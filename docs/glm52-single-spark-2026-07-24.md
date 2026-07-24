@@ -295,3 +295,4 @@ or explicitly waived with reasoning recorded in the evidence file.
 - https://github.com/JustVugg/colibri/issues/161 (single-Spark 2.39 tok/s faithful) · https://github.com/GriffinPilz/SpeedyColibri · https://github.com/giannisanni/neutronstar
 - https://forums.developer.nvidia.com/t/374523 (2× Spark UD-IQ1_S RPC) · /t/375416 (4× Spark) · howtospark.com/recipes/glm-5-2-dual-spark-tp2
 - ik_llama.cpp DSA: https://github.com/ikawrakow/ik_llama.cpp/pull/2093
+- atcyrus.com "GLM-5.2 local hardware requirements" (user-supplied 2026-07-24): general roundup; repeats the falsified 0xSero "~111 GB" Q2_K_XL claim (HF API shard sums = 196.4 GiB), llama.cpp-only, no single-Spark or streaming path — no plan impact

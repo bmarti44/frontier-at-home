@@ -1,0 +1,45 @@
+{
+  "gate": "G1",
+  "title": "CUDA SSD-streaming machinery proven on DSV4 weights (upstream ds4 master)",
+  "timestamp": "2026-07-24T11:49:59-04:00",
+  "host": "spark-aba1",
+  "capture_method": "single scripted run as dsv4 (g1_smoke.sh via 'sudo -u dsv4 bash -s'); raw logs copied verbatim into results/glm52-gates/logs/g1/. A first run at 11:47 passed 11/12 with the only FAIL being a harness race (ready-file read before memwatch's first 2-s poll cycle; memwatch.log proved ARMED 1 s after server start). The harness wait was fixed to wait for ARMED content and the ENTIRE run was re-executed cleanly at 11:49 — the committed evidence is the full 11:49 rerun, not a patched first run.",
+  "engine": {
+    "binary": "/home/dsv4/ds4-project/src/ds4-upstream-master/ds4-server",
+    "binary_sha256_12": "dd10f3c9b99f (matches G0)",
+    "weights": "/home/dsv4/ds4-project/gguf/DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf (86720111488 bytes)",
+    "args": "--cuda -c 8192 --host 127.0.0.1 --port 8022 --ssd-streaming --ssd-streaming-cache-experts 16GB"
+  },
+  "raw_logs": {
+    "dir": "results/glm52-gates/logs/g1/",
+    "note": "server.log filtered only of per-token load-progress and per-request kv-trace spam lines (filter recorded in repo history); all startup/streaming/shutdown lines intact. run1.json/run2.json are the raw HTTP bodies; run1.text/run2.text the extracted completions (159 bytes each)."
+  },
+  "assertions_file": "results/glm52-gates/logs/g1/assertions.log",
+  "assertions_summary": [
+    {"name": "port_free", "pass": true},
+    {"name": "memwatch_armed", "expected": "ready-file ARMED <engine pid>", "actual": "ARMED 96439 96422 70210224 engine (pid verified child-of-sudo-wrapper; identity ticks checked by 01_memwatch.sh itself)", "pass": true},
+    {"name": "server_ready", "actual": "/v1/models 200 after ~5 s (streaming: only 0.99 GiB token-embedding span mapped at startup)", "pass": true},
+    {"name": "http_200_run1_run2", "actual": "200/200", "pass": true},
+    {"name": "byte_identical", "expected": "temp-0 seed-42 fixed prompt, extracted text bytes equal across two consecutive requests", "actual": "cmp exit 0 on 159-byte outputs", "pass": true},
+    {"name": "read_bytes_growth_run1", "expected": ">= 2 GiB via /proc/<pid>/io during completion (O_DIRECT streamed expert reads are page-cache-invisible, so read_bytes is disk-real)", "actual": "84,594,065,408 bytes (84.6 GB for 24-token prefill + 32-token decode)", "pass": true},
+    {"name": "zero_cuda_stubs", "expected": "0 'CUDA stub called' lines", "actual": "0", "pass": true},
+    {"name": "streaming_engaged", "actual": "'cuda SSD streaming total expert budget 16.00 GiB = 3.38 GiB prefill headroom + 12.62 GiB dynamic cache (1915 experts, 6.75 MiB each)' + 'SSD streaming initial cuda model map restricted to token embedding'", "pass": true},
+    {"name": "memwatch_no_breach", "actual": "0 breach lines; min sampled MemAvailable 86.72 GiB vs 10 GiB line; ARMED->DISARMED bracket clean", "pass": true},
+    {"name": "clean_shutdown_port_released", "actual": "SIGTERM drain + exit, port 8022 released", "pass": true}
+  ],
+  "recorded_not_gated": {
+    "request_wall_times_s": {"run1": 26, "run2": 23},
+    "read_bytes_run2_delta": 83898605568,
+    "observation": "run2 re-read 83.9 GB vs run1's 84.6 GB — the 12.62 GiB dynamic cache yields ~1% reuse across identical consecutive requests on the 61-layer DSV4 path. This is the sol-predicted near-zero-hit CUDA behavior and is exactly what G4a (persistent CUDA expert cache) exists to fix.",
+    "effective_read_throughput": "~3.3 GB/s during decode vs 10.7 GB/s sequential NVMe — selected-expert reads do not reach sequential bandwidth, as predicted."
+  },
+  "waivers": [
+    {
+      "criterion": "prod stopped for a bounded window, then restored and verified (tailnet 401 + warm probe < 2 s)",
+      "status": "PARTIALLY WAIVED with reasoning",
+      "reasoning": "Prod was found already down before G1 began: ds4 v0.4.2 received a clean 'shutdown requested' 2026-07-23 21:34 EDT (ds4-server.log) with a clean memwatch DISARM; a llama.cpp engine then served until a clean 'cleaning up before exit' 2026-07-24 09:36 EDT. No crash, no OOM (journal clean), no reboot (uptime 8 days). The user directive for this work authorizes keeping DeepSeek down until GLM is verified ('you may shut down the current deepseek model running/do whatever else you need'). Auth chain verified untouched during G1: dsv4-authhelper + caddy active, tailnet-facing :8010 returns 401. Full DSV4 restore + warm-probe verification is deferred to G5, whose round-trip gate proves it end-to-end."
+    }
+  ],
+  "result": "PASS (pending sol adversarial review)",
+  "sol_review": null
+}
