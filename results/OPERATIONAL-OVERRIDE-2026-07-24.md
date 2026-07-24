@@ -47,3 +47,13 @@ promoting these knobs into any qualified config. Full analysis:
 docs/ds4-v042-memory-analysis-sol-2026-07-24.md (tail of the sol run;
 ranked patch set including the conditional 5.5-6.3 GiB serial-fallback
 guard and a ~3 GiB soft idle-release hook design for upstream).
+
+## Decision (2026-07-24): idle-release not pursued
+
+The soft idle-release design (docs/ds4-v042-memory-analysis-sol-2026-07-24.md
+§3) is documented but intentionally NOT implemented: active-use memory is
+already inside the safe envelope with the deployed knobs (steady free 13.7
+GiB), the ~3 GiB it would recover only matters while the model is idle, and
+the recurring multi-GiB free/realloc cycles carry a unified-memory
+fragmentation risk. Revisit only if the box's between-conversation workloads
+(training runs, etc.) start losing to the reserved workspace.
