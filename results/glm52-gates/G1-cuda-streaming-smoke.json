@@ -1,9 +1,9 @@
 {
   "gate": "G1",
   "title": "CUDA SSD-streaming machinery proven on DSV4 weights (upstream ds4 master)",
-  "timestamp": "2026-07-24T11:58:32-04:00",
+  "timestamp": "2026-07-24T12:05:54-04:00",
   "host": "spark-aba1",
-  "capture_method": "single scripted run as dsv4 of the COMMITTED harness results/glm52-gates/harness/g1_smoke.sh with the COMMITTED request fixture results/glm52-gates/harness/fixture-prime8.json; harness and fixture sha12 recorded inside run.log. Raw logs copied verbatim into results/glm52-gates/logs/g1/; server.log is UNFILTERED. This is the third full execution: run A (11:47) had one harness race assertion, run B (11:49) was reviewed by sol and failed on auditability (no O_DIRECT proof, uncommitted harness/fixture, filtered stderr, arm/ready wording); run C (11:57, this evidence) is a complete clean re-execution addressing all findings.",
+  "capture_method": "single scripted run as dsv4 of the COMMITTED harness results/glm52-gates/harness/g1_smoke.sh (sha12 185c6462b1d0, committed at be5a6a2 BEFORE execution) with the COMMITTED fixture fixture-prime8.json (sha12 5b79f3cbe477); both sha12s recorded inside run.log by the harness itself. Raw logs copied verbatim into results/glm52-gates/logs/g1/; server.log UNFILTERED. Execution history: run A (11:47) one harness race assertion; run B (11:49) sol round-1 FAIL on auditability; run C (11:57) closed those findings but ran before the harness was committed (sol round-2 provenance defect); run D (12:04, THIS evidence) executed from the harness already committed at be5a6a2. Determinism across full server restarts: run C and run D produced the same 159-byte output (sha12 8c21819f5c98) and the same run-1 read_bytes delta (84,594,065,408).",
   "engine": {
     "binary": "/home/dsv4/ds4-project/src/ds4-upstream-master/ds4-server",
     "binary_sha256_12": "dd10f3c9b99f (matches G0)",
@@ -13,46 +13,104 @@
   "raw_logs": "results/glm52-gates/logs/g1/ (assertions.log, run.log, server.log UNFILTERED, memwatch.log, fdinfo.txt, streaming_lines.log, io_before/mid/after.txt, run1/run2 .json raw HTTP bodies + .text extracted 159-byte completions)",
   "assertions_file": "results/glm52-gates/logs/g1/assertions.log",
   "assertions_summary": [
-    {"name": "port_free", "pass": true},
-    {"name": "memwatch_armed", "actual": "ready-file ARMED 99060 99035 70261126 engine; identity/pgid/start-ticks authenticated by 01_memwatch.sh itself; run.log wording now distinguishes ARM REQUESTED (target-file write) from actual ARM (memwatch.log ARMED line)", "pass": true},
-    {"name": "server_ready", "actual": "/v1/models 200 on first poll after memwatch arm-wait (streaming startup maps only the 0.99 GiB token-embedding span); wall-clock timestamps in run.log", "pass": true},
-    {"name": "o_direct_fd", "expected": "at least one open engine fd on the GGUF carries O_DIRECT (aarch64 flag bit octal 0200000) in /proc/<pid>/fdinfo", "actual": "fd 34 flags 0600000 = O_LARGEFILE|O_DIRECT (streaming fd); fd 4 flags 0400000 (non-direct header fd) — fdinfo.txt", "pass": true},
-    {"name": "http_200_run1_run2", "actual": "200/200", "pass": true},
-    {"name": "byte_identical", "expected": "temp-0 seed-42 committed fixture, extracted text bytes equal across two consecutive requests", "actual": "sha256-12 8c21819f5c98 == 8c21819f5c98 (159 bytes each), cmp exit 0", "pass": true},
-    {"name": "read_bytes_growth_run1", "expected": ">= 2 GiB via /proc/<pid>/io during request 1 (O_DIRECT reads bypass page cache, so read_bytes is disk-real)", "actual": "84,594,065,408 bytes for 24-token prefill + 32-token decode", "pass": true},
-    {"name": "zero_cuda_stubs", "expected": "0 'CUDA stub called' lines in UNFILTERED server.log", "actual": "0 (23-line full log committed)", "pass": true},
-    {"name": "streaming_engaged", "actual": "'cuda SSD streaming total expert budget 16.00 GiB = 3.38 GiB prefill headroom + 12.62 GiB dynamic cache (1915 experts, 6.75 MiB each)' + 'SSD streaming initial cuda model map restricted to token embedding (1 spans, 0.99 GiB tensor span)'", "pass": true},
-    {"name": "memwatch_no_breach", "actual": "0 breach lines; min sampled MemAvailable 86.72 GiB vs 10 GiB line; ARMED->DISARMED bracket authenticated", "pass": true},
-    {"name": "clean_shutdown_port_released", "actual": "SIGTERM drain + exit, port 8022 released", "pass": true}
+    {
+      "name": "port_free",
+      "pass": true
+    },
+    {
+      "name": "memwatch_armed",
+      "actual": "ready-file ARMED (pid/pgid/start-ticks authenticated by 01_memwatch.sh); run.log distinguishes ARM REQUESTED from memwatch.log's ARMED line",
+      "pass": true
+    },
+    {
+      "name": "server_ready",
+      "actual": "/v1/models 200 on first poll after memwatch arm-wait (streaming startup maps only the 0.99 GiB token-embedding span); wall-clock timestamps in run.log",
+      "pass": true
+    },
+    {
+      "name": "o_direct_fd",
+      "expected": "at least one open engine fd on the GGUF carries O_DIRECT (aarch64 flag bit octal 0200000) in /proc/<pid>/fdinfo",
+      "actual": "1 of 2 gguf fds has O_DIRECT: fd 34 flags 0600000 = O_LARGEFILE|O_DIRECT (streaming fd); fd 4 flags 0400000 (non-direct header fd) \u2014 fdinfo.txt",
+      "pass": true
+    },
+    {
+      "name": "http_200_run1_run2",
+      "actual": "200/200",
+      "pass": true
+    },
+    {
+      "name": "byte_identical",
+      "expected": "temp-0 seed-42 committed fixture, extracted text bytes equal across two consecutive requests",
+      "actual": "sha256-12 8c21819f5c98 == 8c21819f5c98 (159 bytes each), cmp exit 0",
+      "pass": true
+    },
+    {
+      "name": "read_bytes_growth_run1",
+      "expected": ">= 2 GiB via /proc/<pid>/io during request 1 (O_DIRECT reads bypass page cache, so read_bytes is disk-real)",
+      "actual": "84,594,065,408 bytes for 24-token prefill + 32-token decode",
+      "pass": true
+    },
+    {
+      "name": "zero_cuda_stubs",
+      "expected": "0 'CUDA stub called' lines in UNFILTERED server.log",
+      "actual": "0 (23-line full log committed)",
+      "pass": true
+    },
+    {
+      "name": "streaming_engaged",
+      "actual": "'cuda SSD streaming total expert budget 16.00 GiB = 3.38 GiB prefill headroom + 12.62 GiB dynamic cache (1915 experts, 6.75 MiB each)' + 'SSD streaming initial cuda model map restricted to token embedding (1 spans, 0.99 GiB tensor span)'",
+      "pass": true
+    },
+    {
+      "name": "memwatch_no_breach",
+      "actual": "0 breach lines; min sampled MemAvailable 86.72 GiB vs 10 GiB line; ARMED->DISARMED bracket authenticated",
+      "pass": true
+    },
+    {
+      "name": "clean_shutdown_port_released",
+      "actual": "SIGTERM drain + exit, port 8022 released",
+      "pass": true
+    }
   ],
   "recorded_not_gated": {
-    "request_wall_times_s": {"run1": 24, "run2": 23},
-    "read_bytes_run2_delta": 83898642432,
+    "request_wall_times_s": {
+      "run1": 24,
+      "run2": 23
+    },
+    "read_bytes_run2_delta": 83898707968,
     "observations": [
-      "Request 2 read 83.90 GB vs request 1's 84.59 GB — 0.8% less. No evidence of meaningful expert-cache persistence across requests on CUDA at this pin; consistent with the source finding that the persistent-cache APIs are no-ops. This is the G4a work item.",
-      "Whole-request effective storage throughput ~3.5 GB/s (84.6 GB / 24 s, prefill+decode combined) vs 10.7 GB/s sequential NVMe — selected-expert reads do not reach sequential bandwidth, as predicted in the plan doc."
+      "Request 2 read 83.90 GB vs request 1's 84.59 GB \u2014 0.8% less. No evidence of meaningful expert-cache persistence across requests on CUDA at this pin; consistent with the source finding that the persistent-cache APIs are no-ops. This is the G4a work item.",
+      "Whole-request effective storage throughput ~3.5 GB/s (84.6 GB / 24 s, prefill+decode combined) vs 10.7 GB/s sequential NVMe \u2014 selected-expert reads do not reach sequential bandwidth, as predicted in the plan doc."
     ]
   },
   "waivers": [
     {
       "criterion": "prod stopped for a bounded window, then restored and verified (tailnet 401 + warm probe < 2 s)",
       "status": "PARTIALLY WAIVED with reasoning",
-      "reasoning": "Prod was found already down before G1 began: ds4 v0.4.2 received a clean 'shutdown requested' 2026-07-23 21:34 EDT (ds4-server.log) with a clean memwatch DISARM; a llama.cpp engine then served until a clean 'cleaning up before exit' 2026-07-24 09:36 EDT. No crash, no OOM (journal clean), no reboot (uptime 8 days). The user directive for this work authorizes keeping DeepSeek down until GLM is verified ('you may shut down the current deepseek model running/do whatever else you need'). Auth chain observed intact during the window (dsv4-authhelper + caddy units active; :8010 returned 401 at 11:36 EDT — session transcript; not re-captured as raw G1 evidence). Full DSV4 restore + warm-probe verification is deferred to G5, whose round-trip gate proves it end-to-end. Residual risk disclosed: production health is NOT established by G1."
+      "reasoning": "Prod was found already down before G1 began: ds4 v0.4.2 received a clean 'shutdown requested' 2026-07-23 21:34 EDT (ds4-server.log) with a clean memwatch DISARM; a llama.cpp engine then served until a clean 'cleaning up before exit' 2026-07-24 09:36 EDT. No crash, no OOM (journal clean), no reboot (uptime 8 days). The user directive for this work authorizes keeping DeepSeek down until GLM is verified ('you may shut down the current deepseek model running/do whatever else you need'). Auth chain observed intact during the window (dsv4-authhelper + caddy units active; :8010 returned 401 at 11:36 EDT \u2014 session transcript; not re-captured as raw G1 evidence). Full DSV4 restore + warm-probe verification is deferred to G5, whose round-trip gate proves it end-to-end. Residual risk disclosed: production health is NOT established by G1."
     }
   ],
   "scope_note": "G1 proves the streaming MACHINERY on the DeepSeek path only. It proves nothing about GLM-5.2 (G3), nothing about useful throughput (~1.3 tok/s effective here), and nothing about cache effectiveness (explicitly absent, see observations).",
-  "result": "PASS (pending sol adversarial re-review)",
+  "result": "PASS (pending sol round-3)",
   "sol_review": {
     "round1": {
       "verdict": "FAIL",
       "findings_and_closure": [
-        "1,2,4,7 VERIFIED (byte identity, I/O arithmetic, memwatch bracket, waiver reasoning sound/narrow) — no action.",
+        "1,2,4,7 VERIFIED (byte identity, I/O arithmetic, memwatch bracket, waiver reasoning sound/narrow) \u2014 no action.",
         "3 GAP no O_DIRECT/cold-cache proof -> CLOSED: o_direct_fd assertion added; fdinfo.txt shows the streaming fd with O_DIRECT; O_DIRECT bypasses page cache so read_bytes growth is disk-real independent of cache temperature.",
         "5 REFUTED arm/ready wording contradictions, harness not committed -> CLOSED: harness + fixture committed (sha12 in run.log), wording now 'ARM REQUESTED' vs memwatch's own ARMED line, readiness reported in wall-clock timestamps; full third run executed.",
         "6 GAP filtered stderr, fixture not committed -> CLOSED: server.log committed unfiltered (23 lines); fixture committed and referenced by path in run.log.",
         "8 GAP 'reuse'/throughput wording misleading -> CLOSED: reworded to '0.8% less, no evidence of meaningful persistence' and 'whole-request effective storage throughput'."
       ]
     },
-    "round2": null
+    "round2": {
+      "verdict": "FAIL",
+      "findings_and_closure": [
+        "(3),(6 runtime),(8) VERIFIED \u2014 no action.",
+        "(5) REFUTED committed-at-execution provenance: run C predated the harness commit -> CLOSED: run D executed from harness committed at be5a6a2; harness sha12 in run.log matches the committed file.",
+        "minor fd miscount '1 of 3' -> CLOSED: grep pattern fixed in be5a6a2; run D reports 1 of 2."
+      ]
+    },
+    "round3": null
   }
 }

@@ -281,6 +281,16 @@ a gate is a script or a checklist with evidence, whichever is smaller.
   verified engine pid (child-of-sudo-wrapper procedure), other profile's
   state-dir checksums unchanged; static assert that the systemd unit still
   starts the qualified DSV4 stack. All binary, all in one evidence file.
+  UPDATED 2026-07-24 (user directive mid-implementation): "don't worry
+  about any prod environment — if glm 5.2 is proven working, i want to
+  switch over to using it instead of deepseek." G5's end state is
+  therefore GLM-5.2 serving behind the auth chain as the default backend,
+  with DSV4 preserved and switchable back (weights, Entrpi tree, launcher
+  untouched). The round-trip legs above remain the proof mechanism —
+  the trip simply ends on the glm52 leg instead of the dsv4 leg, plus one
+  final dsv4-restorability leg to prove the switch-back path works. No
+  mid-gate prod-restore obligations (G1's partial waiver is now fully
+  covered by this directive).
 
 Each of G1-G5 closes with: `codex exec -c model_reasoning_effort=xhigh`
 adversarial review of the gate's evidence JSON + logs; findings addressed
