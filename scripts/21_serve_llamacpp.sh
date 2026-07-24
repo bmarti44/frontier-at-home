@@ -806,9 +806,19 @@ do_start() {
         chmod 700 -- "$slot_save_canonical" || die 'cannot secure slot save directory'
         slot_save_path=$slot_save_canonical
     fi
+    # DSV4_PARALLEL: number of server slots (default 1 = production original).
+    # n_ctx is split evenly across slots, so raise CTX accordingly (e.g.
+    # CTX=65536 with 2 slots = 32768 each). Rationale (2026-07-24, measured):
+    # agent clients fire small utility requests (title generation) between
+    # turns; with one slot those clobber the main conversation's 20K prefix
+    # cache and force a full re-prefill every turn. With 2 slots llama-server
+    # routes by longest-common-prefix similarity, so utility calls land on
+    # the idle slot. DSV4's compressed KV keeps the cost ~256 MiB at 64K.
+    parallel=${DSV4_PARALLEL:-1}
+    [[ $parallel =~ ^[1-4]$ ]] || die 'DSV4_PARALLEL must be 1-4'
     server_command=("$BINARY" --model "$MODEL_PATH")
     [[ -z $API_KEY_FILE ]] || server_command+=(--api-key-file "$API_KEY_FILE")
-    server_command+=(--host 127.0.0.1 --port "$PORT" -c "$CTX" -np 1 -ngl 999
+    server_command+=(--host 127.0.0.1 --port "$PORT" -c "$CTX" -np "$parallel" -ngl 999
         -b "$batch" -ub "$ubatch" --no-warmup --cache-ram 0)
     (( no_mmap == 0 )) || server_command+=(--no-mmap)
     (( log_verbosity == 3 )) || server_command+=(-lv "$log_verbosity")
