@@ -45,7 +45,9 @@ def read_value(t):
         else:
             f.seek(SCALAR[et] * n, 1)
         return None
-    f.seek(SCALAR[t], 1)
+    raw = rd(SCALAR[t])
+    if t in (4, 5, 10, 11):  # u32, i32, u64, i64 — keep scalars (alignment etc.)
+        return int.from_bytes(raw, "little", signed=t in (5, 11))
     return None
 
 try:
@@ -72,7 +74,7 @@ try:
             14:(210,256),15:(292,256),16:(66,256),17:(74,256),18:(98,256),
             19:(50,256),20:(18,32),21:(110,256),22:(82,256),23:(136,256),
             24:(1,1),25:(2,1),26:(4,1),27:(8,1),28:(8,1),29:(56,256),30:(2,1)}
-    names, tensors = [], []
+    names, tensors, extents = [], [], []
     for _ in range(n_tensors):
         name = s()
         n_dims = u32()
@@ -85,27 +87,39 @@ try:
     header_end = f.tell()
     if header_end >= fsize: errors.append("header extends past EOF")
 
-    align = int(kvs.get("general.alignment", 32) or 32)
+    align = int(kvs.get("general.alignment") or 32)
+    if not (align > 0 and (align & (align - 1)) == 0):
+        errors.append(f"bad alignment {align}"); align = 32
     data_start = (header_end + align - 1) // align * align
     region = fsize - data_start
-    max_end, unknown = 0, set()
+    unknown = set()
     for name, dims, dtype, off in tensors:
         if dtype not in GGML:
             unknown.add(dtype); continue
         bb, be = GGML[dtype]
+        if not dims or dims[0] % be != 0:
+            errors.append(f"{name}: dims[0]={dims[0] if dims else None} not multiple of block {be} (type {dtype})"); continue
         elems = 1
         for d in dims: elems *= d
-        if elems % be != 0:
-            errors.append(f"{name}: {elems} elems not multiple of block {be} (type {dtype})"); continue
         nbytes = elems // be * bb
         if off % align != 0:
             errors.append(f"{name}: offset {off} not {align}-aligned")
         if off < 0 or off + nbytes > region:
             errors.append(f"{name}: extent [{off},{off+nbytes}) outside data region {region}")
-        max_end = max(max_end, off + nbytes)
+        extents.append((off, nbytes, name))
     if unknown: errors.append(f"unknown ggml types {sorted(unknown)}")
-    if not errors and (region - max_end) > 1 << 20:
-        errors.append(f"tensor data covers only {max_end} of {region} region bytes")
+    # exact packing: sorted by offset, each tensor starts at the previous
+    # tensor's align-padded end, first at 0, final padded end == region
+    if not errors and extents:
+        extents.sort()
+        expect = 0
+        for off, nbytes, name in extents:
+            if off != expect:
+                errors.append(f"{name}: offset {off} != expected packed offset {expect} (gap/overlap)"); break
+            expect = (off + nbytes + align - 1) // align * align
+        else:
+            if not (region - align < expect <= region + align):
+                errors.append(f"packed end {expect} != data region size {region}")
 except (EOFError, ValueError, struct.error) as e:
     errors.append(f"header walk failed: {e}")
     names, kvs, version, n_tensors, n_kv = [], {}, None, None, None
