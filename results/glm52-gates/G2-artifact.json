@@ -1,9 +1,9 @@
 {
   "gate": "G2",
   "title": "Disk cleanup + GLM-5.2 GGUF acquisition with deterministic verification",
-  "timestamp": "2026-07-24T13:08:30-04:00",
+  "timestamp": "2026-07-24T13:28:30-04:00",
   "host": "spark-aba1",
-  "capture_method": "committed harness results/glm52-gates/harness/g2_download.sh run as dsv4. Attempt history: attempt 1 (12:23) aborted at hf_cli_present (no hf CLI, PEP 668); attempt 2 (12:24, after committed venv fix) is the passing run \u2014 its run.log/assertions.log are the committed evidence (attempt 1's assertion lines were reset by the harness rm -rf of its own out-dir; attempt 1's failure is preserved in this JSON and the task record). Post-review finalize pass (committed harness/g2_finalize.sh, 13:08) appended the deletion-postcondition, strict header, negative-control, and sha-split assertions to the same assertions.log.",
+  "capture_method": "committed harness results/glm52-gates/harness/g2_download.sh run as dsv4. Attempt history: attempt 1 (12:23) aborted at hf_cli_present (no hf CLI, PEP 668); attempt 2 (12:24, after committed venv fix) is the passing run \u2014 its run.log/assertions.log are the committed evidence (attempt 1's assertion lines were reset by the harness rm -rf of its own out-dir; attempt 1's failure is preserved in this JSON and the task record). Post-review finalize pass (committed harness/g2_finalize.sh, 13:08) appended the deletion-postcondition, strict header, negative-control, and sha-split assertions to the same assertions.log. Second finalize pass (13:28) after sol round-2: reran the strengthened checker; assertions.log therefore contains the finalize assertion set twice (13:08 weak-checker run and 13:28 strict-checker run) \u2014 both PASS, the 13:28 lines are authoritative for header_parse_strict.",
   "plan_deviation": {
     "planned": "delete falsified teamblobfish IQ2_XXS-XL GGUF (~74-80 GB)",
     "actual": "teamblobfish no longer existed on disk (removed outside this session). Deleted instead: weights/xik94-reap162b (77,601,530,845 bytes) \u2014 REAP-162B experiment artifact, re-downloadable, its bug-B investigation complete; deletion EXPLICITLY user-approved in-session ('i approve you making the deletion') after the permission classifier blocked the first attempt. unsloth-ud-q2_k_xl prod llamacpp weights deliberately preserved for DSV4 restorability.",
@@ -72,7 +72,7 @@
     },
     {
       "name": "header_parse_strict",
-      "expected": "assert-mode exit 0: magic, v3, arch glm-dsa, 1809 tensors, blocks 0..78, no duplicate KV keys, tensor offsets in file bounds, walk complete",
+      "expected": "assert-mode exit 0: magic, v3, arch glm-dsa, 1809 tensors, blocks 0..78 CONTIGUOUS, no duplicate KV keys, per-tensor byte extents from dtype block math within the aligned data region, offsets 32-aligned, region coverage within 1 MiB, no unknown ggml types, EOF-safe walk",
       "actual": "exit=0 (header_check.json)",
       "pass": true
     },
@@ -88,7 +88,7 @@
       "pass": true
     }
   ],
-  "result": "PASS (pending sol round-2)",
+  "result": "PASS (pending sol round-3)",
   "sol_review": {
     "round1": {
       "verdict": "FAIL",
@@ -100,6 +100,14 @@
         "5 LOW attempt-history wording -> CLOSED: capture_method now states exactly one aborted attempt + one passing run and why attempt 1's assertion lines are absent."
       ]
     },
-    "round2": null
+    "round2": {
+      "verdict": "FAIL",
+      "findings_and_closure": [
+        "1 HIGH --assert still shallow (min/max blocks only, offset-at-EOF allowed, no extents/dims/types) -> CLOSED: checker now validates contiguous block ids, per-tensor byte extents computed from ggml dtype block sizes, 32-byte offset alignment, full data-region coverage (<=1 MiB slack), unknown-dtype rejection; re-run on the artifact passes with zero errors (header_check.json), negative control still fails.",
+        "2,3 evidence lines + commit-before-run CONFIRMED \u2014 no action.",
+        "4 round-1 #2 open -> addressed by the above; all other round-1 findings confirmed closed."
+      ]
+    },
+    "round3": null
   }
 }
