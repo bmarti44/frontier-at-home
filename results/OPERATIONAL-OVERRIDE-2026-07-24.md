@@ -57,3 +57,27 @@ GiB), the ~3 GiB it would recover only matters while the model is idle, and
 the recurring multi-GiB free/realloc cycles carry a unified-memory
 fragmentation risk. Revisit only if the box's between-conversation workloads
 (training runs, etc.) start losing to the reserved workspace.
+
+## Rollback of the memory knobs (same day, ~14:15)
+
+Both sol-identified env knobs are REVERTED after live failure evidence:
+- `DS4_SERVER_COALESCE_MAX_TOKENS=2048`: the first genuinely novel ~20K
+  prompt (the user's agent preamble) hung the GPU worker in a 99.9%-CPU
+  zero-progress loop for 10+ minutes with no log output — consistent with
+  the cap (2048) sitting below the engine's prefill chunk (4096). The
+  earlier "validation" passed only because its 19K probe was served from
+  the disk-KV cache; the unquantified-novel-prefill gap noted at deploy
+  time was the exact hole.
+- `DS4_CUDA_NO_ATTENTION_OUTPUT_F16_CACHE=1`: with the hang cleared, a
+  novel 19K prompt prefilled at 123 tok/s vs 776 tok/s with the cache
+  enabled — the F16 attention-output cache is a ~6x prefill accelerator,
+  not an idle 2.7 GiB.
+Serving env is back to the gauntlet-validated original
+(`DS4_BATCH_FIT_HEADROOM_MB=16384` only + warmup + disk-KV). Verified after
+revert: novel 18K prompt at 776 tok/s prefill / 20 s TTFT; steady free
+~10.6-12 GiB (warm banks included); dev watchdog re-armed on the verified
+engine pid (earlier arms twice targeted a transient/sudo wrapper pid —
+procedure now: resolve the engine as the child of the sudo wrapper).
+Lesson recorded: never promote a serving-knob change without a
+NOVEL-prompt probe; sol's rank table entries 2 and 3 are rejected on this
+host by measurement.
