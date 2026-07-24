@@ -88,7 +88,7 @@
       "pass": true
     }
   ],
-  "result": "PASS (pending sol round-4)",
+  "result": "PASS",
   "sol_review": {
     "round1": {
       "verdict": "FAIL",
@@ -118,6 +118,9 @@
         "Note adopted from sol: artifact-substitution integrity is anchored by the full-file sha256 vs HF LFS oid; the header checker is defense-in-depth for structural sanity."
       ]
     },
-    "round4": null
+    "round4": {
+      "verdict": "PASS",
+      "notes": "All three round-3 closures implemented correctly; remaining edge cases (alignment=0 default, 64-KV retention cap, negative control not exercising packing paths) judged non-material under the sha256/LFS-oid anchor."
+    }
   }
 }
