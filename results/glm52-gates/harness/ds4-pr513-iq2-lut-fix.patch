@@ -1,0 +1,110 @@
+From a62bb0c62dd336d4896f0e8802e6c0980c4a1e50 Mon Sep 17 00:00:00 2001
+From: giannisanni <gsanrochman@@gmail.com>
+Date: Tue, 7 Jul 2026 05:12:09 -0300
+Subject: [PATCH] cuda: load IQ2 dequant LUTs unconditionally in batch MoE
+ expert-tile kernels
+
+The moe_gate_up_mid_expert_tile8_{row32,row2048,rowspan} kernels stage the
+IQ2_XXS dequant tables (s_iq2_grid, s_iq2_signs) into shared memory inside
+the xq_blocks <= 16 activation-staging branch, but the
+dev_dot_iq2_xxs_q8_K_block8_deq_lut calls consume them unconditionally.
+
+Models with n_embd <= 4096 (16 q8_K blocks, e.g. V4 Flash) always take the
+branch, so the bug is invisible there. Any model with n_embd > 4096 skips
+it and runs the entire batch gate/up dequant against uninitialized shared
+memory: multi-token batch encodes (prefill, MTP verify) produce fluent
+garbage at full speed while single-token decode stays correct, since the
+n_tokens == 1 path uses different kernels.
+
+Found on a GLM-5.2 port (n_embd 7168 = 28 blocks) where batch prefill
+output was corrupt; with the fix, a 600-token prompt prefills correctly at
+6.5 t/s vs 0.30 t/s token-major on the same hardware (RTX 4060 Ti, SSD
+streaming). The fix hoists the two LUT loads out of the staging branch and
+makes the barrier unconditional; the decode_lut kernel is left unchanged
+because its launcher already guards xq_blocks <= 16.
+---
+ ds4_cuda.cu | 39 ++++++++++++++++++++++++++++++---------
+ 1 file changed, 30 insertions(+), 9 deletions(-)
+
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index 188b341ad..ef79db2fb 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -10816,15 +10816,22 @@ __global__ static void moe_gate_up_mid_expert_tile8_row32_kernel(
+         slot[np] = pair[np] - tok[np] * n_expert;
+         xqb[np] = xq + (uint64_t)tok[np] * xq_blocks;
+     }
++    /* The IQ2 dequant LUTs are consumed unconditionally by the dot calls
++     * below, so they must load for every xq_blocks; only the xq staging is
++     * <=16-blocks specific. Models with n_embd > 4096 (more than 16 q8_K
++     * blocks) used to skip the LUT loads too, leaving s_iq2_grid and
++     * s_iq2_signs uninitialized for the whole gate/up dequant. */
++    for (uint32_t i = threadIdx.x; i < 256u; i += blockDim.x) s_iq2_grid[i] = cuda_iq2xxs_grid[i];
++    for (uint32_t i = threadIdx.x; i < 128u; i += blockDim.x) s_iq2_signs[i] = cuda_ksigns_iq2xs[i];
+     if (xq_blocks <= 16u) {
+         for (uint32_t i = threadIdx.x; i < np * xq_blocks; i += blockDim.x) {
+             uint32_t p = i / xq_blocks;
+             uint32_t b = i - p * xq_blocks;
+             sxq[p][b] = xqb[p][b];
+         }
+-        for (uint32_t i = threadIdx.x; i < 256u; i += blockDim.x) s_iq2_grid[i] = cuda_iq2xxs_grid[i];
+-        for (uint32_t i = threadIdx.x; i < 128u; i += blockDim.x) s_iq2_signs[i] = cuda_ksigns_iq2xs[i];
+-        __syncthreads();
++    }
++    __syncthreads();
++    if (xq_blocks <= 16u) {
+         for (uint32_t p = 0; p < np; p++) xqb[p] = sxq[p];
+     }
+     if (row >= expert_mid_dim) return;
+@@ -10906,15 +10913,22 @@ __global__ static void moe_gate_up_mid_expert_tile8_row2048_kernel(
+         slot[np] = pair[np] - tok[np] * n_expert;
+         xqb[np] = xq + (uint64_t)tok[np] * xq_blocks;
+     }
++    /* The IQ2 dequant LUTs are consumed unconditionally by the dot calls
++     * below, so they must load for every xq_blocks; only the xq staging is
++     * <=16-blocks specific. Models with n_embd > 4096 (more than 16 q8_K
++     * blocks) used to skip the LUT loads too, leaving s_iq2_grid and
++     * s_iq2_signs uninitialized for the whole gate/up dequant. */
++    for (uint32_t i = threadIdx.x; i < 256u; i += blockDim.x) s_iq2_grid[i] = cuda_iq2xxs_grid[i];
++    for (uint32_t i = threadIdx.x; i < 128u; i += blockDim.x) s_iq2_signs[i] = cuda_ksigns_iq2xs[i];
+     if (xq_blocks <= 16u) {
+         for (uint32_t i = threadIdx.x; i < np * xq_blocks; i += blockDim.x) {
+             uint32_t p = i / xq_blocks;
+             uint32_t b = i - p * xq_blocks;
+             sxq[p][b] = xqb[p][b];
+         }
+-        for (uint32_t i = threadIdx.x; i < 256u; i += blockDim.x) s_iq2_grid[i] = cuda_iq2xxs_grid[i];
+-        for (uint32_t i = threadIdx.x; i < 128u; i += blockDim.x) s_iq2_signs[i] = cuda_ksigns_iq2xs[i];
+-        __syncthreads();
++    }
++    __syncthreads();
++    if (xq_blocks <= 16u) {
+         for (uint32_t p = 0; p < np; p++) xqb[p] = sxq[p];
+     }
+     for (uint32_t rr = 0; rr < 64u; rr++) {
+@@ -11000,15 +11014,22 @@ __global__ static void moe_gate_up_mid_expert_tile8_rowspan_kernel(
+         slot[np] = pair[np] - tok[np] * n_expert;
+         xqb[np] = xq + (uint64_t)tok[np] * xq_blocks;
+     }
++    /* The IQ2 dequant LUTs are consumed unconditionally by the dot calls
++     * below, so they must load for every xq_blocks; only the xq staging is
++     * <=16-blocks specific. Models with n_embd > 4096 (more than 16 q8_K
++     * blocks) used to skip the LUT loads too, leaving s_iq2_grid and
++     * s_iq2_signs uninitialized for the whole gate/up dequant. */
++    for (uint32_t i = threadIdx.x; i < 256u; i += blockDim.x) s_iq2_grid[i] = cuda_iq2xxs_grid[i];
++    for (uint32_t i = threadIdx.x; i < 128u; i += blockDim.x) s_iq2_signs[i] = cuda_ksigns_iq2xs[i];
+     if (xq_blocks <= 16u) {
+         for (uint32_t i = threadIdx.x; i < np * xq_blocks; i += blockDim.x) {
+             uint32_t p = i / xq_blocks;
+             uint32_t b = i - p * xq_blocks;
+             sxq[p][b] = xqb[p][b];
+         }
+-        for (uint32_t i = threadIdx.x; i < 256u; i += blockDim.x) s_iq2_grid[i] = cuda_iq2xxs_grid[i];
+-        for (uint32_t i = threadIdx.x; i < 128u; i += blockDim.x) s_iq2_signs[i] = cuda_ksigns_iq2xs[i];
+-        __syncthreads();
++    }
++    __syncthreads();
++    if (xq_blocks <= 16u) {
+         for (uint32_t p = 0; p < np; p++) xqb[p] = sxq[p];
+     }
+     for (uint32_t rr = 0; rr < ROW_SPAN / 32u; rr++) {
