@@ -1,5 +1,7 @@
 # Production runbook
 
+> **TEMPORARY EXCEPTION 2026-07-24:** port 8011 serves a dev ds4 v0.4.2 process outside this runbook's managed procedures (results/OPERATIONAL-OVERRIDE-2026-07-24.md has controls + rollback). Reboot reverts to the managed llama.cpp unit; the do-not-launch-binaries-directly rule below is knowingly excepted for this experiment.
+
 This runbook covers day-2 operation after `scripts/41_install_service.sh llamacpp` has
 installed the product endpoint behind Caddy and Tailscale Serve. The frozen ≤28K benchmark
 verdict remains ds4, but Brian's 1M-context-roadmap override makes llama.cpp the production

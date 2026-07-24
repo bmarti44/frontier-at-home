@@ -165,7 +165,11 @@ TESTS = {"prefix-cache": t_prefix_cache, "slot-thrash": t_slot_thrash,
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tests", nargs="+")
-    ap.add_argument("--base", default="http://127.0.0.1:8011")
+    # No default: port 8011's engine changes with operational posture (see
+    # results/OPERATIONAL-OVERRIDE-2026-07-24.md), so an implicit default
+    # can silently run llama.cpp assertions against ds4 or vice versa.
+    ap.add_argument("--base", required=True,
+                    help="engine base URL, e.g. http://127.0.0.1:8011 — required; verify which engine is serving first")
     ap.add_argument("--json")
     args = ap.parse_args()
     names = ["prefix-cache", "slot-thrash"] if args.tests == ["all-llamacpp"] else args.tests

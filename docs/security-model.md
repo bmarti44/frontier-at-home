@@ -1,5 +1,7 @@
 # Production security model
 
+> **TEMPORARY EXCEPTION 2026-07-24:** 8011 currently = dev ds4 v0.4.2 (loopback-only verified; exposure chain re-verified PASS today); 8012 mapping below is historical. Disk-KV tier active at /home/dsv4/ds4-v042-kvdisk (0700, dsv4-owned, prompt-sensitive). See results/OPERATIONAL-OVERRIDE-2026-07-24.md.
+
 The selected inference stack is reachable remotely only through Tailscale
 Serve. Every application listener remains bound to loopback on the Spark. The
 production selection is llama.cpp under the documented product override; ds4

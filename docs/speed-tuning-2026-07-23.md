@@ -1,5 +1,7 @@
 # Speed tuning session — 2026-07-23
 
+> **OPERATIONAL NOTE 2026-07-24:** measurements below are the llama.cpp record; current 8011 posture is governed by results/OPERATIONAL-OVERRIDE-2026-07-24.md.
+
 Goal: make the production llama.cpp endpoint (DeepSeek V4 Flash UD-Q2_K_XL on the
 DGX Spark GB10, 128 GB unified) meaningfully faster for agent workloads
 (~20K-token fixed prefix, interactive TTFT, decode throughput). Everything below

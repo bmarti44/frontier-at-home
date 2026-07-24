@@ -1,5 +1,7 @@
 # Decode-ceiling paths: measured results — 2026-07-24
 
+> **OPERATIONAL NOTE 2026-07-24:** the 'tuned llama.cpp remains production' conclusion below is the historical record; port 8011 currently serves dev ds4 v0.4.2 under results/OPERATIONAL-OVERRIDE-2026-07-24.md.
+
 Follow-up to docs/speed-tuning-2026-07-23.md. Two paths past the ~18 tok/s
 prose decode ceiling were pursued to completion on this host. Baseline for all
 comparisons: tuned llama.cpp fusion serving UD-Q2_K_XL
