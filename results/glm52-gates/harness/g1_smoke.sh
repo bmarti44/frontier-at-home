@@ -84,7 +84,7 @@ for fd in /proc/$SPID/fd/*; do
   flags=$(awk '/^flags:/{print $2}' "/proc/$SPID/fdinfo/$n")
   if (( 8#$flags & 8#0200000 )); then DIRECT_OK=0; echo "== fd $n HAS O_DIRECT (flags octal $flags)" >> "$OUT/fdinfo.txt"; fi
 done
-assert o_direct_fd "at least one open fd on the GGUF has O_DIRECT (flags octal bit 0200000, aarch64)" "$(grep -c 'HAS O_DIRECT' "$OUT/fdinfo.txt") of $(grep -c '^== fd' "$OUT/fdinfo.txt") gguf fds; see fdinfo.txt" $DIRECT_OK
+assert o_direct_fd "at least one open fd on the GGUF has O_DIRECT (flags octal bit 0200000, aarch64)" "$(grep -c 'HAS O_DIRECT' "$OUT/fdinfo.txt") of $(grep -cE '^== fd [0-9]+ ->' "$OUT/fdinfo.txt") gguf fds; see fdinfo.txt" $DIRECT_OK
 
 cat "/proc/$SPID/io" > "$OUT/io_before.txt"
 note "request 1 begin (fixture $FIX)"
