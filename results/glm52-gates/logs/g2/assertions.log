@@ -14,3 +14,7 @@ ASSERT name=deletion_postcondition expected=[path absent: /home/bmarti44/spark-d
 ASSERT name=header_parse_strict expected=[assert-mode exit 0 (magic, v3, arch glm-dsa, 1809 tensors, blocks 0..78, no dup keys, offsets in bounds, walk complete)] actual=[exit=0 (header_check.json)] result=PASS
 ASSERT name=header_check_negative_control expected=[nonzero exit on deepseek4 shard asserted as glm-dsa] actual=[exit=1] result=PASS
 ASSERT name=sha256_recorded_split expected=[two 32-hex halves committed (sha256_split.txt)] actual=[prefix a49de64c5020, halves written] result=PASS
+ASSERT name=deletion_postcondition expected=[path absent: /home/bmarti44/spark-deepseek-v4-flash/weights/xik94-reap162b] actual=[absent (test ! -e)] result=PASS
+ASSERT name=header_parse_strict expected=[assert-mode exit 0 (magic, v3, arch glm-dsa, 1809 tensors, blocks 0..78, no dup keys, offsets in bounds, walk complete)] actual=[exit=0 (header_check.json)] result=PASS
+ASSERT name=header_check_negative_control expected=[nonzero exit on deepseek4 shard asserted as glm-dsa] actual=[exit=1] result=PASS
+ASSERT name=sha256_recorded_split expected=[two 32-hex halves committed (sha256_split.txt)] actual=[prefix a49de64c5020, halves written] result=PASS

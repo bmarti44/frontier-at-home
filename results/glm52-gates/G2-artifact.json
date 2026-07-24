@@ -1,9 +1,9 @@
 {
   "gate": "G2",
   "title": "Disk cleanup + GLM-5.2 GGUF acquisition with deterministic verification",
-  "timestamp": "2026-07-24T13:28:30-04:00",
+  "timestamp": "2026-07-24T13:37:30-04:00",
   "host": "spark-aba1",
-  "capture_method": "committed harness results/glm52-gates/harness/g2_download.sh run as dsv4. Attempt history: attempt 1 (12:23) aborted at hf_cli_present (no hf CLI, PEP 668); attempt 2 (12:24, after committed venv fix) is the passing run \u2014 its run.log/assertions.log are the committed evidence (attempt 1's assertion lines were reset by the harness rm -rf of its own out-dir; attempt 1's failure is preserved in this JSON and the task record). Post-review finalize pass (committed harness/g2_finalize.sh, 13:08) appended the deletion-postcondition, strict header, negative-control, and sha-split assertions to the same assertions.log. Second finalize pass (13:28) after sol round-2: reran the strengthened checker; assertions.log therefore contains the finalize assertion set twice (13:08 weak-checker run and 13:28 strict-checker run) \u2014 both PASS, the 13:28 lines are authoritative for header_parse_strict.",
+  "capture_method": "committed harness results/glm52-gates/harness/g2_download.sh run as dsv4. Attempt history: attempt 1 (12:23) aborted at hf_cli_present (no hf CLI, PEP 668); attempt 2 (12:24, after committed venv fix) is the passing run \u2014 its run.log/assertions.log are the committed evidence (attempt 1's assertion lines were reset by the harness rm -rf of its own out-dir; attempt 1's failure is preserved in this JSON and the task record). Post-review finalize pass (committed harness/g2_finalize.sh, 13:08) appended the deletion-postcondition, strict header, negative-control, and sha-split assertions to the same assertions.log. Second finalize pass (13:28) after sol round-2: reran the strengthened checker; assertions.log therefore contains the finalize assertion set twice (13:08 weak-checker run and 13:28 strict-checker run) \u2014 both PASS, third finalize pass 13:37 after sol round-3 (assertions.log now has the finalize set three times; the LAST set is authoritative \u2014 each earlier set also PASSed with the then-current checker).",
   "plan_deviation": {
     "planned": "delete falsified teamblobfish IQ2_XXS-XL GGUF (~74-80 GB)",
     "actual": "teamblobfish no longer existed on disk (removed outside this session). Deleted instead: weights/xik94-reap162b (77,601,530,845 bytes) \u2014 REAP-162B experiment artifact, re-downloadable, its bug-B investigation complete; deletion EXPLICITLY user-approved in-session ('i approve you making the deletion') after the permission classifier blocked the first attempt. unsloth-ud-q2_k_xl prod llamacpp weights deliberately preserved for DSV4 restorability.",
@@ -88,7 +88,7 @@
       "pass": true
     }
   ],
-  "result": "PASS (pending sol round-3)",
+  "result": "PASS (pending sol round-4)",
   "sol_review": {
     "round1": {
       "verdict": "FAIL",
@@ -108,6 +108,16 @@
         "4 round-1 #2 open -> addressed by the above; all other round-1 findings confirmed closed."
       ]
     },
-    "round3": null
+    "round3": {
+      "verdict": "FAIL",
+      "findings_and_closure": [
+        "1 dims[0]%block not checked -> CLOSED: per-GGML dims[0] divisibility asserted.",
+        "1b coverage only max-endpoint -> CLOSED: exact packing asserted \u2014 tensors sorted by offset, each offset must equal the previous align-padded end, first at 0, padded end == region size (gaps/overlaps/truncated-padding all fail).",
+        "1c general.alignment never read -> CLOSED: scalar int KVs now decoded; alignment validated as a power of two.",
+        "2,3 evidence + double-append CONFIRMED \u2014 no action.",
+        "Note adopted from sol: artifact-substitution integrity is anchored by the full-file sha256 vs HF LFS oid; the header checker is defense-in-depth for structural sanity."
+      ]
+    },
+    "round4": null
   }
 }
