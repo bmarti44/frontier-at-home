@@ -1,0 +1,33 @@
+{
+  "gate": "G2",
+  "title": "Disk cleanup + GLM-5.2 GGUF acquisition with deterministic verification",
+  "timestamp": "2026-07-24T13:01:55-04:00",
+  "host": "spark-aba1",
+  "capture_method": "committed harness results/glm52-gates/harness/g2_download.sh run as dsv4 (single run after two aborted starts: run 1 aborted at hf_cli_present — no hf CLI for dsv4; run 2 = this run after the PEP-668 venv fix, harness committed before execution). Deletion + header check captured separately (deletion predates the harness run by necessity; header check is post-download).",
+  "plan_deviation": {
+    "planned": "delete falsified teamblobfish IQ2_XXS-XL GGUF (~74-80 GB)",
+    "actual": "teamblobfish no longer existed on disk (removed outside this session). Deleted instead: weights/xik94-reap162b (77,601,530,845 bytes) — REAP-162B experiment artifact, re-downloadable, its bug-B investigation complete; deletion EXPLICITLY user-approved in-session ('i approve you making the deletion') after the permission classifier blocked the first attempt. unsloth-ud-q2_k_xl prod llamacpp weights deliberately preserved for DSV4 restorability.",
+    "record": "results/glm52-gates/logs/g2/deletion.log (pre-deletion inventory, du bytes, original artifact sha12 c8eed26a4732 from hf metadata, re-download command, df before/after)"
+  },
+  "raw_logs": "results/glm52-gates/logs/g2/ (assertions.log, run.log, deletion.log, download_tail.log, header_check.json, hf_api_tree.json, pip.log)",
+  "artifact": {
+    "repo": "antirez/GLM-5.2-GGUF",
+    "file": "GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "dest": "/home/dsv4/ds4-project/gguf-glm/",
+    "bytes": 211075856448,
+    "sha256_12": "a49de64c5020 (full 64-char compare against the HF LFS oid done in-shell by the harness: full_match=yes; full hash not committed per gitleaks policy)"
+  },
+  "assertions_summary": [
+    {"name": "disk_precondition", "expected": ">= 252,000,000,000 bytes free", "actual": "281,248,591,872", "pass": true},
+    {"name": "hf_api_size", "expected": "211075856448", "actual": "211075856448 (live API cross-check, tree JSON committed)", "pass": true},
+    {"name": "hf_api_oid_prefix", "expected": "a49de64c5020", "actual": "a49de64c5020", "pass": true},
+    {"name": "hf_cli_present", "actual": "/home/dsv4/hf-venv/bin/hf (dedicated venv, PEP 668)", "pass": true},
+    {"name": "download_exit_0", "actual": "0 (12:24:35 -> 12:59:43, ~100 MB/s avg)", "pass": true},
+    {"name": "byte_size", "expected": "211075856448", "actual": "211075856448 (stat -c%s)", "pass": true},
+    {"name": "sha256_matches_lfs_oid", "actual": "full 64-char match (sha256 pass 12:59:43 -> 13:01:55)", "pass": true},
+    {"name": "free_after", "expected": ">= 40 GB", "actual": "70,072,672,256 bytes", "pass": true},
+    {"name": "header_parse", "expected": "GGUF magic, arch == glm-dsa, tensor count recorded", "actual": "magic_ok, version 3, arch glm-dsa, 1809 tensors, blocks 0..78 incl. blk.78 nextn (MTP) tensors — header_check.json via committed harness/g2_header_check.py", "pass": true}
+  ],
+  "result": "PASS (pending sol review)",
+  "sol_review": null
+}
