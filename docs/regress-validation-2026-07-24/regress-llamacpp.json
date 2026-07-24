@@ -1,0 +1,21 @@
+{
+ "when": "2026-07-24T13:28:15Z",
+ "base": "http://127.0.0.1:8011",
+ "results": [
+  {
+   "test": "prefix-cache",
+   "pass": true,
+   "detail": "repeat cache_n=18734/18738 (>=99%: True); shared-prefix cache_n=16690 (checkpoint-bounded floor 9522: True)"
+  },
+  {
+   "test": "slot-thrash",
+   "pass": true,
+   "detail": "turn-2 after utility call: prompt_n=17 cache_n=18734 (< 1500 required; single-slot server re-prefills ~20000)"
+  },
+  {
+   "test": "slot-restore(expected-fail guard)",
+   "pass": true,
+   "detail": "restore-then-repeat cache_n=0; guard asserts bug STILL PRESENT \u2014 if this FAILS the fork fix landed: flip the assertion to require reuse"
+  }
+ ]
+}
