@@ -66,19 +66,46 @@ try:
             kvs[key] = v
     if dups: errors.append(f"duplicate KV keys: {dups[:5]}")
 
-    names, offs = [], []
+    # ggml type id -> (block_bytes, block_elems); strict: unknown type = error
+    GGML = {0:(4,1),1:(2,1),2:(18,32),3:(20,32),6:(22,32),7:(24,32),8:(34,32),
+            9:(36,32),10:(84,256),11:(110,256),12:(144,256),13:(176,256),
+            14:(210,256),15:(292,256),16:(66,256),17:(74,256),18:(98,256),
+            19:(50,256),20:(18,32),21:(110,256),22:(82,256),23:(136,256),
+            24:(1,1),25:(2,1),26:(4,1),27:(8,1),28:(8,1),29:(56,256),30:(2,1)}
+    names, tensors = [], []
     for _ in range(n_tensors):
         name = s()
         n_dims = u32()
         if n_dims > 8: raise ValueError(f"implausible n_dims {n_dims} for {name}")
-        f.seek(8 * n_dims, 1)
-        f.seek(4, 1)          # dtype
-        offs.append(u64())    # offset within tensor-data region
+        dims = [u64() for _ in range(n_dims)]
+        dtype = u32()
+        off = u64()
         names.append(name)
+        tensors.append((name, dims, dtype, off))
     header_end = f.tell()
     if header_end >= fsize: errors.append("header extends past EOF")
-    bad_offs = [o for o in offs if o < 0 or header_end + o > fsize]
-    if bad_offs: errors.append(f"{len(bad_offs)} tensor offsets outside file bounds")
+
+    align = int(kvs.get("general.alignment", 32) or 32)
+    data_start = (header_end + align - 1) // align * align
+    region = fsize - data_start
+    max_end, unknown = 0, set()
+    for name, dims, dtype, off in tensors:
+        if dtype not in GGML:
+            unknown.add(dtype); continue
+        bb, be = GGML[dtype]
+        elems = 1
+        for d in dims: elems *= d
+        if elems % be != 0:
+            errors.append(f"{name}: {elems} elems not multiple of block {be} (type {dtype})"); continue
+        nbytes = elems // be * bb
+        if off % align != 0:
+            errors.append(f"{name}: offset {off} not {align}-aligned")
+        if off < 0 or off + nbytes > region:
+            errors.append(f"{name}: extent [{off},{off+nbytes}) outside data region {region}")
+        max_end = max(max_end, off + nbytes)
+    if unknown: errors.append(f"unknown ggml types {sorted(unknown)}")
+    if not errors and (region - max_end) > 1 << 20:
+        errors.append(f"tensor data covers only {max_end} of {region} region bytes")
 except (EOFError, ValueError, struct.error) as e:
     errors.append(f"header walk failed: {e}")
     names, kvs, version, n_tensors, n_kv = [], {}, None, None, None
@@ -105,6 +132,7 @@ if do_assert:
     if out["architecture"] != arch: errors.append(f"arch {out['architecture']} != {arch}")
     if out["n_tensors"] != nt: errors.append(f"n_tensors {out['n_tensors']} != {nt}")
     if out["block_range"] != [lo, hi]: errors.append(f"block_range {out['block_range']} != [{lo},{hi}]")
+    if blk != list(range(lo, hi + 1)): errors.append("block ids not contiguous over expected range")
     out["assert_mode"] = {"expected": {"arch": arch, "n_tensors": nt, "blocks": [lo, hi]}, "errors": errors}
 
 print(json.dumps(out, indent=2))
