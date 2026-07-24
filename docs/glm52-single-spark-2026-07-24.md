@@ -251,6 +251,9 @@ a gate is a script or a checklist with evidence, whichever is smaller.
   GGUF downloaded; exact byte size matches HF API; sha256 recorded;
   gguf-tensors.py parses header, arch == glm-dsa, tensor count recorded;
   free NVMe ≥ 40 GB after. All binary.
+  (Executed 2026-07-24: teamblobfish was already gone; the user-approved
+  substitute deletion was weights/xik94-reap162b — see
+  results/glm52-gates/G2-artifact.json plan_deviation.)
 - **G3 (GLM POC on one Spark):** server loads GLM via streaming; fixed
   temp-0 fixture set: one short prompt AND one > 2048 tokens (forces real
   DSA top-k, per sol); assertions: 200s, byte-stable outputs across two

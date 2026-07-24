@@ -1,0 +1,33 @@
+{
+  "file_bytes": 5256864,
+  "magic_ok": true,
+  "version": 3,
+  "n_tensors": 0,
+  "n_kv": 72,
+  "architecture": "deepseek4",
+  "name": "Deepseek-V4-Flash",
+  "block_range": null,
+  "n_blocks": 0,
+  "mtp_nextn_tensor_count": 0,
+  "mtp_nextn_sample": [],
+  "errors": [
+    "arch deepseek4 != glm-dsa",
+    "n_tensors 0 != 1809",
+    "block_range None != [0,78]"
+  ],
+  "assert_mode": {
+    "expected": {
+      "arch": "glm-dsa",
+      "n_tensors": 1809,
+      "blocks": [
+        0,
+        78
+      ]
+    },
+    "errors": [
+      "arch deepseek4 != glm-dsa",
+      "n_tensors 0 != 1809",
+      "block_range None != [0,78]"
+    ]
+  }
+}
