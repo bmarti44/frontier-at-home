@@ -30,13 +30,16 @@ EXPECTED_SHA256=$(python3 -c 'import json;print([f["lfs"]["oid"] for f in json.l
 assert hf_api_size "$EXPECTED_BYTES" "$API_BYTES" $([[ "$API_BYTES" == "$EXPECTED_BYTES" ]] && echo 0 || echo 1)
 assert hf_api_oid_prefix "$EXPECTED_SHA256_PREFIX" "${EXPECTED_SHA256:0:12}" $([[ "${EXPECTED_SHA256:0:12}" == "$EXPECTED_SHA256_PREFIX" ]] && echo 0 || echo 1)
 
-export PATH="$HOME/.local/bin:$PATH"
-if ! command -v hf >/dev/null 2>&1; then
-  note "installing huggingface_hub + hf_xet (user)"
-  python3 -m pip install --user -q -U huggingface_hub hf_xet >> "$OUT/pip.log" 2>&1
+# PEP 668: system python is externally managed — use a dedicated venv.
+VENV="$HOME/hf-venv"
+if [[ ! -x "$VENV/bin/hf" ]]; then
+  note "creating venv + installing huggingface_hub + hf_xet"
+  python3 -m venv "$VENV" >> "$OUT/pip.log" 2>&1
+  "$VENV/bin/pip" install -q -U huggingface_hub hf_xet >> "$OUT/pip.log" 2>&1
 fi
+export PATH="$VENV/bin:$PATH"
 command -v hf >/dev/null 2>&1 || { assert hf_cli_present "hf on PATH" "missing" 1; echo "G2_ABORT no hf cli"; exit 1; }
-assert hf_cli_present "hf on PATH" "$(command -v hf)" 0
+assert hf_cli_present "hf on PATH (venv)" "$(command -v hf)" 0
 
 note "download begin ($FILE, $EXPECTED_BYTES bytes)"
 hf download "$REPO_ID" "$FILE" --repo-type model --local-dir "$DEST" >> "$OUT/download.log" 2>&1
