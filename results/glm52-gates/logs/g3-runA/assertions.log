@@ -1,0 +1,22 @@
+ASSERT name=port_free expected=[no listener on 8023] actual=[no listener] result=PASS
+ASSERT name=memwatch_armed expected=[ready-file ARMED 125456] actual=[ARMED 125456 125428 70910649 engine] result=PASS
+ASSERT name=server_ready expected=[GET /v1/models -> 200 within 1800s] actual=[code=200 after 0s] result=PASS
+ASSERT name=o_direct_fd expected=[gguf fd with O_DIRECT bit (octal 0200000)] actual=[1 of 2 gguf fds] result=PASS
+ASSERT name=http_200_S1 expected=[200] actual=[500] result=FAIL
+ASSERT name=http_200_S2 expected=[200] actual=[500] result=FAIL
+ASSERT name=http_200_L1 expected=[200] actual=[500] result=FAIL
+ASSERT name=http_200_L2 expected=[200] actual=[500] result=FAIL
+ASSERT name=short_byte_identical expected=[identical] actual=[cmp=0 sha12=204cca1a45a0/204cca1a45a0] result=PASS
+ASSERT name=long_byte_identical expected=[identical] actual=[cmp=0 sha12=204cca1a45a0/204cca1a45a0] result=PASS
+ASSERT name=long_first_char_gt expected=[">" (upstream glm_long_context_smoke criterion)] actual=[[<]] result=FAIL
+ASSERT name=zero_cuda_stubs expected=[0 in unfiltered server.log] actual=[0] result=PASS
+ASSERT name=streaming_engaged expected=[streaming startup lines present] actual=[3 lines] result=PASS
+ASSERT name=memwatch_no_breach expected=[0 breach lines] actual=[breach=0 min_gib=na] result=PASS
+read_bytes_delta short1: 1550692352
+read_bytes_delta short2: 77955072
+read_bytes_delta long1: 368640
+read_bytes_delta long2: 0
+ASSERT name=clean_shutdown expected=[TERM exits <=120s] actual=[exited] result=PASS
+ASSERT name=quality_exit expected=[0/0] actual=[1/1] result=FAIL
+ASSERT name=quality_deterministic expected=[quality1.tsv == quality2.tsv] actual=[cmp=0] result=PASS
+ASSERT name=quality_finite expected=[0 nan/inf rows] actual=[0] result=PASS

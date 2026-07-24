@@ -1,0 +1,22 @@
+ds4: Linux cuda backend set oom_score_adj=1000
+ds4: CUDA backend initialized on NVIDIA GB10 (sm_121) dev=0
+ds4: cuda SSD streaming total expert budget 40.00 GiB = 5.91 GiB prefill headroom + 34.09 GiB dynamic cache (3761 experts, 9.28 MiB each)
+ds4: SSD streaming mixed-precision model: 1/76 routed layers off the slab size class will bypass the expert cache and read experts via mapped model views
+ds4: SSD streaming initial cuda model map restricted to token embedding (1 spans, 0.94 GiB tensor span)
+ds4: CUDA host registration skipped: operation not supported
+ds4: CUDA preparing model tensor mappings
+ds4: CUDA loading model tensors into device cache
+ds4: CUDA startup model preparation covered 0.94 GiB of tensor spans in 0.277s
+ds4: cuda backend initialized for graph diagnostics
+ds4: memory: KV 1.45 GiB (raw 0.00 + compressed 1.45) + buffers 4.07 GiB + resident model 0.94 GiB + expert cache 34.09 GiB + prefill expert reserve 5.91 GiB = 46.46 GiB planned
+ds4: memory detail: ctx=8192 prefill_cap=4096 raw_kv_rows=0 compressed_kv_rows=8192 backend=cuda
+0724 13:45:46 ds4-server: context buffers 5653.35 MiB (ctx=8192, backend=cuda, prefill_chunk=4096, raw_kv_rows=0, compressed_kv_rows=8192)
+ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
+ds4: GLM graph allocating compact DSA cache: rows=8192 logical_ctx=8192 kv_layers=78 indexer_layers=21 f32 1.45 GiB
+ds4: GLM compact indexed prefill chunk=4096 score_rows=4096 score_scratch=128.00 MiB
+0724 13:45:47 ds4-server: listening on http://127.0.0.1:8023
+0724 13:45:48 ds4-server: completion ctx=0..31:31 prompt start
+0724 13:45:48 ds4-server: completion ctx=0..31:31 prompt start
+0724 13:45:48 ds4-server: completion ctx=0..5047:5047 prompt start
+0724 13:45:49 ds4-server: completion ctx=0..5047:5047 prompt start
+0724 13:45:54 ds4-server: shutdown requested, draining requests
