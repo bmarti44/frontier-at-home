@@ -218,6 +218,74 @@ cross-merging the two heavily-diverged forks is explicitly rejected).
   lands on the qualified DSV4 systemd unit (unchanged), so GLM can never
   become the accidental default.
 
+## Part 4 — Deterministic verification and gates (added 2026-07-24, user
+## requirement before implementation starts)
+
+Rules: every phase ends at a GATE with binary pass/fail assertions —
+temperature 0, fixed committed fixtures, token/byte/count thresholds, never
+wall-clock feelings. Each gate writes a JSON evidence file to
+results/glm52-gates/ (gate name, timestamp, assertions with expected/actual,
+raw log paths). A gate PASSES only after (a) all assertions green AND
+(b) an adversarial review of the evidence by codex sol at
+`model_reasoning_effort=xhigh` finds no fatal objection. When stuck at any
+point, escalate to sol xhigh before improvising. Anti-over-engineering rule:
+gates reuse existing repo tooling (regression-suite.py patterns,
+gguf-tensors.py, 42_verify_exposure.sh, memwatch) — no new frameworks;
+a gate is a script or a checklist with evidence, whichever is smaller.
+
+- **G0 (build integrity — already satisfiable):** upstream pin commit +
+  binary sha256 (12-char) recorded; `--help` advertises `--ssd-streaming`
+  on Metal/CUDA/ROCm; `make` exit 0 warning-free tail. Evidence: build log
+  tail + hashes.
+- **G1 (CUDA streaming machinery, DSV4 weights):** with prod stopped
+  (bounded window, rollback = existing tested procedure): server starts in
+  `--ssd-streaming` with explicit cache arg; log proves streaming mode
+  engaged and staged O_DIRECT reads active (assert on the engine's own
+  startup lines; cross-check /proc/<pid>/io read_bytes grows during a
+  completion while page cache is cold); one fixed temp-0 prompt returns
+  200 with byte-identical output across two consecutive runs; ZERO
+  "CUDA stub called" lines in stderr; MemAvailable never crosses the
+  armed memwatch line; prod restored and verified (tailnet 401 + warm
+  probe < 2 s TTFT). All binary.
+- **G2 (artifact):** teamblobfish deletion logged with freed bytes; GLM
+  GGUF downloaded; exact byte size matches HF API; sha256 recorded;
+  gguf-tensors.py parses header, arch == glm-dsa, tensor count recorded;
+  free NVMe ≥ 40 GB after. All binary.
+- **G3 (GLM POC on one Spark):** server loads GLM via streaming; fixed
+  temp-0 fixture set: one short prompt AND one > 2048 tokens (forces real
+  DSA top-k, per sol); assertions: 200s, byte-stable outputs across two
+  runs, zero stub lines, no watchdog breach, coherence spot-check against
+  upstream's GLM quality fixtures (subset, deterministic). Measured tok/s
+  and read-amplification are RECORDED as ground truth, not gated — the
+  corrected expectation is 0.4-1.7 tok/s and the POC passes on
+  correctness, not speed.
+- **G4a (persistent CUDA expert cache — the feature):** correctness gate:
+  outputs byte-identical cache-on vs cache-off on the full fixture set at
+  temp 0; effectiveness gate: on an identical repeated request,
+  /proc/<pid>/io read_bytes for run 2 < 25% of run 1 (deterministic proxy
+  for hit rate; threshold revisitable with sol at gate review);
+  memory gate: cache stays within its configured budget (engine census /
+  MemAvailable delta ≤ budget + 1 GiB); upstream GLM quality fixtures pass
+  identically to cache-off. DSV4 prod untouched by construction (different
+  tree); still re-run our regression-suite.py against prod afterward as a
+  no-interference check.
+- **G4b (f16 compact cache):** precondition gate: instrumented sweep of the
+  full fixture set shows zero routes into stubbed *_typed/group8 variants
+  with f16 enabled; quality gate: GLM fixtures pass; size gate: engine's
+  reported cache bytes halve (±5%); stability gate: temp-0 outputs
+  byte-stable across runs (f16-vs-f32 outputs may legitimately differ —
+  compare each against fixture expectations, not each other).
+- **G5 (profile switch):** scripted round-trip dsv4 → glm52 → dsv4;
+  after each leg: correct engine identity string, tailnet 401, local
+  health 200, one timed temp-0 completion 200, memwatch armed on the
+  verified engine pid (child-of-sudo-wrapper procedure), other profile's
+  state-dir checksums unchanged; static assert that the systemd unit still
+  starts the qualified DSV4 stack. All binary, all in one evidence file.
+
+Each of G1-G5 closes with: `codex exec -c model_reasoning_effort=xhigh`
+adversarial review of the gate's evidence JSON + logs; findings addressed
+or explicitly waived with reasoning recorded in the evidence file.
+
 ## Sources (primary ones)
 
 - https://github.com/antirez/ds4 (master @ 0a7ad77; bbd069d CUDA/ROCm streaming; 005afed GLM inference, Jul 18)
