@@ -1,13 +1,14 @@
 ASSERT name=port_free expected=[no listener on 8022] actual=[no listener] result=PASS
-ASSERT name=memwatch_armed expected=[ready-file ARMED 96439] actual=[ARMED 96439 96422 70210224 engine] result=PASS
-ASSERT name=server_ready expected=[GET /v1/models -> 200 within 1200s] actual=[code=200 after 5s] result=PASS
+ASSERT name=memwatch_armed expected=[ready-file ARMED 99060] actual=[ARMED 99060 99035 70261126 engine] result=PASS
+ASSERT name=server_ready expected=[GET /v1/models -> 200 within 1200s] actual=[code=200 after 0s (wall-clock)] result=PASS
+ASSERT name=o_direct_fd expected=[at least one open fd on the GGUF has O_DIRECT (flags octal bit 0200000, aarch64)] actual=[1 of 3 gguf fds; see fdinfo.txt] result=PASS
 ASSERT name=http_200_run1 expected=[200] actual=[200] result=PASS
 ASSERT name=http_200_run2 expected=[200] actual=[200] result=PASS
-ASSERT name=byte_identical expected=[run1.text == run2.text] actual=[cmp exit 0 (text: We need to list the first eight prime numbers. Prime numbers are natural numbers greater than 1 that have no positive di)] result=PASS
-ASSERT name=read_bytes_growth_run1 expected=[>= 2147483648 (2 GiB streamed during completion)] actual=[84594065408] result=PASS
-read_bytes run2 delta: 83898605568 (recorded, not gated)
-ASSERT name=zero_cuda_stubs expected=[0] actual=[0] result=PASS
-ASSERT name=streaming_engaged expected=[server.log has streaming-mode lines] actual=[2 matching lines (see streaming_lines.log)] result=PASS
-ASSERT name=memwatch_no_breach expected=[0 breach lines; min MemAvailable > 10 GiB] actual=[breach_lines=0 min_gib=86.72] result=PASS
+ASSERT name=byte_identical expected=[run1.text == run2.text] actual=[cmp exit 0; sha12 run1=8c21819f5c98 run2=8c21819f5c98] result=PASS
+ASSERT name=read_bytes_growth_run1 expected=[>= 2147483648 (2 GiB read from storage during request 1)] actual=[84594065408] result=PASS
+read_bytes request 2 delta: 83898642432 (recorded, not gated)
+ASSERT name=zero_cuda_stubs expected=[0 in UNFILTERED server.log] actual=[0] result=PASS
+ASSERT name=streaming_engaged expected=[server.log has streaming-mode startup lines] actual=[2 matching lines (see streaming_lines.log)] result=PASS
+ASSERT name=memwatch_no_breach expected=[0 breach lines; min sampled MemAvailable > 10 GiB] actual=[breach_lines=0 min_gib=86.72] result=PASS
 ASSERT name=clean_shutdown expected=[TERM exits <=60s] actual=[exited] result=PASS
 ASSERT name=port_released expected=[no listener after shutdown] actual=[released] result=PASS

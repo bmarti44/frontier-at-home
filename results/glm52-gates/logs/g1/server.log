@@ -5,10 +5,19 @@ ds4: SSD streaming initial cuda model map restricted to token embedding (1 spans
 ds4: CUDA host registration skipped: operation not supported
 ds4: CUDA preparing model tensor mappings
 ds4: CUDA loading model tensors into device cache
-ds4: CUDA startup model preparation covered 0.99 GiB of tensor spans in 0.287s
+ds4: CUDA startup model preparation covered 0.99 GiB of tensor spans in 0.273s
 ds4: cuda backend initialized for graph diagnostics
 ds4: memory: KV 0.46 GiB (raw 0.36 + compressed 0.11) + buffers 0.06 GiB + resident model 0.99 GiB + expert cache 12.62 GiB + prefill expert reserve 3.38 GiB = 17.51 GiB planned
 ds4: memory detail: ctx=8192 prefill_cap=4096 raw_kv_rows=4352 compressed_kv_rows=2050 backend=cuda
-0724 11:49:02 ds4-server: context buffers 539.25 MiB (ctx=8192, backend=cuda, prefill_chunk=4096, raw_kv_rows=4352, compressed_kv_rows=2050)
-0724 11:49:02 ds4-server: listening on http://127.0.0.1:8022
-0724 11:49:56 ds4-server: shutdown requested, draining requests
+0724 11:57:31 ds4-server: context buffers 539.25 MiB (ctx=8192, backend=cuda, prefill_chunk=4096, raw_kv_rows=4352, compressed_kv_rows=2050)
+0724 11:57:31 ds4-server: listening on http://127.0.0.1:8022
+0724 11:57:33 ds4-server: completion ctx=0..24:24 prompt start
+0724 11:57:40 ds4-server: completion ctx=0..24:24 prompt done 7.421s
+0724 11:57:57 ds4-server: completion ctx=24..56:32 gen=32 THINKING decoding chunk=1.86 t/s avg=1.86 t/s 17.219s
+0724 11:57:57 ds4-server: completion ctx=0..24:24 gen=32 THINKING finish=length 24.641s
+0724 11:57:57 ds4-server: live kv cache miss live=56 prompt=24 common=24 reason=token-mismatch
+0724 11:57:57 ds4-server: completion ctx=0..24:24 prompt start
+0724 11:58:03 ds4-server: completion ctx=0..24:24 prompt done 5.682s
+0724 11:58:20 ds4-server: completion ctx=24..56:32 gen=32 THINKING decoding chunk=1.81 t/s avg=1.81 t/s 17.642s
+0724 11:58:20 ds4-server: completion ctx=0..24:24 gen=32 THINKING finish=length 23.324s
+0724 11:58:25 ds4-server: shutdown requested, draining requests
