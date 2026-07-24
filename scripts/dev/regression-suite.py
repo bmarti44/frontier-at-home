@@ -134,10 +134,16 @@ def t_ds4_mem_init(base):
         chat(base, prose, 128)
     after_five = mem_available_gib()
     drift = after_first - after_five
-    ok1 = 9.0 <= init_cost <= 15.0
+    # Band is config-dependent: ~11-12 G at default knobs; ~8-9 G with
+    # DS4_SERVER_COALESCE_MAX_TOKENS=2048 + DS4_CUDA_NO_ATTENTION_OUTPUT_F16_CACHE=1
+    # (sol memory analysis, 2026-07-24). Override via env for other configs.
+    import os
+    lo = float(os.environ.get("DS4_INIT_BAND_LO", "7.0"))
+    hi = float(os.environ.get("DS4_INIT_BAND_HI", "15.0"))
+    ok1 = lo <= init_cost <= hi
     ok2 = drift < 1.0
     return record("ds4-mem-init", ok1 and ok2,
-                  f"first-request init={init_cost:.1f}G (band 9-15: {ok1}); "
+                  f"first-request init={init_cost:.1f}G (band {lo}-{hi}: {ok1}); "
                   f"drift over 5 identical={drift:.2f}G (<1.0: {ok2}); NOTE: run on a freshly started server")
 
 def t_slot_restore(base):

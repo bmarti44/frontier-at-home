@@ -31,3 +31,19 @@ record (results/DECISION.md) and the 2026-07-17 product override
   experiment ends and llama.cpp resumes 8011.
 - Owner: Brian. Review trigger: any memwatch BREACH, accuracy complaint,
   or 7 days elapsed.
+
+## Update (same day, post sol memory analysis)
+
+Serving env now adds `DS4_SERVER_COALESCE_MAX_TOKENS=2048` and
+`DS4_CUDA_NO_ATTENTION_OUTPUT_F16_CACHE=1` (sol-identified reductions, no
+code changes): first-generation init pool 11.9 -> 8.5 GiB, steady free
+13.7 GiB (above the 12 GiB reference line, desktop apps running),
+speculation intact (JSON 38.6 tok/s @ 95.7% acceptance), and the disk-KV
+tier demonstrated cross-restart warm restore (19K prompt served at 0.4 s
+TTFT by a freshly started process). Dev watchdog re-armed on the new pid.
+Prefill cost of the coalesce cap on genuinely novel long prompts is not
+yet quantified (the 19K probe was served from disk cache) — measure before
+promoting these knobs into any qualified config. Full analysis:
+docs/ds4-v042-memory-analysis-sol-2026-07-24.md (tail of the sol run;
+ranked patch set including the conditional 5.5-6.3 GiB serial-fallback
+guard and a ~3 GiB soft idle-release hook design for upstream).
