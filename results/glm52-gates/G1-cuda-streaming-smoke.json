@@ -63,7 +63,7 @@
     },
     {
       "name": "memwatch_no_breach",
-      "actual": "0 breach lines; min sampled MemAvailable 86.72 GiB vs 10 GiB line; ARMED->DISARMED bracket authenticated",
+      "actual": "0 breach lines; min sampled MemAvailable 86.71 GiB vs 10 GiB line; ARMED->DISARMED bracket authenticated",
       "pass": true
     },
     {
@@ -91,7 +91,7 @@
     }
   ],
   "scope_note": "G1 proves the streaming MACHINERY on the DeepSeek path only. It proves nothing about GLM-5.2 (G3), nothing about useful throughput (~1.3 tok/s effective here), and nothing about cache effectiveness (explicitly absent, see observations).",
-  "result": "PASS (pending sol round-3)",
+  "result": "PASS",
   "sol_review": {
     "round1": {
       "verdict": "FAIL",
@@ -111,6 +111,9 @@
         "minor fd miscount '1 of 3' -> CLOSED: grep pattern fixed in be5a6a2; run D reports 1 of 2."
       ]
     },
-    "round3": null
+    "round3": {
+      "verdict": "PASS",
+      "notes": "Provenance, coherence, determinism all verified. Minor non-gating: JSON said 86.72 GiB vs run D's 86.71 \u2014 corrected."
+    }
   }
 }

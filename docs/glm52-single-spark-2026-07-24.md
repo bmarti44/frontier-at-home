@@ -296,6 +296,30 @@ Each of G1-G5 closes with: `codex exec -c model_reasoning_effort=xhigh`
 adversarial review of the gate's evidence JSON + logs; findings addressed
 or explicitly waived with reasoning recorded in the evidence file.
 
+### Acceptance bar for the production switch (user, 2026-07-24)
+
+"If glm 5.2 works" = **similar-or-better performance metrics than DeepSeek
+AND comparable context window**, measured, not felt. DSV4 reference numbers
+(same machine, this week's logs): llama.cpp fusion — 467 tok/s prefill on an
+8,140-token prompt, ~18.4 tok/s decode, 32K ctx served; ds4 v0.4.2 — 24.6K
+ctx continuous batching, DSpark MTP 2.7-3.0 tok/step at 69-74% accept.
+
+Honest projection against that bar (from the committed analysis + G1
+measurements): faithful GLM-5.2 streaming decode is I/O-capped at ~1.68
+tok/s uncached on this NVMe; a perfect in-budget persistent cache (40-61
+GiB vs ~180 GiB of routed experts) still leaves most expert reads as
+misses, so low-single-digit tok/s is the realistic ceiling; best published
+faithful single-Spark result is 2.39 tok/s; streamed prefill is orders of
+magnitude below 467 tok/s (published: ~6.5 tok/s batch prefill; 512-token
+prefill in 202 s). G1 confirmed the physics: 84.6 GB read for a 56-token
+request, ~3.5 GB/s effective. **Unless G3/G4a measurements surprise far
+beyond every published result, GLM-5.2 will NOT meet this bar on one
+Spark.** The gates still produce the ground-truth numbers; the switch
+decision at G5 is conditional on the bar, so the expected outcome is:
+GLM qualified as a working secondary profile, DSV4 remains the serving
+default. Recorded here so the decision criterion is fixed before the
+measurements exist.
+
 ## Sources (primary ones)
 
 - https://github.com/antirez/ds4 (master @ 0a7ad77; bbd069d CUDA/ROCm streaming; 005afed GLM inference, Jul 18)
