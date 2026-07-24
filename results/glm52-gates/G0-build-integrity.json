@@ -1,0 +1,87 @@
+{
+  "gate": "G0",
+  "title": "Upstream ds4 pin + clean CUDA build + streaming advertised",
+  "timestamp": "2026-07-24T11:34:04-04:00",
+  "host": "spark-aba1",
+  "capture_method": "single scripted run as dsv4 (g0_capture.sh piped via 'sudo -u dsv4 bash -s'); raw logs copied verbatim into results/glm52-gates/logs/g0/",
+  "raw_logs": {
+    "provenance": "results/glm52-gates/logs/g0/provenance.log",
+    "build": "results/glm52-gates/logs/g0/build.log",
+    "binaries": "results/glm52-gates/logs/g0/binaries.log",
+    "help": "results/glm52-gates/logs/g0/help.log",
+    "assertion_summary": "results/glm52-gates/logs/g0/assertions.log"
+  },
+  "assertions": [
+    {
+      "name": "upstream_pin",
+      "expected": "git rev-parse HEAD == 0a7ad776b906... in /home/dsv4/ds4-project/src/ds4-upstream-master",
+      "actual": "0a7ad776b9068348e6cb09df8cafa9cadd285298 ('Fix batched server session recovery race', 2026-07-23T09:07:10+00:00) — provenance.log lines 5-10",
+      "pass": true
+    },
+    {
+      "name": "tree_clean",
+      "expected": "git status --porcelain empty",
+      "actual": "empty (provenance.log: no lines between the status header and the next section header)",
+      "pass": true
+    },
+    {
+      "name": "full_clean_rebuild_exit_0",
+      "expected": "make clean removes *.o, then make cuda CUDA_ARCH=sm_121 exits 0",
+      "actual": "make_clean_exit: 0 (rm list includes *.o); 16 cc -c compiles + 1 nvcc -c (ds4_cuda.cu) + 5 nvcc links, make_cuda_exit: 0 — build.log complete, no elision",
+      "pass": true
+    },
+    {
+      "name": "warning_free",
+      "expected": "0 lines matching /warning/i and /error/i in full build log (cc runs with -Wall -Wextra)",
+      "actual": "warnings_in_build_log: 0, errors_in_build_log: 0 (assertions.log; grep -ci over the full build.log)",
+      "pass": true
+    },
+    {
+      "name": "binaries_linked_and_hashed",
+      "expected": "ds4-server, ds4-bench, ds4-eval, ds4-agent exist post-rebuild with recorded sha256 prefixes",
+      "actual": "binaries.log 2026-07-24T11:34:04-04:00: ds4-server dd10f3c9b99f, ds4-bench c7b39c7305e3, ds4-eval 8438ce0a758a, ds4-agent f23c7d130fcd; ls shows all four mtime 11:34, sha_exit: 0",
+      "pass": true
+    },
+    {
+      "name": "help_advertises_ssd_streaming",
+      "expected": "ds4-server --help exits 0 and contains '--ssd-streaming' with Metal/CUDA/ROCm wording",
+      "actual": "help.log line 19: '--ssd-streaming                Metal/CUDA/ROCm: opt in to SSD-backed model streaming instead of full residency.'; help_exit: 0; invoked path recorded in log line 2",
+      "pass": true
+    }
+  ],
+  "policy_notes": [
+    "sha256 values recorded as 12-char prefixes: repo gitleaks config rejects full 64-char hex strings. Full hashes are reproducible on-host via sha256sum against the recorded binary paths.",
+    "The 40-char git commit SHA is recorded in full in provenance.log (git SHAs are not blocked by gitleaks).",
+    "Rebuild wall time was ~25 s (11:33:39 -> 11:34:04). Verified NOT a cache artifact: cc is plain gcc 13.3.0 (no ccache on PATH or /usr/lib/ccache), and build.log lists every compile command post-clean. The GB10's 20-core Grace CPU is simply fast at -j4 on these translation units."
+  ],
+  "known_limitations_carried_forward": [
+    "Compilation does not exercise the 12 GLM 'CUDA stub called' routes; stub-free execution is asserted at G1 (DeepSeek path) and G3 (GLM path), not here.",
+    "CUDA persistent expert cache APIs are no-ops at this pin; G0 asserts build integrity only."
+  ],
+  "sol_review": {
+    "round1": {
+      "verdict": "FAIL",
+      "findings_and_closure": [
+        "1 VERIFIED (commit prefix, sha prefixes, help text recorded) — no action.",
+        "2 GAP no raw git provenance -> CLOSED: provenance.log has raw remote -v, rev-parse, status --porcelain, log -1 output.",
+        "3 REFUTED build tail elided, no exit status -> CLOSED: build.log is the complete unelided make clean + make cuda output with make_clean_exit/make_cuda_exit lines.",
+        "4 GAP links and hashes not tied to fresh binaries -> CLOSED: full rebuild from make clean; binaries.log records post-build sha prefixes + mtimes in the same scripted run.",
+        "5 GAP help provenance unproven -> CLOSED: help.log records invoked path, full output, help_exit: 0.",
+        "6 REFUTED missing timestamp/schema/log paths -> CLOSED: per-step ISO timestamps in logs, this file uses expected/actual assertions and raw_logs paths.",
+        "7 GAP scope creep with unproven promoted criteria -> CLOSED: extra context moved to policy_notes/limitations; every assertion above is log-backed.",
+        "8 REFUTED PASS premature -> CLOSED: result stays PENDING until a sol round passes."
+      ]
+    },
+    "round2": {
+      "verdict": "FAIL",
+      "findings_and_closure": [
+        "1,3,4 VERIFIED (consistency, hashes, help) — no action.",
+        "2 REFUTED compile count '19 cc' wrong -> CLOSED: corrected to 16 cc -c + 1 nvcc -c + 5 links.",
+        "5 REFUTED logs gitignored, evidence untracked -> CLOSED: .gitignore negation added for results/glm52-gates/**; logs + JSON committed (see repo history).",
+        "6 GAP round-1 findings not enumerated -> CLOSED: enumerated here with per-item closure."
+      ]
+    },
+    "round3": null
+  },
+  "result": "PENDING sol round-3"
+}
