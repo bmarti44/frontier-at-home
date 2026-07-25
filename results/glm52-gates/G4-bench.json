@@ -1,0 +1,27 @@
+{
+  "artifact": "GLM-5.2 vs DSV4 benchmark snapshot (feeds G5 switch decision)",
+  "timestamp": "2026-07-25T12:35:00-04:00",
+  "engine": "ds4 pin+PR513+iq2down v4.3 (3ad4cc047417), expert cache 72GB, deterministic dispatch, disk-KV align 64",
+  "glm_perf": {
+    "ttft_cold_5047tok_s": 263.1,
+    "ttft_warm_restore_s": 33.5,
+    "note_ttft": "warm = 745 MiB KV checkpoint restore (~90 ms) + 55-token suffix prefill (token-major path dominates; lever identified)",
+    "decode128_first_s": 595.1,
+    "decode128_repeat_s": 131.4,
+    "decode_warm_tok_s": "~1.2-1.3 (128 tokens net of restored prefill)",
+    "prefill_batch_tok_s": "~19 cold / ~26 warm (5,047-token fixture)"
+  },
+  "dsv4_baseline_recorded": {
+    "prefill_tok_s": 467, "decode_tok_s": 18.4, "warm_ttft_s": "<2", "ctx": 32768,
+    "source": "prod llamacpp logs 2026-07-24 (task 787: 17.4 s prompt eval on 8,140 tokens)"
+  },
+  "glm_fidelity_vs_hosted_api": {
+    "suite": "gguf-tools/quality-testing glm52-openrouter-100 (official continuations, top_logprobs=20)",
+    "n": 100, "avg_nll_mean": 0.4515, "avg_nll_median": 0.4329, "avg_nll_p90": 0.8348, "avg_nll_max": 1.3097,
+    "api_top1_agreement": 0.834, "api_pair_rate": 0.753, "api_target_logprob_mae_nats": 0.386,
+    "reading": "IQ2_XXS quant + this engine tracks the hosted FP8 reference closely; deterministic and reproducible (temp-0 teacher forcing)."
+  },
+  "dsv4_fidelity_note": "DSV4 prod fidelity is anchored by its committed accuracy suites (results/acc-*.json: GSM8K/MMLU/HumanEval dev+holdout). Methodologies differ (task accuracy vs NLL-to-reference); both are deterministic and committed.",
+  "bar_assessment": "DSV4 bar (467/18.4/<2s) NOT met by GLM streaming: prefill ~26 vs 467, warm decode ~1.3 vs 18.4, warm TTFT 33.5 s vs <2 s. Remaining ranked levers (arena-pointer kernels, batch small-suffix prefill, MTP drafting) project to ~6-12 tok/s decode and few-second warm TTFT; 18.4 faithful remains out of reach on this hardware per research + measurements.",
+  "raw": "results/glm52-gates/logs/bench/"
+}
