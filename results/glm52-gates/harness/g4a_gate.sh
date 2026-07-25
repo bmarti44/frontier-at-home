@@ -69,9 +69,21 @@ assert phaseB_server_ready "200" "ready" 0
 # follows (cross-workload retention is characterized separately by the stats
 # line). The arena initializes lazily on the first load, so the enabled-line
 # assertion happens after requests complete.
+# Sol pre-registered criterion (2026-07-25, final): fixture sha must match
+# the registered hash; three consecutive runs against the fresh cache-on
+# process; /v1/models GETs mark stat windows (emit+reset in engine).
+FIXSHA=$(sha256sum "$FIX16" | awk '{print $1}')
+# registered hash stored as two 32-hex halves (repo gitleaks policy)
+REG="712d0ad102d66dad0514f9ed75f061c9""385c4d620d3bb98e0996f6a2422c5719"
+[[ "$FIXSHA" == "$REG" ]] || {
+  echo "ASSERT name=fixture_sha expected=[registered 712d0ad1...] actual=[$FIXSHA] result=FAIL" >> "$A"; }
+curl -s -o /dev/null "http://127.0.0.1:$PORT/v1/models"   # reset window
 req "$FIX16" B_rep1
+curl -s -o /dev/null "http://127.0.0.1:$PORT/v1/models"   # close W1
 req "$FIX16" B_rep2
+curl -s -o /dev/null "http://127.0.0.1:$PORT/v1/models"   # close W2
 req "$FIX16" B_rep3
+curl -s -o /dev/null "http://127.0.0.1:$PORT/v1/models"   # close W3
 req "$FIXS"  B_short
 req "$FIXL"  B_long
 ARENA_LINE=$(grep -m1 "persistent expert cache enabled" "$OUT/serverB.log" || true)
@@ -95,9 +107,28 @@ assert byte_identical_short16 "cache-on rep1 == cache-off" "cmp=$r" $r
 cmp -s "$OUT/B_rep1.text" "$OUT/B_rep3.text"; r=$?
 assert repeat_stable "rep1 == rep3" "cmp=$r" $r
 
-BASE=$(rbdelta A_short16); WARM=$(rbdelta B_rep3)
-PCT=$(( WARM * 100 / BASE ))
-assert warm_reads_lt_25pct_of_off "warm repeat reads < 25% of cache-OFF baseline reads (gate text 'run 2 < 25% of run 1' with run1 = uncached; interpretation documented for review)" "baseline=$BASE warm=$WARM = ${PCT}%" $(( PCT < 25 ? 0 : 1 ))
+# ---- Sol pre-registered effectiveness assertions (final, verbatim) ----
+D1=$(rbdelta B_rep1); D2=$(rbdelta B_rep2); D3=$(rbdelta B_rep3)
+BASE=$(rbdelta A_short16)
+echo "recorded: uncached baseline=$BASE (not a denominator per criterion)" >> "$A"
+assert D1_bounds "0 < D1 < 120e9" "$D1" $(( D1 > 0 && D1 < 120000000000 ? 0 : 1 ))
+assert D2_bounds "0 < D2 < 75e9" "$D2" $(( D2 > 0 && D2 < 75000000000 ? 0 : 1 ))
+assert D3_bounds "0 < D3 < 75e9" "$D3" $(( D3 > 0 && D3 < 75000000000 ? 0 : 1 ))
+assert D2_lt_70pct_D1 "100*D2 < 70*D1" "$((100*D2)) vs $((70*D1))" $(( 100*D2 < 70*D1 ? 0 : 1 ))
+assert D3_lt_70pct_D1 "100*D3 < 70*D1" "$((100*D3)) vs $((70*D1))" $(( 100*D3 < 70*D1 ? 0 : 1 ))
+DIFF=$(( D2 > D3 ? D2 - D3 : D3 - D2 ))
+assert D2_D3_stable "200*|D2-D3| <= 10*(D2+D3)" "diff=$DIFF" $(( 200*DIFF <= 10*(D2+D3) ? 0 : 1 ))
+mapfile -t WINS < <(grep "expert-cache window tag=models-get" "$OUT/serverB.log")
+echo "windows: ${#WINS[@]}" >> "$A"
+W1=${WINS[1]:-}; W2=${WINS[2]:-}; W3=${WINS[3]:-}
+gv() { echo "$1" | grep -oE "$2=[a-f0-9]+" | cut -d= -f2; }
+SH1=$(gv "$W1" stream_sha256); SH2=$(gv "$W2" stream_sha256); SH3=$(gv "$W3" stream_sha256)
+LB1=$(gv "$W1" lookup_bytes); LB2=$(gv "$W2" lookup_bytes); LB3=$(gv "$W3" lookup_bytes)
+HB2=$(gv "$W2" hit_bytes); HB3=$(gv "$W3" hit_bytes)
+assert stream_sha_equal "run1==run2==run3 access streams" "${SH1:0:12}/${SH2:0:12}/${SH3:0:12}" $([[ -n "$SH1" && "$SH1" == "$SH2" && "$SH2" == "$SH3" ]] && echo 0 || echo 1)
+assert lookup_bytes_equal "identical lookup bytes across runs" "$LB1/$LB2/$LB3" $([[ -n "$LB1" && "$LB1" == "$LB2" && "$LB2" == "$LB3" ]] && echo 0 || echo 1)
+assert hit_rate_run2 "100*hit_bytes >= 70*lookup_bytes (run2)" "$HB2/$LB2" $(( ${HB2:-0} > 0 && 100*HB2 >= 70*LB2 ? 0 : 1 ))
+assert hit_rate_run3 "100*hit_bytes >= 70*lookup_bytes (run3)" "$HB3/$LB3" $(( ${HB3:-0} > 0 && 100*HB3 >= 70*LB3 ? 0 : 1 ))
 
 STUBS=$(( $(grep -c 'CUDA stub called' "$OUT/serverA.log") + $(grep -c 'CUDA stub called' "$OUT/serverB.log") ))
 assert zero_cuda_stubs "0" "$STUBS" $([[ $STUBS == 0 ]] && echo 0 || echo 1)

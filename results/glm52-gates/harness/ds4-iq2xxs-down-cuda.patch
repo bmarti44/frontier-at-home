@@ -450,7 +450,7 @@ index 1a79a01..bd5b214 100644
  }
  
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 041e162..788fc4c 100644
+index 041e162..038baa5 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -93,6 +93,10 @@ static int g_model_fd = -1;
@@ -1249,7 +1249,7 @@ index 041e162..788fc4c 100644
  }
  
  extern "C" int ds4_gpu_routed_moe_batch_owned_tensor(
-@@ -22971,6 +23506,221 @@ static int cuda_stream_selected_ranges_valid(
+@@ -22971,6 +23506,316 @@ static int cuda_stream_selected_ranges_valid(
             down_bytes <= table->model_size - table->down_offset;
  }
  
@@ -1317,6 +1317,101 @@ index 041e162..788fc4c 100644
 +                                   registration; immune to address reuse) */
 +    std::unordered_map<uint64_t, uint32_t> *map;
 +} g_expert_persist_cache;
++
++/* Compact SHA-256 (FIPS 180-4) for the access-stream digest required by the
++ * G4a pre-registered criterion: digest over the post-compaction
++ * (layer u32, expert u32, slab_bytes u64) records of every selected load. */
++typedef struct { uint32_t h[8]; uint64_t len; uint8_t buf[64]; size_t fill; } ec_sha256;
++static const uint32_t ec_k256[64] = {
++ 0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
++ 0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
++ 0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
++ 0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
++ 0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
++ 0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
++ 0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
++ 0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2};
++static void ec_sha256_init(ec_sha256 *c) {
++    static const uint32_t h0[8] = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
++                                   0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
++    memcpy(c->h, h0, sizeof(h0)); c->len = 0; c->fill = 0;
++}
++static void ec_sha256_block(ec_sha256 *c, const uint8_t p[64]) {
++    uint32_t w[64], a, b, d, e, f, g, hh, t1, t2, cc;
++    for (int i = 0; i < 16; i++)
++        w[i] = ((uint32_t)p[i*4] << 24) | ((uint32_t)p[i*4+1] << 16) |
++               ((uint32_t)p[i*4+2] << 8) | p[i*4+3];
++#define EC_ROR(x,n) (((x) >> (n)) | ((x) << (32 - (n))))
++    for (int i = 16; i < 64; i++) {
++        uint32_t s0 = EC_ROR(w[i-15],7) ^ EC_ROR(w[i-15],18) ^ (w[i-15] >> 3);
++        uint32_t s1 = EC_ROR(w[i-2],17) ^ EC_ROR(w[i-2],19) ^ (w[i-2] >> 10);
++        w[i] = w[i-16] + s0 + w[i-7] + s1;
++    }
++    a=c->h[0]; b=c->h[1]; cc=c->h[2]; d=c->h[3]; e=c->h[4]; f=c->h[5]; g=c->h[6]; hh=c->h[7];
++    for (int i = 0; i < 64; i++) {
++        uint32_t S1 = EC_ROR(e,6) ^ EC_ROR(e,11) ^ EC_ROR(e,25);
++        uint32_t ch = (e & f) ^ (~e & g);
++        t1 = hh + S1 + ch + ec_k256[i] + w[i];
++        uint32_t S0 = EC_ROR(a,2) ^ EC_ROR(a,13) ^ EC_ROR(a,22);
++        uint32_t mj = (a & b) ^ (a & cc) ^ (b & cc);
++        t2 = S0 + mj;
++        hh=g; g=f; f=e; e=d+t1; d=cc; cc=b; b=a; a=t1+t2;
++    }
++    c->h[0]+=a; c->h[1]+=b; c->h[2]+=cc; c->h[3]+=d; c->h[4]+=e; c->h[5]+=f; c->h[6]+=g; c->h[7]+=hh;
++#undef EC_ROR
++}
++static void ec_sha256_update(ec_sha256 *c, const void *data, size_t n) {
++    const uint8_t *p = (const uint8_t *)data;
++    c->len += n;
++    while (n) {
++        size_t take = 64 - c->fill; if (take > n) take = n;
++        memcpy(c->buf + c->fill, p, take);
++        c->fill += take; p += take; n -= take;
++        if (c->fill == 64) { ec_sha256_block(c, c->buf); c->fill = 0; }
++    }
++}
++static void ec_sha256_final_hex(ec_sha256 *c, char out[65]) {
++    uint64_t bits = c->len * 8;
++    uint8_t pad = 0x80; ec_sha256_update(c, &pad, 1);
++    uint8_t z = 0;
++    while (c->fill != 56) ec_sha256_update(c, &z, 1);
++    uint8_t lb[8];
++    for (int i = 0; i < 8; i++) lb[i] = (uint8_t)(bits >> (56 - 8*i));
++    ec_sha256_update(c, lb, 8);
++    for (int i = 0; i < 8; i++) sprintf(out + i*8, "%08x", c->h[i]);
++}
++
++static struct {
++    int inited;
++    ec_sha256 stream;
++    uint64_t lookup_bytes;
++    uint64_t hit_bytes;
++} g_expert_cache_run_stats;
++
++static void ec_run_stats_ensure(void) {
++    if (!g_expert_cache_run_stats.inited) {
++        ec_sha256_init(&g_expert_cache_run_stats.stream);
++        g_expert_cache_run_stats.inited = 1;
++    }
++}
++
++/* Called by the server on GET /v1/models: prints the finalized per-window
++ * access-stream digest + byte counters, then resets the window. */
++extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
++    ec_run_stats_ensure();
++    char hex[65];
++    ec_sha256_final_hex(&g_expert_cache_run_stats.stream, hex);
++    fprintf(stderr,
++            "ds4: expert-cache window tag=%s lookup_bytes=%llu hit_bytes=%llu "
++            "stream_sha256=%s\n",
++            tag ? tag : "-",
++            (unsigned long long)g_expert_cache_run_stats.lookup_bytes,
++            (unsigned long long)g_expert_cache_run_stats.hit_bytes,
++            hex);
++    ec_sha256_init(&g_expert_cache_run_stats.stream);
++    g_expert_cache_run_stats.lookup_bytes = 0;
++    g_expert_cache_run_stats.hit_bytes = 0;
++}
 +
 +static void cuda_expert_cache_flush_for_model(void) {
 +    if (g_expert_persist_cache.disabled) return;
@@ -1471,7 +1566,7 @@ index 041e162..788fc4c 100644
  static int cuda_stream_selected_cache_begin_load(
          const ds4_gpu_stream_expert_table *table,
          const int32_t *selected_ids,
-@@ -22979,12 +23729,14 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -22979,12 +23824,14 @@ static int cuda_stream_selected_cache_begin_load(
      if (!g_ssd_streaming_mode) return 1;
      if (!cuda_stream_selected_ranges_valid(table) || !selected_ids ||
          slot_count == 0) {
@@ -1488,7 +1583,7 @@ index 041e162..788fc4c 100644
      }
  
      std::vector<int32_t> expert_to_slot;
-@@ -22996,7 +23748,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -22996,7 +23843,8 @@ static int cuda_stream_selected_cache_begin_load(
                              slot_count : table->n_total_expert);
          slot_ids.resize(slot_count);
      } catch (...) {
@@ -1498,7 +1593,7 @@ index 041e162..788fc4c 100644
      }
      for (uint32_t i = 0; i < slot_count; i++) {
          const int32_t expert = selected_ids[i];
-@@ -23004,7 +23757,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23004,7 +23852,8 @@ static int cuda_stream_selected_cache_begin_load(
              fprintf(stderr,
                      "ds4: CUDA streaming expert id %d is outside 0..%u at layer %u\n",
                      expert, table->n_total_expert, table->layer);
@@ -1508,7 +1603,7 @@ index 041e162..788fc4c 100644
          }
          int32_t compact = expert_to_slot[(uint32_t)expert];
          if (compact < 0) {
-@@ -23014,14 +23768,40 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23014,14 +23863,40 @@ static int cuda_stream_selected_cache_begin_load(
          }
          slot_ids[i] = compact;
      }
@@ -1551,7 +1646,7 @@ index 041e162..788fc4c 100644
      const int logical_tier = 0;
      if (g_stream_selected_cache.logical_tier != logical_tier &&
          (g_stream_selected_cache.gate_ptr ||
-@@ -23045,9 +23825,16 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23045,9 +23920,16 @@ static int cuda_stream_selected_cache_begin_load(
                  down_bytes, "down experts") ||
          !cuda_stream_selected_ensure_i32(slot_count)) {
          cuda_stream_selected_cache_invalidate();
@@ -1569,18 +1664,31 @@ index 041e162..788fc4c 100644
      for (uint32_t i = 0; i < compact_ids.size(); i++) {
          const uint64_t expert = (uint32_t)compact_ids[i];
          const uint64_t gate_src =
-@@ -23058,6 +23845,35 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23058,6 +23940,48 @@ static int cuda_stream_selected_cache_begin_load(
              table->down_offset + expert * table->down_expert_bytes;
          const uint64_t gate_dst = (uint64_t)i * table->gate_expert_bytes;
          const uint64_t down_dst = (uint64_t)i * table->down_expert_bytes;
 +        const uint64_t key =
 +            ((uint64_t)table->layer << 32) | (uint64_t)(uint32_t)expert;
++        {
++            ec_run_stats_ensure();
++            const uint32_t rec_layer = table->layer;
++            const uint32_t rec_expert = (uint32_t)expert;
++            const uint64_t rec_bytes =
++                2u * table->gate_expert_bytes + table->down_expert_bytes;
++            ec_sha256_update(&g_expert_cache_run_stats.stream, &rec_layer, 4);
++            ec_sha256_update(&g_expert_cache_run_stats.stream, &rec_expert, 4);
++            ec_sha256_update(&g_expert_cache_run_stats.stream, &rec_bytes, 8);
++            g_expert_cache_run_stats.lookup_bytes += rec_bytes;
++        }
 +        uint8_t *slab = persist_ok ?
 +            cuda_expert_cache_lookup(key, gate_src, down_src) : NULL;
 +        if (slab) {
 +            /* HIT: memory copy from the fixed arena; identical bytes to a
 +             * disk read of the same offsets, so outputs are unchanged. */
 +            g_expert_persist_cache.hits++;
++            g_expert_cache_run_stats.hit_bytes +=
++                2u * table->gate_expert_bytes + table->down_expert_bytes;
 +            if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.gate_ptr + gate_dst,
 +                                    slab, table->gate_expert_bytes,
 +                                    cudaMemcpyDefault),
@@ -1605,7 +1713,7 @@ index 041e162..788fc4c 100644
          if (!cuda_model_copy_to_device_streamed(
                      g_stream_selected_cache.gate_ptr + gate_dst,
                      table->model_map, table->model_size,
-@@ -23074,7 +23890,56 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23074,7 +23998,56 @@ static int cuda_stream_selected_cache_begin_load(
                      down_src, table->down_expert_bytes,
                      "stream down expert copy")) {
              cuda_stream_selected_cache_invalidate();
@@ -1663,7 +1771,7 @@ index 041e162..788fc4c 100644
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -23083,7 +23948,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23083,7 +24056,8 @@ static int cuda_stream_selected_cache_begin_load(
                              cudaMemcpyHostToDevice),
                   "stream selected-id remap copy")) {
          cuda_stream_selected_cache_invalidate();
@@ -1673,7 +1781,7 @@ index 041e162..788fc4c 100644
      }
  
      g_stream_selected_cache.logical_tier = logical_tier;
-@@ -26720,19 +27586,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+@@ -26720,19 +27694,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
      if (!g_ssd_streaming_mode) return 1;
      if (!table || !selected || n_selected == 0 ||
          selected->bytes < (uint64_t)n_selected * sizeof(int32_t)) {
@@ -1699,7 +1807,7 @@ index 041e162..788fc4c 100644
      }
      return cuda_stream_selected_cache_begin_load(table, ids.data(), n_selected);
  }
-@@ -26960,7 +27829,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
+@@ -26960,7 +27937,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
  }
  
  extern "C" void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled) {
@@ -1710,3 +1818,33 @@ index 041e162..788fc4c 100644
  }
  
  extern "C" void ds4_gpu_set_glm_mtp_verify_mode(bool enabled) {
+diff --git a/ds4_gpu.h b/ds4_gpu.h
+index 2000bba..36388d3 100644
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -140,6 +140,9 @@ void ds4_gpu_set_quality(bool quality);
+ void ds4_gpu_set_glm_model(bool enabled);
+ void ds4_gpu_set_ssd_streaming(bool enabled);
+ void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled);
++/* G4a: emit + reset the persistent-expert-cache window stats (access-stream
++ * sha256, lookup/hit bytes). No-op semantics when the cache is disabled. */
++void ds4_gpu_expert_cache_stats_emit(const char *tag);
+ #ifdef __APPLE__
+ void ds4_gpu_release_zero_prefix_prefill_mask_cache(void);
+ #endif
+diff --git a/ds4_server.c b/ds4_server.c
+index f4f563e..a0198fc 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -12389,6 +12389,11 @@ static void *client_main(void *arg) {
+     }
+ 
+     if (!strcmp(hr.method, "GET") && !strcmp(hr.path, "/v1/models")) {
++        /* G4a instrumentation: each /v1/models GET emits + resets the
++         * expert-cache access-stream digest and byte counters, giving test
++         * harnesses exact per-window values (no-op cost otherwise). */
++        extern void ds4_gpu_expert_cache_stats_emit(const char *tag);
++        ds4_gpu_expert_cache_stats_emit("models-get");
+         send_models(s, fd);
+         http_request_free(&hr);
+         goto done;
