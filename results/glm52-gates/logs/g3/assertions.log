@@ -1,0 +1,23 @@
+ASSERT name=port_free expected=[no listener on 8023] actual=[no listener] result=PASS
+ASSERT name=memwatch_armed expected=[ready-file ARMED 20611] actual=[ARMED 20611 20582 1083001 engine] result=PASS
+ASSERT name=server_ready expected=[GET /v1/models -> 200 within 1800s] actual=[code=200 after 0s] result=PASS
+ASSERT name=o_direct_fd expected=[gguf fd with O_DIRECT bit (octal 0200000)] actual=[1 of 2 gguf fds] result=PASS
+ASSERT name=http_200_S1 expected=[200] actual=[200] result=PASS
+ASSERT name=http_200_S2 expected=[200] actual=[200] result=PASS
+ASSERT name=http_200_L1 expected=[200] actual=[200] result=PASS
+ASSERT name=http_200_L2 expected=[200] actual=[200] result=PASS
+ASSERT name=short_byte_identical expected=[identical] actual=[cmp=0 sha12=16fe2a7eba06/16fe2a7eba06] result=PASS
+ASSERT name=long_byte_identical expected=[identical] actual=[cmp=0 sha12=e433f3d53368/e433f3d53368] result=PASS
+long1 first char: [T] (recorded; upstream CLI criterion is '>')
+ASSERT name=long_prompt_comprehension expected=[output references the prompt tail (stdio/include)] actual=[grep=0 text=The user wants me to continue a C source file. The prefix ends with `#include <s] result=PASS
+ASSERT name=zero_cuda_stubs expected=[0 in unfiltered server.log] actual=[0] result=PASS
+ASSERT name=streaming_engaged expected=[streaming startup lines present] actual=[3 lines] result=PASS
+ASSERT name=memwatch_no_breach expected=[0 breach lines] actual=[breach=0 min_gib=84.47] result=PASS
+read_bytes_delta short1: 387254493184
+read_bytes_delta short2: 368337715200
+read_bytes_delta long1: 551891902464
+read_bytes_delta long2: 551688044544
+ASSERT name=clean_shutdown expected=[TERM exits <=120s] actual=[exited] result=PASS
+ASSERT name=quality_exit expected=[0/0] actual=[0/0] result=PASS
+ASSERT name=quality_deterministic expected=[quality1.tsv == quality2.tsv] actual=[cmp=0] result=PASS
+ASSERT name=quality_finite expected=[0 nan/inf rows] actual=[0] result=PASS

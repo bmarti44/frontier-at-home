@@ -1,0 +1,55 @@
+ds4: Linux cuda backend set oom_score_adj=1000
+ds4: CUDA backend initialized on NVIDIA GB10 (sm_121) dev=0
+ds4: cuda SSD streaming total expert budget 40.00 GiB = 5.91 GiB prefill headroom + 34.09 GiB dynamic cache (3761 experts, 9.28 MiB each)
+ds4: SSD streaming mixed-precision model: 1/76 routed layers off the slab size class will bypass the expert cache and read experts via mapped model views
+ds4: SSD streaming initial cuda model map restricted to token embedding (1 spans, 0.94 GiB tensor span)
+ds4: CUDA host registration skipped: operation not supported
+ds4: CUDA preparing model tensor mappings
+ds4: CUDA loading model tensors into device cache
+ds4: CUDA startup model preparation covered 0.94 GiB of tensor spans in 0.226s
+ds4: cuda backend initialized for graph diagnostics
+ds4: memory: KV 1.45 GiB (raw 0.00 + compressed 1.45) + buffers 4.07 GiB + resident model 0.94 GiB + expert cache 34.09 GiB + prefill expert reserve 5.91 GiB = 46.46 GiB planned
+ds4: memory detail: ctx=8192 prefill_cap=4096 raw_kv_rows=0 compressed_kv_rows=8192 backend=cuda
+0724 23:40:58 ds4-server: context buffers 5653.35 MiB (ctx=8192, backend=cuda, prefill_chunk=4096, raw_kv_rows=0, compressed_kv_rows=8192)
+ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
+ds4: GLM graph allocating compact DSA cache: rows=8192 logical_ctx=8192 kv_layers=78 indexer_layers=21 f32 1.45 GiB
+ds4: GLM compact indexed prefill chunk=4096 score_rows=4096 score_scratch=128.00 MiB
+0724 23:40:58 ds4-server: listening on http://127.0.0.1:8023
+0724 23:40:59 ds4-server: completion ctx=0..31:31 prompt start
+ds4: CUDA loading model tensors 16.01 GiB cached
+ds4: CUDA loading model tensors 17.61 GiB cached
+0724 23:41:50 ds4-server: completion ctx=0..31:31 prefill chunk 31/31 (100.0%) chunk=0.00 t/s avg=0.61 t/s 50.470s
+0724 23:41:50 ds4-server: completion ctx=0..31:31 prompt done 50.470s
+0724 23:42:37 ds4-server: completion ctx=31..63:32 gen=32 THINKING decoding chunk=0.67 t/s avg=0.67 t/s 47.562s
+0724 23:42:37 ds4-server: completion ctx=0..31:31 gen=32 THINKING finish=length 98.032s
+0724 23:42:37 ds4-server: live kv cache miss live=63 prompt=31 common=31 reason=token-mismatch
+0724 23:42:37 ds4-server: completion ctx=0..31:31 prompt start
+0724 23:43:23 ds4-server: completion ctx=0..31:31 prefill chunk 31/31 (100.0%) chunk=0.00 t/s avg=0.68 t/s 45.271s
+0724 23:43:23 ds4-server: completion ctx=0..31:31 prompt done 45.271s
+0724 23:44:10 ds4-server: completion ctx=31..63:32 gen=32 THINKING decoding chunk=0.68 t/s avg=0.68 t/s 46.941s
+0724 23:44:10 ds4-server: completion ctx=0..31:31 gen=32 THINKING finish=length 92.213s
+0724 23:44:10 ds4-server: live kv cache miss live=63 prompt=5047 common=16 reason=token-mismatch
+0724 23:44:10 ds4-server: completion ctx=0..5047:5047 prompt start
+0724 23:45:26 ds4-server: completion ctx=0..5047:5047 prefill chunk 2048/5047 (40.6%) chunk=0.00 t/s avg=26.92 t/s 76.064s
+ds4: CUDA loading model tensors 18.56 GiB cached
+ds4: CUDA loading model tensors 18.60 GiB cached
+ds4: CUDA loading model tensors 18.62 GiB cached
+ds4: CUDA loading model tensors 18.63 GiB cached
+ds4: CUDA loading model tensors 18.65 GiB cached
+ds4: CUDA loading model tensors 18.67 GiB cached
+ds4: CUDA loading model tensors 18.69 GiB cached
+ds4: CUDA loading model tensors 18.71 GiB cached
+ds4: CUDA loading model tensors 18.73 GiB cached
+ds4: CUDA loading model tensors 18.74 GiB cached
+0724 23:47:10 ds4-server: completion ctx=0..5047:5047 prefill chunk 5047/5047 (100.0%) chunk=28.70 t/s avg=27.95 t/s 180.567s
+0724 23:47:10 ds4-server: completion ctx=0..5047:5047 prompt done 180.567s
+0724 23:48:02 ds4-server: completion ctx=5047..5079:32 gen=32 THINKING decoding chunk=0.61 t/s avg=0.61 t/s 52.163s
+0724 23:48:02 ds4-server: completion ctx=0..5047:5047 gen=32 THINKING finish=length 232.730s
+0724 23:48:02 ds4-server: live kv cache miss live=5079 prompt=5047 common=5047 reason=token-mismatch
+0724 23:48:02 ds4-server: completion ctx=0..5047:5047 prompt start
+0724 23:49:18 ds4-server: completion ctx=0..5047:5047 prefill chunk 2048/5047 (40.6%) chunk=0.00 t/s avg=27.13 t/s 75.498s
+0724 23:51:03 ds4-server: completion ctx=0..5047:5047 prefill chunk 5047/5047 (100.0%) chunk=28.60 t/s avg=27.99 t/s 180.342s
+0724 23:51:03 ds4-server: completion ctx=0..5047:5047 prompt done 180.342s
+0724 23:51:55 ds4-server: completion ctx=5047..5079:32 gen=32 THINKING decoding chunk=0.62 t/s avg=0.62 t/s 51.914s
+0724 23:51:55 ds4-server: completion ctx=0..5047:5047 gen=32 THINKING finish=length 232.256s
+0724 23:51:59 ds4-server: shutdown requested, draining requests
