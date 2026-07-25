@@ -51,8 +51,14 @@ plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 1 Hz)"
 KILLED=""
 while kill -0 "$WRAP" 2>/dev/null; do
   MA=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
-  RSS=$(awk '/VmRSS/{print $2}' "/proc/$ENG/status" 2>/dev/null || echo 0)
-  RB=$(awk '/^read_bytes/{print $2}' "/proc/$ENG/io" 2>/dev/null || echo 0)
+  # sample the largest ds4* process (sol G3 finding 8: child-guess picked the
+  # wrong pid); fall back to the original guess
+  BIG=$(pgrep -x 'ds4-server|ds4|ds4-bench|ds4-eval' 2>/dev/null | while read -r p2; do
+          printf '%s %s\n' "$(awk '/VmRSS/{print $2}' /proc/$p2/status 2>/dev/null || echo 0)" "$p2"
+        done | sort -rn | head -1 | awk '{print $2}')
+  SPID2=${BIG:-$ENG}
+  RSS=$(awk '/VmRSS/{print $2}' "/proc/$SPID2/status" 2>/dev/null || echo 0)
+  RB=$(awk '/^read_bytes/{print $2}' "/proc/$SPID2/io" 2>/dev/null || echo 0)
   echo "$(date -Is) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
   sync -d "$SAMP" 2>/dev/null || true
   if (( MA < KILL_FLOOR_GIB * 1048576 )); then
