@@ -1,0 +1,8 @@
+Belady OPT simulation on the committed decode trace (768,000 accesses,
+server-trace.log.gz; script inline in session record 2026-07-25):
+  40 GiB (4413 slots): 79.5%   60 GiB: 86.2%   67 GiB (gate arena): 88.0%
+  80 GiB: 90.8%   100 GiB: 93.7%
+Measured LRU on same trace: 59.7/70.9/78.7/85.3% at 40/60/80/100 GiB.
+Reading: clairvoyant headroom over LRU is ~9-13 pp at feasible sizes; policy
+work (router-lookahead-assisted eviction) can capture part of it; not the
+dominant lever vs QD fix / zero-copy / byte reduction.
