@@ -16,7 +16,7 @@ SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 KVDIR=/home/dsv4/ds4-project/glm52-kvdisk-serve
 STATE=/home/dsv4/ds4-project/engine-switch
-PORT=8011
+PORT=${ENGINE_PORT:-8011}
 mkdir -p "$STATE" "$KVDIR"
 log() { echo "$(date -Is) $*" | tee -a "$STATE/switch.log"; }
 
