@@ -1,0 +1,255 @@
+ * Persistent host-side expert cache (G4a).
+ *
+ * The per-batch selected-expert staging above re-reads every unique expert
+ * from disk on every layer visit (measured: <1% cross-request savings).
+ * This cache keeps whole expert slabs (gate+up+down bytes for one expert of
+ * one layer) in a FIXED host arena allocated once, keyed by
+ * (layer << 32 | expert), with O(1) LRU eviction.
+ *
+ *   - Enabled only when DS4_CUDA_EXPERT_CACHE_GB is set (> 0). Unset/0
+ *     keeps the exact pre-existing behavior (gate A/B requirement).
+ *   - Bounded by construction: arena bytes = n_slots * slot_bytes computed
+ *     once; no growth path exists (post-incident invariant).
+ *   - Hits copy from the arena instead of reading disk; misses read disk
+ *     as before and then populate the arena (evicting the LRU slab).
+ *   - Slabs whose byte sizes differ from the arena's slot layout (e.g. the
+ *     off-slab-class MTP layer, or a different model) bypass the cache.
+ *   - Fail-open: any allocation failure disables the cache permanently and
+ *     logs once; correctness never depends on the cache.
+ *   - Stats: DS4_GLM_TP_DEBUG prints a summary every 1024 loads.
+ * ------------------------------------------------------------------------ */
+typedef struct {
+    uint64_t key;      /* (layer << 32) | expert; UINT64_MAX = free */
+    uint32_t prev;
+    uint32_t next;
+} cuda_expert_cache_slot_meta;
+
+static struct {
+    int initialized;
+    int disabled;
+    uint8_t *arena;
+    cuda_expert_cache_slot_meta *meta;
+    uint32_t n_slots;
+    uint64_t gate_bytes;    /* per-expert gate (== up) bytes for this layout */
+    uint64_t down_bytes;
+    uint64_t slot_bytes;    /* 2*gate_bytes + down_bytes */
+    uint32_t lru_head;      /* most recent */
+    uint32_t lru_tail;      /* least recent */
+    uint32_t used;
+    uint64_t hits;
+    uint64_t misses;
+    uint64_t loads;
+    std::unordered_map<uint64_t, uint32_t> *map;
+} g_expert_persist_cache;
+
+static void cuda_expert_cache_lru_unlink(uint32_t s) {
+    cuda_expert_cache_slot_meta *m = g_expert_persist_cache.meta;
+    if (m[s].prev != UINT32_MAX) m[m[s].prev].next = m[s].next;
+    else g_expert_persist_cache.lru_head = m[s].next;
+    if (m[s].next != UINT32_MAX) m[m[s].next].prev = m[s].prev;
+    else g_expert_persist_cache.lru_tail = m[s].prev;
+    m[s].prev = m[s].next = UINT32_MAX;
+}
+
+static void cuda_expert_cache_lru_push_front(uint32_t s) {
+    cuda_expert_cache_slot_meta *m = g_expert_persist_cache.meta;
+    m[s].prev = UINT32_MAX;
+    m[s].next = g_expert_persist_cache.lru_head;
+    if (g_expert_persist_cache.lru_head != UINT32_MAX)
+        m[g_expert_persist_cache.lru_head].prev = s;
+    g_expert_persist_cache.lru_head = s;
+    if (g_expert_persist_cache.lru_tail == UINT32_MAX)
+        g_expert_persist_cache.lru_tail = s;
+}
+
+static void cuda_expert_cache_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
+    if (g_expert_persist_cache.initialized) return;
+    g_expert_persist_cache.initialized = 1;
+    g_expert_persist_cache.disabled = 1;
+    const char *env = getenv("DS4_CUDA_EXPERT_CACHE_GB");
+    if (!env) return;
+    const double gb = atof(env);
+    if (!(gb > 0.0) || gb > 1024.0) return;
+    const uint64_t slot_bytes = 2u * gate_bytes + down_bytes;
+    if (slot_bytes == 0) return;
+    uint64_t n_slots64 = (uint64_t)(gb * 1e9) / slot_bytes;
+    if (n_slots64 < 64) return;
+    if (n_slots64 > 4u * 1024u * 1024u) n_slots64 = 4u * 1024u * 1024u;
+    const uint32_t n_slots = (uint32_t)n_slots64;
+    uint8_t *arena = (uint8_t *)malloc((size_t)n_slots * slot_bytes);
+    cuda_expert_cache_slot_meta *meta = (cuda_expert_cache_slot_meta *)
+        malloc((size_t)n_slots * sizeof(cuda_expert_cache_slot_meta));
+    std::unordered_map<uint64_t, uint32_t> *map = NULL;
+    try { map = new std::unordered_map<uint64_t, uint32_t>(); }
+    catch (...) { map = NULL; }
+    if (!arena || !meta || !map) {
+        free(arena); free(meta); delete map;
+        fprintf(stderr, "ds4: CUDA persistent expert cache DISABLED "
+                        "(arena allocation failed for %.1f GB)\n", gb);
+        return;
+    }
+    for (uint32_t i = 0; i < n_slots; i++) {
+        meta[i].key = UINT64_MAX;
+        meta[i].prev = meta[i].next = UINT32_MAX;
+    }
+    g_expert_persist_cache.arena = arena;
+    g_expert_persist_cache.meta = meta;
+    g_expert_persist_cache.map = map;
+    g_expert_persist_cache.n_slots = n_slots;
+    g_expert_persist_cache.gate_bytes = gate_bytes;
+    g_expert_persist_cache.down_bytes = down_bytes;
+    g_expert_persist_cache.slot_bytes = slot_bytes;
+    g_expert_persist_cache.lru_head = UINT32_MAX;
+    g_expert_persist_cache.lru_tail = UINT32_MAX;
+    g_expert_persist_cache.used = 0;
+    g_expert_persist_cache.disabled = 0;
+    fprintf(stderr,
+            "ds4: CUDA persistent expert cache enabled: %u slots x %.2f MiB "
+            "= %.2f GiB (fixed arena)\n",
+            n_slots, (double)slot_bytes / (1024.0 * 1024.0),
+            (double)n_slots * (double)slot_bytes /
+            (1024.0 * 1024.0 * 1024.0));
+}
+
+/* Returns arena slot base on hit (and refreshes LRU), NULL on miss. */
+static uint8_t *cuda_expert_cache_lookup(uint64_t key) {
+    if (g_expert_persist_cache.disabled) return NULL;
+    auto it = g_expert_persist_cache.map->find(key);
+    if (it == g_expert_persist_cache.map->end()) return NULL;
+    const uint32_t s = it->second;
+    cuda_expert_cache_lru_unlink(s);
+    cuda_expert_cache_lru_push_front(s);
+    return g_expert_persist_cache.arena +
+           (uint64_t)s * g_expert_persist_cache.slot_bytes;
+}
+
+/* Returns arena slot base to fill for this key (evicting LRU if needed). */
+static uint8_t *cuda_expert_cache_insert(uint64_t key) {
+    if (g_expert_persist_cache.disabled) return NULL;
+    uint32_t s;
+    if (g_expert_persist_cache.used < g_expert_persist_cache.n_slots) {
+        s = g_expert_persist_cache.used++;
+    } else {
+        s = g_expert_persist_cache.lru_tail;
+        if (s == UINT32_MAX) return NULL;
+        cuda_expert_cache_lru_unlink(s);
+        g_expert_persist_cache.map->erase(g_expert_persist_cache.meta[s].key);
+    }
+    g_expert_persist_cache.meta[s].key = key;
+    try { (*g_expert_persist_cache.map)[key] = s; }
+    catch (...) { g_expert_persist_cache.meta[s].key = UINT64_MAX; return NULL; }
+    cuda_expert_cache_lru_push_front(s);
+    return g_expert_persist_cache.arena +
+           (uint64_t)s * g_expert_persist_cache.slot_bytes;
+}
+
+static int cuda_stream_selected_cache_begin_load(
+    cuda_expert_cache_init_once(table->gate_expert_bytes,
+                                table->down_expert_bytes);
+    const int persist_ok = !g_expert_persist_cache.disabled &&
+        g_expert_persist_cache.gate_bytes == table->gate_expert_bytes &&
+        g_expert_persist_cache.down_bytes == table->down_expert_bytes;
+    for (uint32_t i = 0; i < compact_ids.size(); i++) {
+        const uint64_t expert = (uint32_t)compact_ids[i];
+        const uint64_t gate_src =
+            table->gate_offset + expert * table->gate_expert_bytes;
+        const uint64_t up_src =
+            table->up_offset + expert * table->gate_expert_bytes;
+        const uint64_t down_src =
+            table->down_offset + expert * table->down_expert_bytes;
+        const uint64_t gate_dst = (uint64_t)i * table->gate_expert_bytes;
+        const uint64_t down_dst = (uint64_t)i * table->down_expert_bytes;
+        const uint64_t key =
+            ((uint64_t)table->layer << 32) | (uint64_t)expert;
+        uint8_t *slab = persist_ok ? cuda_expert_cache_lookup(key) : NULL;
+        if (slab) {
+            /* HIT: memory copy from the fixed arena; identical bytes to a
+             * disk read of the same offsets, so outputs are unchanged. */
+            g_expert_persist_cache.hits++;
+            if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.gate_ptr + gate_dst,
+                                    slab, table->gate_expert_bytes,
+                                    cudaMemcpyDefault),
+                         "expert cache gate copy") ||
+                !cuda_ok(cudaMemcpy(g_stream_selected_cache.up_ptr + gate_dst,
+                                    slab + table->gate_expert_bytes,
+                                    table->gate_expert_bytes,
+                                    cudaMemcpyDefault),
+                         "expert cache up copy") ||
+                !cuda_ok(cudaMemcpy(g_stream_selected_cache.down_ptr + down_dst,
+                                    slab + 2u * table->gate_expert_bytes,
+                                    table->down_expert_bytes,
+                                    cudaMemcpyDefault),
+                         "expert cache down copy")) {
+                cuda_stream_selected_cache_invalidate();
+                return cuda_stream_selected_reject(table, slot_count,
+                                                   "expert cache copy");
+            }
+            continue;
+        }
+        if (persist_ok) g_expert_persist_cache.misses++;
+        if (!cuda_model_copy_to_device_streamed(
+                    g_stream_selected_cache.gate_ptr + gate_dst,
+                    table->model_map, table->model_size,
+                    gate_src, table->gate_expert_bytes,
+                    "stream gate expert copy") ||
+            !cuda_model_copy_to_device_streamed(
+                    g_stream_selected_cache.up_ptr + gate_dst,
+                    table->model_map, table->model_size,
+                    up_src, table->gate_expert_bytes,
+                    "stream up expert copy") ||
+            !cuda_model_copy_to_device_streamed(
+                    g_stream_selected_cache.down_ptr + down_dst,
+                    table->model_map, table->model_size,
+                    down_src, table->down_expert_bytes,
+                    "stream down expert copy")) {
+            cuda_stream_selected_cache_invalidate();
+            return cuda_stream_selected_reject(table, slot_count,
+                                               "expert weight copy");
+        }
+        if (persist_ok) {
+            uint8_t *fill = cuda_expert_cache_insert(key);
+            if (fill) {
+                /* Populate the arena from the just-staged device buffers so
+                 * the arena always holds bytes that already produced output
+                 * (single source of truth: the streamed read above). */
+                if (!cuda_ok(cudaMemcpy(fill,
+                                        g_stream_selected_cache.gate_ptr + gate_dst,
+                                        table->gate_expert_bytes,
+                                        cudaMemcpyDefault),
+                             "expert cache gate fill") ||
+                    !cuda_ok(cudaMemcpy(fill + table->gate_expert_bytes,
+                                        g_stream_selected_cache.up_ptr + gate_dst,
+                                        table->gate_expert_bytes,
+                                        cudaMemcpyDefault),
+                             "expert cache up fill") ||
+                    !cuda_ok(cudaMemcpy(fill + 2u * table->gate_expert_bytes,
+                                        g_stream_selected_cache.down_ptr + down_dst,
+                                        table->down_expert_bytes,
+                                        cudaMemcpyDefault),
+                             "expert cache down fill")) {
+                    /* fill failure only disables this insertion */
+                    g_expert_persist_cache.meta
+                        [(*g_expert_persist_cache.map)[key]].key = UINT64_MAX;
+                    g_expert_persist_cache.map->erase(key);
+                }
+            }
+        }
+    }
+    if (persist_ok) {
+        g_expert_persist_cache.loads++;
+        if ((g_expert_persist_cache.loads & 1023u) == 0 &&
+            getenv("DS4_GLM_TP_DEBUG")) {
+            const double tot = (double)(g_expert_persist_cache.hits +
+                                        g_expert_persist_cache.misses);
+            fprintf(stderr,
+                    "ds4: expert-cache stats loads=%llu hits=%llu misses=%llu "
+                    "hit%%=%.1f resident=%u/%u slots\n",
+                    (unsigned long long)g_expert_persist_cache.loads,
+                    (unsigned long long)g_expert_persist_cache.hits,
+                    (unsigned long long)g_expert_persist_cache.misses,
+                    tot > 0 ? 100.0 * (double)g_expert_persist_cache.hits / tot : 0.0,
+                    g_expert_persist_cache.used,
+                    g_expert_persist_cache.n_slots);
+        }
+    }
+    if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
