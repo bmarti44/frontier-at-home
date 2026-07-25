@@ -267,6 +267,15 @@ a gate is a script or a checklist with evidence, whichever is smaller.
   temp 0; effectiveness gate: on an identical repeated request,
   /proc/<pid>/io read_bytes for run 2 < 25% of run 1 (deterministic proxy
   for hit rate; threshold revisitable with sol at gate review);
+  REVISED 2026-07-25 under that clause, sol-pre-registered as final after
+  measurement showed the 25% plain ratio arithmetically unreachable (run 1
+  self-benefits from in-flight caching; per-request working set exceeds any
+  feasible arena): three consecutive registered-fixture runs, D1<120 GB,
+  D2,D3<75 GB, D2 and D3 each <70% of D1, |D2-D3| <= 5% of mean, PLUS
+  engine cross-checks — identical post-compaction access-stream sha256 and
+  lookup_bytes across runs, byte-weighted hit rate >=70% on runs 2-3
+  (instrumentation in patch v4.5). Uncached baseline recorded, not a
+  denominator.
   memory gate: cache stays within its configured budget (engine census /
   MemAvailable delta ≤ budget + 1 GiB); upstream GLM quality fixtures pass
   identically to cache-off. DSV4 prod untouched by construction (different
