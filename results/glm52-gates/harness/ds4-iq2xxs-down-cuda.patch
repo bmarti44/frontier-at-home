@@ -450,7 +450,7 @@ index 1a79a01..bd5b214 100644
  }
  
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 041e162..2c19ed3 100644
+index 041e162..f3486af 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -17216,11 +17216,13 @@ __global__ static void moe_gate_up_mid_decode_lut_owned_qwarp32_kernel(
@@ -1272,7 +1272,7 @@ index 041e162..2c19ed3 100644
          }
          int32_t compact = expert_to_slot[(uint32_t)expert];
          if (compact < 0) {
-@@ -23014,14 +23560,28 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23014,14 +23560,40 @@ static int cuda_stream_selected_cache_begin_load(
          }
          slot_ids[i] = compact;
      }
@@ -1300,10 +1300,22 @@ index 041e162..2c19ed3 100644
 +                (double)gate_bytes / (1024.0 * 1024.0),
 +                (double)down_bytes / (1024.0 * 1024.0));
 +    }
++    /* Routing-trace instrumentation (G4a lever 0): one line per selected-load
++     * with the raw expert ids, enabling offline hit-rate/locality analysis
++     * (cache sizing + policy). Decode emits 8 ids per routed layer per token;
++     * batch prefill emits the chunk's slot list. Off unless env set. */
++    if (getenv("DS4_CUDA_EXPERT_TRACE")) {
++        fprintf(stderr, "XTRACE L%u N%u:", table->layer, slot_count);
++        const uint32_t trace_cap = slot_count < 64u ? slot_count : 64u;
++        for (uint32_t i = 0; i < trace_cap; i++)
++            fprintf(stderr, " %d", selected_ids[i]);
++        if (trace_cap < slot_count) fprintf(stderr, " ...");
++        fputc('\n', stderr);
++    }
      const int logical_tier = 0;
      if (g_stream_selected_cache.logical_tier != logical_tier &&
          (g_stream_selected_cache.gate_ptr ||
-@@ -23045,7 +23605,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23045,7 +23617,8 @@ static int cuda_stream_selected_cache_begin_load(
                  down_bytes, "down experts") ||
          !cuda_stream_selected_ensure_i32(slot_count)) {
          cuda_stream_selected_cache_invalidate();
@@ -1313,7 +1325,7 @@ index 041e162..2c19ed3 100644
      }
  
      for (uint32_t i = 0; i < compact_ids.size(); i++) {
-@@ -23074,7 +23635,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23074,7 +23647,8 @@ static int cuda_stream_selected_cache_begin_load(
                      down_src, table->down_expert_bytes,
                      "stream down expert copy")) {
              cuda_stream_selected_cache_invalidate();
@@ -1323,7 +1335,7 @@ index 041e162..2c19ed3 100644
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -23083,7 +23645,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23083,7 +23657,8 @@ static int cuda_stream_selected_cache_begin_load(
                              cudaMemcpyHostToDevice),
                   "stream selected-id remap copy")) {
          cuda_stream_selected_cache_invalidate();
@@ -1333,7 +1345,7 @@ index 041e162..2c19ed3 100644
      }
  
      g_stream_selected_cache.logical_tier = logical_tier;
-@@ -26720,19 +27283,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+@@ -26720,19 +27295,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
      if (!g_ssd_streaming_mode) return 1;
      if (!table || !selected || n_selected == 0 ||
          selected->bytes < (uint64_t)n_selected * sizeof(int32_t)) {
@@ -1359,7 +1371,7 @@ index 041e162..2c19ed3 100644
      }
      return cuda_stream_selected_cache_begin_load(table, ids.data(), n_selected);
  }
-@@ -26960,7 +27526,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
+@@ -26960,7 +27538,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
  }
  
  extern "C" void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled) {
