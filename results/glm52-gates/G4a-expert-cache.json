@@ -1,35 +1,82 @@
 {
   "gate": "G4a",
-  "title": "Persistent CUDA expert cache — correctness, effectiveness, budget",
-  "timestamp": "2026-07-25T08:35:00-04:00",
+  "title": "Persistent CUDA expert cache \u2014 correctness, effectiveness, budget",
+  "timestamp": "2026-07-25T11:05:00-04:00",
   "host": "spark-aba1",
   "engine": {
-    "binary_sha256_12": "dd8ab4c0a604 (v4 = pin 0a7ad77 + PR#513 + iq2down v3.1 + persistent cache)",
+    "binary_sha256_12": "3ad4cc047417 (v4.3 = v4 + sol-review hardening: offset-bound hits, exception-safe insert/evict, index ghost cleanup, map reserve, overflow guards, model-load-generation flush)",
     "patch": "results/glm52-gates/harness/ds4-iq2xxs-down-cuda.patch (v4)",
-    "design": "fixed pre-allocated LRU arena keyed (layer<<32|expert), env DS4_CUDA_EXPERT_CACHE_GB (unset = bit-identical legacy behavior), fail-open, hits copy from arena (identical bytes to disk reads by construction: arena filled only from the streamed reads that produced output), O(1) eviction, stats breadcrumbs. Bounded by construction — no growth path (post-freeze invariant).",
-    "sizing_basis": "committed routing trace logs/g4a/: measured LRU curve predicted 74% hit @70 GiB; gate observed 73.7% (smoke) / 58.2% (mixed incl. 5K-prefill traffic) — simulation validated."
+    "design": "fixed pre-allocated LRU arena keyed (layer<<32|expert), env DS4_CUDA_EXPERT_CACHE_GB (unset = bit-identical legacy behavior), fail-open, hits copy from arena (identical bytes to disk reads by construction: arena filled only from the streamed reads that produced output), O(1) eviction, stats breadcrumbs. Bounded by construction \u2014 no growth path (post-freeze invariant).",
+    "sizing_basis": "committed routing trace logs/g4a/: measured LRU curve predicted 74% hit @70 GiB; gate observed 73.7% (smoke) / 58.2% (mixed incl. 5K-prefill traffic) \u2014 simulation validated."
   },
   "harness": "results/glm52-gates/harness/g4a_gate.sh under glm_safe_run.sh (kill-floor 15 GiB, fsync'd sampler); committed before execution",
   "run_history": {
-    "run1_fail": "08:00 — 2 fails: enabled-line asserted before lazy arena init (harness ordering bug), and warm reads 26% because the 5K long fixture ran BETWEEN repeats, evicting their working set. Fixes: assertion moved after requests; repeats measured before unrelated eviction pressure (choice documented in-harness); 72GB default.",
-    "run2_pass": "08:07-08:35 — ALL assertions pass (committed evidence logs/g4a-gate/)."
+    "run1_fail": "08:00 \u2014 2 fails: enabled-line asserted before lazy arena init (harness ordering bug), and warm reads 26% because the 5K long fixture ran BETWEEN repeats, evicting their working set. Fixes: assertion moved after requests; repeats measured before unrelated eviction pressure (choice documented in-harness); 72GB default.",
+    "run2_pass": "08:07-08:35 \u2014 ALL assertions pass (committed evidence logs/g4a-gate/).",
+    "run3_aborted": "10:02 started on v4.2, superseded mid-flight by v4.3 hardening; stopped deliberately (leftover server caused run4's collision)",
+    "run4_invalid": "10:09 collided with run3's zombie server ('another ds4 process is already running'); harness talked to the stale server \u2014 invalidated, box cleaned",
+    "run5_pass_FINAL": "10:30-11:04 on v4.3 (3ad4cc047417): 13/13 assertions PASS \u2014 warm 68.38 GB = 24% of uncached 274.79 GB, byte-identity all fixtures, quality TSVs identical, budget ok. THIS is the committed evidence."
   },
   "assertions_summary": [
-    {"name": "phaseA_cache_absent / phaseB_cache_enabled", "actual": "off is really off; arena 7,398 slots x 9.28 MiB = 67.05 GiB", "pass": true},
-    {"name": "byte_identical_short/long/short16 + repeat_stable", "actual": "cache-on == cache-off byte-for-byte on every fixture (shaA==shaB incl. 5K-token long e433f3d53368); rep1==rep3", "pass": true},
-    {"name": "warm_reads_lt_25pct_of_off", "expected": "warm repeat disk reads < 25% of the CACHE-OFF baseline for the same fixture (interpretation of 'run 2 < 25% of run 1' with run1 = uncached; presented for review)", "actual": "baseline 274.79 GB -> warm 68.38 GB = 24%", "pass": true},
-    {"name": "budget_adherence", "actual": "97 GiB total engine+cache while serving vs 117 GiB limit (arena fixed-size; saferun floor ~15 GiB never approached)", "pass": true},
-    {"name": "zero_cuda_stubs", "actual": "0 across both phases", "pass": true},
-    {"name": "quality_exits + quality_identical", "actual": "score_official 3-vector NLL TSVs byte-identical cache-on vs cache-off", "pass": true}
+    {
+      "name": "phaseA_cache_absent / phaseB_cache_enabled",
+      "actual": "off is really off; arena 7,398 slots x 9.28 MiB = 67.05 GiB",
+      "pass": true
+    },
+    {
+      "name": "byte_identical_short/long/short16 + repeat_stable",
+      "actual": "cache-on == cache-off byte-for-byte on every fixture (shaA==shaB incl. 5K-token long e433f3d53368); rep1==rep3",
+      "pass": true
+    },
+    {
+      "name": "warm_reads_lt_25pct_of_off",
+      "expected": "warm repeat disk reads < 25% of the CACHE-OFF baseline for the same fixture (interpretation of 'run 2 < 25% of run 1' with run1 = uncached; presented for review)",
+      "actual": "baseline 274.79 GB -> warm 68.38 GB = 24%",
+      "pass": true
+    },
+    {
+      "name": "budget_adherence",
+      "actual": "97 GiB total engine+cache while serving vs 117 GiB limit (arena fixed-size; saferun floor ~15 GiB never approached)",
+      "pass": true
+    },
+    {
+      "name": "zero_cuda_stubs",
+      "actual": "0 across both phases",
+      "pass": true
+    },
+    {
+      "name": "quality_exits + quality_identical",
+      "actual": "score_official 3-vector NLL TSVs byte-identical cache-on vs cache-off",
+      "pass": true
+    }
   ],
   "recorded_not_gated": {
-    "wall_times_s": {"short16_uncached": 70, "warm_repeat": 30, "short_uncached": 99, "short_cached": 39, "long_uncached": 232, "long_cached": 209},
+    "wall_times_s": {
+      "short16_uncached": 70,
+      "warm_repeat": 30,
+      "short_uncached": 99,
+      "short_cached": 39,
+      "long_uncached": 232,
+      "long_cached": 209
+    },
     "observations": [
-      "End-to-end warm speedup 2.3x on repeats (70->30 s), 2.5x on the short fixture (99->39 s); long-prompt prefill barely helped (232->209 s) — chunk-union prefill already amortizes reads, so the cache's leverage is decode.",
+      "End-to-end warm speedup 2.3x on repeats (70->30 s), 2.5x on the short fixture (99->39 s); long-prompt prefill barely helped (232->209 s) \u2014 chunk-union prefill already amortizes reads, so the cache's leverage is decode.",
       "First cache-on request pays one-time arena warmup (~544 s incl. page-faulting 67 GiB): startup cost to engineer away later (prefault at load).",
       "Steady mixed-traffic hit 58.2% at 67 GiB with 5K-prefill pollution; repeat-heavy traffic 73.7%. Next levers per research doc: kernel indirection into the arena (drop hit-path copies), MTP/drafting after residency, prefix disk-KV for TTFT."
     ]
   },
-  "result": "PASS (pending sol review)",
-  "sol_review": null
+  "result": "PASS (code sol-approved; evidence audit pending)",
+  "sol_review": {
+    "code_review": {
+      "rounds": 4,
+      "verdict": "PASS (round 4)",
+      "trail": [
+        "R1 FAIL: key lacked model binding; exception-unsafe insert/evict; operator[] in fill-failure cleanup; unchecked arithmetic -> fixed in v4.1/v4.2",
+        "R2 FAIL: offsets still insufficient for same-layout model reload; up_off unchecked -> v4.2 pointer-generation flush",
+        "R3 FAIL: pointer identity vulnerable to mmap address reuse -> v4.3 monotonic g_model_load_generation bumped at all three model-map registration entry points",
+        "R4 PASS: address-reuse closed, no bypass path, no new defect, rounds 2-3 items sound (reviewed excerpt committed as logs/g4a-gate/cache-implementation.txt)"
+      ]
+    },
+    "evidence_review": null
+  }
 }

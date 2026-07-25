@@ -3,7 +3,7 @@ ASSERT name=phaseA_cache_absent expected=[0 cache-enabled lines (off is really o
 ASSERT name=phaseB_server_ready expected=[200] actual=[ready] result=PASS
 ASSERT name=phaseB_cache_enabled expected=[arena line present] actual=[ds4: CUDA persistent expert cache enabled: 7398 slots x 9.28 MiB = 67.05 GiB (fixed arena)] result=PASS
 ASSERT name=budget_adherence expected=[total engine+cache usage <= 117 GiB (arena bounded by construction; census in serverB.log)] actual=[97 GiB while serving] result=PASS
-final cache stats: ds4: expert-cache stats loads=17408 hits=102144 misses=73336 hit%=58.2 resident=7398/7398 slots
+final cache stats: ds4: expert-cache stats loads=17408 hits=98748 misses=76732 hit%=56.3 resident=6748/7398 slots
 ASSERT name=byte_identical_short expected=[cache-on == cache-off] actual=[cmp=0 shaA=16fe2a7eba06 shaB=16fe2a7eba06] result=PASS
 ASSERT name=byte_identical_long expected=[cache-on == cache-off] actual=[cmp=0 shaA=e433f3d53368 shaB=e433f3d53368] result=PASS
 ASSERT name=byte_identical_short16 expected=[cache-on rep1 == cache-off] actual=[cmp=0] result=PASS

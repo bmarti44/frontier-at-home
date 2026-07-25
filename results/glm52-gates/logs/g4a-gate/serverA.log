@@ -6,16 +6,16 @@ ds4: SSD streaming initial cuda model map restricted to token embedding (1 spans
 ds4: CUDA host registration skipped: operation not supported
 ds4: CUDA preparing model tensor mappings
 ds4: CUDA loading model tensors into device cache
-ds4: CUDA startup model preparation covered 0.94 GiB of tensor spans in 0.257s
+ds4: CUDA startup model preparation covered 0.94 GiB of tensor spans in 0.236s
 ds4: cuda backend initialized for graph diagnostics
 ds4: memory: KV 1.45 GiB (raw 0.00 + compressed 1.45) + buffers 4.07 GiB + resident model 0.94 GiB + expert cache 34.09 GiB + prefill expert reserve 5.91 GiB = 46.46 GiB planned
 ds4: memory detail: ctx=8192 prefill_cap=4096 raw_kv_rows=0 compressed_kv_rows=8192 backend=cuda
-0725 08:07:37 ds4-server: context buffers 5653.35 MiB (ctx=8192, backend=cuda, prefill_chunk=4096, raw_kv_rows=0, compressed_kv_rows=8192)
+0725 10:30:51 ds4-server: context buffers 5653.35 MiB (ctx=8192, backend=cuda, prefill_chunk=4096, raw_kv_rows=0, compressed_kv_rows=8192)
 ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
 ds4: GLM graph allocating compact DSA cache: rows=8192 logical_ctx=8192 kv_layers=78 indexer_layers=21 f32 1.45 GiB
 ds4: GLM compact indexed prefill chunk=4096 score_rows=4096 score_scratch=128.00 MiB
-0725 08:07:38 ds4-server: listening on http://127.0.0.1:8026
-0725 08:07:39 ds4-server: completion ctx=0..31:31 prompt start
+0725 10:30:51 ds4-server: listening on http://127.0.0.1:8026
+0725 10:30:52 ds4-server: completion ctx=0..31:31 prompt start
 ds4: CUDA selected-expert batch layer=3 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=4 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=5 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
@@ -2343,8 +2343,8 @@ ds4: CUDA selected-expert batch layer=75 slots=8 unique=8 load=74.2 MiB (gate 24
 ds4: CUDA selected-expert batch layer=76 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=77 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA loading model tensors 17.61 GiB cached
-0725 08:08:30 ds4-server: completion ctx=0..31:31 prefill chunk 31/31 (100.0%) chunk=0.00 t/s avg=0.61 t/s 50.999s
-0725 08:08:30 ds4-server: completion ctx=0..31:31 prompt done 50.999s
+0725 10:31:41 ds4-server: completion ctx=0..31:31 prefill chunk 31/31 (100.0%) chunk=0.00 t/s avg=0.63 t/s 48.976s
+0725 10:31:41 ds4-server: completion ctx=0..31:31 prompt done 48.976s
 ds4: CUDA selected-expert batch layer=3 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=4 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=5 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
@@ -4745,10 +4745,10 @@ ds4: CUDA selected-expert batch layer=74 slots=8 unique=8 load=74.2 MiB (gate 24
 ds4: CUDA selected-expert batch layer=75 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=76 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=77 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
-0725 08:09:18 ds4-server: completion ctx=31..63:32 gen=32 THINKING decoding chunk=0.67 t/s avg=0.67 t/s 47.989s
-0725 08:09:18 ds4-server: completion ctx=0..31:31 gen=32 THINKING finish=length 98.988s
-0725 08:09:18 ds4-server: live kv cache miss live=63 prompt=31 common=31 reason=token-mismatch
-0725 08:09:18 ds4-server: completion ctx=0..31:31 prompt start
+0725 10:32:27 ds4-server: completion ctx=31..63:32 gen=32 THINKING decoding chunk=0.70 t/s avg=0.70 t/s 45.662s
+0725 10:32:27 ds4-server: completion ctx=0..31:31 gen=32 THINKING finish=length 94.639s
+0725 10:32:27 ds4-server: live kv cache miss live=63 prompt=31 common=31 reason=token-mismatch
+0725 10:32:27 ds4-server: completion ctx=0..31:31 prompt start
 ds4: CUDA selected-expert batch layer=3 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=4 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=5 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
@@ -7074,8 +7074,8 @@ ds4: CUDA selected-expert batch layer=74 slots=8 unique=8 load=74.2 MiB (gate 24
 ds4: CUDA selected-expert batch layer=75 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=76 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=77 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
-0725 08:10:03 ds4-server: completion ctx=0..31:31 prefill chunk 31/31 (100.0%) chunk=0.00 t/s avg=0.68 t/s 45.724s
-0725 08:10:03 ds4-server: completion ctx=0..31:31 prompt done 45.724s
+0725 10:33:12 ds4-server: completion ctx=0..31:31 prefill chunk 31/31 (100.0%) chunk=0.00 t/s avg=0.68 t/s 45.366s
+0725 10:33:12 ds4-server: completion ctx=0..31:31 prompt done 45.366s
 ds4: CUDA selected-expert batch layer=3 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=4 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=5 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
@@ -8276,10 +8276,10 @@ ds4: CUDA selected-expert batch layer=74 slots=8 unique=8 load=74.2 MiB (gate 24
 ds4: CUDA selected-expert batch layer=75 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=76 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=77 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
-0725 08:10:28 ds4-server: completion ctx=31..47:16 gen=16 THINKING decoding chunk=0.65 t/s avg=0.65 t/s 24.516s
-0725 08:10:28 ds4-server: completion ctx=0..31:31 gen=16 THINKING finish=length 70.239s
-0725 08:10:28 ds4-server: live kv cache miss live=47 prompt=5047 common=16 reason=token-mismatch
-0725 08:10:28 ds4-server: completion ctx=0..5047:5047 prompt start
+0725 10:33:36 ds4-server: completion ctx=31..47:16 gen=16 THINKING decoding chunk=0.67 t/s avg=0.67 t/s 23.862s
+0725 10:33:36 ds4-server: completion ctx=0..31:31 gen=16 THINKING finish=length 69.228s
+0725 10:33:36 ds4-server: live kv cache miss live=47 prompt=5047 common=16 reason=token-mismatch
+0725 10:33:36 ds4-server: completion ctx=0..5047:5047 prompt start
 ds4: CUDA selected-expert batch layer=3 slots=16384 unique=252 load=2338.9 MiB (gate 779.6 + up 779.6 + down 779.6)
 ds4: CUDA selected-expert batch layer=4 slots=16384 unique=251 load=2329.6 MiB (gate 776.5 + up 776.5 + down 776.5)
 ds4: CUDA selected-expert batch layer=5 slots=16384 unique=251 load=2329.6 MiB (gate 776.5 + up 776.5 + down 776.5)
@@ -8355,7 +8355,7 @@ ds4: CUDA selected-expert batch layer=74 slots=16384 unique=256 load=2376.0 MiB 
 ds4: CUDA selected-expert batch layer=75 slots=16384 unique=255 load=2366.7 MiB (gate 788.9 + up 788.9 + down 788.9)
 ds4: CUDA selected-expert batch layer=76 slots=16384 unique=255 load=2366.7 MiB (gate 788.9 + up 788.9 + down 788.9)
 ds4: CUDA selected-expert batch layer=77 slots=16384 unique=253 load=2348.2 MiB (gate 782.7 + up 782.7 + down 782.7)
-0725 08:11:44 ds4-server: completion ctx=0..5047:5047 prefill chunk 2048/5047 (40.6%) chunk=0.00 t/s avg=26.90 t/s 76.136s
+0725 10:34:51 ds4-server: completion ctx=0..5047:5047 prefill chunk 2048/5047 (40.6%) chunk=0.00 t/s avg=27.38 t/s 74.806s
 ds4: CUDA loading model tensors 18.56 GiB cached
 ds4: CUDA selected-expert batch layer=3 slots=23992 unique=251 load=2329.6 MiB (gate 776.5 + up 776.5 + down 776.5)
 ds4: CUDA selected-expert batch layer=4 slots=23992 unique=251 load=2329.6 MiB (gate 776.5 + up 776.5 + down 776.5)
@@ -8441,8 +8441,8 @@ ds4: CUDA selected-expert batch layer=74 slots=23992 unique=253 load=2348.2 MiB 
 ds4: CUDA selected-expert batch layer=75 slots=23992 unique=252 load=2338.9 MiB (gate 779.6 + up 779.6 + down 779.6)
 ds4: CUDA selected-expert batch layer=76 slots=23992 unique=252 load=2338.9 MiB (gate 779.6 + up 779.6 + down 779.6)
 ds4: CUDA selected-expert batch layer=77 slots=23992 unique=249 load=2311.0 MiB (gate 770.3 + up 770.3 + down 770.3)
-0725 08:13:29 ds4-server: completion ctx=0..5047:5047 prefill chunk 5047/5047 (100.0%) chunk=28.68 t/s avg=27.93 t/s 180.714s
-0725 08:13:29 ds4-server: completion ctx=0..5047:5047 prompt done 180.714s
+0725 10:36:35 ds4-server: completion ctx=0..5047:5047 prefill chunk 5047/5047 (100.0%) chunk=29.01 t/s avg=28.32 t/s 178.194s
+0725 10:36:35 ds4-server: completion ctx=0..5047:5047 prompt done 178.194s
 ds4: CUDA selected-expert batch layer=3 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=4 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=5 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
@@ -10843,6 +10843,6 @@ ds4: CUDA selected-expert batch layer=74 slots=8 unique=8 load=74.2 MiB (gate 24
 ds4: CUDA selected-expert batch layer=75 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=76 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
 ds4: CUDA selected-expert batch layer=77 slots=8 unique=8 load=74.2 MiB (gate 24.8 + up 24.8 + down 24.8)
-0725 08:14:20 ds4-server: completion ctx=5047..5079:32 gen=32 THINKING decoding chunk=0.62 t/s avg=0.62 t/s 51.523s
-0725 08:14:20 ds4-server: completion ctx=0..5047:5047 gen=32 THINKING finish=length 232.237s
-0725 08:14:20 ds4-server: shutdown requested, draining requests
+0725 10:37:23 ds4-server: completion ctx=5047..5079:32 gen=32 THINKING decoding chunk=0.66 t/s avg=0.66 t/s 48.760s
+0725 10:37:23 ds4-server: completion ctx=0..5047:5047 gen=32 THINKING finish=length 226.954s
+0725 10:37:23 ds4-server: shutdown requested, draining requests
