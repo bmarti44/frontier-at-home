@@ -1,5 +1,5 @@
 diff --git a/ds4.c b/ds4.c
-index 1a79a01..7ad504a 100644
+index 1a79a01..bd5b214 100644
 --- a/ds4.c
 +++ b/ds4.c
 @@ -38024,8 +38024,8 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
@@ -228,13 +228,19 @@ index 1a79a01..7ad504a 100644
      if (trace) {
          const double ms = (now_sec() - trace_upload_t0) * 1000.0;
          if (trace_all || ms >= trace_slow_ms || !ok) {
-@@ -43697,14 +43833,18 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43697,14 +43833,24 @@ static bool glm_graph_forward_indexed_tokens(
      const uint32_t drain_interval =
          progress_flush_interval != 0 ? glm_graph_indexed_prefill_drain_interval() : 0u;
      const bool progress_requested = display_progress && work_total > 0;
 -    ds4_gpu_set_glm_streaming_prefill_full_layer(false);
-+    const bool full_layer_prefill =
-+        glm_graph_stream_prefill_full_layer_enabled(g, n_tokens);
++    /* Full-layer prefill mapping stays DISABLED on the indexed path: the
++     * CUDA weight cache has no per-layer eviction, so mapping every routed
++     * layer's expert spans grows ~2.4 GiB per layer (~184 GiB for GLM-5.2)
++     * and exhausts unified memory (observed host freeze). Indexed batch
++     * prefill instead streams the dedup'd per-layer selected-expert working
++     * set, bounded to <= n_total_expert slabs by
++     * cuda_stream_selected_cache_begin_load's compact remap. */
++    const bool full_layer_prefill = false;
 +    ds4_gpu_set_glm_streaming_prefill_full_layer(full_layer_prefill);
      const bool streaming_prefill_sync_each_layer =
          !g->ssd_streaming ||
@@ -250,7 +256,7 @@ index 1a79a01..7ad504a 100644
                  pos0,
                  n_tokens,
                  use_scalar_indexer ? 1u : 0u,
-@@ -43712,6 +43852,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43712,6 +43858,7 @@ static bool glm_graph_forward_indexed_tokens(
                  use_batch_attn_kernel ? 1u : 0u,
                  use_split_value_proj ? 1u : 0u,
                  use_batch_ffn ? 1u : 0u,
@@ -258,7 +264,7 @@ index 1a79a01..7ad504a 100644
                  progress_flush_interval,
                  drain_interval);
      }
-@@ -43740,6 +43881,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43740,6 +43887,7 @@ static bool glm_graph_forward_indexed_tokens(
              }
          }
      }
@@ -266,7 +272,7 @@ index 1a79a01..7ad504a 100644
      if (ok && !input_hc) {
          const double t0 = trace ? now_sec() : 0.0;
          ok = ds4_gpu_embed_tokens_quant_tensor(cur,
-@@ -43763,9 +43905,11 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43763,9 +43911,11 @@ static bool glm_graph_forward_indexed_tokens(
              }
          }
      }
@@ -278,7 +284,7 @@ index 1a79a01..7ad504a 100644
  
  #define DS4_GLM_PROFILE_INDEXED_STAGE(part_, name_) do { \
          if (ok && trace) { \
-@@ -43788,6 +43932,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43788,6 +43938,7 @@ static bool glm_graph_forward_indexed_tokens(
          } else if (ok && stage_sync) { \
              ok = glm_graph_prefill_stage_sync_boundary(); \
          } \
@@ -286,7 +292,7 @@ index 1a79a01..7ad504a 100644
      } while (0)
      ds4_gpu_tensor *last_indexer_selected = NULL;
      uint32_t last_indexer_selected_count = 0;
-@@ -43797,6 +43942,11 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43797,6 +43948,11 @@ static bool glm_graph_forward_indexed_tokens(
           * are rewritten every layer, so one fill per chunk suffices. */
          ok = ds4_gpu_tensor_fill_f32(g->batch_heads, 0.0f,
                                       (uint64_t)n_tokens * g->heads_dim) != 0;
@@ -298,7 +304,7 @@ index 1a79a01..7ad504a 100644
      }
      ds4_gpu_tp_set_attn_head_split(tp_attn_head_split ? 1 : 0);
      for (uint32_t il = g->layer_start; ok && il <= g->layer_end; il++) {
-@@ -43807,8 +43957,18 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43807,8 +43963,18 @@ static bool glm_graph_forward_indexed_tokens(
                                                      weights,
                                                      il,
                                                      n_tokens,
@@ -318,7 +324,7 @@ index 1a79a01..7ad504a 100644
          }
          const ds4_layer_weights *l = &weights->layer[il];
          const uint32_t kv_raw_dim = (uint32_t)l->attn_kv_a_mqa->dim[1];
-@@ -43833,6 +43993,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43833,6 +43999,9 @@ static bool glm_graph_forward_indexed_tokens(
          }
          if (residual_elems > UINT32_MAX) {
              ok = false;
@@ -328,7 +334,7 @@ index 1a79a01..7ad504a 100644
              break;
          }
          if (layer_stage_profile) {
-@@ -44534,7 +44697,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44534,7 +44703,7 @@ static bool glm_graph_forward_indexed_tokens(
                                              g->batch_after_attn,
                                              next,
                                              n_tokens,
@@ -337,7 +343,7 @@ index 1a79a01..7ad504a 100644
                                              layer_stage_profile,
                                              stage_sync,
                                              layer_stage_profile ? &layer_stage_t0 : NULL);
-@@ -44629,6 +44792,11 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44629,6 +44798,11 @@ static bool glm_graph_forward_indexed_tokens(
                  ds4_gpu_tensor_free(after_attn_view);
              }
          }
@@ -349,7 +355,7 @@ index 1a79a01..7ad504a 100644
          if (ok) {
              ds4_gpu_tensor *tmp = cur;
              cur = next;
-@@ -44715,8 +44883,16 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44715,8 +44889,16 @@ static bool glm_graph_forward_indexed_tokens(
          }
          if (g->ssd_streaming) {
              if (streaming_prefill_sync_each_layer) {
@@ -368,7 +374,7 @@ index 1a79a01..7ad504a 100644
              } else if (!ok) {
                  (void)ds4_gpu_synchronize();
              }
-@@ -44746,7 +44922,6 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44746,7 +44928,6 @@ static bool glm_graph_forward_indexed_tokens(
          }
      }
      ds4_gpu_tp_set_attn_head_split(0);
@@ -376,7 +382,7 @@ index 1a79a01..7ad504a 100644
      if (ok && !g->ssd_streaming) {
          const double trace_end_t0 = trace ? now_sec() : 0.0;
          if (trace) {
-@@ -44767,6 +44942,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44767,6 +44948,9 @@ static bool glm_graph_forward_indexed_tokens(
                      end_ms,
                      chunk_ms);
          }
@@ -386,7 +392,7 @@ index 1a79a01..7ad504a 100644
      } else if (!ok) {
          if (trace) {
              glm_graph_indexed_prefill_tracef(
-@@ -44783,6 +44961,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44783,6 +44967,9 @@ static bool glm_graph_forward_indexed_tokens(
          !output_hc &&
          !logits_out) {
          ok = ds4_gpu_end_commands() != 0;
@@ -396,7 +402,7 @@ index 1a79a01..7ad504a 100644
      }
      if (ok) {
          glm_graph_report_prefill_display_progress(display_progress,
-@@ -44800,11 +44981,13 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44800,11 +44987,13 @@ static bool glm_graph_forward_indexed_tokens(
                                   0,
                                   output_hc,
                                   (uint64_t)n_tokens * DS4_N_EMBD * sizeof(float)) != 0;
@@ -410,7 +416,7 @@ index 1a79a01..7ad504a 100644
      }
      if (ok && logits_out) {
          last_hidden = glm_graph_tensor_row_view_strided(cur,
-@@ -44812,8 +44995,19 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44812,8 +45001,19 @@ static bool glm_graph_forward_indexed_tokens(
                                                          DS4_N_EMBD,
                                                          DS4_N_EMBD);
          ok = last_hidden != NULL;
@@ -432,7 +438,7 @@ index 1a79a01..7ad504a 100644
          if (ok) {
              glm_graph_report_prefill_display_progress(display_progress,
                                                        display_progress_ud,
-@@ -44828,6 +45022,10 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44828,6 +45028,10 @@ static bool glm_graph_forward_indexed_tokens(
      }
      ds4_gpu_tensor_free(last_hidden);
      ds4_gpu_set_glm_streaming_prefill_full_layer(false);
@@ -444,7 +450,7 @@ index 1a79a01..7ad504a 100644
  }
  
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 041e162..ba0a5f5 100644
+index 041e162..2c19ed3 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -17216,11 +17216,13 @@ __global__ static void moe_gate_up_mid_decode_lut_owned_qwarp32_kernel(
@@ -1266,7 +1272,7 @@ index 041e162..ba0a5f5 100644
          }
          int32_t compact = expert_to_slot[(uint32_t)expert];
          if (compact < 0) {
-@@ -23014,11 +23560,15 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23014,14 +23560,28 @@ static int cuda_stream_selected_cache_begin_load(
          }
          slot_ids[i] = compact;
      }
@@ -1284,7 +1290,20 @@ index 041e162..ba0a5f5 100644
      }
      const uint64_t gate_bytes = compact_count * table->gate_expert_bytes;
      const uint64_t down_bytes = compact_count * table->down_expert_bytes;
-@@ -23045,7 +23595,8 @@ static int cuda_stream_selected_cache_begin_load(
++    if (getenv("DS4_GLM_TP_DEBUG")) {
++        fprintf(stderr,
++                "ds4: CUDA selected-expert batch layer=%u slots=%u unique=%u "
++                "load=%.1f MiB (gate %.1f + up %.1f + down %.1f)\n",
++                table->layer, slot_count, (uint32_t)compact_count,
++                (double)(2u * gate_bytes + down_bytes) / (1024.0 * 1024.0),
++                (double)gate_bytes / (1024.0 * 1024.0),
++                (double)gate_bytes / (1024.0 * 1024.0),
++                (double)down_bytes / (1024.0 * 1024.0));
++    }
+     const int logical_tier = 0;
+     if (g_stream_selected_cache.logical_tier != logical_tier &&
+         (g_stream_selected_cache.gate_ptr ||
+@@ -23045,7 +23605,8 @@ static int cuda_stream_selected_cache_begin_load(
                  down_bytes, "down experts") ||
          !cuda_stream_selected_ensure_i32(slot_count)) {
          cuda_stream_selected_cache_invalidate();
@@ -1294,7 +1313,7 @@ index 041e162..ba0a5f5 100644
      }
  
      for (uint32_t i = 0; i < compact_ids.size(); i++) {
-@@ -23074,7 +23625,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23074,7 +23635,8 @@ static int cuda_stream_selected_cache_begin_load(
                      down_src, table->down_expert_bytes,
                      "stream down expert copy")) {
              cuda_stream_selected_cache_invalidate();
@@ -1304,7 +1323,7 @@ index 041e162..ba0a5f5 100644
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -23083,7 +23635,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23083,7 +23645,8 @@ static int cuda_stream_selected_cache_begin_load(
                              cudaMemcpyHostToDevice),
                   "stream selected-id remap copy")) {
          cuda_stream_selected_cache_invalidate();
@@ -1314,7 +1333,7 @@ index 041e162..ba0a5f5 100644
      }
  
      g_stream_selected_cache.logical_tier = logical_tier;
-@@ -26720,19 +27273,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+@@ -26720,19 +27283,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
      if (!g_ssd_streaming_mode) return 1;
      if (!table || !selected || n_selected == 0 ||
          selected->bytes < (uint64_t)n_selected * sizeof(int32_t)) {
@@ -1340,7 +1359,7 @@ index 041e162..ba0a5f5 100644
      }
      return cuda_stream_selected_cache_begin_load(table, ids.data(), n_selected);
  }
-@@ -26960,7 +27516,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
+@@ -26960,7 +27526,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
  }
  
  extern "C" void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled) {
