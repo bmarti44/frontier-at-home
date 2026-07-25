@@ -15,7 +15,7 @@ start_srv() {
   DS4_GLM_TP_DEBUG=1 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=60 \
     "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port 8027 \
     --ssd-streaming --ssd-streaming-cache-experts 40GB \
-    --kv-disk-dir "$KVDIR" --kv-disk-space-mb 8192 > "$OUT/$1" 2>&1 &
+    --kv-disk-dir "$KVDIR" --kv-disk-space-mb 8192 --kv-cache-boundary-align-tokens ${G4P_ALIGN:-2048} > "$OUT/$1" 2>&1 &
   SPID=$!
   for i in $(seq 1 200); do
     [[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:8027/v1/models)" == 200 ]] && return 0
