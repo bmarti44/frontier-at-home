@@ -1,3 +1,4 @@
+REDACTED COPY: hex digests truncated to 12 chars per repo gitleaks policy; unredacted originals under /home/dsv4/ds4-project/glm52-gates-g4a/
 ASSERT name=phaseA_server_ready expected=[200] actual=[ready] result=PASS
 ASSERT name=phaseA_cache_absent expected=[0 cache-enabled lines (off is really off)] actual=[0] result=PASS
 ASSERT name=phaseB_server_ready expected=[200] actual=[ready] result=PASS
@@ -8,7 +9,20 @@ ASSERT name=byte_identical_short expected=[cache-on == cache-off] actual=[cmp=0 
 ASSERT name=byte_identical_long expected=[cache-on == cache-off] actual=[cmp=0 shaA=e433f3d53368 shaB=e433f3d53368] result=PASS
 ASSERT name=byte_identical_short16 expected=[cache-on rep1 == cache-off] actual=[cmp=0] result=PASS
 ASSERT name=repeat_stable expected=[rep1 == rep3] actual=[cmp=0] result=PASS
-ASSERT name=warm_reads_lt_25pct_of_off expected=[warm repeat reads < 25% of cache-OFF baseline reads (gate text 'run 2 < 25% of run 1' with run1 = uncached; interpretation documented for review)] actual=[baseline=274791628800 warm=68376342528 = 24%] result=PASS
+recorded: uncached baseline=274791628800 (not a denominator per criterion)
+ASSERT name=D1_bounds expected=[0 < D1 < 120e9] actual=[111303282688] result=PASS
+ASSERT name=D2_bounds expected=[0 < D2 < 75e9] actual=[68376342528] result=PASS
+ASSERT name=D3_bounds expected=[0 < D3 < 75e9] actual=[68376342528] result=PASS
+ASSERT name=D2_lt_70pct_D1 expected=[100*D2 < 70*D1] actual=[6837634252800 vs 7791229788160] result=PASS
+ASSERT name=D3_lt_70pct_D1 expected=[100*D3 < 70*D1] actual=[6837634252800 vs 7791229788160] result=PASS
+ASSERT name=D2_D3_stable expected=[200*|D2-D3| <= 10*(D2+D3)] actual=[diff=0] result=PASS
+windows: 5 (readiness polling also emits windows; the three
+run windows are the LAST three — each closed by the explicit GET after its
+run; nothing follows rep3's GET)
+ASSERT name=stream_sha_equal expected=[run1==run2==run3 access streams] actual=[c7d755bc1d6c/c7d755bc1d6c/c7d755bc1d6c] result=PASS
+ASSERT name=lookup_bytes_equal expected=[identical lookup bytes across runs] actual=[274445107200/274445107200/274445107200] result=PASS
+ASSERT name=hit_rate_run2 expected=[100*hit_bytes >= 70*lookup_bytes (run2)] actual=[206154989568/274445107200] result=PASS
+ASSERT name=hit_rate_run3 expected=[100*hit_bytes >= 70*lookup_bytes (run3)] actual=[206154989568/274445107200] result=PASS
 ASSERT name=zero_cuda_stubs expected=[0] actual=[0] result=PASS
 ASSERT name=quality_exits expected=[0/0] actual=[0/0] result=PASS
 ASSERT name=quality_identical expected=[NLL TSV identical cache-on vs cache-off] actual=[cmp=0] result=PASS

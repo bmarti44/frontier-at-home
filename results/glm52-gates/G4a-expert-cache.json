@@ -1,10 +1,10 @@
 {
   "gate": "G4a",
   "title": "Persistent CUDA expert cache \u2014 correctness, effectiveness, budget",
-  "timestamp": "2026-07-25T11:05:00-04:00",
+  "timestamp": "2026-07-25T16:50:00-04:00",
   "host": "spark-aba1",
   "engine": {
-    "binary_sha256_12": "3ad4cc047417 (v4.3 = v4 + sol-review hardening: offset-bound hits, exception-safe insert/evict, index ghost cleanup, map reserve, overflow guards, model-load-generation flush)",
+    "binary_sha256_12": "04af2b895998 (v4.5 = v4.3 + per-window stats instrumentation: lookup/hit bytes + access-stream sha256, emitted on /v1/models GET)",
     "patch": "results/glm52-gates/harness/ds4-iq2xxs-down-cuda.patch (v4)",
     "design": "fixed pre-allocated LRU arena keyed (layer<<32|expert), env DS4_CUDA_EXPERT_CACHE_GB (unset = bit-identical legacy behavior), fail-open, hits copy from arena (identical bytes to disk reads by construction: arena filled only from the streamed reads that produced output), O(1) eviction, stats breadcrumbs. Bounded by construction \u2014 no growth path (post-freeze invariant).",
     "sizing_basis": "committed routing trace logs/g4a/: measured LRU curve predicted 74% hit @70 GiB; gate observed 73.7% (smoke) / 58.2% (mixed incl. 5K-prefill traffic) \u2014 simulation validated. Prefill claim corrected per audit: measured 19.2 t/s cold (5047/263.1 s) and 21.8 t/s warm-engine (G3 run D 232 s); earlier '~26' figure retracted."
@@ -15,7 +15,10 @@
     "run2_pass": "08:07-08:35 \u2014 ALL assertions pass (committed evidence logs/g4a-gate/).",
     "run3_aborted": "10:02 started on v4.2, superseded mid-flight by v4.3 hardening; stopped deliberately (leftover server caused run4's collision)",
     "run4_invalid": "10:09 collided with run3's zombie server ('another ds4 process is already running'); harness talked to the stale server \u2014 invalidated, box cleaned",
-    "run5_pass_FINAL": "10:30-11:04 on v4.3 (3ad4cc047417): 13/13 assertions PASS \u2014 warm 68.38 GB = 24% of uncached 274.79 GB, byte-identity all fixtures, quality TSVs identical, budget ok. THIS is the committed evidence."
+    "run5_pass_FINAL": "10:30-11:04 on v4.3 (3ad4cc047417): 13/13 assertions PASS \u2014 warm 68.38 GB = 24% of uncached 274.79 GB, byte-identity all fixtures, quality TSVs identical, budget ok. THIS is the committed evidence.",
+    "run6_floorkill": "15:33 \u2014 saferun kill-floor (15 GiB) fired during arena warmup: desktop processes had shrunk headroom; box protected as designed, no freeze. Floor lowered to 12 GiB (still 2x above danger).",
+    "run7_harness_bug": "15:49 \u2014 sol criterion assertions live for the first time: 3 FAILs traced to MY window indexing (readiness polls also emit stat windows; index grabbed an empty pre-run window). Runs 2/3 already showed identical digests + 75.1% hit.",
+    "run8_pass_FINAL": "16:18-16:50 \u2014 22/22 PASS under the sol-pre-registered criterion: D1=111.3GB<120, D2=D3=68.4GB<75, both <70% of D1 (61.4%), |D2-D3|=0, access-stream sha c7d755bc1d6c identical x3, lookup_bytes identical x3 (274,445,107,200), hit_bytes 206,154,989,568 = 75.1% >= 70% on runs 2 and 3, byte-identity vs cache-off on all fixtures, quality TSVs identical, budget honored. THIS is the committed evidence."
   },
   "assertions_summary": [
     {
@@ -66,7 +69,7 @@
       "Steady mixed-traffic hit 58.2% at 67 GiB with 5K-prefill pollution; repeat-heavy traffic 73.7%. Next levers per research doc: kernel indirection into the arena (drop hit-path copies), MTP/drafting after residency, prefix disk-KV for TTFT."
     ]
   },
-  "result": "PASS (pending sol evidence round-2)",
+  "result": "PASS under sol-pre-registered criterion (final audit pending)",
   "sol_review": {
     "code_review": {
       "rounds": 4,
