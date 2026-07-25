@@ -119,8 +119,11 @@ assert D3_lt_70pct_D1 "100*D3 < 70*D1" "$((100*D3)) vs $((70*D1))" $(( 100*D3 < 
 DIFF=$(( D2 > D3 ? D2 - D3 : D3 - D2 ))
 assert D2_D3_stable "200*|D2-D3| <= 10*(D2+D3)" "diff=$DIFF" $(( 200*DIFF <= 10*(D2+D3) ? 0 : 1 ))
 mapfile -t WINS < <(grep "expert-cache window tag=models-get" "$OUT/serverB.log")
-echo "windows: ${#WINS[@]}" >> "$A"
-W1=${WINS[1]:-}; W2=${WINS[2]:-}; W3=${WINS[3]:-}
+echo "windows: ${#WINS[@]} (readiness polling also emits windows; the three
+run windows are the LAST three — each closed by the explicit GET after its
+run; nothing follows rep3's GET)" >> "$A"
+N=${#WINS[@]}
+W1=${WINS[$((N-3))]:-}; W2=${WINS[$((N-2))]:-}; W3=${WINS[$((N-1))]:-}
 gv() { echo "$1" | grep -oE "$2=[a-f0-9]+" | cut -d= -f2; }
 SH1=$(gv "$W1" stream_sha256); SH2=$(gv "$W2" stream_sha256); SH3=$(gv "$W3" stream_sha256)
 LB1=$(gv "$W1" lookup_bytes); LB2=$(gv "$W2" lookup_bytes); LB3=$(gv "$W3" lookup_bytes)
