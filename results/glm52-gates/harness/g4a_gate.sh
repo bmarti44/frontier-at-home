@@ -12,7 +12,7 @@ FIXS=$REPO/results/glm52-gates/harness/fixture-glm-short.json
 FIX16=$REPO/results/glm52-gates/harness/fixture-glm-short16.json
 FIXL=$REPO/results/glm52-gates/harness/fixture-glm-long.json
 PORT=8026
-CACHE_GB=${G4A_CACHE_GB:-68}
+CACHE_GB=${G4A_CACHE_GB:-72}
 rm -rf "$OUT"; mkdir -p "$OUT"
 A="$OUT/assertions.log"
 note() { echo "$(date -Is) $*" >> "$OUT/run.log"; }
@@ -64,13 +64,18 @@ assert phaseA_cache_absent "0 cache-enabled lines (off is really off)" "$CA" $([
 note "phase B: cache ON ($CACHE_GB GB)"
 start_server "$CACHE_GB" "$OUT/serverB.log" || { assert phaseB_server_ready ok dead 1; echo "G4A_DONE result=FAIL"; exit 1; }
 assert phaseB_server_ready "200" "ready" 0
-ARENA_LINE=$(grep -m1 "persistent expert cache enabled" "$OUT/serverB.log" || true)
-assert phaseB_cache_enabled "arena line present" "${ARENA_LINE:-missing}" $([[ -n "$ARENA_LINE" ]] && echo 0 || echo 1)
-req "$FIXS"  B_short
+# Repeats run FIRST so the effectiveness measurement reflects repeated-traffic
+# cache behavior, not eviction pressure from the unrelated long fixture that
+# follows (cross-workload retention is characterized separately by the stats
+# line). The arena initializes lazily on the first load, so the enabled-line
+# assertion happens after requests complete.
 req "$FIX16" B_rep1
 req "$FIX16" B_rep2
 req "$FIX16" B_rep3
+req "$FIXS"  B_short
 req "$FIXL"  B_long
+ARENA_LINE=$(grep -m1 "persistent expert cache enabled" "$OUT/serverB.log" || true)
+assert phaseB_cache_enabled "arena line present" "${ARENA_LINE:-missing}" $([[ -n "$ARENA_LINE" ]] && echo 0 || echo 1)
 # budget adherence: MemAvailable now vs phase-A idle, minus expected non-cache load
 MEM_B=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
 USED_GIB=$(( (MEM_A0 - MEM_B) / 1048576 ))
