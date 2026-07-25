@@ -1,0 +1,14 @@
+ASSERT name=phaseA_server_ready expected=[200] actual=[ready] result=PASS
+ASSERT name=phaseA_cache_absent expected=[0 cache-enabled lines (off is really off)] actual=[0] result=PASS
+ASSERT name=phaseB_server_ready expected=[200] actual=[ready] result=PASS
+ASSERT name=phaseB_cache_enabled expected=[arena line present] actual=[ds4: CUDA persistent expert cache enabled: 7398 slots x 9.28 MiB = 67.05 GiB (fixed arena)] result=PASS
+ASSERT name=budget_adherence expected=[total engine+cache usage <= 117 GiB (arena bounded by construction; census in serverB.log)] actual=[97 GiB while serving] result=PASS
+final cache stats: ds4: expert-cache stats loads=17408 hits=102144 misses=73336 hit%=58.2 resident=7398/7398 slots
+ASSERT name=byte_identical_short expected=[cache-on == cache-off] actual=[cmp=0 shaA=16fe2a7eba06 shaB=16fe2a7eba06] result=PASS
+ASSERT name=byte_identical_long expected=[cache-on == cache-off] actual=[cmp=0 shaA=e433f3d53368 shaB=e433f3d53368] result=PASS
+ASSERT name=byte_identical_short16 expected=[cache-on rep1 == cache-off] actual=[cmp=0] result=PASS
+ASSERT name=repeat_stable expected=[rep1 == rep3] actual=[cmp=0] result=PASS
+ASSERT name=warm_reads_lt_25pct_of_off expected=[warm repeat reads < 25% of cache-OFF baseline reads (gate text 'run 2 < 25% of run 1' with run1 = uncached; interpretation documented for review)] actual=[baseline=274791628800 warm=68376342528 = 24%] result=PASS
+ASSERT name=zero_cuda_stubs expected=[0] actual=[0] result=PASS
+ASSERT name=quality_exits expected=[0/0] actual=[0/0] result=PASS
+ASSERT name=quality_identical expected=[NLL TSV identical cache-on vs cache-off] actual=[cmp=0] result=PASS
