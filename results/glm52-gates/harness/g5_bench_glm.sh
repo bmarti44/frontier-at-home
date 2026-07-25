@@ -13,7 +13,7 @@ rm -rf "$OUT" "$KVDIR"; mkdir -p "$OUT" "$KVDIR"
 note() { echo "$(date -Is) $*" >> "$OUT/run.log"; }
 note "bench start binary=$(sha256sum "$SRC/ds4-server" | cut -c1-12)"
 
-DS4_GLM_TP_DEBUG=1 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
+DS4_GLM_TP_DEBUG=1 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 DS4_CUDA_FETCH_THREADS=6 \
   "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port 8028 \
   --ssd-streaming --ssd-streaming-cache-experts 40GB \
   --kv-disk-dir "$KVDIR" --kv-disk-space-mb 8192 --kv-cache-boundary-align-tokens 64 \
@@ -43,7 +43,7 @@ fire decode128b "$OUT/fix_decode.json"    # repeat (KV boundary differences)
 kill -TERM $SPID; for i in $(seq 1 60); do kill -0 $SPID 2>/dev/null || break; sleep 2; done
 
 note "full-100 fidelity pass begin"
-(cd "$SRC" && DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
+(cd "$SRC" && DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 DS4_CUDA_FETCH_THREADS=6 \
   ./gguf-tools/quality-testing/score_official "$GGUF" \
   gguf-tools/quality-testing/data/glm52-openrouter-100/manifest.tsv \
   "$OUT/quality100.tsv" 8192 --ssd-streaming --ssd-streaming-cache-experts 40GB) \
