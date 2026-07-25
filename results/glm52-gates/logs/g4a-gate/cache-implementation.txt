@@ -42,8 +42,29 @@ static struct {
     uint64_t hits;
     uint64_t misses;
     uint64_t loads;
+    const char *model_map;  /* generation: cache is valid for exactly one
+                               model mapping; any change flushes everything
+                               (same-layout different-model guard). */
     std::unordered_map<uint64_t, uint32_t> *map;
 } g_expert_persist_cache;
+
+static void cuda_expert_cache_flush_for_model(const char *model_map) {
+    if (g_expert_persist_cache.disabled) return;
+    if (g_expert_persist_cache.model_map == model_map) return;
+    g_expert_persist_cache.map->clear();
+    for (uint32_t i = 0; i < g_expert_persist_cache.n_slots; i++) {
+        g_expert_persist_cache.meta[i].key = UINT64_MAX;
+        g_expert_persist_cache.meta[i].prev =
+            g_expert_persist_cache.meta[i].next = UINT32_MAX;
+    }
+    g_expert_persist_cache.lru_head = UINT32_MAX;
+    g_expert_persist_cache.lru_tail = UINT32_MAX;
+    g_expert_persist_cache.used = 0;
+    if (g_expert_persist_cache.model_map != NULL)
+        fprintf(stderr, "ds4: CUDA persistent expert cache flushed "
+                        "(model mapping changed)\n");
+    g_expert_persist_cache.model_map = model_map;
+}
 
 static void cuda_expert_cache_lru_unlink(uint32_t s) {
     cuda_expert_cache_slot_meta *m = g_expert_persist_cache.meta;
@@ -179,6 +200,7 @@ static uint32_t cuda_expert_cache_insert(uint64_t key, uint64_t gate_off,
 static int cuda_stream_selected_cache_begin_load(
     cuda_expert_cache_init_once(table->gate_expert_bytes,
                                 table->down_expert_bytes);
+    cuda_expert_cache_flush_for_model((const char *)table->model_map);
     const int persist_ok = !g_expert_persist_cache.disabled &&
         g_expert_persist_cache.gate_bytes == table->gate_expert_bytes &&
         g_expert_persist_cache.down_bytes == table->down_expert_bytes;

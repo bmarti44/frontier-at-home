@@ -450,7 +450,7 @@ index 1a79a01..bd5b214 100644
  }
  
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 041e162..b513b38 100644
+index 041e162..2d6e811 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -17216,11 +17216,13 @@ __global__ static void moe_gate_up_mid_decode_lut_owned_qwarp32_kernel(
@@ -1214,7 +1214,7 @@ index 041e162..b513b38 100644
  }
  
  extern "C" int ds4_gpu_routed_moe_batch_owned_tensor(
-@@ -22971,6 +23499,199 @@ static int cuda_stream_selected_ranges_valid(
+@@ -22971,6 +23499,220 @@ static int cuda_stream_selected_ranges_valid(
             down_bytes <= table->model_size - table->down_offset;
  }
  
@@ -1277,8 +1277,29 @@ index 041e162..b513b38 100644
 +    uint64_t hits;
 +    uint64_t misses;
 +    uint64_t loads;
++    const char *model_map;  /* generation: cache is valid for exactly one
++                               model mapping; any change flushes everything
++                               (same-layout different-model guard). */
 +    std::unordered_map<uint64_t, uint32_t> *map;
 +} g_expert_persist_cache;
++
++static void cuda_expert_cache_flush_for_model(const char *model_map) {
++    if (g_expert_persist_cache.disabled) return;
++    if (g_expert_persist_cache.model_map == model_map) return;
++    g_expert_persist_cache.map->clear();
++    for (uint32_t i = 0; i < g_expert_persist_cache.n_slots; i++) {
++        g_expert_persist_cache.meta[i].key = UINT64_MAX;
++        g_expert_persist_cache.meta[i].prev =
++            g_expert_persist_cache.meta[i].next = UINT32_MAX;
++    }
++    g_expert_persist_cache.lru_head = UINT32_MAX;
++    g_expert_persist_cache.lru_tail = UINT32_MAX;
++    g_expert_persist_cache.used = 0;
++    if (g_expert_persist_cache.model_map != NULL)
++        fprintf(stderr, "ds4: CUDA persistent expert cache flushed "
++                        "(model mapping changed)\n");
++    g_expert_persist_cache.model_map = model_map;
++}
 +
 +static void cuda_expert_cache_lru_unlink(uint32_t s) {
 +    cuda_expert_cache_slot_meta *m = g_expert_persist_cache.meta;
@@ -1414,7 +1435,7 @@ index 041e162..b513b38 100644
  static int cuda_stream_selected_cache_begin_load(
          const ds4_gpu_stream_expert_table *table,
          const int32_t *selected_ids,
-@@ -22979,12 +23700,14 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -22979,12 +23721,14 @@ static int cuda_stream_selected_cache_begin_load(
      if (!g_ssd_streaming_mode) return 1;
      if (!cuda_stream_selected_ranges_valid(table) || !selected_ids ||
          slot_count == 0) {
@@ -1431,7 +1452,7 @@ index 041e162..b513b38 100644
      }
  
      std::vector<int32_t> expert_to_slot;
-@@ -22996,7 +23719,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -22996,7 +23740,8 @@ static int cuda_stream_selected_cache_begin_load(
                              slot_count : table->n_total_expert);
          slot_ids.resize(slot_count);
      } catch (...) {
@@ -1441,7 +1462,7 @@ index 041e162..b513b38 100644
      }
      for (uint32_t i = 0; i < slot_count; i++) {
          const int32_t expert = selected_ids[i];
-@@ -23004,7 +23728,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23004,7 +23749,8 @@ static int cuda_stream_selected_cache_begin_load(
              fprintf(stderr,
                      "ds4: CUDA streaming expert id %d is outside 0..%u at layer %u\n",
                      expert, table->n_total_expert, table->layer);
@@ -1451,7 +1472,7 @@ index 041e162..b513b38 100644
          }
          int32_t compact = expert_to_slot[(uint32_t)expert];
          if (compact < 0) {
-@@ -23014,14 +23739,40 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23014,14 +23760,40 @@ static int cuda_stream_selected_cache_begin_load(
          }
          slot_ids[i] = compact;
      }
@@ -1494,7 +1515,7 @@ index 041e162..b513b38 100644
      const int logical_tier = 0;
      if (g_stream_selected_cache.logical_tier != logical_tier &&
          (g_stream_selected_cache.gate_ptr ||
-@@ -23045,9 +23796,15 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23045,9 +23817,16 @@ static int cuda_stream_selected_cache_begin_load(
                  down_bytes, "down experts") ||
          !cuda_stream_selected_ensure_i32(slot_count)) {
          cuda_stream_selected_cache_invalidate();
@@ -1505,13 +1526,14 @@ index 041e162..b513b38 100644
  
 +    cuda_expert_cache_init_once(table->gate_expert_bytes,
 +                                table->down_expert_bytes);
++    cuda_expert_cache_flush_for_model((const char *)table->model_map);
 +    const int persist_ok = !g_expert_persist_cache.disabled &&
 +        g_expert_persist_cache.gate_bytes == table->gate_expert_bytes &&
 +        g_expert_persist_cache.down_bytes == table->down_expert_bytes;
      for (uint32_t i = 0; i < compact_ids.size(); i++) {
          const uint64_t expert = (uint32_t)compact_ids[i];
          const uint64_t gate_src =
-@@ -23058,6 +23815,35 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23058,6 +23837,35 @@ static int cuda_stream_selected_cache_begin_load(
              table->down_offset + expert * table->down_expert_bytes;
          const uint64_t gate_dst = (uint64_t)i * table->gate_expert_bytes;
          const uint64_t down_dst = (uint64_t)i * table->down_expert_bytes;
@@ -1547,7 +1569,7 @@ index 041e162..b513b38 100644
          if (!cuda_model_copy_to_device_streamed(
                      g_stream_selected_cache.gate_ptr + gate_dst,
                      table->model_map, table->model_size,
-@@ -23074,7 +23860,56 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23074,7 +23882,56 @@ static int cuda_stream_selected_cache_begin_load(
                      down_src, table->down_expert_bytes,
                      "stream down expert copy")) {
              cuda_stream_selected_cache_invalidate();
@@ -1605,7 +1627,7 @@ index 041e162..b513b38 100644
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -23083,7 +23918,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23083,7 +23940,8 @@ static int cuda_stream_selected_cache_begin_load(
                              cudaMemcpyHostToDevice),
                   "stream selected-id remap copy")) {
          cuda_stream_selected_cache_invalidate();
@@ -1615,7 +1637,7 @@ index 041e162..b513b38 100644
      }
  
      g_stream_selected_cache.logical_tier = logical_tier;
-@@ -26720,19 +27556,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+@@ -26720,19 +27578,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
      if (!g_ssd_streaming_mode) return 1;
      if (!table || !selected || n_selected == 0 ||
          selected->bytes < (uint64_t)n_selected * sizeof(int32_t)) {
@@ -1641,7 +1663,7 @@ index 041e162..b513b38 100644
      }
      return cuda_stream_selected_cache_begin_load(table, ids.data(), n_selected);
  }
-@@ -26960,7 +27799,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
+@@ -26960,7 +27821,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
  }
  
  extern "C" void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled) {
