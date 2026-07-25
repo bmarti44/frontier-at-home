@@ -32,5 +32,11 @@
   },
   "dsv4_fidelity_note": "DSV4 prod fidelity is anchored by its committed accuracy suites (results/acc-*.json: GSM8K/MMLU/HumanEval dev+holdout). Methodologies differ (task accuracy vs NLL-to-reference); both are deterministic and committed.",
   "bar_assessment": "DSV4 bar (467 prefill / 18.4 decode / <2 s warm TTFT) NOT met by GLM streaming: prefill 19-28 vs 467, warm decode ~1.2-1.3 vs 18.4, warm TTFT 33.5 s vs <2 s. Further levers exist (arena-pointer kernels to remove hit-path copies, batch small-suffix prefill, MTP drafting) but no measured basis is claimed for their magnitude here; the honest conclusion is the bar is not reachable with faithful routing on this hardware.",
-  "raw": "results/glm52-gates/logs/bench/"
+  "raw": "results/glm52-gates/logs/bench/",
+  "io_lever_1_parallel_fetch": {
+    "timestamp": "2026-07-25T18:25",
+    "qd_sweep": "drive delivers 8.43 GB/s @QD1, 12.47 @QD4, ~10.2-10.4 @QD8-32 for 9.7MiB/1MiB random O_DIRECT reads (harness/qd_sweep.py) \u2014 the engine's 3.5 GB/s effective was its own sequential per-tensor read path",
+    "ab_result": "DS4_CUDA_FETCH_THREADS: 0 -> prefill 6.84 t/s, decode 0.74; 6 -> 12.75 / 1.35; 12 -> 12.69 / 1.38; outputs byte-identical (sha 9b4170d06f8f x3); saturates at ~6 threads as predicted",
+    "patch": "v4.6 (parallel miss-fetch pool in selected loader; arena inserts preserved; env-gated, default legacy)"
+  }
 }
