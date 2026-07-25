@@ -16,7 +16,7 @@
 #   5. Start/exit records with command, env, tree commit, binary sha.
 # Logs: /home/dsv4/ds4-project/glm52-crashlog/<ts>-<tag>/
 set -u
-VLIMIT_KB=${GLM_SAFE_VLIMIT_KB:-99614720}   # 95 GiB
+VLIMIT_KB=${GLM_SAFE_VLIMIT_KB:-419430400}  # 400 GiB backstop: engine mmaps the whole GGUF (196.6 GiB VIRTUAL, file-backed, mostly non-resident), so RLIMIT_AS must clear that. Resident-growth protection is the kill-floor sampler below.
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 TAG=run
@@ -46,6 +46,7 @@ ENG=$(pgrep -P "$WRAP" | head -1); ENG=${ENG:-$WRAP}
 ENG2=$(pgrep -P "$ENG" 2>/dev/null | head -1); ENG=${ENG2:-$ENG}
 PG=$(ps -o pgid= -p "$WRAP" | tr -d ' ')
 plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 1 Hz)"
+: > "$SAMP"
 
 KILLED=""
 while kill -0 "$WRAP" 2>/dev/null; do
