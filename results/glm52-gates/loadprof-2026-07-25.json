@@ -410,5 +410,26 @@
   ],
   "keep_n_probe_downgraded": "the sweep's triage analysis + our flat gate-mass predict keep-N fidelity A/B fails; run it only as a cheap confirmation, expect kill",
   "descope_2026_07_26": "Brian: NVMe-oF external hardware EXCLUDED. Software-only build order: (1) theta*-gated cross-layer prefetch \u2014 evaluate layer L+1's router on layer L's hidden state (lit ~90% acc, clears theta*~0.4), async-fetch predicted experts into the arena during L's compute; per-layer fetch 2.7ms < per-layer compute 4.5ms so ~90% of the 212ms fetch can hide => decode ~600->~410ms (~2.4 t/s with SLRU), zero fidelity risk; needs thread-safe arena insert handoff (LRU map is single-threaded by design \u2014 staging queue + main-thread commit). (2) no-stall sketch tier \u2014 REVISED sizing: 0.5bpw sketches 53GB + ~15GB exact arena (63GB sketch variant leaves no exact tier); keep-6 catastrophe mandates strict NLL gate \u2014 sketch keeps contributions (noise mode) unlike removal, but risk is now rated HIGH until measured. (3) cascade counters. (4) QTIP awaiting Brian's quantization-compute decision."
+ },
+ "predacc_probe_2026_07_26": {
+  "probe": "DS4_GLM_PREDACC (binary a895ae724b1d): at each decode layer, run layer L+1's router on the CURRENT hidden state, compare its top-8 against the ids layer L+1 actually selects next; clobber-and-restore so real selection is untouched (byte-identity 9113dfd0d233 x3 confirmed)",
+  "result": {
+   "n_steps": 13986,
+   "mean_accuracy": 0.758,
+   "p10": 0.5,
+   "p50": 0.75,
+   "p90": 0.875,
+   "histogram_matches_of_8": {
+    "0-3": 480,
+    "4": 990,
+    "5": 2514,
+    "6": 4296,
+    "7": 4392,
+    "8": 1314
+   }
+  },
+  "verdict": "PASS by a wide margin \u2014 75.8% vs the theta*=0.40 profitability threshold (Dahlin bound / Srinath-Mutlu 40% rule). GLM-5.2's hidden state at layer L predicts layer L+1's routing well despite the FLAT gate-mass distribution (the two findings are independent: flat = no expert dominates; predictable = which experts get chosen is stable across the layer boundary).",
+  "implication": "cross-layer prefetch is the strongest remaining software lever: ~76% of each layer's expert fetch can start one layer early and hide behind compute (per-layer fetch 2.7ms vs compute 4.5ms). Mispredictions cost only wasted bandwidth (Do-No-Harm eviction guard), never correctness \u2014 outputs stay byte-identical because the real router still selects the real experts.",
+  "next": "implement the background prefetch worker + staging ring (task #41 step 2), sol review before adoption"
  }
 }
