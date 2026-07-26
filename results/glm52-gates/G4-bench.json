@@ -54,5 +54,30 @@
       "ttft_cold": "263 -> 218 s",
       "prefill": "6.84 -> 12.75 t/s (CLI batch-258)"
     }
+  },
+  "reap50_resident_bench_2026_07_25": {
+    "artifact": "REAP50 Q2_K (50% expert-pruned GLM-5.2), 4 shards, 139 GB total, /home/dsv4/ds4-project/gguf-reap/ (download completeness verified)",
+    "engine": "fusion llama.cpp llama-server, '-ngl 999 --cpu-moe' (dense+attention device-alloc ~20 GiB; ALL routed experts file-backed mmap on CPU = reclaimable page cache), :8030, ctx 8192",
+    "safety": "glm_safe_run.sh tag reap-bench2, kill-floor 10 GiB, rc=0 no kill; peak resident ~14 GiB, page cache ~105 GiB, zero OOM pressure \u2014 the --cpu-moe fix eliminated the 129.5 GiB non-reclaimable device-alloc path that killed attempt 1",
+    "results": {
+      "decode_tok_s": {
+        "short1": 1.77,
+        "short2": 1.87,
+        "dec128": 1.91
+      },
+      "prefill_cold_tok_s": 4.37,
+      "ttft_cold_5029tok_s": 1152.1,
+      "ttft_warm_s": 1.56,
+      "ttft_warm_caveat": "prefix-cached: llama.cpp slot LCP reuse left 1 token to eval; max_tokens=1 wall time",
+      "coherence": "outputs coherent (correct primes 2..19, base-completion continuation style; no chat template applied)",
+      "determinism": "short1 sha 9ec2adb4c5fe != short2 sha 9ed335b2b3f2 \u2014 run 2 reused KV prefix (n_past=12) changing batch split; llama.cpp is not bit-deterministic across cache states (known; ds4 stack IS byte-stable)"
+    },
+    "three_way_comparison": {
+      "dsv4_bar": "467 prefill / 18.4 decode / <2 s warm TTFT",
+      "glm_streaming_best": "23.2 prefill / ~1.4 decode / 19.0 s warm TTFT / 217.9 s cold TTFT",
+      "reap50_cpu_moe": "4.37 prefill / 1.91 decode / 1.56 s warm TTFT / 1152 s cold TTFT"
+    },
+    "verdict": "REAP-resident via --cpu-moe is NOT the decode-parity path as configured: decode 1.91 t/s is only ~1.35x streaming GLM and ~10x short of DSV4. Warm TTFT 1.56 s is the standout \u2014 meets the DSV4 <2 s bar and beats streaming GLM's 19 s, because prefix KV reuse leaves ~1 token of work. Cold prefill (4.37 t/s) is 5x WORSE than ds4 streaming. Probable causes: 139 GB > ~105 GiB usable page cache so ~25% of expert bytes still fault to disk with a scattered mmap pattern; all routed-expert math runs on Grace CPU cores; no expert-locality batching. Fidelity leg SKIPPED per pre-declared rule (only if perf pans out) \u2014 perf did not.",
+    "possible_followups_not_run": "-ncmoe N partial GPU offload (risk: non-reclaimable device-alloc, the attempt-1 OOM path); smaller REAP context; ds4-engine support for the REAP artifact (would get expert cache + batch dispatch, but REAP tensor layout is Q2_K not IQ2_XXS \u2014 down-kernel exists upstream)"
   }
 }
