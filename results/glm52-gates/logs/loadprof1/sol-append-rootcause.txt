@@ -1,0 +1,113 @@
+Verdict: the excerpt confirms a missing state-frontier validation/truncation, but it does not alone prove that old rows are visible. The hypothesis is highly plausible, not yet uniquely proven. A second live possibility is that long APPEND suffixes take glm_graph_forward_indexed_tokens while the three-token exact replay takes a different path because suffix < resume_min.
+
+1. State that survives
+
+On a genuine resume:
+
+start = s->checkpoint.len
+
+Only the logical token checkpoint establishes start. No operation shown rewinds s->glm_graph.
+
+When indexed_resume_keeps_sparse_state is true, the code deliberately:
+
+- Skips dense_bridge because of !indexed_resume_keeps_sparse_state.
+- Retains the graph’s compact/indexed state.
+- Calls glm_graph_forward_indexed_tokens at pos = s->checkpoint.len.
+- Appends new tokens to s->checkpoint only after the graph call.
+
+Therefore the dangerous surviving state is the graph-owned sparse/indexed state:
+
+- Persistent indexer key/compressed-row cache.
+- Persistent compact/sparse attention KV cache.
+- The logical valid-row count or evaluated frontier used to bound top-k.
+- Any incremental indexer/compressor frontier accumulators associated with the next row.
+
+The dense cache is probably not the contaminant. dense_gap=1 explicitly says it is behind start, and the indexed path intentionally avoids repairing it.
+
+There is no evidence here that an indexer score buffer is persistent. Top-k scores are normally scratch recomputed for each query; stale index keys and stale valid-row counts are the more likely problem. Likewise, old s->logits should be overwritten by the suffix evaluation.
+
+The concrete glm_graph member names cannot be identified honestly from this excerpt because the definitions and glm_graph_forward_indexed_tokens implementation are absent. The equivalent DS4 state is generally the per-layer compressed/indexer caches, their state/frontier tensors, and their n_comp/n_index_comp-style counters.
+
+2. Truncation and visibility
+
+No truncation occurs in the shown sync block.
+
+Changing checkpoint.len or assigning start does not truncate GPU cache state. There is no call resembling:
+
+glm_graph_truncate(..., start)
+glm_graph_restore_frontier(..., start)
+glm_graph_reset_prefill_state(...)
+
+The indexed forward call also receives no explicit previous-frontier or truncation argument.
+
+Whether old physical rows above the new prompt are actually visible to top-k depends on the implementation behind glm_graph_forward_indexed_tokens:
+
+- If candidate count comes from a persistent graph row count that remains above start, then yes: old rows remain logically live and top-k can select them.
+- If candidate count is derived strictly from the supplied absolute pos, rows above the current position are invisible even though their bytes remain allocated.
+- Even in the latter case, a stale incremental frontier can corrupt newly written rows.
+
+Physical rows do not need zeroing. The essential requirement is that the logical row count and all frontier accumulators represent exactly start. The excerpt does not enforce that invariant.
+
+One important caveat: the exact-replay control is not branch-equivalent. The committed evidence says exact replay has suffix 3; the failing appends have suffix 22–29. With resume_min around 4, only the latter enters indexed_resume. Thus the evidence does not yet distinguish stale retained state from a general resumed indexed-batch correctness bug.
+
+3. Minimal safe fix
+
+The correct invariant is:
+
+Before evaluating token start, every live graph frontier must represent exactly tokens [0, start).
+
+Suffix equality is not the right primary condition. A valid checkpoint at start must support any continuation. Invalidating merely because the new suffix differs would hide the broken frontier invariant and unnecessarily reject legitimate resume traffic.
+
+The minimal safe fix is:
+
+- Immediately after the starts_with success, before calculating indexed_resume_keeps_sparse_state, compare the graph’s logical evaluated/sparse frontier with start.
+- Permit indexed_keep only when that frontier equals start and belongs to the restored checkpoint.
+- If the graph frontier is greater than start, restore a real checkpoint snapshot at start.
+- If no complete rollback helper exists, reset the entire GLM graph and cold-prefill from token zero.
+
+Conceptually:
+
+resumed_checkpoint = true;
+
+if (!glm_graph_frontier_matches(&s->glm_graph, start)) {
+    glm_graph_reset_prefill_state(&s->glm_graph);
+    ds4_session_glm_reset_dense_cache(s);
+    s->checkpoint.len = 0;
+    s->checkpoint_valid = false;
+    start = 0;
+    resumed_checkpoint = false;
+}
+
+Simply forcing indexed_resume_keeps_sparse_state=false is not proven safe. In this block that only enables dense_bridge; it does not itself clear the compact/indexed cache. It is safe only if the dense bridge’s first forward performs a documented full reset of all sparse state.
+
+A truncate-to-start helper is correct only if it restores all of:
+
+- Valid compact/indexer row counts.
+- Sparse attention frontier.
+- Indexer/compressor partial-window state.
+- Any logical sequence/evaluated length.
+- Dense/raw logical length where relevant.
+
+Merely lowering the row count is unsafe at non-aligned positions because the partial frontier state cannot generally be reconstructed from the count.
+
+For a do-not-over-engineer patch, full reset plus cold prefill whenever graph_frontier != start is the safest choice. Optimize rollback later.
+
+4. Disk restore versus live session
+
+Nothing in this sync block distinguishes disk-restored from live-session state. Once checkpoint_valid is set, both use exactly the same logic.
+
+Any difference must originate before this block:
+
+- Live-session risk: code shortens the token checkpoint to start without rewinding the graph.
+- Disk risk: the serializer records saved_tokens=start but serializes row counts/frontiers from a graph that had advanced farther. Restore would then faithfully recreate an internally inconsistent checkpoint.
+- A correctly serialized disk checkpoint whose counters and frontiers were captured exactly at start should be safe and should support a different suffix.
+
+The save and restore paths should assert:
+
+saved_graph_frontier == saved_token_count
+
+and after restore:
+
+restored_graph_frontier == checkpoint.len
+
+Best decisive probe: log the graph evaluated length, every relevant per-layer valid-row count, and the maximum row selected by top-k immediately before the first indexed_resume call. Any frontier above 5044, or any selected row at or beyond the current query position, confirms the proposed contamination mechanism directly. If all frontiers equal 5044, force the same 22–29-token suffix through per-token decode; matching cold would instead isolate the bug to glm_graph_forward_indexed_tokens.
