@@ -17,7 +17,7 @@ DSV4-vs-GLM same-fixture head-to-head remains open.
 | metric | DSV4 | GLM-5.2 (best measured) | status |
 |---|---|---|---|
 | warm TTFT, exact replay | ~1.2 s (unmatched probe) | **1.76 s** | meets the absolute <2 s steady-state exact-replay threshold (byte-identical; matched head-to-head vs DSV4 open) |
-| warm TTFT, multi-turn agent | <2 s | **5.6 s** (exact-prefix semantics, probe-gated) / ~150 s (strict default) | NOT met; floor ~2.3–2.9 s after fix ladder below |
+| warm TTFT, multi-turn agent | <2 s | **5.6 s** (exact-prefix semantics, probe-gated) / ~150 s (strict default) | NOT met; ~2.2–2.7 s unvalidated projection after fix ladder below |
 | context window | 32K | 32K allocated; **11.6K functional** + retrieval beyond row 8192 proven | partially validated (full-depth ~30K probe open) |
 | decode | 18.4 t/s | **1.6–1.8 t/s** | NOT met — single-Spark physics (fully profiled) |
 | prefill | 467 t/s | **~23 t/s** | NOT met — single-Spark physics |
@@ -52,8 +52,12 @@ differ between any two chunkings), amplified by greedy decoding — the same
 equivalence class as llama.cpp prefix-cache reuse. Token ids at the junction
 are identical (TOKDUMP); restore is content-faithful where testable. The
 v4.8d guard (in the tree binary) enforces byte-canonical-or-cold — stricter
-than industry practice. One loose end: L40 same-lineage store→load rows
-differ; one targeted dump (no eval between) settles it.
+than industry practice. HOWEVER, per the sol closing audit: corruption is
+NOT excluded while the L40 same-lineage store→load round-trip violation
+stands unexplained (a pure byte-copy should preserve those rows). The strict
+guard REMAINS the recommended serving posture until the targeted
+no-eval-between round-trip dump passes — which also weakens the case for
+relaxing the guard default in decision 1 below.
 
 ## Decisions on the table (owner: Brian)
 
