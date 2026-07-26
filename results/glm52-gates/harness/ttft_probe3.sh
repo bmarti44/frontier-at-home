@@ -6,11 +6,12 @@
 # warm case in 1.56 s via in-RAM prefix reuse — this measures what ds4
 # recomputes instead.
 set -u
-OUT=/home/dsv4/ds4-project/glm52-ttft3
+ALIGN=${TTFT3_ALIGN:-64}
+OUT=/home/dsv4/ds4-project/glm52-ttft3-a${ALIGN}
 SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 FIX=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/fixture-glm-long8.json
-KVDIR=/home/dsv4/ds4-project/glm52-kvdisk-ttft3
+KVDIR=/home/dsv4/ds4-project/glm52-kvdisk-ttft3-a${ALIGN}
 PORT=8016
 rm -rf "$OUT" "$KVDIR"; mkdir -p "$OUT" "$KVDIR"
 note() { echo "$(date -Is) $*" >> "$OUT/run.log"; }
@@ -30,7 +31,7 @@ DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
   "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
   --ssd-streaming --ssd-streaming-cache-experts 40GB \
   --kv-disk-dir "$KVDIR" --kv-disk-space-mb 8192 \
-  --kv-cache-boundary-align-tokens 64 \
+  --kv-cache-boundary-align-tokens $ALIGN \
   > "$OUT/server.log" 2>&1 &
 SPID=$!
 trap 'kill -TERM $SPID 2>/dev/null' EXIT
