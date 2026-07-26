@@ -36,6 +36,7 @@ serve() { # $1 tag
   DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
   DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
   DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 DS4_GLM_SYNC_TRACE=1 \
+  DS4_KV_DECIDE_LOG=1 \
     "$SRC/ds4-server" --cuda -m "$GGUF" -c 32768 --host 127.0.0.1 --port $PORT \
     --ssd-streaming --ssd-streaming-cache-experts 40GB \
     --kv-disk-dir "$KVDIR" --kv-disk-space-mb 16384 \
@@ -131,6 +132,8 @@ print("cold   : %r" % yr[:80])
 PYEOF
 echo "--- X sync traces ---" >> "$OUT/summary"
 grep -h "GLM sync start=" "$OUT/server-X.log" 2>/dev/null | head -4 >> "$OUT/summary"
+echo "--- KV decisions (X) ---" >> "$OUT/summary"
+grep -h "KVDECIDE" "$OUT/server-X.log" 2>/dev/null >> "$OUT/summary"
 chmod -R a+rX "$OUT"
 note "F13 tagged-logit done"
 echo F13T_DONE
