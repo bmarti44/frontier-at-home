@@ -65,5 +65,26 @@
   ],
   "revalidation": "byte-identity sha x3 unchanged, routing identical, hit-copy 2.7ms / fill 2.1ms / warmup 50.9s \u2014 fixes cost nothing",
   "round2": "PASS \u2014 all 7 findings addressed or deferred-with-justification; 'no new correctness, lifecycle, or stream-ordering defects found' (logs/loadprof1/sol-v471-round2-PASS.txt)"
+ },
+ "mtp_probe_2026_07_25": {
+  "discovery": "the served GGUF carries the MTP block (blk.78.nextn.eh_proj/enorm/hnorm/shared_head_norm \u2014 the 'blk78Q2K' in the artifact name) and ds4 has integrated greedy GLM MTP speculation (--glm-mtp / --glm-mtp-timing), depth hard-wired to 1 (verify2: 2-token batch verify, commit at most 2)",
+  "window": "mtp-probe1: serving pins + pin'd arena 68GB + --glm-mtp-timing, MOE_PROFILE off",
+  "measured": {
+   "cycles": 65,
+   "accept_rate": 0.48,
+   "verify2_warm_ms": "~630-730",
+   "head_draft_ms": "~12-19",
+   "tokens_per_cycle": 1.48,
+   "effective": "~472 ms/token vs ~610 single-token -> ~1.3x decode speedup at depth 1",
+   "loader_shift": "2-token verify loads more unique experts/layer: fetch 229 -> 284 ms/token-equivalent, hits 474->618 per aggregated token"
+  },
+  "identity_caveat": "MTP output is NOT byte-identical to single-token decode: warm2/dec32 sha 6da984e6bb80 vs baseline 9113dfd0d233 (within-run stable: warm2==dec32). Cause: the 2-token verify batch takes the n_tokens>1 kernel path whose FP summation order differs, so greedy flips at near-ties. warm1 (first request, no draft state yet) matched baseline exactly. Any adoption requires the 100-case NLL fidelity suite re-run in MTP mode instead of byte-vs-baseline.",
+  "arena_bump_ruled_out": "86GB arena would breach the kill floor (engine non-arena RSS ~30 GiB; 97 total observed at 68GB arena). Safe max ~75GB buys only ~2-3 LRU hit points per the committed trace curve \u2014 not worth a window. The fetch levers are slab repack (read granularity 3.1->9.3MB) and admission policy (LRU 74% vs Belady 88% at same size).",
+  "next": [
+   "fidelity suite (100-case NLL) with --glm-mtp before serving adoption",
+   "deeper draft chain (engine extension; machinery present: chained mtp_step + N+1-row verify)",
+   "slab repack",
+   "admission policy vs Belady gap"
+  ]
  }
 }
