@@ -61,6 +61,21 @@ Invariant that should hold before evaluating token `start`:
 every live graph frontier represents exactly tokens `[0, start)`.
 Save/restore should assert `saved_graph_frontier == saved_token_count`.
 
+## Update (post-guard, cache exonerated)
+
+A prefix-replay-only guard (v4.8d) now contains the bug locally
+(correct-or-cold). Two further discriminators sharpen the root cause:
+(1) with the local persistent expert cache fully disabled the corruption is
+byte-identical — all local patches exonerated; (2) even a forced from-zero
+re-prefill on a session that just underwent the GLM `ds4_session_load_payload`
+restore deterministically differs from a virgin-server prefill of the same
+prompt. The restore itself leaves the graph in a state that corrupts any
+subsequent evaluation except pure prefix-replay. A full stateful-member audit
+found no graph-side frontier scalar and correct row/visibility bounds at every
+C call site — remaining suspects are the restore's GPU writes (e.g. indexer
+key cache content/layout/ordering) or the process-global selected-expert
+staging cache interactions.
+
 ## Fix options
 
 - **A (minimal, correctness):** on resume, if the graph frontier extends past

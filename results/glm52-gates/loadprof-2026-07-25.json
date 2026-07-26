@@ -222,5 +222,12 @@
   "serving_posture": "v4.8d is STRICTLY SAFER than qualified v4.7.1 (which silently serves corrupted appends): the guard can only force an unnecessary cold start. Tree binary left at v4.8d deliberately.",
   "status": "guard mechanism landed and validated; completion (residual reset + sol review + re-validation) = next session",
   "counter_hypothesis_disproven": "the option-B 'GLM restore skips layer_n_comp reset' suspect is WRONG: ds4_glm_gpu_graph has no layer_n_comp/layer_n_index_comp members (those are Metal-graph state; the n_comp arrays in ds4_session_load_payload are file-consistency validation only \u2014 build error proved it, edit reverted, tree back at committed v4.8d, rebuilt clean 7462277e79bb). The GLM CUDA frontier state that survives the load lives elsewhere \u2014 next candidates from the struct scan: prefill_seed_layer_captured[DS4_MAX_LAYER] per-layer capture flags, indexer seed/score tensors, mtp position window state. Next session: sol source hunt over glm_graph_forward_indexed_tokens + the restore path for stateful members not reset by load."
+ },
+ "cache_exoneration_2026_07_26": {
+  "experiment": "append probe with DS4_CUDA_EXPERT_CACHE_GB=0 (sol's discriminator; zero 'expert cache enabled' lines in log)",
+  "result": "corruption BYTE-IDENTICAL to cache-on runs (same shas b2e78d232806/5d80ebee65e9/ac1347bbf0c8, guard 4/4) \u2014 our persistent expert cache and pinning layer are EXONERATED; the bug is fully upstream",
+  "mechanism_refined": "the guard-forced from-zero re-prefill (over a graph that just underwent ds4_session_load_payload GLM restore) deterministically differs from a virgin-server prefill of the same prompt, cache on or off => the GLM shard RESTORE ITSELF leaves the graph in a state that corrupts subsequent evaluation of any shape except pure prefix-replay. Sol's source audit found no graph-side frontier scalar and correct bounds everywhere in the C caller \u2014 remaining suspects are the restore's GPU writes themselves (indexer key cache layout/\u0441\u043e\u0434\u0435\u0440\u0436\u0438\u043c\u043e\u0435, ordering) or upstream g_stream_selected_cache interactions.",
+  "sol_source_audit": "logs/loadprof1/sol-frontier-hunt.txt \u2014 full stateful-member classification; minimal reset sets for load and forced-cold; MTP session-state gaps flagged for --glm-mtp mode",
+  "operational_state": "v4.8d guard remains the right containment (correct-or-cold, never corrupt); serving-safe. True fix = upstream GLM restore repair; report draft updated."
  }
 }
