@@ -1,0 +1,169 @@
+The strongest end-state is a rate-allocated, fractional-bit QTIP-style format consumed directly by a CUDA GEMV kernel. Target about 1.75 bpw; treat 1.6 bpw as a quality-risk stretch. Do not invest further in lossless field separation: a newer measurement on the actual GLM expert tensor has already killed it.
+
+One arithmetic correction: relative to 2.0625 bpw, 1.90 saves 7.9%, 1.75 saves 15.2%, and 1.60 saves 22.4%. A true 25% saving requires 1.547 bpw before metadata.
+
+IQ2_XXS anatomy and entropy verdict
+
+Each 256-weight IQ2_XXS block is exactly 66 bytes:
+
+- 32 bytes: four 8-bit E8 lattice indices per 32-weight subblock.
+- 28 bytes: four 7-bit sign-pattern selectors per subblock. These are not independently compressible raw signs.
+- 4 bytes: one 4-bit local scale per 32 weights.
+- 2 bytes: one FP16 superblock scale.
+
+Thus indices are 48.5%, sign selectors 42.4%, and all scale metadata only 9.1%. This follows the [llama.cpp format definition](https://github.com/ggml-org/llama.cpp/blob/master/ggml/src/ggml-common.h#L353-L360) and decoder layout.
+
+More importantly, the actual 64 MiB GLM probe found:
+
+- E8-index H0 = 7.970 bits/index.
+- E8-index H1 = 7.966: effectively memoryless.
+- Every byte lane was about 7.85–7.97 bits.
+- Ideal order-0 compression after stream separation was only 1.12%, before tables, chunk headers, alignment, and ANS final-state overhead.
+
+That result is committed in [loadprof-2026-07-25.json](/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/loadprof-2026-07-25.json:315), with the reproducer in [iq2_stream_entropy.py](/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/iq2_stream_entropy.py:1).
+
+So the answer to “typical E8 skew” is unusually definitive here: on this model, there is essentially none. rANS/tANS on separated lossless streams should net 0–1%, not 5–10%. AQLM independently reports learned code entropy of 15.91/16 bits, reinforcing that calibrated VQ indices tend to use their code space almost uniformly. Generic or field-aware lossless coding is closed.
+
+Scale compression is also bounded:
+
+- Lossless: already included in the 1.12% whole-block ceiling.
+- FP16 super-scale → FP8 plus 4-bit → 3-bit local scales saves 2 bytes/block, exactly 3.03%.
+- FP8 plus 2-bit local scales saves 3 bytes/block, 4.55%.
+- These are lossy requantizations and need joint re-optimization of indices; scale truncation alone is the wrong implementation.
+
+Ranked shortlist
+
+1. Fractional-rate QTIP/TCQ with direct CUDA GEMV
+
+Use a palette of fixed-rate TCQ tiles rather than entropy-coded variable-length weights. The convenient initial palette is:
+
+- 1.5 bpw: k=3, V=2 trellis.
+- 2.0 bpw: k=4, V=2 trellis.
+- Average 1.75 bpw by assigning half the tiles to each rate.
+- Average 1.6 bpw with roughly 80% at 1.5 and 20% at 2.0.
+
+Allocate rates with an RDO objective such as:
+
+  routed activation loss + λ × measured miss-frequency × stored bytes
+
+Use the actual route trace and expert inputs. Keep sensitive early/late layers and down-projection tiles at 2 bits; spend 1.5 bits on insensitive gate/up tiles and experts contributing the most miss bytes per unit quality cost.
+
+This is attractive because QTIP’s high-dimensional shaping creates quality headroom. At 2 bits, its Gaussian-source experiment reports MSE 0.069 versus 0.089 for an E8P VQ comparator. The Gaussian rate-distortion bound at 1.75 bits is about 0.088, suggesting—only as a heuristic—that 1.75-bit TCQ may approach 2-bit E8 quality. It is not evidence for GLM, but it is the best technical reason to believe the idea. QTIP also decodes directly during matvec and reports over 80% of peak memory bandwidth on modern GPUs; its published 70B benchmark was 23.5 t/s versus 8.78 for AQLM on RTX 6000 Ada. [QTIP paper](https://papers.nips.cc/paper_files/paper/2024/file/6de2e84b8da47bb2eb5e2ac96c63d2b0-Paper-Conference.pdf), [implementation](https://github.com/Cornell-RelaxML/qtip).
+
+Expected result:
+
+- 1.75–1.80 effective bpw: 12–15% fewer expert bytes, 26–33 ms/token saved, approximately 1.67–1.91 t/s from the present 1.6–1.8.
+- 1.60–1.70 effective bpw: 18–22% fewer bytes, 40–49 ms saved, approximately 1.71–1.98 t/s.
+- Possible additional upside: if the cache stores TCQ directly, 15% smaller experts give 17.6% more cache capacity. The t/s estimates above exclude the resulting miss-rate improvement.
+
+Quality priors versus the existing IQ2 artifact, not guarantees:
+
+- Around 1.75 bpw: ΔNLL approximately 0–0.02 nat/token is plausible.
+- Around 1.6 bpw: expect roughly +0.02–0.08 nat/token and more tail failures.
+- I would not ship 1.6 unless rate allocation, transforms, and held-out routing traffic make it clearly pass.
+
+Cost: 1–2 weeks for a quantization-only proof; roughly 8–12 engineer-weeks for a robust ds4 kernel, format, cache integration, and testing. Full-model quantization needs rented multi-GPU capacity and the original BF16 weights; do not requantize decoded IQ2 for production.
+
+2. Entropy-constrained IQ2 RDO, preserving the current GEMV
+
+Modify the IQ2 quantizer to minimize activation-weighted distortion plus a learned code-length penalty. Iteratively train static tables per layer/role, then bias the candidate selection toward cheap E8 indices, sign patterns, and scales. The resulting approximate model is transported losslessly with rANS and expanded back into ordinary IQ2 blocks on cache fill, so existing GEMV kernels remain unchanged.
+
+This is the cheapest path to integrate—but the new entropy result makes its >10% prospect doubtful. If signs/scales remain uniform, obtaining 10% overall requires lattice-index entropy to fall from 7.97 to approximately 6.35 bits/index. Fifteen percent requires about 5.53 bits. That is a severe distribution change and probably costs material distortion; IQ2 does not appear to have texture-codec-like representational degeneracy.
+
+Expected result if it passes:
+
+- 10–12% bytes: 22–26 ms saved, approximately 1.66–1.89 t/s before decoder overhead.
+- Likely quality cost at that ratio: ΔNLL around +0.01–0.05, but this is precisely what the first probe must establish.
+- Cache capacity does not improve if cache entries are expanded back to IQ2.
+
+Cost: 2–4 days for the decisive offline probe; 3–6 weeks for a sidecar container and pipelined CPU decoder. Add several weeks if a custom CUDA decoder is required.
+
+3. AQLM-style 2×7 or 2×6 residual VQ
+
+The sensible fractional formats are:
+
+- 2 codebooks × 7-bit indices over groups of 8 = 1.75 bpw.
+- 2 × 6-bit indices = 1.5 bpw.
+
+At 2×7, both FP16 codebooks occupy only 4 KiB per matrix, so metadata is negligible and cache locality is much better than a single 14-bit codebook. Avoid 1×14: its 256 KiB codebook per matrix erodes much of the nominal 15% saving across gate/up/down.
+
+AQLM’s public fast CUDA path is optimized for 2×8; 7-bit packing, direct GEMV, and GLM MoE integration would still be custom work. The official project describes 2×8 as faster but less accurate than its large-codebook configuration, while the paper reports 70B quantization taking 10–14 A100-days. [AQLM paper](https://arxiv.org/pdf/2401.06118), [kernel matrix](https://github.com/Vahe1994/AQLM#inference-kernels).
+
+Expected result:
+
+- 1.75 bpw: about 15% saving and 1.69–1.91 t/s.
+- 1.6-ish effective mixed rate: about 18–20% and 1.71–1.96 t/s.
+- Quality prior: ΔNLL +0.01–0.04 at 1.75, +0.03–0.10 near 1.6.
+- Cost: 10–16 engineer-weeks plus substantial multi-GPU quantization time. QTIP dominates unless AQLM adapts to GLM much more easily.
+
+4. Scale-only lossy recoding
+
+FP8 plus 3-bit local scales gives only 3.03% saving: about 6.7 ms/token and 1.62–1.82 t/s. It is useful as an adjunct to a fixed-rate code, not as a standalone project.
+
+Container choice
+
+Do not force QTIP or AQLM into nominal GGUF compatibility.
+
+Use the original GGUF for metadata and non-expert tensors, plus a ds4 expert sidecar indexed by:
+
+  layer, expert, gate/up/down, rate, offset, length, shape, codebook/scale ID, checksum
+
+Make each expert slab 4 KiB aligned and internally chunk it at roughly 128 KiB–1 MiB. For RDO-IQ2, the sidecar expands into standard IQ2 cache entries. For TCQ/AQLM, the cache retains the dense code and the GEMV consumes it directly.
+
+A private GGML tensor type is feasible but buys little: every normal GGUF reader must still be patched. Encoding opaque byte tensors as I8 is technically parseable but semantically ugly and fragile. A small ds4 sidecar is less engineering.
+
+Decompression and break-even
+
+Let:
+
+- R = compressed bytes / original bytes.
+- D = 10.7 GB/s SSD bandwidth.
+- G = decompressor output throughput in original GB/s.
+
+With overlapped chunked I/O and decoding:
+
+  effective source rate = min(D/R, G)
+
+Break-even requires G > D. To realize the full compression benefit, require:
+
+  G ≥ D/R
+
+Therefore:
+
+- R=0.90 requires G≥11.9 GB/s.
+- R=0.85 requires G≥12.6 GB/s.
+- R=0.80 requires G≥13.4 GB/s.
+- R=0.75 requires G≥14.3 GB/s.
+
+At only 12 GB/s, decompression caps the maximum fetch-time reduction at 10.8%, regardless of whether storage shrinks 15% or 25%. The practical target should be at least 15 GB/s, preferably 18–20 GB/s under simultaneous GEMV load.
+
+If read and decompression are serialized, the time ratio is:
+
+  Tcompressed / Traw = R + D/G
+
+At G=12, break-even would require R<0.108—impossible here. Chunk overlap or fused decode is mandatory.
+
+nvCOMP ANS is useful only as a throughput prototype after RDO has deliberately created entropy. LZ4 and Bitcomp have no useful ratio on these near-uniform codes; NVIDIA describes Bitcomp as targeting smooth/sparse floating-point data. ANS runs on SMs and competes with GEMV. NVIDIA’s current hardware decompression-engine support list names B200/B300/GB200/GB300, not GB10, so do not assume Spark has offloaded decompression. [nvCOMP selection guidance](https://docs.nvidia.com/cuda/nvcomp/algorithm_selection.html).
+
+For RDO-IQ2, I would first try multithreaded ARM rANS into double-buffered unified memory during SSD reads. For TCQ/AQLM, avoid a separate decompressor entirely: unpack codes, perform lookup/trellis reconstruction, and accumulate GEMV in the same CUDA kernel.
+
+The single best first probe
+
+Run an entropy-constrained IQ2 RDO sweep without writing any decoder or CUDA code.
+
+Use original BF16 tensors and held-out routed activations for nine representative tensors: gate/up/down from high-, median-, and low-traffic experts across early, middle, and late layers. Add a code-length term to the existing IQ2 candidate search, iteratively refit per-role probability tables, and sweep λ.
+
+For every point, record:
+
+- Actual rANS size, including tables and chunk overhead.
+- Activation-weighted error relative to BF16 and ordinary IQ2.
+- E8/sign/scale entropy.
+- Teacher-forced ΔNLL with three representative layers replaced.
+
+Promotion gate:
+
+- At least 10% real byte saving.
+- No more than 5% increase in activation-weighted error over ordinary IQ2.
+- Held-out three-layer ΔNLL no worse than +0.005 nat/token.
+
+If no point crosses that gate, permanently kill IQ2-compatible RDO and move directly to the 1.5/2.0 TCQ rate-palette probe. Given the measured 7.97-bit memoryless index stream, failure is the more likely result—but this experiment costs days and prevents spending months on the wrong decoder.

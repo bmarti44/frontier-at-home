@@ -318,6 +318,27 @@
    "verdict": "stream-separated entropy coding is DEAD (stronger than the old 3.8-4.2% packed measurement \u2014 E8 lattice indices are near-uniform and memoryless). Lossless/recoding branch closed from a second independent angle.",
    "consequence": "remaining creative space is LOSSY/STRUCTURAL only: sub-2bpw trellis/VQ re-quant (fidelity-measurable), mixed-precision-by-router-weight (HOBBIT-class), shared-basis expert factorization, semantic cache tiering"
   },
-  "in_flight": "sol-A (recoding/re-quant design \u2014 probe1 already kills its branch 1), sol-B (MoE-structural), web agent (2024-26 MoE offloading + sub-2bpw + GPU entropy decode literature)"
+  "in_flight": "sol-A (recoding/re-quant design \u2014 probe1 already kills its branch 1), sol-B (MoE-structural), web agent (2024-26 MoE offloading + sub-2bpw + GPU entropy decode literature)",
+  "probe2_shared_basis": {
+   "harness": "shared_basis_probe.py \u2014 gguf-py IQ2_XXS dequant, 32-expert Gram accumulation, blk.40 gate_exps (2048x6144 per expert)",
+   "result": "retained energy: r128=5.3% r256=9.4% r512=16.5% r1024=28.9% r1536=39.7% (isotropic baseline 2.1/4.2/8.3/16.7/25.0)",
+   "verdict": "DEAD \u2014 needed >=90% at rank<=1024; experts are near-isotropic in hidden space (only ~1.7x baseline). MoBE-class shared-basis factorization does not transfer to GLM-5.2 gate projections."
+  },
+  "synthesis": {
+   "killed_today": [
+    "stream-separated entropy coding (1.1% ceiling)",
+    "shared-basis factorization (28.9% @ r1024 vs 90% needed)",
+    "RDO-IQ2 (sol-A: requires index entropy 7.97->6.35 bits \u2014 'failure is the more likely result' given memoryless measurement)"
+   ],
+   "surviving_ranked": [
+    "1. popularity-pin + LRU hybrid cache (sol-B trace replay: +2-3 hit points, ~+3-4% decode, ZERO fidelity risk, <1 day) \u2014 implement regardless",
+    "2. gate-mass-thresholded exact prefix + AdapMoE-style low-weight expert skipping (training-free; lit: ~90% next-layer prediction, 25% fewer experts, 'no accuracy loss' claims \u2014 must gate on OUR 100-case NLL suite; prerequisite: log cumulative top-k gate-mass distribution, one window)",
+    "3. HOBBIT-class two-tier: exact top-gate experts + resident sub-1bpw sketches for the rest (sol-B modeled 1.93-2.16 t/s; memory arithmetic: 0.48bpw sketch=35GB + 33GB exact arena fits; fidelity risk medium \u2014 measurable; 1-2 weeks)",
+    "4. QTIP/TCQ 1.75bpw re-quant (sol-A: 12-15% bytes, +cache capacity; needs original BF16 weights + rented multi-GPU quantization \u2014 Brian decision on cost; 8-12 eng-weeks for full integration)",
+    "5. GPU-decode break-even recorded: decompressor must sustain >=D/R (>=12.6 GB/s at R=0.85) overlapped \u2014 nvCOMP/DietGPU rates 250-590 GB/s on datacenter parts make tier-3/4 formats feasible if they existed; GB10 has NO hardware decompression engine"
+   ],
+   "modeled_ceiling_if_stack_lands": "levers 1+2+3 compound to roughly 2.2-3 t/s decode (sol-B trace-replay grounded); +QTIP ~2.5-3.5. DSV4's 18.4 remains out of reach on one box \u2014 but this is now a 1.5-2x credible program, not speculation",
+   "sources": "logs/loadprof1/sol-compress-A.txt, sol-compress-B.txt; web-lit summary in this session (HOBBIT 2411.01433, MoBE 2508.05257, AdapMoE 2408.10284, QTIP 2406.11235, MoE-Infinity, LLM-in-a-flash et al.)"
+  }
  }
 }

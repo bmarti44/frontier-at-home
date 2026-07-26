@@ -1,0 +1,180 @@
+The best structural research bet is an orientation-aware shared hidden-state basis, but the best practical bet is gate-weighted dual representation. I would immediately ship the exact hybrid cache policy, then run one cheap basis-spectrum probe before writing factor kernels.
+
+One consistency issue first: the committed GLM trace contains 75 routed layers × 256 expert IDs, not 160; 75 × 8 × 9.28 MiB also explains the observed 5.9 GB/token. The cache simulations below use that trace. If 160 is the intended production topology, rerun before sizing any arena.
+
+Latency model
+
+Current decode is approximately:
+
+- 405 ms/token non-fetch work
+- 215 ms/token fetch
+- 620 ms/token total = 1.61 t/s
+- Logical routed weights: 5.9 GB/token
+- At 75% hit, theoretical NVMe traffic: 1.475 GB/token
+
+For byte-only changes:
+
+`Tnew ≈ 405 ms + 215 ms × (new NVMe bytes / 1.475 GB)`
+
+1. Shared-basis decomposition
+
+There is no defensible published “typical shared-energy fraction” for large MoEs. The papers mostly report final compression/accuracy, not the joint singular-value curves needed here.
+
+The closest evidence is mixed and argues against assuming 80–95% shared energy:
+
+- Flattened expert-weight cosine similarity is about 0.2–0.4 for Mixtral, but close to zero for from-scratch DeepSeekMoE and Grok experts. Cosine similarity is not subspace energy, but it is a warning against assuming strong redundancy. [A Closer Look into Mixture-of-Experts](https://aclanthology.org/2025.findings-naacl.251.pdf)
+- MoBE gets 24–30% parameter compression with roughly 1–2% relative performance loss, but uses full expert rank, 64 basis matrices for DeepSeek-V3, and leaves down projections uncompressed. It also notes that activated parameters can increase. This is not evidence for a tiny common rank. [MoBE](https://arxiv.org/html/2508.05257v1)
+- MoBE’s own rank study finds that 95% per-expert energy generally requires rank above 1,593 for 7168×2048 DeepSeek/Kimi matrices. Rank 16 is therefore unsuitable as a faithful whole-expert approximation; it is plausible only for a small correction after clustering.
+- MoE-SVD reports 60% compression and 1.5× inference speed through selective decomposition and a shared V matrix, but does not establish a universal shared-energy percentage. [MoE-SVD](https://openreview.net/forum?id=acJ3vdFljk)
+
+The right ds4 factorization is not the same orientation for all three matrices. With the usual `y = Wx` convention:
+
+```text
+Wgate,e ≈ Agate,e Bgate,layer
+Wup,e   ≈ Aup,e   Bup,layer
+Wdown,e ≈ Bdown,layer Cdown,e
+```
+
+Then decode becomes:
+
+```text
+zg = Bgate x                         resident, once/layer
+zu = Bup   x                         resident, once/layer
+
+for selected expert e:
+    g  = Agate,e zg                  streamed/cached factor
+    u  = Aup,e   zu                  streamed/cached factor
+    h  = silu(g) * u
+    q  = Cdown,e h                   streamed/cached factor
+    s += router_weight[e] * q
+
+y = Bdown s                          resident, once/layer
+```
+
+The last transformation is the important restructuring: because `Bdown` is shared and linear, it occurs after summing the routed experts instead of eight times.
+
+For hidden size `d=7168` and common rank `r`, streamed factor bytes are approximately `r/d` of the original expert bytes:
+
+- r=512: 7.1%
+- r=1024: 14.3%
+- r=1536: 21.4%
+
+The three FP16 bases cost approximately 1.65, 3.30, and 4.95 GB respectively across 75 layers. With a 10%-of-original residual budget and the stated 150 GB expert footprint:
+
+- r=512: about 27 GB factors/residual + bases
+- r=1024: about 40 GB
+- r=1536: about 52 GB
+
+All could fit within 68 GB, eliminating NVMe expert fetching. But “resident” is not free: at r=512 the bases themselves generate about 1.65 GB/token of DRAM traffic; at r=1024, 3.3 GB/token.
+
+Modeled result, assuming fused kernels and ≤10% residual:
+
+- r=512: approximately 2.6–2.8 t/s, +61–74%
+- r=1024: approximately 2.35–2.55 t/s, +46–58%
+
+Fidelity risk: high until measured. Implementation: very high, around 2–3 engineer-weeks for conversion, balanced factor quantization, artifact layout, cache changes, three fused CUDA stages, and evaluation. Factor quantization should balance singular values between factors before IQ2 encoding; naïvely putting all scale into one factor will quantize poorly.
+
+2. Router-weighted resident sketches
+
+The actual error statement is:
+
+`||Δy|| ≤ Σlow ge ||Ee(x) − Êe(x)||`
+
+Gate weight is a multiplier, not an absolute bound by itself; the expert residual norm must also be controlled. HOBBIT found a 0.99 correlation between gate weight and weighted expert-output norm on Mixtral, used 67% high precision / 30% low precision / 3% skipped selections, lost under 1% task accuracy, and obtained 1.19–1.57× loader speedup. Your proposed top-2-of-8 policy is considerably more aggressive because only 25% of selections remain exact. [HOBBIT](https://arxiv.org/abs/2411.01433)
+
+There is also a memory arithmetic correction:
+
+- IQ2_XXS is about 2.06 bpw.
+- 150 GB → 0.5 bpw is about 36 GB.
+- 150 GB → 1 bpw is about 73 GB.
+
+Therefore the “35 GB resident sketch” requires approximately 0.48 bpw, not a 0.5–1 bpw range. At 1 bpw there is no room for the exact cache.
+
+Assuming a 35 GB global sketch and 33 GB remaining exact arena, I replayed the committed trace, trained popularity on its first half, and tested on its second half. Assuming each eight-ID list is router-score ordered:
+
+```text
+Exact prefix   Exact-cache hit   NVMe GB/token   Decode
+top 2          67.2% LRU         0.48            2.10 t/s  (+30%)
+top 2          72.9% hybrid      0.40            2.16 t/s  (+34%)
+top 3          64.6% LRU         0.78            1.93 t/s  (+20%)
+top 3          68.2% hybrid      0.70            1.97 t/s  (+22%)
+top 4          62–65%            1.03–1.11       1.76–1.80 t/s
+```
+
+The top-2 gate-mass fraction affects fidelity, not these bytes. Before choosing a threshold, log cumulative top-1/2/3 gate mass p10/p50/p90. I would choose the smallest exact prefix reaching a cumulative mass target, rather than hard-coding two.
+
+Fidelity risk: medium-high for top 2, medium for top 3. Rank-16 alone is unlikely to be a sufficient sketch; a learned sub-bit codebook or cluster prototype plus rank-16 correction is more plausible. Implementation: high, roughly 1–2 weeks.
+
+3. Functional clustering for cache slots
+
+Exact-byte deduplication being 0% says almost nothing here. Published functional measurements find moderate-to-high CKA similarity for some expert groups, including groups above 0.7 in early Mixtral layers. [Diversifying the Expert Knowledge](https://aclanthology.org/2025.findings-acl.4.pdf) Sub-MoE clusters using expert-output cosine similarity and reports retaining 96%/86% of original Mixtral benchmark performance after 25%/50% expert reduction. [Sub-MoE](https://ojs.aaai.org/index.php/AAAI/article/view/39464)
+
+For ds4:
+
+- Compute expert fingerprints from whitened outputs on captured GLM hidden states.
+- Cluster within each layer using weighted output error, not flattened weights.
+- Store a medoid/prototype expert in the arena.
+- Store a small expert-specific correction, ideally rank 8–32 or structured sparse.
+- Never approximate a high-gate activation initially; fetch the exact expert instead.
+
+Idealized trace capacity effects, before correction storage:
+
+- 10% prototype merging: hit rate +3.0 points; about 1.68 t/s, +4%
+- 20% merging: hit rate +6.2 points; about 1.76 t/s, +9–10%
+- 25% merging: approximately +13%, but fidelity risk becomes substantial
+
+Implementation: medium-high, around one week. Fidelity risk: medium-high. A rank-16 correction is much more credible here than rank-16 approximation of an entire expert.
+
+4. Semantic/progressive residency versus LRU
+
+A held-out replay of the committed 1,280-token trace gave:
+
+- Warm LRU at 68 GiB: 74.5%
+- Full static LFU: 73.6%; worse than LRU
+- Pin top 20% of pairs, LRU remainder: 76.4%
+- Best pin/LRU split in this trace: 77.3%
+
+So long-horizon popularity alone beats LRU by only about 2–3 hit points, reducing fetched bytes by approximately 8–12% and improving decode to roughly 1.67–1.68 t/s, +3–4%. This is useful and nearly free, but it does not approach the 88% Belady bound. Popularity must retain a recency partition.
+
+With the stated 150 GB expert footprint, a concrete progressive layout is:
+
+- Top 20% exact: about 30 GB; serves 50.5% of selections
+- Remaining 80% at 0.5 bpw: about 30 GB
+- Remaining approximately 8 GB: dynamic exact tail cache
+
+That fits. The same design at 1 bpw needs about 90 GB and does not.
+
+Implementation: low for exact pin-plus-LRU, less than a day. Fidelity: none. Once sketches are added, it becomes the mixed-precision design above.
+
+Ranked shortlist
+
+Ranked by value of the next experiment:
+
+1. Shared hidden-space basis: 2.35–2.8 t/s modeled; high fidelity uncertainty; very high ds4 cost, but extremely cheap to falsify.
+2. Gate-weighted exact-plus-sketch: 1.93–2.16 t/s; medium/high measurable fidelity risk; high implementation cost; strongest credible large win.
+3. Exact popularity-pinned plus LRU cache: 1.67–1.68 t/s; zero fidelity risk; very low cost; should be implemented regardless.
+4. Functional prototype plus correction clustering: 1.68–1.76 t/s at 10–20% sharing; medium/high fidelity risk; medium-high cost.
+
+For ship-readiness, swap positions 1 and 3.
+
+The single cheapest validating probe
+
+Run a streaming randomized-SVD probe on three dequantized layers—early, middle, late—using the deployed IQ2 weights as the target.
+
+For gate/up, measure the common right/hidden subspace from:
+
+`S = Σe Weᵀ We`
+
+For down, measure the common left/hidden subspace from:
+
+`S = Σe We Weᵀ`
+
+A NumPy randomized range finder can calculate retained Frobenius energy at ranks 128, 256, 512, 1024, and 1536 without materializing a concatenation of every expert. Compare against the isotropic baseline `r/7168`: 7.1% at r=512 and 14.3% at r=1024.
+
+Go/no-go:
+
+- If rank 1024 does not retain roughly 90% energy for all three projections, kill the aggressive basis design; the necessary residual will probably erase its byte advantage.
+- If rank 512–1024 retains 90%+ raw energy, repeat with captured activations and gate-weighted output error before touching CUDA.
+- Any surviving variant then runs the existing 100-case suite as a paired comparison against current IQ2: mean, median, p90, and max ΔNLL plus top-1 agreement. A reasonable provisional gate is mean ΔNLL ≤0.01 nat/token and top-1 agreement loss ≤0.5 point.
+
+The current baseline for that comparison is already committed in [G4-bench.json](/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/G4-bench.json), and the routing evidence is in [trace-analysis.txt](/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/logs/g4a/trace-analysis.txt).
