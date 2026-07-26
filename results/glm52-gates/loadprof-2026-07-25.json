@@ -408,6 +408,7 @@
    "4. cascade counters atop SLRU",
    "5. QTIP re-quant captures the final ~13% (BRIAN: quantization compute)"
   ],
-  "keep_n_probe_downgraded": "the sweep's triage analysis + our flat gate-mass predict keep-N fidelity A/B fails; run it only as a cheap confirmation, expect kill"
+  "keep_n_probe_downgraded": "the sweep's triage analysis + our flat gate-mass predict keep-N fidelity A/B fails; run it only as a cheap confirmation, expect kill",
+  "descope_2026_07_26": "Brian: NVMe-oF external hardware EXCLUDED. Software-only build order: (1) theta*-gated cross-layer prefetch \u2014 evaluate layer L+1's router on layer L's hidden state (lit ~90% acc, clears theta*~0.4), async-fetch predicted experts into the arena during L's compute; per-layer fetch 2.7ms < per-layer compute 4.5ms so ~90% of the 212ms fetch can hide => decode ~600->~410ms (~2.4 t/s with SLRU), zero fidelity risk; needs thread-safe arena insert handoff (LRU map is single-threaded by design \u2014 staging queue + main-thread commit). (2) no-stall sketch tier \u2014 REVISED sizing: 0.5bpw sketches 53GB + ~15GB exact arena (63GB sketch variant leaves no exact tier); keep-6 catastrophe mandates strict NLL gate \u2014 sketch keeps contributions (noise mode) unlike removal, but risk is now rated HIGH until measured. (3) cascade counters. (4) QTIP awaiting Brian's quantization-compute decision."
  }
 }
