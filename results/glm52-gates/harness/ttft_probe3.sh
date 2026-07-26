@@ -25,10 +25,12 @@ j = json.load(open(sys.argv[1])); j["max_tokens"] = 1
 json.dump(j, open(sys.argv[2] + "/fix1.json", "w"))
 EOF
 
-DS4_GLM_SYNC_TRACE=1 DS4_CUDA_LOAD_PROFILE=1 \
-${TTFT3_BATCHALL:+DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1} \
-DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=68 \
-DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
+BA_ENV=()
+[[ -n "${TTFT3_BATCHALL:-}" ]] && BA_ENV+=(DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1)
+env DS4_GLM_SYNC_TRACE=1 DS4_CUDA_LOAD_PROFILE=1 \
+  "${BA_ENV[@]}" \
+  DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=68 \
+  DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
   "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
   --ssd-streaming --ssd-streaming-cache-experts 40GB \
   --kv-disk-dir "$KVDIR" --kv-disk-space-mb 8192 \
