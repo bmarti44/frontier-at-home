@@ -820,5 +820,13 @@
     "mechanism_confirmed_in_the_same_logs": "'live kv cache miss live=5063 prompt=5066 common=5045 reason=token-mismatch' -- exactly the BPE re-merge at the generation junction that was hypothesised: the live session holds 5063 tokens, the appended prompt is 5066, and only 5045 are common, so the junction token was re-merged differently.",
     "consequence": "FIX-A / F13 is UNBLOCKED. The decisive tagged-logit comparison in the failing regime can now be taken: with disk space available the cold checkpoint should store, the append should miss the live cache, load the shorter checkpoint from disk, and extend by a long suffix.",
     "lesson": "a harness that greps only for the SUCCESS string cannot distinguish 'precondition unmet' from 'operation attempted and failed'. Grep for the failure strings too."
+  },
+  "prefill_chunk_v1_INVALID_2026_07_26": {
+    "what_happened": "the pre-registered prefill-chunk hypothesis was tested with DS4_METAL_PREFILL_CHUNK=8192 and BOTH arms ran with prefill_chunk=4096. ds4_prefill_cap_for_prompt() only consults that env var when the configured chunk is 0, and ds4-server always configures one, so the env var was silently ignored.",
+    "evidence_the_arms_were_identical": "server log 'context buffers ... prefill_chunk=4096' in BOTH arms; sweeps=2 in both; prefill_mib=347268.1 identical to one decimal place; cold 159.4 s vs 158.3 s",
+    "verdict": "NO RESULT. The hypothesis is neither supported nor falsified -- the independent variable never changed. This is the SAME failure mode as the flush 'A/B' whose arms were also secretly identical.",
+    "what_caught_it": "the harness counted sweeps and summed prefill bytes from the trace instead of assuming them; identical byte totals to one decimal are impossible for genuinely different chunkings",
+    "fix": "v2 uses the real CLI flag --prefill-chunk and asserts from the server's own 'prefill_chunk=N' line that the arms differ, refusing to print any comparison if they do not",
+    "useful_number_that_did_come_out": "one 5047-token prefill moves 347,268 MiB = 339 GiB of expert weights across 2 sweeps, i.e. ~170 GiB per sweep -- confirming the ~176 GB/sweep estimate used to explain the flush-fix null result"
   }
 }
