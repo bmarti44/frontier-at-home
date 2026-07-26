@@ -265,5 +265,18 @@
    "policy decision for serving: relax guard to accept exact-prefix resumes (multi-turn warm TTFT ~2-4s, llama.cpp-grade consistency) OR keep strict byte-canonical behavior (cold appends ~150s). This is a serving-semantics choice, not a bug fix",
    "upstream report should be recast as: (1) the L40 same-lineage round-trip question, (2) a documentation note that disk-KV resume has chunk-shape numeric semantics"
   ]
+ },
+ "appended_turn_ttft_measured_2026_07_26": {
+  "config": "adopted profile + DS4_GLM_RESUME_GUARD_OFF (probe env; serving default remains strict pending owner decision), max_tokens=1",
+  "measured_ms": {
+   "ap1": 5675,
+   "ap2": 5664,
+   "ap3": 5633,
+   "ap1_repeat": 5640,
+   "cold_controls": "138803-150230"
+  },
+  "honest_read": "multi-turn agent TTFT = 5.6-5.7 s under llama.cpp-equivalent exact-prefix semantics \u2014 25x better than the strict default's ~140-150 s cold appends, but still ~3x over the DSV4 <2 s bar (my earlier 2-4 s estimate was wrong; the eviction store ~250ms + shard load ~115ms + 22-29-token suffix batch prefill ~2s + first-token decode ~0.6s + session overhead account for it)",
+  "headroom_not_pursued": "skip per-turn eviction re-store; keep live session hot instead of store+load round-trip per request; both are engine changes",
+  "bar_verdict": "multi-turn TTFT: 5.6 s measured vs <2 s bar \u2014 NOT met, but now a measured quantity under comparable semantics rather than a contingent claim"
  }
 }
