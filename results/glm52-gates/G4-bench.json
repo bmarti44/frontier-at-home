@@ -38,5 +38,21 @@
     "qd_sweep": "drive delivers 8.43 GB/s @QD1, 12.47 @QD4, ~10.2-10.4 @QD8-32 for 9.7MiB/1MiB random O_DIRECT reads (harness/qd_sweep.py) \u2014 the engine's 3.5 GB/s effective was its own sequential per-tensor read path",
     "ab_result": "DS4_CUDA_FETCH_THREADS: 0 -> prefill 6.84 t/s, decode 0.74; 6 -> 12.75 / 1.35; 12 -> 12.69 / 1.38; outputs byte-identical (sha 9b4170d06f8f x3); saturates at ~6 threads as predicted",
     "patch": "v4.6 (parallel miss-fetch pool in selected loader; arena inserts preserved; env-gated, default legacy)"
+  },
+  "current_best_snapshot_2026_07_25": {
+    "stack": "v4.6.1 (75edba234709): expert cache 68GB + parallel fetch x6 + deterministic dispatch + disk-KV align 64",
+    "ttft_cold_5047tok_s": 217.9,
+    "ttft_warm_restore_s": 19.0,
+    "decode_warm_tok_s": "~1.4 (128 tok in ~89 s net of restore+suffix)",
+    "uncached_decode_tok_s": 1.38,
+    "prefill_cold_tok_s": 23.2,
+    "fidelity": "IDENTICAL to pre-optimization run: mean avg_nll 0.4515, median 0.4329, api_top1 0.834 over all 100 official vectors \u2014 zero fidelity cost from the entire lever stack (bench3-quality100.tsv)",
+    "progression": {
+      "decode_uncached": "0.74 -> 1.38 t/s",
+      "decode_warm": "~1.15 -> ~1.4 t/s",
+      "ttft_warm": "33.5 -> 19.0 s",
+      "ttft_cold": "263 -> 218 s",
+      "prefill": "6.84 -> 12.75 t/s (CLI batch-258)"
+    }
   }
 }
