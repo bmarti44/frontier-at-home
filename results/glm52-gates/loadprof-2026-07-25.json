@@ -99,5 +99,28 @@
   },
   "verdict": "NOT adopted for serving yet: +10% decode does not justify losing byte-reproducibility vs the qualified single-token config. Structural insight recorded: speculation on streamed MoE is bounded by expert-diversity growth, not acceptance rate \u2014 deeper drafts make this WORSE unless hit rate is near 100%. Revisit if/when hit rate rises (repack + admission policy) since the expert-side penalty then drops to kernel-only.",
   "evidence": "logs/loadprof1/mtp-ab2-summary.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-mtp-ab/"
+ },
+ "warm_ttft_2026_07_26": {
+  "root_cause_probe": "ttft_probe3.sh: warm request correctly resumes from disk-KV checkpoint and batch-prefills only the suffix (sync trace committed). The recorded 19.0s bench3 number predated the pinned arena + batchall levers.",
+  "alignment_sweep_5047tok": {
+   "align_64": {
+    "warm2_s": 5.52,
+    "suffix": 55
+   },
+   "align_16": {
+    "warm2_s": 4.56,
+    "suffix": 39
+   },
+   "align_4": {
+    "warm2_s": 4.22,
+    "suffix": 35,
+    "cold_s": 153.7
+   }
+  },
+  "fit": "warm_ttft ~= 2.0s fixed + ~65ms/suffix-token; suffix floors at ~35 (checkpoint rule + resume_min=4), so finer align stops paying below 16",
+  "current_best_warm_ttft_s": 4.22,
+  "progression": "33.5 -> 19.0 -> 4.22 s (pin + batchall + align 4)",
+  "bar_gap": "DSV4 <2s; remaining fixed ~2.0s = checkpoint restore + engine bookkeeping + 1 decode token (~0.62s). Sub-2s needs in-RAM session/prefix KV cache (engine change \u2014 llama.cpp does 1.56s this way on the same box) or a faster restore path.",
+  "serving_adoption": "52_engine_switch.sh glm52 now carries ALL proven levers: pin, batchall, align 4, and FETCH_THREADS=6 (which was missing from the profile \u2014 benched at 2x decode but never adopted; fixed)"
  }
 }
