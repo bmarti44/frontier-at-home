@@ -343,7 +343,8 @@
   "lever1_slru_landed": {
    "code": "v4.9 (binary 625cdef11d86): segmented LRU \u2014 probationary+protected lists, protected cap 60% of slots, promote on hit, demote protected-LRU on overflow, evict probationary-tail first; env DS4_CUDA_EXPERT_CACHE_SLRU=1, default off = exact legacy LRU",
    "validation": "same-binary OFF/ON A-B windows: byte-identity sha 9113dfd0d233 x3 in BOTH; ON: hits 474.3->495.0/token, misses 166.4->145.7 (-12.4%), hit rate 74.0%->77.3% (matches sol-B's modeled 77.3% optimum), fetch 226.0->211.8ms, loader 275.0->262.0ms (~14ms/token saved, ~+2.3% decode; larger gains expected on mixed/scan traffic where SLRU protects against pollution)",
-   "adopted": "DS4_CUDA_EXPERT_CACHE_SLRU=1 added to 52_engine_switch.sh glm52 profile; sol review batched with next round"
+   "adopted": "DS4_CUDA_EXPERT_CACHE_SLRU=1 added to 52_engine_switch.sh glm52 profile; sol review batched with next round",
+   "validation_CORRECTED": "per-token figures corrected for the 75-vs-79 layer bug: legacy hits 444.2/misses 155.8/fetch 211.7ms; SLRU hits 463.6/misses 136.4/fetch 198.3ms. Hit rate 74.0->77.3% and -12.4% misses unchanged (ratio). Byte-identity unaffected."
   },
   "gate_mass_measured": {
    "probe": "DS4_GLM_GATE_MASS_LOG at the GLM decode router site (v4.9+gatemass binary d9b1d505fcfa), 14,175 routed-layer decode steps, byte-identity preserved (9113dfd0d233 x3)",
@@ -430,6 +431,39 @@
   },
   "verdict": "PASS by a wide margin \u2014 75.8% vs the theta*=0.40 profitability threshold (Dahlin bound / Srinath-Mutlu 40% rule). GLM-5.2's hidden state at layer L predicts layer L+1's routing well despite the FLAT gate-mass distribution (the two findings are independent: flat = no expert dominates; predictable = which experts get chosen is stable across the layer boundary).",
   "implication": "cross-layer prefetch is the strongest remaining software lever: ~76% of each layer's expert fetch can start one layer early and hide behind compute (per-layer fetch 2.7ms vs compute 4.5ms). Mispredictions cost only wasted bandwidth (Do-No-Harm eviction guard), never correctness \u2014 outputs stay byte-identical because the real router still selects the real experts.",
-  "next": "implement the background prefetch worker + staging ring (task #41 step 2), sol review before adoption"
+  "next": "implement the background prefetch worker + staging ring (task #41 step 2), sol review before adoption",
+  "sol_narrowing": "measures selected-set overlap, NOT miss-conditioned recall (the metric that governs prefetch payoff); effective sample = 3 repeated trajectories x 63 tokens x 74 transitions; sol-computed trivial baselines (3.1/3.2/16.1/23.8%) confirm 75.8% is genuinely informative"
+ },
+ "sol_round2_review_2026_07_26": {
+  "verdicts": "PART1 SLRU SOUND-WITH-GAPS; PART2 probes SOUND-WITH-GAPS; PART3 prefetch forecast UNSOUND as stated",
+  "MEASUREMENT_BUG_FOUND": "glm_profile_probe.sh hard-coded n_layers=79; GLM-5.2 routes 75 (L3..L77, verified: 75 distinct LOADPROF layer ids). All per-token loader figures this session were inflated ~6.8%. Self-evident in hindsight: reported 640.7 accesses/token exceeds the 600 maximum (75 layers x top-8). HARNESS FIXED (layer count now derived from the trace).",
+  "corrected_per_token": {
+   "legacy_LRU": {
+    "hits": 444.2,
+    "misses": 155.8,
+    "fetch_ms": 211.7,
+    "loader_total_ms": 257.5
+   },
+   "SLRU": {
+    "hits": 463.6,
+    "misses": 136.4,
+    "fetch_ms": 198.3,
+    "loader_total_ms": 245.4
+   },
+   "note": "hit RATE (74.0->77.3%) and miss reduction (-12.4%) survive \u2014 denominator cancels; absolute figures corrected"
+  },
+  "findings_accepted": [
+   "P1.2 SLRU invariants are fragile-but-correct single-threaded: add env-gated validator; getenv() enables on '0' (cosmetic)",
+   "P1.4 A/B is single-trace causal evidence, not a general perf claim: needs cold-reset ABBA repeats + committed access-stream digests",
+   "P1.5 map entries publish before async fills complete \u2014 SAFE today (single-threaded + device sync) but INVALIDATED by any prefetch thread: needs EMPTY/INFLIGHT/READY states",
+   "P2.1-2.2 gate-mass claim narrowed: measures diffuseness AMONG the 8 selected (not global 256-expert flatness, not popularity flatness); effective sample is 3 repeated trajectories, not 14k independent cases",
+   "P2.4 PREDACC restore return values discarded; statics are process-global (races if concurrent sessions); needs separate scratch tensors",
+   "P2.5 75.8% IS informative \u2014 sol computed baselines from our committed trace: random-8 3.1%, reuse-L-ids 3.2%, static-popularity 16.1%, previous-token 23.8%. Far above all trivial predictors.",
+   "P2.6 CRITICAL: selected-set overlap != prefetch profitability. Need MISS-CONDITIONED recall (fraction of demand-MISS bytes predicted), precision, timeliness. Predictable experts may be the already-cached hot ones.",
+   "P2.7 keep-6 kill narrowed: renormalization amplifies retained contributions ~1.18x, itself possibly damaging; 'keep-6-renormalized decisively fails' is proven, 'all skipping dead' is not",
+   "P3 prefetch forecast corrected: ideal ceiling 2.10-2.47 t/s (not 'modeled 2.4'), and only if miss-conditioned recall matches selected-set overlap; worker must be NVMe->private-staging ONLY (no CUDA ops on the legacy stream, no cache mutation); 'probationary-only' is NOT Do-No-Harm (speculative inserts still evict demand entries)"
+  ],
+  "revised_plan": "SHADOW-PREFETCH EXPERIMENT FIRST: prediction-driven reads into disposable staging, zero cache mutation; measure miss-conditioned recall + timeliness + contention + net latency. Only if that passes: main-thread-only admission with INFLIGHT/READY publication. No 2.4 t/s claim until demonstrated.",
+  "trail": "logs/loadprof1/sol-round2-review.txt"
  }
 }

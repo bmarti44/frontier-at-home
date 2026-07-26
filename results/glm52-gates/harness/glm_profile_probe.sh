@@ -67,7 +67,9 @@ lp = [l for l in log if l.startswith("LOADPROF")][skip:]
 mp = [l for l in log if "CUDA MoE profile tokens=1 " in l]
 def f(l, k): return float(re.search(k + r"=([0-9.]+)", l).group(1))
 def i(l, k): return int(re.search(k + r"=([0-9]+)", l).group(1))
-n_layers = 79
+# routed-layer count derived from the trace itself (sol finding: hard-coded
+# 79 inflated all per-token figures ~7%; GLM-5.2 routes 75 layers, L3..L77)
+n_layers = len({l.split()[1] for l in log if l.startswith("LOADPROF L")}) or 75
 if lp:
     tok = max(1, len(lp) // n_layers)
     tot = {k: sum(f(l, k) for l in lp) / tok for k in ("hit_ms", "fetch_ms", "fill_ms", "total_ms")}

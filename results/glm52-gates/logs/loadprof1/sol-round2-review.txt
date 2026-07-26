@@ -1,0 +1,226 @@
+OVERALL VERDICTS
+
+PART 1: SOUND-WITH-GAPS
+
+PART 2: SOUND-WITH-GAPS
+
+PART 3: UNSOUND as a performance forecast and production design. A shadow-prefetch prototype is justified, but 2.4 t/s is not yet an evidence-backed expectation.
+
+
+PART 1 — SLRU CODE AND CLAIMS
+
+1. The core list transitions are sound under the current single-threaded contract.
+
+On a protected hit, unlink decrements prot_used and clears seg; promote then relinks the slot, restores seg=1, and increments prot_used. Overflow demotion unlinks the protected tail, decrements prot_used, clears seg, and links it into probationary.
+
+Probationary eviction is consistent. The protected-tail fallback also decrements prot_used through cuda_expert_cache_lru_unlink(). The stale-offset “ghost” path is correct: a protected slot is first unlinked and cleared, then becomes a probationary ghost. Fill-failure ghosts originate from insertion and are already probationary. flush_all resets both lists, every seg, prot_used, used, and the map.
+
+I see no normal single-threaded path that leaves a committed slot on both lists or neither list.
+
+2. The invariants are fragile rather than self-defending.
+
+seg=0 means both “probationary” and “not linked yet.” ec_list_unlink() trusts the caller and has no membership check. prot_used-- has no underflow guard. These are acceptable only while all mutation remains serialized and every caller obeys the implicit slot-state protocol.
+
+Add an env-gated validator checking:
+
+a. Each linked slot occurs exactly once.
+b. prev/next are reciprocal.
+c. Heads and tails are correct.
+d. seg agrees with the traversed list.
+e. prot_used equals the protected traversal count.
+f. Every used slot is linked exactly once.
+g. Every valid key has exactly one matching map entry.
+h. Fresh slots are unlinked and key=UINT64_MAX.
+
+Also note that getenv("DS4_CUDA_EXPERT_CACHE_SLRU") enables SLRU even when set to “0”.
+
+3. The reported absolute per-token measurements are wrong.
+
+The committed profiling harness hard-codes n_layers=79. The captured GLM route has 75 routed layers, L3 through L77. Each measured window has 4,725 LOADPROF lines:
+
+4,725 / 79, using integer division, produces the reported 59 tokens.
+4,725 / 75 is actually 63 routed-token equivalents.
+
+The impossible reported total exposes this directly:
+
+474.3 hits + 166.4 misses = 640.7 expert accesses/token.
+
+With 75 routed layers and top-8 selection, the maximum is exactly 600.
+
+Correcting by 59/63 gives approximately:
+
+Legacy:
+hits 444.2/token
+misses 155.8/token
+fetch 211.7 ms/token
+loader total 257.5 ms/token
+
+SLRU:
+hits 463.6/token
+misses 136.4/token
+fetch 198.3 ms/token
+loader total 245.4 ms/token
+
+The 74.0% to 77.3% hit-rate change and approximately 12.4% miss reduction survive because their denominator cancels. The absolute hits/token, misses/token, fetch time, loader time, and subsequent speed model do not.
+
+4. The A/B supports causality on one trace, not general performance.
+
+Cache hit counts are deterministic if access stream, starting cache state, capacity, and policy are identical. Ordinary runtime variance cannot explain a 20.7 hit/token difference. Therefore, if both processes started from equivalent empty state and had identical access-stream digests, the hit-rate delta is properly attributable to SLRU for that trajectory.
+
+What is missing is committed proof of those conditions. The SLRU evidence contains summaries but not the access-stream digest, initial occupancy, or raw per-layer records. Identical generated text strongly suggests identical routing but does not prove it.
+
+A sound experiment would use cold-reset processes, record the existing access-stream digest, run representative prompts in randomized ABBA order, and report per-request results. Hit-rate confidence should be clustered by request, not by expert lookup. Timing needs repeated pairs because NVMe temperature, page cache, clocks, and queue behavior vary.
+
+The numerical match to the earlier “77.3% optimum” is not validation: that number came from a different pin/LRU policy and trace.
+
+5. SLRU itself should not change output bytes, but diff A contains additional risks.
+
+The policy only chooses between disk bytes and a byte-exact cached slab keyed by layer, expert, offsets, and model generation. That is semantically exact.
+
+However, map entries become visible immediately after asynchronous device-to-host fills are enqueued, before completion. The current single-threaded layer path appears safe because the next lookup follows a cudaDeviceSynchronize and selected IDs are compacted within a load. A future prefetch thread would invalidate that argument.
+
+Similarly, immediate cudaMemcpyAsync success does not detect a later asynchronous transfer failure. A recovery path could retain a keyed but incomplete slot.
+
+Use an explicit EMPTY/INFLIGHT/READY state and publish the map entry only after an event confirms completion. The output SHA proves exact generated bytes for the tested greedy trajectory; it does not prove cache contents, logits, or all error paths.
+
+
+PART 2 — MEASUREMENT PROBES
+
+1. Gate mass measures a useful but narrower property than claimed.
+
+The probe observes post-selection top-8 router weights. Assuming each row is sorted and normalized by its own total, it shows that contribution mass among the eight executed experts is moderately diffuse: top-2 carries 42.1%, while dropping the bottom two removes about 15.2%.
+
+That supports “fixed keep-6 is an aggressive approximation.” It does not establish that the full 256-expert router is globally flat, that expert popularity is flat, or that correctness-preserving tiering is weak. Frequency-based tiering and per-layer popularity remain separate questions.
+
+“Unusually flat” also needs a comparator. A top-1 share of 25.1% is twice the uniform top-8 share, so “diffuse relative to a top-2-dominates assumption” is the defensible wording.
+
+2. The effective gate-mass sample is much smaller than advertised.
+
+14,175 factors exactly as:
+
+3 repeated requests x 63 token positions x 75 routed layers.
+
+Those are layer-router observations, not 14,175 independent decode cases. Because the three output SHAs are identical, they are largely repeated trajectories. This is adequate for instrument validation, not a model-wide conclusion.
+
+Use many distinct prompts and report prompt-level and layer-level distributions.
+
+3. PREDACC is comparing the intended layer transition.
+
+At layer L, actual L IDs are read first. The code then evaluates layer L+1’s router using L’s ffn_norm, stores that predicted set, and compares it when the real L+1 route is reached. pred_layer prevents a wrong-layer comparison.
+
+The comparison happens before the current route is clobbered, so the restore path cannot directly inflate the score.
+
+Precise wording matters: the predictor uses layer L’s pre-FFN normalized state, not L’s completed output. That is appropriate for maximizing prefetch lead time.
+
+4. The normal PREDACC restore path is plausible, but not robustly proven.
+
+ffn_norm is input-only and need not be restored. Re-running L’s router GEMV should restore router_logits; re-running selection should restore router_probs, router_weights, and router_selected. On this CUDA backend, end_commands is a device synchronization and begin_commands is effectively a no-op, so the extra pairs should affect timing rather than arithmetic.
+
+The serious gaps are:
+
+a. Every restore return value is discarded. A failed tensor write, GEMV, or selector lets normal inference continue with partially predicted scratch.
+b. pred_ids and pred_layer are process-global statics. Concurrent sessions would race and mix measurements.
+c. Re-execution is assumed deterministic but not checked tensor-by-tensor.
+d. The output SHA only proves that tested greedy tokens did not change. Small hidden-state or logit differences can remain below token-decision margins.
+
+Use separate prediction scratch tensors. At minimum, propagate every restore failure and add an audit mode that byte-compares all router tensors before prediction and after restoration.
+
+5. The 75.8% overlap is genuinely informative, but the current evidence is narrow.
+
+From the separate committed 1,280-token routing trace, I calculate these approximate top-8 set-overlap baselines:
+
+Random eight of 256: 3.1%
+Reuse layer L’s expert IDs for L+1: 3.2%
+Always use each target layer’s most popular eight, trained on the first half and tested on the second: 16.1%
+Reuse the previous token’s IDs for the same target layer: 23.8%
+
+Thus 75.8% is far above obvious trivial baselines. Static popularity or accidental same-ID reuse does not explain it. Those baselines should still be recomputed on the exact PREDACC workload, and the experiment needs diverse requests.
+
+Also, 13,986 equals three repeated 63-token requests times 74 cross-layer comparisons. It is not fourteen thousand independent token examples.
+
+6. Selected-set accuracy is not prefetch profitability.
+
+The probe measures overlap among all eight actual experts. It does not measure recall among demand misses. Predictable experts may disproportionately be hot experts already in cache, while unpredictable experts may be the misses that matter.
+
+The required metrics are:
+
+Miss recall: fraction of actual demand-miss bytes present in the predicted set.
+Prefetch precision: fraction of fetched speculative bytes actually demanded.
+Timeliness: fraction completed before the demand deadline.
+Net stall reduction after contention and predictor overhead.
+
+7. Keep-6 kills one specific approximation, not every skipping scheme.
+
+Renormalization is not mathematically equivalent to literal contribution skipping. Literal skipping retains the original weights and sets dropped contributions to zero. This probe amplifies every retained contribution by total/kept, approximately 1/0.848 = 1.18 on average. That amplification can itself cause quality damage.
+
+Renormalization is a reasonable emulation of a top-N router that preserves total activation scale, but it is only one design point. The threshold implementation can also retain more than N experts when weights tie.
+
+The catastrophic outputs strongly reject fixed keep-6 with renormalization. They do not justify “expert-skip lever dead” until the same binary is tested with:
+
+a. Keep-8 control through the identical probe path.
+b. Keep-6 without renormalization.
+c. Adaptive mass thresholds.
+d. Teacher-forced ΔNLL/perplexity and top-token agreement over a representative corpus.
+
+The committed raw evidence also contains only two failure snippets rather than the claimed eight-case results.
+
+
+PART 3 — CROSS-LAYER PREFETCH
+
+VERDICT: UNSOUND AS STATED.
+
+1. The central speed equation uses the wrong accuracy.
+
+You cannot multiply 212 ms by 75.8%. The relevant multiplier is timely recall of actual cache-miss bytes, not overlap across all selected experts.
+
+Until miss-conditioned recall is measured, 75.8% is only an optimistic upper-bound proxy.
+
+2. The timing input is inflated.
+
+With the corrected 75-layer denominator, SLRU fetch time is approximately 198 ms/token, not 212 ms/token. Even granting 75.8% useful coverage, the ideal removable stall is about 150 ms.
+
+Starting from 1.6–1.8 t/s, or 625–556 ms/token, the zero-overhead ideal becomes roughly 475–405 ms/token, or 2.10–2.47 t/s. Therefore 2.4 t/s is near the optimistic end, not a central forecast. Predictor cost, synchronization, false reads, and contention can only lower it.
+
+3. There is a real overlap window, but the present probe does not demonstrate it.
+
+The per-layer cudaDeviceSynchronize does not stop an independent CPU pread thread. A worker can read L+1 while the GPU executes L’s MoE and subsequent attention/router work.
+
+The window disappears if the worker performs CUDA operations on the legacy stream, because those can serialize with GPU compute. Production prefetch should perform NVMe-to-private-host-staging only; CUDA transfer or arena publication should happen through explicit stream/event ordering at demand.
+
+The extra next-layer router GEMV, selected-ID readback, and synchronization also consume part of the lead time. Separate scratch could allow actual and predicted IDs to be read at an existing synchronization point, but that schedule must be measured.
+
+The unified-memory GB10 adds another uncertainty: NVMe DMA, cache copies, and GPU kernels share the memory system, so overlapped wall time need not equal max(fetch, compute).
+
+4. A worker touching the current cache is immediately unsafe.
+
+unordered_map, both intrusive lists, used, prot_used, and slot bytes are unsynchronized. Concurrent lookup/insert/eviction is a C++ data race and can corrupt both map and lists. A worker writing directly into an arena slot can also race a hit copy or slot reuse.
+
+The safe design is:
+
+a. Main thread performs cache lookup and creates an in-flight key record.
+b. Worker reads only into a private bounded staging buffer.
+c. Worker posts a completion record with key, offsets, model generation, and byte count.
+d. Main thread validates generation and commits the completed slab.
+e. Map publication happens only after the bytes are complete.
+f. Shutdown joins workers before unregistering the arena.
+g. In-flight requests are deduplicated and demand reads have priority.
+
+5. “Probationary only” is not Do-No-Harm.
+
+A speculative insert that evicts a probationary demand entry can reduce future hits. Protected entries are not the only valuable entries.
+
+True no-harm requires a separate speculative buffer or reserved speculative partition. Promote/commit a staged slab only when it is actually demanded, or evict only another speculative entry. Otherwise measure the cache-hit loss and call the policy “protected-segment-preserving,” not no-harm.
+
+6. The 40% kill switch targets the wrong signal.
+
+Use timely useful bytes divided by prefetched bytes, actual demand stall avoided, cache-hit regression, and net token latency. Add hysteresis and demand priority. Raw selected-set overlap below or above 40% is not a portable profitability boundary.
+
+FINAL DECISION
+
+Keep SLRU, after fixing the profiling denominator and adding invariant tests.
+
+Keep the gate-mass and PREDACC probes, but narrow their claims and move PREDACC to separate scratch.
+
+Treat keep-6-renormalized as decisively failed; do not yet declare every skip formulation dead.
+
+Proceed only with a shadow-prefetch experiment that reads into disposable staging and never mutates the cache. Measure miss-conditioned recall, timeliness, contention, and net latency first. If that passes, add main-thread-only cache admission. Do not use 2.4 t/s as a forecast until that shadow run demonstrates it.
