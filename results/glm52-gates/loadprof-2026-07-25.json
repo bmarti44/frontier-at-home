@@ -254,5 +254,16 @@
   "reframe": "the append-resume 'corruption' is most likely NON-CANONICAL-BUT-VALID tokenization semantics (identical philosophy to llama.cpp slot reuse, which the industry accepts), NOT state damage. Both paths are deterministic and internally consistent; they evaluate different token sequences for the same text. The earlier 'continues the old generation tail' interpretation of 24-token samples was probably pattern-matching.",
   "remaining_check_before_downgrading_severity": "confirm resumed outputs are quality-equivalent (not subtly degraded) on longer samples, and confirm the suffix tokens the server built are exactly tokenize(text-beyond-stored-boundary) \u2014 if yes, the bug report becomes a SEMANTICS note and the v4.8d guard can be relaxed to accept exact-prefix+suffix resumes, giving multi-turn warm TTFT ~2-4s at llama.cpp-grade consistency",
   "implication_for_bar": "if confirmed, multi-turn agent TTFT lands at ~2-4s (resume + suffix) with industry-standard semantics \u2014 closing the last TTFT gap without any upstream fix"
+ },
+ "final_synthesis_2026_07_26": {
+  "tokdump": "effective-prompt token ids at the junction window are IDENTICAL between resumed and cold (TOKDUMP 16 ids equal) \u2014 tokenization-semantics theory dead",
+  "layer_locality": "L0 rows byte-perfect across round-trip AND across different cold evaluations; L40 rows differ (~25% kv_lora bytes, ~100% k_rope bytes) between ANY two evaluations with different prefill chunk shapes (5044-token vs 5062-token stage-1)",
+  "conclusion": "the append-resume divergence is DEEP-LAYER NUMERIC PATH-DEPENDENCE on evaluation chunk shape, amplified by greedy decoding \u2014 the same equivalence class as llama.cpp prefix-cache reuse and our own batch-boundary findings (atomics, MTP). Resumed-vs-cold byte-equality is UNACHIEVABLE by construction whenever the cold run re-evaluates the shared prefix under a different chunking. Both 96-token outputs are valid, coherent continuations (evidence in rowdump summary). NOT state corruption.",
+  "honest_loose_end": "X live-vs-restored L40 rows differ WITHIN the same lineage, which a pure byte-copy round trip shouldn't allow \u2014 one targeted check remains (dump immediately before store and after load with no evaluation between; possible per-layer dtype subtlety in the f16 flag path)",
+  "operational_consequence": [
+   "the v4.8d guard's byte-identity standard is STRICTER than the industry's (llama.cpp reuse has identical semantics and nobody calls it corruption)",
+   "policy decision for serving: relax guard to accept exact-prefix resumes (multi-turn warm TTFT ~2-4s, llama.cpp-grade consistency) OR keep strict byte-canonical behavior (cold appends ~150s). This is a serving-semantics choice, not a bug fix",
+   "upstream report should be recast as: (1) the L40 same-lineage round-trip question, (2) a documentation note that disk-KV resume has chunk-shape numeric semantics"
+  ]
  }
 }
