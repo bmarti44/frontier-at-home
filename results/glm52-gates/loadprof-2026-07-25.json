@@ -178,5 +178,16 @@
   "refined_diagnosis": "the bug is specific to GENUINE resume-with-different-suffix: prompt tokens 0..start-1 match (so suffix tokens are canonical \u2014 tokenization mismatch ruled out); prime suspect is indexed_resume_keeps_sparse_state retaining indexer/sparse state built over the previous lineage's rows (incl. old generated rows above the new suffix), contaminating attention. Exact-replay is immune because the recomputed suffix is identical to the old content.",
   "sol_root_cause_session": "launched (sync excerpt ds4.c 58030-58330 + evidence); fix direction: invalidate/truncate sparse state above start when the resumed suffix differs from previously evaluated tokens",
   "operational_note": "silent cold fallback on lineage mismatch also explains why agent traffic 'works' today at 140s+ TTFT \u2014 most appends after generation probably fall back to cold rather than resume"
+ },
+ "append_discriminator_2026_07_26": {
+  "experiment": "ttft_append_probe.sh with APPEND_PROBE_BATCHALL=0 (suffix through per-token decode instead of indexed batch)",
+  "result": "divergence PERSISTS and X shas are byte-identical to the batchall run (41b1c66448d0 / 208a0513169d / 04b0b01bca84) \u2014 corruption is deterministic and path-independent",
+  "conclusion": "sol's second candidate (resumed indexed-batch kernel bug) ELIMINATED; confirmed mechanism = resume-state/frontier contamination: the graph's sparse/indexer frontier advanced by the prior request's suffix+generation is never truncated to start on resume (no glm_graph_truncate in the sync block), so genuinely-resumed different-suffix requests read stale state",
+  "fix_options": [
+   "A (sol minimal, correctness-first): full graph reset + cold prefill whenever graph_frontier != start \u2014 safe but turns EVERY post-generation append into a ~150s cold prefill (destroys agent-turn TTFT value; exact-replay unaffected)",
+   "B (right fix, larger): implement frontier/sparse-state truncation to start (valid row counts, indexer partial-window state, sequence length) \u2014 needs glm_graph internals + save/restore invariant asserts (saved_graph_frontier == saved_token_count)",
+   "C (upstream): report to antirez/ds4 with the minimal repro \u2014 this is an upstream bug in the GLM resume path, present without any of our patches"
+  ],
+  "status": "bug fully isolated and mechanism confirmed; fix NOT yet implemented \u2014 appended-turn resume remains labeled UNSAFE; exact-replay chain unaffected"
  }
 }
