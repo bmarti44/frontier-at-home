@@ -207,5 +207,19 @@
   ],
   "next_fix_site": "server-side, ONE function: kv_cache_try_load_text knows pre-load live length; if pre_live > loaded_len (or if any load lands on a session whose graph advanced past loaded_len since cold), invalidate and take the cold path \u2014 UNLESS replay probes prove suffix<=resume_min safe (b_warm's exact path through evict+load needs one tracing run to know whether preserving 1.77s survives this guard)",
   "status": "guard groundwork landed and validated harmless; real choke point identified with raw log evidence; fix completion + sol review = next session"
+ },
+ "v48d_guard_2026_07_26": {
+  "binary": "1bec5e7319df (v4.8d): lineage snapshot moved to the REAL checkpoint-replace sites \u2014 ds4_session_invalidate (snapshot instead of clear) + the three struct-assign restore sites (s->checkpoint = new_checkpoint) that all prior hooks missed",
+  "validated": {
+   "guard_fires": "4/4 append requests detected divergence-past-frontier and forced cold (152s full prefill each) \u2014 NO MORE SILENT CORRUPTION",
+   "replay": "untouched: warm2 1.757s, byte-identical b344d80e24a3 x3, guard silent",
+   "tracing_answer": "exact-replay ALSO goes evict+shard-load (live=5048 prompt=5047 common=5047 -> load 5044) and stays correct \u2014 load itself is not the discriminator; suffix-content-vs-lineage is, which the token-compare guard captures exactly"
+  },
+  "residual_open": [
+   "guard-forced-cold outputs do NOT byte-match fresh-server cold controls \u2014 some additional state the natural cold-fallback paths reset is missed (or deeper cross-request state); one anomaly: a guarded request reproduced a DIFFERENT prompt's cold output \u2014 needs fresh investigation with sol before the guard can be called complete",
+   "possible option-B one-liner spotted: the non-GLM raw-KV restore explicitly restores per-layer frontier counters (g->layer_n_comp / layer_n_index_comp) after checkpoint replacement; the GLM compact restore visibly does not \u2014 check whether the GLM restore path resets those counters, prime suspect for the whole bug"
+  ],
+  "serving_posture": "v4.8d is STRICTLY SAFER than qualified v4.7.1 (which silently serves corrupted appends): the guard can only force an unnecessary cold start. Tree binary left at v4.8d deliberately.",
+  "status": "guard mechanism landed and validated; completion (residual reset + sol review + re-validation) = next session"
  }
 }

@@ -1,5 +1,5 @@
 diff --git a/ds4.c b/ds4.c
-index 1a79a01..e54dde4 100644
+index 1a79a01..30e10be 100644
 --- a/ds4.c
 +++ b/ds4.c
 @@ -38024,8 +38024,8 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
@@ -492,7 +492,40 @@ index 1a79a01..e54dde4 100644
          token_vec_free(&s->checkpoint);
          memset(&s->checkpoint, 0, sizeof(s->checkpoint));
          for (uint32_t i = 0; i < n_tokens; i++) token_vec_push(&s->checkpoint, tokens[i]);
-@@ -56757,6 +56983,7 @@ void ds4_session_free(ds4_session *s) {
+@@ -49921,6 +50147,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+             return 1;
+         }
+ 
++        if (s->checkpoint.len > s->glm_evaluated.len) {
++            ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                            (const ds4_tokens *)&s->checkpoint);
++        }
+         token_vec_free(&s->checkpoint);
+         s->checkpoint = new_checkpoint;
+         s->checkpoint_valid = true;
+@@ -50061,6 +50291,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+             payload_set_err(err, errlen, "KV checkpoint has trailing payload bytes");
+             return 1;
+         }
++        if (s->checkpoint.len > s->glm_evaluated.len) {
++            ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                            (const ds4_tokens *)&s->checkpoint);
++        }
+         token_vec_free(&s->checkpoint);
+         s->checkpoint = new_checkpoint;
+         s->checkpoint_valid = true;
+@@ -50270,6 +50504,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+         return 1;
+     }
+ 
++    if (s->checkpoint.len > s->glm_evaluated.len) {
++        ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                        (const ds4_tokens *)&s->checkpoint);
++    }
+     token_vec_free(&s->checkpoint);
+     s->checkpoint = new_checkpoint;
+     for (uint32_t il = 0; il < DS4_N_LAYER; il++) {
+@@ -56757,6 +56995,7 @@ void ds4_session_free(ds4_session *s) {
      }
  #endif
      token_vec_free(&s->checkpoint);
@@ -500,7 +533,7 @@ index 1a79a01..e54dde4 100644
      token_vec_free(&s->greedy_splitkv_segment);
      free(s->logits);
      free(s->sample_probs);
-@@ -57865,7 +58092,40 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+@@ -57865,7 +58104,40 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
              start = s->checkpoint.len;
              resumed_checkpoint = true;
              s->mtp_draft_valid = false;
@@ -542,15 +575,26 @@ index 1a79a01..e54dde4 100644
              s->checkpoint.len = 0;
              s->checkpoint_valid = false;
              s->mtp_draft_valid = false;
-@@ -64506,6 +64766,7 @@ void ds4_session_invalidate(ds4_session *s) {
+@@ -64504,6 +64776,18 @@ void ds4_session_invalidate(ds4_session *s) {
+         !ds4_tp_failed(s->engine->tp.ctx)) {
+         (void)ds4_tp_send_invalidate(s->engine->tp.ctx, s->tp_session_id);
      }
++    if (s->checkpoint.len > s->glm_evaluated.len) {
++        /* Invalidate is the last moment the token record of the lineage the
++         * graph has actually evaluated still exists (a shard load typically
++         * follows and replaces the checkpoint with a shorter prefix while
++         * graph frontier state persists). Snapshot it so the GLM resume
++         * guard can distinguish pure prefix-replay (safe) from
++         * divergence/extension (must cold-start). Never cleared except at
++         * session free: a stale snapshot can only force an unnecessary
++         * cold start or admit a byte-identical replay, both safe. */
++        ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                        (const ds4_tokens *)&s->checkpoint);
++    }
      s->checkpoint_valid = false;
      s->checkpoint.len = 0;
-+    s->glm_evaluated.len = 0;
      s->mtp_draft_valid = false;
-     ds4_session_dspark_capture_invalidate(s);
- #ifndef DS4_NO_GPU
-@@ -64520,6 +64781,13 @@ void ds4_session_rewind(ds4_session *s, int pos) {
+@@ -64520,6 +64804,13 @@ void ds4_session_rewind(ds4_session *s, int pos) {
      }
      if (pos < 0) pos = 0;
      if (pos > s->checkpoint.len) pos = s->checkpoint.len;
