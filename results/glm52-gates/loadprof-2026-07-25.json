@@ -564,5 +564,25 @@
   "action_taken": "DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL REMOVED from the glm52 serving profile with an in-file warning; any future re-enable requires a short-prompt fidelity gate.",
   "collateral": "the warm-TTFT results that used batchall (1.76s claim) must be re-measured without it; cold-TTFT 3.6x gain attributed to this lever is forfeit unless it can be made safe.",
   "lesson": "byte-identity on ONE fixture is not a fidelity gate. Every lever needs short AND long prompt coverage before adoption."
+ },
+ "post_fix_verification_2026_07_26": {
+  "round_trip_switch_DEMONSTRATED": [
+   "leg1 glm52: VERIFY OK identity='glm-5.2,glm-5.2-chat,glm-5.2-reasoner' authhelper=401 probe_ms=28585",
+   "leg2 dsv4:  VERIFY OK identity='...DeepSeek-V4-Flash-UD-Q2_K_XL...' authhelper=401 probe_ms=1085",
+   "leg3 glm52: VERIFY OK identity='glm-5.2,glm-5.2-chat,glm-5.2-reasoner' authhelper=401 probe_ms=35695",
+   "each leg independently verified engine identity + auth-chain 401 + a live completion; earlier one-way claim corrected"
+  ],
+  "coherence_restored": "with the batchall lever removed, the short prompt that produced repetition loops and invalid UTF-8 now returns coherent, reproducible output ('1.  **Analyze the Request:** ... **Topic:**') identical across repeats",
+  "measured_latency_post_fix": {
+   "short_prompt_16_tokens": "18.97-19.77 s across 3 identical requests (stable)",
+   "implied_decode": "~0.83 t/s on a SHORT prompt \u2014 much slower than the 1.6-1.8 t/s measured on the 5047-token fixture, because a short prompt's expert working set is entirely uncached (every token is a full miss)",
+   "note": "this is the first honest short-prompt decode measurement; prior figures were all long-fixture and did not represent this regime"
+  },
+  "claims_now_forfeit": [
+   "warm TTFT 1.764 s \u2014 measured WITH the batchall lever; must be re-measured without it",
+   "cold TTFT 3.6x improvement \u2014 attributed to the batchall lever, forfeit unless the lever can be made safe",
+   "keep-6 'collapse' as evidence against expert skipping \u2014 almost certainly caused by the same lever (FIX-B must re-test)"
+  ],
+  "what_stands": "SLRU (byte-identical, exonerated in this A/B), pinned arena (separate lever, unaffected), parallel fetch, deterministic dispatch, 32K allocation, and the engine's IQ2_XXS down-projection kernels that make GLM run at all"
  }
 }
