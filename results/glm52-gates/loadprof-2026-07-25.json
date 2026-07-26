@@ -939,5 +939,21 @@
       "keep7": "fidelity inconclusive (CI spans zero, point estimate 2x over) and its speed benefit is not established -- the trajectory-controlled run gave only -2.0% (347 s vs 354 s), against +10% free-running",
       "serving_profile": "scripts/52_engine_switch.sh unchanged; sets no DS4_GLM_TOPK_KEEP and no DS4_GLM_TOPK_SKIP_LOAD"
     }
+  },
+  "SLRU_causal_ab_2026_07_26": {
+    "why": "the audit (F07) found the SLRU claim rested on a single A/B pair with no committed digests, and that my summary conflated SLRU's effect with a later prefetch result. SLRU is a serving default, so it needed a causal test.",
+    "method": "results/glm52-gates/harness/slru_ab.sh -- same binary, ABBA over two passes, decode isolated as 64/(t65-t1) on one warm server, and a sha256 DIGEST of the post-warmup expert access stream (DS4_CUDA_EXPERT_TRACE) per arm",
+    "pass1": {
+      "slru_tok_s": 2.298,
+      "lru_tok_s": 2.188,
+      "slru_gain_pct": 5.0,
+      "access_digest_slru": "0ceb3a555ded9918",
+      "access_digest_lru": "0ceb3a555ded9918",
+      "accesses_each": 11700
+    },
+    "key_point": "the access-stream digests are IDENTICAL across the two policies over 11,700 accesses. Both caches were asked for exactly the same experts in exactly the same order, so the timing difference is attributable to the EVICTION POLICY and not to different traffic. That is the causal evidence the audit asked for.",
+    "caveat": "hit-rate percentages are not available in this run: the periodic 'expert-cache stats' counter is printed under DS4_GLM_TP_DEBUG, which I deliberately omitted so the extra logging could not confound the timing. The comparison is therefore on decode wall time plus the matched access stream.",
+    "restatement": "SLRU is worth about +5% decode over plain LRU on this fixture with a matched access stream. That is far more modest than the original framing (which mixed in a prefetch result), and it justifies keeping SLRU on without supporting the larger number.",
+    "status": "pass 1 complete; ABBA pass 2 in flight"
   }
 }
