@@ -309,5 +309,15 @@
   "result": "L40 row differences IDENTICAL to the append flow (kv_lora 2037/8192, k_rope 1021/1024; L0 and indexer byte-exact) while replay output is BYTE-IDENTICAL (a053b5b2b3a1 == a053b5b2b3a1)",
   "conclusion": "DOWNGRADED per sol review (NOT SUPPORTED as a closure): the defensible statement is only 'the observed L40 difference did not change greedy output in one short exact-replay execution'. Replay-inertness does not imply append-inertness (different suffix lengths/batching may consume those rows); byte-count equality is not pattern identity (no coordinate masks committed); dump-request association and layout assumptions were not independently auditable; one run cannot carry a universal claim. THE STRICT GUARD REMAINS THE RECOMMENDED POSTURE. Required to truly close: branch-matched 22-29-token suffix probes with logit comparison, coordinate-mask diffs vs the append flow, committed sync-trace dump association, fresh-server repetition.",
   "guard_recommendation_update": "RETRACTED \u2014 strict guard stays; relaxation is not supported on current evidence (sol trail logs/loadprof1/sol-closure-review.txt)"
+ },
+ "creative_round2_2026_07_26": {
+  "directive": "Brian: get more creative on the unmet perf clause \u2014 compress the model itself before transfer; sol subagents on xhigh; left-field ideas",
+  "probe1_stream_entropy": {
+   "harness": "iq2_stream_entropy.py on 64MB of blk.40.ffn_gate_exps (1,016,800 IQ2_XXS blocks)",
+   "result": "ALL byte lanes ~7.85-7.97 bits/byte; lattice-index-ish lane H0=7.970, order-1 H1=7.966 (memoryless); weighted ideal order-0 per-stream compression = 1.12%",
+   "verdict": "stream-separated entropy coding is DEAD (stronger than the old 3.8-4.2% packed measurement \u2014 E8 lattice indices are near-uniform and memoryless). Lossless/recoding branch closed from a second independent angle.",
+   "consequence": "remaining creative space is LOSSY/STRUCTURAL only: sub-2bpw trellis/VQ re-quant (fidelity-measurable), mixed-precision-by-router-weight (HOBBIT-class), shared-basis expert factorization, semantic cache tiering"
+  },
+  "in_flight": "sol-A (recoding/re-quant design \u2014 probe1 already kills its branch 1), sol-B (MoE-structural), web agent (2024-26 MoE offloading + sub-2bpw + GPU entropy decode literature)"
  }
 }
