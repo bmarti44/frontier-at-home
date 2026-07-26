@@ -1,0 +1,219 @@
+Source-hunt result
+
+Bottom line: ds4_glm_gpu_graph has no compact-cache frontier, per-layer live-row counter, bridge length, or cached token position. The main GLM frontier is implicit in s->checkpoint.len and the pos/pos0/n_rows arguments. The expanded-cache frontier is s->glm_dense_cache_len. Therefore no missing scalar in (A) can simply be set to L.
+
+1. Complete state classification
+
+Request-semantic cache state
+
+- layer_kv_lora_cache[DS4_MAX_LAYER]
+- layer_k_rope_cache[DS4_MAX_LAYER]
+- layer_indexer_key_cache[DS4_MAX_LAYER]
+- layer_key_cache[DS4_MAX_LAYER]
+- layer_value_cache[DS4_MAX_LAYER]
+
+These are the only ordinary-model lineage-bearing members in (A), at ds4.c:37256-37269.
+
+Load behavior:
+- (B) restores layer_key_cache and layer_value_cache through saved_full_live at ds4.c:50063-50080.
+- It restores the compact KV and full-indexer rows through expected_compact_live at ds4.c:50082-50110.
+- Rows above those limits are not cleared. They retain the previous lineage physically.
+
+Full-prefill-from-zero behavior:
+- Rows [0,N) are overwritten.
+- Rows [N,capacity) remain untouched.
+- There is no graph-side live-row field to reset.
+
+The intended logical bounds are nevertheless explicit:
+- Indexed batch computes n_rows = pos0 + n_tokens at ds4.c:43690.
+- New indexer and compact KV rows are stored at pos0 for n_tokens at ds4.c:44101-44121 and 44153-44163.
+- Indexer scoring/top-k is passed n_rows, not capacity, at ds4.c:44330-44349.
+- Decode uses visible = pos + 1 at ds4.c:45712-45779.
+
+Thus stale tail rows can affect output only if a CUDA kernel/backend cache ignores those bounds, a store is not visible before the read, or some backend high-water state exists outside this struct.
+
+Session-side frontiers omitted from (A)
+
+- s->checkpoint.len: compact-cache logical frontier.
+- s->glm_dense_cache_len: expanded full-KV frontier, ds4.c:47661.
+- s->logits: logits corresponding to the checkpoint frontier.
+- s->glm_evaluated.len: lineage-guard bookkeeping added by your patch; it is not a compute frontier.
+- checkpoint_len_with_logits, suffix, dense_cache_gap, and dense bridge positions are locals at ds4.c:58132-58180. There is no persistent “bridge length” member.
+
+(B) handles the dense frontier correctly:
+- Clears glm_dense_cache_len before restore at ds4.c:50057-50059.
+- Sets it to saved_full_live on success at ds4.c:50128-50132.
+- The helper’s complete behavior is at ds4.c:48475-48500.
+
+Prefill expert-cache capture state
+
+- prefill_seed_router_selected
+- prefill_seed_tokens
+- prefill_seed_layer_captured[DS4_MAX_LAYER]
+
+These are at ds4.c:37208-37210.
+
+Load behavior:
+- Not reset by (B).
+
+Full batch-prefill behavior:
+- prefill_seed_tokens is zeroed and every capture flag is cleared by glm_graph_reset_prefill_seed_capture at ds4.c:40938-40943.
+- That helper is called at the start of dense full-attention batch prefill at ds4.c:42773 and indexed batch prefill at ds4.c:43755.
+- The backing tensor itself is not cleared; flags determine which rows are valid.
+
+A purely token-major/per-token cold prefill does not call the reset helper, but it also does not consume this captured batch seed. A later batch prefill resets it before use.
+
+GLM MTP state
+
+Graph members at ds4.c:37261-37266:
+
+- mtp_kv_lora_cache
+- mtp_k_rope_cache
+- mtp_concat
+- mtp_selected
+- mtp_logits_host
+- mtp_ready
+
+Only the first two are lineage caches. mtp_concat, mtp_selected, and mtp_logits_host are scratch. mtp_ready means “allocation completed,” not “cache frontier valid.”
+
+The actual MTP window state is outside (A), at ds4.c:47662-47668:
+
+- s->glm_mtp_draft
+- s->glm_mtp_have
+- s->glm_spec_inside
+- s->glm_mtp_min_pos
+- s->glm_mtp_hc
+- s->glm_mtp_logits0
+
+Neither (B), ds4_session_invalidate, nor a normal cold prefill resets glm_mtp_have, glm_mtp_draft, glm_mtp_min_pos, or glm_spec_inside. The reset of s->mtp_draft_valid in (B), ds4.c:50058 and 50131, is a different, legacy speculative state flag.
+
+The MTP cache uses absolute slots and selects [min_pos..pos], ds4.c:42030-42032 and 42069-42085. Its first-cycle logic relies on glm_mtp_have and glm_mtp_min_pos at ds4.c:57188-57205.
+
+Ordinary scratch tensors
+
+All of these retain bytes across calls, but their active portions are intended to be overwritten before use:
+
+- cur, next, attn_norm, q_rank, q_rank_norm, q, kv_raw, kv_norm, k_nope, value, heads, attn_out, after_attn, ffn_norm, ffn_gate, ffn_up, ffn_mid, routed_gate, routed_up, routed_down, ffn_out, ffn_sum, router_logits, router_probs, router_selected, router_weights, output_norm, logits.
+- prefill_tokens and every batch_* tensor.
+- indexer_k, indexer_q, indexer_weights, indexer_scores, indexer_selected, qk_low, attn_partial_lora, attn_partial_ms and their batch variants.
+- tp_bounce_out and tp_bounce_in.
+
+Load does not reset them. Full prefill overwrites only the active shapes. They are not logical cache frontiers. cur is special only when GLM MTP consumes the last main-model hidden state; ordinary decode overwrites cur with the new token embedding first.
+
+Operational state
+
+- batch_routed_mid_is_f16: reset to false before each routed batch dispatch at ds4.c:39665 and recomputed by the kernel. Not lineage-dependent.
+- streaming_static_decode_map_current: mapping-cache flag at ds4.c:37277. Not reset by (B). Every non-static token/layer/output mapping sets it false at ds4.c:37999-38005, 38059-38081, 38084-38132, and 38281-38287. Full SSD prefill therefore invalidates it. It contains no position.
+- ws_ready, ws_tier, ws_mirror, ws_orig: multi-tier scratch binding state, ds4.c:37291-37295. Load does nothing. Prefill switches tiers but does not reset them. No lineage meaning.
+- verify_ws_ready, verify_ws_tier, verify_ws_mirror, verify_ws_orig: analogous two-row verification workspace state, ds4.c:37296-37300. No lineage meaning.
+
+Static allocation/configuration state
+
+These persist for the whole session and should never be reset by restore or prefill:
+
+- ctx_cap; source also has ctx_size immediately before the supplied excerpt.
+- normal_layers, layer_start, layer_end, layer_count.
+- q_dim, q_nope, heads_dim, kv_raw_dim, dense_hidden_max, ffn_mid_elems.
+- compact_cache_cap, indexed_prefill_cap, indexed_prefill_score_cap, indexer_full_layers.
+- full_kv_cache, has_token_embd, has_output_head, quality, ssd_streaming, ssd_streaming_cold, generic_routed_moe.
+- tp_world, tp_rank, tp_out, tp_in, placement.
+
+2. Best explanation of both observations
+
+No scalar member in (A) explains both.
+
+The strongest within-graph candidate is the physical stale tail in:
+
+- layer_kv_lora_cache[]
+- layer_k_rope_cache[]
+- layer_indexer_key_cache[]
+
+The resumed decode is explicitly forced onto indexed attention whenever logits are requested, even below ctx_cap, at ds4.c:40557-40564. Therefore the expanded layer_key_cache/layer_value_cache pair is secondary for this reproduction.
+
+Those compact arrays explain both observations only if the CUDA backend reads beyond n_rows/visible, fails to make overwritten suffix rows visible, or retains an additional backend high-water mark. The C caller itself passes the correct bounds. There is no graph member representing the alleged old frontier.
+
+The strongest single candidate outside (A) is CUDA’s process-global selected-expert staging cache:
+
+- g_stream_selected_cache, ds4_cuda.cu:130-154.
+- It contains content-dependent selected-ID remapping and compact expert weights.
+- Both per-token decode and indexed batch prefill load through it: ds4.c:40111-40114 and 41603-41606.
+- Routed MoE replaces the caller’s selected tensor with its global slot_selected_tensor at ds4_cuda.cu:21285-21318.
+- It survives an in-session cold prefill.
+
+cuda_stream_selected_cache_begin_load invalidates valid at entry and repopulates it, ds4_cuda.cu:23819-24080, so the intended code is safe. A synchronization/remap defect there would, however, fit all discriminators: same old lineage means identical routes and remains clean; a changed suffix needs different mappings; both decode and batch share the cache; and a virgin process starts without the old staging state.
+
+Your runs also enable the local process-global g_expert_persist_cache with DS4_CUDA_EXPERT_CACHE_GB=72. That cache is at ds4_cuda.cu:23553-23572. It is intended to contain identical weight bytes, not lineage, but it is an obvious discriminator for the guard-cold-versus-new-process anomaly. Re-run with DS4_CUDA_EXPERT_CACHE_GB=0.
+
+The only genuine unreset lineage family besides the main caches is GLM MTP. It could explain an in-session cold discrepancy when --glm-mtp is enabled, but the append harness command does not enable --glm-mtp. It therefore cannot explain this reproduction.
+
+prefill_seed_layer_captured cannot explain it.
+
+3. Minimal reset set
+
+For load_payload success, ordinary non-MTP GLM
+
+The source-defined required state is already:
+
+- Restore layer_kv_lora_cache[], layer_k_rope_cache[], and layer_indexer_key_cache[] through L.
+- Restore layer_key_cache[] and layer_value_cache[] through saved_full_live.
+- Set s->checkpoint to the saved L tokens.
+- Set s->checkpoint_valid = true.
+- Restore s->logits.
+- Set s->glm_dense_cache_len = saved_full_live.
+
+There is no additional A-member frontier to set to L. Claiming otherwise would invent state that is not present.
+
+For GLM MTP-enabled sessions, add:
+
+- s->glm_mtp_have = 0
+- s->glm_mtp_draft = -1
+- s->glm_spec_inside = 0
+- s->glm_mtp_min_pos = 0
+
+Zero is intentional: it is the sentinel causing the first new MTP cycle to set min_pos to the current position. Setting glm_mtp_min_pos = L would incorrectly allow the drafter to select stale, unrestored MTP rows [L..pos]. Keep g->mtp_ready unchanged; clearing it without freeing its allocations would leak and still would not describe validity.
+
+Hygienic but not required for ordinary KV correctness:
+
+- glm_graph_reset_prefill_seed_capture(g)
+- g->streaming_static_decode_map_current = false
+
+Given the reproduced failure, a member-only reset cannot currently guarantee correctness. Until the backend state is identified, the guaranteed cold operation is graph/session destruction and recreation, or a new CUDA reset API that invalidates/releases g_stream_selected_cache and any persistent expert-cache metadata before rebuilding from zero.
+
+For a forced in-session cold restart
+
+Reset before prefill:
+
+- s->checkpoint.len = 0
+- s->checkpoint_valid = false
+- s->glm_dense_cache_len = 0
+- s->mtp_draft_valid = false
+- s->glm_evaluated.len = 0
+- s->glm_mtp_have = 0
+- s->glm_mtp_draft = -1
+- s->glm_spec_inside = 0
+- s->glm_mtp_min_pos = 0
+- glm_graph_reset_prefill_seed_capture(g)
+- g->streaming_static_decode_map_current = false
+- Restore/invalidate verification workspace bindings if speculative verification could be active.
+- Invalidate/release CUDA selected-expert staging; for the virgin-process equivalence test, also disable or flush g_expert_persist_cache.
+
+Do not reset capacities, layout fields, mtp_ready, or workspace allocation readiness.
+
+If this set still differs from a virgin run, the survivor is definitively outside ds4_glm_gpu_graph or is a CUDA kernel over-read/ordering defect.
+
+4. prefill_seed_layer_captured
+
+Purpose:
+It marks which layer slices in prefill_seed_router_selected contain valid copies of the final K routed-expert IDs from the current batch. The copy takes rows n_tokens-K through n_tokens-1, ds4.c:40983-40997. The consumer checks the flags at ds4.c:41018-41052 and seeds the streaming expert-weight cache.
+
+Position dependence:
+It is content/routing-dependent but does not store an absolute token position. prefill_seed_tokens is only K, not a sequence frontier.
+
+Restore behavior:
+Not cleared by (B).
+
+Cold behavior:
+Cleared at the entry of both dense batch and indexed batch prefill, C:40938-40943, with call sites at ds4.c:42773 and 43755. C:41148 is inside the ROCm-only full-layer seeding branch; it is not the CUDA reset mechanism.
+
+CUDA relevance:
+The seed feature is disabled unless the explicit Metal/ROCm-named environment switch is enabled, ds4.c:40907-40915, and the CUDA seed_selected implementation in this snapshot is a no-op. These flags are not the corruption source.
