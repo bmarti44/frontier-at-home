@@ -509,5 +509,13 @@
   "what_remains_open": "the divergence is real and reproducible; remaining candidate mechanisms are (a) the CONTENT of rows below the resume point differing after restore (row content, not row selection), (b) non-attention state (indexer key cache values, dense/bridge state, MTP window), (c) the batch-vs-per-token evaluation path difference at the junction. Next probe: compare the actual per-position logits resumed-vs-cold (not text), which distinguishes content corruption from evaluation-order numerics.",
   "operational": "strict resume guard REMAINS default; nothing here justifies relaxing it",
   "safety_note": "the run was floor-killed at 12.58 GiB available (72GB arena + 12 GiB floor) after collecting 777 samples \u2014 protection worked as designed, box healthy (113 GiB free after); rerun with a smaller arena for full-length traces"
+ },
+ "F13_logit_ab_2026_07_26": {
+  "intent": "distinguish state/content corruption from evaluation-order numerics by comparing LOGITS (not text) resumed-vs-cold",
+  "what_happened": "HARNESS LIMITATION: the sync traces show BOTH arms cold-prefilled the appended prompt (start=0 prompt=5064) \u2014 the append never resumed in this setup, so the intended contrast was not exercised. Reported honestly rather than presented as a resume comparison.",
+  "result_obtained": "two INDEPENDENT PROCESSES performing identical cold prefills produced BIT-IDENTICAL logits: max|delta| = 0 over 154,880 vocab entries, identical argmax (14109) and identical top-1 margin",
+  "value_of_this_negative": "the engine is exactly deterministic across processes for identical work. Combined with the ROWTRACE result (0/777 stale-row selections), two candidate explanations for the append divergence are now eliminated: it is NOT generic nondeterminism, and it is NOT stale-row attention. Whatever the mechanism is, it is specific to the resume evaluation path itself.",
+  "harness_gap_to_fix": "the append prompt cold-falls-back in this harness (its token sequence diverges from the stored lineage before checkpoint length). ttft_append_probe.sh DOES reach genuine resume (sync shows start=5044 suffix=22) \u2014 the logit dump must be armed in THAT harness, on the resumed request specifically, to complete the comparison.",
+  "F13_status": "still open; strict guard remains default; two mechanisms eliminated, search narrowed"
  }
 }
