@@ -721,5 +721,12 @@
       "keep_arm_determinism": "keep7 sha 0ddeb62fc1f0 and keep6 sha 02267b77b033 each reproduce exactly across both passes",
       "flush_fix_gain_on_short_prompts": "NOT MEASURABLE HERE and not claimed: the storm is a prefill pathology, so both arms ran flush-free. Measured separately by flushfix_ab.sh on the 5047-token fixture."
     }
+  },
+  "warm_ttft_requires_disk_kv_2026_07_26": {
+    "observation": "flushfix_ab.sh replays the identical 5047-token request against the same live server and the replay took 147.4 s, not ~2 s",
+    "difference_from_the_1.755s_measurement": "ttft_probe3.sh passes --kv-disk-dir plus --kv-cache-boundary-align-tokens/--kv-cache-boundary-trim-tokens; flushfix_ab.sh does not",
+    "implication": "the sub-2 s warm TTFT is NOT a property of hitting the same process. It depends on the disk-KV checkpoint configuration being present. A serving profile without --kv-disk-dir re-prefills the whole prompt.",
+    "consequence_for_this_harness": "the second request in flushfix_ab.sh must be reported as a SECOND PREFILL, not as warm TTFT. The bug-vs-fix comparison is unaffected (both arms identical config), but no warm-TTFT number may be quoted from it.",
+    "action": "scripts/52_engine_switch.sh already carries --kv-disk-dir for the glm52 profile; this is a caution against benchmarking without it"
   }
 }
