@@ -812,5 +812,13 @@
     "implication": "the sub-2 s warm TTFT is NOT a property of hitting the same process. It depends on the disk-KV checkpoint configuration being present. A serving profile without --kv-disk-dir re-prefills the whole prompt.",
     "consequence_for_this_harness": "the second request in flushfix_ab.sh must be reported as a SECOND PREFILL, not as warm TTFT. The bug-vs-fix comparison is unaffected (both arms identical config), but no warm-TTFT number may be quoted from it.",
     "action": "scripts/52_engine_switch.sh already carries --kv-disk-dir for the glm52 profile; this is a caution against benchmarking without it"
+  },
+  "F13_BLOCKER_SOLVED_2026_07_26": {
+    "previous_claim": "RETRACTED: 'the cold-boundary disk store never fires in my reproduction harnesses' was wrong.",
+    "what_actually_happened": "the cold store fired every time and FAILED with ENOSPC. The logs carry 'ds4-server: kv cache store failed (cold): No space left on device save=166.8 ms' in both glm52-f13-regime and glm52-f13-tagged. My harnesses grepped for the success string 'kv cache stored', which never appeared because the write errored, so I concluded the precondition was unmet.",
+    "root_cause": "the filesystem was at 100% (745 MB free) for the whole F13 investigation. 168 GB has since been freed.",
+    "mechanism_confirmed_in_the_same_logs": "'live kv cache miss live=5063 prompt=5066 common=5045 reason=token-mismatch' -- exactly the BPE re-merge at the generation junction that was hypothesised: the live session holds 5063 tokens, the appended prompt is 5066, and only 5045 are common, so the junction token was re-merged differently.",
+    "consequence": "FIX-A / F13 is UNBLOCKED. The decisive tagged-logit comparison in the failing regime can now be taken: with disk space available the cold checkpoint should store, the append should miss the live cache, load the shorter checkpoint from disk, and extend by a long suffix.",
+    "lesson": "a harness that greps only for the SUCCESS string cannot distinguish 'precondition unmet' from 'operation attempted and failed'. Grep for the failure strings too."
   }
 }

@@ -132,8 +132,14 @@ Eliminated: stale-row attention (0/777 ROWTRACE violations), cross-process
 nondeterminism (max|Δ| = 0 over 154,880 logits), and "any resume diverges".
 Identified mechanism: BPE re-merge at the generation junction causes a
 live-cache miss, a disk-KV load of a shorter checkpoint, then a long suffix
-extension. **Blocker:** the cold-boundary disk store never fires in the
-reproduction harnesses, so the decisive comparison has not been taken.
+extension. ~~**Blocker:** the cold-boundary disk store never fires in the reproduction
+harnesses~~ — **RETRACTED 2026-07-26.** The store fired every time and failed
+with `No space left on device`; the filesystem was at 100% for the whole
+investigation. My harness grepped only for the success string, so an attempted
+-and-failed write looked like an unmet precondition. 168 GB has since been
+freed and the decisive comparison is now runnable. The same logs confirm the
+mechanism directly: `live kv cache miss live=5063 prompt=5066 common=5045
+reason=token-mismatch`.
 **The strict resume guard remains default.**
 
 ### C12. 32K context — restated
