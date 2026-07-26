@@ -46,7 +46,8 @@ strategy helps when the working set is the whole model.
 
 | lever | speed | why not shipped |
 |---|---|---|
-| keep-6 expert skip | **+11.3%** (trajectory-controlled) | **fails fidelity**: paired ΔNLL +0.0799 nat/token, 95% CI [+0.0135, +0.1463], 8x the 0.01 threshold |
+| keep-6 expert skip | +13.0% free-running / -11.3% teacher-forced | **fails fidelity**: paired ΔNLL +0.0799, 95% CI [+0.0135, +0.1463], 8x the 0.01 threshold, CI excludes zero |
+| keep-7 expert skip | +10.0% free-running / -2.0% teacher-forced | fidelity inconclusive (ΔNLL +0.0169, CI spans zero) **and** speed benefit unestablished |
 | MTP speculation | ~+10% | output not identical; single unrepeated observation |
 | cross-layer prefetch | net-neutral | no gain; "46% fewer misses" was a mislabelled counter |
 | batchall prefill | — | **fidelity hazard**: repetition loops and invalid UTF-8 on short prompts |
