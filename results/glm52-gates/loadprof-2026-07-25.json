@@ -691,7 +691,51 @@
         "sol_prerecorded": "predicted 'large, tens-of-percent, roughly 20-40%' before seeing the result -- FALSIFIED by measurement. Its model assumed hit rate would rise to 40-50%, which the prefill working set does not permit.",
         "mine": "I described this as likely bigger than the keep-N lever -- also wrong."
       },
-      "status": "KEEP the fix as a CORRECTNESS fix (a cache that silently discards itself is a latent hazard, and the generation is also the prefetch pool's validity token) but claim NO performance benefit from it."
+      "status": "KEEP the fix as a CORRECTNESS fix (a cache that silently discards itself is a latent hazard, and the generation is also the prefetch pool's validity token) but claim NO performance benefit from it.",
+      "n2_confirmation": {
+        "cold_s": {
+          "bug": [
+            158.1,
+            164.4
+          ],
+          "fix": [
+            163.2,
+            165.3
+          ],
+          "delta_pct": 1.8
+        },
+        "second_prefill_s": {
+          "bug": [
+            147.4,
+            146.1
+          ],
+          "fix": [
+            143.9,
+            145.2
+          ],
+          "delta_pct": -1.5
+        },
+        "flushes": {
+          "bug": [
+            452,
+            300
+          ],
+          "fix": [
+            0,
+            0
+          ]
+        },
+        "hit_pct": {
+          "bug": 9.3,
+          "fix": 12.6
+        },
+        "output_sha": "3a72d53e6f01 identical across bug-p1, fix-p1, fix-p2 -- the fix changes no output byte",
+        "conclusion": "null at n=2; the fix is correctness-only"
+      },
+      "harness_defects_disclosed": [
+        "the decode metric in flushfix_ab.sh is 32/(t33 - warm) where both terms are ~145 s prefill-dominated numbers; subtracting two large noisy values gives a useless decode estimate (fix-p1 1.411 vs fix-p2 2.138 t/s from identical configs). Those decode figures are NOT quoted. The decode lever numbers come from decode_ab.sh, which isolates decode properly.",
+        "bug-p2's t33 request returned http=000 (connection failure) so that arm has no decode value and its flush count (300) is a partial-run count. Cold and second-prefill for bug-p2 completed normally and are used."
+      ]
     }
   },
   "measurement_bug_prefill_dominated_2026_07_26": {
