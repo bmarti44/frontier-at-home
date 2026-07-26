@@ -7,7 +7,8 @@
 # recomputes instead.
 set -u
 ALIGN=${TTFT3_ALIGN:-64}
-OUT=/home/dsv4/ds4-project/glm52-ttft3-a${ALIGN}
+TRIM=${TTFT3_TRIM:-32}
+OUT=/home/dsv4/ds4-project/glm52-ttft3-a${ALIGN}t${TRIM}
 SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 FIX=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/fixture-glm-long8.json
@@ -32,6 +33,7 @@ DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
   --ssd-streaming --ssd-streaming-cache-experts 40GB \
   --kv-disk-dir "$KVDIR" --kv-disk-space-mb 8192 \
   --kv-cache-boundary-align-tokens $ALIGN \
+  --kv-cache-boundary-trim-tokens $TRIM \
   > "$OUT/server.log" 2>&1 &
 SPID=$!
 trap 'kill -TERM $SPID 2>/dev/null' EXIT
