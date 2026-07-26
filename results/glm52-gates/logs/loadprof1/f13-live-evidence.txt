@@ -1,0 +1,18 @@
+dumps present: ['lg-X.0', 'lg-X.1', 'lg-X.2', 'lg-X.3', 'lg-X.4', 'lg-X.5', 'lg-X.6', 'lg-X.7', 'lg-Y.0', 'lg-Y.1', 'lg-Y.2', 'lg-Y.3']
+text resumed sha=1855d53b81f2
+text cold    sha=1855d53b81f2
+text identical: True
+resumed: 'The user wants me to continue a C'
+cold   : 'The user wants me to continue a C'
+
+LOGITS compared: 154880
+max|delta|=23.7631  mean|delta|=1.97577
+argmax resumed=397 top1=24.31127 margin=3.96363
+argmax cold   =14109 top1=6.24766 margin=0.27609
+same argmax: False
+VERDICT: LARGE deltas -> state/content corruption in the resume path
+--- X sync traces (expect a genuine resume: start>0) ---
+ds4: GLM sync start=0 prompt=5044 suffix=5044 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=5044 prompt=5047 suffix=3 checkpoint=5044 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=0 prompt=5064 suffix=5064 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=5064 prompt=5066 suffix=2 checkpoint=5064 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1

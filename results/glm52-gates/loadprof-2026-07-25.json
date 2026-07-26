@@ -517,5 +517,13 @@
   "value_of_this_negative": "the engine is exactly deterministic across processes for identical work. Combined with the ROWTRACE result (0/777 stale-row selections), two candidate explanations for the append divergence are now eliminated: it is NOT generic nondeterminism, and it is NOT stale-row attention. Whatever the mechanism is, it is specific to the resume evaluation path itself.",
   "harness_gap_to_fix": "the append prompt cold-falls-back in this harness (its token sequence diverges from the stored lineage before checkpoint length). ttft_append_probe.sh DOES reach genuine resume (sync shows start=5044 suffix=22) \u2014 the logit dump must be armed in THAT harness, on the resumed request specifically, to complete the comparison.",
   "F13_status": "still open; strict guard remains default; two mechanisms eliminated, search narrowed"
+ },
+ "F13_live_logit_2026_07_26": {
+  "attempted": "compare logits of a LIVE in-process resumed append vs a cold evaluation (per-sync dump added: DS4_GLM_LOGIT_DUMP_ALL)",
+  "printed_verdict_RETRACTED": "the harness printed 'LARGE deltas -> state/content corruption' (max|delta|=23.8, different argmax). THIS IS AN ARTIFACT, NOT A FINDING: with per-sync dumps enabled, lg-X.1 is the BASE request's first decode step, not the appended request's prefill \u2014 I compared two different computations. Retracted before it entered any conclusion.",
+  "what_the_run_actually_shows": "the append AGAIN did not resume: X's sync trace reads start=0 prompt=5064 for the appended request (then its own internal 5064->5066 suffix). Output text was identical between arms (sha 1855d53b81f2), consistent with both being cold evaluations.",
+  "harness_lesson": "three attempts (cross-process x2, in-process x1) failed to reproduce the genuine base->append resume that ttft_append_probe.sh does reach (its trace shows start=5044 suffix=22). The difference is not yet understood and must be identified before the logit comparison can be run: the correct dump index must be selected by matching the sync trace, not assumed.",
+  "F13_status": "STILL OPEN. Established so far: (1) stale-row attention DISPROVEN by direct row tracing (0/777 selections at/above the visible bound); (2) cross-process determinism for identical work is EXACT (max|delta|=0 over 154,880 logits); (3) no valid resumed-vs-cold logit comparison exists yet. Strict guard remains default.",
+  "next_concrete_step": "instrument the dump to tag each file with (start, prompt_len, suffix) from the sync so the resumed evaluation can be identified unambiguously, then re-run inside ttft_append_probe.sh which is the only harness observed to reach a genuine resume."
  }
 }
