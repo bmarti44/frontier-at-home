@@ -1,0 +1,78 @@
+VERDICT: NEEDS-FIXES
+
+1. CRITICAL — generation stamping does not bind reads to the current model file.
+
+g_pf.fd is opened once and remains attached to the first model. After a reload, new requests receive the new g_model_load_generation but are still read from the old fd. Their generation then matches at claim, allowing old-model bytes into device staging and the arena.
+
+On every model change, quiesce and restart/rebind the pool, clear queued/READY entries, and bind fd, model size, alignment, and generation as one immutable pool configuration. Claim must require the pool generation as well as the request generation.
+
+2. HIGH — slot ownership ends before CUDA completion is explicitly established.
+
+The CPU arena memcpy and the GPU transfer both read pf, so those two operations do not conflict. The problem is ds4_pf_release(): it permits a worker to overwrite pf while the three cudaMemcpyAsync operations may still reference it. cudaStreamLegacy orders CUDA work but does not itself establish host completion.
+
+The slabs are currently malloc/pageable memory, for which CUDA documents synchronous fallback behavior, so this will probably stage the bytes before returning—and provide little transfer overlap. That is not a robust ownership contract. Record an event after the last copy and retain the slot until it completes, or use blocking cudaMemcpy. If an intermediate copy call fails after an earlier one succeeded, drain those earlier operations before release too. See the [NVIDIA CUDA Programming Guide](https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html).
+
+3. HIGH — shutdown and partial initialization are broken.
+
+Workers do not access the registered arena, so cudaHostUnregister by itself does not create a worker UAF. What breaks is lifecycle:
+
+- Cleanup followed by reinitialization leaves the old pool enabled with its old fd and dimensions.
+- dlclose/library teardown can leave threads executing unmapped code.
+- A partial pthread_create failure leaves already-created workers waiting forever while enabled remains false.
+- Fds, staging allocations, slot buffers, mutexes, and condition variables leak.
+
+Cleanup must disable submissions, set stop under the mutex, broadcast, join every successfully created thread, close/free everything, and reset initialization state. It must run before model teardown/rebinding. A blocked pread can delay joining, so decide whether unbounded shutdown waiting is acceptable.
+
+4. HIGH — false predictions permanently exhaust the 12 READY slots.
+
+A READY slot is reclaimed only when that exact key is demanded or rejected during a matching claim. False-positive keys remain READY indefinitely. At 67.7% precision, the pool will eventually accumulate 12 unused predictions and stop prefetching.
+
+Add an age/sequence stamp and recycle the oldest READY slot when no EMPTY slot exists. Never recycle FILLING or MAIN-OWNED slots. Also flush READY and queued entries on generation change.
+
+The basic synchronization is otherwise sound: mutex-protected 0→1 prevents two workers claiming a slot; main only claims state 2 after the worker’s mutex publication; a partial read returns the slot to 0 before main can see it. State 1 can still remain indefinitely if pread blocks.
+
+5. HIGH — router restoration is semantic, not exact.
+
+Re-running the current GEMV and select should overwrite logits, probabilities, selected IDs, and weights, assuming the select fully writes its outputs and execution is deterministic. It does not guarantee restoration of the exact original routing state around ties or nondeterministic reductions. Writing save_ids and then rerunning select is also redundant because select overwrites those IDs.
+
+Use separate predictor scratch tensors. That removes the restore proof entirely and avoids rerunning the current layer’s router. Alternatively, snapshot and restore every overwritten tensor.
+
+Setting ok=false after a restore failure is correct. However, a failing initial ds4_gpu_end_commands currently leaves ok true and continues inference. A failed CUDA synchronization should fail loudly. A read failure before any prediction mutation may safely disable this hint, but should not conceal a poisoned CUDA state.
+
+6. MEDIUM — there are real or conditional data races.
+
+- g_pf.filled is written by workers under g_pf.mu but printed without that mutex. In C++, that is a data race. Snapshot all counters under the mutex or use atomics.
+- g_model_load_generation reads are safe only if model loading and inference are serialized on the same main thread. The prefetch mutex does not protect a generation writer elsewhere. Make it atomic or use the model-lifecycle lock.
+- Workers do not read g_model_direct_align, g_model_file_size, or g_model_load_generation directly. They use copied pool configuration. That part is safe until reconfiguration/shutdown is added.
+- Slot buffers are safely handed from worker to main through the mutex, except for the outstanding-CUDA ownership problem in finding 2.
+- static pf_ids is unnecessarily non-reentrant. Make it a stack array.
+
+7. MEDIUM — the byte-identity validation is incomplete.
+
+Claim checks gate_off and down_off but not up_off. Pass up_src and require all three offsets. Also validate multiplication, addition, rounded-read arithmetic, and every span against the bound model-file size before enqueueing.
+
+A failed second or third read cannot publish an incomplete slab because state becomes 2 only after all three reads succeed. That part is correct.
+
+The pasted order is cuda_expert_cache_insert followed by memcpy, meaning the key is published before the arena bytes are filled. Under the strict single-main-thread invariant, nothing can observe the entry between those operations. A reserve/fill/publish-last API would make that invariant explicit and future-proof.
+
+8. MEDIUM — cross-backend linkage needs guarding.
+
+The generic ds4.c and ds4_gpu.h now reference ds4_gpu_expert_prefetch_hint, but only ds4_cuda.cu defines it. Unless the newer tree already supplies stubs, Metal and ROCm builds will have an unresolved symbol. Guard the call for CUDA or provide no-op backend implementations.
+
+9. PERFORMANCE — the measured predictor quality does not establish net benefit.
+
+The implementation adds the next-layer GEMV, synchronization/readback, and another current-layer GEMV/select. It also introduces up to six speculative readers competing with six demand readers. A 1.02x byte ratio does not measure tail latency or demand-I/O interference.
+
+Additionally, pthread_cond_signal wakes only one idle worker for an eight-request batch, and stack order reverses the IDs within that batch—potentially processing the lowest-ranked prediction first. Wake enough workers and preserve router rank while still prioritizing the newest layer.
+
+Do-No-Harm conclusion:
+
+The arena policy in this diff is already demand-confirmed: an unused READY slab is never inserted, and insertion happens only when the same key is an actual demand miss. If the normal disk-miss path would perform the identical insertion, eviction here is baseline-equivalent and should be treated as a demand insertion, not a speculative probationary insertion.
+
+The minimal correct policy is therefore:
+
+- Never admit at hint or READY completion.
+- On a matching demand, follow exactly the normal demand-miss admission/touch path.
+- If speculative arena admission is added later, it may consume only an empty slot or evict another speculative entry; “probationary” alone is insufficient because it can still evict a demand line.
+
+After fixing model-fd lifecycle, explicit CUDA completion ownership, READY recycling, and shutdown, this becomes reasonable for a gated test. As submitted, silent old-model byte admission remains possible.

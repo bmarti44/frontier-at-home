@@ -477,5 +477,28 @@
   "verdict": "PASS decisively on sol's own gate: 67.7% true precision vs theta*=0.40. The standout is the 1.02x overhead \u2014 because the prefetcher skips resident experts, it issues essentially the SAME number of reads as demand fetching (+2%), but 69% of them can start one layer early.",
   "expected_gain": "69% of the corrected 198 ms/token fetch = ~137 ms movable off the critical path, against ~360 ms/token of GPU work available to hide it. Ideal: ~620 -> ~485 ms/token = ~2.0-2.1 t/s (from 1.6-1.8). Sol's caveats stand: unified-memory bus contention, worker scheduling, and predictor overhead can only reduce this; the shadow run measures coverage, not achieved overlap.",
   "next": "implement the worker per sol's safe design (NVMe -> private staging only, no CUDA ops on the legacy stream, main-thread-only cache admission with INFLIGHT/READY states, speculative-partition eviction not probationary-eviction), then A/B for real decode gain + byte-identity"
+ },
+ "prefetch_implementation_2026_07_26": {
+  "status": "IMPLEMENTED, SAFE, BYTE-IDENTICAL, but NET-NEUTRAL on decode \u2014 not yet adopted",
+  "binary": "218339e24d20 (env DS4_GLM_PREFETCH, default off)",
+  "design": "worker pool (6 threads, private cloned O_DIRECT fd, private pinned slot buffers, NO CUDA calls, NO cache access) + main-thread-only admission; predictor runs layer L+1's router on layer L's hidden state into the UNUSED batch-router scratch (no save/restore of live routing state, one extra device sync per layer)",
+  "sol_fixes_applied": [
+   "CRITICAL: pool generation binding \u2014 pool disables itself on model reload rather than serving old-model bytes through a stale fd",
+   "HIGH: blocking copies for explicit slot-ownership handoff (a full stream sync cost 62 ms/token \u2014 measured and rejected)",
+   "MEDIUM: up_off validated at claim; pf_ids de-staticized",
+   "slot expiry + resident-skip at enqueue (found independently by me and sol: 104,919 issued / 46 filled before the fix)"
+  ],
+  "measured": {
+   "misses_per_token": "136.4 -> 74.0 (-46%)",
+   "fetch_ms_per_token": "196.1 -> 145.2 (-51 ms)",
+   "consume_path_cost_ms": "+46.6 (shows as loader 'other'): 3 host->device copies + 3 device->arena copies per served slab, ~65 slabs/token ~= 1.2 GB of copies",
+   "loader_total_ms": "242.8 -> 237.9",
+   "decode_wall_ms": "29320 -> 29373 (NEUTRAL, within noise)",
+   "byte_identity": "sha 9113dfd0d233 x3 preserved across every prefetch variant tested",
+   "prefetch_counters": "issued 28,772 / filled 25,431 / served 12,704 / expired 12,727 / resident-skipped 76,300"
+  },
+  "root_cause_of_neutrality": "prefetch removes the DISK READ from the critical path but the consume path still pays the same host<->device copies the demand path pays. The gain is real (-51 ms of disk) and the cost is real (+47 ms of copies).",
+  "next_step_identified": "reserve-fill-publish: main thread RESERVES an arena slot (key unpublished), the worker fills the arena bytes directly, the main thread publishes the key when READY. A prefetched expert then arrives as a normal cache HIT (~6 us) instead of a copy-heavy miss, eliminating the entire consume-path copy cost \u2014 this is the structure sol's review pointed at ('a reserve/fill/publish-last API would make that invariant explicit'). Expected to convert the -51 ms disk saving into net decode gain.",
+  "not_adopted": "DS4_GLM_PREFETCH stays OFF in the serving profile until it shows a real decode win"
  }
 }

@@ -1,8 +1,30 @@
 diff --git a/ds4.c b/ds4.c
-index 1a79a01..de2b23b 100644
+index 1a79a01..f9227df 100644
 --- a/ds4.c
 +++ b/ds4.c
-@@ -38024,8 +38024,8 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
+@@ -20750,6 +20750,21 @@ static bool metal_graph_decode_cuda_selected_load(
+                                   selected_ids,
+                                   (uint64_t)DS4_N_EXPERT_USED *
+                                       sizeof(selected_ids[0])) != 0;
++    if (ok && getenv("DS4_GLM_GATE_MASS_LOG") != NULL &&
++        metal_graph_router_weights(g)) {
++        /* Gate-mass distribution probe (expert-skip lever prerequisite):
++         * one line per routed layer per decode step with the top-k router
++         * weights, aggregated offline into cumulative top-k mass. */
++        float gm[DS4_MAX_EXPERT_USED] = {0};
++        if (ds4_gpu_tensor_read(metal_graph_router_weights(g), 0, gm,
++                                (uint64_t)DS4_N_EXPERT_USED *
++                                    sizeof(gm[0])) != 0) {
++            fprintf(stderr, "GATEMASS L%u:", il);
++            for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
++                fprintf(stderr, " %.5f", gm[gi]);
++            fputc('\n', stderr);
++        }
++    }
+     const double t_read = profile ? now_sec() : 0.0;
+ 
+     if (ok) {
+@@ -38024,8 +38039,8 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
  #ifdef DS4_ROCM_BUILD
      /*
       * ROCm selected-address batch prefill has pointer kernels for the
@@ -13,7 +35,7 @@ index 1a79a01..de2b23b 100644
       */
      if (glm_stream_selected_expert_cache_supported(l, il)) return true;
      return l &&
-@@ -38037,6 +38037,15 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
+@@ -38037,6 +38052,15 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
             l->ffn_down_exps->type == DS4_TENSOR_Q2_K &&
             glm_stream_expert_cache_addr_layout_supported(weights, l, il);
  #else
@@ -29,7 +51,189 @@ index 1a79a01..de2b23b 100644
      return glm_stream_expert_cache_addr_supported(weights, l, il);
  #endif
  }
-@@ -41163,6 +41172,16 @@ static bool glm_graph_seed_streaming_expert_cache_from_full_layer(
+@@ -40007,6 +40031,181 @@ static bool glm_graph_encode_sparse_ffn_one(
+                                                   DS4_N_EXPERT,
+                                                   DS4_N_EXPERT_USED,
+                                                   DS4_EXPERT_WEIGHT_SCALE) != 0;
++    if (ok && getenv("DS4_GLM_PREFETCH") != NULL && il + 1u < DS4_N_LAYER) {
++        /* Cross-layer expert prefetch: predict layer il+1's experts from the
++         * CURRENT hidden state and hand them to the background reader so the
++         * bytes land while layer il's kernels run. Measured on this model:
++         * 69.0% miss-conditioned recall, 67.7% true precision, 1.02x bytes.
++         *
++         * The predictor writes into the BATCH router scratch (unused during
++         * single-token decode), so the live routing tensors are never
++         * touched: no save/restore, no re-run of this layer's router, and
++         * only ONE extra device sync per layer (two extra syncs cost more
++         * than the prefetch saved — measured). */
++        int32_t pf_ids[DS4_MAX_EXPERT_USED];
++        const ds4_layer_weights *lnext = l + 1;
++        uint64_t nb_gate = 0, nb_down = 0;
++        if (lnext->ffn_gate_inp && lnext->ffn_exp_probs_b &&
++            g->batch_router_logits && g->batch_router_selected &&
++            g->batch_router_weights && g->batch_router_probs &&
++            streaming_layer_gate_down_expert_bytes(lnext, &nb_gate, &nb_down) &&
++            ds4_gpu_matmul_f32_tensor(g->batch_router_logits, model->map,
++                                      model->size,
++                                      lnext->ffn_gate_inp->abs_offset,
++                                      DS4_N_EMBD, DS4_N_EXPERT,
++                                      ffn_norm, 1) != 0 &&
++            ds4_gpu_glm_router_select_tensor(g->batch_router_selected,
++                                             g->batch_router_weights,
++                                             g->batch_router_probs,
++                                             model->map, model->size,
++                                             lnext->ffn_exp_probs_b->abs_offset,
++                                             g->batch_router_logits,
++                                             DS4_N_EXPERT,
++                                             DS4_N_EXPERT_USED,
++                                             DS4_EXPERT_WEIGHT_SCALE) != 0 &&
++            ds4_gpu_end_commands() != 0) {
++            if (ds4_gpu_tensor_read(g->batch_router_selected, 0, pf_ids,
++                                    (uint64_t)DS4_N_EXPERT_USED *
++                                        sizeof(pf_ids[0])) != 0) {
++                const ds4_gpu_stream_expert_table ntab =
++                    graph_stream_expert_table_make(model, lnext, il + 1u,
++                                                   nb_gate, nb_down);
++                ds4_gpu_expert_prefetch_hint(&ntab, pf_ids, DS4_N_EXPERT_USED);
++            }
++            if (ds4_gpu_begin_commands() == 0) ok = false;
++        }
++    }
++    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < DS4_N_LAYER) {
++        /* Cross-layer prediction-accuracy probe (prefetch lever gate):
++         * run layer il+1's router on the CURRENT hidden state, then compare
++         * its top-k against the ids layer il+1 actually selects next step.
++         * Clobbers router scratch, so it must run BEFORE the real ids are
++         * consumed... hence we snapshot/restore around it. */
++        static int32_t pred_ids[DS4_MAX_EXPERT_USED];
++        static uint32_t pred_layer = 0xffffffffu;
++        int32_t actual_ids[DS4_MAX_EXPERT_USED] = {0};
++        if (ds4_gpu_end_commands() != 0 &&
++            ds4_gpu_tensor_read(g->router_selected, 0, actual_ids,
++                                (uint64_t)DS4_N_EXPERT_USED *
++                                    sizeof(actual_ids[0])) != 0) {
++            if (pred_layer == il) {
++                uint32_t match = 0;
++                for (uint32_t a = 0; a < DS4_N_EXPERT_USED; a++)
++                    for (uint32_t b = 0; b < DS4_N_EXPERT_USED; b++)
++                        if (pred_ids[a] == actual_ids[b]) { match++; break; }
++                fprintf(stderr, "PREDACC L%u match=%u/%u\n",
++                        il, match, (unsigned)DS4_N_EXPERT_USED);
++                /* emit the ids this prediction covers so the offline join
++                 * can compute MISS-CONDITIONED recall (sol finding: overlap
++                 * != prefetch profitability) */
++                fprintf(stderr, "PREDIDS L%u:", il);
++                for (uint32_t a = 0; a < DS4_N_EXPERT_USED; a++)
++                    fprintf(stderr, " %d", pred_ids[a]);
++                fputc('\n', stderr);
++                /* residency of each predicted expert AT PREDICTION TIME:
++                 * a prefetcher skips resident ones for free, so only the
++                 * non-resident predictions cost bandwidth (sol: measure
++                 * timely-useful-bytes / prefetched-bytes) */
++                fprintf(stderr, "PREDRES L%u:", il);
++                for (uint32_t a = 0; a < DS4_N_EXPERT_USED; a++)
++                    fprintf(stderr, " %d",
++                            ds4_gpu_expert_cache_peek(il, (uint32_t)pred_ids[a]));
++                fputc('\n', stderr);
++            }
++            /* predict layer il+1 from this hidden state (l+1 is the next
++             * entry of the contiguous w->layer[] array) */
++            const ds4_layer_weights *lnext = l + 1;
++            if (lnext->ffn_gate_inp &&
++                ds4_gpu_matmul_f32_tensor(g->router_logits, model->map,
++                                          model->size,
++                                          lnext->ffn_gate_inp->abs_offset,
++                                          DS4_N_EMBD, DS4_N_EXPERT,
++                                          ffn_norm, 1) != 0 &&
++                ds4_gpu_glm_router_select_tensor(g->router_selected,
++                                                 g->router_weights,
++                                                 g->router_probs,
++                                                 model->map, model->size,
++                                                 lnext->ffn_exp_probs_b->abs_offset,
++                                                 g->router_logits,
++                                                 DS4_N_EXPERT,
++                                                 DS4_N_EXPERT_USED,
++                                                 DS4_EXPERT_WEIGHT_SCALE) != 0 &&
++                ds4_gpu_end_commands() != 0 &&
++                ds4_gpu_tensor_read(g->router_selected, 0, pred_ids,
++                                    (uint64_t)DS4_N_EXPERT_USED *
++                                        sizeof(pred_ids[0])) != 0) {
++                pred_layer = il + 1u;
++            } else {
++                pred_layer = 0xffffffffu;
++            }
++            /* restore the REAL selection for this layer (probe must not
++             * change any output byte) */
++            (void)ds4_gpu_tensor_write(g->router_selected, 0, actual_ids,
++                    (uint64_t)DS4_N_EXPERT_USED * sizeof(actual_ids[0]));
++            (void)ds4_gpu_matmul_f32_tensor(g->router_logits, model->map,
++                                            model->size,
++                                            l->ffn_gate_inp->abs_offset,
++                                            DS4_N_EMBD, DS4_N_EXPERT,
++                                            ffn_norm, 1);
++            (void)ds4_gpu_glm_router_select_tensor(g->router_selected,
++                                                   g->router_weights,
++                                                   g->router_probs,
++                                                   model->map, model->size,
++                                                   l->ffn_exp_probs_b->abs_offset,
++                                                   g->router_logits,
++                                                   DS4_N_EXPERT,
++                                                   DS4_N_EXPERT_USED,
++                                                   DS4_EXPERT_WEIGHT_SCALE);
++        }
++        if (ds4_gpu_begin_commands() == 0) ok = false;
++    }
++    if (ok && (getenv("DS4_GLM_GATE_MASS_LOG") != NULL ||
++               getenv("DS4_GLM_TOPK_KEEP") != NULL)) {
++        /* Gate-mass probe + keep-N fidelity experiment (expert-skip lever
++         * live-or-die test): zero all but the top-N router weights and
++         * renormalize to the original mass, mathematically equivalent to
++         * skipping the dropped experts' contributions. */
++        float gm[DS4_MAX_EXPERT_USED] = {0};
++        if (ds4_gpu_end_commands() != 0 &&
++            ds4_gpu_tensor_read(g->router_weights, 0, gm,
++                                (uint64_t)DS4_N_EXPERT_USED *
++                                    sizeof(gm[0])) != 0) {
++            if (getenv("DS4_GLM_GATE_MASS_LOG") != NULL) {
++                fprintf(stderr, "GATEMASS L%u:", il);
++                for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
++                    fprintf(stderr, " %.5f", gm[gi]);
++                fputc('\n', stderr);
++            }
++            const char *kn = getenv("DS4_GLM_TOPK_KEEP");
++            const int keep = kn ? atoi(kn) : 0;
++            if (keep > 0 && keep < (int)DS4_N_EXPERT_USED) {
++                float sorted[DS4_MAX_EXPERT_USED];
++                memcpy(sorted, gm, sizeof(gm));
++                for (uint32_t a = 0; a < DS4_N_EXPERT_USED; a++)
++                    for (uint32_t b = a + 1; b < DS4_N_EXPERT_USED; b++)
++                        if (sorted[b] > sorted[a]) {
++                            const float t = sorted[a];
++                            sorted[a] = sorted[b];
++                            sorted[b] = t;
++                        }
++                const float thresh = sorted[keep - 1];
++                float total = 0.0f, kept = 0.0f;
++                for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++) {
++                    total += gm[gi];
++                    if (gm[gi] < thresh) gm[gi] = 0.0f;
++                    else kept += gm[gi];
++                }
++                if (kept > 0.0f && total > 0.0f) {
++                    const float scale = total / kept;
++                    for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
++                        gm[gi] *= scale;
++                    (void)ds4_gpu_tensor_write(g->router_weights, 0, gm,
++                            (uint64_t)DS4_N_EXPERT_USED * sizeof(gm[0]));
++                }
++            }
++        }
++        if (ds4_gpu_begin_commands() == 0) ok = false;
++    }
+     if (ok) ok = glm_graph_profile_stage(stage_profile,
+                                          "glm_decode_ffn",
+                                          "router",
+@@ -41163,6 +41362,16 @@ static bool glm_graph_seed_streaming_expert_cache_from_full_layer(
  }
  
  static bool glm_graph_disable_add3_residual(void);
@@ -46,7 +250,7 @@ index 1a79a01..de2b23b 100644
  
  static bool glm_graph_encode_sparse_ffn_indexed_batch_routed_moe(
          ds4_glm_gpu_graph       *g,
-@@ -41276,6 +41295,16 @@ static bool glm_graph_encode_sparse_ffn_indexed_batch_routed_moe(
+@@ -41276,6 +41485,16 @@ static bool glm_graph_encode_sparse_ffn_indexed_batch_routed_moe(
      if (ok) ok = glm_graph_capture_prefill_seed_router_selected(g,
                                                                  il,
                                                                  n_tokens);
@@ -63,7 +267,7 @@ index 1a79a01..de2b23b 100644
      metal_graph_debug_dump_tensor("glm_indexed_router_logits",
                                    g->batch_router_logits,
                                    (uint64_t)n_tokens * DS4_N_EXPERT,
-@@ -41534,6 +41563,73 @@ static bool glm_graph_disable_add3_residual(void) {
+@@ -41534,6 +41753,73 @@ static bool glm_graph_disable_add3_residual(void) {
      return false;
  }
  
@@ -137,7 +341,7 @@ index 1a79a01..de2b23b 100644
  static bool glm_graph_encode_ffn_batch(
          ds4_glm_gpu_graph       *g,
          const ds4_model         *model,
-@@ -41731,6 +41827,16 @@ static bool glm_graph_encode_ffn_batch(
+@@ -41731,6 +42017,16 @@ static bool glm_graph_encode_ffn_batch(
              gate_out * gate_row_bytes,
              down_out * down_row_bytes,
              full_layer_prefill);
@@ -154,7 +358,7 @@ index 1a79a01..de2b23b 100644
      bool shared_done = false;
  #define DS4_GLM_ENCODE_FFN_BATCH_SHARED() do { \
          if (ok) { \
-@@ -43548,6 +43654,23 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43548,6 +43844,23 @@ static bool glm_graph_forward_indexed_tokens(
          uint32_t           display_absolute_base,
          uint32_t           work_done_base,
          uint32_t           work_total) {
@@ -178,7 +382,7 @@ index 1a79a01..de2b23b 100644
      if (!g || !model || !weights || !tokens ||
          g->compact_cache_cap == 0 ||
          g->indexed_prefill_cap == 0 ||
-@@ -43561,11 +43684,13 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43561,11 +43874,13 @@ static bool glm_graph_forward_indexed_tokens(
          g->layer_count == 0 ||
          n_tokens > g->indexed_prefill_cap ||
          !glm_graph_span_fits_context(g, pos0, n_tokens)) {
@@ -192,7 +396,7 @@ index 1a79a01..de2b23b 100644
          return false;
      }
      const uint32_t indexed_selected_count =
-@@ -43598,6 +43723,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43598,6 +43913,7 @@ static bool glm_graph_forward_indexed_tokens(
                      n_rows,
                      g->compact_cache_cap);
          }
@@ -200,7 +404,7 @@ index 1a79a01..de2b23b 100644
          return false;
      }
      if (trace) {
-@@ -43613,14 +43739,24 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43613,14 +43929,24 @@ static bool glm_graph_forward_indexed_tokens(
          }
      }
      for (uint32_t i = 0; i < n_tokens; i++) {
@@ -228,7 +432,7 @@ index 1a79a01..de2b23b 100644
      if (trace) {
          const double ms = (now_sec() - trace_upload_t0) * 1000.0;
          if (trace_all || ms >= trace_slow_ms || !ok) {
-@@ -43697,14 +43833,24 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43697,14 +44023,24 @@ static bool glm_graph_forward_indexed_tokens(
      const uint32_t drain_interval =
          progress_flush_interval != 0 ? glm_graph_indexed_prefill_drain_interval() : 0u;
      const bool progress_requested = display_progress && work_total > 0;
@@ -256,7 +460,7 @@ index 1a79a01..de2b23b 100644
                  pos0,
                  n_tokens,
                  use_scalar_indexer ? 1u : 0u,
-@@ -43712,6 +43858,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43712,6 +44048,7 @@ static bool glm_graph_forward_indexed_tokens(
                  use_batch_attn_kernel ? 1u : 0u,
                  use_split_value_proj ? 1u : 0u,
                  use_batch_ffn ? 1u : 0u,
@@ -264,7 +468,7 @@ index 1a79a01..de2b23b 100644
                  progress_flush_interval,
                  drain_interval);
      }
-@@ -43740,6 +43887,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43740,6 +44077,7 @@ static bool glm_graph_forward_indexed_tokens(
              }
          }
      }
@@ -272,7 +476,7 @@ index 1a79a01..de2b23b 100644
      if (ok && !input_hc) {
          const double t0 = trace ? now_sec() : 0.0;
          ok = ds4_gpu_embed_tokens_quant_tensor(cur,
-@@ -43763,9 +43911,11 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43763,9 +44101,11 @@ static bool glm_graph_forward_indexed_tokens(
              }
          }
      }
@@ -284,7 +488,7 @@ index 1a79a01..de2b23b 100644
  
  #define DS4_GLM_PROFILE_INDEXED_STAGE(part_, name_) do { \
          if (ok && trace) { \
-@@ -43788,6 +43938,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43788,6 +44128,7 @@ static bool glm_graph_forward_indexed_tokens(
          } else if (ok && stage_sync) { \
              ok = glm_graph_prefill_stage_sync_boundary(); \
          } \
@@ -292,7 +496,7 @@ index 1a79a01..de2b23b 100644
      } while (0)
      ds4_gpu_tensor *last_indexer_selected = NULL;
      uint32_t last_indexer_selected_count = 0;
-@@ -43797,6 +43948,11 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43797,6 +44138,11 @@ static bool glm_graph_forward_indexed_tokens(
           * are rewritten every layer, so one fill per chunk suffices. */
          ok = ds4_gpu_tensor_fill_f32(g->batch_heads, 0.0f,
                                       (uint64_t)n_tokens * g->heads_dim) != 0;
@@ -304,7 +508,7 @@ index 1a79a01..de2b23b 100644
      }
      ds4_gpu_tp_set_attn_head_split(tp_attn_head_split ? 1 : 0);
      for (uint32_t il = g->layer_start; ok && il <= g->layer_end; il++) {
-@@ -43807,8 +43963,18 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43807,8 +44153,18 @@ static bool glm_graph_forward_indexed_tokens(
                                                      weights,
                                                      il,
                                                      n_tokens,
@@ -324,7 +528,7 @@ index 1a79a01..de2b23b 100644
          }
          const ds4_layer_weights *l = &weights->layer[il];
          const uint32_t kv_raw_dim = (uint32_t)l->attn_kv_a_mqa->dim[1];
-@@ -43833,6 +43999,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -43833,6 +44189,9 @@ static bool glm_graph_forward_indexed_tokens(
          }
          if (residual_elems > UINT32_MAX) {
              ok = false;
@@ -334,7 +538,7 @@ index 1a79a01..de2b23b 100644
              break;
          }
          if (layer_stage_profile) {
-@@ -44534,7 +44703,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44534,7 +44893,7 @@ static bool glm_graph_forward_indexed_tokens(
                                              g->batch_after_attn,
                                              next,
                                              n_tokens,
@@ -343,7 +547,7 @@ index 1a79a01..de2b23b 100644
                                              layer_stage_profile,
                                              stage_sync,
                                              layer_stage_profile ? &layer_stage_t0 : NULL);
-@@ -44629,6 +44798,11 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44629,6 +44988,11 @@ static bool glm_graph_forward_indexed_tokens(
                  ds4_gpu_tensor_free(after_attn_view);
              }
          }
@@ -355,7 +559,7 @@ index 1a79a01..de2b23b 100644
          if (ok) {
              ds4_gpu_tensor *tmp = cur;
              cur = next;
-@@ -44715,8 +44889,16 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44715,8 +45079,16 @@ static bool glm_graph_forward_indexed_tokens(
          }
          if (g->ssd_streaming) {
              if (streaming_prefill_sync_each_layer) {
@@ -374,7 +578,7 @@ index 1a79a01..de2b23b 100644
              } else if (!ok) {
                  (void)ds4_gpu_synchronize();
              }
-@@ -44746,7 +44928,6 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44746,7 +45118,6 @@ static bool glm_graph_forward_indexed_tokens(
          }
      }
      ds4_gpu_tp_set_attn_head_split(0);
@@ -382,7 +586,7 @@ index 1a79a01..de2b23b 100644
      if (ok && !g->ssd_streaming) {
          const double trace_end_t0 = trace ? now_sec() : 0.0;
          if (trace) {
-@@ -44767,6 +44948,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44767,6 +45138,9 @@ static bool glm_graph_forward_indexed_tokens(
                      end_ms,
                      chunk_ms);
          }
@@ -392,7 +596,7 @@ index 1a79a01..de2b23b 100644
      } else if (!ok) {
          if (trace) {
              glm_graph_indexed_prefill_tracef(
-@@ -44783,6 +44967,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44783,6 +45157,9 @@ static bool glm_graph_forward_indexed_tokens(
          !output_hc &&
          !logits_out) {
          ok = ds4_gpu_end_commands() != 0;
@@ -402,7 +606,7 @@ index 1a79a01..de2b23b 100644
      }
      if (ok) {
          glm_graph_report_prefill_display_progress(display_progress,
-@@ -44800,11 +44987,13 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44800,11 +45177,13 @@ static bool glm_graph_forward_indexed_tokens(
                                   0,
                                   output_hc,
                                   (uint64_t)n_tokens * DS4_N_EMBD * sizeof(float)) != 0;
@@ -416,7 +620,7 @@ index 1a79a01..de2b23b 100644
      }
      if (ok && logits_out) {
          last_hidden = glm_graph_tensor_row_view_strided(cur,
-@@ -44812,8 +45001,19 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44812,8 +45191,19 @@ static bool glm_graph_forward_indexed_tokens(
                                                          DS4_N_EMBD,
                                                          DS4_N_EMBD);
          ok = last_hidden != NULL;
@@ -438,7 +642,7 @@ index 1a79a01..de2b23b 100644
          if (ok) {
              glm_graph_report_prefill_display_progress(display_progress,
                                                        display_progress_ud,
-@@ -44828,6 +45028,10 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44828,6 +45218,10 @@ static bool glm_graph_forward_indexed_tokens(
      }
      ds4_gpu_tensor_free(last_hidden);
      ds4_gpu_set_glm_streaming_prefill_full_layer(false);
@@ -449,7 +653,7 @@ index 1a79a01..de2b23b 100644
      return ok;
  }
  
-@@ -47467,6 +47671,12 @@ struct ds4_session {
+@@ -47467,6 +47861,12 @@ struct ds4_session {
      ds4_kv_cache cpu_cache;
      ds4_cpu_decode_scratch cpu_scratch;
      token_vec checkpoint;
@@ -462,7 +666,7 @@ index 1a79a01..de2b23b 100644
      token_vec greedy_splitkv_segment;
      float *logits;
      float *sample_probs;
-@@ -48876,6 +49086,14 @@ int ds4_session_load_layer_payload(ds4_session *s, FILE *fp,
+@@ -48876,6 +49276,14 @@ int ds4_session_load_layer_payload(ds4_session *s, FILE *fp,
              rc = 1;
          }
          if (rc == 0) {
@@ -477,7 +681,7 @@ index 1a79a01..de2b23b 100644
              token_vec_free(&s->checkpoint);
              memset(&s->checkpoint, 0, sizeof(s->checkpoint));
              for (uint32_t i = 0; i < n_tokens; i++) token_vec_push(&s->checkpoint, tokens[i]);
-@@ -49089,6 +49307,14 @@ int ds4_session_load_layer_payload(ds4_session *s, FILE *fp,
+@@ -49089,6 +49497,14 @@ int ds4_session_load_layer_payload(ds4_session *s, FILE *fp,
          rc = 1;
      }
      if (rc == 0) {
@@ -492,7 +696,7 @@ index 1a79a01..de2b23b 100644
          token_vec_free(&s->checkpoint);
          memset(&s->checkpoint, 0, sizeof(s->checkpoint));
          for (uint32_t i = 0; i < n_tokens; i++) token_vec_push(&s->checkpoint, tokens[i]);
-@@ -49720,6 +49946,52 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
+@@ -49720,6 +50136,52 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
  #endif
  }
  
@@ -545,7 +749,7 @@ index 1a79a01..de2b23b 100644
  int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, char *err, size_t errlen) {
      if (!s || !fp) {
          payload_set_err(err, errlen, "invalid session payload load");
-@@ -49921,6 +50193,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -49921,6 +50383,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
              return 1;
          }
  
@@ -556,7 +760,7 @@ index 1a79a01..de2b23b 100644
          token_vec_free(&s->checkpoint);
          s->checkpoint = new_checkpoint;
          s->checkpoint_valid = true;
-@@ -50061,6 +50337,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -50061,6 +50527,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
              payload_set_err(err, errlen, "KV checkpoint has trailing payload bytes");
              return 1;
          }
@@ -567,7 +771,7 @@ index 1a79a01..de2b23b 100644
          token_vec_free(&s->checkpoint);
          s->checkpoint = new_checkpoint;
          s->checkpoint_valid = true;
-@@ -50270,6 +50550,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -50270,6 +50740,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
          return 1;
      }
  
@@ -578,7 +782,7 @@ index 1a79a01..de2b23b 100644
      token_vec_free(&s->checkpoint);
      s->checkpoint = new_checkpoint;
      for (uint32_t il = 0; il < DS4_N_LAYER; il++) {
-@@ -56757,6 +57041,7 @@ void ds4_session_free(ds4_session *s) {
+@@ -56757,6 +57231,7 @@ void ds4_session_free(ds4_session *s) {
      }
  #endif
      token_vec_free(&s->checkpoint);
@@ -586,7 +790,7 @@ index 1a79a01..de2b23b 100644
      token_vec_free(&s->greedy_splitkv_segment);
      free(s->logits);
      free(s->sample_probs);
-@@ -57830,6 +58115,7 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+@@ -57830,6 +58305,7 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
      const char *backend_name = ds4_backend_name(e->backend);
      (void)backend_name; (void)e;
      if (ds4_session_is_glm(s)) {
@@ -594,7 +798,7 @@ index 1a79a01..de2b23b 100644
          /* Debug: truncate the prompt so the dumped prefill logits line up
           * with the CPU first-token reference (DS4_GLM_LOGIT_DUMP). */
          ds4_tokens glm_trunc_prompt;
-@@ -57865,7 +58151,57 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+@@ -57865,7 +58341,57 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
              start = s->checkpoint.len;
              resumed_checkpoint = true;
              s->mtp_draft_valid = false;
@@ -653,7 +857,7 @@ index 1a79a01..de2b23b 100644
              s->checkpoint.len = 0;
              s->checkpoint_valid = false;
              s->mtp_draft_valid = false;
-@@ -64504,6 +64840,18 @@ void ds4_session_invalidate(ds4_session *s) {
+@@ -64504,6 +65030,18 @@ void ds4_session_invalidate(ds4_session *s) {
          !ds4_tp_failed(s->engine->tp.ctx)) {
          (void)ds4_tp_send_invalidate(s->engine->tp.ctx, s->tp_session_id);
      }
@@ -672,7 +876,7 @@ index 1a79a01..de2b23b 100644
      s->checkpoint_valid = false;
      s->checkpoint.len = 0;
      s->mtp_draft_valid = false;
-@@ -64520,6 +64868,13 @@ void ds4_session_rewind(ds4_session *s, int pos) {
+@@ -64520,6 +65058,13 @@ void ds4_session_rewind(ds4_session *s, int pos) {
      }
      if (pos < 0) pos = 0;
      if (pos > s->checkpoint.len) pos = s->checkpoint.len;
@@ -687,7 +891,7 @@ index 1a79a01..de2b23b 100644
      s->mtp_draft_valid = false;
      ds4_session_dspark_capture_invalidate(s);
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 041e162..13253e3 100644
+index 041e162..bf3672f 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -16,6 +16,8 @@
@@ -1632,7 +1836,7 @@ index 041e162..13253e3 100644
  }
  
  extern "C" int ds4_gpu_routed_moe_batch_owned_tensor(
-@@ -22971,20 +23511,452 @@ static int cuda_stream_selected_ranges_valid(
+@@ -22971,20 +23511,744 @@ static int cuda_stream_selected_ranges_valid(
             down_bytes <= table->model_size - table->down_offset;
  }
  
@@ -1787,6 +1991,298 @@ index 041e162..13253e3 100644
 +
 +/* Called by the server on GET /v1/models: prints the finalized per-window
 + * access-stream digest + byte counters, then resets the window. */
++/* ------------------------------------------------------------------------
++ * Cross-layer expert prefetch worker (DS4_GLM_PREFETCH).
++ *
++ * Shadow-measured on this model: 69.0% of demand-miss bytes are predictable
++ * one layer ahead, 67.7% true precision, 1.02x bandwidth overhead.
++ *
++ * Safety contract (sol review):
++ *   - the worker performs NVMe reads into its OWN staging buffers only;
++ *     it never calls CUDA, never touches the arena, the LRU lists or the map
++ *   - it uses a PRIVATE O_DIRECT fd so it cannot race the loader's fd state
++ *   - completed slabs are published READY; the MAIN thread alone copies them
++ *     into device staging and admits them to the arena, so all cache
++ *     mutation stays single-threaded exactly as before
++ *   - a generation stamp makes slabs from a superseded model load unusable
++ *   - bounded slots: memory is fixed, requests are dropped when full
++ * Correctness: prefetch only ever supplies bytes that a demand read of the
++ * same offsets would have supplied, so outputs are unchanged by construction.
++ * ------------------------------------------------------------------------ */
++#define DS4_PF_SLOTS 12
++
++typedef struct {
++    uint64_t key, gate_off, up_off, down_off, generation, epoch;
++} ds4_pf_req;
++
++typedef struct {
++    int state;              /* 0 empty, 1 filling, 2 ready, 3 main-owned */
++    uint64_t epoch;         /* hint round it was requested in */
++    uint64_t key, gate_off, up_off, down_off, generation;
++    uint8_t *buf;           /* gate|up|down, slot_bytes */
++} ds4_pf_slot;
++
++static struct {
++    int enabled;
++    int started;
++    int stop;
++    pthread_mutex_t mu;
++    pthread_cond_t cv;
++    ds4_pf_slot slots[DS4_PF_SLOTS];
++    ds4_pf_req reqs[DS4_PF_SLOTS];
++    int n_req;
++    uint64_t gate_bytes, down_bytes, slot_bytes;
++    int fd;
++    uint64_t align;
++    uint8_t *stage_raw[8], *stage[8];   /* per-worker private staging */
++    uint64_t stage_bytes;
++    int n_threads;
++    pthread_t threads[8];
++    uint64_t issued, dropped, served, stale, filled, expired, skipped_resident;
++    uint64_t epoch;
++    uint64_t pool_generation;   /* model load this pool's fd belongs to */
++} g_pf;
++
++static int ds4_pf_read_span(int wi, uint64_t off, uint64_t bytes, uint8_t *dst) {
++    /* private-fd O_DIRECT read; falls back to the shared mapping */
++    if (g_pf.fd >= 0 && g_pf.align > 1) {
++        const uint64_t a_off = (off / g_pf.align) * g_pf.align;
++        const uint64_t delta = off - a_off;
++        uint64_t rsz = ((delta + bytes + g_pf.align - 1) / g_pf.align) * g_pf.align;
++        if (rsz <= g_pf.stage_bytes) {
++            uint64_t done = 0;
++            int ok = 1;
++            while (done < rsz) {
++                const ssize_t n = pread(g_pf.fd, g_pf.stage[wi] + done,
++                                        (size_t)(rsz - done), (off_t)(a_off + done));
++                if (n <= 0) { ok = 0; break; }
++                done += (uint64_t)n;
++            }
++            if (ok) { memcpy(dst, g_pf.stage[wi] + delta, (size_t)bytes); return 1; }
++        }
++    }
++    return 0;
++}
++
++static void *ds4_pf_worker(void *arg) {
++    const int wi = (int)(intptr_t)arg;
++    for (;;) {
++        ds4_pf_req req;
++        int slot = -1;
++        pthread_mutex_lock(&g_pf.mu);
++        while (!g_pf.stop && g_pf.n_req == 0)
++            pthread_cond_wait(&g_pf.cv, &g_pf.mu);
++        if (g_pf.stop) { pthread_mutex_unlock(&g_pf.mu); break; }
++        req = g_pf.reqs[--g_pf.n_req];           /* LIFO: freshest prediction */
++        for (int i = 0; i < DS4_PF_SLOTS; i++)
++            if (g_pf.slots[i].state == 0) { slot = i; break; }
++        if (slot >= 0) {
++            g_pf.slots[slot].state = 1;
++            g_pf.slots[slot].key = req.key;
++            g_pf.slots[slot].gate_off = req.gate_off;
++            g_pf.slots[slot].up_off = req.up_off;
++            g_pf.slots[slot].down_off = req.down_off;
++            g_pf.slots[slot].generation = req.generation;
++            g_pf.slots[slot].epoch = req.epoch;
++        }
++        pthread_mutex_unlock(&g_pf.mu);
++        if (slot < 0) continue;
++        uint8_t *b = g_pf.slots[slot].buf;
++        const int ok =
++            ds4_pf_read_span(wi, req.gate_off, g_pf.gate_bytes, b) &&
++            ds4_pf_read_span(wi, req.up_off, g_pf.gate_bytes, b + g_pf.gate_bytes) &&
++            ds4_pf_read_span(wi, req.down_off, g_pf.down_bytes,
++                             b + 2u * g_pf.gate_bytes);
++        pthread_mutex_lock(&g_pf.mu);
++        g_pf.slots[slot].state = ok ? 2 : 0;
++        if (ok) g_pf.filled++;
++        pthread_mutex_unlock(&g_pf.mu);
++    }
++    return NULL;
++}
++
++static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
++    static int done = 0;
++    if (done) return;
++    done = 1;
++    if (getenv("DS4_GLM_PREFETCH") == NULL) return;
++    g_pf.gate_bytes = gate_bytes;
++    g_pf.down_bytes = down_bytes;
++    g_pf.slot_bytes = 2u * gate_bytes + down_bytes;
++    g_pf.align = g_model_direct_align > 1 ? g_model_direct_align : 4096;
++    g_pf.stage_bytes = ((gate_bytes > down_bytes ? gate_bytes : down_bytes) +
++                        2u * g_pf.align + g_pf.align - 1) / g_pf.align * g_pf.align;
++    g_pf.fd = -1;
++    if (g_model_direct_fd >= 0) {
++        /* private descriptor cloned from the loader's (same technique the
++         * loader uses): the worker must never mutate shared fd state */
++        char proc_path[64];
++        snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d",
++                 g_model_direct_fd);
++#if defined(__linux__) && defined(O_DIRECT)
++        g_pf.fd = open(proc_path, O_RDONLY | O_DIRECT);
++#endif
++        if (g_pf.fd < 0) g_pf.fd = open(proc_path, O_RDONLY);
++    }
++    const char *nt = getenv("DS4_GLM_PREFETCH_THREADS");
++    g_pf.n_threads = nt ? atoi(nt) : 6;
++    if (g_pf.n_threads < 1) g_pf.n_threads = 1;
++    if (g_pf.n_threads > 8) g_pf.n_threads = 8;
++    int alloc_ok = g_pf.fd >= 0;
++    for (int i = 0; alloc_ok && i < g_pf.n_threads; i++) {
++        if (posix_memalign((void **)&g_pf.stage_raw[i], (size_t)g_pf.align,
++                           (size_t)g_pf.stage_bytes) != 0) alloc_ok = 0;
++        else g_pf.stage[i] = g_pf.stage_raw[i];
++    }
++    for (int i = 0; alloc_ok && i < DS4_PF_SLOTS; i++) {
++        /* page-aligned so it can be pinned: pinned staging turns the
++         * consume-path host->device copy into a DMA transfer (pageable
++         * cost ~47 ms/token measured). Blocking cudaMemcpy keeps the
++         * ownership contract explicit even though the buffer is pinned. */
++        if (posix_memalign((void **)&g_pf.slots[i].buf, 4096,
++                           (size_t)g_pf.slot_bytes) != 0) {
++            g_pf.slots[i].buf = NULL;
++            alloc_ok = 0;
++            break;
++        }
++        if (cudaHostRegister(g_pf.slots[i].buf, (size_t)g_pf.slot_bytes,
++                             cudaHostRegisterPortable) != cudaSuccess) {
++            (void)cudaGetLastError();   /* fail-open: pageable still works */
++        }
++    }
++    if (!alloc_ok) {
++        fprintf(stderr, "ds4: expert prefetch DISABLED (allocation/fd)\n");
++        return;
++    }
++    pthread_mutex_init(&g_pf.mu, NULL);
++    pthread_cond_init(&g_pf.cv, NULL);
++    for (int i = 0; i < g_pf.n_threads; i++) {
++        if (pthread_create(&g_pf.threads[i], NULL, ds4_pf_worker,
++                           (void *)(intptr_t)i) != 0) {
++            fprintf(stderr, "ds4: expert prefetch DISABLED (thread %d)\n", i);
++            return;
++        }
++    }
++    g_pf.pool_generation = g_model_load_generation;
++    g_pf.started = 1;
++    g_pf.enabled = 1;
++    fprintf(stderr, "ds4: cross-layer expert prefetch enabled (%d workers, "
++                    "%d slots x %.2f MiB)\n", g_pf.n_threads, DS4_PF_SLOTS,
++            (double)g_pf.slot_bytes / (1024.0 * 1024.0));
++}
++
++/* main thread: hand the worker a predicted (layer,expert) set */
++extern "C" void ds4_gpu_expert_prefetch_hint(
++        const ds4_gpu_stream_expert_table *table,
++        const int32_t *ids, uint32_t n_ids) {
++    if (!g_pf.enabled || !table || !ids) return;
++    if (table->gate_expert_bytes != g_pf.gate_bytes ||
++        table->down_expert_bytes != g_pf.down_bytes) return;
++    if (g_pf.pool_generation != g_model_load_generation) {
++        /* sol CRITICAL: the worker fd is bound to the model open at pool
++         * init; after a reload it would read OLD-model bytes that still
++         * carry a matching request generation. Disable rather than serve
++         * stale weights. */
++        pthread_mutex_lock(&g_pf.mu);
++        for (int i = 0; i < DS4_PF_SLOTS; i++)
++            if (g_pf.slots[i].state == 2) g_pf.slots[i].state = 0;
++        g_pf.n_req = 0;
++        g_pf.enabled = 0;
++        pthread_mutex_unlock(&g_pf.mu);
++        fprintf(stderr, "ds4: expert prefetch disabled (model reload)\n");
++        return;
++    }
++    pthread_mutex_lock(&g_pf.mu);
++    const uint64_t ep = ++g_pf.epoch;
++    /* a prediction is only useful for the layer it targets: recycle READY
++     * slabs that were not claimed within two hint rounds, otherwise the
++     * fixed slot pool clogs with never-demanded predictions and every later
++     * request is dropped (observed: 104,919 issued / 46 filled). */
++    for (int i = 0; i < DS4_PF_SLOTS; i++) {
++        if (g_pf.slots[i].state == 2 && ep > g_pf.slots[i].epoch + 2) {
++            g_pf.slots[i].state = 0;
++            g_pf.expired++;
++        }
++    }
++    g_pf.n_req = 0;   /* stale requests are worthless once a new layer is predicted */
++    for (uint32_t i = 0; i < n_ids && g_pf.n_req < DS4_PF_SLOTS; i++) {
++        const int32_t e = ids[i];
++        if (e < 0 || (uint32_t)e >= table->n_total_expert) continue;
++        const uint64_t key = ((uint64_t)table->layer << 32) | (uint64_t)(uint32_t)e;
++        /* already resident: a real prefetcher skips it for free (this is what
++         * the shadow measurement assumed; 1.02x bandwidth depends on it) */
++        if (!g_expert_persist_cache.disabled && g_expert_persist_cache.map) {
++            auto rit = g_expert_persist_cache.map->find(key);
++            if (rit != g_expert_persist_cache.map->end() &&
++                g_expert_persist_cache.meta[rit->second].key == key) {
++                g_pf.skipped_resident++;
++                continue;
++            }
++        }
++        int dup = 0;
++        for (int q = 0; q < g_pf.n_req; q++) if (g_pf.reqs[q].key == key) dup = 1;
++        for (int sidx = 0; !dup && sidx < DS4_PF_SLOTS; sidx++)
++            if (g_pf.slots[sidx].state != 0 && g_pf.slots[sidx].key == key) dup = 1;
++        if (dup) continue;
++        ds4_pf_req *r = &g_pf.reqs[g_pf.n_req++];
++        r->key = key;
++        r->gate_off = table->gate_offset + (uint64_t)e * table->gate_expert_bytes;
++        r->up_off = table->up_offset + (uint64_t)e * table->gate_expert_bytes;
++        r->down_off = table->down_offset + (uint64_t)e * table->down_expert_bytes;
++        r->generation = g_model_load_generation;
++        r->epoch = ep;
++        g_pf.issued++;
++    }
++    pthread_cond_signal(&g_pf.cv);
++    pthread_mutex_unlock(&g_pf.mu);
++}
++
++/* main thread: claim a completed slab matching this exact expert, or NULL.
++ * Caller MUST call ds4_pf_release() when done copying. */
++static uint8_t *ds4_pf_claim(uint64_t key, uint64_t gate_off, uint64_t up_off,
++                             uint64_t down_off, int *slot_out) {
++    if (!g_pf.enabled) return NULL;
++    uint8_t *buf = NULL;
++    pthread_mutex_lock(&g_pf.mu);
++    for (int i = 0; i < DS4_PF_SLOTS; i++) {
++        if (g_pf.slots[i].state != 2 || g_pf.slots[i].key != key) continue;
++        if (g_pf.slots[i].gate_off != gate_off ||
++            g_pf.slots[i].up_off != up_off ||
++            g_pf.slots[i].down_off != down_off ||
++            g_pf.slots[i].generation != g_model_load_generation ||
++            g_pf.pool_generation != g_model_load_generation) {
++            g_pf.slots[i].state = 0;      /* stale: superseded model load */
++            g_pf.stale++;
++            continue;
++        }
++        g_pf.slots[i].state = 3;          /* main owns it while copying */
++        buf = g_pf.slots[i].buf;
++        *slot_out = i;
++        g_pf.served++;
++        break;
++    }
++    pthread_mutex_unlock(&g_pf.mu);
++    return buf;
++}
++
++static void ds4_pf_release(int slot) {
++    if (slot < 0) return;
++    pthread_mutex_lock(&g_pf.mu);
++    g_pf.slots[slot].state = 0;
++    pthread_mutex_unlock(&g_pf.mu);
++}
++
++/* Read-only residency peek for the prefetch-profitability probe. Does NOT
++ * touch LRU order or any counter, so enabling it cannot change cache
++ * behaviour or measurements. Returns 1 if (layer,expert) is resident. */
++extern "C" int ds4_gpu_expert_cache_peek(uint32_t layer, uint32_t expert) {
++    if (g_expert_persist_cache.disabled || !g_expert_persist_cache.map) return 0;
++    const uint64_t key = ((uint64_t)layer << 32) | (uint64_t)expert;
++    auto it = g_expert_persist_cache.map->find(key);
++    if (it == g_expert_persist_cache.map->end()) return 0;
++    return g_expert_persist_cache.meta[it->second].key == key ? 1 : 0;
++}
++
 +extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
 +    ec_run_stats_ensure();
 +    char hex[65];
@@ -2087,7 +2583,7 @@ index 041e162..13253e3 100644
      }
  
      std::vector<int32_t> expert_to_slot;
-@@ -22996,7 +23968,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -22996,7 +24260,8 @@ static int cuda_stream_selected_cache_begin_load(
                              slot_count : table->n_total_expert);
          slot_ids.resize(slot_count);
      } catch (...) {
@@ -2097,7 +2593,7 @@ index 041e162..13253e3 100644
      }
      for (uint32_t i = 0; i < slot_count; i++) {
          const int32_t expert = selected_ids[i];
-@@ -23004,7 +23977,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23004,7 +24269,8 @@ static int cuda_stream_selected_cache_begin_load(
              fprintf(stderr,
                      "ds4: CUDA streaming expert id %d is outside 0..%u at layer %u\n",
                      expert, table->n_total_expert, table->layer);
@@ -2107,7 +2603,7 @@ index 041e162..13253e3 100644
          }
          int32_t compact = expert_to_slot[(uint32_t)expert];
          if (compact < 0) {
-@@ -23014,14 +23988,40 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23014,14 +24280,40 @@ static int cuda_stream_selected_cache_begin_load(
          }
          slot_ids[i] = compact;
      }
@@ -2150,7 +2646,7 @@ index 041e162..13253e3 100644
      const int logical_tier = 0;
      if (g_stream_selected_cache.logical_tier != logical_tier &&
          (g_stream_selected_cache.gate_ptr ||
-@@ -23045,9 +24045,29 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23045,9 +24337,30 @@ static int cuda_stream_selected_cache_begin_load(
                  down_bytes, "down experts") ||
          !cuda_stream_selected_ensure_i32(slot_count)) {
          cuda_stream_selected_cache_invalidate();
@@ -2163,6 +2659,7 @@ index 041e162..13253e3 100644
 +
 +    cuda_expert_cache_init_once(table->gate_expert_bytes,
 +                                table->down_expert_bytes);
++    ds4_pf_init_once(table->gate_expert_bytes, table->down_expert_bytes);
 +    cuda_expert_cache_flush_for_model();
 +    struct cuda_miss_job { uint64_t gate_src, up_src, down_src, gate_dst, down_dst, key; };
 +    std::vector<cuda_miss_job> miss_jobs;
@@ -2183,7 +2680,7 @@ index 041e162..13253e3 100644
      for (uint32_t i = 0; i < compact_ids.size(); i++) {
          const uint64_t expert = (uint32_t)compact_ids[i];
          const uint64_t gate_src =
-@@ -23058,6 +24078,62 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23058,6 +24371,127 @@ static int cuda_stream_selected_cache_begin_load(
              table->down_offset + expert * table->down_expert_bytes;
          const uint64_t gate_dst = (uint64_t)i * table->gate_expert_bytes;
          const uint64_t down_dst = (uint64_t)i * table->down_expert_bytes;
@@ -2232,6 +2729,71 @@ index 041e162..13253e3 100644
 +            continue;
 +        }
 +        if (persist_ok) g_expert_persist_cache.misses++;
++        {
++            /* prefetched slab available? copy it in place of the disk read.
++             * Identical bytes to a demand read of the same offsets. */
++            int pf_slot = -1;
++            uint8_t *pf = ds4_pf_claim(key, gate_src, up_src, down_src, &pf_slot);
++            if (pf) {
++                /* BLOCKING copies: for a pageable source CUDA guarantees the
++                 * host buffer is consumed before return, so slot ownership
++                 * ends safely at release without stalling the whole stream
++                 * (a full stream sync here cost ~62 ms/token — measured). */
++                const int copy_ok =
++                    cuda_ok(cudaMemcpy(g_stream_selected_cache.gate_ptr + gate_dst,
++                                       pf, table->gate_expert_bytes,
++                                       cudaMemcpyDefault), "prefetch gate copy") &&
++                    cuda_ok(cudaMemcpy(g_stream_selected_cache.up_ptr + gate_dst,
++                                       pf + table->gate_expert_bytes,
++                                       table->gate_expert_bytes,
++                                       cudaMemcpyDefault), "prefetch up copy") &&
++                    cuda_ok(cudaMemcpy(g_stream_selected_cache.down_ptr + down_dst,
++                                       pf + 2u * table->gate_expert_bytes,
++                                       table->down_expert_bytes,
++                                       cudaMemcpyDefault), "prefetch down copy");
++                if (copy_ok && persist_ok) {
++                    /* fill the arena from DEVICE staging exactly like the
++                     * demand path: a CPU memcpy of the 9.28 MiB slab costs
++                     * ~65 ms/token (measured), the DMA path ~1 ms. */
++                    const uint32_t fs = cuda_expert_cache_insert(key, gate_src, down_src);
++                    if (fs != UINT32_MAX) {
++                        uint8_t *fill = g_expert_persist_cache.arena +
++                            (uint64_t)fs * g_expert_persist_cache.slot_bytes;
++                        if (!cuda_ok(cudaMemcpy(fill,
++                                        g_stream_selected_cache.gate_ptr + gate_dst,
++                                        table->gate_expert_bytes,
++                                        cudaMemcpyDefault), "pf arena gate") ||
++                            !cuda_ok(cudaMemcpy(fill + table->gate_expert_bytes,
++                                        g_stream_selected_cache.up_ptr + gate_dst,
++                                        table->gate_expert_bytes,
++                                        cudaMemcpyDefault), "pf arena up") ||
++                            !cuda_ok(cudaMemcpy(fill + 2u * table->gate_expert_bytes,
++                                        g_stream_selected_cache.down_ptr + down_dst,
++                                        table->down_expert_bytes,
++                                        cudaMemcpyDefault), "pf arena down")) {
++                            g_expert_persist_cache.map->erase(key);
++                            g_expert_persist_cache.meta[fs].key = UINT64_MAX;
++                        }
++                    }
++                }
++                ds4_pf_release(pf_slot);
++                if (copy_ok) continue;
++                cuda_stream_selected_cache_invalidate();
++                return cuda_stream_selected_reject(table, slot_count,
++                                                   "prefetch copy");
++            }
++        }
++        if (persist_ok && getenv("DS4_CUDA_MISS_IDS") != NULL) {
++            /* demand-miss expert id log: joined offline against PREDIDS to
++             * compute miss-conditioned prefetch recall */
++            static uint32_t mi_layer = 0xffffffffu;
++            if (mi_layer != table->layer) {
++                if (mi_layer != 0xffffffffu) fputc('\n', stderr);
++                fprintf(stderr, "MISSIDS L%u:", table->layer);
++                mi_layer = table->layer;
++            }
++            fprintf(stderr, " %u", (uint32_t)expert);
++        }
 +        /* Parallel miss fetch (G4 I/O lever): measured QD sweep shows the
 +         * drive delivers 8.4 GB/s at QD1 and 10-12.5 GB/s at QD4+ for these
 +         * read sizes, while the sequential per-tensor loop reaches ~3.5
@@ -2246,7 +2808,7 @@ index 041e162..13253e3 100644
          if (!cuda_model_copy_to_device_streamed(
                      g_stream_selected_cache.gate_ptr + gate_dst,
                      table->model_map, table->model_size,
-@@ -23073,8 +24149,148 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23073,8 +24507,156 @@ static int cuda_stream_selected_cache_begin_load(
                      table->model_map, table->model_size,
                      down_src, table->down_expert_bytes,
                      "stream down expert copy")) {
@@ -2393,10 +2955,18 @@ index 041e162..13253e3 100644
 +                    tot > 0 ? 100.0 * (double)g_expert_persist_cache.hits / tot : 0.0,
 +                    g_expert_persist_cache.used,
 +                    g_expert_persist_cache.n_slots);
++            if (g_pf.enabled)
++                fprintf(stderr, "ds4: prefetch issued=%llu filled=%llu "
++                                "served=%llu expired=%llu resident_skip=%llu\n",
++                        (unsigned long long)g_pf.issued,
++                        (unsigned long long)g_pf.filled,
++                        (unsigned long long)g_pf.served,
++                        (unsigned long long)g_pf.expired,
++                        (unsigned long long)g_pf.skipped_resident);
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -23082,8 +24298,10 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23082,8 +24664,10 @@ static int cuda_stream_selected_cache_begin_load(
                              (size_t)slot_count * sizeof(int32_t),
                              cudaMemcpyHostToDevice),
                   "stream selected-id remap copy")) {
@@ -2408,7 +2978,7 @@ index 041e162..13253e3 100644
      }
  
      g_stream_selected_cache.logical_tier = logical_tier;
-@@ -23104,6 +24322,14 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23104,6 +24688,14 @@ static int cuda_stream_selected_cache_begin_load(
      g_stream_selected_cache.slot_selected_tensor.owner = 0;
      g_stream_selected_cache.slot_selected_tensor.device_id = logical_tier;
      g_stream_selected_cache.valid = 1;
@@ -2423,7 +2993,7 @@ index 041e162..13253e3 100644
      return 1;
  }
  
-@@ -26720,19 +27946,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+@@ -26720,19 +28312,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
      if (!g_ssd_streaming_mode) return 1;
      if (!table || !selected || n_selected == 0 ||
          selected->bytes < (uint64_t)n_selected * sizeof(int32_t)) {
@@ -2449,7 +3019,7 @@ index 041e162..13253e3 100644
      }
      return cuda_stream_selected_cache_begin_load(table, ids.data(), n_selected);
  }
-@@ -26960,7 +28189,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
+@@ -26960,7 +28555,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
  }
  
  extern "C" void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled) {
@@ -2461,19 +3031,30 @@ index 041e162..13253e3 100644
  
  extern "C" void ds4_gpu_set_glm_mtp_verify_mode(bool enabled) {
 diff --git a/ds4_gpu.h b/ds4_gpu.h
-index 2000bba..36388d3 100644
+index 2000bba..af04e27 100644
 --- a/ds4_gpu.h
 +++ b/ds4_gpu.h
-@@ -140,6 +140,9 @@ void ds4_gpu_set_quality(bool quality);
+@@ -140,6 +140,10 @@ void ds4_gpu_set_quality(bool quality);
  void ds4_gpu_set_glm_model(bool enabled);
  void ds4_gpu_set_ssd_streaming(bool enabled);
  void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled);
 +/* G4a: emit + reset the persistent-expert-cache window stats (access-stream
 + * sha256, lookup/hit bytes). No-op semantics when the cache is disabled. */
 +void ds4_gpu_expert_cache_stats_emit(const char *tag);
++int ds4_gpu_expert_cache_peek(uint32_t layer, uint32_t expert);
  #ifdef __APPLE__
  void ds4_gpu_release_zero_prefix_prefill_mask_cache(void);
  #endif
+@@ -159,6 +163,9 @@ typedef struct ds4_gpu_stream_expert_table {
+     uint64_t    gate_expert_bytes;
+     uint64_t    down_expert_bytes;
+ } ds4_gpu_stream_expert_table;
++
++void ds4_gpu_expert_prefetch_hint(const ds4_gpu_stream_expert_table *table,
++                                  const int32_t *ids, uint32_t n_ids);
+ /* Reset only the prompt-local eviction heuristic.  The resident SSD expert
+  * cache itself is intentionally kept warm across sessions. */
+ void ds4_gpu_stream_expert_cache_reset_route_hotness(void);
 diff --git a/ds4_server.c b/ds4_server.c
 index f4f563e..a0198fc 100644
 --- a/ds4_server.c
