@@ -52,5 +52,18 @@
    "unaccounted_attn_dense": "~250-290 (ATTN_OUTPUT_PROFILE emitted no tokens=1 lines in this window \u2014 split still open)"
   },
   "next": "arena size bump when GLM-only, fetch granularity (slab repack), attention-side split, MTP drafting multiplier"
+ },
+ "sol_review_v47": {
+  "round1": "FAIL \u2014 3 MED (sticky pin error state; deferred fill failure can leave stale cache slot; no unregister lifecycle) + 4 LOW (RLIMIT not a guard; LOADPROF field semantics; timespec UB; per-thread-default-stream fragility)",
+  "fixes_v471 (binary a506f29d459f)": [
+   "MED1: cudaGetLastError() clears sticky state after failed pin; consumed prior error logged if it differs",
+   "MED2: cuda_expert_cache_flush_all() on all four CUDA-error reject paths in begin_load \u2014 no published slot survives a failed sync point; outside-begin_load deferred errors treated as poisoned context (fail-visible)",
+   "MED3: arena_pinned flag + cudaHostUnregister in ds4_gpu_cleanup (after device sync); incompatible-layout in-process reload deferred \u2014 one model per process lifetime by deployment",
+   "LOW6: timespecs zero-initialized; LOW7: cudaStreamLegacy explicit in all 9 async calls",
+   "LOW4 documented: operational memory guard is the kill-floor watchdog, NOT RLIMIT_MEMLOCK (67 GiB registered under a 15 GiB limit \u2014 driver path bypasses it)",
+   "LOW5 documented: post-pin hit_ms/fill_ms are ENQUEUE times (DMA completion lands in the next sync point); seq-fetch path (<2 threads) reports zero fetch/fill \u2014 profile is only used in the 6-worker config"
+  ],
+  "revalidation": "byte-identity sha x3 unchanged, routing identical, hit-copy 2.7ms / fill 2.1ms / warmup 50.9s \u2014 fixes cost nothing",
+  "round2": "pending"
  }
 }
