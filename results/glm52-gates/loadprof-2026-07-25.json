@@ -867,5 +867,11 @@
     "honest_caveat": "the reference arm also resumes (start=5064, suffix=2), because the engine always chunks a prompt this long. Strictly, this shows that a 22-token resume from a 5044-token disk checkpoint diverges materially from a 2-token resume off a fresh in-process evaluation. Combined with the text signature the stale-state reading is strongly supported, but a fully chunk-free reference is not obtainable on this path.",
     "audit_position_confirmed": "the F13 audit finding was right and my 'chunk-shape numerics, not corruption' framing was wrong. Treat as an open state bug.",
     "next": "implement option B (truncate the live session to the common prefix on a junction mismatch instead of loading a shorter disk checkpoint), then re-run this comparison and require max|delta| to collapse to numerics scale"
+  },
+  "build_fix_score_official_cuda_2026_07_26": {
+    "problem": "the CUDA rule for gguf-tools/quality-testing/score_official passes QUALITY_CFLAGS (which contains -std=c11) straight to nvcc, and nvcc rejects it: 'nvcc fatal : Value c11 is not defined for option std'. The scorer therefore could not be relinked against current core objects.",
+    "why_it_mattered": "score_official links ds4.o/ds4_cuda.o, so a stale binary would have scored STALE ENGINE CODE. keepn_nll.sh has a guard for exactly this and correctly refused to run (KEEPN_NLL_STALE), which is how the problem surfaced instead of silently producing a wrong fidelity number.",
+    "workaround": "make CUDA_ARCH=native QUALITY_CFLAGS=\"-O3 -g -Xcompiler -march=native -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -std=c11\" gguf-tools/quality-testing/score_official -- wraps the host flags for nvcc. nvcc compiles the .c as C++ (one harmless warning about -std=c11 not applying to C++).",
+    "upstream": "this is an upstream Makefile bug in the CUDA target (line 155); the Metal rule at line 80 uses $(CC) and is unaffected."
   }
 }
