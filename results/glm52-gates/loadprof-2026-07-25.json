@@ -189,5 +189,12 @@
    "C (upstream): report to antirez/ds4 with the minimal repro \u2014 this is an upstream bug in the GLM resume path, present without any of our patches"
   ],
   "status": "bug fully isolated and mechanism confirmed; fix NOT yet implemented \u2014 appended-turn resume remains labeled UNSAFE; exact-replay chain unaffected"
+ },
+ "append_clean_2026_07_26": {
+  "experiment": "ttft_append_clean.sh \u2014 realistic agent-turn appends (newline-prefixed new messages) vs cold controls; first run was a silent-no-op duplicate (caught via impossible identical cold shas), rerun with verified fixtures",
+  "verdict": "FAIL \u2014 clean appends corrupt identically to adversarial ones. Stronger: x_ap2's output is byte-identical to the ADVERSARIAL run's x_ap2 despite a different append, and every resumed output begins with the same stale continuation ('oft...' \u2014 completing the previous generation's mid-word tail). The resumed generation continues from the OLD frontier and effectively ignores the appended text.",
+  "final_bug_statement": "ds4 GLM disk-KV resume with a different-suffix prompt continues generation from the previous lineage's frontier state instead of the new prompt: UNSAFE for ALL multi-turn traffic (adversarial and realistic shapes). Exact-replay only rewrites identical content and is unaffected. Upstream bug (present without local patches).",
+  "operational_ruling": "GLM serving MUST NOT rely on kv-disk resume for multi-turn traffic until the frontier fix (option B) or the full-reset guard (option A) is implemented. Warm-TTFT 1.77s stands for exact-replay; multi-turn warm TTFT is effectively cold (~150s) pending the fix.",
+  "next_session": "implement option A guard first (correctness), then option B (frontier truncation) for performance; file upstream repro (option C)"
  }
 }
