@@ -534,5 +534,17 @@
   "sharpened_hypothesis": "divergence correlates specifically with resuming from a SHORTER base-lineage checkpoint (start=5044, 22-token suffix), not with any resume. Three harnesses that cold-prefilled the append (start=0, then a 2-token internal suffix) all matched cold exactly. This is the strongest structural clue yet: the suspect regime is a long suffix evaluated over a restored base checkpoint.",
   "why_reproduction_fails": "the disk-KV lookup finds the base checkpoint only under conditions ttft_append_probe.sh happens to create (it fires base + three appends, accumulating checkpoints); the single-append harnesses cold-fall-back instead. Next step: instrument the kv lookup decision (hit/miss + chosen file + common-prefix length) so the resuming condition can be forced deliberately rather than stumbled into.",
   "F13_status": "OPEN. Eliminated: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0), and now 'any resume diverges' (identical-work arms match exactly). Remaining suspect: long-suffix evaluation over a restored shorter checkpoint. Strict guard stays default."
+ },
+ "F13_kvdecide_2026_07_26": {
+  "instrumentation": "DS4_KV_DECIDE_LOG (binary e709f4734814) logs why each request does/doesn't reuse state: cached, source, live length, prompt length, common-prefix length",
+  "decisive_line": "KVDECIDE cached=0 source=none live=5063 prompt=5066 common=5045 kv_enabled=1 min_tokens=512",
+  "mechanism_identified": [
+   "1. The appended prompt's tokens DIVERGE FROM THE LIVE SESSION at position 5045 even though its TEXT is base+generated+append. Cause: BPE re-merge at the junction \u2014 tokenizing the concatenated text yields different tokens near the boundary than (base tokens + sampled generation tokens). This is why live reuse always misses: common=5045 < live=5063.",
+   "2. After that miss, a disk-KV load is what supplies the resume. In ttft_append_probe.sh a base checkpoint EXISTED on disk, so the server loaded the 5044-token file and resumed with a 22-token suffix \u2014 the regime that diverges. In my three reproduction harnesses no such checkpoint was present (no 'kv cache stored' line in this run), so the append cold-prefilled and matched cold exactly.",
+   "3. This explains all five experiments coherently: divergence appears if and only if a disk checkpoint is loaded and then extended by a long suffix."
+  ],
+  "reproduction_recipe_now_known": "prime the disk store (base request, verify a 'kv cache stored' line appears), keep KVDIR intact, then fire the append in a process whose live session mismatches \u2014 the server will disk-load and resume with a long suffix. Only then is the tagged logit pair valid.",
+  "F13_status": "OPEN but fully scoped. Eliminated: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0), 'any resume diverges' (identical-work arms match). Established: the failing regime is disk-checkpoint load + long-suffix extension, entered via a BPE-junction live-cache miss. Strict guard stays default.",
+  "fidelity_relevance": "this is the accuracy-affecting item: until the logit comparison runs in the identified regime, multi-turn GLM serving must keep the strict guard (correct-or-cold), which is the current default."
  }
 }
