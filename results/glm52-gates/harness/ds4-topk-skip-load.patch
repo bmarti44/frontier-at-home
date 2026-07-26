@@ -1,0 +1,56 @@
+diff --git a/ds4.c b/ds4.c
+index 3993493..bb9bd63 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -40220,11 +40220,48 @@ static bool glm_graph_encode_sparse_ffn_one(
+                     else kept += gm[gi];
+                 }
+                 if (kept > 0.0f && total > 0.0f) {
+-                    const float scale = total / kept;
+-                    for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
+-                        gm[gi] *= scale;
++                    /* DS4_GLM_TOPK_NORENORM=1 zeroes the dropped experts but
++                     * does NOT amplify the survivors. This separates "skip
++                     * the expert" from "renormalize the rest" — sol's F04
++                     * finding was that renormalization (~1.18x survivor
++                     * amplification) is an untested alternative cause of the
++                     * observed collapse. */
++                    if (getenv("DS4_GLM_TOPK_NORENORM") == NULL) {
++                        const float scale = total / kept;
++                        for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
++                            gm[gi] *= scale;
++                    }
+                     (void)ds4_gpu_tensor_write(g->router_weights, 0, gm,
+                             (uint64_t)DS4_N_EXPERT_USED * sizeof(gm[0]));
++                    /* DS4_GLM_TOPK_SKIP_LOAD=1 turns the fidelity experiment
++                     * into an actual BYTE reduction. Zeroing a gate weight
++                     * removes the expert's contribution but the streaming
++                     * loader fetches from router_selected, so all 8 experts
++                     * are still read from SSD -- no speed gain at all. The
++                     * loader (cuda_stream_selected_cache_begin_load) dedups
++                     * ids into compact_ids and fetches only unique experts,
++                     * so pointing every dropped slot at a KEPT expert id
++                     * makes it fetch exactly `keep` uniques. The dropped
++                     * slots then compute keeper_expert * 0.0 = 0, which is
++                     * the same result as before, at 6/8 of the bytes. */
++                    if (getenv("DS4_GLM_TOPK_SKIP_LOAD") != NULL) {
++                        int32_t sel[DS4_MAX_EXPERT_USED] = {0};
++                        if (ds4_gpu_tensor_read(g->router_selected, 0, sel,
++                                (uint64_t)DS4_N_EXPERT_USED *
++                                    sizeof(sel[0])) != 0) {
++                            int32_t keeper = -1;
++                            for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
++                                if (gm[gi] != 0.0f) { keeper = sel[gi]; break; }
++                            if (keeper >= 0) {
++                                for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
++                                    if (gm[gi] == 0.0f) sel[gi] = keeper;
++                                (void)ds4_gpu_tensor_write(g->router_selected,
++                                        0, sel,
++                                        (uint64_t)DS4_N_EXPERT_USED *
++                                            sizeof(sel[0]));
++                            }
++                        }
++                    }
+                 }
+             }
+         }
