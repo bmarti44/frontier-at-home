@@ -11,7 +11,11 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 note() { echo "$(date -Is) $*" >> "$OUT/run.log"; }
 note "stopping DSV4 for bench window"
 pkill -TERM -f "llama-server.*8011" 2>/dev/null; sleep 8
-"$BIN" -m "$M" -c 8192 -ngl 999 -b 2048 -ub 512 --host 127.0.0.1 --port 8030 \
+# --cpu-moe: routed experts stay as file-backed mmap (reclaimable page
+# cache — kernel evicts under pressure instead of OOM/freeze); GPU gets
+# only dense/attention allocations (~20 GiB). Safe for a 129.5 GiB model
+# on a 119.7 GiB box; experts serve from cache at LPDDR bandwidth.
+"$BIN" -m "$M" -c 8192 -ngl 999 --cpu-moe -b 2048 -ub 512 --host 127.0.0.1 --port 8030 \
   --no-warmup > "$OUT/server.log" 2>&1 &
 SPID=$!
 trap 'kill -TERM $SPID 2>/dev/null' EXIT
