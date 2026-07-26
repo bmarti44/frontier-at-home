@@ -86,5 +86,18 @@
    "slab repack",
    "admission policy vs Belady gap"
   ]
+ },
+ "mtp_ab_2026_07_25": {
+  "harness": "results/glm52-gates/harness/mtp_ab.sh (8 varied prompts, greedy 96 tok, 2 passes per config, pass-2 timed, pinned arena 68GB)",
+  "results": {
+   "decode_off_tok_s": 1.61,
+   "decode_on_tok_s": 1.77,
+   "speedup": "1.10x",
+   "accept_rate": "72.5% (647/892 cycles)",
+   "why_so_small": "the 2-token verify batch loads ~1.5x unique experts per step on the streaming stack \u2014 expert-diversity cost eats the speculation gain (tokens/cycle 1.72x vs bytes/step ~1.5x). MTP only amortizes the FIXED per-step costs (~250ms attention/host), hence ~+10% net.",
+   "agreement": "0/8 prompts identical to single-token decode; divergences are greedy tie-flips under 2-token-batch FP ordering (both continuations coherent; first divergence 100-370 chars in)"
+  },
+  "verdict": "NOT adopted for serving yet: +10% decode does not justify losing byte-reproducibility vs the qualified single-token config. Structural insight recorded: speculation on streamed MoE is bounded by expert-diversity growth, not acceptance rate \u2014 deeper drafts make this WORSE unless hit rate is near 100%. Revisit if/when hit rate rises (repack + admission policy) since the expert-side penalty then drops to kernel-only.",
+  "evidence": "logs/loadprof1/mtp-ab2-summary.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-mtp-ab/"
  }
 }
