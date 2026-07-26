@@ -372,6 +372,15 @@
    },
    "implication": "GLM-5.2's router is UNUSUALLY FLAT \u2014 the 'top-2 dominate' prior behind AdapMoE-style skipping and aggressive HOBBIT tiering does NOT hold: keep-6 discards 15.2% of gate mass, keep-4 discards 33.7%; a 90%-mass exact tier needs ~7 of 8 experts (only 12.5% byte cut). Levers 2 and 3 are significantly WEAKENED on this model \u2014 importance-based tiering is fighting a flat distribution.",
    "decisive_next_probe": "keep-N fidelity A/B: env DS4_GLM_TOPK_KEEP=N \u2014 at the decode router site, zero weights beyond top-N and renormalize (8-float read-modify-write at the existing GATEMASS hook point, ~15 lines); run the 100-case NLL suite at N=6 and N=4 vs N=8 baseline. If NLL cost at N=6 is negligible despite the 15% mass discard, lever 2 lives (25% byte cut); if not, levers 2-3 die on this model and the surviving stack reduces to SLRU (landed) + QTIP (Brian's call) + second-box."
+  },
+  "keepn_probe_KILL": {
+   "probe": "DS4_GLM_TOPK_KEEP=6 (zero bottom-2 router weights + renormalize; binary afc7378bb80f), 8 varied prompts x 96 tok greedy vs committed keep-8 baselines",
+   "result": "CATASTROPHIC quality collapse, far beyond predicted: invalid UTF-8 bytes emitted (2 of 8 outputs unparseable), degenerate repetition loops, language-switch spam \u2014 vs coherent reasoning at keep-8. Dropping the two SMALLEST contributions (~15% gate mass) destroys generation.",
+   "verdicts": [
+    "lever 2 (expert skipping / AdapMoE-class): DEAD on GLM-5.2 \u2014 confirms both theoretical predictions (flat router; triage requires peaked importance) same-day",
+    "raises the fidelity-risk flag on ANY scheme serving selected experts at reduced contribution, including aggressive two-tier variants; the no-stall successive-refinement tier survives ONLY because its degradation mode is transient-noise-on-miss rather than contribution removal \u2014 but this result mandates a strict NLL gate before any adoption there",
+    "day's probe scoreboard: 6 decisive kills (entropy, shared-basis, RDO-by-implication, reference-coding, importance-tiering, expert-skip) + 1 lever landed (SLRU) + 2 measured foundations (gate-mass, prefetch threshold)"
+   ]
   }
  },
  "cross_domain_sweep_2026_07_26": {
