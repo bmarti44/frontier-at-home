@@ -155,7 +155,21 @@ investigation. My harness grepped only for the success string, so an attempted
 freed and the decisive comparison is now runnable. The same logs confirm the
 mechanism directly: `live kv cache miss live=5063 prompt=5066 common=5045
 reason=token-mismatch`.
-**The strict resume guard remains default.**
+**RESOLVED 2026-07-26 (root cause, not fix).** With disk space freed the regime
+reproduces on demand and the logit comparison is decisive: at the same final
+position for the same 5066-token prompt, the resumed path (start=5044,
+suffix=22) and a fresh-process reference (start=5064, suffix=2) give
+**max|Δ| = 5.911 across 154,880 logits (18.2% of the logit range), mean |Δ| =
+1.19, and different argmaxes** (14181 vs 785) with healthy margins (1.05, 1.35).
+FP reassociation lands near 1e-3, and the engine is deterministic (an earlier
+cross-process test measured max|Δ| = 0 on the same 154,880 logits), so this is
+**state, not numerics**. The resumed text corroborates it by continuing the
+previous generation's mid-thought.
+*Caveat:* the reference arm also resumes by 2 tokens, because GLM's indexed
+prefill always chunks a prompt this long; a fully chunk-free reference is not
+obtainable on this path.
+**The strict resume guard remains default; the fix (truncate to the common
+prefix instead of loading a shorter checkpoint) is not yet implemented.**
 
 ### C12. 32K context — restated
 ~~"32K functionally proven"~~ → **retrieval beyond the 8192 dense cap is

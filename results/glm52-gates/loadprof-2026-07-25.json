@@ -841,5 +841,31 @@
     "so_the_v2_fix_would_also_be_null": "yes -- switching from the env var to the CLI flag would not have changed anything either. The v2 harness is NOT run.",
     "sol_prediction_recorded_before_the_run": "'both arms execute two sweeps, ~339 GiB, identical output, causal TTFT change exactly 0%' -- matched the measurement exactly",
     "what_a_real_version_would_require": "resizing the indexed workspaces and memory guards and redesigning the top-k bridge; merging batches could change floating-point results and would need a fidelity gate. Not attempted."
+  },
+  "F13_RESOLVED_2026_07_26": {
+    "status": "ROOT-CAUSED with a real reproduction and logit-level evidence. The fix is still not implemented; the strict resume guard remains the mitigation.",
+    "how_it_was_unblocked": "the whole earlier investigation was defeated by a full disk -- the cold KV store fired every time and failed with ENOSPC, and the harness grepped only for the success string. After freeing 168 GB the store succeeds (916.82 MiB written) and the failing regime reproduces on demand.",
+    "reproduced_sequence": [
+      "KVDECIDE cached=0 source=none live=0 prompt=5047 -- cold",
+      "kv cache stored tokens=5044 trimmed=3 reason=cold size=916.82 MiB",
+      "KVDECIDE cached=0 source=none live=5063 prompt=5066 common=5045 -- BPE re-merge at the generation junction: the live session holds 5063 tokens, the append is 5066, only 5045 match",
+      "kv cache hit text tokens=5044 load=118.3 ms -- falls back to the shorter DISK checkpoint",
+      "GLM sync start=5044 prompt=5066 suffix=22 -- resumes and extends by a long suffix"
+    ],
+    "decisive_comparison": {
+      "method": "final-position logits for the SAME 5066-token prompt in both arms. The original harness demanded a cold dump with start==0, which can never exist: GLM's indexed prefill always chunks a 5000+ token prompt, so even a fresh process evaluates 5064 then +2. Corrected pairing in results/glm52-gates/harness/f13_pair_analysis.py.",
+      "resumed": "lg-X.7 start=5044 suffix=22, argmax=14181 top1=23.349 margin=1.055",
+      "cold": "lg-Y.3 start=5064 suffix=2 (fresh process, wiped KV dir), argmax=785 top1=22.902 margin=1.348",
+      "logits": 154880,
+      "max_abs_delta": 5.911,
+      "mean_abs_delta": 1.1926,
+      "delta_as_pct_of_logit_range": 18.2,
+      "same_argmax": false
+    },
+    "why_this_is_not_numerics": "chunk-shape/FP-reassociation differences land near 1e-3. This is 5.911 on a 32.5-unit logit range with a mean absolute delta of 1.19 across every logit, and the two arms pick DIFFERENT top tokens with margins of 1.05 and 1.35 -- not a near-tie flip. It is also not nondeterminism: the earlier cross-process test measured max|delta| = 0 over the same 154,880 logits.",
+    "corroborating_text_evidence": "the resumed generation opens 'Wait, the prefix ends with `#include <stdio.h` - actually the last line shown is', i.e. it continues the PREVIOUS generation's train of thought, while the cold arm opens cleanly with 'The user wants me to continue a C source file.' That is the stale-state signature the audit described.",
+    "honest_caveat": "the reference arm also resumes (start=5064, suffix=2), because the engine always chunks a prompt this long. Strictly, this shows that a 22-token resume from a 5044-token disk checkpoint diverges materially from a 2-token resume off a fresh in-process evaluation. Combined with the text signature the stale-state reading is strongly supported, but a fully chunk-free reference is not obtainable on this path.",
+    "audit_position_confirmed": "the F13 audit finding was right and my 'chunk-shape numerics, not corruption' framing was wrong. Treat as an open state bug.",
+    "next": "implement option B (truncate the live session to the common prefix on a junction mismatch instead of loading a shorter disk checkpoint), then re-run this comparison and require max|delta| to collapse to numerics scale"
   }
 }
