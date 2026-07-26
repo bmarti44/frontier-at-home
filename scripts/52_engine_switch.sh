@@ -93,6 +93,7 @@ case "${1:-status}" in
       --threshold-gib 12 --interval-sec 2 --log "$STATE/glm52.memwatch.log" &
     echo $! > "$STATE/glm52.memwatch.pid"
     DS4_GLM_TP_DEBUG=0 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
+      DS4_CUDA_EXPERT_CACHE_PIN=1 \
       "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
       --ssd-streaming --ssd-streaming-cache-experts 40GB \
       --kv-disk-dir "$KVDIR" --kv-disk-space-mb 16384 \

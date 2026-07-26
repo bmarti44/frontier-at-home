@@ -28,5 +28,29 @@
   "4. GLM MTP block / drafting: multiplies effective t/s by accept length across the ENTIRE per-token cost \u2014 the only lever that beats the byte-arithmetic ceiling",
   "5. kernel read-path bandwidth (55 GB/s effective vs ~200 attainable) \u2014 investigate before writing new kernels"
  ],
- "evidence": "results/glm52-gates/logs/loadprof1/evidence.txt (summary + last-12 LOADPROF lines); raw at dsv4:/home/dsv4/ds4-project/glm52-loadprof/"
+ "evidence": "results/glm52-gates/logs/loadprof1/evidence.txt (summary + last-12 LOADPROF lines); raw at dsv4:/home/dsv4/ds4-project/glm52-loadprof/",
+ "lever_async_plus_pin_2026_07_25": {
+  "v4.7_async_only": "cudaMemcpyAsync on pageable arena: NO gain (hit_copy 92.5 -> 91.6 ms) \u2014 pageable async falls back to staged sync copies; byte-identity held",
+  "v4.7_pinned (binary 12c4e766be8e)": {
+   "hit_copy_ms": 2.6,
+   "fill_ms": 2.1,
+   "loader_other_ms": 44.1,
+   "loader_total_ms": 276.3,
+   "fetch_ms": 227.5,
+   "kernels_ms": 107.1,
+   "arena_pin": "cudaHostRegister 67 GiB ok in 13.3 s (one-time at init; not blocked by the 15 GiB RLIMIT_MEMLOCK \u2014 driver pins via its own path)",
+   "arena_warmup_wall_s": "508 -> 54.4 (9.4x \u2014 fills were the dominant first-request penalty)",
+   "warm_repeat_wall_s": "41.1 -> 30.3",
+   "dec32_wall_s": "34.6 -> 30.4 (~93 ms/token saved)",
+   "byte_identity": "sha 9113dfd0d233 x3 identical across v4.6.2 / v4.7-async / v4.7-pinned; routing stream identical (hits 474.3 / miss 166.4 per token in all three)"
+  },
+  "serving_adoption": "DS4_CUDA_EXPERT_CACHE_PIN=1 added to scripts/52_engine_switch.sh glm52 profile",
+  "remaining_budget_per_token_ms": {
+   "fetch": 227,
+   "kernels": 107,
+   "loader_other": 44,
+   "unaccounted_attn_dense": "~250-290 (ATTN_OUTPUT_PROFILE emitted no tokens=1 lines in this window \u2014 split still open)"
+  },
+  "next": "arena size bump when GLM-only, fetch granularity (slab repack), attention-side split, MTP drafting multiplier"
+ }
 }

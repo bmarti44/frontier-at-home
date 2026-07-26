@@ -18,6 +18,8 @@ note "stopping DSV4 for profile window"
 pkill -TERM -f "llama-server.*8011" 2>/dev/null; sleep 8
 
 DS4_CUDA_LOAD_PROFILE=1 DS4_CUDA_MOE_PROFILE=1 \
+DS4_CUDA_ATTN_OUTPUT_PROFILE=${PROBE_ATTN_PROFILE:-1} \
+DS4_CUDA_EXPERT_CACHE_PIN=${PROBE_PIN:-1} \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=68 DS4_CUDA_FETCH_THREADS=6 \
   "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
   --ssd-streaming --ssd-streaming-cache-experts 40GB \
@@ -78,6 +80,15 @@ if mp:
     keys = ("xq", "sort", "gateup", "midq", "down", "sum", "total")
     agg = {k: sum(f(l, k) for l in mp) / tok for k in keys}
     print("KERNEL per-token: " + " ".join(f"{k}={agg[k]:.1f}ms" for k in keys))
+ap = [l for l in log if "attention output profile tokens=1 " in l]
+if ap:
+    ap = ap[-32 * n_layers:]
+    tok = max(1, len(ap) // n_layers)
+    agg = {k: sum(f(l, k) for l in ap) / tok for k in ("A", "B", "total")}
+    print(f"ATTN-OUT per-token: A={agg['A']:.1f}ms B={agg['B']:.1f}ms total={agg['total']:.1f}ms")
+pin = [l for l in log if "arena pin" in l]
+if pin:
+    print(pin[-1].strip())
 EOF
 cat "$OUT/timings"
 note "window done (caller restores DSV4)"
