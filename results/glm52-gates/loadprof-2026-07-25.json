@@ -828,5 +828,18 @@
     "what_caught_it": "the harness counted sweeps and summed prefill bytes from the trace instead of assuming them; identical byte totals to one decimal are impossible for genuinely different chunkings",
     "fix": "v2 uses the real CLI flag --prefill-chunk and asserts from the server's own 'prefill_chunk=N' line that the arms differ, refusing to print any comparison if they do not",
     "useful_number_that_did_come_out": "one 5047-token prefill moves 347,268 MiB = 339 GiB of expert weights across 2 sweeps, i.e. ~170 GiB per sweep -- confirming the ~176 GB/sweep estimate used to explain the flush-fix null result"
+  },
+  "FACTUAL_CORRECTION_expert_count_2026_07_26": {
+    "wrong": "GLM-5.2 has 160 experts per layer (repeated in the ledger, the memory file and several harness comments)",
+    "right": "256 experts per layer, 8 used, 1 shared, 79 layers (75 routed), n_indexer_top_k=2048 -- read directly from the DS4_VARIANT_GLM52 shape in ds4.c",
+    "how_it_surfaced": "prefill traces show unique=252/253 experts per layer, which is impossible if there were only 160. sol flagged it while explaining why both prefill batch sizes saturate nearly all experts.",
+    "consequence": "does not change any measured number, but it is the reason the prefill working set is so large: a 2048-token batch already touches ~99% of the 256 experts in every routed layer, so bigger chunks cannot help"
+  },
+  "prefill_chunk_lever_ABANDONED_2026_07_26": {
+    "verdict": "the lever does not exist as hypothesised. GLM bypasses ds4_prefill_cap_for_prompt() entirely and uses the indexed-prefill path, where glm_graph_limit_indexed_prefill_chunk() clamps the chunk to (n_indexer_top_k - pos) = 2048 and the chunk size comes from the compile-time DS4_GLM_METAL_INDEXED_PREFILL_CHUNK_TOKENS -- neither DS4_METAL_PREFILL_CHUNK nor --prefill-chunk reaches it.",
+    "verified_in_source": "ds4.c glm_graph_limit_indexed_prefill_chunk / glm_graph_indexed_prefill_chunk_tokens; shape n_indexer_top_k=2048 explains the observed 2048 + 2999 split of a 5047-token prompt",
+    "so_the_v2_fix_would_also_be_null": "yes -- switching from the env var to the CLI flag would not have changed anything either. The v2 harness is NOT run.",
+    "sol_prediction_recorded_before_the_run": "'both arms execute two sweeps, ~339 GiB, identical output, causal TTFT change exactly 0%' -- matched the measurement exactly",
+    "what_a_real_version_would_require": "resizing the indexed workspaces and memory guards and redesigning the top-k bridge; merging batches could change floating-point results and would need a fidelity gate. Not attempted."
   }
 }
