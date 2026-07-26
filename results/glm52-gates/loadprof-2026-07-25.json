@@ -554,5 +554,15 @@
   "next_step_precise": "determine what makes the cold-boundary store fire (compare the original append-probe server log's store conditions against these runs \u2014 candidate differences: request sequencing, slot state at completion, or the second-base request invalidating the pending store). Force the store, verify a 'kv cache stored' line, THEN the in-regime logit comparison becomes possible.",
   "F13_status_final_for_session": "OPEN, fully scoped, no verdict claimed. Eliminated by measurement: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0 over 154,880 logits), 'any resume diverges' (identical-work arms byte-match). Established: divergence requires a disk-checkpoint load + long-suffix extension, entered via a BPE-junction live-cache miss; the disk store is the precondition my harnesses fail to create. Strict guard remains default so multi-turn serving is correct-or-cold.",
   "infrastructure_delivered": "DS4_GLM_ROWTRACE (indexer row selection), DS4_GLM_LOGIT_DUMP_ALL with (start,prompt,suffix) tagging, DS4_KV_DECIDE_LOG (resume decision), and a probe that refuses to emit verdicts outside the target regime \u2014 all committed, all reusable"
+ },
+ "CRITICAL_batchall_fidelity_bug_2026_07_26": {
+  "severity": "CRITICAL \u2014 a lever I adopted into the serving profile silently destroys output quality on short prompts",
+  "finding": "DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 ('batchall' prefill) produces DEGENERATE OUTPUT on short prompts: repetition loops and invalid UTF-8 (e.g. '\\xe5\\xae' + 'orkorkork'; '\u5bb3\\n</think>\u5bb3\\n\\n| \u5bb3...' repeated).",
+  "clean_ab": "same binary, same prompt ('The three most important considerations when designing a distributed cache are'), ctx 8192, cache 72GB: WITH the flag -> degenerate (both SLRU on and off, ctx 8k and 32k); WITHOUT the flag -> coherent ('1. **Analyze the Request:** ... **Topic:** Designing a distributed cache.'). SLRU and context size are exonerated; the resume guard is exonerated (guard on and off both coherent without the flag).",
+  "why_it_escaped_qualification": "the lever was verified byte-identical ONLY on the 5047-token long fixture (sha b344d80e24a3). Long prompts are unaffected; short prompts are destroyed. My fidelity gate never included a short-prompt case.",
+  "consequence_for_F04": "this EXPLAINS the keep-6 'collapse' and confirms sol's F04 falsification with a mechanism: keepn_ab.sh ran WITH batchall while its keep-8 'control' came from mtp_ab.sh WITHOUT it. The collapse I attributed to expert skipping was almost certainly this flag. Expert skipping must be re-tested (FIX-B) with a valid control.",
+  "action_taken": "DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL REMOVED from the glm52 serving profile with an in-file warning; any future re-enable requires a short-prompt fidelity gate.",
+  "collateral": "the warm-TTFT results that used batchall (1.76s claim) must be re-measured without it; cold-TTFT 3.6x gain attributed to this lever is forfeit unless it can be made safe.",
+  "lesson": "byte-identity on ONE fixture is not a fidelity gate. Every lever needs short AND long prompt coverage before adoption."
  }
 }
