@@ -161,5 +161,15 @@
    "multi-session kv-disk eviction behavior",
    "align-64 raw record absent (JSON summary only)"
   ]
+ },
+ "append_probe_2026_07_26": {
+  "harness": "ttft_append_probe.sh \u2014 5047-tok base -> checkpoint -> 3 adversarial-boundary appends (resumed) vs fresh-server cold controls; exact adopted profile",
+  "verdict": "FAIL \u2014 resumed-vs-cold append continuations DIVERGE from char 0 on all three appends (X continues raw content, Y opens fresh reasoning); each path individually deterministic (ap1 repeat stable)",
+  "smoking_gun": "y_ap1 and y_ap3 outputs are byte-identical (sha 5d80ebee65e9) despite DIFFERENT appended tails \u2014 consistent with the resume path ignoring or mis-evaluating appended suffix tokens, i.e. a correctness bug in append-resume, not merely non-canonical junction tokenization",
+  "scope": "affects APPEND-style resume at any align/trim (the boundary just moves); pure exact-replay identity is unaffected (b344d80e24a3 chain still holds)",
+  "operational_impact": "warm-TTFT MET claim is valid for exact-replay traffic only; appended-turn resume (the Hermes agent pattern) must be treated as UNSAFE until root-caused \u2014 outputs are plausible and deterministic but not canonical-equivalent",
+  "appended_turn_ttft_recorded": "18.2-21.3 s per appended turn (suffix 22-29 tokens; dominated by 16-24 token decode at ~1.6 t/s, not resume overhead)",
+  "next": "root-cause with sol: (1) minimal repro comparing suffix token ids resume-vs-cold, (2) inspect glm sync suffix evaluation for appended tails after prior generation (rows 5044+ overwrite vs stale indexer/dense state), (3) check upstream for known issue; until then do NOT claim append-resume fidelity",
+  "evidence": "logs/loadprof1/append-probe-evidence.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-append-probe/"
  }
 }
