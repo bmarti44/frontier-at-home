@@ -226,6 +226,20 @@ salient-passphrase task. Capacity-edge behaviour is untested.
 
 ---
 
+### C14. SLRU eviction policy — ESTABLISHED
+Causal A/B, same binary, ABBA over two passes, n=2 per arm:
+plain LRU **2.196 t/s** (2.188, 2.204) vs SLRU **2.332 t/s** (2.298, 2.366) =
+**+6.2%**. The arms do not overlap.
+What makes it causal: the sha256 **digest of the post-warmup expert access
+stream is identical across all four arms** (`0ceb3a555ded9918`, 11,700
+accesses each), so both policies were asked for the same experts in the same
+order. Output sha is identical too — a cache policy must not change a byte.
+~~"SLRU: hit 74.0 -> 77.3%, misses -12.4%"~~ — that summary conflated SLRU's
+effect with a later prefetch result. Restated as the measured +6.2% decode.
+*Caveat:* hit-rate percentages are unavailable in this run because that counter
+prints under `DS4_GLM_TP_DEBUG`, omitted so its logging could not confound the
+timing.
+
 ## Model facts (corrected 2026-07-26)
 
 GLM-5.2 shape, read from `DS4_VARIANT_GLM52` in ds4.c: **256 experts per

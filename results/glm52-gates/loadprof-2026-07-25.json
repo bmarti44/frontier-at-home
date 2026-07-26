@@ -954,6 +954,23 @@
     "key_point": "the access-stream digests are IDENTICAL across the two policies over 11,700 accesses. Both caches were asked for exactly the same experts in exactly the same order, so the timing difference is attributable to the EVICTION POLICY and not to different traffic. That is the causal evidence the audit asked for.",
     "caveat": "hit-rate percentages are not available in this run: the periodic 'expert-cache stats' counter is printed under DS4_GLM_TP_DEBUG, which I deliberately omitted so the extra logging could not confound the timing. The comparison is therefore on decode wall time plus the matched access stream.",
     "restatement": "SLRU is worth about +5% decode over plain LRU on this fixture with a matched access stream. That is far more modest than the original framing (which mixed in a prefetch result), and it justifies keeping SLRU on without supporting the larger number.",
-    "status": "pass 1 complete; ABBA pass 2 in flight"
+    "status": "COMPLETE",
+    "FINAL_abba_n2": {
+      "lru_tok_s": [
+        2.188,
+        2.204
+      ],
+      "lru_mean": 2.196,
+      "slru_tok_s": [
+        2.298,
+        2.366
+      ],
+      "slru_mean": 2.332,
+      "gain_pct": 6.2,
+      "separation": "the arms do not overlap -- SLRU's slowest run (2.298) beats LRU's fastest (2.204)",
+      "access_digest_all_four_arms": "0ceb3a555ded9918, 11700 accesses each",
+      "output_sha_all_arms": "4a2300193eb3 -- the policy changes no output byte, as a cache policy must not",
+      "verdict": "SLRU CONFIRMED as a real, causally-attributable decode lever worth +6.2% on this fixture. Keep it enabled."
+    }
   }
 }
