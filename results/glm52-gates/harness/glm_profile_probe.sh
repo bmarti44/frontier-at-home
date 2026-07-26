@@ -17,12 +17,14 @@ note() { echo "$(date -Is) $*" >> "$OUT/run.log"; }
 note "stopping DSV4 for profile window"
 pkill -TERM -f "llama-server.*8011" 2>/dev/null; sleep 8
 
-DS4_CUDA_LOAD_PROFILE=1 DS4_CUDA_MOE_PROFILE=1 \
+DS4_CUDA_LOAD_PROFILE=${PROBE_LOAD_PROFILE:-1} DS4_CUDA_MOE_PROFILE=${PROBE_MOE_PROFILE:-1} \
 DS4_CUDA_ATTN_OUTPUT_PROFILE=${PROBE_ATTN_PROFILE:-1} \
 DS4_CUDA_EXPERT_CACHE_PIN=${PROBE_PIN:-1} \
-DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=68 DS4_CUDA_FETCH_THREADS=6 \
+DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=${PROBE_CACHE_GB:-68} \
+DS4_CUDA_FETCH_THREADS=6 \
   "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
   --ssd-streaming --ssd-streaming-cache-experts 40GB \
+  ${PROBE_EXTRA_ARGS:-} \
   > "$OUT/server.log" 2>&1 &
 SPID=$!
 trap 'kill -TERM $SPID 2>/dev/null' EXIT
@@ -52,6 +54,7 @@ fire warm2 "$OUT/f_short.json"           # hits-dominant repeat
 MARK2=$(grep -c LOADPROF "$OUT/server.log" || true)
 fire dec32 "$OUT/f_dec32.json"           # the measured decode window
 echo "marks $MARK1 $MARK2 $(grep -c LOADPROF "$OUT/server.log" || true)" >> "$OUT/timings"
+grep -iE "mtp|accept" "$OUT/server.log" | tail -12 >> "$OUT/timings" || true
 
 kill -TERM $SPID; for i in $(seq 1 60); do kill -0 $SPID 2>/dev/null || break; sleep 2; done
 trap - EXIT
