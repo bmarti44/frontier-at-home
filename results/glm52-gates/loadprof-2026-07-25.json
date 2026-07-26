@@ -1022,6 +1022,32 @@
       },
       "cost_honest": "NOT a config flip. The CUDA path casts the cache as (float *)comp_cache->ptr (ds4.c:14285, 14298) and the compressed-attention kernels assume F32. Enabling F16 requires porting those kernels to __half; true FP8 storage is a larger project again. The write path is already abstracted (F32 staging + ds4_gpu_tensor_copy_f32_to_f16, which IS implemented in the CUDA backend), so the store half is mostly done -- it is the CONSUME half that needs work.",
       "why_it_matters": "context is the metric with the largest structural gap to the DSV4 bar (1M vs 32768 configured), and this is the mechanism that would move it."
+    },
+    "WEB_RESEARCH_does_this_exist": {
+      "verdict": "FP8-on-MLA-latent is WELL-TRODDEN; sub-FP8 on the latent is genuinely OPEN.",
+      "SnapMLA_arXiv_2602_10718": {
+        "what": "FP8 for the MLA content component (cKV), BF16 retained for the RoPE component -- exactly the split derived here independently",
+        "their_measured_reason": "the RoPE component spans +/-10^3 with outlier tails while content stays within +/-10^1; FP8 on RoPE raised MSE by an order of magnitude",
+        "results": "negligible accuracy degradation, up to 1.91x throughput",
+        "does_not_attempt": "FP4 or lower on the latent",
+        "convergence_note": "ds4's dsv4_fp8_kv_quantize_row_inplace_cpu already rounds ONLY n_nope = head_dim - n_rot, i.e. DeepSeek arrived at the same content/RoPE split independently"
+      },
+      "production_precedent": "vLLM ships FP8 KV and describes it as safe across virtually all tasks; SGLang has quantized KV as well. Our FP8 tier is catching CUDA up to what Apple already does in this same engine, not inventing anything.",
+      "SUB_FP8_PREDICTION_recorded_before_measuring": {
+        "datum": "DeepSeek MLA with Q4 KV reported at +0.19 PPL (+3.0%)",
+        "converted": "ln(1.03) = 0.0296 nat/token, about 3x our pre-declared 0.01 nat/token budget",
+        "prediction": "plain FP4 on the latent will FAIL our fidelity gate as a naive drop-in",
+        "mechanism_matches_our_own_caution": "the MLA compressed latent has LESS redundancy to absorb 4-bit rounding error than a standard MHA/GQA cache, and asymmetric K/V dims (K=192, V=128) distribute error unevenly -- so KIVI/KVQuant 2-bit headline numbers should not be assumed to transfer",
+        "only_plausible_path_under_budget": "rotation before quantization (QuIP#/QuaRot/SpinQuant family); ds4 already implements Hadamard-then-FP4 for the indexer path at ds4.c:3268/3295, so the machinery exists to borrow. Kitty (arXiv 2511.18643) 2-bit with dynamic channel-wise precision boost is the other candidate."
+      },
+      "sources": [
+        "arxiv.org/html/2602.10718v2 (SnapMLA)",
+        "vllm-project.github.io/2026/04/22/fp8-kvcache.html",
+        "sgl-project-sglang-93.mintlify.app/optimization/quantized-kv-cache",
+        "arxiv.org/pdf/2511.18643 (Kitty)",
+        "ai-infrastructure.net/nvfp4-quantization/",
+        "arxiv.org/pdf/2601.19910"
+      ]
     }
   }
 }
