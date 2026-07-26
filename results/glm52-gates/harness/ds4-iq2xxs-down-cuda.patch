@@ -1,5 +1,5 @@
 diff --git a/ds4.c b/ds4.c
-index 1a79a01..bd5b214 100644
+index 1a79a01..e54dde4 100644
 --- a/ds4.c
 +++ b/ds4.c
 @@ -38024,8 +38024,8 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
@@ -449,6 +449,121 @@ index 1a79a01..bd5b214 100644
      return ok;
  }
  
+@@ -47467,6 +47671,12 @@ struct ds4_session {
+     ds4_kv_cache cpu_cache;
+     ds4_cpu_decode_scratch cpu_scratch;
+     token_vec checkpoint;
++    /* GLM resume-frontier guard: full token lineage the graph has
++     * evaluated since the last cold start. Maintained by
++     * ds4_session_rewind (snapshot before the token checkpoint is
++     * shortened without a graph rewind) and cleared on invalidate.
++     * See docs/ds4-glm-resume-frontier-bug-2026-07-26.md. */
++    token_vec glm_evaluated;
+     token_vec greedy_splitkv_segment;
+     float *logits;
+     float *sample_probs;
+@@ -48876,6 +49086,14 @@ int ds4_session_load_layer_payload(ds4_session *s, FILE *fp,
+             rc = 1;
+         }
+         if (rc == 0) {
++            if (s->checkpoint.len > s->glm_evaluated.len) {
++                /* resume-frontier guard bookkeeping: the graph held a
++                 * longer live lineage before this shard restore; rows and
++                 * frontier state above the restored length are not rewound
++                 * by the load (docs/ds4-glm-resume-frontier-bug). */
++                ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                                (const ds4_tokens *)&s->checkpoint);
++            }
+             token_vec_free(&s->checkpoint);
+             memset(&s->checkpoint, 0, sizeof(s->checkpoint));
+             for (uint32_t i = 0; i < n_tokens; i++) token_vec_push(&s->checkpoint, tokens[i]);
+@@ -49089,6 +49307,14 @@ int ds4_session_load_layer_payload(ds4_session *s, FILE *fp,
+         rc = 1;
+     }
+     if (rc == 0) {
++        if (s->checkpoint.len > s->glm_evaluated.len) {
++            /* resume-frontier guard bookkeeping: the graph held a
++             * longer live lineage before this shard restore; rows and
++             * frontier state above the restored length are not rewound
++             * by the load (docs/ds4-glm-resume-frontier-bug). */
++            ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                            (const ds4_tokens *)&s->checkpoint);
++        }
+         token_vec_free(&s->checkpoint);
+         memset(&s->checkpoint, 0, sizeof(s->checkpoint));
+         for (uint32_t i = 0; i < n_tokens; i++) token_vec_push(&s->checkpoint, tokens[i]);
+@@ -56757,6 +56983,7 @@ void ds4_session_free(ds4_session *s) {
+     }
+ #endif
+     token_vec_free(&s->checkpoint);
++    token_vec_free(&s->glm_evaluated);
+     token_vec_free(&s->greedy_splitkv_segment);
+     free(s->logits);
+     free(s->sample_probs);
+@@ -57865,7 +58092,40 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+             start = s->checkpoint.len;
+             resumed_checkpoint = true;
+             s->mtp_draft_valid = false;
+-        } else {
++        }
++        if (resumed_checkpoint &&
++            s->glm_evaluated.len > s->checkpoint.len) {
++            /* Resume-frontier guard: graph state extends past the token
++             * checkpoint (a rewind shortened tokens without rewinding the
++             * graph). Resuming is only proven byte-safe when the new prompt
++             * is a pure prefix-replay of the evaluated lineage; extension or
++             * divergence corrupts (append-resume bug,
++             * docs/ds4-glm-resume-frontier-bug-2026-07-26.md). Force the
++             * proven cold path otherwise. */
++            bool replay = prompt->len <= s->glm_evaluated.len;
++            if (replay) {
++                for (int gi = start; gi < prompt->len; gi++) {
++                    if (prompt->v[gi] != s->glm_evaluated.v[gi]) {
++                        replay = false;
++                        break;
++                    }
++                }
++            }
++            if (!replay) {
++                fprintf(stderr,
++                        "ds4: GLM resume guard: prompt (%d) extends/diverges "
++                        "past evaluated frontier %d (checkpoint %d) — "
++                        "cold restart for correctness\n",
++                        prompt->len, s->glm_evaluated.len, start);
++                start = 0;
++                resumed_checkpoint = false;
++                s->checkpoint.len = 0;
++                s->checkpoint_valid = false;
++                s->glm_evaluated.len = 0;
++                ds4_session_glm_reset_dense_cache(s);
++            }
++        }
++        if (!resumed_checkpoint) {
+             s->checkpoint.len = 0;
+             s->checkpoint_valid = false;
+             s->mtp_draft_valid = false;
+@@ -64506,6 +64766,7 @@ void ds4_session_invalidate(ds4_session *s) {
+     }
+     s->checkpoint_valid = false;
+     s->checkpoint.len = 0;
++    s->glm_evaluated.len = 0;
+     s->mtp_draft_valid = false;
+     ds4_session_dspark_capture_invalidate(s);
+ #ifndef DS4_NO_GPU
+@@ -64520,6 +64781,13 @@ void ds4_session_rewind(ds4_session *s, int pos) {
+     }
+     if (pos < 0) pos = 0;
+     if (pos > s->checkpoint.len) pos = s->checkpoint.len;
++    if (pos < s->checkpoint.len) {
++        /* The graph is NOT rewound here; remember the full lineage it has
++         * actually evaluated so the GLM sync resume guard can tell pure
++         * prefix-replay (safe) from divergence/extension (must cold-start). */
++        ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                        (const ds4_tokens *)&s->checkpoint);
++    }
+     s->checkpoint.len = pos;
+     s->mtp_draft_valid = false;
+     ds4_session_dspark_capture_invalidate(s);
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
 index 041e162..09d64ce 100644
 --- a/ds4_cuda.cu

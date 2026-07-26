@@ -196,5 +196,16 @@
   "final_bug_statement": "ds4 GLM disk-KV resume with a different-suffix prompt continues generation from the previous lineage's frontier state instead of the new prompt: UNSAFE for ALL multi-turn traffic (adversarial and realistic shapes). Exact-replay only rewrites identical content and is unaffected. Upstream bug (present without local patches).",
   "operational_ruling": "GLM serving MUST NOT rely on kv-disk resume for multi-turn traffic until the frontier fix (option B) or the full-reset guard (option A) is implemented. Warm-TTFT 1.77s stands for exact-replay; multi-turn warm TTFT is effectively cold (~150s) pending the fix.",
   "next_session": "implement option A guard first (correctness), then option B (frontier truncation) for performance; file upstream repro (option C)"
+ },
+ "v48_guard_attempt_2026_07_26": {
+  "code": "v4.8/v4.8b (binary fe78d8a744b7, dsv4 tree uncommitted-pending-review): session token_vec glm_evaluated + snapshot hooks in ds4_session_rewind and both KV-shard-restore sites + prefix-replay-only resume guard in the GLM sync block",
+  "validation": "replay path PERFECT (warm2 1.764s, byte-identical, guard silent). Append path: guard fired 0 times, corruption unchanged \u2014 hooks miss the real transition.",
+  "decisive_server_log_evidence": [
+   "live kv cache miss live=5063 prompt=5066 common=5045 reason=token-mismatch \u2014 BPE re-merge at the base/generation junction reaches BACK into the base tail: canonical append-prompt tokens diverge from live tokens at 5045, so the live-continuation path (which would be correct) never engages for raw completions traffic",
+   "server then stores live to disk (evict, tokens=5063) and LOADS the 5044 cold shard (916.8 MiB, ~114ms) into the same session \u2014 the load path invalidates the session first (clearing glm_evaluated), so the guard sees a fresh lineage",
+   "corruption therefore occurs on a FRESHLY SHARD-LOADED graph extended past its loaded length: the shard restore repopulates rows/caches but evidently NOT the sparse/indexer frontier accumulators (sol's 'disk risk') \u2014 OR extension-after-load is broken for a different reason; suffix-3 replay after the same load stays byte-correct"
+  ],
+  "next_fix_site": "server-side, ONE function: kv_cache_try_load_text knows pre-load live length; if pre_live > loaded_len (or if any load lands on a session whose graph advanced past loaded_len since cold), invalidate and take the cold path \u2014 UNLESS replay probes prove suffix<=resume_min safe (b_warm's exact path through evict+load needs one tracing run to know whether preserving 1.77s survives this guard)",
+  "status": "guard groundwork landed and validated harmless; real choke point identified with raw log evidence; fix completion + sol review = next session"
  }
 }
