@@ -99,6 +99,7 @@ case "${1:-status}" in
       --ssd-streaming --ssd-streaming-cache-experts 40GB \
       --kv-disk-dir "$KVDIR" --kv-disk-space-mb 16384 \
       --kv-cache-boundary-align-tokens 4 \
+      --kv-cache-boundary-trim-tokens 0 \
       > "$STATE/glm52.server.log" 2>&1 &
     SP=$!
     echo "$SP" > "$STATE/glm52.pid"
