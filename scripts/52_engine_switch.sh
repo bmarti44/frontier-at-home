@@ -95,7 +95,7 @@ case "${1:-status}" in
     DS4_GLM_TP_DEBUG=0 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
       DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
       DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 \
-      "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
+      "$SRC/ds4-server" --cuda -m "$GGUF" -c 32768 --host 127.0.0.1 --port $PORT \
       --ssd-streaming --ssd-streaming-cache-experts 40GB \
       --kv-disk-dir "$KVDIR" --kv-disk-space-mb 16384 \
       --kv-cache-boundary-align-tokens 4 \

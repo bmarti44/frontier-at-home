@@ -140,5 +140,13 @@
    ],
    "serving_adoption": "align 4 + trim 0 now in 52_engine_switch.sh glm52 profile"
   }
+ },
+ "ctx32k_smoke_2026_07_26": {
+  "config": "-c 32768, otherwise identical serving pins (ctx32k-smoke window, rc=0, no floor-kill)",
+  "memory": "context buffers 10.2 GiB + compact DSA cache 5.81 GiB (rows=32768 f32, kv_layers 78 + indexer 21) \u2014 total serving footprint ~98 GiB with 72GB arena, ~21 GiB headroom",
+  "identity": "warm1/warm2/dec32 sha 9113dfd0d233 x3 \u2014 byte-identical to the 8K-ctx reference",
+  "decode": "dec32 wall 30.4s \u2014 unchanged vs 8K",
+  "BAR": "CONTEXT WINDOW MET: GLM-5.2 now serves 32K ctx = DSV4's window (user bar: 'similar/better performance metrics AND content window size'); adopted -c 32768 in glm52 profile",
+  "note": "kv-disk-space-mb 16384 holds ~2 full-32K checkpoints (5.8 GiB each); raise if multi-conversation checkpointing thrashes"
  }
 }
