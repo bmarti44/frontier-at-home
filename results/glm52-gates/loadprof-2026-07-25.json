@@ -917,9 +917,27 @@
       "keep8_s": 354,
       "keep6_s": 314,
       "gain_pct": 11.3,
-      "conclusion": "the expert-skip speed gain is REAL and not a token-trajectory artifact; the trajectory-controlled figure is +11.3%, slightly below the +13.0% free-running measurement"
+      "conclusion": "the expert-skip speed gain is REAL and not a token-trajectory artifact; the trajectory-controlled figure is +11.3%, slightly below the +13.0% free-running measurement",
+      "caveat_n": "these elapsed times are ONE observation per arm. keep-7 at -2.0% and keep-6 at -11.3% are not monotone with the byte reduction, which is what n=1 timing noise looks like. The free-running decode_ab numbers (n=4/arm) remain the better speed estimate; this run's value is that it controls the token trajectory, not that it is precise."
     },
     "decision": "keep-6 buys ~11% decode for a 15% relative NLL degradation. Not shipped. scripts/52_engine_switch.sh is unchanged and does NOT set DS4_GLM_TOPK_KEEP.",
-    "limitations": "n=16 of 100 available cases; cases are short (about 23-token prompts, 24-token targets, 384 scored tokens per arm). The CI excludes zero so the direction is established, but the magnitude is loosely bounded."
+    "limitations": "n=16 of 100 available cases; cases are short (about 23-token prompts, 24-token targets, 384 scored tokens per arm). The CI excludes zero so the direction is established, but the magnitude is loosely bounded.",
+    "keep7_added": {
+      "mean_nll": 0.5436,
+      "first_token": "11/16",
+      "paired_delta_nll": 0.0169,
+      "ci95": [
+        -0.0397,
+        0.0735
+      ],
+      "gate": "point estimate is 2x the 0.01 threshold but the 95% CI spans zero -- INCONCLUSIVE at n=16, not a pass",
+      "teacher_forced_elapsed_s": 347
+    },
+    "FINAL_DECISION": {
+      "adopted": "NONE. Expert skipping is not enabled at any level.",
+      "keep6": "fails fidelity by 8x with a CI excluding zero, for ~11% decode",
+      "keep7": "fidelity inconclusive (CI spans zero, point estimate 2x over) and its speed benefit is not established -- the trajectory-controlled run gave only -2.0% (347 s vs 354 s), against +10% free-running",
+      "serving_profile": "scripts/52_engine_switch.sh unchanged; sets no DS4_GLM_TOPK_KEEP and no DS4_GLM_TOPK_SKIP_LOAD"
+    }
   }
 }

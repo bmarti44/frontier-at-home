@@ -17,7 +17,16 @@ Last updated 2026-07-26.
 
 ## Performance
 
-### C1. Expert skipping reduces decode bytes and time — SUPPORTED
+### C1. Expert skipping — MEASURED, REJECTED (fidelity)
+**Final decision: not adopted at any level.** The fidelity gate (C2) reports
+keep-6 ΔNLL +0.0799 nat/token, 95% CI [+0.0135, +0.1463] — 8x the 0.01
+threshold with the CI excluding zero — for ~11% decode. keep-7 is inconclusive
+(ΔNLL +0.0169, CI [-0.0397, +0.0735] spans zero) and its speed benefit is not
+established: the trajectory-controlled run gave -2.0%, against +10%
+free-running. `52_engine_switch.sh` sets neither knob.
+The speed measurements below stand; they are simply not worth their cost.
+
+#### Speed as measured — SUPPORTED
 `DS4_GLM_TOPK_KEEP=N` + `DS4_GLM_TOPK_SKIP_LOAD=1`:
 keep-7 **+10.0%**, keep-6 **+13.0%** decode vs a same-binary keep-8 control
 (2.293 t/s), n=4 per arm, ABBA across two passes.
@@ -35,13 +44,25 @@ that ablated contributions while still loading all 8 experts, with a control
 from a *different* configuration, under a `batchall` flag later shown to
 corrupt short-prompt output on its own.
 
-### C2. Fidelity cost of expert skipping — OPEN
+### C2. Fidelity cost of expert skipping — MEASURED, GATE FAILED
 Coherence, valid UTF-8 and low 3-gram repetition are **liveness checks, not
 fidelity**; they cannot see factual drift, reasoning collapse or wrong code.
-The gate is paired teacher-forced NLL on the committed `glm52-openrouter-100`
-suite, keep-8 vs keep-6, same case subset, reporting mean/median/p90 ΔNLL with
-a paired CI and first-token agreement. Provisional thresholds: mean ΔNLL
-≤ 0.01 nat/token, top-1 loss ≤ 0.5 pp.
+Ran: paired teacher-forced NLL, `glm52-openrouter-100`, 16 of 100 cases,
+identical subset in all three arms, scorer relinked against current objects.
+
+| arm | mean NLL | first-token | ΔNLL vs keep-8 | 95% CI |
+|---|---|---|---|---|
+| keep-8 | 0.5267 | 12/16 | — | — |
+| keep-7 | 0.5436 | 11/16 | +0.0169 | [-0.0397, +0.0735] |
+| keep-6 | 0.6066 | 12/16 | +0.0799 | [+0.0135, +0.1463] |
+
+**keep-6 FAILS** (8x the 0.01 threshold, CI excludes zero, worse on 11/16
+cases). **keep-7 is INCONCLUSIVE** — point estimate 2x over, CI spans zero.
+
+The reason the earlier checks missed this: first-token agreement is *identical*
+(12/16) between keep-8 and keep-6, and both produce clean coherent English. The
+damage is distributed across the probability mass, invisible at the argmax.
+That is sol's "coherence is liveness, not fidelity" objection, demonstrated.
 
 ### C3. Warm TTFT 1.755 s — SUPPORTED, with a dependency
 Measured cold 147.6 s / warm1 2.378 s / warm2 1.755 s, identical output sha
