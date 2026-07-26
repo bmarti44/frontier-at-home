@@ -1,638 +1,657 @@
 {
- "artifact": "decode-path profile, GLM-5.2 ds4 streaming v4.6.2 (binary 3128c56c5453), 68GB arena, 6 fetch threads",
- "timestamp": "2026-07-25T22:16:00-04:00",
- "window": "warm1 (arena warmup 508s) -> warm2 (41s) -> dec32 (35s); aggregation over 59 token-loads after warm2 mark",
- "per_token_ms": {
-  "loader_total": 342.8,
-  "miss_fetch": 214.9,
-  "hit_copy": 92.5,
-  "arena_fill": 34.5,
-  "moe_kernels_total": 107.3,
-  "moe_gateup": 70.6,
-  "moe_down": 35.6,
-  "note": "wall was ~768 ms/token in this window (profile eventSync + fprintf overhead inflate it; serving wall is ~714)"
- },
- "derived": {
-  "hits_per_token": 474.3,
-  "misses_per_token": 166.4,
-  "hit_rate": 0.74,
-  "hit_copy_diagnosis": "474 slabs x 3 cudaMemcpy = 1422 calls at ~62-65us/call -> call-overhead dominated, not bandwidth (4.4 GB at only 47 GB/s)",
-  "fetch_diagnosis": "1.54 GB/token at ~7.2 GB/s aggregate; per-layer lines show ~1.05 ms per single miss (3x 3.1MB reads) \u2014 near the drive's random ceiling for 3.1MB granularity; 9.3MB contiguous slab reads would reach ~12.5 GB/s (QD sweep)",
-  "kernel_diagnosis": "gateup+down read 5.86 GB/token of expert weights at ~55 GB/s effective \u2014 this 107 ms is the floor that remains even at 100% hit rate with zero copies",
-  "decode_ceiling_faithful": "~6-8 t/s with every loader cost removed (kernels + attention/dense remain); consistent with research doc's 5.5-9. Only levers past it: fewer bytes/token (MTP drafting multiplier) or faster kernel read path"
- },
- "ranked_next_levers_by_measured_value": [
-  "1. async/batched hit copies + fills (92.5+34.5 -> ~20 ms; ~30 lines, no kernel changes) then re-measure before deciding on full zero-copy pointer-indirection",
-  "2. arena 68 -> ~86 GB in GLM-only serving (DSV4 not resident): LRU curve puts hit ~85%, fetch 215 -> ~130 ms \u2014 pure config",
-  "3. GGUF slab repack (gate|up|down contiguous per expert): fetch granularity 3.1 -> 9.3 MB, ~7.2 -> ~11-12.5 GB/s",
-  "4. GLM MTP block / drafting: multiplies effective t/s by accept length across the ENTIRE per-token cost \u2014 the only lever that beats the byte-arithmetic ceiling",
-  "5. kernel read-path bandwidth (55 GB/s effective vs ~200 attainable) \u2014 investigate before writing new kernels"
- ],
- "evidence": "results/glm52-gates/logs/loadprof1/evidence.txt (summary + last-12 LOADPROF lines); raw at dsv4:/home/dsv4/ds4-project/glm52-loadprof/",
- "lever_async_plus_pin_2026_07_25": {
-  "v4.7_async_only": "cudaMemcpyAsync on pageable arena: NO gain (hit_copy 92.5 -> 91.6 ms) \u2014 pageable async falls back to staged sync copies; byte-identity held",
-  "v4.7_pinned (binary 12c4e766be8e)": {
-   "hit_copy_ms": 2.6,
-   "fill_ms": 2.1,
-   "loader_other_ms": 44.1,
-   "loader_total_ms": 276.3,
-   "fetch_ms": 227.5,
-   "kernels_ms": 107.1,
-   "arena_pin": "cudaHostRegister 67 GiB ok in 13.3 s (one-time at init; not blocked by the 15 GiB RLIMIT_MEMLOCK \u2014 driver pins via its own path)",
-   "arena_warmup_wall_s": "508 -> 54.4 (9.4x \u2014 fills were the dominant first-request penalty)",
-   "warm_repeat_wall_s": "41.1 -> 30.3",
-   "dec32_wall_s": "34.6 -> 30.4 (~93 ms/token saved)",
-   "byte_identity": "sha 9113dfd0d233 x3 identical across v4.6.2 / v4.7-async / v4.7-pinned; routing stream identical (hits 474.3 / miss 166.4 per token in all three)"
+  "artifact": "decode-path profile, GLM-5.2 ds4 streaming v4.6.2 (binary 3128c56c5453), 68GB arena, 6 fetch threads",
+  "timestamp": "2026-07-25T22:16:00-04:00",
+  "window": "warm1 (arena warmup 508s) -> warm2 (41s) -> dec32 (35s); aggregation over 59 token-loads after warm2 mark",
+  "per_token_ms": {
+    "loader_total": 342.8,
+    "miss_fetch": 214.9,
+    "hit_copy": 92.5,
+    "arena_fill": 34.5,
+    "moe_kernels_total": 107.3,
+    "moe_gateup": 70.6,
+    "moe_down": 35.6,
+    "note": "wall was ~768 ms/token in this window (profile eventSync + fprintf overhead inflate it; serving wall is ~714)"
   },
-  "serving_adoption": "DS4_CUDA_EXPERT_CACHE_PIN=1 added to scripts/52_engine_switch.sh glm52 profile",
-  "remaining_budget_per_token_ms": {
-   "fetch": 227,
-   "kernels": 107,
-   "loader_other": 44,
-   "unaccounted_attn_dense": "~250-290 (ATTN_OUTPUT_PROFILE emitted no tokens=1 lines in this window \u2014 split still open)"
+  "derived": {
+    "hits_per_token": 474.3,
+    "misses_per_token": 166.4,
+    "hit_rate": 0.74,
+    "hit_copy_diagnosis": "474 slabs x 3 cudaMemcpy = 1422 calls at ~62-65us/call -> call-overhead dominated, not bandwidth (4.4 GB at only 47 GB/s)",
+    "fetch_diagnosis": "1.54 GB/token at ~7.2 GB/s aggregate; per-layer lines show ~1.05 ms per single miss (3x 3.1MB reads) \u2014 near the drive's random ceiling for 3.1MB granularity; 9.3MB contiguous slab reads would reach ~12.5 GB/s (QD sweep)",
+    "kernel_diagnosis": "gateup+down read 5.86 GB/token of expert weights at ~55 GB/s effective \u2014 this 107 ms is the floor that remains even at 100% hit rate with zero copies",
+    "decode_ceiling_faithful": "~6-8 t/s with every loader cost removed (kernels + attention/dense remain); consistent with research doc's 5.5-9. Only levers past it: fewer bytes/token (MTP drafting multiplier) or faster kernel read path"
   },
-  "next": "arena size bump when GLM-only, fetch granularity (slab repack), attention-side split, MTP drafting multiplier"
- },
- "sol_review_v47": {
-  "round1": "FAIL \u2014 3 MED (sticky pin error state; deferred fill failure can leave stale cache slot; no unregister lifecycle) + 4 LOW (RLIMIT not a guard; LOADPROF field semantics; timespec UB; per-thread-default-stream fragility)",
-  "fixes_v471 (binary a506f29d459f)": [
-   "MED1: cudaGetLastError() clears sticky state after failed pin; consumed prior error logged if it differs",
-   "MED2: cuda_expert_cache_flush_all() on all four CUDA-error reject paths in begin_load \u2014 no published slot survives a failed sync point; outside-begin_load deferred errors treated as poisoned context (fail-visible)",
-   "MED3: arena_pinned flag + cudaHostUnregister in ds4_gpu_cleanup (after device sync); incompatible-layout in-process reload deferred \u2014 one model per process lifetime by deployment",
-   "LOW6: timespecs zero-initialized; LOW7: cudaStreamLegacy explicit in all 9 async calls",
-   "LOW4 documented: operational memory guard is the kill-floor watchdog, NOT RLIMIT_MEMLOCK (67 GiB registered under a 15 GiB limit \u2014 driver path bypasses it)",
-   "LOW5 documented: post-pin hit_ms/fill_ms are ENQUEUE times (DMA completion lands in the next sync point); seq-fetch path (<2 threads) reports zero fetch/fill \u2014 profile is only used in the 6-worker config"
+  "ranked_next_levers_by_measured_value": [
+    "1. async/batched hit copies + fills (92.5+34.5 -> ~20 ms; ~30 lines, no kernel changes) then re-measure before deciding on full zero-copy pointer-indirection",
+    "2. arena 68 -> ~86 GB in GLM-only serving (DSV4 not resident): LRU curve puts hit ~85%, fetch 215 -> ~130 ms \u2014 pure config",
+    "3. GGUF slab repack (gate|up|down contiguous per expert): fetch granularity 3.1 -> 9.3 MB, ~7.2 -> ~11-12.5 GB/s",
+    "4. GLM MTP block / drafting: multiplies effective t/s by accept length across the ENTIRE per-token cost \u2014 the only lever that beats the byte-arithmetic ceiling",
+    "5. kernel read-path bandwidth (55 GB/s effective vs ~200 attainable) \u2014 investigate before writing new kernels"
   ],
-  "revalidation": "byte-identity sha x3 unchanged, routing identical, hit-copy 2.7ms / fill 2.1ms / warmup 50.9s \u2014 fixes cost nothing",
-  "round2": "PASS \u2014 all 7 findings addressed or deferred-with-justification; 'no new correctness, lifecycle, or stream-ordering defects found' (logs/loadprof1/sol-v471-round2-PASS.txt)"
- },
- "mtp_probe_2026_07_25": {
-  "discovery": "the served GGUF carries the MTP block (blk.78.nextn.eh_proj/enorm/hnorm/shared_head_norm \u2014 the 'blk78Q2K' in the artifact name) and ds4 has integrated greedy GLM MTP speculation (--glm-mtp / --glm-mtp-timing), depth hard-wired to 1 (verify2: 2-token batch verify, commit at most 2)",
-  "window": "mtp-probe1: serving pins + pin'd arena 68GB + --glm-mtp-timing, MOE_PROFILE off",
-  "measured": {
-   "cycles": 65,
-   "accept_rate": 0.48,
-   "verify2_warm_ms": "~630-730",
-   "head_draft_ms": "~12-19",
-   "tokens_per_cycle": 1.48,
-   "effective": "~472 ms/token vs ~610 single-token -> ~1.3x decode speedup at depth 1",
-   "loader_shift": "2-token verify loads more unique experts/layer: fetch 229 -> 284 ms/token-equivalent, hits 474->618 per aggregated token"
-  },
-  "identity_caveat": "MTP output is NOT byte-identical to single-token decode: warm2/dec32 sha 6da984e6bb80 vs baseline 9113dfd0d233 (within-run stable: warm2==dec32). Cause: the 2-token verify batch takes the n_tokens>1 kernel path whose FP summation order differs, so greedy flips at near-ties. warm1 (first request, no draft state yet) matched baseline exactly. Any adoption requires the 100-case NLL fidelity suite re-run in MTP mode instead of byte-vs-baseline.",
-  "arena_bump_ruled_out": "86GB arena would breach the kill floor (engine non-arena RSS ~30 GiB; 97 total observed at 68GB arena). Safe max ~75GB buys only ~2-3 LRU hit points per the committed trace curve \u2014 not worth a window. The fetch levers are slab repack (read granularity 3.1->9.3MB) and admission policy (LRU 74% vs Belady 88% at same size).",
-  "next": [
-   "fidelity suite (100-case NLL) with --glm-mtp before serving adoption",
-   "deeper draft chain (engine extension; machinery present: chained mtp_step + N+1-row verify)",
-   "slab repack",
-   "admission policy vs Belady gap"
-  ]
- },
- "mtp_ab_2026_07_25": {
-  "harness": "results/glm52-gates/harness/mtp_ab.sh (8 varied prompts, greedy 96 tok, 2 passes per config, pass-2 timed, pinned arena 68GB)",
-  "results": {
-   "decode_off_tok_s": 1.61,
-   "decode_on_tok_s": 1.77,
-   "speedup": "1.10x",
-   "accept_rate": "72.5% (647/892 cycles)",
-   "why_so_small": "the 2-token verify batch loads ~1.5x unique experts per step on the streaming stack \u2014 expert-diversity cost eats the speculation gain (tokens/cycle 1.72x vs bytes/step ~1.5x). MTP only amortizes the FIXED per-step costs (~250ms attention/host), hence ~+10% net.",
-   "agreement": "0/8 prompts identical to single-token decode; divergences are greedy tie-flips under 2-token-batch FP ordering (both continuations coherent; first divergence 100-370 chars in)"
-  },
-  "verdict": "NOT adopted for serving yet: +10% decode does not justify losing byte-reproducibility vs the qualified single-token config. Structural insight recorded: speculation on streamed MoE is bounded by expert-diversity growth, not acceptance rate \u2014 deeper drafts make this WORSE unless hit rate is near 100%. Revisit if/when hit rate rises (repack + admission policy) since the expert-side penalty then drops to kernel-only.",
-  "evidence": "logs/loadprof1/mtp-ab2-summary.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-mtp-ab/"
- },
- "warm_ttft_2026_07_26": {
-  "root_cause_probe": "ttft_probe3.sh: warm request correctly resumes from disk-KV checkpoint and batch-prefills only the suffix (sync trace committed). The recorded 19.0s bench3 number predated the pinned arena + batchall levers.",
-  "alignment_sweep_5047tok": {
-   "align_64": {
-    "warm2_s": 5.52,
-    "suffix": 55
-   },
-   "align_16": {
-    "warm2_s": 4.56,
-    "suffix": 39
-   },
-   "align_4": {
-    "warm2_s": 4.22,
-    "suffix": 35,
-    "cold_s": 153.7
-   }
-  },
-  "fit": "warm_ttft ~= 2.0s fixed + ~65ms/suffix-token; suffix floors at ~35 (checkpoint rule + resume_min=4), so finer align stops paying below 16",
-  "current_best_warm_ttft_s": 4.22,
-  "progression": "33.5 -> 19.0 -> 4.22 s (pin + batchall + align 4)",
-  "bar_gap": "DSV4 <2s; remaining fixed ~2.0s = checkpoint restore + engine bookkeeping + 1 decode token (~0.62s). Sub-2s needs in-RAM session/prefix KV cache (engine change \u2014 llama.cpp does 1.56s this way on the same box) or a faster restore path.",
-  "serving_adoption": "52_engine_switch.sh glm52 now carries ALL proven levers: pin, batchall, align 4, and FETCH_THREADS=6 (which was missing from the profile \u2014 benched at 2x decode but never adopted; fixed)",
-  "trim0_result": {
-   "config": "align 4 + trim 0 (--kv-cache-boundary-trim-tokens 0; default 32 was the cap: store_len = tokens - trim, floored to align \u2014 explains 4992/5008/5012 exactly)",
-   "measured": {
-    "cold_s": 196.7,
-    "warm1_s": 3.37,
-    "warm2_s": 1.764,
-    "suffix": 3
-   },
-   "BAR": "QUALIFIED per sol audit (SUPPORTED-WITH-GAPS): steady-state exact-replay 1.764 s at ctx=8192; first-warm 3.37 s; not yet measured on the final adopted profile; appended-turn distribution and trim=0 BPE-boundary safety unproven. Re-gate in ctx_regate.sh.",
-   "progression_final": "33.5 -> 19.0 -> 4.22 -> 1.76 s",
-   "caveats": [
-    "trim 0 stores dynamic prompt tails; for append-style agent traffic this only costs extra tail-chunk rewrites on disk, no correctness impact (LCP just matches less on a changed tail)",
-    "cold wall 196.7s this window vs 153.7 at trim 32 (+150 loadprof lines) \u2014 extra store passes at the finer boundary; cold is once-per-novel-prefix",
-    "warm1 (first warm after cold) pays ~3.4s locality warmup; steady-state repeats 1.76s",
-    "no engine code change needed \u2014 task #38's in-RAM session reuse would shave the remaining ~1.1s of restore/bookkeeping but is no longer required for the bar"
-   ],
-   "serving_adoption": "align 4 + trim 0 now in 52_engine_switch.sh glm52 profile"
-  }
- },
- "ctx32k_smoke_2026_07_26": {
-  "config": "-c 32768, otherwise identical serving pins (ctx32k-smoke window, rc=0, no floor-kill)",
-  "memory": "context buffers 10.2 GiB + compact DSA cache 5.81 GiB (rows=32768 f32, kv_layers 78 + indexer 21) \u2014 total serving footprint ~98 GiB with 72GB arena, ~21 GiB headroom",
-  "identity": "warm1/warm2/dec32 sha 9113dfd0d233 x3 \u2014 byte-identical to the 8K-ctx reference",
-  "decode": "dec32 wall 30.4s \u2014 unchanged vs 8K",
-  "BAR": "DOWNGRADED per sol audit (NOT SUPPORTED): allocation/startup + short-context regression smoke passed; functional 32K window NOT yet validated (no request crossed row 8192, no raw evidence committed). Re-gate harness ctx_regate.sh addresses both.",
-  "note": "kv-disk-space-mb 16384 holds ~2 full-32K checkpoints (5.8 GiB each); raise if multi-conversation checkpointing thrashes"
- },
- "sol_night_audit": "logs/loadprof1/sol-night-audit.txt \u2014 claim1 SUPPORTED-WITH-GAPS (6 findings), claim2 NOT SUPPORTED (5 findings); re-gate requirements adopted verbatim",
- "sol_regate_2026_07_26": {
-  "harnesses": "ctx_regate.sh + ctx_a_retry.sh, exact adopted glm52 profile (ctx 32768, arena 72 pinned, batchall, align 4 trim 0, kv-disk 16GB), HTTP codes captured",
-  "A_functional_32k": "PASS \u2014 11,648-token prompt, passphrase planted at ~row 10K (beyond dense cap 8192): retrieved exactly ('KESTREL-4491'), deterministic x2 (sha 348a60ced056); cold 346s, resumed repeat 14.6s (checkpoint 11648, suffix 1). ctx_cap=8192 in traces is the DENSE-attention cap; indexed path handles rows above it.",
-  "B_ttft_adopted_profile": "PASS \u2014 5047-tok fixture on ctx-32768 server: cold 139.1s, warm1 2.34s, warm2 1.77s, cold/warm1/warm2 byte-identical (b344d80e24a3). Honest labels per audit: steady-state exact replay 1.77s; first warm 2.34s.",
-  "C_trim0_bpe": "STILL OPEN \u2014 the short C prompts (32-42 tokens) never met the checkpoint minimum, so no resume occurred (sync: checkpoint=0); the byte-match vs control is vacuous for the trim-0 risk. Partial evidence: A's resumed-vs-cold identity at 11,648 tokens with trim 0 (empty append). A nontrivial-append BPE-boundary probe on a >min-tokens prompt remains TODO before trusting trim 0 under real agent traffic.",
-  "remaining_sol_findings_open": [
-   "appended-turn TTFT distribution (agent-realistic)",
-   "DSV4 same-fixture head-to-head",
-   "multi-session kv-disk eviction behavior",
-   "align-64 raw record absent (JSON summary only)"
-  ]
- },
- "append_probe_2026_07_26": {
-  "harness": "ttft_append_probe.sh \u2014 5047-tok base -> checkpoint -> 3 adversarial-boundary appends (resumed) vs fresh-server cold controls; exact adopted profile",
-  "verdict": "FAIL \u2014 resumed-vs-cold append continuations DIVERGE from char 0 on all three appends (X continues raw content, Y opens fresh reasoning); each path individually deterministic (ap1 repeat stable)",
-  "smoking_gun": "y_ap1 and y_ap3 outputs are byte-identical (sha 5d80ebee65e9) despite DIFFERENT appended tails \u2014 consistent with the resume path ignoring or mis-evaluating appended suffix tokens, i.e. a correctness bug in append-resume, not merely non-canonical junction tokenization",
-  "scope": "affects APPEND-style resume at any align/trim (the boundary just moves); pure exact-replay identity is unaffected (b344d80e24a3 chain still holds)",
-  "operational_impact": "warm-TTFT MET claim is valid for exact-replay traffic only; appended-turn resume (the Hermes agent pattern) must be treated as UNSAFE until root-caused \u2014 outputs are plausible and deterministic but not canonical-equivalent",
-  "appended_turn_ttft_recorded": "18.2-21.3 s per appended turn (suffix 22-29 tokens; dominated by 16-24 token decode at ~1.6 t/s, not resume overhead)",
-  "next": "root-cause with sol: (1) minimal repro comparing suffix token ids resume-vs-cold, (2) inspect glm sync suffix evaluation for appended tails after prior generation (rows 5044+ overwrite vs stale indexer/dense state), (3) check upstream for known issue; until then do NOT claim append-resume fidelity",
-  "evidence": "logs/loadprof1/append-probe-evidence.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-append-probe/"
- },
- "append_isolate_2026_07_26": {
-  "experiment": "append_isolate.sh \u2014 ap3 as FIRST request on fresh server (true cold) vs the resumed lineages",
-  "result": "z_ap3_cold == y_ap3 == y_ap1 (5d80ebee65e9): the y equality was a generic-opener coincidence AND the y/z 'resumes' were actually silent cold fallbacks (their prompts diverge from the stored lineage before the checkpoint length, so starts_with fails). x_ap3 (genuine resume from base checkpoint) remains the only divergent path.",
-  "refined_diagnosis": "the bug is specific to GENUINE resume-with-different-suffix: prompt tokens 0..start-1 match (so suffix tokens are canonical \u2014 tokenization mismatch ruled out); prime suspect is indexed_resume_keeps_sparse_state retaining indexer/sparse state built over the previous lineage's rows (incl. old generated rows above the new suffix), contaminating attention. Exact-replay is immune because the recomputed suffix is identical to the old content.",
-  "sol_root_cause_session": "launched (sync excerpt ds4.c 58030-58330 + evidence); fix direction: invalidate/truncate sparse state above start when the resumed suffix differs from previously evaluated tokens",
-  "operational_note": "silent cold fallback on lineage mismatch also explains why agent traffic 'works' today at 140s+ TTFT \u2014 most appends after generation probably fall back to cold rather than resume"
- },
- "append_discriminator_2026_07_26": {
-  "experiment": "ttft_append_probe.sh with APPEND_PROBE_BATCHALL=0 (suffix through per-token decode instead of indexed batch)",
-  "result": "divergence PERSISTS and X shas are byte-identical to the batchall run (41b1c66448d0 / 208a0513169d / 04b0b01bca84) \u2014 corruption is deterministic and path-independent",
-  "conclusion": "sol's second candidate (resumed indexed-batch kernel bug) ELIMINATED; confirmed mechanism = resume-state/frontier contamination: the graph's sparse/indexer frontier advanced by the prior request's suffix+generation is never truncated to start on resume (no glm_graph_truncate in the sync block), so genuinely-resumed different-suffix requests read stale state",
-  "fix_options": [
-   "A (sol minimal, correctness-first): full graph reset + cold prefill whenever graph_frontier != start \u2014 safe but turns EVERY post-generation append into a ~150s cold prefill (destroys agent-turn TTFT value; exact-replay unaffected)",
-   "B (right fix, larger): implement frontier/sparse-state truncation to start (valid row counts, indexer partial-window state, sequence length) \u2014 needs glm_graph internals + save/restore invariant asserts (saved_graph_frontier == saved_token_count)",
-   "C (upstream): report to antirez/ds4 with the minimal repro \u2014 this is an upstream bug in the GLM resume path, present without any of our patches"
-  ],
-  "status": "bug fully isolated and mechanism confirmed; fix NOT yet implemented \u2014 appended-turn resume remains labeled UNSAFE; exact-replay chain unaffected"
- },
- "append_clean_2026_07_26": {
-  "experiment": "ttft_append_clean.sh \u2014 realistic agent-turn appends (newline-prefixed new messages) vs cold controls; first run was a silent-no-op duplicate (caught via impossible identical cold shas), rerun with verified fixtures",
-  "verdict": "FAIL \u2014 clean appends corrupt identically to adversarial ones. Stronger: x_ap2's output is byte-identical to the ADVERSARIAL run's x_ap2 despite a different append, and every resumed output begins with the same stale continuation ('oft...' \u2014 completing the previous generation's mid-word tail). The resumed generation continues from the OLD frontier and effectively ignores the appended text.",
-  "final_bug_statement": "ds4 GLM disk-KV resume with a different-suffix prompt continues generation from the previous lineage's frontier state instead of the new prompt: UNSAFE for ALL multi-turn traffic (adversarial and realistic shapes). Exact-replay only rewrites identical content and is unaffected. Upstream bug (present without local patches).",
-  "operational_ruling": "GLM serving MUST NOT rely on kv-disk resume for multi-turn traffic until the frontier fix (option B) or the full-reset guard (option A) is implemented. Warm-TTFT 1.77s stands for exact-replay; multi-turn warm TTFT is effectively cold (~150s) pending the fix.",
-  "next_session": "implement option A guard first (correctness), then option B (frontier truncation) for performance; file upstream repro (option C)"
- },
- "v48_guard_attempt_2026_07_26": {
-  "code": "v4.8/v4.8b (binary fe78d8a744b7, dsv4 tree uncommitted-pending-review): session token_vec glm_evaluated + snapshot hooks in ds4_session_rewind and both KV-shard-restore sites + prefix-replay-only resume guard in the GLM sync block",
-  "validation": "replay path PERFECT (warm2 1.764s, byte-identical, guard silent). Append path: guard fired 0 times, corruption unchanged \u2014 hooks miss the real transition.",
-  "decisive_server_log_evidence": [
-   "live kv cache miss live=5063 prompt=5066 common=5045 reason=token-mismatch \u2014 BPE re-merge at the base/generation junction reaches BACK into the base tail: canonical append-prompt tokens diverge from live tokens at 5045, so the live-continuation path (which would be correct) never engages for raw completions traffic",
-   "server then stores live to disk (evict, tokens=5063) and LOADS the 5044 cold shard (916.8 MiB, ~114ms) into the same session \u2014 the load path invalidates the session first (clearing glm_evaluated), so the guard sees a fresh lineage",
-   "corruption therefore occurs on a FRESHLY SHARD-LOADED graph extended past its loaded length: the shard restore repopulates rows/caches but evidently NOT the sparse/indexer frontier accumulators (sol's 'disk risk') \u2014 OR extension-after-load is broken for a different reason; suffix-3 replay after the same load stays byte-correct"
-  ],
-  "next_fix_site": "server-side, ONE function: kv_cache_try_load_text knows pre-load live length; if pre_live > loaded_len (or if any load lands on a session whose graph advanced past loaded_len since cold), invalidate and take the cold path \u2014 UNLESS replay probes prove suffix<=resume_min safe (b_warm's exact path through evict+load needs one tracing run to know whether preserving 1.77s survives this guard)",
-  "status": "guard groundwork landed and validated harmless; real choke point identified with raw log evidence; fix completion + sol review = next session"
- },
- "v48d_guard_2026_07_26": {
-  "binary": "1bec5e7319df (v4.8d): lineage snapshot moved to the REAL checkpoint-replace sites \u2014 ds4_session_invalidate (snapshot instead of clear) + the three struct-assign restore sites (s->checkpoint = new_checkpoint) that all prior hooks missed",
-  "validated": {
-   "guard_fires": "4/4 append requests detected divergence-past-frontier and forced cold (152s full prefill each) \u2014 NO MORE SILENT CORRUPTION",
-   "replay": "untouched: warm2 1.757s, byte-identical b344d80e24a3 x3, guard silent",
-   "tracing_answer": "exact-replay ALSO goes evict+shard-load (live=5048 prompt=5047 common=5047 -> load 5044) and stays correct \u2014 load itself is not the discriminator; suffix-content-vs-lineage is, which the token-compare guard captures exactly"
-  },
-  "residual_open": [
-   "guard-forced-cold outputs do NOT byte-match fresh-server cold controls \u2014 some additional state the natural cold-fallback paths reset is missed (or deeper cross-request state); one anomaly: a guarded request reproduced a DIFFERENT prompt's cold output \u2014 needs fresh investigation with sol before the guard can be called complete",
-   "possible option-B one-liner spotted: the non-GLM raw-KV restore explicitly restores per-layer frontier counters (g->layer_n_comp / layer_n_index_comp) after checkpoint replacement; the GLM compact restore visibly does not \u2014 check whether the GLM restore path resets those counters, prime suspect for the whole bug"
-  ],
-  "serving_posture": "v4.8d is STRICTLY SAFER than qualified v4.7.1 (which silently serves corrupted appends): the guard can only force an unnecessary cold start. Tree binary left at v4.8d deliberately.",
-  "status": "guard mechanism landed and validated; completion (residual reset + sol review + re-validation) = next session",
-  "counter_hypothesis_disproven": "the option-B 'GLM restore skips layer_n_comp reset' suspect is WRONG: ds4_glm_gpu_graph has no layer_n_comp/layer_n_index_comp members (those are Metal-graph state; the n_comp arrays in ds4_session_load_payload are file-consistency validation only \u2014 build error proved it, edit reverted, tree back at committed v4.8d, rebuilt clean 7462277e79bb). The GLM CUDA frontier state that survives the load lives elsewhere \u2014 next candidates from the struct scan: prefill_seed_layer_captured[DS4_MAX_LAYER] per-layer capture flags, indexer seed/score tensors, mtp position window state. Next session: sol source hunt over glm_graph_forward_indexed_tokens + the restore path for stateful members not reset by load."
- },
- "cache_exoneration_2026_07_26": {
-  "experiment": "append probe with DS4_CUDA_EXPERT_CACHE_GB=0 (sol's discriminator; zero 'expert cache enabled' lines in log)",
-  "result": "corruption BYTE-IDENTICAL to cache-on runs (same shas b2e78d232806/5d80ebee65e9/ac1347bbf0c8, guard 4/4) \u2014 our persistent expert cache and pinning layer are EXONERATED; the bug is fully upstream",
-  "mechanism_refined": "the guard-forced from-zero re-prefill (over a graph that just underwent ds4_session_load_payload GLM restore) deterministically differs from a virgin-server prefill of the same prompt, cache on or off => the GLM shard RESTORE ITSELF leaves the graph in a state that corrupts subsequent evaluation of any shape except pure prefix-replay. Sol's source audit found no graph-side frontier scalar and correct bounds everywhere in the C caller \u2014 remaining suspects are the restore's GPU writes themselves (indexer key cache layout/\u0441\u043e\u0434\u0435\u0440\u0436\u0438\u043c\u043e\u0435, ordering) or upstream g_stream_selected_cache interactions.",
-  "sol_source_audit": "logs/loadprof1/sol-frontier-hunt.txt \u2014 full stateful-member classification; minimal reset sets for load and forced-cold; MTP session-state gaps flagged for --glm-mtp mode",
-  "operational_state": "v4.8d guard remains the right containment (correct-or-cold, never corrupt); serving-safe. True fix = upstream GLM restore repair; report draft updated."
- },
- "write_cursor_hypothesis_2026_07_26": {
-  "derivation": "restored ROW CONTENT is proven correct: pure replay after load reads restored rows [0..5044) and is byte-identical to cold \u2014 so 'restore writes garbage' theories die. The surviving theory: after load, NEW row writes land at the OLD physical frontier (~5063) instead of the logical resume point (5044) \u2014 a stale write cursor.",
-  "explains_everything": [
-   "replay immunity: its 3 suffix rows are byte-identical to what sits at EITHER location, and last-token attention reads only stale-but-identical rows",
-   "append signature: the token at logical position ~5050 attends physical rows [0..5050] which still contain the OLD lineage (base tail + old generation start) \u2014 the model literally sees the old generation as context, hence every corrupted output continuing the old tail ('oft...')",
-   "append content-independence: outputs barely depend on appended text (writes displaced, reads see old context)",
-   "guard-cold divergence: a from-zero re-prefill with a displaced write cursor shifts everything",
-   "path-independence: both decode and batch writers would use the same cursor"
-  ],
-  "where_to_look": "NOT in ds4_glm_gpu_graph (sol enumerated \u2014 no cursor member). Candidates: ds4_gpu_tensor append/len state used as a write cursor by kv/indexer cache writes (check ds4_gpu.h tensor struct + cache write call sites for tensor->len-style cursors), or a device-side per-layer write position in ds4_cuda.cu. The load path restores tensor CONTENT but may not reset a tensor-level length/cursor field.",
-  "decisive_probe": "instrument the kv/indexer cache WRITE call sites to log (logical_pos, physical_offset) for the first suffix token after a load \u2014 one line of fprintf, one window",
-  "status": "hypothesis recorded for next session; consistent with 100% of tonight's evidence",
-  "c_level_negative": "checked: the compact-KV and indexer-K store call sites are explicitly position-addressed (ds4_gpu_glm_store_compact_kv_tensor / store_indexer_k_tensor take pos0 straight from sync's start; ds4_gpu_tensor has no cursor field). No C-side stale cursor exists. Hypothesis narrows to: (a) inside the CUDA store/attention/indexer kernels (offset computation from pos0 + some cached device state), or (b) restored cache content subtly wrong in a way replay's attention pattern doesn't expose. DECISIVE PROBE (next session): env-gated GPU readback \u2014 dump layer-0 kv_lora/indexer rows [start..start+4) after the first post-load suffix evaluation and byte-compare with the same rows from a virgin cold run at identical positions (payload_write_tensor_span machinery already reads GPU tensors \u2014 reuse it)."
- },
- "rowdump_reframe_2026_07_26": {
-  "probe": "rowdump_probe.sh (GPU readback of compact-cache rows [5040..5048), layers 0+40, at every sync entry) \u2014 guard-on and guard-off runs",
-  "byte_facts": [
-   "guard-on: guard-forced-cold post-write rows == virgin-cold rows EXACTLY (a3d512e5daf7 both) \u2014 earlier guard-cold OUTPUT divergence is therefore NOT cache state; prime suspect is the server-built effective_prompt differing from canonical",
-   "guard-off (genuine resume): rows BELOW the resume point byte-match cold (first diff at byte 8192 = row 4 = position 5044 = exactly the resume boundary) \u2014 RESTORE FIDELITY CONFIRMED",
-   "rows AT/AFTER the resume point differ from cold \u2014 because the disk-load path builds the continuation as loaded-token-prefix + TEXT-SUFFIX tokenization (build_prompt_from_exact_prefix_and_text_suffix; deliberate upstream design), which produces different suffix tokens than canonical whole-prompt tokenization"
-  ],
-  "reframe": "the append-resume 'corruption' is most likely NON-CANONICAL-BUT-VALID tokenization semantics (identical philosophy to llama.cpp slot reuse, which the industry accepts), NOT state damage. Both paths are deterministic and internally consistent; they evaluate different token sequences for the same text. The earlier 'continues the old generation tail' interpretation of 24-token samples was probably pattern-matching.",
-  "remaining_check_before_downgrading_severity": "confirm resumed outputs are quality-equivalent (not subtly degraded) on longer samples, and confirm the suffix tokens the server built are exactly tokenize(text-beyond-stored-boundary) \u2014 if yes, the bug report becomes a SEMANTICS note and the v4.8d guard can be relaxed to accept exact-prefix+suffix resumes, giving multi-turn warm TTFT ~2-4s at llama.cpp-grade consistency",
-  "implication_for_bar": "if confirmed, multi-turn agent TTFT lands at ~2-4s (resume + suffix) with industry-standard semantics \u2014 closing the last TTFT gap without any upstream fix"
- },
- "final_synthesis_2026_07_26": {
-  "tokdump": "effective-prompt token ids at the junction window are IDENTICAL between resumed and cold (TOKDUMP 16 ids equal) \u2014 tokenization-semantics theory dead",
-  "layer_locality": "L0 rows byte-perfect across round-trip AND across different cold evaluations; L40 rows differ (~25% kv_lora bytes, ~100% k_rope bytes) between ANY two evaluations with different prefill chunk shapes (5044-token vs 5062-token stage-1)",
-  "conclusion": "DOWNGRADED per sol closing audit: chunk-shape numeric path-dependence is demonstrated (L0/L40 layer-locality evidence), but corruption is NOT excluded while the L40 same-lineage store->load round-trip violation stands unexplained. Strict guard remains the correct serving posture until the no-eval-between round-trip dump passes.",
-  "honest_loose_end": "X live-vs-restored L40 rows differ WITHIN the same lineage, which a pure byte-copy round trip shouldn't allow \u2014 one targeted check remains (dump immediately before store and after load with no evaluation between; possible per-layer dtype subtlety in the f16 flag path)",
-  "operational_consequence": [
-   "the v4.8d guard's byte-identity standard is STRICTER than the industry's (llama.cpp reuse has identical semantics and nobody calls it corruption)",
-   "policy decision for serving: relax guard to accept exact-prefix resumes (multi-turn warm TTFT ~2-4s, llama.cpp-grade consistency) OR keep strict byte-canonical behavior (cold appends ~150s). This is a serving-semantics choice, not a bug fix",
-   "upstream report should be recast as: (1) the L40 same-lineage round-trip question, (2) a documentation note that disk-KV resume has chunk-shape numeric semantics"
-  ]
- },
- "appended_turn_ttft_measured_2026_07_26": {
-  "config": "adopted profile + DS4_GLM_RESUME_GUARD_OFF (probe env; serving default remains strict pending owner decision), max_tokens=1",
-  "measured_ms": {
-   "ap1": 5675,
-   "ap2": 5664,
-   "ap3": 5633,
-   "ap1_repeat": 5640,
-   "cold_controls": "138803-150230"
-  },
-  "honest_read": "multi-turn agent TTFT = 5.6-5.7 s under llama.cpp-equivalent exact-prefix semantics \u2014 25x better than the strict default's ~140-150 s cold appends, but still ~3x over the DSV4 <2 s bar (my earlier 2-4 s estimate was wrong; the eviction store ~250ms + shard load ~115ms + 22-29-token suffix batch prefill ~2s + first-token decode ~0.6s + session overhead account for it)",
-  "headroom_not_pursued": "skip per-turn eviction re-store; keep live session hot instead of store+load round-trip per request; both are engine changes",
-  "bar_verdict": "multi-turn TTFT: 5.6 s measured vs <2 s bar \u2014 NOT met, but now a measured quantity under comparable semantics rather than a contingent claim",
-  "decomposition_ms": {
-   "evict_store_920MiB": 1227,
-   "shard_load": 295,
-   "suffix_prefill_22tok_at_8.84tps": 2487,
-   "first_token_decode": 1001,
-   "session_http_overhead": "~660",
-   "total": 5675,
-   "fix_ladder": [
-    "1. skip the per-turn evict re-store (server stores live state to a NEW file EVERY turn even when the disk prefix is already covered): -1.2s -> ~4.5s",
-    "2. live-rewind to common prefix (server already computes common=5045 in the live-miss check, then discards live and does store+load; llama.cpp-style rewind is free): -0.3s -> ~4.2s",
-    "3. small-suffix prefill optimization (22 tokens at 8.84 t/s = 2.5s; the suffix path leaves most of the batch machinery idle): potential -1.5-2s -> ~2.3-2.9s",
-    "4. first-token decode 1.0s is the decode-speed floor itself"
-   ],
-   "conclusion": "CORRECTED per sol: components from committed log excerpt of one turn; floor after ladder items 1-3 is ~2.2-2.7s and is an UNVALIDATED projection (additivity not demonstrated), not a measured floor."
-  }
- },
- "sol_closing_audit_2026_07_26": {
-  "verdicts": "final-synthesis NOT SUPPORTED (categorical 'not corruption' incompatible with the open L40 same-lineage round-trip violation); TTFT decomposition NOT SUPPORTED as committed (components were in server logs but not committed; ledger self-contradicted; floor arithmetic wrong); exact-replay MET only as ABSOLUTE <2s threshold (matched DSV4 head-to-head still open); 32K MET overstated (11.6K proven, capacity region unexercised); 'DSV4 baseline measured under llama.cpp prefix-cache semantics' FALSE on the committed record (the 1.218s probe is prefix-cache-cold, tiny prompt)",
-  "corrections_applied": [
-   "final synthesis DOWNGRADED to: chunk-shape path-dependence demonstrated; corruption NOT excluded; same-lineage round-trip invariant open; STRICT GUARD STAYS until that invariant is tested",
-   "decomposition components now backed by committed log excerpt (logs/loadprof1/appended-turn-components.txt: save=1226.7ms, load=295.2ms, suffix 2487ms, first-token 1001ms); earlier ~250/115ms figures were from different, smaller-state turns \u2014 noted; floor corrected to ~2.2-2.7s and labeled UNVALIDATED PROJECTION (additivity not demonstrated)",
-   "ledger rows relabeled: exact-replay = 'meets absolute <2s steady-state exact-replay threshold' (not DSV4 parity; head-to-head open); 32K = 'allocated; 11.6K functional + retrieval beyond row 8192 proven; full-depth ~30K probe open'",
-   "the llama.cpp-semantics framing of the DSV4 baseline RETRACTED \u2014 this also removes my justification for flipping the guard default; the permission-layer block stands vindicated twice over"
-  ],
-  "note": "sol trail logs/loadprof1/sol-closing-audit.txt"
- },
- "invariant_closure_2026_07_26": {
-  "probe": "rowdump_replay.sh \u2014 replay flow with dumps at live-post-store and post-load-pre-eval, rows below the resume point",
-  "result": "L40 row differences IDENTICAL to the append flow (kv_lora 2037/8192, k_rope 1021/1024; L0 and indexer byte-exact) while replay output is BYTE-IDENTICAL (a053b5b2b3a1 == a053b5b2b3a1)",
-  "conclusion": "DOWNGRADED per sol review (NOT SUPPORTED as a closure): the defensible statement is only 'the observed L40 difference did not change greedy output in one short exact-replay execution'. Replay-inertness does not imply append-inertness (different suffix lengths/batching may consume those rows); byte-count equality is not pattern identity (no coordinate masks committed); dump-request association and layout assumptions were not independently auditable; one run cannot carry a universal claim. THE STRICT GUARD REMAINS THE RECOMMENDED POSTURE. Required to truly close: branch-matched 22-29-token suffix probes with logit comparison, coordinate-mask diffs vs the append flow, committed sync-trace dump association, fresh-server repetition.",
-  "guard_recommendation_update": "RETRACTED \u2014 strict guard stays; relaxation is not supported on current evidence (sol trail logs/loadprof1/sol-closure-review.txt)"
- },
- "creative_round2_2026_07_26": {
-  "directive": "Brian: get more creative on the unmet perf clause \u2014 compress the model itself before transfer; sol subagents on xhigh; left-field ideas",
-  "probe1_stream_entropy": {
-   "harness": "iq2_stream_entropy.py on 64MB of blk.40.ffn_gate_exps (1,016,800 IQ2_XXS blocks)",
-   "result": "ALL byte lanes ~7.85-7.97 bits/byte; lattice-index-ish lane H0=7.970, order-1 H1=7.966 (memoryless); weighted ideal order-0 per-stream compression = 1.12%",
-   "verdict": "stream-separated entropy coding is DEAD (stronger than the old 3.8-4.2% packed measurement \u2014 E8 lattice indices are near-uniform and memoryless). Lossless/recoding branch closed from a second independent angle.",
-   "consequence": "remaining creative space is LOSSY/STRUCTURAL only: sub-2bpw trellis/VQ re-quant (fidelity-measurable), mixed-precision-by-router-weight (HOBBIT-class), shared-basis expert factorization, semantic cache tiering"
-  },
-  "in_flight": "sol-A (recoding/re-quant design \u2014 probe1 already kills its branch 1), sol-B (MoE-structural), web agent (2024-26 MoE offloading + sub-2bpw + GPU entropy decode literature)",
-  "probe2_shared_basis": {
-   "harness": "shared_basis_probe.py \u2014 gguf-py IQ2_XXS dequant, 32-expert Gram accumulation, blk.40 gate_exps (2048x6144 per expert)",
-   "result": "retained energy: r128=5.3% r256=9.4% r512=16.5% r1024=28.9% r1536=39.7% (isotropic baseline 2.1/4.2/8.3/16.7/25.0)",
-   "verdict": "DEAD \u2014 needed >=90% at rank<=1024; experts are near-isotropic in hidden space (only ~1.7x baseline). MoBE-class shared-basis factorization does not transfer to GLM-5.2 gate projections."
-  },
-  "synthesis": {
-   "killed_today": [
-    "stream-separated entropy coding (1.1% ceiling)",
-    "shared-basis factorization (28.9% @ r1024 vs 90% needed)",
-    "RDO-IQ2 (sol-A: requires index entropy 7.97->6.35 bits \u2014 'failure is the more likely result' given memoryless measurement)"
-   ],
-   "surviving_ranked": [
-    "1. popularity-pin + LRU hybrid cache (sol-B trace replay: +2-3 hit points, ~+3-4% decode, ZERO fidelity risk, <1 day) \u2014 implement regardless",
-    "2. gate-mass-thresholded exact prefix + AdapMoE-style low-weight expert skipping (training-free; lit: ~90% next-layer prediction, 25% fewer experts, 'no accuracy loss' claims \u2014 must gate on OUR 100-case NLL suite; prerequisite: log cumulative top-k gate-mass distribution, one window)",
-    "3. HOBBIT-class two-tier: exact top-gate experts + resident sub-1bpw sketches for the rest (sol-B modeled 1.93-2.16 t/s; memory arithmetic: 0.48bpw sketch=35GB + 33GB exact arena fits; fidelity risk medium \u2014 measurable; 1-2 weeks)",
-    "4. QTIP/TCQ 1.75bpw re-quant (sol-A: 12-15% bytes, +cache capacity; needs original BF16 weights + rented multi-GPU quantization \u2014 Brian decision on cost; 8-12 eng-weeks for full integration)",
-    "5. GPU-decode break-even recorded: decompressor must sustain >=D/R (>=12.6 GB/s at R=0.85) overlapped \u2014 nvCOMP/DietGPU rates 250-590 GB/s on datacenter parts make tier-3/4 formats feasible if they existed; GB10 has NO hardware decompression engine"
-   ],
-   "modeled_ceiling_if_stack_lands": "levers 1+2+3 compound to roughly 2.2-3 t/s decode (sol-B trace-replay grounded); +QTIP ~2.5-3.5. DSV4's 18.4 remains out of reach on one box \u2014 but this is now a 1.5-2x credible program, not speculation",
-   "sources": "logs/loadprof1/sol-compress-A.txt, sol-compress-B.txt; web-lit summary in this session (HOBBIT 2411.01433, MoBE 2508.05257, AdapMoE 2408.10284, QTIP 2406.11235, MoE-Infinity, LLM-in-a-flash et al.)"
-  },
-  "lever1_slru_landed": {
-   "code": "v4.9 (binary 625cdef11d86): segmented LRU \u2014 probationary+protected lists, protected cap 60% of slots, promote on hit, demote protected-LRU on overflow, evict probationary-tail first; env DS4_CUDA_EXPERT_CACHE_SLRU=1, default off = exact legacy LRU",
-   "validation": "same-binary OFF/ON A-B windows: byte-identity sha 9113dfd0d233 x3 in BOTH; ON: hits 474.3->495.0/token, misses 166.4->145.7 (-12.4%), hit rate 74.0%->77.3% (matches sol-B's modeled 77.3% optimum), fetch 226.0->211.8ms, loader 275.0->262.0ms (~14ms/token saved, ~+2.3% decode; larger gains expected on mixed/scan traffic where SLRU protects against pollution)",
-   "adopted": "DS4_CUDA_EXPERT_CACHE_SLRU=1 added to 52_engine_switch.sh glm52 profile; sol review batched with next round",
-   "validation_CORRECTED": "per-token figures corrected for the 75-vs-79 layer bug: legacy hits 444.2/misses 155.8/fetch 211.7ms; SLRU hits 463.6/misses 136.4/fetch 198.3ms. Hit rate 74.0->77.3% and -12.4% misses unchanged (ratio). Byte-identity unaffected."
-  },
-  "gate_mass_measured": {
-   "probe": "DS4_GLM_GATE_MASS_LOG at the GLM decode router site (v4.9+gatemass binary d9b1d505fcfa), 14,175 routed-layer decode steps, byte-identity preserved (9113dfd0d233 x3)",
-   "cumulative_topk_mass": {
-    "top1": {
-     "p10": 0.171,
-     "p50": 0.236,
-     "p90": 0.346,
-     "mean": 0.251
+  "evidence": "results/glm52-gates/logs/loadprof1/evidence.txt (summary + last-12 LOADPROF lines); raw at dsv4:/home/dsv4/ds4-project/glm52-loadprof/",
+  "lever_async_plus_pin_2026_07_25": {
+    "v4.7_async_only": "cudaMemcpyAsync on pageable arena: NO gain (hit_copy 92.5 -> 91.6 ms) \u2014 pageable async falls back to staged sync copies; byte-identity held",
+    "v4.7_pinned (binary 12c4e766be8e)": {
+      "hit_copy_ms": 2.6,
+      "fill_ms": 2.1,
+      "loader_other_ms": 44.1,
+      "loader_total_ms": 276.3,
+      "fetch_ms": 227.5,
+      "kernels_ms": 107.1,
+      "arena_pin": "cudaHostRegister 67 GiB ok in 13.3 s (one-time at init; not blocked by the 15 GiB RLIMIT_MEMLOCK \u2014 driver pins via its own path)",
+      "arena_warmup_wall_s": "508 -> 54.4 (9.4x \u2014 fills were the dominant first-request penalty)",
+      "warm_repeat_wall_s": "41.1 -> 30.3",
+      "dec32_wall_s": "34.6 -> 30.4 (~93 ms/token saved)",
+      "byte_identity": "sha 9113dfd0d233 x3 identical across v4.6.2 / v4.7-async / v4.7-pinned; routing stream identical (hits 474.3 / miss 166.4 per token in all three)"
     },
-    "top2": {
-     "p10": 0.321,
-     "p50": 0.409,
-     "p90": 0.535,
-     "mean": 0.421
+    "serving_adoption": "DS4_CUDA_EXPERT_CACHE_PIN=1 added to scripts/52_engine_switch.sh glm52 profile",
+    "remaining_budget_per_token_ms": {
+      "fetch": 227,
+      "kernels": 107,
+      "loader_other": 44,
+      "unaccounted_attn_dense": "~250-290 (ATTN_OUTPUT_PROFILE emitted no tokens=1 lines in this window \u2014 split still open)"
     },
-    "top3": {
-     "mean": 0.553
+    "next": "arena size bump when GLM-only, fetch granularity (slab repack), attention-side split, MTP drafting multiplier"
+  },
+  "sol_review_v47": {
+    "round1": "FAIL \u2014 3 MED (sticky pin error state; deferred fill failure can leave stale cache slot; no unregister lifecycle) + 4 LOW (RLIMIT not a guard; LOADPROF field semantics; timespec UB; per-thread-default-stream fragility)",
+    "fixes_v471 (binary a506f29d459f)": [
+      "MED1: cudaGetLastError() clears sticky state after failed pin; consumed prior error logged if it differs",
+      "MED2: cuda_expert_cache_flush_all() on all four CUDA-error reject paths in begin_load \u2014 no published slot survives a failed sync point; outside-begin_load deferred errors treated as poisoned context (fail-visible)",
+      "MED3: arena_pinned flag + cudaHostUnregister in ds4_gpu_cleanup (after device sync); incompatible-layout in-process reload deferred \u2014 one model per process lifetime by deployment",
+      "LOW6: timespecs zero-initialized; LOW7: cudaStreamLegacy explicit in all 9 async calls",
+      "LOW4 documented: operational memory guard is the kill-floor watchdog, NOT RLIMIT_MEMLOCK (67 GiB registered under a 15 GiB limit \u2014 driver path bypasses it)",
+      "LOW5 documented: post-pin hit_ms/fill_ms are ENQUEUE times (DMA completion lands in the next sync point); seq-fetch path (<2 threads) reports zero fetch/fill \u2014 profile is only used in the 6-worker config"
+    ],
+    "revalidation": "byte-identity sha x3 unchanged, routing identical, hit-copy 2.7ms / fill 2.1ms / warmup 50.9s \u2014 fixes cost nothing",
+    "round2": "PASS \u2014 all 7 findings addressed or deferred-with-justification; 'no new correctness, lifecycle, or stream-ordering defects found' (logs/loadprof1/sol-v471-round2-PASS.txt)"
+  },
+  "mtp_probe_2026_07_25": {
+    "discovery": "the served GGUF carries the MTP block (blk.78.nextn.eh_proj/enorm/hnorm/shared_head_norm \u2014 the 'blk78Q2K' in the artifact name) and ds4 has integrated greedy GLM MTP speculation (--glm-mtp / --glm-mtp-timing), depth hard-wired to 1 (verify2: 2-token batch verify, commit at most 2)",
+    "window": "mtp-probe1: serving pins + pin'd arena 68GB + --glm-mtp-timing, MOE_PROFILE off",
+    "measured": {
+      "cycles": 65,
+      "accept_rate": 0.48,
+      "verify2_warm_ms": "~630-730",
+      "head_draft_ms": "~12-19",
+      "tokens_per_cycle": 1.48,
+      "effective": "~472 ms/token vs ~610 single-token -> ~1.3x decode speedup at depth 1",
+      "loader_shift": "2-token verify loads more unique experts/layer: fetch 229 -> 284 ms/token-equivalent, hits 474->618 per aggregated token"
     },
-    "top4": {
-     "mean": 0.663
+    "identity_caveat": "MTP output is NOT byte-identical to single-token decode: warm2/dec32 sha 6da984e6bb80 vs baseline 9113dfd0d233 (within-run stable: warm2==dec32). Cause: the 2-token verify batch takes the n_tokens>1 kernel path whose FP summation order differs, so greedy flips at near-ties. warm1 (first request, no draft state yet) matched baseline exactly. Any adoption requires the 100-case NLL fidelity suite re-run in MTP mode instead of byte-vs-baseline.",
+    "arena_bump_ruled_out": "86GB arena would breach the kill floor (engine non-arena RSS ~30 GiB; 97 total observed at 68GB arena). Safe max ~75GB buys only ~2-3 LRU hit points per the committed trace curve \u2014 not worth a window. The fetch levers are slab repack (read granularity 3.1->9.3MB) and admission policy (LRU 74% vs Belady 88% at same size).",
+    "next": [
+      "fidelity suite (100-case NLL) with --glm-mtp before serving adoption",
+      "deeper draft chain (engine extension; machinery present: chained mtp_step + N+1-row verify)",
+      "slab repack",
+      "admission policy vs Belady gap"
+    ]
+  },
+  "mtp_ab_2026_07_25": {
+    "harness": "results/glm52-gates/harness/mtp_ab.sh (8 varied prompts, greedy 96 tok, 2 passes per config, pass-2 timed, pinned arena 68GB)",
+    "results": {
+      "decode_off_tok_s": 1.61,
+      "decode_on_tok_s": 1.77,
+      "speedup": "1.10x",
+      "accept_rate": "72.5% (647/892 cycles)",
+      "why_so_small": "the 2-token verify batch loads ~1.5x unique experts per step on the streaming stack \u2014 expert-diversity cost eats the speculation gain (tokens/cycle 1.72x vs bytes/step ~1.5x). MTP only amortizes the FIXED per-step costs (~250ms attention/host), hence ~+10% net.",
+      "agreement": "0/8 prompts identical to single-token decode; divergences are greedy tie-flips under 2-token-batch FP ordering (both continuations coherent; first divergence 100-370 chars in)"
     },
-    "top6": {
-     "mean": 0.848
+    "verdict": "NOT adopted for serving yet: +10% decode does not justify losing byte-reproducibility vs the qualified single-token config. Structural insight recorded: speculation on streamed MoE is bounded by expert-diversity growth, not acceptance rate \u2014 deeper drafts make this WORSE unless hit rate is near 100%. Revisit if/when hit rate rises (repack + admission policy) since the expert-side penalty then drops to kernel-only.",
+    "evidence": "logs/loadprof1/mtp-ab2-summary.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-mtp-ab/"
+  },
+  "warm_ttft_2026_07_26": {
+    "root_cause_probe": "ttft_probe3.sh: warm request correctly resumes from disk-KV checkpoint and batch-prefills only the suffix (sync trace committed). The recorded 19.0s bench3 number predated the pinned arena + batchall levers.",
+    "alignment_sweep_5047tok": {
+      "align_64": {
+        "warm2_s": 5.52,
+        "suffix": 55
+      },
+      "align_16": {
+        "warm2_s": 4.56,
+        "suffix": 39
+      },
+      "align_4": {
+        "warm2_s": 4.22,
+        "suffix": 35,
+        "cold_s": 153.7
+      }
+    },
+    "fit": "warm_ttft ~= 2.0s fixed + ~65ms/suffix-token; suffix floors at ~35 (checkpoint rule + resume_min=4), so finer align stops paying below 16",
+    "current_best_warm_ttft_s": 4.22,
+    "progression": "33.5 -> 19.0 -> 4.22 s (pin + batchall + align 4)",
+    "bar_gap": "DSV4 <2s; remaining fixed ~2.0s = checkpoint restore + engine bookkeeping + 1 decode token (~0.62s). Sub-2s needs in-RAM session/prefix KV cache (engine change \u2014 llama.cpp does 1.56s this way on the same box) or a faster restore path.",
+    "serving_adoption": "52_engine_switch.sh glm52 now carries ALL proven levers: pin, batchall, align 4, and FETCH_THREADS=6 (which was missing from the profile \u2014 benched at 2x decode but never adopted; fixed)",
+    "trim0_result": {
+      "config": "align 4 + trim 0 (--kv-cache-boundary-trim-tokens 0; default 32 was the cap: store_len = tokens - trim, floored to align \u2014 explains 4992/5008/5012 exactly)",
+      "measured": {
+        "cold_s": 196.7,
+        "warm1_s": 3.37,
+        "warm2_s": 1.764,
+        "suffix": 3
+      },
+      "BAR": "QUALIFIED per sol audit (SUPPORTED-WITH-GAPS): steady-state exact-replay 1.764 s at ctx=8192; first-warm 3.37 s; not yet measured on the final adopted profile; appended-turn distribution and trim=0 BPE-boundary safety unproven. Re-gate in ctx_regate.sh.",
+      "progression_final": "33.5 -> 19.0 -> 4.22 -> 1.76 s",
+      "caveats": [
+        "trim 0 stores dynamic prompt tails; for append-style agent traffic this only costs extra tail-chunk rewrites on disk, no correctness impact (LCP just matches less on a changed tail)",
+        "cold wall 196.7s this window vs 153.7 at trim 32 (+150 loadprof lines) \u2014 extra store passes at the finer boundary; cold is once-per-novel-prefix",
+        "warm1 (first warm after cold) pays ~3.4s locality warmup; steady-state repeats 1.76s",
+        "no engine code change needed \u2014 task #38's in-RAM session reuse would shave the remaining ~1.1s of restore/bookkeeping but is no longer required for the bar"
+      ],
+      "serving_adoption": "align 4 + trim 0 now in 52_engine_switch.sh glm52 profile"
     }
-   },
-   "implication": "GLM-5.2's router is UNUSUALLY FLAT \u2014 the 'top-2 dominate' prior behind AdapMoE-style skipping and aggressive HOBBIT tiering does NOT hold: keep-6 discards 15.2% of gate mass, keep-4 discards 33.7%; a 90%-mass exact tier needs ~7 of 8 experts (only 12.5% byte cut). Levers 2 and 3 are significantly WEAKENED on this model \u2014 importance-based tiering is fighting a flat distribution.",
-   "decisive_next_probe": "keep-N fidelity A/B: env DS4_GLM_TOPK_KEEP=N \u2014 at the decode router site, zero weights beyond top-N and renormalize (8-float read-modify-write at the existing GATEMASS hook point, ~15 lines); run the 100-case NLL suite at N=6 and N=4 vs N=8 baseline. If NLL cost at N=6 is negligible despite the 15% mass discard, lever 2 lives (25% byte cut); if not, levers 2-3 die on this model and the surviving stack reduces to SLRU (landed) + QTIP (Brian's call) + second-box."
   },
-  "keepn_probe_KILL": {
-   "probe": "DS4_GLM_TOPK_KEEP=6 (zero bottom-2 router weights + renormalize; binary afc7378bb80f), 8 varied prompts x 96 tok greedy vs committed keep-8 baselines",
-   "result": "CATASTROPHIC quality collapse, far beyond predicted: invalid UTF-8 bytes emitted (2 of 8 outputs unparseable), degenerate repetition loops, language-switch spam \u2014 vs coherent reasoning at keep-8. Dropping the two SMALLEST contributions (~15% gate mass) destroys generation.",
-   "verdicts": [
-    "lever 2 (expert skipping / AdapMoE-class): DEAD on GLM-5.2 \u2014 confirms both theoretical predictions (flat router; triage requires peaked importance) same-day",
-    "raises the fidelity-risk flag on ANY scheme serving selected experts at reduced contribution, including aggressive two-tier variants; the no-stall successive-refinement tier survives ONLY because its degradation mode is transient-noise-on-miss rather than contribution removal \u2014 but this result mandates a strict NLL gate before any adoption there",
-    "day's probe scoreboard: 6 decisive kills (entropy, shared-basis, RDO-by-implication, reference-coding, importance-tiering, expert-skip) + 1 lever landed (SLRU) + 2 measured foundations (gate-mass, prefetch threshold)"
-   ]
+  "ctx32k_smoke_2026_07_26": {
+    "config": "-c 32768, otherwise identical serving pins (ctx32k-smoke window, rc=0, no floor-kill)",
+    "memory": "context buffers 10.2 GiB + compact DSA cache 5.81 GiB (rows=32768 f32, kv_layers 78 + indexer 21) \u2014 total serving footprint ~98 GiB with 72GB arena, ~21 GiB headroom",
+    "identity": "warm1/warm2/dec32 sha 9113dfd0d233 x3 \u2014 byte-identical to the 8K-ctx reference",
+    "decode": "dec32 wall 30.4s \u2014 unchanged vs 8K",
+    "BAR": "DOWNGRADED per sol audit (NOT SUPPORTED): allocation/startup + short-context regression smoke passed; functional 32K window NOT yet validated (no request crossed row 8192, no raw evidence committed). Re-gate harness ctx_regate.sh addresses both.",
+    "note": "kv-disk-space-mb 16384 holds ~2 full-32K checkpoints (5.8 GiB each); raise if multi-conversation checkpointing thrashes"
+  },
+  "sol_night_audit": "logs/loadprof1/sol-night-audit.txt \u2014 claim1 SUPPORTED-WITH-GAPS (6 findings), claim2 NOT SUPPORTED (5 findings); re-gate requirements adopted verbatim",
+  "sol_regate_2026_07_26": {
+    "harnesses": "ctx_regate.sh + ctx_a_retry.sh, exact adopted glm52 profile (ctx 32768, arena 72 pinned, batchall, align 4 trim 0, kv-disk 16GB), HTTP codes captured",
+    "A_functional_32k": "PASS \u2014 11,648-token prompt, passphrase planted at ~row 10K (beyond dense cap 8192): retrieved exactly ('KESTREL-4491'), deterministic x2 (sha 348a60ced056); cold 346s, resumed repeat 14.6s (checkpoint 11648, suffix 1). ctx_cap=8192 in traces is the DENSE-attention cap; indexed path handles rows above it.",
+    "B_ttft_adopted_profile": "PASS \u2014 5047-tok fixture on ctx-32768 server: cold 139.1s, warm1 2.34s, warm2 1.77s, cold/warm1/warm2 byte-identical (b344d80e24a3). Honest labels per audit: steady-state exact replay 1.77s; first warm 2.34s.",
+    "C_trim0_bpe": "STILL OPEN \u2014 the short C prompts (32-42 tokens) never met the checkpoint minimum, so no resume occurred (sync: checkpoint=0); the byte-match vs control is vacuous for the trim-0 risk. Partial evidence: A's resumed-vs-cold identity at 11,648 tokens with trim 0 (empty append). A nontrivial-append BPE-boundary probe on a >min-tokens prompt remains TODO before trusting trim 0 under real agent traffic.",
+    "remaining_sol_findings_open": [
+      "appended-turn TTFT distribution (agent-realistic)",
+      "DSV4 same-fixture head-to-head",
+      "multi-session kv-disk eviction behavior",
+      "align-64 raw record absent (JSON summary only)"
+    ]
+  },
+  "append_probe_2026_07_26": {
+    "harness": "ttft_append_probe.sh \u2014 5047-tok base -> checkpoint -> 3 adversarial-boundary appends (resumed) vs fresh-server cold controls; exact adopted profile",
+    "verdict": "FAIL \u2014 resumed-vs-cold append continuations DIVERGE from char 0 on all three appends (X continues raw content, Y opens fresh reasoning); each path individually deterministic (ap1 repeat stable)",
+    "smoking_gun": "y_ap1 and y_ap3 outputs are byte-identical (sha 5d80ebee65e9) despite DIFFERENT appended tails \u2014 consistent with the resume path ignoring or mis-evaluating appended suffix tokens, i.e. a correctness bug in append-resume, not merely non-canonical junction tokenization",
+    "scope": "affects APPEND-style resume at any align/trim (the boundary just moves); pure exact-replay identity is unaffected (b344d80e24a3 chain still holds)",
+    "operational_impact": "warm-TTFT MET claim is valid for exact-replay traffic only; appended-turn resume (the Hermes agent pattern) must be treated as UNSAFE until root-caused \u2014 outputs are plausible and deterministic but not canonical-equivalent",
+    "appended_turn_ttft_recorded": "18.2-21.3 s per appended turn (suffix 22-29 tokens; dominated by 16-24 token decode at ~1.6 t/s, not resume overhead)",
+    "next": "root-cause with sol: (1) minimal repro comparing suffix token ids resume-vs-cold, (2) inspect glm sync suffix evaluation for appended tails after prior generation (rows 5044+ overwrite vs stale indexer/dense state), (3) check upstream for known issue; until then do NOT claim append-resume fidelity",
+    "evidence": "logs/loadprof1/append-probe-evidence.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-append-probe/"
+  },
+  "append_isolate_2026_07_26": {
+    "experiment": "append_isolate.sh \u2014 ap3 as FIRST request on fresh server (true cold) vs the resumed lineages",
+    "result": "z_ap3_cold == y_ap3 == y_ap1 (5d80ebee65e9): the y equality was a generic-opener coincidence AND the y/z 'resumes' were actually silent cold fallbacks (their prompts diverge from the stored lineage before the checkpoint length, so starts_with fails). x_ap3 (genuine resume from base checkpoint) remains the only divergent path.",
+    "refined_diagnosis": "the bug is specific to GENUINE resume-with-different-suffix: prompt tokens 0..start-1 match (so suffix tokens are canonical \u2014 tokenization mismatch ruled out); prime suspect is indexed_resume_keeps_sparse_state retaining indexer/sparse state built over the previous lineage's rows (incl. old generated rows above the new suffix), contaminating attention. Exact-replay is immune because the recomputed suffix is identical to the old content.",
+    "sol_root_cause_session": "launched (sync excerpt ds4.c 58030-58330 + evidence); fix direction: invalidate/truncate sparse state above start when the resumed suffix differs from previously evaluated tokens",
+    "operational_note": "silent cold fallback on lineage mismatch also explains why agent traffic 'works' today at 140s+ TTFT \u2014 most appends after generation probably fall back to cold rather than resume"
+  },
+  "append_discriminator_2026_07_26": {
+    "experiment": "ttft_append_probe.sh with APPEND_PROBE_BATCHALL=0 (suffix through per-token decode instead of indexed batch)",
+    "result": "divergence PERSISTS and X shas are byte-identical to the batchall run (41b1c66448d0 / 208a0513169d / 04b0b01bca84) \u2014 corruption is deterministic and path-independent",
+    "conclusion": "sol's second candidate (resumed indexed-batch kernel bug) ELIMINATED; confirmed mechanism = resume-state/frontier contamination: the graph's sparse/indexer frontier advanced by the prior request's suffix+generation is never truncated to start on resume (no glm_graph_truncate in the sync block), so genuinely-resumed different-suffix requests read stale state",
+    "fix_options": [
+      "A (sol minimal, correctness-first): full graph reset + cold prefill whenever graph_frontier != start \u2014 safe but turns EVERY post-generation append into a ~150s cold prefill (destroys agent-turn TTFT value; exact-replay unaffected)",
+      "B (right fix, larger): implement frontier/sparse-state truncation to start (valid row counts, indexer partial-window state, sequence length) \u2014 needs glm_graph internals + save/restore invariant asserts (saved_graph_frontier == saved_token_count)",
+      "C (upstream): report to antirez/ds4 with the minimal repro \u2014 this is an upstream bug in the GLM resume path, present without any of our patches"
+    ],
+    "status": "bug fully isolated and mechanism confirmed; fix NOT yet implemented \u2014 appended-turn resume remains labeled UNSAFE; exact-replay chain unaffected"
+  },
+  "append_clean_2026_07_26": {
+    "experiment": "ttft_append_clean.sh \u2014 realistic agent-turn appends (newline-prefixed new messages) vs cold controls; first run was a silent-no-op duplicate (caught via impossible identical cold shas), rerun with verified fixtures",
+    "verdict": "FAIL \u2014 clean appends corrupt identically to adversarial ones. Stronger: x_ap2's output is byte-identical to the ADVERSARIAL run's x_ap2 despite a different append, and every resumed output begins with the same stale continuation ('oft...' \u2014 completing the previous generation's mid-word tail). The resumed generation continues from the OLD frontier and effectively ignores the appended text.",
+    "final_bug_statement": "ds4 GLM disk-KV resume with a different-suffix prompt continues generation from the previous lineage's frontier state instead of the new prompt: UNSAFE for ALL multi-turn traffic (adversarial and realistic shapes). Exact-replay only rewrites identical content and is unaffected. Upstream bug (present without local patches).",
+    "operational_ruling": "GLM serving MUST NOT rely on kv-disk resume for multi-turn traffic until the frontier fix (option B) or the full-reset guard (option A) is implemented. Warm-TTFT 1.77s stands for exact-replay; multi-turn warm TTFT is effectively cold (~150s) pending the fix.",
+    "next_session": "implement option A guard first (correctness), then option B (frontier truncation) for performance; file upstream repro (option C)"
+  },
+  "v48_guard_attempt_2026_07_26": {
+    "code": "v4.8/v4.8b (binary fe78d8a744b7, dsv4 tree uncommitted-pending-review): session token_vec glm_evaluated + snapshot hooks in ds4_session_rewind and both KV-shard-restore sites + prefix-replay-only resume guard in the GLM sync block",
+    "validation": "replay path PERFECT (warm2 1.764s, byte-identical, guard silent). Append path: guard fired 0 times, corruption unchanged \u2014 hooks miss the real transition.",
+    "decisive_server_log_evidence": [
+      "live kv cache miss live=5063 prompt=5066 common=5045 reason=token-mismatch \u2014 BPE re-merge at the base/generation junction reaches BACK into the base tail: canonical append-prompt tokens diverge from live tokens at 5045, so the live-continuation path (which would be correct) never engages for raw completions traffic",
+      "server then stores live to disk (evict, tokens=5063) and LOADS the 5044 cold shard (916.8 MiB, ~114ms) into the same session \u2014 the load path invalidates the session first (clearing glm_evaluated), so the guard sees a fresh lineage",
+      "corruption therefore occurs on a FRESHLY SHARD-LOADED graph extended past its loaded length: the shard restore repopulates rows/caches but evidently NOT the sparse/indexer frontier accumulators (sol's 'disk risk') \u2014 OR extension-after-load is broken for a different reason; suffix-3 replay after the same load stays byte-correct"
+    ],
+    "next_fix_site": "server-side, ONE function: kv_cache_try_load_text knows pre-load live length; if pre_live > loaded_len (or if any load lands on a session whose graph advanced past loaded_len since cold), invalidate and take the cold path \u2014 UNLESS replay probes prove suffix<=resume_min safe (b_warm's exact path through evict+load needs one tracing run to know whether preserving 1.77s survives this guard)",
+    "status": "guard groundwork landed and validated harmless; real choke point identified with raw log evidence; fix completion + sol review = next session"
+  },
+  "v48d_guard_2026_07_26": {
+    "binary": "1bec5e7319df (v4.8d): lineage snapshot moved to the REAL checkpoint-replace sites \u2014 ds4_session_invalidate (snapshot instead of clear) + the three struct-assign restore sites (s->checkpoint = new_checkpoint) that all prior hooks missed",
+    "validated": {
+      "guard_fires": "4/4 append requests detected divergence-past-frontier and forced cold (152s full prefill each) \u2014 NO MORE SILENT CORRUPTION",
+      "replay": "untouched: warm2 1.757s, byte-identical b344d80e24a3 x3, guard silent",
+      "tracing_answer": "exact-replay ALSO goes evict+shard-load (live=5048 prompt=5047 common=5047 -> load 5044) and stays correct \u2014 load itself is not the discriminator; suffix-content-vs-lineage is, which the token-compare guard captures exactly"
+    },
+    "residual_open": [
+      "guard-forced-cold outputs do NOT byte-match fresh-server cold controls \u2014 some additional state the natural cold-fallback paths reset is missed (or deeper cross-request state); one anomaly: a guarded request reproduced a DIFFERENT prompt's cold output \u2014 needs fresh investigation with sol before the guard can be called complete",
+      "possible option-B one-liner spotted: the non-GLM raw-KV restore explicitly restores per-layer frontier counters (g->layer_n_comp / layer_n_index_comp) after checkpoint replacement; the GLM compact restore visibly does not \u2014 check whether the GLM restore path resets those counters, prime suspect for the whole bug"
+    ],
+    "serving_posture": "v4.8d is STRICTLY SAFER than qualified v4.7.1 (which silently serves corrupted appends): the guard can only force an unnecessary cold start. Tree binary left at v4.8d deliberately.",
+    "status": "guard mechanism landed and validated; completion (residual reset + sol review + re-validation) = next session",
+    "counter_hypothesis_disproven": "the option-B 'GLM restore skips layer_n_comp reset' suspect is WRONG: ds4_glm_gpu_graph has no layer_n_comp/layer_n_index_comp members (those are Metal-graph state; the n_comp arrays in ds4_session_load_payload are file-consistency validation only \u2014 build error proved it, edit reverted, tree back at committed v4.8d, rebuilt clean 7462277e79bb). The GLM CUDA frontier state that survives the load lives elsewhere \u2014 next candidates from the struct scan: prefill_seed_layer_captured[DS4_MAX_LAYER] per-layer capture flags, indexer seed/score tensors, mtp position window state. Next session: sol source hunt over glm_graph_forward_indexed_tokens + the restore path for stateful members not reset by load."
+  },
+  "cache_exoneration_2026_07_26": {
+    "experiment": "append probe with DS4_CUDA_EXPERT_CACHE_GB=0 (sol's discriminator; zero 'expert cache enabled' lines in log)",
+    "result": "corruption BYTE-IDENTICAL to cache-on runs (same shas b2e78d232806/5d80ebee65e9/ac1347bbf0c8, guard 4/4) \u2014 our persistent expert cache and pinning layer are EXONERATED; the bug is fully upstream",
+    "mechanism_refined": "the guard-forced from-zero re-prefill (over a graph that just underwent ds4_session_load_payload GLM restore) deterministically differs from a virgin-server prefill of the same prompt, cache on or off => the GLM shard RESTORE ITSELF leaves the graph in a state that corrupts subsequent evaluation of any shape except pure prefix-replay. Sol's source audit found no graph-side frontier scalar and correct bounds everywhere in the C caller \u2014 remaining suspects are the restore's GPU writes themselves (indexer key cache layout/\u0441\u043e\u0434\u0435\u0440\u0436\u0438\u043c\u043e\u0435, ordering) or upstream g_stream_selected_cache interactions.",
+    "sol_source_audit": "logs/loadprof1/sol-frontier-hunt.txt \u2014 full stateful-member classification; minimal reset sets for load and forced-cold; MTP session-state gaps flagged for --glm-mtp mode",
+    "operational_state": "v4.8d guard remains the right containment (correct-or-cold, never corrupt); serving-safe. True fix = upstream GLM restore repair; report draft updated."
+  },
+  "write_cursor_hypothesis_2026_07_26": {
+    "derivation": "restored ROW CONTENT is proven correct: pure replay after load reads restored rows [0..5044) and is byte-identical to cold \u2014 so 'restore writes garbage' theories die. The surviving theory: after load, NEW row writes land at the OLD physical frontier (~5063) instead of the logical resume point (5044) \u2014 a stale write cursor.",
+    "explains_everything": [
+      "replay immunity: its 3 suffix rows are byte-identical to what sits at EITHER location, and last-token attention reads only stale-but-identical rows",
+      "append signature: the token at logical position ~5050 attends physical rows [0..5050] which still contain the OLD lineage (base tail + old generation start) \u2014 the model literally sees the old generation as context, hence every corrupted output continuing the old tail ('oft...')",
+      "append content-independence: outputs barely depend on appended text (writes displaced, reads see old context)",
+      "guard-cold divergence: a from-zero re-prefill with a displaced write cursor shifts everything",
+      "path-independence: both decode and batch writers would use the same cursor"
+    ],
+    "where_to_look": "NOT in ds4_glm_gpu_graph (sol enumerated \u2014 no cursor member). Candidates: ds4_gpu_tensor append/len state used as a write cursor by kv/indexer cache writes (check ds4_gpu.h tensor struct + cache write call sites for tensor->len-style cursors), or a device-side per-layer write position in ds4_cuda.cu. The load path restores tensor CONTENT but may not reset a tensor-level length/cursor field.",
+    "decisive_probe": "instrument the kv/indexer cache WRITE call sites to log (logical_pos, physical_offset) for the first suffix token after a load \u2014 one line of fprintf, one window",
+    "status": "hypothesis recorded for next session; consistent with 100% of tonight's evidence",
+    "c_level_negative": "checked: the compact-KV and indexer-K store call sites are explicitly position-addressed (ds4_gpu_glm_store_compact_kv_tensor / store_indexer_k_tensor take pos0 straight from sync's start; ds4_gpu_tensor has no cursor field). No C-side stale cursor exists. Hypothesis narrows to: (a) inside the CUDA store/attention/indexer kernels (offset computation from pos0 + some cached device state), or (b) restored cache content subtly wrong in a way replay's attention pattern doesn't expose. DECISIVE PROBE (next session): env-gated GPU readback \u2014 dump layer-0 kv_lora/indexer rows [start..start+4) after the first post-load suffix evaluation and byte-compare with the same rows from a virgin cold run at identical positions (payload_write_tensor_span machinery already reads GPU tensors \u2014 reuse it)."
+  },
+  "rowdump_reframe_2026_07_26": {
+    "probe": "rowdump_probe.sh (GPU readback of compact-cache rows [5040..5048), layers 0+40, at every sync entry) \u2014 guard-on and guard-off runs",
+    "byte_facts": [
+      "guard-on: guard-forced-cold post-write rows == virgin-cold rows EXACTLY (a3d512e5daf7 both) \u2014 earlier guard-cold OUTPUT divergence is therefore NOT cache state; prime suspect is the server-built effective_prompt differing from canonical",
+      "guard-off (genuine resume): rows BELOW the resume point byte-match cold (first diff at byte 8192 = row 4 = position 5044 = exactly the resume boundary) \u2014 RESTORE FIDELITY CONFIRMED",
+      "rows AT/AFTER the resume point differ from cold \u2014 because the disk-load path builds the continuation as loaded-token-prefix + TEXT-SUFFIX tokenization (build_prompt_from_exact_prefix_and_text_suffix; deliberate upstream design), which produces different suffix tokens than canonical whole-prompt tokenization"
+    ],
+    "reframe": "the append-resume 'corruption' is most likely NON-CANONICAL-BUT-VALID tokenization semantics (identical philosophy to llama.cpp slot reuse, which the industry accepts), NOT state damage. Both paths are deterministic and internally consistent; they evaluate different token sequences for the same text. The earlier 'continues the old generation tail' interpretation of 24-token samples was probably pattern-matching.",
+    "remaining_check_before_downgrading_severity": "confirm resumed outputs are quality-equivalent (not subtly degraded) on longer samples, and confirm the suffix tokens the server built are exactly tokenize(text-beyond-stored-boundary) \u2014 if yes, the bug report becomes a SEMANTICS note and the v4.8d guard can be relaxed to accept exact-prefix+suffix resumes, giving multi-turn warm TTFT ~2-4s at llama.cpp-grade consistency",
+    "implication_for_bar": "if confirmed, multi-turn agent TTFT lands at ~2-4s (resume + suffix) with industry-standard semantics \u2014 closing the last TTFT gap without any upstream fix"
+  },
+  "final_synthesis_2026_07_26": {
+    "tokdump": "effective-prompt token ids at the junction window are IDENTICAL between resumed and cold (TOKDUMP 16 ids equal) \u2014 tokenization-semantics theory dead",
+    "layer_locality": "L0 rows byte-perfect across round-trip AND across different cold evaluations; L40 rows differ (~25% kv_lora bytes, ~100% k_rope bytes) between ANY two evaluations with different prefill chunk shapes (5044-token vs 5062-token stage-1)",
+    "conclusion": "DOWNGRADED per sol closing audit: chunk-shape numeric path-dependence is demonstrated (L0/L40 layer-locality evidence), but corruption is NOT excluded while the L40 same-lineage store->load round-trip violation stands unexplained. Strict guard remains the correct serving posture until the no-eval-between round-trip dump passes.",
+    "honest_loose_end": "X live-vs-restored L40 rows differ WITHIN the same lineage, which a pure byte-copy round trip shouldn't allow \u2014 one targeted check remains (dump immediately before store and after load with no evaluation between; possible per-layer dtype subtlety in the f16 flag path)",
+    "operational_consequence": [
+      "the v4.8d guard's byte-identity standard is STRICTER than the industry's (llama.cpp reuse has identical semantics and nobody calls it corruption)",
+      "policy decision for serving: relax guard to accept exact-prefix resumes (multi-turn warm TTFT ~2-4s, llama.cpp-grade consistency) OR keep strict byte-canonical behavior (cold appends ~150s). This is a serving-semantics choice, not a bug fix",
+      "upstream report should be recast as: (1) the L40 same-lineage round-trip question, (2) a documentation note that disk-KV resume has chunk-shape numeric semantics"
+    ]
+  },
+  "appended_turn_ttft_measured_2026_07_26": {
+    "config": "adopted profile + DS4_GLM_RESUME_GUARD_OFF (probe env; serving default remains strict pending owner decision), max_tokens=1",
+    "measured_ms": {
+      "ap1": 5675,
+      "ap2": 5664,
+      "ap3": 5633,
+      "ap1_repeat": 5640,
+      "cold_controls": "138803-150230"
+    },
+    "honest_read": "multi-turn agent TTFT = 5.6-5.7 s under llama.cpp-equivalent exact-prefix semantics \u2014 25x better than the strict default's ~140-150 s cold appends, but still ~3x over the DSV4 <2 s bar (my earlier 2-4 s estimate was wrong; the eviction store ~250ms + shard load ~115ms + 22-29-token suffix batch prefill ~2s + first-token decode ~0.6s + session overhead account for it)",
+    "headroom_not_pursued": "skip per-turn eviction re-store; keep live session hot instead of store+load round-trip per request; both are engine changes",
+    "bar_verdict": "multi-turn TTFT: 5.6 s measured vs <2 s bar \u2014 NOT met, but now a measured quantity under comparable semantics rather than a contingent claim",
+    "decomposition_ms": {
+      "evict_store_920MiB": 1227,
+      "shard_load": 295,
+      "suffix_prefill_22tok_at_8.84tps": 2487,
+      "first_token_decode": 1001,
+      "session_http_overhead": "~660",
+      "total": 5675,
+      "fix_ladder": [
+        "1. skip the per-turn evict re-store (server stores live state to a NEW file EVERY turn even when the disk prefix is already covered): -1.2s -> ~4.5s",
+        "2. live-rewind to common prefix (server already computes common=5045 in the live-miss check, then discards live and does store+load; llama.cpp-style rewind is free): -0.3s -> ~4.2s",
+        "3. small-suffix prefill optimization (22 tokens at 8.84 t/s = 2.5s; the suffix path leaves most of the batch machinery idle): potential -1.5-2s -> ~2.3-2.9s",
+        "4. first-token decode 1.0s is the decode-speed floor itself"
+      ],
+      "conclusion": "CORRECTED per sol: components from committed log excerpt of one turn; floor after ladder items 1-3 is ~2.2-2.7s and is an UNVALIDATED projection (additivity not demonstrated), not a measured floor."
+    }
+  },
+  "sol_closing_audit_2026_07_26": {
+    "verdicts": "final-synthesis NOT SUPPORTED (categorical 'not corruption' incompatible with the open L40 same-lineage round-trip violation); TTFT decomposition NOT SUPPORTED as committed (components were in server logs but not committed; ledger self-contradicted; floor arithmetic wrong); exact-replay MET only as ABSOLUTE <2s threshold (matched DSV4 head-to-head still open); 32K MET overstated (11.6K proven, capacity region unexercised); 'DSV4 baseline measured under llama.cpp prefix-cache semantics' FALSE on the committed record (the 1.218s probe is prefix-cache-cold, tiny prompt)",
+    "corrections_applied": [
+      "final synthesis DOWNGRADED to: chunk-shape path-dependence demonstrated; corruption NOT excluded; same-lineage round-trip invariant open; STRICT GUARD STAYS until that invariant is tested",
+      "decomposition components now backed by committed log excerpt (logs/loadprof1/appended-turn-components.txt: save=1226.7ms, load=295.2ms, suffix 2487ms, first-token 1001ms); earlier ~250/115ms figures were from different, smaller-state turns \u2014 noted; floor corrected to ~2.2-2.7s and labeled UNVALIDATED PROJECTION (additivity not demonstrated)",
+      "ledger rows relabeled: exact-replay = 'meets absolute <2s steady-state exact-replay threshold' (not DSV4 parity; head-to-head open); 32K = 'allocated; 11.6K functional + retrieval beyond row 8192 proven; full-depth ~30K probe open'",
+      "the llama.cpp-semantics framing of the DSV4 baseline RETRACTED \u2014 this also removes my justification for flipping the guard default; the permission-layer block stands vindicated twice over"
+    ],
+    "note": "sol trail logs/loadprof1/sol-closing-audit.txt"
+  },
+  "invariant_closure_2026_07_26": {
+    "probe": "rowdump_replay.sh \u2014 replay flow with dumps at live-post-store and post-load-pre-eval, rows below the resume point",
+    "result": "L40 row differences IDENTICAL to the append flow (kv_lora 2037/8192, k_rope 1021/1024; L0 and indexer byte-exact) while replay output is BYTE-IDENTICAL (a053b5b2b3a1 == a053b5b2b3a1)",
+    "conclusion": "DOWNGRADED per sol review (NOT SUPPORTED as a closure): the defensible statement is only 'the observed L40 difference did not change greedy output in one short exact-replay execution'. Replay-inertness does not imply append-inertness (different suffix lengths/batching may consume those rows); byte-count equality is not pattern identity (no coordinate masks committed); dump-request association and layout assumptions were not independently auditable; one run cannot carry a universal claim. THE STRICT GUARD REMAINS THE RECOMMENDED POSTURE. Required to truly close: branch-matched 22-29-token suffix probes with logit comparison, coordinate-mask diffs vs the append flow, committed sync-trace dump association, fresh-server repetition.",
+    "guard_recommendation_update": "RETRACTED \u2014 strict guard stays; relaxation is not supported on current evidence (sol trail logs/loadprof1/sol-closure-review.txt)"
+  },
+  "creative_round2_2026_07_26": {
+    "directive": "Brian: get more creative on the unmet perf clause \u2014 compress the model itself before transfer; sol subagents on xhigh; left-field ideas",
+    "probe1_stream_entropy": {
+      "harness": "iq2_stream_entropy.py on 64MB of blk.40.ffn_gate_exps (1,016,800 IQ2_XXS blocks)",
+      "result": "ALL byte lanes ~7.85-7.97 bits/byte; lattice-index-ish lane H0=7.970, order-1 H1=7.966 (memoryless); weighted ideal order-0 per-stream compression = 1.12%",
+      "verdict": "stream-separated entropy coding is DEAD (stronger than the old 3.8-4.2% packed measurement \u2014 E8 lattice indices are near-uniform and memoryless). Lossless/recoding branch closed from a second independent angle.",
+      "consequence": "remaining creative space is LOSSY/STRUCTURAL only: sub-2bpw trellis/VQ re-quant (fidelity-measurable), mixed-precision-by-router-weight (HOBBIT-class), shared-basis expert factorization, semantic cache tiering"
+    },
+    "in_flight": "sol-A (recoding/re-quant design \u2014 probe1 already kills its branch 1), sol-B (MoE-structural), web agent (2024-26 MoE offloading + sub-2bpw + GPU entropy decode literature)",
+    "probe2_shared_basis": {
+      "harness": "shared_basis_probe.py \u2014 gguf-py IQ2_XXS dequant, 32-expert Gram accumulation, blk.40 gate_exps (2048x6144 per expert)",
+      "result": "retained energy: r128=5.3% r256=9.4% r512=16.5% r1024=28.9% r1536=39.7% (isotropic baseline 2.1/4.2/8.3/16.7/25.0)",
+      "verdict": "DEAD \u2014 needed >=90% at rank<=1024; experts are near-isotropic in hidden space (only ~1.7x baseline). MoBE-class shared-basis factorization does not transfer to GLM-5.2 gate projections."
+    },
+    "synthesis": {
+      "killed_today": [
+        "stream-separated entropy coding (1.1% ceiling)",
+        "shared-basis factorization (28.9% @ r1024 vs 90% needed)",
+        "RDO-IQ2 (sol-A: requires index entropy 7.97->6.35 bits \u2014 'failure is the more likely result' given memoryless measurement)"
+      ],
+      "surviving_ranked": [
+        "1. popularity-pin + LRU hybrid cache (sol-B trace replay: +2-3 hit points, ~+3-4% decode, ZERO fidelity risk, <1 day) \u2014 implement regardless",
+        "2. gate-mass-thresholded exact prefix + AdapMoE-style low-weight expert skipping (training-free; lit: ~90% next-layer prediction, 25% fewer experts, 'no accuracy loss' claims \u2014 must gate on OUR 100-case NLL suite; prerequisite: log cumulative top-k gate-mass distribution, one window)",
+        "3. HOBBIT-class two-tier: exact top-gate experts + resident sub-1bpw sketches for the rest (sol-B modeled 1.93-2.16 t/s; memory arithmetic: 0.48bpw sketch=35GB + 33GB exact arena fits; fidelity risk medium \u2014 measurable; 1-2 weeks)",
+        "4. QTIP/TCQ 1.75bpw re-quant (sol-A: 12-15% bytes, +cache capacity; needs original BF16 weights + rented multi-GPU quantization \u2014 Brian decision on cost; 8-12 eng-weeks for full integration)",
+        "5. GPU-decode break-even recorded: decompressor must sustain >=D/R (>=12.6 GB/s at R=0.85) overlapped \u2014 nvCOMP/DietGPU rates 250-590 GB/s on datacenter parts make tier-3/4 formats feasible if they existed; GB10 has NO hardware decompression engine"
+      ],
+      "modeled_ceiling_if_stack_lands": "levers 1+2+3 compound to roughly 2.2-3 t/s decode (sol-B trace-replay grounded); +QTIP ~2.5-3.5. DSV4's 18.4 remains out of reach on one box \u2014 but this is now a 1.5-2x credible program, not speculation",
+      "sources": "logs/loadprof1/sol-compress-A.txt, sol-compress-B.txt; web-lit summary in this session (HOBBIT 2411.01433, MoBE 2508.05257, AdapMoE 2408.10284, QTIP 2406.11235, MoE-Infinity, LLM-in-a-flash et al.)"
+    },
+    "lever1_slru_landed": {
+      "code": "v4.9 (binary 625cdef11d86): segmented LRU \u2014 probationary+protected lists, protected cap 60% of slots, promote on hit, demote protected-LRU on overflow, evict probationary-tail first; env DS4_CUDA_EXPERT_CACHE_SLRU=1, default off = exact legacy LRU",
+      "validation": "same-binary OFF/ON A-B windows: byte-identity sha 9113dfd0d233 x3 in BOTH; ON: hits 474.3->495.0/token, misses 166.4->145.7 (-12.4%), hit rate 74.0%->77.3% (matches sol-B's modeled 77.3% optimum), fetch 226.0->211.8ms, loader 275.0->262.0ms (~14ms/token saved, ~+2.3% decode; larger gains expected on mixed/scan traffic where SLRU protects against pollution)",
+      "adopted": "DS4_CUDA_EXPERT_CACHE_SLRU=1 added to 52_engine_switch.sh glm52 profile; sol review batched with next round",
+      "validation_CORRECTED": "per-token figures corrected for the 75-vs-79 layer bug: legacy hits 444.2/misses 155.8/fetch 211.7ms; SLRU hits 463.6/misses 136.4/fetch 198.3ms. Hit rate 74.0->77.3% and -12.4% misses unchanged (ratio). Byte-identity unaffected."
+    },
+    "gate_mass_measured": {
+      "probe": "DS4_GLM_GATE_MASS_LOG at the GLM decode router site (v4.9+gatemass binary d9b1d505fcfa), 14,175 routed-layer decode steps, byte-identity preserved (9113dfd0d233 x3)",
+      "cumulative_topk_mass": {
+        "top1": {
+          "p10": 0.171,
+          "p50": 0.236,
+          "p90": 0.346,
+          "mean": 0.251
+        },
+        "top2": {
+          "p10": 0.321,
+          "p50": 0.409,
+          "p90": 0.535,
+          "mean": 0.421
+        },
+        "top3": {
+          "mean": 0.553
+        },
+        "top4": {
+          "mean": 0.663
+        },
+        "top6": {
+          "mean": 0.848
+        }
+      },
+      "implication": "GLM-5.2's router is UNUSUALLY FLAT \u2014 the 'top-2 dominate' prior behind AdapMoE-style skipping and aggressive HOBBIT tiering does NOT hold: keep-6 discards 15.2% of gate mass, keep-4 discards 33.7%; a 90%-mass exact tier needs ~7 of 8 experts (only 12.5% byte cut). Levers 2 and 3 are significantly WEAKENED on this model \u2014 importance-based tiering is fighting a flat distribution.",
+      "decisive_next_probe": "keep-N fidelity A/B: env DS4_GLM_TOPK_KEEP=N \u2014 at the decode router site, zero weights beyond top-N and renormalize (8-float read-modify-write at the existing GATEMASS hook point, ~15 lines); run the 100-case NLL suite at N=6 and N=4 vs N=8 baseline. If NLL cost at N=6 is negligible despite the 15% mass discard, lever 2 lives (25% byte cut); if not, levers 2-3 die on this model and the surviving stack reduces to SLRU (landed) + QTIP (Brian's call) + second-box."
+    },
+    "keepn_probe_KILL": {
+      "probe": "DS4_GLM_TOPK_KEEP=6 (zero bottom-2 router weights + renormalize; binary afc7378bb80f), 8 varied prompts x 96 tok greedy vs committed keep-8 baselines",
+      "result": "CATASTROPHIC quality collapse, far beyond predicted: invalid UTF-8 bytes emitted (2 of 8 outputs unparseable), degenerate repetition loops, language-switch spam \u2014 vs coherent reasoning at keep-8. Dropping the two SMALLEST contributions (~15% gate mass) destroys generation.",
+      "verdicts": [
+        "lever 2 (expert skipping / AdapMoE-class): DEAD on GLM-5.2 \u2014 confirms both theoretical predictions (flat router; triage requires peaked importance) same-day",
+        "raises the fidelity-risk flag on ANY scheme serving selected experts at reduced contribution, including aggressive two-tier variants; the no-stall successive-refinement tier survives ONLY because its degradation mode is transient-noise-on-miss rather than contribution removal \u2014 but this result mandates a strict NLL gate before any adoption there",
+        "day's probe scoreboard: 6 decisive kills (entropy, shared-basis, RDO-by-implication, reference-coding, importance-tiering, expert-skip) + 1 lever landed (SLRU) + 2 measured foundations (gate-mass, prefetch threshold)"
+      ]
+    }
+  },
+  "cross_domain_sweep_2026_07_26": {
+    "top_findings": [
+      "D. NVMe-oF over the box's OWN dual-200GbE ConnectX-7 to a cheap external Gen5 NVMe target (~$2-4k JBOF/Linux box, NOT a second Spark): StorageReview measured 12.1 GiB/s GDS on this product at only 100G; parallel with the internal drive => ~31 GB/s aggregate, all-miss decode floor 1.8 -> ~5 t/s. Highest-ROI buyable lever in the entire program.",
+      "A. Successive refinement (Equitz-Cover): splitting 2-bit weights into a 0.6-bit ALWAYS-RESIDENT tier (63GB \u2014 fits) + 1.4-bit streamed refinement costs ZERO extra total bytes; misses never stall (game-engine virtual-texturing pattern: serve coarse instantly, refine async). BYPASSES the flat-router problem \u2014 it is stall-elimination, not importance-tiering; fidelity cost only transient on the 23% miss stream.",
+      "B. Prefetch threshold theory (Dahlin; Srinath/Mutlu 40% rule): prefetch pays only when P(used) > theta* ~= 0.38-0.64 at our rates \u2014 KILLS naive router-prior prefetch under the flat distribution (per-expert P~0.21) but a conditioned cross-layer predictor (~90% literature accuracy) clears the bar; chunk-capped speculation + Do-No-Harm eviction (Cao 4 rules) makes it <=2x off offline-optimal.",
+      "H. HARD CEILING on all quantization cleverness combined: reverse water-filling on a flat spectrum => remaining headroom = granular gain 0.254 bits/weight = 12.7% (QTIP-class TCQ captures most). Closes the compression research direction with a number.",
+      "N. Noise-shaping/beta-encoding quantization (Chou-Gunturk; Lybrand-Saab): the ONE quantization family whose guarantee survives a flat spectrum (redundancy source = over-parameterization, not spectral decay); reaches the RD limit cheaply with a sequential/streaming decoder.",
+      "E. Fusi cascade / Benna-Fusi metaplasticity counters: the only cache-eviction model in any literature CONSTRUCTED for flat access; 4-6 leaky accumulators per expert, timescales x4 \u2014 upgrade path beyond SLRU.",
+      "K. LHCb inversion (persist product not input) = activation/prefix caching \u2014 we already ship this as disk-KV.",
+      "M. Future watch: SanDisk/SKhynix High-Bandwidth Flash (1.6 TB/s, 512GB/stack, samples H2-2026) \u2014 the eventual real fix for this entire class of problem; on-package only, not buyable for GB10."
+    ],
+    "closed_by_sweep": [
+      "importance-based expert dropping (triage transfers only for peaked distributions \u2014 matches our flat gate-mass)",
+      "Wyner-Ziv as framed (offline encoder knows side info; successive refinement is the right sibling)",
+      "manufactured reference/diff coding (selection buys 3.8-15.9% only atop existing similarity)",
+      "GPU/CSD decompression (GB10 excluded from DE support; 99% incompressible anyway)",
+      "analog/CXL/USB4/DNA exotics (numbers 3-2000x short)"
+    ],
+    "revised_build_order": [
+      "1. NVMe-oF external NVMe target over ConnectX-7 (BRIAN: ~$2-4k purchase decision)",
+      "2. 0.6-bit resident proxy tier + no-stall coarse-fallback-on-miss (successive-refinement two-tier, flat-router-proof)",
+      "3. theta*-gated cross-layer prefetch with accuracy kill-switch + chunk cap + Do-No-Harm",
+      "4. cascade counters atop SLRU",
+      "5. QTIP re-quant captures the final ~13% (BRIAN: quantization compute)"
+    ],
+    "keep_n_probe_downgraded": "the sweep's triage analysis + our flat gate-mass predict keep-N fidelity A/B fails; run it only as a cheap confirmation, expect kill",
+    "descope_2026_07_26": "Brian: NVMe-oF external hardware EXCLUDED. Software-only build order: (1) theta*-gated cross-layer prefetch \u2014 evaluate layer L+1's router on layer L's hidden state (lit ~90% acc, clears theta*~0.4), async-fetch predicted experts into the arena during L's compute; per-layer fetch 2.7ms < per-layer compute 4.5ms so ~90% of the 212ms fetch can hide => decode ~600->~410ms (~2.4 t/s with SLRU), zero fidelity risk; needs thread-safe arena insert handoff (LRU map is single-threaded by design \u2014 staging queue + main-thread commit). (2) no-stall sketch tier \u2014 REVISED sizing: 0.5bpw sketches 53GB + ~15GB exact arena (63GB sketch variant leaves no exact tier); keep-6 catastrophe mandates strict NLL gate \u2014 sketch keeps contributions (noise mode) unlike removal, but risk is now rated HIGH until measured. (3) cascade counters. (4) QTIP awaiting Brian's quantization-compute decision."
+  },
+  "predacc_probe_2026_07_26": {
+    "probe": "DS4_GLM_PREDACC (binary a895ae724b1d): at each decode layer, run layer L+1's router on the CURRENT hidden state, compare its top-8 against the ids layer L+1 actually selects next; clobber-and-restore so real selection is untouched (byte-identity 9113dfd0d233 x3 confirmed)",
+    "result": {
+      "n_steps": 13986,
+      "mean_accuracy": 0.758,
+      "p10": 0.5,
+      "p50": 0.75,
+      "p90": 0.875,
+      "histogram_matches_of_8": {
+        "0-3": 480,
+        "4": 990,
+        "5": 2514,
+        "6": 4296,
+        "7": 4392,
+        "8": 1314
+      }
+    },
+    "verdict": "PASS by a wide margin \u2014 75.8% vs the theta*=0.40 profitability threshold (Dahlin bound / Srinath-Mutlu 40% rule). GLM-5.2's hidden state at layer L predicts layer L+1's routing well despite the FLAT gate-mass distribution (the two findings are independent: flat = no expert dominates; predictable = which experts get chosen is stable across the layer boundary).",
+    "implication": "cross-layer prefetch is the strongest remaining software lever: ~76% of each layer's expert fetch can start one layer early and hide behind compute (per-layer fetch 2.7ms vs compute 4.5ms). Mispredictions cost only wasted bandwidth (Do-No-Harm eviction guard), never correctness \u2014 outputs stay byte-identical because the real router still selects the real experts.",
+    "next": "implement the background prefetch worker + staging ring (task #41 step 2), sol review before adoption",
+    "sol_narrowing": "measures selected-set overlap, NOT miss-conditioned recall (the metric that governs prefetch payoff); effective sample = 3 repeated trajectories x 63 tokens x 74 transitions; sol-computed trivial baselines (3.1/3.2/16.1/23.8%) confirm 75.8% is genuinely informative"
+  },
+  "sol_round2_review_2026_07_26": {
+    "verdicts": "PART1 SLRU SOUND-WITH-GAPS; PART2 probes SOUND-WITH-GAPS; PART3 prefetch forecast UNSOUND as stated",
+    "MEASUREMENT_BUG_FOUND": "glm_profile_probe.sh hard-coded n_layers=79; GLM-5.2 routes 75 (L3..L77, verified: 75 distinct LOADPROF layer ids). All per-token loader figures this session were inflated ~6.8%. Self-evident in hindsight: reported 640.7 accesses/token exceeds the 600 maximum (75 layers x top-8). HARNESS FIXED (layer count now derived from the trace).",
+    "corrected_per_token": {
+      "legacy_LRU": {
+        "hits": 444.2,
+        "misses": 155.8,
+        "fetch_ms": 211.7,
+        "loader_total_ms": 257.5
+      },
+      "SLRU": {
+        "hits": 463.6,
+        "misses": 136.4,
+        "fetch_ms": 198.3,
+        "loader_total_ms": 245.4
+      },
+      "note": "hit RATE (74.0->77.3%) and miss reduction (-12.4%) survive \u2014 denominator cancels; absolute figures corrected"
+    },
+    "findings_accepted": [
+      "P1.2 SLRU invariants are fragile-but-correct single-threaded: add env-gated validator; getenv() enables on '0' (cosmetic)",
+      "P1.4 A/B is single-trace causal evidence, not a general perf claim: needs cold-reset ABBA repeats + committed access-stream digests",
+      "P1.5 map entries publish before async fills complete \u2014 SAFE today (single-threaded + device sync) but INVALIDATED by any prefetch thread: needs EMPTY/INFLIGHT/READY states",
+      "P2.1-2.2 gate-mass claim narrowed: measures diffuseness AMONG the 8 selected (not global 256-expert flatness, not popularity flatness); effective sample is 3 repeated trajectories, not 14k independent cases",
+      "P2.4 PREDACC restore return values discarded; statics are process-global (races if concurrent sessions); needs separate scratch tensors",
+      "P2.5 75.8% IS informative \u2014 sol computed baselines from our committed trace: random-8 3.1%, reuse-L-ids 3.2%, static-popularity 16.1%, previous-token 23.8%. Far above all trivial predictors.",
+      "P2.6 CRITICAL: selected-set overlap != prefetch profitability. Need MISS-CONDITIONED recall (fraction of demand-MISS bytes predicted), precision, timeliness. Predictable experts may be the already-cached hot ones.",
+      "P2.7 keep-6 kill narrowed: renormalization amplifies retained contributions ~1.18x, itself possibly damaging; 'keep-6-renormalized decisively fails' is proven, 'all skipping dead' is not",
+      "P3 prefetch forecast corrected: ideal ceiling 2.10-2.47 t/s (not 'modeled 2.4'), and only if miss-conditioned recall matches selected-set overlap; worker must be NVMe->private-staging ONLY (no CUDA ops on the legacy stream, no cache mutation); 'probationary-only' is NOT Do-No-Harm (speculative inserts still evict demand entries)"
+    ],
+    "revised_plan": "SHADOW-PREFETCH EXPERIMENT FIRST: prediction-driven reads into disposable staging, zero cache mutation; measure miss-conditioned recall + timeliness + contention + net latency. Only if that passes: main-thread-only admission with INFLIGHT/READY publication. No 2.4 t/s claim until demonstrated.",
+    "trail": "logs/loadprof1/sol-round2-review.txt"
+  },
+  "shadow_prefetch_2026_07_26": {
+    "method": "sol-specified shadow experiment (binary b38a56959d99): PREDIDS (predicted ids for L+1), PREDRES (read-only cache-residency peek at prediction time \u2014 does NOT touch LRU, cannot perturb the measurement), MISSIDS (actual demand-miss ids per layer). Joined offline over 11,832 layer-events. NO threading, NO cache mutation.",
+    "results": {
+      "miss_conditioned_recall": 0.69,
+      "true_prefetch_precision": 0.677,
+      "speculative_bandwidth_overhead": "1.02x demand bytes",
+      "note": "precision is computed on bytes a prefetcher would ACTUALLY fetch (predicted AND not already resident) \u2014 the metric sol required; my earlier naive precision (0.209) wrongly counted already-cached predictions as waste"
+    },
+    "verdict": "PASS decisively on sol's own gate: 67.7% true precision vs theta*=0.40. The standout is the 1.02x overhead \u2014 because the prefetcher skips resident experts, it issues essentially the SAME number of reads as demand fetching (+2%), but 69% of them can start one layer early.",
+    "expected_gain": "69% of the corrected 198 ms/token fetch = ~137 ms movable off the critical path, against ~360 ms/token of GPU work available to hide it. Ideal: ~620 -> ~485 ms/token = ~2.0-2.1 t/s (from 1.6-1.8). Sol's caveats stand: unified-memory bus contention, worker scheduling, and predictor overhead can only reduce this; the shadow run measures coverage, not achieved overlap.",
+    "next": "implement the worker per sol's safe design (NVMe -> private staging only, no CUDA ops on the legacy stream, main-thread-only cache admission with INFLIGHT/READY states, speculative-partition eviction not probationary-eviction), then A/B for real decode gain + byte-identity"
+  },
+  "prefetch_implementation_2026_07_26": {
+    "status": "IMPLEMENTED, SAFE, BYTE-IDENTICAL, but NET-NEUTRAL on decode \u2014 not yet adopted",
+    "binary": "218339e24d20 (env DS4_GLM_PREFETCH, default off)",
+    "design": "worker pool (6 threads, private cloned O_DIRECT fd, private pinned slot buffers, NO CUDA calls, NO cache access) + main-thread-only admission; predictor runs layer L+1's router on layer L's hidden state into the UNUSED batch-router scratch (no save/restore of live routing state, one extra device sync per layer)",
+    "sol_fixes_applied": [
+      "CRITICAL: pool generation binding \u2014 pool disables itself on model reload rather than serving old-model bytes through a stale fd",
+      "HIGH: blocking copies for explicit slot-ownership handoff (a full stream sync cost 62 ms/token \u2014 measured and rejected)",
+      "MEDIUM: up_off validated at claim; pf_ids de-staticized",
+      "slot expiry + resident-skip at enqueue (found independently by me and sol: 104,919 issued / 46 filled before the fix)"
+    ],
+    "measured": {
+      "misses_per_token": "136.4 -> 74.0 (-46%)",
+      "fetch_ms_per_token": "196.1 -> 145.2 (-51 ms)",
+      "consume_path_cost_ms": "+46.6 (shows as loader 'other'): 3 host->device copies + 3 device->arena copies per served slab, ~65 slabs/token ~= 1.2 GB of copies",
+      "loader_total_ms": "242.8 -> 237.9",
+      "decode_wall_ms": "29320 -> 29373 (NEUTRAL, within noise)",
+      "byte_identity": "sha 9113dfd0d233 x3 preserved across every prefetch variant tested",
+      "prefetch_counters": "issued 28,772 / filled 25,431 / served 12,704 / expired 12,727 / resident-skipped 76,300"
+    },
+    "root_cause_of_neutrality": "prefetch removes the DISK READ from the critical path but the consume path still pays the same host<->device copies the demand path pays. The gain is real (-51 ms of disk) and the cost is real (+47 ms of copies).",
+    "next_step_identified": "reserve-fill-publish: main thread RESERVES an arena slot (key unpublished), the worker fills the arena bytes directly, the main thread publishes the key when READY. A prefetched expert then arrives as a normal cache HIT (~6 us) instead of a copy-heavy miss, eliminating the entire consume-path copy cost \u2014 this is the structure sol's review pointed at ('a reserve/fill/publish-last API would make that invariant explicit'). Expected to convert the -51 ms disk saving into net decode gain.",
+    "not_adopted": "DS4_GLM_PREFETCH stays OFF in the serving profile until it shows a real decode win"
+  },
+  "F13_rowtrace_2026_07_26": {
+    "purpose": "FIX-A: decide stale-state vs numerics for the append-resume divergence by DIRECT observation of which physical rows the indexer selects (binary ad8e60ecf5db, env DS4_GLM_ROWTRACE)",
+    "method": "log the max compact-cache row index selected by the indexer top-k at every decode position of a genuinely-resumed append (guard bypassed), compare against the visible bound (pos+1)",
+    "result": "777 traced layer-positions across decode positions 5044..5055+: max selected row EXACTLY equals pos (i.e. == visible-1) at every single position; ZERO violations of the visible bound (0/777)",
+    "verdict_on_F13": "The 'stale rows are being ATTENDED' mechanism is DISPROVEN by direct measurement: the indexer never selects a row at or beyond the visible frontier, so rows written by the previous lineage above the resume point cannot be read by attention. This does NOT restore my earlier 'benign numerics' claim (the audit was right that it was unproven); it eliminates one specific mechanism and narrows the search.",
+    "what_remains_open": "the divergence is real and reproducible; remaining candidate mechanisms are (a) the CONTENT of rows below the resume point differing after restore (row content, not row selection), (b) non-attention state (indexer key cache values, dense/bridge state, MTP window), (c) the batch-vs-per-token evaluation path difference at the junction. Next probe: compare the actual per-position logits resumed-vs-cold (not text), which distinguishes content corruption from evaluation-order numerics.",
+    "operational": "strict resume guard REMAINS default; nothing here justifies relaxing it",
+    "safety_note": "the run was floor-killed at 12.58 GiB available (72GB arena + 12 GiB floor) after collecting 777 samples \u2014 protection worked as designed, box healthy (113 GiB free after); rerun with a smaller arena for full-length traces"
+  },
+  "F13_logit_ab_2026_07_26": {
+    "intent": "distinguish state/content corruption from evaluation-order numerics by comparing LOGITS (not text) resumed-vs-cold",
+    "what_happened": "HARNESS LIMITATION: the sync traces show BOTH arms cold-prefilled the appended prompt (start=0 prompt=5064) \u2014 the append never resumed in this setup, so the intended contrast was not exercised. Reported honestly rather than presented as a resume comparison.",
+    "result_obtained": "two INDEPENDENT PROCESSES performing identical cold prefills produced BIT-IDENTICAL logits: max|delta| = 0 over 154,880 vocab entries, identical argmax (14109) and identical top-1 margin",
+    "value_of_this_negative": "the engine is exactly deterministic across processes for identical work. Combined with the ROWTRACE result (0/777 stale-row selections), two candidate explanations for the append divergence are now eliminated: it is NOT generic nondeterminism, and it is NOT stale-row attention. Whatever the mechanism is, it is specific to the resume evaluation path itself.",
+    "harness_gap_to_fix": "the append prompt cold-falls-back in this harness (its token sequence diverges from the stored lineage before checkpoint length). ttft_append_probe.sh DOES reach genuine resume (sync shows start=5044 suffix=22) \u2014 the logit dump must be armed in THAT harness, on the resumed request specifically, to complete the comparison.",
+    "F13_status": "still open; strict guard remains default; two mechanisms eliminated, search narrowed"
+  },
+  "F13_live_logit_2026_07_26": {
+    "attempted": "compare logits of a LIVE in-process resumed append vs a cold evaluation (per-sync dump added: DS4_GLM_LOGIT_DUMP_ALL)",
+    "printed_verdict_RETRACTED": "the harness printed 'LARGE deltas -> state/content corruption' (max|delta|=23.8, different argmax). THIS IS AN ARTIFACT, NOT A FINDING: with per-sync dumps enabled, lg-X.1 is the BASE request's first decode step, not the appended request's prefill \u2014 I compared two different computations. Retracted before it entered any conclusion.",
+    "what_the_run_actually_shows": "the append AGAIN did not resume: X's sync trace reads start=0 prompt=5064 for the appended request (then its own internal 5064->5066 suffix). Output text was identical between arms (sha 1855d53b81f2), consistent with both being cold evaluations.",
+    "harness_lesson": "three attempts (cross-process x2, in-process x1) failed to reproduce the genuine base->append resume that ttft_append_probe.sh does reach (its trace shows start=5044 suffix=22). The difference is not yet understood and must be identified before the logit comparison can be run: the correct dump index must be selected by matching the sync trace, not assumed.",
+    "F13_status": "STILL OPEN. Established so far: (1) stale-row attention DISPROVEN by direct row tracing (0/777 selections at/above the visible bound); (2) cross-process determinism for identical work is EXACT (max|delta|=0 over 154,880 logits); (3) no valid resumed-vs-cold logit comparison exists yet. Strict guard remains default.",
+    "next_concrete_step": "instrument the dump to tag each file with (start, prompt_len, suffix) from the sync so the resumed evaluation can be identified unambiguously, then re-run inside ttft_append_probe.sh which is the only harness observed to reach a genuine resume."
+  },
+  "F13_tagged_logit_2026_07_26": {
+    "infrastructure": "logit dumps now carry their sync parameters in the filename (lg-<arm>.<seq>.s<start>_p<prompt>_x<suffix>), so a resumed evaluation is selected by evidence instead of by index \u2014 the error that produced the retracted verdict",
+    "guard_worked": "the harness printed 'NO VALID PAIR ... report as harness limitation, NOT as a finding' and emitted no verdict, which is the intended behaviour",
+    "dump_inventory": "X: s0_p5044 (base cold), s5044_p5047_x3 (base internal suffix), s0_p5064 (APPEND COLD), s5064_p5066_x2 (append internal suffix). Y: identical pattern. No X dump exists at start>0 with the append's own base lineage.",
+    "key_observation": "in this harness BOTH arms performed IDENTICAL work (cold 5064 + suffix 2) and produced IDENTICAL output (sha 5d80ebee65e9 both). The same appended prompt DIVERGED in ttft_append_probe.sh, whose trace shows a genuine base-lineage resume (start=5044 prompt=5066 suffix=22).",
+    "sharpened_hypothesis": "divergence correlates specifically with resuming from a SHORTER base-lineage checkpoint (start=5044, 22-token suffix), not with any resume. Three harnesses that cold-prefilled the append (start=0, then a 2-token internal suffix) all matched cold exactly. This is the strongest structural clue yet: the suspect regime is a long suffix evaluated over a restored base checkpoint.",
+    "why_reproduction_fails": "the disk-KV lookup finds the base checkpoint only under conditions ttft_append_probe.sh happens to create (it fires base + three appends, accumulating checkpoints); the single-append harnesses cold-fall-back instead. Next step: instrument the kv lookup decision (hit/miss + chosen file + common-prefix length) so the resuming condition can be forced deliberately rather than stumbled into.",
+    "F13_status": "OPEN. Eliminated: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0), and now 'any resume diverges' (identical-work arms match exactly). Remaining suspect: long-suffix evaluation over a restored shorter checkpoint. Strict guard stays default."
+  },
+  "F13_kvdecide_2026_07_26": {
+    "instrumentation": "DS4_KV_DECIDE_LOG (binary e709f4734814) logs why each request does/doesn't reuse state: cached, source, live length, prompt length, common-prefix length",
+    "decisive_line": "KVDECIDE cached=0 source=none live=5063 prompt=5066 common=5045 kv_enabled=1 min_tokens=512",
+    "mechanism_identified": [
+      "1. The appended prompt's tokens DIVERGE FROM THE LIVE SESSION at position 5045 even though its TEXT is base+generated+append. Cause: BPE re-merge at the junction \u2014 tokenizing the concatenated text yields different tokens near the boundary than (base tokens + sampled generation tokens). This is why live reuse always misses: common=5045 < live=5063.",
+      "2. After that miss, a disk-KV load is what supplies the resume. In ttft_append_probe.sh a base checkpoint EXISTED on disk, so the server loaded the 5044-token file and resumed with a 22-token suffix \u2014 the regime that diverges. In my three reproduction harnesses no such checkpoint was present (no 'kv cache stored' line in this run), so the append cold-prefilled and matched cold exactly.",
+      "3. This explains all five experiments coherently: divergence appears if and only if a disk checkpoint is loaded and then extended by a long suffix."
+    ],
+    "reproduction_recipe_now_known": "prime the disk store (base request, verify a 'kv cache stored' line appears), keep KVDIR intact, then fire the append in a process whose live session mismatches \u2014 the server will disk-load and resume with a long suffix. Only then is the tagged logit pair valid.",
+    "F13_status": "OPEN but fully scoped. Eliminated: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0), 'any resume diverges' (identical-work arms match). Established: the failing regime is disk-checkpoint load + long-suffix extension, entered via a BPE-junction live-cache miss. Strict guard stays default.",
+    "fidelity_relevance": "this is the accuracy-affecting item: until the logit comparison runs in the identified regime, multi-turn GLM serving must keep the strict guard (correct-or-cold), which is the current default."
+  },
+  "F13_regime_attempt_2026_07_26": {
+    "outcome": "REGIME NOT REACHED \u2014 harness emitted NO verdict (guard working as designed)",
+    "new_diagnostic": "three KVDECIDE lines expose the full decision sequence: (1) base cold (live=0); (2) REPEATED base: live=5063 prompt=5047 common=5047 -> cached=0 DESPITE the prompt being a strict prefix of live state (the server refuses reuse when the incoming prompt is SHORTER than the live checkpoint); (3) append: live=5063 prompt=5066 common=5045 -> live miss at the BPE junction.",
+    "missing_precondition_identified": "NO 'kv cache stored' line appears in any of my reproduction harnesses, so the disk-load branch can never fire \u2014 that is why five attempts all cold-prefilled. The original ttft_append_probe.sh run DID show 'kv cache stored tokens=5044 trimmed=3 reason=cold ... save=183.1 ms'. The store, not the append shape, is the missing precondition.",
+    "next_step_precise": "determine what makes the cold-boundary store fire (compare the original append-probe server log's store conditions against these runs \u2014 candidate differences: request sequencing, slot state at completion, or the second-base request invalidating the pending store). Force the store, verify a 'kv cache stored' line, THEN the in-regime logit comparison becomes possible.",
+    "F13_status_final_for_session": "OPEN, fully scoped, no verdict claimed. Eliminated by measurement: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0 over 154,880 logits), 'any resume diverges' (identical-work arms byte-match). Established: divergence requires a disk-checkpoint load + long-suffix extension, entered via a BPE-junction live-cache miss; the disk store is the precondition my harnesses fail to create. Strict guard remains default so multi-turn serving is correct-or-cold.",
+    "infrastructure_delivered": "DS4_GLM_ROWTRACE (indexer row selection), DS4_GLM_LOGIT_DUMP_ALL with (start,prompt,suffix) tagging, DS4_KV_DECIDE_LOG (resume decision), and a probe that refuses to emit verdicts outside the target regime \u2014 all committed, all reusable"
+  },
+  "CRITICAL_batchall_fidelity_bug_2026_07_26": {
+    "severity": "CRITICAL \u2014 a lever I adopted into the serving profile silently destroys output quality on short prompts",
+    "finding": "DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 ('batchall' prefill) produces DEGENERATE OUTPUT on short prompts: repetition loops and invalid UTF-8 (e.g. '\\xe5\\xae' + 'orkorkork'; '\u5bb3\\n</think>\u5bb3\\n\\n| \u5bb3...' repeated).",
+    "clean_ab": "same binary, same prompt ('The three most important considerations when designing a distributed cache are'), ctx 8192, cache 72GB: WITH the flag -> degenerate (both SLRU on and off, ctx 8k and 32k); WITHOUT the flag -> coherent ('1. **Analyze the Request:** ... **Topic:** Designing a distributed cache.'). SLRU and context size are exonerated; the resume guard is exonerated (guard on and off both coherent without the flag).",
+    "why_it_escaped_qualification": "the lever was verified byte-identical ONLY on the 5047-token long fixture (sha b344d80e24a3). Long prompts are unaffected; short prompts are destroyed. My fidelity gate never included a short-prompt case.",
+    "consequence_for_F04": "this EXPLAINS the keep-6 'collapse' and confirms sol's F04 falsification with a mechanism: keepn_ab.sh ran WITH batchall while its keep-8 'control' came from mtp_ab.sh WITHOUT it. The collapse I attributed to expert skipping was almost certainly this flag. Expert skipping must be re-tested (FIX-B) with a valid control.",
+    "action_taken": "DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL REMOVED from the glm52 serving profile with an in-file warning; any future re-enable requires a short-prompt fidelity gate.",
+    "collateral": "the warm-TTFT results that used batchall (1.76s claim) must be re-measured without it; cold-TTFT 3.6x gain attributed to this lever is forfeit unless it can be made safe.",
+    "lesson": "byte-identity on ONE fixture is not a fidelity gate. Every lever needs short AND long prompt coverage before adoption."
+  },
+  "post_fix_verification_2026_07_26": {
+    "round_trip_switch_DEMONSTRATED": [
+      "leg1 glm52: VERIFY OK identity='glm-5.2,glm-5.2-chat,glm-5.2-reasoner' authhelper=401 probe_ms=28585",
+      "leg2 dsv4:  VERIFY OK identity='...DeepSeek-V4-Flash-UD-Q2_K_XL...' authhelper=401 probe_ms=1085",
+      "leg3 glm52: VERIFY OK identity='glm-5.2,glm-5.2-chat,glm-5.2-reasoner' authhelper=401 probe_ms=35695",
+      "each leg independently verified engine identity + auth-chain 401 + a live completion; earlier one-way claim corrected"
+    ],
+    "coherence_restored": "with the batchall lever removed, the short prompt that produced repetition loops and invalid UTF-8 now returns coherent, reproducible output ('1.  **Analyze the Request:** ... **Topic:**') identical across repeats",
+    "measured_latency_post_fix": {
+      "short_prompt_16_tokens": "18.97-19.77 s across 3 identical requests (stable)",
+      "implied_decode": "~0.83 t/s on a SHORT prompt \u2014 much slower than the 1.6-1.8 t/s measured on the 5047-token fixture, because a short prompt's expert working set is entirely uncached (every token is a full miss)",
+      "note": "this is the first honest short-prompt decode measurement; prior figures were all long-fixture and did not represent this regime"
+    },
+    "claims_now_forfeit": [
+      "warm TTFT 1.764 s \u2014 measured WITH the batchall lever; must be re-measured without it",
+      "cold TTFT 3.6x improvement \u2014 attributed to the batchall lever, forfeit unless the lever can be made safe",
+      "keep-6 'collapse' as evidence against expert skipping \u2014 almost certainly caused by the same lever (FIX-B must re-test)"
+    ],
+    "what_stands": "SLRU (byte-identical, exonerated in this A/B), pinned arena (separate lever, unaffected), parallel fetch, deterministic dispatch, 32K allocation, and the engine's IQ2_XXS down-projection kernels that make GLM run at all"
+  },
+  "ttft_remeasured_without_batchall_2026_07_26": {
+    "context": "the batchall lever was removed as a fidelity hazard; every TTFT number measured with it had to be re-taken",
+    "results_WITHOUT_batchall": {
+      "cold_ms": 147610,
+      "warm1_ms": 2378,
+      "warm2_ms": 1755,
+      "coherence": "all three responses coherent, bad_utf8=0, sha b344d80e24a3 x3"
+    },
+    "results_WITH_batchall (prior run, same align/trim)": {
+      "cold_ms": 152624,
+      "warm1_ms": 2478,
+      "warm2_ms": 1757
+    },
+    "verdict": "the warm-TTFT result SURVIVES the fix: 1.755 s without the lever vs 1.757 s with it (identical within noise), and COLD is slightly FASTER without it (147.6 s vs 152.6 s). The lever contributed nothing measurable in this configuration while silently destroying short-prompt output.",
+    "claims_restored": "warm TTFT ~1.76 s (steady-state exact replay, align 4 + trim 0) is re-established on a clean configuration with byte-identical, coherence-checked responses",
+    "claim_withdrawn_permanently": "the '3.6x cold TTFT improvement from batchall' figure came from a much earlier, different configuration and is NOT reproducible here \u2014 cold TTFT is unaffected by the lever. Withdrawn.",
+    "harness_hardening": "ttft_probe3.sh now (a) makes batchall opt-in via an env array (an earlier ${VAR:+...} form silently broke the env-assignment chain and killed the server) and (b) checks every response for coherence and invalid UTF-8, so a fidelity regression cannot pass a timing run again"
+  },
+  "FIX_B_keepn_controlled_2026_07_26": {
+    "design": "4 arms, SAME binary + SAME config (24GB cache, SLRU on, ctx 8192, NO batchall), differing only in DS4_GLM_TOPK_KEEP; 8 varied prompts x 96 tokens greedy; keep-8 is the same-binary control the original experiment lacked",
+    "results": {
+      "keep8_control": {
+        "bad_utf8": 0,
+        "rep3gram": 0.019,
+        "coherent": true
+      },
+      "keep7": {
+        "bad_utf8": 0,
+        "rep3gram": 0.03,
+        "coherent": true,
+        "match_control": "0/8"
+      },
+      "keep6": {
+        "bad_utf8": 0,
+        "rep3gram": 0.032,
+        "coherent": true,
+        "match_control": "0/8"
+      },
+      "keep6_no_renorm": {
+        "bad_utf8": 0,
+        "rep3gram": 0.019,
+        "coherent": true,
+        "match_control": "0/8"
+      }
+    },
+    "VERDICT": "EXPERT SKIPPING DOES NOT COLLAPSE GLM-5.2. All arms produce coherent output with ZERO invalid UTF-8 and low repetition. My earlier 'keep-6 catastrophically collapses generation' finding was ENTIRELY an artifact of the batchall prefill lever, exactly as sol's F04 falsification predicted. The conclusion 'AdapMoE-class expert skipping is dead on this model' is RETRACTED.",
+    "significance": "this reopens the single largest software lever for the performance goal: keep-6 of 8 = ~25% fewer expert bytes per token, which on a byte-bound decode path is close to a proportional speedup. It also demonstrates the renormalization question: keep6 (renormalized) and keep6nr (not) are both coherent, with keep6nr showing LOWER repetition (0.019 vs 0.032, matching the control exactly).",
+    "next": "measure the actual decode gain (keep-8 vs keep-6/keep-7 timings) and the fidelity cost on the committed 100-case NLL suite \u2014 subjective coherence is not a fidelity gate",
+    "evidence": "logs/loadprof1/keepn-controlled.txt; raw per-arm outputs at dsv4:/home/dsv4/ds4-project/glm52-keepn-controlled/"
+  },
+  "FIX_B_part2_keepN_was_a_noop_2026_07_26": {
+    "finding": "DS4_GLM_TOPK_KEEP as implemented saved ZERO bytes and ZERO compute. It zeroed router_weights only; the streaming loader fetches from router_selected (cuda_stream_selected_cache_begin_load reads selected_ids and dedups into compact_ids), so all 8 experts were still read from SSD and computed. Every keep-N result to date is a contribution-ablation pilot, not a performance measurement.",
+    "found_by": "independent code read (ds4.c keep-N block vs ds4_cuda.cu loader) AND sol xhigh review, which reached the same conclusion and marked the 'expert skipping does not collapse GLM' performance claim FALSIFIED on relevance grounds",
+    "fix": "DS4_GLM_TOPK_SKIP_LOAD=1 collapses dropped slots' expert ids onto a kept expert id so the loader's existing dedup fetches exactly `keep` unique experts; dropped slots then compute keeper*0.0. Patch committed at results/glm52-gates/harness/ds4-topk-skip-load.patch",
+    "verification_designed": "per-decode-load unique-expert histogram parsed from DS4_GLM_TP_DEBUG (must equal keep-N), not inferred from timings",
+    "status": "implemented, built (binary c59a87f056a0), measurement in flight"
+  },
+  "ROOT_CAUSE_expert_cache_flush_storm_2026_07_26": {
+    "symptom": "persistent host expert cache never warmed: 331 'persistent expert cache flushed (model load generation changed)' lines in a single serving run; hit%=20.0; resident slots 2004 -> 5566 -> 245 of 7398 mid-request",
+    "root_cause": "g_model_load_generation++ ran UNCONDITIONALLY at the top of ds4_gpu_set_model_map, ds4_gpu_set_model_map_range and ds4_gpu_register_model_map_no_copy, BEFORE the pre-existing 'same host pointer and size -> nothing to do, return 1' early return. Every model-span install (token embedding, static decode, per-layer, decode layer, output head; metal_graph_install_model_spans -> ds4_gpu_set_model_map_spans -> ds4_gpu_set_model_map) therefore looked like a model RELOAD, and cuda_expert_cache_flush_for_model() -- called on every selected-expert load -- cleared the entire 72 GB cache.",
+    "why_it_matters": "decode on this config is byte-bound: 74.2 MiB of expert weights per routed layer x 75 routed layers = ~5.4 GB requested per decode step. The host cache is the only thing that avoids re-reading those bytes from NVMe. A cache that is wiped hundreds of times per run cannot amortize anything.",
+    "fix": "cuda_model_gen_bump_if_changed() bumps only when (host pointer, size) actually changes -- the same identity test the existing early-return already relies on, so the change removes an inconsistency rather than introducing an assumption. DS4_CUDA_MODEL_GEN_ALWAYS_BUMP=1 restores the old behaviour for same-binary A/B. Patch: results/glm52-gates/harness/ds4-model-gen-flush-fix.patch",
+    "measurement": "decode_ab.sh, decode isolated arithmetically as 64/(t65-t1) on one warm server so prefill cancels; ABBA arm order; per-arm flush counts, unique-expert histograms, HTTP status and output shas",
+    "status": "fixed and built (c59a87f056a0); A/B in flight; sol reviewing the patch adversarially"
+  },
+  "measurement_bug_prefill_dominated_2026_07_26": {
+    "finding": "the first keep-N speed harness timed whole requests against the 5047-token fixture; at ~160 s per request that is ~95% prefill. keep-N only touches the DECODE graph, so that harness could not have measured the lever even if the lever worked. Withdrawn before producing a number.",
+    "lesson": "state which phase a lever acts on, then prove the metric isolates that phase"
   }
- },
- "cross_domain_sweep_2026_07_26": {
-  "top_findings": [
-   "D. NVMe-oF over the box's OWN dual-200GbE ConnectX-7 to a cheap external Gen5 NVMe target (~$2-4k JBOF/Linux box, NOT a second Spark): StorageReview measured 12.1 GiB/s GDS on this product at only 100G; parallel with the internal drive => ~31 GB/s aggregate, all-miss decode floor 1.8 -> ~5 t/s. Highest-ROI buyable lever in the entire program.",
-   "A. Successive refinement (Equitz-Cover): splitting 2-bit weights into a 0.6-bit ALWAYS-RESIDENT tier (63GB \u2014 fits) + 1.4-bit streamed refinement costs ZERO extra total bytes; misses never stall (game-engine virtual-texturing pattern: serve coarse instantly, refine async). BYPASSES the flat-router problem \u2014 it is stall-elimination, not importance-tiering; fidelity cost only transient on the 23% miss stream.",
-   "B. Prefetch threshold theory (Dahlin; Srinath/Mutlu 40% rule): prefetch pays only when P(used) > theta* ~= 0.38-0.64 at our rates \u2014 KILLS naive router-prior prefetch under the flat distribution (per-expert P~0.21) but a conditioned cross-layer predictor (~90% literature accuracy) clears the bar; chunk-capped speculation + Do-No-Harm eviction (Cao 4 rules) makes it <=2x off offline-optimal.",
-   "H. HARD CEILING on all quantization cleverness combined: reverse water-filling on a flat spectrum => remaining headroom = granular gain 0.254 bits/weight = 12.7% (QTIP-class TCQ captures most). Closes the compression research direction with a number.",
-   "N. Noise-shaping/beta-encoding quantization (Chou-Gunturk; Lybrand-Saab): the ONE quantization family whose guarantee survives a flat spectrum (redundancy source = over-parameterization, not spectral decay); reaches the RD limit cheaply with a sequential/streaming decoder.",
-   "E. Fusi cascade / Benna-Fusi metaplasticity counters: the only cache-eviction model in any literature CONSTRUCTED for flat access; 4-6 leaky accumulators per expert, timescales x4 \u2014 upgrade path beyond SLRU.",
-   "K. LHCb inversion (persist product not input) = activation/prefix caching \u2014 we already ship this as disk-KV.",
-   "M. Future watch: SanDisk/SKhynix High-Bandwidth Flash (1.6 TB/s, 512GB/stack, samples H2-2026) \u2014 the eventual real fix for this entire class of problem; on-package only, not buyable for GB10."
-  ],
-  "closed_by_sweep": [
-   "importance-based expert dropping (triage transfers only for peaked distributions \u2014 matches our flat gate-mass)",
-   "Wyner-Ziv as framed (offline encoder knows side info; successive refinement is the right sibling)",
-   "manufactured reference/diff coding (selection buys 3.8-15.9% only atop existing similarity)",
-   "GPU/CSD decompression (GB10 excluded from DE support; 99% incompressible anyway)",
-   "analog/CXL/USB4/DNA exotics (numbers 3-2000x short)"
-  ],
-  "revised_build_order": [
-   "1. NVMe-oF external NVMe target over ConnectX-7 (BRIAN: ~$2-4k purchase decision)",
-   "2. 0.6-bit resident proxy tier + no-stall coarse-fallback-on-miss (successive-refinement two-tier, flat-router-proof)",
-   "3. theta*-gated cross-layer prefetch with accuracy kill-switch + chunk cap + Do-No-Harm",
-   "4. cascade counters atop SLRU",
-   "5. QTIP re-quant captures the final ~13% (BRIAN: quantization compute)"
-  ],
-  "keep_n_probe_downgraded": "the sweep's triage analysis + our flat gate-mass predict keep-N fidelity A/B fails; run it only as a cheap confirmation, expect kill",
-  "descope_2026_07_26": "Brian: NVMe-oF external hardware EXCLUDED. Software-only build order: (1) theta*-gated cross-layer prefetch \u2014 evaluate layer L+1's router on layer L's hidden state (lit ~90% acc, clears theta*~0.4), async-fetch predicted experts into the arena during L's compute; per-layer fetch 2.7ms < per-layer compute 4.5ms so ~90% of the 212ms fetch can hide => decode ~600->~410ms (~2.4 t/s with SLRU), zero fidelity risk; needs thread-safe arena insert handoff (LRU map is single-threaded by design \u2014 staging queue + main-thread commit). (2) no-stall sketch tier \u2014 REVISED sizing: 0.5bpw sketches 53GB + ~15GB exact arena (63GB sketch variant leaves no exact tier); keep-6 catastrophe mandates strict NLL gate \u2014 sketch keeps contributions (noise mode) unlike removal, but risk is now rated HIGH until measured. (3) cascade counters. (4) QTIP awaiting Brian's quantization-compute decision."
- },
- "predacc_probe_2026_07_26": {
-  "probe": "DS4_GLM_PREDACC (binary a895ae724b1d): at each decode layer, run layer L+1's router on the CURRENT hidden state, compare its top-8 against the ids layer L+1 actually selects next; clobber-and-restore so real selection is untouched (byte-identity 9113dfd0d233 x3 confirmed)",
-  "result": {
-   "n_steps": 13986,
-   "mean_accuracy": 0.758,
-   "p10": 0.5,
-   "p50": 0.75,
-   "p90": 0.875,
-   "histogram_matches_of_8": {
-    "0-3": 480,
-    "4": 990,
-    "5": 2514,
-    "6": 4296,
-    "7": 4392,
-    "8": 1314
-   }
-  },
-  "verdict": "PASS by a wide margin \u2014 75.8% vs the theta*=0.40 profitability threshold (Dahlin bound / Srinath-Mutlu 40% rule). GLM-5.2's hidden state at layer L predicts layer L+1's routing well despite the FLAT gate-mass distribution (the two findings are independent: flat = no expert dominates; predictable = which experts get chosen is stable across the layer boundary).",
-  "implication": "cross-layer prefetch is the strongest remaining software lever: ~76% of each layer's expert fetch can start one layer early and hide behind compute (per-layer fetch 2.7ms vs compute 4.5ms). Mispredictions cost only wasted bandwidth (Do-No-Harm eviction guard), never correctness \u2014 outputs stay byte-identical because the real router still selects the real experts.",
-  "next": "implement the background prefetch worker + staging ring (task #41 step 2), sol review before adoption",
-  "sol_narrowing": "measures selected-set overlap, NOT miss-conditioned recall (the metric that governs prefetch payoff); effective sample = 3 repeated trajectories x 63 tokens x 74 transitions; sol-computed trivial baselines (3.1/3.2/16.1/23.8%) confirm 75.8% is genuinely informative"
- },
- "sol_round2_review_2026_07_26": {
-  "verdicts": "PART1 SLRU SOUND-WITH-GAPS; PART2 probes SOUND-WITH-GAPS; PART3 prefetch forecast UNSOUND as stated",
-  "MEASUREMENT_BUG_FOUND": "glm_profile_probe.sh hard-coded n_layers=79; GLM-5.2 routes 75 (L3..L77, verified: 75 distinct LOADPROF layer ids). All per-token loader figures this session were inflated ~6.8%. Self-evident in hindsight: reported 640.7 accesses/token exceeds the 600 maximum (75 layers x top-8). HARNESS FIXED (layer count now derived from the trace).",
-  "corrected_per_token": {
-   "legacy_LRU": {
-    "hits": 444.2,
-    "misses": 155.8,
-    "fetch_ms": 211.7,
-    "loader_total_ms": 257.5
-   },
-   "SLRU": {
-    "hits": 463.6,
-    "misses": 136.4,
-    "fetch_ms": 198.3,
-    "loader_total_ms": 245.4
-   },
-   "note": "hit RATE (74.0->77.3%) and miss reduction (-12.4%) survive \u2014 denominator cancels; absolute figures corrected"
-  },
-  "findings_accepted": [
-   "P1.2 SLRU invariants are fragile-but-correct single-threaded: add env-gated validator; getenv() enables on '0' (cosmetic)",
-   "P1.4 A/B is single-trace causal evidence, not a general perf claim: needs cold-reset ABBA repeats + committed access-stream digests",
-   "P1.5 map entries publish before async fills complete \u2014 SAFE today (single-threaded + device sync) but INVALIDATED by any prefetch thread: needs EMPTY/INFLIGHT/READY states",
-   "P2.1-2.2 gate-mass claim narrowed: measures diffuseness AMONG the 8 selected (not global 256-expert flatness, not popularity flatness); effective sample is 3 repeated trajectories, not 14k independent cases",
-   "P2.4 PREDACC restore return values discarded; statics are process-global (races if concurrent sessions); needs separate scratch tensors",
-   "P2.5 75.8% IS informative \u2014 sol computed baselines from our committed trace: random-8 3.1%, reuse-L-ids 3.2%, static-popularity 16.1%, previous-token 23.8%. Far above all trivial predictors.",
-   "P2.6 CRITICAL: selected-set overlap != prefetch profitability. Need MISS-CONDITIONED recall (fraction of demand-MISS bytes predicted), precision, timeliness. Predictable experts may be the already-cached hot ones.",
-   "P2.7 keep-6 kill narrowed: renormalization amplifies retained contributions ~1.18x, itself possibly damaging; 'keep-6-renormalized decisively fails' is proven, 'all skipping dead' is not",
-   "P3 prefetch forecast corrected: ideal ceiling 2.10-2.47 t/s (not 'modeled 2.4'), and only if miss-conditioned recall matches selected-set overlap; worker must be NVMe->private-staging ONLY (no CUDA ops on the legacy stream, no cache mutation); 'probationary-only' is NOT Do-No-Harm (speculative inserts still evict demand entries)"
-  ],
-  "revised_plan": "SHADOW-PREFETCH EXPERIMENT FIRST: prediction-driven reads into disposable staging, zero cache mutation; measure miss-conditioned recall + timeliness + contention + net latency. Only if that passes: main-thread-only admission with INFLIGHT/READY publication. No 2.4 t/s claim until demonstrated.",
-  "trail": "logs/loadprof1/sol-round2-review.txt"
- },
- "shadow_prefetch_2026_07_26": {
-  "method": "sol-specified shadow experiment (binary b38a56959d99): PREDIDS (predicted ids for L+1), PREDRES (read-only cache-residency peek at prediction time \u2014 does NOT touch LRU, cannot perturb the measurement), MISSIDS (actual demand-miss ids per layer). Joined offline over 11,832 layer-events. NO threading, NO cache mutation.",
-  "results": {
-   "miss_conditioned_recall": 0.69,
-   "true_prefetch_precision": 0.677,
-   "speculative_bandwidth_overhead": "1.02x demand bytes",
-   "note": "precision is computed on bytes a prefetcher would ACTUALLY fetch (predicted AND not already resident) \u2014 the metric sol required; my earlier naive precision (0.209) wrongly counted already-cached predictions as waste"
-  },
-  "verdict": "PASS decisively on sol's own gate: 67.7% true precision vs theta*=0.40. The standout is the 1.02x overhead \u2014 because the prefetcher skips resident experts, it issues essentially the SAME number of reads as demand fetching (+2%), but 69% of them can start one layer early.",
-  "expected_gain": "69% of the corrected 198 ms/token fetch = ~137 ms movable off the critical path, against ~360 ms/token of GPU work available to hide it. Ideal: ~620 -> ~485 ms/token = ~2.0-2.1 t/s (from 1.6-1.8). Sol's caveats stand: unified-memory bus contention, worker scheduling, and predictor overhead can only reduce this; the shadow run measures coverage, not achieved overlap.",
-  "next": "implement the worker per sol's safe design (NVMe -> private staging only, no CUDA ops on the legacy stream, main-thread-only cache admission with INFLIGHT/READY states, speculative-partition eviction not probationary-eviction), then A/B for real decode gain + byte-identity"
- },
- "prefetch_implementation_2026_07_26": {
-  "status": "IMPLEMENTED, SAFE, BYTE-IDENTICAL, but NET-NEUTRAL on decode \u2014 not yet adopted",
-  "binary": "218339e24d20 (env DS4_GLM_PREFETCH, default off)",
-  "design": "worker pool (6 threads, private cloned O_DIRECT fd, private pinned slot buffers, NO CUDA calls, NO cache access) + main-thread-only admission; predictor runs layer L+1's router on layer L's hidden state into the UNUSED batch-router scratch (no save/restore of live routing state, one extra device sync per layer)",
-  "sol_fixes_applied": [
-   "CRITICAL: pool generation binding \u2014 pool disables itself on model reload rather than serving old-model bytes through a stale fd",
-   "HIGH: blocking copies for explicit slot-ownership handoff (a full stream sync cost 62 ms/token \u2014 measured and rejected)",
-   "MEDIUM: up_off validated at claim; pf_ids de-staticized",
-   "slot expiry + resident-skip at enqueue (found independently by me and sol: 104,919 issued / 46 filled before the fix)"
-  ],
-  "measured": {
-   "misses_per_token": "136.4 -> 74.0 (-46%)",
-   "fetch_ms_per_token": "196.1 -> 145.2 (-51 ms)",
-   "consume_path_cost_ms": "+46.6 (shows as loader 'other'): 3 host->device copies + 3 device->arena copies per served slab, ~65 slabs/token ~= 1.2 GB of copies",
-   "loader_total_ms": "242.8 -> 237.9",
-   "decode_wall_ms": "29320 -> 29373 (NEUTRAL, within noise)",
-   "byte_identity": "sha 9113dfd0d233 x3 preserved across every prefetch variant tested",
-   "prefetch_counters": "issued 28,772 / filled 25,431 / served 12,704 / expired 12,727 / resident-skipped 76,300"
-  },
-  "root_cause_of_neutrality": "prefetch removes the DISK READ from the critical path but the consume path still pays the same host<->device copies the demand path pays. The gain is real (-51 ms of disk) and the cost is real (+47 ms of copies).",
-  "next_step_identified": "reserve-fill-publish: main thread RESERVES an arena slot (key unpublished), the worker fills the arena bytes directly, the main thread publishes the key when READY. A prefetched expert then arrives as a normal cache HIT (~6 us) instead of a copy-heavy miss, eliminating the entire consume-path copy cost \u2014 this is the structure sol's review pointed at ('a reserve/fill/publish-last API would make that invariant explicit'). Expected to convert the -51 ms disk saving into net decode gain.",
-  "not_adopted": "DS4_GLM_PREFETCH stays OFF in the serving profile until it shows a real decode win"
- },
- "F13_rowtrace_2026_07_26": {
-  "purpose": "FIX-A: decide stale-state vs numerics for the append-resume divergence by DIRECT observation of which physical rows the indexer selects (binary ad8e60ecf5db, env DS4_GLM_ROWTRACE)",
-  "method": "log the max compact-cache row index selected by the indexer top-k at every decode position of a genuinely-resumed append (guard bypassed), compare against the visible bound (pos+1)",
-  "result": "777 traced layer-positions across decode positions 5044..5055+: max selected row EXACTLY equals pos (i.e. == visible-1) at every single position; ZERO violations of the visible bound (0/777)",
-  "verdict_on_F13": "The 'stale rows are being ATTENDED' mechanism is DISPROVEN by direct measurement: the indexer never selects a row at or beyond the visible frontier, so rows written by the previous lineage above the resume point cannot be read by attention. This does NOT restore my earlier 'benign numerics' claim (the audit was right that it was unproven); it eliminates one specific mechanism and narrows the search.",
-  "what_remains_open": "the divergence is real and reproducible; remaining candidate mechanisms are (a) the CONTENT of rows below the resume point differing after restore (row content, not row selection), (b) non-attention state (indexer key cache values, dense/bridge state, MTP window), (c) the batch-vs-per-token evaluation path difference at the junction. Next probe: compare the actual per-position logits resumed-vs-cold (not text), which distinguishes content corruption from evaluation-order numerics.",
-  "operational": "strict resume guard REMAINS default; nothing here justifies relaxing it",
-  "safety_note": "the run was floor-killed at 12.58 GiB available (72GB arena + 12 GiB floor) after collecting 777 samples \u2014 protection worked as designed, box healthy (113 GiB free after); rerun with a smaller arena for full-length traces"
- },
- "F13_logit_ab_2026_07_26": {
-  "intent": "distinguish state/content corruption from evaluation-order numerics by comparing LOGITS (not text) resumed-vs-cold",
-  "what_happened": "HARNESS LIMITATION: the sync traces show BOTH arms cold-prefilled the appended prompt (start=0 prompt=5064) \u2014 the append never resumed in this setup, so the intended contrast was not exercised. Reported honestly rather than presented as a resume comparison.",
-  "result_obtained": "two INDEPENDENT PROCESSES performing identical cold prefills produced BIT-IDENTICAL logits: max|delta| = 0 over 154,880 vocab entries, identical argmax (14109) and identical top-1 margin",
-  "value_of_this_negative": "the engine is exactly deterministic across processes for identical work. Combined with the ROWTRACE result (0/777 stale-row selections), two candidate explanations for the append divergence are now eliminated: it is NOT generic nondeterminism, and it is NOT stale-row attention. Whatever the mechanism is, it is specific to the resume evaluation path itself.",
-  "harness_gap_to_fix": "the append prompt cold-falls-back in this harness (its token sequence diverges from the stored lineage before checkpoint length). ttft_append_probe.sh DOES reach genuine resume (sync shows start=5044 suffix=22) \u2014 the logit dump must be armed in THAT harness, on the resumed request specifically, to complete the comparison.",
-  "F13_status": "still open; strict guard remains default; two mechanisms eliminated, search narrowed"
- },
- "F13_live_logit_2026_07_26": {
-  "attempted": "compare logits of a LIVE in-process resumed append vs a cold evaluation (per-sync dump added: DS4_GLM_LOGIT_DUMP_ALL)",
-  "printed_verdict_RETRACTED": "the harness printed 'LARGE deltas -> state/content corruption' (max|delta|=23.8, different argmax). THIS IS AN ARTIFACT, NOT A FINDING: with per-sync dumps enabled, lg-X.1 is the BASE request's first decode step, not the appended request's prefill \u2014 I compared two different computations. Retracted before it entered any conclusion.",
-  "what_the_run_actually_shows": "the append AGAIN did not resume: X's sync trace reads start=0 prompt=5064 for the appended request (then its own internal 5064->5066 suffix). Output text was identical between arms (sha 1855d53b81f2), consistent with both being cold evaluations.",
-  "harness_lesson": "three attempts (cross-process x2, in-process x1) failed to reproduce the genuine base->append resume that ttft_append_probe.sh does reach (its trace shows start=5044 suffix=22). The difference is not yet understood and must be identified before the logit comparison can be run: the correct dump index must be selected by matching the sync trace, not assumed.",
-  "F13_status": "STILL OPEN. Established so far: (1) stale-row attention DISPROVEN by direct row tracing (0/777 selections at/above the visible bound); (2) cross-process determinism for identical work is EXACT (max|delta|=0 over 154,880 logits); (3) no valid resumed-vs-cold logit comparison exists yet. Strict guard remains default.",
-  "next_concrete_step": "instrument the dump to tag each file with (start, prompt_len, suffix) from the sync so the resumed evaluation can be identified unambiguously, then re-run inside ttft_append_probe.sh which is the only harness observed to reach a genuine resume."
- },
- "F13_tagged_logit_2026_07_26": {
-  "infrastructure": "logit dumps now carry their sync parameters in the filename (lg-<arm>.<seq>.s<start>_p<prompt>_x<suffix>), so a resumed evaluation is selected by evidence instead of by index \u2014 the error that produced the retracted verdict",
-  "guard_worked": "the harness printed 'NO VALID PAIR ... report as harness limitation, NOT as a finding' and emitted no verdict, which is the intended behaviour",
-  "dump_inventory": "X: s0_p5044 (base cold), s5044_p5047_x3 (base internal suffix), s0_p5064 (APPEND COLD), s5064_p5066_x2 (append internal suffix). Y: identical pattern. No X dump exists at start>0 with the append's own base lineage.",
-  "key_observation": "in this harness BOTH arms performed IDENTICAL work (cold 5064 + suffix 2) and produced IDENTICAL output (sha 5d80ebee65e9 both). The same appended prompt DIVERGED in ttft_append_probe.sh, whose trace shows a genuine base-lineage resume (start=5044 prompt=5066 suffix=22).",
-  "sharpened_hypothesis": "divergence correlates specifically with resuming from a SHORTER base-lineage checkpoint (start=5044, 22-token suffix), not with any resume. Three harnesses that cold-prefilled the append (start=0, then a 2-token internal suffix) all matched cold exactly. This is the strongest structural clue yet: the suspect regime is a long suffix evaluated over a restored base checkpoint.",
-  "why_reproduction_fails": "the disk-KV lookup finds the base checkpoint only under conditions ttft_append_probe.sh happens to create (it fires base + three appends, accumulating checkpoints); the single-append harnesses cold-fall-back instead. Next step: instrument the kv lookup decision (hit/miss + chosen file + common-prefix length) so the resuming condition can be forced deliberately rather than stumbled into.",
-  "F13_status": "OPEN. Eliminated: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0), and now 'any resume diverges' (identical-work arms match exactly). Remaining suspect: long-suffix evaluation over a restored shorter checkpoint. Strict guard stays default."
- },
- "F13_kvdecide_2026_07_26": {
-  "instrumentation": "DS4_KV_DECIDE_LOG (binary e709f4734814) logs why each request does/doesn't reuse state: cached, source, live length, prompt length, common-prefix length",
-  "decisive_line": "KVDECIDE cached=0 source=none live=5063 prompt=5066 common=5045 kv_enabled=1 min_tokens=512",
-  "mechanism_identified": [
-   "1. The appended prompt's tokens DIVERGE FROM THE LIVE SESSION at position 5045 even though its TEXT is base+generated+append. Cause: BPE re-merge at the junction \u2014 tokenizing the concatenated text yields different tokens near the boundary than (base tokens + sampled generation tokens). This is why live reuse always misses: common=5045 < live=5063.",
-   "2. After that miss, a disk-KV load is what supplies the resume. In ttft_append_probe.sh a base checkpoint EXISTED on disk, so the server loaded the 5044-token file and resumed with a 22-token suffix \u2014 the regime that diverges. In my three reproduction harnesses no such checkpoint was present (no 'kv cache stored' line in this run), so the append cold-prefilled and matched cold exactly.",
-   "3. This explains all five experiments coherently: divergence appears if and only if a disk checkpoint is loaded and then extended by a long suffix."
-  ],
-  "reproduction_recipe_now_known": "prime the disk store (base request, verify a 'kv cache stored' line appears), keep KVDIR intact, then fire the append in a process whose live session mismatches \u2014 the server will disk-load and resume with a long suffix. Only then is the tagged logit pair valid.",
-  "F13_status": "OPEN but fully scoped. Eliminated: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0), 'any resume diverges' (identical-work arms match). Established: the failing regime is disk-checkpoint load + long-suffix extension, entered via a BPE-junction live-cache miss. Strict guard stays default.",
-  "fidelity_relevance": "this is the accuracy-affecting item: until the logit comparison runs in the identified regime, multi-turn GLM serving must keep the strict guard (correct-or-cold), which is the current default."
- },
- "F13_regime_attempt_2026_07_26": {
-  "outcome": "REGIME NOT REACHED \u2014 harness emitted NO verdict (guard working as designed)",
-  "new_diagnostic": "three KVDECIDE lines expose the full decision sequence: (1) base cold (live=0); (2) REPEATED base: live=5063 prompt=5047 common=5047 -> cached=0 DESPITE the prompt being a strict prefix of live state (the server refuses reuse when the incoming prompt is SHORTER than the live checkpoint); (3) append: live=5063 prompt=5066 common=5045 -> live miss at the BPE junction.",
-  "missing_precondition_identified": "NO 'kv cache stored' line appears in any of my reproduction harnesses, so the disk-load branch can never fire \u2014 that is why five attempts all cold-prefilled. The original ttft_append_probe.sh run DID show 'kv cache stored tokens=5044 trimmed=3 reason=cold ... save=183.1 ms'. The store, not the append shape, is the missing precondition.",
-  "next_step_precise": "determine what makes the cold-boundary store fire (compare the original append-probe server log's store conditions against these runs \u2014 candidate differences: request sequencing, slot state at completion, or the second-base request invalidating the pending store). Force the store, verify a 'kv cache stored' line, THEN the in-regime logit comparison becomes possible.",
-  "F13_status_final_for_session": "OPEN, fully scoped, no verdict claimed. Eliminated by measurement: stale-row attention (0/777), cross-process nondeterminism (max|delta|=0 over 154,880 logits), 'any resume diverges' (identical-work arms byte-match). Established: divergence requires a disk-checkpoint load + long-suffix extension, entered via a BPE-junction live-cache miss; the disk store is the precondition my harnesses fail to create. Strict guard remains default so multi-turn serving is correct-or-cold.",
-  "infrastructure_delivered": "DS4_GLM_ROWTRACE (indexer row selection), DS4_GLM_LOGIT_DUMP_ALL with (start,prompt,suffix) tagging, DS4_KV_DECIDE_LOG (resume decision), and a probe that refuses to emit verdicts outside the target regime \u2014 all committed, all reusable"
- },
- "CRITICAL_batchall_fidelity_bug_2026_07_26": {
-  "severity": "CRITICAL \u2014 a lever I adopted into the serving profile silently destroys output quality on short prompts",
-  "finding": "DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 ('batchall' prefill) produces DEGENERATE OUTPUT on short prompts: repetition loops and invalid UTF-8 (e.g. '\\xe5\\xae' + 'orkorkork'; '\u5bb3\\n</think>\u5bb3\\n\\n| \u5bb3...' repeated).",
-  "clean_ab": "same binary, same prompt ('The three most important considerations when designing a distributed cache are'), ctx 8192, cache 72GB: WITH the flag -> degenerate (both SLRU on and off, ctx 8k and 32k); WITHOUT the flag -> coherent ('1. **Analyze the Request:** ... **Topic:** Designing a distributed cache.'). SLRU and context size are exonerated; the resume guard is exonerated (guard on and off both coherent without the flag).",
-  "why_it_escaped_qualification": "the lever was verified byte-identical ONLY on the 5047-token long fixture (sha b344d80e24a3). Long prompts are unaffected; short prompts are destroyed. My fidelity gate never included a short-prompt case.",
-  "consequence_for_F04": "this EXPLAINS the keep-6 'collapse' and confirms sol's F04 falsification with a mechanism: keepn_ab.sh ran WITH batchall while its keep-8 'control' came from mtp_ab.sh WITHOUT it. The collapse I attributed to expert skipping was almost certainly this flag. Expert skipping must be re-tested (FIX-B) with a valid control.",
-  "action_taken": "DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL REMOVED from the glm52 serving profile with an in-file warning; any future re-enable requires a short-prompt fidelity gate.",
-  "collateral": "the warm-TTFT results that used batchall (1.76s claim) must be re-measured without it; cold-TTFT 3.6x gain attributed to this lever is forfeit unless it can be made safe.",
-  "lesson": "byte-identity on ONE fixture is not a fidelity gate. Every lever needs short AND long prompt coverage before adoption."
- },
- "post_fix_verification_2026_07_26": {
-  "round_trip_switch_DEMONSTRATED": [
-   "leg1 glm52: VERIFY OK identity='glm-5.2,glm-5.2-chat,glm-5.2-reasoner' authhelper=401 probe_ms=28585",
-   "leg2 dsv4:  VERIFY OK identity='...DeepSeek-V4-Flash-UD-Q2_K_XL...' authhelper=401 probe_ms=1085",
-   "leg3 glm52: VERIFY OK identity='glm-5.2,glm-5.2-chat,glm-5.2-reasoner' authhelper=401 probe_ms=35695",
-   "each leg independently verified engine identity + auth-chain 401 + a live completion; earlier one-way claim corrected"
-  ],
-  "coherence_restored": "with the batchall lever removed, the short prompt that produced repetition loops and invalid UTF-8 now returns coherent, reproducible output ('1.  **Analyze the Request:** ... **Topic:**') identical across repeats",
-  "measured_latency_post_fix": {
-   "short_prompt_16_tokens": "18.97-19.77 s across 3 identical requests (stable)",
-   "implied_decode": "~0.83 t/s on a SHORT prompt \u2014 much slower than the 1.6-1.8 t/s measured on the 5047-token fixture, because a short prompt's expert working set is entirely uncached (every token is a full miss)",
-   "note": "this is the first honest short-prompt decode measurement; prior figures were all long-fixture and did not represent this regime"
-  },
-  "claims_now_forfeit": [
-   "warm TTFT 1.764 s \u2014 measured WITH the batchall lever; must be re-measured without it",
-   "cold TTFT 3.6x improvement \u2014 attributed to the batchall lever, forfeit unless the lever can be made safe",
-   "keep-6 'collapse' as evidence against expert skipping \u2014 almost certainly caused by the same lever (FIX-B must re-test)"
-  ],
-  "what_stands": "SLRU (byte-identical, exonerated in this A/B), pinned arena (separate lever, unaffected), parallel fetch, deterministic dispatch, 32K allocation, and the engine's IQ2_XXS down-projection kernels that make GLM run at all"
- },
- "ttft_remeasured_without_batchall_2026_07_26": {
-  "context": "the batchall lever was removed as a fidelity hazard; every TTFT number measured with it had to be re-taken",
-  "results_WITHOUT_batchall": {
-   "cold_ms": 147610,
-   "warm1_ms": 2378,
-   "warm2_ms": 1755,
-   "coherence": "all three responses coherent, bad_utf8=0, sha b344d80e24a3 x3"
-  },
-  "results_WITH_batchall (prior run, same align/trim)": {
-   "cold_ms": 152624,
-   "warm1_ms": 2478,
-   "warm2_ms": 1757
-  },
-  "verdict": "the warm-TTFT result SURVIVES the fix: 1.755 s without the lever vs 1.757 s with it (identical within noise), and COLD is slightly FASTER without it (147.6 s vs 152.6 s). The lever contributed nothing measurable in this configuration while silently destroying short-prompt output.",
-  "claims_restored": "warm TTFT ~1.76 s (steady-state exact replay, align 4 + trim 0) is re-established on a clean configuration with byte-identical, coherence-checked responses",
-  "claim_withdrawn_permanently": "the '3.6x cold TTFT improvement from batchall' figure came from a much earlier, different configuration and is NOT reproducible here \u2014 cold TTFT is unaffected by the lever. Withdrawn.",
-  "harness_hardening": "ttft_probe3.sh now (a) makes batchall opt-in via an env array (an earlier ${VAR:+...} form silently broke the env-assignment chain and killed the server) and (b) checks every response for coherence and invalid UTF-8, so a fidelity regression cannot pass a timing run again"
- },
- "FIX_B_keepn_controlled_2026_07_26": {
-  "design": "4 arms, SAME binary + SAME config (24GB cache, SLRU on, ctx 8192, NO batchall), differing only in DS4_GLM_TOPK_KEEP; 8 varied prompts x 96 tokens greedy; keep-8 is the same-binary control the original experiment lacked",
-  "results": {
-   "keep8_control": {
-    "bad_utf8": 0,
-    "rep3gram": 0.019,
-    "coherent": true
-   },
-   "keep7": {
-    "bad_utf8": 0,
-    "rep3gram": 0.03,
-    "coherent": true,
-    "match_control": "0/8"
-   },
-   "keep6": {
-    "bad_utf8": 0,
-    "rep3gram": 0.032,
-    "coherent": true,
-    "match_control": "0/8"
-   },
-   "keep6_no_renorm": {
-    "bad_utf8": 0,
-    "rep3gram": 0.019,
-    "coherent": true,
-    "match_control": "0/8"
-   }
-  },
-  "VERDICT": "EXPERT SKIPPING DOES NOT COLLAPSE GLM-5.2. All arms produce coherent output with ZERO invalid UTF-8 and low repetition. My earlier 'keep-6 catastrophically collapses generation' finding was ENTIRELY an artifact of the batchall prefill lever, exactly as sol's F04 falsification predicted. The conclusion 'AdapMoE-class expert skipping is dead on this model' is RETRACTED.",
-  "significance": "this reopens the single largest software lever for the performance goal: keep-6 of 8 = ~25% fewer expert bytes per token, which on a byte-bound decode path is close to a proportional speedup. It also demonstrates the renormalization question: keep6 (renormalized) and keep6nr (not) are both coherent, with keep6nr showing LOWER repetition (0.019 vs 0.032, matching the control exactly).",
-  "next": "measure the actual decode gain (keep-8 vs keep-6/keep-7 timings) and the fidelity cost on the committed 100-case NLL suite \u2014 subjective coherence is not a fidelity gate",
-  "evidence": "logs/loadprof1/keepn-controlled.txt; raw per-arm outputs at dsv4:/home/dsv4/ds4-project/glm52-keepn-controlled/"
- }
 }
