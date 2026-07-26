@@ -79,5 +79,17 @@
     },
     "verdict": "REAP-resident via --cpu-moe is NOT the decode-parity path as configured: decode 1.91 t/s is only ~1.35x streaming GLM and ~10x short of DSV4. Warm TTFT 1.56 s is the standout \u2014 meets the DSV4 <2 s bar and beats streaming GLM's 19 s, because prefix KV reuse leaves ~1 token of work. Cold prefill (4.37 t/s) is 5x WORSE than ds4 streaming. Probable causes: 139 GB > ~105 GiB usable page cache so ~25% of expert bytes still fault to disk with a scattered mmap pattern; all routed-expert math runs on Grace CPU cores; no expert-locality batching. Fidelity leg SKIPPED per pre-declared rule (only if perf pans out) \u2014 perf did not.",
     "possible_followups_not_run": "-ncmoe N partial GPU offload (risk: non-reclaimable device-alloc, the attempt-1 OOM path); smaller REAP context; ds4-engine support for the REAP artifact (would get expert cache + batch dispatch, but REAP tensor layout is Q2_K not IQ2_XXS \u2014 down-kernel exists upstream)"
+  },
+  "current_best_snapshot_2026_07_26": {
+    "stack": "v4.7.1 (a506f29d459f): pinned expert cache 68-72GB + parallel fetch x6 + deterministic dispatch + batchall prefill + kv-disk align 4 / trim 0",
+    "ttft_warm_s": 1.764,
+    "ttft_warm_bar": "MET (<2s; DSV4 ~1.2s) \u2014 byte-identical b344d80e24a3 cold/warm x3",
+    "ttft_cold_5047tok_s": "154-197 (align/trim dependent)",
+    "decode_tok_s": "1.6-1.8 (mtp +10% measured, not adopted)",
+    "prefill_tok_s": "~23",
+    "fidelity": "zero loss maintained through every adopted lever (byte-identity chain); MTP not adopted (tie-flip divergence documented)",
+    "progression_warm_ttft": "33.5 -> 19.0 -> 4.22 -> 1.76 s",
+    "progression_decode": "0.77 -> 1.6-1.8 t/s",
+    "bar_final": "warm TTFT MET; decode (18.4) and prefill (467) structurally unmet on single-Spark faithful serving \u2014 measured convergence ~3-4 t/s decode with all remaining levers; parity paths: second box (NVMe-oF), accepted fidelity trade, or DSV4 remains prod"
   }
 }
