@@ -21,3 +21,14 @@ x_ap1r http=200 wall_ms=18224
 y_ap1 http=200 wall_ms=168448
 y_ap2 http=200 wall_ms=153338
 y_ap3 http=200 wall_ms=154042
+=== ISOLATE ===
+z_ap3_cold(TRUE COLD) = 5d80ebee65e9 'The user wants me to continue a C source file. The'
+y_ap3(resumed lineage)= 5d80ebee65e9  equal_to_true_cold=True
+x_ap3(base resume)    = 04b0b01bca84  equal_to_true_cold=False
+z_ap1_after(resumed from ap3 lineage) = 5d80ebee65e9  vs y_ap1(cold) 5d80ebee65e9 equal=True
+INTERPRETATION: if z_ap3_cold != y_ap3 -> resume contamination proven;
+if z_ap3_cold == y_ap3 -> y equality was generic-response coincidence
+ds4: GLM sync start=0 prompt=5068 suffix=5068 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=5068 prompt=5071 suffix=3 checkpoint=5068 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=0 prompt=5064 suffix=5064 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=5064 prompt=5066 suffix=2 checkpoint=5064 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1

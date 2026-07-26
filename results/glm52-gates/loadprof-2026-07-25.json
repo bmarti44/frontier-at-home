@@ -171,5 +171,12 @@
   "appended_turn_ttft_recorded": "18.2-21.3 s per appended turn (suffix 22-29 tokens; dominated by 16-24 token decode at ~1.6 t/s, not resume overhead)",
   "next": "root-cause with sol: (1) minimal repro comparing suffix token ids resume-vs-cold, (2) inspect glm sync suffix evaluation for appended tails after prior generation (rows 5044+ overwrite vs stale indexer/dense state), (3) check upstream for known issue; until then do NOT claim append-resume fidelity",
   "evidence": "logs/loadprof1/append-probe-evidence.txt; raw at dsv4:/home/dsv4/ds4-project/glm52-append-probe/"
+ },
+ "append_isolate_2026_07_26": {
+  "experiment": "append_isolate.sh \u2014 ap3 as FIRST request on fresh server (true cold) vs the resumed lineages",
+  "result": "z_ap3_cold == y_ap3 == y_ap1 (5d80ebee65e9): the y equality was a generic-opener coincidence AND the y/z 'resumes' were actually silent cold fallbacks (their prompts diverge from the stored lineage before the checkpoint length, so starts_with fails). x_ap3 (genuine resume from base checkpoint) remains the only divergent path.",
+  "refined_diagnosis": "the bug is specific to GENUINE resume-with-different-suffix: prompt tokens 0..start-1 match (so suffix tokens are canonical \u2014 tokenization mismatch ruled out); prime suspect is indexed_resume_keeps_sparse_state retaining indexer/sparse state built over the previous lineage's rows (incl. old generated rows above the new suffix), contaminating attention. Exact-replay is immune because the recomputed suffix is identical to the old content.",
+  "sol_root_cause_session": "launched (sync excerpt ds4.c 58030-58330 + evidence); fix direction: invalidate/truncate sparse state above start when the resumed suffix differs from previously evaluated tokens",
+  "operational_note": "silent cold fallback on lineage mismatch also explains why agent traffic 'works' today at 140s+ TTFT \u2014 most appends after generation probably fall back to cold rather than resume"
  }
 }
