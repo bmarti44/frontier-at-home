@@ -500,5 +500,14 @@
   "root_cause_of_neutrality": "prefetch removes the DISK READ from the critical path but the consume path still pays the same host<->device copies the demand path pays. The gain is real (-51 ms of disk) and the cost is real (+47 ms of copies).",
   "next_step_identified": "reserve-fill-publish: main thread RESERVES an arena slot (key unpublished), the worker fills the arena bytes directly, the main thread publishes the key when READY. A prefetched expert then arrives as a normal cache HIT (~6 us) instead of a copy-heavy miss, eliminating the entire consume-path copy cost \u2014 this is the structure sol's review pointed at ('a reserve/fill/publish-last API would make that invariant explicit'). Expected to convert the -51 ms disk saving into net decode gain.",
   "not_adopted": "DS4_GLM_PREFETCH stays OFF in the serving profile until it shows a real decode win"
+ },
+ "F13_rowtrace_2026_07_26": {
+  "purpose": "FIX-A: decide stale-state vs numerics for the append-resume divergence by DIRECT observation of which physical rows the indexer selects (binary ad8e60ecf5db, env DS4_GLM_ROWTRACE)",
+  "method": "log the max compact-cache row index selected by the indexer top-k at every decode position of a genuinely-resumed append (guard bypassed), compare against the visible bound (pos+1)",
+  "result": "777 traced layer-positions across decode positions 5044..5055+: max selected row EXACTLY equals pos (i.e. == visible-1) at every single position; ZERO violations of the visible bound (0/777)",
+  "verdict_on_F13": "The 'stale rows are being ATTENDED' mechanism is DISPROVEN by direct measurement: the indexer never selects a row at or beyond the visible frontier, so rows written by the previous lineage above the resume point cannot be read by attention. This does NOT restore my earlier 'benign numerics' claim (the audit was right that it was unproven); it eliminates one specific mechanism and narrows the search.",
+  "what_remains_open": "the divergence is real and reproducible; remaining candidate mechanisms are (a) the CONTENT of rows below the resume point differing after restore (row content, not row selection), (b) non-attention state (indexer key cache values, dense/bridge state, MTP window), (c) the batch-vs-per-token evaluation path difference at the junction. Next probe: compare the actual per-position logits resumed-vs-cold (not text), which distinguishes content corruption from evaluation-order numerics.",
+  "operational": "strict resume guard REMAINS default; nothing here justifies relaxing it",
+  "safety_note": "the run was floor-killed at 12.58 GiB available (72GB arena + 12 GiB floor) after collecting 777 samples \u2014 protection worked as designed, box healthy (113 GiB free after); rerun with a smaller arena for full-length traces"
  }
 }
