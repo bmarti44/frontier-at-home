@@ -339,6 +339,11 @@
    ],
    "modeled_ceiling_if_stack_lands": "levers 1+2+3 compound to roughly 2.2-3 t/s decode (sol-B trace-replay grounded); +QTIP ~2.5-3.5. DSV4's 18.4 remains out of reach on one box \u2014 but this is now a 1.5-2x credible program, not speculation",
    "sources": "logs/loadprof1/sol-compress-A.txt, sol-compress-B.txt; web-lit summary in this session (HOBBIT 2411.01433, MoBE 2508.05257, AdapMoE 2408.10284, QTIP 2406.11235, MoE-Infinity, LLM-in-a-flash et al.)"
+  },
+  "lever1_slru_landed": {
+   "code": "v4.9 (binary 625cdef11d86): segmented LRU \u2014 probationary+protected lists, protected cap 60% of slots, promote on hit, demote protected-LRU on overflow, evict probationary-tail first; env DS4_CUDA_EXPERT_CACHE_SLRU=1, default off = exact legacy LRU",
+   "validation": "same-binary OFF/ON A-B windows: byte-identity sha 9113dfd0d233 x3 in BOTH; ON: hits 474.3->495.0/token, misses 166.4->145.7 (-12.4%), hit rate 74.0%->77.3% (matches sol-B's modeled 77.3% optimum), fetch 226.0->211.8ms, loader 275.0->262.0ms (~14ms/token saved, ~+2.3% decode; larger gains expected on mixed/scan traffic where SLRU protects against pollution)",
+   "adopted": "DS4_CUDA_EXPERT_CACHE_SLRU=1 added to 52_engine_switch.sh glm52 profile; sol review batched with next round"
   }
  }
 }

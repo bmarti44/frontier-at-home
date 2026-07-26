@@ -1,5 +1,5 @@
 diff --git a/ds4.c b/ds4.c
-index 1a79a01..30e10be 100644
+index 1a79a01..de2b23b 100644
 --- a/ds4.c
 +++ b/ds4.c
 @@ -38024,8 +38024,8 @@ static bool glm_graph_stream_prefill_expert_addr_supported(
@@ -492,7 +492,60 @@ index 1a79a01..30e10be 100644
          token_vec_free(&s->checkpoint);
          memset(&s->checkpoint, 0, sizeof(s->checkpoint));
          for (uint32_t i = 0; i < n_tokens; i++) token_vec_push(&s->checkpoint, tokens[i]);
-@@ -49921,6 +50147,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -49720,6 +49946,52 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
+ #endif
+ }
+ 
++/* Debug probe (DS4_GLM_KV_ROWDUMP=dir, DS4_GLM_KV_ROWDUMP_LO=row): at every
++ * GLM sync entry, dump 8 compact-cache rows of layers 0 and 40 to
++ * dir/rowdump-NNN.bin. Used to byte-compare restored/post-write cache
++ * content against a virgin cold run at identical logical positions
++ * (docs/ds4-glm-resume-frontier-bug-2026-07-26.md). */
++static void glm_debug_kv_rowdump(ds4_session *s) {
++    const char *dir = getenv("DS4_GLM_KV_ROWDUMP");
++    if (!dir) return;
++    ds4_glm_gpu_graph *g = &s->glm_graph;
++    if (!s->glm_graph_ready || g->compact_cache_cap == 0) return;
++    const char *lo_s = getenv("DS4_GLM_KV_ROWDUMP_LO");
++    const uint32_t lo = lo_s ? (uint32_t)atoi(lo_s) : 0;
++    const uint32_t nrows = 8;
++    static int seq = 0;
++    char path[512];
++    snprintf(path, sizeof(path), "%s/rowdump-%03d.bin", dir, seq++);
++    FILE *fp = fopen(path, "wb");
++    if (!fp) return;
++    uint8_t *buf = (uint8_t *)malloc(DS4_SESSION_IO_CHUNK);
++    char err[160];
++    const uint32_t layers[2] = {0, 40};
++    for (int li = 0; buf && li < 2; li++) {
++        const uint32_t il = layers[li];
++        ds4_gpu_tensor *ts[3] = {
++            g->layer_kv_lora_cache[il],
++            g->layer_k_rope_cache[il],
++            g->layer_indexer_key_cache[il],
++        };
++        for (int ti = 0; ti < 3; ti++) {
++            if (!ts[ti]) continue;
++            const uint64_t stride =
++                ds4_gpu_tensor_bytes(ts[ti]) / g->compact_cache_cap;
++            if (stride == 0 ||
++                (uint64_t)(lo + nrows) * stride > ds4_gpu_tensor_bytes(ts[ti]))
++                continue;
++            (void)payload_write_tensor_span(fp, ts[ti],
++                                            (uint64_t)lo * stride,
++                                            (uint64_t)nrows * stride,
++                                            buf, DS4_SESSION_IO_CHUNK,
++                                            err, sizeof(err));
++        }
++    }
++    free(buf);
++    fclose(fp);
++}
++
+ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, char *err, size_t errlen) {
+     if (!s || !fp) {
+         payload_set_err(err, errlen, "invalid session payload load");
+@@ -49921,6 +50193,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
              return 1;
          }
  
@@ -503,7 +556,7 @@ index 1a79a01..30e10be 100644
          token_vec_free(&s->checkpoint);
          s->checkpoint = new_checkpoint;
          s->checkpoint_valid = true;
-@@ -50061,6 +50291,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -50061,6 +50337,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
              payload_set_err(err, errlen, "KV checkpoint has trailing payload bytes");
              return 1;
          }
@@ -514,7 +567,7 @@ index 1a79a01..30e10be 100644
          token_vec_free(&s->checkpoint);
          s->checkpoint = new_checkpoint;
          s->checkpoint_valid = true;
-@@ -50270,6 +50504,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -50270,6 +50550,10 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
          return 1;
      }
  
@@ -525,7 +578,7 @@ index 1a79a01..30e10be 100644
      token_vec_free(&s->checkpoint);
      s->checkpoint = new_checkpoint;
      for (uint32_t il = 0; il < DS4_N_LAYER; il++) {
-@@ -56757,6 +56995,7 @@ void ds4_session_free(ds4_session *s) {
+@@ -56757,6 +57041,7 @@ void ds4_session_free(ds4_session *s) {
      }
  #endif
      token_vec_free(&s->checkpoint);
@@ -533,13 +586,22 @@ index 1a79a01..30e10be 100644
      token_vec_free(&s->greedy_splitkv_segment);
      free(s->logits);
      free(s->sample_probs);
-@@ -57865,7 +58104,40 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+@@ -57830,6 +58115,7 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+     const char *backend_name = ds4_backend_name(e->backend);
+     (void)backend_name; (void)e;
+     if (ds4_session_is_glm(s)) {
++        glm_debug_kv_rowdump(s);
+         /* Debug: truncate the prompt so the dumped prefill logits line up
+          * with the CPU first-token reference (DS4_GLM_LOGIT_DUMP). */
+         ds4_tokens glm_trunc_prompt;
+@@ -57865,7 +58151,57 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
              start = s->checkpoint.len;
              resumed_checkpoint = true;
              s->mtp_draft_valid = false;
 -        } else {
 +        }
 +        if (resumed_checkpoint &&
++            getenv("DS4_GLM_RESUME_GUARD_OFF") == NULL &&
 +            s->glm_evaluated.len > s->checkpoint.len) {
 +            /* Resume-frontier guard: graph state extends past the token
 +             * checkpoint (a rewind shortened tokens without rewinding the
@@ -571,11 +633,27 @@ index 1a79a01..30e10be 100644
 +                ds4_session_glm_reset_dense_cache(s);
 +            }
 +        }
++        {
++            /* Debug (env DS4_GLM_TOKDUMP_LO): print 16 effective-prompt
++             * token ids at a fixed window so resumed (prefix+suffix
++             * tokenization) and cold (canonical) runs can be compared
++             * directly from logs. */
++            const char *tl = getenv("DS4_GLM_TOKDUMP_LO");
++            if (tl) {
++                const int lo = atoi(tl);
++                if (lo >= 0 && prompt->len > lo + 16) {
++                    fprintf(stderr, "TOKDUMP lo=%d start=%d:", lo, start);
++                    for (int ti = lo; ti < lo + 16; ti++)
++                        fprintf(stderr, " %d", prompt->v[ti]);
++                    fputc('\n', stderr);
++                }
++            }
++        }
 +        if (!resumed_checkpoint) {
              s->checkpoint.len = 0;
              s->checkpoint_valid = false;
              s->mtp_draft_valid = false;
-@@ -64504,6 +64776,18 @@ void ds4_session_invalidate(ds4_session *s) {
+@@ -64504,6 +64840,18 @@ void ds4_session_invalidate(ds4_session *s) {
          !ds4_tp_failed(s->engine->tp.ctx)) {
          (void)ds4_tp_send_invalidate(s->engine->tp.ctx, s->tp_session_id);
      }
@@ -594,7 +672,7 @@ index 1a79a01..30e10be 100644
      s->checkpoint_valid = false;
      s->checkpoint.len = 0;
      s->mtp_draft_valid = false;
-@@ -64520,6 +64804,13 @@ void ds4_session_rewind(ds4_session *s, int pos) {
+@@ -64520,6 +64868,13 @@ void ds4_session_rewind(ds4_session *s, int pos) {
      }
      if (pos < 0) pos = 0;
      if (pos > s->checkpoint.len) pos = s->checkpoint.len;
@@ -609,7 +687,7 @@ index 1a79a01..30e10be 100644
      s->mtp_draft_valid = false;
      ds4_session_dspark_capture_invalidate(s);
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 041e162..09d64ce 100644
+index 041e162..13253e3 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -16,6 +16,8 @@
@@ -1554,7 +1632,7 @@ index 041e162..09d64ce 100644
  }
  
  extern "C" int ds4_gpu_routed_moe_batch_owned_tensor(
-@@ -22971,20 +23511,389 @@ static int cuda_stream_selected_ranges_valid(
+@@ -22971,20 +23511,452 @@ static int cuda_stream_selected_ranges_valid(
             down_bytes <= table->model_size - table->down_offset;
  }
  
@@ -1600,6 +1678,7 @@ index 041e162..09d64ce 100644
 +                       /* against same-shaped model reloads — sol finding). */
 +    uint32_t prev;
 +    uint32_t next;
++    uint8_t seg;       /* SLRU segment: 0 probationary, 1 protected */
 +} cuda_expert_cache_slot_meta;
 +
 +static struct {
@@ -1612,8 +1691,13 @@ index 041e162..09d64ce 100644
 +    uint64_t gate_bytes;    /* per-expert gate (== up) bytes for this layout */
 +    uint64_t down_bytes;
 +    uint64_t slot_bytes;    /* 2*gate_bytes + down_bytes */
-+    uint32_t lru_head;      /* most recent */
-+    uint32_t lru_tail;      /* least recent */
++    uint32_t lru_head;      /* probationary most recent */
++    uint32_t lru_tail;      /* probationary least recent */
++    uint32_t prot_head;     /* SLRU protected segment (env-gated) */
++    uint32_t prot_tail;
++    uint32_t prot_used;
++    uint32_t prot_cap;
++    int slru;               /* DS4_CUDA_EXPERT_CACHE_SLRU=1 enables */
 +    uint32_t used;
 +    uint64_t hits;
 +    uint64_t misses;
@@ -1726,9 +1810,13 @@ index 041e162..09d64ce 100644
 +        g_expert_persist_cache.meta[i].key = UINT64_MAX;
 +        g_expert_persist_cache.meta[i].prev =
 +            g_expert_persist_cache.meta[i].next = UINT32_MAX;
++        g_expert_persist_cache.meta[i].seg = 0;
 +    }
 +    g_expert_persist_cache.lru_head = UINT32_MAX;
 +    g_expert_persist_cache.lru_tail = UINT32_MAX;
++    g_expert_persist_cache.prot_head = UINT32_MAX;
++    g_expert_persist_cache.prot_tail = UINT32_MAX;
++    g_expert_persist_cache.prot_used = 0;
 +    g_expert_persist_cache.used = 0;
 +    if (why)
 +        fprintf(stderr, "ds4: CUDA persistent expert cache flushed (%s)\n",
@@ -1751,24 +1839,62 @@ index 041e162..09d64ce 100644
 +    g_expert_persist_cache.model_generation = g_model_load_generation;
 +}
 +
-+static void cuda_expert_cache_lru_unlink(uint32_t s) {
++static void ec_list_unlink(uint32_t s, uint32_t *head, uint32_t *tail) {
 +    cuda_expert_cache_slot_meta *m = g_expert_persist_cache.meta;
 +    if (m[s].prev != UINT32_MAX) m[m[s].prev].next = m[s].next;
-+    else g_expert_persist_cache.lru_head = m[s].next;
++    else *head = m[s].next;
 +    if (m[s].next != UINT32_MAX) m[m[s].next].prev = m[s].prev;
-+    else g_expert_persist_cache.lru_tail = m[s].prev;
++    else *tail = m[s].prev;
 +    m[s].prev = m[s].next = UINT32_MAX;
 +}
 +
-+static void cuda_expert_cache_lru_push_front(uint32_t s) {
++static void ec_list_push_front(uint32_t s, uint32_t *head, uint32_t *tail) {
 +    cuda_expert_cache_slot_meta *m = g_expert_persist_cache.meta;
 +    m[s].prev = UINT32_MAX;
-+    m[s].next = g_expert_persist_cache.lru_head;
-+    if (g_expert_persist_cache.lru_head != UINT32_MAX)
-+        m[g_expert_persist_cache.lru_head].prev = s;
-+    g_expert_persist_cache.lru_head = s;
-+    if (g_expert_persist_cache.lru_tail == UINT32_MAX)
-+        g_expert_persist_cache.lru_tail = s;
++    m[s].next = *head;
++    if (*head != UINT32_MAX) m[*head].prev = s;
++    *head = s;
++    if (*tail == UINT32_MAX) *tail = s;
++}
++
++/* Unlink from whichever segment the slot occupies; clears seg (caller
++ * chooses the destination list). Maintains prot_used. */
++static void cuda_expert_cache_lru_unlink(uint32_t s) {
++    if (g_expert_persist_cache.meta[s].seg) {
++        ec_list_unlink(s, &g_expert_persist_cache.prot_head,
++                       &g_expert_persist_cache.prot_tail);
++        g_expert_persist_cache.prot_used--;
++        g_expert_persist_cache.meta[s].seg = 0;
++    } else {
++        ec_list_unlink(s, &g_expert_persist_cache.lru_head,
++                       &g_expert_persist_cache.lru_tail);
++    }
++}
++
++static void cuda_expert_cache_lru_push_front(uint32_t s) {
++    /* destination: probationary (seg cleared by unlink) */
++    ec_list_push_front(s, &g_expert_persist_cache.lru_head,
++                       &g_expert_persist_cache.lru_tail);
++}
++
++/* SLRU promotion: move a just-hit slot to the protected segment MRU,
++ * demoting the protected LRU tail to probationary if over capacity. */
++static void cuda_expert_cache_promote(uint32_t s) {
++    ec_list_push_front(s, &g_expert_persist_cache.prot_head,
++                       &g_expert_persist_cache.prot_tail);
++    g_expert_persist_cache.meta[s].seg = 1;
++    g_expert_persist_cache.prot_used++;
++    if (g_expert_persist_cache.prot_used > g_expert_persist_cache.prot_cap) {
++        const uint32_t d = g_expert_persist_cache.prot_tail;
++        if (d != UINT32_MAX) {
++            ec_list_unlink(d, &g_expert_persist_cache.prot_head,
++                           &g_expert_persist_cache.prot_tail);
++            g_expert_persist_cache.prot_used--;
++            g_expert_persist_cache.meta[d].seg = 0;
++            ec_list_push_front(d, &g_expert_persist_cache.lru_head,
++                               &g_expert_persist_cache.lru_tail);
++        }
++    }
 +}
 +
 +static void cuda_expert_cache_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
@@ -1804,7 +1930,18 @@ index 041e162..09d64ce 100644
 +    for (uint32_t i = 0; i < n_slots; i++) {
 +        meta[i].key = UINT64_MAX;
 +        meta[i].prev = meta[i].next = UINT32_MAX;
++        meta[i].seg = 0;
 +    }
++    g_expert_persist_cache.prot_head = UINT32_MAX;
++    g_expert_persist_cache.prot_tail = UINT32_MAX;
++    g_expert_persist_cache.prot_used = 0;
++    g_expert_persist_cache.prot_cap = n_slots * 6u / 10u;
++    g_expert_persist_cache.slru =
++        getenv("DS4_CUDA_EXPERT_CACHE_SLRU") != NULL;
++    if (g_expert_persist_cache.slru)
++        fprintf(stderr, "ds4: expert cache SLRU enabled (protected cap %u "
++                        "of %u slots)\n",
++                g_expert_persist_cache.prot_cap, n_slots);
 +    g_expert_persist_cache.arena = arena;
 +    g_expert_persist_cache.meta = meta;
 +    g_expert_persist_cache.map = map;
@@ -1872,7 +2009,10 @@ index 041e162..09d64ce 100644
 +        return NULL;
 +    }
 +    cuda_expert_cache_lru_unlink(s);
-+    cuda_expert_cache_lru_push_front(s);
++    if (g_expert_persist_cache.slru)
++        cuda_expert_cache_promote(s);
++    else
++        cuda_expert_cache_lru_push_front(s);
 +    return g_expert_persist_cache.arena +
 +           (uint64_t)s * g_expert_persist_cache.slot_bytes;
 +}
@@ -1892,6 +2032,7 @@ index 041e162..09d64ce 100644
 +        fresh = 1;
 +    } else {
 +        s = g_expert_persist_cache.lru_tail;
++        if (s == UINT32_MAX) s = g_expert_persist_cache.prot_tail;
 +        if (s == UINT32_MAX) return UINT32_MAX;
 +        cuda_expert_cache_lru_unlink(s);
 +        if (g_expert_persist_cache.meta[s].key != UINT64_MAX)
@@ -1946,7 +2087,7 @@ index 041e162..09d64ce 100644
      }
  
      std::vector<int32_t> expert_to_slot;
-@@ -22996,7 +23905,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -22996,7 +23968,8 @@ static int cuda_stream_selected_cache_begin_load(
                              slot_count : table->n_total_expert);
          slot_ids.resize(slot_count);
      } catch (...) {
@@ -1956,7 +2097,7 @@ index 041e162..09d64ce 100644
      }
      for (uint32_t i = 0; i < slot_count; i++) {
          const int32_t expert = selected_ids[i];
-@@ -23004,7 +23914,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23004,7 +23977,8 @@ static int cuda_stream_selected_cache_begin_load(
              fprintf(stderr,
                      "ds4: CUDA streaming expert id %d is outside 0..%u at layer %u\n",
                      expert, table->n_total_expert, table->layer);
@@ -1966,7 +2107,7 @@ index 041e162..09d64ce 100644
          }
          int32_t compact = expert_to_slot[(uint32_t)expert];
          if (compact < 0) {
-@@ -23014,14 +23925,40 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23014,14 +23988,40 @@ static int cuda_stream_selected_cache_begin_load(
          }
          slot_ids[i] = compact;
      }
@@ -2009,7 +2150,7 @@ index 041e162..09d64ce 100644
      const int logical_tier = 0;
      if (g_stream_selected_cache.logical_tier != logical_tier &&
          (g_stream_selected_cache.gate_ptr ||
-@@ -23045,9 +23982,29 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23045,9 +24045,29 @@ static int cuda_stream_selected_cache_begin_load(
                  down_bytes, "down experts") ||
          !cuda_stream_selected_ensure_i32(slot_count)) {
          cuda_stream_selected_cache_invalidate();
@@ -2042,7 +2183,7 @@ index 041e162..09d64ce 100644
      for (uint32_t i = 0; i < compact_ids.size(); i++) {
          const uint64_t expert = (uint32_t)compact_ids[i];
          const uint64_t gate_src =
-@@ -23058,6 +24015,62 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23058,6 +24078,62 @@ static int cuda_stream_selected_cache_begin_load(
              table->down_offset + expert * table->down_expert_bytes;
          const uint64_t gate_dst = (uint64_t)i * table->gate_expert_bytes;
          const uint64_t down_dst = (uint64_t)i * table->down_expert_bytes;
@@ -2105,7 +2246,7 @@ index 041e162..09d64ce 100644
          if (!cuda_model_copy_to_device_streamed(
                      g_stream_selected_cache.gate_ptr + gate_dst,
                      table->model_map, table->model_size,
-@@ -23073,8 +24086,148 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23073,8 +24149,148 @@ static int cuda_stream_selected_cache_begin_load(
                      table->model_map, table->model_size,
                      down_src, table->down_expert_bytes,
                      "stream down expert copy")) {
@@ -2255,7 +2396,7 @@ index 041e162..09d64ce 100644
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -23082,8 +24235,10 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23082,8 +24298,10 @@ static int cuda_stream_selected_cache_begin_load(
                              (size_t)slot_count * sizeof(int32_t),
                              cudaMemcpyHostToDevice),
                   "stream selected-id remap copy")) {
@@ -2267,7 +2408,7 @@ index 041e162..09d64ce 100644
      }
  
      g_stream_selected_cache.logical_tier = logical_tier;
-@@ -23104,6 +24259,14 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23104,6 +24322,14 @@ static int cuda_stream_selected_cache_begin_load(
      g_stream_selected_cache.slot_selected_tensor.owner = 0;
      g_stream_selected_cache.slot_selected_tensor.device_id = logical_tier;
      g_stream_selected_cache.valid = 1;
@@ -2282,7 +2423,7 @@ index 041e162..09d64ce 100644
      return 1;
  }
  
-@@ -26720,19 +27883,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+@@ -26720,19 +27946,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
      if (!g_ssd_streaming_mode) return 1;
      if (!table || !selected || n_selected == 0 ||
          selected->bytes < (uint64_t)n_selected * sizeof(int32_t)) {
@@ -2308,7 +2449,7 @@ index 041e162..09d64ce 100644
      }
      return cuda_stream_selected_cache_begin_load(table, ids.data(), n_selected);
  }
-@@ -26960,7 +28126,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
+@@ -26960,7 +28189,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
  }
  
  extern "C" void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled) {
