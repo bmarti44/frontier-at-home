@@ -56,8 +56,10 @@ run_arm() { # $1 tag, $2 keepN (0=off), $3 skip_load(1/0)
      > "$OUT/q100-$1.log" 2>&1
   note "arm $1 exit=$? elapsed_s=$(( $(date +%s) - t0 ))"
 }
+# Two arms only: keep-8 control vs keep-6 (the largest byte cut, and the one
+# worth shipping if fidelity holds). keep-7 sits between them; measuring the
+# extreme bounds the cost of anything in between.
 run_arm keep8  0 0
-run_arm keep7s 7 1
 run_arm keep6s 6 1
 
 python3 - "$OUT" <<'PYEOF' | tee "$OUT/summary"
@@ -75,7 +77,7 @@ def load(tag):
 base = load("keep8")
 print("%-7s %4s %9s %9s %9s %9s" % ("arm", "n", "mean_nll", "median", "p90", "first_tok%"))
 print("(n is the number of scored cases -- the suite has 100 available; see run.log)")
-for tag in ("keep8", "keep7s", "keep6s"):
+for tag in ("keep8", "keep6s"):
     d = load(tag)
     if not d or not d["n"]:
         print("%-7s   -- no data (scorer failed; see q100-%s.log)" % (tag, tag)); continue
@@ -87,7 +89,7 @@ for tag in ("keep8", "keep7s", "keep6s"):
 if base and base["n"]:
     b = statistics.mean(base["nll"])
     print("\nfidelity cost vs keep-8 control (positive = worse):")
-    for tag in ("keep7s", "keep6s"):
+    for tag in ("keep6s",):
         d = load(tag)
         if not d or not d["n"] or d["n"] != base["n"]:
             print("  %-7s not comparable (n mismatch or missing)" % tag); continue
