@@ -584,5 +584,23 @@
    "keep-6 'collapse' as evidence against expert skipping \u2014 almost certainly caused by the same lever (FIX-B must re-test)"
   ],
   "what_stands": "SLRU (byte-identical, exonerated in this A/B), pinned arena (separate lever, unaffected), parallel fetch, deterministic dispatch, 32K allocation, and the engine's IQ2_XXS down-projection kernels that make GLM run at all"
+ },
+ "ttft_remeasured_without_batchall_2026_07_26": {
+  "context": "the batchall lever was removed as a fidelity hazard; every TTFT number measured with it had to be re-taken",
+  "results_WITHOUT_batchall": {
+   "cold_ms": 147610,
+   "warm1_ms": 2378,
+   "warm2_ms": 1755,
+   "coherence": "all three responses coherent, bad_utf8=0, sha b344d80e24a3 x3"
+  },
+  "results_WITH_batchall (prior run, same align/trim)": {
+   "cold_ms": 152624,
+   "warm1_ms": 2478,
+   "warm2_ms": 1757
+  },
+  "verdict": "the warm-TTFT result SURVIVES the fix: 1.755 s without the lever vs 1.757 s with it (identical within noise), and COLD is slightly FASTER without it (147.6 s vs 152.6 s). The lever contributed nothing measurable in this configuration while silently destroying short-prompt output.",
+  "claims_restored": "warm TTFT ~1.76 s (steady-state exact replay, align 4 + trim 0) is re-established on a clean configuration with byte-identical, coherence-checked responses",
+  "claim_withdrawn_permanently": "the '3.6x cold TTFT improvement from batchall' figure came from a much earlier, different configuration and is NOT reproducible here \u2014 cold TTFT is unaffected by the lever. Withdrawn.",
+  "harness_hardening": "ttft_probe3.sh now (a) makes batchall opt-in via an env array (an earlier ${VAR:+...} form silently broke the env-assignment chain and killed the server) and (b) checks every response for coherence and invalid UTF-8, so a fidelity regression cannot pass a timing run again"
  }
 }
