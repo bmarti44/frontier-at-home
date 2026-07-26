@@ -640,7 +640,12 @@
     "found_by": "independent code read (ds4.c keep-N block vs ds4_cuda.cu loader) AND sol xhigh review, which reached the same conclusion and marked the 'expert skipping does not collapse GLM' performance claim FALSIFIED on relevance grounds",
     "fix": "DS4_GLM_TOPK_SKIP_LOAD=1 collapses dropped slots' expert ids onto a kept expert id so the loader's existing dedup fetches exactly `keep` unique experts; dropped slots then compute keeper*0.0. Patch committed at results/glm52-gates/harness/ds4-topk-skip-load.patch",
     "verification_designed": "per-decode-load unique-expert histogram parsed from DS4_GLM_TP_DEBUG (must equal keep-N), not inferred from timings",
-    "status": "implemented, built (binary c59a87f056a0), measurement in flight"
+    "status": "implemented, built (binary c59a87f056a0), measurement in flight",
+    "byte_reduction_VERIFIED": {
+      "keep8_control": "slots=8 unique=8 load=74.2 MiB per routed layer",
+      "keep7_skip_load": "slots=8 unique=7 load=65.0 MiB per routed layer (= 7/8, exactly as designed)",
+      "method": "DS4_GLM_TP_DEBUG per-load lines, counted after warmup only -- deterministic, not inferred from timings"
+    }
   },
   "ROOT_CAUSE_expert_cache_flush_storm_2026_07_26": {
     "symptom": "persistent host expert cache never warmed: 331 'persistent expert cache flushed (model load generation changed)' lines in a single serving run; hit%=20.0; resident slots 2004 -> 5566 -> 245 of 7398 mid-request",
@@ -648,10 +653,28 @@
     "why_it_matters": "decode on this config is byte-bound: 74.2 MiB of expert weights per routed layer x 75 routed layers = ~5.4 GB requested per decode step. The host cache is the only thing that avoids re-reading those bytes from NVMe. A cache that is wiped hundreds of times per run cannot amortize anything.",
     "fix": "cuda_model_gen_bump_if_changed() bumps only when (host pointer, size) actually changes -- the same identity test the existing early-return already relies on, so the change removes an inconsistency rather than introducing an assumption. DS4_CUDA_MODEL_GEN_ALWAYS_BUMP=1 restores the old behaviour for same-binary A/B. Patch: results/glm52-gates/harness/ds4-model-gen-flush-fix.patch",
     "measurement": "decode_ab.sh, decode isolated arithmetically as 64/(t65-t1) on one warm server so prefill cancels; ABBA arm order; per-arm flush counts, unique-expert histograms, HTTP status and output shas",
-    "status": "fixed and built (c59a87f056a0); A/B in flight; sol reviewing the patch adversarially"
+    "status": "fixed and built (c59a87f056a0); A/B in flight; sol reviewing the patch adversarially",
+    "CORRECTION_regime": {
+      "finding": "the flush storm is a PREFILL pathology, not a decode one. Flush lines interleave with batch-prefill loads (slots=23992, one per routed layer) and never with decode loads (slots=8). A short-prompt harness records 0 flushes even with DS4_CUDA_MODEL_GEN_ALWAYS_BUMP=1.",
+      "consequence": "my first decode A/B was not an A/B at all: the 'bug' arm and the 'fix' arm both recorded flushes=0 and byte-identical cache counters (loads=30720 hits=190628 misses=55132 hit%=77.6 resident=7398/7398). No speedup may be attributed to the fix from that run. Withdrawn.",
+      "correct_test": "flushfix_ab.sh on the 5047-token fixture, where prefill actually chunks per layer",
+      "supporting_evidence": "long-prompt run on the pre-fix binary: 452 flush lines spanning the whole run, resident collapsing to 245/7398; short-prompt run on the fixed binary with the bug re-enabled: 0 flushes, resident 7398/7398"
+    }
   },
   "measurement_bug_prefill_dominated_2026_07_26": {
     "finding": "the first keep-N speed harness timed whole requests against the 5047-token fixture; at ~160 s per request that is ~95% prefill. keep-N only touches the DECODE graph, so that harness could not have measured the lever even if the lever worked. Withdrawn before producing a number.",
     "lesson": "state which phase a lever acts on, then prove the metric isolates that phase"
+  },
+  "decode_ab_2026_07_26": {
+    "harness": "results/glm52-gates/harness/decode_ab.sh; decode isolated as 64/(t65-t1) on one warm server so prefill cancels; short prompt; ABBA order; HTTP status recorded per request",
+    "keep8_baseline_tok_s": [
+      2.327,
+      2.233
+    ],
+    "keep7_skip_load_tok_s": [
+      2.442
+    ],
+    "note": "keep-7 is +7% over the keep-8 control for a 12.5% byte cut, implying expert traffic is roughly half of decode wall time on this config",
+    "status": "pass 1 partial; keep-6 arm and pass-2 repeats pending; fidelity cost NOT yet measured (keepn_nll.sh is the gate)"
   }
 }
