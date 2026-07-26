@@ -64,17 +64,32 @@ Fix verified: **452 → 0 flushes**.
 "20–40% speedup" — **both FALSIFIED by measurement**: cold TTFT 158.1 → 163.2 s,
 second prefill 147.4 → 143.9 s, decode 1.84 → 1.79 t/s, hit rate only
 9.3 → 12.6%. A prefill chunk sweeps ~253 distinct experts per routed layer
-(~176 GB across 75 layers) against a 68 GB cache, so it thrashes regardless of
-flushing. **Kept as a correctness fix only** — a cache that silently discards
+(~170 GiB across 75 layers, measured 339 GiB over two sweeps) against a 68 GB
+cache — about 2.5x — so it thrashes regardless of flushing. Scoped per sol:
+**no measurable benefit observed on this fixture**, not a universal null.
+**Kept as a cache-invalidation/lifecycle fix only** (sol notes it is not an
+inference-correctness fix: the old behaviour was output-safe but wasteful) — a cache that silently discards
 itself is a latent hazard, and the generation doubles as the prefetch pool's
 validity token.
 
-### C5. Prefill chunk size — OPEN (pre-registered)
-Because each chunk pays the full ~176 GB expert sweep regardless of token
-count, and `ds4_prefill_cap_for_prompt()` caps chunks at 4096 tokens, a
-5047-token prompt pays that sweep twice. `DS4_METAL_PREFILL_CHUNK=8192` should
-collapse it to one. Harness counts sweeps from the trace and checks the output
-sha. **Prediction recorded before running.**
+### C5. Prefill chunk size — ABANDONED, the lever does not exist
+Hypothesis was: each chunk pays the full ~170 GiB expert sweep regardless of
+token count, so making a 5047-token prompt one chunk instead of two would halve
+prefill traffic.
+**Falsified mechanically.** GLM bypasses `ds4_prefill_cap_for_prompt()` and uses
+the indexed-prefill path, where `glm_graph_limit_indexed_prefill_chunk()` clamps
+the chunk to `n_indexer_top_k - pos` = 2048 and the size comes from the
+compile-time `DS4_GLM_METAL_INDEXED_PREFILL_CHUNK_TOKENS`. Neither
+`DS4_METAL_PREFILL_CHUNK` nor `--prefill-chunk` reaches it — the observed
+2048 + 2999 split is structural.
+The first attempt also produced **no result at all**: both arms ran
+`prefill_chunk=4096` (identical sweeps=2 and prefill bytes to one decimal),
+the same "arms were secretly identical" failure as the flush A/B.
+sol pre-registered the outcome before the run and matched it exactly: "two
+sweeps, ~339 GiB, identical output, causal TTFT change exactly 0%".
+A real version would need the indexed workspaces resized and the top-k bridge
+redesigned, with a fidelity gate because merging batches changes FP results.
+**Not attempted.**
 
 ### C6. Levers measured and NOT adopted
 - **MTP speculation**: ~+10%, output not identical. One non-repeated
@@ -173,3 +188,23 @@ salient-passphrase task. Capacity-edge behaviour is untested.
 6. **Reviewers must be able to read the code under review** — `/home/dsv4` is
    unreadable to the sandbox and `vendor/ds4/` is a stale snapshot that
    silently misled a review round.
+
+---
+
+## Model facts (corrected 2026-07-26)
+
+GLM-5.2 shape, read from `DS4_VARIANT_GLM52` in ds4.c: **256 experts per
+layer** (not 160, which was wrong in the ledger, the memory file and several
+harness comments), 8 used, 1 shared, 79 layers of which 75 are routed,
+`n_indexer_top_k = 2048`.
+This does not change any measured number, but it is *why* prefill is so
+expensive: a 2048-token batch already touches ~99% of all 256 experts in every
+routed layer, so no chunking strategy can reduce the sweep.
+
+### Still unsupported (sol round 3)
+- keep-7/keep-6 gains are one-fixture observations until the trajectory-
+  controlled pass finishes.
+- `unique=8/7/6` proves reduced *logical loader slab bytes*; the 29% drop in
+  cache misses is the supporting evidence for physical NVMe reduction, but
+  kernel-compute reduction is not shown.
+- gen3 is statically reviewed but, at time of writing, unbuilt and unrun.
