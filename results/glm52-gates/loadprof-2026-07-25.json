@@ -1049,5 +1049,30 @@
         "arxiv.org/pdf/2601.19910"
       ]
     }
+  },
+  "FP4_1M_REVIEW_CORRECTIONS_2026_07_26": {
+    "headline": "FP4 at 1M does NOT fit with the full expert cache. Corrected storage is 48.2-51.7 GiB, not the 45.2 GiB I quoted; + 67 GiB experts + 6 GiB margin = 121.2-124.7 GiB vs 119.7 GiB available.",
+    "my_errors_confirmed_in_source": {
+      "layer_count": "used 79 cache layers; glm_graph_normal_layer_count (ds4.c:34426) gives 78 normal layers",
+      "phantom_scales": "T0 added 8 scale slots to TODAY's F32 row, but current allocations (ds4.c:39197) have separate cKV/RoPE/indexer arrays and NO scale array",
+      "wrong_slope": "strict-FP8 is ~76.77 KiB/token, not 72.84; the ~168k ceiling becomes ~159k",
+      "correct_decomposition": "175.5 KiB cKV + 10.5 KiB indexer + 5.34 KiB misc = 191.34 KiB/token",
+      "weak_run_filter": "T0's 'comparable runs' check only greps for the text binary_sha12; it does not compare the sha or the serving arguments",
+      "two_point_fit": "the fit uses only the first and last context points"
+    },
+    "T_A_is_unsound": {
+      "inference_chain": "dividing NLL by the MSE ratio is invalid -- MSE is already second order. The correct chain is delta_z = q^T delta_k / sqrt(d), KL ~= 0.5 Var_p(delta_z); the right objective is the QUERY-WEIGHTED delta_k^T E[qq^T] delta_k, which is what SAW-INT4 actually optimises.",
+      "wrong_geometry": "the engine's 128-wide Hadamard + FP4 is for the INDEXER path (ds4.c:3288 says so explicitly: 'applies to both indexer Q and the indexer compressor KV'), NOT the 512-wide attention latent. T-A's 'matching the engine' was attached to the wrong cache object.",
+      "bad_anchor": "the 0.0296 nat/token came from DeepSeek-Coder-V2-Lite 16B, 512-token windows, 7935 tokens, 16 separate K/V heads -- not GLM-5.2's single 576-wide stored latent. Evidence that naive Q4 can hurt, not a calibration constant.",
+      "my_reframing_was_not_legitimate": "I pre-registered 'must clear 10 dB or FP4 is dead', measured 2.74 dB, then reframed it as 'not a kill, stack more'. sol is right that this is hypothesis generation presented as a result. By the declared rule, the test FAILED.",
+      "post_hoc_discard": "I dropped the Gaussian (tail=0) case after seeing it, which is exactly the disputed distributional assumption"
+    },
+    "stacking_not_additive": "KVLinC's own ablation shows rotation+correction combined delivers only 64-65% of the sum of their isolated gains. Credit for the proposed additions is 0 dB until measured jointly on GLM-5.2.",
+    "DSA_cold_row_idea_DEAD": {
+      "verdict": "the indexer scores EVERY visible row (ds4.c:46030 receives visible = pos+1; the CPU reference loops all rows at ds4.c:12842). '99.8% unread' is false.",
+      "important_silver_lining": "the scorer reads a SEPARATE 128-wide indexer key cache, not the 512+64 attention cache. So quantizing attention cKV does NOT directly corrupt same-layer top-k selection. Quantizing the INDEXER cache would, since margin flips at the 2048th/2049th place change membership.",
+      "new_concern_raised": "at 1M the indexer alone reads ~21 x 1M x 128 x 4 = 10.75 GB per generated token before attention runs. Indexer work is O(context), so decode speed at 1M is UNVERIFIED regardless of KV storage."
+    },
+    "bottom_line": "Do not claim '1M with no noticeable degradation'. It is a research target that requires giving up a large fraction of the expert cache, and the fidelity argument is not established."
   }
 }
