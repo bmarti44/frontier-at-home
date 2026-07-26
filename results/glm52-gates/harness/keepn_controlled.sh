@@ -45,7 +45,7 @@ run_arm() { # $1 arm-tag, $2 keep-N (0 = control/off), $3 norenorm(1/0)
   env "${envs[@]}" \
     DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=24 \
     DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
-    DS4_CUDA_EXPERT_CACHE_SLRU=1 DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 \
+    DS4_CUDA_EXPERT_CACHE_SLRU=1 \
     "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
     --ssd-streaming --ssd-streaming-cache-experts 20GB \
     > "$OUT/server-$1.log" 2>&1 &
