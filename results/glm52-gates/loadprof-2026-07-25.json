@@ -373,5 +373,32 @@
    "implication": "GLM-5.2's router is UNUSUALLY FLAT \u2014 the 'top-2 dominate' prior behind AdapMoE-style skipping and aggressive HOBBIT tiering does NOT hold: keep-6 discards 15.2% of gate mass, keep-4 discards 33.7%; a 90%-mass exact tier needs ~7 of 8 experts (only 12.5% byte cut). Levers 2 and 3 are significantly WEAKENED on this model \u2014 importance-based tiering is fighting a flat distribution.",
    "decisive_next_probe": "keep-N fidelity A/B: env DS4_GLM_TOPK_KEEP=N \u2014 at the decode router site, zero weights beyond top-N and renormalize (8-float read-modify-write at the existing GATEMASS hook point, ~15 lines); run the 100-case NLL suite at N=6 and N=4 vs N=8 baseline. If NLL cost at N=6 is negligible despite the 15% mass discard, lever 2 lives (25% byte cut); if not, levers 2-3 die on this model and the surviving stack reduces to SLRU (landed) + QTIP (Brian's call) + second-box."
   }
+ },
+ "cross_domain_sweep_2026_07_26": {
+  "top_findings": [
+   "D. NVMe-oF over the box's OWN dual-200GbE ConnectX-7 to a cheap external Gen5 NVMe target (~$2-4k JBOF/Linux box, NOT a second Spark): StorageReview measured 12.1 GiB/s GDS on this product at only 100G; parallel with the internal drive => ~31 GB/s aggregate, all-miss decode floor 1.8 -> ~5 t/s. Highest-ROI buyable lever in the entire program.",
+   "A. Successive refinement (Equitz-Cover): splitting 2-bit weights into a 0.6-bit ALWAYS-RESIDENT tier (63GB \u2014 fits) + 1.4-bit streamed refinement costs ZERO extra total bytes; misses never stall (game-engine virtual-texturing pattern: serve coarse instantly, refine async). BYPASSES the flat-router problem \u2014 it is stall-elimination, not importance-tiering; fidelity cost only transient on the 23% miss stream.",
+   "B. Prefetch threshold theory (Dahlin; Srinath/Mutlu 40% rule): prefetch pays only when P(used) > theta* ~= 0.38-0.64 at our rates \u2014 KILLS naive router-prior prefetch under the flat distribution (per-expert P~0.21) but a conditioned cross-layer predictor (~90% literature accuracy) clears the bar; chunk-capped speculation + Do-No-Harm eviction (Cao 4 rules) makes it <=2x off offline-optimal.",
+   "H. HARD CEILING on all quantization cleverness combined: reverse water-filling on a flat spectrum => remaining headroom = granular gain 0.254 bits/weight = 12.7% (QTIP-class TCQ captures most). Closes the compression research direction with a number.",
+   "N. Noise-shaping/beta-encoding quantization (Chou-Gunturk; Lybrand-Saab): the ONE quantization family whose guarantee survives a flat spectrum (redundancy source = over-parameterization, not spectral decay); reaches the RD limit cheaply with a sequential/streaming decoder.",
+   "E. Fusi cascade / Benna-Fusi metaplasticity counters: the only cache-eviction model in any literature CONSTRUCTED for flat access; 4-6 leaky accumulators per expert, timescales x4 \u2014 upgrade path beyond SLRU.",
+   "K. LHCb inversion (persist product not input) = activation/prefix caching \u2014 we already ship this as disk-KV.",
+   "M. Future watch: SanDisk/SKhynix High-Bandwidth Flash (1.6 TB/s, 512GB/stack, samples H2-2026) \u2014 the eventual real fix for this entire class of problem; on-package only, not buyable for GB10."
+  ],
+  "closed_by_sweep": [
+   "importance-based expert dropping (triage transfers only for peaked distributions \u2014 matches our flat gate-mass)",
+   "Wyner-Ziv as framed (offline encoder knows side info; successive refinement is the right sibling)",
+   "manufactured reference/diff coding (selection buys 3.8-15.9% only atop existing similarity)",
+   "GPU/CSD decompression (GB10 excluded from DE support; 99% incompressible anyway)",
+   "analog/CXL/USB4/DNA exotics (numbers 3-2000x short)"
+  ],
+  "revised_build_order": [
+   "1. NVMe-oF external NVMe target over ConnectX-7 (BRIAN: ~$2-4k purchase decision)",
+   "2. 0.6-bit resident proxy tier + no-stall coarse-fallback-on-miss (successive-refinement two-tier, flat-router-proof)",
+   "3. theta*-gated cross-layer prefetch with accuracy kill-switch + chunk cap + Do-No-Harm",
+   "4. cascade counters atop SLRU",
+   "5. QTIP re-quant captures the final ~13% (BRIAN: quantization compute)"
+  ],
+  "keep_n_probe_downgraded": "the sweep's triage analysis + our flat gate-mass predict keep-N fidelity A/B fails; run it only as a cheap confirmation, expect kill"
  }
 }
