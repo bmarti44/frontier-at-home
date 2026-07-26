@@ -8,7 +8,7 @@
 set -u
 ALIGN=${TTFT3_ALIGN:-64}
 TRIM=${TTFT3_TRIM:-32}
-OUT=/home/dsv4/ds4-project/glm52-ttft3-a${ALIGN}t${TRIM}
+OUT=/home/dsv4/ds4-project/glm52-ttft3-a${ALIGN}t${TRIM}b${TTFT3_BATCHALL:-0}
 SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 FIX=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/fixture-glm-long8.json
@@ -26,7 +26,7 @@ json.dump(j, open(sys.argv[2] + "/fix1.json", "w"))
 EOF
 
 DS4_GLM_SYNC_TRACE=1 DS4_CUDA_LOAD_PROFILE=1 \
-DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 \
+${TTFT3_BATCHALL:+DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1} \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=68 \
 DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
   "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
@@ -57,6 +57,22 @@ kill -TERM $SPID; for i in $(seq 1 60); do kill -0 $SPID 2>/dev/null || break; s
 trap - EXIT
 
 grep -E "GLM sync|checkpoint" "$OUT/server.log" | grep -v "branch=" | tail -12 >> "$OUT/timings"
+python3 - "$OUT" <<'PYC' >> "$OUT/timings"
+import json, sys, hashlib
+out = sys.argv[1]
+for n in ("cold", "warm1", "warm2"):
+    try:
+        raw = open("%s/%s.json" % (out, n), "rb").read()
+        bad = 0
+        try: raw.decode("utf-8")
+        except UnicodeDecodeError: bad = 1
+        d = json.loads(raw.decode("utf-8", "replace"))
+        t = d["choices"][0]["text"]
+        print("%s sha=%s bad_utf8=%d text=%r" % (
+            n, hashlib.sha256(t.encode()).hexdigest()[:12], bad, t[:50]))
+    except Exception as e:
+        print("%s ERR %s" % (n, e))
+PYC
 cat "$OUT/timings"
 chmod -R a+rX "$OUT"
 note "window done (caller restores DSV4)"
