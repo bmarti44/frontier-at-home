@@ -1,0 +1,95 @@
+Overall verdict
+
+Claim 1: SUPPORTED-WITH-GAPS
+
+Claim 2: NOT SUPPORTED
+
+The adopted profile is plausible as an experimental configuration, but the evidence does not qualify it as a generally sound agent-serving profile. The strongest result is a narrow steady-state exact-replay TTFT measurement at 8K context. The 32K result proves configuration/allocation only, not a functioning 32K window.
+
+Claim 1: warm TTFT MET
+
+What is supported:
+
+The harness sends the same 5,047-token request three times to one server with max_tokens=1. The committed trace shows checkpoint 5,044 and suffix 3, and records 3.369 s for warm1 and 1.764 s for warm2. Because this is a one-token non-streaming completion, total response wall time is an upper bound on true first-token latency if the response was valid.
+
+The alignment fit also checks numerically. Using the stated 55/39/35-token points gives:
+
+warm wall = 2.039 s + 63.46 ms × suffix tokens
+
+That reasonably rounds to “about 2.0 s + 65 ms/token.”
+
+Findings:
+
+1. HIGH — 1.764 s is an honest steady-state exact-replay number, not yet an honest general agent metric.
+
+Warm2 is the third firing and the second cache-hit firing. The first cache-hit experience was warm1 at 3.369 s. An agent’s next turn is normally an appended conversation, not another identical prompt. Its suffix includes newly generated assistant text, tool results, and the next user message. No appended-turn distribution was measured.
+
+Therefore the defensible label is: “steady-state second exact replay: 1.764 s.” It does not establish p50/p95 warm agent TTFT or first-hit TTFT below two seconds.
+
+2. HIGH — The claim that trim=0 has “no correctness impact” is unsupported.
+
+The default 32-token trim is a stability margin at the tokenization boundary. The current upstream cache design can preserve authoritative cached token IDs and tokenize only the appended text suffix; an exact rendered-byte prefix is not necessarily the same tokenization as canonically tokenizing the entire appended prompt. Removing the tail margin can therefore produce a continuation that differs from a cold stateless request at an adversarial BPE boundary.
+
+This is not arbitrary wrong-prefix reuse—the rendered bytes still match—but it can be wrong relative to canonical whole-request tokenization. Identical full-prompt repetition cannot expose it. The upstream design and rationale are documented in the [disk-KV documentation and implementation](https://github.com/antirez/ds4#disk-kv-cache).
+
+Required closure: append probes ending at merge-prone byte boundaries, chat/DSML markers, generated text, tool calls, Unicode, and whitespace; compare cold full-tokenization against live and disk-restored continuations over multiple output tokens or logits.
+
+3. MEDIUM — The 1.764 s result was not measured on the final adopted profile.
+
+The TTFT harness uses ctx=8192, a 68GB arena, and an 8GB disk-KV budget. The adopted profile uses ctx=32768, a 72GB arena, and 16GB disk-KV. The 32K smoke records decode but not the 1.764 s TTFT. The final combination therefore lacks an exact-profile revalidation.
+
+4. MEDIUM — The raw evidence chain is incomplete.
+
+The harness does not record HTTP status or enforce curl success. The committed BAR-MET log contains timings and sync traces but not response bodies or the claimed b344d80e24a3 hashes. Those hashes appear only in narrative JSON. The load-profile increments make a successful inference likely, but the byte-identity claim is not independently reproducible from committed evidence. It also covers only one generated token.
+
+5. MEDIUM — The DSV4 comparison is not matched.
+
+The cited 1.218 s DSV4 probe uses the tiny “Reply with the single word: ready” request with max_tokens=4. GLM uses a 5,047-token prompt, max_tokens=1, and disk-checkpoint restoration. Both satisfy an absolute two-second bar, but 1.764 versus 1.1–1.2 is not a controlled head-to-head comparison.
+
+6. LOW — No decode-token double counting exists in the fit, but the model is only descriptive.
+
+The measured response already includes computation of the first output token, which correctly belongs in TTFT. Double counting occurs only if the approximately 0.6 s decode cost is added again after applying the fitted intercept.
+
+The trim=0 point does change the fit: all four points give roughly 1.599 s + 73.27 ms/token, while the old fit predicts about 2.23 s at suffix 3. The 1.764 s result is approximately 0.4 s faster than that extrapolation, indicating locality or nonlinear-path effects. Also, the align-64 raw record is absent; only its JSON summary remains.
+
+Claim 2: 32K context window MET
+
+Findings:
+
+1. HIGH — No request crossed the old 8,192-token cap.
+
+The short fixture remains around 5K tokens. Its identity and unchanged dec32 wall exercise the same row range as the 8K configuration. They prove that allocating ctx=32768 did not perturb short-context output; they do not prove that row 8193 or row 32768 works.
+
+A prompt exceeding 8192 GLM tokens is mandatory before claiming the context window works. Prefer approximately 30–31K tokens so there is room for at least 32–128 decoded tokens, with a deterministic dependency on material positioned beyond token 8192.
+
+2. HIGH — There is no committed raw 32K evidence.
+
+Commit e1369f7 added only the narrative JSON section and changed -c 8192 to -c 32768 in the profile. It added no harness, server log, row trace, memory series, response, or checkpoint listing. Consequently, rc=0, no floor kill, 98 GiB footprint, hashes, and dec32 timing are assertions rather than auditable artifacts.
+
+This is central missing evidence, hence NOT SUPPORTED rather than SUPPORTED-WITH-GAPS.
+
+3. MEDIUM — Short-context dec32 cannot establish high-row decode performance.
+
+Sparse attention may read only the selected top 2048 rows, but the indexer must still score/select against the available row population. That work and its memory traffic can grow with n_rows. Larger row counts may also trigger different top-k kernels, workspace limits, positional/frontier behavior, or capacity-edge bugs. A 5K test cannot rule out latency or correctness cliffs at 9K, 16K, or 30K.
+
+4. MEDIUM — The memory wording appears to double-count the compact cache.
+
+At 186 KiB/token, the 32K compact DSA cache is 5.8125 GiB. The documented persistent graph scratch is approximately 4.19 GiB, producing about 10.0–10.2 GiB total context buffers. Thus the accurate description is probably “10.2 GiB context buffers, of which 5.81 GiB is compact DSA,” not “10.2 plus 5.81.”
+
+The approximately 98 GiB footprint and 21 GiB idle/short-run headroom are plausible, but no long-prefill high-water trace validates them.
+
+5. MEDIUM — The 16GiB disk budget arithmetic is plausible but operationally thin.
+
+Two 5.81 GiB checkpoints plus modest metadata/headroom fit; three do not. Continued checkpoints occur at the default 10K-token interval, and multiple conversations or cold/evict/shutdown anchors can consume the budget quickly. The default cold-save maximum is also 30,000 tokens, so “two full-32K checkpoints” is not demonstrated by the profile alone. Eviction and write churn need a multi-session long-context test.
+
+Required re-gate
+
+For TTFT, run the exact adopted profile with HTTP status capture and streaming first-byte timestamps. Measure cold, first warm, and steady warm over several repetitions; include identical replay, appended agent turns, restart/disk restore, and multi-session eviction. Run DSV4 through the same fixture and cache-state sequence.
+
+For 32K, use a GLM-tokenized prompt beyond 8192 and near 30–31K, prove through traces that rows beyond 8192 are stored and attended/indexed, generate at least 32 tokens, compare cold/live/disk-restored outputs, record row-depth decode timings, checkpoint sizes/evictions, and the complete MemAvailable high-water series.
+
+Until those pass, the accurate labels are:
+
+“Warm TTFT: steady-state exact replay at ctx=8192 measured once at 1.764 s.”
+
+“32K: allocation/startup and short-context regression smoke passed; functional 32K window not yet validated.”

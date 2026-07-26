@@ -130,7 +130,7 @@
     "warm2_s": 1.764,
     "suffix": 3
    },
-   "BAR": "warm TTFT 1.764 s < 2 s \u2014 DSV4 warm-TTFT bar MET, byte-identical outputs (b344d80e24a3 across cold/warm1/warm2, matches the registered batchall reference sha)",
+   "BAR": "QUALIFIED per sol audit (SUPPORTED-WITH-GAPS): steady-state exact-replay 1.764 s at ctx=8192; first-warm 3.37 s; not yet measured on the final adopted profile; appended-turn distribution and trim=0 BPE-boundary safety unproven. Re-gate in ctx_regate.sh.",
    "progression_final": "33.5 -> 19.0 -> 4.22 -> 1.76 s",
    "caveats": [
     "trim 0 stores dynamic prompt tails; for append-style agent traffic this only costs extra tail-chunk rewrites on disk, no correctness impact (LCP just matches less on a changed tail)",
@@ -146,7 +146,8 @@
   "memory": "context buffers 10.2 GiB + compact DSA cache 5.81 GiB (rows=32768 f32, kv_layers 78 + indexer 21) \u2014 total serving footprint ~98 GiB with 72GB arena, ~21 GiB headroom",
   "identity": "warm1/warm2/dec32 sha 9113dfd0d233 x3 \u2014 byte-identical to the 8K-ctx reference",
   "decode": "dec32 wall 30.4s \u2014 unchanged vs 8K",
-  "BAR": "CONTEXT WINDOW MET: GLM-5.2 now serves 32K ctx = DSV4's window (user bar: 'similar/better performance metrics AND content window size'); adopted -c 32768 in glm52 profile",
+  "BAR": "DOWNGRADED per sol audit (NOT SUPPORTED): allocation/startup + short-context regression smoke passed; functional 32K window NOT yet validated (no request crossed row 8192, no raw evidence committed). Re-gate harness ctx_regate.sh addresses both.",
   "note": "kv-disk-space-mb 16384 holds ~2 full-32K checkpoints (5.8 GiB each); raise if multi-conversation checkpointing thrashes"
- }
+ },
+ "sol_night_audit": "logs/loadprof1/sol-night-audit.txt \u2014 claim1 SUPPORTED-WITH-GAPS (6 findings), claim2 NOT SUPPORTED (5 findings); re-gate requirements adopted verbatim"
 }
