@@ -7,16 +7,18 @@ bottom.
 ## The bar (DSV4 production baseline)
 
 467 t/s prefill · 18.4 t/s decode · <2 s warm TTFT · 32K context.
-Note: DSV4's warm-TTFT figure was itself measured under llama.cpp
-prefix-cache reuse (exact-prefix resume semantics).
+Note: an earlier draft claimed DSV4's warm-TTFT figure was measured under
+llama.cpp prefix-cache reuse — RETRACTED per the sol closing audit: the
+committed 1.218 s record is a prefix-cache-cold tiny-prompt probe. A matched
+DSV4-vs-GLM same-fixture head-to-head remains open.
 
 ## Final measured ledger
 
 | metric | DSV4 | GLM-5.2 (best measured) | status |
 |---|---|---|---|
-| warm TTFT, exact replay | ~1.2 s | **1.76 s** | MET (sol-re-gated, byte-identical) |
+| warm TTFT, exact replay | ~1.2 s (unmatched probe) | **1.76 s** | meets the absolute <2 s steady-state exact-replay threshold (byte-identical; matched head-to-head vs DSV4 open) |
 | warm TTFT, multi-turn agent | <2 s | **5.6 s** (exact-prefix semantics, probe-gated) / ~150 s (strict default) | NOT met; floor ~2.3–2.9 s after fix ladder below |
-| context window | 32K | **32K functional** (retrieval beyond row 8192 proven) | MET |
+| context window | 32K | 32K allocated; **11.6K functional** + retrieval beyond row 8192 proven | partially validated (full-depth ~30K probe open) |
 | decode | 18.4 t/s | **1.6–1.8 t/s** | NOT met — single-Spark physics (fully profiled) |
 | prefill | 467 t/s | **~23 t/s** | NOT met — single-Spark physics |
 | fidelity | — | **zero loss** on every adopted lever (byte chains + 100-case NLL 0.4515 / top-1 0.834 vs hosted) | MET |
@@ -38,11 +40,13 @@ evict re-store (920 MiB to a NEW file every turn) 1227 ms · shard load
 Fix ladder (bounded engine work, in order): (1) stop the redundant per-turn
 re-store −1.2 s; (2) live-rewind to the common prefix the server already
 computes instead of evict+load −0.3 s; (3) small-suffix prefill optimization
-−1.5–2 s. Floor ≈ 2.3–2.9 s. Rung 4 is the decode floor itself.
+−1.5–2 s. Projected floor ≈ 2.2–2.7 s — an UNVALIDATED projection
+(additivity not demonstrated; per sol closing audit). Rung 4 is the decode
+floor itself. Component evidence: logs/loadprof1/appended-turn-components.txt.
 
-## The resume-"bug" saga, resolved
+## The resume-"bug" saga — demonstrated mechanism, one invariant open
 
-What looked like corruption is deep-layer numeric path-dependence on
+The dominant demonstrated mechanism is deep-layer numeric path-dependence on
 evaluation chunk shape (L0 rows byte-exact across everything; L40 rows
 differ between any two chunkings), amplified by greedy decoding — the same
 equivalence class as llama.cpp prefix-cache reuse. Token ids at the junction

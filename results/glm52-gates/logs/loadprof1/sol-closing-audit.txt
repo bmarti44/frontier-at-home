@@ -1,0 +1,79 @@
+CLOSING ADVERSARIAL AUDIT
+
+1. FINAL SYNTHESIS
+
+Verdict: NOT SUPPORTED
+
+Finding 1: Identical junction tokens eliminate the tokenization theory, and differing cold-run L40 values support chunk-shape numeric path-dependence. They do not establish that path-dependence is the only cause of resumed/cold divergence.
+
+Finding 2: The admitted same-lineage L40 store→load mismatch is directly incompatible with the categorical “NOT state corruption” conclusion. A pure byte-copy round trip should preserve those rows. Until the proposed no-evaluation-between dump passes, serialization/restoration damage remains a live explanation. The llama.cpp analogy cannot exonerate a violated round-trip invariant.
+
+Finding 3: The committed raw evidence is too thin for the claimed layer-level precision. semantics-confirm-evidence.txt contains aggregate hashes, one first-difference offset, and “RESTORED-LOWER ... False”; it does not contain the binaries, per-layer comparisons, or the stated approximately 25%/100% byte counts. It therefore cannot independently support “L0 byte-exact everywhere” or “L40 differs between any two chunkings.”
+
+Finding 4: Coherent outputs are not evidence of semantic equivalence. The resumed output begins “oft.h...” while the cold control responds to the instruction. That remains consistent with the previously observed stale-tail behavior.
+
+Finding 5: The master ledger is internally contradictory. loadprof JSON lines 228–231 says restore leaves the graph in a state that “corrupts subsequent evaluation”; lines 258–266 later declare “NOT state corruption” without closing the round-trip discrepancy. The supposedly recast upstream document still says “stale-frontier contamination,” “corrupts,” and “root cause confirmed” at docs/ds4-glm-resume-frontier-bug-2026-07-26.md lines 1–12 and 64–77.
+
+Shipping judgment: It is not sound to call this “resolved.” The defensible status is “chunk-shape path-dependence demonstrated; corruption not excluded; same-lineage round-trip invariant still open.” The strict guard should remain until that invariant is tested.
+
+2. TTFT DECOMPOSITION AND FIX FLOOR
+
+Verdict: NOT SUPPORTED
+
+Finding 1: The top-line 5.633–5.675 second wall measurements are supported. The decomposition is not. appended-turn-ttft.txt contains only HTTP status and total wall times; it has no component timestamps or traces.
+
+Finding 2: The arithmetic nearly closes, but not “to the millisecond”:
+
+1227 + 295 + 2487 + 1001 = 5010 ms.
+5675 − 5010 = 665 ms, not 660 ms.
+Using “~660” gives 5670 ms.
+
+Finding 3: The ledger contradicts itself. loadprof JSON line 278 describes approximately 250 ms store, 115 ms load, and 600 ms decode; lines 282–285 later use 1227, 295, and 1001 ms. No committed raw trace explains those large revisions.
+
+Finding 4: The stated floor does not follow from its own ladder. Using exact values:
+
+5675 − 1227 − 295 − 1500 to 2000 = 2153–2653 ms.
+
+Using the rounded ladder gives approximately 2175–2675 ms. Neither yields 2.3–2.9 seconds.
+
+Finding 5: Additivity is assumed, not demonstrated. Live rewind may subsume both store and load; it is not proven “free,” especially while graph-state restoration is unresolved. Skipping stores changes later checkpoint availability, while a new suffix path may change batching, overhead, locality, and numeric behavior. No individual or combined A/B measurements exist.
+
+The honest statement is: “5.6–5.7 seconds measured; component attribution and a roughly 2.2–2.9 second optimization projection remain unvalidated.” It is not a measured floor.
+
+3A. EXACT-REPLAY 1.76 SECOND “MET”
+
+Verdict: SUPPORTED-WITH-GAPS
+
+Finding 1: The re-gate supports 1.770 seconds on the final profile, HTTP 200, with identical cold/warm outputs. This honestly meets a separately defined absolute “steady-state exact replay <2 seconds” threshold.
+
+Finding 2: It is the third identical request and second cache hit, with max_tokens=1. First warm was 2.340 seconds. It is not a first-hit, multi-turn, p50, or p95 result.
+
+Finding 3: The DSV4 comparison remains unmatched, exactly as the earlier audit found. GLM used a 5,047-token restored fixture; DSV4’s 1.218-second record used a tiny prompt and max_tokens=4. The ledger itself leaves “DSV4 same-fixture head-to-head” open at loadprof JSON line 160.
+
+“MET” is acceptable only if expanded to “MET the absolute steady-state exact-replay threshold.” It is not evidence of matched DSV4 parity.
+
+3B. “32K FUNCTIONAL” MET
+
+Verdict: NOT SUPPORTED
+
+Finding 1: The re-gate validly proves retrieval beyond row 8192: an 11,648-token prompt with a passphrase around row 10K was answered correctly and repeated deterministically.
+
+Finding 2: An 11.6K request does not validate a 32K window. Approximately 21K advertised rows, including the capacity boundary, were never exercised.
+
+Finding 3: The earlier audit explicitly required a roughly 30–31K prompt, meaningful generation, and high-row tracing. None of that closure occurred.
+
+The defensible ledger entry is “ctx=32768 allocated; 11.6K functional and retrieval beyond row 8192 proven.” “32K functional: MET” overstates the evidence.
+
+4. DSV4 LLAMA.CPP PREFIX-CACHE FRAMING
+
+Verdict: NOT SUPPORTED
+
+Finding 1: The 1.218-second record is the first completion after a fresh llama.cpp start. The switch log shows startup followed by one verification request. The request is “Reply with the single word: ready,” max_tokens=4 (scripts/52_engine_switch.sh lines 67–71).
+
+Finding 2: Before that request, launcher readiness calls only /health, and verification calls /v1/models. Neither evaluates a matching prompt. There was therefore no recorded prefix available for reuse. The measurement may be model-warm, but it is prefix-cache-cold.
+
+Finding 3: The G4 baseline source cites a 17.4-second evaluation of an 8,140-token prompt. That supports the 467 t/s prefill figure, not the <2-second warm-TTFT or its cache semantics.
+
+Finding 4: Actual llama.cpp agent records report approximately 2–4 seconds for cached 19K turns. The explicit 0.8–1.1-second long-prefix result belongs to ds4 v0.4.2, not llama.cpp. The status sheet conflates that genuine cache result with the unrelated 1.218-second llama.cpp health probe.
+
+The sentence that DSV4’s approximately 1.2-second baseline “was itself measured under llama.cpp prefix-cache semantics” is convenient but false on the committed record.

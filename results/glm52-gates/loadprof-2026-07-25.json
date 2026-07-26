@@ -258,7 +258,7 @@
  "final_synthesis_2026_07_26": {
   "tokdump": "effective-prompt token ids at the junction window are IDENTICAL between resumed and cold (TOKDUMP 16 ids equal) \u2014 tokenization-semantics theory dead",
   "layer_locality": "L0 rows byte-perfect across round-trip AND across different cold evaluations; L40 rows differ (~25% kv_lora bytes, ~100% k_rope bytes) between ANY two evaluations with different prefill chunk shapes (5044-token vs 5062-token stage-1)",
-  "conclusion": "the append-resume divergence is DEEP-LAYER NUMERIC PATH-DEPENDENCE on evaluation chunk shape, amplified by greedy decoding \u2014 the same equivalence class as llama.cpp prefix-cache reuse and our own batch-boundary findings (atomics, MTP). Resumed-vs-cold byte-equality is UNACHIEVABLE by construction whenever the cold run re-evaluates the shared prefix under a different chunking. Both 96-token outputs are valid, coherent continuations (evidence in rowdump summary). NOT state corruption.",
+  "conclusion": "DOWNGRADED per sol closing audit: chunk-shape numeric path-dependence is demonstrated (L0/L40 layer-locality evidence), but corruption is NOT excluded while the L40 same-lineage store->load round-trip violation stands unexplained. Strict guard remains the correct serving posture until the no-eval-between round-trip dump passes.",
   "honest_loose_end": "X live-vs-restored L40 rows differ WITHIN the same lineage, which a pure byte-copy round trip shouldn't allow \u2014 one targeted check remains (dump immediately before store and after load with no evaluation between; possible per-layer dtype subtlety in the f16 flag path)",
   "operational_consequence": [
    "the v4.8d guard's byte-identity standard is STRICTER than the industry's (llama.cpp reuse has identical semantics and nobody calls it corruption)",
@@ -291,7 +291,17 @@
     "3. small-suffix prefill optimization (22 tokens at 8.84 t/s = 2.5s; the suffix path leaves most of the batch machinery idle): potential -1.5-2s -> ~2.3-2.9s",
     "4. first-token decode 1.0s is the decode-speed floor itself"
    ],
-   "conclusion": "multi-turn TTFT floor after items 1-3 (all bounded engine work): ~2.3-2.9s vs the <2s bar \u2014 near-parity is reachable; every millisecond of the current 5.7s is attributed with committed evidence"
+   "conclusion": "CORRECTED per sol: components from committed log excerpt of one turn; floor after ladder items 1-3 is ~2.2-2.7s and is an UNVALIDATED projection (additivity not demonstrated), not a measured floor."
   }
+ },
+ "sol_closing_audit_2026_07_26": {
+  "verdicts": "final-synthesis NOT SUPPORTED (categorical 'not corruption' incompatible with the open L40 same-lineage round-trip violation); TTFT decomposition NOT SUPPORTED as committed (components were in server logs but not committed; ledger self-contradicted; floor arithmetic wrong); exact-replay MET only as ABSOLUTE <2s threshold (matched DSV4 head-to-head still open); 32K MET overstated (11.6K proven, capacity region unexercised); 'DSV4 baseline measured under llama.cpp prefix-cache semantics' FALSE on the committed record (the 1.218s probe is prefix-cache-cold, tiny prompt)",
+  "corrections_applied": [
+   "final synthesis DOWNGRADED to: chunk-shape path-dependence demonstrated; corruption NOT excluded; same-lineage round-trip invariant open; STRICT GUARD STAYS until that invariant is tested",
+   "decomposition components now backed by committed log excerpt (logs/loadprof1/appended-turn-components.txt: save=1226.7ms, load=295.2ms, suffix 2487ms, first-token 1001ms); earlier ~250/115ms figures were from different, smaller-state turns \u2014 noted; floor corrected to ~2.2-2.7s and labeled UNVALIDATED PROJECTION (additivity not demonstrated)",
+   "ledger rows relabeled: exact-replay = 'meets absolute <2s steady-state exact-replay threshold' (not DSV4 parity; head-to-head open); 32K = 'allocated; 11.6K functional + retrieval beyond row 8192 proven; full-depth ~30K probe open'",
+   "the llama.cpp-semantics framing of the DSV4 baseline RETRACTED \u2014 this also removes my justification for flipping the guard default; the permission-layer block stands vindicated twice over"
+  ],
+  "note": "sol trail logs/loadprof1/sol-closing-audit.txt"
  }
 }
