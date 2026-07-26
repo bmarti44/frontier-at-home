@@ -29,6 +29,7 @@ open(sys.argv[2] + "/base_prompt.txt", "w").write(base)
 EOF
 
 serve() { # $1 = log suffix
+  if [[ -n "${APPEND_GUARD_OFF:-}" ]]; then export DS4_GLM_RESUME_GUARD_OFF=1; fi
   DS4_GLM_TP_DEBUG=0 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=${APPEND_PROBE_CACHE_GB:-72} \
   DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
   DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=${APPEND_PROBE_BATCHALL:-1} DS4_GLM_SYNC_TRACE=1 \
@@ -69,9 +70,11 @@ open(out + "/gen.txt", "w").write(gen)
 appends = ["ological analysis shows",
            " naïve café résumé — attaché",
            "\n\n```python\ndef f(x):"]
+import os
+mt = int(os.environ.get("APPEND_MAX_TOKENS", "24"))
 for i, ap in enumerate(appends, 1):
     json.dump({"model": "default", "prompt": base + gen + ap,
-               "max_tokens": 24, "temperature": 0},
+               "max_tokens": mt, "temperature": 0},
               open(f"{out}/ap{i}.json", "w"))
 EOF
 fire x_ap1 "$OUT/ap1.json"
