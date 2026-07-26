@@ -68,12 +68,23 @@ out = sys.argv[1]
 def load(tag):
     p = os.path.join(out, "q100-%s.tsv" % tag)
     try:
-        rows = [l.rstrip("\n").split("\t") for l in open(p) if not l.startswith("#")]
+        rows = [l.rstrip("\n").split("\t") for l in open(p)
+                if not l.startswith("#") and l.strip()]
     except FileNotFoundError:
         return None
-    nll = [float(r[4]) for r in rows if len(r) > 4]
-    first = [int(r[5]) for r in rows if len(r) > 5]
-    return {"n": len(nll), "nll": nll, "first": first}
+    # score_official writes a PLAIN header row (not '#'-prefixed); skipping only
+    # '#' lines made float() raise and produced an empty summary. Parse
+    # defensively and key by case id so the arms are paired case-for-case.
+    nll, first, ids = [], [], []
+    for r in rows:
+        if len(r) < 6:
+            continue
+        try:
+            v, f = float(r[4]), int(r[5])
+        except ValueError:
+            continue          # header or malformed row
+        ids.append(r[0]); nll.append(v); first.append(f)
+    return {"n": len(nll), "nll": nll, "first": first, "ids": ids}
 base = load("keep8")
 print("%-7s %4s %9s %9s %9s %9s" % ("arm", "n", "mean_nll", "median", "p90", "first_tok%"))
 print("(n is the number of scored cases -- the suite has 100 available; see run.log)")
