@@ -241,6 +241,7 @@
   ],
   "where_to_look": "NOT in ds4_glm_gpu_graph (sol enumerated \u2014 no cursor member). Candidates: ds4_gpu_tensor append/len state used as a write cursor by kv/indexer cache writes (check ds4_gpu.h tensor struct + cache write call sites for tensor->len-style cursors), or a device-side per-layer write position in ds4_cuda.cu. The load path restores tensor CONTENT but may not reset a tensor-level length/cursor field.",
   "decisive_probe": "instrument the kv/indexer cache WRITE call sites to log (logical_pos, physical_offset) for the first suffix token after a load \u2014 one line of fprintf, one window",
-  "status": "hypothesis recorded for next session; consistent with 100% of tonight's evidence"
+  "status": "hypothesis recorded for next session; consistent with 100% of tonight's evidence",
+  "c_level_negative": "checked: the compact-KV and indexer-K store call sites are explicitly position-addressed (ds4_gpu_glm_store_compact_kv_tensor / store_indexer_k_tensor take pos0 straight from sync's start; ds4_gpu_tensor has no cursor field). No C-side stale cursor exists. Hypothesis narrows to: (a) inside the CUDA store/attention/indexer kernels (offset computation from pos0 + some cached device state), or (b) restored cache content subtly wrong in a way replay's attention pattern doesn't expose. DECISIVE PROBE (next session): env-gated GPU readback \u2014 dump layer-0 kv_lora/indexer rows [start..start+4) after the first post-load suffix evaluation and byte-compare with the same rows from a virgin cold run at identical positions (payload_write_tensor_span machinery already reads GPU tensors \u2014 reuse it)."
  }
 }
