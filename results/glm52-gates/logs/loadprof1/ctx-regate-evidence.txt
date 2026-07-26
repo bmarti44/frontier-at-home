@@ -1,0 +1,36 @@
+A cold: sha=05ab353a0a75 contains_secret=False text='The user wants the passphrase from the IMPORTANT RECORD.\nThe'
+A rep : sha=05ab353a0a75 contains_secret=False identical=True
+A VERDICT: FAIL (deterministic dependency beyond row 8192)
+B cold sha=b344d80e24a3  warm1 sha=b344d80e24a3  warm2 sha=b344d80e24a3  all_eq=True
+C full(resumed-after-base) sha=d57a655e8ea9 text='宂 looks like a good word\n\n宂 looks like a good wo'
+C full2(repeat)            sha=d57a655e8ea9 identical=True
+C NOTE: cold reference for c_full comes from the paired fresh-server control run
+ds4: GLM sync start=5044 prompt=5047 suffix=3 checkpoint=5044 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+ds4: GLM sync branch=decode_resume pos=5044 token_index=5044 updates_dense=0
+ds4: GLM sync branch=decode_resume pos=5045 token_index=5045 updates_dense=0
+ds4: GLM sync branch=decode_resume pos=5046 token_index=5046 updates_dense=0
+ds4: GLM sync start=0 prompt=32 suffix=32 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync branch=full_indexed pos=0 chunk=32 logits=1
+ds4: GLM sync start=0 prompt=42 suffix=42 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync branch=full_indexed pos=0 chunk=42 logits=1
+ds4: GLM sync start=0 prompt=42 suffix=42 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync branch=full_indexed pos=0 chunk=42 logits=1
+A64 run1 sha=348a60ced056 contains_secret=True
+A64 text: 'The user wants the passphrase from the IMPORTANT RECORD.\nThe passphrase is KESTREL-4491.</think>KESTREL-4491'
+A64 run2 identical=True
+A64 VERDICT: PASS
+ds4: GLM sync start=0 prompt=11648 suffix=11648 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=11648 prompt=11649 suffix=1 checkpoint=11648 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=11648 prompt=11649 suffix=1 checkpoint=11648 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+
+a_cold http=200 wall_ms=378621
+a_rep http=200 wall_ms=69932
+b_cold http=200 wall_ms=139115
+b_warm1 http=200 wall_ms=2340
+b_warm2 http=200 wall_ms=1770
+c_base http=200 wall_ms=27263
+c_full http=200 wall_ms=23860
+c_full2 http=200 wall_ms=23731
+c_control http=200 wall_ms=36101
+a64_1 http=200 wall_ms=346400
+a64_2 http=200 wall_ms=14602

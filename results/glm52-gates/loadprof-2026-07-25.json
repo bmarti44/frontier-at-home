@@ -149,5 +149,17 @@
   "BAR": "DOWNGRADED per sol audit (NOT SUPPORTED): allocation/startup + short-context regression smoke passed; functional 32K window NOT yet validated (no request crossed row 8192, no raw evidence committed). Re-gate harness ctx_regate.sh addresses both.",
   "note": "kv-disk-space-mb 16384 holds ~2 full-32K checkpoints (5.8 GiB each); raise if multi-conversation checkpointing thrashes"
  },
- "sol_night_audit": "logs/loadprof1/sol-night-audit.txt \u2014 claim1 SUPPORTED-WITH-GAPS (6 findings), claim2 NOT SUPPORTED (5 findings); re-gate requirements adopted verbatim"
+ "sol_night_audit": "logs/loadprof1/sol-night-audit.txt \u2014 claim1 SUPPORTED-WITH-GAPS (6 findings), claim2 NOT SUPPORTED (5 findings); re-gate requirements adopted verbatim",
+ "sol_regate_2026_07_26": {
+  "harnesses": "ctx_regate.sh + ctx_a_retry.sh, exact adopted glm52 profile (ctx 32768, arena 72 pinned, batchall, align 4 trim 0, kv-disk 16GB), HTTP codes captured",
+  "A_functional_32k": "PASS \u2014 11,648-token prompt, passphrase planted at ~row 10K (beyond dense cap 8192): retrieved exactly ('KESTREL-4491'), deterministic x2 (sha 348a60ced056); cold 346s, resumed repeat 14.6s (checkpoint 11648, suffix 1). ctx_cap=8192 in traces is the DENSE-attention cap; indexed path handles rows above it.",
+  "B_ttft_adopted_profile": "PASS \u2014 5047-tok fixture on ctx-32768 server: cold 139.1s, warm1 2.34s, warm2 1.77s, cold/warm1/warm2 byte-identical (b344d80e24a3). Honest labels per audit: steady-state exact replay 1.77s; first warm 2.34s.",
+  "C_trim0_bpe": "STILL OPEN \u2014 the short C prompts (32-42 tokens) never met the checkpoint minimum, so no resume occurred (sync: checkpoint=0); the byte-match vs control is vacuous for the trim-0 risk. Partial evidence: A's resumed-vs-cold identity at 11,648 tokens with trim 0 (empty append). A nontrivial-append BPE-boundary probe on a >min-tokens prompt remains TODO before trusting trim 0 under real agent traffic.",
+  "remaining_sol_findings_open": [
+   "appended-turn TTFT distribution (agent-realistic)",
+   "DSV4 same-fixture head-to-head",
+   "multi-session kv-disk eviction behavior",
+   "align-64 raw record absent (JSON summary only)"
+  ]
+ }
 }
