@@ -1001,5 +1001,27 @@
       },
       "actionable": "the current 32768 setting is a CONFIG choice, not a limit. ctx=131072 needs only 27.9 GiB of KV and would still leave ~85 GiB for the expert cache and model. Raising it is the cheapest real improvement available and has not been tried."
     }
+  },
+  "KV_COMPRESSION_MECHANISM_2026_07_26": {
+    "question": "how does DSV4 get 1M context, is the KV drastically compressed, and can GLM use the same thing?",
+    "answer_the_stack_in_ds4": [
+      "1. MLA-style LATENT compression (architectural): one compressed latent row per token instead of per-head K/V. GLM n_head_dim=576 (512 non-RoPE + 64 RoPE), 64 heads collapse to one latent.",
+      "2. E4M3 FP8 rounding of the non-RoPE part: dsv4_fp8_kv_quantize_row_inplace_cpu (ds4.c:3210), per-64-element block, power-of-two scale 2^ceil(log2(amax/448)), clamp +/-448.",
+      "3. Hadamard rotation + E2M1 FP4 for the indexer path (ds4.c:3268, 3295): 128-wide Hadamard then FP4 {0,.5,1,1.5,2,3,4,6} with per-32 scale. Rotate-then-quantize is the QuIP#/QuaRot/SpinQuant outlier-spreading trick.",
+      "4. DSA sparse indexing: n_indexer_top_k=2048, so attention reads only the top-2048 rows and attention COMPUTE does not grow with context length."
+    ],
+    "is_it_turboquant": "No. Grepped the tree: no turboquant/turbo_quant anywhere. TurboQuant (2025) is near-optimal VECTOR quantization for KV; what is implemented here is scalar FP8/FP4 with Hadamard rotation, DeepSeek's own design. Same problem family, different technique.",
+    "does_GLM_already_use_it": "YES. GLM-5.2 runs as DS4_VARIANT_GLM52 / GLM_DSA with the same latent KV, the same FP8/FP4 rounding and the same 2048 indexer top-k. That is why ds4 supports GLM at all.",
+    "THE_INEFFICIENCY_FOUND": {
+      "finding": "the KV values are FP8-rounded but on CUDA they are STORED as F32. Only Apple stores F16: '#if defined(__APPLE__) #define DS4_GPU_ATTN_COMP_CACHE_F16 1 #else 0' (ds4.c:14821).",
+      "arithmetic_check": "576 floats x 4 bytes x 79 layers = 177.8 KiB/token, against the measured two-point fit of 191.3 KiB/token -- the F32 compact cache IS essentially all of the per-token KV cost.",
+      "potential": {
+        "F32_now": "191 KiB/token, 1M = 186 GiB (impossible)",
+        "F16": "~96 KiB/token, 1M = ~93 GiB (512k feasible)",
+        "true_FP8_storage": "~48 KiB/token, 1M = ~47 GiB (1M becomes FEASIBLE on this box)"
+      },
+      "cost_honest": "NOT a config flip. The CUDA path casts the cache as (float *)comp_cache->ptr (ds4.c:14285, 14298) and the compressed-attention kernels assume F32. Enabling F16 requires porting those kernels to __half; true FP8 storage is a larger project again. The write path is already abstracted (F32 staging + ds4_gpu_tensor_copy_f32_to_f16, which IS implemented in the CUDA backend), so the store half is mostly done -- it is the CONSUME half that needs work.",
+      "why_it_matters": "context is the metric with the largest structural gap to the DSV4 bar (1M vs 32768 configured), and this is the mechanism that would move it."
+    }
   }
 }
