@@ -972,5 +972,34 @@
       "output_sha_all_arms": "4a2300193eb3 -- the policy changes no output byte, as a cache policy must not",
       "verdict": "SLRU CONFIRMED as a real, causally-attributable decode lever worth +6.2% on this fixture. Keep it enabled."
     }
+  },
+  "DSV4_BAR_CORRECTED_2026_07_26": {
+    "source": "user correction: the DSV4 bar includes cold TTFT ~19 s for prompts up to ~19k tokens, and a 1,000,000-token context window. My STATUS.md had cold TTFT as unspecified and context as '--'.",
+    "corrected_bar": {
+      "warm_ttft_s": "<2",
+      "cold_ttft_s_at_19k": 19,
+      "decode_tok_s": 18.4,
+      "prefill_tok_s": 467,
+      "context_tokens": 1000000
+    },
+    "glm_against_it": {
+      "warm_ttft": "1.755 s -- MET",
+      "cold_ttft": "GLM prefills at ~23-32 tok/s, so a 19k prompt would take ~10-14 MINUTES against DSV4's ~19 s. Roughly 35-45x short. Measured directly: 5047 tokens in 147-165 s.",
+      "decode": "2.33 vs 18.4 tok/s, ~8x short",
+      "context": "configured at 32768 vs DSV4's 1,000,000"
+    },
+    "GLM_CONTEXT_CEILING_measured": {
+      "method": "two-point fit of the engine's own 'context buffers' line: 5653.35 MiB at ctx=8192 and 10245.44 MiB at ctx=32768",
+      "per_token_kib": 191.3,
+      "fixed_overhead_mib": 4123,
+      "kv_needed_at_1M_gib": 186.5,
+      "verdict": "1M context is IMPOSSIBLE on one Spark: the KV alone needs 186.5 GiB against 119.7 GiB of unified memory, even with zero expert cache and zero model residency.",
+      "feasible_ceilings": {
+        "with_72GiB_expert_cache": "~207k tokens",
+        "with_40GiB_expert_cache": "~383k tokens",
+        "with_8GiB_expert_cache": "~558k tokens (but decode would degrade badly -- the cache is what keeps decode above the 1.83 tok/s all-miss floor)"
+      },
+      "actionable": "the current 32768 setting is a CONFIG choice, not a limit. ctx=131072 needs only 27.9 GiB of KV and would still leave ~85 GiB for the expert cache and model. Raising it is the cheapest real improvement available and has not been tried."
+    }
   }
 }

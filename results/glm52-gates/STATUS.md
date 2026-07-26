@@ -9,10 +9,25 @@ order of magnitude, and the reason is arithmetic, not tuning.**
 | metric | DSV4 bar | GLM-5.2 measured | verdict |
 |---|---|---|---|
 | warm TTFT | <2 s | **1.755 s** | **MET** (with a config dependency, below) |
-| cold TTFT (5047 tok) | fast | 147–165 s | not met |
-| decode | 18.4 tok/s | 2.29 tok/s | ~8x short |
-| prefill | 467 tok/s | ~23 tok/s | ~20x short |
-| context | — | 32768 configured; retrieval proven past the 8192 dense cap | partial |
+| cold TTFT | **~19 s at ~19k tokens** | 147–165 s at 5047 tokens; ~19k would take **10–14 min** | ~35–45x short |
+| decode | 18.4 tok/s | 2.33 tok/s | ~8x short |
+| prefill | 467 tok/s | ~23–32 tok/s | ~15–20x short |
+| context | **1,000,000** | 32768 configured; **~207k is the ceiling** at the current cache size | see below |
+
+## Context: 1M is impossible here, but 32768 is leaving a lot on the table
+
+Two-point fit of the engine's own `context buffers` line (5653.35 MiB at
+ctx=8192, 10245.44 MiB at ctx=32768) gives **191.3 KiB/token + 4.1 GiB fixed**.
+
+- **1M context needs 186.5 GiB of KV alone** against 119.7 GiB of unified
+  memory — impossible on one Spark even with zero expert cache and no model
+  resident. This is a hard structural gap against DSV4's 1M, not a tuning one.
+- But the current **32768 is a config choice, not a limit**: ctx=131072 costs
+  only 27.9 GiB of KV and still leaves ~85 GiB for the expert cache and model.
+  Ceilings: ~207k tokens with the 72 GiB cache, ~383k at 40 GiB, ~558k at 8 GiB
+  (the last would wreck decode — the cache is what holds decode above the
+  1.83 tok/s all-miss floor).
+- **Raising the context window is the cheapest untried improvement available.**
 
 ## Why decode cannot be fixed in software
 
