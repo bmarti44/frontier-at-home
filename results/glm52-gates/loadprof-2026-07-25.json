@@ -465,5 +465,17 @@
   ],
   "revised_plan": "SHADOW-PREFETCH EXPERIMENT FIRST: prediction-driven reads into disposable staging, zero cache mutation; measure miss-conditioned recall + timeliness + contention + net latency. Only if that passes: main-thread-only admission with INFLIGHT/READY publication. No 2.4 t/s claim until demonstrated.",
   "trail": "logs/loadprof1/sol-round2-review.txt"
+ },
+ "shadow_prefetch_2026_07_26": {
+  "method": "sol-specified shadow experiment (binary b38a56959d99): PREDIDS (predicted ids for L+1), PREDRES (read-only cache-residency peek at prediction time \u2014 does NOT touch LRU, cannot perturb the measurement), MISSIDS (actual demand-miss ids per layer). Joined offline over 11,832 layer-events. NO threading, NO cache mutation.",
+  "results": {
+   "miss_conditioned_recall": 0.69,
+   "true_prefetch_precision": 0.677,
+   "speculative_bandwidth_overhead": "1.02x demand bytes",
+   "note": "precision is computed on bytes a prefetcher would ACTUALLY fetch (predicted AND not already resident) \u2014 the metric sol required; my earlier naive precision (0.209) wrongly counted already-cached predictions as waste"
+  },
+  "verdict": "PASS decisively on sol's own gate: 67.7% true precision vs theta*=0.40. The standout is the 1.02x overhead \u2014 because the prefetcher skips resident experts, it issues essentially the SAME number of reads as demand fetching (+2%), but 69% of them can start one layer early.",
+  "expected_gain": "69% of the corrected 198 ms/token fetch = ~137 ms movable off the critical path, against ~360 ms/token of GPU work available to hide it. Ideal: ~620 -> ~485 ms/token = ~2.0-2.1 t/s (from 1.6-1.8). Sol's caveats stand: unified-memory bus contention, worker scheduling, and predictor overhead can only reduce this; the shadow run measures coverage, not achieved overlap.",
+  "next": "implement the worker per sol's safe design (NVMe -> private staging only, no CUDA ops on the legacy stream, main-thread-only cache admission with INFLIGHT/READY states, speculative-partition eviction not probationary-eviction), then A/B for real decode gain + byte-identity"
  }
 }
