@@ -602,5 +602,37 @@
   "claims_restored": "warm TTFT ~1.76 s (steady-state exact replay, align 4 + trim 0) is re-established on a clean configuration with byte-identical, coherence-checked responses",
   "claim_withdrawn_permanently": "the '3.6x cold TTFT improvement from batchall' figure came from a much earlier, different configuration and is NOT reproducible here \u2014 cold TTFT is unaffected by the lever. Withdrawn.",
   "harness_hardening": "ttft_probe3.sh now (a) makes batchall opt-in via an env array (an earlier ${VAR:+...} form silently broke the env-assignment chain and killed the server) and (b) checks every response for coherence and invalid UTF-8, so a fidelity regression cannot pass a timing run again"
+ },
+ "FIX_B_keepn_controlled_2026_07_26": {
+  "design": "4 arms, SAME binary + SAME config (24GB cache, SLRU on, ctx 8192, NO batchall), differing only in DS4_GLM_TOPK_KEEP; 8 varied prompts x 96 tokens greedy; keep-8 is the same-binary control the original experiment lacked",
+  "results": {
+   "keep8_control": {
+    "bad_utf8": 0,
+    "rep3gram": 0.019,
+    "coherent": true
+   },
+   "keep7": {
+    "bad_utf8": 0,
+    "rep3gram": 0.03,
+    "coherent": true,
+    "match_control": "0/8"
+   },
+   "keep6": {
+    "bad_utf8": 0,
+    "rep3gram": 0.032,
+    "coherent": true,
+    "match_control": "0/8"
+   },
+   "keep6_no_renorm": {
+    "bad_utf8": 0,
+    "rep3gram": 0.019,
+    "coherent": true,
+    "match_control": "0/8"
+   }
+  },
+  "VERDICT": "EXPERT SKIPPING DOES NOT COLLAPSE GLM-5.2. All arms produce coherent output with ZERO invalid UTF-8 and low repetition. My earlier 'keep-6 catastrophically collapses generation' finding was ENTIRELY an artifact of the batchall prefill lever, exactly as sol's F04 falsification predicted. The conclusion 'AdapMoE-class expert skipping is dead on this model' is RETRACTED.",
+  "significance": "this reopens the single largest software lever for the performance goal: keep-6 of 8 = ~25% fewer expert bytes per token, which on a byte-bound decode path is close to a proportional speedup. It also demonstrates the renormalization question: keep6 (renormalized) and keep6nr (not) are both coherent, with keep6nr showing LOWER repetition (0.019 vs 0.032, matching the control exactly).",
+  "next": "measure the actual decode gain (keep-8 vs keep-6/keep-7 timings) and the fidelity cost on the committed 100-case NLL suite \u2014 subjective coherence is not a fidelity gate",
+  "evidence": "logs/loadprof1/keepn-controlled.txt; raw per-arm outputs at dsv4:/home/dsv4/ds4-project/glm52-keepn-controlled/"
  }
 }
