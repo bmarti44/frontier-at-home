@@ -873,5 +873,53 @@
     "why_it_mattered": "score_official links ds4.o/ds4_cuda.o, so a stale binary would have scored STALE ENGINE CODE. keepn_nll.sh has a guard for exactly this and correctly refused to run (KEEPN_NLL_STALE), which is how the problem surfaced instead of silently producing a wrong fidelity number.",
     "workaround": "make CUDA_ARCH=native QUALITY_CFLAGS=\"-O3 -g -Xcompiler -march=native -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -std=c11\" gguf-tools/quality-testing/score_official -- wraps the host flags for nvcc. nvcc compiles the .c as C++ (one harmless warning about -std=c11 not applying to C++).",
     "upstream": "this is an upstream Makefile bug in the CUDA target (line 155); the Metal rule at line 80 uses $(CC) and is unaffected."
+  },
+  "FIDELITY_GATE_RESULT_2026_07_26": {
+    "verdict": "keep-6 FAILS the fidelity gate. DO NOT ENABLE.",
+    "method": "paired teacher-forced NLL, score_official on the committed glm52-openrouter-100 suite, 16 of 100 cases, identical case subset in both arms, scorer relinked against current objects (sha 58b97be90189) and verified newer than ds4.o",
+    "keep8_control": {
+      "mean_nll": 0.5267,
+      "median": 0.4661,
+      "p90": 0.9762,
+      "first_token": "12/16",
+      "mean_greedy_lcp": 4.56,
+      "elapsed_s": 354
+    },
+    "keep6_skip_load": {
+      "mean_nll": 0.6066,
+      "median": 0.5592,
+      "p90": 0.953,
+      "first_token": "12/16",
+      "mean_greedy_lcp": 5.06,
+      "elapsed_s": 314
+    },
+    "paired_delta_nll": {
+      "mean": 0.0799,
+      "ci95": [
+        0.0135,
+        0.1463
+      ],
+      "sd": 0.1355,
+      "relative_pct": 15.2,
+      "worse_on": "11 of 16 cases"
+    },
+    "gate": {
+      "threshold_mean_dnll": 0.01,
+      "measured": 0.0799,
+      "result": "FAIL by 8x, and the 95% CI excludes zero so the degradation is real, not noise",
+      "threshold_top1_loss_pp": 0.5,
+      "measured_pp": 0.0,
+      "result_top1": "PASS"
+    },
+    "why_the_earlier_checks_missed_it": "first-token agreement is IDENTICAL (12/16) in both arms, and both produce coherent English with zero invalid UTF-8. That is exactly sol's point that coherence is a liveness check, not fidelity: the damage is distributed across the probability mass, not visible at the argmax of the first token.",
+    "TRAJECTORY_CONTROLLED_SPEED": {
+      "note": "this run also answers sol's strongest objection to the +13% claim. Teacher-forced scoring evaluates the IDENTICAL token sequence in every arm, so expert routing and cache locality are controlled by construction.",
+      "keep8_s": 354,
+      "keep6_s": 314,
+      "gain_pct": 11.3,
+      "conclusion": "the expert-skip speed gain is REAL and not a token-trajectory artifact; the trajectory-controlled figure is +11.3%, slightly below the +13.0% free-running measurement"
+    },
+    "decision": "keep-6 buys ~11% decode for a 15% relative NLL degradation. Not shipped. scripts/52_engine_switch.sh is unchanged and does NOT set DS4_GLM_TOPK_KEEP.",
+    "limitations": "n=16 of 100 available cases; cases are short (about 23-token prompts, 24-token targets, 384 scored tokens per arm). The CI excludes zero so the direction is established, but the magnitude is loosely bounded."
   }
 }
