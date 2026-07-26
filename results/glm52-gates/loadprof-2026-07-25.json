@@ -220,6 +220,7 @@
    "possible option-B one-liner spotted: the non-GLM raw-KV restore explicitly restores per-layer frontier counters (g->layer_n_comp / layer_n_index_comp) after checkpoint replacement; the GLM compact restore visibly does not \u2014 check whether the GLM restore path resets those counters, prime suspect for the whole bug"
   ],
   "serving_posture": "v4.8d is STRICTLY SAFER than qualified v4.7.1 (which silently serves corrupted appends): the guard can only force an unnecessary cold start. Tree binary left at v4.8d deliberately.",
-  "status": "guard mechanism landed and validated; completion (residual reset + sol review + re-validation) = next session"
+  "status": "guard mechanism landed and validated; completion (residual reset + sol review + re-validation) = next session",
+  "counter_hypothesis_disproven": "the option-B 'GLM restore skips layer_n_comp reset' suspect is WRONG: ds4_glm_gpu_graph has no layer_n_comp/layer_n_index_comp members (those are Metal-graph state; the n_comp arrays in ds4_session_load_payload are file-consistency validation only \u2014 build error proved it, edit reverted, tree back at committed v4.8d, rebuilt clean 7462277e79bb). The GLM CUDA frontier state that survives the load lives elsewhere \u2014 next candidates from the struct scan: prefill_seed_layer_captured[DS4_MAX_LAYER] per-layer capture flags, indexer seed/score tensors, mtp position window state. Next session: sol source hunt over glm_graph_forward_indexed_tokens + the restore path for stateful members not reset by load."
  }
 }
