@@ -1,0 +1,14 @@
+REPLAY-FLOW round trip (live post-store vs post-load pre-eval), rows below 5044:
+  L0 kv_lora: 0/8192 bytes differ
+  L0 k_rope: 0/1024 bytes differ
+  L0 idx: 0/1024 bytes differ
+  L40 kv_lora: 2037/8192 bytes differ
+  L40 k_rope: 1021/1024 bytes differ
+  L40 idx: 0/1024 bytes differ
+base sha=a053b5b2b3a1 replay sha=a053b5b2b3a1 identical=True
+VERDICT: L40 differs here + identical output => restored-row diff is output-inert (benign)
+0726 07:26:19 ds4-server: kv cache stored tokens=5044 trimmed=3 reason=cold key=token-text size=916.82 MiB save=1324.5 ms
+0726 07:27:52 ds4-server: live kv cache miss live=5063 prompt=5047 common=5047 reason=token-mismatch
+0726 07:27:53 ds4-server: kv cache stored tokens=5063 trimmed=0 reason=evict key=token-text size=920.27 MiB save=386.3 ms
+0726 07:27:54 ds4-server: kv cache hit text tokens=5044 text=15571 quant=2 key=token-text load=627.2 ms file=/home/dsv4/ds4-project/glm52-kvdisk-rowdump-replay/9e5ba8aa0b75e6c618f68d9834ef541c44cd4b42.kv
+0726 07:28:02 ds4-server: live kv cache miss live=5063 prompt=19 common=16 reason=token-mismatch

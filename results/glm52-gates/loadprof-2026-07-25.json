@@ -303,5 +303,11 @@
    "the llama.cpp-semantics framing of the DSV4 baseline RETRACTED \u2014 this also removes my justification for flipping the guard default; the permission-layer block stands vindicated twice over"
   ],
   "note": "sol trail logs/loadprof1/sol-closing-audit.txt"
+ },
+ "invariant_closure_2026_07_26": {
+  "probe": "rowdump_replay.sh \u2014 replay flow with dumps at live-post-store and post-load-pre-eval, rows below the resume point",
+  "result": "L40 row differences IDENTICAL to the append flow (kv_lora 2037/8192, k_rope 1021/1024; L0 and indexer byte-exact) while replay output is BYTE-IDENTICAL (a053b5b2b3a1 == a053b5b2b3a1)",
+  "conclusion": "sol's open L40 same-lineage round-trip violation closes BENIGNLY: the restored-row difference is OUTPUT-INERT (identical bytes-diff pattern coexists with byte-identical output in the replay flow), so it cannot be the append-divergence mechanism. The demonstrated chunk-shape numeric path-dependence explanation now stands without the contradicting loose end. Note: the L40 rows in question are evidently not consumed by decode at these positions (likely dense-path coverage or dead layout regions) \u2014 worth one upstream question but no longer a correctness blocker.",
+  "guard_recommendation_update": "with the invariant closed, the case for relaxing the strict guard to exact-prefix semantics is back on the table on its original merits (industry-standard llama.cpp-equivalent semantics) \u2014 still Brian's call; sol re-review of this closure recommended before any default change"
  }
 }
