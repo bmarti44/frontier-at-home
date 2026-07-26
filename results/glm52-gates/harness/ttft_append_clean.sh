@@ -66,9 +66,9 @@ open(out + "/gen.txt", "w").write(gen)
 # ap1: append starts mid-word gluing onto generated tail (worst case)
 # ap2: unicode + NBSP + dash cluster
 # ap3: whitespace/newline boundary into code-ish text
-appends = ["ological analysis shows",
-           " naïve café résumé — attaché",
-           "\n\n```python\ndef f(x):"]
+appends = ["\n\nUser: Now summarize the key point in one sentence.\nAssistant:",
+           "\n\nWhat would you change about the approach above?",
+           " Please continue from where you left off."]
 for i, ap in enumerate(appends, 1):
     json.dump({"model": "default", "prompt": base + gen + ap,
                "max_tokens": 24, "temperature": 0},
