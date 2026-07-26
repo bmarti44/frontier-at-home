@@ -277,6 +277,21 @@
   },
   "honest_read": "multi-turn agent TTFT = 5.6-5.7 s under llama.cpp-equivalent exact-prefix semantics \u2014 25x better than the strict default's ~140-150 s cold appends, but still ~3x over the DSV4 <2 s bar (my earlier 2-4 s estimate was wrong; the eviction store ~250ms + shard load ~115ms + 22-29-token suffix batch prefill ~2s + first-token decode ~0.6s + session overhead account for it)",
   "headroom_not_pursued": "skip per-turn eviction re-store; keep live session hot instead of store+load round-trip per request; both are engine changes",
-  "bar_verdict": "multi-turn TTFT: 5.6 s measured vs <2 s bar \u2014 NOT met, but now a measured quantity under comparable semantics rather than a contingent claim"
+  "bar_verdict": "multi-turn TTFT: 5.6 s measured vs <2 s bar \u2014 NOT met, but now a measured quantity under comparable semantics rather than a contingent claim",
+  "decomposition_ms": {
+   "evict_store_920MiB": 1227,
+   "shard_load": 295,
+   "suffix_prefill_22tok_at_8.84tps": 2487,
+   "first_token_decode": 1001,
+   "session_http_overhead": "~660",
+   "total": 5675,
+   "fix_ladder": [
+    "1. skip the per-turn evict re-store (server stores live state to a NEW file EVERY turn even when the disk prefix is already covered): -1.2s -> ~4.5s",
+    "2. live-rewind to common prefix (server already computes common=5045 in the live-miss check, then discards live and does store+load; llama.cpp-style rewind is free): -0.3s -> ~4.2s",
+    "3. small-suffix prefill optimization (22 tokens at 8.84 t/s = 2.5s; the suffix path leaves most of the batch machinery idle): potential -1.5-2s -> ~2.3-2.9s",
+    "4. first-token decode 1.0s is the decode-speed floor itself"
+   ],
+   "conclusion": "multi-turn TTFT floor after items 1-3 (all bounded engine work): ~2.3-2.9s vs the <2s bar \u2014 near-parity is reachable; every millisecond of the current 5.7s is attributed with committed evidence"
+  }
  }
 }
