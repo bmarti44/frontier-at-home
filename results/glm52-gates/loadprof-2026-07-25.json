@@ -1,0 +1,32 @@
+{
+ "artifact": "decode-path profile, GLM-5.2 ds4 streaming v4.6.2 (binary 3128c56c5453), 68GB arena, 6 fetch threads",
+ "timestamp": "2026-07-25T22:16:00-04:00",
+ "window": "warm1 (arena warmup 508s) -> warm2 (41s) -> dec32 (35s); aggregation over 59 token-loads after warm2 mark",
+ "per_token_ms": {
+  "loader_total": 342.8,
+  "miss_fetch": 214.9,
+  "hit_copy": 92.5,
+  "arena_fill": 34.5,
+  "moe_kernels_total": 107.3,
+  "moe_gateup": 70.6,
+  "moe_down": 35.6,
+  "note": "wall was ~768 ms/token in this window (profile eventSync + fprintf overhead inflate it; serving wall is ~714)"
+ },
+ "derived": {
+  "hits_per_token": 474.3,
+  "misses_per_token": 166.4,
+  "hit_rate": 0.74,
+  "hit_copy_diagnosis": "474 slabs x 3 cudaMemcpy = 1422 calls at ~62-65us/call -> call-overhead dominated, not bandwidth (4.4 GB at only 47 GB/s)",
+  "fetch_diagnosis": "1.54 GB/token at ~7.2 GB/s aggregate; per-layer lines show ~1.05 ms per single miss (3x 3.1MB reads) \u2014 near the drive's random ceiling for 3.1MB granularity; 9.3MB contiguous slab reads would reach ~12.5 GB/s (QD sweep)",
+  "kernel_diagnosis": "gateup+down read 5.86 GB/token of expert weights at ~55 GB/s effective \u2014 this 107 ms is the floor that remains even at 100% hit rate with zero copies",
+  "decode_ceiling_faithful": "~6-8 t/s with every loader cost removed (kernels + attention/dense remain); consistent with research doc's 5.5-9. Only levers past it: fewer bytes/token (MTP drafting multiplier) or faster kernel read path"
+ },
+ "ranked_next_levers_by_measured_value": [
+  "1. async/batched hit copies + fills (92.5+34.5 -> ~20 ms; ~30 lines, no kernel changes) then re-measure before deciding on full zero-copy pointer-indirection",
+  "2. arena 68 -> ~86 GB in GLM-only serving (DSV4 not resident): LRU curve puts hit ~85%, fetch 215 -> ~130 ms \u2014 pure config",
+  "3. GGUF slab repack (gate|up|down contiguous per expert): fetch granularity 3.1 -> 9.3 MB, ~7.2 -> ~11-12.5 GB/s",
+  "4. GLM MTP block / drafting: multiplies effective t/s by accept length across the ENTIRE per-token cost \u2014 the only lever that beats the byte-arithmetic ceiling",
+  "5. kernel read-path bandwidth (55 GB/s effective vs ~200 attainable) \u2014 investigate before writing new kernels"
+ ],
+ "evidence": "results/glm52-gates/logs/loadprof1/evidence.txt (summary + last-12 LOADPROF lines); raw at dsv4:/home/dsv4/ds4-project/glm52-loadprof/"
+}
