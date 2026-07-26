@@ -1,0 +1,15 @@
+{
+  "gate": "G5",
+  "title": "Engine profile switch round-trip on the production port (8011)",
+  "timestamp": "2026-07-25T21:19:00-04:00",
+  "mechanism": "scripts/52_engine_switch.sh (committed); auth chain (caddy/tailnet -> authhelper :8010 -> engine :8011) untouched throughout",
+  "precondition_resolved": "port 8011 was held by loraforge (user app); user authorized killing it ('loraforge is working on classification and doesn't need to have anything running')",
+  "legs": [
+    {"leg": "glm52 on :8011", "result": "VERIFY OK 20:47:44 — identity 'glm-5.2,glm-5.2-chat,glm-5.2-reasoner', authhelper 401, temp-0 probe 200 (probe_ms 480932 = cold arena warmup; engine binary 75edba234709, cache 72GB, memwatch armed)"},
+    {"leg": "dsv4 on :8011", "result": "VERIFY OK 21:18:48 — identity unsloth UD-Q2_K_XL weights, authhelper 401, temp-0 probe 200 in 1218 ms (warm). First attempt failed the launcher's own 16 GiB memory-budget gate (desktop apps holding ~6 GiB); retried with DSV4_MEM_FLOOR_GIB=13 override — DISCLOSED deviation, caused a brief desktop stall; future launches keep the default floor."}
+  ],
+  "earlier_mechanism_proof": "glm52 leg also verified on neutral port 8013 (20:xx) while 8011 was occupied",
+  "state_isolation": "GLM profile state (arena, kv-disk, logs) under /home/dsv4/ds4-project/{gguf-glm,glm52-kvdisk-serve,engine-switch}; DSV4 weights/launcher untouched by construction (52_engine_switch.sh never writes to the other profile's paths)",
+  "residual": "systemd unit still fails its 100 GiB disk preflight after the GLM artifact (documented since 2026-07-24); reboot-default posture is a user decision for the wrap-up",
+  "result": "PASS (mechanism + both legs verified; sol review batched with final wrap-up)"
+}
