@@ -1,0 +1,17 @@
+PASS
+
+1. Addressed. Failed cudaHostRegister now clears the thread-local CUDA error state and logs any distinct prior error consumed.
+
+2. Addressed. All four rejecting CUDA-error paths flush the map and demote every slot before staging invalidation. Immediate fill-enqueue failures still demote their specific slot. Errors escaping begin_load remain fail-visible under the documented poisoned-context policy.
+
+3. Addressed/deferred acceptably. Successful registration is tracked, and cleanup synchronizes before unregistering. Same-layout flushes correctly retain registration. Incompatible-layout in-process reload remains deferred under the documented one-model-per-process deployment contract.
+
+4. Explicitly deferred with adequate justification. The results document the external kill-floor watchdog as the operational guard and correctly avoid claiming RLIMIT_MEMLOCK protection.
+
+5. Explicitly deferred with adequate documentation. LOADPROF hit/fill measurements are identified as enqueue times, and the supported profiling configuration is the six-worker path.
+
+6. Addressed. Profiling timespec values are zero-initialized, eliminating undefined reads when clock_gettime fails.
+
+7. Addressed. All nine cache-related asynchronous copies explicitly use cudaStreamLegacy, preserving intended ordering independently of per-thread-default-stream compilation.
+
+No new correctness, lifecycle, or stream-ordering defects found. The reported byte identity, routing identity, clean build, and unchanged performance are consistent with the fixes.
