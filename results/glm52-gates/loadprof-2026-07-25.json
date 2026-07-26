@@ -659,6 +659,15 @@
       "consequence": "my first decode A/B was not an A/B at all: the 'bug' arm and the 'fix' arm both recorded flushes=0 and byte-identical cache counters (loads=30720 hits=190628 misses=55132 hit%=77.6 resident=7398/7398). No speedup may be attributed to the fix from that run. Withdrawn.",
       "correct_test": "flushfix_ab.sh on the 5047-token fixture, where prefill actually chunks per layer",
       "supporting_evidence": "long-prompt run on the pre-fix binary: 452 flush lines spanning the whole run, resident collapsing to 245/7398; short-prompt run on the fixed binary with the bug re-enabled: 0 flushes, resident 7398/7398"
+    },
+    "long_fixture_bug_arm": {
+      "cold_ttft_s": 158.1,
+      "second_prefill_s": 147.4,
+      "decode_tok_s": 1.84,
+      "flushes": 452,
+      "hit_pct": 9.3,
+      "misses": 120850,
+      "note": "with the storm active on a 5047-token prompt the expert cache hit rate is 9.3%, versus 77.6% on short prompts where the storm does not fire"
     }
   },
   "measurement_bug_prefill_dominated_2026_07_26": {
@@ -720,6 +729,13 @@
       "noise_floor": "the bug and fix arms were, on this short-prompt harness, the SAME configuration (both flushes=0, identical cache counters). Their spread is therefore a pure noise estimate: 2.256 vs 2.293 = 1.6%. The keep-6 gain of 13.0% is ~8x that floor.",
       "keep_arm_determinism": "keep7 sha 0ddeb62fc1f0 and keep6 sha 02267b77b033 each reproduce exactly across both passes",
       "flush_fix_gain_on_short_prompts": "NOT MEASURABLE HERE and not claimed: the storm is a prefill pathology, so both arms ran flush-free. Measured separately by flushfix_ab.sh on the 5047-token fixture."
+    },
+    "CORRECTION_statistics": {
+      "what_I_overstated": "I called the 1.6% spread between the two accidentally-identical arms a 'noise floor' and said keep-6's +13.0% was '8x noise'. sol is right that this is wrong: a single contrast between two runs is one observation, not a noise-floor estimate.",
+      "second_correction": "the four values per arm are two measurements inside each of only TWO server runs, so they are not four independent samples; the 95% CI I quoted treats them as independent and is therefore anti-conservative. The CI method was also undocumented.",
+      "strongest_remaining_objection_sol": "trajectory confound -- keep-6 produces a DIFFERENT token sequence, hence different expert routing and different cache locality, so part of the measured gain may be trajectory luck rather than the byte reduction",
+      "how_it_is_being_answered": "the NLL run is teacher-forced: every arm scores the IDENTICAL token sequence, so its per-arm elapsed time is a trajectory-controlled speed comparison. That measurement supersedes the +13% figure as the general claim.",
+      "restated_claim": "keep-6 gave +13.0% decode on ONE prompt across two server runs per arm with the token trajectory uncontrolled. It is a promising harness-specific result, NOT yet a general throughput claim."
     }
   },
   "warm_ttft_requires_disk_kv_2026_07_26": {
