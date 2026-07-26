@@ -22,7 +22,7 @@ DS4_CUDA_ATTN_OUTPUT_PROFILE=${PROBE_ATTN_PROFILE:-1} \
 DS4_CUDA_EXPERT_CACHE_PIN=${PROBE_PIN:-1} \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=${PROBE_CACHE_GB:-68} \
 DS4_CUDA_FETCH_THREADS=6 \
-  "$SRC/ds4-server" --cuda -m "$GGUF" -c 8192 --host 127.0.0.1 --port $PORT \
+  "$SRC/ds4-server" --cuda -m "$GGUF" -c ${PROBE_CTX:-8192} --host 127.0.0.1 --port $PORT \
   --ssd-streaming --ssd-streaming-cache-experts 40GB \
   ${PROBE_EXTRA_ARGS:-} \
   > "$OUT/server.log" 2>&1 &
