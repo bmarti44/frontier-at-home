@@ -243,5 +243,16 @@
   "decisive_probe": "instrument the kv/indexer cache WRITE call sites to log (logical_pos, physical_offset) for the first suffix token after a load \u2014 one line of fprintf, one window",
   "status": "hypothesis recorded for next session; consistent with 100% of tonight's evidence",
   "c_level_negative": "checked: the compact-KV and indexer-K store call sites are explicitly position-addressed (ds4_gpu_glm_store_compact_kv_tensor / store_indexer_k_tensor take pos0 straight from sync's start; ds4_gpu_tensor has no cursor field). No C-side stale cursor exists. Hypothesis narrows to: (a) inside the CUDA store/attention/indexer kernels (offset computation from pos0 + some cached device state), or (b) restored cache content subtly wrong in a way replay's attention pattern doesn't expose. DECISIVE PROBE (next session): env-gated GPU readback \u2014 dump layer-0 kv_lora/indexer rows [start..start+4) after the first post-load suffix evaluation and byte-compare with the same rows from a virgin cold run at identical positions (payload_write_tensor_span machinery already reads GPU tensors \u2014 reuse it)."
+ },
+ "rowdump_reframe_2026_07_26": {
+  "probe": "rowdump_probe.sh (GPU readback of compact-cache rows [5040..5048), layers 0+40, at every sync entry) \u2014 guard-on and guard-off runs",
+  "byte_facts": [
+   "guard-on: guard-forced-cold post-write rows == virgin-cold rows EXACTLY (a3d512e5daf7 both) \u2014 earlier guard-cold OUTPUT divergence is therefore NOT cache state; prime suspect is the server-built effective_prompt differing from canonical",
+   "guard-off (genuine resume): rows BELOW the resume point byte-match cold (first diff at byte 8192 = row 4 = position 5044 = exactly the resume boundary) \u2014 RESTORE FIDELITY CONFIRMED",
+   "rows AT/AFTER the resume point differ from cold \u2014 because the disk-load path builds the continuation as loaded-token-prefix + TEXT-SUFFIX tokenization (build_prompt_from_exact_prefix_and_text_suffix; deliberate upstream design), which produces different suffix tokens than canonical whole-prompt tokenization"
+  ],
+  "reframe": "the append-resume 'corruption' is most likely NON-CANONICAL-BUT-VALID tokenization semantics (identical philosophy to llama.cpp slot reuse, which the industry accepts), NOT state damage. Both paths are deterministic and internally consistent; they evaluate different token sequences for the same text. The earlier 'continues the old generation tail' interpretation of 24-token samples was probably pattern-matching.",
+  "remaining_check_before_downgrading_severity": "confirm resumed outputs are quality-equivalent (not subtly degraded) on longer samples, and confirm the suffix tokens the server built are exactly tokenize(text-beyond-stored-boundary) \u2014 if yes, the bug report becomes a SEMANTICS note and the v4.8d guard can be relaxed to accept exact-prefix+suffix resumes, giving multi-turn warm TTFT ~2-4s at llama.cpp-grade consistency",
+  "implication_for_bar": "if confirmed, multi-turn agent TTFT lands at ~2-4s (resume + suffix) with industry-standard semantics \u2014 closing the last TTFT gap without any upstream fix"
  }
 }

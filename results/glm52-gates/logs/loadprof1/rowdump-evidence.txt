@@ -1,0 +1,10 @@
+X/rowdump-000.bin: sha=02b1c2234680 bytes=40960
+X/rowdump-001.bin: sha=dbb2edc84942 bytes=40960
+X/rowdump-002.bin: sha=5305d5d003bc bytes=40960
+X/rowdump-003.bin: sha=e2f40d9fe195 bytes=40960
+Y/rowdump-000.bin: sha=02b1c2234680 bytes=40960
+Y/rowdump-001.bin: sha=a3d512e5daf7 bytes=40960
+Y/rowdump-002.bin: sha=a3d512e5daf7 bytes=40960
+POSTWRITE X.dump2 == Y.dump1: False
+  first diff at byte 8192 of 40960
+RESTORED-LOWER X.dump1[:half] == Y.dump1[:half]: False
