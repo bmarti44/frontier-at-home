@@ -33,7 +33,7 @@ EOF
 
 serve() { # $1 = X|Y
   if [[ -n "${ROWDUMP_GUARD_OFF:-}" ]]; then export DS4_GLM_RESUME_GUARD_OFF=1; fi
-  DS4_GLM_KV_ROWDUMP="$OUT/$1" DS4_GLM_KV_ROWDUMP_LO=5040 \
+  DS4_GLM_KV_ROWDUMP="$OUT/$1" DS4_GLM_KV_ROWDUMP_LO=5040 DS4_GLM_TOKDUMP_LO=5040 \
   DS4_GLM_TP_DEBUG=0 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
   DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
   DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL=1 DS4_GLM_SYNC_TRACE=1 \
@@ -64,7 +64,7 @@ out = sys.argv[1]
 base = open(out + "/base_prompt.txt").read()
 gen = json.load(open(out + "/x_base.json"))["choices"][0]["text"]
 json.dump({"model": "default", "prompt": base + gen + "ological analysis shows",
-           "max_tokens": 24, "temperature": 0}, open(out + "/ap1.json", "w"))
+           "max_tokens": 96, "temperature": 0}, open(out + "/ap1.json", "w"))
 EOF
 fire x_ap1 "$OUT/ap1.json"
 fire x_dummy "$OUT/dummy.json"
@@ -100,6 +100,16 @@ try:
 except Exception as e:
     print("compare error:", e)
 EOF
+python3 - "$OUT" <<'EOF2' | tee -a "$OUT/summary"
+import json, sys, hashlib
+out = sys.argv[1]
+for n in ("x_ap1", "y_ap1"):
+    t = json.load(open(f"{out}/{n}.json"))["choices"][0]["text"]
+    print(f"{n} sha={hashlib.sha256(t.encode()).hexdigest()[:12]}")
+    print(f"{n} text: {t[:220]!r}")
+EOF2
+grep -h TOKDUMP "$OUT"/server-X.log | tail -2 >> "$OUT/summary"
+grep -h TOKDUMP "$OUT"/server-Y.log | tail -2 >> "$OUT/summary"
 chmod -R a+rX "$OUT"
 note "rowdump window done (caller restores DSV4)"
 echo ROWDUMP_DONE
