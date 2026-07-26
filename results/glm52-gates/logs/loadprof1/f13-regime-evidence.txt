@@ -1,0 +1,38 @@
+  lg-X.0.s0_p5044_x5044 start=0 prompt=5044 suffix=5044
+  lg-X.1.s0_p5044_x5044 start=0 prompt=5044 suffix=5044
+  lg-X.2.s5044_p5047_x3 start=5044 prompt=5047 suffix=3
+  lg-X.3.s5044_p5047_x3 start=5044 prompt=5047 suffix=3
+  lg-X.4.s0_p5044_x5044 start=0 prompt=5044 suffix=5044
+  lg-X.5.s0_p5044_x5044 start=0 prompt=5044 suffix=5044
+  lg-X.6.s5044_p5047_x3 start=5044 prompt=5047 suffix=3
+  lg-X.7.s5044_p5047_x3 start=5044 prompt=5047 suffix=3
+  lg-X.8.s0_p5064_x5064 start=0 prompt=5064 suffix=5064
+  lg-X.9.s0_p5064_x5064 start=0 prompt=5064 suffix=5064
+  lg-X.10.s5064_p5066_x2 start=5064 prompt=5066 suffix=2
+  lg-X.11.s5064_p5066_x2 start=5064 prompt=5066 suffix=2
+  lg-Y.0.s0_p5064_x5064 start=0 prompt=5064 suffix=5064
+  lg-Y.1.s0_p5064_x5064 start=0 prompt=5064 suffix=5064
+  lg-Y.2.s5064_p5066_x2 start=5064 prompt=5066 suffix=2
+  lg-Y.3.s5064_p5066_x2 start=5064 prompt=5066 suffix=2
+
+append length=5066
+REGIME-MATCHING resumed dumps (start>0, suffix>4): []
+cold dumps: []
+
+REGIME NOT REACHED — no verdict. (need X: start>0 & suffix>4 at the
+append length, plus a cold Y dump). Report as harness limitation.
+
+text resumed sha=5d80ebee65e9 cold sha=5d80ebee65e9 identical=True
+resumed: 'The user wants me to continue a C source file. The prefix ends with `#include <s'
+cold   : 'The user wants me to continue a C source file. The prefix ends with `#include <s'
+--- X sync ---
+ds4: GLM sync start=0 prompt=5044 suffix=5044 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=5044 prompt=5047 suffix=3 checkpoint=5044 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=0 prompt=5044 suffix=5044 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=5044 prompt=5047 suffix=3 checkpoint=5044 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=0 prompt=5064 suffix=5064 checkpoint=0 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 indexed_keep=0 indexed_batch=1 batch_ffn=1
+ds4: GLM sync start=5064 prompt=5066 suffix=2 checkpoint=5064 dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 batch_ffn=1
+--- X kv ---
+0726 13:13:00 ds4-server: KVDECIDE cached=0 source=none live=0 prompt=5047 common=0 kv_enabled=1 min_tokens=512
+0726 13:15:43 ds4-server: KVDECIDE cached=0 source=none live=5063 prompt=5047 common=5047 kv_enabled=1 min_tokens=512
+0726 13:18:12 ds4-server: KVDECIDE cached=0 source=none live=5063 prompt=5066 common=5045 kv_enabled=1 min_tokens=512
