@@ -344,6 +344,34 @@
    "code": "v4.9 (binary 625cdef11d86): segmented LRU \u2014 probationary+protected lists, protected cap 60% of slots, promote on hit, demote protected-LRU on overflow, evict probationary-tail first; env DS4_CUDA_EXPERT_CACHE_SLRU=1, default off = exact legacy LRU",
    "validation": "same-binary OFF/ON A-B windows: byte-identity sha 9113dfd0d233 x3 in BOTH; ON: hits 474.3->495.0/token, misses 166.4->145.7 (-12.4%), hit rate 74.0%->77.3% (matches sol-B's modeled 77.3% optimum), fetch 226.0->211.8ms, loader 275.0->262.0ms (~14ms/token saved, ~+2.3% decode; larger gains expected on mixed/scan traffic where SLRU protects against pollution)",
    "adopted": "DS4_CUDA_EXPERT_CACHE_SLRU=1 added to 52_engine_switch.sh glm52 profile; sol review batched with next round"
+  },
+  "gate_mass_measured": {
+   "probe": "DS4_GLM_GATE_MASS_LOG at the GLM decode router site (v4.9+gatemass binary d9b1d505fcfa), 14,175 routed-layer decode steps, byte-identity preserved (9113dfd0d233 x3)",
+   "cumulative_topk_mass": {
+    "top1": {
+     "p10": 0.171,
+     "p50": 0.236,
+     "p90": 0.346,
+     "mean": 0.251
+    },
+    "top2": {
+     "p10": 0.321,
+     "p50": 0.409,
+     "p90": 0.535,
+     "mean": 0.421
+    },
+    "top3": {
+     "mean": 0.553
+    },
+    "top4": {
+     "mean": 0.663
+    },
+    "top6": {
+     "mean": 0.848
+    }
+   },
+   "implication": "GLM-5.2's router is UNUSUALLY FLAT \u2014 the 'top-2 dominate' prior behind AdapMoE-style skipping and aggressive HOBBIT tiering does NOT hold: keep-6 discards 15.2% of gate mass, keep-4 discards 33.7%; a 90%-mass exact tier needs ~7 of 8 experts (only 12.5% byte cut). Levers 2 and 3 are significantly WEAKENED on this model \u2014 importance-based tiering is fighting a flat distribution.",
+   "decisive_next_probe": "keep-N fidelity A/B: env DS4_GLM_TOPK_KEEP=N \u2014 at the decode router site, zero weights beyond top-N and renormalize (8-float read-modify-write at the existing GATEMASS hook point, ~15 lines); run the 100-case NLL suite at N=6 and N=4 vs N=8 baseline. If NLL cost at N=6 is negligible despite the 15% mass discard, lever 2 lives (25% byte cut); if not, levers 2-3 die on this model and the surviving stack reduces to SLRU (landed) + QTIP (Brian's call) + second-box."
   }
  }
 }
