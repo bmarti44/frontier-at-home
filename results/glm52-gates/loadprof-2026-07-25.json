@@ -229,5 +229,18 @@
   "mechanism_refined": "the guard-forced from-zero re-prefill (over a graph that just underwent ds4_session_load_payload GLM restore) deterministically differs from a virgin-server prefill of the same prompt, cache on or off => the GLM shard RESTORE ITSELF leaves the graph in a state that corrupts subsequent evaluation of any shape except pure prefix-replay. Sol's source audit found no graph-side frontier scalar and correct bounds everywhere in the C caller \u2014 remaining suspects are the restore's GPU writes themselves (indexer key cache layout/\u0441\u043e\u0434\u0435\u0440\u0436\u0438\u043c\u043e\u0435, ordering) or upstream g_stream_selected_cache interactions.",
   "sol_source_audit": "logs/loadprof1/sol-frontier-hunt.txt \u2014 full stateful-member classification; minimal reset sets for load and forced-cold; MTP session-state gaps flagged for --glm-mtp mode",
   "operational_state": "v4.8d guard remains the right containment (correct-or-cold, never corrupt); serving-safe. True fix = upstream GLM restore repair; report draft updated."
+ },
+ "write_cursor_hypothesis_2026_07_26": {
+  "derivation": "restored ROW CONTENT is proven correct: pure replay after load reads restored rows [0..5044) and is byte-identical to cold \u2014 so 'restore writes garbage' theories die. The surviving theory: after load, NEW row writes land at the OLD physical frontier (~5063) instead of the logical resume point (5044) \u2014 a stale write cursor.",
+  "explains_everything": [
+   "replay immunity: its 3 suffix rows are byte-identical to what sits at EITHER location, and last-token attention reads only stale-but-identical rows",
+   "append signature: the token at logical position ~5050 attends physical rows [0..5050] which still contain the OLD lineage (base tail + old generation start) \u2014 the model literally sees the old generation as context, hence every corrupted output continuing the old tail ('oft...')",
+   "append content-independence: outputs barely depend on appended text (writes displaced, reads see old context)",
+   "guard-cold divergence: a from-zero re-prefill with a displaced write cursor shifts everything",
+   "path-independence: both decode and batch writers would use the same cursor"
+  ],
+  "where_to_look": "NOT in ds4_glm_gpu_graph (sol enumerated \u2014 no cursor member). Candidates: ds4_gpu_tensor append/len state used as a write cursor by kv/indexer cache writes (check ds4_gpu.h tensor struct + cache write call sites for tensor->len-style cursors), or a device-side per-layer write position in ds4_cuda.cu. The load path restores tensor CONTENT but may not reset a tensor-level length/cursor field.",
+  "decisive_probe": "instrument the kv/indexer cache WRITE call sites to log (logical_pos, physical_offset) for the first suffix token after a load \u2014 one line of fprintf, one window",
+  "status": "hypothesis recorded for next session; consistent with 100% of tonight's evidence"
  }
 }
