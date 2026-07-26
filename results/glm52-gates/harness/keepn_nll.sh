@@ -18,6 +18,12 @@ SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 MANI=gguf-tools/quality-testing/data/glm52-openrouter-100/manifest.tsv
 SCORER=gguf-tools/quality-testing/score_official
+# Teacher-forced scoring runs at prefill rate (~23 tok/s on ~2300-token cases),
+# so the full 100-case suite costs ~2.8 h PER ARM. NLL_CASES caps the case
+# count; the arms are paired on the SAME subset, so the paired delta stays
+# valid -- only the width of the confidence interval changes. The count is
+# printed in the summary so no result can quietly claim n=100.
+NLL_CASES=${NLL_CASES:-30}
 rm -rf "$OUT"; mkdir -p "$OUT"
 note() { echo "$(date -Is) $*" >> "$OUT/run.log"; }
 pkill -TERM -x ds4-server 2>/dev/null
@@ -29,6 +35,12 @@ if [[ "$SRC/$SCORER" -ot "$SRC/ds4.o" ]]; then
 fi
 note "scorer sha12=$(sha256sum "$SRC/$SCORER" | cut -c1-12) ds4.o sha12=$(sha256sum "$SRC/ds4.o" | cut -c1-12)"
 
+# Build the capped manifest once and point every arm at it, so the arms are
+# paired case-for-case.
+SUB="$OUT/manifest-$NLL_CASES.tsv"
+{ grep '^#' "$SRC/$MANI" || true; grep -v '^#' "$SRC/$MANI" | head -n "$NLL_CASES"; } > "$SUB"
+note "cases=$(grep -vc '^#' "$SUB") of $(grep -vc '^#' "$SRC/$MANI") available"
+
 run_arm() { # $1 tag, $2 keepN (0=off), $3 skip_load(1/0)
   local envs=()
   [[ "$2" != "0" ]] && envs+=("DS4_GLM_TOPK_KEEP=$2")
@@ -39,7 +51,7 @@ run_arm() { # $1 tag, $2 keepN (0=off), $3 skip_load(1/0)
      DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
      DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
      DS4_CUDA_EXPERT_CACHE_SLRU=1 \
-     ./$SCORER "$GGUF" "$MANI" "$OUT/q100-$1.tsv" 8192 \
+     ./$SCORER "$GGUF" "$SUB" "$OUT/q100-$1.tsv" 8192 \
      --ssd-streaming --ssd-streaming-cache-experts 40GB) \
      > "$OUT/q100-$1.log" 2>&1
   note "arm $1 exit=$? elapsed_s=$(( $(date +%s) - t0 ))"
@@ -62,6 +74,7 @@ def load(tag):
     return {"n": len(nll), "nll": nll, "first": first}
 base = load("keep8")
 print("%-7s %4s %9s %9s %9s %9s" % ("arm", "n", "mean_nll", "median", "p90", "first_tok%"))
+print("(n is the number of scored cases -- the suite has 100 available; see run.log)")
 for tag in ("keep8", "keep7s", "keep6s"):
     d = load(tag)
     if not d or not d["n"]:
