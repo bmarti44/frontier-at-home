@@ -1,0 +1,44 @@
+--- /tmp/claude-1000/-home-bmarti44-spark-deepseek-v4-flash/3109d29d-cd62-4998-a2e1-bfb6e29288b5/scratchpad/engine-src/ds4_cuda.cu	2026-07-26 16:22:04.490800089 -0400
++++ /tmp/claude-1000/-home-bmarti44-spark-deepseek-v4-flash/3109d29d-cd62-4998-a2e1-bfb6e29288b5/scratchpad/engine-src/gen3-preview/ds4_cuda.cu	2026-07-26 16:47:07.329296194 -0400
+@@ -158,6 +158,20 @@
+     return h ? h : 1ULL;
+ }
+ 
++/* Close/reopen in the SAME process is the remaining hole sol found: cleanup
++ * resets g_model_fd but left this shadow tuple and the persistent cache
++ * intact, so reopening a DIFFERENT model that happens to reuse the address,
++ * the size, the first 4 KiB and the fd number would not bump the generation
++ * and would hit model A's cached expert slabs. Teardown therefore poisons the
++ * tuple: a NULL map can never equal a real mapping, so the next setter call
++ * is guaranteed to bump whatever the reopened model looks like. */
++static void cuda_model_gen_invalidate(void) {
++    g_model_gen_last_map = NULL;
++    g_model_gen_last_size = 0;
++    g_model_gen_last_fp = 0;
++    g_model_gen_last_fd = -2;
++}
++
+ static void cuda_model_gen_bump_if_changed(const void *model_map,
+                                            uint64_t model_size) {
+     const uint64_t fp = cuda_model_map_fingerprint(model_map, model_size);
+@@ -2309,6 +2323,8 @@
+ extern "C" void ds4_gpu_cleanup(void) {
+     (void)cudaDeviceSynchronize();
+     cuda_expert_cache_unpin();
++    /* force the next model registration to look like a reload */
++    cuda_model_gen_invalidate();
+     g_current_logical_tier = -1;
+ 
+     /* Multi-GPU teardown: events, streams, cublas handles, scratch
+@@ -3818,7 +3834,10 @@
+ extern "C" int ds4_gpu_set_model_fd(int fd) {
+     /* A new fd can mean new backing storage for the same mapping; the
+      * generation predicate reads g_model_fd, so setting it here is what makes
+-     * the next model-map call invalidate the expert cache and prefetch pool. */
++     * the next model-map call invalidate the expert cache and prefetch pool.
++     * Clearing the fd (fd < 0) means the model is going away, which is the
++     * close half of the close/reopen hole -- poison the tuple as well. */
++    if (fd < 0) cuda_model_gen_invalidate();
+     g_model_fd = fd;
+     g_model_fd_host_base = g_model_host_base;
+     g_model_file_size = 0;
