@@ -8,7 +8,7 @@ set -u
 OUT=/home/dsv4/ds4-project/glm52-mtp-ab
 SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
-PORT=8014
+PORT=${MTP_AB_PORT:-8016}
 rm -rf "$OUT"; mkdir -p "$OUT"
 note() { echo "$(date -Is) $*" >> "$OUT/run.log"; }
 note "stopping DSV4 for A/B window"
