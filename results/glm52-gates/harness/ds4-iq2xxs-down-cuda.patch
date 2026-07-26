@@ -450,7 +450,7 @@ index 1a79a01..bd5b214 100644
  }
  
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 041e162..d026f48 100644
+index 041e162..202e404 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -16,6 +16,8 @@
@@ -672,34 +672,10 @@ index 041e162..d026f48 100644
  __global__ static DS4_CUDA_UNUSED void moe_down_expert_tile8_kernel(
          float *down_out,
          const char *down_base,
-@@ -20574,10 +20722,173 @@ __global__ static void moe_down_expert_tile16_rowspan_kernel(
-                                      xqb[4] ? xqb[4] + b : NULL, xqb[5] ? xqb[5] + b : NULL,
-                                      xqb[6] ? xqb[6] + b : NULL, xqb[7] ? xqb[7] + b : NULL, np < 8u ? np : 8u, acc);
-             if (np > 8u) {
--                dev_dot_q2_K_q8_K_block8(wr + b, xqb[8] ? xqb[8] + b : NULL, xqb[9] ? xqb[9] + b : NULL,
--                                         xqb[10] ? xqb[10] + b : NULL, xqb[11] ? xqb[11] + b : NULL,
--                                         xqb[12] ? xqb[12] + b : NULL, xqb[13] ? xqb[13] + b : NULL,
--                                         xqb[14] ? xqb[14] + b : NULL, xqb[15] ? xqb[15] + b : NULL, np - 8u, acc + 8);
-+                dev_dot_q2_K_q8_K_block8(wr + b, xqb[8] ? xqb[8] + b : NULL, xqb[9] ? xqb[9] + b : NULL,
-+                                         xqb[10] ? xqb[10] + b : NULL, xqb[11] ? xqb[11] + b : NULL,
-+                                         xqb[12] ? xqb[12] + b : NULL, xqb[13] ? xqb[13] + b : NULL,
-+                                         xqb[14] ? xqb[14] + b : NULL, xqb[15] ? xqb[15] + b : NULL, np - 8u, acc + 8);
-+            }
-+        }
-+        for (uint32_t p = 0; p < np; p++) {
-+            acc[p] = quarter_warp_sum_f32(acc[p], lane);
-+            if (lane == 0) {
-+                if (atomic_out) {
-+                    uint32_t tok = pair[p] / n_expert;
-+                    atomicAdd(down_out + (uint64_t)tok * out_dim + row, acc[p]);
-+                } else {
-+                    down_out[(uint64_t)pair[p] * out_dim + row] = acc[p];
-+                }
-+            }
-+        }
-+    }
-+}
-+
+@@ -20594,6 +20742,169 @@ __global__ static void moe_down_expert_tile16_rowspan_kernel(
+     }
+ }
+ 
 +template <uint32_t TILE_M, uint32_t ROW_SPAN>
 +__global__ static void moe_down_iq2_xxs_expert_tile8_rowspan_kernel(
 +        float *down_out,
@@ -847,9 +823,25 @@ index 041e162..d026f48 100644
 +                        xqb[12] ? xqb[12] + b : NULL, xqb[13] ? xqb[13] + b : NULL,
 +                        xqb[14] ? xqb[14] + b : NULL, xqb[15] ? xqb[15] + b : NULL,
 +                        np - 8u, acc + 8, s_iq2_grid, s_iq2_signs);
-             }
-         }
-         for (uint32_t p = 0; p < np; p++) {
++            }
++        }
++        for (uint32_t p = 0; p < np; p++) {
++            acc[p] = quarter_warp_sum_f32(acc[p], lane);
++            if (lane == 0) {
++                if (atomic_out) {
++                    uint32_t tok = pair[p] / n_expert;
++                    atomicAdd(down_out + (uint64_t)tok * out_dim + row, acc[p]);
++                } else {
++                    down_out[(uint64_t)pair[p] * out_dim + row] = acc[p];
++                }
++            }
++        }
++    }
++}
++
+ __global__ static void moe_down_sorted_p2_qwarp32_kernel(
+         float *down_out,
+         const char *down_base,
 @@ -20624,6 +20935,36 @@ __global__ static void moe_down_sorted_p2_qwarp32_kernel(
      if (lane == 0) down_out[(uint64_t)pair * out_dim + row] = acc;
  }
@@ -1266,7 +1258,7 @@ index 041e162..d026f48 100644
  }
  
  extern "C" int ds4_gpu_routed_moe_batch_owned_tensor(
-@@ -22971,6 +23508,316 @@ static int cuda_stream_selected_ranges_valid(
+@@ -22971,20 +23508,345 @@ static int cuda_stream_selected_ranges_valid(
             down_bytes <= table->model_size - table->down_offset;
  }
  
@@ -1580,11 +1572,25 @@ index 041e162..d026f48 100644
 +    return s;
 +}
 +
++static inline double ec_prof_now_ms(void) {
++    struct timespec lp_ts;
++    clock_gettime(CLOCK_MONOTONIC, &lp_ts);
++    return (double)lp_ts.tv_sec * 1e3 + (double)lp_ts.tv_nsec / 1e6;
++}
++
  static int cuda_stream_selected_cache_begin_load(
          const ds4_gpu_stream_expert_table *table,
          const int32_t *selected_ids,
-@@ -22979,12 +23826,14 @@ static int cuda_stream_selected_cache_begin_load(
+         uint32_t slot_count) {
+     cuda_stream_selected_cache_invalidate();
      if (!g_ssd_streaming_mode) return 1;
++    static int lp_on = -1;
++    if (lp_on < 0) lp_on = getenv("DS4_CUDA_LOAD_PROFILE") != NULL;
++    const double lp_t0 = lp_on ? ec_prof_now_ms() : 0.0;
++    double lp_hit_ms = 0.0, lp_fetch_ms = 0.0, lp_fill_ms = 0.0;
++    double lp_h0 = 0.0, lp_p0 = 0.0, lp_f0 = 0.0;
++    uint32_t lp_hits = 0;
++    (void)lp_h0; (void)lp_p0; (void)lp_f0;
      if (!cuda_stream_selected_ranges_valid(table) || !selected_ids ||
          slot_count == 0) {
 -        return 0;
@@ -1600,7 +1606,7 @@ index 041e162..d026f48 100644
      }
  
      std::vector<int32_t> expert_to_slot;
-@@ -22996,7 +23845,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -22996,7 +23858,8 @@ static int cuda_stream_selected_cache_begin_load(
                              slot_count : table->n_total_expert);
          slot_ids.resize(slot_count);
      } catch (...) {
@@ -1610,7 +1616,7 @@ index 041e162..d026f48 100644
      }
      for (uint32_t i = 0; i < slot_count; i++) {
          const int32_t expert = selected_ids[i];
-@@ -23004,7 +23854,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23004,7 +23867,8 @@ static int cuda_stream_selected_cache_begin_load(
              fprintf(stderr,
                      "ds4: CUDA streaming expert id %d is outside 0..%u at layer %u\n",
                      expert, table->n_total_expert, table->layer);
@@ -1620,7 +1626,7 @@ index 041e162..d026f48 100644
          }
          int32_t compact = expert_to_slot[(uint32_t)expert];
          if (compact < 0) {
-@@ -23014,14 +23865,40 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23014,14 +23878,40 @@ static int cuda_stream_selected_cache_begin_load(
          }
          slot_ids[i] = compact;
      }
@@ -1663,7 +1669,7 @@ index 041e162..d026f48 100644
      const int logical_tier = 0;
      if (g_stream_selected_cache.logical_tier != logical_tier &&
          (g_stream_selected_cache.gate_ptr ||
-@@ -23045,9 +23922,29 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23045,9 +23935,29 @@ static int cuda_stream_selected_cache_begin_load(
                  down_bytes, "down experts") ||
          !cuda_stream_selected_ensure_i32(slot_count)) {
          cuda_stream_selected_cache_invalidate();
@@ -1696,7 +1702,7 @@ index 041e162..d026f48 100644
      for (uint32_t i = 0; i < compact_ids.size(); i++) {
          const uint64_t expert = (uint32_t)compact_ids[i];
          const uint64_t gate_src =
-@@ -23058,6 +23955,59 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23058,6 +23968,61 @@ static int cuda_stream_selected_cache_begin_load(
              table->down_offset + expert * table->down_expert_bytes;
          const uint64_t gate_dst = (uint64_t)i * table->gate_expert_bytes;
          const uint64_t down_dst = (uint64_t)i * table->down_expert_bytes;
@@ -1719,6 +1725,7 @@ index 041e162..d026f48 100644
 +            /* HIT: memory copy from the fixed arena; identical bytes to a
 +             * disk read of the same offsets, so outputs are unchanged. */
 +            g_expert_persist_cache.hits++;
++            if (lp_on) lp_h0 = ec_prof_now_ms();
 +            g_expert_cache_run_stats.hit_bytes +=
 +                2u * table->gate_expert_bytes + table->down_expert_bytes;
 +            if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.gate_ptr + gate_dst,
@@ -1739,6 +1746,7 @@ index 041e162..d026f48 100644
 +                return cuda_stream_selected_reject(table, slot_count,
 +                                                   "expert cache copy");
 +            }
++            if (lp_on) { lp_hit_ms += ec_prof_now_ms() - lp_h0; lp_hits++; }
 +            continue;
 +        }
 +        if (persist_ok) g_expert_persist_cache.misses++;
@@ -1756,7 +1764,7 @@ index 041e162..d026f48 100644
          if (!cuda_model_copy_to_device_streamed(
                      g_stream_selected_cache.gate_ptr + gate_dst,
                      table->model_map, table->model_size,
-@@ -23074,7 +24024,141 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23074,7 +24039,145 @@ static int cuda_stream_selected_cache_begin_load(
                      down_src, table->down_expert_bytes,
                      "stream down expert copy")) {
              cuda_stream_selected_cache_invalidate();
@@ -1797,6 +1805,7 @@ index 041e162..d026f48 100644
 +        }
 +    }
 +    if (fetch_threads >= 2 && !miss_jobs.empty()) {
++        if (lp_on) lp_p0 = ec_prof_now_ms();
 +        std::atomic<size_t> next(0);
 +        std::atomic<int> failed(0);
 +        const uint64_t max_tb = table->gate_expert_bytes > table->down_expert_bytes ?
@@ -1845,11 +1854,13 @@ index 041e162..d026f48 100644
 +            failed.store(1);            /* workers observe and drain */
 +        }
 +        for (auto &t : pool) t.join();  /* join whatever started */
++        if (lp_on) lp_fetch_ms += ec_prof_now_ms() - lp_p0;
 +        if (failed.load()) {
 +            cuda_stream_selected_cache_invalidate();
 +            return cuda_stream_selected_reject(table, slot_count,
 +                                               "parallel expert fetch");
 +        }
++        if (lp_on) lp_f0 = ec_prof_now_ms();
 +        /* sequential arena-insert pass for the fetched misses (the LRU map
 +         * is single-threaded by design; copies source from the staged
 +         * device buffers exactly like the sequential path) */
@@ -1880,6 +1891,7 @@ index 041e162..d026f48 100644
 +                }
 +            }
 +        }
++        if (lp_on) lp_fill_ms += ec_prof_now_ms() - lp_f0;
 +    }
 +    if (persist_ok) {
 +        g_expert_persist_cache.loads++;
@@ -1899,7 +1911,7 @@ index 041e162..d026f48 100644
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -23083,7 +24167,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -23083,7 +24186,8 @@ static int cuda_stream_selected_cache_begin_load(
                              cudaMemcpyHostToDevice),
                   "stream selected-id remap copy")) {
          cuda_stream_selected_cache_invalidate();
@@ -1909,7 +1921,22 @@ index 041e162..d026f48 100644
      }
  
      g_stream_selected_cache.logical_tier = logical_tier;
-@@ -26720,19 +27805,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+@@ -23104,6 +24208,14 @@ static int cuda_stream_selected_cache_begin_load(
+     g_stream_selected_cache.slot_selected_tensor.owner = 0;
+     g_stream_selected_cache.slot_selected_tensor.device_id = logical_tier;
+     g_stream_selected_cache.valid = 1;
++    if (lp_on) {
++        fprintf(stderr,
++                "LOADPROF L%u uniq=%u hits=%u miss=%zu hit_ms=%.2f "
++                "fetch_ms=%.2f fill_ms=%.2f total_ms=%.2f\n",
++                table->layer, (uint32_t)compact_count, lp_hits,
++                miss_jobs.size(), lp_hit_ms, lp_fetch_ms, lp_fill_ms,
++                ec_prof_now_ms() - lp_t0);
++    }
+     return 1;
+ }
+ 
+@@ -26720,19 +27832,22 @@ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
      if (!g_ssd_streaming_mode) return 1;
      if (!table || !selected || n_selected == 0 ||
          selected->bytes < (uint64_t)n_selected * sizeof(int32_t)) {
@@ -1935,7 +1962,7 @@ index 041e162..d026f48 100644
      }
      return cuda_stream_selected_cache_begin_load(table, ids.data(), n_selected);
  }
-@@ -26960,7 +28048,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
+@@ -26960,7 +28075,9 @@ extern "C" int ds4_gpu_routed_moe_set_selected_override(const int32_t *selected,
  }
  
  extern "C" void ds4_gpu_set_glm_streaming_prefill_full_layer(bool enabled) {
