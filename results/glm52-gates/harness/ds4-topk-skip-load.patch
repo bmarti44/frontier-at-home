@@ -1,14 +1,16 @@
 diff --git a/ds4.c b/ds4.c
-index 3993493..bb9bd63 100644
+index 3993493..a537151 100644
 --- a/ds4.c
 +++ b/ds4.c
-@@ -40220,11 +40220,48 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40220,11 +40220,62 @@ static bool glm_graph_encode_sparse_ffn_one(
                      else kept += gm[gi];
                  }
                  if (kept > 0.0f && total > 0.0f) {
 -                    const float scale = total / kept;
 -                    for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
 -                        gm[gi] *= scale;
+-                    (void)ds4_gpu_tensor_write(g->router_weights, 0, gm,
+-                            (uint64_t)DS4_N_EXPERT_USED * sizeof(gm[0]));
 +                    /* DS4_GLM_TOPK_NORENORM=1 zeroes the dropped experts but
 +                     * does NOT amplify the survivors. This separates "skip
 +                     * the expert" from "renormalize the rest" — sol's F04
@@ -20,8 +22,14 @@ index 3993493..bb9bd63 100644
 +                        for (uint32_t gi = 0; gi < DS4_N_EXPERT_USED; gi++)
 +                            gm[gi] *= scale;
 +                    }
-                     (void)ds4_gpu_tensor_write(g->router_weights, 0, gm,
-                             (uint64_t)DS4_N_EXPERT_USED * sizeof(gm[0]));
++                    /* The id collapse below is only safe if the zeroed
++                     * weights actually landed: pairing OLD nonzero weights
++                     * with duplicated keeper ids would count the keeper's
++                     * contribution several times (sol review). Gate on the
++                     * write result rather than discarding it. */
++                    const bool weights_written =
++                        ds4_gpu_tensor_write(g->router_weights, 0, gm,
++                            (uint64_t)DS4_N_EXPERT_USED * sizeof(gm[0])) != 0;
 +                    /* DS4_GLM_TOPK_SKIP_LOAD=1 turns the fidelity experiment
 +                     * into an actual BYTE reduction. Zeroing a gate weight
 +                     * removes the expert's contribution but the streaming
@@ -33,7 +41,15 @@ index 3993493..bb9bd63 100644
 +                     * makes it fetch exactly `keep` uniques. The dropped
 +                     * slots then compute keeper_expert * 0.0 = 0, which is
 +                     * the same result as before, at 6/8 of the bytes. */
-+                    if (getenv("DS4_GLM_TOPK_SKIP_LOAD") != NULL) {
++                    if (weights_written &&
++                        getenv("DS4_GLM_TOPK_SKIP_LOAD") != NULL) {
++                        /* NOTE: after this write, router_selected holds
++                         * duplicated ids. Anything reading it downstream for
++                         * OBSERVABILITY (router-selection profiling, debug
++                         * dumps, XTRACE) reports the collapsed ids, not the
++                         * true routing. That is a diagnostics caveat, not a
++                         * correctness one -- the duplicated slots carry
++                         * weight 0. */
 +                        int32_t sel[DS4_MAX_EXPERT_USED] = {0};
 +                        if (ds4_gpu_tensor_read(g->router_selected, 0, sel,
 +                                (uint64_t)DS4_N_EXPERT_USED *
