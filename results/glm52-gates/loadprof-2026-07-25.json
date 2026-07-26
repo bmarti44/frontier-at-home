@@ -713,6 +713,13 @@
     "interpretation": "both points land at ~55% of the ideal byte-proportional gain (12.5% bytes -> 10.0%, 25% bytes -> 13.0%), consistent with expert traffic being roughly half of decode wall time on this config",
     "control_stability": "the keep-8 control is 2.23-2.33 across BOTH passes, so the higher pass-2 values on the keep arms are arm variance, not machine warming",
     "fidelity": "NOT YET MEASURED. Coherence is a liveness check, not fidelity. keepn_nll.sh (paired NLL vs the reference suite) is the gate and no ship recommendation is made before it runs.",
-    "sol_verdict_on_the_mechanism": "CORRECT-BUT-RISKY: math equivalent to the implemented weight truncation for finite values (no division, renormalization or unique-count downstream; scale <= 8/K so a zeroed weight cannot become NaN); defects are an ignored write return and collapsed ids appearing in profiling/debug output"
+    "sol_verdict_on_the_mechanism": "CORRECT-BUT-RISKY: math equivalent to the implemented weight truncation for finite values (no division, renormalization or unique-count downstream; scale <= 8/K so a zeroed weight cannot become NaN); defects are an ignored write return and collapsed ids appearing in profiling/debug output",
+    "FINAL_matrix": {
+      "unique_expert_histogram_per_arm": "bug/fix 8:23400, keep7 7:23400, keep6 6:23400 -- EVERY decode load hit the target unique count across 23,400 loads per arm. sol's threshold-tie concern (ties can retain more than keep) did not materialise even once on real routing.",
+      "flush_fix_is_output_neutral": "bug and fix arms produce byte-identical text (sha 4a2300193eb3) in all four runs, as a caching fix must",
+      "noise_floor": "the bug and fix arms were, on this short-prompt harness, the SAME configuration (both flushes=0, identical cache counters). Their spread is therefore a pure noise estimate: 2.256 vs 2.293 = 1.6%. The keep-6 gain of 13.0% is ~8x that floor.",
+      "keep_arm_determinism": "keep7 sha 0ddeb62fc1f0 and keep6 sha 02267b77b033 each reproduce exactly across both passes",
+      "flush_fix_gain_on_short_prompts": "NOT MEASURABLE HERE and not claimed: the storm is a prefill pathology, so both arms ran flush-free. Measured separately by flushfix_ab.sh on the 5047-token fixture."
+    }
   }
 }
