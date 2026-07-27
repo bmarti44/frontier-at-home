@@ -73,6 +73,10 @@ DIR=/home/dsv4/ds4-project/glm52-crashlog/$TS-$TAG
 mkdir -p "$DIR"
 MAIN="$DIR/main.log"; SAMP="$DIR/samples.log"
 plog() { echo "$(date -Is) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
+live_group_pids() {
+  ps -eo pid=,pgid=,stat= | awk -v group="$1" \
+    '$2 == group && $3 !~ /^Z/ {print $1}'
+}
 WRAP=
 PG=
 
@@ -232,6 +236,26 @@ while kill -0 "$WRAP" 2>/dev/null; do
   sleep 0.25
 done
 wait "$WRAP" 2>/dev/null; RC=$?
+SURVIVORS=$(live_group_pids "$PG")
+if [[ -n $SURVIVORS ]]; then
+  plog "FATAL isolated process group survived command completion pgid=$PG pids=$(tr '\n' ',' <<<"$SURVIVORS" | sed 's/,$//')"
+  kill -TERM -- -"$PG" 2>/dev/null || true
+  for _ in $(seq 1 30); do
+    [[ -z $(live_group_pids "$PG") ]] && break
+    sleep 0.1
+  done
+  [[ -z $(live_group_pids "$PG") ]] || kill -KILL -- -"$PG" 2>/dev/null || true
+  for _ in $(seq 1 50); do
+    [[ -z $(live_group_pids "$PG") ]] && break
+    sleep 0.1
+  done
+  if [[ -n $(live_group_pids "$PG") ]]; then
+    plog "FATAL isolated process-group cleanup failed pgid=$PG"
+    RC=125
+  else
+    RC=12
+  fi
+fi
 if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 0 ]]; then
   plog "FATAL executed candidate binary was not observed"
   RC=11
