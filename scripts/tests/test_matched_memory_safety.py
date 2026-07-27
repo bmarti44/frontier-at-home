@@ -85,6 +85,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertNotIn("21_serve_llamacpp.sh\" start >/dev/null 2>&1 || true", source)
         self.assertIn("watchdog_armed", source)
         self.assertIn("matched campaign finished without verified DeepSeek restoration", source)
+        self.assertIn("glm_cgroup_run.sh", source)
+        self.assertNotIn('bash "$SAFE" --tag "$label"', source)
 
     def test_harness_does_not_lower_emergency_floor(self):
         source = HARNESS.read_text(encoding="utf-8")
