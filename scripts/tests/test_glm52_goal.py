@@ -717,6 +717,26 @@ class FormulaTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "source provenance"):
                 self.goal.validate_attempt(attempt)
 
+    def test_w11_raw_identities_must_match_manifest_artifacts(self):
+        manifest = {
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+            "model_sha256": "c" * 64,
+            "tokenizer_sha256": "d" * 64,
+            "fixture_sha256": "e" * 64,
+        }
+        record = {
+            "binary_sha256": "f" * 64,
+            "configuration_sha256": "b" * 64,
+            "model_sha256": "c" * 64,
+            "tokenizer_sha256": "d" * 64,
+            "fixture_sha256": "e" * 64,
+        }
+        with self.assertRaisesRegex(ValueError, "raw binary identity"):
+            self.goal.validate_record_artifact_bindings(
+                "W11", manifest, [record]
+            )
+
     def test_duplicate_json_keys_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "summary.json"

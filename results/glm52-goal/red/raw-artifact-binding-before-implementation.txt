@@ -1,0 +1,11 @@
+Candidate under test: cbe042e4a8a8d5fa4ec17480df46b10f61edb90d
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_w11_raw_identities_must_match_manifest_artifacts
+
+Result: genuine RED
+
+The production controller had no raw-to-manifest artifact binding validator.
+The acceptance test failed with:
+
+  AttributeError: module 'glm52_goal' has no attribute
+  'validate_record_artifact_bindings'
