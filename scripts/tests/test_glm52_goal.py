@@ -815,9 +815,10 @@ class FormulaTests(unittest.TestCase):
                 "w11.context.v1",
                 "parity.performance.v1",
                 "review.final.v1",
+                "workstream.terminal.v1",
             )
         }
-        self.assertEqual(len(set(digests.values())), 4)
+        self.assertEqual(len(set(digests.values())), 5)
         for digest in digests.values():
             self.assertRegex(digest, r"^[0-9a-f]{64}$")
         with self.assertRaises(ValueError):
@@ -1261,6 +1262,24 @@ class FormulaTests(unittest.TestCase):
                     self.goal.validate_record_artifact_bindings(
                         gate, manifest, records
                     )
+
+    def test_workstream_candidate_identities_match_manifest(self):
+        record = workstream_record("W2")
+        manifest = {
+            name: record[name]
+            for name in (
+                "binary_sha256",
+                "configuration_sha256",
+                "fixture_sha256",
+            )
+        }
+        self.goal.validate_record_artifact_bindings("W2", manifest, [record])
+        broken = json.loads(json.dumps(record))
+        broken["binary_sha256"] = "f" * 64
+        with self.assertRaisesRegex(ValueError, "raw binary identity"):
+            self.goal.validate_record_artifact_bindings(
+                "W2", manifest, [broken]
+            )
 
     def test_foundation_and_parity_reject_unapproved_dsv4_reference(self):
         candidate = subprocess.run(

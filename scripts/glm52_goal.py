@@ -745,6 +745,21 @@ def validate_record_artifact_bindings(
     artifact_paths: dict[str, Path] | None = None,
 ) -> None:
     """Require raw candidate identities to equal the hashed manifest artifacts."""
+    workstream_gates = {f"W{index}" for index in range(1, 11)} | {"switch"}
+    if gate in workstream_gates:
+        if len(records) != 1:
+            raise ValueError(f"{gate} requires one raw workstream record")
+        for field in (
+            "binary_sha256",
+            "configuration_sha256",
+            "fixture_sha256",
+        ):
+            if records[0].get(field) != manifest.get(field):
+                label = field.removesuffix("_sha256").replace("_", " ")
+                raise ValueError(
+                    f"{gate} raw {label} identity does not match manifest"
+                )
+        return
     if gate == "foundation":
         candidates = [
             record.get("glm_baseline")
@@ -1379,6 +1394,315 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _score_workstream(
+    records: list[dict[str, Any]], gate: str
+) -> dict[str, Any]:
+    """Score one W1-W10 or switch observation from strict raw fields."""
+    supported = {f"W{index}" for index in range(1, 11)} | {"switch"}
+    if gate not in supported:
+        raise ValueError(f"workstream scorer does not support {gate}")
+    if len(records) != 1:
+        raise ValueError(f"{gate} requires exactly one workstream observation")
+    record = records[0]
+    _require_exact_keys(
+        record,
+        {
+            "record_type",
+            "gate",
+            "binary_sha256",
+            "configuration_sha256",
+            "fixture_sha256",
+            "workflow",
+            "metrics",
+            "failures",
+        },
+        f"{gate} workstream observation",
+    )
+    if record["record_type"] != "workstream_observation" or record["gate"] != gate:
+        raise ValueError(f"{gate} workstream identity is invalid")
+    for field in ("binary_sha256", "configuration_sha256", "fixture_sha256"):
+        if not _is_sha256(record[field]):
+            raise ValueError(f"{gate} {field} is invalid")
+    workflow_keys = {
+        "test_committed",
+        "red_confirmed",
+        "implementation_default_off",
+        "candidate_frozen",
+        "post_freeze_randomness",
+        "clean_build",
+        "blinded_ab",
+        "diff_scan_clean",
+        "mutation_rejected",
+    }
+    workflow = record["workflow"]
+    _require_exact_keys(workflow, workflow_keys, f"{gate} workflow")
+    if any(not isinstance(workflow[key], bool) for key in workflow_keys):
+        raise ValueError(f"{gate} workflow fields must be boolean")
+    if not isinstance(record["failures"], list):
+        raise ValueError(f"{gate} failures must be a list")
+    metrics = record["metrics"]
+
+    def exact(expected: set[str]) -> None:
+        _require_exact_keys(metrics, expected, f"{gate} metrics")
+
+    def booleans(fields: Iterable[str]) -> dict[str, bool]:
+        result = {}
+        for field in fields:
+            if not isinstance(metrics[field], bool):
+                raise ValueError(f"{gate} {field} must be boolean")
+            result[field] = metrics[field]
+        return result
+
+    derived: dict[str, float] = {}
+    if gate == "W1":
+        fields = {
+            "f16_tested",
+            "block_e4m3_tested",
+            "f32_rope",
+            "fidelity_pass",
+            "retrieval_pass",
+            "available_memory_gib",
+        }
+        exact(fields)
+        checks = booleans(fields - {"available_memory_gib"})
+        memory = _finite_number(
+            metrics["available_memory_gib"], "W1 available memory"
+        )
+        checks["memory_floor"] = memory >= 10.0
+    elif gate == "W2":
+        exact({"byte_identical", "baseline_hit_rate", "candidate_hit_rate"})
+        checks = booleans({"byte_identical"})
+        baseline = _finite_number(
+            metrics["baseline_hit_rate"], "W2 baseline hit rate", minimum=-1.0
+        )
+        candidate = _finite_number(
+            metrics["candidate_hit_rate"], "W2 candidate hit rate", minimum=-1.0
+        )
+        if baseline > 1.0 or candidate > 1.0:
+            raise ValueError("W2 hit rates must be at most one")
+        derived["hit_rate_gain_pp"] = (candidate - baseline) * 100.0
+        checks["hit_rate_gain"] = derived["hit_rate_gain_pp"] >= 3.0
+    elif gate == "W3":
+        exact(
+            {
+                "byte_identical",
+                "event_safe",
+                "baseline_seconds",
+                "candidate_seconds",
+            }
+        )
+        checks = booleans({"byte_identical", "event_safe"})
+        if (
+            len(metrics["baseline_seconds"]) != 5
+            or len(metrics["candidate_seconds"]) != 5
+        ):
+            raise ValueError("W3 requires five paired timing samples")
+        derived["completed_time_ratio_upper_95"] = paired_ratio_bound(
+            metrics["candidate_seconds"],
+            metrics["baseline_seconds"],
+            side="upper",
+        )
+        checks["completed_time_improvement"] = (
+            derived["completed_time_ratio_upper_95"] <= 0.95
+        )
+    elif gate == "W4":
+        exact(
+            {
+                "ids_identical",
+                "logits_identical",
+                "baseline_topk_seconds",
+                "candidate_topk_seconds",
+                "baseline_prefill_seconds",
+                "candidate_prefill_seconds",
+            }
+        )
+        checks = booleans({"ids_identical", "logits_identical"})
+        sample_fields = (
+            "baseline_topk_seconds",
+            "candidate_topk_seconds",
+            "baseline_prefill_seconds",
+            "candidate_prefill_seconds",
+        )
+        if any(len(metrics[field]) != 5 for field in sample_fields):
+            raise ValueError("W4 requires five paired samples per timing metric")
+        derived["topk_speedup_lower_95"] = paired_ratio_bound(
+            metrics["baseline_topk_seconds"],
+            metrics["candidate_topk_seconds"],
+            side="lower",
+        )
+        derived["prefill_speedup_lower_95"] = paired_ratio_bound(
+            metrics["baseline_prefill_seconds"],
+            metrics["candidate_prefill_seconds"],
+            side="lower",
+        )
+        checks["topk_speedup"] = derived["topk_speedup_lower_95"] >= 2.0
+        checks["prefill_speedup"] = derived["prefill_speedup_lower_95"] >= 1.05
+    elif gate == "W5":
+        exact(
+            {
+                "scores_identical",
+                "ids_identical",
+                "logits_identical",
+                "baseline_allocation_bytes",
+                "candidate_allocation_bytes",
+            }
+        )
+        checks = booleans(
+            {"scores_identical", "ids_identical", "logits_identical"}
+        )
+        baseline = _finite_number(
+            metrics["baseline_allocation_bytes"], "W5 baseline allocation"
+        )
+        candidate = _finite_number(
+            metrics["candidate_allocation_bytes"], "W5 candidate allocation"
+        )
+        derived["allocation_ratio"] = candidate / baseline
+        checks["half_allocation"] = derived["allocation_ratio"] == 0.5
+    elif gate == "W6":
+        exact(
+            {
+                "outputs_identical",
+                "width2_measured",
+                "width4_measured",
+                "selected_width",
+                "width2_seconds",
+                "width4_seconds",
+                "baseline_load_bytes",
+                "selected_load_bytes",
+            }
+        )
+        checks = booleans(
+            {"outputs_identical", "width2_measured", "width4_measured"}
+        )
+        width = metrics["selected_width"]
+        if isinstance(width, bool) or width not in {2, 4}:
+            raise ValueError("W6 selected width must be 2 or 4")
+        width2 = _finite_number(metrics["width2_seconds"], "W6 width-2 time")
+        width4 = _finite_number(metrics["width4_seconds"], "W6 width-4 time")
+        baseline_load = _finite_number(
+            metrics["baseline_load_bytes"], "W6 baseline loads"
+        )
+        selected_load = _finite_number(
+            metrics["selected_load_bytes"], "W6 selected loads"
+        )
+        checks["fastest_selected"] = width == (2 if width2 <= width4 else 4)
+        checks["load_reduced"] = selected_load < baseline_load
+    elif gate == "W7":
+        exact(
+            {
+                "complete_dumps_equal",
+                "max_abs_logit_delta",
+                "argmax_identical",
+                "checkpoint_correct",
+                "global_guard_preserved",
+            }
+        )
+        checks = booleans(
+            {
+                "complete_dumps_equal",
+                "argmax_identical",
+                "checkpoint_correct",
+                "global_guard_preserved",
+            }
+        )
+        delta = _finite_number(
+            metrics["max_abs_logit_delta"], "W7 max logit delta", minimum=-1.0
+        )
+        checks["logit_delta"] = delta < 1e-2
+    elif gate == "W8":
+        fields = {
+            "checksums_verified",
+            "corruption_failed_closed",
+            "selected_rows_exact",
+            "selected_block_cache",
+            "context_1m_pass",
+            "retrieval_pass",
+            "available_memory_gib",
+        }
+        exact(fields)
+        checks = booleans(fields - {"available_memory_gib"})
+        memory = _finite_number(
+            metrics["available_memory_gib"], "W8 available memory"
+        )
+        checks["memory_floor"] = memory >= 10.0
+    elif gate == "W9":
+        exact(
+            {
+                "real_capture",
+                "capture_width",
+                "query_weighted_error",
+                "maximum_allowed_error",
+            }
+        )
+        checks = booleans({"real_capture"})
+        width = metrics["capture_width"]
+        if not isinstance(width, int) or isinstance(width, bool):
+            raise ValueError("W9 capture width must be an integer")
+        error = _finite_number(
+            metrics["query_weighted_error"], "W9 query-weighted error", minimum=-1.0
+        )
+        limit = _finite_number(
+            metrics["maximum_allowed_error"], "W9 error limit", minimum=-1.0
+        )
+        checks["capture_width"] = width == 512
+        checks["offline_falsifier"] = error <= limit
+    elif gate == "W10":
+        exact(
+            {
+                "data_frozen",
+                "splits_frozen",
+                "seeds_frozen",
+                "storage_ratio",
+                "maximum_storage_ratio",
+                "runtime_ratio",
+                "maximum_runtime_ratio",
+                "fidelity_pass",
+            }
+        )
+        checks = booleans(
+            {"data_frozen", "splits_frozen", "seeds_frozen", "fidelity_pass"}
+        )
+        storage = _finite_number(metrics["storage_ratio"], "W10 storage ratio")
+        storage_limit = _finite_number(
+            metrics["maximum_storage_ratio"], "W10 storage limit"
+        )
+        runtime = _finite_number(metrics["runtime_ratio"], "W10 runtime ratio")
+        runtime_limit = _finite_number(
+            metrics["maximum_runtime_ratio"], "W10 runtime limit"
+        )
+        checks["storage"] = storage <= storage_limit
+        checks["runtime"] = runtime <= runtime_limit
+    else:
+        fields = {
+            "serialized",
+            "idempotent",
+            "hashes_verified",
+            "environment_allowlisted",
+            "identity_safe_stop",
+            "authenticated_completion",
+            "unauthenticated_rejected",
+            "memwatch_pass",
+            "semantic_output_pass",
+            "rollback_pass",
+            "reboot_restore_pass",
+            "fault_matrix_pass",
+            "transition_cycle_pass",
+        }
+        exact(fields)
+        checks = booleans(fields)
+
+    checks["workflow"] = all(workflow.values())
+    checks["no_failures"] = not record["failures"]
+    return {
+        "scorer_id": "workstream.terminal.v1",
+        "formula_version": 1,
+        "gate": gate,
+        "derived_metrics": derived,
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 def registered_scorer_digest(scorer_id: str) -> str:
     """Hash only the fixed formula and dependencies for one scorer version."""
     dependencies: dict[str, tuple[Any, ...]] = {
@@ -1414,6 +1738,15 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _review_issues,
             _review_issue_ids,
             _require_exact_keys,
+        ),
+        "workstream.terminal.v1": (
+            _score_workstream,
+            paired_ratio_bound,
+            _finite_positive,
+            _t95,
+            _require_exact_keys,
+            _finite_number,
+            _is_sha256,
         ),
     }
     functions = dependencies.get(scorer_id)
@@ -1461,6 +1794,11 @@ def score_registered_gate(
         ("parity", "parity.performance.v1"): _score_parity,
         ("review", "review.final.v1"): _score_review,
     }
+    if scorer_id == "workstream.terminal.v1" and gate in {
+        *(f"W{index}" for index in range(1, 11)),
+        "switch",
+    }:
+        return _score_workstream(rows, gate)
     scorer = registered.get((gate, scorer_id))
     if scorer is None:
         raise ValueError(
