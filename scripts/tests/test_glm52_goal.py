@@ -399,6 +399,77 @@ class FormulaTests(unittest.TestCase):
                             "foundation", "foundation.v1", [broken]
                         )
 
+    def test_registered_review_scorer_recomputes_both_persistent_scores(self):
+        candidate = "a" * 40
+
+        def review(reviewer):
+            return {
+                "record_type": "review",
+                "reviewer": reviewer,
+                "candidate_hash": candidate,
+                "review_round": 7,
+                "claimed_score": 96,
+                "critical": [],
+                "high": [],
+                "medium": ["M-001"],
+                "low": ["L-001"],
+                "prior_issue_status": [
+                    {"id": "OLD-001", "status": "FIXED"},
+                    {"id": "OLD-002", "status": "FALSIFIED"},
+                ],
+                "verdict": "ACCEPT",
+            }
+
+        rows = [review("gap_reviewer"), review("adversarial_reviewer")]
+        result = self.goal.score_registered_gate(
+            "review", "review.final.v1", rows
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        for mutation in (
+            "one_reviewer",
+            "wrong_name",
+            "candidate_mismatch",
+            "score_lie",
+            "critical",
+            "score_below_90",
+            "duplicate_prior",
+        ):
+            broken = json.loads(json.dumps(rows))
+            if mutation == "one_reviewer":
+                broken = broken[:1]
+            elif mutation == "wrong_name":
+                broken[0]["reviewer"] = "fresh_reviewer"
+            elif mutation == "candidate_mismatch":
+                broken[0]["candidate_hash"] = "b" * 40
+            elif mutation == "score_lie":
+                broken[0]["claimed_score"] = 100
+            elif mutation == "critical":
+                broken[0]["critical"] = ["C-001"]
+                broken[0]["claimed_score"] = 71
+                broken[0]["verdict"] = "REJECT"
+            elif mutation == "score_below_90":
+                broken[0]["medium"] = [f"M-{index:03d}" for index in range(4)]
+                broken[0]["low"] = []
+                broken[0]["claimed_score"] = 88
+                broken[0]["verdict"] = "REJECT"
+            else:
+                broken[0]["prior_issue_status"].append(
+                    {"id": "OLD-001", "status": "FIXED"}
+                )
+            with self.subTest(mutation=mutation):
+                if mutation in {"critical", "score_below_90"}:
+                    self.assertEqual(
+                        self.goal.score_registered_gate(
+                            "review", "review.final.v1", broken
+                        )["verdict"],
+                        "FAIL",
+                    )
+                else:
+                    with self.assertRaises(ValueError):
+                        self.goal.score_registered_gate(
+                            "review", "review.final.v1", broken
+                        )
+
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)
