@@ -9,7 +9,7 @@ SEED=$3
 REPO=/home/bmarti44/spark-deepseek-v4-flash
 SRC=${GLM_CANDIDATE_SRC:-/home/dsv4/ds4-project/src/ds4-goal-clean-0a7ad776}
 MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
-PORT=8011
+PORT=${GLM_PORT:-8011}
 PID=
 START_TICKS=
 EXPERT_CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
@@ -18,6 +18,14 @@ EXPERT_CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
     || { echo "invalid GLM_CANDIDATE_SRC: $SRC" >&2; exit 2; }
 [[ $EXPERT_CACHE_GB =~ ^([0-9]|[1-6][0-9]|7[0-2])$ ]] \
     || { echo "GLM_EXPERT_CACHE_GB must be an integer from 0 through 72" >&2; exit 2; }
+[[ $PORT =~ ^[0-9]+$ ]] \
+    || { echo "GLM_PORT must be an integer from 1024 through 65535" >&2; exit 2; }
+port=$((10#$PORT))
+if (( port < 1024 || port > 65535 )); then
+    echo "GLM_PORT must be an integer from 1024 through 65535" >&2
+    exit 2
+fi
+PORT=$port
 
 stop_server() {
     [[ ${PID:-} =~ ^[0-9]+$ ]] || return 0

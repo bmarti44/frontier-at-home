@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "stack_label": "foundation-dsv4-21b9017-r6323991",
+    "base_url": "http://127.0.0.1:8021",
+    "started_at": "2026-07-27T11:17:18.056438+00:00",
+    "finished_at": "2026-07-27T11:17:18.284635+00:00",
+    "reps": 1,
+    "warmup_reps": 0,
+    "ignore_eos_supported": true,
+    "max_tokens": 160,
+    "min_completion_tokens": 128,
+    "temperature": 0,
+    "seed": 1508243735,
+    "prefill_rate_label": "incl. queue+setup",
+    "iqr_method": "inclusive quartiles",
+    "model": "deepseek-v4-flash",
+    "fixture_path": "fixtures/ctx-32k.txt",
+    "fixture_total_tokens": 40657
+  },
+  "cells": [
+    {
+      "ctx_tokens": 0,
+      "reps": [
+        {
+          "ttft_s": null,
+          "decode_tok_s": null,
+          "prefill_tok_s": null,
+          "completion_tokens": null,
+          "valid": false,
+          "error": "PermissionError: [Errno 13] Permission denied: '/home/dsv4/logs/llamacpp-server.log'"
+        }
+      ],
+      "median_decode": null,
+      "iqr_decode": null,
+      "median_ttft": null,
+      "gpu_before": "2431 MHz, 51",
+      "gpu_after": "2431 MHz, 51",
+      "invalid_reps": 1,
+      "valid": false
+    }
+  ],
+  "suite_valid": false
+}

@@ -1,0 +1,51 @@
+{
+  "metadata": {
+    "stack_label": "foundation-dsv4-21b9017-r6323991",
+    "base_url": "http://127.0.0.1:8021",
+    "started_at": "2026-07-27T11:17:42.356989+00:00",
+    "finished_at": "2026-07-27T11:17:51.787449+00:00",
+    "reps": 1,
+    "warmup_reps": 0,
+    "ignore_eos_supported": true,
+    "max_tokens": 160,
+    "min_completion_tokens": 128,
+    "temperature": 0,
+    "seed": 1508243735,
+    "prefill_rate_label": "incl. queue+setup",
+    "iqr_method": "inclusive quartiles",
+    "model": "deepseek-v4-flash",
+    "fixture_path": "fixtures/ctx-32k.txt",
+    "fixture_total_tokens": 40657
+  },
+  "cells": [
+    {
+      "ctx_tokens": 0,
+      "reps": [
+        {
+          "ttft_s": 0.11661339900001622,
+          "decode_tok_s": 17.547448961123834,
+          "prefill_tok_s": 445.91788290119877,
+          "completion_tokens": 160,
+          "server_completion_tokens": 160,
+          "valid": true,
+          "prompt_tokens": 52,
+          "client_completion_tokens": 160,
+          "event_completion_tokens": 160,
+          "timing_source": "sse_content_events",
+          "token_timestamps_ns": null,
+          "token_ids": null,
+          "client_fixture_tokens": 0,
+          "data_chunks": 163
+        }
+      ],
+      "median_decode": 17.547448961123834,
+      "iqr_decode": 0.0,
+      "median_ttft": 0.11661339900001622,
+      "gpu_before": "2431 MHz, 51",
+      "gpu_after": "2509 MHz, 59",
+      "invalid_reps": 0,
+      "valid": true
+    }
+  ],
+  "suite_valid": true
+}

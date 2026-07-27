@@ -1,0 +1,30 @@
+===== llama.cpp session start 2026-07-27T11:14:58Z ctx=32768 =====
+0.00.258.686 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.259.026 W srv  llama_server: -----------------
+0.00.259.028 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.259.028 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.259.028 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.259.028 W srv  llama_server: -----------------
+0.00.260.279 I srv    load_model: loading model '/home/bmarti44/spark-deepseek-v4-flash/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf'
+1.32.110.024 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+1.32.110.692 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+1.32.128.505 I srv  llama_server: model loaded
+1.32.128.509 I srv  llama_server: listening on http://127.0.0.1:8021
+1.48.466.770 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+1.48.466.806 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+1.54.873.842 I slot print_timing: id  0 | task 0 | n_decoded =    100, tg =  17.68 t/s, tg_3s =  17.68 t/s
+1.57.900.427 I slot print_timing: id  0 | task 0 | n_decoded =    153, tg =  17.62 t/s, tg_3s =  17.51 t/s
+1.58.290.214 I slot print_timing: id  0 | task 0 | prompt eval time =     750.16 ms /    52 tokens (   14.43 ms per token,    69.32 tokens per second)
+1.58.290.216 I slot print_timing: id  0 | task 0 |        eval time =    9073.23 ms /   160 tokens (   56.71 ms per token,    17.63 tokens per second)
+1.58.290.216 I slot print_timing: id  0 | task 0 |       total time =    9823.39 ms /   212 tokens
+1.58.290.219 I slot print_timing: id  0 | task 0 |    graphs reused =        156
+1.58.290.253 I slot      release: id  0 | task 0 | stop processing: n_tokens = 211, truncated = 0
+2.43.760.652 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, sim_best = 1.000 (> 0.100 thold), f_keep = 0.246
+2.43.760.718 I slot launch_slot_: id  0 | task 163 | processing task, is_child = 0
+2.49.511.694 I slot print_timing: id  0 | task 163 | n_decoded =    100, tg =  17.70 t/s, tg_3s =  17.70 t/s
+2.52.548.311 I slot print_timing: id  0 | task 163 | n_decoded =    153, tg =  17.61 t/s, tg_3s =  17.45 t/s
+2.52.922.417 I slot print_timing: id  0 | task 163 | prompt eval time =     100.57 ms /     4 tokens (   25.14 ms per token,    39.77 tokens per second)
+2.52.922.419 I slot print_timing: id  0 | task 163 |        eval time =    9061.12 ms /   160 tokens (   56.63 ms per token,    17.66 tokens per second)
+2.52.922.420 I slot print_timing: id  0 | task 163 |       total time =    9161.69 ms /   164 tokens
+2.52.922.421 I slot print_timing: id  0 | task 163 |    graphs reused =        312
+2.52.922.446 I slot      release: id  0 | task 163 | stop processing: n_tokens = 211, truncated = 0

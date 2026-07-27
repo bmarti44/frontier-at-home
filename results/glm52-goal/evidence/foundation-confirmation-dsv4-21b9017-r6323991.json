@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "21b9017a2b9e91aea9893f5eb844ac7ccb14aac1",
+  "drand_round": 6323991,
+  "foundation_seed": 1508243735,
+  "profile": {
+    "model": "deepseek-v4-flash",
+    "port": 8021,
+    "context_cap": 32768,
+    "batch": 2048,
+    "ubatch": 512,
+    "no_mmap": true,
+    "speculative_type": "ngram-map-k4v",
+    "watchdog_floor_gib": 18
+  },
+  "identity": {
+    "binary_sha256": "757274c8a23cb297e0a79349bd47fb14c13985a35d37391065a886eeecfd74f4",
+    "scorer_sha256": "e1acb8aec432a81dadcc6fbf5336f0fa44de45f7d0e1c74ccda300db0b106935",
+    "boot_id": "825cf7d9-cec4-4a9a-8304-91578a98a6d2"
+  },
+  "measurements": {
+    "strict_token_log_arm": "NO_RESULT",
+    "strict_token_log_error": "no DS4_TOKEN_TIMING records appended",
+    "streaming_arm": "PASS",
+    "timing_source": "sse_content_events",
+    "completion_tokens": 160,
+    "decode_tokens_per_second": 17.547448961123834,
+    "ttft_seconds": 0.11661339900001622,
+    "prompt_tokens": 52,
+    "prefill_tokens_per_second_including_queue_and_setup": 445.91788290119877,
+    "memwatch_samples": 79,
+    "minimum_mem_available_gib": 22.09,
+    "swap_used_bytes_after_run": 352256,
+    "kernel_oom_or_xid_records": 0
+  },
+  "shutdown": {
+    "server_stopped": true,
+    "state_removed": true,
+    "port_released": true,
+    "mem_available_after_gib": 115.075588,
+    "watchdog_identity_warning": "unverified memwatch pid 13469 (start time mismatch)"
+  },
+  "result": "NO_RESULT",
+  "reason": "A safe one-repetition streaming baseline was measured, but the preregistered strict timing arm lacked required binary instrumentation and five fresh ABBA/BAAB blocks were not run."
+}
