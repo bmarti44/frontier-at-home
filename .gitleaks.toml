@@ -5,8 +5,9 @@
 useDefault = true
 
 [allowlist]
-description = "public integrity digests recorded by the decision/speed harness"
+description = "public integrity digests recorded in exact evidence fields"
 regexTarget = "line"
 regexes = [
-  '''"tokenizer_sha256": "[0-9a-f]{64}"''',
+  '''"(binary|configuration|diff|fixture|model|scorer|server|source|tokenizer|preserved_archive)_sha256": "[0-9a-f]{64}"''',
+  '''"drand_randomness": "[0-9a-f]{64}"''',
 ]

@@ -397,6 +397,7 @@ def _load_state(state_dir: Path) -> dict[str, Any]:
     path = state_dir / "state.json"
     if not path.exists():
         state = _initial_state()
+        _ingest_attempts(state_dir, state)
         _atomic_json(path, state)
         return state
     try:
@@ -404,7 +405,43 @@ def _load_state(state_dir: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError) as exc:
         raise GoalError(f"cannot read state: {exc}") from exc
     _validate_state(state)
+    if _ingest_attempts(state_dir, state):
+        state["updated_at"] = _utcnow()
+        _atomic_json(path, state)
     return state
+
+
+def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
+    """Discover immutable attempt directories and ingest fixed verdicts."""
+    changed = False
+    for name in GATE_ORDER:
+        gate_dir = state_dir / name
+        attempts = (
+            sorted(path for path in gate_dir.iterdir() if path.is_dir())
+            if gate_dir.is_dir()
+            else []
+        )
+        relative = [str(path.relative_to(state_dir)) for path in attempts]
+        gate = state["gates"][name]
+        if gate["attempts"] != relative:
+            gate["attempts"] = relative
+            changed = True
+        if not attempts:
+            continue
+        latest = attempts[-1]
+        try:
+            validate_attempt(latest)
+            summary = _read_strict_json(latest / "summary.json")
+            status = summary["verdict"]
+            reason = summary.get("reason")
+        except ValueError as exc:
+            status = "FAIL"
+            reason = f"invalid evidence in {latest.name}: {exc}"
+        if gate["status"] != status or gate.get("reason") != reason:
+            gate["status"] = status
+            gate["reason"] = reason
+            changed = True
+    return changed
 
 
 def _selected_gate(state: dict[str, Any]) -> str | None:

@@ -8,7 +8,7 @@ readonly SECRET_PATTERN_NOHEX='Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPENSSH)? 
 
 is_checksum_file() {
   case "$1" in
-    verification/MANIFEST.sha256|configs/versions.lock|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/decision.json|results/holdout-ledger.json|weights/*/manifest.json|*.sha256) return 0 ;;
+    verification/MANIFEST.sha256|configs/versions.lock|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -91,6 +91,16 @@ allowlist = {
     "source_summary_sha256",
     "source_transcript_sha256",
     "tokenizer_sha256",
+    "binary_sha256",
+    "configuration_sha256",
+    "diff_sha256",
+    "fixture_sha256",
+    "model_sha256",
+    "scorer_sha256",
+    "server_sha256",
+    "source_sha256",
+    "preserved_archive_sha256",
+    "drand_randomness",
     "pin_sha256",
     "entry_sha256",
     "tarball_sha256",
@@ -104,7 +114,14 @@ map_allowlist = {
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
-    document = json.loads(raw)
+    if display_path.endswith(".jsonl"):
+        document = [
+            json.loads(line)
+            for line in raw.splitlines()
+            if line.strip()
+        ]
+    else:
+        document = json.loads(raw)
 except (UnicodeDecodeError, json.JSONDecodeError) as error:
     print(f"{display_path}: invalid exempted JSON: {error}", file=sys.stderr)
     raise SystemExit(1)
