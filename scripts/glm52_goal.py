@@ -2568,8 +2568,13 @@ def _release_verdict(state_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _selected_gate(state: dict[str, Any]) -> str | None:
+    required_pass = {"foundation", "W11", "switch", "parity", "review"}
     for name in GATE_ORDER:
-        if state["gates"][name]["status"] not in TERMINAL_STATUSES:
+        status = state["gates"][name]["status"]
+        if name in required_pass:
+            if status != "PASS":
+                return name
+        elif status not in TERMINAL_STATUSES:
             return name
     return None
 
