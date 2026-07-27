@@ -110,7 +110,7 @@ if [[ $stack == ds4 ]]; then
 else
     engine_unit=deepseek-v4-flash-llamacpp.service
     other=ds4
-    upstream_port=8011
+    upstream_port=8013
 fi
 
 install -o root -g dsv4auth -m 0640 /dev/null "$ENV_FILE"

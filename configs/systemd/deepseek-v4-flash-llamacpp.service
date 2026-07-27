@@ -20,6 +20,9 @@ RemainAfterExit=yes
 User=dsv4
 Group=dsv4
 Environment=HOME=/home/dsv4
+# Dedicated internal engine port. The authenticated public endpoint remains
+# 127.0.0.1:8010; 8011 is used by the local LoraForge workbench.
+Environment=DSV4_PORT=8013
 # Projected-free memory floor for the startup budget gate. Keep this at the
 # launcher's hard minimum so the installed service remains startable while
 # preserving at least 18 GiB of modeled post-load headroom.

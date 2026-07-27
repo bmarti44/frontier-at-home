@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Transactional profile switch for the unchanged :8010 auth chain -> :8011.
+# Transactional profile switch for the unchanged :8010 auth chain.
 set -Eeuo pipefail
 umask 077
 
@@ -8,7 +8,7 @@ readonly PROD_STATE=/home/dsv4/ds4-project/engine-switch
 readonly PROD_SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 readonly PROD_GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-profile.json
-readonly PORT=8011
+readonly PORT=8013
 readonly AUTH_PORT=8010
 
 if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
@@ -50,7 +50,8 @@ clean_curl() {
 
 dsv4_launcher() {
     env -i PATH=/usr/bin:/bin HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 \
-        LANG=C.UTF-8 "$REPO/scripts/21_serve_llamacpp.sh" "$@"
+        LANG=C.UTF-8 DSV4_PORT="$PORT" \
+        "$REPO/scripts/21_serve_llamacpp.sh" "$@"
 }
 
 sha256() { sha256sum -- "$1" | awk '{print $1}'; }
