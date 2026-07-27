@@ -95,11 +95,11 @@ class EngineSwitchTests(unittest.TestCase):
             "DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json",
             "DSV4_MEM_FLOOR_GIB=18",
             "DSV4_WATCHDOG_FLOOR_GIB=18",
-            "DSV4_UBATCH=2048",
-            "DSV4_BATCH=2048",
-            "DSV4_UBATCH_LARGE=1",
-            "CTX=65536",
-            "DSV4_PARALLEL=2",
+            "DSV4_UBATCH=512",
+            "DSV4_BATCH=512",
+            "DSV4_UBATCH_LARGE=0",
+            "CTX=8192",
+            "DSV4_PARALLEL=1",
             "DSV4_NO_MMAP=1",
             "DSV4_SPEC_TYPE=ngram-map-k4v",
         ):
@@ -107,6 +107,17 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn(
             "DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key", source
         )
+
+    def test_installed_deepseek_service_uses_the_safe_bootstrap_profile(self):
+        service = DSV4_SERVICE.read_text()
+        for setting in (
+            "Environment=DSV4_UBATCH=512",
+            "Environment=DSV4_BATCH=512",
+            "Environment=DSV4_UBATCH_LARGE=0",
+            "Environment=CTX=8192",
+            "Environment=DSV4_PARALLEL=1",
+        ):
+            self.assertIn(setting, service)
 
     def test_selected_profile_has_a_boot_restore_unit(self):
         source = SCRIPT.read_text()
