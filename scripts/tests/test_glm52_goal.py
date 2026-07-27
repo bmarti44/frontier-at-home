@@ -771,6 +771,22 @@ class FormulaTests(unittest.TestCase):
             "review", "review.final.v1", rows
         )
         self.assertEqual(result["verdict"], "PASS")
+        low_score = json.loads(json.dumps(rows))
+        low_score[0]["claimed_score"] = 12
+        low_score[0]["verdict"] = "REJECT"
+        low_score[1]["claimed_score"] = 47
+        low_score[1]["verdict"] = "REJECT"
+        low_score_result = self.goal.score_registered_gate(
+            "review", "review.final.v1", low_score
+        )
+        self.assertEqual(low_score_result["verdict"], "PASS")
+        self.assertEqual(
+            low_score_result["scores"],
+            {"gap_reviewer": 12, "adversarial_reviewer": 47},
+        )
+        self.assertNotIn(
+            "both_scores_at_least_90", low_score_result["checks"]
+        )
         for mutation in (
             "one_reviewer",
             "wrong_name",
@@ -778,7 +794,6 @@ class FormulaTests(unittest.TestCase):
             "score_out_of_range",
             "score_boolean",
             "critical",
-            "score_below_90",
             "duplicate_prior",
         ):
             broken = json.loads(json.dumps(rows))
@@ -796,19 +811,12 @@ class FormulaTests(unittest.TestCase):
                 broken[0]["critical"] = [issue("C-001")]
                 broken[0]["claimed_score"] = 99
                 broken[0]["verdict"] = "REJECT"
-            elif mutation == "score_below_90":
-                broken[0]["medium"] = [
-                    issue(f"M-{index:03d}") for index in range(4)
-                ]
-                broken[0]["low"] = []
-                broken[0]["claimed_score"] = 88
-                broken[0]["verdict"] = "REJECT"
             else:
                 broken[0]["prior_issue_status"].append(
                     {"id": "OLD-001", "status": "FIXED"}
                 )
             with self.subTest(mutation=mutation):
-                if mutation in {"critical", "score_below_90"}:
+                if mutation == "critical":
                     self.assertEqual(
                         self.goal.score_registered_gate(
                             "review", "review.final.v1", broken
