@@ -1087,6 +1087,181 @@ def _score_parity(records: list[dict[str, Any]]) -> dict[str, Any]:
     return {"scorer_id": "parity.performance.v1", "samples": samples, **result}
 
 
+def reviewed_measurements_digest(records: Iterable[dict[str, Any]]) -> str:
+    """Bind a review to the exact ordered matched-arm observations."""
+    rows = list(records)
+    try:
+        encoded = json.dumps(
+            rows,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"reviewed measurements are not canonical JSON: {exc}") from exc
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _score_reviewed_no_go(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Authorize candidate-level NO_GO from decisive matched data and reviews."""
+    arms = [
+        record for record in records if record.get("record_type") == "matched_arm"
+    ]
+    reviews = [
+        record for record in records if record.get("record_type") == "no_go_review"
+    ]
+    if len(arms) + len(reviews) != len(records):
+        raise ValueError("reviewed NO_GO contains an unknown record type")
+    parity = _score_parity(arms)
+    if len(reviews) != 2:
+        raise ValueError("reviewed NO_GO requires exactly two persistent reviewers")
+
+    samples = parity["samples"]
+    decisive_failures = {
+        "decode": paired_ratio_bound(
+            samples["decode_glm"], samples["decode_dsv4"], side="upper"
+        )
+        < 0.80,
+        "prefill_rate": paired_ratio_bound(
+            samples["prefill_glm"], samples["prefill_dsv4"], side="upper"
+        )
+        < 0.80,
+        "prefill_time": paired_ratio_bound(
+            samples["prefill_time_glm"],
+            samples["prefill_time_dsv4"],
+            side="lower",
+        )
+        > 1.25,
+        "warm_ttft": paired_ratio_bound(
+            samples["warm_ttft_glm"],
+            samples["warm_ttft_dsv4"],
+            side="lower",
+        )
+        > 1.20,
+        "cold_ttft": paired_ratio_bound(
+            samples["cold_ttft_glm"],
+            samples["cold_ttft_dsv4"],
+            side="lower",
+        )
+        > 1.20,
+    }
+    measurement_digest = reviewed_measurements_digest(arms)
+    expected = {
+        "record_type",
+        "reviewer",
+        "candidate_hash",
+        "review_round",
+        "reviewed_measurements_sha256",
+        "claimed_score",
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "prior_issue_status",
+        "verdict",
+    }
+    canonical = {"gap_reviewer", "adversarial_reviewer"}
+    reviewers: set[str] = set()
+    candidates: set[str] = set()
+    rounds: set[int] = set()
+    scores: dict[str, int] = {}
+    narratives: dict[str, str] = {}
+    counts: dict[str, dict[str, int]] = {}
+    for index, review in enumerate(reviews):
+        _require_exact_keys(review, expected, f"NO_GO review {index}")
+        reviewer = review["reviewer"]
+        if reviewer not in canonical or reviewer in reviewers:
+            raise ValueError("reviewed NO_GO persistent reviewer identity is invalid")
+        reviewers.add(reviewer)
+        candidate = review["candidate_hash"]
+        if not (
+            isinstance(candidate, str)
+            and len(candidate) == 40
+            and all(character in "0123456789abcdef" for character in candidate)
+        ):
+            raise ValueError("reviewed NO_GO candidate hash is invalid")
+        candidates.add(candidate)
+        review_round = review["review_round"]
+        if (
+            not isinstance(review_round, int)
+            or isinstance(review_round, bool)
+            or review_round < 1
+        ):
+            raise ValueError("reviewed NO_GO round is invalid")
+        rounds.add(review_round)
+        if review["reviewed_measurements_sha256"] != measurement_digest:
+            raise ValueError("reviewed measurements do not match the matched arms")
+        issues = {
+            severity: _review_issues(review[severity], severity)
+            for severity in ("critical", "high", "medium", "low")
+        }
+        issue_ids = [
+            issue["id"] for values in issues.values() for issue in values
+        ]
+        if len(set(issue_ids)) != len(issue_ids):
+            raise ValueError("one NO_GO review issue appears at multiple severities")
+        score = review["claimed_score"]
+        if (
+            not isinstance(score, int)
+            or isinstance(score, bool)
+            or not 0 <= score <= 100
+        ):
+            raise ValueError("NO_GO reviewer score must be an integer from 0 to 100")
+        if review["verdict"] not in {"ACCEPT", "REJECT"}:
+            raise ValueError("NO_GO reviewer narrative verdict is invalid")
+        prior = review["prior_issue_status"]
+        if not isinstance(prior, list):
+            raise ValueError("NO_GO prior_issue_status must be a list")
+        prior_ids: list[str] = []
+        for entry in prior:
+            _require_exact_keys(entry, {"id", "status"}, "NO_GO prior issue")
+            issue_id = _review_issue_ids([entry["id"]], "NO_GO prior issue")[0]
+            if entry["status"] not in {
+                "OPEN",
+                "VERIFIED",
+                "FALSIFIED",
+                "FIXED",
+                "DEFERRED",
+            }:
+                raise ValueError("NO_GO prior issue status is invalid")
+            prior_ids.append(issue_id)
+        if len(set(prior_ids)) != len(prior_ids):
+            raise ValueError("NO_GO prior_issue_status contains duplicate IDs")
+        scores[reviewer] = score
+        narratives[reviewer] = review["verdict"]
+        counts[reviewer] = {
+            severity: len(values) for severity, values in issues.items()
+        }
+    if reviewers != canonical:
+        raise ValueError("reviewed NO_GO persistent reviewer pair is incomplete")
+    if len(candidates) != 1:
+        raise ValueError("NO_GO reviewers inspected different candidates")
+    if len(rounds) != 1:
+        raise ValueError("NO_GO reviewers reported different rounds")
+
+    checks = {
+        "matched_parity_failed": parity["verdict"] == "FAIL",
+        "decisive_matched_failure": any(decisive_failures.values()),
+        "no_critical": all(value["critical"] == 0 for value in counts.values()),
+        "no_high": all(value["high"] == 0 for value in counts.values()),
+    }
+    return {
+        "scorer_id": "parity.reviewed-no-go.v1",
+        "formula_version": 1,
+        "candidate_hash": next(iter(candidates)),
+        "review_round": next(iter(rounds)),
+        "reviewed_measurements_sha256": measurement_digest,
+        "parity": parity,
+        "decisive_failures": decisive_failures,
+        "reviewer_scores": scores,
+        "reviewer_verdicts": narratives,
+        "reviewer_issue_counts": counts,
+        "checks": checks,
+        "decision": "NO_GO",
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 def _score_foundation_baseline(
     baseline: dict[str, Any], expected_profile: str
 ) -> dict[str, float]:
@@ -1732,6 +1907,23 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _finite_number,
             _is_sha256,
         ),
+        "parity.reviewed-no-go.v1": (
+            _score_reviewed_no_go,
+            _score_parity,
+            reviewed_measurements_digest,
+            performance_verdict,
+            paired_ratio_bound,
+            _finite_positive,
+            _t95,
+            validate_raw_record,
+            validate_ab_blocks,
+            decode_tokens_per_second,
+            _review_issues,
+            _review_issue_ids,
+            _require_exact_keys,
+            _finite_number,
+            _is_sha256,
+        ),
         "review.final.v1": (
             _score_review,
             _review_issues,
@@ -1791,6 +1983,7 @@ def score_registered_gate(
         ("foundation", "foundation.v1"): _score_foundation,
         ("W11", "w11.context.v1"): _score_w11,
         ("parity", "parity.performance.v1"): _score_parity,
+        ("parity", "parity.reviewed-no-go.v1"): _score_reviewed_no_go,
         ("review", "review.final.v1"): _score_review,
     }
     if scorer_id == "workstream.terminal.v1" and gate in {
@@ -2398,9 +2591,9 @@ def validate_attempt(attempt: Path) -> None:
     recomputed = score_registered_gate(manifest["gate"], scorer_id, records)
     if (
         manifest["gate"] == "review"
-        and recomputed.get("candidate_hash") != candidate_hash
-    ):
-        raise ValueError("review candidate does not match manifest candidate")
+        or scorer_id == "parity.reviewed-no-go.v1"
+    ) and recomputed.get("candidate_hash") != candidate_hash:
+        raise ValueError("reviewed candidate does not match manifest candidate")
     if summary != recomputed:
         raise ValueError("summary does not exactly match fixed scorer output")
 
@@ -2535,6 +2728,35 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
     return changed
 
 
+def _parity_release_decision(
+    state_dir: Path, state: dict[str, Any]
+) -> str:
+    gate = state["gates"]["parity"]
+    if gate["status"] != "PASS" or not gate["attempts"]:
+        return "UNPROVEN"
+    attempt = (state_dir / gate["attempts"][-1]).resolve()
+    if not attempt.is_relative_to(state_dir.resolve()):
+        return "UNPROVEN"
+    try:
+        validate_attempt(attempt)
+        summary = _read_strict_json(attempt / "summary.json")
+    except (OSError, ValueError):
+        return "UNPROVEN"
+    if (
+        summary.get("scorer_id") == "parity.performance.v1"
+        and summary.get("verdict") == "PASS"
+        and "decision" not in summary
+    ):
+        return "PASS"
+    if (
+        summary.get("scorer_id") == "parity.reviewed-no-go.v1"
+        and summary.get("verdict") == "PASS"
+        and summary.get("decision") == "NO_GO"
+    ):
+        return "NO_GO"
+    return "UNPROVEN"
+
+
 def _release_verdict(state_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     failed: list[str] = []
     gates = state["gates"]
@@ -2548,21 +2770,15 @@ def _release_verdict(state_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     for name in ("switch", "review"):
         if gates[name]["status"] != "PASS":
             failed.append(name)
-    parity_ok = gates["parity"]["status"] == "PASS"
-    # A summary boolean is not reviewer authority. Keep NO_GO disabled until a
-    # registered scorer recomputes the physical bound and validates immutable
-    # attestations from both persistent reviewers.
-    parity_no_go = False
-    if not (parity_ok or parity_no_go):
+    parity_decision = _parity_release_decision(state_dir, state)
+    if parity_decision not in {"PASS", "NO_GO"}:
         failed.append("parity")
     unique_failed = list(dict.fromkeys(failed))
     return {
         "schema_version": 1,
         "release_qualified": not unique_failed,
         "failed_requirements": unique_failed,
-        "parity_decision": (
-            "PASS" if parity_ok else "NO_GO" if parity_no_go else "UNPROVEN"
-        ),
+        "parity_decision": parity_decision,
     }
 
 
