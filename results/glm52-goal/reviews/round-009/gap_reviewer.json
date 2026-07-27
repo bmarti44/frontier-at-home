@@ -1,0 +1,201 @@
+{
+  "candidate_hash": "97cb155c7e7abb630a19ec36aefb3e472ec11578",
+  "review_round": 9,
+  "score_0_to_100": 0,
+  "critical": [
+    {
+      "id": "GAP-C002",
+      "evidence": "Review authority remains self-asserted. Candidate 97cb155 adds no authenticated persistent-agent transcript, session identity, or complete-ledger enforcement to review.final.v1. The round-8 full-attempt reproduction that accepted two fabricated canonical reviewer records therefore remains applicable.",
+      "affected_gate": "Review and final release evidence authority",
+      "reproduction_instructions": "Construct a hash-consistent review attempt for candidate 97cb155 with two records merely naming gap_reviewer and adversarial_reviewer, empty findings and prior ledgers, an invented common review round, and rubric-consistent score 100/verdict ACCEPT. Recompute the fixed summary and validate the attempt.",
+      "proposed_acceptance_test": "Require persistent reviewer-session identities and complete transcripts anchored outside the attempt author’s control. Reconcile every record against the complete prior ledger and candidate sequence. A full-attempt mutation using self-authored canonical names, omitted prior issues, an invented round, or substituted sessions must FAIL."
+    },
+    {
+      "id": "GAP-C003",
+      "evidence": "GLM switching remains disabled. The fresh GLM arm was run directly on alternate port 8022 and does not exercise transactional switching, endpoint preservation, authenticated completion, rollback, active-state commit, or reboot restoration.",
+      "affected_gate": "Turnkey switching and rollback",
+      "reproduction_instructions": "Inspect scripts/52_engine_switch.sh and the GLM evidence command logs. The production arm bypasses the switch, while glm52 switching still terminates through the disabled lifecycle.",
+      "proposed_acceptance_test": "After qualification, require passing concurrency, stale-PID, wrong-model, startup-death, completion-failure, low-memory, D-state, rollback, reboot-restoration, and dsv4→glm52→dsv4→glm52 tests with exact identity, authentication, semantic output, watchdog supervision, and atomic active-state commit."
+    },
+    {
+      "id": "GAP-C004",
+      "evidence": "Only foundation, W11, parity, and review have registered terminal scorers; W1-W10, switch, and physical-NO_GO remain unregistered, and no production runner directory exists. State remains foundation=FAIL, W1=FAIL, and all later work gates PENDING. The new standalone measurements cannot be ingested as terminal goal evidence.",
+      "affected_gate": "W1-W10, switch, autonomous execution, physical NO_GO, and final release",
+      "reproduction_instructions": "Inspect score_registered_gate, scripts/glm52-runners, state.json, and _release_verdict. Observe four registered scorers, no production runners, parity_no_go=false, and no scorer consuming the new physical evidence.",
+      "proposed_acceptance_test": "Implement fixed scorers and autonomous runners for every required terminal gate, including a physical-NO_GO scorer. Mutation-test each scorer with stale binaries, unequal arms, fabricated counters, relaxed physical bounds, and incomplete reviewer evidence."
+    }
+  ],
+  "high": [
+    {
+      "id": "GAP-H001",
+      "evidence": "The new measurements are valid standalone arms but not a matched campaign. GLM used seed 4250036357, 61 prompt tokens, server token-log timing, and binary 0bbf570; DeepSeek used seed 1508243735, 52 prompt tokens, SSE timing, and binary 757274c. Only one execution per profile exists. The diagnostic decode ratio is 0.0702613, but unequal fixtures, timing sources, candidates, and missing five-block confidence intervals prevent a parity verdict.",
+      "affected_gate": "Matched decode, prefill, and TTFT parity",
+      "reproduction_instructions": "Compare foundation-confirmation-glm-instrumented-8746c87-r6324047.json with foundation-dsv4-streaming-21b9017-r6323991.json. Confirm the differing seeds, prompt-token counts and timing sources and the absence of 20 ABBA/BAAB records.",
+      "proposed_acceptance_test": "Freeze complete GLM and DeepSeek profiles and one deterministic byte-identical fixture. Run exactly five fresh-server four-arm blocks in ABBA/BAAB alternation with 20 unique boot/server identities. Every arm must contain at least 128 observed token timestamps, synchronized prefill timing, warm and cold TTFT, exact artifact hashes, equal fixture hash, memory telemetry and empty failure/OOM/Xid lists. Recompute all one-sided 95% bounds with parity.performance.v1."
+    },
+    {
+      "id": "GAP-H002",
+      "evidence": "Round-9 runtime evidence uses post-freeze drand lineage, but the candidate still lacks an externally anchored pre-beacon publication, offline drand signature verification, and a complete seed-derived executable fixture specifying prompt bytes/token streams and normalization. The unequal GLM and DeepSeek fixtures demonstrate why the remaining fixture gap matters.",
+      "affected_gate": "Post-freeze confirmation derivation and reproducible matched workloads",
+      "reproduction_instructions": "Inspect generate_w11_fixture and the two new baseline summaries. Observe that generated fixture metadata still omits complete executable input construction and that the measured arms used different seeds and prompt-token counts.",
+      "proposed_acceptance_test": "Deterministically generate and hash complete prompt bytes, request parameters, tokenizer-specific token streams, expected outputs and normalization. Externally timestamp the frozen candidate before beacon selection, preserve relay responses, and verify the drand signature offline against the registered chain key."
+    },
+    {
+      "id": "GAP-H003",
+      "evidence": "Raw provenance improved materially for GLM: the evidence contains 160 token IDs and CLOCK_MONOTONIC_RAW timestamps, process identity, 651 memory samples and compressed server logs. Cross-arm provenance remains asymmetric: the DeepSeek arm has no token IDs or raw token timestamps, uses SSE content events, reports a memwatch start-time mismatch, and is not bound with GLM into one manifest and scorer attempt. Cache/I/O and CUDA-event counters needed for a physical bound are also absent from the valid GLM summary.",
+      "affected_gate": "Foundation, parity, and physical-NO_GO measurement validity",
+      "reproduction_instructions": "Inspect both result files and their confirmation summaries. Compare timing_source, token_ids, token_timestamps_ns, process/watchdog identity, and artifact-manifest coverage.",
+      "proposed_acceptance_test": "Require symmetric process- and boot-bound raw logs for both profiles, with token IDs/timestamps, CUDA events, synchronized prefill intervals, cache/I/O counters, 4 Hz memory, and kernel/OOM/Xid records. Bind all logs and complete model/tokenizer/configuration identities into one immutable attempt. Mutations replacing either process, timing stream, or counter source must FAIL."
+    },
+    {
+      "id": "GAP-H004",
+      "evidence": "The GLM production arm used context_cap=8192 and processed a 61-token prompt. It does not exercise 128K, 256K, 512K, or 1,048,576 context, one million processed tokens, retrieval, negative controls, or 1M resource safety. W11 remains PENDING.",
+      "affected_gate": "W11 and qualified 1M profile",
+      "reproduction_instructions": "Inspect the GLM server log and result metadata, then inspect state.json. The run allocates an 8192-token context and W11 has no attempt.",
+      "proposed_acceptance_test": "Execute all four graduated stages through the artifact-bound W11 runner, including at least 1,000,000 processed tokens at the final stage, seed-derived multi-position retrieval and negative controls, completed generation, continuous memory coverage, and verified absence of truncation, OOM and Xid."
+    },
+    {
+      "id": "GAP-H005",
+      "evidence": "A genuine production-path GLM completion now exists and preserves 160 raw token timings, but it uses a broad historical IQ2 support commit explicitly labelled diagnostic-only. W1-W10 still lack committed RED→default-off→freeze→blind-run workflows, and neither the broad IQ2 implementation nor the standalone timing arm has persistent-review release qualification.",
+      "affected_gate": "Anti-cheating and per-change production qualification",
+      "reproduction_instructions": "Inspect foundation-confirmation-glm-iq2-clean-build-17be9e6.json, which states first_support_commit_after_upstream=false and includes_all_iq2_xxs_routed_down_support=true, then map the change and W1-W10 against the required workflow.",
+      "proposed_acceptance_test": "For the final narrowed engine candidate, require a committed production-path RED test, default-off implementation, frozen source/binary hashes, post-freeze deterministic fixtures, clean build, blinded confirmation, diff scan, rejection mutations, raw evidence and verification by both persistent reviewers. Repeat this ledger for each terminal W gate."
+    },
+    {
+      "id": "GAP-H007",
+      "evidence": "A reviewed NO_GO cannot yet be proven. The diagnostic point estimates are severe: decode needs an 11.3861x improvement to reach 80%, prefill needs 309.691x, and TTFT must improve 378.428x to reach 1.20x. Current GLM decode takes 811.092 ms/token while 80% of the DeepSeek point estimate permits 71.2354 ms/token. Those figures strongly motivate a bounded NO_GO campaign, but one unequal-fixture block measures an inefficient diagnostic implementation, not an upper bound on every allowed optimization. The existing roofline remains NO_RESULT because measured residual time is not a physical lower bound.",
+      "affected_gate": "Parity PASS or independently reviewed physical NO_GO",
+      "reproduction_instructions": "Recompute the ratios from the two confirmation files and inspect roofline-14c9a9d.json. Observe that no confidence bounds, matched fixtures, optimal-cache lower bound, mandatory-operation bound, MTP bound, or quality-qualified lower-bit bound exists.",
+      "proposed_acceptance_test": "Minimal reviewed-NO_GO evidence is: (1) pass GAP-H013 correctness for the measured engine; (2) run the exact 20-arm matched campaign in GAP-H001; and (3) produce a fixed physical scorer proving U95(GLM decode)/L95(DeepSeek decode)<0.80. Derive U95(GLM) from a conservative latency lower bound that grants perfect overlap and zero cost to every unbounded component, uses a complete selected-expert trace with an offline optimal-cache policy at the 10 GiB memory floor, hardware-interface upper bandwidth bounds, mandatory bytes/FLOPs only, and the best quality-passing compression/lower-bit and MTP alternatives. Sum components only where serialized dependency is proven; otherwise take their maximum. Mutation tests that reduce mandatory bytes, increase bandwidth, improve optimal cache residency, or grant maximal MTP acceptance must still leave the ratio below 0.80. Both persistent reviewers must independently reproduce the bound and score the candidate at least 90."
+    },
+    {
+      "id": "GAP-H012",
+      "evidence": "Foundation has advanced substantially: fresh GLM and DeepSeek model/tokenizer/binary hashes, five DRAM samples, and safe runtime baselines now exist. It remains nonterminal because artifact verification and runtime arms are split across standalone NO_RESULT records, the cross-model fixtures are unequal, the GLM engine is diagnostic-only, and no foundation.v1 attempt binds both baselines to one frozen candidate and configuration.",
+      "affected_gate": "Foundation and trustworthy baseline establishment",
+      "reproduction_instructions": "Inspect foundation-confirmation-artifacts-bandwidth-20260727.json, both runtime confirmations, the foundation attempt directory and state.json. The standalone evidence is useful but foundation remains FAIL.",
+      "proposed_acceptance_test": "Create complete candidate-owned profiles containing binary, model, tokenizer and configuration hashes. Run both baselines on one deterministic fixture after one freeze, bind the five bandwidth samples and symmetric raw telemetry into a strict foundation.v1 attempt, and require the controller to ingest PASS."
+    },
+    {
+      "id": "GAP-H013",
+      "evidence": "The measured IQ2 engine is not yet a trusted correctness oracle for NO_GO. Commit 17be9e6 is explicitly a broad historical support commit rather than the first minimal patch after clean upstream; it changes all IQ2_XXS routed-down support. The timing instrumentation is default-off and separately hashed, but there is no trusted GLM logit/reference comparison, byte-identical instrumented/uninstrumented result, or focused CUDA reference test proving the `(16,16)` implementation computes the intended model. A slow incorrect kernel cannot establish physical infeasibility.",
+      "affected_gate": "GLM production correctness, foundation, and physical NO_GO",
+      "reproduction_instructions": "Inspect the IQ2 build confirmation scope and the valid GLM result. Observe that HTTP completion and finite token timing are present, but no reference logits, argmax comparison, paired quality result, or instrumentation byte-identity result is recorded.",
+      "proposed_acceptance_test": "Narrow or independently justify the IQ2 diff. Require fixed synthetic `(16,16)` routed-MoE tests for batch sizes 1, 2 and 64 against a host dequantization reference with all outputs finite and max_abs_error<=1e-3+1e-3*max_abs(reference); require existing `(12,12)` and `(16,10)` fixtures byte-identical before/after. On end-to-end GLM captures require max|Δlogit|<1e-2 and matching argmax against a trusted reference, plus byte-identical token IDs with DS4_TOKEN_TIMING_LOG off versus on. Any lossy representation additionally requires the fixed 100-case ΔNLL/top-1 gate."
+    }
+  ],
+  "medium": [],
+  "low": [],
+  "prior_issue_status": [
+    {
+      "id": "GAP-C001",
+      "status": "FIXED",
+      "evidence": "Controller execution remains serialized under one lock."
+    },
+    {
+      "id": "GAP-C002",
+      "status": "OPEN",
+      "evidence": "Persistent review identity and complete-ledger authority remain self-asserted."
+    },
+    {
+      "id": "GAP-C003",
+      "status": "OPEN",
+      "evidence": "GLM was measured directly, but the required switch lifecycle remains disabled."
+    },
+    {
+      "id": "GAP-C004",
+      "status": "OPEN",
+      "evidence": "W1-W10, switch, and physical-NO_GO scorers/runners remain absent."
+    },
+    {
+      "id": "GAP-C005",
+      "status": "FIXED",
+      "evidence": "The existing roofline and unmatched comparison correctly remain NO_RESULT rather than claiming NO_GO."
+    },
+    {
+      "id": "GAP-H001",
+      "status": "OPEN",
+      "evidence": "One valid arm per model exists, but fixtures, seeds and timing sources differ and five matched blocks are absent."
+    },
+    {
+      "id": "GAP-H002",
+      "status": "OPEN",
+      "evidence": "Post-freeze seeds improved, but complete executable fixture derivation and external pre-beacon anchoring remain unresolved."
+    },
+    {
+      "id": "GAP-H003",
+      "status": "OPEN",
+      "evidence": "GLM raw token provenance improved materially; symmetric DeepSeek telemetry, complete artifact binding and physical counters remain missing."
+    },
+    {
+      "id": "GAP-H004",
+      "status": "OPEN",
+      "evidence": "The new run is 8K with a 61-token prompt; no qualifying 1M execution exists."
+    },
+    {
+      "id": "GAP-H005",
+      "status": "OPEN",
+      "evidence": "A strict production-path GLM arm exists, but the broad diagnostic engine and W1-W10 lack the complete release workflow."
+    },
+    {
+      "id": "GAP-H006",
+      "status": "FIXED",
+      "evidence": "Controller concurrency remains serialized."
+    },
+    {
+      "id": "GAP-H007",
+      "status": "OPEN",
+      "evidence": "The 14.23x point-estimate decode gap is diagnostic; neither matched confidence bounds nor a physical upper-throughput bound exists."
+    },
+    {
+      "id": "GAP-H008",
+      "status": "FIXED",
+      "evidence": "The new guarded runs preserved large memory margins and no OOM/Xid without weakening safety controls."
+    },
+    {
+      "id": "GAP-H009",
+      "status": "FIXED",
+      "evidence": "The summaries explicitly refuse to authorize NO_GO from unmatched profile streams."
+    },
+    {
+      "id": "GAP-H010",
+      "status": "FIXED",
+      "evidence": "Matched restoration safeguards remain unchanged."
+    },
+    {
+      "id": "GAP-H011",
+      "status": "FIXED",
+      "evidence": "Malformed or unauthoritative attempts continue to terminalize as preserved FAIL."
+    },
+    {
+      "id": "GAP-H012",
+      "status": "OPEN",
+      "evidence": "Artifact rehashing, DRAM measurement and standalone baselines now exist, but no authoritative combined foundation attempt passes."
+    },
+    {
+      "id": "GAP-H013",
+      "status": "OPEN",
+      "evidence": "New in round 9: broad IQ2 diagnostic correctness has not been established against a trusted reference."
+    },
+    {
+      "id": "GAP-M001",
+      "status": "FIXED",
+      "evidence": "Strict JSON, integer, symlink, ordering and numeric-normalization checks remain fail-closed."
+    },
+    {
+      "id": "GAP-M002",
+      "status": "FIXED",
+      "evidence": "Confidence-bound calculations remain connected to parity.performance.v1."
+    },
+    {
+      "id": "GAP-M003",
+      "status": "FIXED",
+      "evidence": "Measured residual work is not treated as a physical lower bound."
+    },
+    {
+      "id": "GAP-L001",
+      "status": "FIXED",
+      "evidence": "Scorer dependency hashing now includes the DeepSeek profile loader."
+    }
+  ],
+  "verdict": "REJECT RELEASE; NO_GO NOT YET PROVEN. Candidate 97cb155 contains the first valid strict production-path GLM timing arm: 160 raw token IDs/timestamps, 1.232906 tok/s decode, 52.9558 s TTFT, 1.15190 tok/s prefill, 88.1978 GiB minimum available memory, and no OOM/Xid. The diagnostic gap to the standalone DeepSeek arm is enormous and makes a bounded physical-NO_GO campaign higher value than further broad optimization. It still cannot authorize NO_GO because the arms are one-block, unequal-fixture and asymmetrically instrumented, while the GLM engine is broad and not reference-qualified. The minimal path is a focused correctness gate, one exact five-block matched campaign, and an optimistic physical upper-throughput scorer that still fails after granting optimal caching, perfect overlap, the best quality-passing representation, and maximal bounded MTP benefit. Until those pass and both persistent reviews independently verify the bound, DeepSeek V4 Flash must remain the default."
+}
