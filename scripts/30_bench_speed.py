@@ -109,6 +109,15 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_TOKENIZER_SHA256,
         help="required SHA-256 of --tokenizer-path",
     )
+    parser.add_argument(
+        "--output-tokenizer-path",
+        type=Path,
+        help="model-specific tokenizer used only to validate generated token IDs",
+    )
+    parser.add_argument(
+        "--output-tokenizer-sha256",
+        help="required SHA-256 of --output-tokenizer-path",
+    )
     args = parser.parse_args()
     if args.extra_body is not None:
         args.extra_body = json.loads(args.extra_body)
@@ -135,6 +144,20 @@ def parse_args() -> argparse.Namespace:
         parser.error("--base-url must not be empty")
     if not re.fullmatch(r"[0-9a-f]{64}", args.tokenizer_sha256):
         parser.error("--tokenizer-sha256 must be 64 lowercase hexadecimal digits")
+    if (args.output_tokenizer_path is None) != (
+        args.output_tokenizer_sha256 is None
+    ):
+        parser.error(
+            "--output-tokenizer-path and --output-tokenizer-sha256 "
+            "must be supplied together"
+        )
+    if (
+        args.output_tokenizer_sha256 is not None
+        and not re.fullmatch(r"[0-9a-f]{64}", args.output_tokenizer_sha256)
+    ):
+        parser.error(
+            "--output-tokenizer-sha256 must be 64 lowercase hexadecimal digits"
+        )
     return args
 
 
@@ -611,6 +634,7 @@ def raw_timing_envelope_errors(
 def run_rep(
     client: Client,
     tokenizer: Any,
+    output_tokenizer: Any,
     model: str,
     fixture_slice: str,
     context_tokens: int,
@@ -650,7 +674,9 @@ def run_rep(
             return invalid_rep(f"invalid usage.completion_tokens: {completion_tokens!r}")
         if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
             return invalid_rep(f"invalid usage.prompt_tokens: {prompt_tokens!r}")
-        client_completion_tokens = token_count(tokenizer, stream["generated_text"])
+        client_completion_tokens = token_count(
+            output_tokenizer, stream["generated_text"]
+        )
         sse_token_timestamps = stream["token_timestamps"]
         event_completion_tokens = len(sse_token_timestamps)
         if completion_tokens == 0:
@@ -679,7 +705,7 @@ def run_rep(
                 )
             reasons.extend(
                 raw_visible_output_errors(
-                    tokenizer,
+                    output_tokenizer,
                     raw_timing["token_ids"],
                     stream["generated_reasoning"],
                     stream["generated_content"],
@@ -805,6 +831,18 @@ def main() -> int:
             args.tokenizer_path, args.tokenizer_sha256
         )
         tokenizer = load_tokenizer_bytes(tokenizer_bytes)
+        output_tokenizer = tokenizer
+        output_tokenizer_digest = tokenizer_digest
+        output_tokenizer_path = args.tokenizer_path
+        if args.output_tokenizer_path is not None:
+            output_tokenizer_bytes, output_tokenizer_digest = (
+                read_verified_tokenizer_bytes(
+                    args.output_tokenizer_path,
+                    args.output_tokenizer_sha256,
+                )
+            )
+            output_tokenizer = load_tokenizer_bytes(output_tokenizer_bytes)
+            output_tokenizer_path = args.output_tokenizer_path
         fixture = FIXTURE_PATH.read_text(encoding="utf-8")
         fixture_total_tokens = token_count(tokenizer, fixture)
         if fixture_total_tokens < max(args.context_levels):
@@ -822,6 +860,11 @@ def main() -> int:
         result["metadata"]["tokenizer_sha256"] = tokenizer_digest
         result["metadata"]["tokenizer_vocab_size"] = tokenizer.get_vocab_size(
             with_added_tokens=True
+        )
+        result["metadata"]["output_tokenizer_path"] = str(output_tokenizer_path)
+        result["metadata"]["output_tokenizer_sha256"] = output_tokenizer_digest
+        result["metadata"]["output_tokenizer_vocab_size"] = (
+            output_tokenizer.get_vocab_size(with_added_tokens=True)
         )
         result["metadata"]["fixture_path"] = str(FIXTURE_PATH.relative_to(REPO_ROOT))
         result["metadata"]["fixture_total_tokens"] = fixture_total_tokens
@@ -842,6 +885,7 @@ def main() -> int:
                 run_rep(
                     client,
                     tokenizer,
+                    output_tokenizer,
                     model,
                     fixture_slices[level],
                     level,
@@ -860,6 +904,7 @@ def main() -> int:
                 rep = run_rep(
                     client,
                     tokenizer,
+                    output_tokenizer,
                     model,
                     fixture_slices[level],
                     level,

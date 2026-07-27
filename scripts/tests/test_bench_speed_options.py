@@ -302,6 +302,7 @@ class BenchOptionTests(unittest.TestCase):
                 rep = bench.run_rep(
                     Client(timing),
                     Tokenizer(),
+                    Tokenizer(),
                     "glm-5.2",
                     "",
                     0,

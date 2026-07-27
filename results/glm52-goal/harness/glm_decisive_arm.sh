@@ -90,8 +90,8 @@ fi
     --out "$OUT/result.json" \
     --stack-label "$LABEL" \
     --model-id glm-5.2 \
-    --tokenizer-path "$TOKENIZER" \
-    --tokenizer-sha256 "$TOKENIZER_SHA256" \
+    --output-tokenizer-path "$TOKENIZER" \
+    --output-tokenizer-sha256 "$TOKENIZER_SHA256" \
     "${timing_args[@]}" \
     --reps 1 --context-levels 0 --max-tokens 160 \
     --min-completion-tokens 128 --seed "$SEED"
