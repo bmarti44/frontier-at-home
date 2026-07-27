@@ -82,6 +82,20 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(glm["binary_sha256"], glm_build["binary_sha256"])
         self.assertEqual(glm["model_sha256"], glm_build["model_sha256"])
         self.assertEqual(glm["context_cap"], 1_048_576)
+        self.assertNotIn("evidence", glm_build)
+        self.assertEqual(len(glm_build["evidence_archive"]), 14)
+        for path, digest in glm_build["evidence_archive"].items():
+            self.assertTrue(
+                path.startswith("results/glm52-goal/evidence/build-repro/"),
+                path,
+            )
+            artifact = ROOT / path
+            self.assertTrue(artifact.is_file(), path)
+            self.assertEqual(
+                digest,
+                hashlib.sha256(artifact.read_bytes()).hexdigest(),
+                path,
+            )
         self.assertEqual(
             glm["build_manifest_sha256"],
             hashlib.sha256(GLM_BUILD.read_bytes()).hexdigest(),
