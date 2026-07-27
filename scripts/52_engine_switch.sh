@@ -263,17 +263,30 @@ PY
             clean_curl --config - -sS -o "$STATE/probe.json.tmp" \
                 -w '%{http_code}' --max-time 1800 \
                 -H 'Content-Type: application/json' \
-                -d '{"model":"default","prompt":"Reply with the single word ready.","max_tokens":4,"temperature":0}' \
-                "http://127.0.0.1:$AUTH_PORT/v1/completions" || true
+                -d '{"model":"default","messages":[{"role":"user","content":"Calculate 2+2. State the decimal answer clearly."}],"max_tokens":64,"temperature":0}' \
+                "http://127.0.0.1:$AUTH_PORT/v1/chat/completions" || true
     )
     unset key REPLY
     [[ $code == 200 ]] || return 1
     clean_python - "$STATE/probe.json.tmp" <<'PY'
 import json, sys
+import re
 with open(sys.argv[1], encoding="utf-8") as stream:
     value=json.load(stream)
-text=value["choices"][0]["text"].strip().lower()
-if "ready" not in text:
+message=value["choices"][0]["message"]
+finish_reason=value["choices"][0]["finish_reason"]
+if finish_reason not in {"stop", "length"}:
+    raise SystemExit("semantic readiness finish reason is invalid")
+usage=value["usage"]
+if not isinstance(usage.get("completion_tokens"), int) or usage["completion_tokens"] < 1:
+    raise SystemExit("semantic readiness completion count is invalid")
+parts=[
+    message.get(field)
+    for field in ("reasoning_content", "content")
+    if isinstance(message.get(field), str)
+]
+text="\n".join(parts)
+if not text.strip() or re.search(r"(?<![0-9])4(?![0-9])", text) is None:
     raise SystemExit("semantic readiness probe failed")
 PY
     mv -- "$STATE/probe.json.tmp" "$STATE/$profile.probe.json"
