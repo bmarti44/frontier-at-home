@@ -1402,6 +1402,8 @@ def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
 
 def validate_attempt(attempt: Path) -> None:
     """Validate the mandatory evidence triplet without trusting narration."""
+    if attempt.is_symlink():
+        raise ValueError("attempt directory must not be a symlink")
     if not attempt.is_dir():
         raise ValueError("attempt path is not a directory")
     required_hashes = {
@@ -1602,11 +1604,20 @@ def _load_state(state_dir: Path) -> dict[str, Any]:
 
 def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
     """Discover immutable attempt directories and ingest fixed verdicts."""
+    def attempt_order(path: Path) -> tuple[int, int | str]:
+        suffix = path.name.removeprefix("attempt-")
+        if path.name.startswith("attempt-") and suffix.isdigit():
+            return (0, int(suffix))
+        return (1, path.name)
+
     changed = False
     for name in GATE_ORDER:
         gate_dir = state_dir / name
         attempts = (
-            sorted(path for path in gate_dir.iterdir() if path.is_dir())
+            sorted(
+                (path for path in gate_dir.iterdir() if path.is_dir()),
+                key=attempt_order,
+            )
             if gate_dir.is_dir()
             else []
         )
