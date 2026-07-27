@@ -190,6 +190,12 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn('--token-timing-log "$OUT/server.log"', source)
         self.assertNotIn("DS4_GLM_TP_DEBUG=0", source)
 
+    def test_glm_arm_port_override_is_bounded_and_default_off(self):
+        source = GLM_ARM.read_text(encoding="utf-8")
+        self.assertIn("GLM_PORT:-8011", source)
+        self.assertIn("GLM_PORT must be an integer from 1024 through 65535", source)
+        self.assertIn("port < 1024 || port > 65535", source)
+
 
 if __name__ == "__main__":
     unittest.main()
