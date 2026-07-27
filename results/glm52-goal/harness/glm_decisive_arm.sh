@@ -15,7 +15,9 @@ ca112d42a854923df93db4a6f333a82d
 PORT=${GLM_PORT:-8011}
 CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
 IQ2_REFERENCE=${DS4_CUDA_IQ2_DOWN_REFERENCE:-1}
+NO_EXPERT_TILES=${DS4_CUDA_MOE_NO_EXPERT_TILES:-0}
 IQ2_ENV=()
+TILE_ENV=()
 PID=
 START_TICKS=
 
@@ -44,6 +46,11 @@ CACHE_GB=$cache_gb
 if [[ $IQ2_REFERENCE == 1 ]]; then
     IQ2_ENV+=(DS4_CUDA_IQ2_DOWN_REFERENCE=1)
 fi
+[[ $NO_EXPERT_TILES == 0 || $NO_EXPERT_TILES == 1 ]] \
+    || { echo "NO_EXPERT_TILES must be 0 or 1" >&2; exit 2; }
+if [[ $NO_EXPERT_TILES == 1 ]]; then
+    TILE_ENV+=(DS4_CUDA_MOE_NO_EXPERT_TILES=1)
+fi
 
 stop_server() {
     [[ ${PID:-} =~ ^[0-9]+$ ]] || return 0
@@ -61,14 +68,15 @@ stop_server() {
 trap stop_server EXIT
 
 mkdir -p -- "$OUT"
-printf 'expert_cache_gib=%s\niq2_reference=%s\n' \
-    "$CACHE_GB" "$IQ2_REFERENCE" >"$OUT/runtime.config"
+printf 'expert_cache_gib=%s\niq2_reference=%s\nno_expert_tiles=%s\n' \
+    "$CACHE_GB" "$IQ2_REFERENCE" "$NO_EXPERT_TILES" >"$OUT/runtime.config"
 env DS4_TOKEN_TIMING_LOG=1 \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
 DS4_CUDA_EXPERT_CACHE_GB="$CACHE_GB" \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
 DS4_CUDA_FETCH_THREADS=6 \
 DS4_CUDA_EXPERT_CACHE_SLRU=1 \
+    "${TILE_ENV[@]}" \
     "${IQ2_ENV[@]}" \
     "$SRC/ds4-server" --cuda -m "$MODEL" -c 8192 \
     --host 127.0.0.1 --port "$PORT" --ssd-streaming \
