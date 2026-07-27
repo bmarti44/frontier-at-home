@@ -82,6 +82,52 @@ class CgroupEvidenceExportTests(unittest.TestCase):
                 check=False,
             )
 
+    def test_symlink_root_fails_without_changing_target_permissions(self):
+        suffix = uuid.uuid4().hex[:10]
+        evidence = Path(
+            f"/home/dsv4/ds4-project/glm52-confirm-export-{suffix}"
+        )
+        protected = Path(f"/home/dsv4/ds4-project/export-protected-{suffix}")
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "GLM_SAFE_EVIDENCE_DIR": str(evidence),
+                "GLM_SAFE_KILL_FLOOR_GIB": "40",
+                "GLM_SAFE_MIN_START_GIB": "110",
+                "GLM_SAFE_TIMEOUT_S": "30",
+            }
+        )
+        result = subprocess.run(
+            [
+                str(LAUNCHER), "--tag", f"export-link-{suffix}", "--",
+                "/usr/bin/bash", "-c",
+                'umask 077; mkdir -- "$1"; printf protected >"$1/raw"; '
+                'ln -s -- "$1" "$2"; sleep 1',
+                "sh", str(protected), str(evidence),
+            ],
+            env=environment,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=45,
+            check=False,
+        )
+        try:
+            self.assertEqual(result.returncode, 16, result.stdout + result.stderr)
+            self.assertTrue(evidence.is_symlink())
+            self.assertEqual(protected.stat().st_mode & 0o777, 0o700)
+            self.assertEqual((protected / "raw").stat().st_mode & 0o777, 0o600)
+        finally:
+            self.cleanup(evidence)
+            if str(protected).startswith(
+                "/home/dsv4/ds4-project/export-protected-"
+            ):
+                subprocess.run(
+                    ["sudo", "-n", "-u", "dsv4", "rm", "-rf", "--",
+                     str(protected)],
+                    check=False,
+                )
+
     def test_success_exports_reviewer_readable_evidence(self):
         result, evidence = self.run_case(0)
         try:
