@@ -196,7 +196,7 @@ class FormulaTests(unittest.TestCase):
                         "block": block,
                         "sequence": sequence,
                         "arm": arm,
-                        "server_boot_id": f"boot-{block}",
+                        "server_boot_id": f"boot-{block}-{sequence}",
                         "fixture_sha256": "a" * 64,
                         "binary_sha256": ("b" if arm == "A" else "c") * 64,
                         "configuration_sha256": ("d" if arm == "A" else "e") * 64,
@@ -217,7 +217,7 @@ class FormulaTests(unittest.TestCase):
                     item["binary_sha256"] = "b" * 64
                     item["configuration_sha256"] = "d" * 64
             elif mutation == "same_boot":
-                broken[-1]["server_boot_id"] = broken[0]["server_boot_id"]
+                broken[-1]["server_boot_id"] = broken[-2]["server_boot_id"]
             elif mutation == "wrong_order":
                 broken[0]["arm"] = "B"
             else:
@@ -225,6 +225,102 @@ class FormulaTests(unittest.TestCase):
             with self.subTest(mutation=mutation):
                 with self.assertRaises(ValueError):
                     self.goal.validate_ab_blocks(broken)
+
+    def test_registered_w11_scorer_is_derived_from_exact_raw_record(self):
+        passing = {
+            "record_type": "context_observation",
+            "context_cap": 1_048_576,
+            "processed_tokens": 1_000_000,
+            "retrieval_pass": True,
+            "negative_control_pass": True,
+            "completed_generation": True,
+            "truncated": False,
+            "oom": False,
+            "xid": False,
+            "available_memory_gib": 10.0,
+        }
+        result = self.goal.score_registered_gate(
+            "W11", "w11.context.v1", [passing]
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        failed = dict(passing, processed_tokens=999_999)
+        self.assertEqual(
+            self.goal.score_registered_gate(
+                "W11", "w11.context.v1", [failed]
+            )["verdict"],
+            "FAIL",
+        )
+        for gate, scorer, records in (
+            ("W10", "w11.context.v1", [passing]),
+            ("W11", "unknown", [passing]),
+            ("W11", "w11.context.v1", [passing, passing]),
+            ("W11", "w11.context.v1", [{**passing, "unexpected": True}]),
+        ):
+            with self.subTest(gate=gate, scorer=scorer, records=len(records)):
+                with self.assertRaises(ValueError):
+                    self.goal.score_registered_gate(gate, scorer, records)
+
+    def test_registered_parity_scorer_recomputes_five_block_bounds(self):
+        rows = []
+        for block in range(5):
+            order = "ABBA" if block % 2 == 0 else "BAAB"
+            for sequence, arm in enumerate(order):
+                glm = arm == "A"
+                decode = 8.4 if glm else 10.0
+                rows.append(
+                    {
+                        "record_type": "matched_arm",
+                        "block": block,
+                        "sequence": sequence,
+                        "arm": arm,
+                        "profile": "glm52" if glm else "dsv4",
+                        "server_boot_id": f"boot-{block}-{sequence}",
+                        "fixture_sha256": "a" * 64,
+                        "binary_sha256": ("b" if glm else "c") * 64,
+                        "configuration_sha256": ("d" if glm else "e") * 64,
+                        "token_timestamps": [
+                            index / decode for index in range(128)
+                        ],
+                        "evaluated_tokens": 1000,
+                        "prefill_seconds": 11.9 if glm else 10.0,
+                        "warm_ttft_seconds": 1.15 if glm else 1.0,
+                        "cold_ttft_seconds": 11.5 if glm else 10.0,
+                        "available_memory_gib": 20.0,
+                        "truncated": False,
+                        "oom": False,
+                        "xid": False,
+                        "failures": [],
+                    }
+                )
+        result = self.goal.score_registered_gate(
+            "parity", "parity.performance.v1", rows
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        broken = [dict(row) for row in rows]
+        broken[0]["token_timestamps"] = [
+            index / 7.0 for index in range(128)
+        ]
+        self.assertEqual(
+            self.goal.score_registered_gate(
+                "parity", "parity.performance.v1", broken
+            )["verdict"],
+            "FAIL",
+        )
+        for mutation in ("short", "duplicate_boot", "wrong_profile", "oom"):
+            malformed = [dict(row) for row in rows]
+            if mutation == "short":
+                malformed[0]["token_timestamps"] = [0.0] * 127
+            elif mutation == "duplicate_boot":
+                malformed[-1]["server_boot_id"] = malformed[-2]["server_boot_id"]
+            elif mutation == "wrong_profile":
+                malformed[0]["profile"] = "dsv4"
+            else:
+                malformed[0]["oom"] = True
+            with self.subTest(mutation=mutation):
+                with self.assertRaises(ValueError):
+                    self.goal.score_registered_gate(
+                        "parity", "parity.performance.v1", malformed
+                    )
 
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
