@@ -90,6 +90,11 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("IQ2_REFERENCE must be 0 or 1", source)
         self.assertIn("glm52-b4734de4/tokenizer.json", source)
         self.assertNotIn("DS4_CUDA_EXPERT_CACHE_GB=72", source)
+        self.assertIn("DS4_CUDA_MOE_NO_EXPERT_TILES:-0", source)
+        self.assertIn("NO_EXPERT_TILES must be 0 or 1", source)
+
+        cgroup = GLM_CGROUP.read_text(encoding="utf-8")
+        self.assertIn("DS4_CUDA_MOE_NO_EXPERT_TILES", cgroup)
 
     def test_headless_foundation_runner_restores_display_and_fails_closed(self):
         scheduler = HEADLESS_SCHEDULER.read_text(encoding="utf-8")
