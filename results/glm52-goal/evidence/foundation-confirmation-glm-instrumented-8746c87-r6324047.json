@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "sha256": "8746c8725f4b5a6b198de5245748d8216b351c6c7a83bf165201972f97f04301"
+  },
+  "drand_round": 6324047,
+  "foundation_seed": 4250036357,
+  "binary_sha256": "0bbf570bbd7aa6474dd5b5448271754539e6246ac6bcc4f465ed623057cc4e6f",
+  "glm52": {
+    "timing_source": "server_raw_token_log",
+    "prompt_tokens": 61,
+    "completion_tokens": 160,
+    "decode_tokens_per_second": 1.2329060456650962,
+    "ttft_seconds": 52.955777147999925,
+    "prefill_tokens_per_second_including_queue_and_setup": 1.1519045378093162,
+    "suite_valid": true
+  },
+  "dsv4_reference": {
+    "source": "foundation-dsv4-streaming-21b9017-r6323991",
+    "timing_source": "sse_content_events",
+    "prompt_tokens": 52,
+    "completion_tokens": 160,
+    "decode_tokens_per_second": 17.547448961123834,
+    "ttft_seconds": 0.11661339900001622,
+    "suite_valid": true
+  },
+  "single_block_comparison_not_acceptance": {
+    "decode_ratio": 0.07026126979463425,
+    "ttft_ratio": 454.1140006389194,
+    "decode_target_ratio": 0.8,
+    "fixtures_are_not_equal": true,
+    "five_fresh_server_blocks_are_missing": true,
+    "confidence_intervals_are_missing": true
+  },
+  "safety": {
+    "memwatch_samples": 651,
+    "minimum_mem_available_gib": 88.197773,
+    "watchdog_floor_gib": 18,
+    "safe_wrapper_killed_process": false,
+    "kernel_oom_or_xid_records": 0,
+    "swap_used_bytes_after_run": 352256,
+    "server_processes_after_run": 0,
+    "port_8022_released": true,
+    "mem_available_after_gib": 115.0
+  },
+  "result": "NO_RESULT",
+  "reason": "The GLM production-path measurement is valid, but the cross-model comparison is a one-block, unequal-fixture diagnostic and cannot produce a parity verdict."
+}
