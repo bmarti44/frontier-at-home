@@ -94,7 +94,7 @@ systemctl daemon-reload
 systemctl disable deepseek-v4-flash-llamacpp.service
 systemctl enable dsv4-engine-restore.service
 systemctl restart dsv4-authhelper.service
-systemctl reset-failed deepseek-v4-flash-llamacpp.service
+systemctl reset-failed deepseek-v4-flash-llamacpp.service 2>/dev/null || true
 
 [[ -e $HOLD ]] || die "maintenance hold disappeared during install"
 [[ $(systemctl is-active deepseek-v4-flash-llamacpp.service || true) != active ]] ||
