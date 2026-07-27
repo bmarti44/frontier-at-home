@@ -94,7 +94,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
     def test_harness_does_not_lower_emergency_floor(self):
         source = HARNESS.read_text(encoding="utf-8")
         self.assertNotIn("GLM_SAFE_KILL_FLOOR_GIB=10", source)
-        self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=18", source)
+        self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=40", source)
         safe_source = GLM_SAFE.read_text(encoding="utf-8")
         self.assertIn("GLM_SAFE_MIN_START_GIB=110", source)
         self.assertIn("setsid timeout", safe_source)
