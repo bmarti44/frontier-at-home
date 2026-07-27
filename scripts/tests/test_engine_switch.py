@@ -104,6 +104,11 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("touch --date=", source)
         self.assertIn("-j2", source)
         self.assertIn("cmp -s", source)
+        self.assertIn(
+            "CANONICAL_WORK_ROOT=/home/bmarti44/.cache/glm52-ds4-repro-v1",
+            source,
+        )
+        self.assertIn('[[ $WORK_ROOT == "$CANONICAL_WORK_ROOT" ]]', source)
 
     def test_authenticated_probe_keeps_bearer_secret_out_of_argv(self):
         source = SCRIPT.read_text()
