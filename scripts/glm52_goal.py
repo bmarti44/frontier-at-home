@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
+import inspect
 import json
 import math
 import os
@@ -836,6 +837,56 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def registered_scorer_digest(scorer_id: str) -> str:
+    """Hash only the fixed formula and dependencies for one scorer version."""
+    dependencies: dict[str, tuple[Any, ...]] = {
+        "foundation.v1": (
+            _score_foundation,
+            _score_foundation_baseline,
+            _require_exact_keys,
+            _finite_number,
+            decode_tokens_per_second,
+            _is_sha256,
+        ),
+        "w11.context.v1": (
+            _score_w11,
+            context_verdict,
+            _require_exact_keys,
+        ),
+        "parity.performance.v1": (
+            _score_parity,
+            performance_verdict,
+            paired_ratio_bound,
+            _finite_positive,
+            _t95,
+            validate_raw_record,
+            validate_ab_blocks,
+            decode_tokens_per_second,
+            _require_exact_keys,
+            _finite_number,
+            _is_sha256,
+        ),
+        "review.final.v1": (
+            _score_review,
+            _review_issue_ids,
+            _require_exact_keys,
+        ),
+    }
+    functions = dependencies.get(scorer_id)
+    if functions is None:
+        raise ValueError(f"unknown registered scorer: {scorer_id}")
+    digest = hashlib.sha256()
+    digest.update(f"scorer_id={scorer_id}\n".encode())
+    for function in functions:
+        digest.update(f"function={function.__name__}\n".encode())
+        digest.update(inspect.getsource(function).encode())
+    if scorer_id == "parity.performance.v1":
+        digest.update(
+            json.dumps(_T95, sort_keys=True, separators=(",", ":")).encode()
+        )
+    return digest.hexdigest()
+
+
 def score_registered_gate(
     gate: str, scorer_id: str, records: Iterable[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -907,6 +958,7 @@ def validate_attempt(attempt: Path) -> None:
     if not isinstance(artifacts, dict):
         raise ValueError("manifest artifacts map is missing")
     root = attempt.resolve()
+    artifact_paths: dict[str, Path] = {}
     for field in required_hashes:
         if not _is_sha256(manifest.get(field)):
             raise ValueError(f"manifest {field} is invalid")
@@ -919,6 +971,7 @@ def validate_attempt(attempt: Path) -> None:
             raise ValueError(f"manifest artifact {artifact_name} escapes or is absent")
         if _sha256(artifact) != manifest[field]:
             raise ValueError(f"manifest artifact {artifact_name} hash mismatch")
+        artifact_paths[artifact_name] = artifact
     raw_path = attempt / "raw.jsonl"
     try:
         lines = raw_path.read_text(encoding="utf-8").splitlines()
@@ -953,8 +1006,21 @@ def validate_attempt(attempt: Path) -> None:
         raise ValueError(
             f"no fixed terminal scorer is registered for {manifest['gate']}"
         )
-    if manifest["scorer_sha256"] != _sha256(Path(__file__)):
-        raise ValueError("manifest scorer is not the executing fixed scorer")
+    descriptor = _read_strict_json(artifact_paths["scorer"])
+    if not isinstance(descriptor, dict) or set(descriptor) != {
+        "schema_version",
+        "scorer_id",
+        "implementation_sha256",
+    }:
+        raise ValueError("scorer artifact is not a strict descriptor")
+    if descriptor.get("schema_version") != 1:
+        raise ValueError("scorer descriptor schema is invalid")
+    if descriptor.get("scorer_id") != scorer_id:
+        raise ValueError("scorer descriptor ID does not match summary")
+    if descriptor.get("implementation_sha256") != registered_scorer_digest(
+        scorer_id
+    ):
+        raise ValueError("scorer descriptor does not match fixed implementation")
     recomputed = score_registered_gate(manifest["gate"], scorer_id, records)
     if summary != recomputed:
         raise ValueError("summary does not exactly match fixed scorer output")
