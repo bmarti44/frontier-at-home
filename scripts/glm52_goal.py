@@ -1257,6 +1257,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
         validate_attempt,
         validate_manifest_lineage,
         validate_source_provenance,
+        validate_profile_artifact_bindings,
         validate_record_artifact_bindings,
         _read_strict_json,
         _unique_pairs,
@@ -1430,6 +1431,63 @@ def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
         raise ValueError("source provenance git tree does not match candidate")
 
 
+def validate_profile_artifact_bindings(
+    manifest: dict[str, Any], artifact_paths: dict[str, Path]
+) -> None:
+    """Bind terminal GLM artifacts to the profile committed in the candidate."""
+    if manifest.get("gate") not in {"foundation", "W11", "parity"}:
+        return
+    candidate_hash = manifest.get("candidate_hash")
+    profile_result = subprocess.run(
+        ["git", "show", f"{candidate_hash}:configs/glm52-profile.json"],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        env={
+            "HOME": os.environ.get("HOME", ""),
+            "PATH": os.environ.get("PATH", ""),
+            "LANG": "C.UTF-8",
+        },
+    )
+    if profile_result.returncode != 0:
+        raise ValueError("approved GLM profile is absent from candidate")
+    try:
+        profile = json.loads(
+            profile_result.stdout.decode("utf-8"),
+            object_pairs_hook=lambda pairs: _unique_pairs(
+                pairs, "approved GLM profile"
+            ),
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite profile value {value}")
+            ),
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"approved GLM profile is invalid: {exc}") from exc
+    _require_exact_keys(
+        profile,
+        {"profile", "binary_sha256", "model_sha256", "context_cap"},
+        "approved GLM profile",
+    )
+    if profile["profile"] != "glm52" or profile["context_cap"] != 1_048_576:
+        raise ValueError("approved GLM profile identity or context cap is invalid")
+    for field in ("binary_sha256", "model_sha256"):
+        if not _is_sha256(profile[field]) or manifest.get(field) != profile[field]:
+            raise ValueError(
+                f"manifest {field} does not match approved GLM profile"
+            )
+    configuration = artifact_paths.get("configuration")
+    if (
+        configuration is None
+        or configuration.read_bytes() != profile_result.stdout
+        or manifest.get("configuration_sha256")
+        != hashlib.sha256(profile_result.stdout).hexdigest()
+    ):
+        raise ValueError(
+            "configuration artifact does not match approved GLM profile"
+        )
+
+
 def validate_attempt(attempt: Path) -> None:
     """Validate the mandatory evidence triplet without trusting narration."""
     if attempt.is_symlink():
@@ -1494,6 +1552,7 @@ def validate_attempt(attempt: Path) -> None:
             raise ValueError(f"manifest artifact {artifact_name} hash mismatch")
         artifact_paths[artifact_name] = artifact
     validate_source_provenance(artifact_paths["source"], candidate_hash)
+    validate_profile_artifact_bindings(manifest, artifact_paths)
     raw_path = attempt / "raw.jsonl"
     try:
         lines = raw_path.read_text(encoding="utf-8").splitlines()

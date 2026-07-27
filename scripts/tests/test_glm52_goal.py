@@ -908,6 +908,13 @@ class FormulaTests(unittest.TestCase):
                 paths[name] = path
             manifest = {
                 "gate": "W11",
+                "candidate_hash": subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=ROOT,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    check=True,
+                ).stdout.strip(),
                 "binary_sha256": hashlib.sha256(
                     paths["binary"].read_bytes()
                 ).hexdigest(),
