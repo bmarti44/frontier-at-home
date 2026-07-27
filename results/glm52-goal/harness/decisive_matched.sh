@@ -87,7 +87,8 @@ run_glm() {
     env GLM_CANDIDATE_SRC="${GLM_CANDIDATE_SRC:-}" \
         GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
         GLM_SAFE_EXPECTED_BINARY_SHA256="${GLM_SAFE_EXPECTED_BINARY_SHA256:-}" \
-        GLM_SAFE_KILL_FLOOR_GIB=18 GLM_SAFE_MIN_START_GIB=110 \
+        GLM_SAFE_KILL_FLOOR_GIB=40 GLM_SAFE_MIN_START_GIB=110 \
+        GLM_SAFE_EVIDENCE_DIR="$arm_out" \
         GLM_SAFE_TIMEOUT_S=2400 \
         "$CGROUP" --tag "$label" -- \
         bash "$GLM_ARM" "$arm_out" "$label" "$SEED"

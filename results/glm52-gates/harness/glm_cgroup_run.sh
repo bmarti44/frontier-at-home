@@ -33,7 +33,8 @@ TIMEOUT_S=$((10#$TIMEOUT_S))
 (( KILL_FLOOR_GIB >= 18 && KILL_FLOOR_GIB <= 64 )) || exit 2
 (( TIMEOUT_S >= 1 && TIMEOUT_S <= 3600 )) || exit 2
 if [[ -n $EVIDENCE_DIR ]]; then
-  [[ $EVIDENCE_DIR =~ ^/home/dsv4/ds4-project/glm52-confirm-[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ]] || {
+  [[ $EVIDENCE_DIR =~ ^/home/dsv4/ds4-project/glm52-confirm-[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ||
+     $EVIDENCE_DIR =~ ^/home/dsv4/ds4-project/glm52-decisive-[A-Za-z0-9][A-Za-z0-9._-]{0,79}/[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ]] || {
     echo "invalid GLM_SAFE_EVIDENCE_DIR" >&2
     exit 2
   }
