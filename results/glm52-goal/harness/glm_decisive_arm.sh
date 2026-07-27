@@ -35,7 +35,6 @@ stop_server() {
 trap stop_server EXIT
 
 mkdir -p -- "$OUT"
-DS4_GLM_TP_DEBUG=0 \
 DS4_TOKEN_TIMING_LOG=1 \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
 DS4_CUDA_EXPERT_CACHE_GB="$EXPERT_CACHE_GB" \
