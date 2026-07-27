@@ -20,17 +20,10 @@ RemainAfterExit=yes
 User=dsv4
 Group=dsv4
 Environment=HOME=/home/dsv4
-# Projected-free memory floor for the startup budget gate. With ub>512 the
-# launcher charges overhead-gib 8 vs ~1 GiB measured real overhead. Honest
-# accounting (sol review 2026-07-24): floor 14 + overhead 8 EQUALS the
-# original 16+6 admission threshold (112.2 GiB required free) while ub=2048
-# consumes ~1 GiB more at runtime, so modeled margin above the 12 GiB
-# watchdog is ~2 GiB at the admission boundary (was ~4). Accepted tradeoff
-# for 2x prefill on this single-user host: measured post-load free at
-# ub=2048 is ~18.4 GiB in practice, and the 1 Hz watchdog remains the hard
-# backstop (it cannot catch sub-second spikes; no gate here can).
-# Floor 15 blocked desktop-loaded starts by 0.9 GiB (2026-07-23).
-Environment=DSV4_MEM_FLOOR_GIB=14
+# Projected-free memory floor for the startup budget gate. Keep this at the
+# launcher's hard minimum so the installed service remains startable while
+# preserving at least 18 GiB of modeled post-load headroom.
+Environment=DSV4_MEM_FLOOR_GIB=18
 # Production serves the fused-hyper-connection build (llama.cpp 0dc74e3, PR
 # #25585): validated correct (GSM8K dev 97/100, identical to the 32e789fd
 # benchmark build; needle retrieval + golden gates pass) and ~14% faster decode
