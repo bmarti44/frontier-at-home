@@ -49,6 +49,11 @@ class BenchOptionTests(unittest.TestCase):
         self.assertEqual(args.min_completion_tokens, 128)
         self.assertEqual(args.seed, 123)
         self.assertEqual(args.model_id, "glm-5.2")
+        self.assertEqual(args.tokenizer_path, bench.TOKENIZER_PATH)
+        self.assertEqual(
+            args.tokenizer_sha256,
+            bench.DEFAULT_TOKENIZER_SHA256,
+        )
 
     def test_any_invalid_or_missing_rep_fails_the_cell(self):
         bench = load_module()
@@ -56,6 +61,14 @@ class BenchOptionTests(unittest.TestCase):
         self.assertFalse(bench.reps_are_complete([{"valid": False}], 1))
         self.assertFalse(bench.reps_are_complete([], 1))
         self.assertFalse(bench.reps_are_complete([{"valid": True}], 2))
+
+    def test_tokenizer_artifact_must_match_expected_hash(self):
+        bench = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "tokenizer.json"
+            path.write_bytes(b"substituted tokenizer")
+            with self.assertRaisesRegex(RuntimeError, "tokenizer SHA-256 mismatch"):
+                bench.verify_tokenizer_hash(path, "0" * 64)
 
     def test_observable_output_not_server_usage_controls_decode_validity(self):
         bench = load_module()
@@ -145,6 +158,12 @@ class BenchOptionTests(unittest.TestCase):
                 9: "</think>",
                 10: "answer",
             }
+            sequences = {
+                "alpha beta": [7, 8],
+                "alphaanswer": [7, 10],
+                "<think>": [],
+                "</think>": [9],
+            }
 
             def get_vocab_size(self, with_added_tokens=True):
                 self.assert_added = with_added_tokens
@@ -154,8 +173,7 @@ class BenchOptionTests(unittest.TestCase):
                 return "".join(self.pieces[token] for token in ids)
 
             def encode(self, text, add_special_tokens=False):
-                reverse = {value: key for key, value in self.pieces.items()}
-                return Encoding([reverse[text]])
+                return Encoding(self.sequences[text])
 
         tokenizer = Tokenizer()
         self.assertEqual(
@@ -180,6 +198,16 @@ class BenchOptionTests(unittest.TestCase):
         self.assertTrue(
             bench.raw_visible_output_errors(
                 tokenizer, [999_999_999], "alpha"
+            )
+        )
+
+        # Identical decoded bytes are insufficient: a longer noncanonical
+        # decomposition would inflate N and therefore the reported throughput.
+        tokenizer.pieces.update({1: "a", 2: "aaaaaaaa"})
+        tokenizer.sequences["a" * 128] = [2] * 16
+        self.assertTrue(
+            bench.raw_visible_output_errors(
+                tokenizer, [1] * 128, "a" * 128
             )
         )
 
