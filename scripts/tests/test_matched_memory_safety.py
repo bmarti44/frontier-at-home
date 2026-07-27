@@ -305,6 +305,17 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("DSV4_PORT must be an integer from 1024 through 65535", source)
         self.assertIn("port < 1024 || port > 65535", source)
 
+    def test_launcher_stop_tolerates_watchdog_exit_after_engine_shutdown(self):
+        source = DSV4_LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn(
+            'if "$memwatch_verified" && pid_alive "$memwatch_pid"; then',
+            source,
+        )
+        self.assertIn(
+            'verify_aux_identity "$memwatch_pid" "$memwatch_start_ticks"',
+            source,
+        )
+
     def test_candidate_source_override_is_bound_but_runtime_flags_are_frozen(self):
         source = GLM_ARM.read_text(encoding="utf-8")
         self.assertIn("GLM_CANDIDATE_SRC:-", source)
