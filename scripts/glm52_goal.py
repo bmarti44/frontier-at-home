@@ -1335,24 +1335,16 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
         ]
         if len(set(flattened)) != len(flattened):
             raise ValueError("one review issue appears at multiple severities")
-        expected_score = max(
-            0,
-            100
-            - 25 * len(issues["critical"])
-            - 10 * len(issues["high"])
-            - 3 * len(issues["medium"])
-            - len(issues["low"]),
-        )
         claimed = record["claimed_score"]
         if (
             not isinstance(claimed, int)
             or isinstance(claimed, bool)
-            or claimed != expected_score
+            or not 0 <= claimed <= 100
         ):
-            raise ValueError("claimed reviewer score does not match the rubric")
+            raise ValueError("reviewer-assigned score must be an integer from 0 to 100")
         expected_verdict = (
             "ACCEPT"
-            if expected_score >= 90
+            if claimed >= 90
             and not issues["critical"]
             and not issues["high"]
             else "REJECT"
@@ -1377,7 +1369,7 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
             prior_ids.append(issue_id)
         if len(set(prior_ids)) != len(prior_ids):
             raise ValueError("prior_issue_status contains duplicate IDs")
-        scores[reviewer] = expected_score
+        scores[reviewer] = claimed
         counts[reviewer] = {
             severity: len(values) for severity, values in issues.items()
         }
@@ -1394,7 +1386,7 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
     return {
         "scorer_id": "review.final.v1",
-        "formula_version": 1,
+        "formula_version": 2,
         "candidate_hash": next(iter(candidate_hashes)),
         "review_round": next(iter(rounds)),
         "scores": scores,
