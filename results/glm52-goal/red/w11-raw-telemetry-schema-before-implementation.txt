@@ -1,0 +1,11 @@
+Candidate under test: b380b6c52fab34594c7330343e5c4cf7bca94673
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_registered_w11_scorer_is_derived_from_exact_raw_record
+
+Result: genuine RED
+
+The existing W11 scorer rejected the preregistered staged telemetry fields
+because it still expected one self-reported context total and pass/fail
+booleans. Missing production fields included staged generation, retrieval
+results, negative controls, memory samples, failure events, OOM events, and
+Xid events.

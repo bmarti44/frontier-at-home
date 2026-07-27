@@ -32,6 +32,55 @@ def replacement_attempt_validator(_attempt):
     raise ValueError("mutated validator")
 
 
+def w11_record(hashes=None):
+    identities = hashes or {
+        "binary_sha256": "a" * 64,
+        "configuration_sha256": "b" * 64,
+        "model_sha256": "c" * 64,
+        "tokenizer_sha256": "d" * 64,
+        "fixture_sha256": "e" * 64,
+    }
+    stages = []
+    for context_cap in (131_072, 262_144, 524_288, 1_048_576):
+        stages.append(
+            {
+                "context_cap": context_cap,
+                "processed_tokens": context_cap,
+                "completed_output_tokens": 8,
+                "token_timestamps": [index / 10 for index in range(8)],
+                "output_sha256": f"{context_cap // 131072:x}" * 64,
+                "finish_reason": "stop",
+                "truncated": False,
+            }
+        )
+    retrieval = [
+        {
+            "case_id": f"needle-{index}",
+            "position": position,
+            "expected_sha256": str(index + 1) * 64,
+            "observed_sha256": str(index + 1) * 64,
+        }
+        for index, position in enumerate((16_384, 524_288, 983_040))
+    ]
+    return {
+        "record_type": "context_observation",
+        **identities,
+        "stages": stages,
+        "retrieval_results": retrieval,
+        "negative_control_results": [
+            {
+                "case_id": "absent-0",
+                "expected_sha256": "4" * 64,
+                "observed_sha256": "4" * 64,
+            }
+        ],
+        "memory_samples_gib": [20.0, 18.0, 14.0, 10.0],
+        "failure_events": [],
+        "oom_events": [],
+        "xid_events": [],
+    }
+
+
 class FormulaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -231,28 +280,13 @@ class FormulaTests(unittest.TestCase):
                     self.goal.validate_ab_blocks(broken)
 
     def test_registered_w11_scorer_is_derived_from_exact_raw_record(self):
-        passing = {
-            "record_type": "context_observation",
-            "binary_sha256": "a" * 64,
-            "configuration_sha256": "b" * 64,
-            "model_sha256": "c" * 64,
-            "tokenizer_sha256": "d" * 64,
-            "fixture_sha256": "e" * 64,
-            "context_cap": 1_048_576,
-            "processed_tokens": 1_000_000,
-            "retrieval_pass": True,
-            "negative_control_pass": True,
-            "completed_generation": True,
-            "truncated": False,
-            "oom": False,
-            "xid": False,
-            "available_memory_gib": 10.0,
-        }
+        passing = w11_record()
         result = self.goal.score_registered_gate(
             "W11", "w11.context.v1", [passing]
         )
         self.assertEqual(result["verdict"], "PASS")
-        failed = dict(passing, processed_tokens=999_999)
+        failed = json.loads(json.dumps(passing))
+        failed["stages"][-1]["processed_tokens"] = 999_999
         self.assertEqual(
             self.goal.score_registered_gate(
                 "W11", "w11.context.v1", [failed]
@@ -267,12 +301,22 @@ class FormulaTests(unittest.TestCase):
             (
                 "W11",
                 "w11.context.v1",
-                [{**passing, "available_memory_gib": "10.0"}],
+                [
+                    {
+                        **passing,
+                        "memory_samples_gib": [20.0, 18.0, 14.0, "10.0"],
+                    }
+                ],
             ),
             (
                 "W11",
                 "w11.context.v1",
-                [{**passing, "available_memory_gib": 10**10000}],
+                [
+                    {
+                        **passing,
+                        "memory_samples_gib": [20.0, 18.0, 14.0, 10**10000],
+                    }
+                ],
             ),
         ):
             with self.subTest(gate=gate, scorer=scorer, records=len(records)):
@@ -715,23 +759,18 @@ class FormulaTests(unittest.TestCase):
                     "seed_sha256": seed,
                 },
             }
-            observation = {
-                "record_type": "context_observation",
-                "binary_sha256": manifest["binary_sha256"],
-                "configuration_sha256": manifest["configuration_sha256"],
-                "model_sha256": manifest["model_sha256"],
-                "tokenizer_sha256": manifest["tokenizer_sha256"],
-                "fixture_sha256": manifest["fixture_sha256"],
-                "context_cap": 1_048_576,
-                "processed_tokens": 1_000_000,
-                "retrieval_pass": True,
-                "negative_control_pass": True,
-                "completed_generation": True,
-                "truncated": False,
-                "oom": False,
-                "xid": False,
-                "available_memory_gib": 10.0,
-            }
+            observation = w11_record(
+                {
+                    name: manifest[name]
+                    for name in (
+                        "binary_sha256",
+                        "configuration_sha256",
+                        "model_sha256",
+                        "tokenizer_sha256",
+                        "fixture_sha256",
+                    )
+                }
+            )
             summary = self.goal.score_registered_gate(
                 "W11", scorer_id, [observation]
             )
