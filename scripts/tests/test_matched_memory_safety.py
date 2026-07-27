@@ -6,6 +6,7 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import unittest
+import os
 from pathlib import Path
 
 
@@ -104,12 +105,32 @@ class MatchedHarnessContractTests(unittest.TestCase):
             "GLM_SAFE_MIN_START_GIB",
             "GLM_SAFE_TIMEOUT_S",
         ):
-            self.assertIn(f"invalid {variable}", source)
+            self.assertIn(f'"{variable}:', source)
+            self.assertIn(f'config_error "{variable}"', source)
         self.assertIn("KILL_FLOOR_GIB < 18", source)
         self.assertIn("MIN_START_GIB < 110", source)
         self.assertIn("TIMEOUT_S > 3600", source)
         self.assertIn("VLIMIT_KB > 419430400", source)
         self.assertIn("sleep 0.25", source)
+        for variable, value in (
+            ("GLM_SAFE_VLIMIT_KB", "999999999"),
+            ("GLM_SAFE_VLIMIT_KB", "9" * 100),
+            ("GLM_SAFE_KILL_FLOOR_GIB", "0"),
+            ("GLM_SAFE_MIN_START_GIB", "0"),
+            ("GLM_SAFE_TIMEOUT_S", "3601"),
+        ):
+            environment = os.environ.copy()
+            environment[variable] = value
+            result = subprocess.run(
+                ["bash", str(GLM_SAFE), "--", "/bin/true"],
+                env=environment,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2, result)
+            self.assertIn(f"invalid {variable}", result.stderr)
 
     def test_production_watchdog_reserves_18_gib(self):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")

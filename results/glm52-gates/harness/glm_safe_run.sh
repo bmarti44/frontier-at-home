@@ -5,9 +5,9 @@
 #   sudo -u dsv4 bash glm_safe_run.sh [--tag NAME] -- <command...>
 #
 # Protections (layered, all mandatory):
-#   1. ulimit -v hard cap (default 95 GiB): runaway mmap/managed allocations
+#   1. ulimit -v hard cap (default 400 GiB): runaway mmap/managed allocations
 #      fail with ENOMEM inside the process instead of freezing the kernel.
-#   2. 1-second sidecar sampler: MemAvailable + engine VmRSS + read_bytes,
+#   2. 4 Hz sidecar sampler: MemAvailable + engine VmRSS + read_bytes,
 #      appended to a PERSISTENT log and fdatasync'd every sample, so the
 #      final seconds survive a hard freeze/power cycle.
 #   3. Kill floor (default 18 GiB MemAvailable): sampler SIGKILLs the whole
@@ -21,8 +21,44 @@ KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 MIN_START_GIB=${GLM_SAFE_MIN_START_GIB:-110}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 TAG=run
-if [[ "${1:-}" == --tag ]]; then TAG=$2; shift 2; fi
+config_error() {
+  printf 'FATAL invalid %s\n' "$*" >&2
+  exit 2
+}
+for pair in \
+  "GLM_SAFE_VLIMIT_KB:$VLIMIT_KB" \
+  "GLM_SAFE_KILL_FLOOR_GIB:$KILL_FLOOR_GIB" \
+  "GLM_SAFE_MIN_START_GIB:$MIN_START_GIB" \
+  "GLM_SAFE_TIMEOUT_S:$TIMEOUT_S"
+do
+  name=${pair%%:*}
+  value=${pair#*:}
+  [[ $value =~ ^[0-9]{1,9}$ ]] || config_error "$name"
+done
+if (( VLIMIT_KB < 1048576 || VLIMIT_KB > 419430400 )); then
+  config_error "GLM_SAFE_VLIMIT_KB"
+fi
+if (( KILL_FLOOR_GIB < 18 || KILL_FLOOR_GIB > 64 )); then
+  config_error "GLM_SAFE_KILL_FLOOR_GIB"
+fi
+if (( MIN_START_GIB < 110 || MIN_START_GIB > 119 )); then
+  config_error "GLM_SAFE_MIN_START_GIB"
+fi
+if (( TIMEOUT_S < 1 || TIMEOUT_S > 3600 )); then
+  config_error "GLM_SAFE_TIMEOUT_S"
+fi
+if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then
+  config_error "memory floors"
+fi
+if [[ "${1:-}" == --tag ]]; then
+  [[ -n ${2:-} ]] || config_error "tag"
+  TAG=$2
+  shift 2
+fi
+[[ $TAG =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]] ||
+  config_error "tag"
 [[ "${1:-}" == -- ]] && shift
+(( $# > 0 )) || config_error "command"
 
 TS=$(date +%Y%m%d-%H%M%S)
 DIR=/home/dsv4/ds4-project/glm52-crashlog/$TS-$TAG
@@ -87,7 +123,7 @@ if [[ $actual_pg != "$PG" ]]; then
   wait "$WRAP" 2>/dev/null || true
   exit 10
 fi
-plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 1 Hz)"
+plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 4 Hz)"
 : > "$SAMP"
 
 KILLED=""
@@ -109,7 +145,7 @@ while kill -0 "$WRAP" 2>/dev/null; do
     KILLED=floor
     break
   fi
-  sleep 1
+  sleep 0.25
 done
 wait "$WRAP" 2>/dev/null; RC=$?
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
