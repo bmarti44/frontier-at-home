@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "09b6a9feb4abe7f83723d14d709590483d356b2b",
+  "drand_round": 6324007,
+  "foundation_seed": 3439734307,
+  "source_commit": "0a7ad776b9068348e6cb09df8cafa9cadd285298",
+  "binary_sha256": "47c872dd5850ed7f96aa1099e4ac40911cd90ba21756d357b3fa0af9d35c22f3",
+  "attempts": [
+    {
+      "name": "unchanged_clean_indexed_prefill",
+      "result": "FAIL",
+      "http_error": "cuda GLM prefill failed",
+      "minimum_mem_available_gib": 104.027107,
+      "safe_wrapper_killed_process": false
+    },
+    {
+      "name": "diagnostic_token_major_prefill",
+      "result": "FAIL",
+      "configuration_change": "DS4_GLM_STREAMING_TOKEN_PREFILL_MAX=64",
+      "http_error": "cuda GLM prefill failed",
+      "minimum_mem_available_gib": 104.155708,
+      "safe_wrapper_killed_process": false
+    }
+  ],
+  "independent_source_diagnosis": {
+    "model_routed_gate_type": 16,
+    "model_routed_down_type": 16,
+    "clean_cuda_dispatch_accepts": [
+      [12, 12],
+      [16, 10]
+    ],
+    "clean_cuda_dispatch_rejects_16_16": true,
+    "reproduction": "ds4_cuda.cu routed_moe_launch returns 0 when gate_type is 16 and down_type is 16"
+  },
+  "safety": {
+    "kernel_oom_or_xid_records": 0,
+    "swap_used_bytes_after_attempts": 352256,
+    "server_processes_after_attempts": 0,
+    "port_8022_released": true,
+    "mem_available_after_gib": 115.0
+  },
+  "result": "RED_CONFIRMED",
+  "reason": "Fresh clean source cannot execute this model's all-IQ2_XXS routed expert format. Both canonical indexed prefill and a token-major diagnostic fail closed before producing output."
+}
