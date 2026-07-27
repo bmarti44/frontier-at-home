@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "sha256": "9e5479d2c7f082c1eda6ac40e7ea48250a951f3f0280fce06dd3e6920f16893a"
+  },
+  "drand_round": 6324035,
+  "foundation_seed": 1886253123,
+  "binary_sha256": "7327937805f18340c29dcd4891872546013dba91afd5c53f66ec49acb7582c74",
+  "observations_not_accepted_as_metrics": {
+    "ttft_seconds": 53.91392319099987,
+    "decode_tokens_per_second": 1.2348929855132191,
+    "prefill_tokens_per_second_including_queue_and_setup": 1.0943369821369107,
+    "server_completion_tokens": 160,
+    "client_completion_tokens": 166,
+    "timestamped_sse_content_events": 157,
+    "process_read_bytes_high_water": 1300339957760
+  },
+  "failed_assertion": "timestamp/client token mismatch: events=157, client=166",
+  "safety": {
+    "memwatch_samples": 648,
+    "minimum_mem_available_gib": 88.1959,
+    "watchdog_floor_gib": 18,
+    "safe_wrapper_killed_process": false,
+    "kernel_oom_or_xid_records": 0,
+    "swap_used_bytes_after_run": 352256,
+    "server_processes_after_run": 0,
+    "port_8022_released": true,
+    "mem_available_after_gib": 115.0
+  },
+  "result": "NO_RESULT",
+  "reason": "The fixed metric script rejected unequal server, client-tokenizer, and timestamp-event counts. Observed timing values are preserved but have no acceptance authority."
+}

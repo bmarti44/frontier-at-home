@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "stack_label": "foundation-glm-streaming-9e5479d-r6324035",
+    "base_url": "http://127.0.0.1:8022",
+    "started_at": "2026-07-27T11:35:35.071615+00:00",
+    "finished_at": "2026-07-27T11:38:35.540088+00:00",
+    "reps": 1,
+    "warmup_reps": 0,
+    "ignore_eos_supported": false,
+    "max_tokens": 160,
+    "min_completion_tokens": 128,
+    "temperature": 0,
+    "seed": 1886253123,
+    "prefill_rate_label": "incl. queue+setup",
+    "iqr_method": "inclusive quartiles",
+    "model": "glm-5.2",
+    "fixture_path": "fixtures/ctx-32k.txt",
+    "fixture_total_tokens": 40657
+  },
+  "cells": [
+    {
+      "ctx_tokens": 0,
+      "reps": [
+        {
+          "ttft_s": 53.91392319099987,
+          "decode_tok_s": 1.2348929855132191,
+          "prefill_tok_s": 1.0943369821369107,
+          "completion_tokens": 157,
+          "valid": false,
+          "error": "timestamp/client token mismatch: events=157, client=166",
+          "server_completion_tokens": 160,
+          "prompt_tokens": 59,
+          "client_completion_tokens": 166,
+          "event_completion_tokens": 157,
+          "timing_source": "sse_content_events",
+          "token_timestamps_ns": null,
+          "token_ids": null,
+          "client_fixture_tokens": 0,
+          "data_chunks": 160
+        }
+      ],
+      "median_decode": null,
+      "iqr_decode": null,
+      "median_ttft": null,
+      "gpu_before": "2431 MHz, 50",
+      "gpu_after": "2457 MHz, 62",
+      "invalid_reps": 1,
+      "valid": false
+    }
+  ],
+  "suite_valid": false
+}
