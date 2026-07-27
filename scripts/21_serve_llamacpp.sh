@@ -402,18 +402,22 @@ terminate_from_state() {
         publish_disarm "$armed_target_pid" "$armed_target_pgid" \
             "$armed_target_start_ticks"
     fi
-    if "$memwatch_verified" &&
-            verify_aux_identity "$memwatch_pid" "$memwatch_start_ticks" \
+    # The watchdog may exit itself after the verified engine disappears.
+    # Treat an already-dead watchdog as clean; only inspect or signal a PID
+    # that is still live, preserving the PID-reuse identity guard.
+    if "$memwatch_verified" && pid_alive "$memwatch_pid"; then
+        if verify_aux_identity "$memwatch_pid" "$memwatch_start_ticks" \
                 '01_memwatch.sh' memwatch; then
-        kill -TERM "$memwatch_pid" 2>/dev/null || true
-        for ((seconds=0; seconds < 50; seconds++)); do
-            pid_alive "$memwatch_pid" || break
-            sleep 0.1
-        done
-        if pid_alive "$memwatch_pid" &&
-                verify_aux_identity "$memwatch_pid" "$memwatch_start_ticks" \
-                    '01_memwatch.sh' memwatch; then
-            kill -KILL "$memwatch_pid" 2>/dev/null || true
+            kill -TERM "$memwatch_pid" 2>/dev/null || true
+            for ((seconds=0; seconds < 50; seconds++)); do
+                pid_alive "$memwatch_pid" || break
+                sleep 0.1
+            done
+            if pid_alive "$memwatch_pid" &&
+                    verify_aux_identity "$memwatch_pid" "$memwatch_start_ticks" \
+                        '01_memwatch.sh' memwatch; then
+                kill -KILL "$memwatch_pid" 2>/dev/null || true
+            fi
         fi
     fi
 
