@@ -9,11 +9,13 @@ raw.jsonl and summary.json under the immutable attempt directory.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import math
 import os
 import statistics
+import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -602,21 +604,76 @@ def _sha256(path: Path) -> str:
 
 
 def _dispatch(state_dir: Path, command: str) -> dict[str, Any]:
-    state = _load_state(state_dir)
-    selected = _selected_gate(state)
-    event = {
-        "command": command,
-        "selected_gate": selected,
-        "time": _utcnow(),
-        "action": "awaiting_registered_runner" if selected else "complete",
-    }
+    state_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = state_dir / "controller.lock"
+    with lock_path.open("a+", encoding="utf-8") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        while True:
+            state = _load_state(state_dir)
+            selected = _selected_gate(state)
+            if selected is None:
+                event = {
+                    "command": command,
+                    "selected_gate": None,
+                    "time": _utcnow(),
+                    "action": "terminal_not_release_qualified",
+                }
+                break
+            candidates = [ROOT / "scripts" / "glm52-runners" / selected]
+            if state_dir.resolve() != DEFAULT_STATE_DIR.resolve():
+                candidates.insert(0, state_dir / "runners" / selected)
+            runner = next(
+                (
+                    path
+                    for path in candidates
+                    if path.is_file() and os.access(path, os.X_OK)
+                ),
+                None,
+            )
+            if runner is None:
+                event = {
+                    "command": command,
+                    "selected_gate": selected,
+                    "time": _utcnow(),
+                    "action": "awaiting_registered_runner",
+                }
+                break
+            completed = subprocess.run(
+                [str(runner), str(state_dir), selected],
+                cwd=ROOT,
+                check=False,
+                timeout=14_400,
+                env={
+                    "HOME": os.environ.get("HOME", ""),
+                    "PATH": os.environ.get("PATH", ""),
+                    "LANG": os.environ.get("LANG", "C.UTF-8"),
+                },
+            )
+            if completed.returncode != 0:
+                event = {
+                    "command": command,
+                    "selected_gate": selected,
+                    "time": _utcnow(),
+                    "action": "runner_failed",
+                    "runner_returncode": completed.returncode,
+                }
+                break
+            refreshed = _load_state(state_dir)
+            if _selected_gate(refreshed) == selected:
+                event = {
+                    "command": command,
+                    "selected_gate": selected,
+                    "time": _utcnow(),
+                    "action": "runner_produced_no_terminal_evidence",
+                }
+                break
     events = state_dir / "events.jsonl"
     events.parent.mkdir(parents=True, exist_ok=True)
     with events.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(event, sort_keys=True, allow_nan=False) + "\n")
         handle.flush()
         os.fsync(handle.fileno())
-    return event
+        return event
 
 
 def main(argv: list[str] | None = None) -> int:
