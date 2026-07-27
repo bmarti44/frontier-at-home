@@ -84,6 +84,9 @@ class EngineSwitchTests(unittest.TestCase):
 
     def test_switch_runs_deepseek_as_engine_user_with_frozen_profile(self):
         source = SCRIPT.read_text()
+        self.assertIn(
+            "install -d -o dsv4 -g dsv4 -m 0700 /run/dsv4", source
+        )
         self.assertIn("/usr/sbin/runuser -u dsv4 --", source)
         for setting in (
             "DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/"
