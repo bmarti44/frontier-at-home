@@ -1,0 +1,12 @@
+Candidate under test: 569dd3ad5bb1bf13cd454ad2396977b539c95873
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_attempt_rejects_self_consistent_but_unbound_source_artifact
+
+Result: genuine RED
+
+The descriptor-backed W11 attempt used an arbitrary source artifact and an
+arbitrary diff artifact. Every artifact hash, scorer descriptor, public
+randomness lineage, raw record, and recomputed summary was internally
+consistent. validate_attempt accepted it, so the acceptance test failed with:
+
+  AssertionError: ValueError not raised

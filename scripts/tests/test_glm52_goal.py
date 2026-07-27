@@ -634,6 +634,89 @@ class FormulaTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.goal.validate_attempt(attempt)
 
+    def test_attempt_rejects_self_consistent_but_unbound_source_artifact(self):
+        candidate = "77782656208f120a59f0650699d877fd286304b3"
+        confirmation = json.loads(
+            (
+                ROOT
+                / "results/glm52-goal/evidence/"
+                "lineage-confirmation-7778265.json"
+            ).read_text()
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            attempt = Path(tmp)
+            scorer_id = "w11.context.v1"
+            descriptor = {
+                "schema_version": 1,
+                "scorer_id": scorer_id,
+                "implementation_sha256": self.goal.registered_scorer_digest(
+                    scorer_id
+                ),
+            }
+            contents = {
+                "source": b"self-authored arbitrary source provenance",
+                "diff": b"self-authored arbitrary diff",
+                "binary": b"candidate binary",
+                "scorer": json.dumps(descriptor, sort_keys=True).encode(),
+                "model": b"candidate model",
+                "tokenizer": b"candidate tokenizer",
+                "fixture": b"candidate fixture",
+                "configuration": b"candidate configuration",
+            }
+            manifest = {
+                "gate": "W11",
+                "candidate_hash": candidate,
+                "artifacts": {},
+            }
+            for name, content in contents.items():
+                path = attempt / f"{name}.artifact"
+                path.write_bytes(content)
+                manifest["artifacts"][name] = path.name
+                manifest[f"{name}_sha256"] = hashlib.sha256(content).hexdigest()
+            seed = next(
+                item["sha256"]
+                for item in confirmation["gate_seeds"]
+                if item["gate"] == "W11"
+            )
+            manifest["lineage"] = {
+                "freeze": {
+                    "candidate_hash": candidate,
+                    "frozen_at": confirmation["frozen_at"],
+                },
+                "randomness": {
+                    "source": confirmation["confirmation"]["source"],
+                    "round": confirmation["confirmation"]["round"],
+                    "randomness": confirmation["confirmation"][
+                        "drand_randomness"
+                    ],
+                    "signature": confirmation["confirmation"][
+                        "drand_signature"
+                    ],
+                    "obtained_at": confirmation["confirmation"]["obtained_at"],
+                    "seed_sha256": seed,
+                },
+            }
+            observation = {
+                "record_type": "context_observation",
+                "context_cap": 1_048_576,
+                "processed_tokens": 1_000_000,
+                "retrieval_pass": True,
+                "negative_control_pass": True,
+                "completed_generation": True,
+                "truncated": False,
+                "oom": False,
+                "xid": False,
+                "available_memory_gib": 10.0,
+            }
+            summary = self.goal.score_registered_gate(
+                "W11", scorer_id, [observation]
+            )
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            (attempt / "raw.jsonl").write_text(json.dumps(observation) + "\n")
+            (attempt / "summary.json").write_text(json.dumps(summary))
+            with self.assertRaisesRegex(ValueError, "source provenance"):
+                self.goal.validate_attempt(attempt)
+
     def test_duplicate_json_keys_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "summary.json"
