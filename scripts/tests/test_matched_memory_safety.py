@@ -16,6 +16,7 @@ HARNESS = ROOT / "results" / "glm52-goal" / "harness" / "decisive_matched.sh"
 GLM_SAFE = ROOT / "results" / "glm52-gates" / "harness" / "glm_safe_run.sh"
 GLM_CGROUP = ROOT / "results" / "glm52-gates" / "harness" / "glm_cgroup_run.sh"
 DSV4_LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
+DSV4_SERVICE = ROOT / "configs" / "systemd" / "deepseek-v4-flash-llamacpp.service"
 GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
 
 
@@ -75,6 +76,10 @@ class MemoryGuardTests(unittest.TestCase):
 
 
 class MatchedHarnessContractTests(unittest.TestCase):
+    def test_production_service_uses_launcher_accepted_memory_floor(self):
+        source = DSV4_SERVICE.read_text(encoding="utf-8")
+        self.assertIn("Environment=DSV4_MEM_FLOOR_GIB=18", source)
+
     def test_harness_waits_for_full_release_and_serializes_engines(self):
         source = HARNESS.read_text(encoding="utf-8")
         self.assertIn("03_memory_guard.py", source)
