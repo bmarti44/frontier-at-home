@@ -1433,6 +1433,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
         validate_profile_artifact_bindings,
         validate_record_artifact_bindings,
         generate_w11_fixture,
+        _load_approved_dsv4_profile,
         _read_strict_json,
         _unique_pairs,
         _sha256,
