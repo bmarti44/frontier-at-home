@@ -183,6 +183,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("process.identity.json", source)
         self.assertIn("memwatch.segment.log", source)
         self.assertIn("samples.log", source)
+        self.assertIn("kernel.log", source)
         self.assertIn("host.boot_id", GLM_ARM.read_text(encoding="utf-8"))
 
     def test_harness_rejects_kernel_gpu_and_oom_faults_from_each_arm(self):
