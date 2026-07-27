@@ -74,6 +74,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("clean_curl()", source)
         self.assertIn("dsv4_launcher()", source)
         self.assertIn("env -i", source)
+        self.assertIn('/usr/bin/curl --disable "$@"', source)
         self.assertNotIn("PYTHONOPTIMIZE", source)
 
     def test_unqualified_glm_is_rejected_before_active_profile_is_stopped(self):

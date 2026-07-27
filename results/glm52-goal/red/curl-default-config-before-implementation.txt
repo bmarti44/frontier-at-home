@@ -1,0 +1,9 @@
+Candidate under test: ca5e5103e371264501a1b9bdc6b6e6a8fc79c506
+Command:
+  python3 -m unittest scripts.tests.test_engine_switch.EngineSwitchTests.test_switch_subprocesses_use_a_frozen_environment_allowlist
+
+Result: genuine RED
+
+The clean curl wrapper used an empty environment but did not pass --disable
+as curl's first option, so a system default configuration could still alter
+the probe.
