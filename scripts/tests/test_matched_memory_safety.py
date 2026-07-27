@@ -143,6 +143,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("executed_binary_sha256=", source)
         self.assertIn("EXECUTED_START_TICKS", source)
         self.assertIn("executed candidate identity changed", source)
+        self.assertIn("isolated process group survived command completion", source)
         self.assertNotIn(
             "SRC=/home/dsv4/ds4-project/src/ds4-upstream-master",
             source,

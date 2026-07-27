@@ -1,0 +1,9 @@
+An approved candidate waited for initial attestation, forked a signal-resistant
+20-second child in the isolated process group, recorded the exact child PID,
+and exited zero.
+
+On unchanged candidate e0b9000 the wrapper returned zero while the recorded
+child remained live in state S. This independently reproduces AR-063.
+
+Required result: terminate any live process-group survivor and return nonzero
+before reporting SAFE_RUN_DONE.
