@@ -171,6 +171,15 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("systemctl --user stop", source)
         self.assertIn("GLM_SAFE_REQUIRE_CGROUP=1", source)
 
+    def test_cgroup_launcher_exports_exact_evidence_without_masking_failure(self):
+        source = GLM_CGROUP.read_text(encoding="utf-8")
+        self.assertIn("GLM_SAFE_EVIDENCE_DIR", source)
+        self.assertIn("/home/dsv4/ds4-project/glm52-confirm-", source)
+        self.assertIn('chmod -R a+rX -- "$EVIDENCE_DIR"', source)
+        self.assertIn("command_rc=$?", source)
+        self.assertIn("evidence_export_rc=", source)
+        self.assertIn("exit \"$command_rc\"", source)
+
     def test_production_watchdog_reserves_18_gib(self):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_WATCHDOG_FLOOR_GIB:-18", source)
