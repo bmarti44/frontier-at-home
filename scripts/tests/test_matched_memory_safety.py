@@ -316,12 +316,14 @@ class MatchedHarnessContractTests(unittest.TestCase):
             source,
         )
 
-    def test_candidate_source_override_is_bound_but_runtime_flags_are_frozen(self):
+    def test_candidate_source_and_bounded_cache_overrides_are_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
         self.assertIn("GLM_CANDIDATE_SRC:-", source)
         self.assertIn("ds4-goal-clean-0a7ad776", source)
-        self.assertNotIn("GLM_EXPERT_CACHE_GB:-", source)
-        self.assertIn("DS4_CUDA_EXPERT_CACHE_GB=0", source)
+        self.assertIn("GLM_EXPERT_CACHE_GB:-0", source)
+        self.assertIn("CACHE_GB must be an integer from 0 through 40", source)
+        self.assertIn("cache_gb < 0 || cache_gb > 40", source)
+        self.assertIn('DS4_CUDA_EXPERT_CACHE_GB="$CACHE_GB"', source)
         self.assertIn("DS4_CUDA_IQ2_DOWN_REFERENCE=1", source)
         self.assertIn("DS4_TOKEN_TIMING_LOG=1", source)
         self.assertIn('--token-timing-log "$OUT/server.log"', source)
