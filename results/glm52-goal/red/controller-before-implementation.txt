@@ -1,0 +1,50 @@
+test_resume_selects_highest_value_unfinished_gate (scripts.tests.test_glm52_goal.ControllerTests.test_resume_selects_highest_value_unfinished_gate) ... FAIL
+test_state_rejects_unknown_status (scripts.tests.test_glm52_goal.ControllerTests.test_state_rejects_unknown_status) ... FAIL
+test_status_initializes_all_required_gates (scripts.tests.test_glm52_goal.ControllerTests.test_status_initializes_all_required_gates) ... FAIL
+setUpClass (scripts.tests.test_glm52_goal.FormulaTests) ... ERROR
+
+======================================================================
+ERROR: setUpClass (scripts.tests.test_glm52_goal.FormulaTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm52_goal.py", line 33, in setUpClass
+    cls.goal = load_goal_module()
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm52_goal.py", line 26, in load_goal_module
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1128, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1186, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/scripts/glm52_goal.py'
+
+======================================================================
+FAIL: test_resume_selects_highest_value_unfinished_gate (scripts.tests.test_glm52_goal.ControllerTests.test_resume_selects_highest_value_unfinished_gate)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm52_goal.py", line 180, in test_resume_selects_highest_value_unfinished_gate
+    self.assertEqual(first.returncode, 0, first.stderr)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file '/home/bmarti44/spark-deepseek-v4-flash/scripts/glm52_goal.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_state_rejects_unknown_status (scripts.tests.test_glm52_goal.ControllerTests.test_state_rejects_unknown_status)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm52_goal.py", line 188, in test_state_rejects_unknown_status
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file '/home/bmarti44/spark-deepseek-v4-flash/scripts/glm52_goal.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_status_initializes_all_required_gates (scripts.tests.test_glm52_goal.ControllerTests.test_status_initializes_all_required_gates)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm52_goal.py", line 163, in test_status_initializes_all_required_gates
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file '/home/bmarti44/spark-deepseek-v4-flash/scripts/glm52_goal.py': [Errno 2] No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.045s
+
+FAILED (failures=3, errors=1)
