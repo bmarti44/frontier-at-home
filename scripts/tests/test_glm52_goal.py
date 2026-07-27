@@ -433,6 +433,58 @@ class ControllerTests(unittest.TestCase):
             self.assertEqual(state["gates"]["foundation"]["status"], "FAIL")
             self.assertIn("invalid", state["gates"]["foundation"]["reason"])
 
+    def test_run_executes_registered_runner_and_advances(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            seed = state_dir / "seed-attempt"
+            seed.mkdir()
+            manifest = {
+                "gate": "foundation",
+                "candidate_hash": "a" * 40,
+                "artifacts": {},
+            }
+            for index, name in enumerate(
+                (
+                    "source",
+                    "diff",
+                    "binary",
+                    "scorer",
+                    "model",
+                    "tokenizer",
+                    "fixture",
+                    "configuration",
+                )
+            ):
+                path = seed / f"{name}.artifact"
+                path.write_text(f"artifact-{index}")
+                manifest["artifacts"][name] = path.name
+                manifest[f"{name}_sha256"] = hashlib.sha256(
+                    path.read_bytes()
+                ).hexdigest()
+            (seed / "manifest.json").write_text(json.dumps(manifest))
+            (seed / "raw.jsonl").write_text(
+                '{"event":"bounded_runner","failures":[]}\n'
+            )
+            (seed / "summary.json").write_text(
+                '{"formula_version":1,"verdict":"NO_RESULT","reason":"bounded"}'
+            )
+            runners = state_dir / "runners"
+            runners.mkdir()
+            runner = runners / "foundation"
+            runner.write_text(
+                "#!/bin/sh\n"
+                "set -eu\n"
+                "mkdir -p \"$1/foundation\"\n"
+                "cp -R \"$1/seed-attempt\" \"$1/foundation/attempt-001\"\n"
+                "echo ran > \"$1/runner.marker\"\n"
+            )
+            runner.chmod(0o700)
+            result = self.run_cli(state_dir, "run")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            event = json.loads(result.stdout)
+            self.assertEqual(event["selected_gate"], "W1")
+            self.assertEqual((state_dir / "runner.marker").read_text(), "ran\n")
+
 
 if __name__ == "__main__":
     unittest.main()

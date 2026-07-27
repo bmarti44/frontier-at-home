@@ -1,0 +1,35 @@
+test_malformed_attempt_fails_gate_and_does_not_get_skipped (scripts.tests.test_glm52_goal.ControllerTests.test_malformed_attempt_fails_gate_and_does_not_get_skipped) ... ok
+test_resume_ingests_valid_attempt_and_advances (scripts.tests.test_glm52_goal.ControllerTests.test_resume_ingests_valid_attempt_and_advances) ... ok
+test_resume_selects_highest_value_unfinished_gate (scripts.tests.test_glm52_goal.ControllerTests.test_resume_selects_highest_value_unfinished_gate) ... ok
+test_run_executes_registered_runner_and_advances (scripts.tests.test_glm52_goal.ControllerTests.test_run_executes_registered_runner_and_advances) ... FAIL
+test_state_rejects_terminal_status_without_attempt (scripts.tests.test_glm52_goal.ControllerTests.test_state_rejects_terminal_status_without_attempt) ... ok
+test_state_rejects_unknown_status (scripts.tests.test_glm52_goal.ControllerTests.test_state_rejects_unknown_status) ... ok
+test_status_initializes_all_required_gates (scripts.tests.test_glm52_goal.ControllerTests.test_status_initializes_all_required_gates) ... ok
+test_attempt_rejects_fabricated_pass_and_artifact_mutation (scripts.tests.test_glm52_goal.FormulaTests.test_attempt_rejects_fabricated_pass_and_artifact_mutation) ... ok
+test_attempt_requires_manifest_raw_and_fixed_summary (scripts.tests.test_glm52_goal.FormulaTests.test_attempt_requires_manifest_raw_and_fixed_summary) ... ok
+test_decode_formula_rejects_short_or_nonfinite_input (scripts.tests.test_glm52_goal.FormulaTests.test_decode_formula_rejects_short_or_nonfinite_input) ... ok
+test_decode_formula_uses_first_and_last_token (scripts.tests.test_glm52_goal.FormulaTests.test_decode_formula_uses_first_and_last_token) ... ok
+test_duplicate_json_keys_are_rejected (scripts.tests.test_glm52_goal.FormulaTests.test_duplicate_json_keys_are_rejected) ... ok
+test_five_fresh_server_blocks_require_abba_baab_and_distinct_arms (scripts.tests.test_glm52_goal.FormulaTests.test_five_fresh_server_blocks_require_abba_baab_and_distinct_arms) ... ok
+test_long_context_requires_real_processing_and_safety (scripts.tests.test_glm52_goal.FormulaTests.test_long_context_requires_real_processing_and_safety) ... ok
+test_lossy_quality_formula_and_mutations (scripts.tests.test_glm52_goal.FormulaTests.test_lossy_quality_formula_and_mutations) ... ok
+test_performance_acceptance_formula (scripts.tests.test_glm52_goal.FormulaTests.test_performance_acceptance_formula) ... ok
+test_ratio_confidence_bounds_are_directional (scripts.tests.test_glm52_goal.FormulaTests.test_ratio_confidence_bounds_are_directional) ... ok
+test_ratio_rejects_bad_or_unpaired_samples (scripts.tests.test_glm52_goal.FormulaTests.test_ratio_rejects_bad_or_unpaired_samples) ... ok
+test_raw_arm_validation_fails_closed (scripts.tests.test_glm52_goal.FormulaTests.test_raw_arm_validation_fails_closed) ... ok
+
+======================================================================
+FAIL: test_run_executes_registered_runner_and_advances (scripts.tests.test_glm52_goal.ControllerTests.test_run_executes_registered_runner_and_advances)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm52_goal.py", line 485, in test_run_executes_registered_runner_and_advances
+    self.assertEqual(event["selected_gate"], "W1")
+AssertionError: 'foundation' != 'W1'
+- foundation
++ W1
+
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.372s
+
+FAILED (failures=1)
