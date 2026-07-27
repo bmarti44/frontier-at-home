@@ -133,6 +133,16 @@ class MatchedHarnessContractTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, result)
             self.assertIn(f"invalid {variable}", result.stderr)
 
+    def test_glm_wrapper_hashes_the_selected_candidate_binary(self):
+        source = GLM_SAFE.read_text(encoding="utf-8")
+        self.assertIn("GLM_CANDIDATE_SRC", source)
+        self.assertIn("candidate_binary_sha256=", source)
+        self.assertIn('sha256sum -- "$CANDIDATE_BINARY"', source)
+        self.assertNotIn(
+            "SRC=/home/dsv4/ds4-project/src/ds4-upstream-master",
+            source,
+        )
+
     def test_production_watchdog_reserves_18_gib(self):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_WATCHDOG_FLOOR_GIB:-18", source)
