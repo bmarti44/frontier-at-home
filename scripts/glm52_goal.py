@@ -351,10 +351,13 @@ def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
         expected = "ABBA" if block % 2 == 0 else "BAAB"
         if "".join(str(row.get("arm", "")) for row in group) != expected:
             raise ValueError(f"block {block} does not follow {expected}")
-        group_boots = {row.get("server_boot_id") for row in group}
-        if len(group_boots) != 1 or not next(iter(group_boots), ""):
-            raise ValueError(f"block {block} does not share one server boot ID")
-        boot_ids.append(next(iter(group_boots)))
+        group_boots = [row.get("server_boot_id") for row in group]
+        if (
+            any(not isinstance(value, str) or not value for value in group_boots)
+            or len(set(group_boots)) != 4
+        ):
+            raise ValueError(f"block {block} does not use four fresh servers")
+        boot_ids.extend(group_boots)
         identities = {
             arm: {
                 (row.get("binary_sha256"), row.get("configuration_sha256"))
@@ -371,8 +374,8 @@ def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
                 raise ValueError(f"block {block} has invalid {arm} hashes")
         if identities["A"] == identities["B"]:
             raise ValueError(f"block {block} arms are identical")
-    if len(set(boot_ids)) != 5:
-        raise ValueError("each block must use a fresh server boot")
+    if len(set(boot_ids)) != 20:
+        raise ValueError("every arm execution must use a fresh server")
     for arm in ("A", "B"):
         global_identities = {
             (row.get("binary_sha256"), row.get("configuration_sha256"))
@@ -381,6 +384,183 @@ def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
         }
         if len(global_identities) != 1:
             raise ValueError(f"{arm} identity changes between blocks")
+
+
+def _require_exact_keys(
+    record: dict[str, Any], expected: set[str], label: str
+) -> None:
+    if not isinstance(record, dict):
+        raise ValueError(f"{label} must be an object")
+    missing = sorted(expected - record.keys())
+    extra = sorted(record.keys() - expected)
+    if missing or extra:
+        raise ValueError(
+            f"{label} keys differ: missing={missing!r} extra={extra!r}"
+        )
+
+
+def _finite_number(value: Any, label: str, *, minimum: float = 0.0) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{label} must be numeric")
+    result = float(value)
+    if not math.isfinite(result) or result <= minimum:
+        raise ValueError(f"{label} must be finite and greater than {minimum}")
+    return result
+
+
+def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
+    if len(records) != 1:
+        raise ValueError("W11 requires exactly one context observation")
+    expected = {
+        "record_type",
+        "context_cap",
+        "processed_tokens",
+        "retrieval_pass",
+        "negative_control_pass",
+        "completed_generation",
+        "truncated",
+        "oom",
+        "xid",
+        "available_memory_gib",
+    }
+    observation = records[0]
+    _require_exact_keys(observation, expected, "W11 context observation")
+    if observation["record_type"] != "context_observation":
+        raise ValueError("W11 record_type is invalid")
+    result = context_verdict(observation)
+    return {"scorer_id": "w11.context.v1", **result}
+
+
+def _score_parity(records: list[dict[str, Any]]) -> dict[str, Any]:
+    expected = {
+        "record_type",
+        "block",
+        "sequence",
+        "arm",
+        "profile",
+        "server_boot_id",
+        "fixture_sha256",
+        "binary_sha256",
+        "configuration_sha256",
+        "token_timestamps",
+        "evaluated_tokens",
+        "prefill_seconds",
+        "warm_ttft_seconds",
+        "cold_ttft_seconds",
+        "available_memory_gib",
+        "truncated",
+        "oom",
+        "xid",
+        "failures",
+    }
+    if len(records) != 20:
+        raise ValueError("parity requires exactly 20 matched arm records")
+    for index, record in enumerate(records):
+        _require_exact_keys(record, expected, f"parity record {index}")
+        if record["record_type"] != "matched_arm":
+            raise ValueError(f"parity record {index} has invalid record_type")
+        if (
+            not isinstance(record["block"], int)
+            or isinstance(record["block"], bool)
+            or not isinstance(record["sequence"], int)
+            or isinstance(record["sequence"], bool)
+        ):
+            raise ValueError("parity block and sequence must be exact integers")
+        if record["profile"] not in {"glm52", "dsv4"}:
+            raise ValueError("parity profile is invalid")
+        validate_raw_record(record)
+        for field in (
+            "warm_ttft_seconds",
+            "cold_ttft_seconds",
+            "available_memory_gib",
+        ):
+            _finite_number(record[field], field)
+        if record["available_memory_gib"] < 10.0:
+            raise ValueError("parity record violates the memory floor")
+        for field in ("truncated", "oom", "xid"):
+            if record[field] is not False:
+                raise ValueError(f"parity record has {field}=true")
+    validate_ab_blocks(records)
+
+    arm_profiles = {
+        arm: {record["profile"] for record in records if record["arm"] == arm}
+        for arm in ("A", "B")
+    }
+    if any(len(values) != 1 for values in arm_profiles.values()):
+        raise ValueError("A/B profile mapping changes between runs")
+    if arm_profiles["A"] == arm_profiles["B"]:
+        raise ValueError("A/B profiles are identical")
+
+    samples: dict[str, list[float]] = {
+        name: []
+        for name in (
+            "decode_glm",
+            "decode_dsv4",
+            "prefill_glm",
+            "prefill_dsv4",
+            "prefill_time_glm",
+            "prefill_time_dsv4",
+            "warm_ttft_glm",
+            "warm_ttft_dsv4",
+            "cold_ttft_glm",
+            "cold_ttft_dsv4",
+        )
+    }
+    for block in range(5):
+        for profile, suffix in (("glm52", "glm"), ("dsv4", "dsv4")):
+            group = [
+                record
+                for record in records
+                if record["block"] == block and record["profile"] == profile
+            ]
+            if len(group) != 2:
+                raise ValueError(
+                    f"block {block} does not contain two {profile} executions"
+                )
+            samples[f"decode_{suffix}"].append(
+                statistics.fmean(
+                    decode_tokens_per_second(record["token_timestamps"])
+                    for record in group
+                )
+            )
+            samples[f"prefill_{suffix}"].append(
+                statistics.fmean(
+                    record["evaluated_tokens"] / record["prefill_seconds"]
+                    for record in group
+                )
+            )
+            samples[f"prefill_time_{suffix}"].append(
+                statistics.fmean(record["prefill_seconds"] for record in group)
+            )
+            samples[f"warm_ttft_{suffix}"].append(
+                statistics.fmean(
+                    record["warm_ttft_seconds"] for record in group
+                )
+            )
+            samples[f"cold_ttft_{suffix}"].append(
+                statistics.fmean(
+                    record["cold_ttft_seconds"] for record in group
+                )
+            )
+    result = performance_verdict(samples)
+    return {"scorer_id": "parity.performance.v1", "samples": samples, **result}
+
+
+def score_registered_gate(
+    gate: str, scorer_id: str, records: Iterable[dict[str, Any]]
+) -> dict[str, Any]:
+    """Recompute an authoritative terminal verdict from strict raw records."""
+    rows = list(records)
+    registered = {
+        ("W11", "w11.context.v1"): _score_w11,
+        ("parity", "parity.performance.v1"): _score_parity,
+    }
+    scorer = registered.get((gate, scorer_id))
+    if scorer is None:
+        raise ValueError(
+            f"no fixed terminal scorer {scorer_id!r} is registered for {gate}"
+        )
+    return scorer(rows)
 
 
 def _read_strict_json(path: Path) -> Any:
@@ -454,6 +634,7 @@ def validate_attempt(attempt: Path) -> None:
         raise ValueError(f"invalid raw.jsonl: {exc}") from exc
     if not lines:
         raise ValueError("raw.jsonl is empty")
+    records: list[dict[str, Any]] = []
     for number, line in enumerate(lines, 1):
         try:
             record = json.loads(
@@ -469,17 +650,22 @@ def validate_attempt(attempt: Path) -> None:
             raise ValueError(f"raw.jsonl line {number}: {exc}") from exc
         if not isinstance(record, dict):
             raise ValueError(f"raw.jsonl line {number} is not an object")
+        records.append(record)
     summary = _read_strict_json(attempt / "summary.json")
     if not isinstance(summary, dict) or summary.get("formula_version") != 1:
         raise ValueError("summary has no fixed formula version")
     if summary.get("verdict") not in {"PASS", "FAIL", "NO_RESULT"}:
         raise ValueError("summary verdict is invalid")
-    # Generic, hash-consistent narration is not acceptance authority for any
-    # terminal state. Gate-specific scorers are intentionally registered only
-    # when they recompute their verdict from the validated raw schema.
-    raise ValueError(
-        f"no fixed terminal scorer is registered for {manifest['gate']}"
-    )
+    scorer_id = summary.get("scorer_id")
+    if not isinstance(scorer_id, str) or not scorer_id:
+        raise ValueError(
+            f"no fixed terminal scorer is registered for {manifest['gate']}"
+        )
+    if manifest["scorer_sha256"] != _sha256(Path(__file__)):
+        raise ValueError("manifest scorer is not the executing fixed scorer")
+    recomputed = score_registered_gate(manifest["gate"], scorer_id, records)
+    if summary != recomputed:
+        raise ValueError("summary does not exactly match fixed scorer output")
 
 
 def _unique_pairs(pairs: list[tuple[str, Any]], label: str) -> dict[str, Any]:
