@@ -72,6 +72,18 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("systemctl is-active --quiet display-manager.service", source)
         self.assertIn("overhead_gib=3", source)
 
+    def test_15_gib_floor_is_restricted_to_headless_1m_qualification(self):
+        source = LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB", source)
+        self.assertIn("${DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB:-0}", source)
+        self.assertIn("must be 0 or 15", source)
+        self.assertIn("CTX != 1048576", source)
+        self.assertIn("measured_headless_overhead_gib != 3", source)
+        worker = WORKER.read_text(encoding="utf-8")
+        self.assertIn("DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=15", worker)
+        self.assertIn("DSV4_WATCHDOG_FLOOR_GIB=\"$floor\"", worker)
+        self.assertIn("DSV4_MEM_FLOOR_GIB=\"$floor\"", worker)
+
     def test_worker_graduates_exact_rungs_and_restores_safe_profile(self):
         source = WORKER.read_text(encoding="utf-8")
         self.assertIn("131072 262144 524288 1048576", source)
