@@ -202,12 +202,16 @@ def context_verdict(observation: dict[str, Any]) -> dict[str, Any]:
     missing = sorted(required - observation.keys())
     if missing:
         raise ValueError(f"missing context fields: {', '.join(missing)}")
+    for field in ("context_cap", "processed_tokens"):
+        value = observation[field]
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ValueError(f"{field} must be an exact integer")
     memory = float(observation["available_memory_gib"])
     if not math.isfinite(memory):
         raise ValueError("available memory is non-finite")
     checks = {
-        "context_cap": int(observation["context_cap"]) == 1_048_576,
-        "processed_tokens": int(observation["processed_tokens"]) >= 1_000_000,
+        "context_cap": observation["context_cap"] == 1_048_576,
+        "processed_tokens": observation["processed_tokens"] >= 1_000_000,
         "retrieval": observation["retrieval_pass"] is True,
         "negative_control": observation["negative_control_pass"] is True,
         "completed_generation": observation["completed_generation"] is True,
@@ -218,6 +222,83 @@ def context_verdict(observation: dict[str, Any]) -> dict[str, Any]:
     }
     return {
         "formula_version": 1,
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
+def _weighted_upper_95(values: list[float], weights: list[int]) -> tuple[float, float]:
+    total = float(sum(weights))
+    mean = sum(value * weight for value, weight in zip(values, weights)) / total
+    sum_w2 = float(sum(weight * weight for weight in weights))
+    effective_n = total * total / sum_w2
+    denominator = total - sum_w2 / total
+    if denominator <= 0 or effective_n <= 1:
+        raise ValueError("quality suite has no effective paired variance")
+    variance = (
+        sum(weight * (value - mean) ** 2 for value, weight in zip(values, weights))
+        / denominator
+    )
+    sem = math.sqrt(variance / effective_n)
+    upper = mean + _t95(max(1, int(math.floor(effective_n - 1)))) * sem
+    return mean, upper
+
+
+def quality_verdict(cases: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Fixed 100-case paired lossy-fidelity scorer."""
+    rows = list(cases)
+    if len(rows) != 100:
+        raise ValueError("quality suite requires exactly 100 paired cases")
+    weights: list[int] = []
+    nll_delta: list[float] = []
+    top1_loss: list[float] = []
+    for index, row in enumerate(rows):
+        required = {
+            "tokens",
+            "baseline_nll_sum",
+            "candidate_nll_sum",
+            "baseline_top1_correct",
+            "candidate_top1_correct",
+        }
+        if not isinstance(row, dict) or set(row) != required:
+            raise ValueError(f"quality case {index} has wrong schema")
+        tokens = row["tokens"]
+        if not isinstance(tokens, int) or isinstance(tokens, bool) or tokens <= 0:
+            raise ValueError(f"quality case {index} has invalid token count")
+        numeric = [float(row[name]) for name in ("baseline_nll_sum", "candidate_nll_sum")]
+        if any(not math.isfinite(value) for value in numeric):
+            raise ValueError(f"quality case {index} has non-finite NLL")
+        correct = [
+            row["baseline_top1_correct"],
+            row["candidate_top1_correct"],
+        ]
+        if any(
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value < 0
+            or value > tokens
+            for value in correct
+        ):
+            raise ValueError(f"quality case {index} has invalid top-1 counts")
+        weights.append(tokens)
+        nll_delta.append((numeric[1] - numeric[0]) / tokens)
+        top1_loss.append((correct[0] - correct[1]) / tokens)
+    nll_mean, nll_upper = _weighted_upper_95(nll_delta, weights)
+    top1_mean, top1_upper = _weighted_upper_95(top1_loss, weights)
+    checks = {
+        "delta_nll_mean": nll_mean <= 0.01,
+        "delta_nll_upper_95": nll_upper <= 0.01,
+        "top1_loss_pp": top1_mean * 100 <= 0.5,
+        "top1_loss_upper_95_pp": top1_upper * 100 <= 0.5,
+    }
+    return {
+        "formula_version": 1,
+        "metrics": {
+            "delta_nll": nll_mean,
+            "delta_nll_upper_95": nll_upper,
+            "top1_loss_pp": top1_mean * 100,
+            "top1_loss_upper_95_pp": top1_upper * 100,
+        },
         "checks": checks,
         "verdict": "PASS" if all(checks.values()) else "FAIL",
     }
