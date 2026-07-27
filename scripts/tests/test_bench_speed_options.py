@@ -2,6 +2,7 @@
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -61,6 +62,34 @@ class BenchOptionTests(unittest.TestCase):
         self.assertEqual(bench.observable_output_errors(157, 157, 128), [])
         self.assertTrue(bench.observable_output_errors(157, 160, 128))
         self.assertTrue(bench.observable_output_errors(127, 127, 128))
+
+    def test_parses_strict_raw_token_timestamps(self):
+        bench = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "server.log"
+            path.write_text(
+                "noise\n"
+                "DS4_TOKEN_TIMING request=chatcmpl-a index=1 monotonic_ns=100 token=7\n"
+                "DS4_TOKEN_TIMING request=chatcmpl-a index=2 monotonic_ns=250 token=8\n",
+                encoding="utf-8",
+            )
+            timing = bench.read_token_timing(path, 0)
+        self.assertEqual(timing["request"], "chatcmpl-a")
+        self.assertEqual(timing["indices"], [1, 2])
+        self.assertEqual(timing["monotonic_ns"], [100, 250])
+        self.assertEqual(timing["token_ids"], [7, 8])
+
+    def test_rejects_missing_or_nonmonotonic_raw_timestamps(self):
+        bench = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "server.log"
+            path.write_text(
+                "DS4_TOKEN_TIMING request=x index=1 monotonic_ns=200 token=7\n"
+                "DS4_TOKEN_TIMING request=x index=3 monotonic_ns=100 token=8\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(RuntimeError):
+                bench.read_token_timing(path, 0)
 
 
 if __name__ == "__main__":

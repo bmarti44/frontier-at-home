@@ -918,6 +918,31 @@ def recompute_speed_rep_validity(rep: dict[str, Any]) -> bool:
         or float(decode) <= 0
     ):
         return False
+    if rep.get("timing_source") == "server_raw_token_log":
+        timestamps = rep.get("token_timestamps_ns")
+        token_ids = rep.get("token_ids")
+        server_completion_tokens = rep.get("server_completion_tokens")
+        if (
+            not isinstance(timestamps, list)
+            or len(timestamps) != completion_tokens
+            or not isinstance(token_ids, list)
+            or len(token_ids) != completion_tokens
+            or server_completion_tokens != completion_tokens
+            or any(
+                not isinstance(value, int) or isinstance(value, bool) or value <= 0
+                for value in timestamps
+            )
+            or any(
+                later <= earlier
+                for earlier, later in zip(timestamps, timestamps[1:])
+            )
+            or any(
+                not isinstance(value, int) or isinstance(value, bool)
+                for value in token_ids
+            )
+        ):
+            return False
+        return True
     token_count_error = (
         abs(client_completion_tokens - completion_tokens) / completion_tokens
     )

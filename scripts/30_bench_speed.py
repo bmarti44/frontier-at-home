@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import statistics
 import subprocess
 import time
@@ -86,6 +87,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model-id",
         help="exact model id to select when /v1/models exposes multiple aliases",
+    )
+    parser.add_argument(
+        "--token-timing-log",
+        type=Path,
+        help="server log containing DS4_TOKEN_TIMING records for exact decode timing",
     )
     args = parser.parse_args()
     if args.extra_body is not None:
@@ -374,6 +380,49 @@ def observable_output_errors(
     return reasons
 
 
+TOKEN_TIMING_RE = re.compile(
+    r"^DS4_TOKEN_TIMING request=(\S+) index=(\d+) "
+    r"monotonic_ns=(\d+) token=(-?\d+)$"
+)
+
+
+def read_token_timing(path: Path, offset: int) -> dict[str, Any]:
+    """Read and validate raw per-token records appended after *offset*."""
+    with path.open("rb") as stream:
+        stream.seek(offset)
+        raw = stream.read()
+    records: list[tuple[str, int, int, int]] = []
+    for line in raw.decode("utf-8", errors="strict").splitlines():
+        match = TOKEN_TIMING_RE.fullmatch(line)
+        if match:
+            records.append(
+                (
+                    match.group(1),
+                    int(match.group(2)),
+                    int(match.group(3)),
+                    int(match.group(4)),
+                )
+            )
+    if not records:
+        raise RuntimeError(f"no DS4_TOKEN_TIMING records appended to {path}")
+    requests = {record[0] for record in records}
+    if len(requests) != 1:
+        raise RuntimeError(f"token timing contains multiple requests: {sorted(requests)}")
+    indices = [record[1] for record in records]
+    expected = list(range(1, len(records) + 1))
+    if indices != expected:
+        raise RuntimeError(f"token timing indices are incomplete: {indices[:8]}...")
+    monotonic_ns = [record[2] for record in records]
+    if any(later <= earlier for earlier, later in zip(monotonic_ns, monotonic_ns[1:])):
+        raise RuntimeError("token timing timestamps are not strictly increasing")
+    return {
+        "request": records[0][0],
+        "indices": indices,
+        "monotonic_ns": monotonic_ns,
+        "token_ids": [record[3] for record in records],
+    }
+
+
 def run_rep(
     client: Client,
     tokenizer: Any,
@@ -385,6 +434,7 @@ def run_rep(
     max_tokens: int = MAX_TOKENS,
     min_completion_tokens: int = MIN_VALID_COMPLETION_TOKENS,
     seed: int = SEED,
+    token_timing_log: Path | None = None,
 ) -> dict[str, Any]:
     try:
         preamble = make_preamble(tokenizer, unique_id, seed)
@@ -398,6 +448,9 @@ def run_rep(
         }
         if ignore_eos_supported:
             payload["ignore_eos"] = True
+        timing_offset = (
+            token_timing_log.stat().st_size if token_timing_log is not None else None
+        )
         stream = client.stream_chat(payload)
         if not stream["done"]:
             return invalid_rep("SSE stream did not terminate with [DONE]")
@@ -413,23 +466,45 @@ def run_rep(
         if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
             return invalid_rep(f"invalid usage.prompt_tokens: {prompt_tokens!r}")
         client_completion_tokens = token_count(tokenizer, stream["generated_text"])
-        token_timestamps = stream["token_timestamps"]
-        event_completion_tokens = len(token_timestamps)
+        sse_token_timestamps = stream["token_timestamps"]
+        event_completion_tokens = len(sse_token_timestamps)
         if completion_tokens == 0:
             return invalid_rep("server reported zero completion tokens")
+        raw_timing = None
+        if token_timing_log is not None:
+            raw_timing = read_token_timing(token_timing_log, timing_offset)
+            token_timestamps = [
+                value / 1_000_000_000 for value in raw_timing["monotonic_ns"]
+            ]
+            reasons = []
+            if len(token_timestamps) < min_completion_tokens:
+                reasons.append(
+                    f"early stop: {len(token_timestamps)} raw timed tokens, "
+                    f"minimum is {min_completion_tokens}"
+                )
+            if len(token_timestamps) != completion_tokens:
+                reasons.append(
+                    "raw timing/server completion mismatch: "
+                    f"timed={len(token_timestamps)}, server={completion_tokens}"
+                )
+            timing_source = "server_raw_token_log"
+        else:
+            token_timestamps = sse_token_timestamps
+            reasons = observable_output_errors(
+                client_completion_tokens,
+                len(token_timestamps),
+                min_completion_tokens,
+            )
+            timing_source = "sse_content_events"
+        timed_completion_tokens = len(token_timestamps)
         ttft_s = stream["first_content_at"] - stream["request_started"]
-        decode_elapsed_s = stream["last_content_at"] - stream["first_content_at"]
+        decode_elapsed_s = token_timestamps[-1] - token_timestamps[0]
         decode_tok_s = (
-            (event_completion_tokens - 1) / decode_elapsed_s
+            (timed_completion_tokens - 1) / decode_elapsed_s
             if decode_elapsed_s > 0
             else None
         )
         prefill_tok_s = prompt_tokens / ttft_s if ttft_s > 0 else None
-        reasons = observable_output_errors(
-            client_completion_tokens,
-            event_completion_tokens,
-            min_completion_tokens,
-        )
         if ttft_s <= 0:
             reasons.append(f"non-positive TTFT: {ttft_s}")
         if decode_elapsed_s <= 0:
@@ -441,11 +516,16 @@ def run_rep(
                     "ttft_s": ttft_s,
                     "decode_tok_s": decode_tok_s,
                     "prefill_tok_s": prefill_tok_s,
-                    "completion_tokens": event_completion_tokens,
+                    "completion_tokens": timed_completion_tokens,
                     "server_completion_tokens": completion_tokens,
                     "prompt_tokens": prompt_tokens,
                     "client_completion_tokens": client_completion_tokens,
                     "event_completion_tokens": event_completion_tokens,
+                    "timing_source": timing_source,
+                    "token_timestamps_ns": (
+                        raw_timing["monotonic_ns"] if raw_timing is not None else None
+                    ),
+                    "token_ids": raw_timing["token_ids"] if raw_timing is not None else None,
                     "client_fixture_tokens": context_tokens,
                     "data_chunks": stream["data_chunks"],
                 }
@@ -455,12 +535,17 @@ def run_rep(
             "ttft_s": ttft_s,
             "decode_tok_s": decode_tok_s,
             "prefill_tok_s": prefill_tok_s,
-            "completion_tokens": event_completion_tokens,
+            "completion_tokens": timed_completion_tokens,
             "server_completion_tokens": completion_tokens,
             "valid": True,
             "prompt_tokens": prompt_tokens,
             "client_completion_tokens": client_completion_tokens,
             "event_completion_tokens": event_completion_tokens,
+            "timing_source": timing_source,
+            "token_timestamps_ns": (
+                raw_timing["monotonic_ns"] if raw_timing is not None else None
+            ),
+            "token_ids": raw_timing["token_ids"] if raw_timing is not None else None,
             "client_fixture_tokens": context_tokens,
             "data_chunks": stream["data_chunks"],
         }
@@ -551,6 +636,7 @@ def main() -> int:
                     args.max_tokens,
                     args.min_completion_tokens,
                     args.seed,
+                    args.token_timing_log,
                 )
                 unique_id += 1
                 if warmup_index + 1 < args.warmup or args.reps > 0:
@@ -568,6 +654,7 @@ def main() -> int:
                     args.max_tokens,
                     args.min_completion_tokens,
                     args.seed,
+                    args.token_timing_log,
                 )
                 unique_id += 1
                 cell["reps"].append(rep)

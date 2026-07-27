@@ -36,6 +36,7 @@ trap stop_server EXIT
 
 mkdir -p -- "$OUT"
 DS4_GLM_TP_DEBUG=0 \
+DS4_TOKEN_TIMING_LOG=1 \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
 DS4_CUDA_EXPERT_CACHE_GB="$EXPERT_CACHE_GB" \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
@@ -69,6 +70,7 @@ done
     --out "$OUT/result.json" \
     --stack-label "$LABEL" \
     --model-id glm-5.2 \
+    --token-timing-log "$OUT/server.log" \
     --reps 1 --context-levels 0 --max-tokens 160 \
     --min-completion-tokens 128 --seed "$SEED"
 

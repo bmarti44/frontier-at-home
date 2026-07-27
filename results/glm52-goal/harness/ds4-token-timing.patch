@@ -1,0 +1,23 @@
+diff --git a/ds4_server.c b/ds4_server.c
+index fc8f3e9..c590cb1 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -11443,6 +11443,18 @@ decode_again:
+             size_t piece_len = 0;
+             char *piece = ds4_token_text(s->engine, token, &piece_len);
+             completion++;
++            if (getenv("DS4_TOKEN_TIMING_LOG") != NULL) {
++                struct timespec token_ts;
++                if (clock_gettime(CLOCK_MONOTONIC_RAW, &token_ts) == 0) {
++                    const unsigned long long token_ns =
++                        (unsigned long long)token_ts.tv_sec * 1000000000ull +
++                        (unsigned long long)token_ts.tv_nsec;
++                    fprintf(stderr,
++                            "DS4_TOKEN_TIMING request=%s index=%d "
++                            "monotonic_ns=%llu token=%d\n",
++                            id, completion, token_ns, token);
++                }
++            }
+ 
+             trace_piece(s, trace_id, piece, piece_len);
+             buf_append(&text, piece, piece_len);

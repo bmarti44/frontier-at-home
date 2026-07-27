@@ -101,6 +101,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("GLM_CANDIDATE_SRC:-", source)
         self.assertIn("ds4-goal-clean-0a7ad776", source)
         self.assertIn("GLM_EXPERT_CACHE_GB:-0", source)
+        self.assertIn("DS4_TOKEN_TIMING_LOG=1", source)
+        self.assertIn('--token-timing-log "$OUT/server.log"', source)
 
 
 if __name__ == "__main__":
