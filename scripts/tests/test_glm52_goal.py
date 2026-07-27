@@ -668,6 +668,39 @@ class FormulaTests(unittest.TestCase):
                         broken, "W11", candidate
                     )
 
+    def test_manifest_lineage_rejects_signature_not_published_by_relays(self):
+        candidate = "a" * 40
+        signature = "00" * 96
+        randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
+        lineage = {
+            "freeze": {
+                "candidate_hash": candidate,
+                "frozen_at": "2026-07-27T03:59:00+00:00",
+            },
+            "randomness": {
+                "source": "drand-default",
+                "round": 6_323_125,
+                "randomness": randomness,
+                "signature": signature,
+                "obtained_at": "2026-07-27T04:00:00+00:00",
+                "seed_sha256": hashlib.sha256(
+                    f"{candidate}:{randomness}:W11".encode()
+                ).hexdigest(),
+            },
+        }
+        published = {
+            "round": 6_323_125,
+            "randomness": "1" * 64,
+            "signature": "2" * 192,
+        }
+        with self.assertRaisesRegex(ValueError, "public drand relays"):
+            self.goal.validate_manifest_lineage(
+                lineage,
+                "W11",
+                candidate,
+                relay_fetcher=lambda _host, _round: published,
+            )
+
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)

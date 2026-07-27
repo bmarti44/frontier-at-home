@@ -1,0 +1,9 @@
+Candidate under test: 47888d46e256daae1e08513579cec9d03d6d7d84
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_manifest_lineage_rejects_signature_not_published_by_relays
+
+Result: genuine RED
+
+The lineage validator could check only SHA-256(signature). It had no mechanism
+to compare the claimed round, signature, and randomness against independent
+public drand relays.
