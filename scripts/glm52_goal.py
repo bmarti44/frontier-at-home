@@ -290,15 +290,33 @@ def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
             raise ValueError(f"block {block} arms are identical")
     if len(set(boot_ids)) != 5:
         raise ValueError("each block must use a fresh server boot")
+    for arm in ("A", "B"):
+        global_identities = {
+            (row.get("binary_sha256"), row.get("configuration_sha256"))
+            for row in rows
+            if row.get("arm") == arm
+        }
+        if len(global_identities) != 1:
+            raise ValueError(f"{arm} identity changes between blocks")
 
 
 def _read_strict_json(path: Path) -> Any:
     def reject_constant(value: str) -> None:
         raise ValueError(f"{path.name} contains non-finite value {value}")
 
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"{path.name} contains duplicate key {key!r}")
+            result[key] = value
+        return result
+
     try:
         return json.loads(
-            path.read_text(encoding="utf-8"), parse_constant=reject_constant
+            path.read_text(encoding="utf-8"),
+            parse_constant=reject_constant,
+            object_pairs_hook=reject_duplicate_keys,
         )
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"invalid {path.name}: {exc}") from exc
@@ -321,9 +339,31 @@ def validate_attempt(attempt: Path) -> None:
     manifest = _read_strict_json(attempt / "manifest.json")
     if not isinstance(manifest, dict):
         raise ValueError("manifest must be an object")
+    if manifest.get("gate") not in GATE_ORDER:
+        raise ValueError("manifest gate is missing or unknown")
+    candidate_hash = manifest.get("candidate_hash")
+    if not (
+        isinstance(candidate_hash, str)
+        and len(candidate_hash) == 40
+        and all(char in "0123456789abcdef" for char in candidate_hash)
+    ):
+        raise ValueError("manifest candidate_hash is invalid")
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("manifest artifacts map is missing")
+    root = attempt.resolve()
     for field in required_hashes:
         if not _is_sha256(manifest.get(field)):
             raise ValueError(f"manifest {field} is invalid")
+        artifact_name = field.removesuffix("_sha256")
+        relative = artifacts.get(artifact_name)
+        if not isinstance(relative, str) or not relative:
+            raise ValueError(f"manifest artifact {artifact_name} is missing")
+        artifact = (attempt / relative).resolve()
+        if not artifact.is_relative_to(root) or not artifact.is_file():
+            raise ValueError(f"manifest artifact {artifact_name} escapes or is absent")
+        if _sha256(artifact) != manifest[field]:
+            raise ValueError(f"manifest artifact {artifact_name} hash mismatch")
     raw_path = attempt / "raw.jsonl"
     try:
         lines = raw_path.read_text(encoding="utf-8").splitlines()
@@ -333,9 +373,15 @@ def validate_attempt(attempt: Path) -> None:
         raise ValueError("raw.jsonl is empty")
     for number, line in enumerate(lines, 1):
         try:
-            record = json.loads(line, parse_constant=lambda value: (_ for _ in ()).throw(
-                ValueError(f"non-finite value {value}")
-            ))
+            record = json.loads(
+                line,
+                parse_constant=lambda value: (_ for _ in ()).throw(
+                    ValueError(f"non-finite value {value}")
+                ),
+                object_pairs_hook=lambda pairs: _unique_pairs(
+                    pairs, f"raw.jsonl line {number}"
+                ),
+            )
         except (json.JSONDecodeError, ValueError) as exc:
             raise ValueError(f"raw.jsonl line {number}: {exc}") from exc
         if not isinstance(record, dict):
@@ -345,6 +391,19 @@ def validate_attempt(attempt: Path) -> None:
         raise ValueError("summary has no fixed formula version")
     if summary.get("verdict") not in {"PASS", "FAIL", "NO_RESULT"}:
         raise ValueError("summary verdict is invalid")
+    if summary["verdict"] == "PASS":
+        raise ValueError(
+            f"no fixed PASS scorer is registered for {manifest['gate']}"
+        )
+
+
+def _unique_pairs(pairs: list[tuple[str, Any]], label: str) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"{label} contains duplicate key {key!r}")
+        result[key] = value
+    return result
 
 
 def _utcnow() -> str:
@@ -374,6 +433,8 @@ def _validate_state(state: dict[str, Any]) -> None:
             raise GoalError(f"{name}: invalid status")
         if not isinstance(gate.get("attempts"), list):
             raise GoalError(f"{name}: attempts is not a list")
+        if gate.get("status") in TERMINAL_STATUSES and not gate["attempts"]:
+            raise GoalError(f"{name}: terminal status has no evidence attempt")
 
 
 def _atomic_json(path: Path, value: dict[str, Any]) -> None:
