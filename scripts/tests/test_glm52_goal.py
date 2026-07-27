@@ -898,6 +898,29 @@ class FormulaTests(unittest.TestCase):
                         gate, manifest, records
                     )
 
+    def test_candidate_binary_model_and_profile_are_pinned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paths = {}
+            for name in ("binary", "model", "configuration"):
+                path = root / name
+                path.write_bytes(f"arbitrary {name}".encode())
+                paths[name] = path
+            manifest = {
+                "gate": "W11",
+                "binary_sha256": hashlib.sha256(
+                    paths["binary"].read_bytes()
+                ).hexdigest(),
+                "model_sha256": hashlib.sha256(
+                    paths["model"].read_bytes()
+                ).hexdigest(),
+                "configuration_sha256": hashlib.sha256(
+                    paths["configuration"].read_bytes()
+                ).hexdigest(),
+            }
+            with self.assertRaisesRegex(ValueError, "approved GLM profile"):
+                self.goal.validate_profile_artifact_bindings(manifest, paths)
+
     def test_w11_retrieval_expectations_are_bound_to_fixture(self):
         record = w11_record()
         with tempfile.TemporaryDirectory() as tmp:
