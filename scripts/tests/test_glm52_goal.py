@@ -28,6 +28,10 @@ def load_goal_module():
     return module
 
 
+def replacement_attempt_validator(_attempt):
+    raise ValueError("mutated validator")
+
+
 class FormulaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -508,6 +512,16 @@ class FormulaTests(unittest.TestCase):
             self.assertRegex(digest, r"^[0-9a-f]{64}$")
         with self.assertRaises(ValueError):
             self.goal.registered_scorer_digest("unknown")
+
+    def test_scorer_identity_changes_with_attempt_validation(self):
+        before = self.goal.registered_scorer_digest("w11.context.v1")
+        original = self.goal.validate_attempt
+        try:
+            self.goal.validate_attempt = replacement_attempt_validator
+            after = self.goal.registered_scorer_digest("w11.context.v1")
+        finally:
+            self.goal.validate_attempt = original
+        self.assertNotEqual(before, after)
 
     def test_manifest_lineage_requires_post_freeze_verifiable_randomness(self):
         signature = (

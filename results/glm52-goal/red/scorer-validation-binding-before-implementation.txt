@@ -1,0 +1,10 @@
+Candidate under test: dbc78686bc8127838db55c6f2f38e16720fc635c
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_scorer_identity_changes_with_attempt_validation
+
+Result: genuine RED
+
+Replacing validate_attempt with a deliberately broken validator left the
+w11.context.v1 implementation digest unchanged:
+
+  1b94a45cbd7d... (same value before and after)
