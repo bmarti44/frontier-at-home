@@ -12,12 +12,17 @@ SOURCE_REPOSITORY=$1
 COMMIT=$2
 WORK_ROOT=$3
 OUTPUT_DIRECTORY=$4
+CANONICAL_WORK_ROOT=/home/bmarti44/.cache/glm52-ds4-repro-v1
 for path in "$SOURCE_REPOSITORY" "$WORK_ROOT" "$OUTPUT_DIRECTORY"; do
     [[ $path == /* ]] || {
         echo "all paths must be absolute" >&2
         exit 2
     }
 done
+[[ $WORK_ROOT == "$CANONICAL_WORK_ROOT" ]] || {
+    echo "WORK_ROOT must be the canonical CUDA build path" >&2
+    exit 2
+}
 [[ $COMMIT =~ ^[0-9a-f]{40}$ ]] || {
     echo "commit must be a full lowercase Git object ID" >&2
     exit 2
@@ -26,8 +31,8 @@ done
     echo "source repository is not a Git worktree" >&2
     exit 2
 }
-[[ ! -e $WORK_ROOT && ! -e $OUTPUT_DIRECTORY ]] || {
-    echo "work and output paths must be absent" >&2
+[[ ! -e $OUTPUT_DIRECTORY ]] || {
+    echo "output path must be absent" >&2
     exit 2
 }
 git -C "$SOURCE_REPOSITORY" cat-file -e "$COMMIT^{commit}"
@@ -37,6 +42,12 @@ available_kib=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
     exit 8
 }
 
+mkdir -p -- "$(dirname "$WORK_ROOT")"
+exec 9>"$WORK_ROOT.lock"
+flock -n 9 || {
+    echo "another reproducible build owns the canonical path" >&2
+    exit 75
+}
 mkdir -p -- "$WORK_ROOT" "$OUTPUT_DIRECTORY"
 WORKTREE=$WORK_ROOT/src
 KEEP_DIR=$WORK_ROOT/nvcc-keep
@@ -48,6 +59,12 @@ SOURCE_DATE_EPOCH=$(
     echo "invalid source commit epoch" >&2
     exit 2
 }
+if [[ -e $WORKTREE ]]; then
+    [[ -f $WORKTREE/.git ]]
+    [[ $(git -C "$WORKTREE" rev-parse HEAD) == "$COMMIT" ]]
+    [[ -z $(git -C "$WORKTREE" status --short) ]]
+    git -C "$SOURCE_REPOSITORY" worktree remove "$WORKTREE"
+fi
 
 build_one() {
     local number=$1
