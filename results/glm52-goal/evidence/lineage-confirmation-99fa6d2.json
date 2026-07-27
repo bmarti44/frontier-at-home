@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "sha256": "99fa6d2125077dbdb2a102c72e0388445a9c0f06379ec5bac933120d6614cae7"
+  },
+  "candidate_components": {
+    "root_commit": "1af55a62818b9ac5a2c91eacaae3074d0b188b85",
+    "engine_commit": "17be9e65d186ce19e810a47e210ac29a0b924884",
+    "binary_sha256": "7327937805f18340c29dcd4891872546013dba91afd5c53f66ec49acb7582c74",
+    "configuration_sha256": "e7c0c76b923e2fbeeb0223f5a328c2fe233a6a8c3c526f6170c0b1d2fce1079c"
+  },
+  "candidate_formula": "sha256(root_commit:engine_commit:engine_binary_sha256:arm_sha256)",
+  "frozen_at": "2026-07-27T11:27:21+00:00",
+  "confirmation": {
+    "source": "drand-default",
+    "round": 6324021,
+    "published_at": "2026-07-27T11:27:30+00:00",
+    "obtained_at": "2026-07-27T11:27:48+00:00",
+    "drand_randomness": "e0bee50193bf9b0ada52a77182093b1b603bdbab753c072e701045f66165f65e",
+    "drand_signature": "a4eb71e8280816ecffc6864d349025c942a2f7c7494f9e882ed2101dec50fa80dadd994a83a79d9ee5403d648340b35b11aad5d94364f1c2e2b21719d006dee32e5b361721dde06469d7d7674b75e4538f6740d8ae96f5bdf36897fd229169ad"
+  },
+  "gate_seeds": [
+    {
+      "gate": "foundation",
+      "sha256": "88fe0db81f64e8cb5f6b56232c42990b221f32f9ba8bc44a404c7e5310852f22",
+      "integer_seed_from_first_8_hex": 2298351032
+    },
+    {
+      "gate": "W11",
+      "sha256": "ab523e77160d82d11de7af9a0d5e9d8aebcfe75be28387860c6b19960b0dc00d"
+    },
+    {
+      "gate": "parity",
+      "sha256": "97dbde209ea96c1417ca5200998abd5b43e9f100f8ea18d2abf9bd5eb705eeff"
+    },
+    {
+      "gate": "review",
+      "sha256": "99ee0bb423360ddc4a14ef1b5a6112567d35920a7dc13507d5acd6ca1bba3837"
+    }
+  ],
+  "result": "PASS",
+  "checks": {
+    "candidate_precedes_beacon": true,
+    "beacon_precedes_observation": true,
+    "randomness_is_sha256_signature": true,
+    "seeds_are_candidate_randomness_gate_sha256": true,
+    "three_public_relays_agreed": true
+  }
+}
