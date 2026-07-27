@@ -1,0 +1,9 @@
+Candidate under test: c37d3e1f6307276c31217581f658415c797c828c
+Command:
+  python3 -m unittest scripts.tests.test_engine_switch.EngineSwitchTests.test_switch_subprocesses_use_a_frozen_environment_allowlist
+
+Result: genuine RED
+
+Python, curl, and the DeepSeek launcher inherited the caller environment. The
+switch had no env -i wrappers for validation, probing, or engine lifecycle
+commands.

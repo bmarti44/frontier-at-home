@@ -68,6 +68,14 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("curl --config -", source)
         self.assertIn("printf 'header = \"Authorization: Bearer %s\"", source)
 
+    def test_switch_subprocesses_use_a_frozen_environment_allowlist(self):
+        source = SCRIPT.read_text()
+        self.assertIn("clean_python()", source)
+        self.assertIn("clean_curl()", source)
+        self.assertIn("dsv4_launcher()", source)
+        self.assertIn("env -i", source)
+        self.assertNotIn("PYTHONOPTIMIZE", source)
+
     def test_unqualified_glm_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
