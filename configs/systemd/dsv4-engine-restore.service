@@ -1,0 +1,25 @@
+[Unit]
+Description=Restore the selected GLM-5.2 or DeepSeek engine profile
+Wants=network-online.target dsv4-authhelper.service dsv4-caddy.service
+After=network-online.target
+After=dsv4-authhelper.service
+After=dsv4-caddy.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=@DSV4_REPO@/scripts/52_engine_switch.sh restore
+TimeoutStartSec=2000
+RemainAfterExit=yes
+
+# The switcher drops the DeepSeek process to dsv4 and applies its own strict
+# environment allowlist. Root is retained only for the serialized profile
+# transaction and future GLM cgroup lifecycle.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/run/dsv4 /home/dsv4
+PrivateTmp=yes
+ProtectHome=no
+
+[Install]
+WantedBy=multi-user.target

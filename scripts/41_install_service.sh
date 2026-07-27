@@ -127,6 +127,7 @@ for source in \
     "$SYSTEMD_DIR/dsv4-caddy.service" \
     "$SYSTEMD_DIR/dsv4-guard.service" \
     "$SYSTEMD_DIR/dsv4-guard.timer" \
+    "$SYSTEMD_DIR/dsv4-engine-restore.service" \
     "$REPO_ROOT/configs/caddy/Caddyfile" \
     "$REPO_ROOT/scripts/40_auth_helper.py" \
     "$REPO_ROOT/scripts/42_verify_exposure.sh"; do
@@ -147,6 +148,7 @@ install_unit "$SYSTEMD_DIR/$engine_unit"
 install_unit "$SYSTEMD_DIR/dsv4-authhelper.service"
 install_unit "$SYSTEMD_DIR/dsv4-caddy.service"
 install_unit "$SYSTEMD_DIR/dsv4-guard.service"
+install_unit "$SYSTEMD_DIR/dsv4-engine-restore.service"
 install -o root -g root -m 0644 "$SYSTEMD_DIR/dsv4-guard.timer" /etc/systemd/system/
 install -D -o root -g root -m 0644 "$REPO_ROOT/configs/caddy/Caddyfile" /etc/caddy/Caddyfile
 install -D -o root -g root -m 0755 "$REPO_ROOT/scripts/40_auth_helper.py" \
@@ -159,7 +161,14 @@ systemctl daemon-reload
 # second listener or compete with the hardened dsv4-caddy.service.
 systemctl disable --now caddy.service 2>/dev/null || true
 systemctl disable --now "deepseek-v4-flash-$other.service" 2>/dev/null || true
-systemctl enable "$engine_unit" dsv4-authhelper.service dsv4-caddy.service dsv4-guard.timer
+systemctl enable dsv4-authhelper.service dsv4-caddy.service dsv4-guard.timer
+if [[ $stack == llamacpp ]]; then
+    systemctl disable "$engine_unit" 2>/dev/null || true
+    systemctl enable dsv4-engine-restore.service
+else
+    systemctl enable "$engine_unit"
+    systemctl disable dsv4-engine-restore.service 2>/dev/null || true
+fi
 systemctl restart dsv4-authhelper.service
 systemctl restart "$engine_unit"
 systemctl restart dsv4-caddy.service
@@ -178,6 +187,16 @@ while (( SECONDS < deadline )); do
     sleep 2
 done
 "$ready" || die 'readiness timed out after 600 seconds'
+
+if [[ $stack == llamacpp ]]; then
+    switch_state=/home/dsv4/ds4-project/engine-switch
+    install -d -o root -g root -m 0700 "$switch_state"
+    active_tmp=$switch_state/.active.json.new.$$
+    printf '{"schema_version":1,"profile":"dsv4"}\n' >"$active_tmp"
+    chown root:root "$active_tmp"
+    chmod 0600 "$active_tmp"
+    mv -f -- "$active_tmp" "$switch_state/active.json"
+fi
 
 ss_output=$(ss -H -tlnp) || die 'ss failed during loopback-listener verification'
 python3 - "$upstream_port" 3<<<"$ss_output" <<'PY' \

@@ -49,8 +49,17 @@ clean_curl() {
 }
 
 dsv4_launcher() {
-    env -i PATH=/usr/bin:/bin HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 \
-        LANG=C.UTF-8 DSV4_PORT="$PORT" \
+    install -d -o dsv4 -g dsv4 -m 0700 /run/dsv4
+    /usr/sbin/runuser -u dsv4 -- env -i \
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
+        DSV4_PORT="$PORT" \
+        DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
+        DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
+        DSV4_MEM_FLOOR_GIB=18 DSV4_WATCHDOG_FLOOR_GIB=18 \
+        DSV4_UBATCH=2048 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=1 \
+        CTX=65536 DSV4_PARALLEL=2 DSV4_NO_MMAP=1 \
+        DSV4_SPEC_TYPE=ngram-map-k4v \
         "$REPO/scripts/21_serve_llamacpp.sh" "$@"
 }
 
@@ -195,7 +204,7 @@ start_glm52() {
 }
 
 api_key() {
-    local file=${DSV4_API_KEY_FILE:-/run/credentials/dsv4-api-key}
+    local file=${DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key}
     [[ -r $file ]] || return 1
     IFS= read -r REPLY <"$file"
     [[ $REPLY =~ ^[A-Za-z0-9._-]{16,512}$ ]]
@@ -302,7 +311,27 @@ if [[ $command == status ]]; then
     json_status
     exit 0
 fi
-[[ $command == dsv4 || $command == glm52 ]] || die "usage: $0 status [--json]|dsv4|glm52"
+[[ $command == restore || $command == dsv4 || $command == glm52 ]] ||
+    die "usage: $0 status [--json]|restore|dsv4|glm52"
+if [[ $command == restore ]]; then
+    mkdir -p -- "$STATE"
+    exec 9>"$LOCK"
+    flock -x 9
+    command=$(read_active_profile)
+    [[ -n $command ]] || exit 0
+    if [[ $command == glm52 ]] && ! glm_qualified; then
+        die "recorded GLM-5.2 profile is no longer qualified"
+    fi
+    if verify_serving "$command"; then
+        exit 0
+    fi
+    "start_$command"
+    wait_model_ready "$command" ||
+        die "$command boot restoration timed out or model identity is wrong"
+    verify_serving "$command" ||
+        die "$command boot restoration failed serving verification"
+    exit 0
+fi
 if [[ $command == glm52 ]] && ! glm_qualified; then
     die "GLM-5.2 1M profile is not qualified"
 fi
