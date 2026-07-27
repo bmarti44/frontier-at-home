@@ -57,6 +57,10 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("wait_model_ready", source)
         self.assertIn("Waiting for %s load", source)
         self.assertIn("deadline=$((SECONDS + 1800))", source)
+        self.assertIn("trap 'rollback \"$command\"' EXIT", source)
+        self.assertIn("expected=deepseek-v4-flash", source)
+        self.assertIn('expected == item["id"].lower()', source)
+        self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START || true", source)
 
     def test_unqualified_glm_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:

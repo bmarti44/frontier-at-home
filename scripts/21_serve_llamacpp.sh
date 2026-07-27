@@ -111,9 +111,15 @@ signal_verified_pid() {
 
 cleanup_failed_start() {
     local rc=$1 start_group_signaled=false watchdog_disarmed=false identity_ok=true
+    local cleanup_wait
     "$startup_cleanup_armed" || return "$rc"
     startup_cleanup_armed=false
     trap - ERR EXIT
+    # Publish the same-boot retry latch before any cleanup wait. In particular,
+    # a CUDA task stuck in uninterruptible D state must not delay the latch.
+    printf 'failed_at=%s exit_status=%s\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$rc" >"$START_FAILURE_MARKER.tmp"
+    mv -- "$START_FAILURE_MARKER.tmp" "$START_FAILURE_MARKER"
 
     # Preserve supervision until the engine/start group is dead. During the
     # gated window flock_pid is the verified provisional group leader; after
@@ -141,6 +147,14 @@ cleanup_failed_start() {
         start_group_signaled=true
     fi
     if "$start_group_signaled"; then
+        for ((cleanup_wait=0; cleanup_wait < 50; cleanup_wait++)); do
+            pid_alive "$flock_pid" || break
+            sleep 0.1
+        done
+        if pid_alive "$flock_pid"; then
+            printf 'ERROR: start group remains alive after SIGKILL; preserving armed watchdog and state for recovery.\n' >&2
+            return "$rc"
+        fi
         wait "$flock_pid" 2>/dev/null || true
     fi
 
@@ -156,24 +170,22 @@ cleanup_failed_start() {
             verify_aux_identity "$memwatch_pid" "${memwatch_start_ticks:-0}" \
                 '01_memwatch.sh' memwatch; then
         kill -TERM "$memwatch_pid" 2>/dev/null || true
-        wait "$memwatch_pid" 2>/dev/null || true
+        for ((cleanup_wait=0; cleanup_wait < 50; cleanup_wait++)); do
+            pid_alive "$memwatch_pid" || break
+            sleep 0.1
+        done
         if pid_alive "$memwatch_pid" &&
                 verify_aux_identity "$memwatch_pid" "$memwatch_start_ticks" \
                     '01_memwatch.sh' memwatch; then
             kill -KILL "$memwatch_pid" 2>/dev/null || true
         fi
+        pid_alive "$memwatch_pid" || wait "$memwatch_pid" 2>/dev/null || true
     fi
 
     "$state_published" && rm -f -- "$STATE_FILE"
     "$watchdog_disarmed" && rm -f -- "$WATCHDOG_READY"
     [[ -z ${target_tmp:-} ]] || rm -f -- "$target_tmp"
     [[ -z ${start_gate:-} ]] || rm -f -- "$start_gate"
-    # /run is cleared by reboot. A failed large CUDA initialization can leave
-    # driver allocations fragmented even after host memory recovers, so never
-    # retry blindly on the same boot.
-    printf 'failed_at=%s exit_status=%s\n' \
-        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$rc" >"$START_FAILURE_MARKER.tmp"
-    mv -- "$START_FAILURE_MARKER.tmp" "$START_FAILURE_MARKER"
     return "$rc"
 }
 
@@ -697,7 +709,6 @@ do_start() {
             die "a prior large-model start failed on this boot; reboot before retrying (marker: $START_FAILURE_MARKER)"
         fi
         printf 'WARNING: explicitly retrying after a failed large-model start on this boot.\n' >&2
-        rm -f -- "$START_FAILURE_MARKER"
     fi
 
     if [[ -e $STATE_FILE ]]; then
@@ -842,7 +853,8 @@ do_start() {
     [[ $parallel =~ ^[1-4]$ ]] || die 'DSV4_PARALLEL must be 1-4'
     server_command=("$BINARY" --model "$MODEL_PATH")
     [[ -z $API_KEY_FILE ]] || server_command+=(--api-key-file "$API_KEY_FILE")
-    server_command+=(--host 127.0.0.1 --port "$PORT" -c "$CTX" -np "$parallel" -ngl 999
+    server_command+=(--alias deepseek-v4-flash
+        --host 127.0.0.1 --port "$PORT" -c "$CTX" -np "$parallel" -ngl 999
         -b "$batch" -ub "$ubatch" --no-warmup --cache-ram 0)
     (( no_mmap == 0 )) || server_command+=(--no-mmap)
     (( log_verbosity == 3 )) || server_command+=(-lv "$log_verbosity")
@@ -933,6 +945,7 @@ do_start() {
         fi
         if curl --silent --show-error --fail --max-time 3 \
                 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
+            rm -f -- "$START_FAILURE_MARKER"
             printf '{"ok":true,"stack":"llamacpp","pid":%d,"port":%d}\n' "$server_pid" "$PORT"
             startup_cleanup_armed=false
             trap - ERR EXIT

@@ -20,7 +20,8 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     GGUF=$STATE/model.gguf
 else
     unset ENGINE_SWITCH_TEST_ROOT ENGINE_PORT DS4_GLM_TOPK_KEEP \
-        DS4_GLM_TOPK_SKIP_LOAD DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL || true
+        DS4_GLM_TOPK_SKIP_LOAD DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL \
+        DSV4_ALLOW_RETRY_AFTER_FAILED_START || true
     STATE=$PROD_STATE
     SRC=$PROD_SRC
     GGUF=$PROD_GGUF
@@ -185,8 +186,8 @@ api_key() {
 
 wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
-    expected=deepseek
-    [[ $profile == glm52 ]] && expected=glm
+    expected=deepseek-v4-flash
+    [[ $profile == glm52 ]] && expected=glm-5.2
     deadline=$((SECONDS + 1800))
     while (( SECONDS < deadline )); do
         body=$(curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
@@ -195,7 +196,7 @@ wait_model_ready() {
 import json, sys
 expected, raw = sys.argv[1:]
 value = json.loads(raw)
-assert any(expected in item["id"].lower() for item in value["data"])
+assert any(expected == item["id"].lower() for item in value["data"])
 PY
         then
             return 0
@@ -214,15 +215,15 @@ PY
 
 verify_serving() {
     local profile=$1 expected unauth code key body
-    expected=deepseek
-    [[ $profile == glm52 ]] && expected=glm
+    expected=deepseek-v4-flash
+    [[ $profile == glm52 ]] && expected=glm-5.2
     body=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
     python3 - "$expected" "$body" <<'PY'
 import json, sys
 expected=sys.argv[1]
 value=json.loads(sys.argv[2])
-assert any(expected in item["id"].lower() for item in value["data"])
+assert any(expected == item["id"].lower() for item in value["data"])
 PY
     unauth=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -293,11 +294,11 @@ if [[ $previous_profile == "$command" ]] && verify_serving "$command"; then
     exit 0
 fi
 rollback_needed=true
-trap 'rollback "$command"' ERR
+trap 'rollback "$command"' EXIT
 stop_profile "$previous_profile"
 "start_$command"
 wait_model_ready "$command" || die "$command readiness timed out or model identity is wrong"
 verify_serving "$command"
 commit_active "$command"
 rollback_needed=false
-trap - ERR
+trap - EXIT

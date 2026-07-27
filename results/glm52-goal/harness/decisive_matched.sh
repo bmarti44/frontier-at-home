@@ -41,7 +41,7 @@ PY
     python3 - "$models" <<'PY' || return 1
 import json, sys
 value = json.loads(sys.argv[1])
-assert any("deepseek" in item["id"].lower() for item in value["data"])
+assert any("deepseek-v4-flash" == item["id"].lower() for item in value["data"])
 PY
     ACTIVE=dsv4
 }

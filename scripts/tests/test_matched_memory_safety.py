@@ -103,6 +103,11 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("llamacpp.start-failed", source)
         self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START", source)
         self.assertIn("reboot before retrying", source)
+        self.assertIn("--alias deepseek-v4-flash", source)
+        marker_index = source.index("failed_at=%s exit_status=%s")
+        wait_index = source.index('wait "$flock_pid"')
+        self.assertLess(marker_index, wait_index)
+        self.assertIn("start group remains alive after SIGKILL", source)
 
     def test_candidate_source_override_is_explicit_and_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
