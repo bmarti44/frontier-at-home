@@ -33,8 +33,9 @@ class FormulaTests(unittest.TestCase):
         cls.goal = load_goal_module()
 
     def test_decode_formula_uses_first_and_last_token(self):
-        self.assertEqual(
-            self.goal.decode_tokens_per_second([1.0, 1.1, 1.2, 1.3]), 10.0
+        timestamps = [1.0 + index / 10.0 for index in range(128)]
+        self.assertAlmostEqual(
+            self.goal.decode_tokens_per_second(timestamps), 10.0, places=12
         )
 
     def test_decode_formula_rejects_short_or_nonfinite_input(self):
