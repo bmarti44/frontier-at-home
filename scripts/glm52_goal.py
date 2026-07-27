@@ -930,9 +930,20 @@ def registered_scorer_digest(scorer_id: str) -> str:
     functions = dependencies.get(scorer_id)
     if functions is None:
         raise ValueError(f"unknown registered scorer: {scorer_id}")
+    trust_boundary = (
+        registered_scorer_digest,
+        score_registered_gate,
+        validate_attempt,
+        validate_manifest_lineage,
+        validate_source_provenance,
+        validate_record_artifact_bindings,
+        _read_strict_json,
+        _unique_pairs,
+        _sha256,
+    )
     digest = hashlib.sha256()
     digest.update(f"scorer_id={scorer_id}\n".encode())
-    for function in functions:
+    for function in functions + trust_boundary:
         digest.update(f"function={function.__name__}\n".encode())
         digest.update(inspect.getsource(function).encode())
     if scorer_id == "parity.performance.v1":
