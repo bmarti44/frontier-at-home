@@ -64,6 +64,11 @@ class ContextProbeTests(unittest.TestCase):
 
 
 class ContextWorkerContractTests(unittest.TestCase):
+    def test_preload_admission_allows_measured_headless_baseline(self):
+        worker = WORKER.read_text(encoding="utf-8")
+        self.assertIn("--required-gib 115.0", worker)
+        self.assertNotIn("--required-gib 115.25", worker)
+
     def test_measured_headless_admission_is_default_off_and_bounded(self):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_MEASURED_HEADLESS_OVERHEAD_GIB", source)
