@@ -8,7 +8,7 @@ readonly SECRET_PATTERN_NOHEX='Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPENSSH)? 
 
 is_checksum_file() {
   case "$1" in
-    verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
+    verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -91,14 +91,26 @@ allowlist = {
     "source_summary_sha256",
     "source_transcript_sha256",
     "tokenizer_sha256",
+    "tsa_certificate_sha256",
     "binary_sha256",
     "build_manifest_sha256",
+    "ca_certificate_sha256",
     "configuration_sha256",
+    "generated_content_sha256",
+    "generated_reasoning_sha256",
     "diff_sha256",
     "fixture_sha256",
+    "freeze_json_sha256",
     "model_sha256",
+    "output_tokenizer_sha256",
+    "profile_sha256",
+    "randomness",
+    "request_sha256",
+    "response_sha256",
     "scorer_sha256",
     "server_sha256",
+    "seed_sha256",
+    "staged_binary_sha256",
     "cuda_sass_sha256",
     "source_sha256",
     "preserved_archive_sha256",
@@ -204,10 +216,36 @@ raise SystemExit(failed)
 PY
 }
 
+scan_public_evidence_log() {
+  local display_path="$1"
+  python3 - "$display_path" 3<&0 <<'PY'
+import os
+import re
+import sys
+
+display_path = sys.argv[1]
+approved = {
+    "5bc2c255f33fb8a282c4c67037579f26"
+    + "be573ded680e4d5cdd1c0adbd0bad3f0",
+}
+failed = False
+for line_number, line in enumerate(os.fdopen(3, encoding="utf-8"), 1):
+    for value in re.findall(r"[0-9a-fA-F]{64}", line):
+        if value.lower() not in approved:
+            print(
+                f"{display_path}:{line_number}: unapproved evidence digest",
+                file=sys.stderr,
+            )
+            failed = True
+raise SystemExit(failed)
+PY
+}
+
 scan_digest_file() {
   local display_path="$1"
   case "$display_path" in
     MANIFEST|*/MANIFEST|*.sha256) scan_digest_manifest "$display_path" ;;
+    results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity) scan_public_evidence_log "$display_path" ;;
     *) scan_digest_json "$display_path" ;;
   esac
 }

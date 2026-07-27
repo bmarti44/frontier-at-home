@@ -8,11 +8,14 @@ useDefault = true
 description = "public integrity digests recorded in exact evidence fields"
 regexTarget = "line"
 regexes = [
-  '''"(binary|build_manifest|configuration|diff|fixture|model|scorer|server|source|tokenizer|weights_manifest|preserved_archive)_sha256": "[0-9a-f]{64}"''',
+  '''"(binary|build_manifest|configuration|diff|fixture|generated_content|generated_reasoning|model|output_tokenizer|profile|request|response|scorer|seed|server|source|staged_binary|tokenizer|weights_manifest|preserved_archive)_sha256": "[0-9a-f]{64}"''',
+  '''"randomness": "[0-9a-f]{64}"''',
   '''"lib[a-zA-Z0-9._-]+\.so": "[0-9a-f]{64}"''',
   '''"(base|mtp|dspark_drafter)": "[0-9a-f]{64}"''',
   '''"(results/glm52-(goal|gates)/harness/[a-zA-Z0-9._/-]+|scripts/(11_build_glm52_repro\.sh|30_bench_speed\.py))": "[0-9a-f]{64}"''',
   '''"results/glm52-goal/evidence/build-repro/[a-zA-Z0-9._/-]+": "[0-9a-f]{64}"''',
+  '''"(freeze_json|response|tsa_certificate|ca_certificate)_sha256": "[0-9a-f]{64}"''',
+  '''"(freeze|no-result-relative-path|success)/[a-zA-Z0-9._/-]+": "[0-9a-f]{64}"''',
   '''"drand_randomness": "[0-9a-f]{64}"''',
   '''"drand_signature": "[0-9a-f]{192}"''',
   '''"/home/dsv4/ds4-project/[^"]+": "[0-9a-f]{64}"''',

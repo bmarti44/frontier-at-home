@@ -1,0 +1,190 @@
+ds4: Linux cuda backend set oom_score_adj=1000
+ds4: CUDA backend initialized on NVIDIA GB10 (sm_121) dev=0
+ds4: cuda SSD streaming total expert budget 40.00 GiB = 5.91 GiB prefill headroom + 34.09 GiB dynamic cache (3761 experts, 9.28 MiB each)
+ds4: SSD streaming mixed-precision model: 1/76 routed layers off the slab size class will bypass the expert cache and read experts via mapped model views
+ds4: SSD streaming initial cuda model map restricted to token embedding (1 spans, 0.94 GiB tensor span)
+ds4: CUDA host registration skipped: operation not supported
+ds4: CUDA preparing model tensor mappings
+ds4: CUDA loading model tensors into device cache
+ds4: CUDA startup model preparation covered 0.94 GiB of tensor spans in 0.281s
+ds4: cuda backend initialized for graph diagnostics
+ds4: memory: KV 1.45 GiB (raw 0.00 + compressed 1.45) + buffers 4.07 GiB + resident model 0.94 GiB + expert cache 34.09 GiB + prefill expert reserve 5.91 GiB = 46.46 GiB planned
+ds4: memory detail: ctx=8192 prefill_cap=4096 raw_kv_rows=0 compressed_kv_rows=8192 backend=cuda
+0727 12:44:21 ds4-server: context buffers 5653.35 MiB (ctx=8192, backend=cuda, prefill_chunk=4096, raw_kv_rows=0, compressed_kv_rows=8192)
+ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped
+ds4: GLM graph allocating compact DSA cache: rows=8192 logical_ctx=8192 kv_layers=78 indexer_layers=21 f32 1.45 GiB
+ds4: GLM compact indexed prefill chunk=4096 score_rows=4096 score_scratch=128.00 MiB
+0727 12:44:21 ds4-server: listening on http://127.0.0.1:18011
+0727 12:44:23 ds4-server: chat ctx=0..62:62 prompt start
+ds4: CUDA IQ2-down reference enabled gate_type=16 down_type=16
+ds4: CUDA loading model tensors 16.01 GiB cached
+ds4: CUDA loading model tensors 17.61 GiB cached
+0727 12:45:57 ds4-server: chat ctx=0..62:62 prefill chunk 62/62 (100.0%) chunk=0.00 t/s avg=0.66 t/s 93.833s
+0727 12:45:57 ds4-server: chat ctx=0..62:62 prompt done 93.833s
+DS4_TOKEN_TIMING request=chatcmpl-1 index=1 monotonic_ns=21090362943776 token=785
+DS4_TOKEN_TIMING request=chatcmpl-1 index=2 monotonic_ns=21091851013040 token=1196
+DS4_TOKEN_TIMING request=chatcmpl-1 index=3 monotonic_ns=21093364532080 token=6801
+DS4_TOKEN_TIMING request=chatcmpl-1 index=4 monotonic_ns=21094895356352 token=752
+DS4_TOKEN_TIMING request=chatcmpl-1 index=5 monotonic_ns=21096438434992 token=311
+DS4_TOKEN_TIMING request=chatcmpl-1 index=6 monotonic_ns=21097915230032 token=3060
+DS4_TOKEN_TIMING request=chatcmpl-1 index=7 monotonic_ns=21099397281456 token=264
+DS4_TOKEN_TIMING request=chatcmpl-1 index=8 monotonic_ns=21100872286592 token=1467
+DS4_TOKEN_TIMING request=chatcmpl-1 index=9 monotonic_ns=21102359551952 token=429
+DS4_TOKEN_TIMING request=chatcmpl-1 index=10 monotonic_ns=21103809872272 token=8470
+DS4_TOKEN_TIMING request=chatcmpl-1 index=11 monotonic_ns=21105246301936 token=448
+DS4_TOKEN_TIMING request=chatcmpl-1 index=12 monotonic_ns=21106709506352 token=264
+DS4_TOKEN_TIMING request=chatcmpl-1 index=13 monotonic_ns=21108220605760 token=88713
+DS4_TOKEN_TIMING request=chatcmpl-1 index=14 monotonic_ns=21109737091680 token=8481
+DS4_TOKEN_TIMING request=chatcmpl-1 index=15 monotonic_ns=21111214982656 token=22601
+DS4_TOKEN_TIMING request=chatcmpl-1 index=16 monotonic_ns=21112676891728 token=4194
+DS4_TOKEN_TIMING request=chatcmpl-1 index=17 monotonic_ns=21114131699424 token=4244
+DS4_TOKEN_TIMING request=chatcmpl-1 index=18 monotonic_ns=21115616076064 token=13
+DS4_TOKEN_TIMING request=chatcmpl-1 index=19 monotonic_ns=21117167714816 token=358
+DS4_TOKEN_TIMING request=chatcmpl-1 index=20 monotonic_ns=21118660453424 token=1184
+DS4_TOKEN_TIMING request=chatcmpl-1 index=21 monotonic_ns=21120187896432 token=311
+DS4_TOKEN_TIMING request=chatcmpl-1 index=22 monotonic_ns=21121692595072 token=3060
+DS4_TOKEN_TIMING request=chatcmpl-1 index=23 monotonic_ns=21123273229264 token=17687
+DS4_TOKEN_TIMING request=chatcmpl-1 index=24 monotonic_ns=21124801764512 token=323
+DS4_TOKEN_TIMING request=chatcmpl-1 index=25 monotonic_ns=21126330846240 token=3270
+DS4_TOKEN_TIMING request=chatcmpl-1 index=26 monotonic_ns=21127808756176 token=518
+DS4_TOKEN_TIMING request=chatcmpl-1 index=27 monotonic_ns=21129277032896 token=3245
+DS4_TOKEN_TIMING request=chatcmpl-1 index=28 monotonic_ns=21130743366080 token=220
+DS4_TOKEN_TIMING request=chatcmpl-1 index=29 monotonic_ns=21132235045248 token=103306
+DS4_TOKEN_TIMING request=chatcmpl-1 index=30 monotonic_ns=21133761261280 token=4244
+DS4_TOKEN_TIMING request=chatcmpl-1 index=31 monotonic_ns=21135276017712 token=2041
+DS4_TOKEN_TIMING request=chatcmpl-1 index=32 monotonic_ns=21136798883280 token=22476
+DS4_TOKEN_TIMING request=chatcmpl-1 index=33 monotonic_ns=21138339427568 token=382
+DS4_TOKEN_TIMING request=chatcmpl-1 index=34 monotonic_ns=21139844752320 token=10056
+DS4_TOKEN_TIMING request=chatcmpl-1 index=35 monotonic_ns=21141331538272 token=752
+DS4_TOKEN_TIMING request=chatcmpl-1 index=36 monotonic_ns=21142809607344 token=1401
+DS4_TOKEN_TIMING request=chatcmpl-1 index=37 monotonic_ns=21144345278800 token=518
+DS4_TOKEN_TIMING request=chatcmpl-1 index=38 monotonic_ns=21145783631840 token=279
+DS4_TOKEN_TIMING request=chatcmpl-1 index=39 monotonic_ns=21147217033776 token=5383
+DS4_TOKEN_TIMING request=chatcmpl-1 index=40 monotonic_ns=21148656943424 token=25
+DS4_TOKEN_TIMING request=chatcmpl-1 index=41 monotonic_ns=21150129615344 token=330
+DS4_TOKEN_TIMING request=chatcmpl-1 index=42 monotonic_ns=21151655874752 token=47
+DS4_TOKEN_TIMING request=chatcmpl-1 index=43 monotonic_ns=21153153565888 token=85987
+DS4_TOKEN_TIMING request=chatcmpl-1 index=44 monotonic_ns=21154644429008 token=28331
+DS4_TOKEN_TIMING request=chatcmpl-1 index=45 monotonic_ns=21156155037872 token=12
+DS4_TOKEN_TIMING request=chatcmpl-1 index=46 monotonic_ns=21157595103600 token=99752
+DS4_TOKEN_TIMING request=chatcmpl-1 index=47 monotonic_ns=21159040065264 token=99752
+DS4_TOKEN_TIMING request=chatcmpl-1 index=48 monotonic_ns=21160481913264 token=1257
+DS4_TOKEN_TIMING request=chatcmpl-1 index=49 monotonic_ns=21161941835136 token=7836
+DS4_TOKEN_TIMING request=chatcmpl-1 index=50 monotonic_ns=21163460900688 token=752
+0727 12:47:11 ds4-server: chat ctx=62..112:50 gen=50 THINKING decoding chunk=0.67 t/s avg=0.67 t/s 74.571s
+DS4_TOKEN_TIMING request=chatcmpl-1 index=51 monotonic_ns=21164988323536 token=5843
+DS4_TOKEN_TIMING request=chatcmpl-1 index=52 monotonic_ns=21166483899520 token=69464
+DS4_TOKEN_TIMING request=chatcmpl-1 index=53 monotonic_ns=21167973509744 token=60505
+DS4_TOKEN_TIMING request=chatcmpl-1 index=54 monotonic_ns=21169425798496 token=1051
+DS4_TOKEN_TIMING request=chatcmpl-1 index=55 monotonic_ns=21170911567680 token=59464
+DS4_TOKEN_TIMING request=chatcmpl-1 index=56 monotonic_ns=21172380206032 token=752
+DS4_TOKEN_TIMING request=chatcmpl-1 index=57 monotonic_ns=21173837252032 token=5843
+DS4_TOKEN_TIMING request=chatcmpl-1 index=58 monotonic_ns=21175297646768 token=60505
+DS4_TOKEN_TIMING request=chatcmpl-1 index=59 monotonic_ns=21176759440912 token=9473
+DS4_TOKEN_TIMING request=chatcmpl-1 index=60 monotonic_ns=21178274250240 token=8150
+DS4_TOKEN_TIMING request=chatcmpl-1 index=61 monotonic_ns=21179780634816 token=10516
+DS4_TOKEN_TIMING request=chatcmpl-1 index=62 monotonic_ns=21181284898928 token=51662
+DS4_TOKEN_TIMING request=chatcmpl-1 index=63 monotonic_ns=21182811594304 token=40812
+DS4_TOKEN_TIMING request=chatcmpl-1 index=64 monotonic_ns=21184297649728 token=51662
+DS4_TOKEN_TIMING request=chatcmpl-1 index=65 monotonic_ns=21185763662352 token=21002
+DS4_TOKEN_TIMING request=chatcmpl-1 index=66 monotonic_ns=21187202055056 token=85719
+DS4_TOKEN_TIMING request=chatcmpl-1 index=67 monotonic_ns=21188650816000 token=12915
+DS4_TOKEN_TIMING request=chatcmpl-1 index=68 monotonic_ns=21190086666624 token=54018
+DS4_TOKEN_TIMING request=chatcmpl-1 index=69 monotonic_ns=21191533915712 token=31969
+DS4_TOKEN_TIMING request=chatcmpl-1 index=70 monotonic_ns=21192996237040 token=17674
+DS4_TOKEN_TIMING request=chatcmpl-1 index=71 monotonic_ns=21194533659808 token=12851
+DS4_TOKEN_TIMING request=chatcmpl-1 index=72 monotonic_ns=21195988214400 token=60940
+DS4_TOKEN_TIMING request=chatcmpl-1 index=73 monotonic_ns=21197425365904 token=580
+DS4_TOKEN_TIMING request=chatcmpl-1 index=74 monotonic_ns=21198956683136 token=33435
+DS4_TOKEN_TIMING request=chatcmpl-1 index=75 monotonic_ns=21200468555120 token=50964
+DS4_TOKEN_TIMING request=chatcmpl-1 index=76 monotonic_ns=21201959563808 token=1837
+DS4_TOKEN_TIMING request=chatcmpl-1 index=77 monotonic_ns=21203425911824 token=1986
+DS4_TOKEN_TIMING request=chatcmpl-1 index=78 monotonic_ns=21204867404448 token=7951
+DS4_TOKEN_TIMING request=chatcmpl-1 index=79 monotonic_ns=21206325828208 token=311
+DS4_TOKEN_TIMING request=chatcmpl-1 index=80 monotonic_ns=21207772567504 token=387
+DS4_TOKEN_TIMING request=chatcmpl-1 index=81 monotonic_ns=21209216460048 token=264
+DS4_TOKEN_TIMING request=chatcmpl-1 index=82 monotonic_ns=21210669394944 token=8499
+DS4_TOKEN_TIMING request=chatcmpl-1 index=83 monotonic_ns=21212109154656 token=315
+DS4_TOKEN_TIMING request=chatcmpl-1 index=84 monotonic_ns=21213574132144 token=4244
+DS4_TOKEN_TIMING request=chatcmpl-1 index=85 monotonic_ns=21215126150320 token=11
+DS4_TOKEN_TIMING request=chatcmpl-1 index=86 monotonic_ns=21216642643856 token=10762
+DS4_TOKEN_TIMING request=chatcmpl-1 index=87 monotonic_ns=21218180053040 token=1894
+DS4_TOKEN_TIMING request=chatcmpl-1 index=88 monotonic_ns=21219665801104 token=5036
+DS4_TOKEN_TIMING request=chatcmpl-1 index=89 monotonic_ns=21221140624176 token=11
+DS4_TOKEN_TIMING request=chatcmpl-1 index=90 monotonic_ns=21222612172928 token=6993
+DS4_TOKEN_TIMING request=chatcmpl-1 index=91 monotonic_ns=21224132752144 token=4244
+DS4_TOKEN_TIMING request=chatcmpl-1 index=92 monotonic_ns=21225622997328 token=11
+DS4_TOKEN_TIMING request=chatcmpl-1 index=93 monotonic_ns=21227140186992 token=323
+DS4_TOKEN_TIMING request=chatcmpl-1 index=94 monotonic_ns=21228646574144 token=1008
+DS4_TOKEN_TIMING request=chatcmpl-1 index=95 monotonic_ns=21230102181488 token=3793
+DS4_TOKEN_TIMING request=chatcmpl-1 index=96 monotonic_ns=21231565978352 token=13
+DS4_TOKEN_TIMING request=chatcmpl-1 index=97 monotonic_ns=21233076539808 token=6771
+DS4_TOKEN_TIMING request=chatcmpl-1 index=98 monotonic_ns=21234586138640 token=752
+DS4_TOKEN_TIMING request=chatcmpl-1 index=99 monotonic_ns=21236045382496 token=3060
+DS4_TOKEN_TIMING request=chatcmpl-1 index=100 monotonic_ns=21237477333696 token=304
+0727 12:48:25 ds4-server: chat ctx=112..162:50 gen=100 THINKING decoding chunk=0.68 t/s avg=0.67 t/s 148.587s
+DS4_TOKEN_TIMING request=chatcmpl-1 index=101 monotonic_ns=21238967359136 token=264
+DS4_TOKEN_TIMING request=chatcmpl-1 index=102 monotonic_ns=21240458117376 token=4428
+DS4_TOKEN_TIMING request=chatcmpl-1 index=103 monotonic_ns=21241940954256 token=52890
+DS4_TOKEN_TIMING request=chatcmpl-1 index=104 monotonic_ns=21243423940400 token=11
+DS4_TOKEN_TIMING request=chatcmpl-1 index=105 monotonic_ns=21244916717984 token=6825
+DS4_TOKEN_TIMING request=chatcmpl-1 index=106 monotonic_ns=21246373608336 token=264
+DS4_TOKEN_TIMING request=chatcmpl-1 index=107 monotonic_ns=21247820368288 token=5810
+DS4_TOKEN_TIMING request=chatcmpl-1 index=108 monotonic_ns=21249273716192 token=40940
+DS4_TOKEN_TIMING request=chatcmpl-1 index=109 monotonic_ns=21250739871232 token=429
+DS4_TOKEN_TIMING request=chatcmpl-1 index=110 monotonic_ns=21252199957232 token=27363
+DS4_TOKEN_TIMING request=chatcmpl-1 index=111 monotonic_ns=21253703437968 token=504
+DS4_TOKEN_TIMING request=chatcmpl-1 index=112 monotonic_ns=21255248316592 token=1493
+DS4_TOKEN_TIMING request=chatcmpl-1 index=113 monotonic_ns=21256768458160 token=4244
+DS4_TOKEN_TIMING request=chatcmpl-1 index=114 monotonic_ns=21258248612336 token=1119
+DS4_TOKEN_TIMING request=chatcmpl-1 index=115 monotonic_ns=21259741678576 token=264
+DS4_TOKEN_TIMING request=chatcmpl-1 index=116 monotonic_ns=21261209632288 token=55413
+DS4_TOKEN_TIMING request=chatcmpl-1 index=117 monotonic_ns=21262716013280 token=1467
+DS4_TOKEN_TIMING request=chatcmpl-1 index=118 monotonic_ns=21264199740768 token=382
+DS4_TOKEN_TIMING request=chatcmpl-1 index=119 monotonic_ns=21265711134720 token=52246
+DS4_TOKEN_TIMING request=chatcmpl-1 index=120 monotonic_ns=21267207330832 token=11
+DS4_TOKEN_TIMING request=chatcmpl-1 index=121 monotonic_ns=21268711651360 token=3330
+DS4_TOKEN_TIMING request=chatcmpl-1 index=122 monotonic_ns=21270217213616 token=803
+DS4_TOKEN_TIMING request=chatcmpl-1 index=123 monotonic_ns=21271722685632 token=15504
+DS4_TOKEN_TIMING request=chatcmpl-1 index=124 monotonic_ns=21273177742544 token=11
+DS4_TOKEN_TIMING request=chatcmpl-1 index=125 monotonic_ns=21274649246800 token=419
+DS4_TOKEN_TIMING request=chatcmpl-1 index=126 monotonic_ns=21276091727856 token=4977
+DS4_TOKEN_TIMING request=chatcmpl-1 index=127 monotonic_ns=21277544193168 token=1075
+DS4_TOKEN_TIMING request=chatcmpl-1 index=128 monotonic_ns=21279010607200 token=432
+DS4_TOKEN_TIMING request=chatcmpl-1 index=129 monotonic_ns=21280503986640 token=1410
+DS4_TOKEN_TIMING request=chatcmpl-1 index=130 monotonic_ns=21282012799680 token=387
+DS4_TOKEN_TIMING request=chatcmpl-1 index=131 monotonic_ns=21283519694848 token=264
+DS4_TOKEN_TIMING request=chatcmpl-1 index=132 monotonic_ns=21285030094736 token=3409
+DS4_TOKEN_TIMING request=chatcmpl-1 index=133 monotonic_ns=21286495193984 token=1140
+DS4_TOKEN_TIMING request=chatcmpl-1 index=134 monotonic_ns=21287956680048 token=476
+DS4_TOKEN_TIMING request=chatcmpl-1 index=135 monotonic_ns=21289464501264 token=1045
+DS4_TOKEN_TIMING request=chatcmpl-1 index=136 monotonic_ns=21290968556976 token=3093
+DS4_TOKEN_TIMING request=chatcmpl-1 index=137 monotonic_ns=21292456164928 token=315
+DS4_TOKEN_TIMING request=chatcmpl-1 index=138 monotonic_ns=21293942032448 token=46385
+DS4_TOKEN_TIMING request=chatcmpl-1 index=139 monotonic_ns=21295418343024 token=8499
+DS4_TOKEN_TIMING request=chatcmpl-1 index=140 monotonic_ns=21296950245664 token=13
+DS4_TOKEN_TIMING request=chatcmpl-1 index=141 monotonic_ns=21298430628208 token=576
+DS4_TOKEN_TIMING request=chatcmpl-1 index=142 monotonic_ns=21299933685888 token=7600
+DS4_TOKEN_TIMING request=chatcmpl-1 index=143 monotonic_ns=21301382330384 token=2727
+DS4_TOKEN_TIMING request=chatcmpl-1 index=144 monotonic_ns=21302828149360 token=311
+DS4_TOKEN_TIMING request=chatcmpl-1 index=145 monotonic_ns=21304329580208 token=330
+DS4_TOKEN_TIMING request=chatcmpl-1 index=146 monotonic_ns=21305854594848 token=9530
+DS4_TOKEN_TIMING request=chatcmpl-1 index=147 monotonic_ns=21307363463248 token=419
+DS4_TOKEN_TIMING request=chatcmpl-1 index=148 monotonic_ns=21308888726352 token=1467
+DS4_TOKEN_TIMING request=chatcmpl-1 index=149 monotonic_ns=21310347818352 token=17687
+DS4_TOKEN_TIMING request=chatcmpl-1 index=150 monotonic_ns=21311849625072 token=1
+0727 12:49:40 ds4-server: chat ctx=162..212:50 gen=150 THINKING decoding chunk=0.67 t/s avg=0.67 t/s 222.960s
+DS4_TOKEN_TIMING request=chatcmpl-1 index=151 monotonic_ns=21313409267088 token=481
+DS4_TOKEN_TIMING request=chatcmpl-1 index=152 monotonic_ns=21314939600944 token=773
+DS4_TOKEN_TIMING request=chatcmpl-1 index=153 monotonic_ns=21316475050240 token=358
+DS4_TOKEN_TIMING request=chatcmpl-1 index=154 monotonic_ns=21317929739808 token=1265
+DS4_TOKEN_TIMING request=chatcmpl-1 index=155 monotonic_ns=21319398561632 token=1430
+DS4_TOKEN_TIMING request=chatcmpl-1 index=156 monotonic_ns=21320928499904 token=311
+DS4_TOKEN_TIMING request=chatcmpl-1 index=157 monotonic_ns=21322425227840 token=1281
+DS4_TOKEN_TIMING request=chatcmpl-1 index=158 monotonic_ns=21323927983840 token=432
+DS4_TOKEN_TIMING request=chatcmpl-1 index=159 monotonic_ns=21325418653536 token=6396
+DS4_TOKEN_TIMING request=chatcmpl-1 index=160 monotonic_ns=21326933718208 token=17687
+0727 12:49:55 ds4-server: chat ctx=212..222:10 gen=160 THINKING decoding chunk=0.66 t/s avg=0.67 t/s 238.044s
+ds4-server: thinking not closed, ignoring GLM tool calls in reasoning
+0727 12:49:55 ds4-server: chat ctx=0..62:62 gen=160 THINKING finish=length 331.877s
+0727 12:49:55 ds4-server: shutdown requested, draining requests

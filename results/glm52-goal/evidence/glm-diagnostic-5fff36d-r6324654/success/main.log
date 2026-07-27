@@ -1,0 +1,16 @@
+2026-07-27T12:44:18-04:00 SAFE_RUN start tag=confirm-r6324654 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=2400
+2026-07-27T12:44:18-04:00 cmd: /usr/bin/bash /home/bmarti44/spark-deepseek-v4-flash/results/glm52-goal/harness/glm_decisive_arm.sh /home/dsv4/ds4-project/glm52-confirm-5fff36d-r6324654 glm52-repro-5fff36d 1088063042
+2026-07-27T12:44:18-04:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-07-27T12:44:18-04:00 candidate_provenance_enabled=1
+2026-07-27T12:44:18-04:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-confirm-r6324654-601056.service memory_high=71697432576 memory_max=75992399872 memory_swap_max=0 memory_oom_group=1
+2026-07-27T12:44:18-04:00 candidate_src=/home/dsv4/ds4-project/src/ds4-goal-repro-5bc2c255-5fff36d candidate_binary_sha256=5bc2c255f33fb8a282c4c67037579f26be573ded680e4d5cdd1c0adbd0bad3f0 candidate_device_inode=66306:688856
+MemTotal:       125483392 kB
+MemAvailable:   120348352 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":114.767,"stable_samples_observed":3}
+2026-07-27T12:44:21-04:00 wrapper_pid=601122 engine_pid=601129 pgid=601122 (sampler at 4 Hz)
+2026-07-27T12:44:21-04:00 executed_candidate_verified pid=601129 start_ticks=2099253 path=/home/dsv4/ds4-project/src/ds4-goal-repro-5bc2c255-5fff36d/ds4-server executed_binary_sha256=5bc2c255f33fb8a282c4c67037579f26be573ded680e4d5cdd1c0adbd0bad3f0 device_inode=66306:688856
+2026-07-27T12:49:57-04:00 executed candidate exited during wrapper shutdown pid=601129
+2026-07-27T12:49:57-04:00 executed candidate clean exit verified after wrapper and descendant checks
+curl: (7) Failed to connect to 127.0.0.1 port 18011 after 0 ms: Couldn't connect to server
+2026-07-27T12:49:57-04:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   119931484 kB
