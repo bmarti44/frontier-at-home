@@ -772,6 +772,20 @@ class FormulaTests(unittest.TestCase):
                 relay_fetcher=lambda _host, _round: published,
             )
 
+    def test_drand_fetch_disables_curl_default_configuration(self):
+        completed = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout=b'{"round":1,"randomness":"a","signature":"b"}',
+            stderr=b"",
+        )
+        with mock.patch.object(
+            self.goal.subprocess, "run", return_value=completed
+        ) as run:
+            self.goal._fetch_public_drand("api.drand.sh", 1)
+        argv = run.call_args.args[0]
+        self.assertEqual(argv[:2], ["/usr/bin/curl", "--disable"])
+
     def test_manifest_freeze_time_is_derived_from_commit(self):
         confirmation = json.loads(
             (
