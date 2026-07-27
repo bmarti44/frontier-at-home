@@ -96,7 +96,7 @@ class EngineSwitchTests(unittest.TestCase):
             "DSV4_MEM_FLOOR_GIB=18",
             "DSV4_WATCHDOG_FLOOR_GIB=18",
             "DSV4_UBATCH=512",
-            "DSV4_BATCH=512",
+            "DSV4_BATCH=2048",
             "DSV4_UBATCH_LARGE=0",
             "CTX=8192",
             "DSV4_PARALLEL=1",
@@ -112,7 +112,7 @@ class EngineSwitchTests(unittest.TestCase):
         service = DSV4_SERVICE.read_text()
         for setting in (
             "Environment=DSV4_UBATCH=512",
-            "Environment=DSV4_BATCH=512",
+            "Environment=DSV4_BATCH=2048",
             "Environment=DSV4_UBATCH_LARGE=0",
             "Environment=CTX=8192",
             "Environment=DSV4_PARALLEL=1",
