@@ -658,6 +658,93 @@ class FormulaTests(unittest.TestCase):
                         "parity", "parity.performance.v1", malformed
                     )
 
+    def test_reviewed_no_go_requires_decisive_matched_failure_and_clean_reviews(self):
+        candidate = "a" * 40
+        arms = []
+        for block in range(5):
+            order = "ABBA" if block % 2 == 0 else "BAAB"
+            for sequence, arm in enumerate(order):
+                glm = arm == "A"
+                decode = 1.0 if glm else 10.0
+                arms.append(
+                    {
+                        "record_type": "matched_arm",
+                        "block": block,
+                        "sequence": sequence,
+                        "arm": arm,
+                        "profile": "glm52" if glm else "dsv4",
+                        "server_boot_id": f"boot-{block}-{sequence}",
+                        "fixture_sha256": "a" * 64,
+                        "binary_sha256": ("b" if glm else "c") * 64,
+                        "configuration_sha256": ("d" if glm else "e") * 64,
+                        "token_timestamps": [
+                            index / decode for index in range(128)
+                        ],
+                        "evaluated_tokens": 1000,
+                        "prefill_seconds": 20.0 if glm else 10.0,
+                        "warm_ttft_seconds": 2.0 if glm else 1.0,
+                        "cold_ttft_seconds": 20.0 if glm else 10.0,
+                        "available_memory_gib": 20.0,
+                        "truncated": False,
+                        "oom": False,
+                        "xid": False,
+                        "failures": [],
+                    }
+                )
+        measurement_digest = self.goal.reviewed_measurements_digest(arms)
+        reviews = [
+            {
+                "record_type": "no_go_review",
+                "reviewer": reviewer,
+                "candidate_hash": candidate,
+                "review_round": 1,
+                "reviewed_measurements_sha256": measurement_digest,
+                "claimed_score": score,
+                "critical": [],
+                "high": [],
+                "medium": [],
+                "low": [],
+                "prior_issue_status": [],
+                "verdict": "REJECT",
+            }
+            for reviewer, score in (
+                ("gap_reviewer", 0),
+                ("adversarial_reviewer", 1),
+            )
+        ]
+        result = self.goal.score_registered_gate(
+            "parity", "parity.reviewed-no-go.v1", arms + reviews
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(result["decision"], "NO_GO")
+        self.assertTrue(result["checks"]["decisive_matched_failure"])
+        self.assertNotIn("scores_at_least_90", result["checks"])
+
+        high = json.loads(json.dumps(arms + reviews))
+        high[-1]["high"] = [
+            {
+                "id": "H-001",
+                "evidence": "unresolved high issue",
+                "affected_gate": "parity",
+                "reproduction_instructions": "reproduce the high issue",
+                "proposed_acceptance_test": "prove the issue is fixed",
+            }
+        ]
+        high[-1]["claimed_score"] = 100
+        self.assertEqual(
+            self.goal.score_registered_gate(
+                "parity", "parity.reviewed-no-go.v1", high
+            )["verdict"],
+            "FAIL",
+        )
+
+        stale = json.loads(json.dumps(arms + reviews))
+        stale[0]["prefill_seconds"] += 1.0
+        with self.assertRaisesRegex(ValueError, "reviewed measurements"):
+            self.goal.score_registered_gate(
+                "parity", "parity.reviewed-no-go.v1", stale
+            )
+
     def test_registered_foundation_scorer_requires_clean_safe_baselines(self):
         def baseline(profile, hash_char, spacing):
             return {
