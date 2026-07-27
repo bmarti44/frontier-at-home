@@ -869,6 +869,35 @@ class FormulaTests(unittest.TestCase):
                 "W11", manifest, [record]
             )
 
+    def test_foundation_and_parity_candidate_identities_match_manifest(self):
+        manifest = {
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        foundation = {
+            "glm_baseline": {
+                "binary_sha256": "f" * 64,
+                "configuration_sha256": "b" * 64,
+                "fixture_sha256": "c" * 64,
+            }
+        }
+        parity = {
+            "profile": "glm52",
+            "binary_sha256": "f" * 64,
+            "configuration_sha256": "b" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        for gate, records in (
+            ("foundation", [foundation]),
+            ("parity", [parity]),
+        ):
+            with self.subTest(gate=gate):
+                with self.assertRaisesRegex(ValueError, "raw binary identity"):
+                    self.goal.validate_record_artifact_bindings(
+                        gate, manifest, records
+                    )
+
     def test_w11_retrieval_expectations_are_bound_to_fixture(self):
         record = w11_record()
         with tempfile.TemporaryDirectory() as tmp:
