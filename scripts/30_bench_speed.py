@@ -345,6 +345,15 @@ def invalid_rep(error: str) -> dict[str, Any]:
     }
 
 
+def reps_are_complete(reps: list[dict[str, Any]], expected_reps: int) -> bool:
+    """Fail closed: every requested measurement must exist and be valid."""
+    return (
+        expected_reps > 0
+        and len(reps) == expected_reps
+        and all(rep.get("valid") is True for rep in reps)
+    )
+
+
 def run_rep(
     client: Client,
     tokenizer: Any,
@@ -559,7 +568,7 @@ def main() -> int:
             cell["median_ttft"] = median(ttft_values)
             invalid_count = len(cell["reps"]) - len(valid_reps)
             cell["invalid_reps"] = invalid_count
-            cell["valid"] = invalid_count <= 2
+            cell["valid"] = reps_are_complete(cell["reps"], args.reps)
             if not cell["valid"]:
                 any_cell_failed = True
             result["cells"].append(cell)

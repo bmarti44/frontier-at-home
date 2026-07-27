@@ -49,6 +49,13 @@ class BenchOptionTests(unittest.TestCase):
         self.assertEqual(args.seed, 123)
         self.assertEqual(args.model_id, "glm-5.2")
 
+    def test_any_invalid_or_missing_rep_fails_the_cell(self):
+        bench = load_module()
+        self.assertTrue(bench.reps_are_complete([{"valid": True}], 1))
+        self.assertFalse(bench.reps_are_complete([{"valid": False}], 1))
+        self.assertFalse(bench.reps_are_complete([], 1))
+        self.assertFalse(bench.reps_are_complete([{"valid": True}], 2))
+
 
 if __name__ == "__main__":
     unittest.main()
