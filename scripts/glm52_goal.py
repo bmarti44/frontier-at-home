@@ -249,6 +249,104 @@ def validate_raw_record(record: dict[str, Any]) -> None:
         raise ValueError("measurement record contains failures")
 
 
+def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
+    """Require five fresh-server ABBA/BAAB blocks with equal fixtures."""
+    rows = list(records)
+    if len(rows) != 20:
+        raise ValueError("exactly five four-arm blocks are required")
+    fixtures = {row.get("fixture_sha256") for row in rows}
+    if len(fixtures) != 1 or not _is_sha256(next(iter(fixtures), None)):
+        raise ValueError("all arms must use one valid fixture hash")
+    boot_ids: list[str] = []
+    for block in range(5):
+        group = sorted(
+            (row for row in rows if row.get("block") == block),
+            key=lambda row: row.get("sequence", -1),
+        )
+        if len(group) != 4 or [row.get("sequence") for row in group] != list(range(4)):
+            raise ValueError(f"block {block} is incomplete or mis-sequenced")
+        expected = "ABBA" if block % 2 == 0 else "BAAB"
+        if "".join(str(row.get("arm", "")) for row in group) != expected:
+            raise ValueError(f"block {block} does not follow {expected}")
+        group_boots = {row.get("server_boot_id") for row in group}
+        if len(group_boots) != 1 or not next(iter(group_boots), ""):
+            raise ValueError(f"block {block} does not share one server boot ID")
+        boot_ids.append(next(iter(group_boots)))
+        identities = {
+            arm: {
+                (row.get("binary_sha256"), row.get("configuration_sha256"))
+                for row in group
+                if row.get("arm") == arm
+            }
+            for arm in ("A", "B")
+        }
+        for arm in ("A", "B"):
+            if len(identities.get(arm, set())) != 1:
+                raise ValueError(f"block {block} has inconsistent {arm} identity")
+            binary, config = next(iter(identities[arm]))
+            if not _is_sha256(binary) or not _is_sha256(config):
+                raise ValueError(f"block {block} has invalid {arm} hashes")
+        if identities["A"] == identities["B"]:
+            raise ValueError(f"block {block} arms are identical")
+    if len(set(boot_ids)) != 5:
+        raise ValueError("each block must use a fresh server boot")
+
+
+def _read_strict_json(path: Path) -> Any:
+    def reject_constant(value: str) -> None:
+        raise ValueError(f"{path.name} contains non-finite value {value}")
+
+    try:
+        return json.loads(
+            path.read_text(encoding="utf-8"), parse_constant=reject_constant
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid {path.name}: {exc}") from exc
+
+
+def validate_attempt(attempt: Path) -> None:
+    """Validate the mandatory evidence triplet without trusting narration."""
+    if not attempt.is_dir():
+        raise ValueError("attempt path is not a directory")
+    required_hashes = {
+        "source_sha256",
+        "diff_sha256",
+        "binary_sha256",
+        "scorer_sha256",
+        "model_sha256",
+        "tokenizer_sha256",
+        "fixture_sha256",
+        "configuration_sha256",
+    }
+    manifest = _read_strict_json(attempt / "manifest.json")
+    if not isinstance(manifest, dict):
+        raise ValueError("manifest must be an object")
+    for field in required_hashes:
+        if not _is_sha256(manifest.get(field)):
+            raise ValueError(f"manifest {field} is invalid")
+    raw_path = attempt / "raw.jsonl"
+    try:
+        lines = raw_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise ValueError(f"invalid raw.jsonl: {exc}") from exc
+    if not lines:
+        raise ValueError("raw.jsonl is empty")
+    for number, line in enumerate(lines, 1):
+        try:
+            record = json.loads(line, parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite value {value}")
+            ))
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"raw.jsonl line {number}: {exc}") from exc
+        if not isinstance(record, dict):
+            raise ValueError(f"raw.jsonl line {number} is not an object")
+    summary = _read_strict_json(attempt / "summary.json")
+    if not isinstance(summary, dict) or summary.get("formula_version") != 1:
+        raise ValueError("summary has no fixed formula version")
+    if summary.get("verdict") not in {"PASS", "FAIL", "NO_RESULT"}:
+        raise ValueError("summary verdict is invalid")
+
+
 def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
