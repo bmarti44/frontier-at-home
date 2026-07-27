@@ -20,6 +20,7 @@ DSV4_SERVICE = ROOT / "configs" / "systemd" / "deepseek-v4-flash-llamacpp.servic
 GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
 HEADLESS_SCHEDULER = ROOT / "scripts" / "54_schedule_headless_foundation.sh"
 HEADLESS_WORKER = ROOT / "scripts" / "55_headless_foundation_worker.sh"
+HEADLESS_RESTORE = ROOT / "scripts" / "56_restore_headless_services.sh"
 
 
 class MemoryGuardTests(unittest.TestCase):
@@ -81,15 +82,28 @@ class MatchedHarnessContractTests(unittest.TestCase):
     def test_headless_foundation_runner_restores_display_and_fails_closed(self):
         scheduler = HEADLESS_SCHEDULER.read_text(encoding="utf-8")
         worker = HEADLESS_WORKER.read_text(encoding="utf-8")
+        restorer = HEADLESS_RESTORE.read_text(encoding="utf-8")
         self.assertIn("must run as root", scheduler)
         self.assertIn("/home/dsv4/.dsv4-start-hold", scheduler)
         self.assertIn("systemd-run", scheduler)
         self.assertIn("--no-block", scheduler)
         self.assertIn("glm52-headless-foundation.service", scheduler)
         self.assertIn("OnFailure=display-manager.service", scheduler)
+        self.assertIn("ExecStopPost=", scheduler)
+        self.assertIn("56_restore_headless_services.sh", scheduler)
         self.assertIn("trap cleanup EXIT", worker)
         self.assertIn("systemctl stop display-manager.service", worker)
-        self.assertIn("systemctl start display-manager.service", worker)
+        self.assertIn("systemctl stop user@1000.service", worker)
+        self.assertIn("docker.service", worker)
+        self.assertIn("containerd.service", worker)
+        self.assertIn("dsv4-authhelper.service", worker)
+        self.assertIn("56_restore_headless_services.sh", worker)
+        self.assertIn("initially-active.units", worker)
+        self.assertIn("systemctl start --", restorer)
+        self.assertIn("display-manager.service", restorer)
+        self.assertIn("user@1000.service", restorer)
+        self.assertIn("initially-active.units", restorer)
+        self.assertNotIn("eval ", restorer)
         self.assertIn("--required-gib 117", worker)
         self.assertIn("--required-gib 110", worker)
         self.assertIn("DSV4_MEM_FLOOR_GIB=18", worker)
@@ -104,6 +118,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("candidate hash changed", worker)
         self.assertIn("repository is not clean", worker)
         self.assertIn("--reps 2", worker)
+        for evidence_file in ("manifest.json", "raw.jsonl", "summary.json"):
+            self.assertIn(evidence_file, worker)
         self.assertNotIn("rm -f -- /home/dsv4/.dsv4-start-hold", worker)
 
     def test_production_service_uses_launcher_accepted_memory_floor(self):
