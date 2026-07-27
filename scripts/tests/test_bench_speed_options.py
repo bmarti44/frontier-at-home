@@ -183,6 +183,79 @@ class BenchOptionTests(unittest.TestCase):
             )
         )
 
+    def test_raw_clock_must_match_independent_client_wall_interval(self):
+        bench = load_module()
+        self.assertEqual(
+            bench.raw_timing_envelope_errors(10.0, 20.0, 30.0),
+            [],
+        )
+        self.assertTrue(
+            bench.raw_timing_envelope_errors(0.000001, 20.0, 30.0)
+        )
+        self.assertTrue(
+            bench.raw_timing_envelope_errors(10.0, 20.0, 20.0)
+        )
+
+    def test_fabricated_raw_timing_cannot_make_short_output_valid(self):
+        bench = load_module()
+
+        class Encoding:
+            ids = [1]
+
+        class Tokenizer:
+            def encode(self, text, add_special_tokens=False):
+                return Encoding()
+
+            def decode(self, ids, skip_special_tokens=False):
+                return "x" * len(ids)
+
+            def get_vocab_size(self, with_added_tokens=True):
+                return 100
+
+        class Client:
+            def __init__(self, timing):
+                self.timing = timing
+
+            def stream_chat(self, payload):
+                self.timing.write_text(
+                    "".join(
+                        "DS4_TOKEN_TIMING request=chatcmpl-fake "
+                        f"index={index} monotonic_ns={index} token=99\n"
+                        for index in range(1, 129)
+                    ),
+                    encoding="utf-8",
+                )
+                return {
+                    "response_id": "chatcmpl-fake",
+                    "request_started": 1.0,
+                    "first_content_at": 2.0,
+                    "last_content_at": 2.0,
+                    "generated_text": "x",
+                    "usage": {"completion_tokens": 128, "prompt_tokens": 32},
+                    "done": True,
+                    "data_chunks": 3,
+                    "token_timestamps": [2.0],
+                }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            timing = Path(tmp) / "server.log"
+            timing.write_text("", encoding="utf-8")
+            with mock.patch.object(bench, "make_preamble", return_value="p"):
+                rep = bench.run_rep(
+                    Client(timing),
+                    Tokenizer(),
+                    "glm-5.2",
+                    "",
+                    0,
+                    1,
+                    False,
+                    max_tokens=128,
+                    min_completion_tokens=128,
+                    token_timing_log=timing,
+                )
+        self.assertFalse(rep["valid"])
+        self.assertIn("mismatch", rep["error"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -454,6 +454,65 @@ def read_token_timing(
     }
 
 
+def raw_visible_output_errors(
+    tokenizer: Any,
+    token_ids: list[int],
+    generated_text: str,
+) -> list[str]:
+    """Bind server-side token records to the exact bytes observed by the client."""
+    reasons: list[str] = []
+    try:
+        vocab_size = tokenizer.get_vocab_size(with_added_tokens=True)
+    except Exception as error:
+        return [f"cannot determine frozen tokenizer vocabulary: {error}"]
+    if (
+        not isinstance(vocab_size, int)
+        or vocab_size <= 0
+        or any(
+            not isinstance(token, int) or token < 0 or token >= vocab_size
+            for token in token_ids
+        )
+    ):
+        return ["raw timing contains a token outside the frozen tokenizer vocabulary"]
+    try:
+        decoded = tokenizer.decode(token_ids, skip_special_tokens=False)
+    except Exception as error:
+        return [f"cannot decode raw timing tokens: {error}"]
+
+    # Thinking mode may place the opening marker in the assistant prefix (so it
+    # is absent here) or generate it. The OpenAI stream deliberately hides both
+    # framing markers while preserving the reasoning and content bytes in order.
+    visible = decoded
+    if visible.startswith("<think>"):
+        visible = visible[len("<think>") :]
+    visible = visible.replace("</think>", "", 1)
+    if visible != generated_text:
+        reasons.append(
+            "raw token/client byte mismatch: "
+            f"decoded_bytes={len(visible.encode('utf-8'))}, "
+            f"client_bytes={len(generated_text.encode('utf-8'))}"
+        )
+    return reasons
+
+
+def raw_timing_envelope_errors(
+    raw_elapsed_s: float,
+    client_first_content_at: float,
+    client_last_content_at: float,
+) -> list[str]:
+    """Reject raw clocks inconsistent with an independent client wall interval."""
+    client_elapsed_s = client_last_content_at - client_first_content_at
+    if client_elapsed_s <= 0:
+        return [f"non-positive client content interval: {client_elapsed_s}"]
+    ratio = raw_elapsed_s / client_elapsed_s
+    if not 0.75 <= ratio <= 1.25:
+        return [
+            "raw/client decode interval mismatch: "
+            f"raw={raw_elapsed_s}, client={client_elapsed_s}, ratio={ratio}"
+        ]
+    return []
+
+
 def run_rep(
     client: Client,
     tokenizer: Any,
@@ -523,6 +582,13 @@ def run_rep(
                     "raw timing/server completion mismatch: "
                     f"timed={len(token_timestamps)}, server={completion_tokens}"
                 )
+            reasons.extend(
+                raw_visible_output_errors(
+                    tokenizer,
+                    raw_timing["token_ids"],
+                    stream["generated_text"],
+                )
+            )
             timing_source = "server_raw_token_log"
         else:
             token_timestamps = sse_token_timestamps
@@ -535,6 +601,14 @@ def run_rep(
         timed_completion_tokens = len(token_timestamps)
         ttft_s = stream["first_content_at"] - stream["request_started"]
         decode_elapsed_s = token_timestamps[-1] - token_timestamps[0]
+        if raw_timing is not None:
+            reasons.extend(
+                raw_timing_envelope_errors(
+                    decode_elapsed_s,
+                    stream["first_content_at"],
+                    stream["last_content_at"],
+                )
+            )
         decode_tok_s = (
             (timed_completion_tokens - 1) / decode_elapsed_s
             if decode_elapsed_s > 0
