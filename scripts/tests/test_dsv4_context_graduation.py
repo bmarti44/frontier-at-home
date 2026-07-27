@@ -90,10 +90,14 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("ubatch=256", worker)
         self.assertIn('DSV4_UBATCH="$ubatch"', worker)
         self.assertIn('DSV4_BATCH="$batch"', worker)
-        self.assertIn(
+        self.assertIn("systemctl restart dsv4-engine-restore.service", worker)
+        self.assertNotIn(
             "systemctl --no-block restart dsv4-engine-restore.service",
             worker,
         )
+        restore = worker.index("systemctl restart dsv4-engine-restore.service")
+        timer = worker.index("systemctl start dsv4-guard.timer", restore)
+        self.assertLess(restore, timer)
 
     def test_worker_graduates_exact_rungs_and_restores_headless_safe_profile(self):
         source = WORKER.read_text(encoding="utf-8")
@@ -126,6 +130,11 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("/run/dsv4/inference.lock", source)
         self.assertIn("glm52.process.json", source)
         self.assertNotIn("OnFailure=display-manager.service", source)
+        stop_timer = source.index("systemctl stop dsv4-guard.timer")
+        stop_guard = source.index("systemctl stop dsv4-guard.service", stop_timer)
+        schedule = source.index("systemd-run", stop_guard)
+        self.assertLess(stop_timer, stop_guard)
+        self.assertLess(stop_guard, schedule)
 
 
 if __name__ == "__main__":
