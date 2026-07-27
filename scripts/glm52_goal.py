@@ -1328,6 +1328,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
         validate_attempt,
         validate_manifest_lineage,
         _fetch_public_drand,
+        _git_commit_time,
         _utc_timestamp,
         _finite_number,
         _is_sha256,
@@ -1408,6 +1409,7 @@ def validate_manifest_lineage(
     gate: str,
     candidate_hash: str,
     relay_fetcher: Any = None,
+    commit_time_fetcher: Any = None,
 ) -> None:
     """Require public randomness obtained strictly after the candidate freeze."""
     if not isinstance(lineage, dict):
@@ -1435,6 +1437,15 @@ def validate_manifest_lineage(
     if freeze["candidate_hash"] != candidate_hash:
         raise ValueError("freeze lineage candidate does not match manifest")
     frozen_at = _utc_timestamp(freeze["frozen_at"], "frozen_at")
+    if commit_time_fetcher is not None:
+        try:
+            committed_at = _utc_timestamp(
+                commit_time_fetcher(candidate_hash), "commit timestamp"
+            )
+        except Exception as exc:
+            raise ValueError(f"cannot derive commit timestamp: {exc}") from exc
+        if frozen_at != committed_at:
+            raise ValueError("frozen_at does not equal the commit timestamp")
     obtained_at = _utc_timestamp(randomness["obtained_at"], "obtained_at")
     if obtained_at <= frozen_at:
         raise ValueError("public randomness was not obtained after the freeze")
@@ -1531,6 +1542,31 @@ def _fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"invalid drand response from {host}")
     return value
+
+
+def _git_commit_time(candidate_hash: str) -> str:
+    result = subprocess.run(
+        ["git", "show", "-s", "--format=%cI", candidate_hash],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        env={
+            "HOME": os.environ.get("HOME", ""),
+            "PATH": os.environ.get("PATH", ""),
+            "LANG": "C.UTF-8",
+        },
+    )
+    if result.returncode != 0:
+        raise ValueError("git cannot resolve candidate timestamp")
+    try:
+        value = datetime.fromisoformat(result.stdout.strip())
+    except ValueError as exc:
+        raise ValueError("git returned an invalid candidate timestamp") from exc
+    if value.tzinfo is None:
+        raise ValueError("git candidate timestamp lacks an offset")
+    return value.astimezone(timezone.utc).isoformat()
 
 
 def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
@@ -1676,6 +1712,7 @@ def validate_attempt(attempt: Path) -> None:
         manifest["gate"],
         candidate_hash,
         relay_fetcher=_fetch_public_drand,
+        commit_time_fetcher=_git_commit_time,
     )
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, dict):
