@@ -82,6 +82,7 @@ def parse_args() -> argparse.Namespace:
         default=MIN_VALID_COMPLETION_TOKENS,
         help=f"minimum valid generated tokens (default: {MIN_VALID_COMPLETION_TOKENS})",
     )
+    parser.add_argument("--seed", type=int, default=SEED, help="fixture and sampling seed")
     args = parser.parse_args()
     if args.extra_body is not None:
         args.extra_body = json.loads(args.extra_body)
@@ -284,8 +285,8 @@ class Client:
         }
 
 
-def make_preamble(tokenizer: Any, unique_id: int) -> str:
-    rng = random.Random(SEED + unique_id * 1_000_003)
+def make_preamble(tokenizer: Any, unique_id: int, seed: int = SEED) -> str:
+    rng = random.Random(seed + unique_id * 1_000_003)
     words = [f"benchmark-{unique_id:06d}"]
     words.extend(rng.choice(PREAMBLE_WORDS) for _ in range(80))
     source = "Preamble " + " ".join(words) + "."
@@ -336,16 +337,17 @@ def run_rep(
     ignore_eos_supported: bool,
     max_tokens: int = MAX_TOKENS,
     min_completion_tokens: int = MIN_VALID_COMPLETION_TOKENS,
+    seed: int = SEED,
 ) -> dict[str, Any]:
     try:
-        preamble = make_preamble(tokenizer, unique_id)
+        preamble = make_preamble(tokenizer, unique_id, seed)
         prompt = preamble + "\n\n" + fixture_slice + "\n\nContinue this text naturally, writing at least 600 more words without stopping."
         payload: dict[str, Any] = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": 0,
-            "seed": SEED,
+            "seed": seed,
         }
         if ignore_eos_supported:
             payload["ignore_eos"] = True
@@ -457,7 +459,7 @@ def main() -> int:
             "max_tokens": args.max_tokens,
             "min_completion_tokens": args.min_completion_tokens,
             "temperature": 0,
-            "seed": SEED,
+            "seed": args.seed,
             "prefill_rate_label": "incl. queue+setup",
             "iqr_method": "inclusive quartiles",
         },
@@ -506,6 +508,7 @@ def main() -> int:
                     args.ignore_eos_supported,
                     args.max_tokens,
                     args.min_completion_tokens,
+                    args.seed,
                 )
                 unique_id += 1
                 if warmup_index + 1 < args.warmup or args.reps > 0:
@@ -522,6 +525,7 @@ def main() -> int:
                     args.ignore_eos_supported,
                     args.max_tokens,
                     args.min_completion_tokens,
+                    args.seed,
                 )
                 unique_id += 1
                 cell["reps"].append(rep)
