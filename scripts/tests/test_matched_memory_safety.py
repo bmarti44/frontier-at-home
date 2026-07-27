@@ -176,6 +176,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("MATCHED_PORT:-8021", source)
         self.assertIn('DSV4_PORT="$PORT"', source)
         self.assertIn('GLM_PORT="$PORT"', source)
+        self.assertEqual(source.count("--reps 2"), 2)
+        self.assertNotIn("--reps 1", source)
 
     def test_harness_rejects_kernel_gpu_and_oom_faults_from_each_arm(self):
         source = HARNESS.read_text(encoding="utf-8")
