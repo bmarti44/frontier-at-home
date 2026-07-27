@@ -345,6 +345,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("DS4_CUDA_IQ2_DOWN_REFERENCE:-1", source)
         self.assertIn("IQ2_REFERENCE must be 0 or 1", source)
         self.assertIn('IQ2_ENV+=(DS4_CUDA_IQ2_DOWN_REFERENCE=1)', source)
+        self.assertIn("DS4_CUDA_MOE_NO_EXPERT_TILES:-0", source)
+        self.assertIn("NO_EXPERT_TILES must be 0 or 1", source)
         self.assertIn("DS4_TOKEN_TIMING_LOG=1", source)
         self.assertIn('--token-timing-log "$OUT/server.log"', source)
         self.assertIn("glm52-b4734de4/tokenizer.json", source)
