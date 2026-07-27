@@ -2243,6 +2243,7 @@ def validate_profile_artifact_bindings(
     ):
         raise ValueError("approved GLM runtime configuration is invalid")
     expected_artifacts = {
+        "scripts/11_build_glm52_repro.sh",
         "results/glm52-goal/harness/glm_decisive_arm.sh",
         "results/glm52-gates/harness/glm_safe_run.sh",
         "results/glm52-gates/harness/glm_cgroup_run.sh",
