@@ -1295,8 +1295,9 @@ def registered_scorer_digest(scorer_id: str) -> str:
         ),
         "w11.context.v1": (
             _score_w11,
-            context_verdict,
             _require_exact_keys,
+            _finite_number,
+            _is_sha256,
         ),
         "parity.performance.v1": (
             _score_parity,
@@ -1327,6 +1328,9 @@ def registered_scorer_digest(scorer_id: str) -> str:
         validate_attempt,
         validate_manifest_lineage,
         _fetch_public_drand,
+        _utc_timestamp,
+        _finite_number,
+        _is_sha256,
         validate_source_provenance,
         validate_profile_artifact_bindings,
         validate_record_artifact_bindings,
