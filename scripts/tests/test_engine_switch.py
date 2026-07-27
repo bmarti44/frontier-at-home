@@ -149,6 +149,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(
             set(glm["artifact_sha256"]),
             {
+                "scripts/11_build_glm52_repro.sh",
                 "results/glm52-goal/harness/glm_decisive_arm.sh",
                 "results/glm52-gates/harness/glm_safe_run.sh",
                 "results/glm52-gates/harness/glm_cgroup_run.sh",
