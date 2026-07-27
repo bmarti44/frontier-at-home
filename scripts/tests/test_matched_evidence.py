@@ -175,7 +175,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             source = campaign / "block0-seq0-armA" / "process.identity"
             target = campaign / "block0-seq3-armA" / "process.identity"
             target.write_bytes(source.read_bytes())
-            with self.assertRaisesRegex(ValueError, "server boot"):
+            with self.assertRaisesRegex(ValueError, "fresh servers|server boot"):
                 self.collector.collect_records(campaign, fixture, profile)
 
 

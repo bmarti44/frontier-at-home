@@ -86,6 +86,7 @@ PID=$!
 START_TICKS=$(awk '{print $22}' "/proc/$PID/stat")
 printf '%s\n' "$PID $START_TICKS $(sha256sum "$SRC/ds4-server" | awk '{print $1}')" \
     >"$OUT/process.identity"
+cp -- /proc/sys/kernel/random/boot_id "$OUT/host.boot_id"
 
 ready=false
 for _ in $(seq 1 600); do

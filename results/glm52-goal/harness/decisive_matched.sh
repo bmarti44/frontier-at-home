@@ -7,6 +7,8 @@ TAG=${MATCHED_TAG:?MATCHED_TAG is required}
 OUT=/home/dsv4/ds4-project/glm52-decisive-$TAG
 CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 GLM_ARM=/tmp/glm_decisive_arm_$TAG.sh
+DSV4_MEMWATCH_LOG=/home/dsv4/logs/memwatch-llamacpp.log
+GLM_CRASHLOG=/home/dsv4/ds4-project/glm52-crashlog
 SEED=${MATCHED_SEED:?MATCHED_SEED is required}
 BLOCKS=${MATCHED_BLOCKS:-5}
 [[ $BLOCKS =~ ^[1-5]$ ]] || { echo "MATCHED_BLOCKS must be 1-5" >&2; exit 2; }
@@ -48,7 +50,7 @@ kernel_cursor() {
 }
 
 assert_no_kernel_faults_since() {
-    local cursor=$1 label=$2 log
+    local cursor=$1 label=$2 output=$3 log
     [[ -n $cursor ]] || {
         echo "$label: could not freeze kernel journal cursor" >&2
         return 1
@@ -57,6 +59,8 @@ assert_no_kernel_faults_since() {
         echo "$label: could not read kernel journal after cursor" >&2
         return 1
     }
+    printf '%s\n' "$log" | sudo -n -u dsv4 tee "$output" >/dev/null ||
+        return 1
     if grep -Eiq \
         'NV_ERR_NO_MEMORY|NVRM.*Xid|oom-kill|Out of memory: Killed process|Killed process .*total-vm' \
         <<<"$log"; then
@@ -119,9 +123,18 @@ sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
 wait_full_release
 
 run_dsv4() {
-    local label=$1 arm_out=$OUT/$label cursor rc=0
+    local label=$1 arm_out=$OUT/$label cursor rc=0 bench_rc=0 status
+    local before_identity= before_size=0 after_identity= after_size=0 offset
     sudo -n -u dsv4 mkdir -p -- "$arm_out"
     wait_full_release
+    if read -r before_identity before_size < <(
+        sudo -n -u dsv4 stat -Lc '%d:%i %s' "$DSV4_MEMWATCH_LOG" 2>/dev/null
+    ); then
+        :
+    else
+        before_identity=
+        before_size=0
+    fi
     cursor=$(kernel_cursor)
     set +e
     sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
@@ -129,10 +142,15 @@ run_dsv4() {
     rc=$?
     set -e
     if (( rc != 0 )); then
-        assert_no_kernel_faults_since "$cursor" "$label" || true
+        assert_no_kernel_faults_since "$cursor" "$label" \
+            "$arm_out/kernel.log" || true
         return "$rc"
     fi
     ACTIVE=dsv4
+    status=$(sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
+        "$REPO/scripts/21_serve_llamacpp.sh" status) || rc=1
+    printf '%s\n' "$status" | sudo -n -u dsv4 tee \
+        "$arm_out/process.identity.json" >/dev/null || rc=1
     set +e
     sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
         "$REPO/.venv-harness/bin/python" "$REPO/scripts/30_bench_speed.py" \
@@ -140,21 +158,39 @@ run_dsv4() {
         --out "$arm_out/result.json" --stack-label "$label" \
         --reps 2 --context-levels 0 --max-tokens 160 \
         --min-completion-tokens 128 --seed "$SEED" --ignore-eos-supported
-    rc=$?
+    bench_rc=$?
+    (( bench_rc == 0 )) || rc=$bench_rc
+    read -r after_identity after_size < <(
+        sudo -n -u dsv4 stat -Lc '%d:%i %s' "$DSV4_MEMWATCH_LOG"
+    ) || rc=1
+    if [[ -n $before_identity && $after_identity != "$before_identity" ]] ||
+            (( after_size < before_size )); then
+        echo "$label: DeepSeek memwatch log identity changed" >&2
+        rc=1
+    else
+        offset=$((before_size + 1))
+        sudo -n -u dsv4 bash -c \
+            'tail -c "+$1" -- "$2" >"$3"' _ "$offset" \
+            "$DSV4_MEMWATCH_LOG" "$arm_out/memwatch.segment.log" || rc=1
+        sudo -n -u dsv4 test -s "$arm_out/memwatch.segment.log" || rc=1
+    fi
     sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
         "$REPO/scripts/21_serve_llamacpp.sh" stop
     (( $? == 0 )) || rc=1
     set -e
     ACTIVE=
     wait_full_release || rc=1
-    assert_no_kernel_faults_since "$cursor" "$label" || rc=1
+    assert_no_kernel_faults_since "$cursor" "$label" \
+        "$arm_out/kernel.log" || rc=1
     return "$rc"
 }
 
 run_glm() {
-    local label=$1 arm_out=$OUT/$label cursor rc=0
+    local label=$1 arm_out=$OUT/$label cursor rc=0 safety_marker
+    local -a safety_dirs=()
     wait_full_release
     cursor=$(kernel_cursor)
+    safety_marker=$(mktemp "/tmp/glm52-safety-$TAG-$label.XXXXXX")
     ACTIVE=glm52
     set +e
     env GLM_CANDIDATE_SRC="${GLM_CANDIDATE_SRC:-}" \
@@ -168,9 +204,24 @@ run_glm() {
         bash "$GLM_ARM" "$arm_out" "$label" "$SEED"
     rc=$?
     set -e
+    mapfile -t safety_dirs < <(
+        sudo -n -u dsv4 find "$GLM_CRASHLOG" -mindepth 1 -maxdepth 1 \
+            -type d -newer "$safety_marker" -name "*-$label" -print
+    )
+    rm -f -- "$safety_marker"
+    if (( ${#safety_dirs[@]} != 1 )); then
+        echo "$label: expected exactly one GLM safety evidence directory" >&2
+        rc=1
+    else
+        sudo -n -u dsv4 cp -- "${safety_dirs[0]}/samples.log" \
+            "$arm_out/samples.log" || rc=1
+        sudo -n -u dsv4 cp -- "${safety_dirs[0]}/main.log" \
+            "$arm_out/safety.main.log" || rc=1
+    fi
     ACTIVE=
     wait_full_release || rc=1
-    assert_no_kernel_faults_since "$cursor" "$label" || rc=1
+    assert_no_kernel_faults_since "$cursor" "$label" \
+        "$arm_out/kernel.log" || rc=1
     return "$rc"
 }
 
