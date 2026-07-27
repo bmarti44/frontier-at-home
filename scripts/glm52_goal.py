@@ -1031,6 +1031,45 @@ def validate_manifest_lineage(
         raise ValueError("confirmation seed derivation is invalid")
 
 
+def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
+    """Bind the source descriptor to the frozen repository commit and tree."""
+    try:
+        descriptor = _read_strict_json(source_path)
+    except ValueError as exc:
+        raise ValueError(f"source provenance is invalid: {exc}") from exc
+    if not isinstance(descriptor, dict):
+        raise ValueError("source provenance must be an object")
+    _require_exact_keys(
+        descriptor,
+        {"schema_version", "candidate_hash", "git_tree"},
+        "source provenance",
+    )
+    if descriptor["schema_version"] != 1:
+        raise ValueError("source provenance schema is invalid")
+    if descriptor["candidate_hash"] != candidate_hash:
+        raise ValueError("source provenance candidate does not match manifest")
+    tree = subprocess.run(
+        ["git", "rev-parse", f"{candidate_hash}^{{tree}}"],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        env={
+            "HOME": os.environ.get("HOME", ""),
+            "PATH": os.environ.get("PATH", ""),
+            "LANG": "C.UTF-8",
+        },
+    )
+    expected_tree = tree.stdout.strip()
+    if (
+        tree.returncode != 0
+        or len(expected_tree) != 40
+        or descriptor["git_tree"] != expected_tree
+    ):
+        raise ValueError("source provenance git tree does not match candidate")
+
+
 def validate_attempt(attempt: Path) -> None:
     """Validate the mandatory evidence triplet without trusting narration."""
     if not attempt.is_dir():
@@ -1092,6 +1131,7 @@ def validate_attempt(attempt: Path) -> None:
         if _sha256(artifact) != manifest[field]:
             raise ValueError(f"manifest artifact {artifact_name} hash mismatch")
         artifact_paths[artifact_name] = artifact
+    validate_source_provenance(artifact_paths["source"], candidate_hash)
     raw_path = attempt / "raw.jsonl"
     try:
         lines = raw_path.read_text(encoding="utf-8").splitlines()
