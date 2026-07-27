@@ -546,12 +546,160 @@ def _score_parity(records: list[dict[str, Any]]) -> dict[str, Any]:
     return {"scorer_id": "parity.performance.v1", "samples": samples, **result}
 
 
+def _score_foundation_baseline(
+    baseline: dict[str, Any], expected_profile: str
+) -> dict[str, float]:
+    expected = {
+        "profile",
+        "server_instance_id",
+        "fixture_sha256",
+        "binary_sha256",
+        "configuration_sha256",
+        "token_timestamps",
+        "evaluated_tokens",
+        "prefill_seconds",
+        "warm_ttft_seconds",
+        "cold_ttft_seconds",
+        "available_memory_gib",
+        "truncated",
+        "oom",
+        "xid",
+        "failures",
+    }
+    _require_exact_keys(baseline, expected, f"{expected_profile} baseline")
+    if baseline["profile"] != expected_profile:
+        raise ValueError(f"{expected_profile} baseline profile is wrong")
+    if (
+        not isinstance(baseline["server_instance_id"], str)
+        or not baseline["server_instance_id"]
+    ):
+        raise ValueError("foundation server_instance_id is invalid")
+    for field in (
+        "fixture_sha256",
+        "binary_sha256",
+        "configuration_sha256",
+    ):
+        if not _is_sha256(baseline[field]):
+            raise ValueError(f"foundation baseline {field} is invalid")
+    decode = decode_tokens_per_second(baseline["token_timestamps"])
+    evaluated = baseline["evaluated_tokens"]
+    if (
+        not isinstance(evaluated, int)
+        or isinstance(evaluated, bool)
+        or evaluated <= 0
+    ):
+        raise ValueError("foundation evaluated_tokens must be a positive integer")
+    prefill = _finite_number(baseline["prefill_seconds"], "prefill_seconds")
+    warm = _finite_number(
+        baseline["warm_ttft_seconds"], "warm_ttft_seconds"
+    )
+    cold = _finite_number(
+        baseline["cold_ttft_seconds"], "cold_ttft_seconds"
+    )
+    memory = _finite_number(
+        baseline["available_memory_gib"], "available_memory_gib"
+    )
+    if memory < 10.0:
+        raise ValueError("foundation baseline violates the memory floor")
+    for field in ("truncated", "oom", "xid"):
+        if baseline[field] is not False:
+            raise ValueError(f"foundation baseline has {field}=true")
+    if baseline["failures"] != []:
+        raise ValueError("foundation baseline contains failures")
+    return {
+        "decode_tok_s": decode,
+        "prefill_tok_s": evaluated / prefill,
+        "prefill_seconds": prefill,
+        "warm_ttft_seconds": warm,
+        "cold_ttft_seconds": cold,
+        "available_memory_gib": memory,
+    }
+
+
+def _score_foundation(records: list[dict[str, Any]]) -> dict[str, Any]:
+    if len(records) != 1:
+        raise ValueError("foundation requires exactly one observation")
+    expected = {
+        "record_type",
+        "upstream_commit",
+        "source_clean",
+        "clean_build",
+        "model_artifacts_verified",
+        "tokenizer_artifacts_verified",
+        "bandwidth_gb_s",
+        "glm_baseline",
+        "dsv4_baseline",
+    }
+    record = records[0]
+    _require_exact_keys(record, expected, "foundation observation")
+    if record["record_type"] != "foundation_observation":
+        raise ValueError("foundation record_type is invalid")
+    commit = record["upstream_commit"]
+    if not (
+        isinstance(commit, str)
+        and len(commit) == 40
+        and all(character in "0123456789abcdef" for character in commit)
+    ):
+        raise ValueError("foundation upstream_commit is invalid")
+    for field in (
+        "source_clean",
+        "clean_build",
+        "model_artifacts_verified",
+        "tokenizer_artifacts_verified",
+    ):
+        if record[field] is not True and record[field] is not False:
+            raise ValueError(f"foundation {field} must be boolean")
+    bandwidth = record["bandwidth_gb_s"]
+    if not isinstance(bandwidth, list) or len(bandwidth) != 5:
+        raise ValueError("foundation requires exactly five bandwidth samples")
+    bandwidth_values = [
+        _finite_number(value, "bandwidth_gb_s") for value in bandwidth
+    ]
+    glm = record["glm_baseline"]
+    dsv4 = record["dsv4_baseline"]
+    if not isinstance(glm, dict) or not isinstance(dsv4, dict):
+        raise ValueError("foundation baselines must be objects")
+    glm_metrics = _score_foundation_baseline(glm, "glm52")
+    dsv4_metrics = _score_foundation_baseline(dsv4, "dsv4")
+    if glm["fixture_sha256"] != dsv4["fixture_sha256"]:
+        raise ValueError("foundation baselines use unequal fixtures")
+    if glm["server_instance_id"] == dsv4["server_instance_id"]:
+        raise ValueError("foundation baselines reuse one server instance")
+    glm_identity = (glm["binary_sha256"], glm["configuration_sha256"])
+    dsv4_identity = (dsv4["binary_sha256"], dsv4["configuration_sha256"])
+    if glm_identity == dsv4_identity:
+        raise ValueError("foundation baseline identities are identical")
+    checks = {
+        field: record[field] is True
+        for field in (
+            "source_clean",
+            "clean_build",
+            "model_artifacts_verified",
+            "tokenizer_artifacts_verified",
+        )
+    }
+    return {
+        "scorer_id": "foundation.v1",
+        "formula_version": 1,
+        "measurements": {
+            "bandwidth_gb_s": bandwidth_values,
+            "bandwidth_mean_gb_s": statistics.fmean(bandwidth_values),
+            "bandwidth_min_gb_s": min(bandwidth_values),
+            "glm_baseline": glm_metrics,
+            "dsv4_baseline": dsv4_metrics,
+        },
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 def score_registered_gate(
     gate: str, scorer_id: str, records: Iterable[dict[str, Any]]
 ) -> dict[str, Any]:
     """Recompute an authoritative terminal verdict from strict raw records."""
     rows = list(records)
     registered = {
+        ("foundation", "foundation.v1"): _score_foundation,
         ("W11", "w11.context.v1"): _score_w11,
         ("parity", "parity.performance.v1"): _score_parity,
     }
