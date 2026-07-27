@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "status": "FAIL",
+  "authority": "preserved failed diagnostic only; no foundation, parity, prefill, TTFT, switch, or release authority",
+  "candidate_hash": "554caaede74502bf4bb94ec29e9e37b87f0f0abf",
+  "candidate_tree": "edc1cc072d37dd984ccc76dad77309596d186f89",
+  "candidate_committed_at": "2026-07-27T12:58:03-04:00",
+  "boot_id": "825cf7d9-cec4-4a9a-8304-91578a98a6d2",
+  "reason": "kernel NVRM NV_ERR_NO_MEMORY occurred during model load; anti-cheating and resource-safety rules invalidate the entire arm even though the server later became healthy and completed both requests",
+  "kernel_failure": {
+    "timestamp_local": "2026-07-27T13:01:19-04:00",
+    "message": "NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359"
+  },
+  "configuration": {
+    "context": 8192,
+    "parallel": 1,
+    "batch": 2048,
+    "ubatch": 512,
+    "no_mmap": true,
+    "speculation": "ngram-map-k4v",
+    "port": 8021,
+    "admission_floor_gib": 18,
+    "watchdog_floor_gib": 18
+  },
+  "identity": {
+    "binary_sha256": "757274c8a23cb297e0a79349bd47fb14c13985a35d37391065a886eeecfd74f4",
+    "binary_bytes": 72488,
+    "profile_sha256": "57725addb69d0c8e4797749bc54d2158626adaa3aba1799a22058a85c8bcd9fa",
+    "harness_sha256": "bbde3cc6cc5f83192dd21c05285e7e916976c86de38efe8970ce1a048235b085",
+    "result_sha256": "3c059c5ab40886d7ef9ed9972c353eec771c74d56c261ebf52732f7cff965a19"
+  },
+  "public_randomness": {
+    "source": "drand-default",
+    "round": 6324686,
+    "randomness": "fbb7cab1aa500c942db378535a5f27170e6e123fee79f08e8b71ca16d90c0add",
+    "signature": "8918166c6296bc14fa5619bcb4a281eb39dc8c01f7d585ab0ffbbf6973c6a9d3972f6dddfd5db6da3f37fc79e754192407cecbfd050ebc04e6930d44556812e3e7e4ea6d1d45ef02db0edbbee0c6b18f6a89fa3246e41adfe970c56fab4f2120",
+    "seed_sha256": "db24bd38fbcfec1e62c82a9699ed2565ec8fd9e0a24bebb6898ba61bbbea4dd4",
+    "seed": 3676618040
+  },
+  "post_shutdown": {
+    "engine_survived": false,
+    "memwatch_survived": false,
+    "state_file_survived": false,
+    "target_file_survived": false,
+    "persistent_startup_hold_present": true,
+    "stable_available_memory_gib": 114.77,
+    "swap_growth": false
+  }
+}
