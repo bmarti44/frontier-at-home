@@ -85,7 +85,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("/home/dsv4/.dsv4-start-hold", scheduler)
         self.assertIn("systemd-run", scheduler)
         self.assertIn("--no-block", scheduler)
-        self.assertIn("glm52-headless-foundation.service", scheduler)
+        self.assertIn("dsv4-headless-smoke.service", scheduler)
+        self.assertNotIn("glm52-headless-foundation.service", scheduler)
         self.assertIn("OnFailure=display-manager.service", scheduler)
         self.assertIn("trap cleanup EXIT", worker)
         self.assertIn("systemctl stop display-manager.service", worker)
@@ -106,6 +107,14 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("--reps 2", worker)
         for evidence_file in ("manifest.json", "raw.jsonl", "summary.json"):
             self.assertIn(evidence_file, worker)
+        display_stop = worker.index("systemctl stop display-manager.service")
+        admission = worker.index("--required-gib 116", display_stop)
+        swap_baseline = worker.index("SWAP_START_KIB=$(", admission)
+        model_start = worker.index("dsv4_launcher start", swap_baseline)
+        self.assertLess(display_stop, admission)
+        self.assertLess(admission, swap_baseline)
+        self.assertLess(swap_baseline, model_start)
+        self.assertIn('"post_admission_pre_model"', worker)
         self.assertNotIn("rm -f -- /home/dsv4/.dsv4-start-hold", worker)
 
     def test_production_service_uses_launcher_accepted_memory_floor(self):
