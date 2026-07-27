@@ -632,6 +632,36 @@ def validate_record_artifact_bindings(
     artifact_paths: dict[str, Path] | None = None,
 ) -> None:
     """Require raw candidate identities to equal the hashed manifest artifacts."""
+    if gate == "foundation":
+        candidates = [
+            record.get("glm_baseline")
+            for record in records
+            if isinstance(record, dict)
+        ]
+    elif gate == "parity":
+        candidates = [
+            record
+            for record in records
+            if isinstance(record, dict) and record.get("profile") == "glm52"
+        ]
+    else:
+        candidates = []
+    if gate in {"foundation", "parity"}:
+        if not candidates or any(not isinstance(record, dict) for record in candidates):
+            raise ValueError(f"{gate} candidate raw records are missing")
+        for index, record in enumerate(candidates):
+            for field in (
+                "binary_sha256",
+                "configuration_sha256",
+                "fixture_sha256",
+            ):
+                if record.get(field) != manifest.get(field):
+                    label = field.removesuffix("_sha256").replace("_", " ")
+                    raise ValueError(
+                        f"{gate} raw {label} identity does not match manifest "
+                        f"at candidate record {index}"
+                    )
+        return
     if gate != "W11":
         return
     fields = (
