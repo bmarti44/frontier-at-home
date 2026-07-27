@@ -65,6 +65,23 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="JSON object merged into every request body (per-stack mode control)",
     )
+    parser.add_argument(
+        "--context-levels",
+        default=",".join(str(value) for value in CONTEXT_LEVELS),
+        help="comma-separated exact fixture-token context levels",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=MAX_TOKENS,
+        help=f"maximum generated tokens (default: {MAX_TOKENS})",
+    )
+    parser.add_argument(
+        "--min-completion-tokens",
+        type=int,
+        default=MIN_VALID_COMPLETION_TOKENS,
+        help=f"minimum valid generated tokens (default: {MIN_VALID_COMPLETION_TOKENS})",
+    )
     args = parser.parse_args()
     if args.extra_body is not None:
         args.extra_body = json.loads(args.extra_body)
@@ -74,6 +91,18 @@ def parse_args() -> argparse.Namespace:
         parser.error("--reps must be positive")
     if args.warmup < 0:
         parser.error("--warmup must be non-negative")
+    try:
+        args.context_levels = tuple(
+            int(value) for value in args.context_levels.split(",") if value != ""
+        )
+    except ValueError:
+        parser.error("--context-levels must contain comma-separated integers")
+    if not args.context_levels or any(value < 0 for value in args.context_levels):
+        parser.error("--context-levels must contain non-negative integers")
+    if args.max_tokens < 128:
+        parser.error("--max-tokens must be at least 128 for decode timing")
+    if not 128 <= args.min_completion_tokens <= args.max_tokens:
+        parser.error("--min-completion-tokens must be between 128 and --max-tokens")
     args.base_url = args.base_url.rstrip("/")
     if not args.base_url:
         parser.error("--base-url must not be empty")
@@ -192,6 +221,7 @@ class Client:
         first_content_at: float | None = None
         last_content_at: float | None = None
         generated_parts: list[str] = []
+        token_timestamps: list[float] = []
         usage: dict[str, Any] | None = None
         done = False
         data_chunks = 0
@@ -235,6 +265,7 @@ class Client:
                         if fragments:
                             now = time.perf_counter()
                             generated_parts.extend(fragments)
+                            token_timestamps.append(now)
                             if first_content_at is None:
                                 first_content_at = now
                             last_content_at = now
@@ -249,6 +280,7 @@ class Client:
             "usage": usage,
             "done": done,
             "data_chunks": data_chunks,
+            "token_timestamps": token_timestamps,
         }
 
 
@@ -302,6 +334,8 @@ def run_rep(
     context_tokens: int,
     unique_id: int,
     ignore_eos_supported: bool,
+    max_tokens: int = MAX_TOKENS,
+    min_completion_tokens: int = MIN_VALID_COMPLETION_TOKENS,
 ) -> dict[str, Any]:
     try:
         preamble = make_preamble(tokenizer, unique_id)
@@ -309,7 +343,7 @@ def run_rep(
         payload: dict[str, Any] = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": MAX_TOKENS,
+            "max_tokens": max_tokens,
             "temperature": 0,
             "seed": SEED,
         }
@@ -330,26 +364,28 @@ def run_rep(
         if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
             return invalid_rep(f"invalid usage.prompt_tokens: {prompt_tokens!r}")
         client_completion_tokens = token_count(tokenizer, stream["generated_text"])
+        token_timestamps = stream["token_timestamps"]
+        event_completion_tokens = len(token_timestamps)
         if completion_tokens == 0:
             return invalid_rep("server reported zero completion tokens")
-        token_count_error = abs(client_completion_tokens - completion_tokens) / completion_tokens
+        token_count_error = abs(event_completion_tokens - completion_tokens) / completion_tokens
         ttft_s = stream["first_content_at"] - stream["request_started"]
         decode_elapsed_s = stream["last_content_at"] - stream["first_content_at"]
         decode_tok_s = (
-            (completion_tokens - 1) / decode_elapsed_s
+            (event_completion_tokens - 1) / decode_elapsed_s
             if decode_elapsed_s > 0
             else None
         )
         prefill_tok_s = prompt_tokens / ttft_s if ttft_s > 0 else None
         reasons: list[str] = []
-        if completion_tokens < MIN_VALID_COMPLETION_TOKENS:
+        if event_completion_tokens < min_completion_tokens:
             reasons.append(
-                f"early stop: {completion_tokens} completion tokens, minimum is {MIN_VALID_COMPLETION_TOKENS}"
+                f"early stop: {event_completion_tokens} timestamped tokens, minimum is {min_completion_tokens}"
             )
-        if token_count_error > 0.02:
+        if token_count_error != 0:
             reasons.append(
-                "client/server completion token mismatch: "
-                f"client={client_completion_tokens}, server={completion_tokens}, "
+                "timestamp/server completion token mismatch: "
+                f"events={event_completion_tokens}, server={completion_tokens}, "
                 f"relative_error={token_count_error:.6f}"
             )
         if ttft_s <= 0:
@@ -366,6 +402,7 @@ def run_rep(
                     "completion_tokens": completion_tokens,
                     "prompt_tokens": prompt_tokens,
                     "client_completion_tokens": client_completion_tokens,
+                    "event_completion_tokens": event_completion_tokens,
                     "client_fixture_tokens": context_tokens,
                     "data_chunks": stream["data_chunks"],
                 }
@@ -379,6 +416,7 @@ def run_rep(
             "valid": True,
             "prompt_tokens": prompt_tokens,
             "client_completion_tokens": client_completion_tokens,
+            "event_completion_tokens": event_completion_tokens,
             "client_fixture_tokens": context_tokens,
             "data_chunks": stream["data_chunks"],
         }
@@ -416,7 +454,8 @@ def main() -> int:
             "reps": args.reps,
             "warmup_reps": args.warmup,
             "ignore_eos_supported": args.ignore_eos_supported,
-            "max_tokens": MAX_TOKENS,
+            "max_tokens": args.max_tokens,
+            "min_completion_tokens": args.min_completion_tokens,
             "temperature": 0,
             "seed": SEED,
             "prefill_rate_label": "incl. queue+setup",
@@ -430,13 +469,13 @@ def main() -> int:
         tokenizer = load_tokenizer()
         fixture = FIXTURE_PATH.read_text(encoding="utf-8")
         fixture_total_tokens = token_count(tokenizer, fixture)
-        if fixture_total_tokens < max(CONTEXT_LEVELS):
+        if fixture_total_tokens < max(args.context_levels):
             raise RuntimeError(
-                f"fixture has {fixture_total_tokens} tokens; {max(CONTEXT_LEVELS)} required"
+                f"fixture has {fixture_total_tokens} tokens; {max(args.context_levels)} required"
             )
         fixture_slices = {
             level: prefix_with_exact_tokens(tokenizer, fixture, level)
-            for level in CONTEXT_LEVELS
+            for level in args.context_levels
         }
         client = Client(args.base_url, api_key, args.extra_body)
         model = client.get_model()
@@ -446,7 +485,7 @@ def main() -> int:
 
         any_cell_failed = False
         unique_id = 0
-        for cell_index, level in enumerate(CONTEXT_LEVELS):
+        for cell_index, level in enumerate(args.context_levels):
             cell: dict[str, Any] = {
                 "ctx_tokens": level,
                 "reps": [],
@@ -465,6 +504,8 @@ def main() -> int:
                     level,
                     unique_id,
                     args.ignore_eos_supported,
+                    args.max_tokens,
+                    args.min_completion_tokens,
                 )
                 unique_id += 1
                 if warmup_index + 1 < args.warmup or args.reps > 0:
@@ -479,6 +520,8 @@ def main() -> int:
                     level,
                     unique_id,
                     args.ignore_eos_supported,
+                    args.max_tokens,
+                    args.min_completion_tokens,
                 )
                 unique_id += 1
                 cell["reps"].append(rep)
@@ -498,7 +541,7 @@ def main() -> int:
             if not cell["valid"]:
                 any_cell_failed = True
             result["cells"].append(cell)
-            if cell_index + 1 < len(CONTEXT_LEVELS):
+            if cell_index + 1 < len(args.context_levels):
                 time.sleep(2)
 
         result["suite_valid"] = not any_cell_failed
