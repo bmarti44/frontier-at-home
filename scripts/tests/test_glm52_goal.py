@@ -855,12 +855,11 @@ class FormulaTests(unittest.TestCase):
             "review", scorer_id, records
         )
         self.assertEqual(summary["formula_version"], 3)
+        implementation_digest = self.goal.registered_scorer_digest(scorer_id)
         descriptor = {
             "schema_version": 1,
             "scorer_id": scorer_id,
-            "implementation_sha256": self.goal.registered_scorer_digest(
-                scorer_id
-            ),
+            "implementation_sha256": implementation_digest,
         }
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)
@@ -909,6 +908,11 @@ class FormulaTests(unittest.TestCase):
                 ),
                 mock.patch.object(
                     self.goal, "validate_record_artifact_bindings"
+                ),
+                mock.patch.object(
+                    self.goal,
+                    "registered_scorer_digest",
+                    return_value=implementation_digest,
                 ),
             ):
                 self.goal.validate_attempt(attempt)

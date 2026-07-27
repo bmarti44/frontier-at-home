@@ -2364,7 +2364,14 @@ def validate_attempt(attempt: Path) -> None:
         manifest["gate"], manifest, records, artifact_paths
     )
     summary = _read_strict_json(attempt / "summary.json")
-    if not isinstance(summary, dict) or summary.get("formula_version") != 1:
+    formula_version = (
+        summary.get("formula_version") if isinstance(summary, dict) else None
+    )
+    if (
+        not isinstance(formula_version, int)
+        or isinstance(formula_version, bool)
+        or formula_version < 1
+    ):
         raise ValueError("summary has no fixed formula version")
     if summary.get("verdict") not in {"PASS", "FAIL", "NO_RESULT"}:
         raise ValueError("summary verdict is invalid")
