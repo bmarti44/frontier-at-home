@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import hashlib
 from pathlib import Path
 
 
@@ -163,6 +164,13 @@ class FormulaTests(unittest.TestCase):
                     }
                 )
         self.goal.validate_ab_blocks(records)
+        rotating = [dict(item) for item in records]
+        for item in rotating:
+            item["binary_sha256"] = (
+                f"{item['block'] + (0 if item['arm'] == 'A' else 8):x}" * 64
+            )[:64]
+        with self.assertRaises(ValueError):
+            self.goal.validate_ab_blocks(rotating)
         for mutation in ("same_binary", "same_boot", "wrong_order", "unequal_fixture"):
             broken = [dict(item) for item in records]
             if mutation == "same_binary":
@@ -182,16 +190,27 @@ class FormulaTests(unittest.TestCase):
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)
-            manifest = {
-                "source_sha256": "a" * 64,
-                "diff_sha256": "b" * 64,
-                "binary_sha256": "c" * 64,
-                "scorer_sha256": "d" * 64,
-                "model_sha256": "e" * 64,
-                "tokenizer_sha256": "f" * 64,
-                "fixture_sha256": "0" * 64,
-                "configuration_sha256": "1" * 64,
-            }
+            artifacts = {}
+            manifest = {"gate": "foundation", "candidate_hash": "a" * 40}
+            for index, field in enumerate(
+                (
+                    "source",
+                    "diff",
+                    "binary",
+                    "scorer",
+                    "model",
+                    "tokenizer",
+                    "fixture",
+                    "configuration",
+                )
+            ):
+                artifact = attempt / f"{field}.artifact"
+                artifact.write_bytes(f"artifact-{index}".encode())
+                artifacts[field] = artifact.name
+                manifest[f"{field}_sha256"] = hashlib.sha256(
+                    artifact.read_bytes()
+                ).hexdigest()
+            manifest["artifacts"] = artifacts
             (attempt / "manifest.json").write_text(json.dumps(manifest))
             (attempt / "raw.jsonl").write_text(
                 json.dumps({"event": "diagnostic", "failures": []}) + "\n"
@@ -209,6 +228,41 @@ class FormulaTests(unittest.TestCase):
             (attempt / "raw.jsonl").write_text("")
             with self.assertRaises(ValueError):
                 self.goal.validate_attempt(attempt)
+
+    def test_attempt_rejects_fabricated_pass_and_artifact_mutation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            attempt = Path(tmp)
+            manifest = {
+                f"{name}_sha256": str(index) * 64
+                for index, name in enumerate(
+                    (
+                        "source",
+                        "diff",
+                        "binary",
+                        "scorer",
+                        "model",
+                        "tokenizer",
+                        "fixture",
+                        "configuration",
+                    )
+                )
+            }
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            (attempt / "raw.jsonl").write_text('{"event":"fabricated","failures":[]}\n')
+            (attempt / "summary.json").write_text(
+                '{"formula_version":1,"verdict":"PASS"}'
+            )
+            with self.assertRaises(ValueError):
+                self.goal.validate_attempt(attempt)
+
+    def test_duplicate_json_keys_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "summary.json"
+            path.write_text(
+                '{"formula_version":1,"verdict":"FAIL","verdict":"PASS"}'
+            )
+            with self.assertRaises(ValueError):
+                self.goal._read_strict_json(path)
 
 
 class ControllerTests(unittest.TestCase):
@@ -258,26 +312,47 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "status", "--json")
             self.assertNotEqual(result.returncode, 0)
 
+    def test_state_rejects_terminal_status_without_attempt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            result = self.run_cli(state_dir, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            state_path = state_dir / "state.json"
+            state = json.loads(state_path.read_text())
+            for gate in state["gates"].values():
+                gate["status"] = "PASS"
+            state_path.write_text(json.dumps(state))
+            result = self.run_cli(state_dir, "resume")
+            self.assertNotEqual(result.returncode, 0)
+
     def test_resume_ingests_valid_attempt_and_advances(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
             attempt = state_dir / "foundation" / "attempt-001"
             attempt.mkdir(parents=True)
             manifest = {
-                name: str(index) * 64
-                for index, name in enumerate(
-                    (
-                        "source_sha256",
-                        "diff_sha256",
-                        "binary_sha256",
-                        "scorer_sha256",
-                        "model_sha256",
-                        "tokenizer_sha256",
-                        "fixture_sha256",
-                        "configuration_sha256",
-                    )
-                )
+                "gate": "foundation",
+                "candidate_hash": "a" * 40,
+                "artifacts": {},
             }
+            for index, name in enumerate(
+                (
+                    "source",
+                    "diff",
+                    "binary",
+                    "scorer",
+                    "model",
+                    "tokenizer",
+                    "fixture",
+                    "configuration",
+                )
+            ):
+                path = attempt / f"{name}.artifact"
+                path.write_text(f"artifact-{index}")
+                manifest["artifacts"][name] = path.name
+                manifest[f"{name}_sha256"] = hashlib.sha256(
+                    path.read_bytes()
+                ).hexdigest()
             (attempt / "manifest.json").write_text(json.dumps(manifest))
             (attempt / "raw.jsonl").write_text(
                 json.dumps({"event": "bounded falsifier", "failures": []}) + "\n"
