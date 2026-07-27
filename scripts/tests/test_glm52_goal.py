@@ -1419,6 +1419,13 @@ class FormulaTests(unittest.TestCase):
                     ):
                         self.goal._load_approved_dsv4_profile("f" * 40)
 
+    def test_controller_git_subprocesses_are_absolute_and_isolated(self):
+        source = SCRIPT.read_text()
+        self.assertNotIn('["git",', source)
+        self.assertIn('["/usr/bin/git",', source)
+        self.assertIn('"GIT_CONFIG_NOSYSTEM": "1"', source)
+        self.assertIn('"GIT_CONFIG_GLOBAL": "/dev/null"', source)
+
     def test_candidate_binary_model_and_profile_are_pinned(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

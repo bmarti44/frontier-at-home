@@ -229,6 +229,11 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn('NVCC="$NVCC_PATH"', source)
         self.assertIn('CUDA_HOME="$CUDA_HOME_PATH"', source)
         self.assertIn('DS4_LINK="$NVCC_PATH $nvccflags"', source)
+        self.assertIn("clean_git()", source)
+        self.assertIn("/usr/bin/git", source)
+        self.assertIn("GIT_CONFIG_NOSYSTEM=1", source)
+        self.assertIn("GIT_CONFIG_GLOBAL=/dev/null", source)
+        self.assertNotIn("\ngit -C", source)
 
     def test_authenticated_probe_keeps_bearer_secret_out_of_argv(self):
         source = SCRIPT.read_text()
