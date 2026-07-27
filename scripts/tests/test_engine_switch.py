@@ -71,6 +71,11 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("expected=deepseek-v4-flash", source)
         self.assertIn('expected == item["id"].lower()', source)
         self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START || true", source)
+        self.assertIn("/v1/chat/completions", source)
+        self.assertIn('"content":"Calculate 2+2.', source)
+        self.assertIn('value["choices"][0]["message"]', source)
+        self.assertIn('finish_reason not in {"stop", "length"}', source)
+        self.assertNotIn('"ready" not in text', source)
 
     def test_switch_uses_a_dedicated_internal_port_without_changing_auth_endpoint(self):
         source = SCRIPT.read_text()
