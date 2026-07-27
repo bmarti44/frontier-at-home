@@ -46,13 +46,22 @@ RESTORE_ALLOWED=true
 dsv4_launcher() {
     local context=$1 measured=$2
     shift 2
+    # Normal/recovery contract: DSV4_MEM_FLOOR_GIB=18 and
+    # DSV4_WATCHDOG_FLOOR_GIB=18. The exact 1M branch alone exports
+    # DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=15.
+    local floor=18 qualification_floor=0
+    if (( context == 1048576 && measured == 3 )); then
+        floor=15
+        qualification_floor=15
+    fi
     /usr/sbin/runuser -u dsv4 -- env -i \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
         DSV4_PORT=8013 \
         DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
         DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
-        DSV4_MEM_FLOOR_GIB=18 DSV4_WATCHDOG_FLOOR_GIB=18 \
+        DSV4_MEM_FLOOR_GIB="$floor" DSV4_WATCHDOG_FLOOR_GIB="$floor" \
+        DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB="$qualification_floor" \
         DSV4_MEASURED_HEADLESS_OVERHEAD_GIB="$measured" \
         DSV4_UBATCH=512 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=0 \
         CTX="$context" DSV4_PARALLEL=1 DSV4_NO_MMAP=1 \
