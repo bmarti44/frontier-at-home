@@ -322,6 +322,83 @@ class FormulaTests(unittest.TestCase):
                         "parity", "parity.performance.v1", malformed
                     )
 
+    def test_registered_foundation_scorer_requires_clean_safe_baselines(self):
+        def baseline(profile, hash_char, spacing):
+            return {
+                "profile": profile,
+                "server_instance_id": f"{profile}-fresh-1",
+                "fixture_sha256": "a" * 64,
+                "binary_sha256": hash_char * 64,
+                "configuration_sha256": chr(ord(hash_char) + 2) * 64,
+                "token_timestamps": [
+                    index * spacing for index in range(128)
+                ],
+                "evaluated_tokens": 1000,
+                "prefill_seconds": 10.0,
+                "warm_ttft_seconds": 1.0,
+                "cold_ttft_seconds": 10.0,
+                "available_memory_gib": 20.0,
+                "truncated": False,
+                "oom": False,
+                "xid": False,
+                "failures": [],
+            }
+
+        passing = {
+            "record_type": "foundation_observation",
+            "upstream_commit": "b" * 40,
+            "source_clean": True,
+            "clean_build": True,
+            "model_artifacts_verified": True,
+            "tokenizer_artifacts_verified": True,
+            "bandwidth_gb_s": [105.0, 106.0, 107.0, 108.0, 109.0],
+            "glm_baseline": baseline("glm52", "b", 0.12),
+            "dsv4_baseline": baseline("dsv4", "c", 0.10),
+        }
+        result = self.goal.score_registered_gate(
+            "foundation", "foundation.v1", [passing]
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        for mutation in (
+            "dirty",
+            "short_bandwidth",
+            "same_identity",
+            "short_decode",
+            "oom",
+            "unequal_fixture",
+        ):
+            broken = json.loads(json.dumps(passing))
+            if mutation == "dirty":
+                broken["source_clean"] = False
+            elif mutation == "short_bandwidth":
+                broken["bandwidth_gb_s"] = broken["bandwidth_gb_s"][:4]
+            elif mutation == "same_identity":
+                broken["dsv4_baseline"]["binary_sha256"] = (
+                    broken["glm_baseline"]["binary_sha256"]
+                )
+                broken["dsv4_baseline"]["configuration_sha256"] = (
+                    broken["glm_baseline"]["configuration_sha256"]
+                )
+            elif mutation == "short_decode":
+                broken["glm_baseline"]["token_timestamps"] = [0.0] * 127
+            elif mutation == "oom":
+                broken["glm_baseline"]["oom"] = True
+            else:
+                broken["glm_baseline"]["fixture_sha256"] = "f" * 64
+            with self.subTest(mutation=mutation):
+                if mutation == "dirty":
+                    self.assertEqual(
+                        self.goal.score_registered_gate(
+                            "foundation", "foundation.v1", [broken]
+                        )["verdict"],
+                        "FAIL",
+                    )
+                else:
+                    with self.assertRaises(ValueError):
+                        self.goal.score_registered_gate(
+                            "foundation", "foundation.v1", [broken]
+                        )
+
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)
