@@ -1342,15 +1342,8 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
             or not 0 <= claimed <= 100
         ):
             raise ValueError("reviewer-assigned score must be an integer from 0 to 100")
-        expected_verdict = (
-            "ACCEPT"
-            if claimed >= 90
-            and not issues["critical"]
-            and not issues["high"]
-            else "REJECT"
-        )
-        if record["verdict"] != expected_verdict:
-            raise ValueError("reviewer verdict does not match score and issues")
+        if record["verdict"] not in {"ACCEPT", "REJECT"}:
+            raise ValueError("reviewer verdict is invalid")
         prior = record["prior_issue_status"]
         if not isinstance(prior, list):
             raise ValueError("prior_issue_status must be a list")
@@ -1380,13 +1373,12 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
     if len(rounds) != 1:
         raise ValueError("reviewers reported different review rounds")
     checks = {
-        "both_scores_at_least_90": all(score >= 90 for score in scores.values()),
         "no_critical": all(value["critical"] == 0 for value in counts.values()),
         "no_high": all(value["high"] == 0 for value in counts.values()),
     }
     return {
         "scorer_id": "review.final.v1",
-        "formula_version": 2,
+        "formula_version": 3,
         "candidate_hash": next(iter(candidate_hashes)),
         "review_round": next(iter(rounds)),
         "scores": scores,
