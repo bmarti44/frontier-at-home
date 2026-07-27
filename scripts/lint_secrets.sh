@@ -98,6 +98,7 @@ allowlist = {
     "model_sha256",
     "scorer_sha256",
     "server_sha256",
+    "cuda_sass_sha256",
     "source_sha256",
     "preserved_archive_sha256",
     "drand_randomness",
