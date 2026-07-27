@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "dcd965b0b0dd399cbb17320416348bcbdcbbc14d",
+  "candidate": {
+    "engine_source_commit": "86abb92b7519389e38ce9aac3f73ad2f78b593c1",
+    "binary_sha256": "0ca5a70d4d68f38e486dd7e0bbd798df73d45563a1bcc7899e1362d3f43ec774"
+  },
+  "randomness": {
+    "source": "drand-default",
+    "round": 6324273,
+    "drand_randomness": "d8103eb9bc48e7521baf3a5dedda191a80f9eb20acb53341946287eb2e839938",
+    "derived_seed": {
+      "sha256": "46d478feea4f901bc101ba29041ab3980f32106ee6d1070d7ef2d39e1cffe2f1",
+      "u32": 1188329726
+    }
+  },
+  "executed_identity": {
+    "verified": true,
+    "path": "/home/dsv4/ds4-project/src/ds4-goal-iq2-86abb92/ds4-server",
+    "binary_sha256": "0ca5a70d4d68f38e486dd7e0bbd798df73d45563a1bcc7899e1362d3f43ec774",
+    "device_inode": "66306:686764",
+    "isolated_process_group": true
+  },
+  "measurement": {
+    "prompt_tokens": 61,
+    "server_completion_tokens": 160,
+    "client_completion_tokens": 160,
+    "event_completion_tokens": 157,
+    "decode_tokens_per_second_diagnostic": 0.6469323176083854,
+    "prefill_tokens_per_second_diagnostic": 0.5829650410958332,
+    "ttft_seconds_diagnostic": 104.63749230199937,
+    "suite_valid": false
+  },
+  "safety": {
+    "exit_status": 1,
+    "watchdog_killed": false,
+    "memory_samples": 1184,
+    "minimum_available_memory_gib": 87.906174,
+    "maximum_engine_rss_gib": 0.837559,
+    "oom_events": 0,
+    "xid_events": 0,
+    "server_processes_after": 0,
+    "persistent_maintenance_hold_present": true
+  },
+  "artifacts": {
+    "/home/dsv4/ds4-project/glm52-goal-iq2-dcd965b-r6324273/result.json": "8ab07a7bcf07c16fc3776e6f62b708aa81b73fe6092864da572f69bc48582063",
+    "/home/dsv4/ds4-project/glm52-goal-iq2-dcd965b-r6324273/server.log": "1b945cd4cf9d17e544635eaabcea4ae8a7c89dc01a1eef8e88e0abbf9fc4cbca",
+    "/home/dsv4/ds4-project/glm52-goal-iq2-dcd965b-r6324273/process.identity": "8eda5b5e824ebfd6ec044c61ce75fb544b6727eef13c5167e115a7dc19954d7c",
+    "/home/dsv4/ds4-project/glm52-crashlog/20260727-093413-iq2-dcd965b-r6324273/main.log": "57a5b1555970c81754e65805fea22977f73382fbe9546bf73a5f8e41ec4dc176",
+    "/home/dsv4/ds4-project/glm52-crashlog/20260727-093413-iq2-dcd965b-r6324273/samples.log": "c39003056b9863efe4fd45bfd760c5c8d059a983af93bb208670ad2b88247878"
+  },
+  "verdict": "FAIL",
+  "reason": "The executed candidate and memory safety were verified, but the fixed harness rejected unequal SSE event and client token counts (157 versus 160). The diagnostic rates have no acceptance authority."
+}
