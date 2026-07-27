@@ -74,16 +74,46 @@ class EngineSwitchTests(unittest.TestCase):
         dsv4 = json.loads(DSV4_PROFILE.read_text())
         glm_build = json.loads(GLM_BUILD.read_text())
         dsv4_build = json.loads(DSV4_BUILD.read_text())
+        weights = json.loads(
+            (ROOT / "configs/build-manifests/ds4-weights.json").read_text()
+        )
+        self.assertEqual(glm["schema_version"], 2)
+        self.assertEqual(glm["profile"], "glm52")
+        self.assertEqual(glm["binary_sha256"], glm_build["binary_sha256"])
+        self.assertEqual(glm["model_sha256"], glm_build["model_sha256"])
+        self.assertEqual(glm["context_cap"], 1_048_576)
         self.assertEqual(
-            glm,
+            glm["build_manifest_sha256"],
+            hashlib.sha256(GLM_BUILD.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            glm["tokenizer_sha256"],
+            "19e773648cb4e65de8660ea6365e10ac"
+            "ca112d42a854923df93db4a6f333a82d",
+        )
+        self.assertEqual(
+            glm["runtime"]["engine_environment"],
             {
-                "binary_sha256": glm_build["binary_sha256"],
-                "context_cap": 1_048_576,
-                "model_sha256": glm_build["model_sha256"],
-                "profile": "glm52",
+                "DS4_CUDA_EXPERT_CACHE_GB": "0",
+                "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+                "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+                "DS4_CUDA_FETCH_THREADS": "6",
+                "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
+                "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+                "DS4_TOKEN_TIMING_LOG": "1",
             },
         )
-        self.assertEqual(dsv4["schema_version"], 1)
+        self.assertEqual(glm["runtime"]["safety"]["minimum_start_gib"], 110)
+        self.assertEqual(glm["runtime"]["safety"]["kill_floor_gib"], 40)
+        self.assertEqual(glm["runtime"]["safety"]["swap_max_bytes"], 0)
+        for path, digest in glm["artifact_sha256"].items():
+            self.assertEqual(
+                digest,
+                hashlib.sha256((ROOT / path).read_bytes()).hexdigest(),
+                path,
+            )
+
+        self.assertEqual(dsv4["schema_version"], 2)
         self.assertEqual(dsv4["profile"], "dsv4")
         self.assertEqual(
             dsv4["binary_sha256"],
@@ -92,6 +122,31 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(
             dsv4["configuration_sha256"],
             hashlib.sha256(DSV4_SERVICE.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            dsv4["build_manifest_sha256"],
+            hashlib.sha256(DSV4_BUILD.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            dsv4["weights_manifest_sha256"],
+            hashlib.sha256(
+                (ROOT / "configs/build-manifests/ds4-weights.json").read_bytes()
+            ).hexdigest(),
+        )
+        self.assertEqual(
+            dsv4["shared_libraries"],
+            {
+                name: record["sha256"]
+                for name, record in dsv4_build["shared_libraries"].items()
+            },
+        )
+        self.assertEqual(
+            dsv4["model_files"],
+            {
+                record["role"]: record["sha256"]
+                for record in weights["files"]
+                if record["role"] in {"base", "dspark_drafter"}
+            },
         )
 
     def test_glm_repro_build_fixes_all_nondeterministic_inputs(self):
