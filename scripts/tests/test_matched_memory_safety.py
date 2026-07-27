@@ -149,6 +149,11 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("executed_binary_sha256=", source)
         self.assertIn("EXECUTED_START_TICKS", source)
         self.assertIn("executed candidate identity changed", source)
+        self.assertIn("executed candidate exited during wrapper shutdown", source)
+        self.assertIn("CANDIDATE_EXIT_GRACE_TICKS=8", source)
+        self.assertIn("replacement candidate appeared during shutdown", source)
+        self.assertIn("EXECUTED_CANDIDATE_CLEAN_EXIT=1", source)
+        self.assertIn("wrapper command failed after candidate exit", source)
         self.assertIn("isolated process group survived command completion", source)
         self.assertNotIn(
             "SRC=/home/dsv4/ds4-project/src/ds4-upstream-master",
