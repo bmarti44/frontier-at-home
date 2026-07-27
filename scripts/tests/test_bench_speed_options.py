@@ -348,16 +348,17 @@ class BenchOptionTests(unittest.TestCase):
                 )
                 return {
                     "response_id": "chatcmpl-fake",
-                    "request_started": 1.0,
-                    "first_content_at": 2.0,
-                    "last_content_at": 2.0,
+                    "request_sha256": "b" * 64,
+                    "request_started_ns": 1_000_000_000,
+                    "first_content_at_ns": 2_000_000_000,
+                    "last_content_at_ns": 2_000_000_000,
                     "generated_text": "x",
                     "generated_reasoning": "x",
                     "generated_content": "",
                     "usage": {"completion_tokens": 128, "prompt_tokens": 32},
                     "done": True,
                     "data_chunks": 3,
-                    "token_timestamps": [2.0],
+                    "token_timestamps_ns": [2_000_000_000],
                 }
 
         with tempfile.TemporaryDirectory() as tmp:

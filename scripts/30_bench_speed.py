@@ -303,19 +303,19 @@ class Client:
             headers=headers,
             method="POST",
         )
-        request_started = time.perf_counter()
+        request_started_ns = time.perf_counter_ns()
         try:
             response = urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S)
         except urllib.error.HTTPError as error:
             raw = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"stream returned HTTP {error.code}: {raw[:500]!r}") from error
 
-        first_content_at: float | None = None
-        last_content_at: float | None = None
+        first_content_at_ns: int | None = None
+        last_content_at_ns: int | None = None
         generated_parts: list[str] = []
         reasoning_parts: list[str] = []
         content_parts: list[str] = []
-        token_timestamps: list[float] = []
+        token_timestamps_ns: list[int] = []
         usage: dict[str, Any] | None = None
         done = False
         data_chunks = 0
@@ -367,12 +367,12 @@ class Client:
                                 else:
                                     content_parts.append(fragment)
                         if fragments:
-                            now = time.perf_counter()
+                            now_ns = time.perf_counter_ns()
                             generated_parts.extend(fragments)
-                            token_timestamps.append(now)
-                            if first_content_at is None:
-                                first_content_at = now
-                            last_content_at = now
+                            token_timestamps_ns.append(now_ns)
+                            if first_content_at_ns is None:
+                                first_content_at_ns = now_ns
+                            last_content_at_ns = now_ns
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise RuntimeError(f"invalid SSE stream: {error}") from error
         if len(response_ids) != 1:
@@ -382,16 +382,18 @@ class Client:
 
         return {
             "response_id": next(iter(response_ids)),
-            "request_started": request_started,
-            "first_content_at": first_content_at,
-            "last_content_at": last_content_at,
+            "request_sha256": hashlib.sha256(body).hexdigest(),
+            "request_bytes": len(body),
+            "request_started_ns": request_started_ns,
+            "first_content_at_ns": first_content_at_ns,
+            "last_content_at_ns": last_content_at_ns,
             "generated_text": "".join(generated_parts),
             "generated_reasoning": "".join(reasoning_parts),
             "generated_content": "".join(content_parts),
             "usage": usage,
             "done": done,
             "data_chunks": data_chunks,
-            "token_timestamps": token_timestamps,
+            "token_timestamps_ns": token_timestamps_ns,
         }
 
 
@@ -663,7 +665,10 @@ def run_rep(
         stream = client.stream_chat(payload)
         if not stream["done"]:
             return invalid_rep("SSE stream did not terminate with [DONE]")
-        if stream["first_content_at"] is None or stream["last_content_at"] is None:
+        if (
+            stream["first_content_at_ns"] is None
+            or stream["last_content_at_ns"] is None
+        ):
             return invalid_rep("SSE stream produced no content chunks")
         usage = stream["usage"]
         if not isinstance(usage, dict):
@@ -677,8 +682,8 @@ def run_rep(
         client_completion_tokens = token_count(
             output_tokenizer, stream["generated_text"]
         )
-        sse_token_timestamps = stream["token_timestamps"]
-        event_completion_tokens = len(sse_token_timestamps)
+        sse_token_timestamps_ns = stream["token_timestamps_ns"]
+        event_completion_tokens = len(sse_token_timestamps_ns)
         if completion_tokens == 0:
             return invalid_rep("server reported zero completion tokens")
         raw_timing = None
@@ -713,22 +718,51 @@ def run_rep(
             )
             timing_source = "server_raw_token_log"
         else:
-            token_timestamps = sse_token_timestamps
+            token_timestamps = [
+                value / 1_000_000_000 for value in sse_token_timestamps_ns
+            ]
             reasons = observable_output_errors(
                 client_completion_tokens,
                 len(token_timestamps),
                 min_completion_tokens,
             )
             timing_source = "sse_content_events"
+        if any(
+            later <= earlier
+            for earlier, later in zip(
+                sse_token_timestamps_ns, sse_token_timestamps_ns[1:]
+            )
+        ):
+            reasons.append("SSE content timestamps are not strictly increasing")
         timed_completion_tokens = len(token_timestamps)
-        ttft_s = stream["first_content_at"] - stream["request_started"]
+        request_started_ns = stream["request_started_ns"]
+        first_content_at_ns = stream["first_content_at_ns"]
+        last_content_at_ns = stream["last_content_at_ns"]
+        if not all(
+            isinstance(value, int)
+            for value in (
+                request_started_ns,
+                first_content_at_ns,
+                last_content_at_ns,
+            )
+        ):
+            return invalid_rep("client timing endpoints are not integer nanoseconds")
+        ttft_s = (first_content_at_ns - request_started_ns) / 1_000_000_000
         decode_elapsed_s = token_timestamps[-1] - token_timestamps[0]
+        client_decode_elapsed_s = (
+            last_content_at_ns - first_content_at_ns
+        ) / 1_000_000_000
+        raw_client_timing_ratio = (
+            decode_elapsed_s / client_decode_elapsed_s
+            if raw_timing is not None and client_decode_elapsed_s > 0
+            else None
+        )
         if raw_timing is not None:
             reasons.extend(
                 raw_timing_envelope_errors(
                     decode_elapsed_s,
-                    stream["first_content_at"],
-                    stream["last_content_at"],
+                    first_content_at_ns / 1_000_000_000,
+                    last_content_at_ns / 1_000_000_000,
                 )
             )
         decode_tok_s = (
@@ -741,6 +775,26 @@ def run_rep(
             reasons.append(f"non-positive TTFT: {ttft_s}")
         if decode_elapsed_s <= 0:
             reasons.append(f"non-positive decode interval: {decode_elapsed_s}")
+        generated_reasoning = stream["generated_reasoning"].encode("utf-8")
+        generated_content = stream["generated_content"].encode("utf-8")
+        evidence = {
+            "response_id": stream["response_id"],
+            "request_sha256": stream["request_sha256"],
+            "request_bytes": stream.get("request_bytes"),
+            "generated_reasoning_sha256": hashlib.sha256(
+                generated_reasoning
+            ).hexdigest(),
+            "generated_reasoning_bytes": len(generated_reasoning),
+            "generated_content_sha256": hashlib.sha256(
+                generated_content
+            ).hexdigest(),
+            "generated_content_bytes": len(generated_content),
+            "client_request_started_ns": request_started_ns,
+            "client_first_content_ns": first_content_at_ns,
+            "client_last_content_ns": last_content_at_ns,
+            "sse_token_timestamps_ns": sse_token_timestamps_ns,
+            "raw_client_timing_ratio": raw_client_timing_ratio,
+        }
         if reasons:
             rep = invalid_rep("; ".join(reasons))
             rep.update(
@@ -755,15 +809,18 @@ def run_rep(
                     "event_completion_tokens": event_completion_tokens,
                     "timing_source": timing_source,
                     "token_timestamps_ns": (
-                        raw_timing["monotonic_ns"] if raw_timing is not None else None
+                        raw_timing["monotonic_ns"]
+                        if raw_timing is not None
+                        else sse_token_timestamps_ns
                     ),
                     "token_ids": raw_timing["token_ids"] if raw_timing is not None else None,
                     "client_fixture_tokens": context_tokens,
                     "data_chunks": stream["data_chunks"],
                 }
             )
+            rep.update(evidence)
             return rep
-        return {
+        rep = {
             "ttft_s": ttft_s,
             "decode_tok_s": decode_tok_s,
             "prefill_tok_s": prefill_tok_s,
@@ -775,12 +832,16 @@ def run_rep(
             "event_completion_tokens": event_completion_tokens,
             "timing_source": timing_source,
             "token_timestamps_ns": (
-                raw_timing["monotonic_ns"] if raw_timing is not None else None
+                raw_timing["monotonic_ns"]
+                if raw_timing is not None
+                else sse_token_timestamps_ns
             ),
             "token_ids": raw_timing["token_ids"] if raw_timing is not None else None,
             "client_fixture_tokens": context_tokens,
             "data_chunks": stream["data_chunks"],
         }
+        rep.update(evidence)
+        return rep
     except Exception as error:
         return invalid_rep(f"{type(error).__name__}: {error}")
 
