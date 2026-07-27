@@ -221,6 +221,14 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("GLM_EXPERT_CACHE_GB:-0", source)
         self.assertIn("DS4_TOKEN_TIMING_LOG=1", source)
         self.assertIn('--token-timing-log "$OUT/server.log"', source)
+        self.assertIn("glm52-b4734de4/tokenizer.json", source)
+        self.assertIn(
+            "19e773648cb4e65de8660ea6365e10ac"
+            + "ca112d42a854923df93db4a6f333a82d",
+            source.replace("\\\n", ""),
+        )
+        self.assertIn('--tokenizer-path "$TOKENIZER"', source)
+        self.assertIn('--tokenizer-sha256 "$TOKENIZER_SHA256"', source)
         self.assertNotIn("DS4_GLM_TP_DEBUG=0", source)
 
     def test_glm_arm_port_override_is_bounded_and_default_off(self):

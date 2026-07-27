@@ -9,6 +9,9 @@ SEED=$3
 REPO=/home/bmarti44/spark-deepseek-v4-flash
 SRC=${GLM_CANDIDATE_SRC:-/home/dsv4/ds4-project/src/ds4-goal-clean-0a7ad776}
 MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
+TOKENIZER=/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json
+TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10ac\
+ca112d42a854923df93db4a6f333a82d
 PORT=${GLM_PORT:-8011}
 PID=
 START_TICKS=
@@ -17,6 +20,8 @@ REQUIRE_TOKEN_TIMING_LOG=${GLM_REQUIRE_TOKEN_TIMING_LOG:-1}
 
 [[ $SRC == /home/dsv4/ds4-project/src/* && -x $SRC/ds4-server ]] \
     || { echo "invalid GLM_CANDIDATE_SRC: $SRC" >&2; exit 2; }
+[[ -r $TOKENIZER && $(sha256sum "$TOKENIZER" | awk '{print $1}') == "$TOKENIZER_SHA256" ]] \
+    || { echo "GLM tokenizer identity mismatch: $TOKENIZER" >&2; exit 2; }
 [[ $EXPERT_CACHE_GB =~ ^([0-9]|[1-6][0-9]|7[0-2])$ ]] \
     || { echo "GLM_EXPERT_CACHE_GB must be an integer from 0 through 72" >&2; exit 2; }
 [[ $REQUIRE_TOKEN_TIMING_LOG =~ ^[01]$ ]] \
@@ -85,6 +90,8 @@ fi
     --out "$OUT/result.json" \
     --stack-label "$LABEL" \
     --model-id glm-5.2 \
+    --tokenizer-path "$TOKENIZER" \
+    --tokenizer-sha256 "$TOKENIZER_SHA256" \
     "${timing_args[@]}" \
     --reps 1 --context-levels 0 --max-tokens 160 \
     --min-completion-tokens 128 --seed "$SEED"

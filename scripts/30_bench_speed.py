@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import re
@@ -26,6 +27,10 @@ MAX_TOKENS = 256
 MIN_VALID_COMPLETION_TOKENS = 200
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TOKENIZER_PATH = REPO_ROOT / "vendor" / "official-encoding" / "tokenizer.json"
+DEFAULT_TOKENIZER_SHA256 = (
+    "8f9f37ca37fdc4f5fd36d5cf4d3b0e8"
+    "392edb4e894fd10cc0d70b4957c8633cf"
+)
 FIXTURE_PATH = REPO_ROOT / "fixtures" / "ctx-32k.txt"
 PREAMBLE_WORDS = (
     "amber", "anchor", "apricot", "atlas", "basil", "beacon", "birch",
@@ -93,6 +98,17 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="server log containing DS4_TOKEN_TIMING records for exact decode timing",
     )
+    parser.add_argument(
+        "--tokenizer-path",
+        type=Path,
+        default=TOKENIZER_PATH,
+        help="frozen tokenizer.json matching the measured model",
+    )
+    parser.add_argument(
+        "--tokenizer-sha256",
+        default=DEFAULT_TOKENIZER_SHA256,
+        help="required SHA-256 of --tokenizer-path",
+    )
     args = parser.parse_args()
     if args.extra_body is not None:
         args.extra_body = json.loads(args.extra_body)
@@ -117,6 +133,8 @@ def parse_args() -> argparse.Namespace:
     args.base_url = args.base_url.rstrip("/")
     if not args.base_url:
         parser.error("--base-url must not be empty")
+    if not re.fullmatch(r"[0-9a-f]{64}", args.tokenizer_sha256):
+        parser.error("--tokenizer-sha256 must be 64 lowercase hexadecimal digits")
     return args
 
 
@@ -129,14 +147,31 @@ def load_api_key(path: Path | None) -> str | None:
     return key
 
 
-def load_tokenizer() -> Any:
+def verify_tokenizer_hash(path: Path, expected_sha256: str) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as error:
+        raise RuntimeError(f"cannot read frozen tokenizer {path}: {error}") from error
+    actual = digest.hexdigest()
+    if actual != expected_sha256:
+        raise RuntimeError(
+            "tokenizer SHA-256 mismatch: "
+            f"expected={expected_sha256}, actual={actual}, path={path}"
+        )
+    return actual
+
+
+def load_tokenizer(path: Path = TOKENIZER_PATH) -> Any:
     try:
         from tokenizers import Tokenizer
     except ImportError as error:
         raise RuntimeError("tokenizers is required; install requirements-harness.txt") from error
-    if not TOKENIZER_PATH.is_file():
-        raise RuntimeError(f"pinned tokenizer is missing: {TOKENIZER_PATH}")
-    return Tokenizer.from_file(str(TOKENIZER_PATH))
+    if not path.is_file():
+        raise RuntimeError(f"pinned tokenizer is missing: {path}")
+    return Tokenizer.from_file(str(path))
 
 
 def token_count(tokenizer: Any, text: str) -> int:
@@ -475,22 +510,36 @@ def raw_visible_output_errors(
     ):
         return ["raw timing contains a token outside the frozen tokenizer vocabulary"]
     try:
-        decoded = tokenizer.decode(token_ids, skip_special_tokens=False)
+        open_ids = tokenizer.encode("<think>", add_special_tokens=False).ids
+        close_ids = tokenizer.encode("</think>", add_special_tokens=False).ids
+        visible_ids = list(token_ids)
+        if open_ids and visible_ids[: len(open_ids)] == open_ids:
+            del visible_ids[: len(open_ids)]
+        if close_ids:
+            for index in range(len(visible_ids) - len(close_ids) + 1):
+                if visible_ids[index : index + len(close_ids)] == close_ids:
+                    del visible_ids[index : index + len(close_ids)]
+                    break
+        visible = tokenizer.decode(visible_ids, skip_special_tokens=False)
+        canonical_ids = tokenizer.encode(
+            generated_text, add_special_tokens=False
+        ).ids
     except Exception as error:
-        return [f"cannot decode raw timing tokens: {error}"]
+        return [f"cannot bind raw timing tokens to client output: {error}"]
 
-    # Thinking mode may place the opening marker in the assistant prefix (so it
-    # is absent here) or generate it. The OpenAI stream deliberately hides both
-    # framing markers while preserving the reasoning and content bytes in order.
-    visible = decoded
-    if visible.startswith("<think>"):
-        visible = visible[len("<think>") :]
-    visible = visible.replace("</think>", "", 1)
+    # The stream hides only the think framing tokens. Exact canonical IDs are
+    # required as well as bytes so a longer noncanonical decomposition cannot
+    # inflate the measured token count.
     if visible != generated_text:
         reasons.append(
             "raw token/client byte mismatch: "
             f"decoded_bytes={len(visible.encode('utf-8'))}, "
             f"client_bytes={len(generated_text.encode('utf-8'))}"
+        )
+    if canonical_ids != visible_ids:
+        reasons.append(
+            "raw token/client canonical-ID mismatch: "
+            f"raw_visible={len(visible_ids)}, canonical={len(canonical_ids)}"
         )
     return reasons
 
@@ -705,7 +754,10 @@ def main() -> int:
     }
     try:
         api_key = load_api_key(args.api_key_file)
-        tokenizer = load_tokenizer()
+        tokenizer_digest = verify_tokenizer_hash(
+            args.tokenizer_path, args.tokenizer_sha256
+        )
+        tokenizer = load_tokenizer(args.tokenizer_path)
         fixture = FIXTURE_PATH.read_text(encoding="utf-8")
         fixture_total_tokens = token_count(tokenizer, fixture)
         if fixture_total_tokens < max(args.context_levels):
@@ -719,6 +771,11 @@ def main() -> int:
         client = Client(args.base_url, api_key, args.extra_body)
         model = client.get_model(args.model_id)
         result["metadata"]["model"] = model
+        result["metadata"]["tokenizer_path"] = str(args.tokenizer_path)
+        result["metadata"]["tokenizer_sha256"] = tokenizer_digest
+        result["metadata"]["tokenizer_vocab_size"] = tokenizer.get_vocab_size(
+            with_added_tokens=True
+        )
         result["metadata"]["fixture_path"] = str(FIXTURE_PATH.relative_to(REPO_ROOT))
         result["metadata"]["fixture_total_tokens"] = fixture_total_tokens
 
@@ -788,6 +845,7 @@ def main() -> int:
                 time.sleep(2)
 
         result["suite_valid"] = not any_cell_failed
+        verify_tokenizer_hash(args.tokenizer_path, args.tokenizer_sha256)
         result["metadata"]["finished_at"] = utc_now()
         write_result(args.out, result)
         return 0 if result["suite_valid"] else 1
