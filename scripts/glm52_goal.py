@@ -693,6 +693,149 @@ def _score_foundation(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _review_issue_ids(value: Any, label: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+    if any(
+        not isinstance(issue, str)
+        or not issue
+        or any(
+            character
+            not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+            for character in issue
+        )
+        for issue in value
+    ):
+        raise ValueError(f"{label} contains an invalid issue ID")
+    if len(set(value)) != len(value):
+        raise ValueError(f"{label} contains duplicate issue IDs")
+    return value
+
+
+def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
+    if len(records) != 2:
+        raise ValueError("review requires exactly two persistent reviewers")
+    expected = {
+        "record_type",
+        "reviewer",
+        "candidate_hash",
+        "review_round",
+        "claimed_score",
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "prior_issue_status",
+        "verdict",
+    }
+    canonical = {"gap_reviewer", "adversarial_reviewer"}
+    reviewers: set[str] = set()
+    candidate_hashes: set[str] = set()
+    rounds: set[int] = set()
+    scores: dict[str, int] = {}
+    counts: dict[str, dict[str, int]] = {}
+    for index, record in enumerate(records):
+        _require_exact_keys(record, expected, f"review record {index}")
+        if record["record_type"] != "review":
+            raise ValueError("review record_type is invalid")
+        reviewer = record["reviewer"]
+        if reviewer not in canonical:
+            raise ValueError("reviewer is not one of the persistent canonical pair")
+        if reviewer in reviewers:
+            raise ValueError("persistent reviewer is duplicated")
+        reviewers.add(reviewer)
+        candidate = record["candidate_hash"]
+        if not (
+            isinstance(candidate, str)
+            and len(candidate) == 40
+            and all(character in "0123456789abcdef" for character in candidate)
+        ):
+            raise ValueError("review candidate_hash is invalid")
+        candidate_hashes.add(candidate)
+        review_round = record["review_round"]
+        if (
+            not isinstance(review_round, int)
+            or isinstance(review_round, bool)
+            or review_round < 1
+        ):
+            raise ValueError("review_round must be a positive integer")
+        rounds.add(review_round)
+        issues = {
+            severity: _review_issue_ids(record[severity], severity)
+            for severity in ("critical", "high", "medium", "low")
+        }
+        flattened = [issue for values in issues.values() for issue in values]
+        if len(set(flattened)) != len(flattened):
+            raise ValueError("one review issue appears at multiple severities")
+        expected_score = max(
+            0,
+            100
+            - 25 * len(issues["critical"])
+            - 10 * len(issues["high"])
+            - 3 * len(issues["medium"])
+            - len(issues["low"]),
+        )
+        claimed = record["claimed_score"]
+        if (
+            not isinstance(claimed, int)
+            or isinstance(claimed, bool)
+            or claimed != expected_score
+        ):
+            raise ValueError("claimed reviewer score does not match the rubric")
+        expected_verdict = (
+            "ACCEPT"
+            if expected_score >= 90
+            and not issues["critical"]
+            and not issues["high"]
+            else "REJECT"
+        )
+        if record["verdict"] != expected_verdict:
+            raise ValueError("reviewer verdict does not match score and issues")
+        prior = record["prior_issue_status"]
+        if not isinstance(prior, list):
+            raise ValueError("prior_issue_status must be a list")
+        prior_ids: list[str] = []
+        for entry in prior:
+            _require_exact_keys(entry, {"id", "status"}, "prior issue status")
+            issue_id = _review_issue_ids([entry["id"]], "prior issue")[0]
+            if entry["status"] not in {
+                "OPEN",
+                "VERIFIED",
+                "FALSIFIED",
+                "FIXED",
+                "DEFERRED",
+            }:
+                raise ValueError("prior issue status is invalid")
+            prior_ids.append(issue_id)
+        if len(set(prior_ids)) != len(prior_ids):
+            raise ValueError("prior_issue_status contains duplicate IDs")
+        scores[reviewer] = expected_score
+        counts[reviewer] = {
+            severity: len(values) for severity, values in issues.items()
+        }
+    if reviewers != canonical:
+        raise ValueError("the persistent reviewer pair is incomplete")
+    if len(candidate_hashes) != 1:
+        raise ValueError("reviewers inspected different candidate hashes")
+    if len(rounds) != 1:
+        raise ValueError("reviewers reported different review rounds")
+    checks = {
+        "both_scores_at_least_90": all(score >= 90 for score in scores.values()),
+        "no_critical": all(value["critical"] == 0 for value in counts.values()),
+        "no_high": all(value["high"] == 0 for value in counts.values()),
+    }
+    return {
+        "scorer_id": "review.final.v1",
+        "formula_version": 1,
+        "candidate_hash": next(iter(candidate_hashes)),
+        "review_round": next(iter(rounds)),
+        "scores": scores,
+        "issue_counts": counts,
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 def score_registered_gate(
     gate: str, scorer_id: str, records: Iterable[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -702,6 +845,7 @@ def score_registered_gate(
         ("foundation", "foundation.v1"): _score_foundation,
         ("W11", "w11.context.v1"): _score_w11,
         ("parity", "parity.performance.v1"): _score_parity,
+        ("review", "review.final.v1"): _score_review,
     }
     scorer = registered.get((gate, scorer_id))
     if scorer is None:
