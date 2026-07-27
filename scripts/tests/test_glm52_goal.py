@@ -470,6 +470,22 @@ class FormulaTests(unittest.TestCase):
                             "review", "review.final.v1", broken
                         )
 
+    def test_registered_scorer_identity_is_function_scoped(self):
+        digests = {
+            scorer: self.goal.registered_scorer_digest(scorer)
+            for scorer in (
+                "foundation.v1",
+                "w11.context.v1",
+                "parity.performance.v1",
+                "review.final.v1",
+            )
+        }
+        self.assertEqual(len(set(digests.values())), 4)
+        for digest in digests.values():
+            self.assertRegex(digest, r"^[0-9a-f]{64}$")
+        with self.assertRaises(ValueError):
+            self.goal.registered_scorer_digest("unknown")
+
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)
