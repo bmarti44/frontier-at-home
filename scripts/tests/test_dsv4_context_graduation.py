@@ -84,7 +84,18 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("DSV4_WATCHDOG_FLOOR_GIB=\"$floor\"", worker)
         self.assertIn("DSV4_MEM_FLOOR_GIB=\"$floor\"", worker)
 
-    def test_worker_graduates_exact_rungs_and_restores_safe_profile(self):
+    def test_1m_uses_smaller_prefill_buffers_and_external_restore_unit(self):
+        worker = WORKER.read_text(encoding="utf-8")
+        self.assertIn("batch=512", worker)
+        self.assertIn("ubatch=256", worker)
+        self.assertIn('DSV4_UBATCH="$ubatch"', worker)
+        self.assertIn('DSV4_BATCH="$batch"', worker)
+        self.assertIn(
+            "systemctl --no-block restart dsv4-engine-restore.service",
+            worker,
+        )
+
+    def test_worker_graduates_exact_rungs_and_restores_headless_safe_profile(self):
         source = WORKER.read_text(encoding="utf-8")
         self.assertIn("131072 262144 524288 1048576", source)
         self.assertIn("130000 260000 520000 1000000", source)
@@ -101,6 +112,7 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("DSV4_SPEC_TYPE=none", source)
         self.assertNotIn("glm_safe_run.sh", source)
         self.assertNotIn("gguf-glm", source)
+        self.assertNotIn("systemctl start display-manager.service", source)
 
     def test_scheduler_is_detached_candidate_bound_and_serialized(self):
         source = SCHEDULER.read_text(encoding="utf-8")
@@ -113,6 +125,7 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("RuntimeMaxSec=14400", source)
         self.assertIn("/run/dsv4/inference.lock", source)
         self.assertIn("glm52.process.json", source)
+        self.assertNotIn("OnFailure=display-manager.service", source)
 
 
 if __name__ == "__main__":
