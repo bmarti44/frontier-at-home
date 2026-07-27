@@ -259,6 +259,14 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertNotIn("GLM_REQUIRE_TOKEN_TIMING_LOG", source)
         self.assertIn('--token-timing-log "$OUT/server.log"', source)
 
+    def test_matched_glm_arm_uses_profile_safety_and_exports_evidence(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=40", source)
+        self.assertNotIn("GLM_SAFE_KILL_FLOOR_GIB=18", source)
+        self.assertIn('GLM_SAFE_EVIDENCE_DIR="$arm_out"', source)
+        cgroup = GLM_CGROUP.read_text(encoding="utf-8")
+        self.assertIn("glm52-decisive-", cgroup)
+
 
 if __name__ == "__main__":
     unittest.main()

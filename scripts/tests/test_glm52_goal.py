@@ -1459,6 +1459,7 @@ class FormulaTests(unittest.TestCase):
     def test_complete_glm_runtime_profile_is_accepted_and_hash_bound(self):
         artifact_paths = {
             "scripts/11_build_glm52_repro.sh",
+            "results/glm52-goal/harness/decisive_matched.sh",
             "results/glm52-goal/harness/glm_decisive_arm.sh",
             "results/glm52-gates/harness/glm_safe_run.sh",
             "results/glm52-gates/harness/glm_cgroup_run.sh",
