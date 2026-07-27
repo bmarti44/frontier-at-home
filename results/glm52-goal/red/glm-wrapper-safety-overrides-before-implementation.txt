@@ -1,0 +1,9 @@
+Candidate under test: 8823d995d736e32487da1c9696f5514cf646f76d
+Command:
+  python3 -m unittest scripts.tests.test_matched_memory_safety.MatchedHarnessContractTests.test_glm_wrapper_rejects_unsafe_safety_overrides
+
+Result: genuine RED
+
+The wrapper accepted unbounded environment overrides and sampled global
+available memory only once per second. The acceptance test first failed
+because no validation for GLM_SAFE_VLIMIT_KB existed.

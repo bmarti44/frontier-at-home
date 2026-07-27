@@ -96,6 +96,21 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn('kill -0 -- "-$PG"', safe_source)
         self.assertIn("survived signal escalation", safe_source)
 
+    def test_glm_wrapper_rejects_unsafe_safety_overrides(self):
+        source = GLM_SAFE.read_text(encoding="utf-8")
+        for variable in (
+            "GLM_SAFE_VLIMIT_KB",
+            "GLM_SAFE_KILL_FLOOR_GIB",
+            "GLM_SAFE_MIN_START_GIB",
+            "GLM_SAFE_TIMEOUT_S",
+        ):
+            self.assertIn(f"invalid {variable}", source)
+        self.assertIn("KILL_FLOOR_GIB < 18", source)
+        self.assertIn("MIN_START_GIB < 110", source)
+        self.assertIn("TIMEOUT_S > 3600", source)
+        self.assertIn("VLIMIT_KB > 419430400", source)
+        self.assertIn("sleep 0.25", source)
+
     def test_production_watchdog_reserves_18_gib(self):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_WATCHDOG_FLOOR_GIB:-18", source)
