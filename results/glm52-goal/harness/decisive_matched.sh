@@ -138,7 +138,7 @@ run_dsv4() {
         "$REPO/.venv-harness/bin/python" "$REPO/scripts/30_bench_speed.py" \
         --base-url "http://127.0.0.1:$PORT" \
         --out "$arm_out/result.json" --stack-label "$label" \
-        --reps 1 --context-levels 0 --max-tokens 160 \
+        --reps 2 --context-levels 0 --max-tokens 160 \
         --min-completion-tokens 128 --seed "$SEED" --ignore-eos-supported
     rc=$?
     sudo -n -u dsv4 env "${DSV4_ENV[@]}" \

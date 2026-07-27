@@ -109,7 +109,7 @@ done
     --output-tokenizer-path "$TOKENIZER" \
     --output-tokenizer-sha256 "$TOKENIZER_SHA256" \
     --token-timing-log "$OUT/server.log" \
-    --reps 1 --context-levels 0 --max-tokens 160 \
+    --reps 2 --context-levels 0 --max-tokens 160 \
     --min-completion-tokens 128 --seed "$SEED"
 
 stop_server
