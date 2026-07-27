@@ -446,26 +446,190 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         "model_sha256",
         "tokenizer_sha256",
         "fixture_sha256",
-        "context_cap",
-        "processed_tokens",
-        "retrieval_pass",
-        "negative_control_pass",
-        "completed_generation",
-        "truncated",
-        "oom",
-        "xid",
-        "available_memory_gib",
+        "stages",
+        "retrieval_results",
+        "negative_control_results",
+        "memory_samples_gib",
+        "failure_events",
+        "oom_events",
+        "xid_events",
     }
     observation = records[0]
     _require_exact_keys(observation, expected, "W11 context observation")
     if observation["record_type"] != "context_observation":
         raise ValueError("W11 record_type is invalid")
-    result = context_verdict(observation)
-    return {"scorer_id": "w11.context.v1", **result}
+    for field in (
+        "binary_sha256",
+        "configuration_sha256",
+        "model_sha256",
+        "tokenizer_sha256",
+        "fixture_sha256",
+    ):
+        if not _is_sha256(observation[field]):
+            raise ValueError(f"W11 {field} is invalid")
+
+    stages = observation["stages"]
+    expected_caps = [131_072, 262_144, 524_288, 1_048_576]
+    if not isinstance(stages, list) or len(stages) != len(expected_caps):
+        raise ValueError("W11 requires exactly four graduated stages")
+    processed: list[int] = []
+    generations_complete = True
+    no_truncation = True
+    for index, (stage, expected_cap) in enumerate(zip(stages, expected_caps)):
+        _require_exact_keys(
+            stage,
+            {
+                "context_cap",
+                "processed_tokens",
+                "completed_output_tokens",
+                "token_timestamps",
+                "output_sha256",
+                "finish_reason",
+                "truncated",
+            },
+            f"W11 stage {index}",
+        )
+        for field in ("context_cap", "processed_tokens", "completed_output_tokens"):
+            if (
+                not isinstance(stage[field], int)
+                or isinstance(stage[field], bool)
+                or stage[field] < 1
+            ):
+                raise ValueError(f"W11 stage {index} {field} must be positive integer")
+        if stage["context_cap"] != expected_cap:
+            raise ValueError("W11 context stages are not graduated exactly")
+        if stage["processed_tokens"] > stage["context_cap"]:
+            raise ValueError("W11 processed tokens exceed the context cap")
+        timestamps = stage["token_timestamps"]
+        if (
+            not isinstance(timestamps, list)
+            or len(timestamps) != stage["completed_output_tokens"]
+        ):
+            raise ValueError("W11 generation timestamp coverage is incomplete")
+        numeric_timestamps = [
+            _finite_number(value, "W11 token timestamp", minimum=-1.0)
+            for value in timestamps
+        ]
+        if any(
+            right <= left
+            for left, right in zip(numeric_timestamps, numeric_timestamps[1:])
+        ):
+            raise ValueError("W11 token timestamps are not strictly increasing")
+        if not _is_sha256(stage["output_sha256"]):
+            raise ValueError("W11 output digest is invalid")
+        if stage["finish_reason"] not in {"stop", "length"}:
+            raise ValueError("W11 finish reason is invalid")
+        if not isinstance(stage["truncated"], bool):
+            raise ValueError("W11 truncated must be boolean")
+        processed.append(stage["processed_tokens"])
+        generations_complete &= stage["completed_output_tokens"] > 0
+        no_truncation &= stage["truncated"] is False
+
+    retrieval = observation["retrieval_results"]
+    if not isinstance(retrieval, list) or len(retrieval) < 3:
+        raise ValueError("W11 requires at least three retrieval positions")
+    retrieval_ids: set[str] = set()
+    retrieval_positions: list[int] = []
+    retrieval_pass = True
+    for index, result in enumerate(retrieval):
+        _require_exact_keys(
+            result,
+            {"case_id", "position", "expected_sha256", "observed_sha256"},
+            f"W11 retrieval {index}",
+        )
+        case_id = result["case_id"]
+        position = result["position"]
+        if not isinstance(case_id, str) or not case_id or case_id in retrieval_ids:
+            raise ValueError("W11 retrieval case IDs must be unique strings")
+        if (
+            not isinstance(position, int)
+            or isinstance(position, bool)
+            or position < 0
+            or position >= processed[-1]
+        ):
+            raise ValueError("W11 retrieval position is invalid")
+        if not _is_sha256(result["expected_sha256"]) or not _is_sha256(
+            result["observed_sha256"]
+        ):
+            raise ValueError("W11 retrieval digest is invalid")
+        retrieval_ids.add(case_id)
+        retrieval_positions.append(position)
+        retrieval_pass &= result["expected_sha256"] == result["observed_sha256"]
+    position_coverage = (
+        min(retrieval_positions) <= expected_caps[-1] // 4
+        and any(
+            expected_caps[-1] // 4 < position < 3 * expected_caps[-1] // 4
+            for position in retrieval_positions
+        )
+        and max(retrieval_positions) >= 3 * expected_caps[-1] // 4
+    )
+
+    negative = observation["negative_control_results"]
+    if not isinstance(negative, list) or not negative:
+        raise ValueError("W11 requires a negative control")
+    negative_ids: set[str] = set()
+    negative_pass = True
+    for index, result in enumerate(negative):
+        _require_exact_keys(
+            result,
+            {"case_id", "expected_sha256", "observed_sha256"},
+            f"W11 negative control {index}",
+        )
+        case_id = result["case_id"]
+        if not isinstance(case_id, str) or not case_id or case_id in negative_ids:
+            raise ValueError("W11 negative-control IDs must be unique strings")
+        if not _is_sha256(result["expected_sha256"]) or not _is_sha256(
+            result["observed_sha256"]
+        ):
+            raise ValueError("W11 negative-control digest is invalid")
+        negative_ids.add(case_id)
+        negative_pass &= result["expected_sha256"] == result["observed_sha256"]
+
+    memory_samples = observation["memory_samples_gib"]
+    if not isinstance(memory_samples, list) or len(memory_samples) < 4:
+        raise ValueError("W11 memory telemetry is incomplete")
+    memory = [
+        _finite_number(value, "W11 available memory") for value in memory_samples
+    ]
+    event_fields = ("failure_events", "oom_events", "xid_events")
+    for field in event_fields:
+        if not isinstance(observation[field], list):
+            raise ValueError(f"W11 {field} must be a list")
+    checks = {
+        "context_cap": stages[-1]["context_cap"] == 1_048_576,
+        "processed_tokens": processed[-1] >= 1_000_000,
+        "graduated_stages": processed == sorted(processed),
+        "retrieval": retrieval_pass,
+        "retrieval_position_coverage": position_coverage,
+        "negative_control": negative_pass,
+        "completed_generation": generations_complete,
+        "no_truncation": no_truncation,
+        "no_failures": not observation["failure_events"],
+        "no_oom": not observation["oom_events"],
+        "no_xid": not observation["xid_events"],
+        "memory_floor": min(memory) >= 10.0,
+    }
+    return {
+        "scorer_id": "w11.context.v1",
+        "formula_version": 1,
+        "measurements": {
+            "stage_context_caps": expected_caps,
+            "stage_processed_tokens": processed,
+            "retrieval_cases": len(retrieval),
+            "negative_control_cases": len(negative),
+            "memory_samples": len(memory),
+            "minimum_available_memory_gib": min(memory),
+        },
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
 
 
 def validate_record_artifact_bindings(
-    gate: str, manifest: dict[str, Any], records: list[dict[str, Any]]
+    gate: str,
+    manifest: dict[str, Any],
+    records: list[dict[str, Any]],
+    artifact_paths: dict[str, Path] | None = None,
 ) -> None:
     """Require raw candidate identities to equal the hashed manifest artifacts."""
     if gate != "W11":
@@ -485,6 +649,105 @@ def validate_record_artifact_bindings(
                     f"W11 raw {label} identity does not match manifest "
                     f"at record {index}"
                 )
+    if artifact_paths is None:
+        return
+    fixture_path = artifact_paths.get("fixture")
+    if fixture_path is None:
+        raise ValueError("W11 fixture artifact is unavailable")
+    try:
+        fixture = _read_strict_json(fixture_path)
+    except ValueError as exc:
+        raise ValueError(f"W11 fixture is invalid: {exc}") from exc
+    _require_exact_keys(
+        fixture,
+        {
+            "schema_version",
+            "context_cap",
+            "stage_context_caps",
+            "retrieval_cases",
+            "negative_control_cases",
+        },
+        "W11 fixture",
+    )
+    if fixture["schema_version"] != 1 or fixture["context_cap"] != 1_048_576:
+        raise ValueError("W11 fixture schema or context cap is invalid")
+    expected_caps = [131_072, 262_144, 524_288, 1_048_576]
+    if fixture["stage_context_caps"] != expected_caps:
+        raise ValueError("W11 fixture stage graduation is invalid")
+    if len(records) != 1:
+        raise ValueError("W11 fixture binding requires one raw record")
+    record = records[0]
+    raw_caps = [
+        stage.get("context_cap")
+        for stage in record.get("stages", [])
+        if isinstance(stage, dict)
+    ]
+    if raw_caps != fixture["stage_context_caps"]:
+        raise ValueError("W11 raw stages do not match fixture")
+
+    fixture_retrieval: dict[str, tuple[int, str]] = {}
+    retrieval_cases = fixture["retrieval_cases"]
+    if not isinstance(retrieval_cases, list) or len(retrieval_cases) < 3:
+        raise ValueError("W11 fixture retrieval coverage is incomplete")
+    for index, case in enumerate(retrieval_cases):
+        _require_exact_keys(
+            case,
+            {"case_id", "position", "expected_sha256"},
+            f"W11 fixture retrieval {index}",
+        )
+        case_id = case["case_id"]
+        if (
+            not isinstance(case_id, str)
+            or not case_id
+            or case_id in fixture_retrieval
+            or not isinstance(case["position"], int)
+            or isinstance(case["position"], bool)
+            or not _is_sha256(case["expected_sha256"])
+        ):
+            raise ValueError("W11 fixture retrieval case is invalid")
+        fixture_retrieval[case_id] = (
+            case["position"],
+            case["expected_sha256"],
+        )
+    raw_retrieval = {
+        result.get("case_id"): (
+            result.get("position"),
+            result.get("expected_sha256"),
+        )
+        for result in record.get("retrieval_results", [])
+        if isinstance(result, dict)
+    }
+    if raw_retrieval != fixture_retrieval:
+        raise ValueError("W11 fixture retrieval expectations do not match raw")
+
+    fixture_negative: dict[str, str] = {}
+    negative_cases = fixture["negative_control_cases"]
+    if not isinstance(negative_cases, list) or not negative_cases:
+        raise ValueError("W11 fixture negative controls are missing")
+    for index, case in enumerate(negative_cases):
+        _require_exact_keys(
+            case,
+            {"case_id", "expected_sha256"},
+            f"W11 fixture negative control {index}",
+        )
+        case_id = case["case_id"]
+        if (
+            not isinstance(case_id, str)
+            or not case_id
+            or case_id in fixture_negative
+            or not _is_sha256(case["expected_sha256"])
+        ):
+            raise ValueError("W11 fixture negative control is invalid")
+        fixture_negative[case_id] = case["expected_sha256"]
+    raw_negative = {
+        result.get("case_id"): result.get("expected_sha256")
+        for result in record.get("negative_control_results", [])
+        if isinstance(result, dict)
+    }
+    if raw_negative != fixture_negative:
+        raise ValueError(
+            "W11 fixture negative-control expectations do not match raw"
+        )
 
 
 def _score_parity(records: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1195,7 +1458,9 @@ def validate_attempt(attempt: Path) -> None:
         if not isinstance(record, dict):
             raise ValueError(f"raw.jsonl line {number} is not an object")
         records.append(record)
-    validate_record_artifact_bindings(manifest["gate"], manifest, records)
+    validate_record_artifact_bindings(
+        manifest["gate"], manifest, records, artifact_paths
+    )
     summary = _read_strict_json(attempt / "summary.json")
     if not isinstance(summary, dict) or summary.get("formula_version") != 1:
         raise ValueError("summary has no fixed formula version")

@@ -293,6 +293,38 @@ class FormulaTests(unittest.TestCase):
             )["verdict"],
             "FAIL",
         )
+        fail_mutations = []
+        retrieval_failure = json.loads(json.dumps(passing))
+        retrieval_failure["retrieval_results"][0]["observed_sha256"] = "f" * 64
+        fail_mutations.append(retrieval_failure)
+        negative_failure = json.loads(json.dumps(passing))
+        negative_failure["negative_control_results"][0][
+            "observed_sha256"
+        ] = "f" * 64
+        fail_mutations.append(negative_failure)
+        oom_failure = json.loads(json.dumps(passing))
+        oom_failure["oom_events"] = [{"event": "allocation failure"}]
+        fail_mutations.append(oom_failure)
+        memory_failure = json.loads(json.dumps(passing))
+        memory_failure["memory_samples_gib"][-1] = 9.99
+        fail_mutations.append(memory_failure)
+        truncated_failure = json.loads(json.dumps(passing))
+        truncated_failure["stages"][-1]["truncated"] = True
+        fail_mutations.append(truncated_failure)
+        for index, mutation in enumerate(fail_mutations):
+            with self.subTest(fail_mutation=index):
+                self.assertEqual(
+                    self.goal.score_registered_gate(
+                        "W11", "w11.context.v1", [mutation]
+                    )["verdict"],
+                    "FAIL",
+                )
+        malformed_timestamp = json.loads(json.dumps(passing))
+        malformed_timestamp["stages"][0]["token_timestamps"][0] = "0.0"
+        with self.assertRaises(ValueError):
+            self.goal.score_registered_gate(
+                "W11", "w11.context.v1", [malformed_timestamp]
+            )
         for gate, scorer, records in (
             ("W10", "w11.context.v1", [passing]),
             ("W11", "unknown", [passing]),
