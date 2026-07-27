@@ -49,6 +49,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertNotIn("pkill", source)
         self.assertIn("start_ticks", source)
         self.assertIn("rollback", source)
+        self.assertIn("release-check", source)
 
     def test_unqualified_glm_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:

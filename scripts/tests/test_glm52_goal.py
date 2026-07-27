@@ -364,6 +364,70 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "resume")
             self.assertNotEqual(result.returncode, 0)
 
+    def test_state_rejects_terminal_status_when_attempt_disappears(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            result = self.run_cli(state_dir, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            state_path = state_dir / "state.json"
+            state = json.loads(state_path.read_text())
+            state["gates"]["foundation"] = {
+                "status": "PASS",
+                "attempts": ["foundation/ghost-attempt"],
+                "reason": None,
+            }
+            state_path.write_text(json.dumps(state))
+            result = self.run_cli(state_dir, "status", "--json")
+            self.assertNotEqual(result.returncode, 0)
+
+    def test_attempt_manifest_gate_must_match_directory_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            attempt = state_dir / "W1" / "attempt-001"
+            attempt.mkdir(parents=True)
+            manifest = {
+                "gate": "foundation",
+                "candidate_hash": "a" * 40,
+                "artifacts": {},
+            }
+            for index, name in enumerate(
+                (
+                    "source",
+                    "diff",
+                    "binary",
+                    "scorer",
+                    "model",
+                    "tokenizer",
+                    "fixture",
+                    "configuration",
+                )
+            ):
+                path = attempt / f"{name}.artifact"
+                path.write_text(f"artifact-{index}")
+                manifest["artifacts"][name] = path.name
+                manifest[f"{name}_sha256"] = hashlib.sha256(
+                    path.read_bytes()
+                ).hexdigest()
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            (attempt / "raw.jsonl").write_text('{"event":"diagnostic"}\n')
+            (attempt / "summary.json").write_text(
+                '{"formula_version":1,"verdict":"NO_RESULT","reason":"fake"}'
+            )
+            result = self.run_cli(state_dir, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            state = json.loads(result.stdout)
+            self.assertEqual(state["gates"]["W1"]["status"], "FAIL")
+            self.assertIn("does not match", state["gates"]["W1"]["reason"])
+
+    def test_release_check_fails_closed_on_incomplete_goal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            result = self.run_cli(state_dir, "release-check", "--json")
+            self.assertNotEqual(result.returncode, 0)
+            value = json.loads(result.stdout)
+            self.assertFalse(value["release_qualified"])
+            self.assertIn("W11", value["failed_requirements"])
+
     def test_resume_ingests_valid_attempt_and_advances(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
