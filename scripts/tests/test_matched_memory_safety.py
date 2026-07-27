@@ -80,6 +80,9 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("--stable-samples 3", source)
         self.assertIn("/run/dsv4/inference.lock", source)
         self.assertIn("MATCHED_BLOCKS:-5", source)
+        self.assertNotIn("21_serve_llamacpp.sh\" start >/dev/null 2>&1 || true", source)
+        self.assertIn("watchdog_armed", source)
+        self.assertIn("matched campaign finished without verified DeepSeek restoration", source)
 
     def test_harness_does_not_lower_emergency_floor(self):
         source = HARNESS.read_text(encoding="utf-8")

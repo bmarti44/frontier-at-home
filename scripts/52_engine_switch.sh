@@ -173,75 +173,7 @@ start_dsv4() {
 }
 
 start_glm52() {
-    local kvdir=$STATE/kv pid identity pgid ticks exe_sha
-    local memwatch_pid memwatch_ticks ready
-    "$REPO/scripts/03_memory_guard.py" --required-gib 110 \
-        --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
-    mkdir -p -- "$kvdir"
-    rm -f -- "$GLM_WATCHDOG_TARGET" "$GLM_WATCHDOG_READY"
-    "$REPO/scripts/01_memwatch.sh" \
-        --target-file "$GLM_WATCHDOG_TARGET" \
-        --ready-file "$GLM_WATCHDOG_READY" \
-        --threshold-gib 18 --interval-sec 1 --log "$GLM_WATCHDOG_LOG" &
-    memwatch_pid=$!
-    memwatch_ticks=
-    for _ in $(seq 1 50); do
-        memwatch_ticks=$(proc_identity "$memwatch_pid" 2>/dev/null || true)
-        memwatch_ticks=${memwatch_ticks#* }
-        ready=$(cat "$GLM_WATCHDOG_READY" 2>/dev/null || true)
-        [[ -n $memwatch_ticks && $ready == READY ]] && break
-        sleep 0.1
-    done
-    if [[ -z $memwatch_ticks || $ready != READY ]]; then
-        kill -TERM "$memwatch_pid" 2>/dev/null || true
-        wait "$memwatch_pid" 2>/dev/null || true
-        die "GLM memory watchdog failed to initialize"
-    fi
-    setsid env -i HOME=/home/dsv4 LANG=C.UTF-8 \
-        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-        DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=64 \
-        DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
-        DS4_CUDA_EXPERT_CACHE_SLRU=1 \
-        "$SRC/ds4-server" --cuda -m "$GGUF" -c 1048576 \
-        --host 127.0.0.1 --port "$PORT" --ssd-streaming \
-        --ssd-streaming-cache-experts 40GB --kv-disk-dir "$kvdir" \
-        --kv-disk-space-mb 196608 >"$STATE/glm52.server.log" 2>&1 &
-    pid=$!
-    identity=
-    for _ in $(seq 1 20); do
-        identity=$(proc_identity "$pid" 2>/dev/null || true)
-        [[ -n $identity ]] && break
-        sleep 1
-    done
-    if [[ -z $identity ]]; then
-        kill -TERM "$memwatch_pid" 2>/dev/null || true
-        wait "$memwatch_pid" 2>/dev/null || true
-        die "GLM startup died before identity capture"
-    fi
-    read -r pgid ticks <<<"$identity"
-    exe_sha=$(sha256 "$SRC/ds4-server")
-    python3 - "$GLM_PROCESS.tmp" "$pid" "$pgid" "$ticks" "$exe_sha" \
-        "$memwatch_pid" "$memwatch_ticks" <<'PY'
-import json, os, sys
-path, pid, pgid, ticks, digest, watchdog_pid, watchdog_ticks = sys.argv[1:]
-with open(path, "x", encoding="utf-8") as stream:
-    json.dump({"schema_version":1, "pid":int(pid), "pgid":int(pgid),
-               "start_ticks":int(ticks), "exe_sha256":digest,
-               "memwatch_pid":int(watchdog_pid),
-               "memwatch_start_ticks":int(watchdog_ticks)}, stream)
-    stream.flush(); os.fsync(stream.fileno())
-PY
-    mv -- "$GLM_PROCESS.tmp" "$GLM_PROCESS"
-    printf '%s %s %s engine\n' "$pid" "$pgid" "$ticks" \
-        >"$GLM_WATCHDOG_TARGET.tmp"
-    mv -- "$GLM_WATCHDOG_TARGET.tmp" "$GLM_WATCHDOG_TARGET"
-    for _ in $(seq 1 50); do
-        ready=$(cat "$GLM_WATCHDOG_READY" 2>/dev/null || true)
-        [[ $ready == "ARMED $pid $pgid $ticks engine" ]] && break
-        sleep 0.1
-    done
-    [[ $ready == "ARMED $pid $pgid $ticks engine" ]] ||
-        die "GLM memory watchdog did not arm"
+    die "GLM switching remains disabled until its gated watchdog lifecycle passes fault injection"
 }
 
 api_key() {
@@ -349,7 +281,10 @@ fi
 if [[ $command == glm52 ]] && ! glm_qualified; then
     die "GLM-5.2 1M profile is not qualified"
 fi
-if [[ $command == glm52 ]]; then verify_glm_hashes; fi
+if [[ $command == glm52 ]]; then
+    verify_glm_hashes
+    die "GLM switching remains disabled until its gated watchdog lifecycle passes fault injection"
+fi
 mkdir -p -- "$STATE"
 exec 9>"$LOCK"
 flock -x 9

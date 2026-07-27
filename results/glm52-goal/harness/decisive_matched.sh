@@ -19,12 +19,31 @@ wait_full_release() {
 }
 
 restore_dsv4() {
+    local status models
     if [[ $ACTIVE == glm52 ]]; then
         ACTIVE=
     fi
     wait_full_release || return 1
     sudo -n -u dsv4 env HOME=/home/dsv4 \
-        "$REPO/scripts/21_serve_llamacpp.sh" start >/dev/null 2>&1 || true
+        "$REPO/scripts/21_serve_llamacpp.sh" start
+    status=$(sudo -n -u dsv4 env HOME=/home/dsv4 \
+        "$REPO/scripts/21_serve_llamacpp.sh" status) || return 1
+    python3 - "$status" <<'PY' || return 1
+import json, sys
+value = json.loads(sys.argv[1])
+assert value["server_alive"] is True
+assert value["memwatch_alive"] is True
+assert value["watchdog_armed"] is True
+assert value["healthy"] is True
+PY
+    models=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
+        return 1
+    python3 - "$models" <<'PY' || return 1
+import json, sys
+value = json.loads(sys.argv[1])
+assert any("deepseek" in item["id"].lower() for item in value["data"])
+PY
+    ACTIVE=dsv4
 }
 trap restore_dsv4 EXIT
 
@@ -92,7 +111,11 @@ for ((block=0; block<BLOCKS; block++)); do
     done
 done
 
-restore_dsv4
+if ! restore_dsv4; then
+    trap - EXIT
+    echo "FATAL: matched campaign finished without verified DeepSeek restoration" >&2
+    exit 1
+fi
 trap - EXIT
 sudo -n -u dsv4 chmod -R a+rX "$OUT"
 echo "DECISIVE_MATCHED_DONE out=$OUT"
