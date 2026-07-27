@@ -92,6 +92,7 @@ allowlist = {
     "source_transcript_sha256",
     "tokenizer_sha256",
     "binary_sha256",
+    "build_manifest_sha256",
     "configuration_sha256",
     "diff_sha256",
     "fixture_sha256",
@@ -106,13 +107,17 @@ allowlist = {
     "pin_sha256",
     "entry_sha256",
     "tarball_sha256",
+    "weights_manifest_sha256",
 }
 # Keys whose value is a MAP of repo-relative path -> sha256 (audit bindings).
 # Every string leaf under them is an allowed digest.
 map_allowlist = {
     "accuracy_result_sha256",
+    "artifact_sha256",
     "artifacts",
     "evalset_sha256",
+    "model_files",
+    "shared_libraries",
 }
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()

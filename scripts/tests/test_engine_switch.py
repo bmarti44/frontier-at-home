@@ -181,7 +181,6 @@ class EngineSwitchTests(unittest.TestCase):
             {
                 record["role"]: record["sha256"]
                 for record in weights["files"]
-                if record["role"] in {"base", "dspark_drafter"}
             },
         )
 

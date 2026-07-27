@@ -228,11 +228,13 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("DSV4_PORT must be an integer from 1024 through 65535", source)
         self.assertIn("port < 1024 || port > 65535", source)
 
-    def test_candidate_source_override_is_explicit_and_default_off(self):
+    def test_candidate_source_override_is_bound_but_runtime_flags_are_frozen(self):
         source = GLM_ARM.read_text(encoding="utf-8")
         self.assertIn("GLM_CANDIDATE_SRC:-", source)
         self.assertIn("ds4-goal-clean-0a7ad776", source)
-        self.assertIn("GLM_EXPERT_CACHE_GB:-0", source)
+        self.assertNotIn("GLM_EXPERT_CACHE_GB:-", source)
+        self.assertIn("DS4_CUDA_EXPERT_CACHE_GB=0", source)
+        self.assertIn("DS4_CUDA_IQ2_DOWN_REFERENCE=1", source)
         self.assertIn("DS4_TOKEN_TIMING_LOG=1", source)
         self.assertIn('--token-timing-log "$OUT/server.log"', source)
         self.assertIn("glm52-b4734de4/tokenizer.json", source)
@@ -252,12 +254,10 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("GLM_PORT must be an integer from 1024 through 65535", source)
         self.assertIn("port < 1024 || port > 65535", source)
 
-    def test_glm_arm_streaming_timing_fallback_is_explicit_and_default_off(self):
+    def test_glm_arm_requires_raw_token_timing(self):
         source = GLM_ARM.read_text(encoding="utf-8")
-        self.assertIn("GLM_REQUIRE_TOKEN_TIMING_LOG:-1", source)
-        self.assertIn("GLM_REQUIRE_TOKEN_TIMING_LOG must be 0 or 1", source)
-        self.assertIn('timing_args=(--token-timing-log "$OUT/server.log")', source)
-        self.assertIn('"${timing_args[@]}"', source)
+        self.assertNotIn("GLM_REQUIRE_TOKEN_TIMING_LOG", source)
+        self.assertIn('--token-timing-log "$OUT/server.log"', source)
 
 
 if __name__ == "__main__":

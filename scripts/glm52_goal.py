@@ -2012,7 +2012,7 @@ def _git_commit_time(candidate_hash: str) -> str:
     return value.astimezone(timezone.utc).isoformat()
 
 
-def _load_approved_dsv4_profile(candidate_hash: Any) -> dict[str, str]:
+def _load_approved_dsv4_profile(candidate_hash: Any) -> dict[str, Any]:
     """Load the exact DeepSeek reference identity frozen in the candidate."""
     if not (
         isinstance(candidate_hash, str)
@@ -2053,13 +2053,35 @@ def _load_approved_dsv4_profile(candidate_hash: Any) -> dict[str, str]:
             "profile",
             "binary_sha256",
             "configuration_sha256",
+            "build_manifest_sha256",
+            "weights_manifest_sha256",
+            "shared_libraries",
+            "model_files",
         },
         "approved DeepSeek profile",
     )
-    if profile["schema_version"] != 1 or profile["profile"] != "dsv4":
+    if profile["schema_version"] != 2 or profile["profile"] != "dsv4":
         raise ValueError("approved DeepSeek profile identity is invalid")
-    for field in ("binary_sha256", "configuration_sha256"):
+    for field in (
+        "binary_sha256",
+        "configuration_sha256",
+        "build_manifest_sha256",
+        "weights_manifest_sha256",
+    ):
         if not _is_sha256(profile[field]):
+            raise ValueError(f"approved DeepSeek profile {field} is invalid")
+    for field in ("shared_libraries", "model_files"):
+        values = profile[field]
+        if (
+            not isinstance(values, dict)
+            or not values
+            or any(
+                not isinstance(name, str)
+                or not name
+                or not _is_sha256(digest)
+                for name, digest in values.items()
+            )
+        ):
             raise ValueError(f"approved DeepSeek profile {field} is invalid")
     return profile
 
@@ -2138,15 +2160,128 @@ def validate_profile_artifact_bindings(
         raise ValueError(f"approved GLM profile is invalid: {exc}") from exc
     _require_exact_keys(
         profile,
-        {"profile", "binary_sha256", "model_sha256", "context_cap"},
+        {
+            "schema_version",
+            "profile",
+            "binary_sha256",
+            "model_sha256",
+            "tokenizer_sha256",
+            "context_cap",
+            "build_manifest_sha256",
+            "runtime",
+            "artifact_sha256",
+        },
         "approved GLM profile",
     )
-    if profile["profile"] != "glm52" or profile["context_cap"] != 1_048_576:
+    if (
+        profile["schema_version"] != 2
+        or profile["profile"] != "glm52"
+        or profile["context_cap"] != 1_048_576
+    ):
         raise ValueError("approved GLM profile identity or context cap is invalid")
+    for field in (
+        "binary_sha256",
+        "model_sha256",
+        "tokenizer_sha256",
+        "build_manifest_sha256",
+    ):
+        if not _is_sha256(profile[field]):
+            raise ValueError(f"approved GLM profile {field} is invalid")
     for field in ("binary_sha256", "model_sha256"):
         if not _is_sha256(profile[field]) or manifest.get(field) != profile[field]:
             raise ValueError(
                 f"manifest {field} does not match approved GLM profile"
+            )
+    runtime = profile["runtime"]
+    _require_exact_keys(
+        runtime,
+        {"engine_environment", "launch_arguments", "benchmark", "safety"},
+        "approved GLM runtime",
+    )
+    expected_environment = {
+        "DS4_CUDA_EXPERT_CACHE_GB": "0",
+        "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+        "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+        "DS4_CUDA_FETCH_THREADS": "6",
+        "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
+        "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+        "DS4_TOKEN_TIMING_LOG": "1",
+    }
+    expected_arguments = [
+        "--cuda",
+        "-m",
+        "{model}",
+        "-c",
+        "8192",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "{port}",
+        "--ssd-streaming",
+        "--ssd-streaming-cache-experts",
+        "40GB",
+    ]
+    expected_benchmark = {
+        "fixture_context_tokens": 0,
+        "max_completion_tokens": 160,
+        "minimum_completion_tokens": 128,
+        "raw_token_timing_required": True,
+    }
+    expected_safety = {
+        "kill_floor_gib": 40,
+        "minimum_start_gib": 110,
+        "sample_hz": 4,
+        "swap_max_bytes": 0,
+        "timeout_seconds": 2400,
+        "virtual_memory_limit_kib": 419_430_400,
+    }
+    if (
+        runtime["engine_environment"] != expected_environment
+        or runtime["launch_arguments"] != expected_arguments
+        or runtime["benchmark"] != expected_benchmark
+        or runtime["safety"] != expected_safety
+    ):
+        raise ValueError("approved GLM runtime configuration is invalid")
+    expected_artifacts = {
+        "results/glm52-goal/harness/glm_decisive_arm.sh",
+        "results/glm52-gates/harness/glm_safe_run.sh",
+        "results/glm52-gates/harness/glm_cgroup_run.sh",
+        "results/glm52-gates/harness/glm_evidence_export.py",
+        "scripts/30_bench_speed.py",
+    }
+    artifact_hashes = profile["artifact_sha256"]
+    if (
+        not isinstance(artifact_hashes, dict)
+        or set(artifact_hashes) != expected_artifacts
+        or any(not _is_sha256(value) for value in artifact_hashes.values())
+    ):
+        raise ValueError("approved GLM artifact hash map is invalid")
+    candidate_artifacts = {
+        **artifact_hashes,
+        "configs/build-manifests/glm52-ds4-repro.json": profile[
+            "build_manifest_sha256"
+        ],
+    }
+    for relative_path, expected_digest in candidate_artifacts.items():
+        artifact_result = subprocess.run(
+            ["git", "show", f"{candidate_hash}:{relative_path}"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            env={
+                "HOME": os.environ.get("HOME", ""),
+                "PATH": os.environ.get("PATH", ""),
+                "LANG": "C.UTF-8",
+            },
+        )
+        if (
+            artifact_result.returncode != 0
+            or hashlib.sha256(artifact_result.stdout).hexdigest()
+            != expected_digest
+        ):
+            raise ValueError(
+                f"approved GLM artifact does not match candidate: {relative_path}"
             )
     configuration = artifact_paths.get("configuration")
     if (

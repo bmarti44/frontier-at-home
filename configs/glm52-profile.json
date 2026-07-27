@@ -1,6 +1,55 @@
 {
+  "schema_version": 2,
+  "profile": "glm52",
   "binary_sha256": "5bc2c255f33fb8a282c4c67037579f26be573ded680e4d5cdd1c0adbd0bad3f0",
-  "context_cap": 1048576,
   "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
-  "profile": "glm52"
+  "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+  "context_cap": 1048576,
+  "build_manifest_sha256": "2904bb439bec4d2051f46f4585318b3f1639125c8e45ee5719cdcb214d1187b1",
+  "runtime": {
+    "engine_environment": {
+      "DS4_CUDA_EXPERT_CACHE_GB": "0",
+      "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+      "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+      "DS4_CUDA_FETCH_THREADS": "6",
+      "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
+      "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+      "DS4_TOKEN_TIMING_LOG": "1"
+    },
+    "launch_arguments": [
+      "--cuda",
+      "-m",
+      "{model}",
+      "-c",
+      "8192",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "{port}",
+      "--ssd-streaming",
+      "--ssd-streaming-cache-experts",
+      "40GB"
+    ],
+    "benchmark": {
+      "fixture_context_tokens": 0,
+      "max_completion_tokens": 160,
+      "minimum_completion_tokens": 128,
+      "raw_token_timing_required": true
+    },
+    "safety": {
+      "kill_floor_gib": 40,
+      "minimum_start_gib": 110,
+      "sample_hz": 4,
+      "swap_max_bytes": 0,
+      "timeout_seconds": 2400,
+      "virtual_memory_limit_kib": 419430400
+    }
+  },
+  "artifact_sha256": {
+    "results/glm52-goal/harness/glm_decisive_arm.sh": "0a9749767f0410bd403410cecb7d46062d5fe8986325c5e229a7c39cefc7aeef",
+    "results/glm52-gates/harness/glm_safe_run.sh": "2aef14383132f11e4a64231e4bb214b782960fd6b6d737c68f6906d37bbab3b6",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "69746761df395b9cbfc4e8d4258e1d11e2d928da8b8ab358e9eccea02f96fbf5",
+    "results/glm52-gates/harness/glm_evidence_export.py": "8f4cd672643a3863b149565ce2462b7fe48f94bb7a270bde3680562835f36b92",
+    "scripts/30_bench_speed.py": "bbde3cc6cc5f83192dd21c05285e7e916976c86de38efe8970ce1a048235b085"
+  }
 }
