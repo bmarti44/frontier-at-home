@@ -18,10 +18,8 @@ GLM_PROFILE = ROOT / "configs" / "glm52-profile.json"
 DSV4_PROFILE = ROOT / "configs" / "dsv4-profile.json"
 DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
-GLM_CONFIRMATION = (
-    ROOT / "results/glm52-goal/evidence/"
-    "w1-confirmation-iq2-549d12c-r6324494-manifest.json"
-)
+GLM_BUILD = ROOT / "configs/build-manifests/glm52-ds4-repro.json"
+GLM_BUILD_SCRIPT = ROOT / "scripts/11_build_glm52_repro.sh"
 
 
 class EngineSwitchTests(unittest.TestCase):
@@ -74,14 +72,14 @@ class EngineSwitchTests(unittest.TestCase):
     def test_frozen_profiles_pin_the_verified_production_candidates(self):
         glm = json.loads(GLM_PROFILE.read_text())
         dsv4 = json.loads(DSV4_PROFILE.read_text())
-        confirmation = json.loads(GLM_CONFIRMATION.read_text())
+        glm_build = json.loads(GLM_BUILD.read_text())
         dsv4_build = json.loads(DSV4_BUILD.read_text())
         self.assertEqual(
             glm,
             {
-                "binary_sha256": confirmation["source"]["binary_sha256"],
+                "binary_sha256": glm_build["binary_sha256"],
                 "context_cap": 1_048_576,
-                "model_sha256": confirmation["artifacts"]["model_sha256"],
+                "model_sha256": glm_build["model_sha256"],
                 "profile": "glm52",
             },
         )
@@ -95,6 +93,17 @@ class EngineSwitchTests(unittest.TestCase):
             dsv4["configuration_sha256"],
             hashlib.sha256(DSV4_SERVICE.read_bytes()).hexdigest(),
         )
+
+    def test_glm_repro_build_fixes_all_nondeterministic_inputs(self):
+        source = GLM_BUILD_SCRIPT.read_text()
+        self.assertIn("SOURCE_DATE_EPOCH", source)
+        self.assertIn("--frandom-seed=", source)
+        self.assertIn("--keep-dir=", source)
+        self.assertIn("-ffile-prefix-map=", source)
+        self.assertIn("git ls-files -z", source)
+        self.assertIn("touch --date=", source)
+        self.assertIn("-j2", source)
+        self.assertIn("cmp -s", source)
 
     def test_authenticated_probe_keeps_bearer_secret_out_of_argv(self):
         source = SCRIPT.read_text()
