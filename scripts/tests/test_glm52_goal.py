@@ -229,6 +229,11 @@ class FormulaTests(unittest.TestCase):
     def test_registered_w11_scorer_is_derived_from_exact_raw_record(self):
         passing = {
             "record_type": "context_observation",
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+            "model_sha256": "c" * 64,
+            "tokenizer_sha256": "d" * 64,
+            "fixture_sha256": "e" * 64,
             "context_cap": 1_048_576,
             "processed_tokens": 1_000_000,
             "retrieval_pass": True,
@@ -698,6 +703,11 @@ class FormulaTests(unittest.TestCase):
             }
             observation = {
                 "record_type": "context_observation",
+                "binary_sha256": manifest["binary_sha256"],
+                "configuration_sha256": manifest["configuration_sha256"],
+                "model_sha256": manifest["model_sha256"],
+                "tokenizer_sha256": manifest["tokenizer_sha256"],
+                "fixture_sha256": manifest["fixture_sha256"],
                 "context_cap": 1_048_576,
                 "processed_tokens": 1_000_000,
                 "retrieval_pass": True,

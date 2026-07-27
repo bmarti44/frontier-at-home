@@ -441,6 +441,11 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         raise ValueError("W11 requires exactly one context observation")
     expected = {
         "record_type",
+        "binary_sha256",
+        "configuration_sha256",
+        "model_sha256",
+        "tokenizer_sha256",
+        "fixture_sha256",
         "context_cap",
         "processed_tokens",
         "retrieval_pass",
@@ -457,6 +462,29 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         raise ValueError("W11 record_type is invalid")
     result = context_verdict(observation)
     return {"scorer_id": "w11.context.v1", **result}
+
+
+def validate_record_artifact_bindings(
+    gate: str, manifest: dict[str, Any], records: list[dict[str, Any]]
+) -> None:
+    """Require raw candidate identities to equal the hashed manifest artifacts."""
+    if gate != "W11":
+        return
+    fields = (
+        "binary_sha256",
+        "configuration_sha256",
+        "model_sha256",
+        "tokenizer_sha256",
+        "fixture_sha256",
+    )
+    for index, record in enumerate(records):
+        for field in fields:
+            if record.get(field) != manifest.get(field):
+                label = field.removesuffix("_sha256").replace("_", " ")
+                raise ValueError(
+                    f"W11 raw {label} identity does not match manifest "
+                    f"at record {index}"
+                )
 
 
 def _score_parity(records: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1156,6 +1184,7 @@ def validate_attempt(attempt: Path) -> None:
         if not isinstance(record, dict):
             raise ValueError(f"raw.jsonl line {number} is not an object")
         records.append(record)
+    validate_record_artifact_bindings(manifest["gate"], manifest, records)
     summary = _read_strict_json(attempt / "summary.json")
     if not isinstance(summary, dict) or summary.get("formula_version") != 1:
         raise ValueError("summary has no fixed formula version")
