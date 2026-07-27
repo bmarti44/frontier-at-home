@@ -191,6 +191,9 @@ KILLED=""
 EXECUTED_CANDIDATE_OBSERVED=0
 EXECUTED_PID=""
 EXECUTED_START_TICKS=""
+EXECUTED_CANDIDATE_CLEAN_EXIT=0
+EXECUTED_CANDIDATE_EXIT_PENDING=0
+CANDIDATE_EXIT_GRACE_TICKS=8
 PROVENANCE_FAILURE=""
 while kill -0 "$WRAP" 2>/dev/null; do
   MA=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
@@ -228,23 +231,74 @@ while kill -0 "$WRAP" 2>/dev/null; do
     plog "executed_candidate_verified pid=$EXECUTED_PID start_ticks=$EXECUTED_START_TICKS path=$EXECUTED_PATH executed_binary_sha256=$EXECUTED_HASH device_inode=$EXECUTED_DEVICE_INODE"
   fi
   if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 1 ]]; then
-    CURRENT_START_TICKS=$(awk '{print $22}' "/proc/$EXECUTED_PID/stat" 2>/dev/null || true)
-    if [[ $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
-      sleep 0.1
-      if ! kill -0 "$WRAP" 2>/dev/null; then
-        break
-      fi
+    CURRENT_STATE=""
+    CURRENT_START_TICKS=""
+    CURRENT_STAT=""
+    IFS= read -r CURRENT_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
+    if [[ -n $CURRENT_STAT ]]; then
+      CURRENT_STAT_REST=${CURRENT_STAT##*) }
+      read -r -a CURRENT_STAT_FIELDS <<<"$CURRENT_STAT_REST"
+      CURRENT_STATE=${CURRENT_STAT_FIELDS[0]:-}
+      CURRENT_START_TICKS=${CURRENT_STAT_FIELDS[19]:-}
+    fi
+    CURRENT_GROUP=$(ps -o pgid= -p "$EXECUTED_PID" 2>/dev/null | tr -d ' ')
+    CURRENT_PATH=$(readlink -f -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+    CURRENT_HASH=$(sha256sum -- "/proc/$EXECUTED_PID/exe" 2>/dev/null | awk '{print $1}')
+    CURRENT_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+    if [[ -n $CURRENT_START_TICKS &&
+          $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
       plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=start-ticks"
       kill -KILL -- -"$PG" 2>/dev/null || true
       KILLED=provenance
       PROVENANCE_FAILURE=continuous-identity
       break
     fi
-    CURRENT_GROUP=$(ps -o pgid= -p "$EXECUTED_PID" 2>/dev/null | tr -d ' ')
-    CURRENT_PATH=$(readlink -f -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
-    CURRENT_HASH=$(sha256sum -- "/proc/$EXECUTED_PID/exe" 2>/dev/null | awk '{print $1}')
-    CURRENT_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+    if [[ -z $CURRENT_STATE || $CURRENT_STATE == Z || $CURRENT_STATE == X ]]; then
+      REPLACEMENT_PID=""
+      for _ in $(seq 1 "$CANDIDATE_EXIT_GRACE_TICKS"); do
+        REUSED_STAT=""
+        IFS= read -r REUSED_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
+        if [[ -n $REUSED_STAT ]]; then
+          REUSED_STAT_REST=${REUSED_STAT##*) }
+          read -r -a REUSED_STAT_FIELDS <<<"$REUSED_STAT_REST"
+          REUSED_STATE=${REUSED_STAT_FIELDS[0]:-}
+          REUSED_START_TICKS=${REUSED_STAT_FIELDS[19]:-}
+          if [[ $REUSED_START_TICKS != "$EXECUTED_START_TICKS" ||
+                ($REUSED_STATE != Z && $REUSED_STATE != X) ]]; then
+            REPLACEMENT_PID=$EXECUTED_PID
+            break
+          fi
+        fi
+        REPLACEMENT_PID=$(pgrep -x 'ds4-server|ds4|ds4-bench|ds4-eval' 2>/dev/null |
+          while read -r candidate_pid; do
+            [[ $candidate_pid != "$EXECUTED_PID" ]] || continue
+            candidate_group=$(ps -o pgid= -p "$candidate_pid" 2>/dev/null | tr -d ' ')
+            [[ $candidate_group == "$PG" ]] && { echo "$candidate_pid"; break; }
+          done)
+        [[ -z $REPLACEMENT_PID ]] || break
+        WRAP_STATE=$(ps -o stat= -p "$WRAP" 2>/dev/null | tr -d ' ')
+        if [[ -z $WRAP_STATE || $WRAP_STATE == Z* ]]; then
+          EXECUTED_CANDIDATE_EXIT_PENDING=1
+          plog "executed candidate exited during wrapper shutdown pid=$EXECUTED_PID"
+          break
+        fi
+        sleep 0.25
+      done
+      if [[ -n $REPLACEMENT_PID ]]; then
+        plog "FATAL replacement candidate appeared during shutdown pid=$REPLACEMENT_PID"
+        kill -KILL -- -"$PG" 2>/dev/null || true
+        KILLED=provenance
+        PROVENANCE_FAILURE=replacement
+      elif [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 0 ]]; then
+        plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=disappeared-before-wrapper-exit"
+        kill -KILL -- -"$PG" 2>/dev/null || true
+        KILLED=provenance
+        PROVENANCE_FAILURE=continuous-identity
+      fi
+      break
+    fi
     if [[ $CURRENT_GROUP != "$PG" ||
+          $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ||
           $CURRENT_PATH != "$CANDIDATE_BINARY" ||
           $CURRENT_HASH != "$EXPECTED_BINARY_SHA256" ||
           $CURRENT_DEVICE_INODE != "$CANDIDATE_DEVICE_INODE" ]]; then
@@ -268,6 +322,9 @@ while kill -0 "$WRAP" 2>/dev/null; do
   sleep 0.25
 done
 wait "$WRAP" 2>/dev/null; RC=$?
+if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 && $RC != 0 ]]; then
+  plog "FATAL wrapper command failed after candidate exit rc=$RC"
+fi
 SURVIVORS=$(live_group_pids "$PG")
 if [[ -n $SURVIVORS ]]; then
   plog "FATAL isolated process group survived command completion pgid=$PG pids=$(tr '\n' ',' <<<"$SURVIVORS" | sed 's/,$//')"
@@ -346,6 +403,10 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
     plog "FATAL cgroup memory event delta $CGROUP_EVENT_FAILURES"
     RC=14
   fi
+fi
+if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 && $RC == 0 ]]; then
+  EXECUTED_CANDIDATE_CLEAN_EXIT=1
+  plog "executed candidate clean exit verified after wrapper and descendant checks"
 fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"

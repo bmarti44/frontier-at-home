@@ -116,6 +116,14 @@ class CandidateLifecycleTests(unittest.TestCase):
         result = self.run_mutation("replace")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_nonzero_wrapper_after_candidate_exit_is_rejected(self):
+        result = self.run_mutation("fail")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_wrapper_exceeding_shutdown_grace_is_rejected(self):
+        result = self.run_mutation("linger")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

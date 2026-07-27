@@ -14,7 +14,9 @@ static pid_t start_candidate(const char *path) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3 || (strcmp(argv[1], "clean") && strcmp(argv[1], "replace")))
+    if (argc != 3 ||
+        (strcmp(argv[1], "clean") && strcmp(argv[1], "replace") &&
+         strcmp(argv[1], "fail") && strcmp(argv[1], "linger")))
         return 2;
     pid_t first = start_candidate(argv[2]);
     if (first <= 0) return 3;
@@ -28,6 +30,11 @@ int main(int argc, char **argv) {
         if (second <= 0) return 5;
         sleep(2);
         kill(second, SIGTERM);
+        return 0;
+    }
+    if (!strcmp(argv[1], "fail")) return 1;
+    if (!strcmp(argv[1], "linger")) {
+        sleep(3);
         return 0;
     }
     usleep(300000);
