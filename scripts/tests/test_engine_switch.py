@@ -110,6 +110,21 @@ class EngineSwitchTests(unittest.TestCase):
         )
         self.assertIn('[[ $WORK_ROOT == "$CANONICAL_WORK_ROOT" ]]', source)
 
+    def test_glm_repro_build_ignores_caller_toolchain_environment(self):
+        source = GLM_BUILD_SCRIPT.read_text()
+        self.assertIn("readonly CC_PATH=/usr/bin/cc", source)
+        self.assertIn("readonly MAKE_PATH=/usr/bin/make", source)
+        self.assertIn("readonly CUDA_HOME_PATH=/usr/local/cuda", source)
+        self.assertIn(
+            "readonly NVCC_PATH=/usr/local/cuda/bin/nvcc",
+            source,
+        )
+        self.assertIn("env -i", source)
+        self.assertIn('CC="$CC_PATH"', source)
+        self.assertIn('NVCC="$NVCC_PATH"', source)
+        self.assertIn('CUDA_HOME="$CUDA_HOME_PATH"', source)
+        self.assertIn('DS4_LINK="$NVCC_PATH $nvccflags"', source)
+
     def test_authenticated_probe_keeps_bearer_secret_out_of_argv(self):
         source = SCRIPT.read_text()
         self.assertNotIn('-H "Authorization: Bearer $key"', source)
