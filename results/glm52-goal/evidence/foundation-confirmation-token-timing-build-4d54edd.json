@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "source_commit": "4d54edd477919b01af336be5ff23ebc7b8a19827",
+  "parent_commit": "17be9e65d186ce19e810a47e210ac29a0b924884",
+  "patch": {
+    "path": "results/glm52-goal/harness/ds4-token-timing.patch",
+    "sha256": "e4135c172be49331ee75fc8986b4b1db49bb53d7fd2c79dfda811a9079ed05d7"
+  },
+  "behavior": {
+    "default_off": true,
+    "flag": "DS4_TOKEN_TIMING_LOG",
+    "clock": "CLOCK_MONOTONIC_RAW",
+    "fields": [
+      "request",
+      "index",
+      "monotonic_ns",
+      "token"
+    ],
+    "model_computation_changed": false
+  },
+  "build": {
+    "command": "make -j4 CUDA_ARCH=native ds4-server",
+    "result": "PASS",
+    "elapsed_seconds": 3.61,
+    "maximum_rss_kib": 223456,
+    "swaps": 0,
+    "binary_sha256": "0bbf570bbd7aa6474dd5b5448271754539e6246ac6bcc4f465ed623057cc4e6f",
+    "source_sha256": "191ccf93e008ce9cf6d8130a65e3d6f8b4d7b77d3cb14ebe8c8afd859feb9546"
+  },
+  "result": "PASS"
+}
