@@ -181,7 +181,7 @@ api_key() {
     local file=${DSV4_API_KEY_FILE:-/run/credentials/dsv4-api-key}
     [[ -r $file ]] || return 1
     IFS= read -r REPLY <"$file"
-    [[ -n $REPLY ]]
+    [[ $REPLY =~ ^[A-Za-z0-9._-]{16,512}$ ]]
 }
 
 wait_model_ready() {
@@ -232,10 +232,14 @@ PY
     [[ $unauth == 401 ]] || return 1
     api_key || return 1
     key=$REPLY
-    code=$(curl -sS -o "$STATE/probe.json.tmp" -w '%{http_code}' --max-time 1800 \
-        -H "Authorization: Bearer $key" -H 'Content-Type: application/json' \
-        -d '{"model":"default","prompt":"Reply with the single word ready.","max_tokens":4,"temperature":0}' \
-        "http://127.0.0.1:$AUTH_PORT/v1/completions" || true)
+    code=$(
+        printf 'header = "Authorization: Bearer %s"\n' "$key" |
+            curl --config - -sS -o "$STATE/probe.json.tmp" \
+                -w '%{http_code}' --max-time 1800 \
+                -H 'Content-Type: application/json' \
+                -d '{"model":"default","prompt":"Reply with the single word ready.","max_tokens":4,"temperature":0}' \
+                "http://127.0.0.1:$AUTH_PORT/v1/completions" || true
+    )
     unset key REPLY
     [[ $code == 200 ]] || return 1
     python3 - "$STATE/probe.json.tmp" <<'PY'
