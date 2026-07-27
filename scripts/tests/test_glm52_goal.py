@@ -1269,9 +1269,9 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "resume")
             self.assertEqual(result.returncode, 0, result.stderr)
             event = json.loads(result.stdout)
-            self.assertEqual(event["selected_gate"], "foundation")
+            self.assertEqual(event["selected_gate"], "W1")
             state = json.loads((state_dir / "state.json").read_text())
-            self.assertEqual(state["gates"]["foundation"]["status"], "PENDING")
+            self.assertEqual(state["gates"]["foundation"]["status"], "FAIL")
             self.assertIn("invalid", state["gates"]["foundation"]["reason"])
 
     def test_run_executes_registered_runner_and_advances(self):

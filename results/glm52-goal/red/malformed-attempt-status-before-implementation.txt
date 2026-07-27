@@ -1,0 +1,9 @@
+Candidate under test: 8b6cf49a0ed2d4acd31a979b95f9b25aacd22c86
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.ControllerTests.test_malformed_attempt_fails_gate_and_does_not_get_skipped
+
+Result: genuine RED
+
+The controller converted invalid evidence to PENDING and selected the same
+gate again. The anti-cheating contract requires the preserved malformed
+attempt to terminalize as FAIL before autonomous work continues.
