@@ -354,6 +354,26 @@ def reps_are_complete(reps: list[dict[str, Any]], expected_reps: int) -> bool:
     )
 
 
+def observable_output_errors(
+    client_completion_tokens: int,
+    event_completion_tokens: int,
+    minimum_tokens: int,
+) -> list[str]:
+    """Validate counts measured by the client, without trusting server usage."""
+    reasons: list[str] = []
+    if event_completion_tokens < minimum_tokens:
+        reasons.append(
+            f"early stop: {event_completion_tokens} timestamped tokens, "
+            f"minimum is {minimum_tokens}"
+        )
+    if client_completion_tokens != event_completion_tokens:
+        reasons.append(
+            "timestamp/client token mismatch: "
+            f"events={event_completion_tokens}, client={client_completion_tokens}"
+        )
+    return reasons
+
+
 def run_rep(
     client: Client,
     tokenizer: Any,
@@ -397,7 +417,6 @@ def run_rep(
         event_completion_tokens = len(token_timestamps)
         if completion_tokens == 0:
             return invalid_rep("server reported zero completion tokens")
-        token_count_error = abs(event_completion_tokens - completion_tokens) / completion_tokens
         ttft_s = stream["first_content_at"] - stream["request_started"]
         decode_elapsed_s = stream["last_content_at"] - stream["first_content_at"]
         decode_tok_s = (
@@ -406,17 +425,11 @@ def run_rep(
             else None
         )
         prefill_tok_s = prompt_tokens / ttft_s if ttft_s > 0 else None
-        reasons: list[str] = []
-        if event_completion_tokens < min_completion_tokens:
-            reasons.append(
-                f"early stop: {event_completion_tokens} timestamped tokens, minimum is {min_completion_tokens}"
-            )
-        if token_count_error != 0:
-            reasons.append(
-                "timestamp/server completion token mismatch: "
-                f"events={event_completion_tokens}, server={completion_tokens}, "
-                f"relative_error={token_count_error:.6f}"
-            )
+        reasons = observable_output_errors(
+            client_completion_tokens,
+            event_completion_tokens,
+            min_completion_tokens,
+        )
         if ttft_s <= 0:
             reasons.append(f"non-positive TTFT: {ttft_s}")
         if decode_elapsed_s <= 0:
@@ -428,7 +441,8 @@ def run_rep(
                     "ttft_s": ttft_s,
                     "decode_tok_s": decode_tok_s,
                     "prefill_tok_s": prefill_tok_s,
-                    "completion_tokens": completion_tokens,
+                    "completion_tokens": event_completion_tokens,
+                    "server_completion_tokens": completion_tokens,
                     "prompt_tokens": prompt_tokens,
                     "client_completion_tokens": client_completion_tokens,
                     "event_completion_tokens": event_completion_tokens,
@@ -441,7 +455,8 @@ def run_rep(
             "ttft_s": ttft_s,
             "decode_tok_s": decode_tok_s,
             "prefill_tok_s": prefill_tok_s,
-            "completion_tokens": completion_tokens,
+            "completion_tokens": event_completion_tokens,
+            "server_completion_tokens": completion_tokens,
             "valid": True,
             "prompt_tokens": prompt_tokens,
             "client_completion_tokens": client_completion_tokens,

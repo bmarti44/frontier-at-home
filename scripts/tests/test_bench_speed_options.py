@@ -56,6 +56,12 @@ class BenchOptionTests(unittest.TestCase):
         self.assertFalse(bench.reps_are_complete([], 1))
         self.assertFalse(bench.reps_are_complete([{"valid": True}], 2))
 
+    def test_observable_output_not_server_usage_controls_decode_validity(self):
+        bench = load_module()
+        self.assertEqual(bench.observable_output_errors(157, 157, 128), [])
+        self.assertTrue(bench.observable_output_errors(157, 160, 128))
+        self.assertTrue(bench.observable_output_errors(127, 127, 128))
+
 
 if __name__ == "__main__":
     unittest.main()
