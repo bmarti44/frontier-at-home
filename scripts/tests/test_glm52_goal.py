@@ -530,7 +530,8 @@ class FormulaTests(unittest.TestCase):
                 result = self.goal.score_registered_gate(
                     gate, "workstream.terminal.v1", [passing]
                 )
-                self.assertEqual(result["verdict"], "PASS")
+                self.assertEqual(result["verdict"], "FAIL")
+                self.assertFalse(result["checks"]["raw_evidence_authority"])
 
                 broken_workflow = json.loads(json.dumps(passing))
                 broken_workflow["workflow"]["red_confirmed"] = False

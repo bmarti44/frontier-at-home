@@ -1693,6 +1693,11 @@ def _score_workstream(
 
     checks["workflow"] = all(workflow.values())
     checks["no_failures"] = not record["failures"]
+    # This compact schema is useful for preserving terminal diagnostics, but
+    # its workflow and fidelity fields are self-attestations rather than raw
+    # observations. It must never authorize PASS. A gate-specific raw scorer
+    # is required before any workstream can qualify a release.
+    checks["raw_evidence_authority"] = False
     return {
         "scorer_id": "workstream.terminal.v1",
         "formula_version": 1,
