@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "result": "NO_RESULT",
+  "reason": "clean source and binaries verified; model hashes and runtime baselines not measured on the current boot",
+  "engine": {
+    "repo": "https://github.com/antirez/ds4.git",
+    "commit": "0a7ad776b9068348e6cb09df8cafa9cadd285298",
+    "git_tree": "06259f4681d5d59305ef1c8bb5705cb98e05193e",
+    "worktree": "/home/dsv4/ds4-project/src/ds4-goal-build-0a7ad776-r1",
+    "status_porcelain": ""
+  },
+  "sources": [
+    {
+      "path": "ds4.c",
+      "sha256": "4a0e94dd5a0e4d602d5a9d9a01369cde0d98492516bad5ae3a75c0f6bddedb87"
+    },
+    {
+      "path": "ds4_cuda.cu",
+      "sha256": "d393ce40ac2520218d0958046b5baca07b25ea67921c1b19abdc1dda81c630d1"
+    }
+  ],
+  "builds": {
+    "server": {
+      "command": "make -j2 CUDA_ARCH=native ds4-server",
+      "binary_sha256": "47c872dd5850ed7f96aa1099e4ac40911cd90ba21756d357b3fa0af9d35c22f3",
+      "elapsed_seconds": 30.73,
+      "maximum_rss_kib": 533020,
+      "swaps": 0,
+      "exit_status": 0
+    },
+    "quality_scorer": {
+      "command": "make CUDA_ARCH=native QUALITY_CFLAGS='-O3 -g -Xcompiler -march=native -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -std=c11' gguf-tools/quality-testing/score_official",
+      "scorer_sha256": "c8a6f7912363cf3391a959a319ea5ee356210fdd3a4331641436fd9b2d37ac4f",
+      "elapsed_seconds": 0.57,
+      "maximum_rss_kib": 49696,
+      "swaps": 0,
+      "exit_status": 0
+    }
+  },
+  "safety": {
+    "minimum_start_available_gib": 110,
+    "observed_start_available_gib": 115.253,
+    "per_process_address_space_limit_kib": 16777216,
+    "jobs": 2,
+    "gpu_or_model_started": false
+  },
+  "production_tree_preserved": {
+    "commit": "e0ae64873e2844a2e82e26803a0f0541c0319a06",
+    "modified_tracked_files": 2,
+    "untracked_backup_files": 5,
+    "changed_insertions": 159,
+    "changed_deletions": 8
+  }
+}
