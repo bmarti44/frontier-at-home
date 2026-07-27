@@ -1,0 +1,9 @@
+Candidate under test: 69d74d9db64f9af2efdf026bff09cd0a02b53f43
+Command:
+  python3 -m unittest scripts.tests.test_matched_memory_safety.MatchedHarnessContractTests.test_production_watchdog_reserves_18_gib
+
+Result: genuine RED
+
+The production DeepSeek launcher accepted any positive caller-supplied
+watchdog floor, including 1 GiB. It had no enforced 18 GiB minimum or bounded
+upper range.

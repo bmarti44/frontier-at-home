@@ -144,6 +144,9 @@ class MatchedHarnessContractTests(unittest.TestCase):
         wait_index = source.index('wait "$flock_pid"')
         self.assertLess(marker_index, wait_index)
         self.assertIn("start group remains alive after SIGKILL", source)
+        self.assertIn("watchdog_floor_gib < 18", source)
+        self.assertIn("watchdog_floor_gib > 64", source)
+        self.assertIn("mem_floor_gib < 18", source)
 
     def test_candidate_source_override_is_explicit_and_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
