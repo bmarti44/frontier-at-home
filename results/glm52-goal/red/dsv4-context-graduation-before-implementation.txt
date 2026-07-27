@@ -1,0 +1,63 @@
+EEEE
+======================================================================
+ERROR: test_fixture_has_exact_token_count_and_three_position_bands (scripts.tests.test_dsv4_context_graduation.ContextProbeTests.test_fixture_has_exact_token_count_and_three_position_bands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_dsv4_context_graduation.py", line 28, in test_fixture_has_exact_token_count_and_three_position_bands
+    probe = load_probe()
+            ^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_dsv4_context_graduation.py", line 22, in load_probe
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1128, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1186, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/scripts/57_dsv4_context_probe.py'
+
+======================================================================
+ERROR: test_retrieval_validation_fails_closed (scripts.tests.test_dsv4_context_graduation.ContextProbeTests.test_retrieval_validation_fails_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_dsv4_context_graduation.py", line 39, in test_retrieval_validation_fails_closed
+    probe = load_probe()
+            ^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_dsv4_context_graduation.py", line 22, in load_probe
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1128, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1186, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/scripts/57_dsv4_context_probe.py'
+
+======================================================================
+ERROR: test_scheduler_is_detached_candidate_bound_and_serialized (scripts.tests.test_dsv4_context_graduation.ContextWorkerContractTests.test_scheduler_is_detached_candidate_bound_and_serialized)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_dsv4_context_graduation.py", line 85, in test_scheduler_is_detached_candidate_bound_and_serialized
+    source = SCHEDULER.read_text(encoding="utf-8")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1029, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/scripts/59_schedule_dsv4_context.sh'
+
+======================================================================
+ERROR: test_worker_graduates_exact_rungs_and_restores_safe_profile (scripts.tests.test_dsv4_context_graduation.ContextWorkerContractTests.test_worker_graduates_exact_rungs_and_restores_safe_profile)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_dsv4_context_graduation.py", line 67, in test_worker_graduates_exact_rungs_and_restores_safe_profile
+    source = WORKER.read_text(encoding="utf-8")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1029, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/scripts/58_dsv4_context_worker.sh'
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.011s
+
+FAILED (errors=4)
