@@ -41,6 +41,10 @@ def replacement_utc_timestamp(_value, _label):
     return None
 
 
+def replacement_w11_fixture(_candidate_hash, _seed_sha256):
+    return {}
+
+
 def w11_record(hashes=None):
     identities = hashes or {
         "binary_sha256": "a" * 64,
@@ -667,7 +671,11 @@ class FormulaTests(unittest.TestCase):
 
     def test_scorer_identity_covers_numeric_and_lineage_dependencies(self):
         before = self.goal.registered_scorer_digest("w11.context.v1")
-        originals = (self.goal._finite_number, self.goal._utc_timestamp)
+        originals = (
+            self.goal._finite_number,
+            self.goal._utc_timestamp,
+            self.goal.generate_w11_fixture,
+        )
         try:
             self.goal._finite_number = replacement_finite_number
             finite_digest = self.goal.registered_scorer_digest(
@@ -676,10 +684,20 @@ class FormulaTests(unittest.TestCase):
             self.goal._finite_number = originals[0]
             self.goal._utc_timestamp = replacement_utc_timestamp
             utc_digest = self.goal.registered_scorer_digest("w11.context.v1")
+            self.goal._utc_timestamp = originals[1]
+            self.goal.generate_w11_fixture = replacement_w11_fixture
+            fixture_digest = self.goal.registered_scorer_digest(
+                "w11.context.v1"
+            )
         finally:
-            self.goal._finite_number, self.goal._utc_timestamp = originals
+            (
+                self.goal._finite_number,
+                self.goal._utc_timestamp,
+                self.goal.generate_w11_fixture,
+            ) = originals
         self.assertNotEqual(before, finite_digest)
         self.assertNotEqual(before, utc_digest)
+        self.assertNotEqual(before, fixture_digest)
 
     def test_manifest_lineage_requires_post_freeze_verifiable_randomness(self):
         signature = (
@@ -1285,39 +1303,73 @@ class FormulaTests(unittest.TestCase):
                     {"fixture": fixture_path},
                 )
 
+    def test_w11_accepts_exact_deterministic_fixture(self):
+        record = w11_record()
+        candidate = "a" * 40
+        seed = "b" * 64
+        fixture = self.goal.generate_w11_fixture(candidate, seed)
+        record["retrieval_results"] = [
+            {**case, "observed_sha256": case["expected_sha256"]}
+            for case in fixture["retrieval_cases"]
+        ]
+        record["negative_control_results"] = [
+            {**case, "observed_sha256": case["expected_sha256"]}
+            for case in fixture["negative_control_cases"]
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture_path = Path(tmp) / "fixture.json"
+            fixture_path.write_text(json.dumps(fixture))
+            manifest = {
+                field: record[field]
+                for field in (
+                    "binary_sha256",
+                    "configuration_sha256",
+                    "model_sha256",
+                    "tokenizer_sha256",
+                )
+            }
+            manifest.update(
+                {
+                    "candidate_hash": candidate,
+                    "fixture_sha256": hashlib.sha256(
+                        fixture_path.read_bytes()
+                    ).hexdigest(),
+                    "lineage": {
+                        "randomness": {"seed_sha256": seed}
+                    },
+                }
+            )
+            record["fixture_sha256"] = manifest["fixture_sha256"]
+            self.goal.validate_record_artifact_bindings(
+                "W11",
+                manifest,
+                [record],
+                {"fixture": fixture_path},
+            )
+
     def test_w11_retrieval_expectations_are_bound_to_fixture(self):
         record = w11_record()
         candidate = "a" * 40
         seed = "b" * 64
         with tempfile.TemporaryDirectory() as tmp:
             fixture_path = Path(tmp) / "fixture.json"
-            fixture = {
-                "schema_version": 1,
-                "candidate_hash": candidate,
-                "seed_sha256": seed,
-                "generator_version": "w11-fixture.v1",
-                "context_cap": 1_048_576,
-                "stage_context_caps": [131_072, 262_144, 524_288, 1_048_576],
-                "retrieval_cases": [
-                    {
-                        "case_id": item["case_id"],
-                        "position": item["position"],
-                        "expected_sha256": (
-                            "f" * 64
-                            if index == 0
-                            else item["expected_sha256"]
-                        ),
-                    }
-                    for index, item in enumerate(record["retrieval_results"])
-                ],
-                "negative_control_cases": [
-                    {
-                        "case_id": item["case_id"],
-                        "expected_sha256": item["expected_sha256"],
-                    }
-                    for item in record["negative_control_results"]
-                ],
-            }
+            fixture = self.goal.generate_w11_fixture(candidate, seed)
+            record["retrieval_results"] = [
+                {
+                    **case,
+                    "observed_sha256": case["expected_sha256"],
+                }
+                for case in fixture["retrieval_cases"]
+            ]
+            record["negative_control_results"] = [
+                {
+                    **case,
+                    "observed_sha256": case["expected_sha256"],
+                }
+                for case in fixture["negative_control_cases"]
+            ]
+            record["retrieval_results"][0]["expected_sha256"] = "f" * 64
+            record["retrieval_results"][0]["observed_sha256"] = "f" * 64
             fixture_path.write_text(json.dumps(fixture))
             manifest = {
                 field: record[field]

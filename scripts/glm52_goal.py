@@ -679,6 +679,65 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def generate_w11_fixture(
+    candidate_hash: str, seed_sha256: str
+) -> dict[str, Any]:
+    """Generate the complete registered W11 confirmation fixture."""
+    if not (
+        isinstance(candidate_hash, str)
+        and len(candidate_hash) == 40
+        and all(char in "0123456789abcdef" for char in candidate_hash)
+    ):
+        raise ValueError("W11 fixture candidate is invalid")
+    if not _is_sha256(seed_sha256):
+        raise ValueError("W11 fixture seed is invalid")
+
+    def derived(label: str) -> str:
+        return hashlib.sha256(
+            (
+                "w11-fixture.v1:"
+                f"{candidate_hash}:{seed_sha256}:{label}"
+            ).encode()
+        ).hexdigest()
+
+    position_ranges = (
+        (16_384, 104_857),
+        (419_430, 629_145),
+        (943_718, 1_048_575),
+    )
+    retrieval_cases = []
+    for index, (lower, upper) in enumerate(position_ranges):
+        position = lower + int(derived(f"position:{index}")[:16], 16) % (
+            upper - lower + 1
+        )
+        marker = derived(f"retrieval-marker:{index}")
+        retrieval_cases.append(
+            {
+                "case_id": f"needle-{index}",
+                "position": position,
+                "expected_sha256": hashlib.sha256(marker.encode()).hexdigest(),
+            }
+        )
+    absent_marker = "ABSENT-" + derived("negative-marker:0")
+    return {
+        "schema_version": 1,
+        "candidate_hash": candidate_hash,
+        "seed_sha256": seed_sha256,
+        "generator_version": "w11-fixture.v1",
+        "context_cap": 1_048_576,
+        "stage_context_caps": [131_072, 262_144, 524_288, 1_048_576],
+        "retrieval_cases": retrieval_cases,
+        "negative_control_cases": [
+            {
+                "case_id": "absent-0",
+                "expected_sha256": hashlib.sha256(
+                    absent_marker.encode()
+                ).hexdigest(),
+            }
+        ],
+    }
+
+
 def validate_record_artifact_bindings(
     gate: str,
     manifest: dict[str, Any],
@@ -805,6 +864,13 @@ def validate_record_artifact_bindings(
     expected_caps = [131_072, 262_144, 524_288, 1_048_576]
     if fixture["stage_context_caps"] != expected_caps:
         raise ValueError("W11 fixture stage graduation is invalid")
+    generated_fixture = generate_w11_fixture(
+        manifest.get("candidate_hash"), expected_seed
+    )
+    if fixture != generated_fixture:
+        raise ValueError(
+            "W11 fixture is not the deterministic registered seed output"
+        )
     if len(records) != 1:
         raise ValueError("W11 fixture binding requires one raw record")
     record = records[0]
@@ -1366,6 +1432,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
         validate_source_provenance,
         validate_profile_artifact_bindings,
         validate_record_artifact_bindings,
+        generate_w11_fixture,
         _read_strict_json,
         _unique_pairs,
         _sha256,
