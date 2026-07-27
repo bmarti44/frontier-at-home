@@ -4,6 +4,11 @@
 set -Eeuo pipefail
 umask 077
 
+readonly CC_PATH=/usr/bin/cc
+readonly MAKE_PATH=/usr/bin/make
+readonly CUDA_HOME_PATH=/usr/local/cuda
+readonly NVCC_PATH=/usr/local/cuda/bin/nvcc
+
 [[ $# == 4 ]] || {
     echo "usage: $0 SOURCE_REPOSITORY COMMIT WORK_ROOT OUTPUT_DIRECTORY" >&2
     exit 2
@@ -89,9 +94,12 @@ build_one() {
     nvccflags+=" -Xcompiler -ffile-prefix-map=$WORKTREE=/usr/src/ds4"
     nvccflags+=" -Xcompiler -fdebug-prefix-map=$WORKTREE=/usr/src/ds4"
     nvccflags+=" -Xcompiler -fmacro-prefix-map=$WORKTREE=/usr/src/ds4"
-    env SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" TZ=UTC LC_ALL=C \
+    env -i PATH=/usr/bin:/bin HOME=/nonexistent \
+        SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" TZ=UTC LC_ALL=C \
         /usr/bin/time -v -o "$OUTPUT_DIRECTORY/build${number}.time" \
-        make -C "$WORKTREE" -j2 CUDA_ARCH=native \
+        "$MAKE_PATH" -C "$WORKTREE" -j2 CUDA_ARCH=native \
+        CC="$CC_PATH" NVCC="$NVCC_PATH" CUDA_HOME="$CUDA_HOME_PATH" \
+        DS4_LINK="$NVCC_PATH $nvccflags" \
         CFLAGS="$cflags" NVCCFLAGS="$nvccflags" ds4-server \
         >"$OUTPUT_DIRECTORY/build${number}.log" 2>&1
     [[ -z $(git -C "$WORKTREE" status --short) ]] || {
@@ -110,7 +118,8 @@ cmp -s "$OUTPUT_DIRECTORY/build1-ds4-server" \
     exit 10
 }
 
-/usr/bin/python3 - "$OUTPUT_DIRECTORY" "$COMMIT" "$SOURCE_DATE_EPOCH" <<'PY'
+/usr/bin/python3 - "$OUTPUT_DIRECTORY" "$COMMIT" "$SOURCE_DATE_EPOCH" \
+    "$CC_PATH" "$NVCC_PATH" <<'PY'
 import hashlib
 import json
 import os
@@ -121,13 +130,15 @@ import sys
 output = pathlib.Path(sys.argv[1])
 commit = sys.argv[2]
 source_epoch = int(sys.argv[3])
+cc_path = sys.argv[4]
+nvcc_path = sys.argv[5]
 binary = output / "build1-ds4-server"
 digest = hashlib.sha256(binary.read_bytes()).hexdigest()
 cc = subprocess.run(
-    ["cc", "--version"], text=True, stdout=subprocess.PIPE, check=True
+    [cc_path, "--version"], text=True, stdout=subprocess.PIPE, check=True
 ).stdout.splitlines()[0]
 nvcc = subprocess.run(
-    ["/usr/local/cuda/bin/nvcc", "--version"],
+    [nvcc_path, "--version"],
     text=True,
     stdout=subprocess.PIPE,
     check=True,
