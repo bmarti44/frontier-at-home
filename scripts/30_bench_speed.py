@@ -250,6 +250,7 @@ class Client:
         usage: dict[str, Any] | None = None
         done = False
         data_chunks = 0
+        response_ids: set[str] = set()
         try:
             with response:
                 if response.status != 200:
@@ -268,6 +269,11 @@ class Client:
                         continue
                     data_chunks += 1
                     event = json.loads(data)
+                    response_id = event.get("id")
+                    if response_id is not None:
+                        if not isinstance(response_id, str) or not response_id:
+                            raise RuntimeError("SSE response id is invalid")
+                        response_ids.add(response_id)
                     event_usage = event.get("usage")
                     if event_usage is not None:
                         if not isinstance(event_usage, dict):
@@ -296,8 +302,13 @@ class Client:
                             last_content_at = now
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise RuntimeError(f"invalid SSE stream: {error}") from error
+        if len(response_ids) != 1:
+            raise RuntimeError(
+                f"SSE stream has ambiguous response ids: {sorted(response_ids)!r}"
+            )
 
         return {
+            "response_id": next(iter(response_ids)),
             "request_started": request_started,
             "first_content_at": first_content_at,
             "last_content_at": last_content_at,
@@ -386,7 +397,13 @@ TOKEN_TIMING_RE = re.compile(
 )
 
 
-def read_token_timing(path: Path, offset: int) -> dict[str, Any]:
+def read_token_timing(
+    path: Path,
+    offset: int,
+    *,
+    expected_request: str,
+    expected_count: int,
+) -> dict[str, Any]:
     """Read and validate raw per-token records appended after *offset*."""
     with path.open("rb") as stream:
         stream.seek(offset)
@@ -403,16 +420,30 @@ def read_token_timing(path: Path, offset: int) -> dict[str, Any]:
                     int(match.group(4)),
                 )
             )
+        elif line.startswith("DS4_TOKEN_TIMING"):
+            raise RuntimeError(f"malformed DS4_TOKEN_TIMING record: {line[:200]!r}")
     if not records:
         raise RuntimeError(f"no DS4_TOKEN_TIMING records appended to {path}")
+    if len(records) != expected_count:
+        raise RuntimeError(
+            "token timing count mismatch: "
+            f"timed={len(records)}, expected={expected_count}"
+        )
     requests = {record[0] for record in records}
     if len(requests) != 1:
         raise RuntimeError(f"token timing contains multiple requests: {sorted(requests)}")
+    if requests != {expected_request}:
+        raise RuntimeError(
+            "token timing request mismatch: "
+            f"timed={sorted(requests)!r}, expected={expected_request!r}"
+        )
     indices = [record[1] for record in records]
     expected = list(range(1, len(records) + 1))
     if indices != expected:
         raise RuntimeError(f"token timing indices are incomplete: {indices[:8]}...")
     monotonic_ns = [record[2] for record in records]
+    if any(value <= 0 for value in monotonic_ns):
+        raise RuntimeError("token timing timestamps must be positive")
     if any(later <= earlier for earlier, later in zip(monotonic_ns, monotonic_ns[1:])):
         raise RuntimeError("token timing timestamps are not strictly increasing")
     return {
@@ -472,7 +503,12 @@ def run_rep(
             return invalid_rep("server reported zero completion tokens")
         raw_timing = None
         if token_timing_log is not None:
-            raw_timing = read_token_timing(token_timing_log, timing_offset)
+            raw_timing = read_token_timing(
+                token_timing_log,
+                timing_offset,
+                expected_request=stream["response_id"],
+                expected_count=completion_tokens,
+            )
             token_timestamps = [
                 value / 1_000_000_000 for value in raw_timing["monotonic_ns"]
             ]

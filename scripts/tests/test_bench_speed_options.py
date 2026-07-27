@@ -109,7 +109,8 @@ class BenchOptionTests(unittest.TestCase):
                 "malformed",
             ),
             (
-                "DS4_TOKEN_TIMING request=other index=1 monotonic_ns=100 token=7\n",
+                "DS4_TOKEN_TIMING request=other index=1 monotonic_ns=100 token=7\n"
+                "DS4_TOKEN_TIMING request=other index=2 monotonic_ns=200 token=8\n",
                 "request",
             ),
             (
