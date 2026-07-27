@@ -1,0 +1,11 @@
+Mutation:
+An approved ds4-server waits long enough for the first sampler attestation and
+then execs /bin/sleep in the same PID and process group.
+
+Observed unchanged behavior:
+The wrapper returned zero because EXECUTED_CANDIDATE_OBSERVED suppressed every
+subsequent executable check.
+
+Required result:
+Continuously bind PID, start ticks, executable path, device/inode and process
+group. The post-attestation exec mutation must fail closed.

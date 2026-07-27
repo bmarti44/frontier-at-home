@@ -141,6 +141,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn('readlink -f -- "/proc/$SPID2/exe"', source)
         self.assertIn("executed candidate binary was not observed", source)
         self.assertIn("executed_binary_sha256=", source)
+        self.assertIn("EXECUTED_START_TICKS", source)
+        self.assertIn("executed candidate identity changed", source)
         self.assertNotIn(
             "SRC=/home/dsv4/ds4-project/src/ds4-upstream-master",
             source,
