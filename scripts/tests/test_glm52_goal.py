@@ -146,6 +146,70 @@ class FormulaTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.goal.validate_raw_record(record)
 
+    def test_five_fresh_server_blocks_require_abba_baab_and_distinct_arms(self):
+        records = []
+        for block in range(5):
+            order = "ABBA" if block % 2 == 0 else "BAAB"
+            for sequence, arm in enumerate(order):
+                records.append(
+                    {
+                        "block": block,
+                        "sequence": sequence,
+                        "arm": arm,
+                        "server_boot_id": f"boot-{block}",
+                        "fixture_sha256": "a" * 64,
+                        "binary_sha256": ("b" if arm == "A" else "c") * 64,
+                        "configuration_sha256": ("d" if arm == "A" else "e") * 64,
+                    }
+                )
+        self.goal.validate_ab_blocks(records)
+        for mutation in ("same_binary", "same_boot", "wrong_order", "unequal_fixture"):
+            broken = [dict(item) for item in records]
+            if mutation == "same_binary":
+                for item in broken:
+                    item["binary_sha256"] = "b" * 64
+                    item["configuration_sha256"] = "d" * 64
+            elif mutation == "same_boot":
+                broken[-1]["server_boot_id"] = broken[0]["server_boot_id"]
+            elif mutation == "wrong_order":
+                broken[0]["arm"] = "B"
+            else:
+                broken[-1]["fixture_sha256"] = "f" * 64
+            with self.subTest(mutation=mutation):
+                with self.assertRaises(ValueError):
+                    self.goal.validate_ab_blocks(broken)
+
+    def test_attempt_requires_manifest_raw_and_fixed_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            attempt = Path(tmp)
+            manifest = {
+                "source_sha256": "a" * 64,
+                "diff_sha256": "b" * 64,
+                "binary_sha256": "c" * 64,
+                "scorer_sha256": "d" * 64,
+                "model_sha256": "e" * 64,
+                "tokenizer_sha256": "f" * 64,
+                "fixture_sha256": "0" * 64,
+                "configuration_sha256": "1" * 64,
+            }
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            (attempt / "raw.jsonl").write_text(
+                json.dumps({"event": "diagnostic", "failures": []}) + "\n"
+            )
+            (attempt / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "formula_version": 1,
+                        "verdict": "NO_RESULT",
+                        "reason": "diagnostic-only",
+                    }
+                )
+            )
+            self.goal.validate_attempt(attempt)
+            (attempt / "raw.jsonl").write_text("")
+            with self.assertRaises(ValueError):
+                self.goal.validate_attempt(attempt)
+
 
 class ControllerTests(unittest.TestCase):
     def run_cli(self, state_dir: Path, *args: str):
