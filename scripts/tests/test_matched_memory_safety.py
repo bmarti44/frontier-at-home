@@ -196,6 +196,13 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("GLM_PORT must be an integer from 1024 through 65535", source)
         self.assertIn("port < 1024 || port > 65535", source)
 
+    def test_glm_arm_streaming_timing_fallback_is_explicit_and_default_off(self):
+        source = GLM_ARM.read_text(encoding="utf-8")
+        self.assertIn("GLM_REQUIRE_TOKEN_TIMING_LOG:-1", source)
+        self.assertIn("GLM_REQUIRE_TOKEN_TIMING_LOG must be 0 or 1", source)
+        self.assertIn('timing_args=(--token-timing-log "$OUT/server.log")', source)
+        self.assertIn('"${timing_args[@]}"', source)
+
 
 if __name__ == "__main__":
     unittest.main()
