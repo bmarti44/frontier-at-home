@@ -84,8 +84,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
     def test_glm_logit_arm_is_one_token_and_path_bound(self):
         source = GLM_LOGIT_ARM.read_text(encoding="utf-8")
         self.assertIn('DS4_GLM_LOGIT_DUMP="$OUT/prefill.logits"', source)
-        self.assertIn("--max-tokens 1", source)
-        self.assertIn("--min-completion-tokens 1", source)
+        self.assertIn('"max_tokens": 1', source)
+        self.assertIn("completion_tokens == 1", source)
         self.assertIn("DS4_CUDA_IQ2_DOWN_REFERENCE:-1", source)
         self.assertIn("IQ2_REFERENCE must be 0 or 1", source)
         self.assertIn("glm52-b4734de4/tokenizer.json", source)
