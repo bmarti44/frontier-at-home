@@ -1,0 +1,189 @@
+{
+  "candidate_hash": "0deac09dbb9bb8ca5d7590349c77f8ba0c9be765",
+  "review_round": 7,
+  "score_0_to_100": 0,
+  "critical": [
+    {
+      "id": "GAP-C002",
+      "evidence": "Terminal evidence remains spoofable. I built a complete review attempt using the real candidate commit/tree, genuine drand round 6323218, the correct transitive scorer descriptor, and hash-consistent dummy artifacts. Two fabricated JSON records merely naming gap_reviewer and adversarial_reviewer, with review_round=999 and empty issue and prior-status arrays, passed validate_attempt and terminalized as PASS. Foundation and parity artifact binding also validates only glm52 records: direct mutation showed arbitrary DeepSeek binary and configuration hashes are accepted for both gates. This permits a false matched result by weakening the reference arm.",
+      "affected_gate": "Foundation, parity, review, and final release evidence authority",
+      "reproduction_instructions": "Construct a review attempt for candidate 0deac09 using its source descriptor and genuine round-6323218 lineage. Use dummy non-scorer artifacts, the correct review.final.v1 descriptor, and two canonical-name records with empty findings and ledgers; validate_attempt accepts PASS. Separately call validate_record_artifact_bindings for foundation or parity with a manifest-matching glm52 record and an arbitrary dsv4 record; it returns successfully.",
+      "proposed_acceptance_test": "Bind both GLM and DeepSeek arms to independently approved binary, model, tokenizer, configuration, and fixture artifacts. Bind raw events to the frozen harness execution and exact server identities. Require review attempts to contain authenticated persistent-agent transcripts, the complete prior ledger, and reviewer-session identifiers that cannot be supplied as arbitrary strings. Add full-attempt mutations proving fabricated canonical reviewer records and an unbound reference arm cannot PASS."
+    },
+    {
+      "id": "GAP-C003",
+      "evidence": "GLM switching remains deliberately and safely disabled. Every glm52 request exits before transactional locking, teardown, launch, validation, rollback, or active-state commit. Environment isolation, curl configuration isolation, credential handling, exact DeepSeek identity, and rollback scaffolding improved, but the required lifecycle has not been exercised.",
+      "affected_gate": "Turnkey switching and rollback",
+      "reproduction_instructions": "Run scripts/52_engine_switch.sh glm52 with qualification and hashes otherwise satisfied. Observe the unconditional disabled-lifecycle exit before any GLM transition.",
+      "proposed_acceptance_test": "After a safe reboot and successful qualification, require executable tests for concurrency, stale PID, wrong model, startup death, completion failure, low memory, surviving D-state processes, rollback, reboot restoration, and dsv4→glm52→dsv4→glm52, with exact identity, authentication, semantic output, watchdog supervision, and atomic state commit."
+    },
+    {
+      "id": "GAP-C004",
+      "evidence": "Only foundation, W11, parity, and review have registered scorers. W1-W10 and switch still lack terminal scorers and production runners. A reviewed physical-NO_GO cannot complete the goal because release-check still hard-codes parity_no_go=false. The frozen state contains no successful production gate.",
+      "affected_gate": "W1-W10, switch, autonomous execution, NO_GO handling, and final release",
+      "reproduction_instructions": "Inspect score_registered_gate, the runner directories, and release-check. Run status --json: legacy malformed foundation and W1 attempts become FAIL, while the remaining work gates are PENDING; no runtime gate is PASS.",
+      "proposed_acceptance_test": "Implement versioned fixed scorers and autonomous runners for W1-W10 and switch, plus an authoritative physical-NO_GO scorer validating direct measurements and both persistent reviews. Demonstrate autonomous progression and rejection mutations for every terminal gate."
+    }
+  ],
+  "high": [
+    {
+      "id": "GAP-H001",
+      "evidence": "No 20-arm, five-block fresh-server ABBA/BAAB attempt exists. The parity scorer is structurally available, but no decode, prefill, warm TTFT, or cold TTFT confidence bound has been measured, and the DeepSeek reference identity is not manifest-bound.",
+      "affected_gate": "Matched decode, prefill, and TTFT parity",
+      "reproduction_instructions": "Inspect results/glm52-goal/parity and controller status; no parity attempt exists. Inspect validate_record_artifact_bindings and observe that parity selects only records whose profile is glm52.",
+      "proposed_acceptance_test": "Run five fresh-server ABBA/BAAB blocks after reboot using separately pinned GLM and DeepSeek profiles, frozen equal fixtures, at least 128 observed output tokens, synchronized prefill timing, and independent confidence-bound recomputation."
+    },
+    {
+      "id": "GAP-H002",
+      "evidence": "The recorded confirmation is genuine: drand round 6323218 was published after candidate 0deac09, all three relays returned the recorded signature and randomness, and all four gate seeds recompute exactly. The seed still does not determine fixture contents. I created two different W11 retrieval fixtures with the same candidate hash, seed, and generator_version; both passed validation when their raw records matched. The validator checks only the seed label and generator string, not deterministic regeneration. Relay validation also depends on three live network calls and its curl invocation lacks --disable, so a transient outage or system curl configuration can convert preserved evidence to FAIL.",
+      "affected_gate": "Post-freeze confirmation-suite derivation and reproducibility",
+      "reproduction_instructions": "Create two W11 fixtures with identical candidate_hash, seed_sha256, and generator_version but different retrieval expected digests. Update each raw record and fixture hash consistently, then call validate_record_artifact_bindings; both validate. Inspect _fetch_public_drand and note the live three-relay dependency and absence of --disable.",
+      "proposed_acceptance_test": "Implement w11-fixture.v1 as a fixed deterministic generator and recompute the entire fixture from candidate and seed during validation. Preserve authenticated relay responses or verify the drand signature offline so later validation does not depend on network availability. Invoke curl with --disable and publicly anchor the candidate hash before the beacon."
+    },
+    {
+      "id": "GAP-H003",
+      "evidence": "Exact numeric typing, W11 stage thresholds, timestamped memory coverage, profile binary/model pins, and the transitive scorer digest are improved. Complete provenance remains missing: the approved profile does not pin tokenizer_sha256; foundation and parity DeepSeek identities are unbound; parity records contain no model/tokenizer identity; and token, memory, OOM, Xid, and failure observations remain self-authored JSON rather than authenticated harness or system records.",
+      "affected_gate": "Raw evidence validity for foundation, W11, parity, and future work gates",
+      "reproduction_instructions": "Inspect configs/glm52-profile.json and validate_profile_artifact_bindings: only binary_sha256 and model_sha256 are approved. Inspect parity raw schema and reference-arm binding. Observe that event lists and timestamps have no source-log or process-identity linkage.",
+      "proposed_acceptance_test": "Pin both models' tokenizer and configuration identities, bind every raw arm to its approved profile, and require content-addressed harness logs containing process/boot identity, token and CUDA events, timestamped 4 Hz memory samples, and authenticated kernel/Xid/OOM records. Mutation-test coherent synthetic telemetry."
+    },
+    {
+      "id": "GAP-H004",
+      "evidence": "The prior W11 formula defects are fixed: minimum processed-token counts now apply at every stage and memory samples must cover execution with bounded timestamp gaps. No actual 128K, 256K, 512K, or 1M model execution exists, so context qualification, deterministic retrieval, completed generation, resource safety, and the 10 GiB floor remain unproven.",
+      "affected_gate": "W11 and qualified 1M profile",
+      "reproduction_instructions": "Inspect results/glm52-goal/W11 and controller status. W11 has no attempt and remains PENDING.",
+      "proposed_acceptance_test": "After reboot, execute all four graduated stages with artifact-bound telemetry, at least 1000000 processed tokens at the final stage, seed-derived multi-position retrieval and negative controls, completed generation, continuous memory coverage, and authenticated absence of truncation, OOM, and Xid."
+    },
+    {
+      "id": "GAP-H005",
+      "evidence": "The candidate contains extensive genuine RED tests and 71 tests pass, including malformed-evidence FAIL semantics, leading-zero normalization, relay authentication, stage coverage, environment isolation, and transitive digest mutations. The complete RED→default-off→freeze→seed-derived fixture→clean build→blind A/B→raw evidence→review workflow is still absent for W1-W10 and switching, and no GPU confirmation run exists.",
+      "affected_gate": "Anti-cheating and per-change production qualification",
+      "reproduction_instructions": "Map every W1-W10 and switch change to the required machine-verifiable workflow. Most items have no runner, attempt, blinded execution, or persistent-review verification.",
+      "proposed_acceptance_test": "Make release-check consume a machine-readable per-change ledger and reject any item missing committed RED evidence, default-off implementation, frozen hashes, deterministically seed-derived fixtures, clean build, blinded run, diff scan, mutation result, and persistent-review verification."
+    },
+    {
+      "id": "GAP-H007",
+      "evidence": "The roofline remains an honest NO_RESULT, direct parity measurements are absent, and no fixed reviewed physical-NO_GO path exists. Neither accepted parity outcome has been established.",
+      "affected_gate": "Parity PASS or independently reviewed NO_GO",
+      "reproduction_instructions": "Run the roofline tool and release-check. physical_no_go_established remains false and parity_decision remains UNPROVEN.",
+      "proposed_acceptance_test": "Either pass the fully artifact-bound five-block parity campaign or implement and satisfy a physical-NO_GO scorer using fresh direct measurements, falsifiers, complete lineage, and both persistent reviewers at score at least 90."
+    },
+    {
+      "id": "GAP-H012",
+      "evidence": "Foundation remains incomplete. results/glm52-goal/evidence/foundation-confirmation-clean-build-0a7ad776.json explicitly reports NO_RESULT because model hashes and runtime baselines were not measured. It contains a clean source/build record, but no fresh model/tokenizer rehash, DRAM bandwidth result, or valid GLM and DeepSeek baseline attempt. The controller foundation gate is FAIL due older malformed evidence, not a reproduced foundation result.",
+      "affected_gate": "Foundation and trustworthy baseline establishment",
+      "reproduction_instructions": "Inspect the clean-build confirmation's result and reason, then run controller status. The standalone evidence is NO_RESULT and is not an accepted foundation attempt.",
+      "proposed_acceptance_test": "After reboot, independently rehash all model and tokenizer artifacts, measure DRAM bandwidth, preserve clean-build provenance, and run fresh artifact-bound GLM and DeepSeek baselines through foundation.v1 with raw timestamps, memory, and failure telemetry."
+    }
+  ],
+  "medium": [],
+  "low": [],
+  "prior_issue_status": [
+    {
+      "id": "GAP-C001",
+      "status": "FIXED",
+      "evidence": "Registered runners execute under one controller lock."
+    },
+    {
+      "id": "GAP-C002",
+      "status": "OPEN",
+      "evidence": "GLM profile binding improved, but arbitrary DeepSeek reference identities and fabricated canonical-reviewer attempts still validate."
+    },
+    {
+      "id": "GAP-C003",
+      "status": "OPEN",
+      "evidence": "Unsafe GLM execution remains deleted, but the required switch lifecycle is disabled."
+    },
+    {
+      "id": "GAP-C004",
+      "status": "OPEN",
+      "evidence": "W1-W10, switch, and reviewed-NO_GO terminal scorers remain absent."
+    },
+    {
+      "id": "GAP-C005",
+      "status": "FIXED",
+      "evidence": "The roofline correctly reports NO_RESULT rather than an unsupported physical NO_GO."
+    },
+    {
+      "id": "GAP-H001",
+      "status": "OPEN",
+      "evidence": "No five-block matched campaign attempt exists, and the DeepSeek reference is not artifact-bound."
+    },
+    {
+      "id": "GAP-H002",
+      "status": "OPEN",
+      "evidence": "Beacon authenticity and ordering are fixed for this candidate, but fixture contents are not deterministically derived from the seed."
+    },
+    {
+      "id": "GAP-H003",
+      "status": "OPEN",
+      "evidence": "Numeric typing, W11 timing, and scorer dependency hashing are fixed; full raw provenance and both-profile identity binding remain incomplete."
+    },
+    {
+      "id": "GAP-H004",
+      "status": "OPEN",
+      "evidence": "The W11 formula defects are fixed, but no qualifying 1M execution exists."
+    },
+    {
+      "id": "GAP-H005",
+      "status": "OPEN",
+      "evidence": "The complete per-change blind execution and review workflow remains absent."
+    },
+    {
+      "id": "GAP-H006",
+      "status": "FIXED",
+      "evidence": "Controller concurrency remains serialized."
+    },
+    {
+      "id": "GAP-H007",
+      "status": "OPEN",
+      "evidence": "Neither parity PASS nor reviewed NO_GO exists."
+    },
+    {
+      "id": "GAP-H008",
+      "status": "FIXED",
+      "evidence": "Safety overrides are bounded and normalized as decimal, 4 Hz supervision is configured, and process-group cleanup remains fail-closed."
+    },
+    {
+      "id": "GAP-H009",
+      "status": "FIXED",
+      "evidence": "Unmatched profile streams cannot authorize NO_GO."
+    },
+    {
+      "id": "GAP-H010",
+      "status": "FIXED",
+      "evidence": "Matched restoration validates exact DeepSeek identity and health and propagates failures."
+    },
+    {
+      "id": "GAP-H011",
+      "status": "FIXED",
+      "evidence": "Malformed or unauthoritative attempts now terminalize as FAIL and are preserved."
+    },
+    {
+      "id": "GAP-H012",
+      "status": "OPEN",
+      "evidence": "Newly tracked: clean source/build evidence is NO_RESULT and lacks model rehash, DRAM measurement, and runtime baselines."
+    },
+    {
+      "id": "GAP-M001",
+      "status": "FIXED",
+      "evidence": "Duplicate keys, inexact state integers, directory symlinks, numeric attempt ordering, and leading-zero shell inputs are handled fail-closed."
+    },
+    {
+      "id": "GAP-M002",
+      "status": "FIXED",
+      "evidence": "Confidence-bound calculations are connected to parity.performance.v1."
+    },
+    {
+      "id": "GAP-M003",
+      "status": "FIXED",
+      "evidence": "Roofline logic no longer treats measured residual work as a physical lower bound."
+    },
+    {
+      "id": "GAP-L001",
+      "status": "FIXED",
+      "evidence": "The stale digest/update bookkeeping defect remains corrected."
+    }
+  ],
+  "verdict": "REJECT RELEASE; PENDING AND SAFELY FAIL-CLOSED. Candidate 0deac09dbb9bb8ca5d7590349c77f8ba0c9be765 passes 71 tests and shell syntax checks, has a genuine post-freeze three-relay confirmation, terminal malformed-evidence semantics, stronger GLM artifact binding, corrected W11 coverage, safer environments, and transitive scorer hashing. It still accepts fabricated review authority and unbound DeepSeek reference identities, does not deterministically derive fixtures from the public seed, lacks foundation and GPU runtime evidence, has no matched campaign or reviewed NO_GO, and keeps GLM switching disabled. DeepSeek V4 Flash must remain the default."
+}

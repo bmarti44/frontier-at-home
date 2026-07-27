@@ -1,0 +1,158 @@
+{
+  "candidate_hash": "0deac09dbb9bb8ca5d7590349c77f8ba0c9be765",
+  "review_round": 7,
+  "score_0_to_100": 0,
+  "critical": [
+    {
+      "id": "AR-009",
+      "evidence": "Relay authentication is fixed, but freeze time still trusts the self-authored Git committer timestamp. Using the frozen validator, I created a commit after observing drand round 6323218, backdated it to 2026-07-27T04:45:52Z, and validation accepted that round as post-freeze. The same construction enabled a complete synthetic W11 PASS.",
+      "affected_gate": "lineage, W11, parity, review",
+      "reproduction_instructions": "Create a child commit after a known beacon using GIT_COMMITTER_DATE earlier than its publication, derive the gate seed from that child hash and the known beacon, then call validate_manifest_lineage with _git_commit_time and _fetch_public_drand. It returns successfully.",
+      "proposed_acceptance_test": "Require an external, append-only publication receipt containing the candidate hash before selecting the confirmation round. Add a mutation that backdates a commit created after the beacon and require rejection."
+    },
+    {
+      "id": "AR-033",
+      "evidence": "The frozen validator accepted a full W11 attempt containing a 16-byte synthetic binary, 15-byte synthetic model, self-authored fixture, invented stage/token timestamps, invented retrieval digests, and invented 4 Hz memory samples. The profile was changed in a temporary child commit and the commit was backdated; no engine or GPU work occurred. Artifact pins therefore establish internal consistency, not execution provenance.",
+      "affected_gate": "W11",
+      "reproduction_instructions": "Commit profile hashes for small dummy files, backdate the commit before an already-known authenticated beacon, create a fixture whose expected values are arbitrary but internally consistent, generate the raw W11 JSON from those values, recompute the registered summary, and run validate_attempt. It passes.",
+      "proposed_acceptance_test": "Bind W11 to independently captured process identity, executable mapping, request/response bytes, tokenizer trace, output bytes, memory telemetry source, kernel/Xid logs, and fixture-generator implementation. A complete constructed JSON attempt with dummy artifacts must fail."
+    },
+    {
+      "id": "AR-034",
+      "evidence": "A complete review attempt with the two canonical reviewer name strings, review_round 999, empty issue and prior-issue ledgers, claimed scores 100, and ACCEPT verdicts passed validate_attempt. No persistent-agent identity, transcript, continuity, or prior-ledger completeness is authenticated.",
+      "affected_gate": "review, release",
+      "reproduction_instructions": "Create two review records named gap_reviewer and adversarial_reviewer with empty severity and prior_issue_status arrays, claimed_score 100 and verdict ACCEPT; compute the registered summary and package normal artifacts. Validation accepts the attempt.",
+      "proposed_acceptance_test": "Bind review records to controller-recorded persistent agent/session identities and transcript hashes. Require the complete prior-issue ledger and reject empty ledgers when earlier rounds contain issues."
+    }
+  ],
+  "high": [
+    {
+      "id": "AR-003",
+      "evidence": "Foundation and parity raw bindings compare claimed hashes only. They do not bind measurements to a process, executable mapping, request, response, or timing capture. The clean-build evidence reports server hash 47c872dd..., while the committed approved profile uses 6d2284c6..., so the freshly built binary is not the pinned serving binary.",
+      "affected_gate": "foundation, parity",
+      "reproduction_instructions": "Construct baseline or parity records with manifest-matching GLM hash strings and invented timestamps; the scorers have no independent execution artifact with which to contradict them.",
+      "proposed_acceptance_test": "Require hashed external capture artifacts covering PID/start ticks, mapped executable, model file identity, exact request/output, token events and synchronized prefill events. Require the approved binary to equal the clean-build output."
+    },
+    {
+      "id": "AR-010",
+      "evidence": "W11 now enforces temporal coverage, but all timestamps, memory values, empty failure lists and output digests remain fields in the same self-authored raw record. Timestamp consistency does not demonstrate that processing occurred.",
+      "affected_gate": "W11",
+      "reproduction_instructions": "Generate monotonically increasing stage/token timestamps and 0.25-second memory samples covering the declared interval, with matching expected/observed hashes. The fixed scorer returns PASS without any runtime capture.",
+      "proposed_acceptance_test": "Require independently captured output bytes, token-count trace, process-linked memory samples and system Xid/OOM records; recompute every digest and count from those artifacts."
+    },
+    {
+      "id": "AR-014",
+      "evidence": "The post-freeze evidence contains authenticated gate seeds, but no generated confirmation cases or executed mutation confirmation suite. W11 accepts the literal generator_version string without hashing or invoking a registered generator.",
+      "affected_gate": "all confirmation gates",
+      "reproduction_instructions": "Inspect lineage-confirmation-0deac09.json and validate_record_artifact_bindings: only seed values and a generator name are required.",
+      "proposed_acceptance_test": "Register and hash the generator implementation, deterministically regenerate fixtures from the seed, and require preserved outputs from the mandated confirmation and mutation runs."
+    },
+    {
+      "id": "AR-021",
+      "evidence": "_release_verdict hard-codes parity_no_go = False. There is no registered measured-roofline plus dual-reviewer path that can produce the permitted independently reviewed NO_GO result.",
+      "affected_gate": "parity, release",
+      "reproduction_instructions": "Inspect _release_verdict and submit any NO_GO summary; parity remains UNPROVEN because narrative or summary booleans are intentionally ignored and no replacement authority exists.",
+      "proposed_acceptance_test": "Implement a fixed NO_GO scorer using fresh measured roofline/direct measurements and both persistent reviews, then test valid and mutated NO_GO evidence."
+    },
+    {
+      "id": "AR-028",
+      "evidence": "Only foundation, W11, parity and review have registered scorers. W1-W10 and switch lack fixed terminal scorers. Malformed attempts become terminal FAIL, and release accepts any terminal status for W1-W10.",
+      "affected_gate": "W1-W10, switch, release",
+      "reproduction_instructions": "Inspect score_registered_gate and _release_verdict; no scorer tuple exists for W1-W10 or switch.",
+      "proposed_acceptance_test": "Provide fixed scorers and strict schemas for every gate, and make release recompute their intended terminal results rather than accepting generic malformed-evidence FAIL states."
+    },
+    {
+      "id": "AR-031",
+      "evidence": "The switch tests still do not cover the required stale PID, wrong model, startup death, completion failure, low-memory rollback and repeated transition matrix with process/watchdog liveness.",
+      "affected_gate": "switch",
+      "reproduction_instructions": "Run the frozen test suite and enumerate test_engine_switch.py: only six switch tests run, with no complete failure/rollback matrix.",
+      "proposed_acceptance_test": "Add production-path tests that kill or replace the server/watchdog during readiness and validate identity-safe rollback for every required failure and transition."
+    },
+    {
+      "id": "AR-032",
+      "evidence": "GLM switching remains deliberately unavailable because release-check cannot pass; there is no qualified GLM profile or demonstrated rollback path.",
+      "affected_gate": "switch, release",
+      "reproduction_instructions": "Invoke the qualification check or inspect glm_qualified; incomplete gates reject GLM before the active profile is stopped.",
+      "proposed_acceptance_test": "After genuine runtime qualification, execute and preserve dsv4→glm52→dsv4→glm52, failure rollback and reboot restoration tests."
+    },
+    {
+      "id": "AR-036",
+      "evidence": "The scorer digest now includes the previously omitted numeric and lineage helpers, but still omits _ingest_attempts, _release_verdict and the controller/release dispatch authority.",
+      "affected_gate": "controller, release",
+      "reproduction_instructions": "Compare registered_scorer_digest's trust_boundary with the functions that choose terminal attempts and decide release qualification.",
+      "proposed_acceptance_test": "Hash the complete ingestion and release authority separately or include it transitively; mutations to attempt selection or release requirements must change an authenticated implementation digest."
+    },
+    {
+      "id": "AR-037",
+      "evidence": "Attempt directories remain mutable, and numeric aliases such as attempt-1 and attempt-01 receive equal numeric sort keys. Preservation and unambiguous ordering are not enforced.",
+      "affected_gate": "controller evidence ingestion",
+      "reproduction_instructions": "Create equal-valued numeric aliases and inspect attempt_order; both map to the same key. Modify an already-ingested attempt and observe that no immutable-attempt mechanism prevents it.",
+      "proposed_acceptance_test": "Require canonical non-zero-padded monotonically increasing names, reject aliases, and enforce content-addressed or append-only attempts with mutation detection."
+    },
+    {
+      "id": "AR-038",
+      "evidence": "_fetch_public_drand invokes /usr/bin/curl without --disable. Its minimal environment does not disable system curl configuration, unlike the corrected switch clean_curl wrapper.",
+      "affected_gate": "lineage validation",
+      "reproduction_instructions": "Inspect _fetch_public_drand's argv and compare it with clean_curl in 52_engine_switch.sh.",
+      "proposed_acceptance_test": "Place --disable first in the drand curl argv and add a test proving user and system default curl configuration cannot alter relay requests or output."
+    }
+  ],
+  "medium": [
+    {
+      "id": "AR-025",
+      "evidence": "No fresh post-W3 measured roofline exists for this candidate. The inherited roofline evidence predates the candidate and remains insufficient for parity or NO_GO.",
+      "affected_gate": "roofline, parity",
+      "reproduction_instructions": "Compare the candidate and evidence lineage hashes and inspect the absence of fresh direct measurements.",
+      "proposed_acceptance_test": "Freeze and hash fresh bandwidth, traffic and kernel-time measurements from the candidate, then recompute the roofline with confidence bounds."
+    },
+    {
+      "id": "AR-026",
+      "evidence": "Residual and 1M-context costs are not supported by fresh process-linked measurements, so the stretch-target feasibility conclusion remains unqualified.",
+      "affected_gate": "roofline, W11, parity",
+      "reproduction_instructions": "Attempt to derive the claimed residual from preserved candidate-linked raw counters; the required inputs are absent.",
+      "proposed_acceptance_test": "Require complete measured byte/load/runtime accounting at the matched 1M workload and reject unexplained residual terms."
+    }
+  ],
+  "low": [],
+  "prior_issue_status": [
+    {"id": "AR-001", "status": "FIXED"},
+    {"id": "AR-002", "status": "FIXED"},
+    {"id": "AR-003", "status": "VERIFIED"},
+    {"id": "AR-004", "status": "FIXED"},
+    {"id": "AR-005", "status": "FIXED"},
+    {"id": "AR-006", "status": "FIXED"},
+    {"id": "AR-007", "status": "FIXED"},
+    {"id": "AR-008", "status": "FIXED"},
+    {"id": "AR-009", "status": "VERIFIED"},
+    {"id": "AR-010", "status": "VERIFIED"},
+    {"id": "AR-011", "status": "FIXED"},
+    {"id": "AR-012", "status": "FIXED"},
+    {"id": "AR-013", "status": "FIXED"},
+    {"id": "AR-014", "status": "VERIFIED"},
+    {"id": "AR-015", "status": "FIXED"},
+    {"id": "AR-016", "status": "FIXED"},
+    {"id": "AR-017", "status": "FIXED"},
+    {"id": "AR-018", "status": "FIXED"},
+    {"id": "AR-019", "status": "FIXED"},
+    {"id": "AR-020", "status": "FIXED"},
+    {"id": "AR-021", "status": "VERIFIED"},
+    {"id": "AR-022", "status": "FIXED"},
+    {"id": "AR-023", "status": "DEFERRED"},
+    {"id": "AR-024", "status": "FIXED"},
+    {"id": "AR-025", "status": "DEFERRED"},
+    {"id": "AR-026", "status": "DEFERRED"},
+    {"id": "AR-027", "status": "FIXED"},
+    {"id": "AR-028", "status": "VERIFIED"},
+    {"id": "AR-029", "status": "FIXED"},
+    {"id": "AR-030", "status": "FIXED"},
+    {"id": "AR-031", "status": "VERIFIED"},
+    {"id": "AR-032", "status": "VERIFIED"},
+    {"id": "AR-033", "status": "VERIFIED"},
+    {"id": "AR-034", "status": "VERIFIED"},
+    {"id": "AR-035", "status": "FIXED"},
+    {"id": "AR-036", "status": "VERIFIED"},
+    {"id": "AR-037", "status": "OPEN"},
+    {"id": "AR-038", "status": "VERIFIED"}
+  ],
+  "verdict": "REJECT. The exact frozen source passed all 71 non-GPU tests, the three public relays independently matched round 6323218, leading-zero normalization is fixed, switch curl isolation is fixed, and the new foundation evidence correctly remains NO_RESULT. Those improvements do not prevent synthetic terminal W11 and review success. No runtime qualification, parity result, switch qualification or reviewed NO_GO exists."
+}
