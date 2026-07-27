@@ -55,6 +55,8 @@ class BenchOptionTests(unittest.TestCase):
             args.tokenizer_sha256,
             bench.DEFAULT_TOKENIZER_SHA256,
         )
+        self.assertIsNone(args.output_tokenizer_path)
+        self.assertIsNone(args.output_tokenizer_sha256)
 
     def test_any_invalid_or_missing_rep_fails_the_cell(self):
         bench = load_module()

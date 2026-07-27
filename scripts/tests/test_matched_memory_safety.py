@@ -227,8 +227,9 @@ class MatchedHarnessContractTests(unittest.TestCase):
             + "ca112d42a854923df93db4a6f333a82d",
             source.replace("\\\n", ""),
         )
-        self.assertIn('--tokenizer-path "$TOKENIZER"', source)
-        self.assertIn('--tokenizer-sha256 "$TOKENIZER_SHA256"', source)
+        self.assertIn('--output-tokenizer-path "$TOKENIZER"', source)
+        self.assertIn('--output-tokenizer-sha256 "$TOKENIZER_SHA256"', source)
+        self.assertNotIn('    --tokenizer-path "$TOKENIZER"', source)
         self.assertNotIn("DS4_GLM_TP_DEBUG=0", source)
 
     def test_glm_arm_port_override_is_bounded_and_default_off(self):
