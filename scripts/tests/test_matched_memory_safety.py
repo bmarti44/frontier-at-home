@@ -86,6 +86,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("systemd-run", scheduler)
         self.assertIn("--no-block", scheduler)
         self.assertIn("glm52-headless-foundation.service", scheduler)
+        self.assertIn("OnFailure=display-manager.service", scheduler)
         self.assertIn("trap cleanup EXIT", worker)
         self.assertIn("systemctl stop display-manager.service", worker)
         self.assertIn("systemctl start display-manager.service", worker)
@@ -100,6 +101,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("journalctl -k -n 0 --show-cursor", worker)
         self.assertIn("journalctl -k --after-cursor", worker)
         self.assertIn("NV_ERR_NO_MEMORY", worker)
+        self.assertIn("candidate hash changed", worker)
+        self.assertIn("repository is not clean", worker)
         self.assertIn("--reps 2", worker)
         self.assertNotIn("rm -f -- /home/dsv4/.dsv4-start-hold", worker)
 
