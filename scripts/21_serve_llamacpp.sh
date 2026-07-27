@@ -711,12 +711,18 @@ do_start() {
 
     local budget rc
     set +e
+    watchdog_floor_gib=${DSV4_WATCHDOG_FLOOR_GIB:-18}
+    [[ $watchdog_floor_gib =~ ^[1-9][0-9]*$ ]] \
+        || die 'DSV4_WATCHDOG_FLOOR_GIB must be a positive integer'
     # overhead-gib 6: llama.cpp non-weight footprint for this config (compute
     # buffers at b=2048/ub=512, CUDA context, KV pool) measures 3-5 GiB; 6 keeps
-    # slack without double-counting against the hard 16 GiB floor.
-    # DSV4_MEM_FLOOR_GIB lets a benchmark run relax the projected-free floor
-    # (still well above the 12 GiB watchdog kill line); defaults to 16.
-    mem_floor_gib=${DSV4_MEM_FLOOR_GIB:-16}
+    # slack without double-counting against the hard emergency floor.
+    # Admission may reserve more memory, but never less than the watchdog.
+    mem_floor_gib=${DSV4_MEM_FLOOR_GIB:-$watchdog_floor_gib}
+    [[ $mem_floor_gib =~ ^[1-9][0-9]*$ ]] \
+        || die 'DSV4_MEM_FLOOR_GIB must be a positive integer'
+    (( mem_floor_gib >= watchdog_floor_gib )) \
+        || die 'DSV4_MEM_FLOOR_GIB must not be below DSV4_WATCHDOG_FLOOR_GIB'
     # Measured on the fusion build (2026-07-23): CUDA0 compute buffer is 267
     # MiB at ub=512, KV buffers are MB-scale; overhead 6 is already generous.
     # For ub>512 charge +2 GiB, covering 4x compute-buffer growth plus
@@ -851,7 +857,7 @@ do_start() {
     startup_cleanup_armed=true
     trap on_start_error ERR
     trap on_start_exit EXIT
-    setsid bash "$MEMWATCH" --target-file "$TARGET_FILE" --ready-file "$WATCHDOG_READY" --threshold-gib 12 \
+    setsid bash "$MEMWATCH" --target-file "$TARGET_FILE" --ready-file "$WATCHDOG_READY" --threshold-gib "$watchdog_floor_gib" \
         --interval-sec 1 --log "$MEMWATCH_LOG" >/dev/null 2>&1 &
     memwatch_pid=$!
     memwatch_start_ticks=$(proc_start_ticks "$memwatch_pid") \

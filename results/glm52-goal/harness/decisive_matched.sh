@@ -11,10 +11,16 @@ SEED=${MATCHED_SEED:?MATCHED_SEED is required}
 PORT=8011
 ACTIVE=
 
+wait_full_release() {
+    sudo -n -u dsv4 python3 "$REPO/scripts/03_memory_guard.py" \
+        --required-gib 110 --stable-samples 3 --timeout-seconds 180
+}
+
 restore_dsv4() {
     if [[ $ACTIVE == glm52 ]]; then
         ACTIVE=
     fi
+    wait_full_release || return 1
     sudo -n -u dsv4 env HOME=/home/dsv4 \
         "$REPO/scripts/21_serve_llamacpp.sh" start >/dev/null 2>&1 || true
 }
@@ -30,10 +36,12 @@ sudo -n -u dsv4 chmod 0500 "$GLM_ARM"
 
 sudo -n -u dsv4 env HOME=/home/dsv4 \
     "$REPO/scripts/21_serve_llamacpp.sh" stop
+wait_full_release
 
 run_dsv4() {
     local label=$1 arm_out=$OUT/$label
     sudo -n -u dsv4 mkdir -p -- "$arm_out"
+    wait_full_release
     sudo -n -u dsv4 env HOME=/home/dsv4 \
         "$REPO/scripts/21_serve_llamacpp.sh" start
     ACTIVE=dsv4
@@ -46,15 +54,20 @@ run_dsv4() {
     sudo -n -u dsv4 env HOME=/home/dsv4 \
         "$REPO/scripts/21_serve_llamacpp.sh" stop
     ACTIVE=
+    wait_full_release
 }
 
 run_glm() {
     local label=$1 arm_out=$OUT/$label
+    wait_full_release
     ACTIVE=glm52
     sudo -n -u dsv4 env HOME=/home/dsv4 \
-        GLM_SAFE_KILL_FLOOR_GIB=10 GLM_SAFE_TIMEOUT_S=2400 \
+        GLM_SAFE_KILL_FLOOR_GIB=18 GLM_SAFE_MIN_START_GIB=110 \
+        GLM_SAFE_TIMEOUT_S=2400 \
+        flock -n -E 75 /run/dsv4/inference.lock \
         bash "$SAFE" --tag "$label" -- bash "$GLM_ARM" "$arm_out" "$label" "$SEED"
     ACTIVE=
+    wait_full_release
 }
 
 # Random mapping: odd seed => A is DSV4, B is GLM.

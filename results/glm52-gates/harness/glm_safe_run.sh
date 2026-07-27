@@ -18,6 +18,7 @@
 set -u
 VLIMIT_KB=${GLM_SAFE_VLIMIT_KB:-419430400}  # 400 GiB backstop: engine mmaps the whole GGUF (196.6 GiB VIRTUAL, file-backed, mostly non-resident), so RLIMIT_AS must clear that. Resident-growth protection is the kill-floor sampler below.
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
+MIN_START_GIB=${GLM_SAFE_MIN_START_GIB:-110}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 TAG=run
 if [[ "${1:-}" == --tag ]]; then TAG=$2; shift 2; fi
@@ -29,16 +30,20 @@ mkdir -p "$DIR"
 MAIN="$DIR/main.log"; SAMP="$DIR/samples.log"
 plog() { echo "$(date -Is) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
 
-plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB timeout_s=$TIMEOUT_S"
+plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB min_start_gib=$MIN_START_GIB timeout_s=$TIMEOUT_S"
 plog "cmd: $*"
 plog "host: $(hostname) kernel: $(uname -r)"
 SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 [[ -d $SRC/.git ]] && plog "tree: $(cd $SRC && git log --oneline -1) binary_sha12=$(sha256sum $SRC/ds4-server 2>/dev/null | cut -c1-12)"
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
+python3 /home/bmarti44/spark-deepseek-v4-flash/scripts/03_memory_guard.py \
+  --required-gib "$MIN_START_GIB" --stable-samples 3 --timeout-seconds 0 \
+  >>"$MAIN" || { plog "FATAL insufficient stable memory before launch"; exit 8; }
+
 ulimit -v "$VLIMIT_KB" || { plog "FATAL cannot set ulimit -v"; exit 9; }
 
-( timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" "$@" > "$DIR/cmd.log" 2>&1 ) &
+setsid timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" "$@" > "$DIR/cmd.log" 2>&1 &
 WRAP=$!
 sleep 0.5
 # find the deepest child (the engine) for RSS sampling; fall back to wrapper
