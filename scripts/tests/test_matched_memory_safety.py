@@ -78,6 +78,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("--required-gib 110", source)
         self.assertIn("--stable-samples 3", source)
         self.assertIn("/run/dsv4/inference.lock", source)
+        self.assertIn("MATCHED_BLOCKS:-5", source)
 
     def test_harness_does_not_lower_emergency_floor(self):
         source = HARNESS.read_text(encoding="utf-8")

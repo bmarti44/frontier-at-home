@@ -8,6 +8,8 @@ OUT=/home/dsv4/ds4-project/glm52-decisive-$TAG
 SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 GLM_ARM=/tmp/glm_decisive_arm_$TAG.sh
 SEED=${MATCHED_SEED:?MATCHED_SEED is required}
+BLOCKS=${MATCHED_BLOCKS:-5}
+[[ $BLOCKS =~ ^[1-5]$ ]] || { echo "MATCHED_BLOCKS must be 1-5" >&2; exit 2; }
 PORT=8011
 ACTIVE=
 
@@ -80,7 +82,7 @@ run_arm() {
     fi
 }
 
-for block in 0 1 2 3 4; do
+for ((block=0; block<BLOCKS; block++)); do
     if (( block % 2 == 0 )); then order=ABBA; else order=BAAB; fi
     for sequence in 0 1 2 3; do
         arm=${order:sequence:1}
