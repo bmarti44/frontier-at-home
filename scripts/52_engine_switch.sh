@@ -1,123 +1,290 @@
 #!/usr/bin/env bash
-# 52_engine_switch.sh — one-command switch between serving profiles behind
-# the unchanged auth chain (caddy/tailnet -> authhelper :8010 -> engine :8011).
-#
-#   sudo -u dsv4 scripts/52_engine_switch.sh status
-#   sudo -u dsv4 scripts/52_engine_switch.sh dsv4    # qualified llama.cpp DSV4
-#   sudo -u dsv4 scripts/52_engine_switch.sh glm52   # GLM-5.2 ds4 streaming
-#
-# glm52 profile = the G4a-qualified configuration: upstream ds4 pin+patches
-# (binary recorded in state), persistent expert cache, deterministic batch
-# dispatch, disk-KV prefix cache. memwatch is armed on the engine pid via the
-# repo's 01_memwatch.sh. The OTHER profile's weights/state are never touched.
+# Transactional profile switch for the unchanged :8010 auth chain -> :8011.
 set -Eeuo pipefail
-REPO=/home/bmarti44/spark-deepseek-v4-flash
-SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
-GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
-KVDIR=/home/dsv4/ds4-project/glm52-kvdisk-serve
-STATE=/home/dsv4/ds4-project/engine-switch
-PORT=${ENGINE_PORT:-8011}
-mkdir -p "$STATE" "$KVDIR"
-log() { echo "$(date -Is) $*" | tee -a "$STATE/switch.log"; }
+umask 077
 
-engine_identity() {
-  curl -s --max-time 3 "http://127.0.0.1:$PORT/v1/models" 2>/dev/null \
-    | python3 -c 'import json,sys
+readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
+readonly PROD_STATE=/home/dsv4/ds4-project/engine-switch
+readonly PROD_SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
+readonly PROD_GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
+readonly PROFILE_MANIFEST=$REPO/configs/glm52-profile.json
+readonly GOAL_STATE=$REPO/results/glm52-goal/state.json
+readonly PORT=8011
+readonly AUTH_PORT=8010
+
+if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
+    [[ -n ${ENGINE_SWITCH_TEST_ROOT:-} ]] || {
+        echo "ENGINE_SWITCH_TEST_ROOT is required" >&2; exit 2;
+    }
+    STATE=$ENGINE_SWITCH_TEST_ROOT
+    SRC=$STATE/source
+    GGUF=$STATE/model.gguf
+else
+    unset ENGINE_SWITCH_TEST_ROOT ENGINE_PORT DS4_GLM_TOPK_KEEP \
+        DS4_GLM_TOPK_SKIP_LOAD DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL || true
+    STATE=$PROD_STATE
+    SRC=$PROD_SRC
+    GGUF=$PROD_GGUF
+fi
+readonly STATE SRC GGUF
+readonly ACTIVE=$STATE/active.json
+readonly LOCK=$STATE/switch.lock
+readonly GLM_PROCESS=$STATE/glm52.process.json
+rollback_needed=false
+previous_profile=
+
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+sha256() { sha256sum -- "$1" | awk '{print $1}'; }
+
+json_status() {
+    python3 - "$ACTIVE" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+profile = None
+state = "inactive"
 try:
-    d = json.load(sys.stdin)
-    print(",".join(m["id"] for m in d.get("data", []))[:120])
-except Exception:
-    print("none")' 2>/dev/null || echo none
+    with open(path, encoding="utf-8") as stream:
+        value = json.load(stream)
+    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52"}:
+        profile = value["profile"]
+        state = "recorded"
+except (OSError, ValueError, TypeError):
+    pass
+print(json.dumps({"schema_version": 1, "active_profile": profile, "state": state},
+                 separators=(",", ":"), sort_keys=True))
+PY
 }
 
-stop_all() {
-  log "stopping engines on :$PORT"
-  if [[ -f "$STATE/glm52.pid" ]]; then
-    local p; p=$(cat "$STATE/glm52.pid")
-    if kill -0 "$p" 2>/dev/null; then
-      [[ -f "$STATE/glm52.memwatch.target" && -f "$STATE/glm52.arm" ]] && \
-        cp "$STATE/glm52.arm" "$STATE/glm52.memwatch.target" 2>/dev/null || true
-      kill -TERM "$p" 2>/dev/null || true
-      for i in $(seq 1 60); do kill -0 "$p" 2>/dev/null || break; sleep 2; done
-      kill -KILL "$p" 2>/dev/null || true
-    fi
-    rm -f "$STATE/glm52.pid"
-  fi
-  pkill -TERM -f "llama-server.*--port $PORT" 2>/dev/null || true
-  pkill -TERM -f "ds4-server.*--port $PORT" 2>/dev/null || true
-  sleep 3
-  if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/v1/models"; then
-    log "ERROR: something still listens on :$PORT"; return 1
-  fi
-  # stop any memwatch we armed
-  [[ -f "$STATE/glm52.memwatch.pid" ]] && kill "$(cat "$STATE/glm52.memwatch.pid")" 2>/dev/null || true
-  rm -f "$STATE/glm52.memwatch.pid"
-  return 0
+read_active_profile() {
+    python3 - "$ACTIVE" <<'PY'
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as stream:
+        value = json.load(stream)
+    profile = value.get("profile")
+    print(profile if profile in {"dsv4", "glm52"} else "")
+except (OSError, ValueError, TypeError):
+    print("")
+PY
 }
 
-verify_serving() { # profile expected_identity_regex
-  local code idy t0 t1
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$PORT/v1/models" || true)
-  idy=$(engine_identity)
-  [[ "$code" == 200 ]] || { log "VERIFY FAIL health=$code"; return 1; }
-  echo "$idy" | grep -qE "$2" || { log "VERIFY FAIL identity='$idy' !~ $2"; return 1; }
-  # tailnet-facing auth must still 401 without a key
-  local auth; auth=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8010/health || true)
-  [[ "$auth" == 401 || "$auth" == 200 ]] || { log "VERIFY FAIL authhelper=$auth"; return 1; }
-  t0=$(date +%s%3N)
-  local rc; rc=$(curl -s -o "$STATE/$1.probe.json" -w '%{http_code}' --max-time 1800 \
-    -H 'Content-Type: application/json' \
-    -d '{"model":"default","prompt":"Reply with the single word: ready","max_tokens":4,"temperature":0}' \
-    "http://127.0.0.1:$PORT/v1/completions" || true)
-  t1=$(date +%s%3N)
-  [[ "$rc" == 200 ]] || { log "VERIFY FAIL probe=$rc"; return 1; }
-  log "VERIFY OK profile=$1 identity='$idy' authhelper=$auth probe_ms=$((t1-t0))"
+glm_qualified() {
+    [[ ${ENGINE_SWITCH_TESTING:-0} != 1 ]] || return 1
+    python3 - "$GOAL_STATE" <<'PY'
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as stream:
+        state = json.load(stream)
+    gates = state["gates"]
+    ok = (
+        gates["W11"]["status"] == "PASS"
+        and gates["review"]["status"] == "PASS"
+        and gates["switch"]["status"] == "PASS"
+    )
+except (OSError, KeyError, TypeError, ValueError):
+    ok = False
+raise SystemExit(0 if ok else 1)
+PY
 }
 
-case "${1:-status}" in
-  status)
-    log "status: identity='$(engine_identity)' (:$PORT)"
-    ;;
-  dsv4)
-    stop_all
-    log "starting DSV4 (qualified llama.cpp stack)"
-    "$REPO/scripts/21_serve_llamacpp.sh" start
-    verify_serving dsv4 "deepseek|flash"
-    ;;
-  glm52)
-    stop_all
-    log "starting GLM-5.2 (ds4 streaming, binary $(sha256sum "$SRC/ds4-server" | cut -c1-12))"
-    TF="$STATE/glm52.memwatch.target"; RF="$STATE/glm52.memwatch.ready"
-    rm -f "$TF" "$RF"
-    "$REPO/scripts/01_memwatch.sh" --target-file "$TF" --ready-file "$RF" \
-      --threshold-gib 12 --interval-sec 2 --log "$STATE/glm52.memwatch.log" &
-    echo $! > "$STATE/glm52.memwatch.pid"
-    DS4_GLM_TP_DEBUG=0 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
-      DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
-      DS4_CUDA_EXPERT_CACHE_SLRU=1 \
-      `# DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL REMOVED 2026-07-26: it` \
-      `# produces DEGENERATE OUTPUT on short prompts (A/B: same binary,` \
-      `# same prompt, ctx 8192 -> coherent without it, repetition loops` \
-      `# and broken UTF-8 with it). It was qualified byte-identical only` \
-      `# on a 5047-token fixture. Do not re-enable without a short-prompt` \
-      `# fidelity gate.` \
-      "$SRC/ds4-server" --cuda -m "$GGUF" -c 32768 --host 127.0.0.1 --port $PORT \
-      --ssd-streaming --ssd-streaming-cache-experts 40GB \
-      --kv-disk-dir "$KVDIR" --kv-disk-space-mb 16384 \
-      --kv-cache-boundary-align-tokens 4 \
-      --kv-cache-boundary-trim-tokens 0 \
-      > "$STATE/glm52.server.log" 2>&1 &
-    SP=$!
-    echo "$SP" > "$STATE/glm52.pid"
-    SPG=$(ps -o pgid= -p $SP | tr -d ' '); STK=$(awk '{print $22}' /proc/$SP/stat)
-    echo "$SP $SPG $STK engine" > "$TF"
-    printf 'DISARM %s %s %s\n' "$SP" "$SPG" "$STK" > "$STATE/glm52.arm"
-    for i in $(seq 1 200); do
-      [[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:$PORT/v1/models)" == 200 ]] && break
-      kill -0 $SP 2>/dev/null || { log "GLM server died"; tail -5 "$STATE/glm52.server.log"; exit 1; }
-      sleep 2
+verify_glm_hashes() {
+    python3 - "$PROFILE_MANIFEST" "$SRC/ds4-server" "$GGUF" <<'PY'
+import hashlib, json, sys
+manifest_path, binary_path, model_path = sys.argv[1:]
+with open(manifest_path, encoding="utf-8") as stream:
+    manifest = json.load(stream)
+def digest(path):
+    value = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+if digest(binary_path) != manifest["binary_sha256"]:
+    raise SystemExit("GLM binary hash is not approved")
+if digest(model_path) != manifest["model_sha256"]:
+    raise SystemExit("GLM model hash is not approved")
+if manifest.get("context_cap") != 1048576:
+    raise SystemExit("GLM profile context cap is not 1048576")
+PY
+}
+
+proc_identity() {
+    local pid=$1 line
+    [[ $pid =~ ^[0-9]+$ && $pid -gt 1 && -r /proc/$pid/stat ]] || return 1
+    IFS= read -r line <"/proc/$pid/stat" || return 1
+    line=${line##*) }
+    local -a fields
+    read -r -a fields <<<"$line"
+    [[ ${fields[2]} =~ ^[0-9]+$ && ${fields[19]} =~ ^[0-9]+$ ]] || return 1
+    printf '%s %s\n' "${fields[2]}" "${fields[19]}"
+}
+
+stop_glm_verified() {
+    [[ -f $GLM_PROCESS ]] || return 0
+    local values pid expected_pgid expected_ticks expected_sha current current_pgid current_ticks exe
+    values=$(python3 - "$GLM_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["exe_sha256"])
+PY
+    ) || die "invalid GLM process record"
+    read -r pid expected_pgid expected_ticks expected_sha <<<"$values"
+    current=$(proc_identity "$pid") || {
+        rm -f -- "$GLM_PROCESS"
+        return 0
+    }
+    read -r current_pgid current_ticks <<<"$current"
+    exe=$(readlink -f "/proc/$pid/exe") || die "cannot resolve recorded GLM executable"
+    [[ $current_pgid == "$expected_pgid" && $current_ticks == "$expected_ticks" ]] ||
+        die "stale GLM PID identity; refusing to signal"
+    [[ $(sha256 "$exe") == "$expected_sha" ]] ||
+        die "GLM executable hash changed; refusing to signal"
+    kill -TERM -- "-$expected_pgid"
+    for _ in $(seq 1 60); do
+        [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] && break
+        sleep 2
     done
-    verify_serving glm52 "glm"
-    ;;
-  *) echo "usage: $0 status|dsv4|glm52"; exit 2 ;;
-esac
+    if [[ $(proc_identity "$pid" 2>/dev/null || true) == "$current" ]]; then
+        kill -KILL -- "-$expected_pgid"
+    fi
+    rm -f -- "$GLM_PROCESS"
+}
+
+stop_profile() {
+    case "$1" in
+        dsv4) "$REPO/scripts/21_serve_llamacpp.sh" stop ;;
+        glm52) stop_glm_verified ;;
+        "") return 0 ;;
+        *) die "unknown previous profile $1" ;;
+    esac
+}
+
+start_dsv4() {
+    "$REPO/scripts/21_serve_llamacpp.sh" start
+}
+
+start_glm52() {
+    local kvdir=$STATE/kv pid identity pgid ticks exe_sha
+    mkdir -p -- "$kvdir"
+    DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_CUDA_EXPERT_CACHE_GB=72 \
+    DS4_CUDA_EXPERT_CACHE_PIN=1 DS4_CUDA_FETCH_THREADS=6 \
+    DS4_CUDA_EXPERT_CACHE_SLRU=1 \
+        setsid "$SRC/ds4-server" --cuda -m "$GGUF" -c 1048576 \
+        --host 127.0.0.1 --port "$PORT" --ssd-streaming \
+        --ssd-streaming-cache-experts 40GB --kv-disk-dir "$kvdir" \
+        --kv-disk-space-mb 196608 >"$STATE/glm52.server.log" 2>&1 &
+    pid=$!
+    identity=
+    for _ in $(seq 1 20); do
+        identity=$(proc_identity "$pid" 2>/dev/null || true)
+        [[ -n $identity ]] && break
+        sleep 1
+    done
+    [[ -n $identity ]] || die "GLM startup died before identity capture"
+    read -r pgid ticks <<<"$identity"
+    exe_sha=$(sha256 "$SRC/ds4-server")
+    python3 - "$GLM_PROCESS.tmp" "$pid" "$pgid" "$ticks" "$exe_sha" <<'PY'
+import json, os, sys
+path, pid, pgid, ticks, digest = sys.argv[1:]
+with open(path, "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "pid":int(pid), "pgid":int(pgid),
+               "start_ticks":int(ticks), "exe_sha256":digest}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+    mv -- "$GLM_PROCESS.tmp" "$GLM_PROCESS"
+}
+
+api_key() {
+    local file=${DSV4_API_KEY_FILE:-/run/credentials/dsv4-api-key}
+    [[ -r $file ]] || return 1
+    IFS= read -r REPLY <"$file"
+    [[ -n $REPLY ]]
+}
+
+verify_serving() {
+    local profile=$1 expected unauth code key body
+    expected=deepseek
+    [[ $profile == glm52 ]] && expected=glm
+    body=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
+        return 1
+    python3 - "$expected" "$body" <<'PY'
+import json, sys
+expected=sys.argv[1]
+value=json.loads(sys.argv[2])
+assert any(expected in item["id"].lower() for item in value["data"])
+PY
+    unauth=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
+        "http://127.0.0.1:$AUTH_PORT/health" || true)
+    [[ $unauth == 401 ]] || return 1
+    api_key || return 1
+    key=$REPLY
+    code=$(curl -sS -o "$STATE/probe.json.tmp" -w '%{http_code}' --max-time 1800 \
+        -H "Authorization: Bearer $key" -H 'Content-Type: application/json' \
+        -d '{"model":"default","prompt":"Reply with the single word ready.","max_tokens":4,"temperature":0}' \
+        "http://127.0.0.1:$AUTH_PORT/v1/completions" || true)
+    unset key REPLY
+    [[ $code == 200 ]] || return 1
+    python3 - "$STATE/probe.json.tmp" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value=json.load(stream)
+text=value["choices"][0]["text"].strip().lower()
+assert "ready" in text
+PY
+    mv -- "$STATE/probe.json.tmp" "$STATE/$profile.probe.json"
+}
+
+commit_active() {
+    python3 - "$ACTIVE.tmp" "$1" <<'PY'
+import json, os, sys
+with open(sys.argv[1], "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "profile":sys.argv[2]}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+    mv -- "$ACTIVE.tmp" "$ACTIVE"
+}
+
+rollback() {
+    local rc=$?
+    "$rollback_needed" || return "$rc"
+    rollback_needed=false
+    stop_profile "${1:-}" || true
+    if [[ -n $previous_profile ]]; then
+        "start_$previous_profile" || true
+        if verify_serving "$previous_profile"; then
+            commit_active "$previous_profile"
+        else
+            echo "ROLLBACK VERIFICATION FAILED" >&2
+        fi
+    fi
+    return "$rc"
+}
+
+command=${1:-status}
+if [[ $command == status ]]; then
+    [[ ${2:-} == --json ]] && { json_status; exit 0; }
+    json_status
+    exit 0
+fi
+[[ $command == dsv4 || $command == glm52 ]] || die "usage: $0 status [--json]|dsv4|glm52"
+if [[ $command == glm52 ]] && ! glm_qualified; then
+    die "GLM-5.2 1M profile is not qualified"
+fi
+if [[ $command == glm52 ]]; then verify_glm_hashes; fi
+mkdir -p -- "$STATE"
+exec 9>"$LOCK"
+flock -x 9
+previous_profile=$(read_active_profile)
+if [[ $previous_profile == "$command" ]] && verify_serving "$command"; then
+    exit 0
+fi
+rollback_needed=true
+trap 'rollback "$command"' ERR
+stop_profile "$previous_profile"
+"start_$command"
+verify_serving "$command"
+commit_active "$command"
+rollback_needed=false
+trap - ERR
