@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import hashlib
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -311,6 +312,10 @@ class FormulaTests(unittest.TestCase):
         truncated_failure = json.loads(json.dumps(passing))
         truncated_failure["stages"][-1]["truncated"] = True
         fail_mutations.append(truncated_failure)
+        fake_graduation = json.loads(json.dumps(passing))
+        for stage in fake_graduation["stages"][:3]:
+            stage["processed_tokens"] = 1
+        fail_mutations.append(fake_graduation)
         for index, mutation in enumerate(fail_mutations):
             with self.subTest(fail_mutation=index):
                 self.assertEqual(
@@ -354,6 +359,27 @@ class FormulaTests(unittest.TestCase):
             with self.subTest(gate=gate, scorer=scorer, records=len(records)):
                 with self.assertRaises(ValueError):
                     self.goal.score_registered_gate(gate, scorer, records)
+
+    def test_w11_requires_timestamped_memory_coverage(self):
+        record = w11_record()
+        for index, stage in enumerate(record["stages"]):
+            start = index * 2.0
+            stage["started_at_seconds"] = start
+            stage["finished_at_seconds"] = start + 1.0
+            stage["token_timestamps"] = [
+                start + 0.3 + token * 0.1 for token in range(8)
+            ]
+        record.pop("memory_samples_gib")
+        record["memory_samples"] = [
+            {"timestamp_seconds": index * 0.25, "available_gib": 20.0}
+            for index in range(29)
+        ]
+        self.assertEqual(
+            self.goal.score_registered_gate(
+                "W11", "w11.context.v1", [record]
+            )["verdict"],
+            "PASS",
+        )
 
     def test_registered_parity_scorer_recomputes_five_block_bounds(self):
         rows = []
@@ -879,8 +905,16 @@ class FormulaTests(unittest.TestCase):
             (attempt / "manifest.json").write_text(json.dumps(manifest))
             (attempt / "raw.jsonl").write_text(json.dumps(observation) + "\n")
             (attempt / "summary.json").write_text(json.dumps(summary))
-            with self.assertRaisesRegex(ValueError, "source provenance"):
-                self.goal.validate_attempt(attempt)
+            published = {
+                "round": confirmation["confirmation"]["round"],
+                "randomness": confirmation["confirmation"]["drand_randomness"],
+                "signature": confirmation["confirmation"]["drand_signature"],
+            }
+            with mock.patch.object(
+                self.goal, "_fetch_public_drand", return_value=published
+            ):
+                with self.assertRaisesRegex(ValueError, "source provenance"):
+                    self.goal.validate_attempt(attempt)
 
     def test_w11_raw_identities_must_match_manifest_artifacts(self):
         manifest = {

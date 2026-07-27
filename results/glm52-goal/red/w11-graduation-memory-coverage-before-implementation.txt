@@ -1,0 +1,10 @@
+Candidate under test: bc4ebb89770c176c4cdedb7f900cd865431c8e39
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_registered_w11_scorer_is_derived_from_exact_raw_record scripts.tests.test_glm52_goal.FormulaTests.test_w11_requires_timestamped_memory_coverage
+
+Result: two genuine RED results
+
+- W11 returned PASS when the first 128K, 256K, and 512K stages each processed
+  only one token.
+- W11 had no timestamped memory-sample schema and rejected the preregistered
+  4 Hz coverage records.
