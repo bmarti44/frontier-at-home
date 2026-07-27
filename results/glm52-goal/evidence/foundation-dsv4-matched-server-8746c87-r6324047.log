@@ -1,0 +1,22 @@
+===== llama.cpp session start 2026-07-27T11:47:05Z ctx=32768 =====
+0.00.256.630 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.256.972 W srv  llama_server: -----------------
+0.00.256.974 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.256.975 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.256.975 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.256.975 W srv  llama_server: -----------------
+0.00.258.331 I srv    load_model: loading model '/home/bmarti44/spark-deepseek-v4-flash/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf'
+1.28.074.952 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+1.28.075.548 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+1.28.090.849 I srv  llama_server: model loaded
+1.28.090.855 I srv  llama_server: listening on http://127.0.0.1:8021
+1.33.859.499 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+1.33.859.564 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+1.40.267.614 I slot print_timing: id  0 | task 0 | n_decoded =    100, tg =  17.57 t/s, tg_3s =  17.57 t/s
+1.43.303.677 I slot print_timing: id  0 | task 0 | n_decoded =    152, tg =  17.42 t/s, tg_3s =  17.13 t/s
+1.43.751.198 I slot print_timing: id  0 | task 0 | prompt eval time =     717.11 ms /    52 tokens (   13.79 ms per token,    72.51 tokens per second)
+1.43.751.200 I slot print_timing: id  0 | task 0 |        eval time =    9174.51 ms /   160 tokens (   57.34 ms per token,    17.44 tokens per second)
+1.43.751.200 I slot print_timing: id  0 | task 0 |       total time =    9891.61 ms /   212 tokens
+1.43.751.204 I slot print_timing: id  0 | task 0 |    graphs reused =        156
+1.43.751.242 I slot      release: id  0 | task 0 | stop processing: n_tokens = 211, truncated = 0
+1.50.636.431 I srv    operator(): operator(): cleaning up before exit...

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "sha256": "8746c8725f4b5a6b198de5245748d8216b351c6c7a83bf165201972f97f04301"
+  },
+  "drand_round": 6324047,
+  "seed": 4250036357,
+  "fixture": {
+    "path": "fixtures/ctx-32k.txt",
+    "context_level": 0,
+    "same_generator_seed": true,
+    "glm_prompt_tokens": 61,
+    "dsv4_prompt_tokens": 52
+  },
+  "glm52": {
+    "binary_sha256": "0bbf570bbd7aa6474dd5b5448271754539e6246ac6bcc4f465ed623057cc4e6f",
+    "timing_source": "server_raw_token_log",
+    "completion_tokens": 160,
+    "decode_tokens_per_second": 1.2329060456650962,
+    "ttft_seconds": 52.955777147999925,
+    "minimum_mem_available_gib": 88.197773,
+    "valid": true
+  },
+  "dsv4": {
+    "binary_sha256": "757274c8a23cb297e0a79349bd47fb14c13985a35d37391065a886eeecfd74f4",
+    "timing_source": "sse_content_events",
+    "completion_tokens": 160,
+    "decode_tokens_per_second": 17.331037856480652,
+    "ttft_seconds": 0.7331986730000608,
+    "minimum_mem_available_gib": 22.04,
+    "valid": true
+  },
+  "comparison": {
+    "decode_ratio": 0.07113861592565107,
+    "ttft_ratio": 72.22568602220524,
+    "decode_target_ratio": 0.8,
+    "decode_improvement_factor_needed": 11.24565310550084
+  },
+  "safety": {
+    "kernel_oom_or_xid_records": 0,
+    "swap_used_bytes_after_both_arms": 352256,
+    "server_processes_after_both_arms": 0,
+    "ports_released": true,
+    "mem_available_after_gib": 115.015728,
+    "persistent_maintenance_hold_present": true
+  },
+  "result": "NO_RESULT",
+  "reason": "The arms share the confirmation seed and fixed fixture generator, but only one fresh-server block exists. Five ABBA/BAAB blocks and confidence bounds are required for PASS or reviewed NO_GO."
+}
