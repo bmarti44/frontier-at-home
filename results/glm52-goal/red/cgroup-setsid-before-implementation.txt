@@ -1,0 +1,9 @@
+The unchanged PGID-only wrapper was given an approved candidate that waited
+for attestation, forked, called setsid(), recorded its exact PID, and slept.
+
+The wrapper returned zero while the recorded S-state child remained alive
+outside the original process group. This is AR-064.
+
+Acceptance requires a dedicated cgroup whose control-group stop reaps the
+setsid descendant, plus finite memory.high/memory.max, zero swap, and
+memory.oom.group=1.

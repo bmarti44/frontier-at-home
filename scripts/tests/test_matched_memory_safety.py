@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 GUARD = ROOT / "scripts" / "03_memory_guard.py"
 HARNESS = ROOT / "results" / "glm52-goal" / "harness" / "decisive_matched.sh"
 GLM_SAFE = ROOT / "results" / "glm52-gates" / "harness" / "glm_safe_run.sh"
+GLM_CGROUP = ROOT / "results" / "glm52-gates" / "harness" / "glm_cgroup_run.sh"
 DSV4_LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
 
@@ -148,6 +149,17 @@ class MatchedHarnessContractTests(unittest.TestCase):
             "SRC=/home/dsv4/ds4-project/src/ds4-upstream-master",
             source,
         )
+
+    def test_cgroup_launcher_contains_setsid_descendants_and_memory(self):
+        source = GLM_CGROUP.read_text(encoding="utf-8")
+        self.assertIn("systemd-run --user --wait --collect", source)
+        self.assertIn("KillMode=control-group", source)
+        self.assertIn("MemoryHigh=", source)
+        self.assertIn("MemoryMax=", source)
+        self.assertIn("MemorySwapMax=0", source)
+        self.assertIn("OOMPolicy=kill", source)
+        self.assertIn("systemctl --user stop", source)
+        self.assertIn("GLM_SAFE_REQUIRE_CGROUP=1", source)
 
     def test_production_watchdog_reserves_18_gib(self):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")
