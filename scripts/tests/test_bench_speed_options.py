@@ -252,6 +252,71 @@ class BenchOptionTests(unittest.TestCase):
             bench.raw_timing_envelope_errors(10.0, 20.0, 20.0)
         )
 
+    def test_rep_preserves_client_timestamps_and_exact_output_identities(self):
+        bench = load_module()
+
+        class Encoding:
+            def __init__(self, ids):
+                self.ids = ids
+
+        class Tokenizer:
+            def encode(self, text, add_special_tokens=False):
+                return Encoding(list(range(len(text))))
+
+        timestamps_ns = [2_000_000_000 + index * 10_000_000 for index in range(128)]
+        reasoning = "x" * 128
+
+        class Client:
+            def stream_chat(self, payload):
+                return {
+                    "response_id": "chatcmpl-evidence",
+                    "request_sha256": "a" * 64,
+                    "request_started_ns": 1_000_000_000,
+                    "first_content_at_ns": timestamps_ns[0],
+                    "last_content_at_ns": timestamps_ns[-1],
+                    "generated_text": reasoning,
+                    "generated_reasoning": reasoning,
+                    "generated_content": "",
+                    "usage": {"completion_tokens": 128, "prompt_tokens": 32},
+                    "done": True,
+                    "data_chunks": 130,
+                    "token_timestamps_ns": timestamps_ns,
+                }
+
+        with mock.patch.object(bench, "make_preamble", return_value="p"):
+            rep = bench.run_rep(
+                Client(),
+                Tokenizer(),
+                Tokenizer(),
+                "deepseek-v4-flash",
+                "",
+                0,
+                1,
+                False,
+                max_tokens=128,
+                min_completion_tokens=128,
+            )
+
+        self.assertTrue(rep["valid"])
+        self.assertEqual(rep["response_id"], "chatcmpl-evidence")
+        self.assertEqual(rep["request_sha256"], "a" * 64)
+        self.assertEqual(rep["client_request_started_ns"], 1_000_000_000)
+        self.assertEqual(rep["client_first_content_ns"], timestamps_ns[0])
+        self.assertEqual(rep["client_last_content_ns"], timestamps_ns[-1])
+        self.assertEqual(rep["sse_token_timestamps_ns"], timestamps_ns)
+        self.assertEqual(rep["token_timestamps_ns"], timestamps_ns)
+        self.assertEqual(
+            rep["generated_reasoning_sha256"],
+            hashlib.sha256(reasoning.encode("utf-8")).hexdigest(),
+        )
+        self.assertEqual(rep["generated_reasoning_bytes"], 128)
+        self.assertEqual(
+            rep["generated_content_sha256"],
+            hashlib.sha256(b"").hexdigest(),
+        )
+        self.assertEqual(rep["generated_content_bytes"], 0)
+        self.assertIsNone(rep["raw_client_timing_ratio"])
+
     def test_fabricated_raw_timing_cannot_make_short_output_valid(self):
         bench = load_module()
 
