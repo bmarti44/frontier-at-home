@@ -21,6 +21,7 @@ DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
 GLM_BUILD = ROOT / "configs/build-manifests/glm52-ds4-repro.json"
 GLM_BUILD_SCRIPT = ROOT / "scripts/11_build_glm52_repro.sh"
 INSTALLER = ROOT / "scripts/41_install_service.sh"
+RESTORE_SERVICE = ROOT / "configs/systemd/dsv4-engine-restore.service"
 
 
 class EngineSwitchTests(unittest.TestCase):
@@ -80,6 +81,39 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("Environment=DSV4_PORT=8013", service)
         self.assertIn("upstream_port=8013", installer)
         self.assertNotIn("readonly PORT=8011", source)
+
+    def test_switch_runs_deepseek_as_engine_user_with_frozen_profile(self):
+        source = SCRIPT.read_text()
+        self.assertIn("/usr/sbin/runuser -u dsv4 --", source)
+        for setting in (
+            "DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/"
+            "llama.cpp-fusion/build/bin/llama-server",
+            "DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json",
+            "DSV4_MEM_FLOOR_GIB=18",
+            "DSV4_WATCHDOG_FLOOR_GIB=18",
+            "DSV4_UBATCH=2048",
+            "DSV4_BATCH=2048",
+            "DSV4_UBATCH_LARGE=1",
+            "CTX=65536",
+            "DSV4_PARALLEL=2",
+            "DSV4_NO_MMAP=1",
+            "DSV4_SPEC_TYPE=ngram-map-k4v",
+        ):
+            self.assertIn(setting, source)
+        self.assertIn(
+            "DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key", source
+        )
+
+    def test_selected_profile_has_a_boot_restore_unit(self):
+        source = SCRIPT.read_text()
+        installer = INSTALLER.read_text()
+        unit = RESTORE_SERVICE.read_text()
+        self.assertIn("status [--json]|restore|dsv4|glm52", source)
+        self.assertIn('if [[ $command == restore ]]', source)
+        self.assertIn("dsv4-engine-restore.service", installer)
+        self.assertIn("52_engine_switch.sh restore", unit)
+        self.assertIn("WantedBy=multi-user.target", unit)
+        self.assertIn("After=dsv4-authhelper.service", unit)
 
     def test_frozen_profiles_pin_the_verified_production_candidates(self):
         glm = json.loads(GLM_PROFILE.read_text())
