@@ -175,6 +175,12 @@ class MatchedHarnessContractTests(unittest.TestCase):
         restart_check_index = guard.index("/usr/sbin/runuser")
         self.assertLess(hold_index, restart_check_index)
 
+    def test_launcher_port_override_is_bounded_and_default_off(self):
+        source = DSV4_LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("DSV4_PORT:-8011", source)
+        self.assertIn("DSV4_PORT must be an integer from 1024 through 65535", source)
+        self.assertIn("port < 1024 || port > 65535", source)
+
     def test_candidate_source_override_is_explicit_and_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
         self.assertIn("GLM_CANDIDATE_SRC:-", source)
