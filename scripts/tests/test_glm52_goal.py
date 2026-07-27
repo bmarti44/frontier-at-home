@@ -1018,10 +1018,15 @@ class FormulaTests(unittest.TestCase):
 
     def test_w11_retrieval_expectations_are_bound_to_fixture(self):
         record = w11_record()
+        candidate = "a" * 40
+        seed = "b" * 64
         with tempfile.TemporaryDirectory() as tmp:
             fixture_path = Path(tmp) / "fixture.json"
             fixture = {
                 "schema_version": 1,
+                "candidate_hash": candidate,
+                "seed_sha256": seed,
+                "generator_version": "w11-fixture.v1",
                 "context_cap": 1_048_576,
                 "stage_context_caps": [131_072, 262_144, 524_288, 1_048_576],
                 "retrieval_cases": [
@@ -1057,6 +1062,8 @@ class FormulaTests(unittest.TestCase):
             manifest["fixture_sha256"] = hashlib.sha256(
                 fixture_path.read_bytes()
             ).hexdigest()
+            manifest["candidate_hash"] = candidate
+            manifest["lineage"] = {"randomness": {"seed_sha256": seed}}
             record["fixture_sha256"] = manifest["fixture_sha256"]
             with self.assertRaisesRegex(ValueError, "fixture retrieval"):
                 self.goal.validate_record_artifact_bindings(

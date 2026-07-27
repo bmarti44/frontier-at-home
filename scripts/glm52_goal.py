@@ -746,6 +746,9 @@ def validate_record_artifact_bindings(
         fixture,
         {
             "schema_version",
+            "candidate_hash",
+            "seed_sha256",
+            "generator_version",
             "context_cap",
             "stage_context_caps",
             "retrieval_cases",
@@ -755,6 +758,19 @@ def validate_record_artifact_bindings(
     )
     if fixture["schema_version"] != 1 or fixture["context_cap"] != 1_048_576:
         raise ValueError("W11 fixture schema or context cap is invalid")
+    lineage = manifest.get("lineage")
+    expected_seed = (
+        lineage.get("randomness", {}).get("seed_sha256")
+        if isinstance(lineage, dict)
+        and isinstance(lineage.get("randomness"), dict)
+        else None
+    )
+    if fixture["candidate_hash"] != manifest.get("candidate_hash"):
+        raise ValueError("W11 fixture candidate does not match manifest")
+    if not _is_sha256(expected_seed) or fixture["seed_sha256"] != expected_seed:
+        raise ValueError("W11 fixture seed does not match manifest lineage")
+    if fixture["generator_version"] != "w11-fixture.v1":
+        raise ValueError("W11 fixture generator is not registered")
     expected_caps = [131_072, 262_144, 524_288, 1_048_576]
     if fixture["stage_context_caps"] != expected_caps:
         raise ValueError("W11 fixture stage graduation is invalid")
