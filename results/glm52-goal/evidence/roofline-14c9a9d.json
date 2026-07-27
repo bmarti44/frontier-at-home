@@ -1,0 +1,46 @@
+{
+  "formula_version": 1,
+  "assumptions": {
+    "loader_time_removed_completely": true,
+    "measured_moe_time_replaced_by_physical_read_floor": true,
+    "expert_mib_per_layer_lower_bound": 74.0,
+    "routed_layers": 75,
+    "memory_bandwidth_gb_s_upper_bound": 273.0
+  },
+  "measurements": {
+    "dsv4_decode_tok_s": 11.417449108913278,
+    "clean_glm_wall_ms_per_token": 473.7591558238994,
+    "loader_ms_per_token_removed": 243.61572327044027,
+    "measured_moe_ms_per_token_replaced": 101.83673584905661,
+    "non_loader_non_moe_ms_per_token": 128.3066967044025,
+    "physical_expert_read_floor_ms": 21.317204395604396,
+    "indexer_1m_read_floor_ms": 39.38461538461539
+  },
+  "roofline": {
+    "required_80_percent_tok_s": 9.133959287130622,
+    "optimistic_short_context_tok_s": 6.6834241899067415,
+    "optimistic_short_context_ratio": 0.5853692997579628,
+    "optimistic_1m_tok_s": 5.290766885000973,
+    "optimistic_1m_ratio": 0.4633930779573715
+  },
+  "decision": "NO_GO",
+  "memory": {
+    "clean_min_gib": 28.94890594482422,
+    "loader_profile_min_gib": 28.970401763916016,
+    "moe_profile_min_gib": 28.91286849975586
+  },
+  "checks": {
+    "all_memory_at_least_10_gib": true,
+    "at_least_128_intervals": true,
+    "roofline_below_80_percent": true
+  },
+  "artifacts": {
+    "/home/dsv4/ds4-project/dsv4-matched-01b5c58-r6322989.json": "56aa9f7f6bdc66f85d39ca3707657af5edf17e58e561080410dad917cae75732",
+    "/home/dsv4/ds4-project/glm52-cache64-clean-14c9a9d-r6323020/result.json": "ee517762584c6b2cac2119e9154f46562b421d2ae5f4c2210f639cabf3a17fe1",
+    "/home/dsv4/ds4-project/glm52-roofline-cache64-01b5c58-r6323012/server.log": "ae269209808361aa2802a6f82cd394957f2da3dc3155cc2aef944591e10e55d6",
+    "/home/dsv4/ds4-project/glm52-roofline-moe64-14c9a9d-r6323027/server.log": "f776fa0af19d66bf5cf35baf0d0575fae8a7bc30fa0101a06e1f008c7a23fa80",
+    "/home/dsv4/ds4-project/glm52-crashlog/20260726-230737-cache64-clean-14c9a9d-r6323020/samples.log": "1d8fcd7c913052962e13f85b9bb119dd98d4f447e7528130656ac8e24b00ef70",
+    "/home/dsv4/ds4-project/glm52-crashlog/20260726-230339-roofline-cache64-01b5c58-r6323012/samples.log": "3755ab94c530fc91b4b5d84c2eb1bde34670fe461b61aa634132d961456b2a58",
+    "/home/dsv4/ds4-project/glm52-crashlog/20260726-231106-roofline-moe64-14c9a9d-r6323027/samples.log": "828183dd5810d4917ce4bf3eb1c0471bee336bdb2ba73fb793ea709014826b70"
+  }
+}
