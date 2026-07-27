@@ -8,7 +8,6 @@ readonly PROD_STATE=/home/dsv4/ds4-project/engine-switch
 readonly PROD_SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
 readonly PROD_GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-profile.json
-readonly GOAL_STATE=$REPO/results/glm52-goal/state.json
 readonly PORT=8011
 readonly AUTH_PORT=8010
 
@@ -71,21 +70,7 @@ PY
 
 glm_qualified() {
     [[ ${ENGINE_SWITCH_TESTING:-0} != 1 ]] || return 1
-    python3 - "$GOAL_STATE" <<'PY'
-import json, sys
-try:
-    with open(sys.argv[1], encoding="utf-8") as stream:
-        state = json.load(stream)
-    gates = state["gates"]
-    ok = (
-        gates["W11"]["status"] == "PASS"
-        and gates["review"]["status"] == "PASS"
-        and gates["switch"]["status"] == "PASS"
-    )
-except (OSError, KeyError, TypeError, ValueError):
-    ok = False
-raise SystemExit(0 if ok else 1)
-PY
+    "$REPO/scripts/glm52_goal.py" release-check --json >/dev/null
 }
 
 verify_glm_hashes() {

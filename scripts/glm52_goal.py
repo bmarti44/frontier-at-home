@@ -545,11 +545,12 @@ def _load_state(state_dir: Path) -> dict[str, Any]:
         _atomic_json(path, state)
         return state
     try:
-        state = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        state = _read_strict_json(path)
+    except (OSError, ValueError) as exc:
         raise GoalError(f"cannot read state: {exc}") from exc
     _validate_state(state)
     if _ingest_attempts(state_dir, state):
+        _validate_state(state)
         state["updated_at"] = _utcnow()
         _atomic_json(path, state)
     return state
@@ -571,10 +572,19 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
             gate["attempts"] = relative
             changed = True
         if not attempts:
+            if gate["status"] in TERMINAL_STATUSES:
+                raise GoalError(f"{name}: terminal evidence attempt disappeared")
             continue
         latest = attempts[-1]
         try:
+            if not latest.name.startswith("attempt-") or not latest.name[8:].isdigit():
+                raise ValueError("attempt directory name is invalid")
             validate_attempt(latest)
+            manifest = _read_strict_json(latest / "manifest.json")
+            if manifest.get("gate") != name:
+                raise ValueError(
+                    f"manifest gate {manifest.get('gate')!r} does not match {name!r}"
+                )
             summary = _read_strict_json(latest / "summary.json")
             status = summary["verdict"]
             reason = summary.get("reason")
@@ -586,6 +596,44 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
             gate["reason"] = reason
             changed = True
     return changed
+
+
+def _release_verdict(state_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    failed: list[str] = []
+    gates = state["gates"]
+    if gates["foundation"]["status"] != "PASS":
+        failed.append("foundation")
+    for name in (f"W{index}" for index in range(1, 12)):
+        if gates[name]["status"] not in TERMINAL_STATUSES:
+            failed.append(name)
+    if gates["W11"]["status"] != "PASS":
+        failed.append("W11")
+    for name in ("switch", "review"):
+        if gates[name]["status"] != "PASS":
+            failed.append(name)
+    parity_ok = gates["parity"]["status"] == "PASS"
+    parity_no_go = False
+    if gates["parity"]["status"] == "FAIL" and gates["parity"]["attempts"]:
+        attempt = state_dir / gates["parity"]["attempts"][-1]
+        try:
+            summary = _read_strict_json(attempt / "summary.json")
+            parity_no_go = (
+                summary.get("decision") == "NO_GO"
+                and summary.get("independently_reviewed") is True
+            )
+        except ValueError:
+            parity_no_go = False
+    if not (parity_ok or parity_no_go):
+        failed.append("parity")
+    unique_failed = list(dict.fromkeys(failed))
+    return {
+        "schema_version": 1,
+        "release_qualified": not unique_failed,
+        "failed_requirements": unique_failed,
+        "parity_decision": (
+            "PASS" if parity_ok else "NO_GO" if parity_no_go else "UNPROVEN"
+        ),
+    }
 
 
 def _selected_gate(state: dict[str, Any]) -> str | None:
@@ -684,6 +732,8 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("resume")
     status = subparsers.add_parser("status")
     status.add_argument("--json", action="store_true")
+    release = subparsers.add_parser("release-check")
+    release.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
         state = _load_state(args.state_dir)
@@ -696,6 +746,18 @@ def main(argv: list[str] | None = None) -> int:
                 for name in GATE_ORDER:
                     print(f"{name}: {state['gates'][name]['status']}")
             return 0
+        if args.command == "release-check":
+            verdict = _release_verdict(args.state_dir, state)
+            if args.json:
+                print(json.dumps(verdict, sort_keys=True, allow_nan=False))
+            else:
+                print(
+                    "qualified"
+                    if verdict["release_qualified"]
+                    else "not qualified: "
+                    + ",".join(verdict["failed_requirements"])
+                )
+            return 0 if verdict["release_qualified"] else 1
         print(
             json.dumps(
                 _dispatch(args.state_dir, args.command),
