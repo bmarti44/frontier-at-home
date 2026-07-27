@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "result": "FAIL",
+  "candidate_hash": "23506c5bd12595fb839c79b8cd42adf52e300c94",
+  "boot_id": "825cf7d9-cec4-4a9a-8304-91578a98a6d2",
+  "started_at": "2026-07-27T11:10:23Z",
+  "profile": "dsv4",
+  "reason": "the production launcher attempted its default port 8011, which was already held by the preserved loraforge endpoint",
+  "observations": {
+    "launcher_reported_temporary_pid": 11446,
+    "server_log_error": "couldn't bind HTTP server socket, hostname: 127.0.0.1, port: 8011",
+    "watchdog_result": "FAIL_CLOSED reason=missing_invalid_or_unverifiable_armed_target",
+    "engine_alive_after_attempt": false,
+    "model_loaded": false,
+    "oom": false,
+    "xid": false,
+    "minimum_available_memory_gib": 114.9
+  },
+  "corrective_action": "added a bounded default-off DSV4_PORT override and retained the existing listener"
+}
