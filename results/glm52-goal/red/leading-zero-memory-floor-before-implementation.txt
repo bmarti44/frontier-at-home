@@ -1,0 +1,9 @@
+Candidate under test: e63c40c2f170ff760d6e2f5682bb81457efebcbe
+Command:
+  python3 -m unittest scripts.tests.test_matched_memory_safety.MatchedHarnessContractTests.test_glm_wrapper_rejects_unsafe_safety_overrides scripts.tests.test_matched_memory_safety.MatchedHarnessContractTests.test_production_watchdog_reserves_18_gib
+
+Result: two genuine RED results
+
+GLM_SAFE_KILL_FLOOR_GIB=09 reached Bash arithmetic as invalid octal and the
+wrapper continued past its range check. The DeepSeek launcher likewise had
+no explicit base-10 normalization before arithmetic.

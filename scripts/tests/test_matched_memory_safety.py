@@ -116,6 +116,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
             ("GLM_SAFE_VLIMIT_KB", "999999999"),
             ("GLM_SAFE_VLIMIT_KB", "9" * 100),
             ("GLM_SAFE_KILL_FLOOR_GIB", "0"),
+            ("GLM_SAFE_KILL_FLOOR_GIB", "09"),
             ("GLM_SAFE_MIN_START_GIB", "0"),
             ("GLM_SAFE_TIMEOUT_S", "3601"),
         ):
@@ -148,6 +149,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("watchdog_floor_gib > 64", source)
         self.assertIn("mem_floor_gib < 18", source)
         self.assertIn("--interval-sec 0.25", source)
+        self.assertIn("10#$watchdog_floor_gib", source)
+        self.assertIn("10#$mem_floor_gib", source)
 
     def test_candidate_source_override_is_explicit_and_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
