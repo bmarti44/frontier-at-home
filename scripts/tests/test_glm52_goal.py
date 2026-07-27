@@ -1069,6 +1069,47 @@ class FormulaTests(unittest.TestCase):
                         gate, manifest, records
                     )
 
+    def test_foundation_and_parity_reject_unapproved_dsv4_reference(self):
+        candidate = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            check=True,
+        ).stdout.strip()
+        manifest = {
+            "candidate_hash": candidate,
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        glm = {
+            "profile": "glm52",
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        dsv4 = {
+            "profile": "dsv4",
+            "binary_sha256": "d" * 64,
+            "configuration_sha256": "e" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        records_by_gate = {
+            "foundation": [
+                {"glm_baseline": glm, "dsv4_baseline": dsv4}
+            ],
+            "parity": [glm, dsv4],
+        }
+        for gate, records in records_by_gate.items():
+            with self.subTest(gate=gate):
+                with self.assertRaisesRegex(
+                    ValueError, "approved DeepSeek profile"
+                ):
+                    self.goal.validate_record_artifact_bindings(
+                        gate, manifest, records
+                    )
+
     def test_candidate_binary_model_and_profile_are_pinned(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
