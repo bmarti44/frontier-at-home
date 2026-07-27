@@ -96,7 +96,15 @@ def _finite_positive(values: Iterable[float], label: str) -> list[float]:
 
 def decode_tokens_per_second(token_timestamps: Iterable[float]) -> float:
     """Return (N-1)/(tN-t1), requiring at least 128 emitted tokens."""
-    timestamps = [float(value) for value in token_timestamps]
+    timestamps = []
+    for value in token_timestamps:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError("token timestamps must be exact numeric values")
+        try:
+            timestamp = float(value)
+        except OverflowError as exc:
+            raise ValueError("token timestamp is outside the numeric range") from exc
+        timestamps.append(timestamp)
     if len(timestamps) < 128:
         raise ValueError("decode requires at least 128 token timestamps")
     if any(not math.isfinite(value) for value in timestamps):
@@ -209,9 +217,27 @@ def context_verdict(observation: dict[str, Any]) -> dict[str, Any]:
         value = observation[field]
         if not isinstance(value, int) or isinstance(value, bool):
             raise ValueError(f"{field} must be an exact integer")
-    memory = float(observation["available_memory_gib"])
+    memory_value = observation["available_memory_gib"]
+    if isinstance(memory_value, bool) or not isinstance(
+        memory_value, (int, float)
+    ):
+        raise ValueError("available memory must be an exact numeric value")
+    try:
+        memory = float(memory_value)
+    except OverflowError as exc:
+        raise ValueError("available memory is outside the numeric range") from exc
     if not math.isfinite(memory):
         raise ValueError("available memory is non-finite")
+    for field in (
+        "retrieval_pass",
+        "negative_control_pass",
+        "completed_generation",
+        "truncated",
+        "oom",
+        "xid",
+    ):
+        if not isinstance(observation[field], bool):
+            raise ValueError(f"{field} must be boolean")
     checks = {
         "context_cap": observation["context_cap"] == 1_048_576,
         "processed_tokens": observation["processed_tokens"] >= 1_000_000,
@@ -326,9 +352,7 @@ def validate_raw_record(record: dict[str, Any]) -> None:
     evaluated = record.get("evaluated_tokens")
     if not isinstance(evaluated, int) or isinstance(evaluated, bool) or evaluated <= 0:
         raise ValueError("evaluated_tokens must be a positive integer")
-    seconds = float(record.get("prefill_seconds", math.nan))
-    if not math.isfinite(seconds) or seconds <= 0:
-        raise ValueError("prefill_seconds must be finite and positive")
+    _finite_number(record.get("prefill_seconds"), "prefill_seconds")
     if record.get("failures") != []:
         raise ValueError("measurement record contains failures")
 
@@ -403,7 +427,10 @@ def _require_exact_keys(
 def _finite_number(value: Any, label: str, *, minimum: float = 0.0) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{label} must be numeric")
-    result = float(value)
+    try:
+        result = float(value)
+    except OverflowError as exc:
+        raise ValueError(f"{label} is outside the numeric range") from exc
     if not math.isfinite(result) or result <= minimum:
         raise ValueError(f"{label} must be finite and greater than {minimum}")
     return result
@@ -928,6 +955,82 @@ def _read_strict_json(path: Path) -> Any:
         raise ValueError(f"invalid {path.name}: {exc}") from exc
 
 
+def _utc_timestamp(value: Any, label: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be an ISO-8601 string")
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"{label} is not valid ISO-8601") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() != timezone.utc.utcoffset(parsed):
+        raise ValueError(f"{label} must carry an explicit UTC offset")
+    return parsed
+
+
+def validate_manifest_lineage(
+    lineage: Any, gate: str, candidate_hash: str
+) -> None:
+    """Require public randomness obtained strictly after the candidate freeze."""
+    if not isinstance(lineage, dict):
+        raise ValueError("manifest lineage must be an object")
+    _require_exact_keys(lineage, {"freeze", "randomness"}, "manifest lineage")
+    freeze = lineage["freeze"]
+    randomness = lineage["randomness"]
+    if not isinstance(freeze, dict) or not isinstance(randomness, dict):
+        raise ValueError("freeze and randomness lineage must be objects")
+    _require_exact_keys(
+        freeze, {"candidate_hash", "frozen_at"}, "freeze lineage"
+    )
+    _require_exact_keys(
+        randomness,
+        {
+            "source",
+            "round",
+            "randomness",
+            "signature",
+            "obtained_at",
+            "seed_sha256",
+        },
+        "randomness lineage",
+    )
+    if freeze["candidate_hash"] != candidate_hash:
+        raise ValueError("freeze lineage candidate does not match manifest")
+    frozen_at = _utc_timestamp(freeze["frozen_at"], "frozen_at")
+    obtained_at = _utc_timestamp(randomness["obtained_at"], "obtained_at")
+    if obtained_at <= frozen_at:
+        raise ValueError("public randomness was not obtained after the freeze")
+    if randomness["source"] != "drand-default":
+        raise ValueError("randomness source is not the registered drand chain")
+    round_number = randomness["round"]
+    if (
+        not isinstance(round_number, int)
+        or isinstance(round_number, bool)
+        or round_number < 1
+    ):
+        raise ValueError("drand round must be a positive integer")
+    beacon_unix = 1_595_431_050 + (round_number - 1) * 30
+    beacon_time = datetime.fromtimestamp(beacon_unix, timezone.utc)
+    if beacon_time <= frozen_at:
+        raise ValueError("drand round was published before the candidate freeze")
+    if obtained_at < beacon_time:
+        raise ValueError("obtained_at predates the drand round publication")
+    signature = randomness["signature"]
+    if not (
+        isinstance(signature, str)
+        and len(signature) == 192
+        and all(character in "0123456789abcdef" for character in signature)
+    ):
+        raise ValueError("drand signature is invalid")
+    expected_randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
+    if randomness["randomness"] != expected_randomness:
+        raise ValueError("drand randomness is not SHA-256(signature)")
+    expected_seed = hashlib.sha256(
+        f"{candidate_hash}:{expected_randomness}:{gate}".encode()
+    ).hexdigest()
+    if randomness["seed_sha256"] != expected_seed:
+        raise ValueError("confirmation seed derivation is invalid")
+
+
 def validate_attempt(attempt: Path) -> None:
     """Validate the mandatory evidence triplet without trusting narration."""
     if not attempt.is_dir():
@@ -954,6 +1057,23 @@ def validate_attempt(attempt: Path) -> None:
         and all(char in "0123456789abcdef" for char in candidate_hash)
     ):
         raise ValueError("manifest candidate_hash is invalid")
+    candidate_check = subprocess.run(
+        ["git", "cat-file", "-e", f"{candidate_hash}^{{commit}}"],
+        cwd=ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        env={
+            "HOME": os.environ.get("HOME", ""),
+            "PATH": os.environ.get("PATH", ""),
+            "LANG": "C.UTF-8",
+        },
+    )
+    if candidate_check.returncode != 0:
+        raise ValueError("manifest candidate_hash is not a repository commit")
+    validate_manifest_lineage(
+        manifest.get("lineage"), manifest["gate"], candidate_hash
+    )
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, dict):
         raise ValueError("manifest artifacts map is missing")
@@ -1022,6 +1142,11 @@ def validate_attempt(attempt: Path) -> None:
     ):
         raise ValueError("scorer descriptor does not match fixed implementation")
     recomputed = score_registered_gate(manifest["gate"], scorer_id, records)
+    if (
+        manifest["gate"] == "review"
+        and recomputed.get("candidate_hash") != candidate_hash
+    ):
+        raise ValueError("review candidate does not match manifest candidate")
     if summary != recomputed:
         raise ValueError("summary does not exactly match fixed scorer output")
 

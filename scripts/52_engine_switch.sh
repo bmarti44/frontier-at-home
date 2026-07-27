@@ -196,7 +196,8 @@ wait_model_ready() {
 import json, sys
 expected, raw = sys.argv[1:]
 value = json.loads(raw)
-assert any(expected == item["id"].lower() for item in value["data"])
+if not any(expected == item["id"].lower() for item in value["data"]):
+    raise SystemExit("exact model identity mismatch")
 PY
         then
             return 0
@@ -223,7 +224,8 @@ verify_serving() {
 import json, sys
 expected=sys.argv[1]
 value=json.loads(sys.argv[2])
-assert any(expected == item["id"].lower() for item in value["data"])
+if not any(expected == item["id"].lower() for item in value["data"]):
+    raise SystemExit("exact model identity mismatch")
 PY
     unauth=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -241,7 +243,8 @@ import json, sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     value=json.load(stream)
 text=value["choices"][0]["text"].strip().lower()
-assert "ready" in text
+if "ready" not in text:
+    raise SystemExit("semantic readiness probe failed")
 PY
     mv -- "$STATE/probe.json.tmp" "$STATE/$profile.probe.json"
 }

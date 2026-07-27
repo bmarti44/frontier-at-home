@@ -255,6 +255,16 @@ class FormulaTests(unittest.TestCase):
             ("W11", "unknown", [passing]),
             ("W11", "w11.context.v1", [passing, passing]),
             ("W11", "w11.context.v1", [{**passing, "unexpected": True}]),
+            (
+                "W11",
+                "w11.context.v1",
+                [{**passing, "available_memory_gib": "10.0"}],
+            ),
+            (
+                "W11",
+                "w11.context.v1",
+                [{**passing, "available_memory_gib": 10**10000}],
+            ),
         ):
             with self.subTest(gate=gate, scorer=scorer, records=len(records)):
                 with self.assertRaises(ValueError):
@@ -306,6 +316,14 @@ class FormulaTests(unittest.TestCase):
             )["verdict"],
             "FAIL",
         )
+        malformed = [dict(row) for row in rows]
+        malformed[0]["token_timestamps"] = [
+            str(value) for value in malformed[0]["token_timestamps"]
+        ]
+        with self.assertRaisesRegex(ValueError, "exact numeric"):
+            self.goal.score_registered_gate(
+                "parity", "parity.performance.v1", malformed
+            )
         for mutation in ("short", "duplicate_boot", "wrong_profile", "oom"):
             malformed = [dict(row) for row in rows]
             if mutation == "short":
@@ -503,14 +521,14 @@ class FormulaTests(unittest.TestCase):
         lineage = {
             "freeze": {
                 "candidate_hash": candidate,
-                "frozen_at": "2026-07-27T00:00:00+00:00",
+                "frozen_at": "2026-07-27T03:59:00+00:00",
             },
             "randomness": {
                 "source": "drand-default",
                 "round": 6_323_125,
                 "randomness": randomness,
                 "signature": signature,
-                "obtained_at": "2026-07-27T00:01:00+00:00",
+                "obtained_at": "2026-07-27T04:00:00+00:00",
                 "seed_sha256": seed,
             },
         }
@@ -581,7 +599,10 @@ class FormulaTests(unittest.TestCase):
                     }
                 )
             )
-            with self.assertRaisesRegex(ValueError, "terminal scorer"):
+            with self.assertRaisesRegex(
+                ValueError,
+                "repository commit|manifest lineage|terminal scorer",
+            ):
                 self.goal.validate_attempt(attempt)
             (attempt / "raw.jsonl").write_text("")
             with self.assertRaises(ValueError):

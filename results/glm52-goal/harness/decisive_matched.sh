@@ -31,17 +31,19 @@ restore_dsv4() {
     python3 - "$status" <<'PY' || return 1
 import json, sys
 value = json.loads(sys.argv[1])
-assert value["server_alive"] is True
-assert value["memwatch_alive"] is True
-assert value["watchdog_armed"] is True
-assert value["healthy"] is True
+required = ("server_alive", "memwatch_alive", "watchdog_armed", "healthy")
+if not all(value.get(field) is True for field in required):
+    raise SystemExit("DeepSeek supervision or health is not verified")
 PY
     models=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
     python3 - "$models" <<'PY' || return 1
 import json, sys
 value = json.loads(sys.argv[1])
-assert any("deepseek-v4-flash" == item["id"].lower() for item in value["data"])
+if not any(
+    "deepseek-v4-flash" == item["id"].lower() for item in value["data"]
+):
+    raise SystemExit("exact DeepSeek model identity mismatch")
 PY
     ACTIVE=dsv4
 }
