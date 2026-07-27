@@ -234,6 +234,11 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("GIT_CONFIG_NOSYSTEM=1", source)
         self.assertIn("GIT_CONFIG_GLOBAL=/dev/null", source)
         self.assertNotIn("\ngit -C", source)
+        self.assertIn("os.lstat", source)
+        self.assertIn("stat.S_ISLNK", source)
+        self.assertIn('exec 8<"$WORK_ROOT"', source)
+        self.assertIn("WORK_ROOT_IDENTITY", source)
+        self.assertIn("verify_work_root", source)
 
     def test_authenticated_probe_keeps_bearer_secret_out_of_argv(self):
         source = SCRIPT.read_text()
