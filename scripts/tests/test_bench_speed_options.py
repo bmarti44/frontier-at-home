@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -69,6 +70,18 @@ class BenchOptionTests(unittest.TestCase):
             path.write_bytes(b"substituted tokenizer")
             with self.assertRaisesRegex(RuntimeError, "tokenizer SHA-256 mismatch"):
                 bench.verify_tokenizer_hash(path, "0" * 64)
+
+    def test_tokenizer_is_loaded_from_the_same_bytes_that_were_hashed(self):
+        bench = load_module()
+        original = b'{"frozen":"original"}'
+        expected = hashlib.sha256(original).hexdigest()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "tokenizer.json"
+            path.write_bytes(original)
+            raw, actual = bench.read_verified_tokenizer_bytes(path, expected)
+            path.write_bytes(b'{"frozen":"replacement"}')
+        self.assertEqual(raw, original)
+        self.assertEqual(actual, expected)
 
     def test_observable_output_not_server_usage_controls_decode_validity(self):
         bench = load_module()
@@ -178,7 +191,7 @@ class BenchOptionTests(unittest.TestCase):
         tokenizer = Tokenizer()
         self.assertEqual(
             bench.raw_visible_output_errors(
-                tokenizer, [7, 8], "alpha beta"
+                tokenizer, [7, 8], "alpha beta", ""
             ),
             [],
         )
@@ -186,18 +199,28 @@ class BenchOptionTests(unittest.TestCase):
         # the concatenated reasoning_content/content bytes.
         self.assertEqual(
             bench.raw_visible_output_errors(
-                tokenizer, [7, 9, 10], "alphaanswer"
+                tokenizer, [7, 9, 10], "alpha", "answer"
+            ),
+            [],
+        )
+        # Canonical reasoning and answer tokens stay separate across the hidden
+        # boundary even if concatenating their bytes would select another BPE.
+        tokenizer.pieces.update({1: "a", 2: "aa"})
+        tokenizer.sequences.update({"a": [1], "aa": [2]})
+        self.assertEqual(
+            bench.raw_visible_output_errors(
+                tokenizer, [1, 9, 1], "a", "a"
             ),
             [],
         )
         self.assertTrue(
             bench.raw_visible_output_errors(
-                tokenizer, [7, 8], "unrelated"
+                tokenizer, [7, 8], "unrelated", ""
             )
         )
         self.assertTrue(
             bench.raw_visible_output_errors(
-                tokenizer, [999_999_999], "alpha"
+                tokenizer, [999_999_999], "alpha", ""
             )
         )
 
@@ -207,7 +230,7 @@ class BenchOptionTests(unittest.TestCase):
         tokenizer.sequences["a" * 128] = [2] * 16
         self.assertTrue(
             bench.raw_visible_output_errors(
-                tokenizer, [1] * 128, "a" * 128
+                tokenizer, [1] * 128, "a" * 128, ""
             )
         )
 
