@@ -1507,6 +1507,7 @@ def _fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
     response = subprocess.run(
         [
             "/usr/bin/curl",
+            "--disable",
             "--silent",
             "--show-error",
             "--fail",
