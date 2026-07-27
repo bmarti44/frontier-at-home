@@ -1376,10 +1376,14 @@ class FormulaTests(unittest.TestCase):
 
     def test_approved_dsv4_profile_parser_fails_closed(self):
         valid = {
-            "schema_version": 1,
+            "schema_version": 2,
             "profile": "dsv4",
             "binary_sha256": "a" * 64,
             "configuration_sha256": "b" * 64,
+            "build_manifest_sha256": "c" * 64,
+            "weights_manifest_sha256": "d" * 64,
+            "shared_libraries": {"libllama.so": "e" * 64},
+            "model_files": {"base": "f" * 64},
         }
         completed = subprocess.CompletedProcess(
             args=[],
@@ -1396,6 +1400,8 @@ class FormulaTests(unittest.TestCase):
         for mutation in (
             {**valid, "profile": "glm52"},
             {**valid, "binary_sha256": "bad"},
+            {**valid, "shared_libraries": {}},
+            {**valid, "model_files": {"base": "bad"}},
             {**valid, "extra": True},
         ):
             completed = subprocess.CompletedProcess(
