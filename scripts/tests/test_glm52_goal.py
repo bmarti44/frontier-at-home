@@ -561,6 +561,15 @@ class FormulaTests(unittest.TestCase):
                 "W2", "workstream.terminal.v1", [malformed]
             )
 
+    def test_workstream_self_attestation_cannot_create_pass(self):
+        fabricated = workstream_record("W1")
+        self.assertEqual(
+            self.goal.score_registered_gate(
+                "W1", "workstream.terminal.v1", [fabricated]
+            )["verdict"],
+            "FAIL",
+        )
+
     def test_w11_requires_timestamped_memory_coverage(self):
         record = w11_record()
         self.assertEqual(
