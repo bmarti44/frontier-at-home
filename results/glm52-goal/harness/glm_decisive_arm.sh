@@ -12,9 +12,12 @@ MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.g
 PORT=8011
 PID=
 START_TICKS=
+EXPERT_CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
 
 [[ $SRC == /home/dsv4/ds4-project/src/* && -x $SRC/ds4-server ]] \
     || { echo "invalid GLM_CANDIDATE_SRC: $SRC" >&2; exit 2; }
+[[ $EXPERT_CACHE_GB =~ ^([0-9]|[1-6][0-9]|7[0-2])$ ]] \
+    || { echo "GLM_EXPERT_CACHE_GB must be an integer from 0 through 72" >&2; exit 2; }
 
 stop_server() {
     [[ ${PID:-} =~ ^[0-9]+$ ]] || return 0
@@ -34,7 +37,7 @@ trap stop_server EXIT
 mkdir -p -- "$OUT"
 DS4_GLM_TP_DEBUG=0 \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
-DS4_CUDA_EXPERT_CACHE_GB=72 \
+DS4_CUDA_EXPERT_CACHE_GB="$EXPERT_CACHE_GB" \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
 DS4_CUDA_FETCH_THREADS=6 \
 DS4_CUDA_EXPERT_CACHE_SLRU=1 \

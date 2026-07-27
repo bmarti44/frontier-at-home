@@ -29,6 +29,25 @@ DIR=/home/dsv4/ds4-project/glm52-crashlog/$TS-$TAG
 mkdir -p "$DIR"
 MAIN="$DIR/main.log"; SAMP="$DIR/samples.log"
 plog() { echo "$(date -Is) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
+WRAP=
+PG=
+
+forward_signal() {
+  local signal=$1 exit_code=$2
+  trap - INT TERM HUP
+  plog "SAFE_RUN forwarding $signal as TERM to isolated pgid=${PG:-unavailable}"
+  if [[ ${PG:-} =~ ^[0-9]+$ ]] && (( PG > 1 )); then
+    kill -TERM -- "-$PG" 2>/dev/null || true
+    for _ in $(seq 1 30); do
+      kill -0 "$WRAP" 2>/dev/null || break
+      sleep 1
+    done
+    kill -0 "$WRAP" 2>/dev/null && kill -KILL -- "-$PG" 2>/dev/null || true
+    wait "$WRAP" 2>/dev/null || true
+  fi
+  plog "SAFE_RUN interrupted signal=$signal exit=$exit_code"
+  exit "$exit_code"
+}
 
 plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB min_start_gib=$MIN_START_GIB timeout_s=$TIMEOUT_S"
 plog "cmd: $*"
@@ -45,11 +64,21 @@ ulimit -v "$VLIMIT_KB" || { plog "FATAL cannot set ulimit -v"; exit 9; }
 
 setsid timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" "$@" > "$DIR/cmd.log" 2>&1 &
 WRAP=$!
+PG=$WRAP
+trap 'forward_signal INT 130' INT
+trap 'forward_signal TERM 143' TERM
+trap 'forward_signal HUP 129' HUP
 sleep 0.5
 # find the deepest child (the engine) for RSS sampling; fall back to wrapper
 ENG=$(pgrep -P "$WRAP" | head -1); ENG=${ENG:-$WRAP}
 ENG2=$(pgrep -P "$ENG" 2>/dev/null | head -1); ENG=${ENG2:-$ENG}
-PG=$(ps -o pgid= -p "$WRAP" | tr -d ' ')
+actual_pg=$(ps -o pgid= -p "$WRAP" | tr -d ' ')
+if [[ $actual_pg != "$PG" ]]; then
+  plog "FATAL isolated process-group mismatch expected=$PG actual=${actual_pg:-missing}"
+  kill -KILL -- "-$PG" 2>/dev/null || true
+  wait "$WRAP" 2>/dev/null || true
+  exit 10
+fi
 plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 1 Hz)"
 : > "$SAMP"
 

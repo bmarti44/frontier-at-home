@@ -88,6 +88,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         safe_source = GLM_SAFE.read_text(encoding="utf-8")
         self.assertIn("GLM_SAFE_MIN_START_GIB=110", source)
         self.assertIn("setsid timeout", safe_source)
+        self.assertIn("trap 'forward_signal TERM 143' TERM", safe_source)
+        self.assertIn('kill -TERM -- "-$PG"', safe_source)
 
     def test_production_watchdog_reserves_18_gib(self):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")
@@ -98,6 +100,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         source = GLM_ARM.read_text(encoding="utf-8")
         self.assertIn("GLM_CANDIDATE_SRC:-", source)
         self.assertIn("ds4-goal-clean-0a7ad776", source)
+        self.assertIn("GLM_EXPERT_CACHE_GB:-0", source)
 
 
 if __name__ == "__main__":
