@@ -486,6 +486,64 @@ class FormulaTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.goal.registered_scorer_digest("unknown")
 
+    def test_manifest_lineage_requires_post_freeze_verifiable_randomness(self):
+        signature = (
+            "952376f4137b3dcb0798721d8a76ffe3"
+            "35949d115e02cd6b6fcf97b0f748a66d"
+            "e3258668f148ea29172d8438b94185e00"
+            "48c3061497303a027fabec04eb0bb27e"
+            "bf01e86e7b97ee4232ccea760fc867af"
+            "8bfe18b0e1106915148438bb3c235f6"
+        )
+        candidate = "a" * 40
+        randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
+        seed = hashlib.sha256(
+            f"{candidate}:{randomness}:W11".encode()
+        ).hexdigest()
+        lineage = {
+            "freeze": {
+                "candidate_hash": candidate,
+                "frozen_at": "2026-07-27T00:00:00+00:00",
+            },
+            "randomness": {
+                "source": "drand-default",
+                "round": 6_323_125,
+                "randomness": randomness,
+                "signature": signature,
+                "obtained_at": "2026-07-27T00:01:00+00:00",
+                "seed_sha256": seed,
+            },
+        }
+        self.goal.validate_manifest_lineage(lineage, "W11", candidate)
+        for mutation in (
+            "pre_freeze",
+            "wrong_candidate",
+            "wrong_randomness",
+            "wrong_seed",
+            "bad_round",
+            "extra",
+        ):
+            broken = json.loads(json.dumps(lineage))
+            if mutation == "pre_freeze":
+                broken["randomness"]["obtained_at"] = (
+                    "2026-07-26T23:59:59+00:00"
+                )
+            elif mutation == "wrong_candidate":
+                broken["freeze"]["candidate_hash"] = "b" * 40
+            elif mutation == "wrong_randomness":
+                broken["randomness"]["randomness"] = "0" * 64
+            elif mutation == "wrong_seed":
+                broken["randomness"]["seed_sha256"] = "0" * 64
+            elif mutation == "bad_round":
+                broken["randomness"]["round"] = True
+            else:
+                broken["freeze"]["extra"] = True
+            with self.subTest(mutation=mutation):
+                with self.assertRaises(ValueError):
+                    self.goal.validate_manifest_lineage(
+                        broken, "W11", candidate
+                    )
+
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)
