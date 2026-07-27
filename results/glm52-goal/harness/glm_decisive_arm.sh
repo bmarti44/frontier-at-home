@@ -14,6 +14,8 @@ TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10ac\
 ca112d42a854923df93db4a6f333a82d
 PORT=${GLM_PORT:-8011}
 CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
+IQ2_REFERENCE=${DS4_CUDA_IQ2_DOWN_REFERENCE:-1}
+IQ2_ENV=()
 PID=
 START_TICKS=
 
@@ -37,6 +39,11 @@ if (( cache_gb < 0 || cache_gb > 40 )); then
     exit 2
 fi
 CACHE_GB=$cache_gb
+[[ $IQ2_REFERENCE == 0 || $IQ2_REFERENCE == 1 ]] \
+    || { echo "IQ2_REFERENCE must be 0 or 1" >&2; exit 2; }
+if [[ $IQ2_REFERENCE == 1 ]]; then
+    IQ2_ENV+=(DS4_CUDA_IQ2_DOWN_REFERENCE=1)
+fi
 
 stop_server() {
     [[ ${PID:-} =~ ^[0-9]+$ ]] || return 0
@@ -54,14 +61,15 @@ stop_server() {
 trap stop_server EXIT
 
 mkdir -p -- "$OUT"
-printf 'expert_cache_gib=%s\n' "$CACHE_GB" >"$OUT/runtime.config"
-DS4_TOKEN_TIMING_LOG=1 \
+printf 'expert_cache_gib=%s\niq2_reference=%s\n' \
+    "$CACHE_GB" "$IQ2_REFERENCE" >"$OUT/runtime.config"
+env DS4_TOKEN_TIMING_LOG=1 \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
 DS4_CUDA_EXPERT_CACHE_GB="$CACHE_GB" \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
 DS4_CUDA_FETCH_THREADS=6 \
 DS4_CUDA_EXPERT_CACHE_SLRU=1 \
-DS4_CUDA_IQ2_DOWN_REFERENCE=1 \
+    "${IQ2_ENV[@]}" \
     "$SRC/ds4-server" --cuda -m "$MODEL" -c 8192 \
     --host 127.0.0.1 --port "$PORT" --ssd-streaming \
     --ssd-streaming-cache-experts 40GB \
