@@ -15,6 +15,23 @@ clean_git() {
         /usr/bin/git "$@"
 }
 
+verify_no_symlink_components() {
+    /usr/bin/python3 - "$WORK_ROOT" <<'PY'
+import os
+import pathlib
+import stat
+import sys
+
+path = pathlib.Path(sys.argv[1])
+for component in reversed((path, *path.parents)):
+    metadata = os.lstat(component)
+    if stat.S_ISLNK(metadata.st_mode):
+        raise SystemExit(f"symlinked canonical path component: {component}")
+if not path.is_dir() or os.lstat(path).st_uid != os.getuid():
+    raise SystemExit("canonical work root owner or type is invalid")
+PY
+}
+
 [[ $# == 4 ]] || {
     echo "usage: $0 SOURCE_REPOSITORY COMMIT WORK_ROOT OUTPUT_DIRECTORY" >&2
     exit 2
@@ -60,6 +77,16 @@ flock -n 9 || {
     exit 75
 }
 mkdir -p -- "$WORK_ROOT" "$OUTPUT_DIRECTORY"
+chmod 0700 -- "$WORK_ROOT"
+verify_no_symlink_components
+exec 8<"$WORK_ROOT"
+WORK_ROOT_IDENTITY=$(/usr/bin/stat -Lc '%d:%i' "/proc/$$/fd/8")
+verify_work_root() {
+    verify_no_symlink_components
+    [[ $(/usr/bin/stat -Lc '%d:%i' "$WORK_ROOT") == "$WORK_ROOT_IDENTITY" ]]
+    [[ $(/usr/bin/stat -Lc '%d:%i' "/proc/$$/fd/8") == "$WORK_ROOT_IDENTITY" ]]
+}
+verify_work_root
 WORKTREE=$WORK_ROOT/src
 KEEP_DIR=$WORK_ROOT/nvcc-keep
 mkdir -p -- "$KEEP_DIR"
@@ -81,6 +108,7 @@ build_one() {
     local number=$1
     local destination=$OUTPUT_DIRECTORY/build${number}-ds4-server
     local cflags nvccflags
+    verify_work_root
     clean_git -C "$SOURCE_REPOSITORY" worktree add --detach "$WORKTREE" "$COMMIT"
     (
         cd "$WORKTREE"
@@ -113,11 +141,13 @@ build_one() {
         exit 9
     }
     install -m 0500 -- "$WORKTREE/ds4-server" "$destination"
+    verify_work_root
 }
 
 build_one 1
 clean_git -C "$SOURCE_REPOSITORY" worktree remove "$WORKTREE"
 build_one 2
+verify_work_root
 cmp -s "$OUTPUT_DIRECTORY/build1-ds4-server" \
     "$OUTPUT_DIRECTORY/build2-ds4-server" || {
     echo "independent builds are not byte-identical" >&2
