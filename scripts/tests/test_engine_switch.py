@@ -59,6 +59,9 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("--threshold-gib 18", source)
         self.assertIn("memwatch_start_ticks", source)
         self.assertIn("DISARM %s %s %s", source)
+        self.assertIn("wait_model_ready", source)
+        self.assertIn("Waiting for %s load", source)
+        self.assertIn("deadline=$((SECONDS + 1800))", source)
 
     def test_unqualified_glm_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:

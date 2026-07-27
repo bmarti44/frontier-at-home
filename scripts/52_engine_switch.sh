@@ -251,6 +251,35 @@ api_key() {
     [[ -n $REPLY ]]
 }
 
+wait_model_ready() {
+    local profile=$1 expected body deadline probe_count=0 available
+    expected=deepseek
+    [[ $profile == glm52 ]] && expected=glm
+    deadline=$((SECONDS + 1800))
+    while (( SECONDS < deadline )); do
+        body=$(curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
+            2>/dev/null || true)
+        if python3 - "$expected" "$body" <<'PY' 2>/dev/null
+import json, sys
+expected, raw = sys.argv[1:]
+value = json.loads(raw)
+assert any(expected in item["id"].lower() for item in value["data"])
+PY
+        then
+            return 0
+        fi
+        probe_count=$((probe_count + 1))
+        if (( probe_count % 15 == 0 )); then
+            available=$(awk '$1 == "MemAvailable:" {printf "%.2f", $2 / 1048576}' \
+                /proc/meminfo)
+            printf 'Waiting for %s load: MemAvailable=%s GiB\n' \
+                "$profile" "${available:-unknown}" >&2
+        fi
+        sleep 2
+    done
+    return 1
+}
+
 verify_serving() {
     local profile=$1 expected unauth code key body
     expected=deepseek
@@ -332,6 +361,7 @@ rollback_needed=true
 trap 'rollback "$command"' ERR
 stop_profile "$previous_profile"
 "start_$command"
+wait_model_ready "$command" || die "$command readiness timed out or model identity is wrong"
 verify_serving "$command"
 commit_active "$command"
 rollback_needed=false
