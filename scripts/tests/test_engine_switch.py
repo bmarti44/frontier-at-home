@@ -50,6 +50,15 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("start_ticks", source)
         self.assertIn("rollback", source)
         self.assertIn("release-check", source)
+        self.assertIn("03_memory_guard.py", source)
+        self.assertIn("--required-gib 110", source)
+        self.assertIn("DS4_CUDA_EXPERT_CACHE_GB=64", source)
+        self.assertNotIn("DS4_CUDA_EXPERT_CACHE_GB=72", source)
+        self.assertIn("env -i", source)
+        self.assertIn("01_memwatch.sh", source)
+        self.assertIn("--threshold-gib 18", source)
+        self.assertIn("memwatch_start_ticks", source)
+        self.assertIn("DISARM %s %s %s", source)
 
     def test_unqualified_glm_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:

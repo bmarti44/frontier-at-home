@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Compute an optimistic GLM decode roofline from frozen raw measurements."""
+"""Compute a GLM decode engineering forecast from frozen raw measurements.
+
+The retained non-loader/non-MoE time is measured implementation time, not a
+physical lower bound. Consequently this report cannot authorize a global
+NO_GO by itself.
+"""
 
 from __future__ import annotations
 
@@ -138,6 +143,14 @@ def compute_roofline(
     indexer_1m_bytes = 21 * 1_000_000 * 128 * 4
     indexer_1m_floor_ms = indexer_1m_bytes / (bandwidth_gb_s * 1e9) * 1000
     optimistic_1m_tok_s = 1000 / (optimistic_ms + indexer_1m_floor_ms)
+    target_total_ms = 1000 / required_tok_s
+    allowed_residual_ms = target_total_ms - physical_expert_read_floor_ms
+    residual_reduction_needed_ms = max(
+        0.0, non_loader_non_moe_ms - allowed_residual_ms
+    )
+    residual_reduction_needed_fraction = (
+        residual_reduction_needed_ms / non_loader_non_moe_ms
+    )
     return {
         "formula_version": 1,
         "assumptions": {
@@ -158,12 +171,21 @@ def compute_roofline(
         },
         "roofline": {
             "required_80_percent_tok_s": required_tok_s,
-            "optimistic_short_context_tok_s": optimistic_tok_s,
-            "optimistic_short_context_ratio": optimistic_tok_s / dsv4_decode_tok_s,
-            "optimistic_1m_tok_s": optimistic_1m_tok_s,
-            "optimistic_1m_ratio": optimistic_1m_tok_s / dsv4_decode_tok_s,
+            "forecast_short_context_tok_s": optimistic_tok_s,
+            "forecast_short_context_ratio": optimistic_tok_s / dsv4_decode_tok_s,
+            "forecast_1m_tok_s": optimistic_1m_tok_s,
+            "forecast_1m_ratio": optimistic_1m_tok_s / dsv4_decode_tok_s,
+            "target_total_ms": target_total_ms,
+            "allowed_residual_ms": allowed_residual_ms,
+            "residual_reduction_needed_ms": residual_reduction_needed_ms,
+            "residual_reduction_needed_fraction": residual_reduction_needed_fraction,
         },
-        "decision": "NO_GO" if optimistic_tok_s < required_tok_s else "CONTINUE",
+        "physical_no_go_established": False,
+        "decision": "NO_RESULT",
+        "reason": (
+            "forecast retains measured residual time without a physical lower "
+            "bound; it cannot establish a global NO_GO"
+        ),
     }
 
 
@@ -198,7 +220,7 @@ def main() -> int:
     report["checks"] = {
         "all_memory_at_least_10_gib": min(memory.values()) >= 10.0,
         "at_least_128_intervals": len(raw_intervals_ms(clean)) >= 127,
-        "roofline_below_80_percent": report["decision"] == "NO_GO",
+        "physical_no_go_established": report["physical_no_go_established"],
     }
     report["artifacts"] = {
         str(path): sha256(path)
@@ -214,6 +236,8 @@ def main() -> int:
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    # Preserve the forecast but fail closed until every retained component is
+    # a justified physical floor.
     return 0 if all(report["checks"].values()) else 1
 
 

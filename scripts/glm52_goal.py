@@ -612,17 +612,10 @@ def _release_verdict(state_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
         if gates[name]["status"] != "PASS":
             failed.append(name)
     parity_ok = gates["parity"]["status"] == "PASS"
+    # A summary boolean is not reviewer authority. Keep NO_GO disabled until a
+    # registered scorer recomputes the physical bound and validates immutable
+    # attestations from both persistent reviewers.
     parity_no_go = False
-    if gates["parity"]["status"] == "FAIL" and gates["parity"]["attempts"]:
-        attempt = state_dir / gates["parity"]["attempts"][-1]
-        try:
-            summary = _read_strict_json(attempt / "summary.json")
-            parity_no_go = (
-                summary.get("decision") == "NO_GO"
-                and summary.get("independently_reviewed") is True
-            )
-        except ValueError:
-            parity_no_go = False
     if not (parity_ok or parity_no_go):
         failed.append("parity")
     unique_failed = list(dict.fromkeys(failed))

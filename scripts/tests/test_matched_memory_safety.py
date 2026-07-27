@@ -90,6 +90,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("setsid timeout", safe_source)
         self.assertIn("trap 'forward_signal TERM 143' TERM", safe_source)
         self.assertIn('kill -TERM -- "-$PG"', safe_source)
+        self.assertIn('kill -0 -- "-$PG"', safe_source)
+        self.assertIn("survived signal escalation", safe_source)
 
     def test_production_watchdog_reserves_18_gib(self):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")

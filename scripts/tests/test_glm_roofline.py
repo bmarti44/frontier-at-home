@@ -19,7 +19,7 @@ def load_module():
 
 
 class RooflineTests(unittest.TestCase):
-    def test_optimistic_bound_still_rejects_parity(self):
+    def test_measured_residual_cannot_authorize_no_go(self):
         roofline = load_module()
         report = roofline.compute_roofline(
             dsv4_decode_tok_s=11.417,
@@ -28,8 +28,27 @@ class RooflineTests(unittest.TestCase):
             moe_groups_ms=[[101.84 / 75] * 75 for _ in range(159)],
             bandwidth_gb_s=273.0,
         )
-        self.assertEqual(report["decision"], "NO_GO")
-        self.assertLess(report["roofline"]["optimistic_short_context_ratio"], 0.80)
+        self.assertEqual(report["decision"], "NO_RESULT")
+        self.assertFalse(report["physical_no_go_established"])
+        self.assertLess(report["roofline"]["forecast_short_context_ratio"], 0.80)
+        self.assertGreater(
+            report["roofline"]["residual_reduction_needed_fraction"], 0
+        )
+
+    def test_zero_unbounded_residual_would_exceed_target(self):
+        roofline = load_module()
+        report = roofline.compute_roofline(
+            dsv4_decode_tok_s=11.417,
+            clean_intervals_ms=[345.451] * 159,
+            loader_groups_ms=[[243.61 / 75] * 75 for _ in range(159)],
+            moe_groups_ms=[[101.84 / 75] * 75 for _ in range(159)],
+            bandwidth_gb_s=273.0,
+        )
+        self.assertEqual(report["decision"], "NO_RESULT")
+        self.assertFalse(report["physical_no_go_established"])
+        self.assertEqual(
+            report["roofline"]["residual_reduction_needed_fraction"], 0
+        )
 
     def test_rejects_missing_layer_coverage(self):
         roofline = load_module()

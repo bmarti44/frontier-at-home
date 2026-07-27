@@ -428,6 +428,11 @@ class ControllerTests(unittest.TestCase):
             self.assertFalse(value["release_qualified"])
             self.assertIn("W11", value["failed_requirements"])
 
+    def test_release_does_not_trust_no_go_summary_boolean(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn('summary.get("independently_reviewed") is True', source)
+        self.assertIn("parity_no_go = False", source)
+
     def test_resume_ingests_valid_attempt_and_advances(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)

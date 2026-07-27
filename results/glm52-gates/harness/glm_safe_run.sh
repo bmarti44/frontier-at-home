@@ -39,11 +39,19 @@ forward_signal() {
   if [[ ${PG:-} =~ ^[0-9]+$ ]] && (( PG > 1 )); then
     kill -TERM -- "-$PG" 2>/dev/null || true
     for _ in $(seq 1 30); do
-      kill -0 "$WRAP" 2>/dev/null || break
+      kill -0 -- "-$PG" 2>/dev/null || break
       sleep 1
     done
-    kill -0 "$WRAP" 2>/dev/null && kill -KILL -- "-$PG" 2>/dev/null || true
+    kill -0 -- "-$PG" 2>/dev/null && kill -KILL -- "-$PG" 2>/dev/null || true
     wait "$WRAP" 2>/dev/null || true
+    for _ in $(seq 1 50); do
+      kill -0 -- "-$PG" 2>/dev/null || break
+      sleep 0.1
+    done
+    if kill -0 -- "-$PG" 2>/dev/null; then
+      plog "FATAL isolated pgid=$PG survived signal escalation"
+      exit 125
+    fi
   fi
   plog "SAFE_RUN interrupted signal=$signal exit=$exit_code"
   exit "$exit_code"
