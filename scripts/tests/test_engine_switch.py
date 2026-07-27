@@ -22,6 +22,7 @@ GLM_BUILD = ROOT / "configs/build-manifests/glm52-ds4-repro.json"
 GLM_BUILD_SCRIPT = ROOT / "scripts/11_build_glm52_repro.sh"
 INSTALLER = ROOT / "scripts/41_install_service.sh"
 RESTORE_SERVICE = ROOT / "configs/systemd/dsv4-engine-restore.service"
+CONTROL_INSTALLER = ROOT / "scripts/53_install_switch_control.sh"
 
 
 class EngineSwitchTests(unittest.TestCase):
@@ -117,6 +118,20 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("52_engine_switch.sh restore", unit)
         self.assertIn("WantedBy=multi-user.target", unit)
         self.assertIn("After=dsv4-authhelper.service", unit)
+
+    def test_control_plane_installer_cannot_start_a_model(self):
+        source = CONTROL_INSTALLER.read_text()
+        self.assertIn("must be run as root", source)
+        self.assertIn("/home/dsv4/.dsv4-start-hold", source)
+        self.assertIn("UPSTREAM_PORT=8013", source)
+        self.assertIn("systemctl daemon-reload", source)
+        self.assertIn("systemctl disable deepseek-v4-flash-llamacpp.service", source)
+        self.assertIn("systemctl enable dsv4-engine-restore.service", source)
+        self.assertIn("systemctl restart dsv4-authhelper.service", source)
+        self.assertNotIn(
+            "systemctl restart deepseek-v4-flash-llamacpp.service", source
+        )
+        self.assertNotIn("52_engine_switch.sh dsv4", source)
 
     def test_frozen_profiles_pin_the_verified_production_candidates(self):
         glm = json.loads(GLM_PROFILE.read_text())
