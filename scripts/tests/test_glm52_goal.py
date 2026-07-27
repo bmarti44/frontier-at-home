@@ -745,6 +745,29 @@ class FormulaTests(unittest.TestCase):
                 "parity", "parity.reviewed-no-go.v1", stale
             )
 
+        straddling = json.loads(json.dumps(arms))
+        for arm in straddling:
+            if arm["profile"] == "glm52":
+                ratio = 0.6 + 0.1 * arm["block"]
+                arm["token_timestamps"] = [
+                    index / (10.0 * ratio) for index in range(128)
+                ]
+                arm["prefill_seconds"] = 10.0
+                arm["warm_ttft_seconds"] = 1.0
+                arm["cold_ttft_seconds"] = 10.0
+        straddling_digest = self.goal.reviewed_measurements_digest(straddling)
+        straddling_reviews = json.loads(json.dumps(reviews))
+        for review in straddling_reviews:
+            review["reviewed_measurements_sha256"] = straddling_digest
+        inconclusive = self.goal.score_registered_gate(
+            "parity",
+            "parity.reviewed-no-go.v1",
+            straddling + straddling_reviews,
+        )
+        self.assertEqual(inconclusive["parity"]["verdict"], "FAIL")
+        self.assertFalse(inconclusive["checks"]["decisive_matched_failure"])
+        self.assertEqual(inconclusive["verdict"], "FAIL")
+
     def test_registered_foundation_scorer_requires_clean_safe_baselines(self):
         def baseline(profile, hash_char, spacing):
             return {
@@ -1011,11 +1034,12 @@ class FormulaTests(unittest.TestCase):
                 "foundation.v1",
                 "w11.context.v1",
                 "parity.performance.v1",
+                "parity.reviewed-no-go.v1",
                 "review.final.v1",
                 "workstream.terminal.v1",
             )
         }
-        self.assertEqual(len(set(digests.values())), 5)
+        self.assertEqual(len(set(digests.values())), 6)
         for digest in digests.values():
             self.assertRegex(digest, r"^[0-9a-f]{64}$")
         with self.assertRaises(ValueError):
@@ -2065,10 +2089,38 @@ class ControllerTests(unittest.TestCase):
             self.assertFalse(value["release_qualified"])
             self.assertIn("W11", value["failed_requirements"])
 
-    def test_release_does_not_trust_no_go_summary_boolean(self):
-        source = SCRIPT.read_text(encoding="utf-8")
-        self.assertNotIn('summary.get("independently_reviewed") is True', source)
-        self.assertIn("parity_no_go = False", source)
+    def test_release_accepts_only_registered_recomputed_no_go(self):
+        goal = load_goal_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            attempt = state_dir / "parity" / "attempt-002"
+            attempt.mkdir(parents=True)
+            summary = {
+                "scorer_id": "parity.reviewed-no-go.v1",
+                "formula_version": 1,
+                "decision": "NO_GO",
+                "verdict": "PASS",
+            }
+            (attempt / "summary.json").write_text(json.dumps(summary))
+            state = goal._initial_state()
+            for name, gate in state["gates"].items():
+                gate["attempts"] = [f"{name}/attempt-001"]
+                if name in {"foundation", "W11", "switch", "parity", "review"}:
+                    gate["status"] = "PASS"
+                else:
+                    gate["status"] = "FAIL"
+            state["gates"]["parity"]["attempts"] = ["parity/attempt-002"]
+            with mock.patch.object(goal, "validate_attempt"):
+                result = goal._release_verdict(state_dir, state)
+            self.assertTrue(result["release_qualified"])
+            self.assertEqual(result["parity_decision"], "NO_GO")
+
+            summary["scorer_id"] = "parity.performance.v1"
+            (attempt / "summary.json").write_text(json.dumps(summary))
+            with mock.patch.object(goal, "validate_attempt"):
+                rejected = goal._release_verdict(state_dir, state)
+            self.assertFalse(rejected["release_qualified"])
+            self.assertEqual(rejected["parity_decision"], "UNPROVEN")
 
     def test_resume_ingests_valid_attempt_and_advances(self):
         with tempfile.TemporaryDirectory() as tmp:
