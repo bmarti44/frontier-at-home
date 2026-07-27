@@ -22,6 +22,8 @@ MIN_START_GIB=${GLM_SAFE_MIN_START_GIB:-110}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
 EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
+REQUIRE_CGROUP=${GLM_SAFE_REQUIRE_CGROUP:-0}
+EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -58,6 +60,8 @@ if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then
 fi
 [[ $CANDIDATE_PROVENANCE =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_LOG_CANDIDATE_PROVENANCE"
+[[ $REQUIRE_CGROUP =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_REQUIRE_CGROUP"
 if [[ "${1:-}" == --tag ]]; then
   [[ -n ${2:-} ]] || config_error "tag"
   TAG=$2
@@ -109,6 +113,34 @@ plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GI
 plog "cmd: $*"
 plog "host: $(hostname) kernel: $(uname -r)"
 plog "candidate_provenance_enabled=$CANDIDATE_PROVENANCE"
+CGROUP_PATH=""
+CGROUP_DIR=""
+CGROUP_BASELINE_PIDS=""
+declare -A CGROUP_EVENTS_BEFORE=()
+if [[ $REQUIRE_CGROUP == 1 ]]; then
+  [[ $EXPECTED_CGROUP_UNIT =~ ^glm52-[A-Za-z0-9_-]{1,80}$ ]] ||
+    config_error "GLM_SAFE_CGROUP_UNIT"
+  CGROUP_PATH=$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup)
+  [[ $CGROUP_PATH == */"$EXPECTED_CGROUP_UNIT.service" ]] ||
+    config_error "GLM_SAFE_CGROUP_UNIT membership"
+  CGROUP_DIR=/sys/fs/cgroup$CGROUP_PATH
+  [[ -r $CGROUP_DIR/memory.high && -r $CGROUP_DIR/memory.max &&
+     -r $CGROUP_DIR/memory.swap.max && -r $CGROUP_DIR/memory.oom.group &&
+     -r $CGROUP_DIR/memory.events.local && -r $CGROUP_DIR/cgroup.procs ]] ||
+    config_error "cgroup controls"
+  CGROUP_HIGH=$(<"$CGROUP_DIR/memory.high")
+  CGROUP_MAX=$(<"$CGROUP_DIR/memory.max")
+  CGROUP_SWAP_MAX=$(<"$CGROUP_DIR/memory.swap.max")
+  CGROUP_OOM_GROUP=$(<"$CGROUP_DIR/memory.oom.group")
+  [[ $CGROUP_HIGH =~ ^[0-9]+$ && $CGROUP_MAX =~ ^[0-9]+$ &&
+     $CGROUP_SWAP_MAX == 0 && $CGROUP_OOM_GROUP == 1 ]] ||
+    config_error "finite cgroup controls"
+  while read -r key value; do
+    CGROUP_EVENTS_BEFORE["$key"]=$value
+  done < "$CGROUP_DIR/memory.events.local"
+  CGROUP_BASELINE_PIDS=$(<"$CGROUP_DIR/cgroup.procs")
+  plog "cgroup_verified path=$CGROUP_PATH memory_high=$CGROUP_HIGH memory_max=$CGROUP_MAX memory_swap_max=$CGROUP_SWAP_MAX memory_oom_group=$CGROUP_OOM_GROUP"
+fi
 if [[ $CANDIDATE_PROVENANCE == 1 ]]; then
   APPROVED_SRC_ROOT=/home/dsv4/ds4-project/src
   CANDIDATE_SRC=$(realpath -e -- "${GLM_CANDIDATE_SRC:-}" 2>/dev/null || true)
@@ -261,6 +293,59 @@ if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 0 ]]; then
   RC=11
 elif [[ -n $PROVENANCE_FAILURE ]]; then
   RC=11
+fi
+if [[ $REQUIRE_CGROUP == 1 ]]; then
+  CGROUP_NEW_PIDS=""
+  while read -r pid; do
+    [[ -n $pid ]] || continue
+    if ! grep -qx -- "$pid" <<<"$CGROUP_BASELINE_PIDS"; then
+      CGROUP_NEW_PIDS+="${CGROUP_NEW_PIDS:+ }$pid"
+    fi
+  done < "$CGROUP_DIR/cgroup.procs"
+  if [[ -n $CGROUP_NEW_PIDS ]]; then
+    plog "FATAL cgroup descendants survived command completion pids=$CGROUP_NEW_PIDS"
+    for pid in $CGROUP_NEW_PIDS; do
+      kill -TERM "$pid" 2>/dev/null || true
+    done
+    for _ in $(seq 1 30); do
+      remaining=""
+      for pid in $CGROUP_NEW_PIDS; do
+        kill -0 "$pid" 2>/dev/null && remaining+="${remaining:+ }$pid"
+      done
+      [[ -z $remaining ]] && break
+      sleep 0.1
+    done
+    for pid in ${remaining:-}; do
+      kill -KILL "$pid" 2>/dev/null || true
+    done
+    for _ in $(seq 1 50); do
+      remaining=""
+      for pid in $CGROUP_NEW_PIDS; do
+        state=$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')
+        [[ -n $state && $state != Z* ]] && remaining+="${remaining:+ }$pid"
+      done
+      [[ -z $remaining ]] && break
+      sleep 0.1
+    done
+    if [[ -n $remaining ]]; then
+      plog "FATAL cgroup descendant cleanup failed pids=$remaining"
+      RC=125
+    else
+      plog "cgroup descendant cleanup complete"
+      RC=15
+    fi
+  fi
+  CGROUP_EVENT_FAILURES=""
+  while read -r key value; do
+    before=${CGROUP_EVENTS_BEFORE[$key]:-0}
+    if [[ $key =~ ^(high|max|oom|oom_kill)$ ]] && (( value > before )); then
+      CGROUP_EVENT_FAILURES+="${CGROUP_EVENT_FAILURES:+ }$key:$before->$value"
+    fi
+  done < "$CGROUP_DIR/memory.events.local"
+  if [[ -n $CGROUP_EVENT_FAILURES ]]; then
+    plog "FATAL cgroup memory event delta $CGROUP_EVENT_FAILURES"
+    RC=14
+  fi
 fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
