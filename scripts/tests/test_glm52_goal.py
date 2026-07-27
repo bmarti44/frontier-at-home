@@ -33,6 +33,14 @@ def replacement_attempt_validator(_attempt):
     raise ValueError("mutated validator")
 
 
+def replacement_finite_number(_value, _label, *, minimum=0.0):
+    return minimum + 1.0
+
+
+def replacement_utc_timestamp(_value, _label):
+    return None
+
+
 def w11_record(hashes=None):
     identities = hashes or {
         "binary_sha256": "a" * 64,
@@ -656,6 +664,22 @@ class FormulaTests(unittest.TestCase):
         finally:
             self.goal.validate_attempt = original
         self.assertNotEqual(before, after)
+
+    def test_scorer_identity_covers_numeric_and_lineage_dependencies(self):
+        before = self.goal.registered_scorer_digest("w11.context.v1")
+        originals = (self.goal._finite_number, self.goal._utc_timestamp)
+        try:
+            self.goal._finite_number = replacement_finite_number
+            finite_digest = self.goal.registered_scorer_digest(
+                "w11.context.v1"
+            )
+            self.goal._finite_number = originals[0]
+            self.goal._utc_timestamp = replacement_utc_timestamp
+            utc_digest = self.goal.registered_scorer_digest("w11.context.v1")
+        finally:
+            self.goal._finite_number, self.goal._utc_timestamp = originals
+        self.assertNotEqual(before, finite_digest)
+        self.assertNotEqual(before, utc_digest)
 
     def test_manifest_lineage_requires_post_freeze_verifiable_randomness(self):
         signature = (

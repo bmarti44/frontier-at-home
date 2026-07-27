@@ -1,0 +1,9 @@
+Candidate under test: afd097ee409d5273a873c34970f6d26b1ca93b0f
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_scorer_identity_covers_numeric_and_lineage_dependencies
+
+Result: genuine RED
+
+Replacing the numeric validator left the W11 scorer implementation digest
+unchanged. The lineage timestamp parser was likewise outside the explicit
+transitive trust closure.
