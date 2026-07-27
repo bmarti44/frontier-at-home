@@ -3,7 +3,7 @@ set -Eeuo pipefail
 umask 077
 
 STACK=llamacpp
-PORT=8011
+PORT=${DSV4_PORT:-8011}
 RUNTIME_DIR=/run/dsv4
 LOCK_FILE=$RUNTIME_DIR/inference.lock
 STATE_FILE=$RUNTIME_DIR/llamacpp.state.json
@@ -664,7 +664,15 @@ PY
 }
 
 do_start() {
+    local port
     [[ -n ${HOME:-} ]] || die 'HOME is not set'
+    [[ $PORT =~ ^[0-9]{4,5}$ ]] \
+        || die 'DSV4_PORT must be an integer from 1024 through 65535'
+    port=$((10#$PORT))
+    if (( port < 1024 || port > 65535 )); then
+        die 'DSV4_PORT must be an integer from 1024 through 65535'
+    fi
+    PORT=$port
     [[ $START_HOLD_FILE == /* ]] || die 'DSV4_START_HOLD_FILE must be absolute'
     [[ ! -e $START_HOLD_FILE ]] \
         || die "persistent maintenance hold blocks large-model startup: $START_HOLD_FILE"
