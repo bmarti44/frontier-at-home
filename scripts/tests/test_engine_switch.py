@@ -128,6 +128,9 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("systemctl disable deepseek-v4-flash-llamacpp.service", source)
         self.assertIn("systemctl enable dsv4-engine-restore.service", source)
         self.assertIn("systemctl restart dsv4-authhelper.service", source)
+        self.assertIn("deadline=$((SECONDS + 30))", source)
+        self.assertIn("while (( SECONDS < deadline ))", source)
+        self.assertIn("sleep 1", source)
         self.assertNotIn(
             "systemctl restart deepseek-v4-flash-llamacpp.service", source
         )
