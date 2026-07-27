@@ -829,6 +829,90 @@ class FormulaTests(unittest.TestCase):
                             "review", "review.final.v1", broken
                         )
 
+    def test_review_scorer_summary_version_is_accepted_end_to_end(self):
+        candidate = "a" * 40
+        records = [
+            {
+                "record_type": "review",
+                "reviewer": reviewer,
+                "candidate_hash": candidate,
+                "review_round": 1,
+                "claimed_score": score,
+                "critical": [],
+                "high": [],
+                "medium": [],
+                "low": [],
+                "prior_issue_status": [],
+                "verdict": "ACCEPT",
+            }
+            for reviewer, score in (
+                ("gap_reviewer", 37),
+                ("adversarial_reviewer", 82),
+            )
+        ]
+        scorer_id = "review.final.v1"
+        summary = self.goal.score_registered_gate(
+            "review", scorer_id, records
+        )
+        self.assertEqual(summary["formula_version"], 3)
+        descriptor = {
+            "schema_version": 1,
+            "scorer_id": scorer_id,
+            "implementation_sha256": self.goal.registered_scorer_digest(
+                scorer_id
+            ),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            attempt = Path(tmp)
+            contents = {
+                name: (
+                    json.dumps(descriptor, sort_keys=True).encode()
+                    if name == "scorer"
+                    else f"{name}-artifact".encode()
+                )
+                for name in (
+                    "source",
+                    "diff",
+                    "binary",
+                    "scorer",
+                    "model",
+                    "tokenizer",
+                    "fixture",
+                    "configuration",
+                )
+            }
+            manifest = {
+                "gate": "review",
+                "candidate_hash": candidate,
+                "lineage": {},
+                "artifacts": {},
+            }
+            for name, content in contents.items():
+                path = attempt / f"{name}.artifact"
+                path.write_bytes(content)
+                manifest["artifacts"][name] = path.name
+                manifest[f"{name}_sha256"] = hashlib.sha256(content).hexdigest()
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            (attempt / "raw.jsonl").write_text(
+                "".join(json.dumps(record) + "\n" for record in records)
+            )
+            (attempt / "summary.json").write_text(json.dumps(summary))
+            candidate_ok = subprocess.CompletedProcess([], 0)
+            with (
+                mock.patch.object(
+                    self.goal.subprocess, "run", return_value=candidate_ok
+                ),
+                mock.patch.object(self.goal, "validate_manifest_lineage"),
+                mock.patch.object(self.goal, "validate_source_provenance"),
+                mock.patch.object(
+                    self.goal, "validate_profile_artifact_bindings"
+                ),
+                mock.patch.object(
+                    self.goal, "validate_record_artifact_bindings"
+                ),
+            ):
+                self.goal.validate_attempt(attempt)
+
     def test_registered_scorer_identity_is_function_scoped(self):
         digests = {
             scorer: self.goal.registered_scorer_digest(scorer)
