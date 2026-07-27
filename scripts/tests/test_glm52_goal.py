@@ -740,6 +740,32 @@ class FormulaTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.goal.validate_attempt(attempt)
 
+    def test_attempt_discovery_orders_numeric_suffixes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            gate_dir = state_dir / "foundation"
+            (gate_dir / "attempt-9").mkdir(parents=True)
+            (gate_dir / "attempt-100").mkdir()
+            state = self.goal._initial_state()
+            self.goal._ingest_attempts(state_dir, state)
+            self.assertEqual(
+                state["gates"]["foundation"]["attempts"],
+                ["foundation/attempt-9", "foundation/attempt-100"],
+            )
+            self.assertIn(
+                "attempt-100", state["gates"]["foundation"]["reason"]
+            )
+
+    def test_attempt_validation_rejects_directory_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "outside"
+            target.mkdir()
+            link = root / "attempt-001"
+            link.symlink_to(target, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                self.goal.validate_attempt(link)
+
     def test_attempt_rejects_self_consistent_but_unbound_source_artifact(self):
         candidate = "77782656208f120a59f0650699d877fd286304b3"
         confirmation = json.loads(

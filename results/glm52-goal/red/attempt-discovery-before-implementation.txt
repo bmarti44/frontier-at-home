@@ -1,0 +1,10 @@
+Candidate under test: c381df13adb8b3465e30b417b439a13e32ed2c6a
+Command:
+  python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_attempt_discovery_orders_numeric_suffixes scripts.tests.test_glm52_goal.FormulaTests.test_attempt_validation_rejects_directory_symlink
+
+Result: two genuine RED failures
+
+- Lexicographic discovery ordered attempt-100 before attempt-9, then treated
+  attempt-9 as the latest evidence.
+- A directory symlink was followed into its target and was not rejected as a
+  symlink at the attempt trust boundary.
