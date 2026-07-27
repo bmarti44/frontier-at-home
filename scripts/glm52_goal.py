@@ -449,7 +449,7 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         "stages",
         "retrieval_results",
         "negative_control_results",
-        "memory_samples_gib",
+        "memory_samples",
         "failure_events",
         "oom_events",
         "xid_events",
@@ -470,6 +470,7 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
 
     stages = observation["stages"]
     expected_caps = [131_072, 262_144, 524_288, 1_048_576]
+    minimum_processed = [130_000, 260_000, 520_000, 1_000_000]
     if not isinstance(stages, list) or len(stages) != len(expected_caps):
         raise ValueError("W11 requires exactly four graduated stages")
     processed: list[int] = []
@@ -481,6 +482,8 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
             {
                 "context_cap",
                 "processed_tokens",
+                "started_at_seconds",
+                "finished_at_seconds",
                 "completed_output_tokens",
                 "token_timestamps",
                 "output_sha256",
@@ -500,6 +503,20 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError("W11 context stages are not graduated exactly")
         if stage["processed_tokens"] > stage["context_cap"]:
             raise ValueError("W11 processed tokens exceed the context cap")
+        started = _finite_number(
+            stage["started_at_seconds"],
+            "W11 stage start",
+            minimum=-1.0,
+        )
+        finished = _finite_number(
+            stage["finished_at_seconds"],
+            "W11 stage finish",
+            minimum=-1.0,
+        )
+        if finished <= started:
+            raise ValueError("W11 stage timing is not positive")
+        if index and started <= stages[index - 1]["finished_at_seconds"]:
+            raise ValueError("W11 stage timing overlaps or is out of order")
         timestamps = stage["token_timestamps"]
         if (
             not isinstance(timestamps, list)
@@ -515,6 +532,11 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
             for left, right in zip(numeric_timestamps, numeric_timestamps[1:])
         ):
             raise ValueError("W11 token timestamps are not strictly increasing")
+        if (
+            numeric_timestamps[0] < started
+            or numeric_timestamps[-1] > finished
+        ):
+            raise ValueError("W11 token timestamps fall outside the stage")
         if not _is_sha256(stage["output_sha256"]):
             raise ValueError("W11 output digest is invalid")
         if stage["finish_reason"] not in {"stop", "length"}:
@@ -585,12 +607,40 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         negative_ids.add(case_id)
         negative_pass &= result["expected_sha256"] == result["observed_sha256"]
 
-    memory_samples = observation["memory_samples_gib"]
+    memory_samples = observation["memory_samples"]
     if not isinstance(memory_samples, list) or len(memory_samples) < 4:
         raise ValueError("W11 memory telemetry is incomplete")
-    memory = [
-        _finite_number(value, "W11 available memory") for value in memory_samples
-    ]
+    memory_times: list[float] = []
+    memory: list[float] = []
+    for index, sample in enumerate(memory_samples):
+        _require_exact_keys(
+            sample,
+            {"timestamp_seconds", "available_gib"},
+            f"W11 memory sample {index}",
+        )
+        memory_times.append(
+            _finite_number(
+                sample["timestamp_seconds"],
+                "W11 memory timestamp",
+                minimum=-1.0,
+            )
+        )
+        memory.append(
+            _finite_number(sample["available_gib"], "W11 available memory")
+        )
+    if any(
+        right <= left for left, right in zip(memory_times, memory_times[1:])
+    ):
+        raise ValueError("W11 memory timestamps are not strictly increasing")
+    if (
+        memory_times[0] > stages[0]["started_at_seconds"]
+        or memory_times[-1] < stages[-1]["finished_at_seconds"]
+        or any(
+            right - left > 0.5
+            for left, right in zip(memory_times, memory_times[1:])
+        )
+    ):
+        raise ValueError("W11 memory telemetry does not cover execution at 4 Hz")
     event_fields = ("failure_events", "oom_events", "xid_events")
     for field in event_fields:
         if not isinstance(observation[field], list):
@@ -598,7 +648,11 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
     checks = {
         "context_cap": stages[-1]["context_cap"] == 1_048_576,
         "processed_tokens": processed[-1] >= 1_000_000,
-        "graduated_stages": processed == sorted(processed),
+        "graduated_stages": all(
+            actual >= minimum
+            for actual, minimum in zip(processed, minimum_processed)
+        )
+        and all(right > left for left, right in zip(processed, processed[1:])),
         "retrieval": retrieval_pass,
         "retrieval_position_coverage": position_coverage,
         "negative_control": negative_pass,
@@ -1256,6 +1310,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
         score_registered_gate,
         validate_attempt,
         validate_manifest_lineage,
+        _fetch_public_drand,
         validate_source_provenance,
         validate_profile_artifact_bindings,
         validate_record_artifact_bindings,
@@ -1329,7 +1384,10 @@ def _utc_timestamp(value: Any, label: str) -> datetime:
 
 
 def validate_manifest_lineage(
-    lineage: Any, gate: str, candidate_hash: str
+    lineage: Any,
+    gate: str,
+    candidate_hash: str,
+    relay_fetcher: Any = None,
 ) -> None:
     """Require public randomness obtained strictly after the candidate freeze."""
     if not isinstance(lineage, dict):
@@ -1390,6 +1448,69 @@ def validate_manifest_lineage(
     ).hexdigest()
     if randomness["seed_sha256"] != expected_seed:
         raise ValueError("confirmation seed derivation is invalid")
+    if relay_fetcher is not None:
+        expected_beacon = {
+            "round": round_number,
+            "randomness": expected_randomness,
+            "signature": signature,
+        }
+        for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
+            try:
+                published = relay_fetcher(host, round_number)
+            except Exception as exc:
+                raise ValueError(
+                    f"public drand relays are unavailable: {host}: {exc}"
+                ) from exc
+            if not isinstance(published, dict) or any(
+                published.get(field) != value
+                for field, value in expected_beacon.items()
+            ):
+                raise ValueError(
+                    f"public drand relays do not authenticate the beacon: {host}"
+                )
+
+
+def _fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
+    if host not in {"api.drand.sh", "api2.drand.sh", "api3.drand.sh"}:
+        raise ValueError("unregistered drand relay")
+    response = subprocess.run(
+        [
+            "/usr/bin/curl",
+            "--silent",
+            "--show-error",
+            "--fail",
+            "--max-time",
+            "10",
+            "--proto",
+            "=https",
+            f"https://{host}/public/{round_number}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        env={
+            "HOME": "/nonexistent",
+            "PATH": "/usr/bin:/bin",
+            "LANG": "C.UTF-8",
+        },
+    )
+    if response.returncode != 0:
+        raise ValueError(
+            response.stderr.decode("utf-8", errors="replace").strip()
+            or f"curl exited {response.returncode}"
+        )
+    try:
+        value = json.loads(
+            response.stdout.decode("utf-8"),
+            object_pairs_hook=lambda pairs: _unique_pairs(
+                pairs, f"drand relay {host}"
+            ),
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"invalid drand response from {host}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"invalid drand response from {host}")
+    return value
 
 
 def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
@@ -1531,7 +1652,10 @@ def validate_attempt(attempt: Path) -> None:
     if candidate_check.returncode != 0:
         raise ValueError("manifest candidate_hash is not a repository commit")
     validate_manifest_lineage(
-        manifest.get("lineage"), manifest["gate"], candidate_hash
+        manifest.get("lineage"),
+        manifest["gate"],
+        candidate_hash,
+        relay_fetcher=_fetch_public_drand,
     )
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, dict):

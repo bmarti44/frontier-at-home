@@ -42,13 +42,20 @@ def w11_record(hashes=None):
         "fixture_sha256": "e" * 64,
     }
     stages = []
-    for context_cap in (131_072, 262_144, 524_288, 1_048_576):
+    for stage_index, context_cap in enumerate(
+        (131_072, 262_144, 524_288, 1_048_576)
+    ):
+        start = stage_index * 2.0
         stages.append(
             {
                 "context_cap": context_cap,
                 "processed_tokens": context_cap,
+                "started_at_seconds": start,
+                "finished_at_seconds": start + 1.0,
                 "completed_output_tokens": 8,
-                "token_timestamps": [index / 10 for index in range(8)],
+                "token_timestamps": [
+                    start + 0.3 + index / 10 for index in range(8)
+                ],
                 "output_sha256": f"{context_cap // 131072:x}" * 64,
                 "finish_reason": "stop",
                 "truncated": False,
@@ -75,7 +82,13 @@ def w11_record(hashes=None):
                 "observed_sha256": "4" * 64,
             }
         ],
-        "memory_samples_gib": [20.0, 18.0, 14.0, 10.0],
+        "memory_samples": [
+            {
+                "timestamp_seconds": index * 0.25,
+                "available_gib": 10.0 + index / 10,
+            }
+            for index in range(29)
+        ],
         "failure_events": [],
         "oom_events": [],
         "xid_events": [],
@@ -307,7 +320,7 @@ class FormulaTests(unittest.TestCase):
         oom_failure["oom_events"] = [{"event": "allocation failure"}]
         fail_mutations.append(oom_failure)
         memory_failure = json.loads(json.dumps(passing))
-        memory_failure["memory_samples_gib"][-1] = 9.99
+        memory_failure["memory_samples"][-1]["available_gib"] = 9.99
         fail_mutations.append(memory_failure)
         truncated_failure = json.loads(json.dumps(passing))
         truncated_failure["stages"][-1]["truncated"] = True
@@ -341,7 +354,13 @@ class FormulaTests(unittest.TestCase):
                 [
                     {
                         **passing,
-                        "memory_samples_gib": [20.0, 18.0, 14.0, "10.0"],
+                        "memory_samples": [
+                            *passing["memory_samples"][:-1],
+                            {
+                                "timestamp_seconds": 7.0,
+                                "available_gib": "10.0",
+                            },
+                        ],
                     }
                 ],
             ),
@@ -351,7 +370,13 @@ class FormulaTests(unittest.TestCase):
                 [
                     {
                         **passing,
-                        "memory_samples_gib": [20.0, 18.0, 14.0, 10**10000],
+                        "memory_samples": [
+                            *passing["memory_samples"][:-1],
+                            {
+                                "timestamp_seconds": 7.0,
+                                "available_gib": 10**10000,
+                            },
+                        ],
                     }
                 ],
             ),
@@ -362,24 +387,20 @@ class FormulaTests(unittest.TestCase):
 
     def test_w11_requires_timestamped_memory_coverage(self):
         record = w11_record()
-        for index, stage in enumerate(record["stages"]):
-            start = index * 2.0
-            stage["started_at_seconds"] = start
-            stage["finished_at_seconds"] = start + 1.0
-            stage["token_timestamps"] = [
-                start + 0.3 + token * 0.1 for token in range(8)
-            ]
-        record.pop("memory_samples_gib")
-        record["memory_samples"] = [
-            {"timestamp_seconds": index * 0.25, "available_gib": 20.0}
-            for index in range(29)
-        ]
         self.assertEqual(
             self.goal.score_registered_gate(
                 "W11", "w11.context.v1", [record]
             )["verdict"],
             "PASS",
         )
+        missing_coverage = json.loads(json.dumps(record))
+        missing_coverage["memory_samples"] = missing_coverage[
+            "memory_samples"
+        ][::4]
+        with self.assertRaisesRegex(ValueError, "cover execution at 4 Hz"):
+            self.goal.score_registered_gate(
+                "W11", "w11.context.v1", [missing_coverage]
+            )
 
     def test_registered_parity_scorer_recomputes_five_block_bounds(self):
         rows = []
