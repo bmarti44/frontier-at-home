@@ -99,8 +99,17 @@ systemctl reset-failed deepseek-v4-flash-llamacpp.service
 [[ -e $HOLD ]] || die "maintenance hold disappeared during install"
 [[ $(systemctl is-active deepseek-v4-flash-llamacpp.service || true) != active ]] ||
     die "engine service unexpectedly became active"
-[[ $(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
-    http://127.0.0.1:8010/health || true) == 401 ]] ||
+ready=false
+deadline=$((SECONDS + 30))
+while (( SECONDS < deadline )); do
+    if [[ $(curl -s -o /dev/null -w '%{http_code}' --max-time 2 \
+        http://127.0.0.1:8010/health || true) == 401 ]]; then
+        ready=true
+        break
+    fi
+    sleep 1
+done
+"$ready" ||
     die "unchanged authenticated endpoint did not reject an unauthenticated probe"
 
 printf '{"ok":true,"engine_started":false,"internal_port":8013,"auth_port":8010}\n'
