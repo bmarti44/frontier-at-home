@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PROBE = ROOT / "scripts" / "57_dsv4_context_probe.py"
 WORKER = ROOT / "scripts" / "58_dsv4_context_worker.sh"
 SCHEDULER = ROOT / "scripts" / "59_schedule_dsv4_context.sh"
+LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 
 
 def load_probe():
@@ -63,6 +64,14 @@ class ContextProbeTests(unittest.TestCase):
 
 
 class ContextWorkerContractTests(unittest.TestCase):
+    def test_measured_headless_admission_is_default_off_and_bounded(self):
+        source = LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("DSV4_MEASURED_HEADLESS_OVERHEAD_GIB", source)
+        self.assertIn("${DSV4_MEASURED_HEADLESS_OVERHEAD_GIB:-0}", source)
+        self.assertIn("must be 0 or 3", source)
+        self.assertIn("systemctl is-active --quiet display-manager.service", source)
+        self.assertIn("overhead_gib=3", source)
+
     def test_worker_graduates_exact_rungs_and_restores_safe_profile(self):
         source = WORKER.read_text(encoding="utf-8")
         self.assertIn("131072 262144 524288 1048576", source)
