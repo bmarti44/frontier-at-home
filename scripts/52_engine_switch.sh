@@ -45,7 +45,7 @@ clean_python() {
 
 clean_curl() {
     env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 \
-        /usr/bin/curl "$@"
+        /usr/bin/curl --disable "$@"
 }
 
 dsv4_launcher() {
