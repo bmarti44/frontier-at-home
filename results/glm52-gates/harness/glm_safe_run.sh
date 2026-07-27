@@ -21,6 +21,7 @@ KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 MIN_START_GIB=${GLM_SAFE_MIN_START_GIB:-110}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
+EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -105,13 +106,22 @@ plog "cmd: $*"
 plog "host: $(hostname) kernel: $(uname -r)"
 plog "candidate_provenance_enabled=$CANDIDATE_PROVENANCE"
 if [[ $CANDIDATE_PROVENANCE == 1 ]]; then
-  CANDIDATE_SRC=${GLM_CANDIDATE_SRC:-}
-  [[ $CANDIDATE_SRC == /home/dsv4/ds4-project/src/* ]] ||
+  APPROVED_SRC_ROOT=/home/dsv4/ds4-project/src
+  CANDIDATE_SRC=$(realpath -e -- "${GLM_CANDIDATE_SRC:-}" 2>/dev/null || true)
+  [[ $CANDIDATE_SRC == "$APPROVED_SRC_ROOT"/* ]] ||
     config_error "GLM_CANDIDATE_SRC"
-  CANDIDATE_BINARY=$CANDIDATE_SRC/ds4-server
+  CANDIDATE_BINARY=$(realpath -e -- "$CANDIDATE_SRC/ds4-server" 2>/dev/null || true)
+  [[ $CANDIDATE_BINARY == "$CANDIDATE_SRC"/ds4-server ]] ||
+    config_error "GLM_CANDIDATE_SRC binary containment"
   [[ -f $CANDIDATE_BINARY && -x $CANDIDATE_BINARY ]] ||
     config_error "GLM_CANDIDATE_SRC binary"
-  plog "candidate_src=$CANDIDATE_SRC candidate_binary_sha256=$(sha256sum -- "$CANDIDATE_BINARY" | awk '{print $1}')"
+  [[ $EXPECTED_BINARY_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
+    config_error "GLM_SAFE_EXPECTED_BINARY_SHA256"
+  CANDIDATE_HASH=$(sha256sum -- "$CANDIDATE_BINARY" | awk '{print $1}')
+  [[ $CANDIDATE_HASH == "$EXPECTED_BINARY_SHA256" ]] ||
+    config_error "GLM_SAFE_EXPECTED_BINARY_SHA256 mismatch"
+  CANDIDATE_DEVICE_INODE=$(stat -Lc '%d:%i' -- "$CANDIDATE_BINARY")
+  plog "candidate_src=$CANDIDATE_SRC candidate_binary_sha256=$CANDIDATE_HASH candidate_device_inode=$CANDIDATE_DEVICE_INODE"
 fi
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
@@ -142,14 +152,34 @@ plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 4 Hz)"
 : > "$SAMP"
 
 KILLED=""
+EXECUTED_CANDIDATE_OBSERVED=0
+PROVENANCE_FAILURE=""
 while kill -0 "$WRAP" 2>/dev/null; do
   MA=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
   # sample the largest ds4* process (sol G3 finding 8: child-guess picked the
   # wrong pid); fall back to the original guess
   BIG=$(pgrep -x 'ds4-server|ds4|ds4-bench|ds4-eval' 2>/dev/null | while read -r p2; do
+          p2_group=$(ps -o pgid= -p "$p2" 2>/dev/null | tr -d ' ')
+          [[ $p2_group == "$PG" ]] || continue
           printf '%s %s\n' "$(awk '/VmRSS/{print $2}' /proc/$p2/status 2>/dev/null || echo 0)" "$p2"
         done | sort -rn | head -1 | awk '{print $2}')
   SPID2=${BIG:-$ENG}
+  if [[ $CANDIDATE_PROVENANCE == 1 && -n $BIG && $EXECUTED_CANDIDATE_OBSERVED == 0 ]]; then
+    EXECUTED_PATH=$(readlink -f -- "/proc/$SPID2/exe" 2>/dev/null || true)
+    EXECUTED_HASH=$(sha256sum -- "/proc/$SPID2/exe" 2>/dev/null | awk '{print $1}')
+    EXECUTED_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$SPID2/exe" 2>/dev/null || true)
+    if [[ $EXECUTED_PATH != "$CANDIDATE_BINARY" ||
+          $EXECUTED_HASH != "$EXPECTED_BINARY_SHA256" ||
+          $EXECUTED_DEVICE_INODE != "$CANDIDATE_DEVICE_INODE" ]]; then
+      plog "FATAL executed candidate mismatch pid=$SPID2 path=${EXECUTED_PATH:-missing} executed_binary_sha256=${EXECUTED_HASH:-missing} device_inode=${EXECUTED_DEVICE_INODE:-missing}"
+      kill -KILL -- -"$PG" 2>/dev/null || true
+      KILLED=provenance
+      PROVENANCE_FAILURE=mismatch
+      break
+    fi
+    EXECUTED_CANDIDATE_OBSERVED=1
+    plog "executed_candidate_verified pid=$SPID2 path=$EXECUTED_PATH executed_binary_sha256=$EXECUTED_HASH device_inode=$EXECUTED_DEVICE_INODE"
+  fi
   RSS=$(awk '/VmRSS/{print $2}' "/proc/$SPID2/status" 2>/dev/null || echo 0)
   RB=$(awk '/^read_bytes/{print $2}' "/proc/$SPID2/io" 2>/dev/null || echo 0)
   echo "$(date -Is) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
@@ -163,6 +193,12 @@ while kill -0 "$WRAP" 2>/dev/null; do
   sleep 0.25
 done
 wait "$WRAP" 2>/dev/null; RC=$?
+if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 0 ]]; then
+  plog "FATAL executed candidate binary was not observed"
+  RC=11
+elif [[ -n $PROVENANCE_FAILURE ]]; then
+  RC=11
+fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
 grep MemAvailable /proc/meminfo >> "$MAIN"; sync
