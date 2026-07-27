@@ -1,0 +1,29 @@
+test_decisive_subset_options (scripts.tests.test_bench_speed_options.BenchOptionTests.test_decisive_subset_options) ... usage: 30_bench_speed.py [-h] --base-url BASE_URL
+                         [--api-key-file API_KEY_FILE] --out OUT --stack-label
+                         STACK_LABEL [--reps REPS] [--warmup WARMUP]
+                         [--ignore-eos-supported] [--extra-body EXTRA_BODY]
+30_bench_speed.py: error: unrecognized arguments: --context-levels 0 --max-tokens 160 --min-completion-tokens 128
+ERROR
+
+======================================================================
+ERROR: test_decisive_subset_options (scripts.tests.test_bench_speed_options.BenchOptionTests.test_decisive_subset_options)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_bench_speed_options.py", line 41, in test_decisive_subset_options
+    args = bench.parse_args()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/30_bench_speed.py", line 68, in parse_args
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/argparse.py", line 1911, in parse_args
+    self.error(msg % ' '.join(argv))
+  File "/usr/lib/python3.12/argparse.py", line 2677, in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+  File "/usr/lib/python3.12/argparse.py", line 2664, in exit
+    _sys.exit(status)
+SystemExit: 2
+
+----------------------------------------------------------------------
+Ran 1 test in 0.009s
+
+FAILED (errors=1)
