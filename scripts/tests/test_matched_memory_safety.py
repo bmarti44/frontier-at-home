@@ -138,6 +138,9 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("GLM_CANDIDATE_SRC", source)
         self.assertIn("candidate_binary_sha256=", source)
         self.assertIn('sha256sum -- "$CANDIDATE_BINARY"', source)
+        self.assertIn('readlink -f -- "/proc/$SPID2/exe"', source)
+        self.assertIn("executed candidate binary was not observed", source)
+        self.assertIn("executed_binary_sha256=", source)
         self.assertNotIn(
             "SRC=/home/dsv4/ds4-project/src/ds4-upstream-master",
             source,
