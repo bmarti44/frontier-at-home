@@ -6,7 +6,7 @@ umask 077
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly HOLD=/home/dsv4/.dsv4-start-hold
-readonly HOLD_OVERRIDE=/home/dsv4/.glm52-headless-start-allow
+readonly HOLD_OVERRIDE=/home/dsv4/.dsv4-headless-start-allow
 readonly LAUNCHER=$REPO/scripts/21_serve_llamacpp.sh
 readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly FAULT_PATTERN='NV_ERR_NO_MEMORY|NVRM.*Xid|oom-kill|Out of memory: Killed process|Killed process .*total-vm'
@@ -78,6 +78,7 @@ value = {
     "swap_start_kib": int(swap_start),
     "swap_end_kib": int(swap_end),
     "swap_growth": int(swap_end) > int(swap_start),
+    "swap_baseline_phase": "post_admission_pre_model",
 }
 with open(path, "x", encoding="utf-8") as stream:
     json.dump(value, stream, sort_keys=True, separators=(",", ":"))
@@ -250,8 +251,6 @@ KERNEL_CURSOR=$(
         sed -n 's/^-- cursor: //p'
 )
 [[ -n $KERNEL_CURSOR ]] || { echo "cannot freeze kernel cursor" >&2; exit 1; }
-SWAP_START_KIB=$(awk '$1 == "SwapFree:" {free=$2}
-    $1 == "SwapTotal:" {total=$2} END {print total-free}' /proc/meminfo)
 MEMWATCH_START_LINE=$(
     wc -l </home/dsv4/logs/memwatch-llamacpp.log 2>/dev/null || echo 0
 )
@@ -263,6 +262,8 @@ fi
 /usr/bin/python3 "$GUARD" --required-gib 116 --stable-samples 3 \
     --interval-seconds 1 --timeout-seconds 180 >"$OUT/admission.json"
 [[ -e $HOLD ]] || { echo "maintenance hold disappeared" >&2; exit 1; }
+SWAP_START_KIB=$(awk '$1 == "SwapFree:" {free=$2}
+    $1 == "SwapTotal:" {total=$2} END {print total-free}' /proc/meminfo)
 
 dsv4_launcher start >"$OUT/start.log" 2>&1
 ENGINE_ACTIVE=true

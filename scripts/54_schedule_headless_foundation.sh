@@ -5,7 +5,7 @@ umask 077
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly HOLD=/home/dsv4/.dsv4-start-hold
-readonly UNIT=glm52-headless-foundation.service
+readonly UNIT=dsv4-headless-smoke.service
 
 die() {
     printf '54_schedule_headless_foundation.sh: %s\n' "$*" >&2
@@ -23,7 +23,7 @@ CANDIDATE_HASH=$3
 (( EUID == 0 )) || die "must run as root"
 [[ -e $HOLD && -f $HOLD && ! -L $HOLD ]] ||
     die "persistent maintenance hold is required"
-[[ ! -e /home/dsv4/.glm52-headless-start-allow ]] ||
+[[ ! -e /home/dsv4/.dsv4-headless-start-allow ]] ||
     die "headless hold-override sentinel unexpectedly exists"
 
 actual=$(
