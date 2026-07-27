@@ -152,6 +152,29 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("10#$watchdog_floor_gib", source)
         self.assertIn("10#$mem_floor_gib", source)
 
+    def test_persistent_maintenance_hold_blocks_boot_start_and_guard(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            hold = Path(tmp) / ".dsv4-start-hold"
+            hold.touch()
+            environment = os.environ.copy()
+            environment["HOME"] = tmp
+            environment["DSV4_START_HOLD_FILE"] = str(hold)
+            result = subprocess.run(
+                ["bash", str(DSV4_LAUNCHER), "start"],
+                env=environment,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("persistent maintenance hold", result.stderr)
+
+        guard = (ROOT / "scripts/03_guard.sh").read_text(encoding="utf-8")
+        hold_index = guard.index("dsv4-start-hold")
+        restart_check_index = guard.index("/usr/sbin/runuser")
+        self.assertLess(hold_index, restart_check_index)
+
     def test_candidate_source_override_is_explicit_and_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
         self.assertIn("GLM_CANDIDATE_SRC:-", source)
