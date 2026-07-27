@@ -73,7 +73,12 @@ class BenchOptionTests(unittest.TestCase):
                 "DS4_TOKEN_TIMING request=chatcmpl-a index=2 monotonic_ns=250 token=8\n",
                 encoding="utf-8",
             )
-            timing = bench.read_token_timing(path, 0)
+            timing = bench.read_token_timing(
+                path,
+                0,
+                expected_request="chatcmpl-a",
+                expected_count=2,
+            )
         self.assertEqual(timing["request"], "chatcmpl-a")
         self.assertEqual(timing["indices"], [1, 2])
         self.assertEqual(timing["monotonic_ns"], [100, 250])
@@ -89,7 +94,41 @@ class BenchOptionTests(unittest.TestCase):
                 encoding="utf-8",
             )
             with self.assertRaises(RuntimeError):
-                bench.read_token_timing(path, 0)
+                bench.read_token_timing(
+                    path,
+                    0,
+                    expected_request="x",
+                    expected_count=2,
+                )
+
+    def test_raw_token_timing_rejects_malformed_identity_and_count(self):
+        bench = load_module()
+        mutations = (
+            (
+                "DS4_TOKEN_TIMING malformed\n",
+                "malformed",
+            ),
+            (
+                "DS4_TOKEN_TIMING request=other index=1 monotonic_ns=100 token=7\n",
+                "request",
+            ),
+            (
+                "DS4_TOKEN_TIMING request=chatcmpl-a index=1 monotonic_ns=100 token=7\n",
+                "count",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "server.log"
+            for contents, error in mutations:
+                with self.subTest(error=error):
+                    path.write_text(contents, encoding="utf-8")
+                    with self.assertRaisesRegex(RuntimeError, error):
+                        bench.read_token_timing(
+                            path,
+                            0,
+                            expected_request="chatcmpl-a",
+                            expected_count=2,
+                        )
 
 
 if __name__ == "__main__":

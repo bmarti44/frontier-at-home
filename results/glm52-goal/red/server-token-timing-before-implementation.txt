@@ -1,0 +1,9 @@
+Root harness RED:
+python3 -m unittest scripts.tests.test_bench_speed_options
+FAILED with five errors because read_token_timing did not accept or enforce
+expected request identity and completion count.
+
+Engine source RED:
+python3 -m unittest tests.test_token_timing_source
+FAILED because unchanged engine commit 86abb92 had no exact default-off
+DS4_TOKEN_TIMING_LOG=1 production decode-loop logging.
