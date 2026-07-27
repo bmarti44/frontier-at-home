@@ -53,7 +53,6 @@ systemd-run \
     --property=Type=exec \
     --property=KillMode=control-group \
     --property=OOMPolicy=kill \
-    --property=OnFailure=display-manager.service \
     --property=RuntimeMaxSec=14400 \
     "$REPO/scripts/58_dsv4_context_worker.sh" \
     "$OUT" "$TAG" "$SEED_SHA256" "$CANDIDATE_HASH" "$MODE"

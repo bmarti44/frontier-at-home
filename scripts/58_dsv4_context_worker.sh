@@ -37,7 +37,6 @@ actual=$(/usr/bin/git -c safe.directory="$REPO" -C "$REPO" rev-parse HEAD)
     { echo "repository is not clean" >&2; exit 2; }
 
 ENGINE_ACTIVE=false
-DISPLAY_WAS_ACTIVE=false
 TELEMETRY_PID=
 KERNEL_CURSOR=
 ORIGINAL_RUNNING=false
@@ -49,10 +48,12 @@ dsv4_launcher() {
     # Normal/recovery contract: DSV4_MEM_FLOOR_GIB=18 and
     # DSV4_WATCHDOG_FLOOR_GIB=18. The exact 1M branch alone exports
     # DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=15.
-    local floor=18 qualification_floor=0
+    local floor=18 qualification_floor=0 batch=2048 ubatch=512
     if (( context == 1048576 && measured == 3 )); then
         floor=15
         qualification_floor=15
+        batch=512
+        ubatch=256
     fi
     /usr/sbin/runuser -u dsv4 -- env -i \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
@@ -63,7 +64,7 @@ dsv4_launcher() {
         DSV4_MEM_FLOOR_GIB="$floor" DSV4_WATCHDOG_FLOOR_GIB="$floor" \
         DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB="$qualification_floor" \
         DSV4_MEASURED_HEADLESS_OVERHEAD_GIB="$measured" \
-        DSV4_UBATCH=512 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=0 \
+        DSV4_UBATCH="$ubatch" DSV4_BATCH="$batch" DSV4_UBATCH_LARGE=0 \
         CTX="$context" DSV4_PARALLEL=1 DSV4_NO_MMAP=1 \
         DSV4_SPEC_TYPE=none \
         "$LAUNCHER" "$@"
@@ -78,17 +79,16 @@ stop_telemetry() {
 
 restore_safe_profile() {
     "$ORIGINAL_RUNNING" || return 0
-    systemctl start display-manager.service >>"$OUT/display.log" 2>&1 || return 1
-    DISPLAY_WAS_ACTIVE=false
     "$RESTORE_ALLOWED" || {
         echo "safe-profile restore suppressed after a kernel/OOM/startup fault" \
             >>"$OUT/restore.log"
         return 1
     }
-    /usr/bin/python3 "$GUARD" --required-gib 110 --stable-samples 3 \
-        --interval-seconds 1 --timeout-seconds 180 >>"$OUT/restore.log" 2>&1 ||
-        return 1
-    dsv4_launcher "$SAFE_CTX" 0 start >>"$OUT/restore.log" 2>&1
+    # A launcher started directly here inherits this transient unit's cgroup
+    # and is killed when the worker exits. Restart the persistent restore unit
+    # without blocking so the recovery engine belongs to its own cgroup.
+    systemctl --no-block restart dsv4-engine-restore.service \
+        >>"$OUT/restore.log" 2>&1
 }
 
 cleanup() {
@@ -112,14 +112,7 @@ cleanup() {
         RESTORE_ALLOWED=false
         rc=1
     fi
-    if "$DISPLAY_WAS_ACTIVE"; then
-        if "$ORIGINAL_RUNNING"; then
-            restore_safe_profile || rc=1
-        else
-            systemctl start display-manager.service >>"$OUT/display.log" 2>&1 || rc=1
-            DISPLAY_WAS_ACTIVE=false
-        fi
-    fi
+    restore_safe_profile || rc=1
     /usr/bin/python3 - "$OUT" "$rc" "$CANDIDATE_HASH" "$SEED_SHA256" "$MODE" <<'PY'
 import hashlib
 import json
@@ -205,10 +198,9 @@ if dsv4_launcher "$SAFE_CTX" 0 status >/dev/null 2>&1; then
     ORIGINAL_RUNNING=true
     dsv4_launcher "$SAFE_CTX" 0 stop >"$OUT/original-stop.log" 2>&1
 fi
-if systemctl is-active --quiet display-manager.service; then
-    DISPLAY_WAS_ACTIVE=true
-    systemctl stop display-manager.service >>"$OUT/display.log" 2>&1
-fi
+systemctl stop display-manager.service >>"$OUT/display.log" 2>&1 || true
+systemctl is-active --quiet display-manager.service &&
+    { echo "display manager remained active" >&2; exit 1; }
 /usr/bin/python3 "$GUARD" --required-gib 115.25 --stable-samples 3 \
     --interval-seconds 1 --timeout-seconds 180 >"$OUT/admission.json"
 
