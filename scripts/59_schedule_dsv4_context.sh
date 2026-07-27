@@ -30,6 +30,16 @@ actual=$(
     die "GLM process record exists"
 systemctl is-active --quiet "$UNIT" && die "$UNIT is already active"
 install -d -o dsv4 -g dsv4 -m 0700 /run/dsv4
+guard_handoff=false
+restore_guard_on_error() {
+    "$guard_handoff" || systemctl start dsv4-guard.timer >/dev/null 2>&1 || true
+}
+trap restore_guard_on_error EXIT
+# Serialize against the health supervisor before inspecting/stopping the live
+# engine. Stopping both closes a timer-expiry race already reproduced in a
+# failed 1M attempt.
+systemctl stop dsv4-guard.timer
+systemctl stop dsv4-guard.service
 # Fail if an unrelated process has the inference lock. The worker stops the
 # identity-verified current DSV4 process before taking over the same launcher.
 if /usr/sbin/runuser -u dsv4 -- env -i \
@@ -56,4 +66,6 @@ systemd-run \
     --property=RuntimeMaxSec=14400 \
     "$REPO/scripts/58_dsv4_context_worker.sh" \
     "$OUT" "$TAG" "$SEED_SHA256" "$CANDIDATE_HASH" "$MODE"
+guard_handoff=true
+trap - EXIT
 printf 'Scheduled %s. Evidence: %s\n' "$UNIT" "$OUT"

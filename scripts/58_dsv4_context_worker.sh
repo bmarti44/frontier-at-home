@@ -78,17 +78,20 @@ stop_telemetry() {
 }
 
 restore_safe_profile() {
-    "$ORIGINAL_RUNNING" || return 0
     "$RESTORE_ALLOWED" || {
         echo "safe-profile restore suppressed after a kernel/OOM/startup fault" \
             >>"$OUT/restore.log"
         return 1
     }
     # A launcher started directly here inherits this transient unit's cgroup
-    # and is killed when the worker exits. Restart the persistent restore unit
-    # without blocking so the recovery engine belongs to its own cgroup.
-    systemctl --no-block restart dsv4-engine-restore.service \
-        >>"$OUT/restore.log" 2>&1
+    # and is killed when the worker exits. The persistent restore unit has its
+    # own cgroup. Wait for its verified health result before rearming the
+    # periodic guard, otherwise the guard can race the recovery load.
+    if "$ORIGINAL_RUNNING"; then
+        systemctl restart dsv4-engine-restore.service \
+            >>"$OUT/restore.log" 2>&1 || return 1
+    fi
+    systemctl start dsv4-guard.timer >>"$OUT/restore.log" 2>&1
 }
 
 cleanup() {
@@ -193,6 +196,10 @@ if journalctl -k -b --no-pager | grep -Eiq "$FAULT_PATTERN"; then
     echo "pre-existing kernel GPU/OOM fault on current boot" >&2
     exit 1
 fi
+# Defense in depth for direct worker invocation. The scheduler pauses these
+# before creating this unit, closing the timer-to-worker handoff race.
+systemctl stop dsv4-guard.timer
+systemctl stop dsv4-guard.service
 
 if dsv4_launcher "$SAFE_CTX" 0 status >/dev/null 2>&1; then
     ORIGINAL_RUNNING=true
