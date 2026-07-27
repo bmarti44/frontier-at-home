@@ -772,6 +772,51 @@ class FormulaTests(unittest.TestCase):
                 relay_fetcher=lambda _host, _round: published,
             )
 
+    def test_manifest_freeze_time_is_derived_from_commit(self):
+        confirmation = json.loads(
+            (
+                ROOT
+                / "results/glm52-goal/evidence/"
+                "lineage-confirmation-6996608.json"
+            ).read_text()
+        )
+        candidate = confirmation["candidate_hash"]
+        item = next(
+            value
+            for value in confirmation["gate_seeds"]
+            if value["gate"] == "W11"
+        )
+        beacon = confirmation["confirmation"]
+        lineage = {
+            "freeze": {
+                "candidate_hash": candidate,
+                "frozen_at": "2020-01-01T00:00:00+00:00",
+            },
+            "randomness": {
+                "source": beacon["source"],
+                "round": beacon["round"],
+                "randomness": beacon["drand_randomness"],
+                "signature": beacon["drand_signature"],
+                "obtained_at": beacon["obtained_at"],
+                "seed_sha256": item["sha256"],
+            },
+        }
+        published = {
+            "round": beacon["round"],
+            "randomness": beacon["drand_randomness"],
+            "signature": beacon["drand_signature"],
+        }
+        with self.assertRaisesRegex(ValueError, "commit timestamp"):
+            self.goal.validate_manifest_lineage(
+                lineage,
+                "W11",
+                candidate,
+                relay_fetcher=lambda _host, _round: published,
+                commit_time_fetcher=lambda _candidate: (
+                    "2026-07-27T04:24:33+00:00"
+                ),
+            )
+
     def test_attempt_requires_manifest_raw_and_fixed_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             attempt = Path(tmp)
