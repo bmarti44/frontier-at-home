@@ -103,9 +103,45 @@ class EngineSwitchTests(unittest.TestCase):
                 "DS4_TOKEN_TIMING_LOG": "1",
             },
         )
-        self.assertEqual(glm["runtime"]["safety"]["minimum_start_gib"], 110)
-        self.assertEqual(glm["runtime"]["safety"]["kill_floor_gib"], 40)
-        self.assertEqual(glm["runtime"]["safety"]["swap_max_bytes"], 0)
+        self.assertEqual(
+            glm["runtime"]["launch_arguments"],
+            [
+                "--cuda", "-m", "{model}", "-c", "8192",
+                "--host", "127.0.0.1", "--port", "{port}",
+                "--ssd-streaming",
+                "--ssd-streaming-cache-experts", "40GB",
+            ],
+        )
+        self.assertEqual(
+            glm["runtime"]["benchmark"],
+            {
+                "fixture_context_tokens": 0,
+                "max_completion_tokens": 160,
+                "minimum_completion_tokens": 128,
+                "raw_token_timing_required": True,
+            },
+        )
+        self.assertEqual(
+            glm["runtime"]["safety"],
+            {
+                "kill_floor_gib": 40,
+                "minimum_start_gib": 110,
+                "sample_hz": 4,
+                "swap_max_bytes": 0,
+                "timeout_seconds": 2400,
+                "virtual_memory_limit_kib": 419_430_400,
+            },
+        )
+        self.assertEqual(
+            set(glm["artifact_sha256"]),
+            {
+                "results/glm52-goal/harness/glm_decisive_arm.sh",
+                "results/glm52-gates/harness/glm_safe_run.sh",
+                "results/glm52-gates/harness/glm_cgroup_run.sh",
+                "results/glm52-gates/harness/glm_evidence_export.py",
+                "scripts/30_bench_speed.py",
+            },
+        )
         for path, digest in glm["artifact_sha256"].items():
             self.assertEqual(
                 digest,
