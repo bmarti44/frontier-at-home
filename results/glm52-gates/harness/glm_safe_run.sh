@@ -153,6 +153,8 @@ plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 4 Hz)"
 
 KILLED=""
 EXECUTED_CANDIDATE_OBSERVED=0
+EXECUTED_PID=""
+EXECUTED_START_TICKS=""
 PROVENANCE_FAILURE=""
 while kill -0 "$WRAP" 2>/dev/null; do
   MA=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
@@ -178,7 +180,44 @@ while kill -0 "$WRAP" 2>/dev/null; do
       break
     fi
     EXECUTED_CANDIDATE_OBSERVED=1
-    plog "executed_candidate_verified pid=$SPID2 path=$EXECUTED_PATH executed_binary_sha256=$EXECUTED_HASH device_inode=$EXECUTED_DEVICE_INODE"
+    EXECUTED_PID=$SPID2
+    EXECUTED_START_TICKS=$(awk '{print $22}' "/proc/$EXECUTED_PID/stat" 2>/dev/null || true)
+    [[ $EXECUTED_START_TICKS =~ ^[0-9]+$ ]] || {
+      plog "FATAL executed candidate start ticks unavailable pid=$EXECUTED_PID"
+      kill -KILL -- -"$PG" 2>/dev/null || true
+      KILLED=provenance
+      PROVENANCE_FAILURE=start-ticks
+      break
+    }
+    plog "executed_candidate_verified pid=$EXECUTED_PID start_ticks=$EXECUTED_START_TICKS path=$EXECUTED_PATH executed_binary_sha256=$EXECUTED_HASH device_inode=$EXECUTED_DEVICE_INODE"
+  fi
+  if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 1 ]]; then
+    CURRENT_START_TICKS=$(awk '{print $22}' "/proc/$EXECUTED_PID/stat" 2>/dev/null || true)
+    if [[ $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
+      sleep 0.1
+      if ! kill -0 "$WRAP" 2>/dev/null; then
+        break
+      fi
+      plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=start-ticks"
+      kill -KILL -- -"$PG" 2>/dev/null || true
+      KILLED=provenance
+      PROVENANCE_FAILURE=continuous-identity
+      break
+    fi
+    CURRENT_GROUP=$(ps -o pgid= -p "$EXECUTED_PID" 2>/dev/null | tr -d ' ')
+    CURRENT_PATH=$(readlink -f -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+    CURRENT_HASH=$(sha256sum -- "/proc/$EXECUTED_PID/exe" 2>/dev/null | awk '{print $1}')
+    CURRENT_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+    if [[ $CURRENT_GROUP != "$PG" ||
+          $CURRENT_PATH != "$CANDIDATE_BINARY" ||
+          $CURRENT_HASH != "$EXPECTED_BINARY_SHA256" ||
+          $CURRENT_DEVICE_INODE != "$CANDIDATE_DEVICE_INODE" ]]; then
+      plog "FATAL executed candidate identity changed pid=$EXECUTED_PID start_ticks=$CURRENT_START_TICKS pgid=${CURRENT_GROUP:-missing} path=${CURRENT_PATH:-missing} executed_binary_sha256=${CURRENT_HASH:-missing} device_inode=${CURRENT_DEVICE_INODE:-missing}"
+      kill -KILL -- -"$PG" 2>/dev/null || true
+      KILLED=provenance
+      PROVENANCE_FAILURE=continuous-identity
+      break
+    fi
   fi
   RSS=$(awk '/VmRSS/{print $2}' "/proc/$SPID2/status" 2>/dev/null || echo 0)
   RB=$(awk '/^read_bytes/{print $2}' "/proc/$SPID2/io" 2>/dev/null || echo 0)
