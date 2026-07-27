@@ -38,23 +38,14 @@ Environment=DSV4_BUILD_MANIFEST=@DSV4_REPO@/configs/build-manifests/llamacpp-fus
 # requirement (fetching both weight sets); a loaded engine only writes logs, so
 # 100 GiB is an ample runtime floor now that the host disk is shared/fuller.
 Environment=DSV4_MIN_ROOT_FREE_GIB=100
-# Tuned 2026-07-23 (docs/speed-tuning-2026-07-23.md). Micro-batch 2048: the
-# fusion build's measured CUDA compute buffer is 267 MiB at ub=512 (the 35 GiB
-# graph-capture peak that motivated ub=256 was the pre-fusion build); ub=2048
-# costs ~1 GiB and lifts 19K-prompt prefill from ~208 to ~434 tok/s. The
-# launcher charges +2 GiB membudget overhead when ub>512 (DSV4_UBATCH_LARGE).
-Environment=DSV4_UBATCH=2048
-Environment=DSV4_BATCH=2048
-Environment=DSV4_UBATCH_LARGE=1
-# Two slots at 64K total (32K per slot): agent clients fire small utility
-# requests (title generation) between turns; with one slot those clobber the
-# main conversation's ~20K prefix cache and force a full re-prefill every
-# turn (measured 2026-07-24 from live agent traffic: turn-starts re-prefilled
-# 20K while continuations reused down to 5 tokens). llama-server routes by
-# prefix similarity, so the second slot absorbs utility calls. DSV4's
-# compressed KV makes the extra context ~256 MiB (charged via membudget CTX).
-Environment=CTX=65536
-Environment=DSV4_PARALLEL=2
+# OOM-safe bootstrap profile reproduced after the 2026-07-27 reboot. It keeps
+# the launcher's full 18 GiB post-load floor and avoids the rejected 117 GiB
+# projected allocation of the former 64K/two-slot profile.
+Environment=DSV4_UBATCH=512
+Environment=DSV4_BATCH=512
+Environment=DSV4_UBATCH_LARGE=0
+Environment=CTX=8192
+Environment=DSV4_PARALLEL=1
 # GB10 mmap page faults make cold loads pathologically slow (measured here:
 # 6-7 min -> ~92 s with --no-mmap). Weights are resident either way (-ngl 999).
 Environment=DSV4_NO_MMAP=1
