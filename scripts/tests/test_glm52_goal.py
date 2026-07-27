@@ -45,6 +45,15 @@ def replacement_w11_fixture(_candidate_hash, _seed_sha256):
     return {}
 
 
+def replacement_dsv4_profile(_candidate_hash):
+    return {
+        "schema_version": 1,
+        "profile": "dsv4",
+        "binary_sha256": "a" * 64,
+        "configuration_sha256": "b" * 64,
+    }
+
+
 def w11_record(hashes=None):
     identities = hashes or {
         "binary_sha256": "a" * 64,
@@ -675,6 +684,7 @@ class FormulaTests(unittest.TestCase):
             self.goal._finite_number,
             self.goal._utc_timestamp,
             self.goal.generate_w11_fixture,
+            self.goal._load_approved_dsv4_profile,
         )
         try:
             self.goal._finite_number = replacement_finite_number
@@ -689,15 +699,25 @@ class FormulaTests(unittest.TestCase):
             fixture_digest = self.goal.registered_scorer_digest(
                 "w11.context.v1"
             )
+            self.goal.generate_w11_fixture = originals[2]
+            self.goal._load_approved_dsv4_profile = replacement_dsv4_profile
+            profile_digest = self.goal.registered_scorer_digest(
+                "parity.performance.v1"
+            )
         finally:
             (
                 self.goal._finite_number,
                 self.goal._utc_timestamp,
                 self.goal.generate_w11_fixture,
+                self.goal._load_approved_dsv4_profile,
             ) = originals
         self.assertNotEqual(before, finite_digest)
         self.assertNotEqual(before, utc_digest)
         self.assertNotEqual(before, fixture_digest)
+        self.assertNotEqual(
+            self.goal.registered_scorer_digest("parity.performance.v1"),
+            profile_digest,
+        )
 
     def test_manifest_lineage_requires_post_freeze_verifiable_randomness(self):
         signature = (
