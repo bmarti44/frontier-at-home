@@ -782,6 +782,24 @@ do_start() {
     # graph-reserve slack with wide margin.
     overhead_gib=6
     [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] && (( ${DSV4_UBATCH:-512} > 512 )) && overhead_gib=8
+    # Default-off context-qualification mode. The fusion build's resident
+    # non-weight footprint was measured at 2.74 GiB with ubatch=512 on this
+    # host. Charge 3 GiB only while the display is confirmed stopped; the
+    # independent 18 GiB quarter-second watchdog remains unchanged.
+    measured_headless_overhead_gib=${DSV4_MEASURED_HEADLESS_OVERHEAD_GIB:-0}
+    [[ $measured_headless_overhead_gib == 0 || $measured_headless_overhead_gib == 3 ]] \
+        || die 'DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3'
+    if (( measured_headless_overhead_gib == 3 )); then
+        need_command systemctl
+        systemctl is-active --quiet display-manager.service &&
+            die 'measured headless overhead requires an inactive display manager'
+        [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] &&
+            (( ${DSV4_UBATCH:-512} <= 512 )) ||
+            die 'measured headless overhead requires DSV4_UBATCH <= 512'
+        overhead_gib=3
+        printf 'Using measured headless admission overhead: %s GiB; watchdog floor remains %s GiB.\n' \
+            "$overhead_gib" "$watchdog_floor_gib" >&2
+    fi
     budget=$(python3 "$MEMBUDGET" --weights "${weights[@]}" --ctx "$CTX" \
         --kv-bytes-per-token 4096 --overhead-gib "$overhead_gib" --floor-gib "$mem_floor_gib" 2>&1)
     rc=$?
