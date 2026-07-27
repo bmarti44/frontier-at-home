@@ -9,6 +9,7 @@ LOCK_FILE=$RUNTIME_DIR/inference.lock
 STATE_FILE=$RUNTIME_DIR/llamacpp.state.json
 TARGET_FILE=$RUNTIME_DIR/llamacpp.engine.target
 WATCHDOG_READY=$RUNTIME_DIR/llamacpp.memwatch.ready
+START_FAILURE_MARKER=$RUNTIME_DIR/llamacpp.start-failed
 startup_cleanup_armed=false
 memwatch_pid=
 memwatch_start_ticks=0
@@ -167,6 +168,12 @@ cleanup_failed_start() {
     "$watchdog_disarmed" && rm -f -- "$WATCHDOG_READY"
     [[ -z ${target_tmp:-} ]] || rm -f -- "$target_tmp"
     [[ -z ${start_gate:-} ]] || rm -f -- "$start_gate"
+    # /run is cleared by reboot. A failed large CUDA initialization can leave
+    # driver allocations fragmented even after host memory recovers, so never
+    # retry blindly on the same boot.
+    printf 'failed_at=%s exit_status=%s\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$rc" >"$START_FAILURE_MARKER.tmp"
+    mv -- "$START_FAILURE_MARKER.tmp" "$START_FAILURE_MARKER"
     return "$rc"
 }
 
@@ -681,6 +688,17 @@ do_start() {
     fi
     mkdir -p -- "$RUNTIME_DIR" "$LOG_DIR" || die 'cannot create runtime or log directory'
     chmod 700 -- "$RUNTIME_DIR" "$LOG_DIR" || die 'cannot secure runtime or log directory'
+
+    retry_failed_start=${DSV4_ALLOW_RETRY_AFTER_FAILED_START:-0}
+    [[ $retry_failed_start == 0 || $retry_failed_start == 1 ]] \
+        || die 'DSV4_ALLOW_RETRY_AFTER_FAILED_START must be 0 or 1'
+    if [[ -e $START_FAILURE_MARKER ]]; then
+        if (( retry_failed_start == 0 )); then
+            die "a prior large-model start failed on this boot; reboot before retrying (marker: $START_FAILURE_MARKER)"
+        fi
+        printf 'WARNING: explicitly retrying after a failed large-model start on this boot.\n' >&2
+        rm -f -- "$START_FAILURE_MARKER"
+    fi
 
     if [[ -e $STATE_FILE ]]; then
         read_state

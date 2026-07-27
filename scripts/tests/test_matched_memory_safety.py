@@ -97,6 +97,9 @@ class MatchedHarnessContractTests(unittest.TestCase):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_WATCHDOG_FLOOR_GIB:-18", source)
         self.assertIn('--threshold-gib "$watchdog_floor_gib"', source)
+        self.assertIn("llamacpp.start-failed", source)
+        self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START", source)
+        self.assertIn("reboot before retrying", source)
 
     def test_candidate_source_override_is_explicit_and_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
