@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "status": "NO_RESULT",
+  "observed": {
+    "outer_exit_status": 11,
+    "outer_failure": "The already-attested engine became a zombie during the arm's normal stop_server shutdown. The pre-fix wrapper misclassified the missing /proc/PID/exe as continuous provenance substitution.",
+    "benchmark_suite_valid": true,
+    "completion_tokens": 160,
+    "decode_tokens_per_second": 0.6703883295073607,
+    "ttft_seconds": 100.24545277599827,
+    "prefill_tokens_per_second": 0.5885553744950149,
+    "prompt_tokens": 59,
+    "minimum_available_memory_gib": 87.049583435,
+    "swap_growth": false,
+    "oom_observed": false,
+    "xid_observed": false,
+    "model_process_survived": false,
+    "acceptance_authority": false,
+    "required_disposition": "Preserve as NO_RESULT; fix shutdown provenance test-first, freeze a new candidate and rerun with new randomness."
+  },
+  "raw_evidence": {
+    "result": {
+      "path": "/home/dsv4/ds4-project/glm52-confirm-58b1759-r6324425/result.json",
+      "source_sha256": "8fd5ee84c37dfac9a4835b67c24f902a7ca0dee543ca957c0a2a6f90abda18e6"
+    },
+    "server_log": {
+      "path": "/home/dsv4/ds4-project/glm52-confirm-58b1759-r6324425/server.log",
+      "source_sha256": "d246b0b27f8cd2da4032e8c276aa93806f493c581cc0ac496594b79ca2d7ddaf"
+    },
+    "process_identity": {
+      "path": "/home/dsv4/ds4-project/glm52-confirm-58b1759-r6324425/process.identity",
+      "source_sha256": "49515c63a6d7af0a742626f438acedcfd32e6fcbe2702bdae45c329564e9cbc5"
+    },
+    "safe_main_log": {
+      "path": "/home/dsv4/ds4-project/glm52-crashlog/20260727-105129-confirm-r6324425/main.log",
+      "source_sha256": "90fab0adef069fb7d92943acfe9e71dd3a74ece75bc4976ff5015871300af4f7"
+    },
+    "memory_samples": {
+      "path": "/home/dsv4/ds4-project/glm52-crashlog/20260727-105129-confirm-r6324425/samples.log",
+      "source_sha256": "b95b93fc421f91761ec729e44b73535255288ff4e42e1f09387f570f18c3ce8d"
+    }
+  },
+  "purpose": "one guarded GLM functional/timing confirmation; not matched or release authority",
+  "frozen_at_utc": "2026-07-27T14:49:57Z",
+  "source": {
+    "root_commit": "58b1759dd83c19f2b9069772d139f850ebb10d83",
+    "engine_commit": "24cbaec6a69c3a78fbc47a5cae592fa06ad255c1",
+    "binary_sha256": "df95f388d0eeed6e025988747b69c9d06bd4dce6c634fe6df60acbbc0d93fae8",
+    "binary_bytes": 13845136
+  },
+  "artifacts": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "model_bytes": 211075856448,
+    "fixture_tokenizer": {
+      "tokenizer_sha256": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf"
+    },
+    "glm_output_tokenizer": {
+      "source": "zai-org/GLM-5.2@b4734de4facf877f85769a911abafc5283eab3d9",
+      "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+      "bytes": 20217442,
+      "usable_ids": 154856
+    },
+    "model_head_rows": 154880,
+    "fixture_sha256": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031",
+    "scorer_sha256": "c7017fd4cb57b227ad8b4ca1a6c5533c0c1eac4c536e59d3e8a52e6e62103dd3",
+    "arm": {
+      "source_sha256": "d3886ecc0f47a14bba5655d49a4540f86f86c28701ed641875e2015618f2467f"
+    },
+    "cgroup_launcher": {
+      "source_sha256": "a7a39f85086492ba35b3e9905842cb8a6fe1b0f8844273e9a44632847c52e839"
+    },
+    "safe_wrapper": {
+      "source_sha256": "6a4d8f374e4426a7ba7236a8daf3618819e34d09ee5c1b806ee0614a28fa9787"
+    }
+  },
+  "public_randomness": {
+    "source": "https://api.drand.sh/public/latest",
+    "round": 6324425,
+    "drand_randomness": "702bbf8b75207bbfdd4c245a524f5bedb8daf44c48944330f36c8ad98bec5518",
+    "drand_signature": "ae3f96560f578d8f4151b808981a941eac392feeaf5080cd8210745cff9a7eaf2136e6cb1e46aa094ff7b4b4a582caf0137f9be747f67e1a3d2da92aa8eb9ea0b0cfeeb2e822bfff814834eae4e5d77b5683f513c6aa944ed05c4f23c3d9fbd8",
+    "seed_formula": "int(randomness, 16) mod 2147483647",
+    "seed": 140974649
+  },
+  "configuration": {
+    "port": 18011,
+    "context_cap": 8192,
+    "fixture_context_tokens": 0,
+    "max_completion_tokens": 160,
+    "minimum_completion_tokens": 128,
+    "raw_token_timing_required": true,
+    "iq2_down_reference": true,
+    "minimum_start_available_gib": 110,
+    "kill_floor_available_gib": 40,
+    "timeout_seconds": 2400,
+    "swap_max_bytes": 0,
+    "absolute_arm_path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm52-goal/harness/glm_decisive_arm.sh"
+  },
+  "acceptance": {
+    "decode_formula": "(N-1)/(tN-t1)",
+    "output_binding": "one atomically hashed GLM tokenizer byte snapshot; exact reasoning/content byte reconstruction and canonical IDs checked independently",
+    "canonical_only_failure": "NO_RESULT, not engine failure",
+    "padding_behavior": "sampled token id 154856..154879 fails closed",
+    "timing_envelope": "0.75 <= raw_decode_elapsed/client_content_elapsed <= 1.25",
+    "safety": "no cgroup memory event, swap, OOM, Xid, or surviving descendant; minimum available memory >=40GiB"
+  }
+}
