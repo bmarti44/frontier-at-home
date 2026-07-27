@@ -743,6 +743,7 @@ do_start() {
     watchdog_floor_gib=${DSV4_WATCHDOG_FLOOR_GIB:-18}
     [[ $watchdog_floor_gib =~ ^[0-9]{1,2}$ ]] \
         || die 'DSV4_WATCHDOG_FLOOR_GIB must be a bounded integer'
+    watchdog_floor_gib=$((10#$watchdog_floor_gib))
     if (( watchdog_floor_gib < 18 || watchdog_floor_gib > 64 )); then
         die 'DSV4_WATCHDOG_FLOOR_GIB must be between 18 and 64'
     fi
@@ -753,6 +754,7 @@ do_start() {
     mem_floor_gib=${DSV4_MEM_FLOOR_GIB:-$watchdog_floor_gib}
     [[ $mem_floor_gib =~ ^[0-9]{1,3}$ ]] \
         || die 'DSV4_MEM_FLOOR_GIB must be a bounded integer'
+    mem_floor_gib=$((10#$mem_floor_gib))
     if (( mem_floor_gib < 18 || mem_floor_gib > 119 )); then
         die 'DSV4_MEM_FLOOR_GIB must be between 18 and 119'
     fi

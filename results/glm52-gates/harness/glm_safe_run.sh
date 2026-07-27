@@ -35,6 +35,10 @@ do
   value=${pair#*:}
   [[ $value =~ ^[0-9]{1,9}$ ]] || config_error "$name"
 done
+VLIMIT_KB=$((10#$VLIMIT_KB))
+KILL_FLOOR_GIB=$((10#$KILL_FLOOR_GIB))
+MIN_START_GIB=$((10#$MIN_START_GIB))
+TIMEOUT_S=$((10#$TIMEOUT_S))
 if (( VLIMIT_KB < 1048576 || VLIMIT_KB > 419430400 )); then
   config_error "GLM_SAFE_VLIMIT_KB"
 fi
