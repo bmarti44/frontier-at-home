@@ -258,6 +258,67 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "status", "--json")
             self.assertNotEqual(result.returncode, 0)
 
+    def test_resume_ingests_valid_attempt_and_advances(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            attempt = state_dir / "foundation" / "attempt-001"
+            attempt.mkdir(parents=True)
+            manifest = {
+                name: str(index) * 64
+                for index, name in enumerate(
+                    (
+                        "source_sha256",
+                        "diff_sha256",
+                        "binary_sha256",
+                        "scorer_sha256",
+                        "model_sha256",
+                        "tokenizer_sha256",
+                        "fixture_sha256",
+                        "configuration_sha256",
+                    )
+                )
+            }
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            (attempt / "raw.jsonl").write_text(
+                json.dumps({"event": "bounded falsifier", "failures": []}) + "\n"
+            )
+            (attempt / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "formula_version": 1,
+                        "verdict": "NO_RESULT",
+                        "reason": "bounded attempt exhausted",
+                    }
+                )
+            )
+            result = self.run_cli(state_dir, "resume")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            event = json.loads(result.stdout)
+            self.assertEqual(event["selected_gate"], "W1")
+            state = json.loads((state_dir / "state.json").read_text())
+            self.assertEqual(state["gates"]["foundation"]["status"], "NO_RESULT")
+            self.assertEqual(
+                state["gates"]["foundation"]["attempts"], ["foundation/attempt-001"]
+            )
+
+    def test_malformed_attempt_fails_gate_and_does_not_get_skipped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            attempt = state_dir / "foundation" / "attempt-001"
+            attempt.mkdir(parents=True)
+            (attempt / "manifest.json").write_text("{}")
+            (attempt / "raw.jsonl").write_text("{}\n")
+            (attempt / "summary.json").write_text(
+                '{"formula_version":1,"verdict":"PASS"}'
+            )
+            result = self.run_cli(state_dir, "resume")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            event = json.loads(result.stdout)
+            self.assertEqual(event["selected_gate"], "W1")
+            state = json.loads((state_dir / "state.json").read_text())
+            self.assertEqual(state["gates"]["foundation"]["status"], "FAIL")
+            self.assertIn("invalid", state["gates"]["foundation"]["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()
