@@ -175,7 +175,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         source = GLM_CGROUP.read_text(encoding="utf-8")
         self.assertIn("GLM_SAFE_EVIDENCE_DIR", source)
         self.assertIn("/home/dsv4/ds4-project/glm52-confirm-", source)
-        self.assertIn('chmod -R a+rX -- "$EVIDENCE_DIR"', source)
+        self.assertIn('"$EVIDENCE_EXPORT" "$EVIDENCE_DIR"', source)
         self.assertIn("command_rc=$?", source)
         self.assertIn("evidence_export_rc=", source)
         self.assertIn("exit \"$command_rc\"", source)

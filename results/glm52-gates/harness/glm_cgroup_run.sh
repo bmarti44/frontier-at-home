@@ -49,16 +49,43 @@ high_mib=$((max_mib - 4096))
 
 UNIT="glm52-${TAG//./-}-$$"
 SAFE=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_safe_run.sh
+EVIDENCE_EXPORT=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_evidence_export.py
 UNIT_ACTIVE=0
+export_evidence() {
+  [[ -n $EVIDENCE_DIR ]] || return 0
+  local evidence_export_rc=0
+  local crash_dir
+  sudo -n -u dsv4 /usr/bin/python3 "$EVIDENCE_EXPORT" "$EVIDENCE_DIR" ||
+    evidence_export_rc=1
+  while IFS= read -r crash_dir; do
+    [[ -n $crash_dir ]] || continue
+    sudo -n -u dsv4 /usr/bin/python3 "$EVIDENCE_EXPORT" "$crash_dir" ||
+      evidence_export_rc=1
+  done < <(
+    sudo -n -u dsv4 find /home/dsv4/ds4-project/glm52-crashlog \
+      -mindepth 1 -maxdepth 1 -type d -name "*-$TAG" -print
+  )
+  if (( evidence_export_rc != 0 )); then
+    echo "evidence export failed for $EVIDENCE_DIR" >&2
+    return 1
+  fi
+  return 0
+}
 stop_unit() {
   trap - INT TERM HUP
   if (( UNIT_ACTIVE )); then
     systemctl --user stop "$UNIT.service" >/dev/null 2>&1 || true
   fi
 }
-trap 'stop_unit; exit 130' INT
-trap 'stop_unit; exit 143' TERM
-trap 'stop_unit; exit 129' HUP
+handle_signal() {
+  local signal_rc=$1
+  stop_unit
+  export_evidence || true
+  exit "$signal_rc"
+}
+trap 'handle_signal 130' INT
+trap 'handle_signal 143' TERM
+trap 'handle_signal 129' HUP
 
 env_args=(
   HOME=/home/dsv4
@@ -104,27 +131,9 @@ set -e
 UNIT_ACTIVE=0
 
 # Export only the exact preregistered confirmation tree and this tag's safety
-# logs. Permission changes run after the contained command for both success and
-# failure and never rewrite evidence bytes.
-evidence_export_rc=0
-if [[ -n $EVIDENCE_DIR ]]; then
-  if sudo -n -u dsv4 test -d "$EVIDENCE_DIR"; then
-    sudo -n -u dsv4 chmod -R a+rX -- "$EVIDENCE_DIR" ||
-      evidence_export_rc=1
-  else
-    evidence_export_rc=1
-  fi
-  while IFS= read -r crash_dir; do
-    [[ -n $crash_dir ]] || continue
-    sudo -n -u dsv4 chmod -R a+rX -- "$crash_dir" ||
-      evidence_export_rc=1
-  done < <(
-    sudo -n -u dsv4 find /home/dsv4/ds4-project/glm52-crashlog \
-      -mindepth 1 -maxdepth 1 -type d -name "*-$TAG" -print
-  )
-  if (( evidence_export_rc != 0 )); then
-    echo "evidence export failed for $EVIDENCE_DIR" >&2
-    (( command_rc != 0 )) || exit 16
-  fi
+# logs. Permission changes run after every outcome and never rewrite evidence
+# bytes. An export failure must not mask an existing command failure.
+if ! export_evidence; then
+  (( command_rc != 0 )) || exit 16
 fi
 exit "$command_rc"
