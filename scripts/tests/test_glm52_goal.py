@@ -116,6 +116,123 @@ def w11_record(hashes=None):
     }
 
 
+def workstream_record(gate):
+    workflow = {
+        "test_committed": True,
+        "red_confirmed": True,
+        "implementation_default_off": True,
+        "candidate_frozen": True,
+        "post_freeze_randomness": True,
+        "clean_build": True,
+        "blinded_ab": True,
+        "diff_scan_clean": True,
+        "mutation_rejected": True,
+    }
+    metrics = {
+        "W1": {
+            "f16_tested": True,
+            "block_e4m3_tested": True,
+            "f32_rope": True,
+            "fidelity_pass": True,
+            "retrieval_pass": True,
+            "available_memory_gib": 12.0,
+        },
+        "W2": {
+            "byte_identical": True,
+            "baseline_hit_rate": 0.50,
+            "candidate_hit_rate": 0.54,
+        },
+        "W3": {
+            "byte_identical": True,
+            "event_safe": True,
+            "baseline_seconds": [10.0] * 5,
+            "candidate_seconds": [9.0] * 5,
+        },
+        "W4": {
+            "ids_identical": True,
+            "logits_identical": True,
+            "baseline_topk_seconds": [10.0] * 5,
+            "candidate_topk_seconds": [4.0] * 5,
+            "baseline_prefill_seconds": [10.0] * 5,
+            "candidate_prefill_seconds": [9.0] * 5,
+        },
+        "W5": {
+            "scores_identical": True,
+            "ids_identical": True,
+            "logits_identical": True,
+            "baseline_allocation_bytes": 200,
+            "candidate_allocation_bytes": 100,
+        },
+        "W6": {
+            "outputs_identical": True,
+            "width2_measured": True,
+            "width4_measured": True,
+            "selected_width": 4,
+            "width2_seconds": 9.0,
+            "width4_seconds": 8.0,
+            "baseline_load_bytes": 1000,
+            "selected_load_bytes": 700,
+        },
+        "W7": {
+            "complete_dumps_equal": True,
+            "max_abs_logit_delta": 0.009,
+            "argmax_identical": True,
+            "checkpoint_correct": True,
+            "global_guard_preserved": True,
+        },
+        "W8": {
+            "checksums_verified": True,
+            "corruption_failed_closed": True,
+            "selected_rows_exact": True,
+            "selected_block_cache": True,
+            "context_1m_pass": True,
+            "retrieval_pass": True,
+            "available_memory_gib": 12.0,
+        },
+        "W9": {
+            "real_capture": True,
+            "capture_width": 512,
+            "query_weighted_error": 0.005,
+            "maximum_allowed_error": 0.01,
+        },
+        "W10": {
+            "data_frozen": True,
+            "splits_frozen": True,
+            "seeds_frozen": True,
+            "storage_ratio": 0.5,
+            "maximum_storage_ratio": 0.6,
+            "runtime_ratio": 1.1,
+            "maximum_runtime_ratio": 1.2,
+            "fidelity_pass": True,
+        },
+        "switch": {
+            "serialized": True,
+            "idempotent": True,
+            "hashes_verified": True,
+            "environment_allowlisted": True,
+            "identity_safe_stop": True,
+            "authenticated_completion": True,
+            "unauthenticated_rejected": True,
+            "memwatch_pass": True,
+            "semantic_output_pass": True,
+            "rollback_pass": True,
+            "reboot_restore_pass": True,
+            "fault_matrix_pass": True,
+            "transition_cycle_pass": True,
+        },
+    }[gate]
+    return {
+        "record_type": "workstream_observation",
+        "gate": gate,
+        "binary_sha256": "a" * 64,
+        "configuration_sha256": "b" * 64,
+        "fixture_sha256": "c" * 64,
+        "workflow": workflow,
+        "metrics": metrics,
+        "failures": [],
+    }
+
+
 class FormulaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -405,6 +522,44 @@ class FormulaTests(unittest.TestCase):
             with self.subTest(gate=gate, scorer=scorer, records=len(records)):
                 with self.assertRaises(ValueError):
                     self.goal.score_registered_gate(gate, scorer, records)
+
+    def test_registered_workstream_scorer_is_fail_closed_for_w1_w10_and_switch(self):
+        for gate in [f"W{index}" for index in range(1, 11)] + ["switch"]:
+            with self.subTest(gate=gate):
+                passing = workstream_record(gate)
+                result = self.goal.score_registered_gate(
+                    gate, "workstream.terminal.v1", [passing]
+                )
+                self.assertEqual(result["verdict"], "PASS")
+
+                broken_workflow = json.loads(json.dumps(passing))
+                broken_workflow["workflow"]["red_confirmed"] = False
+                self.assertEqual(
+                    self.goal.score_registered_gate(
+                        gate, "workstream.terminal.v1", [broken_workflow]
+                    )["verdict"],
+                    "FAIL",
+                )
+
+                broken_metric = json.loads(json.dumps(passing))
+                first_metric = next(iter(broken_metric["metrics"]))
+                value = broken_metric["metrics"][first_metric]
+                broken_metric["metrics"][first_metric] = (
+                    False if isinstance(value, bool) else 0
+                )
+                self.assertEqual(
+                    self.goal.score_registered_gate(
+                        gate, "workstream.terminal.v1", [broken_metric]
+                    )["verdict"],
+                    "FAIL",
+                )
+
+        malformed = workstream_record("W2")
+        malformed["unexpected"] = True
+        with self.assertRaises(ValueError):
+            self.goal.score_registered_gate(
+                "W2", "workstream.terminal.v1", [malformed]
+            )
 
     def test_w11_requires_timestamped_memory_coverage(self):
         record = w11_record()
