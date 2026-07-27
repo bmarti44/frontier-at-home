@@ -263,7 +263,8 @@ class FormulaTests(unittest.TestCase):
                     }
                 )
             )
-            self.goal.validate_attempt(attempt)
+            with self.assertRaisesRegex(ValueError, "terminal scorer"):
+                self.goal.validate_attempt(attempt)
             (attempt / "raw.jsonl").write_text("")
             with self.assertRaises(ValueError):
                 self.goal.validate_attempt(attempt)
@@ -416,7 +417,7 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "status", "--json")
             self.assertEqual(result.returncode, 0, result.stderr)
             state = json.loads(result.stdout)
-            self.assertEqual(state["gates"]["W1"]["status"], "FAIL")
+            self.assertEqual(state["gates"]["W1"]["status"], "PENDING")
             self.assertIn("does not match", state["gates"]["W1"]["reason"])
 
     def test_release_check_fails_closed_on_incomplete_goal(self):
@@ -477,9 +478,9 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "resume")
             self.assertEqual(result.returncode, 0, result.stderr)
             event = json.loads(result.stdout)
-            self.assertEqual(event["selected_gate"], "W1")
+            self.assertEqual(event["selected_gate"], "foundation")
             state = json.loads((state_dir / "state.json").read_text())
-            self.assertEqual(state["gates"]["foundation"]["status"], "NO_RESULT")
+            self.assertEqual(state["gates"]["foundation"]["status"], "PENDING")
             self.assertEqual(
                 state["gates"]["foundation"]["attempts"], ["foundation/attempt-001"]
             )
@@ -497,9 +498,9 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "resume")
             self.assertEqual(result.returncode, 0, result.stderr)
             event = json.loads(result.stdout)
-            self.assertEqual(event["selected_gate"], "W1")
+            self.assertEqual(event["selected_gate"], "foundation")
             state = json.loads((state_dir / "state.json").read_text())
-            self.assertEqual(state["gates"]["foundation"]["status"], "FAIL")
+            self.assertEqual(state["gates"]["foundation"]["status"], "PENDING")
             self.assertIn("invalid", state["gates"]["foundation"]["reason"])
 
     def test_run_executes_registered_runner_and_advances(self):
@@ -551,7 +552,10 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "run")
             self.assertEqual(result.returncode, 0, result.stderr)
             event = json.loads(result.stdout)
-            self.assertEqual(event["selected_gate"], "W1")
+            self.assertEqual(event["selected_gate"], "foundation")
+            self.assertEqual(
+                event["action"], "runner_produced_no_terminal_evidence"
+            )
             self.assertEqual((state_dir / "runner.marker").read_text(), "ran\n")
 
 

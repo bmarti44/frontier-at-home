@@ -474,10 +474,12 @@ def validate_attempt(attempt: Path) -> None:
         raise ValueError("summary has no fixed formula version")
     if summary.get("verdict") not in {"PASS", "FAIL", "NO_RESULT"}:
         raise ValueError("summary verdict is invalid")
-    if summary["verdict"] == "PASS":
-        raise ValueError(
-            f"no fixed PASS scorer is registered for {manifest['gate']}"
-        )
+    # Generic, hash-consistent narration is not acceptance authority for any
+    # terminal state. Gate-specific scorers are intentionally registered only
+    # when they recompute their verdict from the validated raw schema.
+    raise ValueError(
+        f"no fixed terminal scorer is registered for {manifest['gate']}"
+    )
 
 
 def _unique_pairs(pairs: list[tuple[str, Any]], label: str) -> dict[str, Any]:
@@ -579,17 +581,20 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
         try:
             if not latest.name.startswith("attempt-") or not latest.name[8:].isdigit():
                 raise ValueError("attempt directory name is invalid")
-            validate_attempt(latest)
             manifest = _read_strict_json(latest / "manifest.json")
             if manifest.get("gate") != name:
                 raise ValueError(
                     f"manifest gate {manifest.get('gate')!r} does not match {name!r}"
                 )
+            validate_attempt(latest)
             summary = _read_strict_json(latest / "summary.json")
             status = summary["verdict"]
             reason = summary.get("reason")
         except ValueError as exc:
-            status = "FAIL"
+            # Invalid or unauthoritative evidence must not terminalize a gate.
+            # Keeping it PENDING lets a registered runner supersede it with a
+            # later immutable attempt.
+            status = "PENDING"
             reason = f"invalid evidence in {latest.name}: {exc}"
         if gate["status"] != status or gate.get("reason") != reason:
             gate["status"] = status
