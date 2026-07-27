@@ -1931,7 +1931,7 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "resume")
             self.assertEqual(result.returncode, 0, result.stderr)
             event = json.loads(result.stdout)
-            self.assertEqual(event["selected_gate"], "W1")
+            self.assertEqual(event["selected_gate"], "foundation")
             state = json.loads((state_dir / "state.json").read_text())
             self.assertEqual(state["gates"]["foundation"]["status"], "FAIL")
             self.assertEqual(
@@ -1951,7 +1951,7 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "resume")
             self.assertEqual(result.returncode, 0, result.stderr)
             event = json.loads(result.stdout)
-            self.assertEqual(event["selected_gate"], "W1")
+            self.assertEqual(event["selected_gate"], "foundation")
             state = json.loads((state_dir / "state.json").read_text())
             self.assertEqual(state["gates"]["foundation"]["status"], "FAIL")
             self.assertIn("invalid", state["gates"]["foundation"]["reason"])
@@ -2005,8 +2005,10 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "run")
             self.assertEqual(result.returncode, 0, result.stderr)
             event = json.loads(result.stdout)
-            self.assertEqual(event["selected_gate"], "W1")
-            self.assertEqual(event["action"], "awaiting_registered_runner")
+            self.assertEqual(event["selected_gate"], "foundation")
+            self.assertEqual(
+                event["action"], "runner_produced_no_terminal_evidence"
+            )
             self.assertEqual((state_dir / "runner.marker").read_text(), "ran\n")
 
 

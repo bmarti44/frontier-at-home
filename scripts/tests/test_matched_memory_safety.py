@@ -96,6 +96,37 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("glm_cgroup_run.sh", source)
         self.assertNotIn('bash "$SAFE" --tag "$label"', source)
 
+    def test_harness_uses_the_frozen_production_dsv4_profile(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        expected = (
+            "DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/"
+            "llama.cpp-fusion/build/bin/llama-server",
+            "DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json",
+            "DSV4_MEM_FLOOR_GIB=18",
+            "DSV4_WATCHDOG_FLOOR_GIB=18",
+            "DSV4_UBATCH=2048",
+            "DSV4_BATCH=2048",
+            "DSV4_UBATCH_LARGE=1",
+            "CTX=65536",
+            "DSV4_PARALLEL=2",
+            "DSV4_NO_MMAP=1",
+            "DSV4_SPEC_TYPE=ngram-map-k4v",
+        )
+        for setting in expected:
+            self.assertIn(setting, source)
+        self.assertIn("MATCHED_PORT:-8021", source)
+        self.assertIn('DSV4_PORT="$PORT"', source)
+        self.assertIn('GLM_PORT="$PORT"', source)
+
+    def test_harness_rejects_kernel_gpu_and_oom_faults_from_each_arm(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("journalctl -k -n 0 --show-cursor", source)
+        self.assertIn("journalctl -k --after-cursor", source)
+        self.assertIn("NV_ERR_NO_MEMORY", source)
+        self.assertIn("NVRM.*Xid", source)
+        self.assertIn("oom-kill", source)
+        self.assertGreaterEqual(source.count("assert_no_kernel_faults_since"), 3)
+
     def test_harness_does_not_lower_emergency_floor(self):
         source = HARNESS.read_text(encoding="utf-8")
         self.assertNotIn("GLM_SAFE_KILL_FLOOR_GIB=10", source)
