@@ -13,11 +13,14 @@ PORT=${GLM_PORT:-8011}
 PID=
 START_TICKS=
 EXPERT_CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
+REQUIRE_TOKEN_TIMING_LOG=${GLM_REQUIRE_TOKEN_TIMING_LOG:-1}
 
 [[ $SRC == /home/dsv4/ds4-project/src/* && -x $SRC/ds4-server ]] \
     || { echo "invalid GLM_CANDIDATE_SRC: $SRC" >&2; exit 2; }
 [[ $EXPERT_CACHE_GB =~ ^([0-9]|[1-6][0-9]|7[0-2])$ ]] \
     || { echo "GLM_EXPERT_CACHE_GB must be an integer from 0 through 72" >&2; exit 2; }
+[[ $REQUIRE_TOKEN_TIMING_LOG =~ ^[01]$ ]] \
+    || { echo "GLM_REQUIRE_TOKEN_TIMING_LOG must be 0 or 1" >&2; exit 2; }
 [[ $PORT =~ ^[0-9]+$ ]] \
     || { echo "GLM_PORT must be an integer from 1024 through 65535" >&2; exit 2; }
 port=$((10#$PORT))
@@ -71,13 +74,18 @@ for _ in $(seq 1 600); do
 done
 "$ready" || { tail -80 "$OUT/server.log" >&2; exit 1; }
 
+timing_args=()
+if [[ $REQUIRE_TOKEN_TIMING_LOG == 1 ]]; then
+    timing_args=(--token-timing-log "$OUT/server.log")
+fi
+
 /home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin/python \
     "$REPO/scripts/30_bench_speed.py" \
     --base-url "http://127.0.0.1:$PORT" \
     --out "$OUT/result.json" \
     --stack-label "$LABEL" \
     --model-id glm-5.2 \
-    --token-timing-log "$OUT/server.log" \
+    "${timing_args[@]}" \
     --reps 1 --context-levels 0 --max-tokens 160 \
     --min-completion-tokens 128 --seed "$SEED"
 
