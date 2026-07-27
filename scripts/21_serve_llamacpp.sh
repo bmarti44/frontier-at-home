@@ -741,15 +741,21 @@ do_start() {
     local budget rc
     set +e
     watchdog_floor_gib=${DSV4_WATCHDOG_FLOOR_GIB:-18}
-    [[ $watchdog_floor_gib =~ ^[1-9][0-9]*$ ]] \
-        || die 'DSV4_WATCHDOG_FLOOR_GIB must be a positive integer'
+    [[ $watchdog_floor_gib =~ ^[0-9]{1,2}$ ]] \
+        || die 'DSV4_WATCHDOG_FLOOR_GIB must be a bounded integer'
+    if (( watchdog_floor_gib < 18 || watchdog_floor_gib > 64 )); then
+        die 'DSV4_WATCHDOG_FLOOR_GIB must be between 18 and 64'
+    fi
     # overhead-gib 6: llama.cpp non-weight footprint for this config (compute
     # buffers at b=2048/ub=512, CUDA context, KV pool) measures 3-5 GiB; 6 keeps
     # slack without double-counting against the hard emergency floor.
     # Admission may reserve more memory, but never less than the watchdog.
     mem_floor_gib=${DSV4_MEM_FLOOR_GIB:-$watchdog_floor_gib}
-    [[ $mem_floor_gib =~ ^[1-9][0-9]*$ ]] \
-        || die 'DSV4_MEM_FLOOR_GIB must be a positive integer'
+    [[ $mem_floor_gib =~ ^[0-9]{1,3}$ ]] \
+        || die 'DSV4_MEM_FLOOR_GIB must be a bounded integer'
+    if (( mem_floor_gib < 18 || mem_floor_gib > 119 )); then
+        die 'DSV4_MEM_FLOOR_GIB must be between 18 and 119'
+    fi
     (( mem_floor_gib >= watchdog_floor_gib )) \
         || die 'DSV4_MEM_FLOOR_GIB must not be below DSV4_WATCHDOG_FLOOR_GIB'
     # Measured on the fusion build (2026-07-23): CUDA0 compute buffer is 267
@@ -888,7 +894,7 @@ do_start() {
     trap on_start_error ERR
     trap on_start_exit EXIT
     setsid bash "$MEMWATCH" --target-file "$TARGET_FILE" --ready-file "$WATCHDOG_READY" --threshold-gib "$watchdog_floor_gib" \
-        --interval-sec 1 --log "$MEMWATCH_LOG" >/dev/null 2>&1 &
+        --interval-sec 0.25 --log "$MEMWATCH_LOG" >/dev/null 2>&1 &
     memwatch_pid=$!
     memwatch_start_ticks=$(proc_start_ticks "$memwatch_pid") \
         || die "cannot read start time for memwatch pid $memwatch_pid"

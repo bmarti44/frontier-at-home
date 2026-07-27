@@ -147,6 +147,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("watchdog_floor_gib < 18", source)
         self.assertIn("watchdog_floor_gib > 64", source)
         self.assertIn("mem_floor_gib < 18", source)
+        self.assertIn("--interval-sec 0.25", source)
 
     def test_candidate_source_override_is_explicit_and_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
