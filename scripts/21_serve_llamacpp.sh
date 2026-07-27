@@ -10,6 +10,7 @@ STATE_FILE=$RUNTIME_DIR/llamacpp.state.json
 TARGET_FILE=$RUNTIME_DIR/llamacpp.engine.target
 WATCHDOG_READY=$RUNTIME_DIR/llamacpp.memwatch.ready
 START_FAILURE_MARKER=$RUNTIME_DIR/llamacpp.start-failed
+START_HOLD_FILE=${DSV4_START_HOLD_FILE:-${HOME:-/home/dsv4}/.dsv4-start-hold}
 startup_cleanup_armed=false
 memwatch_pid=
 memwatch_start_ticks=0
@@ -664,6 +665,9 @@ PY
 
 do_start() {
     [[ -n ${HOME:-} ]] || die 'HOME is not set'
+    [[ $START_HOLD_FILE == /* ]] || die 'DSV4_START_HOLD_FILE must be absolute'
+    [[ ! -e $START_HOLD_FILE ]] \
+        || die "persistent maintenance hold blocks large-model startup: $START_HOLD_FILE"
     LLAMACPP_HOME=${LLAMACPP_HOME:-$HOME/llamacpp-project}
     CTX=${CTX:-32768}
     [[ $CTX =~ ^[1-9][0-9]*$ ]] || die 'CTX must be a positive integer'

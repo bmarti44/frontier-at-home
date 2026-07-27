@@ -13,6 +13,7 @@ set -Eeuo pipefail
 STACK=${STACK:?guard: STACK is not set (expected from EnvironmentFile)}
 STATE_DIR=/run/dsv4
 COUNTER=$STATE_DIR/guard-consecutive-failures
+START_HOLD_FILE=/home/dsv4/.dsv4-start-hold
 readonly MAX_CONSECUTIVE_FAILURES=3
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
@@ -23,6 +24,11 @@ case "$STACK" in
     llamacpp) script=$REPO_ROOT/scripts/21_serve_llamacpp.sh; unit=deepseek-v4-flash-llamacpp.service ;;
     *) echo "guard: invalid STACK=$STACK" >&2; exit 1 ;;
 esac
+
+if [[ -e $START_HOLD_FILE ]]; then
+    echo "guard: persistent maintenance hold is active; not checking or restarting $STACK"
+    exit 0
+fi
 
 read_count() {
     local c
