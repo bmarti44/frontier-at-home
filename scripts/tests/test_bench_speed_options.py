@@ -36,12 +36,15 @@ class BenchOptionTests(unittest.TestCase):
             "160",
             "--min-completion-tokens",
             "128",
+            "--seed",
+            "123",
         ]
         with mock.patch.object(sys, "argv", argv):
             args = bench.parse_args()
         self.assertEqual(args.context_levels, (0,))
         self.assertEqual(args.max_tokens, 160)
         self.assertEqual(args.min_completion_tokens, 128)
+        self.assertEqual(args.seed, 123)
 
 
 if __name__ == "__main__":
