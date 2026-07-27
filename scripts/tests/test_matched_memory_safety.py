@@ -80,7 +80,10 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("03_memory_guard.py", source)
         self.assertIn("--required-gib 110", source)
         self.assertIn("--stable-samples 3", source)
-        self.assertIn("/run/dsv4/inference.lock", source)
+        self.assertIn(
+            "/run/dsv4/inference.lock",
+            source + GLM_CGROUP.read_text(encoding="utf-8"),
+        )
         self.assertIn("MATCHED_BLOCKS:-5", source)
         self.assertNotIn("21_serve_llamacpp.sh\" start >/dev/null 2>&1 || true", source)
         self.assertIn("watchdog_armed", source)

@@ -5,7 +5,7 @@ umask 077
 REPO=/home/bmarti44/spark-deepseek-v4-flash
 TAG=${MATCHED_TAG:?MATCHED_TAG is required}
 OUT=/home/dsv4/ds4-project/glm52-decisive-$TAG
-SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
+CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 GLM_ARM=/tmp/glm_decisive_arm_$TAG.sh
 SEED=${MATCHED_SEED:?MATCHED_SEED is required}
 BLOCKS=${MATCHED_BLOCKS:-5}
@@ -84,12 +84,13 @@ run_glm() {
     local label=$1 arm_out=$OUT/$label
     wait_full_release
     ACTIVE=glm52
-    sudo -n -u dsv4 env HOME=/home/dsv4 \
-        GLM_CANDIDATE_SRC="${GLM_CANDIDATE_SRC:-}" \
+    env GLM_CANDIDATE_SRC="${GLM_CANDIDATE_SRC:-}" \
+        GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
+        GLM_SAFE_EXPECTED_BINARY_SHA256="${GLM_SAFE_EXPECTED_BINARY_SHA256:-}" \
         GLM_SAFE_KILL_FLOOR_GIB=18 GLM_SAFE_MIN_START_GIB=110 \
         GLM_SAFE_TIMEOUT_S=2400 \
-        flock -n -E 75 /run/dsv4/inference.lock \
-        bash "$SAFE" --tag "$label" -- bash "$GLM_ARM" "$arm_out" "$label" "$SEED"
+        "$CGROUP" --tag "$label" -- \
+        bash "$GLM_ARM" "$arm_out" "$label" "$SEED"
     ACTIVE=
     wait_full_release
 }
