@@ -1857,10 +1857,10 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
             status = summary["verdict"]
             reason = summary.get("reason")
         except ValueError as exc:
-            # Invalid or unauthoritative evidence must not terminalize a gate.
-            # Keeping it PENDING lets a registered runner supersede it with a
-            # later immutable attempt.
-            status = "PENDING"
+            # The anti-cheating contract makes malformed or unauthoritative
+            # evidence a preserved terminal failure. A later, higher-numbered
+            # immutable attempt may supersede it.
+            status = "FAIL"
             reason = f"invalid evidence in {latest.name}: {exc}"
         if gate["status"] != status or gate.get("reason") != reason:
             gate["status"] = status
