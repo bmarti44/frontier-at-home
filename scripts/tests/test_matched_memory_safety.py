@@ -18,6 +18,9 @@ GLM_CGROUP = ROOT / "results" / "glm52-gates" / "harness" / "glm_cgroup_run.sh"
 DSV4_LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 DSV4_SERVICE = ROOT / "configs" / "systemd" / "deepseek-v4-flash-llamacpp.service"
 GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
+GLM_LOGIT_ARM = (
+    ROOT / "results" / "glm52-goal" / "harness" / "glm_logit_arm.sh"
+)
 HEADLESS_SCHEDULER = ROOT / "scripts" / "54_schedule_headless_foundation.sh"
 HEADLESS_WORKER = ROOT / "scripts" / "55_headless_foundation_worker.sh"
 
@@ -78,6 +81,16 @@ class MemoryGuardTests(unittest.TestCase):
 
 
 class MatchedHarnessContractTests(unittest.TestCase):
+    def test_glm_logit_arm_is_one_token_and_path_bound(self):
+        source = GLM_LOGIT_ARM.read_text(encoding="utf-8")
+        self.assertIn('DS4_GLM_LOGIT_DUMP="$OUT/prefill.logits"', source)
+        self.assertIn("--max-tokens 1", source)
+        self.assertIn("--min-completion-tokens 1", source)
+        self.assertIn("DS4_CUDA_IQ2_DOWN_REFERENCE:-1", source)
+        self.assertIn("IQ2_REFERENCE must be 0 or 1", source)
+        self.assertIn("glm52-b4734de4/tokenizer.json", source)
+        self.assertNotIn("DS4_CUDA_EXPERT_CACHE_GB=72", source)
+
     def test_headless_foundation_runner_restores_display_and_fails_closed(self):
         scheduler = HEADLESS_SCHEDULER.read_text(encoding="utf-8")
         worker = HEADLESS_WORKER.read_text(encoding="utf-8")
