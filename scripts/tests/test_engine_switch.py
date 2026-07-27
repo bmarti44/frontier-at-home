@@ -20,6 +20,7 @@ DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
 GLM_BUILD = ROOT / "configs/build-manifests/glm52-ds4-repro.json"
 GLM_BUILD_SCRIPT = ROOT / "scripts/11_build_glm52_repro.sh"
+INSTALLER = ROOT / "scripts/41_install_service.sh"
 
 
 class EngineSwitchTests(unittest.TestCase):
@@ -68,6 +69,17 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("expected=deepseek-v4-flash", source)
         self.assertIn('expected == item["id"].lower()', source)
         self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START || true", source)
+
+    def test_switch_uses_a_dedicated_internal_port_without_changing_auth_endpoint(self):
+        source = SCRIPT.read_text()
+        service = DSV4_SERVICE.read_text()
+        installer = INSTALLER.read_text()
+        self.assertIn("readonly PORT=8013", source)
+        self.assertIn("readonly AUTH_PORT=8010", source)
+        self.assertIn('DSV4_PORT="$PORT"', source)
+        self.assertIn("Environment=DSV4_PORT=8013", service)
+        self.assertIn("upstream_port=8013", installer)
+        self.assertNotIn("readonly PORT=8011", source)
 
     def test_frozen_profiles_pin_the_verified_production_candidates(self):
         glm = json.loads(GLM_PROFILE.read_text())
