@@ -505,6 +505,15 @@ class FormulaTests(unittest.TestCase):
     def test_registered_review_scorer_recomputes_both_persistent_scores(self):
         candidate = "a" * 40
 
+        def issue(issue_id):
+            return {
+                "id": issue_id,
+                "evidence": f"evidence for {issue_id}",
+                "affected_gate": "W11",
+                "reproduction_instructions": f"reproduce {issue_id}",
+                "proposed_acceptance_test": f"test {issue_id}",
+            }
+
         def review(reviewer):
             return {
                 "record_type": "review",
@@ -514,8 +523,8 @@ class FormulaTests(unittest.TestCase):
                 "claimed_score": 96,
                 "critical": [],
                 "high": [],
-                "medium": ["M-001"],
-                "low": ["L-001"],
+                "medium": [issue("M-001")],
+                "low": [issue("L-001")],
                 "prior_issue_status": [
                     {"id": "OLD-001", "status": "FIXED"},
                     {"id": "OLD-002", "status": "FALSIFIED"},
@@ -547,11 +556,13 @@ class FormulaTests(unittest.TestCase):
             elif mutation == "score_lie":
                 broken[0]["claimed_score"] = 100
             elif mutation == "critical":
-                broken[0]["critical"] = ["C-001"]
+                broken[0]["critical"] = [issue("C-001")]
                 broken[0]["claimed_score"] = 71
                 broken[0]["verdict"] = "REJECT"
             elif mutation == "score_below_90":
-                broken[0]["medium"] = [f"M-{index:03d}" for index in range(4)]
+                broken[0]["medium"] = [
+                    issue(f"M-{index:03d}") for index in range(4)
+                ]
                 broken[0]["low"] = []
                 broken[0]["claimed_score"] = 88
                 broken[0]["verdict"] = "REJECT"
