@@ -800,6 +800,56 @@ class FormulaTests(unittest.TestCase):
                 "W11", manifest, [record]
             )
 
+    def test_w11_retrieval_expectations_are_bound_to_fixture(self):
+        record = w11_record()
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture_path = Path(tmp) / "fixture.json"
+            fixture = {
+                "schema_version": 1,
+                "context_cap": 1_048_576,
+                "stage_context_caps": [131_072, 262_144, 524_288, 1_048_576],
+                "retrieval_cases": [
+                    {
+                        "case_id": item["case_id"],
+                        "position": item["position"],
+                        "expected_sha256": (
+                            "f" * 64
+                            if index == 0
+                            else item["expected_sha256"]
+                        ),
+                    }
+                    for index, item in enumerate(record["retrieval_results"])
+                ],
+                "negative_control_cases": [
+                    {
+                        "case_id": item["case_id"],
+                        "expected_sha256": item["expected_sha256"],
+                    }
+                    for item in record["negative_control_results"]
+                ],
+            }
+            fixture_path.write_text(json.dumps(fixture))
+            manifest = {
+                field: record[field]
+                for field in (
+                    "binary_sha256",
+                    "configuration_sha256",
+                    "model_sha256",
+                    "tokenizer_sha256",
+                )
+            }
+            manifest["fixture_sha256"] = hashlib.sha256(
+                fixture_path.read_bytes()
+            ).hexdigest()
+            record["fixture_sha256"] = manifest["fixture_sha256"]
+            with self.assertRaisesRegex(ValueError, "fixture retrieval"):
+                self.goal.validate_record_artifact_bindings(
+                    "W11",
+                    manifest,
+                    [record],
+                    {"fixture": fixture_path},
+                )
+
     def test_duplicate_json_keys_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "summary.json"
