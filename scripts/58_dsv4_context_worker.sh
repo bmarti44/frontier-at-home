@@ -208,7 +208,7 @@ fi
 systemctl stop display-manager.service >>"$OUT/display.log" 2>&1 || true
 systemctl is-active --quiet display-manager.service &&
     { echo "display manager remained active" >&2; exit 1; }
-/usr/bin/python3 "$GUARD" --required-gib 115.25 --stable-samples 3 \
+/usr/bin/python3 "$GUARD" --required-gib 115.0 --stable-samples 3 \
     --interval-seconds 1 --timeout-seconds 180 >"$OUT/admission.json"
 
 indices=(0 1 2 3)
