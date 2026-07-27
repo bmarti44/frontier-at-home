@@ -1,0 +1,8 @@
+Candidate under test: fc15aa817caf9be8a7fbb351ba9558fc35009f78
+Command:
+  python3 -m unittest scripts.tests.test_engine_switch.EngineSwitchTests.test_authenticated_probe_keeps_bearer_secret_out_of_argv
+
+Result: genuine RED
+
+The authenticated completion passed the bearer credential through curl's
+-H argv option, making it visible in /proc while the request was active.

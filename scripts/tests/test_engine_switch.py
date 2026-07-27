@@ -62,6 +62,12 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn('expected == item["id"].lower()', source)
         self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START || true", source)
 
+    def test_authenticated_probe_keeps_bearer_secret_out_of_argv(self):
+        source = SCRIPT.read_text()
+        self.assertNotIn('-H "Authorization: Bearer $key"', source)
+        self.assertIn("curl --config -", source)
+        self.assertIn("printf 'header = \"Authorization: Bearer %s\"", source)
+
     def test_unqualified_glm_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
