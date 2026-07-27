@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 import unittest
 import uuid
 from pathlib import Path
@@ -116,7 +117,15 @@ class CgroupEvidenceExportTests(unittest.TestCase):
             self.assertEqual(result.returncode, 16, result.stdout + result.stderr)
             self.assertTrue(evidence.is_symlink())
             self.assertEqual(protected.stat().st_mode & 0o777, 0o700)
-            self.assertEqual((protected / "raw").stat().st_mode & 0o777, 0o600)
+            raw_mode = subprocess.run(
+                ["sudo", "-n", "-u", "dsv4", "stat", "-c", "%a",
+                 str(protected / "raw")],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            ).stdout.strip()
+            self.assertEqual(raw_mode, "600")
         finally:
             self.cleanup(evidence)
             if str(protected).startswith(
@@ -142,6 +151,56 @@ class CgroupEvidenceExportTests(unittest.TestCase):
             self.assertEqual(result.returncode, 7, result.stdout + result.stderr)
             self.assertEqual((evidence / "raw").read_text(), "evidence")
         finally:
+            self.cleanup(evidence)
+
+    def test_term_exports_evidence_and_preserves_signal_status(self):
+        suffix = uuid.uuid4().hex[:10]
+        evidence = Path(
+            f"/home/dsv4/ds4-project/glm52-confirm-export-{suffix}"
+        )
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "GLM_SAFE_EVIDENCE_DIR": str(evidence),
+                "GLM_SAFE_KILL_FLOOR_GIB": "40",
+                "GLM_SAFE_MIN_START_GIB": "110",
+                "GLM_SAFE_TIMEOUT_S": "30",
+            }
+        )
+        process = subprocess.Popen(
+            [
+                str(LAUNCHER), "--tag", f"export-term-{suffix}", "--",
+                "/usr/bin/bash", "-c",
+                'mkdir -p -- "$1"; umask 077; printf evidence >"$1/raw"; '
+                "sleep 5",
+                "sh", str(evidence),
+            ],
+            env=environment,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                ready = subprocess.run(
+                    ["sudo", "-n", "-u", "dsv4", "test", "-f",
+                     str(evidence / "raw")],
+                    check=False,
+                ).returncode == 0
+                if ready:
+                    break
+                time.sleep(0.1)
+            else:
+                self.fail("contained command did not create evidence")
+            process.terminate()
+            stdout, stderr = process.communicate(timeout=15)
+            self.assertEqual(process.returncode, 143, stdout + stderr)
+            self.assertEqual((evidence / "raw").read_text(), "evidence")
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
             self.cleanup(evidence)
 
 
