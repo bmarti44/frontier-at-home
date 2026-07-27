@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "status": "NO_RESULT",
+  "preflight_stop": {
+    "reason": "The persistent reviewer found that the prior failed-attempt manifest was still untracked, so the evidence tree was not clean at freeze. No model process was started.",
+    "model_process_started": false,
+    "retry_requirement": "commit all attempt evidence, freeze a clean candidate, and obtain new public randomness"
+  },
+  "purpose": "one guarded post-freeze GLM functional/timing confirmation; not matched or release authority",
+  "frozen_at_utc": "2026-07-27T14:47:02Z",
+  "source": {
+    "root_commit": "f5d91d10bc9986818f6f4ede969db98dab7decb8",
+    "engine_commit": "24cbaec6a69c3a78fbc47a5cae592fa06ad255c1",
+    "binary_sha256": "df95f388d0eeed6e025988747b69c9d06bd4dce6c634fe6df60acbbc0d93fae8",
+    "binary_bytes": 13845136
+  },
+  "artifacts": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "model_bytes": 211075856448,
+    "fixture_tokenizer": {
+      "tokenizer_sha256": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf"
+    },
+    "glm_output_tokenizer": {
+      "source": "zai-org/GLM-5.2@b4734de4facf877f85769a911abafc5283eab3d9",
+      "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+      "bytes": 20217442,
+      "usable_ids": 154856
+    },
+    "model_head_rows": 154880,
+    "fixture_sha256": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031",
+    "scorer_sha256": "c7017fd4cb57b227ad8b4ca1a6c5533c0c1eac4c536e59d3e8a52e6e62103dd3",
+    "arm": {
+      "source_sha256": "d3886ecc0f47a14bba5655d49a4540f86f86c28701ed641875e2015618f2467f"
+    },
+    "cgroup_launcher": {
+      "source_sha256": "a7a39f85086492ba35b3e9905842cb8a6fe1b0f8844273e9a44632847c52e839"
+    },
+    "safe_wrapper": {
+      "source_sha256": "6a4d8f374e4426a7ba7236a8daf3618819e34d09ee5c1b806ee0614a28fa9787"
+    }
+  },
+  "public_randomness": {
+    "source": "https://api.drand.sh/public/latest",
+    "round": 6324420,
+    "drand_randomness": "13c36945ff19602b5e34d04f42a969e17b194d7c014f6f8467a5d5e9dae10537",
+    "drand_signature": "a5fb59e22e45388292bf5790a1c56b0b3942bde9e4b63b0a774feafd0ae64bee37342ea8c913db6de3aa9a514a163599189258b85c68b732ae46fab8937a402cd261dce137296a9cdf91cd7a0e3d362f9178ef344c7f5c5f78b2eb21aa98605f",
+    "seed_formula": "int(randomness, 16) mod 2147483647",
+    "seed": 561131751
+  },
+  "configuration": {
+    "port": 18011,
+    "context_cap": 8192,
+    "fixture_context_tokens": 0,
+    "max_completion_tokens": 160,
+    "minimum_completion_tokens": 128,
+    "raw_token_timing_required": true,
+    "iq2_down_reference": true,
+    "minimum_start_available_gib": 110,
+    "kill_floor_available_gib": 40,
+    "timeout_seconds": 2400,
+    "swap_max_bytes": 0,
+    "absolute_arm_path_required": true
+  },
+  "acceptance": {
+    "decode_formula": "(N-1)/(tN-t1)",
+    "output_binding": "one atomically hashed GLM tokenizer byte snapshot; exact reasoning/content byte reconstruction and canonical IDs checked independently around the hidden think boundary",
+    "padding_behavior": "any sampled token id 154856..154879 fails closed",
+    "independent_timing_envelope": "0.75 <= raw_decode_elapsed/client_content_elapsed <= 1.25",
+    "safety": "no cgroup memory high/max/oom/oom_kill delta, no swap, no Xid, no surviving descendant, minimum available memory >=40GiB"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "FAIL",
+  "failure": {
+    "exit_status": 10,
+    "reason": "The systemd service did not inherit the repository working directory, so the relative arm path was absent. The safe wrapper failed closed at its initial process-identity check.",
+    "crashlog": "/home/dsv4/ds4-project/glm52-crashlog/20260727-103331-confirm-r6324388",
+    "model_process_started": false,
+    "output_directory_created": false,
+    "memory_available_after_gib": 114,
+    "oom_or_xid_observed": false,
+    "retry_requirement": "new candidate, new public randomness, and an absolute arm path"
+  },
+  "purpose": "single post-freeze guarded functional/timing confirmation; not parity authority",
+  "frozen_at_utc": "2026-07-27T14:31:15Z",
+  "source": {
+    "root_commit": "4ed32257322a92002799310c8c3a116a6fd58557",
+    "root_diff": "clean before freeze",
+    "engine_commit": "24cbaec6a69c3a78fbc47a5cae592fa06ad255c1",
+    "engine_diff": "clean",
+    "binary_sha256": "df95f388d0eeed6e025988747b69c9d06bd4dce6c634fe6df60acbbc0d93fae8",
+    "binary_bytes": 13845136
+  },
+  "artifacts": {
+    "model_path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "model_bytes": 211075856448,
+    "tokenizer_sha256": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf",
+    "fixture_sha256": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031",
+    "scorer_sha256": "26ef49c21dfb568ed9d68f54a7f049088a3d72c3f434a99e0e367c23b936759a",
+    "arm": {
+      "source_sha256": "46c9fbab654e84b21c49ac06caae2c9e2e5a5550cc8fb63f2557d92ed584f0eb"
+    },
+    "cgroup_launcher": {
+      "source_sha256": "a7a39f85086492ba35b3e9905842cb8a6fe1b0f8844273e9a44632847c52e839"
+    },
+    "safe_wrapper": {
+      "source_sha256": "6a4d8f374e4426a7ba7236a8daf3618819e34d09ee5c1b806ee0614a28fa9787"
+    }
+  },
+  "public_randomness": {
+    "source": "https://api.drand.sh/public/latest",
+    "retrieved_after_freeze": true,
+    "round": 6324388,
+    "drand_randomness": "c1dfefbaab150dee5825149d0e7d7c9563d0e225a5f214bfcebbe2995ad3a66b",
+    "drand_signature": "a0b4287a5fc73c509ce5b95d0c1164c3776a9b90831c2592494d462dfddb1fa47c830197c64b7c158923a784e2408b5f1662161a4936697cdf4a1bfa3fa5da699870ee4003940fc76f2cfc51280dde12f940a10dc72fbb55e3da038b8f0a1428",
+    "seed_formula": "int(randomness, 16) mod 2147483647",
+    "seed": 1347454575
+  },
+  "configuration": {
+    "port": 18011,
+    "context_cap": 8192,
+    "fixture_context_tokens": 0,
+    "max_completion_tokens": 160,
+    "minimum_completion_tokens": 128,
+    "raw_token_timing_required": true,
+    "iq2_down_reference": true,
+    "minimum_start_available_gib": 110,
+    "kill_floor_available_gib": 40,
+    "timeout_seconds": 2400,
+    "swap_max_bytes": 0
+  },
+  "acceptance": {
+    "decode_formula": "(N-1)/(tN-t1)",
+    "raw_timing_identity": "one SSE response id; exactly usage.completion_tokens records; indices 1..N; strictly increasing positive CLOCK_MONOTONIC_RAW timestamps",
+    "output_binding": "raw token ids in frozen vocabulary and exact frozen-tokenizer decode equals concatenated client-visible reasoning/content after removal of at most one think framing pair",
+    "independent_timing_envelope": "0.75 <= raw_decode_elapsed/client_content_elapsed <= 1.25",
+    "safety": "no cgroup memory high/max/oom/oom_kill delta, no swap, no Xid, no surviving descendant, minimum available memory >=40GiB"
+  }
+}
