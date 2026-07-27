@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "observed": {
+    "outer_exit_status": 0,
+    "benchmark_suite_valid": true,
+    "completion_tokens": 160,
+    "server_completion_tokens": 160,
+    "client_completion_tokens": 160,
+    "raw_timing_records": 160,
+    "raw_timing_first_index": 1,
+    "raw_timing_last_index": 160,
+    "decode_tokens_per_second": 0.6684544985547374,
+    "ttft_seconds": 95.85517804600022,
+    "prefill_tokens_per_second": 0.6050794665695182,
+    "prompt_tokens": 58,
+    "minimum_available_memory_gib": 87.431655884,
+    "swap_growth": false,
+    "oom_observed": false,
+    "xid_observed": false,
+    "model_process_survived": false,
+    "cgroup_survived": false,
+    "exact_crash_log_exported": true,
+    "acceptance_authority": false,
+    "required_disposition": "Diagnostic confirmation PASS only; cannot establish a controller gate PASS, parity, NO_GO, switching qualification, or release."
+  },
+  "raw_evidence": {
+    "result": {
+      "path": "/home/dsv4/ds4-project/glm52-confirm-549d12c-r6324494/result.json",
+      "source_sha256": "c972d51418d6fef582e4888aea43bb9ce86318633943bfe365c48948276670a4"
+    },
+    "server_log": {
+      "path": "/home/dsv4/ds4-project/glm52-confirm-549d12c-r6324494/server.log",
+      "source_sha256": "e64413caf63f3ed5d5be76a35395ad05909eefad59df2cc1c59424c334f99847"
+    },
+    "process_identity": {
+      "path": "/home/dsv4/ds4-project/glm52-confirm-549d12c-r6324494/process.identity",
+      "source_sha256": "6e4c1784bc540175d463780d56813f178de4ab65a06a0893fe4fb9ebcd157654"
+    },
+    "safe_command_log": {
+      "path": "/home/dsv4/ds4-project/glm52-crashlog/20260727-112531-confirm-r6324494/cmd.log",
+      "source_sha256": "1e689791960b075f80f30aa57827c2f62149c3eba7bfe26874e817326481d2e8"
+    },
+    "safe_main_log": {
+      "path": "/home/dsv4/ds4-project/glm52-crashlog/20260727-112531-confirm-r6324494/main.log",
+      "source_sha256": "2172072ab74ca106865fb09dc549153eab56b9f159ec0ba7a18bc15705741031"
+    },
+    "memory_samples": {
+      "path": "/home/dsv4/ds4-project/glm52-crashlog/20260727-112531-confirm-r6324494/samples.log",
+      "source_sha256": "04f76f7539b8bb547e2a7535b868712b246bdf8fdb151e9e67a49ed891d90d8f"
+    }
+  },
+  "purpose": "one guarded GLM functional/timing confirmation; non-authoritative research only",
+  "frozen_at_utc": "2026-07-27T15:24:23Z",
+  "source": {
+    "root_commit": "549d12c884987520a5d78db3656bb236a3863056",
+    "engine_commit": "24cbaec6a69c3a78fbc47a5cae592fa06ad255c1",
+    "binary_sha256": "df95f388d0eeed6e025988747b69c9d06bd4dce6c634fe6df60acbbc0d93fae8",
+    "binary_bytes": 13845136
+  },
+  "artifacts": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "model_bytes": 211075856448,
+    "fixture_tokenizer": {
+      "tokenizer_sha256": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf"
+    },
+    "glm_output_tokenizer": {
+      "source": "zai-org/GLM-5.2@b4734de4facf877f85769a911abafc5283eab3d9",
+      "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+      "bytes": 20217442,
+      "usable_ids": 154856
+    },
+    "model_head_rows": 154880,
+    "fixture_sha256": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031",
+    "scorer_sha256": "c7017fd4cb57b227ad8b4ca1a6c5533c0c1eac4c536e59d3e8a52e6e62103dd3",
+    "arm": {
+      "source_sha256": "d3886ecc0f47a14bba5655d49a4540f86f86c28701ed641875e2015618f2467f"
+    },
+    "cgroup_launcher": {
+      "source_sha256": "69746761df395b9cbfc4e8d4258e1d11e2d928da8b8ab358e9eccea02f96fbf5"
+    },
+    "safe_wrapper": {
+      "source_sha256": "2aef14383132f11e4a64231e4bb214b782960fd6b6d737c68f6906d37bbab3b6"
+    },
+    "evidence_exporter": {
+      "source_sha256": "8f4cd672643a3863b149565ce2462b7fe48f94bb7a270bde3680562835f36b92"
+    }
+  },
+  "public_randomness": {
+    "source": "https://api.drand.sh/public/latest",
+    "round": 6324494,
+    "drand_randomness": "2d1b329dcc4e4aca7d453b86dde07d33de578d835a7f8f63a2525bef5144cd81",
+    "drand_signature": "a3bfb252ae8e6ac6fd41e4cdcda71a8d7f045137c3d364776201391e1f7ff5e55d037635451950ff3c16dd2c0853a73f03c30ef3643c9802d1783f96c0d792965856345608e17326f39e8119b06cea4f2489769578de2076bcd7f813ad5e690c",
+    "seed_formula": "int(randomness, 16) mod 2147483647",
+    "seed": 444560597
+  },
+  "configuration": {
+    "port": 18011,
+    "context_cap": 8192,
+    "fixture_context_tokens": 0,
+    "max_completion_tokens": 160,
+    "minimum_completion_tokens": 128,
+    "raw_token_timing_required": true,
+    "iq2_down_reference": true,
+    "minimum_start_available_gib": 110,
+    "kill_floor_available_gib": 40,
+    "timeout_seconds": 2400,
+    "swap_max_bytes": 0,
+    "absolute_arm_path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm52-goal/harness/glm_decisive_arm.sh",
+    "evidence_path": "/home/dsv4/ds4-project/glm52-confirm-549d12c-r6324494",
+    "tag": "confirm-r6324494"
+  },
+  "acceptance": {
+    "decode_formula": "(N-1)/(tN-t1)",
+    "output_binding": "one atomically hashed GLM tokenizer byte snapshot; exact reasoning/content byte reconstruction and canonical IDs checked independently",
+    "canonical_only_failure": "NO_RESULT, not engine failure",
+    "padding_behavior": "sampled token id 154856..154879 fails closed",
+    "timing_envelope": "0.75 <= raw_decode_elapsed/client_content_elapsed <= 1.25",
+    "safety": "no cgroup memory event, swap, OOM, Xid, or surviving descendant; minimum available memory >=40GiB",
+    "evidence_discovery": "missing or unreadable exact tag-bound crash-log directory invalidates this diagnostic"
+  },
+  "review": {
+    "round": 27,
+    "gap_reviewer": "SAFE for exactly one bounded diagnostic",
+    "adversarial_reviewer": "operationally safe for exactly one bounded diagnostic with exact post-run crash-log verification",
+    "release_authority": false
+  }
+}
