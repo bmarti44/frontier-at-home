@@ -172,8 +172,11 @@ class BenchOptionTests(unittest.TestCase):
                 10: "answer",
             }
             sequences = {
+                "": [],
+                "alpha": [7],
                 "alpha beta": [7, 8],
                 "alphaanswer": [7, 10],
+                "answer": [10],
                 "<think>": [],
                 "</think>": [9],
             }
@@ -282,6 +285,8 @@ class BenchOptionTests(unittest.TestCase):
                     "first_content_at": 2.0,
                     "last_content_at": 2.0,
                     "generated_text": "x",
+                    "generated_reasoning": "x",
+                    "generated_content": "",
                     "usage": {"completion_tokens": 128, "prompt_tokens": 32},
                     "done": True,
                     "data_chunks": 3,

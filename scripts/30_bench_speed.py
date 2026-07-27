@@ -147,31 +147,40 @@ def load_api_key(path: Path | None) -> str | None:
     return key
 
 
-def verify_tokenizer_hash(path: Path, expected_sha256: str) -> str:
-    digest = hashlib.sha256()
+def read_verified_tokenizer_bytes(
+    path: Path, expected_sha256: str
+) -> tuple[bytes, str]:
     try:
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
-                digest.update(chunk)
+        raw = path.read_bytes()
     except OSError as error:
         raise RuntimeError(f"cannot read frozen tokenizer {path}: {error}") from error
-    actual = digest.hexdigest()
+    actual = hashlib.sha256(raw).hexdigest()
     if actual != expected_sha256:
         raise RuntimeError(
             "tokenizer SHA-256 mismatch: "
             f"expected={expected_sha256}, actual={actual}, path={path}"
         )
-    return actual
+    return raw, actual
 
 
-def load_tokenizer(path: Path = TOKENIZER_PATH) -> Any:
+def verify_tokenizer_hash(path: Path, expected_sha256: str) -> str:
+    return read_verified_tokenizer_bytes(path, expected_sha256)[1]
+
+
+def load_tokenizer_bytes(raw: bytes) -> Any:
     try:
         from tokenizers import Tokenizer
     except ImportError as error:
         raise RuntimeError("tokenizers is required; install requirements-harness.txt") from error
-    if not path.is_file():
-        raise RuntimeError(f"pinned tokenizer is missing: {path}")
-    return Tokenizer.from_file(str(path))
+    try:
+        document = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise RuntimeError(f"frozen tokenizer is not UTF-8: {error}") from error
+    return Tokenizer.from_str(document)
+
+
+def load_tokenizer(path: Path = TOKENIZER_PATH) -> Any:
+    return load_tokenizer_bytes(path.read_bytes())
 
 
 def token_count(tokenizer: Any, text: str) -> int:
@@ -281,6 +290,8 @@ class Client:
         first_content_at: float | None = None
         last_content_at: float | None = None
         generated_parts: list[str] = []
+        reasoning_parts: list[str] = []
+        content_parts: list[str] = []
         token_timestamps: list[float] = []
         usage: dict[str, Any] | None = None
         done = False
@@ -328,6 +339,10 @@ class Client:
                                 raise RuntimeError(f"{field} delta is not a string")
                             if fragment:
                                 fragments.append(fragment)
+                                if field == "reasoning_content":
+                                    reasoning_parts.append(fragment)
+                                else:
+                                    content_parts.append(fragment)
                         if fragments:
                             now = time.perf_counter()
                             generated_parts.extend(fragments)
@@ -348,6 +363,8 @@ class Client:
             "first_content_at": first_content_at,
             "last_content_at": last_content_at,
             "generated_text": "".join(generated_parts),
+            "generated_reasoning": "".join(reasoning_parts),
+            "generated_content": "".join(content_parts),
             "usage": usage,
             "done": done,
             "data_chunks": data_chunks,
@@ -492,7 +509,8 @@ def read_token_timing(
 def raw_visible_output_errors(
     tokenizer: Any,
     token_ids: list[int],
-    generated_text: str,
+    generated_reasoning: str,
+    generated_content: str,
 ) -> list[str]:
     """Bind server-side token records to the exact bytes observed by the client."""
     reasons: list[str] = []
@@ -512,34 +530,62 @@ def raw_visible_output_errors(
     try:
         open_ids = tokenizer.encode("<think>", add_special_tokens=False).ids
         close_ids = tokenizer.encode("</think>", add_special_tokens=False).ids
-        visible_ids = list(token_ids)
-        if open_ids and visible_ids[: len(open_ids)] == open_ids:
-            del visible_ids[: len(open_ids)]
+        framed_ids = list(token_ids)
+        if open_ids and framed_ids[: len(open_ids)] == open_ids:
+            del framed_ids[: len(open_ids)]
+        close_index = None
         if close_ids:
-            for index in range(len(visible_ids) - len(close_ids) + 1):
-                if visible_ids[index : index + len(close_ids)] == close_ids:
-                    del visible_ids[index : index + len(close_ids)]
+            for index in range(len(framed_ids) - len(close_ids) + 1):
+                if framed_ids[index : index + len(close_ids)] == close_ids:
+                    close_index = index
                     break
-        visible = tokenizer.decode(visible_ids, skip_special_tokens=False)
-        canonical_ids = tokenizer.encode(
-            generated_text, add_special_tokens=False
+        if close_index is not None:
+            reasoning_ids = framed_ids[:close_index]
+            content_ids = framed_ids[close_index + len(close_ids) :]
+        elif generated_reasoning and not generated_content:
+            reasoning_ids, content_ids = framed_ids, []
+        elif generated_content and not generated_reasoning:
+            reasoning_ids, content_ids = [], framed_ids
+        else:
+            return [
+                "raw timing has no unambiguous reasoning/content token boundary"
+            ]
+        decoded_reasoning = tokenizer.decode(
+            reasoning_ids, skip_special_tokens=False
+        )
+        decoded_content = tokenizer.decode(content_ids, skip_special_tokens=False)
+        canonical_reasoning_ids = tokenizer.encode(
+            generated_reasoning, add_special_tokens=False
+        ).ids
+        canonical_content_ids = tokenizer.encode(
+            generated_content, add_special_tokens=False
         ).ids
     except Exception as error:
         return [f"cannot bind raw timing tokens to client output: {error}"]
 
-    # The stream hides only the think framing tokens. Exact canonical IDs are
-    # required as well as bytes so a longer noncanonical decomposition cannot
-    # inflate the measured token count.
-    if visible != generated_text:
+    # Validate the two client channels independently: joining their bytes can
+    # legitimately select a different BPE across the hidden </think> boundary.
+    if (
+        decoded_reasoning != generated_reasoning
+        or decoded_content != generated_content
+    ):
         reasons.append(
             "raw token/client byte mismatch: "
-            f"decoded_bytes={len(visible.encode('utf-8'))}, "
-            f"client_bytes={len(generated_text.encode('utf-8'))}"
+            f"raw_reasoning_bytes={len(decoded_reasoning.encode('utf-8'))}, "
+            f"client_reasoning_bytes={len(generated_reasoning.encode('utf-8'))}, "
+            f"raw_content_bytes={len(decoded_content.encode('utf-8'))}, "
+            f"client_content_bytes={len(generated_content.encode('utf-8'))}"
         )
-    if canonical_ids != visible_ids:
+    if (
+        canonical_reasoning_ids != reasoning_ids
+        or canonical_content_ids != content_ids
+    ):
         reasons.append(
             "raw token/client canonical-ID mismatch: "
-            f"raw_visible={len(visible_ids)}, canonical={len(canonical_ids)}"
+            f"raw_reasoning={len(reasoning_ids)}, "
+            f"canonical_reasoning={len(canonical_reasoning_ids)}, "
+            f"raw_content={len(content_ids)}, "
+            f"canonical_content={len(canonical_content_ids)}"
         )
     return reasons
 
@@ -635,7 +681,8 @@ def run_rep(
                 raw_visible_output_errors(
                     tokenizer,
                     raw_timing["token_ids"],
-                    stream["generated_text"],
+                    stream["generated_reasoning"],
+                    stream["generated_content"],
                 )
             )
             timing_source = "server_raw_token_log"
@@ -754,10 +801,10 @@ def main() -> int:
     }
     try:
         api_key = load_api_key(args.api_key_file)
-        tokenizer_digest = verify_tokenizer_hash(
+        tokenizer_bytes, tokenizer_digest = read_verified_tokenizer_bytes(
             args.tokenizer_path, args.tokenizer_sha256
         )
-        tokenizer = load_tokenizer(args.tokenizer_path)
+        tokenizer = load_tokenizer_bytes(tokenizer_bytes)
         fixture = FIXTURE_PATH.read_text(encoding="utf-8")
         fixture_total_tokens = token_count(tokenizer, fixture)
         if fixture_total_tokens < max(args.context_levels):
@@ -845,7 +892,6 @@ def main() -> int:
                 time.sleep(2)
 
         result["suite_valid"] = not any_cell_failed
-        verify_tokenizer_hash(args.tokenizer_path, args.tokenizer_sha256)
         result["metadata"]["finished_at"] = utc_now()
         write_result(args.out, result)
         return 0 if result["suite_valid"] else 1
