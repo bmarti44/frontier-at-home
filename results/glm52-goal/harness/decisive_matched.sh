@@ -64,6 +64,7 @@ run_glm() {
     wait_full_release
     ACTIVE=glm52
     sudo -n -u dsv4 env HOME=/home/dsv4 \
+        GLM_CANDIDATE_SRC="${GLM_CANDIDATE_SRC:-}" \
         GLM_SAFE_KILL_FLOOR_GIB=18 GLM_SAFE_MIN_START_GIB=110 \
         GLM_SAFE_TIMEOUT_S=2400 \
         flock -n -E 75 /run/dsv4/inference.lock \

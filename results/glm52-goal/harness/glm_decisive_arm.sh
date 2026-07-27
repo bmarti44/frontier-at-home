@@ -7,11 +7,14 @@ OUT=$1
 LABEL=$2
 SEED=$3
 REPO=/home/bmarti44/spark-deepseek-v4-flash
-SRC=/home/dsv4/ds4-project/src/ds4-goal-clean-0a7ad776
+SRC=${GLM_CANDIDATE_SRC:-/home/dsv4/ds4-project/src/ds4-goal-clean-0a7ad776}
 MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 PORT=8011
 PID=
 START_TICKS=
+
+[[ $SRC == /home/dsv4/ds4-project/src/* && -x $SRC/ds4-server ]] \
+    || { echo "invalid GLM_CANDIDATE_SRC: $SRC" >&2; exit 2; }
 
 stop_server() {
     [[ ${PID:-} =~ ^[0-9]+$ ]] || return 0

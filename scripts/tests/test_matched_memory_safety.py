@@ -14,6 +14,7 @@ GUARD = ROOT / "scripts" / "03_memory_guard.py"
 HARNESS = ROOT / "results" / "glm52-goal" / "harness" / "decisive_matched.sh"
 GLM_SAFE = ROOT / "results" / "glm52-gates" / "harness" / "glm_safe_run.sh"
 DSV4_LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
+GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
 
 
 class MemoryGuardTests(unittest.TestCase):
@@ -92,6 +93,11 @@ class MatchedHarnessContractTests(unittest.TestCase):
         source = DSV4_LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_WATCHDOG_FLOOR_GIB:-18", source)
         self.assertIn('--threshold-gib "$watchdog_floor_gib"', source)
+
+    def test_candidate_source_override_is_explicit_and_default_off(self):
+        source = GLM_ARM.read_text(encoding="utf-8")
+        self.assertIn("GLM_CANDIDATE_SRC:-", source)
+        self.assertIn("ds4-goal-clean-0a7ad776", source)
 
 
 if __name__ == "__main__":
