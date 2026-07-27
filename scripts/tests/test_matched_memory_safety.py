@@ -18,6 +18,8 @@ GLM_CGROUP = ROOT / "results" / "glm52-gates" / "harness" / "glm_cgroup_run.sh"
 DSV4_LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 DSV4_SERVICE = ROOT / "configs" / "systemd" / "deepseek-v4-flash-llamacpp.service"
 GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
+HEADLESS_SCHEDULER = ROOT / "scripts" / "54_schedule_headless_foundation.sh"
+HEADLESS_WORKER = ROOT / "scripts" / "55_headless_foundation_worker.sh"
 
 
 class MemoryGuardTests(unittest.TestCase):
@@ -76,6 +78,31 @@ class MemoryGuardTests(unittest.TestCase):
 
 
 class MatchedHarnessContractTests(unittest.TestCase):
+    def test_headless_foundation_runner_restores_display_and_fails_closed(self):
+        scheduler = HEADLESS_SCHEDULER.read_text(encoding="utf-8")
+        worker = HEADLESS_WORKER.read_text(encoding="utf-8")
+        self.assertIn("must run as root", scheduler)
+        self.assertIn("/home/dsv4/.dsv4-start-hold", scheduler)
+        self.assertIn("systemd-run", scheduler)
+        self.assertIn("--no-block", scheduler)
+        self.assertIn("glm52-headless-foundation.service", scheduler)
+        self.assertIn("trap cleanup EXIT", worker)
+        self.assertIn("systemctl stop display-manager.service", worker)
+        self.assertIn("systemctl start display-manager.service", worker)
+        self.assertIn("--required-gib 117", worker)
+        self.assertIn("--required-gib 110", worker)
+        self.assertIn("DSV4_MEM_FLOOR_GIB=18", worker)
+        self.assertIn("DSV4_WATCHDOG_FLOOR_GIB=18", worker)
+        self.assertIn("DSV4_UBATCH=2048", worker)
+        self.assertIn("CTX=65536", worker)
+        self.assertIn("DSV4_PARALLEL=2", worker)
+        self.assertIn("DSV4_PORT=8013", worker)
+        self.assertIn("journalctl -k -n 0 --show-cursor", worker)
+        self.assertIn("journalctl -k --after-cursor", worker)
+        self.assertIn("NV_ERR_NO_MEMORY", worker)
+        self.assertIn("--reps 2", worker)
+        self.assertNotIn("rm -f -- /home/dsv4/.dsv4-start-hold", worker)
+
     def test_production_service_uses_launcher_accepted_memory_floor(self):
         source = DSV4_SERVICE.read_text(encoding="utf-8")
         self.assertIn("Environment=DSV4_MEM_FLOOR_GIB=18", source)
