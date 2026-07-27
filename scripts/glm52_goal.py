@@ -1031,6 +1031,31 @@ def _review_issue_ids(value: Any, label: str) -> list[str]:
     return value
 
 
+def _review_issues(value: Any, label: str) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+    expected = {
+        "id",
+        "evidence",
+        "affected_gate",
+        "reproduction_instructions",
+        "proposed_acceptance_test",
+    }
+    issues: list[dict[str, str]] = []
+    ids: list[str] = []
+    for index, issue in enumerate(value):
+        _require_exact_keys(issue, expected, f"{label} issue {index}")
+        issue_id = _review_issue_ids([issue["id"]], label)[0]
+        for field in expected - {"id"}:
+            if not isinstance(issue[field], str) or not issue[field].strip():
+                raise ValueError(f"{label} issue {field} must be non-empty")
+        ids.append(issue_id)
+        issues.append(issue)
+    if len(set(ids)) != len(ids):
+        raise ValueError(f"{label} contains duplicate issue IDs")
+    return issues
+
+
 def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
     if len(records) != 2:
         raise ValueError("review requires exactly two persistent reviewers")
@@ -1080,10 +1105,12 @@ def _score_review(records: list[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError("review_round must be a positive integer")
         rounds.add(review_round)
         issues = {
-            severity: _review_issue_ids(record[severity], severity)
+            severity: _review_issues(record[severity], severity)
             for severity in ("critical", "high", "medium", "low")
         }
-        flattened = [issue for values in issues.values() for issue in values]
+        flattened = [
+            issue["id"] for values in issues.values() for issue in values
+        ]
         if len(set(flattened)) != len(flattened):
             raise ValueError("one review issue appears at multiple severities")
         expected_score = max(
@@ -1186,6 +1213,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
         ),
         "review.final.v1": (
             _score_review,
+            _review_issues,
             _review_issue_ids,
             _require_exact_keys,
         ),
