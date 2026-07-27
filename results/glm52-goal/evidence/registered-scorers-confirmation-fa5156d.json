@@ -1,0 +1,44 @@
+{
+  "candidate_hash": "fa5156d00111fd3d7211dab55e773415b156e5da",
+  "drand": {
+    "round": 6323104,
+    "drand_randomness": "1df841f12d5cabc1d71a01ee2cb8ad89facc95093e1af1645b1fd099aac67cf1",
+    "drand_signature": "81213fe293ba63ad9b5456f98a15e0cc40285e6ad7379b561f3f026f49270a86f1ff8cc5bf358073dd6ef34fd9ce869b0b8f2007fb1499c7dfcec3591868389e7696138826c1f098525d8b9db5a0d5ce3550f30f3bed8cba4c829e3463fc51b4",
+    "relay_verification": {
+      "matching_relays": [
+        "api.drand.sh",
+        "api2.drand.sh",
+        "api3.drand.sh"
+      ],
+      "all_round_randomness_signature_equal": true
+    }
+  },
+  "derivation": "mutation_index = successive randomness bytes modulo mutation-list length",
+  "results": [
+    {
+      "gate": "W11",
+      "mutation": "string_count",
+      "rejected": true,
+      "observed": "ValueError"
+    },
+    {
+      "gate": "W11",
+      "mutation": "memory_low",
+      "rejected": true,
+      "observed": "FAIL"
+    },
+    {
+      "gate": "parity",
+      "mutation": "wrong_profile",
+      "rejected": true,
+      "observed": "ValueError"
+    },
+    {
+      "gate": "parity",
+      "mutation": "oom",
+      "rejected": true,
+      "observed": "ValueError"
+    }
+  ],
+  "verdict": "PASS"
+}
