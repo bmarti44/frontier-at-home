@@ -74,3 +74,4 @@ tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
 grep MemAvailable /proc/meminfo >> "$MAIN"; sync
 echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR"
+exit "$RC"

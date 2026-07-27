@@ -83,6 +83,10 @@ def parse_args() -> argparse.Namespace:
         help=f"minimum valid generated tokens (default: {MIN_VALID_COMPLETION_TOKENS})",
     )
     parser.add_argument("--seed", type=int, default=SEED, help="fixture and sampling seed")
+    parser.add_argument(
+        "--model-id",
+        help="exact model id to select when /v1/models exposes multiple aliases",
+    )
     args = parser.parse_args()
     if args.extra_body is not None:
         args.extra_body = json.loads(args.extra_body)
@@ -169,7 +173,7 @@ class Client:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
-    def get_model(self) -> str:
+    def get_model(self, requested: str | None = None) -> str:
         request = urllib.request.Request(
             self.base_url + "/v1/models", headers=self.headers(), method="GET"
         )
@@ -189,13 +193,27 @@ class Client:
             data = document["data"]
         except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as error:
             raise RuntimeError(f"invalid models response: {raw[:500]!r}") from error
-        if not isinstance(data, list) or len(data) != 1:
+        if not isinstance(data, list) or not data:
             count = len(data) if isinstance(data, list) else "non-list"
-            raise RuntimeError(f"expected exactly one model, received {count}")
-        model = data[0].get("id") if isinstance(data[0], dict) else None
-        if not isinstance(model, str) or not model:
-            raise RuntimeError(f"model id is missing or invalid: {data[0]!r}")
-        return model
+            raise RuntimeError(f"expected at least one model, received {count}")
+        models = [
+            item.get("id")
+            for item in data
+            if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"]
+        ]
+        if len(models) != len(data):
+            raise RuntimeError("one or more model ids are missing or invalid")
+        if requested is not None:
+            if requested not in models:
+                raise RuntimeError(
+                    f"requested model {requested!r} is absent; available={models!r}"
+                )
+            return requested
+        if len(models) != 1:
+            raise RuntimeError(
+                f"multiple model aliases require --model-id; available={models!r}"
+            )
+        return models[0]
 
     def stream_chat(self, payload: dict[str, Any]) -> dict[str, Any]:
         request_payload = dict(self.extra_body)
@@ -480,7 +498,7 @@ def main() -> int:
             for level in args.context_levels
         }
         client = Client(args.base_url, api_key, args.extra_body)
-        model = client.get_model()
+        model = client.get_model(args.model_id)
         result["metadata"]["model"] = model
         result["metadata"]["fixture_path"] = str(FIXTURE_PATH.relative_to(REPO_ROOT))
         result["metadata"]["fixture_total_tokens"] = fixture_total_tokens

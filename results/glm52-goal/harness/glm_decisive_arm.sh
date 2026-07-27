@@ -62,6 +62,7 @@ done
     --base-url "http://127.0.0.1:$PORT" \
     --out "$OUT/result.json" \
     --stack-label "$LABEL" \
+    --model-id glm-5.2 \
     --reps 1 --context-levels 0 --max-tokens 160 \
     --min-completion-tokens 128 --seed "$SEED"
 
