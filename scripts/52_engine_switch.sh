@@ -38,10 +38,25 @@ previous_profile=
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
+clean_python() {
+    env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 \
+        /usr/bin/python3 "$@"
+}
+
+clean_curl() {
+    env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 \
+        /usr/bin/curl "$@"
+}
+
+dsv4_launcher() {
+    env -i PATH=/usr/bin:/bin HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 \
+        LANG=C.UTF-8 "$REPO/scripts/21_serve_llamacpp.sh" "$@"
+}
+
 sha256() { sha256sum -- "$1" | awk '{print $1}'; }
 
 json_status() {
-    python3 - "$ACTIVE" <<'PY'
+    clean_python - "$ACTIVE" <<'PY'
 import json, os, sys
 path = sys.argv[1]
 profile = None
@@ -60,7 +75,7 @@ PY
 }
 
 read_active_profile() {
-    python3 - "$ACTIVE" <<'PY'
+    clean_python - "$ACTIVE" <<'PY'
 import json, sys
 try:
     with open(sys.argv[1], encoding="utf-8") as stream:
@@ -74,11 +89,12 @@ PY
 
 glm_qualified() {
     [[ ${ENGINE_SWITCH_TESTING:-0} != 1 ]] || return 1
-    "$REPO/scripts/glm52_goal.py" release-check --json >/dev/null
+    env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 \
+        "$REPO/scripts/glm52_goal.py" release-check --json >/dev/null
 }
 
 verify_glm_hashes() {
-    python3 - "$PROFILE_MANIFEST" "$SRC/ds4-server" "$GGUF" <<'PY'
+    clean_python - "$PROFILE_MANIFEST" "$SRC/ds4-server" "$GGUF" <<'PY'
 import hashlib, json, sys
 manifest_path, binary_path, model_path = sys.argv[1:]
 with open(manifest_path, encoding="utf-8") as stream:
@@ -113,7 +129,7 @@ stop_glm_verified() {
     [[ -f $GLM_PROCESS ]] || return 0
     local values pid expected_pgid expected_ticks expected_sha memwatch_pid
     local memwatch_ticks current current_pgid current_ticks exe cmdline
-    values=$(python3 - "$GLM_PROCESS" <<'PY'
+    values=$(clean_python - "$GLM_PROCESS" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     value = json.load(stream)
@@ -162,7 +178,7 @@ PY
 
 stop_profile() {
     case "$1" in
-        dsv4) "$REPO/scripts/21_serve_llamacpp.sh" stop ;;
+        dsv4) dsv4_launcher stop ;;
         glm52) stop_glm_verified ;;
         "") return 0 ;;
         *) die "unknown previous profile $1" ;;
@@ -170,7 +186,7 @@ stop_profile() {
 }
 
 start_dsv4() {
-    "$REPO/scripts/21_serve_llamacpp.sh" start
+    dsv4_launcher start
 }
 
 start_glm52() {
@@ -190,9 +206,9 @@ wait_model_ready() {
     [[ $profile == glm52 ]] && expected=glm-5.2
     deadline=$((SECONDS + 1800))
     while (( SECONDS < deadline )); do
-        body=$(curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
+        body=$(clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
             2>/dev/null || true)
-        if python3 - "$expected" "$body" <<'PY' 2>/dev/null
+        if clean_python - "$expected" "$body" <<'PY' 2>/dev/null
 import json, sys
 expected, raw = sys.argv[1:]
 value = json.loads(raw)
@@ -218,23 +234,23 @@ verify_serving() {
     local profile=$1 expected unauth code key body
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
-    body=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
+    body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
-    python3 - "$expected" "$body" <<'PY'
+    clean_python - "$expected" "$body" <<'PY'
 import json, sys
 expected=sys.argv[1]
 value=json.loads(sys.argv[2])
 if not any(expected == item["id"].lower() for item in value["data"]):
     raise SystemExit("exact model identity mismatch")
 PY
-    unauth=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
+    unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
     [[ $unauth == 401 ]] || return 1
     api_key || return 1
     key=$REPLY
     code=$(
         printf 'header = "Authorization: Bearer %s"\n' "$key" |
-            curl --config - -sS -o "$STATE/probe.json.tmp" \
+            clean_curl --config - -sS -o "$STATE/probe.json.tmp" \
                 -w '%{http_code}' --max-time 1800 \
                 -H 'Content-Type: application/json' \
                 -d '{"model":"default","prompt":"Reply with the single word ready.","max_tokens":4,"temperature":0}' \
@@ -242,7 +258,7 @@ PY
     )
     unset key REPLY
     [[ $code == 200 ]] || return 1
-    python3 - "$STATE/probe.json.tmp" <<'PY'
+    clean_python - "$STATE/probe.json.tmp" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     value=json.load(stream)
@@ -254,7 +270,7 @@ PY
 }
 
 commit_active() {
-    python3 - "$ACTIVE.tmp" "$1" <<'PY'
+    clean_python - "$ACTIVE.tmp" "$1" <<'PY'
 import json, os, sys
 with open(sys.argv[1], "x", encoding="utf-8") as stream:
     json.dump({"schema_version":1, "profile":sys.argv[2]}, stream)

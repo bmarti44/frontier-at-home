@@ -65,7 +65,7 @@ class EngineSwitchTests(unittest.TestCase):
     def test_authenticated_probe_keeps_bearer_secret_out_of_argv(self):
         source = SCRIPT.read_text()
         self.assertNotIn('-H "Authorization: Bearer $key"', source)
-        self.assertIn("curl --config -", source)
+        self.assertIn("clean_curl --config -", source)
         self.assertIn("printf 'header = \"Authorization: Bearer %s\"", source)
 
     def test_switch_subprocesses_use_a_frozen_environment_allowlist(self):
