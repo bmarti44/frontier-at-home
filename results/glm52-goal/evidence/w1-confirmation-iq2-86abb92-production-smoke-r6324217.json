@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "source_commit": "86abb92b7519389e38ce9aac3f73ad2f78b593c1",
+    "binary_sha256": "0ca5a70d4d68f38e486dd7e0bbd798df73d45563a1bcc7899e1362d3f43ec774",
+    "binary_bytes": 13650120,
+    "flag": "DS4_CUDA_IQ2_DOWN_REFERENCE=1",
+    "flag_default_off": true
+  },
+  "run": {
+    "tag": "iq2-86abb92-smoke-r6324217",
+    "drand_round": 6324217,
+    "port": 18011,
+    "context_cap": 8192,
+    "prompt_tokens": 60,
+    "server_completion_tokens": 160,
+    "client_completion_tokens": 159,
+    "timing_source": "sse_content_events",
+    "decode_tokens_per_second": 0.6488160781232165,
+    "prefill_tokens_per_second": 0.6147086751118344,
+    "ttft_seconds": 97.60721204899892,
+    "total_request_seconds": 341.127,
+    "valid": true
+  },
+  "safety": {
+    "required_stable_start_gib": 110,
+    "kill_floor_gib": 40,
+    "virtual_memory_limit_kib": 419430400,
+    "timeout_seconds": 2400,
+    "memory_samples": 1211,
+    "minimum_available_memory_gib": 87.887161,
+    "maximum_engine_rss_gib": 0.837555,
+    "maximum_process_read_gib": 1216.481056,
+    "watchdog_killed": false,
+    "exit_status": 0,
+    "oom_events": 0,
+    "xid_events": 0,
+    "swap_used_bytes_after": 352256,
+    "server_processes_after": 0,
+    "available_memory_gib_after": 114.932,
+    "persistent_maintenance_hold_present": true
+  },
+  "provenance": {
+    "process_identity_matches_candidate_binary": true,
+    "safe_wrapper_headline_matches_candidate_binary": false,
+    "safe_wrapper_defect": "The pre-fix wrapper logged a hard-coded upstream tree and binary. process.identity and the executable independently hashed as the candidate binary.",
+    "fixture_sha256": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031"
+  },
+  "artifacts": {
+    "/home/dsv4/ds4-project/glm52-goal-iq2-86abb92-smoke-r6324217/result.json": "186ada2cdb6f0e6d529c1c983c184aaa5a1b3652deeaba8b091dc16aabbd96ac",
+    "/home/dsv4/ds4-project/glm52-goal-iq2-86abb92-smoke-r6324217/server.log": "6a96df7bcdabc8a4050c02c8b1d5b406f855f645805540d2c3412e3f4edaa437",
+    "/home/dsv4/ds4-project/glm52-crashlog/20260727-091518-iq2-86abb92-smoke-r6324217/main.log": "b1497b6cd357d6a6986c5ce2382fd9a0ff6969a4474c54a0a6b29249c8bcbe75",
+    "/home/dsv4/ds4-project/glm52-crashlog/20260727-091518-iq2-86abb92-smoke-r6324217/samples.log": "59b5fa5f6a075779086fa7f5829c944e80787ff030076db63194ad6f862db23b"
+  },
+  "assessment": {
+    "functional_smoke": "PASS",
+    "memory_safety": "PASS",
+    "performance_authority": "NO_RESULT",
+    "w1_terminal_result": "NO_RESULT",
+    "reason": "This one-arm diagnostic confirms production-path generation and safety for the IQ2 down reference, but it neither tests the specified F16/block-E4M3/F32-RoPE W1 formats nor supplies blinded A/B or retrieval evidence."
+  }
+}

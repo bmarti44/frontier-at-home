@@ -20,6 +20,7 @@ VLIMIT_KB=${GLM_SAFE_VLIMIT_KB:-419430400}  # 400 GiB backstop: engine mmaps the
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 MIN_START_GIB=${GLM_SAFE_MIN_START_GIB:-110}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
+CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -54,6 +55,8 @@ fi
 if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then
   config_error "memory floors"
 fi
+[[ $CANDIDATE_PROVENANCE =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_LOG_CANDIDATE_PROVENANCE"
 if [[ "${1:-}" == --tag ]]; then
   [[ -n ${2:-} ]] || config_error "tag"
   TAG=$2
@@ -100,8 +103,16 @@ forward_signal() {
 plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB min_start_gib=$MIN_START_GIB timeout_s=$TIMEOUT_S"
 plog "cmd: $*"
 plog "host: $(hostname) kernel: $(uname -r)"
-SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
-[[ -d $SRC/.git ]] && plog "tree: $(cd $SRC && git log --oneline -1) binary_sha12=$(sha256sum $SRC/ds4-server 2>/dev/null | cut -c1-12)"
+plog "candidate_provenance_enabled=$CANDIDATE_PROVENANCE"
+if [[ $CANDIDATE_PROVENANCE == 1 ]]; then
+  CANDIDATE_SRC=${GLM_CANDIDATE_SRC:-}
+  [[ $CANDIDATE_SRC == /home/dsv4/ds4-project/src/* ]] ||
+    config_error "GLM_CANDIDATE_SRC"
+  CANDIDATE_BINARY=$CANDIDATE_SRC/ds4-server
+  [[ -f $CANDIDATE_BINARY && -x $CANDIDATE_BINARY ]] ||
+    config_error "GLM_CANDIDATE_SRC binary"
+  plog "candidate_src=$CANDIDATE_SRC candidate_binary_sha256=$(sha256sum -- "$CANDIDATE_BINARY" | awk '{print $1}')"
+fi
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
 python3 /home/bmarti44/spark-deepseek-v4-flash/scripts/03_memory_guard.py \
