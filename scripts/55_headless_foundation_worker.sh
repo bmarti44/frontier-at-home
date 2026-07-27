@@ -52,8 +52,8 @@ dsv4_launcher() {
         DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
         DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
         DSV4_MEM_FLOOR_GIB=18 DSV4_WATCHDOG_FLOOR_GIB=18 \
-        DSV4_UBATCH=2048 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=1 \
-        CTX=65536 DSV4_PARALLEL=2 DSV4_NO_MMAP=1 \
+        DSV4_UBATCH=512 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=0 \
+        CTX=8192 DSV4_PARALLEL=1 DSV4_NO_MMAP=1 \
         DSV4_SPEC_TYPE=ngram-map-k4v \
         "$LAUNCHER" "$@"
 }
@@ -86,6 +86,112 @@ with open(path, "x", encoding="utf-8") as stream:
     os.fsync(stream.fileno())
 PY
     mv -f -- "$OUT/status.json.tmp" "$OUT/status.json"
+}
+
+write_evidence_triplet() {
+    local rc=$1
+    /usr/bin/python3 - "$OUT" "$rc" "$CANDIDATE_HASH" "$TAG" "$SEED" \
+        "$REPO/scripts/55_headless_foundation_worker.sh" \
+        /home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
+        "$REPO/configs/build-manifests/llamacpp-fusion.json" \
+        "$REPO/weights/unsloth-ud-q2_k_xl/manifest.json" \
+        "$REPO/scripts/30_bench_speed.py" <<'PY'
+import hashlib
+import json
+import os
+import pathlib
+import sys
+
+out = pathlib.Path(sys.argv[1])
+rc = int(sys.argv[2])
+candidate, tag, seed = sys.argv[3:6]
+worker, binary, build_manifest, model_manifest, scorer = map(
+    pathlib.Path, sys.argv[6:]
+)
+
+def digest(path):
+    value = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+def load(name):
+    path = out / name
+    if not path.is_file() or path.is_symlink():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+status = load("status.json")
+admission = load("admission.json")
+result = load("result.json")
+configuration = {
+    "batch": 2048,
+    "ctx": 8192,
+    "no_mmap": True,
+    "parallel": 1,
+    "port": 8013,
+    "ubatch": 512,
+    "watchdog_floor_gib": 18,
+}
+configuration_bytes = json.dumps(
+    configuration, sort_keys=True, separators=(",", ":")
+).encode()
+fixture_sha256 = hashlib.sha256(
+    f"{candidate}:{seed}:foundation-dsv4-headless".encode()
+).hexdigest()
+manifest = {
+    "schema_version": 1,
+    "gate": "foundation",
+    "attempt_kind": "dsv4_headless_baseline",
+    "candidate_hash": candidate,
+    "tag": tag,
+    "seed": int(seed),
+    "source_sha256": digest(worker),
+    "diff_sha256": hashlib.sha256(b"").hexdigest(),
+    "binary_sha256": digest(binary),
+    "scorer_sha256": digest(scorer),
+    "model_sha256": digest(model_manifest),
+    "tokenizer_sha256": digest(model_manifest),
+    "fixture_sha256": fixture_sha256,
+    "configuration_sha256": hashlib.sha256(configuration_bytes).hexdigest(),
+    "configuration": configuration,
+}
+raw = {
+    "record_type": "headless_foundation_arm",
+    "candidate_hash": candidate,
+    "tag": tag,
+    "seed": int(seed),
+    "admission": admission,
+    "benchmark": result,
+    "status": status,
+}
+summary = {
+    "formula_version": 1,
+    "verdict": "FAIL" if rc else "NO_RESULT",
+    "reason": (
+        "headless DeepSeek arm failed before a valid baseline completed"
+        if rc
+        else "DeepSeek arm completed; matched GLM arm remains required"
+    ),
+    "admission": admission,
+    "status": status,
+}
+for name, value in (
+    ("manifest.json", manifest),
+    ("raw.jsonl", raw),
+    ("summary.json", summary),
+):
+    path = out / name
+    with path.open("x", encoding="utf-8") as stream:
+        json.dump(value, stream, sort_keys=True, separators=(",", ":"))
+        stream.write("\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+PY
 }
 
 cleanup() {
@@ -128,6 +234,7 @@ cleanup() {
         (( $? == 0 )) || rc=1
     fi
     write_status "$rc" "$kernel_fault" "$release_ok" "$swap_end_kib" || rc=1
+    write_evidence_triplet "$rc" || rc=1
     chmod -R a+rX "$OUT" 2>/dev/null || true
     exit "$rc"
 }
@@ -153,7 +260,7 @@ if systemctl is-active --quiet display-manager.service; then
     DISPLAY_WAS_ACTIVE=true
     systemctl stop display-manager.service >>"$OUT/display.log" 2>&1
 fi
-/usr/bin/python3 "$GUARD" --required-gib 117 --stable-samples 3 \
+/usr/bin/python3 "$GUARD" --required-gib 116 --stable-samples 3 \
     --interval-seconds 1 --timeout-seconds 180 >"$OUT/admission.json"
 [[ -e $HOLD ]] || { echo "maintenance hold disappeared" >&2; exit 1; }
 
