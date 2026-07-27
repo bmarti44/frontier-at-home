@@ -1,0 +1,11 @@
+{
+  "checks": {
+    "codec_exact": true,
+    "cuda_codec_exact": true,
+    "one_million_memory_fit": false,
+    "real_glm_tensor_capture": false
+  },
+  "formula_version": 1,
+  "reason": "Strict FP8 alone needs 86.9 GiB for KV plus margin against a measured 21.7 GiB envelope; estimated safe context is about 111K. No real-tensor claim is made.",
+  "verdict": "FAIL"
+}

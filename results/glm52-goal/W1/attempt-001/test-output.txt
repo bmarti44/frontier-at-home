@@ -1,0 +1,37 @@
+T1: FP8 KV storage codec must be LOSSLESS for already-quantized values
+
+T1a exhaustive index round-trip (254 values)      : pass
+T1b quantizer image over 81 scales (20574 values) : pass
+T1c real-shaped row round-trip (200 rows)         : pass
+T1d source-drift check vs ds4.c                   : pass
+
+T1 PASSED (0 failures)
+T2: CUDA FP8 KV store/load must round-trip BITWISE  [mode: RoPE F32 strict]
+    4096 rows x 576 dims (512 non-RoPE @1B + 64 RoPE @2B)
+
+T2a non-RoPE bitwise round-trip : pass  (0/2097152 mismatched, worst |d|=0)
+T2b RoPE stored at F32 (strict) : pass  (0/262144 differ) -- whole row is
+                                  bit-identical, so T3 can demand max|d|==0
+
+row bytes: F32 2304 -> packed 800  (2.88x reduction, scales included)
+T2 PASSED (non-RoPE path is exact)
+T0: strict-FP8 KV must fit alongside the model and expert cache
+
+measured points: [(8192, 5653.4), (32768, 10245.4)]
+  -> F32 191.3 KiB/token + 4123 MiB fixed
+  -> compact 180.2 KiB/tok, other 11.1 KiB/tok (unchanged by this work)
+  -> STRICT 72.8 KiB/token  (2.63x less)
+
+budget baseline: 99 comparable ds4-streaming runs
+measured peak RSS        : 70.7 GiB  (expert cache + runtime)
+measured min MemAvailable: 11.7 GiB
+
+KV envelope = current KV at ctx=32768 (10.0 GiB) + free (11.7 GiB) = 21.7 GiB
+strict KV at ctx=1048576 = 76.9 GiB
+
+require strict_KV + 10.0 GiB margin <= envelope:  86.9 <= 21.7  -> FAIL
+
+ctx=1048576 needs 195.4 GiB at F32, which does NOT fit -- so strict FP8 is what unlocks it.
+FAIL: ctx=1048576 does not fit with a 10.0 GiB margin; max safe ctx is ~111000
+
+T0 FAILED (1)
