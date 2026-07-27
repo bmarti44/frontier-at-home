@@ -46,6 +46,16 @@ GATE_ORDER = (
     "review",
 )
 
+
+def _git_env() -> dict[str, str]:
+    return {
+        "HOME": "/nonexistent",
+        "PATH": "/usr/bin:/bin",
+        "LANG": "C.UTF-8",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+    }
+
 # One-sided 95% Student-t critical values, indexed by degrees of freedom.
 _T95 = {
     1: 6.3138,
@@ -1989,17 +1999,13 @@ def _fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
 
 def _git_commit_time(candidate_hash: str) -> str:
     result = subprocess.run(
-        ["git", "show", "-s", "--format=%cI", candidate_hash],
+        ["/usr/bin/git", "show", "-s", "--format=%cI", candidate_hash],
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         check=False,
-        env={
-            "HOME": os.environ.get("HOME", ""),
-            "PATH": os.environ.get("PATH", ""),
-            "LANG": "C.UTF-8",
-        },
+        env=_git_env(),
     )
     if result.returncode != 0:
         raise ValueError("git cannot resolve candidate timestamp")
@@ -2021,16 +2027,12 @@ def _load_approved_dsv4_profile(candidate_hash: Any) -> dict[str, Any]:
     ):
         raise ValueError("approved DeepSeek profile candidate is invalid")
     result = subprocess.run(
-        ["git", "show", f"{candidate_hash}:configs/dsv4-profile.json"],
+        ["/usr/bin/git", "show", f"{candidate_hash}:configs/dsv4-profile.json"],
         cwd=ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         check=False,
-        env={
-            "HOME": os.environ.get("HOME", ""),
-            "PATH": os.environ.get("PATH", ""),
-            "LANG": "C.UTF-8",
-        },
+        env=_git_env(),
     )
     if result.returncode != 0:
         raise ValueError("approved DeepSeek profile is absent from candidate")
@@ -2104,17 +2106,13 @@ def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
     if descriptor["candidate_hash"] != candidate_hash:
         raise ValueError("source provenance candidate does not match manifest")
     tree = subprocess.run(
-        ["git", "rev-parse", f"{candidate_hash}^{{tree}}"],
+        ["/usr/bin/git", "rev-parse", f"{candidate_hash}^{{tree}}"],
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         check=False,
-        env={
-            "HOME": os.environ.get("HOME", ""),
-            "PATH": os.environ.get("PATH", ""),
-            "LANG": "C.UTF-8",
-        },
+        env=_git_env(),
     )
     expected_tree = tree.stdout.strip()
     if (
@@ -2133,16 +2131,12 @@ def validate_profile_artifact_bindings(
         return
     candidate_hash = manifest.get("candidate_hash")
     profile_result = subprocess.run(
-        ["git", "show", f"{candidate_hash}:configs/glm52-profile.json"],
+        ["/usr/bin/git", "show", f"{candidate_hash}:configs/glm52-profile.json"],
         cwd=ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         check=False,
-        env={
-            "HOME": os.environ.get("HOME", ""),
-            "PATH": os.environ.get("PATH", ""),
-            "LANG": "C.UTF-8",
-        },
+        env=_git_env(),
     )
     if profile_result.returncode != 0:
         raise ValueError("approved GLM profile is absent from candidate")
@@ -2265,16 +2259,12 @@ def validate_profile_artifact_bindings(
     }
     for relative_path, expected_digest in candidate_artifacts.items():
         artifact_result = subprocess.run(
-            ["git", "show", f"{candidate_hash}:{relative_path}"],
+            ["/usr/bin/git", "show", f"{candidate_hash}:{relative_path}"],
             cwd=ROOT,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             check=False,
-            env={
-                "HOME": os.environ.get("HOME", ""),
-                "PATH": os.environ.get("PATH", ""),
-                "LANG": "C.UTF-8",
-            },
+            env=_git_env(),
         )
         if (
             artifact_result.returncode != 0
@@ -2325,16 +2315,12 @@ def validate_attempt(attempt: Path) -> None:
     ):
         raise ValueError("manifest candidate_hash is invalid")
     candidate_check = subprocess.run(
-        ["git", "cat-file", "-e", f"{candidate_hash}^{{commit}}"],
+        ["/usr/bin/git", "cat-file", "-e", f"{candidate_hash}^{{commit}}"],
         cwd=ROOT,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
-        env={
-            "HOME": os.environ.get("HOME", ""),
-            "PATH": os.environ.get("PATH", ""),
-            "LANG": "C.UTF-8",
-        },
+        env=_git_env(),
     )
     if candidate_check.returncode != 0:
         raise ValueError("manifest candidate_hash is not a repository commit")

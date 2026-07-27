@@ -9,6 +9,12 @@ readonly MAKE_PATH=/usr/bin/make
 readonly CUDA_HOME_PATH=/usr/local/cuda
 readonly NVCC_PATH=/usr/local/cuda/bin/nvcc
 
+clean_git() {
+    env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 \
+        GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+        /usr/bin/git "$@"
+}
+
 [[ $# == 4 ]] || {
     echo "usage: $0 SOURCE_REPOSITORY COMMIT WORK_ROOT OUTPUT_DIRECTORY" >&2
     exit 2
@@ -40,7 +46,7 @@ done
     echo "output path must be absent" >&2
     exit 2
 }
-git -C "$SOURCE_REPOSITORY" cat-file -e "$COMMIT^{commit}"
+clean_git -C "$SOURCE_REPOSITORY" cat-file -e "$COMMIT^{commit}"
 available_kib=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
 (( available_kib >= 4 * 1048576 )) || {
     echo "less than 4 GiB is available; refusing compiler start" >&2
@@ -58,7 +64,7 @@ WORKTREE=$WORK_ROOT/src
 KEEP_DIR=$WORK_ROOT/nvcc-keep
 mkdir -p -- "$KEEP_DIR"
 SOURCE_DATE_EPOCH=$(
-    git -C "$SOURCE_REPOSITORY" show -s --format=%ct "$COMMIT"
+    clean_git -C "$SOURCE_REPOSITORY" show -s --format=%ct "$COMMIT"
 )
 [[ $SOURCE_DATE_EPOCH =~ ^[0-9]{10}$ ]] || {
     echo "invalid source commit epoch" >&2
@@ -66,19 +72,19 @@ SOURCE_DATE_EPOCH=$(
 }
 if [[ -e $WORKTREE ]]; then
     [[ -f $WORKTREE/.git ]]
-    [[ $(git -C "$WORKTREE" rev-parse HEAD) == "$COMMIT" ]]
-    [[ -z $(git -C "$WORKTREE" status --short) ]]
-    git -C "$SOURCE_REPOSITORY" worktree remove "$WORKTREE"
+    [[ $(clean_git -C "$WORKTREE" rev-parse HEAD) == "$COMMIT" ]]
+    [[ -z $(clean_git -C "$WORKTREE" status --short) ]]
+    clean_git -C "$SOURCE_REPOSITORY" worktree remove "$WORKTREE"
 fi
 
 build_one() {
     local number=$1
     local destination=$OUTPUT_DIRECTORY/build${number}-ds4-server
     local cflags nvccflags
-    git -C "$SOURCE_REPOSITORY" worktree add --detach "$WORKTREE" "$COMMIT"
+    clean_git -C "$SOURCE_REPOSITORY" worktree add --detach "$WORKTREE" "$COMMIT"
     (
         cd "$WORKTREE"
-        git ls-files -z |
+        clean_git ls-files -z |
             xargs -0 -r touch --date="@$SOURCE_DATE_EPOCH" --
     )
     [[ $KEEP_DIR == "$WORK_ROOT/nvcc-keep" ]]
@@ -102,7 +108,7 @@ build_one() {
         DS4_LINK="$NVCC_PATH $nvccflags" \
         CFLAGS="$cflags" NVCCFLAGS="$nvccflags" ds4-server \
         >"$OUTPUT_DIRECTORY/build${number}.log" 2>&1
-    [[ -z $(git -C "$WORKTREE" status --short) ]] || {
+    [[ -z $(clean_git -C "$WORKTREE" status --short) ]] || {
         echo "build changed tracked source content" >&2
         exit 9
     }
@@ -110,7 +116,7 @@ build_one() {
 }
 
 build_one 1
-git -C "$SOURCE_REPOSITORY" worktree remove "$WORKTREE"
+clean_git -C "$SOURCE_REPOSITORY" worktree remove "$WORKTREE"
 build_one 2
 cmp -s "$OUTPUT_DIRECTORY/build1-ds4-server" \
     "$OUTPUT_DIRECTORY/build2-ds4-server" || {
