@@ -735,7 +735,7 @@ class FormulaTests(unittest.TestCase):
                             "foundation", "foundation.v1", [broken]
                         )
 
-    def test_registered_review_scorer_recomputes_both_persistent_scores(self):
+    def test_registered_review_scorer_accepts_reviewer_assigned_scores(self):
         candidate = "a" * 40
 
         def issue(issue_id):
@@ -753,7 +753,8 @@ class FormulaTests(unittest.TestCase):
                 "reviewer": reviewer,
                 "candidate_hash": candidate,
                 "review_round": 7,
-                "claimed_score": 96,
+                # Reviewers score holistically; issue counts do not determine it.
+                "claimed_score": 93,
                 "critical": [],
                 "high": [],
                 "medium": [issue("M-001")],
@@ -774,7 +775,8 @@ class FormulaTests(unittest.TestCase):
             "one_reviewer",
             "wrong_name",
             "candidate_mismatch",
-            "score_lie",
+            "score_out_of_range",
+            "score_boolean",
             "critical",
             "score_below_90",
             "duplicate_prior",
@@ -786,11 +788,13 @@ class FormulaTests(unittest.TestCase):
                 broken[0]["reviewer"] = "fresh_reviewer"
             elif mutation == "candidate_mismatch":
                 broken[0]["candidate_hash"] = "b" * 40
-            elif mutation == "score_lie":
-                broken[0]["claimed_score"] = 100
+            elif mutation == "score_out_of_range":
+                broken[0]["claimed_score"] = 101
+            elif mutation == "score_boolean":
+                broken[0]["claimed_score"] = True
             elif mutation == "critical":
                 broken[0]["critical"] = [issue("C-001")]
-                broken[0]["claimed_score"] = 71
+                broken[0]["claimed_score"] = 99
                 broken[0]["verdict"] = "REJECT"
             elif mutation == "score_below_90":
                 broken[0]["medium"] = [
