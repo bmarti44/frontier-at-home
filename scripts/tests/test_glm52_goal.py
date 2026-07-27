@@ -118,6 +118,45 @@ class FormulaTests(unittest.TestCase):
                 self.assertEqual(
                     self.goal.context_verdict(mutated)["verdict"], "FAIL"
                 )
+        for key, value in (
+            ("context_cap", "1048576"),
+            ("processed_tokens", 1_000_000.9),
+            ("processed_tokens", True),
+        ):
+            malformed = dict(passing)
+            malformed[key] = value
+            with self.subTest(malformed=key):
+                with self.assertRaises(ValueError):
+                    self.goal.context_verdict(malformed)
+
+    def test_lossy_quality_formula_and_mutations(self):
+        passing = [
+            {
+                "tokens": 100,
+                "baseline_nll_sum": 200.0,
+                "candidate_nll_sum": 200.5,
+                "baseline_top1_correct": 70,
+                "candidate_top1_correct": 70,
+            }
+            for _ in range(100)
+        ]
+        verdict = self.goal.quality_verdict(passing)
+        self.assertEqual(verdict["verdict"], "PASS")
+        high_nll = [dict(case) for case in passing]
+        high_nll[0]["candidate_nll_sum"] = 400.0
+        self.assertEqual(self.goal.quality_verdict(high_nll)["verdict"], "FAIL")
+        top1_loss = [dict(case) for case in passing]
+        for case in top1_loss:
+            case["candidate_top1_correct"] = 69
+        self.assertEqual(self.goal.quality_verdict(top1_loss)["verdict"], "FAIL")
+        for mutation in (
+            passing[:99],
+            passing + [dict(passing[0])],
+            [{**passing[0], "tokens": 0}] * 100,
+            [{**passing[0], "candidate_nll_sum": math.nan}] * 100,
+        ):
+            with self.assertRaises(ValueError):
+                self.goal.quality_verdict(mutation)
 
     def test_raw_arm_validation_fails_closed(self):
         valid = {
