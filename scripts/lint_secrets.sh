@@ -8,7 +8,7 @@ readonly SECRET_PATTERN_NOHEX='Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPENSSH)? 
 
 is_checksum_file() {
   case "$1" in
-    verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-scorer-confirmation-*.json|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
+    verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
     *) return 1 ;;
   esac
 }
