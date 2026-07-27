@@ -1110,6 +1110,87 @@ class FormulaTests(unittest.TestCase):
                         gate, manifest, records
                     )
 
+    def test_foundation_and_parity_accept_frozen_dsv4_reference(self):
+        manifest = {
+            "candidate_hash": "f" * 40,
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        glm = {
+            "profile": "glm52",
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        dsv4 = {
+            "profile": "dsv4",
+            "binary_sha256": "d" * 64,
+            "configuration_sha256": "e" * 64,
+            "fixture_sha256": "c" * 64,
+        }
+        records_by_gate = {
+            "foundation": [
+                {"glm_baseline": glm, "dsv4_baseline": dsv4}
+            ],
+            "parity": [glm, dsv4],
+        }
+        approved = {
+            "schema_version": 1,
+            "profile": "dsv4",
+            "binary_sha256": "d" * 64,
+            "configuration_sha256": "e" * 64,
+        }
+        with mock.patch.object(
+            self.goal,
+            "_load_approved_dsv4_profile",
+            return_value=approved,
+        ):
+            for gate, records in records_by_gate.items():
+                with self.subTest(gate=gate):
+                    self.goal.validate_record_artifact_bindings(
+                        gate, manifest, records
+                    )
+
+    def test_approved_dsv4_profile_parser_fails_closed(self):
+        valid = {
+            "schema_version": 1,
+            "profile": "dsv4",
+            "binary_sha256": "a" * 64,
+            "configuration_sha256": "b" * 64,
+        }
+        completed = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout=json.dumps(valid).encode(),
+            stderr=b"",
+        )
+        with mock.patch.object(
+            self.goal.subprocess, "run", return_value=completed
+        ):
+            self.assertEqual(
+                self.goal._load_approved_dsv4_profile("f" * 40), valid
+            )
+        for mutation in (
+            {**valid, "profile": "glm52"},
+            {**valid, "binary_sha256": "bad"},
+            {**valid, "extra": True},
+        ):
+            completed = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=json.dumps(mutation).encode(),
+                stderr=b"",
+            )
+            with self.subTest(mutation=mutation):
+                with mock.patch.object(
+                    self.goal.subprocess, "run", return_value=completed
+                ):
+                    with self.assertRaisesRegex(
+                        ValueError, "approved DeepSeek profile"
+                    ):
+                        self.goal._load_approved_dsv4_profile("f" * 40)
+
     def test_candidate_binary_model_and_profile_are_pinned(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

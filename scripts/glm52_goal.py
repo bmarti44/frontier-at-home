@@ -692,14 +692,25 @@ def validate_record_artifact_bindings(
             for record in records
             if isinstance(record, dict)
         ]
+        references = [
+            record.get("dsv4_baseline")
+            for record in records
+            if isinstance(record, dict)
+        ]
     elif gate == "parity":
         candidates = [
             record
             for record in records
             if isinstance(record, dict) and record.get("profile") == "glm52"
         ]
+        references = [
+            record
+            for record in records
+            if isinstance(record, dict) and record.get("profile") == "dsv4"
+        ]
     else:
         candidates = []
+        references = []
     if gate in {"foundation", "parity"}:
         if not candidates or any(not isinstance(record, dict) for record in candidates):
             raise ValueError(f"{gate} candidate raw records are missing")
@@ -715,6 +726,26 @@ def validate_record_artifact_bindings(
                         f"{gate} raw {label} identity does not match manifest "
                         f"at candidate record {index}"
                     )
+        if not references or any(
+            not isinstance(record, dict) for record in references
+        ):
+            raise ValueError(f"{gate} DeepSeek raw records are missing")
+        approved_reference = _load_approved_dsv4_profile(
+            manifest.get("candidate_hash")
+        )
+        for index, record in enumerate(references):
+            for field in ("binary_sha256", "configuration_sha256"):
+                if record.get(field) != approved_reference[field]:
+                    label = field.removesuffix("_sha256").replace("_", " ")
+                    raise ValueError(
+                        f"{gate} raw {label} identity does not match "
+                        f"approved DeepSeek profile at reference record {index}"
+                    )
+            if record.get("fixture_sha256") != manifest.get("fixture_sha256"):
+                raise ValueError(
+                    f"{gate} raw fixture identity does not match manifest "
+                    f"at reference record {index}"
+                )
         return
     if gate != "W11":
         return
@@ -1568,6 +1599,58 @@ def _git_commit_time(candidate_hash: str) -> str:
     if value.tzinfo is None:
         raise ValueError("git candidate timestamp lacks an offset")
     return value.astimezone(timezone.utc).isoformat()
+
+
+def _load_approved_dsv4_profile(candidate_hash: Any) -> dict[str, str]:
+    """Load the exact DeepSeek reference identity frozen in the candidate."""
+    if not (
+        isinstance(candidate_hash, str)
+        and len(candidate_hash) == 40
+        and all(char in "0123456789abcdef" for char in candidate_hash)
+    ):
+        raise ValueError("approved DeepSeek profile candidate is invalid")
+    result = subprocess.run(
+        ["git", "show", f"{candidate_hash}:configs/dsv4-profile.json"],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        env={
+            "HOME": os.environ.get("HOME", ""),
+            "PATH": os.environ.get("PATH", ""),
+            "LANG": "C.UTF-8",
+        },
+    )
+    if result.returncode != 0:
+        raise ValueError("approved DeepSeek profile is absent from candidate")
+    try:
+        profile = json.loads(
+            result.stdout.decode("utf-8"),
+            object_pairs_hook=lambda pairs: _unique_pairs(
+                pairs, "approved DeepSeek profile"
+            ),
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite profile value {value}")
+            ),
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"approved DeepSeek profile is invalid: {exc}") from exc
+    _require_exact_keys(
+        profile,
+        {
+            "schema_version",
+            "profile",
+            "binary_sha256",
+            "configuration_sha256",
+        },
+        "approved DeepSeek profile",
+    )
+    if profile["schema_version"] != 1 or profile["profile"] != "dsv4":
+        raise ValueError("approved DeepSeek profile identity is invalid")
+    for field in ("binary_sha256", "configuration_sha256"):
+        if not _is_sha256(profile[field]):
+            raise ValueError(f"approved DeepSeek profile {field} is invalid")
+    return profile
 
 
 def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
