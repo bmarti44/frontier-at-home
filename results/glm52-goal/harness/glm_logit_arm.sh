@@ -15,7 +15,9 @@ ca112d42a854923df93db4a6f333a82d
 FIXTURE=$REPO/results/glm52-gates/harness/fixture-glm-short.json
 PORT=${GLM_PORT:-8011}
 IQ2_REFERENCE=${DS4_CUDA_IQ2_DOWN_REFERENCE:-1}
+NO_EXPERT_TILES=${DS4_CUDA_MOE_NO_EXPERT_TILES:-0}
 IQ2_ENV=()
+TILE_ENV=()
 PID=
 START_TICKS=
 
@@ -35,6 +37,11 @@ PORT=$port
     || { echo "IQ2_REFERENCE must be 0 or 1" >&2; exit 2; }
 if [[ $IQ2_REFERENCE == 1 ]]; then
     IQ2_ENV+=(DS4_CUDA_IQ2_DOWN_REFERENCE=1)
+fi
+[[ $NO_EXPERT_TILES == 0 || $NO_EXPERT_TILES == 1 ]] \
+    || { echo "NO_EXPERT_TILES must be 0 or 1" >&2; exit 2; }
+if [[ $NO_EXPERT_TILES == 1 ]]; then
+    TILE_ENV+=(DS4_CUDA_MOE_NO_EXPERT_TILES=1)
 fi
 
 stop_server() {
@@ -68,7 +75,8 @@ with open(sys.argv[2], "x", encoding="utf-8") as stream:
     json.dump(request, stream, sort_keys=True, allow_nan=False)
     stream.write("\n")
 PY
-printf 'label=%s\niq2_reference=%s\n' "$LABEL" "$IQ2_REFERENCE" \
+printf 'label=%s\niq2_reference=%s\nno_expert_tiles=%s\n' \
+    "$LABEL" "$IQ2_REFERENCE" "$NO_EXPERT_TILES" \
     >"$OUT/runtime.config"
 env DS4_TOKEN_TIMING_LOG=1 \
 DS4_GLM_LOGIT_DUMP="$OUT/prefill.logits" \
@@ -77,6 +85,7 @@ DS4_CUDA_EXPERT_CACHE_GB=0 \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
 DS4_CUDA_FETCH_THREADS=6 \
 DS4_CUDA_EXPERT_CACHE_SLRU=1 \
+    "${TILE_ENV[@]}" \
     "${IQ2_ENV[@]}" \
     "$SRC/ds4-server" --cuda -m "$MODEL" -c 8192 \
     --host 127.0.0.1 --port "$PORT" --ssd-streaming \
