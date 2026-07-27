@@ -1449,6 +1449,91 @@ class FormulaTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "approved GLM profile"):
                 self.goal.validate_profile_artifact_bindings(manifest, paths)
 
+    def test_complete_glm_runtime_profile_is_accepted_and_hash_bound(self):
+        artifact_paths = {
+            "results/glm52-goal/harness/glm_decisive_arm.sh",
+            "results/glm52-gates/harness/glm_safe_run.sh",
+            "results/glm52-gates/harness/glm_cgroup_run.sh",
+            "results/glm52-gates/harness/glm_evidence_export.py",
+            "scripts/30_bench_speed.py",
+        }
+        artifact_digest = hashlib.sha256(b"frozen artifact").hexdigest()
+        profile = {
+            "schema_version": 2,
+            "profile": "glm52",
+            "binary_sha256": hashlib.sha256(b"binary").hexdigest(),
+            "model_sha256": hashlib.sha256(b"model").hexdigest(),
+            "tokenizer_sha256": "a" * 64,
+            "context_cap": 1_048_576,
+            "build_manifest_sha256": artifact_digest,
+            "runtime": {
+                "engine_environment": {
+                    "DS4_CUDA_EXPERT_CACHE_GB": "0",
+                    "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+                    "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+                    "DS4_CUDA_FETCH_THREADS": "6",
+                    "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
+                    "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+                    "DS4_TOKEN_TIMING_LOG": "1",
+                },
+                "launch_arguments": [
+                    "--cuda", "-m", "{model}", "-c", "8192",
+                    "--host", "127.0.0.1", "--port", "{port}",
+                    "--ssd-streaming",
+                    "--ssd-streaming-cache-experts", "40GB",
+                ],
+                "benchmark": {
+                    "fixture_context_tokens": 0,
+                    "max_completion_tokens": 160,
+                    "minimum_completion_tokens": 128,
+                    "raw_token_timing_required": True,
+                },
+                "safety": {
+                    "kill_floor_gib": 40,
+                    "minimum_start_gib": 110,
+                    "sample_hz": 4,
+                    "swap_max_bytes": 0,
+                    "timeout_seconds": 2400,
+                    "virtual_memory_limit_kib": 419_430_400,
+                },
+            },
+            "artifact_sha256": {
+                path: artifact_digest for path in artifact_paths
+            },
+        }
+        profile_bytes = json.dumps(profile).encode()
+
+        def git_show(args, **kwargs):
+            requested = args[-1].split(":", 1)[1]
+            data = (
+                profile_bytes
+                if requested == "configs/glm52-profile.json"
+                else b"frozen artifact"
+            )
+            return subprocess.CompletedProcess(args, 0, data, b"")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paths = {}
+            for name, data in (
+                ("binary", b"binary"),
+                ("model", b"model"),
+                ("configuration", profile_bytes),
+            ):
+                paths[name] = root / name
+                paths[name].write_bytes(data)
+            manifest = {
+                "gate": "W11",
+                "candidate_hash": "f" * 40,
+                "binary_sha256": profile["binary_sha256"],
+                "model_sha256": profile["model_sha256"],
+                "configuration_sha256": hashlib.sha256(profile_bytes).hexdigest(),
+            }
+            with mock.patch.object(
+                self.goal.subprocess, "run", side_effect=git_show
+            ):
+                self.goal.validate_profile_artifact_bindings(manifest, paths)
+
     def test_w11_rejects_self_authored_fixture_with_valid_seed_label(self):
         record = w11_record()
         candidate = "a" * 40
