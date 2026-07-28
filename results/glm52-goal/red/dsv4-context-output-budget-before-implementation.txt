@@ -1,0 +1,13 @@
+RED confirmation: 2026-07-28
+Production-path non-thinking 1024-token probe with max_tokens=128:
+  pass=false
+  prompt_tokens=1068
+  completion_tokens=128
+  event_timestamps=128
+  reasoning_content_length=0
+  finish_reason=length
+  final content ended inside RECORD_CHARLIE and omitted NO_EXTRA_RECORD
+
+The deterministic retrieval and non-truncation checks correctly failed. The
+acceptance test now requires a 256-token context-probe budget and is RED while
+completion_payload still returns 128.

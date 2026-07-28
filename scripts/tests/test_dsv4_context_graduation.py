@@ -129,7 +129,7 @@ class ContextProbeTests(unittest.TestCase):
         self.assertEqual(
             payload["chat_template_kwargs"], {"enable_thinking": False}
         )
-        self.assertEqual(payload["max_tokens"], 128)
+        self.assertEqual(payload["max_tokens"], 256)
         self.assertEqual(payload["temperature"], 0)
 
 
