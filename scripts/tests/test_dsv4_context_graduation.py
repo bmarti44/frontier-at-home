@@ -308,6 +308,12 @@ class ContextProbeTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "unlisted"):
                 scorer.verify_freeze(frozen, candidate)
 
+    def test_frozen_scorer_disables_bytecode_before_dynamic_imports(self):
+        source = SCORER.read_text(encoding="utf-8")
+        disable = source.index("sys.dont_write_bytecode = True")
+        loader = source.index("def load_module(")
+        self.assertLess(disable, loader)
+
     def test_failed_context_scoring_always_emits_complete_triplet(self):
         scorer = load_scorer()
         with tempfile.TemporaryDirectory() as directory:
