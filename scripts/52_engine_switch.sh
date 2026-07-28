@@ -360,6 +360,7 @@ if [[ $command == restore ]]; then
     if verify_serving "$command"; then
         exit 0
     fi
+    stop_profile "$command"
     "start_$command"
     wait_model_ready "$command" ||
         die "$command boot restoration timed out or model identity is wrong"
