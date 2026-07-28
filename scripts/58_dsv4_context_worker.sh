@@ -106,6 +106,27 @@ dsv4_launcher() {
         "$LAUNCHER" "$@"
 }
 
+run_context_probe() {
+    local cap=$1 target=$2
+    local -a command=(
+        "$REPO/.venv-harness/bin/python" "$PROBE"
+        --base-url http://127.0.0.1:8013
+        --context-cap "$cap" --target-tokens "$target"
+        --seed-sha256 "$SEED_SHA256" --out "$OUT/stage-$cap.json"
+    )
+    if [[ $RUN_MODE == root ]]; then
+        run_as_dsv4 env -i \
+            HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
+            PATH=/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin:/usr/bin:/bin \
+            "${command[@]}"
+    else
+        env -i \
+            HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
+            PATH=/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin:/usr/bin:/bin \
+            "${command[@]}"
+    fi
+}
+
 stop_telemetry() {
     [[ ${TELEMETRY_PID:-} =~ ^[0-9]+$ ]] || return 0
     kill -TERM "$TELEMETRY_PID" 2>/dev/null || true
@@ -318,13 +339,7 @@ for index in "${indices[@]}"; do
     TELEMETRY_PID=$!
     dsv4_launcher "$cap" 3 start >"$OUT/start-$cap.log" 2>&1
     ENGINE_ACTIVE=true
-    run_as_dsv4 env -i \
-        HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
-        PATH=/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin:/usr/bin:/bin \
-        "$REPO/.venv-harness/bin/python" "$PROBE" \
-        --base-url http://127.0.0.1:8013 \
-        --context-cap "$cap" --target-tokens "$target" \
-        --seed-sha256 "$SEED_SHA256" --out "$OUT/stage-$cap.json"
+    run_context_probe "$cap" "$target"
     stop_telemetry
     dsv4_launcher "$cap" 3 stop >"$OUT/stop-$cap.log" 2>&1
     ENGINE_ACTIVE=false
