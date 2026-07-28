@@ -514,6 +514,21 @@ def validate_stage_lineage(
         raise RuntimeError("stage lineage differs from regenerated fixture")
 
 
+def context_stage_plan(mode: str) -> tuple[tuple[int, int], ...]:
+    """Return the exact context stages authorized by the explicit run mode."""
+    graduated = (
+        (131_072, 130_000),
+        (262_144, 260_000),
+        (524_288, 520_000),
+        (1_048_576, 1_000_000),
+    )
+    if mode == "graduated":
+        return graduated
+    if mode == "one-million":
+        return (graduated[-1],)
+    raise RuntimeError("context qualification mode is invalid")
+
+
 def write_failure_triplet(
     *,
     out: Path,
@@ -660,8 +675,7 @@ def build_observation(
     mode: str,
     lifecycle_exit_status: int,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    if mode != "graduated":
-        raise RuntimeError("only graduated mode can produce W11 evidence")
+    stage_plan = context_stage_plan(mode)
     artifacts = verify_freeze(ROOT, candidate)
     goal = load_module("glm52_goal_frozen", ROOT / "scripts" / "glm52_goal.py")
     probe = load_module(
@@ -697,13 +711,29 @@ def build_observation(
     if lineage["randomness"]["seed_sha256"] != seed:
         raise RuntimeError("worker seed differs from public lineage")
 
-    caps = (131_072, 262_144, 524_288, 1_048_576)
-    targets = (130_000, 260_000, 520_000, 1_000_000)
+    caps = tuple(cap for cap, _target in stage_plan)
+    targets = tuple(target for _cap, target in stage_plan)
     stages = []
     retrieval_results = []
     fixture_hashes = []
     worker_invocation = freeze_witness["receipt"].get("invocation_id")
-    for index, (cap, target) in enumerate(zip(caps, targets)):
+    expected_stage_files = {
+        name
+        for cap, _target in stage_plan
+        for name in (
+            f"stage-{cap}.json",
+            f"engine-{cap}.log",
+            f"witness-stage-{cap}.json",
+        )
+    }
+    recognized_stage_files = {
+        path.name
+        for pattern in ("stage-*.json", "engine-*.log", "witness-stage-*.json")
+        for path in out.glob(pattern)
+    }
+    if recognized_stage_files != expected_stage_files:
+        raise RuntimeError("context evidence stage set differs from run mode")
+    for index, (cap, target) in enumerate(stage_plan):
         stage_path = out / f"stage-{cap}.json"
         engine_path = out / f"engine-{cap}.log"
         if not stage_path.is_file() or not engine_path.is_file():
@@ -766,7 +796,7 @@ def build_observation(
             }
         )
         fixture_hashes.append(stage["fixture_sha256"])
-        if index == len(caps) - 1:
+        if index == len(stage_plan) - 1:
             absent_value = expected["fixture"]["absent_value"]
             strict_retrieval = probe.validate_retrieval(
                 content,
@@ -980,7 +1010,8 @@ def finalize_attempt(
     for name in scoring_inputs:
         if (out / name).is_file():
             artifacts.append(name)
-    for cap in (131_072, 262_144, 524_288, 1_048_576):
+    stage_plan = context_stage_plan(mode)
+    for cap, _target in stage_plan:
         for name in (
             f"stage-{cap}.json",
             f"engine-{cap}.log",
@@ -988,7 +1019,8 @@ def finalize_attempt(
         ):
             if (out / name).is_file():
                 artifacts.append(name)
-    if verdict == "PASS" and len(artifacts) != 19:
+    expected_artifact_count = 7 + 3 * len(stage_plan)
+    if verdict == "PASS" and len(artifacts) != expected_artifact_count:
         raise RuntimeError("PASS finalization is missing mandatory evidence")
     claims = {
         "gate": CONTEXT_GATE,
