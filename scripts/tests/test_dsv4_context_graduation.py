@@ -81,6 +81,14 @@ class ContextProbeTests(unittest.TestCase):
             + valid
         )
         self.assertTrue(probe.validate_retrieval(verbose, records)["pass"])
+        labeled_single_line = (
+            "AUDIT RECORD 1: RECORD_ALPHA_aaa, "
+            "AUDIT RECORD 2: RECORD_BRAVO_bbb, "
+            "AUDIT RECORD 3: RECORD_CHARLIE_ccc, NO_EXTRA_RECORD"
+        )
+        self.assertTrue(
+            probe.validate_retrieval(labeled_single_line, records)["pass"]
+        )
         absent = "RECORD_DELTA_absent"
         self.assertTrue(
             probe.validate_retrieval(valid, records, absent_value=absent)["pass"]
@@ -641,6 +649,14 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("swap_current_bytes", source)
         self.assertIn("w11.context.v1", source)
         self.assertNotIn('"verdict": "PASS" if (', source)
+
+    def test_worker_preserves_failed_probe_engine_evidence_before_exiting(self):
+        source = WORKER.read_text(encoding="utf-8")
+        probe = source.index('run_context_probe "$cap" "$target"')
+        capture = source.index('>"$OUT/engine-$cap.log"', probe)
+        propagate = source.index('(( probe_rc == 0 ))', capture)
+        self.assertLess(probe, capture)
+        self.assertLess(capture, propagate)
 
     def test_scheduler_is_detached_candidate_bound_and_serialized(self):
         source = SCHEDULER.read_text(encoding="utf-8")
