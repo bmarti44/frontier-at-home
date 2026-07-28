@@ -600,6 +600,16 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("systemctl is-active --quiet display-manager.service", source)
         self.assertIn("overhead_gib=3", source)
 
+    def test_full_verification_can_evict_only_verified_weight_page_cache(self):
+        launcher = LAUNCHER.read_text(encoding="utf-8")
+        worker = WORKER.read_text(encoding="utf-8")
+        self.assertIn("DSV4_EVICT_VERIFIED_WEIGHT_CACHE", launcher)
+        self.assertIn("${DSV4_EVICT_VERIFIED_WEIGHT_CACHE:-0}", launcher)
+        self.assertIn("os.posix_fadvise", launcher)
+        self.assertIn("os.POSIX_FADV_DONTNEED", launcher)
+        self.assertIn('DSV4_EVICT_VERIFIED_WEIGHT_CACHE=1', worker)
+        self.assertNotIn("/proc/sys/vm/drop_caches", launcher)
+
     def test_14_gib_floor_is_restricted_to_headless_1m_qualification(self):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB", source)
@@ -657,6 +667,18 @@ class ContextWorkerContractTests(unittest.TestCase):
         propagate = source.index('(( probe_rc == 0 ))', capture)
         self.assertLess(probe, capture)
         self.assertLess(capture, propagate)
+
+    def test_worker_rejects_new_kernel_faults_before_and_after_each_probe(self):
+        source = WORKER.read_text(encoding="utf-8")
+        start = source.index('dsv4_launcher "$cap" 3 start')
+        first_scan = source.index("require_no_kernel_fault", start)
+        probe = source.index('run_context_probe "$cap" "$target"', first_scan)
+        second_scan = source.index("require_no_kernel_fault", probe)
+        advance = source.index('dsv4_launcher "$cap" 3 stop', second_scan)
+        self.assertLess(start, first_scan)
+        self.assertLess(first_scan, probe)
+        self.assertLess(probe, second_scan)
+        self.assertLess(second_scan, advance)
 
     def test_scheduler_is_detached_candidate_bound_and_serialized(self):
         source = SCHEDULER.read_text(encoding="utf-8")
