@@ -1,0 +1,18 @@
+RED confirmation: 2026-07-28
+Reviewed candidate: 21f5138
+
+Verified false-success/terminal findings:
+- strict scorer trusts stage-supplied fixture records and expected hashes
+- exact seeded request bytes are not regenerated during scoring
+- the rootless scorer cannot directly read the protected production binary
+- the claimed negative control is a literal positive copy target
+
+New production-path tests require:
+- seed-derived absent marker not present in fixture or final output
+- exact fixture/records/absent-marker/request hash regeneration
+- rejection of each mutated lineage field
+- protected binary hashing through the existing dsv4 delegation
+
+These tests are RED because build_request_artifacts, validate_stage_lineage,
+hash_as_dsv4, fixture absent_value, and absent-value retrieval validation do
+not exist in the reviewed candidate.

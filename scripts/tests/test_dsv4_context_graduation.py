@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -13,6 +15,7 @@ PROBE = ROOT / "scripts" / "57_dsv4_context_probe.py"
 WORKER = ROOT / "scripts" / "58_dsv4_context_worker.sh"
 SCHEDULER = ROOT / "scripts" / "59_schedule_dsv4_context.sh"
 USER_SCHEDULER = ROOT / "scripts" / "60_schedule_dsv4_context_user.sh"
+SCORER = ROOT / "scripts" / "62_score_dsv4_context.py"
 LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 
 
@@ -20,6 +23,15 @@ def load_probe():
     spec = importlib.util.spec_from_file_location("dsv4_context_probe", PROBE)
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load context probe")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_scorer():
+    spec = importlib.util.spec_from_file_location("dsv4_context_scorer", SCORER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load context scorer")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -36,6 +48,7 @@ class ContextProbeTests(unittest.TestCase):
         self.assertTrue(130_000 // 4 < positions[1] < 3 * 130_000 // 4)
         self.assertGreaterEqual(positions[2], 3 * 130_000 // 4)
         self.assertEqual(len({record["value"] for record in fixture["records"]}), 3)
+        self.assertNotIn(fixture["absent_value"], fixture["text"])
 
     def test_retrieval_validation_fails_closed(self):
         probe = load_probe()
@@ -56,6 +69,17 @@ class ContextProbeTests(unittest.TestCase):
             + valid
         )
         self.assertTrue(probe.validate_retrieval(verbose, records)["pass"])
+        absent = "RECORD_DELTA_absent"
+        self.assertTrue(
+            probe.validate_retrieval(valid, records, absent_value=absent)["pass"]
+        )
+        self.assertFalse(
+            probe.validate_retrieval(
+                valid + ", " + absent,
+                records,
+                absent_value=absent,
+            )["pass"]
+        )
         self.assertFalse(
             probe.validate_retrieval(valid.replace("BRAVO_bbb", "BRAVO_bad"), records)[
                 "pass"
@@ -151,6 +175,55 @@ class ContextProbeTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "timestamp"):
             probe.completed_text_token_count(usage_tokens=142, event_count=140)
+
+    def test_scorer_regenerates_seeded_request_and_rejects_stage_mutation(self):
+        probe = load_probe()
+        scorer = load_scorer()
+        tokenizer = probe.load_tokenizer()
+        expected = probe.build_request_artifacts(
+            tokenizer, target=1024, seed_sha256="2" * 64
+        )
+        stage = {
+            "seed_sha256": "2" * 64,
+            "target_tokens": 1024,
+            "fixture_sha256": expected["fixture"]["fixture_sha256"],
+            "records": expected["fixture"]["records"],
+            "absent_value_sha256": expected["absent_value_sha256"],
+            "request_sha256": expected["request_sha256"],
+        }
+        scorer.validate_stage_lineage(stage, expected)
+        for field, replacement in (
+            ("fixture_sha256", "f" * 64),
+            ("records", []),
+            ("absent_value_sha256", "e" * 64),
+            ("request_sha256", "d" * 64),
+        ):
+            broken = json.loads(json.dumps(stage))
+            broken[field] = replacement
+            with self.subTest(field=field), self.assertRaisesRegex(
+                RuntimeError, "lineage"
+            ):
+                scorer.validate_stage_lineage(broken, expected)
+
+    def test_protected_binary_hash_runs_under_service_identity(self):
+        scorer = load_scorer()
+        completed = mock.Mock(stdout=("a" * 64 + "  /protected/binary\n"))
+        with mock.patch.object(scorer.subprocess, "run", return_value=completed) as run:
+            self.assertEqual(
+                scorer.hash_as_dsv4(Path("/protected/binary")), "a" * 64
+            )
+        self.assertEqual(
+            run.call_args.args[0],
+            [
+                "sudo",
+                "-n",
+                "-u",
+                "dsv4",
+                "sha256sum",
+                "--",
+                "/protected/binary",
+            ],
+        )
 
 
 class ContextWorkerContractTests(unittest.TestCase):
