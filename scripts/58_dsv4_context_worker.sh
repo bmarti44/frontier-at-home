@@ -3,7 +3,9 @@
 set -Eeuo pipefail
 umask 077
 
-readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+readonly REPO=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
+readonly LIVE_REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly LAUNCHER=$REPO/scripts/21_serve_llamacpp.sh
 readonly PROBE=$REPO/scripts/57_dsv4_context_probe.py
 readonly GUARD=$REPO/scripts/03_memory_guard.py
@@ -16,6 +18,9 @@ readonly WORKER_START_HOLD=/run/dsv4/context-worker.start-hold
 readonly START_FAILURE_MARKER=/run/dsv4/llamacpp.start-failed
 readonly USER_RESTORE=$REPO/scripts/61_restore_dsv4_user.sh
 readonly USER_ENGINE_UNIT=dsv4-safe-engine.service
+readonly ENGINE_LOG=/home/dsv4/logs/llamacpp-server.log
+readonly MODEL_PATH=$LIVE_REPO/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
+# Fixed acceptance authority: w11.context.v1 in glm52_goal.py.
 
 [[ $# == 5 ]] || {
     echo "usage: $0 OUT TAG SEED_SHA256 CANDIDATE_HASH MODE" >&2
@@ -48,10 +53,12 @@ fi
 [[ $MODE == one-million || $MODE == graduated ]] ||
     { echo "mode must be one-million or graduated" >&2; exit 2; }
 
-actual=$(/usr/bin/git -c safe.directory="$REPO" -C "$REPO" rev-parse HEAD)
-[[ $actual == "$CANDIDATE_HASH" ]] || { echo "candidate hash changed" >&2; exit 2; }
-[[ -z $(/usr/bin/git -c safe.directory="$REPO" -C "$REPO" status --porcelain) ]] ||
-    { echo "repository is not clean" >&2; exit 2; }
+verify_frozen_candidate() {
+    "$LIVE_REPO/.venv-harness/bin/python" \
+        "$REPO/scripts/62_score_dsv4_context.py" \
+        --candidate-hash "$CANDIDATE_HASH" --verify-only
+}
+verify_frozen_candidate
 
 ENGINE_ACTIVE=false
 TELEMETRY_PID=
@@ -96,6 +103,7 @@ dsv4_launcher() {
         DSV4_PORT=8013 \
         DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
         DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
+        MODEL_PATH="$MODEL_PATH" DSV4_VERIFY_WEIGHTS=full \
         DSV4_MEM_FLOOR_GIB="$floor" DSV4_WATCHDOG_FLOOR_GIB="$floor" \
         DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB="$qualification_floor" \
         DSV4_MEASURED_HEADLESS_OVERHEAD_GIB="$measured" \
@@ -109,7 +117,7 @@ dsv4_launcher() {
 run_context_probe() {
     local cap=$1 target=$2
     local -a command=(
-        "$REPO/.venv-harness/bin/python" "$PROBE"
+        "$LIVE_REPO/.venv-harness/bin/python" "$PROBE"
         --base-url http://127.0.0.1:8013
         --context-cap "$cap" --target-tokens "$target"
         --seed-sha256 "$SEED_SHA256" --out "$OUT/stage-$cap.json"
@@ -117,12 +125,12 @@ run_context_probe() {
     if [[ $RUN_MODE == root ]]; then
         run_as_dsv4 env -i \
             HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
-            PATH=/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin:/usr/bin:/bin \
+            PATH=$LIVE_REPO/.venv-harness/bin:/usr/bin:/bin \
             "${command[@]}"
     else
         env -i \
             HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
-            PATH=/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin:/usr/bin:/bin \
+            PATH=$LIVE_REPO/.venv-harness/bin:/usr/bin:/bin \
             "${command[@]}"
     fi
 }
@@ -132,6 +140,28 @@ stop_telemetry() {
     kill -TERM "$TELEMETRY_PID" 2>/dev/null || true
     wait "$TELEMETRY_PID" 2>/dev/null || true
     TELEMETRY_PID=
+}
+
+start_telemetry() {
+    local cgroup_path
+    cgroup_path=$(awk -F: '$1 == "0" { print $3 }' /proc/self/cgroup)
+    [[ $cgroup_path == /* &&
+        -r /sys/fs/cgroup$cgroup_path/memory.swap.current ]] ||
+        { echo "cannot locate worker cgroup swap counter" >&2; return 1; }
+    (
+        trap 'exit 0' TERM INT
+        while true; do
+            swap_current=$(</sys/fs/cgroup$cgroup_path/memory.swap.current)
+            awk -v now="$(date +%s.%N)" -v swap="$swap_current" '
+                $1 == "MemAvailable:" { available = $2 / 1048576 }
+                END {
+                    printf "{\"timestamp_seconds\":%s,\"available_gib\":%.6f,\"swap_current_bytes\":%d}\n",
+                           now, available, swap
+                }' /proc/meminfo
+            sleep 0.25
+        done
+    ) >>"$OUT/memory.jsonl" &
+    TELEMETRY_PID=$!
 }
 
 activate_user_hold() {
@@ -211,73 +241,10 @@ cleanup() {
     fi
     start_failure_exists && rc=1
     restore_safe_profile || rc=1
-    /usr/bin/python3 - "$OUT" "$rc" "$CANDIDATE_HASH" "$SEED_SHA256" "$MODE" <<'PY'
-import hashlib
-import json
-import pathlib
-import sys
-
-out = pathlib.Path(sys.argv[1])
-rc = int(sys.argv[2])
-candidate, seed, mode = sys.argv[3:]
-stages = []
-for path in sorted(out.glob("stage-*.json")):
-    try:
-        stages.append(json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, ValueError):
-        stages.append({"pass": False, "error": f"invalid stage artifact: {path.name}"})
-memory = []
-path = out / "memory.jsonl"
-if path.is_file():
-    for line in path.read_text(encoding="utf-8").splitlines():
-        try:
-            memory.append(json.loads(line))
-        except ValueError:
-            memory.append({"invalid": line})
-kernel = (out / "kernel.log").read_text(encoding="utf-8", errors="replace") \
-    if (out / "kernel.log").is_file() else ""
-summary = {
-    "schema_version": 1,
-    "gate": "dsv4_context",
-    "candidate_hash": candidate,
-    "seed_sha256": seed,
-    "mode": mode,
-    "stages_attempted": len(stages),
-    "stage_passes": [stage.get("pass") is True for stage in stages],
-    "minimum_available_memory_gib": min(
-        (sample["available_gib"] for sample in memory
-         if isinstance(sample, dict) and isinstance(sample.get("available_gib"), (int, float))),
-        default=None,
-    ),
-    "kernel_fault": any(term in kernel.lower() for term in (
-        "nv_err_no_memory", "xid", "oom-kill", "out of memory: killed process"
-    )),
-    "exit_status": rc,
-}
-summary["verdict"] = "PASS" if (
-    rc == 0 and stages and all(summary["stage_passes"])
-    and not summary["kernel_fault"]
-) else "FAIL"
-(out / "summary.json").write_text(
-    json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n",
-    encoding="utf-8",
-)
-manifest = {
-    "schema_version": 1,
-    "candidate_hash": candidate,
-    "seed_sha256": seed,
-    "probe_sha256": hashlib.sha256(
-        pathlib.Path("/home/bmarti44/spark-deepseek-v4-flash/scripts/57_dsv4_context_probe.py").read_bytes()
-    ).hexdigest(),
-    "worker_sha256": hashlib.sha256(
-        pathlib.Path("/home/bmarti44/spark-deepseek-v4-flash/scripts/58_dsv4_context_worker.sh").read_bytes()
-    ).hexdigest(),
-}
-(out / "manifest.json").write_text(
-    json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n",
-    encoding="utf-8",
-)
-PY
+    "$LIVE_REPO/.venv-harness/bin/python" "$REPO/scripts/62_score_dsv4_context.py" \
+        --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
+        --seed-sha256 "$SEED_SHA256" --mode "$MODE" \
+        --lifecycle-exit-status "$rc" || rc=1
     chmod -R a+rX "$OUT" 2>/dev/null || true
     exit "$rc"
 }
@@ -320,27 +287,19 @@ systemctl is-active --quiet display-manager.service &&
 /usr/bin/python3 "$GUARD" --required-gib 115.0 --stable-samples 3 \
     --interval-seconds 1 --timeout-seconds 180 >"$OUT/admission.json"
 
+start_telemetry
 indices=(0 1 2 3)
 [[ $MODE == graduated ]] || indices=(3)
 for index in "${indices[@]}"; do
+    verify_frozen_candidate
     cap=${CAPS[$index]}
     target=${TARGETS[$index]}
-    (
-        trap 'exit 0' TERM INT
-        while true; do
-            awk -v now="$(date +%s.%N)" '
-                $1 == "MemAvailable:" {
-                    printf "{\"timestamp_seconds\":%s,\"available_gib\":%.6f}\n",
-                           now, $2 / 1048576
-                }' /proc/meminfo
-            sleep 0.25
-        done
-    ) >>"$OUT/memory.jsonl" &
-    TELEMETRY_PID=$!
     dsv4_launcher "$cap" 3 start >"$OUT/start-$cap.log" 2>&1
     ENGINE_ACTIVE=true
+    engine_log_bytes=$(run_as_dsv4 stat -c %s "$ENGINE_LOG")
     run_context_probe "$cap" "$target"
-    stop_telemetry
+    run_as_dsv4 tail -c "+$((engine_log_bytes + 1))" "$ENGINE_LOG" \
+        >"$OUT/engine-$cap.log"
     dsv4_launcher "$cap" 3 stop >"$OUT/stop-$cap.log" 2>&1
     ENGINE_ACTIVE=false
     /usr/bin/python3 "$GUARD" --required-gib 110 --stable-samples 3 \

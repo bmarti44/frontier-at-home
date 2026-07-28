@@ -215,7 +215,7 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertNotIn("glm_safe_run.sh", source)
         self.assertNotIn("gguf-glm", source)
         self.assertNotIn("systemctl start display-manager.service", source)
-        self.assertIn('"swap_current_bytes"', source)
+        self.assertIn("swap_current_bytes", source)
         self.assertIn("w11.context.v1", source)
         self.assertNotIn('"verdict": "PASS" if (', source)
 

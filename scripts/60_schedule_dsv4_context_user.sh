@@ -4,7 +4,6 @@ set -Eeuo pipefail
 umask 077
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
-readonly WORKER=$REPO/scripts/58_dsv4_context_worker.sh
 readonly UNIT=dsv4-context-graduation.service
 readonly STATE_ROOT=/home/bmarti44/.local/state/dsv4-context
 
@@ -51,6 +50,39 @@ install -d -m 0700 "$STATE_ROOT"
 OUT=$STATE_ROOT/dsv4-context-$TAG
 [[ ! -e $OUT ]] || die "refusing to overwrite $OUT"
 install -d -m 0700 "$OUT"
+FROZEN=$OUT/frozen-candidate
+install -d -m 0700 "$FROZEN"
+/usr/bin/git -C "$REPO" archive "$CANDIDATE_HASH" |
+    /usr/bin/tar -x -C "$FROZEN"
+install -D -m 0400 "$REPO/vendor/official-encoding/tokenizer.json" \
+    "$FROZEN/vendor/official-encoding/tokenizer.json"
+/usr/bin/python3 - "$FROZEN" "$CANDIDATE_HASH" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+candidate = sys.argv[2]
+artifacts = {}
+for path in sorted(item for item in root.rglob("*") if item.is_file()):
+    artifacts[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
+(root / "freeze-manifest.json").write_text(
+    json.dumps(
+        {
+            "schema_version": 1,
+            "candidate_hash": candidate,
+            "artifacts": artifacts,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    + "\n",
+    encoding="utf-8",
+)
+PY
+chmod -R a-w "$FROZEN"
+readonly WORKER=$FROZEN/scripts/58_dsv4_context_worker.sh
 
 systemctl --user reset-failed "$UNIT" 2>/dev/null || true
 systemd-run --user \
@@ -60,7 +92,10 @@ systemd-run --user \
     --property=Type=exec \
     --property=KillMode=control-group \
     --property=OOMPolicy=kill \
-    --property=RuntimeMaxSec=14400 \
+    --property=RuntimeMaxSec=43200 \
+    --property=TimeoutStopSec=600 \
+    --property=MemorySwapMax=0 \
+    --directory="$FROZEN" \
     --property="StandardOutput=append:$OUT/worker.log" \
     --property="StandardError=append:$OUT/worker.log" \
     "$WORKER" "$OUT" "$TAG" "$SEED_SHA256" "$CANDIDATE_HASH" "$MODE"

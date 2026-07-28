@@ -466,7 +466,10 @@ class FormulaTests(unittest.TestCase):
         fail_mutations.append(truncated_failure)
         length_failure = json.loads(json.dumps(passing))
         length_failure["stages"][-1]["finish_reason"] = "length"
-        fail_mutations.append(length_failure)
+        with self.assertRaisesRegex(ValueError, "non-truncated stop"):
+            self.goal.score_registered_gate(
+                "W11", "w11.context.v1", [length_failure]
+            )
         swap_failure = json.loads(json.dumps(passing))
         swap_failure["memory_samples"][-1]["swap_current_bytes"] = 4096
         fail_mutations.append(swap_failure)

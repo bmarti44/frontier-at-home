@@ -549,8 +549,8 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError("W11 token timestamps fall outside the stage")
         if not _is_sha256(stage["output_sha256"]):
             raise ValueError("W11 output digest is invalid")
-        if stage["finish_reason"] not in {"stop", "length"}:
-            raise ValueError("W11 finish reason is invalid")
+        if stage["finish_reason"] != "stop":
+            raise ValueError("W11 requires a non-truncated stop finish")
         if not isinstance(stage["truncated"], bool):
             raise ValueError("W11 truncated must be boolean")
         processed.append(stage["processed_tokens"])
@@ -622,10 +622,11 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         raise ValueError("W11 memory telemetry is incomplete")
     memory_times: list[float] = []
     memory: list[float] = []
+    swap_current: list[int] = []
     for index, sample in enumerate(memory_samples):
         _require_exact_keys(
             sample,
-            {"timestamp_seconds", "available_gib"},
+            {"timestamp_seconds", "available_gib", "swap_current_bytes"},
             f"W11 memory sample {index}",
         )
         memory_times.append(
@@ -638,6 +639,14 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         memory.append(
             _finite_number(sample["available_gib"], "W11 available memory")
         )
+        swap_value = sample["swap_current_bytes"]
+        if (
+            not isinstance(swap_value, int)
+            or isinstance(swap_value, bool)
+            or swap_value < 0
+        ):
+            raise ValueError("W11 swap current bytes must be a nonnegative integer")
+        swap_current.append(swap_value)
     if any(
         right <= left for left, right in zip(memory_times, memory_times[1:])
     ):
@@ -672,6 +681,7 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
         "no_oom": not observation["oom_events"],
         "no_xid": not observation["xid_events"],
         "memory_floor": min(memory) >= 10.0,
+        "zero_swap": max(swap_current) == 0,
     }
     return {
         "scorer_id": "w11.context.v1",
@@ -683,6 +693,7 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
             "negative_control_cases": len(negative),
             "memory_samples": len(memory),
             "minimum_available_memory_gib": min(memory),
+            "maximum_swap_current_bytes": max(swap_current),
         },
         "checks": checks,
         "verdict": "PASS" if all(checks.values()) else "FAIL",

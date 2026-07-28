@@ -22,6 +22,10 @@ TOKENIZER_SHA256 = (
 )
 FILLER_PATH = ROOT / "fixtures" / "ctx-32k.txt"
 RECORD_PATTERN = re.compile(r"RECORD_[A-Z]+_[0-9a-z]+")
+ENGINE_PROGRESS_PATTERN = re.compile(
+    r"task\s+(?P<task>[0-9]+)\s+\|\s+prompt processing,\s+"
+    r"n_tokens\s*=\s*(?P<tokens>[0-9]+)"
+)
 
 
 def load_tokenizer() -> Any:
@@ -126,6 +130,78 @@ def validate_retrieval(output: str, records: list[dict[str, Any]]) -> dict[str, 
     }
 
 
+def validate_completion(
+    *,
+    content: str,
+    reasoning_content: str,
+    finish_reason: str | None,
+    done: bool,
+    records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Score only the user-visible final answer and reject truncation."""
+    retrieval = validate_retrieval(content, records)
+    checks = {
+        "stream_complete": done is True,
+        "finish_reason_stop": finish_reason == "stop",
+        "final_content_present": bool(content),
+        "retrieval_in_final_content": retrieval["pass"],
+    }
+    return {
+        "checks": checks,
+        "retrieval": retrieval,
+        "reasoning_content_sha256": hashlib.sha256(
+            reasoning_content.encode()
+        ).hexdigest(),
+        "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+        "pass": all(checks.values()),
+    }
+
+
+def parse_engine_progress(log: str, *, task_id: int | None = None) -> dict[str, Any]:
+    """Derive evaluated tokens from process-linked server progress events."""
+    rows = [
+        (int(match.group("task")), int(match.group("tokens")))
+        for match in ENGINE_PROGRESS_PATTERN.finditer(log)
+    ]
+    if task_id is not None:
+        rows = [row for row in rows if row[0] == task_id]
+    if not rows:
+        raise RuntimeError("engine progress evidence is missing")
+    task_ids = {row[0] for row in rows}
+    if len(task_ids) != 1:
+        raise RuntimeError("engine progress evidence contains multiple tasks")
+    counts = [row[1] for row in rows]
+    if any(right <= left for left, right in zip(counts, counts[1:])):
+        raise RuntimeError("engine progress token counts are not increasing")
+    return {
+        "task_id": next(iter(task_ids)),
+        "evaluated_tokens": counts[-1],
+        "progress_events": len(counts),
+        "first_evaluated_tokens": counts[0],
+    }
+
+
+def require_token_count_agreement(
+    *, requested_tokens: int, usage_tokens: int, engine_tokens: int
+) -> None:
+    """Fail unless independent engine progress reaches the requested target."""
+    if engine_tokens < requested_tokens:
+        raise RuntimeError(
+            f"engine progress did not reach target: {engine_tokens} < "
+            f"{requested_tokens}"
+        )
+    if usage_tokens < requested_tokens:
+        raise RuntimeError(
+            f"server usage did not reach target: {usage_tokens} < "
+            f"{requested_tokens}"
+        )
+    # Chat templating adds a small suffix/prefix, but independent progress and
+    # response usage must still describe the same request.
+    if abs(engine_tokens - usage_tokens) > 64:
+        raise RuntimeError(
+            "engine progress and usage token counts disagree: "
+            f"{engine_tokens} != {usage_tokens}"
+        )
 def stream_completion(
     base_url: str, payload: dict[str, Any], api_key: str | None
 ) -> dict[str, Any]:
@@ -141,7 +217,8 @@ def stream_completion(
     )
     started = time.time()
     monotonic_started = time.monotonic()
-    output: list[str] = []
+    content: list[str] = []
+    reasoning_content: list[str] = []
     timestamps: list[float] = []
     usage = None
     finish_reason = None
@@ -176,13 +253,16 @@ def stream_completion(
                 if reason is not None:
                     finish_reason = reason
                 delta = choice.get("delta", {})
-                for field in ("reasoning_content", "content"):
+                for field, destination in (
+                    ("reasoning_content", reasoning_content),
+                    ("content", content),
+                ):
                     fragment = delta.get(field)
                     if fragment:
                         if not isinstance(fragment, str):
                             raise RuntimeError(f"{field} fragment is not text")
-                        output.append(fragment)
-                        timestamps.append(time.monotonic())
+                        destination.append(fragment)
+                        timestamps.append(time.time())
     return {
         "request_sha256": hashlib.sha256(body).hexdigest(),
         "started_at_seconds": started,
@@ -191,7 +271,8 @@ def stream_completion(
         "response_ids": sorted(response_ids),
         "done": done,
         "finish_reason": finish_reason,
-        "output": "".join(output),
+        "content": "".join(content),
+        "reasoning_content": "".join(reasoning_content),
         "event_timestamps": timestamps,
         "usage": usage,
     }
@@ -252,15 +333,22 @@ def main() -> int:
             raise RuntimeError("prompt token count is invalid")
         if not isinstance(completed, int) or isinstance(completed, bool):
             raise RuntimeError("completion token count is invalid")
-        retrieval = validate_retrieval(response["output"], fixture["records"])
+        completion = validate_completion(
+            content=response["content"],
+            reasoning_content=response["reasoning_content"],
+            finish_reason=response["finish_reason"],
+            done=response["done"],
+            records=fixture["records"],
+        )
         checks = {
             "server_processed_target": processed >= args.target_tokens,
             "within_context_cap": processed <= args.context_cap,
-            "stream_complete": response["done"] is True,
             "response_identity": len(response["response_ids"]) == 1,
-            "finish_reason": response["finish_reason"] in {"stop", "length"},
-            "completed_generation": completed > 0 and bool(response["output"]),
-            "retrieval": retrieval["pass"],
+            "completion_token_timestamps": (
+                completed > 0
+                and len(response["event_timestamps"]) == completed
+            ),
+            "strict_completion": completion["pass"],
         }
         result.update(
             {
@@ -271,7 +359,8 @@ def main() -> int:
                 "processed_tokens": processed,
                 "completed_output_tokens": completed,
                 "response": response,
-                "retrieval": retrieval,
+                "completion": completion,
+                "truncated": response["finish_reason"] != "stop",
                 "checks": checks,
                 "pass": all(checks.values()),
             }
