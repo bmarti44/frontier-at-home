@@ -1,0 +1,17 @@
+RED confirmation: 2026-07-28
+Reviewed candidate: 3fd5dfb
+
+Verified remaining provenance bypasses:
+- all observations and final evidence are owner-rewritable files
+- Git commit time can be backdated after seeing randomness
+- git/sudo/sha256sum resolve through ambient PATH
+- Python launches permit ambient startup/import hooks
+
+The new integration tests require a root-journald receipt whose trusted fields
+bind exact canonical event bytes to UID, boot, invocation/cgroup, PID and
+realtime. Altered payloads must fail journal lookup. Security-sensitive
+subprocesses must use absolute paths plus an allowlisted environment, and
+Python must run isolated with no user site/PYTHONPATH.
+
+These tests are RED because journal witness emit/verify functions do not exist
+and the reviewed launches still inherit ambient command/Python resolution.

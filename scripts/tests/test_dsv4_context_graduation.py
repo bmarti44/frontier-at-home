@@ -225,11 +225,11 @@ class ContextProbeTests(unittest.TestCase):
         self.assertEqual(
             run.call_args.args[0],
             [
-                "sudo",
+                "/usr/bin/sudo",
                 "-n",
                 "-u",
                 "dsv4",
-                "sha256sum",
+                "/usr/bin/sha256sum",
                 "--",
                 "/protected/binary",
             ],
@@ -350,6 +350,45 @@ class ContextProbeTests(unittest.TestCase):
         scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
         self.assertIn("[[ $SEED_SHA256 == auto ]]", scheduler)
         self.assertIn("--capture-lineage", scheduler)
+
+    def test_journal_witness_is_process_linked_and_tamper_evident(self):
+        scorer = load_scorer()
+        payload = {
+            "event": "context-test-witness",
+            "candidate_hash": "c" * 40,
+            "nonce": "d" * 32,
+        }
+        receipt = scorer.emit_journal_witness(payload)
+        scorer.verify_journal_witness(payload, receipt)
+        tampered = dict(payload)
+        tampered["candidate_hash"] = "e" * 40
+        with self.assertRaisesRegex(RuntimeError, "journal witness"):
+            scorer.verify_journal_witness(tampered, receipt)
+        self.assertEqual(receipt["uid"], "1000")
+        self.assertTrue(receipt["boot_id"])
+        self.assertTrue(receipt["invocation_id"])
+
+    def test_security_subprocesses_ignore_ambient_path_and_python_hooks(self):
+        scorer = load_scorer()
+        completed = mock.Mock(stdout=("a" * 64 + "  /protected/binary\n"))
+        with mock.patch.object(scorer.subprocess, "run", return_value=completed) as run:
+            scorer.hash_as_dsv4(Path("/protected/binary"))
+        self.assertEqual(run.call_args.args[0][0], "/usr/bin/sudo")
+        self.assertIn("/usr/bin/sha256sum", run.call_args.args[0])
+        self.assertEqual(
+            run.call_args.kwargs["env"],
+            {
+                "HOME": "/nonexistent",
+                "PATH": "/usr/bin:/bin",
+                "LANG": "C.UTF-8",
+            },
+        )
+        worker = WORKER.read_text(encoding="utf-8")
+        scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
+        self.assertIn('PYTHONNOUSERSITE=1', worker)
+        self.assertIn('PYTHONPATH=', worker)
+        self.assertIn('"$LIVE_REPO/.venv-harness/bin/python" -I', worker)
+        self.assertIn('"$REPO/.venv-harness/bin/python" -I', scheduler)
 
 
 class ContextWorkerContractTests(unittest.TestCase):
