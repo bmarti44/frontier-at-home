@@ -253,7 +253,8 @@ while kill -0 "$WRAP" 2>/dev/null; do
       PROVENANCE_FAILURE=continuous-identity
       break
     fi
-    if [[ -z $CURRENT_STATE || $CURRENT_STATE == Z || $CURRENT_STATE == X ]]; then
+    if [[ -z $CURRENT_STATE || $CURRENT_STATE == Z || $CURRENT_STATE == X ||
+          -z $CURRENT_HASH || -z $CURRENT_DEVICE_INODE ]]; then
       REPLACEMENT_PID=""
       for _ in $(seq 1 "$CANDIDATE_EXIT_GRACE_TICKS"); do
         REUSED_STAT=""
