@@ -516,6 +516,11 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("MODEL_ROOT=$STATE_ROOT/models/deepseek-v4-flash", submit)
         self.assertIn("/usr/bin/ln", submit)
         self.assertIn("/usr/bin/chown root:root", submit)
+        self.assertIn("stat -c %u", submit)
+        self.assertIn("stat -c %a", submit)
+        self.assertNotIn(
+            "! -w $FROZEN/scripts/58_dsv4_context_worker.sh", submit
+        )
         self.assertIn('"$FROZEN/scripts/21_serve_llamacpp.sh" status', submit)
         self.assertNotIn(
             '"$REPO/scripts/21_serve_llamacpp.sh" status', submit
