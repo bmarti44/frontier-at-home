@@ -49,6 +49,13 @@ class ContextProbeTests(unittest.TestCase):
             "RECORD_CHARLIE_ccc, NO_EXTRA_RECORD"
         )
         self.assertTrue(probe.validate_retrieval(valid, records)["pass"])
+        verbose = (
+            "AUDIT RECORD 1: RECORD_ALPHA_aaa\n"
+            "AUDIT RECORD 2: RECORD_BRAVO_bbb\n"
+            "AUDIT RECORD 3: RECORD_CHARLIE_ccc\n\n"
+            + valid
+        )
+        self.assertTrue(probe.validate_retrieval(verbose, records)["pass"])
         self.assertFalse(
             probe.validate_retrieval(valid.replace("BRAVO_bbb", "BRAVO_bad"), records)[
                 "pass"
@@ -131,6 +138,19 @@ class ContextProbeTests(unittest.TestCase):
         )
         self.assertEqual(payload["max_tokens"], 256)
         self.assertEqual(payload["temperature"], 0)
+
+    def test_context_probe_allows_only_one_terminal_eos_without_sse_text(self):
+        probe = load_probe()
+        self.assertEqual(
+            probe.completed_text_token_count(usage_tokens=142, event_count=141),
+            141,
+        )
+        self.assertEqual(
+            probe.completed_text_token_count(usage_tokens=141, event_count=141),
+            141,
+        )
+        with self.assertRaisesRegex(RuntimeError, "timestamp"):
+            probe.completed_text_token_count(usage_tokens=142, event_count=140)
 
 
 class ContextWorkerContractTests(unittest.TestCase):

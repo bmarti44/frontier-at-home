@@ -1,0 +1,14 @@
+RED confirmation: 2026-07-28
+Production-path non-thinking probe with max_tokens=256:
+  finish_reason=stop
+  prompt_tokens=1068
+  completion_tokens=142
+  SSE text events=141
+  reasoning_content_length=0
+  final line contains all three exact records and NO_EXTRA_RECORD
+
+The old validator rejected the answer because the model first echoed the three
+source AUDIT RECORD lines, making each marker appear twice. It also rejected the
+single terminal EOS token that has no SSE text fragment. New tests require
+scoring only the final nonempty answer line and allow zero or one EOS-only count
+difference; a difference of two remains an error.
