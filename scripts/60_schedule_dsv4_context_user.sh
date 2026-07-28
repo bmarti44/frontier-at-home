@@ -2,6 +2,7 @@
 # Schedule a detached DeepSeek context run without root privileges.
 set -Eeuo pipefail
 umask 077
+export PATH=/usr/bin:/bin
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly UNIT=dsv4-context-graduation.service
@@ -50,6 +51,26 @@ install -d -m 0700 "$STATE_ROOT"
 OUT=$STATE_ROOT/dsv4-context-$TAG
 [[ ! -e $OUT ]] || die "refusing to overwrite $OUT"
 install -d -m 0700 "$OUT"
+SCHEDULED=false
+record_scheduler_failure() {
+    local rc=$?
+    trap - EXIT
+    if (( rc != 0 )) && ! "$SCHEDULED"; then
+        local failure_seed=$SEED_SHA256
+        [[ $failure_seed =~ ^[0-9a-f]{64}$ ]] ||
+            failure_seed=$(printf '%064d' 0)
+        /usr/bin/env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
+            LANG=C.UTF-8 PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
+            "$REPO/.venv-harness/bin/python" -I \
+            "$REPO/scripts/62_score_dsv4_context.py" \
+            --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
+            --seed-sha256 "$failure_seed" --mode "$MODE" \
+            --record-preflight-failure "scheduler exited $rc" \
+            >/dev/null 2>&1 || true
+    fi
+    exit "$rc"
+}
+trap record_scheduler_failure EXIT
 FROZEN=$OUT/frozen-candidate
 install -d -m 0700 "$FROZEN"
 /usr/bin/git -C "$REPO" archive "$CANDIDATE_HASH" |
@@ -84,7 +105,9 @@ PY
 chmod -R a-w "$FROZEN"
 readonly WORKER=$FROZEN/scripts/58_dsv4_context_worker.sh
 SEED_SHA256=$(
-    "$REPO/.venv-harness/bin/python" \
+    /usr/bin/env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
+        LANG=C.UTF-8 PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
+        "$REPO/.venv-harness/bin/python" -I \
         "$FROZEN/scripts/62_score_dsv4_context.py" \
         --candidate-hash "$CANDIDATE_HASH" \
         --capture-lineage "$OUT/lineage.json"
@@ -103,8 +126,9 @@ systemd-run --user \
     --property=RuntimeMaxSec=43200 \
     --property=TimeoutStopSec=600 \
     --property=MemorySwapMax=0 \
-    --directory="$FROZEN" \
+    --working-directory="$FROZEN" \
     --property="StandardOutput=append:$OUT/worker.log" \
     --property="StandardError=append:$OUT/worker.log" \
     "$WORKER" "$OUT" "$TAG" "$SEED_SHA256" "$CANDIDATE_HASH" "$MODE"
+SCHEDULED=true
 printf 'Scheduled user %s. Evidence: %s\n' "$UNIT" "$OUT"

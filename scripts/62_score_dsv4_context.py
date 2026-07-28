@@ -8,8 +8,11 @@ import hashlib
 import importlib.util
 import json
 import math
+import os
+import secrets
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,6 +32,12 @@ DRAND_HOSTS = ("api.drand.sh", "api2.drand.sh", "api3.drand.sh")
 DRAND_GENESIS_UNIX = 1_595_431_050
 DRAND_PERIOD_SECONDS = 30
 CONTEXT_GATE = "dsv4_reference_context"
+SECURE_ENV = {
+    "HOME": "/nonexistent",
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+}
+JOURNAL_TAG = "dsv4-context-witness"
 
 
 def sha256(path: Path) -> str:
@@ -48,16 +57,206 @@ def aggregate(values: Any) -> str:
 def hash_as_dsv4(path: Path) -> str:
     """Hash a protected engine artifact through the narrow service delegation."""
     completed = subprocess.run(
-        ["sudo", "-n", "-u", "dsv4", "sha256sum", "--", str(path)],
+        [
+            "/usr/bin/sudo",
+            "-n",
+            "-u",
+            "dsv4",
+            "/usr/bin/sha256sum",
+            "--",
+            str(path),
+        ],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        env=SECURE_ENV,
     )
     digest = completed.stdout.split(maxsplit=1)[0]
     if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
         raise RuntimeError(f"invalid protected artifact digest: {path}")
     return digest
+
+
+def _journal_rows(since_seconds: float) -> list[dict[str, Any]]:
+    completed = subprocess.run(
+        [
+            "/usr/bin/journalctl",
+            "--user",
+            "--since",
+            f"@{since_seconds:.6f}",
+            "--identifier",
+            JOURNAL_TAG,
+            "--output",
+            "json",
+            "--no-pager",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=SECURE_ENV,
+    )
+    rows = []
+    for line in completed.stdout.splitlines():
+        value = json.loads(line)
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
+
+
+def emit_journal_witness(payload: dict[str, Any]) -> dict[str, str]:
+    """Bind canonical evidence to system-owned journal metadata."""
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    started = time.time() - 1.0
+    journal_process = subprocess.Popen(
+        [
+            "/usr/bin/systemd-cat",
+            f"--identifier={JOURNAL_TAG}",
+            "--priority=notice",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=SECURE_ENV,
+    )
+    try:
+        assert journal_process.stdin is not None
+        journal_process.stdin.write(message + "\n")
+        journal_process.stdin.flush()
+        for _ in range(40):
+            matches = [
+                row
+                for row in _journal_rows(started)
+                if row.get("MESSAGE") == message and row.get("_UID") == "1000"
+            ]
+            if matches:
+                row = matches[-1]
+                receipt = {
+                    "cursor": str(row.get("__CURSOR", "")),
+                    "realtime_timestamp": str(
+                        row.get("__REALTIME_TIMESTAMP", "")
+                    ),
+                    "boot_id": str(row.get("_BOOT_ID", "")),
+                    "invocation_id": str(
+                        row.get("_SYSTEMD_INVOCATION_ID", "")
+                    ),
+                    "stream_id": str(row.get("_STREAM_ID", "")),
+                    "pid": str(row.get("_PID", "")),
+                    "uid": str(row.get("_UID", "")),
+                    "cgroup": str(row.get("_SYSTEMD_CGROUP", "")),
+                }
+                receipt["scope_id"] = (
+                    receipt["invocation_id"] or receipt["stream_id"]
+                )
+                required_invocation = os.environ.get("INVOCATION_ID", "")
+                if required_invocation and (
+                    receipt["invocation_id"] != required_invocation
+                ):
+                    time.sleep(0.05)
+                    continue
+                if all(
+                    receipt[field]
+                    for field in (
+                        "cursor",
+                        "realtime_timestamp",
+                        "boot_id",
+                        "pid",
+                        "uid",
+                        "scope_id",
+                    )
+                ):
+                    return receipt
+            time.sleep(0.05)
+        raise RuntimeError("journal witness was not persisted")
+    finally:
+        if journal_process.stdin is not None:
+            journal_process.stdin.close()
+        try:
+            journal_process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            journal_process.terminate()
+            journal_process.wait(timeout=2)
+        if journal_process.stderr is not None:
+            journal_process.stderr.close()
+
+
+def verify_journal_witness(
+    payload: dict[str, Any], receipt: dict[str, Any]
+) -> None:
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    try:
+        since = int(receipt["realtime_timestamp"]) / 1_000_000 - 1.0
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError("journal witness receipt is invalid") from exc
+    matches = [
+        row
+        for row in _journal_rows(since)
+        if row.get("__CURSOR") == receipt.get("cursor")
+        and row.get("MESSAGE") == message
+        and row.get("_UID") == receipt.get("uid") == "1000"
+        and row.get("_BOOT_ID") == receipt.get("boot_id")
+        and row.get("_SYSTEMD_INVOCATION_ID", "")
+        == receipt.get("invocation_id")
+        and row.get("_STREAM_ID", "") == receipt.get("stream_id", "")
+        and row.get("_PID") == receipt.get("pid")
+    ]
+    if len(matches) != 1:
+        raise RuntimeError("journal witness does not match trusted record")
+
+
+def create_artifact_witness(
+    *,
+    root: Path,
+    event: str,
+    candidate: str,
+    seed: str,
+    artifacts: list[str],
+) -> dict[str, Any]:
+    root = root.resolve()
+    digests: dict[str, str] = {}
+    for relative in sorted(artifacts):
+        path = (root / relative).resolve()
+        if (
+            not path.is_relative_to(root)
+            or not path.is_file()
+            or path.is_symlink()
+        ):
+            raise RuntimeError(f"artifact witness path is invalid: {relative}")
+        digests[relative] = sha256(path)
+    payload = {
+        "event": event,
+        "candidate_hash": candidate,
+        "seed_sha256": seed,
+        "artifacts": digests,
+    }
+    return {
+        "payload": payload,
+        "receipt": emit_journal_witness(payload),
+    }
+
+
+def verify_artifact_witness(*, root: Path, witness: dict[str, Any]) -> None:
+    try:
+        payload = witness["payload"]
+        receipt = witness["receipt"]
+        artifacts = payload["artifacts"]
+    except (KeyError, TypeError) as exc:
+        raise RuntimeError("artifact witness is malformed") from exc
+    if not isinstance(artifacts, dict) or not artifacts:
+        raise RuntimeError("artifact witness is empty")
+    root = root.resolve()
+    for relative, expected in artifacts.items():
+        path = (root / relative).resolve()
+        if (
+            not path.is_relative_to(root)
+            or not path.is_file()
+            or path.is_symlink()
+            or sha256(path) != expected
+        ):
+            raise RuntimeError(f"artifact witness changed: {relative}")
+    verify_journal_witness(payload, receipt)
 
 
 def fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
@@ -122,13 +321,18 @@ def capture_public_lineage(
     now: datetime,
     relay_fetcher: Any = fetch_public_drand,
     commit_time_fetcher: Any = git_commit_time,
+    frozen_at: datetime | None = None,
+    round_number: int | None = None,
 ) -> dict[str, Any]:
     """Capture three-relay randomness strictly after the candidate commit."""
     if now.tzinfo is None or now.utcoffset() != timezone.utc.utcoffset(now):
         raise RuntimeError("lineage capture time must be UTC")
-    round_number = (
-        int(now.timestamp() - DRAND_GENESIS_UNIX) // DRAND_PERIOD_SECONDS + 1
-    )
+    if round_number is None:
+        round_number = (
+            int(now.timestamp() - DRAND_GENESIS_UNIX)
+            // DRAND_PERIOD_SECONDS
+            + 1
+        )
     if round_number < 1:
         raise RuntimeError("drand round is invalid")
     responses = [
@@ -151,8 +355,12 @@ def capture_public_lineage(
     randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
     if beacon["round"] != round_number or beacon["randomness"] != randomness:
         raise RuntimeError("drand beacon is invalid")
-    frozen_at = commit_time_fetcher(candidate)
-    frozen_time = datetime.fromisoformat(frozen_at)
+    if frozen_at is None:
+        frozen_at_text = commit_time_fetcher(candidate)
+        frozen_time = datetime.fromisoformat(frozen_at_text)
+    else:
+        frozen_time = frozen_at
+        frozen_at_text = frozen_time.isoformat()
     beacon_time = datetime.fromtimestamp(
         DRAND_GENESIS_UNIX + (round_number - 1) * DRAND_PERIOD_SECONDS,
         timezone.utc,
@@ -165,7 +373,7 @@ def capture_public_lineage(
     return {
         "freeze": {
             "candidate_hash": candidate,
-            "frozen_at": frozen_at,
+            "frozen_at": frozen_at_text,
         },
         "randomness": {
             "source": "drand-default",
@@ -280,7 +488,7 @@ def verify_freeze(root: Path, candidate: str) -> dict[str, str]:
         raise RuntimeError("frozen artifact manifest is empty")
     resolved = subprocess.run(
         [
-            "git",
+            "/usr/bin/git",
             "-C",
             str(LIVE_ROOT),
             "rev-parse",
@@ -291,14 +499,16 @@ def verify_freeze(root: Path, candidate: str) -> dict[str, str]:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        env=SECURE_ENV,
     ).stdout.strip()
     if resolved != candidate:
         raise RuntimeError("Git candidate does not resolve exactly")
     tree_output = subprocess.run(
-        ["git", "-C", str(LIVE_ROOT), "ls-tree", "-rz", candidate],
+        ["/usr/bin/git", "-C", str(LIVE_ROOT), "ls-tree", "-rz", candidate],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=SECURE_ENV,
     ).stdout
     expected_blobs: dict[str, str] = {}
     for entry in tree_output.split(b"\0"):
@@ -364,12 +574,28 @@ def build_observation(
     )
     tokenizer = probe.load_tokenizer()
     lineage = json.loads((out / "lineage.json").read_text(encoding="utf-8"))
+    freeze_witness = json.loads(
+        (out / "freeze-witness.json").read_text(encoding="utf-8")
+    )
+    verify_journal_witness(
+        freeze_witness["payload"], freeze_witness["receipt"]
+    )
+    if (
+        freeze_witness["payload"].get("event") != "candidate-freeze"
+        or freeze_witness["payload"].get("candidate_hash") != candidate
+    ):
+        raise RuntimeError("candidate freeze witness is invalid")
+    witnessed_at = datetime.fromtimestamp(
+        int(freeze_witness["receipt"]["realtime_timestamp"]) / 1_000_000,
+        timezone.utc,
+    )
+    if datetime.fromisoformat(lineage["freeze"]["frozen_at"]) != witnessed_at:
+        raise RuntimeError("lineage freeze time differs from journal witness")
     goal.validate_manifest_lineage(
         lineage,
         CONTEXT_GATE,
         candidate,
         relay_fetcher=fetch_public_drand,
-        commit_time_fetcher=git_commit_time,
     )
     if lineage["randomness"]["seed_sha256"] != seed:
         raise RuntimeError("worker seed differs from public lineage")
@@ -384,6 +610,12 @@ def build_observation(
         engine_path = out / f"engine-{cap}.log"
         if not stage_path.is_file() or not engine_path.is_file():
             raise RuntimeError(f"missing stage evidence for {cap}")
+        stage_witness = json.loads(
+            (out / f"witness-stage-{cap}.json").read_text(encoding="utf-8")
+        )
+        verify_artifact_witness(root=out, witness=stage_witness)
+        if stage_witness["payload"].get("event") != f"stage-{cap}-complete":
+            raise RuntimeError(f"stage {cap} journal witness is invalid")
         stage = json.loads(stage_path.read_text(encoding="utf-8"))
         if stage.get("pass") is not True or stage.get("context_cap") != cap:
             raise RuntimeError(f"stage {cap} did not pass strict probe")
@@ -552,7 +784,7 @@ def build_observation(
     manifest = {
         "schema_version": 2,
         "gate": CONTEXT_GATE,
-        "qualification_authority": True,
+        "qualification_authority": False,
         "candidate_hash": candidate,
         "seed_sha256": seed,
         "scorer_id": "w11.context.v1",
@@ -569,6 +801,7 @@ def build_observation(
         "frozen_artifacts": artifacts,
         "configuration": configuration,
         "lineage": lineage,
+        "freeze_witness": freeze_witness,
     }
     return observation, {"manifest": manifest, "summary": summary}
 
@@ -582,17 +815,136 @@ def main() -> int:
     parser.add_argument("--verify-only", action="store_true")
     parser.add_argument("--lifecycle-exit-status", type=int, default=0)
     parser.add_argument("--capture-lineage", type=Path)
+    parser.add_argument("--witness-stage", type=int)
+    parser.add_argument("--witness-final", action="store_true")
+    parser.add_argument("--record-preflight-failure")
     args = parser.parse_args()
+    if args.record_preflight_failure is not None:
+        if args.out is None:
+            parser.error("--record-preflight-failure requires --out")
+        write_failure_triplet(
+            out=args.out,
+            candidate=args.candidate_hash,
+            seed=args.seed_sha256 or "0" * 64,
+            mode=args.mode or "graduated",
+            error=RuntimeError(args.record_preflight_failure),
+        )
+        return 0
     if args.capture_lineage is not None:
+        freeze_payload = {
+            "event": "candidate-freeze",
+            "candidate_hash": args.candidate_hash,
+            "nonce": secrets.token_hex(16),
+        }
+        freeze_witness = {
+            "payload": freeze_payload,
+            "receipt": emit_journal_witness(freeze_payload),
+        }
+        frozen_at = datetime.fromtimestamp(
+            int(freeze_witness["receipt"]["realtime_timestamp"]) / 1_000_000,
+            timezone.utc,
+        )
+        round_number = (
+            int(frozen_at.timestamp() - DRAND_GENESIS_UNIX)
+            // DRAND_PERIOD_SECONDS
+            + 2
+        )
+        beacon_time = datetime.fromtimestamp(
+            DRAND_GENESIS_UNIX
+            + (round_number - 1) * DRAND_PERIOD_SECONDS,
+            timezone.utc,
+        )
+        delay = (beacon_time - datetime.now(timezone.utc)).total_seconds() + 0.5
+        if delay > 35:
+            raise RuntimeError("next drand beacon wait is unexpectedly long")
+        if delay > 0:
+            time.sleep(delay)
         lineage = capture_public_lineage(
             candidate=args.candidate_hash,
             now=datetime.now(timezone.utc),
+            frozen_at=frozen_at,
+            round_number=round_number,
         )
         args.capture_lineage.write_text(
             json.dumps(lineage, sort_keys=True, separators=(",", ":")) + "\n",
             encoding="utf-8",
         )
+        args.capture_lineage.with_name("freeze-witness.json").write_text(
+            json.dumps(
+                freeze_witness, sort_keys=True, separators=(",", ":")
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         print(lineage["randomness"]["seed_sha256"])
+        return 0
+    if args.witness_stage is not None:
+        if args.out is None or args.seed_sha256 is None:
+            parser.error("--witness-stage requires --out and --seed-sha256")
+        cap = args.witness_stage
+        if cap not in {131_072, 262_144, 524_288, 1_048_576}:
+            parser.error("--witness-stage cap is invalid")
+        witness = create_artifact_witness(
+            root=args.out,
+            event=f"stage-{cap}-complete",
+            candidate=args.candidate_hash,
+            seed=args.seed_sha256,
+            artifacts=[f"stage-{cap}.json", f"engine-{cap}.log"],
+        )
+        (args.out / f"witness-stage-{cap}.json").write_text(
+            json.dumps(witness, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        return 0
+    if args.witness_final:
+        if args.out is None or args.seed_sha256 is None:
+            parser.error("--witness-final requires --out and --seed-sha256")
+        artifacts = [
+            "manifest.json",
+            "raw.jsonl",
+            "summary.json",
+        ]
+        for name in ("memory.jsonl", "kernel.log"):
+            if (args.out / name).is_file():
+                artifacts.append(name)
+        for cap in (131_072, 262_144, 524_288, 1_048_576):
+            for name in (
+                f"stage-{cap}.json",
+                f"engine-{cap}.log",
+                f"witness-stage-{cap}.json",
+            ):
+                if (args.out / name).is_file():
+                    artifacts.append(name)
+        witness = create_artifact_witness(
+            root=args.out,
+            event="context-attempt-complete",
+            candidate=args.candidate_hash,
+            seed=args.seed_sha256,
+            artifacts=artifacts,
+        )
+        verify_artifact_witness(root=args.out, witness=witness)
+        (args.out / "journal-seal.json").write_text(
+            json.dumps(witness, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        summary = json.loads(
+            (args.out / "summary.json").read_text(encoding="utf-8")
+        )
+        qualification = {
+            "gate": CONTEXT_GATE,
+            "candidate_hash": args.candidate_hash,
+            "seed_sha256": args.seed_sha256,
+            "journal_seal_verified": True,
+            "qualification_authority": summary.get("verdict") == "PASS",
+            "verdict": summary.get("verdict", "FAIL"),
+        }
+        (args.out / "qualification.json").write_text(
+            json.dumps(
+                qualification, sort_keys=True, separators=(",", ":")
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         return 0
     if args.verify_only:
         verify_freeze(ROOT, args.candidate_hash)

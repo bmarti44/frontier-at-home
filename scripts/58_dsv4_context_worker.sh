@@ -2,6 +2,7 @@
 # Detached, watchdog-protected DeepSeek context qualification worker.
 set -Eeuo pipefail
 umask 077
+export PATH=/usr/bin:/bin
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 readonly REPO=$(cd -- "$SCRIPT_DIR/.." && pwd -P)
@@ -55,6 +56,7 @@ fi
 
 verify_frozen_candidate() {
     "$LIVE_REPO/.venv-harness/bin/python" \
+        -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --candidate-hash "$CANDIDATE_HASH" --verify-only
 }
@@ -117,7 +119,7 @@ dsv4_launcher() {
 run_context_probe() {
     local cap=$1 target=$2
     local -a command=(
-        "$LIVE_REPO/.venv-harness/bin/python" "$PROBE"
+        "$LIVE_REPO/.venv-harness/bin/python" -I "$PROBE"
         --base-url http://127.0.0.1:8013
         --context-cap "$cap" --target-tokens "$target"
         --seed-sha256 "$SEED_SHA256" --out "$OUT/stage-$cap.json"
@@ -125,11 +127,13 @@ run_context_probe() {
     if [[ $RUN_MODE == root ]]; then
         run_as_dsv4 env -i \
             HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
+            PYTHONNOUSERSITE=1 PYTHONPATH= \
             PATH=$LIVE_REPO/.venv-harness/bin:/usr/bin:/bin \
             "${command[@]}"
     else
         env -i \
             HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
+            PYTHONNOUSERSITE=1 PYTHONPATH= \
             PATH=$LIVE_REPO/.venv-harness/bin:/usr/bin:/bin \
             "${command[@]}"
     fi
@@ -241,10 +245,21 @@ cleanup() {
     fi
     start_failure_exists && rc=1
     restore_safe_profile || rc=1
-    "$LIVE_REPO/.venv-harness/bin/python" "$REPO/scripts/62_score_dsv4_context.py" \
+    env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
+        PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
+        INVOCATION_ID="${INVOCATION_ID:-}" \
+        "$LIVE_REPO/.venv-harness/bin/python" -I \
+        "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --mode "$MODE" \
         --lifecycle-exit-status "$rc" || rc=1
+    env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
+        PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
+        INVOCATION_ID="${INVOCATION_ID:-}" \
+        "$LIVE_REPO/.venv-harness/bin/python" -I \
+        "$REPO/scripts/62_score_dsv4_context.py" \
+        --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
+        --seed-sha256 "$SEED_SHA256" --witness-final || rc=1
     chmod -R a+rX "$OUT" 2>/dev/null || true
     exit "$rc"
 }
@@ -302,6 +317,13 @@ for index in "${indices[@]}"; do
     run_context_probe "$cap" "$target"
     run_as_dsv4 tail -c "+$((engine_log_bytes + 1))" "$ENGINE_LOG" \
         >"$OUT/engine-$cap.log"
+    env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
+        PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
+        INVOCATION_ID="${INVOCATION_ID:-}" \
+        "$LIVE_REPO/.venv-harness/bin/python" -I \
+        "$REPO/scripts/62_score_dsv4_context.py" \
+        --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
+        --seed-sha256 "$SEED_SHA256" --witness-stage "$cap"
     dsv4_launcher "$cap" 3 stop >"$OUT/stop-$cap.log" 2>&1
     ENGINE_ACTIVE=false
     /usr/bin/python3 "$GUARD" --required-gib 110 --stable-samples 3 \
