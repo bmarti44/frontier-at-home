@@ -128,6 +128,7 @@ class EngineSwitchTests(unittest.TestCase):
             "Environment=DSV4_MEM_FLOOR_GIB=14",
             "Environment=DSV4_WATCHDOG_FLOOR_GIB=14",
             "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=3",
+            "Environment=DSV4_ALLOW_RETRY_AFTER_FAILED_START=1",
             "Environment=DSV4_UBATCH=256",
             "Environment=DSV4_BATCH=512",
             "Environment=DSV4_UBATCH_LARGE=0",
