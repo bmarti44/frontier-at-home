@@ -23,6 +23,8 @@ SCHEDULER = ROOT / "scripts" / "59_schedule_dsv4_context.sh"
 USER_SCHEDULER = ROOT / "scripts" / "60_schedule_dsv4_context_user.sh"
 SCORER = ROOT / "scripts" / "62_score_dsv4_context.py"
 LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
+ATTESTOR_INSTALLER = ROOT / "scripts" / "63_install_context_attestor.sh"
+ATTESTOR_SUBMIT = ROOT / "scripts" / "64_context_submit.sh"
 
 
 def load_probe():
@@ -426,6 +428,9 @@ class ContextProbeTests(unittest.TestCase):
             "manifest": {
                 "candidate_hash": candidate,
                 "seed_sha256": seed,
+                "freeze_witness": {
+                    "receipt": {"invocation_id": "c" * 32}
+                },
             },
             "summary": {"verdict": "PASS"},
         }
@@ -487,6 +492,23 @@ class ContextProbeTests(unittest.TestCase):
 
 
 class ContextWorkerContractTests(unittest.TestCase):
+    def test_root_attestor_replaces_unrestricted_dsv4_delegation(self):
+        installer = ATTESTOR_INSTALLER.read_text(encoding="utf-8")
+        submit = ATTESTOR_SUBMIT.read_text(encoding="utf-8")
+        self.assertIn("/etc/sudoers.d/dsv4-delegate", installer)
+        self.assertIn("/usr/local/sbin/dsv4-context-submit", installer)
+        self.assertIn("/usr/sbin/visudo -cf", installer)
+        self.assertIn("NOPASSWD: /usr/local/sbin/dsv4-context-submit", installer)
+        self.assertNotIn("(dsv4) NOPASSWD: ALL", installer)
+        self.assertIn("(( EUID == 0 ))", submit)
+        self.assertIn("/var/lib/dsv4-context/candidates", submit)
+        self.assertIn("/var/lib/dsv4-context/attempts", submit)
+        self.assertIn("/usr/bin/git", submit)
+        self.assertIn("RuntimeMaxSec=43200", submit)
+        self.assertIn("MemorySwapMax=0", submit)
+        self.assertIn("systemd-run", submit)
+        self.assertNotIn("systemd-run --user", submit)
+
     def test_preload_admission_allows_measured_headless_baseline(self):
         worker = WORKER.read_text(encoding="utf-8")
         self.assertIn("--required-gib 115.0", worker)
