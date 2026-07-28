@@ -38,6 +38,7 @@ SECURE_ENV = {
     "LANG": "C.UTF-8",
 }
 JOURNAL_TAG = "dsv4-context-witness"
+QUALIFICATION_UNIT = "dsv4-context-graduation.service"
 
 
 def sha256(path: Path) -> str:
@@ -105,7 +106,26 @@ def _journal_rows(since_seconds: float) -> list[dict[str, Any]]:
     return rows
 
 
-def emit_journal_witness(payload: dict[str, Any]) -> dict[str, str]:
+def require_qualification_invocation() -> str:
+    invocation = os.environ.get("INVOCATION_ID", "")
+    if not (
+        len(invocation) == 32
+        and all(character in "0123456789abcdef" for character in invocation)
+    ):
+        raise RuntimeError("qualification INVOCATION_ID is absent or invalid")
+    cgroup = Path("/proc/self/cgroup").read_text(encoding="utf-8").strip()
+    expected_suffix = f"/{QUALIFICATION_UNIT}"
+    if not any(
+        line.split(":", 2)[-1].endswith(expected_suffix)
+        for line in cgroup.splitlines()
+    ):
+        raise RuntimeError("process is outside the registered worker cgroup")
+    return invocation
+
+
+def emit_journal_witness(
+    payload: dict[str, Any], *, required_user_unit: str | None = None
+) -> dict[str, str]:
     """Bind canonical evidence to system-owned journal metadata."""
     message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     started = time.time() - 1.0
@@ -146,6 +166,7 @@ def emit_journal_witness(payload: dict[str, Any]) -> dict[str, str]:
                     "pid": str(row.get("_PID", "")),
                     "uid": str(row.get("_UID", "")),
                     "cgroup": str(row.get("_SYSTEMD_CGROUP", "")),
+                    "user_unit": str(row.get("_SYSTEMD_USER_UNIT", "")),
                 }
                 receipt["scope_id"] = (
                     receipt["invocation_id"] or receipt["stream_id"]
@@ -153,6 +174,11 @@ def emit_journal_witness(payload: dict[str, Any]) -> dict[str, str]:
                 required_invocation = os.environ.get("INVOCATION_ID", "")
                 if required_invocation and (
                     receipt["invocation_id"] != required_invocation
+                ):
+                    time.sleep(0.05)
+                    continue
+                if required_user_unit and (
+                    receipt["user_unit"] != required_user_unit
                 ):
                     time.sleep(0.05)
                     continue
@@ -183,7 +209,10 @@ def emit_journal_witness(payload: dict[str, Any]) -> dict[str, str]:
 
 
 def verify_journal_witness(
-    payload: dict[str, Any], receipt: dict[str, Any]
+    payload: dict[str, Any],
+    receipt: dict[str, Any],
+    *,
+    required_user_unit: str | None = None,
 ) -> None:
     message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     try:
@@ -201,9 +230,19 @@ def verify_journal_witness(
         == receipt.get("invocation_id")
         and row.get("_STREAM_ID", "") == receipt.get("stream_id", "")
         and row.get("_PID") == receipt.get("pid")
+        and row.get("_SYSTEMD_CGROUP", "") == receipt.get("cgroup", "")
+        and row.get("_SYSTEMD_USER_UNIT", "")
+        == receipt.get("user_unit", "")
     ]
     if len(matches) != 1:
         raise RuntimeError("journal witness does not match trusted record")
+    if required_user_unit and (
+        receipt.get("user_unit") != required_user_unit
+        or not str(receipt.get("cgroup", "")).endswith(
+            f"/{required_user_unit}"
+        )
+    ):
+        raise RuntimeError("journal witness is outside the registered worker unit")
 
 
 def create_artifact_witness(
@@ -213,6 +252,8 @@ def create_artifact_witness(
     candidate: str,
     seed: str,
     artifacts: list[str],
+    claims: dict[str, Any] | None = None,
+    required_user_unit: str | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
     digests: dict[str, str] = {}
@@ -231,13 +272,22 @@ def create_artifact_witness(
         "seed_sha256": seed,
         "artifacts": digests,
     }
+    if claims is not None:
+        payload["claims"] = claims
     return {
         "payload": payload,
-        "receipt": emit_journal_witness(payload),
+        "receipt": emit_journal_witness(
+            payload, required_user_unit=required_user_unit
+        ),
     }
 
 
-def verify_artifact_witness(*, root: Path, witness: dict[str, Any]) -> None:
+def verify_artifact_witness(
+    *,
+    root: Path,
+    witness: dict[str, Any],
+    required_user_unit: str | None = None,
+) -> None:
     try:
         payload = witness["payload"]
         receipt = witness["receipt"]
@@ -256,7 +306,9 @@ def verify_artifact_witness(*, root: Path, witness: dict[str, Any]) -> None:
             or sha256(path) != expected
         ):
             raise RuntimeError(f"artifact witness changed: {relative}")
-    verify_journal_witness(payload, receipt)
+    verify_journal_witness(
+        payload, receipt, required_user_unit=required_user_unit
+    )
 
 
 def fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
@@ -578,7 +630,9 @@ def build_observation(
         (out / "freeze-witness.json").read_text(encoding="utf-8")
     )
     verify_journal_witness(
-        freeze_witness["payload"], freeze_witness["receipt"]
+        freeze_witness["payload"],
+        freeze_witness["receipt"],
+        required_user_unit=QUALIFICATION_UNIT,
     )
     if (
         freeze_witness["payload"].get("event") != "candidate-freeze"
@@ -605,6 +659,7 @@ def build_observation(
     stages = []
     retrieval_results = []
     fixture_hashes = []
+    worker_invocation = freeze_witness["receipt"].get("invocation_id")
     for index, (cap, target) in enumerate(zip(caps, targets)):
         stage_path = out / f"stage-{cap}.json"
         engine_path = out / f"engine-{cap}.log"
@@ -613,8 +668,19 @@ def build_observation(
         stage_witness = json.loads(
             (out / f"witness-stage-{cap}.json").read_text(encoding="utf-8")
         )
-        verify_artifact_witness(root=out, witness=stage_witness)
-        if stage_witness["payload"].get("event") != f"stage-{cap}-complete":
+        verify_artifact_witness(
+            root=out,
+            witness=stage_witness,
+            required_user_unit=QUALIFICATION_UNIT,
+        )
+        if (
+            stage_witness["payload"].get("event")
+            != f"stage-{cap}-complete"
+            or stage_witness["payload"].get("candidate_hash") != candidate
+            or stage_witness["payload"].get("seed_sha256") != seed
+            or stage_witness["receipt"].get("invocation_id")
+            != worker_invocation
+        ):
             raise RuntimeError(f"stage {cap} journal witness is invalid")
         stage = json.loads(stage_path.read_text(encoding="utf-8"))
         if stage.get("pass") is not True or stage.get("context_cap") != cap:
@@ -806,6 +872,100 @@ def build_observation(
     return observation, {"manifest": manifest, "summary": summary}
 
 
+def finalize_attempt(
+    *,
+    out: Path,
+    candidate: str,
+    seed: str,
+    mode: str,
+    lifecycle_exit_status: int,
+) -> dict[str, Any]:
+    """Recompute any PASS and place its authority inside the final seal."""
+    invocation = require_qualification_invocation()
+    persisted = {
+        "manifest": json.loads(
+            (out / "manifest.json").read_text(encoding="utf-8")
+        ),
+        "raw": json.loads((out / "raw.jsonl").read_text(encoding="utf-8")),
+        "summary": json.loads(
+            (out / "summary.json").read_text(encoding="utf-8")
+        ),
+    }
+    verdict = persisted["summary"].get("verdict")
+    if verdict not in {"PASS", "FAIL"}:
+        raise RuntimeError("persisted summary verdict is invalid")
+    if verdict == "PASS":
+        observation, result = build_observation(
+            out,
+            candidate,
+            seed,
+            mode,
+            lifecycle_exit_status,
+        )
+        expected = {
+            "manifest": result["manifest"],
+            "raw": observation,
+            "summary": result["summary"],
+        }
+        for name in ("manifest", "raw", "summary"):
+            if persisted[name] != expected[name]:
+                raise RuntimeError(f"persisted {name} differs from recomputation")
+        if (
+            persisted["manifest"].get("candidate_hash") != candidate
+            or persisted["manifest"].get("seed_sha256") != seed
+            or persisted["manifest"].get("qualification_authority") is not False
+        ):
+            raise RuntimeError("persisted manifest identity is invalid")
+
+    artifacts = ["manifest.json", "raw.jsonl", "summary.json"]
+    scoring_inputs = (
+        "lineage.json",
+        "freeze-witness.json",
+        "memory.jsonl",
+        "kernel.log",
+    )
+    for name in scoring_inputs:
+        if (out / name).is_file():
+            artifacts.append(name)
+    for cap in (131_072, 262_144, 524_288, 1_048_576):
+        for name in (
+            f"stage-{cap}.json",
+            f"engine-{cap}.log",
+            f"witness-stage-{cap}.json",
+        ):
+            if (out / name).is_file():
+                artifacts.append(name)
+    if verdict == "PASS" and len(artifacts) != 19:
+        raise RuntimeError("PASS finalization is missing mandatory evidence")
+    claims = {
+        "gate": CONTEXT_GATE,
+        "verdict": verdict,
+        "qualification_authority": verdict == "PASS",
+        "worker_invocation_id": invocation,
+    }
+    witness = create_artifact_witness(
+        root=out,
+        event="context-attempt-complete",
+        candidate=candidate,
+        seed=seed,
+        artifacts=artifacts,
+        claims=claims,
+        required_user_unit=QUALIFICATION_UNIT,
+    )
+    verify_artifact_witness(
+        root=out,
+        witness=witness,
+        required_user_unit=QUALIFICATION_UNIT,
+    )
+    if witness["receipt"].get("invocation_id") != invocation:
+        raise RuntimeError("final witness invocation differs from worker")
+    (out / "journal-seal.json").write_text(
+        json.dumps(witness, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    return witness
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path)
@@ -831,6 +991,7 @@ def main() -> int:
         )
         return 0
     if args.capture_lineage is not None:
+        require_qualification_invocation()
         freeze_payload = {
             "event": "candidate-freeze",
             "candidate_hash": args.candidate_hash,
@@ -838,7 +999,9 @@ def main() -> int:
         }
         freeze_witness = {
             "payload": freeze_payload,
-            "receipt": emit_journal_witness(freeze_payload),
+            "receipt": emit_journal_witness(
+                freeze_payload, required_user_unit=QUALIFICATION_UNIT
+            ),
         }
         frozen_at = datetime.fromtimestamp(
             int(freeze_witness["receipt"]["realtime_timestamp"]) / 1_000_000,
@@ -881,6 +1044,7 @@ def main() -> int:
     if args.witness_stage is not None:
         if args.out is None or args.seed_sha256 is None:
             parser.error("--witness-stage requires --out and --seed-sha256")
+        require_qualification_invocation()
         cap = args.witness_stage
         if cap not in {131_072, 262_144, 524_288, 1_048_576}:
             parser.error("--witness-stage cap is invalid")
@@ -890,6 +1054,7 @@ def main() -> int:
             candidate=args.candidate_hash,
             seed=args.seed_sha256,
             artifacts=[f"stage-{cap}.json", f"engine-{cap}.log"],
+            required_user_unit=QUALIFICATION_UNIT,
         )
         (args.out / f"witness-stage-{cap}.json").write_text(
             json.dumps(witness, sort_keys=True, separators=(",", ":")) + "\n",
@@ -897,53 +1062,20 @@ def main() -> int:
         )
         return 0
     if args.witness_final:
-        if args.out is None or args.seed_sha256 is None:
-            parser.error("--witness-final requires --out and --seed-sha256")
-        artifacts = [
-            "manifest.json",
-            "raw.jsonl",
-            "summary.json",
-        ]
-        for name in ("memory.jsonl", "kernel.log"):
-            if (args.out / name).is_file():
-                artifacts.append(name)
-        for cap in (131_072, 262_144, 524_288, 1_048_576):
-            for name in (
-                f"stage-{cap}.json",
-                f"engine-{cap}.log",
-                f"witness-stage-{cap}.json",
-            ):
-                if (args.out / name).is_file():
-                    artifacts.append(name)
-        witness = create_artifact_witness(
-            root=args.out,
-            event="context-attempt-complete",
+        if (
+            args.out is None
+            or args.seed_sha256 is None
+            or args.mode is None
+        ):
+            parser.error(
+                "--witness-final requires --out, --seed-sha256 and --mode"
+            )
+        finalize_attempt(
+            out=args.out,
             candidate=args.candidate_hash,
             seed=args.seed_sha256,
-            artifacts=artifacts,
-        )
-        verify_artifact_witness(root=args.out, witness=witness)
-        (args.out / "journal-seal.json").write_text(
-            json.dumps(witness, sort_keys=True, separators=(",", ":")) + "\n",
-            encoding="utf-8",
-        )
-        summary = json.loads(
-            (args.out / "summary.json").read_text(encoding="utf-8")
-        )
-        qualification = {
-            "gate": CONTEXT_GATE,
-            "candidate_hash": args.candidate_hash,
-            "seed_sha256": args.seed_sha256,
-            "journal_seal_verified": True,
-            "qualification_authority": summary.get("verdict") == "PASS",
-            "verdict": summary.get("verdict", "FAIL"),
-        }
-        (args.out / "qualification.json").write_text(
-            json.dumps(
-                qualification, sort_keys=True, separators=(",", ":")
-            )
-            + "\n",
-            encoding="utf-8",
+            mode=args.mode,
+            lifecycle_exit_status=args.lifecycle_exit_status,
         )
         return 0
     if args.verify_only:

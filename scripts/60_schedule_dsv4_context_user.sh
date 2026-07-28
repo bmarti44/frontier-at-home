@@ -7,6 +7,7 @@ export PATH=/usr/bin:/bin
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly UNIT=dsv4-context-graduation.service
 readonly STATE_ROOT=/home/bmarti44/.local/state/dsv4-context
+readonly SNAPSHOT_ROOT=/home/dsv4/ds4-project/frozen-candidates
 
 die() { printf '60_schedule_dsv4_context_user.sh: %s\n' "$*" >&2; exit 1; }
 
@@ -61,7 +62,7 @@ record_scheduler_failure() {
             failure_seed=$(printf '%064d' 0)
         /usr/bin/env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
             LANG=C.UTF-8 PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
-            "$REPO/.venv-harness/bin/python" -I \
+            /usr/bin/python3 -I \
             "$REPO/scripts/62_score_dsv4_context.py" \
             --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
             --seed-sha256 "$failure_seed" --mode "$MODE" \
@@ -71,13 +72,16 @@ record_scheduler_failure() {
     exit "$rc"
 }
 trap record_scheduler_failure EXIT
-FROZEN=$OUT/frozen-candidate
-install -d -m 0700 "$FROZEN"
+FROZEN=$SNAPSHOT_ROOT/$CANDIDATE_HASH-$TAG
+sudo -n -u dsv4 test ! -e "$FROZEN" ||
+    die "protected candidate snapshot already exists"
+sudo -n -u dsv4 install -d -m 0700 "$SNAPSHOT_ROOT" "$FROZEN"
 /usr/bin/git -C "$REPO" archive "$CANDIDATE_HASH" |
-    /usr/bin/tar -x -C "$FROZEN"
-install -D -m 0400 "$REPO/vendor/official-encoding/tokenizer.json" \
+    sudo -n -u dsv4 /usr/bin/tar -x -C "$FROZEN"
+sudo -n -u dsv4 install -D -m 0444 \
+    "$REPO/vendor/official-encoding/tokenizer.json" \
     "$FROZEN/vendor/official-encoding/tokenizer.json"
-/usr/bin/python3 - "$FROZEN" "$CANDIDATE_HASH" <<'PY'
+sudo -n -u dsv4 /usr/bin/python3 - "$FROZEN" "$CANDIDATE_HASH" <<'PY'
 import hashlib
 import json
 import pathlib
@@ -102,18 +106,13 @@ for path in sorted(item for item in root.rglob("*") if item.is_file()):
     encoding="utf-8",
 )
 PY
-chmod -R a-w "$FROZEN"
+sudo -n -u dsv4 chmod -R a-w "$FROZEN"
+sudo -n -u dsv4 setfacl -m u:bmarti44:x "$SNAPSHOT_ROOT"
+sudo -n -u dsv4 setfacl -R -m u:bmarti44:rX "$FROZEN"
+[[ -r $FROZEN/scripts/58_dsv4_context_worker.sh &&
+    ! -w $FROZEN/scripts/58_dsv4_context_worker.sh ]] ||
+    die "protected candidate snapshot is not immutable to the worker"
 readonly WORKER=$FROZEN/scripts/58_dsv4_context_worker.sh
-SEED_SHA256=$(
-    /usr/bin/env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
-        LANG=C.UTF-8 PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
-        "$REPO/.venv-harness/bin/python" -I \
-        "$FROZEN/scripts/62_score_dsv4_context.py" \
-        --candidate-hash "$CANDIDATE_HASH" \
-        --capture-lineage "$OUT/lineage.json"
-) || die "cannot capture post-freeze public randomness"
-[[ $SEED_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
-    die "captured seed is invalid"
 
 systemctl --user reset-failed "$UNIT" 2>/dev/null || true
 systemd-run --user \
@@ -129,6 +128,6 @@ systemd-run --user \
     --working-directory="$FROZEN" \
     --property="StandardOutput=append:$OUT/worker.log" \
     --property="StandardError=append:$OUT/worker.log" \
-    "$WORKER" "$OUT" "$TAG" "$SEED_SHA256" "$CANDIDATE_HASH" "$MODE"
+    "$WORKER" "$OUT" "$TAG" auto "$CANDIDATE_HASH" "$MODE"
 SCHEDULED=true
 printf 'Scheduled user %s. Evidence: %s\n' "$UNIT" "$OUT"

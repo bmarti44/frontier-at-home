@@ -29,7 +29,7 @@ readonly MODEL_PATH=$LIVE_REPO/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q
 }
 OUT=$1
 TAG=$2
-SEED_SHA256=$3
+SEED_REQUEST=$3
 CANDIDATE_HASH=$4
 MODE=$5
 RUN_MODE=root
@@ -48,14 +48,15 @@ fi
 [[ $OUT == $valid_out_pattern && -d $OUT && ! -L $OUT ]] ||
     { echo "invalid evidence directory" >&2; exit 2; }
 [[ $TAG =~ ^[a-z0-9][a-z0-9.-]{0,63}$ ]] || { echo "invalid tag" >&2; exit 2; }
-[[ $SEED_SHA256 =~ ^[0-9a-f]{64}$ ]] || { echo "invalid seed digest" >&2; exit 2; }
+[[ $SEED_REQUEST == auto ]] || { echo "seed request must be auto" >&2; exit 2; }
+SEED_SHA256=$(printf '%064d' 0)
 [[ $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ ]] ||
     { echo "invalid candidate hash" >&2; exit 2; }
 [[ $MODE == one-million || $MODE == graduated ]] ||
     { echo "mode must be one-million or graduated" >&2; exit 2; }
 
 verify_frozen_candidate() {
-    "$LIVE_REPO/.venv-harness/bin/python" \
+    /usr/bin/python3 \
         -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --candidate-hash "$CANDIDATE_HASH" --verify-only
@@ -119,7 +120,7 @@ dsv4_launcher() {
 run_context_probe() {
     local cap=$1 target=$2
     local -a command=(
-        "$LIVE_REPO/.venv-harness/bin/python" -I "$PROBE"
+        /usr/bin/python3 -I "$PROBE"
         --base-url http://127.0.0.1:8013
         --context-cap "$cap" --target-tokens "$target"
         --seed-sha256 "$SEED_SHA256" --out "$OUT/stage-$cap.json"
@@ -128,13 +129,13 @@ run_context_probe() {
         run_as_dsv4 env -i \
             HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
             PYTHONNOUSERSITE=1 PYTHONPATH= \
-            PATH=$LIVE_REPO/.venv-harness/bin:/usr/bin:/bin \
+            PATH=/usr/bin:/bin \
             "${command[@]}"
     else
         env -i \
             HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
             PYTHONNOUSERSITE=1 PYTHONPATH= \
-            PATH=$LIVE_REPO/.venv-harness/bin:/usr/bin:/bin \
+            PATH=/usr/bin:/bin \
             "${command[@]}"
     fi
 }
@@ -248,7 +249,7 @@ cleanup() {
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
         PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
         INVOCATION_ID="${INVOCATION_ID:-}" \
-        "$LIVE_REPO/.venv-harness/bin/python" -I \
+        /usr/bin/python3 -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --mode "$MODE" \
@@ -256,14 +257,27 @@ cleanup() {
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
         PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
         INVOCATION_ID="${INVOCATION_ID:-}" \
-        "$LIVE_REPO/.venv-harness/bin/python" -I \
+        /usr/bin/python3 -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
-        --seed-sha256 "$SEED_SHA256" --witness-final || rc=1
+        --seed-sha256 "$SEED_SHA256" --mode "$MODE" \
+        --lifecycle-exit-status "$rc" --witness-final || rc=1
     chmod -R a+rX "$OUT" 2>/dev/null || true
     exit "$rc"
 }
 trap cleanup EXIT
+
+SEED_SHA256=$(
+    env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
+        PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
+        INVOCATION_ID="${INVOCATION_ID:-}" \
+        /usr/bin/python3 -I \
+        "$REPO/scripts/62_score_dsv4_context.py" \
+        --candidate-hash "$CANDIDATE_HASH" \
+        --capture-lineage "$OUT/lineage.json"
+)
+[[ $SEED_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
+    { echo "captured seed is invalid" >&2; exit 1; }
 
 KERNEL_CURSOR=$(
     journalctl -k -n 0 --show-cursor --no-pager | sed -n 's/^-- cursor: //p'
@@ -320,7 +334,7 @@ for index in "${indices[@]}"; do
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
         PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
         INVOCATION_ID="${INVOCATION_ID:-}" \
-        "$LIVE_REPO/.venv-harness/bin/python" -I \
+        /usr/bin/python3 -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --witness-stage "$cap"

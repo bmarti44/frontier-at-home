@@ -389,8 +389,9 @@ class ContextProbeTests(unittest.TestCase):
         scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
         self.assertIn('PYTHONNOUSERSITE=1', worker)
         self.assertIn('PYTHONPATH=', worker)
-        self.assertIn('"$LIVE_REPO/.venv-harness/bin/python" -I', worker)
-        self.assertIn('"$REPO/.venv-harness/bin/python" -I', scheduler)
+        self.assertIn("/usr/bin/python3 -I", worker)
+        self.assertNotIn(".venv-harness/bin/python", worker)
+        self.assertNotIn(".venv-harness/bin/python", scheduler)
 
     def test_journal_artifact_witness_rejects_post_seal_rewrite(self):
         scorer = load_scorer()
@@ -512,6 +513,8 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("MemorySwapMax=0", scheduler)
         self.assertIn("TimeoutStopSec=600", scheduler)
         self.assertIn("frozen-candidate", scheduler)
+        self.assertIn("sudo -n -u dsv4 chmod -R a-w", scheduler)
+        self.assertIn("u:bmarti44:rX", scheduler)
         self.assertIn("--working-directory=", scheduler)
         self.assertNotIn("--directory=", scheduler)
         self.assertIn("repository is not clean", scheduler)
