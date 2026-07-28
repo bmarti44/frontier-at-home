@@ -391,8 +391,8 @@ class ContextProbeTests(unittest.TestCase):
         scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
         self.assertIn('PYTHONNOUSERSITE=1', worker)
         self.assertIn('PYTHONPATH=', worker)
-        self.assertIn("/usr/bin/python3 -I", worker)
-        self.assertNotIn(".venv-harness/bin/python", worker)
+        self.assertIn("PYTHON_BIN=$LIVE_REPO/.venv-harness/bin/python", worker)
+        self.assertIn('"$PYTHON_BIN" -I', worker)
         self.assertNotIn(".venv-harness/bin/python", scheduler)
 
     def test_journal_artifact_witness_rejects_post_seal_rewrite(self):

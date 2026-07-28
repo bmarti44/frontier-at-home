@@ -20,6 +20,7 @@ readonly START_FAILURE_MARKER=/run/dsv4/llamacpp.start-failed
 readonly USER_RESTORE=$REPO/scripts/61_restore_dsv4_user.sh
 readonly USER_ENGINE_UNIT=dsv4-safe-engine.service
 readonly ENGINE_LOG=/home/dsv4/logs/llamacpp-server.log
+readonly PYTHON_BIN=$LIVE_REPO/.venv-harness/bin/python
 readonly LIVE_MODEL_PATH=$LIVE_REPO/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
 readonly PROTECTED_MODEL_PATH=/var/lib/dsv4-context/models/deepseek-v4-flash/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
 # Fixed acceptance authority: w11.context.v1 in glm52_goal.py.
@@ -60,12 +61,16 @@ SEED_SHA256=$(printf '%064d' 0)
     { echo "mode must be one-million or graduated" >&2; exit 2; }
 
 verify_frozen_candidate() {
-    /usr/bin/python3 \
+    "$PYTHON_BIN" \
         -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --candidate-hash "$CANDIDATE_HASH" --verify-only
 }
 verify_frozen_candidate
+if [[ $RUN_MODE == root ]]; then
+    chmod -R a+rX "$REPO"
+    chmod -R a-w "$REPO"
+fi
 
 ENGINE_ACTIVE=false
 TELEMETRY_PID=
@@ -124,7 +129,7 @@ dsv4_launcher() {
 run_context_probe() {
     local cap=$1 target=$2
     local -a command=(
-        /usr/bin/python3 -I "$PROBE"
+        "$PYTHON_BIN" -I "$PROBE"
         --base-url http://127.0.0.1:8013
         --context-cap "$cap" --target-tokens "$target"
         --seed-sha256 "$SEED_SHA256" --out "$OUT/stage-$cap.json"
@@ -253,7 +258,7 @@ cleanup() {
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
         PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
         INVOCATION_ID="${INVOCATION_ID:-}" \
-        /usr/bin/python3 -I \
+        "$PYTHON_BIN" -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --mode "$MODE" \
@@ -261,7 +266,7 @@ cleanup() {
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
         PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
         INVOCATION_ID="${INVOCATION_ID:-}" \
-        /usr/bin/python3 -I \
+        "$PYTHON_BIN" -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --mode "$MODE" \
@@ -275,7 +280,7 @@ SEED_SHA256=$(
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
         PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
         INVOCATION_ID="${INVOCATION_ID:-}" \
-        /usr/bin/python3 -I \
+        "$PYTHON_BIN" -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --candidate-hash "$CANDIDATE_HASH" \
         --capture-lineage "$OUT/lineage.json"
@@ -338,7 +343,7 @@ for index in "${indices[@]}"; do
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
         PATH=/usr/bin:/bin PYTHONNOUSERSITE=1 PYTHONPATH= \
         INVOCATION_ID="${INVOCATION_ID:-}" \
-        /usr/bin/python3 -I \
+        "$PYTHON_BIN" -I \
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --witness-stage "$cap"
