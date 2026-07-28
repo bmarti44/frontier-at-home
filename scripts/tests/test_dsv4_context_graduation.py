@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PROBE = ROOT / "scripts" / "57_dsv4_context_probe.py"
 WORKER = ROOT / "scripts" / "58_dsv4_context_worker.sh"
 SCHEDULER = ROOT / "scripts" / "59_schedule_dsv4_context.sh"
+USER_SCHEDULER = ROOT / "scripts" / "60_schedule_dsv4_context_user.sh"
 LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 
 
@@ -74,6 +75,21 @@ class ContextWorkerContractTests(unittest.TestCase):
         telemetry = worker.index('>>"$OUT/memory.jsonl" &')
         startup = worker.index('dsv4_launcher "$cap" 3 start')
         self.assertLess(telemetry, startup)
+
+    def test_user_runner_needs_no_root_and_serializes_with_guard(self):
+        worker = WORKER.read_text(encoding="utf-8")
+        scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
+        self.assertIn("sudo -n -u dsv4", worker)
+        self.assertIn("/home/dsv4/.dsv4-start-hold", worker)
+        self.assertIn("systemctl is-active --quiet dsv4-guard.service", worker)
+        self.assertIn("DSV4_START_HOLD_FILE", worker)
+        self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START", worker)
+        self.assertIn("--required-gib 110", worker)
+        self.assertIn("systemd-run --user", scheduler)
+        self.assertIn("RuntimeMaxSec=14400", scheduler)
+        self.assertIn("repository is not clean", scheduler)
+        self.assertIn("candidate hash changed", scheduler)
+        self.assertNotIn("must run as root", scheduler)
 
     def test_measured_headless_admission_is_default_off_and_bounded(self):
         source = LAUNCHER.read_text(encoding="utf-8")
