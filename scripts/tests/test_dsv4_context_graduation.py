@@ -480,11 +480,14 @@ class ContextProbeTests(unittest.TestCase):
         with mock.patch.dict(
             scorer.os.environ, {"INVOCATION_ID": "a" * 32}, clear=True
         ):
-            with mock.patch.object(
-                scorer.Path,
-                "read_text",
-                return_value=(
-                    "0::/user.slice/user-1000.slice/session-1.scope\n"
+            with (
+                mock.patch.object(scorer.os, "geteuid", return_value=0),
+                mock.patch.object(
+                    scorer.Path,
+                    "read_text",
+                    return_value=(
+                        "0::/user.slice/user-1000.slice/session-1.scope\n"
+                    ),
                 ),
             ):
                 with self.assertRaisesRegex(RuntimeError, "worker cgroup"):
@@ -501,8 +504,9 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("NOPASSWD: /usr/local/sbin/dsv4-context-submit", installer)
         self.assertNotIn("(dsv4) NOPASSWD: ALL", installer)
         self.assertIn("(( EUID == 0 ))", submit)
-        self.assertIn("/var/lib/dsv4-context/candidates", submit)
-        self.assertIn("/var/lib/dsv4-context/attempts", submit)
+        self.assertIn("readonly STATE_ROOT=/var/lib/dsv4-context", submit)
+        self.assertIn("CANDIDATE_ROOT=$STATE_ROOT/candidates", submit)
+        self.assertIn("ATTEMPT_ROOT=$STATE_ROOT/attempts", submit)
         self.assertIn("/usr/bin/git", submit)
         self.assertIn("RuntimeMaxSec=43200", submit)
         self.assertIn("MemorySwapMax=0", submit)

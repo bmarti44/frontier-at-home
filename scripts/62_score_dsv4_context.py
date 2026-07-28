@@ -83,7 +83,6 @@ def _journal_rows(since_seconds: float) -> list[dict[str, Any]]:
     completed = subprocess.run(
         [
             "/usr/bin/journalctl",
-            "--user",
             "--since",
             f"@{since_seconds:.6f}",
             "--identifier",
@@ -113,6 +112,8 @@ def require_qualification_invocation() -> str:
         and all(character in "0123456789abcdef" for character in invocation)
     ):
         raise RuntimeError("qualification INVOCATION_ID is absent or invalid")
+    if os.geteuid() != 0:
+        raise RuntimeError("qualification authority requires the root attestor")
     cgroup = Path("/proc/self/cgroup").read_text(encoding="utf-8").strip()
     expected_suffix = f"/{QUALIFICATION_UNIT}"
     if not any(
@@ -128,6 +129,7 @@ def emit_journal_witness(
 ) -> dict[str, str]:
     """Bind canonical evidence to system-owned journal metadata."""
     message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    trusted_uid = str(os.geteuid())
     started = time.time() - 1.0
     journal_process = subprocess.Popen(
         [
@@ -149,7 +151,8 @@ def emit_journal_witness(
             matches = [
                 row
                 for row in _journal_rows(started)
-                if row.get("MESSAGE") == message and row.get("_UID") == "1000"
+                if row.get("MESSAGE") == message
+                and row.get("_UID") == trusted_uid
             ]
             if matches:
                 row = matches[-1]
@@ -167,6 +170,7 @@ def emit_journal_witness(
                     "uid": str(row.get("_UID", "")),
                     "cgroup": str(row.get("_SYSTEMD_CGROUP", "")),
                     "user_unit": str(row.get("_SYSTEMD_USER_UNIT", "")),
+                    "system_unit": str(row.get("_SYSTEMD_UNIT", "")),
                 }
                 receipt["scope_id"] = (
                     receipt["invocation_id"] or receipt["stream_id"]
@@ -178,7 +182,7 @@ def emit_journal_witness(
                     time.sleep(0.05)
                     continue
                 if required_user_unit and (
-                    receipt["user_unit"] != required_user_unit
+                    receipt["system_unit"] != required_user_unit
                 ):
                     time.sleep(0.05)
                     continue
@@ -224,7 +228,8 @@ def verify_journal_witness(
         for row in _journal_rows(since)
         if row.get("__CURSOR") == receipt.get("cursor")
         and row.get("MESSAGE") == message
-        and row.get("_UID") == receipt.get("uid") == "1000"
+        and row.get("_UID") == receipt.get("uid")
+        and receipt.get("uid") in {"0", "1000"}
         and row.get("_BOOT_ID") == receipt.get("boot_id")
         and row.get("_SYSTEMD_INVOCATION_ID", "")
         == receipt.get("invocation_id")
@@ -233,11 +238,14 @@ def verify_journal_witness(
         and row.get("_SYSTEMD_CGROUP", "") == receipt.get("cgroup", "")
         and row.get("_SYSTEMD_USER_UNIT", "")
         == receipt.get("user_unit", "")
+        and row.get("_SYSTEMD_UNIT", "")
+        == receipt.get("system_unit", "")
     ]
     if len(matches) != 1:
         raise RuntimeError("journal witness does not match trusted record")
     if required_user_unit and (
-        receipt.get("user_unit") != required_user_unit
+        receipt.get("uid") != "0"
+        or receipt.get("system_unit") != required_user_unit
         or not str(receipt.get("cgroup", "")).endswith(
             f"/{required_user_unit}"
         )
@@ -346,6 +354,8 @@ def git_commit_time(candidate: str) -> str:
     return subprocess.run(
         [
             "/usr/bin/git",
+            "-c",
+            f"safe.directory={LIVE_ROOT}",
             "-C",
             str(LIVE_ROOT),
             "show",
@@ -556,7 +566,16 @@ def verify_freeze(root: Path, candidate: str) -> dict[str, str]:
     if resolved != candidate:
         raise RuntimeError("Git candidate does not resolve exactly")
     tree_output = subprocess.run(
-        ["/usr/bin/git", "-C", str(LIVE_ROOT), "ls-tree", "-rz", candidate],
+        [
+            "/usr/bin/git",
+            "-c",
+            f"safe.directory={LIVE_ROOT}",
+            "-C",
+            str(LIVE_ROOT),
+            "ls-tree",
+            "-rz",
+            candidate,
+        ],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -902,6 +921,16 @@ def finalize_attempt(
             mode,
             lifecycle_exit_status,
         )
+        freeze_invocation = (
+            result["manifest"]
+            .get("freeze_witness", {})
+            .get("receipt", {})
+            .get("invocation_id")
+        )
+        if freeze_invocation != invocation:
+            raise RuntimeError(
+                "final invocation differs from freeze/stage invocation"
+            )
         expected = {
             "manifest": result["manifest"],
             "raw": observation,

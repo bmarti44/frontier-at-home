@@ -41,7 +41,7 @@ if (( EUID != 0 )); then
         { echo "passwordless dsv4 service-account delegation is unavailable" >&2; exit 2; }
 fi
 if [[ $RUN_MODE == root ]]; then
-    valid_out_pattern=/home/dsv4/ds4-project/dsv4-context-\*
+    valid_out_pattern=/var/lib/dsv4-context/attempts/dsv4-context-\*
 else
     valid_out_pattern=/home/bmarti44/.local/state/dsv4-context/dsv4-context-\*
 fi
@@ -126,8 +126,8 @@ run_context_probe() {
         --seed-sha256 "$SEED_SHA256" --out "$OUT/stage-$cap.json"
     )
     if [[ $RUN_MODE == root ]]; then
-        run_as_dsv4 env -i \
-            HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
+        env -i \
+            HOME=/root USER=root LOGNAME=root LANG=C.UTF-8 \
             PYTHONNOUSERSITE=1 PYTHONPATH= \
             PATH=/usr/bin:/bin \
             "${command[@]}"
