@@ -20,6 +20,10 @@ BINARY = Path(
     "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server"
 )
 MODEL_ROOT = LIVE_ROOT / "weights" / "unsloth-ud-q2_k_xl"
+TOKENIZER_SHA256 = (
+    "8f9f37ca37fdc4f5fd36d5cf4d3b0e8"
+    "392edb4e894fd10cc0d70b4957c8633cf"
+)
 
 
 def sha256(path: Path) -> str:
@@ -89,6 +93,50 @@ def validate_stage_lineage(
         raise RuntimeError("stage lineage differs from regenerated fixture")
 
 
+def write_failure_triplet(
+    *,
+    out: Path,
+    candidate: str,
+    seed: str,
+    mode: str,
+    error: Exception,
+) -> None:
+    """Preserve mandatory artifacts even when strict scoring cannot start."""
+    failure = {
+        "record_type": "context_failure",
+        "candidate_hash": candidate,
+        "seed_sha256": seed,
+        "mode": mode,
+        "failure_events": [
+            {"event": f"{type(error).__name__}: {error}"}
+        ],
+    }
+    manifest = {
+        "schema_version": 2,
+        "gate": "dsv4_reference_context",
+        "qualification_authority": False,
+        "candidate_hash": candidate,
+        "seed_sha256": seed,
+        "mode": mode,
+        "scorer_id": "w11.context.v1",
+        "scorer_sha256": sha256(Path(__file__).resolve()),
+    }
+    summary = {
+        "scorer_id": "w11.context.v1",
+        "verdict": "FAIL",
+        "error": f"{type(error).__name__}: {error}",
+    }
+    (out / "raw.jsonl").write_text(
+        json.dumps(failure, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    for name, value in (("manifest", manifest), ("summary", summary)):
+        (out / f"{name}.json").write_text(
+            json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+
+
 def load_module(name: str, path: Path) -> Any:
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -107,10 +155,73 @@ def verify_freeze(root: Path, candidate: str) -> dict[str, str]:
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, dict) or not artifacts:
         raise RuntimeError("frozen artifact manifest is empty")
+    resolved = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(LIVE_ROOT),
+            "rev-parse",
+            "--verify",
+            f"{candidate}^{{commit}}",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    ).stdout.strip()
+    if resolved != candidate:
+        raise RuntimeError("Git candidate does not resolve exactly")
+    tree_output = subprocess.run(
+        ["git", "-C", str(LIVE_ROOT), "ls-tree", "-rz", candidate],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ).stdout
+    expected_blobs: dict[str, str] = {}
+    for entry in tree_output.split(b"\0"):
+        if not entry:
+            continue
+        metadata, raw_path = entry.split(b"\t", 1)
+        mode, kind, object_id = metadata.decode().split()
+        if mode not in {"100644", "100755"} or kind != "blob":
+            raise RuntimeError("Git candidate contains unsupported artifact type")
+        expected_blobs[raw_path.decode()] = object_id
+    actual_paths = {
+        str(path.relative_to(root))
+        for path in root.rglob("*")
+        if path.is_file() or path.is_symlink()
+    }
+    expected_paths = set(expected_blobs) | {
+        "vendor/official-encoding/tokenizer.json",
+        "freeze-manifest.json",
+    }
+    added = sorted(actual_paths - expected_paths)
+    missing = sorted(expected_paths - actual_paths)
+    if added:
+        raise RuntimeError(f"frozen candidate contains unlisted files: {added}")
+    if missing:
+        raise RuntimeError(f"frozen candidate is missing files: {missing}")
+    for relative, object_id in expected_blobs.items():
+        path = root / relative
+        if not path.is_file() or path.is_symlink():
+            raise RuntimeError(f"Git candidate artifact type changed: {relative}")
+        raw = path.read_bytes()
+        blob_hash = hashlib.sha1(
+            f"blob {len(raw)}\0".encode() + raw,
+            usedforsecurity=False,
+        ).hexdigest()
+        if blob_hash != object_id:
+            raise RuntimeError(f"artifact differs from Git candidate: {relative}")
+    tokenizer_path = root / "vendor/official-encoding/tokenizer.json"
+    if tokenizer_path.is_symlink() or sha256(tokenizer_path) != TOKENIZER_SHA256:
+        raise RuntimeError("frozen tokenizer differs from registered artifact")
+    artifact_paths = expected_paths - {"freeze-manifest.json"}
+    if set(artifacts) != artifact_paths:
+        raise RuntimeError("freeze manifest artifact set differs from Git candidate")
     for relative, expected in artifacts.items():
         path = root / relative
-        if not path.is_file() or path.is_symlink() or sha256(path) != expected:
-            raise RuntimeError(f"frozen artifact changed: {relative}")
+        if sha256(path) != expected:
+            raise RuntimeError(f"frozen artifact manifest changed: {relative}")
     return artifacts
 
 
@@ -307,7 +418,8 @@ def build_observation(
     summary = goal.score_registered_gate("W11", "w11.context.v1", [observation])
     manifest = {
         "schema_version": 2,
-        "gate": "W11",
+        "gate": "dsv4_reference_context",
+        "qualification_authority": True,
         "candidate_hash": candidate,
         "seed_sha256": seed,
         "scorer_id": "w11.context.v1",
@@ -363,18 +475,12 @@ def main() -> int:
             )
         return 0 if result["summary"]["verdict"] == "PASS" else 1
     except Exception as error:
-        (args.out / "summary.json").write_text(
-            json.dumps(
-                {
-                    "scorer_id": "w11.context.v1",
-                    "verdict": "FAIL",
-                    "error": f"{type(error).__name__}: {error}",
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-            + "\n",
-            encoding="utf-8",
+        write_failure_triplet(
+            out=args.out,
+            candidate=args.candidate_hash,
+            seed=args.seed_sha256,
+            mode=args.mode,
+            error=error,
         )
         return 1
 

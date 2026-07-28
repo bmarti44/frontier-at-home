@@ -297,6 +297,8 @@ for index in "${indices[@]}"; do
     dsv4_launcher "$cap" 3 start >"$OUT/start-$cap.log" 2>&1
     ENGINE_ACTIVE=true
     engine_log_bytes=$(run_as_dsv4 stat -c %s "$ENGINE_LOG")
+    # Narrow the verified-path TOCTOU window to the probe exec boundary.
+    verify_frozen_candidate
     run_context_probe "$cap" "$target"
     run_as_dsv4 tail -c "+$((engine_log_bytes + 1))" "$ENGINE_LOG" \
         >"$OUT/engine-$cap.log"
