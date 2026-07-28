@@ -8,23 +8,28 @@ readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly SUBMIT=/usr/local/sbin/dsv4-context-submit
 readonly RULE=/etc/sudoers.d/dsv4-context-attestor
 readonly OLD_RULE=/etc/sudoers.d/dsv4-delegate
-readonly SUBMIT_SHA256='8297bef99d15b26732a8a9a739c07ae9''24e77112cddb051821742e41576c3f5b'
+readonly SUBMIT_SHA256='76c0f33a37f87f3bd789495c079d15d6''6e0489beae958383891a363a5c3137f0'
 
 die() { printf '63_install_context_attestor.sh: %s\n' "$*" >&2; exit 1; }
+git_as_user() {
+    /usr/sbin/runuser -u bmarti44 -- /usr/bin/env -i \
+        HOME=/nonexistent PATH=/usr/bin:/bin LANG=C.UTF-8 \
+        GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+        /usr/bin/git -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"
+}
 (( EUID == 0 )) || die "must run as root"
 [[ $# == 1 ]] || die "usage: $0 CANDIDATE_HASH"
 CANDIDATE_HASH=$1
 [[ $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ ]] || die "invalid candidate hash"
 actual=$(
-    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" \
-        rev-parse --verify "$CANDIDATE_HASH^{commit}"
+    git_as_user -C "$REPO" rev-parse --verify "$CANDIDATE_HASH^{commit}"
 ) || die "candidate does not resolve"
 [[ $actual == "$CANDIDATE_HASH" ]] || die "candidate is not exact"
 [[ $(
-    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" rev-parse HEAD
+    git_as_user -C "$REPO" rev-parse HEAD
 ) == "$CANDIDATE_HASH" ]] || die "candidate is not HEAD"
 [[ -z $(
-    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" status --porcelain
+    git_as_user -C "$REPO" status --porcelain
 ) ]] || die "repository is not clean"
 
 submit_temporary=$(/usr/bin/mktemp /run/dsv4-context-submit.XXXXXX)
@@ -34,7 +39,7 @@ cleanup() {
     /usr/bin/rm -f -- "$submit_temporary"
 }
 trap cleanup EXIT
-/usr/bin/git -c safe.directory="$REPO" -C "$REPO" \
+git_as_user -C "$REPO" \
     show "$CANDIDATE_HASH:scripts/64_context_submit.sh" >"$submit_temporary"
 actual_submit_sha=$(/usr/bin/sha256sum "$submit_temporary")
 [[ ${actual_submit_sha%% *} == "$SUBMIT_SHA256" ]] ||

@@ -10,6 +10,7 @@ readonly STATE_ROOT=/var/lib/dsv4-context
 readonly CANDIDATE_ROOT=$STATE_ROOT/candidates
 readonly ATTEMPT_ROOT=$STATE_ROOT/attempts
 readonly MODEL_ROOT=$STATE_ROOT/models/deepseek-v4-flash
+readonly MODEL_PARENT=$STATE_ROOT/models
 readonly MODEL_SOURCE=$REPO/weights/unsloth-ud-q2_k_xl
 readonly MODEL_FILES=(
     DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
@@ -18,6 +19,13 @@ readonly MODEL_FILES=(
 )
 
 die() { printf 'dsv4-context-submit: %s\n' "$*" >&2; exit 1; }
+
+git_as_user() {
+    /usr/sbin/runuser -u bmarti44 -- /usr/bin/env -i \
+        HOME=/nonexistent PATH=/usr/bin:/bin LANG=C.UTF-8 \
+        GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+        /usr/bin/git -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"
+}
 
 [[ $# == 4 ]] || die "usage: $0 TAG auto CANDIDATE_HASH MODE"
 TAG=$1
@@ -31,11 +39,11 @@ MODE=$4
 [[ $MODE == one-million || $MODE == graduated ]] || die "invalid mode"
 
 actual=$(
-    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" rev-parse HEAD
+    git_as_user -C "$REPO" rev-parse HEAD
 ) || die "cannot resolve candidate"
 [[ $actual == "$CANDIDATE_HASH" ]] || die "candidate hash changed"
 [[ -z $(
-    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" status --porcelain
+    git_as_user -C "$REPO" status --porcelain
 ) ]] || die "repository is not clean"
 /usr/bin/systemctl is-active --quiet display-manager.service &&
     die "display manager must remain inactive"
@@ -45,22 +53,41 @@ actual=$(
     die "GLM process record exists"
 
 /usr/bin/install -d -o root -g root -m 0711 \
-    "$STATE_ROOT" "$CANDIDATE_ROOT" "$ATTEMPT_ROOT"
-/usr/bin/install -d -o root -g root -m 0700 "$MODEL_ROOT"
+    "$STATE_ROOT" "$CANDIDATE_ROOT" "$ATTEMPT_ROOT" "$MODEL_PARENT"
+model_valid=true
 for name in "${MODEL_FILES[@]}"; do
-    source_path=$MODEL_SOURCE/$name
     protected_path=$MODEL_ROOT/$name
-    [[ -f $source_path && ! -L $source_path ]] ||
-        die "registered model source is invalid: $name"
-    if [[ ! -e $protected_path ]]; then
-        /usr/bin/ln -- "$source_path" "$protected_path"
+    if [[ ! -f $protected_path || -L $protected_path ]] ||
+        [[ $(/usr/bin/stat -c %u "$protected_path" 2>/dev/null) != 0 ]] ||
+        [[ $(/usr/bin/stat -c %h "$protected_path" 2>/dev/null) != 1 ]]; then
+        model_valid=false
     fi
-    [[ -f $protected_path && ! -L $protected_path ]] ||
-        die "protected model artifact is invalid: $name"
-    /usr/bin/chown root:root "$protected_path"
-    /usr/bin/chmod 0444 "$protected_path"
 done
-/usr/bin/chmod 0555 "$MODEL_ROOT"
+if ! "$model_valid"; then
+    model_temporary=$MODEL_PARENT/.deepseek-v4-flash-copy-$CANDIDATE_HASH
+    [[ ! -e $model_temporary ]] ||
+        die "protected model temporary path already exists"
+    /usr/bin/install -d -o root -g root -m 0700 "$model_temporary"
+    for name in "${MODEL_FILES[@]}"; do
+        source_path=$MODEL_SOURCE/$name
+        [[ -f $source_path && ! -L $source_path ]] ||
+            die "registered model source is invalid: $name"
+        printf 'Protecting model shard %s...\n' "$name"
+        /usr/bin/cp --reflink=never --sparse=always -- \
+            "$source_path" "$model_temporary/$name"
+        /usr/bin/chown root:root "$model_temporary/$name"
+        /usr/bin/chmod 0444 "$model_temporary/$name"
+        [[ $(/usr/bin/stat -c %h "$model_temporary/$name") == 1 ]] ||
+            die "protected model shard is not an independent inode"
+    done
+    /usr/bin/chmod 0555 "$model_temporary"
+    if [[ -e $MODEL_ROOT ]]; then
+        replaced=$MODEL_PARENT/deepseek-v4-flash-replaced-$CANDIDATE_HASH
+        [[ ! -e $replaced ]] || die "protected model replacement already exists"
+        /usr/bin/mv -- "$MODEL_ROOT" "$replaced"
+    fi
+    /usr/bin/mv -- "$model_temporary" "$MODEL_ROOT"
+fi
 OUT=$ATTEMPT_ROOT/dsv4-context-$TAG
 [[ ! -e $OUT ]] || die "refusing to overwrite $OUT"
 /usr/bin/install -d -o root -g root -m 0700 "$OUT"
@@ -68,8 +95,7 @@ OUT=$ATTEMPT_ROOT/dsv4-context-$TAG
 FROZEN=$CANDIDATE_ROOT/$CANDIDATE_HASH
 if [[ ! -d $FROZEN ]]; then
     /usr/bin/install -d -o root -g root -m 0700 "$FROZEN"
-    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" \
-        archive "$CANDIDATE_HASH" |
+    git_as_user -C "$REPO" archive "$CANDIDATE_HASH" |
         /usr/bin/tar -x -C "$FROZEN"
     /usr/bin/install -D -o root -g root -m 0444 \
         "$REPO/vendor/official-encoding/tokenizer.json" \

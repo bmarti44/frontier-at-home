@@ -41,6 +41,33 @@ JOURNAL_TAG = "dsv4-context-witness"
 QUALIFICATION_UNIT = "dsv4-context-graduation.service"
 
 
+def git_command(*arguments: str) -> list[str]:
+    command = [
+        "/usr/bin/git",
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
+        *arguments,
+    ]
+    if os.geteuid() != 0:
+        return command
+    return [
+        "/usr/sbin/runuser",
+        "-u",
+        "bmarti44",
+        "--",
+        "/usr/bin/env",
+        "-i",
+        "HOME=/nonexistent",
+        "PATH=/usr/bin:/bin",
+        "LANG=C.UTF-8",
+        "GIT_CONFIG_NOSYSTEM=1",
+        "GIT_CONFIG_GLOBAL=/dev/null",
+        *command,
+    ]
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -352,17 +379,14 @@ def fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
 
 def git_commit_time(candidate: str) -> str:
     return subprocess.run(
-        [
-            "/usr/bin/git",
-            "-c",
-            f"safe.directory={LIVE_ROOT}",
+        git_command(
             "-C",
             str(LIVE_ROOT),
             "show",
             "-s",
             "--format=%cI",
             candidate,
-        ],
+        ),
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -549,14 +573,13 @@ def verify_freeze(root: Path, candidate: str) -> dict[str, str]:
     if not isinstance(artifacts, dict) or not artifacts:
         raise RuntimeError("frozen artifact manifest is empty")
     resolved = subprocess.run(
-        [
-            "/usr/bin/git",
+        git_command(
             "-C",
             str(LIVE_ROOT),
             "rev-parse",
             "--verify",
             f"{candidate}^{{commit}}",
-        ],
+        ),
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -566,16 +589,13 @@ def verify_freeze(root: Path, candidate: str) -> dict[str, str]:
     if resolved != candidate:
         raise RuntimeError("Git candidate does not resolve exactly")
     tree_output = subprocess.run(
-        [
-            "/usr/bin/git",
-            "-c",
-            f"safe.directory={LIVE_ROOT}",
+        git_command(
             "-C",
             str(LIVE_ROOT),
             "ls-tree",
             "-rz",
             candidate,
-        ],
+        ),
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
