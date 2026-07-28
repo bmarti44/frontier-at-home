@@ -107,6 +107,7 @@ def w11_record(hashes=None):
             {
                 "timestamp_seconds": index * 0.25,
                 "available_gib": 10.0 + index / 10,
+                "swap_current_bytes": 0,
             }
             for index in range(29)
         ],
@@ -463,6 +464,12 @@ class FormulaTests(unittest.TestCase):
         truncated_failure = json.loads(json.dumps(passing))
         truncated_failure["stages"][-1]["truncated"] = True
         fail_mutations.append(truncated_failure)
+        length_failure = json.loads(json.dumps(passing))
+        length_failure["stages"][-1]["finish_reason"] = "length"
+        fail_mutations.append(length_failure)
+        swap_failure = json.loads(json.dumps(passing))
+        swap_failure["memory_samples"][-1]["swap_current_bytes"] = 4096
+        fail_mutations.append(swap_failure)
         fake_graduation = json.loads(json.dumps(passing))
         for stage in fake_graduation["stages"][:3]:
             stage["processed_tokens"] = 1
@@ -497,6 +504,7 @@ class FormulaTests(unittest.TestCase):
                             {
                                 "timestamp_seconds": 7.0,
                                 "available_gib": "10.0",
+                                "swap_current_bytes": 0,
                             },
                         ],
                     }
@@ -513,6 +521,7 @@ class FormulaTests(unittest.TestCase):
                             {
                                 "timestamp_seconds": 7.0,
                                 "available_gib": 10**10000,
+                                "swap_current_bytes": 0,
                             },
                         ],
                     }

@@ -1,0 +1,17 @@
+RED confirmation: 2026-07-28
+Candidate before implementation: b2ac8b3ebd7e582059b7e09d8b94a3102ecb7aa0
+Command:
+  python3 -m unittest scripts.tests.test_dsv4_context_graduation
+
+Result: FAILED (failures=2, errors=2)
+
+Genuine unchanged-production failures:
+- AttributeError: dsv4_context_probe has no parse_engine_progress
+- AttributeError: dsv4_context_probe has no validate_completion
+- RuntimeMaxSec remained 14400 instead of the tested 43200
+- MemorySwapMax=0, frozen-candidate execution, and fixed W11 scoring were absent
+- worker telemetry omitted swap_current_bytes
+
+The additional W11 mutation test also fails on the unchanged scorer because
+memory samples do not yet accept/require swap_current_bytes and finish_reason
+"length" is not independently rejected when truncated is false.

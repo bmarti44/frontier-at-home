@@ -63,6 +63,66 @@ class ContextProbeTests(unittest.TestCase):
             ]
         )
 
+    def test_engine_progress_is_required_and_cannot_be_faked_by_usage(self):
+        probe = load_probe()
+        log = "\n".join(
+            (
+                "I slot print_timing: id 0 | task 7 | prompt processing, "
+                "n_tokens = 999488, progress = 1.00",
+                "I slot print_timing: id 0 | task 7 | prompt processing, "
+                "n_tokens = 1000000, progress = 1.00",
+            )
+        )
+        evidence = probe.parse_engine_progress(log, task_id=7)
+        self.assertEqual(evidence["evaluated_tokens"], 1_000_000)
+        with self.assertRaisesRegex(RuntimeError, "engine progress"):
+            probe.parse_engine_progress("", task_id=7)
+        with self.assertRaisesRegex(RuntimeError, "target"):
+            probe.require_token_count_agreement(
+                requested_tokens=1_000_000,
+                usage_tokens=1_000_000,
+                engine_tokens=999_488,
+            )
+
+    def test_only_final_content_can_satisfy_retrieval_and_stop_is_required(self):
+        probe = load_probe()
+        records = [
+            {"case_id": "needle-0", "value": "RECORD_ALPHA_aaa"},
+            {"case_id": "needle-1", "value": "RECORD_BRAVO_bbb"},
+            {"case_id": "needle-2", "value": "RECORD_CHARLIE_ccc"},
+        ]
+        valid = (
+            "RECORD_ALPHA_aaa, RECORD_BRAVO_bbb, "
+            "RECORD_CHARLIE_ccc, NO_EXTRA_RECORD"
+        )
+        self.assertFalse(
+            probe.validate_completion(
+                content="",
+                reasoning_content=valid,
+                finish_reason="stop",
+                done=True,
+                records=records,
+            )["pass"]
+        )
+        self.assertFalse(
+            probe.validate_completion(
+                content=valid,
+                reasoning_content="",
+                finish_reason="length",
+                done=True,
+                records=records,
+            )["pass"]
+        )
+        self.assertTrue(
+            probe.validate_completion(
+                content=valid,
+                reasoning_content="",
+                finish_reason="stop",
+                done=True,
+                records=records,
+            )["pass"]
+        )
+
 
 class ContextWorkerContractTests(unittest.TestCase):
     def test_preload_admission_allows_measured_headless_baseline(self):
@@ -86,7 +146,11 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START", worker)
         self.assertIn("--required-gib 110", worker)
         self.assertIn("systemd-run --user", scheduler)
-        self.assertIn("RuntimeMaxSec=14400", scheduler)
+        self.assertIn("RuntimeMaxSec=43200", scheduler)
+        self.assertIn("MemorySwapMax=0", scheduler)
+        self.assertIn("TimeoutStopSec=600", scheduler)
+        self.assertIn("frozen-candidate", scheduler)
+        self.assertIn("--directory=", scheduler)
         self.assertIn("repository is not clean", scheduler)
         self.assertIn("candidate hash changed", scheduler)
         self.assertNotIn("must run as root", scheduler)
@@ -151,6 +215,9 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertNotIn("glm_safe_run.sh", source)
         self.assertNotIn("gguf-glm", source)
         self.assertNotIn("systemctl start display-manager.service", source)
+        self.assertIn('"swap_current_bytes"', source)
+        self.assertIn("w11.context.v1", source)
+        self.assertNotIn('"verdict": "PASS" if (', source)
 
     def test_scheduler_is_detached_candidate_bound_and_serialized(self):
         source = SCHEDULER.read_text(encoding="utf-8")
