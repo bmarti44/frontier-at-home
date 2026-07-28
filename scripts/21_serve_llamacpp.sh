@@ -757,19 +757,19 @@ do_start() {
     local budget rc
     set +e
     qualification_floor_gib=${DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB:-0}
-    [[ $qualification_floor_gib == 0 || $qualification_floor_gib == 15 ]] \
-        || die 'DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB must be 0 or 15'
+    [[ $qualification_floor_gib == 0 || $qualification_floor_gib == 14 ]] \
+        || die 'DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB must be 0 or 14'
     watchdog_floor_gib=${DSV4_WATCHDOG_FLOOR_GIB:-18}
     [[ $watchdog_floor_gib =~ ^[0-9]{1,2}$ ]] \
         || die 'DSV4_WATCHDOG_FLOOR_GIB must be a bounded integer'
     watchdog_floor_gib=$((10#$watchdog_floor_gib))
-    if (( qualification_floor_gib == 15 )); then
-        (( watchdog_floor_gib == 15 )) ||
-            die '1M qualification requires DSV4_WATCHDOG_FLOOR_GIB=15'
+    if (( qualification_floor_gib == 14 )); then
+        (( watchdog_floor_gib == 14 )) ||
+            die '1M qualification requires DSV4_WATCHDOG_FLOOR_GIB=14'
         # Reject textually as well as numerically: a huge CTX congruent to 1M
         # must not pass through Bash integer wraparound (CTX != 1048576).
         [[ $CTX == 1048576 ]] ||
-            die '15 GiB qualification floor requires CTX=1048576'
+            die '14 GiB qualification floor requires CTX=1048576'
     elif (( watchdog_floor_gib < 18 || watchdog_floor_gib > 64 )); then
         die 'DSV4_WATCHDOG_FLOOR_GIB must be between 18 and 64'
     fi
@@ -781,9 +781,9 @@ do_start() {
     [[ $mem_floor_gib =~ ^[0-9]{1,3}$ ]] \
         || die 'DSV4_MEM_FLOOR_GIB must be a bounded integer'
     mem_floor_gib=$((10#$mem_floor_gib))
-    if (( qualification_floor_gib == 15 )); then
-        (( mem_floor_gib >= 15 && mem_floor_gib <= 119 )) ||
-            die '1M qualification DSV4_MEM_FLOOR_GIB must be between 15 and 119'
+    if (( qualification_floor_gib == 14 )); then
+        (( mem_floor_gib >= 14 && mem_floor_gib <= 119 )) ||
+            die '1M qualification DSV4_MEM_FLOOR_GIB must be between 14 and 119'
     elif (( mem_floor_gib < 18 || mem_floor_gib > 119 )); then
         die 'DSV4_MEM_FLOOR_GIB must be between 18 and 119'
     fi
@@ -802,9 +802,9 @@ do_start() {
     measured_headless_overhead_gib=${DSV4_MEASURED_HEADLESS_OVERHEAD_GIB:-0}
     [[ $measured_headless_overhead_gib == 0 || $measured_headless_overhead_gib == 3 ]] \
         || die 'DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3'
-    if (( qualification_floor_gib == 15 &&
+    if (( qualification_floor_gib == 14 &&
             measured_headless_overhead_gib != 3 )); then
-        die '15 GiB qualification floor requires measured headless admission'
+        die '14 GiB qualification floor requires measured headless admission'
     fi
     if (( measured_headless_overhead_gib == 3 )); then
         need_command systemctl

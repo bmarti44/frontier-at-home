@@ -77,12 +77,12 @@ dsv4_launcher() {
     shift 2
     # Normal/recovery contract: DSV4_MEM_FLOOR_GIB=18 and
     # DSV4_WATCHDOG_FLOOR_GIB=18. The exact 1M branch alone exports
-    # DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=15.
+    # DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14.
     local floor=18 qualification_floor=0 batch=2048 ubatch=512 retry=0
     local -a hold_override=()
     if (( context == 1048576 && measured == 3 )); then
-        floor=15
-        qualification_floor=15
+        floor=14
+        qualification_floor=14
         batch=512
         ubatch=256
     fi
