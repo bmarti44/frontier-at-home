@@ -88,6 +88,11 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("upstream_port=8013", installer)
         self.assertNotIn("readonly PORT=8011", source)
 
+    def test_deepseek_readiness_requires_the_exact_1m_context(self):
+        source = SCRIPT.read_text()
+        self.assertIn('"/slots"', source)
+        self.assertIn('slot["n_ctx"] != 1048576', source)
+
     def test_switch_runs_deepseek_as_engine_user_with_frozen_1m_profile(self):
         source = SCRIPT.read_text()
         self.assertIn(

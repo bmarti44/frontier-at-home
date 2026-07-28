@@ -1,0 +1,11 @@
+Command:
+python3 -m unittest scripts.tests.test_engine_switch.EngineSwitchTests.test_deepseek_readiness_requires_the_exact_1m_context
+
+Result:
+FAIL
+
+The switcher did not query /slots or require n_ctx == 1048576, so a healthy
+8K process could incorrectly satisfy idempotent 1M profile validation.
+
+Ran 1 test
+FAILED (failures=1)
