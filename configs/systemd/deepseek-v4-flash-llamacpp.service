@@ -30,6 +30,9 @@ Environment=DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14
 Environment=DSV4_MEM_FLOOR_GIB=14
 Environment=DSV4_WATCHDOG_FLOOR_GIB=14
 Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=3
+# This fixed qualified profile may restart after a preserved prior-attempt
+# marker; the independent watchdog and systemd start-rate limit remain active.
+Environment=DSV4_ALLOW_RETRY_AFTER_FAILED_START=1
 # Production serves the fused-hyper-connection build (llama.cpp 0dc74e3, PR
 # #25585): validated correct (GSM8K dev 97/100, identical to the 32e789fd
 # benchmark build; needle retrieval + golden gates pass) and ~14% faster decode
