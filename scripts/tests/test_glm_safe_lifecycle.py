@@ -17,6 +17,19 @@ SAFE = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
 FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
+class CandidateLifecycleSourceTests(unittest.TestCase):
+    def test_exit_race_enters_shutdown_grace_before_identity_failure(self):
+        source = SAFE.read_text(encoding="utf-8")
+        shutdown = source.index("if [[ -z $CURRENT_STATE")
+        identity = source.index(
+            'plog "FATAL executed candidate identity changed pid=$EXECUTED_PID',
+            shutdown,
+        )
+        guarded = source[shutdown:identity]
+        self.assertIn("-z $CURRENT_HASH", guarded)
+        self.assertIn("-z $CURRENT_DEVICE_INODE", guarded)
+
+
 class CandidateLifecycleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
