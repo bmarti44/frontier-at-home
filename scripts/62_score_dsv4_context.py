@@ -18,6 +18,10 @@ from pathlib import Path
 from typing import Any
 
 
+# Frozen candidates are immutable evidence inputs. Dynamic imports must never
+# create __pycache__ entries inside the candidate after its manifest is sealed.
+sys.dont_write_bytecode = True
+
 ROOT = Path(__file__).resolve().parent.parent
 LIVE_ROOT = Path("/home/bmarti44/spark-deepseek-v4-flash")
 BINARY = Path(
