@@ -91,6 +91,12 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("candidate hash changed", scheduler)
         self.assertNotIn("must run as root", scheduler)
 
+    def test_user_probe_writes_evidence_as_evidence_owner(self):
+        worker = WORKER.read_text(encoding="utf-8")
+        self.assertIn("run_context_probe()", worker)
+        self.assertIn("HOME=/home/bmarti44 USER=bmarti44", worker)
+        self.assertIn('run_context_probe "$cap" "$target"', worker)
+
     def test_measured_headless_admission_is_default_off_and_bounded(self):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_MEASURED_HEADLESS_OVERHEAD_GIB", source)
