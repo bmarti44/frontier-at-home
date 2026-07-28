@@ -115,12 +115,14 @@ def build_fixture(tokenizer: Any, target: int, seed_sha256: str) -> dict[str, An
 
 
 def validate_retrieval(output: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    answer = lines[-1] if lines else ""
     expected = [record["value"] for record in records]
-    observed = RECORD_PATTERN.findall(output)
+    observed = RECORD_PATTERN.findall(answer)
     checks = {
-        "all_expected_once": all(output.count(value) == 1 for value in expected),
+        "all_expected_once": all(answer.count(value) == 1 for value in expected),
         "ordered": observed == expected,
-        "negative_control": "NO_EXTRA_RECORD" in output,
+        "negative_control": answer.count("NO_EXTRA_RECORD") == 1,
         "no_unexpected_record": set(observed) == set(expected),
     }
     return {
@@ -202,6 +204,31 @@ def require_token_count_agreement(
             "engine progress and usage token counts disagree: "
             f"{engine_tokens} != {usage_tokens}"
         )
+
+
+def completion_payload(prompt: str, seed_sha256: str) -> dict[str, Any]:
+    """Return the frozen deterministic, non-thinking retrieval request."""
+    return {
+        "model": "deepseek-v4-flash",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 256,
+        "temperature": 0,
+        "seed": int(seed_sha256[:8], 16),
+        "chat_template_kwargs": {"enable_thinking": False},
+        "stream": True,
+        "stream_options": {"include_usage": True},
+    }
+
+
+def completed_text_token_count(*, usage_tokens: int, event_count: int) -> int:
+    """Bind output coverage while allowing llama.cpp's terminal EOS token."""
+    if event_count <= 0 or usage_tokens not in {event_count, event_count + 1}:
+        raise RuntimeError(
+            "completion token timestamp coverage differs by more than terminal EOS"
+        )
+    return event_count
+
+
 def stream_completion(
     base_url: str, payload: dict[str, Any], api_key: str | None
 ) -> dict[str, Any]:
@@ -313,15 +340,7 @@ def main() -> int:
                 raise ValueError("API key is empty")
         response = stream_completion(
             args.base_url,
-            {
-                "model": "deepseek-v4-flash",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 128,
-                "temperature": 0,
-                "seed": int(args.seed_sha256[:8], 16),
-                "stream": True,
-                "stream_options": {"include_usage": True},
-            },
+            completion_payload(prompt, args.seed_sha256),
             api_key,
         )
         usage = response["usage"]
@@ -333,6 +352,10 @@ def main() -> int:
             raise RuntimeError("prompt token count is invalid")
         if not isinstance(completed, int) or isinstance(completed, bool):
             raise RuntimeError("completion token count is invalid")
+        completed_text_tokens = completed_text_token_count(
+            usage_tokens=completed,
+            event_count=len(response["event_timestamps"]),
+        )
         completion = validate_completion(
             content=response["content"],
             reasoning_content=response["reasoning_content"],
@@ -344,10 +367,7 @@ def main() -> int:
             "server_processed_target": processed >= args.target_tokens,
             "within_context_cap": processed <= args.context_cap,
             "response_identity": len(response["response_ids"]) == 1,
-            "completion_token_timestamps": (
-                completed > 0
-                and len(response["event_timestamps"]) == completed
-            ),
+            "completion_token_timestamps": completed_text_tokens > 0,
             "strict_completion": completion["pass"],
         }
         result.update(
@@ -357,7 +377,8 @@ def main() -> int:
                 "records": fixture["records"],
                 "expected_values": values,
                 "processed_tokens": processed,
-                "completed_output_tokens": completed,
+                "completed_output_tokens": completed_text_tokens,
+                "server_completion_tokens": completed,
                 "response": response,
                 "completion": completion,
                 "truncated": response["finish_reason"] != "stop",
