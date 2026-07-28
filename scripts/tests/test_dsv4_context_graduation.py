@@ -366,7 +366,7 @@ class ContextProbeTests(unittest.TestCase):
             scorer.verify_journal_witness(tampered, receipt)
         self.assertEqual(receipt["uid"], "1000")
         self.assertTrue(receipt["boot_id"])
-        self.assertTrue(receipt["invocation_id"])
+        self.assertTrue(receipt["scope_id"])
 
     def test_security_subprocesses_ignore_ambient_path_and_python_hooks(self):
         scorer = load_scorer()
@@ -389,6 +389,30 @@ class ContextProbeTests(unittest.TestCase):
         self.assertIn('PYTHONPATH=', worker)
         self.assertIn('"$LIVE_REPO/.venv-harness/bin/python" -I', worker)
         self.assertIn('"$REPO/.venv-harness/bin/python" -I', scheduler)
+
+    def test_journal_artifact_witness_rejects_post_seal_rewrite(self):
+        scorer = load_scorer()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "stage.json").write_text(
+                '{"pass":true}\n', encoding="utf-8"
+            )
+            (root / "engine.log").write_text(
+                "completed batch\n", encoding="utf-8"
+            )
+            witness = scorer.create_artifact_witness(
+                root=root,
+                event="stage-complete",
+                candidate="a" * 40,
+                seed="b" * 64,
+                artifacts=["stage.json", "engine.log"],
+            )
+            scorer.verify_artifact_witness(root=root, witness=witness)
+            (root / "stage.json").write_text(
+                '{"pass":false}\n', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(RuntimeError, "artifact witness"):
+                scorer.verify_artifact_witness(root=root, witness=witness)
 
 
 class ContextWorkerContractTests(unittest.TestCase):

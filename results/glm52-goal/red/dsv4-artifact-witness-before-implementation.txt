@@ -1,0 +1,12 @@
+RED confirmation: 2026-07-28
+Candidate under repair: 3fd5dfb
+
+Generic journald payload binding now has a production integration test, but
+stage and final artifacts are not yet hashed into that trusted channel. A
+same-user process can therefore rewrite stage JSON, engine slices or the final
+triplet without invalidating acceptance.
+
+The new mutation test requires a canonical artifact map to be journal-witnessed
+with candidate and seed. Exact bytes verify; rewriting a sealed stage must fail.
+It is RED because create_artifact_witness and verify_artifact_witness do not
+exist.
