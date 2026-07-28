@@ -191,7 +191,20 @@ PY
 
 stop_profile() {
     case "$1" in
-        dsv4) dsv4_launcher stop ;;
+        dsv4)
+            if dsv4_launcher stop; then
+                return 0
+            fi
+            # The launcher fails closed after removing a dead, identity-checked
+            # state record. Treat only that exact absent-and-unreachable result
+            # as already stopped; a live or ambiguous endpoint still fails.
+            [[ ! -e /run/dsv4/llamacpp.state.json ]] || return 1
+            if clean_curl -fsS --max-time 2 \
+                    "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
+                return 1
+            fi
+            return 0
+            ;;
         glm52) stop_glm_verified ;;
         "") return 0 ;;
         *) die "unknown previous profile $1" ;;
