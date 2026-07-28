@@ -145,6 +145,8 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("dsv4-engine-restore.service", installer)
         self.assertIn("52_engine_switch.sh restore", unit)
         self.assertIn("WantedBy=multi-user.target", unit)
+        restore = source[source.index('if [[ $command == restore ]]') :]
+        self.assertIn('stop_profile "$command"', restore)
         self.assertIn("After=dsv4-authhelper.service", unit)
 
     def test_control_plane_installer_cannot_start_a_model(self):
