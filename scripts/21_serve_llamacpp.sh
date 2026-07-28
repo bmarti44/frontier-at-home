@@ -579,14 +579,21 @@ verify_live_artifacts() {
     local selected
     selected=$(printf '%s\n' "${weights[@]}")
     python3 - "$WEIGHTS_MANIFEST" "$BUILD_MANIFEST" "$BINARY" \
-        "$verify_weights" "$selected" <<'PY'
+        "$verify_weights" "$evict_verified_weight_cache" "$selected" <<'PY'
 import hashlib
 import json
 import os
 import stat
 import sys
 
-weights_manifest_path, build_manifest_path, binary_path, verify_mode, selected = sys.argv[1:]
+(
+    weights_manifest_path,
+    build_manifest_path,
+    binary_path,
+    verify_mode,
+    evict_verified_weight_cache,
+    selected,
+) = sys.argv[1:]
 paths = selected.splitlines()
 try:
     if os.path.islink(binary_path):
@@ -659,8 +666,12 @@ try:
             with open(path, "rb") as shard:
                 for chunk in iter(lambda: shard.read(16 * 1024 * 1024), b""):
                     shard_digest.update(chunk)
-            if shard_digest.hexdigest() != entry["sha256"]:
-                raise ValueError(f"model shard sha256 mismatch: {path}")
+                if shard_digest.hexdigest() != entry["sha256"]:
+                    raise ValueError(f"model shard sha256 mismatch: {path}")
+                if evict_verified_weight_cache == "1":
+                    os.posix_fadvise(
+                        shard.fileno(), 0, 0, os.POSIX_FADV_DONTNEED
+                    )
 except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
     print(f"live artifact integrity check failed: {error}", file=sys.stderr)
     sys.exit(1)
@@ -687,6 +698,16 @@ do_start() {
     verify_weights=${DSV4_VERIFY_WEIGHTS:-size}
     [[ $verify_weights == size || $verify_weights == full ]] \
         || die 'DSV4_VERIFY_WEIGHTS must be size or full'
+    # Full hashing reads every weight byte immediately before the no-mmap CUDA
+    # load. Qualification can evict only those verified file pages so the
+    # driver does not race a large reclaim spike. Default-off for production.
+    evict_verified_weight_cache=${DSV4_EVICT_VERIFIED_WEIGHT_CACHE:-0}
+    [[ $evict_verified_weight_cache == 0 ||
+        $evict_verified_weight_cache == 1 ]] \
+        || die 'DSV4_EVICT_VERIFIED_WEIGHT_CACHE must be 0 or 1'
+    if (( evict_verified_weight_cache )) && [[ $verify_weights != full ]]; then
+        die 'weight-cache eviction requires DSV4_VERIFY_WEIGHTS=full'
+    fi
 
     SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) || die 'cannot resolve script directory'
     REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P) || die 'cannot resolve repository root'

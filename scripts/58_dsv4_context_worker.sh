@@ -11,6 +11,7 @@ readonly LAUNCHER=$REPO/scripts/21_serve_llamacpp.sh
 readonly PROBE=$REPO/scripts/57_dsv4_context_probe.py
 readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly FAULT_PATTERN='NV_ERR_NO_MEMORY|NVRM.*Xid|oom-kill|Out of memory: Killed process|Killed process .*total-vm'
+readonly PREEXISTING_FATAL_PATTERN='NVRM.*Xid|oom-kill|Out of memory: Killed process|Killed process .*total-vm'
 readonly CAPS=(131072 262144 524288 1048576)
 readonly TARGETS=(130000 260000 520000 1000000)
 readonly SAFE_CTX=8192 # CTX=8192 is the proven production recovery profile.
@@ -116,6 +117,7 @@ dsv4_launcher() {
         DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
         DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
         MODEL_PATH="$MODEL_PATH" DSV4_VERIFY_WEIGHTS=full \
+        DSV4_EVICT_VERIFIED_WEIGHT_CACHE=1 \
         DSV4_MEM_FLOOR_GIB="$floor" DSV4_WATCHDOG_FLOOR_GIB="$floor" \
         DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB="$qualification_floor" \
         DSV4_MEASURED_HEADLESS_OVERHEAD_GIB="$measured" \
@@ -176,6 +178,16 @@ start_telemetry() {
         done
     ) >>"$OUT/memory.jsonl" &
     TELEMETRY_PID=$!
+}
+
+require_no_kernel_fault() {
+    journalctl -k --after-cursor "$KERNEL_CURSOR" --no-pager \
+        >"$OUT/kernel-current.log" 2>&1
+    if grep -Eiq "$FAULT_PATTERN" "$OUT/kernel-current.log"; then
+        RESTORE_ALLOWED=false
+        echo "new GPU/OOM kernel fault detected; refusing to advance" >&2
+        return 1
+    fi
 }
 
 activate_user_hold() {
@@ -292,8 +304,8 @@ KERNEL_CURSOR=$(
     journalctl -k -n 0 --show-cursor --no-pager | sed -n 's/^-- cursor: //p'
 )
 [[ -n $KERNEL_CURSOR ]] || { echo "cannot freeze kernel cursor" >&2; exit 1; }
-if journalctl -k -b --no-pager | grep -Eiq "$FAULT_PATTERN"; then
-    echo "pre-existing kernel GPU/OOM fault on current boot" >&2
+if journalctl -k -b --no-pager | grep -Eiq "$PREEXISTING_FATAL_PATTERN"; then
+    echo "pre-existing fatal kernel GPU/OOM fault on current boot" >&2
     exit 1
 fi
 # The root scheduler pauses the guard. The user scheduler instead creates the
@@ -334,6 +346,7 @@ for index in "${indices[@]}"; do
     target=${TARGETS[$index]}
     dsv4_launcher "$cap" 3 start >"$OUT/start-$cap.log" 2>&1
     ENGINE_ACTIVE=true
+    require_no_kernel_fault
     engine_log_bytes=$(run_as_dsv4 stat -c %s "$ENGINE_LOG")
     # Narrow the verified-path TOCTOU window to the probe exec boundary.
     verify_frozen_candidate
@@ -350,6 +363,7 @@ for index in "${indices[@]}"; do
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --witness-stage "$cap"
+    require_no_kernel_fault
     (( probe_rc == 0 ))
     dsv4_launcher "$cap" 3 stop >"$OUT/stop-$cap.log" 2>&1
     ENGINE_ACTIVE=false
