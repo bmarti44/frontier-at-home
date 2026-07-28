@@ -62,6 +62,10 @@ class ContextProbeTests(unittest.TestCase):
             "RECORD_CHARLIE_ccc, NO_EXTRA_RECORD"
         )
         self.assertTrue(probe.validate_retrieval(valid, records)["pass"])
+        payload_only = "aaa, bbb, ccc, NO_EXTRA_RECORD"
+        self.assertTrue(
+            probe.validate_retrieval(payload_only, records)["pass"]
+        )
         verbose = (
             "AUDIT RECORD 1: RECORD_ALPHA_aaa\n"
             "AUDIT RECORD 2: RECORD_BRAVO_bbb\n"

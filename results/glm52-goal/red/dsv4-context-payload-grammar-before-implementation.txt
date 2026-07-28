@@ -1,0 +1,12 @@
+RED confirmation: 2026-07-28
+Production-path seed 0x2222... probe:
+  finish_reason=stop
+  reasoning_content_length=0
+  exact final line:
+    e00f3d15d0e5f436, 7a4363c758e4856e, 5d23a148ea29e8e5, NO_EXTRA_RECORD
+
+Those are the exact seed-derived payloads from the three ordered
+RECORD_ALPHA_/BRAVO_/CHARLIE_ markers, but the prior grammar accepted only the
+complete prefixed strings. The new test requires either complete markers or
+their exact derived payloads, still in order, with exactly three values and the
+negative-control sentinel. Extra, missing, altered, or reordered values fail.
