@@ -108,7 +108,7 @@ class EngineSwitchTests(unittest.TestCase):
             "CTX=1048576",
             "DSV4_PARALLEL=1",
             "DSV4_NO_MMAP=1",
-            "DSV4_SPEC_TYPE=ngram-map-k4v",
+            "DSV4_SPEC_TYPE=none",
         ):
             self.assertIn(setting, source)
         self.assertIn(
@@ -127,6 +127,7 @@ class EngineSwitchTests(unittest.TestCase):
             "Environment=DSV4_UBATCH_LARGE=0",
             "Environment=CTX=1048576",
             "Environment=DSV4_PARALLEL=1",
+            "Environment=DSV4_SPEC_TYPE=none",
         ):
             self.assertIn(setting, service)
 
