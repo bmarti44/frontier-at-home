@@ -56,10 +56,12 @@ dsv4_launcher() {
         DSV4_PORT="$PORT" \
         DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
         DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
-        DSV4_MEM_FLOOR_GIB=18 DSV4_WATCHDOG_FLOOR_GIB=18 \
-        DSV4_UBATCH=512 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=0 \
-        CTX=8192 DSV4_PARALLEL=1 DSV4_NO_MMAP=1 \
-        DSV4_SPEC_TYPE=ngram-map-k4v \
+        DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14 \
+        DSV4_MEM_FLOOR_GIB=14 DSV4_WATCHDOG_FLOOR_GIB=14 \
+        DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=3 \
+        DSV4_UBATCH=256 DSV4_BATCH=512 DSV4_UBATCH_LARGE=0 \
+        CTX=1048576 DSV4_PARALLEL=1 DSV4_NO_MMAP=1 \
+        DSV4_SPEC_TYPE=none \
         "$REPO/scripts/21_serve_llamacpp.sh" "$@"
 }
 
