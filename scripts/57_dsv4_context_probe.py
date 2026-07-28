@@ -125,10 +125,8 @@ def validate_retrieval(
     absent_value: str | None = None,
 ) -> dict[str, Any]:
     lines = [line.strip() for line in output.splitlines() if line.strip()]
-    answer = lines[-1] if lines else ""
+    answer = "\n".join(lines)
     expected = [record["value"] for record in records]
-    parts = [part.strip() for part in answer.split(",")]
-    observed = parts[:3] if len(parts) == 4 else []
     alternatives = [
         {
             value,
@@ -137,6 +135,25 @@ def validate_retrieval(
         }
         for index, value in enumerate(expected, start=1)
     ]
+    candidates = []
+    if lines:
+        candidates.append([part.strip() for part in lines[-1].split(",")])
+    if len(lines) >= 4:
+        candidates.append(lines[-4:])
+    parts = next(
+        (
+            candidate
+            for candidate in candidates
+            if len(candidate) == 4
+            and all(
+                value in allowed
+                for value, allowed in zip(candidate[:3], alternatives)
+            )
+            and candidate[-1] == "NO_EXTRA_RECORD"
+        ),
+        candidates[0] if candidates else [],
+    )
+    observed = parts[:3] if len(parts) == 4 else []
     ordered = (
         len(observed) == len(expected)
         and all(value in allowed for value, allowed in zip(observed, alternatives))
