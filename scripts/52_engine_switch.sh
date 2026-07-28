@@ -360,7 +360,9 @@ if [[ $command == restore ]]; then
     if verify_serving "$command"; then
         exit 0
     fi
-    stop_profile "$command"
+    if [[ $command != dsv4 || -e /run/dsv4/llamacpp.state.json ]]; then
+        stop_profile "$command"
+    fi
     "start_$command"
     wait_model_ready "$command" ||
         die "$command boot restoration timed out or model identity is wrong"
