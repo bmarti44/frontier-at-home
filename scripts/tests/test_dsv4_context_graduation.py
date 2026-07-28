@@ -46,6 +46,24 @@ def load_scorer():
 
 
 class ContextProbeTests(unittest.TestCase):
+    def test_direct_one_million_mode_requires_only_the_maximum_stage(self):
+        scorer = load_scorer()
+        self.assertEqual(
+            scorer.context_stage_plan("one-million"),
+            ((1_048_576, 1_000_000),),
+        )
+        self.assertEqual(
+            scorer.context_stage_plan("graduated"),
+            (
+                (131_072, 130_000),
+                (262_144, 260_000),
+                (524_288, 520_000),
+                (1_048_576, 1_000_000),
+            ),
+        )
+        with self.assertRaisesRegex(RuntimeError, "mode"):
+            scorer.context_stage_plan("invalid")
+
     def test_fixture_has_exact_token_count_and_three_position_bands(self):
         probe = load_probe()
         tokenizer = probe.load_tokenizer()
