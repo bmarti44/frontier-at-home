@@ -8,7 +8,7 @@ readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly SUBMIT=/usr/local/sbin/dsv4-context-submit
 readonly RULE=/etc/sudoers.d/dsv4-context-attestor
 readonly OLD_RULE=/etc/sudoers.d/dsv4-delegate
-readonly SUBMIT_SHA256='faee973e8299b21d721128916b8e7e837''340ac24f05d763c10e26f7afae0e97b'
+readonly SUBMIT_SHA256='8297bef99d15b26732a8a9a739c07ae9''24e77112cddb051821742e41576c3f5b'
 
 die() { printf '63_install_context_attestor.sh: %s\n' "$*" >&2; exit 1; }
 (( EUID == 0 )) || die "must run as root"

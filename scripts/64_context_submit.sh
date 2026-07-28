@@ -103,9 +103,11 @@ PY
     /usr/bin/chown -R root:root "$FROZEN"
     /usr/bin/chmod -R a-w,go-rwx "$FROZEN"
 fi
-[[ -O $FROZEN && ! -L $FROZEN &&
-    -r $FROZEN/scripts/58_dsv4_context_worker.sh &&
-    ! -w $FROZEN/scripts/58_dsv4_context_worker.sh ]] ||
+worker_path=$FROZEN/scripts/58_dsv4_context_worker.sh
+worker_uid=$(/usr/bin/stat -c %u "$worker_path")
+worker_mode=$(/usr/bin/stat -c %a "$worker_path")
+[[ $worker_uid == 0 && ! -L $FROZEN && -r $worker_path ]] &&
+    (( (8#$worker_mode & 8#222) == 0 )) ||
     die "root-owned candidate snapshot is invalid"
 /usr/bin/python3 -I "$FROZEN/scripts/62_score_dsv4_context.py" \
     --candidate-hash "$CANDIDATE_HASH" --verify-only
