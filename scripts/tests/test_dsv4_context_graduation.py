@@ -500,6 +500,12 @@ class ContextWorkerContractTests(unittest.TestCase):
         submit = ATTESTOR_SUBMIT.read_text(encoding="utf-8")
         self.assertIn("/etc/sudoers.d/dsv4-delegate", installer)
         self.assertIn("/usr/local/sbin/dsv4-context-submit", installer)
+        self.assertIn("git", installer)
+        self.assertIn("CANDIDATE_HASH", installer)
+        self.assertIn("SUBMIT_SHA256", installer)
+        self.assertNotIn(
+            '"$REPO/scripts/64_context_submit.sh" "$SUBMIT"', installer
+        )
         self.assertIn("/usr/sbin/visudo -cf", installer)
         self.assertIn("NOPASSWD: /usr/local/sbin/dsv4-context-submit", installer)
         self.assertNotIn("(dsv4) NOPASSWD: ALL", installer)
@@ -507,6 +513,13 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("readonly STATE_ROOT=/var/lib/dsv4-context", submit)
         self.assertIn("CANDIDATE_ROOT=$STATE_ROOT/candidates", submit)
         self.assertIn("ATTEMPT_ROOT=$STATE_ROOT/attempts", submit)
+        self.assertIn("MODEL_ROOT=$STATE_ROOT/models/deepseek-v4-flash", submit)
+        self.assertIn("/usr/bin/ln", submit)
+        self.assertIn("/usr/bin/chown root:root", submit)
+        self.assertIn('"$FROZEN/scripts/21_serve_llamacpp.sh" status', submit)
+        self.assertNotIn(
+            '"$REPO/scripts/21_serve_llamacpp.sh" status', submit
+        )
         self.assertIn("/usr/bin/git", submit)
         self.assertIn("RuntimeMaxSec=43200", submit)
         self.assertIn("MemorySwapMax=0", submit)
