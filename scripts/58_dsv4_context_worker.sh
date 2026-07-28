@@ -216,8 +216,6 @@ indices=(0 1 2 3)
 for index in "${indices[@]}"; do
     cap=${CAPS[$index]}
     target=${TARGETS[$index]}
-    dsv4_launcher "$cap" 3 start >"$OUT/start-$cap.log" 2>&1
-    ENGINE_ACTIVE=true
     (
         trap 'exit 0' TERM INT
         while true; do
@@ -230,6 +228,8 @@ for index in "${indices[@]}"; do
         done
     ) >>"$OUT/memory.jsonl" &
     TELEMETRY_PID=$!
+    dsv4_launcher "$cap" 3 start >"$OUT/start-$cap.log" 2>&1
+    ENGINE_ACTIVE=true
     /usr/sbin/runuser -u dsv4 -- env -i \
         HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
         PATH=/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin:/usr/bin:/bin \
