@@ -452,6 +452,12 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("HOME=/home/bmarti44 USER=bmarti44", worker)
         self.assertIn('run_context_probe "$cap" "$target"', worker)
 
+    def test_scheduler_preflight_failures_emit_triplet(self):
+        scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
+        self.assertIn("trap record_scheduler_failure EXIT", scheduler)
+        self.assertIn("--record-preflight-failure", scheduler)
+        self.assertIn("SCHEDULED=true", scheduler)
+
     def test_measured_headless_admission_is_default_off_and_bounded(self):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_MEASURED_HEADLESS_OVERHEAD_GIB", source)

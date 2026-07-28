@@ -1,0 +1,10 @@
+RED confirmation: 2026-07-28
+
+Scoring exceptions emit a complete failure triplet, but scheduler failures
+after output creation do not. Archive errors, three-relay failure and
+systemd-run failure can leave an unlabeled partial attempt.
+
+The new contract requires an EXIT trap from output creation until successful
+unit scheduling. It calls the fixed preflight-failure writer and disarms only
+after systemd-run succeeds. The contract is RED because the scheduler has no
+such trap or preflight-failure command.
