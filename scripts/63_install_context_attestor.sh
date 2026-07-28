@@ -8,18 +8,38 @@ readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly SUBMIT=/usr/local/sbin/dsv4-context-submit
 readonly RULE=/etc/sudoers.d/dsv4-context-attestor
 readonly OLD_RULE=/etc/sudoers.d/dsv4-delegate
+readonly SUBMIT_SHA256='faee973e8299b21d721128916b8e7e837''340ac24f05d763c10e26f7afae0e97b'
 
 die() { printf '63_install_context_attestor.sh: %s\n' "$*" >&2; exit 1; }
 (( EUID == 0 )) || die "must run as root"
-[[ -f $REPO/scripts/64_context_submit.sh ]] || die "submitter is missing"
+[[ $# == 1 ]] || die "usage: $0 CANDIDATE_HASH"
+CANDIDATE_HASH=$1
+[[ $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ ]] || die "invalid candidate hash"
+actual=$(
+    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" \
+        rev-parse --verify "$CANDIDATE_HASH^{commit}"
+) || die "candidate does not resolve"
+[[ $actual == "$CANDIDATE_HASH" ]] || die "candidate is not exact"
+[[ $(
+    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" rev-parse HEAD
+) == "$CANDIDATE_HASH" ]] || die "candidate is not HEAD"
+[[ -z $(
+    /usr/bin/git -c safe.directory="$REPO" -C "$REPO" status --porcelain
+) ]] || die "repository is not clean"
 
-/usr/bin/install -o root -g root -m 0755 \
-    "$REPO/scripts/64_context_submit.sh" "$SUBMIT"
+submit_temporary=$(/usr/bin/mktemp /run/dsv4-context-submit.XXXXXX)
 temporary=$(/usr/bin/mktemp /etc/sudoers.d/.dsv4-context-attestor.XXXXXX)
 cleanup() {
     /usr/bin/rm -f -- "$temporary"
+    /usr/bin/rm -f -- "$submit_temporary"
 }
 trap cleanup EXIT
+/usr/bin/git -c safe.directory="$REPO" -C "$REPO" \
+    show "$CANDIDATE_HASH:scripts/64_context_submit.sh" >"$submit_temporary"
+actual_submit_sha=$(/usr/bin/sha256sum "$submit_temporary")
+[[ ${actual_submit_sha%% *} == "$SUBMIT_SHA256" ]] ||
+    die "reviewed submitter digest differs"
+/usr/bin/install -o root -g root -m 0755 "$submit_temporary" "$SUBMIT"
 /usr/bin/printf '%s\n' \
     'bmarti44 ALL=(root) NOPASSWD: /usr/local/sbin/dsv4-context-submit *' \
     >"$temporary"

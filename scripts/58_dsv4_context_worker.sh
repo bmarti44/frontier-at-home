@@ -20,7 +20,8 @@ readonly START_FAILURE_MARKER=/run/dsv4/llamacpp.start-failed
 readonly USER_RESTORE=$REPO/scripts/61_restore_dsv4_user.sh
 readonly USER_ENGINE_UNIT=dsv4-safe-engine.service
 readonly ENGINE_LOG=/home/dsv4/logs/llamacpp-server.log
-readonly MODEL_PATH=$LIVE_REPO/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
+readonly LIVE_MODEL_PATH=$LIVE_REPO/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
+readonly PROTECTED_MODEL_PATH=/var/lib/dsv4-context/models/deepseek-v4-flash/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
 # Fixed acceptance authority: w11.context.v1 in glm52_goal.py.
 
 [[ $# == 5 ]] || {
@@ -42,9 +43,12 @@ if (( EUID != 0 )); then
 fi
 if [[ $RUN_MODE == root ]]; then
     valid_out_pattern=/var/lib/dsv4-context/attempts/dsv4-context-\*
+    MODEL_PATH=$PROTECTED_MODEL_PATH
 else
     valid_out_pattern=/home/bmarti44/.local/state/dsv4-context/dsv4-context-\*
+    MODEL_PATH=$LIVE_MODEL_PATH
 fi
+readonly MODEL_PATH
 [[ $OUT == $valid_out_pattern && -d $OUT && ! -L $OUT ]] ||
     { echo "invalid evidence directory" >&2; exit 2; }
 [[ $TAG =~ ^[a-z0-9][a-z0-9.-]{0,63}$ ]] || { echo "invalid tag" >&2; exit 2; }

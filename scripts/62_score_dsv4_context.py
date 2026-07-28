@@ -23,7 +23,7 @@ LIVE_ROOT = Path("/home/bmarti44/spark-deepseek-v4-flash")
 BINARY = Path(
     "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server"
 )
-MODEL_ROOT = LIVE_ROOT / "weights" / "unsloth-ud-q2_k_xl"
+MODEL_ROOT = Path("/var/lib/dsv4-context/models/deepseek-v4-flash")
 TOKENIZER_SHA256 = (
     "8f9f37ca37fdc4f5fd36d5cf4d3b0e8"
     "392edb4e894fd10cc0d70b4957c8633cf"

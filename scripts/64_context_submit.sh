@@ -9,6 +9,13 @@ readonly UNIT=dsv4-context-graduation.service
 readonly STATE_ROOT=/var/lib/dsv4-context
 readonly CANDIDATE_ROOT=$STATE_ROOT/candidates
 readonly ATTEMPT_ROOT=$STATE_ROOT/attempts
+readonly MODEL_ROOT=$STATE_ROOT/models/deepseek-v4-flash
+readonly MODEL_SOURCE=$REPO/weights/unsloth-ud-q2_k_xl
+readonly MODEL_FILES=(
+    DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
+    DeepSeek-V4-Flash-UD-Q2_K_XL-00002-of-00003.gguf
+    DeepSeek-V4-Flash-UD-Q2_K_XL-00003-of-00003.gguf
+)
 
 die() { printf 'dsv4-context-submit: %s\n' "$*" >&2; exit 1; }
 
@@ -36,14 +43,24 @@ actual=$(
     die "$UNIT is already active"
 [[ ! -e /home/dsv4/ds4-project/engine-switch/glm52.process.json ]] ||
     die "GLM process record exists"
-/usr/sbin/runuser -u dsv4 -- /usr/bin/env -i \
-    HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    DSV4_PORT=8013 "$REPO/scripts/21_serve_llamacpp.sh" status \
-    >/dev/null 2>&1 || die "verified 8K DeepSeek engine is not healthy"
 
 /usr/bin/install -d -o root -g root -m 0711 \
     "$STATE_ROOT" "$CANDIDATE_ROOT" "$ATTEMPT_ROOT"
+/usr/bin/install -d -o root -g root -m 0700 "$MODEL_ROOT"
+for name in "${MODEL_FILES[@]}"; do
+    source_path=$MODEL_SOURCE/$name
+    protected_path=$MODEL_ROOT/$name
+    [[ -f $source_path && ! -L $source_path ]] ||
+        die "registered model source is invalid: $name"
+    if [[ ! -e $protected_path ]]; then
+        /usr/bin/ln -- "$source_path" "$protected_path"
+    fi
+    [[ -f $protected_path && ! -L $protected_path ]] ||
+        die "protected model artifact is invalid: $name"
+    /usr/bin/chown root:root "$protected_path"
+    /usr/bin/chmod 0444 "$protected_path"
+done
+/usr/bin/chmod 0555 "$MODEL_ROOT"
 OUT=$ATTEMPT_ROOT/dsv4-context-$TAG
 [[ ! -e $OUT ]] || die "refusing to overwrite $OUT"
 /usr/bin/install -d -o root -g root -m 0700 "$OUT"
@@ -92,6 +109,11 @@ fi
     die "root-owned candidate snapshot is invalid"
 /usr/bin/python3 -I "$FROZEN/scripts/62_score_dsv4_context.py" \
     --candidate-hash "$CANDIDATE_HASH" --verify-only
+/usr/bin/env -i \
+    HOME=/home/dsv4 USER=root LOGNAME=root LANG=C.UTF-8 \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    DSV4_PORT=8013 "$FROZEN/scripts/21_serve_llamacpp.sh" status \
+    >/dev/null 2>&1 || die "verified 8K DeepSeek engine is not healthy"
 
 /usr/bin/systemctl reset-failed "$UNIT" 2>/dev/null || true
 /usr/bin/systemd-run \
