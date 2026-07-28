@@ -69,6 +69,12 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("--required-gib 115.0", worker)
         self.assertNotIn("--required-gib 115.25", worker)
 
+    def test_memory_telemetry_covers_engine_startup(self):
+        worker = WORKER.read_text(encoding="utf-8")
+        telemetry = worker.index('>>"$OUT/memory.jsonl" &')
+        startup = worker.index('dsv4_launcher "$cap" 3 start')
+        self.assertLess(telemetry, startup)
+
     def test_measured_headless_admission_is_default_off_and_bounded(self):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_MEASURED_HEADLESS_OVERHEAD_GIB", source)
