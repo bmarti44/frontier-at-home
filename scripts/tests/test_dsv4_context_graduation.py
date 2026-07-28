@@ -123,6 +123,15 @@ class ContextProbeTests(unittest.TestCase):
             )["pass"]
         )
 
+    def test_context_probe_freezes_non_thinking_request_mode(self):
+        probe = load_probe()
+        payload = probe.completion_payload("prompt", "1" * 64)
+        self.assertEqual(
+            payload["chat_template_kwargs"], {"enable_thinking": False}
+        )
+        self.assertEqual(payload["max_tokens"], 128)
+        self.assertEqual(payload["temperature"], 0)
+
 
 class ContextWorkerContractTests(unittest.TestCase):
     def test_preload_admission_allows_measured_headless_baseline(self):

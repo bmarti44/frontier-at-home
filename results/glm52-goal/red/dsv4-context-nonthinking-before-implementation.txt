@@ -1,0 +1,14 @@
+RED confirmation: 2026-07-28
+Candidate before implementation: 9f6f182
+Production-path 1024-token probe result:
+  pass=false
+  processed_tokens=1068
+  completion_tokens=128
+  event_timestamps=128
+  finish_reason=length
+  final_content=""
+  reasoning_content_length=350
+
+The strict scorer correctly rejected the response, proving the existing request
+configuration cannot qualify deterministic retrieval. The new test fails with:
+  AttributeError: module dsv4_context_probe has no completion_payload
