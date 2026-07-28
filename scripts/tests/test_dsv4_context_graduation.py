@@ -349,7 +349,9 @@ class ContextProbeTests(unittest.TestCase):
         self.assertEqual(lineage["randomness"]["round"], round_number)
         scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
         self.assertIn("[[ $SEED_SHA256 == auto ]]", scheduler)
-        self.assertIn("--capture-lineage", scheduler)
+        worker = WORKER.read_text(encoding="utf-8")
+        self.assertNotIn("--capture-lineage", scheduler)
+        self.assertIn("--capture-lineage", worker)
 
     def test_journal_witness_is_process_linked_and_tamper_evident(self):
         scorer = load_scorer()
@@ -414,6 +416,74 @@ class ContextProbeTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "artifact witness"):
                 scorer.verify_artifact_witness(root=root, witness=witness)
 
+    def test_pass_finalizer_recomputes_formula_and_seals_authority(self):
+        scorer = load_scorer()
+        candidate = "a" * 40
+        seed = "b" * 64
+        observation = {"record_type": "context_observation"}
+        result = {
+            "manifest": {
+                "candidate_hash": candidate,
+                "seed_sha256": seed,
+            },
+            "summary": {"verdict": "PASS"},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            (out / "raw.jsonl").write_text(
+                json.dumps(observation) + "\n", encoding="utf-8"
+            )
+            for name in ("manifest", "summary"):
+                (out / f"{name}.json").write_text(
+                    json.dumps(result[name]) + "\n", encoding="utf-8"
+                )
+            fake = dict(result["summary"])
+            fake["fabricated"] = True
+            (out / "summary.json").write_text(
+                json.dumps(fake) + "\n", encoding="utf-8"
+            )
+            with (
+                mock.patch.object(
+                    scorer,
+                    "require_qualification_invocation",
+                    return_value="c" * 32,
+                ),
+                mock.patch.object(
+                    scorer,
+                    "build_observation",
+                    return_value=(observation, result),
+                ) as rebuild,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "persisted summary"):
+                    scorer.finalize_attempt(
+                        out=out,
+                        candidate=candidate,
+                        seed=seed,
+                        mode="graduated",
+                        lifecycle_exit_status=0,
+                    )
+            rebuild.assert_called_once()
+            self.assertFalse((out / "journal-seal.json").exists())
+            self.assertFalse((out / "qualification.json").exists())
+
+    def test_qualification_witness_requires_exact_worker_unit(self):
+        scorer = load_scorer()
+        with mock.patch.dict(scorer.os.environ, {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "INVOCATION_ID"):
+                scorer.require_qualification_invocation()
+        with mock.patch.dict(
+            scorer.os.environ, {"INVOCATION_ID": "a" * 32}, clear=True
+        ):
+            with mock.patch.object(
+                scorer.Path,
+                "read_text",
+                return_value=(
+                    "0::/user.slice/user-1000.slice/session-1.scope\n"
+                ),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "worker cgroup"):
+                    scorer.require_qualification_invocation()
+
 
 class ContextWorkerContractTests(unittest.TestCase):
     def test_preload_admission_allows_measured_headless_baseline(self):
@@ -437,6 +507,7 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("DSV4_ALLOW_RETRY_AFTER_FAILED_START", worker)
         self.assertIn("--required-gib 110", worker)
         self.assertIn("systemd-run --user", scheduler)
+        self.assertIn("dsv4-context-graduation.service", scheduler)
         self.assertIn("RuntimeMaxSec=43200", scheduler)
         self.assertIn("MemorySwapMax=0", scheduler)
         self.assertIn("TimeoutStopSec=600", scheduler)
