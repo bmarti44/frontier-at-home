@@ -10,6 +10,7 @@ import json
 import math
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,10 @@ TOKENIZER_SHA256 = (
     "8f9f37ca37fdc4f5fd36d5cf4d3b0e8"
     "392edb4e894fd10cc0d70b4957c8633cf"
 )
+DRAND_HOSTS = ("api.drand.sh", "api2.drand.sh", "api3.drand.sh")
+DRAND_GENESIS_UNIX = 1_595_431_050
+DRAND_PERIOD_SECONDS = 30
+CONTEXT_GATE = "dsv4_reference_context"
 
 
 def sha256(path: Path) -> str:
@@ -53,6 +58,124 @@ def hash_as_dsv4(path: Path) -> str:
     if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
         raise RuntimeError(f"invalid protected artifact digest: {path}")
     return digest
+
+
+def fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
+    if host not in DRAND_HOSTS:
+        raise RuntimeError("unregistered drand relay")
+    completed = subprocess.run(
+        [
+            "/usr/bin/curl",
+            "--disable",
+            "--silent",
+            "--show-error",
+            "--fail",
+            "--max-time",
+            "10",
+            "--proto",
+            "=https",
+            f"https://{host}/public/{round_number}",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env={
+            "HOME": "/nonexistent",
+            "PATH": "/usr/bin:/bin",
+            "LANG": "C.UTF-8",
+        },
+    )
+    value = json.loads(completed.stdout)
+    if not isinstance(value, dict):
+        raise RuntimeError("drand relay response is not an object")
+    return value
+
+
+def git_commit_time(candidate: str) -> str:
+    return subprocess.run(
+        [
+            "/usr/bin/git",
+            "-C",
+            str(LIVE_ROOT),
+            "show",
+            "-s",
+            "--format=%cI",
+            candidate,
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env={
+            "HOME": "/nonexistent",
+            "PATH": "/usr/bin:/bin",
+            "LANG": "C.UTF-8",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+        },
+    ).stdout.strip()
+
+
+def capture_public_lineage(
+    *,
+    candidate: str,
+    now: datetime,
+    relay_fetcher: Any = fetch_public_drand,
+    commit_time_fetcher: Any = git_commit_time,
+) -> dict[str, Any]:
+    """Capture three-relay randomness strictly after the candidate commit."""
+    if now.tzinfo is None or now.utcoffset() != timezone.utc.utcoffset(now):
+        raise RuntimeError("lineage capture time must be UTC")
+    round_number = (
+        int(now.timestamp() - DRAND_GENESIS_UNIX) // DRAND_PERIOD_SECONDS + 1
+    )
+    if round_number < 1:
+        raise RuntimeError("drand round is invalid")
+    responses = [
+        relay_fetcher(host, round_number) for host in DRAND_HOSTS
+    ]
+    fields = ("round", "randomness", "signature")
+    beacon = {field: responses[0].get(field) for field in fields}
+    if any(
+        any(response.get(field) != beacon[field] for field in fields)
+        for response in responses
+    ):
+        raise RuntimeError("public drand relays disagree")
+    signature = beacon["signature"]
+    if (
+        not isinstance(signature, str)
+        or len(signature) != 192
+        or any(char not in "0123456789abcdef" for char in signature)
+    ):
+        raise RuntimeError("drand signature is invalid")
+    randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
+    if beacon["round"] != round_number or beacon["randomness"] != randomness:
+        raise RuntimeError("drand beacon is invalid")
+    frozen_at = commit_time_fetcher(candidate)
+    frozen_time = datetime.fromisoformat(frozen_at)
+    beacon_time = datetime.fromtimestamp(
+        DRAND_GENESIS_UNIX + (round_number - 1) * DRAND_PERIOD_SECONDS,
+        timezone.utc,
+    )
+    if frozen_time.tzinfo is None or beacon_time <= frozen_time or now < beacon_time:
+        raise RuntimeError("drand beacon was not published after candidate freeze")
+    seed = hashlib.sha256(
+        f"{candidate}:{randomness}:{CONTEXT_GATE}".encode()
+    ).hexdigest()
+    return {
+        "freeze": {
+            "candidate_hash": candidate,
+            "frozen_at": frozen_at,
+        },
+        "randomness": {
+            "source": "drand-default",
+            "round": round_number,
+            "randomness": randomness,
+            "signature": signature,
+            "obtained_at": now.isoformat(),
+            "seed_sha256": seed,
+        },
+    }
 
 
 def validate_stage_lineage(
@@ -240,6 +363,16 @@ def build_observation(
         "dsv4_context_probe_frozen", ROOT / "scripts" / "57_dsv4_context_probe.py"
     )
     tokenizer = probe.load_tokenizer()
+    lineage = json.loads((out / "lineage.json").read_text(encoding="utf-8"))
+    goal.validate_manifest_lineage(
+        lineage,
+        CONTEXT_GATE,
+        candidate,
+        relay_fetcher=fetch_public_drand,
+        commit_time_fetcher=git_commit_time,
+    )
+    if lineage["randomness"]["seed_sha256"] != seed:
+        raise RuntimeError("worker seed differs from public lineage")
 
     caps = (131_072, 262_144, 524_288, 1_048_576)
     targets = (130_000, 260_000, 520_000, 1_000_000)
@@ -418,7 +551,7 @@ def build_observation(
     summary = goal.score_registered_gate("W11", "w11.context.v1", [observation])
     manifest = {
         "schema_version": 2,
-        "gate": "dsv4_reference_context",
+        "gate": CONTEXT_GATE,
         "qualification_authority": True,
         "candidate_hash": candidate,
         "seed_sha256": seed,
@@ -435,6 +568,7 @@ def build_observation(
         "scheduler_sha256": artifacts["scripts/60_schedule_dsv4_context_user.sh"],
         "frozen_artifacts": artifacts,
         "configuration": configuration,
+        "lineage": lineage,
     }
     return observation, {"manifest": manifest, "summary": summary}
 
@@ -447,7 +581,19 @@ def main() -> int:
     parser.add_argument("--mode")
     parser.add_argument("--verify-only", action="store_true")
     parser.add_argument("--lifecycle-exit-status", type=int, default=0)
+    parser.add_argument("--capture-lineage", type=Path)
     args = parser.parse_args()
+    if args.capture_lineage is not None:
+        lineage = capture_public_lineage(
+            candidate=args.candidate_hash,
+            now=datetime.now(timezone.utc),
+        )
+        args.capture_lineage.write_text(
+            json.dumps(lineage, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        print(lineage["randomness"]["seed_sha256"])
+        return 0
     if args.verify_only:
         verify_freeze(ROOT, args.candidate_hash)
         return 0

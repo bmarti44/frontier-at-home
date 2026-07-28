@@ -16,7 +16,7 @@ CANDIDATE_HASH=$3
 MODE=$4
 [[ $EUID == 1000 && $(id -un) == bmarti44 ]] || die "must run as bmarti44"
 [[ $TAG =~ ^[a-z0-9][a-z0-9.-]{0,63}$ ]] || die "invalid TAG"
-[[ $SEED_SHA256 =~ ^[0-9a-f]{64}$ ]] || die "invalid SEED_SHA256"
+[[ $SEED_SHA256 == auto ]] || die "SEED_SHA256 must be auto"
 [[ $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ ]] || die "invalid CANDIDATE_HASH"
 [[ $MODE == one-million || $MODE == graduated ]] || die "invalid MODE"
 
@@ -83,6 +83,14 @@ for path in sorted(item for item in root.rglob("*") if item.is_file()):
 PY
 chmod -R a-w "$FROZEN"
 readonly WORKER=$FROZEN/scripts/58_dsv4_context_worker.sh
+SEED_SHA256=$(
+    "$REPO/.venv-harness/bin/python" \
+        "$FROZEN/scripts/62_score_dsv4_context.py" \
+        --candidate-hash "$CANDIDATE_HASH" \
+        --capture-lineage "$OUT/lineage.json"
+) || die "cannot capture post-freeze public randomness"
+[[ $SEED_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
+    die "captured seed is invalid"
 
 systemctl --user reset-failed "$UNIT" 2>/dev/null || true
 systemd-run --user \
