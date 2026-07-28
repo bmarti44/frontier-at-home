@@ -1,0 +1,79 @@
+{
+  "candidate_hash": "b2ac8b3ebd7e582059b7e09d8b94a3102ecb7aa0",
+  "review_round": 1,
+  "score_0_to_100": 24,
+  "critical": [
+    {
+      "id": "AR52-001",
+      "status": "VERIFIED",
+      "evidence": "57_dsv4_context_probe.py accepted server usage.prompt_tokens as evaluated tokens, so a stub could claim 1M without evaluating it.",
+      "affected_gate": "DeepSeek 1M; W11; matched-reference validity",
+      "reproduction_instructions": "Return the expected records and prompt_tokens=1000000 from a stub that never evaluates the prompt.",
+      "proposed_acceptance_test": "Require process-linked evaluated-token evidence tied to the request and reject a fake-usage mutation."
+    },
+    {
+      "id": "AR52-002",
+      "status": "VERIFIED",
+      "evidence": "The worker checked Git only at start, executed mutable live paths, and hashed current rather than necessarily executed bytes at cleanup.",
+      "affected_gate": "rootless context evidence; candidate freeze",
+      "reproduction_instructions": "Replace the probe after the initial Git check, emit a passing stage, then restore it before cleanup.",
+      "proposed_acceptance_test": "Execute a hashed immutable candidate copy, verify it before and after, and reject mid-run replacement."
+    }
+  ],
+  "high": [
+    {
+      "id": "AR52-003",
+      "status": "VERIFIED",
+      "evidence": "The inline worker summary accepted any nonempty set of stage files with pass=true and omitted exact graduation, memory floor, telemetry, identity, and output checks.",
+      "affected_gate": "context summary; W11",
+      "reproduction_instructions": "Supply one stage-fake.json with pass=true, no telemetry, empty kernel log, and rc=0.",
+      "proposed_acceptance_test": "Use the registered strict scorer and reject missing, duplicate, wrong-cap, malformed-memory, and seed-mismatched evidence."
+    },
+    {
+      "id": "AR52-004",
+      "status": "VERIFIED",
+      "evidence": "The launcher used size-only weight verification and the manifest omitted binary libraries, shards, tokenizer, fixture, configuration, and telemetry.",
+      "affected_gate": "model identity; frozen candidate",
+      "reproduction_instructions": "Replace a shard with a same-size artifact; size verification accepts it.",
+      "proposed_acceptance_test": "Full-hash model and executable artifacts and require a complete manifest."
+    },
+    {
+      "id": "AR52-005",
+      "status": "VERIFIED",
+      "evidence": "The probe accepted finish_reason=length and emitted no authoritative truncation field.",
+      "affected_gate": "completed non-truncated generation",
+      "reproduction_instructions": "Return correct records with finish_reason=length.",
+      "proposed_acceptance_test": "Require stop, truncated=false, DONE, and consistent output timestamps."
+    },
+    {
+      "id": "AR52-006",
+      "status": "VERIFIED",
+      "evidence": "The reviewed one-million mode skipped 128K, 256K, and 512K and never fed the registered W11 scorer.",
+      "affected_gate": "W11 graduation",
+      "reproduction_instructions": "Compare one-million indices=(3) with the four exact stages required by _score_w11.",
+      "proposed_acceptance_test": "Only graduated mode may qualify W11; a final-rung-only run remains non-terminal."
+    }
+  ],
+  "medium": [
+    {
+      "id": "AR52-007",
+      "status": "VERIFIED",
+      "evidence": "At review time no completed frozen 14 GiB run supported the measured safety claim.",
+      "affected_gate": "14 GiB qualification watchdog",
+      "reproduction_instructions": "Inspect the precursor and active attempt artifacts.",
+      "proposed_acceptance_test": "Require a completed frozen run with uninterrupted telemetry, kernel log, and registered memory scoring."
+    }
+  ],
+  "low": [
+    {
+      "id": "AR52-008",
+      "status": "VERIFIED",
+      "evidence": "A launcher comment incorrectly said the 18 GiB watchdog remained unchanged in the 14 GiB qualification branch.",
+      "affected_gate": "operator safety",
+      "reproduction_instructions": "Compare the comment with the effective watchdog assignment.",
+      "proposed_acceptance_test": "Document and record the effective watchdog threshold."
+    }
+  ],
+  "prior_issue_status": [],
+  "verdict": "REJECT"
+}

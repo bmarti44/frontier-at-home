@@ -1,0 +1,127 @@
+{
+  "candidate_hash": "b2ac8b3ebd7e582059b7e09d8b94a3102ecb7aa0",
+  "review_round": 1,
+  "score_0_to_100": 12,
+  "critical": [
+    {
+      "id": "GAP-R1-C001",
+      "status": "VERIFIED",
+      "evidence": "Controller status showed malformed foundation and W1 attempts, with W2-W11, parity, switch, and review unfinished.",
+      "affected_gate": "overall completion",
+      "reproduction_instructions": "Run scripts/glm52_goal.py status --json.",
+      "proposed_acceptance_test": "Require reproducible terminal foundation, W1-W11, switching, GLM 1M, parity or NO_GO, and final reviews."
+    },
+    {
+      "id": "GAP-R1-C002",
+      "status": "VERIFIED",
+      "evidence": "The inline worker PASS was weaker than context_verdict and _score_w11 and omitted truncation, 10 GiB, swap, telemetry, four stages, and strict identity.",
+      "affected_gate": "DeepSeek 1M and W11 evidence authority",
+      "reproduction_instructions": "Compare the worker cleanup formula with glm52_goal.py.",
+      "proposed_acceptance_test": "Generate immutable manifest/raw/summary artifacts and mutation-test every omitted condition."
+    }
+  ],
+  "high": [
+    {
+      "id": "GAP-R1-H001",
+      "status": "VERIFIED",
+      "evidence": "The attempt was active and had no terminal stage, manifest, summary, retrieval, release, or restore evidence at review time.",
+      "affected_gate": "DeepSeek 1M qualification",
+      "reproduction_instructions": "Inspect the attempt directory and service.",
+      "proposed_acceptance_test": "Require a terminal result; timeout or missing evidence is FAIL/NO_RESULT."
+    },
+    {
+      "id": "GAP-R1-H002",
+      "status": "VERIFIED",
+      "evidence": "Missing or sub-10 GiB telemetry did not affect the worker verdict; swap was neither prohibited nor sampled.",
+      "affected_gate": "1M resource safety",
+      "reproduction_instructions": "Delete memory.jsonl or insert a 9 GiB sample in a completed copy.",
+      "proposed_acceptance_test": "Require <=0.5-second coverage, >=10 GiB, zero cgroup swap, and live watchdog coverage."
+    },
+    {
+      "id": "GAP-R1-H003",
+      "status": "VERIFIED",
+      "evidence": "The probe accepted length and combined hidden reasoning_content with final content for retrieval scoring.",
+      "affected_gate": "retrieval and non-truncated generation",
+      "reproduction_instructions": "Put records only in reasoning_content or return finish_reason=length.",
+      "proposed_acceptance_test": "Score final content only and require finish_reason=stop."
+    },
+    {
+      "id": "GAP-R1-H004",
+      "status": "VERIFIED",
+      "evidence": "The manifest omitted binary libraries, model shards, tokenizer, fixture, launcher, scheduler, flags, and scorer; startup used size-only weights.",
+      "affected_gate": "artifact lineage",
+      "reproduction_instructions": "Inspect manifest and startup log.",
+      "proposed_acceptance_test": "Require complete schema-v2 identity and full model hashes."
+    },
+    {
+      "id": "GAP-R1-H005",
+      "status": "VERIFIED",
+      "evidence": "The long run executed mutable live scripts and never rechecked candidate cleanliness or hashes.",
+      "affected_gate": "candidate freeze",
+      "reproduction_instructions": "Trace the live paths used by worker, probe, launcher, and restore.",
+      "proposed_acceptance_test": "Execute a read-only frozen attempt tree and verify all hashes before and after."
+    },
+    {
+      "id": "GAP-R1-H006",
+      "status": "VERIFIED",
+      "evidence": "Processed-token acceptance trusted usage.prompt_tokens and did not preserve independent engine evaluation evidence.",
+      "affected_gate": "at least 1M actually processed",
+      "reproduction_instructions": "Inspect the probe source.",
+      "proposed_acceptance_test": "Bind exact request bytes to engine progress and require count agreement."
+    },
+    {
+      "id": "GAP-R1-H007",
+      "status": "VERIFIED",
+      "evidence": "MODE=one-million ran only index 3 and skipped required graduation.",
+      "affected_gate": "context graduation",
+      "reproduction_instructions": "Inspect the indices selection.",
+      "proposed_acceptance_test": "Run all four exact stages on one frozen candidate and seed lineage."
+    },
+    {
+      "id": "GAP-R1-H008",
+      "status": "VERIFIED",
+      "evidence": "Rootless lifecycle tests mostly asserted source text instead of exercising races and failures.",
+      "affected_gate": "rootless lifecycle safety",
+      "reproduction_instructions": "Inspect test_dsv4_context_graduation.py.",
+      "proposed_acceptance_test": "Add isolated integration and fault-injection tests for holds, timeout, restore, markers, concurrency, permissions, and delegation failure."
+    }
+  ],
+  "medium": [
+    {
+      "id": "GAP-R1-M001",
+      "status": "VERIFIED",
+      "evidence": "The 14 GiB floor was still an experimental hypothesis at review time.",
+      "affected_gate": "1M admission profile",
+      "reproduction_instructions": "Compare prior attempts with the active telemetry.",
+      "proposed_acceptance_test": "Require terminal completion, >=10 GiB, no OOM/Xid, and verified restore."
+    },
+    {
+      "id": "GAP-R1-M002",
+      "status": "VERIFIED",
+      "evidence": "The attempt directory did not preserve public-randomness relay or post-freeze lineage.",
+      "affected_gate": "confirmation lineage",
+      "reproduction_instructions": "Inspect the attempt directory.",
+      "proposed_acceptance_test": "Archive randomness response, relay agreement, timestamp, derivation, freeze, and seed."
+    },
+    {
+      "id": "GAP-R1-M003",
+      "status": "VERIFIED",
+      "evidence": "SSE timestamps were appended per nonempty fragment without proving one-to-one output-token correspondence.",
+      "affected_gate": "raw generation evidence",
+      "reproduction_instructions": "Compare stream_completion timestamps with completion_tokens.",
+      "proposed_acceptance_test": "Require authoritative per-token timestamps or reject count mismatch."
+    }
+  ],
+  "low": [
+    {
+      "id": "GAP-R1-L001",
+      "status": "VERIFIED",
+      "evidence": "The probe did not preserve integer monotonic request, first-token, last-token, and completion endpoints.",
+      "affected_gate": "timing auditability",
+      "reproduction_instructions": "Inspect response timing fields.",
+      "proposed_acceptance_test": "Persist integer monotonic timing endpoints."
+    }
+  ],
+  "prior_issue_status": [],
+  "verdict": "REJECT"
+}

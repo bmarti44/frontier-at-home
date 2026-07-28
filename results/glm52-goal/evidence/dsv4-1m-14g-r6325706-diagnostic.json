@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "classification": "NO_RESULT",
+  "qualification_authority": false,
+  "candidate_hash": "b2ac8b3ebd7e582059b7e09d8b94a3102ecb7aa0",
+  "tag": "dsv4-1m-14g-r6325706",
+  "seed_sha256_chunks": ["761629ef", "2b1b77e3", "a2fb5616", "b67db53e", "f77d3fa3", "5a6fa6fc", "3b7b4756", "d7b11be5"],
+  "evidence_directory": "/home/bmarti44/.local/state/dsv4-context/dsv4-context-dsv4-1m-14g-r6325706",
+  "terminal_cause": {
+    "kind": "systemd_runtime_limit",
+    "runtime_max_seconds": 14400,
+    "service_result": "timeout",
+    "main_signal": "SIGKILL",
+    "last_engine_evaluated_tokens": 894465,
+    "last_engine_progress": 0.89,
+    "last_engine_elapsed_seconds": 14284.04,
+    "last_engine_tokens_per_second": 62.62
+  },
+  "resource_observation": {
+    "memory_samples": 56584,
+    "first_timestamp_seconds": 1785202216.1587715,
+    "last_timestamp_seconds": 1785216612.9308653,
+    "minimum_available_memory_gib": 14.389713,
+    "maximum_available_memory_gib": 116.028717,
+    "oom_detected": false,
+    "xid_detected": false
+  },
+  "recovery": {
+    "safe_context": 8192,
+    "user_service": "dsv4-safe-engine.service",
+    "service_active": true,
+    "identity_verified_health": true
+  },
+  "artifact_sha256": {
+    "admission.json": ["2e19a832", "e05ce595", "2d2c1c89", "c90315c5", "2fc0f615", "a7c0d4cd", "83d08280", "31486dcd"],
+    "kernel.log": ["d2ffc032", "c7386e6d", "0ad0f073", "6bb92959", "2602c6ee", "f1c13639", "b471af57", "7618be42"],
+    "memory.jsonl": ["526ad69f", "39ad3b7c", "0ed82aa9", "c70432d7", "a436d124", "a02fdf34", "550a9f91", "554f7bb0"],
+    "original-stop.log": ["5abc5b37", "9208cd8e", "5ae9d2eb", "09ddb4d7", "32b118fe", "f4016e49", "0762356b", "bae0327e"],
+    "restore.log": ["e3b0c442", "98fc1c14", "9afbf4c8", "996fb924", "27ae41e4", "649b934c", "a495991b", "7852b855"],
+    "start-1048576.log": ["01fcdd10", "b4d9ef4c", "7f0d77a2", "1ea28a2d", "59064601", "998ca576", "d0298380", "16fc025c"],
+    "stop-cleanup.log": ["86bdaad7", "695a62b5", "f253d71d", "d7f25ebf", "8ca1e048", "aeb67617", "440ab138", "0d0da80f"],
+    "worker.log": ["b4a6c066", "72677cf0", "e25ec72b", "ec83beae", "33305cee", "4b8087f1", "68962014", "373b02bb"]
+  },
+  "conclusion": "The attempt was memory-safe through 894465 evaluated tokens but did not complete. It is diagnostic only and cannot qualify the 1M gate."
+}
