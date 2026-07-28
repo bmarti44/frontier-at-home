@@ -89,6 +89,13 @@ class ContextProbeTests(unittest.TestCase):
         self.assertTrue(
             probe.validate_retrieval(labeled_single_line, records)["pass"]
         )
+        labeled_lines = (
+            "AUDIT RECORD 1: RECORD_ALPHA_aaa\n"
+            "AUDIT RECORD 2: RECORD_BRAVO_bbb\n"
+            "AUDIT RECORD 3: RECORD_CHARLIE_ccc\n\n"
+            "NO_EXTRA_RECORD"
+        )
+        self.assertTrue(probe.validate_retrieval(labeled_lines, records)["pass"])
         absent = "RECORD_DELTA_absent"
         self.assertTrue(
             probe.validate_retrieval(valid, records, absent_value=absent)["pass"]
