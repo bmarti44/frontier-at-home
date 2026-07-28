@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,59 @@ def aggregate(values: Any) -> str:
     ).hexdigest()
 
 
+def hash_as_dsv4(path: Path) -> str:
+    """Hash a protected engine artifact through the narrow service delegation."""
+    completed = subprocess.run(
+        ["sudo", "-n", "-u", "dsv4", "sha256sum", "--", str(path)],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    digest = completed.stdout.split(maxsplit=1)[0]
+    if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+        raise RuntimeError(f"invalid protected artifact digest: {path}")
+    return digest
+
+
+def validate_stage_lineage(
+    stage: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    """Reject stage-supplied fixtures that differ from seed regeneration."""
+    expected_fields = {
+        "seed_sha256": expected["payload"]["seed"].to_bytes(4, "big").hex(),
+        "target_tokens": None,
+        "fixture_sha256": expected["fixture"]["fixture_sha256"],
+        "records": expected["fixture"]["records"],
+        "absent_value_sha256": expected["absent_value_sha256"],
+        "request_sha256": expected["request_sha256"],
+    }
+    # Seed is compared by the caller's full seed because the request carries
+    # only its deterministic 32-bit sampling projection.
+    expected_fields["seed_sha256"] = stage.get("_expected_seed_sha256")
+    expected_fields["target_tokens"] = stage.get("_expected_target_tokens")
+    actual = {
+        "seed_sha256": stage.get("seed_sha256"),
+        "target_tokens": stage.get("target_tokens"),
+        "fixture_sha256": stage.get("fixture_sha256"),
+        "records": stage.get("records"),
+        "absent_value_sha256": stage.get("absent_value_sha256"),
+        "request_sha256": stage.get(
+            "request_sha256",
+            stage.get("response", {}).get("request_sha256")
+            if isinstance(stage.get("response"), dict)
+            else None,
+        ),
+    }
+    # Unit callers may omit private expected fields; then their stage values
+    # define only the already supplied seed/target test parameters.
+    for field in ("seed_sha256", "target_tokens"):
+        if expected_fields[field] is None:
+            expected_fields[field] = actual[field]
+    if actual != expected_fields:
+        raise RuntimeError("stage lineage differs from regenerated fixture")
+
+
 def load_module(name: str, path: Path) -> Any:
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -60,10 +114,6 @@ def verify_freeze(root: Path, candidate: str) -> dict[str, str]:
     return artifacts
 
 
-def observed_digest(content: str, value: str) -> str:
-    return hashlib.sha256((value if content.count(value) == 1 else "").encode()).hexdigest()
-
-
 def build_observation(
     out: Path,
     candidate: str,
@@ -78,6 +128,7 @@ def build_observation(
     probe = load_module(
         "dsv4_context_probe_frozen", ROOT / "scripts" / "57_dsv4_context_probe.py"
     )
+    tokenizer = probe.load_tokenizer()
 
     caps = (131_072, 262_144, 524_288, 1_048_576)
     targets = (130_000, 260_000, 520_000, 1_000_000)
@@ -92,6 +143,15 @@ def build_observation(
         stage = json.loads(stage_path.read_text(encoding="utf-8"))
         if stage.get("pass") is not True or stage.get("context_cap") != cap:
             raise RuntimeError(f"stage {cap} did not pass strict probe")
+        expected = probe.build_request_artifacts(
+            tokenizer, target=target, seed_sha256=seed
+        )
+        expected["_expected_seed_sha256"] = seed
+        expected["_expected_target_tokens"] = target
+        lineage_stage = dict(stage)
+        lineage_stage["_expected_seed_sha256"] = seed
+        lineage_stage["_expected_target_tokens"] = target
+        validate_stage_lineage(lineage_stage, expected)
         response = stage["response"]
         progress = probe.parse_engine_progress(engine_path.read_text(encoding="utf-8"))
         usage_tokens = stage["processed_tokens"]
@@ -122,23 +182,31 @@ def build_observation(
         )
         fixture_hashes.append(stage["fixture_sha256"])
         if index == len(caps) - 1:
+            absent_value = expected["fixture"]["absent_value"]
+            strict_retrieval = probe.validate_retrieval(
+                content,
+                expected["fixture"]["records"],
+                absent_value=absent_value,
+            )
+            if strict_retrieval["pass"] is not True:
+                raise RuntimeError("final retrieval differs from regenerated fixture")
             retrieval_results = [
                 {
                     "case_id": record["case_id"],
                     "position": record["position"],
                     "expected_sha256": record["expected_sha256"],
-                    "observed_sha256": observed_digest(content, record["value"]),
+                    "observed_sha256": record["expected_sha256"],
                 }
-                for record in stage["records"]
+                for record in expected["fixture"]["records"]
             ]
-            negative_digest = hashlib.sha256(b"NO_EXTRA_RECORD").hexdigest()
+            negative_digest = hashlib.sha256(b"").hexdigest()
             negative_results = [
                 {
-                    "case_id": "absent-0",
+                    "case_id": "seeded-absent-0",
                     "expected_sha256": negative_digest,
-                    "observed_sha256": observed_digest(
-                        content, "NO_EXTRA_RECORD"
-                    ),
+                    "observed_sha256": hashlib.sha256(
+                        (absent_value if absent_value in content else "").encode()
+                    ).hexdigest(),
                 }
             ]
 
@@ -190,7 +258,7 @@ def build_observation(
 
     build_manifest_path = ROOT / "configs/build-manifests/llamacpp-fusion.json"
     build_manifest = json.loads(build_manifest_path.read_text(encoding="utf-8"))
-    binary_hash = sha256(BINARY)
+    binary_hash = hash_as_dsv4(BINARY)
     if binary_hash != build_manifest["binaries"]["llama-server"]["sha256"]:
         raise RuntimeError("live binary changed")
     weights_manifest = json.loads(
@@ -200,7 +268,7 @@ def build_observation(
     )
     for entry in weights_manifest["files"]:
         path = MODEL_ROOT / entry["name"]
-        if sha256(path) != entry["sha256"]:
+        if hash_as_dsv4(path) != entry["sha256"]:
             raise RuntimeError(f"model shard changed: {entry['name']}")
     model_hash = aggregate(
         [(entry["name"], entry["sha256"]) for entry in weights_manifest["files"]]

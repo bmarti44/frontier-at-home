@@ -107,23 +107,44 @@ def build_fixture(tokenizer: Any, target: int, seed_sha256: str) -> dict[str, An
         and positions[2] >= 3 * target // 4
     ):
         raise RuntimeError(f"retrieval positions lack required coverage: {positions}")
+    absent_value = f"RECORD_DELTA_{derive(seed_sha256, 'absent:0')[:16]}"
+    if absent_value in text:
+        raise RuntimeError("negative-control marker unexpectedly appears in fixture")
     return {
         "text": text,
         "records": records,
+        "absent_value": absent_value,
         "fixture_sha256": hashlib.sha256(text.encode()).hexdigest(),
     }
 
 
-def validate_retrieval(output: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+def validate_retrieval(
+    output: str,
+    records: list[dict[str, Any]],
+    *,
+    absent_value: str | None = None,
+) -> dict[str, Any]:
     lines = [line.strip() for line in output.splitlines() if line.strip()]
     answer = lines[-1] if lines else ""
     expected = [record["value"] for record in records]
-    observed = RECORD_PATTERN.findall(answer)
+    parts = [part.strip() for part in answer.split(",")]
+    observed = parts[:3] if len(parts) == 4 else []
+    alternatives = [
+        {value, value.split("_", 2)[-1]}
+        for value in expected
+    ]
+    ordered = (
+        len(observed) == len(expected)
+        and all(value in allowed for value, allowed in zip(observed, alternatives))
+    )
     checks = {
-        "all_expected_once": all(answer.count(value) == 1 for value in expected),
-        "ordered": observed == expected,
-        "negative_control": answer.count("NO_EXTRA_RECORD") == 1,
-        "no_unexpected_record": set(observed) == set(expected),
+        "all_expected_once": ordered,
+        "ordered": ordered,
+        "negative_control": len(parts) == 4 and parts[-1] == "NO_EXTRA_RECORD",
+        "no_unexpected_record": len(parts) == 4 and ordered,
+        "absent_marker_not_hallucinated": (
+            absent_value is None or absent_value not in answer
+        ),
     }
     return {
         "checks": checks,
@@ -139,9 +160,12 @@ def validate_completion(
     finish_reason: str | None,
     done: bool,
     records: list[dict[str, Any]],
+    absent_value: str | None = None,
 ) -> dict[str, Any]:
     """Score only the user-visible final answer and reject truncation."""
-    retrieval = validate_retrieval(content, records)
+    retrieval = validate_retrieval(
+        content, records, absent_value=absent_value
+    )
     checks = {
         "stream_complete": done is True,
         "finish_reason_stop": finish_reason == "stop",
@@ -217,6 +241,30 @@ def completion_payload(prompt: str, seed_sha256: str) -> dict[str, Any]:
         "chat_template_kwargs": {"enable_thinking": False},
         "stream": True,
         "stream_options": {"include_usage": True},
+    }
+
+
+def build_request_artifacts(
+    tokenizer: Any, *, target: int, seed_sha256: str
+) -> dict[str, Any]:
+    """Regenerate the exact seeded fixture, prompt, payload and request hash."""
+    fixture = build_fixture(tokenizer, target, seed_sha256)
+    prompt = (
+        fixture["text"]
+        + "\n\nReturn the values from the three numbered AUDIT RECORD lines "
+        "in numeric order, separated by commas. Then append the literal "
+        "NO_EXTRA_RECORD. Do not invent any other record."
+    )
+    payload = completion_payload(prompt, seed_sha256)
+    body = json.dumps(payload, separators=(",", ":")).encode()
+    return {
+        "fixture": fixture,
+        "prompt": prompt,
+        "payload": payload,
+        "request_sha256": hashlib.sha256(body).hexdigest(),
+        "absent_value_sha256": hashlib.sha256(
+            fixture["absent_value"].encode()
+        ).hexdigest(),
     }
 
 
@@ -325,14 +373,13 @@ def main() -> int:
         if not 1 <= args.target_tokens < args.context_cap:
             raise ValueError("target tokens must be positive and below context cap")
         tokenizer = load_tokenizer()
-        fixture = build_fixture(tokenizer, args.target_tokens, args.seed_sha256)
-        values = [record["value"] for record in fixture["records"]]
-        prompt = (
-            fixture["text"]
-            + "\n\nReturn the values from the three numbered AUDIT RECORD lines "
-            "in numeric order, separated by commas. Then append the literal "
-            "NO_EXTRA_RECORD. Do not invent any other record."
+        artifacts = build_request_artifacts(
+            tokenizer,
+            target=args.target_tokens,
+            seed_sha256=args.seed_sha256,
         )
+        fixture = artifacts["fixture"]
+        values = [record["value"] for record in fixture["records"]]
         api_key = None
         if args.api_key_file:
             api_key = args.api_key_file.read_text(encoding="utf-8").strip()
@@ -340,9 +387,11 @@ def main() -> int:
                 raise ValueError("API key is empty")
         response = stream_completion(
             args.base_url,
-            completion_payload(prompt, args.seed_sha256),
+            artifacts["payload"],
             api_key,
         )
+        if response["request_sha256"] != artifacts["request_sha256"]:
+            raise RuntimeError("request hash differs from regenerated request")
         usage = response["usage"]
         if not isinstance(usage, dict):
             raise RuntimeError("completion omitted usage")
@@ -362,6 +411,7 @@ def main() -> int:
             finish_reason=response["finish_reason"],
             done=response["done"],
             records=fixture["records"],
+            absent_value=fixture["absent_value"],
         )
         checks = {
             "server_processed_target": processed >= args.target_tokens,
@@ -375,6 +425,7 @@ def main() -> int:
                 "fixture_sha256": fixture["fixture_sha256"],
                 "tokenizer_sha256": TOKENIZER_SHA256,
                 "records": fixture["records"],
+                "absent_value_sha256": artifacts["absent_value_sha256"],
                 "expected_values": values,
                 "processed_tokens": processed,
                 "completed_output_tokens": completed_text_tokens,
