@@ -11,6 +11,11 @@ readonly FAULT_PATTERN='NV_ERR_NO_MEMORY|NVRM.*Xid|oom-kill|Out of memory: Kille
 readonly CAPS=(131072 262144 524288 1048576)
 readonly TARGETS=(130000 260000 520000 1000000)
 readonly SAFE_CTX=8192 # CTX=8192 is the proven production recovery profile.
+readonly START_HOLD=/home/dsv4/.dsv4-start-hold
+readonly WORKER_START_HOLD=/run/dsv4/context-worker.start-hold
+readonly START_FAILURE_MARKER=/run/dsv4/llamacpp.start-failed
+readonly USER_RESTORE=$REPO/scripts/61_restore_dsv4_user.sh
+readonly USER_ENGINE_UNIT=dsv4-safe-engine.service
 
 [[ $# == 5 ]] || {
     echo "usage: $0 OUT TAG SEED_SHA256 CANDIDATE_HASH MODE" >&2
@@ -21,8 +26,20 @@ TAG=$2
 SEED_SHA256=$3
 CANDIDATE_HASH=$4
 MODE=$5
-(( EUID == 0 )) || { echo "context worker must run as root" >&2; exit 2; }
-[[ $OUT == /home/dsv4/ds4-project/dsv4-context-* && -d $OUT && ! -L $OUT ]] ||
+RUN_MODE=root
+if (( EUID != 0 )); then
+    [[ $EUID == 1000 && $(id -un) == bmarti44 ]] ||
+        { echo "context worker must run as root or bmarti44" >&2; exit 2; }
+    RUN_MODE=user
+    sudo -n -u dsv4 true ||
+        { echo "passwordless dsv4 service-account delegation is unavailable" >&2; exit 2; }
+fi
+if [[ $RUN_MODE == root ]]; then
+    valid_out_pattern=/home/dsv4/ds4-project/dsv4-context-\*
+else
+    valid_out_pattern=/home/bmarti44/.local/state/dsv4-context/dsv4-context-\*
+fi
+[[ $OUT == $valid_out_pattern && -d $OUT && ! -L $OUT ]] ||
     { echo "invalid evidence directory" >&2; exit 2; }
 [[ $TAG =~ ^[a-z0-9][a-z0-9.-]{0,63}$ ]] || { echo "invalid tag" >&2; exit 2; }
 [[ $SEED_SHA256 =~ ^[0-9a-f]{64}$ ]] || { echo "invalid seed digest" >&2; exit 2; }
@@ -41,6 +58,19 @@ TELEMETRY_PID=
 KERNEL_CURSOR=
 ORIGINAL_RUNNING=false
 RESTORE_ALLOWED=true
+HOLD_OWNED=false
+
+run_as_dsv4() {
+    if [[ $RUN_MODE == root ]]; then
+        /usr/sbin/runuser -u dsv4 -- "$@"
+    else
+        sudo -n -u dsv4 -- "$@"
+    fi
+}
+
+start_failure_exists() {
+    run_as_dsv4 test -e "$START_FAILURE_MARKER"
+}
 
 dsv4_launcher() {
     local context=$1 measured=$2
@@ -48,14 +78,19 @@ dsv4_launcher() {
     # Normal/recovery contract: DSV4_MEM_FLOOR_GIB=18 and
     # DSV4_WATCHDOG_FLOOR_GIB=18. The exact 1M branch alone exports
     # DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=15.
-    local floor=18 qualification_floor=0 batch=2048 ubatch=512
+    local floor=18 qualification_floor=0 batch=2048 ubatch=512 retry=0
+    local -a hold_override=()
     if (( context == 1048576 && measured == 3 )); then
         floor=15
         qualification_floor=15
         batch=512
         ubatch=256
     fi
-    /usr/sbin/runuser -u dsv4 -- env -i \
+    (( context == SAFE_CTX && measured == 0 )) && retry=1
+    if [[ $RUN_MODE == user ]]; then
+        hold_override=(DSV4_START_HOLD_FILE="$WORKER_START_HOLD")
+    fi
+    run_as_dsv4 env -i \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
         DSV4_PORT=8013 \
@@ -64,9 +99,10 @@ dsv4_launcher() {
         DSV4_MEM_FLOOR_GIB="$floor" DSV4_WATCHDOG_FLOOR_GIB="$floor" \
         DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB="$qualification_floor" \
         DSV4_MEASURED_HEADLESS_OVERHEAD_GIB="$measured" \
+        DSV4_ALLOW_RETRY_AFTER_FAILED_START="$retry" \
         DSV4_UBATCH="$ubatch" DSV4_BATCH="$batch" DSV4_UBATCH_LARGE=0 \
         CTX="$context" DSV4_PARALLEL=1 DSV4_NO_MMAP=1 \
-        DSV4_SPEC_TYPE=none \
+        DSV4_SPEC_TYPE=none "${hold_override[@]}" \
         "$LAUNCHER" "$@"
 }
 
@@ -77,21 +113,62 @@ stop_telemetry() {
     TELEMETRY_PID=
 }
 
+activate_user_hold() {
+    [[ $RUN_MODE == user ]] || return 0
+    run_as_dsv4 bash -c \
+        'set -Eeuo pipefail; set -o noclobber; umask 077; : >"$1"' \
+        dsv4-context-hold "$START_HOLD"
+    HOLD_OWNED=true
+    for _ in {1..60}; do
+        systemctl is-active --quiet dsv4-guard.service || return 0
+        sleep 1
+    done
+    echo "dsv4 guard did not quiesce after maintenance hold" >&2
+    return 1
+}
+
+prepare_safe_retry() {
+    start_failure_exists || return 0
+    /usr/bin/python3 "$GUARD" --required-gib 110 --stable-samples 3 \
+        --interval-seconds 1 --timeout-seconds 180 \
+        >"$OUT/recovery-admission.json" || return 1
+    run_as_dsv4 rm -f -- "$START_FAILURE_MARKER"
+}
+
 restore_safe_profile() {
     "$RESTORE_ALLOWED" || {
-        echo "safe-profile restore suppressed after a kernel/OOM/startup fault" \
+        echo "safe-profile restore suppressed after a kernel/OOM fault" \
             >>"$OUT/restore.log"
         return 1
     }
-    # A launcher started directly here inherits this transient unit's cgroup
-    # and is killed when the worker exits. The persistent restore unit has its
-    # own cgroup. Wait for its verified health result before rearming the
-    # periodic guard, otherwise the guard can race the recovery load.
+    prepare_safe_retry >>"$OUT/restore.log" 2>&1 || return 1
     if "$ORIGINAL_RUNNING"; then
-        systemctl restart dsv4-engine-restore.service \
-            >>"$OUT/restore.log" 2>&1 || return 1
+        if [[ $RUN_MODE == root ]]; then
+            # A launcher started directly from a system transient unit inherits
+            # that unit's cgroup. Restore through the persistent root unit.
+            systemctl restart dsv4-engine-restore.service \
+                >>"$OUT/restore.log" 2>&1 || return 1
+        else
+            # Keep the restored engine in a separate persistent user-systemd
+            # cgroup. The qualification unit retains KillMode=control-group,
+            # so a timeout still kills every 1M process without killing 8K
+            # after this worker exits.
+            systemd-run --user --unit="$USER_ENGINE_UNIT" \
+                --property=Type=oneshot \
+                --property=RemainAfterExit=yes \
+                --property=KillMode=control-group \
+                "$USER_RESTORE" >>"$OUT/restore.log" 2>&1 || return 1
+            dsv4_launcher "$SAFE_CTX" 0 status \
+                >>"$OUT/restore.log" 2>&1 || return 1
+        fi
     fi
-    systemctl start dsv4-guard.timer >>"$OUT/restore.log" 2>&1
+    if [[ $RUN_MODE == root ]]; then
+        systemctl start dsv4-guard.timer >>"$OUT/restore.log" 2>&1
+    elif "$HOLD_OWNED"; then
+        run_as_dsv4 rm -f -- "$START_HOLD" >>"$OUT/restore.log" 2>&1 ||
+            return 1
+        HOLD_OWNED=false
+    fi
 }
 
 cleanup() {
@@ -111,10 +188,7 @@ cleanup() {
             rc=1
         fi
     fi
-    if [[ -e /run/dsv4/llamacpp.start-failed ]]; then
-        RESTORE_ALLOWED=false
-        rc=1
-    fi
+    start_failure_exists && rc=1
     restore_safe_profile || rc=1
     /usr/bin/python3 - "$OUT" "$rc" "$CANDIDATE_HASH" "$SEED_SHA256" "$MODE" <<'PY'
 import hashlib
@@ -196,16 +270,30 @@ if journalctl -k -b --no-pager | grep -Eiq "$FAULT_PATTERN"; then
     echo "pre-existing kernel GPU/OOM fault on current boot" >&2
     exit 1
 fi
-# Defense in depth for direct worker invocation. The scheduler pauses these
-# before creating this unit, closing the timer-to-worker handoff race.
-systemctl stop dsv4-guard.timer
-systemctl stop dsv4-guard.service
+# The root scheduler pauses the guard. The user scheduler instead creates the
+# guard's existing persistent maintenance hold and waits out any in-flight
+# oneshot. This grants no root capability to the worker.
+if [[ $RUN_MODE == root ]]; then
+    systemctl stop dsv4-guard.timer
+    systemctl stop dsv4-guard.service
+else
+    activate_user_hold
+fi
 
 if dsv4_launcher "$SAFE_CTX" 0 status >/dev/null 2>&1; then
     ORIGINAL_RUNNING=true
     dsv4_launcher "$SAFE_CTX" 0 stop >"$OUT/original-stop.log" 2>&1
+    if [[ $RUN_MODE == user ]]; then
+        systemctl --user stop "$USER_ENGINE_UNIT" >>"$OUT/original-stop.log" 2>&1 ||
+            true
+    fi
+elif [[ $RUN_MODE == user ]]; then
+    echo "verified 8K DeepSeek engine is not running" >&2
+    exit 1
 fi
-systemctl stop display-manager.service >>"$OUT/display.log" 2>&1 || true
+if [[ $RUN_MODE == root ]]; then
+    systemctl stop display-manager.service >>"$OUT/display.log" 2>&1 || true
+fi
 systemctl is-active --quiet display-manager.service &&
     { echo "display manager remained active" >&2; exit 1; }
 /usr/bin/python3 "$GUARD" --required-gib 115.0 --stable-samples 3 \
@@ -230,7 +318,7 @@ for index in "${indices[@]}"; do
     TELEMETRY_PID=$!
     dsv4_launcher "$cap" 3 start >"$OUT/start-$cap.log" 2>&1
     ENGINE_ACTIVE=true
-    /usr/sbin/runuser -u dsv4 -- env -i \
+    run_as_dsv4 env -i \
         HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
         PATH=/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin:/usr/bin:/bin \
         "$REPO/.venv-harness/bin/python" "$PROBE" \
