@@ -151,6 +151,13 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn('stop_profile "$command"', restore)
         self.assertIn("After=dsv4-authhelper.service", unit)
 
+    def test_restore_tolerates_launcher_removing_an_exact_stale_state(self):
+        source = SCRIPT.read_text()
+        stop = source[source.index("stop_profile() {") : source.index("start_dsv4() {")]
+        self.assertIn("if dsv4_launcher stop", stop)
+        self.assertIn("[[ ! -e /run/dsv4/llamacpp.state.json ]]", stop)
+        self.assertIn('"http://127.0.0.1:$PORT/health"', stop)
+
     def test_control_plane_installer_cannot_start_a_model(self):
         source = CONTROL_INSTALLER.read_text()
         self.assertIn("must be run as root", source)
