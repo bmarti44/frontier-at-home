@@ -1,0 +1,15 @@
+RED confirmation: 2026-07-28
+Reviewed candidate: b0b1bf1
+
+The rootless scheduler accepts any caller-chosen 64-hex seed and neither
+preserves nor verifies a post-freeze drand beacon. This permits fixture
+grinding and pre-freeze selection.
+
+The new test requires scheduler input `auto`, agreement from all three
+registered drand relays, a beacon round published after the candidate commit,
+the registered randomness=SHA256(signature) rule, and seed derivation:
+
+  SHA256(candidate:randomness:dsv4_reference_context)
+
+It is RED because capture_public_lineage and --capture-lineage do not exist and
+the scheduler still accepts an arbitrary digest.

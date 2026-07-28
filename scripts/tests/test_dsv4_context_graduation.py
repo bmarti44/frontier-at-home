@@ -11,6 +11,7 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from unittest import mock
 from pathlib import Path
 
@@ -316,6 +317,39 @@ class ContextProbeTests(unittest.TestCase):
             self.assertEqual(raw["record_type"], "context_failure")
             self.assertEqual(summary["verdict"], "FAIL")
             self.assertFalse(manifest["qualification_authority"])
+
+    def test_scheduler_seed_is_derived_from_three_post_freeze_drand_relays(self):
+        scorer = load_scorer()
+        candidate = "a" * 40
+        signature = "12" * 96
+        randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
+        round_number = 10
+        beacon = {
+            "round": round_number,
+            "randomness": randomness,
+            "signature": signature,
+        }
+        lineage = scorer.capture_public_lineage(
+            candidate=candidate,
+            now=datetime.fromtimestamp(
+                1_595_431_050 + (round_number - 1) * 30 + 1,
+                timezone.utc,
+            ),
+            relay_fetcher=lambda _host, requested: (
+                beacon if requested == round_number else {}
+            ),
+            commit_time_fetcher=lambda _candidate: "2020-07-22T00:00:00+00:00",
+        )
+        expected_seed = hashlib.sha256(
+            f"{candidate}:{randomness}:dsv4_reference_context".encode()
+        ).hexdigest()
+        self.assertEqual(
+            lineage["randomness"]["seed_sha256"], expected_seed
+        )
+        self.assertEqual(lineage["randomness"]["round"], round_number)
+        scheduler = USER_SCHEDULER.read_text(encoding="utf-8")
+        self.assertIn("[[ $SEED_SHA256 == auto ]]", scheduler)
+        self.assertIn("--capture-lineage", scheduler)
 
 
 class ContextWorkerContractTests(unittest.TestCase):
