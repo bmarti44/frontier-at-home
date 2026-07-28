@@ -212,6 +212,21 @@ api_key() {
     [[ $REPLY =~ ^[A-Za-z0-9._-]{16,512}$ ]]
 }
 
+verify_dsv4_context() {
+    local body path="/slots"
+    body=$(clean_curl -fsS --max-time 5 \
+        "http://127.0.0.1:$PORT$path") || return 1
+    clean_python - "$body" <<'PY'
+import json, sys
+value = json.loads(sys.argv[1])
+if not isinstance(value, list) or len(value) != 1:
+    raise SystemExit("DeepSeek slot topology is invalid")
+slot = value[0]
+if slot["n_ctx"] != 1048576:
+    raise SystemExit("DeepSeek context is not 1048576")
+PY
+}
+
 wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
     expected=deepseek-v4-flash
@@ -228,7 +243,9 @@ if not any(expected == item["id"].lower() for item in value["data"]):
     raise SystemExit("exact model identity mismatch")
 PY
         then
-            return 0
+            if [[ $profile != dsv4 ]] || verify_dsv4_context; then
+                return 0
+            fi
         fi
         probe_count=$((probe_count + 1))
         if (( probe_count % 15 == 0 )); then
@@ -255,6 +272,9 @@ value=json.loads(sys.argv[2])
 if not any(expected == item["id"].lower() for item in value["data"]):
     raise SystemExit("exact model identity mismatch")
 PY
+    if [[ $profile == dsv4 ]]; then
+        verify_dsv4_context || return 1
+    fi
     unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
     [[ $unauth == 401 ]] || return 1
