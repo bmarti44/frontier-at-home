@@ -88,7 +88,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("upstream_port=8013", installer)
         self.assertNotIn("readonly PORT=8011", source)
 
-    def test_switch_runs_deepseek_as_engine_user_with_frozen_profile(self):
+    def test_switch_runs_deepseek_as_engine_user_with_frozen_1m_profile(self):
         source = SCRIPT.read_text()
         self.assertIn(
             "install -d -o dsv4 -g dsv4 -m 0700 /run/dsv4", source
@@ -98,12 +98,14 @@ class EngineSwitchTests(unittest.TestCase):
             "DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/"
             "llama.cpp-fusion/build/bin/llama-server",
             "DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json",
-            "DSV4_MEM_FLOOR_GIB=18",
-            "DSV4_WATCHDOG_FLOOR_GIB=18",
-            "DSV4_UBATCH=512",
-            "DSV4_BATCH=2048",
+            "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14",
+            "DSV4_MEM_FLOOR_GIB=14",
+            "DSV4_WATCHDOG_FLOOR_GIB=14",
+            "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=3",
+            "DSV4_UBATCH=256",
+            "DSV4_BATCH=512",
             "DSV4_UBATCH_LARGE=0",
-            "CTX=8192",
+            "CTX=1048576",
             "DSV4_PARALLEL=1",
             "DSV4_NO_MMAP=1",
             "DSV4_SPEC_TYPE=ngram-map-k4v",
@@ -113,13 +115,17 @@ class EngineSwitchTests(unittest.TestCase):
             "DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key", source
         )
 
-    def test_installed_deepseek_service_uses_the_safe_bootstrap_profile(self):
+    def test_installed_deepseek_service_uses_the_qualified_1m_profile(self):
         service = DSV4_SERVICE.read_text()
         for setting in (
-            "Environment=DSV4_UBATCH=512",
-            "Environment=DSV4_BATCH=2048",
+            "Environment=DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14",
+            "Environment=DSV4_MEM_FLOOR_GIB=14",
+            "Environment=DSV4_WATCHDOG_FLOOR_GIB=14",
+            "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=3",
+            "Environment=DSV4_UBATCH=256",
+            "Environment=DSV4_BATCH=512",
             "Environment=DSV4_UBATCH_LARGE=0",
-            "Environment=CTX=8192",
+            "Environment=CTX=1048576",
             "Environment=DSV4_PARALLEL=1",
         ):
             self.assertIn(setting, service)

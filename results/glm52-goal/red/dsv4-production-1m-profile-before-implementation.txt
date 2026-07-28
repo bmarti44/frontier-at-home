@@ -1,0 +1,13 @@
+Command:
+python3 -m unittest \
+  scripts.tests.test_engine_switch.EngineSwitchTests.test_switch_runs_deepseek_as_engine_user_with_frozen_1m_profile \
+  scripts.tests.test_engine_switch.EngineSwitchTests.test_installed_deepseek_service_uses_the_qualified_1m_profile
+
+Result:
+FAIL
+
+The switcher lacked DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14 and still used
+CTX=8192. The installed fallback service also lacked the qualified 1M settings.
+
+Ran 2 tests
+FAILED (failures=2)
