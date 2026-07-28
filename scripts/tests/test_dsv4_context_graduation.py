@@ -290,6 +290,33 @@ class ContextProbeTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "unlisted"):
                 scorer.verify_freeze(frozen, candidate)
 
+    def test_failed_context_scoring_always_emits_complete_triplet(self):
+        scorer = load_scorer()
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            scorer.write_failure_triplet(
+                out=out,
+                candidate="a" * 40,
+                seed="b" * 64,
+                mode="graduated",
+                error=RuntimeError("missing stage"),
+            )
+            for name in ("manifest.json", "raw.jsonl", "summary.json"):
+                self.assertTrue((out / name).is_file(), name)
+            manifest = json.loads(
+                (out / "manifest.json").read_text(encoding="utf-8")
+            )
+            raw = json.loads(
+                (out / "raw.jsonl").read_text(encoding="utf-8")
+            )
+            summary = json.loads(
+                (out / "summary.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(manifest["gate"], "dsv4_reference_context")
+            self.assertEqual(raw["record_type"], "context_failure")
+            self.assertEqual(summary["verdict"], "FAIL")
+            self.assertFalse(manifest["qualification_authority"])
+
 
 class ContextWorkerContractTests(unittest.TestCase):
     def test_preload_admission_allows_measured_headless_baseline(self):

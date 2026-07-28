@@ -1,0 +1,13 @@
+RED confirmation: 2026-07-28
+Reviewed candidate: 546637a
+
+If startup, probe, or engine-log collection fails before all four stage files
+exist, build_observation raises and the exception handler writes summary.json
+only. That violates the mandatory preservation of every failed/null attempt.
+The successful manifest is also mislabeled as GLM W11 even though it is the
+DeepSeek reference profile.
+
+The new test requires every early exception to emit manifest.json, raw.jsonl,
+and summary.json, with FAIL, a context_failure raw record, and the separate
+dsv4_reference_context gate marked as non-authoritative until ingested by a
+registered controller path.
