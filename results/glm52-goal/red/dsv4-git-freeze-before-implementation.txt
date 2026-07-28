@@ -1,0 +1,15 @@
+RED confirmation: 2026-07-28
+Reviewed candidate: 546637a
+
+The current read-only archive is owned by bmarti44 and verify_freeze trusts its
+owner-writable freeze-manifest.json. In the isolated production archive test:
+
+1. replace the frozen probe;
+2. update the local manifest with the replacement hash;
+3. current verification accepts the substituted candidate;
+4. add an unlisted scripts/hashlib.py import-shadow file;
+5. current verification ignores the added file.
+
+The new test requires independent comparison with the content-addressed Git
+candidate and exact file-set enforcement. Both rewritten-manifest substitution
+and any added file must fail.

@@ -4,7 +4,12 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import io
 import json
+import subprocess
+import tarfile
+import tempfile
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -228,6 +233,62 @@ class ContextProbeTests(unittest.TestCase):
                 "/protected/binary",
             ],
         )
+
+    def test_freeze_verification_uses_git_tree_and_rejects_added_files(self):
+        scorer = load_scorer()
+        candidate = subprocess.check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
+        ).strip()
+        archive = subprocess.check_output(
+            ["git", "-C", str(ROOT), "archive", candidate]
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            frozen = Path(directory)
+            with tarfile.open(fileobj=io.BytesIO(archive)) as stream:
+                stream.extractall(frozen, filter="data")
+            tokenizer = ROOT / "vendor" / "official-encoding" / "tokenizer.json"
+            frozen_tokenizer = (
+                frozen / "vendor" / "official-encoding" / "tokenizer.json"
+            )
+            frozen_tokenizer.parent.mkdir(parents=True, exist_ok=True)
+            frozen_tokenizer.write_bytes(tokenizer.read_bytes())
+
+            artifacts = {
+                str(path.relative_to(frozen)): hashlib.sha256(
+                    path.read_bytes()
+                ).hexdigest()
+                for path in frozen.rglob("*")
+                if path.is_file()
+            }
+            manifest_path = frozen / "freeze-manifest.json"
+            manifest = {
+                "schema_version": 1,
+                "candidate_hash": candidate,
+                "artifacts": artifacts,
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            scorer.verify_freeze(frozen, candidate)
+
+            target = frozen / "scripts" / "57_dsv4_context_probe.py"
+            target.write_text("# substituted\n", encoding="utf-8")
+            manifest["artifacts"][
+                "scripts/57_dsv4_context_probe.py"
+            ] = hashlib.sha256(target.read_bytes()).hexdigest()
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "Git candidate"):
+                scorer.verify_freeze(frozen, candidate)
+
+            with tarfile.open(fileobj=io.BytesIO(archive)) as stream:
+                stream.extract("scripts/57_dsv4_context_probe.py", frozen)
+            manifest["artifacts"][
+                "scripts/57_dsv4_context_probe.py"
+            ] = hashlib.sha256(target.read_bytes()).hexdigest()
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            (frozen / "scripts" / "hashlib.py").write_text(
+                "# import shadow\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(RuntimeError, "unlisted"):
+                scorer.verify_freeze(frozen, candidate)
 
 
 class ContextWorkerContractTests(unittest.TestCase):
