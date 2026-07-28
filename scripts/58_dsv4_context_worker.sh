@@ -337,7 +337,10 @@ for index in "${indices[@]}"; do
     engine_log_bytes=$(run_as_dsv4 stat -c %s "$ENGINE_LOG")
     # Narrow the verified-path TOCTOU window to the probe exec boundary.
     verify_frozen_candidate
+    set +e
     run_context_probe "$cap" "$target"
+    probe_rc=$?
+    set -e
     run_as_dsv4 tail -c "+$((engine_log_bytes + 1))" "$ENGINE_LOG" \
         >"$OUT/engine-$cap.log"
     env -i HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 LANG=C.UTF-8 \
@@ -347,6 +350,7 @@ for index in "${indices[@]}"; do
         "$REPO/scripts/62_score_dsv4_context.py" \
         --out "$OUT" --candidate-hash "$CANDIDATE_HASH" \
         --seed-sha256 "$SEED_SHA256" --witness-stage "$cap"
+    (( probe_rc == 0 ))
     dsv4_launcher "$cap" 3 stop >"$OUT/stop-$cap.log" 2>&1
     ENGINE_ACTIVE=false
     /usr/bin/python3 "$GUARD" --required-gib 110 --stable-samples 3 \

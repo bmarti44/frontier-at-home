@@ -130,18 +130,27 @@ def validate_retrieval(
     parts = [part.strip() for part in answer.split(",")]
     observed = parts[:3] if len(parts) == 4 else []
     alternatives = [
-        {value, value.split("_", 2)[-1]}
-        for value in expected
+        {
+            value,
+            value.split("_", 2)[-1],
+            f"AUDIT RECORD {index}: {value}",
+        }
+        for index, value in enumerate(expected, start=1)
     ]
     ordered = (
         len(observed) == len(expected)
         and all(value in allowed for value, allowed in zip(observed, alternatives))
     )
+    record_tokens = RECORD_PATTERN.findall(answer)
     checks = {
         "all_expected_once": ordered,
         "ordered": ordered,
         "negative_control": len(parts) == 4 and parts[-1] == "NO_EXTRA_RECORD",
-        "no_unexpected_record": len(parts) == 4 and ordered,
+        "no_unexpected_record": (
+            len(parts) == 4
+            and ordered
+            and all(value in expected for value in record_tokens)
+        ),
         "absent_marker_not_hallucinated": (
             absent_value is None or absent_value not in answer
         ),
