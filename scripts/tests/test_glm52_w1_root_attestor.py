@@ -131,6 +131,8 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn('"/usr/bin/systemctl", "stop"', campaign)
         self.assertIn('"ProtectHome=read-only"', campaign)
         self.assertIn("_seal_candidate_tree(engine_source)", campaign)
+        self.assertIn('f"safe.directory={source.resolve()}"', campaign)
+        self.assertIn("_trusted_git(engine_source", campaign)
         self.assertIn(
             r"/var/lib/glm52-w1/requests/[0-9a-f]{64}/attempt-[0-9]{3}",
             campaign,
