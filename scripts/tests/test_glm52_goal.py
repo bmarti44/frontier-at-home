@@ -2149,9 +2149,14 @@ class ControllerTests(unittest.TestCase):
             self.assertTrue(
                 all(
                     gate["status"] == "PENDING"
-                    for gate in state["gates"].values()
+                    for name, gate in state["gates"].items()
+                    if name != "W1"
                 )
             )
+            # W1 is deliberately global and root-authoritative, even when a
+            # disposable controller state directory is used. Its initial
+            # status therefore reflects preserved machine evidence.
+            self.assertIn(state["gates"]["W1"]["status"], self.goal.STATUSES)
 
     def test_resume_selects_highest_value_unfinished_gate(self):
         with tempfile.TemporaryDirectory() as tmp:
