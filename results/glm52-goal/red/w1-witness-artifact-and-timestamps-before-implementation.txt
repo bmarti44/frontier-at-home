@@ -1,0 +1,21 @@
+W1 production-path RED, review round 15, 2026-07-29
+
+Candidate 66d936ee05c118707c61d203a9770b6a26be6a12 froze composite:
+- first half: 7bca6c594d74e883d5d96e7182526077
+- second half: 7379722ddfadf13474ebb0d3bc992eab
+No randomness was obtained and no model campaign was launched.
+
+Two production-path mismatches were independently reproduced:
+
+1. The 4 Hz sampler used `date -Is`, which emits whole-second timestamps.
+   Adjacent production samples therefore repeated timestamps while the fixed
+   scorer correctly rejected gaps less than or equal to zero.
+2. The in-unit journal receipt sealed cmd.log and samples.log but not the
+   quality TSV. Replacing all candidate NLL values while keeping fixture IDs
+   and recomputing user-owned artifacts was accepted by the scorer.
+
+The RED tests required nanosecond production timestamps and required an
+in-unit digest of the exact result artifact. Both failed before implementation.
+
+The round-15 composite remains preserved but is retired because these changes
+create a new candidate.

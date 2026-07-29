@@ -56,6 +56,10 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("GLM_SAFE_WITNESS_NONCE", safe)
         self.assertIn("glm52-w1-witness", safe)
         self.assertIn("GLM_SAFE_WITNESS_NONCE", launcher)
+        self.assertIn("GLM_SAFE_WITNESS_ARTIFACT", safe)
+        self.assertIn("artifact_sha256=", safe)
+        self.assertIn("GLM_SAFE_WITNESS_ARTIFACT", launcher)
+        self.assertIn("date --iso-8601=ns", safe)
 
 
 class CandidateLifecycleTests(unittest.TestCase):

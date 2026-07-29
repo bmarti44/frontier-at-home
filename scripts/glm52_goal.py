@@ -974,7 +974,9 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             r"unit=(glm52-w1-[A-Za-z0-9_-]+) "
             r"binary=([0-9a-f]{64}) environment=([0-9a-f]{64}) "
             r"pid=(\d+) start_ticks=(\d+) rc=(\d+) killed=(\S+) "
-            r"cmd_sha256=([0-9a-f]{64}) samples_sha256=([0-9a-f]{64})$",
+            r"cmd_sha256=([0-9a-f]{64}) samples_sha256=([0-9a-f]{64}) "
+            r"artifact_sha256=([0-9a-f]{64}) "
+            r"artifact_identity=(\d+:\d+:\d+)$",
             witness["message"],
             "journal witness message",
         )
@@ -989,6 +991,8 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             witnessed_killed,
             witnessed_cmd,
             witnessed_samples,
+            witnessed_artifact,
+            witnessed_artifact_identity,
         ) = witness_values
         expected_unit_prefix = (
             f"glm52-w1-{seed[:8]}-{index:02d}-{arm}-"
@@ -1006,6 +1010,9 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             != hashlib.sha256(evidence["cmd_log"].encode()).hexdigest()
             or witnessed_samples
             != hashlib.sha256(evidence["samples_log"].encode()).hexdigest()
+            or witnessed_artifact
+            != hashlib.sha256(evidence["quality_tsv"].encode()).hexdigest()
+            or not re.fullmatch(r"\d+:\d+:\d+", witnessed_artifact_identity)
             or witness["uid"] != "1000"
             or witness["user_unit"] != witnessed_unit + ".service"
             or not witness["cgroup"].endswith(

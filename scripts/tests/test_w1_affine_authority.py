@@ -123,7 +123,10 @@ def raw_campaign(goal):
                 "cmd_sha256="
                 f"{hashlib.sha256(evidence['cmd_log'].encode()).hexdigest()} "
                 "samples_sha256="
-                f"{hashlib.sha256(evidence['samples_log'].encode()).hexdigest()}"
+                f"{hashlib.sha256(evidence['samples_log'].encode()).hexdigest()} "
+                "artifact_sha256="
+                f"{hashlib.sha256(evidence['quality_tsv'].encode()).hexdigest()} "
+                f"artifact_identity=66306:{7000 + attempt_index}:4096"
             )
             evidence["journal_witness"] = json.dumps(
                 {
@@ -244,6 +247,17 @@ class W1AffineAuthorityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.goal.score_registered_gate(
                 "W1", "w1.affine-quality.v2", [uncovered]
+            )
+
+        substituted = copy.deepcopy(campaign)
+        for attempt in substituted["attempts"]:
+            if attempt["arm"] == substituted["candidate_arm"]:
+                attempt["evidence"]["quality_tsv"] = attempt["evidence"][
+                    "quality_tsv"
+                ].replace("\t200.5\t", "\t100.0\t")
+        with self.assertRaises(ValueError):
+            self.goal.score_registered_gate(
+                "W1", "w1.affine-quality.v2", [substituted]
             )
 
     def test_fabricated_drand_and_cached_model_identity_are_rejected(self):

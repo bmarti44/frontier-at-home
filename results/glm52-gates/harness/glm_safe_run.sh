@@ -28,6 +28,7 @@ EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
 PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
 EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
 WITNESS_NONCE=${GLM_SAFE_WITNESS_NONCE:-}
+WITNESS_ARTIFACT=${GLM_SAFE_WITNESS_ARTIFACT:-}
 REQUIRE_CGROUP=${GLM_SAFE_REQUIRE_CGROUP:-0}
 EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
@@ -73,6 +74,15 @@ fi
   config_error "GLM_SAFE_RUN_AS_CURRENT_USER"
 if [[ -n $WITNESS_NONCE && ! $WITNESS_NONCE =~ ^[0-9a-f]{64}$ ]]; then
   config_error "GLM_SAFE_WITNESS_NONCE"
+fi
+if [[ -n $WITNESS_NONCE ]]; then
+  [[ $WITNESS_ARTIFACT =~ ^/home/bmarti44/\.local/state/glm52-[A-Za-z0-9._/-]+$ ]] ||
+    config_error "GLM_SAFE_WITNESS_ARTIFACT"
+  WITNESS_PARENT=$(realpath -e -- "$(dirname -- "$WITNESS_ARTIFACT")" 2>/dev/null || true)
+  [[ $WITNESS_PARENT == /home/bmarti44/.local/state/glm52-* ]] ||
+    config_error "GLM_SAFE_WITNESS_ARTIFACT parent"
+  [[ $WITNESS_ARTIFACT == "$WITNESS_PARENT"/"$(basename -- "$WITNESS_ARTIFACT")" ]] ||
+    config_error "GLM_SAFE_WITNESS_ARTIFACT normalization"
 fi
 ENV_PROVENANCE=0
 PROVENANCE_ENV_NAMES=""
@@ -394,7 +404,7 @@ PY
   fi
   RSS=$(awk '/VmRSS/{print $2}' "/proc/$SPID2/status" 2>/dev/null || echo 0)
   RB=$(awk '/^read_bytes/{print $2}' "/proc/$SPID2/io" 2>/dev/null || echo 0)
-  echo "$(date -Is) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
+  echo "$(date --iso-8601=ns) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
   sync -d "$SAMP" 2>/dev/null || true
   if (( MA < KILL_FLOOR_GIB * 1048576 )); then
     plog "KILL_FLOOR breached: MemAvailable=${MA}kB < ${KILL_FLOOR_GIB}GiB — SIGKILL pgid $PG"
@@ -494,9 +504,18 @@ fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
 if [[ -n $WITNESS_NONCE ]]; then
+  if [[ ! -f $WITNESS_ARTIFACT || -L $WITNESS_ARTIFACT ]]; then
+    plog "FATAL witness result artifact is absent or unsafe"
+    RC=17
+    ARTIFACT_SHA256=missing
+    ARTIFACT_IDENTITY=missing
+  else
+    ARTIFACT_SHA256=$(sha256sum -- "$WITNESS_ARTIFACT" | awk '{print $1}')
+    ARTIFACT_IDENTITY=$(stat -Lc '%d:%i:%s' -- "$WITNESS_ARTIFACT")
+  fi
   CMD_SHA256=$(sha256sum -- "$DIR/cmd.log" | awk '{print $1}')
   SAMPLES_SHA256=$(sha256sum -- "$SAMP" | awk '{print $1}')
-  WITNESS_MESSAGE="W1_WITNESS nonce=$WITNESS_NONCE unit=$EXPECTED_CGROUP_UNIT binary=${CANDIDATE_HASH:-missing} environment=${EXECUTED_ENV_HASH:-missing} pid=${EXECUTED_PID:-missing} start_ticks=${EXECUTED_START_TICKS:-missing} rc=$RC killed=${KILLED:-no} cmd_sha256=$CMD_SHA256 samples_sha256=$SAMPLES_SHA256"
+  WITNESS_MESSAGE="W1_WITNESS nonce=$WITNESS_NONCE unit=$EXPECTED_CGROUP_UNIT binary=${CANDIDATE_HASH:-missing} environment=${EXECUTED_ENV_HASH:-missing} pid=${EXECUTED_PID:-missing} start_ticks=${EXECUTED_START_TICKS:-missing} rc=$RC killed=${KILLED:-no} cmd_sha256=$CMD_SHA256 samples_sha256=$SAMPLES_SHA256 artifact_sha256=$ARTIFACT_SHA256 artifact_identity=$ARTIFACT_IDENTITY"
   { printf '%s\n' "$WITNESS_MESSAGE"; sleep 1; } |
     /usr/bin/systemd-cat --identifier=glm52-w1-witness --priority=notice
   printf '%s\n' "$WITNESS_MESSAGE"

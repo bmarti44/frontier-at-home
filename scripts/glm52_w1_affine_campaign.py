@@ -1175,6 +1175,7 @@ def run(args: argparse.Namespace) -> int:
                 "GLM_SAFE_WITNESS_NONCE": hashlib.sha256(
                     f"{seed}:{index}:W1-witness".encode()
                 ).hexdigest(),
+                "GLM_SAFE_WITNESS_ARTIFACT": str(result_path),
             }
         )
         witness_nonce = environment["GLM_SAFE_WITNESS_NONCE"]
