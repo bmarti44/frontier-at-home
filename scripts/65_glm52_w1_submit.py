@@ -53,13 +53,14 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
         return tuple(argv)
     if (
         len(argv) == 2
-        and argv[0] == "status"
+        and argv[0] in {"status", "diagnose"}
         and HASH64.fullmatch(argv[1])
     ):
         return tuple(argv)
     raise ValueError(
         "usage: glm52-w1-submit run HARNESS_COMMIT ENGINE_COMMIT MODEL_SHA256\n"
-        "       glm52-w1-submit status COMPOSITE_SHA256"
+        "       glm52-w1-submit status COMPOSITE_SHA256\n"
+        "       glm52-w1-submit diagnose COMPOSITE_SHA256"
     )
 
 
@@ -315,6 +316,25 @@ def _manifest_sha256(rows: list[dict[str, object]]) -> str:
     return hashlib.sha256(
         json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
+
+
+def _assert_root_owned(root: Path) -> None:
+    """Require an immutable root-owned request tree without following links."""
+    for path in [root, *sorted(root.rglob("*"))]:
+        details = path.lstat()
+        if stat.S_ISLNK(details.st_mode):
+            raise ValueError("failed campaign is not sealed: symlink present")
+        expected_mode = 0o500 if stat.S_ISDIR(details.st_mode) else 0o400
+        if (
+            details.st_uid != 0
+            or details.st_gid != 0
+            or stat.S_IMODE(details.st_mode) != expected_mode
+        ):
+            raise ValueError("failed campaign is not sealed")
+        if not stat.S_ISDIR(details.st_mode) and (
+            not stat.S_ISREG(details.st_mode) or details.st_nlink != 1
+        ):
+            raise ValueError("failed campaign contains an unsafe file")
 
 
 def _seal(root: Path) -> None:
@@ -863,6 +883,48 @@ def show_status(composite: str) -> int:
     return receipt_exit_code(value)
 
 
+def diagnose_campaign(composite: str) -> dict[str, object]:
+    """Expose the exact error from one immutable failed campaign, read-only."""
+    matches: list[tuple[str, Path]] = []
+    requests = STATE_ROOT / "requests"
+    for receipt_path in sorted(requests.glob("[0-9a-f]" * 64 + "/attempt-*/receipt.json")):
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            continue
+        if (
+            receipt.get("composite_candidate_sha256") == composite
+            and receipt.get("terminal_state") == "FAIL"
+            and receipt.get("failure_phase") == "campaign"
+        ):
+            matches.append((receipt_path.parents[1].name, receipt_path.parent))
+    if len(matches) != 1:
+        raise ValueError("exactly one sealed failed campaign was not found")
+    request_id, request_root = matches[0]
+    _assert_root_owned(request_root)
+    before = _tree_manifest(request_root)
+    log = request_root / "campaign.log"
+    if log.stat().st_size > 16 * 1024 * 1024:
+        raise ValueError("failed campaign log is unexpectedly large")
+    lines = [line for line in log.read_text(encoding="utf-8").splitlines() if line]
+    if not lines:
+        raise ValueError("failed campaign log has no exact error")
+    exact_error = lines[-1]
+    if len(exact_error.encode("utf-8")) > 4096:
+        raise ValueError("failed campaign error is unexpectedly large")
+    after = _tree_manifest(request_root)
+    if before != after:
+        raise ValueError("sealed failed campaign changed during diagnosis")
+    return {
+        "schema_version": 1,
+        "terminal_state": "NO_RESULT",
+        "composite_candidate_sha256": composite,
+        "request_id": request_id,
+        "exact_error": exact_error,
+        "sealed_tree_manifest_sha256": _manifest_sha256(before),
+    }
+
+
 def main(argv: list[str]) -> int:
     global ACTIVE_REQUEST
     request = parse_request(argv)
@@ -883,6 +945,15 @@ def main(argv: list[str]) -> int:
                     _record_failed_active_request(exc)
                     ACTIVE_REQUEST = None
                     raise
+        if request[0] == "diagnose":
+            print(
+                json.dumps(
+                    diagnose_campaign(request[1]),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            )
+            return 0
         return show_status(request[1])
 
 
