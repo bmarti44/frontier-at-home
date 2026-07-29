@@ -613,6 +613,30 @@ def _publish_controller_attempt(source: Path) -> Path:
     return destination
 
 
+def _controller_attempt_names(gate: Path) -> frozenset[str]:
+    if not gate.is_dir():
+        return frozenset()
+    return frozenset(
+        path.name
+        for path in gate.iterdir()
+        if path.is_dir()
+        and path.name.startswith("attempt-")
+        and path.name.removeprefix("attempt-").isdigit()
+    )
+
+
+def _select_fresh_controller_attempt(
+    gate: Path, before: frozenset[str]
+) -> Path:
+    after = _controller_attempt_names(gate)
+    fresh = sorted(after - before)
+    if len(fresh) != 1:
+        raise ValueError(
+            "campaign did not produce exactly one fresh controller attempt"
+        )
+    return gate / fresh[0]
+
+
 def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     global ACTIVE_REQUEST
     _assert_docker_closed()
@@ -766,6 +790,8 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         raise RuntimeError("post-freeze public randomness fetch failed")
 
     ACTIVE_REQUEST["phase"] = "campaign"
+    root_gate = frozen_harness / "results/glm52-goal/W1"
+    attempts_before = _controller_attempt_names(root_gate)
     run_result = _run(
         [
             "/usr/bin/python3",
@@ -786,9 +812,11 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     (request_root / "campaign.log").write_text(
         run_result.stdout, encoding="utf-8"
     )
-    root_gate = frozen_harness / "results/glm52-goal/W1"
-    produced = sorted(root_gate.glob("attempt-*"))
-    if not produced:
+    try:
+        controller_attempt = _select_fresh_controller_attempt(
+            root_gate, attempts_before
+        )
+    except ValueError:
         receipt = {
             "schema_version": 2,
             "terminal_state": "FAIL",
@@ -803,7 +831,6 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         ACTIVE_REQUEST = None
         return 1
 
-    controller_attempt = produced[-1]
     ACTIVE_REQUEST["phase"] = "publication"
     attempt_manifest = _tree_manifest(controller_attempt)
     authority_pass = run_result.returncode == 0
