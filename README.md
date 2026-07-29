@@ -71,6 +71,20 @@ and [ROCm system guidance](https://rocm.docs.amd.com/en/latest/how-to/system-opt
 | **DeepSeek V4 Flash** | Ryzen AI Max / Max+ (Strix Halo); ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Strix Halo profile or repository-qualified measurement has been submitted. Contributions must record the exact APU, installed memory, kernel, ROCm version, backend, and model format. |
 | **GLM-5.2** | Ryzen AI Max / Max+ (Strix Halo); ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Strix Halo profile or repository-qualified measurement has been submitted. The shared-memory capacity is promising, but model fit, context capacity, fidelity, and throughput remain unproven here. |
 
+### AMD discrete ROCm
+
+Discrete Radeon, Radeon Pro, and Instinct GPUs use the ROCm/HIP software stack
+but have dedicated VRAM rather than Strix Halo's unified memory. They therefore
+need separate profiles, especially when multiple cards or host-RAM offload are
+used. Hardware and operating-system support varies by ROCm release; contributors
+should verify their exact combination against AMD's
+[current compatibility matrix](https://rocm.docs.amd.com/en/develop/compatibility/compatibility-matrix.html).
+
+| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| **DeepSeek V4 Flash** | AMD Radeon, Radeon Pro, or Instinct; ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No discrete-ROCm profile or repository-qualified measurement has been submitted. Contributions must report every GPU and its VRAM, ROCm and kernel versions, PCIe topology, host-RAM offload, model format, and transfer-inclusive performance. |
+| **GLM-5.2** | AMD Radeon, Radeon Pro, or Instinct; ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No discrete-ROCm profile or repository-qualified measurement has been submitted. Multi-GPU model fit, routed-MoE operator coverage, direct-1M context, fidelity, and performance remain unproven here. |
+
 ### NVIDIA Jetson Thor
 
 Jetson AGX Thor is an ARM64 platform with a Blackwell GPU and the
@@ -143,11 +157,11 @@ whole-system freeze.
 
 ## Beyond CUDA
 
-Apple Silicon/macOS, AMD Strix Halo, NVIDIA Jetson Thor, Intel Xe, Qualcomm
-Snapdragon X, and Tenstorrent Tensix hardware and model profiles are explicitly
-open to pull requests. The same evidence, largest-context, safety,
-authentication, switching, and rollback expectations apply, adapted to each
-platform's memory and service controls.
+Apple Silicon/macOS, AMD Strix Halo, discrete AMD ROCm, NVIDIA Jetson Thor,
+Intel Xe, Qualcomm Snapdragon X, and Tenstorrent Tensix hardware and model
+profiles are explicitly open to pull requests. The same evidence,
+largest-context, safety, authentication, switching, and rollback expectations
+apply, adapted to each platform's memory and service controls.
 
 Other Linux accelerators and CPU/offload architectures are also in scope. Start
 with a measured baseline and roofline; do not assume that a CUDA-specific
