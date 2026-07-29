@@ -358,6 +358,26 @@ self_test() {
     printf '%s\n' 'self-test failed: allowed JSON sha256 was rejected' >&2
     return 1
   fi
+  local decode_evidence_path
+  decode_evidence_path='results/glm52-goal/evidence/dsv4-decode-no-result-test/failure.json'
+  if ! is_checksum_file "$decode_evidence_path"; then
+    printf '%s\n' \
+      'self-test failed: structured decode evidence was not classified for field-aware scanning' >&2
+    return 1
+  fi
+  if ! printf '{"harness_sha256":"%s","result_sha256":"%s"}\n' \
+      "$fake_secret" "$fake_secret" \
+      | scan_digest_json "$decode_evidence_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: declared decode evidence digests were rejected' >&2
+    return 1
+  fi
+  if printf '{"note":"%s"}\n' "$fake_secret" \
+      | scan_digest_json "$decode_evidence_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: undeclared decode evidence digest was accepted' >&2
+    return 1
+  fi
   printf '%s\n' 'self-test passed'
 }
 
