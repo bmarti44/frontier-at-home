@@ -43,17 +43,85 @@ class RootAttestorContractTests(unittest.TestCase):
             submitter.parse_request(["status", sha256]),
             ("status", sha256),
         )
+        self.assertEqual(
+            submitter.parse_request(["diagnose", sha256]),
+            ("diagnose", sha256),
+        )
         for malformed in (
             [],
             ["run", sha1, sha1],
             ["run", "../repo", sha1, sha256],
             ["run", sha1, sha1, sha256, "--command=id"],
             ["status", sha256, "extra"],
+            ["diagnose", "../attempt"],
+            ["diagnose", sha256, "extra"],
             ["shell", sha256],
         ):
             with self.subTest(malformed=malformed):
                 with self.assertRaises(ValueError):
                     submitter.parse_request(malformed)
+
+    def test_diagnosis_reads_only_exact_sealed_failed_campaign(self):
+        submitter = load_submitter()
+        composite = "2" * 64
+        request_id = "3" * 64
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            attempt = state / "requests" / request_id / "attempt-001"
+            attempt.mkdir(parents=True)
+            (attempt / "campaign.log").write_text(
+                "ordinary output\n"
+                "glm52-w1-affine-campaign: W1 raw memory telemetry "
+                "does not cover execution\n",
+                encoding="utf-8",
+            )
+            (attempt / "receipt.json").write_text(
+                '{"composite_candidate_sha256":"' + composite + '",'
+                '"failure_phase":"campaign","terminal_state":"FAIL"}\n',
+                encoding="utf-8",
+            )
+            for path in sorted(attempt.rglob("*"), reverse=True):
+                path.chmod(0o500 if path.is_dir() else 0o400)
+            attempt.chmod(0o500)
+            with (
+                mock.patch.object(submitter, "STATE_ROOT", state),
+                mock.patch.object(
+                    submitter,
+                    "_assert_root_owned",
+                    return_value=None,
+                    create=True,
+                ),
+            ):
+                diagnosis = submitter.diagnose_campaign(composite)
+            self.assertEqual(diagnosis["terminal_state"], "NO_RESULT")
+            self.assertEqual(diagnosis["request_id"], request_id)
+            self.assertEqual(
+                diagnosis["exact_error"],
+                "glm52-w1-affine-campaign: W1 raw memory telemetry "
+                "does not cover execution",
+            )
+            self.assertRegex(diagnosis["sealed_tree_manifest_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(
+                (attempt / "campaign.log").stat().st_mode & 0o777,
+                0o400,
+            )
+
+    def test_diagnosis_rejects_ambiguous_or_unsealed_campaign(self):
+        submitter = load_submitter()
+        composite = "4" * 64
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            attempt = state / "requests" / ("5" * 64) / "attempt-001"
+            attempt.mkdir(parents=True)
+            (attempt / "campaign.log").write_text("failure\n", encoding="utf-8")
+            (attempt / "receipt.json").write_text(
+                '{"composite_candidate_sha256":"' + composite + '",'
+                '"failure_phase":"campaign","terminal_state":"FAIL"}\n',
+                encoding="utf-8",
+            )
+            with mock.patch.object(submitter, "STATE_ROOT", state):
+                with self.assertRaisesRegex(ValueError, "sealed"):
+                    submitter.diagnose_campaign(composite)
 
     def test_submitter_has_fixed_trust_roots_and_no_shell_escape(self):
         submitter = load_submitter()
