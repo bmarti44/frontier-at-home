@@ -86,6 +86,8 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn('DSV4_PORT="$PORT"', source)
         self.assertIn("Environment=DSV4_PORT=8013", service)
         self.assertIn("upstream_port=8013", installer)
+        self.assertIn("configs/tmpfiles/frontier-at-home.conf", installer)
+        self.assertIn("systemd-tmpfiles --create", installer)
         self.assertNotIn("readonly PORT=8011", source)
 
     def test_deepseek_readiness_requires_the_exact_1m_context(self):
@@ -167,6 +169,8 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("systemctl disable deepseek-v4-flash-llamacpp.service", source)
         self.assertIn("systemctl enable dsv4-engine-restore.service", source)
         self.assertIn("systemctl restart dsv4-authhelper.service", source)
+        self.assertIn("configs/tmpfiles/frontier-at-home.conf", source)
+        self.assertIn("systemd-tmpfiles --create", source)
         self.assertIn(
             "systemctl reset-failed deepseek-v4-flash-llamacpp.service "
             "2>/dev/null || true",

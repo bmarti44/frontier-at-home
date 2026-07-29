@@ -163,6 +163,7 @@ fi
 /usr/bin/install -d -o root -g root -m 0755 "$LIBEXEC"
 /usr/bin/printf '%s\n' \
     'd /run/dsv4 1770 root dsv4 -' \
+    'f /run/dsv4/inference.lock 0660 root dsv4 -' \
     'd /run/lock/frontier-at-home 0750 root dsv4 -' \
     'f /run/lock/frontier-at-home/inference.lock 0660 root dsv4 -' \
     >"$harness_temporary/frontier-at-home.conf"

@@ -363,6 +363,10 @@ class RootAttestorContractTests(unittest.TestCase):
             installer,
         )
         self.assertIn("d /run/dsv4 1770 root dsv4 -", installer)
+        self.assertIn(
+            "f /run/dsv4/inference.lock 0660 root dsv4 -",
+            installer,
+        )
         self.assertIn("'RuntimeDirectory='", installer)
         self.assertIn("os.O_NOFOLLOW", installer)
         self.assertIn("opened.st_ino != visible.st_ino", installer)

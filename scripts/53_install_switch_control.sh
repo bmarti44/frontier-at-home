@@ -87,6 +87,10 @@ chmod 0640 "$env_tmp"
 install_unit \
     "$REPO/configs/systemd/deepseek-v4-flash-llamacpp.service"
 install_unit "$REPO/configs/systemd/dsv4-engine-restore.service"
+install -D -o root -g root -m 0644 \
+    "$REPO/configs/tmpfiles/frontier-at-home.conf" \
+    /etc/tmpfiles.d/frontier-at-home.conf
+/usr/bin/systemd-tmpfiles --create /etc/tmpfiles.d/frontier-at-home.conf
 mv -f -- "$env_tmp" "$ENV_FILE"
 trap - EXIT
 

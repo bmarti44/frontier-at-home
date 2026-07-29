@@ -59,7 +59,7 @@ KEY_PREV=$KEY_DIR/api-key.prev
 AUTH_HEADER=$KEY_DIR/auth-header
 ENV_FILE=$KEY_DIR/env
 
-for command_name in install openssl chown chmod mv systemctl getent id curl ss tailscale python3 sed grep mktemp; do
+for command_name in install openssl chown chmod mv systemctl systemd-tmpfiles getent id curl ss tailscale python3 sed grep mktemp; do
     command -v "$command_name" >/dev/null 2>&1 || die "required command not found: $command_name"
 done
 getent group dsv4 >/dev/null || die 'required group does not exist: dsv4'
@@ -128,6 +128,7 @@ for source in \
     "$SYSTEMD_DIR/dsv4-guard.service" \
     "$SYSTEMD_DIR/dsv4-guard.timer" \
     "$SYSTEMD_DIR/dsv4-engine-restore.service" \
+    "$REPO_ROOT/configs/tmpfiles/frontier-at-home.conf" \
     "$REPO_ROOT/configs/caddy/Caddyfile" \
     "$REPO_ROOT/scripts/40_auth_helper.py" \
     "$REPO_ROOT/scripts/42_verify_exposure.sh"; do
@@ -149,6 +150,10 @@ install_unit "$SYSTEMD_DIR/dsv4-authhelper.service"
 install_unit "$SYSTEMD_DIR/dsv4-caddy.service"
 install_unit "$SYSTEMD_DIR/dsv4-guard.service"
 install_unit "$SYSTEMD_DIR/dsv4-engine-restore.service"
+install -D -o root -g root -m 0644 \
+    "$REPO_ROOT/configs/tmpfiles/frontier-at-home.conf" \
+    /etc/tmpfiles.d/frontier-at-home.conf
+systemd-tmpfiles --create /etc/tmpfiles.d/frontier-at-home.conf
 install -o root -g root -m 0644 "$SYSTEMD_DIR/dsv4-guard.timer" /etc/systemd/system/
 install -D -o root -g root -m 0644 "$REPO_ROOT/configs/caddy/Caddyfile" /etc/caddy/Caddyfile
 install -D -o root -g root -m 0755 "$REPO_ROOT/scripts/40_auth_helper.py" \
