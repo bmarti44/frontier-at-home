@@ -277,7 +277,19 @@ def _strict_json(path: Path) -> Any:
     def reject_constant(value: str) -> None:
         raise ValueError(f"non-finite JSON constant: {value}")
 
-    return json.loads(path.read_text(encoding="utf-8"), parse_constant=reject_constant)
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError(f"duplicate JSON key: {key}")
+            value[key] = item
+        return value
+
+    return json.loads(
+        path.read_text(encoding="utf-8"),
+        parse_constant=reject_constant,
+        object_pairs_hook=reject_duplicate_keys,
+    )
 
 
 def _git_environment() -> dict[str, str]:
@@ -420,6 +432,17 @@ def _drand_record(path: Path) -> dict[str, Any]:
     }
 
 
+def _reject_duplicate_drand_keys(
+    pairs: list[tuple[str, Any]], host: str
+) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate drand relay key from {host}: {key}")
+        value[key] = item
+    return value
+
+
 def _authenticate_drand(record: dict[str, Any]) -> dict[str, Any]:
     expected = {
         "round": record["round"],
@@ -451,7 +474,15 @@ def _authenticate_drand(record: dict[str, Any]) -> dict[str, Any]:
         )
         if response.returncode:
             raise ValueError(f"drand relay unavailable: {host}")
-        published = json.loads(response.stdout)
+        published = json.loads(
+            response.stdout,
+            object_pairs_hook=lambda pairs: _reject_duplicate_drand_keys(
+                pairs, host
+            ),
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite drand relay value: {value}")
+            ),
+        )
         if any(published.get(field) != value for field, value in expected.items()):
             raise ValueError(f"drand relay disagreement: {host}")
     return {

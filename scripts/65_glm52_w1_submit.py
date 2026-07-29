@@ -306,6 +306,14 @@ def first_drand_round_after(frozen_at: str) -> int:
 
 
 def _fetch_first_post_freeze_drand(frozen_at: str) -> str:
+    def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError(f"duplicate drand response key: {key}")
+            value[key] = item
+        return value
+
     round_number = first_drand_round_after(frozen_at)
     deadline = time.monotonic() + 45
     while True:
@@ -327,8 +335,14 @@ def _fetch_first_post_freeze_drand(frozen_at: str) -> str:
         )
         if result.returncode == 0:
             try:
-                record = json.loads(result.stdout)
-            except json.JSONDecodeError as exc:
+                record = json.loads(
+                    result.stdout,
+                    object_pairs_hook=unique_pairs,
+                    parse_constant=lambda value: (_ for _ in ()).throw(
+                        ValueError(f"non-finite drand value: {value}")
+                    ),
+                )
+            except (json.JSONDecodeError, ValueError) as exc:
                 raise RuntimeError("post-freeze drand response is invalid") from exc
             if isinstance(record, dict) and record.get("round") == round_number:
                 return result.stdout
