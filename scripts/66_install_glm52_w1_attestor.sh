@@ -195,12 +195,6 @@ fi
 /usr/bin/cp -a -- "$harness_temporary/repository" "$HARNESS"
 harness_installed=1
 /usr/bin/chown -R root:root "$HARNESS"
-/usr/bin/find "$HARNESS" -type d -exec /usr/bin/chmod 0755 {} +
-/usr/bin/find "$HARNESS" -type f -exec /usr/bin/chmod 0644 {} +
-/usr/bin/chmod 0755 \
-    "$HARNESS/scripts/glm52_w1_affine_campaign.py" \
-    "$HARNESS/results/glm52-gates/harness/glm_cgroup_run.sh" \
-    "$HARNESS/results/glm52-gates/harness/glm_safe_run.sh"
 /usr/bin/install -o root -g root -m 0755 "$submitter_temporary" "$SUBMITTER"
 /usr/bin/install -o root -g root -m 0440 "$sudoers_temporary" "$RULE"
 /usr/sbin/visudo -c
