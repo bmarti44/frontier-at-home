@@ -684,6 +684,20 @@ class FormulaTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.goal.score_registered_gate(gate, scorer, records)
 
+    def test_w11_requires_one_direct_one_million_stage(self):
+        direct = w11_record()
+        direct["stages"] = [direct["stages"][-1]]
+        self.assertEqual(
+            self.goal.score_registered_gate(
+                "W11", "w11.context.v1", [direct]
+            )["verdict"],
+            "PASS",
+        )
+        with self.assertRaisesRegex(ValueError, "one direct 1M stage"):
+            self.goal.score_registered_gate(
+                "W11", "w11.context.v1", [w11_record()]
+            )
+
     def test_registered_workstream_scorer_is_fail_closed_for_w1_w10_and_switch(self):
         for gate in [f"W{index}" for index in range(1, 11)] + ["switch"]:
             with self.subTest(gate=gate):
@@ -1984,6 +1998,7 @@ class FormulaTests(unittest.TestCase):
         candidate = "a" * 40
         seed = "b" * 64
         fixture = self.goal.generate_w11_fixture(candidate, seed)
+        self.assertEqual(fixture["stage_context_caps"], [1_048_576])
         record["retrieval_results"] = [
             {**case, "observed_sha256": case["expected_sha256"]}
             for case in fixture["retrieval_cases"]
