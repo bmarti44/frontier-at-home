@@ -20,6 +20,11 @@ shift 2
   echo "cgroup launcher must run as the logged-in benchmark owner" >&2
   exit 2
 }
+RUN_CWD=$(pwd -P)
+[[ $RUN_CWD == /* && $RUN_CWD != *$'\n'* && -x $RUN_CWD ]] || {
+  echo "invalid launch working directory" >&2
+  exit 2
+}
 
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
@@ -154,6 +159,7 @@ UNIT_ACTIVE=1
 set +e
 systemd-run --user --wait --collect --pipe --quiet \
   --expand-environment=no \
+  --working-directory="$RUN_CWD" \
   --unit="$UNIT" --service-type=exec \
   -p KillMode=control-group \
   -p SendSIGKILL=yes \

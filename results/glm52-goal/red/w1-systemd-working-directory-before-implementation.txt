@@ -1,0 +1,22 @@
+W1 production-path RED, 2026-07-29
+
+Frozen candidates:
+- harness: 5cfc1d79c36c4d07df41cbe7505477b34e031e3f
+- engine: 0b14242b083a808146ce1f8088a341a441aff1c5
+- drand round: 6329464
+
+Preserved raw attempt:
+/home/bmarti44/.local/state/glm52-confirm-w1-affine-0b14242-5cfc1d7-r6329464
+
+The unchanged user-cgroup launcher reset the score process working directory.
+Attempt 00 therefore failed safely before evaluating a case:
+
+open gguf-tools/quality-testing/data/glm52-openrouter-100/prompts/case_065.txt: No such file or directory
+SAFE_RUN_DONE rc=1 killed=no
+attempt 00 failed: launcher_rc=1, quality output needs 20 cases, got 0
+
+The production-path regression test also failed before implementation:
+
+python3 -m unittest scripts.tests.test_glm_safe_lifecycle.CandidateLifecycleSourceTests.test_default_off_current_user_mode_retains_containment_and_provenance
+
+AssertionError: 'RUN_CWD=$(pwd -P)' not found in glm_cgroup_run.sh

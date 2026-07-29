@@ -51,6 +51,8 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("GLM_SAFE_EXPECTED_ENV_SHA256", launcher)
         self.assertIn("/run/user/$UID/glm52-inference.lock", launcher)
         self.assertIn("/usr/bin/sudo -n -u dsv4", launcher)
+        self.assertIn('RUN_CWD=$(pwd -P)', launcher)
+        self.assertIn('--working-directory="$RUN_CWD"', launcher)
 
 
 class CandidateLifecycleTests(unittest.TestCase):
