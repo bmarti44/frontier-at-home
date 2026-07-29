@@ -2156,7 +2156,10 @@ class ControllerTests(unittest.TestCase):
             # W1 is deliberately global and root-authoritative, even when a
             # disposable controller state directory is used. Its initial
             # status therefore reflects preserved machine evidence.
-            self.assertIn(state["gates"]["W1"]["status"], self.goal.STATUSES)
+            self.assertIn(
+                state["gates"]["W1"]["status"],
+                {"PENDING", "RED_CONFIRMED", "PASS", "FAIL", "NO_RESULT"},
+            )
 
     def test_resume_selects_highest_value_unfinished_gate(self):
         with tempfile.TemporaryDirectory() as tmp:
