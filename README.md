@@ -21,15 +21,32 @@ implementation: platform-native engines and memory strategies are encouraged
 when they preserve the same standards for correctness, safety, evidence, and
 repeatable operation.
 
-## Current model status
+## Current model status and measurements
 
-Status below is current as of 2026-07-29.
+Status below is current as of 2026-07-29. A dash means that this repository
+does not yet contain a qualifying measurement; it does not mean zero. Context
+size materially changes TTFT and prefill, so every number includes its measured
+prompt size. These are single-user measurements, not concurrency throughput.
 
-| Platform | Model | Current result |
-| --- | --- | --- |
-| **CUDA / NVIDIA GB10 DGX Spark** | **DeepSeek V4 Flash** | Direct 1M qualification passed with a `1,048,576` cap and `1,000,044` actual prompt tokens. Deterministic retrieval, negative control, completed generation, and resource-safety checks passed with more than 14 GiB available at the measured low point. This is the qualified default profile; it may be intentionally stopped while a contained GLM experiment owns the machine. |
-| **CUDA / NVIDIA GB10 DGX Spark** | **GLM-5.2** | Active qualification. Real production tensors were captured and the F16 cache path passed its initial checks. Block-scaled E4M3 and symmetric-int8 both failed the fixed 100-case confidence bounds and remain preserved negative results. The first affine-int8 run remains invalid because it lacked live scorer provenance and compared different CUDA build modes. A clean `CUDA_ARCH=native` parent/candidate check subsequently passed byte-for-byte across all 20 fixed cases, and a newly seeded provenance-verified affine quality run is in progress. GLM has **not** yet passed the direct 1M gate or replaced DeepSeek as the default. |
-| **Apple Silicon / macOS** | **Open to contributors** | Model profiles and backend work are open to pull requests. MLX, Metal, llama.cpp Metal, and model-specific cache or MoE implementations are all in scope when submitted with reproducible measurements and safe operating instructions. |
+### CUDA
+
+| Model | Hardware / format | Largest context result | TTFT | Prefill | Decode | Warm / short-prompt TTFT | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| **DeepSeek V4 Flash** | NVIDIA GB10 DGX Spark; UD-Q2_K_XL; llama.cpp | **1,000,044 tokens processed** with a `1,048,576` cap | **14.268 s @ 4K**; **57.789 s @ 16K**; **104.526 s @ 28K** | **290.790 tok/s @ 4K**; **284.412 tok/s @ 16K**; **274.812 tok/s @ 28K** | **13.882 tok/s @ 4K**; **13.512 tok/s @ 16K**; **13.147 tok/s @ 28K** | **0.554 s @ 52-token prompt**; 30-minute soak median **14.037 decode tok/s** | Qualified CUDA default. Direct 1M retrieval, negative control, generation, and safety checks passed with more than 14 GiB available at the low point. The displayed latency/throughput measurements are the preserved ≤28K suite, not a 1M speed claim. The 52-token result is a short-prompt baseline, not proof of a restored 1M prefix. |
+| **GLM-5.2** | NVIDIA GB10 DGX Spark; routed IQ2_XXS experimental engine | Not yet qualified | — | — | — | — | Active qualification. Real production tensors were captured and F16 passed initial checks. Block-scaled E4M3 and symmetric-int8 failed the fixed 100-case confidence bounds. Affine-int8 still needs a root-authoritative paired campaign. No end-to-end TTFT, prefill, decode, or direct-1M number is accepted yet; research projections are deliberately excluded from this table. |
+
+DeepSeek performance values come from the five-repetition
+[speed suite](results/speed-llamacpp.json); the sustained decode value comes
+from the 96-request [soak](results/soak-llamacpp.json). The 1M capability result
+and the ≤28K performance suite answer different questions and must not be
+combined into an implied 1M throughput figure.
+
+### Apple Silicon
+
+| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| **DeepSeek V4 Flash** | Apple Silicon; MLX, Metal, or llama.cpp Metal | — | — | — | — | — | Open to pull requests. No Apple Silicon profile or repository-qualified measurement has been submitted. |
+| **GLM-5.2** | Apple Silicon; MLX, Metal, or llama.cpp Metal | — | — | — | — | — | Open to pull requests. No Apple Silicon profile or repository-qualified measurement has been submitted. Model-specific cache, MoE, and storage-tier implementations are welcome when accompanied by reproducible evidence and safe operating instructions. |
 
 DeepSeek’s older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
 over upstream llama.cpp on composite accuracy and speed. The product profile
