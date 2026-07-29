@@ -25,13 +25,13 @@ class CudaBandwidthProbeTests(unittest.TestCase):
         self.assertIn("cudaEventRecord", text)
         self.assertIn("cudaEventSynchronize", text)
         self.assertIn("cudaEventElapsedTime", text)
-        self.assertIn('"bandwidth_gb_s"', text)
+        self.assertIn('\\"bandwidth_gb_s\\"', text)
 
     def test_probe_measures_reads_and_consumes_a_checksum(self):
         text = SOURCE.read_text(encoding="utf-8")
         self.assertIn("read_bandwidth_kernel", text)
         self.assertIn("cudaMemcpy", text)
-        self.assertIn('"checksum"', text)
+        self.assertIn('\\"checksum\\"', text)
         self.assertNotIn("cudaMemsetAsync", text)
 
 
