@@ -280,32 +280,100 @@ def _strict_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"), parse_constant=reject_constant)
 
 
-def _trusted_git(source: Path, *arguments: str) -> list[str]:
-    return [
+def _git_environment() -> dict[str, str]:
+    return {
+        "HOME": "/nonexistent",
+        "PATH": "/usr/bin:/bin",
+        "LANG": "C.UTF-8",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_OPTIONAL_LOCKS": "0",
+    }
+
+
+def _trusted_git(
+    source: Path,
+    *arguments: str,
+    git_dir: Path | None = None,
+) -> list[str]:
+    command = [
         "/usr/bin/git",
+        "--no-optional-locks",
         "-c",
-        f"safe.directory={source.resolve()}",
-        *arguments,
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
     ]
+    if git_dir is None:
+        command.extend(
+            [
+                "-c",
+                f"safe.directory={source.resolve()}",
+                "-C",
+                str(source.resolve()),
+            ]
+        )
+    else:
+        command.extend(
+            [
+                f"--git-dir={git_dir.resolve()}",
+                f"--work-tree={source.resolve()}",
+            ]
+        )
+    command.extend(
+        [
+        *arguments,
+        ]
+    )
+    return command
 
 
-def _source_commit(source: Path) -> str:
+def _validate_trusted_git_dir(git_dir: Path, allowed_root: Path) -> None:
+    git_dir = git_dir.resolve()
+    allowed_root = allowed_root.resolve()
+    if not git_dir.is_relative_to(allowed_root):
+        raise ValueError("worktree Git directory escapes the root-owned clone")
+    cursor = git_dir
+    while True:
+        details = cursor.lstat()
+        if (
+            cursor.is_symlink()
+            or not cursor.is_dir()
+            or details.st_uid != 0
+            or details.st_gid != 0
+            or details.st_mode & 0o022
+        ):
+            raise ValueError("worktree Git metadata is not root controlled")
+        if cursor == allowed_root:
+            break
+        cursor = cursor.parent
+
+
+def _source_commit(source: Path, *, git_dir: Path | None = None) -> str:
     status = subprocess.run(
-        _trusted_git(source, "status", "--porcelain", "--untracked-files=no"),
+        _trusted_git(
+            source,
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+            git_dir=git_dir,
+        ),
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=True,
+        env=_git_environment(),
     )
     if status.stdout:
         raise ValueError("engine source has tracked modifications")
     commit = subprocess.run(
-        _trusted_git(source, "rev-parse", "HEAD"),
+        _trusted_git(source, "rev-parse", "HEAD", git_dir=git_dir),
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
         check=True,
+        env=_git_environment(),
     ).stdout.strip()
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("engine candidate commit is invalid")
@@ -319,6 +387,7 @@ def _commit_time(source: Path, commit: str) -> str:
         text=True,
         stdout=subprocess.PIPE,
         check=True,
+        env=_git_environment(),
     ).stdout.strip()
     value = datetime.fromisoformat(raw)
     if value.tzinfo is None:
@@ -464,11 +533,13 @@ def _command_output(command: list[str], cwd: Path | None = None) -> str:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         check=True,
+        env=_git_environment(),
     ).stdout.strip()
 
 
 def _engine_build_descriptor(
     source: Path,
+    git_dir: Path,
     engine_commit: str,
     server_binary: Path,
     quality_binary: Path,
@@ -481,16 +552,28 @@ def _engine_build_descriptor(
     return {
         "schema_version": 1,
         "repository": _command_output(
-            _trusted_git(source, "remote", "get-url", "origin"), source
+            _trusted_git(
+                source, "remote", "get-url", "origin", git_dir=git_dir
+            ),
+            source,
         ),
         "commit": engine_commit,
         "tree": _command_output(
-            _trusted_git(source, "rev-parse", f"{engine_commit}^{{tree}}"),
+            _trusted_git(
+                source,
+                "rev-parse",
+                f"{engine_commit}^{{tree}}",
+                git_dir=git_dir,
+            ),
             source,
         ),
         "status_porcelain": _command_output(
             _trusted_git(
-                source, "status", "--porcelain", "--untracked-files=no"
+                source,
+                "status",
+                "--porcelain",
+                "--untracked-files=no",
+                git_dir=git_dir,
             ),
             source,
         ),
@@ -576,11 +659,12 @@ def _run_checked(
             timeout=timeout + 30 if transient_unit else timeout,
             check=False,
             env={
-                "HOME": run_home,
-                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-                "LANG": "C.UTF-8",
-                "GIT_CONFIG_NOSYSTEM": "1",
-                "GIT_CONFIG_GLOBAL": "/dev/null",
+            "HOME": run_home,
+            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LANG": "C.UTF-8",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+            "GIT_OPTIONAL_LOCKS": "0",
             },
         )
     finally:
@@ -670,6 +754,18 @@ def freeze_candidate(args: argparse.Namespace) -> int:
     engine_source = worktree_root / f"glm52-w1-build-{tag}"
     _fresh_worktree(ROOT, harness_source, harness_commit)
     _fresh_worktree(engine_repository, engine_source, engine_commit)
+    engine_git_dir = Path(
+        _command_output(
+            _trusted_git(
+                engine_source, "rev-parse", "--absolute-git-dir"
+            ),
+            engine_source,
+        )
+    ).resolve()
+    if ROOT_AUTHORITY:
+        _validate_trusted_git_dir(
+            engine_git_dir, engine_repository / ".git"
+        )
     if ROOT_AUTHORITY:
         _seal_candidate_tree(harness_source)
         _chown_tree(engine_source, "dsv4")
@@ -710,6 +806,8 @@ def freeze_candidate(args: argparse.Namespace) -> int:
     for binary in (server, quality, cuda_test):
         if not binary.is_file() or binary.read_bytes()[:4] != b"\x7fELF":
             raise ValueError(f"clean build did not produce an ELF binary: {binary}")
+    if ROOT_AUTHORITY:
+        _seal_candidate_tree(engine_source)
 
     freeze_dir.mkdir(mode=0o700, parents=True)
     transcript_path = freeze_dir / "clean-build.log"
@@ -717,13 +815,22 @@ def freeze_candidate(args: argparse.Namespace) -> int:
     bundle_path = freeze_dir / "engine.bundle"
     _run_checked(
         _trusted_git(
-            engine_source, "bundle", "create", str(bundle_path), "HEAD"
+            engine_source,
+            "bundle",
+            "create",
+            str(bundle_path),
+            "HEAD",
+            git_dir=engine_git_dir,
         ),
         cwd=engine_source,
     )
     bundle_heads = _run_checked(
         _trusted_git(
-            engine_source, "bundle", "list-heads", str(bundle_path)
+            engine_source,
+            "bundle",
+            "list-heads",
+            str(bundle_path),
+            git_dir=engine_git_dir,
         ),
         cwd=engine_source,
     )
@@ -742,7 +849,7 @@ def freeze_candidate(args: argparse.Namespace) -> int:
     runner_path = harness_source / "scripts/glm52_w1_affine_campaign.py"
     scorer_path = harness_source / "scripts/glm52_goal.py"
     engine_build = _engine_build_descriptor(
-        engine_source, engine_commit, server, quality
+        engine_source, engine_git_dir, engine_commit, server, quality
     )
     engine_build["clean_build_transcript_sha256"] = sha256_file(
         transcript_path
@@ -765,9 +872,13 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         "runner_sha256": sha256_file(runner_path),
         "scorer_sha256": sha256_file(scorer_path),
         "engine_candidate_hash": engine_commit,
+        "engine_git_dir": str(engine_git_dir),
         "engine_tree": _command_output(
             _trusted_git(
-                engine_source, "rev-parse", f"{engine_commit}^{{tree}}"
+                engine_source,
+                "rev-parse",
+                f"{engine_commit}^{{tree}}",
+                git_dir=engine_git_dir,
             ),
             engine_source,
         ),
@@ -827,10 +938,17 @@ def verify_frozen_candidate(
         raise ValueError("composite candidate digest changed")
     harness_source = Path(descriptor["harness_source"]).resolve()
     engine_source = Path(descriptor["engine_source"]).resolve()
+    engine_git_dir = Path(descriptor["engine_git_dir"]).resolve()
     model = Path(descriptor["model_path"]).resolve()
+    if ROOT_AUTHORITY:
+        _validate_trusted_git_dir(
+            engine_git_dir,
+            AUTHORITY_REQUEST_ROOT / "engine-repository" / ".git",
+        )
     if (
         _source_commit(harness_source) != descriptor["harness_candidate_hash"]
-        or _source_commit(engine_source) != descriptor["engine_candidate_hash"]
+        or _source_commit(engine_source, git_dir=engine_git_dir)
+        != descriptor["engine_candidate_hash"]
         or sha256_file(
             harness_source / "scripts/glm52_w1_affine_campaign.py"
         )
