@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -62,7 +63,7 @@ START_RE = re.compile(
 )
 EXIT_RE = re.compile(
     r"^ds4: GLM compact cache fidelity attestation resolved_mode=(\d+) "
-    r"affine_store_rows=(\d+)$",
+    r"affine_store_rows=(\d+) affine_changed_values=(\d+)$",
     re.MULTILINE,
 )
 FAULT_RE = re.compile(
@@ -108,28 +109,17 @@ def environment_sha256(names: Iterable[str], values: dict[str, str]) -> str:
 
 def confirmation_seed(
     drand_randomness: str,
-    engine_commit: str,
-    binary_sha256: str,
     harness_commit: str,
 ) -> str:
     for value, label, length in (
         (drand_randomness, "drand randomness", 64),
-        (engine_commit, "engine commit", 40),
-        (binary_sha256, "binary", 64),
         (harness_commit, "harness commit", 40),
     ):
         if not re.fullmatch(rf"[0-9a-f]{{{length}}}", value):
             raise ValueError(f"{label} is invalid")
-    digest = hashlib.sha256()
-    for value in (
-        drand_randomness,
-        engine_commit,
-        binary_sha256,
-        harness_commit,
-    ):
-        digest.update(bytes.fromhex(value))
-    digest.update(b"affine-int8-b16-quality-v3-strict-abba")
-    return digest.hexdigest()
+    return hashlib.sha256(
+        f"{harness_commit}:{drand_randomness}:W1".encode()
+    ).hexdigest()
 
 
 def _manifest_rows(manifest: Path) -> list[tuple[str, str, str, str]]:
@@ -179,16 +169,16 @@ def content_complete_fixture_sha256(
     return digest.hexdigest()
 
 
-def parse_attestation(log: str) -> tuple[int, int]:
+def parse_attestation(log: str) -> tuple[int, int, int]:
     starts = START_RE.findall(log)
     exits = EXIT_RE.findall(log)
     if len(starts) != 1 or len(exits) != 1:
         raise ValueError("runtime mode attestation is missing or duplicated")
     start_mode = int(starts[0])
-    exit_mode, rows = map(int, exits[0])
+    exit_mode, rows, changed = map(int, exits[0])
     if start_mode != exit_mode:
         raise ValueError("runtime mode changed within one process")
-    return start_mode, rows
+    return start_mode, rows, changed
 
 
 def parse_quality_tsv(path: Path) -> list[dict[str, Any]]:
@@ -242,6 +232,22 @@ def _atomic_json(path: Path, value: Any) -> None:
             pass
 
 
+def _canonical_json_bytes(value: Any) -> bytes:
+    return (
+        json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        + "\n"
+    ).encode()
+
+
+def _write_canonical_json(path: Path, value: Any) -> str:
+    data = _canonical_json_bytes(value)
+    if path.exists() and path.read_bytes() != data:
+        raise ValueError(f"existing immutable artifact differs: {path}")
+    if not path.exists():
+        path.write_bytes(data)
+    return sha256_bytes(data)
+
+
 def _strict_json(path: Path) -> Any:
     def reject_constant(value: str) -> None:
         raise ValueError(f"non-finite JSON constant: {value}")
@@ -272,6 +278,20 @@ def _source_commit(source: Path) -> str:
     return commit
 
 
+def _commit_time(source: Path, commit: str) -> str:
+    raw = subprocess.run(
+        ["git", "show", "-s", "--format=%cI", commit],
+        cwd=source,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
+    value = datetime.fromisoformat(raw)
+    if value.tzinfo is None:
+        raise ValueError("candidate commit time lacks a timezone")
+    return value.astimezone(timezone.utc).isoformat()
+
+
 def _drand_record(path: Path) -> dict[str, Any]:
     record = _strict_json(path)
     if not isinstance(record, dict):
@@ -286,7 +306,8 @@ def _drand_record(path: Path) -> dict[str, Any]:
         or not isinstance(randomness, str)
         or not re.fullmatch(r"[0-9a-f]{64}", randomness)
         or not isinstance(signature, str)
-        or not re.fullmatch(r"[0-9a-f]+", signature)
+        or not re.fullmatch(r"[0-9a-f]{192}", signature)
+        or hashlib.sha256(bytes.fromhex(signature)).hexdigest() != randomness
     ):
         raise ValueError("drand record is malformed")
     return {
@@ -294,6 +315,62 @@ def _drand_record(path: Path) -> dict[str, Any]:
         "randomness": randomness,
         "signature": signature,
     }
+
+
+def _authenticate_drand(record: dict[str, Any]) -> dict[str, Any]:
+    expected = {
+        "round": record["round"],
+        "randomness": record["randomness"],
+        "signature": record["signature"],
+    }
+    for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
+        response = subprocess.run(
+            [
+                "/usr/bin/curl",
+                "--disable",
+                "--silent",
+                "--show-error",
+                "--fail",
+                "--max-time",
+                "10",
+                "--proto",
+                "=https",
+                f"https://{host}/public/{record['round']}",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            env={
+                "HOME": "/nonexistent",
+                "PATH": "/usr/bin:/bin",
+                "LANG": "C.UTF-8",
+            },
+        )
+        if response.returncode:
+            raise ValueError(f"drand relay unavailable: {host}")
+        published = json.loads(response.stdout)
+        if any(published.get(field) != value for field, value in expected.items()):
+            raise ValueError(f"drand relay disagreement: {host}")
+    return {
+        **record,
+        "obtained_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def verify_model_content(model: Path, expected_sha256: str) -> str:
+    _validate_sha256(expected_sha256, "expected model")
+    observed = sha256_file(model)
+    if observed != expected_sha256:
+        raise ValueError("model content hash changed")
+    return observed
+
+
+def model_identity(model: Path) -> str:
+    stat = model.stat()
+    return (
+        f"{stat.st_dev}:{stat.st_ino}:{stat.st_size}:"
+        f"{stat.st_uid}:{stat.st_gid}:{stat.st_mode & 0o777}"
+    )
 
 
 def _write_manifests(source: Path, output: Path, seed: str) -> list[Path]:
@@ -315,6 +392,85 @@ def _write_manifests(source: Path, output: Path, seed: str) -> list[Path]:
             manifest.write_text(text, encoding="utf-8")
         manifests.append(manifest)
     return manifests
+
+
+def _fixture_descriptor(
+    source: Path, manifests: list[Path], content_sha256: str
+) -> dict[str, Any]:
+    blocks = []
+    for block, manifest in enumerate(manifests):
+        rows = _manifest_rows(manifest)
+        blocks.append(
+            {
+                "block": block,
+                "manifest_sha256": sha256_file(manifest),
+                "ordered_case_ids": [row[0] for row in rows],
+                "referenced_files": [
+                    {
+                        "path": relative,
+                        "sha256": sha256_file((source / relative).resolve()),
+                    }
+                    for row in rows
+                    for relative in row[1:]
+                ],
+            }
+        )
+    return {
+        "schema_version": 1,
+        "content_sha256": content_sha256,
+        "blocks": blocks,
+    }
+
+
+def _command_output(command: list[str], cwd: Path | None = None) -> str:
+    return subprocess.run(
+        command,
+        cwd=cwd,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=True,
+    ).stdout.strip()
+
+
+def _engine_build_descriptor(
+    source: Path,
+    engine_commit: str,
+    server_binary: Path,
+    quality_binary: Path,
+) -> dict[str, Any]:
+    objects = {
+        path.name: sha256_file(path)
+        for path in sorted(source.glob("*.o"))
+        if path.is_file()
+    }
+    return {
+        "schema_version": 1,
+        "repository": _command_output(
+            ["git", "remote", "get-url", "origin"], source
+        ),
+        "commit": engine_commit,
+        "tree": _command_output(
+            ["git", "rev-parse", f"{engine_commit}^{{tree}}"], source
+        ),
+        "status_porcelain": _command_output(
+            ["git", "status", "--porcelain", "--untracked-files=no"], source
+        ),
+        "build_commands": [
+            "make clean",
+            "make -j2 CUDA_ARCH=native ds4-server "
+            "gguf-tools/quality-testing/score_official "
+            "tests/test_glm_affine_int8_cuda",
+            "./tests/test_glm_affine_int8_cuda",
+        ],
+        "compiler": _command_output(["cc", "--version"]).splitlines()[0],
+        "cuda_compiler": _command_output(
+            ["/usr/local/cuda/bin/nvcc", "--version"]
+        ),
+        "server_binary_sha256": sha256_file(server_binary),
+        "quality_binary_sha256": sha256_file(quality_binary),
+        "object_sha256": objects,
+    }
 
 
 def _journal_cursor() -> str:
@@ -366,7 +522,121 @@ def _score(campaign: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("cannot load fixed scorer")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module._score_w1_affine([campaign])
+    return module._score_w1_affine_raw([campaign])
+
+
+def _goal_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("glm52_goal_authority", SCORER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load controller authority")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _finalize_controller_attempt(
+    output: Path,
+    campaign: dict[str, Any],
+    summary: dict[str, Any],
+    frozen_binary: Path,
+    final_model_identity: str,
+) -> Path:
+    goal = _goal_module()
+    staging = output / "controller-attempt"
+    if staging.exists():
+        raise ValueError("controller attempt staging already exists")
+    staging.mkdir(mode=0o700)
+
+    source_descriptor = {
+        "schema_version": 1,
+        "candidate_hash": campaign["harness_candidate_hash"],
+        "git_tree": _command_output(
+            [
+                "git",
+                "rev-parse",
+                f"{campaign['harness_candidate_hash']}^{{tree}}",
+            ],
+            ROOT,
+        ),
+    }
+    model_descriptor = {
+        "schema_version": 1,
+        "content_sha256": campaign["model_content_sha256"],
+        "identity": final_model_identity,
+    }
+    tokenizer_descriptor = {
+        "schema_version": 1,
+        "lineage": "embedded-in-model-container",
+        "content_sha256": campaign["tokenizer_content_sha256"],
+    }
+    scorer_descriptor = {
+        "schema_version": 1,
+        "scorer_id": "w1.affine-quality.v2",
+        "implementation_sha256": goal.registered_scorer_digest(
+            "w1.affine-quality.v2"
+        ),
+    }
+    artifact_values = {
+        "source.json": source_descriptor,
+        "model.json": model_descriptor,
+        "tokenizer.json": tokenizer_descriptor,
+        "scorer.json": scorer_descriptor,
+        "evidence.json": campaign,
+    }
+    for name, value in artifact_values.items():
+        _write_canonical_json(staging / name, value)
+    shutil.copyfile(output / "engine-build.json", staging / "engine-build.json")
+    shutil.copyfile(output / "configuration.json", staging / "configuration.json")
+    shutil.copyfile(output / "fixture.json", staging / "fixture.json")
+    shutil.copyfile(frozen_binary, staging / "quality-binary")
+    os.chmod(staging / "quality-binary", 0o500)
+    (staging / "raw.jsonl").write_bytes(_canonical_json_bytes(campaign))
+    _write_canonical_json(staging / "summary.json", summary)
+
+    manifest = {
+        "schema_version": 1,
+        "gate": "W1",
+        "candidate_hash": campaign["harness_candidate_hash"],
+        "lineage": campaign["lineage"],
+        "artifacts": {
+            "source": "source.json",
+            "diff": "engine-build.json",
+            "binary": "quality-binary",
+            "scorer": "scorer.json",
+            "model": "model.json",
+            "tokenizer": "tokenizer.json",
+            "fixture": "fixture.json",
+            "configuration": "configuration.json",
+            "evidence": "evidence.json",
+        },
+        "source_sha256": sha256_file(staging / "source.json"),
+        "diff_sha256": sha256_file(staging / "engine-build.json"),
+        "binary_sha256": sha256_file(staging / "quality-binary"),
+        "scorer_sha256": sha256_file(staging / "scorer.json"),
+        "model_sha256": sha256_file(staging / "model.json"),
+        "tokenizer_sha256": sha256_file(staging / "tokenizer.json"),
+        "fixture_sha256": sha256_file(staging / "fixture.json"),
+        "configuration_sha256": sha256_file(staging / "configuration.json"),
+        "evidence_sha256": sha256_file(staging / "evidence.json"),
+    }
+    _write_canonical_json(staging / "manifest.json", manifest)
+    goal.validate_attempt(staging)
+
+    gate_dir = ROOT / "results/glm52-goal/W1"
+    gate_dir.mkdir(parents=True, exist_ok=True)
+    existing_numbers = [
+        int(path.name.removeprefix("attempt-"))
+        for path in gate_dir.glob("attempt-*")
+        if path.is_dir() and path.name.removeprefix("attempt-").isdigit()
+    ]
+    destination = gate_dir / f"attempt-{max(existing_numbers, default=0) + 1:03d}"
+    if destination.exists():
+        raise ValueError("controller attempt destination already exists")
+    os.replace(staging, destination)
+    goal.validate_attempt(destination)
+    return destination
 
 
 def _freeze_scorer(source: Path, engine_commit: str, binary_sha256: str) -> Path:
@@ -402,17 +672,50 @@ def run(args: argparse.Namespace) -> int:
     if args.engine_candidate_hash and args.engine_candidate_hash != engine_commit:
         raise ValueError("engine candidate hash changed")
     scorer_binary = source / "gguf-tools/quality-testing/score_official"
+    server_binary = source / "ds4-server"
+    if not scorer_binary.is_file() or not server_binary.is_file():
+        raise ValueError("clean-built engine binaries are absent")
     binary_sha256 = sha256_file(scorer_binary)
     harness_commit = _source_commit(ROOT)
-    drand = _drand_record(args.drand_json.resolve())
-    seed = confirmation_seed(
-        drand["randomness"], engine_commit, binary_sha256, harness_commit
-    )
+    drand = _authenticate_drand(_drand_record(args.drand_json.resolve()))
+    seed = confirmation_seed(drand["randomness"], harness_commit)
+    frozen_at = _commit_time(ROOT, harness_commit)
+    lineage = {
+        "freeze": {
+            "candidate_hash": harness_commit,
+            "frozen_at": frozen_at,
+        },
+        "randomness": {
+            "source": "drand-default",
+            **drand,
+            "seed_sha256": seed,
+        },
+    }
     frozen = _freeze_scorer(source, engine_commit, binary_sha256)
     output = _campaign_paths(seed, engine_commit, args.output)
     output.mkdir(mode=0o700, parents=True, exist_ok=True)
     manifests = _write_manifests(source, output, seed)
-    fixture_sha256 = content_complete_fixture_sha256(source, manifests)
+    fixture_content_sha256 = content_complete_fixture_sha256(source, manifests)
+    fixture_descriptor = _fixture_descriptor(
+        source, manifests, fixture_content_sha256
+    )
+    fixture_path = output / "fixture.json"
+    fixture_sha256 = _write_canonical_json(fixture_path, fixture_descriptor)
+
+    if not args.model_sha256:
+        raise ValueError("expected model content hash is required")
+    model_sha256 = verify_model_content(model, args.model_sha256)
+    initial_model_identity = model_identity(model)
+    if os.access(model, os.W_OK):
+        raise ValueError("campaign model is writable by the benchmark owner")
+    (output / "model.sha256").write_text(model_sha256 + "\n", encoding="ascii")
+    engine_build = _engine_build_descriptor(
+        source, engine_commit, server_binary, scorer_binary
+    )
+    engine_build_path = output / "engine-build.json"
+    engine_build_sha256 = _write_canonical_json(
+        engine_build_path, engine_build
+    )
 
     common = dict(COMMON_ENGINE_ENVIRONMENT)
     baseline_environment = dict(common)
@@ -431,7 +734,12 @@ def run(args: argparse.Namespace) -> int:
         "harness_candidate_hash": harness_commit,
         "engine_candidate_hash": engine_commit,
         "binary_sha256": binary_sha256,
-        "model": str(model),
+        "model_path": str(model),
+        "model_content_sha256": model_sha256,
+        "tokenizer_content_sha256": model_sha256,
+        "engine_build_sha256": engine_build_sha256,
+        "fixture_sha256": fixture_sha256,
+        "fixture_content_sha256": fixture_content_sha256,
         "launch_arguments": [
             str(model),
             "{manifest}",
@@ -445,50 +753,39 @@ def run(args: argparse.Namespace) -> int:
         "baseline_environment": baseline_environment,
         "candidate_environment": candidate_environment,
         "schedules": list(schedules(seed)),
-        "public_randomness": {
-            **drand,
-            "seed_sha256": seed,
-            "seed_formula": (
-                "sha256(drand_randomness_bytes || engine_commit_bytes || "
-                "binary_sha256_bytes || harness_commit_bytes || "
-                "affine-int8-b16-quality-v3-strict-abba)"
-            ),
-        },
+        "lineage": lineage,
         "safety": SAFE_ENVIRONMENT,
     }
-    configuration_bytes = (
-        json.dumps(configuration, sort_keys=True, separators=(",", ":")) + "\n"
-    ).encode()
     configuration_path = output / "configuration.json"
-    if (
-        configuration_path.exists()
-        and configuration_path.read_bytes() != configuration_bytes
-    ):
-        raise ValueError("existing campaign configuration differs")
-    configuration_path.write_bytes(configuration_bytes)
-    configuration_sha256 = sha256_bytes(configuration_bytes)
-
-    model_digest_path = output / "model.sha256"
-    if model_digest_path.exists():
-        model_sha256 = model_digest_path.read_text().strip()
-        _validate_sha256(model_sha256, "recorded model")
-    else:
-        model_sha256 = sha256_file(model)
-        model_digest_path.write_text(model_sha256 + "\n", encoding="ascii")
-    if args.model_sha256 and args.model_sha256 != model_sha256:
-        raise ValueError("model hash differs from expected digest")
+    configuration_sha256 = _write_canonical_json(
+        configuration_path, configuration
+    )
 
     campaign_path = output / "campaign.json"
     campaign = {
-        "record_type": "w1_affine_campaign",
+        "record_type": "w1_affine_raw_campaign",
+        "harness_candidate_hash": harness_commit,
         "engine_candidate_hash": engine_commit,
         "seed_sha256": seed,
         "binary_sha256": binary_sha256,
         "configuration_sha256": configuration_sha256,
         "fixture_sha256": fixture_sha256,
+        "fixture_content_sha256": fixture_content_sha256,
+        "model_content_sha256": model_sha256,
+        "tokenizer_content_sha256": model_sha256,
+        "engine_build_sha256": engine_build_sha256,
         "baseline_environment_sha256": baseline_environment_sha256,
         "candidate_environment_sha256": candidate_environment_sha256,
         "candidate_arm": candidate_arm(seed),
+        "lineage": lineage,
+        "fixture_blocks": [
+            {
+                "block": block["block"],
+                "manifest_sha256": block["manifest_sha256"],
+                "ordered_case_ids": block["ordered_case_ids"],
+            }
+            for block in fixture_descriptor["blocks"]
+        ],
         "attempts": [],
     }
     if campaign_path.exists():
@@ -499,12 +796,13 @@ def run(args: argparse.Namespace) -> int:
         campaign = existing
     _atomic_json(output / "run-metadata.json", {
         "schema_version": 1,
-        "model_sha256": model_sha256,
+        "model_content_sha256": model_sha256,
+        "model_identity": initial_model_identity,
         "engine_source": str(source),
         "frozen_binary": str(frozen / "ds4-server"),
         "fixture_manifests": [str(path) for path in manifests],
     })
-    _atomic_json(output / "randomness.json", configuration["public_randomness"])
+    _atomic_json(output / "randomness.json", lineage["randomness"])
     _atomic_json(campaign_path, campaign)
 
     flattened = [
@@ -524,8 +822,11 @@ def run(args: argparse.Namespace) -> int:
             else baseline_environment_sha256
         )
         before = content_complete_fixture_sha256(source, manifests)
-        if before != fixture_sha256:
+        if before != fixture_content_sha256:
             raise ValueError("fixture bytes changed before attempt")
+        model_before = model_identity(model)
+        if model_before != initial_model_identity:
+            raise ValueError("model identity changed before attempt")
         cursor = _journal_cursor()
         result_path = output / f"attempt-{index:02d}.tsv"
         log_path = output / f"attempt-{index:02d}.launcher.log"
@@ -590,10 +891,12 @@ def run(args: argparse.Namespace) -> int:
             except OSError:
                 failures.append("safe_run_logs_missing")
         try:
-            resolved_mode, store_count = parse_attestation(command_log)
+            resolved_mode, store_count, changed_values = parse_attestation(
+                command_log
+            )
         except ValueError as exc:
             failures.append(str(exc))
-            resolved_mode, store_count = 0, 0
+            resolved_mode, store_count, changed_values = 0, 0, 0
         try:
             cases = parse_quality_tsv(result_path)
         except (OSError, ValueError) as exc:
@@ -610,8 +913,11 @@ def run(args: argparse.Namespace) -> int:
             failures.append(str(exc))
             available_memory_gib = 0.0
         after = content_complete_fixture_sha256(source, manifests)
-        if after != fixture_sha256:
+        if after != fixture_content_sha256:
             failures.append("fixture_bytes_changed_after_attempt")
+        model_after = model_identity(model)
+        if model_after != model_before:
+            failures.append("model_identity_changed_after_attempt")
         fault_text = "\n".join((kernel, main_log, command_log))
         oom = bool(re.search(r"oom-kill|Out of memory|memory event", fault_text, re.I))
         xid = bool(re.search(r"NVRM.*Xid|NV_ERR_NO_MEMORY", fault_text, re.I))
@@ -619,25 +925,34 @@ def run(args: argparse.Namespace) -> int:
             failures.append("kernel_or_memory_fault")
         if "memory_swap_max=0" not in main_log:
             failures.append("zero_swap_cgroup_not_attested")
+        if is_candidate and (
+            resolved_mode != 2 or store_count <= 0 or changed_values <= 0
+        ):
+            failures.append("affine_device_effect_not_attested")
+        if not is_candidate and (
+            resolved_mode != 0 or store_count != 0 or changed_values != 0
+        ):
+            failures.append("baseline_mode_not_default_off")
         attempt = {
             "block": block,
             "sequence": sequence,
             "arm": arm,
-            "server_instance_id": server_instance,
-            "binary_sha256": binary_sha256,
-            "configuration_sha256": configuration_sha256,
-            "fixture_sha256_before": before,
-            "fixture_sha256_after": after,
-            "environment_sha256": expected_environment_sha256,
-            "resolved_mode": resolved_mode,
-            "affine_store_count": store_count,
-            "completed": not failures,
-            "available_memory_gib": available_memory_gib,
-            "swap_bytes": 0,
-            "oom": oom,
-            "xid": xid,
-            "failures": failures,
-            "cases": cases,
+            "fixture_content_sha256_before": before,
+            "fixture_content_sha256_after": after,
+            "model_identity_before": model_before,
+            "model_identity_after": model_after,
+            "evidence": {
+                "launcher_log": result.stdout,
+                "main_log": main_log,
+                "cmd_log": command_log,
+                "samples_log": samples,
+                "kernel_log": kernel,
+                "quality_tsv": (
+                    result_path.read_text(encoding="utf-8")
+                    if result_path.is_file()
+                    else ""
+                ),
+            },
         }
         campaign["attempts"].append(attempt)
         _atomic_json(campaign_path, campaign)
@@ -653,12 +968,27 @@ def run(args: argparse.Namespace) -> int:
         )
 
     summary = _score(campaign)
+    final_model_sha256 = verify_model_content(model, model_sha256)
+    final_model_identity = model_identity(model)
+    if (
+        final_model_sha256 != model_sha256
+        or final_model_identity != initial_model_identity
+    ):
+        raise ValueError("model content or identity changed after campaign")
     _atomic_json(output / "summary.json", summary)
     (output / "raw.jsonl").write_text(
         json.dumps(campaign, sort_keys=True, separators=(",", ":"), allow_nan=False)
         + "\n",
         encoding="utf-8",
     )
+    destination = _finalize_controller_attempt(
+        output,
+        campaign,
+        summary,
+        frozen / "ds4-server",
+        final_model_identity,
+    )
+    print(f"controller_attempt={destination}", flush=True)
     print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
     return 0 if summary["verdict"] == "PASS" else 1
 

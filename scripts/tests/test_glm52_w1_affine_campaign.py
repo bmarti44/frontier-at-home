@@ -74,9 +74,9 @@ class W1AffineCampaignTests(unittest.TestCase):
         log = (
             "ds4: GLM compact cache fidelity resolved_mode=2\n"
             "ds4: GLM compact cache fidelity attestation "
-            "resolved_mode=2 affine_store_rows=480\n"
+            "resolved_mode=2 affine_store_rows=480 affine_changed_values=240\n"
         )
-        self.assertEqual(campaign.parse_attestation(log), (2, 480))
+        self.assertEqual(campaign.parse_attestation(log), (2, 480, 240))
         with self.assertRaises(ValueError):
             campaign.parse_attestation(log + log)
         with self.assertRaises(ValueError):

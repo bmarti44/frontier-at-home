@@ -9,12 +9,15 @@ raw.jsonl and summary.json under the immutable attempt directory.
 from __future__ import annotations
 
 import argparse
+import csv
 import fcntl
 import hashlib
 import inspect
+import io
 import json
 import math
 import os
+import re
 import statistics
 import subprocess
 import sys
@@ -589,6 +592,363 @@ def _score_w1_affine(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _w1_single_match(pattern: str, text: str, label: str) -> tuple[str, ...]:
+    matches = re.findall(pattern, text, re.MULTILINE)
+    if len(matches) != 1:
+        raise ValueError(f"W1 {label} is missing or duplicated")
+    match = matches[0]
+    return (match,) if isinstance(match, str) else tuple(match)
+
+
+def _w1_quality_cases(
+    text: str, expected_case_ids: list[str]
+) -> list[dict[str, Any]]:
+    if not isinstance(text, str) or not text.endswith("\n"):
+        raise ValueError("W1 quality TSV is malformed")
+    reader = csv.DictReader(io.StringIO(text), delimiter="\t")
+    required = {"id", "target_tokens", "nll", "target_top1_correct"}
+    if (
+        reader.fieldnames is None
+        or len(reader.fieldnames) != len(set(reader.fieldnames))
+        or not required.issubset(reader.fieldnames)
+    ):
+        raise ValueError("W1 quality TSV schema is invalid")
+    rows = list(reader)
+    if len(rows) != 20:
+        raise ValueError("W1 quality TSV requires exactly 20 rows")
+    if [row.get("id") for row in rows] != expected_case_ids:
+        raise ValueError("W1 quality TSV does not match the selected fixture")
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            tokens = int(row["target_tokens"])
+            nll_sum = float(row["nll"])
+            top1_correct = int(row["target_top1_correct"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("W1 quality TSV values are malformed") from exc
+        if (
+            tokens <= 0
+            or not math.isfinite(nll_sum)
+            or top1_correct < 0
+            or top1_correct > tokens
+        ):
+            raise ValueError("W1 quality TSV values are invalid")
+        result.append(
+            {
+                "case_id": row["id"],
+                "tokens": tokens,
+                "nll_sum": nll_sum,
+                "top1_correct": top1_correct,
+            }
+        )
+    return result
+
+
+def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive W1 solely from raw process logs, telemetry and quality TSVs."""
+    if len(records) != 1:
+        raise ValueError("W1 raw scorer requires one campaign")
+    campaign = records[0]
+    _require_exact_keys(
+        campaign,
+        {
+            "record_type",
+            "harness_candidate_hash",
+            "engine_candidate_hash",
+            "seed_sha256",
+            "binary_sha256",
+            "configuration_sha256",
+            "fixture_sha256",
+            "fixture_content_sha256",
+            "model_content_sha256",
+            "tokenizer_content_sha256",
+            "engine_build_sha256",
+            "baseline_environment_sha256",
+            "candidate_environment_sha256",
+            "candidate_arm",
+            "lineage",
+            "fixture_blocks",
+            "attempts",
+        },
+        "W1 raw campaign",
+    )
+    if campaign["record_type"] != "w1_affine_raw_campaign":
+        raise ValueError("W1 raw campaign record type is invalid")
+    for field in ("harness_candidate_hash", "engine_candidate_hash"):
+        value = campaign[field]
+        if (
+            not isinstance(value, str)
+            or len(value) != 40
+            or any(character not in "0123456789abcdef" for character in value)
+        ):
+            raise ValueError(f"W1 raw {field} is invalid")
+    for field in (
+        "seed_sha256",
+        "binary_sha256",
+        "configuration_sha256",
+        "fixture_sha256",
+        "fixture_content_sha256",
+        "model_content_sha256",
+        "tokenizer_content_sha256",
+        "engine_build_sha256",
+        "baseline_environment_sha256",
+        "candidate_environment_sha256",
+    ):
+        if not _is_sha256(campaign[field]):
+            raise ValueError(f"W1 raw {field} is invalid")
+    if (
+        campaign["baseline_environment_sha256"]
+        == campaign["candidate_environment_sha256"]
+    ):
+        raise ValueError("W1 raw arms have identical environments")
+    validate_manifest_lineage(
+        campaign["lineage"],
+        "W1",
+        campaign["harness_candidate_hash"],
+    )
+    lineage_seed = campaign["lineage"]["randomness"]["seed_sha256"]
+    if campaign["seed_sha256"] != lineage_seed:
+        raise ValueError("W1 raw seed does not match authenticated lineage")
+    seed = lineage_seed
+    expected_candidate = "A" if int(seed[:2], 16) % 2 == 0 else "B"
+    if campaign["candidate_arm"] != expected_candidate:
+        raise ValueError("W1 raw candidate arm does not match the seed")
+    first = "ABBA" if int(seed[2:4], 16) % 2 == 0 else "BAAB"
+    other = "BAAB" if first == "ABBA" else "ABBA"
+    expected_schedules = [
+        first if block % 2 == 0 else other for block in range(5)
+    ]
+
+    blocks = campaign["fixture_blocks"]
+    if not isinstance(blocks, list) or len(blocks) != 5:
+        raise ValueError("W1 raw fixture requires five blocks")
+    block_cases: dict[int, list[str]] = {}
+    all_fixture_cases: set[str] = set()
+    for index, block in enumerate(blocks):
+        _require_exact_keys(
+            block,
+            {"block", "manifest_sha256", "ordered_case_ids"},
+            f"W1 raw fixture block {index}",
+        )
+        case_ids = block["ordered_case_ids"]
+        if (
+            block["block"] != index
+            or not _is_sha256(block["manifest_sha256"])
+            or not isinstance(case_ids, list)
+            or len(case_ids) != 20
+            or any(not isinstance(case_id, str) or not case_id for case_id in case_ids)
+            or len(set(case_ids)) != 20
+            or all_fixture_cases.intersection(case_ids)
+        ):
+            raise ValueError("W1 raw fixture block is invalid")
+        all_fixture_cases.update(case_ids)
+        block_cases[index] = case_ids
+    if len(all_fixture_cases) != 100:
+        raise ValueError("W1 raw fixture does not bind 100 unique cases")
+
+    attempts = campaign["attempts"]
+    if not isinstance(attempts, list) or len(attempts) != 20:
+        raise ValueError("W1 raw campaign requires 20 attempts")
+    attempt_keys = {
+        "block",
+        "sequence",
+        "arm",
+        "fixture_content_sha256_before",
+        "fixture_content_sha256_after",
+        "model_identity_before",
+        "model_identity_after",
+        "evidence",
+    }
+    evidence_keys = {
+        "launcher_log",
+        "main_log",
+        "cmd_log",
+        "samples_log",
+        "kernel_log",
+        "quality_tsv",
+    }
+    identities: set[tuple[str, str]] = set()
+    model_identity: str | None = None
+    derived: dict[tuple[int, str], list[dict[str, Any]]] = {}
+    minimum_memory = math.inf
+    for index, attempt in enumerate(attempts):
+        _require_exact_keys(attempt, attempt_keys, f"W1 raw attempt {index}")
+        block, sequence = divmod(index, 4)
+        arm = expected_schedules[block][sequence]
+        if (
+            attempt["block"] != block
+            or attempt["sequence"] != sequence
+            or attempt["arm"] != arm
+        ):
+            raise ValueError("W1 raw attempts are missing or reordered")
+        if (
+            attempt["fixture_content_sha256_before"]
+            != campaign["fixture_content_sha256"]
+            or attempt["fixture_content_sha256_after"]
+            != campaign["fixture_content_sha256"]
+        ):
+            raise ValueError("W1 raw fixture content changed")
+        before_identity = attempt["model_identity_before"]
+        after_identity = attempt["model_identity_after"]
+        if (
+            not isinstance(before_identity, str)
+            or not before_identity
+            or before_identity != after_identity
+            or (model_identity is not None and before_identity != model_identity)
+        ):
+            raise ValueError("W1 raw model identity changed")
+        model_identity = before_identity
+        evidence = attempt["evidence"]
+        _require_exact_keys(evidence, evidence_keys, f"W1 raw evidence {index}")
+        if any(
+            not isinstance(evidence[field], str)
+            or len(evidence[field].encode()) > 16 * 1024 * 1024
+            for field in evidence_keys
+        ):
+            raise ValueError("W1 raw evidence is invalid or oversized")
+
+        launcher = evidence["launcher_log"]
+        if not re.search(r"^SAFE_RUN_DONE rc=0 killed=no dir=\S+$", launcher, re.M):
+            raise ValueError("W1 raw launcher did not complete safely")
+        main = evidence["main_log"]
+        if (
+            "memory_swap_max=0" not in main
+            or "memory_oom_group=1" not in main
+            or "SAFE_RUN end rc=0 killed=no" not in main
+        ):
+            raise ValueError("W1 raw cgroup completion is invalid")
+        binary = _w1_single_match(
+            r"(?:^| )candidate_binary_sha256=([0-9a-f]{64})(?: |$)",
+            main,
+            "binary provenance",
+        )[0]
+        if binary != campaign["binary_sha256"]:
+            raise ValueError("W1 raw executed binary differs")
+        environment = _w1_single_match(
+            r"(?:^| )executed_environment_sha256=([0-9a-f]{64})(?: |$)",
+            main,
+            "environment provenance",
+        )[0]
+        expected_environment = campaign[
+            "candidate_environment_sha256"
+            if arm == campaign["candidate_arm"]
+            else "baseline_environment_sha256"
+        ]
+        if environment != expected_environment:
+            raise ValueError("W1 raw executed environment differs")
+        pid, start_ticks = _w1_single_match(
+            r"executed_candidate_verified pid=(\d+) start_ticks=(\d+)",
+            main,
+            "process identity",
+        )
+        if (pid, start_ticks) in identities:
+            raise ValueError("W1 raw attempts did not use fresh processes")
+        identities.add((pid, start_ticks))
+
+        cmd = evidence["cmd_log"]
+        mode = int(
+            _w1_single_match(
+                r"^ds4: GLM compact cache fidelity resolved_mode=(\d+)$",
+                cmd,
+                "resolved mode",
+            )[0]
+        )
+        exit_mode, store_rows, changed_values = map(
+            int,
+            _w1_single_match(
+                r"^ds4: GLM compact cache fidelity attestation "
+                r"resolved_mode=(\d+) affine_store_rows=(\d+) "
+                r"affine_changed_values=(\d+)$",
+                cmd,
+                "device effect attestation",
+            ),
+        )
+        if mode != exit_mode:
+            raise ValueError("W1 raw mode changed during an attempt")
+        is_candidate = arm == campaign["candidate_arm"]
+        if is_candidate:
+            if mode != 2 or store_rows <= 0 or changed_values <= 0:
+                raise ValueError("W1 raw affine CUDA effect was not executed")
+        elif mode != 0 or store_rows != 0 or changed_values != 0:
+            raise ValueError("W1 raw baseline is not default-off")
+
+        memory_values = [
+            int(value)
+            for value in re.findall(r"(?:^| )mem_avail_kb=(\d+)(?: |$)", evidence["samples_log"], re.M)
+        ]
+        if not memory_values:
+            raise ValueError("W1 raw memory telemetry is absent")
+        attempt_memory = min(memory_values) / 1048576
+        if attempt_memory < 10.0:
+            raise ValueError("W1 raw memory floor was violated")
+        minimum_memory = min(minimum_memory, attempt_memory)
+        if re.search(
+            r"NVRM.*Xid|NV_ERR_NO_MEMORY|oom-kill|Out of memory|"
+            r"Memory cgroup out of memory",
+            "\n".join((evidence["kernel_log"], main, cmd)),
+            re.I,
+        ):
+            raise ValueError("W1 raw kernel or memory fault was observed")
+        cases = _w1_quality_cases(
+            evidence["quality_tsv"], block_cases[block]
+        )
+        observation = {
+            "cases": cases,
+            "store_rows": store_rows,
+            "changed_values": changed_values,
+        }
+        derived.setdefault((block, arm), []).append(observation)
+
+    quality_cases: list[dict[str, Any]] = []
+    baseline_arm = "B" if campaign["candidate_arm"] == "A" else "A"
+    for block in range(5):
+        by_arm: dict[str, list[dict[str, Any]]] = {
+            arm: derived.get((block, arm), []) for arm in ("A", "B")
+        }
+        for arm, repeats in by_arm.items():
+            if len(repeats) != 2 or repeats[0] != repeats[1]:
+                raise ValueError(
+                    f"W1 raw block {block} arm {arm} is not deterministic"
+                )
+        baseline_cases = by_arm[baseline_arm][0]["cases"]
+        candidate_cases = by_arm[campaign["candidate_arm"]][0]["cases"]
+        for baseline_case, candidate_case in zip(
+            baseline_cases, candidate_cases
+        ):
+            quality_cases.append(
+                {
+                    "tokens": baseline_case["tokens"],
+                    "baseline_nll_sum": baseline_case["nll_sum"],
+                    "candidate_nll_sum": candidate_case["nll_sum"],
+                    "baseline_top1_correct": baseline_case["top1_correct"],
+                    "candidate_top1_correct": candidate_case["top1_correct"],
+                }
+            )
+    quality = quality_verdict(quality_cases)
+    checks = {
+        **quality["checks"],
+        "authenticated_seed": True,
+        "raw_process_evidence": True,
+        "exact_fixture_mapping": True,
+        "device_effect_attested": True,
+        "fresh_counterbalanced_processes": len(identities) == 20,
+        "model_identity_stable": model_identity is not None,
+        "resource_safety": minimum_memory >= 10.0,
+    }
+    return {
+        "scorer_id": "w1.affine-quality.v2",
+        "formula_version": 2,
+        "engine_candidate_hash": campaign["engine_candidate_hash"],
+        "harness_candidate_hash": campaign["harness_candidate_hash"],
+        "paired_case_count": len(quality_cases),
+        "attempt_count": len(attempts),
+        "minimum_available_memory_gib": minimum_memory,
+        "metrics": quality["metrics"],
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 def _is_sha256(value: Any) -> bool:
     return (
         isinstance(value, str)
@@ -1016,16 +1376,119 @@ def validate_record_artifact_bindings(
     if gate in workstream_gates:
         if len(records) != 1:
             raise ValueError(f"{gate} requires one raw workstream record")
+        record = records[0]
         for field in (
             "binary_sha256",
             "configuration_sha256",
             "fixture_sha256",
         ):
-            if records[0].get(field) != manifest.get(field):
+            if record.get(field) != manifest.get(field):
                 label = field.removesuffix("_sha256").replace("_", " ")
                 raise ValueError(
                     f"{gate} raw {label} identity does not match manifest"
                 )
+        if gate == "W1":
+            if artifact_paths is None:
+                raise ValueError("W1 artifact bindings are unavailable")
+            if record.get("harness_candidate_hash") != manifest.get(
+                "candidate_hash"
+            ):
+                raise ValueError("W1 raw harness candidate does not match manifest")
+            if record.get("engine_build_sha256") != manifest.get("diff_sha256"):
+                raise ValueError("W1 raw engine build does not match manifest")
+
+            evidence_path = artifact_paths.get("evidence")
+            if evidence_path is None or _read_strict_json(evidence_path) != record:
+                raise ValueError("W1 evidence artifact does not equal raw evidence")
+
+            model = _read_strict_json(artifact_paths["model"])
+            _require_exact_keys(
+                model,
+                {"schema_version", "content_sha256", "identity"},
+                "W1 model descriptor",
+            )
+            if (
+                model["schema_version"] != 1
+                or model["content_sha256"] != record.get("model_content_sha256")
+                or not isinstance(model["identity"], str)
+                or not model["identity"]
+                or any(
+                    attempt.get("model_identity_before") != model["identity"]
+                    or attempt.get("model_identity_after") != model["identity"]
+                    for attempt in record.get("attempts", [])
+                    if isinstance(attempt, dict)
+                )
+            ):
+                raise ValueError("W1 model descriptor does not bind raw evidence")
+
+            tokenizer = _read_strict_json(artifact_paths["tokenizer"])
+            _require_exact_keys(
+                tokenizer,
+                {"schema_version", "lineage", "content_sha256"},
+                "W1 tokenizer descriptor",
+            )
+            if (
+                tokenizer["schema_version"] != 1
+                or tokenizer["lineage"] != "embedded-in-model-container"
+                or tokenizer["content_sha256"]
+                != record.get("tokenizer_content_sha256")
+            ):
+                raise ValueError("W1 tokenizer descriptor does not bind raw evidence")
+
+            fixture = _read_strict_json(artifact_paths["fixture"])
+            _require_exact_keys(
+                fixture,
+                {"schema_version", "content_sha256", "blocks"},
+                "W1 fixture descriptor",
+            )
+            projected_blocks = [
+                {
+                    "block": block.get("block"),
+                    "manifest_sha256": block.get("manifest_sha256"),
+                    "ordered_case_ids": block.get("ordered_case_ids"),
+                }
+                for block in fixture.get("blocks", [])
+                if isinstance(block, dict)
+            ]
+            if (
+                fixture["schema_version"] != 1
+                or fixture["content_sha256"]
+                != record.get("fixture_content_sha256")
+                or projected_blocks != record.get("fixture_blocks")
+            ):
+                raise ValueError("W1 fixture descriptor does not bind raw evidence")
+
+            engine_build = _read_strict_json(artifact_paths["diff"])
+            if (
+                not isinstance(engine_build, dict)
+                or engine_build.get("schema_version") != 1
+                or engine_build.get("commit")
+                != record.get("engine_candidate_hash")
+                or engine_build.get("quality_binary_sha256")
+                != record.get("binary_sha256")
+                or engine_build.get("status_porcelain") != ""
+            ):
+                raise ValueError("W1 engine build does not bind raw evidence")
+
+            configuration = _read_strict_json(artifact_paths["configuration"])
+            expected_configuration = {
+                "harness_candidate_hash": record.get("harness_candidate_hash"),
+                "engine_candidate_hash": record.get("engine_candidate_hash"),
+                "binary_sha256": record.get("binary_sha256"),
+                "model_content_sha256": record.get("model_content_sha256"),
+                "tokenizer_content_sha256": record.get(
+                    "tokenizer_content_sha256"
+                ),
+                "engine_build_sha256": record.get("engine_build_sha256"),
+                "fixture_sha256": record.get("fixture_sha256"),
+                "fixture_content_sha256": record.get("fixture_content_sha256"),
+                "lineage": record.get("lineage"),
+            }
+            if not isinstance(configuration, dict) or any(
+                configuration.get(field) != value
+                for field, value in expected_configuration.items()
+            ):
+                raise ValueError("W1 configuration does not bind raw evidence")
         return
     if gate == "foundation":
         candidates = [
@@ -2196,8 +2659,10 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _finite_number,
             _is_sha256,
         ),
-        "w1.affine-quality.v1": (
-            _score_w1_affine,
+        "w1.affine-quality.v2": (
+            _score_w1_affine_raw,
+            _w1_single_match,
+            _w1_quality_cases,
             quality_verdict,
             _weighted_upper_95,
             _t95,
@@ -2247,7 +2712,7 @@ def score_registered_gate(
     rows = list(records)
     registered = {
         ("foundation", "foundation.v1"): _score_foundation,
-        ("W1", "w1.affine-quality.v1"): _score_w1_affine,
+        ("W1", "w1.affine-quality.v2"): _score_w1_affine_raw,
         ("W11", "w11.context.v1"): _score_w11,
         ("parity", "parity.performance.v1"): _score_parity,
         ("parity", "parity.reviewed-no-go.v1"): _score_reviewed_no_go,
@@ -2781,6 +3246,18 @@ def validate_attempt(attempt: Path) -> None:
         raise ValueError("manifest artifacts map is missing")
     root = attempt.resolve()
     artifact_paths: dict[str, Path] = {}
+    if manifest["gate"] == "W1":
+        if not _is_sha256(manifest.get("evidence_sha256")):
+            raise ValueError("manifest evidence_sha256 is invalid")
+        relative = artifacts.get("evidence")
+        if not isinstance(relative, str) or not relative:
+            raise ValueError("manifest artifact evidence is missing")
+        evidence = (attempt / relative).resolve()
+        if not evidence.is_relative_to(root) or not evidence.is_file():
+            raise ValueError("manifest artifact evidence escapes or is absent")
+        if _sha256(evidence) != manifest["evidence_sha256"]:
+            raise ValueError("manifest artifact evidence hash mismatch")
+        artifact_paths["evidence"] = evidence
     for field in required_hashes:
         if not _is_sha256(manifest.get(field)):
             raise ValueError(f"manifest {field} is invalid")

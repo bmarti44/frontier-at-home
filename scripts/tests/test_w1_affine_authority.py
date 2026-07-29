@@ -123,14 +123,14 @@ def raw_campaign(goal):
         "lineage": {
             "freeze": {
                 "candidate_hash": harness,
-                "frozen_at": "2026-07-29T00:00:00+00:00",
+                "frozen_at": "2026-07-29T04:56:00+00:00",
             },
             "randomness": {
                 "source": "drand-default",
                 "round": 6329000,
                 "randomness": randomness,
                 "signature": signature,
-                "obtained_at": "2026-07-29T00:01:00+00:00",
+                "obtained_at": "2026-07-29T05:00:00+00:00",
                 "seed_sha256": seed,
             },
         },
@@ -214,6 +214,87 @@ class W1AffineAuthorityTests(unittest.TestCase):
         self.assertIn('"evidence_sha256"', source)
         self.assertIn("validate_attempt", source)
         self.assertIn("engine-build.json", source)
+
+    def test_controller_bindings_reject_evidence_not_equal_to_raw_record(self):
+        campaign = raw_campaign(self.goal)
+        identity = campaign["attempts"][0]["model_identity_before"]
+        fixture = {
+            "schema_version": 1,
+            "content_sha256": campaign["fixture_content_sha256"],
+            "blocks": [
+                {
+                    **block,
+                    "referenced_files": [],
+                }
+                for block in campaign["fixture_blocks"]
+            ],
+        }
+        values = {
+            "evidence": campaign,
+            "model": {
+                "schema_version": 1,
+                "content_sha256": campaign["model_content_sha256"],
+                "identity": identity,
+            },
+            "tokenizer": {
+                "schema_version": 1,
+                "lineage": "embedded-in-model-container",
+                "content_sha256": campaign["tokenizer_content_sha256"],
+            },
+            "fixture": fixture,
+            "diff": {
+                "schema_version": 1,
+                "commit": campaign["engine_candidate_hash"],
+                "quality_binary_sha256": campaign["binary_sha256"],
+                "status_porcelain": "",
+            },
+            "configuration": {
+                field: campaign[field]
+                for field in (
+                    "harness_candidate_hash",
+                    "engine_candidate_hash",
+                    "binary_sha256",
+                    "model_content_sha256",
+                    "tokenizer_content_sha256",
+                    "engine_build_sha256",
+                    "fixture_sha256",
+                    "fixture_content_sha256",
+                    "lineage",
+                )
+            },
+        }
+        manifest = {
+            "candidate_hash": campaign["harness_candidate_hash"],
+            "binary_sha256": campaign["binary_sha256"],
+            "configuration_sha256": campaign["configuration_sha256"],
+            "fixture_sha256": campaign["fixture_sha256"],
+            "diff_sha256": campaign["engine_build_sha256"],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = {}
+            for name, value in values.items():
+                path = root / f"{name}.json"
+                path.write_text(
+                    json.dumps(
+                        value,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                        allow_nan=False,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                paths[name] = path
+            self.goal.validate_record_artifact_bindings(
+                "W1", manifest, [campaign], paths
+            )
+            forged = copy.deepcopy(campaign)
+            forged["attempts"][0]["evidence"]["quality_tsv"] += "forged\n"
+            with self.assertRaises(ValueError):
+                self.goal.validate_record_artifact_bindings(
+                    "W1", manifest, [forged], paths
+                )
 
 
 if __name__ == "__main__":
