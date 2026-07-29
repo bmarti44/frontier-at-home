@@ -29,6 +29,14 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("-z $CURRENT_HASH", guarded)
         self.assertIn("-z $CURRENT_DEVICE_INODE", guarded)
 
+    def test_verified_candidate_environment_is_hash_bound_from_proc(self):
+        source = SAFE.read_text(encoding="utf-8")
+        self.assertIn("GLM_SAFE_PROVENANCE_ENV_ALLOWLIST", source)
+        self.assertIn("GLM_SAFE_EXPECTED_ENV_SHA256", source)
+        self.assertIn('"/proc/$SPID2/environ"', source)
+        self.assertIn("executed_environment_sha256=", source)
+        self.assertIn("executed candidate environment mismatch", source)
+
 
 class CandidateLifecycleTests(unittest.TestCase):
     @classmethod
