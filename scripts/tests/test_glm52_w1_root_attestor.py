@@ -73,6 +73,14 @@ class RootAttestorContractTests(unittest.TestCase):
 
     def test_installer_closes_docker_root_equivalence_and_is_hash_pinned(self):
         source = INSTALLER.read_text(encoding="utf-8")
+        self.assertNotIn(
+            'find "$HARNESS" -type f -exec /usr/bin/chmod 0644',
+            source,
+        )
+        self.assertNotIn(
+            'find "$HARNESS" -type d -exec /usr/bin/chmod 0755',
+            source,
+        )
         self.assertIn(
             "/usr/bin/gpasswd -d bmarti44 docker",
             source,
