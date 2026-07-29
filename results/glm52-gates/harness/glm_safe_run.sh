@@ -22,6 +22,8 @@ MIN_START_GIB=${GLM_SAFE_MIN_START_GIB:-110}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
 EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
+PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
+EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
 REQUIRE_CGROUP=${GLM_SAFE_REQUIRE_CGROUP:-0}
 EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 TAG=run
@@ -62,6 +64,27 @@ fi
   config_error "GLM_SAFE_LOG_CANDIDATE_PROVENANCE"
 [[ $REQUIRE_CGROUP =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_REQUIRE_CGROUP"
+ENV_PROVENANCE=0
+PROVENANCE_ENV_NAMES=""
+if [[ -n $PROVENANCE_ENV_ALLOWLIST || -n $EXPECTED_ENV_SHA256 ]]; then
+  [[ $CANDIDATE_PROVENANCE == 1 ]] ||
+    config_error "environment provenance requires candidate provenance"
+  [[ $EXPECTED_ENV_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
+    config_error "GLM_SAFE_EXPECTED_ENV_SHA256"
+  [[ $PROVENANCE_ENV_ALLOWLIST =~ ^DS4_[A-Z0-9_]{0,59}(,DS4_[A-Z0-9_]{0,59}){0,31}$ ]] ||
+    config_error "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST"
+  PROVENANCE_ENV_NAMES=$(
+    tr ',' '\n' <<<"$PROVENANCE_ENV_ALLOWLIST" | LC_ALL=C sort -u
+  )
+  PROVENANCE_ENV_NAME_COUNT=$(wc -l <<<"$PROVENANCE_ENV_NAMES")
+  PROVENANCE_ENV_INPUT_COUNT=$(
+    awk -F, '{print NF}' <<<"$PROVENANCE_ENV_ALLOWLIST"
+  )
+  [[ $PROVENANCE_ENV_NAME_COUNT == "$PROVENANCE_ENV_INPUT_COUNT" ]] ||
+    config_error "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST duplicates"
+  PROVENANCE_ENV_ALLOWLIST=$(paste -sd, <<<"$PROVENANCE_ENV_NAMES")
+  ENV_PROVENANCE=1
+fi
 if [[ "${1:-}" == --tag ]]; then
   [[ -n ${2:-} ]] || config_error "tag"
   TAG=$2
@@ -228,6 +251,37 @@ while kill -0 "$WRAP" 2>/dev/null; do
       PROVENANCE_FAILURE=start-ticks
       break
     }
+    if [[ $ENV_PROVENANCE == 1 ]]; then
+      EXECUTED_ENV_HASH=$(
+        python3 - "/proc/$SPID2/environ" "$PROVENANCE_ENV_ALLOWLIST" <<'PY'
+import hashlib
+import sys
+
+path, raw_names = sys.argv[1:]
+names = raw_names.split(",")
+entries = {}
+with open(path, "rb") as stream:
+    for item in stream.read().split(b"\0"):
+        if b"=" not in item:
+            continue
+        name, value = item.split(b"=", 1)
+        entries[name.decode("ascii", errors="strict")] = value
+canonical = b"".join(
+    name.encode("ascii") + b"=" + entries.get(name, b"<UNSET>") + b"\n"
+    for name in names
+)
+print(hashlib.sha256(canonical).hexdigest())
+PY
+      )
+      if [[ $EXECUTED_ENV_HASH != "$EXPECTED_ENV_SHA256" ]]; then
+        plog "FATAL executed candidate environment mismatch pid=$SPID2 executed_environment_sha256=${EXECUTED_ENV_HASH:-missing} expected_environment_sha256=$EXPECTED_ENV_SHA256"
+        kill -KILL -- -"$PG" 2>/dev/null || true
+        KILLED=provenance
+        PROVENANCE_FAILURE=environment
+        break
+      fi
+      plog "executed_environment_allowlist=$PROVENANCE_ENV_ALLOWLIST executed_environment_sha256=$EXECUTED_ENV_HASH"
+    fi
     plog "executed_candidate_verified pid=$EXECUTED_PID start_ticks=$EXECUTED_START_TICKS path=$EXECUTED_PATH executed_binary_sha256=$EXECUTED_HASH device_inode=$EXECUTED_DEVICE_INODE"
   fi
   if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 1 ]]; then
