@@ -1,0 +1,17 @@
+Command:
+python3 -m unittest scripts.tests.test_glm52_goal.ControllerTests.test_w1_affine_diagnostic_pass_is_only_red_confirmed
+
+Committed test candidate:
+72bc192
+
+Genuine RED:
+AttributeError: module 'glm52_goal' has no attribute
+'_gate_status_from_summary'
+
+Result:
+FAILED (errors=1), exit status 1.
+
+The unchanged controller copied `summary["verdict"]` directly into the W1 gate
+state. Therefore a passing affine fidelity diagnostic could incorrectly mark
+W1 complete before real packed storage, memory, checkpoint, and retrieval
+qualification existed.
