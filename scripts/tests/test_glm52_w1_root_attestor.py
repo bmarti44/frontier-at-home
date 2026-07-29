@@ -12,6 +12,7 @@ import re
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -62,6 +63,36 @@ class RootAttestorContractTests(unittest.TestCase):
             with self.subTest(malformed=malformed):
                 with self.assertRaises(ValueError):
                     submitter.parse_request(malformed)
+
+    def test_first_drand_round_is_strictly_after_freeze(self):
+        submitter = load_submitter()
+        genesis = datetime.fromtimestamp(1_595_431_050, timezone.utc)
+        cases = (
+            (genesis, 2),
+            (datetime.fromtimestamp(1_595_431_050.1, timezone.utc), 2),
+            (datetime.fromtimestamp(1_595_431_079.999, timezone.utc), 2),
+            (datetime.fromtimestamp(1_595_431_080, timezone.utc), 3),
+        )
+        for frozen_at, expected_round in cases:
+            with self.subTest(frozen_at=frozen_at):
+                round_number = submitter.first_drand_round_after(
+                    frozen_at.isoformat()
+                )
+                self.assertEqual(round_number, expected_round)
+                published_at = 1_595_431_050 + (round_number - 1) * 30
+                self.assertGreater(published_at, frozen_at.timestamp())
+
+    def test_campaign_validates_lineage_before_creating_fixtures_or_running_arms(self):
+        source = (
+            ROOT / "scripts/glm52_w1_affine_campaign.py"
+        ).read_text(encoding="utf-8")
+        run_body = source.split("def run(args: argparse.Namespace) -> int:", 1)[1]
+        lineage_validation = run_body.index("validate_manifest_lineage(")
+        self.assertLess(lineage_validation, run_body.index("_write_manifests("))
+        self.assertLess(lineage_validation, run_body.index("subprocess.run("))
+        self.assertIn("commit_time_fetcher=", run_body[: run_body.index("_write_manifests(")])
+        submitter = SUBMITTER.read_text(encoding="utf-8")
+        self.assertNotIn('"https://api.drand.sh/public/latest"', submitter)
 
     def test_diagnosis_reads_only_exact_sealed_failed_campaign(self):
         submitter = load_submitter()
