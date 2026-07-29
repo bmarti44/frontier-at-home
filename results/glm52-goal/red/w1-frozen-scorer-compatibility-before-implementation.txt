@@ -1,0 +1,12 @@
+Command:
+python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_exact_frozen_w1_scorer_digest_survives_unrelated_updates
+
+Result: RED (exit 1)
+
+The unchanged controller had no candidate-bound compatibility check:
+
+AttributeError: module 'glm52_goal' has no attribute 'scorer_descriptor_matches'
+
+The acceptance test requires the exact frozen W1 campaign tuple
+(gate, candidate commit, scorer ID, implementation digest) to remain valid
+after an unrelated W11 fixture update, while mutations of either hash fail.
