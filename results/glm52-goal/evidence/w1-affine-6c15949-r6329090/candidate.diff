@@ -1,0 +1,331 @@
+diff --git a/ds4.c b/ds4.c
+index 4950b27..5abc687 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -34416,9 +34416,15 @@ static uint32_t glm_graph_compact_cache_fake_e4m3(void) {
+     return flag && strcmp(flag, "1") == 0 ? 1u : 0u;
+ }
+ 
+-static uint32_t glm_graph_compact_cache_fake_int8(void) {
+-    const char *flag = getenv("DS4_GLM_COMPACT_CACHE_INT8_FAKE");
+-    return flag && strcmp(flag, "1") == 0 ? 1u : 0u;
++static uint32_t glm_graph_compact_cache_fake_int8_mode(void) {
++    const char *symmetric = getenv("DS4_GLM_COMPACT_CACHE_INT8_FAKE");
++    const char *affine = getenv("DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE");
++    const uint32_t symmetric_on =
++        symmetric && strcmp(symmetric, "1") == 0 ? 1u : 0u;
++    const uint32_t affine_on =
++        affine && strcmp(affine, "1") == 0 ? 1u : 0u;
++    if (symmetric_on && affine_on) return UINT32_MAX;
++    return affine_on ? 2u : symmetric_on;
+ }
+ 
+ static uint64_t glm_graph_compact_cache_elem_bytes(void) {
+@@ -38921,8 +38927,9 @@ static bool glm_graph_alloc_slice(
+     const uint32_t fidelity_arms =
+         glm_graph_compact_cache_is_f16() +
+         glm_graph_compact_cache_fake_e4m3() +
+-        glm_graph_compact_cache_fake_int8();
+-    if (fidelity_arms > 1u) {
++        (glm_graph_compact_cache_fake_int8_mode() != 0u ? 1u : 0u);
++    if (fidelity_arms > 1u ||
++            glm_graph_compact_cache_fake_int8_mode() == UINT32_MAX) {
+         fprintf(stderr,
+                 "ds4: GLM compact cache fidelity arms are mutually exclusive\n");
+         return false;
+@@ -42474,7 +42481,7 @@ static bool glm_graph_mtp_step(
+                                                      DS4_N_ROT,
+                                                      glm_graph_compact_cache_is_f16(),
+                                                      glm_graph_compact_cache_fake_e4m3(),
+-                                                     glm_graph_compact_cache_fake_int8()) != 0;
++                                                     glm_graph_compact_cache_fake_int8_mode()) != 0;
+     DS4_GLM_MTP_STAGE("qk_low");
+     if (ok) ok = ds4_gpu_glm_qk_lowrank_typed_tensor(g->qk_low,
+                                                      g->q,
+@@ -42854,7 +42861,7 @@ static bool glm_graph_verify_rows(
+                                                          DS4_N_ROT,
+                                                          glm_graph_compact_cache_is_f16(),
+                                                          glm_graph_compact_cache_fake_e4m3(),
+-                                                         glm_graph_compact_cache_fake_int8()) != 0;
++                                                         glm_graph_compact_cache_fake_int8_mode()) != 0;
+         if (ok) ok = ds4_gpu_glm_qk_lowrank_typed_batch_tensor(g->batch_qk_low,
+                                                                g->batch_q,
+                                                                model->map,
+@@ -43453,7 +43460,7 @@ static bool glm_graph_forward_tokens(
+                                                      DS4_N_ROT,
+                                                      glm_graph_compact_cache_is_f16(),
+                                                      glm_graph_compact_cache_fake_e4m3(),
+-                                                     glm_graph_compact_cache_fake_int8()) != 0;
++                                                     glm_graph_compact_cache_fake_int8_mode()) != 0;
+         }
+         if (ok) ok = ds4_gpu_glm_k_b_project_typed_tensor(g->batch_k_nope,
+                                                           g->batch_kv_norm,
+@@ -44379,7 +44386,7 @@ static bool glm_graph_forward_indexed_tokens(
+                                                      DS4_N_ROT,
+                                                      glm_graph_compact_cache_is_f16(),
+                                                      glm_graph_compact_cache_fake_e4m3(),
+-                                                     glm_graph_compact_cache_fake_int8()) != 0;
++                                                     glm_graph_compact_cache_fake_int8_mode()) != 0;
+         }
+         DS4_GLM_PROFILE_INDEXED_STAGE("glm_indexed_attn", "kv_path");
+ 
+@@ -45787,7 +45794,7 @@ static bool glm_graph_forward_token(
+                         DS4_N_ROT,
+                         glm_graph_compact_cache_is_f16(),
+                         glm_graph_compact_cache_fake_e4m3(),
+-                        glm_graph_compact_cache_fake_int8(),
++                        glm_graph_compact_cache_fake_int8_mode(),
+                         DS4_RMS_EPS) != 0;
+             }
+         } else if (ok && fuse_qkv_norm) {
+@@ -45928,7 +45935,7 @@ static bool glm_graph_forward_token(
+                                                      DS4_N_ROT,
+                                                      glm_graph_compact_cache_is_f16(),
+                                                      glm_graph_compact_cache_fake_e4m3(),
+-                                                     glm_graph_compact_cache_fake_int8()) != 0;
++                                                     glm_graph_compact_cache_fake_int8_mode()) != 0;
+         }
+         if (use_indexed_attention) {
+             if (ok && glm_graph_layer_uses_full_indexer(il)) {
+@@ -52533,7 +52540,7 @@ static int glm_metal_graph_test_decode_attention(
+                                                      DS4_N_ROT,
+                                                      cache_f16,
+                                                      false,
+-                                                     false) != 0;
++                                                     0u) != 0;
+ 
+     /* Run the last token through the decode kernel sequence at pos > 0. */
+     if (ok) ok = ds4_gpu_embed_token_q8_0_tensor(cur1,
+@@ -52615,7 +52622,7 @@ static int glm_metal_graph_test_decode_attention(
+                                                      DS4_N_ROT,
+                                                      cache_f16,
+                                                      false,
+-                                                     false) != 0;
++                                                     0u) != 0;
+     if (ok) ok = ds4_gpu_glm_fill_selected_range_tensor(selected, n_tok) != 0;
+     if (ok) ok = ds4_gpu_glm_qk_lowrank_typed_tensor(
+             qk_low,
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index 4701802..ded104f 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -26762,6 +26762,61 @@ static int glm_launch_fake_int8_quantize_latent(
+     return cuda_ok(cudaGetLastError(), "glm fake int8 latent launch");
+ }
+ 
++__global__ static void glm_fake_affine_int8_quantize_latent_kernel(
++        float *cache,
++        uint32_t pos0,
++        uint32_t n_tokens,
++        uint32_t cache_cap,
++        uint32_t kv_lora_dim) {
++    const uint32_t token = blockIdx.x;
++    const uint32_t block = blockIdx.y;
++    const uint32_t lane = threadIdx.x;
++    if (token >= n_tokens || lane >= 16u) return;
++    const uint32_t pos = pos0 + token;
++    const uint32_t i = block * 16u + lane;
++    if (pos >= cache_cap || i >= kv_lora_dim) return;
++
++    float *row = cache + (uint64_t)pos * kv_lora_dim;
++    __shared__ float min_shared[16];
++    __shared__ float max_shared[16];
++    min_shared[lane] = row[i];
++    max_shared[lane] = row[i];
++    __syncthreads();
++    for (uint32_t step = 8u; step > 0u; step >>= 1u) {
++        if (lane < step) {
++            min_shared[lane] =
++                fminf(min_shared[lane], min_shared[lane + step]);
++            max_shared[lane] =
++                fmaxf(max_shared[lane], max_shared[lane + step]);
++        }
++        __syncthreads();
++    }
++    const float scale =
++        fmaxf((max_shared[0] - min_shared[0]) / 255.0f, 1.0e-12f);
++    const float quantized = fminf(
++            255.0f,
++            fmaxf(0.0f, rintf((row[i] - min_shared[0]) / scale)));
++    row[i] = quantized * scale + min_shared[0];
++}
++
++static int glm_launch_fake_affine_int8_quantize_latent(
++        ds4_gpu_tensor *cache,
++        uint32_t pos0,
++        uint32_t n_tokens,
++        uint32_t cache_cap,
++        uint32_t kv_lora_dim,
++        bool fake_affine_int8) {
++    if (!fake_affine_int8) return 1;
++    if (!cache || kv_lora_dim == 0u || kv_lora_dim % 16u != 0u ||
++        cache->bytes < (uint64_t)cache_cap * kv_lora_dim * sizeof(float)) {
++        return 0;
++    }
++    dim3 grid(n_tokens, kv_lora_dim / 16u, 1u);
++    glm_fake_affine_int8_quantize_latent_kernel<<<grid, 16>>>(
++            (float *)cache->ptr, pos0, n_tokens, cache_cap, kv_lora_dim);
++    return cuda_ok(cudaGetLastError(), "glm fake affine int8 latent launch");
++}
++
+ /* Fused decode-path QKV norm + compact-KV store, one block per
+  * (token, part): part 0 rms-norms q into q_out, part 1 rms-norms
+  * kv_raw[:kv_lora_dim] into the kv_lora ring, part 2 copies the
+@@ -26873,7 +26928,7 @@ extern "C" int ds4_gpu_glm_qkv_norm_store_compact_kv_tensor(
+         uint32_t              qk_rope,
+         bool                  cache_f16,
+         bool                  fake_e4m3,
+-        bool                  fake_int8,
++        uint32_t              fake_int8_mode,
+         float                 eps) {
+     if (!q_out || !q || !kv_lora_cache || !k_rope_cache || !kv_raw ||
+         !model_map || n_tokens == 0 || q_n == 0 || kv_lora_dim == 0 ||
+@@ -26911,16 +26966,23 @@ extern "C" int ds4_gpu_glm_qkv_norm_store_compact_kv_tensor(
+             pos0, cache_cap, kv_raw_dim, kv_lora_dim, qk_rope,
+             cache_f16 ? 1 : 0, eps);
+     if (!cuda_ok(cudaGetLastError(), "glm qkv norm store compact kv")) return 0;
+-    if ((cache_f16 ? 1u : 0u) + (fake_e4m3 ? 1u : 0u) +
+-            (fake_int8 ? 1u : 0u) > 1u) {
++    if (fake_int8_mode > 2u ||
++            (cache_f16 ? 1u : 0u) + (fake_e4m3 ? 1u : 0u) +
++            (fake_int8_mode != 0u ? 1u : 0u) > 1u) {
+         return 0;
+     }
+     if (!glm_launch_fake_e4m3_quantize_latent(
+             kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim, fake_e4m3)) {
+         return 0;
+     }
+-    return glm_launch_fake_int8_quantize_latent(
+-            kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim, fake_int8);
++    if (!glm_launch_fake_int8_quantize_latent(
++            kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim,
++            fake_int8_mode == 1u)) {
++        return 0;
++    }
++    return glm_launch_fake_affine_int8_quantize_latent(
++            kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim,
++            fake_int8_mode == 2u);
+ }
+ 
+ /* In-place interleaved-pair yarn rope on a [n_tokens][n_head][head_dim]
+@@ -28285,7 +28347,7 @@ extern "C" int ds4_gpu_glm_store_compact_kv_tensor(
+         uint32_t              qk_rope,
+         bool                  cache_f16,
+         bool                  fake_e4m3,
+-        bool                  fake_int8) {
++        uint32_t              fake_int8_mode) {
+     if (!kv_lora_cache || !k_rope_cache || !kv_norm || !kv_raw ||
+         n_tokens == 0 || kv_lora_dim == 0 || qk_rope == 0 ||
+         kv_lora_dim + qk_rope > kv_raw_dim + qk_rope) {
+@@ -28307,16 +28369,23 @@ extern "C" int ds4_gpu_glm_store_compact_kv_tensor(
+             pos0, n_tokens, cache_cap, kv_raw_dim, kv_lora_dim, qk_rope,
+             cache_f16 ? 1u : 0u);
+     if (!cuda_ok(cudaGetLastError(), "glm store compact kv launch")) return 0;
+-    if ((cache_f16 ? 1u : 0u) + (fake_e4m3 ? 1u : 0u) +
+-            (fake_int8 ? 1u : 0u) > 1u) {
++    if (fake_int8_mode > 2u ||
++            (cache_f16 ? 1u : 0u) + (fake_e4m3 ? 1u : 0u) +
++            (fake_int8_mode != 0u ? 1u : 0u) > 1u) {
+         return 0;
+     }
+     if (!glm_launch_fake_e4m3_quantize_latent(
+             kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim, fake_e4m3)) {
+         return 0;
+     }
+-    return glm_launch_fake_int8_quantize_latent(
+-            kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim, fake_int8);
++    if (!glm_launch_fake_int8_quantize_latent(
++            kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim,
++            fake_int8_mode == 1u)) {
++        return 0;
++    }
++    return glm_launch_fake_affine_int8_quantize_latent(
++            kv_lora_cache, pos0, n_tokens, cache_cap, kv_lora_dim,
++            fake_int8_mode == 2u);
+ }
+ 
+ 
+diff --git a/ds4_gpu.h b/ds4_gpu.h
+index cde4814..d3f2843 100644
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -1011,7 +1011,7 @@ int ds4_gpu_glm_store_compact_kv_tensor(
+         uint32_t              qk_rope,
+         bool                  cache_f16,
+         bool                  fake_e4m3,
+-        bool                  fake_int8);
++        uint32_t              fake_int8_mode);
+ 
+ int ds4_gpu_glm_qkv_norm_store_compact_kv_tensor(
+         ds4_gpu_tensor       *q_out,
+@@ -1032,7 +1032,7 @@ int ds4_gpu_glm_qkv_norm_store_compact_kv_tensor(
+         uint32_t              qk_rope,
+         bool                  cache_f16,
+         bool                  fake_e4m3,
+-        bool                  fake_int8,
++        uint32_t              fake_int8_mode,
+         float                 eps);
+ 
+ int ds4_gpu_glm_store_indexer_k_tensor(
+diff --git a/tests/test_glm_compact_cache_affine_int8_fake_source.py b/tests/test_glm_compact_cache_affine_int8_fake_source.py
+new file mode 100644
+index 0000000..795d375
+--- /dev/null
++++ b/tests/test_glm_compact_cache_affine_int8_fake_source.py
+@@ -0,0 +1,56 @@
++#!/usr/bin/env python3
++"""Source contract for the default-off CUDA GLM affine-int8 fidelity arm."""
++
++from pathlib import Path
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++HOST = ROOT / "ds4.c"
++CUDA = ROOT / "ds4_cuda.cu"
++GPU_HEADER = ROOT / "ds4_gpu.h"
++
++
++class GlmCompactCacheAffineInt8FakeSourceTests(unittest.TestCase):
++    def test_arm_is_exact_default_off_and_mutually_exclusive(self):
++        host = HOST.read_text(encoding="utf-8")
++        self.assertIn(
++            'getenv("DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE")',
++            host,
++        )
++        self.assertIn("GLM compact cache fidelity arms are mutually exclusive", host)
++
++    def test_cuda_quantizes_only_f32_latent_in_affine_blocks_of_16(self):
++        cuda = CUDA.read_text(encoding="utf-8")
++        self.assertIn("glm_fake_affine_int8_quantize_latent_kernel", cuda)
++        self.assertIn("kv_lora_dim % 16u", cuda)
++        self.assertIn("(max_shared[0] - min_shared[0]) / 255.0f", cuda)
++        self.assertIn("rintf((row[i] - min_shared[0]) / scale)", cuda)
++        self.assertNotIn("glm_fake_affine_int8_quantize_rope", cuda)
++
++    def test_both_compact_store_paths_apply_the_arm(self):
++        cuda = CUDA.read_text(encoding="utf-8")
++        self.assertGreaterEqual(
++            cuda.count("glm_launch_fake_affine_int8_quantize_latent("),
++            3,
++        )
++
++    def test_affine_reuses_the_existing_int8_mode_argument(self):
++        host = HOST.read_text(encoding="utf-8")
++        header = GPU_HEADER.read_text(encoding="utf-8")
++        self.assertTrue(
++            "glm_graph_compact_cache_fake_int8_mode" in host,
++            "host must combine symmetric and affine int8 into one mode",
++        )
++        self.assertTrue(
++            "uint32_t              fake_int8_mode" in header,
++            "GPU API must reuse the original int8 argument position",
++        )
++        self.assertTrue(
++            "bool                  fake_affine_int8" not in header,
++            "affine mode must not add a GPU API argument",
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

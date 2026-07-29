@@ -1,0 +1,23 @@
+{
+  "arm_order": [
+    "baseline",
+    "candidate"
+  ],
+  "binary_sha256": "f54ea4c303c7637aa146941bebf8bd02fe726fd455c5058e806ffefaac047628",
+  "build_recipe": "make clean && make -j2 CUDA_ARCH=native QUALITY_CFLAGS=-O3,-g,-march=native,-Wall,-Wextra,-std=c11 ds4-server gguf-tools/quality-testing/score_official",
+  "candidate_hash": "6c15949e732981ff8d96fe8328a71500bf7399a8",
+  "case_count": 100,
+  "chunk_count": 5,
+  "cubin_arch": "sm_121",
+  "cuda_arch": "native",
+  "fixture_sha256": "c11db60f50445b9bdbab6ab0f253504f323a4f762be52d077854293b6e680edf",
+  "format": "block-16 affine uint8 latent; F32 RoPE and indexer",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "projected_1m_compact_cache_gib": 78.75,
+  "randomness": "4f1eb989c459c27bc25b5503792d990be5b57bba611d25de522c22942f25b626",
+  "round": 6329090,
+  "scorer_sha256": "a1824ffa220f3462587576ab8c2aabba7a509630bf2c6ad35f54aafe19b26cb1",
+  "seed_formula": "sha256(drand_randomness_bytes || candidate_sha1_bytes || binary_sha256_bytes || scorer_sha256_bytes || affine-int8-b16-quality-v2-native-build)",
+  "seed_sha256": "5c8cfad6571210a1fbd32397cd5f6ef6babc6e4e2ee25fb9cbb7d7d8e4afff28",
+  "signature": "8f4742bd84a31831ff428b41baff6351f966862d07839fe3c8e05d16073a096521e78db041257fb0bbcb6fb9e620cf9212da2664f85c4f2144eb805831f585e2a73946a5b8675a87218b41d93f547470eb593b7463a269243bbb16d84331df0f"
+}

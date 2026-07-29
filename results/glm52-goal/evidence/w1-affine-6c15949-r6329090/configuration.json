@@ -1,0 +1,38 @@
+{
+  "arm_order": [
+    "baseline",
+    "candidate"
+  ],
+  "baseline_mode": {
+    "DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE": "unset"
+  },
+  "blocks_per_arm": 5,
+  "build_recipe": "make clean && make -j2 CUDA_ARCH=native QUALITY_CFLAGS=-O3,-g,-march=native,-Wall,-Wextra,-std=c11 ds4-server gguf-tools/quality-testing/score_official",
+  "candidate_mode": {
+    "DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE": "1"
+  },
+  "cases_per_block": 20,
+  "common_environment": {
+    "DS4_CUDA_EXPERT_CACHE_GB": "0",
+    "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+    "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+    "DS4_CUDA_FETCH_THREADS": "6",
+    "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+    "DS4_CUDA_MOE_NO_EXPERT_TILES": "1"
+  },
+  "cubin_arch": "sm_121",
+  "cuda_arch": "native",
+  "mode_lineage_evidence": "systemd-journal.log.gz",
+  "model_context": 8192,
+  "safety": {
+    "kill_floor_gib": 40,
+    "memory_high_bytes": 73014444032,
+    "memory_max_bytes": 76235669504,
+    "memory_swap_max_bytes": 0,
+    "minimum_start_gib": 110,
+    "oom_group": true,
+    "timeout_seconds": 3600
+  },
+  "schema_version": 1,
+  "ssd_streaming_cache_experts": "40GB"
+}

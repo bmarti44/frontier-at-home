@@ -1,0 +1,107 @@
+{
+  "candidate_hash": "6c15949e732981ff8d96fe8328a71500bf7399a8",
+  "review_round": 12,
+  "root_disposition": "REJECT_FOR_NOW",
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 46,
+      "verdict": "FAIL",
+      "critical": [
+        {
+          "id": "GAP-R12-C001",
+          "affected_gate": "W1 acceptance authority",
+          "evidence": "The numeric quality formula does not own case IDs, arm identity, fixture contents, modes, executable provenance, or execution status. The controller's registered W1 scorer still has raw_evidence_authority=false. A package was created after this review, but it does not repair the fixed-parser or controller-authority defect.",
+          "reproduction": "Inspect quality_verdict(), _score_workstream(), and the W1 controller status.",
+          "acceptance_test": "A committed W1 raw scorer must join strict records by unique case ID, bind every artifact and mode, reject malformed and fabricated campaigns, and generate the only authoritative summary."
+        }
+      ],
+      "high": [
+        {
+          "id": "GAP-R12-H001",
+          "affected_gate": "W1 counterbalanced A/B validity",
+          "evidence": "The preserved systemd journal runs all five baseline chunks followed by all five candidate chunks rather than five ABBA/BAAB fresh-server blocks.",
+          "reproduction": "Inspect systemd-journal.log and runtime attempt timestamps.",
+          "acceptance_test": "A new public-seed campaign must use five fixed ABBA/BAAB or BAAB/ABBA blocks with opaque labels, fresh processes, and a scorer that rejects every other order."
+        },
+        {
+          "id": "GAP-R12-H002",
+          "affected_gate": "W1 mode and fixture provenance",
+          "evidence": "Arm main logs do not bind the effective allowlisted process environment, and fixture_sha256 binds path manifests rather than every prompt, continuation, and response byte.",
+          "reproduction": "Search arm main logs for an effective affine-mode digest; mutate a copied referenced fixture and observe that the stored path-manifest hash is unchanged.",
+          "acceptance_test": "Each arm must bind an allowlisted live /proc environment digest and verify a content-complete ordered fixture digest before and after execution."
+        }
+      ],
+      "medium": [
+        {
+          "id": "GAP-R12-M001",
+          "affected_gate": "build reproducibility",
+          "evidence": "The build recipe is descriptive rather than replay-exact and omits expanded compiler/linker invocations, versions, object hashes, and cubin enumeration.",
+          "reproduction": "Compare randomness.json build_recipe with Makefile expansion and the actual build toolchain.",
+          "acceptance_test": "Freeze literal argv/environment, tool versions, expanded flags, build log, object hashes, final hashes, and cubin list."
+        }
+      ],
+      "low": [
+        {
+          "id": "GAP-R12-L001",
+          "affected_gate": "attempt preservation",
+          "evidence": "The first permission-denied attempt was preserved externally but was not indexed by the original campaign directory.",
+          "reproduction": "Inspect the original campaign directory and the 20260729-014419 crashlog.",
+          "acceptance_test": "A hash-bound ledger must enumerate every matching attempt and reject unindexed attempts."
+        }
+      ],
+      "prior_issue_status": [
+        {"id": "GAP-R10-M001", "status": "VERIFIED"},
+        {"id": "GAP-R10-L001", "status": "FIXED"},
+        {"id": "GAP-R9-C001", "status": "FALSIFIED"},
+        {"id": "GAP-R9-H001", "status": "VERIFIED"},
+        {"id": "GAP-R9-M001", "status": "OPEN"},
+        {"id": "GAP-R8-C001", "status": "OPEN"},
+        {"id": "GAP-R8-H001", "status": "OPEN"}
+      ]
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 84,
+      "verdict": "REJECT_FOR_NOW",
+      "critical": [],
+      "high": [
+        {
+          "id": "AR52-025",
+          "affected_gate": "W1 counterbalanced A/B validity",
+          "evidence": "The campaign is sequential baseline-then-candidate even though validate_ab_blocks() rejects that ordering.",
+          "reproduction": "Compare systemd-journal.log with validate_ab_blocks().",
+          "acceptance_test": "Run five preregistered counterbalanced fresh-process blocks and require the fixed scorer to reject sequential order."
+        }
+      ],
+      "medium": [
+        {
+          "id": "AR52-026",
+          "affected_gate": "W1 mode execution coverage",
+          "evidence": "The shell exports the candidate flag, but the engine does not attest resolved mode 2 or a device-backed affine-store execution count.",
+          "reproduction": "Inspect candidate main.log, cmd.log, and the textual source test.",
+          "acceptance_test": "Require fail-closed resolved-mode and affine-store-count attestations; mutations must reject default mode, symmetric mode, and skipped stores."
+        },
+        {
+          "id": "AR52-027",
+          "affected_gate": "self-contained evidence reproduction",
+          "evidence": "The packaged scorer tests resolve ROOT incorrectly and fail when executed from the evidence directory.",
+          "reproduction": "Run metric-scorer-tests.py from the packaged evidence directory.",
+          "acceptance_test": "Package the expected relative layout or load the sibling scorer explicitly, then preserve a passing standalone mutation run."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "AR52-025", "status": "VERIFIED"},
+        {"id": "AR52-026", "status": "VERIFIED"},
+        {"id": "AR52-027", "status": "VERIFIED"}
+      ]
+    }
+  },
+  "root_reproduction": {
+    "sequential_order": "VERIFIED",
+    "missing_arm_local_mode_attestation": "VERIFIED",
+    "fixture_content_mutation_not_bound_by_path_manifest": "VERIFIED",
+    "controller_raw_authority_missing": "VERIFIED",
+    "build_recipe_not_replay_exact": "VERIFIED",
+    "packaged_tests_not_self_contained": "VERIFIED"
+  }
+}
