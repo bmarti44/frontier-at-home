@@ -1,0 +1,15 @@
+Command:
+  python3 -m unittest scripts.tests.test_glm52_w1_root_attestor
+
+Unchanged candidate:
+  39edcb143ab586955faa045437f0fad13786eed1
+
+Result:
+  FAILED (errors=4)
+
+All four contracts failed because these production-path files did not exist:
+  scripts/65_glm52_w1_submit.py
+  scripts/66_install_glm52_w1_attestor.sh
+
+This is the required genuine RED for the missing root-owned W1 authority and
+the still-open Docker-root trust boundary.
