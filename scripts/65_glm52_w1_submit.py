@@ -363,13 +363,22 @@ def _record_failed_active_request(exc: Exception) -> None:
     _quarantine_seal(root)
 
 
+def _validate_current_lock_parent(lock_root: Path, gid: int) -> None:
+    parent = lock_root.lstat()
+    if (
+        stat.S_ISLNK(parent.st_mode)
+        or not stat.S_ISDIR(parent.st_mode)
+        or parent.st_uid != 0
+        or parent.st_gid != gid
+        or stat.S_IMODE(parent.st_mode) != 0o750
+    ):
+        raise PermissionError("current inference lock directory is unsafe")
+
+
 def _open_one_inference_lock(path: Path, *, stable_parent: bool):
     identity = pwd.getpwnam(DSV4)
     if stable_parent:
-        lock_root = path.parent
-        lock_root.mkdir(mode=0o750, parents=True, exist_ok=True)
-        os.chown(lock_root, 0, identity.pw_gid)
-        os.chmod(lock_root, 0o750)
+        _validate_current_lock_parent(path.parent, identity.pw_gid)
     descriptor = os.open(
         path,
         os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,

@@ -43,6 +43,7 @@ class RuntimeLockProvisionerTests(unittest.TestCase):
                     mock.patch.object(provisioner, "CURRENT", current),
                     mock.patch.object(provisioner.os, "chown"),
                     mock.patch.object(provisioner.os, "fchown"),
+                    mock.patch.object(provisioner, "validate_directory_identity"),
                     mock.patch.object(provisioner.os, "geteuid", return_value=0),
                     mock.patch.object(provisioner.sys, "argv", ["provisioner"]),
                     self.assertRaisesRegex(RuntimeError, "occupied"),
@@ -66,6 +67,7 @@ class RuntimeLockProvisionerTests(unittest.TestCase):
                 mock.patch.object(provisioner.os, "chown"),
                 mock.patch.object(provisioner.os, "fchown"),
                 mock.patch.object(provisioner, "validate_visible_identity"),
+                mock.patch.object(provisioner, "validate_directory_identity"),
                 mock.patch.object(provisioner.os, "geteuid", return_value=0),
                 mock.patch.object(provisioner.sys, "argv", ["provisioner"]),
             ):
@@ -74,6 +76,35 @@ class RuntimeLockProvisionerTests(unittest.TestCase):
                 self.assertTrue(path.is_file())
                 with path.open("a+b") as stream:
                     fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def test_preplanted_current_parent_symlink_is_not_followed(self):
+        provisioner = load_provisioner()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            runtime = base / "runtime"
+            legacy = runtime / "inference.lock"
+            target = base / "target"
+            target.mkdir()
+            original_mode = target.stat().st_mode
+            current_root = base / "current"
+            current_root.symlink_to(target, target_is_directory=True)
+            current = current_root / "inference.lock"
+            with (
+                mock.patch.object(provisioner, "RUNTIME", runtime),
+                mock.patch.object(provisioner, "LEGACY", legacy),
+                mock.patch.object(provisioner, "CURRENT_ROOT", current_root),
+                mock.patch.object(provisioner, "CURRENT", current),
+                mock.patch.object(provisioner.os, "chown"),
+                mock.patch.object(provisioner.os, "fchown"),
+                mock.patch.object(provisioner, "validate_visible_identity"),
+                mock.patch.object(provisioner, "validate_directory_identity"),
+                mock.patch.object(provisioner.os, "geteuid", return_value=0),
+                mock.patch.object(provisioner.sys, "argv", ["provisioner"]),
+                self.assertRaises(OSError),
+            ):
+                provisioner.main()
+            self.assertEqual(target.stat().st_mode, original_mode)
+            self.assertEqual(list(target.iterdir()), [])
 
 
 if __name__ == "__main__":

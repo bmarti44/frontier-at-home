@@ -261,6 +261,7 @@ class RootAttestorContractTests(unittest.TestCase):
                 mock.patch.object(submitter.os, "chown"),
                 mock.patch.object(submitter.os, "fchown") as chown,
                 mock.patch.object(submitter.os, "fchmod") as chmod,
+                mock.patch.object(submitter, "_validate_current_lock_parent"),
             ):
                 with submitter._open_one_inference_lock(
                     lock, stable_parent=True
@@ -314,6 +315,10 @@ class RootAttestorContractTests(unittest.TestCase):
                         submitter,
                         "_validate_legacy_lock_namespace",
                     ),
+                    mock.patch.object(
+                        submitter,
+                        "_validate_current_lock_parent",
+                    ),
                     self.assertRaisesRegex(
                         PermissionError, "pre-migration inference server"
                     ),
@@ -330,6 +335,7 @@ class RootAttestorContractTests(unittest.TestCase):
             current = base / "current" / "inference.lock"
             legacy.parent.mkdir()
             legacy.touch()
+            current.parent.mkdir()
             with (
                 mock.patch.object(
                     submitter, "LEGACY_INFERENCE_LOCK", legacy
@@ -340,6 +346,10 @@ class RootAttestorContractTests(unittest.TestCase):
                 mock.patch.object(
                     submitter,
                     "_validate_legacy_lock_namespace",
+                ),
+                mock.patch.object(
+                    submitter,
+                    "_validate_current_lock_parent",
                 ),
                 submitter._hold_inference_locks(),
             ):

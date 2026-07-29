@@ -17,6 +17,50 @@ CURRENT_ROOT = Path("/run/lock/frontier-at-home")
 CURRENT = CURRENT_ROOT / "inference.lock"
 
 
+def validate_directory_identity(
+    path: Path, descriptor: int, gid: int, mode: int
+) -> None:
+    opened = os.fstat(descriptor)
+    visible = path.lstat()
+    if (
+        not stat.S_ISDIR(opened.st_mode)
+        or stat.S_ISLNK(visible.st_mode)
+        or opened.st_dev != visible.st_dev
+        or opened.st_ino != visible.st_ino
+        or opened.st_uid != 0
+        or opened.st_gid != gid
+        or stat.S_IMODE(opened.st_mode) != mode
+    ):
+        raise RuntimeError(f"unsafe runtime lock directory: {path}")
+
+
+def open_root_directory(
+    path: Path, gid: int, mode: int, *, allow_safe_conversion: bool
+) -> int:
+    created = False
+    try:
+        os.mkdir(path, mode)
+        created = True
+    except FileExistsError:
+        pass
+    descriptor = os.open(
+        path,
+        os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC | os.O_NOFOLLOW,
+    )
+    try:
+        details = os.fstat(descriptor)
+        if not stat.S_ISDIR(details.st_mode):
+            raise RuntimeError(f"runtime lock path is not a directory: {path}")
+        if created or allow_safe_conversion:
+            os.fchown(descriptor, 0, gid)
+            os.fchmod(descriptor, mode)
+        validate_directory_identity(path, descriptor, gid, mode)
+    except Exception:
+        os.close(descriptor)
+        raise
+    return descriptor
+
+
 def validate_visible_identity(path: Path, descriptor: int, gid: int) -> None:
     visible = path.lstat()
     opened = os.fstat(descriptor)
@@ -60,22 +104,28 @@ def main() -> int:
     if os.geteuid() != 0 or sys.argv[1:] != []:
         raise RuntimeError("runtime lock provisioner requires root and no arguments")
     gid = grp.getgrnam("dsv4").gr_gid
-    RUNTIME.mkdir(mode=0o1770, parents=True, exist_ok=True)
-    os.chown(RUNTIME, 0, gid)
-    os.chmod(RUNTIME, 0o1770)
-    legacy = open_private(LEGACY, gid)
+    runtime = open_root_directory(
+        RUNTIME, gid, 0o1770, allow_safe_conversion=True
+    )
+    legacy = -1
+    current_root = -1
     current = -1
     try:
-        CURRENT_ROOT.mkdir(mode=0o750, parents=True, exist_ok=True)
-        os.chown(CURRENT_ROOT, 0, gid)
-        os.chmod(CURRENT_ROOT, 0o750)
+        legacy = open_private(LEGACY, gid)
+        current_root = open_root_directory(
+            CURRENT_ROOT, gid, 0o750, allow_safe_conversion=False
+        )
         current = open_private(CURRENT, gid)
     finally:
         if current >= 0:
             fcntl.flock(current, fcntl.LOCK_UN)
             os.close(current)
-        fcntl.flock(legacy, fcntl.LOCK_UN)
-        os.close(legacy)
+        if current_root >= 0:
+            os.close(current_root)
+        if legacy >= 0:
+            fcntl.flock(legacy, fcntl.LOCK_UN)
+            os.close(legacy)
+        os.close(runtime)
     return 0
 
 

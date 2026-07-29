@@ -13,7 +13,7 @@ readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
-readonly SUBMITTER_SHA256='cf7c4b8bc8e035653fe9c9d77b035f56''df38fdbaa43f5d036dba060512f762ac'
+readonly SUBMITTER_SHA256='132efec7dd66268553504c714c65b1de''7159e3bd18050b7ebc6714a325756c99'
 
 die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
