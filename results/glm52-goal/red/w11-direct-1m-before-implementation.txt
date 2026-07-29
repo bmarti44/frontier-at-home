@@ -1,0 +1,18 @@
+Command:
+python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_w11_requires_one_direct_one_million_stage scripts.tests.test_glm52_goal.FormulaTests.test_w11_accepts_exact_deterministic_fixture
+
+Result: RED (exit 1)
+
+The unchanged scorer rejected a single direct 1,048,576-cap stage with:
+
+ValueError: W11 requires exactly four graduated stages
+
+The unchanged deterministic fixture also emitted:
+
+[131072, 262144, 524288, 1048576]
+
+instead of the required direct-run plan:
+
+[1048576]
+
+This proves the inherited gate still required redundant lower-context runs.
