@@ -22,7 +22,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -655,6 +655,7 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             "record_type",
             "harness_candidate_hash",
             "engine_candidate_hash",
+            "composite_candidate_sha256",
             "seed_sha256",
             "binary_sha256",
             "configuration_sha256",
@@ -663,6 +664,8 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             "model_content_sha256",
             "tokenizer_content_sha256",
             "engine_build_sha256",
+            "engine_source_sha256",
+            "build_log_sha256",
             "baseline_environment_sha256",
             "candidate_environment_sha256",
             "candidate_arm",
@@ -683,6 +686,7 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
         ):
             raise ValueError(f"W1 raw {field} is invalid")
     for field in (
+        "composite_candidate_sha256",
         "seed_sha256",
         "binary_sha256",
         "configuration_sha256",
@@ -691,6 +695,8 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
         "model_content_sha256",
         "tokenizer_content_sha256",
         "engine_build_sha256",
+        "engine_source_sha256",
+        "build_log_sha256",
         "baseline_environment_sha256",
         "candidate_environment_sha256",
     ):
@@ -710,6 +716,11 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
     if campaign["seed_sha256"] != lineage_seed:
         raise ValueError("W1 raw seed does not match authenticated lineage")
     seed = lineage_seed
+    if (
+        campaign["lineage"]["freeze"].get("composite_candidate_sha256")
+        != campaign["composite_candidate_sha256"]
+    ):
+        raise ValueError("W1 raw composite candidate differs from lineage")
     expected_candidate = "A" if int(seed[:2], 16) % 2 == 0 else "B"
     if campaign["candidate_arm"] != expected_candidate:
         raise ValueError("W1 raw candidate arm does not match the seed")
@@ -766,6 +777,7 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
         "samples_log",
         "kernel_log",
         "quality_tsv",
+        "journal_witness",
     }
     identities: set[tuple[str, str]] = set()
     model_identity: str | None = None
@@ -808,15 +820,35 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError("W1 raw evidence is invalid or oversized")
 
         launcher = evidence["launcher_log"]
-        if not re.search(r"^SAFE_RUN_DONE rc=0 killed=no dir=\S+$", launcher, re.M):
-            raise ValueError("W1 raw launcher did not complete safely")
+        _w1_single_match(
+            r"^SAFE_RUN_DONE rc=0 killed=no dir=(\S+)$",
+            launcher,
+            "launcher completion",
+        )
         main = evidence["main_log"]
         if (
             "memory_swap_max=0" not in main
             or "memory_oom_group=1" not in main
-            or "SAFE_RUN end rc=0 killed=no" not in main
         ):
             raise ValueError("W1 raw cgroup completion is invalid")
+        executed_at_text = _w1_single_match(
+            r"^(\S+) executed_candidate_verified pid=\d+ start_ticks=\d+",
+            main,
+            "executed-process timestamp",
+        )[0]
+        completed_at_text = _w1_single_match(
+            r"^(\S+) SAFE_RUN end rc=0 killed=no\b.*$",
+            main,
+            "wrapper completion",
+        )[0]
+        executed_at = _utc_timestamp(
+            executed_at_text, "W1 executed-process timestamp"
+        )
+        completed_at = _utc_timestamp(
+            completed_at_text, "W1 wrapper completion timestamp"
+        )
+        if completed_at <= executed_at:
+            raise ValueError("W1 raw lifecycle timing is invalid")
         binary = _w1_single_match(
             r"(?:^| )candidate_binary_sha256=([0-9a-f]{64})(?: |$)",
             main,
@@ -844,6 +876,32 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
         if (pid, start_ticks) in identities:
             raise ValueError("W1 raw attempts did not use fresh processes")
         identities.add((pid, start_ticks))
+        try:
+            witness = json.loads(
+                evidence["journal_witness"],
+                object_pairs_hook=lambda pairs: _unique_pairs(
+                    pairs, "W1 journal witness"
+                ),
+            )
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ValueError("W1 journal witness is malformed") from exc
+        _require_exact_keys(
+            witness,
+            {
+                "cursor",
+                "realtime_timestamp",
+                "boot_id",
+                "invocation_id",
+                "pid",
+                "uid",
+                "cgroup",
+                "user_unit",
+                "message",
+            },
+            "W1 journal witness",
+        )
+        if any(not isinstance(value, str) or not value for value in witness.values()):
+            raise ValueError("W1 journal witness fields are absent")
 
         cmd = evidence["cmd_log"]
         mode = int(
@@ -872,16 +930,89 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
         elif mode != 0 or store_rows != 0 or changed_values != 0:
             raise ValueError("W1 raw baseline is not default-off")
 
-        memory_values = [
-            int(value)
-            for value in re.findall(r"(?:^| )mem_avail_kb=(\d+)(?: |$)", evidence["samples_log"], re.M)
+        sample_rows = []
+        for line in evidence["samples_log"].splitlines():
+            match = re.fullmatch(
+                r"(\S+) mem_avail_kb=(\d+) eng_rss_kb=(\d+) "
+                r"read_bytes=(\d+)",
+                line,
+            )
+            if match is None:
+                raise ValueError("W1 raw memory telemetry row is malformed")
+            timestamp, available, rss, read_bytes = match.groups()
+            sample_rows.append(
+                (
+                    _utc_timestamp(timestamp, "W1 memory timestamp"),
+                    int(available),
+                    int(rss),
+                    int(read_bytes),
+                )
+            )
+        if len(sample_rows) < 20:
+            raise ValueError("W1 raw memory telemetry coverage is incomplete")
+        sample_times = [row[0] for row in sample_rows]
+        gaps = [
+            (right - left).total_seconds()
+            for left, right in zip(sample_times, sample_times[1:])
         ]
-        if not memory_values:
-            raise ValueError("W1 raw memory telemetry is absent")
+        if (
+            any(gap <= 0 or gap > 0.75 for gap in gaps)
+            or sample_times[0] > executed_at + timedelta(seconds=1)
+            or sample_times[-1] < completed_at - timedelta(seconds=1)
+        ):
+            raise ValueError("W1 raw memory telemetry does not cover execution")
+        memory_values = [row[1] for row in sample_rows]
         attempt_memory = min(memory_values) / 1048576
         if attempt_memory < 10.0:
             raise ValueError("W1 raw memory floor was violated")
         minimum_memory = min(minimum_memory, attempt_memory)
+        expected_nonce = hashlib.sha256(
+            f"{seed}:{index}:W1-witness".encode()
+        ).hexdigest()
+        witness_values = _w1_single_match(
+            r"^W1_WITNESS nonce=([0-9a-f]{64}) "
+            r"unit=(glm52-w1-[A-Za-z0-9_-]+) "
+            r"binary=([0-9a-f]{64}) environment=([0-9a-f]{64}) "
+            r"pid=(\d+) start_ticks=(\d+) rc=(\d+) killed=(\S+) "
+            r"cmd_sha256=([0-9a-f]{64}) samples_sha256=([0-9a-f]{64})$",
+            witness["message"],
+            "journal witness message",
+        )
+        (
+            witnessed_nonce,
+            witnessed_unit,
+            witnessed_binary,
+            witnessed_environment,
+            witnessed_pid,
+            witnessed_start,
+            witnessed_rc,
+            witnessed_killed,
+            witnessed_cmd,
+            witnessed_samples,
+        ) = witness_values
+        expected_unit_prefix = (
+            f"glm52-w1-{seed[:8]}-{index:02d}-{arm}-"
+        )
+        if (
+            witnessed_nonce != expected_nonce
+            or not witnessed_unit.startswith(expected_unit_prefix)
+            or witnessed_binary != binary
+            or witnessed_environment != environment
+            or witnessed_pid != pid
+            or witnessed_start != start_ticks
+            or witnessed_rc != "0"
+            or witnessed_killed != "no"
+            or witnessed_cmd
+            != hashlib.sha256(evidence["cmd_log"].encode()).hexdigest()
+            or witnessed_samples
+            != hashlib.sha256(evidence["samples_log"].encode()).hexdigest()
+            or witness["uid"] != "1000"
+            or witness["user_unit"] != witnessed_unit + ".service"
+            or not witness["cgroup"].endswith(
+                f"/{witnessed_unit}.service"
+            )
+        ):
+            raise ValueError("W1 journal witness does not bind raw execution")
         if re.search(
             r"NVRM.*Xid|NV_ERR_NO_MEMORY|oom-kill|Out of memory|"
             r"Memory cgroup out of memory",
@@ -1365,6 +1496,76 @@ def generate_w11_fixture(
     }
 
 
+def _verify_w1_journal_authority(record: dict[str, Any]) -> None:
+    """Require each embedded witness to exist with journal-owned metadata."""
+    attempts = record.get("attempts")
+    if not isinstance(attempts, list) or len(attempts) != 20:
+        raise ValueError("W1 journal authority requires twenty attempts")
+    for index, attempt in enumerate(attempts):
+        try:
+            witness = json.loads(
+                attempt["evidence"]["journal_witness"],
+                object_pairs_hook=lambda pairs: _unique_pairs(
+                    pairs, f"W1 journal witness {index}"
+                ),
+            )
+            cursor = witness["cursor"]
+        except (KeyError, TypeError, json.JSONDecodeError, ValueError) as exc:
+            raise ValueError("W1 journal witness is malformed") from exc
+        completed = subprocess.run(
+            [
+                "/usr/bin/journalctl",
+                "--no-pager",
+                "-o",
+                "json",
+                "--cursor",
+                cursor,
+                "-n",
+                "1",
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            env={
+                "HOME": "/nonexistent",
+                "PATH": "/usr/bin:/bin",
+                "LANG": "C.UTF-8",
+            },
+        )
+        rows = []
+        if completed.returncode == 0:
+            for line in completed.stdout.splitlines():
+                try:
+                    value = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(value, dict):
+                    rows.append(value)
+        if len(rows) != 1:
+            raise ValueError("W1 journal witness is not externally persisted")
+        row = rows[0]
+        expected = {
+            "__CURSOR": witness.get("cursor"),
+            "__REALTIME_TIMESTAMP": witness.get("realtime_timestamp"),
+            "_BOOT_ID": witness.get("boot_id"),
+            "_SYSTEMD_INVOCATION_ID": witness.get("invocation_id"),
+            "_PID": witness.get("pid"),
+            "_UID": witness.get("uid"),
+            "_SYSTEMD_CGROUP": witness.get("cgroup"),
+            "_SYSTEMD_USER_UNIT": witness.get("user_unit"),
+            "MESSAGE": witness.get("message"),
+        }
+        if (
+            any(str(row.get(field, "")) != value for field, value in expected.items())
+            or witness.get("uid") != "1000"
+            or not str(witness.get("cgroup", "")).endswith(
+                "/" + str(witness.get("user_unit", ""))
+            )
+        ):
+            raise ValueError("W1 journal witness trusted metadata differs")
+
+
 def validate_record_artifact_bindings(
     gate: str,
     manifest: dict[str, Any],
@@ -1396,10 +1597,19 @@ def validate_record_artifact_bindings(
                 raise ValueError("W1 raw harness candidate does not match manifest")
             if record.get("engine_build_sha256") != manifest.get("diff_sha256"):
                 raise ValueError("W1 raw engine build does not match manifest")
+            if record.get("engine_source_sha256") != manifest.get(
+                "engine_source_sha256"
+            ):
+                raise ValueError("W1 raw engine source does not match manifest")
+            if record.get("build_log_sha256") != manifest.get(
+                "build_log_sha256"
+            ):
+                raise ValueError("W1 raw build log does not match manifest")
 
             evidence_path = artifact_paths.get("evidence")
             if evidence_path is None or _read_strict_json(evidence_path) != record:
                 raise ValueError("W1 evidence artifact does not equal raw evidence")
+            _verify_w1_journal_authority(record)
 
             model = _read_strict_json(artifact_paths["model"])
             _require_exact_keys(
@@ -1467,19 +1677,50 @@ def validate_record_artifact_bindings(
                 or engine_build.get("quality_binary_sha256")
                 != record.get("binary_sha256")
                 or engine_build.get("status_porcelain") != ""
+                or engine_build.get("cuda_test_passed") is not True
+                or engine_build.get("clean_build_transcript_sha256")
+                != record.get("build_log_sha256")
+                or "gguf-tools/quality-testing/score_official.o"
+                not in engine_build.get("object_sha256", {})
             ):
                 raise ValueError("W1 engine build does not bind raw evidence")
+            engine_bundle = artifact_paths.get("engine_source")
+            if engine_bundle is None:
+                raise ValueError("W1 engine source bundle is unavailable")
+            bundle_heads = subprocess.run(
+                ["/usr/bin/git", "bundle", "list-heads", str(engine_bundle)],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                env=_git_env(),
+            )
+            if (
+                bundle_heads.returncode != 0
+                or not any(
+                    line.split()[0] == record.get("engine_candidate_hash")
+                    for line in bundle_heads.stdout.splitlines()
+                    if line.split()
+                )
+            ):
+                raise ValueError("W1 engine bundle lacks the frozen commit")
 
             configuration = _read_strict_json(artifact_paths["configuration"])
             expected_configuration = {
                 "harness_candidate_hash": record.get("harness_candidate_hash"),
                 "engine_candidate_hash": record.get("engine_candidate_hash"),
+                "composite_candidate_sha256": record.get(
+                    "composite_candidate_sha256"
+                ),
                 "binary_sha256": record.get("binary_sha256"),
                 "model_content_sha256": record.get("model_content_sha256"),
                 "tokenizer_content_sha256": record.get(
                     "tokenizer_content_sha256"
                 ),
                 "engine_build_sha256": record.get("engine_build_sha256"),
+                "engine_source_sha256": record.get("engine_source_sha256"),
+                "build_log_sha256": record.get("build_log_sha256"),
                 "fixture_sha256": record.get("fixture_sha256"),
                 "fixture_content_sha256": record.get("fixture_content_sha256"),
                 "lineage": record.get("lineage"),
@@ -2780,9 +3021,10 @@ def validate_manifest_lineage(
     randomness = lineage["randomness"]
     if not isinstance(freeze, dict) or not isinstance(randomness, dict):
         raise ValueError("freeze and randomness lineage must be objects")
-    _require_exact_keys(
-        freeze, {"candidate_hash", "frozen_at"}, "freeze lineage"
-    )
+    freeze_keys = {"candidate_hash", "frozen_at"}
+    if gate == "W1":
+        freeze_keys.add("composite_candidate_sha256")
+    _require_exact_keys(freeze, freeze_keys, "freeze lineage")
     _require_exact_keys(
         randomness,
         {
@@ -2805,7 +3047,10 @@ def validate_manifest_lineage(
             )
         except Exception as exc:
             raise ValueError(f"cannot derive commit timestamp: {exc}") from exc
-        if frozen_at != committed_at:
+        if gate == "W1":
+            if frozen_at < committed_at:
+                raise ValueError("frozen_at predates the candidate commit")
+        elif frozen_at != committed_at:
             raise ValueError("frozen_at does not equal the commit timestamp")
     obtained_at = _utc_timestamp(randomness["obtained_at"], "obtained_at")
     if obtained_at <= frozen_at:
@@ -2835,8 +3080,13 @@ def validate_manifest_lineage(
     expected_randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
     if randomness["randomness"] != expected_randomness:
         raise ValueError("drand randomness is not SHA-256(signature)")
+    seed_candidate = candidate_hash
+    if gate == "W1":
+        seed_candidate = freeze["composite_candidate_sha256"]
+        if not _is_sha256(seed_candidate):
+            raise ValueError("composite candidate digest is invalid")
     expected_seed = hashlib.sha256(
-        f"{candidate_hash}:{expected_randomness}:{gate}".encode()
+        f"{seed_candidate}:{expected_randomness}:{gate}".encode()
     ).hexdigest()
     if randomness["seed_sha256"] != expected_seed:
         raise ValueError("confirmation seed derivation is invalid")
@@ -3247,17 +3497,26 @@ def validate_attempt(attempt: Path) -> None:
     root = attempt.resolve()
     artifact_paths: dict[str, Path] = {}
     if manifest["gate"] == "W1":
-        if not _is_sha256(manifest.get("evidence_sha256")):
-            raise ValueError("manifest evidence_sha256 is invalid")
-        relative = artifacts.get("evidence")
-        if not isinstance(relative, str) or not relative:
-            raise ValueError("manifest artifact evidence is missing")
-        evidence = (attempt / relative).resolve()
-        if not evidence.is_relative_to(root) or not evidence.is_file():
-            raise ValueError("manifest artifact evidence escapes or is absent")
-        if _sha256(evidence) != manifest["evidence_sha256"]:
-            raise ValueError("manifest artifact evidence hash mismatch")
-        artifact_paths["evidence"] = evidence
+        for artifact_name, field in (
+            ("evidence", "evidence_sha256"),
+            ("engine_source", "engine_source_sha256"),
+            ("build_log", "build_log_sha256"),
+        ):
+            if not _is_sha256(manifest.get(field)):
+                raise ValueError(f"manifest {field} is invalid")
+            relative = artifacts.get(artifact_name)
+            if not isinstance(relative, str) or not relative:
+                raise ValueError(f"manifest artifact {artifact_name} is missing")
+            artifact = (attempt / relative).resolve()
+            if not artifact.is_relative_to(root) or not artifact.is_file():
+                raise ValueError(
+                    f"manifest artifact {artifact_name} escapes or is absent"
+                )
+            if _sha256(artifact) != manifest[field]:
+                raise ValueError(
+                    f"manifest artifact {artifact_name} hash mismatch"
+                )
+            artifact_paths[artifact_name] = artifact
     for field in required_hashes:
         if not _is_sha256(manifest.get(field)):
             raise ValueError(f"manifest {field} is invalid")
@@ -3271,6 +3530,10 @@ def validate_attempt(attempt: Path) -> None:
         if _sha256(artifact) != manifest[field]:
             raise ValueError(f"manifest artifact {artifact_name} hash mismatch")
         artifact_paths[artifact_name] = artifact
+    if manifest["gate"] == "W1":
+        with artifact_paths["binary"].open("rb") as executable:
+            if executable.read(4) != b"\x7fELF":
+                raise ValueError("W1 quality binary is not an ELF executable")
     validate_source_provenance(artifact_paths["source"], candidate_hash)
     validate_profile_artifact_bindings(manifest, artifact_paths)
     raw_path = attempt / "raw.jsonl"

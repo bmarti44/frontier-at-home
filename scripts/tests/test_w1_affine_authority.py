@@ -7,9 +7,11 @@ import copy
 import hashlib
 import importlib.util
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,11 +37,14 @@ def raw_campaign(goal):
     model = "6" * 64
     tokenizer = "7" * 64
     build = "8" * 64
+    composite = "c" * 64
+    engine_source = "d" * 64
+    build_log = "e" * 64
     baseline_environment = "4" * 64
     candidate_environment = "5" * 64
     signature = "01" * 96
     randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
-    seed = hashlib.sha256(f"{harness}:{randomness}:W1".encode()).hexdigest()
+    seed = hashlib.sha256(f"{composite}:{randomness}:W1".encode()).hexdigest()
     candidate_arm = "A" if int(seed[:2], 16) % 2 == 0 else "B"
     first = "ABBA" if int(seed[2:4], 16) % 2 == 0 else "BAAB"
     other = "BAAB" if first == "ABBA" else "ABBA"
@@ -71,13 +76,18 @@ def raw_campaign(goal):
                     f"dir=/state/attempt-{block}-{sequence}\n"
                 ),
                 "main_log": (
+                    "2026-07-29T00:00:00.000+00:00 "
                     "cgroup_verified path=/unit memory_high=1 memory_max=2 "
                     "memory_swap_max=0 memory_oom_group=1\n"
+                    f"2026-07-29T00:00:00.000+00:00 "
                     f"candidate_binary_sha256={binary}\n"
+                    f"2026-07-29T00:00:00.000+00:00 "
                     f"executed_environment_sha256="
                     f"{candidate_environment if candidate else baseline_environment}\n"
+                    f"2026-07-29T00:00:00.000+00:00 "
                     f"executed_candidate_verified pid={block * 10 + sequence + 1} "
                     f"start_ticks={1000 + block * 10 + sequence}\n"
+                    "2026-07-29T00:00:05.000+00:00 "
                     "SAFE_RUN end rc=0 killed=no\n"
                 ),
                 "cmd_log": (
@@ -86,13 +96,50 @@ def raw_campaign(goal):
                     f"resolved_mode={mode} affine_store_rows={store_rows} "
                     f"affine_changed_values={changed}\n"
                 ),
-                "samples_log": (
-                    "2026-07-29T00:00:00.000+00:00 "
+                "samples_log": "".join(
+                    "2026-07-29T00:00:"
+                    f"{sample / 4:06.3f}+00:00 "
                     "mem_avail_kb=92274688 eng_rss_kb=1 read_bytes=1\n"
+                    for sample in range(21)
                 ),
                 "kernel_log": "-- No entries --\n",
                 "quality_tsv": "\n".join(rows) + "\n",
             }
+            attempt_index = block * 4 + sequence
+            nonce = hashlib.sha256(
+                f"{seed}:{attempt_index}:W1-witness".encode()
+            ).hexdigest()
+            unit = (
+                f"glm52-w1-{seed[:8]}-{attempt_index:02d}-{arm}-"
+                f"{9000 + attempt_index}"
+            )
+            message = (
+                f"W1_WITNESS nonce={nonce} unit={unit} binary={binary} "
+                "environment="
+                f"{candidate_environment if candidate else baseline_environment} "
+                f"pid={block * 10 + sequence + 1} "
+                f"start_ticks={1000 + block * 10 + sequence} "
+                "rc=0 killed=no "
+                "cmd_sha256="
+                f"{hashlib.sha256(evidence['cmd_log'].encode()).hexdigest()} "
+                "samples_sha256="
+                f"{hashlib.sha256(evidence['samples_log'].encode()).hexdigest()}"
+            )
+            evidence["journal_witness"] = json.dumps(
+                {
+                    "cursor": f"cursor-{attempt_index}",
+                    "realtime_timestamp": str(1000000 + attempt_index),
+                    "boot_id": "boot",
+                    "invocation_id": f"{attempt_index:032x}",
+                    "pid": str(8000 + attempt_index),
+                    "uid": "1000",
+                    "cgroup": f"/user.slice/{unit}.service",
+                    "user_unit": f"{unit}.service",
+                    "message": message,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
             attempts.append(
                 {
                     "block": block,
@@ -109,6 +156,7 @@ def raw_campaign(goal):
         "record_type": "w1_affine_raw_campaign",
         "harness_candidate_hash": harness,
         "engine_candidate_hash": engine,
+        "composite_candidate_sha256": composite,
         "seed_sha256": seed,
         "binary_sha256": binary,
         "configuration_sha256": configuration,
@@ -117,6 +165,8 @@ def raw_campaign(goal):
         "model_content_sha256": model,
         "tokenizer_content_sha256": tokenizer,
         "engine_build_sha256": build,
+        "engine_source_sha256": engine_source,
+        "build_log_sha256": build_log,
         "baseline_environment_sha256": baseline_environment,
         "candidate_environment_sha256": candidate_environment,
         "candidate_arm": candidate_arm,
@@ -124,6 +174,7 @@ def raw_campaign(goal):
             "freeze": {
                 "candidate_hash": harness,
                 "frozen_at": "2026-07-29T04:56:00+00:00",
+                "composite_candidate_sha256": composite,
             },
             "randomness": {
                 "source": "drand-default",
@@ -184,6 +235,17 @@ class W1AffineAuthorityTests(unittest.TestCase):
                 "W1", "w1.affine-quality.v2", [noop]
             )
 
+        uncovered = copy.deepcopy(campaign)
+        for attempt in uncovered["attempts"]:
+            attempt["evidence"]["samples_log"] = (
+                "2026-07-29T00:00:00.000+00:00 "
+                "mem_avail_kb=92274688 eng_rss_kb=1 read_bytes=1\n"
+            )
+        with self.assertRaises(ValueError):
+            self.goal.score_registered_gate(
+                "W1", "w1.affine-quality.v2", [uncovered]
+            )
+
     def test_fabricated_drand_and_cached_model_identity_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             beacon = Path(temporary) / "beacon.json"
@@ -214,6 +276,41 @@ class W1AffineAuthorityTests(unittest.TestCase):
         self.assertIn('"evidence_sha256"', source)
         self.assertIn("validate_attempt", source)
         self.assertIn("engine-build.json", source)
+        self.assertIn("composite_candidate_sha256", source)
+        self.assertIn("verify_frozen_candidate", source)
+        self.assertIn("frozen_scorer_path", source)
+        self.assertIn("make", source)
+        self.assertIn("tests/test_glm_affine_int8_cuda", source)
+
+    def test_seed_binds_the_complete_frozen_candidate(self):
+        randomness = "1" * 64
+        first = self.runner.confirmation_seed(randomness, "2" * 64)
+        second = self.runner.confirmation_seed(randomness, "3" * 64)
+        self.assertNotEqual(first, second)
+        self.assertEqual(
+            first,
+            hashlib.sha256(f"{'2' * 64}:{randomness}:W1".encode()).hexdigest(),
+        )
+
+    def test_w1_has_a_registered_controller_runner(self):
+        runner = ROOT / "scripts/glm52-runners/W1"
+        self.assertTrue(runner.is_file())
+        self.assertTrue(runner.stat().st_mode & 0o111)
+        source = runner.read_text(encoding="utf-8")
+        self.assertIn("glm52_w1_affine_campaign.py", source)
+        self.assertIn(" freeze ", source)
+        self.assertIn(" run ", source)
+
+    def test_unpersisted_journal_witness_cannot_authorize(self):
+        campaign = raw_campaign(self.goal)
+        unavailable = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+        with mock.patch.object(
+            self.goal.subprocess, "run", return_value=unavailable
+        ):
+            with self.assertRaisesRegex(ValueError, "externally persisted"):
+                self.goal._verify_w1_journal_authority(campaign)
 
     def test_controller_bindings_reject_evidence_not_equal_to_raw_record(self):
         campaign = raw_campaign(self.goal)
@@ -247,21 +344,33 @@ class W1AffineAuthorityTests(unittest.TestCase):
                 "commit": campaign["engine_candidate_hash"],
                 "quality_binary_sha256": campaign["binary_sha256"],
                 "status_porcelain": "",
+                "cuda_test_passed": True,
+                "clean_build_transcript_sha256": campaign[
+                    "build_log_sha256"
+                ],
+                "object_sha256": {
+                    "gguf-tools/quality-testing/score_official.o": "f" * 64
+                },
             },
             "configuration": {
                 field: campaign[field]
                 for field in (
                     "harness_candidate_hash",
                     "engine_candidate_hash",
+                    "composite_candidate_sha256",
                     "binary_sha256",
                     "model_content_sha256",
                     "tokenizer_content_sha256",
                     "engine_build_sha256",
+                    "engine_source_sha256",
+                    "build_log_sha256",
                     "fixture_sha256",
                     "fixture_content_sha256",
                     "lineage",
                 )
             },
+            "engine_source": {"bundle": "test"},
+            "build_log": {"result": "passed"},
         }
         manifest = {
             "candidate_hash": campaign["harness_candidate_hash"],
@@ -269,6 +378,8 @@ class W1AffineAuthorityTests(unittest.TestCase):
             "configuration_sha256": campaign["configuration_sha256"],
             "fixture_sha256": campaign["fixture_sha256"],
             "diff_sha256": campaign["engine_build_sha256"],
+            "engine_source_sha256": campaign["engine_source_sha256"],
+            "build_log_sha256": campaign["build_log_sha256"],
         }
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -286,15 +397,27 @@ class W1AffineAuthorityTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 paths[name] = path
-            self.goal.validate_record_artifact_bindings(
-                "W1", manifest, [campaign], paths
+            bundle = subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=f"{campaign['engine_candidate_hash']} HEAD\n",
+                stderr="",
             )
+            with mock.patch.object(
+                self.goal, "_verify_w1_journal_authority"
+            ), mock.patch.object(self.goal.subprocess, "run", return_value=bundle):
+                self.goal.validate_record_artifact_bindings(
+                    "W1", manifest, [campaign], paths
+                )
             forged = copy.deepcopy(campaign)
             forged["attempts"][0]["evidence"]["quality_tsv"] += "forged\n"
-            with self.assertRaises(ValueError):
-                self.goal.validate_record_artifact_bindings(
-                    "W1", manifest, [forged], paths
-                )
+            with mock.patch.object(
+                self.goal, "_verify_w1_journal_authority"
+            ), mock.patch.object(self.goal.subprocess, "run", return_value=bundle):
+                with self.assertRaises(ValueError):
+                    self.goal.validate_record_artifact_bindings(
+                        "W1", manifest, [forged], paths
+                    )
 
 
 if __name__ == "__main__":

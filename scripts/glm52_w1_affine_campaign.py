@@ -109,16 +109,16 @@ def environment_sha256(names: Iterable[str], values: dict[str, str]) -> str:
 
 def confirmation_seed(
     drand_randomness: str,
-    harness_commit: str,
+    composite_candidate_sha256: str,
 ) -> str:
-    for value, label, length in (
-        (drand_randomness, "drand randomness", 64),
-        (harness_commit, "harness commit", 40),
+    for value, label in (
+        (drand_randomness, "drand randomness"),
+        (composite_candidate_sha256, "composite candidate"),
     ):
-        if not re.fullmatch(rf"[0-9a-f]{{{length}}}", value):
+        if not re.fullmatch(r"[0-9a-f]{64}", value):
             raise ValueError(f"{label} is invalid")
     return hashlib.sha256(
-        f"{harness_commit}:{drand_randomness}:W1".encode()
+        f"{composite_candidate_sha256}:{drand_randomness}:W1".encode()
     ).hexdigest()
 
 
@@ -257,7 +257,7 @@ def _strict_json(path: Path) -> Any:
 
 def _source_commit(source: Path) -> str:
     status = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=no"],
+        ["/usr/bin/git", "status", "--porcelain", "--untracked-files=no"],
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
@@ -267,7 +267,7 @@ def _source_commit(source: Path) -> str:
     if status.stdout:
         raise ValueError("engine source has tracked modifications")
     commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
+        ["/usr/bin/git", "rev-parse", "HEAD"],
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
@@ -280,7 +280,7 @@ def _source_commit(source: Path) -> str:
 
 def _commit_time(source: Path, commit: str) -> str:
     raw = subprocess.run(
-        ["git", "show", "-s", "--format=%cI", commit],
+        ["/usr/bin/git", "show", "-s", "--format=%cI", commit],
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
@@ -440,21 +440,21 @@ def _engine_build_descriptor(
     quality_binary: Path,
 ) -> dict[str, Any]:
     objects = {
-        path.name: sha256_file(path)
-        for path in sorted(source.glob("*.o"))
+        str(path.relative_to(source)): sha256_file(path)
+        for path in sorted(source.rglob("*.o"))
         if path.is_file()
     }
     return {
         "schema_version": 1,
         "repository": _command_output(
-            ["git", "remote", "get-url", "origin"], source
+            ["/usr/bin/git", "remote", "get-url", "origin"], source
         ),
         "commit": engine_commit,
         "tree": _command_output(
-            ["git", "rev-parse", f"{engine_commit}^{{tree}}"], source
+            ["/usr/bin/git", "rev-parse", f"{engine_commit}^{{tree}}"], source
         ),
         "status_porcelain": _command_output(
-            ["git", "status", "--porcelain", "--untracked-files=no"], source
+            ["/usr/bin/git", "status", "--porcelain", "--untracked-files=no"], source
         ),
         "build_commands": [
             "make clean",
@@ -471,6 +471,241 @@ def _engine_build_descriptor(
         "quality_binary_sha256": sha256_file(quality_binary),
         "object_sha256": objects,
     }
+
+
+def _run_checked(
+    command: list[str],
+    *,
+    cwd: Path,
+    timeout: int = 900,
+) -> str:
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=timeout,
+        check=False,
+        env={
+            "HOME": "/home/bmarti44",
+            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LANG": "C.UTF-8",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+        },
+    )
+    if completed.returncode:
+        raise ValueError(
+            f"command failed rc={completed.returncode}: {' '.join(command)}\n"
+            f"{completed.stdout[-4000:]}"
+        )
+    return completed.stdout
+
+
+def _fresh_worktree(repository: Path, destination: Path, commit: str) -> None:
+    if destination.exists():
+        raise ValueError(f"fresh worktree destination already exists: {destination}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _run_checked(
+        [
+            "/usr/bin/git",
+            "worktree",
+            "add",
+            "--detach",
+            str(destination),
+            commit,
+        ],
+        cwd=repository,
+    )
+
+
+def freeze_candidate(args: argparse.Namespace) -> int:
+    """Clean-build and freeze every identity before public randomness."""
+    engine_repository = args.engine_source.resolve()
+    model = args.model.resolve()
+    freeze_dir = args.freeze_dir.resolve()
+    if freeze_dir.exists():
+        raise ValueError("freeze directory already exists")
+    if not model.is_file() or not engine_repository.is_dir():
+        raise ValueError("engine source or model is absent")
+    harness_commit = _source_commit(ROOT)
+    engine_commit = _source_commit(engine_repository)
+    if args.engine_candidate_hash and args.engine_candidate_hash != engine_commit:
+        raise ValueError("engine candidate hash changed")
+
+    tag = f"{harness_commit[:12]}-{engine_commit[:12]}"
+    harness_source = Path(f"/home/bmarti44/.cache/glm52-w1-harness-{tag}")
+    engine_source = Path(f"/home/bmarti44/.cache/glm52-w1-build-{tag}")
+    _fresh_worktree(ROOT, harness_source, harness_commit)
+    _fresh_worktree(engine_repository, engine_source, engine_commit)
+
+    transcript_parts = []
+    transcript_parts.append(
+        _run_checked(["/usr/bin/make", "clean"], cwd=engine_source)
+    )
+    transcript_parts.append(
+        _run_checked(
+            [
+                "/usr/bin/make",
+                "-j2",
+                "CUDA_ARCH=native",
+                "ds4-server",
+                "gguf-tools/quality-testing/score_official",
+                "tests/test_glm_affine_int8_cuda",
+            ],
+            cwd=engine_source,
+        )
+    )
+    transcript_parts.append(
+        _run_checked(
+            ["./tests/test_glm_affine_int8_cuda"], cwd=engine_source
+        )
+    )
+    build_transcript = "".join(transcript_parts)
+    server = engine_source / "ds4-server"
+    quality = engine_source / "gguf-tools/quality-testing/score_official"
+    cuda_test = engine_source / "tests/test_glm_affine_int8_cuda"
+    for binary in (server, quality, cuda_test):
+        if not binary.is_file() or binary.read_bytes()[:4] != b"\x7fELF":
+            raise ValueError(f"clean build did not produce an ELF binary: {binary}")
+
+    freeze_dir.mkdir(mode=0o700, parents=True)
+    transcript_path = freeze_dir / "clean-build.log"
+    transcript_path.write_text(build_transcript, encoding="utf-8")
+    bundle_path = freeze_dir / "engine.bundle"
+    _run_checked(
+        ["/usr/bin/git", "bundle", "create", str(bundle_path), "HEAD"],
+        cwd=engine_source,
+    )
+    bundle_heads = _run_checked(
+        ["/usr/bin/git", "bundle", "list-heads", str(bundle_path)],
+        cwd=engine_source,
+    )
+    if engine_commit not in bundle_heads:
+        raise ValueError("engine bundle does not contain the frozen commit")
+
+    if not args.model_sha256:
+        raise ValueError("expected model content hash is required")
+    model_sha256 = verify_model_content(model, args.model_sha256)
+    if os.access(model, os.W_OK):
+        raise ValueError("campaign model is writable by the benchmark owner")
+    master = engine_source / MASTER_MANIFEST
+    fixture_master_sha256 = content_complete_fixture_sha256(
+        engine_source, [master]
+    )
+    runner_path = harness_source / "scripts/glm52_w1_affine_campaign.py"
+    scorer_path = harness_source / "scripts/glm52_goal.py"
+    engine_build = _engine_build_descriptor(
+        engine_source, engine_commit, server, quality
+    )
+    engine_build["clean_build_transcript_sha256"] = sha256_file(
+        transcript_path
+    )
+    engine_build["cuda_test_binary_sha256"] = sha256_file(cuda_test)
+    engine_build["cuda_test_passed"] = True
+    engine_build_path = freeze_dir / "engine-build.json"
+    engine_build_sha256 = _write_canonical_json(
+        engine_build_path, engine_build
+    )
+    base = {
+        "schema_version": 1,
+        "frozen_at": datetime.now(timezone.utc).isoformat(),
+        "harness_candidate_hash": harness_commit,
+        "harness_tree": _command_output(
+            ["/usr/bin/git", "rev-parse", f"{harness_commit}^{{tree}}"], ROOT
+        ),
+        "harness_source": str(harness_source),
+        "runner_sha256": sha256_file(runner_path),
+        "scorer_sha256": sha256_file(scorer_path),
+        "engine_candidate_hash": engine_commit,
+        "engine_tree": _command_output(
+            ["/usr/bin/git", "rev-parse", f"{engine_commit}^{{tree}}"],
+            engine_source,
+        ),
+        "engine_source": str(engine_source),
+        "engine_source_sha256": sha256_file(bundle_path),
+        "engine_build_sha256": engine_build_sha256,
+        "server_binary_sha256": sha256_file(server),
+        "quality_binary_sha256": sha256_file(quality),
+        "cuda_test_binary_sha256": sha256_file(cuda_test),
+        "model_path": str(model),
+        "model_content_sha256": model_sha256,
+        "tokenizer_content_sha256": model_sha256,
+        "model_identity": model_identity(model),
+        "fixture_master_sha256": fixture_master_sha256,
+    }
+    descriptor = {
+        **base,
+        "composite_candidate_sha256": sha256_bytes(
+            _canonical_json_bytes(base)
+        ),
+    }
+    _write_canonical_json(freeze_dir / "freeze.json", descriptor)
+    print(
+        json.dumps(
+            {
+                "freeze_dir": str(freeze_dir),
+                "composite_candidate_sha256": descriptor[
+                    "composite_candidate_sha256"
+                ],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    return 0
+
+
+def verify_frozen_candidate(
+    freeze_dir: Path,
+) -> tuple[dict[str, Any], Path, Path, Path]:
+    freeze_dir = freeze_dir.resolve()
+    descriptor = _strict_json(freeze_dir / "freeze.json")
+    if not isinstance(descriptor, dict):
+        raise ValueError("freeze descriptor is not an object")
+    composite = descriptor.get("composite_candidate_sha256")
+    base = {
+        key: value
+        for key, value in descriptor.items()
+        if key != "composite_candidate_sha256"
+    }
+    if (
+        not isinstance(composite, str)
+        or sha256_bytes(_canonical_json_bytes(base)) != composite
+    ):
+        raise ValueError("composite candidate digest changed")
+    harness_source = Path(descriptor["harness_source"]).resolve()
+    engine_source = Path(descriptor["engine_source"]).resolve()
+    model = Path(descriptor["model_path"]).resolve()
+    if (
+        _source_commit(harness_source) != descriptor["harness_candidate_hash"]
+        or _source_commit(engine_source) != descriptor["engine_candidate_hash"]
+        or sha256_file(
+            harness_source / "scripts/glm52_w1_affine_campaign.py"
+        )
+        != descriptor["runner_sha256"]
+        or sha256_file(harness_source / "scripts/glm52_goal.py")
+        != descriptor["scorer_sha256"]
+        or sha256_file(engine_source / "ds4-server")
+        != descriptor["server_binary_sha256"]
+        or sha256_file(engine_source / "gguf-tools/quality-testing/score_official")
+        != descriptor["quality_binary_sha256"]
+        or sha256_file(freeze_dir / "engine.bundle")
+        != descriptor["engine_source_sha256"]
+        or sha256_file(freeze_dir / "engine-build.json")
+        != descriptor["engine_build_sha256"]
+        or model_identity(model) != descriptor["model_identity"]
+    ):
+        raise ValueError("frozen candidate identity changed")
+    if sha256_file(Path(__file__).resolve()) != descriptor["runner_sha256"]:
+        raise ValueError("live runner differs from frozen candidate")
+    master_sha256 = content_complete_fixture_sha256(
+        engine_source, [engine_source / MASTER_MANIFEST]
+    )
+    if master_sha256 != descriptor["fixture_master_sha256"]:
+        raise ValueError("frozen fixture master changed")
+    return descriptor, harness_source, engine_source, model
 
 
 def _journal_cursor() -> str:
@@ -514,10 +749,75 @@ def _minimum_available_gib(samples: str) -> float:
     return min(values) / 1048576
 
 
-def _score(campaign: dict[str, Any]) -> dict[str, Any]:
+def _journal_witness(message: str, expected_nonce: str) -> dict[str, str]:
+    if not message.startswith(f"W1_WITNESS nonce={expected_nonce} "):
+        raise ValueError("journal witness nonce is absent or wrong")
+    completed = subprocess.run(
+        [
+            "/usr/bin/journalctl",
+            "--no-pager",
+            "-o",
+            "json",
+            "--since",
+            "5 minutes ago",
+            "-t",
+            "glm52-w1-witness",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        env={
+            "HOME": "/nonexistent",
+            "PATH": "/usr/bin:/bin",
+            "LANG": "C.UTF-8",
+        },
+    )
+    if completed.returncode:
+        raise ValueError("system journal witness is unavailable")
+    rows = []
+    for line in completed.stdout.splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if row.get("MESSAGE") == message and row.get("_UID") == "1000":
+            rows.append(row)
+    if len(rows) != 1:
+        raise ValueError("system journal witness is missing or duplicated")
+    row = rows[0]
+    unit_match = re.search(r"(?:^| )unit=([A-Za-z0-9_.@-]+)(?: |$)", message)
+    if unit_match is None:
+        raise ValueError("journal witness unit is absent")
+    unit = unit_match.group(1) + ".service"
+    receipt = {
+        "cursor": str(row.get("__CURSOR", "")),
+        "realtime_timestamp": str(row.get("__REALTIME_TIMESTAMP", "")),
+        "boot_id": str(row.get("_BOOT_ID", "")),
+        "invocation_id": str(row.get("_SYSTEMD_INVOCATION_ID", "")),
+        "pid": str(row.get("_PID", "")),
+        "uid": str(row.get("_UID", "")),
+        "cgroup": str(row.get("_SYSTEMD_CGROUP", "")),
+        "user_unit": str(row.get("_SYSTEMD_USER_UNIT", "")),
+        "message": message,
+    }
+    if (
+        not all(receipt.values())
+        or receipt["user_unit"] != unit
+        or not receipt["cgroup"].endswith(f"/{unit}")
+    ):
+        raise ValueError("system journal witness has wrong trusted metadata")
+    return receipt
+
+
+def _score(
+    campaign: dict[str, Any], frozen_scorer_path: Path
+) -> dict[str, Any]:
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("glm52_goal_fixed", SCORER)
+    spec = importlib.util.spec_from_file_location(
+        "glm52_goal_fixed", frozen_scorer_path
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load fixed scorer")
     module = importlib.util.module_from_spec(spec)
@@ -525,10 +825,12 @@ def _score(campaign: dict[str, Any]) -> dict[str, Any]:
     return module._score_w1_affine_raw([campaign])
 
 
-def _goal_module():
+def _goal_module(frozen_scorer_path: Path):
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("glm52_goal_authority", SCORER)
+    spec = importlib.util.spec_from_file_location(
+        "glm52_goal_authority", frozen_scorer_path
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load controller authority")
     module = importlib.util.module_from_spec(spec)
@@ -542,8 +844,10 @@ def _finalize_controller_attempt(
     summary: dict[str, Any],
     frozen_binary: Path,
     final_model_identity: str,
+    frozen_scorer_path: Path,
+    freeze_dir: Path,
 ) -> Path:
-    goal = _goal_module()
+    goal = _goal_module(frozen_scorer_path)
     staging = output / "controller-attempt"
     if staging.exists():
         raise ValueError("controller attempt staging already exists")
@@ -588,6 +892,8 @@ def _finalize_controller_attempt(
     for name, value in artifact_values.items():
         _write_canonical_json(staging / name, value)
     shutil.copyfile(output / "engine-build.json", staging / "engine-build.json")
+    shutil.copyfile(freeze_dir / "engine.bundle", staging / "engine.bundle")
+    shutil.copyfile(freeze_dir / "clean-build.log", staging / "clean-build.log")
     shutil.copyfile(output / "configuration.json", staging / "configuration.json")
     shutil.copyfile(output / "fixture.json", staging / "fixture.json")
     shutil.copyfile(frozen_binary, staging / "quality-binary")
@@ -610,6 +916,8 @@ def _finalize_controller_attempt(
             "fixture": "fixture.json",
             "configuration": "configuration.json",
             "evidence": "evidence.json",
+            "engine_source": "engine.bundle",
+            "build_log": "clean-build.log",
         },
         "source_sha256": sha256_file(staging / "source.json"),
         "diff_sha256": sha256_file(staging / "engine-build.json"),
@@ -620,6 +928,8 @@ def _finalize_controller_attempt(
         "fixture_sha256": sha256_file(staging / "fixture.json"),
         "configuration_sha256": sha256_file(staging / "configuration.json"),
         "evidence_sha256": sha256_file(staging / "evidence.json"),
+        "engine_source_sha256": sha256_file(staging / "engine.bundle"),
+        "build_log_sha256": sha256_file(staging / "clean-build.log"),
     }
     _write_canonical_json(staging / "manifest.json", manifest)
     goal.validate_attempt(staging)
@@ -664,26 +974,32 @@ def _campaign_paths(seed: str, engine_commit: str, output: Path | None) -> Path:
 
 
 def run(args: argparse.Namespace) -> int:
-    source = args.engine_source.resolve()
-    model = args.model.resolve()
-    if not model.is_file() or not source.is_dir():
-        raise ValueError("engine source or model is absent")
-    engine_commit = _source_commit(source)
-    if args.engine_candidate_hash and args.engine_candidate_hash != engine_commit:
-        raise ValueError("engine candidate hash changed")
+    freeze_dir = args.freeze_dir.resolve()
+    (
+        frozen_candidate,
+        harness_source,
+        source,
+        model,
+    ) = verify_frozen_candidate(freeze_dir)
+    engine_commit = frozen_candidate["engine_candidate_hash"]
     scorer_binary = source / "gguf-tools/quality-testing/score_official"
     server_binary = source / "ds4-server"
     if not scorer_binary.is_file() or not server_binary.is_file():
         raise ValueError("clean-built engine binaries are absent")
     binary_sha256 = sha256_file(scorer_binary)
-    harness_commit = _source_commit(ROOT)
+    harness_commit = frozen_candidate["harness_candidate_hash"]
+    composite_candidate_sha256 = frozen_candidate[
+        "composite_candidate_sha256"
+    ]
+    frozen_scorer_path = harness_source / "scripts/glm52_goal.py"
     drand = _authenticate_drand(_drand_record(args.drand_json.resolve()))
-    seed = confirmation_seed(drand["randomness"], harness_commit)
-    frozen_at = _commit_time(ROOT, harness_commit)
+    seed = confirmation_seed(drand["randomness"], composite_candidate_sha256)
+    frozen_at = frozen_candidate["frozen_at"]
     lineage = {
         "freeze": {
             "candidate_hash": harness_commit,
             "frozen_at": frozen_at,
+            "composite_candidate_sha256": composite_candidate_sha256,
         },
         "randomness": {
             "source": "drand-default",
@@ -702,20 +1018,16 @@ def run(args: argparse.Namespace) -> int:
     fixture_path = output / "fixture.json"
     fixture_sha256 = _write_canonical_json(fixture_path, fixture_descriptor)
 
-    if not args.model_sha256:
-        raise ValueError("expected model content hash is required")
-    model_sha256 = verify_model_content(model, args.model_sha256)
+    model_sha256 = verify_model_content(
+        model, frozen_candidate["model_content_sha256"]
+    )
     initial_model_identity = model_identity(model)
     if os.access(model, os.W_OK):
         raise ValueError("campaign model is writable by the benchmark owner")
     (output / "model.sha256").write_text(model_sha256 + "\n", encoding="ascii")
-    engine_build = _engine_build_descriptor(
-        source, engine_commit, server_binary, scorer_binary
-    )
     engine_build_path = output / "engine-build.json"
-    engine_build_sha256 = _write_canonical_json(
-        engine_build_path, engine_build
-    )
+    shutil.copyfile(freeze_dir / "engine-build.json", engine_build_path)
+    engine_build_sha256 = sha256_file(engine_build_path)
 
     common = dict(COMMON_ENGINE_ENVIRONMENT)
     baseline_environment = dict(common)
@@ -733,11 +1045,14 @@ def run(args: argparse.Namespace) -> int:
         "schema_version": 1,
         "harness_candidate_hash": harness_commit,
         "engine_candidate_hash": engine_commit,
+        "composite_candidate_sha256": composite_candidate_sha256,
         "binary_sha256": binary_sha256,
         "model_path": str(model),
         "model_content_sha256": model_sha256,
         "tokenizer_content_sha256": model_sha256,
         "engine_build_sha256": engine_build_sha256,
+        "engine_source_sha256": frozen_candidate["engine_source_sha256"],
+        "build_log_sha256": sha256_file(freeze_dir / "clean-build.log"),
         "fixture_sha256": fixture_sha256,
         "fixture_content_sha256": fixture_content_sha256,
         "launch_arguments": [
@@ -766,6 +1081,7 @@ def run(args: argparse.Namespace) -> int:
         "record_type": "w1_affine_raw_campaign",
         "harness_candidate_hash": harness_commit,
         "engine_candidate_hash": engine_commit,
+        "composite_candidate_sha256": composite_candidate_sha256,
         "seed_sha256": seed,
         "binary_sha256": binary_sha256,
         "configuration_sha256": configuration_sha256,
@@ -774,6 +1090,8 @@ def run(args: argparse.Namespace) -> int:
         "model_content_sha256": model_sha256,
         "tokenizer_content_sha256": model_sha256,
         "engine_build_sha256": engine_build_sha256,
+        "engine_source_sha256": frozen_candidate["engine_source_sha256"],
+        "build_log_sha256": sha256_file(freeze_dir / "clean-build.log"),
         "baseline_environment_sha256": baseline_environment_sha256,
         "candidate_environment_sha256": candidate_environment_sha256,
         "candidate_arm": candidate_arm(seed),
@@ -811,6 +1129,16 @@ def run(args: argparse.Namespace) -> int:
         for sequence, arm in enumerate(order)
     ]
     for index in range(len(campaign["attempts"]), 20):
+        verified, verified_harness, verified_engine, verified_model = (
+            verify_frozen_candidate(freeze_dir)
+        )
+        if (
+            verified != frozen_candidate
+            or verified_harness != harness_source
+            or verified_engine != source
+            or verified_model != model
+        ):
+            raise ValueError("frozen candidate changed before attempt")
         block, sequence, arm = flattened[index]
         is_candidate = arm == campaign["candidate_arm"]
         engine_environment = (
@@ -844,8 +1172,12 @@ def run(args: argparse.Namespace) -> int:
                 "GLM_SAFE_EXPECTED_BINARY_SHA256": binary_sha256,
                 "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(PROVENANCE_NAMES),
                 "GLM_SAFE_EXPECTED_ENV_SHA256": expected_environment_sha256,
+                "GLM_SAFE_WITNESS_NONCE": hashlib.sha256(
+                    f"{seed}:{index}:W1-witness".encode()
+                ).hexdigest(),
             }
         )
+        witness_nonce = environment["GLM_SAFE_WITNESS_NONCE"]
         command = [
             str(LAUNCHER),
             "--tag",
@@ -880,6 +1212,7 @@ def run(args: argparse.Namespace) -> int:
         main_log = ""
         samples = ""
         command_log = ""
+        journal_witness = {}
         if len(safe_dirs) != 1:
             failures.append("safe_run_directory_missing_or_duplicated")
         else:
@@ -890,6 +1223,18 @@ def run(args: argparse.Namespace) -> int:
                 command_log = (safe_dir / "cmd.log").read_text(encoding="utf-8")
             except OSError:
                 failures.append("safe_run_logs_missing")
+        witness_messages = re.findall(
+            r"^(W1_WITNESS .+)$", result.stdout, re.MULTILINE
+        )
+        if len(witness_messages) != 1:
+            failures.append("journal_witness_message_missing_or_duplicated")
+        else:
+            try:
+                journal_witness = _journal_witness(
+                    witness_messages[0], witness_nonce
+                )
+            except ValueError as exc:
+                failures.append(str(exc))
         try:
             resolved_mode, store_count, changed_values = parse_attestation(
                 command_log
@@ -952,6 +1297,12 @@ def run(args: argparse.Namespace) -> int:
                     if result_path.is_file()
                     else ""
                 ),
+                "journal_witness": json.dumps(
+                    journal_witness,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                ),
             },
         }
         campaign["attempts"].append(attempt)
@@ -967,7 +1318,7 @@ def run(args: argparse.Namespace) -> int:
             flush=True,
         )
 
-    summary = _score(campaign)
+    summary = _score(campaign, frozen_scorer_path)
     final_model_sha256 = verify_model_content(model, model_sha256)
     final_model_identity = model_identity(model)
     if (
@@ -987,6 +1338,8 @@ def run(args: argparse.Namespace) -> int:
         summary,
         frozen / "ds4-server",
         final_model_identity,
+        frozen_scorer_path,
+        freeze_dir,
     )
     print(f"controller_attempt={destination}", flush=True)
     print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
@@ -1009,12 +1362,15 @@ def status(args: argparse.Namespace) -> int:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     commands = result.add_subparsers(dest="command", required=True)
+    freeze_parser = commands.add_parser("freeze")
+    freeze_parser.add_argument("--engine-source", required=True, type=Path)
+    freeze_parser.add_argument("--engine-candidate-hash")
+    freeze_parser.add_argument("--model", required=True, type=Path)
+    freeze_parser.add_argument("--model-sha256", required=True)
+    freeze_parser.add_argument("--freeze-dir", required=True, type=Path)
     run_parser = commands.add_parser("run")
     run_parser.add_argument("--drand-json", required=True, type=Path)
-    run_parser.add_argument("--engine-source", required=True, type=Path)
-    run_parser.add_argument("--engine-candidate-hash")
-    run_parser.add_argument("--model", required=True, type=Path)
-    run_parser.add_argument("--model-sha256")
+    run_parser.add_argument("--freeze-dir", required=True, type=Path)
     run_parser.add_argument("--output", type=Path)
     status_parser = commands.add_parser("status")
     status_parser.add_argument("campaign", type=Path)
@@ -1024,6 +1380,8 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = parser().parse_args()
     try:
+        if args.command == "freeze":
+            return freeze_candidate(args)
         return run(args) if args.command == "run" else status(args)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         print(f"glm52-w1-affine: {exc}", file=sys.stderr)

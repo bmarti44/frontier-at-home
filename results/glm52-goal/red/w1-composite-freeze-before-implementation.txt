@@ -1,0 +1,29 @@
+W1 composite-freeze RED, 2026-07-29
+
+Frozen harness candidate 3685845188f0e1e2e44ed7c5de18b3d442db51f7
+and engine candidate 0b14242b083a808146ce1f8088a341a441aff1c5
+were independently reviewed after a real baseline arm completed and the first
+candidate arm began.
+
+The root agent reproduced these failures:
+
+1. `_score()` and `_goal_module()` dynamically imported the live
+   `scripts/glm52_goal.py`, so changing that file after the freeze could change
+   both scoring and validation while the manifest continued to claim the old
+   commit.
+2. The public-randomness seed covered only the harness commit, not the engine
+   commit/tree, server and quality binaries, model/tokenizer, fixture master,
+   build evidence, runner, and scorer.
+3. `_engine_build_descriptor()` described existing outputs without performing
+   a fresh clean build and omitted nested object files.
+4. `scripts/glm52_goal.py run` had no registered W1 runner.
+
+The production contract tests failed before implementation because
+`composite_candidate_sha256`, `verify_frozen_candidate`,
+`frozen_scorer_path`, the clean CUDA build, and
+`scripts/glm52-runners/W1` were absent.
+
+The active campaign was stopped through its signal cleanup path. Its completed
+baseline arm and partial candidate arm remain preserved at:
+
+/home/bmarti44/.local/state/glm52-confirm-w1-affine-0b14242-3685845-r6329478

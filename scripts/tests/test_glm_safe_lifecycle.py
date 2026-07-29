@@ -53,6 +53,9 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("/usr/bin/sudo -n -u dsv4", launcher)
         self.assertIn('RUN_CWD=$(pwd -P)', launcher)
         self.assertIn('--working-directory="$RUN_CWD"', launcher)
+        self.assertIn("GLM_SAFE_WITNESS_NONCE", safe)
+        self.assertIn("glm52-w1-witness", safe)
+        self.assertIn("GLM_SAFE_WITNESS_NONCE", launcher)
 
 
 class CandidateLifecycleTests(unittest.TestCase):

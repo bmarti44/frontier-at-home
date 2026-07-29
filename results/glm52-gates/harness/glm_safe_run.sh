@@ -27,6 +27,7 @@ CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
 EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
 PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
 EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
+WITNESS_NONCE=${GLM_SAFE_WITNESS_NONCE:-}
 REQUIRE_CGROUP=${GLM_SAFE_REQUIRE_CGROUP:-0}
 EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
@@ -70,6 +71,9 @@ fi
   config_error "GLM_SAFE_REQUIRE_CGROUP"
 [[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_RUN_AS_CURRENT_USER"
+if [[ -n $WITNESS_NONCE && ! $WITNESS_NONCE =~ ^[0-9a-f]{64}$ ]]; then
+  config_error "GLM_SAFE_WITNESS_NONCE"
+fi
 ENV_PROVENANCE=0
 PROVENANCE_ENV_NAMES=""
 if [[ -n $PROVENANCE_ENV_ALLOWLIST || -n $EXPECTED_ENV_SHA256 ]]; then
@@ -489,6 +493,14 @@ if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 && $RC == 0 ]]; then
 fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
+if [[ -n $WITNESS_NONCE ]]; then
+  CMD_SHA256=$(sha256sum -- "$DIR/cmd.log" | awk '{print $1}')
+  SAMPLES_SHA256=$(sha256sum -- "$SAMP" | awk '{print $1}')
+  WITNESS_MESSAGE="W1_WITNESS nonce=$WITNESS_NONCE unit=$EXPECTED_CGROUP_UNIT binary=${CANDIDATE_HASH:-missing} environment=${EXECUTED_ENV_HASH:-missing} pid=${EXECUTED_PID:-missing} start_ticks=${EXECUTED_START_TICKS:-missing} rc=$RC killed=${KILLED:-no} cmd_sha256=$CMD_SHA256 samples_sha256=$SAMPLES_SHA256"
+  { printf '%s\n' "$WITNESS_MESSAGE"; sleep 1; } |
+    /usr/bin/systemd-cat --identifier=glm52-w1-witness --priority=notice
+  printf '%s\n' "$WITNESS_MESSAGE"
+fi
 grep MemAvailable /proc/meminfo >> "$MAIN"; sync
 echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR"
 exit "$RC"
