@@ -13,7 +13,9 @@ import socket
 import stat
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -286,6 +288,54 @@ def _model_hash_from_profile(harness: str) -> str:
 
 def _request_id(harness: str, engine: str, model: str) -> str:
     return hashlib.sha256(f"{harness}:{engine}:{model}:W1-root-v2".encode()).hexdigest()
+
+
+def first_drand_round_after(frozen_at: str) -> int:
+    """Return the first default-chain round published strictly after freeze."""
+    try:
+        frozen = datetime.fromisoformat(frozen_at)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("freeze timestamp is invalid") from exc
+    if frozen.tzinfo is None:
+        raise ValueError("freeze timestamp lacks a timezone")
+    frozen = frozen.astimezone(timezone.utc)
+    genesis = datetime.fromtimestamp(1_595_431_050, timezone.utc)
+    if frozen < genesis:
+        return 1
+    return (frozen - genesis) // timedelta(seconds=30) + 2
+
+
+def _fetch_first_post_freeze_drand(frozen_at: str) -> str:
+    round_number = first_drand_round_after(frozen_at)
+    deadline = time.monotonic() + 45
+    while True:
+        result = _run(
+            [
+                "/usr/bin/curl",
+                "--disable",
+                "--silent",
+                "--show-error",
+                "--fail",
+                "--max-time",
+                "10",
+                "--proto",
+                "=https",
+                f"https://api.drand.sh/public/{round_number}",
+            ],
+            check=False,
+            timeout=15,
+        )
+        if result.returncode == 0:
+            try:
+                record = json.loads(result.stdout)
+            except json.JSONDecodeError as exc:
+                raise RuntimeError("post-freeze drand response is invalid") from exc
+            if isinstance(record, dict) and record.get("round") == round_number:
+                return result.stdout
+            raise RuntimeError("post-freeze drand round differs from request")
+        if time.monotonic() >= deadline:
+            raise RuntimeError("post-freeze public randomness fetch failed")
+        time.sleep(2)
 
 
 def _tree_manifest(root: Path) -> list[dict[str, object]]:
@@ -867,25 +917,13 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     campaign_program = frozen_harness / "scripts/glm52_w1_affine_campaign.py"
     ACTIVE_REQUEST["phase"] = "public-randomness"
     drand = request_root / "drand.json"
-    drand_result = _run(
-        [
-            "/usr/bin/curl",
-            "--disable",
-            "--silent",
-            "--show-error",
-            "--fail",
-            "--max-time",
-            "10",
-            "--proto",
-            "=https",
-            "https://api.drand.sh/public/latest",
-        ],
-        check=False,
-        timeout=20,
+    frozen_at = descriptor.get("frozen_at")
+    if not isinstance(frozen_at, str):
+        raise ValueError("campaign freeze timestamp is absent")
+    drand.write_text(
+        _fetch_first_post_freeze_drand(frozen_at),
+        encoding="utf-8",
     )
-    drand.write_text(drand_result.stdout, encoding="utf-8")
-    if drand_result.returncode:
-        raise RuntimeError("post-freeze public randomness fetch failed")
 
     ACTIVE_REQUEST["phase"] = "campaign"
     run_result = _run(

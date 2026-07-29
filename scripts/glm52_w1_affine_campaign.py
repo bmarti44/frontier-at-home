@@ -1308,6 +1308,15 @@ def run(args: argparse.Namespace) -> int:
             "seed_sha256": seed,
         },
     }
+    goal = _goal_module(frozen_scorer_path)
+    goal.validate_manifest_lineage(
+        lineage,
+        "W1",
+        harness_commit,
+        commit_time_fetcher=lambda candidate: _commit_time(
+            harness_source, candidate
+        ),
+    )
     frozen = _freeze_scorer(source, engine_commit, binary_sha256)
     output = _campaign_paths(seed, engine_commit, args.output)
     output.mkdir(mode=0o700, parents=True, exist_ok=True)
