@@ -366,85 +366,59 @@ def _listdir_noatime(path: Path) -> list[str]:
         os.close(descriptor)
 
 
-def _diagnostic_tree_manifest(root: Path) -> list[dict[str, object]]:
-    """Hash sealed content and metadata without changing access timestamps."""
+def _diagnostic_input_manifest(root: Path) -> list[dict[str, object]]:
+    """Snapshot only the fixed identity and error inputs, without atime writes."""
     rows: list[dict[str, object]] = []
-    total = 0
-
-    def walk(descriptor: int, relative_root: Path) -> None:
-        nonlocal total
-        for name in sorted(os.listdir(descriptor)):
-            relative = relative_root / name
-            details = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
-            expected_mode = 0o500 if stat.S_ISDIR(details.st_mode) else 0o400
+    inputs = (
+        (Path("."), "directory", 0),
+        (Path("freeze"), "directory", 0),
+        (Path("receipt.json"), "file", MAX_DIAGNOSTIC_JSON_BYTES),
+        (Path("request.json"), "file", MAX_DIAGNOSTIC_JSON_BYTES),
+        (Path("freeze/freeze.json"), "file", MAX_DIAGNOSTIC_JSON_BYTES),
+        (Path("campaign.log"), "file", 16 * 1024 * 1024),
+    )
+    for relative, kind, maximum in inputs:
+        path = root if relative == Path(".") else root / relative
+        flags = os.O_RDONLY | (os.O_DIRECTORY if kind == "directory" else 0)
+        descriptor = _open_noatime(path, flags)
+        try:
+            details = os.fstat(descriptor)
+            expected_mode = 0o500 if kind == "directory" else 0o400
+            expected_type = (
+                stat.S_ISDIR(details.st_mode)
+                if kind == "directory"
+                else stat.S_ISREG(details.st_mode) and details.st_nlink == 1
+            )
             if (
-                stat.S_ISLNK(details.st_mode)
+                not expected_type
                 or details.st_uid != ROOT_UID
                 or details.st_gid != ROOT_GID
                 or stat.S_IMODE(details.st_mode) != expected_mode
+                or (maximum and details.st_size > maximum)
             ):
-                raise ValueError("failed campaign is not sealed")
+                raise ValueError("failed campaign diagnostic input is unsafe")
             row: dict[str, object] = {
                 "path": relative.as_posix(),
+                "type": kind,
+                "device": details.st_dev,
+                "inode": details.st_ino,
+                "links": details.st_nlink,
                 "mode": stat.S_IMODE(details.st_mode),
                 "uid": details.st_uid,
                 "gid": details.st_gid,
-                "inode": details.st_ino,
-                "links": details.st_nlink,
                 "atime_ns": details.st_atime_ns,
                 "mtime_ns": details.st_mtime_ns,
                 "ctime_ns": details.st_ctime_ns,
                 "size": details.st_size,
             }
-            if stat.S_ISDIR(details.st_mode):
-                child = _open_noatime(
-                    Path(name),
-                    os.O_RDONLY | os.O_DIRECTORY,
-                    dir_fd=descriptor,
-                )
-                try:
-                    row["type"] = "directory"
-                    rows.append(row)
-                    walk(child, relative)
-                finally:
-                    os.close(child)
-                continue
-            if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
-                raise ValueError("failed campaign contains an unsafe file")
-            child = _open_noatime(Path(name), os.O_RDONLY, dir_fd=descriptor)
-            digest = hashlib.sha256()
-            try:
-                opened = os.fstat(child)
-                if (opened.st_dev, opened.st_ino) != (
-                    details.st_dev,
-                    details.st_ino,
-                ):
-                    raise ValueError("failed campaign changed during traversal")
-                while block := os.read(child, 8 * 1024 * 1024):
+            if kind == "file":
+                digest = hashlib.sha256()
+                while block := os.read(descriptor, 1024 * 1024):
                     digest.update(block)
-            finally:
-                os.close(child)
-            total += details.st_size
-            if len(rows) >= MAX_RECEIPT_FILES or total > MAX_RECEIPT_BYTES:
-                raise ValueError("diagnostic file-count or byte limit exceeded")
-            row["type"] = "file"
-            row["sha256"] = digest.hexdigest()
+                row["sha256"] = digest.hexdigest()
             rows.append(row)
-
-    root_descriptor = _open_noatime(root, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        root_details = os.fstat(root_descriptor)
-        if (
-            root_details.st_uid != ROOT_UID
-            or root_details.st_gid != ROOT_GID
-            or stat.S_IMODE(root_details.st_mode) != 0o500
-        ):
-            raise ValueError("failed campaign is not sealed")
-        walk(root_descriptor, Path())
-    finally:
-        os.close(root_descriptor)
-    if not rows:
-        raise ValueError("failed campaign is empty")
+        finally:
+            os.close(descriptor)
     return rows
 
 
@@ -1034,7 +1008,7 @@ def diagnose_campaign(composite: str) -> dict[str, object]:
     if len(matches) != 1:
         raise ValueError("exactly one sealed failed campaign was not found")
     request_id, request_root = matches[0]
-    before = _diagnostic_tree_manifest(request_root)
+    before = _diagnostic_input_manifest(request_root)
     request = json.loads(
         _read_regular_noatime(
             request_root / "request.json",
@@ -1067,7 +1041,7 @@ def diagnose_campaign(composite: str) -> dict[str, object]:
     exact_error = lines[-1]
     if len(exact_error.encode("utf-8")) > 4096:
         raise ValueError("failed campaign error is unexpectedly large")
-    after = _diagnostic_tree_manifest(request_root)
+    after = _diagnostic_input_manifest(request_root)
     if before != after:
         raise ValueError("sealed failed campaign changed during diagnosis")
     return {
@@ -1076,7 +1050,7 @@ def diagnose_campaign(composite: str) -> dict[str, object]:
         "composite_candidate_sha256": composite,
         "request_id": request_id,
         "exact_error": exact_error,
-        "sealed_tree_manifest_sha256": _manifest_sha256(before),
+        "diagnostic_inputs_manifest_sha256": _manifest_sha256(before),
     }
 
 

@@ -93,6 +93,13 @@ class RootAttestorContractTests(unittest.TestCase):
                 json.dumps({"composite_candidate_sha256": composite}) + "\n",
                 encoding="utf-8",
             )
+            large_unrelated_tree = attempt / "worktrees"
+            large_unrelated_tree.mkdir()
+            for number in range(1_100):
+                (large_unrelated_tree / f"source-{number:04d}").write_text(
+                    "frozen source\n",
+                    encoding="utf-8",
+                )
             paths = [attempt, *attempt.rglob("*")]
             for path in sorted(paths, reverse=True):
                 path.chmod(0o500 if path.is_dir() else 0o400)
@@ -126,7 +133,10 @@ class RootAttestorContractTests(unittest.TestCase):
                 "glm52-w1-affine-campaign: W1 raw memory telemetry "
                 "does not cover execution",
             )
-            self.assertRegex(diagnosis["sealed_tree_manifest_sha256"], r"^[0-9a-f]{64}$")
+            self.assertRegex(
+                diagnosis["diagnostic_inputs_manifest_sha256"],
+                r"^[0-9a-f]{64}$",
+            )
             self.assertEqual(
                 (attempt / "campaign.log").stat().st_mode & 0o777,
                 0o400,
