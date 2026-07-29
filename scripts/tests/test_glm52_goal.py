@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
 import json
 import math
 import subprocess
@@ -418,7 +419,9 @@ class FormulaTests(unittest.TestCase):
                         "xid": False,
                         "failures": [],
                         "cases": (
-                            candidate_cases if candidate else baseline_cases
+                            copy.deepcopy(
+                                candidate_cases if candidate else baseline_cases
+                            )
                         ),
                     }
                 )
@@ -472,7 +475,7 @@ class FormulaTests(unittest.TestCase):
         rejected(
             lambda value: value["attempts"][0].__setitem__(
                 "environment_sha256",
-                value["candidate_environment_sha256"],
+                value["baseline_environment_sha256"],
             )
         )
         rejected(

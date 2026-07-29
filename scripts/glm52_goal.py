@@ -343,6 +343,252 @@ def quality_verdict(cases: Iterable[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _score_w1_affine(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Authorize W1 affine fidelity only from a strict counterbalanced campaign."""
+    if len(records) != 1:
+        raise ValueError("W1 affine scorer requires one campaign record")
+    campaign = records[0]
+    _require_exact_keys(
+        campaign,
+        {
+            "record_type",
+            "engine_candidate_hash",
+            "seed_sha256",
+            "binary_sha256",
+            "configuration_sha256",
+            "fixture_sha256",
+            "baseline_environment_sha256",
+            "candidate_environment_sha256",
+            "candidate_arm",
+            "attempts",
+        },
+        "W1 affine campaign",
+    )
+    if campaign["record_type"] != "w1_affine_campaign":
+        raise ValueError("W1 affine campaign record_type is invalid")
+    engine_candidate = campaign["engine_candidate_hash"]
+    if not (
+        isinstance(engine_candidate, str)
+        and len(engine_candidate) == 40
+        and all(character in "0123456789abcdef" for character in engine_candidate)
+    ):
+        raise ValueError("W1 affine engine candidate hash is invalid")
+    for field in (
+        "seed_sha256",
+        "binary_sha256",
+        "configuration_sha256",
+        "fixture_sha256",
+        "baseline_environment_sha256",
+        "candidate_environment_sha256",
+    ):
+        if not _is_sha256(campaign[field]):
+            raise ValueError(f"W1 affine {field} is invalid")
+    if (
+        campaign["baseline_environment_sha256"]
+        == campaign["candidate_environment_sha256"]
+    ):
+        raise ValueError("W1 affine arms have identical environments")
+
+    seed = campaign["seed_sha256"]
+    expected_candidate_arm = "A" if int(seed[:2], 16) % 2 == 0 else "B"
+    if campaign["candidate_arm"] != expected_candidate_arm:
+        raise ValueError("W1 affine arm mapping does not match the public seed")
+    first_schedule = "ABBA" if int(seed[2:4], 16) % 2 == 0 else "BAAB"
+    other_schedule = "BAAB" if first_schedule == "ABBA" else "ABBA"
+    expected_schedules = [
+        first_schedule if block % 2 == 0 else other_schedule
+        for block in range(5)
+    ]
+
+    attempts = campaign["attempts"]
+    if not isinstance(attempts, list) or len(attempts) != 20:
+        raise ValueError("W1 affine campaign requires exactly 20 attempts")
+    expected_attempt_keys = {
+        "block",
+        "sequence",
+        "arm",
+        "server_instance_id",
+        "binary_sha256",
+        "configuration_sha256",
+        "fixture_sha256_before",
+        "fixture_sha256_after",
+        "environment_sha256",
+        "resolved_mode",
+        "affine_store_count",
+        "completed",
+        "available_memory_gib",
+        "swap_bytes",
+        "oom",
+        "xid",
+        "failures",
+        "cases",
+    }
+    expected_case_keys = {
+        "case_id",
+        "tokens",
+        "nll_sum",
+        "top1_correct",
+    }
+    servers: set[str] = set()
+    by_block_arm: dict[tuple[int, str], list[dict[str, Any]]] = {}
+    for index, attempt in enumerate(attempts):
+        _require_exact_keys(
+            attempt, expected_attempt_keys, f"W1 affine attempt {index}"
+        )
+        expected_block, expected_sequence = divmod(index, 4)
+        if (
+            attempt["block"] != expected_block
+            or attempt["sequence"] != expected_sequence
+        ):
+            raise ValueError("W1 affine attempts are missing, duplicated, or reordered")
+        expected_arm = expected_schedules[expected_block][expected_sequence]
+        if attempt["arm"] != expected_arm:
+            raise ValueError("W1 affine schedule is not counterbalanced")
+        server = attempt["server_instance_id"]
+        if not isinstance(server, str) or not server or server in servers:
+            raise ValueError("W1 affine attempts do not use fresh server instances")
+        servers.add(server)
+        for field in ("binary_sha256", "configuration_sha256"):
+            if attempt[field] != campaign[field]:
+                raise ValueError(f"W1 affine attempt {field} does not match campaign")
+        if (
+            attempt["fixture_sha256_before"] != campaign["fixture_sha256"]
+            or attempt["fixture_sha256_after"] != campaign["fixture_sha256"]
+        ):
+            raise ValueError("W1 affine fixture bytes changed or are unbound")
+
+        is_candidate = attempt["arm"] == campaign["candidate_arm"]
+        expected_environment = campaign[
+            "candidate_environment_sha256"
+            if is_candidate
+            else "baseline_environment_sha256"
+        ]
+        if attempt["environment_sha256"] != expected_environment:
+            raise ValueError("W1 affine effective environment is wrong")
+        mode = attempt["resolved_mode"]
+        store_count = attempt["affine_store_count"]
+        if (
+            not isinstance(mode, int)
+            or isinstance(mode, bool)
+            or not isinstance(store_count, int)
+            or isinstance(store_count, bool)
+            or store_count < 0
+        ):
+            raise ValueError("W1 affine mode attestation is malformed")
+        if is_candidate:
+            if mode != 2 or store_count <= 0:
+                raise ValueError("W1 affine candidate mode/store path was not executed")
+        elif mode != 0 or store_count != 0:
+            raise ValueError("W1 affine baseline is not default-off")
+        if attempt["completed"] is not True:
+            raise ValueError("W1 affine attempt did not complete")
+        memory = _finite_number(
+            attempt["available_memory_gib"], "available_memory_gib"
+        )
+        if memory < 10.0:
+            raise ValueError("W1 affine attempt violates the memory floor")
+        if (
+            not isinstance(attempt["swap_bytes"], int)
+            or isinstance(attempt["swap_bytes"], bool)
+            or attempt["swap_bytes"] != 0
+        ):
+            raise ValueError("W1 affine attempt used swap")
+        if attempt["oom"] is not False or attempt["xid"] is not False:
+            raise ValueError("W1 affine attempt reports OOM or Xid")
+        if attempt["failures"] != []:
+            raise ValueError("W1 affine attempt contains failures")
+
+        cases = attempt["cases"]
+        if not isinstance(cases, list) or len(cases) != 20:
+            raise ValueError("W1 affine attempt requires exactly 20 cases")
+        case_ids: set[str] = set()
+        for case_index, case in enumerate(cases):
+            _require_exact_keys(
+                case,
+                expected_case_keys,
+                f"W1 affine attempt {index} case {case_index}",
+            )
+            case_id = case["case_id"]
+            if not isinstance(case_id, str) or not case_id or case_id in case_ids:
+                raise ValueError("W1 affine case IDs are invalid or duplicated")
+            case_ids.add(case_id)
+            tokens = case["tokens"]
+            if (
+                not isinstance(tokens, int)
+                or isinstance(tokens, bool)
+                or tokens <= 0
+            ):
+                raise ValueError("W1 affine case token count is invalid")
+            _finite_number(case["nll_sum"], "nll_sum")
+            correct = case["top1_correct"]
+            if (
+                not isinstance(correct, int)
+                or isinstance(correct, bool)
+                or not 0 <= correct <= tokens
+            ):
+                raise ValueError("W1 affine top-1 count is invalid")
+        by_block_arm.setdefault((expected_block, expected_arm), []).append(attempt)
+
+    quality_cases: list[dict[str, Any]] = []
+    all_case_ids: set[str] = set()
+    baseline_arm = "B" if campaign["candidate_arm"] == "A" else "A"
+    for block in range(5):
+        block_attempts: dict[str, dict[str, Any]] = {}
+        for arm in ("A", "B"):
+            repeats = by_block_arm.get((block, arm), [])
+            if len(repeats) != 2:
+                raise ValueError("W1 affine block does not contain two runs per arm")
+            if (
+                repeats[0]["cases"] != repeats[1]["cases"]
+                or repeats[0]["affine_store_count"]
+                != repeats[1]["affine_store_count"]
+            ):
+                raise ValueError("W1 affine repeated arm is not deterministic")
+            block_attempts[arm] = repeats[0]
+        baseline_cases = block_attempts[baseline_arm]["cases"]
+        candidate_cases = block_attempts[campaign["candidate_arm"]]["cases"]
+        for baseline_case, candidate_case in zip(
+            baseline_cases, candidate_cases
+        ):
+            if (
+                baseline_case["case_id"] != candidate_case["case_id"]
+                or baseline_case["tokens"] != candidate_case["tokens"]
+            ):
+                raise ValueError("W1 affine arms use unequal fixtures")
+            case_id = baseline_case["case_id"]
+            if case_id in all_case_ids:
+                raise ValueError("W1 affine cases repeat between blocks")
+            all_case_ids.add(case_id)
+            quality_cases.append(
+                {
+                    "tokens": baseline_case["tokens"],
+                    "baseline_nll_sum": baseline_case["nll_sum"],
+                    "candidate_nll_sum": candidate_case["nll_sum"],
+                    "baseline_top1_correct": baseline_case["top1_correct"],
+                    "candidate_top1_correct": candidate_case["top1_correct"],
+                }
+            )
+    quality = quality_verdict(quality_cases)
+    checks = {
+        **quality["checks"],
+        "counterbalanced_fresh_servers": len(servers) == 20,
+        "content_complete_fixture_bound": True,
+        "effective_modes_attested": True,
+        "repeat_determinism": True,
+        "resource_safety": True,
+    }
+    return {
+        "scorer_id": "w1.affine-quality.v1",
+        "formula_version": 1,
+        "engine_candidate_hash": engine_candidate,
+        "paired_case_count": len(quality_cases),
+        "attempt_count": len(attempts),
+        "metrics": quality["metrics"],
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 def _is_sha256(value: Any) -> bool:
     return (
         isinstance(value, str)
@@ -1950,6 +2196,15 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _finite_number,
             _is_sha256,
         ),
+        "w1.affine-quality.v1": (
+            _score_w1_affine,
+            quality_verdict,
+            _weighted_upper_95,
+            _t95,
+            _require_exact_keys,
+            _finite_number,
+            _is_sha256,
+        ),
     }
     functions = dependencies.get(scorer_id)
     if functions is None:
@@ -1992,6 +2247,7 @@ def score_registered_gate(
     rows = list(records)
     registered = {
         ("foundation", "foundation.v1"): _score_foundation,
+        ("W1", "w1.affine-quality.v1"): _score_w1_affine,
         ("W11", "w11.context.v1"): _score_w11,
         ("parity", "parity.performance.v1"): _score_parity,
         ("parity", "parity.reviewed-no-go.v1"): _score_reviewed_no_go,
