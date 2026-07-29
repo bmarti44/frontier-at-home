@@ -720,7 +720,7 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("--no-block", source)
         self.assertIn("dsv4-context-graduation.service", source)
         self.assertIn("RuntimeMaxSec=14400", source)
-        self.assertIn("/run/dsv4/inference.lock", source)
+        self.assertIn("/run/lock/frontier-at-home/inference.lock", source)
         self.assertIn("glm52.process.json", source)
         self.assertNotIn("OnFailure=display-manager.service", source)
         stop_timer = source.index("systemctl stop dsv4-guard.timer")

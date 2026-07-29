@@ -154,7 +154,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("--required-gib 110", source)
         self.assertIn("--stable-samples 3", source)
         self.assertIn(
-            "/run/dsv4/inference.lock",
+            "/run/lock/frontier-at-home/inference.lock",
             source + GLM_CGROUP.read_text(encoding="utf-8"),
         )
         self.assertIn("MATCHED_BLOCKS:-5", source)

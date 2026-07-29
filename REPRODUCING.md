@@ -249,7 +249,7 @@ read access with an ACL). Every documented llama.cpp gate command in section 7 i
 auth, so its gate commands take no key. Production installs the selected engine behind the
 authenticating proxy from section 8; the current product selection is llama.cpp.
 
-Do not start both. Both wrappers hold `/run/dsv4/inference.lock` with `flock`; contention
+Do not start both. Both wrappers hold `/run/lock/frontier-at-home/inference.lock` with `flock`; contention
 fails rather than creating two resident models. They check binary/model manifests and a
 16 GiB projected-free-memory floor, start the 12 GiB watchdog before the engine, publish
 PID/start-time/boot-ID state under `/run/dsv4`, and wait up to 600 seconds for readiness.

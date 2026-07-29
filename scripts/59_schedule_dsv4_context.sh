@@ -5,7 +5,7 @@ umask 077
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly UNIT=dsv4-context-graduation.service
-readonly ENGINE_LOCK=/run/dsv4/inference.lock
+readonly ENGINE_LOCK=/run/lock/frontier-at-home/inference.lock
 
 die() { printf '59_schedule_dsv4_context.sh: %s\n' "$*" >&2; exit 1; }
 

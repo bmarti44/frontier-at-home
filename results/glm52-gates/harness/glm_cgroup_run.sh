@@ -177,7 +177,7 @@ elif [[ $RUN_AS_CURRENT_USER == 1 ]]; then
 else
   contained_command=(
     /usr/bin/sudo -n -u dsv4 -- /usr/bin/env -i "${env_args[@]}"
-    /usr/bin/flock -n -E 75 /run/dsv4/inference.lock
+    /usr/bin/flock -n -E 75 /run/lock/frontier-at-home/inference.lock
     /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
   )
 fi

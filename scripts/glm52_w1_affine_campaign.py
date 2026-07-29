@@ -649,11 +649,16 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         if ROOT_AUTHORITY
         else Path("/home/bmarti44/.cache")
     )
+    if ROOT_AUTHORITY:
+        worktree_root.mkdir(mode=0o711, parents=True, exist_ok=True)
+        os.chown(worktree_root, 0, 0)
+        os.chmod(worktree_root, 0o711)
     harness_source = worktree_root / f"glm52-w1-harness-{tag}"
     engine_source = worktree_root / f"glm52-w1-build-{tag}"
     _fresh_worktree(ROOT, harness_source, harness_commit)
     _fresh_worktree(engine_repository, engine_source, engine_commit)
     if ROOT_AUTHORITY:
+        _seal_candidate_tree(harness_source)
         _chown_tree(engine_source, "dsv4")
 
     transcript_parts = []
@@ -1095,6 +1100,11 @@ def _freeze_scorer(source: Path, engine_commit: str, binary_sha256: str) -> Path
         os.replace(temporary, target)
     if sha256_file(target) != binary_sha256:
         raise ValueError("frozen quality binary hash mismatch")
+    if ROOT_AUTHORITY:
+        os.chown(target, 0, 0)
+        os.chmod(target, 0o555)
+        os.chown(frozen, 0, 0)
+        os.chmod(frozen, 0o555)
     return frozen
 
 

@@ -5,7 +5,7 @@ umask 077
 STACK=ds4
 PORT=8012
 RUNTIME_DIR=/run/dsv4
-LOCK_FILE=$RUNTIME_DIR/inference.lock
+LOCK_FILE=/run/lock/frontier-at-home/inference.lock
 STATE_FILE=$RUNTIME_DIR/ds4.state.json
 TARGET_FILE=$RUNTIME_DIR/ds4.engine.target
 WATCHDOG_READY=$RUNTIME_DIR/ds4.memwatch.ready

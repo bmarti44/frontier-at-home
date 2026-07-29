@@ -27,7 +27,7 @@ STATE_ROOT = Path("/var/lib/glm52-w1")
 CONTROLLER_ATTEMPTS = STATE_ROOT / "controller-attempts"
 INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
-INFERENCE_LOCK = Path("/run/dsv4/inference.lock")
+INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
 RUNNER = Path("scripts/glm52-runners/W1")
 PROFILE = Path("configs/glm52-profile.json")
 OWNER = "bmarti44"
@@ -330,15 +330,14 @@ def _quarantine_seal(root: Path) -> None:
     """Revoke all non-root writes without following attacker-created links."""
     for path in sorted(root.rglob("*"), reverse=True):
         details = path.lstat()
-        os.chown(path, 0, 0, follow_symlinks=False)
         if stat.S_ISLNK(details.st_mode):
             continue
         if stat.S_ISDIR(details.st_mode):
+            os.chown(path, 0, 0, follow_symlinks=False)
             os.chmod(path, 0o500, follow_symlinks=False)
-        elif stat.S_ISREG(details.st_mode):
+        elif stat.S_ISREG(details.st_mode) and details.st_nlink == 1:
+            os.chown(path, 0, 0, follow_symlinks=False)
             os.chmod(path, 0o400, follow_symlinks=False)
-        else:
-            os.chmod(path, 0, follow_symlinks=False)
     os.chown(root, 0, 0)
     os.chmod(root, 0o500)
 
@@ -364,6 +363,10 @@ def _record_failed_active_request(exc: Exception) -> None:
 
 def _open_inference_lock():
     identity = pwd.getpwnam(DSV4)
+    lock_root = INFERENCE_LOCK.parent
+    lock_root.mkdir(mode=0o750, parents=True, exist_ok=True)
+    os.chown(lock_root, 0, identity.pw_gid)
+    os.chmod(lock_root, 0o750)
     descriptor = os.open(
         INFERENCE_LOCK,
         os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
@@ -373,8 +376,8 @@ def _open_inference_lock():
     if not stat.S_ISREG(details.st_mode):
         os.close(descriptor)
         raise PermissionError("inference lock is not a regular file")
-    os.fchown(descriptor, identity.pw_uid, identity.pw_gid)
-    os.fchmod(descriptor, 0o600)
+    os.fchown(descriptor, 0, identity.pw_gid)
+    os.fchmod(descriptor, 0o660)
     return os.fdopen(descriptor, "a+b")
 
 

@@ -11,7 +11,8 @@ readonly LIBEXEC=/usr/local/libexec/glm52-w1
 readonly HARNESS=/usr/local/libexec/glm52-w1/harness
 readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
-readonly SUBMITTER_SHA256='64e8f5b97a386cfddecf7508724417b4''1ccb514c390cf275b7bf358e89f815ce'
+readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
+readonly SUBMITTER_SHA256='ad15c685148dab5eaf7388809146c244''7411014469413db952aece5a95a65cf0'
 
 die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
@@ -115,6 +116,13 @@ fi
 /usr/bin/install -d -o root -g root -m 0755 "$STATE_ROOT/by-composite"
 /usr/bin/install -d -o root -g root -m 0755 "$STATE_ROOT/controller-attempts"
 /usr/bin/install -d -o root -g root -m 0755 "$LIBEXEC"
+/usr/bin/printf '%s\n' \
+    'd /run/lock/frontier-at-home 0750 root dsv4 -' \
+    'f /run/lock/frontier-at-home/inference.lock 0660 root dsv4 -' \
+    >"$harness_temporary/frontier-at-home.conf"
+/usr/bin/install -o root -g root -m 0644 \
+    "$harness_temporary/frontier-at-home.conf" "$TMPFILES_RULE"
+/usr/bin/systemd-tmpfiles --create "$TMPFILES_RULE"
 if [[ -e $HARNESS ]]; then
     /usr/bin/mv -- "$HARNESS" "$harness_temporary/previous-harness"
 fi

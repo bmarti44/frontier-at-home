@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import fcntl
 import re
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -182,7 +184,7 @@ class RootAttestorContractTests(unittest.TestCase):
             "  # The immutable root submitter owns",
             1,
         )[1].split("elif [[ $RUN_AS_CURRENT_USER == 1 ]]", 1)[0]
-        self.assertNotIn("/run/dsv4/inference.lock", root_branch)
+        self.assertNotIn("/run/lock/frontier-at-home/inference.lock", root_branch)
         submitter = SUBMITTER.read_text(encoding="utf-8")
         self.assertIn("fcntl.flock(inference, fcntl.LOCK_EX)", submitter)
 
@@ -251,13 +253,80 @@ class RootAttestorContractTests(unittest.TestCase):
             lock = Path(temporary) / "inference.lock"
             with (
                 mock.patch.object(submitter, "INFERENCE_LOCK", lock),
+                mock.patch.object(submitter.os, "chown"),
                 mock.patch.object(submitter.os, "fchown") as chown,
                 mock.patch.object(submitter.os, "fchmod") as chmod,
             ):
                 with submitter._open_inference_lock():
                     pass
             chown.assert_called_once()
-            chmod.assert_called_once_with(mock.ANY, 0o600)
+            chmod.assert_called_once_with(mock.ANY, 0o660)
+
+    def test_lock_path_is_root_anchored_and_reboot_safe(self):
+        submitter = SUBMITTER.read_text(encoding="utf-8")
+        installer = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn(
+            'INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")',
+            submitter,
+        )
+        self.assertIn(
+            "d /run/lock/frontier-at-home 0750 root dsv4 -",
+            installer,
+        )
+        self.assertIn(
+            "f /run/lock/frontier-at-home/inference.lock 0660 root dsv4 -",
+            installer,
+        )
+        self.assertIn("os.fchown(descriptor, 0, identity.pw_gid)", submitter)
+
+    def test_nonwritable_lock_directory_blocks_replacement_and_contention(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            lock_root = Path(temporary) / "root-owned"
+            lock_root.mkdir(mode=0o750)
+            lock = lock_root / "inference.lock"
+            lock.touch(mode=0o660)
+            lock_root.chmod(0o550)
+            with lock.open("a+b") as held:
+                fcntl.flock(held, fcntl.LOCK_EX)
+                completed = subprocess.run(
+                    ["/usr/bin/flock", "-n", str(lock), "-c", "true"],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                self.assertNotEqual(completed.returncode, 0)
+                with self.assertRaises(PermissionError):
+                    lock.unlink()
+            lock_root.chmod(0o750)
+
+    def test_root_worktrees_and_scorer_are_worker_traversable(self):
+        campaign = (
+            ROOT / "scripts/glm52_w1_affine_campaign.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("os.chmod(worktree_root, 0o711)", campaign)
+        self.assertIn("_seal_candidate_tree(harness_source)", campaign)
+        self.assertIn("os.chmod(target, 0o555)", campaign)
+        self.assertIn("os.chmod(frozen, 0o555)", campaign)
+
+    def test_quarantine_does_not_relabel_external_hardlink(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "attempt"
+            root.mkdir()
+            external = base / "external"
+            external.write_text("preserve", encoding="utf-8")
+            linked = root / "linked"
+            linked.hardlink_to(external)
+            with (
+                mock.patch.object(submitter.os, "chown") as chown,
+                mock.patch.object(submitter.os, "chmod"),
+            ):
+                submitter._quarantine_seal(root)
+            touched_paths = {Path(call.args[0]) for call in chown.call_args_list}
+            self.assertNotIn(linked, touched_paths)
+            self.assertEqual(external.read_text(encoding="utf-8"), "preserve")
 
     def test_pass_replay_requires_published_authority_inode(self):
         source = SUBMITTER.read_text(encoding="utf-8")
