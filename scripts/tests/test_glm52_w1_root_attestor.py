@@ -368,6 +368,8 @@ class RootAttestorContractTests(unittest.TestCase):
 
     def test_installer_converts_legacy_lock_without_following_links(self):
         installer = INSTALLER.read_text(encoding="utf-8")
+        self.assertNotIn("/usr/sbin/gpasswd", installer)
+        self.assertIn("/usr/bin/gpasswd", installer)
         self.assertIn(
             "install -d -o root -g dsv4 -m 1770 /run/dsv4",
             installer,
