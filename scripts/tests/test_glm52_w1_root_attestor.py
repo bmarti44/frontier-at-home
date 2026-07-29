@@ -510,15 +510,34 @@ class RootAttestorContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "symlink"):
                 submitter._tree_manifest(root)
 
-    def test_publication_rejects_attempt_bundled_with_frozen_source(self):
+    def test_publication_uses_exact_per_request_attempt_not_frozen_source(self):
         submitter = load_submitter()
         with tempfile.TemporaryDirectory() as temporary:
-            gate = Path(temporary)
-            stale = gate / "attempt-001"
+            output = Path(temporary)
+            stale = output / "attempt-001"
             stale.mkdir()
-            before = submitter._controller_attempt_names(gate)
-            with self.assertRaisesRegex(ValueError, "exactly one fresh"):
-                submitter._select_fresh_controller_attempt(gate, before)
+            with self.assertRaisesRegex(ValueError, "exact campaign attempt"):
+                submitter._select_campaign_controller_attempt(output)
+
+    def test_publication_rejects_symlinked_campaign_attempt(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            stale = output / "stale"
+            stale.mkdir()
+            (output / "controller-attempt-final").symlink_to(stale)
+            with self.assertRaisesRegex(ValueError, "exact campaign attempt"):
+                submitter._select_campaign_controller_attempt(output)
+
+    def test_root_campaign_leaves_final_attempt_in_per_request_output(self):
+        source = (
+            ROOT / "scripts/glm52_w1_affine_campaign.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'destination = output / "controller-attempt-final"',
+            source,
+        )
+        self.assertIn("if ROOT_AUTHORITY:", source)
 
     def test_w1_scorer_digest_binds_journal_authority(self):
         spec = importlib.util.spec_from_file_location(
