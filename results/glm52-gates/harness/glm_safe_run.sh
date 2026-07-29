@@ -1,8 +1,10 @@
 #!/bin/bash
 # glm_safe_run.sh — hardened wrapper for ANY GLM/ds4 engine invocation on the
 # Spark, after two whole-box freezes caused by unbounded unified-memory
-# allocation in an engine test. Run as dsv4:
+# allocation in an engine test. Normally run as dsv4:
 #   sudo -u dsv4 bash glm_safe_run.sh [--tag NAME] -- <command...>
+# GLM_SAFE_RUN_AS_CURRENT_USER=1 selects the default-off, sudo-free path used
+# by the logged-in benchmark owner under the same user-systemd containment.
 #
 # Protections (layered, all mandatory):
 #   1. ulimit -v hard cap (default 400 GiB): runaway mmap/managed allocations
@@ -16,6 +18,7 @@
 #   5. Start/exit records with command, env, tree commit, binary sha.
 # Logs: /home/dsv4/ds4-project/glm52-crashlog/<ts>-<tag>/
 set -u
+umask 077
 VLIMIT_KB=${GLM_SAFE_VLIMIT_KB:-419430400}  # 400 GiB backstop: engine mmaps the whole GGUF (196.6 GiB VIRTUAL, file-backed, mostly non-resident), so RLIMIT_AS must clear that. Resident-growth protection is the kill-floor sampler below.
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 MIN_START_GIB=${GLM_SAFE_MIN_START_GIB:-110}
@@ -26,6 +29,7 @@ PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
 EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
 REQUIRE_CGROUP=${GLM_SAFE_REQUIRE_CGROUP:-0}
 EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
+RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -64,6 +68,8 @@ fi
   config_error "GLM_SAFE_LOG_CANDIDATE_PROVENANCE"
 [[ $REQUIRE_CGROUP =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_REQUIRE_CGROUP"
+[[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_RUN_AS_CURRENT_USER"
 ENV_PROVENANCE=0
 PROVENANCE_ENV_NAMES=""
 if [[ -n $PROVENANCE_ENV_ALLOWLIST || -n $EXPECTED_ENV_SHA256 ]]; then
@@ -96,7 +102,14 @@ fi
 (( $# > 0 )) || config_error "command"
 
 TS=$(date +%Y%m%d-%H%M%S)
-DIR=/home/dsv4/ds4-project/glm52-crashlog/$TS-$TAG
+if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+  [[ $(id -u) != 0 && $(id -un) == bmarti44 ]] ||
+    config_error "GLM_SAFE_RUN_AS_CURRENT_USER identity"
+  CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
+else
+  CRASH_ROOT=/home/dsv4/ds4-project/glm52-crashlog
+fi
+DIR=$CRASH_ROOT/$TS-$TAG
 mkdir -p "$DIR"
 MAIN="$DIR/main.log"; SAMP="$DIR/samples.log"
 plog() { echo "$(date -Is) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
@@ -165,8 +178,19 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
   plog "cgroup_verified path=$CGROUP_PATH memory_high=$CGROUP_HIGH memory_max=$CGROUP_MAX memory_swap_max=$CGROUP_SWAP_MAX memory_oom_group=$CGROUP_OOM_GROUP"
 fi
 if [[ $CANDIDATE_PROVENANCE == 1 ]]; then
-  APPROVED_SRC_ROOT=/home/dsv4/ds4-project/src
+  if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+    APPROVED_SRC_ROOT=/home/bmarti44/.cache
+  else
+    APPROVED_SRC_ROOT=/home/dsv4/ds4-project/src
+  fi
   CANDIDATE_SRC=$(realpath -e -- "${GLM_CANDIDATE_SRC:-}" 2>/dev/null || true)
+  if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+    [[ $CANDIDATE_SRC == /home/bmarti44/.cache/glm52-* ]] ||
+      config_error "GLM_CANDIDATE_SRC"
+  else
+    [[ $CANDIDATE_SRC == "$APPROVED_SRC_ROOT"/* ]] ||
+      config_error "GLM_CANDIDATE_SRC"
+  fi
   [[ $CANDIDATE_SRC == "$APPROVED_SRC_ROOT"/* ]] ||
     config_error "GLM_CANDIDATE_SRC"
   CANDIDATE_BINARY=$(realpath -e -- "$CANDIDATE_SRC/ds4-server" 2>/dev/null || true)

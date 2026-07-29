@@ -24,6 +24,7 @@ shift 2
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 EVIDENCE_DIR=${GLM_SAFE_EVIDENCE_DIR:-}
+RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
 [[ $KILL_FLOOR_GIB =~ ^[0-9]{1,2}$ && $TIMEOUT_S =~ ^[0-9]{1,4}$ ]] || {
   echo "invalid cgroup resource configuration" >&2
   exit 2
@@ -32,6 +33,20 @@ KILL_FLOOR_GIB=$((10#$KILL_FLOOR_GIB))
 TIMEOUT_S=$((10#$TIMEOUT_S))
 (( KILL_FLOOR_GIB >= 18 && KILL_FLOOR_GIB <= 64 )) || exit 2
 (( TIMEOUT_S >= 1 && TIMEOUT_S <= 3600 )) || exit 2
+[[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] || {
+  echo "invalid GLM_SAFE_RUN_AS_CURRENT_USER" >&2
+  exit 2
+}
+if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+  [[ $(id -un) == bmarti44 ]] || {
+    echo "current-user GLM mode requires bmarti44" >&2
+    exit 2
+  }
+  [[ -z $EVIDENCE_DIR ]] || {
+    echo "current-user GLM mode manages evidence directly" >&2
+    exit 2
+  }
+fi
 if [[ -n $EVIDENCE_DIR ]]; then
   [[ $EVIDENCE_DIR =~ ^/home/dsv4/ds4-project/glm52-confirm-[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ||
      $EVIDENCE_DIR =~ ^/home/dsv4/ds4-project/glm52-decisive-[A-Za-z0-9][A-Za-z0-9._-]{0,79}/[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ]] || {
@@ -53,6 +68,7 @@ SAFE=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_safe
 EVIDENCE_EXPORT=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_evidence_export.py
 UNIT_ACTIVE=0
 export_evidence() {
+  [[ $RUN_AS_CURRENT_USER == 0 ]] || return 0
   [[ -n $EVIDENCE_DIR ]] || return 0
   local evidence_export_rc=0
   local crash_dir
@@ -88,17 +104,29 @@ trap 'handle_signal 130' INT
 trap 'handle_signal 143' TERM
 trap 'handle_signal 129' HUP
 
+if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+  run_home=/home/bmarti44
+else
+  run_home=/home/dsv4
+fi
 env_args=(
-  HOME=/home/dsv4
+  "HOME=$run_home"
   PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   GLM_SAFE_REQUIRE_CGROUP=1
   "GLM_SAFE_CGROUP_UNIT=$UNIT"
+  "GLM_SAFE_RUN_AS_CURRENT_USER=$RUN_AS_CURRENT_USER"
 )
 for name in \
   GLM_CANDIDATE_SRC GLM_PORT GLM_EXPERT_CACHE_GB \
   GLM_REQUIRE_TOKEN_TIMING_LOG DS4_CUDA_IQ2_DOWN_REFERENCE \
-  DS4_CUDA_MOE_NO_EXPERT_TILES \
+  DS4_CUDA_MOE_NO_EXPERT_TILES DS4_CUDA_MOE_NO_ATOMIC_DOWN \
+  DS4_CUDA_EXPERT_CACHE_GB DS4_CUDA_EXPERT_CACHE_PIN \
+  DS4_CUDA_EXPERT_CACHE_SLRU DS4_CUDA_FETCH_THREADS \
+  DS4_GLM_COMPACT_CACHE_F16 DS4_GLM_COMPACT_CACHE_E4M3_FAKE \
+  DS4_GLM_COMPACT_CACHE_INT8_FAKE \
+  DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE \
   GLM_SAFE_LOG_CANDIDATE_PROVENANCE GLM_SAFE_EXPECTED_BINARY_SHA256 \
+  GLM_SAFE_PROVENANCE_ENV_ALLOWLIST GLM_SAFE_EXPECTED_ENV_SHA256 \
   GLM_SAFE_VLIMIT_KB GLM_SAFE_KILL_FLOOR_GIB GLM_SAFE_MIN_START_GIB \
   GLM_SAFE_TIMEOUT_S
 do
@@ -106,6 +134,20 @@ do
     env_args+=("$name=${!name}")
   fi
 done
+
+if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+  contained_command=(
+    /usr/bin/env -i "${env_args[@]}"
+    /usr/bin/flock -n -E 75 "/run/user/$UID/glm52-inference.lock"
+    /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
+  )
+else
+  contained_command=(
+    /usr/bin/sudo -n -u dsv4 -- /usr/bin/env -i "${env_args[@]}"
+    /usr/bin/flock -n -E 75 /run/dsv4/inference.lock
+    /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
+  )
+fi
 
 UNIT_ACTIVE=1
 set +e
@@ -122,9 +164,7 @@ systemd-run --user --wait --collect --pipe --quiet \
   -p MemorySwapMax=0 \
   -p OOMPolicy=kill \
   -p TasksMax=4096 \
-  -- /usr/bin/sudo -n -u dsv4 -- /usr/bin/env -i "${env_args[@]}" \
-  /usr/bin/flock -n -E 75 /run/dsv4/inference.lock \
-  /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
+  -- "${contained_command[@]}"
 command_rc=$?
 set -e
 set +e
