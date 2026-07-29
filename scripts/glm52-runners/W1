@@ -3,9 +3,7 @@ set -Eeuo pipefail
 umask 077
 
 REPO=/home/bmarti44/spark-deepseek-v4-flash
-CAMPAIGN=$REPO/scripts/glm52_w1_affine_campaign.py
 ENGINE_REPOSITORY=/home/bmarti44/.cache/glm52-w1-real-capture-a37
-MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 MODEL_SHA256=$(
   /usr/bin/python3 -c \
     'import json,sys; print(json.load(open(sys.argv[1]))["model_sha256"])' \
@@ -18,25 +16,5 @@ MODEL_SHA256=$(
 }
 HARNESS_COMMIT=$(/usr/bin/git -C "$REPO" rev-parse HEAD)
 ENGINE_COMMIT=$(/usr/bin/git -C "$ENGINE_REPOSITORY" rev-parse HEAD)
-BASE=/home/bmarti44/.local/state/glm52-controller-W1-${HARNESS_COMMIT:0:12}-${ENGINE_COMMIT:0:12}
-FREEZE=$BASE/freeze
-DRAND=$BASE/drand.json
-OUTPUT=$BASE/campaign
-mkdir -p "$BASE"
-
-if [[ ! -f $FREEZE/freeze.json ]]; then
-  /usr/bin/python3 "$CAMPAIGN" freeze \
-    --engine-source "$ENGINE_REPOSITORY" \
-    --engine-candidate-hash "$ENGINE_COMMIT" \
-    --model "$MODEL" \
-    --model-sha256 "$MODEL_SHA256" \
-    --freeze-dir "$FREEZE"
-fi
-if [[ ! -f $DRAND ]]; then
-  /usr/bin/curl --disable --silent --show-error --fail --max-time 10 \
-    --proto '=https' https://api.drand.sh/public/latest -o "$DRAND"
-fi
-/usr/bin/python3 "$CAMPAIGN" run \
-  --freeze-dir "$FREEZE" \
-  --drand-json "$DRAND" \
-  --output "$OUTPUT"
+exec /usr/bin/sudo -n /usr/local/sbin/glm52-w1-submit run \
+  "$HARNESS_COMMIT" "$ENGINE_COMMIT" "$MODEL_SHA256"

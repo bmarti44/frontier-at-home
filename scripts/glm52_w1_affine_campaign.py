@@ -10,10 +10,12 @@ import json
 import os
 import random
 import re
+import secrets
 import shutil
 import subprocess
 import sys
 import tempfile
+import pwd
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -22,11 +24,19 @@ from typing import Any, Iterable
 ROOT = Path(__file__).resolve().parents[1]
 LAUNCHER = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 SCORER = ROOT / "scripts/glm52_goal.py"
+ROOT_AUTHORITY = os.environ.get("GLM_W1_ROOT_AUTHORITY") == "1"
+AUTHORITY_REQUEST_ROOT = Path(
+    os.environ.get("GLM_W1_AUTHORITY_REQUEST_ROOT", "/nonexistent")
+)
 MASTER_MANIFEST = Path(
     "gguf-tools/quality-testing/data/glm52-openrouter-100/manifest.tsv"
 )
 COMMON_ENGINE_ENVIRONMENT = {
-    "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
+    "DS4_LOCK_FILE": (
+        "/run/dsv4/ds4-engine.lock"
+        if ROOT_AUTHORITY
+        else "/run/user/1000/ds4-engine.lock"
+    ),
     "DS4_CUDA_EXPERT_CACHE_GB": "0",
     "DS4_CUDA_EXPERT_CACHE_PIN": "1",
     "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
@@ -52,12 +62,27 @@ PROVENANCE_NAMES = tuple(
     sorted((*COMMON_ENGINE_ENVIRONMENT, *FIDELITY_ENVIRONMENT_NAMES))
 )
 SAFE_ENVIRONMENT = {
-    "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+    "GLM_SAFE_RUN_AS_CURRENT_USER": "0" if ROOT_AUTHORITY else "1",
     "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
     "GLM_SAFE_KILL_FLOOR_GIB": "40",
     "GLM_SAFE_MIN_START_GIB": "110",
     "GLM_SAFE_TIMEOUT_S": "1800",
 }
+if ROOT_AUTHORITY:
+    if (
+        os.geteuid() != 0
+        or not re.fullmatch(
+            r"/var/lib/glm52-w1/requests/[0-9a-f]{64}/attempt-[0-9]{3}",
+            str(AUTHORITY_REQUEST_ROOT),
+        )
+    ):
+        raise RuntimeError("invalid root W1 authority environment")
+    SAFE_ENVIRONMENT.update(
+        {
+            "GLM_W1_ROOT_AUTHORITY": "1",
+            "GLM_SAFE_CRASH_ROOT": str(AUTHORITY_REQUEST_ROOT / "crashlog"),
+        }
+    )
 START_RE = re.compile(
     r"^ds4: GLM compact cache fidelity resolved_mode=(\d+)$", re.MULTILINE
 )
@@ -478,9 +503,48 @@ def _run_checked(
     *,
     cwd: Path,
     timeout: int = 900,
+    untrusted: bool = False,
 ) -> str:
+    run_home = pwd.getpwuid(os.geteuid()).pw_dir
+    actual_command = command
+    if ROOT_AUTHORITY and untrusted:
+        actual_command = [
+            "/usr/bin/systemd-run",
+            "--wait",
+            "--collect",
+            "--pipe",
+            "--quiet",
+            f"--unit=glm52-w1-build-{os.getpid()}-{secrets.token_hex(4)}",
+            "--service-type=exec",
+            "--uid=dsv4",
+            "--gid=dsv4",
+            f"--working-directory={cwd}",
+            "-p",
+            "KillMode=control-group",
+            "-p",
+            "MemoryAccounting=yes",
+            "-p",
+            "MemoryHigh=36G",
+            "-p",
+            "MemoryMax=40G",
+            "-p",
+            "MemorySwapMax=0",
+            "-p",
+            "OOMPolicy=kill",
+            "-p",
+            "ProtectHome=read-only",
+            "-p",
+            "NoNewPrivileges=yes",
+            "--",
+            "/usr/bin/env",
+            "-i",
+            "HOME=/home/dsv4",
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LANG=C.UTF-8",
+            *command,
+        ]
     completed = subprocess.run(
-        command,
+        actual_command,
         cwd=cwd,
         text=True,
         stdout=subprocess.PIPE,
@@ -488,7 +552,7 @@ def _run_checked(
         timeout=timeout,
         check=False,
         env={
-            "HOME": "/home/bmarti44",
+            "HOME": run_home,
             "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             "LANG": "C.UTF-8",
             "GIT_CONFIG_NOSYSTEM": "1",
@@ -520,6 +584,30 @@ def _fresh_worktree(repository: Path, destination: Path, commit: str) -> None:
     )
 
 
+def _chown_tree(path: Path, user: str) -> None:
+    identity = pwd.getpwnam(user)
+    for child in path.rglob("*"):
+        if child.is_symlink():
+            raise ValueError("candidate source contains a symlink")
+        os.chown(child, identity.pw_uid, identity.pw_gid)
+    os.chown(path, identity.pw_uid, identity.pw_gid)
+
+
+def _seal_candidate_tree(path: Path) -> None:
+    for child in sorted(path.rglob("*"), reverse=True):
+        details = child.lstat()
+        if child.is_symlink():
+            raise ValueError("candidate source contains a symlink")
+        executable = bool(details.st_mode & 0o111)
+        os.chown(child, 0, 0)
+        os.chmod(
+            child,
+            0o555 if child.is_dir() or executable else 0o444,
+        )
+    os.chown(path, 0, 0)
+    os.chmod(path, 0o555)
+
+
 def freeze_candidate(args: argparse.Namespace) -> int:
     """Clean-build and freeze every identity before public randomness."""
     engine_repository = args.engine_source.resolve()
@@ -535,14 +623,25 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         raise ValueError("engine candidate hash changed")
 
     tag = f"{harness_commit[:12]}-{engine_commit[:12]}"
-    harness_source = Path(f"/home/bmarti44/.cache/glm52-w1-harness-{tag}")
-    engine_source = Path(f"/home/bmarti44/.cache/glm52-w1-build-{tag}")
+    worktree_root = (
+        AUTHORITY_REQUEST_ROOT / "worktrees"
+        if ROOT_AUTHORITY
+        else Path("/home/bmarti44/.cache")
+    )
+    harness_source = worktree_root / f"glm52-w1-harness-{tag}"
+    engine_source = worktree_root / f"glm52-w1-build-{tag}"
     _fresh_worktree(ROOT, harness_source, harness_commit)
     _fresh_worktree(engine_repository, engine_source, engine_commit)
+    if ROOT_AUTHORITY:
+        _chown_tree(engine_source, "dsv4")
 
     transcript_parts = []
     transcript_parts.append(
-        _run_checked(["/usr/bin/make", "clean"], cwd=engine_source)
+        _run_checked(
+            ["/usr/bin/make", "clean"],
+            cwd=engine_source,
+            untrusted=ROOT_AUTHORITY,
+        )
     )
     transcript_parts.append(
         _run_checked(
@@ -555,11 +654,14 @@ def freeze_candidate(args: argparse.Namespace) -> int:
                 "tests/test_glm_affine_int8_cuda",
             ],
             cwd=engine_source,
+            untrusted=ROOT_AUTHORITY,
         )
     )
     transcript_parts.append(
         _run_checked(
-            ["./tests/test_glm_affine_int8_cuda"], cwd=engine_source
+            ["./tests/test_glm_affine_int8_cuda"],
+            cwd=engine_source,
+            untrusted=ROOT_AUTHORITY,
         )
     )
     build_transcript = "".join(transcript_parts)
@@ -588,7 +690,7 @@ def freeze_candidate(args: argparse.Namespace) -> int:
     if not args.model_sha256:
         raise ValueError("expected model content hash is required")
     model_sha256 = verify_model_content(model, args.model_sha256)
-    if os.access(model, os.W_OK):
+    if not ROOT_AUTHORITY and os.access(model, os.W_OK):
         raise ValueError("campaign model is writable by the benchmark owner")
     master = engine_source / MASTER_MANIFEST
     fixture_master_sha256 = content_complete_fixture_sha256(
@@ -642,6 +744,8 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         ),
     }
     _write_canonical_json(freeze_dir / "freeze.json", descriptor)
+    if ROOT_AUTHORITY:
+        _seal_candidate_tree(engine_source)
     print(
         json.dumps(
             {
@@ -781,7 +885,8 @@ def _journal_witness(message: str, expected_nonce: str) -> dict[str, str]:
             row = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if row.get("MESSAGE") == message and row.get("_UID") == "1000":
+        expected_uid = "995" if ROOT_AUTHORITY else "1000"
+        if row.get("MESSAGE") == message and row.get("_UID") == expected_uid:
             rows.append(row)
     if len(rows) != 1:
         raise ValueError("system journal witness is missing or duplicated")
@@ -798,7 +903,9 @@ def _journal_witness(message: str, expected_nonce: str) -> dict[str, str]:
         "pid": str(row.get("_PID", "")),
         "uid": str(row.get("_UID", "")),
         "cgroup": str(row.get("_SYSTEMD_CGROUP", "")),
-        "user_unit": str(row.get("_SYSTEMD_USER_UNIT", "")),
+        "user_unit": str(
+            row.get("_SYSTEMD_UNIT" if ROOT_AUTHORITY else "_SYSTEMD_USER_UNIT", "")
+        ),
         "message": message,
     }
     if (
@@ -932,7 +1039,7 @@ def _finalize_controller_attempt(
         "build_log_sha256": sha256_file(staging / "clean-build.log"),
     }
     _write_canonical_json(staging / "manifest.json", manifest)
-    goal.validate_attempt(staging)
+    goal.validate_attempt(staging, root_authority_pending=ROOT_AUTHORITY)
 
     gate_dir = ROOT / "results/glm52-goal/W1"
     gate_dir.mkdir(parents=True, exist_ok=True)
@@ -945,13 +1052,17 @@ def _finalize_controller_attempt(
     if destination.exists():
         raise ValueError("controller attempt destination already exists")
     os.replace(staging, destination)
-    goal.validate_attempt(destination)
+    goal.validate_attempt(destination, root_authority_pending=ROOT_AUTHORITY)
     return destination
 
 
 def _freeze_scorer(source: Path, engine_commit: str, binary_sha256: str) -> Path:
-    frozen = Path(
-        f"/home/bmarti44/.cache/glm52-w1-affine-score-{engine_commit[:12]}"
+    frozen = (
+        AUTHORITY_REQUEST_ROOT / "frozen-scorer"
+        if ROOT_AUTHORITY
+        else Path(
+            f"/home/bmarti44/.cache/glm52-w1-affine-score-{engine_commit[:12]}"
+        )
     )
     frozen.mkdir(mode=0o700, parents=True, exist_ok=True)
     target = frozen / "ds4-server"
@@ -1010,6 +1121,13 @@ def run(args: argparse.Namespace) -> int:
     frozen = _freeze_scorer(source, engine_commit, binary_sha256)
     output = _campaign_paths(seed, engine_commit, args.output)
     output.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if ROOT_AUTHORITY:
+        artifact_root = AUTHORITY_REQUEST_ROOT / "artifacts"
+        artifact_root.mkdir(mode=0o700, exist_ok=True)
+        dsv4 = pwd.getpwnam("dsv4")
+        os.chown(artifact_root, dsv4.pw_uid, dsv4.pw_gid)
+    else:
+        artifact_root = output
     manifests = _write_manifests(source, output, seed)
     fixture_content_sha256 = content_complete_fixture_sha256(source, manifests)
     fixture_descriptor = _fixture_descriptor(
@@ -1022,7 +1140,7 @@ def run(args: argparse.Namespace) -> int:
         model, frozen_candidate["model_content_sha256"]
     )
     initial_model_identity = model_identity(model)
-    if os.access(model, os.W_OK):
+    if not ROOT_AUTHORITY and os.access(model, os.W_OK):
         raise ValueError("campaign model is writable by the benchmark owner")
     (output / "model.sha256").write_text(model_sha256 + "\n", encoding="ascii")
     engine_build_path = output / "engine-build.json"
@@ -1157,9 +1275,10 @@ def run(args: argparse.Namespace) -> int:
             raise ValueError("model identity changed before attempt")
         cursor = _journal_cursor()
         result_path = output / f"attempt-{index:02d}.tsv"
+        witness_result_path = artifact_root / f"attempt-{index:02d}.tsv"
         log_path = output / f"attempt-{index:02d}.launcher.log"
         kernel_path = output / f"attempt-{index:02d}.kernel.log"
-        if result_path.exists():
+        if result_path.exists() or witness_result_path.exists():
             raise ValueError(f"stale attempt output exists: {result_path}")
         environment = os.environ.copy()
         for name in FORWARDED_ENGINE_ENVIRONMENT_NAMES:
@@ -1175,7 +1294,7 @@ def run(args: argparse.Namespace) -> int:
                 "GLM_SAFE_WITNESS_NONCE": hashlib.sha256(
                     f"{seed}:{index}:W1-witness".encode()
                 ).hexdigest(),
-                "GLM_SAFE_WITNESS_ARTIFACT": str(result_path),
+                "GLM_SAFE_WITNESS_ARTIFACT": str(witness_result_path),
             }
         )
         witness_nonce = environment["GLM_SAFE_WITNESS_NONCE"]
@@ -1187,7 +1306,7 @@ def run(args: argparse.Namespace) -> int:
             str(frozen / "ds4-server"),
             str(model),
             str(manifests[block]),
-            str(result_path),
+            str(witness_result_path),
             "8192",
             "--ssd-streaming",
             "--ssd-streaming-cache-experts",
@@ -1204,6 +1323,8 @@ def run(args: argparse.Namespace) -> int:
             check=False,
         )
         log_path.write_text(result.stdout, encoding="utf-8")
+        if ROOT_AUTHORITY and witness_result_path.is_file():
+            os.replace(witness_result_path, result_path)
         kernel = _kernel_since(cursor)
         kernel_path.write_text(kernel, encoding="utf-8")
         failures: list[str] = []

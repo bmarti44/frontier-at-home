@@ -2205,7 +2205,7 @@ class ControllerTests(unittest.TestCase):
     def test_attempt_manifest_gate_must_match_directory_gate(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
-            attempt = state_dir / "W1" / "attempt-001"
+            attempt = state_dir / "W2" / "attempt-001"
             attempt.mkdir(parents=True)
             manifest = {
                 "gate": "foundation",
@@ -2238,8 +2238,8 @@ class ControllerTests(unittest.TestCase):
             result = self.run_cli(state_dir, "status", "--json")
             self.assertEqual(result.returncode, 0, result.stderr)
             state = json.loads(result.stdout)
-            self.assertEqual(state["gates"]["W1"]["status"], "FAIL")
-            self.assertIn("does not match", state["gates"]["W1"]["reason"])
+            self.assertEqual(state["gates"]["W2"]["status"], "FAIL")
+            self.assertIn("does not match", state["gates"]["W2"]["reason"])
 
     def test_release_check_fails_closed_on_incomplete_goal(self):
         with tempfile.TemporaryDirectory() as tmp:

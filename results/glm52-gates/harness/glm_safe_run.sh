@@ -32,6 +32,8 @@ WITNESS_ARTIFACT=${GLM_SAFE_WITNESS_ARTIFACT:-}
 REQUIRE_CGROUP=${GLM_SAFE_REQUIRE_CGROUP:-0}
 EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
+ROOT_AUTHORITY=${GLM_W1_ROOT_AUTHORITY:-0}
+AUTHORITY_CRASH_ROOT=${GLM_SAFE_CRASH_ROOT:-}
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -72,15 +74,33 @@ fi
   config_error "GLM_SAFE_REQUIRE_CGROUP"
 [[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_RUN_AS_CURRENT_USER"
+[[ $ROOT_AUTHORITY =~ ^[01]$ ]] ||
+  config_error "GLM_W1_ROOT_AUTHORITY"
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  [[ $RUN_AS_CURRENT_USER == 0 && $(id -un) == dsv4 ]] ||
+    config_error "root authority identity"
+  [[ $AUTHORITY_CRASH_ROOT =~ ^/var/lib/glm52-w1/requests/[0-9a-f]{64}/attempt-[0-9]{3}/crashlog$ ]] ||
+    config_error "GLM_SAFE_CRASH_ROOT"
+fi
 if [[ -n $WITNESS_NONCE && ! $WITNESS_NONCE =~ ^[0-9a-f]{64}$ ]]; then
   config_error "GLM_SAFE_WITNESS_NONCE"
 fi
 if [[ -n $WITNESS_NONCE ]]; then
-  [[ $WITNESS_ARTIFACT =~ ^/home/bmarti44/\.local/state/glm52-[A-Za-z0-9._/-]+$ ]] ||
-    config_error "GLM_SAFE_WITNESS_ARTIFACT"
+  if [[ $ROOT_AUTHORITY == 1 ]]; then
+    [[ $WITNESS_ARTIFACT =~ ^/var/lib/glm52-w1/requests/[0-9a-f]{64}/attempt-[0-9]{3}/artifacts/attempt-[0-9]{2}\.tsv$ ]] ||
+      config_error "GLM_SAFE_WITNESS_ARTIFACT"
+  else
+    [[ $WITNESS_ARTIFACT =~ ^/home/bmarti44/\.local/state/glm52-[A-Za-z0-9._/-]+$ ]] ||
+      config_error "GLM_SAFE_WITNESS_ARTIFACT"
+  fi
   WITNESS_PARENT=$(realpath -e -- "$(dirname -- "$WITNESS_ARTIFACT")" 2>/dev/null || true)
-  [[ $WITNESS_PARENT == /home/bmarti44/.local/state/glm52-* ]] ||
-    config_error "GLM_SAFE_WITNESS_ARTIFACT parent"
+  if [[ $ROOT_AUTHORITY == 1 ]]; then
+    [[ $WITNESS_PARENT =~ ^/var/lib/glm52-w1/requests/[0-9a-f]{64}/attempt-[0-9]{3}/artifacts$ ]] ||
+      config_error "GLM_SAFE_WITNESS_ARTIFACT parent"
+  else
+    [[ $WITNESS_PARENT == /home/bmarti44/.local/state/glm52-* ]] ||
+      config_error "GLM_SAFE_WITNESS_ARTIFACT parent"
+  fi
   [[ $WITNESS_ARTIFACT == "$WITNESS_PARENT"/"$(basename -- "$WITNESS_ARTIFACT")" ]] ||
     config_error "GLM_SAFE_WITNESS_ARTIFACT normalization"
 fi
@@ -116,7 +136,9 @@ fi
 (( $# > 0 )) || config_error "command"
 
 TS=$(date +%Y%m%d-%H%M%S)
-if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  CRASH_ROOT=$AUTHORITY_CRASH_ROOT
+elif [[ $RUN_AS_CURRENT_USER == 1 ]]; then
   [[ $(id -u) != 0 && $(id -un) == bmarti44 ]] ||
     config_error "GLM_SAFE_RUN_AS_CURRENT_USER identity"
   CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
@@ -192,13 +214,18 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
   plog "cgroup_verified path=$CGROUP_PATH memory_high=$CGROUP_HIGH memory_max=$CGROUP_MAX memory_swap_max=$CGROUP_SWAP_MAX memory_oom_group=$CGROUP_OOM_GROUP"
 fi
 if [[ $CANDIDATE_PROVENANCE == 1 ]]; then
-  if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+  if [[ $ROOT_AUTHORITY == 1 ]]; then
+    APPROVED_SRC_ROOT=$(dirname -- "$AUTHORITY_CRASH_ROOT")
+  elif [[ $RUN_AS_CURRENT_USER == 1 ]]; then
     APPROVED_SRC_ROOT=/home/bmarti44/.cache
   else
     APPROVED_SRC_ROOT=/home/dsv4/ds4-project/src
   fi
   CANDIDATE_SRC=$(realpath -e -- "${GLM_CANDIDATE_SRC:-}" 2>/dev/null || true)
-  if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+  if [[ $ROOT_AUTHORITY == 1 ]]; then
+    [[ $CANDIDATE_SRC == "$APPROVED_SRC_ROOT"/frozen-scorer ]] ||
+      config_error "GLM_CANDIDATE_SRC"
+  elif [[ $RUN_AS_CURRENT_USER == 1 ]]; then
     [[ $CANDIDATE_SRC == /home/bmarti44/.cache/glm52-* ]] ||
       config_error "GLM_CANDIDATE_SRC"
   else
@@ -222,7 +249,12 @@ if [[ $CANDIDATE_PROVENANCE == 1 ]]; then
 fi
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
-python3 /home/bmarti44/spark-deepseek-v4-flash/scripts/03_memory_guard.py \
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  MEMORY_GUARD=$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")/scripts/03_memory_guard.py
+else
+  MEMORY_GUARD=/home/bmarti44/spark-deepseek-v4-flash/scripts/03_memory_guard.py
+fi
+python3 "$MEMORY_GUARD" \
   --required-gib "$MIN_START_GIB" --stable-samples 3 --timeout-seconds 0 \
   >>"$MAIN" || { plog "FATAL insufficient stable memory before launch"; exit 8; }
 

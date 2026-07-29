@@ -9,13 +9,12 @@ import json
 import os
 import pwd
 import re
-import shutil
+import socket
 import stat
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
-from typing import Iterable
+from typing import Any
 
 
 REPOSITORY = Path("/home/bmarti44/spark-deepseek-v4-flash")
@@ -25,13 +24,19 @@ MODEL = Path(
     "GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf"
 )
 STATE_ROOT = Path("/var/lib/glm52-w1")
+CONTROLLER_ATTEMPTS = STATE_ROOT / "controller-attempts"
+INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
+INFERENCE_LOCK = Path("/run/dsv4/inference.lock")
 RUNNER = Path("scripts/glm52-runners/W1")
 PROFILE = Path("configs/glm52-profile.json")
 OWNER = "bmarti44"
 OWNER_UID = 1000
+DSV4 = "dsv4"
 HASH40 = re.compile(r"^[0-9a-f]{40}$")
 HASH64 = re.compile(r"^[0-9a-f]{64}$")
+MAX_RECEIPT_FILES = 1024
+MAX_RECEIPT_BYTES = 2 * 1024 * 1024 * 1024
 
 
 def parse_request(argv: list[str]) -> tuple[str, ...]:
@@ -55,21 +60,34 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
     )
 
 
+def receipt_exit_code(receipt: dict[str, Any]) -> int:
+    return (
+        0
+        if receipt.get("terminal_state") == "PASS"
+        and receipt.get("service_returncode") == 0
+        else 1
+    )
+
+
 def _run(
     argv: list[str],
     *,
     check: bool = True,
     timeout: int = 60,
+    cwd: Path | None = None,
+    environment: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     completed = subprocess.run(
         argv,
+        cwd=cwd,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         timeout=timeout,
         check=False,
-        env={
+        env=environment
+        or {
             "HOME": "/nonexistent",
             "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             "LANG": "C.UTF-8",
@@ -83,7 +101,7 @@ def _run(
     return completed
 
 
-def _git(repository: Path, *arguments: str) -> str:
+def _git_as_owner(repository: Path, *arguments: str) -> str:
     completed = _run(
         [
             "/usr/sbin/runuser",
@@ -108,6 +126,21 @@ def _git(repository: Path, *arguments: str) -> str:
         ]
     )
     return completed.stdout.strip()
+
+
+def _git_root(repository: Path, *arguments: str) -> str:
+    return _run(
+        [
+            "/usr/bin/git",
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-C",
+            str(repository),
+            *arguments,
+        ]
+    ).stdout.strip()
 
 
 def _sha256(path: Path) -> str:
@@ -138,6 +171,16 @@ def _assert_root() -> None:
         raise PermissionError("benchmark owner identity changed")
 
 
+def _unit_active(name: str) -> bool:
+    return (
+        _run(
+            ["/usr/bin/systemctl", "is-active", "--quiet", name],
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
 def _assert_docker_closed() -> None:
     group_line = Path("/etc/group").read_text(encoding="utf-8")
     docker = next(
@@ -147,34 +190,74 @@ def _assert_docker_closed() -> None:
     members = docker.rsplit(":", 1)[-1].split(",") if docker else []
     if OWNER in members:
         raise PermissionError("bmarti44 remains in the root-equivalent docker group")
-    active = _run(
-        ["/usr/bin/systemctl", "is-active", "--quiet", "docker.socket"],
-        check=False,
+    if _unit_active("docker.socket") or _unit_active("docker.service"):
+        raise PermissionError("root-equivalent Docker service remains active")
+    docker_socket = Path("/var/run/docker.sock")
+    if docker_socket.exists():
+        mode = docker_socket.stat().st_mode
+        if stat.S_ISSOCK(mode):
+            probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                probe.settimeout(0.2)
+                if probe.connect_ex(str(docker_socket)) == 0:
+                    raise PermissionError("a Docker-compatible socket remains live")
+            finally:
+                probe.close()
+    docker_gid = next(
+        (
+            int(line.split(":")[2])
+            for line in group_line.splitlines()
+            if line.startswith("docker:")
+        ),
+        -1,
     )
-    if active.returncode == 0:
-        raise PermissionError("root-equivalent docker socket remains active")
+    caller_pid = int(os.environ.get("SUDO_PID", "0"))
+    if caller_pid > 1:
+        status_path = Path(f"/proc/{caller_pid}/status")
+        if status_path.is_file():
+            groups_line = next(
+                (
+                    line
+                    for line in status_path.read_text(encoding="utf-8").splitlines()
+                    if line.startswith("Groups:")
+                ),
+                "",
+            )
+            groups = {int(value) for value in groups_line.split()[1:]}
+            if docker_gid in groups:
+                raise PermissionError(
+                    "the invoking session retains the root-equivalent docker group"
+                )
 
 
 def _assert_repository(
     repository: Path,
     expected_commit: str,
+    *,
+    reject_untracked: bool,
     required_path: Path | None = None,
 ) -> None:
     if not repository.is_dir() or repository.is_symlink():
         raise ValueError(f"repository is absent or unsafe: {repository}")
-    actual = _git(repository, "rev-parse", "--verify", "HEAD^{commit}")
+    actual = _git_as_owner(repository, "rev-parse", "--verify", "HEAD^{commit}")
     if actual != expected_commit:
         raise ValueError(f"repository HEAD differs: {repository}")
-    if _git(repository, "status", "--porcelain", "--untracked-files=all"):
-        raise ValueError(f"repository is not clean: {repository}")
+    untracked = "all" if reject_untracked else "no"
+    if _git_as_owner(
+        repository, "status", "--porcelain", f"--untracked-files={untracked}"
+    ):
+        raise ValueError(f"repository tracked content is not clean: {repository}")
     if required_path is not None:
-        tracked = _git(repository, "ls-files", "--error-unmatch", str(required_path))
+        tracked = _git_as_owner(
+            repository, "ls-files", "--error-unmatch", str(required_path)
+        )
         if tracked != str(required_path):
             raise ValueError(f"required runner is not tracked: {required_path}")
 
 
-def _model_hash_from_profile() -> str:
-    profile = json.loads((REPOSITORY / PROFILE).read_text(encoding="utf-8"))
+def _model_hash_from_profile(harness: str) -> str:
+    raw = _git_root(INSTALLED_HARNESS, "show", f"{harness}:{PROFILE}")
+    profile = json.loads(raw)
     value = profile.get("model_sha256")
     if not isinstance(value, str) or not HASH64.fullmatch(value):
         raise ValueError("profile model hash is invalid")
@@ -182,11 +265,12 @@ def _model_hash_from_profile() -> str:
 
 
 def _request_id(harness: str, engine: str, model: str) -> str:
-    return hashlib.sha256(f"{harness}:{engine}:{model}:W1-root-v1".encode()).hexdigest()
+    return hashlib.sha256(f"{harness}:{engine}:{model}:W1-root-v2".encode()).hexdigest()
 
 
 def _tree_manifest(root: Path) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    total = 0
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root).as_posix()
         details = path.lstat()
@@ -194,189 +278,361 @@ def _tree_manifest(root: Path) -> list[dict[str, object]]:
             raise ValueError(f"evidence contains a symlink: {relative}")
         if path.is_dir():
             continue
-        if not path.is_file() or details.st_nlink != 1:
+        if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
             raise ValueError(f"evidence file type or link count is unsafe: {relative}")
+        total += details.st_size
+        if len(rows) >= MAX_RECEIPT_FILES or total > MAX_RECEIPT_BYTES:
+            raise ValueError("evidence file-count or byte limit exceeded")
         rows.append(
             {
                 "path": relative,
                 "sha256": _sha256(path),
                 "size": details.st_size,
-                "device": details.st_dev,
-                "inode": details.st_ino,
             }
         )
+    if not rows:
+        raise ValueError("evidence tree is empty")
     return rows
+
+
+def _manifest_sha256(rows: list[dict[str, object]]) -> str:
+    return hashlib.sha256(
+        json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 def _seal(root: Path) -> None:
     for path in sorted(root.rglob("*"), reverse=True):
+        details = path.lstat()
+        if stat.S_ISLNK(details.st_mode):
+            raise ValueError("refusing to seal a symlink")
         os.chown(path, 0, 0, follow_symlinks=False)
         os.chmod(path, 0o500 if path.is_dir() else 0o400, follow_symlinks=False)
     os.chown(root, 0, 0)
     os.chmod(root, 0o500)
 
 
-def _journal_identity(unit: str) -> dict[str, str]:
-    completed = _run(
+def _bundle_clone(
+    repository: Path,
+    commit: str,
+    bundle: Path,
+    destination: Path,
+) -> None:
+    bundle.touch(mode=0o600, exist_ok=False)
+    os.chown(bundle, OWNER_UID, pwd.getpwnam(OWNER).pw_gid)
+    _git_as_owner(repository, "bundle", "create", str(bundle), "HEAD")
+    os.chown(bundle, 0, 0)
+    os.chmod(bundle, 0o400)
+    heads = _run(
+        ["/usr/bin/git", "bundle", "list-heads", str(bundle)]
+    ).stdout.splitlines()
+    if not any(line.split()[0] == commit for line in heads if line.split()):
+        raise ValueError("candidate bundle does not contain the exact commit")
+    _run(
         [
-            "/usr/bin/journalctl",
-            "--no-pager",
-            "-o",
-            "json",
-            "-u",
-            f"{unit}.service",
+            "/usr/bin/git",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "clone",
+            "--no-checkout",
+            str(bundle),
+            str(destination),
         ],
-        check=False,
+        timeout=300,
     )
-    invocation_ids: set[str] = set()
-    cursors: list[str] = []
-    boot_ids: set[str] = set()
-    for line in completed.stdout.splitlines():
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        invocation = row.get("_SYSTEMD_INVOCATION_ID")
-        cursor = row.get("__CURSOR")
-        boot_id = row.get("_BOOT_ID")
-        if isinstance(invocation, str) and invocation:
-            invocation_ids.add(invocation)
-        if isinstance(cursor, str) and cursor:
-            cursors.append(cursor)
-        if isinstance(boot_id, str) and boot_id:
-            boot_ids.add(boot_id)
-    if len(invocation_ids) != 1 or len(boot_ids) != 1 or not cursors:
-        raise ValueError("root systemd invocation identity is incomplete")
+    _run(
+        [
+            "/usr/bin/git",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-C",
+            str(destination),
+            "checkout",
+            "--detach",
+            commit,
+        ],
+        timeout=300,
+    )
+    if _run(
+        ["/usr/bin/git", "-C", str(destination), "status", "--porcelain"]
+    ).stdout.strip():
+        raise ValueError("root candidate clone is not clean")
+
+
+def _bundle_root_repository(
+    repository: Path,
+    commit: str,
+    bundle: Path,
+) -> None:
+    _run(
+        [
+            "/usr/bin/git",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-C",
+            str(repository),
+            "bundle",
+            "create",
+            str(bundle),
+            "HEAD",
+        ],
+        timeout=300,
+    )
+    os.chmod(bundle, 0o400)
+    heads = _run(
+        ["/usr/bin/git", "bundle", "list-heads", str(bundle)]
+    ).stdout.splitlines()
+    if not any(line.split()[0] == commit for line in heads if line.split()):
+        raise ValueError("installed harness bundle lacks the exact commit")
+
+
+def _root_environment(request_root: Path) -> dict[str, str]:
     return {
-        "unit": f"{unit}.service",
-        "invocation_id": next(iter(invocation_ids)),
-        "boot_id": next(iter(boot_ids)),
-        "first_cursor": cursors[0],
-        "last_cursor": cursors[-1],
+        "HOME": "/root",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "LANG": "C.UTF-8",
+        "GLM_W1_ROOT_AUTHORITY": "1",
+        "GLM_W1_AUTHORITY_REQUEST_ROOT": str(request_root),
     }
 
 
-def _copy_attempt(source: Path, destination: Path) -> None:
-    if source.is_symlink() or not source.is_dir():
-        raise ValueError("campaign state is absent or unsafe")
-    shutil.copytree(
-        source,
-        destination,
-        symlinks=False,
-        copy_function=shutil.copy2,
-    )
+def _next_attempt_root(request_base: Path) -> Path:
+    existing = [
+        int(path.name.removeprefix("attempt-"))
+        for path in request_base.glob("attempt-*")
+        if path.is_dir() and path.name.removeprefix("attempt-").isdigit()
+    ]
+    return request_base / f"attempt-{max(existing, default=0) + 1:03d}"
+
+
+def _copy_regular_tree(source: Path, destination: Path) -> None:
+    rows = _tree_manifest(source)
+    destination.mkdir(mode=0o700, parents=False)
+    for row in rows:
+        relative = Path(str(row["path"]))
+        target = destination / relative
+        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        source_path = source / relative
+        with source_path.open("rb") as reader, target.open("xb") as writer:
+            while block := reader.read(1024 * 1024):
+                writer.write(block)
+        if _sha256(target) != row["sha256"]:
+            raise ValueError("exported attempt differs from root evidence")
+    for path in destination.rglob("*"):
+        os.chown(path, 0, 0)
+        os.chmod(path, 0o555 if path.is_dir() else 0o444)
+    os.chown(destination, 0, 0)
+    os.chmod(destination, 0o555)
+
+
+def _publish_controller_attempt(source: Path) -> Path:
+    gate = CONTROLLER_ATTEMPTS
+    gate.mkdir(mode=0o755, parents=True, exist_ok=True)
+    os.chown(gate, 0, 0)
+    os.chmod(gate, 0o755)
+    existing = [
+        int(path.name.removeprefix("attempt-"))
+        for path in gate.glob("attempt-*")
+        if path.is_dir() and path.name.removeprefix("attempt-").isdigit()
+    ]
+    destination = gate / f"attempt-{max(existing, default=0) + 1:03d}"
+    if destination.exists():
+        raise ValueError("controller attempt destination already exists")
+    _copy_regular_tree(source, destination)
+    return destination
 
 
 def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     _assert_docker_closed()
-    _assert_repository(REPOSITORY, harness, RUNNER)
-    _assert_repository(ENGINE_REPOSITORY, engine)
-    if _model_hash_from_profile() != model_hash:
+    _assert_repository(
+        REPOSITORY, harness, reject_untracked=True, required_path=RUNNER
+    )
+    _assert_repository(
+        ENGINE_REPOSITORY, engine, reject_untracked=False
+    )
+    if _model_hash_from_profile(harness) != model_hash:
         raise ValueError("requested model hash differs from the reviewed profile")
     if not MODEL.is_file() or MODEL.is_symlink() or _sha256(MODEL) != model_hash:
         raise ValueError("model content differs from the reviewed profile")
 
     request_id = _request_id(harness, engine, model_hash)
-    request_root = STATE_ROOT / "requests" / request_id
-    if (request_root / "receipt.json").is_file():
-        print((request_root / "receipt.json").read_text(encoding="utf-8"), end="")
-        return 0
-    if request_root.exists():
-        raise ValueError("incomplete prior root request requires inspection")
-    request_root.mkdir(parents=True, mode=0o700)
+    request_base = STATE_ROOT / "requests" / request_id
+    request_base.mkdir(parents=True, mode=0o711, exist_ok=True)
+    completed_receipts = sorted(request_base.glob("attempt-*/receipt.json"))
+    if completed_receipts:
+        latest = json.loads(completed_receipts[-1].read_text(encoding="utf-8"))
+        if receipt_exit_code(latest) == 0:
+            print(json.dumps(latest, sort_keys=True, separators=(",", ":")))
+            return 0
+
+    request_root = _next_attempt_root(request_base)
+    request_root.mkdir(mode=0o711)
     _canonical_json(
         request_root / "request.json",
         {
-            "schema_version": 1,
+            "schema_version": 2,
             "request_id": request_id,
             "harness_commit": harness,
             "engine_commit": engine,
             "model_sha256": model_hash,
         },
     )
+    harness_bundle = request_root / "harness.bundle"
+    engine_bundle = request_root / "engine.bundle"
+    engine_repository = request_root / "engine-repository"
+    if (
+        _git_root(INSTALLED_HARNESS, "rev-parse", "HEAD^{commit}") != harness
+        or _git_root(INSTALLED_HARNESS, "status", "--porcelain")
+    ):
+        raise ValueError("installed root harness differs from the requested candidate")
+    _bundle_root_repository(INSTALLED_HARNESS, harness, harness_bundle)
+    _bundle_clone(ENGINE_REPOSITORY, engine, engine_bundle, engine_repository)
 
-    unit = f"glm52-w1-root-{request_id[:16]}"
-    command = [
-        "/usr/bin/systemd-run",
-        "--wait",
-        "--collect",
-        "--pipe",
-        "--quiet",
-        f"--unit={unit}",
-        "--service-type=exec",
-        "--uid=bmarti44",
-        "--gid=bmarti44",
-        f"--working-directory={REPOSITORY}",
-        "--setenv=HOME=/home/bmarti44",
-        "--setenv=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "--setenv=LANG=C.UTF-8",
-        "--setenv=XDG_RUNTIME_DIR=/run/user/1000",
-        "--setenv=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus",
-        "-p",
-        "KillMode=control-group",
-        "-p",
-        "SendSIGKILL=yes",
-        "-p",
-        "TimeoutStopSec=45s",
-        "-p",
-        "RuntimeMaxSec=12h",
-        "-p",
-        "MemoryAccounting=yes",
-        "-p",
-        "MemoryHigh=72G",
-        "-p",
-        "MemoryMax=76G",
-        "-p",
-        "MemorySwapMax=0",
-        "-p",
-        "OOMPolicy=kill",
-        "-p",
-        "TasksMax=4096",
-        "--",
-        str(REPOSITORY / RUNNER),
-        str(REPOSITORY / "results/glm52-goal"),
-        "W1",
-    ]
-    completed = _run(command, check=False, timeout=12 * 60 * 60 + 120)
-    (request_root / "service.log").write_text(completed.stdout, encoding="utf-8")
-    journal = _journal_identity(unit)
-
-    base = (
-        Path("/home/bmarti44/.local/state")
-        / f"glm52-controller-W1-{harness[:12]}-{engine[:12]}"
+    freeze = request_root / "freeze"
+    campaign = request_root / "campaign"
+    crashlog = request_root / "crashlog"
+    campaign.mkdir(mode=0o770)
+    crashlog.mkdir(mode=0o700)
+    dsv4_identity = pwd.getpwnam(DSV4)
+    os.chown(campaign, 0, dsv4_identity.pw_gid)
+    os.chown(crashlog, dsv4_identity.pw_uid, dsv4_identity.pw_gid)
+    environment = _root_environment(request_root)
+    campaign_program = INSTALLED_HARNESS / "scripts/glm52_w1_affine_campaign.py"
+    freeze_result = _run(
+        [
+            "/usr/bin/python3",
+            str(campaign_program),
+            "freeze",
+            "--engine-source",
+            str(engine_repository),
+            "--engine-candidate-hash",
+            engine,
+            "--model",
+            str(MODEL),
+            "--model-sha256",
+            model_hash,
+            "--freeze-dir",
+            str(freeze),
+        ],
+        check=False,
+        timeout=3600,
+        cwd=INSTALLED_HARNESS,
+        environment=environment,
     )
-    snapshot = request_root / "snapshot"
-    _copy_attempt(base, snapshot)
-    freeze = json.loads((snapshot / "freeze/freeze.json").read_text(encoding="utf-8"))
-    composite = freeze.get("composite_candidate_sha256")
+    (request_root / "freeze.log").write_text(
+        freeze_result.stdout, encoding="utf-8"
+    )
+    if freeze_result.returncode:
+        receipt = {
+            "schema_version": 2,
+            "terminal_state": "FAIL",
+            "service_returncode": freeze_result.returncode,
+            "failure_phase": "freeze",
+            "request_id": request_id,
+        }
+        _canonical_json(request_root / "receipt.json", receipt)
+        _seal(request_root)
+        print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+        return 1
+
+    descriptor = json.loads((freeze / "freeze.json").read_text(encoding="utf-8"))
+    composite = descriptor.get("composite_candidate_sha256")
     if not isinstance(composite, str) or not HASH64.fullmatch(composite):
         raise ValueError("campaign composite hash is absent")
-    manifest = _tree_manifest(snapshot)
+    frozen_harness = Path(descriptor.get("harness_source", "")).resolve()
+    if (
+        not frozen_harness.is_relative_to(request_root / "worktrees")
+        or _git_root(frozen_harness, "rev-parse", "HEAD^{commit}") != harness
+    ):
+        raise ValueError("frozen root harness path or identity is invalid")
+    campaign_program = frozen_harness / "scripts/glm52_w1_affine_campaign.py"
+    drand = request_root / "drand.json"
+    drand_result = _run(
+        [
+            "/usr/bin/curl",
+            "--disable",
+            "--silent",
+            "--show-error",
+            "--fail",
+            "--max-time",
+            "10",
+            "--proto",
+            "=https",
+            "https://api.drand.sh/public/latest",
+        ],
+        check=False,
+        timeout=20,
+    )
+    drand.write_text(drand_result.stdout, encoding="utf-8")
+    if drand_result.returncode:
+        raise RuntimeError("post-freeze public randomness fetch failed")
+
+    run_result = _run(
+        [
+            "/usr/bin/python3",
+            str(campaign_program),
+            "run",
+            "--freeze-dir",
+            str(freeze),
+            "--drand-json",
+            str(drand),
+            "--output",
+            str(campaign),
+        ],
+        check=False,
+        timeout=12 * 60 * 60,
+        cwd=frozen_harness,
+        environment=environment,
+    )
+    (request_root / "campaign.log").write_text(
+        run_result.stdout, encoding="utf-8"
+    )
+    root_gate = frozen_harness / "results/glm52-goal/W1"
+    produced = sorted(root_gate.glob("attempt-*"))
+    if not produced:
+        receipt = {
+            "schema_version": 2,
+            "terminal_state": "FAIL",
+            "service_returncode": run_result.returncode or 1,
+            "failure_phase": "campaign",
+            "request_id": request_id,
+            "composite_candidate_sha256": composite,
+        }
+        _canonical_json(request_root / "receipt.json", receipt)
+        _seal(request_root)
+        print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+        return 1
+
+    controller_attempt = produced[-1]
+    attempt_manifest = _tree_manifest(controller_attempt)
+    authority_pass = run_result.returncode == 0
     receipt = {
-        "schema_version": 1,
-        "authority": "root-owned-glm52-w1-v1",
+        "schema_version": 2,
+        "terminal_state": "PASS" if authority_pass else "FAIL",
+        "service_returncode": run_result.returncode,
+        "campaign_returncode": run_result.returncode,
         "request_id": request_id,
         "harness_commit": harness,
         "engine_commit": engine,
         "model_sha256": model_hash,
         "composite_candidate_sha256": composite,
-        "service_returncode": completed.returncode,
-        "systemd": journal,
-        "snapshot_manifest_sha256": hashlib.sha256(
-            json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest(),
-        "snapshot_files": manifest,
+        "controller_attempt_manifest_sha256": _manifest_sha256(attempt_manifest),
+        "controller_attempt_files": attempt_manifest,
     }
+    by_composite = STATE_ROOT / "by-composite" / composite
+    if authority_pass and by_composite.exists():
+        raise ValueError("composite receipt already exists")
+    destination = _publish_controller_attempt(controller_attempt)
     _canonical_json(request_root / "receipt.json", receipt)
     _seal(request_root)
-    composite_link = STATE_ROOT / "by-composite" / composite
-    composite_link.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if composite_link.exists():
-        raise ValueError("composite receipt already exists")
-    os.link(request_root / "receipt.json", composite_link)
-    os.chmod(composite_link, 0o400)
+    if authority_pass:
+        os.link(request_root / "receipt.json", by_composite)
+        os.chmod(by_composite, 0o444)
+    receipt["controller_attempt"] = str(destination)
+    # The external receipt is immutable; the exported path is informational
+    # and is deliberately not part of its acceptance digest.
     print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
-    return 0 if completed.returncode == 0 else completed.returncode
+    return receipt_exit_code(receipt)
 
 
 def show_status(composite: str) -> int:
@@ -384,18 +640,23 @@ def show_status(composite: str) -> int:
     if not receipt.is_file() or receipt.is_symlink():
         print(json.dumps({"composite_candidate_sha256": composite, "status": "PENDING"}))
         return 3
-    print(receipt.read_text(encoding="utf-8"), end="")
-    return 0
+    value = json.loads(receipt.read_text(encoding="utf-8"))
+    print(json.dumps(value, sort_keys=True, separators=(",", ":")))
+    return receipt_exit_code(value)
 
 
 def main(argv: list[str]) -> int:
     request = parse_request(argv)
     _assert_root()
-    STATE_ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
-    with LOCK.open("a+b") as lock:
+    STATE_ROOT.mkdir(mode=0o755, parents=True, exist_ok=True)
+    (STATE_ROOT / "requests").mkdir(mode=0o711, exist_ok=True)
+    (STATE_ROOT / "by-composite").mkdir(mode=0o755, exist_ok=True)
+    CONTROLLER_ATTEMPTS.mkdir(mode=0o755, exist_ok=True)
+    with LOCK.open("a+b") as lock, INFERENCE_LOCK.open("a+b") as inference:
         os.chmod(LOCK, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
         if request[0] == "run":
+            fcntl.flock(inference, fcntl.LOCK_EX)
             return run_campaign(request[1], request[2], request[3])
         return show_status(request[1])
 

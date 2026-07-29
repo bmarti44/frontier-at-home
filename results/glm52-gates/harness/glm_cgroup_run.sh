@@ -16,10 +16,19 @@ shift 2
 }
 [[ ${1:-} == -- ]] && shift
 (( $# > 0 )) || { echo "missing cgroup command" >&2; exit 2; }
-[[ $(id -u) != 0 && $(id -un) != dsv4 ]] || {
-  echo "cgroup launcher must run as the logged-in benchmark owner" >&2
-  exit 2
-}
+ROOT_AUTHORITY=${GLM_W1_ROOT_AUTHORITY:-0}
+[[ $ROOT_AUTHORITY =~ ^[01]$ ]] || exit 2
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  [[ $(id -u) == 0 ]] || {
+    echo "root W1 authority requires root" >&2
+    exit 2
+  }
+else
+  [[ $(id -u) != 0 && $(id -un) != dsv4 ]] || {
+    echo "cgroup launcher must run as the logged-in benchmark owner" >&2
+    exit 2
+  }
+fi
 RUN_CWD=$(pwd -P)
 [[ $RUN_CWD == /* && $RUN_CWD != *$'\n'* && -x $RUN_CWD ]] || {
   echo "invalid launch working directory" >&2
@@ -69,7 +78,11 @@ high_mib=$((max_mib - 4096))
 }
 
 UNIT="glm52-${TAG//./-}-$$"
-SAFE=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_safe_run.sh
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  SAFE=$(dirname -- "$(readlink -f -- "$0")")/glm_safe_run.sh
+else
+  SAFE=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_safe_run.sh
+fi
 EVIDENCE_EXPORT=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_evidence_export.py
 UNIT_ACTIVE=0
 export_evidence() {
@@ -96,7 +109,11 @@ export_evidence() {
 stop_unit() {
   trap - INT TERM HUP
   if (( UNIT_ACTIVE )); then
-    systemctl --user stop "$UNIT.service" >/dev/null 2>&1 || true
+    if [[ $ROOT_AUTHORITY == 1 ]]; then
+      systemctl stop "$UNIT.service" >/dev/null 2>&1 || true
+    else
+      systemctl --user stop "$UNIT.service" >/dev/null 2>&1 || true
+    fi
   fi
 }
 handle_signal() {
@@ -135,6 +152,7 @@ for name in \
   GLM_SAFE_PROVENANCE_ENV_ALLOWLIST GLM_SAFE_EXPECTED_ENV_SHA256 \
   GLM_SAFE_WITNESS_NONCE \
   GLM_SAFE_WITNESS_ARTIFACT \
+  GLM_W1_ROOT_AUTHORITY GLM_SAFE_CRASH_ROOT \
   GLM_SAFE_VLIMIT_KB GLM_SAFE_KILL_FLOOR_GIB GLM_SAFE_MIN_START_GIB \
   GLM_SAFE_TIMEOUT_S
 do
@@ -143,7 +161,13 @@ do
   fi
 done
 
-if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  contained_command=(
+    /usr/bin/env -i "${env_args[@]}"
+    /usr/bin/flock -n -E 75 /run/dsv4/inference.lock
+    /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
+  )
+elif [[ $RUN_AS_CURRENT_USER == 1 ]]; then
   contained_command=(
     /usr/bin/env -i "${env_args[@]}"
     /usr/bin/flock -n -E 75 "/run/user/$UID/glm52-inference.lock"
@@ -159,25 +183,50 @@ fi
 
 UNIT_ACTIVE=1
 set +e
-systemd-run --user --wait --collect --pipe --quiet \
-  --expand-environment=no \
-  --working-directory="$RUN_CWD" \
-  --unit="$UNIT" --service-type=exec \
-  -p KillMode=control-group \
-  -p SendSIGKILL=yes \
-  -p TimeoutStopSec=45s \
-  -p "RuntimeMaxSec=$((TIMEOUT_S + 60))s" \
-  -p MemoryAccounting=yes \
-  -p "MemoryHigh=${high_mib}M" \
-  -p "MemoryMax=${max_mib}M" \
-  -p MemorySwapMax=0 \
-  -p OOMPolicy=kill \
-  -p TasksMax=4096 \
-  -- "${contained_command[@]}"
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  systemd-run --wait --collect --pipe --quiet \
+    --expand-environment=no \
+    --uid=dsv4 --gid=dsv4 \
+    --working-directory="$RUN_CWD" \
+    --unit="$UNIT" --service-type=exec \
+    -p KillMode=control-group \
+    -p SendSIGKILL=yes \
+    -p TimeoutStopSec=45s \
+    -p "RuntimeMaxSec=$((TIMEOUT_S + 60))s" \
+    -p MemoryAccounting=yes \
+    -p "MemoryHigh=${high_mib}M" \
+    -p "MemoryMax=${max_mib}M" \
+    -p MemorySwapMax=0 \
+    -p OOMPolicy=kill \
+    -p TasksMax=4096 \
+    -p ProtectHome=read-only \
+    -p NoNewPrivileges=yes \
+    -- "${contained_command[@]}"
+else
+  systemd-run --user --wait --collect --pipe --quiet \
+    --expand-environment=no \
+    --working-directory="$RUN_CWD" \
+    --unit="$UNIT" --service-type=exec \
+    -p KillMode=control-group \
+    -p SendSIGKILL=yes \
+    -p TimeoutStopSec=45s \
+    -p "RuntimeMaxSec=$((TIMEOUT_S + 60))s" \
+    -p MemoryAccounting=yes \
+    -p "MemoryHigh=${high_mib}M" \
+    -p "MemoryMax=${max_mib}M" \
+    -p MemorySwapMax=0 \
+    -p OOMPolicy=kill \
+    -p TasksMax=4096 \
+    -- "${contained_command[@]}"
+fi
 command_rc=$?
 set -e
 set +e
-systemctl --user stop "$UNIT.service" >/dev/null 2>&1
+if [[ $ROOT_AUTHORITY == 1 ]]; then
+  systemctl stop "$UNIT.service" >/dev/null 2>&1
+else
+  systemctl --user stop "$UNIT.service" >/dev/null 2>&1
+fi
 set -e
 UNIT_ACTIVE=0
 

@@ -84,13 +84,14 @@ class W1AffineCampaignTests(unittest.TestCase):
                 log.replace("resolved_mode=2 affine_store_rows", "resolved_mode=0 affine_store_rows")
             )
 
-    def test_driver_is_sudo_free_and_keeps_memory_containment(self):
+    def test_driver_supports_root_authority_and_keeps_memory_containment(self):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("glm_cgroup_run.sh", source)
-        self.assertIn('"GLM_SAFE_RUN_AS_CURRENT_USER": "1"', source)
+        self.assertIn('"GLM_SAFE_RUN_AS_CURRENT_USER": "0" if ROOT_AUTHORITY else "1"', source)
+        self.assertIn('"GLM_W1_ROOT_AUTHORITY": "1"', source)
         self.assertIn('"GLM_SAFE_KILL_FLOOR_GIB": "40"', source)
         self.assertIn('"GLM_SAFE_MIN_START_GIB": "110"', source)
-        self.assertIn('"DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock"', source)
+        self.assertIn('"/run/dsv4/ds4-engine.lock"', source)
         self.assertNotIn("sudo", source)
         self.assertNotIn("reboot", source)
 

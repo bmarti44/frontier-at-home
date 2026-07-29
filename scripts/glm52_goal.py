@@ -18,6 +18,7 @@ import json
 import math
 import os
 import re
+import stat
 import statistics
 import subprocess
 import sys
@@ -29,6 +30,8 @@ from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_STATE_DIR = ROOT / "results" / "glm52-goal"
+W1_AUTHORITY_RECEIPT_ROOT = Path("/var/lib/glm52-w1/by-composite")
+W1_AUTHORITY_ATTEMPT_ROOT = Path("/var/lib/glm52-w1/controller-attempts")
 STATUSES = frozenset({"PENDING", "RED_CONFIRMED", "PASS", "FAIL", "NO_RESULT"})
 TERMINAL_STATUSES = frozenset({"PASS", "FAIL", "NO_RESULT"})
 GATE_ORDER = (
@@ -1013,7 +1016,7 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             or witnessed_artifact
             != hashlib.sha256(evidence["quality_tsv"].encode()).hexdigest()
             or not re.fullmatch(r"\d+:\d+:\d+", witnessed_artifact_identity)
-            or witness["uid"] != "1000"
+            or witness["uid"] != "995"
             or witness["user_unit"] != witnessed_unit + ".service"
             or not witness["cgroup"].endswith(
                 f"/{witnessed_unit}.service"
@@ -1560,17 +1563,113 @@ def _verify_w1_journal_authority(record: dict[str, Any]) -> None:
             "_PID": witness.get("pid"),
             "_UID": witness.get("uid"),
             "_SYSTEMD_CGROUP": witness.get("cgroup"),
-            "_SYSTEMD_USER_UNIT": witness.get("user_unit"),
+            "_SYSTEMD_UNIT": witness.get("user_unit"),
             "MESSAGE": witness.get("message"),
         }
         if (
             any(str(row.get(field, "")) != value for field, value in expected.items())
-            or witness.get("uid") != "1000"
+            or witness.get("uid") != "995"
             or not str(witness.get("cgroup", "")).endswith(
                 "/" + str(witness.get("user_unit", ""))
             )
         ):
             raise ValueError("W1 journal witness trusted metadata differs")
+
+
+def _w1_attempt_tree_manifest(attempt: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    total = 0
+    for path in sorted(attempt.rglob("*")):
+        relative = path.relative_to(attempt).as_posix()
+        details = path.lstat()
+        if stat.S_ISLNK(details.st_mode):
+            raise ValueError("W1 controller attempt contains a symlink")
+        if path.is_dir():
+            continue
+        if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
+            raise ValueError("W1 controller attempt contains an unsafe file")
+        total += details.st_size
+        if len(rows) >= 1024 or total > 2 * 1024 * 1024 * 1024:
+            raise ValueError("W1 controller attempt exceeds authority limits")
+        rows.append(
+            {
+                "path": relative,
+                "sha256": _sha256(path),
+                "size": details.st_size,
+            }
+        )
+    return rows
+
+
+def validate_w1_root_receipt(attempt: Path, record: dict[str, Any]) -> None:
+    """Bind W1 acceptance to immutable evidence produced by the root authority."""
+    composite = record.get("composite_candidate_sha256")
+    if not _is_sha256(composite):
+        raise ValueError("W1 root receipt composite is invalid")
+    try:
+        authority_attempt_root = W1_AUTHORITY_ATTEMPT_ROOT.resolve(strict=True)
+        attempt_parent = attempt.parent.resolve(strict=True)
+    except OSError as exc:
+        raise ValueError("W1 root attempt authority is absent") from exc
+    if attempt_parent != authority_attempt_root:
+        raise ValueError("W1 attempt is outside the root authority")
+    authority_root = W1_AUTHORITY_RECEIPT_ROOT.parent
+    receipt_path = W1_AUTHORITY_RECEIPT_ROOT / composite
+    for path in (
+        authority_root,
+        W1_AUTHORITY_ATTEMPT_ROOT,
+        attempt,
+        W1_AUTHORITY_RECEIPT_ROOT,
+        receipt_path,
+    ):
+        try:
+            details = path.lstat()
+        except OSError as exc:
+            raise ValueError("W1 root receipt is absent") from exc
+        if (
+            details.st_uid != 0
+            or details.st_mode & 0o022
+            or stat.S_ISLNK(details.st_mode)
+        ):
+            raise ValueError("W1 root receipt ownership or mode is unsafe")
+    for path in attempt.rglob("*"):
+        details = path.lstat()
+        if details.st_uid != 0 or details.st_mode & 0o022:
+            raise ValueError("W1 attempt evidence ownership or mode is unsafe")
+    receipt = _read_strict_json(receipt_path)
+    _require_exact_keys(
+        receipt,
+        {
+            "schema_version",
+            "terminal_state",
+            "service_returncode",
+            "campaign_returncode",
+            "request_id",
+            "harness_commit",
+            "engine_commit",
+            "model_sha256",
+            "composite_candidate_sha256",
+            "controller_attempt_manifest_sha256",
+            "controller_attempt_files",
+        },
+        "W1 root receipt",
+    )
+    rows = _w1_attempt_tree_manifest(attempt)
+    rows_sha256 = hashlib.sha256(
+        json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    if (
+        receipt["schema_version"] != 2
+        or receipt["terminal_state"] != "PASS"
+        or receipt["service_returncode"] != 0
+        or receipt["harness_commit"] != record.get("harness_candidate_hash")
+        or receipt["engine_commit"] != record.get("engine_candidate_hash")
+        or receipt["model_sha256"] != record.get("model_content_sha256")
+        or receipt["composite_candidate_sha256"] != composite
+        or receipt["controller_attempt_files"] != rows
+        or receipt["controller_attempt_manifest_sha256"] != rows_sha256
+    ):
+        raise ValueError("W1 root receipt does not bind the controller attempt")
 
 
 def validate_record_artifact_bindings(
@@ -2935,6 +3034,9 @@ def registered_scorer_digest(scorer_id: str) -> str:
         validate_source_provenance,
         validate_profile_artifact_bindings,
         validate_record_artifact_bindings,
+        validate_w1_root_receipt,
+        _w1_attempt_tree_manifest,
+        _verify_w1_journal_authority,
         generate_w11_fixture,
         _load_approved_dsv4_profile,
         _read_strict_json,
@@ -3453,7 +3555,9 @@ def validate_profile_artifact_bindings(
         )
 
 
-def validate_attempt(attempt: Path) -> None:
+def validate_attempt(
+    attempt: Path, *, root_authority_pending: bool = False
+) -> None:
     """Validate the mandatory evidence triplet without trusting narration."""
     if attempt.is_symlink():
         raise ValueError("attempt directory must not be a symlink")
@@ -3567,6 +3671,10 @@ def validate_attempt(attempt: Path) -> None:
         if not isinstance(record, dict):
             raise ValueError(f"raw.jsonl line {number} is not an object")
         records.append(record)
+    if manifest["gate"] == "W1" and not root_authority_pending:
+        if len(records) != 1:
+            raise ValueError("W1 root receipt requires one raw record")
+        validate_w1_root_receipt(attempt, records[0])
     validate_record_artifact_bindings(
         manifest["gate"], manifest, records, artifact_paths
     )
@@ -3698,7 +3806,11 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
 
     changed = False
     for name in GATE_ORDER:
-        gate_dir = state_dir / name
+        gate_dir = (
+            W1_AUTHORITY_ATTEMPT_ROOT
+            if name == "W1"
+            else state_dir / name
+        )
         attempts = (
             sorted(
                 (path for path in gate_dir.iterdir() if path.is_dir()),
@@ -3707,12 +3819,24 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
             if gate_dir.is_dir()
             else []
         )
-        relative = [str(path.relative_to(state_dir)) for path in attempts]
+        relative = [
+            (
+                str(path)
+                if name == "W1"
+                else str(path.relative_to(state_dir))
+            )
+            for path in attempts
+        ]
         gate = state["gates"][name]
         if gate["attempts"] != relative:
             gate["attempts"] = relative
             changed = True
         if not attempts:
+            if name == "W1" and gate["status"] in TERMINAL_STATUSES:
+                gate["status"] = "PENDING"
+                gate["reason"] = "awaiting root-authoritative W1 attempt"
+                changed = True
+                continue
             if gate["status"] in TERMINAL_STATUSES:
                 raise GoalError(f"{name}: terminal evidence attempt disappeared")
             continue

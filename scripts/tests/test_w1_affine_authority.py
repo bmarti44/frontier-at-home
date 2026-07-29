@@ -135,7 +135,7 @@ def raw_campaign(goal):
                     "boot_id": "boot",
                     "invocation_id": f"{attempt_index:032x}",
                     "pid": str(8000 + attempt_index),
-                    "uid": "1000",
+                    "uid": "995",
                     "cgroup": f"/user.slice/{unit}.service",
                     "user_unit": f"{unit}.service",
                     "message": message,
@@ -311,9 +311,9 @@ class W1AffineAuthorityTests(unittest.TestCase):
         self.assertTrue(runner.is_file())
         self.assertTrue(runner.stat().st_mode & 0o111)
         source = runner.read_text(encoding="utf-8")
-        self.assertIn("glm52_w1_affine_campaign.py", source)
-        self.assertIn(" freeze ", source)
+        self.assertIn("/usr/local/sbin/glm52-w1-submit", source)
         self.assertIn(" run ", source)
+        self.assertNotIn("glm52_w1_affine_campaign.py", source)
 
     def test_unpersisted_journal_witness_cannot_authorize(self):
         campaign = raw_campaign(self.goal)
