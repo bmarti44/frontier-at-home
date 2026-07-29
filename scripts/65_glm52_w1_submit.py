@@ -37,6 +37,7 @@ HASH40 = re.compile(r"^[0-9a-f]{40}$")
 HASH64 = re.compile(r"^[0-9a-f]{64}$")
 MAX_RECEIPT_FILES = 1024
 MAX_RECEIPT_BYTES = 2 * 1024 * 1024 * 1024
+ACTIVE_REQUEST: dict[str, Any] | None = None
 
 
 def parse_request(argv: list[str]) -> tuple[str, ...]:
@@ -192,6 +193,19 @@ def _assert_docker_closed() -> None:
         raise PermissionError("bmarti44 remains in the root-equivalent docker group")
     if _unit_active("docker.socket") or _unit_active("docker.service"):
         raise PermissionError("root-equivalent Docker service remains active")
+    for process in Path("/proc").glob("[0-9]*"):
+        try:
+            command = (process / "comm").read_text(encoding="utf-8").strip()
+            uid = (
+                (process / "status")
+                .read_text(encoding="utf-8")
+                .split("Uid:", 1)[1]
+                .split()[0]
+            )
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+        if command in {"dockerd", "containerd"} and uid == "0":
+            raise PermissionError("a root container runtime remains active")
     docker_socket = Path("/var/run/docker.sock")
     if docker_socket.exists():
         mode = docker_socket.stat().st_mode
@@ -310,6 +324,58 @@ def _seal(root: Path) -> None:
         os.chmod(path, 0o500 if path.is_dir() else 0o400, follow_symlinks=False)
     os.chown(root, 0, 0)
     os.chmod(root, 0o500)
+
+
+def _quarantine_seal(root: Path) -> None:
+    """Revoke all non-root writes without following attacker-created links."""
+    for path in sorted(root.rglob("*"), reverse=True):
+        details = path.lstat()
+        os.chown(path, 0, 0, follow_symlinks=False)
+        if stat.S_ISLNK(details.st_mode):
+            continue
+        if stat.S_ISDIR(details.st_mode):
+            os.chmod(path, 0o500, follow_symlinks=False)
+        elif stat.S_ISREG(details.st_mode):
+            os.chmod(path, 0o400, follow_symlinks=False)
+        else:
+            os.chmod(path, 0, follow_symlinks=False)
+    os.chown(root, 0, 0)
+    os.chmod(root, 0o500)
+
+
+def _record_failed_active_request(exc: Exception) -> None:
+    active = ACTIVE_REQUEST
+    if active is None:
+        return
+    root = Path(active["root"])
+    receipt_path = root / "receipt.json"
+    if not receipt_path.exists():
+        receipt = {
+            "schema_version": 2,
+            "terminal_state": "FAIL",
+            "service_returncode": 1,
+            "failure_phase": str(active["phase"]),
+            "failure_type": type(exc).__name__,
+            "request_id": str(active["request_id"]),
+        }
+        _canonical_json(receipt_path, receipt)
+    _quarantine_seal(root)
+
+
+def _open_inference_lock():
+    identity = pwd.getpwnam(DSV4)
+    descriptor = os.open(
+        INFERENCE_LOCK,
+        os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
+        0o600,
+    )
+    details = os.fstat(descriptor)
+    if not stat.S_ISREG(details.st_mode):
+        os.close(descriptor)
+        raise PermissionError("inference lock is not a regular file")
+    os.fchown(descriptor, identity.pw_uid, identity.pw_gid)
+    os.fchmod(descriptor, 0o600)
+    return os.fdopen(descriptor, "a+b")
 
 
 def _bundle_clone(
@@ -443,6 +509,7 @@ def _publish_controller_attempt(source: Path) -> Path:
 
 
 def run_campaign(harness: str, engine: str, model_hash: str) -> int:
+    global ACTIVE_REQUEST
     _assert_docker_closed()
     _assert_repository(
         REPOSITORY, harness, reject_untracked=True, required_path=RUNNER
@@ -458,15 +525,37 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     request_id = _request_id(harness, engine, model_hash)
     request_base = STATE_ROOT / "requests" / request_id
     request_base.mkdir(parents=True, mode=0o711, exist_ok=True)
+    os.chown(request_base, 0, 0)
+    os.chmod(request_base, 0o711)
     completed_receipts = sorted(request_base.glob("attempt-*/receipt.json"))
     if completed_receipts:
         latest = json.loads(completed_receipts[-1].read_text(encoding="utf-8"))
-        if receipt_exit_code(latest) == 0:
+        composite = latest.get("composite_candidate_sha256")
+        authority_link = (
+            STATE_ROOT / "by-composite" / composite
+            if isinstance(composite, str) and HASH64.fullmatch(composite)
+            else None
+        )
+        if (
+            receipt_exit_code(latest) == 0
+            and authority_link is not None
+            and authority_link.is_file()
+            and not authority_link.is_symlink()
+            and authority_link.stat().st_ino
+            == completed_receipts[-1].stat().st_ino
+        ):
             print(json.dumps(latest, sort_keys=True, separators=(",", ":")))
             return 0
 
     request_root = _next_attempt_root(request_base)
     request_root.mkdir(mode=0o711)
+    os.chown(request_root, 0, 0)
+    os.chmod(request_root, 0o711)
+    ACTIVE_REQUEST = {
+        "root": str(request_root),
+        "request_id": request_id,
+        "phase": "request-initialization",
+    }
     _canonical_json(
         request_root / "request.json",
         {
@@ -488,13 +577,15 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     _bundle_root_repository(INSTALLED_HARNESS, harness, harness_bundle)
     _bundle_clone(ENGINE_REPOSITORY, engine, engine_bundle, engine_repository)
 
+    ACTIVE_REQUEST["phase"] = "freeze"
     freeze = request_root / "freeze"
     campaign = request_root / "campaign"
     crashlog = request_root / "crashlog"
-    campaign.mkdir(mode=0o770)
+    campaign.mkdir(mode=0o700)
+    os.chown(campaign, 0, 0)
+    os.chmod(campaign, 0o700)
     crashlog.mkdir(mode=0o700)
     dsv4_identity = pwd.getpwnam(DSV4)
-    os.chown(campaign, 0, dsv4_identity.pw_gid)
     os.chown(crashlog, dsv4_identity.pw_uid, dsv4_identity.pw_gid)
     environment = _root_environment(request_root)
     campaign_program = INSTALLED_HARNESS / "scripts/glm52_w1_affine_campaign.py"
@@ -533,6 +624,7 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         _canonical_json(request_root / "receipt.json", receipt)
         _seal(request_root)
         print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+        ACTIVE_REQUEST = None
         return 1
 
     descriptor = json.loads((freeze / "freeze.json").read_text(encoding="utf-8"))
@@ -546,6 +638,7 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     ):
         raise ValueError("frozen root harness path or identity is invalid")
     campaign_program = frozen_harness / "scripts/glm52_w1_affine_campaign.py"
+    ACTIVE_REQUEST["phase"] = "public-randomness"
     drand = request_root / "drand.json"
     drand_result = _run(
         [
@@ -567,6 +660,7 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     if drand_result.returncode:
         raise RuntimeError("post-freeze public randomness fetch failed")
 
+    ACTIVE_REQUEST["phase"] = "campaign"
     run_result = _run(
         [
             "/usr/bin/python3",
@@ -601,9 +695,11 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         _canonical_json(request_root / "receipt.json", receipt)
         _seal(request_root)
         print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+        ACTIVE_REQUEST = None
         return 1
 
     controller_attempt = produced[-1]
+    ACTIVE_REQUEST["phase"] = "publication"
     attempt_manifest = _tree_manifest(controller_attempt)
     authority_pass = run_result.returncode == 0
     receipt = {
@@ -632,6 +728,7 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     # The external receipt is immutable; the exported path is informational
     # and is deliberately not part of its acceptance digest.
     print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+    ACTIVE_REQUEST = None
     return receipt_exit_code(receipt)
 
 
@@ -646,18 +743,25 @@ def show_status(composite: str) -> int:
 
 
 def main(argv: list[str]) -> int:
+    global ACTIVE_REQUEST
     request = parse_request(argv)
     _assert_root()
+    os.umask(0o077)
     STATE_ROOT.mkdir(mode=0o755, parents=True, exist_ok=True)
     (STATE_ROOT / "requests").mkdir(mode=0o711, exist_ok=True)
     (STATE_ROOT / "by-composite").mkdir(mode=0o755, exist_ok=True)
     CONTROLLER_ATTEMPTS.mkdir(mode=0o755, exist_ok=True)
-    with LOCK.open("a+b") as lock, INFERENCE_LOCK.open("a+b") as inference:
+    with LOCK.open("a+b") as lock, _open_inference_lock() as inference:
         os.chmod(LOCK, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
         if request[0] == "run":
             fcntl.flock(inference, fcntl.LOCK_EX)
-            return run_campaign(request[1], request[2], request[3])
+            try:
+                return run_campaign(request[1], request[2], request[3])
+            except Exception as exc:
+                _record_failed_active_request(exc)
+                ACTIVE_REQUEST = None
+                raise
         return show_status(request[1])
 
 

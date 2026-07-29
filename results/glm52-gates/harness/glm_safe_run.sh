@@ -250,7 +250,7 @@ fi
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
 if [[ $ROOT_AUTHORITY == 1 ]]; then
-  MEMORY_GUARD=$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")/scripts/03_memory_guard.py
+  MEMORY_GUARD=$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")")/scripts/03_memory_guard.py
 else
   MEMORY_GUARD=/home/bmarti44/spark-deepseek-v4-flash/scripts/03_memory_guard.py
 fi

@@ -77,8 +77,10 @@ class RootAttestorContractTests(unittest.TestCase):
         )
         self.assertRegex(
             source,
-            r"systemctl disable --now docker\.socket docker\.service",
+            r"systemctl disable --now docker\.socket docker\.service containerd\.service",
         )
+        self.assertIn("/usr/sbin/groupdel docker", source)
+        self.assertIn("/usr/bin/pgrep -x dockerd", source)
         self.assertIn("/usr/sbin/visudo -cf", source)
         self.assertIn("NOPASSWD: /usr/local/sbin/glm52-w1-submit *", source)
         self.assertNotRegex(source, r"NOPASSWD:\\s*ALL")
@@ -114,6 +116,9 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn('"--uid=dsv4"', campaign)
         self.assertIn('"MemoryMax=40G"', campaign)
         self.assertIn('"MemorySwapMax=0"', campaign)
+        self.assertIn('f"RuntimeMaxSec={timeout}s"', campaign)
+        self.assertIn('"TasksMax=4096"', campaign)
+        self.assertIn('"/usr/bin/systemctl", "stop"', campaign)
         self.assertIn('"ProtectHome=read-only"', campaign)
         self.assertIn("_seal_candidate_tree(engine_source)", campaign)
         self.assertIn(
@@ -127,6 +132,46 @@ class RootAttestorContractTests(unittest.TestCase):
             r"/var/lib/glm52-w1/requests/[0-9a-f]{64}/attempt-[0-9]{3}/crashlog",
             safe,
         )
+        self.assertIn(
+            '$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- ',
+            safe,
+        )
+        self.assertTrue(
+            (
+                ROOT
+                / "results/glm52-gates/harness/glm_safe_run.sh"
+            ).resolve().parents[3].joinpath("scripts/03_memory_guard.py").is_file()
+        )
+
+    def test_timed_out_build_still_stops_transient_unit(self):
+        spec = importlib.util.spec_from_file_location(
+            "glm52_campaign_timeout_cleanup",
+            ROOT / "scripts/glm52_w1_affine_campaign.py",
+        )
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        campaign = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(campaign)
+        timeout = __import__("subprocess").TimeoutExpired(["sleep"], 1)
+        stopped = mock.Mock(returncode=0, stdout="")
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            mock.patch.object(campaign, "ROOT_AUTHORITY", True),
+            mock.patch.object(
+                campaign.subprocess,
+                "run",
+                side_effect=[timeout, stopped],
+            ) as run,
+            self.assertRaises(__import__("subprocess").TimeoutExpired),
+        ):
+            campaign._run_checked(
+                ["/usr/bin/sleep", "60"],
+                cwd=Path(temporary),
+                timeout=1,
+                untrusted=True,
+            )
+        cleanup_command = run.call_args_list[1].args[0]
+        self.assertEqual(cleanup_command[:2], ["/usr/bin/systemctl", "stop"])
 
     def test_root_child_does_not_deadlock_on_submitter_inference_lock(self):
         launcher = (
@@ -183,6 +228,48 @@ class RootAttestorContractTests(unittest.TestCase):
         source = SUBMITTER.read_text(encoding="utf-8")
         self.assertIn("authority_pass = run_result.returncode == 0", source)
         self.assertIn("if authority_pass:", source)
+
+    def test_unexpected_failure_gets_a_preserved_failure_receipt(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            submitter.ACTIVE_REQUEST = {
+                "root": str(root),
+                "request_id": "1" * 64,
+                "phase": "public-randomness",
+            }
+            with mock.patch.object(submitter, "_quarantine_seal") as seal:
+                submitter._record_failed_active_request(TimeoutError("fault"))
+            receipt = (root / "receipt.json").read_text(encoding="utf-8")
+            self.assertIn('"terminal_state":"FAIL"', receipt)
+            self.assertIn('"failure_phase":"public-randomness"', receipt)
+            seal.assert_called_once_with(root)
+
+    def test_inference_lock_is_left_usable_by_dsv4(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            lock = Path(temporary) / "inference.lock"
+            with (
+                mock.patch.object(submitter, "INFERENCE_LOCK", lock),
+                mock.patch.object(submitter.os, "fchown") as chown,
+                mock.patch.object(submitter.os, "fchmod") as chmod,
+            ):
+                with submitter._open_inference_lock():
+                    pass
+            chown.assert_called_once()
+            chmod.assert_called_once_with(mock.ANY, 0o600)
+
+    def test_pass_replay_requires_published_authority_inode(self):
+        source = SUBMITTER.read_text(encoding="utf-8")
+        self.assertIn("authority_link.stat().st_ino", source)
+        self.assertIn("completed_receipts[-1].stat().st_ino", source)
+
+    def test_root_campaign_directory_is_not_dsv4_writable(self):
+        source = SUBMITTER.read_text(encoding="utf-8")
+        self.assertIn("campaign.mkdir(mode=0o700)", source)
+        self.assertIn("os.chmod(campaign, 0o700)", source)
+        self.assertNotIn("os.chown(campaign, 0, dsv4_identity.pw_gid)", source)
+        self.assertIn("os.chmod(request_root, 0o711)", source)
 
     def test_evidence_manifest_rejects_symlinks(self):
         submitter = load_submitter()

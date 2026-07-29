@@ -507,20 +507,28 @@ def _run_checked(
 ) -> str:
     run_home = pwd.getpwuid(os.geteuid()).pw_dir
     actual_command = command
+    transient_unit: str | None = None
     if ROOT_AUTHORITY and untrusted:
+        transient_unit = f"glm52-w1-build-{os.getpid()}-{secrets.token_hex(4)}"
         actual_command = [
             "/usr/bin/systemd-run",
             "--wait",
             "--collect",
             "--pipe",
             "--quiet",
-            f"--unit=glm52-w1-build-{os.getpid()}-{secrets.token_hex(4)}",
+            f"--unit={transient_unit}",
             "--service-type=exec",
             "--uid=dsv4",
             "--gid=dsv4",
             f"--working-directory={cwd}",
             "-p",
             "KillMode=control-group",
+            "-p",
+            "SendSIGKILL=yes",
+            "-p",
+            "TimeoutStopSec=15s",
+            "-p",
+            f"RuntimeMaxSec={timeout}s",
             "-p",
             "MemoryAccounting=yes",
             "-p",
@@ -531,6 +539,8 @@ def _run_checked(
             "MemorySwapMax=0",
             "-p",
             "OOMPolicy=kill",
+            "-p",
+            "TasksMax=4096",
             "-p",
             "ProtectHome=read-only",
             "-p",
@@ -543,22 +553,33 @@ def _run_checked(
             "LANG=C.UTF-8",
             *command,
         ]
-    completed = subprocess.run(
-        actual_command,
-        cwd=cwd,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=timeout,
-        check=False,
-        env={
-            "HOME": run_home,
-            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "LANG": "C.UTF-8",
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_CONFIG_GLOBAL": "/dev/null",
-        },
-    )
+    try:
+        completed = subprocess.run(
+            actual_command,
+            cwd=cwd,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=timeout + 30 if transient_unit else timeout,
+            check=False,
+            env={
+                "HOME": run_home,
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG": "C.UTF-8",
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_CONFIG_GLOBAL": "/dev/null",
+            },
+        )
+    finally:
+        if transient_unit is not None:
+            subprocess.run(
+                ["/usr/bin/systemctl", "stop", f"{transient_unit}.service"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=30,
+                check=False,
+            )
     if completed.returncode:
         raise ValueError(
             f"command failed rc={completed.returncode}: {' '.join(command)}\n"

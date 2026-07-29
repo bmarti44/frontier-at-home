@@ -11,7 +11,7 @@ readonly LIBEXEC=/usr/local/libexec/glm52-w1
 readonly HARNESS=/usr/local/libexec/glm52-w1/harness
 readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
-readonly SUBMITTER_SHA256='0aff86eeaf746f755d984de67262247a''5788ee0c58f3765c0898e7e8dfccb51c'
+readonly SUBMITTER_SHA256='64e8f5b97a386cfddecf7508724417b4''1ccb514c390cf275b7bf358e89f815ce'
 
 die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
@@ -78,13 +78,32 @@ harness_head=$(
 # root. Close both paths before installing an authority that claims UID
 # separation. Existing shells retain the old supplementary group, but the
 # stopped socket leaves them no daemon to control; future logins lose the group.
-/usr/bin/systemctl disable --now docker.socket docker.service
+/usr/bin/systemctl disable --now docker.socket docker.service containerd.service
 if /usr/bin/id -nG bmarti44 | /usr/bin/tr ' ' '\n' |
     /usr/bin/grep -qx docker; then
     /usr/sbin/gpasswd -d bmarti44 docker
 fi
-if /usr/bin/systemctl is-active --quiet docker.socket; then
-    die "docker socket remained active"
+if /usr/bin/pgrep -x dockerd >/dev/null 2>&1; then
+    /usr/bin/pkill -TERM -x dockerd
+    for _ in 1 2 3 4 5; do
+        /usr/bin/pgrep -x dockerd >/dev/null 2>&1 || break
+        /usr/bin/sleep 1
+    done
+fi
+if /usr/bin/pgrep -x dockerd >/dev/null 2>&1; then
+    /usr/bin/pkill -KILL -x dockerd
+fi
+if /usr/bin/getent group docker >/dev/null; then
+    /usr/sbin/groupdel docker
+fi
+for unit in docker.socket docker.service containerd.service; do
+    if /usr/bin/systemctl is-active --quiet "$unit"; then
+        die "container runtime remained active: $unit"
+    fi
+done
+if /usr/bin/pgrep -x dockerd >/dev/null 2>&1 ||
+    /usr/bin/pgrep -x containerd >/dev/null 2>&1; then
+    die "container runtime process remained active"
 fi
 if /usr/bin/getent group docker | /usr/bin/cut -d: -f4 |
     /usr/bin/tr ',' '\n' | /usr/bin/grep -qx bmarti44; then
