@@ -1219,6 +1219,37 @@ class FormulaTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.goal.registered_scorer_digest("unknown")
 
+    def test_exact_frozen_w1_scorer_digest_survives_unrelated_updates(self):
+        frozen_candidate = "3879eb01a2a427be76373b847d832738f1f86552"
+        frozen_digest = (
+            "b322d78612d51eb714039c38fe79d512"
+            "1428681610815d7453dbb6e69ad5a1e6"
+        )
+        self.assertTrue(
+            self.goal.scorer_descriptor_matches(
+                "W1",
+                frozen_candidate,
+                "w1.affine-quality.v2",
+                frozen_digest,
+            )
+        )
+        self.assertFalse(
+            self.goal.scorer_descriptor_matches(
+                "W1",
+                "0" * 40,
+                "w1.affine-quality.v2",
+                frozen_digest,
+            )
+        )
+        self.assertFalse(
+            self.goal.scorer_descriptor_matches(
+                "W1",
+                frozen_candidate,
+                "w1.affine-quality.v2",
+                "0" * 64,
+            )
+        )
+
     def test_scorer_identity_changes_with_attempt_validation(self):
         before = self.goal.registered_scorer_digest("w11.context.v1")
         original = self.goal.validate_attempt
