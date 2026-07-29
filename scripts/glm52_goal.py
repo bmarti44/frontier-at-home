@@ -3796,6 +3796,25 @@ def _load_state(state_dir: Path) -> dict[str, Any]:
     return state
 
 
+def _gate_status_from_summary(
+    gate: str, summary: dict[str, Any]
+) -> tuple[str, str | None]:
+    """Map a valid scorer verdict to controller progress without overclaiming."""
+    verdict = summary.get("verdict")
+    reason = summary.get("reason")
+    if (
+        gate == "W1"
+        and summary.get("scorer_id") == "w1.affine-quality.v2"
+        and verdict == "PASS"
+    ):
+        return (
+            "RED_CONFIRMED",
+            "affine fidelity diagnostic passed; real packed storage, memory, "
+            "checkpoint, and retrieval qualification remain unfinished",
+        )
+    return verdict, reason
+
+
 def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
     """Discover immutable attempt directories and ingest fixed verdicts."""
     def attempt_order(path: Path) -> tuple[int, int | str]:
@@ -3851,8 +3870,7 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
                 )
             validate_attempt(latest)
             summary = _read_strict_json(latest / "summary.json")
-            status = summary["verdict"]
-            reason = summary.get("reason")
+            status, reason = _gate_status_from_summary(name, summary)
         except ValueError as exc:
             # The anti-cheating contract makes malformed or unauthoritative
             # evidence a preserved terminal failure. A later, higher-numbered
