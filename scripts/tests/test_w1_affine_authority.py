@@ -315,6 +315,13 @@ class W1AffineAuthorityTests(unittest.TestCase):
         self.assertIn(" run ", source)
         self.assertNotIn("glm52_w1_affine_campaign.py", source)
 
+    def test_root_fixture_is_traversable_but_not_mutable_by_engine(self):
+        source = RUNNER_PATH.read_text(encoding="utf-8")
+        self.assertIn("os.chmod(output, 0o711)", source)
+        self.assertIn("_seal_root_fixture_inputs(manifests)", source)
+        self.assertIn("os.chmod(manifest, 0o444)", source)
+        self.assertIn("os.chmod(manifest.parent, 0o555)", source)
+
     def test_unpersisted_journal_witness_cannot_authorize(self):
         campaign = raw_campaign(self.goal)
         unavailable = subprocess.CompletedProcess(
