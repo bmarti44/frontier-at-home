@@ -24,6 +24,44 @@ def load_provisioner():
 
 
 class RuntimeLockProvisionerTests(unittest.TestCase):
+    def test_existing_legacy_lock_is_opened_without_create(self):
+        """Existing sticky-directory locks must never be opened with O_CREAT."""
+        provisioner = load_provisioner()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            runtime = base / "runtime"
+            legacy = runtime / "inference.lock"
+            current_root = base / "current"
+            current = current_root / "inference.lock"
+            runtime.mkdir()
+            legacy.touch()
+            real_open = provisioner.os.open
+
+            def protected_regular_open(path, flags, *args):
+                if (
+                    Path(path) == legacy
+                    and legacy.exists()
+                    and flags & provisioner.os.O_CREAT
+                ):
+                    raise PermissionError("simulated fs.protected_regular")
+                return real_open(path, flags, *args)
+
+            with (
+                mock.patch.object(provisioner, "RUNTIME", runtime),
+                mock.patch.object(provisioner, "LEGACY", legacy),
+                mock.patch.object(provisioner, "CURRENT_ROOT", current_root),
+                mock.patch.object(provisioner, "CURRENT", current),
+                mock.patch.object(
+                    provisioner.os, "open", side_effect=protected_regular_open
+                ),
+                mock.patch.object(provisioner.os, "fchown"),
+                mock.patch.object(provisioner, "validate_visible_identity"),
+                mock.patch.object(provisioner, "validate_directory_identity"),
+                mock.patch.object(provisioner.os, "geteuid", return_value=0),
+                mock.patch.object(provisioner.sys, "argv", ["provisioner"]),
+            ):
+                self.assertEqual(provisioner.main(), 0)
+
     def test_legacy_holder_blocks_before_current_lock_is_published(self):
         provisioner = load_provisioner()
         with tempfile.TemporaryDirectory() as temporary:
