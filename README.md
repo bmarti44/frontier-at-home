@@ -28,3 +28,50 @@ shared-memory machine from an unrecoverable UMA freeze.
 - [PROTOCOL.md](PROTOCOL.md) defines the frozen evaluation versions.
 - [docs/threat-model.md](docs/threat-model.md) states what the evidence does and does not
   prove.
+
+## Contributing models and optimizations
+
+Read [AGENTS.md](AGENTS.md) before changing an engine, model profile, benchmark,
+or service. It is the working contract for both human and agent contributors.
+
+The short version:
+
+1. Reproduce inherited claims from clean source and independently hashed
+   artifacts.
+2. Write and commit a production-path test, demonstrate RED, then implement the
+   smallest default-off diagnostic arm.
+3. Clean-build only after safely unloading the active large model and recovering
+   at least 110 GiB available memory.
+4. Freeze source/binary/scorer/fixture/configuration hashes, obtain public
+   randomness after the freeze, and run equal-fixture contained arms.
+5. Use fixed scorers and preserve `manifest.json`, `raw.jsonl`, and
+   `summary.json` for every outcome—including failures.
+6. For context qualification, test the largest requested context directly.
+   Smaller prompts are useful fidelity falsifiers, not context-capability
+   evidence.
+7. Never load two large models together. Experimental GLM runs use hard cgroup
+   limits, disabled swap, continuous memory sampling, and an emergency kill
+   floor.
+8. Keep the authenticated endpoint and rollback behavior unchanged; DeepSeek
+   remains the default until another profile passes all quality, safety,
+   direct-1M, switching, and review gates.
+
+The autonomous goal controller is:
+
+```bash
+scripts/glm52_goal.py run
+scripts/glm52_goal.py resume
+scripts/glm52_goal.py status --json
+```
+
+The stable operator interface is:
+
+```bash
+scripts/52_engine_switch.sh status --json
+sudo scripts/52_engine_switch.sh glm52
+sudo scripts/52_engine_switch.sh dsv4
+```
+
+Avoid routine reboots and repeated interactive privilege requests. Use the
+installed delegated controls for exact, identity-verified operations; request
+new authority only when no safe in-scope path exists.
