@@ -57,6 +57,33 @@ result.
 | **DeepSeek V4 Flash** | Apple Silicon; MLX, Metal, or llama.cpp Metal | — | — | — | — | — | — | Open to pull requests. No Apple Silicon profile or repository-qualified measurement has been submitted. |
 | **GLM-5.2** | Apple Silicon; MLX, Metal, or llama.cpp Metal | — | — | — | — | — | — | Open to pull requests. No Apple Silicon profile or repository-qualified measurement has been submitted. Model-specific cache, MoE, and storage-tier implementations are welcome when accompanied by reproducible evidence and safe operating instructions. |
 
+### AMD Strix Halo
+
+Strix Halo combines x86-64 Zen 5 CPU cores, an RDNA 3.5 integrated GPU
+(`gfx1151`) exposed through ROCm/HIP, and an XDNA 2 NPU. Systems are available
+with up to 128 GB of shared LPDDR5X-8000 memory; the 128 GB Ryzen AI Halo
+developer platform specifies 256 GB/s memory bandwidth. See AMD's
+[processor specifications](https://www.amd.com/en/products/processors/desktops/ryzen/ryzen-ai-halo/ryzen-ai-max-plus-395.html)
+and [ROCm system guidance](https://rocm.docs.amd.com/en/latest/how-to/system-optimization/strixhalo.html).
+
+| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| **DeepSeek V4 Flash** | Ryzen AI Max / Max+ (Strix Halo); ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Strix Halo profile or repository-qualified measurement has been submitted. Contributions must record the exact APU, installed memory, kernel, ROCm version, backend, and model format. |
+| **GLM-5.2** | Ryzen AI Max / Max+ (Strix Halo); ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Strix Halo profile or repository-qualified measurement has been submitted. The shared-memory capacity is promising, but model fit, context capacity, fidelity, and throughput remain unproven here. |
+
+### NVIDIA Jetson Thor
+
+Jetson AGX Thor is an ARM64 platform with a Blackwell GPU and the
+CUDA-X/JetPack software stack. The T5000 developer kit has 128 GB of unified
+LPDDR5X memory with 273 GB/s bandwidth, making it a credible contribution target
+for the same large-model fit and context experiments. See NVIDIA's
+[Jetson Thor specifications](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/).
+
+| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| **DeepSeek V4 Flash** | Jetson AGX Thor T5000; ARM64 Blackwell; CUDA/JetPack | — | — | — | — | — | — | Open to pull requests. No Jetson Thor profile or repository-qualified measurement has been submitted. Contributions must state the JetPack/CUDA release, power mode, model format, storage path, and available-memory floor. |
+| **GLM-5.2** | Jetson AGX Thor T5000; ARM64 Blackwell; CUDA/JetPack | — | — | — | — | — | — | Open to pull requests. No Jetson Thor profile or repository-qualified measurement has been submitted. The 128 GB capacity is relevant, but model fit, direct-1M context, fidelity, and sustained performance remain unproven here. |
+
 DeepSeek’s older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
 over upstream llama.cpp on composite accuracy and speed. The product profile
 uses llama.cpp because long context is the priority; the older benchmark remains
@@ -71,10 +98,10 @@ whole-system freeze.
 
 ## Beyond CUDA
 
-Apple Silicon/macOS hardware and model profiles are explicitly open to pull
-requests. The same evidence, largest-context, safety, authentication, switching,
-and rollback expectations apply, adapted to the platform’s memory and service
-controls.
+Apple Silicon/macOS, AMD Strix Halo, and NVIDIA Jetson Thor hardware and model
+profiles are explicitly open to pull requests. The same evidence,
+largest-context, safety, authentication, switching, and rollback expectations
+apply, adapted to each platform's memory and service controls.
 
 Other Linux accelerators and CPU/offload architectures are also in scope. Start
 with a measured baseline and roofline; do not assume that a CUDA-specific
