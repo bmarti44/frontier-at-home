@@ -82,6 +82,31 @@ class RootAttestorContractTests(unittest.TestCase):
                 published_at = 1_595_431_050 + (round_number - 1) * 30
                 self.assertGreater(published_at, frozen_at.timestamp())
 
+    def test_post_freeze_fetch_rejects_duplicate_randomness_keys(self):
+        submitter = load_submitter()
+        frozen_at = datetime.fromtimestamp(
+            1_595_431_050, timezone.utc
+        ).isoformat()
+        payloads = (
+            '{"round":1,"round":2,"randomness":"' + "a" * 64 + '"}',
+            '{"round":2,"round":1,"randomness":"' + "a" * 64 + '"}',
+        )
+        for payload in payloads:
+            with (
+                self.subTest(payload=payload[:30]),
+                mock.patch.object(
+                    submitter,
+                    "_run",
+                    return_value=subprocess.CompletedProcess(
+                        ["curl"], 0, payload, ""
+                    ),
+                ),
+                self.assertRaisesRegex(
+                    RuntimeError, "drand response is invalid"
+                ),
+            ):
+                submitter._fetch_first_post_freeze_drand(frozen_at)
+
     def test_campaign_validates_lineage_before_creating_fixtures_or_running_arms(self):
         source = (
             ROOT / "scripts/glm52_w1_affine_campaign.py"
