@@ -321,6 +321,46 @@ class W1AffineAuthorityTests(unittest.TestCase):
         self.assertIn("_seal_root_fixture_inputs(manifests)", source)
         self.assertIn("os.chmod(manifest, 0o444)", source)
         self.assertIn("os.chmod(manifest.parent, 0o555)", source)
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture_dir = Path(temporary) / "fixtures"
+            fixture_dir.mkdir()
+            manifests = [fixture_dir / f"block-{index}.tsv" for index in range(5)]
+            for manifest in manifests:
+                manifest.write_text("fixture\n", encoding="utf-8")
+            with mock.patch.object(self.runner.os, "chown") as chown:
+                self.runner._seal_root_fixture_inputs(manifests)
+            self.assertEqual(fixture_dir.stat().st_mode & 0o777, 0o555)
+            self.assertTrue(
+                all(manifest.stat().st_mode & 0o777 == 0o444 for manifest in manifests)
+            )
+            self.assertEqual(
+                chown.call_args_list,
+                [mock.call(manifest, 0, 0) for manifest in manifests]
+                + [mock.call(fixture_dir.resolve(), 0, 0)],
+            )
+
+    def test_root_fixture_sealing_rejects_aliases_and_mixed_directories(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first = root / "first"
+            second = root / "second"
+            first.mkdir()
+            second.mkdir()
+            regular = first / "block-0.tsv"
+            regular.write_text("fixture\n", encoding="utf-8")
+            alias = first / "block-1.tsv"
+            alias.symlink_to(regular)
+            with self.assertRaisesRegex(ValueError, "private regular"):
+                self.runner._seal_root_fixture_inputs([alias])
+            alias.unlink()
+            alias.hardlink_to(regular)
+            with self.assertRaisesRegex(ValueError, "private regular"):
+                self.runner._seal_root_fixture_inputs([regular])
+            alias.unlink()
+            other = second / "block-1.tsv"
+            other.write_text("fixture\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "one directory"):
+                self.runner._seal_root_fixture_inputs([regular, other])
 
     def test_unpersisted_journal_witness_cannot_authorize(self):
         campaign = raw_campaign(self.goal)
