@@ -2169,6 +2169,18 @@ class ControllerTests(unittest.TestCase):
             event = json.loads(first.stdout)
             self.assertEqual(event["selected_gate"], "foundation")
 
+    def test_w1_affine_diagnostic_pass_is_only_red_confirmed(self):
+        status, reason = self.goal._gate_status_from_summary(
+            "W1",
+            {
+                "scorer_id": "w1.affine-quality.v2",
+                "verdict": "PASS",
+            },
+        )
+        self.assertEqual(status, "RED_CONFIRMED")
+        self.assertIn("real packed storage", reason)
+        self.assertIn("retrieval", reason)
+
     def test_state_rejects_unknown_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
