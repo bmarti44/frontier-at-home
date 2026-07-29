@@ -88,6 +88,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("upstream_port=8013", installer)
         self.assertIn("configs/tmpfiles/frontier-at-home.conf", installer)
         self.assertIn("systemd-tmpfiles --create", installer)
+        self.assertIn("68_provision_runtime_locks.py", installer)
         self.assertNotIn("readonly PORT=8011", source)
 
     def test_deepseek_readiness_requires_the_exact_1m_context(self):
@@ -171,6 +172,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("systemctl restart dsv4-authhelper.service", source)
         self.assertIn("configs/tmpfiles/frontier-at-home.conf", source)
         self.assertIn("systemd-tmpfiles --create", source)
+        self.assertIn("68_provision_runtime_locks.py", source)
         self.assertIn(
             "systemctl reset-failed deepseek-v4-flash-llamacpp.service "
             "2>/dev/null || true",

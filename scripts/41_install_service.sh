@@ -129,6 +129,7 @@ for source in \
     "$SYSTEMD_DIR/dsv4-guard.timer" \
     "$SYSTEMD_DIR/dsv4-engine-restore.service" \
     "$REPO_ROOT/configs/tmpfiles/frontier-at-home.conf" \
+    "$REPO_ROOT/scripts/68_provision_runtime_locks.py" \
     "$REPO_ROOT/configs/caddy/Caddyfile" \
     "$REPO_ROOT/scripts/40_auth_helper.py" \
     "$REPO_ROOT/scripts/42_verify_exposure.sh"; do
@@ -150,6 +151,11 @@ install_unit "$SYSTEMD_DIR/dsv4-authhelper.service"
 install_unit "$SYSTEMD_DIR/dsv4-caddy.service"
 install_unit "$SYSTEMD_DIR/dsv4-guard.service"
 install_unit "$SYSTEMD_DIR/dsv4-engine-restore.service"
+# Stop known pre-migration holders before the atomic legacy/current bridge.
+systemctl stop \
+    deepseek-v4-flash-ds4.service \
+    deepseek-v4-flash-llamacpp.service 2>/dev/null || true
+/usr/bin/python3 "$REPO_ROOT/scripts/68_provision_runtime_locks.py"
 install -D -o root -g root -m 0644 \
     "$REPO_ROOT/configs/tmpfiles/frontier-at-home.conf" \
     /etc/tmpfiles.d/frontier-at-home.conf

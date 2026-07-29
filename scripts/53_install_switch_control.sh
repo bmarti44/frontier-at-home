@@ -87,6 +87,7 @@ chmod 0640 "$env_tmp"
 install_unit \
     "$REPO/configs/systemd/deepseek-v4-flash-llamacpp.service"
 install_unit "$REPO/configs/systemd/dsv4-engine-restore.service"
+/usr/bin/python3 "$REPO/scripts/68_provision_runtime_locks.py"
 install -D -o root -g root -m 0644 \
     "$REPO/configs/tmpfiles/frontier-at-home.conf" \
     /etc/tmpfiles.d/frontier-at-home.conf
