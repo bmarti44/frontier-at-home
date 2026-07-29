@@ -280,9 +280,18 @@ def _strict_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"), parse_constant=reject_constant)
 
 
+def _trusted_git(source: Path, *arguments: str) -> list[str]:
+    return [
+        "/usr/bin/git",
+        "-c",
+        f"safe.directory={source.resolve()}",
+        *arguments,
+    ]
+
+
 def _source_commit(source: Path) -> str:
     status = subprocess.run(
-        ["/usr/bin/git", "status", "--porcelain", "--untracked-files=no"],
+        _trusted_git(source, "status", "--porcelain", "--untracked-files=no"),
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
@@ -292,7 +301,7 @@ def _source_commit(source: Path) -> str:
     if status.stdout:
         raise ValueError("engine source has tracked modifications")
     commit = subprocess.run(
-        ["/usr/bin/git", "rev-parse", "HEAD"],
+        _trusted_git(source, "rev-parse", "HEAD"),
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
@@ -305,7 +314,7 @@ def _source_commit(source: Path) -> str:
 
 def _commit_time(source: Path, commit: str) -> str:
     raw = subprocess.run(
-        ["/usr/bin/git", "show", "-s", "--format=%cI", commit],
+        _trusted_git(source, "show", "-s", "--format=%cI", commit),
         cwd=source,
         text=True,
         stdout=subprocess.PIPE,
@@ -472,14 +481,18 @@ def _engine_build_descriptor(
     return {
         "schema_version": 1,
         "repository": _command_output(
-            ["/usr/bin/git", "remote", "get-url", "origin"], source
+            _trusted_git(source, "remote", "get-url", "origin"), source
         ),
         "commit": engine_commit,
         "tree": _command_output(
-            ["/usr/bin/git", "rev-parse", f"{engine_commit}^{{tree}}"], source
+            _trusted_git(source, "rev-parse", f"{engine_commit}^{{tree}}"),
+            source,
         ),
         "status_porcelain": _command_output(
-            ["/usr/bin/git", "status", "--porcelain", "--untracked-files=no"], source
+            _trusted_git(
+                source, "status", "--porcelain", "--untracked-files=no"
+            ),
+            source,
         ),
         "build_commands": [
             "make clean",
@@ -703,11 +716,15 @@ def freeze_candidate(args: argparse.Namespace) -> int:
     transcript_path.write_text(build_transcript, encoding="utf-8")
     bundle_path = freeze_dir / "engine.bundle"
     _run_checked(
-        ["/usr/bin/git", "bundle", "create", str(bundle_path), "HEAD"],
+        _trusted_git(
+            engine_source, "bundle", "create", str(bundle_path), "HEAD"
+        ),
         cwd=engine_source,
     )
     bundle_heads = _run_checked(
-        ["/usr/bin/git", "bundle", "list-heads", str(bundle_path)],
+        _trusted_git(
+            engine_source, "bundle", "list-heads", str(bundle_path)
+        ),
         cwd=engine_source,
     )
     if engine_commit not in bundle_heads:
@@ -741,14 +758,17 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         "frozen_at": datetime.now(timezone.utc).isoformat(),
         "harness_candidate_hash": harness_commit,
         "harness_tree": _command_output(
-            ["/usr/bin/git", "rev-parse", f"{harness_commit}^{{tree}}"], ROOT
+            _trusted_git(ROOT, "rev-parse", f"{harness_commit}^{{tree}}"),
+            ROOT,
         ),
         "harness_source": str(harness_source),
         "runner_sha256": sha256_file(runner_path),
         "scorer_sha256": sha256_file(scorer_path),
         "engine_candidate_hash": engine_commit,
         "engine_tree": _command_output(
-            ["/usr/bin/git", "rev-parse", f"{engine_commit}^{{tree}}"],
+            _trusted_git(
+                engine_source, "rev-parse", f"{engine_commit}^{{tree}}"
+            ),
             engine_source,
         ),
         "engine_source": str(engine_source),
