@@ -1,24 +1,49 @@
-# DeepSeek-V4-Flash on a single DGX Spark
+# Frontier at Home
 
-This repository records a frozen comparison of `entrpi/ds4-on-spark` and upstream
-llama.cpp on an NVIDIA GB10 DGX Spark, plus the hardened production service.
+This repository builds reproducible, safe ways to run frontier-level models on
+consumer-accessible hardware. It starts with CUDA on an NVIDIA GB10 DGX Spark
+and with DeepSeek V4 Flash and GLM-5.2, but its scope is deliberately broader:
+additional accelerators, inference architectures, model families, compression
+methods, and storage tiers belong here when they come with honest measurements
+and a dependable operator path.
 
-## Decision and production status
+The goal is not a collection of one-off demos. A contributed profile should be
+something another person can build, qualify at its largest useful context,
+switch to with one command, recover from safely, and audit from preserved raw
+evidence.
 
-The frozen ≤28K benchmark selected **ds4**: composite accuracy 86.03% versus 81.62%,
-with higher measured speed. That result remains the benchmark record in
-[results/DECISION.md](results/DECISION.md).
+## Current CUDA status
 
-Brian made a product override in
-[results/DECISION-OVERRIDE.md](results/DECISION-OVERRIDE.md): **llama.cpp is the
-production engine** because the product roadmap requires contexts approaching 1M tokens,
-while ds4 failed warm requests above roughly 28K on this host. ds4 is parked as the
-faster small-context alternative; its benchmark evidence is unchanged.
+Status below is current as of 2026-07-28.
 
-Production traffic follows `Tailscale Serve → Caddy :8010 → authenticated streaming
-helper :8014 → llama.cpp :8011`. Every listener is loopback-only on the host, Funnel is
-forbidden, the helper strips credentials before the engine, and a watchdog protects the
-shared-memory machine from an unrecoverable UMA freeze.
+| Model | Current result on one DGX Spark |
+| --- | --- |
+| **DeepSeek V4 Flash** | Direct 1M qualification passed with a `1,048,576` cap and `1,000,044` actual prompt tokens. Deterministic retrieval, negative control, completed generation, and resource-safety checks passed with more than 14 GiB available at the measured low point. This is the qualified default profile; it may be intentionally stopped while a contained GLM experiment owns the machine. |
+| **GLM-5.2** | Active qualification. Real production tensors were captured and the F16 cache path passed its initial checks. Block-scaled E4M3 narrowly failed the fixed 100-case confidence bounds and remains a preserved negative result. A lower-error symmetric-int8 cache candidate is now in its frozen paired quality run. GLM has **not** yet passed the direct 1M gate or replaced DeepSeek as the default. |
+
+DeepSeek’s older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
+over upstream llama.cpp on composite accuracy and speed. The product profile
+uses llama.cpp because long context is the priority; the older benchmark remains
+unchanged in [results/DECISION.md](results/DECISION.md), with the rationale in
+[results/DECISION-OVERRIDE.md](results/DECISION-OVERRIDE.md).
+
+Production traffic follows
+`Tailscale Serve → Caddy :8010 → authenticated streaming helper :8014 → llama.cpp :8011`.
+Listeners are loopback-only, Funnel is forbidden, credentials are stripped
+before the engine, and a watchdog protects unified CPU/GPU memory from a
+whole-system freeze.
+
+## Beyond CUDA
+
+Apple Silicon/macOS backends and model profiles are open to pull requests.
+Useful contributions include MLX, Metal, llama.cpp Metal, model-specific cache
+or MoE work, and reproducible qualification on Mac hardware. The same evidence,
+largest-context, safety, authentication, switching, and rollback expectations
+apply, adapted to the platform’s memory and service controls.
+
+Other Linux accelerators and CPU/offload architectures are also in scope. Start
+with a measured baseline and roofline; do not assume that a CUDA-specific
+optimization or DGX Spark memory threshold transfers to another machine.
 
 ## Reproduce and operate
 
