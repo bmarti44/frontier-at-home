@@ -39,6 +39,9 @@ HASH40 = re.compile(r"^[0-9a-f]{40}$")
 HASH64 = re.compile(r"^[0-9a-f]{64}$")
 MAX_RECEIPT_FILES = 1024
 MAX_RECEIPT_BYTES = 2 * 1024 * 1024 * 1024
+MAX_DIAGNOSTIC_JSON_BYTES = 64 * 1024
+ROOT_UID = 0
+ROOT_GID = 0
 ACTIVE_REQUEST: dict[str, Any] | None = None
 
 
@@ -318,23 +321,131 @@ def _manifest_sha256(rows: list[dict[str, object]]) -> str:
     ).hexdigest()
 
 
-def _assert_root_owned(root: Path) -> None:
-    """Require an immutable root-owned request tree without following links."""
-    for path in [root, *sorted(root.rglob("*"))]:
-        details = path.lstat()
-        if stat.S_ISLNK(details.st_mode):
-            raise ValueError("failed campaign is not sealed: symlink present")
-        expected_mode = 0o500 if stat.S_ISDIR(details.st_mode) else 0o400
+def _open_noatime(path: Path, flags: int, *, dir_fd: int | None = None) -> int:
+    return os.open(
+        path if dir_fd is None else path.name,
+        flags | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NOATIME,
+        dir_fd=dir_fd,
+    )
+
+
+def _read_regular_noatime(path: Path, maximum: int) -> bytes:
+    descriptor = _open_noatime(path, os.O_RDONLY)
+    try:
+        details = os.fstat(descriptor)
         if (
-            details.st_uid != 0
-            or details.st_gid != 0
-            or stat.S_IMODE(details.st_mode) != expected_mode
+            not stat.S_ISREG(details.st_mode)
+            or details.st_nlink != 1
+            or details.st_uid != ROOT_UID
+            or details.st_gid != ROOT_GID
+            or stat.S_IMODE(details.st_mode) != 0o400
+            or details.st_size > maximum
+        ):
+            raise ValueError("diagnostic input is unsafe")
+        chunks: list[bytes] = []
+        remaining = maximum + 1
+        while remaining:
+            block = os.read(descriptor, min(remaining, 1024 * 1024))
+            if not block:
+                break
+            chunks.append(block)
+            remaining -= len(block)
+        value = b"".join(chunks)
+        if len(value) > maximum:
+            raise ValueError("diagnostic input is unexpectedly large")
+        return value
+    finally:
+        os.close(descriptor)
+
+
+def _listdir_noatime(path: Path) -> list[str]:
+    descriptor = _open_noatime(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        return sorted(os.listdir(descriptor))
+    finally:
+        os.close(descriptor)
+
+
+def _diagnostic_tree_manifest(root: Path) -> list[dict[str, object]]:
+    """Hash sealed content and metadata without changing access timestamps."""
+    rows: list[dict[str, object]] = []
+    total = 0
+
+    def walk(descriptor: int, relative_root: Path) -> None:
+        nonlocal total
+        for name in sorted(os.listdir(descriptor)):
+            relative = relative_root / name
+            details = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            expected_mode = 0o500 if stat.S_ISDIR(details.st_mode) else 0o400
+            if (
+                stat.S_ISLNK(details.st_mode)
+                or details.st_uid != ROOT_UID
+                or details.st_gid != ROOT_GID
+                or stat.S_IMODE(details.st_mode) != expected_mode
+            ):
+                raise ValueError("failed campaign is not sealed")
+            row: dict[str, object] = {
+                "path": relative.as_posix(),
+                "mode": stat.S_IMODE(details.st_mode),
+                "uid": details.st_uid,
+                "gid": details.st_gid,
+                "inode": details.st_ino,
+                "links": details.st_nlink,
+                "atime_ns": details.st_atime_ns,
+                "mtime_ns": details.st_mtime_ns,
+                "ctime_ns": details.st_ctime_ns,
+                "size": details.st_size,
+            }
+            if stat.S_ISDIR(details.st_mode):
+                child = _open_noatime(
+                    Path(name),
+                    os.O_RDONLY | os.O_DIRECTORY,
+                    dir_fd=descriptor,
+                )
+                try:
+                    row["type"] = "directory"
+                    rows.append(row)
+                    walk(child, relative)
+                finally:
+                    os.close(child)
+                continue
+            if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
+                raise ValueError("failed campaign contains an unsafe file")
+            child = _open_noatime(Path(name), os.O_RDONLY, dir_fd=descriptor)
+            digest = hashlib.sha256()
+            try:
+                opened = os.fstat(child)
+                if (opened.st_dev, opened.st_ino) != (
+                    details.st_dev,
+                    details.st_ino,
+                ):
+                    raise ValueError("failed campaign changed during traversal")
+                while block := os.read(child, 8 * 1024 * 1024):
+                    digest.update(block)
+            finally:
+                os.close(child)
+            total += details.st_size
+            if len(rows) >= MAX_RECEIPT_FILES or total > MAX_RECEIPT_BYTES:
+                raise ValueError("diagnostic file-count or byte limit exceeded")
+            row["type"] = "file"
+            row["sha256"] = digest.hexdigest()
+            rows.append(row)
+
+    root_descriptor = _open_noatime(root, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        root_details = os.fstat(root_descriptor)
+        if (
+            root_details.st_uid != ROOT_UID
+            or root_details.st_gid != ROOT_GID
+            or stat.S_IMODE(root_details.st_mode) != 0o500
         ):
             raise ValueError("failed campaign is not sealed")
-        if not stat.S_ISDIR(details.st_mode) and (
-            not stat.S_ISREG(details.st_mode) or details.st_nlink != 1
-        ):
-            raise ValueError("failed campaign contains an unsafe file")
+        walk(root_descriptor, Path())
+    finally:
+        os.close(root_descriptor)
+    if not rows:
+        raise ValueError("failed campaign is empty")
+    return rows
 
 
 def _seal(root: Path) -> None:
@@ -887,32 +998,76 @@ def diagnose_campaign(composite: str) -> dict[str, object]:
     """Expose the exact error from one immutable failed campaign, read-only."""
     matches: list[tuple[str, Path]] = []
     requests = STATE_ROOT / "requests"
-    for receipt_path in sorted(requests.glob("[0-9a-f]" * 64 + "/attempt-*/receipt.json")):
-        try:
-            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, TypeError):
+    for request_id in _listdir_noatime(requests):
+        if not HASH64.fullmatch(request_id):
             continue
-        if (
-            receipt.get("composite_candidate_sha256") == composite
-            and receipt.get("terminal_state") == "FAIL"
-            and receipt.get("failure_phase") == "campaign"
-        ):
-            matches.append((receipt_path.parents[1].name, receipt_path.parent))
+        request_base = requests / request_id
+        for attempt_name in _listdir_noatime(request_base):
+            if not re.fullmatch(r"attempt-[0-9]{3}", attempt_name):
+                continue
+            request_root = request_base / attempt_name
+            details = request_root.lstat()
+            if (
+                stat.S_ISLNK(details.st_mode)
+                or not stat.S_ISDIR(details.st_mode)
+                or details.st_uid != ROOT_UID
+                or details.st_gid != ROOT_GID
+                or stat.S_IMODE(details.st_mode) != 0o500
+            ):
+                continue
+            try:
+                receipt = json.loads(
+                    _read_regular_noatime(
+                        request_root / "receipt.json",
+                        MAX_DIAGNOSTIC_JSON_BYTES,
+                    ).decode("utf-8")
+                )
+            except (FileNotFoundError, OSError, ValueError, TypeError):
+                continue
+            if (
+                receipt.get("composite_candidate_sha256") == composite
+                and receipt.get("request_id") == request_id
+                and receipt.get("terminal_state") == "FAIL"
+                and receipt.get("failure_phase") == "campaign"
+            ):
+                matches.append((request_id, request_root))
     if len(matches) != 1:
         raise ValueError("exactly one sealed failed campaign was not found")
     request_id, request_root = matches[0]
-    _assert_root_owned(request_root)
-    before = _tree_manifest(request_root)
-    log = request_root / "campaign.log"
-    if log.stat().st_size > 16 * 1024 * 1024:
-        raise ValueError("failed campaign log is unexpectedly large")
-    lines = [line for line in log.read_text(encoding="utf-8").splitlines() if line]
+    before = _diagnostic_tree_manifest(request_root)
+    request = json.loads(
+        _read_regular_noatime(
+            request_root / "request.json",
+            MAX_DIAGNOSTIC_JSON_BYTES,
+        ).decode("utf-8")
+    )
+    freeze = json.loads(
+        _read_regular_noatime(
+            request_root / "freeze" / "freeze.json",
+            MAX_DIAGNOSTIC_JSON_BYTES,
+        ).decode("utf-8")
+    )
+    if (
+        request.get("request_id") != request_id
+        or freeze.get("composite_candidate_sha256") != composite
+    ):
+        raise ValueError("failed campaign identity binding is invalid")
+    lines = [
+        line
+        for line in _read_regular_noatime(
+            request_root / "campaign.log",
+            16 * 1024 * 1024,
+        )
+        .decode("utf-8")
+        .splitlines()
+        if line
+    ]
     if not lines:
         raise ValueError("failed campaign log has no exact error")
     exact_error = lines[-1]
     if len(exact_error.encode("utf-8")) > 4096:
         raise ValueError("failed campaign error is unexpectedly large")
-    after = _tree_manifest(request_root)
+    after = _diagnostic_tree_manifest(request_root)
     if before != after:
         raise ValueError("sealed failed campaign changed during diagnosis")
     return {

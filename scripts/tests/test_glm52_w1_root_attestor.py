@@ -6,6 +6,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import fcntl
+import json
+import os
 import re
 import subprocess
 import tempfile
@@ -77,20 +79,44 @@ class RootAttestorContractTests(unittest.TestCase):
             )
             (attempt / "receipt.json").write_text(
                 '{"composite_candidate_sha256":"' + composite + '",'
+                '"request_id":"' + request_id + '",'
                 '"failure_phase":"campaign","terminal_state":"FAIL"}\n',
                 encoding="utf-8",
             )
-            for path in sorted(attempt.rglob("*"), reverse=True):
+            (attempt / "request.json").write_text(
+                json.dumps({"request_id": request_id}) + "\n",
+                encoding="utf-8",
+            )
+            freeze = attempt / "freeze"
+            freeze.mkdir()
+            (freeze / "freeze.json").write_text(
+                json.dumps({"composite_candidate_sha256": composite}) + "\n",
+                encoding="utf-8",
+            )
+            paths = [attempt, *attempt.rglob("*")]
+            for path in sorted(paths, reverse=True):
                 path.chmod(0o500 if path.is_dir() else 0o400)
-            attempt.chmod(0o500)
+            old_time_ns = 1_700_000_000_000_000_000
+            for path in paths:
+                os.utime(
+                    path,
+                    ns=(old_time_ns, old_time_ns),
+                    follow_symlinks=False,
+                )
+            metadata_before = {
+                path.relative_to(attempt).as_posix(): (
+                    path.lstat().st_atime_ns,
+                    path.lstat().st_mtime_ns,
+                    path.lstat().st_ctime_ns,
+                    path.lstat().st_mode,
+                    path.lstat().st_ino,
+                )
+                for path in paths
+            }
             with (
                 mock.patch.object(submitter, "STATE_ROOT", state),
-                mock.patch.object(
-                    submitter,
-                    "_assert_root_owned",
-                    return_value=None,
-                    create=True,
-                ),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
             ):
                 diagnosis = submitter.diagnose_campaign(composite)
             self.assertEqual(diagnosis["terminal_state"], "NO_RESULT")
@@ -105,6 +131,17 @@ class RootAttestorContractTests(unittest.TestCase):
                 (attempt / "campaign.log").stat().st_mode & 0o777,
                 0o400,
             )
+            metadata_after = {
+                path.relative_to(attempt).as_posix(): (
+                    path.lstat().st_atime_ns,
+                    path.lstat().st_mtime_ns,
+                    path.lstat().st_ctime_ns,
+                    path.lstat().st_mode,
+                    path.lstat().st_ino,
+                )
+                for path in paths
+            }
+            self.assertEqual(metadata_after, metadata_before)
 
     def test_diagnosis_rejects_ambiguous_or_unsealed_campaign(self):
         submitter = load_submitter()
@@ -119,9 +156,61 @@ class RootAttestorContractTests(unittest.TestCase):
                 '"failure_phase":"campaign","terminal_state":"FAIL"}\n',
                 encoding="utf-8",
             )
-            with mock.patch.object(submitter, "STATE_ROOT", state):
-                with self.assertRaisesRegex(ValueError, "sealed"):
+            with (
+                mock.patch.object(submitter, "STATE_ROOT", state),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+            ):
+                with self.assertRaisesRegex(ValueError, "exactly one"):
                     submitter.diagnose_campaign(composite)
+
+    def test_diagnosis_rejects_two_sealed_matching_campaigns(self):
+        submitter = load_submitter()
+        composite = "6" * 64
+        request_id = "7" * 64
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            for number in (1, 2):
+                attempt = (
+                    state
+                    / "requests"
+                    / request_id
+                    / f"attempt-{number:03d}"
+                )
+                (attempt / "freeze").mkdir(parents=True)
+                values = {
+                    "receipt.json": {
+                        "composite_candidate_sha256": composite,
+                        "request_id": request_id,
+                        "failure_phase": "campaign",
+                        "terminal_state": "FAIL",
+                    },
+                    "request.json": {"request_id": request_id},
+                    "freeze/freeze.json": {
+                        "composite_candidate_sha256": composite
+                    },
+                }
+                for relative, value in values.items():
+                    (attempt / relative).write_text(
+                        json.dumps(value) + "\n",
+                        encoding="utf-8",
+                    )
+                (attempt / "campaign.log").write_text(
+                    "exact failure\n",
+                    encoding="utf-8",
+                )
+                for path in sorted(
+                    [attempt, *attempt.rglob("*")],
+                    reverse=True,
+                ):
+                    path.chmod(0o500 if path.is_dir() else 0o400)
+            with (
+                mock.patch.object(submitter, "STATE_ROOT", state),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                self.assertRaisesRegex(ValueError, "exactly one"),
+            ):
+                submitter.diagnose_campaign(composite)
 
     def test_submitter_has_fixed_trust_roots_and_no_shell_escape(self):
         submitter = load_submitter()
