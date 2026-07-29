@@ -255,6 +255,47 @@ class RootAttestorContractTests(unittest.TestCase):
             self.assertIn('"failure_phase":"public-randomness"', receipt)
             seal.assert_called_once_with(root)
 
+    def test_owner_git_streams_bundle_to_root_opened_descriptor(self):
+        submitter = load_submitter()
+        commit = "a" * 40
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = root / "engine.bundle"
+            destination = root / "engine-repository"
+
+            def stream_bundle(argv, **kwargs):
+                self.assertEqual(argv[-4:], ["bundle", "create", "-", "HEAD"])
+                output = kwargs["stdout"]
+                output.write(b"streamed bundle")
+                output.flush()
+                return subprocess.CompletedProcess(argv, 0, None, "")
+
+            def root_git(argv, **_kwargs):
+                stdout = (
+                    f"{commit} HEAD\n"
+                    if argv[1:3] == ["bundle", "list-heads"]
+                    else ""
+                )
+                return subprocess.CompletedProcess(argv, 0, stdout, "")
+
+            with (
+                mock.patch.object(
+                    submitter,
+                    "_git_as_owner",
+                    side_effect=AssertionError(
+                        "owner Git must not create a pathname bundle"
+                    ),
+                ),
+                mock.patch.object(
+                    submitter.subprocess,
+                    "run",
+                    side_effect=stream_bundle,
+                ),
+                mock.patch.object(submitter, "_run", side_effect=root_git),
+            ):
+                submitter._bundle_clone(root, commit, bundle, destination)
+            self.assertEqual(bundle.read_bytes(), b"streamed bundle")
+
     def test_inference_lock_is_left_usable_by_dsv4(self):
         submitter = load_submitter()
         with tempfile.TemporaryDirectory() as temporary:
