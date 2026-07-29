@@ -2170,7 +2170,8 @@ class ControllerTests(unittest.TestCase):
             self.assertEqual(event["selected_gate"], "foundation")
 
     def test_w1_affine_diagnostic_pass_is_only_red_confirmed(self):
-        status, reason = self.goal._gate_status_from_summary(
+        goal = load_goal_module()
+        status, reason = goal._gate_status_from_summary(
             "W1",
             {
                 "scorer_id": "w1.affine-quality.v2",
