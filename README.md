@@ -113,6 +113,22 @@ engine. See Qualcomm's
 | **DeepSeek V4 Flash** | Snapdragon X/X2; ARM64 CPU, Adreno Vulkan/OpenCL, or Qualcomm-native backend | — | — | — | — | — | — | Open to pull requests. No Snapdragon profile or repository-qualified measurement has been submitted. Contributions must report the exact SoC and device, installed and GPU-addressable memory, OS, backend, power mode, and model format. |
 | **GLM-5.2** | Snapdragon X/X2; ARM64 CPU, Adreno Vulkan/OpenCL, or Qualcomm-native backend | — | — | — | — | — | — | Open to pull requests. No Snapdragon profile or repository-qualified measurement has been submitted. The advertised memory ceiling is promising, but shipping configurations, open-engine accelerator access, model fit, direct-1M context, fidelity, and throughput remain unproven here. |
 
+### Tenstorrent Tensix
+
+Tenstorrent sells Blackhole PCIe cards for desktop workstations and the
+four-accelerator QuietBox 2. Its TT-Metalium, TT-NN, and compiler stack are open
+source, making it a useful target for contributors willing to port model
+operators rather than rely on CUDA compatibility. Memory is distributed across
+independent devices, so aggregate capacity is not equivalent to one unified
+address space. See Tenstorrent's
+[Blackhole card overview](https://tenstorrent.com/en/hardware/cards) and
+[QuietBox 2 documentation](https://docs.tenstorrent.com/tt-quietbox2-guide/first-timer/01-what-just-arrived/).
+
+| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| **DeepSeek V4 Flash** | Tenstorrent Blackhole/Wormhole; TT-Metalium, TT-NN, TT-Forge, or vLLM integration | — | — | — | — | — | — | Open to pull requests. No Tenstorrent profile or repository-qualified measurement has been submitted. Contributions must report device count, memory per device, interconnect topology, partitioning, supported operators, and host fallback. |
+| **GLM-5.2** | Tenstorrent Blackhole/Wormhole; TT-Metalium, TT-NN, TT-Forge, or vLLM integration | — | — | — | — | — | — | Open to pull requests. No Tenstorrent profile or repository-qualified measurement has been submitted. Full model fit, routed-MoE operator coverage, direct-1M context, fidelity, and performance remain unproven here. |
+
 DeepSeek’s older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
 over upstream llama.cpp on composite accuracy and speed. The product profile
 uses llama.cpp because long context is the priority; the older benchmark remains
@@ -127,11 +143,11 @@ whole-system freeze.
 
 ## Beyond CUDA
 
-Apple Silicon/macOS, AMD Strix Halo, NVIDIA Jetson Thor, Intel Xe, and Qualcomm
-Snapdragon X hardware and model profiles are explicitly open to pull requests.
-The same evidence, largest-context, safety, authentication, switching, and
-rollback expectations apply, adapted to each platform's memory and service
-controls.
+Apple Silicon/macOS, AMD Strix Halo, NVIDIA Jetson Thor, Intel Xe, Qualcomm
+Snapdragon X, and Tenstorrent Tensix hardware and model profiles are explicitly
+open to pull requests. The same evidence, largest-context, safety,
+authentication, switching, and rollback expectations apply, adapted to each
+platform's memory and service controls.
 
 Other Linux accelerators and CPU/offload architectures are also in scope. Start
 with a measured baseline and roofline; do not assume that a CUDA-specific
