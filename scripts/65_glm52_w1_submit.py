@@ -384,12 +384,27 @@ def _open_one_inference_lock(path: Path, *, stable_parent: bool):
     return os.fdopen(descriptor, "a+b")
 
 
+def _validate_legacy_lock_namespace() -> None:
+    identity = pwd.getpwnam(DSV4)
+    parent = LEGACY_INFERENCE_LOCK.parent.lstat()
+    details = LEGACY_INFERENCE_LOCK.lstat()
+    if (
+        not stat.S_ISDIR(parent.st_mode)
+        or parent.st_uid != 0
+        or parent.st_gid != identity.pw_gid
+        or stat.S_IMODE(parent.st_mode) != 0o1770
+        or stat.S_ISLNK(details.st_mode)
+        or not stat.S_ISREG(details.st_mode)
+        or details.st_uid != 0
+        or details.st_gid != identity.pw_gid
+        or details.st_nlink != 1
+    ):
+        raise PermissionError("legacy inference lock namespace is unsafe")
+
+
 @contextmanager
 def _hold_inference_locks():
-    if LEGACY_INFERENCE_LOCK.exists() or LEGACY_INFERENCE_LOCK.is_symlink():
-        details = LEGACY_INFERENCE_LOCK.lstat()
-        if stat.S_ISLNK(details.st_mode) or not stat.S_ISREG(details.st_mode):
-            raise PermissionError("legacy inference lock path is unsafe")
+    _validate_legacy_lock_namespace()
     with _open_one_inference_lock(
         LEGACY_INFERENCE_LOCK, stable_parent=False
     ) as legacy:

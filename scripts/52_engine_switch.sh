@@ -49,7 +49,7 @@ clean_curl() {
 }
 
 dsv4_launcher() {
-    install -d -o dsv4 -g dsv4 -m 0700 /run/dsv4
+    install -d -o root -g dsv4 -m 1770 /run/dsv4
     /usr/sbin/runuser -u dsv4 -- env -i \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \

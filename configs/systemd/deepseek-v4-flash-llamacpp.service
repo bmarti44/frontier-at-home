@@ -56,9 +56,6 @@ Environment=DSV4_NO_MMAP=1
 # Match the qualified arm and avoid an unmeasured million-token n-gram map.
 Environment=DSV4_SPEC_TYPE=none
 WorkingDirectory=@DSV4_REPO@
-RuntimeDirectory=dsv4
-RuntimeDirectoryMode=0700
-RuntimeDirectoryPreserve=yes
 # This report remains advisory, but preflight failure blocks engine startup;
 # the serve script also enforces its authoritative checks on every start.
 ExecStartPre=@DSV4_REPO@/scripts/00_preflight.sh --out /tmp/preflight-service.json

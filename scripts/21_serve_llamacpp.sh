@@ -735,8 +735,12 @@ do_start() {
     else
         printf 'loopback-unauthenticated; must be fronted by the auth proxy\n' >&2
     fi
-    mkdir -p -- "$RUNTIME_DIR" "$LOG_DIR" || die 'cannot create runtime or log directory'
-    chmod 700 -- "$RUNTIME_DIR" "$LOG_DIR" || die 'cannot secure runtime or log directory'
+    [[ -d $RUNTIME_DIR && ! -L $RUNTIME_DIR ]] ||
+        die 'root-owned runtime directory is absent'
+    [[ $(stat -Lc '%U:%G:%a' -- "$RUNTIME_DIR") == root:dsv4:1770 ]] ||
+        die 'runtime directory ownership or mode is unsafe'
+    mkdir -p -- "$LOG_DIR" || die 'cannot create log directory'
+    chmod 700 -- "$LOG_DIR" || die 'cannot secure log directory'
 
     retry_failed_start=${DSV4_ALLOW_RETRY_AFTER_FAILED_START:-0}
     [[ $retry_failed_start == 0 || $retry_failed_start == 1 ]] \

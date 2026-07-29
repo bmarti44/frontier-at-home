@@ -29,7 +29,7 @@ actual=$(
 [[ ! -e /home/dsv4/ds4-project/engine-switch/glm52.process.json ]] ||
     die "GLM process record exists"
 systemctl is-active --quiet "$UNIT" && die "$UNIT is already active"
-install -d -o dsv4 -g dsv4 -m 0700 /run/dsv4
+install -d -o root -g dsv4 -m 1770 /run/dsv4
 guard_handoff=false
 restore_guard_on_error() {
     "$guard_handoff" || systemctl start dsv4-guard.timer >/dev/null 2>&1 || true

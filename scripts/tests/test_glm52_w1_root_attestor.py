@@ -310,6 +310,10 @@ class RootAttestorContractTests(unittest.TestCase):
                     mock.patch.object(submitter, "INFERENCE_LOCK", current),
                     mock.patch.object(submitter.os, "fchown"),
                     mock.patch.object(submitter.os, "fchmod"),
+                    mock.patch.object(
+                        submitter,
+                        "_validate_legacy_lock_namespace",
+                    ),
                     self.assertRaisesRegex(
                         PermissionError, "pre-migration inference server"
                     ),
@@ -333,6 +337,10 @@ class RootAttestorContractTests(unittest.TestCase):
                 mock.patch.object(submitter, "INFERENCE_LOCK", current),
                 mock.patch.object(submitter.os, "chown"),
                 mock.patch.object(submitter.os, "fchown"),
+                mock.patch.object(
+                    submitter,
+                    "_validate_legacy_lock_namespace",
+                ),
                 submitter._hold_inference_locks(),
             ):
                 for path in (legacy, current):
@@ -345,8 +353,23 @@ class RootAttestorContractTests(unittest.TestCase):
                     )
                     self.assertNotEqual(completed.returncode, 0)
         installer = INSTALLER.read_text(encoding="utf-8")
-        self.assertIn('exec 8>>"$LEGACY_LOCK"', installer)
+        self.assertIn('exec 8<>"$LEGACY_LOCK"', installer)
         self.assertIn("/usr/bin/flock -n -E 75 8", installer)
+
+    def test_installer_converts_legacy_lock_without_following_links(self):
+        installer = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn(
+            "install -d -o root -g dsv4 -m 1770 /run/dsv4",
+            installer,
+        )
+        self.assertIn("d /run/dsv4 1770 root dsv4 -", installer)
+        self.assertIn("'RuntimeDirectory='", installer)
+        self.assertIn("os.O_NOFOLLOW", installer)
+        self.assertIn("opened.st_ino != visible.st_ino", installer)
+        self.assertIn('exec 8<>"$LEGACY_LOCK"', installer)
+        submitter = SUBMITTER.read_text(encoding="utf-8")
+        self.assertIn("stat.S_IMODE(parent.st_mode) != 0o1770", submitter)
+        self.assertIn("details.st_uid != 0", submitter)
 
     def test_nonwritable_lock_directory_blocks_replacement_and_contention(self):
         with tempfile.TemporaryDirectory() as temporary:

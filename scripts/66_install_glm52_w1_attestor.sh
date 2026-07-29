@@ -13,7 +13,7 @@ readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
-readonly SUBMITTER_SHA256='f68f255df31289ec5490cefed2ea3101''c1867ed25f412107a86b554cdbedb6b8'
+readonly SUBMITTER_SHA256='cf7c4b8bc8e035653fe9c9d77b035f56''df38fdbaa43f5d036dba060512f762ac'
 
 die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
@@ -76,18 +76,47 @@ harness_head=$(
 /usr/bin/chmod 0440 "$sudoers_temporary"
 /usr/sbin/visudo -cf "$sudoers_temporary"
 
-# Refuse a live two-inode migration. A pre-update server holds this legacy
-# lock for its entire model lifetime; the new root-owned lock must not be
-# published until that server is gone.
-if [[ -e $LEGACY_LOCK || -L $LEGACY_LOCK ]]; then
-    [[ -f $LEGACY_LOCK && ! -L $LEGACY_LOCK ]] ||
-        die "legacy inference lock path is unsafe"
-fi
-exec 8>>"$LEGACY_LOCK"
-[[ $(/usr/bin/stat -Lc %h "/proc/$$/fd/8") == 1 ]] ||
-    die "legacy inference lock has external hardlinks"
-/usr/bin/chown root:dsv4 "/proc/$$/fd/8"
-/usr/bin/chmod 0660 "/proc/$$/fd/8"
+# Convert the legacy namespace before opening it from shell. O_NOFOLLOW plus
+# descriptor/path identity checks prevent a dsv4-controlled symlink swap; the
+# root-owned sticky directory then makes the root-owned lock nonreplaceable.
+/usr/bin/install -d -o root -g dsv4 -m 1770 /run/dsv4
+/usr/bin/python3 - "$LEGACY_LOCK" <<'PY'
+import fcntl
+import grp
+import os
+import stat
+import sys
+
+path = sys.argv[1]
+descriptor = os.open(
+    path,
+    os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
+    0o660,
+)
+try:
+    opened = os.fstat(descriptor)
+    if not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1:
+        raise SystemExit("legacy inference lock is not a private regular file")
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        raise SystemExit("a pre-migration inference server is still running")
+    os.fchown(descriptor, 0, grp.getgrnam("dsv4").gr_gid)
+    os.fchmod(descriptor, 0o660)
+    opened = os.fstat(descriptor)
+    visible = os.lstat(path)
+    if (
+        stat.S_ISLNK(visible.st_mode)
+        or opened.st_dev != visible.st_dev
+        or opened.st_ino != visible.st_ino
+        or visible.st_uid != 0
+        or visible.st_nlink != 1
+    ):
+        raise SystemExit("legacy inference lock changed during conversion")
+finally:
+    os.close(descriptor)
+PY
+exec 8<>"$LEGACY_LOCK"
 /usr/bin/flock -n -E 75 8 ||
     die "a pre-migration inference server is still running"
 
@@ -133,12 +162,25 @@ fi
 /usr/bin/install -d -o root -g root -m 0755 "$STATE_ROOT/controller-attempts"
 /usr/bin/install -d -o root -g root -m 0755 "$LIBEXEC"
 /usr/bin/printf '%s\n' \
+    'd /run/dsv4 1770 root dsv4 -' \
     'd /run/lock/frontier-at-home 0750 root dsv4 -' \
     'f /run/lock/frontier-at-home/inference.lock 0660 root dsv4 -' \
     >"$harness_temporary/frontier-at-home.conf"
 /usr/bin/install -o root -g root -m 0644 \
     "$harness_temporary/frontier-at-home.conf" "$TMPFILES_RULE"
 /usr/bin/systemd-tmpfiles --create "$TMPFILES_RULE"
+for unit in \
+    deepseek-v4-flash-ds4.service \
+    deepseek-v4-flash-llamacpp.service
+do
+    dropin="/etc/systemd/system/$unit.d"
+    /usr/bin/install -d -o root -g root -m 0755 "$dropin"
+    /usr/bin/printf '%s\n' '[Service]' 'RuntimeDirectory=' \
+        >"$dropin/frontier-runtime.conf"
+    /usr/bin/chown root:root "$dropin/frontier-runtime.conf"
+    /usr/bin/chmod 0644 "$dropin/frontier-runtime.conf"
+done
+/usr/bin/systemctl daemon-reload
 if [[ -e $HARNESS ]]; then
     /usr/bin/mv -- "$HARNESS" "$harness_temporary/previous-harness"
 fi

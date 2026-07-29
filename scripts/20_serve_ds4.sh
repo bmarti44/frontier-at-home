@@ -638,8 +638,12 @@ do_start() {
     [[ -r $BUILD_MANIFEST ]] || die "committed build manifest is missing or unreadable: $BUILD_MANIFEST"
     [[ -r $MANIFEST ]] || die "committed model manifest is missing or unreadable: $MANIFEST"
     [[ -r $MEMBUDGET && -r $MEMWATCH ]] || die 'memory safety scripts are missing or unreadable'
-    mkdir -p -- "$RUNTIME_DIR" "$LOG_DIR" || die 'cannot create runtime or log directory'
-    chmod 700 -- "$RUNTIME_DIR" "$LOG_DIR" || die 'cannot secure runtime or log directory'
+    [[ -d $RUNTIME_DIR && ! -L $RUNTIME_DIR ]] ||
+        die 'root-owned runtime directory is absent'
+    [[ $(stat -Lc '%U:%G:%a' -- "$RUNTIME_DIR") == root:dsv4:1770 ]] ||
+        die 'runtime directory ownership or mode is unsafe'
+    mkdir -p -- "$LOG_DIR" || die 'cannot create log directory'
+    chmod 700 -- "$LOG_DIR" || die 'cannot secure log directory'
 
     if [[ -e $STATE_FILE ]]; then
         read_state
