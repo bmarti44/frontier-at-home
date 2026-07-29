@@ -162,9 +162,10 @@ do
 done
 
 if [[ $ROOT_AUTHORITY == 1 ]]; then
+  # The immutable root submitter owns the global inference lock for the whole
+  # campaign. Re-locking it in this separate process would fail every attempt.
   contained_command=(
     /usr/bin/env -i "${env_args[@]}"
-    /usr/bin/flock -n -E 75 /run/dsv4/inference.lock
     /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
   )
 elif [[ $RUN_AS_CURRENT_USER == 1 ]]; then

@@ -128,6 +128,19 @@ class RootAttestorContractTests(unittest.TestCase):
             safe,
         )
 
+    def test_root_child_does_not_deadlock_on_submitter_inference_lock(self):
+        launcher = (
+            ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+        ).read_text(encoding="utf-8")
+        root_branch = launcher.split(
+            "if [[ $ROOT_AUTHORITY == 1 ]]; then\n"
+            "  # The immutable root submitter owns",
+            1,
+        )[1].split("elif [[ $RUN_AS_CURRENT_USER == 1 ]]", 1)[0]
+        self.assertNotIn("/run/dsv4/inference.lock", root_branch)
+        submitter = SUBMITTER.read_text(encoding="utf-8")
+        self.assertIn("fcntl.flock(inference, fcntl.LOCK_EX)", submitter)
+
     def test_controller_runner_cannot_bypass_root_authority(self):
         runner = RUNNER.read_text(encoding="utf-8")
         self.assertIn("/usr/local/sbin/glm52-w1-submit", runner)
