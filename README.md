@@ -84,6 +84,35 @@ for the same large-model fit and context experiments. See NVIDIA's
 | **DeepSeek V4 Flash** | Jetson AGX Thor T5000; ARM64 Blackwell; CUDA/JetPack | — | — | — | — | — | — | Open to pull requests. No Jetson Thor profile or repository-qualified measurement has been submitted. Contributions must state the JetPack/CUDA release, power mode, model format, storage path, and available-memory floor. |
 | **GLM-5.2** | Jetson AGX Thor T5000; ARM64 Blackwell; CUDA/JetPack | — | — | — | — | — | — | Open to pull requests. No Jetson Thor profile or repository-qualified measurement has been submitted. The 128 GB capacity is relevant, but model fit, direct-1M context, fidelity, and sustained performance remain unproven here. |
 
+### Intel Xe
+
+Intel Arc Pro B-series cards expose Xe Matrix Extensions through oneAPI and
+support Vulkan and OpenCL. The Arc Pro B60 has 24 GB of GDDR6 at 456 GB/s, and
+Intel describes it as multi-GPU Linux ready. That makes affordable multi-card
+systems a credible target, although aggregate capacity, model sharding, and
+backend maturity must be measured rather than assumed. See Intel's
+[Arc Pro B60 specifications](https://www.intel.com/content/www/us/en/products/sku/243916/intel-arc-pro-b60-graphics/specifications.html).
+
+| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| **DeepSeek V4 Flash** | Intel Arc/Xe; oneAPI/Level Zero, SYCL, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Intel Xe profile or repository-qualified measurement has been submitted. Multi-GPU contributions must report per-card VRAM, PCIe topology, host-RAM offload, and whether reported throughput includes inter-device transfers. |
+| **GLM-5.2** | Intel Arc/Xe; oneAPI/Level Zero, SYCL, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Intel Xe profile or repository-qualified measurement has been submitted. Model fit, direct-1M context, fidelity, and performance across multiple cards remain unproven here. |
+
+### Qualcomm Snapdragon X
+
+Snapdragon X2 Elite is an ARM64-compatible system-on-chip with an Adreno GPU,
+Hexagon NPU, and LPDDR5X shared memory. Qualcomm specifies support for up to
+128 GB on X2 Elite and 128+ GB on X2 Elite Extreme, with up to 228 GB/s memory
+bandwidth. Actual installed memory is device-specific, and today the practical
+large-model path may be CPU or Vulkan before the NPU is usable by an open
+engine. See Qualcomm's
+[Snapdragon X2 Elite product brief](https://www.qualcomm.com/content/dam/qcomm-martech/dm-assets/documents/Snapdragon-X2-Elite-Product-Brief.pdf).
+
+| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| **DeepSeek V4 Flash** | Snapdragon X/X2; ARM64 CPU, Adreno Vulkan/OpenCL, or Qualcomm-native backend | — | — | — | — | — | — | Open to pull requests. No Snapdragon profile or repository-qualified measurement has been submitted. Contributions must report the exact SoC and device, installed and GPU-addressable memory, OS, backend, power mode, and model format. |
+| **GLM-5.2** | Snapdragon X/X2; ARM64 CPU, Adreno Vulkan/OpenCL, or Qualcomm-native backend | — | — | — | — | — | — | Open to pull requests. No Snapdragon profile or repository-qualified measurement has been submitted. The advertised memory ceiling is promising, but shipping configurations, open-engine accelerator access, model fit, direct-1M context, fidelity, and throughput remain unproven here. |
+
 DeepSeek’s older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
 over upstream llama.cpp on composite accuracy and speed. The product profile
 uses llama.cpp because long context is the priority; the older benchmark remains
@@ -98,10 +127,11 @@ whole-system freeze.
 
 ## Beyond CUDA
 
-Apple Silicon/macOS, AMD Strix Halo, and NVIDIA Jetson Thor hardware and model
-profiles are explicitly open to pull requests. The same evidence,
-largest-context, safety, authentication, switching, and rollback expectations
-apply, adapted to each platform's memory and service controls.
+Apple Silicon/macOS, AMD Strix Halo, NVIDIA Jetson Thor, Intel Xe, and Qualcomm
+Snapdragon X hardware and model profiles are explicitly open to pull requests.
+The same evidence, largest-context, safety, authentication, switching, and
+rollback expectations apply, adapted to each platform's memory and service
+controls.
 
 Other Linux accelerators and CPU/offload architectures are also in scope. Start
 with a measured baseline and roofline; do not assume that a CUDA-specific
