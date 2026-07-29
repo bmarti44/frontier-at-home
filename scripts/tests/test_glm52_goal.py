@@ -64,9 +64,7 @@ def w11_record(hashes=None):
         "fixture_sha256": "e" * 64,
     }
     stages = []
-    for stage_index, context_cap in enumerate(
-        (131_072, 262_144, 524_288, 1_048_576)
-    ):
+    for stage_index, context_cap in enumerate((1_048_576,)):
         start = stage_index * 2.0
         stages.append(
             {
@@ -78,7 +76,7 @@ def w11_record(hashes=None):
                 "token_timestamps": [
                     start + 0.3 + index / 10 for index in range(8)
                 ],
-                "output_sha256": f"{context_cap // 131072:x}" * 64,
+                "output_sha256": "8" * 64,
                 "finish_reason": "stop",
                 "truncated": False,
             }
@@ -622,10 +620,6 @@ class FormulaTests(unittest.TestCase):
         swap_failure = json.loads(json.dumps(passing))
         swap_failure["memory_samples"][-1]["swap_current_bytes"] = 4096
         fail_mutations.append(swap_failure)
-        fake_graduation = json.loads(json.dumps(passing))
-        for stage in fake_graduation["stages"][:3]:
-            stage["processed_tokens"] = 1
-        fail_mutations.append(fake_graduation)
         for index, mutation in enumerate(fail_mutations):
             with self.subTest(fail_mutation=index):
                 self.assertEqual(
@@ -693,9 +687,14 @@ class FormulaTests(unittest.TestCase):
             )["verdict"],
             "PASS",
         )
+        ladder = w11_record()
+        lower_stage = copy.deepcopy(ladder["stages"][0])
+        lower_stage["context_cap"] = 524_288
+        lower_stage["processed_tokens"] = 524_288
+        ladder["stages"].insert(0, lower_stage)
         with self.assertRaisesRegex(ValueError, "one direct 1M stage"):
             self.goal.score_registered_gate(
-                "W11", "w11.context.v1", [w11_record()]
+                "W11", "w11.context.v1", [ladder]
             )
 
     def test_registered_workstream_scorer_is_fail_closed_for_w1_w10_and_switch(self):
@@ -1939,14 +1938,9 @@ class FormulaTests(unittest.TestCase):
                 "schema_version": 1,
                 "candidate_hash": candidate,
                 "seed_sha256": seed,
-                "generator_version": "w11-fixture.v1",
+                "generator_version": "w11-fixture.v2",
                 "context_cap": 1_048_576,
-                "stage_context_caps": [
-                    131_072,
-                    262_144,
-                    524_288,
-                    1_048_576,
-                ],
+                "stage_context_caps": [1_048_576],
                 "retrieval_cases": [
                     {
                         "case_id": item["case_id"],

@@ -1226,10 +1226,9 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError(f"W11 {field} is invalid")
 
     stages = observation["stages"]
-    expected_caps = [131_072, 262_144, 524_288, 1_048_576]
-    minimum_processed = [130_000, 260_000, 520_000, 1_000_000]
+    expected_caps = [1_048_576]
     if not isinstance(stages, list) or len(stages) != len(expected_caps):
-        raise ValueError("W11 requires exactly four graduated stages")
+        raise ValueError("W11 requires exactly one direct 1M stage")
     processed: list[int] = []
     generations_complete = True
     no_truncation = True
@@ -1414,11 +1413,9 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
     checks = {
         "context_cap": stages[-1]["context_cap"] == 1_048_576,
         "processed_tokens": processed[-1] >= 1_000_000,
-        "graduated_stages": all(
-            actual >= minimum
-            for actual, minimum in zip(processed, minimum_processed)
-        )
-        and all(right > left for left, right in zip(processed, processed[1:])),
+        "direct_one_million_stage": (
+            len(stages) == 1 and stages[0]["context_cap"] == 1_048_576
+        ),
         "retrieval": retrieval_pass,
         "retrieval_position_coverage": position_coverage,
         "negative_control": negative_pass,
@@ -1432,7 +1429,7 @@ def _score_w11(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
     return {
         "scorer_id": "w11.context.v1",
-        "formula_version": 1,
+        "formula_version": 2,
         "measurements": {
             "stage_context_caps": expected_caps,
             "stage_processed_tokens": processed,
@@ -1463,7 +1460,7 @@ def generate_w11_fixture(
     def derived(label: str) -> str:
         return hashlib.sha256(
             (
-                "w11-fixture.v1:"
+                "w11-fixture.v2:"
                 f"{candidate_hash}:{seed_sha256}:{label}"
             ).encode()
         ).hexdigest()
@@ -1491,9 +1488,9 @@ def generate_w11_fixture(
         "schema_version": 1,
         "candidate_hash": candidate_hash,
         "seed_sha256": seed_sha256,
-        "generator_version": "w11-fixture.v1",
+        "generator_version": "w11-fixture.v2",
         "context_cap": 1_048_576,
-        "stage_context_caps": [131_072, 262_144, 524_288, 1_048_576],
+        "stage_context_caps": [1_048_576],
         "retrieval_cases": retrieval_cases,
         "negative_control_cases": [
             {
@@ -1951,11 +1948,11 @@ def validate_record_artifact_bindings(
         raise ValueError("W11 fixture candidate does not match manifest")
     if not _is_sha256(expected_seed) or fixture["seed_sha256"] != expected_seed:
         raise ValueError("W11 fixture seed does not match manifest lineage")
-    if fixture["generator_version"] != "w11-fixture.v1":
+    if fixture["generator_version"] != "w11-fixture.v2":
         raise ValueError("W11 fixture generator is not registered")
-    expected_caps = [131_072, 262_144, 524_288, 1_048_576]
+    expected_caps = [1_048_576]
     if fixture["stage_context_caps"] != expected_caps:
-        raise ValueError("W11 fixture stage graduation is invalid")
+        raise ValueError("W11 fixture direct context plan is invalid")
     generated_fixture = generate_w11_fixture(
         manifest.get("candidate_hash"), expected_seed
     )
