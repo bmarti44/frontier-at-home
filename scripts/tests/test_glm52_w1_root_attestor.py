@@ -73,19 +73,19 @@ class RootAttestorContractTests(unittest.TestCase):
         )
         self.assertRegex(
             source,
-            r"systemctl disable --now docker\\.socket docker\\.service",
+            r"systemctl disable --now docker\.socket docker\.service",
         )
         self.assertIn("/usr/sbin/visudo -cf", source)
         self.assertIn("NOPASSWD: /usr/local/sbin/glm52-w1-submit *", source)
         self.assertNotRegex(source, r"NOPASSWD:\\s*ALL")
         expected = hashlib.sha256(SUBMITTER.read_bytes()).hexdigest()
         match = re.search(
-            r"^readonly SUBMITTER_SHA256='([0-9a-f]{64})'$",
+            r"^readonly SUBMITTER_SHA256='([0-9a-f]{32})''([0-9a-f]{32})'$",
             source,
             re.MULTILINE,
         )
         self.assertIsNotNone(match)
-        self.assertEqual(match.group(1), expected)
+        self.assertEqual("".join(match.groups()), expected)
 
     def test_installer_requires_clean_exact_head(self):
         source = INSTALLER.read_text(encoding="utf-8")
