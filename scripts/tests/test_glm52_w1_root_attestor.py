@@ -253,6 +253,11 @@ class RootAttestorContractTests(unittest.TestCase):
             lock = Path(temporary) / "inference.lock"
             with (
                 mock.patch.object(submitter, "INFERENCE_LOCK", lock),
+                mock.patch.object(
+                    submitter,
+                    "LEGACY_INFERENCE_LOCK",
+                    Path(temporary) / "absent-legacy.lock",
+                ),
                 mock.patch.object(submitter.os, "chown"),
                 mock.patch.object(submitter.os, "fchown") as chown,
                 mock.patch.object(submitter.os, "fchmod") as chmod,
@@ -278,6 +283,35 @@ class RootAttestorContractTests(unittest.TestCase):
             installer,
         )
         self.assertIn("os.fchown(descriptor, 0, identity.pw_gid)", submitter)
+        self.assertIn(
+            'LEGACY_INFERENCE_LOCK = Path("/run/dsv4/inference.lock")',
+            submitter,
+        )
+        self.assertIn(
+            "a pre-migration inference server is still running",
+            installer,
+        )
+
+    def test_held_legacy_lock_fails_before_new_lock_creation(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            legacy = base / "legacy.lock"
+            current = base / "current" / "inference.lock"
+            legacy.touch()
+            with legacy.open("a+b") as held:
+                fcntl.flock(held, fcntl.LOCK_EX)
+                with (
+                    mock.patch.object(
+                        submitter, "LEGACY_INFERENCE_LOCK", legacy
+                    ),
+                    mock.patch.object(submitter, "INFERENCE_LOCK", current),
+                    self.assertRaisesRegex(
+                        PermissionError, "pre-migration inference server"
+                    ),
+                ):
+                    submitter._open_inference_lock()
+            self.assertFalse(current.exists())
 
     def test_nonwritable_lock_directory_blocks_replacement_and_contention(self):
         with tempfile.TemporaryDirectory() as temporary:

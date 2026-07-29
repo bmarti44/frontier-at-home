@@ -28,6 +28,7 @@ CONTROLLER_ATTEMPTS = STATE_ROOT / "controller-attempts"
 INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
+LEGACY_INFERENCE_LOCK = Path("/run/dsv4/inference.lock")
 RUNNER = Path("scripts/glm52-runners/W1")
 PROFILE = Path("configs/glm52-profile.json")
 OWNER = "bmarti44"
@@ -362,6 +363,26 @@ def _record_failed_active_request(exc: Exception) -> None:
 
 
 def _open_inference_lock():
+    if LEGACY_INFERENCE_LOCK.exists() or LEGACY_INFERENCE_LOCK.is_symlink():
+        details = LEGACY_INFERENCE_LOCK.lstat()
+        if stat.S_ISLNK(details.st_mode) or not stat.S_ISREG(details.st_mode):
+            raise PermissionError("legacy inference lock path is unsafe")
+        legacy_descriptor = os.open(
+            LEGACY_INFERENCE_LOCK,
+            os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW,
+        )
+        try:
+            try:
+                fcntl.flock(
+                    legacy_descriptor,
+                    fcntl.LOCK_EX | fcntl.LOCK_NB,
+                )
+            except BlockingIOError as exc:
+                raise PermissionError(
+                    "a pre-migration inference server still holds the legacy lock"
+                ) from exc
+        finally:
+            os.close(legacy_descriptor)
     identity = pwd.getpwnam(DSV4)
     lock_root = INFERENCE_LOCK.parent
     lock_root.mkdir(mode=0o750, parents=True, exist_ok=True)

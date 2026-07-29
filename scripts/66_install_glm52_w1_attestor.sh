@@ -12,7 +12,8 @@ readonly HARNESS=/usr/local/libexec/glm52-w1/harness
 readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
-readonly SUBMITTER_SHA256='ad15c685148dab5eaf7388809146c244''7411014469413db952aece5a95a65cf0'
+readonly LEGACY_LOCK=/run/dsv4/inference.lock
+readonly SUBMITTER_SHA256='d74477bae79cc28776f1a40ca02177c2''c0f6849fc02821f1504d251a4b4d7b07'
 
 die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
@@ -74,6 +75,16 @@ harness_head=$(
 /usr/bin/chown root:root "$sudoers_temporary"
 /usr/bin/chmod 0440 "$sudoers_temporary"
 /usr/sbin/visudo -cf "$sudoers_temporary"
+
+# Refuse a live two-inode migration. A pre-update server holds this legacy
+# lock for its entire model lifetime; the new root-owned lock must not be
+# published until that server is gone.
+if [[ -e $LEGACY_LOCK || -L $LEGACY_LOCK ]]; then
+    [[ -f $LEGACY_LOCK && ! -L $LEGACY_LOCK ]] ||
+        die "legacy inference lock path is unsafe"
+    /usr/bin/flock -n -E 75 "$LEGACY_LOCK" -c true ||
+        die "a pre-migration inference server is still running"
+fi
 
 # Membership in docker plus an active socket is equivalent to unrestricted
 # root. Close both paths before installing an authority that claims UID
