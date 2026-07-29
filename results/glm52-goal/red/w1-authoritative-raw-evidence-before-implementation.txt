@@ -1,0 +1,18 @@
+Command:
+python3 -m unittest scripts.tests.test_w1_affine_authority
+
+Frozen candidate:
+43e7a78
+
+Reviewer reproductions independently confirmed:
+
+- A fully synthetic legacy campaign returns PASS without process artifacts.
+- `w1.affine-quality.v2` is not registered.
+- A fabricated drand record is accepted.
+- Cached model identity is not revalidated.
+- No controller `manifest.json` or hash-bound evidence finalization exists.
+
+Result:
+FAILED (failures=3, errors=1)
+
+Captured before the authoritative raw-evidence implementation.
