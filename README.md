@@ -14,12 +14,12 @@ evidence.
 
 ## Current CUDA status
 
-Status below is current as of 2026-07-28.
+Status below is current as of 2026-07-29.
 
 | Model | Current result on one DGX Spark |
 | --- | --- |
 | **DeepSeek V4 Flash** | Direct 1M qualification passed with a `1,048,576` cap and `1,000,044` actual prompt tokens. Deterministic retrieval, negative control, completed generation, and resource-safety checks passed with more than 14 GiB available at the measured low point. This is the qualified default profile; it may be intentionally stopped while a contained GLM experiment owns the machine. |
-| **GLM-5.2** | Active qualification. Real production tensors were captured and the F16 cache path passed its initial checks. Block-scaled E4M3 narrowly failed the fixed 100-case confidence bounds and remains a preserved negative result. A lower-error symmetric-int8 cache candidate is now in its frozen paired quality run. GLM has **not** yet passed the direct 1M gate or replaced DeepSeek as the default. |
+| **GLM-5.2** | Active qualification. Real production tensors were captured and the F16 cache path passed its initial checks. Block-scaled E4M3 and symmetric-int8 both failed the fixed 100-case confidence bounds and remain preserved negative results. Affine-int8 looked better offline, but its first integrated run was invalidated because the default-off binary changed baseline output; a clean default-path identity repair is now gated against the trusted parent before any new quality run. GLM has **not** yet passed the direct 1M gate or replaced DeepSeek as the default. |
 
 DeepSeek’s older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
 over upstream llama.cpp on composite accuracy and speed. The product profile
