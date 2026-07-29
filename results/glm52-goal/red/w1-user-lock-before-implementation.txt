@@ -1,0 +1,17 @@
+Command:
+python3 -m unittest scripts.tests.test_glm52_w1_affine_campaign.W1AffineCampaignTests.test_driver_is_sudo_free_and_keeps_memory_containment
+
+Unchanged candidate:
+a5d5ade65cc133a487bee3401e50b29c6aeb32c3
+
+Observed failed attempt:
+/home/bmarti44/.local/state/glm52-confirm-w1-affine-23671c629dde-68ed773974ab
+
+Result:
+FAIL: test_driver_is_sudo_free_and_keeps_memory_containment
+AssertionError: current-user DS4_LOCK_FILE is absent
+
+Production symptom:
+ds4: failed to open lock file /tmp/ds4.lock: Permission denied
+
+Captured before binding the current-user engine lock.

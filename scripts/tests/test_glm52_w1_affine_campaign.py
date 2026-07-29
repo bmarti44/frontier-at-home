@@ -90,6 +90,7 @@ class W1AffineCampaignTests(unittest.TestCase):
         self.assertIn('"GLM_SAFE_RUN_AS_CURRENT_USER": "1"', source)
         self.assertIn('"GLM_SAFE_KILL_FLOOR_GIB": "40"', source)
         self.assertIn('"GLM_SAFE_MIN_START_GIB": "110"', source)
+        self.assertIn('"DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock"', source)
         self.assertNotIn("sudo", source)
         self.assertNotIn("reboot", source)
 
