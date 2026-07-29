@@ -448,10 +448,51 @@ def _bundle_clone(
     bundle: Path,
     destination: Path,
 ) -> None:
-    bundle.touch(mode=0o600, exist_ok=False)
-    os.chown(bundle, OWNER_UID, pwd.getpwnam(OWNER).pw_gid)
-    _git_as_owner(repository, "bundle", "create", str(bundle), "HEAD")
-    os.chown(bundle, 0, 0)
+    owner_git = [
+        "/usr/sbin/runuser",
+        "-u",
+        OWNER,
+        "--",
+        "/usr/bin/env",
+        "-i",
+        "HOME=/nonexistent",
+        "PATH=/usr/bin:/bin",
+        "LANG=C.UTF-8",
+        "GIT_CONFIG_NOSYSTEM=1",
+        "GIT_CONFIG_GLOBAL=/dev/null",
+        "/usr/bin/git",
+        "-c",
+        "core.fsmonitor=false",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "-C",
+        str(repository),
+        "bundle",
+        "create",
+        "-",
+        "HEAD",
+    ]
+    try:
+        with bundle.open("xb") as output:
+            completed = subprocess.run(
+                owner_git,
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=300,
+                check=False,
+            )
+            output.flush()
+            os.fsync(output.fileno())
+        if completed.returncode:
+            raise RuntimeError(
+                f"command failed ({completed.returncode}): {owner_git[0]}\n"
+                f"{completed.stderr[-4000:]}"
+            )
+    except Exception:
+        bundle.unlink(missing_ok=True)
+        raise
     os.chmod(bundle, 0o400)
     heads = _run(
         ["/usr/bin/git", "bundle", "list-heads", str(bundle)]
