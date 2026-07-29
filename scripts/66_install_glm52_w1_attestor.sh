@@ -134,7 +134,7 @@ exec 8<>"$LEGACY_LOCK"
 /usr/bin/systemctl disable --now docker.socket docker.service containerd.service
 if /usr/bin/id -nG bmarti44 | /usr/bin/tr ' ' '\n' |
     /usr/bin/grep -qx docker; then
-    /usr/sbin/gpasswd -d bmarti44 docker
+    /usr/bin/gpasswd -d bmarti44 docker
 fi
 if /usr/bin/pgrep -x dockerd >/dev/null 2>&1; then
     /usr/bin/pkill -TERM -x dockerd
