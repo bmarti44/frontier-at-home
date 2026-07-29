@@ -1205,14 +1205,20 @@ def _finalize_controller_attempt(
     _write_canonical_json(staging / "manifest.json", manifest)
     goal.validate_attempt(staging, root_authority_pending=ROOT_AUTHORITY)
 
-    gate_dir = ROOT / "results/glm52-goal/W1"
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    existing_numbers = [
-        int(path.name.removeprefix("attempt-"))
-        for path in gate_dir.glob("attempt-*")
-        if path.is_dir() and path.name.removeprefix("attempt-").isdigit()
-    ]
-    destination = gate_dir / f"attempt-{max(existing_numbers, default=0) + 1:03d}"
+    if ROOT_AUTHORITY:
+        destination = output / "controller-attempt-final"
+    else:
+        gate_dir = ROOT / "results/glm52-goal/W1"
+        gate_dir.mkdir(parents=True, exist_ok=True)
+        existing_numbers = [
+            int(path.name.removeprefix("attempt-"))
+            for path in gate_dir.glob("attempt-*")
+            if path.is_dir() and path.name.removeprefix("attempt-").isdigit()
+        ]
+        destination = (
+            gate_dir
+            / f"attempt-{max(existing_numbers, default=0) + 1:03d}"
+        )
     if destination.exists():
         raise ValueError("controller attempt destination already exists")
     os.replace(staging, destination)

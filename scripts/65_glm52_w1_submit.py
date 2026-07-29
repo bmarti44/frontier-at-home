@@ -613,28 +613,21 @@ def _publish_controller_attempt(source: Path) -> Path:
     return destination
 
 
-def _controller_attempt_names(gate: Path) -> frozenset[str]:
-    if not gate.is_dir():
-        return frozenset()
-    return frozenset(
-        path.name
-        for path in gate.iterdir()
-        if path.is_dir()
-        and path.name.startswith("attempt-")
-        and path.name.removeprefix("attempt-").isdigit()
-    )
-
-
-def _select_fresh_controller_attempt(
-    gate: Path, before: frozenset[str]
-) -> Path:
-    after = _controller_attempt_names(gate)
-    fresh = sorted(after - before)
-    if len(fresh) != 1:
-        raise ValueError(
-            "campaign did not produce exactly one fresh controller attempt"
-        )
-    return gate / fresh[0]
+def _select_campaign_controller_attempt(output: Path) -> Path:
+    attempt = output / "controller-attempt-final"
+    try:
+        details = attempt.lstat()
+    except FileNotFoundError as exc:
+        raise ValueError("exact campaign attempt is absent") from exc
+    if (
+        stat.S_ISLNK(details.st_mode)
+        or not stat.S_ISDIR(details.st_mode)
+        or details.st_uid != 0
+        or details.st_gid != 0
+        or stat.S_IMODE(details.st_mode) != 0o700
+    ):
+        raise ValueError("exact campaign attempt is unsafe")
+    return attempt
 
 
 def run_campaign(harness: str, engine: str, model_hash: str) -> int:
@@ -790,8 +783,6 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         raise RuntimeError("post-freeze public randomness fetch failed")
 
     ACTIVE_REQUEST["phase"] = "campaign"
-    root_gate = frozen_harness / "results/glm52-goal/W1"
-    attempts_before = _controller_attempt_names(root_gate)
     run_result = _run(
         [
             "/usr/bin/python3",
@@ -813,9 +804,7 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         run_result.stdout, encoding="utf-8"
     )
     try:
-        controller_attempt = _select_fresh_controller_attempt(
-            root_gate, attempts_before
-        )
+        controller_attempt = _select_campaign_controller_attempt(campaign)
     except ValueError:
         receipt = {
             "schema_version": 2,
