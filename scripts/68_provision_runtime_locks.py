@@ -76,11 +76,18 @@ def validate_visible_identity(path: Path, descriptor: int, gid: int) -> None:
 
 
 def open_private(path: Path, gid: int) -> int:
-    descriptor = os.open(
-        path,
-        os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
-        0o600,
-    )
+    flags = os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except FileNotFoundError:
+        try:
+            descriptor = os.open(
+                path,
+                flags | os.O_CREAT | os.O_EXCL,
+                0o600,
+            )
+        except FileExistsError:
+            descriptor = os.open(path, flags)
     details = os.fstat(descriptor)
     if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
         os.close(descriptor)

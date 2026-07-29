@@ -88,11 +88,18 @@ import stat
 import sys
 
 path = sys.argv[1]
-descriptor = os.open(
-    path,
-    os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
-    0o660,
-)
+flags = os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW
+try:
+    descriptor = os.open(path, flags)
+except FileNotFoundError:
+    try:
+        descriptor = os.open(
+            path,
+            flags | os.O_CREAT | os.O_EXCL,
+            0o660,
+        )
+    except FileExistsError:
+        descriptor = os.open(path, flags)
 try:
     opened = os.fstat(descriptor)
     if not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1:
