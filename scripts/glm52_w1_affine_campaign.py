@@ -25,6 +25,7 @@ MASTER_MANIFEST = Path(
     "gguf-tools/quality-testing/data/glm52-openrouter-100/manifest.tsv"
 )
 COMMON_ENGINE_ENVIRONMENT = {
+    "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
     "DS4_CUDA_EXPERT_CACHE_GB": "0",
     "DS4_CUDA_EXPERT_CACHE_PIN": "1",
     "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
@@ -37,6 +38,14 @@ FIDELITY_ENVIRONMENT_NAMES = (
     "DS4_GLM_COMPACT_CACHE_E4M3_FAKE",
     "DS4_GLM_COMPACT_CACHE_F16",
     "DS4_GLM_COMPACT_CACHE_INT8_FAKE",
+)
+FORWARDED_ENGINE_ENVIRONMENT_NAMES = (
+    "GLM_EXPERT_CACHE_GB",
+    "GLM_PORT",
+    "GLM_REQUIRE_TOKEN_TIMING_LOG",
+    "DS4_CUDA_IQ2_DOWN_REFERENCE",
+    *COMMON_ENGINE_ENVIRONMENT,
+    *FIDELITY_ENVIRONMENT_NAMES,
 )
 PROVENANCE_NAMES = tuple(
     sorted((*COMMON_ENGINE_ENVIRONMENT, *FIDELITY_ENVIRONMENT_NAMES))
@@ -524,7 +533,7 @@ def run(args: argparse.Namespace) -> int:
         if result_path.exists():
             raise ValueError(f"stale attempt output exists: {result_path}")
         environment = os.environ.copy()
-        for name in FIDELITY_ENVIRONMENT_NAMES:
+        for name in FORWARDED_ENGINE_ENVIRONMENT_NAMES:
             environment.pop(name, None)
         environment.update(SAFE_ENVIRONMENT)
         environment.update(engine_environment)
