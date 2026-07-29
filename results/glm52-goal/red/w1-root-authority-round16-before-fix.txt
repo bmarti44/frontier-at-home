@@ -1,0 +1,14 @@
+Candidate reviewed:
+  ab93cb4c9356ba72b47ab0c98e8a560cad274876
+
+Verified Round 16 failures:
+  - root executed the mutable UID1000 runner and copied UID1000 evidence;
+  - the registered controller runner bypassed the root submitter;
+  - privileged copytree followed attacker-controlled symlinks;
+  - a cached failed receipt replayed with exit status zero.
+
+Acceptance command:
+  python3 -m unittest scripts.tests.test_glm52_w1_root_attestor
+
+Expected RED on ab93cb4:
+  controller/root-authority, no-user-tree, and failed-replay tests fail.

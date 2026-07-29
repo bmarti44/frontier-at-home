@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SUBMITTER = ROOT / "scripts" / "65_glm52_w1_submit.py"
 INSTALLER = ROOT / "scripts" / "66_install_glm52_w1_attestor.sh"
+RUNNER = ROOT / "scripts" / "glm52-runners" / "W1"
+CONTROLLER = ROOT / "scripts" / "glm52_goal.py"
 
 
 def load_submitter():
@@ -99,6 +101,41 @@ class RootAttestorContractTests(unittest.TestCase):
         ):
             with self.subTest(required=required):
                 self.assertIn(required, source)
+
+    def test_controller_runner_cannot_bypass_root_authority(self):
+        runner = RUNNER.read_text(encoding="utf-8")
+        self.assertIn("/usr/local/sbin/glm52-w1-submit", runner)
+        self.assertNotIn('python3 "$CAMPAIGN" run', runner)
+        controller = CONTROLLER.read_text(encoding="utf-8")
+        self.assertIn("validate_w1_root_receipt", controller)
+        self.assertIn("/var/lib/glm52-w1/by-composite", controller)
+
+    def test_submitter_does_not_ingest_user_campaign_trees(self):
+        source = SUBMITTER.read_text(encoding="utf-8")
+        self.assertNotIn("shutil.copytree", source)
+        self.assertNotIn("/home/bmarti44/.local/state", source)
+        self.assertNotIn("--uid=bmarti44", source)
+        self.assertIn("--uid=dsv4", source)
+        self.assertIn("MemorySwapMax=0", source)
+        self.assertIn("OOMPolicy=kill", source)
+
+    def test_failed_receipt_replay_stays_failed(self):
+        submitter = load_submitter()
+        self.assertTrue(hasattr(submitter, "receipt_exit_code"))
+        self.assertEqual(
+            submitter.receipt_exit_code(
+                {"terminal_state": "PASS", "service_returncode": 0}
+            ),
+            0,
+        )
+        for receipt in (
+            {"terminal_state": "FAIL", "service_returncode": 0},
+            {"terminal_state": "PASS", "service_returncode": 137},
+            {"terminal_state": "INCOMPLETE", "service_returncode": 0},
+            {},
+        ):
+            with self.subTest(receipt=receipt):
+                self.assertNotEqual(submitter.receipt_exit_code(receipt), 0)
 
 
 if __name__ == "__main__":
