@@ -497,6 +497,21 @@ def _write_manifests(source: Path, output: Path, seed: str) -> list[Path]:
     return manifests
 
 
+def _seal_root_fixture_inputs(manifests: list[Path]) -> None:
+    fixture_directories = {manifest.parent.resolve() for manifest in manifests}
+    if len(fixture_directories) != 1:
+        raise ValueError("fixture manifests do not share one directory")
+    for manifest in manifests:
+        details = manifest.lstat()
+        if manifest.is_symlink() or not manifest.is_file() or details.st_nlink != 1:
+            raise ValueError("fixture manifest is not a private regular file")
+        os.chown(manifest, 0, 0)
+        os.chmod(manifest, 0o444)
+    fixture_directory = fixture_directories.pop()
+    os.chown(fixture_directory, 0, 0)
+    os.chmod(manifest.parent, 0o555)
+
+
 def _fixture_descriptor(
     source: Path, manifests: list[Path], content_sha256: str
 ) -> dict[str, Any]:
@@ -1297,6 +1312,8 @@ def run(args: argparse.Namespace) -> int:
     output = _campaign_paths(seed, engine_commit, args.output)
     output.mkdir(mode=0o700, parents=True, exist_ok=True)
     if ROOT_AUTHORITY:
+        os.chown(output, 0, 0)
+        os.chmod(output, 0o711)
         artifact_root = AUTHORITY_REQUEST_ROOT / "artifacts"
         artifact_root.mkdir(mode=0o700, exist_ok=True)
         dsv4 = pwd.getpwnam("dsv4")
@@ -1304,6 +1321,8 @@ def run(args: argparse.Namespace) -> int:
     else:
         artifact_root = output
     manifests = _write_manifests(source, output, seed)
+    if ROOT_AUTHORITY:
+        _seal_root_fixture_inputs(manifests)
     fixture_content_sha256 = content_complete_fixture_sha256(source, manifests)
     fixture_descriptor = _fixture_descriptor(
         source, manifests, fixture_content_sha256
