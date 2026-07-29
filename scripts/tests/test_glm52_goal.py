@@ -364,6 +364,155 @@ class FormulaTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.goal.quality_verdict(mutation)
 
+    def _w1_affine_campaign(self):
+        seed = "00" * 32
+        fixture = "1" * 64
+        binary = "2" * 64
+        configuration = "3" * 64
+        baseline_environment = "4" * 64
+        candidate_environment = "5" * 64
+        attempts = []
+        schedules = ("ABBA", "BAAB", "ABBA", "BAAB", "ABBA")
+        for block, schedule in enumerate(schedules):
+            baseline_cases = [
+                {
+                    "case_id": f"case-{block:02d}-{index:02d}",
+                    "tokens": 100,
+                    "nll_sum": 200.0,
+                    "top1_correct": 70,
+                }
+                for index in range(20)
+            ]
+            candidate_cases = [
+                {
+                    **case,
+                    "nll_sum": 200.5,
+                }
+                for case in baseline_cases
+            ]
+            for sequence, arm in enumerate(schedule):
+                candidate = arm == "A"
+                attempts.append(
+                    {
+                        "block": block,
+                        "sequence": sequence,
+                        "arm": arm,
+                        "server_instance_id": (
+                            f"server-{block}-{sequence}-{arm}"
+                        ),
+                        "binary_sha256": binary,
+                        "configuration_sha256": configuration,
+                        "fixture_sha256_before": fixture,
+                        "fixture_sha256_after": fixture,
+                        "environment_sha256": (
+                            candidate_environment
+                            if candidate
+                            else baseline_environment
+                        ),
+                        "resolved_mode": 2 if candidate else 0,
+                        "affine_store_count": 2000 if candidate else 0,
+                        "completed": True,
+                        "available_memory_gib": 88.0,
+                        "swap_bytes": 0,
+                        "oom": False,
+                        "xid": False,
+                        "failures": [],
+                        "cases": (
+                            candidate_cases if candidate else baseline_cases
+                        ),
+                    }
+                )
+        return {
+            "record_type": "w1_affine_campaign",
+            "engine_candidate_hash": "a" * 40,
+            "seed_sha256": seed,
+            "binary_sha256": binary,
+            "configuration_sha256": configuration,
+            "fixture_sha256": fixture,
+            "baseline_environment_sha256": baseline_environment,
+            "candidate_environment_sha256": candidate_environment,
+            "candidate_arm": "A",
+            "attempts": attempts,
+        }
+
+    def test_registered_w1_affine_scorer_accepts_only_strict_raw_campaign(self):
+        campaign = self._w1_affine_campaign()
+        result = self.goal.score_registered_gate(
+            "W1", "w1.affine-quality.v1", [campaign]
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(result["paired_case_count"], 100)
+        self.assertEqual(result["attempt_count"], 20)
+        self.assertTrue(all(result["checks"].values()))
+
+    def test_registered_w1_affine_scorer_rejects_protocol_mutations(self):
+        def rejected(mutator):
+            campaign = self._w1_affine_campaign()
+            mutator(campaign)
+            with self.assertRaises(ValueError):
+                self.goal.score_registered_gate(
+                    "W1", "w1.affine-quality.v1", [campaign]
+                )
+
+        rejected(lambda value: value["attempts"].pop())
+        rejected(
+            lambda value: value["attempts"][0].__setitem__("sequence", 1)
+        )
+        rejected(
+            lambda value: value["attempts"][0].__setitem__(
+                "server_instance_id",
+                value["attempts"][1]["server_instance_id"],
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][0].__setitem__(
+                "fixture_sha256_after", "f" * 64
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][0].__setitem__(
+                "environment_sha256",
+                value["candidate_environment_sha256"],
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][0].__setitem__(
+                "resolved_mode", 0
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][0].__setitem__(
+                "affine_store_count", 0
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][0].__setitem__(
+                "completed", False
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][0]["failures"].append(
+                "injected failure"
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][0]["cases"][0].__setitem__(
+                "case_id",
+                value["attempts"][0]["cases"][1]["case_id"],
+            )
+        )
+        rejected(
+            lambda value: value["attempts"][2]["cases"][0].__setitem__(
+                "nll_sum", 999.0
+            )
+        )
+        rejected(
+            lambda value: value.__setitem__(
+                "candidate_environment_sha256",
+                value["baseline_environment_sha256"],
+            )
+        )
+
     def test_raw_arm_validation_fails_closed(self):
         valid = {
             "arm": "A",
