@@ -1,0 +1,15 @@
+Command:
+python3 -m unittest scripts.tests.test_cuda_bandwidth_probe
+
+Test-only commit:
+ce950e0
+
+Genuine RED:
+The three tests error because `scripts/68_measure_cuda_bandwidth.sh` and
+`scripts/68_cuda_read_bandwidth.cu` do not exist on unchanged code.
+
+Result:
+FAILED (errors=3), exit status 1.
+
+No compilation, CUDA allocation, or measurement was attempted while the live
+W1 campaign owned inference memory.
