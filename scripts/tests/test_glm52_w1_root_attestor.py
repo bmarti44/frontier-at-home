@@ -510,6 +510,16 @@ class RootAttestorContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "symlink"):
                 submitter._tree_manifest(root)
 
+    def test_publication_rejects_attempt_bundled_with_frozen_source(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            gate = Path(temporary)
+            stale = gate / "attempt-001"
+            stale.mkdir()
+            before = submitter._controller_attempt_names(gate)
+            with self.assertRaisesRegex(ValueError, "exactly one fresh"):
+                submitter._select_fresh_controller_attempt(gate, before)
+
     def test_w1_scorer_digest_binds_journal_authority(self):
         spec = importlib.util.spec_from_file_location(
             "glm52_goal_for_digest", CONTROLLER
