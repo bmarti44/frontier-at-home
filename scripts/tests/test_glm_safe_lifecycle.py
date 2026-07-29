@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SAFE = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
+CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
@@ -36,6 +37,20 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn('"/proc/$SPID2/environ"', source)
         self.assertIn("executed_environment_sha256=", source)
         self.assertIn("executed candidate environment mismatch", source)
+
+    def test_default_off_current_user_mode_retains_containment_and_provenance(self):
+        safe = SAFE.read_text(encoding="utf-8")
+        launcher = CGROUP.read_text(encoding="utf-8")
+        self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER", safe)
+        self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER", launcher)
+        self.assertIn("/home/bmarti44/.local/state/glm52-crashlog", safe)
+        self.assertIn("/home/bmarti44/.cache/glm52-", safe)
+        self.assertIn("MemorySwapMax=0", launcher)
+        self.assertIn("OOMPolicy=kill", launcher)
+        self.assertIn("GLM_SAFE_PROVENANCE_ENV_ALLOWLIST", launcher)
+        self.assertIn("GLM_SAFE_EXPECTED_ENV_SHA256", launcher)
+        self.assertIn("/run/user/$UID/glm52-inference.lock", launcher)
+        self.assertIn("/usr/bin/sudo -n -u dsv4", launcher)
 
 
 class CandidateLifecycleTests(unittest.TestCase):
