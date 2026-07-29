@@ -186,7 +186,7 @@ class RootAttestorContractTests(unittest.TestCase):
         )[1].split("elif [[ $RUN_AS_CURRENT_USER == 1 ]]", 1)[0]
         self.assertNotIn("/run/lock/frontier-at-home/inference.lock", root_branch)
         submitter = SUBMITTER.read_text(encoding="utf-8")
-        self.assertIn("fcntl.flock(inference, fcntl.LOCK_EX)", submitter)
+        self.assertIn("with _hold_inference_locks():", submitter)
 
     def test_controller_runner_cannot_bypass_root_authority(self):
         runner = RUNNER.read_text(encoding="utf-8")
@@ -262,7 +262,9 @@ class RootAttestorContractTests(unittest.TestCase):
                 mock.patch.object(submitter.os, "fchown") as chown,
                 mock.patch.object(submitter.os, "fchmod") as chmod,
             ):
-                with submitter._open_inference_lock():
+                with submitter._open_one_inference_lock(
+                    lock, stable_parent=True
+                ):
                     pass
             chown.assert_called_once()
             chmod.assert_called_once_with(mock.ANY, 0o660)
@@ -306,12 +308,45 @@ class RootAttestorContractTests(unittest.TestCase):
                         submitter, "LEGACY_INFERENCE_LOCK", legacy
                     ),
                     mock.patch.object(submitter, "INFERENCE_LOCK", current),
+                    mock.patch.object(submitter.os, "fchown"),
+                    mock.patch.object(submitter.os, "fchmod"),
                     self.assertRaisesRegex(
                         PermissionError, "pre-migration inference server"
                     ),
                 ):
-                    submitter._open_inference_lock()
+                    with submitter._hold_inference_locks():
+                        self.fail("held legacy lock was accepted")
             self.assertFalse(current.exists())
+
+    def test_submitter_holds_legacy_and_current_locks_together(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            legacy = base / "legacy" / "inference.lock"
+            current = base / "current" / "inference.lock"
+            legacy.parent.mkdir()
+            legacy.touch()
+            with (
+                mock.patch.object(
+                    submitter, "LEGACY_INFERENCE_LOCK", legacy
+                ),
+                mock.patch.object(submitter, "INFERENCE_LOCK", current),
+                mock.patch.object(submitter.os, "chown"),
+                mock.patch.object(submitter.os, "fchown"),
+                submitter._hold_inference_locks(),
+            ):
+                for path in (legacy, current):
+                    completed = subprocess.run(
+                        ["/usr/bin/flock", "-n", str(path), "-c", "true"],
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        check=False,
+                    )
+                    self.assertNotEqual(completed.returncode, 0)
+        installer = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn('exec 8>>"$LEGACY_LOCK"', installer)
+        self.assertIn("/usr/bin/flock -n -E 75 8", installer)
 
     def test_nonwritable_lock_directory_blocks_replacement_and_contention(self):
         with tempfile.TemporaryDirectory() as temporary:

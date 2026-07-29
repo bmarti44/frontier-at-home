@@ -13,7 +13,7 @@ readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
-readonly SUBMITTER_SHA256='d74477bae79cc28776f1a40ca02177c2''c0f6849fc02821f1504d251a4b4d7b07'
+readonly SUBMITTER_SHA256='f68f255df31289ec5490cefed2ea3101''c1867ed25f412107a86b554cdbedb6b8'
 
 die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
@@ -82,9 +82,14 @@ harness_head=$(
 if [[ -e $LEGACY_LOCK || -L $LEGACY_LOCK ]]; then
     [[ -f $LEGACY_LOCK && ! -L $LEGACY_LOCK ]] ||
         die "legacy inference lock path is unsafe"
-    /usr/bin/flock -n -E 75 "$LEGACY_LOCK" -c true ||
-        die "a pre-migration inference server is still running"
 fi
+exec 8>>"$LEGACY_LOCK"
+[[ $(/usr/bin/stat -Lc %h "/proc/$$/fd/8") == 1 ]] ||
+    die "legacy inference lock has external hardlinks"
+/usr/bin/chown root:dsv4 "/proc/$$/fd/8"
+/usr/bin/chmod 0660 "/proc/$$/fd/8"
+/usr/bin/flock -n -E 75 8 ||
+    die "a pre-migration inference server is still running"
 
 # Membership in docker plus an active socket is equivalent to unrestricted
 # root. Close both paths before installing an authority that claims UID

@@ -13,6 +13,7 @@ import socket
 import stat
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -362,44 +363,59 @@ def _record_failed_active_request(exc: Exception) -> None:
     _quarantine_seal(root)
 
 
-def _open_inference_lock():
+def _open_one_inference_lock(path: Path, *, stable_parent: bool):
+    identity = pwd.getpwnam(DSV4)
+    if stable_parent:
+        lock_root = path.parent
+        lock_root.mkdir(mode=0o750, parents=True, exist_ok=True)
+        os.chown(lock_root, 0, identity.pw_gid)
+        os.chmod(lock_root, 0o750)
+    descriptor = os.open(
+        path,
+        os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
+        0o660,
+    )
+    details = os.fstat(descriptor)
+    if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
+        os.close(descriptor)
+        raise PermissionError("inference lock is not a private regular file")
+    os.fchown(descriptor, 0, identity.pw_gid)
+    os.fchmod(descriptor, 0o660)
+    return os.fdopen(descriptor, "a+b")
+
+
+@contextmanager
+def _hold_inference_locks():
     if LEGACY_INFERENCE_LOCK.exists() or LEGACY_INFERENCE_LOCK.is_symlink():
         details = LEGACY_INFERENCE_LOCK.lstat()
         if stat.S_ISLNK(details.st_mode) or not stat.S_ISREG(details.st_mode):
             raise PermissionError("legacy inference lock path is unsafe")
-        legacy_descriptor = os.open(
-            LEGACY_INFERENCE_LOCK,
-            os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW,
-        )
+    with _open_one_inference_lock(
+        LEGACY_INFERENCE_LOCK, stable_parent=False
+    ) as legacy:
         try:
+            fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise PermissionError(
+                "a pre-migration inference server still holds the legacy lock"
+            ) from exc
+        with _open_one_inference_lock(
+            INFERENCE_LOCK, stable_parent=True
+        ) as current:
+            legacy_identity = os.fstat(legacy.fileno())
+            current_identity = os.fstat(current.fileno())
+            same_inode = (
+                legacy_identity.st_dev == current_identity.st_dev
+                and legacy_identity.st_ino == current_identity.st_ino
+            )
+            if not same_inode:
+                fcntl.flock(current, fcntl.LOCK_EX)
             try:
-                fcntl.flock(
-                    legacy_descriptor,
-                    fcntl.LOCK_EX | fcntl.LOCK_NB,
-                )
-            except BlockingIOError as exc:
-                raise PermissionError(
-                    "a pre-migration inference server still holds the legacy lock"
-                ) from exc
-        finally:
-            os.close(legacy_descriptor)
-    identity = pwd.getpwnam(DSV4)
-    lock_root = INFERENCE_LOCK.parent
-    lock_root.mkdir(mode=0o750, parents=True, exist_ok=True)
-    os.chown(lock_root, 0, identity.pw_gid)
-    os.chmod(lock_root, 0o750)
-    descriptor = os.open(
-        INFERENCE_LOCK,
-        os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
-        0o600,
-    )
-    details = os.fstat(descriptor)
-    if not stat.S_ISREG(details.st_mode):
-        os.close(descriptor)
-        raise PermissionError("inference lock is not a regular file")
-    os.fchown(descriptor, 0, identity.pw_gid)
-    os.fchmod(descriptor, 0o660)
-    return os.fdopen(descriptor, "a+b")
+                yield
+            finally:
+                if not same_inode:
+                    fcntl.flock(current, fcntl.LOCK_UN)
+                fcntl.flock(legacy, fcntl.LOCK_UN)
 
 
 def _bundle_clone(
@@ -775,17 +791,17 @@ def main(argv: list[str]) -> int:
     (STATE_ROOT / "requests").mkdir(mode=0o711, exist_ok=True)
     (STATE_ROOT / "by-composite").mkdir(mode=0o755, exist_ok=True)
     CONTROLLER_ATTEMPTS.mkdir(mode=0o755, exist_ok=True)
-    with LOCK.open("a+b") as lock, _open_inference_lock() as inference:
+    with LOCK.open("a+b") as lock:
         os.chmod(LOCK, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
         if request[0] == "run":
-            fcntl.flock(inference, fcntl.LOCK_EX)
-            try:
-                return run_campaign(request[1], request[2], request[3])
-            except Exception as exc:
-                _record_failed_active_request(exc)
-                ACTIVE_REQUEST = None
-                raise
+            with _hold_inference_locks():
+                try:
+                    return run_campaign(request[1], request[2], request[3])
+                except Exception as exc:
+                    _record_failed_active_request(exc)
+                    ACTIVE_REQUEST = None
+                    raise
         return show_status(request[1])
 
 
