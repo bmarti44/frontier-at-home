@@ -379,6 +379,8 @@ class RootAttestorContractTests(unittest.TestCase):
         )
         self.assertIn("'RuntimeDirectory='", installer)
         self.assertIn("os.O_NOFOLLOW", installer)
+        self.assertIn("except FileNotFoundError:", installer)
+        self.assertIn("os.O_CREAT | os.O_EXCL", installer)
         self.assertIn("opened.st_ino != visible.st_ino", installer)
         self.assertIn('exec 8<>"$LEGACY_LOCK"', installer)
         submitter = SUBMITTER.read_text(encoding="utf-8")
