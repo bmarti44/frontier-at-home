@@ -438,17 +438,14 @@ class FormulaTests(unittest.TestCase):
             "attempts": attempts,
         }
 
-    def test_registered_w1_affine_scorer_accepts_only_strict_raw_campaign(self):
+    def test_legacy_w1_affine_scorer_is_not_registered(self):
         campaign = self._w1_affine_campaign()
-        result = self.goal.score_registered_gate(
-            "W1", "w1.affine-quality.v1", [campaign]
-        )
-        self.assertEqual(result["verdict"], "PASS")
-        self.assertEqual(result["paired_case_count"], 100)
-        self.assertEqual(result["attempt_count"], 20)
-        self.assertTrue(all(result["checks"].values()))
+        with self.assertRaises(ValueError):
+            self.goal.score_registered_gate(
+                "W1", "w1.affine-quality.v1", [campaign]
+            )
 
-    def test_registered_w1_affine_scorer_rejects_protocol_mutations(self):
+    def test_legacy_w1_affine_scorer_cannot_be_reenabled_by_mutation(self):
         def rejected(mutator):
             campaign = self._w1_affine_campaign()
             mutator(campaign)
