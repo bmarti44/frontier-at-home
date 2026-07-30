@@ -20,6 +20,36 @@ FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
 class CandidateLifecycleSourceTests(unittest.TestCase):
+    def test_disappearing_proc_counters_are_emitted_as_numeric_zero(self):
+        source = SAFE.read_text(encoding="utf-8")
+        start = source.index("  RSS=$(awk ")
+        end = source.index('  echo "$(date -u --iso-8601=ns)', start)
+        sampler = source[start:end]
+        with tempfile.TemporaryDirectory() as temporary:
+            proc = Path(temporary)
+            (proc / "status").write_text("", encoding="utf-8")
+            (proc / "io").write_text("", encoding="utf-8")
+            sampler = sampler.replace(
+                '"/proc/$SPID2/status"', f'"{proc / "status"}"'
+            ).replace(
+                '"/proc/$SPID2/io"', f'"{proc / "io"}"'
+            )
+            result = subprocess.run(
+                [
+                    "bash",
+                    "-c",
+                    "set -u\nSPID2=missing\n"
+                    + sampler
+                    + 'printf "%s|%s\\n" "$RSS" "$RB"\n',
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "0|0\n")
+
     def test_exit_race_enters_shutdown_grace_before_identity_failure(self):
         source = SAFE.read_text(encoding="utf-8")
         shutdown = source.index("if [[ -z $CURRENT_STATE")
@@ -293,6 +323,17 @@ class CurrentUserTimestampTests(unittest.TestCase):
                     line.split()[0] for line in samples.splitlines() if line
                 ]
                 self.assertGreaterEqual(len(sample_timestamps), 2, samples)
+                self.assertTrue(
+                    all(
+                        re.fullmatch(
+                            r"\S+ mem_avail_kb=\d+ eng_rss_kb=\d+ "
+                            r"read_bytes=\d+",
+                            line,
+                        )
+                        for line in samples.splitlines()
+                    ),
+                    samples,
+                )
                 self.assertTrue(
                     all(
                         value.endswith("+00:00")
