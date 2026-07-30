@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -87,13 +88,40 @@ class ModelClaimCatalogTests(unittest.TestCase):
     def test_privileged_claim_workflow_never_executes_fork_content(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("pull_request_target:", workflow)
+        self.assertIn("edited", workflow)
+        self.assertIn("models/catalog.json", workflow)
+        self.assertIn("push:", workflow)
         self.assertIn("context.payload.pull_request.base.sha", workflow)
         self.assertIn("models/catalog.json", workflow)
         self.assertIn("claim-model\\/", workflow)
-        self.assertIn("status:claimed", workflow)
+        self.assertIn("catalog.claim_backends.includes(backend)", workflow)
+        self.assertIn("issues.removeLabel", workflow)
+        self.assertIn("status:self-declared", workflow)
         self.assertNotIn("actions/checkout", workflow)
         self.assertNotIn("pull_request.head.sha", workflow)
         self.assertNotIn("exec(", workflow)
+        self.assertNotIn("\n        run:", workflow)
+        self.assertNotIn("pull-requests: write", workflow)
+        action_refs = re.findall(r"^\s+uses:\s+(\S+)$", workflow, re.MULTILINE)
+        self.assertEqual(
+            action_refs,
+            [
+                "actions/github-script"
+                "@ed597411d8f924073f98dfc5c65a23a2325f34cd"
+            ],
+        )
+
+    def test_catalog_schema_prevents_ambiguous_claim_admission(self):
+        catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+        backends = catalog["claim_backends"]
+        self.assertEqual(len(backends), len(set(backends)))
+        self.assertTrue(backends)
+        for backend in backends:
+            self.assertRegex(backend, r"^[a-z0-9][a-z0-9-]*$")
+        slugs = [model["slug"] for model in catalog["models"]]
+        self.assertEqual(len(slugs), len(set(slugs)))
+        for slug in slugs:
+            self.assertRegex(slug, r"^[a-z0-9][a-z0-9.-]*$")
 
 
 if __name__ == "__main__":
