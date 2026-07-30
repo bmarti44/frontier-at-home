@@ -21,6 +21,58 @@ implementation: platform-native engines and memory strategies are encouraged
 when they preserve the same standards for correctness, safety, evidence, and
 repeatable operation.
 
+## Model integration queue
+
+The queue below was refreshed from Ollama's
+[Cloud model catalog](https://ollama.com/search?c=cloud) on 2026-07-29. The
+Ollama tag is a discovery reference, not the artifact this repository has
+qualified. A contributor must independently identify public local weights,
+verify the license, hash every model/tokenizer artifact, and publish measured
+evidence. Ollama Cloud availability alone does not prove that local weights are
+available.
+
+To claim an integration:
+
+1. Fork the repository and create exactly
+   `claim-model/<catalog-slug>/<backend>`, using a slug and backend from
+   [`models/catalog.json`](models/catalog.json).
+2. Immediately open a **draft** pull request with the
+   [model-integration template](https://github.com/bmarti44/frontier-at-home/compare?expand=1&template=model-integration-claim.md),
+   before substantial implementation work.
+3. The safe `pull_request_target` workflow reads only the base repository's
+   catalog—never fork code—and labels the PR with the model, backend, and
+   `status:claimed`.
+4. Click a model's status badge to see its open claims. A nonzero badge means
+   somebody is actively working on it; parallel claims are allowed when the
+   hardware/backend differs or the approaches are genuinely independent.
+
+Supported backend slugs are `cuda`, `apple-silicon`, `rocm`, `vulkan`,
+`intel-xe`, `qualcomm`, `tenstorrent`, and `cpu`. Opening a claim PR reserves no
+exclusive rights and does not lower the evidence requirements in
+[`AGENTS.md`](AGENTS.md).
+
+| Model / current Ollama tag | Ollama-listed context | Parameters / modalities | Integration status |
+| --- | ---: | --- | --- |
+| [GLM-5.2](https://ollama.com/library/glm-5.2) — `glm-5.2:cloud` | 976K | 756B; text | **Active:** CUDA/DGX Spark qualification. [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aglm-5.2?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aglm-5.2) |
+| [Kimi K3](https://ollama.com/library/kimi-k3) — `kimi-k3:cloud` | 1M | 2.81T; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k3?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k3) |
+| [Gemma 4](https://ollama.com/library/gemma4) — `gemma4:cloud` | 256K | E2B, E4B, 12B, 26B, 31B; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Agemma4?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Agemma4) |
+| [Qwen 3.5](https://ollama.com/library/qwen3.5) — `qwen3.5:cloud` | 256K | 0.8B–397B family; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aqwen3.5?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aqwen3.5) |
+| [GLM-5.1](https://ollama.com/library/glm-5.1) — `glm-5.1:cloud` | 198K | 756B; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aglm-5.1?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aglm-5.1) |
+| [MiniMax M2.7](https://ollama.com/library/minimax-m2.7) — `minimax-m2.7:cloud` | 200K | 229B; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aminimax-m2.7?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aminimax-m2.7) |
+| [Nemotron 3 Super](https://ollama.com/library/nemotron-3-super) — `nemotron-3-super:cloud` | 256K | 120B / 12B active; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-super?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-super) |
+| [MiniMax M2.5](https://ollama.com/library/minimax-m2.5) — `minimax-m2.5:cloud` | 198K | 230B; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aminimax-m2.5?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aminimax-m2.5) |
+| [MiniMax M3](https://ollama.com/library/minimax-m3) — `minimax-m3:cloud` | 512K served | Not listed; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aminimax-m3?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aminimax-m3) |
+| [Kimi K2.7 Code](https://ollama.com/library/kimi-k2.7-code) — `kimi-k2.7-code:cloud` | 256K | 1.04T; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.7-code?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.7-code) |
+| [Kimi K2.6](https://ollama.com/library/kimi-k2.6) — `kimi-k2.6:cloud` | 256K | 1.04T; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.6?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.6) |
+| [DeepSeek V4 Pro](https://ollama.com/library/deepseek-v4-pro) — `deepseek-v4-pro:cloud` | 1M | 1.6T; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-pro?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-pro) |
+| [DeepSeek V4 Flash](https://ollama.com/library/deepseek-v4-flash) — `deepseek-v4-flash:cloud` | 1M | 158B listed; text | **Qualified:** CUDA/DGX Spark. [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-flash?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-flash) |
+| [Nemotron 3 Ultra](https://ollama.com/library/nemotron-3-ultra) — `nemotron-3-ultra:cloud` | 256K served | 550B / 55B active; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-ultra?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-ultra) |
+| [GPT-OSS](https://ollama.com/library/gpt-oss) — `gpt-oss:120b-cloud` | 128K | 20B, 120B; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Agpt-oss?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Agpt-oss) |
+| [Gemini 3 Flash Preview](https://ollama.com/library/gemini-3-flash-preview) — `gemini-3-flash-preview:cloud` | 1M | Not published; text, image | **Reference only:** not claimable until public local weights and a compatible license exist. |
+| [Nemotron 3 Nano](https://ollama.com/library/nemotron-3-nano) — `nemotron-3-nano:30b-cloud` | 1M | 4B, 30B; text | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-nano?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-nano) |
+| [Kimi K2.5](https://ollama.com/library/kimi-k2.5) — `kimi-k2.5:cloud` | 256K | 1.04T; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.5?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.5) |
+| [Mistral Large 3](https://ollama.com/library/mistral-large-3) — `mistral-large-3:675b-cloud` | 256K | 675B; text, image | [![active claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Amistral-large-3?label=active%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Amistral-large-3) |
+
 ## Current model status and measurements
 
 Status below is current as of 2026-07-29. A dash means that this repository

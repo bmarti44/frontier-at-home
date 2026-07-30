@@ -1,0 +1,83 @@
+name: Register model integration claim
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  register:
+    if: startsWith(github.event.pull_request.head.ref, 'claim-model/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch and label the claim
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const match = branch.match(
+              /^claim-model\/([a-z0-9][a-z0-9.-]*)\/(cuda|apple-silicon|rocm|vulkan|intel-xe|qualcomm|tenstorrent|cpu)$/
+            );
+            if (!match) {
+              core.setFailed(
+                'Claim branches must be claim-model/<catalog-slug>/<backend>.'
+              );
+              return;
+            }
+            const [, slug, backend] = match;
+            const response = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'models/catalog.json',
+              ref: context.payload.pull_request.base.sha,
+            });
+            const catalog = JSON.parse(
+              Buffer.from(response.data.content, 'base64').toString('utf8')
+            );
+            const model = catalog.models.find(item => item.slug === slug);
+            if (!model) {
+              core.setFailed(`Unknown model catalog slug: ${slug}`);
+              return;
+            }
+            if (model.repo_status === 'reference_only') {
+              core.setFailed(
+                `${slug} is reference-only until public local weights exist.`
+              );
+              return;
+            }
+            const labels = [
+              [`claim:${slug}`, '5319e7', `Active integration claim for ${slug}`],
+              [`backend:${backend}`, '0e8a16', `Integration backend: ${backend}`],
+              ['status:claimed', 'fbca04', 'Actively being worked on'],
+            ];
+            for (const [name, color, description] of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name,
+                  color,
+                  description,
+                });
+              } catch (error) {
+                if (error.status !== 422) throw error;
+              }
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: labels.map(([name]) => name),
+            });
+            core.summary
+              .addHeading('Model integration claim registered')
+              .addTable([
+                [{data: 'Model', header: true}, slug],
+                [{data: 'Backend', header: true}, backend],
+                [{data: 'Branch', header: true}, branch],
+              ])
+              .write();

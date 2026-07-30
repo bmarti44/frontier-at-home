@@ -183,6 +183,32 @@ If blocked, provide a reviewer the exact failing assertion and evidence. Verify
 the diagnosis locally, try the best two bounded alternatives, then mark the
 branch `NO_RESULT` if neither works.
 
+## Claiming a model integration
+
+The discovery queue is [`models/catalog.json`](models/catalog.json). Claim work
+before implementing it:
+
+1. Choose a catalog `slug` and one listed `claim_backends` value.
+2. Create the exact branch
+   `claim-model/<catalog-slug>/<backend>` in your fork.
+3. Open a draft PR immediately with
+   `.github/PULL_REQUEST_TEMPLATE/model-integration-claim.md`.
+4. Keep that PR open and update its description with the baseline, hardware,
+   memory safeguards, and evidence location as facts become available.
+
+The `pull_request_target` claim workflow deliberately does not check out or
+execute fork content. It reads the catalog at the base commit, validates the
+head branch, and applies `claim:<model>`, `backend:<backend>`, and
+`status:claimed` labels. Those labels drive the live claim badges in the
+README. Never add fork checkout or fork-authored scripts to that privileged
+workflow.
+
+A claim is coordination metadata, not an endorsement or reservation. Multiple
+claims may coexist, especially for different backends. Close a claim PR when
+work stops so the status badge becomes accurate again. A model marked
+`reference_only` cannot be claimed until public local weights and a compatible
+license are documented in the catalog.
+
 ## Adding another model
 
 For a new model family:
@@ -200,4 +226,3 @@ For a new model family:
    auth-rejection, and reboot-restore tests.
 9. Preserve a reviewed `PASS`, `FAIL`, `NO_RESULT`, or `NO_GO`; never substitute
    an optimistic narrative for a terminal measurement.
-
