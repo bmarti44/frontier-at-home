@@ -33,6 +33,17 @@ def load_submitter():
     return module
 
 
+def load_controller():
+    spec = importlib.util.spec_from_file_location(
+        "glm52_goal_root_authority_test", CONTROLLER
+    )
+    if spec is None or spec.loader is None:
+        raise AssertionError("cannot load GLM controller")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 class RootAttestorContractTests(unittest.TestCase):
     def test_submitter_accepts_hashes_only(self):
         submitter = load_submitter()
@@ -354,6 +365,135 @@ class RootAttestorContractTests(unittest.TestCase):
                     ValueError, "root execution surface is unsafe"
                 ):
                     submitter._assert_root_execution_surface(candidate)
+
+    def test_installed_scorer_resolves_later_candidate_in_sealed_repository(self):
+        controller = load_controller()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            installed = root / "installed"
+            requested = root / "requested"
+            subprocess.run(
+                ["/usr/bin/git", "init", "-q", str(installed)],
+                check=True,
+            )
+            subprocess.run(
+                ["/usr/bin/git", "-C", str(installed), "config", "user.name", "test"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "/usr/bin/git",
+                    "-C",
+                    str(installed),
+                    "config",
+                    "user.email",
+                    "test@example.invalid",
+                ],
+                check=True,
+            )
+            (installed / "authority").write_text("fixed\n", encoding="utf-8")
+            subprocess.run(
+                ["/usr/bin/git", "-C", str(installed), "add", "authority"],
+                check=True,
+            )
+            subprocess.run(
+                ["/usr/bin/git", "-C", str(installed), "commit", "-qm", "A"],
+                check=True,
+            )
+            subprocess.run(
+                ["/usr/bin/git", "clone", "-q", str(installed), str(requested)],
+                check=True,
+            )
+            subprocess.run(
+                ["/usr/bin/git", "-C", str(requested), "config", "user.name", "test"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "/usr/bin/git",
+                    "-C",
+                    str(requested),
+                    "config",
+                    "user.email",
+                    "test@example.invalid",
+                ],
+                check=True,
+            )
+            (requested / "metadata").write_text("new\n", encoding="utf-8")
+            subprocess.run(
+                ["/usr/bin/git", "-C", str(requested), "add", "metadata"],
+                check=True,
+            )
+            subprocess.run(
+                ["/usr/bin/git", "-C", str(requested), "commit", "-qm", "B"],
+                check=True,
+            )
+            candidate = subprocess.run(
+                ["/usr/bin/git", "-C", str(requested), "rev-parse", "HEAD"],
+                text=True,
+                stdout=subprocess.PIPE,
+                check=True,
+            ).stdout.strip()
+            tree = subprocess.run(
+                [
+                    "/usr/bin/git",
+                    "-C",
+                    str(requested),
+                    "rev-parse",
+                    f"{candidate}^{{tree}}",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                check=True,
+            ).stdout.strip()
+            source = root / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "candidate_hash": candidate,
+                        "git_tree": tree,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "git tree"):
+                controller.validate_source_provenance(
+                    source, candidate, repository=installed
+                )
+            controller.validate_source_provenance(
+                source, candidate, repository=requested
+            )
+
+            attempt = root / "attempt"
+            attempt.mkdir()
+            (attempt / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "gate": "W1",
+                        "candidate_hash": candidate,
+                        "lineage": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "not a repository commit"):
+                controller.validate_attempt(
+                    attempt,
+                    root_authority_pending=True,
+                    source_repository=installed,
+                )
+            with (
+                mock.patch.object(
+                    controller, "validate_manifest_lineage"
+                ),
+                self.assertRaisesRegex(ValueError, "artifacts map"),
+            ):
+                controller.validate_attempt(
+                    attempt,
+                    root_authority_pending=True,
+                    source_repository=requested,
+                )
 
     def test_installer_closes_docker_root_equivalence_and_is_hash_pinned(self):
         source = INSTALLER.read_text(encoding="utf-8")
