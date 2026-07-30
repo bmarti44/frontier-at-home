@@ -260,6 +260,27 @@ class W1AffineAuthorityTests(unittest.TestCase):
                 "W1", "w1.affine-quality.v2", [substituted]
             )
 
+    def test_raw_scorer_rejects_noncanonical_lifecycle_timestamps(self):
+        for replacement in (
+            "2026-07-28T20:00:00.000-04:00",
+            "2026-07-29T00:00:00.000",
+        ):
+            with self.subTest(replacement=replacement):
+                campaign = raw_campaign(self.goal)
+                campaign["attempts"][0]["evidence"]["main_log"] = campaign[
+                    "attempts"
+                ][0]["evidence"]["main_log"].replace(
+                    "2026-07-29T00:00:00.000+00:00",
+                    replacement,
+                    1,
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "explicit UTC offset"
+                ):
+                    self.goal.score_registered_gate(
+                        "W1", "w1.affine-quality.v2", [campaign]
+                    )
+
     def test_fabricated_drand_and_cached_model_identity_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             beacon = Path(temporary) / "beacon.json"
