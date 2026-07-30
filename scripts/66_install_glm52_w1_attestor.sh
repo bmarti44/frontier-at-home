@@ -14,6 +14,17 @@ readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
 readonly SUBMITTER_SHA256='8516c20349e49e081ff2d97697cb3769''8b2332e97d3d50a0a8792f7a174ef562'
+readonly CONTAINED_RUNTIME_DIRS=(
+    "$HARNESS"
+    "$HARNESS/results"
+    "$HARNESS/results/glm52-gates"
+    "$HARNESS/results/glm52-gates/harness"
+    "$HARNESS/scripts"
+)
+readonly CONTAINED_RUNTIME_FILES=(
+    "$HARNESS/results/glm52-gates/harness/glm_safe_run.sh"
+    "$HARNESS/scripts/03_memory_guard.py"
+)
 
 die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
@@ -195,6 +206,24 @@ fi
 /usr/bin/cp -a -- "$harness_temporary/repository" "$HARNESS"
 harness_installed=1
 /usr/bin/chown -R root:root "$HARNESS"
+for path in "${CONTAINED_RUNTIME_DIRS[@]}"; do
+    [[ -d $path && ! -L $path ]] ||
+        die "contained runtime directory is absent or unsafe"
+done
+for path in "${CONTAINED_RUNTIME_FILES[@]}"; do
+    [[ -f $path && ! -L $path ]] ||
+        die "contained runtime file is absent or unsafe"
+done
+/usr/bin/chmod 0555 "${CONTAINED_RUNTIME_DIRS[@]}"
+/usr/bin/chmod 0444 "${CONTAINED_RUNTIME_FILES[@]}"
+for path in "${CONTAINED_RUNTIME_DIRS[@]}"; do
+    /usr/sbin/runuser -u dsv4 -- /usr/bin/test -x "$path" ||
+        die "contained account cannot traverse runtime directory"
+done
+for path in "${CONTAINED_RUNTIME_FILES[@]}"; do
+    /usr/sbin/runuser -u dsv4 -- /usr/bin/test -r "$path" ||
+        die "contained account cannot read runtime file"
+done
 /usr/bin/install -o root -g root -m 0755 "$submitter_temporary" "$SUBMITTER"
 /usr/bin/install -o root -g root -m 0440 "$sudoers_temporary" "$RULE"
 /usr/sbin/visudo -c

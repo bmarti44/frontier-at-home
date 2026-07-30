@@ -563,6 +563,14 @@ class RootAttestorContractTests(unittest.TestCase):
             '/usr/bin/chmod 0444 "${CONTAINED_RUNTIME_FILES[@]}"',
             source,
         )
+        self.assertIn(
+            '/usr/sbin/runuser -u dsv4 -- /usr/bin/test -x "$path" ||',
+            source,
+        )
+        self.assertIn(
+            '/usr/sbin/runuser -u dsv4 -- /usr/bin/test -r "$path" ||',
+            source,
+        )
         self.assertNotIn('/usr/bin/chmod -R', source)
 
     def test_installer_requires_clean_exact_head(self):
