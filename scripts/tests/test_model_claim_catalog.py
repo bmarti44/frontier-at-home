@@ -97,6 +97,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertIn("catalog.claim_backends.includes(backend)", workflow)
         self.assertIn("issues.removeLabel", workflow)
         self.assertIn("status:self-declared", workflow)
+        self.assertNotIn("base: defaultBranch,", workflow)
         self.assertNotIn("actions/checkout", workflow)
         self.assertNotIn("pull_request.head.sha", workflow)
         self.assertNotIn("exec(", workflow)
