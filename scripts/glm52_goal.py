@@ -3299,10 +3299,12 @@ def _fetch_public_drand(host: str, round_number: int) -> dict[str, Any]:
     return value
 
 
-def _git_commit_time(candidate_hash: str) -> str:
+def _git_commit_time(
+    candidate_hash: str, repository: Path = ROOT
+) -> str:
     result = subprocess.run(
         ["/usr/bin/git", "show", "-s", "--format=%cI", candidate_hash],
-        cwd=ROOT,
+        cwd=repository,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -3390,7 +3392,12 @@ def _load_approved_dsv4_profile(candidate_hash: Any) -> dict[str, Any]:
     return profile
 
 
-def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
+def validate_source_provenance(
+    source_path: Path,
+    candidate_hash: str,
+    *,
+    repository: Path = ROOT,
+) -> None:
     """Bind the source descriptor to the frozen repository commit and tree."""
     try:
         descriptor = _read_strict_json(source_path)
@@ -3409,7 +3416,7 @@ def validate_source_provenance(source_path: Path, candidate_hash: str) -> None:
         raise ValueError("source provenance candidate does not match manifest")
     tree = subprocess.run(
         ["/usr/bin/git", "rev-parse", f"{candidate_hash}^{{tree}}"],
-        cwd=ROOT,
+        cwd=repository,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -3590,7 +3597,10 @@ def validate_profile_artifact_bindings(
 
 
 def validate_attempt(
-    attempt: Path, *, root_authority_pending: bool = False
+    attempt: Path,
+    *,
+    root_authority_pending: bool = False,
+    source_repository: Path | None = None,
 ) -> None:
     """Validate the mandatory evidence triplet without trusting narration."""
     if attempt.is_symlink():
@@ -3619,9 +3629,26 @@ def validate_attempt(
         and all(char in "0123456789abcdef" for char in candidate_hash)
     ):
         raise ValueError("manifest candidate_hash is invalid")
+    repository = (
+        source_repository.resolve()
+        if source_repository is not None
+        else ROOT
+    )
+    if source_repository is not None:
+        try:
+            repository_details = source_repository.lstat()
+        except FileNotFoundError as exc:
+            raise ValueError("source repository is absent") from exc
+        if (
+            not root_authority_pending
+            or manifest["gate"] != "W1"
+            or source_repository.is_symlink()
+            or not stat.S_ISDIR(repository_details.st_mode)
+        ):
+            raise ValueError("source repository override is not authorized")
     candidate_check = subprocess.run(
         ["/usr/bin/git", "cat-file", "-e", f"{candidate_hash}^{{commit}}"],
-        cwd=ROOT,
+        cwd=repository,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
@@ -3634,7 +3661,9 @@ def validate_attempt(
         manifest["gate"],
         candidate_hash,
         relay_fetcher=_fetch_public_drand,
-        commit_time_fetcher=_git_commit_time,
+        commit_time_fetcher=lambda candidate: _git_commit_time(
+            candidate, repository
+        ),
     )
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, dict):
@@ -3679,7 +3708,11 @@ def validate_attempt(
         with artifact_paths["binary"].open("rb") as executable:
             if executable.read(4) != b"\x7fELF":
                 raise ValueError("W1 quality binary is not an ELF executable")
-    validate_source_provenance(artifact_paths["source"], candidate_hash)
+    validate_source_provenance(
+        artifact_paths["source"],
+        candidate_hash,
+        repository=repository,
+    )
     validate_profile_artifact_bindings(manifest, artifact_paths)
     raw_path = attempt / "raw.jsonl"
     try:

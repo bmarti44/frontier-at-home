@@ -1267,7 +1267,11 @@ def _finalize_controller_attempt(
         "build_log_sha256": sha256_file(staging / "clean-build.log"),
     }
     _write_canonical_json(staging / "manifest.json", manifest)
-    goal.validate_attempt(staging, root_authority_pending=ROOT_AUTHORITY)
+    goal.validate_attempt(
+        staging,
+        root_authority_pending=ROOT_AUTHORITY,
+        source_repository=harness_source if ROOT_AUTHORITY else None,
+    )
 
     if ROOT_AUTHORITY:
         destination = output / "controller-attempt-final"
@@ -1286,7 +1290,11 @@ def _finalize_controller_attempt(
     if destination.exists():
         raise ValueError("controller attempt destination already exists")
     os.replace(staging, destination)
-    goal.validate_attempt(destination, root_authority_pending=ROOT_AUTHORITY)
+    goal.validate_attempt(
+        destination,
+        root_authority_pending=ROOT_AUTHORITY,
+        source_repository=harness_source if ROOT_AUTHORITY else None,
+    )
     return destination
 
 
