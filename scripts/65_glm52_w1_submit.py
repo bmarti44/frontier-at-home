@@ -34,6 +34,14 @@ INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
 LEGACY_INFERENCE_LOCK = Path("/run/dsv4/inference.lock")
 RUNNER = Path("scripts/glm52-runners/W1")
 PROFILE = Path("configs/glm52-profile.json")
+ROOT_EXECUTION_SURFACE = (
+    "scripts/65_glm52_w1_submit.py",
+    "scripts/glm52_w1_affine_campaign.py",
+    "scripts/glm52_goal.py",
+    "scripts/03_memory_guard.py",
+    "results/glm52-gates/harness/glm_cgroup_run.sh",
+    "results/glm52-gates/harness/glm_safe_run.sh",
+)
 OWNER = "bmarti44"
 OWNER_UID = 1000
 DSV4 = "dsv4"
@@ -278,16 +286,49 @@ def _assert_repository(
 
 
 def _model_hash_from_profile(harness: str) -> str:
-    raw = _git_root(INSTALLED_HARNESS, "show", f"{harness}:{PROFILE}")
-    profile = json.loads(raw)
+    raw = _git_as_owner(REPOSITORY, "show", f"{harness}:{PROFILE}")
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"profile contains duplicate key {key!r}")
+            result[key] = value
+        return result
+
+    profile = json.loads(raw, object_pairs_hook=reject_duplicate_keys)
     value = profile.get("model_sha256")
     if not isinstance(value, str) or not HASH64.fullmatch(value):
         raise ValueError("profile model hash is invalid")
     return value
 
 
+def _assert_root_execution_surface(candidate: Path) -> None:
+    for relative in ROOT_EXECUTION_SURFACE:
+        installed = INSTALLED_HARNESS / relative
+        requested = candidate / relative
+        try:
+            installed_details = installed.lstat()
+            requested_details = requested.lstat()
+        except FileNotFoundError as exc:
+            raise ValueError(
+                f"root execution surface is absent: {relative}"
+            ) from exc
+        if (
+            not stat.S_ISREG(installed_details.st_mode)
+            or not stat.S_ISREG(requested_details.st_mode)
+            or installed.is_symlink()
+            or requested.is_symlink()
+        ):
+            raise ValueError(f"root execution surface is unsafe: {relative}")
+        if _sha256(installed) != _sha256(requested):
+            raise ValueError(
+                f"root execution surface differs: {relative}"
+            )
+
+
 def _request_id(harness: str, engine: str, model: str) -> str:
-    return hashlib.sha256(f"{harness}:{engine}:{model}:W1-root-v2".encode()).hexdigest()
+    return hashlib.sha256(f"{harness}:{engine}:{model}:W1-root-v3".encode()).hexdigest()
 
 
 def first_drand_round_after(frozen_at: str) -> int:
@@ -859,13 +900,10 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
     )
     harness_bundle = request_root / "harness.bundle"
     engine_bundle = request_root / "engine.bundle"
+    harness_repository = request_root / "harness-repository"
     engine_repository = request_root / "engine-repository"
-    if (
-        _git_root(INSTALLED_HARNESS, "rev-parse", "HEAD^{commit}") != harness
-        or _git_root(INSTALLED_HARNESS, "status", "--porcelain")
-    ):
-        raise ValueError("installed root harness differs from the requested candidate")
-    _bundle_root_repository(INSTALLED_HARNESS, harness, harness_bundle)
+    _bundle_clone(REPOSITORY, harness, harness_bundle, harness_repository)
+    _assert_root_execution_surface(harness_repository)
     _bundle_clone(ENGINE_REPOSITORY, engine, engine_bundle, engine_repository)
 
     ACTIVE_REQUEST["phase"] = "freeze"
@@ -885,6 +923,8 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
             "/usr/bin/python3",
             str(campaign_program),
             "freeze",
+            "--harness-source",
+            str(harness_repository),
             "--engine-source",
             str(engine_repository),
             "--engine-candidate-hash",
@@ -924,11 +964,10 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         raise ValueError("campaign composite hash is absent")
     frozen_harness = Path(descriptor.get("harness_source", "")).resolve()
     if (
-        not frozen_harness.is_relative_to(request_root / "worktrees")
+        frozen_harness != harness_repository.resolve()
         or _git_root(frozen_harness, "rev-parse", "HEAD^{commit}") != harness
     ):
         raise ValueError("frozen root harness path or identity is invalid")
-    campaign_program = frozen_harness / "scripts/glm52_w1_affine_campaign.py"
     ACTIVE_REQUEST["phase"] = "public-randomness"
     drand = request_root / "drand.json"
     frozen_at = descriptor.get("frozen_at")
@@ -954,7 +993,7 @@ def run_campaign(harness: str, engine: str, model_hash: str) -> int:
         ],
         check=False,
         timeout=12 * 60 * 60,
-        cwd=frozen_harness,
+        cwd=INSTALLED_HARNESS,
         environment=environment,
     )
     (request_root / "campaign.log").write_text(

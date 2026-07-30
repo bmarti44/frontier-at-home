@@ -774,6 +774,11 @@ def _seal_candidate_tree(path: Path) -> None:
 
 def freeze_candidate(args: argparse.Namespace) -> int:
     """Clean-build and freeze every identity before public randomness."""
+    requested_harness = (
+        args.harness_source.resolve()
+        if args.harness_source is not None
+        else ROOT
+    )
     engine_repository = args.engine_source.resolve()
     model = args.model.resolve()
     freeze_dir = args.freeze_dir.resolve()
@@ -781,7 +786,13 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         raise ValueError("freeze directory already exists")
     if not model.is_file() or not engine_repository.is_dir():
         raise ValueError("engine source or model is absent")
-    harness_commit = _source_commit(ROOT)
+    if ROOT_AUTHORITY and (
+        args.harness_source is None
+        or requested_harness
+        != (AUTHORITY_REQUEST_ROOT / "harness-repository").resolve()
+    ):
+        raise ValueError("root authority harness source is invalid")
+    harness_commit = _source_commit(requested_harness)
     engine_commit = _source_commit(engine_repository)
     if args.engine_candidate_hash and args.engine_candidate_hash != engine_commit:
         raise ValueError("engine candidate hash changed")
@@ -796,9 +807,14 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         worktree_root.mkdir(mode=0o711, parents=True, exist_ok=True)
         os.chown(worktree_root, 0, 0)
         os.chmod(worktree_root, 0o711)
-    harness_source = worktree_root / f"glm52-w1-harness-{tag}"
+    harness_source = (
+        requested_harness
+        if ROOT_AUTHORITY
+        else worktree_root / f"glm52-w1-harness-{tag}"
+    )
     engine_source = worktree_root / f"glm52-w1-build-{tag}"
-    _fresh_worktree(ROOT, harness_source, harness_commit)
+    if not ROOT_AUTHORITY:
+        _fresh_worktree(ROOT, harness_source, harness_commit)
     _fresh_worktree(engine_repository, engine_source, engine_commit)
     engine_git_dir = Path(
         _command_output(
@@ -911,8 +927,12 @@ def freeze_candidate(args: argparse.Namespace) -> int:
         "frozen_at": datetime.now(timezone.utc).isoformat(),
         "harness_candidate_hash": harness_commit,
         "harness_tree": _command_output(
-            _trusted_git(ROOT, "rev-parse", f"{harness_commit}^{{tree}}"),
-            ROOT,
+            _trusted_git(
+                harness_source,
+                "rev-parse",
+                f"{harness_commit}^{{tree}}",
+            ),
+            harness_source,
         ),
         "harness_source": str(harness_source),
         "runner_sha256": sha256_file(runner_path),
@@ -1127,13 +1147,11 @@ def _journal_witness(message: str, expected_nonce: str) -> dict[str, str]:
     return receipt
 
 
-def _score(
-    campaign: dict[str, Any], frozen_scorer_path: Path
-) -> dict[str, Any]:
+def _score(campaign: dict[str, Any]) -> dict[str, Any]:
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
-        "glm52_goal_fixed", frozen_scorer_path
+        "glm52_goal_fixed", SCORER
     )
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load fixed scorer")
@@ -1161,10 +1179,10 @@ def _finalize_controller_attempt(
     summary: dict[str, Any],
     frozen_binary: Path,
     final_model_identity: str,
-    frozen_scorer_path: Path,
+    harness_source: Path,
     freeze_dir: Path,
 ) -> Path:
-    goal = _goal_module(frozen_scorer_path)
+    goal = _goal_module(SCORER)
     staging = output / "controller-attempt"
     if staging.exists():
         raise ValueError("controller attempt staging already exists")
@@ -1174,12 +1192,12 @@ def _finalize_controller_attempt(
         "schema_version": 1,
         "candidate_hash": campaign["harness_candidate_hash"],
         "git_tree": _command_output(
-            [
-                "git",
+            _trusted_git(
+                harness_source,
                 "rev-parse",
                 f"{campaign['harness_candidate_hash']}^{{tree}}",
-            ],
-            ROOT,
+            ),
+            harness_source,
         ),
     }
     model_descriptor = {
@@ -1323,7 +1341,6 @@ def run(args: argparse.Namespace) -> int:
     composite_candidate_sha256 = frozen_candidate[
         "composite_candidate_sha256"
     ]
-    frozen_scorer_path = harness_source / "scripts/glm52_goal.py"
     drand = _authenticate_drand(_drand_record(args.drand_json.resolve()))
     seed = confirmation_seed(drand["randomness"], composite_candidate_sha256)
     frozen_at = frozen_candidate["frozen_at"]
@@ -1339,7 +1356,7 @@ def run(args: argparse.Namespace) -> int:
             "seed_sha256": seed,
         },
     }
-    goal = _goal_module(frozen_scorer_path)
+    goal = _goal_module(SCORER)
     goal.validate_manifest_lineage(
         lineage,
         "W1",
@@ -1674,7 +1691,7 @@ def run(args: argparse.Namespace) -> int:
             flush=True,
         )
 
-    summary = _score(campaign, frozen_scorer_path)
+    summary = _score(campaign)
     final_model_sha256 = verify_model_content(model, model_sha256)
     final_model_identity = model_identity(model)
     if (
@@ -1694,7 +1711,7 @@ def run(args: argparse.Namespace) -> int:
         summary,
         frozen / "ds4-server",
         final_model_identity,
-        frozen_scorer_path,
+        harness_source,
         freeze_dir,
     )
     print(f"controller_attempt={destination}", flush=True)
@@ -1719,6 +1736,7 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     commands = result.add_subparsers(dest="command", required=True)
     freeze_parser = commands.add_parser("freeze")
+    freeze_parser.add_argument("--harness-source", type=Path)
     freeze_parser.add_argument("--engine-source", required=True, type=Path)
     freeze_parser.add_argument("--engine-candidate-hash")
     freeze_parser.add_argument("--model", required=True, type=Path)
