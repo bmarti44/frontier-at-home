@@ -436,6 +436,8 @@ PY
   fi
   RSS=$(awk '/VmRSS/{print $2}' "/proc/$SPID2/status" 2>/dev/null || echo 0)
   RB=$(awk '/^read_bytes/{print $2}' "/proc/$SPID2/io" 2>/dev/null || echo 0)
+  [[ $RSS =~ ^[0-9]+$ ]] || RSS=0
+  [[ $RB =~ ^[0-9]+$ ]] || RB=0
   echo "$(date -u --iso-8601=ns) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
   sync -d "$SAMP" 2>/dev/null || true
   if (( MA < KILL_FLOOR_GIB * 1048576 )); then

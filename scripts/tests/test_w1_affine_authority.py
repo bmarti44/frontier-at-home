@@ -294,6 +294,21 @@ class W1AffineAuthorityTests(unittest.TestCase):
                 "W1", "w1.affine-quality.v2", [campaign]
             )
 
+    def test_raw_scorer_rejects_empty_memory_counters(self):
+        for field in ("eng_rss_kb", "read_bytes"):
+            with self.subTest(field=field):
+                campaign = raw_campaign(self.goal)
+                samples = campaign["attempts"][0]["evidence"]["samples_log"]
+                campaign["attempts"][0]["evidence"]["samples_log"] = (
+                    samples.replace(f"{field}=1", f"{field}=", 1)
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "memory telemetry row is malformed"
+                ):
+                    self.goal.score_registered_gate(
+                        "W1", "w1.affine-quality.v2", [campaign]
+                    )
+
     def test_fabricated_drand_and_cached_model_identity_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             beacon = Path(temporary) / "beacon.json"
