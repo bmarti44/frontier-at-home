@@ -536,6 +536,35 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual("".join(match.groups()), expected)
 
+    def test_installer_publishes_only_the_contained_runtime_read_surface(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn(
+            'readonly CONTAINED_RUNTIME_DIRS=(\n'
+            '    "$HARNESS"\n'
+            '    "$HARNESS/results"\n'
+            '    "$HARNESS/results/glm52-gates"\n'
+            '    "$HARNESS/results/glm52-gates/harness"\n'
+            '    "$HARNESS/scripts"\n'
+            ")",
+            source,
+        )
+        self.assertIn(
+            'readonly CONTAINED_RUNTIME_FILES=(\n'
+            '    "$HARNESS/results/glm52-gates/harness/glm_safe_run.sh"\n'
+            '    "$HARNESS/scripts/03_memory_guard.py"\n'
+            ")",
+            source,
+        )
+        self.assertIn(
+            '/usr/bin/chmod 0555 "${CONTAINED_RUNTIME_DIRS[@]}"',
+            source,
+        )
+        self.assertIn(
+            '/usr/bin/chmod 0444 "${CONTAINED_RUNTIME_FILES[@]}"',
+            source,
+        )
+        self.assertNotIn('/usr/bin/chmod -R', source)
+
     def test_installer_requires_clean_exact_head(self):
         source = INSTALLER.read_text(encoding="utf-8")
         for required in (
