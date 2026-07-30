@@ -61,6 +61,19 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("GLM_SAFE_WITNESS_ARTIFACT", launcher)
         self.assertIn("date --iso-8601=ns", safe)
 
+    def test_authoritative_timestamps_are_emitted_in_utc(self):
+        source = SAFE.read_text(encoding="utf-8")
+        self.assertIn(
+            'plog() { echo "$(date -u -Is) $*" >> "$MAIN"',
+            source,
+        )
+        self.assertIn(
+            'echo "$(date -u --iso-8601=ns) mem_avail_kb=$MA',
+            source,
+        )
+        self.assertNotIn('echo "$(date -Is)', source)
+        self.assertNotIn('echo "$(date --iso-8601=ns)', source)
+
 
 class CandidateLifecycleTests(unittest.TestCase):
     @classmethod
