@@ -197,8 +197,8 @@ before implementing it:
    memory safeguards, and evidence location as facts become available.
 
 The `pull_request_target` claim workflow deliberately does not check out or
-execute fork content. It reads the catalog at the base commit, validates the
-head branch, and applies `claim:<model>`, `backend:<backend>`, and
+execute fork content. It reads the current trusted default-branch catalog,
+validates the head branch, and applies `claim:<model>`, `backend:<backend>`, and
 `status:self-declared` labels. Those labels drive the live claim badges in the
 README. The workflow also reconciles stale managed labels after PR changes and
 default-branch catalog changes. Never add fork checkout or fork-authored
