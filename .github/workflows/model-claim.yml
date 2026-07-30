@@ -1,83 +1,245 @@
-name: Register model integration claim
+name: Reconcile model integration claims
 
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - converted_to_draft
+      - ready_for_review
+      - closed
+  push:
+    paths:
+      - models/catalog.json
 
 permissions:
   contents: read
   issues: write
-  pull-requests: write
+
+concurrency:
+  group: model-claim-label-reconciliation
+  cancel-in-progress: false
 
 jobs:
-  register:
-    if: startsWith(github.event.pull_request.head.ref, 'claim-model/')
+  reconcile:
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     steps:
-      - name: Validate branch and label the claim
-        uses: actions/github-script@v8
+      - name: Reconcile open self-declared claims
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
         with:
           script: |
-            const branch = context.payload.pull_request.head.ref;
-            const match = branch.match(
-              /^claim-model\/([a-z0-9][a-z0-9.-]*)\/(cuda|apple-silicon|rocm|vulkan|intel-xe|qualcomm|tenstorrent|cpu)$/
-            );
-            if (!match) {
-              core.setFailed(
-                'Claim branches must be claim-model/<catalog-slug>/<backend>.'
+            const {owner, repo} = context.repo;
+            const defaultBranch = context.payload.repository.default_branch;
+            const managedLabel = name =>
+              name.startsWith('claim:') ||
+              name.startsWith('backend:') ||
+              name === 'status:claimed' ||
+              name === 'status:self-declared';
+
+            async function readCatalog(ref) {
+              const response = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path: 'models/catalog.json',
+                ref,
+              });
+              const catalog = JSON.parse(
+                Buffer.from(response.data.content, 'base64').toString('utf8')
               );
-              return;
+              const statuses = new Set([
+                'available',
+                'active',
+                'qualified',
+                'reference_only',
+              ]);
+              if (
+                catalog.schema_version !== 1 ||
+                !Array.isArray(catalog.claim_backends) ||
+                !catalog.claim_backends.length ||
+                new Set(catalog.claim_backends).size !==
+                  catalog.claim_backends.length ||
+                !catalog.claim_backends.every(
+                  item =>
+                    typeof item === 'string' &&
+                    /^[a-z0-9][a-z0-9-]*$/.test(item)
+                ) ||
+                !Array.isArray(catalog.models)
+              ) {
+                throw new Error('Malformed model claim catalog');
+              }
+              const slugs = catalog.models.map(item => item.slug);
+              if (
+                new Set(slugs).size !== slugs.length ||
+                !catalog.models.every(
+                  item =>
+                    typeof item.slug === 'string' &&
+                    /^[a-z0-9][a-z0-9.-]*$/.test(item.slug) &&
+                    statuses.has(item.repo_status)
+                )
+              ) {
+                throw new Error('Ambiguous model claim catalog');
+              }
+              return catalog;
             }
-            const [, slug, backend] = match;
-            const response = await github.rest.repos.getContent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: 'models/catalog.json',
-              ref: context.payload.pull_request.base.sha,
-            });
-            const catalog = JSON.parse(
-              Buffer.from(response.data.content, 'base64').toString('utf8')
-            );
-            const model = catalog.models.find(item => item.slug === slug);
-            if (!model) {
-              core.setFailed(`Unknown model catalog slug: ${slug}`);
-              return;
-            }
-            if (model.repo_status === 'reference_only') {
-              core.setFailed(
-                `${slug} is reference-only until public local weights exist.`
+
+            async function removeManagedLabels(issueNumber) {
+              const labels = await github.paginate(
+                github.rest.issues.listLabelsOnIssue,
+                {owner, repo, issue_number: issueNumber, per_page: 100}
               );
-              return;
-            }
-            const labels = [
-              [`claim:${slug}`, '5319e7', `Active integration claim for ${slug}`],
-              [`backend:${backend}`, '0e8a16', `Integration backend: ${backend}`],
-              ['status:claimed', 'fbca04', 'Actively being worked on'],
-            ];
-            for (const [name, color, description] of labels) {
-              try {
-                await github.rest.issues.createLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  name,
-                  color,
-                  description,
-                });
-              } catch (error) {
-                if (error.status !== 422) throw error;
+              for (const label of labels.filter(item =>
+                managedLabel(item.name)
+              )) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    name: label.name,
+                  });
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                }
               }
             }
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              labels: labels.map(([name]) => name),
-            });
+
+            async function ensureLabel(name, color, description) {
+              try {
+                const existing = await github.rest.issues.getLabel({
+                  owner,
+                  repo,
+                  name,
+                });
+                if (
+                  existing.data.color.toLowerCase() !== color ||
+                  existing.data.description !== description
+                ) {
+                  await github.rest.issues.updateLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description,
+                  });
+                }
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description,
+                  });
+                } catch (createError) {
+                  if (createError.status !== 422) throw createError;
+                  await github.rest.issues.updateLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description,
+                  });
+                }
+              }
+            }
+
+            async function reconcile(pr, catalog, failInvalidClaim) {
+              const branch = pr.head.ref;
+              const startsAsClaim = branch.startsWith('claim-model/');
+              const hasManaged = (pr.labels || []).some(label =>
+                managedLabel(label.name)
+              );
+              if (!startsAsClaim && !hasManaged) return null;
+
+              await removeManagedLabels(pr.number);
+              if (!startsAsClaim || pr.state !== 'open') return null;
+
+              const match = branch.match(
+                /^claim-model\/([a-z0-9][a-z0-9.-]*)\/([a-z0-9][a-z0-9-]*)$/
+              );
+              const reject = message => {
+                if (failInvalidClaim) core.setFailed(message);
+                return null;
+              };
+              if (pr.base.ref !== defaultBranch) {
+                return reject(
+                  `Claim PRs must target the default branch ${defaultBranch}.`
+                );
+              }
+              if (!match) {
+                return reject(
+                  'Claim branches must be claim-model/<catalog-slug>/<backend>.'
+                );
+              }
+              const [, slug, backend] = match;
+              if (!catalog.claim_backends.includes(backend)) {
+                return reject(`Unknown claim backend: ${backend}`);
+              }
+              const model = catalog.models.find(item => item.slug === slug);
+              if (!model) return reject(`Unknown model catalog slug: ${slug}`);
+              if (model.repo_status === 'reference_only') {
+                return reject(
+                  `${slug} is reference-only until public local weights exist.`
+                );
+              }
+
+              const labels = [
+                [
+                  `claim:${slug}`,
+                  '5319e7',
+                  `Open self-declared integration claim for ${slug}`,
+                ],
+                [
+                  `backend:${backend}`,
+                  '0e8a16',
+                  `Integration backend: ${backend}`,
+                ],
+                [
+                  'status:self-declared',
+                  'fbca04',
+                  'Open self-declared integration claim',
+                ],
+              ];
+              for (const label of labels) await ensureLabel(...label);
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: labels.map(([name]) => name),
+              });
+              return {slug, backend, branch};
+            }
+
+            let results = [];
+            if (context.eventName === 'pull_request_target') {
+              const pr = context.payload.pull_request;
+              const ref = context.payload.pull_request.base.sha;
+              const catalog = await readCatalog(ref);
+              const result = await reconcile(pr, catalog, true);
+              if (result) results.push(result);
+            } else {
+              const catalog = await readCatalog(context.sha);
+              const prs = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: 'open',
+                base: defaultBranch,
+                per_page: 100,
+              });
+              for (const pr of prs) {
+                const result = await reconcile(pr, catalog, false);
+                if (result) results.push(result);
+              }
+            }
+
             core.summary
-              .addHeading('Model integration claim registered')
-              .addTable([
-                [{data: 'Model', header: true}, slug],
-                [{data: 'Backend', header: true}, backend],
-                [{data: 'Branch', header: true}, branch],
-              ])
+              .addHeading('Model integration claim reconciliation')
+              .addRaw(`Reconciled ${results.length} open self-declared claim(s).`)
               .write();

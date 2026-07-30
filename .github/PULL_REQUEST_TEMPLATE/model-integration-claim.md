@@ -4,7 +4,8 @@ Open this PR as a draft as soon as work begins. Its head branch must be:
   claim-model/<catalog-slug>/<backend>
 
 Use a slug and backend from models/catalog.json. The base-repository workflow
-will label the PR, and the README status link will then expose the active claim.
+will label the PR, and the README status link will expose the open,
+self-declared claim.
 Do not include credentials, model-provider tokens, private weights, or secrets.
 -->
 

@@ -199,15 +199,18 @@ before implementing it:
 The `pull_request_target` claim workflow deliberately does not check out or
 execute fork content. It reads the catalog at the base commit, validates the
 head branch, and applies `claim:<model>`, `backend:<backend>`, and
-`status:claimed` labels. Those labels drive the live claim badges in the
-README. Never add fork checkout or fork-authored scripts to that privileged
-workflow.
+`status:self-declared` labels. Those labels drive the live claim badges in the
+README. The workflow also reconciles stale managed labels after PR changes and
+default-branch catalog changes. Never add fork checkout or fork-authored
+scripts to that privileged workflow, and pin every external action to a full
+reviewed commit SHA.
 
-A claim is coordination metadata, not an endorsement or reservation. Multiple
-claims may coexist, especially for different backends. Close a claim PR when
-work stops so the status badge becomes accurate again. A model marked
-`reference_only` cannot be claimed until public local weights and a compatible
-license are documented in the catalog.
+A claim is self-declared coordination metadata, not proof of ongoing activity,
+an endorsement, or a reservation. Multiple claims may coexist, especially for
+different backends. Close a claim PR when work stops so the status badge
+becomes accurate again. A model marked `reference_only` cannot be claimed
+until public local weights and a compatible license are documented in the
+catalog.
 
 ## Adding another model
 
