@@ -95,6 +95,10 @@ class ModelClaimCatalogTests(unittest.TestCase):
                 document,
             )
             self.assertIn("Architecture claim mapping", document)
+        self.assertIn(
+            "current trusted default-branch catalog",
+            agents,
+        )
         for backend in (
             "cuda",
             "apple-silicon",
