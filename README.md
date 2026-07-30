@@ -53,6 +53,27 @@ Supported backend slugs are `cuda`, `apple-silicon`, `rocm`, `vulkan`,
 exclusive rights and does not lower the evidence requirements in
 [`AGENTS.md`](AGENTS.md).
 
+### Architecture claim mapping
+
+The branch names combine one model from the queue with the primary backend for
+the target architecture:
+
+| Target architecture | Branch backend |
+| --- | --- |
+| NVIDIA DGX, GeForce, RTX/Blackwell, or Jetson using CUDA | `cuda` |
+| Apple Silicon using MLX or Metal | `apple-silicon` |
+| AMD Strix Halo, Radeon, Radeon Pro, or Instinct using HIP | `rocm` |
+| Cross-vendor GPU implementation using Vulkan | `vulkan` |
+| Intel Arc/Xe using oneAPI, Level Zero, or SYCL | `intel-xe` |
+| Qualcomm Snapdragon/Adreno/Hexagon native implementation | `qualcomm` |
+| Tenstorrent Tensix using TT-Metalium, TT-NN, or TT-Forge | `tenstorrent` |
+| CPU-first or CPU/offload implementation | `cpu` |
+
+For example, GLM-5.2 on Apple Silicon is
+`claim-model/glm-5.2/apple-silicon`; Kimi K3 on Strix Halo through HIP is
+`claim-model/kimi-k3/rocm`. Choose `vulkan` only when Vulkan is the integration
+being qualified rather than a secondary fallback.
+
 | Model / current Ollama tag | Ollama-listed context | Parameters / modalities | Integration status / open self-declared claims |
 | --- | ---: | --- | --- |
 | [GLM-5.2](https://ollama.com/library/glm-5.2) — `glm-5.2:cloud` | 976K | 756B; text | **Active:** CUDA/DGX Spark qualification. [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aglm-5.2?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aglm-5.2) |

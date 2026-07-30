@@ -212,6 +212,28 @@ becomes accurate again. A model marked `reference_only` cannot be claimed
 until public local weights and a compatible license are documented in the
 catalog.
 
+### Architecture claim mapping
+
+Use the backend that is actually being implemented and qualified:
+
+| Target architecture | Branch backend |
+| --- | --- |
+| NVIDIA CUDA, including DGX Spark and Jetson | `cuda` |
+| Apple Silicon with MLX or Metal | `apple-silicon` |
+| AMD Strix Halo or discrete AMD with HIP | `rocm` |
+| A cross-vendor Vulkan implementation | `vulkan` |
+| Intel Arc/Xe with oneAPI, Level Zero, or SYCL | `intel-xe` |
+| Qualcomm Snapdragon native acceleration | `qualcomm` |
+| Tenstorrent Tensix | `tenstorrent` |
+| CPU-first or CPU/offload | `cpu` |
+
+The model and architecture are claimed together in the branch name. Examples:
+`claim-model/glm-5.2/apple-silicon`,
+`claim-model/deepseek-v4-flash/cuda`, and
+`claim-model/kimi-k3/rocm`. If one PR genuinely qualifies multiple primary
+backends, use separate claim PRs so status, evidence, and review remain
+unambiguous.
+
 ## Adding another model
 
 For a new model family:

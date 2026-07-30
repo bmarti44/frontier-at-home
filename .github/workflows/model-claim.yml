@@ -9,6 +9,8 @@ on:
       - edited
       - converted_to_draft
       - ready_for_review
+      - labeled
+      - unlabeled
       - closed
   push:
     paths:
@@ -217,25 +219,32 @@ jobs:
               return {slug, backend, branch};
             }
 
-            let results = [];
+            // Every trigger performs the same global sweep. GitHub may replace
+            // one pending run in a concurrency group, so a PR-specific run
+            // must be equivalent to a catalog-push run.
+            let currentPr = null;
+            let currentNumber = null;
             if (context.eventName === 'pull_request_target') {
-              const pr = context.payload.pull_request;
-              const ref = context.payload.pull_request.base.sha;
-              const catalog = await readCatalog(ref);
-              const result = await reconcile(pr, catalog, true);
+              currentPr = context.payload.pull_request;
+              currentNumber = currentPr.number;
+              // Cleanup is independent of catalog availability. In
+              // particular, retargeting to an old base must fail closed.
+              await removeManagedLabels(currentPr.number);
+            }
+
+            const catalog = await readCatalog(defaultBranch);
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const results = [];
+            for (const pr of prs) {
+              const result = await reconcile(
+                pr, catalog, pr.number === currentNumber
+              );
               if (result) results.push(result);
-            } else {
-              const catalog = await readCatalog(context.sha);
-              const prs = await github.paginate(github.rest.pulls.list, {
-                owner,
-                repo,
-                state: 'open',
-                per_page: 100,
-              });
-              for (const pr of prs) {
-                const result = await reconcile(pr, catalog, false);
-                if (result) results.push(result);
-              }
             }
 
             core.summary

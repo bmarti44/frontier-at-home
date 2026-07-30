@@ -116,7 +116,6 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertIn("unlabeled", workflow)
         self.assertIn("models/catalog.json", workflow)
         self.assertIn("push:", workflow)
-        self.assertIn("context.payload.pull_request.base.sha", workflow)
         self.assertIn("models/catalog.json", workflow)
         self.assertIn("claim-model\\/", workflow)
         self.assertIn("catalog.claim_backends.includes(backend)", workflow)
@@ -129,7 +128,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertLess(workflow.index(cleanup), workflow.index(catalog_read))
         self.assertIn("github.rest.pulls.list", workflow)
         self.assertIn(
-            "reconcile(pr, catalog, pr.number === currentNumber)", workflow
+            "pr, catalog, pr.number === currentNumber", workflow
         )
         self.assertNotIn("base: defaultBranch,", workflow)
         self.assertNotIn("pull_request.base.sha", workflow)
