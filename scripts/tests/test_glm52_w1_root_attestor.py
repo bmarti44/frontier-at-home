@@ -294,6 +294,67 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertNotIn("os.system", source)
         self.assertNotIn("eval(", source)
 
+    def test_requested_commit_never_selects_root_executed_source(self):
+        source = SUBMITTER.read_text(encoding="utf-8")
+        self.assertIn("ROOT_EXECUTION_SURFACE", source)
+        self.assertIn("_assert_root_execution_surface(", source)
+        self.assertIn(
+            "_bundle_clone(REPOSITORY, harness, harness_bundle, "
+            "harness_repository)",
+            source,
+        )
+        self.assertIn(
+            'campaign_program = INSTALLED_HARNESS / '
+            '"scripts/glm52_w1_affine_campaign.py"',
+            source,
+        )
+        self.assertNotIn(
+            'campaign_program = frozen_harness / '
+            '"scripts/glm52_w1_affine_campaign.py"',
+            source,
+        )
+        self.assertNotIn(
+            "_git_root(INSTALLED_HARNESS, \"show\", f\"{harness}:{PROFILE}\")",
+            source,
+        )
+
+        campaign = (
+            ROOT / "scripts/glm52_w1_affine_campaign.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"--harness-source"', campaign)
+        self.assertIn("goal = _goal_module(SCORER)", campaign)
+        self.assertNotIn("goal = _goal_module(frozen_scorer_path)", campaign)
+
+    def test_root_execution_surface_rejects_candidate_code_changes(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            installed = root / "installed"
+            candidate = root / "candidate"
+            for relative in submitter.ROOT_EXECUTION_SURFACE:
+                for base in (installed, candidate):
+                    path = base / relative
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(f"fixed:{relative}\n", encoding="utf-8")
+            with mock.patch.object(
+                submitter, "INSTALLED_HARNESS", installed
+            ):
+                submitter._assert_root_execution_surface(candidate)
+                changed = candidate / submitter.ROOT_EXECUTION_SURFACE[0]
+                changed.write_text("owner-controlled root payload\n")
+                with self.assertRaisesRegex(
+                    ValueError, "root execution surface differs"
+                ):
+                    submitter._assert_root_execution_surface(candidate)
+                changed.unlink()
+                changed.symlink_to(
+                    installed / submitter.ROOT_EXECUTION_SURFACE[0]
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "root execution surface is unsafe"
+                ):
+                    submitter._assert_root_execution_surface(candidate)
+
     def test_installer_closes_docker_root_equivalence_and_is_hash_pinned(self):
         source = INSTALLER.read_text(encoding="utf-8")
         self.assertNotIn(
