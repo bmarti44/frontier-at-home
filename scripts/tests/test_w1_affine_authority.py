@@ -270,9 +270,9 @@ class W1AffineAuthorityTests(unittest.TestCase):
                 campaign["attempts"][0]["evidence"]["main_log"] = campaign[
                     "attempts"
                 ][0]["evidence"]["main_log"].replace(
-                    "2026-07-29T00:00:00.000+00:00",
-                    replacement,
-                    1,
+                    "2026-07-29T00:00:00.000+00:00 "
+                    "executed_candidate_verified",
+                    f"{replacement} executed_candidate_verified",
                 )
                 with self.assertRaisesRegex(
                     ValueError, "explicit UTC offset"
