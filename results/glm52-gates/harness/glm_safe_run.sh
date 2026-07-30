@@ -148,7 +148,7 @@ fi
 DIR=$CRASH_ROOT/$TS-$TAG
 mkdir -p "$DIR"
 MAIN="$DIR/main.log"; SAMP="$DIR/samples.log"
-plog() { echo "$(date -Is) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
+plog() { echo "$(date -u -Is) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
 live_group_pids() {
   ps -eo pid=,pgid=,stat= | awk -v group="$1" \
     '$2 == group && $3 !~ /^Z/ {print $1}'
@@ -436,7 +436,7 @@ PY
   fi
   RSS=$(awk '/VmRSS/{print $2}' "/proc/$SPID2/status" 2>/dev/null || echo 0)
   RB=$(awk '/^read_bytes/{print $2}' "/proc/$SPID2/io" 2>/dev/null || echo 0)
-  echo "$(date --iso-8601=ns) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
+  echo "$(date -u --iso-8601=ns) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
   sync -d "$SAMP" 2>/dev/null || true
   if (( MA < KILL_FLOOR_GIB * 1048576 )); then
     plog "KILL_FLOOR breached: MemAvailable=${MA}kB < ${KILL_FLOOR_GIB}GiB — SIGKILL pgid $PG"
