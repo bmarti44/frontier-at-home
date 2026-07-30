@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -59,7 +60,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("GLM_SAFE_WITNESS_ARTIFACT", safe)
         self.assertIn("artifact_sha256=", safe)
         self.assertIn("GLM_SAFE_WITNESS_ARTIFACT", launcher)
-        self.assertIn("date --iso-8601=ns", safe)
+        self.assertIn("date -u --iso-8601=ns", safe)
 
     def test_authoritative_timestamps_are_emitted_in_utc(self):
         source = SAFE.read_text(encoding="utf-8")
@@ -181,6 +182,124 @@ class CandidateLifecycleTests(unittest.TestCase):
     def test_wrapper_exceeding_shutdown_grace_is_rejected(self):
         result = self.run_mutation("linger")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+class CurrentUserTimestampTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if shutil.which("gcc") is None:
+            raise unittest.SkipTest("gcc is unavailable")
+        available_gib = int(
+            next(
+                line.split()[1]
+                for line in Path("/proc/meminfo").read_text().splitlines()
+                if line.startswith("MemAvailable:")
+            )
+        ) / 1048576
+        if available_gib < 110:
+            raise unittest.SkipTest("110 GiB safe-run precondition is unavailable")
+
+        cls.local_tmp = Path(tempfile.mkdtemp(prefix="glm-utc-lifecycle-"))
+        cls.runner = cls.local_tmp / "runner"
+        subprocess.run(
+            ["gcc", "-O2", "-Wall", "-Wextra", "-o", cls.runner, FIXTURE],
+            check=True,
+        )
+        cache = Path("/home/bmarti44/.cache")
+        cache.mkdir(parents=True, exist_ok=True)
+        cls.candidate_src = Path(
+            tempfile.mkdtemp(prefix="glm52-utc-lifecycle-", dir=cache)
+        )
+        shutil.copy2("/usr/bin/sleep", cls.candidate_src / "ds4-server")
+        cls.digest = hashlib.sha256(
+            (cls.candidate_src / "ds4-server").read_bytes()
+        ).hexdigest()
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, "candidate_src"):
+            shutil.rmtree(cls.candidate_src)
+        if hasattr(cls, "local_tmp"):
+            shutil.rmtree(cls.local_tmp)
+
+    def test_real_wrapper_emits_only_utc_under_host_timezone_variants(self):
+        for timezone_name in (
+            "America/New_York",
+            "UTC",
+            "Pacific/Kiritimati",
+        ):
+            with self.subTest(timezone_name=timezone_name):
+                environment = {
+                    "HOME": "/home/bmarti44",
+                    "PATH": (
+                        "/usr/local/sbin:/usr/local/bin:/usr/sbin:"
+                        "/usr/bin:/sbin:/bin"
+                    ),
+                    "TZ": timezone_name,
+                    "GLM_CANDIDATE_SRC": str(self.candidate_src),
+                    "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+                    "GLM_SAFE_EXPECTED_BINARY_SHA256": self.digest,
+                    "GLM_SAFE_KILL_FLOOR_GIB": "40",
+                    "GLM_SAFE_MIN_START_GIB": "110",
+                    "GLM_SAFE_TIMEOUT_S": "30",
+                    "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+                }
+                result = subprocess.run(
+                    [
+                        "env",
+                        *[
+                            f"{key}={value}"
+                            for key, value in environment.items()
+                        ],
+                        "bash",
+                        str(SAFE),
+                        "--tag",
+                        f"utc-{timezone_name.replace('/', '-')}",
+                        "--",
+                        str(self.runner),
+                        "clean",
+                        str(self.candidate_src / "ds4-server"),
+                    ],
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=45,
+                    check=False,
+                )
+                self.assertEqual(
+                    result.returncode, 0, result.stdout + result.stderr
+                )
+                matches = re.findall(
+                    r"SAFE_RUN_DONE rc=0 killed=no dir=(\S+)",
+                    result.stdout,
+                )
+                self.assertEqual(
+                    len(matches), 1, result.stdout + result.stderr
+                )
+                main = (Path(matches[0]) / "main.log").read_text()
+                samples = (Path(matches[0]) / "samples.log").read_text()
+                lifecycle = [
+                    line.split()[0]
+                    for line in main.splitlines()
+                    if "executed_candidate_verified" in line
+                    or "SAFE_RUN end" in line
+                ]
+                self.assertEqual(len(lifecycle), 2, main)
+                self.assertTrue(
+                    all(value.endswith("+00:00") for value in lifecycle),
+                    lifecycle,
+                )
+                sample_timestamps = [
+                    line.split()[0] for line in samples.splitlines() if line
+                ]
+                self.assertGreaterEqual(len(sample_timestamps), 2, samples)
+                self.assertTrue(
+                    all(
+                        value.endswith("+00:00")
+                        for value in sample_timestamps
+                    ),
+                    sample_timestamps,
+                )
 
 
 if __name__ == "__main__":
