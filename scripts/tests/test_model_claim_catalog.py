@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "models/catalog.json"
 README = ROOT / "README.md"
+AGENTS = ROOT / "AGENTS.md"
 WORKFLOW = ROOT / ".github/workflows/model-claim.yml"
 
 
@@ -85,10 +86,34 @@ class ModelClaimCatalogTests(unittest.TestCase):
             else:
                 self.assertIn(f"claim%3A{slug}", readme)
 
+    def test_readme_and_agent_guide_explain_model_and_architecture_claims(self):
+        readme = README.read_text(encoding="utf-8")
+        agents = AGENTS.read_text(encoding="utf-8")
+        for document in (readme, agents):
+            self.assertIn(
+                "claim-model/<catalog-slug>/<backend>",
+                document,
+            )
+            self.assertIn("Architecture claim mapping", document)
+        for backend in (
+            "cuda",
+            "apple-silicon",
+            "rocm",
+            "vulkan",
+            "intel-xe",
+            "qualcomm",
+            "tenstorrent",
+            "cpu",
+        ):
+            self.assertIn(f"`{backend}`", readme)
+            self.assertIn(f"`{backend}`", agents)
+
     def test_privileged_claim_workflow_never_executes_fork_content(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("pull_request_target:", workflow)
         self.assertIn("edited", workflow)
+        self.assertIn("labeled", workflow)
+        self.assertIn("unlabeled", workflow)
         self.assertIn("models/catalog.json", workflow)
         self.assertIn("push:", workflow)
         self.assertIn("context.payload.pull_request.base.sha", workflow)
@@ -97,7 +122,17 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertIn("catalog.claim_backends.includes(backend)", workflow)
         self.assertIn("issues.removeLabel", workflow)
         self.assertIn("status:self-declared", workflow)
+        cleanup = "await removeManagedLabels(currentPr.number);"
+        catalog_read = "const catalog = await readCatalog(defaultBranch);"
+        self.assertIn(cleanup, workflow)
+        self.assertIn(catalog_read, workflow)
+        self.assertLess(workflow.index(cleanup), workflow.index(catalog_read))
+        self.assertIn("github.rest.pulls.list", workflow)
+        self.assertIn(
+            "reconcile(pr, catalog, pr.number === currentNumber)", workflow
+        )
         self.assertNotIn("base: defaultBranch,", workflow)
+        self.assertNotIn("pull_request.base.sha", workflow)
         self.assertNotIn("actions/checkout", workflow)
         self.assertNotIn("pull_request.head.sha", workflow)
         self.assertNotIn("exec(", workflow)
