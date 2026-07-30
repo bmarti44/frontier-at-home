@@ -305,6 +305,15 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertNotIn("os.system", source)
         self.assertNotIn("eval(", source)
 
+    def test_root_bundle_git_ignores_system_and_global_configuration(self):
+        source = SUBMITTER.read_text(encoding="utf-8")
+        run_helper = source.split("def _run(", 1)[1].split(
+            "def _git_as_owner(", 1
+        )[0]
+        self.assertIn('"GIT_CONFIG_NOSYSTEM": "1"', run_helper)
+        self.assertIn('"GIT_CONFIG_GLOBAL": "/dev/null"', run_helper)
+        self.assertIn('"GIT_OPTIONAL_LOCKS": "0"', run_helper)
+
     def test_requested_commit_never_selects_root_executed_source(self):
         source = SUBMITTER.read_text(encoding="utf-8")
         self.assertIn("ROOT_EXECUTION_SURFACE", source)
