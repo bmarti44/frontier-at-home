@@ -1,35 +1,35 @@
 # Frontier at Home
 
-This repository builds reproducible, safe ways to run frontier-level models on
-consumer-accessible hardware. It is CUDA-first today—not CUDA-only. DeepSeek V4
-Flash and GLM-5.2 on an NVIDIA GB10 DGX Spark are the initial implementations,
-not the boundary of the project. Additional models, accelerators, inference
-architectures, compression methods, and storage tiers belong here when they
-come with honest measurements and a dependable operator path.
+Run frontier-scale models on hardware you can actually buy — with receipts.
 
-The goal is not a collection of one-off demos. A contributed profile should be
+This repository builds reproducible, safe ways to operate frontier-level models
+on consumer-accessible hardware. It is CUDA-first today, not CUDA-only:
+DeepSeek V4 Flash and GLM-5.2 on an NVIDIA GB10 DGX Spark are the first
+implementations, not the boundary. Additional models, accelerators, inference
+architectures, compression methods, and storage tiers all belong here — as long
+as they arrive with honest measurements and a dependable operator path.
+
+This is not a collection of one-off demos. A contributed profile should be
 something another person can build, qualify at its largest useful context,
 switch to with one command, recover from safely, and audit from preserved raw
 evidence.
 
 ## Project direction
 
-The near-term path is to finish the CUDA profiles for DeepSeek V4 Flash and
-GLM-5.2, then apply the same reproducible workflow to other frontier-class model
-families and consumer-accessible systems. A backend need not copy the CUDA
-implementation: platform-native engines and memory strategies are encouraged
-when they preserve the same standards for correctness, safety, evidence, and
-repeatable operation.
+Finish the CUDA profiles for DeepSeek V4 Flash and GLM-5.2, then apply the same
+reproducible workflow to other frontier-class model families and
+consumer-accessible systems. A backend need not copy the CUDA implementation:
+platform-native engines and memory strategies are encouraged when they preserve
+the same standards for correctness, safety, evidence, and repeatable operation.
 
 ## Model integration queue
 
 The queue below was refreshed from Ollama's
-[Cloud model catalog](https://ollama.com/search?c=cloud) on 2026-07-29. The
-Ollama tag is a discovery reference, not the artifact this repository has
+[model catalog](https://ollama.com/search?c=cloud) on 2026-07-29. The catalog
+listing is a discovery reference, not the artifact this repository has
 qualified. A contributor must independently identify public local weights,
 verify the license, hash every model/tokenizer artifact, and publish measured
-evidence. Ollama Cloud availability alone does not prove that local weights are
-available.
+evidence.
 
 To claim an integration:
 
@@ -74,41 +74,39 @@ For example, GLM-5.2 on Apple Silicon is
 `claim-model/kimi-k3/rocm`. Choose `vulkan` only when Vulkan is the integration
 being qualified rather than a secondary fallback.
 
-| Model / current Ollama tag | Ollama-listed context | Parameters / modalities | Integration status / open self-declared claims |
+### Queue
+
+| Model | Ollama-listed context | Parameters / modalities | Integration status / open self-declared claims |
 | --- | ---: | --- | --- |
-| [GLM-5.2](https://ollama.com/library/glm-5.2) — `glm-5.2:cloud` | 976K | 756B; text | **Active:** CUDA/DGX Spark qualification. [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aglm-5.2?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aglm-5.2) |
-| [Kimi K3](https://ollama.com/library/kimi-k3) — `kimi-k3:cloud` | 1M | 2.81T; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k3?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k3) |
-| [Gemma 4](https://ollama.com/library/gemma4) — `gemma4:cloud` | 256K | E2B, E4B, 12B, 26B, 31B; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Agemma4?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Agemma4) |
-| [Qwen 3.5](https://ollama.com/library/qwen3.5) — `qwen3.5:cloud` | 256K | 0.8B–397B family; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aqwen3.5?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aqwen3.5) |
-| [GLM-5.1](https://ollama.com/library/glm-5.1) — `glm-5.1:cloud` | 198K | 756B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aglm-5.1?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aglm-5.1) |
-| [MiniMax M2.7](https://ollama.com/library/minimax-m2.7) — `minimax-m2.7:cloud` | 200K | 229B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aminimax-m2.7?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aminimax-m2.7) |
-| [Nemotron 3 Super](https://ollama.com/library/nemotron-3-super) — `nemotron-3-super:cloud` | 256K | 120B / 12B active; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-super?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-super) |
-| [MiniMax M2.5](https://ollama.com/library/minimax-m2.5) — `minimax-m2.5:cloud` | 198K | 230B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aminimax-m2.5?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aminimax-m2.5) |
-| [MiniMax M3](https://ollama.com/library/minimax-m3) — `minimax-m3:cloud` | 512K served | Not listed; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aminimax-m3?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aminimax-m3) |
-| [Kimi K2.7 Code](https://ollama.com/library/kimi-k2.7-code) — `kimi-k2.7-code:cloud` | 256K | 1.04T; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.7-code?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.7-code) |
-| [Kimi K2.6](https://ollama.com/library/kimi-k2.6) — `kimi-k2.6:cloud` | 256K | 1.04T; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.6?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.6) |
-| [DeepSeek V4 Pro](https://ollama.com/library/deepseek-v4-pro) — `deepseek-v4-pro:cloud` | 1M | 1.6T; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-pro?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-pro) |
-| [DeepSeek V4 Flash](https://ollama.com/library/deepseek-v4-flash) — `deepseek-v4-flash:cloud` | 1M | 158B displayed; description says 284B total / 13B active; text | **Qualified:** CUDA/DGX Spark. [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-flash?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-flash) |
-| [Nemotron 3 Ultra](https://ollama.com/library/nemotron-3-ultra) — `nemotron-3-ultra:cloud` | 256K served | 550B / 55B active; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-ultra?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-ultra) |
-| [GPT-OSS](https://ollama.com/library/gpt-oss) — `gpt-oss:120b-cloud` | 128K | 20B, 120B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Agpt-oss?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Agpt-oss) |
-| [Gemini 3 Flash Preview](https://ollama.com/library/gemini-3-flash-preview) — `gemini-3-flash-preview:cloud` | 1M | Not published; text, image | **Reference only:** not claimable until public local weights and a compatible license exist. |
-| [Nemotron 3 Nano](https://ollama.com/library/nemotron-3-nano) — `nemotron-3-nano:30b-cloud` | 1M | 4B, 30B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-nano?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-nano) |
-| [Kimi K2.5](https://ollama.com/library/kimi-k2.5) — `kimi-k2.5:cloud` | 256K | 1.04T; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.5?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.5) |
-| [Mistral Large 3](https://ollama.com/library/mistral-large-3) — `mistral-large-3:675b-cloud` | 256K | 675B; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Amistral-large-3?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Amistral-large-3) |
+| [GLM-5.2](https://ollama.com/library/glm-5.2) | 976K | 756B; text | **Active:** CUDA/DGX Spark qualification. [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aglm-5.2?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aglm-5.2) |
+| [Kimi K3](https://ollama.com/library/kimi-k3) | 1M | 2.81T; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k3?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k3) |
+| [Gemma 4](https://ollama.com/library/gemma4) | 256K | E2B, E4B, 12B, 26B, 31B; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Agemma4?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Agemma4) |
+| [Qwen 3.5](https://ollama.com/library/qwen3.5) | 256K | 0.8B–397B family; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aqwen3.5?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aqwen3.5) |
+| [MiniMax M3](https://ollama.com/library/minimax-m3) | 512K served | Not listed; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Aminimax-m3?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Aminimax-m3) |
+| [Nemotron 3 Super](https://ollama.com/library/nemotron-3-super) | 256K | 120B / 12B active; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-super?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-super) |
+| [Kimi K2.7 Code](https://ollama.com/library/kimi-k2.7-code) | 256K | 1.04T; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.7-code?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.7-code) |
+| [DeepSeek V4 Pro](https://ollama.com/library/deepseek-v4-pro) | 1M | 1.6T; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-pro?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-pro) |
+| [DeepSeek V4 Flash](https://ollama.com/library/deepseek-v4-flash) | 1M | 284B total / 13B active (Ollama page displays 158B); text | **Qualified:** CUDA/DGX Spark. [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-flash?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-flash) |
+| [Nemotron 3 Ultra](https://ollama.com/library/nemotron-3-ultra) | 256K served | 550B / 55B active; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-ultra?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-ultra) |
+| [GPT-OSS](https://ollama.com/library/gpt-oss) | 128K | 20B, 120B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Agpt-oss?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Agpt-oss) |
+| [Nemotron 3 Nano](https://ollama.com/library/nemotron-3-nano) | 1M | 4B, 30B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-nano?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-nano) |
+| [Mistral Large 3](https://ollama.com/library/mistral-large-3) | 256K | 675B; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Amistral-large-3?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Amistral-large-3) |
 
 ## Current model status and measurements
 
-Status below is current as of 2026-07-30. A dash means that this repository
-does not yet contain a qualifying measurement; it does not mean zero. Context
-size materially changes TTFT and prefill, so every number includes its measured
-prompt size. These are single-user measurements, not concurrency throughput.
+Status below is current as of 2026-07-30. Only DeepSeek V4 Flash and GLM-5.2 on
+CUDA are actively worked on; every other model/backend combination is N/A until
+someone qualifies it. A dash means this repository does not yet contain a
+qualifying measurement — it does not mean zero. Context size materially changes
+TTFT and prefill, so every number includes its measured prompt size. These are
+single-user measurements, not concurrency throughput.
 
 ### CUDA
 
 | Model | Hardware / format | Largest context result | TTFT | Prefill | Decode | Warm / short-prompt TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | **DeepSeek V4 Flash** | NVIDIA GB10 DGX Spark; UD-Q2_K_XL; llama.cpp | **1,000,044 tokens processed** with a `1,048,576` cap | **14.268 s @ 4K**; **57.789 s @ 16K**; **104.526 s @ 28K** | **290.790 tok/s @ 4K**; **284.412 tok/s @ 16K**; **274.812 tok/s @ 28K** | **13.882 tok/s @ 4K**; **13.512 tok/s @ 16K**; **13.147 tok/s @ 28K** | **0.554 s @ 52-token prompt**; 30-minute soak median **14.037 decode tok/s** | GSM8K holdout **97.00%** (97/100); MMLU-Pro holdout **74.09%** (183/247); HumanEval **73.78%** (121/164); composite **81.62%** | Qualified CUDA default. Direct 1M retrieval, negative control, generation, and safety checks passed with more than 14 GiB available at the low point. The displayed latency/throughput measurements are the preserved ≤28K suite, not a 1M speed claim. The 52-token result is a short-prompt baseline, not proof of a restored 1M prefix. |
-| **GLM-5.2** | NVIDIA GB10 DGX Spark; routed IQ2_XXS experimental engine | Not yet qualified | — | — | — | — | 100-vector diagnostic: mean NLL **0.4515**; hosted-reference top-1 agreement **83.4%**; target-logprob MAE **0.386 nat** | Active qualification. Real production tensors were captured and F16 passed initial checks. Block-scaled E4M3 and symmetric-int8 failed the fixed 100-case confidence bounds. Two fresh affine-int8 campaigns are preserved as `NO_RESULT`, not fidelity failures: the first exposed an empty `/proc` counter and the second completed all 20 arms cleanly and deterministically before the scorer exposed whole-second lifecycle timestamps being compared with nanosecond samples. Both telemetry defects now have production regressions. A post-freeze, hash-bound [raw operational diagnostic](results/glm52-goal/evidence/w1-telemetry-probe-893f637-post-freeze-1/) recorded three 60-second probes with worst gaps of **0.320 s**, **0.320 s**, and **0.325 s** against the unchanged **0.75 s** limit and at least **115.83 GiB** available. This user-owned diagnostic is explicitly non-authoritative; only the existing root-owned W1 campaign attestor may issue the fidelity verdict. The earlier hand-authored aggregate is retained only as historical context. No affine fidelity, end-to-end TTFT, prefill, decode, or direct-1M number is accepted yet; research projections are deliberately excluded from this table. |
+| **GLM-5.2** | NVIDIA GB10 DGX Spark; routed IQ2_XXS experimental engine | Not yet qualified | — | — | — | — | 100-vector diagnostic: mean NLL **0.4515**; hosted-reference top-1 agreement **83.4%**; target-logprob MAE **0.386 nat** | Active qualification. Real production tensors were captured and F16 passed initial checks. Block-scaled E4M3 and symmetric int8 failed the fixed 100-case confidence bounds. Two fresh affine-int8 campaigns are preserved as `NO_RESULT`, not fidelity failures: each was voided by a telemetry defect (an empty `/proc` counter, then whole-second lifecycle timestamps compared against nanosecond samples), and both defects now have production regressions. A post-freeze, hash-bound [raw operational diagnostic](results/glm52-goal/evidence/w1-telemetry-probe-893f637-post-freeze-1/) recorded three 60-second probes with worst gaps of **0.320 s**, **0.320 s**, and **0.325 s** against the unchanged **0.75 s** limit and at least **115.83 GiB** available — but it is explicitly non-authoritative; only the root-owned W1 campaign attestor may issue the fidelity verdict. No affine fidelity, end-to-end TTFT, prefill, decode, or direct-1M number is accepted yet. |
 
 DeepSeek performance values come from the five-repetition
 [speed suite](results/speed-llamacpp.json); the sustained decode value comes
@@ -117,108 +115,15 @@ and the ≤28K performance suite answer different questions and must not be
 combined into an implied 1M throughput figure.
 
 DeepSeek task accuracy is the audited llama.cpp result in
-[results/DECISION.md](results/DECISION.md). GLM fidelity is the already-computed
-teacher-forced comparison with a hosted FP8 reference in
+[results/DECISION.md](results/DECISION.md). GLM fidelity is the teacher-forced
+comparison with a hosted FP8 reference in
 [results/glm52-gates/G4-bench.json](results/glm52-gates/G4-bench.json). These
 measure different things: GLM's top-1 agreement and log-probability error are
 diagnostic fidelity measurements, not task accuracy or qualification. Live
 campaign values are excluded until the fixed scorer publishes a complete
 result.
 
-### Apple Silicon
-
-| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | Apple Silicon; MLX, Metal, or llama.cpp Metal | — | — | — | — | — | — | Open to pull requests. No Apple Silicon profile or repository-qualified measurement has been submitted. |
-| **GLM-5.2** | Apple Silicon; MLX, Metal, or llama.cpp Metal | — | — | — | — | — | — | Open to pull requests. No Apple Silicon profile or repository-qualified measurement has been submitted. Model-specific cache, MoE, and storage-tier implementations are welcome when accompanied by reproducible evidence and safe operating instructions. |
-
-### AMD Strix Halo
-
-Strix Halo combines x86-64 Zen 5 CPU cores, an RDNA 3.5 integrated GPU
-(`gfx1151`) exposed through ROCm/HIP, and an XDNA 2 NPU. Systems are available
-with up to 128 GB of shared LPDDR5X-8000 memory; the 128 GB Ryzen AI Halo
-developer platform specifies 256 GB/s memory bandwidth. See AMD's
-[processor specifications](https://www.amd.com/en/products/processors/desktops/ryzen/ryzen-ai-halo/ryzen-ai-max-plus-395.html)
-and [ROCm system guidance](https://rocm.docs.amd.com/en/latest/how-to/system-optimization/strixhalo.html).
-
-| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | Ryzen AI Max / Max+ (Strix Halo); ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Strix Halo profile or repository-qualified measurement has been submitted. Contributions must record the exact APU, installed memory, kernel, ROCm version, backend, and model format. |
-| **GLM-5.2** | Ryzen AI Max / Max+ (Strix Halo); ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Strix Halo profile or repository-qualified measurement has been submitted. The shared-memory capacity is promising, but model fit, context capacity, fidelity, and throughput remain unproven here. |
-
-### AMD discrete ROCm
-
-Discrete Radeon, Radeon Pro, and Instinct GPUs use the ROCm/HIP software stack
-but have dedicated VRAM rather than Strix Halo's unified memory. They therefore
-need separate profiles, especially when multiple cards or host-RAM offload are
-used. Hardware and operating-system support varies by ROCm release; contributors
-should verify their exact combination against AMD's
-[current compatibility matrix](https://rocm.docs.amd.com/en/develop/compatibility/compatibility-matrix.html).
-
-| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | AMD Radeon, Radeon Pro, or Instinct; ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No discrete-ROCm profile or repository-qualified measurement has been submitted. Contributions must report every GPU and its VRAM, ROCm and kernel versions, PCIe topology, host-RAM offload, model format, and transfer-inclusive performance. |
-| **GLM-5.2** | AMD Radeon, Radeon Pro, or Instinct; ROCm/HIP, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No discrete-ROCm profile or repository-qualified measurement has been submitted. Multi-GPU model fit, routed-MoE operator coverage, direct-1M context, fidelity, and performance remain unproven here. |
-
-### NVIDIA Jetson Thor
-
-Jetson AGX Thor is an ARM64 platform with a Blackwell GPU and the
-CUDA-X/JetPack software stack. The T5000 developer kit has 128 GB of unified
-LPDDR5X memory with 273 GB/s bandwidth, making it a credible contribution target
-for the same large-model fit and context experiments. See NVIDIA's
-[Jetson Thor specifications](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/).
-
-| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | Jetson AGX Thor T5000; ARM64 Blackwell; CUDA/JetPack | — | — | — | — | — | — | Open to pull requests. No Jetson Thor profile or repository-qualified measurement has been submitted. Contributions must state the JetPack/CUDA release, power mode, model format, storage path, and available-memory floor. |
-| **GLM-5.2** | Jetson AGX Thor T5000; ARM64 Blackwell; CUDA/JetPack | — | — | — | — | — | — | Open to pull requests. No Jetson Thor profile or repository-qualified measurement has been submitted. The 128 GB capacity is relevant, but model fit, direct-1M context, fidelity, and sustained performance remain unproven here. |
-
-### Intel Xe
-
-Intel Arc Pro B-series cards expose Xe Matrix Extensions through oneAPI and
-support Vulkan and OpenCL. The Arc Pro B60 has 24 GB of GDDR6 at 456 GB/s, and
-Intel describes it as multi-GPU Linux ready. That makes affordable multi-card
-systems a credible target, although aggregate capacity, model sharding, and
-backend maturity must be measured rather than assumed. See Intel's
-[Arc Pro B60 specifications](https://www.intel.com/content/www/us/en/products/sku/243916/intel-arc-pro-b60-graphics/specifications.html).
-
-| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | Intel Arc/Xe; oneAPI/Level Zero, SYCL, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Intel Xe profile or repository-qualified measurement has been submitted. Multi-GPU contributions must report per-card VRAM, PCIe topology, host-RAM offload, and whether reported throughput includes inter-device transfers. |
-| **GLM-5.2** | Intel Arc/Xe; oneAPI/Level Zero, SYCL, Vulkan, or llama.cpp | — | — | — | — | — | — | Open to pull requests. No Intel Xe profile or repository-qualified measurement has been submitted. Model fit, direct-1M context, fidelity, and performance across multiple cards remain unproven here. |
-
-### Qualcomm Snapdragon X
-
-Snapdragon X2 Elite is an ARM64-compatible system-on-chip with an Adreno GPU,
-Hexagon NPU, and LPDDR5X shared memory. Qualcomm specifies support for up to
-128 GB on X2 Elite and 128+ GB on X2 Elite Extreme, with up to 228 GB/s memory
-bandwidth. Actual installed memory is device-specific, and today the practical
-large-model path may be CPU or Vulkan before the NPU is usable by an open
-engine. See Qualcomm's
-[Snapdragon X2 Elite product brief](https://www.qualcomm.com/content/dam/qcomm-martech/dm-assets/documents/Snapdragon-X2-Elite-Product-Brief.pdf).
-
-| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | Snapdragon X/X2; ARM64 CPU, Adreno Vulkan/OpenCL, or Qualcomm-native backend | — | — | — | — | — | — | Open to pull requests. No Snapdragon profile or repository-qualified measurement has been submitted. Contributions must report the exact SoC and device, installed and GPU-addressable memory, OS, backend, power mode, and model format. |
-| **GLM-5.2** | Snapdragon X/X2; ARM64 CPU, Adreno Vulkan/OpenCL, or Qualcomm-native backend | — | — | — | — | — | — | Open to pull requests. No Snapdragon profile or repository-qualified measurement has been submitted. The advertised memory ceiling is promising, but shipping configurations, open-engine accelerator access, model fit, direct-1M context, fidelity, and throughput remain unproven here. |
-
-### Tenstorrent Tensix
-
-Tenstorrent sells Blackhole PCIe cards for desktop workstations and the
-four-accelerator QuietBox 2. Its TT-Metalium, TT-NN, and compiler stack are open
-source, making it a useful target for contributors willing to port model
-operators rather than rely on CUDA compatibility. Memory is distributed across
-independent devices, so aggregate capacity is not equivalent to one unified
-address space. See Tenstorrent's
-[Blackhole card overview](https://tenstorrent.com/en/hardware/cards) and
-[QuietBox 2 documentation](https://docs.tenstorrent.com/tt-quietbox2-guide/first-timer/01-what-just-arrived/).
-
-| Model | Hardware / backend | Largest context result | TTFT | Prefill | Decode | Warm TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | Tenstorrent Blackhole/Wormhole; TT-Metalium, TT-NN, TT-Forge, or vLLM integration | — | — | — | — | — | — | Open to pull requests. No Tenstorrent profile or repository-qualified measurement has been submitted. Contributions must report device count, memory per device, interconnect topology, partitioning, supported operators, and host fallback. |
-| **GLM-5.2** | Tenstorrent Blackhole/Wormhole; TT-Metalium, TT-NN, TT-Forge, or vLLM integration | — | — | — | — | — | — | Open to pull requests. No Tenstorrent profile or repository-qualified measurement has been submitted. Full model fit, routed-MoE operator coverage, direct-1M context, fidelity, and performance remain unproven here. |
-
-DeepSeek’s older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
+DeepSeek's older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
 over upstream llama.cpp on composite accuracy and speed. The product profile
 uses llama.cpp because long context is the priority; the older benchmark remains
 unchanged in [results/DECISION.md](results/DECISION.md), with the rationale in
@@ -230,17 +135,28 @@ Listeners are loopback-only, Funnel is forbidden, credentials are stripped
 before the engine, and a watchdog protects unified CPU/GPU memory from a
 whole-system freeze.
 
-## Beyond CUDA
+### Other backends
 
-Apple Silicon/macOS, AMD Strix Halo, discrete AMD ROCm, NVIDIA Jetson Thor,
-Intel Xe, Qualcomm Snapdragon X, and Tenstorrent Tensix hardware and model
-profiles are explicitly open to pull requests. The same evidence,
-largest-context, safety, authentication, switching, and rollback expectations
-apply, adapted to each platform's memory and service controls.
+No other backend has a repository-qualified measurement yet — every cell that
+would appear below is N/A, and every row is open to pull requests. The same
+evidence, largest-context, safety, authentication, switching, and rollback
+expectations apply, adapted to each platform's memory and service controls.
 
-Other Linux accelerators and CPU/offload architectures are also in scope. Start
-with a measured baseline and roofline; do not assume that a CUDA-specific
-optimization or DGX Spark memory threshold transfers to another machine.
+| Backend | Hardware notes | Status |
+| --- | --- | --- |
+| Apple Silicon | MLX, Metal, or llama.cpp Metal. | N/A — open to pull requests |
+| AMD Strix Halo | Zen 5 + RDNA 3.5 iGPU (`gfx1151`) via ROCm/HIP, up to 128 GB shared LPDDR5X at 256 GB/s. See AMD's [processor specifications](https://www.amd.com/en/products/processors/desktops/ryzen/ryzen-ai-halo/ryzen-ai-max-plus-395.html) and [ROCm system guidance](https://rocm.docs.amd.com/en/latest/how-to/system-optimization/strixhalo.html). | N/A — open to pull requests |
+| AMD discrete ROCm | Radeon, Radeon Pro, and Instinct with dedicated VRAM; verify against AMD's [compatibility matrix](https://rocm.docs.amd.com/en/develop/compatibility/compatibility-matrix.html). Multi-card and host-RAM offload setups need their own profiles. | N/A — open to pull requests |
+| NVIDIA Jetson Thor | AGX Thor T5000: ARM64 Blackwell, 128 GB unified LPDDR5X at 273 GB/s, CUDA-X/JetPack. See NVIDIA's [specifications](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/). | N/A — open to pull requests |
+| Intel Xe | Arc Pro B-series via oneAPI/Level Zero, SYCL, or Vulkan; the [Arc Pro B60](https://www.intel.com/content/www/us/en/products/sku/243916/intel-arc-pro-b60-graphics/specifications.html) has 24 GB GDDR6 at 456 GB/s and is multi-GPU Linux ready. | N/A — open to pull requests |
+| Qualcomm Snapdragon X | X2 Elite: ARM64 SoC with Adreno GPU, Hexagon NPU, up to 128+ GB shared LPDDR5X at 228 GB/s. Practical large-model path may be CPU or Vulkan before the NPU is usable by an open engine. See the [product brief](https://www.qualcomm.com/content/dam/qcomm-martech/dm-assets/documents/Snapdragon-X2-Elite-Product-Brief.pdf). | N/A — open to pull requests |
+| Tenstorrent Tensix | Blackhole PCIe cards and QuietBox 2 with the open-source TT-Metalium/TT-NN stack; memory is distributed per device, not unified. See the [card overview](https://tenstorrent.com/en/hardware/cards) and [QuietBox 2 docs](https://docs.tenstorrent.com/tt-quietbox2-guide/first-timer/01-what-just-arrived/). | N/A — open to pull requests |
+| CPU / other Linux accelerators | Start with a measured baseline and roofline; do not assume a CUDA-specific optimization or DGX Spark memory threshold transfers to another machine. | N/A — open to pull requests |
+
+Contributions must record the exact hardware (device, per-card memory, PCIe or
+interconnect topology), OS/kernel and driver or toolkit versions, backend,
+power mode where relevant, model format, host-RAM offload, and whether reported
+throughput includes inter-device transfers.
 
 ## Reproduce and operate
 
