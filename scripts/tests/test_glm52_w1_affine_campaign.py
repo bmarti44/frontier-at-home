@@ -28,6 +28,46 @@ def load_campaign():
 
 
 class W1AffineCampaignTests(unittest.TestCase):
+    def test_real_packed_candidate_environment_is_exact_and_fake_arms_are_off(self):
+        campaign = load_campaign()
+        environment = campaign.real_candidate_environment()
+        self.assertEqual(
+            environment["DS4_GLM_COMPACT_CACHE_AFFINE_INT8"], "1"
+        )
+        self.assertNotIn(
+            "DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE", environment
+        )
+        self.assertIn(
+            "DS4_GLM_COMPACT_CACHE_AFFINE_INT8",
+            campaign.FIDELITY_ENVIRONMENT_NAMES,
+        )
+
+    def test_real_storage_attestation_requires_candidate_device_writes(self):
+        campaign = load_campaign()
+        candidate_log = (
+            "ds4: GLM compact cache storage format=affine-int8-block16\n"
+            "ds4: GLM compact cache storage attestation "
+            "format=affine-int8-block16 packed_store_rows=8192\n"
+        )
+        baseline_log = (
+            "ds4: GLM compact cache storage format=f32\n"
+            "ds4: GLM compact cache storage attestation "
+            "format=f32 packed_store_rows=0\n"
+        )
+        self.assertEqual(
+            campaign.parse_storage_attestation(candidate_log),
+            ("affine-int8-block16", 8192),
+        )
+        self.assertEqual(
+            campaign.parse_storage_attestation(baseline_log),
+            ("f32", 0),
+        )
+        with self.assertRaises(ValueError):
+            campaign.parse_storage_attestation(
+                candidate_log.replace("packed_store_rows=8192",
+                                      "packed_store_rows=0")
+            )
+
     def test_seed_controls_opaque_arm_and_alternating_counterbalance(self):
         campaign = load_campaign()
         seed = "00" + "00" + "11" * 30

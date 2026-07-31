@@ -1,0 +1,15 @@
+Genuine RED captured: 2026-07-31T01:46:00-04:00
+Unchanged harness base: 60c6466b712f0bcb1f6f3397ed9020822e071ce4
+
+Command:
+python3 -m unittest \
+  scripts.tests.test_glm52_w1_affine_campaign.W1AffineCampaignTests.test_real_packed_candidate_environment_is_exact_and_fake_arms_are_off \
+  scripts.tests.test_glm52_w1_affine_campaign.W1AffineCampaignTests.test_real_storage_attestation_requires_candidate_device_writes
+
+Result:
+FAILED (errors=2), exit status 1.
+
+Both production-path assertions failed because the frozen campaign only knows
+the prior fake-affine diagnostic. It has neither an exact default-off real
+packed candidate environment nor a parser that requires real packed CUDA store
+rows. No model process was started.
