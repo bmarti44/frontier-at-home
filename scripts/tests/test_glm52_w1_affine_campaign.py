@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import tempfile
 import unittest
@@ -28,6 +29,16 @@ def load_campaign():
 
 
 class W1AffineCampaignTests(unittest.TestCase):
+    def test_root_cgroup_launcher_forwards_real_packed_flag(self):
+        launcher = (
+            ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+        ).read_text(encoding="utf-8")
+        self.assertRegex(
+            launcher,
+            re.compile(r"\\bDS4_GLM_COMPACT_CACHE_AFFINE_INT8\\b"),
+            "the root cgroup boundary drops the real packed-cache flag",
+        )
+
     def test_real_packed_candidate_environment_is_exact_and_fake_arms_are_off(self):
         campaign = load_campaign()
         environment = campaign.real_candidate_environment()
