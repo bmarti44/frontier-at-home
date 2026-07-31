@@ -1,0 +1,28 @@
+W1 real-packed cgroup forwarding RED
+captured_at=2026-07-31T07:52:00-04:00
+test_commit=df8c48b
+failed_composite_prefix=61b5677d8e8b
+failed_request_prefix=2c068bd6bf4b
+
+The first F32 arm completed successfully. The next real-packed arm failed
+closed before model execution with launcher_rc=17. Its root journal witness
+recorded:
+
+  expected_environment_sha256_prefix=af6c6a65c2e7
+  executed_environment_sha256_prefix=3e47c2abd003
+  rc=17 killed=provenance
+
+The systemd command contained the provenance allowlist entry for
+DS4_GLM_COMPACT_CACHE_AFFINE_INT8 but did not contain the variable itself.
+The outer cgroup launcher's explicit forwarding list contained only
+DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE.
+
+Command:
+  python3 -m unittest scripts.tests.test_glm52_w1_affine_campaign.W1AffineCampaignTests.test_root_cgroup_launcher_forwards_real_packed_flag
+
+Result:
+  FAILED (failures=1)
+  AssertionError: the root cgroup boundary drops the real packed-cache flag
+
+No OOM or Xid occurred. The failed root-owned attempt and its sealed receipt
+remain under /var/lib/glm52-w1.
