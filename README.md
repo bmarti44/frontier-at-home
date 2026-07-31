@@ -39,10 +39,14 @@ To claim an integration:
 2. Immediately open a **draft** pull request with the
    [model-integration template](https://github.com/bmarti44/frontier-at-home/compare?expand=1&template=model-integration-claim.md),
    before substantial implementation work.
-3. The safe `pull_request_target` workflow reads only the base repository's
+3. Before changing an engine, create and commit the integration's autonomous
+   goal using [`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md). Its
+   controller must provide `run`, `resume`, and `status --json` for that exact
+   model/backend pair.
+4. The safe `pull_request_target` workflow reads only the base repository's
    catalog—never fork code—and labels the PR with the model, backend, and
    `status:self-declared`.
-4. Click a model's status badge to see its open, self-declared claims. A claim
+5. Click a model's status badge to see its open, self-declared claims. A claim
    communicates intent and links the work in progress; it is not independent
    proof of activity, progress, or eventual qualification. Parallel claims are
    allowed when the hardware/backend differs or the approaches are genuinely
@@ -106,7 +110,7 @@ single-user measurements, not concurrency throughput.
 | Model | Hardware / format | Context | Prefill t/s | Decode t/s | TTFT | Warm / short-prompt TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | **DeepSeek V4 Flash** | NVIDIA GB10 DGX Spark; UD-Q2_K_XL; llama.cpp | **1,000,044 tokens processed** with a `1,048,576` cap | **290.790 tok/s @ 4K**; **284.412 tok/s @ 16K**; **274.812 tok/s @ 28K** | **13.882 tok/s @ 4K**; **13.512 tok/s @ 16K**; **13.147 tok/s @ 28K** | **14.268 s @ 4K**; **57.789 s @ 16K**; **104.526 s @ 28K** | **0.554 s @ 52-token prompt**; 30-minute soak median **14.037 decode tok/s** | GSM8K holdout **97.00%** (97/100); MMLU-Pro holdout **74.09%** (183/247); HumanEval **73.78%** (121/164); composite **81.62%** | Qualified CUDA default. Direct 1M retrieval, negative control, generation, and safety checks passed with more than 14 GiB available at the low point. The displayed latency/throughput measurements are the preserved ≤28K suite, not a 1M speed claim. The 52-token result is a short-prompt baseline, not proof of a restored 1M prefix. |
-| **GLM-5.2** | NVIDIA GB10 DGX Spark; routed IQ2_XXS experimental engine | Diagnostic: **2,077 tokens processed** with a `1,048,576` cap; direct 1M not yet qualified | Diagnostic: **14.53 tok/s @ 2,076 tokens**; the 28-token post-top-k chunk improved from **36.411 s** to **14.470 s** (**2.52×**) | Diagnostic only: **0.79 tok/s** over one generated token | Diagnostic cold TTFT: **144.191 s @ 2,076-token prompt** | — | 100-vector diagnostic: mean NLL **0.4515**; hosted-reference top-1 agreement **83.4%**; target-logprob MAE **0.386 nat** | Active qualification. Real production tensors were captured and F16 passed initial checks; block-scaled E4M3 and symmetric int8 failed the fixed 100-case bounds. The default-off affine-int8/F32-RoPE W8 path now uses dynamic request-owned cKV storage, immediately unlinked crash-safe files, and exact eight-query post-top-k batching. A model-backed boundary probe reduced selected-row stage calls from **2,262** to **390**, completed without OOM, Xid, truncation, or cgroup swap, and left zero visible cKV files after shutdown. This is an unreleased operational diagnostic, not accepted parity or 1M evidence: it used a repetitive prompt, physical reads remained **164,216,832 bytes**, compact-trace and admission hardening still require final validation, and no affine fidelity, direct-1M retrieval, accepted TTFT/prefill/decode, or switching verdict exists yet. |
+| **GLM-5.2** | NVIDIA GB10 DGX Spark; routed IQ2_XXS experimental engine | Diagnostic: **2,083 tokens processed** with a `1,048,576` cap; direct 1M not yet qualified | Diagnostic: **14.33 tok/s @ 2,082 tokens**; the earlier 28-token post-top-k comparison improved from **36.411 s** to **14.470 s** (**2.52×**) | Diagnostic only: **0.79 tok/s** over one generated token | Diagnostic cold TTFT: **146.534 s @ 2,082-token prompt** | — | 100-vector diagnostic: mean NLL **0.4515**; hosted-reference top-1 agreement **83.4%**; target-logprob MAE **0.386 nat** | Active qualification. Real production tensors were captured and F16 passed initial checks; block-scaled E4M3 and symmetric int8 failed the fixed 100-case bounds. The default-off affine-int8/F32-RoPE W8 path now uses dynamic request-owned cKV storage, immediately unlinked crash-safe files, exact eight-query post-top-k batching, and cgroup-aware admission at the full context cap. The latest boundary run completed without OOM, Xid, truncation, or cgroup swap; its fixed compact-trace scorer passed **237 records**, all **234** preregistered layer samples, **468** selected-row stage calls, and zero dropped records, and shutdown left zero visible cKV files. This is an unreleased operational diagnostic, not accepted parity or 1M evidence: it used a repetitive prompt, physical reads remained **164,216,832 bytes**, and no affine fidelity, direct-1M retrieval, accepted TTFT/prefill/decode, or switching verdict exists yet. |
 
 DeepSeek performance values come from the five-repetition
 [speed suite](results/speed-llamacpp.json); the sustained decode value comes
@@ -194,7 +198,17 @@ The short version:
    remains the default until another profile passes all quality, safety,
    direct-1M, switching, and review gates.
 
-The autonomous goal controller is:
+Every claimed integration must create its own autonomous controller using
+[`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md). The stable interface
+is:
+
+```bash
+scripts/<model-slug>_<backend>_goal.py run
+scripts/<model-slug>_<backend>_goal.py resume
+scripts/<model-slug>_<backend>_goal.py status --json
+```
+
+The active GLM-5.2/CUDA controller is the first concrete example:
 
 ```bash
 scripts/glm52_goal.py run

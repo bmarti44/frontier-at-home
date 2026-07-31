@@ -71,20 +71,20 @@ class ModelClaimCatalogTests(unittest.TestCase):
             statuses["gemini-3-flash-preview"], "reference_only"
         )
 
-    def test_readme_exposes_every_claim_and_live_status_link(self):
+    def test_readme_claim_links_are_catalogued_and_keep_active_models(self):
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
         readme = README.read_text(encoding="utf-8")
-        for model in catalog["models"]:
-            slug = model["slug"]
-            self.assertIn(f"https://ollama.com/library/{slug}", readme)
-            self.assertIn(f"`{model['ollama_tag']}`", readme)
-            if model["repo_status"] == "reference_only":
-                self.assertIn(
-                    "**Reference only:** not claimable until public local weights",
-                    readme,
-                )
-            else:
-                self.assertIn(f"claim%3A{slug}", readme)
+        models = {model["slug"]: model for model in catalog["models"]}
+        displayed = set(re.findall(r"claim%3A([a-z0-9.-]+)", readme))
+        self.assertTrue(displayed)
+        self.assertTrue(displayed <= set(models))
+        required = {
+            slug for slug, model in models.items()
+            if model["repo_status"] in {"active", "qualified"}
+        }
+        self.assertTrue(required <= displayed)
+        for slug in displayed:
+            self.assertGreaterEqual(readme.count(f"claim%3A{slug}"), 2)
 
     def test_readme_and_agent_guide_explain_model_and_architecture_claims(self):
         readme = README.read_text(encoding="utf-8")

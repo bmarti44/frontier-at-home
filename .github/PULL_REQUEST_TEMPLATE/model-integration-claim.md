@@ -25,9 +25,12 @@ Memory and OOM safeguards:
 
 Evidence directory:
 
+Goal controller and `status --json` command:
+
 Checklist:
 
 - [ ] I read `AGENTS.md`.
+- [ ] I created the model/backend autonomous goal required by [`docs/INTEGRATION_GOALS.md`](../../docs/INTEGRATION_GOALS.md) before engine changes.
 - [ ] The branch name follows the exact claim convention.
 - [ ] Public model and tokenizer artifacts will be independently hashed.
 - [ ] Production-path acceptance tests will be committed before implementation.

@@ -18,7 +18,18 @@ When adding or optimizing a model:
    fails, say so and move to the next bounded alternative.
 5. Never trade whole-system stability for benchmark progress.
 
-The active autonomous controller is:
+For an existing integration, read that model/backend's autonomous controller
+first. For new claimed work, you MUST create the integration goal described in
+[`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md) before changing an
+engine. It must expose:
+
+```bash
+scripts/<model-slug>_<backend>_goal.py run
+scripts/<model-slug>_<backend>_goal.py resume
+scripts/<model-slug>_<backend>_goal.py status --json
+```
+
+The active GLM-5.2/CUDA controller is:
 
 ```bash
 scripts/glm52_goal.py run
@@ -36,10 +47,13 @@ Before changing code:
 ```bash
 git status --short
 git log -5 --oneline
-scripts/glm52_goal.py status --json
 systemctl is-active dsv4-engine-restore.service dsv4-guard.timer
 awk '/MemAvailable|SwapTotal|SwapFree/ {print}' /proc/meminfo
 ```
+
+Then run `status --json` on the controller for the model/backend you are
+actually contributing. Do not use GLM's controller as the state authority for
+another integration.
 
 Also inspect the exact running process, command line, context cap, and listener
 before stopping or replacing anything. Preserve a dirty tree and unrelated user
@@ -193,7 +207,10 @@ before implementing it:
    `claim-model/<catalog-slug>/<backend>` in your fork.
 3. Open a draft PR immediately with
    `.github/PULL_REQUEST_TEMPLATE/model-integration-claim.md`.
-4. Keep that PR open and update its description with the baseline, hardware,
+4. Before engine changes, create the model/backend controller and initial state
+   required by [`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md), then
+   run its `status --json` command and record the path in the PR.
+5. Keep that PR open and update its description with the baseline, hardware,
    memory safeguards, and evidence location as facts become available.
 
 The `pull_request_target` claim workflow deliberately does not check out or
