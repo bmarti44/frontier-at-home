@@ -103,6 +103,59 @@ def server_invocation(
     raise ValueError("profile must be dsv4 or glm52")
 
 
+def benchmark_invocation(
+    profile: str,
+    result_path: Path,
+    port: int,
+    seed: int,
+    tokenizer_path: Path | None,
+    tokenizer_sha256: str | None,
+) -> list[str]:
+    if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed <= 0xFFFFFFFF:
+        raise ValueError("benchmark seed must be an unsigned 32-bit integer")
+    port_text = _bounded_port(port)
+    if profile not in {"dsv4", "glm52"}:
+        raise ValueError("unknown benchmark profile")
+    command = [
+        str(ROOT / ".venv-harness" / "bin" / "python"),
+        str(ROOT / "scripts" / "30_bench_speed.py"),
+        "--base-url",
+        f"http://127.0.0.1:{port_text}",
+        "--out",
+        str(result_path),
+        "--stack-label",
+        f"foundation-{profile}",
+        "--model-id",
+        "deepseek-v4-flash" if profile == "dsv4" else "glm-5.2",
+        "--reps",
+        "2",
+        "--context-levels",
+        "0",
+        "--max-tokens",
+        "160",
+        "--min-completion-tokens",
+        "128",
+        "--seed",
+        str(seed),
+    ]
+    if profile == "dsv4":
+        command.append("--ignore-eos-supported")
+    else:
+        if tokenizer_path is None or tokenizer_sha256 is None:
+            raise ValueError("GLM benchmark tokenizer identity is required")
+        command.extend(
+            [
+                "--output-tokenizer-path",
+                str(tokenizer_path),
+                "--output-tokenizer-sha256",
+                tokenizer_sha256,
+                "--token-timing-log",
+                str(result_path.parent / "server.log"),
+            ]
+        )
+    return command
+
+
 def validate_cgroup(
     profile: str, memory_high: int, memory_max: int, swap_max: int
 ) -> None:
