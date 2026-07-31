@@ -64,6 +64,21 @@ class FoundationRuntimeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 runtime.validate_cgroup(*values)
 
+    def test_cgroup_limits_are_read_from_current_unit_files(self):
+        runtime = load_runtime()
+        with tempfile.TemporaryDirectory() as tmp:
+            cgroup = Path(tmp)
+            (cgroup / "memory.high").write_text(str(105 * 2**30))
+            (cgroup / "memory.max").write_text(str(110 * 2**30))
+            (cgroup / "memory.swap.max").write_text("0")
+            self.assertEqual(
+                runtime.read_cgroup_limits(cgroup),
+                (105 * 2**30, 110 * 2**30, 0),
+            )
+            (cgroup / "memory.max").write_text("max")
+            with self.assertRaises(ValueError):
+                runtime.read_cgroup_limits(cgroup)
+
     def test_baseline_uses_raw_timestamps_and_cold_then_warm_reps(self):
         runtime = load_runtime()
         timestamps = [10_000_000_000 + index * 500_000_000 for index in range(128)]
