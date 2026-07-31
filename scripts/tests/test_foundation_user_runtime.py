@@ -154,6 +154,31 @@ class FoundationRuntimeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 runtime.verify_artifact(artifact, expected)
 
+    def test_deepseek_shards_are_bound_to_manifest_and_evicted(self):
+        runtime = load_runtime()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shard = root / "model-00001-of-00001.gguf"
+            shard.write_bytes(b"shard")
+            manifest = root / "manifest.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "files": [
+                            {
+                                "name": shard.name,
+                                "bytes": 5,
+                                "sha256": hashlib.sha256(b"shard").hexdigest(),
+                            }
+                        ]
+                    }
+                )
+            )
+            runtime.verify_dsv4_shards(manifest)
+            shard.write_bytes(b"wrong")
+            with self.assertRaises(ValueError):
+                runtime.verify_dsv4_shards(manifest)
+
     def test_supervisor_arms_watchdog_runs_probe_and_cleans_process_group(self):
         runtime = load_runtime()
         with tempfile.TemporaryDirectory() as tmp:
