@@ -4154,10 +4154,26 @@ def _registered_default_runner(
         ):
             return None
         digest = hashlib.sha256()
+        copied = 0
         while block := os.read(source, 1024 * 1024):
             digest.update(block)
-            os.write(sealed, block)
+            view = memoryview(block)
+            while view:
+                written = os.write(sealed, view)
+                if written <= 0:
+                    raise OSError("registered runner memfd write made no progress")
+                copied += written
+                view = view[written:]
         if digest.hexdigest() != expected:
+            return None
+        if os.fstat(sealed).st_size != copied:
+            return None
+        sealed_digest = hashlib.sha256()
+        offset = 0
+        while block := os.pread(sealed, 1024 * 1024, offset):
+            sealed_digest.update(block)
+            offset += len(block)
+        if offset != copied or sealed_digest.hexdigest() != expected:
             return None
         os.fchmod(sealed, 0o500)
         fcntl.fcntl(
