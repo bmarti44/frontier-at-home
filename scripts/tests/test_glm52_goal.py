@@ -2236,6 +2236,40 @@ class ControllerTests(unittest.TestCase):
         self.assertIn("storage, memory, and fidelity passed", reason)
         self.assertIn("retrieval", reason)
 
+    def test_w1_retrieval_dependency_routes_to_w8_then_w11(self):
+        goal = load_goal_module()
+        state = goal._initial_state()
+        state["gates"]["foundation"]["status"] = "PASS"
+        state["gates"]["W1"].update(
+            status="RED_CONFIRMED",
+            reason=(
+                "real packed storage, memory, and fidelity passed; "
+                "deterministic retrieval qualification remains unfinished"
+            ),
+        )
+
+        self.assertEqual(goal._selected_gate(state), "W8")
+        state["gates"]["W8"]["status"] = "PASS"
+        self.assertEqual(goal._selected_gate(state), "W11")
+
+        state["gates"]["W11"]["status"] = "PASS"
+        self.assertEqual(goal._selected_gate(state), "W1")
+        self.assertIn("W1", goal._release_verdict(Path("/tmp"), state)["failed_requirements"])
+
+    def test_unregistered_default_runner_is_never_executed(self):
+        goal = load_goal_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runner = root / "scripts" / "glm52-runners" / "W1"
+            runner.parent.mkdir(parents=True)
+            runner.write_text("#!/bin/sh\nexit 99\n")
+            runner.chmod(0o700)
+            self.assertIsNone(
+                goal._registered_default_runner(
+                    "W1", root=root, registry={}
+                )
+            )
+
     def test_state_rejects_unknown_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
