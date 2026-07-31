@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -212,6 +213,80 @@ class FoundationRuntimeTests(unittest.TestCase):
             self.assertIn("DISARMED", (root / "arm" / "memwatch.log").read_text())
             pid = result["server_pid"]
             self.assertFalse(Path(f"/proc/{pid}").exists())
+
+    def test_execute_arm_writes_fixed_baseline_from_production_probe(self):
+        runtime = load_runtime()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = root / "llama-server"
+            model = root / "model.gguf"
+            binary.write_bytes(b"binary")
+            model.write_bytes(b"model")
+            binary.chmod(0o700)
+            cgroup = root / "cgroup"
+            cgroup.mkdir()
+            for name, value in (
+                ("memory.high", 105 * 2**30),
+                ("memory.max", 110 * 2**30),
+                ("memory.swap.max", 0),
+            ):
+                (cgroup / name).write_text(str(value))
+            out = root / "arm"
+            timestamps = [1_000_000_000 + index * 100_000_000 for index in range(128)]
+
+            def fake_supervise(command, environment, output, **kwargs):
+                result_path = output / "result.json"
+                result_path.write_text(
+                    json.dumps(
+                        {
+                            "suite_valid": True,
+                            "metadata": {"reps": 2, "model": "deepseek-v4-flash"},
+                            "cells": [{
+                                "ctx_tokens": 0,
+                                "valid": True,
+                                "reps": [
+                                    {"valid": True, "ttft_s": 8.0},
+                                    {
+                                        "valid": True,
+                                        "ttft_s": 1.0,
+                                        "prompt_tokens": 32,
+                                        "prefill_tok_s": 32.0,
+                                        "completion_tokens": 128,
+                                        "token_timestamps_ns": timestamps,
+                                    },
+                                ],
+                            }],
+                        }
+                    )
+                )
+                return {
+                    "server_instance_id": "a" * 64,
+                    "server_pid": 123,
+                    "available_memory_gib": 15.0,
+                }
+
+            with (
+                mock.patch.object(runtime, "current_cgroup_path", return_value=cgroup),
+                mock.patch.object(runtime, "supervise_process", side_effect=fake_supervise),
+                mock.patch.object(runtime, "_mem_available_gib", return_value=115.0),
+            ):
+                baseline = runtime.execute_arm(
+                    profile="dsv4",
+                    out=out,
+                    binary=binary,
+                    binary_sha256=hashlib.sha256(b"binary").hexdigest(),
+                    model=model,
+                    model_sha256=hashlib.sha256(b"model").hexdigest(),
+                    configuration_sha256="b" * 64,
+                    fixture_sha256="c" * 64,
+                    port=8013,
+                    seed=123,
+                    tokenizer=None,
+                    tokenizer_sha256=None,
+                )
+            self.assertEqual(baseline["profile"], "dsv4")
+            self.assertEqual(baseline["binary_sha256"], hashlib.sha256(b"binary").hexdigest())
+            self.assertEqual(json.loads((out / "baseline.json").read_text()), baseline)
 
 
 if __name__ == "__main__":
