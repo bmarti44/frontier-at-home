@@ -35,7 +35,7 @@ class W1AffineCampaignTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertRegex(
             launcher,
-            re.compile(r"\\bDS4_GLM_COMPACT_CACHE_AFFINE_INT8\\b"),
+            re.compile(r"\bDS4_GLM_COMPACT_CACHE_AFFINE_INT8\b"),
             "the root cgroup boundary drops the real packed-cache flag",
         )
 
