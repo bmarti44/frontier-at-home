@@ -95,13 +95,14 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
     def test_authoritative_timestamps_are_emitted_in_utc(self):
         source = SAFE.read_text(encoding="utf-8")
         self.assertIn(
-            'plog() { echo "$(date -u -Is) $*" >> "$MAIN"',
+            'plog() { echo "$(date -u --iso-8601=ns) $*" >> "$MAIN"',
             source,
         )
         self.assertIn(
             'echo "$(date -u --iso-8601=ns) mem_avail_kb=$MA',
             source,
         )
+        self.assertNotIn("date -u -Is", source)
         self.assertNotIn('echo "$(date -Is)', source)
         self.assertNotIn('echo "$(date --iso-8601=ns)', source)
 

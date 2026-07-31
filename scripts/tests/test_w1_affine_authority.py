@@ -10,6 +10,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -304,6 +305,42 @@ class W1AffineAuthorityTests(unittest.TestCase):
                 )
                 with self.assertRaisesRegex(
                     ValueError, "memory telemetry row is malformed"
+                ):
+                    self.goal.score_registered_gate(
+                        "W1", "w1.affine-quality.v2", [campaign]
+                    )
+
+    def test_raw_scorer_identifies_the_exact_memory_coverage_predicate(self):
+        def shift(
+            rows: list[str], seconds: float, start: int = 0
+        ) -> list[str]:
+            shifted = []
+            for index, row in enumerate(rows):
+                timestamp, fields = row.split(" ", 1)
+                value = datetime.fromisoformat(timestamp)
+                if index >= start:
+                    value += timedelta(seconds=seconds)
+                shifted.append(
+                    value.isoformat(timespec="milliseconds") + " " + fields
+                )
+            return shifted
+
+        cases = {
+            "max_gap": lambda rows: shift(rows, 1.0, start=10),
+            "late_first": lambda rows: shift(rows, 1.25),
+            "early_final": lambda rows: shift(rows, -1.25),
+        }
+        for predicate, mutate in cases.items():
+            with self.subTest(predicate=predicate):
+                campaign = raw_campaign(self.goal)
+                samples = campaign["attempts"][0]["evidence"]["samples_log"]
+                rows = samples.splitlines()
+                campaign["attempts"][0]["evidence"]["samples_log"] = (
+                    "\n".join(mutate(rows)) + "\n"
+                )
+                with self.assertRaisesRegex(
+                    ValueError,
+                    rf"failed=[a-z_,]*{predicate}",
                 ):
                     self.goal.score_registered_gate(
                         "W1", "w1.affine-quality.v2", [campaign]
