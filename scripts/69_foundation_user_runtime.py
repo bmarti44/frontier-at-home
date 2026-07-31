@@ -118,6 +118,34 @@ def validate_cgroup(
         )
 
 
+def read_cgroup_limits(cgroup: Path) -> tuple[int, int, int]:
+    values = []
+    for name in ("memory.high", "memory.max", "memory.swap.max"):
+        try:
+            raw = (cgroup / name).read_text(encoding="ascii").strip()
+            value = int(raw)
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"cgroup {name} is absent or non-finite") from exc
+        if value < 0:
+            raise ValueError(f"cgroup {name} is negative")
+        values.append(value)
+    return values[0], values[1], values[2]
+
+
+def current_cgroup_path() -> Path:
+    try:
+        rows = Path("/proc/self/cgroup").read_text(encoding="ascii").splitlines()
+    except OSError as exc:
+        raise ValueError("cannot inspect current cgroup") from exc
+    matches = [row.split(":", 2)[2] for row in rows if row.startswith("0::")]
+    if len(matches) != 1 or not matches[0].startswith("/"):
+        raise ValueError("current unified cgroup is invalid")
+    path = Path("/sys/fs/cgroup") / matches[0].lstrip("/")
+    if not path.is_dir() or path.is_symlink():
+        raise ValueError("current cgroup directory is unsafe")
+    return path
+
+
 def verify_artifact(path: Path, expected_sha256: str) -> None:
     if not isinstance(expected_sha256, str) or len(expected_sha256) != 64:
         raise ValueError("artifact digest is invalid")
