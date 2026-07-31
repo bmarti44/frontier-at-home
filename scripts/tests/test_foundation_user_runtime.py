@@ -6,6 +6,8 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -109,6 +111,40 @@ class FoundationRuntimeTests(unittest.TestCase):
             artifact.write_bytes(b"changed")
             with self.assertRaises(ValueError):
                 runtime.verify_artifact(artifact, expected)
+
+    def test_supervisor_arms_watchdog_runs_probe_and_cleans_process_group(self):
+        runtime = load_runtime()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            server = root / "fake-server.py"
+            server.write_text(
+                "#!/usr/bin/env python3\n"
+                "import http.server,sys\n"
+                "port=int(sys.argv[1])\n"
+                "class H(http.server.BaseHTTPRequestHandler):\n"
+                " def do_GET(self):\n"
+                "  self.send_response(200); self.end_headers(); self.wfile.write(b'{}')\n"
+                " def log_message(self,*args): pass\n"
+                "http.server.ThreadingHTTPServer(('127.0.0.1',port),H).serve_forever()\n",
+                encoding="utf-8",
+            )
+            server.chmod(0o700)
+            port = 18000 + os.getpid() % 1000
+            result = runtime.supervise_process(
+                [str(server), str(port)],
+                {},
+                root / "arm",
+                port=port,
+                watchdog_floor_gib=1,
+                startup_timeout_seconds=10,
+                probe_command=["/bin/sh", "-c", "printf passed >\"$1\"", "probe", str(root / "probe")],
+            )
+            self.assertTrue((root / "probe").is_file())
+            self.assertRegex(result["server_instance_id"], r"^[0-9a-f]{64}$")
+            self.assertGreater(result["available_memory_gib"], 10)
+            self.assertIn("DISARMED", (root / "arm" / "memwatch.log").read_text())
+            pid = result["server_pid"]
+            self.assertFalse(Path(f"/proc/{pid}").exists())
 
 
 if __name__ == "__main__":
