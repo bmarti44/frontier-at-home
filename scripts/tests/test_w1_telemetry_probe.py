@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import tempfile
 import unittest
@@ -71,6 +72,65 @@ class W1TelemetryProbeSourceTests(unittest.TestCase):
             value["probes"][0]["max_gap_s"] = 0.1
             summary.write_text(json.dumps(value), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "summary differs"):
+                scorer.verify_package(package)
+
+    def test_regenerated_synthetic_evidence_cannot_claim_authority(self):
+        scorer = load_scorer()
+
+        def resign(package, mutate):
+            raw_path = package / "raw.jsonl"
+            rows = [
+                json.loads(line)
+                for line in raw_path.read_text(encoding="utf-8").splitlines()
+            ]
+            mutate(rows)
+            raw = b"".join(
+                scorer.canonical(row).rstrip(b"\n") + b"\n" for row in rows
+            )
+            raw_path.write_bytes(raw)
+            manifest_path = package / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["raw_jsonl_sha256"] = hashlib.sha256(raw).hexdigest()
+            manifest_path.write_bytes(scorer.canonical(manifest))
+            (package / "summary.json").write_bytes(
+                scorer.canonical(scorer.derive_summary(manifest, rows))
+            )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary)
+            scorer.write_test_package(package)
+            accepted = scorer.verify_package(package)
+            self.assertFalse(accepted["acceptance_authority"])
+            self.assertEqual(accepted["verdict"], "DIAGNOSTIC_ONLY")
+
+            resign(package, lambda rows: rows[0].update(command=["/bin/true"]))
+            with self.assertRaisesRegex(ValueError, "invocation"):
+                scorer.verify_package(package)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary)
+            scorer.write_test_package(package)
+
+            def clear_direct_io(rows):
+                witness = json.loads(rows[0]["io_load_log"])
+                witness["fcntl_flags"] = 0
+                rows[0]["io_load_log"] = json.dumps(
+                    witness, sort_keys=True, separators=(",", ":")
+                ) + "\n"
+
+            resign(package, clear_direct_io)
+            with self.assertRaisesRegex(ValueError, "direct-I/O"):
+                scorer.verify_package(package)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary)
+            scorer.write_test_package(package)
+            manifest = json.loads(
+                (package / "manifest.json").read_text(encoding="utf-8")
+            )
+            manifest["model"]["sha256"] = "0" * 64
+            (package / "manifest.json").write_bytes(scorer.canonical(manifest))
+            with self.assertRaisesRegex(ValueError, "model"):
                 scorer.verify_package(package)
 
 
