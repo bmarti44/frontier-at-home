@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Strictly derive post-freeze W1 telemetry-probe metrics from raw logs."""
+"""Strictly derive non-authoritative W1 telemetry diagnostics from raw logs."""
 
 from __future__ import annotations
 
@@ -22,6 +22,11 @@ RUNNER = Path("scripts/67_run_w1_telemetry_probe.py")
 SCORER = Path("scripts/68_score_w1_telemetry_probe.py")
 LOAD_SOURCE = Path("scripts/fixtures/w1_direct_io_load.c")
 PROFILE = Path("configs/glm52-profile.json")
+MODEL_PATH = (
+    "/home/dsv4/ds4-project/gguf-glm/"
+    "GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf"
+)
+MODEL_SIZE = 211075856448
 HASH40 = re.compile(r"^[0-9a-f]{40}$")
 HASH64 = re.compile(r"^[0-9a-f]{64}$")
 SAMPLE = re.compile(
@@ -126,7 +131,81 @@ def read_raw(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def derive_probe(record: dict[str, Any], index: int) -> dict[str, Any]:
+def validate_invocation(
+    record: dict[str, Any], index: int, manifest: dict[str, Any]
+) -> None:
+    candidate = manifest["candidate_hash"]
+    tag = f"w1-telemetry-{candidate[:8]}-{index}"
+    source = record["environment"].get("GLM_CANDIDATE_SRC", "")
+    fixture = f"{source}/ds4-server"
+    expected_environment = {
+        "HOME": "/home/bmarti44",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "LANG": "C.UTF-8",
+        "GLM_CANDIDATE_SRC": source,
+        "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+        "GLM_SAFE_EXPECTED_BINARY_SHA256": manifest["artifact_sha256"][
+            "artifacts/ds4-server"
+        ],
+        "GLM_SAFE_KILL_FLOOR_GIB": "40",
+        "GLM_SAFE_MIN_START_GIB": "110",
+        "GLM_SAFE_TIMEOUT_S": "75",
+        "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+    }
+    expected_command = [
+        "/usr/bin/bash",
+        str(ROOT / SAFE),
+        "--tag",
+        tag,
+        "--",
+        fixture,
+        "60",
+    ]
+    if (
+        not re.fullmatch(
+            r"/home/bmarti44/\.cache/glm52-telemetry-[A-Za-z0-9_]+", source
+        )
+        or record["environment"] != expected_environment
+        or record["command"] != expected_command
+    ):
+        raise ValueError(f"probe {index} invocation is invalid")
+    launcher = re.fullmatch(
+        rf"SAFE_RUN_DONE rc=0 killed=no dir="
+        rf"(/home/bmarti44/\.local/state/glm52-crashlog/"
+        rf"\d{{8}}-\d{{6}}-{re.escape(tag)})\n",
+        record["launcher_log"],
+    )
+    if launcher is None:
+        raise ValueError(f"probe {index} launcher evidence path is invalid")
+    fixture_hash = manifest["artifact_sha256"]["artifacts/ds4-server"]
+    provenance = re.search(
+        r"^(\S+) candidate_src=(\S+) candidate_binary_sha256=([0-9a-f]{64}) "
+        r"candidate_device_inode=(\d+:\d+)$",
+        record["main_log"],
+        re.MULTILINE,
+    )
+    execution = re.search(
+        r"^(\S+) executed_candidate_verified pid=(\d+) start_ticks=(\d+) "
+        r"path=(\S+) executed_binary_sha256=([0-9a-f]{64}) "
+        r"device_inode=(\d+:\d+)$",
+        record["main_log"],
+        re.MULTILINE,
+    )
+    if (
+        provenance is None
+        or execution is None
+        or provenance.group(2) != source
+        or provenance.group(3) != fixture_hash
+        or execution.group(4) != fixture
+        or execution.group(5) != fixture_hash
+        or provenance.group(4) != execution.group(6)
+    ):
+        raise ValueError(f"probe {index} executable provenance is invalid")
+
+
+def derive_probe(
+    record: dict[str, Any], index: int, manifest: dict[str, Any]
+) -> dict[str, Any]:
     required = {
         "record_type",
         "index",
@@ -156,6 +235,7 @@ def derive_probe(record: dict[str, Any], index: int) -> dict[str, Any]:
         )
     ):
         raise ValueError(f"probe {index} invocation is invalid")
+    validate_invocation(record, index, manifest)
     if record["io_load_returncode"] != 0:
         raise ValueError(f"probe {index} direct-I/O load failed")
     started = timestamp(record["started_at"], f"probe {index} start")
@@ -184,6 +264,9 @@ def derive_probe(record: dict[str, Any], index: int) -> dict[str, Any]:
     wrapper_completed = timestamp(
         completed_match.group(1), f"probe {index} wrapper completion"
     )
+    lifecycle_s = (wrapper_completed - executed).total_seconds()
+    if lifecycle_s < 59.0 or lifecycle_s > 61.0:
+        raise ValueError(f"probe {index} lifecycle duration is invalid")
     sample_rows = []
     for line in record["samples_log"].splitlines():
         match = SAMPLE.fullmatch(line)
@@ -223,6 +306,7 @@ def derive_probe(record: dict[str, Any], index: int) -> dict[str, Any]:
         or not isinstance(io_load["elapsed_s"], (int, float))
         or io_load["elapsed_s"] < 60.0
         or not isinstance(io_load["fcntl_flags"], int)
+        or io_load["fcntl_flags"] & os.O_DIRECT == 0
         or not isinstance(io_load["pid"], int)
         or io_load["pid"] <= 1
     ):
@@ -250,7 +334,9 @@ def derive_probe(record: dict[str, Any], index: int) -> dict[str, Any]:
 def derive_summary(manifest: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
     if len(rows) != 3:
         raise ValueError("telemetry confirmation requires exactly three probes")
-    probes = [derive_probe(row, index) for index, row in enumerate(rows)]
+    probes = [
+        derive_probe(row, index, manifest) for index, row in enumerate(rows)
+    ]
     return {
         "schema_version": 1,
         "record_type": "w1_telemetry_loaded_confirmation",
@@ -333,6 +419,36 @@ def verify_package(package: Path) -> dict[str, Any]:
     for relative in ("artifacts/ds4-server", "artifacts/w1-direct-io-load"):
         if sha256_file(package / relative) != artifacts[relative]:
             raise ValueError(f"packaged artifact differs: {relative}")
+    profile = strict_json_bytes(
+        subprocess.run(
+            [
+                "/usr/bin/git",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "show",
+                f"{candidate}:{PROFILE}",
+            ],
+            cwd=ROOT,
+            env={
+                "HOME": "/nonexistent",
+                "PATH": "/usr/bin:/bin",
+                "LANG": "C.UTF-8",
+                "GIT_CONFIG_NOSYSTEM": "1",
+            },
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        ).stdout,
+        "frozen GLM profile",
+    )
+    if (
+        not isinstance(manifest["model"], dict)
+        or set(manifest["model"]) != {"path", "sha256", "size"}
+        or manifest["model"]["path"] != MODEL_PATH
+        or manifest["model"]["sha256"] != profile.get("model_sha256")
+        or manifest["model"]["size"] != MODEL_SIZE
+    ):
+        raise ValueError("manifest model is not the frozen GLM model")
     if sha256_file(raw_path) != manifest["raw_jsonl_sha256"]:
         raise ValueError("raw evidence hash differs")
     rows = read_raw(raw_path)
@@ -340,7 +456,11 @@ def verify_package(package: Path) -> dict[str, Any]:
     stored = strict_json_bytes(summary_path.read_bytes(), "summary")
     if stored != derived:
         raise ValueError("summary differs from fixed derivation")
-    return derived
+    return {
+        **derived,
+        "acceptance_authority": False,
+        "verdict": "DIAGNOSTIC_ONLY",
+    }
 
 
 def write_test_package(package: Path) -> None:
@@ -352,12 +472,30 @@ def write_test_package(package: Path) -> None:
     (artifacts / "w1-direct-io-load").write_bytes(b"fixed-test-binary\n")
     candidate = git("rev-parse", "HEAD")
     committed_at = git("show", "-s", "--format=%cI", candidate)
+    fixture_hash = sha256_file(artifacts / "ds4-server")
+    profile = strict_json_bytes((ROOT / PROFILE).read_bytes(), "test profile")
     rows = []
     for index in range(3):
+        source = "/home/bmarti44/.cache/glm52-telemetry-testfixture"
+        fixture = f"{source}/ds4-server"
+        tag = f"w1-telemetry-{candidate[:8]}-{index}"
+        environment = {
+            "HOME": "/home/bmarti44",
+            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "LANG": "C.UTF-8",
+            "GLM_CANDIDATE_SRC": source,
+            "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+            "GLM_SAFE_EXPECTED_BINARY_SHA256": fixture_hash,
+            "GLM_SAFE_KILL_FLOOR_GIB": "40",
+            "GLM_SAFE_MIN_START_GIB": "110",
+            "GLM_SAFE_TIMEOUT_S": "75",
+            "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+        }
+        sample_start = datetime(2026, 7, 30, tzinfo=timezone.utc)
         samples = "".join(
-            f"2026-07-30T00:00:{sample / 4:06.3f}+00:00 "
+            f"{(sample_start + timedelta(seconds=sample / 4)).isoformat(timespec='milliseconds')} "
             "mem_avail_kb=90000000 eng_rss_kb=1 read_bytes=1\n"
-            for sample in range(21)
+            for sample in range(241)
         )
         rows.append(
             {
@@ -365,14 +503,32 @@ def write_test_package(package: Path) -> None:
                 "index": index,
                 "started_at": "2026-07-30T00:00:00.000+00:00",
                 "completed_at": "2026-07-30T00:00:06.000+00:00",
-                "command": ["/fixture/ds4-server", "60"],
-                "environment": {"GLM_SAFE_RUN_AS_CURRENT_USER": "1"},
-                "launcher_log": "SAFE_RUN_DONE rc=0 killed=no dir=/fixture\n",
+                "command": [
+                    "/usr/bin/bash",
+                    str(ROOT / SAFE),
+                    "--tag",
+                    tag,
+                    "--",
+                    fixture,
+                    "60",
+                ],
+                "environment": environment,
+                "launcher_log": (
+                    "SAFE_RUN_DONE rc=0 killed=no dir="
+                    f"/home/bmarti44/.local/state/glm52-crashlog/"
+                    f"20260730-000000-{tag}\n"
+                ),
                 "main_log": (
+                    "2026-07-30T00:00:00.000+00:00 "
+                    f"candidate_src={source} "
+                    f"candidate_binary_sha256={fixture_hash} "
+                    "candidate_device_inode=1:2\n"
                     f"2026-07-30T00:00:00.000+00:00 "
                     f"executed_candidate_verified pid={100 + index} "
-                    f"start_ticks={200 + index}\n"
-                    "2026-07-30T00:00:05.000+00:00 "
+                    f"start_ticks={200 + index} path={fixture} "
+                    f"executed_binary_sha256={fixture_hash} "
+                    "device_inode=1:2\n"
+                    "2026-07-30T00:01:00.000+00:00 "
                     "SAFE_RUN end rc=0 killed=no\n"
                 ),
                 "samples_log": samples,
@@ -381,7 +537,7 @@ def write_test_package(package: Path) -> None:
                         "bytes_read": 2 * 1024 * 1024 * 1024,
                         "direct_io": True,
                         "elapsed_s": 61.0,
-                        "fcntl_flags": 16384,
+                        "fcntl_flags": os.O_DIRECT,
                         "pid": 300 + index,
                     },
                     sort_keys=True,
@@ -419,7 +575,11 @@ def write_test_package(package: Path) -> None:
         "artifact_sha256": artifact_hashes,
         "raw_jsonl_sha256": sha256_bytes(raw),
         "build": {"compiler": "test", "argv": ["test"]},
-        "model": {"path": "/test/model", "sha256": "0" * 64, "size": 1},
+        "model": {
+            "path": MODEL_PATH,
+            "sha256": profile["model_sha256"],
+            "size": MODEL_SIZE,
+        },
     }
     (package / "manifest.json").write_bytes(canonical(manifest))
     summary = derive_summary(manifest, rows)

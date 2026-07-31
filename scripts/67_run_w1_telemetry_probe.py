@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run three post-freeze W1 telemetry probes with raw direct-I/O evidence."""
+"""Run three non-authoritative W1 telemetry diagnostics with raw evidence."""
 
 from __future__ import annotations
 

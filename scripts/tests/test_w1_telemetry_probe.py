@@ -56,7 +56,8 @@ class W1TelemetryProbeSourceTests(unittest.TestCase):
             package = Path(temporary)
             scorer.write_test_package(package)
             accepted = scorer.verify_package(package)
-            self.assertEqual(accepted["verdict"], "PASS")
+            self.assertEqual(accepted["verdict"], "DIAGNOSTIC_ONLY")
+            self.assertFalse(accepted["acceptance_authority"])
 
             raw = package / "raw.jsonl"
             original = raw.read_text(encoding="utf-8")
@@ -92,9 +93,6 @@ class W1TelemetryProbeSourceTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["raw_jsonl_sha256"] = hashlib.sha256(raw).hexdigest()
             manifest_path.write_bytes(scorer.canonical(manifest))
-            (package / "summary.json").write_bytes(
-                scorer.canonical(scorer.derive_summary(manifest, rows))
-            )
 
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary)
