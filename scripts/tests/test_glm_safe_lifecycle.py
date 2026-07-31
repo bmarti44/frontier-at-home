@@ -38,7 +38,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
                 [
                     "bash",
                     "-c",
-                    "set -u\nSPID2=missing\n"
+                    "set -u\nSPID2=missing\nREQUIRE_CGROUP=0\n"
                     + sampler
                     + 'printf "%s|%s\\n" "$RSS" "$RB"\n',
                 ],
@@ -351,7 +351,10 @@ class CurrentUserTimestampTests(unittest.TestCase):
                     all(
                         re.fullmatch(
                             r"\S+ mem_avail_kb=\d+ eng_rss_kb=\d+ "
-                            r"read_bytes=\d+",
+                            r"read_bytes=\d+ "
+                            r"cgroup_current_bytes=(?:\d+|na) "
+                            r"cgroup_peak_bytes=(?:\d+|na) "
+                            r"cgroup_swap_current_bytes=(?:\d+|na)",
                             line,
                         )
                         for line in samples.splitlines()

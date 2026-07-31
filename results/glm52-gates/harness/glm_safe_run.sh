@@ -148,6 +148,8 @@ fi
 DIR=$CRASH_ROOT/$TS-$TAG
 mkdir -p "$DIR"
 MAIN="$DIR/main.log"; SAMP="$DIR/samples.log"
+KERNEL_LOG="$DIR/kernel.log"
+RUN_STARTED_EPOCH=$(date -u +%s)
 plog() { echo "$(date -u --iso-8601=ns) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
 live_group_pids() {
   ps -eo pid=,pgid=,stat= | awk -v group="$1" \
@@ -197,7 +199,10 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
     config_error "GLM_SAFE_CGROUP_UNIT membership"
   CGROUP_DIR=/sys/fs/cgroup$CGROUP_PATH
   [[ -r $CGROUP_DIR/memory.high && -r $CGROUP_DIR/memory.max &&
-     -r $CGROUP_DIR/memory.swap.max && -r $CGROUP_DIR/memory.oom.group &&
+     -r $CGROUP_DIR/memory.current && -r $CGROUP_DIR/memory.peak &&
+     -r $CGROUP_DIR/memory.swap.max &&
+     -r $CGROUP_DIR/memory.swap.current &&
+     -r $CGROUP_DIR/memory.oom.group &&
      -r $CGROUP_DIR/memory.events.local && -r $CGROUP_DIR/cgroup.procs ]] ||
     config_error "cgroup controls"
   CGROUP_HIGH=$(<"$CGROUP_DIR/memory.high")
@@ -438,7 +443,23 @@ PY
   RB=$(awk '/^read_bytes/{print $2}' "/proc/$SPID2/io" 2>/dev/null || echo 0)
   [[ $RSS =~ ^[0-9]+$ ]] || RSS=0
   [[ $RB =~ ^[0-9]+$ ]] || RB=0
-  echo "$(date -u --iso-8601=ns) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB" >> "$SAMP"
+  CGROUP_CURRENT=na
+  CGROUP_PEAK=na
+  CGROUP_SWAP_CURRENT=na
+  if [[ $REQUIRE_CGROUP == 1 ]]; then
+    CGROUP_CURRENT=$(<"$CGROUP_DIR/memory.current")
+    CGROUP_PEAK=$(<"$CGROUP_DIR/memory.peak")
+    CGROUP_SWAP_CURRENT=$(<"$CGROUP_DIR/memory.swap.current")
+    if [[ ! $CGROUP_CURRENT =~ ^[0-9]+$ ||
+          ! $CGROUP_PEAK =~ ^[0-9]+$ ||
+          ! $CGROUP_SWAP_CURRENT =~ ^[0-9]+$ ]]; then
+      plog "FATAL cgroup safety telemetry became unreadable"
+      kill -KILL -- -"$PG" 2>/dev/null || true
+      KILLED=telemetry
+      break
+    fi
+  fi
+  echo "$(date -u --iso-8601=ns) mem_avail_kb=$MA eng_rss_kb=$RSS read_bytes=$RB cgroup_current_bytes=$CGROUP_CURRENT cgroup_peak_bytes=$CGROUP_PEAK cgroup_swap_current_bytes=$CGROUP_SWAP_CURRENT" >> "$SAMP"
   sync -d "$SAMP" 2>/dev/null || true
   if (( MA < KILL_FLOOR_GIB * 1048576 )); then
     plog "KILL_FLOOR breached: MemAvailable=${MA}kB < ${KILL_FLOOR_GIB}GiB — SIGKILL pgid $PG"
@@ -530,12 +551,27 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
     plog "FATAL cgroup memory event delta $CGROUP_EVENT_FAILURES"
     RC=14
   fi
+  CGROUP_CURRENT_END=$(<"$CGROUP_DIR/memory.current")
+  CGROUP_PEAK_END=$(<"$CGROUP_DIR/memory.peak")
+  CGROUP_SWAP_CURRENT_END=$(<"$CGROUP_DIR/memory.swap.current")
+  plog "cgroup_final current_bytes=$CGROUP_CURRENT_END peak_bytes=$CGROUP_PEAK_END swap_current_bytes=$CGROUP_SWAP_CURRENT_END events=$(tr '\n' ',' <"$CGROUP_DIR/memory.events.local")"
 fi
 if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 && $RC == 0 ]]; then
   EXECUTED_CANDIDATE_CLEAN_EXIT=1
   plog "executed candidate clean exit verified after wrapper and descendant checks"
 fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
+RUN_ENDED_EPOCH=$(date -u +%s)
+if ! journalctl -k --since "@$RUN_STARTED_EPOCH" \
+      --until "@$((RUN_ENDED_EPOCH + 1))" \
+      --no-pager -o short-iso-precise >"$KERNEL_LOG" 2>&1; then
+  plog "FATAL kernel journal could not be captured for Xid verification"
+  RC=16
+elif grep -Eiq 'NVRM.*Xid' "$KERNEL_LOG"; then
+  plog "FATAL kernel Xid evidence appeared during run"
+  RC=16
+fi
+sync -d "$KERNEL_LOG" 2>/dev/null || true
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
 if [[ -n $WITNESS_NONCE ]]; then
   if [[ ! -f $WITNESS_ARTIFACT || -L $WITNESS_ARTIFACT ]]; then
