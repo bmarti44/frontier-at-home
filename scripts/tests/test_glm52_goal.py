@@ -7,6 +7,7 @@ import importlib.util
 import copy
 import json
 import math
+import os
 import subprocess
 import sys
 import tempfile
@@ -2269,6 +2270,36 @@ class ControllerTests(unittest.TestCase):
                     "W1", root=root, registry={}
                 )
             )
+
+    def test_registered_runner_executes_verified_bytes_after_path_swap(self):
+        goal = load_goal_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runner = root / "scripts" / "glm52-runners" / "W8"
+            runner.parent.mkdir(parents=True)
+            approved = b"#!/bin/sh\nprintf 'approved\\n'\n"
+            runner.write_bytes(approved)
+            runner.chmod(0o700)
+            descriptor = goal._registered_default_runner(
+                "W8",
+                root=root,
+                registry={"W8": hashlib.sha256(approved).hexdigest()},
+            )
+            self.assertIsInstance(descriptor, int)
+            runner.write_text("#!/bin/sh\nprintf 'replacement\\n'\n")
+            try:
+                completed = subprocess.run(
+                    [f"/proc/self/fd/{descriptor}"],
+                    pass_fds=(descriptor,),
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+            finally:
+                os.close(descriptor)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(completed.stdout, "approved\n")
 
     def test_state_rejects_unknown_status(self):
         with tempfile.TemporaryDirectory() as tmp:
