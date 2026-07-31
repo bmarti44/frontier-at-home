@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "record_type": "w1_telemetry_loaded_confirmation",
+  "candidate_hash": "1701ba8ddcccbc8ab913676d9a3fbb07f3743105",
+  "executed_at": "2026-07-30T20:30:00-04:00",
+  "workload": {
+    "wrapper_command": "identity-bound ds4-server fixture, 60 seconds",
+    "contention": "sustained O_DIRECT reads from the 197 GiB GLM-5.2 GGUF",
+    "probe_count": 3,
+    "coverage_formula": "all adjacent gaps > 0 and <= 0.75 seconds; first sample <= executed verification + 1 second; final sample >= wrapper completion - 1 second"
+  },
+  "probes": [
+    {
+      "samples": 196,
+      "min_gap_s": 0.292228,
+      "max_gap_s": 0.321418,
+      "first_minus_executed_s": 0.022731,
+      "completed_minus_last_s": 0.265655,
+      "verdict": "PASS"
+    },
+    {
+      "samples": 197,
+      "min_gap_s": 0.289772,
+      "max_gap_s": 0.315675,
+      "first_minus_executed_s": 0.020605,
+      "completed_minus_last_s": 0.265304,
+      "verdict": "PASS"
+    },
+    {
+      "samples": 196,
+      "min_gap_s": 0.290467,
+      "max_gap_s": 0.314399,
+      "first_minus_executed_s": 0.02133,
+      "completed_minus_last_s": 0.348857,
+      "verdict": "PASS"
+    }
+  ],
+  "verdict": "PASS"
+}
