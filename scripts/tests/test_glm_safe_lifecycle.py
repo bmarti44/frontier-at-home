@@ -91,6 +91,16 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("artifact_sha256=", safe)
         self.assertIn("GLM_SAFE_WITNESS_ARTIFACT", launcher)
         self.assertIn("date -u --iso-8601=ns", safe)
+        for name in (
+            "DS4_GLM_CKV_NVME",
+            "DS4_GLM_CKV_DIR",
+            "DS4_GLM_CKV_MODEL_SHA256",
+            "DS4_GLM_CKV_MAX_GIB",
+            "DS4_GLM_CKV_TRACE_PATH",
+            "DS4_GLM_CKV_TRACE_SAMPLE_POSITIONS",
+            "DS4_GLM_CKV_TRACE_MAX_RECORDS",
+        ):
+            self.assertIn(name, launcher)
 
     def test_authoritative_timestamps_are_emitted_in_utc(self):
         source = SAFE.read_text(encoding="utf-8")
