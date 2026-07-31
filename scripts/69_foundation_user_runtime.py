@@ -9,6 +9,7 @@ systemd cgroup after freezing candidate and artifact identities.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import os
 import signal
@@ -215,6 +216,50 @@ def verify_artifact(path: Path, expected_sha256: str) -> None:
             digest.update(block)
     if digest.hexdigest() != expected_sha256:
         raise ValueError(f"artifact hash mismatch: {path}")
+
+
+def verify_dsv4_shards(manifest_path: Path) -> None:
+    verify_plain = manifest_path.lstat()
+    if not stat.S_ISREG(verify_plain.st_mode) or stat.S_ISLNK(verify_plain.st_mode):
+        raise ValueError("DeepSeek weight manifest is unsafe")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("DeepSeek weight manifest is invalid") from exc
+    files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(files, list) or not files:
+        raise ValueError("DeepSeek weight manifest has no shards")
+    seen: set[str] = set()
+    for item in files:
+        if not isinstance(item, dict) or set(item) != {"name", "bytes", "sha256"}:
+            raise ValueError("DeepSeek shard record is invalid")
+        name, size, expected = item["name"], item["bytes"], item["sha256"]
+        if (
+            not isinstance(name, str)
+            or not name
+            or Path(name).name != name
+            or name in seen
+            or isinstance(size, bool)
+            or not isinstance(size, int)
+            or size <= 0
+        ):
+            raise ValueError("DeepSeek shard identity is invalid")
+        seen.add(name)
+        path = manifest_path.parent / name
+        details = path.lstat()
+        if (
+            not stat.S_ISREG(details.st_mode)
+            or stat.S_ISLNK(details.st_mode)
+            or details.st_size != size
+        ):
+            raise ValueError(f"DeepSeek shard file is invalid: {name}")
+        verify_artifact(path, expected)
+        if hasattr(os, "posix_fadvise") and hasattr(os, "POSIX_FADV_DONTNEED"):
+            descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+            try:
+                os.posix_fadvise(descriptor, 0, 0, os.POSIX_FADV_DONTNEED)
+            finally:
+                os.close(descriptor)
 
 
 def _positive_number(value: Any, label: str) -> float:
