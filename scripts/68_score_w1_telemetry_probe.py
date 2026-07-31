@@ -68,8 +68,8 @@ def timestamp(value: str, label: str) -> datetime:
         parsed = datetime.fromisoformat(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label} is invalid") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
-        raise ValueError(f"{label} is not explicit UTC")
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{label} has no explicit timezone")
     return parsed
 
 
