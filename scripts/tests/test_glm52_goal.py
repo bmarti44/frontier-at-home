@@ -2301,6 +2301,32 @@ class ControllerTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertEqual(completed.stdout, "approved\n")
 
+    def test_registered_runner_copy_handles_short_memfd_writes(self):
+        goal = load_goal_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runner = root / "scripts" / "glm52-runners" / "W8"
+            runner.parent.mkdir(parents=True)
+            approved = b"#!/bin/sh\nprintf 'complete-approved-runner\\n'\n"
+            runner.write_bytes(approved)
+            runner.chmod(0o700)
+            real_write = os.write
+
+            def short_write(descriptor, value):
+                return real_write(descriptor, value[: max(1, len(value) // 2)])
+
+            with mock.patch.object(goal.os, "write", side_effect=short_write):
+                descriptor = goal._registered_default_runner(
+                    "W8",
+                    root=root,
+                    registry={"W8": hashlib.sha256(approved).hexdigest()},
+                )
+            self.assertIsInstance(descriptor, int)
+            try:
+                self.assertEqual(os.pread(descriptor, len(approved) + 1, 0), approved)
+            finally:
+                os.close(descriptor)
+
     def test_state_rejects_unknown_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
