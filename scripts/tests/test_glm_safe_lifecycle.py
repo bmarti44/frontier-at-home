@@ -106,6 +106,22 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertNotIn('echo "$(date -Is)', source)
         self.assertNotIn('echo "$(date --iso-8601=ns)', source)
 
+    def test_cgroup_and_xid_safety_telemetry_is_preserved(self):
+        source = SAFE.read_text(encoding="utf-8")
+        for control in (
+            "memory.current",
+            "memory.peak",
+            "memory.swap.current",
+            "memory.events.local",
+        ):
+            self.assertIn(control, source)
+        self.assertIn("cgroup_current_bytes=", source)
+        self.assertIn("cgroup_peak_bytes=", source)
+        self.assertIn("cgroup_swap_current_bytes=", source)
+        self.assertIn('KERNEL_LOG="$DIR/kernel.log"', source)
+        self.assertIn("NVRM.*Xid", source)
+        self.assertIn("FATAL kernel Xid evidence appeared during run", source)
+
 
 class CandidateLifecycleTests(unittest.TestCase):
     @classmethod
