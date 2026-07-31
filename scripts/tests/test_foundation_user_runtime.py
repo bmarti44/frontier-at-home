@@ -51,11 +51,12 @@ class FoundationRuntimeTests(unittest.TestCase):
         self.assertEqual(environment, {})
         self.assertEqual(command[0], "/candidate/llama-server")
         self.assertIn("1048576", command)
-        # The fresh 1M diagnostic loaded successfully at 512/256, but the
-        # first request crossed the fixed 15 GiB watchdog floor (14.89 GiB).
-        # Keep the full context and reduce only transient request buffers.
-        self.assertEqual(command[command.index("-b") + 1], "256")
-        self.assertEqual(command[command.index("-ub") + 1], "128")
+        # Fresh 1M diagnostics loaded at 512/256 and 256/128, but request-time
+        # allocation crossed the fixed 15 GiB watchdog floor (14.89 and 15.00
+        # GiB respectively). Keep full context and reduce only transient
+        # request buffers enough to leave measurable safety headroom.
+        self.assertEqual(command[command.index("-b") + 1], "128")
+        self.assertEqual(command[command.index("-ub") + 1], "64")
         self.assertIn("--no-mmap", command)
         self.assertEqual(command[command.index("--cache-ram") + 1], "0")
 
