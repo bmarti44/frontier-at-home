@@ -30,6 +30,19 @@ def load_runtime():
 
 
 class FoundationRuntimeTests(unittest.TestCase):
+    def test_cli_requires_exact_arm_identity_arguments(self):
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn("--binary-sha256", completed.stderr)
+        self.assertIn("--configuration-sha256", completed.stderr)
+        self.assertIn("--fixture-sha256", completed.stderr)
+
     def test_deepseek_uses_largest_proven_context_and_bounded_batches(self):
         runtime = load_runtime()
         command, environment = runtime.server_invocation(
