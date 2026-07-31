@@ -4125,7 +4125,7 @@ def _registered_default_runner(
     *,
     root: Path = ROOT,
     registry: dict[str, str] | None = None,
-) -> Path | None:
+) -> int | None:
     approved = DEFAULT_RUNNER_SHA256 if registry is None else registry
     expected = approved.get(gate)
     if expected is None:
@@ -4135,15 +4135,47 @@ def _registered_default_runner(
         details = path.lstat()
     except FileNotFoundError:
         return None
-    if (
-        not stat.S_ISREG(details.st_mode)
-        or stat.S_ISLNK(details.st_mode)
-        or not os.access(path, os.X_OK)
-        or not re.fullmatch(r"[0-9a-f]{64}", expected)
-        or _sha256(path) != expected
-    ):
+    if not stat.S_ISREG(details.st_mode) or stat.S_ISLNK(details.st_mode):
         return None
-    return path
+    if not os.access(path, os.X_OK) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        return None
+
+    source = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+    sealed = os.memfd_create(
+        f"glm52-runner-{gate}", os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING
+    )
+    try:
+        opened = os.fstat(source)
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or opened.st_mode & 0o111 == 0
+            or (opened.st_dev, opened.st_ino)
+            != (details.st_dev, details.st_ino)
+        ):
+            return None
+        digest = hashlib.sha256()
+        while block := os.read(source, 1024 * 1024):
+            digest.update(block)
+            os.write(sealed, block)
+        if digest.hexdigest() != expected:
+            return None
+        os.fchmod(sealed, 0o500)
+        fcntl.fcntl(
+            sealed,
+            fcntl.F_ADD_SEALS,
+            fcntl.F_SEAL_SEAL
+            | fcntl.F_SEAL_SHRINK
+            | fcntl.F_SEAL_GROW
+            | fcntl.F_SEAL_WRITE,
+        )
+        os.lseek(sealed, 0, os.SEEK_SET)
+        result = sealed
+        sealed = -1
+        return result
+    finally:
+        os.close(source)
+        if sealed >= 0:
+            os.close(sealed)
 
 
 def _sha256(path: Path) -> str:
@@ -4170,21 +4202,15 @@ def _dispatch(state_dir: Path, command: str) -> dict[str, Any]:
                     "action": "terminal_not_release_qualified",
                 }
                 break
-            candidates: list[Path] = []
+            runner: Path | None = None
             if state_dir.resolve() != DEFAULT_STATE_DIR.resolve():
-                candidates.append(state_dir / "runners" / selected)
-            default_runner = _registered_default_runner(selected)
-            if default_runner is not None:
-                candidates.append(default_runner)
-            runner = next(
-                (
-                    path
-                    for path in candidates
-                    if path.is_file() and os.access(path, os.X_OK)
-                ),
-                None,
+                candidate = state_dir / "runners" / selected
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    runner = candidate
+            runner_descriptor = (
+                None if runner is not None else _registered_default_runner(selected)
             )
-            if runner is None:
+            if runner is None and runner_descriptor is None:
                 event = {
                     "command": command,
                     "selected_gate": selected,
@@ -4192,17 +4218,27 @@ def _dispatch(state_dir: Path, command: str) -> dict[str, Any]:
                     "action": "awaiting_registered_runner",
                 }
                 break
-            completed = subprocess.run(
-                [str(runner), str(state_dir), selected],
-                cwd=ROOT,
-                check=False,
-                timeout=14_400,
-                env={
-                    "HOME": os.environ.get("HOME", ""),
-                    "PATH": os.environ.get("PATH", ""),
-                    "LANG": os.environ.get("LANG", "C.UTF-8"),
-                },
+            executable = (
+                str(runner)
+                if runner is not None
+                else f"/proc/self/fd/{runner_descriptor}"
             )
+            try:
+                completed = subprocess.run(
+                    [executable, str(state_dir), selected],
+                    cwd=ROOT,
+                    check=False,
+                    timeout=14_400,
+                    pass_fds=(runner_descriptor,) if runner_descriptor is not None else (),
+                    env={
+                        "HOME": os.environ.get("HOME", ""),
+                        "PATH": os.environ.get("PATH", ""),
+                        "LANG": os.environ.get("LANG", "C.UTF-8"),
+                    },
+                )
+            finally:
+                if runner_descriptor is not None:
+                    os.close(runner_descriptor)
             if completed.returncode != 0:
                 event = {
                     "command": command,
