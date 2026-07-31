@@ -68,6 +68,8 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn('"/proc/$SPID2/environ"', source)
         self.assertIn("executed_environment_sha256=", source)
         self.assertIn("executed candidate environment mismatch", source)
+        self.assertIn("DS4_GLM_CKV_RUN_NONCE", source)
+        self.assertIn("run_nonce=", source)
 
     def test_default_off_current_user_mode_retains_containment_and_provenance(self):
         safe = SAFE.read_text(encoding="utf-8")
