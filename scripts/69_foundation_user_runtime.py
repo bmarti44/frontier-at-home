@@ -11,12 +11,19 @@ from __future__ import annotations
 import hashlib
 import math
 import os
+import signal
 import stat
+import subprocess
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 
 GIB = 1 << 30
+ROOT = Path(__file__).resolve().parents[1]
+MEMWATCH = ROOT / "scripts" / "01_memwatch.sh"
 CGROUP_LIMITS = {
     "dsv4": (105 * GIB, 110 * GIB, 0),
     "glm52": (68 * GIB, 72 * GIB, 0),
@@ -210,6 +217,202 @@ def baseline_from_result(
         "oom": False,
         "xid": False,
         "failures": [],
+    }
+
+
+def _proc_start_ticks(pid: int) -> int:
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text(encoding="ascii").split(") ", 1)[1].split()
+        value = int(fields[19])
+    except (OSError, ValueError, IndexError) as exc:
+        raise RuntimeError("cannot read server process identity") from exc
+    if value <= 0:
+        raise RuntimeError("server process identity is invalid")
+    return value
+
+
+def _mem_available_gib() -> float:
+    for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines():
+        if line.startswith("MemAvailable:"):
+            return int(line.split()[1]) / 1_048_576
+    raise RuntimeError("MemAvailable is absent")
+
+
+def _terminate_group(process: subprocess.Popen[Any]) -> None:
+    if process.poll() is not None:
+        process.wait()
+        return
+    try:
+        pgid = os.getpgid(process.pid)
+        os.killpg(pgid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        pass
+    try:
+        process.wait(timeout=30)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+    process.wait(timeout=10)
+
+
+def supervise_process(
+    command: list[str],
+    environment: dict[str, str],
+    out: Path,
+    *,
+    port: int,
+    watchdog_floor_gib: int,
+    startup_timeout_seconds: int,
+    probe_command: list[str],
+) -> dict[str, Any]:
+    """Run one server and probe under the independent, identity-bound watchdog."""
+    _bounded_port(port)
+    if (
+        not command
+        or not probe_command
+        or isinstance(watchdog_floor_gib, bool)
+        or not isinstance(watchdog_floor_gib, int)
+        or not 1 <= watchdog_floor_gib <= 64
+        or isinstance(startup_timeout_seconds, bool)
+        or not isinstance(startup_timeout_seconds, int)
+        or not 1 <= startup_timeout_seconds <= 1800
+    ):
+        raise ValueError("foundation supervision arguments are invalid")
+    if out.exists() or out.is_symlink():
+        raise ValueError("foundation arm output already exists")
+    out.mkdir(mode=0o700, parents=True)
+    target = out / "memwatch.target"
+    ready = out / "memwatch.ready"
+    memwatch_log = out / "memwatch.log"
+    memwatch_stderr_path = out / "memwatch.stderr.log"
+    server_log_path = out / "server.log"
+    samples = [_mem_available_gib()]
+    server: subprocess.Popen[Any] | None = None
+    memwatch: subprocess.Popen[Any] | None = None
+    armed = False
+    success = False
+    server_pid = 0
+    server_instance_id = ""
+    with memwatch_stderr_path.open("xb") as memwatch_stderr, server_log_path.open("xb") as server_log:
+        try:
+            memwatch = subprocess.Popen(
+                [
+                    str(MEMWATCH),
+                    "--target-file",
+                    str(target),
+                    "--ready-file",
+                    str(ready),
+                    "--threshold-gib",
+                    str(watchdog_floor_gib),
+                    "--interval-sec",
+                    "0.25",
+                    "--log",
+                    str(memwatch_log),
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=memwatch_stderr,
+            )
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline and not ready.is_file():
+                if memwatch.poll() is not None:
+                    raise RuntimeError("memory watchdog exited before readiness")
+                time.sleep(0.05)
+            if not ready.is_file() or ready.read_text(encoding="ascii").strip() != "READY":
+                raise RuntimeError("memory watchdog did not become ready")
+
+            child_env = {
+                "HOME": os.environ.get("HOME", "/home/bmarti44"),
+                "LANG": "C.UTF-8",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                **environment,
+            }
+            server = subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=server_log,
+                stderr=subprocess.STDOUT,
+                env=child_env,
+                start_new_session=True,
+            )
+            server_pid = server.pid
+            pgid = os.getpgid(server.pid)
+            ticks = _proc_start_ticks(server.pid)
+            if pgid != server.pid:
+                raise RuntimeError("server process group is not isolated")
+            target.write_text(f"{server.pid} {pgid} {ticks} engine\n", encoding="ascii")
+            armed = True
+            boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+            server_instance_id = hashlib.sha256(
+                f"{boot_id}:{server.pid}:{ticks}".encode()
+            ).hexdigest()
+
+            deadline = time.monotonic() + startup_timeout_seconds
+            health_url = f"http://127.0.0.1:{port}/v1/models"
+            while time.monotonic() < deadline:
+                samples.append(_mem_available_gib())
+                if server.poll() is not None:
+                    raise RuntimeError(f"server exited during startup with status {server.returncode}")
+                if memwatch.poll() is not None:
+                    raise RuntimeError("memory watchdog exited while server was armed")
+                try:
+                    with urllib.request.urlopen(health_url, timeout=2) as response:
+                        if response.status == 200:
+                            break
+                except (OSError, urllib.error.URLError):
+                    pass
+                time.sleep(0.25)
+            else:
+                raise RuntimeError("server startup timed out")
+
+            completed = subprocess.run(
+                probe_command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=3600,
+                env=child_env,
+            )
+            samples.append(_mem_available_gib())
+            (out / "probe.stdout.log").write_bytes(completed.stdout)
+            (out / "probe.stderr.log").write_bytes(completed.stderr)
+            if completed.returncode != 0:
+                raise RuntimeError(f"foundation probe failed with status {completed.returncode}")
+
+            target.write_text(
+                f"DISARM {server.pid} {pgid} {ticks}\n", encoding="ascii"
+            )
+            memwatch.wait(timeout=10)
+            if memwatch.returncode != 0:
+                raise RuntimeError("memory watchdog did not disarm cleanly")
+            armed = False
+            _terminate_group(server)
+            success = True
+        finally:
+            if not success:
+                if memwatch is not None and memwatch.poll() is None:
+                    memwatch.send_signal(signal.SIGTERM)
+                    try:
+                        memwatch.wait(timeout=15)
+                    except subprocess.TimeoutExpired:
+                        memwatch.kill()
+                        memwatch.wait()
+                if server is not None:
+                    _terminate_group(server)
+            elif server is not None and server.poll() is None:
+                _terminate_group(server)
+            if armed and memwatch is not None and memwatch.poll() is None:
+                memwatch.kill()
+                memwatch.wait()
+    return {
+        "server_instance_id": server_instance_id,
+        "server_pid": server_pid,
+        "available_memory_gib": min(samples),
     }
 
 
