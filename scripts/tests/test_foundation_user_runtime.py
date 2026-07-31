@@ -235,6 +235,7 @@ class FoundationRuntimeTests(unittest.TestCase):
             timestamps = [1_000_000_000 + index * 100_000_000 for index in range(128)]
 
             def fake_supervise(command, environment, output, **kwargs):
+                output.mkdir()
                 result_path = output / "result.json"
                 result_path.write_text(
                     json.dumps(

@@ -542,5 +542,115 @@ def supervise_process(
     }
 
 
+def _strict_json(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=lambda constant: (_ for _ in ()).throw(
+                ValueError(f"non-finite JSON constant {constant}")
+            ),
+        )
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"invalid JSON artifact: {path}") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"JSON artifact is not an object: {path}")
+    return value
+
+
+def _write_json_exclusive(path: Path, value: dict[str, Any]) -> None:
+    with path.open("x", encoding="utf-8") as stream:
+        json.dump(value, stream, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        stream.write("\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _reject_active_engines() -> None:
+    completed = subprocess.run(
+        ["/usr/bin/pgrep", "-x", "llama-server|ds4-server"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    # pgrep -x treats the pattern as an extended regular expression.
+    if completed.returncode == 0 and completed.stdout.strip():
+        raise RuntimeError("another model engine is already active")
+    if completed.returncode not in {0, 1}:
+        raise RuntimeError("cannot inspect active model engines")
+
+
+def execute_arm(
+    *,
+    profile: str,
+    out: Path,
+    binary: Path,
+    binary_sha256: str,
+    model: Path,
+    model_sha256: str,
+    configuration_sha256: str,
+    fixture_sha256: str,
+    port: int,
+    seed: int,
+    tokenizer: Path | None,
+    tokenizer_sha256: str | None,
+) -> dict[str, Any]:
+    """Execute one fixed foundation arm inside the caller's verified cgroup."""
+    if os.geteuid() != 1000 or os.environ.get("USER", "bmarti44") != "bmarti44":
+        raise ValueError("foundation arm must run as bmarti44")
+    validate_cgroup(profile, *read_cgroup_limits(current_cgroup_path()))
+    verify_artifact(binary, binary_sha256)
+    verify_artifact(model, model_sha256)
+    if profile == "glm52":
+        if tokenizer is None or tokenizer_sha256 is None:
+            raise ValueError("GLM tokenizer identity is missing")
+        verify_artifact(tokenizer, tokenizer_sha256)
+    elif tokenizer is not None or tokenizer_sha256 is not None:
+        raise ValueError("DeepSeek arm must not receive a tokenizer override")
+    for digest in (configuration_sha256, fixture_sha256):
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise ValueError("foundation arm digest is invalid")
+    for _ in range(3):
+        if _mem_available_gib() < 110.0:
+            raise RuntimeError("foundation arm lacks 110 GiB stable start memory")
+        time.sleep(0.1)
+    _reject_active_engines()
+    command, environment = server_invocation(profile, binary, model, port)
+    result_path = out / "result.json"
+    probe = benchmark_invocation(
+        profile,
+        result_path,
+        port,
+        seed,
+        tokenizer,
+        tokenizer_sha256,
+    )
+    lifecycle = supervise_process(
+        command,
+        environment,
+        out,
+        port=port,
+        watchdog_floor_gib=15 if profile == "dsv4" else 40,
+        startup_timeout_seconds=900,
+        probe_command=probe,
+    )
+    result = _strict_json(result_path)
+    baseline = baseline_from_result(
+        result,
+        profile=profile,
+        server_instance_id=lifecycle["server_instance_id"],
+        fixture_sha256=fixture_sha256,
+        binary_sha256=binary_sha256,
+        configuration_sha256=configuration_sha256,
+        available_memory_gib=lifecycle["available_memory_gib"],
+    )
+    _write_json_exclusive(out / "baseline.json", baseline)
+    return baseline
+
+
 if __name__ == "__main__":
     raise SystemExit("69_foundation_user_runtime.py is a library; use its registered runner")
