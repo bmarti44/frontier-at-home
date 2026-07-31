@@ -25,12 +25,10 @@ Memory and OOM safeguards:
 
 Evidence directory:
 
-Built-in agent goal objective and current status:
-
 Checklist:
 
 - [ ] I read `AGENTS.md`.
-- [ ] I used my agent harness's built-in goal tool to create the persistent model/backend qualification goal before engine changes.
+- [ ] I used my agent harness's built-in goal tool to set a persistent goal for this integration before engine changes.
 - [ ] The branch name follows the exact claim convention.
 - [ ] Public model and tokenizer artifacts will be independently hashed.
 - [ ] Production-path acceptance tests will be committed before implementation.

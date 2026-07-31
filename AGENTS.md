@@ -19,14 +19,10 @@ When adding or optimizing a model:
 5. Never trade whole-system stability for benchmark progress.
 
 For new claimed work, you MUST use the goal tool built into your agent harness
-to create a persistent goal before changing an engine or running a large model.
-The objective must name the exact catalog model/backend, target hardware and
-context, correctness/fidelity gates, performance comparison, OOM safeguards,
-switching/rollback outcome, and final review. Keep using that same goal across
-sessions until every required outcome is reproducibly terminal; do not create a
-replacement goal merely to discard failures. If the harness exposes no goal
-tool, put the same explicit goal and gate status in the draft PR rather than
-building a new controller framework.
+to set a persistent goal for the chosen model integration before changing an
+engine or running a large model. Keep that goal active until the integration is
+finished. Do not build a repository-specific replacement for your harness's
+goal tool.
 
 The GLM-5.2/CUDA integration additionally has project-specific evidence
 commands:
@@ -51,9 +47,7 @@ systemctl is-active dsv4-engine-restore.service dsv4-guard.timer
 awk '/MemAvailable|SwapTotal|SwapFree/ {print}' /proc/meminfo
 ```
 
-Then read the current built-in goal and its status before acting. Do not use
-GLM's project-specific controller as the goal authority for another
-integration.
+Then read the current built-in goal and its status before acting.
 
 Also inspect the exact running process, command line, context cap, and listener
 before stopping or replacing anything. Preserve a dirty tree and unrelated user
