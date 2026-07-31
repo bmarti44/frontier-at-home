@@ -27,6 +27,7 @@ CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
 EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
 PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
 EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
+CKV_RUN_NONCE=${DS4_GLM_CKV_RUN_NONCE:-}
 WITNESS_NONCE=${GLM_SAFE_WITNESS_NONCE:-}
 WITNESS_ARTIFACT=${GLM_SAFE_WITNESS_ARTIFACT:-}
 REQUIRE_CGROUP=${GLM_SAFE_REQUIRE_CGROUP:-0}
@@ -84,6 +85,9 @@ if [[ $ROOT_AUTHORITY == 1 ]]; then
 fi
 if [[ -n $WITNESS_NONCE && ! $WITNESS_NONCE =~ ^[0-9a-f]{64}$ ]]; then
   config_error "GLM_SAFE_WITNESS_NONCE"
+fi
+if [[ -n $CKV_RUN_NONCE && ! $CKV_RUN_NONCE =~ ^[0-9a-f]{64}$ ]]; then
+  config_error "DS4_GLM_CKV_RUN_NONCE"
 fi
 if [[ -n $WITNESS_NONCE ]]; then
   if [[ $ROOT_AUTHORITY == 1 ]]; then
@@ -187,6 +191,9 @@ plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GI
 plog "cmd: $*"
 plog "host: $(hostname) kernel: $(uname -r)"
 plog "candidate_provenance_enabled=$CANDIDATE_PROVENANCE"
+if [[ -n $CKV_RUN_NONCE ]]; then
+  plog "run_nonce=$CKV_RUN_NONCE"
+fi
 CGROUP_PATH=""
 CGROUP_DIR=""
 CGROUP_BASELINE_PIDS=""
