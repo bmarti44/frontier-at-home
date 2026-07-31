@@ -668,10 +668,8 @@ class RootAttestorContractTests(unittest.TestCase):
         submitter = SUBMITTER.read_text(encoding="utf-8")
         self.assertIn("with _hold_inference_locks():", submitter)
 
-    def test_controller_runner_cannot_bypass_root_authority(self):
-        runner = RUNNER.read_text(encoding="utf-8")
-        self.assertIn("/usr/local/sbin/glm52-w1-submit", runner)
-        self.assertNotIn('python3 "$CAMPAIGN" run', runner)
+    def test_obsolete_fidelity_runner_cannot_be_relaunched(self):
+        self.assertFalse(RUNNER.exists() and RUNNER.stat().st_mode & 0o111)
         controller = CONTROLLER.read_text(encoding="utf-8")
         self.assertIn("validate_w1_root_receipt", controller)
         self.assertIn("/var/lib/glm52-w1/by-composite", controller)

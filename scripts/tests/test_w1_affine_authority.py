@@ -442,14 +442,9 @@ class W1AffineAuthorityTests(unittest.TestCase):
             hashlib.sha256(f"{'2' * 64}:{randomness}:W1".encode()).hexdigest(),
         )
 
-    def test_w1_has_a_registered_controller_runner(self):
+    def test_w1_fidelity_runner_is_disabled_until_retrieval_exists(self):
         runner = ROOT / "scripts/glm52-runners/W1"
-        self.assertTrue(runner.is_file())
-        self.assertTrue(runner.stat().st_mode & 0o111)
-        source = runner.read_text(encoding="utf-8")
-        self.assertIn("/usr/local/sbin/glm52-w1-submit", source)
-        self.assertIn(" run ", source)
-        self.assertNotIn("glm52_w1_affine_campaign.py", source)
+        self.assertFalse(runner.exists() and runner.stat().st_mode & 0o111)
 
     def test_root_fixture_is_traversable_but_not_mutable_by_engine(self):
         source = RUNNER_PATH.read_text(encoding="utf-8")
