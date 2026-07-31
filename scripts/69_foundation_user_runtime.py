@@ -8,6 +8,7 @@ systemd cgroup after freezing candidate and artifact identities.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import math
@@ -15,6 +16,7 @@ import os
 import signal
 import stat
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -652,5 +654,49 @@ def execute_arm(
     return baseline
 
 
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--profile", choices=("dsv4", "glm52"), required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--binary", type=Path, required=True)
+    parser.add_argument("--binary-sha256", required=True)
+    parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument("--model-sha256", required=True)
+    parser.add_argument("--configuration-sha256", required=True)
+    parser.add_argument("--fixture-sha256", required=True)
+    parser.add_argument("--port", type=int, required=True)
+    parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--tokenizer", type=Path)
+    parser.add_argument("--tokenizer-sha256")
+    parser.add_argument("--weights-manifest", type=Path)
+    args = parser.parse_args(argv)
+    try:
+        if args.profile == "dsv4":
+            if args.weights_manifest is None:
+                raise ValueError("DeepSeek weights manifest is required")
+            verify_dsv4_shards(args.weights_manifest)
+        elif args.weights_manifest is not None:
+            raise ValueError("GLM arm must not receive a DeepSeek weights manifest")
+        baseline = execute_arm(
+            profile=args.profile,
+            out=args.out,
+            binary=args.binary,
+            binary_sha256=args.binary_sha256,
+            model=args.model,
+            model_sha256=args.model_sha256,
+            configuration_sha256=args.configuration_sha256,
+            fixture_sha256=args.fixture_sha256,
+            port=args.port,
+            seed=args.seed,
+            tokenizer=args.tokenizer,
+            tokenizer_sha256=args.tokenizer_sha256,
+        )
+        print(json.dumps(baseline, sort_keys=True, separators=(",", ":")))
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+        print(f"69_foundation_user_runtime.py: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 if __name__ == "__main__":
-    raise SystemExit("69_foundation_user_runtime.py is a library; use its registered runner")
+    raise SystemExit(main())
