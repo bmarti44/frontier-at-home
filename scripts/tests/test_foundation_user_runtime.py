@@ -116,6 +116,33 @@ class FoundationRuntimeTests(unittest.TestCase):
         self.assertEqual(len(baseline["token_timestamps"]), 128)
         self.assertEqual(baseline["failures"], [])
 
+    def test_probe_command_is_fixed_and_glm_tokenizer_bound(self):
+        runtime = load_runtime()
+        dsv4 = runtime.benchmark_invocation(
+            "dsv4", Path("/evidence/dsv4.json"), 8013, 123, None, None
+        )
+        self.assertIn("scripts/30_bench_speed.py", " ".join(dsv4))
+        self.assertEqual(dsv4[dsv4.index("--reps") + 1], "2")
+        self.assertEqual(dsv4[dsv4.index("--max-tokens") + 1], "160")
+        self.assertEqual(dsv4[dsv4.index("--min-completion-tokens") + 1], "128")
+        self.assertEqual(dsv4[dsv4.index("--model-id") + 1], "deepseek-v4-flash")
+
+        glm = runtime.benchmark_invocation(
+            "glm52",
+            Path("/evidence/glm.json"),
+            8014,
+            123,
+            Path("/tokenizer.json"),
+            "e" * 64,
+        )
+        self.assertEqual(glm[glm.index("--model-id") + 1], "glm-5.2")
+        self.assertEqual(
+            glm[glm.index("--output-tokenizer-path") + 1], "/tokenizer.json"
+        )
+        self.assertEqual(
+            glm[glm.index("--output-tokenizer-sha256") + 1], "e" * 64
+        )
+
     def test_artifact_hash_verification_fails_closed(self):
         runtime = load_runtime()
         with tempfile.TemporaryDirectory() as tmp:
