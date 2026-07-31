@@ -2222,6 +2222,19 @@ class ControllerTests(unittest.TestCase):
         self.assertIn("real packed storage", reason)
         self.assertIn("retrieval", reason)
 
+    def test_w1_real_packed_pass_is_promoted(self):
+        goal = load_goal_module()
+        status, reason = goal._gate_status_from_summary(
+            "W1",
+            {
+                "scorer_id": "w1.affine-quality.v2",
+                "verdict": "PASS",
+            },
+            candidate_format="affine-int8-block16",
+        )
+        self.assertEqual(status, "PASS")
+        self.assertIsNone(reason)
+
     def test_state_rejects_unknown_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
