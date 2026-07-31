@@ -20,9 +20,8 @@ When adding or optimizing a model:
 
 For new claimed work, you MUST use the goal tool built into your agent harness
 to set a persistent goal for the chosen model integration before changing an
-engine or running a large model. Keep that goal active until the integration is
-finished. Do not build a repository-specific replacement for your harness's
-goal tool.
+engine or running a large model. Do not build a repository-specific replacement
+for your harness's goal tool.
 
 The GLM-5.2/CUDA integration additionally has project-specific evidence
 commands:
@@ -201,9 +200,8 @@ before implementing it:
    `claim-model/<catalog-slug>/<backend>` in your fork.
 3. Open a draft PR immediately with
    `.github/PULL_REQUEST_TEMPLATE/model-integration-claim.md`.
-4. Before engine changes, create the model/backend goal with the goal tool
-   bundled with your agent harness, then record its objective and current
-   status in the PR.
+4. Before engine changes, set a persistent model/backend goal with the goal tool
+   bundled with your agent harness.
 5. Keep that PR open and update its description with the baseline, hardware,
    memory safeguards, and evidence location as facts become available.
 

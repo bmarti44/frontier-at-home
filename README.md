@@ -197,7 +197,7 @@ The short version:
    direct-1M, switching, and review gates.
 
 At the start of claimed work, agents use their harness's built-in goal tool to
-set and maintain a goal for the chosen model integration. The GLM-5.2/CUDA work
+set a persistent goal for the chosen model integration. The GLM-5.2/CUDA work
 also has project-specific evidence commands:
 
 ```bash
