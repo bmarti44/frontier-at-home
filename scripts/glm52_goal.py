@@ -34,6 +34,14 @@ W1_AUTHORITY_RECEIPT_ROOT = Path("/var/lib/glm52-w1/by-composite")
 W1_AUTHORITY_ATTEMPT_ROOT = Path("/var/lib/glm52-w1/controller-attempts")
 STATUSES = frozenset({"PENDING", "RED_CONFIRMED", "PASS", "FAIL", "NO_RESULT"})
 TERMINAL_STATUSES = frozenset({"PASS", "FAIL", "NO_RESULT"})
+W1_PACKED_RETRIEVAL_REASON = (
+    "real packed storage, memory, and fidelity passed; "
+    "deterministic retrieval qualification remains unfinished"
+)
+# Default-tree runners are executable authority. Keep the registry explicit
+# and content-addressed; an untracked or stale executable must never become a
+# controller action merely because it has a familiar filename.
+DEFAULT_RUNNER_SHA256: dict[str, str] = {}
 GATE_ORDER = (
     "foundation",
     "W1",
@@ -3941,8 +3949,7 @@ def _gate_status_from_summary(
         if candidate_format == "affine-int8-block16":
             return (
                 "RED_CONFIRMED",
-                "real packed storage, memory, and fidelity passed; "
-                "deterministic retrieval qualification remains unfinished",
+                W1_PACKED_RETRIEVAL_REASON,
             )
         return (
             "RED_CONFIRMED",
@@ -4084,6 +4091,24 @@ def _release_verdict(state_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _selected_gate(state: dict[str, Any]) -> str | None:
+    if state["gates"]["foundation"]["status"] != "PASS":
+        return "foundation"
+
+    # The packed W1 campaign established storage, memory and fidelity, but its
+    # 1M retrieval gate needs exact NVMe cKV staging. Route directly through
+    # that dependency and the 1M qualification instead of repeating the same
+    # nonterminal 20-arm campaign or spending time on lower-value gates.
+    w1 = state["gates"]["W1"]
+    if (
+        w1["status"] == "RED_CONFIRMED"
+        and w1.get("reason") == W1_PACKED_RETRIEVAL_REASON
+    ):
+        if state["gates"]["W8"]["status"] not in TERMINAL_STATUSES:
+            return "W8"
+        if state["gates"]["W11"]["status"] != "PASS":
+            return "W11"
+        return "W1"
+
     required_pass = {"foundation", "W11", "switch", "parity", "review"}
     for name in GATE_ORDER:
         status = state["gates"][name]["status"]
@@ -4093,6 +4118,32 @@ def _selected_gate(state: dict[str, Any]) -> str | None:
         elif status not in TERMINAL_STATUSES:
             return name
     return None
+
+
+def _registered_default_runner(
+    gate: str,
+    *,
+    root: Path = ROOT,
+    registry: dict[str, str] | None = None,
+) -> Path | None:
+    approved = DEFAULT_RUNNER_SHA256 if registry is None else registry
+    expected = approved.get(gate)
+    if expected is None:
+        return None
+    path = root / "scripts" / "glm52-runners" / gate
+    try:
+        details = path.lstat()
+    except FileNotFoundError:
+        return None
+    if (
+        not stat.S_ISREG(details.st_mode)
+        or stat.S_ISLNK(details.st_mode)
+        or not os.access(path, os.X_OK)
+        or not re.fullmatch(r"[0-9a-f]{64}", expected)
+        or _sha256(path) != expected
+    ):
+        return None
+    return path
 
 
 def _sha256(path: Path) -> str:
@@ -4119,9 +4170,12 @@ def _dispatch(state_dir: Path, command: str) -> dict[str, Any]:
                     "action": "terminal_not_release_qualified",
                 }
                 break
-            candidates = [ROOT / "scripts" / "glm52-runners" / selected]
+            candidates: list[Path] = []
             if state_dir.resolve() != DEFAULT_STATE_DIR.resolve():
-                candidates.insert(0, state_dir / "runners" / selected)
+                candidates.append(state_dir / "runners" / selected)
+            default_runner = _registered_default_runner(selected)
+            if default_runner is not None:
+                candidates.append(default_runner)
             runner = next(
                 (
                     path
