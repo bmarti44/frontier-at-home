@@ -58,6 +58,18 @@ class W1TelemetryProbeSourceTests(unittest.TestCase):
             accepted = scorer.verify_package(package)
             self.assertEqual(accepted["verdict"], "DIAGNOSTIC_ONLY")
             self.assertFalse(accepted["acceptance_authority"])
+            stored = json.loads(
+                (package / "summary.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(stored, accepted)
+
+            stored["acceptance_authority"] = True
+            stored["verdict"] = "PASS"
+            (package / "summary.json").write_text(
+                json.dumps(stored), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "summary differs"):
+                scorer.verify_package(package)
 
             raw = package / "raw.jsonl"
             original = raw.read_text(encoding="utf-8")
