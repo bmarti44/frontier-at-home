@@ -25,12 +25,12 @@ Memory and OOM safeguards:
 
 Evidence directory:
 
-Goal controller and `status --json` command:
+Built-in agent goal objective and current status:
 
 Checklist:
 
 - [ ] I read `AGENTS.md`.
-- [ ] I created the model/backend autonomous goal required by [`docs/INTEGRATION_GOALS.md`](../../docs/INTEGRATION_GOALS.md) before engine changes.
+- [ ] I used my agent harness's built-in goal tool to create the persistent model/backend qualification goal before engine changes.
 - [ ] The branch name follows the exact claim convention.
 - [ ] Public model and tokenizer artifacts will be independently hashed.
 - [ ] Production-path acceptance tests will be committed before implementation.

@@ -112,21 +112,21 @@ class ModelClaimCatalogTests(unittest.TestCase):
             self.assertIn(f"`{backend}`", readme)
             self.assertIn(f"`{backend}`", agents)
 
-    def test_claimed_integrations_must_create_an_autonomous_goal(self):
+    def test_claimed_integrations_must_create_a_builtin_agent_goal(self):
         readme = README.read_text(encoding="utf-8")
         agents = AGENTS.read_text(encoding="utf-8")
         claim_template = (
             ROOT / ".github" / "PULL_REQUEST_TEMPLATE" /
             "model-integration-claim.md"
         ).read_text(encoding="utf-8")
-        goal_contract = ROOT / "docs" / "INTEGRATION_GOALS.md"
-        self.assertTrue(goal_contract.is_file())
         for document in (readme, agents, claim_template):
-            self.assertIn("docs/INTEGRATION_GOALS.md", document)
-            self.assertIn("status --json", document)
-        self.assertIn("MUST create the integration goal", agents)
-        self.assertIn("PENDING", goal_contract.read_text(encoding="utf-8"))
-        self.assertIn("NO_RESULT", goal_contract.read_text(encoding="utf-8"))
+            self.assertIn("goal tool", document)
+        self.assertIn("built-in goal tool", readme)
+        self.assertIn("built-in goal tool", claim_template)
+        self.assertIn("MUST use the goal tool", agents)
+        self.assertIn("persistent goal", agents)
+        self.assertNotIn("<model-slug>_<backend>_goal.py", readme)
+        self.assertNotIn("<model-slug>_<backend>_goal.py", agents)
 
     def test_privileged_claim_workflow_never_executes_fork_content(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")

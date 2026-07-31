@@ -39,10 +39,9 @@ To claim an integration:
 2. Immediately open a **draft** pull request with the
    [model-integration template](https://github.com/bmarti44/frontier-at-home/compare?expand=1&template=model-integration-claim.md),
    before substantial implementation work.
-3. Before changing an engine, create and commit the integration's autonomous
-   goal using [`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md). Its
-   controller must provide `run`, `resume`, and `status --json` for that exact
-   model/backend pair.
+3. Before changing an engine, use the agent harness's built-in goal tool to
+   create a persistent goal for that exact model/backend pair. Put the goal's
+   objective and current status in the draft PR so work can resume cleanly.
 4. The safe `pull_request_target` workflow reads only the base repository's
    catalog—never fork code—and labels the PR with the model, backend, and
    `status:self-declared`.
@@ -198,17 +197,12 @@ The short version:
    remains the default until another profile passes all quality, safety,
    direct-1M, switching, and review gates.
 
-Every claimed integration must create its own autonomous controller using
-[`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md). The stable interface
-is:
-
-```bash
-scripts/<model-slug>_<backend>_goal.py run
-scripts/<model-slug>_<backend>_goal.py resume
-scripts/<model-slug>_<backend>_goal.py status --json
-```
-
-The active GLM-5.2/CUDA controller is the first concrete example:
+At the start of claimed work, agents use their harness's built-in goal tool to
+create and maintain the model/backend qualification goal. The goal should name
+the target context, correctness/fidelity, performance, memory safety,
+switching, rollback, and review outcomes. It stays active until those outcomes
+are reproducibly terminal; a new repository-specific controller is not
+required. The GLM-5.2/CUDA work also has project-specific evidence commands:
 
 ```bash
 scripts/glm52_goal.py run

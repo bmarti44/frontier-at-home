@@ -18,18 +18,18 @@ When adding or optimizing a model:
    fails, say so and move to the next bounded alternative.
 5. Never trade whole-system stability for benchmark progress.
 
-For an existing integration, read that model/backend's autonomous controller
-first. For new claimed work, you MUST create the integration goal described in
-[`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md) before changing an
-engine. It must expose:
+For new claimed work, you MUST use the goal tool built into your agent harness
+to create a persistent goal before changing an engine or running a large model.
+The objective must name the exact catalog model/backend, target hardware and
+context, correctness/fidelity gates, performance comparison, OOM safeguards,
+switching/rollback outcome, and final review. Keep using that same goal across
+sessions until every required outcome is reproducibly terminal; do not create a
+replacement goal merely to discard failures. If the harness exposes no goal
+tool, put the same explicit goal and gate status in the draft PR rather than
+building a new controller framework.
 
-```bash
-scripts/<model-slug>_<backend>_goal.py run
-scripts/<model-slug>_<backend>_goal.py resume
-scripts/<model-slug>_<backend>_goal.py status --json
-```
-
-The active GLM-5.2/CUDA controller is:
+The GLM-5.2/CUDA integration additionally has project-specific evidence
+commands:
 
 ```bash
 scripts/glm52_goal.py run
@@ -51,9 +51,9 @@ systemctl is-active dsv4-engine-restore.service dsv4-guard.timer
 awk '/MemAvailable|SwapTotal|SwapFree/ {print}' /proc/meminfo
 ```
 
-Then run `status --json` on the controller for the model/backend you are
-actually contributing. Do not use GLM's controller as the state authority for
-another integration.
+Then read the current built-in goal and its status before acting. Do not use
+GLM's project-specific controller as the goal authority for another
+integration.
 
 Also inspect the exact running process, command line, context cap, and listener
 before stopping or replacing anything. Preserve a dirty tree and unrelated user
@@ -207,9 +207,9 @@ before implementing it:
    `claim-model/<catalog-slug>/<backend>` in your fork.
 3. Open a draft PR immediately with
    `.github/PULL_REQUEST_TEMPLATE/model-integration-claim.md`.
-4. Before engine changes, create the model/backend controller and initial state
-   required by [`docs/INTEGRATION_GOALS.md`](docs/INTEGRATION_GOALS.md), then
-   run its `status --json` command and record the path in the PR.
+4. Before engine changes, create the model/backend goal with the goal tool
+   bundled with your agent harness, then record its objective and current
+   status in the PR.
 5. Keep that PR open and update its description with the baseline, hardware,
    memory safeguards, and evidence location as facts become available.
 
