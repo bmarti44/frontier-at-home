@@ -652,32 +652,38 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
     if len(records) != 1:
         raise ValueError("W1 raw scorer requires one campaign")
     campaign = records[0]
+    real_packed = campaign.get("candidate_format") == "affine-int8-block16"
+    campaign_keys = {
+        "record_type",
+        "harness_candidate_hash",
+        "engine_candidate_hash",
+        "composite_candidate_sha256",
+        "seed_sha256",
+        "binary_sha256",
+        "configuration_sha256",
+        "fixture_sha256",
+        "fixture_content_sha256",
+        "model_content_sha256",
+        "tokenizer_content_sha256",
+        "engine_build_sha256",
+        "engine_source_sha256",
+        "build_log_sha256",
+        "baseline_environment_sha256",
+        "candidate_environment_sha256",
+        "candidate_arm",
+        "lineage",
+        "fixture_blocks",
+        "attempts",
+    }
+    if "candidate_format" in campaign:
+        campaign_keys.add("candidate_format")
     _require_exact_keys(
         campaign,
-        {
-            "record_type",
-            "harness_candidate_hash",
-            "engine_candidate_hash",
-            "composite_candidate_sha256",
-            "seed_sha256",
-            "binary_sha256",
-            "configuration_sha256",
-            "fixture_sha256",
-            "fixture_content_sha256",
-            "model_content_sha256",
-            "tokenizer_content_sha256",
-            "engine_build_sha256",
-            "engine_source_sha256",
-            "build_log_sha256",
-            "baseline_environment_sha256",
-            "candidate_environment_sha256",
-            "candidate_arm",
-            "lineage",
-            "fixture_blocks",
-            "attempts",
-        },
+        campaign_keys,
         "W1 raw campaign",
     )
+    if "candidate_format" in campaign and not real_packed:
+        raise ValueError("W1 raw candidate format is invalid")
     if campaign["record_type"] != "w1_affine_raw_campaign":
         raise ValueError("W1 raw campaign record type is invalid")
     for field in ("harness_candidate_hash", "engine_candidate_hash"):
@@ -907,13 +913,11 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError("W1 journal witness fields are absent")
 
         cmd = evidence["cmd_log"]
-        mode = int(
-            _w1_single_match(
-                r"^ds4: GLM compact cache fidelity resolved_mode=(\d+)$",
-                cmd,
-                "resolved mode",
-            )[0]
-        )
+        mode = int(_w1_single_match(
+            r"^ds4: GLM compact cache fidelity resolved_mode=(\d+)$",
+            cmd,
+            "resolved mode",
+        )[0])
         exit_mode, store_rows, changed_values = map(
             int,
             _w1_single_match(
@@ -927,7 +931,46 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
         if mode != exit_mode:
             raise ValueError("W1 raw mode changed during an attempt")
         is_candidate = arm == campaign["candidate_arm"]
-        if is_candidate:
+        packed_store_rows = 0
+        packed_read_values = 0
+        storage_format = "f32"
+        if real_packed:
+            storage_format = _w1_single_match(
+                r"^ds4: GLM compact cache storage format=([a-z0-9-]+)$",
+                cmd,
+                "storage format",
+            )[0]
+            exit_format, packed_rows_text, packed_reads_text = (
+                _w1_single_match(
+                    r"^ds4: GLM compact cache storage attestation "
+                    r"format=([a-z0-9-]+) packed_store_rows=(\d+) "
+                    r"packed_read_values=(\d+)$",
+                    cmd,
+                    "packed device effect attestation",
+                )
+            )
+            packed_store_rows = int(packed_rows_text)
+            packed_read_values = int(packed_reads_text)
+            if storage_format != exit_format:
+                raise ValueError("W1 raw storage format changed")
+            if mode != 0 or store_rows != 0 or changed_values != 0:
+                raise ValueError("W1 raw fake affine mode was not off")
+            if is_candidate:
+                if (
+                    storage_format != "affine-int8-block16"
+                    or packed_store_rows <= 0
+                    or packed_read_values <= 0
+                ):
+                    raise ValueError(
+                        "W1 raw packed CUDA effect was not executed"
+                    )
+            elif (
+                storage_format != "f32"
+                or packed_store_rows != 0
+                or packed_read_values != 0
+            ):
+                raise ValueError("W1 raw baseline is not default-off")
+        elif is_candidate:
             if mode != 2 or store_rows <= 0 or changed_values <= 0:
                 raise ValueError("W1 raw affine CUDA effect was not executed")
         elif mode != 0 or store_rows != 0 or changed_values != 0:
@@ -1049,6 +1092,9 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             "cases": cases,
             "store_rows": store_rows,
             "changed_values": changed_values,
+            "storage_format": storage_format,
+            "packed_store_rows": packed_store_rows,
+            "packed_read_values": packed_read_values,
         }
         derived.setdefault((block, arm), []).append(observation)
 

@@ -45,6 +45,7 @@ COMMON_ENGINE_ENVIRONMENT = {
     "DS4_CUDA_MOE_NO_EXPERT_TILES": "1",
 }
 FIDELITY_ENVIRONMENT_NAMES = (
+    "DS4_GLM_COMPACT_CACHE_AFFINE_INT8",
     "DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE",
     "DS4_GLM_COMPACT_CACHE_E4M3_FAKE",
     "DS4_GLM_COMPACT_CACHE_F16",
@@ -89,6 +90,16 @@ START_RE = re.compile(
 EXIT_RE = re.compile(
     r"^ds4: GLM compact cache fidelity attestation resolved_mode=(\d+) "
     r"affine_store_rows=(\d+) affine_changed_values=(\d+)$",
+    re.MULTILINE,
+)
+STORAGE_START_RE = re.compile(
+    r"^ds4: GLM compact cache storage format=([a-z0-9-]+)$",
+    re.MULTILINE,
+)
+STORAGE_EXIT_RE = re.compile(
+    r"^ds4: GLM compact cache storage attestation "
+    r"format=([a-z0-9-]+) packed_store_rows=(\d+) "
+    r"packed_read_values=(\d+)$",
     re.MULTILINE,
 )
 FAULT_RE = re.compile(
@@ -204,6 +215,31 @@ def parse_attestation(log: str) -> tuple[int, int, int]:
     if start_mode != exit_mode:
         raise ValueError("runtime mode changed within one process")
     return start_mode, rows, changed
+
+
+def real_candidate_environment() -> dict[str, str]:
+    return {"DS4_GLM_COMPACT_CACHE_AFFINE_INT8": "1"}
+
+
+def parse_storage_attestation(log: str) -> tuple[str, int, int]:
+    starts = STORAGE_START_RE.findall(log)
+    exits = STORAGE_EXIT_RE.findall(log)
+    if len(starts) != 1 or len(exits) != 1:
+        raise ValueError("runtime storage attestation is missing or duplicated")
+    exit_format, rows_text, reads_text = exits[0]
+    if starts[0] != exit_format:
+        raise ValueError("runtime storage format changed within one process")
+    rows = int(rows_text)
+    reads = int(reads_text)
+    if exit_format == "affine-int8-block16":
+        if rows <= 0 or reads <= 0:
+            raise ValueError("real packed CUDA device effect was not executed")
+    elif exit_format == "f32":
+        if rows != 0 or reads != 0:
+            raise ValueError("F32 baseline reported a packed device effect")
+    else:
+        raise ValueError("unexpected compact-cache storage format")
+    return exit_format, rows, reads
 
 
 def parse_quality_tsv(path: Path) -> list[dict[str, Any]]:
@@ -1408,10 +1444,7 @@ def run(args: argparse.Namespace) -> int:
 
     common = dict(COMMON_ENGINE_ENVIRONMENT)
     baseline_environment = dict(common)
-    candidate_environment = {
-        **common,
-        "DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE": "1",
-    }
+    candidate_environment = {**common, **real_candidate_environment()}
     baseline_environment_sha256 = environment_sha256(
         PROVENANCE_NAMES, baseline_environment
     )
@@ -1444,6 +1477,7 @@ def run(args: argparse.Namespace) -> int:
         "provenance_environment_names": list(PROVENANCE_NAMES),
         "baseline_environment": baseline_environment,
         "candidate_environment": candidate_environment,
+        "candidate_format": "affine-int8-block16",
         "schedules": list(schedules(seed)),
         "lineage": lineage,
         "safety": SAFE_ENVIRONMENT,
@@ -1471,6 +1505,7 @@ def run(args: argparse.Namespace) -> int:
         "build_log_sha256": sha256_file(freeze_dir / "clean-build.log"),
         "baseline_environment_sha256": baseline_environment_sha256,
         "candidate_environment_sha256": candidate_environment_sha256,
+        "candidate_format": "affine-int8-block16",
         "candidate_arm": candidate_arm(seed),
         "lineage": lineage,
         "fixture_blocks": [
@@ -1624,6 +1659,17 @@ def run(args: argparse.Namespace) -> int:
             failures.append(str(exc))
             resolved_mode, store_count, changed_values = 0, 0, 0
         try:
+            storage_format, packed_store_rows, packed_read_values = (
+                parse_storage_attestation(command_log)
+            )
+        except ValueError as exc:
+            failures.append(str(exc))
+            storage_format, packed_store_rows, packed_read_values = (
+                "invalid",
+                0,
+                0,
+            )
+        try:
             cases = parse_quality_tsv(result_path)
         except (OSError, ValueError) as exc:
             failures.append(str(exc))
@@ -1651,12 +1697,18 @@ def run(args: argparse.Namespace) -> int:
             failures.append("kernel_or_memory_fault")
         if "memory_swap_max=0" not in main_log:
             failures.append("zero_swap_cgroup_not_attested")
+        if resolved_mode != 0 or store_count != 0 or changed_values != 0:
+            failures.append("fake_affine_mode_must_remain_off")
         if is_candidate and (
-            resolved_mode != 2 or store_count <= 0 or changed_values <= 0
+            storage_format != "affine-int8-block16"
+            or packed_store_rows <= 0
+            or packed_read_values <= 0
         ):
-            failures.append("affine_device_effect_not_attested")
+            failures.append("packed_affine_device_effect_not_attested")
         if not is_candidate and (
-            resolved_mode != 0 or store_count != 0 or changed_values != 0
+            storage_format != "f32"
+            or packed_store_rows != 0
+            or packed_read_values != 0
         ):
             failures.append("baseline_mode_not_default_off")
         attempt = {

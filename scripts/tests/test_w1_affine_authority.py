@@ -7,6 +7,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import tempfile
 import unittest
@@ -259,6 +260,55 @@ class W1AffineAuthorityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.goal.score_registered_gate(
                 "W1", "w1.affine-quality.v2", [substituted]
+            )
+
+    def test_real_packed_scorer_requires_physical_reader_and_writer_effects(self):
+        campaign = raw_campaign(self.goal)
+        campaign["candidate_format"] = "affine-int8-block16"
+        for attempt in campaign["attempts"]:
+            candidate = attempt["arm"] == campaign["candidate_arm"]
+            attempt["evidence"]["cmd_log"] = (
+                "ds4: GLM compact cache fidelity resolved_mode=0\n"
+                "ds4: GLM compact cache fidelity attestation "
+                "resolved_mode=0 affine_store_rows=0 "
+                "affine_changed_values=0\n"
+                "ds4: GLM compact cache storage format="
+                f"{'affine-int8-block16' if candidate else 'f32'}\n"
+                "ds4: GLM compact cache storage attestation format="
+                f"{'affine-int8-block16' if candidate else 'f32'} "
+                f"packed_store_rows={8192 if candidate else 0} "
+                f"packed_read_values={4194304 if candidate else 0}\n"
+            )
+            witness = json.loads(attempt["evidence"]["journal_witness"])
+            witness["message"] = re.sub(
+                r"cmd_sha256=[0-9a-f]{64}",
+                "cmd_sha256=" + hashlib.sha256(
+                    attempt["evidence"]["cmd_log"].encode()
+                ).hexdigest(),
+                witness["message"],
+            )
+            attempt["evidence"]["journal_witness"] = json.dumps(
+                witness, sort_keys=True, separators=(",", ":")
+            )
+        result = self.goal.score_registered_gate(
+            "W1", "w1.affine-quality.v2", [campaign]
+        )
+        self.assertEqual(result["verdict"], "PASS")
+
+        broken = copy.deepcopy(campaign)
+        candidate_attempt = next(
+            attempt
+            for attempt in broken["attempts"]
+            if attempt["arm"] == broken["candidate_arm"]
+        )
+        candidate_attempt["evidence"]["cmd_log"] = candidate_attempt[
+            "evidence"
+        ]["cmd_log"].replace(
+            "packed_read_values=4194304", "packed_read_values=0"
+        )
+        with self.assertRaisesRegex(ValueError, "packed CUDA effect"):
+            self.goal.score_registered_gate(
+                "W1", "w1.affine-quality.v2", [broken]
             )
 
     def test_raw_scorer_rejects_noncanonical_lifecycle_timestamps(self):
