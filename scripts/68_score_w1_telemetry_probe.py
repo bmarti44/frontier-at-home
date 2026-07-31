@@ -350,7 +350,8 @@ def derive_summary(manifest: dict[str, Any], rows: list[dict[str, Any]]) -> dict
             "minimum_direct_io_elapsed_s": 60.0,
         },
         "probes": probes,
-        "verdict": "PASS",
+        "acceptance_authority": False,
+        "verdict": "DIAGNOSTIC_ONLY",
     }
 
 
@@ -456,11 +457,7 @@ def verify_package(package: Path) -> dict[str, Any]:
     stored = strict_json_bytes(summary_path.read_bytes(), "summary")
     if stored != derived:
         raise ValueError("summary differs from fixed derivation")
-    return {
-        **derived,
-        "acceptance_authority": False,
-        "verdict": "DIAGNOSTIC_ONLY",
-    }
+    return derived
 
 
 def write_test_package(package: Path) -> None:
