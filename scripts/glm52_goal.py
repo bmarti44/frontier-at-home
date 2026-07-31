@@ -3925,7 +3925,10 @@ def _load_state(state_dir: Path) -> dict[str, Any]:
 
 
 def _gate_status_from_summary(
-    gate: str, summary: dict[str, Any]
+    gate: str,
+    summary: dict[str, Any],
+    *,
+    candidate_format: str | None = None,
 ) -> tuple[str, str | None]:
     """Map a valid scorer verdict to controller progress without overclaiming."""
     verdict = summary.get("verdict")
@@ -3935,6 +3938,12 @@ def _gate_status_from_summary(
         and summary.get("scorer_id") == "w1.affine-quality.v2"
         and verdict == "PASS"
     ):
+        if candidate_format == "affine-int8-block16":
+            return (
+                "RED_CONFIRMED",
+                "real packed storage, memory, and fidelity passed; "
+                "deterministic retrieval qualification remains unfinished",
+            )
         return (
             "RED_CONFIRMED",
             "affine fidelity diagnostic passed; real packed storage, memory, "
@@ -3998,7 +4007,15 @@ def _ingest_attempts(state_dir: Path, state: dict[str, Any]) -> bool:
                 )
             validate_attempt(latest)
             summary = _read_strict_json(latest / "summary.json")
-            status, reason = _gate_status_from_summary(name, summary)
+            candidate_format = None
+            if name == "W1":
+                configuration = _read_strict_json(latest / "configuration.json")
+                candidate_format = configuration.get("candidate_format")
+            status, reason = _gate_status_from_summary(
+                name,
+                summary,
+                candidate_format=candidate_format,
+            )
         except ValueError as exc:
             # The anti-cheating contract makes malformed or unauthoritative
             # evidence a preserved terminal failure. A later, higher-numbered
