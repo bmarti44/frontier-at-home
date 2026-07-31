@@ -958,12 +958,24 @@ def _score_w1_affine_raw(records: list[dict[str, Any]]) -> dict[str, Any]:
             (right - left).total_seconds()
             for left, right in zip(sample_times, sample_times[1:])
         ]
-        if (
-            any(gap <= 0 or gap > 0.75 for gap in gaps)
-            or sample_times[0] > executed_at + timedelta(seconds=1)
-            or sample_times[-1] < completed_at - timedelta(seconds=1)
-        ):
-            raise ValueError("W1 raw memory telemetry does not cover execution")
+        first_delay = (sample_times[0] - executed_at).total_seconds()
+        trailing_delay = (completed_at - sample_times[-1]).total_seconds()
+        failed_coverage = []
+        if any(gap <= 0 or gap > 0.75 for gap in gaps):
+            failed_coverage.append("max_gap")
+        if first_delay > 1.0:
+            failed_coverage.append("late_first")
+        if trailing_delay > 1.0:
+            failed_coverage.append("early_final")
+        if failed_coverage:
+            raise ValueError(
+                "W1 raw memory telemetry does not cover execution: "
+                f"attempt={index} failed={','.join(failed_coverage)} "
+                f"sample_count={len(sample_rows)} "
+                f"min_gap_s={min(gaps)!r} max_gap_s={max(gaps)!r} "
+                f"first_minus_executed_s={first_delay!r} "
+                f"completed_minus_last_s={trailing_delay!r}"
+            )
         memory_values = [row[1] for row in sample_rows]
         attempt_memory = min(memory_values) / 1048576
         if attempt_memory < 10.0:

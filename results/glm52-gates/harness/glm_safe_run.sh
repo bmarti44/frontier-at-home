@@ -148,7 +148,7 @@ fi
 DIR=$CRASH_ROOT/$TS-$TAG
 mkdir -p "$DIR"
 MAIN="$DIR/main.log"; SAMP="$DIR/samples.log"
-plog() { echo "$(date -u -Is) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
+plog() { echo "$(date -u --iso-8601=ns) $*" >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || sync; }
 live_group_pids() {
   ps -eo pid=,pgid=,stat= | awk -v group="$1" \
     '$2 == group && $3 !~ /^Z/ {print $1}'

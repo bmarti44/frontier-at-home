@@ -320,6 +320,13 @@ class CurrentUserTimestampTests(unittest.TestCase):
                     all(value.endswith("+00:00") for value in lifecycle),
                     lifecycle,
                 )
+                self.assertTrue(
+                    all(
+                        re.search(r"[.,]\d+\+00:00$", value)
+                        for value in lifecycle
+                    ),
+                    lifecycle,
+                )
                 sample_timestamps = [
                     line.split()[0] for line in samples.splitlines() if line
                 ]
