@@ -95,6 +95,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_GLM_CKV_NVME",
             "DS4_GLM_CKV_DIR",
             "DS4_GLM_CKV_MODEL_SHA256",
+            "DS4_GLM_CKV_RUN_NONCE",
             "DS4_GLM_CKV_MAX_GIB",
             "DS4_GLM_CKV_TRACE_PATH",
             "DS4_GLM_CKV_TRACE_SAMPLE_POSITIONS",
