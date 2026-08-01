@@ -116,6 +116,57 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         )
         self.assertEqual(off["DS4_CUDA_FETCH_THREADS"], "8")
         self.assertNotIn("DS4_CUDA_EXPERT_SLAB_TRACE", on)
+        self.assertNotEqual(
+            CAMPAIGN.canonical_environment_sha256(off),
+            CAMPAIGN.canonical_environment_sha256(on),
+        )
+
+    def test_engine_log_parser_requires_resolved_positive_slab_mode(self):
+        log = "\n".join(
+            (
+                "ds4: CUDA contiguous expert slab enabled records=19456 path=/f ",
+                "LOADPROF L3 uniq=8 hits=1 miss=7 hit_ms=1 fetch_ms=2 "
+                "fill_ms=1 total_ms=4 slab_mode=on slab_reads=7 "
+                "slab_bytes=70 slab_actual_bytes=72 slab_peak_qd=7 slab_io_ms=2",
+                "ds4: expert-cache arena pin: ok (1.0 s)",
+                "ds4: expert-cache window tag=models-get lookup_bytes=70 "
+                "hit_bytes=10 stream_sha256=" + "1" * 64,
+            )
+        )
+        parsed = CAMPAIGN.parse_engine_log(log, "on")
+        self.assertEqual(parsed["slab_reads"], 7)
+        self.assertEqual(parsed["slab_peak_qd"], 7)
+        for broken in (
+            log.replace("slab_reads=7", "slab_reads=0"),
+            log.replace("slab_mode=on", "slab_mode=off"),
+            log.replace("arena pin: ok", "arena pin: failed"),
+            log + "\nSLABIO worker=1",
+        ):
+            with self.assertRaises(ValueError):
+                CAMPAIGN.parse_engine_log(broken, "on")
+
+    def test_safety_log_parser_requires_clean_external_evidence(self):
+        main = "\n".join(
+            (
+                "candidate_binary_sha256=" + "a" * 64,
+                "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
+                "events=low 0,high 0,max 0,oom 0,oom_kill 0,",
+                "executed candidate clean exit verified after wrapper and descendant checks",
+                "SAFE_RUN end rc=0 killed=no",
+            )
+        )
+        samples = "\n".join(
+            f"t mem_avail_kb={20 * 1048576} eng_rss_kb=1 read_bytes={index} "
+            "cgroup_current_bytes=1 cgroup_peak_bytes=2 cgroup_swap_current_bytes=0"
+            for index in range(3)
+        )
+        parsed = CAMPAIGN.parse_safety_logs(main, samples, "kernel clean")
+        self.assertEqual(parsed["cgroup_high_events"], 0)
+        self.assertGreaterEqual(parsed["minimum_available_gib"], 10)
+        with self.assertRaises(ValueError):
+            CAMPAIGN.parse_safety_logs(
+                main.replace("high 0", "high 1"), samples, "kernel clean"
+            )
 
     def test_fixed_scorer_accepts_complete_lossless_campaign(self):
         result = CAMPAIGN.score_campaign(self.passing_records(), self.passing_nll())

@@ -55,6 +55,21 @@ def canonical_engine_environment(mode: str) -> dict[str, str]:
     return result
 
 
+def canonical_environment_sha256(environment: dict[str, str]) -> str:
+    """Hash the exact engine environment as glm_safe_run observes it."""
+    raise NotImplementedError(environment)
+
+
+def parse_engine_log(text: str, mode: str) -> dict[str, Any]:
+    """Reduce aggregate slab/cache telemetry without trusting its timings."""
+    raise NotImplementedError((text, mode))
+
+
+def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
+    """Fail closed on containment, memory, process, or kernel evidence."""
+    raise NotImplementedError((main, samples, kernel))
+
+
 def score_campaign(records: list[dict[str, Any]], nll: dict[str, Any]) -> dict[str, Any]:
     """Validate raw arms and apply the fixed Rung 0.1 formulas."""
     expected_keys = {
