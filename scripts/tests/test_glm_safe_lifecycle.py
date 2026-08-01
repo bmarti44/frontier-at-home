@@ -118,6 +118,15 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         ):
             self.assertIn(name, launcher)
 
+    def test_cgroup_launcher_accepts_only_a_measured_profile_envelope(self):
+        launcher = CGROUP.read_text(encoding="utf-8")
+        self.assertIn("GLM_SAFE_MEMORY_HIGH_GIB", launcher)
+        self.assertIn("profile memory envelope exceeds safe host budget", launcher)
+        self.assertIn("max_mib=$((high_mib + 2048))", launcher)
+        self.assertIn(
+            "max_mib + KILL_FLOOR_GIB * 1024 <= available_mib", launcher
+        )
+
     def test_memory_guard_is_resolved_from_frozen_harness(self):
         safe = SAFE.read_text(encoding="utf-8")
         self.assertNotIn(
