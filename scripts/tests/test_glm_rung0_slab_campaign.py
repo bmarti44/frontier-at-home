@@ -50,8 +50,9 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                     "mode": mode,
                     "server_instance_id": f"server-{block}-{sequence}",
                     "binary_sha256": "a" * 64,
-                    "configuration_sha256": ("b" if mode == "off" else "c")
-                    * 64,
+                    "configuration_sha256": CAMPAIGN.canonical_environment_sha256(
+                        CAMPAIGN.canonical_engine_environment(mode)
+                    ),
                     "fixture_sha256": "d" * 64,
                     "suite_valid": True,
                     "reps": reps,
@@ -102,6 +103,21 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 "".join(row[2] for row in group),
                 "ABBA" if block % 2 == 0 else "BAAB",
             )
+        flipped = CAMPAIGN.arm_schedule(flip=True)
+        self.assertEqual("".join(row[2] for row in flipped[:4]), "BAAB")
+        self.assertNotEqual(schedule, flipped)
+
+    def test_public_randomness_seed_is_bound_to_both_frozen_binaries(self):
+        first = CAMPAIGN.confirmation_seed(
+            "1" * 64, "2" * 40, "3" * 64, "4" * 64
+        )
+        self.assertEqual(first, CAMPAIGN.confirmation_seed(
+            "1" * 64, "2" * 40, "3" * 64, "4" * 64
+        ))
+        self.assertNotEqual(
+            first,
+            CAMPAIGN.confirmation_seed("1" * 64, "2" * 40, "3" * 64, "5" * 64),
+        )
 
     def test_timed_arms_differ_only_by_slab_identity(self):
         off = CAMPAIGN.canonical_engine_environment("off")
@@ -330,9 +346,11 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                         for index in range(100)
                     ],
                     "output_sha256": "8" * 64,
-                    "configuration_sha256": (
-                        "9" if arm == "A" else "a"
-                    ) * 64,
+                    "configuration_sha256": CAMPAIGN.canonical_environment_sha256(
+                        CAMPAIGN.canonical_engine_environment(
+                            "off" if arm == "A" else "on"
+                        )
+                    ),
                     "engine": {
                         "slab_mode": "off" if arm == "A" else "on",
                         "slab_reads": 0 if arm == "A" else 20,
@@ -393,9 +411,11 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                         for index, case_id in enumerate(expected_ids)
                     ],
                     "output_sha256": "8" * 64,
-                    "configuration_sha256": (
-                        "9" if arm == "A" else "a"
-                    ) * 64,
+                    "configuration_sha256": CAMPAIGN.canonical_environment_sha256(
+                        CAMPAIGN.canonical_engine_environment(
+                            "off" if arm == "A" else "on"
+                        )
+                    ),
                     "engine": {
                         "slab_mode": "off" if arm == "A" else "on",
                         "slab_reads": 0 if arm == "A" else 20,
@@ -418,6 +438,9 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             "schema_version": 1,
             "quality_binary_sha256": "d" * 64,
             "fixture_content_sha256": CAMPAIGN.QUALITY_FIXTURE_CONTENT_SHA256,
+            "fixture_content_sha256_after": CAMPAIGN.QUALITY_FIXTURE_CONTENT_SHA256,
+            "model_stat_before": {"size": 1},
+            "model_stat_after": {"size": 1},
             "ordered_case_ids": expected_ids,
         }
         result = CAMPAIGN.validate_bound_quality_evidence(
