@@ -261,11 +261,8 @@ if [[ $CANDIDATE_PROVENANCE == 1 ]]; then
 fi
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
-if [[ $ROOT_AUTHORITY == 1 ]]; then
-  MEMORY_GUARD=$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")")/scripts/03_memory_guard.py
-else
-  MEMORY_GUARD=/home/bmarti44/spark-deepseek-v4-flash/scripts/03_memory_guard.py
-fi
+HARNESS_ROOT=$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")")
+MEMORY_GUARD=$HARNESS_ROOT/scripts/03_memory_guard.py
 python3 "$MEMORY_GUARD" \
   --required-gib "$MIN_START_GIB" --stable-samples 3 --timeout-seconds 0 \
   >>"$MAIN" || { plog "FATAL insufficient stable memory before launch"; exit 8; }
