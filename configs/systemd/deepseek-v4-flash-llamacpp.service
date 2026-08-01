@@ -23,13 +23,15 @@ Environment=HOME=/home/dsv4
 # Dedicated internal engine port. The authenticated public endpoint remains
 # 127.0.0.1:8010; 8011 is used by the local LoraForge workbench.
 Environment=DSV4_PORT=8013
-# Qualified headless 1M profile. A quarter-second watchdog preserves the 14 GiB
-# emergency floor; the measured run retained at least 14.142 GiB and used no
-# swap while processing 1,000,044 prompt tokens.
+# Qualified headless 1M profile with the measured fast-prefill buffers. A
+# quarter-second watchdog preserves the 14 GiB emergency floor; the qualified
+# 1M run retained at least 14.142 GiB and used no swap while processing
+# 1,000,044 prompt tokens (at ub=256; the fast buffers below re-verify via the
+# membudget gate + a measured overhead charge of 5 GiB).
 Environment=DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14
 Environment=DSV4_MEM_FLOOR_GIB=14
 Environment=DSV4_WATCHDOG_FLOOR_GIB=14
-Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=3
+Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5
 # This fixed qualified profile may restart after a preserved prior-attempt
 # marker; the independent watchdog and systemd start-rate limit remain active.
 Environment=DSV4_ALLOW_RETRY_AFTER_FAILED_START=1
@@ -44,10 +46,17 @@ Environment=DSV4_BUILD_MANIFEST=@DSV4_REPO@/configs/build-manifests/llamacpp-fus
 # requirement (fetching both weight sets); a loaded engine only writes logs, so
 # 100 GiB is an ample runtime floor now that the host disk is shared/fuller.
 Environment=DSV4_MIN_ROOT_FREE_GIB=100
-# Match the buffers and single slot used by the successful direct 1M run.
-Environment=DSV4_UBATCH=256
-Environment=DSV4_BATCH=512
-Environment=DSV4_UBATCH_LARGE=0
+# Fast-prefill buffers (ggerganov's canonical DGX Spark config): ~434 tok/s
+# prefill at 19K vs ~208 at ub=256, i.e. agent TTFT ~59 s instead of ~100 s.
+# History: the 2026-07-27 "OOM-safe" revert to small buffers was an
+# admission-gate marginality (the conservative 8 GiB overhead charge + 18 GiB
+# floor exceeded boot MemAvailable by ~1.5 GiB), NOT a live OOM. The fix is
+# the measured 5 GiB admission path above, not shrinking these buffers.
+# Guarded by scripts/tests/test_profile_conformance.py; see
+# docs/speed-tuning-2026-07-23.md before changing any value here.
+Environment=DSV4_UBATCH=2048
+Environment=DSV4_BATCH=2048
+Environment=DSV4_UBATCH_LARGE=1
 Environment=CTX=1048576
 Environment=DSV4_PARALLEL=1
 # GB10 mmap page faults make cold loads pathologically slow (measured here:

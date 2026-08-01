@@ -627,9 +627,9 @@ class ContextWorkerContractTests(unittest.TestCase):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_MEASURED_HEADLESS_OVERHEAD_GIB", source)
         self.assertIn("${DSV4_MEASURED_HEADLESS_OVERHEAD_GIB:-0}", source)
-        self.assertIn("must be 0 or 3", source)
+        self.assertIn("must be 0 or 3 or 5", source)
         self.assertIn("systemctl is-active --quiet display-manager.service", source)
-        self.assertIn("overhead_gib=3", source)
+        self.assertIn("overhead_gib=$measured_headless_overhead_gib", source)
 
     def test_full_verification_can_evict_only_verified_weight_page_cache(self):
         launcher = LAUNCHER.read_text(encoding="utf-8")
@@ -647,7 +647,7 @@ class ContextWorkerContractTests(unittest.TestCase):
         self.assertIn("${DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB:-0}", source)
         self.assertIn("must be 0 or 14", source)
         self.assertIn("CTX != 1048576", source)
-        self.assertIn("measured_headless_overhead_gib != 3", source)
+        self.assertIn("measured_headless_overhead_gib == 0", source)
         worker = WORKER.read_text(encoding="utf-8")
         self.assertIn("floor=14", worker)
         self.assertIn("qualification_floor=14", worker)

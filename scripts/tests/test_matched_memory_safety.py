@@ -144,7 +144,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("Environment=DSV4_MEM_FLOOR_GIB=14", source)
         self.assertIn("Environment=DSV4_WATCHDOG_FLOOR_GIB=14", source)
         self.assertIn(
-            "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=3",
+            "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5",
             source,
         )
 

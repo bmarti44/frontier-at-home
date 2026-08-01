@@ -124,10 +124,14 @@ class ProfileConformanceTests(unittest.TestCase):
         the fast buffers safe under the 14 GiB qualification floor)."""
         source = (ROOT / "scripts/21_serve_llamacpp.sh").read_text(
             encoding="utf-8")
-        self.assertRegex(
+        self.assertIn(
+            "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3 or 5",
             source,
-            r"DSV4_MEASURED_HEADLESS_OVERHEAD_GIB[^\n]*\n[^\n]*(0 or 3 or 5|0, 3,? or 5|0\|3\|5)",
             "serve script must allow DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5",
+        )
+        self.assertIn(
+            "measured headless overhead 5 requires DSV4_UBATCH <= 2048",
+            source,
         )
 
 

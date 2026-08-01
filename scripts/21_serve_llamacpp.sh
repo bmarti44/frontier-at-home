@@ -824,21 +824,39 @@ do_start() {
     # non-weight footprint was measured at 2.74 GiB with ubatch=512 on this
     # host. Charge 3 GiB only while the display is confirmed stopped; the
     # independent 18 GiB quarter-second watchdog remains unchanged.
+    # Value 5 is the measured FAST-buffer headless admission: 2.74 GiB
+    # (ub=512) + ~1 GiB compute-buffer growth at ub=2048 + slack. It exists
+    # because the 2026-07-27 "OOM-safe" revert was an admission-gate
+    # marginality (conservative 8 GiB charge + 18 GiB floor exceeded
+    # MemAvailable by ~1.5 GiB), not a live OOM; do not shrink the buffers
+    # to fix admission failures — see docs/speed-tuning-2026-07-23.md.
     measured_headless_overhead_gib=${DSV4_MEASURED_HEADLESS_OVERHEAD_GIB:-0}
-    [[ $measured_headless_overhead_gib == 0 || $measured_headless_overhead_gib == 3 ]] \
-        || die 'DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3'
+    [[ $measured_headless_overhead_gib == 0 || $measured_headless_overhead_gib == 3 \
+        || $measured_headless_overhead_gib == 5 ]] \
+        || die 'DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3 or 5'
     if (( qualification_floor_gib == 14 &&
-            measured_headless_overhead_gib != 3 )); then
+            measured_headless_overhead_gib == 0 )); then
         die '14 GiB qualification floor requires measured headless admission'
     fi
-    if (( measured_headless_overhead_gib == 3 )); then
+    if (( measured_headless_overhead_gib != 0 )); then
         need_command systemctl
         systemctl is-active --quiet display-manager.service &&
             die 'measured headless overhead requires an inactive display manager'
-        [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] &&
-            (( ${DSV4_UBATCH:-512} <= 512 )) ||
-            die 'measured headless overhead requires DSV4_UBATCH <= 512'
-        overhead_gib=3
+        if (( measured_headless_overhead_gib == 3 )); then
+            [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] &&
+                (( ${DSV4_UBATCH:-512} <= 512 )) ||
+                die 'measured headless overhead 3 requires DSV4_UBATCH <= 512'
+        else
+            # The 5 GiB charge covers ub up to 2048 and demands the explicit
+            # large-ubatch opt-in so the +2 GiB surcharge reasoning above
+            # stays visible in the profile.
+            [[ ${DSV4_UBATCH_LARGE:-0} == 1 ]] ||
+                die 'measured headless overhead 5 requires DSV4_UBATCH_LARGE=1'
+            [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] &&
+                (( ${DSV4_UBATCH:-512} <= 2048 )) ||
+                die 'measured headless overhead 5 requires DSV4_UBATCH <= 2048'
+        fi
+        overhead_gib=$measured_headless_overhead_gib
         printf 'Using measured headless admission overhead: %s GiB; watchdog floor remains %s GiB.\n' \
             "$overhead_gib" "$watchdog_floor_gib" >&2
     fi
