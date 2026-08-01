@@ -376,7 +376,21 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             f"read_bytes=1 cgroup_peak_bytes={35 * 1024**3}",
         )
         self.assertEqual(
-            CAMPAIGN.measured_non_arena_peak_bytes(charged), 35 * 1024**3
+            CAMPAIGN.measured_non_arena_peak_bytes(
+                charged, "MemAvailable:       100 kB\n"
+            ),
+            35 * 1024**3,
+        )
+        unified = (
+            samples.replace("mem_avail_kb=100", "mem_avail_kb=41943040")
+            .replace("mem_avail_kb=90", "mem_avail_kb=20971520")
+            .replace("mem_avail_kb=80", "mem_avail_kb=10485760")
+        )
+        self.assertEqual(
+            CAMPAIGN.measured_non_arena_peak_bytes(
+                unified, "MemAvailable:       41943040 kB\n"
+            ),
+            30 * 1024**3,
         )
 
     def test_quality_command_uses_frozen_scorer_and_full_manifest(self):

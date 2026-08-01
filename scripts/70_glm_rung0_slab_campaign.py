@@ -587,15 +587,25 @@ def peak_engine_rss_bytes(samples: str) -> int:
     return max(values) * 1024
 
 
-def measured_non_arena_peak_bytes(samples: str) -> int:
-    """Conservatively include both process RSS and cgroup-charged file cache."""
+def measured_non_arena_peak_bytes(samples: str, main: str) -> int:
+    """Include RSS, cgroup charges, and unified-memory loss from the host."""
     rss = peak_engine_rss_bytes(samples)
     cgroup_peaks = [
         int(match.group(1))
         for match in re.finditer(r"\bcgroup_peak_bytes=(\d+)\b", samples)
         if int(match.group(1)) > 0
     ]
-    return max([rss, *cgroup_peaks])
+    baseline_matches = re.findall(r"^MemAvailable:\s+(\d+) kB$", main, re.MULTILINE)
+    available_samples = [
+        int(value)
+        for value in re.findall(r"\bmem_avail_kb=(\d+)\b", samples)
+    ]
+    if not baseline_matches or len(available_samples) < 2:
+        raise ValueError("memory probe lacks whole-system baseline or samples")
+    host_loss = (int(baseline_matches[0]) - min(available_samples)) * 1024
+    if host_loss <= 0:
+        raise ValueError("memory probe did not measure positive host memory use")
+    return max([rss, host_loss, *cgroup_peaks])
 
 
 def quality_command(
@@ -1470,7 +1480,7 @@ def run_memory_probe(args: argparse.Namespace) -> int:
     samples = (arm_out / "safety.samples.log").read_text(encoding="utf-8")
     kernel = (arm_out / "safety.kernel.log").read_text(encoding="utf-8")
     safety = parse_safety_logs(main, samples, kernel)
-    non_arena_peak_bytes = measured_non_arena_peak_bytes(samples)
+    non_arena_peak_bytes = measured_non_arena_peak_bytes(samples, main)
     host_total_bytes = next(
         int(line.split()[1]) * 1024
         for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines()
