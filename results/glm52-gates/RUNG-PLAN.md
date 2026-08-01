@@ -68,7 +68,8 @@ through the existing delegated control surface during a safe GLM window.
 Current Rung 0.1 candidate reconciliation:
 
 - engine source worktree: `/tmp/glm52-rung0-engine`, clean commit
-  `a4baadd36a86d818aafb4a2993f1ccabaa650da9`;
+  `cb95fc37ef005d1b95315793f72d98f79f90533f`. This is the reviewed slab
+  commit plus the previously tested `score_official` all-token top-1 column;
 - repository patch: `results/glm52-gates/harness/ds4-expert-slab-io.patch`,
   SHA-256 prefix `4a60e135c479`;
 - the patch reverse-applies cleanly to the candidate commit, proving the
@@ -83,6 +84,12 @@ Current Rung 0.1 candidate reconciliation:
 
 The retired W8 branch is not an implementation dependency. Its affine-INT8
 cache result remains a separate lossy datum and cannot be merged into Rung 0.
+
+The shared-lock ACL is deployed only by
+`scripts/71_install_glm_benchmark_lock_acl.sh`. It grants `bmarti44` read/write
+access to the one inference lock and nothing else; it does not grant service
+control, sudoers access, or arbitrary root execution. The campaign continues
+to fail closed until that ACL is installed and independently verified.
 
 ## Ranked execution plan and pre-registered gates
 
