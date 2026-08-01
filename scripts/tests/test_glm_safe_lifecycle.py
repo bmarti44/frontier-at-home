@@ -82,7 +82,10 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("OOMPolicy=kill", launcher)
         self.assertIn("GLM_SAFE_PROVENANCE_ENV_ALLOWLIST", launcher)
         self.assertIn("GLM_SAFE_EXPECTED_ENV_SHA256", launcher)
-        self.assertIn("/run/user/$UID/glm52-inference.lock", launcher)
+        self.assertIn(
+            "/run/lock/frontier-at-home/inference.lock", launcher
+        )
+        self.assertNotIn("/run/user/$UID/glm52-inference.lock", launcher)
         self.assertIn("/usr/bin/sudo -n -u dsv4", launcher)
         self.assertIn('RUN_CWD=$(pwd -P)', launcher)
         self.assertIn('--working-directory="$RUN_CWD"', launcher)
