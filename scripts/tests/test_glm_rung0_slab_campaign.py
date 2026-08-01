@@ -329,7 +329,25 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                         }
                         for index in range(100)
                     ],
-                    "safety": {"failures": []},
+                    "output_sha256": "8" * 64,
+                    "configuration_sha256": (
+                        "9" if arm == "A" else "a"
+                    ) * 64,
+                    "engine": {
+                        "slab_mode": "off" if arm == "A" else "on",
+                        "slab_reads": 0 if arm == "A" else 20,
+                        "slab_peak_qd": 0 if arm == "A" else 8,
+                    },
+                    "safety": {
+                        "minimum_available_gib": 18.0,
+                        "cgroup_high_events": 0,
+                        "cgroup_max_events": 0,
+                        "cgroup_oom_events": 0,
+                        "cgroup_swap_bytes": 0,
+                        "xid": False,
+                        "survivors": [],
+                        "failures": [],
+                    },
                 }
             )
         expected_ids = [f"case-{index:03d}" for index in range(100)]
@@ -339,6 +357,13 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             CAMPAIGN.validate_quality_attempts(attempts, expected_ids)
         attempts[1]["rows"][50]["nll_sum"] -= 1e-7
+        attempts[1]["rows"][50]["case_id"] = expected_ids[50]
+        attempts[1].pop("engine")
+        with self.assertRaises(ValueError):
+            CAMPAIGN.validate_quality_attempts(attempts, expected_ids)
+        attempts[1]["engine"] = {
+            "slab_mode": "on", "slab_reads": 20, "slab_peak_qd": 8
+        }
         attempts[1]["rows"][50]["case_id"] = "substituted-case"
         with self.assertRaises(ValueError):
             CAMPAIGN.validate_quality_attempts(attempts, expected_ids)
@@ -367,7 +392,25 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                         }
                         for index, case_id in enumerate(expected_ids)
                     ],
-                    "safety": {"failures": []},
+                    "output_sha256": "8" * 64,
+                    "configuration_sha256": (
+                        "9" if arm == "A" else "a"
+                    ) * 64,
+                    "engine": {
+                        "slab_mode": "off" if arm == "A" else "on",
+                        "slab_reads": 0 if arm == "A" else 20,
+                        "slab_peak_qd": 0 if arm == "A" else 8,
+                    },
+                    "safety": {
+                        "minimum_available_gib": 18.0,
+                        "cgroup_high_events": 0,
+                        "cgroup_max_events": 0,
+                        "cgroup_oom_events": 0,
+                        "cgroup_swap_bytes": 0,
+                        "xid": False,
+                        "survivors": [],
+                        "failures": [],
+                    },
                 }
             )
         manifest = {
@@ -393,6 +436,21 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 CAMPAIGN.validate_bound_quality_evidence(
                     performance, broken, attempts
                 )
+
+    def test_performance_raw_is_bound_to_manifest_schedule_and_identities(self):
+        records = self.passing_records()
+        manifest = {
+            "schema_version": 1,
+            "gate": "glm-rung0-slab",
+            "binary_sha256": "a" * 64,
+            "quality_binary_sha256": "d" * 64,
+            "fixture_sha256": "d" * 64,
+            "schedule": [list(row) for row in CAMPAIGN.arm_schedule()],
+        }
+        CAMPAIGN.validate_performance_binding(manifest, records)
+        records[0]["binary_sha256"] = "e" * 64
+        with self.assertRaises(ValueError):
+            CAMPAIGN.validate_performance_binding(manifest, records)
 
     def test_runtime_is_a_thin_wrapper_around_existing_measurement(self):
         source = SCRIPT.read_text(encoding="utf-8")
