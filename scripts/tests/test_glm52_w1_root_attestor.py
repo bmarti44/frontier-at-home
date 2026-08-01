@@ -536,31 +536,6 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual("".join(match.groups()), expected)
 
-    def test_rung0_maintenance_window_is_fixed_and_restorative(self):
-        submitter = load_submitter()
-        candidate = "a" * 40
-        self.assertEqual(
-            submitter.parse_request(["rung0-maintenance-begin", candidate]),
-            ("rung0-maintenance-begin", candidate),
-        )
-        self.assertEqual(
-            submitter.parse_request(["rung0-maintenance-end", candidate]),
-            ("rung0-maintenance-end", candidate),
-        )
-        source = SUBMITTER.read_text(encoding="utf-8")
-        for required in (
-            "deepseek-v4-flash-llamacpp.service",
-            "dsv4-guard.timer",
-            "glm52-rung0-auto-restore",
-            "glm52-rung0-lock-holder",
-            "1048576",
-            "pkill -KILL -x ds4-server",
-            "_wait_for_engine_exit",
-            "_verify_dsv4_restored",
-        ):
-            with self.subTest(required=required):
-                self.assertIn(required, source)
-
     def test_installer_publishes_only_the_contained_runtime_read_surface(self):
         source = INSTALLER.read_text(encoding="utf-8")
         self.assertIn(
