@@ -270,6 +270,28 @@ measured overhead value in `scripts/21_serve_llamacpp.sh` — do not shrink the
 prefill buffers; that trade was measured at ~2x agent TTFT
 (docs/speed-tuning-2026-07-23.md).
 
+## Agent prefix pre-warm (DSV4_PREWARM_BODY)
+
+After the health check passes, the launcher replays
+`fixtures/hermes-prefix.json` at the loopback engine in the background so the
+first real agent request after a restart hits a warm prefix cache (~2-5 s
+TTFT) instead of the full ~19K prefill (~40 s). The fixture is a complete
+`/v1/chat/completions` request body containing the agent's byte-stable prefix
+— the same `model`, `messages` (system prompt only, no user turn), and
+`tools` array the agent sends — with `"max_tokens": 1, "temperature": 0,
+"stream": false`. Prerequisite: the agent client must emit a byte-stable
+prefix (deterministic tool ordering, no sub-day timestamp); verified for the
+Hermes deployment on 2026-08-01.
+
+To capture or refresh the fixture, export one request body from the agent
+client's debug log (preferred, exact bytes), strip the trailing user message,
+set the three fields above, and save it as `fixtures/hermes-prefix.json`
+(mode 0644, committed only if the prompt content is shareable — otherwise
+keep it untracked; the launcher treats a missing file as skip-with-warning).
+Validate with `scripts/dev/regression-suite.py prewarm-ttft --base
+http://127.0.0.1:<port>` at least ~60 s after a restart: it asserts >= 95%
+cache reuse and < 10 s prompt processing on an agent-shaped request.
+
 ## Incident: server unresponsive
 
 The guard normally detects the failed wrapper status within about 60 seconds and restarts

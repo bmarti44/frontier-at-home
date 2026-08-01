@@ -1,0 +1,26 @@
+{
+ "when": "2026-08-01T02:18:47Z",
+ "base": "http://127.0.0.1:8013",
+ "results": [
+  {
+   "test": "prefix-cache",
+   "pass": true,
+   "detail": "repeat cache_n=18734/18738 (>=99%: True); shared-prefix cache_n=16690 (checkpoint-bounded floor 9522: True)"
+  },
+  {
+   "test": "turn-continuation",
+   "pass": true,
+   "detail": "appended turn 2: prompt_n=17 cache_n=18761 (< 1500 required; a full re-prefill means in-slot reuse broke)"
+  },
+  {
+   "test": "slot-thrash",
+   "pass": true,
+   "detail": "turn-2 after utility call: prompt_n=17 cache_n=18734 (< 1500 required; single-slot server re-prefills ~20000)"
+  },
+  {
+   "test": "prefill-throughput",
+   "pass": true,
+   "detail": "novel prompt cache_n=1 (<100: True); prefill=468 tok/s (>=350: True); prompt processing=40.1s (<=75: True); tuned ub/b=2048 profile measures ~434 tok/s \u2014 a failure here usually means the fast buffers were reverted (see docs/speed-tuning-2026-07-23.md)"
+  }
+ ]
+}

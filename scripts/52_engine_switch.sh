@@ -63,6 +63,7 @@ dsv4_launcher() {
         DSV4_UBATCH=2048 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=1 \
         CTX=1048576 DSV4_PARALLEL=2 DSV4_NO_MMAP=1 \
         DSV4_SPEC_TYPE=none \
+        DSV4_PREWARM_BODY=$REPO/fixtures/hermes-prefix.json \
         "$REPO/scripts/21_serve_llamacpp.sh" "$@"
 }
 
