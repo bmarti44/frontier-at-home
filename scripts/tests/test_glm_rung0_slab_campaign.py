@@ -259,6 +259,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
     def test_quality_command_uses_frozen_scorer_and_full_manifest(self):
         command = CAMPAIGN.quality_command(
             Path("/home/bmarti44/.cache/glm52-test-quality/ds4-server"),
+            CAMPAIGN.MODEL_PATH,
             Path("/home/bmarti44/.cache/glm52-test/manifest.tsv"),
             Path("/home/bmarti44/.local/state/glm52-rung0-test/quality-off.tsv"),
         )
@@ -266,9 +267,10 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             command[-3:],
             ["--ssd-streaming", "--ssd-streaming-cache-experts", "40GB"],
         )
-        self.assertEqual(command[3], "8192")
-        self.assertEqual(command[1].name, "manifest.tsv")
-        self.assertEqual(command[2].name, "quality-off.tsv")
+        self.assertEqual(command[4], "8192")
+        self.assertEqual(command[1], CAMPAIGN.MODEL_PATH)
+        self.assertEqual(command[2].name, "manifest.tsv")
+        self.assertEqual(command[3].name, "quality-off.tsv")
 
     def test_quality_schedule_proves_each_arm_deterministic_with_itself(self):
         self.assertEqual(CAMPAIGN.quality_schedule(), ("A", "B", "B", "A"))
