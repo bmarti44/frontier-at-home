@@ -1,0 +1,335 @@
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index f2935c2..675f722 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -23637,7 +23637,7 @@ static void ec_sha256_update(ec_sha256 *c, const void *data, size_t n) {
+         if (c->fill == 64) { ec_sha256_block(c, c->buf); c->fill = 0; }
+     }
+ }
+-static void ec_sha256_final_hex(ec_sha256 *c, char out[65]) {
++static void ec_sha256_final_bytes(ec_sha256 *c, uint8_t out[32]) {
+     uint64_t bits = c->len * 8;
+     uint8_t pad = 0x80; ec_sha256_update(c, &pad, 1);
+     uint8_t z = 0;
+@@ -23645,7 +23645,22 @@ static void ec_sha256_final_hex(ec_sha256 *c, char out[65]) {
+     uint8_t lb[8];
+     for (int i = 0; i < 8; i++) lb[i] = (uint8_t)(bits >> (56 - 8*i));
+     ec_sha256_update(c, lb, 8);
+-    for (int i = 0; i < 8; i++) sprintf(out + i*8, "%08x", c->h[i]);
++    for (int i = 0; i < 8; i++) {
++        out[i*4] = (uint8_t)(c->h[i] >> 24);
++        out[i*4+1] = (uint8_t)(c->h[i] >> 16);
++        out[i*4+2] = (uint8_t)(c->h[i] >> 8);
++        out[i*4+3] = (uint8_t)c->h[i];
++    }
++}
++static void ec_sha256_final_hex(ec_sha256 *c, char out[65]) {
++    static const char hex[] = "0123456789abcdef";
++    uint8_t digest[32];
++    ec_sha256_final_bytes(c, digest);
++    for (int i = 0; i < 32; i++) {
++        out[i*2] = hex[digest[i] >> 4];
++        out[i*2+1] = hex[digest[i] & 15];
++    }
++    out[64] = '\0';
+ }
+ 
+ static struct {
+@@ -23662,6 +23677,225 @@ static void ec_run_stats_ensure(void) {
+     }
+ }
+ 
++/* Default-off, byte-identical expert sidecar. The offline builder writes one
++ * 4096-aligned gate|up|down record per (layer, expert), so each miss needs one
++ * O_DIRECT read instead of three distant GGUF reads. Explicit configuration
++ * is fail-closed: a bad header, model identity, index, read, or checksum never
++ * falls back to different bytes. */
++#pragma pack(push, 1)
++typedef struct {
++    uint8_t magic[8];
++    uint32_t version;
++    uint32_t alignment;
++    uint64_t model_size;
++    uint8_t model_probe_sha256[32];
++    uint32_t record_count;
++    uint32_t record_size;
++    uint64_t data_offset;
++} cuda_expert_slab_header;
++typedef struct {
++    uint32_t layer;
++    uint32_t expert;
++    uint64_t expert_slab_offset;
++    uint64_t payload_bytes;
++    uint64_t gate_bytes;
++    uint64_t down_bytes;
++    uint8_t payload_sha256[32];
++    uint8_t reserved[8];
++} cuda_expert_slab_record;
++#pragma pack(pop)
++static_assert(sizeof(cuda_expert_slab_header) == 72,
++              "expert slab header format drift");
++static_assert(sizeof(cuda_expert_slab_record) == 80,
++              "expert slab record format drift");
++
++static struct {
++    std::atomic<int> state; /* 0 uninitialized, 1 active, 2 off, -1 invalid */
++    int fd;
++    uint64_t file_size;
++    uint64_t model_generation;
++    cuda_expert_slab_header header;
++    std::vector<cuda_expert_slab_record> records;
++    std::unordered_map<uint64_t, size_t> by_key;
++    std::atomic<uint64_t> reads;
++    std::atomic<uint64_t> bytes;
++} g_expert_slab;
++
++static uint64_t cuda_expert_slab_align_up(uint64_t value, uint64_t alignment) {
++    if (alignment == 0 || value > UINT64_MAX - (alignment - 1)) return 0;
++    return (value + alignment - 1) / alignment * alignment;
++}
++
++static void cuda_expert_slab_model_probe(const void *model_map,
++                                         uint64_t model_size,
++                                         uint8_t out[32]) {
++    const uint64_t probe_bytes = 1u << 20;
++    const uint64_t first = model_size < probe_bytes ? model_size : probe_bytes;
++    ec_sha256 digest;
++    ec_sha256_init(&digest);
++    ec_sha256_update(&digest, &model_size, sizeof(model_size));
++    ec_sha256_update(&digest, model_map, (size_t)first);
++    if (model_size > probe_bytes) {
++        ec_sha256_update(&digest,
++                         (const uint8_t *)model_map + model_size - probe_bytes,
++                         (size_t)probe_bytes);
++    }
++    ec_sha256_final_bytes(&digest, out);
++}
++
++static int cuda_expert_slab_fail(const char *reason) {
++    const int previous = g_expert_slab.state.exchange(-1);
++    if (previous == -1) return -1;
++    /* An active fd may still be inside another worker's pread. Never close it
++     * here: closing and reusing the descriptor number would let that worker
++     * read an unrelated file. The process owns this one fd until teardown. */
++    if (previous == 0 && g_expert_slab.fd >= 0) {
++        (void)close(g_expert_slab.fd);
++        g_expert_slab.fd = -1;
++    }
++    fprintf(stderr, "ds4: CUDA contiguous expert slab disabled: %s\n",
++            reason ? reason : "invalid sidecar");
++    return -1;
++}
++
++static int cuda_expert_slab_init(const ds4_gpu_stream_expert_table *table) {
++    const int current_state = g_expert_slab.state.load();
++    if (current_state != 0) {
++        if (current_state == 1 &&
++            g_expert_slab.model_generation != g_model_load_generation) {
++            return cuda_expert_slab_fail("model load generation changed");
++        }
++        return current_state == 1 ? 1 : (current_state == 2 ? 0 : -1);
++    }
++    g_expert_slab.fd = -1;
++    const char *path = getenv("DS4_CUDA_EXPERT_SLAB_PATH");
++    if (!path || !path[0]) {
++        g_expert_slab.state.store(2);
++        fprintf(stderr, "ds4: CUDA contiguous expert slab disabled (default)\n");
++        return 0;
++    }
++    if (!table || !table->model_map || table->model_size == 0) {
++        return cuda_expert_slab_fail("missing model identity");
++    }
++    int index_fd = open(path, O_RDONLY);
++    if (index_fd < 0) return cuda_expert_slab_fail("open failed");
++    struct stat st;
++    if (fstat(index_fd, &st) != 0 || st.st_size < 0 ||
++        (uint64_t)st.st_size < sizeof(cuda_expert_slab_header) ||
++        !cuda_pread_full(index_fd, &g_expert_slab.header,
++                         sizeof(g_expert_slab.header), 0)) {
++        (void)close(index_fd);
++        return cuda_expert_slab_fail("header read failed");
++    }
++    const cuda_expert_slab_header &h = g_expert_slab.header;
++    const uint8_t magic[8] = {'G','L','M','5','2','S','L','B'};
++    if (memcmp(h.magic, magic, sizeof(magic)) != 0 || h.version != 1 ||
++        h.alignment != 4096 || h.record_size != sizeof(cuda_expert_slab_record) ||
++        h.record_count == 0 || h.record_count > 100000 ||
++        h.model_size != table->model_size) {
++        (void)close(index_fd);
++        return cuda_expert_slab_fail("header or model size mismatch");
++    }
++    const uint64_t index_bytes =
++        (uint64_t)h.record_count * sizeof(cuda_expert_slab_record);
++    const uint64_t expected_data = cuda_expert_slab_align_up(
++        sizeof(cuda_expert_slab_header) + index_bytes, h.alignment);
++    if (expected_data == 0 || h.data_offset != expected_data ||
++        h.data_offset > (uint64_t)st.st_size) {
++        (void)close(index_fd);
++        return cuda_expert_slab_fail("index geometry mismatch");
++    }
++    uint8_t probe[32];
++    cuda_expert_slab_model_probe(table->model_map, table->model_size, probe);
++    if (memcmp(probe, h.model_probe_sha256, sizeof(probe)) != 0) {
++        (void)close(index_fd);
++        fprintf(stderr, "ds4: expert slab model identity mismatch\n");
++        return cuda_expert_slab_fail("model identity mismatch");
++    }
++    try {
++        g_expert_slab.records.resize(h.record_count);
++        g_expert_slab.by_key.reserve((size_t)h.record_count * 2u);
++    } catch (...) {
++        (void)close(index_fd);
++        return cuda_expert_slab_fail("index allocation failed");
++    }
++    if (!cuda_pread_full(index_fd, g_expert_slab.records.data(), index_bytes,
++                         sizeof(cuda_expert_slab_header))) {
++        (void)close(index_fd);
++        return cuda_expert_slab_fail("index read failed");
++    }
++    (void)close(index_fd);
++    g_expert_slab.file_size = (uint64_t)st.st_size;
++    for (size_t i = 0; i < g_expert_slab.records.size(); i++) {
++        const cuda_expert_slab_record &r = g_expert_slab.records[i];
++        const uint64_t key = ((uint64_t)r.layer << 32) | r.expert;
++        const uint64_t read_bytes = cuda_expert_slab_align_up(
++            r.payload_bytes, h.alignment);
++        if (r.expert_slab_offset < h.data_offset ||
++            r.expert_slab_offset % h.alignment != 0 || read_bytes == 0 ||
++            r.expert_slab_offset > g_expert_slab.file_size ||
++            read_bytes > g_expert_slab.file_size - r.expert_slab_offset ||
++            r.payload_bytes != 2u * r.gate_bytes + r.down_bytes ||
++            !g_expert_slab.by_key.emplace(key, i).second) {
++            return cuda_expert_slab_fail("invalid or duplicate index record");
++        }
++    }
++#if defined(__linux__) && defined(O_DIRECT)
++    g_expert_slab.fd = open(path, O_RDONLY | O_DIRECT);
++#else
++    g_expert_slab.fd = -1;
++#endif
++    if (g_expert_slab.fd < 0) {
++        return cuda_expert_slab_fail("O_DIRECT open failed");
++    }
++    g_expert_slab.model_generation = g_model_load_generation;
++    g_expert_slab.reads.store(0);
++    g_expert_slab.bytes.store(0);
++    g_expert_slab.state.store(1);
++    fprintf(stderr,
++            "ds4: CUDA contiguous expert slab enabled records=%u path=%s\n",
++            h.record_count, path);
++    return 1;
++}
++
++static int cuda_expert_slab_read(uint32_t layer, uint32_t expert,
++                                 uint64_t gate_bytes, uint64_t down_bytes,
++                                 void *buffer, uint64_t buffer_bytes,
++                                 const uint8_t **payload_out) {
++    const uint64_t key = ((uint64_t)layer << 32) | expert;
++    auto found = g_expert_slab.by_key.find(key);
++    if (found == g_expert_slab.by_key.end()) {
++        cuda_expert_slab_fail("record absent");
++        return 0;
++    }
++    const cuda_expert_slab_record &record =
++        g_expert_slab.records[found->second];
++    const uint64_t read_bytes = cuda_expert_slab_align_up(
++        record.payload_bytes, g_expert_slab.header.alignment);
++    if (record.gate_bytes != gate_bytes || record.down_bytes != down_bytes ||
++        read_bytes == 0 || read_bytes > buffer_bytes ||
++        !cuda_pread_full(g_expert_slab.fd, buffer, read_bytes,
++                         record.expert_slab_offset)) {
++        cuda_expert_slab_fail("record read or shape mismatch");
++        return 0;
++    }
++    ec_sha256 digest;
++    uint8_t actual[32];
++    ec_sha256_init(&digest);
++    ec_sha256_update(&digest, buffer, (size_t)record.payload_bytes);
++    ec_sha256_final_bytes(&digest, actual);
++    if (memcmp(actual, record.payload_sha256, sizeof(actual)) != 0) {
++        fprintf(stderr, "ds4: expert slab record checksum mismatch layer=%u expert=%u\n",
++                layer, expert);
++        cuda_expert_slab_fail("record checksum mismatch");
++        return 0;
++    }
++    g_expert_slab.reads.fetch_add(1);
++    g_expert_slab.bytes.fetch_add(record.payload_bytes);
++    *payload_out = (const uint8_t *)buffer;
++    return 1;
++}
++
+ /* Called by the server on GET /v1/models: prints the finalized per-window
+  * access-stream digest + byte counters, then resets the window. */
+ /* ------------------------------------------------------------------------
+@@ -24548,12 +24782,23 @@ static int cuda_stream_selected_cache_begin_load(
+     }
+     if (fetch_threads >= 2 && !miss_jobs.empty()) {
+         if (lp_on) lp_p0 = ec_prof_now_ms();
++        const int slab_mode = cuda_expert_slab_init(table);
++        if (slab_mode < 0) {
++            cuda_expert_cache_flush_all("invalid expert slab");
++            cuda_stream_selected_cache_invalidate();
++            return cuda_stream_selected_reject(table, slot_count,
++                                               "expert slab initialization");
++        }
+         std::atomic<size_t> next(0);
+         std::atomic<int> failed(0);
+         const uint64_t max_tb = table->gate_expert_bytes > table->down_expert_bytes ?
+                                 table->gate_expert_bytes : table->down_expert_bytes;
+         const uint64_t align = g_model_direct_align > 1 ? g_model_direct_align : 4096;
+-        const uint64_t buf_bytes = ((max_tb + 2 * align + align - 1) / align) * align;
++        const uint64_t slab_bytes = 2u * table->gate_expert_bytes +
++                                    table->down_expert_bytes;
++        const uint64_t read_capacity = slab_mode ? slab_bytes : max_tb;
++        const uint64_t buf_bytes =
++            cuda_expert_slab_align_up(read_capacity + 2u * align, align);
+         const int nthr = (int)(miss_jobs.size() < (size_t)fetch_threads ?
+                                miss_jobs.size() : (size_t)fetch_threads);
+         auto worker = [&]() {
+@@ -24565,6 +24810,28 @@ static int cuda_stream_selected_cache_begin_load(
+                 const size_t i = next.fetch_add(1);
+                 if (i >= miss_jobs.size() || failed.load()) break;
+                 const cuda_miss_job &j = miss_jobs[i];
++                if (slab_mode) {
++                    const uint8_t *payload = NULL;
++                    const uint32_t expert = (uint32_t)j.key;
++                    if (!cuda_expert_slab_read(table->layer, expert,
++                                               table->gate_expert_bytes,
++                                               table->down_expert_bytes,
++                                               buf, buf_bytes, &payload) ||
++                        cudaMemcpy(g_stream_selected_cache.gate_ptr + j.gate_dst,
++                                   payload, table->gate_expert_bytes,
++                                   cudaMemcpyDefault) != cudaSuccess ||
++                        cudaMemcpy(g_stream_selected_cache.up_ptr + j.gate_dst,
++                                   payload + table->gate_expert_bytes,
++                                   table->gate_expert_bytes,
++                                   cudaMemcpyDefault) != cudaSuccess ||
++                        cudaMemcpy(g_stream_selected_cache.down_ptr + j.down_dst,
++                                   payload + 2u * table->gate_expert_bytes,
++                                   table->down_expert_bytes,
++                                   cudaMemcpyDefault) != cudaSuccess) {
++                        failed.store(1);
++                    }
++                    continue;
++                }
+                 const struct { uint64_t src, bytes; char *dst; } parts[3] = {
+                     {j.gate_src, table->gate_expert_bytes,
+                      g_stream_selected_cache.gate_ptr + j.gate_dst},
+@@ -24693,10 +24960,15 @@ static int cuda_stream_selected_cache_begin_load(
+     if (lp_on) {
+         fprintf(stderr,
+                 "LOADPROF L%u uniq=%u hits=%u miss=%zu hit_ms=%.2f "
+-                "fetch_ms=%.2f fill_ms=%.2f total_ms=%.2f\n",
++                "fetch_ms=%.2f fill_ms=%.2f total_ms=%.2f slab_mode=%s "
++                "slab_reads=%llu slab_bytes=%llu\n",
+                 table->layer, (uint32_t)compact_count, lp_hits,
+                 miss_jobs.size(), lp_hit_ms, lp_fetch_ms, lp_fill_ms,
+-                ec_prof_now_ms() - lp_t0);
++                ec_prof_now_ms() - lp_t0,
++                g_expert_slab.state.load() == 1 ? "on" :
++                    (g_expert_slab.state.load() < 0 ? "error" : "off"),
++                (unsigned long long)g_expert_slab.reads.load(),
++                (unsigned long long)g_expert_slab.bytes.load());
+     }
+     return 1;
+ }

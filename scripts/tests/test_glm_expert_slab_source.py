@@ -6,13 +6,18 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-ENGINE_PATCH = ROOT / "results/glm52-gates/harness/ds4-iq2xxs-down-cuda.patch"
+ENGINE_PATCHES = (
+    ROOT / "results/glm52-gates/harness/ds4-iq2xxs-down-cuda.patch",
+    ROOT / "results/glm52-gates/harness/ds4-expert-slab-io.patch",
+)
 
 
 class ExpertSlabSourceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.source = ENGINE_PATCH.read_text(encoding="utf-8")
+        cls.source = "\n".join(
+            patch.read_text(encoding="utf-8") for patch in ENGINE_PATCHES
+        )
 
     def test_slab_path_is_explicit_and_default_off(self) -> None:
         for marker in (
