@@ -113,6 +113,15 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn('HARNESS_ROOT=$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")")', safe)
         self.assertIn('MEMORY_GUARD=$HARNESS_ROOT/scripts/03_memory_guard.py', safe)
 
+    def test_journal_witness_hashes_final_safe_main_log(self):
+        safe = SAFE.read_text(encoding="utf-8")
+        self.assertIn('MAIN_SHA256=$(sha256sum -- "$MAIN"', safe)
+        self.assertIn('main_sha256=$MAIN_SHA256', safe)
+        self.assertLess(
+            safe.index('grep MemAvailable /proc/meminfo >> "$MAIN"'),
+            safe.index('MAIN_SHA256=$(sha256sum -- "$MAIN"'),
+        )
+
     def test_authoritative_timestamps_are_emitted_in_utc(self):
         source = SAFE.read_text(encoding="utf-8")
         self.assertIn(
