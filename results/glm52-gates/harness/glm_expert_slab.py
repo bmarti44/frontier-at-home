@@ -9,32 +9,45 @@ consumed directly by the default-off CUDA loader.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import shutil
+import stat
 import struct
 import sys
+import tempfile
 from typing import BinaryIO, NamedTuple
 
 
 MAGIC = b"GLM52SLB"
 VERSION = 1
 ALIGNMENT = 4096
-HEADER = struct.Struct("<8sIIQ32sIIQ")
+HEADER = struct.Struct("<8sIIQ32s32sIIQ")
 RECORD = struct.Struct("<IIQQQQ32s8x")
 PROBE_BYTES = 1 << 20
+MAX_TENSORS = 200_000
+MAX_KV = 100_000
+MAX_ARRAY = 1_000_000
+MAX_LAYERS = 80
+MAX_EXPERTS = 256
+MAX_RECORDS = MAX_LAYERS * MAX_EXPERTS
+MAX_ARTIFACT_BYTES = 256 << 30
+LARGE_BUILD_BYTES = 1 << 30
+FREE_SPACE_FLOOR = 20 << 30
 TENSOR_RE = re.compile(r"^blk\.(\d+)\.ffn_(gate|up|down)_exps\.weight$")
+# Accept only types the engine permits for routed experts. Keeping an
+# independent copy small makes drift obvious and testable.
 GGML = {
-    0: (4, 1), 1: (2, 1), 2: (18, 32), 3: (20, 32), 6: (22, 32),
-    7: (24, 32), 8: (34, 32), 9: (36, 32), 10: (84, 256),
-    11: (110, 256), 12: (144, 256), 13: (176, 256),
-    14: (210, 256), 15: (292, 256), 16: (66, 256),
-    17: (74, 256), 18: (98, 256), 19: (50, 256), 20: (18, 32),
-    21: (110, 256), 22: (82, 256), 23: (136, 256), 24: (1, 1),
-    25: (2, 1), 26: (4, 1), 27: (8, 1), 28: (8, 1),
-    29: (56, 256), 30: (2, 1),
+    8: (34, 32),       # Q8_0
+    10: (84, 256),     # Q2_K
+    12: (144, 256),    # Q4_K
+    13: (176, 256),    # Q5_K
+    14: (210, 256),    # Q6_K
+    16: (66, 256),     # IQ2_XXS
 }
 SCALAR = {0: 1, 1: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 7: 1,
           10: 8, 11: 8, 12: 8}
@@ -62,7 +75,16 @@ class PlannedRecord(NamedTuple):
 
 
 def align_up(value: int, alignment: int = ALIGNMENT) -> int:
+    if value < 0 or alignment <= 0 or alignment & (alignment - 1):
+        raise ValueError("invalid alignment geometry")
     return (value + alignment - 1) // alignment * alignment
+
+
+def regular_identity(path: Path) -> tuple[int, int, int, int, int]:
+    value = path.stat(follow_symlinks=False)
+    if not stat.S_ISREG(value.st_mode):
+        raise ValueError(f"not a regular file: {path}")
+    return value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns
 
 
 def read_exact(stream: BinaryIO, size: int) -> bytes:
@@ -92,6 +114,8 @@ def skip_value(stream: BinaryIO, value_type: int) -> None:
         read_exact(stream, read_u64(stream))
     elif value_type == 9:
         element_type, count = read_u32(stream), read_u64(stream)
+        if count > MAX_ARRAY:
+            raise ValueError(f"implausible GGUF array count {count}")
         for _ in range(count):
             skip_value(stream, element_type)
     elif value_type in SCALAR:
@@ -101,13 +125,17 @@ def skip_value(stream: BinaryIO, value_type: int) -> None:
 
 
 def parse_expert_tensors(path: Path) -> tuple[int, dict[int, dict[str, Tensor]]]:
-    file_size = path.stat().st_size
+    file_size = regular_identity(path)[2]
     with path.open("rb") as stream:
         if read_exact(stream, 4) != b"GGUF":
             raise ValueError("source is not GGUF")
         version, tensor_count, kv_count = read_u32(stream), read_u64(stream), read_u64(stream)
         if version != 3:
             raise ValueError(f"unsupported GGUF version {version}")
+        if tensor_count == 0 or tensor_count > MAX_TENSORS:
+            raise ValueError(f"implausible GGUF tensor count {tensor_count}")
+        if kv_count > MAX_KV:
+            raise ValueError(f"implausible GGUF metadata count {kv_count}")
         alignment = 32
         for _ in range(kv_count):
             key, value_type = read_string(stream), read_u32(stream)
@@ -120,6 +148,8 @@ def parse_expert_tensors(path: Path) -> tuple[int, dict[int, dict[str, Tensor]]]
             name, dimensions = read_string(stream), read_u32(stream)
             dims = [read_u64(stream) for _ in range(dimensions)]
             raw.append((name, dims, read_u32(stream), read_u64(stream)))
+        if alignment > ALIGNMENT:
+            raise ValueError(f"unsupported GGUF alignment {alignment}")
         data_start = align_up(stream.tell(), alignment)
 
     tensors: dict[int, dict[str, Tensor]] = {}
@@ -129,8 +159,16 @@ def parse_expert_tensors(path: Path) -> tuple[int, dict[int, dict[str, Tensor]]]
             continue
         if data_type not in GGML or len(dims) != 3:
             raise ValueError(f"unsupported routed tensor {name}")
+        if int(match.group(1)) >= MAX_LAYERS or not dims[2] or dims[2] > MAX_EXPERTS:
+            raise ValueError(f"unsupported routed tensor geometry {name}")
         block_bytes, block_elements = GGML[data_type]
-        elements = dims[0] * dims[1] * dims[2]
+        elements = 1
+        for dimension in dims:
+            if dimension == 0 or dimension > (1 << 32):
+                raise ValueError(f"invalid dimension for {name}")
+            elements *= dimension
+            if elements > (1 << 63):
+                raise ValueError(f"routed tensor too large: {name}")
         if dims[0] % block_elements or elements % block_elements:
             raise ValueError(f"invalid quantized dimensions for {name}")
         nbytes = elements // block_elements * block_bytes
@@ -158,9 +196,19 @@ def model_probe(path: Path) -> bytes:
     return digest.digest()
 
 
+def file_sha256(path: Path) -> bytes:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.digest()
+
+
 def plan_records(path: Path) -> tuple[int, bytes, list[PlannedRecord], int]:
     model_size, tensors = parse_expert_tensors(path)
     count = sum(next(iter(parts.values())).experts for parts in tensors.values())
+    if count == 0 or count > MAX_RECORDS:
+        raise ValueError(f"invalid expert slab record count {count}")
     data_offset = align_up(HEADER.size + count * RECORD.size)
     output_offset = data_offset
     records: list[PlannedRecord] = []
@@ -183,6 +231,8 @@ def plan_records(path: Path) -> tuple[int, bytes, list[PlannedRecord], int]:
                 down.offset + expert * down_bytes, down_bytes,
             ))
             output_offset = align_up(output_offset + records[-1].payload_bytes)
+            if output_offset > MAX_ARTIFACT_BYTES:
+                raise ValueError("expert slab exceeds maximum artifact size")
     return model_size, model_probe(path), records, output_offset
 
 
@@ -197,15 +247,40 @@ def copy_range(source: BinaryIO, output: BinaryIO, offset: int, size: int,
         remaining -= len(data)
 
 
-def build(source_path: Path, output_path: Path) -> dict[str, object]:
+def build(source_path: Path, output_path: Path, *, allow_large: bool = False) -> dict[str, object]:
+    source_identity = regular_identity(source_path)
     model_size, probe, plans, final_size = plan_records(source_path)
-    temporary = output_path.with_name(output_path.name + ".partial")
-    if temporary.exists() or output_path.exists():
-        raise ValueError("refusing to overwrite an existing slab or partial file")
+    model_digest = file_sha256(source_path)
+    if regular_identity(source_path) != source_identity:
+        raise ValueError("source model changed during planning")
+    if final_size > LARGE_BUILD_BYTES and not allow_large:
+        raise ValueError("large build requires --owner-approved-large-build")
+    output_path.parent.mkdir(parents=False, exist_ok=True)
+    if output_path.exists() or output_path.is_symlink():
+        raise ValueError("refusing to overwrite an existing slab")
+    free = shutil.disk_usage(output_path.parent).free
+    if free < final_size + FREE_SPACE_FLOOR:
+        raise ValueError("insufficient disk space for slab plus safety floor")
+    lock_path = output_path.with_name(output_path.name + ".lock")
+    lock_flags = os.O_RDWR | os.O_CREAT | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        lock_flags |= os.O_NOFOLLOW
+    lock_fd = os.open(lock_path, lock_flags, 0o600)
+    fcntl.flock(lock_fd, fcntl.LOCK_EX)
+    temporary_fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{output_path.name}.", suffix=".partial", dir=output_path.parent
+    )
+    temporary = Path(temporary_name)
     records: list[bytes] = []
+    published = False
     try:
-        with source_path.open("rb") as source, temporary.open("xb+") as output:
-            output.truncate(final_size)
+        if output_path.exists() or output_path.is_symlink():
+            raise ValueError("refusing to overwrite an existing slab")
+        with source_path.open("rb") as source, os.fdopen(temporary_fd, "w+b") as output:
+            temporary_fd = -1
+            if not hasattr(os, "posix_fallocate"):
+                raise ValueError("filesystem allocation preflight is unavailable")
+            os.posix_fallocate(output.fileno(), 0, final_size)
             for plan in plans:
                 output.seek(plan.offset)
                 digest = hashlib.sha256()
@@ -218,7 +293,7 @@ def build(source_path: Path, output_path: Path) -> dict[str, object]:
                 ))
             output.seek(0)
             output.write(HEADER.pack(
-                MAGIC, VERSION, ALIGNMENT, model_size, probe,
+                MAGIC, VERSION, ALIGNMENT, model_size, probe, model_digest,
                 len(records), RECORD.size, align_up(HEADER.size + len(records) * RECORD.size),
             ))
             output.seek(HEADER.size)
@@ -226,30 +301,58 @@ def build(source_path: Path, output_path: Path) -> dict[str, object]:
                 output.write(record)
             output.flush()
             os.fsync(output.fileno())
-        os.replace(temporary, output_path)
+        if regular_identity(source_path) != source_identity:
+            raise ValueError("source model changed during build")
+        verify(source_path, temporary)
+        os.link(temporary, output_path, follow_symlinks=False)
+        published = True
+        verify(source_path, output_path)
+        temporary.unlink()
+        directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     except BaseException:
+        if temporary_fd >= 0:
+            os.close(temporary_fd)
         if temporary.exists():
+            if published and output_path.exists():
+                temporary_stat = temporary.stat(follow_symlinks=False)
+                output_stat = output_path.stat(follow_symlinks=False)
+                if (temporary_stat.st_dev, temporary_stat.st_ino) == (
+                    output_stat.st_dev, output_stat.st_ino
+                ):
+                    output_path.unlink()
             temporary.unlink()
         raise
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
     return {"records": len(records), "bytes": final_size, "model_bytes": model_size}
 
 
 def load_index(path: Path) -> tuple[tuple[object, ...], list[tuple[object, ...]]]:
+    file_size = regular_identity(path)[2]
     with path.open("rb") as stream:
         header = HEADER.unpack(read_exact(stream, HEADER.size))
-        magic, version, alignment, _, _, count, record_size, data_offset = header
+        magic, version, alignment, _, _, _, count, record_size, data_offset = header
         if magic != MAGIC or version != VERSION or alignment != ALIGNMENT:
             raise ValueError("invalid expert slab header")
         if record_size != RECORD.size or data_offset != align_up(HEADER.size + count * RECORD.size):
             raise ValueError("invalid expert slab index geometry")
+        if count == 0 or count > MAX_RECORDS or HEADER.size + count * RECORD.size > file_size:
+            raise ValueError("invalid expert slab record count")
         records = [RECORD.unpack(read_exact(stream, RECORD.size)) for _ in range(count)]
     return header, records
 
 
 def verify(source_path: Path, slab_path: Path) -> dict[str, object]:
+    source_identity = regular_identity(source_path)
+    slab_identity = regular_identity(slab_path)
     model_size, probe, plans, final_size = plan_records(source_path)
     header, records = load_index(slab_path)
-    if header[3] != model_size or header[4] != probe:
+    if header[3] != model_size or header[4] != probe or header[5] != file_sha256(source_path):
         raise ValueError("expert slab model identity mismatch")
     if slab_path.stat().st_size != final_size or len(records) != len(plans):
         raise ValueError("expert slab size or record count mismatch")
@@ -275,6 +378,8 @@ def verify(source_path: Path, slab_path: Path) -> dict[str, object]:
                 source_bytes.extend(read_exact(source, part_bytes))
             if payload != source_bytes:
                 raise ValueError("expert slab payload differs from GGUF")
+    if regular_identity(source_path) != source_identity or regular_identity(slab_path) != slab_identity:
+        raise ValueError("source or slab changed during verification")
     return {"records": len(records), "bytes": final_size, "verified": True}
 
 
@@ -286,6 +391,8 @@ def main() -> int:
         child.add_argument("source", type=Path)
         if command != "plan":
             child.add_argument("slab", type=Path)
+        if command == "build":
+            child.add_argument("--owner-approved-large-build", action="store_true")
     args = parser.parse_args()
     try:
         if args.command == "plan":
@@ -293,10 +400,13 @@ def main() -> int:
             result = {"records": len(records), "bytes": final_size,
                       "model_bytes": model_size}
         elif args.command == "build":
-            result = build(args.source, args.slab)
+            result = build(
+                args.source, args.slab,
+                allow_large=args.owner_approved_large_build,
+            )
         else:
             result = verify(args.source, args.slab)
-    except (OSError, ValueError, struct.error) as error:
+    except (MemoryError, OSError, OverflowError, ValueError, struct.error) as error:
         print(json.dumps({"verdict": "FAIL", "error": str(error)}))
         return 1
     print(json.dumps({"verdict": "PASS", **result}, sort_keys=True))

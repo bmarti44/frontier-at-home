@@ -27,6 +27,17 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
+    def test_explicit_mode_requires_frozen_identity_and_qd(self) -> None:
+        for marker in (
+            'getenv("DS4_CUDA_EXPERT_SLAB_SHA256")',
+            'getenv("DS4_CUDA_EXPERT_SLAB_MODEL_SHA256")',
+            "expert slab requires DS4_CUDA_FETCH_THREADS=8..32",
+            "frozen full-sidecar identity mismatch",
+            "validated/direct descriptor mismatch",
+            "O_NOFOLLOW",
+        ):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
     def test_one_checksummed_record_read_replaces_three_model_reads(self) -> None:
         for marker in (
             "cuda_expert_slab_read",
@@ -36,9 +47,41 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
-    def test_slab_mode_is_attested_in_load_profile(self) -> None:
-        for marker in ("slab_mode=%s", "slab_reads=%llu", "slab_bytes=%llu"):
+    def test_lifecycle_and_worker_device_are_explicit(self) -> None:
+        for marker in (
+            "g_expert_slab_init_mu",
+            "active_readers",
+            "cuda_expert_slab_cleanup();",
+            "while (g_expert_slab.active_readers.load() != 0)",
+            "cudaSetDevice(g_gpu[logical_tier].device_id)",
+        ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
+    def test_slab_mode_is_attested_in_load_profile(self) -> None:
+        for marker in (
+            "slab_mode=%s",
+            "slab_reads=%llu",
+            "slab_bytes=%llu",
+            "slab_actual_bytes=%llu",
+            "slab_peak_qd=%u",
+            "SLABIO worker=%d",
+        ):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
+    def test_builder_publication_is_bounded_and_non_replacing(self) -> None:
+        builder = (ROOT / "results/glm52-gates/harness/glm_expert_slab.py").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "MAX_ARTIFACT_BYTES",
+            "FREE_SPACE_FLOOR",
+            "os.posix_fallocate",
+            "tempfile.mkstemp",
+            "fcntl.flock",
+            "os.link(temporary, output_path",
+            "os.fsync(directory_fd)",
+        ):
+            self.assertTrue(marker in builder, f"missing builder marker: {marker}")
 
 
 if __name__ == "__main__":
