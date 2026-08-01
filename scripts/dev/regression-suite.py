@@ -36,12 +36,32 @@ Tests and their targets:
                  repeat still re-prefills (cache_n < 100). When the fork
                  fix lands this test FAILS, signalling the guard should be
                  flipped to assert reuse instead.
+  prefill-throughput  llama.cpp endpoint. Regression for: the 2026-07-27/28
+                 buffer reverts (ub 2048 -> 256 halved prefill speed and
+                 nothing failed). Sends a NOVEL ~19K prompt (per-run UUID
+                 preamble; asserts cache_n < 100 to prove novelty, honoring
+                 the "never promote a serving-knob change without a
+                 NOVEL-prompt probe" lesson) and asserts prefill
+                 >= 350 tok/s and prompt processing <= 75 s. The one
+                 wall-clock-adjacent gate in the suite: host-specific by
+                 design, valid only on this Spark with the frozen weights.
+  turn-continuation  llama.cpp endpoint, any slot count. Regression for:
+                 the live Hermes experience — an appended second turn on a
+                 ~19K conversation must reuse the slot cache (prompt_n
+                 < 1500) instead of re-prefilling ~19K. Catches both
+                 in-slot reuse breakage and (in live traffic shape)
+                 utility-call clobber; run slot-thrash too when the server
+                 has DSV4_PARALLEL >= 2.
 
 Usage:
   regression-suite.py TEST [TEST...] [--base URL] [--json PATH]
   regression-suite.py all-llamacpp        # prefix-cache + slot-thrash
+  regression-suite.py agent-gate          # prefix-cache + turn-continuation
+                                          #   + prefill-throughput; the
+                                          #   mandatory pre-promotion gate
+                                          #   for any serving-knob change
 """
-import argparse, json, sys, time, urllib.request, urllib.error
+import argparse, json, sys, time, urllib.request, urllib.error, uuid
 
 FIXTURE = "/home/bmarti44/spark-deepseek-v4-flash/fixtures/ctx-32k.txt"
 RESULTS = []
@@ -164,9 +184,48 @@ def t_slot_restore(base):
                   f"restore-then-repeat cache_n={t['cache_n']}; guard asserts bug STILL PRESENT — "
                   "if this FAILS the fork fix landed: flip the assertion to require reuse")
 
+def t_prefill_throughput(base):
+    # A per-run UUID preamble guarantees a novel prompt: no checkpoint, no
+    # prefix reuse, so the timing measures true prefill speed.
+    P = f"Session {uuid.uuid4()}. Reference document follows.\n" + load_prefix()
+    msgs = [{"role": "system", "content": P},
+            {"role": "user", "content": "Summarize the first paragraph in one sentence."}]
+    t = chat(base, msgs, 16)["timings"]
+    novel = t["cache_n"] < 100
+    tok_s = t.get("prompt_per_second") or (t["prompt_n"] / (t["prompt_ms"] / 1000))
+    prompt_s = t["prompt_ms"] / 1000
+    ok1 = tok_s >= 350
+    ok2 = prompt_s <= 75
+    return record("prefill-throughput", novel and ok1 and ok2,
+                  f"novel prompt cache_n={t['cache_n']} (<100: {novel}); "
+                  f"prefill={tok_s:.0f} tok/s (>=350: {ok1}); "
+                  f"prompt processing={prompt_s:.1f}s (<=75: {ok2}); "
+                  "tuned ub/b=2048 profile measures ~434 tok/s — a failure "
+                  "here usually means the fast buffers were reverted "
+                  "(see docs/speed-tuning-2026-07-23.md)")
+
+def t_turn_continuation(base):
+    # Fresh conversation (UUID prefix) so turn 1 fully prefills, then an
+    # appended turn 2 with NO interleaved utility call: the daily Hermes
+    # shape once title generation is disabled/redirected client-side.
+    P = f"Session {uuid.uuid4()}. Reference document follows.\n" + load_prefix()
+    conv = [{"role": "system", "content": P},
+            {"role": "user", "content": "Summarize the first half in two sentences."}]
+    first = chat(base, conv, 128)
+    reply = first["choices"][0]["message"].get("content") or "Summary."
+    conv += [{"role": "assistant", "content": reply},
+             {"role": "user", "content": "Now give one example record number."}]
+    t2 = chat(base, conv, 64)["timings"]
+    ok = t2["prompt_n"] < 1500
+    return record("turn-continuation", ok,
+                  f"appended turn 2: prompt_n={t2['prompt_n']} cache_n={t2['cache_n']} "
+                  "(< 1500 required; a full re-prefill means in-slot reuse broke)")
+
 TESTS = {"prefix-cache": t_prefix_cache, "slot-thrash": t_slot_thrash,
          "reap-mmid": t_reap_mmid, "ds4-mem-init": t_ds4_mem_init,
-         "slot-restore": t_slot_restore}
+         "slot-restore": t_slot_restore,
+         "prefill-throughput": t_prefill_throughput,
+         "turn-continuation": t_turn_continuation}
 
 def main():
     ap = argparse.ArgumentParser()
@@ -178,7 +237,11 @@ def main():
                     help="engine base URL, e.g. http://127.0.0.1:8011 — required; verify which engine is serving first")
     ap.add_argument("--json")
     args = ap.parse_args()
-    names = ["prefix-cache", "slot-thrash"] if args.tests == ["all-llamacpp"] else args.tests
+    aliases = {
+        "all-llamacpp": ["prefix-cache", "slot-thrash"],
+        "agent-gate": ["prefix-cache", "turn-continuation", "prefill-throughput"],
+    }
+    names = aliases[args.tests[0]] if len(args.tests) == 1 and args.tests[0] in aliases else args.tests
     ok = True
     for n in names:
         if n not in TESTS:
