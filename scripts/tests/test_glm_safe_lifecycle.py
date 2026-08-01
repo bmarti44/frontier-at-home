@@ -105,6 +105,16 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         ):
             self.assertIn(name, launcher)
 
+    def test_cgroup_launcher_forwards_expert_slab_arm_identity(self):
+        launcher = CGROUP.read_text(encoding="utf-8")
+        for name in (
+            "DS4_CUDA_EXPERT_SLAB_PATH",
+            "DS4_CUDA_EXPERT_SLAB_SHA256",
+            "DS4_CUDA_EXPERT_SLAB_MODEL_SHA256",
+            "DS4_CUDA_EXPERT_SLAB_TRACE",
+        ):
+            self.assertIn(name, launcher)
+
     def test_memory_guard_is_resolved_from_frozen_harness(self):
         safe = SAFE.read_text(encoding="utf-8")
         self.assertNotIn(
