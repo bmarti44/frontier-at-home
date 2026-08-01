@@ -115,6 +115,9 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_CUDA_EXPERT_SLAB_SHA256",
             "DS4_CUDA_EXPERT_SLAB_MODEL_SHA256",
             "DS4_CUDA_EXPERT_SLAB_TRACE",
+            "DS4_CUDA_LOAD_PROFILE",
+            "DS4_TOKEN_TIMING_LOG",
+            "DS4_GLM_TP_DEBUG",
         ):
             self.assertIn(name, launcher)
 
