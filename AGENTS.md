@@ -82,8 +82,11 @@ not merely fail one process.
 - Use the inference lock and the hardened wrapper:
   `results/glm52-gates/harness/glm_safe_run.sh`.
 - For current GLM qualification runs, use a fresh systemd cgroup with
-  `MemoryHigh=68G`, `MemoryMax=71G`, `MemorySwapMax=0`,
-  `OOMPolicy=kill`, and `KillMode=control-group`.
+  `MemorySwapMax=0`, `OOMPolicy=kill`, and `KillMode=control-group`. Size
+  `MemoryHigh` and `MemoryMax` from a measured preflight that includes both
+  the pinned expert arena and engine RSS. Do not reuse the old 68/71 GiB
+  limits: a 68 GiB arena plus roughly 30 GiB engine RSS will fight those
+  limits and can destabilize the host.
 - Keep the whole-system kill floor at 40 GiB for experimental GLM runs unless
   new measured evidence justifies another value. The production profile has its
   own validated floor.
