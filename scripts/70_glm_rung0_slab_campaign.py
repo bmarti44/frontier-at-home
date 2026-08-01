@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
+import re
 import statistics
 from typing import Any
 
@@ -18,6 +20,24 @@ SLAB_SHA256 = (
 MODEL_SHA256 = (
     "a49de64c5020432bdae23de36a423a96"
     "60a5621bc0db8d12b66bd8814b07fea0"
+)
+PROVENANCE_NAMES = tuple(
+    sorted(
+        {
+            "DS4_CUDA_EXPERT_CACHE_GB",
+            "DS4_CUDA_EXPERT_CACHE_PIN",
+            "DS4_CUDA_EXPERT_CACHE_SLRU",
+            "DS4_CUDA_FETCH_THREADS",
+            "DS4_CUDA_LOAD_PROFILE",
+            "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
+            "DS4_GLM_TP_DEBUG",
+            "DS4_TOKEN_TIMING_LOG",
+            "DS4_CUDA_EXPERT_SLAB_PATH",
+            "DS4_CUDA_EXPERT_SLAB_SHA256",
+            "DS4_CUDA_EXPERT_SLAB_MODEL_SHA256",
+            "DS4_CUDA_EXPERT_SLAB_TRACE",
+        }
+    )
 )
 
 
@@ -57,17 +77,130 @@ def canonical_engine_environment(mode: str) -> dict[str, str]:
 
 def canonical_environment_sha256(environment: dict[str, str]) -> str:
     """Hash the exact engine environment as glm_safe_run observes it."""
-    raise NotImplementedError(environment)
+    if not isinstance(environment, dict) or any(
+        not isinstance(name, str)
+        or name not in PROVENANCE_NAMES
+        or not isinstance(value, str)
+        for name, value in environment.items()
+    ):
+        raise ValueError("engine environment is outside the fixed allowlist")
+    required = set(canonical_engine_environment("off"))
+    if not required.issubset(environment):
+        raise ValueError("engine environment lacks a required common setting")
+    canonical = b"".join(
+        name.encode("ascii")
+        + b"="
+        + environment.get(name, "<UNSET>").encode("utf-8")
+        + b"\n"
+        for name in PROVENANCE_NAMES
+    )
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def parse_engine_log(text: str, mode: str) -> dict[str, Any]:
     """Reduce aggregate slab/cache telemetry without trusting its timings."""
-    raise NotImplementedError((text, mode))
+    if mode not in {"off", "on"}:
+        raise ValueError("mode must be off or on")
+    if not isinstance(text, str):
+        raise ValueError("engine log is not text")
+    trace_lines = sum(line.startswith("SLABIO ") for line in text.splitlines())
+    if trace_lines:
+        raise ValueError("per-read slab trace contaminated a timed arm")
+    if "ds4: expert-cache arena pin: ok" not in text:
+        raise ValueError("pinned expert arena was not established")
+    if mode == "on":
+        if "ds4: CUDA contiguous expert slab enabled records=19456" not in text:
+            raise ValueError("slab activation marker is absent")
+    elif "ds4: CUDA contiguous expert slab disabled (default)" not in text:
+        raise ValueError("default-off marker is absent")
+
+    load_pattern = re.compile(
+        r"^LOADPROF .*\bslab_mode=(on|off|error) "
+        r"slab_reads=(\d+) .*\bslab_peak_qd=(\d+)\b",
+        re.MULTILINE,
+    )
+    loads = load_pattern.findall(text)
+    if not loads or any(resolved != mode for resolved, _, _ in loads):
+        raise ValueError("per-load slab mode is absent or inconsistent")
+    reads = sum(int(value) for _, value, _ in loads)
+    peak = max(int(value) for _, _, value in loads)
+    if mode == "on" and (reads <= 0 or peak < 2):
+        raise ValueError("slab arm lacks positive concurrent reads")
+    if mode == "off" and (reads != 0 or peak != 0):
+        raise ValueError("default-off arm performed slab reads")
+
+    window_pattern = re.compile(
+        r"^ds4: expert-cache window tag=models-get lookup_bytes=(\d+) "
+        r"hit_bytes=(\d+) stream_sha256=([0-9a-f]{64})$",
+        re.MULTILINE,
+    )
+    windows = [match for match in window_pattern.findall(text) if int(match[0]) > 0]
+    if not windows:
+        raise ValueError("non-empty expert access-stream digest is absent")
+    return {
+        "slab_mode": mode,
+        "slab_reads": reads,
+        "slab_peak_qd": peak,
+        "access_stream_sha256": windows[-1][2],
+        "arena_pin_ok": True,
+        "trace_lines": trace_lines,
+    }
 
 
 def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
     """Fail closed on containment, memory, process, or kernel evidence."""
-    raise NotImplementedError((main, samples, kernel))
+    for marker in (
+        "executed candidate clean exit verified after wrapper and descendant checks",
+        "SAFE_RUN end rc=0 killed=no",
+        "cgroup_final ",
+    ):
+        if marker not in main:
+            raise ValueError(f"safety log lacks {marker!r}")
+    if "FATAL" in main:
+        raise ValueError("safety wrapper reported a fatal condition")
+    final = [line for line in main.splitlines() if "cgroup_final " in line]
+    if len(final) != 1:
+        raise ValueError("safety log lacks one final cgroup record")
+    swap_match = re.search(r"swap_current_bytes=(\d+)", final[0])
+    events = {
+        name: int(value)
+        for name, value in re.findall(
+            r"\b(high|max|oom|oom_kill) (\d+)(?:,|$)", final[0]
+        )
+    }
+    if swap_match is None or set(events) != {"high", "max", "oom", "oom_kill"}:
+        raise ValueError("final cgroup counters are incomplete")
+    if int(swap_match.group(1)) != 0 or any(events.values()):
+        raise ValueError("cgroup memory or swap event invalidates the arm")
+    memory_values: list[int] = []
+    sample_swap: list[int] = []
+    for line in samples.splitlines():
+        memory = re.search(r"\bmem_avail_kb=(\d+)\b", line)
+        swap = re.search(r"\bcgroup_swap_current_bytes=(\d+)\b", line)
+        if memory is not None and swap is not None:
+            memory_values.append(int(memory.group(1)))
+            sample_swap.append(int(swap.group(1)))
+    if len(memory_values) < 2 or any(sample_swap):
+        raise ValueError("external memory samples are incomplete or swapped")
+    minimum_available_gib = min(memory_values) / 1_048_576
+    if minimum_available_gib < 10:
+        raise ValueError("whole-system memory floor was violated")
+    if re.search(
+        r"NVRM.*Xid|oom-kill|Out of memory: Killed process|Killed process .*total-vm",
+        kernel,
+        re.IGNORECASE,
+    ):
+        raise ValueError("kernel OOM or Xid evidence invalidates the arm")
+    return {
+        "minimum_available_gib": minimum_available_gib,
+        "cgroup_high_events": events["high"],
+        "cgroup_max_events": events["max"],
+        "cgroup_oom_events": events["oom"] + events["oom_kill"],
+        "cgroup_swap_bytes": int(swap_match.group(1)),
+        "xid": False,
+        "survivors": [],
+        "failures": [],
+    }
 
 
 def score_campaign(records: list[dict[str, Any]], nll: dict[str, Any]) -> dict[str, Any]:
