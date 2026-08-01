@@ -153,6 +153,20 @@ def parse_quality_tsv(path: Path) -> list[dict[str, Any]]:
     return cases
 
 
+def fixture_manifest_case_ids(path: Path) -> list[str]:
+    """Validate the fixed official manifest's literal on-disk schema."""
+    with path.open(encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream, delimiter="\t"))
+    identifiers = [row.get("# id") for row in rows]
+    if (
+        len(identifiers) != 100
+        or any(not isinstance(identifier, str) or not identifier for identifier in identifiers)
+        or len(set(identifiers)) != 100
+    ):
+        raise ValueError("quality fixture is not the fixed complete 100-case suite")
+    return identifiers
+
+
 def compare_quality_rows(
     baseline: list[dict[str, Any]], candidate: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -1121,11 +1135,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
         or not manifest.is_file()
     ):
         raise ValueError("quality campaign identity is invalid")
-    with manifest.open(encoding="utf-8", newline="") as stream:
-        fixture_rows = list(csv.DictReader(stream, delimiter="\t"))
-    fixture_ids = [row.get("id") for row in fixture_rows]
-    if len(fixture_ids) != 100 or None in fixture_ids or len(set(fixture_ids)) != 100:
-        raise ValueError("quality fixture is not the fixed complete 100-case suite")
+    fixture_manifest_case_ids(manifest)
     envelope = verified_memory_envelope(
         args.memory_envelope.resolve(),
         args.server_binary_sha256,
