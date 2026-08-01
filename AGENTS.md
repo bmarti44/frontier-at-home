@@ -18,22 +18,10 @@ When adding or optimizing a model:
    fails, say so and move to the next bounded alternative.
 5. Never trade whole-system stability for benchmark progress.
 
-For new claimed work, you MUST use the goal tool built into your agent harness
-to set a persistent goal for the chosen model integration before changing an
-engine or running a large model. Do not build a repository-specific replacement
-for your harness's goal tool.
-
-The GLM-5.2/CUDA integration additionally has project-specific evidence
-commands:
-
-```bash
-scripts/glm52_goal.py run
-scripts/glm52_goal.py resume
-scripts/glm52_goal.py status --json
-```
-
-Read its status and the current evidence before assuming that an inherited claim
-is true.
+Before starting claimed work, set a persistent goal for the chosen model and
+backend with the goal tool built into your agent harness. That is the entire
+agent-goal requirement: do not create a repository-specific substitute. Read
+the existing evidence before assuming that an inherited claim is true.
 
 ## Start every session with facts
 
@@ -46,7 +34,7 @@ systemctl is-active dsv4-engine-restore.service dsv4-guard.timer
 awk '/MemAvailable|SwapTotal|SwapFree/ {print}' /proc/meminfo
 ```
 
-Then read the current built-in goal and its status before acting.
+Then read your current harness goal and its status before acting.
 
 Also inspect the exact running process, command line, context cap, and listener
 before stopping or replacing anything. Preserve a dirty tree and unrelated user

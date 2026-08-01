@@ -196,15 +196,9 @@ The short version:
    remains the default until another profile passes all quality, safety,
    direct-1M, switching, and review gates.
 
-At the start of claimed work, agents use their harness's built-in goal tool to
-set a persistent goal for the chosen model integration. The GLM-5.2/CUDA work
-also has project-specific evidence commands:
-
-```bash
-scripts/glm52_goal.py run
-scripts/glm52_goal.py resume
-scripts/glm52_goal.py status --json
-```
+At the start of claimed work, agents set a persistent goal for the chosen model
+and backend with the goal tool already provided by their harness. No separate
+repository-specific goal system is required.
 
 The stable operator interface is:
 
