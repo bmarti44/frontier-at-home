@@ -123,6 +123,10 @@ Lossy cache or weight changes require the fixed 100-case paired suite:
 - top-1 loss and its one-sided 95% upper bound `<= 0.5` percentage points.
 
 An improved average does not override a failed confidence bound.
+Passing these statistical limits also does not authorize a fidelity spend.
+Report every nonzero delta together with the measured performance it bought;
+only the repository owner decides whether to adopt it. Exhaust byte-identical
+levers first, and never spend fidelity merely to improve prefill.
 
 ## Evidence contract
 

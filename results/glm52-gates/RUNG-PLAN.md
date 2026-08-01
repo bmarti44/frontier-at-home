@@ -1,28 +1,43 @@
 # GLM-5.2 performance qualification: active rung plan
 
-Owner course correction accepted 2026-07-31. This document supersedes the
+Owner course correction accepted 2026-08-01. This document supersedes the
 W1-W11 execution order, but preserves those identifiers so old evidence stays
 traceable. The existing G0-G5 gate evidence, `glm_safe_run.sh` witness, and the
 two persistent sol reviewers remain the evidence and review mechanism. Do not
 build another attestation framework.
 
+The native agent goal predates this correction and cannot be renamed while it
+is active. This file and the active agent execution plan are therefore the
+authoritative interpretation of that goal: maximize GLM performance with the
+least fidelity spend, rather than completing old W identifiers in numerical
+order. Old controller statuses are historical bookkeeping, not the work queue.
+
 ## Goal and stopping rule
 
-On one DGX Spark, move GLM-5.2 toward the matched DSV4 reference of 18.4 decode
-tokens/s, warm agent-turn TTFT below 2 seconds, and 467 prefill tokens/s on a
-32K-class fixture. Priority is decode, then TTFT, then best-effort prefill.
+On one DGX Spark, move GLM-5.2 as close as possible to the matched DSV4
+reference of 18.4 decode tokens/s, warm agent-turn TTFT below 2 seconds, and
+467 prefill tokens/s on a 32K-class fixture. Priority is decode, then TTFT,
+then best-effort prefill. Prefill parity is likely unreachable and is never a
+reason to spend fidelity.
 
-Fidelity is a budget. Exhaust byte-identical changes first. After every
-adopted change, run the fixed 100-case `glm52-openrouter-100` NLL suite against
-the 0.4515 NLL / 0.834 top-1 reference. Report every nonzero delta and the
-performance it purchased to the owner. Only the owner may approve a lossy
-change. Stop climbing permanently when the performance bars are met.
+Fidelity is a budget. Exhaust byte-identical changes first, then consider the
+smallest measured fidelity spend in order of cost-effectiveness. After every
+candidate change, run the fixed 100-case `glm52-openrouter-100` NLL suite
+against the 0.4515 NLL / 0.834 top-1 reference. Report every nonzero delta and
+the performance it purchased to the owner. A statistical threshold is not
+authorization: only the owner may approve a lossy change. Stop climbing
+permanently when the performance bars are met.
 
 The measured streaming ceiling is not an open question: a token touches about
 5.8 GB of expert weights, and the current 68 GB cache leaves faithful decode
 at roughly 6-8 tokens/s even after I/O improvements. Reaching 18.4 requires a
 resident or approximation path; prefill parity is not a reason to spend
 fidelity.
+
+Do not re-run the measured dead ends: expert keep-N, lossless or entropy
+compression of routed weights, shared-basis/MoBE, REAP Q2_K with `--cpu-moe`,
+prefill chunking, or purchased NVMe-oF. MTP gets exactly one retest after the
+first three fidelity-free I/O levers land.
 
 ## Branch and source reconciliation
 
@@ -50,6 +65,25 @@ attributed to v4.9, and none is the current production DSV4 process. The
 installed GLM tree remains unverified until its source and binary are exported
 through the existing delegated control surface during a safe GLM window.
 
+Current Rung 0.1 candidate reconciliation:
+
+- engine source worktree: `/tmp/glm52-rung0-engine`, clean commit
+  `a4baadd36a86d818aafb4a2993f1ccabaa650da9`;
+- repository patch: `results/glm52-gates/harness/ds4-expert-slab-io.patch`,
+  SHA-256 prefix `4a60e135c479`;
+- the patch reverse-applies cleanly to the candidate commit, proving the
+  repository patch describes that source delta;
+- verified immutable sidecar:
+  `/home/bmarti44/.cache/glm52-rung0-artifacts/glm52-experts-v2.slab`,
+  190,028,697,600 bytes, SHA-256 prefix `62961905a685` (the full digest is in
+  `G6-rung0-io-sidecar-build.json`);
+- no current Rung 0.1 binary exists yet. A binary hash will be recorded only
+  after DSV4 is safely stopped, the measured memory envelope is known, and a
+  clean `-j2` build is frozen under `/home/bmarti44/.cache/glm52-*`.
+
+The retired W8 branch is not an implementation dependency. Its affine-INT8
+cache result remains a separate lossy datum and cannot be merged into Rung 0.
+
 ## Ranked execution plan and pre-registered gates
 
 ### Rung 0.1 - coalesced expert I/O and slab layout (W3/W8 transport)
@@ -75,6 +109,20 @@ Acceptance before adoption:
   not engine self-report; no OOM, Xid, swap growth, timeout, or survivor;
 - the safe wrapper is used with RLIMIT_AS 400 GiB and cgroup limits sized from
   arena plus RSS, while preserving at least 10 GiB available memory.
+
+Before the full 68 GB-cache campaign, run one contained cache-off startup probe
+to measure non-arena peak RSS. Set `MemoryHigh` from that measurement plus the
+68 GB arena and explicit margin; never reuse the rejected 68/71 GiB cgroup.
+The production DSV4 engine, guard timer, and guard service must all be stopped,
+the shared inference lock must be held, and both engine names must be absent
+before every arm. The campaign is blocked until both persistent reviewers
+report no high or critical safety or measurement issue.
+
+Implementation scope is capped. Reuse `glm_safe_run.sh`, the existing fixed
+ratio/ABBA scorer, committed raw logs, and the existing sol-review pattern.
+Only add code needed to observe client token timing, effective slab mode,
+external I/O, process identity, and OOM/Xid/swap/survivor failures. Do not add
+commitment, invocation-receipt, or cryptographic self-attestation layers.
 
 ### Rung 0.2 - cross-layer theta-star prefetch (W2/W3)
 
