@@ -241,6 +241,35 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(parsed.memory_envelope, Path("/tmp/envelope.json"))
         self.assertFalse(hasattr(parsed, "memory_high_gib"))
 
+    def test_probe_is_cache_off_and_peak_rss_comes_from_external_samples(self):
+        environment = CAMPAIGN.memory_probe_environment()
+        self.assertEqual(environment["DS4_CUDA_EXPERT_CACHE_GB"], "0")
+        self.assertNotIn("DS4_CUDA_EXPERT_SLAB_PATH", environment)
+        samples = "\n".join(
+            (
+                "t mem_avail_kb=100 eng_rss_kb=10485760 read_bytes=0",
+                "t mem_avail_kb=90 eng_rss_kb=31457280 read_bytes=1",
+                "t mem_avail_kb=80 eng_rss_kb=20971520 read_bytes=2",
+            )
+        )
+        self.assertEqual(CAMPAIGN.peak_engine_rss_bytes(samples), 30 * 1024**3)
+        with self.assertRaises(ValueError):
+            CAMPAIGN.peak_engine_rss_bytes("t mem_avail_kb=100 eng_rss_kb=0")
+
+    def test_quality_command_uses_frozen_scorer_and_full_manifest(self):
+        command = CAMPAIGN.quality_command(
+            Path("/home/bmarti44/.cache/glm52-test-quality/ds4-server"),
+            Path("/home/bmarti44/.cache/glm52-test/manifest.tsv"),
+            Path("/home/bmarti44/.local/state/glm52-rung0-test/quality-off.tsv"),
+        )
+        self.assertEqual(
+            command[-3:],
+            ["--ssd-streaming", "--ssd-streaming-cache-experts", "40GB"],
+        )
+        self.assertEqual(command[3], "8192")
+        self.assertEqual(command[1].name, "manifest.tsv")
+        self.assertEqual(command[2].name, "quality-off.tsv")
+
     def test_runtime_is_a_thin_wrapper_around_existing_measurement(self):
         source = SCRIPT.read_text(encoding="utf-8")
         for marker in (
