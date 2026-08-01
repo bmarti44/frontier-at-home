@@ -266,6 +266,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 "--candidate", "/home/bmarti44/.cache/glm52-test",
                 "--candidate-commit", "a" * 40,
                 "--binary-sha256", "b" * 64,
+                "--quality-binary-sha256", "d" * 64,
                 "--seed-sha256", "c" * 64,
                 "--memory-envelope", "/tmp/envelope.json",
             ]
@@ -339,6 +340,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         performance = {
             "candidate_commit": "a" * 40,
             "binary_sha256": "b" * 64,
+            "quality_binary_sha256": "d" * 64,
             "model_sha256": CAMPAIGN.MODEL_SHA256,
             "memory_envelope_sha256": "c" * 64,
         }
@@ -399,7 +401,11 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertNotIn('"DS4_CUDA_EXPERT_SLAB_TRACE": "1"', source)
 
     def test_fixed_scorer_accepts_complete_lossless_campaign(self):
-        result = CAMPAIGN.score_campaign(self.passing_records(), self.passing_nll())
+        with self.assertRaises(ValueError):
+            CAMPAIGN.score_campaign(self.passing_records(), self.passing_nll())
+        result = CAMPAIGN.score_campaign(
+            self.passing_records(), self.passing_nll(), quality_bound=True
+        )
         self.assertEqual(result["verdict"], "PASS")
         self.assertGreater(result["decode_ratio_lower_95"], 1.0)
         self.assertLessEqual(result["warm_ttft_ratio_upper_95"], 1.05)
@@ -433,13 +439,17 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 rows = copy.deepcopy(self.passing_records())
                 mutate(rows)
                 with self.assertRaises(ValueError):
-                    CAMPAIGN.score_campaign(rows, self.passing_nll())
+                    CAMPAIGN.score_campaign(
+                        rows, self.passing_nll(), quality_bound=True
+                    )
 
     def test_fixed_scorer_requires_exact_zero_nll_for_lossless_transport(self):
         nll = self.passing_nll()
         nll["token_weighted_delta_nll"] = 1e-9
         with self.assertRaises(ValueError):
-            CAMPAIGN.score_campaign(self.passing_records(), nll)
+            CAMPAIGN.score_campaign(
+                self.passing_records(), nll, quality_bound=True
+            )
 
 
 if __name__ == "__main__":
