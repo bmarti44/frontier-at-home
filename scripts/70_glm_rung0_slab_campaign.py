@@ -3,13 +3,29 @@
 
 from __future__ import annotations
 
+import argparse
+import fcntl
 import hashlib
+import json
 import math
+import os
 import re
+import shutil
+import signal
 import statistics
+import subprocess
+import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
 from typing import Any
 
-from scripts.glm52_goal import paired_ratio_bound, validate_ab_blocks
+SCRIPT_DIRECTORY = Path(__file__).resolve().parent
+if str(SCRIPT_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIRECTORY))
+from glm52_goal import paired_ratio_bound, validate_ab_blocks
 
 
 SLAB_PATH = "/home/bmarti44/.cache/glm52-rung0-artifacts/glm52-experts-v2.slab"
@@ -39,6 +55,24 @@ PROVENANCE_NAMES = tuple(
         }
     )
 )
+ROOT = Path(__file__).resolve().parents[1]
+CGROUP_RUNNER = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+BENCHMARK = ROOT / "scripts/30_bench_speed.py"
+TOKENIZER = Path(
+    "/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json"
+)
+TOKENIZER_SHA256 = (
+    "19e773648cb4e65de8660ea6365e10ac"
+    "ca112d42a854923df93db4a6f333a82d"
+)
+FIXTURE = ROOT / "fixtures/ctx-32k.txt"
+GLOBAL_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
+CRASH_ROOT = Path("/home/bmarti44/.local/state/glm52-crashlog")
+MODEL_PATH = Path(
+    "/home/dsv4/ds4-project/gguf-glm/"
+    "GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf"
+)
+INFLIGHT = Path("/sys/class/block/nvme0n1/inflight")
 
 
 def arm_schedule() -> tuple[tuple[int, int, str], ...]:
@@ -210,9 +244,640 @@ def summarize_external_io(
     elapsed_seconds: float,
 ) -> dict[str, Any]:
     """Summarize externally observed block queue depth and completed reads."""
-    raise NotImplementedError(
-        (samples, read_bytes_before, read_bytes_after, elapsed_seconds)
+    if (
+        not isinstance(samples, list)
+        or len(samples) < 2
+        or any(
+            not isinstance(sample, tuple)
+            or len(sample) != 2
+            or any(isinstance(value, bool) or not isinstance(value, int) for value in sample)
+            or sample[0] <= 0
+            or sample[1] < 0
+            for sample in samples
+        )
+        or any(right[0] <= left[0] for left, right in zip(samples, samples[1:]))
+        or isinstance(read_bytes_before, bool)
+        or not isinstance(read_bytes_before, int)
+        or isinstance(read_bytes_after, bool)
+        or not isinstance(read_bytes_after, int)
+        or read_bytes_before < 0
+        or read_bytes_after <= read_bytes_before
+        or isinstance(elapsed_seconds, bool)
+        or not isinstance(elapsed_seconds, (int, float))
+        or not math.isfinite(float(elapsed_seconds))
+        or elapsed_seconds <= 0
+    ):
+        raise ValueError("external I/O samples are incomplete")
+    return {
+        "read_bytes_delta": read_bytes_after - read_bytes_before,
+        "elapsed_seconds": float(elapsed_seconds),
+        "peak_read_qd": max(sample[1] for sample in samples),
+        "sample_count": len(samples),
+    }
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(8 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def strict_json(path: Path) -> dict[str, Any]:
+    value = json.loads(
+        path.read_text(encoding="utf-8"),
+        parse_constant=lambda value: (_ for _ in ()).throw(
+            ValueError(f"non-finite JSON constant {value}")
+        ),
     )
+    if not isinstance(value, dict):
+        raise ValueError(f"JSON artifact is not an object: {path}")
+    return value
+
+
+def write_json_exclusive(path: Path, value: dict[str, Any]) -> None:
+    with path.open("x", encoding="utf-8") as stream:
+        json.dump(value, stream, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        stream.write("\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def proc_start_ticks(pid: int) -> int:
+    fields = Path(f"/proc/{pid}/stat").read_text(encoding="ascii").split(") ", 1)
+    if len(fields) != 2:
+        raise RuntimeError("process start identity is malformed")
+    value = int(fields[1].split()[19])
+    if value <= 0:
+        raise RuntimeError("process start identity is invalid")
+    return value
+
+
+def proc_read_bytes(pid: int) -> int:
+    for line in Path(f"/proc/{pid}/io").read_text(encoding="ascii").splitlines():
+        if line.startswith("read_bytes:"):
+            return int(line.split(":", 1)[1])
+    raise RuntimeError("process completed read-byte counter is absent")
+
+
+def read_qd() -> int:
+    fields = INFLIGHT.read_text(encoding="ascii").split()
+    if len(fields) != 2:
+        raise RuntimeError("block inflight counter is malformed")
+    value = int(fields[0])
+    if value < 0:
+        raise RuntimeError("block inflight counter is negative")
+    return value
+
+
+def terminate_exact(process: subprocess.Popen[Any], start_ticks: int) -> None:
+    if process.poll() is not None:
+        process.wait()
+        return
+    try:
+        if proc_start_ticks(process.pid) != start_ticks:
+            raise RuntimeError("server PID changed identity before termination")
+        process.send_signal(signal.SIGTERM)
+        process.wait(timeout=45)
+    except subprocess.TimeoutExpired:
+        if proc_start_ticks(process.pid) != start_ticks:
+            raise RuntimeError("server PID changed identity before SIGKILL")
+        process.kill()
+        process.wait(timeout=15)
+
+
+def matching_executable_pids(binary: Path) -> list[int]:
+    identity = binary.stat()
+    matches: list[int] = []
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            observed = (entry / "exe").stat()
+        except (FileNotFoundError, PermissionError, ProcessLookupError):
+            continue
+        if (observed.st_dev, observed.st_ino) == (identity.st_dev, identity.st_ino):
+            matches.append(int(entry.name))
+    return matches
+
+
+def wait_ready(process: subprocess.Popen[Any], port: int) -> None:
+    deadline = time.monotonic() + 900
+    url = f"http://127.0.0.1:{port}/v1/models"
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError(f"server exited during startup rc={process.returncode}")
+        try:
+            with urllib.request.urlopen(url, timeout=2) as response:
+                if response.status == 200:
+                    return
+        except (OSError, urllib.error.URLError):
+            pass
+        time.sleep(0.25)
+    raise RuntimeError("server startup timed out")
+
+
+def execute_arm(args: argparse.Namespace) -> int:
+    """Run one fresh server; outer glm_safe_run owns containment and safety."""
+    mode = "off" if args.arm == "A" else "on"
+    expected_environment = canonical_engine_environment(mode)
+    observed_environment = {
+        name: os.environ[name] for name in PROVENANCE_NAMES if name in os.environ
+    }
+    if observed_environment != expected_environment:
+        raise ValueError("inherited engine environment differs from fixed arm")
+    binary = args.binary.resolve()
+    model = args.model.resolve()
+    out = args.out.resolve()
+    if (
+        not str(binary.parent).startswith("/home/bmarti44/.cache/glm52-")
+        or binary.name != "ds4-server"
+        or not binary.is_file()
+        or sha256_file(binary) != args.binary_sha256
+        or model != MODEL_PATH
+        or not model.is_file()
+        or out.exists()
+        or not str(out).startswith("/home/bmarti44/.local/state/glm52-rung0-")
+    ):
+        raise ValueError("arm artifact or output identity is invalid")
+    if sha256_file(TOKENIZER) != TOKENIZER_SHA256:
+        raise ValueError("GLM tokenizer identity mismatch")
+    out.mkdir(mode=0o700, parents=True)
+    server_log_path = out / "server.log"
+    server_environment = {
+        "HOME": "/home/bmarti44",
+        "LANG": "C.UTF-8",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        **expected_environment,
+    }
+    command = [
+        str(binary),
+        "--cuda",
+        "-m",
+        str(model),
+        "-c",
+        "8192",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(args.port),
+        "--ssd-streaming",
+        "--ssd-streaming-cache-experts",
+        "40GB",
+    ]
+    server: subprocess.Popen[Any] | None = None
+    server_start_ticks: int | None = None
+    with server_log_path.open("xb") as server_log:
+        try:
+            server = subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=server_log,
+                stderr=subprocess.STDOUT,
+                env=server_environment,
+                start_new_session=False,
+            )
+            start_ticks = proc_start_ticks(server.pid)
+            server_start_ticks = start_ticks
+            started = time.monotonic()
+            wait_ready(server, args.port)
+            ready_seconds = time.monotonic() - started
+            boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(
+                encoding="ascii"
+            ).strip()
+            server_instance_id = hashlib.sha256(
+                f"{boot_id}:{server.pid}:{start_ticks}".encode("ascii")
+            ).hexdigest()
+            read_before = proc_read_bytes(server.pid)
+            io_samples: list[tuple[int, int]] = []
+            sampler_error: list[str] = []
+            stop_sampler = threading.Event()
+
+            def sample_io() -> None:
+                while not stop_sampler.is_set():
+                    try:
+                        io_samples.append((time.monotonic_ns(), read_qd()))
+                    except Exception as error:  # recorded and failed closed below
+                        sampler_error.append(f"{type(error).__name__}: {error}")
+                        return
+                    stop_sampler.wait(0.002)
+
+            sampler = threading.Thread(target=sample_io, daemon=True)
+            sampler.start()
+            probe_started = time.monotonic()
+            completed = subprocess.run(
+                [
+                    str(ROOT / ".venv-harness/bin/python"),
+                    str(ROOT / "scripts/30_bench_speed.py"),
+                    "--base-url",
+                    f"http://127.0.0.1:{args.port}",
+                    "--out",
+                    str(out / "result.json"),
+                    "--stack-label",
+                    f"rung0-slab-{mode}",
+                    "--model-id",
+                    "glm-5.2",
+                    "--output-tokenizer-path",
+                    str(TOKENIZER),
+                    "--output-tokenizer-sha256",
+                    TOKENIZER_SHA256,
+                    "--token-timing-log",
+                    str(server_log_path),
+                    "--reps",
+                    "2",
+                    "--warmup", "1",
+                    "--context-levels",
+                    "0",
+                    "--max-tokens",
+                    "160",
+                    "--min-completion-tokens",
+                    "128",
+                    "--seed",
+                    str(args.seed),
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=server_environment,
+                timeout=3000,
+                check=False,
+            )
+            (out / "probe.stdout.log").write_bytes(completed.stdout)
+            (out / "probe.stderr.log").write_bytes(completed.stderr)
+            if completed.returncode != 0:
+                raise RuntimeError(f"existing speed scorer failed rc={completed.returncode}")
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{args.port}/v1/models", timeout=10
+            ) as response:
+                if response.status != 200:
+                    raise RuntimeError("final telemetry flush failed")
+                response.read()
+            probe_elapsed = time.monotonic() - probe_started
+            read_after = proc_read_bytes(server.pid)
+            stop_sampler.set()
+            sampler.join(timeout=5)
+            if sampler.is_alive() or sampler_error:
+                raise RuntimeError(f"external I/O sampler failed: {sampler_error}")
+            with (out / "nvme-inflight.log").open("x", encoding="ascii") as stream:
+                for timestamp_ns, qd in io_samples:
+                    stream.write(f"{timestamp_ns} {qd}\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            external_io = summarize_external_io(
+                io_samples, read_before, read_after, probe_elapsed
+            )
+            result = strict_json(out / "result.json")
+            cells = result.get("cells")
+            if (
+                result.get("suite_valid") is not True
+                or not isinstance(cells, list)
+                or len(cells) != 1
+                or not isinstance(cells[0], dict)
+                or cells[0].get("ctx_tokens") != 0
+            ):
+                raise ValueError("existing speed scorer result shape is invalid")
+            server_log.flush()
+            os.fsync(server_log.fileno())
+            engine = parse_engine_log(
+                server_log_path.read_text(encoding="utf-8"), mode
+            )
+            record = {
+                "schema_version": 1,
+                "block": args.block,
+                "sequence": args.sequence,
+                "arm": args.arm,
+                "mode": mode,
+                "server_instance_id": server_instance_id,
+                "binary_sha256": args.binary_sha256,
+                "configuration_sha256": canonical_environment_sha256(
+                    expected_environment
+                ),
+                "fixture_sha256": sha256_file(FIXTURE),
+                "suite_valid": True,
+                "reps": cells[0].get("reps"),
+                "engine": engine,
+                "external_io": external_io,
+                "server_start_to_ready_seconds": ready_seconds,
+            }
+            write_json_exclusive(out / "partial.json", record)
+        finally:
+            if server is not None and server_start_ticks is not None:
+                terminate_exact(server, server_start_ticks)
+    if matching_executable_pids(binary):
+        raise RuntimeError("frozen engine executable survived arm cleanup")
+    return 0
+
+
+def no_large_engines() -> None:
+    completed = subprocess.run(
+        ["/usr/bin/pgrep", "-x", "llama-server|ds4-server"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if completed.returncode == 0 and completed.stdout.strip():
+        raise RuntimeError("another large model engine is active")
+    if completed.returncode not in {0, 1}:
+        raise RuntimeError("cannot inspect active model engines")
+
+
+def services_are_stopped() -> None:
+    for unit in (
+        "dsv4-guard.timer",
+        "dsv4-guard.service",
+        "deepseek-v4-flash-llamacpp.service",
+    ):
+        completed = subprocess.run(
+            ["/usr/bin/systemctl", "is-active", unit],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if completed.stdout.strip() not in {"inactive", "failed"}:
+            raise RuntimeError(f"production unit is not stopped: {unit}")
+
+
+def stable_start_memory(required_gib: float = 110.0) -> None:
+    for _ in range(3):
+        available = next(
+            int(line.split()[1]) / 1_048_576
+            for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines()
+            if line.startswith("MemAvailable:")
+        )
+        if available < required_gib:
+            raise RuntimeError(
+                f"stable start memory is {available:.2f} GiB, below {required_gib:.2f}"
+            )
+        time.sleep(0.1)
+
+
+def verify_global_lock_access() -> None:
+    descriptor = os.open(GLOBAL_LOCK, os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW)
+    try:
+        details = os.fstat(descriptor)
+        if not GLOBAL_LOCK.is_file() or details.st_nlink != 1:
+            raise RuntimeError("global inference lock is not a stable regular file")
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        os.close(descriptor)
+
+
+def artifact_stat(path: Path) -> dict[str, Any]:
+    details = path.stat()
+    return {
+        "device": details.st_dev,
+        "inode": details.st_ino,
+        "size": details.st_size,
+        "mtime_ns": details.st_mtime_ns,
+        "ctime_ns": details.st_ctime_ns,
+    }
+
+
+def run_campaign(args: argparse.Namespace) -> int:
+    candidate = args.candidate.resolve()
+    binary = candidate / "ds4-server"
+    out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
+    if (
+        out.exists()
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,39}", args.tag) is None
+        or not candidate.is_dir()
+        or not str(candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not binary.is_file()
+        or sha256_file(binary) != args.binary_sha256
+        or re.fullmatch(r"[0-9a-f]{64}", args.binary_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
+        or not re.fullmatch(r"[0-9a-f]{64}", args.seed_sha256)
+        or not 1024 <= args.port <= 65535
+        or not 32 <= args.memory_high_gib <= 99
+    ):
+        raise ValueError("campaign identity or bounded configuration is invalid")
+    services_are_stopped()
+    no_large_engines()
+    stable_start_memory(max(110.0, args.memory_high_gib + 20.0))
+    verify_global_lock_access()
+    if sha256_file(MODEL_PATH) != MODEL_SHA256:
+        raise ValueError("full mapped model identity mismatch")
+    slab = Path(SLAB_PATH)
+    sidecar_before = artifact_stat(slab)
+    if sha256_file(slab) != SLAB_SHA256:
+        raise ValueError("full expert sidecar identity mismatch")
+    out.mkdir(mode=0o700, parents=True)
+    arms_root = out / "arms"
+    arms_root.mkdir(mode=0o700)
+    seed = int(args.seed_sha256[:8], 16)
+    manifest = {
+        "schema_version": 1,
+        "gate": "glm-rung0-slab",
+        "candidate_source": str(candidate),
+        "candidate_commit": args.candidate_commit,
+        "binary_sha256": args.binary_sha256,
+        "model_sha256": MODEL_SHA256,
+        "sidecar_sha256": SLAB_SHA256,
+        "tokenizer_sha256": TOKENIZER_SHA256,
+        "fixture_sha256": sha256_file(FIXTURE),
+        "seed_sha256": args.seed_sha256,
+        "schedule": [list(row) for row in arm_schedule()],
+        "memory_high_gib": args.memory_high_gib,
+        "memory_max_gib": args.memory_high_gib + 2,
+        "kill_floor_gib": 18,
+        "artifact_sha256": {
+            str(BENCHMARK.relative_to(ROOT)): sha256_file(BENCHMARK),
+            str(CGROUP_RUNNER.relative_to(ROOT)): sha256_file(CGROUP_RUNNER),
+            "results/glm52-gates/harness/glm_safe_run.sh": sha256_file(
+                ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
+            ),
+            str(Path(__file__).resolve().relative_to(ROOT)): sha256_file(
+                Path(__file__).resolve()
+            ),
+        },
+        "sidecar_stat_before": sidecar_before,
+    }
+    write_json_exclusive(out / "manifest.json", manifest)
+    raw_path = out / "raw.jsonl"
+    raw_stream = raw_path.open("x", encoding="utf-8")
+    try:
+        for block, sequence, arm in arm_schedule():
+            services_are_stopped()
+            no_large_engines()
+            stable_start_memory(max(110.0, args.memory_high_gib + 20.0))
+            mode = "off" if arm == "A" else "on"
+            label = f"r0-b{block}s{sequence}{arm.lower()}"
+            arm_out = arms_root / label
+            crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
+            engine_environment = canonical_engine_environment(mode)
+            environment = os.environ.copy()
+            for name in list(environment):
+                if name.startswith("DS4_") or name.startswith("GLM_"):
+                    del environment[name]
+            environment.update(engine_environment)
+            environment.update(
+                {
+                    "GLM_CANDIDATE_SRC": str(candidate),
+                    "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+                    "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+                    "GLM_SAFE_EXPECTED_BINARY_SHA256": args.binary_sha256,
+                    "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(
+                        PROVENANCE_NAMES
+                    ),
+                    "GLM_SAFE_EXPECTED_ENV_SHA256": canonical_environment_sha256(
+                        engine_environment
+                    ),
+                    "GLM_SAFE_MEMORY_HIGH_GIB": str(args.memory_high_gib),
+                    "GLM_SAFE_KILL_FLOOR_GIB": "18",
+                    "GLM_SAFE_MIN_START_GIB": "110",
+                    "GLM_SAFE_TIMEOUT_S": "3600",
+                }
+            )
+            completed = subprocess.run(
+                [
+                    str(CGROUP_RUNNER),
+                    "--tag",
+                    label,
+                    "--",
+                    sys.executable,
+                    str(Path(__file__).resolve()),
+                    "arm",
+                    "--out",
+                    str(arm_out),
+                    "--block",
+                    str(block),
+                    "--sequence",
+                    str(sequence),
+                    "--arm",
+                    arm,
+                    "--binary",
+                    str(binary),
+                    "--binary-sha256",
+                    args.binary_sha256,
+                    "--model",
+                    str(MODEL_PATH),
+                    "--port",
+                    str(args.port),
+                    "--seed",
+                    str(seed),
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=environment,
+                timeout=3700,
+                check=False,
+            )
+            if arm_out.is_dir():
+                (arm_out / "containment.stdout.log").write_bytes(completed.stdout)
+                (arm_out / "containment.stderr.log").write_bytes(completed.stderr)
+            if completed.returncode != 0:
+                raise RuntimeError(
+                    f"contained arm {label} failed rc={completed.returncode}"
+                )
+            crash_after = set(CRASH_ROOT.glob("*"))
+            crash_matches = [
+                path for path in crash_after - crash_before if path.name.endswith(f"-{label}")
+            ]
+            if len(crash_matches) != 1:
+                raise RuntimeError(f"arm {label} lacks one safety evidence directory")
+            crash = crash_matches[0]
+            for name in ("main.log", "samples.log", "kernel.log", "cmd.log"):
+                source = crash / name
+                if not source.is_file():
+                    raise RuntimeError(f"arm {label} lacks safety artifact {name}")
+                shutil.copy2(source, arm_out / f"safety.{name}")
+            partial = strict_json(arm_out / "partial.json")
+            lifecycle = partial.pop("server_start_to_ready_seconds", None)
+            write_json_exclusive(
+                arm_out / "lifecycle.json",
+                {"server_start_to_ready_seconds": lifecycle},
+            )
+            partial["safety"] = parse_safety_logs(
+                (arm_out / "safety.main.log").read_text(encoding="utf-8"),
+                (arm_out / "safety.samples.log").read_text(encoding="utf-8"),
+                (arm_out / "safety.kernel.log").read_text(encoding="utf-8"),
+            )
+            write_json_exclusive(arm_out / "record.json", partial)
+            raw_stream.write(
+                json.dumps(
+                    partial, sort_keys=True, separators=(",", ":"), allow_nan=False
+                )
+                + "\n"
+            )
+            raw_stream.flush()
+            os.fsync(raw_stream.fileno())
+            no_large_engines()
+    finally:
+        raw_stream.close()
+    sidecar_after = artifact_stat(slab)
+    if sidecar_after != sidecar_before or sha256_file(slab) != SLAB_SHA256:
+        raise RuntimeError("expert sidecar changed during campaign")
+    write_json_exclusive(
+        out / "performance-stage.json",
+        {
+            "status": "COMPLETE_PENDING_NLL",
+            "arm_count": 20,
+            "sidecar_stat_after": sidecar_after,
+        },
+    )
+    print(f"RUNG0_SLAB_PERF_DONE_PENDING_NLL out={out}")
+    return 0
+
+
+def score_directory(args: argparse.Namespace) -> int:
+    campaign = args.campaign.resolve()
+    records = [
+        json.loads(line)
+        for line in (campaign / "raw.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    nll = strict_json(args.nll.resolve())
+    summary = score_campaign(records, nll)
+    write_json_exclusive(campaign / "summary.json", summary)
+    print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
+def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    arm = subparsers.add_parser("arm")
+    arm.add_argument("--out", type=Path, required=True)
+    arm.add_argument("--block", type=int, required=True)
+    arm.add_argument("--sequence", type=int, required=True)
+    arm.add_argument("--arm", choices=("A", "B"), required=True)
+    arm.add_argument("--binary", type=Path, required=True)
+    arm.add_argument("--binary-sha256", required=True)
+    arm.add_argument("--model", type=Path, required=True)
+    arm.add_argument("--port", type=int, required=True)
+    arm.add_argument("--seed", type=int, required=True)
+    run = subparsers.add_parser("run")
+    run.add_argument("--tag", required=True)
+    run.add_argument("--candidate", type=Path, required=True)
+    run.add_argument("--candidate-commit", required=True)
+    run.add_argument("--binary-sha256", required=True)
+    run.add_argument("--seed-sha256", required=True)
+    run.add_argument("--memory-high-gib", type=int, required=True)
+    run.add_argument("--port", type=int, default=8032)
+    score = subparsers.add_parser("score")
+    score.add_argument("--campaign", type=Path, required=True)
+    score.add_argument("--nll", type=Path, required=True)
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_cli(argv)
+    try:
+        if args.command == "arm":
+            return execute_arm(args)
+        if args.command == "run":
+            return run_campaign(args)
+        if args.command == "score":
+            return score_directory(args)
+        raise ValueError("unknown command")
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
+        print(f"70_glm_rung0_slab_campaign.py: {error}", file=sys.stderr)
+        return 1
 
 
 def score_campaign(records: list[dict[str, Any]], nll: dict[str, Any]) -> dict[str, Any]:
@@ -474,3 +1139,7 @@ def score_campaign(records: list[dict[str, Any]], nll: dict[str, Any]) -> dict[s
         },
         "nll": dict(nll),
     }
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

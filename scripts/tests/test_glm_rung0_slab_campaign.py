@@ -184,7 +184,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             "scripts/30_bench_speed.py",
             '"--warmup", "1"',
             "/sys/class/block/nvme0n1/inflight",
-            'f"/proc/{server.pid}/io"',
+            'f"/proc/{pid}/io"',
             "start_new_session=False",
             "arm_schedule()",
         ):
