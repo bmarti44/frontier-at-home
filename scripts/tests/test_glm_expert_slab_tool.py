@@ -237,6 +237,37 @@ class ExpertSlabToolTests(unittest.TestCase):
                 slab.build(self.source, self.output)
         self.assertEqual(self.output.read_bytes(), b"hostile replacement")
 
+    def test_same_inode_mutation_during_sync_cannot_return_pass(self) -> None:
+        real_fsync = os.fsync
+        mutated = False
+
+        def mutate_at_first_directory_sync(descriptor: int) -> None:
+            nonlocal mutated
+            if stat.S_ISDIR(os.fstat(descriptor).st_mode) and not mutated:
+                mutated = True
+                before = self.output.stat()
+                with self.output.open("r+b") as stream:
+                    stream.seek(slab.ALIGNMENT + 3)
+                    value = stream.read(1)
+                    stream.seek(slab.ALIGNMENT + 3)
+                    stream.write(bytes([value[0] ^ 1]))
+                    stream.flush()
+                    real_fsync(stream.fileno())
+                os.utime(
+                    self.output,
+                    ns=(before.st_atime_ns, before.st_mtime_ns),
+                )
+            real_fsync(descriptor)
+
+        with mock.patch.object(
+                slab.os, "fsync", side_effect=mutate_at_first_directory_sync
+        ):
+            with self.assertRaisesRegex(
+                    ValueError, "checksum mismatch|changed during final"
+            ):
+                slab.build(self.source, self.output)
+        self.assertFalse(self.output.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -389,12 +389,8 @@ def build_stream(source: BinaryIO, output_path: Path, *,
         with open_regular(temporary) as frozen:
             frozen_stat = stream_identity(frozen)
             published_identity = (frozen_stat[0], frozen_stat[1])
-            slab_digest = file_sha256_stream(frozen)
-            if stream_identity(frozen) != frozen_stat:
-                raise ValueError("expert slab changed during final hashing")
             os.link(temporary, output_path, follow_symlinks=False)
             published = True
-            verify_stream(source, output_path, expected_model_digest=model_digest)
             directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
             try:
                 os.fsync(directory_fd)
@@ -408,11 +404,23 @@ def build_stream(source: BinaryIO, output_path: Path, *,
                 os.fsync(directory_fd)
             finally:
                 os.close(directory_fd)
-            # Removing the private hardlink legitimately changes ctime on the
-            # retained inode. Device, inode, size, and mtime must not change.
-            if (regular_identity(output_path)[:2] != published_identity or
-                    stream_identity(frozen)[:4] != frozen_stat[:4]):
+            if regular_identity(output_path)[:2] != published_identity:
                 raise ValueError("published slab identity changed before commit")
+            # Unlinking the private name legitimately changed ctime. Establish
+            # a new complete baseline, then verify every record and compute the
+            # returned digest through the retained descriptor. Any in-place
+            # mutation during these reads changes ctime and fails the final
+            # full-stat comparison even if an attacker restores mtime.
+            final_before = stream_identity(frozen)
+            verify_descriptors(
+                source, frozen, expected_model_digest=model_digest
+            )
+            slab_digest = file_sha256_stream(frozen)
+            final_after = stream_identity(frozen)
+            if final_after != final_before:
+                raise ValueError("expert slab changed during final verification")
+            if regular_identity(output_path) != final_after:
+                raise ValueError("published slab changed after final verification")
     except BaseException:
         if temporary_fd >= 0:
             os.close(temporary_fd)
@@ -435,58 +443,72 @@ def build_stream(source: BinaryIO, output_path: Path, *,
     }
 
 
-def load_index(path: Path) -> tuple[tuple[object, ...], list[tuple[object, ...]]]:
-    file_size = regular_identity(path)[2]
-    with path.open("rb") as stream:
-        header = HEADER.unpack(read_exact(stream, HEADER.size))
-        magic, version, alignment, _, _, _, count, record_size, data_offset = header
-        if magic != MAGIC or version != VERSION or alignment != ALIGNMENT:
-            raise ValueError("invalid expert slab header")
-        if record_size != RECORD.size or data_offset != align_up(HEADER.size + count * RECORD.size):
-            raise ValueError("invalid expert slab index geometry")
-        if count == 0 or count > MAX_RECORDS or HEADER.size + count * RECORD.size > file_size:
-            raise ValueError("invalid expert slab record count")
-        records = [RECORD.unpack(read_exact(stream, RECORD.size)) for _ in range(count)]
+def load_index_stream(
+        stream: BinaryIO) -> tuple[tuple[object, ...], list[tuple[object, ...]]]:
+    file_size = stream_identity(stream)[2]
+    stream.seek(0)
+    header = HEADER.unpack(read_exact(stream, HEADER.size))
+    magic, version, alignment, _, _, _, count, record_size, data_offset = header
+    if magic != MAGIC or version != VERSION or alignment != ALIGNMENT:
+        raise ValueError("invalid expert slab header")
+    if record_size != RECORD.size or data_offset != align_up(HEADER.size + count * RECORD.size):
+        raise ValueError("invalid expert slab index geometry")
+    if count == 0 or count > MAX_RECORDS or HEADER.size + count * RECORD.size > file_size:
+        raise ValueError("invalid expert slab record count")
+    records = [RECORD.unpack(read_exact(stream, RECORD.size)) for _ in range(count)]
     return header, records
 
 
-def verify_stream(source: BinaryIO, slab_path: Path, *,
-                  expected_model_digest: bytes | None = None) -> dict[str, object]:
+def load_index(path: Path) -> tuple[tuple[object, ...], list[tuple[object, ...]]]:
+    with open_regular(path) as stream:
+        return load_index_stream(stream)
+
+
+def verify_descriptors(source: BinaryIO, slab: BinaryIO, *,
+                       expected_model_digest: bytes | None = None) -> dict[str, object]:
     source_identity = stream_identity(source)
-    slab_identity = regular_identity(slab_path)
+    slab_identity = stream_identity(slab)
     model_size, probe, plans, final_size = plan_records_stream(source)
-    header, records = load_index(slab_path)
+    header, records = load_index_stream(slab)
     model_digest = (expected_model_digest if expected_model_digest is not None
                     else file_sha256_stream(source))
     if header[3] != model_size or header[4] != probe or header[5] != model_digest:
         raise ValueError("expert slab model identity mismatch")
-    if slab_path.stat().st_size != final_size or len(records) != len(plans):
+    if slab_identity[2] != final_size or len(records) != len(plans):
         raise ValueError("expert slab size or record count mismatch")
-    with slab_path.open("rb") as slab:
-        for plan, record in zip(plans, records, strict=True):
-            layer, expert, offset, payload_bytes, gate_bytes, down_bytes, expected = record
-            identity = (layer, expert, offset, payload_bytes, gate_bytes, down_bytes)
-            wanted = (plan.layer, plan.expert, plan.offset, plan.payload_bytes,
-                      plan.gate_bytes, plan.down_bytes)
-            if identity != wanted:
-                raise ValueError("expert slab index record mismatch")
-            slab.seek(offset)
-            payload = read_exact(slab, payload_bytes)
-            if hashlib.sha256(payload).digest() != expected:
-                raise ValueError("expert slab record checksum mismatch")
-            source_bytes = bytearray()
-            for part_offset, part_bytes in (
-                (plan.gate_offset, plan.gate_bytes),
-                (plan.up_offset, plan.gate_bytes),
-                (plan.down_offset, plan.down_bytes),
-            ):
-                source.seek(part_offset)
-                source_bytes.extend(read_exact(source, part_bytes))
-            if payload != source_bytes:
-                raise ValueError("expert slab payload differs from GGUF")
-    if stream_identity(source) != source_identity or regular_identity(slab_path) != slab_identity:
+    for plan, record in zip(plans, records, strict=True):
+        layer, expert, offset, payload_bytes, gate_bytes, down_bytes, expected = record
+        identity = (layer, expert, offset, payload_bytes, gate_bytes, down_bytes)
+        wanted = (plan.layer, plan.expert, plan.offset, plan.payload_bytes,
+                  plan.gate_bytes, plan.down_bytes)
+        if identity != wanted:
+            raise ValueError("expert slab index record mismatch")
+        slab.seek(offset)
+        payload = read_exact(slab, payload_bytes)
+        if hashlib.sha256(payload).digest() != expected:
+            raise ValueError("expert slab record checksum mismatch")
+        source_bytes = bytearray()
+        for part_offset, part_bytes in (
+            (plan.gate_offset, plan.gate_bytes),
+            (plan.up_offset, plan.gate_bytes),
+            (plan.down_offset, plan.down_bytes),
+        ):
+            source.seek(part_offset)
+            source_bytes.extend(read_exact(source, part_bytes))
+        if payload != source_bytes:
+            raise ValueError("expert slab payload differs from GGUF")
+    if (stream_identity(source) != source_identity or
+            stream_identity(slab) != slab_identity):
         raise ValueError("source or slab changed during verification")
     return {"records": len(records), "bytes": final_size, "verified": True}
+
+
+def verify_stream(source: BinaryIO, slab_path: Path, *,
+                  expected_model_digest: bytes | None = None) -> dict[str, object]:
+    with open_regular(slab_path) as slab:
+        return verify_descriptors(
+            source, slab, expected_model_digest=expected_model_digest
+        )
 
 
 def verify(source_path: Path, slab_path: Path) -> dict[str, object]:
