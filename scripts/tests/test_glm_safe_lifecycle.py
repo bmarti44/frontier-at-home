@@ -20,6 +20,19 @@ FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
 class CandidateLifecycleSourceTests(unittest.TestCase):
+    def test_benchmark_lock_acl_has_a_narrow_installer(self):
+        references = []
+        for script in (ROOT / "scripts").glob("*.sh"):
+            text = script.read_text(encoding="utf-8")
+            if "frontier-at-home-glm-benchmark.conf" in text:
+                references.append((script, text))
+        self.assertEqual(len(references), 1)
+        _, installer = references[0]
+        self.assertIn("systemd-tmpfiles --create", installer)
+        self.assertIn("/etc/tmpfiles.d/frontier-at-home-glm-benchmark.conf", installer)
+        self.assertNotIn("sudoers", installer)
+        self.assertNotIn("systemctl", installer)
+
     def test_disappearing_proc_counters_are_emitted_as_numeric_zero(self):
         source = SAFE.read_text(encoding="utf-8")
         start = source.index("  RSS=$(awk ")

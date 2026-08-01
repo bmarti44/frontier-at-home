@@ -146,6 +146,23 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 CAMPAIGN.parse_engine_log(broken, "on")
 
+    def test_off_arm_needs_resolved_zero_counters_not_unreachable_marker(self):
+        log = "\n".join(
+            (
+                "LOADPROF L3 uniq=8 hits=1 miss=7 hit_ms=1 fetch_ms=2 "
+                "fill_ms=1 total_ms=4 slab_mode=off slab_reads=0 "
+                "slab_bytes=0 slab_actual_bytes=0 slab_peak_qd=0 slab_io_ms=0",
+                "ds4: expert-cache arena pin: ok (1.0 s)",
+                "ds4: expert-cache window tag=models-get lookup_bytes=70 "
+                "hit_bytes=10 stream_sha256=" + "1" * 64,
+            )
+        )
+        self.assertEqual(CAMPAIGN.parse_engine_log(log, "off")["slab_reads"], 0)
+        with self.assertRaises(ValueError):
+            CAMPAIGN.parse_engine_log(
+                log + "\nds4: CUDA contiguous expert slab enabled records=19456", "off"
+            )
+
     def test_safety_log_parser_requires_clean_external_evidence(self):
         main = "\n".join(
             (
@@ -307,11 +324,66 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                     "safety": {"failures": []},
                 }
             )
-        result = CAMPAIGN.validate_quality_attempts(attempts)
+        expected_ids = [f"case-{index:03d}" for index in range(100)]
+        result = CAMPAIGN.validate_quality_attempts(attempts, expected_ids)
         self.assertEqual(result, self.passing_nll())
         attempts[1]["rows"][50]["nll_sum"] += 1e-7
         with self.assertRaises(ValueError):
-            CAMPAIGN.validate_quality_attempts(attempts)
+            CAMPAIGN.validate_quality_attempts(attempts, expected_ids)
+        attempts[1]["rows"][50]["nll_sum"] -= 1e-7
+        attempts[1]["rows"][50]["case_id"] = "substituted-case"
+        with self.assertRaises(ValueError):
+            CAMPAIGN.validate_quality_attempts(attempts, expected_ids)
+
+    def test_final_scorer_derives_and_binds_quality_raw_evidence(self):
+        performance = {
+            "candidate_commit": "a" * 40,
+            "binary_sha256": "b" * 64,
+            "model_sha256": CAMPAIGN.MODEL_SHA256,
+            "memory_envelope_sha256": "c" * 64,
+        }
+        attempts = []
+        expected_ids = [f"case-{index:03d}" for index in range(100)]
+        for arm in CAMPAIGN.quality_schedule():
+            attempts.append(
+                {
+                    "arm": arm,
+                    "mode": "off" if arm == "A" else "on",
+                    "rows": [
+                        {
+                            "case_id": case_id,
+                            "tokens": 4,
+                            "nll_sum": index + 0.25,
+                            "top1_correct": 3,
+                        }
+                        for index, case_id in enumerate(expected_ids)
+                    ],
+                    "safety": {"failures": []},
+                }
+            )
+        manifest = {
+            **performance,
+            "schema_version": 1,
+            "quality_binary_sha256": "d" * 64,
+            "fixture_content_sha256": CAMPAIGN.QUALITY_FIXTURE_CONTENT_SHA256,
+            "ordered_case_ids": expected_ids,
+        }
+        result = CAMPAIGN.validate_bound_quality_evidence(
+            performance, manifest, attempts
+        )
+        self.assertEqual(result, self.passing_nll())
+        for key, value in (
+            ("candidate_commit", "e" * 40),
+            ("binary_sha256", "e" * 64),
+            ("memory_envelope_sha256", "e" * 64),
+            ("fixture_content_sha256", "e" * 64),
+        ):
+            broken = copy.deepcopy(manifest)
+            broken[key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                CAMPAIGN.validate_bound_quality_evidence(
+                    performance, broken, attempts
+                )
 
     def test_runtime_is_a_thin_wrapper_around_existing_measurement(self):
         source = SCRIPT.read_text(encoding="utf-8")
