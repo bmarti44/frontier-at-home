@@ -203,6 +203,18 @@ def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
     }
 
 
+def summarize_external_io(
+    samples: list[tuple[int, int]],
+    read_bytes_before: int,
+    read_bytes_after: int,
+    elapsed_seconds: float,
+) -> dict[str, Any]:
+    """Summarize externally observed block queue depth and completed reads."""
+    raise NotImplementedError(
+        (samples, read_bytes_before, read_bytes_after, elapsed_seconds)
+    )
+
+
 def score_campaign(records: list[dict[str, Any]], nll: dict[str, Any]) -> dict[str, Any]:
     """Validate raw arms and apply the fixed Rung 0.1 formulas."""
     expected_keys = {

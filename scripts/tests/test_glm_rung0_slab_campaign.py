@@ -168,6 +168,29 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 main.replace("high 0", "high 1"), samples, "kernel clean"
             )
 
+    def test_external_io_summary_uses_completed_proc_bytes_and_block_qd(self):
+        result = CAMPAIGN.summarize_external_io(
+            [(1, 0), (2, 3), (3, 1)], 100, 1100, 2.0
+        )
+        self.assertEqual(result["read_bytes_delta"], 1000)
+        self.assertEqual(result["peak_read_qd"], 3)
+        self.assertEqual(result["sample_count"], 3)
+        with self.assertRaises(ValueError):
+            CAMPAIGN.summarize_external_io([(1, 0)], 100, 50, 2.0)
+
+    def test_runtime_is_a_thin_wrapper_around_existing_measurement(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        for marker in (
+            "scripts/30_bench_speed.py",
+            '"--warmup", "1"',
+            "/sys/class/block/nvme0n1/inflight",
+            'f"/proc/{server.pid}/io"',
+            "start_new_session=False",
+            "arm_schedule()",
+        ):
+            self.assertIn(marker, source)
+        self.assertNotIn('"DS4_CUDA_EXPERT_SLAB_TRACE": "1"', source)
+
     def test_fixed_scorer_accepts_complete_lossless_campaign(self):
         result = CAMPAIGN.score_campaign(self.passing_records(), self.passing_nll())
         self.assertEqual(result["verdict"], "PASS")
