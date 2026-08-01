@@ -226,6 +226,21 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                     baseline, CAMPAIGN.parse_quality_tsv(on)
                 )
 
+    def test_official_fixture_manifest_uses_hash_prefixed_id_header(self):
+        rows = "".join(
+            f"case_{index:03d}\tp/{index}\tc/{index}\tr/{index}\n"
+            for index in range(100)
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "manifest.tsv"
+            manifest.write_text(
+                "# id\tprompt_file\tcontinuation_file\tresponse_file\n" + rows,
+                encoding="utf-8",
+            )
+            identifiers = CAMPAIGN.fixture_manifest_case_ids(manifest)
+            self.assertEqual(len(identifiers), 100)
+            self.assertEqual(identifiers[0], "case_000")
+
     def test_campaign_requires_a_bound_measured_memory_envelope(self):
         parsed = CAMPAIGN.parse_cli(
             [
