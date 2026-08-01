@@ -32,6 +32,11 @@ INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
 LEGACY_INFERENCE_LOCK = Path("/run/dsv4/inference.lock")
+RUNG0_MAINTENANCE_STATE = Path("/run/glm52-rung0-maintenance.json")
+RUNG0_AUTO_RESTORE_UNIT = "glm52-rung0-auto-restore"
+RUNG0_LOCK_HOLDER_UNIT = "glm52-rung0-lock-holder"
+DSV4_SERVICE = "deepseek-v4-flash-llamacpp.service"
+DSV4_GUARD_TIMER = "dsv4-guard.timer"
 RUNNER = Path("scripts/glm52-runners/W1")
 PROFILE = Path("configs/glm52-profile.json")
 ROOT_EXECUTION_SURFACE = (
@@ -57,6 +62,12 @@ ACTIVE_REQUEST: dict[str, Any] | None = None
 
 def parse_request(argv: list[str]) -> tuple[str, ...]:
     if (
+        len(argv) == 2
+        and argv[0] in {"rung0-maintenance-begin", "rung0-maintenance-end"}
+        and HASH40.fullmatch(argv[1])
+    ):
+        return tuple(argv)
+    if (
         len(argv) == 4
         and argv[0] == "run"
         and HASH40.fullmatch(argv[1])
@@ -73,7 +84,8 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
     raise ValueError(
         "usage: glm52-w1-submit run HARNESS_COMMIT ENGINE_COMMIT MODEL_SHA256\n"
         "       glm52-w1-submit status COMPOSITE_SHA256\n"
-        "       glm52-w1-submit diagnose COMPOSITE_SHA256"
+        "       glm52-w1-submit diagnose COMPOSITE_SHA256\n"
+        "       glm52-w1-submit rung0-maintenance-{begin,end} CANDIDATE_HASH"
     )
 
 
@@ -199,6 +211,200 @@ def _unit_active(name: str) -> bool:
         ).returncode
         == 0
     )
+
+
+def _engine_processes() -> list[dict[str, object]]:
+    processes: list[dict[str, object]] = []
+    dsv4_uid = pwd.getpwnam(DSV4).pw_uid
+    for entry in Path("/proc").glob("[0-9]*"):
+        try:
+            name = (entry / "comm").read_text(encoding="utf-8").strip()
+            if name not in {"llama-server", "ds4-server"}:
+                continue
+            status = (entry / "status").read_text(encoding="utf-8")
+            uid = int(status.split("Uid:", 1)[1].split()[0])
+            command = (entry / "cmdline").read_bytes().split(b"\0")
+            arguments = [value.decode("utf-8", "strict") for value in command if value]
+        except (FileNotFoundError, PermissionError, ProcessLookupError,
+                UnicodeError, ValueError):
+            continue
+        processes.append(
+            {"pid": int(entry.name), "name": name, "uid": uid,
+             "is_dsv4": uid == dsv4_uid, "arguments": arguments}
+        )
+    return processes
+
+
+def _wait_for_engine_exit(timeout: float = 120.0) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not _engine_processes():
+            return
+        time.sleep(0.5)
+    raise RuntimeError("inference engine survived maintenance stop")
+
+
+def _dsv4_command_is_1m(arguments: list[str]) -> bool:
+    try:
+        context_index = arguments.index("-c")
+        context_ok = arguments[context_index + 1] == "1048576"
+    except (ValueError, IndexError):
+        context_ok = False
+    try:
+        alias_index = arguments.index("--alias")
+        alias_ok = arguments[alias_index + 1] == "deepseek-v4-flash"
+    except (ValueError, IndexError):
+        alias_ok = False
+    return context_ok and alias_ok
+
+
+def _verify_dsv4_restored(timeout: float = 240.0) -> dict[str, object]:
+    deadline = time.monotonic() + timeout
+    last_health = "not attempted"
+    while time.monotonic() < deadline:
+        engines = _engine_processes()
+        if (
+            len(engines) == 1
+            and engines[0]["name"] == "llama-server"
+            and engines[0]["is_dsv4"] is True
+            and _dsv4_command_is_1m(engines[0]["arguments"])
+        ):
+            health = _run(
+                ["/usr/bin/curl", "-fsS", "--max-time", "5",
+                 "http://127.0.0.1:8013/health"],
+                check=False,
+                timeout=10,
+            )
+            last_health = health.stdout[-1000:]
+            if health.returncode == 0:
+                return engines[0]
+        time.sleep(1)
+    raise RuntimeError(f"DSV4 1M restoration failed: {last_health}")
+
+
+def _cancel_rung0_auto_restore() -> None:
+    _run(
+        ["/usr/bin/systemctl", "stop",
+         f"{RUNG0_AUTO_RESTORE_UNIT}.timer",
+         f"{RUNG0_AUTO_RESTORE_UNIT}.service"],
+        check=False,
+    )
+    _run(
+        ["/usr/bin/systemctl", "reset-failed",
+         f"{RUNG0_AUTO_RESTORE_UNIT}.service"],
+        check=False,
+    )
+
+
+def _stop_rung0_lock_holder() -> None:
+    _run(
+        ["/usr/bin/systemctl", "stop", f"{RUNG0_LOCK_HOLDER_UNIT}.service"],
+        check=False,
+    )
+
+
+def _start_rung0_lock_holder() -> None:
+    _stop_rung0_lock_holder()
+    _run(
+        [
+            "/usr/bin/systemd-run", f"--unit={RUNG0_LOCK_HOLDER_UNIT}",
+            "--service-type=exec", "--property=KillMode=control-group",
+            "/usr/bin/flock", "-n", "-E", "75", str(INFERENCE_LOCK),
+            "/usr/bin/flock", "-n", "-E", "75", str(LEGACY_INFERENCE_LOCK),
+            "/usr/bin/sleep", "43200",
+        ],
+        timeout=30,
+    )
+    if not _unit_active(f"{RUNG0_LOCK_HOLDER_UNIT}.service"):
+        raise RuntimeError("Rung 0 inference lock holder failed to start")
+
+
+def _schedule_rung0_auto_restore() -> None:
+    _cancel_rung0_auto_restore()
+    _run(
+        [
+            "/usr/bin/systemd-run",
+            f"--unit={RUNG0_AUTO_RESTORE_UNIT}",
+            "--on-active=12h",
+            "--property=Type=oneshot",
+            "--property=ExecStartPre=-/usr/bin/pkill -KILL -x ds4-server",
+            f"--property=ExecStartPre=/usr/bin/systemctl stop {RUNG0_LOCK_HOLDER_UNIT}.service",
+            "/usr/bin/systemctl", "start", DSV4_SERVICE,
+        ],
+        timeout=30,
+    )
+
+
+def _rung0_maintenance_begin(candidate: str) -> int:
+    _assert_docker_closed()
+    _assert_repository(REPOSITORY, candidate, reject_untracked=True)
+    if RUNG0_MAINTENANCE_STATE.exists():
+        state = json.loads(RUNG0_MAINTENANCE_STATE.read_text(encoding="utf-8"))
+        if (state.get("candidate_hash") == candidate and
+                not _engine_processes() and
+                _unit_active(f"{RUNG0_LOCK_HOLDER_UNIT}.service")):
+            print(json.dumps(state, sort_keys=True, separators=(",", ":")))
+            return 0
+        raise RuntimeError("another GLM maintenance window is already recorded")
+    if not _unit_active(DSV4_SERVICE):
+        raise RuntimeError("DSV4 service is not active before maintenance")
+    _verify_dsv4_restored(timeout=30)
+    stopped = False
+    try:
+        _run(["/usr/bin/systemctl", "stop", DSV4_GUARD_TIMER])
+        stopped = True
+        _run(["/usr/bin/systemctl", "stop", DSV4_SERVICE], timeout=180)
+        _wait_for_engine_exit()
+        with _hold_inference_locks():
+            pass
+        _start_rung0_lock_holder()
+        _schedule_rung0_auto_restore()
+        state = {
+            "schema_version": 1,
+            "state": "MAINTENANCE",
+            "candidate_hash": candidate,
+            "previous_profile": "dsv4-1m-fast",
+            "auto_restore_unit": f"{RUNG0_AUTO_RESTORE_UNIT}.timer",
+            "opened_at_epoch": int(time.time()),
+        }
+        _canonical_json(RUNG0_MAINTENANCE_STATE, state, mode=0o600)
+        print(json.dumps(state, sort_keys=True, separators=(",", ":")))
+        return 0
+    except Exception:
+        _cancel_rung0_auto_restore()
+        _stop_rung0_lock_holder()
+        if stopped:
+            _run(["/usr/bin/systemctl", "start", DSV4_SERVICE], check=False,
+                 timeout=180)
+        _run(["/usr/bin/systemctl", "start", DSV4_GUARD_TIMER], check=False)
+        raise
+
+
+def _rung0_maintenance_end(candidate: str) -> int:
+    _assert_repository(REPOSITORY, candidate, reject_untracked=True)
+    if not RUNG0_MAINTENANCE_STATE.is_file():
+        restored = _verify_dsv4_restored(timeout=30)
+        print(json.dumps({"state": "RESTORED", "engine": restored},
+                         sort_keys=True, separators=(",", ":")))
+        return 0
+    state = json.loads(RUNG0_MAINTENANCE_STATE.read_text(encoding="utf-8"))
+    if state.get("candidate_hash") != candidate:
+        raise ValueError("maintenance candidate differs from recorded window")
+    engines = _engine_processes()
+    already_restored = False
+    if engines:
+        _verify_dsv4_restored(timeout=30)
+        already_restored = True
+    _cancel_rung0_auto_restore()
+    _stop_rung0_lock_holder()
+    if not already_restored:
+        _run(["/usr/bin/systemctl", "start", DSV4_SERVICE], timeout=180)
+    restored = _verify_dsv4_restored()
+    _run(["/usr/bin/systemctl", "start", DSV4_GUARD_TIMER])
+    RUNG0_MAINTENANCE_STATE.unlink()
+    print(json.dumps({"state": "RESTORED", "engine": restored},
+                     sort_keys=True, separators=(",", ":")))
+    return 0
 
 
 def _assert_docker_closed() -> None:
@@ -1160,6 +1366,10 @@ def main(argv: list[str]) -> int:
     with LOCK.open("a+b") as lock:
         os.chmod(LOCK, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
+        if request[0] == "rung0-maintenance-begin":
+            return _rung0_maintenance_begin(request[1])
+        if request[0] == "rung0-maintenance-end":
+            return _rung0_maintenance_end(request[1])
         if request[0] == "run":
             with _hold_inference_locks():
                 try:
