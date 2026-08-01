@@ -40,6 +40,11 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
                 (ROOT / "configs/tmpfiles/frontier-at-home-glm-benchmark.conf").read_bytes()
             ).hexdigest(),
         )
+        self.assertIn('sha256sum -- "$TARGET"', installer)
+        self.assertLess(
+            installer.index('sha256sum -- "$TARGET"'),
+            installer.index("systemd-tmpfiles --create"),
+        )
         self.assertNotIn("sudoers", installer)
         self.assertNotIn("systemctl", installer)
 

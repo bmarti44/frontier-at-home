@@ -131,7 +131,10 @@ def authenticate_confirmation(
     not_before_epoch_s: float,
 ) -> dict[str, Any]:
     """Require relay-agreed randomness published after the binary freeze."""
-    record = _authenticate_drand(_drand_record(path))
+    authenticated = _authenticate_drand(_drand_record(path))
+    record = {
+        name: authenticated[name] for name in ("round", "randomness", "signature")
+    }
     chain_identity: tuple[int, int, str] | None = None
     for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
         completed = subprocess.run(
@@ -205,7 +208,7 @@ def validate_confirmation_record(
 ) -> None:
     """Validate the complete public-randomness binding consumed by scoring."""
     expected_keys = {
-        "round", "randomness", "signature", "obtained_at", "chain_hash",
+        "round", "randomness", "signature", "chain_hash",
         "published_epoch_s", "seed_sha256", "flip",
     }
     if (
@@ -218,7 +221,6 @@ def validate_confirmation_record(
         or not re.fullmatch(r"[0-9a-f]{192}", record.get("signature", ""))
         or hashlib.sha256(bytes.fromhex(record["signature"])).hexdigest()
         != record["randomness"]
-        or not isinstance(record.get("obtained_at"), str)
         or not re.fullmatch(r"[0-9a-f]{64}", record.get("chain_hash", ""))
         or not isinstance(record.get("published_epoch_s"), int)
         or isinstance(record.get("published_epoch_s"), bool)
@@ -502,6 +504,7 @@ def validate_performance_binding(
         or schedule not in allowed_schedules
         or not isinstance(randomness, dict)
         or randomness.get("flip") not in {False, True}
+        or manifest.get("seed_sha256") != randomness.get("seed_sha256")
         or schedule != arm_schedule(flip=randomness["flip"])
         or not re.fullmatch(r"[0-9a-f]{64}", manifest.get("binary_sha256", ""))
         or not re.fullmatch(
@@ -1324,13 +1327,21 @@ def artifact_stat(path: Path) -> dict[str, Any]:
 
 
 def verified_memory_envelope(
-    path: Path, binary_sha256: str, candidate_commit: str
+    path: Path,
+    binary: Path,
+    binary_sha256: str,
+    quality_binary: Path,
+    quality_binary_sha256: str,
+    candidate_commit: str,
 ) -> dict[str, Any]:
     """Load a probe-bound envelope and recompute its fixed arithmetic."""
     envelope = strict_json(path)
     expected_keys = {
         "schema_version",
         "binary_sha256",
+        "binary_stat",
+        "quality_binary_sha256",
+        "quality_binary_stat",
         "candidate_commit",
         "probe_environment_sha256",
         "probe_safety",
@@ -1347,6 +1358,11 @@ def verified_memory_envelope(
         set(envelope) != expected_keys
         or envelope["schema_version"] != 1
         or envelope["binary_sha256"] != binary_sha256
+        or envelope["binary_stat"] != artifact_stat(binary)
+        or sha256_file(binary) != binary_sha256
+        or envelope["quality_binary_sha256"] != quality_binary_sha256
+        or envelope["quality_binary_stat"] != artifact_stat(quality_binary)
+        or sha256_file(quality_binary) != quality_binary_sha256
         or envelope["candidate_commit"] != candidate_commit
         or not isinstance(envelope["probe_safety"], dict)
         or envelope["probe_safety"].get("failures") != []
@@ -1365,6 +1381,8 @@ def run_memory_probe(args: argparse.Namespace) -> int:
     """Run one contained cache-off startup and bind its measured RSS."""
     candidate = args.candidate.resolve()
     binary = candidate / "ds4-server"
+    quality_candidate = args.quality_candidate.resolve()
+    quality_binary = quality_candidate / "ds4-server"
     out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
     if (
         out.exists()
@@ -1373,7 +1391,11 @@ def run_memory_probe(args: argparse.Namespace) -> int:
         or binary.name != "ds4-server"
         or not binary.is_file()
         or sha256_file(binary) != args.binary_sha256
+        or not str(quality_candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not quality_binary.is_file()
+        or sha256_file(quality_binary) != args.quality_binary_sha256
         or re.fullmatch(r"[0-9a-f]{64}", args.binary_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{64}", args.quality_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
         or not 1024 <= args.port <= 65535
     ):
@@ -1453,6 +1475,9 @@ def run_memory_probe(args: argparse.Namespace) -> int:
     envelope = {
         "schema_version": 1,
         "binary_sha256": args.binary_sha256,
+        "binary_stat": artifact_stat(binary),
+        "quality_binary_sha256": args.quality_binary_sha256,
+        "quality_binary_stat": artifact_stat(quality_binary),
         "candidate_commit": args.candidate_commit,
         "probe_environment_sha256": observed_environment_sha256(
             probe_environment
@@ -1469,6 +1494,8 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
     """Run ABBA full-suite scorer arms and emit the fixed exact NLL artifact."""
     quality_candidate = args.quality_candidate.resolve()
     binary = quality_candidate / "ds4-server"
+    server_candidate = args.server_candidate.resolve()
+    server_binary = server_candidate / "ds4-server"
     fixture_root = args.fixture_root.resolve()
     manifest = args.manifest.resolve()
     out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
@@ -1478,6 +1505,9 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
         or not str(quality_candidate).startswith("/home/bmarti44/.cache/glm52-")
         or not binary.is_file()
         or sha256_file(binary) != args.quality_binary_sha256
+        or not str(server_candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not server_binary.is_file()
+        or sha256_file(server_binary) != args.server_binary_sha256
         or re.fullmatch(r"[0-9a-f]{64}", args.quality_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{64}", args.server_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
@@ -1499,13 +1529,20 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
         raise ValueError("quality model content hash mismatch before execution")
     envelope = verified_memory_envelope(
         args.memory_envelope.resolve(),
+        server_binary,
         args.server_binary_sha256,
+        binary,
+        args.quality_binary_sha256,
         args.candidate_commit,
     )
     confirmation = authenticate_confirmation(
         args.drand_json.resolve(), args.candidate_commit,
         args.server_binary_sha256, args.quality_binary_sha256,
-        args.memory_envelope.resolve().stat().st_mtime,
+        max(
+            args.memory_envelope.resolve().stat().st_mtime,
+            server_binary.stat().st_mtime,
+            binary.stat().st_mtime,
+        ),
     )
     schedule = quality_schedule(flip=confirmation["flip"])
     memory_high_gib = envelope["memory_high_gib"]
@@ -1653,6 +1690,8 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
 def run_campaign(args: argparse.Namespace) -> int:
     candidate = args.candidate.resolve()
     binary = candidate / "ds4-server"
+    quality_candidate = args.quality_candidate.resolve()
+    quality_binary = quality_candidate / "ds4-server"
     out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
     if (
         out.exists()
@@ -1661,6 +1700,9 @@ def run_campaign(args: argparse.Namespace) -> int:
         or not str(candidate).startswith("/home/bmarti44/.cache/glm52-")
         or not binary.is_file()
         or sha256_file(binary) != args.binary_sha256
+        or not str(quality_candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not quality_binary.is_file()
+        or sha256_file(quality_binary) != args.quality_binary_sha256
         or re.fullmatch(r"[0-9a-f]{64}", args.binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{64}", args.quality_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
@@ -1669,12 +1711,17 @@ def run_campaign(args: argparse.Namespace) -> int:
     ):
         raise ValueError("campaign identity or bounded configuration is invalid")
     envelope = verified_memory_envelope(
-        args.memory_envelope.resolve(), args.binary_sha256, args.candidate_commit
+        args.memory_envelope.resolve(), binary, args.binary_sha256,
+        quality_binary, args.quality_binary_sha256, args.candidate_commit,
     )
     confirmation = authenticate_confirmation(
         args.drand_json.resolve(), args.candidate_commit,
         args.binary_sha256, args.quality_binary_sha256,
-        args.memory_envelope.resolve().stat().st_mtime,
+        max(
+            args.memory_envelope.resolve().stat().st_mtime,
+            binary.stat().st_mtime,
+            quality_binary.stat().st_mtime,
+        ),
     )
     schedule = arm_schedule(flip=confirmation["flip"])
     memory_high_gib = envelope["memory_high_gib"]
@@ -1959,8 +2006,10 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     probe = subparsers.add_parser("memory-probe")
     probe.add_argument("--tag", required=True)
     probe.add_argument("--candidate", type=Path, required=True)
+    probe.add_argument("--quality-candidate", type=Path, required=True)
     probe.add_argument("--candidate-commit", required=True)
     probe.add_argument("--binary-sha256", required=True)
+    probe.add_argument("--quality-binary-sha256", required=True)
     probe.add_argument("--port", type=int, default=8032)
     quality_arm = subparsers.add_parser("quality-arm")
     quality_arm.add_argument("--arm", choices=("A", "B"), required=True)
@@ -1973,6 +2022,7 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     quality = subparsers.add_parser("quality")
     quality.add_argument("--tag", required=True)
     quality.add_argument("--quality-candidate", type=Path, required=True)
+    quality.add_argument("--server-candidate", type=Path, required=True)
     quality.add_argument("--quality-binary-sha256", required=True)
     quality.add_argument("--server-binary-sha256", required=True)
     quality.add_argument("--candidate-commit", required=True)
@@ -1983,6 +2033,7 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     run = subparsers.add_parser("run")
     run.add_argument("--tag", required=True)
     run.add_argument("--candidate", type=Path, required=True)
+    run.add_argument("--quality-candidate", type=Path, required=True)
     run.add_argument("--candidate-commit", required=True)
     run.add_argument("--binary-sha256", required=True)
     run.add_argument("--quality-binary-sha256", required=True)
@@ -2215,6 +2266,11 @@ def score_campaign(
         if safety.get("failures") != []:
             raise ValueError("arm contains a safety failure")
 
+    if validation_rows[0]["arm"] == "B":
+        validation_rows = [
+            {**row, "arm": "A" if row["arm"] == "B" else "B"}
+            for row in validation_rows
+        ]
     validate_ab_blocks(validation_rows)
     if len(binaries) != 1:
         raise ValueError("campaign used more than one binary")

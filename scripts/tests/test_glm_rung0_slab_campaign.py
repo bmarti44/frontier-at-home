@@ -34,16 +34,15 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             "round": 11,
             "randomness": randomness,
             "signature": signature,
-            "obtained_at": "2026-08-01T00:00:00+00:00",
             "chain_hash": "a" * 64,
             "published_epoch_s": 1300,
             "seed_sha256": seed,
             "flip": bool(int(seed[:2], 16) & 1),
         }
 
-    def passing_records(self):
+    def passing_records(self, *, flip: bool = False):
         records = []
-        for block, sequence, arm in CAMPAIGN.arm_schedule():
+        for block, sequence, arm in CAMPAIGN.arm_schedule(flip=flip):
             mode = "off" if arm == "A" else "on"
             step = 100_000_000 if mode == "off" else 80_000_000
             reps = []
@@ -158,13 +157,26 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         )
         with (
             mock.patch.object(CAMPAIGN, "_drand_record", return_value=record),
-            mock.patch.object(CAMPAIGN, "_authenticate_drand", return_value=record),
+            mock.patch.object(
+                CAMPAIGN,
+                "_authenticate_drand",
+                side_effect=[
+                    record,
+                    {**record, "obtained_at": "2026-08-01T00:00:01+00:00"},
+                    {**record, "obtained_at": "2026-08-01T00:00:02+00:00"},
+                ],
+            ),
             mock.patch.object(CAMPAIGN.subprocess, "run", return_value=relay),
         ):
             accepted = CAMPAIGN.authenticate_confirmation(
                 Path("/unused"), "2" * 40, "3" * 64, "4" * 64, 1299,
             )
             self.assertEqual(accepted["published_epoch_s"], 1300)
+            repeated = CAMPAIGN.authenticate_confirmation(
+                Path("/unused"), "2" * 40, "3" * 64, "4" * 64, 1299,
+            )
+            self.assertEqual(accepted, repeated)
+            self.assertNotIn("obtained_at", accepted)
             with self.assertRaisesRegex(ValueError, "before the frozen candidate"):
                 CAMPAIGN.authenticate_confirmation(
                     Path("/unused"), "2" * 40, "3" * 64, "4" * 64, 1300,
@@ -331,6 +343,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 "run",
                 "--tag", "test",
                 "--candidate", "/home/bmarti44/.cache/glm52-test",
+                "--quality-candidate", "/home/bmarti44/.cache/glm52-test-quality",
                 "--candidate-commit", "a" * 40,
                 "--binary-sha256", "b" * 64,
                 "--quality-binary-sha256", "d" * 64,
@@ -554,6 +567,10 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             )
         ]
         CAMPAIGN.validate_performance_binding(manifest, records)
+        broken_seed = copy.deepcopy(manifest)
+        broken_seed["seed_sha256"] = "0" * 64
+        with self.assertRaises(ValueError):
+            CAMPAIGN.validate_performance_binding(broken_seed, records)
         records[0]["binary_sha256"] = "e" * 64
         with self.assertRaises(ValueError):
             CAMPAIGN.validate_performance_binding(manifest, records)
@@ -578,6 +595,10 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             self.passing_records(), self.passing_nll(), quality_bound=True
         )
         self.assertEqual(result["verdict"], "PASS")
+        flipped = CAMPAIGN.score_campaign(
+            self.passing_records(flip=True), self.passing_nll(), quality_bound=True
+        )
+        self.assertEqual(flipped["verdict"], "PASS")
         self.assertGreater(result["decode_ratio_lower_95"], 1.0)
         self.assertLessEqual(result["warm_ttft_ratio_upper_95"], 1.05)
 

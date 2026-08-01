@@ -27,6 +27,10 @@ readonly SOURCE_SHA256=${SOURCE_SHA256_PREFIX}${SOURCE_SHA256_SUFFIX}
     exit 2
 }
 /usr/bin/install -o root -g root -m 0644 -- "$SOURCE" "$TARGET"
+[[ $(/usr/bin/sha256sum -- "$TARGET") == "$SOURCE_SHA256  $TARGET" ]] || {
+    echo "71_install_glm_benchmark_lock_acl.sh: installed ACL policy changed" >&2
+    exit 2
+}
 /usr/bin/systemd-tmpfiles --create frontier-at-home-glm-benchmark.conf
 /usr/sbin/runuser -u bmarti44 -- /usr/bin/python3 - "$LOCK" <<'PY'
 import os
