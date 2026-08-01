@@ -526,13 +526,6 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn("/usr/bin/pgrep -x dockerd", source)
         self.assertIn("/usr/sbin/visudo -cf", source)
         self.assertIn("NOPASSWD: /usr/local/sbin/glm52-w1-submit *", source)
-        for command in (
-            "/usr/bin/systemctl stop dsv4-guard.timer",
-            "/usr/bin/systemctl stop deepseek-v4-flash-llamacpp.service",
-            "/usr/bin/systemctl start deepseek-v4-flash-llamacpp.service",
-            "/usr/bin/systemctl start dsv4-guard.timer",
-        ):
-            self.assertIn(f"NOPASSWD: {command}", source)
         self.assertNotRegex(source, r"NOPASSWD:\\s*ALL")
         expected = hashlib.sha256(SUBMITTER.read_bytes()).hexdigest()
         match = re.search(

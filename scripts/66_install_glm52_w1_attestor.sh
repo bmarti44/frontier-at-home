@@ -82,10 +82,6 @@ harness_head=$(
 
 /usr/bin/printf '%s\n' \
     'bmarti44 ALL=(root) NOPASSWD: /usr/local/sbin/glm52-w1-submit *' \
-    'bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl stop dsv4-guard.timer' \
-    'bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl stop deepseek-v4-flash-llamacpp.service' \
-    'bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start deepseek-v4-flash-llamacpp.service' \
-    'bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start dsv4-guard.timer' \
     >"$sudoers_temporary"
 /usr/bin/chown root:root "$sudoers_temporary"
 /usr/bin/chmod 0440 "$sudoers_temporary"
