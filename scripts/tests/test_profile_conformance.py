@@ -153,31 +153,6 @@ class ProfileConformanceTests(unittest.TestCase):
             source,
         )
 
-    def test_launcher_and_profiles_wire_the_agent_prewarm(self):
-        """After readiness the launcher must fire the saved agent prefix at
-        the server in the background (DSV4_PREWARM_BODY), so the first real
-        agent request after a restart hits a warm cache instead of paying the
-        full ~19K prefill. Byte-stable client payloads are a prerequisite
-        (Hermes fix, 2026-08-01)."""
-        launcher = (ROOT / "scripts/21_serve_llamacpp.sh").read_text(
-            encoding="utf-8")
-        self.assertIn("DSV4_PREWARM_BODY", launcher)
-        self.assertIn("${DSV4_PREWARM_BODY:-}", launcher)
-        # Best-effort contract: a missing fixture warns and skips; it must
-        # never block engine startup.
-        self.assertIn("prewarm body missing; skipping", launcher)
-        self.assertIn("/v1/chat/completions", launcher)
-        for path, needle in (
-            (SERVICE, "Environment=DSV4_PREWARM_BODY="),
-            (SWITCH, "DSV4_PREWARM_BODY="),
-        ):
-            self.assertIn(
-                "fixtures/hermes-prefix.json",
-                path.read_text(encoding="utf-8"),
-                f"{path.name} must point DSV4_PREWARM_BODY at the fixture",
-            )
-            self.assertIn(needle, path.read_text(encoding="utf-8"))
-
 
 if __name__ == "__main__":
     unittest.main()

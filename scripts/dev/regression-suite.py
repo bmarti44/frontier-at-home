@@ -45,14 +45,6 @@ Tests and their targets:
                  >= 350 tok/s and prompt processing <= 75 s. The one
                  wall-clock-adjacent gate in the suite: host-specific by
                  design, valid only on this Spark with the frozen weights.
-  prewarm-ttft   llama.cpp endpoint with DSV4_PREWARM_BODY configured and
-                 fixtures/hermes-prefix.json captured. Regression for: the
-                 startup pre-warm. Replays the fixture body plus a short
-                 user turn and asserts >= 95% of the prefix came from cache
-                 and prompt processing took < 10 s — the executable form of
-                 the "usable cold start" goal. Run only after the server has
-                 been up long enough for the background pre-warm to finish
-                 (~60 s after readiness).
   turn-continuation  llama.cpp endpoint, any slot count. Regression for:
                  the live Hermes experience — an appended second turn on a
                  ~19K conversation must reuse the slot cache (prompt_n
@@ -229,30 +221,11 @@ def t_turn_continuation(base):
                   f"appended turn 2: prompt_n={t2['prompt_n']} cache_n={t2['cache_n']} "
                   "(< 1500 required; a full re-prefill means in-slot reuse broke)")
 
-def t_prewarm_ttft(base):
-    import os
-    fixture = os.path.join(os.path.dirname(FIXTURE), "hermes-prefix.json")
-    if not os.path.isfile(fixture):
-        return record("prewarm-ttft", False,
-                      f"fixture not captured yet: {fixture} (see docs/runbook.md)")
-    body = json.load(open(fixture))
-    msgs = list(body["messages"]) + [
-        {"role": "user", "content": "Reply with the single word: ready."}]
-    t = chat(base, msgs, 16)["timings"]
-    total = t["prompt_n"] + t["cache_n"]
-    prompt_s = t["prompt_ms"] / 1000
-    ok1 = t["cache_n"] >= 0.95 * total
-    ok2 = prompt_s < 10
-    return record("prewarm-ttft", ok1 and ok2,
-                  f"first agent-shaped request: cache_n={t['cache_n']}/{total} "
-                  f"(>=95%: {ok1}); prompt processing={prompt_s:.1f}s (<10: {ok2})")
-
 TESTS = {"prefix-cache": t_prefix_cache, "slot-thrash": t_slot_thrash,
          "reap-mmid": t_reap_mmid, "ds4-mem-init": t_ds4_mem_init,
          "slot-restore": t_slot_restore,
          "prefill-throughput": t_prefill_throughput,
-         "turn-continuation": t_turn_continuation,
-         "prewarm-ttft": t_prewarm_ttft}
+         "turn-continuation": t_turn_continuation}
 
 def main():
     ap = argparse.ArgumentParser()

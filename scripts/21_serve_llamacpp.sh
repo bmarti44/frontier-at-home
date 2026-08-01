@@ -962,22 +962,6 @@ do_start() {
         chmod 700 -- "$slot_save_canonical" || die 'cannot secure slot save directory'
         slot_save_path=$slot_save_canonical
     fi
-    # DSV4_PREWARM_BODY: optional path to a saved /v1/chat/completions body
-    # holding the agent's byte-stable prefix (system prompt + tool schemas,
-    # max_tokens 1). After the health check passes, the launcher replays it in
-    # the background so the first real agent request after a restart hits a
-    # warm prefix cache (~2-5 s TTFT) instead of paying the full ~19K prefill
-    # (~40 s). Best-effort: a missing file warns and skips — capture the
-    # fixture per docs/runbook.md; it must never block engine startup. The
-    # body is sent to the loopback engine only.
-    prewarm_body=${DSV4_PREWARM_BODY:-}
-    if [[ -n $prewarm_body ]]; then
-        if [[ ! -f $prewarm_body || ! -r $prewarm_body ]]; then
-            printf 'WARNING: prewarm body missing; skipping cache pre-warm (%s)\n' \
-                "$prewarm_body" >&2
-            prewarm_body=
-        fi
-    fi
     # DSV4_PARALLEL: number of server slots (default 1 = production original).
     # n_ctx is split evenly across slots, so raise CTX accordingly (e.g.
     # CTX=65536 with 2 slots = 32768 each). Rationale (2026-07-24, measured):
@@ -1083,15 +1067,6 @@ do_start() {
         if curl --silent --show-error --fail --max-time 3 \
                 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
             rm -f -- "$START_FAILURE_MARKER"
-            if [[ -n $prewarm_body ]]; then
-                printf 'Pre-warming agent prefix cache from %s (background).\n' \
-                    "$prewarm_body" >&2
-                setsid curl --silent --output /dev/null --max-time 900 \
-                    --header 'Content-Type: application/json' \
-                    --data-binary @"$prewarm_body" \
-                    "http://127.0.0.1:$PORT/v1/chat/completions" \
-                    >/dev/null 2>&1 &
-            fi
             printf '{"ok":true,"stack":"llamacpp","pid":%d,"port":%d}\n' "$server_pid" "$PORT"
             startup_cleanup_armed=false
             trap - ERR EXIT

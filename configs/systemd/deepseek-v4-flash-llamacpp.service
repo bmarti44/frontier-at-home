@@ -70,10 +70,6 @@ Environment=DSV4_PARALLEL=2
 Environment=DSV4_NO_MMAP=1
 # Match the qualified arm and avoid an unmeasured million-token n-gram map.
 Environment=DSV4_SPEC_TYPE=none
-# Replay the saved byte-stable agent prefix after readiness so the first
-# real agent request post-restart hits a warm cache (best-effort: a missing
-# fixture only logs a warning). Capture procedure: docs/runbook.md.
-Environment=DSV4_PREWARM_BODY=@DSV4_REPO@/fixtures/hermes-prefix.json
 WorkingDirectory=@DSV4_REPO@
 # This report remains advisory, but preflight failure blocks engine startup;
 # the serve script also enforces its authoritative checks on every start.
