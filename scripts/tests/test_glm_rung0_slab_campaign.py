@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import copy
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -177,6 +178,68 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(result["sample_count"], 3)
         with self.assertRaises(ValueError):
             CAMPAIGN.summarize_external_io([(1, 0)], 100, 50, 2.0)
+
+    def test_memory_envelope_is_derived_from_measured_non_arena_peak(self):
+        envelope = CAMPAIGN.derive_memory_envelope(
+            non_arena_peak_bytes=30 * 1024**3,
+            host_total_bytes=120 * 1024**3,
+        )
+        self.assertEqual(envelope["arena_bytes"], 68_000_000_000)
+        self.assertEqual(envelope["margin_bytes"], 4 * 1024**3)
+        self.assertEqual(envelope["memory_high_gib"], 98)
+        self.assertEqual(envelope["memory_max_gib"], 100)
+        self.assertGreaterEqual(
+            envelope["memory_high_bytes"],
+            envelope["non_arena_peak_bytes"]
+            + envelope["arena_bytes"]
+            + envelope["margin_bytes"],
+        )
+        with self.assertRaises(ValueError):
+            CAMPAIGN.derive_memory_envelope(
+                non_arena_peak_bytes=35 * 1024**3,
+                host_total_bytes=120 * 1024**3,
+            )
+
+    def test_full_quality_parser_and_comparator_require_exact_100_case_identity(self):
+        header = "id\ttarget_tokens\tnll\ttarget_top1_correct\n"
+        rows = "".join(
+            f"case-{index:03d}\t4\t{index + 0.25}\t3\n" for index in range(100)
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            off = Path(directory) / "off.tsv"
+            on = Path(directory) / "on.tsv"
+            off.write_text(header + rows, encoding="utf-8")
+            on.write_text(header + rows, encoding="utf-8")
+            baseline = CAMPAIGN.parse_quality_tsv(off)
+            candidate = CAMPAIGN.parse_quality_tsv(on)
+            result = CAMPAIGN.compare_quality_rows(baseline, candidate)
+            self.assertEqual(result["case_count"], 100)
+            self.assertEqual(result["token_weighted_delta_nll"], 0.0)
+            self.assertEqual(result["top1_loss_pp"], 0.0)
+            self.assertTrue(result["deterministic"])
+            on.write_text(
+                (header + rows).replace("case-050\t4\t50.25", "case-050\t4\t50.2500001"),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                CAMPAIGN.compare_quality_rows(
+                    baseline, CAMPAIGN.parse_quality_tsv(on)
+                )
+
+    def test_campaign_requires_a_bound_measured_memory_envelope(self):
+        parsed = CAMPAIGN.parse_cli(
+            [
+                "run",
+                "--tag", "test",
+                "--candidate", "/home/bmarti44/.cache/glm52-test",
+                "--candidate-commit", "a" * 40,
+                "--binary-sha256", "b" * 64,
+                "--seed-sha256", "c" * 64,
+                "--memory-envelope", "/tmp/envelope.json",
+            ]
+        )
+        self.assertEqual(parsed.memory_envelope, Path("/tmp/envelope.json"))
+        self.assertFalse(hasattr(parsed, "memory_high_gib"))
 
     def test_runtime_is_a_thin_wrapper_around_existing_measurement(self):
         source = SCRIPT.read_text(encoding="utf-8")
