@@ -91,6 +91,19 @@ access to the one inference lock and nothing else; it does not grant service
 control, sudoers access, or arbitrary root execution. The campaign continues
 to fail closed until that ACL is installed and independently verified.
 
+After every Rung 0 campaign attempt, restore the installed DSV4 1M-fast
+profile without rerunning an installer or rotating its API key:
+
+1. require `pgrep -x ds4-server` and `pgrep -x llama-server` to be empty;
+2. require swap use below 1 GiB;
+3. run `systemctl reset-failed deepseek-v4-flash-llamacpp.service`, restart
+   `dsv4-engine-restore.service`, then start `dsv4-guard.timer` as root;
+4. verify `scripts/52_engine_switch.sh status --json`, authenticated model
+   identity/completion, unauthenticated rejection, and the 1M process command.
+
+Do not use `scripts/61_restore_dsv4_user.sh`: that historical helper launches
+an 8K profile and violates the repository's current largest-context policy.
+
 ## Ranked execution plan and pre-registered gates
 
 ### Rung 0.1 - coalesced expert I/O and slab layout (W3/W8 transport)

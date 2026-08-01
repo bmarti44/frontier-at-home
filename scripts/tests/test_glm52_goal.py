@@ -557,6 +557,18 @@ class FormulaTests(unittest.TestCase):
                     }
                 )
         self.goal.validate_ab_blocks(records)
+        flipped = [dict(item) for item in records]
+        for item in flipped:
+            item["arm"] = "B" if item["arm"] == "A" else "A"
+            item["binary_sha256"] = (
+                "b" if item["arm"] == "A" else "c"
+            ) * 64
+            item["configuration_sha256"] = (
+                "d" if item["arm"] == "A" else "e"
+            ) * 64
+        self.goal.validate_ab_blocks(flipped, flip=True)
+        with self.assertRaises(ValueError):
+            self.goal.validate_ab_blocks(flipped, flip=False)
         rotating = [dict(item) for item in records]
         for item in rotating:
             item["binary_sha256"] = (

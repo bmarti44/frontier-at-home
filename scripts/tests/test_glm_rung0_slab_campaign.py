@@ -596,9 +596,15 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         )
         self.assertEqual(result["verdict"], "PASS")
         flipped = CAMPAIGN.score_campaign(
-            self.passing_records(flip=True), self.passing_nll(), quality_bound=True
+            self.passing_records(flip=True), self.passing_nll(),
+            quality_bound=True, schedule_flip=True,
         )
         self.assertEqual(flipped["verdict"], "PASS")
+        with self.assertRaises(ValueError):
+            CAMPAIGN.score_campaign(
+                self.passing_records(flip=True), self.passing_nll(),
+                quality_bound=True, schedule_flip=False,
+            )
         self.assertGreater(result["decode_ratio_lower_95"], 1.0)
         self.assertLessEqual(result["warm_ttft_ratio_upper_95"], 1.05)
 

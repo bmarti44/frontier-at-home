@@ -1978,7 +1978,12 @@ def score_directory(args: argparse.Namespace) -> int:
     )
     if strict_json(quality_nll) != nll:
         raise ValueError("stored NLL differs from raw quality derivation")
-    summary = score_campaign(records, nll, quality_bound=True)
+    summary = score_campaign(
+        records,
+        nll,
+        quality_bound=True,
+        schedule_flip=performance_manifest["randomness"]["flip"],
+    )
     write_json_exclusive(campaign / "summary.json", summary)
     print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
     return 0
@@ -2074,9 +2079,10 @@ def score_campaign(
     nll: dict[str, Any],
     *,
     quality_bound: bool = False,
+    schedule_flip: bool = False,
 ) -> dict[str, Any]:
     """Validate raw arms and apply the fixed Rung 0.1 formulas."""
-    if quality_bound is not True:
+    if quality_bound is not True or not isinstance(schedule_flip, bool):
         raise ValueError("quality evidence was not bound by the authoritative scorer")
     expected_keys = {
         "schema_version",
@@ -2266,12 +2272,7 @@ def score_campaign(
         if safety.get("failures") != []:
             raise ValueError("arm contains a safety failure")
 
-    if validation_rows[0]["arm"] == "B":
-        validation_rows = [
-            {**row, "arm": "A" if row["arm"] == "B" else "B"}
-            for row in validation_rows
-        ]
-    validate_ab_blocks(validation_rows)
+    validate_ab_blocks(validation_rows, flip=schedule_flip)
     if len(binaries) != 1:
         raise ValueError("campaign used more than one binary")
     if any(len(values) != 1 for values in configurations.values()):

@@ -5,6 +5,7 @@ readonly SECRET_PATTERN='[0-9a-f]{64}|Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPE
 # Digest-bearing files get field/format-aware 64-hex validation. They still get
 # every other secret pattern via SECRET_PATTERN_NOHEX.
 readonly SECRET_PATTERN_NOHEX='Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPENSSH)? PRIVATE KEY|hf_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|tskey-[A-Za-z0-9-]{20,}'
+readonly PUBLIC_DIGEST_ALLOWLIST='^scripts/71_install_glm_benchmark_lock_acl\.sh:[0-9]+:readonly SOURCE_SHA256=[0-9a-f]{64}$'
 
 is_checksum_file() {
   case "$1" in
@@ -59,7 +60,7 @@ redact_matches() {
 
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" || true)"
+  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
@@ -358,6 +359,16 @@ self_test() {
   fake_secret="$(printf 'a%.0s' {1..64})"
   if printf 'self-test.txt:1:%s\n' "$fake_secret" | scan_stream >/dev/null 2>&1; then
     printf '%s\n' 'self-test failed: fake secret was not detected' >&2
+    return 1
+  fi
+  if ! printf 'scripts/71_install_glm_benchmark_lock_acl.sh:15:readonly SOURCE_SHA256=%s\n' \
+      "$fake_secret" | scan_stream >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: pinned public digest was rejected' >&2
+    return 1
+  fi
+  if printf 'scripts/other.sh:15:readonly SOURCE_SHA256=%s\n' "$fake_secret" \
+      | scan_stream >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: public digest allowlist was too broad' >&2
     return 1
   fi
   if printf '{"note":"%s"}\n' "$fake_secret" \

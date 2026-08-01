@@ -1180,8 +1180,12 @@ def validate_raw_record(record: dict[str, Any]) -> None:
         raise ValueError("measurement record contains failures")
 
 
-def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
+def validate_ab_blocks(
+    records: Iterable[dict[str, Any]], *, flip: bool = False
+) -> None:
     """Require five fresh-server ABBA/BAAB blocks with equal fixtures."""
+    if not isinstance(flip, bool):
+        raise ValueError("AB block orientation must be boolean")
     rows = list(records)
     if len(rows) != 20:
         raise ValueError("exactly five four-arm blocks are required")
@@ -1196,7 +1200,7 @@ def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
         )
         if len(group) != 4 or [row.get("sequence") for row in group] != list(range(4)):
             raise ValueError(f"block {block} is incomplete or mis-sequenced")
-        expected = "ABBA" if block % 2 == 0 else "BAAB"
+        expected = "ABBA" if (block + int(flip)) % 2 == 0 else "BAAB"
         if "".join(str(row.get("arm", "")) for row in group) != expected:
             raise ValueError(f"block {block} does not follow {expected}")
         group_boots = [row.get("server_boot_id") for row in group]
