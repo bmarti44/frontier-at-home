@@ -270,6 +270,32 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(command[1].name, "manifest.tsv")
         self.assertEqual(command[2].name, "quality-off.tsv")
 
+    def test_quality_schedule_proves_each_arm_deterministic_with_itself(self):
+        self.assertEqual(CAMPAIGN.quality_schedule(), ("A", "B", "B", "A"))
+        attempts = []
+        for arm in CAMPAIGN.quality_schedule():
+            attempts.append(
+                {
+                    "arm": arm,
+                    "mode": "off" if arm == "A" else "on",
+                    "rows": [
+                        {
+                            "case_id": f"case-{index:03d}",
+                            "tokens": 4,
+                            "nll_sum": index + 0.25,
+                            "top1_correct": 3,
+                        }
+                        for index in range(100)
+                    ],
+                    "safety": {"failures": []},
+                }
+            )
+        result = CAMPAIGN.validate_quality_attempts(attempts)
+        self.assertEqual(result, self.passing_nll())
+        attempts[1]["rows"][50]["nll_sum"] += 1e-7
+        with self.assertRaises(ValueError):
+            CAMPAIGN.validate_quality_attempts(attempts)
+
     def test_runtime_is_a_thin_wrapper_around_existing_measurement(self):
         source = SCRIPT.read_text(encoding="utf-8")
         for marker in (
