@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import fcntl
 import hashlib
 import json
@@ -73,6 +74,10 @@ MODEL_PATH = Path(
     "GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf"
 )
 INFLIGHT = Path("/sys/class/block/nvme0n1/inflight")
+ARENA_BYTES = 68_000_000_000
+MEMORY_MARGIN_BYTES = 4 * 1024**3
+MEMORY_MAX_EXCURSION_GIB = 2
+HOST_KILL_FLOOR_GIB = 18
 
 
 def arm_schedule() -> tuple[tuple[int, int, str], ...]:
@@ -82,6 +87,89 @@ def arm_schedule() -> tuple[tuple[int, int, str], ...]:
         order = "ABBA" if block % 2 == 0 else "BAAB"
         rows.extend((block, sequence, arm) for sequence, arm in enumerate(order))
     return tuple(rows)
+
+
+def derive_memory_envelope(
+    non_arena_peak_bytes: int, host_total_bytes: int
+) -> dict[str, int]:
+    """Derive the only accepted full-cache cgroup limit from a real probe."""
+    if (
+        isinstance(non_arena_peak_bytes, bool)
+        or not isinstance(non_arena_peak_bytes, int)
+        or isinstance(host_total_bytes, bool)
+        or not isinstance(host_total_bytes, int)
+        or not 8 * 1024**3 <= non_arena_peak_bytes <= 48 * 1024**3
+        or host_total_bytes < 110 * 1024**3
+    ):
+        raise ValueError("memory probe values are outside the bounded host model")
+    required = non_arena_peak_bytes + ARENA_BYTES + MEMORY_MARGIN_BYTES
+    memory_high_gib = math.ceil(required / 1024**3)
+    memory_max_gib = memory_high_gib + MEMORY_MAX_EXCURSION_GIB
+    if (
+        memory_high_gib < 32
+        or memory_high_gib > 101
+        or (memory_max_gib + HOST_KILL_FLOOR_GIB) * 1024**3 > host_total_bytes
+    ):
+        raise ValueError("measured GLM envelope cannot preserve the host kill floor")
+    return {
+        "non_arena_peak_bytes": non_arena_peak_bytes,
+        "arena_bytes": ARENA_BYTES,
+        "margin_bytes": MEMORY_MARGIN_BYTES,
+        "memory_high_bytes": memory_high_gib * 1024**3,
+        "memory_high_gib": memory_high_gib,
+        "memory_max_gib": memory_max_gib,
+        "host_total_bytes": host_total_bytes,
+        "host_kill_floor_gib": HOST_KILL_FLOOR_GIB,
+    }
+
+
+def parse_quality_tsv(path: Path) -> list[dict[str, Any]]:
+    """Read the complete fixed quality suite and reject partial evidence."""
+    with path.open(encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream, delimiter="\t"))
+    if len(rows) != 100:
+        raise ValueError(f"quality output needs 100 cases, got {len(rows)}")
+    cases: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            case = {
+                "case_id": row["id"],
+                "tokens": int(row["target_tokens"]),
+                "nll_sum": float(row["nll"]),
+                "top1_correct": int(row["target_top1_correct"]),
+            }
+        except (KeyError, TypeError, ValueError) as error:
+            raise ValueError("quality output contains malformed values") from error
+        if (
+            not case["case_id"]
+            or case["tokens"] <= 0
+            or not 0 <= case["top1_correct"] <= case["tokens"]
+            or not math.isfinite(case["nll_sum"])
+        ):
+            raise ValueError("quality output contains invalid values")
+        cases.append(case)
+    if len({case["case_id"] for case in cases}) != 100:
+        raise ValueError("quality output case IDs are duplicated")
+    return cases
+
+
+def compare_quality_rows(
+    baseline: list[dict[str, Any]], candidate: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Enforce exact teacher-forced identity for byte-preserving transport."""
+    if len(baseline) != 100 or len(candidate) != 100:
+        raise ValueError("quality comparison requires two complete suites")
+    if baseline != candidate:
+        raise ValueError("lossless slab transport changed quality evidence")
+    tokens = sum(case["tokens"] for case in baseline)
+    if tokens <= 0:
+        raise ValueError("quality comparison has no target tokens")
+    return {
+        "case_count": 100,
+        "token_weighted_delta_nll": 0.0,
+        "top1_loss_pp": 0.0,
+        "deterministic": True,
+    }
 
 
 def canonical_engine_environment(mode: str) -> dict[str, str]:
@@ -109,6 +197,43 @@ def canonical_engine_environment(mode: str) -> dict[str, str]:
     return result
 
 
+def memory_probe_environment() -> dict[str, str]:
+    """Return the exact cache-off environment used to measure non-arena RSS."""
+    return {
+        "DS4_CUDA_EXPERT_CACHE_GB": "0",
+        "DS4_CUDA_FETCH_THREADS": "8",
+        "DS4_CUDA_LOAD_PROFILE": "1",
+        "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+        "DS4_GLM_TP_DEBUG": "1",
+        "DS4_TOKEN_TIMING_LOG": "1",
+    }
+
+
+def peak_engine_rss_bytes(samples: str) -> int:
+    """Read peak engine RSS from the wrapper's independent /proc sampler."""
+    values = [
+        int(match.group(1))
+        for match in re.finditer(r"\beng_rss_kb=(\d+)\b", samples)
+        if int(match.group(1)) > 0
+    ]
+    if len(values) < 2:
+        raise ValueError("memory probe lacks repeated positive engine RSS samples")
+    return max(values) * 1024
+
+
+def quality_command(binary: Path, manifest: Path, output: Path) -> list[Any]:
+    """Build the existing official scorer invocation for the full fixture."""
+    return [
+        binary,
+        manifest,
+        output,
+        "8192",
+        "--ssd-streaming",
+        "--ssd-streaming-cache-experts",
+        "40GB",
+    ]
+
+
 def canonical_environment_sha256(environment: dict[str, str]) -> str:
     """Hash the exact engine environment as glm_safe_run observes it."""
     if not isinstance(environment, dict) or any(
@@ -121,6 +246,23 @@ def canonical_environment_sha256(environment: dict[str, str]) -> str:
     required = set(canonical_engine_environment("off"))
     if not required.issubset(environment):
         raise ValueError("engine environment lacks a required common setting")
+    canonical = b"".join(
+        name.encode("ascii")
+        + b"="
+        + environment.get(name, "<UNSET>").encode("utf-8")
+        + b"\n"
+        for name in PROVENANCE_NAMES
+    )
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def observed_environment_sha256(environment: dict[str, str]) -> str:
+    """Hash any exact allowlisted engine environment, including cache-off."""
+    if not isinstance(environment, dict) or any(
+        name not in PROVENANCE_NAMES or not isinstance(value, str)
+        for name, value in environment.items()
+    ):
+        raise ValueError("engine environment is outside the fixed allowlist")
     canonical = b"".join(
         name.encode("ascii")
         + b"="
@@ -376,6 +518,92 @@ def wait_ready(process: subprocess.Popen[Any], port: int) -> None:
             pass
         time.sleep(0.25)
     raise RuntimeError("server startup timed out")
+
+
+def execute_memory_probe_arm(args: argparse.Namespace) -> int:
+    """Load cache-off GLM once so the outer sampler can measure non-arena RSS."""
+    expected_environment = memory_probe_environment()
+    observed_environment = {
+        name: os.environ[name] for name in PROVENANCE_NAMES if name in os.environ
+    }
+    if observed_environment != expected_environment:
+        raise ValueError("inherited memory-probe environment differs")
+    binary = args.binary.resolve()
+    model = args.model.resolve()
+    out = args.out.resolve()
+    if (
+        binary.name != "ds4-server"
+        or not str(binary.parent).startswith("/home/bmarti44/.cache/glm52-")
+        or not binary.is_file()
+        or sha256_file(binary) != args.binary_sha256
+        or model != MODEL_PATH
+        or not model.is_file()
+        or out.exists()
+        or not str(out).startswith("/home/bmarti44/.local/state/glm52-rung0-")
+    ):
+        raise ValueError("memory-probe artifact identity is invalid")
+    out.mkdir(mode=0o700, parents=True)
+    server_environment = {
+        "HOME": "/home/bmarti44",
+        "LANG": "C.UTF-8",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        **expected_environment,
+    }
+    command = [
+        str(binary), "--cuda", "-m", str(model), "-c", "8192",
+        "--host", "127.0.0.1", "--port", str(args.port),
+        "--ssd-streaming", "--ssd-streaming-cache-experts", "40GB",
+    ]
+    server: subprocess.Popen[Any] | None = None
+    start_ticks: int | None = None
+    with (out / "server.log").open("xb") as server_log:
+        try:
+            server = subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=server_log,
+                stderr=subprocess.STDOUT,
+                env=server_environment,
+                start_new_session=False,
+            )
+            start_ticks = proc_start_ticks(server.pid)
+            wait_ready(server, args.port)
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{args.port}/v1/completions",
+                data=json.dumps(
+                    {
+                        "model": "glm-5.2",
+                        "prompt": "Reply with the single word OK.",
+                        "temperature": 0,
+                        "max_tokens": 1,
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=600) as response:
+                body = json.loads(response.read())
+                if response.status != 200 or not body.get("choices"):
+                    raise RuntimeError("cache-off memory probe completion failed")
+            time.sleep(1)
+            server_log.flush()
+            os.fsync(server_log.fileno())
+            write_json_exclusive(
+                out / "partial.json",
+                {
+                    "schema_version": 1,
+                    "binary_sha256": args.binary_sha256,
+                    "probe_environment_sha256": observed_environment_sha256(
+                        expected_environment
+                    ),
+                },
+            )
+        finally:
+            if server is not None and start_ticks is not None:
+                terminate_exact(server, start_ticks)
+    if matching_executable_pids(binary):
+        raise RuntimeError("frozen engine survived memory-probe cleanup")
+    return 0
 
 
 def execute_arm(args: argparse.Namespace) -> int:
@@ -637,6 +865,148 @@ def artifact_stat(path: Path) -> dict[str, Any]:
     }
 
 
+def verified_memory_envelope(
+    path: Path, binary_sha256: str, candidate_commit: str
+) -> dict[str, Any]:
+    """Load a probe-bound envelope and recompute its fixed arithmetic."""
+    envelope = strict_json(path)
+    expected_keys = {
+        "schema_version",
+        "binary_sha256",
+        "candidate_commit",
+        "probe_environment_sha256",
+        "probe_safety",
+        "non_arena_peak_bytes",
+        "arena_bytes",
+        "margin_bytes",
+        "memory_high_bytes",
+        "memory_high_gib",
+        "memory_max_gib",
+        "host_total_bytes",
+        "host_kill_floor_gib",
+    }
+    if (
+        set(envelope) != expected_keys
+        or envelope["schema_version"] != 1
+        or envelope["binary_sha256"] != binary_sha256
+        or envelope["candidate_commit"] != candidate_commit
+        or not isinstance(envelope["probe_safety"], dict)
+        or envelope["probe_safety"].get("failures") != []
+        or not re.fullmatch(r"[0-9a-f]{64}", envelope["probe_environment_sha256"])
+    ):
+        raise ValueError("memory envelope identity or safety evidence is invalid")
+    derived = derive_memory_envelope(
+        envelope["non_arena_peak_bytes"], envelope["host_total_bytes"]
+    )
+    if any(envelope.get(name) != value for name, value in derived.items()):
+        raise ValueError("memory envelope arithmetic differs from the fixed formula")
+    return envelope
+
+
+def run_memory_probe(args: argparse.Namespace) -> int:
+    """Run one contained cache-off startup and bind its measured RSS."""
+    candidate = args.candidate.resolve()
+    binary = candidate / "ds4-server"
+    out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
+    if (
+        out.exists()
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,39}", args.tag) is None
+        or not str(candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or binary.name != "ds4-server"
+        or not binary.is_file()
+        or sha256_file(binary) != args.binary_sha256
+        or re.fullmatch(r"[0-9a-f]{64}", args.binary_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
+        or not 1024 <= args.port <= 65535
+    ):
+        raise ValueError("memory-probe candidate identity is invalid")
+    services_are_stopped()
+    no_large_engines()
+    stable_start_memory(110.0)
+    verify_global_lock_access()
+    out.mkdir(mode=0o700, parents=True)
+    arm_out = out / "probe"
+    crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
+    probe_environment = memory_probe_environment()
+    environment = os.environ.copy()
+    for name in list(environment):
+        if name.startswith("DS4_") or name.startswith("GLM_"):
+            del environment[name]
+    environment.update(probe_environment)
+    environment.update(
+        {
+            "GLM_CANDIDATE_SRC": str(candidate),
+            "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+            "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+            "GLM_SAFE_EXPECTED_BINARY_SHA256": args.binary_sha256,
+            "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(PROVENANCE_NAMES),
+            "GLM_SAFE_EXPECTED_ENV_SHA256": observed_environment_sha256(
+                probe_environment
+            ),
+            "GLM_SAFE_MEMORY_HIGH_GIB": "48",
+            "GLM_SAFE_KILL_FLOOR_GIB": "40",
+            "GLM_SAFE_MIN_START_GIB": "110",
+            "GLM_SAFE_TIMEOUT_S": "1200",
+        }
+    )
+    completed = subprocess.run(
+        [
+            str(CGROUP_RUNNER), "--tag", f"{args.tag}-rss", "--",
+            sys.executable, str(Path(__file__).resolve()), "memory-probe-arm",
+            "--out", str(arm_out), "--binary", str(binary),
+            "--binary-sha256", args.binary_sha256,
+            "--model", str(MODEL_PATH), "--port", str(args.port),
+        ],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=environment,
+        timeout=1300,
+        check=False,
+    )
+    if arm_out.is_dir():
+        (arm_out / "containment.stdout.log").write_bytes(completed.stdout)
+        (arm_out / "containment.stderr.log").write_bytes(completed.stderr)
+    if completed.returncode != 0:
+        raise RuntimeError(f"contained memory probe failed rc={completed.returncode}")
+    crash_after = set(CRASH_ROOT.glob("*"))
+    matches = [
+        path
+        for path in crash_after - crash_before
+        if path.name.endswith(f"-{args.tag}-rss")
+    ]
+    if len(matches) != 1:
+        raise RuntimeError("memory probe lacks one safety evidence directory")
+    for name in ("main.log", "samples.log", "kernel.log", "cmd.log"):
+        source = matches[0] / name
+        if not source.is_file():
+            raise RuntimeError(f"memory probe lacks safety artifact {name}")
+        shutil.copy2(source, arm_out / f"safety.{name}")
+    main = (arm_out / "safety.main.log").read_text(encoding="utf-8")
+    samples = (arm_out / "safety.samples.log").read_text(encoding="utf-8")
+    kernel = (arm_out / "safety.kernel.log").read_text(encoding="utf-8")
+    safety = parse_safety_logs(main, samples, kernel)
+    non_arena_peak_bytes = peak_engine_rss_bytes(samples)
+    host_total_bytes = next(
+        int(line.split()[1]) * 1024
+        for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines()
+        if line.startswith("MemTotal:")
+    )
+    envelope = {
+        "schema_version": 1,
+        "binary_sha256": args.binary_sha256,
+        "candidate_commit": args.candidate_commit,
+        "probe_environment_sha256": observed_environment_sha256(
+            probe_environment
+        ),
+        "probe_safety": safety,
+        **derive_memory_envelope(non_arena_peak_bytes, host_total_bytes),
+    }
+    write_json_exclusive(out / "memory-envelope.json", envelope)
+    print(f"RUNG0_MEMORY_ENVELOPE out={out / 'memory-envelope.json'}")
+    return 0
+
+
 def run_campaign(args: argparse.Namespace) -> int:
     candidate = args.candidate.resolve()
     binary = candidate / "ds4-server"
@@ -652,12 +1022,15 @@ def run_campaign(args: argparse.Namespace) -> int:
         or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
         or not re.fullmatch(r"[0-9a-f]{64}", args.seed_sha256)
         or not 1024 <= args.port <= 65535
-        or not 32 <= args.memory_high_gib <= 99
     ):
         raise ValueError("campaign identity or bounded configuration is invalid")
+    envelope = verified_memory_envelope(
+        args.memory_envelope.resolve(), args.binary_sha256, args.candidate_commit
+    )
+    memory_high_gib = envelope["memory_high_gib"]
     services_are_stopped()
     no_large_engines()
-    stable_start_memory(max(110.0, args.memory_high_gib + 20.0))
+    stable_start_memory(max(110.0, memory_high_gib + 20.0))
     verify_global_lock_access()
     if sha256_file(MODEL_PATH) != MODEL_SHA256:
         raise ValueError("full mapped model identity mismatch")
@@ -681,8 +1054,9 @@ def run_campaign(args: argparse.Namespace) -> int:
         "fixture_sha256": sha256_file(FIXTURE),
         "seed_sha256": args.seed_sha256,
         "schedule": [list(row) for row in arm_schedule()],
-        "memory_high_gib": args.memory_high_gib,
-        "memory_max_gib": args.memory_high_gib + 2,
+        "memory_envelope_sha256": sha256_file(args.memory_envelope.resolve()),
+        "memory_high_gib": memory_high_gib,
+        "memory_max_gib": memory_high_gib + MEMORY_MAX_EXCURSION_GIB,
         "kill_floor_gib": 18,
         "artifact_sha256": {
             str(BENCHMARK.relative_to(ROOT)): sha256_file(BENCHMARK),
@@ -703,7 +1077,7 @@ def run_campaign(args: argparse.Namespace) -> int:
         for block, sequence, arm in arm_schedule():
             services_are_stopped()
             no_large_engines()
-            stable_start_memory(max(110.0, args.memory_high_gib + 20.0))
+            stable_start_memory(max(110.0, memory_high_gib + 20.0))
             mode = "off" if arm == "A" else "on"
             label = f"r0-b{block}s{sequence}{arm.lower()}"
             arm_out = arms_root / label
@@ -726,7 +1100,7 @@ def run_campaign(args: argparse.Namespace) -> int:
                     "GLM_SAFE_EXPECTED_ENV_SHA256": canonical_environment_sha256(
                         engine_environment
                     ),
-                    "GLM_SAFE_MEMORY_HIGH_GIB": str(args.memory_high_gib),
+                    "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
                     "GLM_SAFE_KILL_FLOOR_GIB": "18",
                     "GLM_SAFE_MIN_START_GIB": "110",
                     "GLM_SAFE_TIMEOUT_S": "3600",
@@ -851,13 +1225,25 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     arm.add_argument("--model", type=Path, required=True)
     arm.add_argument("--port", type=int, required=True)
     arm.add_argument("--seed", type=int, required=True)
+    probe_arm = subparsers.add_parser("memory-probe-arm")
+    probe_arm.add_argument("--out", type=Path, required=True)
+    probe_arm.add_argument("--binary", type=Path, required=True)
+    probe_arm.add_argument("--binary-sha256", required=True)
+    probe_arm.add_argument("--model", type=Path, required=True)
+    probe_arm.add_argument("--port", type=int, required=True)
+    probe = subparsers.add_parser("memory-probe")
+    probe.add_argument("--tag", required=True)
+    probe.add_argument("--candidate", type=Path, required=True)
+    probe.add_argument("--candidate-commit", required=True)
+    probe.add_argument("--binary-sha256", required=True)
+    probe.add_argument("--port", type=int, default=8032)
     run = subparsers.add_parser("run")
     run.add_argument("--tag", required=True)
     run.add_argument("--candidate", type=Path, required=True)
     run.add_argument("--candidate-commit", required=True)
     run.add_argument("--binary-sha256", required=True)
     run.add_argument("--seed-sha256", required=True)
-    run.add_argument("--memory-high-gib", type=int, required=True)
+    run.add_argument("--memory-envelope", type=Path, required=True)
     run.add_argument("--port", type=int, default=8032)
     score = subparsers.add_parser("score")
     score.add_argument("--campaign", type=Path, required=True)
@@ -870,6 +1256,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "arm":
             return execute_arm(args)
+        if args.command == "memory-probe-arm":
+            return execute_memory_probe_arm(args)
+        if args.command == "memory-probe":
+            return run_memory_probe(args)
         if args.command == "run":
             return run_campaign(args)
         if args.command == "score":
