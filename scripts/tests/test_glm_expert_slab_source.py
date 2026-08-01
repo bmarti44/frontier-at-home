@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Source contract for the default-off GLM contiguous expert-slab path."""
+
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[2]
+ENGINE_PATCH = ROOT / "results/glm52-gates/harness/ds4-iq2xxs-down-cuda.patch"
+
+
+class ExpertSlabSourceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.source = ENGINE_PATCH.read_text(encoding="utf-8")
+
+    def test_slab_path_is_explicit_and_default_off(self) -> None:
+        for marker in (
+            'getenv("DS4_CUDA_EXPERT_SLAB_PATH")',
+            "CUDA contiguous expert slab enabled",
+            "CUDA contiguous expert slab disabled",
+        ):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
+    def test_one_checksummed_record_read_replaces_three_model_reads(self) -> None:
+        for marker in (
+            "cuda_expert_slab_read",
+            "expert slab record checksum mismatch",
+            "expert slab model identity mismatch",
+            "expert_slab_offset",
+        ):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
+    def test_slab_mode_is_attested_in_load_profile(self) -> None:
+        for marker in ("slab_mode=%s", "slab_reads=%llu", "slab_bytes=%llu"):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
+
+if __name__ == "__main__":
+    unittest.main()
