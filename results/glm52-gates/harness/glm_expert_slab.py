@@ -325,31 +325,39 @@ def build_stream(source: BinaryIO, output_path: Path, *,
     model_size, probe, plans, final_size = plan_records_stream(source)
     if final_size > LARGE_BUILD_BYTES and not allow_large:
         raise ValueError("large build requires --owner-approved-large-build")
-    output_path.parent.mkdir(parents=False, exist_ok=True)
+    output_path.parent.mkdir(mode=0o700, parents=False, exist_ok=True)
+    parent_stat = output_path.parent.stat(follow_symlinks=False)
+    if (not stat.S_ISDIR(parent_stat.st_mode) or
+            parent_stat.st_uid != os.geteuid() or parent_stat.st_mode & 0o077):
+        raise ValueError("slab output directory must be owner-private")
     if output_path.exists() or output_path.is_symlink():
         raise ValueError("refusing to overwrite an existing slab")
     free = shutil.disk_usage(output_path.parent).free
     if free < final_size + FREE_SPACE_FLOOR:
         raise ValueError("insufficient disk space for slab plus safety floor")
-    model_digest = file_sha256_stream(source)
-    if stream_identity(source) != source_identity:
-        raise ValueError("source model changed during planning")
     lock_path = output_path.with_name(output_path.name + ".lock")
     lock_flags = os.O_RDWR | os.O_CREAT | os.O_CLOEXEC
     if hasattr(os, "O_NOFOLLOW"):
         lock_flags |= os.O_NOFOLLOW
     lock_fd = os.open(lock_path, lock_flags, 0o600)
     fcntl.flock(lock_fd, fcntl.LOCK_EX)
-    temporary_fd, temporary_name = tempfile.mkstemp(
-        prefix=f".{output_path.name}.", suffix=".partial", dir=output_path.parent
-    )
-    temporary = Path(temporary_name)
+    temporary_fd = -1
+    temporary: Path | None = None
     records: list[bytes] = []
     published = False
     published_identity: tuple[int, int] | None = None
+    slab_digest: bytes | None = None
     try:
         if output_path.exists() or output_path.is_symlink():
             raise ValueError("refusing to overwrite an existing slab")
+        model_digest = file_sha256_stream(source)
+        if stream_identity(source) != source_identity:
+            raise ValueError("source model changed during planning")
+        temporary_fd, temporary_name = tempfile.mkstemp(
+            prefix=f".{output_path.name}.", suffix=".partial",
+            dir=output_path.parent,
+        )
+        temporary = Path(temporary_name)
         with os.fdopen(temporary_fd, "w+b") as output:
             temporary_fd = -1
             if not hasattr(os, "posix_fallocate"):
@@ -378,22 +386,33 @@ def build_stream(source: BinaryIO, output_path: Path, *,
         if stream_identity(source) != source_identity:
             raise ValueError("source model changed during build")
         verify_stream(source, temporary, expected_model_digest=model_digest)
-        temporary_stat = temporary.stat(follow_symlinks=False)
-        os.link(temporary, output_path, follow_symlinks=False)
-        published = True
-        published_identity = (temporary_stat.st_dev, temporary_stat.st_ino)
-        verify_stream(source, output_path, expected_model_digest=model_digest)
-        directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
-        temporary.unlink()
-        directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
+        with open_regular(temporary) as frozen:
+            frozen_stat = stream_identity(frozen)
+            published_identity = (frozen_stat[0], frozen_stat[1])
+            slab_digest = file_sha256_stream(frozen)
+            if stream_identity(frozen) != frozen_stat:
+                raise ValueError("expert slab changed during final hashing")
+            os.link(temporary, output_path, follow_symlinks=False)
+            published = True
+            verify_stream(source, output_path, expected_model_digest=model_digest)
+            directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+            if regular_identity(output_path)[:2] != published_identity:
+                raise ValueError("published slab identity changed during sync")
+            temporary.unlink()
+            directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+            # Removing the private hardlink legitimately changes ctime on the
+            # retained inode. Device, inode, size, and mtime must not change.
+            if (regular_identity(output_path)[:2] != published_identity or
+                    stream_identity(frozen)[:4] != frozen_stat[:4]):
+                raise ValueError("published slab identity changed before commit")
     except BaseException:
         if temporary_fd >= 0:
             os.close(temporary_fd)
@@ -401,13 +420,19 @@ def build_stream(source: BinaryIO, output_path: Path, *,
             output_stat = output_path.stat(follow_symlinks=False)
             if (output_stat.st_dev, output_stat.st_ino) == published_identity:
                 output_path.unlink()
-        if temporary.exists():
+        if temporary is not None and temporary.exists():
             temporary.unlink()
         raise
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         os.close(lock_fd)
-    return {"records": len(records), "bytes": final_size, "model_bytes": model_size}
+    if published_identity is None or slab_digest is None:
+        raise ValueError("slab publication did not produce a frozen identity")
+    return {
+        "records": len(records), "bytes": final_size,
+        "model_bytes": model_size, "slab_sha256": slab_digest.hex(),
+        "device": published_identity[0], "inode": published_identity[1],
+    }
 
 
 def load_index(path: Path) -> tuple[tuple[object, ...], list[tuple[object, ...]]]:

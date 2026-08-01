@@ -158,11 +158,17 @@ class ExpertSlabToolTests(unittest.TestCase):
             except ValueError as error:
                 outcomes.append(str(error))
 
-        workers = [threading.Thread(target=run) for _ in range(2)]
-        for worker in workers:
-            worker.start()
-        for worker in workers:
-            worker.join()
+        with mock.patch.object(
+                slab, "file_sha256_stream", wraps=slab.file_sha256_stream
+        ) as full_hash:
+            workers = [threading.Thread(target=run) for _ in range(2)]
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join()
+            # One model digest and one retained-descriptor slab digest. The
+            # losing builder must not enter either bulk scan.
+            self.assertEqual(full_hash.call_count, 2)
         self.assertEqual(outcomes.count("PASS"), 1)
         self.assertEqual(len(outcomes), 2)
         self.assertTrue(slab.verify(self.source, self.output)["verified"])
@@ -211,6 +217,25 @@ class ExpertSlabToolTests(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "directory fsync failure"):
                 slab.build(self.source, self.output)
         self.assertFalse(self.output.exists())
+
+    def test_replacement_during_publication_cannot_return_pass(self) -> None:
+        real_fsync = os.fsync
+        replaced = False
+
+        def replace_at_first_directory_sync(descriptor: int) -> None:
+            nonlocal replaced
+            if stat.S_ISDIR(os.fstat(descriptor).st_mode) and not replaced:
+                replaced = True
+                self.output.unlink()
+                self.output.write_bytes(b"hostile replacement")
+            real_fsync(descriptor)
+
+        with mock.patch.object(
+                slab.os, "fsync", side_effect=replace_at_first_directory_sync
+        ):
+            with self.assertRaisesRegex(ValueError, "identity changed"):
+                slab.build(self.source, self.output)
+        self.assertEqual(self.output.read_bytes(), b"hostile replacement")
 
 
 if __name__ == "__main__":
