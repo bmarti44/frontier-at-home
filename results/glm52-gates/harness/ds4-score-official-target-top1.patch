@@ -1,0 +1,50 @@
+diff --git a/gguf-tools/quality-testing/score_official.c b/gguf-tools/quality-testing/score_official.c
+index 0ad15d4..cb5f54d 100644
+--- a/gguf-tools/quality-testing/score_official.c
++++ b/gguf-tools/quality-testing/score_official.c
+@@ -596,7 +596,8 @@ int main(int argc, char **argv) {
+             "\tapi_top1_count\tapi_top1_match\tapi_top1_rate"
+             "\tapi_topn_ref\tapi_topn_hit\tapi_topn_recall"
+             "\tapi_top_logprob_count\tapi_top_mae\tapi_top_mean_delta"
+-            "\tapi_pair_total\tapi_pair_agree\tapi_pair_rate\n");
++            "\tapi_pair_total\tapi_pair_agree\tapi_pair_rate"
++            "\ttarget_top1_correct\n");
+ 
+     char line[8192];
+     int case_n = 0;
+@@ -658,6 +659,7 @@ int main(int argc, char **argv) {
+         int lcp = 0;
+         bool still_matching = true;
+         bool first_match = false;
++        long target_top1_correct = 0;
+         for (int i = 0; i < target.len; i++) {
+             double logsum = 0.0;
+             int greedy = -1;
+@@ -667,6 +669,7 @@ int main(int argc, char **argv) {
+             }
+ 
+             if (i == 0) first_match = (greedy == target.v[i]);
++            if (greedy == target.v[i]) target_top1_correct++;
+             if (still_matching && greedy == target.v[i]) lcp++;
+             else still_matching = false;
+ 
+@@ -750,7 +753,8 @@ int main(int argc, char **argv) {
+                 "\t%ld\t%ld\t%.9f"
+                 "\t%ld\t%ld\t%.9f"
+                 "\t%ld\t%.9f\t%.9f"
+-                "\t%ld\t%ld\t%.9f\n",
++                "\t%ld\t%ld\t%.9f"
++                "\t%ld\n",
+                 id, prompt.len, target.len, nll, avg, first_match ? 1 : 0, lcp,
+                 have_api ? ref.n_pos : 0,
+                 cm.target_count,
+@@ -770,7 +774,8 @@ int main(int argc, char **argv) {
+                 safe_avg(cm.top_signed_delta, cm.top_logprob_count),
+                 cm.pair_total,
+                 cm.pair_agree,
+-                safe_ratio(cm.pair_agree, cm.pair_total));
++                safe_ratio(cm.pair_agree, cm.pair_total),
++                target_top1_correct);
+         fflush(out);
+ 
+         case_n++;

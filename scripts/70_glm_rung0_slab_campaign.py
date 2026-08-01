@@ -27,6 +27,7 @@ SCRIPT_DIRECTORY = Path(__file__).resolve().parent
 if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 from glm52_goal import paired_ratio_bound, validate_ab_blocks
+from glm52_w1_affine_campaign import content_complete_fixture_sha256
 
 
 SLAB_PATH = "/home/bmarti44/.cache/glm52-rung0-artifacts/glm52-experts-v2.slab"
@@ -78,6 +79,13 @@ ARENA_BYTES = 68_000_000_000
 MEMORY_MARGIN_BYTES = 4 * 1024**3
 MEMORY_MAX_EXCURSION_GIB = 2
 HOST_KILL_FLOOR_GIB = 18
+QUALITY_FIXTURE_RELATIVE = Path(
+    "gguf-tools/quality-testing/data/glm52-openrouter-100/manifest.tsv"
+)
+QUALITY_FIXTURE_CONTENT_SHA256 = (
+    "11c5dc7234a21f645141c5431dd80eb5"
+    "5ff9b36bc5eb8ca1baff377012bdc0d3"
+)
 
 
 def arm_schedule() -> tuple[tuple[int, int, str], ...]:
@@ -191,7 +199,9 @@ def quality_schedule() -> tuple[str, ...]:
     return ("A", "B", "B", "A")
 
 
-def validate_quality_attempts(attempts: list[dict[str, Any]]) -> dict[str, Any]:
+def validate_quality_attempts(
+    attempts: list[dict[str, Any]], expected_case_ids: list[str]
+) -> dict[str, Any]:
     """Require exact self-replay and exact cross-arm quality identity."""
     if (
         not isinstance(attempts, list)
@@ -199,6 +209,12 @@ def validate_quality_attempts(attempts: list[dict[str, Any]]) -> dict[str, Any]:
         or tuple(attempt.get("arm") for attempt in attempts) != quality_schedule()
     ):
         raise ValueError("quality attempts do not match the fixed ABBA schedule")
+    if (
+        len(expected_case_ids) != 100
+        or len(set(expected_case_ids)) != 100
+        or any(not isinstance(case_id, str) or not case_id for case_id in expected_case_ids)
+    ):
+        raise ValueError("official quality case identity is invalid")
     grouped: dict[str, list[list[dict[str, Any]]]] = {"A": [], "B": []}
     for attempt in attempts:
         arm = attempt["arm"]
@@ -212,10 +228,39 @@ def validate_quality_attempts(attempts: list[dict[str, Any]]) -> dict[str, Any]:
             or attempt["safety"].get("failures") != []
         ):
             raise ValueError("quality attempt is incomplete or unsafe")
+        if [row.get("case_id") for row in rows] != expected_case_ids:
+            raise ValueError("quality output IDs differ from the official fixture")
         grouped[arm].append(rows)
     if grouped["A"][0] != grouped["A"][1] or grouped["B"][0] != grouped["B"][1]:
         raise ValueError("quality arm is not deterministic with itself")
     return compare_quality_rows(grouped["A"][0], grouped["B"][0])
+
+
+def validate_bound_quality_evidence(
+    performance_manifest: dict[str, Any],
+    quality_manifest: dict[str, Any],
+    attempts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Derive quality from raw attempts bound to the performance candidate."""
+    for name in (
+        "candidate_commit",
+        "binary_sha256",
+        "model_sha256",
+        "memory_envelope_sha256",
+    ):
+        if quality_manifest.get(name) != performance_manifest.get(name):
+            raise ValueError(f"quality evidence differs on {name}")
+    expected_ids = quality_manifest.get("ordered_case_ids")
+    if (
+        quality_manifest.get("schema_version") != 1
+        or quality_manifest.get("fixture_content_sha256")
+        != QUALITY_FIXTURE_CONTENT_SHA256
+        or quality_manifest.get("quality_binary_sha256")
+        != performance_manifest.get("quality_binary_sha256")
+        or not isinstance(expected_ids, list)
+    ):
+        raise ValueError("quality manifest is not bound to the fixed scorer contract")
+    return validate_quality_attempts(attempts, expected_ids)
 
 
 def canonical_engine_environment(mode: str) -> dict[str, str]:
@@ -265,6 +310,17 @@ def peak_engine_rss_bytes(samples: str) -> int:
     if len(values) < 2:
         raise ValueError("memory probe lacks repeated positive engine RSS samples")
     return max(values) * 1024
+
+
+def measured_non_arena_peak_bytes(samples: str) -> int:
+    """Conservatively include both process RSS and cgroup-charged file cache."""
+    rss = peak_engine_rss_bytes(samples)
+    cgroup_peaks = [
+        int(match.group(1))
+        for match in re.finditer(r"\bcgroup_peak_bytes=(\d+)\b", samples)
+        if int(match.group(1)) > 0
+    ]
+    return max([rss, *cgroup_peaks])
 
 
 def quality_command(
@@ -336,8 +392,8 @@ def parse_engine_log(text: str, mode: str) -> dict[str, Any]:
     if mode == "on":
         if "ds4: CUDA contiguous expert slab enabled records=19456" not in text:
             raise ValueError("slab activation marker is absent")
-    elif "ds4: CUDA contiguous expert slab disabled (default)" not in text:
-        raise ValueError("default-off marker is absent")
+    elif "ds4: CUDA contiguous expert slab enabled" in text:
+        raise ValueError("default-off arm emitted a slab activation marker")
 
     load_pattern = re.compile(
         r"^LOADPROF .*\bslab_mode=(on|off|error) "
@@ -376,13 +432,11 @@ def parse_quality_engine_log(text: str, mode: str) -> dict[str, Any]:
     """Prove the official scorer actually exercised the requested slab arm."""
     if "ds4: expert-cache arena pin: ok" not in text:
         raise ValueError("quality arm did not establish the pinned arena")
-    marker = (
-        "ds4: CUDA contiguous expert slab enabled records=19456"
-        if mode == "on"
-        else "ds4: CUDA contiguous expert slab disabled (default)"
-    )
-    if marker not in text:
-        raise ValueError("quality arm lacks its effective slab marker")
+    marker = "ds4: CUDA contiguous expert slab enabled records=19456"
+    if mode == "on" and marker not in text:
+        raise ValueError("quality arm lacks its slab activation marker")
+    if mode == "off" and "ds4: CUDA contiguous expert slab enabled" in text:
+        raise ValueError("quality baseline emitted a slab activation marker")
     loads = re.findall(
         r"^LOADPROF .*\bslab_mode=(on|off|error) "
         r"slab_reads=(\d+) .*\bslab_peak_qd=(\d+)\b",
@@ -652,7 +706,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
                         "model": "glm-5.2",
                         "prompt": "Reply with the single word OK.",
                         "temperature": 0,
-                        "max_tokens": 1,
+                        "max_tokens": 128,
                     }
                 ).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
@@ -691,6 +745,7 @@ def execute_quality_arm(args: argparse.Namespace) -> int:
         name: os.environ[name] for name in PROVENANCE_NAMES if name in os.environ
     }
     binary = args.binary.resolve()
+    fixture_root = args.fixture_root.resolve()
     manifest = args.manifest.resolve()
     output = args.output.resolve()
     if (
@@ -699,6 +754,9 @@ def execute_quality_arm(args: argparse.Namespace) -> int:
         or not str(binary.parent).startswith("/home/bmarti44/.cache/glm52-")
         or not binary.is_file()
         or sha256_file(binary) != args.binary_sha256
+        or not fixture_root.is_dir()
+        or not str(fixture_root).startswith("/home/bmarti44/.cache/glm52-")
+        or manifest != fixture_root / QUALITY_FIXTURE_RELATIVE
         or not manifest.is_file()
         or sha256_file(manifest) != args.manifest_sha256
         or output.exists()
@@ -712,6 +770,7 @@ def execute_quality_arm(args: argparse.Namespace) -> int:
         "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         **expected_environment,
     }
+    os.chdir(fixture_root)
     os.execve(binary, [os.fspath(part) for part in command], environment)
     raise RuntimeError("quality scorer exec unexpectedly returned")
 
@@ -1096,7 +1155,7 @@ def run_memory_probe(args: argparse.Namespace) -> int:
     samples = (arm_out / "safety.samples.log").read_text(encoding="utf-8")
     kernel = (arm_out / "safety.kernel.log").read_text(encoding="utf-8")
     safety = parse_safety_logs(main, samples, kernel)
-    non_arena_peak_bytes = peak_engine_rss_bytes(samples)
+    non_arena_peak_bytes = measured_non_arena_peak_bytes(samples)
     host_total_bytes = next(
         int(line.split()[1]) * 1024
         for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines()
@@ -1121,6 +1180,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
     """Run ABBA full-suite scorer arms and emit the fixed exact NLL artifact."""
     quality_candidate = args.quality_candidate.resolve()
     binary = quality_candidate / "ds4-server"
+    fixture_root = args.fixture_root.resolve()
     manifest = args.manifest.resolve()
     out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
     if (
@@ -1132,10 +1192,18 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
         or re.fullmatch(r"[0-9a-f]{64}", args.quality_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{64}", args.server_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
+        or not fixture_root.is_dir()
+        or not str(fixture_root).startswith("/home/bmarti44/.cache/glm52-")
+        or manifest != fixture_root / QUALITY_FIXTURE_RELATIVE
         or not manifest.is_file()
     ):
         raise ValueError("quality campaign identity is invalid")
-    fixture_manifest_case_ids(manifest)
+    fixture_ids = fixture_manifest_case_ids(manifest)
+    fixture_content_sha256 = content_complete_fixture_sha256(
+        fixture_root, [manifest]
+    )
+    if fixture_content_sha256 != QUALITY_FIXTURE_CONTENT_SHA256:
+        raise ValueError("official quality fixture content hash mismatch")
     envelope = verified_memory_envelope(
         args.memory_envelope.resolve(),
         args.server_binary_sha256,
@@ -1189,6 +1257,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
                     "--binary-sha256", args.quality_binary_sha256,
                     "--manifest", str(manifest),
                     "--manifest-sha256", manifest_sha256,
+                    "--fixture-root", str(fixture_root),
                     "--output", str(result_path),
                 ],
                 stdin=subprocess.DEVNULL,
@@ -1222,8 +1291,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
                 safety_files["kernel.log"],
             )
             engine = parse_quality_engine_log(
-                completed.stdout.decode("utf-8", errors="replace")
-                + completed.stderr.decode("utf-8", errors="replace"),
+                safety_files["cmd.log"],
                 mode,
             )
             rows = parse_quality_tsv(result_path)
@@ -1248,20 +1316,23 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
             no_large_engines()
     finally:
         raw_stream.close()
-    result = validate_quality_attempts(attempts)
+    result = validate_quality_attempts(attempts, fixture_ids)
     write_json_exclusive(out / "nll.json", result)
-    write_json_exclusive(
-        out / "quality-manifest.json",
-        {
-            "schema_version": 1,
-            "candidate_commit": args.candidate_commit,
-            "quality_binary_sha256": args.quality_binary_sha256,
-            "server_binary_sha256": args.server_binary_sha256,
-            "fixture_sha256": manifest_sha256,
-            "memory_envelope_sha256": sha256_file(args.memory_envelope.resolve()),
-            "schedule": list(quality_schedule()),
-        },
-    )
+    quality_manifest = {
+        "schema_version": 1,
+        "candidate_commit": args.candidate_commit,
+        "binary_sha256": args.server_binary_sha256,
+        "quality_binary_sha256": args.quality_binary_sha256,
+        "model_sha256": MODEL_SHA256,
+        "fixture_sha256": manifest_sha256,
+        "fixture_content_sha256": fixture_content_sha256,
+        "ordered_case_ids": fixture_ids,
+        "memory_envelope_sha256": sha256_file(args.memory_envelope.resolve()),
+        "quality_raw_sha256": sha256_file(out / "quality-raw.jsonl"),
+        "nll_sha256": sha256_file(out / "nll.json"),
+        "schedule": list(quality_schedule()),
+    }
+    write_json_exclusive(out / "quality-manifest.json", quality_manifest)
     print(f"RUNG0_QUALITY_DONE out={out / 'nll.json'}")
     return 0
 
@@ -1278,6 +1349,7 @@ def run_campaign(args: argparse.Namespace) -> int:
         or not binary.is_file()
         or sha256_file(binary) != args.binary_sha256
         or re.fullmatch(r"[0-9a-f]{64}", args.binary_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{64}", args.quality_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
         or not re.fullmatch(r"[0-9a-f]{64}", args.seed_sha256)
         or not 1024 <= args.port <= 65535
@@ -1307,6 +1379,7 @@ def run_campaign(args: argparse.Namespace) -> int:
         "candidate_source": str(candidate),
         "candidate_commit": args.candidate_commit,
         "binary_sha256": args.binary_sha256,
+        "quality_binary_sha256": args.quality_binary_sha256,
         "model_sha256": MODEL_SHA256,
         "sidecar_sha256": SLAB_SHA256,
         "tokenizer_sha256": TOKENIZER_SHA256,
@@ -1459,13 +1532,42 @@ def run_campaign(args: argparse.Namespace) -> int:
 
 def score_directory(args: argparse.Namespace) -> int:
     campaign = args.campaign.resolve()
+    performance_manifest = strict_json(campaign / "manifest.json")
     records = [
-        json.loads(line)
+        json.loads(
+            line,
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite JSON constant {value}")
+            ),
+        )
         for line in (campaign / "raw.jsonl").read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    nll = strict_json(args.nll.resolve())
-    summary = score_campaign(records, nll)
+    quality = args.quality_campaign.resolve()
+    quality_manifest = strict_json(quality / "quality-manifest.json")
+    quality_raw = quality / "quality-raw.jsonl"
+    quality_nll = quality / "nll.json"
+    if (
+        quality_manifest.get("quality_raw_sha256") != sha256_file(quality_raw)
+        or quality_manifest.get("nll_sha256") != sha256_file(quality_nll)
+    ):
+        raise ValueError("quality raw or NLL hash differs from its manifest")
+    attempts = [
+        json.loads(
+            line,
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite JSON constant {value}")
+            ),
+        )
+        for line in quality_raw.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    nll = validate_bound_quality_evidence(
+        performance_manifest, quality_manifest, attempts
+    )
+    if strict_json(quality_nll) != nll:
+        raise ValueError("stored NLL differs from raw quality derivation")
+    summary = score_campaign(records, nll, quality_bound=True)
     write_json_exclusive(campaign / "summary.json", summary)
     print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
     return 0
@@ -1502,6 +1604,7 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     quality_arm.add_argument("--binary-sha256", required=True)
     quality_arm.add_argument("--manifest", type=Path, required=True)
     quality_arm.add_argument("--manifest-sha256", required=True)
+    quality_arm.add_argument("--fixture-root", type=Path, required=True)
     quality_arm.add_argument("--output", type=Path, required=True)
     quality = subparsers.add_parser("quality")
     quality.add_argument("--tag", required=True)
@@ -1509,6 +1612,7 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     quality.add_argument("--quality-binary-sha256", required=True)
     quality.add_argument("--server-binary-sha256", required=True)
     quality.add_argument("--candidate-commit", required=True)
+    quality.add_argument("--fixture-root", type=Path, required=True)
     quality.add_argument("--manifest", type=Path, required=True)
     quality.add_argument("--memory-envelope", type=Path, required=True)
     run = subparsers.add_parser("run")
@@ -1516,12 +1620,13 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     run.add_argument("--candidate", type=Path, required=True)
     run.add_argument("--candidate-commit", required=True)
     run.add_argument("--binary-sha256", required=True)
+    run.add_argument("--quality-binary-sha256", required=True)
     run.add_argument("--seed-sha256", required=True)
     run.add_argument("--memory-envelope", type=Path, required=True)
     run.add_argument("--port", type=int, default=8032)
     score = subparsers.add_parser("score")
     score.add_argument("--campaign", type=Path, required=True)
-    score.add_argument("--nll", type=Path, required=True)
+    score.add_argument("--quality-campaign", type=Path, required=True)
     return parser.parse_args(argv)
 
 
@@ -1548,8 +1653,15 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
 
-def score_campaign(records: list[dict[str, Any]], nll: dict[str, Any]) -> dict[str, Any]:
+def score_campaign(
+    records: list[dict[str, Any]],
+    nll: dict[str, Any],
+    *,
+    quality_bound: bool = False,
+) -> dict[str, Any]:
     """Validate raw arms and apply the fixed Rung 0.1 formulas."""
+    if quality_bound is not True:
+        raise ValueError("quality evidence was not bound by the authoritative scorer")
     expected_keys = {
         "schema_version",
         "block",
