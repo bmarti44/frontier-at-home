@@ -172,6 +172,38 @@ def compare_quality_rows(
     }
 
 
+def quality_schedule() -> tuple[str, ...]:
+    """One balanced block with two independent executions of each arm."""
+    return ("A", "B", "B", "A")
+
+
+def validate_quality_attempts(attempts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Require exact self-replay and exact cross-arm quality identity."""
+    if (
+        not isinstance(attempts, list)
+        or len(attempts) != 4
+        or tuple(attempt.get("arm") for attempt in attempts) != quality_schedule()
+    ):
+        raise ValueError("quality attempts do not match the fixed ABBA schedule")
+    grouped: dict[str, list[list[dict[str, Any]]]] = {"A": [], "B": []}
+    for attempt in attempts:
+        arm = attempt["arm"]
+        mode = "off" if arm == "A" else "on"
+        rows = attempt.get("rows")
+        if (
+            attempt.get("mode") != mode
+            or not isinstance(rows, list)
+            or len(rows) != 100
+            or not isinstance(attempt.get("safety"), dict)
+            or attempt["safety"].get("failures") != []
+        ):
+            raise ValueError("quality attempt is incomplete or unsafe")
+        grouped[arm].append(rows)
+    if grouped["A"][0] != grouped["A"][1] or grouped["B"][0] != grouped["B"][1]:
+        raise ValueError("quality arm is not deterministic with itself")
+    return compare_quality_rows(grouped["A"][0], grouped["B"][0])
+
+
 def canonical_engine_environment(mode: str) -> dict[str, str]:
     """Return the exact timed engine environment for one arm."""
     if mode not in {"off", "on"}:
@@ -221,10 +253,13 @@ def peak_engine_rss_bytes(samples: str) -> int:
     return max(values) * 1024
 
 
-def quality_command(binary: Path, manifest: Path, output: Path) -> list[Any]:
+def quality_command(
+    binary: Path, model: Path, manifest: Path, output: Path
+) -> list[Any]:
     """Build the existing official scorer invocation for the full fixture."""
     return [
         binary,
+        model,
         manifest,
         output,
         "8192",
@@ -321,6 +356,34 @@ def parse_engine_log(text: str, mode: str) -> dict[str, Any]:
         "arena_pin_ok": True,
         "trace_lines": trace_lines,
     }
+
+
+def parse_quality_engine_log(text: str, mode: str) -> dict[str, Any]:
+    """Prove the official scorer actually exercised the requested slab arm."""
+    if "ds4: expert-cache arena pin: ok" not in text:
+        raise ValueError("quality arm did not establish the pinned arena")
+    marker = (
+        "ds4: CUDA contiguous expert slab enabled records=19456"
+        if mode == "on"
+        else "ds4: CUDA contiguous expert slab disabled (default)"
+    )
+    if marker not in text:
+        raise ValueError("quality arm lacks its effective slab marker")
+    loads = re.findall(
+        r"^LOADPROF .*\bslab_mode=(on|off|error) "
+        r"slab_reads=(\d+) .*\bslab_peak_qd=(\d+)\b",
+        text,
+        re.MULTILINE,
+    )
+    if not loads or any(resolved != mode for resolved, _, _ in loads):
+        raise ValueError("quality arm slab mode is absent or inconsistent")
+    reads = sum(int(value) for _, value, _ in loads)
+    peak = max(int(value) for _, _, value in loads)
+    if mode == "on" and (reads <= 0 or peak < 2):
+        raise ValueError("quality slab arm lacks concurrent reads")
+    if mode == "off" and (reads or peak):
+        raise ValueError("quality baseline performed slab reads")
+    return {"slab_mode": mode, "slab_reads": reads, "slab_peak_qd": peak}
 
 
 def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
@@ -604,6 +667,39 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
     if matching_executable_pids(binary):
         raise RuntimeError("frozen engine survived memory-probe cleanup")
     return 0
+
+
+def execute_quality_arm(args: argparse.Namespace) -> int:
+    """Validate identities, then replace this process with the frozen scorer."""
+    mode = "off" if args.arm == "A" else "on"
+    expected_environment = canonical_engine_environment(mode)
+    observed_environment = {
+        name: os.environ[name] for name in PROVENANCE_NAMES if name in os.environ
+    }
+    binary = args.binary.resolve()
+    manifest = args.manifest.resolve()
+    output = args.output.resolve()
+    if (
+        observed_environment != expected_environment
+        or binary.name != "ds4-server"
+        or not str(binary.parent).startswith("/home/bmarti44/.cache/glm52-")
+        or not binary.is_file()
+        or sha256_file(binary) != args.binary_sha256
+        or not manifest.is_file()
+        or sha256_file(manifest) != args.manifest_sha256
+        or output.exists()
+        or not str(output).startswith("/home/bmarti44/.local/state/glm52-rung0-")
+    ):
+        raise ValueError("quality arm identity or environment is invalid")
+    command = quality_command(binary, MODEL_PATH, manifest, output)
+    environment = {
+        "HOME": "/home/bmarti44",
+        "LANG": "C.UTF-8",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        **expected_environment,
+    }
+    os.execve(binary, [os.fspath(part) for part in command], environment)
+    raise RuntimeError("quality scorer exec unexpectedly returned")
 
 
 def execute_arm(args: argparse.Namespace) -> int:
@@ -1007,6 +1103,159 @@ def run_memory_probe(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_quality_campaign(args: argparse.Namespace) -> int:
+    """Run ABBA full-suite scorer arms and emit the fixed exact NLL artifact."""
+    quality_candidate = args.quality_candidate.resolve()
+    binary = quality_candidate / "ds4-server"
+    manifest = args.manifest.resolve()
+    out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
+    if (
+        out.exists()
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,39}", args.tag) is None
+        or not str(quality_candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not binary.is_file()
+        or sha256_file(binary) != args.quality_binary_sha256
+        or re.fullmatch(r"[0-9a-f]{64}", args.quality_binary_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{64}", args.server_binary_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
+        or not manifest.is_file()
+    ):
+        raise ValueError("quality campaign identity is invalid")
+    with manifest.open(encoding="utf-8", newline="") as stream:
+        fixture_rows = list(csv.DictReader(stream, delimiter="\t"))
+    fixture_ids = [row.get("id") for row in fixture_rows]
+    if len(fixture_ids) != 100 or None in fixture_ids or len(set(fixture_ids)) != 100:
+        raise ValueError("quality fixture is not the fixed complete 100-case suite")
+    envelope = verified_memory_envelope(
+        args.memory_envelope.resolve(),
+        args.server_binary_sha256,
+        args.candidate_commit,
+    )
+    memory_high_gib = envelope["memory_high_gib"]
+    services_are_stopped()
+    no_large_engines()
+    stable_start_memory(max(110.0, memory_high_gib + 20.0))
+    verify_global_lock_access()
+    out.mkdir(mode=0o700, parents=True)
+    manifest_sha256 = sha256_file(manifest)
+    attempts: list[dict[str, Any]] = []
+    raw_stream = (out / "quality-raw.jsonl").open("x", encoding="utf-8")
+    try:
+        for index, arm in enumerate(quality_schedule()):
+            services_are_stopped()
+            no_large_engines()
+            stable_start_memory(max(110.0, memory_high_gib + 20.0))
+            mode = "off" if arm == "A" else "on"
+            label = f"quality-{index:02d}-{arm.lower()}"
+            result_path = out / f"{label}.tsv"
+            crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
+            engine_environment = canonical_engine_environment(mode)
+            environment = os.environ.copy()
+            for name in list(environment):
+                if name.startswith("DS4_") or name.startswith("GLM_"):
+                    del environment[name]
+            environment.update(engine_environment)
+            environment.update(
+                {
+                    "GLM_CANDIDATE_SRC": str(quality_candidate),
+                    "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+                    "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+                    "GLM_SAFE_EXPECTED_BINARY_SHA256": args.quality_binary_sha256,
+                    "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(PROVENANCE_NAMES),
+                    "GLM_SAFE_EXPECTED_ENV_SHA256": canonical_environment_sha256(
+                        engine_environment
+                    ),
+                    "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
+                    "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
+                    "GLM_SAFE_MIN_START_GIB": "110",
+                    "GLM_SAFE_TIMEOUT_S": "3600",
+                }
+            )
+            completed = subprocess.run(
+                [
+                    str(CGROUP_RUNNER), "--tag", label, "--",
+                    sys.executable, str(Path(__file__).resolve()), "quality-arm",
+                    "--arm", arm, "--binary", str(binary),
+                    "--binary-sha256", args.quality_binary_sha256,
+                    "--manifest", str(manifest),
+                    "--manifest-sha256", manifest_sha256,
+                    "--output", str(result_path),
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=environment,
+                timeout=3700,
+                check=False,
+            )
+            (out / f"{label}.stdout.log").write_bytes(completed.stdout)
+            (out / f"{label}.stderr.log").write_bytes(completed.stderr)
+            if completed.returncode != 0:
+                raise RuntimeError(f"contained quality arm failed rc={completed.returncode}")
+            crash_after = set(CRASH_ROOT.glob("*"))
+            matches = [
+                path for path in crash_after - crash_before if path.name.endswith(f"-{label}")
+            ]
+            if len(matches) != 1:
+                raise RuntimeError(f"quality arm {label} lacks one safety directory")
+            safety_files: dict[str, str] = {}
+            for name in ("main.log", "samples.log", "kernel.log", "cmd.log"):
+                source = matches[0] / name
+                if not source.is_file():
+                    raise RuntimeError(f"quality arm {label} lacks {name}")
+                destination = out / f"{label}.safety.{name}"
+                shutil.copy2(source, destination)
+                safety_files[name] = destination.read_text(encoding="utf-8")
+            safety = parse_safety_logs(
+                safety_files["main.log"],
+                safety_files["samples.log"],
+                safety_files["kernel.log"],
+            )
+            engine = parse_quality_engine_log(
+                completed.stdout.decode("utf-8", errors="replace")
+                + completed.stderr.decode("utf-8", errors="replace"),
+                mode,
+            )
+            rows = parse_quality_tsv(result_path)
+            attempt = {
+                "arm": arm,
+                "mode": mode,
+                "rows": rows,
+                "output_sha256": sha256_file(result_path),
+                "configuration_sha256": canonical_environment_sha256(
+                    engine_environment
+                ),
+                "engine": engine,
+                "safety": safety,
+            }
+            attempts.append(attempt)
+            raw_stream.write(
+                json.dumps(attempt, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                + "\n"
+            )
+            raw_stream.flush()
+            os.fsync(raw_stream.fileno())
+            no_large_engines()
+    finally:
+        raw_stream.close()
+    result = validate_quality_attempts(attempts)
+    write_json_exclusive(out / "nll.json", result)
+    write_json_exclusive(
+        out / "quality-manifest.json",
+        {
+            "schema_version": 1,
+            "candidate_commit": args.candidate_commit,
+            "quality_binary_sha256": args.quality_binary_sha256,
+            "server_binary_sha256": args.server_binary_sha256,
+            "fixture_sha256": manifest_sha256,
+            "memory_envelope_sha256": sha256_file(args.memory_envelope.resolve()),
+            "schedule": list(quality_schedule()),
+        },
+    )
+    print(f"RUNG0_QUALITY_DONE out={out / 'nll.json'}")
+    return 0
+
+
 def run_campaign(args: argparse.Namespace) -> int:
     candidate = args.candidate.resolve()
     binary = candidate / "ds4-server"
@@ -1237,6 +1486,21 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     probe.add_argument("--candidate-commit", required=True)
     probe.add_argument("--binary-sha256", required=True)
     probe.add_argument("--port", type=int, default=8032)
+    quality_arm = subparsers.add_parser("quality-arm")
+    quality_arm.add_argument("--arm", choices=("A", "B"), required=True)
+    quality_arm.add_argument("--binary", type=Path, required=True)
+    quality_arm.add_argument("--binary-sha256", required=True)
+    quality_arm.add_argument("--manifest", type=Path, required=True)
+    quality_arm.add_argument("--manifest-sha256", required=True)
+    quality_arm.add_argument("--output", type=Path, required=True)
+    quality = subparsers.add_parser("quality")
+    quality.add_argument("--tag", required=True)
+    quality.add_argument("--quality-candidate", type=Path, required=True)
+    quality.add_argument("--quality-binary-sha256", required=True)
+    quality.add_argument("--server-binary-sha256", required=True)
+    quality.add_argument("--candidate-commit", required=True)
+    quality.add_argument("--manifest", type=Path, required=True)
+    quality.add_argument("--memory-envelope", type=Path, required=True)
     run = subparsers.add_parser("run")
     run.add_argument("--tag", required=True)
     run.add_argument("--candidate", type=Path, required=True)
@@ -1260,6 +1524,10 @@ def main(argv: list[str] | None = None) -> int:
             return execute_memory_probe_arm(args)
         if args.command == "memory-probe":
             return run_memory_probe(args)
+        if args.command == "quality-arm":
+            return execute_quality_arm(args)
+        if args.command == "quality":
+            return run_quality_campaign(args)
         if args.command == "run":
             return run_campaign(args)
         if args.command == "score":
