@@ -793,6 +793,7 @@ def run_rep(
             "client_first_content_ns": first_content_at_ns,
             "client_last_content_ns": last_content_at_ns,
             "sse_token_timestamps_ns": sse_token_timestamps_ns,
+            "client_prompt_tokens": token_count(tokenizer, prompt),
             "raw_client_timing_ratio": raw_client_timing_ratio,
         }
         if reasons:
