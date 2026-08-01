@@ -53,6 +53,7 @@ PROVENANCE_NAMES = tuple(
             "DS4_CUDA_LOAD_PROFILE",
             "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
             "DS4_GLM_TP_DEBUG",
+            "DS4_LOCK_FILE",
             "DS4_TOKEN_TIMING_LOG",
             "DS4_CUDA_EXPERT_SLAB_PATH",
             "DS4_CUDA_EXPERT_SLAB_SHA256",
@@ -73,6 +74,7 @@ TOKENIZER_SHA256 = (
 )
 FIXTURE = ROOT / "fixtures/ctx-32k.txt"
 GLOBAL_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
+INSTANCE_LOCK = "/run/user/1000/glm52-rung0-ds4.lock"
 CRASH_ROOT = Path("/home/bmarti44/.local/state/glm52-crashlog")
 MODEL_PATH = Path(
     "/home/dsv4/ds4-project/gguf-glm/"
@@ -546,6 +548,7 @@ def canonical_engine_environment(mode: str) -> dict[str, str]:
         "DS4_CUDA_LOAD_PROFILE": "1",
         "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
         "DS4_GLM_TP_DEBUG": "1",
+        "DS4_LOCK_FILE": INSTANCE_LOCK,
         "DS4_TOKEN_TIMING_LOG": "1",
     }
     if mode == "on":
@@ -567,6 +570,7 @@ def memory_probe_environment() -> dict[str, str]:
         "DS4_CUDA_LOAD_PROFILE": "1",
         "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
         "DS4_GLM_TP_DEBUG": "1",
+        "DS4_LOCK_FILE": INSTANCE_LOCK,
         "DS4_TOKEN_TIMING_LOG": "1",
     }
 

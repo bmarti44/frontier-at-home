@@ -195,6 +195,8 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             {key: value for key, value in on.items() if key not in slab}, off
         )
         self.assertEqual(off["DS4_CUDA_FETCH_THREADS"], "8")
+        self.assertEqual(off["DS4_LOCK_FILE"], CAMPAIGN.INSTANCE_LOCK)
+        self.assertTrue(CAMPAIGN.INSTANCE_LOCK.startswith("/run/user/1000/"))
         self.assertNotIn("DS4_CUDA_EXPERT_SLAB_TRACE", on)
         self.assertNotEqual(
             CAMPAIGN.canonical_environment_sha256(off),
@@ -357,6 +359,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
     def test_probe_is_cache_off_and_peak_rss_comes_from_external_samples(self):
         environment = CAMPAIGN.memory_probe_environment()
         self.assertEqual(environment["DS4_CUDA_EXPERT_CACHE_GB"], "0")
+        self.assertEqual(environment["DS4_LOCK_FILE"], CAMPAIGN.INSTANCE_LOCK)
         self.assertNotIn("DS4_CUDA_EXPERT_SLAB_PATH", environment)
         samples = "\n".join(
             (
