@@ -56,12 +56,12 @@ dsv4_launcher() {
         DSV4_PORT="$PORT" \
         DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
         DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
-        DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14 \
-        DSV4_MEM_FLOOR_GIB=14 DSV4_WATCHDOG_FLOOR_GIB=14 \
-        DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5 \
+        DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=8 \
+        DSV4_MEM_FLOOR_GIB=8 DSV4_WATCHDOG_FLOOR_GIB=8 \
+        DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=12 \
         DSV4_ALLOW_RETRY_AFTER_FAILED_START=1 \
         DSV4_UBATCH=2048 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=1 \
-        CTX=1048576 DSV4_PARALLEL=1 DSV4_NO_MMAP=1 \
+        CTX=1048576 DSV4_PARALLEL=2 DSV4_NO_MMAP=1 \
         DSV4_SPEC_TYPE=none \
         "$REPO/scripts/21_serve_llamacpp.sh" "$@"
 }
@@ -233,11 +233,11 @@ verify_dsv4_context() {
     clean_python - "$body" <<'PY'
 import json, sys
 value = json.loads(sys.argv[1])
-if not isinstance(value, list) or len(value) != 1:
+if not isinstance(value, list) or len(value) != 2:
     raise SystemExit("DeepSeek slot topology is invalid")
-slot = value[0]
-if slot["n_ctx"] != 1048576:
-    raise SystemExit("DeepSeek context is not 1048576")
+for slot in value:
+    if slot["n_ctx"] != 524288:
+        raise SystemExit("DeepSeek per-slot context is not 524288 (2 x 512k)")
 PY
 }
 

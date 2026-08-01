@@ -645,7 +645,7 @@ class ContextWorkerContractTests(unittest.TestCase):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB", source)
         self.assertIn("${DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB:-0}", source)
-        self.assertIn("must be 0 or 14", source)
+        self.assertIn("must be 0 or 8 or 14", source)
         self.assertIn("CTX != 1048576", source)
         self.assertIn("measured_headless_overhead_gib == 0", source)
         worker = WORKER.read_text(encoding="utf-8")

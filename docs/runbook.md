@@ -258,10 +258,10 @@ flags in `scripts/21_serve_llamacpp.sh`) must pass, in order:
    three profile copies in sync (this is the guard added after the 2026-07-27/28
    reverts silently halved prefill throughput).
 2. `scripts/dev/regression-suite.py agent-gate --base http://127.0.0.1:<port>`
-   against the restarted server — prefix-cache, turn-continuation, and the
-   novel-prompt prefill-throughput gate (>= 350 tok/s at ~19K). Never promote
-   a serving-knob change without this novel-prompt probe
-   (results/OPERATIONAL-OVERRIDE-2026-07-24.md lesson).
+   against the restarted server — prefix-cache, turn-continuation, slot-thrash
+   (the default profile runs 2 slots), and the novel-prompt prefill-throughput
+   gate (>= 350 tok/s at ~19K). Never promote a serving-knob change without
+   this novel-prompt probe (results/OPERATIONAL-OVERRIDE-2026-07-24.md lesson).
 3. If the change is memory-relevant: a 30-minute `scripts/35_soak.py` run with
    the memwatch log reviewed for floor proximity.
 

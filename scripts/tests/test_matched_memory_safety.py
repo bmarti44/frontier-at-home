@@ -138,13 +138,13 @@ class MatchedHarnessContractTests(unittest.TestCase):
     def test_production_service_uses_launcher_accepted_memory_floor(self):
         source = DSV4_SERVICE.read_text(encoding="utf-8")
         self.assertIn(
-            "Environment=DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14",
+            "Environment=DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=8",
             source,
         )
-        self.assertIn("Environment=DSV4_MEM_FLOOR_GIB=14", source)
-        self.assertIn("Environment=DSV4_WATCHDOG_FLOOR_GIB=14", source)
+        self.assertIn("Environment=DSV4_MEM_FLOOR_GIB=8", source)
+        self.assertIn("Environment=DSV4_WATCHDOG_FLOOR_GIB=8", source)
         self.assertIn(
-            "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5",
+            "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=12",
             source,
         )
 

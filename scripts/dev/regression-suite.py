@@ -239,7 +239,8 @@ def main():
     args = ap.parse_args()
     aliases = {
         "all-llamacpp": ["prefix-cache", "slot-thrash"],
-        "agent-gate": ["prefix-cache", "turn-continuation", "prefill-throughput"],
+        "agent-gate": ["prefix-cache", "turn-continuation", "slot-thrash",
+                       "prefill-throughput"],
     }
     names = aliases[args.tests[0]] if len(args.tests) == 1 and args.tests[0] in aliases else args.tests
     ok = True

@@ -781,20 +781,27 @@ do_start() {
 
     local budget rc
     set +e
+    # Floor 14 is the qualified single-slot 1M profile (retained 14.142 GiB).
+    # Floor 8 is the owner-accepted 1M-fast profile (2026-08-01): the
+    # context-scaled compute buffers at ub=2048/CTX=1M leave a measured
+    # steady state of ~9.8 GiB free, below the 14 GiB barrier, and the owner
+    # chose a thinner crash barrier over giving up 1M context or prefill
+    # speed. The quarter-second watchdog remains armed at the lower floor.
     qualification_floor_gib=${DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB:-0}
-    [[ $qualification_floor_gib == 0 || $qualification_floor_gib == 14 ]] \
-        || die 'DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB must be 0 or 14'
+    [[ $qualification_floor_gib == 0 || $qualification_floor_gib == 8 \
+        || $qualification_floor_gib == 14 ]] \
+        || die 'DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB must be 0 or 8 or 14'
     watchdog_floor_gib=${DSV4_WATCHDOG_FLOOR_GIB:-18}
     [[ $watchdog_floor_gib =~ ^[0-9]{1,2}$ ]] \
         || die 'DSV4_WATCHDOG_FLOOR_GIB must be a bounded integer'
     watchdog_floor_gib=$((10#$watchdog_floor_gib))
-    if (( qualification_floor_gib == 14 )); then
-        (( watchdog_floor_gib == 14 )) ||
-            die '1M qualification requires DSV4_WATCHDOG_FLOOR_GIB=14'
+    if (( qualification_floor_gib != 0 )); then
+        (( watchdog_floor_gib == qualification_floor_gib )) ||
+            die '1M qualification requires DSV4_WATCHDOG_FLOOR_GIB to equal the qualification floor'
         # Reject textually as well as numerically: a huge CTX congruent to 1M
         # must not pass through Bash integer wraparound (CTX != 1048576).
         [[ $CTX == 1048576 ]] ||
-            die '14 GiB qualification floor requires CTX=1048576'
+            die 'a 1M qualification floor requires CTX=1048576'
     elif (( watchdog_floor_gib < 18 || watchdog_floor_gib > 64 )); then
         die 'DSV4_WATCHDOG_FLOOR_GIB must be between 18 and 64'
     fi
@@ -806,9 +813,9 @@ do_start() {
     [[ $mem_floor_gib =~ ^[0-9]{1,3}$ ]] \
         || die 'DSV4_MEM_FLOOR_GIB must be a bounded integer'
     mem_floor_gib=$((10#$mem_floor_gib))
-    if (( qualification_floor_gib == 14 )); then
-        (( mem_floor_gib >= 14 && mem_floor_gib <= 119 )) ||
-            die '1M qualification DSV4_MEM_FLOOR_GIB must be between 14 and 119'
+    if (( qualification_floor_gib != 0 )); then
+        (( mem_floor_gib >= qualification_floor_gib && mem_floor_gib <= 119 )) ||
+            die '1M qualification DSV4_MEM_FLOOR_GIB must be between the qualification floor and 119'
     elif (( mem_floor_gib < 18 || mem_floor_gib > 119 )); then
         die 'DSV4_MEM_FLOOR_GIB must be between 18 and 119'
     fi
@@ -824,19 +831,24 @@ do_start() {
     # non-weight footprint was measured at 2.74 GiB with ubatch=512 on this
     # host. Charge 3 GiB only while the display is confirmed stopped; the
     # independent 18 GiB quarter-second watchdog remains unchanged.
-    # Value 5 is the measured FAST-buffer headless admission: 2.74 GiB
-    # (ub=512) + ~1 GiB compute-buffer growth at ub=2048 + slack. It exists
-    # because the 2026-07-27 "OOM-safe" revert was an admission-gate
-    # marginality (conservative 8 GiB charge + 18 GiB floor exceeded
-    # MemAvailable by ~1.5 GiB), not a live OOM; do not shrink the buffers
-    # to fix admission failures — see docs/speed-tuning-2026-07-23.md.
+    # Value 5 is the measured FAST-buffer headless admission AT MODERATE
+    # CONTEXT: 2.74 GiB (ub=512) + ~1 GiB compute-buffer growth at ub=2048 +
+    # slack, measured at CTX=65536. Compute buffers scale with CTX as well as
+    # ub (the flash-attention mask alone is n_ctx x n_ubatch x 2B), so this
+    # charge is only valid up to CTX=131072 — at CTX=1M with ub=2048 the real
+    # non-weight, non-KV footprint measured ~11.3 GiB (memwatch BREACH to
+    # 9.79 GiB, 2026-08-01), which is what value 12 charges. The 2026-07-27
+    # "OOM-safe" revert was an admission-gate marginality, not a live OOM; do
+    # not shrink the buffers to fix admission failures — see
+    # docs/speed-tuning-2026-07-23.md and docs/runbook.md.
     measured_headless_overhead_gib=${DSV4_MEASURED_HEADLESS_OVERHEAD_GIB:-0}
     [[ $measured_headless_overhead_gib == 0 || $measured_headless_overhead_gib == 3 \
-        || $measured_headless_overhead_gib == 5 ]] \
-        || die 'DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3 or 5'
-    if (( qualification_floor_gib == 14 &&
+        || $measured_headless_overhead_gib == 5 \
+        || $measured_headless_overhead_gib == 12 ]] \
+        || die 'DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3 or 5 or 12'
+    if (( qualification_floor_gib != 0 &&
             measured_headless_overhead_gib == 0 )); then
-        die '14 GiB qualification floor requires measured headless admission'
+        die 'a 1M qualification floor requires measured headless admission'
     fi
     if (( measured_headless_overhead_gib != 0 )); then
         need_command systemctl
@@ -846,15 +858,22 @@ do_start() {
             [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] &&
                 (( ${DSV4_UBATCH:-512} <= 512 )) ||
                 die 'measured headless overhead 3 requires DSV4_UBATCH <= 512'
-        else
-            # The 5 GiB charge covers ub up to 2048 and demands the explicit
-            # large-ubatch opt-in so the +2 GiB surcharge reasoning above
-            # stays visible in the profile.
+        elif (( measured_headless_overhead_gib == 5 )); then
             [[ ${DSV4_UBATCH_LARGE:-0} == 1 ]] ||
                 die 'measured headless overhead 5 requires DSV4_UBATCH_LARGE=1'
             [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] &&
                 (( ${DSV4_UBATCH:-512} <= 2048 )) ||
                 die 'measured headless overhead 5 requires DSV4_UBATCH <= 2048'
+            (( CTX <= 131072 )) ||
+                die 'measured headless overhead 5 requires CTX <= 131072 (context-scaled buffers exceed the charge above it)'
+        else
+            [[ ${DSV4_UBATCH_LARGE:-0} == 1 ]] ||
+                die 'measured headless overhead 12 requires DSV4_UBATCH_LARGE=1'
+            [[ ${DSV4_UBATCH:-512} =~ ^[0-9]{1,5}$ ]] &&
+                (( ${DSV4_UBATCH:-512} <= 2048 )) ||
+                die 'measured headless overhead 12 requires DSV4_UBATCH <= 2048'
+            [[ $CTX == 1048576 ]] ||
+                die 'measured headless overhead 12 requires CTX=1048576 (it charges the measured 1M-context buffers)'
         fi
         overhead_gib=$measured_headless_overhead_gib
         printf 'Using measured headless admission overhead: %s GiB; watchdog floor remains %s GiB.\n' \

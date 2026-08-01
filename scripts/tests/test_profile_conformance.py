@@ -24,21 +24,29 @@ PROFILE = ROOT / "configs/profiles/dsv4-1m-fast.env"
 SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 SWITCH = ROOT / "scripts/52_engine_switch.sh"
 
-# The qualified 1M+fast profile: million-token context with the measured
-# fast-prefill buffers (ggerganov's canonical DGX Spark config, ~434 tok/s
-# prefill vs ~208 at ub=256).
+# The 1M+fast profile: million-token context with the measured fast-prefill
+# buffers (ggerganov's canonical DGX Spark config, ~434 tok/s prefill vs ~208
+# at ub=256). The context-scaled compute buffers at CTX=1M/ub=2048 leave a
+# measured steady state of ~9.8 GiB free (memwatch BREACH 2026-08-01), so the
+# owner accepted lowering the watchdog floor to 8 GiB — a deliberately
+# thinner crash barrier, chosen over giving up either 1M context or prefill
+# speed. The 12 GiB overhead charge is the measured non-weight, non-KV
+# footprint (~11.3 GiB) at this exact configuration. Two slots (512k each)
+# protect the agent conversation cache from utility-call eviction; a single
+# request is therefore capped at 512k tokens — use the ub=256 single-slot
+# switch profile for true 1M-token runs.
 EXPECTED = {
     "DSV4_UBATCH": "2048",
     "DSV4_BATCH": "2048",
     "DSV4_UBATCH_LARGE": "1",
     "CTX": "1048576",
-    "DSV4_PARALLEL": "1",
+    "DSV4_PARALLEL": "2",
     "DSV4_NO_MMAP": "1",
     "DSV4_SPEC_TYPE": "none",
-    "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB": "5",
-    "DSV4_MEM_FLOOR_GIB": "14",
-    "DSV4_WATCHDOG_FLOOR_GIB": "14",
-    "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB": "14",
+    "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB": "12",
+    "DSV4_MEM_FLOOR_GIB": "8",
+    "DSV4_WATCHDOG_FLOOR_GIB": "8",
+    "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB": "8",
 }
 
 ASSIGN_RE = re.compile(r"^([A-Z][A-Z0-9_]*)=(\S+)$")
@@ -125,12 +133,23 @@ class ProfileConformanceTests(unittest.TestCase):
         source = (ROOT / "scripts/21_serve_llamacpp.sh").read_text(
             encoding="utf-8")
         self.assertIn(
-            "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3 or 5",
+            "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB must be 0 or 3 or 5 or 12",
             source,
-            "serve script must allow DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5",
+            "serve script must allow DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=12",
         )
         self.assertIn(
-            "measured headless overhead 5 requires DSV4_UBATCH <= 2048",
+            "measured headless overhead 12 requires CTX=1048576",
+            source,
+        )
+        # The 5 GiB charge was measured at 64K context; the FA mask and other
+        # context-scaled buffers make it unsafe at 1M (memwatch BREACH to
+        # 9.79 GiB on 2026-08-01), so the launcher must scope it.
+        self.assertIn(
+            "measured headless overhead 5 requires CTX <= 131072",
+            source,
+        )
+        self.assertIn(
+            "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB must be 0 or 8 or 14",
             source,
         )
 

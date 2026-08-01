@@ -94,7 +94,7 @@ class EngineSwitchTests(unittest.TestCase):
     def test_deepseek_readiness_requires_the_exact_1m_context(self):
         source = SCRIPT.read_text()
         self.assertIn('"/slots"', source)
-        self.assertIn('slot["n_ctx"] != 1048576', source)
+        self.assertIn('slot["n_ctx"] != 524288', source)
 
     def test_switch_runs_deepseek_as_engine_user_with_frozen_1m_profile(self):
         source = SCRIPT.read_text()
@@ -106,16 +106,16 @@ class EngineSwitchTests(unittest.TestCase):
             "DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/"
             "llama.cpp-fusion/build/bin/llama-server",
             "DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json",
-            "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14",
-            "DSV4_MEM_FLOOR_GIB=14",
-            "DSV4_WATCHDOG_FLOOR_GIB=14",
-            "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5",
+            "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=8",
+            "DSV4_MEM_FLOOR_GIB=8",
+            "DSV4_WATCHDOG_FLOOR_GIB=8",
+            "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=12",
             "DSV4_ALLOW_RETRY_AFTER_FAILED_START=1",
             "DSV4_UBATCH=2048",
             "DSV4_BATCH=2048",
             "DSV4_UBATCH_LARGE=1",
             "CTX=1048576",
-            "DSV4_PARALLEL=1",
+            "DSV4_PARALLEL=2",
             "DSV4_NO_MMAP=1",
             "DSV4_SPEC_TYPE=none",
         ):
@@ -127,16 +127,16 @@ class EngineSwitchTests(unittest.TestCase):
     def test_installed_deepseek_service_uses_the_qualified_1m_profile(self):
         service = DSV4_SERVICE.read_text()
         for setting in (
-            "Environment=DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=14",
-            "Environment=DSV4_MEM_FLOOR_GIB=14",
-            "Environment=DSV4_WATCHDOG_FLOOR_GIB=14",
-            "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=5",
+            "Environment=DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=8",
+            "Environment=DSV4_MEM_FLOOR_GIB=8",
+            "Environment=DSV4_WATCHDOG_FLOOR_GIB=8",
+            "Environment=DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=12",
             "Environment=DSV4_ALLOW_RETRY_AFTER_FAILED_START=1",
             "Environment=DSV4_UBATCH=2048",
             "Environment=DSV4_BATCH=2048",
             "Environment=DSV4_UBATCH_LARGE=1",
             "Environment=CTX=1048576",
-            "Environment=DSV4_PARALLEL=1",
+            "Environment=DSV4_PARALLEL=2",
             "Environment=DSV4_SPEC_TYPE=none",
         ):
             self.assertIn(setting, service)
