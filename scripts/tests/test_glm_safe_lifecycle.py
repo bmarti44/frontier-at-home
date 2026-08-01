@@ -30,6 +30,16 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         _, installer = references[0]
         self.assertIn("systemd-tmpfiles --create", installer)
         self.assertIn("/etc/tmpfiles.d/frontier-at-home-glm-benchmark.conf", installer)
+        prefix = re.search(r"SOURCE_SHA256_PREFIX=([0-9a-f]{32})", installer)
+        suffix = re.search(r"SOURCE_SHA256_SUFFIX=([0-9a-f]{32})", installer)
+        self.assertIsNotNone(prefix)
+        self.assertIsNotNone(suffix)
+        self.assertEqual(
+            prefix.group(1) + suffix.group(1),
+            hashlib.sha256(
+                (ROOT / "configs/tmpfiles/frontier-at-home-glm-benchmark.conf").read_bytes()
+            ).hexdigest(),
+        )
         self.assertNotIn("sudoers", installer)
         self.assertNotIn("systemctl", installer)
 

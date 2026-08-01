@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import importlib.util
 import copy
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +21,26 @@ SPEC.loader.exec_module(CAMPAIGN)
 
 
 class Rung0SlabCampaignTests(unittest.TestCase):
+    @staticmethod
+    def passing_confirmation(
+        candidate_commit: str, binary_sha256: str, quality_binary_sha256: str
+    ):
+        signature = "22" * 96
+        randomness = hashlib.sha256(bytes.fromhex(signature)).hexdigest()
+        seed = CAMPAIGN.confirmation_seed(
+            randomness, candidate_commit, binary_sha256, quality_binary_sha256
+        )
+        return {
+            "round": 11,
+            "randomness": randomness,
+            "signature": signature,
+            "obtained_at": "2026-08-01T00:00:00+00:00",
+            "chain_hash": "a" * 64,
+            "published_epoch_s": 1300,
+            "seed_sha256": seed,
+            "flip": bool(int(seed[:2], 16) & 1),
+        }
+
     def passing_records(self):
         records = []
         for block, sequence, arm in CAMPAIGN.arm_schedule():
@@ -118,6 +140,35 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             first,
             CAMPAIGN.confirmation_seed("1" * 64, "2" * 40, "3" * 64, "5" * 64),
         )
+
+    def test_public_randomness_must_be_published_after_freeze(self):
+        record = {
+            "round": 11,
+            "randomness": "1" * 64,
+            "signature": "2" * 192,
+            "obtained_at": "2026-08-01T00:00:00+00:00",
+        }
+        relay = CAMPAIGN.subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout=(
+                b'{"genesis_time":1000,"period":30,"hash":"'
+                + b"a" * 64 + b'"}'
+            ),
+            stderr=b"",
+        )
+        with (
+            mock.patch.object(CAMPAIGN, "_drand_record", return_value=record),
+            mock.patch.object(CAMPAIGN, "_authenticate_drand", return_value=record),
+            mock.patch.object(CAMPAIGN.subprocess, "run", return_value=relay),
+        ):
+            accepted = CAMPAIGN.authenticate_confirmation(
+                Path("/unused"), "2" * 40, "3" * 64, "4" * 64, 1299,
+            )
+            self.assertEqual(accepted["published_epoch_s"], 1300)
+            with self.assertRaisesRegex(ValueError, "before the frozen candidate"):
+                CAMPAIGN.authenticate_confirmation(
+                    Path("/unused"), "2" * 40, "3" * 64, "4" * 64, 1300,
+                )
 
     def test_timed_arms_differ_only_by_slab_identity(self):
         off = CAMPAIGN.canonical_engine_environment("off")
@@ -283,7 +334,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 "--candidate-commit", "a" * 40,
                 "--binary-sha256", "b" * 64,
                 "--quality-binary-sha256", "d" * 64,
-                "--seed-sha256", "c" * 64,
+                "--drand-json", "/tmp/drand.json",
                 "--memory-envelope", "/tmp/envelope.json",
             ]
         )
@@ -393,10 +444,15 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             "quality_binary_sha256": "d" * 64,
             "model_sha256": CAMPAIGN.MODEL_SHA256,
             "memory_envelope_sha256": "c" * 64,
+            "randomness": self.passing_confirmation(
+                "a" * 40, "b" * 64, "d" * 64
+            ),
         }
         attempts = []
         expected_ids = [f"case-{index:03d}" for index in range(100)]
-        for arm in CAMPAIGN.quality_schedule():
+        for arm in CAMPAIGN.quality_schedule(
+            flip=performance["randomness"]["flip"]
+        ):
             attempts.append(
                 {
                     "arm": arm,
@@ -442,6 +498,13 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             "model_stat_before": {"size": 1},
             "model_stat_after": {"size": 1},
             "ordered_case_ids": expected_ids,
+            "schedule": list(CAMPAIGN.quality_schedule(
+                flip=performance["randomness"]["flip"]
+            )),
+            "fixture_sha256": "5" * 64,
+            "quality_raw_sha256": "6" * 64,
+            "nll_sha256": "7" * 64,
+            "randomness": performance["randomness"],
         }
         result = CAMPAIGN.validate_bound_quality_evidence(
             performance, manifest, attempts
@@ -465,11 +528,31 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         manifest = {
             "schema_version": 1,
             "gate": "glm-rung0-slab",
+            "candidate_source": "/home/bmarti44/.cache/glm52-test",
+            "candidate_commit": "f" * 40,
             "binary_sha256": "a" * 64,
             "quality_binary_sha256": "d" * 64,
+            "model_sha256": CAMPAIGN.MODEL_SHA256,
+            "sidecar_sha256": CAMPAIGN.SLAB_SHA256,
+            "tokenizer_sha256": CAMPAIGN.TOKENIZER_SHA256,
             "fixture_sha256": "d" * 64,
-            "schedule": [list(row) for row in CAMPAIGN.arm_schedule()],
+            "randomness": self.passing_confirmation(
+                "f" * 40, "a" * 64, "d" * 64
+            ),
+            "seed_sha256": "",
+            "memory_envelope_sha256": "2" * 64,
+            "memory_high_gib": 98,
+            "memory_max_gib": 100,
+            "kill_floor_gib": 18,
+            "artifact_sha256": {},
+            "sidecar_stat_before": {},
         }
+        manifest["seed_sha256"] = manifest["randomness"]["seed_sha256"]
+        manifest["schedule"] = [
+            list(row) for row in CAMPAIGN.arm_schedule(
+                flip=manifest["randomness"]["flip"]
+            )
+        ]
         CAMPAIGN.validate_performance_binding(manifest, records)
         records[0]["binary_sha256"] = "e" * 64
         with self.assertRaises(ValueError):

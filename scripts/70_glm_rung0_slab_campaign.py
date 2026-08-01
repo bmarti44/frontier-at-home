@@ -27,7 +27,11 @@ SCRIPT_DIRECTORY = Path(__file__).resolve().parent
 if str(SCRIPT_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIRECTORY))
 from glm52_goal import paired_ratio_bound, validate_ab_blocks
-from glm52_w1_affine_campaign import content_complete_fixture_sha256
+from glm52_w1_affine_campaign import (
+    _authenticate_drand,
+    _drand_record,
+    content_complete_fixture_sha256,
+)
 
 
 SLAB_PATH = "/home/bmarti44/.cache/glm52-rung0-artifacts/glm52-experts-v2.slab"
@@ -88,13 +92,145 @@ QUALITY_FIXTURE_CONTENT_SHA256 = (
 )
 
 
-def arm_schedule() -> tuple[tuple[int, int, str], ...]:
+def arm_schedule(*, flip: bool = False) -> tuple[tuple[int, int, str], ...]:
     """Return the preregistered five-block execution order."""
     rows: list[tuple[int, int, str]] = []
     for block in range(5):
-        order = "ABBA" if block % 2 == 0 else "BAAB"
+        order = "ABBA" if (block + int(flip)) % 2 == 0 else "BAAB"
         rows.extend((block, sequence, arm) for sequence, arm in enumerate(order))
     return tuple(rows)
+
+
+def confirmation_seed(
+    randomness: str,
+    candidate_commit: str,
+    binary_sha256: str,
+    quality_binary_sha256: str,
+) -> str:
+    """Bind public randomness to both clean-built candidate executables."""
+    if (
+        re.fullmatch(r"[0-9a-f]{64}", randomness) is None
+        or re.fullmatch(r"[0-9a-f]{40}", candidate_commit) is None
+        or re.fullmatch(r"[0-9a-f]{64}", binary_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{64}", quality_binary_sha256) is None
+    ):
+        raise ValueError("confirmation seed input is malformed")
+    return hashlib.sha256(
+        (
+            f"{candidate_commit}:{binary_sha256}:{quality_binary_sha256}:"
+            f"{randomness}:glm-rung0-slab"
+        ).encode("ascii")
+    ).hexdigest()
+
+
+def authenticate_confirmation(
+    path: Path,
+    candidate_commit: str,
+    binary_sha256: str,
+    quality_binary_sha256: str,
+    not_before_epoch_s: float,
+) -> dict[str, Any]:
+    """Require relay-agreed randomness published after the binary freeze."""
+    record = _authenticate_drand(_drand_record(path))
+    chain_identity: tuple[int, int, str] | None = None
+    for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
+        completed = subprocess.run(
+            [
+                "/usr/bin/curl", "--disable", "--silent", "--show-error",
+                "--fail", "--max-time", "10", "--proto", "=https",
+                f"https://{host}/info",
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"},
+            check=False,
+        )
+        if completed.returncode:
+            raise ValueError(f"latest drand relay unavailable: {host}")
+        info = json.loads(
+            completed.stdout,
+            object_pairs_hook=lambda pairs: _reject_duplicate_json_pairs(
+                pairs, f"drand chain metadata from {host}"
+            ),
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite drand value {value}")
+            ),
+        )
+        identity = (info.get("genesis_time"), info.get("period"), info.get("hash"))
+        if (
+            not isinstance(identity[0], int)
+            or not isinstance(identity[1], int)
+            or identity[1] <= 0
+            or not isinstance(identity[2], str)
+            or re.fullmatch(r"[0-9a-f]{64}", identity[2]) is None
+        ):
+            raise ValueError(f"drand chain metadata is malformed at {host}")
+        if chain_identity is None:
+            chain_identity = identity
+        elif identity != chain_identity:
+            raise ValueError("drand relays disagree on chain metadata")
+    assert chain_identity is not None
+    published_epoch_s = chain_identity[0] + (record["round"] - 1) * chain_identity[1]
+    if published_epoch_s <= not_before_epoch_s:
+        raise ValueError("drand round was published before the frozen candidate")
+    seed = confirmation_seed(
+        record["randomness"], candidate_commit, binary_sha256, quality_binary_sha256
+    )
+    return {
+        **record,
+        "chain_hash": chain_identity[2],
+        "published_epoch_s": published_epoch_s,
+        "seed_sha256": seed,
+        "flip": bool(int(seed[:2], 16) & 1),
+    }
+
+
+def _reject_duplicate_json_pairs(
+    pairs: list[tuple[str, Any]], label: str
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate key in {label}: {key}")
+        result[key] = value
+    return result
+
+
+def validate_confirmation_record(
+    record: Any,
+    candidate_commit: str,
+    binary_sha256: str,
+    quality_binary_sha256: str,
+) -> None:
+    """Validate the complete public-randomness binding consumed by scoring."""
+    expected_keys = {
+        "round", "randomness", "signature", "obtained_at", "chain_hash",
+        "published_epoch_s", "seed_sha256", "flip",
+    }
+    if (
+        not isinstance(record, dict)
+        or set(record) != expected_keys
+        or not isinstance(record.get("round"), int)
+        or isinstance(record.get("round"), bool)
+        or record["round"] <= 0
+        or not re.fullmatch(r"[0-9a-f]{64}", record.get("randomness", ""))
+        or not re.fullmatch(r"[0-9a-f]{192}", record.get("signature", ""))
+        or hashlib.sha256(bytes.fromhex(record["signature"])).hexdigest()
+        != record["randomness"]
+        or not isinstance(record.get("obtained_at"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", record.get("chain_hash", ""))
+        or not isinstance(record.get("published_epoch_s"), int)
+        or isinstance(record.get("published_epoch_s"), bool)
+        or not isinstance(record.get("flip"), bool)
+        or record.get("seed_sha256")
+        != confirmation_seed(
+            record["randomness"], candidate_commit, binary_sha256,
+            quality_binary_sha256,
+        )
+        or record["flip"] != bool(int(record["seed_sha256"][:2], 16) & 1)
+    ):
+        raise ValueError("public-randomness binding is incomplete or malformed")
 
 
 def derive_memory_envelope(
@@ -194,9 +330,9 @@ def compare_quality_rows(
     }
 
 
-def quality_schedule() -> tuple[str, ...]:
+def quality_schedule(*, flip: bool = False) -> tuple[str, ...]:
     """One balanced block with two independent executions of each arm."""
-    return ("A", "B", "B", "A")
+    return ("B", "A", "A", "B") if flip else ("A", "B", "B", "A")
 
 
 def validate_quality_attempts(
@@ -206,7 +342,8 @@ def validate_quality_attempts(
     if (
         not isinstance(attempts, list)
         or len(attempts) != 4
-        or tuple(attempt.get("arm") for attempt in attempts) != quality_schedule()
+        or tuple(attempt.get("arm") for attempt in attempts)
+        not in {quality_schedule(), quality_schedule(flip=True)}
     ):
         raise ValueError("quality attempts do not match the fixed ABBA schedule")
     if (
@@ -220,14 +357,49 @@ def validate_quality_attempts(
         arm = attempt["arm"]
         mode = "off" if arm == "A" else "on"
         rows = attempt.get("rows")
+        engine = attempt.get("engine")
+        safety = attempt.get("safety")
+        expected_attempt_keys = {
+            "arm", "mode", "rows", "output_sha256", "configuration_sha256",
+            "engine", "safety",
+        }
+        expected_safety_keys = {
+            "minimum_available_gib", "cgroup_high_events", "cgroup_max_events",
+            "cgroup_oom_events", "cgroup_swap_bytes", "xid", "survivors",
+            "failures",
+        }
         if (
-            attempt.get("mode") != mode
+            set(attempt) != expected_attempt_keys
+            or attempt.get("mode") != mode
             or not isinstance(rows, list)
             or len(rows) != 100
-            or not isinstance(attempt.get("safety"), dict)
-            or attempt["safety"].get("failures") != []
+            or not re.fullmatch(r"[0-9a-f]{64}", attempt.get("output_sha256", ""))
+            or attempt.get("configuration_sha256")
+            != canonical_environment_sha256(canonical_engine_environment(mode))
+            or not isinstance(engine, dict)
+            or set(engine) != {"slab_mode", "slab_reads", "slab_peak_qd"}
+            or engine.get("slab_mode") != mode
+            or not isinstance(safety, dict)
+            or set(safety) != expected_safety_keys
+            or safety.get("minimum_available_gib", 0) < 10
+            or any(
+                safety.get(name) != 0
+                for name in (
+                    "cgroup_high_events", "cgroup_max_events",
+                    "cgroup_oom_events", "cgroup_swap_bytes",
+                )
+            )
+            or safety.get("xid") is not False
+            or safety.get("survivors") != []
+            or safety.get("failures") != []
         ):
             raise ValueError("quality attempt is incomplete or unsafe")
+        if mode == "on" and (
+            engine["slab_reads"] <= 0 or engine["slab_peak_qd"] < 2
+        ):
+            raise ValueError("quality slab arm lacks concurrent reads")
+        if mode == "off" and (engine["slab_reads"] != 0 or engine["slab_peak_qd"] != 0):
+            raise ValueError("quality baseline performed slab reads")
         if [row.get("case_id") for row in rows] != expected_case_ids:
             raise ValueError("quality output IDs differ from the official fixture")
         grouped[arm].append(rows)
@@ -250,17 +422,113 @@ def validate_bound_quality_evidence(
     ):
         if quality_manifest.get(name) != performance_manifest.get(name):
             raise ValueError(f"quality evidence differs on {name}")
-    expected_ids = quality_manifest.get("ordered_case_ids")
+    performance_randomness = performance_manifest.get("randomness")
+    quality_randomness = quality_manifest.get("randomness")
+    validate_confirmation_record(
+        performance_randomness,
+        performance_manifest.get("candidate_commit", ""),
+        performance_manifest.get("binary_sha256", ""),
+        performance_manifest.get("quality_binary_sha256", ""),
+    )
+    validate_confirmation_record(
+        quality_randomness,
+        quality_manifest.get("candidate_commit", ""),
+        quality_manifest.get("binary_sha256", ""),
+        quality_manifest.get("quality_binary_sha256", ""),
+    )
     if (
-        quality_manifest.get("schema_version") != 1
+        not isinstance(performance_randomness, dict)
+        or not isinstance(quality_randomness, dict)
+        or quality_randomness != performance_randomness
+    ):
+        raise ValueError("quality and performance public randomness differ")
+    expected_ids = quality_manifest.get("ordered_case_ids")
+    expected_quality_keys = {
+        "schema_version", "candidate_commit", "binary_sha256",
+        "quality_binary_sha256", "model_sha256", "model_stat_before",
+        "model_stat_after", "fixture_sha256", "fixture_content_sha256",
+        "fixture_content_sha256_after", "ordered_case_ids",
+        "memory_envelope_sha256", "quality_raw_sha256", "nll_sha256",
+        "schedule", "randomness",
+    }
+    manifest_schedule = tuple(quality_manifest.get("schedule", ()))
+    expected_schedule = quality_schedule(flip=bool(quality_randomness.get("flip")))
+    if (
+        set(quality_manifest) != expected_quality_keys
+        or quality_manifest.get("schema_version") != 1
         or quality_manifest.get("fixture_content_sha256")
         != QUALITY_FIXTURE_CONTENT_SHA256
+        or quality_manifest.get("fixture_content_sha256_after")
+        != QUALITY_FIXTURE_CONTENT_SHA256
+        or quality_manifest.get("model_stat_before")
+        != quality_manifest.get("model_stat_after")
+        or not isinstance(quality_manifest.get("model_stat_before"), dict)
         or quality_manifest.get("quality_binary_sha256")
         != performance_manifest.get("quality_binary_sha256")
         or not isinstance(expected_ids, list)
+        or manifest_schedule != expected_schedule
+        or tuple(attempt.get("arm") for attempt in attempts) != expected_schedule
     ):
         raise ValueError("quality manifest is not bound to the fixed scorer contract")
     return validate_quality_attempts(attempts, expected_ids)
+
+
+def validate_performance_binding(
+    manifest: dict[str, Any], records: list[dict[str, Any]]
+) -> None:
+    """Bind every performance arm to the frozen manifest and exact schedule."""
+    raw_schedule = manifest.get("schedule")
+    allowed_schedules = {
+        tuple(arm_schedule()),
+        tuple(arm_schedule(flip=True)),
+    }
+    try:
+        schedule = tuple(tuple(row) for row in raw_schedule)
+    except (TypeError, ValueError):
+        schedule = ()
+    randomness = manifest.get("randomness")
+    expected_manifest_keys = {
+        "schema_version", "gate", "candidate_source", "candidate_commit",
+        "binary_sha256", "quality_binary_sha256", "model_sha256",
+        "sidecar_sha256", "tokenizer_sha256", "fixture_sha256", "randomness",
+        "seed_sha256", "schedule", "memory_envelope_sha256",
+        "memory_high_gib", "memory_max_gib", "kill_floor_gib",
+        "artifact_sha256", "sidecar_stat_before",
+    }
+    if (
+        set(manifest) != expected_manifest_keys
+        or manifest.get("schema_version") != 1
+        or manifest.get("gate") != "glm-rung0-slab"
+        or schedule not in allowed_schedules
+        or not isinstance(randomness, dict)
+        or randomness.get("flip") not in {False, True}
+        or schedule != arm_schedule(flip=randomness["flip"])
+        or not re.fullmatch(r"[0-9a-f]{64}", manifest.get("binary_sha256", ""))
+        or not re.fullmatch(
+            r"[0-9a-f]{64}", manifest.get("quality_binary_sha256", "")
+        )
+        or not re.fullmatch(r"[0-9a-f]{64}", manifest.get("fixture_sha256", ""))
+        or len(records) != 20
+    ):
+        raise ValueError("performance manifest identity or schedule is invalid")
+    validate_confirmation_record(
+        randomness,
+        manifest["candidate_commit"],
+        manifest["binary_sha256"],
+        manifest["quality_binary_sha256"],
+    )
+    for record, (block, sequence, arm) in zip(records, schedule, strict=True):
+        mode = "off" if arm == "A" else "on"
+        if (
+            (record.get("block"), record.get("sequence"), record.get("arm"))
+            != (block, sequence, arm)
+            or record.get("mode") != mode
+            or record.get("binary_sha256") != manifest["binary_sha256"]
+            or record.get("fixture_sha256") != manifest["fixture_sha256"]
+            or record.get("configuration_sha256")
+            != canonical_environment_sha256(canonical_engine_environment(mode))
+        ):
+            raise ValueError("performance raw arm differs from its manifest")
 
 
 def canonical_engine_environment(mode: str) -> dict[str, str]:
@@ -699,23 +967,44 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
             )
             start_ticks = proc_start_ticks(server.pid)
             wait_ready(server, args.port)
-            request = urllib.request.Request(
-                f"http://127.0.0.1:{args.port}/v1/completions",
-                data=json.dumps(
-                    {
-                        "model": "glm-5.2",
-                        "prompt": "Reply with the single word OK.",
-                        "temperature": 0,
-                        "max_tokens": 128,
-                    }
-                ).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST",
+            probe_result = out / "probe-result.json"
+            completed = subprocess.run(
+                [
+                    str(ROOT / ".venv-harness/bin/python"),
+                    str(BENCHMARK),
+                    "--base-url", f"http://127.0.0.1:{args.port}",
+                    "--out", str(probe_result),
+                    "--stack-label", "rung0-cache-off-memory-probe",
+                    "--model-id", "glm-5.2",
+                    "--output-tokenizer-path", str(TOKENIZER),
+                    "--output-tokenizer-sha256", TOKENIZER_SHA256,
+                    "--token-timing-log", str(out / "server.log"),
+                    "--reps", "1", "--warmup", "0", "--context-levels", "0",
+                    "--max-tokens", "160", "--min-completion-tokens", "128",
+                    "--seed", "0",
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=server_environment,
+                timeout=1200,
+                check=False,
             )
-            with urllib.request.urlopen(request, timeout=600) as response:
-                body = json.loads(response.read())
-                if response.status != 200 or not body.get("choices"):
-                    raise RuntimeError("cache-off memory probe completion failed")
+            (out / "probe.stdout.log").write_bytes(completed.stdout)
+            (out / "probe.stderr.log").write_bytes(completed.stderr)
+            if completed.returncode != 0:
+                raise RuntimeError("cache-off memory probe benchmark failed")
+            result = strict_json(probe_result)
+            cells = result.get("cells")
+            if (
+                result.get("suite_valid") is not True
+                or not isinstance(cells, list)
+                or len(cells) != 1
+                or not isinstance(cells[0].get("reps"), list)
+                or len(cells[0]["reps"]) != 1
+                or cells[0]["reps"][0].get("client_completion_tokens", 0) < 128
+            ):
+                raise RuntimeError("cache-off memory probe produced fewer than 128 tokens")
             time.sleep(1)
             server_log.flush()
             os.fsync(server_log.fileno())
@@ -1196,6 +1485,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
         or not str(fixture_root).startswith("/home/bmarti44/.cache/glm52-")
         or manifest != fixture_root / QUALITY_FIXTURE_RELATIVE
         or not manifest.is_file()
+        or not args.drand_json.is_file()
     ):
         raise ValueError("quality campaign identity is invalid")
     fixture_ids = fixture_manifest_case_ids(manifest)
@@ -1204,11 +1494,20 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
     )
     if fixture_content_sha256 != QUALITY_FIXTURE_CONTENT_SHA256:
         raise ValueError("official quality fixture content hash mismatch")
+    model_stat_before = artifact_stat(MODEL_PATH)
+    if sha256_file(MODEL_PATH) != MODEL_SHA256:
+        raise ValueError("quality model content hash mismatch before execution")
     envelope = verified_memory_envelope(
         args.memory_envelope.resolve(),
         args.server_binary_sha256,
         args.candidate_commit,
     )
+    confirmation = authenticate_confirmation(
+        args.drand_json.resolve(), args.candidate_commit,
+        args.server_binary_sha256, args.quality_binary_sha256,
+        args.memory_envelope.resolve().stat().st_mtime,
+    )
+    schedule = quality_schedule(flip=confirmation["flip"])
     memory_high_gib = envelope["memory_high_gib"]
     services_are_stopped()
     no_large_engines()
@@ -1219,7 +1518,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
     attempts: list[dict[str, Any]] = []
     raw_stream = (out / "quality-raw.jsonl").open("x", encoding="utf-8")
     try:
-        for index, arm in enumerate(quality_schedule()):
+        for index, arm in enumerate(schedule):
             services_are_stopped()
             no_large_engines()
             stable_start_memory(max(110.0, memory_high_gib + 20.0))
@@ -1316,6 +1615,16 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
             no_large_engines()
     finally:
         raw_stream.close()
+    model_stat_after = artifact_stat(MODEL_PATH)
+    fixture_content_after = content_complete_fixture_sha256(
+        fixture_root, [manifest]
+    )
+    if (
+        model_stat_after != model_stat_before
+        or sha256_file(MODEL_PATH) != MODEL_SHA256
+        or fixture_content_after != fixture_content_sha256
+    ):
+        raise RuntimeError("quality model or fixture changed during the campaign")
     result = validate_quality_attempts(attempts, fixture_ids)
     write_json_exclusive(out / "nll.json", result)
     quality_manifest = {
@@ -1324,13 +1633,17 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
         "binary_sha256": args.server_binary_sha256,
         "quality_binary_sha256": args.quality_binary_sha256,
         "model_sha256": MODEL_SHA256,
+        "model_stat_before": model_stat_before,
+        "model_stat_after": model_stat_after,
         "fixture_sha256": manifest_sha256,
         "fixture_content_sha256": fixture_content_sha256,
+        "fixture_content_sha256_after": fixture_content_after,
         "ordered_case_ids": fixture_ids,
         "memory_envelope_sha256": sha256_file(args.memory_envelope.resolve()),
         "quality_raw_sha256": sha256_file(out / "quality-raw.jsonl"),
         "nll_sha256": sha256_file(out / "nll.json"),
-        "schedule": list(quality_schedule()),
+        "schedule": list(schedule),
+        "randomness": confirmation,
     }
     write_json_exclusive(out / "quality-manifest.json", quality_manifest)
     print(f"RUNG0_QUALITY_DONE out={out / 'nll.json'}")
@@ -1351,13 +1664,19 @@ def run_campaign(args: argparse.Namespace) -> int:
         or re.fullmatch(r"[0-9a-f]{64}", args.binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{64}", args.quality_binary_sha256) is None
         or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
-        or not re.fullmatch(r"[0-9a-f]{64}", args.seed_sha256)
+        or not args.drand_json.is_file()
         or not 1024 <= args.port <= 65535
     ):
         raise ValueError("campaign identity or bounded configuration is invalid")
     envelope = verified_memory_envelope(
         args.memory_envelope.resolve(), args.binary_sha256, args.candidate_commit
     )
+    confirmation = authenticate_confirmation(
+        args.drand_json.resolve(), args.candidate_commit,
+        args.binary_sha256, args.quality_binary_sha256,
+        args.memory_envelope.resolve().stat().st_mtime,
+    )
+    schedule = arm_schedule(flip=confirmation["flip"])
     memory_high_gib = envelope["memory_high_gib"]
     services_are_stopped()
     no_large_engines()
@@ -1372,7 +1691,7 @@ def run_campaign(args: argparse.Namespace) -> int:
     out.mkdir(mode=0o700, parents=True)
     arms_root = out / "arms"
     arms_root.mkdir(mode=0o700)
-    seed = int(args.seed_sha256[:8], 16)
+    seed = int(confirmation["seed_sha256"][:8], 16)
     manifest = {
         "schema_version": 1,
         "gate": "glm-rung0-slab",
@@ -1384,8 +1703,9 @@ def run_campaign(args: argparse.Namespace) -> int:
         "sidecar_sha256": SLAB_SHA256,
         "tokenizer_sha256": TOKENIZER_SHA256,
         "fixture_sha256": sha256_file(FIXTURE),
-        "seed_sha256": args.seed_sha256,
-        "schedule": [list(row) for row in arm_schedule()],
+        "randomness": confirmation,
+        "seed_sha256": confirmation["seed_sha256"],
+        "schedule": [list(row) for row in schedule],
         "memory_envelope_sha256": sha256_file(args.memory_envelope.resolve()),
         "memory_high_gib": memory_high_gib,
         "memory_max_gib": memory_high_gib + MEMORY_MAX_EXCURSION_GIB,
@@ -1406,7 +1726,7 @@ def run_campaign(args: argparse.Namespace) -> int:
     raw_path = out / "raw.jsonl"
     raw_stream = raw_path.open("x", encoding="utf-8")
     try:
-        for block, sequence, arm in arm_schedule():
+        for block, sequence, arm in schedule:
             services_are_stopped()
             no_large_engines()
             stable_start_memory(max(110.0, memory_high_gib + 20.0))
@@ -1524,6 +1844,8 @@ def run_campaign(args: argparse.Namespace) -> int:
             "status": "COMPLETE_PENDING_NLL",
             "arm_count": 20,
             "sidecar_stat_after": sidecar_after,
+            "manifest_sha256": sha256_file(out / "manifest.json"),
+            "raw_sha256": sha256_file(raw_path),
         },
     )
     print(f"RUNG0_SLAB_PERF_DONE_PENDING_NLL out={out}")
@@ -1533,6 +1855,21 @@ def run_campaign(args: argparse.Namespace) -> int:
 def score_directory(args: argparse.Namespace) -> int:
     campaign = args.campaign.resolve()
     performance_manifest = strict_json(campaign / "manifest.json")
+    performance_stage = strict_json(campaign / "performance-stage.json")
+    performance_raw = campaign / "raw.jsonl"
+    if (
+        set(performance_stage)
+        != {
+            "status", "arm_count", "sidecar_stat_after",
+            "manifest_sha256", "raw_sha256",
+        }
+        or performance_stage.get("status") != "COMPLETE_PENDING_NLL"
+        or performance_stage.get("arm_count") != 20
+        or performance_stage.get("manifest_sha256")
+        != sha256_file(campaign / "manifest.json")
+        or performance_stage.get("raw_sha256") != sha256_file(performance_raw)
+    ):
+        raise ValueError("performance raw or manifest differs from its stage receipt")
     records = [
         json.loads(
             line,
@@ -1540,9 +1877,10 @@ def score_directory(args: argparse.Namespace) -> int:
                 ValueError(f"non-finite JSON constant {value}")
             ),
         )
-        for line in (campaign / "raw.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in performance_raw.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    validate_performance_binding(performance_manifest, records)
     quality = args.quality_campaign.resolve()
     quality_manifest = strict_json(quality / "quality-manifest.json")
     quality_raw = quality / "quality-raw.jsonl"
@@ -1562,6 +1900,32 @@ def score_directory(args: argparse.Namespace) -> int:
         for line in quality_raw.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    bound_quality_schedule = tuple(quality_manifest.get("schedule", ()))
+    for index, (attempt, arm) in enumerate(
+        zip(attempts, bound_quality_schedule, strict=True)
+    ):
+        label = f"quality-{index:02d}-{arm.lower()}"
+        result_path = quality / f"{label}.tsv"
+        safety_paths = {
+            name: quality / f"{label}.safety.{name}"
+            for name in ("main.log", "samples.log", "kernel.log", "cmd.log")
+        }
+        if (
+            attempt.get("output_sha256") != sha256_file(result_path)
+            or attempt.get("rows") != parse_quality_tsv(result_path)
+        ):
+            raise ValueError("quality raw differs from its official scorer TSV")
+        safety = parse_safety_logs(
+            safety_paths["main.log"].read_text(encoding="utf-8"),
+            safety_paths["samples.log"].read_text(encoding="utf-8"),
+            safety_paths["kernel.log"].read_text(encoding="utf-8"),
+        )
+        engine = parse_quality_engine_log(
+            safety_paths["cmd.log"].read_text(encoding="utf-8"),
+            "off" if arm == "A" else "on",
+        )
+        if attempt.get("safety") != safety or attempt.get("engine") != engine:
+            raise ValueError("quality raw differs from its external safety logs")
     nll = validate_bound_quality_evidence(
         performance_manifest, quality_manifest, attempts
     )
@@ -1615,13 +1979,14 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     quality.add_argument("--fixture-root", type=Path, required=True)
     quality.add_argument("--manifest", type=Path, required=True)
     quality.add_argument("--memory-envelope", type=Path, required=True)
+    quality.add_argument("--drand-json", type=Path, required=True)
     run = subparsers.add_parser("run")
     run.add_argument("--tag", required=True)
     run.add_argument("--candidate", type=Path, required=True)
     run.add_argument("--candidate-commit", required=True)
     run.add_argument("--binary-sha256", required=True)
     run.add_argument("--quality-binary-sha256", required=True)
-    run.add_argument("--seed-sha256", required=True)
+    run.add_argument("--drand-json", type=Path, required=True)
     run.add_argument("--memory-envelope", type=Path, required=True)
     run.add_argument("--port", type=int, default=8032)
     score = subparsers.add_parser("score")
