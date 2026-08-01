@@ -39,6 +39,7 @@ KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 EVIDENCE_DIR=${GLM_SAFE_EVIDENCE_DIR:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
+MEMORY_HIGH_GIB=${GLM_SAFE_MEMORY_HIGH_GIB:-}
 [[ $KILL_FLOOR_GIB =~ ^[0-9]{1,2}$ && $TIMEOUT_S =~ ^[0-9]{1,4}$ ]] || {
   echo "invalid cgroup resource configuration" >&2
   exit 2
@@ -51,6 +52,17 @@ TIMEOUT_S=$((10#$TIMEOUT_S))
   echo "invalid GLM_SAFE_RUN_AS_CURRENT_USER" >&2
   exit 2
 }
+if [[ -n $MEMORY_HIGH_GIB ]]; then
+  [[ $MEMORY_HIGH_GIB =~ ^[0-9]{2,3}$ ]] || {
+    echo "invalid GLM_SAFE_MEMORY_HIGH_GIB" >&2
+    exit 2
+  }
+  MEMORY_HIGH_GIB=$((10#$MEMORY_HIGH_GIB))
+  (( MEMORY_HIGH_GIB >= 32 && MEMORY_HIGH_GIB <= 101 )) || {
+    echo "invalid GLM_SAFE_MEMORY_HIGH_GIB" >&2
+    exit 2
+  }
+fi
 if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
   [[ $(id -un) == bmarti44 ]] || {
     echo "current-user GLM mode requires bmarti44" >&2
@@ -70,8 +82,20 @@ if [[ -n $EVIDENCE_DIR ]]; then
 fi
 
 available_mib=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
-max_mib=$((available_mib - KILL_FLOOR_GIB * 1024 - 4096))
-high_mib=$((max_mib - 4096))
+if [[ -n $MEMORY_HIGH_GIB ]]; then
+  # The caller derives MemoryHigh from a guarded cache-off RSS measurement,
+  # the exact arena allocation, and explicit overhead. MemoryMax adds only a
+  # bounded 2 GiB excursion and may never consume the whole-system kill floor.
+  high_mib=$((MEMORY_HIGH_GIB * 1024))
+  max_mib=$((high_mib + 2048))
+  (( max_mib + KILL_FLOOR_GIB * 1024 <= available_mib )) || {
+    echo "profile memory envelope exceeds safe host budget" >&2
+    exit 8
+  }
+else
+  max_mib=$((available_mib - KILL_FLOOR_GIB * 1024 - 4096))
+  high_mib=$((max_mib - 4096))
+fi
 (( high_mib >= 32768 && max_mib > high_mib )) || {
   echo "insufficient memory for bounded cgroup" >&2
   exit 8
