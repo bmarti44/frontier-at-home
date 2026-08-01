@@ -288,6 +288,13 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(CAMPAIGN.peak_engine_rss_bytes(samples), 30 * 1024**3)
         with self.assertRaises(ValueError):
             CAMPAIGN.peak_engine_rss_bytes("t mem_avail_kb=100 eng_rss_kb=0")
+        charged = samples.replace(
+            "read_bytes=1",
+            f"read_bytes=1 cgroup_peak_bytes={35 * 1024**3}",
+        )
+        self.assertEqual(
+            CAMPAIGN.measured_non_arena_peak_bytes(charged), 35 * 1024**3
+        )
 
     def test_quality_command_uses_frozen_scorer_and_full_manifest(self):
         command = CAMPAIGN.quality_command(
