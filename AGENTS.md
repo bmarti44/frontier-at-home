@@ -87,9 +87,12 @@ not merely fail one process.
   the pinned expert arena and engine RSS. Do not reuse the old 68/71 GiB
   limits: a 68 GiB arena plus roughly 30 GiB engine RSS will fight those
   limits and can destabilize the host.
-- Keep the whole-system kill floor at 40 GiB for experimental GLM runs unless
-  new measured evidence justifies another value. The production profile has its
-  own validated floor.
+- Use a 40 GiB whole-system kill floor for the cache-off measurement probe. A
+  full 68 GB-arena campaign may use the preregistered 18 GiB kill floor only
+  when its cgroup ceiling is derived from that probe, the arithmetic preserves
+  the floor against physical memory, and external sampling still rejects any
+  arm below 10 GiB available. The production profile has its own validated
+  floor.
 - Require stable start memory, a wall-clock timeout, continuous process/binary
   identity checks, and timestamped memory sampling.
 - Treat OOM, cgroup kill, swap use, Xid, short output, timeout, missing process
