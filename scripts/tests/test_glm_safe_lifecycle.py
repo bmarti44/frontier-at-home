@@ -93,6 +93,14 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("artifact_sha256=", safe)
         self.assertIn("GLM_SAFE_WITNESS_ARTIFACT", launcher)
         self.assertIn("date -u --iso-8601=ns", safe)
+
+    def test_memory_guard_is_resolved_from_frozen_harness(self):
+        safe = SAFE.read_text(encoding="utf-8")
+        self.assertNotIn(
+            "MEMORY_GUARD=/home/bmarti44/spark-deepseek-v4-flash", safe
+        )
+        self.assertIn('HARNESS_ROOT=$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")")', safe)
+        self.assertIn('MEMORY_GUARD=$HARNESS_ROOT/scripts/03_memory_guard.py', safe)
         for name in (
             "DS4_GLM_CKV_NVME",
             "DS4_GLM_CKV_DIR",
