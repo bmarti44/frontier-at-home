@@ -9,6 +9,7 @@ consumed directly by the default-off CUDA loader.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
@@ -24,7 +25,7 @@ from typing import BinaryIO, NamedTuple
 
 
 MAGIC = b"GLM52SLB"
-VERSION = 1
+VERSION = 2
 ALIGNMENT = 4096
 HEADER = struct.Struct("<8sIIQ32s32sIIQ")
 RECORD = struct.Struct("<IIQQQQ32s8x")
@@ -32,6 +33,9 @@ PROBE_BYTES = 1 << 20
 MAX_TENSORS = 200_000
 MAX_KV = 100_000
 MAX_ARRAY = 1_000_000
+MAX_ARRAY_ELEMENTS = 2_000_000
+MAX_METADATA_DEPTH = 8
+MAX_STRING_BYTES = 128 << 20
 MAX_LAYERS = 80
 MAX_EXPERTS = 256
 MAX_RECORDS = MAX_LAYERS * MAX_EXPERTS
@@ -87,6 +91,35 @@ def regular_identity(path: Path) -> tuple[int, int, int, int, int]:
     return value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns
 
 
+def stream_identity(stream: BinaryIO) -> tuple[int, int, int, int, int]:
+    value = os.fstat(stream.fileno())
+    if not stat.S_ISREG(value.st_mode):
+        raise ValueError("source descriptor is not a regular file")
+    return value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns
+
+
+@contextmanager
+def open_regular(path: Path):
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise ValueError(f"not a regular file: {path}") from error
+    try:
+        stream = os.fdopen(descriptor, "rb")
+        descriptor = -1
+        stream_identity(stream)
+        try:
+            yield stream
+        finally:
+            stream.close()
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
 def read_exact(stream: BinaryIO, size: int) -> bytes:
     value = stream.read(size)
     if len(value) != size:
@@ -102,31 +135,47 @@ def read_u64(stream: BinaryIO) -> int:
     return struct.unpack("<Q", read_exact(stream, 8))[0]
 
 
-def read_string(stream: BinaryIO) -> str:
+def read_string(stream: BinaryIO, budget: dict[str, int]) -> str:
     size = read_u64(stream)
     if size > 1 << 20:
         raise ValueError(f"implausible GGUF string length {size}")
+    budget["string_bytes"] += size
+    if budget["string_bytes"] > MAX_STRING_BYTES:
+        raise ValueError("GGUF aggregate string budget exceeded")
     return read_exact(stream, size).decode("utf-8")
 
 
-def skip_value(stream: BinaryIO, value_type: int) -> None:
+def skip_value(stream: BinaryIO, value_type: int,
+               budget: dict[str, int], depth: int = 0) -> None:
+    if depth > MAX_METADATA_DEPTH:
+        raise ValueError("GGUF metadata nesting budget exceeded")
     if value_type == 8:
-        read_exact(stream, read_u64(stream))
+        size = read_u64(stream)
+        budget["string_bytes"] += size
+        if size > 1 << 20 or budget["string_bytes"] > MAX_STRING_BYTES:
+            raise ValueError("GGUF metadata string budget exceeded")
+        read_exact(stream, size)
     elif value_type == 9:
         element_type, count = read_u32(stream), read_u64(stream)
         if count > MAX_ARRAY:
             raise ValueError(f"implausible GGUF array count {count}")
+        budget["array_elements"] += count
+        if budget["array_elements"] > MAX_ARRAY_ELEMENTS:
+            raise ValueError("GGUF aggregate array budget exceeded")
         for _ in range(count):
-            skip_value(stream, element_type)
+            skip_value(stream, element_type, budget, depth + 1)
     elif value_type in SCALAR:
         read_exact(stream, SCALAR[value_type])
     else:
         raise ValueError(f"unsupported GGUF metadata type {value_type}")
 
 
-def parse_expert_tensors(path: Path) -> tuple[int, dict[int, dict[str, Tensor]]]:
-    file_size = regular_identity(path)[2]
-    with path.open("rb") as stream:
+def parse_expert_tensors_stream(
+        stream: BinaryIO) -> tuple[int, dict[int, dict[str, Tensor]]]:
+    file_size = stream_identity(stream)[2]
+    stream.seek(0)
+    budget = {"string_bytes": 0, "array_elements": 0}
+    try:
         if read_exact(stream, 4) != b"GGUF":
             raise ValueError("source is not GGUF")
         version, tensor_count, kv_count = read_u32(stream), read_u64(stream), read_u64(stream)
@@ -138,19 +187,26 @@ def parse_expert_tensors(path: Path) -> tuple[int, dict[int, dict[str, Tensor]]]
             raise ValueError(f"implausible GGUF metadata count {kv_count}")
         alignment = 32
         for _ in range(kv_count):
-            key, value_type = read_string(stream), read_u32(stream)
+            key, value_type = read_string(stream, budget), read_u32(stream)
             if key == "general.alignment" and value_type == 4:
                 alignment = read_u32(stream)
             else:
-                skip_value(stream, value_type)
+                skip_value(stream, value_type, budget)
         raw: list[tuple[str, list[int], int, int]] = []
         for _ in range(tensor_count):
-            name, dimensions = read_string(stream), read_u32(stream)
+            name, dimensions = read_string(stream, budget), read_u32(stream)
+            # GGUF permits lower-dimensional non-routed tensors. Bound the
+            # count before allocating; routed tensors are required to be 3-D
+            # below after their names are classified.
+            if dimensions == 0 or dimensions > 4:
+                raise ValueError(f"implausible tensor dimension count {dimensions}")
             dims = [read_u64(stream) for _ in range(dimensions)]
             raw.append((name, dims, read_u32(stream), read_u64(stream)))
         if alignment > ALIGNMENT:
             raise ValueError(f"unsupported GGUF alignment {alignment}")
         data_start = align_up(stream.tell(), alignment)
+    except MemoryError as error:
+        raise ValueError("GGUF parsing exceeded memory budget") from error
 
     tensors: dict[int, dict[str, Tensor]] = {}
     for name, dims, data_type, relative_offset in raw:
@@ -184,28 +240,34 @@ def parse_expert_tensors(path: Path) -> tuple[int, dict[int, dict[str, Tensor]]]
     return file_size, tensors
 
 
-def model_probe(path: Path) -> bytes:
-    size = path.stat().st_size
+def parse_expert_tensors(path: Path) -> tuple[int, dict[int, dict[str, Tensor]]]:
+    with open_regular(path) as stream:
+        return parse_expert_tensors_stream(stream)
+
+
+def model_probe_stream(stream: BinaryIO) -> bytes:
+    size = stream_identity(stream)[2]
     digest = hashlib.sha256()
     digest.update(struct.pack("<Q", size))
-    with path.open("rb") as stream:
+    stream.seek(0)
+    digest.update(read_exact(stream, min(PROBE_BYTES, size)))
+    if size > PROBE_BYTES:
+        stream.seek(max(0, size - PROBE_BYTES))
         digest.update(read_exact(stream, min(PROBE_BYTES, size)))
-        if size > PROBE_BYTES:
-            stream.seek(max(0, size - PROBE_BYTES))
-            digest.update(read_exact(stream, min(PROBE_BYTES, size)))
     return digest.digest()
 
 
-def file_sha256(path: Path) -> bytes:
+def file_sha256_stream(stream: BinaryIO) -> bytes:
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(8 << 20), b""):
-            digest.update(chunk)
+    stream.seek(0)
+    for chunk in iter(lambda: stream.read(8 << 20), b""):
+        digest.update(chunk)
     return digest.digest()
 
 
-def plan_records(path: Path) -> tuple[int, bytes, list[PlannedRecord], int]:
-    model_size, tensors = parse_expert_tensors(path)
+def plan_records_stream(
+        stream: BinaryIO) -> tuple[int, bytes, list[PlannedRecord], int]:
+    model_size, tensors = parse_expert_tensors_stream(stream)
     count = sum(next(iter(parts.values())).experts for parts in tensors.values())
     if count == 0 or count > MAX_RECORDS:
         raise ValueError(f"invalid expert slab record count {count}")
@@ -233,7 +295,12 @@ def plan_records(path: Path) -> tuple[int, bytes, list[PlannedRecord], int]:
             output_offset = align_up(output_offset + records[-1].payload_bytes)
             if output_offset > MAX_ARTIFACT_BYTES:
                 raise ValueError("expert slab exceeds maximum artifact size")
-    return model_size, model_probe(path), records, output_offset
+    return model_size, model_probe_stream(stream), records, output_offset
+
+
+def plan_records(path: Path) -> tuple[int, bytes, list[PlannedRecord], int]:
+    with open_regular(path) as stream:
+        return plan_records_stream(stream)
 
 
 def copy_range(source: BinaryIO, output: BinaryIO, offset: int, size: int,
@@ -248,11 +315,14 @@ def copy_range(source: BinaryIO, output: BinaryIO, offset: int, size: int,
 
 
 def build(source_path: Path, output_path: Path, *, allow_large: bool = False) -> dict[str, object]:
-    source_identity = regular_identity(source_path)
-    model_size, probe, plans, final_size = plan_records(source_path)
-    model_digest = file_sha256(source_path)
-    if regular_identity(source_path) != source_identity:
-        raise ValueError("source model changed during planning")
+    with open_regular(source_path) as source:
+        return build_stream(source, output_path, allow_large=allow_large)
+
+
+def build_stream(source: BinaryIO, output_path: Path, *,
+                 allow_large: bool = False) -> dict[str, object]:
+    source_identity = stream_identity(source)
+    model_size, probe, plans, final_size = plan_records_stream(source)
     if final_size > LARGE_BUILD_BYTES and not allow_large:
         raise ValueError("large build requires --owner-approved-large-build")
     output_path.parent.mkdir(parents=False, exist_ok=True)
@@ -261,6 +331,9 @@ def build(source_path: Path, output_path: Path, *, allow_large: bool = False) ->
     free = shutil.disk_usage(output_path.parent).free
     if free < final_size + FREE_SPACE_FLOOR:
         raise ValueError("insufficient disk space for slab plus safety floor")
+    model_digest = file_sha256_stream(source)
+    if stream_identity(source) != source_identity:
+        raise ValueError("source model changed during planning")
     lock_path = output_path.with_name(output_path.name + ".lock")
     lock_flags = os.O_RDWR | os.O_CREAT | os.O_CLOEXEC
     if hasattr(os, "O_NOFOLLOW"):
@@ -273,10 +346,11 @@ def build(source_path: Path, output_path: Path, *, allow_large: bool = False) ->
     temporary = Path(temporary_name)
     records: list[bytes] = []
     published = False
+    published_identity: tuple[int, int] | None = None
     try:
         if output_path.exists() or output_path.is_symlink():
             raise ValueError("refusing to overwrite an existing slab")
-        with source_path.open("rb") as source, os.fdopen(temporary_fd, "w+b") as output:
+        with os.fdopen(temporary_fd, "w+b") as output:
             temporary_fd = -1
             if not hasattr(os, "posix_fallocate"):
                 raise ValueError("filesystem allocation preflight is unavailable")
@@ -301,12 +375,19 @@ def build(source_path: Path, output_path: Path, *, allow_large: bool = False) ->
                 output.write(record)
             output.flush()
             os.fsync(output.fileno())
-        if regular_identity(source_path) != source_identity:
+        if stream_identity(source) != source_identity:
             raise ValueError("source model changed during build")
-        verify(source_path, temporary)
+        verify_stream(source, temporary, expected_model_digest=model_digest)
+        temporary_stat = temporary.stat(follow_symlinks=False)
         os.link(temporary, output_path, follow_symlinks=False)
         published = True
-        verify(source_path, output_path)
+        published_identity = (temporary_stat.st_dev, temporary_stat.st_ino)
+        verify_stream(source, output_path, expected_model_digest=model_digest)
+        directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
         temporary.unlink()
         directory_fd = os.open(output_path.parent, os.O_RDONLY | os.O_DIRECTORY)
         try:
@@ -316,14 +397,11 @@ def build(source_path: Path, output_path: Path, *, allow_large: bool = False) ->
     except BaseException:
         if temporary_fd >= 0:
             os.close(temporary_fd)
+        if published and published_identity and output_path.exists():
+            output_stat = output_path.stat(follow_symlinks=False)
+            if (output_stat.st_dev, output_stat.st_ino) == published_identity:
+                output_path.unlink()
         if temporary.exists():
-            if published and output_path.exists():
-                temporary_stat = temporary.stat(follow_symlinks=False)
-                output_stat = output_path.stat(follow_symlinks=False)
-                if (temporary_stat.st_dev, temporary_stat.st_ino) == (
-                    output_stat.st_dev, output_stat.st_ino
-                ):
-                    output_path.unlink()
             temporary.unlink()
         raise
     finally:
@@ -347,16 +425,19 @@ def load_index(path: Path) -> tuple[tuple[object, ...], list[tuple[object, ...]]
     return header, records
 
 
-def verify(source_path: Path, slab_path: Path) -> dict[str, object]:
-    source_identity = regular_identity(source_path)
+def verify_stream(source: BinaryIO, slab_path: Path, *,
+                  expected_model_digest: bytes | None = None) -> dict[str, object]:
+    source_identity = stream_identity(source)
     slab_identity = regular_identity(slab_path)
-    model_size, probe, plans, final_size = plan_records(source_path)
+    model_size, probe, plans, final_size = plan_records_stream(source)
     header, records = load_index(slab_path)
-    if header[3] != model_size or header[4] != probe or header[5] != file_sha256(source_path):
+    model_digest = (expected_model_digest if expected_model_digest is not None
+                    else file_sha256_stream(source))
+    if header[3] != model_size or header[4] != probe or header[5] != model_digest:
         raise ValueError("expert slab model identity mismatch")
     if slab_path.stat().st_size != final_size or len(records) != len(plans):
         raise ValueError("expert slab size or record count mismatch")
-    with source_path.open("rb") as source, slab_path.open("rb") as slab:
+    with slab_path.open("rb") as slab:
         for plan, record in zip(plans, records, strict=True):
             layer, expert, offset, payload_bytes, gate_bytes, down_bytes, expected = record
             identity = (layer, expert, offset, payload_bytes, gate_bytes, down_bytes)
@@ -378,9 +459,14 @@ def verify(source_path: Path, slab_path: Path) -> dict[str, object]:
                 source_bytes.extend(read_exact(source, part_bytes))
             if payload != source_bytes:
                 raise ValueError("expert slab payload differs from GGUF")
-    if regular_identity(source_path) != source_identity or regular_identity(slab_path) != slab_identity:
+    if stream_identity(source) != source_identity or regular_identity(slab_path) != slab_identity:
         raise ValueError("source or slab changed during verification")
     return {"records": len(records), "bytes": final_size, "verified": True}
+
+
+def verify(source_path: Path, slab_path: Path) -> dict[str, object]:
+    with open_regular(source_path) as source:
+        return verify_stream(source, slab_path)
 
 
 def main() -> int:

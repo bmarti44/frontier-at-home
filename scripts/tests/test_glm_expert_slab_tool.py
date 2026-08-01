@@ -3,7 +3,9 @@
 
 import importlib.util
 import hashlib
+import os
 from pathlib import Path
+import stat
 import struct
 import tempfile
 import threading
@@ -138,7 +140,9 @@ class ExpertSlabToolTests(unittest.TestCase):
     def test_large_build_requires_explicit_owner_approval(self) -> None:
         planned = slab.plan_records(self.source)
         oversized = (planned[0], planned[1], planned[2], slab.LARGE_BUILD_BYTES + 1)
-        with mock.patch.object(slab, "plan_records", return_value=oversized):
+        with mock.patch.object(slab, "plan_records_stream", return_value=oversized), \
+             mock.patch.object(slab, "file_sha256_stream",
+                               side_effect=AssertionError("bulk hash must not run")):
             with self.assertRaisesRegex(ValueError, "owner-approved-large-build"):
                 slab.build(self.source, self.output)
 
@@ -168,6 +172,45 @@ class ExpertSlabToolTests(unittest.TestCase):
         make_gguf(unsupported, data_type=9)
         with self.assertRaisesRegex(ValueError, "unsupported routed tensor"):
             slab.plan_records(unsupported)
+
+    def test_implausible_dimension_count_is_rejected_before_reads(self) -> None:
+        malformed = self.root / "dimension-bomb.gguf"
+        malformed.write_bytes(
+            b"GGUF" + struct.pack("<IQQ", 3, 1, 0) +
+            encoded_string("tensor") + struct.pack("<I", 0xffffffff)
+        )
+        with self.assertRaisesRegex(ValueError, "tensor dimension count"):
+            slab.plan_records(malformed)
+
+    def test_build_remains_bound_to_open_source_descriptor(self) -> None:
+        original_name = self.root / "original.gguf"
+        replacement = self.root / "replacement.gguf"
+        make_gguf(replacement)
+        with replacement.open("r+b") as stream:
+            stream.seek(-1, 2)
+            value = stream.read(1)
+            stream.seek(-1, 2)
+            stream.write(bytes([value[0] ^ 1]))
+        with slab.open_regular(self.source) as source:
+            self.source.rename(original_name)
+            replacement.rename(self.source)
+            slab.build_stream(source, self.output)
+        self.assertTrue(slab.verify(original_name, self.output)["verified"])
+        with self.assertRaisesRegex(ValueError, "model identity mismatch"):
+            slab.verify(self.source, self.output)
+
+    def test_directory_fsync_failure_leaves_no_published_artifact(self) -> None:
+        real_fsync = os.fsync
+
+        def fail_directory(descriptor: int) -> None:
+            if stat.S_ISDIR(os.fstat(descriptor).st_mode):
+                raise OSError("injected directory fsync failure")
+            real_fsync(descriptor)
+
+        with mock.patch.object(slab.os, "fsync", side_effect=fail_directory):
+            with self.assertRaisesRegex(OSError, "directory fsync failure"):
+                slab.build(self.source, self.output)
+        self.assertFalse(self.output.exists())
 
 
 if __name__ == "__main__":

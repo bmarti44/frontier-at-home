@@ -1,5 +1,5 @@
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index f2935c2..7f80ef5 100644
+index f2935c2..7736dd1 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -12,12 +12,14 @@
@@ -67,7 +67,7 @@ index f2935c2..7f80ef5 100644
  }
 
  static struct {
-@@ -23662,6 +23682,419 @@ static void ec_run_stats_ensure(void) {
+@@ -23662,6 +23682,444 @@ static void ec_run_stats_ensure(void) {
      }
  }
 
@@ -105,8 +105,8 @@ index f2935c2..7f80ef5 100644
 +              "expert slab record format drift");
 +
 +static struct {
-+    std::atomic<int> state; /* 0 uninitialized, 1 active, 2 off, -1 invalid */
-+    int fd;
++    std::atomic<int> state{0}; /* 0 uninitialized, 1 active, 2 off, -1 invalid */
++    int fd = -1;
 +    uint64_t file_size;
 +    dev_t device;
 +    ino_t inode;
@@ -192,6 +192,24 @@ index f2935c2..7f80ef5 100644
 +    }
 +    ec_sha256_final_bytes(&digest, out);
 +    free(buffer);
++    return 1;
++}
++
++static int cuda_expert_slab_hash_model_map(const void *model_map,
++                                           uint64_t model_size,
++                                           uint8_t out[32]) {
++    if (!model_map || model_size == 0) return 0;
++    const uint64_t chunk_bytes = 8u << 20;
++    ec_sha256 digest;
++    ec_sha256_init(&digest);
++    uint64_t offset = 0;
++    while (offset < model_size) {
++        const size_t count = (size_t)((model_size - offset) < chunk_bytes ?
++                                     (model_size - offset) : chunk_bytes);
++        ec_sha256_update(&digest, (const uint8_t *)model_map + offset, count);
++        offset += count;
++    }
++    ec_sha256_final_bytes(&digest, out);
 +    return 1;
 +}
 +
@@ -292,7 +310,7 @@ index f2935c2..7f80ef5 100644
 +    }
 +    const cuda_expert_slab_header &h = g_expert_slab.header;
 +    const uint8_t magic[8] = {'G','L','M','5','2','S','L','B'};
-+    if (memcmp(h.magic, magic, sizeof(magic)) != 0 || h.version != 1 ||
++    if (memcmp(h.magic, magic, sizeof(magic)) != 0 || h.version != 2 ||
 +        h.alignment != 4096 || h.record_size != sizeof(cuda_expert_slab_record) ||
 +        h.record_count == 0 || h.record_count > 80u * 256u ||
 +        h.model_size != table->model_size) {
@@ -318,6 +336,13 @@ index f2935c2..7f80ef5 100644
 +    if (memcmp(expected_model, h.model_sha256, sizeof(expected_model)) != 0) {
 +        (void)close(index_fd);
 +        return cuda_expert_slab_fail("frozen full-model identity mismatch");
++    }
++    uint8_t actual_model[32];
++    if (!cuda_expert_slab_hash_model_map(table->model_map, table->model_size,
++                                         actual_model) ||
++        memcmp(expected_model, actual_model, sizeof(expected_model)) != 0) {
++        (void)close(index_fd);
++        return cuda_expert_slab_fail("mapped full-model identity mismatch");
 +    }
 +    uint8_t actual_slab[32];
 +    if (!cuda_expert_slab_hash_fd(index_fd, (uint64_t)st.st_size, actual_slab) ||
@@ -487,7 +512,7 @@ index f2935c2..7f80ef5 100644
  /* Called by the server on GET /v1/models: prints the finalized per-window
   * access-stream digest + byte counters, then resets the window. */
  /* ------------------------------------------------------------------------
-@@ -24354,12 +24787,31 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -24354,12 +24812,31 @@ static int cuda_stream_selected_cache_begin_load(
      static int fetch_threads = -1;
      if (fetch_threads < 0) {
          const char *ft = getenv("DS4_CUDA_FETCH_THREADS");
@@ -521,7 +546,7 @@ index f2935c2..7f80ef5 100644
      const int persist_ok = !g_expert_persist_cache.disabled &&
          g_expert_persist_cache.gate_bytes == table->gate_expert_bytes &&
          g_expert_persist_cache.down_bytes == table->down_expert_bytes;
-@@ -24548,15 +25000,31 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -24548,15 +25025,31 @@ static int cuda_stream_selected_cache_begin_load(
      }
      if (fetch_threads >= 2 && !miss_jobs.empty()) {
          if (lp_on) lp_p0 = ec_prof_now_ms();
@@ -555,7 +580,7 @@ index f2935c2..7f80ef5 100644
              void *buf = NULL;
              if (posix_memalign(&buf, (size_t)align, (size_t)buf_bytes) != 0 || !buf) {
                  failed.store(1); return;
-@@ -24565,6 +25033,29 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -24565,6 +25058,29 @@ static int cuda_stream_selected_cache_begin_load(
                  const size_t i = next.fetch_add(1);
                  if (i >= miss_jobs.size() || failed.load()) break;
                  const cuda_miss_job &j = miss_jobs[i];
@@ -585,7 +610,7 @@ index f2935c2..7f80ef5 100644
                  const struct { uint64_t src, bytes; char *dst; } parts[3] = {
                      {j.gate_src, table->gate_expert_bytes,
                       g_stream_selected_cache.gate_ptr + j.gate_dst},
-@@ -24591,7 +25082,7 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -24591,7 +25107,7 @@ static int cuda_stream_selected_cache_begin_load(
          std::vector<std::thread> pool;
          try {
              pool.reserve((size_t)nthr);
@@ -594,7 +619,7 @@ index f2935c2..7f80ef5 100644
          } catch (...) {
              failed.store(1);            /* workers observe and drain */
          }
-@@ -24693,10 +25184,22 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -24693,10 +25209,22 @@ static int cuda_stream_selected_cache_begin_load(
      if (lp_on) {
          fprintf(stderr,
                  "LOADPROF L%u uniq=%u hits=%u miss=%zu hit_ms=%.2f "

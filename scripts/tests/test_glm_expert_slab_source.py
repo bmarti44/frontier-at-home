@@ -33,6 +33,8 @@ class ExpertSlabSourceTests(unittest.TestCase):
             'getenv("DS4_CUDA_EXPERT_SLAB_MODEL_SHA256")',
             "expert slab requires DS4_CUDA_FETCH_THREADS=8..32",
             "frozen full-sidecar identity mismatch",
+            "mapped full-model identity mismatch",
+            "cuda_expert_slab_hash_model_map",
             "validated/direct descriptor mismatch",
             "O_NOFOLLOW",
         ):
@@ -50,6 +52,7 @@ class ExpertSlabSourceTests(unittest.TestCase):
     def test_lifecycle_and_worker_device_are_explicit(self) -> None:
         for marker in (
             "g_expert_slab_init_mu",
+            "int fd = -1;",
             "active_readers",
             "cuda_expert_slab_cleanup();",
             "while (g_expert_slab.active_readers.load() != 0)",
@@ -80,6 +83,10 @@ class ExpertSlabSourceTests(unittest.TestCase):
             "fcntl.flock",
             "os.link(temporary, output_path",
             "os.fsync(directory_fd)",
+            "open_regular(source_path)",
+            "MAX_METADATA_DEPTH",
+            "MAX_ARRAY_ELEMENTS",
+            "MAX_STRING_BYTES",
         ):
             self.assertTrue(marker in builder, f"missing builder marker: {marker}")
 
