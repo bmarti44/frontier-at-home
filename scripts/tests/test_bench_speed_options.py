@@ -316,6 +316,10 @@ class BenchOptionTests(unittest.TestCase):
         )
         self.assertEqual(rep["generated_content_bytes"], 0)
         self.assertIsNone(rep["raw_client_timing_ratio"])
+        self.assertEqual(
+            rep["client_prompt_tokens"],
+            len("p\n\n\n\nContinue this text naturally, writing at least 600 more words without stopping."),
+        )
 
     def test_fabricated_raw_timing_cannot_make_short_output_valid(self):
         bench = load_module()
