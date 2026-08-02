@@ -76,16 +76,17 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "0|0\n")
 
-    def test_exit_race_enters_shutdown_grace_before_identity_failure(self):
+    def test_exit_state_is_distinct_from_live_identity_failure(self):
         source = SAFE.read_text(encoding="utf-8")
-        shutdown = source.index("if [[ -z $CURRENT_STATE")
+        shutdown = source.index("elif [[ -z $CURRENT_STATE")
         identity = source.index(
             'plog "FATAL executed candidate identity changed pid=$EXECUTED_PID',
             shutdown,
         )
         guarded = source[shutdown:identity]
-        self.assertIn("-z $CURRENT_HASH", guarded)
-        self.assertIn("-z $CURRENT_DEVICE_INODE", guarded)
+        self.assertIn("EXECUTED_CANDIDATE_EXIT_PENDING=1", guarded)
+        self.assertNotIn("-z $CURRENT_HASH", guarded)
+        self.assertNotIn("-z $CURRENT_DEVICE_INODE", guarded)
 
     def test_verified_candidate_environment_is_hash_bound_from_proc(self):
         source = SAFE.read_text(encoding="utf-8")
