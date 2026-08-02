@@ -310,9 +310,9 @@ class CandidateLifecycleTests(unittest.TestCase):
         result = self.run_mutation("fail")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_wrapper_exceeding_shutdown_grace_is_rejected(self):
+    def test_controller_postprocessing_after_candidate_exit_is_accepted(self):
         result = self.run_mutation("linger")
-        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 class CurrentUserTimestampTests(unittest.TestCase):
@@ -411,6 +411,37 @@ class CurrentUserTimestampTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
+            "executed candidate clean exit verified after wrapper and descendant checks",
+            main,
+        )
+
+    def test_zombie_candidate_during_postprocessing_is_attested(self):
+        result = self.run_current_user_mutation("linger")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        match = re.search(r" dir=(\S+)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+        self.assertIn(
+            "executed candidate clean exit verified after wrapper and descendant checks",
+            main,
+        )
+
+    def test_replacement_candidate_during_postprocessing_is_rejected(self):
+        result = self.run_current_user_mutation("replace")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_nonzero_controller_after_candidate_exit_is_rejected(self):
+        result = self.run_current_user_mutation("fail")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_unrelated_live_descendant_is_rejected_and_cleaned_up(self):
+        result = self.run_current_user_mutation("survivor")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        match = re.search(r" dir=(\S+)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+        self.assertIn("isolated process group survived command completion", main)
+        self.assertNotIn(
             "executed candidate clean exit verified after wrapper and descendant checks",
             main,
         )
