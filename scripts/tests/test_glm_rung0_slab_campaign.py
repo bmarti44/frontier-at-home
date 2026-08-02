@@ -626,6 +626,8 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             "expert slab pinned staging allocation failed",
             "NV_ERR_NO_MEMORY",
             'probe_arm.add_argument("--mode", choices=("off", "on")',
+            'request_timeout = 2700 if mode == "on" else 300',
+            '"--request-timeout", str(request_timeout)',
         ):
             self.assertIn(marker, source)
 
