@@ -290,6 +290,17 @@ class CandidateLifecycleTests(unittest.TestCase):
         result = self.run_mutation("clean")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_clean_reaped_candidate_between_sampler_ticks_is_attested(self):
+        result = self.run_mutation("reaped")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        match = re.search(r" dir=(\S+)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+        self.assertIn(
+            "executed candidate clean exit verified after wrapper and descendant checks",
+            main,
+        )
+
     def test_replacement_candidate_during_exit_is_rejected(self):
         result = self.run_mutation("replace")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -340,6 +351,57 @@ class CurrentUserTimestampTests(unittest.TestCase):
             shutil.rmtree(cls.candidate_src)
         if hasattr(cls, "local_tmp"):
             shutil.rmtree(cls.local_tmp)
+
+    def run_current_user_mutation(
+        self, mode: str
+    ) -> subprocess.CompletedProcess[str]:
+        environment = {
+            "HOME": "/home/bmarti44",
+            "PATH": (
+                "/usr/local/sbin:/usr/local/bin:/usr/sbin:"
+                "/usr/bin:/sbin:/bin"
+            ),
+            "GLM_CANDIDATE_SRC": str(self.candidate_src),
+            "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+            "GLM_SAFE_EXPECTED_BINARY_SHA256": self.digest,
+            "GLM_SAFE_KILL_FLOOR_GIB": "40",
+            "GLM_SAFE_MIN_START_GIB": "110",
+            "GLM_SAFE_TIMEOUT_S": "30",
+            "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+        }
+        return subprocess.run(
+            [
+                "env",
+                *[
+                    f"{key}={value}"
+                    for key, value in environment.items()
+                ],
+                "bash",
+                str(SAFE),
+                "--tag",
+                f"current-user-lifecycle-{mode}",
+                "--",
+                str(self.runner),
+                mode,
+                str(self.candidate_src / "ds4-server"),
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=45,
+            check=False,
+        )
+
+    def test_clean_reaped_candidate_between_sampler_ticks_is_attested(self):
+        result = self.run_current_user_mutation("reaped")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        match = re.search(r" dir=(\S+)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+        self.assertIn(
+            "executed candidate clean exit verified after wrapper and descendant checks",
+            main,
+        )
 
     def test_real_wrapper_emits_only_utc_under_host_timezone_variants(self):
         for timezone_name in (
