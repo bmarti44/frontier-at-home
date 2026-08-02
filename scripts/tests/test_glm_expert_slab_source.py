@@ -33,8 +33,8 @@ class ExpertSlabSourceTests(unittest.TestCase):
             'getenv("DS4_CUDA_EXPERT_SLAB_MODEL_SHA256")',
             "expert slab requires DS4_CUDA_FETCH_THREADS=8..32",
             "frozen full-sidecar identity mismatch",
-            "mapped full-model identity mismatch",
-            "cuda_expert_slab_hash_model_map",
+            "direct full-model identity mismatch",
+            "cuda_expert_slab_hash_model_fd",
             "validated/direct descriptor mismatch",
             "O_NOFOLLOW",
         ):
