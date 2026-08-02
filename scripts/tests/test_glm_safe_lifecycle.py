@@ -403,6 +403,17 @@ class CurrentUserTimestampTests(unittest.TestCase):
             main,
         )
 
+    def test_clean_reaped_candidate_with_postprocessing_is_attested(self):
+        result = self.run_current_user_mutation("postprocess")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        match = re.search(r" dir=(\S+)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+        self.assertIn(
+            "executed candidate clean exit verified after wrapper and descendant checks",
+            main,
+        )
+
     def test_real_wrapper_emits_only_utc_under_host_timezone_variants(self):
         for timezone_name in (
             "America/New_York",

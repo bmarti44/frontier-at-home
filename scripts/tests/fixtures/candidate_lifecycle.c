@@ -17,6 +17,7 @@ static pid_t start_candidate(const char *path) {
 int main(int argc, char **argv) {
     if (argc != 3 ||
         (strcmp(argv[1], "clean") && strcmp(argv[1], "reaped") &&
+         strcmp(argv[1], "postprocess") &&
          strcmp(argv[1], "replace") &&
          strcmp(argv[1], "fail") && strcmp(argv[1], "linger")))
         return 2;
@@ -24,8 +25,9 @@ int main(int argc, char **argv) {
     if (first <= 0) return 3;
     sleep(1);
     if (kill(first, SIGTERM)) return 4;
-    if (!strcmp(argv[1], "reaped")) {
+    if (!strcmp(argv[1], "reaped") || !strcmp(argv[1], "postprocess")) {
         if (waitpid(first, NULL, 0) != first) return 6;
+        if (!strcmp(argv[1], "postprocess")) sleep(4);
         return 0;
     }
     /* Deliberately leave the first child as a zombie, matching the production
