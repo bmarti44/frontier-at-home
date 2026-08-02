@@ -840,6 +840,50 @@ def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
     }
 
 
+def parse_slab_staging_telemetry(text: str) -> list[dict[str, int]]:
+    """Validate the bounded pinned pool before a slab performance arm."""
+    lowered = text.lower()
+    if (
+        "expert slab pinned staging allocation failed" in lowered
+        or "expert slab pinned staging memory query failed" in lowered
+        or "NV_ERR_NO_MEMORY" in text
+    ):
+        raise ValueError("slab pinned staging reported an allocation failure")
+    matches = re.findall(
+        r"^ds4: expert slab pinned staging ready count=(\d+) "
+        r"buffer_bytes=(\d+) total_bytes=(\d+) "
+        r"cuda_free_before=(\d+) cuda_free_after=(\d+) cuda_total=(\d+)$",
+        text,
+        re.MULTILINE,
+    )
+    pools: list[dict[str, int]] = []
+    for fields in matches:
+        count, buffer_bytes, total_bytes, free_before, free_after, cuda_total = (
+            int(value) for value in fields
+        )
+        if (
+            not 1 <= count <= 8
+            or not 8 * 1024**2 <= buffer_bytes <= 16 * 1024**2
+            or total_bytes != count * buffer_bytes
+            or not 0 < free_before <= cuda_total
+            or not 0 < free_after <= cuda_total
+        ):
+            raise ValueError("slab pinned staging geometry is invalid")
+        pools.append(
+            {
+                "count": count,
+                "buffer_bytes": buffer_bytes,
+                "total_bytes": total_bytes,
+                "cuda_free_before": free_before,
+                "cuda_free_after": free_after,
+                "cuda_total": cuda_total,
+            }
+        )
+    if not pools:
+        raise ValueError("slab pinned staging success telemetry is absent")
+    return pools
+
+
 def summarize_external_io(
     samples: list[tuple[int, int]],
     read_bytes_before: int,
@@ -982,13 +1026,18 @@ def wait_ready(process: subprocess.Popen[Any], port: int) -> None:
 
 
 def execute_memory_probe_arm(args: argparse.Namespace) -> int:
-    """Load cache-off GLM once so the outer sampler can measure non-arena RSS."""
-    expected_environment = memory_probe_environment()
+    """Run one bounded completion for cache-off RSS or slab-on safety."""
+    mode = getattr(args, "mode", "off")
+    expected_environment = (
+        memory_probe_environment()
+        if mode == "off"
+        else canonical_engine_environment("on")
+    )
     observed_environment = {
         name: os.environ[name] for name in PROVENANCE_NAMES if name in os.environ
     }
     if observed_environment != expected_environment:
-        raise ValueError("inherited memory-probe environment differs")
+        raise ValueError("inherited single-request environment differs")
     binary = args.binary.resolve()
     model = args.model.resolve()
     out = args.out.resolve()
@@ -1036,7 +1085,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
                     str(BENCHMARK),
                     "--base-url", f"http://127.0.0.1:{args.port}",
                     "--out", str(probe_result),
-                    "--stack-label", "rung0-cache-off-memory-probe",
+                    "--stack-label", f"rung0-{mode}-single-request-probe",
                     "--model-id", "glm-5.2",
                     "--output-tokenizer-path", str(TOKENIZER),
                     "--output-tokenizer-sha256", TOKENIZER_SHA256,
@@ -1070,14 +1119,23 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
             time.sleep(1)
             server_log.flush()
             os.fsync(server_log.fileno())
+            slab_evidence: dict[str, Any] = {}
+            if mode == "on":
+                log_text = (out / "server.log").read_text(encoding="utf-8")
+                slab_evidence = {
+                    "engine": parse_engine_log(log_text, "on"),
+                    "staging_pools": parse_slab_staging_telemetry(log_text),
+                }
             write_json_exclusive(
                 out / "partial.json",
                 {
                     "schema_version": 1,
                     "binary_sha256": args.binary_sha256,
+                    "mode": mode,
                     "probe_environment_sha256": observed_environment_sha256(
                         expected_environment
                     ),
+                    **slab_evidence,
                 },
             )
         finally:
@@ -2070,6 +2128,7 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     probe_arm.add_argument("--binary-sha256", required=True)
     probe_arm.add_argument("--model", type=Path, required=True)
     probe_arm.add_argument("--port", type=int, required=True)
+    probe_arm.add_argument("--mode", choices=("off", "on"), default="off")
     probe = subparsers.add_parser("memory-probe")
     probe.add_argument("--tag", required=True)
     probe.add_argument("--candidate", type=Path, required=True)

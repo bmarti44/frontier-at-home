@@ -629,6 +629,25 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         ):
             self.assertIn(marker, source)
 
+        line = (
+            "ds4: expert slab pinned staging ready count=8 "
+            "buffer_bytes=9736192 total_bytes=77889536 "
+            "cuda_free_before=25000000000 cuda_free_after=24922110464 "
+            "cuda_total=128495218688\n"
+        )
+        pools = CAMPAIGN.parse_slab_staging_telemetry(line)
+        self.assertEqual(pools[0]["total_bytes"], 77_889_536)
+        for mutation in (
+            "",
+            line + "ds4: expert slab pinned staging allocation failed index=0 count=8\n",
+            line.replace("total_bytes=77889536", "total_bytes=1"),
+            line.replace("count=8", "count=33", 1),
+            line.replace("cuda_free_after=24922110464", "cuda_free_after=0"),
+        ):
+            with self.subTest(mutation=mutation[-80:]):
+                with self.assertRaises(ValueError):
+                    CAMPAIGN.parse_slab_staging_telemetry(mutation)
+
     def test_fixed_scorer_accepts_complete_lossless_campaign(self):
         with self.assertRaises(ValueError):
             CAMPAIGN.score_campaign(self.passing_records(), self.passing_nll())
