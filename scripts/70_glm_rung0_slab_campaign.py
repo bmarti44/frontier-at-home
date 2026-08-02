@@ -1079,6 +1079,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
             start_ticks = proc_start_ticks(server.pid)
             wait_ready(server, args.port)
             probe_result = out / "probe-result.json"
+            request_timeout = 2700 if mode == "on" else 300
             completed = subprocess.run(
                 [
                     str(ROOT / ".venv-harness/bin/python"),
@@ -1091,6 +1092,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
                     "--output-tokenizer-sha256", TOKENIZER_SHA256,
                     "--token-timing-log", str(out / "server.log"),
                     "--reps", "1", "--warmup", "0", "--context-levels", "0",
+                    "--request-timeout", str(request_timeout),
                     "--max-tokens", "160", "--min-completion-tokens", "128",
                     "--seed", "0",
                 ],
@@ -1098,7 +1100,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=server_environment,
-                timeout=1200,
+                timeout=request_timeout + 300,
                 check=False,
             )
             (out / "probe.stdout.log").write_bytes(completed.stdout)
