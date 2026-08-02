@@ -95,6 +95,10 @@ not merely fail one process.
   floor.
 - Require stable start memory, a wall-clock timeout, continuous process/binary
   identity checks, and timestamped memory sampling.
+- Every newly introduced host-to-device copy path must use persistent pinned
+  staging or include a measured justification for pageable memory. Check this
+  before the first large serving run; a fast disk read can otherwise be hidden
+  inside tens of milliseconds of implicit CUDA registration and staging.
 - Treat OOM, cgroup kill, swap use, Xid, short output, timeout, missing process
   identity, or a surviving descendant as a failed attempt.
 

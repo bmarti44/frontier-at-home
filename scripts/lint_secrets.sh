@@ -9,7 +9,7 @@ readonly PUBLIC_DIGEST_ALLOWLIST='^scripts/71_install_glm_benchmark_lock_acl\.sh
 
 is_checksum_file() {
   case "$1" in
-    verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/speed-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-gates/G6-rung0-io-sidecar-build.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/dsv4-decode-*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/evidence/w1-affine-*/manifest.json|results/glm52-goal/evidence/w1-affine-*/raw.jsonl|results/glm52-goal/evidence/w1-affine-*/raw-inputs/randomness.json|results/glm52-goal/evidence/w1-telemetry-probe-*/manifest.json|results/glm52-goal/evidence/w1-telemetry-probe-*/raw.jsonl|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
+    verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/speed-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-gates/G6-rung0-io-sidecar-build.json|results/glm52-gates/G6-rung0-io-slab-calibration-no-results.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/dsv4-decode-*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/evidence/w1-affine-*/manifest.json|results/glm52-goal/evidence/w1-affine-*/raw.jsonl|results/glm52-goal/evidence/w1-affine-*/raw-inputs/randomness.json|results/glm52-goal/evidence/w1-telemetry-probe-*/manifest.json|results/glm52-goal/evidence/w1-telemetry-probe-*/raw.jsonl|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -113,6 +113,8 @@ allowlist = {
     "freeze_json_sha256",
     "harness_sha256",
     "model_sha256",
+    "sidecar_sha256",
+    "slab_on_configuration_sha256",
     "output_tokenizer_sha256",
     "profile_sha256",
     "randomness",
@@ -121,6 +123,10 @@ allowlist = {
     "result_sha256",
     "scorer_sha256",
     "server_sha256",
+    "server_log_sha256",
+    "wrapper_log_sha256",
+    "samples_log_sha256",
+    "kernel_log_sha256",
     "seed_sha256",
     "staged_binary_sha256",
     "cuda_sass_sha256",
@@ -399,6 +405,16 @@ self_test() {
       | scan_digest_json "$decode_evidence_path" >/dev/null 2>&1; then
     printf '%s\n' \
       'self-test failed: undeclared decode evidence digest was accepted' >&2
+    return 1
+  fi
+  local slab_no_result_path
+  slab_no_result_path='results/glm52-gates/G6-rung0-io-slab-calibration-no-results.json'
+  if ! is_checksum_file "$slab_no_result_path" ||
+      ! printf '{"sidecar_sha256":"%s","server_log_sha256":"%s"}\n' \
+        "$fake_secret" "$fake_secret" \
+        | scan_digest_json "$slab_no_result_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: slab NO_RESULT evidence digests were rejected' >&2
     return 1
   fi
   printf '%s\n' 'self-test passed'

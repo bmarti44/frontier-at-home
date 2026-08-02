@@ -1,0 +1,90 @@
+{
+  "artifact": "GLM-5.2 Rung 0.1 slab-on calibration attempts",
+  "generated_at": "2026-08-02T21:57:53Z",
+  "acceptance_authority": false,
+  "verdict": "NO_RESULT",
+  "reason": "Neither slab-on attempt completed the required warmup plus two 160-token measured repetitions, so no arm ratio or acceptance statistic exists.",
+  "shared_configuration": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "sidecar_sha256": "62961905a685e16e3e8f5f98e189511eb2e65ee6eda7e1a860c1ec58959e5518",
+    "slab_on_configuration_sha256": "91497d3ff78718f75f8cc5312ee3a7399a354d17510f2a61f2661f7366354415",
+    "repetitions_required": 2,
+    "warmups_required": 1,
+    "tokens_per_request": 160,
+    "minimum_measured_completion_tokens": 128
+  },
+  "attempts": [
+    {
+      "tag": "cal-b-b859",
+      "candidate_engine_commit": "9e5a59f",
+      "binary_sha256": "f606df69e7b8a1c10be92f914674d86a5b9f09b8e74676bdfcf168af1690d4fa",
+      "status": "NO_RESULT",
+      "termination": "operator terminated after live diagnostics proved the pageable staging path could not finish within the preregistered budget",
+      "wrapper_exit_code": 143,
+      "completed_measured_repetitions": 0,
+      "diagnostic_only": {
+        "timed_tokens": 33,
+        "decode_tok_s": 0.247018293284,
+        "interpretation": "not an accepted metric; it motivated the RED test for pageable CUDA staging"
+      },
+      "safety": {
+        "minimum_mem_available_gib": 24.888725281,
+        "cgroup_peak_gib": 64.491058350,
+        "maximum_cgroup_swap_bytes": 0,
+        "nvrm_out_of_memory": false,
+        "surviving_engine": false
+      },
+      "raw_evidence": {
+        "server_log": "/home/bmarti44/.local/state/glm52-rung0-calibration-b859ed9/b/server.log",
+        "server_log_sha256": "57420858adb573b96d5d9371469bc90ba1f2e359da7504f133d65842a129bf7f",
+        "wrapper_log": "/home/bmarti44/.local/state/glm52-crashlog/20260802-155043-cal-b-b859/main.log",
+        "wrapper_log_sha256": "9df3b789419bbeb54b3f4cf41bc5825319c39f798bcc8ab22303e536ebc9f19b",
+        "samples_log": "/home/bmarti44/.local/state/glm52-crashlog/20260802-155043-cal-b-b859/samples.log",
+        "samples_log_sha256": "946d1c48e4cddd7c61536c0682495cd616c294b659861f8eb0124db0857e510b"
+      }
+    },
+    {
+      "tag": "cal-b-984",
+      "candidate_engine_commit": "afdf7dcf04a9c46710eeb61d1e7df623a33051cd",
+      "binary_sha256": "ce4e63b8c0bd7bc6a2925cd621981f786d47ce49ecaa2005a6fa6a75673ff980",
+      "status": "NO_RESULT",
+      "termination": "the fixed 3000-second benchmark subprocess timeout expired during the first measured repetition",
+      "wrapper_exit_code": 1,
+      "completed_warmups": 1,
+      "completed_measured_repetitions": 0,
+      "diagnostic_only": {
+        "warmup_timed_tokens": 160,
+        "warmup_decode_tok_s": 0.274148715750,
+        "loadprof_rows": 18586,
+        "nonzero_fetch_rows": 14958,
+        "fetch_ms_min": 49.480,
+        "fetch_ms_mean": 58.514,
+        "fetch_ms_max": 108.260,
+        "slab_io_ms_min": 0.935,
+        "slab_io_ms_mean": 2.742,
+        "slab_io_ms_max": 11.341,
+        "interpretation": "O_DIRECT I/O is fast, but work after read completion dominates miss handling; these incomplete-arm diagnostics are not acceptance metrics"
+      },
+      "safety": {
+        "minimum_mem_available_gib": 24.753089905,
+        "cgroup_peak_gib": 64.533691406,
+        "maximum_cgroup_swap_bytes": 0,
+        "cgroup_oom_events": 0,
+        "nvrm_out_of_memory": true,
+        "surviving_engine": false,
+        "safety_verdict": "FAIL"
+      },
+      "raw_evidence": {
+        "server_log": "/home/bmarti44/.local/state/glm52-rung0-calibration-9843353/b/server.log",
+        "server_log_sha256": "205cfd1125abfbe85df5164b4af1aec257963e8851442995748f51d9afe06559",
+        "wrapper_log": "/home/bmarti44/.local/state/glm52-crashlog/20260802-170031-cal-b-984/main.log",
+        "wrapper_log_sha256": "b95886c77f5ed5d2110fd2b75a57c5328d8f8b32df8c8611fb8eb0dc78e1932c",
+        "samples_log": "/home/bmarti44/.local/state/glm52-crashlog/20260802-170031-cal-b-984/samples.log",
+        "samples_log_sha256": "b51a29e505f1f974d058ada2380fb3a959722b6e1251078f91c9ba7bc9235759",
+        "kernel_log": "/home/bmarti44/.local/state/glm52-crashlog/20260802-170031-cal-b-984/kernel.log",
+        "kernel_log_sha256": "4dae061df09baa61149e5a23546d6c17e2e3cbe62220b7b75ca7adbe18f2c91f"
+      }
+    }
+  ],
+  "next_action": "Remove or accelerate the measured post-read hot path behind a fresh default-off candidate, retain full startup identity verification, rerun the memory probe, then rerun same-binary OFF/ON calibration before any campaign."
+}
