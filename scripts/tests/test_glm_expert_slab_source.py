@@ -57,14 +57,35 @@ class ExpertSlabSourceTests(unittest.TestCase):
             self.source,
         )
 
-    def test_one_checksummed_record_read_replaces_three_model_reads(self) -> None:
+    def test_one_contiguous_record_read_replaces_three_model_reads(self) -> None:
         for marker in (
             "cuda_expert_slab_read",
-            "expert slab record checksum mismatch",
             "expert slab model identity mismatch",
             "expert_slab_offset",
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
+    def test_hot_read_uses_startup_digest_and_stable_descriptor_not_scalar_sha(self) -> None:
+        """Do not SHA-256 every 9.7 MiB miss after hashing the full artifact.
+
+        The afdf7dc slab arm measured 2.742 ms mean O_DIRECT time inside a
+        58.514 ms mean miss window. Its scalar record SHA ran between those
+        observations. Evidence mode already hashes the complete sidecar before
+        serving. Runtime reads must instead reject dev/inode/size/mtime/ctime
+        drift around the retained O_DIRECT descriptor. Pre-start corruption
+        remains covered by the full-sidecar digest and builder mutation tests.
+        """
+        start = self.source.index("static int cuda_expert_slab_read(")
+        end = self.source.index("static void cuda_expert_slab_cleanup", start)
+        hot_read = self.source[start:end]
+        for marker in (
+            "fstat(g_expert_slab.fd",
+            "cuda_expert_slab_stable",
+            "sidecar changed during record read",
+        ):
+            self.assertIn(marker, hot_read)
+        self.assertNotIn("ec_sha256_update", hot_read)
+        self.assertNotIn("record checksum mismatch", hot_read)
 
     def test_lifecycle_and_worker_device_are_explicit(self) -> None:
         for marker in (
