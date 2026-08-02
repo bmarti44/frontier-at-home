@@ -85,35 +85,52 @@ through the existing delegated control surface during a safe GLM window.
 
 Current Rung 0.1 candidate reconciliation:
 
-- engine source worktree: `/tmp/glm52-rung0-engine`, clean commit
-  `afdf7dcf04a9c46710eeb61d1e7df623a33051cd`. It includes persistent pinned
-  slab staging while deliberately preserving the original pageable OFF arm;
+- engine source worktree: `/tmp/glm52-score-official`, clean commit
+  `e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004`. It includes persistent pinned
+  slab staging only for the ON path, allocation/CUDA-memory telemetry, exact
+  EVP SHA-256 for the full O_DIRECT identity reads, and the corrected build
+  target for the real official scorer. The original pageable OFF path remains
+  deliberately unchanged;
 - frozen serving binary:
-  `/home/bmarti44/.cache/glm52-rung0-afd-server/ds4-server`, SHA-256
-  prefix `ce4e63b8c0bd` (full digest in the calibration evidence);
+  `/home/bmarti44/.cache/glm52-rung0-e637-server/ds4-server`, SHA-256
+  `5a7caa3e7fded039797e6a0158dd4687b932d3b3c5f225c05ac7a656021fbd1a`;
 - frozen quality binary:
-  `/home/bmarti44/.cache/glm52-rung0-afd-quality/ds4-server`, SHA-256
-  prefix `d412e8c43f60`;
-- repository patches are
+  `/home/bmarti44/.cache/glm52-rung0-e637-quality/ds4-server`, SHA-256
+  `3f4f6d197a37369ec20413e7ee77b87508803511106d0250ecc45671ac01e349`.
+  It identifies itself as `score_official`, consumes the 100-case manifest,
+  and is not the earlier accidental `ds4-eval` binary;
+- both binaries were independently clean-built twice at no more than `-j2`
+  and were byte-identical within their respective pairs. Candidate commits
+  `5858be8`, `5294c32`, `95b3844`, and `e637b6f` preserve the scorer-build and
+  full-hash RED/fix lineage on top of `840767e`;
+- the existing repository patch series begins with
   `results/glm52-gates/harness/ds4-expert-slab-io.patch`,
   `ds4-expert-slab-pinned-staging.patch`, and
-  `ds4-expert-slab-pinned-on-only.patch`;
+  `ds4-expert-slab-pinned-on-only.patch`, plus the allocation and CUDA-memory
+  telemetry patches. The final EVP/scorer diffs must be exported from the
+  exact `e637b6f` tree before promotion; until then that clean commit is the
+  candidate source of truth;
 - verified immutable sidecar:
   `/home/bmarti44/.cache/glm52-rung0-artifacts/glm52-experts-v2.slab`,
   190,028,697,600 bytes, SHA-256 prefix `62961905a685` (the full digest is in
   `G6-rung0-io-sidecar-build.json`);
 - the fresh memory envelope passed at
-  `/home/bmarti44/.local/state/glm52-rung0-afd-mem-20260802a/` with a 68 GB
-  arena, 29,522,165,760 non-arena peak bytes, 88.070274 GiB minimum available,
+  `/home/bmarti44/.local/state/glm52-rung0-e637-mem-20260802a/` with a 68 GB
+  arena, 29,053,083,648 non-arena peak bytes, 88.299553 GiB minimum available,
   zero swap/cgroup/Xid failures, and no survivor;
-- the same-binary OFF calibration completed at 2.2231-2.2373 decode tok/s.
-  Its roughly 29-30 second TTFT is a deliberately stripped control-config
-  number, not the serving profile's measured 1.76 second exact-replay TTFT;
-- two slab-on attempts are preserved as `NO_RESULT` in
-  `G6-rung0-io-slab-calibration-no-results.json`. The latest completed one
-  warmup at a diagnostic 0.2741 tok/s but timed out during the first measured
-  repetition and recorded one driver `NV_ERR_NO_MEMORY`; neither attempt is an
-  A/B result.
+- the bounded slab-on canary passed and all preceding attempts are preserved
+  in `R0-slab-canary-attempts-2026-08-02.json`. The passing arm generated 160
+  tokens at a control-config 1.504518 tok/s, observed 29,679 slab reads and
+  peak queue depth eight, allocated eight 9,744,384-byte pinned buffers, kept
+  24.878883 GiB available at the low point, and recorded zero cgroup events,
+  swap, Xid, OOM, or survivor. Its 277.226-second TTFT includes the evidence-
+  only 401 GB identity scan and is not a serving-profile TTFT;
+- the prior 2.2231-2.2373 tok/s OFF calibration used the superseded binary and
+  remains useful diagnostic history only. Both OFF and ON performance arms
+  must be rerun on `e637b6f`; no Rung 0.1 A/B adoption result exists yet;
+- post-freeze public randomness round `6342786` is authenticated and bound to
+  the two frozen hashes. Performance and NLL campaigns remain blocked until
+  both persistent reviewers report no verified high or critical issue.
 
 The retired W8 branch is not an implementation dependency. Its affine-INT8
 cache result remains a separate lossy datum and cannot be merged into Rung 0.

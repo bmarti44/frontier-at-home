@@ -406,6 +406,23 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         source = inspect.getsource(CAMPAIGN.execute_memory_probe_arm)
         self.assertIn("flush_expert_cache_window(args.port)", source)
 
+    def test_authoritative_plan_binds_current_frozen_candidate(self):
+        plan = (ROOT / "results/glm52-gates/RUNG-PLAN.md").read_text(
+            encoding="utf-8"
+        )
+        current = plan.split("Current Rung 0.1 candidate reconciliation:", 1)[1]
+        current = current.split("The retired W8 branch", 1)[0]
+        for expected in (
+            "e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004",
+            "5a7caa3e7fded039797e6a0158dd4687b932d3b3c5f225c05ac7a656021fbd1a",
+            "3f4f6d197a37369ec20413e7ee77b87508803511106d0250ecc45671ac01e349",
+            "/tmp/glm52-score-official",
+            "glm52-rung0-e637-mem-20260802a",
+            "R0-slab-canary-attempts-2026-08-02.json",
+        ):
+            self.assertIn(expected, current)
+        self.assertNotIn("afdf7dcf04a9c46710eeb61d1e7df623a33051cd", current)
+
     def test_quality_command_uses_frozen_scorer_and_full_manifest(self):
         command = CAMPAIGN.quality_command(
             Path("/home/bmarti44/.cache/glm52-test-quality/ds4-server"),
