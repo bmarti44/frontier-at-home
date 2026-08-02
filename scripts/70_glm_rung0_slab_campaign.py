@@ -1025,6 +1025,16 @@ def wait_ready(process: subprocess.Popen[Any], port: int) -> None:
     raise RuntimeError("server startup timed out")
 
 
+def flush_expert_cache_window(port: int) -> None:
+    """Request the engine's finalized access-stream counters."""
+    with urllib.request.urlopen(
+        f"http://127.0.0.1:{port}/v1/models", timeout=10
+    ) as response:
+        if response.status != 200:
+            raise RuntimeError("final telemetry flush failed")
+        response.read()
+
+
 def execute_memory_probe_arm(args: argparse.Namespace) -> int:
     """Run one bounded completion for cache-off RSS or slab-on safety."""
     mode = getattr(args, "mode", "off")
@@ -1118,6 +1128,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
                 or cells[0]["reps"][0].get("client_completion_tokens", 0) < 128
             ):
                 raise RuntimeError("cache-off memory probe produced fewer than 128 tokens")
+            flush_expert_cache_window(args.port)
             time.sleep(1)
             server_log.flush()
             os.fsync(server_log.fileno())
