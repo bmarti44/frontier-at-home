@@ -1,0 +1,137 @@
+{
+  "acceptance": {
+    "complete_output_tokens_minimum": 128,
+    "cgroup_events_required_zero": true,
+    "cgroup_swap_required_zero": true,
+    "cuda_allocation_telemetry_required": true,
+    "full_model_identity_bytes": 211075856448,
+    "full_sidecar_identity_bytes": 190028697600,
+    "minimum_available_gib": 18,
+    "oom_xid_or_survivor_required_absent": true,
+    "slab_peak_qd_minimum": 2,
+    "slab_reads_minimum": 1,
+    "staging_buffer_bytes_maximum": 16777216,
+    "staging_buffer_bytes_minimum": 8388608,
+    "staging_pool_count_maximum": 8
+  },
+  "attempts": [
+    {
+      "candidate_commit": "840767e4d446705f1da45fea1466efe5fdd7ceae",
+      "failure": "The launch omitted the unset slab-trace variable from the provenance allowlist, so the wrapper rejected the executed environment before model load.",
+      "outcome": "NO_RESULT",
+      "raw": [
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-8407-slab-canary-20260802a/server.log",
+          "raw_artifact_sha256": "3d67feb540f9db4a5dea01c621830ab3ae8a971ec6bb4f15c5b14ad37f8d9b86"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-crashlog/20260802-183838-8407-slab-canary/main.log",
+          "raw_artifact_sha256": "dbee934ae349008fc64f147e01158ac85edec0549a84018dd5d48ae10b99c122"
+        }
+      ],
+      "server_sha256": "db150099f0eb43cff312fc1f1db232222fab37d5c53d9d5af4baee7fdcbfa933"
+    },
+    {
+      "candidate_commit": "840767e4d446705f1da45fea1466efe5fdd7ceae",
+      "failure": "The benchmark client's hidden 300-second request timeout expired during the full identity scan.",
+      "minimum_available_gib": 40.890262604,
+      "outcome": "NO_RESULT",
+      "raw": [
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-8407-slab-canary-20260802b/server.log",
+          "raw_artifact_sha256": "4b50a3165dfb1c5a3c849c3e5b2497624d19b637b3f205b1d5fb1a68f6ca5daf"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-8407-slab-canary-20260802b/probe-result.json",
+          "raw_artifact_sha256": "1cdd10c90780ce7b22de62eb79dc0cccf662852a7af4a0136bc5493afe3d4cfa"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-crashlog/20260802-184043-8407-slab-canary-b/main.log",
+          "raw_artifact_sha256": "afa2661ac411ad0406631ee2563b5c93f51f3bf38ae964c37e2a3ef1f535c824"
+        }
+      ],
+      "server_sha256": "db150099f0eb43cff312fc1f1db232222fab37d5c53d9d5af4baee7fdcbfa933"
+    },
+    {
+      "candidate_commit": "840767e4d446705f1da45fea1466efe5fdd7ceae",
+      "completed_output_tokens": 160,
+      "control_config_decode_tokens_per_second": 1.50698941760139,
+      "failure": "The request completed, but the single-request harness omitted the final /v1/models cache-stat flush and therefore correctly rejected the missing access-stream digest.",
+      "minimum_available_gib": 24.891208649,
+      "outcome": "FAIL",
+      "raw": [
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-8407-slab-canary-20260802c/server.log",
+          "raw_artifact_sha256": "e8fa5eba1e2338e685cdf0d1c5ed666415e89c3588b6b22309e2f6524fe1ff85"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-8407-slab-canary-20260802c/probe-result.json",
+          "raw_artifact_sha256": "856753be16c3162fe0b44629dbe0e9cd37d123c0e6ba6ac27c7d5bc65c1c9a53"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-crashlog/20260802-184814-8407-slab-canary-c/main.log",
+          "raw_artifact_sha256": "c788b609684403613c58d15ad544e721dc8ed6f1a5dc6366c121f3790f9c4ec6"
+        }
+      ],
+      "server_sha256": "db150099f0eb43cff312fc1f1db232222fab37d5c53d9d5af4baee7fdcbfa933"
+    },
+    {
+      "access_stream_sha256": "5f92af1d569ae50cb0635a6f66515e518aad7e3d398700597fa406044101318e",
+      "candidate_commit": "e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004",
+      "cgroup_events": {
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0
+      },
+      "cgroup_peak_bytes": 69161484288,
+      "cgroup_swap_bytes": 0,
+      "completed_output_tokens": 160,
+      "control_config_decode_tokens_per_second": 1.5045177358806598,
+      "control_config_ttft_seconds_including_full_identity_scan": 277.226477926,
+      "generated_content_sha256": "5a8a92097259b40e00cb197d1eb5f1e0da5d0b289592c0255077fe4fae799f25",
+      "generated_reasoning_sha256": "7fad4b1593d92e9781964d6027d8926696fade1d987ab7ddb28d4b499296b208",
+      "minimum_available_gib": 24.878883362,
+      "outcome": "PASS",
+      "scorer_sha256": "3f4f6d197a37369ec20413e7ee77b87508803511106d0250ecc45671ac01e349",
+      "raw": [
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-e637-slab-canary-20260802a/server.log",
+          "raw_artifact_sha256": "e1bc3a25c3c16b6e6dab25939750397c8346087d201eacd3691f3b5b13386bb1"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-e637-slab-canary-20260802a/probe-result.json",
+          "raw_artifact_sha256": "221b39b723dacf13e8dea183a75e3013db4a9c5be5307a00b51d5cb20ffa818f"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-rung0-e637-slab-canary-20260802a/partial.json",
+          "raw_artifact_sha256": "5141eb518b46b20cb5c9bed5cdd6312fe34975b492260a587fbd8d474b7ded6e"
+        },
+        {
+          "path": "/home/bmarti44/.local/state/glm52-crashlog/20260802-193848-e637-slab-canary-a/main.log",
+          "raw_artifact_sha256": "f991ae5e46534669675737853cebfbf3c168306c1b0d123c43b52dbd814d395c"
+        }
+      ],
+      "server_sha256": "5a7caa3e7fded039797e6a0158dd4687b932d3b3c5f225c05ac7a656021fbd1a",
+      "slab_peak_qd": 8,
+      "slab_reads": 29679,
+      "staging": {
+        "buffer_bytes": 9744384,
+        "count": 8,
+        "cuda_free_after": 17764093952,
+        "cuda_free_before": 17847570432,
+        "cuda_total": 128495218688,
+        "total_bytes": 77955072
+      }
+    }
+  ],
+  "gate": "GLM-5.2 Rung 0.1 expert-slab allocation and single-request safety canary",
+  "notes": [
+    "The canary TTFT includes evidence-only full SHA-256 reads of the 211 GB model and 190 GB sidecar and is not a serving-profile TTFT.",
+    "The canary decode result is a one-request safety observation, not the five-block A/B adoption estimate.",
+    "The wrapper samples executed-process identity at 4 Hz; clean exit means the candidate was verified alive at least once and no contradiction was observed, not that every sub-250 ms transition was witnessed."
+  ],
+  "schema_version": 1,
+  "verdict": "PASS"
+}
