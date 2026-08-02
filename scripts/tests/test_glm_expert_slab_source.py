@@ -12,6 +12,7 @@ ENGINE_PATCHES = (
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-pinned-staging.patch",
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-pinned-on-only.patch",
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-accelerated-sha.patch",
+    ROOT / "results/glm52-gates/harness/ds4-expert-slab-allocation-telemetry.patch",
 )
 
 
