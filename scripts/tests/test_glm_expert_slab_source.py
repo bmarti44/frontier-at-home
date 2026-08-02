@@ -94,6 +94,15 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
+    def test_pinned_staging_does_not_change_the_slab_off_arm(self) -> None:
+        for marker in (
+            "std::unique_lock<std::mutex> staging_lock;",
+            "if (slab_mode) {",
+            "if (!slab_mode &&",
+            "if (!slab_mode) free(buf);",
+        ):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
     def test_slab_mode_is_attested_in_load_profile(self) -> None:
         for marker in (
             "slab_mode=%s",
