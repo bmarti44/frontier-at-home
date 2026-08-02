@@ -128,7 +128,7 @@ Current Rung 0.1 candidate reconciliation:
 - the prior 2.2231-2.2373 tok/s OFF calibration used the superseded binary and
   remains useful diagnostic history only. Both OFF and ON performance arms
   must be rerun on `e637b6f`; no Rung 0.1 A/B adoption result exists yet;
-- post-freeze public randomness round `6342786` is authenticated and bound to
+- post-reconciliation public randomness round `6342798` is authenticated and bound to
   the two frozen hashes. Performance and NLL campaigns remain blocked until
   both persistent reviewers report no verified high or critical issue.
 
