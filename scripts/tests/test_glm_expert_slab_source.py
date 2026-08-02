@@ -117,6 +117,23 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
+    def test_pinned_staging_reports_bounded_geometry_and_cuda_failures(self) -> None:
+        """The safety canary must identify exactly what CUDA tried to pin.
+
+        A prior slab arm left an NV_ERR_NO_MEMORY kernel event while the engine
+        swallowed cudaHostAlloc's status.  Require a stable success marker with
+        pool count, per-buffer bytes, and total bytes, plus the CUDA error name
+        and the failed allocation index on failure.  The existing count <= 32
+        guard remains the production bound.
+        """
+        for marker in (
+            "expert slab pinned staging ready count=%u buffer_bytes=%llu total_bytes=%llu",
+            "expert slab pinned staging allocation failed index=%u count=%u",
+            "cudaGetErrorName(err)",
+            "count > 32",
+        ):
+            self.assertIn(marker, self.source)
+
     def test_pinned_staging_does_not_change_the_slab_off_arm(self) -> None:
         for marker in (
             "std::unique_lock<std::mutex> staging_lock;",
