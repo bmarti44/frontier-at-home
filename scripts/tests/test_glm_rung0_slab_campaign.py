@@ -86,7 +86,9 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                         "trace_lines": 0,
                     },
                     "external_io": {
-                        "read_bytes_delta": 1000,
+                        "read_bytes_delta": (
+                            1000 if mode == "off" else 401_104_554_048
+                        ),
                         "elapsed_seconds": 1.0,
                         "peak_read_qd": 1 if mode == "off" else 8,
                         "sample_count": 20,
@@ -206,6 +208,10 @@ class Rung0SlabCampaignTests(unittest.TestCase):
     def test_engine_log_parser_requires_resolved_positive_slab_mode(self):
         log = "\n".join(
             (
+                "ds4: expert slab full-model identity verified via O_DIRECT "
+                "bytes=211075856448",
+                "ds4: expert slab full-sidecar identity verified via O_DIRECT "
+                "bytes=190028697600",
                 "ds4: CUDA contiguous expert slab enabled records=19456 path=/f ",
                 "LOADPROF L3 uniq=8 hits=1 miss=7 hit_ms=1 fetch_ms=2 "
                 "fill_ms=1 total_ms=4 slab_mode=on slab_reads=7 "
@@ -219,6 +225,8 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(parsed["slab_reads"], 7)
         self.assertEqual(parsed["slab_peak_qd"], 7)
         for broken in (
+            log.replace("full-model identity verified", "model identity pending"),
+            log.replace("full-sidecar identity verified", "sidecar identity pending"),
             log.replace("slab_reads=7", "slab_reads=0"),
             log.replace("slab_mode=on", "slab_mode=off"),
             log.replace("arena pin: ok", "arena pin: failed"),
@@ -625,6 +633,17 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             )
         self.assertGreater(result["decode_ratio_lower_95"], 1.0)
         self.assertLessEqual(result["warm_ttft_ratio_upper_95"], 1.05)
+
+    def test_slab_arm_requires_full_identity_physical_reads(self):
+        records = self.passing_records()
+        slab = next(record for record in records if record["mode"] == "on")
+        slab["external_io"]["read_bytes_delta"] = 401_104_554_047
+        with self.assertRaisesRegex(ValueError, "full identity read coverage"):
+            CAMPAIGN.score_campaign(
+                records,
+                self.passing_nll(),
+                quality_bound=True,
+            )
 
     def test_fixed_scorer_rejects_false_success_mutations(self):
         mutations = {

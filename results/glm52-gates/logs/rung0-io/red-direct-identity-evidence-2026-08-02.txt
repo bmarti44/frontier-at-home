@@ -1,0 +1,9 @@
+Command:
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_glm_expert_slab_source scripts.tests.test_glm_rung0_slab_campaign.Rung0SlabCampaignTests.test_engine_log_parser_requires_resolved_positive_slab_mode scripts.tests.test_glm_rung0_slab_campaign.Rung0SlabCampaignTests.test_slab_arm_requires_full_identity_physical_reads
+
+Result: RED (exit 1)
+
+The production patch lacks a bounded direct sidecar hash, the engine-log parser
+accepts missing full-identity markers, and the fixed scorer accepts a slab-on
+arm with one byte less than the 211,075,856,448-byte model plus the
+190,028,697,600-byte sidecar physical-read requirement.
