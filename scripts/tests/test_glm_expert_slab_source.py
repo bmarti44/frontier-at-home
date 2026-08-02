@@ -131,6 +131,9 @@ class ExpertSlabSourceTests(unittest.TestCase):
             "expert slab pinned staging ready count=%u buffer_bytes=%llu total_bytes=%llu",
             "expert slab pinned staging allocation failed index=%u count=%u",
             "cudaGetErrorName(err)",
+            "cudaMemGetInfo(&cuda_free_before, &cuda_total_before)",
+            "cudaMemGetInfo(&cuda_free_after, &cuda_total_after)",
+            "cuda_free_before=%llu cuda_free_after=%llu cuda_total=%llu",
             "count > 32",
         ):
             self.assertIn(marker, self.source)
