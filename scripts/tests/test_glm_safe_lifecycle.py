@@ -20,6 +20,38 @@ FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
 class CandidateLifecycleSourceTests(unittest.TestCase):
+    def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
+        safe_environment = {
+            "PATH": "/usr/bin:/bin",
+            "GLM_SAFE_TIMEOUT_S": "5400",
+            "GLM_SAFE_MIN_START_GIB": "109",
+        }
+        safe = subprocess.run(
+            ["env", *[f"{key}={value}" for key, value in safe_environment.items()],
+             "bash", str(SAFE), "--tag", "timeout-contract", "--", "/bin/true"],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+        self.assertEqual(safe.returncode, 2)
+        self.assertIn("invalid GLM_SAFE_MIN_START_GIB", safe.stderr)
+        self.assertNotIn("invalid GLM_SAFE_TIMEOUT_S", safe.stderr)
+
+        launcher_environment = {
+            "PATH": "/usr/bin:/bin",
+            "GLM_SAFE_TIMEOUT_S": "5400",
+            "GLM_SAFE_RUN_AS_CURRENT_USER": "2",
+        }
+        launcher = subprocess.run(
+            ["env", *[f"{key}={value}" for key, value in launcher_environment.items()],
+             "bash", str(CGROUP), "--tag", "timeout-contract", "--", "/bin/true"],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+        self.assertEqual(launcher.returncode, 2)
+        self.assertIn("invalid GLM_SAFE_RUN_AS_CURRENT_USER", launcher.stderr)
+
+        for script in (SAFE, CGROUP):
+            source = script.read_text(encoding="utf-8")
+            self.assertIn("TIMEOUT_S > 5400", source)
+
     def test_benchmark_lock_acl_has_a_narrow_installer(self):
         references = []
         for script in (ROOT / "scripts").glob("*.sh"):
