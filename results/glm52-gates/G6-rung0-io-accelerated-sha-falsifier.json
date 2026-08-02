@@ -1,0 +1,18 @@
+{
+  "artifact": "GLM-5.2 slab per-record accelerated SHA-256 falsifier",
+  "generated_at": "2026-08-02T22:08:00Z",
+  "candidate_engine_commit": "ab35ae341b6b45f0e7ba7c952489a415122a9ae8",
+  "method": "Resolve OpenSSL 3 SHA256 with dlopen/dlsym, hash the exact 9,732,096-byte record size used by the slab 100 times, and compare with sha256sum over an equal zero-filled stream.",
+  "payload_bytes": 9732096,
+  "iterations": 100,
+  "elapsed_seconds": 0.395149856,
+  "throughput_gib_s": 2.293743,
+  "mean_ms_per_record": 3.95149856,
+  "expected_sha256": "447d8f100e42297f6df6b0fe69a8b49dcf886c86b4f9b6e48eb15d2ab284f88b",
+  "actual_sha256": "447d8f100e42297f6df6b0fe69a8b49dcf886c86b4f9b6e48eb15d2ab284f88b",
+  "correct_digest": true,
+  "engine_cuda_unit_compiled": true,
+  "engine_help_smoke_passed": true,
+  "verdict": "PASS",
+  "scope": "Cheap offline falsifier only. It does not authorize a serving run; the candidate-bound allocation and integrity canary is still required."
+}

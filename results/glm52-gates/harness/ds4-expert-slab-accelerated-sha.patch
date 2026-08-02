@@ -1,0 +1,114 @@
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index c666b50..7142780 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -9,6 +9,7 @@
+ #include <limits.h>
+ #include <math.h>
+ #include <fcntl.h>
++#include <dlfcn.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -23733,6 +23734,13 @@ static struct {
+ } g_expert_slab;
+ static std::mutex g_expert_slab_init_mu;
+ 
++typedef unsigned char *(*cuda_expert_slab_sha256_fn)(
++    const unsigned char *, size_t, unsigned char *);
++static struct {
++    void *handle;
++    cuda_expert_slab_sha256_fn sha256;
++} g_expert_slab_crypto;
++
+ /* O_DIRECT buffers must also be CUDA page-locked.  Pageable per-layer
+  * buffers make cudaMemcpy perform an implicit registration/staging cycle on
+  * every expert miss; the live RED arm measured 2--9 ms reads inside 50--70 ms
+@@ -23760,6 +23768,40 @@ static uint64_t cuda_expert_slab_align_up(uint64_t value, uint64_t alignment) {
+     return (value + alignment - 1) / alignment * alignment;
+ }
+ 
++static int cuda_expert_slab_crypto_init(void) {
++    if (g_expert_slab_crypto.sha256) return 1;
++    const char *libraries[] = {"libcrypto.so.3", "libcrypto.so"};
++    for (const char *library : libraries) {
++        void *handle = dlopen(library, RTLD_NOW | RTLD_LOCAL);
++        if (!handle) continue;
++        void *symbol = dlsym(handle, "SHA256");
++        cuda_expert_slab_sha256_fn function = NULL;
++        memcpy(&function, &symbol, sizeof(function));
++        if (function) {
++            g_expert_slab_crypto.handle = handle;
++            g_expert_slab_crypto.sha256 = function;
++            return 1;
++        }
++        (void)dlclose(handle);
++    }
++    return 0;
++}
++
++static int cuda_expert_slab_sha256(const void *data, size_t bytes,
++                                   uint8_t out[32]) {
++    return g_expert_slab_crypto.sha256 &&
++           g_expert_slab_crypto.sha256(
++               (const unsigned char *)data, bytes, out) == out;
++}
++
++static void cuda_expert_slab_crypto_release(void) {
++    g_expert_slab_crypto.sha256 = NULL;
++    if (g_expert_slab_crypto.handle) {
++        (void)dlclose(g_expert_slab_crypto.handle);
++        g_expert_slab_crypto.handle = NULL;
++    }
++}
++
+ static void cuda_expert_slab_staging_release(void) {
+     for (void *allocation : g_expert_slab_staging.allocations) {
+         if (allocation) (void)cudaFreeHost(allocation);
+@@ -24146,6 +24188,10 @@ static int cuda_expert_slab_init(const ds4_gpu_stream_expert_table *table) {
+         !cuda_expert_slab_stable(&st, &direct_st)) {
+         return cuda_expert_slab_fail("validated/direct descriptor mismatch");
+     }
++    if (!cuda_expert_slab_crypto_init()) {
++        return cuda_expert_slab_fail(
++            "expert slab accelerated SHA-256 unavailable");
++    }
+     g_expert_slab.device = st.st_dev;
+     g_expert_slab.inode = st.st_ino;
+     g_expert_slab.mtime = st.st_mtim;
+@@ -24157,7 +24203,8 @@ static int cuda_expert_slab_init(const ds4_gpu_stream_expert_table *table) {
+     g_expert_slab.state.store(1);
+     fprintf(stderr,
+             "ds4: CUDA contiguous expert slab enabled records=%u path=%s "
+-            "slab_sha256=%.12s model_sha256=%.12s inode=%llu\n",
++            "slab_sha256=%.12s model_sha256=%.12s inode=%llu "
++            "integrity=startup-sha256+openssl-sha256-per-record\n",
+             h.record_count, path, slab_sha, model_sha,
+             (unsigned long long)st.st_ino);
+     return 1;
+@@ -24220,11 +24267,13 @@ static int cuda_expert_slab_read(uint32_t layer, uint32_t expert,
+         release_reader();
+         return 0;
+     }
+-    ec_sha256 digest;
+     uint8_t actual[32];
+-    ec_sha256_init(&digest);
+-    ec_sha256_update(&digest, buffer, (size_t)record.payload_bytes);
+-    ec_sha256_final_bytes(&digest, actual);
++    if (!cuda_expert_slab_sha256(buffer, (size_t)record.payload_bytes,
++                                 actual)) {
++        cuda_expert_slab_fail("expert slab accelerated SHA-256 unavailable");
++        release_reader();
++        return 0;
++    }
+     if (memcmp(actual, record.payload_sha256, sizeof(actual)) != 0) {
+         fprintf(stderr, "ds4: expert slab record checksum mismatch layer=%u expert=%u\n",
+                 layer, expert);
+@@ -24249,6 +24298,7 @@ static void cuda_expert_slab_cleanup(void) {
+     g_expert_slab.by_key.clear();
+     g_expert_slab.file_size = 0;
+     g_expert_slab.model_generation = 0;
++    cuda_expert_slab_crypto_release();
+     {
+         std::lock_guard<std::mutex> staging_lock(g_expert_slab_staging.mu);
+         cuda_expert_slab_staging_release();

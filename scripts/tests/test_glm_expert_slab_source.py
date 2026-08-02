@@ -11,6 +11,7 @@ ENGINE_PATCHES = (
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-io.patch",
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-pinned-staging.patch",
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-pinned-on-only.patch",
+    ROOT / "results/glm52-gates/harness/ds4-expert-slab-accelerated-sha.patch",
 )
 
 
@@ -80,7 +81,8 @@ class ExpertSlabSourceTests(unittest.TestCase):
             "expert slab accelerated SHA-256 unavailable",
             "record checksum mismatch",
             "integrity=startup-sha256+openssl-sha256-per-record",
-            'dlopen("libcrypto.so.3"',
+            'const char *libraries[] = {"libcrypto.so.3", "libcrypto.so"}',
+            "dlopen(library, RTLD_NOW | RTLD_LOCAL)",
             "RTLD_NOW | RTLD_LOCAL",
             "dlclose",
         ):
