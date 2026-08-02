@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import copy
 import hashlib
+import inspect
 from pathlib import Path
 import tempfile
 import unittest
@@ -400,6 +401,10 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             ),
             30 * 1024**3,
         )
+
+    def test_single_request_probe_flushes_nonempty_access_window(self):
+        source = inspect.getsource(CAMPAIGN.execute_memory_probe_arm)
+        self.assertIn("flush_expert_cache_window(args.port)", source)
 
     def test_quality_command_uses_frozen_scorer_and_full_manifest(self):
         command = CAMPAIGN.quality_command(
