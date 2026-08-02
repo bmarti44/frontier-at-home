@@ -597,6 +597,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         for marker in (
             "scripts/30_bench_speed.py",
             '"--warmup", "1"',
+            '"--request-timeout", "2700"',
             "/sys/class/block/nvme0n1/inflight",
             'f"/proc/{pid}/io"',
             "start_new_session=False",

@@ -42,6 +42,8 @@ class BenchOptionTests(unittest.TestCase):
             "123",
             "--model-id",
             "glm-5.2",
+            "--request-timeout",
+            "2700",
         ]
         with mock.patch.object(sys, "argv", argv):
             args = bench.parse_args()
@@ -50,6 +52,7 @@ class BenchOptionTests(unittest.TestCase):
         self.assertEqual(args.min_completion_tokens, 128)
         self.assertEqual(args.seed, 123)
         self.assertEqual(args.model_id, "glm-5.2")
+        self.assertEqual(args.request_timeout, 2700)
         self.assertEqual(args.tokenizer_path, bench.TOKENIZER_PATH)
         self.assertEqual(
             args.tokenizer_sha256,

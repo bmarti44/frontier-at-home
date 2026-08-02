@@ -1,0 +1,8 @@
+Command:
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_bench_speed_options.BenchOptionTests.test_decisive_subset_options scripts.tests.test_glm_rung0_slab_campaign.Rung0SlabCampaignTests.test_runtime_is_a_thin_wrapper_around_existing_measurement
+
+Result: RED (exit 1)
+
+The existing speed client rejects --request-timeout as an unknown argument,
+and the Rung 0 arm does not pass the required bounded 2700-second deadline.
+The default for every other caller must remain 300 seconds.
