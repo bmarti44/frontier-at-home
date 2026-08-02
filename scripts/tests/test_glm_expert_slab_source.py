@@ -40,6 +40,19 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
+    def test_full_model_identity_hash_uses_bounded_direct_io(self) -> None:
+        for marker in (
+            "cuda_expert_slab_hash_model_fd",
+            "g_model_direct_fd",
+            "g_model_direct_align",
+            "model changed during identity hash",
+        ):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+        self.assertNotIn(
+            "cuda_expert_slab_hash_model_map(table->model_map",
+            self.source,
+        )
+
     def test_one_checksummed_record_read_replaces_three_model_reads(self) -> None:
         for marker in (
             "cuda_expert_slab_read",

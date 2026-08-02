@@ -1,0 +1,13 @@
+Command:
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_glm_expert_slab_source.ExpertSlabSourceTests.test_full_model_identity_hash_uses_bounded_direct_io
+
+Result: RED (exit 1)
+
+FAIL: test_full_model_identity_hash_uses_bounded_direct_io
+AssertionError: False is not true : missing source marker: cuda_expert_slab_hash_model_fd
+
+The existing production patch hashes the 211,075,856,448-byte mapped model
+after allocating the 68,000,000,000-byte expert arena. The first contained B
+arm reached memory.high 5,143 times before slab activation. This test requires
+the full identity hash to use the engine's already-open bounded direct-I/O
+model descriptor while retaining stable-file checks.
