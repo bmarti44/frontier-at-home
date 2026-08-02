@@ -47,7 +47,10 @@ MEMORY_HIGH_GIB=${GLM_SAFE_MEMORY_HIGH_GIB:-}
 KILL_FLOOR_GIB=$((10#$KILL_FLOOR_GIB))
 TIMEOUT_S=$((10#$TIMEOUT_S))
 (( KILL_FLOOR_GIB >= 18 && KILL_FLOOR_GIB <= 64 )) || exit 2
-(( TIMEOUT_S >= 1 && TIMEOUT_S <= 3600 )) || exit 2
+if (( TIMEOUT_S < 1 || TIMEOUT_S > 5400 )); then
+  echo "invalid GLM_SAFE_TIMEOUT_S" >&2
+  exit 2
+fi
 [[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] || {
   echo "invalid GLM_SAFE_RUN_AS_CURRENT_USER" >&2
   exit 2
