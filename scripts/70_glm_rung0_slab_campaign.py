@@ -105,6 +105,15 @@ def arm_schedule(*, flip: bool = False) -> tuple[tuple[int, int, str], ...]:
     return tuple(rows)
 
 
+def safe_timeout_seconds(mode: str) -> int:
+    """Allow the evidence-only 401 GB identity scan to finish unchanged."""
+    if mode == "off":
+        return 3600
+    if mode == "on":
+        return 5400
+    raise ValueError("unknown slab mode")
+
+
 def confirmation_seed(
     randomness: str,
     candidate_commit: str,
@@ -1611,6 +1620,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
             no_large_engines()
             stable_start_memory(max(110.0, memory_high_gib + 20.0))
             mode = "off" if arm == "A" else "on"
+            safe_timeout = safe_timeout_seconds(mode)
             label = f"quality-{index:02d}-{arm.lower()}"
             result_path = out / f"{label}.tsv"
             crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
@@ -1633,7 +1643,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
                     "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
                     "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
                     "GLM_SAFE_MIN_START_GIB": "110",
-                    "GLM_SAFE_TIMEOUT_S": "3600",
+                    "GLM_SAFE_TIMEOUT_S": str(safe_timeout),
                 }
             )
             completed = subprocess.run(
@@ -1651,7 +1661,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=environment,
-                timeout=3700,
+                timeout=safe_timeout + 100,
                 check=False,
             )
             (out / f"{label}.stdout.log").write_bytes(completed.stdout)
@@ -1829,6 +1839,7 @@ def run_campaign(args: argparse.Namespace) -> int:
             no_large_engines()
             stable_start_memory(max(110.0, memory_high_gib + 20.0))
             mode = "off" if arm == "A" else "on"
+            safe_timeout = safe_timeout_seconds(mode)
             label = f"r0-b{block}s{sequence}{arm.lower()}"
             arm_out = arms_root / label
             crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
@@ -1853,7 +1864,7 @@ def run_campaign(args: argparse.Namespace) -> int:
                     "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
                     "GLM_SAFE_KILL_FLOOR_GIB": "18",
                     "GLM_SAFE_MIN_START_GIB": "110",
-                    "GLM_SAFE_TIMEOUT_S": "3600",
+                    "GLM_SAFE_TIMEOUT_S": str(safe_timeout),
                 }
             )
             completed = subprocess.run(
@@ -1888,7 +1899,7 @@ def run_campaign(args: argparse.Namespace) -> int:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=environment,
-                timeout=3700,
+                timeout=safe_timeout + 100,
                 check=False,
             )
             if arm_out.is_dir():

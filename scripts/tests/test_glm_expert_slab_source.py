@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ENGINE_PATCHES = (
     ROOT / "results/glm52-gates/harness/ds4-iq2xxs-down-cuda.patch",
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-io.patch",
+    ROOT / "results/glm52-gates/harness/ds4-expert-slab-pinned-staging.patch",
 )
 
 
