@@ -618,6 +618,17 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(CAMPAIGN.safe_timeout_seconds("off"), 3600)
         self.assertEqual(CAMPAIGN.safe_timeout_seconds("on"), 5400)
 
+    def test_single_request_slab_canary_has_fixed_safety_acceptance(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        for marker in (
+            "def parse_slab_staging_telemetry",
+            "expert slab pinned staging ready",
+            "expert slab pinned staging allocation failed",
+            "NV_ERR_NO_MEMORY",
+            'probe_arm.add_argument("--mode", choices=("off", "on")',
+        ):
+            self.assertIn(marker, source)
+
     def test_fixed_scorer_accepts_complete_lossless_campaign(self):
         with self.assertRaises(ValueError):
             CAMPAIGN.score_campaign(self.passing_records(), self.passing_nll())
