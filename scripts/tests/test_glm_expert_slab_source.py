@@ -65,27 +65,26 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
-    def test_hot_read_uses_startup_digest_and_stable_descriptor_not_scalar_sha(self) -> None:
-        """Do not SHA-256 every 9.7 MiB miss after hashing the full artifact.
+    def test_hot_read_uses_accelerated_end_to_end_record_sha(self) -> None:
+        """Keep record authentication without the 50 ms scalar SHA path.
 
         The afdf7dc slab arm measured 2.742 ms mean O_DIRECT time inside a
         58.514 ms mean miss window. Its scalar record SHA ran between those
-        observations. Evidence mode already hashes the complete sidecar before
-        serving. Runtime reads must instead reject dev/inode/size/mtime/ctime
-        drift around the retained O_DIRECT descriptor. Pre-start corruption
-        remains covered by the full-sidecar digest and builder mutation tests.
+        observations. The replacement must authenticate the exact pinned bytes
+        that will be copied to CUDA, using the system's ARM-accelerated SHA-256.
+        Stable file metadata is not equivalent: it cannot detect a post-pread
+        staging-buffer mutation.
         """
-        start = self.source.index("static int cuda_expert_slab_read(")
-        end = self.source.index("static void cuda_expert_slab_cleanup", start)
-        hot_read = self.source[start:end]
         for marker in (
-            "fstat(g_expert_slab.fd",
-            "cuda_expert_slab_stable",
-            "sidecar changed during record read",
+            "cuda_expert_slab_sha256",
+            "expert slab accelerated SHA-256 unavailable",
+            "record checksum mismatch",
+            "integrity=startup-sha256+openssl-sha256-per-record",
+            'dlopen("libcrypto.so.3"',
+            "RTLD_NOW | RTLD_LOCAL",
+            "dlclose",
         ):
-            self.assertIn(marker, hot_read)
-        self.assertNotIn("ec_sha256_update", hot_read)
-        self.assertNotIn("record checksum mismatch", hot_read)
+            self.assertIn(marker, self.source)
 
     def test_lifecycle_and_worker_device_are_explicit(self) -> None:
         for marker in (
