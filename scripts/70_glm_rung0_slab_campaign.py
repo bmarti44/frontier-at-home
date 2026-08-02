@@ -1190,6 +1190,7 @@ def execute_arm(args: argparse.Namespace) -> int:
                     "--reps",
                     "2",
                     "--warmup", "1",
+                    "--request-timeout", "2700",
                     "--context-levels",
                     "0",
                     "--max-tokens",

@@ -90,6 +90,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=SEED, help="fixture and sampling seed")
     parser.add_argument(
+        "--request-timeout",
+        type=int,
+        default=REQUEST_TIMEOUT_S,
+        help=f"HTTP request timeout in seconds (default: {REQUEST_TIMEOUT_S})",
+    )
+    parser.add_argument(
         "--model-id",
         help="exact model id to select when /v1/models exposes multiple aliases",
     )
@@ -139,6 +145,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--max-tokens must be at least 128 for decode timing")
     if not 128 <= args.min_completion_tokens <= args.max_tokens:
         parser.error("--min-completion-tokens must be between 128 and --max-tokens")
+    if not 1 <= args.request_timeout <= 2700:
+        parser.error("--request-timeout must be between 1 and 2700 seconds")
     args.base_url = args.base_url.rstrip("/")
     if not args.base_url:
         parser.error("--base-url must not be empty")
@@ -234,11 +242,13 @@ class Client:
         base_url: str,
         api_key: str | None,
         extra_body: dict[str, Any] | None = None,
+        request_timeout_s: int = REQUEST_TIMEOUT_S,
     ) -> None:
         self.base_url = base_url
         self.api_key = api_key
         # Merged before harness-critical keys; cannot override them.
         self.extra_body = dict(extra_body or {})
+        self.request_timeout_s = request_timeout_s
 
     def headers(self) -> dict[str, str]:
         headers = {"Accept": "application/json"}
@@ -251,7 +261,9 @@ class Client:
             self.base_url + "/v1/models", headers=self.headers(), method="GET"
         )
         try:
-            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S) as response:
+            with urllib.request.urlopen(
+                request, timeout=self.request_timeout_s
+            ) as response:
                 status = response.status
                 raw = response.read()
         except urllib.error.HTTPError as error:
@@ -305,7 +317,9 @@ class Client:
         )
         request_started_ns = time.perf_counter_ns()
         try:
-            response = urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S)
+            response = urllib.request.urlopen(
+                request, timeout=self.request_timeout_s
+            )
         except urllib.error.HTTPError as error:
             raw = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"stream returned HTTP {error.code}: {raw[:500]!r}") from error
@@ -915,7 +929,12 @@ def main() -> int:
             level: prefix_with_exact_tokens(tokenizer, fixture, level)
             for level in args.context_levels
         }
-        client = Client(args.base_url, api_key, args.extra_body)
+        client = Client(
+            args.base_url,
+            api_key,
+            args.extra_body,
+            request_timeout_s=args.request_timeout,
+        )
         model = client.get_model(args.model_id)
         result["metadata"]["model"] = model
         result["metadata"]["tokenizer_path"] = str(args.tokenizer_path)
