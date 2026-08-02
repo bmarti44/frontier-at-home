@@ -43,6 +43,8 @@ MODEL_SHA256 = (
     "a49de64c5020432bdae23de36a423a96"
     "60a5621bc0db8d12b66bd8814b07fea0"
 )
+MODEL_BYTES = 211_075_856_448
+SLAB_BYTES = 190_028_697_600
 PROVENANCE_NAMES = tuple(
     sorted(
         {
@@ -675,9 +677,26 @@ def parse_engine_log(text: str, mode: str) -> dict[str, Any]:
     if "ds4: expert-cache arena pin: ok" not in text:
         raise ValueError("pinned expert arena was not established")
     if mode == "on":
-        if "ds4: CUDA contiguous expert slab enabled records=19456" not in text:
-            raise ValueError("slab activation marker is absent")
-    elif "ds4: CUDA contiguous expert slab enabled" in text:
+        model_marker = (
+            "ds4: expert slab full-model identity verified via O_DIRECT "
+            f"bytes={MODEL_BYTES}"
+        )
+        sidecar_marker = (
+            "ds4: expert slab full-sidecar identity verified via O_DIRECT "
+            f"bytes={SLAB_BYTES}"
+        )
+        enabled_marker = "ds4: CUDA contiguous expert slab enabled records=19456"
+        if (
+            text.count(model_marker) != 1
+            or text.count(sidecar_marker) != 1
+            or text.count(enabled_marker) != 1
+            or not text.index(model_marker) < text.index(sidecar_marker) < text.index(enabled_marker)
+        ):
+            raise ValueError("ordered full-identity slab activation is absent")
+    elif (
+        "ds4: CUDA contiguous expert slab enabled" in text
+        or "identity verified via O_DIRECT" in text
+    ):
         raise ValueError("default-off arm emitted a slab activation marker")
 
     load_pattern = re.compile(
@@ -718,9 +737,26 @@ def parse_quality_engine_log(text: str, mode: str) -> dict[str, Any]:
     if "ds4: expert-cache arena pin: ok" not in text:
         raise ValueError("quality arm did not establish the pinned arena")
     marker = "ds4: CUDA contiguous expert slab enabled records=19456"
-    if mode == "on" and marker not in text:
-        raise ValueError("quality arm lacks its slab activation marker")
-    if mode == "off" and "ds4: CUDA contiguous expert slab enabled" in text:
+    if mode == "on":
+        model_marker = (
+            "ds4: expert slab full-model identity verified via O_DIRECT "
+            f"bytes={MODEL_BYTES}"
+        )
+        sidecar_marker = (
+            "ds4: expert slab full-sidecar identity verified via O_DIRECT "
+            f"bytes={SLAB_BYTES}"
+        )
+        if (
+            text.count(model_marker) != 1
+            or text.count(sidecar_marker) != 1
+            or text.count(marker) != 1
+            or not text.index(model_marker) < text.index(sidecar_marker) < text.index(marker)
+        ):
+            raise ValueError("quality arm lacks ordered full-identity activation")
+    if mode == "off" and (
+        "ds4: CUDA contiguous expert slab enabled" in text
+        or "identity verified via O_DIRECT" in text
+    ):
         raise ValueError("quality baseline emitted a slab activation marker")
     loads = re.findall(
         r"^LOADPROF .*\bslab_mode=(on|off|error) "
@@ -2267,6 +2303,8 @@ def score_campaign(
             or (mode == "on" and external_qd < 2)
         ):
             raise ValueError("external completed-I/O coverage is invalid")
+        if mode == "on" and read_bytes < MODEL_BYTES + SLAB_BYTES:
+            raise ValueError("slab arm lacks full identity read coverage")
         io_throughput[mode].append(read_bytes / io_elapsed)
 
         safety = record["safety"]
