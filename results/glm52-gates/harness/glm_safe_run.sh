@@ -560,7 +560,9 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
   CGROUP_SWAP_CURRENT_END=$(<"$CGROUP_DIR/memory.swap.current")
   plog "cgroup_final current_bytes=$CGROUP_CURRENT_END peak_bytes=$CGROUP_PEAK_END swap_current_bytes=$CGROUP_SWAP_CURRENT_END events=$(tr '\n' ',' <"$CGROUP_DIR/memory.events.local")"
 fi
-if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 && $RC == 0 ]]; then
+if [[ $CANDIDATE_PROVENANCE == 1 &&
+      $EXECUTED_CANDIDATE_OBSERVED == 1 &&
+      -z $PROVENANCE_FAILURE && $RC == 0 ]]; then
   EXECUTED_CANDIDATE_CLEAN_EXIT=1
   plog "executed candidate clean exit verified after wrapper and descendant checks"
 fi
