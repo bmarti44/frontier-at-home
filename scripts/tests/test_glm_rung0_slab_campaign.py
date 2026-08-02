@@ -614,6 +614,10 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             self.assertIn(marker, source)
         self.assertNotIn('"DS4_CUDA_EXPERT_SLAB_TRACE": "1"', source)
 
+    def test_slab_on_arms_keep_full_verification_and_have_90_minute_budget(self):
+        self.assertEqual(CAMPAIGN.safe_timeout_seconds("off"), 3600)
+        self.assertEqual(CAMPAIGN.safe_timeout_seconds("on"), 5400)
+
     def test_fixed_scorer_accepts_complete_lossless_campaign(self):
         with self.assertRaises(ValueError):
             CAMPAIGN.score_campaign(self.passing_records(), self.passing_nll())
