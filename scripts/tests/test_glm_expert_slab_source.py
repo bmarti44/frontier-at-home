@@ -75,6 +75,24 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
+    def test_slab_miss_staging_is_persistent_and_cuda_pinned(self) -> None:
+        """O_DIRECT completion must not feed CUDA through pageable buffers.
+
+        The live RED arm measured 2--9 ms slab reads but 50--70 ms fetch
+        windows because every layer allocated pageable worker buffers and
+        synchronous cudaMemcpy had to stage them.  The default-off slab path
+        must instead retain bounded page-locked staging across layer visits.
+        Runtime adoption still requires the fixed paired decode lower bound;
+        this source contract only prevents the reproduced staging regression.
+        """
+        for marker in (
+            "cuda_expert_slab_staging_ensure",
+            "cudaHostAllocPortable",
+            "cudaFreeHost",
+            "g_expert_slab_staging.buffers",
+        ):
+            self.assertTrue(marker in self.source, f"missing source marker: {marker}")
+
     def test_slab_mode_is_attested_in_load_profile(self) -> None:
         for marker in (
             "slab_mode=%s",
