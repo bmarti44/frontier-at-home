@@ -9,7 +9,8 @@
 # Protections (layered, all mandatory):
 #   1. ulimit -v hard cap (default 400 GiB): runaway mmap/managed allocations
 #      fail with ENOMEM inside the process instead of freezing the kernel.
-#   2. 4 Hz sidecar sampler: MemAvailable + engine VmRSS + read_bytes,
+#   2. Periodic sidecar sampler: MemAvailable + engine VmRSS + read_bytes;
+#      actual cadence is recorded in samples.log.
 #      appended to a PERSISTENT log and fdatasync'd every sample, so the
 #      final seconds survive a hard freeze/power cycle.
 #   3. Kill floor (default 18 GiB MemAvailable): sampler SIGKILLs the whole
@@ -286,7 +287,7 @@ if [[ $actual_pg != "$PG" ]]; then
   wait "$WRAP" 2>/dev/null || true
   exit 10
 fi
-plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 4 Hz)"
+plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (periodic sampler; actual cadence in samples.log)"
 : > "$SAMP"
 
 KILLED=""
@@ -406,7 +407,8 @@ PY
       CURRENT_HASH=$(sha256sum -- "/proc/$EXECUTED_PID/exe" 2>/dev/null | awk '{print $1}')
       CURRENT_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
       IDENTITY_INCOMPLETE=0
-      if [[ -z $CURRENT_GROUP || -z $CURRENT_PATH ||
+      if [[ -z $CURRENT_START_TICKS || -z $CURRENT_GROUP ||
+            -z $CURRENT_PATH ||
             $CURRENT_PATH == "/proc/$EXECUTED_PID/exe" ||
             -z $CURRENT_HASH || -z $CURRENT_DEVICE_INODE ]]; then
         IDENTITY_INCOMPLETE=1
@@ -586,7 +588,7 @@ if [[ $CANDIDATE_PROVENANCE == 1 &&
       $EXECUTED_CANDIDATE_OBSERVED == 1 &&
       -z $PROVENANCE_FAILURE && $RC == 0 ]]; then
   EXECUTED_CANDIDATE_CLEAN_EXIT=1
-  plog "executed candidate was verified alive at least once; no identity contradiction observed at 4 Hz; wrapper and descendant checks clean"
+  plog "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler; actual cadence is recorded in samples.log; wrapper and descendant checks clean"
 fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 RUN_ENDED_EPOCH=$(date -u +%s)

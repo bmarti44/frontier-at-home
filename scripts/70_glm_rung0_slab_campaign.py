@@ -788,7 +788,8 @@ def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
     """Fail closed on containment, memory, process, or kernel evidence."""
     for marker in (
         "executed candidate was verified alive at least once; no identity "
-        "contradiction observed at 4 Hz; wrapper and descendant checks clean",
+        "contradiction observed by the periodic sampler; actual cadence is "
+        "recorded in samples.log; wrapper and descendant checks clean",
         "SAFE_RUN end rc=0 killed=no",
         "cgroup_final ",
     ):
