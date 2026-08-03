@@ -36,6 +36,9 @@ class ExpertSlabSourceTests(unittest.TestCase):
         cls.compiled_source = Path(
             "/tmp/glm52-rung0-prefetch-candidate/ds4_cuda.cu"
         ).read_text(encoding="utf-8")
+        cls.compiled_graph_source = Path(
+            "/tmp/glm52-rung0-prefetch-candidate/ds4.c"
+        ).read_text(encoding="utf-8")
 
     def test_slab_path_is_explicit_and_default_off(self) -> None:
         for marker in (
@@ -206,6 +209,23 @@ class ExpertSlabSourceTests(unittest.TestCase):
             r"pthread_mutex_lock\(&g_pf\.mu\);\s*\+\+g_pf\.served;\s*"
             r"pthread_mutex_unlock\(&g_pf\.mu\);",
         )
+
+    def test_prefetch_hint_is_published_only_after_current_selected_load(self) -> None:
+        source = self.compiled_graph_source
+        hint = source.index("ds4_gpu_expert_prefetch_hint(&pf_table")
+        selected = source.index(
+            "ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor"
+        )
+        self.assertGreater(hint, selected)
+
+    def test_demand_and_prefetch_share_one_eight_credit_read_authority(self) -> None:
+        for marker in (
+            "ReadCredits g_expert_slab_read_credits(8)",
+            "g_expert_slab_read_credits.acquire_demand()",
+            "g_expert_slab_read_credits.acquire_prefetch()",
+            "shared_peak_qd=%u",
+        ):
+            self.assertIn(marker, self.compiled_source)
 
     def test_slab_miss_staging_is_persistent_and_cuda_pinned(self) -> None:
         """O_DIRECT completion must not feed CUDA through pageable buffers.

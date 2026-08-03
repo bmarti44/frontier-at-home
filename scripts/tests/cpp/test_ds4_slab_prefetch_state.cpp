@@ -254,6 +254,73 @@ static void duplicate_consumers_and_ring_exhaustion_are_safe() {
     REQUIRE(!full.issue(id).valid);
     for (size_t i = 0; i < leases.size(); ++i)
         REQUIRE(full.lease_token(leases[i].slot) == leases[i].token);
+    Telemetry exhausted = full.telemetry();
+    REQUIRE(exhausted.issue_dropped == 1);
+    REQUIRE(exhausted.late == 0 && exhausted.fallback == 0);
+}
+
+static void demand_waits_for_matching_read_instead_of_duplicating_it() {
+    std::vector<std::vector<uint8_t>> storage(4, std::vector<uint8_t>(256));
+    Ring ring = make_ring(4, 7, storage);
+    BlockingBackend blocked(256);
+    const Identity id = identity(256);
+    Lease worker = ring.issue(id);
+    REQUIRE(worker.valid);
+    std::thread reader([&] { REQUIRE(ring.complete_read(worker, blocked)); });
+    {
+        std::unique_lock<std::mutex> lock(blocked.mutex);
+        blocked.condition.wait(lock, [&] { return blocked.entered; });
+    }
+    Lease owner;
+    std::thread demand([&] { owner = ring.claim_or_wait(id); });
+    {
+        std::lock_guard<std::mutex> lock(blocked.mutex);
+        blocked.release = true;
+    }
+    blocked.condition.notify_all();
+    reader.join();
+    demand.join();
+    REQUIRE(owner.valid && owner.token == worker.token);
+    REQUIRE(ring.copy_sync(owner, blocked));
+    Telemetry telemetry = ring.telemetry();
+    REQUIRE(telemetry.attempts == 1);
+    REQUIRE(telemetry.late == 0 && telemetry.fallback == 0);
+}
+
+static void shared_read_credits_bound_both_paths_and_prioritize_demand() {
+    ReadCredits credits(8);
+    std::atomic<int> entered{0};
+    std::atomic<bool> release{false};
+    std::vector<std::thread> prefetch;
+    for (int i = 0; i < 8; ++i) {
+        prefetch.emplace_back([&] {
+            credits.acquire_prefetch();
+            entered.fetch_add(1);
+            while (!release.load()) std::this_thread::yield();
+            credits.release();
+        });
+    }
+    while (entered.load() != 8) std::this_thread::yield();
+    std::atomic<bool> demand_entered{false};
+    std::thread demand([&] {
+        credits.acquire_demand();
+        demand_entered.store(true);
+        credits.release();
+    });
+    std::atomic<bool> ninth_prefetch_entered{false};
+    std::thread ninth([&] {
+        credits.acquire_prefetch();
+        ninth_prefetch_entered.store(true);
+        credits.release();
+    });
+    release.store(true);
+    demand.join();
+    REQUIRE(demand_entered.load());
+    ninth.join();
+    REQUIRE(ninth_prefetch_entered.load());
+    for (auto &thread : prefetch) thread.join();
+    REQUIRE(credits.peak() == 8);
+    REQUIRE(credits.active() == 0);
 }
 
 static void repeated_publication_stress() {
@@ -280,6 +347,8 @@ int main() {
     identity_lease_and_reload_are_aba_safe();
     mutation_after_validation_is_caught_before_copy();
     duplicate_consumers_and_ring_exhaustion_are_safe();
+    demand_waits_for_matching_read_instead_of_duplicating_it();
+    shared_read_credits_bound_both_paths_and_prioritize_demand();
     repeated_publication_stress();
     return 0;
 }
