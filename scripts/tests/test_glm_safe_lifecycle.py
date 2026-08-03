@@ -331,7 +331,8 @@ class CandidateLifecycleTests(unittest.TestCase):
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
             "executed candidate was verified alive at least once; no identity "
-            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
+            "contradiction observed by the periodic sampler; actual cadence is "
+            "recorded in samples.log; wrapper and descendant checks clean",
             main,
         )
 
@@ -506,7 +507,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
             "executed candidate was verified alive at least once; no identity "
-            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
+            "contradiction observed by the periodic sampler; actual cadence is "
+            "recorded in samples.log; wrapper and descendant checks clean",
             main,
         )
 
@@ -518,7 +520,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
             "executed candidate was verified alive at least once; no identity "
-            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
+            "contradiction observed by the periodic sampler; actual cadence is "
+            "recorded in samples.log; wrapper and descendant checks clean",
             main,
         )
 
@@ -530,7 +533,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
             "executed candidate was verified alive at least once; no identity "
-            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
+            "contradiction observed by the periodic sampler; actual cadence is "
+            "recorded in samples.log; wrapper and descendant checks clean",
             main,
         )
 
@@ -551,7 +555,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         self.assertIn("isolated process group survived command completion", main)
         self.assertNotIn(
             "executed candidate was verified alive at least once; no identity "
-            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
+            "contradiction observed by the periodic sampler; actual cadence is "
+            "recorded in samples.log; wrapper and descendant checks clean",
             main,
         )
 

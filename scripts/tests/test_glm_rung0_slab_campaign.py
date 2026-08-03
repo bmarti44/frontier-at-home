@@ -260,7 +260,8 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
                 "events=low 0,high 0,max 0,oom 0,oom_kill 0,",
                 "executed candidate was verified alive at least once; no identity "
-                "contradiction observed at 4 Hz; wrapper and descendant checks clean",
+                "contradiction observed by the periodic sampler; actual cadence "
+                "is recorded in samples.log; wrapper and descendant checks clean",
                 "SAFE_RUN end rc=0 killed=no",
             )
         )
