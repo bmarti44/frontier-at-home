@@ -1,0 +1,90 @@
+{
+  "artifact": "GLM-5.2 Rung 0.1 e637 slab A/B campaign attempt",
+  "acceptance_authority": false,
+  "verdict": "NO_RESULT",
+  "reason": "The third scheduled arm completed its requests but the 4 Hz lifecycle sampler mixed a live /proc stat snapshot with executable fields read after normal process exit. The wrapper rejected the arm with rc=11 and aborted the incomplete campaign. This is preserved fail-closed evidence, not an A/B result.",
+  "candidate_engine_commit": "e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004",
+  "binary_sha256": "5a7caa3e7fded039797e6a0158dd4687b932d3b3c5f225c05ac7a656021fbd1a",
+  "randomness_round": 6342798,
+  "seed_sha256": "38fd2971c2804284b094a047ce2d8dab791ba8064d7938c584193a324000659c",
+  "completed_schedule_cells": [
+    {
+      "tag": "r0-b0s0a",
+      "arm": "A",
+      "mode": "off",
+      "status": "PASS_ARM_ONLY",
+      "decode_tokens_per_second": [2.208937693287712, 2.2343319252763068],
+      "ttft_seconds_control_config": [28.936044741, 29.537639024]
+    },
+    {
+      "tag": "r0-b0s1b",
+      "arm": "B",
+      "mode": "on",
+      "status": "PASS_ARM_ONLY",
+      "decode_tokens_per_second": [1.4652056028682532, 1.4923342102912203],
+      "ttft_seconds_control_config": [43.33141246, 44.665142428],
+      "slab_peak_qd": 8,
+      "slab_reads": 87518
+    },
+    {
+      "tag": "r0-b0s2b",
+      "arm": "B",
+      "mode": "on",
+      "status": "FAIL",
+      "wrapper_exit_code": 11,
+      "diagnostic_only": {
+        "decode_tokens_per_second": [1.4582866534858785, 1.4855179387699164],
+        "ttft_seconds_control_config": [43.617427789, 44.886179707],
+        "slab_peak_qd": 8,
+        "slab_reads": 87518,
+        "minimum_available_gib": 24.800800323486,
+        "cgroup_peak_gib": 64.461227416992,
+        "cgroup_swap_bytes": 0,
+        "oom_xid_or_survivor": false
+      },
+      "failure": "FATAL executed candidate identity changed with unchanged start_ticks/pgid, literal /proc/PID/exe path, and missing hash/inode after the candidate's normal exit"
+    }
+  ],
+  "comparability": {
+    "same_binary": true,
+    "paired_request_hashes": true,
+    "byte_identical_reasoning_outputs": true,
+    "campaign_complete": false,
+    "scorable": false
+  },
+  "raw_evidence": [
+    {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-e637-ab-20260802a/manifest.json",
+      "sha256": "ac7c828d1f5cd7db029c148f7ed652bfa0be365efcf6c1476a8c4b0f2e2f0f72"
+    },
+    {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-e637-ab-20260802a/raw.jsonl",
+      "sha256": "8468d864ab7577ad3e36b30b86e0abe21f9e5111c0bc4dd57b0caad0871e4897"
+    },
+    {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-e637-ab-20260802a/arms/r0-b0s2b/result.json",
+      "sha256": "35c43ea04eaa1bdef4953320daf6b37316e88b0ff0ba888ec502ae34be6985e1"
+    },
+    {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-e637-ab-20260802a/arms/r0-b0s2b/partial.json",
+      "sha256": "69a3355657caba8e04579fadb18a2d09fda3ed441b2d5d9ac11c50ea5903579d"
+    },
+    {
+      "path": "/home/bmarti44/.local/state/glm52-crashlog/20260802-202445-r0-b0s2b/main.log",
+      "sha256": "543e1f5af7c19d9528b7e8a3390c7cdfceb35f080f120c11a613cd4f950a1e79"
+    },
+    {
+      "path": "/home/bmarti44/.local/state/glm52-crashlog/20260802-202445-r0-b0s2b/samples.log",
+      "sha256": "095bce8998d1fd255613d6db5c8c8a405c9e097f64f9ad5101976e2b1866169b"
+    },
+    {
+      "path": "/home/bmarti44/.local/state/glm52-crashlog/20260802-202445-r0-b0s2b/kernel.log",
+      "sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+    }
+  ],
+  "resolution": {
+    "red_test_commit": "62fbd4d",
+    "fix_commit": "a4109b1",
+    "policy": "Freeze a new harness, obtain fresh post-freeze public randomness, and restart the complete schedule. Do not reuse completed cells from this attempt."
+  }
+}

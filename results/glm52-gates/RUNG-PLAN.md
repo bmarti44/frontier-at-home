@@ -128,9 +128,14 @@ Current Rung 0.1 candidate reconciliation:
 - the prior 2.2231-2.2373 tok/s OFF calibration used the superseded binary and
   remains useful diagnostic history only. Both OFF and ON performance arms
   must be rerun on `e637b6f`; no Rung 0.1 A/B adoption result exists yet;
-- post-reconciliation public randomness round `6342798` is authenticated and bound to
-  the two frozen hashes. Performance and NLL campaigns remain blocked until
-  both persistent reviewers report no verified high or critical issue.
+- post-reconciliation public randomness round `6342798` is authenticated and
+  bound to the two frozen hashes. Its campaign attempt is terminal
+  `NO_RESULT`: two complete arms and the third arm's requests were safe and
+  valid, but a normal exit between `/proc` identity reads triggered a
+  fail-closed rc=11 and aborted the schedule.
+  `R0-e637-campaign-attempt-2026-08-02.json` preserves the raw bindings.
+  Commits `62fbd4d` and `a4109b1` reproduce and repair that race; the full
+  schedule must restart under a new harness freeze and fresh randomness.
 
 The retired W8 branch is not an implementation dependency. Its affine-INT8
 cache result remains a separate lossy datum and cannot be merged into Rung 0.
@@ -141,8 +146,12 @@ access to the one inference lock and nothing else; it does not grant service
 control, sudoers access, or arbitrary root execution. The campaign continues
 to fail closed until that ACL is installed and independently verified.
 
-After every Rung 0 campaign attempt, restore the installed DSV4 1M-fast
-profile without rerunning an installer or rotating its API key:
+DSV4 is idle test infrastructure on this machine, not a production service.
+Agents must not pause to ask the owner to stop, restart, or restore it. They may
+stop an identity-verified DSV4 process automatically when an exclusive evidence
+run requires the machine, and restore it only when the active task calls for a
+DSV4 validation. When restoration is required, do it without rerunning an
+installer or rotating its API key:
 
 1. require `pgrep -x ds4-server` and `pgrep -x llama-server` to be empty;
 2. require swap use below 1 GiB;
@@ -183,9 +192,10 @@ Acceptance before adoption:
 Before the full 68 GB-cache campaign, run one contained cache-off startup probe
 to measure non-arena peak RSS. Set `MemoryHigh` from that measurement plus the
 68 GB arena and explicit margin; never reuse the rejected 68/71 GiB cgroup.
-The production DSV4 engine, guard timer, and guard service must all be stopped,
-the shared inference lock must be held, and both engine names must be absent
-before every arm. The campaign is blocked until both persistent reviewers
+The DSV4 engine, guard timer, and guard service must all be stopped, the shared
+inference lock must be held, and both engine names must be absent before every
+arm. This is an automated exclusivity check, not an owner-coordinated production
+maintenance window. The campaign is blocked until both persistent reviewers
 report no high or critical safety or measurement issue.
 
 Implementation scope is capped. Reuse `glm_safe_run.sh`, the existing fixed
@@ -193,6 +203,69 @@ ratio/ABBA scorer, committed raw logs, and the existing sol-review pattern.
 Only add code needed to observe client token timing, effective slab mode,
 external I/O, process identity, and OOM/Xid/swap/survivor failures. Do not add
 commitment, invocation-receipt, or cryptographic self-attestation layers.
+
+### NVMe characterization and submission gate
+
+This gate runs immediately after the current `e637b6f` slab A/B has a terminal
+result and before Rung 0.5. No engine, evidence arm, or GPU measurement may run
+concurrently. Use fio in read-only O_DIRECT mode against the expert-slab
+sidecar file only; never open the raw NVMe device and never use a writable fio
+mode. Sweep 1, 4, 9.28, and 16 MiB blocks at iodepth 1, 4, 8, 16, and 32 with
+both one and four io_uring jobs for approximately 60 seconds per cell.
+
+Capture `nvme smart-log` temperature and throttle state before and after every
+cell. The committed evidence must contain the full GB/s curve, thermal trace,
+fio command/config hashes, slab device/inode/size/hash identity, and explicit
+safety/exclusivity checks. If the 9.28 MiB QD1 cell does not reproduce the
+roughly 4.8 GB/s engine observation, diagnose the method before using any cell
+to recalibrate the plan. Sustained thermally stable bandwidth, not burst peak,
+is the planning constant.
+
+If high-QD fio materially exceeds 4.8 GB/s, audit and correct the engine's
+submission batching, io_uring depth, pinned staging-buffer count, and
+completion-to-compute overlap. All eight routed experts across the available
+prefetch horizon should be eligible to remain in flight; one staging buffer is
+still QD1 regardless of ring depth. The eventual slab engine must sustain at
+least 80% of the matched 9.28 MiB fio bandwidth. This work is coupled to the
+Rung 0.5 expert-address oracle because cross-token lookahead may be required to
+keep QD16+ occupied.
+
+After the sweep, re-derive rather than scale by analogy: all-miss decode,
+cache-hit/miss decode with compute overlap, the faithful streamed decode
+ceiling, and the ub2048 streamed-prefill ceiling. The currently documented
+6-8 decode, 75-100 prefill, and 7-10 lossless-plateau ranges are provisional
+until that artifact lands. The owner decision to stop or authorize a lossy
+rung is blocked on the recalibrated measured plateau.
+
+### DSV4 bounded cold-load acceleration
+
+The owner has approved a DSV4 experiment after both the `e637b6f` campaign and
+the fio gate. It is strictly a cold-start quality-of-life change: the serving
+path, `configs/profiles/dsv4-1m-fast.env`, and admission budget
+`90.2 + 4.0 + 12 + 8` remain byte-for-byte unchanged. DSV4 is not serving
+production traffic here, so the agent should take the exclusive window itself
+after confirming no campaign, fio, or engine process is active; do not ask the
+owner to stop or restart it.
+
+Start with an external bounded readahead window of 2-4 GiB over the stock
+loader, paced ahead of its file offset and issuing `POSIX_FADV_DONTNEED` behind
+the consumed range. This has the smallest serving-code surface. If it cannot
+reach the gate, option A is an O_DIRECT/io_uring loader at the fio-supported
+QD16-32, reading aligned superblocks directly into allocated weight storage and
+copying only unaligned GGUF edges. At no point may the loader retain a second
+90.2 GiB weight copy; transient memory is bounded to the declared window and
+must fail closed before the host safety floor.
+
+Build to a side install and pre-verify the existing switch/restore path before
+changing the selected backend. Acceptance requires at least three stock and
+three candidate cold loads, candidate load time in the 15-30 second target and
+at least 50% of the matched sustained fio sequential rate, deterministic
+in-memory tensor samples or exact-replay first-token logits matching stock,
+unchanged profile conformance, and the complete `regression-suite.py agent-gate`
+(prefix cache, turn continuation, slot thrash, and novel-19K prefill at or above
+350 tok/s). Any steady-state regression is a rejection. Evidence labels this
+as cold-start only. If the direct loader is adopted, record it as a candidate
+for future GLM resident/rung-3 loading; do not schedule that reuse yet.
 
 ### R0-UPGRADE a - corrected cross-layer prefetch (W2/W3)
 
