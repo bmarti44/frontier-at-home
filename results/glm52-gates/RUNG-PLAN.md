@@ -216,10 +216,14 @@ both one and four io_uring jobs for approximately 60 seconds per cell.
 Capture `nvme smart-log` temperature and throttle state before and after every
 cell. The committed evidence must contain the full GB/s curve, thermal trace,
 fio command/config hashes, slab device/inode/size/hash identity, and explicit
-safety/exclusivity checks. If the 9.28 MiB QD1 cell does not reproduce the
-roughly 4.8 GB/s engine observation, diagnose the method before using any cell
-to recalibrate the plan. Sustained thermally stable bandwidth, not burst peak,
-is the planning constant.
+safety/exclusivity checks. The matched 9.28 MiB cell uses the engine's exact
+`9,732,096`-byte O_DIRECT request, not a rounded `9.28m` fio value: the frozen
+sidecar index contains 19,200 such records across routed layers 3--77, plus 256
+`12,386,304`-byte records for layer 78. Report the latter separately rather
+than silently mixing request sizes. If the exact-size QD1 cell does not
+reproduce the roughly 4.8 GB/s engine observation, diagnose the method before
+using any cell to recalibrate the plan. Sustained thermally stable bandwidth,
+not burst peak, is the planning constant.
 
 If high-QD fio materially exceeds 4.8 GB/s, audit and correct the engine's
 submission batching, io_uring depth, pinned staging-buffer count, and
