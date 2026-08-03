@@ -408,6 +408,14 @@ probe and the cheaper baselines at equal end-to-end cost, merge the probe result
 into the Rung 0.5 oracle as a refinement rather than creating another runtime
 mechanism. Preserve the full comparison table either way.
 
+Bootstrap status: the legacy G4a ID-only trace provides 96,000 token-layer
+events, not the fixture-grouped P0 corpus. It measures mean/P95 true union sizes
+of 14.096/16 at K=2, 24.498/30 at K=4, and 41.630/53 at K=8. A chronological
+70/30 diagnostic frequency prior with a 64-expert budget reaches only 54.2561%
+K=2 recall and 48.6062% K=8 recall, with effectively zero full-set coverage.
+This is a frozen null-baseline diagnostic in `logs/g4a/trace-analysis.txt`, not
+P1 acceptance; it confirms that flat-router popularity alone is insufficient.
+
 #### P2 - split-conformal calibration
 
 Use the frozen calibration split to turn raw per-expert scores into prediction
