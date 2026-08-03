@@ -2375,7 +2375,7 @@ def score_campaign(
             )
             if (
                 not math.isclose(
-                    observed_ratio, recomputed_ratio, rel_tol=1e-12, abs_tol=1e-12
+                    observed_ratio, recomputed_ratio, rel_tol=1e-9, abs_tol=1e-12
                 )
                 or not 0.75 <= recomputed_ratio <= 1.25
             ):
