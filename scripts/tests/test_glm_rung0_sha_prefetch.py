@@ -157,7 +157,8 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     "read_bytes_delta": 1_000_000,
                     "elapsed_seconds": 1.0,
                     "sample_count": 500,
-                    "peak_read_qd": 0 if arm == "A" else 4,
+                    "peak_global_read_qd": 0 if arm == "A" else 4,
+                    "peak_candidate_slab_qd": 0 if arm == "A" else 4,
                     "sample_started_ns": reps[0]["client_request_started_ns"] - 1,
                     "sample_finished_ns": reps[-1]["client_last_token_ns"] + 1,
                 },
@@ -522,22 +523,47 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         campaign = self.load_campaign()
         good = [
             "META read_before=10 read_after=1000010 start_ns=1000 end_ns=5000",
-            "1000 0", "2000 4", "3000 8", "4000 2", "5000 0",
+            "1000 0 0", "2000 4 4", "3000 8 8", "4000 2 2", "5000 0 0",
         ]
         parsed = campaign.parse_nvme_inflight_log(
             "\n".join(good), require_ring_qd=True
         )
-        self.assertEqual(parsed["peak_read_qd"], 8)
+        self.assertEqual(parsed["peak_candidate_slab_qd"], 8)
         for mutation in (
-            [line.replace("2000 4", "2000 1").replace("3000 8", "3000 1")
+            [line.replace("2000 4 4", "2000 4 1").replace("3000 8 8", "3000 8 1")
              for line in good],
-            [line.replace("3000 8", "3000 9") for line in good],
+            [line.replace("3000 8 8", "3000 9 9") for line in good],
+            [line.replace("2000 4 4", "2000 1 4") for line in good],
             [good[0], good[2], good[1], *good[3:]],
         ):
             with self.assertRaises(ValueError):
                 campaign.parse_nvme_inflight_log(
                     "\n".join(mutation), require_ring_qd=True
                 )
+
+    def test_sampler_boundary_is_captured_before_thread_launch(self):
+        campaign = self.load_campaign()
+        source = inspect.getsource(campaign.execute_arm)
+        self.assertLess(
+            source.index("probe_started_ns = time.monotonic_ns()"),
+            source.index("sampler.start()"),
+        )
+
+    def test_safe_run_artifact_binding_rejects_cross_mixed_output(self):
+        campaign = self.load_campaign()
+        path = "/home/bmarti44/.local/state/glm52-test/arms/b/result.json"
+        digest = "a" * 64
+        log = (
+            "2026-08-03T00:00:00.000000000+00:00 "
+            f"final_artifact_verified path={path} sha256={digest} "
+            "device_inode=1:2:3\n"
+        )
+        bindings = campaign.parse_safe_run_final_artifacts(log)
+        self.assertEqual(bindings[path]["sha256"], digest)
+        with self.assertRaises(ValueError):
+            campaign.require_safe_run_artifact_bindings(
+                log, {path: "b" * 64}
+            )
 
     def test_benchmark_metadata_rejects_discarded_warmups_and_seed_drift(self):
         campaign = self.load_campaign()
