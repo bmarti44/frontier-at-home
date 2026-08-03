@@ -67,8 +67,8 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             attempts = 0 if arm == "A" else 100
             sha_success = 0 if arm == "A" else 100
             ready = 80 if arm == "C" else 0
-            late = 10 if arm == "C" else 0
-            fallback = 10 if arm == "C" else 0
+            late = 20 if arm == "C" else 0
+            fallback = 20 if arm == "C" else 0
             copies = 70 if arm == "C" else 100 if arm == "B" else 0
             validated = sha_success * 256
             copied = copies * 256
@@ -237,7 +237,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 for rep in row["reps"]:
                     first = rep["client_first_token_ns"]
                     rep["client_token_timestamps_ns"] = [
-                        first + index * 95_000_000 for index in range(128)
+                        first + index * 92_000_000 for index in range(128)
                     ]
                     rep["client_last_token_ns"] = rep["client_token_timestamps_ns"][-1]
         cases["one clock"] = client_loss
@@ -258,6 +258,34 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             with self.subTest(label=label):
                 scored = campaign.score_sha_prefetch_campaign(changed, manifest)
                 self.assertEqual(scored["verdict"], "FAIL")
+
+    def test_three_arm_scorer_reconciles_every_telemetry_class(self):
+        campaign = self.load_campaign()
+        records, manifest = self.passing_campaign(campaign)
+        mutations = {
+            "attempts": ("attempts", 101),
+            "sha successes": ("sha_successes", 99),
+            "sha failures": ("sha_failures", 1),
+            "ready": ("ready", 81),
+            "late": ("late", 21),
+            "stale": ("stale", 1),
+            "fallback": ("fallback", 21),
+            "copies": ("copies", 101),
+            "validated bytes": ("validated_bytes", 1),
+            "copied bytes": ("copied_bytes", 25_601),
+            "publications": ("publications", 71),
+            "read timer": ("read_ns", -1),
+            "sha timer": ("sha_ns", -1),
+            "wait timer": ("wait_ns", -1),
+            "copy timer": ("copy_ns", -1),
+        }
+        c_index = next(i for i, row in enumerate(records) if row["arm"] == "C")
+        for label, (field, value) in mutations.items():
+            with self.subTest(label=label):
+                changed = copy.deepcopy(records)
+                changed[c_index]["engine"]["telemetry"][field] = value
+                with self.assertRaises(ValueError):
+                    campaign.score_sha_prefetch_campaign(changed, manifest)
 
 
 if __name__ == "__main__":

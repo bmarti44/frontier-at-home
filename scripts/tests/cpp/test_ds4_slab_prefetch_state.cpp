@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include <thread>
 
 using namespace ds4_slab_prefetch;
 
@@ -99,7 +101,9 @@ static void valid_sync_and_async_paths() {
         Lease owner2 = ring.claim(id);
         REQUIRE(ring.copy_async(owner2, backend));
         REQUIRE(ring.state(owner2.slot) == State::copying);
-        REQUIRE(!ring.issue(id).valid);  // claimed buffer cannot be recycled
+        Lease concurrent = ring.issue(id);
+        REQUIRE(concurrent.valid && concurrent.slot != owner2.slot);
+        REQUIRE(ring.state(owner2.slot) == State::copying); // no recycle/ABA
         REQUIRE(!ring.poll(owner2, backend));
         backend.event_done = true;
         REQUIRE(ring.poll(owner2, backend));
@@ -175,9 +179,73 @@ static void identity_lease_and_reload_are_aba_safe() {
     REQUIRE(ring.issue(identity(256, 8)).valid);
 }
 
+static void mutation_after_validation_is_caught_before_copy() {
+    std::vector<std::vector<uint8_t>> storage(4, std::vector<uint8_t>(256));
+    Ring ring = make_ring(4, 7, storage);
+    FakeBackend backend(256);
+    Identity id = identity(256);
+    Lease worker = ring.issue(id);
+    REQUIRE(ring.complete_read(worker, backend));
+    Lease owner = ring.claim(id);
+    REQUIRE(owner.valid);
+    storage[owner.slot][127] ^= 0x80;
+    REQUIRE(!ring.copy_sync(owner, backend));
+    REQUIRE(ring.invalidated() && backend.invalidated);
+    REQUIRE(backend.copy_calls == 0);
+    Telemetry t = ring.telemetry();
+    REQUIRE(t.copies == 0 && t.publications == 0 && t.copied_bytes == 0 &&
+            t.fallback == 0);
+}
+
+static void duplicate_consumers_and_ring_exhaustion_are_safe() {
+    std::vector<std::vector<uint8_t>> storage(4, std::vector<uint8_t>(256));
+    Ring ring = make_ring(4, 7, storage);
+    FakeBackend backend(256);
+    Identity id = identity(256);
+    Lease worker = ring.issue(id);
+    REQUIRE(ring.complete_read(worker, backend));
+    std::atomic<bool> start{false};
+    std::array<Lease, 2> claims{};
+    std::thread left([&] { while (!start.load(std::memory_order_acquire)) {}
+                           claims[0] = ring.claim(id); });
+    std::thread right([&] { while (!start.load(std::memory_order_acquire)) {}
+                            claims[1] = ring.claim(id); });
+    start.store(true, std::memory_order_release);
+    left.join(); right.join();
+    REQUIRE(int(claims[0].valid) + int(claims[1].valid) == 1);
+
+    std::vector<std::vector<uint8_t>> full_storage(4, std::vector<uint8_t>(256));
+    Ring full = make_ring(4, 7, full_storage);
+    std::array<Lease, 4> leases{};
+    for (Lease &lease : leases) { lease = full.issue(id); REQUIRE(lease.valid); }
+    REQUIRE(!full.issue(id).valid);
+    for (size_t i = 0; i < leases.size(); ++i)
+        REQUIRE(full.lease_token(leases[i].slot) == leases[i].token);
+}
+
+static void repeated_publication_stress() {
+    std::vector<std::vector<uint8_t>> storage(4, std::vector<uint8_t>(256));
+    Ring ring = make_ring(4, 7, storage);
+    FakeBackend backend(256);
+    Identity id = identity(256);
+    for (int iteration = 0; iteration < 2000; ++iteration) {
+        Lease worker = ring.issue(id);
+        REQUIRE(worker.valid && ring.complete_read(worker, backend));
+        Lease owner = ring.claim(id);
+        REQUIRE(owner.valid && ring.copy_sync(owner, backend));
+    }
+    Telemetry t = ring.telemetry();
+    REQUIRE(t.attempts == 2000 && t.sha_successes == 2000 &&
+            t.ready == 2000 && t.copies == 2000 && t.publications == 2000 &&
+            t.validated_bytes == 2000 * 256 && t.copied_bytes == 2000 * 256);
+}
+
 int main() {
     valid_sync_and_async_paths();
     corruption_fails_closed();
     identity_lease_and_reload_are_aba_safe();
+    mutation_after_validation_is_caught_before_copy();
+    duplicate_consumers_and_ring_exhaustion_are_safe();
+    repeated_publication_stress();
     return 0;
 }
