@@ -361,6 +361,19 @@ size record, offset/length, truncation, stale generation, concurrent completion
 and buffer reuse between validation and copy. Require byte-identical outputs,
 the fixed quality suite if retained, and no swap/Xid/OOM/survivor.
 
+Implementation status (2026-08-03): candidate `53a70cfdd3b225de9153a44309bdb84d418e0401`
+implements the default-off synchronous-copy form of this contract. A shared
+state authority is used by the production CUDA source for issue, full SHA-256,
+READY publication, exact-identity claim, copy, arena publication, recycling,
+model reload, and integrity invalidation. Its executable tests mutate real
+buffers before and after validation, exercise leases/concurrency/ring
+exhaustion, and the fixed scorer rejects partial wins and malformed telemetry.
+The patch applies to a fresh `e637b6f` tree and two deterministic max-`-j2`
+builds produced the same binary SHA-256 recorded in the frozen JSON artifact.
+This is build evidence only: no engine or GPU measurement has run. The exact
+freeze is `R0.2-prefetch-build-freeze-2026-08-03.json`; reviewer clearance and
+the bounded completed-fetch probe remain mandatory before any campaign.
+
 ### DSV4 bounded cold-load acceleration
 
 The owner has approved a DSV4 experiment after both the `e637b6f` campaign and

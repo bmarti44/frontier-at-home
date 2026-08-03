@@ -1,0 +1,37 @@
+{
+  "artifact": "GLM-5.2 Rung 0.2 collision-resistant full-SHA prefetch build freeze",
+  "date": "2026-08-03",
+  "status": "BUILD_ONLY",
+  "candidate_commit": "53a70cfdd3b225de9153a44309bdb84d418e0401",
+  "engine_base_commit": "e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004",
+  "source": {
+    "patch_sha256": "ff76f56e79fd2897828e5486d59e322052ce8a82f117b90c8739db1894bacd72",
+    "ds4_cuda_sha256": "dc47faf88573d250ef3c24852087424b23ae6607e16e5e51622a364f7c6d9963",
+    "state_header_sha256": "9ef8dbeb5fb2fd085baa8db764d0d8322e66d94711ff204b2d973cf305302e6e",
+    "state_header_engine_copy_sha256": "9ef8dbeb5fb2fd085baa8db764d0d8322e66d94711ff204b2d973cf305302e6e",
+    "scorer_sha256": "e11300aa69c90249435dadbea2ce0cc60f9bcb8dff1bfd815c17010d81457e7f",
+    "acceptance_test_sha256": "31bac97ed508ba250a47928ce2b93fe8fd31cf1bf9dda5cb1d6e32e0ca4e17df"
+  },
+  "build": {
+    "source_tree": "/tmp/glm52-rung0-prefetch-candidate",
+    "parallel_jobs": 2,
+    "source_date_epoch": 0,
+    "nvcc_random_seed": "696035c",
+    "fixed_nvcc_keep_directory": "/tmp/glm52-prefetch-nvcc-keep",
+    "build_1_binary_sha256": "86fa3db3fc9fa597e21ee9f7207283ca727e6f8ae78ae5da88f40ede874ec7f9",
+    "build_2_binary_sha256": "86fa3db3fc9fa597e21ee9f7207283ca727e6f8ae78ae5da88f40ede874ec7f9",
+    "binary_bytes": 14457992,
+    "byte_identical": true
+  },
+  "verification": {
+    "targeted_tests": 54,
+    "targeted_tests_passed": 54,
+    "profile_conformance_tests": 5,
+    "profile_conformance_passed": 5,
+    "fresh_e637_patch_application": "PASS",
+    "fresh_source_matches_development_source": true,
+    "engine_started": false,
+    "gpu_measurement_claim": false
+  },
+  "next_gate": "Persistent reviewer inspection of the readable frozen engine source and executable A/B/C scorer. After clearance, obtain post-freeze public randomness and run only the contained probe; do not start the five-block campaign unless completed-fetch median C/B is at most 0.90 and all integrity/safety checks pass."
+}
