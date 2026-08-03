@@ -1257,7 +1257,7 @@ MEMORY_PROBE_ARTIFACT_NAMES = (
 
 
 def derive_memory_probe_evidence(
-    probe_root: Path, binary_sha256: str
+    probe_root: Path, binary_sha256: str, candidate_commit: str
 ) -> dict[str, Any]:
     """Strictly rederive the reusable envelope inputs from preserved raw logs."""
     paths = {name: probe_root / name for name in MEMORY_PROBE_ARTIFACT_NAMES}
@@ -1268,9 +1268,11 @@ def derive_memory_probe_evidence(
         memory_probe_environment()
     )
     if (
-        partial != {
+        re.fullmatch(r"[0-9a-f]{40}", candidate_commit) is None
+        or partial != {
             "schema_version": 1,
             "binary_sha256": binary_sha256,
+            "candidate_commit": candidate_commit,
             "mode": "off",
             "probe_environment_sha256": expected_environment_sha256,
         }
@@ -1291,8 +1293,14 @@ def derive_memory_probe_evidence(
         executed_hashes != [binary_sha256]
         or environment_hashes != [expected_environment_sha256]
         or len(total_matches) != 1
+        or "memory-probe-arm" not in main
+        or f"--candidate-commit {candidate_commit}" not in main
     ):
         raise ValueError("memory probe safe-run identity is incomplete")
+    require_safe_run_artifact_bindings(
+        main,
+        {os.fspath(paths["partial.json"]): sha256_file(paths["partial.json"])},
+    )
     return {
         "probe_artifact_sha256": {
             name: sha256_file(path) for name, path in paths.items()
@@ -1306,9 +1314,12 @@ def derive_memory_probe_evidence(
 
 
 def require_memory_probe_evidence(
-    probe_root: Path, expected: dict[str, Any], binary_sha256: str
+    probe_root: Path, expected: dict[str, Any], binary_sha256: str,
+    candidate_commit: str,
 ) -> None:
-    derived = derive_memory_probe_evidence(probe_root, binary_sha256)
+    derived = derive_memory_probe_evidence(
+        probe_root, binary_sha256, candidate_commit
+    )
     if any(expected.get(name) != value for name, value in derived.items()):
         raise ValueError("memory envelope differs from bound raw probe evidence")
 
@@ -2097,6 +2108,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
         or not str(binary.parent).startswith("/home/bmarti44/.cache/glm52-")
         or not binary.is_file()
         or sha256_file(binary) != args.binary_sha256
+        or re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
         or model != MODEL_PATH
         or not model.is_file()
         or out.exists()
@@ -2185,6 +2197,7 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
                 {
                     "schema_version": 1,
                     "binary_sha256": args.binary_sha256,
+                    "candidate_commit": args.candidate_commit,
                     "mode": mode,
                     "probe_environment_sha256": observed_environment_sha256(
                         expected_environment
@@ -2588,7 +2601,9 @@ def verified_memory_envelope(
         or not re.fullmatch(r"[0-9a-f]{64}", envelope["probe_environment_sha256"])
     ):
         raise ValueError("memory envelope identity or safety evidence is invalid")
-    require_memory_probe_evidence(path.parent / "probe", envelope, binary_sha256)
+    require_memory_probe_evidence(
+        path.parent / "probe", envelope, binary_sha256, candidate_commit
+    )
     derived = derive_memory_envelope(
         envelope["non_arena_peak_bytes"],
         envelope["non_arena_cgroup_peak_bytes"],
@@ -2649,6 +2664,7 @@ def run_memory_probe(args: argparse.Namespace) -> int:
             "GLM_SAFE_KILL_FLOOR_GIB": "40",
             "GLM_SAFE_MIN_START_GIB": "110",
             "GLM_SAFE_TIMEOUT_S": "1200",
+            "GLM_SAFE_FINAL_ARTIFACTS": os.fspath(arm_out / "partial.json"),
         }
     )
     completed = subprocess.run(
@@ -2657,6 +2673,7 @@ def run_memory_probe(args: argparse.Namespace) -> int:
             sys.executable, str(Path(__file__).resolve()), "memory-probe-arm",
             "--out", str(arm_out), "--binary", str(binary),
             "--binary-sha256", args.binary_sha256,
+            "--candidate-commit", args.candidate_commit,
             "--model", str(MODEL_PATH), "--port", str(args.port),
         ],
         stdin=subprocess.DEVNULL,
@@ -2684,7 +2701,9 @@ def run_memory_probe(args: argparse.Namespace) -> int:
         if not source.is_file():
             raise RuntimeError(f"memory probe lacks safety artifact {name}")
         shutil.copy2(source, arm_out / f"safety.{name}")
-    probe_evidence = derive_memory_probe_evidence(arm_out, args.binary_sha256)
+    probe_evidence = derive_memory_probe_evidence(
+        arm_out, args.binary_sha256, args.candidate_commit
+    )
     envelope = {
         "schema_version": 1,
         "binary_sha256": args.binary_sha256,
@@ -3880,6 +3899,7 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     probe_arm.add_argument("--out", type=Path, required=True)
     probe_arm.add_argument("--binary", type=Path, required=True)
     probe_arm.add_argument("--binary-sha256", required=True)
+    probe_arm.add_argument("--candidate-commit", required=True)
     probe_arm.add_argument("--model", type=Path, required=True)
     probe_arm.add_argument("--port", type=int, required=True)
     probe_arm.add_argument("--mode", choices=("off", "on"), default="off")

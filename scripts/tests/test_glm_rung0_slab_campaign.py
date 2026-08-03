@@ -358,6 +358,8 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             probe = Path(directory)
             main = "\n".join((
                 f"candidate_binary_sha256={binary_sha256}",
+                "cmd: memory-probe-arm "
+                f"--candidate-commit {candidate_commit}",
                 "MemTotal:       125829120 kB",
                 "MemAvailable:   120586240 kB",
                 f"executed_environment_sha256={environment_sha256}",
@@ -387,6 +389,14 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 + environment_sha256 + '","schema_version":1}\n',
                 encoding="utf-8",
             )
+            partial = probe / "partial.json"
+            details = partial.stat()
+            main += (
+                "\nfinal_artifact_verified path=" + str(partial)
+                + " sha256=" + hashlib.sha256(partial.read_bytes()).hexdigest()
+                + f" device_inode={details.st_dev}:{details.st_ino}:{details.st_size}"
+            )
+            (probe / "safety.main.log").write_text(main, encoding="utf-8")
             evidence = CAMPAIGN.derive_memory_probe_evidence(
                 probe, binary_sha256, candidate_commit
             )
@@ -397,6 +407,22 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 CAMPAIGN.require_memory_probe_evidence(
                     probe, evidence, binary_sha256, "c" * 40
                 )
+            partial.write_text(
+                partial.read_text(encoding="utf-8").replace(
+                    candidate_commit, "c" * 40
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                CAMPAIGN.derive_memory_probe_evidence(
+                    probe, binary_sha256, "c" * 40
+                )
+            partial.write_text(
+                partial.read_text(encoding="utf-8").replace(
+                    "c" * 40, candidate_commit
+                ),
+                encoding="utf-8",
+            )
             (probe / "safety.samples.log").write_text(
                 samples.replace(str(110 * 1048576), str(100 * 1048576)),
                 encoding="utf-8",
