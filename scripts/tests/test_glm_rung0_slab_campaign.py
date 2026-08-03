@@ -642,6 +642,10 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(CAMPAIGN.safe_timeout_seconds("off"), 3600)
         self.assertEqual(CAMPAIGN.safe_timeout_seconds("on"), 5400)
 
+    def test_full_quality_arms_have_a_separate_150_minute_budget(self):
+        self.assertEqual(CAMPAIGN.quality_timeout_seconds("off"), 9000)
+        self.assertEqual(CAMPAIGN.quality_timeout_seconds("on"), 9000)
+
     def test_single_request_slab_canary_has_fixed_safety_acceptance(self):
         source = SCRIPT.read_text(encoding="utf-8")
         for marker in (

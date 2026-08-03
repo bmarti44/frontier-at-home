@@ -23,7 +23,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
     def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
         safe_environment = {
             "PATH": "/usr/bin:/bin",
-            "GLM_SAFE_TIMEOUT_S": "5400",
+            "GLM_SAFE_TIMEOUT_S": "9000",
             "GLM_SAFE_MIN_START_GIB": "109",
         }
         safe = subprocess.run(
@@ -37,7 +37,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
 
         launcher_environment = {
             "PATH": "/usr/bin:/bin",
-            "GLM_SAFE_TIMEOUT_S": "5400",
+            "GLM_SAFE_TIMEOUT_S": "9000",
             "GLM_SAFE_RUN_AS_CURRENT_USER": "2",
         }
         launcher = subprocess.run(
@@ -50,7 +50,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
 
         for script in (SAFE, CGROUP):
             source = script.read_text(encoding="utf-8")
-            self.assertIn("TIMEOUT_S > 5400", source)
+            self.assertIn("TIMEOUT_S > 9000", source)
 
     def test_benchmark_lock_acl_has_a_narrow_installer(self):
         references = []
