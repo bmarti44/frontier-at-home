@@ -631,9 +631,16 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
 
     def test_freeze_binds_every_declared_acceptance_test(self):
         campaign = self.load_campaign()
-        self.assertIn(
+        required_sources = {
             "results/glm52-gates/harness/glm_safe_run.sh",
-            campaign.SHA_PREFETCH_SOURCE_PATHS,
+            "results/glm52-gates/harness/glm_cgroup_run.sh",
+            "scripts/03_memory_guard.py",
+            "scripts/30_bench_speed.py",
+            "scripts/glm52_goal.py",
+            "scripts/glm52_w1_affine_campaign.py",
+        }
+        self.assertTrue(
+            required_sources.issubset(campaign.SHA_PREFETCH_SOURCE_PATHS)
         )
         self.assertIn(
             "scripts/tests/test_glm_safe_lifecycle.py",
@@ -648,6 +655,29 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         self.assertEqual(set(campaign.sha_prefetch_test_hashes()), expected)
         source = inspect.getsource(campaign.validate_sha_prefetch_freeze)
         self.assertIn("tests_sha256_by_path", source)
+
+        _, _, freeze, _ = self.passing_campaign(campaign)
+        original = campaign.sha256_file
+        for target in required_sources:
+            with self.subTest(target=target), mock.patch.object(
+                campaign,
+                "sha256_file",
+                side_effect=lambda path, target=target: (
+                    "0" * 64 if str(path).endswith(target) else original(path)
+                ),
+            ), self.assertRaises(ValueError):
+                campaign.validate_sha_prefetch_freeze(
+                    freeze,
+                    freeze["candidate_commit"],
+                    freeze["binary_sha256"],
+                    freeze["quality_binary_sha256"],
+                )
+
+    def test_cgroup_forwards_final_artifact_contract(self):
+        source = (ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("GLM_SAFE_FINAL_ARTIFACTS", source)
 
     def test_scorer_rejects_arbitrary_configuration_digests(self):
         campaign = self.load_campaign()
