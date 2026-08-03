@@ -321,7 +321,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(envelope["margin_bytes"], 4 * 1024**3)
         self.assertEqual(envelope["memory_high_gib"], 69)
         self.assertEqual(envelope["memory_max_gib"], 71)
-        self.assertEqual(envelope["minimum_start_available_gib"], 114)
+        self.assertEqual(envelope["minimum_start_available_gib"], 116)
         self.assertGreaterEqual(
             envelope["memory_high_bytes"],
             envelope["non_arena_cgroup_peak_bytes"]
@@ -347,6 +347,56 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 non_arena_cgroup_peak_bytes=1 * 1024**3,
                 host_total_bytes=120 * 1024**3,
             )
+
+    def test_memory_envelope_rederives_bound_raw_probe(self):
+        binary_sha256 = "a" * 64
+        environment_sha256 = CAMPAIGN.observed_environment_sha256(
+            CAMPAIGN.memory_probe_environment()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            probe = Path(directory)
+            main = "\n".join((
+                f"candidate_binary_sha256={binary_sha256}",
+                "MemTotal:       125829120 kB",
+                "MemAvailable:   120586240 kB",
+                f"executed_environment_sha256={environment_sha256}",
+                "executed_candidate_verified pid=1 start_ticks=1 path=/x "
+                f"executed_binary_sha256={binary_sha256} device_inode=1:2",
+                "cgroup_final current_bytes=1 peak_bytes=1073741824 "
+                "swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,",
+                "executed candidate was verified alive at least once; no identity "
+                "contradiction observed by the periodic sampler; actual cadence is "
+                "recorded in samples.log; wrapper and descendant checks clean",
+                "SAFE_RUN end rc=0 killed=no",
+            ))
+            samples = "\n".join(
+                f"t{index} mem_avail_kb={110 * 1048576} "
+                f"eng_rss_kb={9 * 1048576} read_bytes={index + 1} "
+                "cgroup_current_bytes=1 cgroup_peak_bytes=1073741824 "
+                "cgroup_swap_current_bytes=0"
+                for index in range(3)
+            )
+            (probe / "safety.main.log").write_text(main, encoding="utf-8")
+            (probe / "safety.samples.log").write_text(samples, encoding="utf-8")
+            (probe / "safety.kernel.log").write_text("kernel clean\n", encoding="utf-8")
+            (probe / "partial.json").write_text(
+                '{"binary_sha256":"' + binary_sha256
+                + '","mode":"off","probe_environment_sha256":"'
+                + environment_sha256 + '","schema_version":1}\n',
+                encoding="utf-8",
+            )
+            evidence = CAMPAIGN.derive_memory_probe_evidence(probe, binary_sha256)
+            CAMPAIGN.require_memory_probe_evidence(
+                probe, evidence, binary_sha256
+            )
+            (probe / "safety.samples.log").write_text(
+                samples.replace(str(110 * 1048576), str(100 * 1048576)),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                CAMPAIGN.require_memory_probe_evidence(
+                    probe, evidence, binary_sha256
+                )
 
     def test_full_quality_parser_and_comparator_require_exact_100_case_identity(self):
         header = "id\ttarget_tokens\tnll\ttarget_top1_correct\n"
