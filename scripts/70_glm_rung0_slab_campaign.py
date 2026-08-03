@@ -2307,24 +2307,86 @@ def score_campaign(
         for rep_index, rep in enumerate(reps):
             if not isinstance(rep, dict) or rep.get("valid") is not True:
                 raise ValueError("measured rep is invalid")
-            timestamps = rep.get("sse_token_timestamps_ns")
-            token_count = rep.get("client_completion_tokens")
+            raw_timestamps = rep.get("token_timestamps_ns")
+            raw_token_count = rep.get("completion_tokens")
+            server_token_count = rep.get("server_completion_tokens")
             token_ids = rep.get("token_ids")
             if (
-                not isinstance(timestamps, list)
-                or len(timestamps) < 128
-                or isinstance(token_count, bool)
-                or not isinstance(token_count, int)
-                or token_count != len(timestamps)
+                rep.get("timing_source") != "server_raw_token_log"
+                or not isinstance(raw_timestamps, list)
+                or len(raw_timestamps) < 128
+                or isinstance(raw_token_count, bool)
+                or not isinstance(raw_token_count, int)
+                or raw_token_count != server_token_count
+                or raw_token_count != len(raw_timestamps)
                 or not isinstance(token_ids, list)
-                or len(token_ids) != token_count
-                or any(isinstance(value, bool) or not isinstance(value, int) for value in timestamps)
-                or any(right <= left for left, right in zip(timestamps, timestamps[1:]))
+                or len(token_ids) != raw_token_count
+                or any(
+                    isinstance(value, bool) or not isinstance(value, int)
+                    for value in raw_timestamps
+                )
+                or any(
+                    right <= left
+                    for left, right in zip(raw_timestamps, raw_timestamps[1:])
+                )
             ):
-                raise ValueError("client-observed token timing is incomplete")
-            elapsed = (timestamps[-1] - timestamps[0]) / 1_000_000_000
-            decode_rates.append((token_count - 1) / positive(elapsed, "decode elapsed"))
-            ttft = positive(rep.get("ttft_s"), "TTFT")
+                raise ValueError("raw generated-token timing is incomplete")
+
+            client_timestamps = rep.get("sse_token_timestamps_ns")
+            request_started = rep.get("client_request_started_ns")
+            first_content = rep.get("client_first_content_ns")
+            last_content = rep.get("client_last_content_ns")
+            event_count = rep.get("event_completion_tokens")
+            client_token_count = rep.get("client_completion_tokens")
+            if (
+                not isinstance(client_timestamps, list)
+                or len(client_timestamps) < 2
+                or isinstance(event_count, bool)
+                or not isinstance(event_count, int)
+                or event_count != len(client_timestamps)
+                or isinstance(client_token_count, bool)
+                or not isinstance(client_token_count, int)
+                or client_token_count <= 0
+                or any(
+                    isinstance(value, bool) or not isinstance(value, int)
+                    for value in client_timestamps
+                )
+                or any(
+                    right <= left
+                    for left, right in zip(client_timestamps, client_timestamps[1:])
+                )
+                or any(
+                    isinstance(value, bool) or not isinstance(value, int)
+                    for value in (request_started, first_content, last_content)
+                )
+                or not request_started < first_content < last_content
+                or client_timestamps[0] != first_content
+                or client_timestamps[-1] != last_content
+            ):
+                raise ValueError("independent client timing envelope is incomplete")
+
+            elapsed = (last_content - first_content) / 1_000_000_000
+            raw_elapsed = (raw_timestamps[-1] - raw_timestamps[0]) / 1_000_000_000
+            observed_ratio = positive(
+                rep.get("raw_client_timing_ratio"), "raw/client timing ratio"
+            )
+            recomputed_ratio = positive(raw_elapsed, "raw decode elapsed") / positive(
+                elapsed, "client decode elapsed"
+            )
+            if (
+                not math.isclose(
+                    observed_ratio, recomputed_ratio, rel_tol=1e-12, abs_tol=1e-12
+                )
+                or not 0.75 <= recomputed_ratio <= 1.25
+            ):
+                raise ValueError("raw/client timing envelope is inconsistent")
+            decode_rates.append(
+                (raw_token_count - 1) / positive(elapsed, "client decode elapsed")
+            )
+            ttft = (first_content - request_started) / 1_000_000_000
+            reported_ttft = positive(rep.get("ttft_s"), "reported TTFT")
+            if not math.isclose(ttft, reported_ttft, rel_tol=1e-12, abs_tol=1e-12):
+                raise ValueError("reported TTFT does not match client endpoints")
             prompt_tokens = rep.get("client_prompt_tokens")
             if (
                 isinstance(prompt_tokens, bool)
@@ -2344,7 +2406,7 @@ def score_campaign(
                     rep.get("generated_content_sha256"),
                     "generated_content_sha256",
                 ),
-                token_count,
+                raw_token_count,
                 tuple(token_ids),
             )
             output_signatures[rep_index].add(signature)
@@ -2470,7 +2532,7 @@ def score_campaign(
     ttft_upper = paired_ratio_bound(ttft_on, ttft_off, side="upper")
     verdict = "PASS" if decode_lower > 1.0 and ttft_upper <= 1.05 else "FAIL"
     return {
-        "scorer_id": "glm.rung0.slab.v1",
+        "scorer_id": "glm.rung0.slab.v2-client-wall",
         "verdict": verdict,
         "decode_ratio_lower_95": decode_lower,
         "warm_ttft_ratio_upper_95": ttft_upper,
