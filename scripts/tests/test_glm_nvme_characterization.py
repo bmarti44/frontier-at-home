@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 
@@ -46,6 +47,9 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
         self.assertEqual(plan["matched_record_bytes"], 9_732_096)
         self.assertEqual(plan["tail_record_bytes"], 12_386_304)
         self.assertEqual(plan["cell_count"], 40)
+        self.assertEqual(plan["tail_cell_count"], 2)
+        self.assertEqual(plan["sequential_cell_count"], 3)
+        self.assertEqual(plan["total_cell_count"], 45)
 
     def test_fio_arguments_are_read_only_direct_and_machine_parseable(self):
         probe = load_probe()
@@ -101,16 +105,23 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
     def test_parser_rejects_nonfinite_bandwidth_and_any_write(self):
         probe = load_probe()
         base = {
+            "fio version": "fio-3.36",
             "jobs": [{"error": 0, "read": {
                 "bw_bytes": 12_000_000_000, "io_bytes": 720_000_000_000,
-                "runtime": 60_000,
-            }, "write": {"io_bytes": 0}}]
+                "runtime": 60_000, "total_ios": 720_000,
+            }, "write": {"io_bytes": 0, "total_ios": 0},
+                "trim": {"io_bytes": 0, "total_ios": 0}}]
         }
         with tempfile.TemporaryDirectory() as temporary:
             result = Path(temporary) / "fio.json"
             result.write_text(json.dumps(base), encoding="utf-8")
             self.assertEqual(probe.parse_fio_result(result)["bandwidth_gb_s"], 12.0)
             base["jobs"][0]["read"]["bw_bytes"] = float("nan")
+            result.write_text(json.dumps(base), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                probe.parse_fio_result(result)
+            base["jobs"][0]["read"]["bw_bytes"] = 12_000_000_000
+            base["jobs"][0]["write"]["io_bytes"] = 4096
             result.write_text(json.dumps(base), encoding="utf-8")
             with self.assertRaises(ValueError):
                 probe.parse_fio_result(result)
@@ -130,6 +141,60 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
     def test_production_lock_cannot_be_overridden(self):
         source = PROBE.read_text(encoding="utf-8")
         self.assertNotIn('add_argument("--lock"', source)
+        self.assertNotIn('add_argument("--hwmon-root"', source)
+
+    def test_cell_schedule_covers_primary_tail_and_sequential_once(self):
+        probe = load_probe()
+        cells = probe.cell_specs(probe.EXPECTED_SLAB_SIZE)
+        self.assertEqual(len(cells), 45)
+        self.assertEqual(len({cell["name"] for cell in cells}), 45)
+        self.assertEqual(sum(cell["kind"] == "primary" for cell in cells), 40)
+        tails = [cell for cell in cells if cell["kind"] == "tail"]
+        self.assertEqual(len(tails), 2)
+        self.assertEqual({cell["block_size"] for cell in tails}, {12_386_304})
+        self.assertEqual({cell["size"] for cell in tails}, {256 * 12_386_304})
+        sequential = [cell for cell in cells if cell["kind"] == "sequential"]
+        self.assertEqual(len(sequential), 3)
+        self.assertEqual({cell["access"] for cell in sequential}, {"read"})
+
+    def test_fixed_scorer_rejects_bad_qd1_and_duplicate_cells(self):
+        probe = load_probe()
+        rows = []
+        for cell in probe.cell_specs(probe.EXPECTED_SLAB_SIZE):
+            bandwidth = 4.8 if (
+                cell["kind"] == "primary" and
+                cell["block_size"] == probe.MATCHED_RECORD_BYTES and
+                cell["iodepth"] == 1 and cell["numjobs"] == 1
+            ) else 12.0
+            rows.append({**cell, "bandwidth_gb_s": bandwidth,
+                         "device_tail_gb_s": bandwidth})
+        score = probe.score_sweep(rows)
+        self.assertEqual(score["verdict"], "PASS")
+        self.assertAlmostEqual(score["future_engine_80pct_target_gb_s"], 9.6)
+        bad = [dict(row) for row in rows]
+        for row in bad:
+            if (row["kind"] == "primary" and
+                    row["block_size"] == probe.MATCHED_RECORD_BYTES and
+                    row["iodepth"] == 1 and row["numjobs"] == 1):
+                row["bandwidth_gb_s"] = 1.0
+        self.assertEqual(probe.score_sweep(bad)["verdict"], "NO_RESULT")
+        self.assertEqual(probe.score_sweep(rows[:-1] + [rows[0]])["verdict"], "FAIL")
+
+    def test_target_device_resolves_to_its_own_nvme_controller(self):
+        probe = load_probe()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            controller = root / "devices" / "nvme" / "nvme7"
+            block = controller / "nvme7n1" / "nvme7n1p2"
+            block.mkdir(parents=True)
+            dev = root / "dev-block"
+            dev.mkdir()
+            (dev / "259:2").symlink_to(block)
+            resolved_block, resolved_controller = probe.resolve_nvme_controller(
+                os.makedev(259, 2), dev,
+            )
+            self.assertEqual(resolved_block, block)
+            self.assertEqual(resolved_controller, controller)
 
     def test_telemetry_failure_terminates_and_reaps_fio(self):
         probe = load_probe()
@@ -145,7 +210,7 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             calls = 0
             original = probe.thermal_sample
 
-            def failing_thermal(_hwmon):
+            def failing_thermal(_hwmon, _block=None):
                 nonlocal calls
                 calls += 1
                 if calls > 1:
@@ -168,11 +233,89 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                         os.killpg(pid, signal.SIGKILL)
                     except ProcessLookupError:
                         pass
-            base["jobs"][0]["read"]["bw_bytes"] = 12_000_000_000
-            base["jobs"][0]["write"]["io_bytes"] = 4096
-            result.write_text(json.dumps(base), encoding="utf-8")
-            with self.assertRaises(ValueError):
-                probe.parse_fio_result(result)
+
+    def test_fake_fio_full_schedule_reaches_pass_only_with_45_valid_cells(self):
+        probe = load_probe()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            target = root / "slab"
+            target.touch()
+            fio = root / "fio"
+            fio.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            fio.chmod(0o755)
+            output = root / "evidence"
+            identity = {
+                "device": os.makedev(259, 2), "inode": 7,
+                "size": probe.EXPECTED_SLAB_SIZE,
+                "mtime_ns": 11, "ctime_ns": 12,
+            }
+            original = {
+                name: getattr(probe, name) for name in (
+                    "validate_target", "verified_target_sha256",
+                    "conflicting_processes", "lock_exclusively",
+                    "resolve_nvme_controller", "find_nvme_hwmon",
+                    "controller_identity", "file_sha256",
+                    "wait_for_thermal_window", "smart_log_sample", "run_cell",
+                )
+            }
+
+            def fake_run_cell(argv, _hwmon, _raw, **_kwargs):
+                options = dict(part[2:].split("=", 1) for part in argv if part.startswith("--"))
+                block_size = int(options["bs"])
+                desired = 4.8 if (
+                    block_size == probe.MATCHED_RECORD_BYTES and
+                    int(options["iodepth"]) == 1 and int(options["numjobs"]) == 1
+                ) else 12.0
+                total_ios = round(desired * 1e9 * 60 / block_size)
+                io_bytes = total_ios * block_size
+                bandwidth = io_bytes / 60
+                document = {
+                    "fio version": "fio-3.36",
+                    "jobs": [{
+                        "jobname": options["name"], "error": 0,
+                        "read": {"bw_bytes": bandwidth, "io_bytes": io_bytes,
+                                 "runtime": 60_000, "total_ios": total_ios},
+                        "write": {"io_bytes": 0, "total_ios": 0},
+                        "trim": {"io_bytes": 0, "total_ios": 0},
+                    }],
+                }
+                Path(options["output"]).write_text(json.dumps(document), encoding="utf-8")
+                sectors_per_second = round(bandwidth / 512)
+                samples = []
+                for second in range(61):
+                    samples.append({
+                        "monotonic_ns": second * 1_000_000_000,
+                        "temperatures_c": {"temp1_input": 50.0},
+                        "temp1_alarm": 0, "temp1_max_c": 82.0,
+                        "temp1_crit_c": 85.0,
+                        "disk": {"reads_completed": second * total_ios // 60,
+                                 "sectors_read": second * sectors_per_second,
+                                 "io_in_flight": 0, "io_time_ms": second * 1000},
+                    })
+                return 0, samples
+
+            try:
+                probe.validate_target = lambda _path: dict(identity)
+                probe.verified_target_sha256 = lambda _path, _identity: "a" * 64
+                probe.conflicting_processes = lambda **_kwargs: []
+                probe.lock_exclusively = lambda _path: os.open(root / "lock", os.O_CREAT | os.O_RDWR)
+                probe.resolve_nvme_controller = lambda _device: (root / "block", root / "nvme0")
+                probe.find_nvme_hwmon = lambda _controller: root / "hwmon0"
+                probe.controller_identity = lambda _controller: {"name": "nvme0"}
+                probe.file_sha256 = lambda _path: "b" * 64
+                probe.wait_for_thermal_window = lambda *_args, **_kwargs: {"ok": True}
+                probe.smart_log_sample = lambda _controller: {"available": False}
+                probe.run_cell = fake_run_cell
+                rc = probe.run_sweep(SimpleNamespace(
+                    target=target, fio=fio, output=output, target_sha256="a" * 64,
+                ))
+                self.assertEqual(rc, 0)
+                summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+                self.assertEqual(summary["verdict"], "PASS")
+                self.assertEqual(len(summary["cells"]), 45)
+            finally:
+                for name, value in original.items():
+                    setattr(probe, name, value)
 
 
 if __name__ == "__main__":

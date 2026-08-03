@@ -211,10 +211,21 @@ result and before Rung 0.5. No engine, evidence arm, or GPU measurement may run
 concurrently. Use fio in read-only O_DIRECT mode against the expert-slab
 sidecar file only; never open the raw NVMe device and never use a writable fio
 mode. Sweep 1, 4, 9.28, and 16 MiB blocks at iodepth 1, 4, 8, 16, and 32 with
-both one and four io_uring jobs for approximately 60 seconds per cell.
+both one and four io_uring jobs for 60 seconds per cell. These 40 headline
+cells use a counterbalanced QD order. Add two separately labeled layer-78 tail
+cells (QD1/QD16 at exactly 12,386,304 bytes) and three separately labeled
+16-MiB sequential cells (QD1/QD16/QD32) for the identity-scan comparator; none
+of those five diagnostics may be mixed into the 40-cell serving curve.
 
 Capture `nvme smart-log` temperature and throttle state before and after every
-cell. The committed evidence must contain the full GB/s curve, thermal trace,
+cell when the unprivileged controller device permits it. On this installed
+host `/dev/nvme0` is root-only and the standing no-sudo rule applies, so the
+mandatory fallback binds the target filesystem device through sysfs to its
+exact NVMe controller and records controller hwmon alarm/max/critical values
+plus partition diskstats every second. A cell waits below 70 C, stays at least
+2 C below the sysfs maximum, and rejects a thermal alarm, a SMART transition
+when SMART is available, or a second-half bandwidth decay greater than 15%.
+The committed evidence must contain the full GB/s curve, thermal trace,
 fio command/config hashes, slab device/inode/size/hash identity, and explicit
 safety/exclusivity checks. The matched 9.28 MiB cell uses the engine's exact
 `9,732,096`-byte O_DIRECT request, not a rounded `9.28m` fio value: the frozen
@@ -224,6 +235,13 @@ than silently mixing request sizes. If the exact-size QD1 cell does not
 reproduce the roughly 4.8 GB/s engine observation, diagnose the method before
 using any cell to recalibrate the plan. Sustained thermally stable bandwidth,
 not burst peak, is the planning constant.
+
+The fixed scorer accepts QD1 method reproduction only within 25% of 4.8 GB/s;
+otherwise the characterization is `NO_RESULT` and cannot recalibrate physics.
+The matched serving reference is the maximum across exact-size QD16/QD32 cells
+of `min(fio average, second-half device bandwidth)`. The future slab engine
+target is exactly 80% of that value. The identity-scan reference and 80% target
+use the same formula over the distinct sequential QD16/QD32 cells.
 
 If high-QD fio materially exceeds 4.8 GB/s, audit and correct the engine's
 submission batching, io_uring depth, pinned staging-buffer count, and
