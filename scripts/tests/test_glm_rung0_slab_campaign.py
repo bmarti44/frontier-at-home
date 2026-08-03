@@ -48,18 +48,40 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             step = 100_000_000 if mode == "off" else 80_000_000
             reps = []
             for rep in range(2):
+                ttft_s = 1.0 if mode == "off" else 1.02
+                first_client_ns = 2_000_000_000
+                last_client_ns = first_client_ns + 127 * step
+                raw_step = step + 1_000_000
+                raw_elapsed_ns = 127 * raw_step
                 reps.append(
                     {
                         "valid": True,
                         "request_sha256": "d" * 64,
                         "generated_reasoning_sha256": "e" * 64,
                         "generated_content_sha256": "f" * 64,
-                        "client_completion_tokens": 128,
+                        # SSE content fragments and a re-tokenized pair of client
+                        # channels are not one-to-one with raw generated tokens.
+                        "client_completion_tokens": 127,
+                        "completion_tokens": 128,
+                        "server_completion_tokens": 128,
+                        "event_completion_tokens": 125,
+                        "timing_source": "server_raw_token_log",
                         "sse_token_timestamps_ns": [
-                            1_000_000_000 + index * step for index in range(128)
+                            first_client_ns
+                            + index * (last_client_ns - first_client_ns) // 124
+                            for index in range(125)
+                        ],
+                        "token_timestamps_ns": [
+                            900_000_000 + index * raw_step for index in range(128)
                         ],
                         "token_ids": list(range(128)),
-                        "ttft_s": 1.0 if mode == "off" else 1.02,
+                        "client_request_started_ns": first_client_ns
+                        - int(ttft_s * 1_000_000_000),
+                        "client_first_content_ns": first_client_ns,
+                        "client_last_content_ns": last_client_ns,
+                        "raw_client_timing_ratio": raw_elapsed_ns
+                        / (last_client_ns - first_client_ns),
+                        "ttft_s": ttft_s,
                         "client_prompt_tokens": 256,
                     }
                 )
@@ -698,6 +720,18 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertGreater(result["decode_ratio_lower_95"], 1.0)
         self.assertLessEqual(result["warm_ttft_ratio_upper_95"], 1.05)
 
+    def test_fixed_scorer_accepts_fragmented_sse_with_complete_raw_tokens(self):
+        records = self.passing_records()
+        rep = records[0]["reps"][0]
+        self.assertEqual(len(rep["token_ids"]), 128)
+        self.assertEqual(len(rep["token_timestamps_ns"]), 128)
+        self.assertEqual(len(rep["sse_token_timestamps_ns"]), 125)
+        self.assertEqual(rep["client_completion_tokens"], 127)
+        result = CAMPAIGN.score_campaign(
+            records, self.passing_nll(), quality_bound=True
+        )
+        self.assertEqual(result["verdict"], "PASS")
+
     def test_slab_arm_requires_full_identity_physical_reads(self):
         records = self.passing_records()
         slab = next(record for record in records if record["mode"] == "on")
@@ -721,7 +755,25 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 generated_content_sha256="0" * 64
             ),
             "short output": lambda rows: rows[1]["reps"][0].update(
-                sse_token_timestamps_ns=[1, 2]
+                token_ids=[1, 2], token_timestamps_ns=[1, 2]
+            ),
+            "server token mismatch": lambda rows: rows[1]["reps"][0].update(
+                server_completion_tokens=127
+            ),
+            "nonmonotonic raw timing": lambda rows: rows[1]["reps"][0][
+                "token_timestamps_ns"
+            ].__setitem__(64, 1),
+            "nonmonotonic client events": lambda rows: rows[1]["reps"][0][
+                "sse_token_timestamps_ns"
+            ].__setitem__(64, 1),
+            "client endpoint mismatch": lambda rows: rows[1]["reps"][0].update(
+                client_last_content_ns=99_000_000_000
+            ),
+            "event count mismatch": lambda rows: rows[1]["reps"][0].update(
+                event_completion_tokens=124
+            ),
+            "raw client ratio mismatch": lambda rows: rows[1]["reps"][0].update(
+                raw_client_timing_ratio=1.0
             ),
             "missing io": lambda rows: rows[1]["external_io"].update(
                 sample_count=0
