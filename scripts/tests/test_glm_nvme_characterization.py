@@ -234,6 +234,29 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             probe.telemetry_metrics(samples)
 
+    def test_smart_counter_increase_and_availability_drift_fail(self):
+        probe = load_probe()
+        values = {
+            "critical_warning": 0, "warning_temp_time": 0,
+            "critical_comp_time": 0, "thm_temp1_trans_count": 0,
+            "thm_temp2_trans_count": 0, "thm_temp1_total_time": 0,
+            "thm_temp2_total_time": 0,
+        }
+        probe.validate_smart_pair(
+            {"available": True, "values": dict(values)},
+            {"available": True, "values": dict(values)},
+        )
+        changed = dict(values)
+        changed["thm_temp1_total_time"] = 1
+        with self.assertRaises(ValueError):
+            probe.validate_smart_pair(
+                {"available": True, "values": dict(values)},
+                {"available": True, "values": changed},
+            )
+        with self.assertRaises(ValueError):
+            probe.validate_smart_pair({"available": False},
+                                      {"available": True, "values": dict(values)})
+
     def test_telemetry_failure_terminates_and_reaps_fio(self):
         probe = load_probe()
         with tempfile.TemporaryDirectory() as temporary:
@@ -289,7 +312,7 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             }
             original = {
                 name: getattr(probe, name) for name in (
-                    "validate_target", "verified_target_sha256",
+                    "load_frozen_target", "validate_target", "verified_target_sha256",
                     "conflicting_processes", "lock_exclusively",
                     "resolve_nvme_controller", "find_nvme_hwmon",
                     "controller_identity", "file_sha256",
@@ -333,6 +356,12 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                 return 0, samples
 
             try:
+                probe.load_frozen_target = lambda: {
+                    "path": target, "sha256": "a" * 64,
+                    "bytes": probe.EXPECTED_SLAB_SIZE,
+                    "manifest": str(root / "manifest.json"),
+                    "manifest_sha256": "c" * 64,
+                }
                 probe.validate_target = lambda _path: dict(identity)
                 probe.verified_target_sha256 = lambda _path, _identity: "a" * 64
                 probe.conflicting_processes = lambda **_kwargs: []
@@ -345,7 +374,7 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                 probe.smart_log_sample = lambda _controller: {"available": False}
                 probe.run_cell = fake_run_cell
                 rc = probe.run_sweep(SimpleNamespace(
-                    target=target, fio=fio, output=output, target_sha256="a" * 64,
+                    fio=fio, output=output,
                 ))
                 self.assertEqual(rc, 0)
                 summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))

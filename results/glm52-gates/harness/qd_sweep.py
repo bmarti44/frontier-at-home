@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import signal
 import stat
+import statistics
 import subprocess
 import sys
 import time
@@ -28,6 +29,10 @@ MATCHED_RECORD_COUNT = 19_200
 TAIL_RECORD_BYTES = 12_386_304
 SLAB_DATA_OFFSET = 1_560_576
 EXPECTED_SLAB_SIZE = 190_028_697_600
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+FROZEN_TARGET_MANIFEST = (
+    REPOSITORY_ROOT / "results/glm52-gates/G6-rung0-io-sidecar-build.json"
+)
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
 HWMON_ROOT = Path("/sys/class/hwmon")
 SYS_DEV_BLOCK = Path("/sys/dev/block")
@@ -58,6 +63,31 @@ def describe() -> dict[str, Any]:
         "direct": True,
         "ioengine": "io_uring",
         "target_kind": "regular-file-only",
+        "target_manifest": str(FROZEN_TARGET_MANIFEST.relative_to(REPOSITORY_ROOT)),
+    }
+
+
+def load_frozen_target() -> dict[str, Any]:
+    document = json.loads(FROZEN_TARGET_MANIFEST.read_text(encoding="utf-8"))
+    sidecar = document.get("sidecar")
+    if (
+        document.get("schema_version") != 1 or
+        document.get("gate") != "G6-rung0-io-sidecar-build" or
+        document.get("verdict") != "PASS" or
+        not isinstance(sidecar, dict) or
+        sidecar.get("format_version") != 2 or
+        sidecar.get("records") != 19_456 or
+        sidecar.get("bytes") != EXPECTED_SLAB_SIZE or
+        not isinstance(sidecar.get("path"), str) or
+        not SHA256_RE.fullmatch(str(sidecar.get("generated_content_sha256", "")))
+    ):
+        raise ValueError("committed G6 frozen-sidecar manifest is malformed")
+    return {
+        "path": Path(sidecar["path"]),
+        "sha256": sidecar["generated_content_sha256"],
+        "bytes": sidecar["bytes"],
+        "manifest": str(FROZEN_TARGET_MANIFEST),
+        "manifest_sha256": file_sha256(FROZEN_TARGET_MANIFEST),
     }
 
 
@@ -266,6 +296,37 @@ def smart_log_sample(controller: Path, nvme_cli: Path = NVME_CLI) -> dict[str, A
     return {"available": True, "values": {key: data.get(key) for key in wanted}}
 
 
+def validate_smart_pair(before: dict[str, Any], after: dict[str, Any]) -> None:
+    if bool(before.get("available")) != bool(after.get("available")):
+        raise ValueError("NVMe SMART availability changed during cell")
+    if not before.get("available"):
+        return
+    before_values = before.get("values")
+    after_values = after.get("values")
+    if not isinstance(before_values, dict) or not isinstance(after_values, dict):
+        raise ValueError("NVMe SMART values are malformed")
+
+    def numeric(values: dict[str, Any], key: str) -> int:
+        value = values.get(key)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            return int(value, 0)
+        raise ValueError(f"NVMe SMART field is missing: {key}")
+
+    if numeric(after_values, "critical_warning") != 0:
+        raise ValueError("NVMe SMART critical warning is nonzero")
+    for key in (
+        "warning_temp_time", "critical_comp_time",
+        "thm_temp1_trans_count", "thm_temp2_trans_count",
+        "thm_temp1_total_time", "thm_temp2_total_time",
+    ):
+        first = numeric(before_values, key)
+        second = numeric(after_values, key)
+        if second != first:
+            raise ValueError(f"NVMe SMART thermal counter changed: {key}")
+
+
 def thermal_sample(hwmon: Path, block: Path | None = None) -> dict[str, Any]:
     sensors: dict[str, float] = {}
     for value_path in sorted(hwmon.glob("temp*_input")):
@@ -432,10 +493,12 @@ def cell_geometry(file_size: int, block_size: int) -> tuple[int, int]:
 
 def cell_specs(file_size: int) -> list[dict[str, Any]]:
     specs: list[dict[str, Any]] = []
-    for block_size in BLOCK_SIZES:
+    for block_index, block_size in enumerate(BLOCK_SIZES):
         offset, size = cell_geometry(file_size, block_size)
-        for q_index, iodepth in enumerate(PRIMARY_QD_ORDER):
-            jobs = NUMJOBS if q_index % 2 == 0 else tuple(reversed(NUMJOBS))
+        qd_order = PRIMARY_QD_ORDER[block_index:] + PRIMARY_QD_ORDER[:block_index]
+        for q_index, iodepth in enumerate(qd_order):
+            jobs = (NUMJOBS if (block_index + q_index) % 2 == 0
+                    else tuple(reversed(NUMJOBS)))
             for numjobs in jobs:
                 specs.append({
                     "kind": "primary", "access": "randread",
@@ -470,8 +533,8 @@ def telemetry_metrics(samples: list[dict[str, Any]]) -> dict[str, Any]:
     for first, second in zip(samples, samples[1:]):
         elapsed = (second["monotonic_ns"] - first["monotonic_ns"]) / 1e9
         sectors = second["disk"]["sectors_read"] - first["disk"]["sectors_read"]
-        if elapsed <= 0 or sectors < 0:
-            raise ValueError("invalid diskstats interval")
+        if elapsed < 0.5 or elapsed > 2.5 or sectors < 0:
+            raise ValueError("invalid diskstats interval or sampling cadence")
         rates.append(sectors * 512 / elapsed / 1e9)
     if len(rates) < 20:
         raise ValueError("insufficient diskstats rate intervals")
@@ -529,20 +592,38 @@ def score_sweep(rows: list[dict[str, Any]]) -> dict[str, Any]:
                row["iodepth"] in (16, 32)]
     sequential = [row for row in rows if
                   row["kind"] == "sequential" and row["iodepth"] in (16, 32)]
-    matched_reference = max(min(row["bandwidth_gb_s"], row["device_tail_gb_s"])
-                            for row in matched)
-    sequential_reference = max(min(row["bandwidth_gb_s"], row["device_tail_gb_s"])
-                               for row in sequential)
+
+    def matched_reference(candidates: list[dict[str, Any]]) -> tuple[float, list[str]]:
+        temperatures = [row["temperature_start_c"]["temp1_input"] for row in candidates]
+        center = statistics.median(temperatures)
+        eligible = [row for row in candidates if
+                    abs(row["temperature_start_c"]["temp1_input"] - center) <= 2.0]
+        if len(eligible) < 2 or {row["iodepth"] for row in eligible} != {16, 32}:
+            raise ValueError("QD16/QD32 cells lack thermally matched observations")
+        values = [min(row["bandwidth_gb_s"], row["device_tail_gb_s"])
+                  for row in eligible]
+        return statistics.median(values), [row["name"] for row in eligible]
+
+    try:
+        matched_value, matched_cells = matched_reference(matched)
+        sequential_value, sequential_cells = matched_reference(sequential)
+    except (KeyError, TypeError, ValueError) as error:
+        return {"verdict": "NO_RESULT", "reason": str(error)}
     return {
         "verdict": "PASS",
         "qd1_expected_gb_s": QD1_REFERENCE_GB_S,
         "qd1_allowed_gb_s": [low, high],
         "qd1_observed_gb_s": qd1["bandwidth_gb_s"],
-        "matched_sustained_reference_gb_s": matched_reference,
-        "future_engine_80pct_target_gb_s": 0.8 * matched_reference,
-        "sequential_sustained_reference_gb_s": sequential_reference,
-        "future_identity_scan_80pct_target_gb_s": 0.8 * sequential_reference,
-        "sustained_formula": "max(min(fio_average,device_tail_average))",
+        "matched_sustained_reference_gb_s": matched_value,
+        "matched_reference_cells": matched_cells,
+        "future_engine_80pct_target_gb_s": 0.8 * matched_value,
+        "sequential_sustained_reference_gb_s": sequential_value,
+        "sequential_reference_cells": sequential_cells,
+        "future_identity_scan_80pct_target_gb_s": 0.8 * sequential_value,
+        "sustained_formula": (
+            "median(min(fio_average,device_tail_average)) over start-temperature-"
+            "matched QD16/QD32 cells"
+        ),
     }
 
 
@@ -602,7 +683,6 @@ def run_cell(
             if conflicts:
                 raise RuntimeError(f"exclusive workload appeared during cell: {conflicts}")
             samples.append(thermal_sample(hwmon, block))
-        samples.append(thermal_sample(hwmon, block))
         return process.returncode, samples
     finally:
         terminate_process_group(process)
@@ -612,15 +692,14 @@ def run_cell(
 
 
 def run_sweep(args: argparse.Namespace) -> int:
-    # Make the path absolute without resolving its final component: validate_target
-    # must see and reject a symlink instead of silently accepting its destination.
-    target = Path(os.path.abspath(args.target))
+    frozen_target = load_frozen_target()
+    # Make the committed path absolute without resolving its final component:
+    # validate_target must see and reject a symlink rather than its destination.
+    target = Path(os.path.abspath(frozen_target["path"]))
     fio = args.fio.resolve(strict=True)
     if not os.access(fio, os.X_OK) or not stat.S_ISREG(fio.stat().st_mode):
         raise ValueError("fio must be an executable regular file")
     before = validate_target(target)
-    if not SHA256_RE.fullmatch(args.target_sha256):
-        raise ValueError("target SHA-256 must be 64 lowercase hexadecimal characters")
     conflicts = conflicting_processes()
     if conflicts:
         raise RuntimeError(f"exclusive measurement blocked by: {conflicts}")
@@ -630,7 +709,7 @@ def run_sweep(args: argparse.Namespace) -> int:
         if conflicts:
             raise RuntimeError(f"exclusive measurement race: {conflicts}")
         before_digest = verified_target_sha256(target, before)
-        if validate_target(target) != before or before_digest != args.target_sha256:
+        if validate_target(target) != before or before_digest != frozen_target["sha256"]:
             raise ValueError("target stat or full SHA-256 does not match the frozen slab")
         block, controller = resolve_nvme_controller(before["device"])
         hwmon = find_nvme_hwmon(controller)
@@ -645,7 +724,9 @@ def run_sweep(args: argparse.Namespace) -> int:
             "plan": describe(),
             "target": {
                 **before, "path": str(target),
-                "frozen_sha256": args.target_sha256,
+                "frozen_sha256": frozen_target["sha256"],
+                "frozen_manifest": frozen_target["manifest"],
+                "frozen_manifest_sha256": frozen_target["manifest_sha256"],
                 "verified_sha256_before": before_digest,
             },
             "fio": {"path": str(fio), "sha256": file_sha256(fio)},
@@ -691,14 +772,7 @@ def run_sweep(args: argparse.Namespace) -> int:
                         f"fio/device read accounting mismatch for {name}: {ratio:.3f}"
                     )
                 smart_after = smart_log_sample(controller)
-                if smart_before.get("available") and smart_after.get("available"):
-                    before_values = smart_before["values"]
-                    after_values = smart_after["values"]
-                    if after_values.get("critical_warning") not in (0, "0", None):
-                        raise RuntimeError(f"NVMe SMART warning during {name}")
-                    for key in ("thm_temp1_trans_count", "thm_temp2_trans_count"):
-                        if before_values.get(key) != after_values.get(key):
-                            raise RuntimeError(f"NVMe thermal transition during {name}")
+                validate_smart_pair(smart_before, smart_after)
                 row = {
                     **spec, **metric, **telemetry,
                     "fio_device_bandwidth_ratio": ratio,
@@ -754,8 +828,6 @@ def parser() -> argparse.ArgumentParser:
     describe_parser = commands.add_parser("describe")
     describe_parser.add_argument("--json", action="store_true")
     run_parser = commands.add_parser("run")
-    run_parser.add_argument("--target", type=Path, required=True)
-    run_parser.add_argument("--target-sha256", required=True)
     run_parser.add_argument("--fio", type=Path, required=True)
     run_parser.add_argument("--output", type=Path, required=True)
     return value

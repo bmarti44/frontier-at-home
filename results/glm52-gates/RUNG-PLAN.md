@@ -212,7 +212,8 @@ concurrently. Use fio in read-only O_DIRECT mode against the expert-slab
 sidecar file only; never open the raw NVMe device and never use a writable fio
 mode. Sweep 1, 4, 9.28, and 16 MiB blocks at iodepth 1, 4, 8, 16, and 32 with
 both one and four io_uring jobs for 60 seconds per cell. These 40 headline
-cells use a counterbalanced QD order. Add two separately labeled layer-78 tail
+cells rotate the QD order once per block-size group and balance the numjobs
+order. Add two separately labeled layer-78 tail
 cells (QD1/QD16 at exactly 12,386,304 bytes) and three separately labeled
 16-MiB sequential cells (QD1/QD16/QD32) for the identity-scan comparator; none
 of those five diagnostics may be mixed into the 40-cell serving curve.
@@ -236,12 +237,16 @@ reproduce the roughly 4.8 GB/s engine observation, diagnose the method before
 using any cell to recalibrate the plan. Sustained thermally stable bandwidth,
 not burst peak, is the planning constant.
 
-The fixed scorer accepts QD1 method reproduction only within 25% of 4.8 GB/s;
+The target path, byte count, and expected full digest come only from the
+committed passing `G6-rung0-io-sidecar-build.json`; the CLI cannot substitute a
+different self-consistent file/digest pair. The fixed scorer accepts QD1 method
+reproduction only within 25% of 4.8 GB/s;
 otherwise the characterization is `NO_RESULT` and cannot recalibrate physics.
-The matched serving reference is the maximum across exact-size QD16/QD32 cells
-of `min(fio average, second-half device bandwidth)`. The future slab engine
-target is exactly 80% of that value. The identity-scan reference and 80% target
-use the same formula over the distinct sequential QD16/QD32 cells.
+The matched serving reference is the median across start-temperature-matched
+exact-size QD16/QD32 cells of
+`min(fio average, second-half device bandwidth)`. The future slab engine target
+is exactly 80% of that value. The identity-scan reference and 80% target use the
+same formula over the distinct sequential QD16/QD32 cells.
 
 If high-QD fio materially exceeds 4.8 GB/s, audit and correct the engine's
 submission batching, io_uring depth, pinned staging-buffer count, and
