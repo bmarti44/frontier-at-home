@@ -126,6 +126,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                         ([10.0, 10.2, 9.8] if arm == "B" else [8.5, 8.6, 8.4]),
                     "telemetry": {
                         "attempts": attempts,
+                        "issue_dropped": 0,
                         "sha_successes": sha_success,
                         "sha_failures": 0,
                         "ready": ready,
@@ -838,10 +839,11 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         )
         marker = (
             "PREFETCHSHA mode=prefetch_sha generation=9 attempts=4 "
-            "sha_successes=4 sha_failures=0 ready=3 late=1 stale=0 "
+            "issue_dropped=2 sha_successes=4 sha_failures=0 ready=3 late=1 stale=0 "
             f"fallback=1 copies=2 validated_bytes={4 * payload} "
             f"copied_bytes={2 * payload} publications=2 read_ns=400 "
-            "sha_ns=200 wait_ns=100 copy_ns=80 current_ready=1 peak_qd=4"
+            "sha_ns=200 wait_ns=100 copy_ns=80 current_ready=1 peak_qd=4 "
+            "shared_peak_qd=7"
         )
         parsed = campaign.parse_sha_prefetch_engine_log(
             "\n".join([*auth, load, marker]),
@@ -849,12 +851,14 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             model_generation=9,
         )
         self.assertEqual(parsed["telemetry"]["attempts"], 4)
+        self.assertEqual(parsed["telemetry"]["issue_dropped"], 2)
         self.assertEqual(parsed["telemetry"]["validated_bytes"], 4 * payload)
-        self.assertEqual(parsed["slab_peak_qd"], 4)
+        self.assertEqual(parsed["slab_peak_qd"], 7)
         for bad_marker in (
             marker.replace("attempts=4", "attempts=3"),
             marker.replace("sha_successes=4", "sha_successes=3"),
             marker.replace("sha_failures=0", "sha_failures=1"),
+            marker.replace("shared_peak_qd=7", "shared_peak_qd=9"),
         ):
             with self.subTest(marker=bad_marker):
                 with self.assertRaises(ValueError):
