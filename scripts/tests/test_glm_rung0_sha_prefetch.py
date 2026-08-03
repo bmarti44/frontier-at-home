@@ -288,6 +288,37 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         self.assertIn("freeze", parameters)
         self.assertIn("quality_attempts", parameters)
 
+    def test_production_campaign_uses_existing_containment_and_raw_producers(self):
+        campaign = self.load_campaign()
+        for name in (
+            "run_sha_prefetch_campaign",
+            "run_sha_prefetch_quality_campaign",
+            "score_sha_prefetch_directory",
+        ):
+            self.assertTrue(callable(getattr(campaign, name, None)), name)
+        run_source = inspect.getsource(campaign.run_sha_prefetch_campaign)
+        quality_source = inspect.getsource(
+            campaign.run_sha_prefetch_quality_campaign
+        )
+        self.assertIn("CGROUP_RUNNER", run_source)
+        self.assertIn('"sha-prefetch-arm"', run_source)
+        self.assertIn("parse_safety_logs", run_source)
+        self.assertIn('"raw.jsonl"', run_source)
+        self.assertIn("CGROUP_RUNNER", quality_source)
+        self.assertIn('"sha-prefetch-quality-arm"', quality_source)
+        self.assertIn('"quality-raw.jsonl"', quality_source)
+
+    def test_sha_prefetch_cli_exposes_run_quality_and_score_without_flip(self):
+        campaign = self.load_campaign()
+        parser_source = inspect.getsource(campaign.parse_cli)
+        for command in (
+            'add_parser("sha-prefetch-run")',
+            'add_parser("sha-prefetch-quality")',
+            'add_parser("sha-prefetch-score")',
+        ):
+            self.assertIn(command, parser_source)
+        self.assertNotIn("--schedule-flip", parser_source)
+
     def test_scorer_rejects_arbitrary_configuration_digests(self):
         campaign = self.load_campaign()
         records, manifest, freeze, quality = self.passing_campaign(campaign)
