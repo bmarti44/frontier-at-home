@@ -535,6 +535,25 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     "\n".join(mutation), require_ring_qd=True
                 )
 
+    def test_external_nvme_trace_accepts_single_trailing_pread_after_device_completion(self):
+        campaign = self.load_campaign()
+        trace = [
+            "META read_before=10 read_after=1000010 start_ns=1000 end_ns=6000",
+            "1000 0 0",
+            "2000 4 4",
+            "3000 8 8",
+            # /proc/TID/syscall can still report the final pread64 after the
+            # block-layer in-flight counter has already returned to zero.
+            "4000 0 1",
+            "5000 2 2",
+            "6000 0 0",
+        ]
+        parsed = campaign.parse_nvme_inflight_log(
+            "\n".join(trace), require_ring_qd=True
+        )
+        self.assertEqual(parsed["peak_candidate_slab_qd"], 8)
+        self.assertEqual(parsed["peak_global_read_qd"], 8)
+
     def test_sampler_boundary_is_captured_before_thread_launch(self):
         campaign = self.load_campaign()
         source = inspect.getsource(campaign.execute_arm)
