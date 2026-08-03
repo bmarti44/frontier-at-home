@@ -1301,6 +1301,13 @@ def derive_memory_probe_evidence(
         main,
         {os.fspath(paths["partial.json"]): sha256_file(paths["partial.json"])},
     )
+    require_safe_run_safety_artifact_bindings(
+        main,
+        {
+            "samples.log": paths["safety.samples.log"],
+            "kernel.log": paths["safety.kernel.log"],
+        },
+    )
     return {
         "probe_artifact_sha256": {
             name: sha256_file(path) for name, path in paths.items()
@@ -2028,6 +2035,32 @@ def require_safe_run_artifact_bindings(
         for path, digest in expected.items()
     ):
         raise ValueError("safe-run final artifacts differ from scored outputs")
+
+
+def require_safe_run_safety_artifact_bindings(
+    main_log: str, expected: dict[str, Path]
+) -> None:
+    """Require wrapper-finalized hashes for copied sampler and kernel logs."""
+    matches = re.findall(
+        r"safety_artifact_verified name=(samples\.log|kernel\.log) "
+        r"sha256=([0-9a-f]{64}) size=(\d+)",
+        main_log,
+    )
+    bindings: dict[str, tuple[str, int]] = {}
+    for name, digest, size in matches:
+        if name in bindings:
+            raise ValueError("safe-run repeats a safety artifact binding")
+        bindings[name] = (digest, int(size))
+    if set(bindings) != set(expected):
+        raise ValueError("safe-run safety artifact bindings are incomplete")
+    for name, path in expected.items():
+        try:
+            size = path.stat().st_size
+            digest = sha256_file(path)
+        except OSError as error:
+            raise ValueError("a wrapper safety artifact is absent") from error
+        if bindings[name] != (digest, size):
+            raise ValueError("wrapper safety artifact differs from its receipt")
 
 
 def terminate_exact(process: subprocess.Popen[Any], start_ticks: int) -> None:

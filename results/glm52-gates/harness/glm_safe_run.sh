@@ -638,6 +638,16 @@ elif grep -Eiq 'NVRM.*Xid' "$KERNEL_LOG"; then
   RC=16
 fi
 sync -d "$KERNEL_LOG" 2>/dev/null || true
+for safety_artifact in "$SAMP" "$KERNEL_LOG"; do
+  if [[ ! -f $safety_artifact || -L $safety_artifact ]]; then
+    plog "FATAL wrapper safety artifact is absent or unsafe path=$safety_artifact"
+    RC=17
+    continue
+  fi
+  safety_sha256=$(sha256sum -- "$safety_artifact" | awk '{print $1}')
+  safety_size=$(stat -Lc '%s' -- "$safety_artifact")
+  plog "safety_artifact_verified name=$(basename -- "$safety_artifact") sha256=$safety_sha256 size=$safety_size"
+done
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
 if [[ -n $WITNESS_NONCE ]]; then
   if [[ ! -f $WITNESS_ARTIFACT || -L $WITNESS_ARTIFACT ]]; then
