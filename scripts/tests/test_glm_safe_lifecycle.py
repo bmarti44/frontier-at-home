@@ -120,6 +120,14 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertNotIn("-z $CURRENT_HASH", guarded)
         self.assertNotIn("-z $CURRENT_DEVICE_INODE", guarded)
 
+    def test_missing_start_ticks_make_identity_sample_incomplete(self):
+        source = SAFE.read_text(encoding="utf-8")
+        start = source.index("      IDENTITY_INCOMPLETE=0")
+        end = source.index(
+            "      if [[ -n $CURRENT_START_TICKS", start
+        )
+        self.assertIn("-z $CURRENT_START_TICKS", source[start:end])
+
     def test_verified_candidate_environment_is_hash_bound_from_proc(self):
         source = SAFE.read_text(encoding="utf-8")
         self.assertIn("GLM_SAFE_PROVENANCE_ENV_ALLOWLIST", source)
