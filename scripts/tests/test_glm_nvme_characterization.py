@@ -117,6 +117,30 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             os.killpg(process.pid, signal.SIGKILL)
             process.wait()
 
+    def test_exclusivity_ignores_reaped_fio_zombie(self):
+        probe = load_probe()
+        code = (
+            "import ctypes,os; "
+            "ctypes.CDLL(None).prctl(15, b'fio', 0, 0, 0); "
+            "os._exit(0)"
+        )
+        process = subprocess.Popen([sys.executable, "-c", code])
+        try:
+            for _ in range(200):
+                try:
+                    fields = Path(f"/proc/{process.pid}/stat").read_text().split()
+                except FileNotFoundError:
+                    self.fail("test process was unexpectedly reaped")
+                if fields[2] == "Z":
+                    break
+                time.sleep(0.01)
+            else:
+                self.fail("test process did not enter zombie state")
+            conflicts = probe.conflicting_processes(allowed_process_group=-1)
+            self.assertNotIn(process.pid, {row["pid"] for row in conflicts})
+        finally:
+            process.wait()
+
     def test_target_validation_rejects_symlinks_and_non_regular_files(self):
         probe = load_probe()
         with tempfile.TemporaryDirectory() as temporary:
