@@ -321,6 +321,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         self.assertEqual(envelope["margin_bytes"], 4 * 1024**3)
         self.assertEqual(envelope["memory_high_gib"], 69)
         self.assertEqual(envelope["memory_max_gib"], 71)
+        self.assertEqual(envelope["minimum_start_available_gib"], 114)
         self.assertGreaterEqual(
             envelope["memory_high_bytes"],
             envelope["non_arena_cgroup_peak_bytes"]
@@ -333,6 +334,13 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             + envelope["arena_bytes"]
             + envelope["margin_bytes"],
         )
+        for runner in (
+            CAMPAIGN.run_sha_prefetch_campaign,
+            CAMPAIGN.run_sha_prefetch_quality_campaign,
+        ):
+            source = inspect.getsource(runner)
+            self.assertIn("minimum_start_available_gib", source)
+            self.assertNotIn('"GLM_SAFE_MIN_START_GIB": "110"', source)
         with self.assertRaises(ValueError):
             CAMPAIGN.derive_memory_envelope(
                 non_arena_peak_bytes=35 * 1024**3,
