@@ -330,7 +330,8 @@ class CandidateLifecycleTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
-            "executed candidate clean exit verified after wrapper and descendant checks",
+            "executed candidate was verified alive at least once; no identity "
+            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
             main,
         )
 
@@ -391,11 +392,13 @@ class CurrentUserTimestampTests(unittest.TestCase):
             "  count=$((count + 1))\n"
             "  printf '%s\\n' \"$count\" >\"$GLM_TEST_READLINK_COUNT\"\n"
             "  if (( count == 2 )); then\n"
-            "    /bin/kill -TERM \"${BASH_REMATCH[1]}\" 2>/dev/null || true\n"
-            "    for _ in $(/usr/bin/seq 1 100); do\n"
-            "      [[ ! -e $target ]] && break\n"
-            "      /bin/sleep 0.005\n"
-            "    done\n"
+            "    if [[ $GLM_TEST_READLINK_ACTION == exit ]]; then\n"
+            "      /bin/kill -TERM \"${BASH_REMATCH[1]}\" 2>/dev/null || true\n"
+            "      for _ in $(/usr/bin/seq 1 100); do\n"
+            "        [[ ! -e $target ]] && break\n"
+            "        /bin/sleep 0.005\n"
+            "      done\n"
+            "    fi\n"
             "    exit 1\n"
             "  fi\n"
             "fi\n"
@@ -461,6 +464,7 @@ class CurrentUserTimestampTests(unittest.TestCase):
                 "PATH": f"{self.shim_dir}:/usr/local/sbin:/usr/local/bin:"
                 "/usr/sbin:/usr/bin:/sbin:/bin",
                 "GLM_TEST_READLINK_COUNT": str(self.readlink_count),
+                "GLM_TEST_READLINK_ACTION": "exit",
             },
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -474,6 +478,26 @@ class CurrentUserTimestampTests(unittest.TestCase):
         )
         self.assertNotIn("executed candidate identity changed", main)
 
+    def test_unavailable_identity_while_candidate_is_live_is_rejected(self):
+        self.readlink_count.write_text("0\n", encoding="ascii")
+        result = self.run_current_user_mutation(
+            "clean",
+            {
+                "PATH": f"{self.shim_dir}:/usr/local/sbin:/usr/local/bin:"
+                "/usr/sbin:/usr/bin:/sbin:/bin",
+                "GLM_TEST_READLINK_COUNT": str(self.readlink_count),
+                "GLM_TEST_READLINK_ACTION": "unavailable",
+            },
+        )
+        self.assertEqual(result.returncode, 11, result.stdout + result.stderr)
+        match = re.search(r" dir=(\S+)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+        self.assertIn(
+            "executed candidate identity unavailable while process remained live",
+            main,
+        )
+
     def test_clean_reaped_candidate_between_sampler_ticks_is_attested(self):
         result = self.run_current_user_mutation("reaped")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -481,7 +505,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
-            "executed candidate clean exit verified after wrapper and descendant checks",
+            "executed candidate was verified alive at least once; no identity "
+            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
             main,
         )
 
@@ -492,7 +517,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
-            "executed candidate clean exit verified after wrapper and descendant checks",
+            "executed candidate was verified alive at least once; no identity "
+            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
             main,
         )
 
@@ -503,7 +529,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         self.assertIsNotNone(match, result.stdout)
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn(
-            "executed candidate clean exit verified after wrapper and descendant checks",
+            "executed candidate was verified alive at least once; no identity "
+            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
             main,
         )
 
@@ -523,7 +550,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
         main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
         self.assertIn("isolated process group survived command completion", main)
         self.assertNotIn(
-            "executed candidate clean exit verified after wrapper and descendant checks",
+            "executed candidate was verified alive at least once; no identity "
+            "contradiction observed at 4 Hz; wrapper and descendant checks clean",
             main,
         )
 

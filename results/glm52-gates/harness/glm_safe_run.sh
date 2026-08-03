@@ -405,6 +405,12 @@ PY
       CURRENT_PATH=$(readlink -f -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
       CURRENT_HASH=$(sha256sum -- "/proc/$EXECUTED_PID/exe" 2>/dev/null | awk '{print $1}')
       CURRENT_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+      IDENTITY_INCOMPLETE=0
+      if [[ -z $CURRENT_GROUP || -z $CURRENT_PATH ||
+            $CURRENT_PATH == "/proc/$EXECUTED_PID/exe" ||
+            -z $CURRENT_HASH || -z $CURRENT_DEVICE_INODE ]]; then
+        IDENTITY_INCOMPLETE=1
+      fi
       if [[ -n $CURRENT_START_TICKS &&
             $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
         plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=start-ticks"
@@ -415,16 +421,47 @@ PY
       elif [[ -z $CURRENT_STATE || $CURRENT_STATE == Z || $CURRENT_STATE == X ]]; then
         EXECUTED_CANDIDATE_EXIT_PENDING=1
         plog "executed candidate exited; monitoring controller and process group pid=$EXECUTED_PID"
-      elif [[ $CURRENT_GROUP != "$PG" ||
-              $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ||
-              $CURRENT_PATH != "$CANDIDATE_BINARY" ||
-              $CURRENT_HASH != "$EXPECTED_BINARY_SHA256" ||
-              $CURRENT_DEVICE_INODE != "$CANDIDATE_DEVICE_INODE" ]]; then
+      elif [[ (-n $CURRENT_GROUP && $CURRENT_GROUP != "$PG") ||
+              (-n $CURRENT_PATH &&
+               $CURRENT_PATH != "/proc/$EXECUTED_PID/exe" &&
+               $CURRENT_PATH != "$CANDIDATE_BINARY") ||
+              (-n $CURRENT_HASH && $CURRENT_HASH != "$EXPECTED_BINARY_SHA256") ||
+              (-n $CURRENT_DEVICE_INODE &&
+               $CURRENT_DEVICE_INODE != "$CANDIDATE_DEVICE_INODE") ]]; then
         plog "FATAL executed candidate identity changed pid=$EXECUTED_PID start_ticks=$CURRENT_START_TICKS pgid=${CURRENT_GROUP:-missing} path=${CURRENT_PATH:-missing} executed_binary_sha256=${CURRENT_HASH:-missing} device_inode=${CURRENT_DEVICE_INODE:-missing}"
         kill -KILL -- -"$PG" 2>/dev/null || true
         KILLED=provenance
         PROVENANCE_FAILURE=continuous-identity
         break
+      elif [[ $IDENTITY_INCOMPLETE == 1 ]]; then
+        CONFIRM_STATE=""
+        CONFIRM_START_TICKS=""
+        CONFIRM_STAT=""
+        IFS= read -r CONFIRM_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
+        if [[ -n $CONFIRM_STAT ]]; then
+          CONFIRM_STAT_REST=${CONFIRM_STAT##*) }
+          read -r -a CONFIRM_STAT_FIELDS <<<"$CONFIRM_STAT_REST"
+          CONFIRM_STATE=${CONFIRM_STAT_FIELDS[0]:-}
+          CONFIRM_START_TICKS=${CONFIRM_STAT_FIELDS[19]:-}
+        fi
+        if [[ -n $CONFIRM_START_TICKS &&
+              $CONFIRM_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
+          plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=confirmed-start-ticks"
+          kill -KILL -- -"$PG" 2>/dev/null || true
+          KILLED=provenance
+          PROVENANCE_FAILURE=continuous-identity
+          break
+        elif [[ -z $CONFIRM_STATE ||
+                $CONFIRM_STATE == Z || $CONFIRM_STATE == X ]]; then
+          EXECUTED_CANDIDATE_EXIT_PENDING=1
+          plog "executed candidate exited during identity sample; monitoring controller and process group pid=$EXECUTED_PID"
+        else
+          plog "FATAL executed candidate identity unavailable while process remained live pid=$EXECUTED_PID start_ticks=$CONFIRM_START_TICKS state=$CONFIRM_STATE"
+          kill -KILL -- -"$PG" 2>/dev/null || true
+          KILLED=provenance
+          PROVENANCE_FAILURE=continuous-identity
+          break
+        fi
       fi
     fi
   fi
@@ -549,7 +586,7 @@ if [[ $CANDIDATE_PROVENANCE == 1 &&
       $EXECUTED_CANDIDATE_OBSERVED == 1 &&
       -z $PROVENANCE_FAILURE && $RC == 0 ]]; then
   EXECUTED_CANDIDATE_CLEAN_EXIT=1
-  plog "executed candidate clean exit verified after wrapper and descendant checks"
+  plog "executed candidate was verified alive at least once; no identity contradiction observed at 4 Hz; wrapper and descendant checks clean"
 fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
 RUN_ENDED_EPOCH=$(date -u +%s)
