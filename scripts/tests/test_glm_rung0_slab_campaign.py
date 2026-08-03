@@ -396,6 +396,16 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 + " sha256=" + hashlib.sha256(partial.read_bytes()).hexdigest()
                 + f" device_inode={details.st_dev}:{details.st_ino}:{details.st_size}"
             )
+            for copied_name, receipt_name in (
+                ("safety.samples.log", "samples.log"),
+                ("safety.kernel.log", "kernel.log"),
+            ):
+                evidence_path = probe / copied_name
+                main += (
+                    f"\nsafety_artifact_verified name={receipt_name} sha256="
+                    + hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+                    + f" size={evidence_path.stat().st_size}"
+                )
             (probe / "safety.main.log").write_text(main, encoding="utf-8")
             evidence = CAMPAIGN.derive_memory_probe_evidence(
                 probe, binary_sha256, candidate_commit
@@ -423,10 +433,27 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            original_samples = (probe / "safety.samples.log").read_text(
+                encoding="utf-8"
+            )
             (probe / "safety.samples.log").write_text(
                 samples.replace(str(110 * 1048576), str(100 * 1048576)),
                 encoding="utf-8",
             )
+            with self.assertRaises(ValueError):
+                CAMPAIGN.derive_memory_probe_evidence(
+                    probe, binary_sha256, candidate_commit
+                )
+            (probe / "safety.samples.log").write_text(
+                original_samples, encoding="utf-8"
+            )
+            (probe / "safety.kernel.log").write_text(
+                "different but still clean kernel log\n", encoding="utf-8"
+            )
+            with self.assertRaises(ValueError):
+                CAMPAIGN.derive_memory_probe_evidence(
+                    probe, binary_sha256, candidate_commit
+                )
             with self.assertRaises(ValueError):
                 CAMPAIGN.require_memory_probe_evidence(
                     probe, evidence, binary_sha256, candidate_commit

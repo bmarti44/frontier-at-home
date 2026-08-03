@@ -572,6 +572,14 @@ class CurrentUserTimestampTests(unittest.TestCase):
             self.assertIn(
                 f"final_artifact_verified path={artifact} sha256={digest} ", main
             )
+            for name in ("samples.log", "kernel.log"):
+                evidence = Path(match.group(1)) / name
+                evidence_digest = hashlib.sha256(evidence.read_bytes()).hexdigest()
+                self.assertIn(
+                    f"safety_artifact_verified name={name} "
+                    f"sha256={evidence_digest} size={evidence.stat().st_size}",
+                    main,
+                )
         finally:
             shutil.rmtree(artifact_root)
 
