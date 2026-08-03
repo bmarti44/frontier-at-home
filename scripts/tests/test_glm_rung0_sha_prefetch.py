@@ -323,6 +323,59 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             self.assertIn(command, parser_source)
         self.assertNotIn("--schedule-flip", parser_source)
 
+    def test_first_retained_request_is_the_true_cold_observation(self):
+        campaign = self.load_campaign()
+        arm_source = inspect.getsource(campaign.execute_arm)
+        normalize_source = inspect.getsource(campaign.normalize_sha_prefetch_reps)
+        self.assertIn('"--warmup", "0"', arm_source)
+        self.assertIn('"request_ordinal": ordinal', normalize_source)
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
+        records[0]["reps"][0]["request_ordinal"] = 1
+        with self.assertRaises(ValueError):
+            campaign.score_sha_prefetch_campaign(
+                records, manifest, freeze=freeze, quality_attempts=quality
+            )
+
+    def test_quality_path_binds_complete_official_fixture_before_and_after(self):
+        campaign = self.load_campaign()
+        source = inspect.getsource(campaign.run_sha_prefetch_quality_campaign)
+        scorer = inspect.getsource(campaign.score_sha_prefetch_directory)
+        self.assertGreaterEqual(source.count("content_complete_fixture_sha256"), 2)
+        self.assertIn("QUALITY_FIXTURE_CONTENT_SHA256", source)
+        self.assertIn("ordered_case_ids", source)
+        self.assertIn("fixture_content_sha256", scorer)
+        self.assertIn("parse_quality_tsv", scorer)
+
+    def test_bounded_probe_must_pass_before_full_campaign(self):
+        campaign = self.load_campaign()
+        self.assertTrue(callable(getattr(campaign, "run_sha_prefetch_probe", None)))
+        run_source = inspect.getsource(campaign.run_sha_prefetch_campaign)
+        cli_source = inspect.getsource(campaign.parse_cli)
+        self.assertIn('add_parser("sha-prefetch-probe")', cli_source)
+        self.assertIn("verified_sha_prefetch_probe_receipt", run_source)
+        self.assertLess(
+            run_source.index("verified_sha_prefetch_probe_receipt"),
+            run_source.index("out.mkdir"),
+        )
+
+    def test_score_reauthenticates_randomness_and_rederives_raw_artifacts(self):
+        campaign = self.load_campaign()
+        score_source = inspect.getsource(campaign.score_sha_prefetch_directory)
+        self.assertIn("authenticate_confirmation", score_source)
+        self.assertIn("derive_sha_prefetch_record_from_artifacts", score_source)
+        self.assertIn("artifact_sha256", score_source)
+
+    def test_freeze_binds_every_declared_acceptance_test(self):
+        campaign = self.load_campaign()
+        expected = {
+            "scripts/tests/test_glm_rung0_sha_prefetch.py",
+            "scripts/tests/test_glm_expert_slab_source.py",
+            "scripts/tests/cpp/test_ds4_slab_prefetch_state.cpp",
+        }
+        self.assertEqual(set(campaign.sha_prefetch_test_hashes()), expected)
+        source = inspect.getsource(campaign.validate_sha_prefetch_freeze)
+        self.assertIn("tests_sha256_by_path", source)
+
     def test_scorer_rejects_arbitrary_configuration_digests(self):
         campaign = self.load_campaign()
         records, manifest, freeze, quality = self.passing_campaign(campaign)
