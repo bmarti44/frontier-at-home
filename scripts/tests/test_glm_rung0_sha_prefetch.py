@@ -171,13 +171,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     )
                 },
             })
-        source_hash = campaign._canonical_object_sha256({
-            "patch_sha256": campaign.sha256_file(
-                ROOT / "results/glm52-gates/harness/"
-                "ds4-expert-slab-prefetch-sha-pipeline.patch"
-            ),
-            "state_header_sha256": campaign.sha256_file(HEADER),
-        })
+        source_hash = campaign.sha_prefetch_source_hash()
         freeze = {
             "schema_version": 1,
             "candidate_commit": commit,
@@ -637,10 +631,19 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
 
     def test_freeze_binds_every_declared_acceptance_test(self):
         campaign = self.load_campaign()
+        self.assertIn(
+            "results/glm52-gates/harness/glm_safe_run.sh",
+            campaign.SHA_PREFETCH_SOURCE_PATHS,
+        )
+        self.assertIn(
+            "scripts/tests/test_glm_safe_lifecycle.py",
+            campaign.SHA_PREFETCH_TEST_PATHS,
+        )
         expected = {
             "scripts/tests/test_glm_rung0_sha_prefetch.py",
             "scripts/tests/test_glm_expert_slab_source.py",
             "scripts/tests/cpp/test_ds4_slab_prefetch_state.cpp",
+            "scripts/tests/test_glm_safe_lifecycle.py",
         }
         self.assertEqual(set(campaign.sha_prefetch_test_hashes()), expected)
         source = inspect.getsource(campaign.validate_sha_prefetch_freeze)

@@ -155,11 +155,25 @@ SHA_PREFETCH_TEST_PATHS = (
     "scripts/tests/test_glm_rung0_sha_prefetch.py",
     "scripts/tests/test_glm_expert_slab_source.py",
     "scripts/tests/cpp/test_ds4_slab_prefetch_state.cpp",
+    "scripts/tests/test_glm_safe_lifecycle.py",
+)
+
+SHA_PREFETCH_SOURCE_PATHS = (
+    "results/glm52-gates/harness/ds4-expert-slab-prefetch-sha-pipeline.patch",
+    "results/glm52-gates/harness/ds4_slab_prefetch_state.h",
+    "results/glm52-gates/harness/glm_safe_run.sh",
+    "results/glm52-gates/harness/glm_cgroup_run.sh",
 )
 
 
 def sha_prefetch_test_hashes() -> dict[str, str]:
     return {path: sha256_file(ROOT / path) for path in SHA_PREFETCH_TEST_PATHS}
+
+
+def sha_prefetch_source_hash() -> str:
+    return _canonical_object_sha256({
+        path: sha256_file(ROOT / path) for path in SHA_PREFETCH_SOURCE_PATHS
+    })
 
 
 def validate_sha_prefetch_freeze(
@@ -172,15 +186,7 @@ def validate_sha_prefetch_freeze(
         "quality_binary_sha256", "source_sha256", "scorer_sha256",
         "tests_sha256_by_path", "frozen_epoch_s",
     }
-    expected_source = _canonical_object_sha256({
-        "patch_sha256": sha256_file(
-            ROOT / "results/glm52-gates/harness/"
-            "ds4-expert-slab-prefetch-sha-pipeline.patch"
-        ),
-        "state_header_sha256": sha256_file(
-            ROOT / "results/glm52-gates/harness/ds4_slab_prefetch_state.h"
-        ),
-    })
+    expected_source = sha_prefetch_source_hash()
     if (
         not isinstance(freeze, dict) or set(freeze) != expected_keys
         or freeze["schema_version"] != 1
@@ -403,15 +409,7 @@ def score_sha_prefetch_campaign(
         or manifest["freeze_sha256"] != _canonical_object_sha256(freeze)
     ):
         raise ValueError("campaign is not bound to the frozen candidate")
-    expected_source = _canonical_object_sha256({
-        "patch_sha256": sha256_file(
-            ROOT / "results/glm52-gates/harness/"
-            "ds4-expert-slab-prefetch-sha-pipeline.patch"
-        ),
-        "state_header_sha256": sha256_file(
-            ROOT / "results/glm52-gates/harness/ds4_slab_prefetch_state.h"
-        ),
-    })
+    expected_source = sha_prefetch_source_hash()
     if (
         freeze["source_sha256"] != expected_source
         or freeze["scorer_sha256"] != sha256_file(Path(__file__).resolve())
