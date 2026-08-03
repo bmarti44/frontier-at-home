@@ -162,8 +162,8 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             "engine does not include the shared prefetch state authority",
         )
         required_calls = (
-            ".issue(", ".complete_read(", ".claim(", ".copy_sync(",
-            ".copy_async(", ".poll(", ".reload(",
+            "->issue(", "->complete_read(", "->claim(", "->copy_sync(",
+            "->discard_ready(", "->reload(",
         )
         for call in required_calls:
             self.assertIn(call, source)
