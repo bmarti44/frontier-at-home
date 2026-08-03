@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -90,6 +91,31 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                 )
             self.assertEqual(returncode, 3)
             self.assertEqual(stderr_path.read_text(), "fio-readonly-error\n")
+
+    def test_exclusivity_allows_only_exact_launched_fio_command(self):
+        probe = load_probe()
+        code = (
+            "import ctypes,time; "
+            "ctypes.CDLL(None).prctl(15, b'fio', 0, 0, 0); "
+            "time.sleep(30)"
+        )
+        argv = [sys.executable, "-c", code]
+        process = subprocess.Popen(argv, start_new_session=True)
+        try:
+            for _ in range(100):
+                if Path(f"/proc/{process.pid}/comm").read_text().strip() == "fio":
+                    break
+                time.sleep(0.01)
+            conflicts = probe.conflicting_processes(
+                allowed_process_group=-1,
+                allowed_fio_argv=tuple(argv),
+            )
+            self.assertNotIn(process.pid, {row["pid"] for row in conflicts})
+            conflicts = probe.conflicting_processes(allowed_process_group=-1)
+            self.assertIn(process.pid, {row["pid"] for row in conflicts})
+        finally:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
 
     def test_target_validation_rejects_symlinks_and_non_regular_files(self):
         probe = load_probe()
