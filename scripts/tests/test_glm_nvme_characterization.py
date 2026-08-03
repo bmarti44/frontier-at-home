@@ -142,6 +142,9 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
         source = PROBE.read_text(encoding="utf-8")
         self.assertNotIn('add_argument("--lock"', source)
         self.assertNotIn('add_argument("--hwmon-root"', source)
+        self.assertNotIn('add_argument("--target"', source)
+        self.assertNotIn('add_argument("--target-sha256"', source)
+        self.assertIn("G6-rung0-io-sidecar-build.json", source)
 
     def test_cell_schedule_covers_primary_tail_and_sequential_once(self):
         probe = load_probe()
@@ -156,6 +159,14 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
         sequential = [cell for cell in cells if cell["kind"] == "sequential"]
         self.assertEqual(len(sequential), 3)
         self.assertEqual({cell["access"] for cell in sequential}, {"read"})
+        orders = []
+        for block_size in probe.BLOCK_SIZES:
+            orders.append(tuple(
+                cell["iodepth"] for cell in cells
+                if cell["kind"] == "primary" and
+                cell["block_size"] == block_size and cell["numjobs"] == 1
+            ))
+        self.assertEqual(len(set(orders)), len(probe.BLOCK_SIZES))
 
     def test_fixed_scorer_rejects_bad_qd1_and_duplicate_cells(self):
         probe = load_probe()
@@ -167,7 +178,8 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                 cell["iodepth"] == 1 and cell["numjobs"] == 1
             ) else 12.0
             rows.append({**cell, "bandwidth_gb_s": bandwidth,
-                         "device_tail_gb_s": bandwidth})
+                         "device_tail_gb_s": bandwidth,
+                         "temperature_start_c": {"temp1_input": 55.0}})
         score = probe.score_sweep(rows)
         self.assertEqual(score["verdict"], "PASS")
         self.assertAlmostEqual(score["future_engine_80pct_target_gb_s"], 9.6)
@@ -179,6 +191,15 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                 row["bandwidth_gb_s"] = 1.0
         self.assertEqual(probe.score_sweep(bad)["verdict"], "NO_RESULT")
         self.assertEqual(probe.score_sweep(rows[:-1] + [rows[0]])["verdict"], "FAIL")
+
+        high_qd = [row for row in rows if
+                   row["kind"] == "primary" and
+                   row["block_size"] == probe.MATCHED_RECORD_BYTES and
+                   row["iodepth"] in (16, 32)]
+        high_qd[-1]["bandwidth_gb_s"] = 100.0
+        high_qd[-1]["device_tail_gb_s"] = 100.0
+        robust = probe.score_sweep(rows)
+        self.assertLess(robust["matched_sustained_reference_gb_s"], 20.0)
 
     def test_target_device_resolves_to_its_own_nvme_controller(self):
         probe = load_probe()
@@ -195,6 +216,23 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             )
             self.assertEqual(resolved_block, block)
             self.assertEqual(resolved_controller, controller)
+
+    def test_near_zero_terminal_diskstats_interval_is_rejected(self):
+        probe = load_probe()
+        samples = []
+        for second in range(31):
+            samples.append({
+                "monotonic_ns": second * 1_000_000_000,
+                "temperatures_c": {"temp1_input": 50.0},
+                "temp1_alarm": 0, "temp1_max_c": 82.0,
+                "disk": {"sectors_read": second * 1_000_000},
+            })
+        final = dict(samples[-1])
+        final["monotonic_ns"] += 1
+        final["disk"] = {"sectors_read": samples[-1]["disk"]["sectors_read"]}
+        samples.append(final)
+        with self.assertRaises(ValueError):
+            probe.telemetry_metrics(samples)
 
     def test_telemetry_failure_terminates_and_reaps_fio(self):
         probe = load_probe()
