@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
@@ -71,11 +73,17 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             target.touch()
             target.write_bytes(b"x")
             with target.open("r+b") as stream:
-                stream.truncate(32 << 20)
+                stream.truncate(190_028_697_600)
             link = root / "link"
             link.symlink_to(target)
             identity = probe.validate_target(target)
-            self.assertEqual(identity["size"], 32 << 20)
+            self.assertEqual(identity["size"], 190_028_697_600)
+            wrong_size = root / "wrong-size"
+            wrong_size.write_bytes(b"x")
+            with wrong_size.open("r+b") as stream:
+                stream.truncate(32 << 20)
+            with self.assertRaises(ValueError):
+                probe.validate_target(wrong_size)
             with self.assertRaises(ValueError):
                 probe.validate_target(link)
             with self.assertRaises(ValueError):
@@ -106,6 +114,60 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             result.write_text(json.dumps(base), encoding="utf-8")
             with self.assertRaises(ValueError):
                 probe.parse_fio_result(result)
+
+    def test_parser_rejects_short_or_missing_status(self):
+        probe = load_probe()
+        malformed = {"jobs": [{
+            "read": {"bw_bytes": 1, "io_bytes": 1, "runtime": 0},
+            "write": {},
+        }]}
+        with tempfile.TemporaryDirectory() as temporary:
+            result = Path(temporary) / "fio.json"
+            result.write_text(json.dumps(malformed), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                probe.parse_fio_result(result)
+
+    def test_production_lock_cannot_be_overridden(self):
+        source = PROBE.read_text(encoding="utf-8")
+        self.assertNotIn('add_argument("--lock"', source)
+
+    def test_telemetry_failure_terminates_and_reaps_fio(self):
+        probe = load_probe()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pidfile = root / "pid"
+            raw = root / "raw.jsonl"
+            code = (
+                "import os,time,pathlib; "
+                f"pathlib.Path({str(pidfile)!r}).write_text(str(os.getpid())); "
+                "time.sleep(30)"
+            )
+            calls = 0
+            original = probe.thermal_sample
+
+            def failing_thermal(_hwmon):
+                nonlocal calls
+                calls += 1
+                if calls > 1:
+                    raise RuntimeError("telemetry disappeared")
+                return {"monotonic_ns": 1, "temperatures_c": {"temp1_input": 40.0},
+                        "temp1_alarm": 0}
+
+            probe.thermal_sample = failing_thermal
+            try:
+                with self.assertRaises(RuntimeError):
+                    probe.run_cell([sys.executable, "-c", code], root, raw)
+                pid = int(pidfile.read_text(encoding="utf-8"))
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(pid, 0)
+            finally:
+                probe.thermal_sample = original
+                if pidfile.exists():
+                    pid = int(pidfile.read_text(encoding="utf-8"))
+                    try:
+                        os.killpg(pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
             base["jobs"][0]["read"]["bw_bytes"] = 12_000_000_000
             base["jobs"][0]["write"]["io_bytes"] = 4096
             result.write_text(json.dumps(base), encoding="utf-8")
