@@ -446,6 +446,60 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     )
                     path.write_text(original, encoding="utf-8")
 
+    def test_scorer_consumes_the_actual_safety_parser_schema(self):
+        campaign = self.load_campaign()
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
+        canonical = {
+            "minimum_available_gib": 24.0,
+            "cgroup_high_events": 0,
+            "cgroup_max_events": 0,
+            "cgroup_oom_events": 0,
+            "cgroup_swap_bytes": 0,
+            "xid": False,
+            "survivors": [],
+            "failures": [],
+        }
+        for record in records:
+            record["safety"] = copy.deepcopy(canonical)
+        self.assertEqual(
+            campaign.score_sha_prefetch_campaign(
+                records, manifest, freeze=freeze, quality_attempts=quality
+            )["verdict"],
+            "PASS",
+        )
+
+    def test_duplicate_authentic_artifact_bundle_is_rejected(self):
+        campaign = self.load_campaign()
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
+        records[1]["artifact_sha256"] = copy.deepcopy(
+            records[0]["artifact_sha256"]
+        )
+        with self.assertRaises(ValueError):
+            campaign.score_sha_prefetch_campaign(
+                records, manifest, freeze=freeze, quality_attempts=quality
+            )
+
+    def test_external_nvme_trace_rejects_qd1_qd9_and_reordering(self):
+        campaign = self.load_campaign()
+        good = [
+            "META read_before=10 read_after=1000010 start_ns=1000 end_ns=5000",
+            "1000 0", "2000 4", "3000 8", "4000 2", "5000 0",
+        ]
+        parsed = campaign.parse_nvme_inflight_log(
+            "\n".join(good), require_ring_qd=True
+        )
+        self.assertEqual(parsed["peak_read_qd"], 8)
+        for mutation in (
+            [line.replace("2000 4", "2000 1").replace("3000 8", "3000 1")
+             for line in good],
+            [line.replace("3000 8", "3000 9") for line in good],
+            [good[0], good[2], good[1], *good[3:]],
+        ):
+            with self.assertRaises(ValueError):
+                campaign.parse_nvme_inflight_log(
+                    "\n".join(mutation), require_ring_qd=True
+                )
+
     def test_score_reauthenticates_randomness_and_rederives_raw_artifacts(self):
         campaign = self.load_campaign()
         score_source = inspect.getsource(campaign.score_sha_prefetch_directory)
