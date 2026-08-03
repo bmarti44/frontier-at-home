@@ -648,6 +648,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         )
         expected = {
             "scripts/tests/test_glm_rung0_sha_prefetch.py",
+            "scripts/tests/test_glm_rung0_slab_campaign.py",
             "scripts/tests/test_glm_expert_slab_source.py",
             "scripts/tests/cpp/test_ds4_slab_prefetch_state.cpp",
             "scripts/tests/test_glm_safe_lifecycle.py",

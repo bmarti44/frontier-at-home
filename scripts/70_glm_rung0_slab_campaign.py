@@ -153,6 +153,7 @@ def _canonical_object_sha256(value: Any) -> str:
 
 SHA_PREFETCH_TEST_PATHS = (
     "scripts/tests/test_glm_rung0_sha_prefetch.py",
+    "scripts/tests/test_glm_rung0_slab_campaign.py",
     "scripts/tests/test_glm_expert_slab_source.py",
     "scripts/tests/cpp/test_ds4_slab_prefetch_state.cpp",
     "scripts/tests/test_glm_safe_lifecycle.py",
@@ -847,31 +848,45 @@ def validate_confirmation_record(
 
 
 def derive_memory_envelope(
-    non_arena_peak_bytes: int, host_total_bytes: int
+    non_arena_peak_bytes: int,
+    non_arena_cgroup_peak_bytes: int,
+    host_total_bytes: int,
 ) -> dict[str, int]:
-    """Derive the only accepted full-cache cgroup limit from a real probe."""
+    """Separate physical UMA pressure from memory charged to the cgroup."""
     if (
         isinstance(non_arena_peak_bytes, bool)
         or not isinstance(non_arena_peak_bytes, int)
+        or isinstance(non_arena_cgroup_peak_bytes, bool)
+        or not isinstance(non_arena_cgroup_peak_bytes, int)
         or isinstance(host_total_bytes, bool)
         or not isinstance(host_total_bytes, int)
         or not 8 * 1024**3 <= non_arena_peak_bytes <= 48 * 1024**3
+        or not 1 <= non_arena_cgroup_peak_bytes <= non_arena_peak_bytes
         or host_total_bytes < 110 * 1024**3
     ):
         raise ValueError("memory probe values are outside the bounded host model")
-    required = non_arena_peak_bytes + ARENA_BYTES + MEMORY_MARGIN_BYTES
-    memory_high_gib = math.ceil(required / 1024**3)
+    projected_physical_peak_bytes = (
+        non_arena_peak_bytes + ARENA_BYTES + MEMORY_MARGIN_BYTES
+    )
+    cgroup_required_bytes = (
+        non_arena_cgroup_peak_bytes + ARENA_BYTES + MEMORY_MARGIN_BYTES
+    )
+    memory_high_gib = math.ceil(cgroup_required_bytes / 1024**3)
     memory_max_gib = memory_high_gib + MEMORY_MAX_EXCURSION_GIB
     if (
         memory_high_gib < 32
         or memory_high_gib > 101
+        or projected_physical_peak_bytes
+        + HOST_KILL_FLOOR_GIB * 1024**3 > host_total_bytes
         or (memory_max_gib + HOST_KILL_FLOOR_GIB) * 1024**3 > host_total_bytes
     ):
         raise ValueError("measured GLM envelope cannot preserve the host kill floor")
     return {
         "non_arena_peak_bytes": non_arena_peak_bytes,
+        "non_arena_cgroup_peak_bytes": non_arena_cgroup_peak_bytes,
         "arena_bytes": ARENA_BYTES,
         "margin_bytes": MEMORY_MARGIN_BYTES,
+        "projected_physical_peak_bytes": projected_physical_peak_bytes,
         "memory_high_bytes": memory_high_gib * 1024**3,
         "memory_high_gib": memory_high_gib,
         "memory_max_gib": memory_max_gib,
@@ -1215,6 +1230,18 @@ def measured_non_arena_peak_bytes(samples: str, main: str) -> int:
     if host_loss <= 0:
         raise ValueError("memory probe did not measure positive host memory use")
     return max([rss, host_loss, *cgroup_peaks])
+
+
+def measured_cgroup_peak_bytes(samples: str) -> int:
+    """Return the independently sampled peak actually charged to the cgroup."""
+    values = [
+        int(match.group(1))
+        for match in re.finditer(r"\bcgroup_peak_bytes=(\d+)\b", samples)
+        if int(match.group(1)) > 0
+    ]
+    if len(values) < 2:
+        raise ValueError("memory probe lacks repeated cgroup peak samples")
+    return max(values)
 
 
 def quality_command(
@@ -2465,8 +2492,10 @@ def verified_memory_envelope(
         "probe_environment_sha256",
         "probe_safety",
         "non_arena_peak_bytes",
+        "non_arena_cgroup_peak_bytes",
         "arena_bytes",
         "margin_bytes",
+        "projected_physical_peak_bytes",
         "memory_high_bytes",
         "memory_high_gib",
         "memory_max_gib",
@@ -2489,7 +2518,9 @@ def verified_memory_envelope(
     ):
         raise ValueError("memory envelope identity or safety evidence is invalid")
     derived = derive_memory_envelope(
-        envelope["non_arena_peak_bytes"], envelope["host_total_bytes"]
+        envelope["non_arena_peak_bytes"],
+        envelope["non_arena_cgroup_peak_bytes"],
+        envelope["host_total_bytes"],
     )
     if any(envelope.get(name) != value for name, value in derived.items()):
         raise ValueError("memory envelope arithmetic differs from the fixed formula")
@@ -2586,6 +2617,7 @@ def run_memory_probe(args: argparse.Namespace) -> int:
     kernel = (arm_out / "safety.kernel.log").read_text(encoding="utf-8")
     safety = parse_safety_logs(main, samples, kernel)
     non_arena_peak_bytes = measured_non_arena_peak_bytes(samples, main)
+    non_arena_cgroup_peak_bytes = measured_cgroup_peak_bytes(samples)
     host_total_bytes = next(
         int(line.split()[1]) * 1024
         for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines()
@@ -2602,7 +2634,9 @@ def run_memory_probe(args: argparse.Namespace) -> int:
             probe_environment
         ),
         "probe_safety": safety,
-        **derive_memory_envelope(non_arena_peak_bytes, host_total_bytes),
+        **derive_memory_envelope(
+            non_arena_peak_bytes, non_arena_cgroup_peak_bytes, host_total_bytes
+        ),
     }
     write_json_exclusive(out / "memory-envelope.json", envelope)
     print(f"RUNG0_MEMORY_ENVELOPE out={out / 'memory-envelope.json'}")
