@@ -387,6 +387,11 @@ def conflicting_processes(
                 continue
             comm = (entry / "comm").read_text(encoding="utf-8").strip()
             raw_cmdline = (entry / "cmdline").read_bytes()
+            stat_line = (entry / "stat").read_text(encoding="utf-8")
+            close_paren = stat_line.rfind(")")
+            if close_paren < 0:
+                continue
+            process_state = stat_line[close_paren + 2:].split()[0]
             command = tuple(
                 part.decode("utf-8", errors="replace")
                 for part in raw_cmdline.split(b"\0")
@@ -396,6 +401,10 @@ def conflicting_processes(
                 "utf-8", errors="replace"
             )
         except (FileNotFoundError, PermissionError, ProcessLookupError):
+            continue
+        # A zombie has no address space and cannot submit I/O. /proc can retain
+        # comm while cmdline has already been cleared during normal fio exit.
+        if process_state == "Z":
             continue
         if comm == "fio" and allowed_fio_argv is not None and command == allowed_fio_argv:
             continue
