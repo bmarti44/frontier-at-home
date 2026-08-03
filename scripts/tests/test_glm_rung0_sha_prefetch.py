@@ -358,6 +358,53 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     "\n".join(mutation), "demand_sha", model_generation=9
                 )
 
+    def test_prefetch_log_parser_binds_raw_auth_to_terminal_telemetry(self):
+        campaign = self.load_campaign()
+        payload = campaign.EXPERT_RECORD_PAYLOAD_BYTES
+        auth = [
+            (
+                f"SLABAUTH mode=prefetch_sha generation=9 attempt={index} "
+                f"key={100 + index} submit_ns={1000 + index * 100} "
+                f"complete_ns={1080 + index * 100} "
+                f"payload_bytes={payload} ok=1"
+            )
+            for index in range(1, 5)
+        ]
+        load = (
+            "LOADPROF L3 uniq=8 hits=4 miss=4 hit_ms=1.00 fetch_ms=8.00 "
+            "fill_ms=1.00 total_ms=10.00 slab_mode=on slab_reads=2 "
+            f"slab_bytes={2 * payload} slab_actual_bytes={2 * payload} "
+            "slab_peak_qd=2 slab_io_ms=7.000 slab_validation_ms=0.500 "
+            "slab_copy_ms=0.400"
+        )
+        marker = (
+            "PREFETCHSHA mode=prefetch_sha generation=9 attempts=4 "
+            "sha_successes=4 sha_failures=0 ready=3 late=1 stale=0 "
+            f"fallback=1 copies=2 validated_bytes={4 * payload} "
+            f"copied_bytes={2 * payload} publications=2 read_ns=400 "
+            "sha_ns=200 wait_ns=100 copy_ns=80 current_ready=1 peak_qd=4"
+        )
+        parsed = campaign.parse_sha_prefetch_engine_log(
+            "\n".join([*auth, load, marker]),
+            "prefetch_sha",
+            model_generation=9,
+        )
+        self.assertEqual(parsed["telemetry"]["attempts"], 4)
+        self.assertEqual(parsed["telemetry"]["validated_bytes"], 4 * payload)
+        self.assertEqual(parsed["slab_peak_qd"], 4)
+        for bad_marker in (
+            marker.replace("attempts=4", "attempts=3"),
+            marker.replace("sha_successes=4", "sha_successes=3"),
+            marker.replace("sha_failures=0", "sha_failures=1"),
+        ):
+            with self.subTest(marker=bad_marker):
+                with self.assertRaises(ValueError):
+                    campaign.parse_sha_prefetch_engine_log(
+                        "\n".join([*auth, load, bad_marker]),
+                        "prefetch_sha",
+                        model_generation=9,
+                    )
+
     def test_three_arm_scorer_rejects_malformed_or_partial_evidence(self):
         campaign = self.load_campaign()
         records, manifest, freeze, quality = self.passing_campaign(campaign)
