@@ -105,6 +105,286 @@ def arm_schedule(*, flip: bool = False) -> tuple[tuple[int, int, str], ...]:
     return tuple(rows)
 
 
+def sha_prefetch_schedule(flip: bool = False) -> tuple[tuple[int, int, str], ...]:
+    """Five-block, three-arm schedule frozen before the async implementation."""
+    orders = ("ABC", "BCA", "CAB", "CBA", "ACB")
+    if flip:
+        orders = tuple(order[::-1] for order in orders)
+    return tuple(
+        (block, sequence, arm)
+        for block, order in enumerate(orders)
+        for sequence, arm in enumerate(order)
+    )
+
+
+def score_sha_prefetch_campaign(
+    records: list[dict[str, Any]],
+    manifest: dict[str, Any],
+    *,
+    schedule_flip: bool = False,
+) -> dict[str, Any]:
+    """Score the frozen A=off/B=demand-SHA/C=prefetch-SHA campaign."""
+    expected_manifest_keys = {
+        "schema_version", "candidate_commit", "binary_sha256",
+        "configuration_sha256_by_arm", "fixture_sha256",
+        "access_stream_sha256", "campaign_started_monotonic_ns",
+        "campaign_finished_monotonic_ns", "quality",
+    }
+    if set(manifest) != expected_manifest_keys or manifest["schema_version"] != 1:
+        raise ValueError("prefetch manifest schema is invalid")
+
+    def sha256(value: Any, label: str) -> str:
+        if (not isinstance(value, str) or len(value) != 64 or
+                any(character not in "0123456789abcdef" for character in value)):
+            raise ValueError(f"{label} is not a lowercase SHA-256")
+        return value
+
+    def finite(value: Any, label: str, *, positive: bool = False) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{label} is not numeric")
+        result = float(value)
+        if not math.isfinite(result) or (positive and result <= 0) or (
+            not positive and result < 0
+        ):
+            raise ValueError(f"{label} is not finite in the required range")
+        return result
+
+    def integer(value: Any, label: str, *, minimum: int = 0) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            raise ValueError(f"{label} is not an integer in the required range")
+        return value
+
+    commit = manifest["candidate_commit"]
+    if (not isinstance(commit, str) or len(commit) != 40 or
+            any(character not in "0123456789abcdef" for character in commit)):
+        raise ValueError("candidate commit is invalid")
+    binary = sha256(manifest["binary_sha256"], "manifest binary")
+    fixture = sha256(manifest["fixture_sha256"], "manifest fixture")
+    access = sha256(manifest["access_stream_sha256"], "manifest access stream")
+    configurations = manifest["configuration_sha256_by_arm"]
+    if not isinstance(configurations, dict) or set(configurations) != {"A", "B", "C"}:
+        raise ValueError("manifest arm configurations are invalid")
+    configurations = {
+        arm: sha256(value, f"configuration {arm}")
+        for arm, value in configurations.items()
+    }
+    if len(set(configurations.values())) != 3:
+        raise ValueError("campaign configurations are not distinct")
+    started = integer(
+        manifest["campaign_started_monotonic_ns"], "campaign start", minimum=1
+    )
+    finished = integer(
+        manifest["campaign_finished_monotonic_ns"], "campaign finish", minimum=1
+    )
+    if not started < finished or finished - started > 86_400 * 1_000_000_000:
+        raise ValueError("campaign is not a bounded contemporaneous window")
+    quality = manifest["quality"]
+    if (not isinstance(quality, dict) or set(quality) != {
+            "case_count", "token_weighted_delta_nll", "top1_loss_pp",
+            "deterministic"} or quality["case_count"] != 100 or
+            quality["token_weighted_delta_nll"] != 0.0 or
+            quality["top1_loss_pp"] != 0.0 or quality["deterministic"] is not True):
+        raise ValueError("lossless campaign quality binding is invalid")
+
+    schedule = sha_prefetch_schedule(schedule_flip)
+    if not isinstance(records, list) or len(records) != len(schedule):
+        raise ValueError("campaign requires exactly 15 fresh-server arms")
+    exact_record_keys = {
+        "schema_version", "block", "sequence", "arm", "mode",
+        "server_instance_id", "candidate_commit", "binary_sha256",
+        "configuration_sha256", "fixture_sha256", "access_stream_sha256",
+        "recorded_monotonic_ns", "reps", "engine", "safety",
+    }
+    expected_mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}
+    servers: set[str] = set()
+    paired_outputs: dict[tuple[int, int], set[tuple[Any, ...]]] = {}
+    metrics: dict[str, dict[str, dict[int, list[float]]]] = {
+        arm: {
+            "client": {block: [] for block in range(5)},
+            "raw": {block: [] for block in range(5)},
+            "cold": {block: [] for block in range(5)},
+            "warm": {block: [] for block in range(5)},
+        }
+        for arm in "ABC"
+    }
+    fetch_ms: dict[str, list[float]] = {"B": [], "C": []}
+
+    for ordinal, (record, scheduled) in enumerate(zip(records, schedule)):
+        if set(record) != exact_record_keys or record["schema_version"] != 1:
+            raise ValueError(f"arm {ordinal} schema is invalid")
+        block, sequence, arm = scheduled
+        if (record["block"], record["sequence"], record["arm"]) != scheduled:
+            raise ValueError("campaign arms are missing, duplicated, or reordered")
+        mode = expected_mode[arm]
+        if record["mode"] != mode:
+            raise ValueError("arm-to-mode mapping is invalid")
+        server = record["server_instance_id"]
+        if not isinstance(server, str) or not server or server in servers:
+            raise ValueError("campaign did not use unique fresh servers")
+        servers.add(server)
+        if (record["candidate_commit"] != commit or
+                sha256(record["binary_sha256"], "record binary") != binary or
+                sha256(record["configuration_sha256"], "record configuration") != configurations[arm] or
+                sha256(record["fixture_sha256"], "record fixture") != fixture or
+                sha256(record["access_stream_sha256"], "record access stream") != access):
+            raise ValueError("arm provenance differs from the frozen manifest")
+        recorded = integer(record["recorded_monotonic_ns"], "record time", minimum=1)
+        if not started <= recorded <= finished:
+            raise ValueError("historical or out-of-window arm is forbidden")
+
+        reps = record["reps"]
+        if not isinstance(reps, list) or len(reps) != 2 or [
+            rep.get("phase") if isinstance(rep, dict) else None for rep in reps
+        ] != ["cold", "warm"]:
+            raise ValueError("each fresh server requires cold then warm reps")
+        for rep_index, rep in enumerate(reps):
+            exact_rep_keys = {
+                "phase", "request_sha256", "generated_bytes_sha256",
+                "token_ids", "completion_tokens", "raw_token_timestamps_ns",
+                "client_token_timestamps_ns", "client_request_started_ns",
+                "client_first_token_ns", "client_last_token_ns", "ttft_seconds",
+            }
+            if not isinstance(rep, dict) or set(rep) != exact_rep_keys:
+                raise ValueError("rep schema is invalid")
+            count = integer(rep["completion_tokens"], "completion tokens", minimum=128)
+            token_ids = rep["token_ids"]
+            raw_times = rep["raw_token_timestamps_ns"]
+            client_times = rep["client_token_timestamps_ns"]
+            if (not isinstance(token_ids, list) or len(token_ids) != count or
+                    not isinstance(raw_times, list) or len(raw_times) != count or
+                    not isinstance(client_times, list) or len(client_times) != count or
+                    any(isinstance(value, bool) or not isinstance(value, int)
+                        for value in token_ids + raw_times + client_times) or
+                    any(right <= left for left, right in zip(raw_times, raw_times[1:])) or
+                    any(right <= left for left, right in zip(client_times, client_times[1:]))):
+                raise ValueError("generated token/timing evidence is incomplete")
+            request_started = integer(rep["client_request_started_ns"], "request start", minimum=1)
+            first = integer(rep["client_first_token_ns"], "first token", minimum=1)
+            last = integer(rep["client_last_token_ns"], "last token", minimum=1)
+            if (client_times[0] != first or client_times[-1] != last or
+                    not request_started < first < last):
+                raise ValueError("client timing endpoints are inconsistent")
+            ttft = (first - request_started) / 1e9
+            if not math.isclose(
+                ttft, finite(rep["ttft_seconds"], "reported TTFT", positive=True),
+                rel_tol=1e-12, abs_tol=1e-12,
+            ):
+                raise ValueError("reported TTFT differs from client endpoints")
+            client_elapsed = (client_times[-1] - client_times[0]) / 1e9
+            raw_elapsed = (raw_times[-1] - raw_times[0]) / 1e9
+            clock_ratio = raw_elapsed / client_elapsed
+            if not 0.75 <= clock_ratio <= 1.25:
+                raise ValueError("client and raw clocks disagree")
+            metrics[arm]["client"][block].append((count - 1) / client_elapsed)
+            metrics[arm]["raw"][block].append((count - 1) / raw_elapsed)
+            metrics[arm][rep["phase"]][block].append(ttft)
+            signature = (
+                sha256(rep["request_sha256"], "request"),
+                sha256(rep["generated_bytes_sha256"], "generated bytes"),
+                tuple(token_ids), count,
+            )
+            paired_outputs.setdefault((block, rep_index), set()).add(signature)
+
+        engine = record["engine"]
+        if not isinstance(engine, dict) or set(engine) != {
+            "mode", "model_generation", "slab_reads", "slab_peak_qd",
+            "completed_fetch_ms", "telemetry",
+        } or engine["mode"] != mode or integer(
+            engine["model_generation"], "model generation", minimum=1
+        ) != 9:
+            raise ValueError("engine mode/generation evidence is invalid")
+        reads = integer(engine["slab_reads"], "slab reads")
+        qd = integer(engine["slab_peak_qd"], "slab queue depth")
+        fetch = engine["completed_fetch_ms"]
+        if not isinstance(fetch, list) or any(
+            not math.isfinite(finite(value, "completed fetch", positive=True))
+            for value in fetch
+        ):
+            raise ValueError("completed-fetch timing is invalid")
+        if arm == "A":
+            if reads != 0 or qd != 0 or fetch:
+                raise ValueError("slab-off arm performed slab work")
+        else:
+            if reads <= 0 or qd < 2 or len(fetch) < 3:
+                raise ValueError("slab arm lacks completed I/O coverage")
+            fetch_ms[arm].extend(float(value) for value in fetch)
+        telemetry = engine["telemetry"]
+        telemetry_keys = {
+            "attempts", "sha_successes", "sha_failures", "ready", "late",
+            "stale", "fallback", "copies", "validated_bytes", "copied_bytes",
+            "publications", "read_ns", "sha_ns", "wait_ns", "copy_ns",
+        }
+        if not isinstance(telemetry, dict) or set(telemetry) != telemetry_keys:
+            raise ValueError("prefetch telemetry schema is invalid")
+        t = {name: integer(value, f"telemetry {name}") for name, value in telemetry.items()}
+        if (t["attempts"] != t["sha_successes"] + t["sha_failures"] or
+                t["sha_failures"] != 0 or t["copies"] > t["sha_successes"] or
+                t["publications"] > t["copies"] or
+                t["copied_bytes"] > t["validated_bytes"]):
+            raise ValueError("prefetch telemetry does not reconcile")
+        if arm == "A" and any(t.values()):
+            raise ValueError("slab-off telemetry is nonzero")
+        if arm == "B" and (t["ready"] or t["late"] or t["stale"] or t["fallback"]):
+            raise ValueError("demand-only arm emitted prefetch outcomes")
+        if arm == "C" and (
+            t["ready"] + t["late"] + t["stale"] != t["sha_successes"] or
+            t["fallback"] > t["late"]
+        ):
+            raise ValueError("prefetch terminal outcomes do not reconcile")
+
+        safety = record["safety"]
+        if not isinstance(safety, dict) or set(safety) != {
+            "minimum_available_gib", "swap_bytes", "oom_events", "xid", "survivors"
+        } or finite(safety["minimum_available_gib"], "available memory", positive=True) < 10 or \
+                safety["swap_bytes"] != 0 or safety["oom_events"] != 0 or \
+                safety["xid"] is not False or safety["survivors"] != []:
+            raise ValueError("arm safety evidence is invalid")
+
+    if len(paired_outputs) != 10 or any(
+        len(values) != 1 for values in paired_outputs.values()
+    ):
+        raise ValueError("paired requests, bytes, or token IDs differ across arms")
+
+    block_means: dict[str, dict[str, list[float]]] = {
+        arm: {metric: [] for metric in ("client", "raw", "cold", "warm")}
+        for arm in "ABC"
+    }
+    for arm in "ABC":
+        for metric in block_means[arm]:
+            for block in range(5):
+                values = metrics[arm][metric][block]
+                expected_count = 2 if metric in {"client", "raw"} else 1
+                if len(values) != expected_count:
+                    raise ValueError("block metric coverage is incomplete")
+                block_means[arm][metric].append(statistics.fmean(values))
+
+    decode_bounds: dict[str, float] = {}
+    ttft_bounds: dict[str, float] = {}
+    for comparator in ("A", "B"):
+        for clock in ("client", "raw"):
+            decode_bounds[f"C/{comparator}:{'client_wall' if clock == 'client' else 'raw_token'}"] = paired_ratio_bound(
+                block_means["C"][clock], block_means[comparator][clock], side="lower"
+            )
+        for phase in ("cold", "warm"):
+            ttft_bounds[f"C/{comparator}:{phase}"] = paired_ratio_bound(
+                block_means["C"][phase], block_means[comparator][phase], side="upper"
+            )
+    fetch_ratio = statistics.median(fetch_ms["C"]) / statistics.median(fetch_ms["B"])
+    verdict = "PASS" if (
+        fetch_ratio <= 0.90 and all(value > 1.0 for value in decode_bounds.values())
+        and all(value <= 1.05 for value in ttft_bounds.values())
+    ) else "FAIL"
+    return {
+        "scorer_id": "glm.rung0.full-sha-prefetch.v1",
+        "verdict": verdict,
+        "probe_completed_fetch_ratio": fetch_ratio,
+        "decode_ratio_lower_95_by_comparator_and_clock": decode_bounds,
+        "ttft_ratio_upper_95_by_comparator_and_state": ttft_bounds,
+        "block_means": block_means,
+        "quality": dict(quality),
+    }
+
+
 def safe_timeout_seconds(mode: str) -> int:
     """Allow the evidence-only 401 GB identity scan to finish unchanged."""
     if mode == "off":
