@@ -286,6 +286,63 @@ ceiling, and the ub2048 streamed-prefill ceiling. The currently documented
 until that artifact lands. The owner decision to stop or authorize a lossy
 rung is blocked on the recalibrated measured plateau.
 
+#### Completed NVMe characterization (`2026-08-03d`)
+
+The clean 45-cell read-only sweep is preserved in
+`NVME-characterization-final-2026-08-03.json`. Its formal verdict is
+**`NO_RESULT`**: the exact 9,732,096-byte QD1/single-job cell measured
+9.354496968 GB/s, outside the frozen 3.6-6.0 GB/s method-reproduction band.
+This is not silently relabeled as a PASS. All cells completed, fio reported
+zero writes and trims, the 190 GB target's pre/post SHA-256 is identical, and
+the maximum observed controller temperature was 60.85 C.
+
+The complete curve nevertheless falsifies the raw-drive bottleneck hypothesis
+and supplies bounded engineering diagnostics. Exact expert records peak at
+12.56426434920906 GB/s sustained with one QD4 ring; QD8 is close, while QD16,
+QD32 and four independent jobs are slower. Sequential 16 MiB reads peak at
+11.711432152234353 GB/s sustained at QD1. Therefore the next engine target is
+a single QD4-QD8 ring with at most eight persistent pinned buffers, not QD16-32
+or multiple independent job pools. The diagnostic 80% targets are
+10.051411479367248 GB/s for exact expert records and 9.369145721787483 GB/s
+for sequential evidence scans.
+
+At the exact-record drive rate, 5.8 GB of all-miss expert traffic is a
+drive-only 0.4616267087985234 seconds/token (2.166252474001562 tok/s). With a
+77% byte hit rate, the 1.334 GB/token miss component alone is
+0.10617414302366038 seconds/token (9.418489017398096 tok/s). These are component
+bounds, **not serving ceilings**. The e637 engine already approached 10 GB/s
+when an all-miss layer exposed eight reads, but cached layers normally exposed
+only one or two: a representative one-miss layer spent 1.01 ms in `pread`
+inside a 5.77 ms fetch window. Compute, checksum/copy cost, realized trace
+bytes and overlap remain measured inputs; total decode/prefill and the
+lossless plateau therefore remain provisional until the matched engine-stage
+gate below closes.
+
+#### Rung 0.2 - repeated-record validation and bounded submission
+
+Before changing prediction policy, isolate the reproduced roughly 4.8-5.0 ms
+post-read cost. The next candidate is default-off. A record's first use must
+still match its frozen SHA-256. Only after that match may the model-generation-
+bound record state cache a fast checksum for repeated reads; cleanup or model
+generation change clears it. A repeated read must validate the exact pinned
+bytes before any CUDA copy, and a one-byte mutation must fail closed. The
+implementation must label the fast checksum honestly, must not claim
+cryptographic collision resistance, and must retain the frozen whole-file and
+first-use SHA-256 chain.
+
+The production-path RED test and scorer are frozen before implementation.
+Telemetry must independently count first-use SHA checks, fast-check hits and
+failures, read time, validation time and copy time. First run a bounded serving
+probe. Continue to a matched campaign only if the fast-check arm materially
+reduces completed fetch time without a safety regression. Adoption requires
+both a positive decode lower confidence bound versus repeated SHA and a
+positive decode lower confidence bound versus the then-current slab-off best,
+byte-identical outputs, control TTFT no worse than 1.05x, corruption mutations
+that fail closed, no swap/Xid/OOM/survivor, and the fixed quality suite if the
+lever is retained. If it improves slab transport but does not beat slab-off,
+keep it only as an unadopted component for the immediately following corrected
+cross-layer-prefetch candidate; do not call it a serving win.
+
 ### DSV4 bounded cold-load acceleration
 
 The owner has approved a DSV4 experiment after both the `e637b6f` campaign and
