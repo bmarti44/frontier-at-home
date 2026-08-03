@@ -1,5 +1,5 @@
 {
-  "artifact": "GLM-5.2 Rung 0.1 coalesced expert-slab terminal A/B result",
+  "artifact": "GLM-5.2 Rung 0.1 coalesced expert-slab post-hoc diagnostic rejection and formal NO_RESULT",
   "schema_version": 1,
   "candidate_engine_commit": "e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004",
   "candidate_binary_sha256": "5a7caa3e7fded039797e6a0158dd4687b932d3b3c5f225c05ac7a656021fbd1a",
@@ -17,6 +17,22 @@
       "cf2812a"
     ],
     "reason_for_v2": "SSE content fragments and separately retokenized reasoning/content channels are not one-to-one with generated raw tokens. The v1 reducer incorrectly rejected authentic 160-token reps containing 157 or 159 SSE fragments. Raw output coverage remains fixed at at least 128 tokens; SSE timestamps remain a monotonic client-wall envelope."
+  },
+  "formal_validity": {
+    "status": "NO_RESULT",
+    "reason": "The v2 client-wall scorer and the complete-quality timeout fix were frozen after the shared randomness and observations. The resulting diagnostic is reproducible and decisive but is not a preregistered terminal gate result.",
+    "next_candidate_requirement": "Freeze the complete harness, timeout, dual-clock scorer, tests, and hashes before fresh public randomness and any new measurements."
+  },
+  "future_fixed_scorer": {
+    "id": "glm.rung0.slab.v3-dual-clock",
+    "metric_scorer_sha256": "c334f5be67220c0081a5ec497b11fdc00eb8a934468be61ab58c68213231cfb2",
+    "metric_scorer_tests_sha256": "eb4bb6f5d1a4f49edf69a661caca4047538e6f92ebcb1b2cb96b4258496c3f33",
+    "acceptance": "A future PASS requires both the independent client-wall lower 95% ratio and raw-token-clock lower 95% ratio to exceed 1.0, plus the existing TTFT and fidelity gates.",
+    "diagnostic_reduction_of_existing_raw": {
+      "client_wall_decode_ratio_lower_95": 0.6732533993567755,
+      "raw_token_decode_ratio_lower_95": 0.6731187519883433,
+      "verdict": "FAIL"
+    }
   },
   "performance_campaign": {
     "path": "/home/bmarti44/.local/state/glm52-rung0-e637-ab-b1fd-20260802a",
@@ -65,6 +81,7 @@
       ]
     },
     "decode_ratio_lower_95": 0.6732533993567755,
+    "raw_token_decode_ratio_lower_95_sensitivity": 0.6731187519883433,
     "control_config_ttft_seconds_mean": {
       "slab_off": 29.8515156581,
       "slab_on": 44.52654697845
@@ -91,9 +108,11 @@
     "baseline_mean_avg_nll": 0.45145226406,
     "hosted_reference_top1_agreement": 0.83384090914,
     "hosted_reference_pair_agreement": 0.75316503141,
-    "hosted_reference_target_logprob_mae_nat": 0.38550036026
+    "hosted_reference_target_logprob_mae_nat": 0.38550036026,
+    "absolute_metric_source": "Arithmetic means over the 100 rows in each byte-identical quality TSV bound by quality_campaign.all_arm_tsv_sha256; cross-arm deltas are independently derived by the bound quality scorer."
   },
-  "verdict": "FAIL",
-  "decision": "REJECT slab-on candidate. It is byte-identical and safe but its decode lower 95% ratio is 0.6732533993567755, below the preregistered requirement that the lower bound exceed 1.0; its TTFT upper ratio also exceeds 1.05.",
+  "verdict": "NO_RESULT",
+  "diagnostic_verdict": "FAIL",
+  "decision": "Do not adopt slab-on. Both independent clocks diagnose a large regression (client-wall lower 95% ratio 0.6732533993567755; raw-token lower 95% ratio 0.6731187519883433), and the candidate is byte-identical and safe. Because the corrected formula was selected post-observation, this is an engineering rejection but not a formally preregistered terminal FAIL.",
   "reporting_caveat": "The 29.85 s and 44.53 s TTFT values are stripped control-configuration measurements used only to isolate the slab lever. They are not GLM serving-profile TTFT; the separately established exact-replay warm serving measurement is 1.755 s."
 }

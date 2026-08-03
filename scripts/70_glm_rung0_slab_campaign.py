@@ -2268,7 +2268,7 @@ def score_campaign(
     configurations: dict[str, set[str]] = {"off": set(), "on": set()}
     output_signatures: dict[int, set[tuple[Any, ...]]] = {0: set(), 1: set()}
     access_streams: set[str] = set()
-    per_row: dict[tuple[int, int], tuple[float, float, float]] = {}
+    per_row: dict[tuple[int, int], tuple[float, float, float, float]] = {}
     io_throughput: dict[str, list[float]] = {"off": [], "on": []}
 
     for index, record in enumerate(records):
@@ -2302,6 +2302,7 @@ def score_campaign(
         if not isinstance(reps, list) or len(reps) != 2:
             raise ValueError("each arm requires exactly two measured reps")
         decode_rates: list[float] = []
+        raw_decode_rates: list[float] = []
         ttfts: list[float] = []
         prompt_rates: list[float] = []
         for rep_index, rep in enumerate(reps):
@@ -2383,6 +2384,10 @@ def score_campaign(
             decode_rates.append(
                 (raw_token_count - 1) / positive(elapsed, "client decode elapsed")
             )
+            raw_decode_rates.append(
+                (raw_token_count - 1)
+                / positive(raw_elapsed, "raw token decode elapsed")
+            )
             ttft = (first_content - request_started) / 1_000_000_000
             reported_ttft = positive(rep.get("ttft_s"), "reported TTFT")
             if not math.isclose(ttft, reported_ttft, rel_tol=1e-12, abs_tol=1e-12):
@@ -2412,6 +2417,7 @@ def score_campaign(
             output_signatures[rep_index].add(signature)
         per_row[(record["block"], record["sequence"])] = (
             statistics.fmean(decode_rates),
+            statistics.fmean(raw_decode_rates),
             statistics.fmean(ttfts),
             statistics.fmean(prompt_rates),
         )
@@ -2508,14 +2514,16 @@ def score_campaign(
 
     decode_off: list[float] = []
     decode_on: list[float] = []
+    raw_decode_off: list[float] = []
+    raw_decode_on: list[float] = []
     ttft_off: list[float] = []
     ttft_on: list[float] = []
     prompt_rate_off: list[float] = []
     prompt_rate_on: list[float] = []
     for block in range(5):
-        for arm, decode_target, ttft_target, prompt_target in (
-            ("A", decode_off, ttft_off, prompt_rate_off),
-            ("B", decode_on, ttft_on, prompt_rate_on),
+        for arm, decode_target, raw_decode_target, ttft_target, prompt_target in (
+            ("A", decode_off, raw_decode_off, ttft_off, prompt_rate_off),
+            ("B", decode_on, raw_decode_on, ttft_on, prompt_rate_on),
         ):
             values = [
                 per_row[(block, record["sequence"])]
@@ -2525,18 +2533,34 @@ def score_campaign(
             if len(values) != 2:
                 raise ValueError("block does not contain two instances per arm")
             decode_target.append(statistics.fmean(value[0] for value in values))
-            ttft_target.append(statistics.fmean(value[1] for value in values))
-            prompt_target.append(statistics.fmean(value[2] for value in values))
+            raw_decode_target.append(statistics.fmean(value[1] for value in values))
+            ttft_target.append(statistics.fmean(value[2] for value in values))
+            prompt_target.append(statistics.fmean(value[3] for value in values))
 
-    decode_lower = paired_ratio_bound(decode_on, decode_off, side="lower")
+    client_decode_lower = paired_ratio_bound(decode_on, decode_off, side="lower")
+    raw_decode_lower = paired_ratio_bound(
+        raw_decode_on, raw_decode_off, side="lower"
+    )
+    decode_lower = min(client_decode_lower, raw_decode_lower)
     ttft_upper = paired_ratio_bound(ttft_on, ttft_off, side="upper")
-    verdict = "PASS" if decode_lower > 1.0 and ttft_upper <= 1.05 else "FAIL"
+    verdict = (
+        "PASS"
+        if client_decode_lower > 1.0
+        and raw_decode_lower > 1.0
+        and ttft_upper <= 1.05
+        else "FAIL"
+    )
     return {
-        "scorer_id": "glm.rung0.slab.v2-client-wall",
+        "scorer_id": "glm.rung0.slab.v3-dual-clock",
         "verdict": verdict,
         "decode_ratio_lower_95": decode_lower,
+        "decode_ratio_lower_95_by_clock": {
+            "client_wall": client_decode_lower,
+            "raw_token": raw_decode_lower,
+        },
         "warm_ttft_ratio_upper_95": ttft_upper,
         "decode_tps": {"off": decode_off, "on": decode_on},
+        "raw_decode_tps": {"off": raw_decode_off, "on": raw_decode_on},
         "warm_ttft_seconds": {"off": ttft_off, "on": ttft_on},
         "diagnostic_prompt_rate": {
             "label": "client-token-count divided by TTFT; not synchronized prefill",

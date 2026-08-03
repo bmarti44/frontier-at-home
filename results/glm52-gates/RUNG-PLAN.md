@@ -125,18 +125,22 @@ Current Rung 0.1 candidate reconciliation:
   24.878883 GiB available at the low point, and recorded zero cgroup events,
   swap, Xid, OOM, or survivor. Its 277.226-second TTFT includes the evidence-
   only 401 GB identity scan and is not a serving-profile TTFT;
-- the terminal five-block A/B on the same frozen `e637b6f` binary measured
+- the completed five-block A/B on the same frozen `e637b6f` binary measured
   **2.2977581991 tok/s OFF** and **1.5485937026 tok/s ON** on the independent
   client-wall clock. The decode lower 95% ratio is **0.6732533994** and the
   control-config TTFT upper 95% ratio is **1.4938309019**, so slab ON is
-  decisively rejected. These TTFTs isolate the slab in a stripped control
+  decisively diagnose a regression. The corrected client-wall formula was
+  frozen after observation, so the formal gate is **NO_RESULT**, not a
+  preregistered terminal FAIL; slab ON is still rejected from engineering
+  adoption. These TTFTs isolate the slab in a stripped control
   configuration and are not serving-profile TTFT;
 - the four-arm B/A/A/B 100-case campaign was deterministic and byte-identical:
   token-weighted delta NLL **0.0**, top-1 loss **0.0 pp**, baseline mean NLL
   **0.45145226406**, and hosted-reference top-1 agreement **0.83384090914**.
   Every arm had zero cgroup/OOM/swap/Xid/survivor failure and at least
-  24.69 GiB available. `R0-e637-slab-final-2026-08-03.json` binds the terminal
-  raw, manifest, receipt, summary, and quality hashes;
+  24.69 GiB available. `R0-e637-slab-final-2026-08-03.json` binds the raw,
+  manifest, receipt, post-hoc summary, and quality hashes and records the
+  formal **NO_RESULT**;
 - post-reconciliation public randomness round `6342798` is authenticated and
   bound to the two frozen hashes. Its campaign attempt is terminal
   `NO_RESULT`: two complete arms and the third arm's requests were safe and
