@@ -207,12 +207,14 @@ def _validate_sha_prefetch_quality(
     expected_mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}
     canonical_rows: list[dict[str, Any]] | None = None
     case_ids: list[str] | None = None
+    server_identities: set[str] = set()
     for attempt, arm in zip(attempts, "ABC", strict=True):
         if not isinstance(attempt, dict) or set(attempt) != {
             "schema_version", "arm", "mode", "candidate_commit",
             "binary_sha256", "configuration_sha256", "fixture_sha256",
             "quality_fixture_content_sha256", "ordered_case_ids",
-            "output_sha256", "rows",
+            "output_sha256", "rows", "server_instance_id", "safety",
+            "artifact_sha256",
         }:
             raise ValueError("quality attempt schema is invalid")
         rows = attempt["rows"]
@@ -232,6 +234,32 @@ def _validate_sha_prefetch_quality(
             or len(rows) != 100
         ):
             raise ValueError("quality attempt is incomplete or unbound")
+        server = attempt["server_instance_id"]
+        safety = attempt["safety"]
+        artifacts = attempt["artifact_sha256"]
+        if (
+            re.fullmatch(r"[0-9a-f]{64}", server or "") is None
+            or server in server_identities
+            or not isinstance(safety, dict) or set(safety) != {
+                "minimum_available_gib", "cgroup_high_events", "cgroup_max_events",
+                "cgroup_oom_events", "cgroup_swap_bytes", "xid", "survivors",
+                "failures",
+            }
+            or safety["minimum_available_gib"] < 10
+            or any(safety[name] != 0 for name in (
+                "cgroup_high_events", "cgroup_max_events", "cgroup_oom_events",
+                "cgroup_swap_bytes",
+            ))
+            or safety["xid"] is not False or safety["survivors"] != []
+            or safety["failures"] != []
+            or not isinstance(artifacts, dict)
+            or set(artifacts) != {"result.tsv", "safety.main.log", "safety.samples.log",
+                                  "safety.kernel.log", "safety.cmd.log"}
+            or any(re.fullmatch(r"[0-9a-f]{64}", value) is None
+                   for value in artifacts.values())
+        ):
+            raise ValueError("quality arm safety or identity is invalid")
+        server_identities.add(server)
         ids: list[str] = []
         for row in rows:
             if not isinstance(row, dict) or set(row) != {
@@ -404,10 +432,11 @@ def score_sha_prefetch_campaign(
         "server_instance_id", "candidate_commit", "binary_sha256",
         "configuration_sha256", "fixture_sha256", "access_stream_sha256",
         "recorded_monotonic_ns", "reps", "engine", "safety",
-        "artifact_sha256",
+        "artifact_sha256", "external_io",
     }
     expected_mode = expected_modes
     servers: set[str] = set()
+    artifact_bundles: set[str] = set()
     paired_outputs: dict[tuple[int, int], set[tuple[Any, ...]]] = {}
     metrics: dict[str, dict[str, dict[int, list[float]]]] = {
         arm: {
@@ -454,6 +483,10 @@ def score_sha_prefetch_campaign(
                    for value in artifacts.values())
         ):
             raise ValueError("arm source-artifact binding is incomplete")
+        bundle = _canonical_object_sha256(artifacts)
+        if bundle in artifact_bundles:
+            raise ValueError("campaign reused an arm artifact bundle")
+        artifact_bundles.add(bundle)
 
         reps = record["reps"]
         if not isinstance(reps, list) or len(reps) != 2 or [
@@ -532,7 +565,7 @@ def score_sha_prefetch_campaign(
             if reads != 0 or qd != 0 or fetch:
                 raise ValueError("slab-off arm performed slab work")
         else:
-            if reads <= 0 or qd < 2 or len(fetch) < 3:
+            if reads <= 0 or not 4 <= qd <= 8 or len(fetch) < 3:
                 raise ValueError("slab arm lacks completed I/O coverage")
             fetch_ms[arm].extend(float(value) for value in fetch)
         telemetry = engine["telemetry"]
@@ -574,11 +607,38 @@ def score_sha_prefetch_campaign(
 
         safety = record["safety"]
         if not isinstance(safety, dict) or set(safety) != {
-            "minimum_available_gib", "swap_bytes", "oom_events", "xid", "survivors"
+            "minimum_available_gib", "cgroup_high_events", "cgroup_max_events",
+            "cgroup_oom_events", "cgroup_swap_bytes", "xid", "survivors",
+            "failures",
         } or finite(safety["minimum_available_gib"], "available memory", positive=True) < 10 or \
-                safety["swap_bytes"] != 0 or safety["oom_events"] != 0 or \
-                safety["xid"] is not False or safety["survivors"] != []:
+                any(safety[name] != 0 for name in (
+                    "cgroup_high_events", "cgroup_max_events",
+                    "cgroup_oom_events", "cgroup_swap_bytes",
+                )) or safety["xid"] is not False or safety["survivors"] != [] or \
+                safety["failures"] != []:
             raise ValueError("arm safety evidence is invalid")
+        external = record["external_io"]
+        if not isinstance(external, dict) or set(external) != {
+            "read_bytes_delta", "elapsed_seconds", "sample_count", "peak_read_qd",
+            "sample_started_ns", "sample_finished_ns",
+        } or integer(external["sample_count"], "external sample count", minimum=2) < 2 or \
+                finite(external["elapsed_seconds"], "external elapsed", positive=True) <= 0 or \
+                integer(external["read_bytes_delta"], "external read bytes", minimum=1) < 1:
+            raise ValueError("external I/O evidence is invalid")
+        external_peak = integer(external["peak_read_qd"], "external peak QD")
+        sample_started = integer(
+            external["sample_started_ns"], "external first sample", minimum=1
+        )
+        sample_finished = integer(
+            external["sample_finished_ns"], "external last sample", minimum=1
+        )
+        if (
+            sample_started > min(rep["client_request_started_ns"] for rep in reps)
+            or sample_finished < max(rep["client_last_token_ns"] for rep in reps)
+        ):
+            raise ValueError("external NVMe samples do not span measured requests")
+        if arm != "A" and not 4 <= external_peak <= 8:
+            raise ValueError("external NVMe trace did not achieve bounded ring QD")
 
     if len(paired_outputs) != 10 or any(
         len(values) != 1 for values in paired_outputs.values()
@@ -1386,6 +1446,54 @@ def normalize_sha_prefetch_reps(reps: Any) -> list[dict[str, Any]]:
     return normalized
 
 
+def validate_sha_prefetch_benchmark_result(
+    result: Any, mode: str, seed: int
+) -> dict[str, Any]:
+    if not isinstance(result, dict) or result.get("suite_valid") is not True:
+        raise ValueError("speed result is invalid")
+    metadata = result.get("metadata")
+    expected = {
+        "stack_label": f"rung0-slab-{mode}", "reps": 2, "warmup_reps": 0,
+        "max_tokens": 160, "min_completion_tokens": 128,
+        "temperature": 0, "seed": seed, "model": "glm-5.2",
+        "output_tokenizer_path": str(TOKENIZER),
+        "output_tokenizer_sha256": TOKENIZER_SHA256,
+        "fixture_path": "fixtures/ctx-32k.txt",
+    }
+    if not isinstance(metadata, dict) or any(
+        metadata.get(name) != value for name, value in expected.items()
+    ):
+        raise ValueError("speed result metadata differs from the fixed arm")
+    cells = result.get("cells")
+    if (
+        not isinstance(cells, list) or len(cells) != 1
+        or not isinstance(cells[0], dict) or cells[0].get("ctx_tokens") != 0
+        or cells[0].get("valid") is not True
+    ):
+        raise ValueError("speed result cell shape is invalid")
+    return cells[0]
+
+
+def validate_server_token_evidence(text: str, reps: Any) -> None:
+    pattern = re.compile(
+        r"^DS4_TOKEN_TIMING request=(\S+) index=(\d+) "
+        r"monotonic_ns=(\d+) token=(-?\d+)$", re.MULTILINE
+    )
+    rows: dict[str, list[tuple[int, int, int]]] = {}
+    for request, index, timestamp, token in pattern.findall(text):
+        rows.setdefault(request, []).append((int(index), int(timestamp), int(token)))
+    if not isinstance(reps, list) or len(reps) != 2:
+        raise ValueError("server token evidence lacks exact reps")
+    for rep in reps:
+        request = rep.get("response_id") if isinstance(rep, dict) else None
+        expected = list(zip(
+            range(1, len(rep.get("token_ids", [])) + 1),
+            rep.get("token_timestamps_ns", []), rep.get("token_ids", []), strict=True,
+        )) if isinstance(rep, dict) else []
+        if not isinstance(request, str) or rows.get(request) != expected:
+            raise ValueError("speed result tokens differ from the server log")
+
+
 def parse_engine_log(text: str, mode: str) -> dict[str, Any]:
     """Reduce aggregate slab/cache telemetry without trusting its timings."""
     if mode not in {"off", "on"}:
@@ -1634,6 +1742,48 @@ def summarize_external_io(
         "elapsed_seconds": float(elapsed_seconds),
         "peak_read_qd": max(sample[1] for sample in samples),
         "sample_count": len(samples),
+    }
+
+
+def parse_nvme_inflight_log(
+    text: str, *, require_ring_qd: bool = False
+) -> dict[str, Any]:
+    lines = text.splitlines()
+    if len(lines) < 3:
+        raise ValueError("external NVMe trace is incomplete")
+    meta = re.fullmatch(
+        r"META read_before=(\d+) read_after=(\d+) start_ns=(\d+) end_ns=(\d+)",
+        lines[0],
+    )
+    if not meta:
+        raise ValueError("external NVMe trace metadata is malformed")
+    read_before, read_after, start_ns, end_ns = map(int, meta.groups())
+    samples: list[tuple[int, int]] = []
+    for line in lines[1:]:
+        match = re.fullmatch(r"(\d+) (\d+)", line)
+        if not match:
+            raise ValueError("external NVMe sample is malformed")
+        samples.append((int(match[1]), int(match[2])))
+    timestamps = [timestamp for timestamp, _ in samples]
+    if (
+        read_after <= read_before or start_ns <= 0 or end_ns <= start_ns
+        or len(samples) < 2
+        or any(right <= left for left, right in zip(timestamps, timestamps[1:]))
+        or timestamps[0] < start_ns or timestamps[-1] > end_ns
+        or timestamps[0] - start_ns > 100_000_000
+        or end_ns - timestamps[-1] > 100_000_000
+    ):
+        raise ValueError("external NVMe trace timing or byte coverage is invalid")
+    peak = max(qd for _, qd in samples)
+    if require_ring_qd and not 4 <= peak <= 8:
+        raise ValueError("external NVMe trace did not achieve QD4-QD8")
+    return {
+        "read_bytes_delta": read_after - read_before,
+        "elapsed_seconds": (end_ns - start_ns) / 1e9,
+        "sample_count": len(samples),
+        "peak_read_qd": peak,
+        "sample_started_ns": timestamps[0],
+        "sample_finished_ns": timestamps[-1],
     }
 
 
@@ -2008,6 +2158,7 @@ def execute_arm(args: argparse.Namespace) -> int:
 
             sampler = threading.Thread(target=sample_io, daemon=True)
             sampler.start()
+            probe_started_ns = time.monotonic_ns()
             probe_started = time.monotonic()
             completed = subprocess.run(
                 [
@@ -2057,34 +2208,33 @@ def execute_arm(args: argparse.Namespace) -> int:
                 if response.status != 200:
                     raise RuntimeError("final telemetry flush failed")
                 response.read()
-            probe_elapsed = time.monotonic() - probe_started
             read_after = proc_read_bytes(server.pid)
             stop_sampler.set()
             sampler.join(timeout=5)
+            probe_finished_ns = time.monotonic_ns()
+            probe_elapsed = time.monotonic() - probe_started
             if sampler.is_alive() or sampler_error:
                 raise RuntimeError(f"external I/O sampler failed: {sampler_error}")
             with (out / "nvme-inflight.log").open("x", encoding="ascii") as stream:
+                stream.write(
+                    f"META read_before={read_before} read_after={read_after} "
+                    f"start_ns={probe_started_ns} end_ns={probe_finished_ns}\n"
+                )
                 for timestamp_ns, qd in io_samples:
                     stream.write(f"{timestamp_ns} {qd}\n")
                 stream.flush()
                 os.fsync(stream.fileno())
-            external_io = summarize_external_io(
-                io_samples, read_before, read_after, probe_elapsed
+            external_io = parse_nvme_inflight_log(
+                (out / "nvme-inflight.log").read_text(encoding="ascii"),
+                require_ring_qd=sha_prefetch and mode != "off",
             )
             result = strict_json(out / "result.json")
-            cells = result.get("cells")
-            if (
-                result.get("suite_valid") is not True
-                or not isinstance(cells, list)
-                or len(cells) != 1
-                or not isinstance(cells[0], dict)
-                or cells[0].get("ctx_tokens") != 0
-            ):
-                raise ValueError("existing speed scorer result shape is invalid")
+            cell = validate_sha_prefetch_benchmark_result(result, mode, args.seed)
             server_log.flush()
             os.fsync(server_log.fileno())
             log_text = server_log_path.read_text(encoding="utf-8")
             if sha_prefetch:
+                validate_server_token_evidence(log_text, cell.get("reps"))
                 generic = parse_engine_log(
                     log_text, "off" if mode == "off" else "on"
                 )
@@ -2106,8 +2256,9 @@ def execute_arm(args: argparse.Namespace) -> int:
                     "fixture_sha256": sha256_file(FIXTURE),
                     "access_stream_sha256": generic["access_stream_sha256"],
                     "recorded_monotonic_ns": time.monotonic_ns(),
-                    "reps": normalize_sha_prefetch_reps(cells[0].get("reps")),
+                    "reps": normalize_sha_prefetch_reps(cell.get("reps")),
                     "engine": engine,
+                    "external_io": external_io,
                 }
             else:
                 engine = parse_engine_log(log_text, mode)
@@ -2124,7 +2275,7 @@ def execute_arm(args: argparse.Namespace) -> int:
                 ),
                 "fixture_sha256": sha256_file(FIXTURE),
                 "suite_valid": True,
-                "reps": cells[0].get("reps"),
+                "reps": cell.get("reps"),
                 "engine": engine,
                 "external_io": external_io,
                 "server_start_to_ready_seconds": ready_seconds,
@@ -2814,20 +2965,44 @@ def sha_prefetch_artifact_hashes(arm_out: Path) -> dict[str, str]:
     return {name: sha256_file(arm_out / name) for name in names}
 
 
+def sha_prefetch_quality_artifact_hashes(
+    quality_root: Path, arm: str
+) -> dict[str, str]:
+    label = f"sha-quality-{arm.lower()}"
+    paths = {
+        "result.tsv": quality_root / f"{label}.tsv",
+        **{
+            f"safety.{name}.log": quality_root / label / f"safety.{name}.log"
+            for name in ("main", "samples", "kernel", "cmd")
+        },
+    }
+    if any(not path.is_file() for path in paths.values()):
+        raise ValueError("quality arm is missing a result or safety witness")
+    return {name: sha256_file(path) for name, path in paths.items()}
+
+
+def safe_run_server_identity(main_log: str) -> str:
+    matches = re.findall(
+        r"executed_candidate_verified pid=(\d+) start_ticks=(\d+) path=(\S+) "
+        r"executed_binary_sha256=([0-9a-f]{64}) device_inode=(\d+:\d+)",
+        main_log,
+    )
+    if len(matches) != 1:
+        raise ValueError("safe-run log lacks one executed server identity")
+    return _canonical_object_sha256(list(matches[0]))
+
+
 def derive_sha_prefetch_record_from_artifacts(
     arm_out: Path, record: dict[str, Any], mode: str, model_generation: int,
+    seed: int,
 ) -> None:
     """Reparse independent timing, engine and safety sources at scoring time."""
     if record.get("artifact_sha256") != sha_prefetch_artifact_hashes(arm_out):
         raise ValueError("arm source artifact changed after collection")
     result = strict_json(arm_out / "result.json")
-    cells = result.get("cells")
-    if (
-        result.get("suite_valid") is not True or not isinstance(cells, list)
-        or len(cells) != 1 or cells[0].get("ctx_tokens") != 0
-    ):
-        raise ValueError("arm speed source is incomplete")
+    cell = validate_sha_prefetch_benchmark_result(result, mode, seed)
     log_text = (arm_out / "server.log").read_text(encoding="utf-8")
+    validate_server_token_evidence(log_text, cell.get("reps"))
     generic = parse_engine_log(log_text, "off" if mode == "off" else "on")
     engine = parse_sha_prefetch_engine_log(
         log_text, mode, model_generation=model_generation
@@ -2837,16 +3012,29 @@ def derive_sha_prefetch_record_from_artifacts(
         (arm_out / "safety.samples.log").read_text(encoding="utf-8"),
         (arm_out / "safety.kernel.log").read_text(encoding="utf-8"),
     )
+    external_io = parse_nvme_inflight_log(
+        (arm_out / "nvme-inflight.log").read_text(encoding="ascii"),
+        require_ring_qd=mode != "off",
+    )
     main_log = (arm_out / "safety.main.log").read_text(encoding="utf-8")
+    command_binding = (
+        f"sha-prefetch-arm --out {arm_out} --block {record.get('block')} "
+        f"--sequence {record.get('sequence')} --arm {record.get('arm')} "
+    )
     if (
         f"executed_binary_sha256={record.get('binary_sha256')}" not in main_log
         or f"executed_environment_sha256={record.get('configuration_sha256')}"
         not in main_log
         or record.get("fixture_sha256") != sha256_file(FIXTURE)
         or record.get("access_stream_sha256") != generic["access_stream_sha256"]
-        or record.get("reps") != normalize_sha_prefetch_reps(cells[0].get("reps"))
+        or record.get("reps") != normalize_sha_prefetch_reps(cell.get("reps"))
         or record.get("engine") != engine
         or record.get("safety") != safety
+        or record.get("external_io") != external_io
+        or record.get("server_instance_id") != safe_run_server_identity(main_log)
+        or command_binding not in main_log
+        or f"--candidate-commit {record.get('candidate_commit')}" not in main_log
+        or f"--model-generation {model_generation}" not in main_log
     ):
         raise ValueError("derived arm record differs from authoritative artifacts")
 
@@ -2885,10 +3073,23 @@ def verified_sha_prefetch_probe_receipt(
     if len(records) != 2 or [row.get("arm") for row in records] != ["B", "C"]:
         raise ValueError("bounded probe does not contain exact B/C records")
     for record, (sequence, arm) in zip(records, ((0, "B"), (1, "C")), strict=True):
+        mode = "demand_sha" if arm == "B" else "prefetch_sha"
+        if (
+            record.get("candidate_commit") != candidate_commit
+            or record.get("binary_sha256") != binary_sha256
+            or record.get("configuration_sha256")
+            != canonical_environment_sha256(canonical_sha_prefetch_environment(mode))
+            or record.get("fixture_sha256") != sha256_file(FIXTURE)
+            or record.get("engine", {}).get("model_generation") != model_generation
+        ):
+            raise ValueError("bounded probe record differs from its receipt identity")
         derive_sha_prefetch_record_from_artifacts(
             path.parent / "arms" / f"sha-b0s{sequence}{arm.lower()}", record,
-            "demand_sha" if arm == "B" else "prefetch_sha", model_generation,
+            mode, model_generation,
+            int(randomness["seed_sha256"][:8], 16),
         )
+    if records[0]["server_instance_id"] == records[1]["server_instance_id"]:
+        raise ValueError("bounded probe reused one contained server identity")
     recomputed_ratio = statistics.median(
         records[1]["engine"]["completed_fetch_ms"]
     ) / statistics.median(records[0]["engine"]["completed_fetch_ms"])
@@ -3030,6 +3231,9 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
                 raise RuntimeError(f"contained arm {label} failed rc={completed.returncode}")
             safety = _copy_and_parse_arm_safety(label, arm_out, crash_before)
             record = strict_json(arm_out / "partial.json")
+            record["server_instance_id"] = safe_run_server_identity(
+                (arm_out / "safety.main.log").read_text(encoding="utf-8")
+            )
             if expected_access_stream is None:
                 expected_access_stream = record.get("access_stream_sha256")
             if record.get("access_stream_sha256") != expected_access_stream:
@@ -3202,7 +3406,8 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
             (arm_out / "containment.stderr.log").write_bytes(completed.stderr)
             if completed.returncode != 0:
                 raise RuntimeError(f"quality arm {arm} failed rc={completed.returncode}")
-            _copy_and_parse_arm_safety(label, arm_out, crash_before)
+            safety = _copy_and_parse_arm_safety(label, arm_out, crash_before)
+            main_log = (arm_out / "safety.main.log").read_text(encoding="utf-8")
             rows = [
                 {
                     "case_id": row["case_id"],
@@ -3222,6 +3427,9 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
                 "fixture_sha256": sha256_file(FIXTURE),
                 "quality_fixture_content_sha256": fixture_content_before,
                 "ordered_case_ids": fixture_ids,
+                "server_instance_id": safe_run_server_identity(main_log),
+                "safety": safety,
+                "artifact_sha256": sha_prefetch_quality_artifact_hashes(out, arm),
                 "output_sha256": sha256_file(result_path), "rows": rows,
             }
             attempts.append(attempt)
@@ -3294,6 +3502,7 @@ def score_sha_prefetch_directory(args: argparse.Namespace) -> int:
             campaign / "arms" / f"sha-b{block}s{sequence}{arm.lower()}",
             record, {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[arm],
             manifest["model_generation"],
+            int(manifest["randomness"]["seed_sha256"][:8], 16),
         )
     attempts = [json.loads(line) for line in quality_path.read_text().splitlines() if line]
     fixture_root = args.fixture_root.resolve()
@@ -3313,6 +3522,13 @@ def score_sha_prefetch_directory(args: argparse.Namespace) -> int:
         raise ValueError("quality stage differs from the fixed complete fixture")
     for attempt, arm in zip(attempts, "ABC", strict=True):
         result_path = quality / f"sha-quality-{arm.lower()}.tsv"
+        arm_root = quality / f"sha-quality-{arm.lower()}"
+        main_log = (arm_root / "safety.main.log").read_text(encoding="utf-8")
+        safety = parse_safety_logs(
+            main_log,
+            (arm_root / "safety.samples.log").read_text(encoding="utf-8"),
+            (arm_root / "safety.kernel.log").read_text(encoding="utf-8"),
+        )
         parsed_rows = [
             {
                 "case_id": row["case_id"], "target_tokens": row["tokens"],
@@ -3327,6 +3543,14 @@ def score_sha_prefetch_directory(args: argparse.Namespace) -> int:
             or attempt.get("ordered_case_ids") != ordered_case_ids
             or attempt.get("quality_fixture_content_sha256")
             != fixture_content_sha256
+            or attempt.get("artifact_sha256")
+            != sha_prefetch_quality_artifact_hashes(quality, arm)
+            or attempt.get("safety") != safety
+            or attempt.get("server_instance_id") != safe_run_server_identity(main_log)
+            or f"sha-prefetch-quality-arm --arm {arm}" not in main_log
+            or f"executed_binary_sha256={attempt.get('binary_sha256')}" not in main_log
+            or f"executed_environment_sha256={attempt.get('configuration_sha256')}"
+            not in main_log
         ):
             raise ValueError("quality attempt differs from its official TSV")
     summary = score_sha_prefetch_campaign(

@@ -145,13 +145,24 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 },
                 "safety": {
                     "minimum_available_gib": 24.0,
-                    "swap_bytes": 0,
-                    "oom_events": 0,
+                    "cgroup_high_events": 0,
+                    "cgroup_max_events": 0,
+                    "cgroup_oom_events": 0,
+                    "cgroup_swap_bytes": 0,
                     "xid": False,
                     "survivors": [],
+                    "failures": [],
+                },
+                "external_io": {
+                    "read_bytes_delta": 1_000_000,
+                    "elapsed_seconds": 1.0,
+                    "sample_count": 500,
+                    "peak_read_qd": 0 if arm == "A" else 4,
+                    "sample_started_ns": reps[0]["client_request_started_ns"] - 1,
+                    "sample_finished_ns": reps[-1]["client_last_token_ns"] + 1,
                 },
                 "artifact_sha256": {
-                    name: hashlib.sha256(name.encode()).hexdigest()
+                    name: hashlib.sha256(f"{ordinal}:{name}".encode()).hexdigest()
                     for name in (
                         "server.log", "result.json", "nvme-inflight.log",
                         "safety.main.log", "safety.samples.log",
@@ -212,6 +223,22 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 "quality_fixture_content_sha256":
                     campaign.QUALITY_FIXTURE_CONTENT_SHA256,
                 "ordered_case_ids": [row["case_id"] for row in rows],
+                "server_instance_id": hashlib.sha256(
+                    f"quality-server-{arm}".encode()
+                ).hexdigest(),
+                "safety": {
+                    "minimum_available_gib": 24.0,
+                    "cgroup_high_events": 0, "cgroup_max_events": 0,
+                    "cgroup_oom_events": 0, "cgroup_swap_bytes": 0,
+                    "xid": False, "survivors": [], "failures": [],
+                },
+                "artifact_sha256": {
+                    name: hashlib.sha256(f"{arm}:{name}".encode()).hexdigest()
+                    for name in (
+                        "result.tsv", "safety.main.log", "safety.samples.log",
+                        "safety.kernel.log", "safety.cmd.log",
+                    )
+                },
                 "output_sha256": hashlib.sha256(
                     json.dumps(rows, sort_keys=True).encode()
                 ).hexdigest(),
@@ -378,13 +405,25 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             raw = root / "raw.jsonl"
             probe_rows = [
                 {"arm": "B", "access_stream_sha256": "4" * 64,
-                 "engine": {"completed_fetch_ms": [10.0, 10.0, 10.0]}},
+                 "candidate_commit": "1" * 40, "binary_sha256": "2" * 64,
+                 "configuration_sha256": campaign.canonical_environment_sha256(
+                     campaign.canonical_sha_prefetch_environment("demand_sha")),
+                 "fixture_sha256": campaign.sha256_file(campaign.FIXTURE),
+                 "server_instance_id": "6" * 64,
+                 "engine": {"completed_fetch_ms": [10.0, 10.0, 10.0],
+                            "model_generation": 9}},
                 {"arm": "C", "access_stream_sha256": "4" * 64,
-                 "engine": {"completed_fetch_ms": [8.0, 8.0, 8.0]}},
+                 "candidate_commit": "1" * 40, "binary_sha256": "2" * 64,
+                 "configuration_sha256": campaign.canonical_environment_sha256(
+                     campaign.canonical_sha_prefetch_environment("prefetch_sha")),
+                 "fixture_sha256": campaign.sha256_file(campaign.FIXTURE),
+                 "server_instance_id": "7" * 64,
+                 "engine": {"completed_fetch_ms": [8.0, 8.0, 8.0],
+                            "model_generation": 9}},
             ]
             raw.write_text("\n".join(json.dumps(row) for row in probe_rows) + "\n",
                            encoding="utf-8")
-            randomness = {"round": 1}
+            randomness = {"round": 1, "seed_sha256": "0" * 64}
             receipt = {
                 "schema_version": 1, "verdict": "PASS",
                 "candidate_commit": "1" * 40, "binary_sha256": "2" * 64,
@@ -498,6 +537,36 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 campaign.parse_nvme_inflight_log(
                     "\n".join(mutation), require_ring_qd=True
+                )
+
+    def test_benchmark_metadata_rejects_discarded_warmups_and_seed_drift(self):
+        campaign = self.load_campaign()
+        seed = 123
+        result = {
+            "suite_valid": True,
+            "metadata": {
+                "stack_label": "rung0-slab-demand_sha", "reps": 2,
+                "warmup_reps": 0, "max_tokens": 160,
+                "min_completion_tokens": 128, "temperature": 0,
+                "seed": seed, "model": "glm-5.2",
+                "output_tokenizer_path": str(campaign.TOKENIZER),
+                "output_tokenizer_sha256": campaign.TOKENIZER_SHA256,
+                "fixture_path": "fixtures/ctx-32k.txt",
+            },
+            "cells": [{"ctx_tokens": 0, "valid": True, "reps": []}],
+        }
+        campaign.validate_sha_prefetch_benchmark_result(
+            result, "demand_sha", seed
+        )
+        for field, value in (
+            ("warmup_reps", 1), ("seed", seed + 1), ("max_tokens", 159),
+            ("temperature", 0.1),
+        ):
+            changed = copy.deepcopy(result)
+            changed["metadata"][field] = value
+            with self.assertRaises(ValueError):
+                campaign.validate_sha_prefetch_benchmark_result(
+                    changed, "demand_sha", seed
                 )
 
     def test_score_reauthenticates_randomness_and_rederives_raw_artifacts(self):
@@ -704,6 +773,10 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             cases[f"{phase} TTFT"] = changed
         for label, changed in cases.items():
             with self.subTest(label=label):
+                for row in changed:
+                    row["external_io"]["sample_finished_ns"] = max(
+                        rep["client_last_token_ns"] for rep in row["reps"]
+                    ) + 1
                 scored = campaign.score_sha_prefetch_campaign(
                     changed, manifest, freeze=freeze, quality_attempts=quality
                 )
