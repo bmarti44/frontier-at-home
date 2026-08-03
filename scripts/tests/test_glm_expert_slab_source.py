@@ -197,6 +197,16 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertTrue(marker in self.source, f"missing source marker: {marker}")
 
+    def test_prefetch_served_counter_uses_the_statistics_mutex(self) -> None:
+        start = self.compiled_source.index("static int ds4_pf_consume(")
+        end = self.compiled_source.index("/* Read-only residency peek", start)
+        consume = self.compiled_source[start:end]
+        self.assertRegex(
+            consume,
+            r"pthread_mutex_lock\(&g_pf\.mu\);\s*\+\+g_pf\.served;\s*"
+            r"pthread_mutex_unlock\(&g_pf\.mu\);",
+        )
+
     def test_slab_miss_staging_is_persistent_and_cuda_pinned(self) -> None:
         """O_DIRECT completion must not feed CUDA through pageable buffers.
 

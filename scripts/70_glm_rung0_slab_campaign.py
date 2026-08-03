@@ -150,6 +150,17 @@ def _canonical_object_sha256(value: Any) -> str:
     ).hexdigest()
 
 
+SHA_PREFETCH_TEST_PATHS = (
+    "scripts/tests/test_glm_rung0_sha_prefetch.py",
+    "scripts/tests/test_glm_expert_slab_source.py",
+    "scripts/tests/cpp/test_ds4_slab_prefetch_state.cpp",
+)
+
+
+def sha_prefetch_test_hashes() -> dict[str, str]:
+    return {path: sha256_file(ROOT / path) for path in SHA_PREFETCH_TEST_PATHS}
+
+
 def validate_sha_prefetch_freeze(
     freeze: Any, candidate_commit: str, binary_sha256: str,
     quality_binary_sha256: str,
@@ -158,7 +169,7 @@ def validate_sha_prefetch_freeze(
     expected_keys = {
         "schema_version", "candidate_commit", "binary_sha256",
         "quality_binary_sha256", "source_sha256", "scorer_sha256",
-        "tests_sha256", "frozen_epoch_s",
+        "tests_sha256_by_path", "frozen_epoch_s",
     }
     expected_source = _canonical_object_sha256({
         "patch_sha256": sha256_file(
@@ -177,9 +188,7 @@ def validate_sha_prefetch_freeze(
         or freeze["quality_binary_sha256"] != quality_binary_sha256
         or freeze["source_sha256"] != expected_source
         or freeze["scorer_sha256"] != sha256_file(Path(__file__).resolve())
-        or freeze["tests_sha256"] != sha256_file(
-            ROOT / "scripts/tests/test_glm_rung0_sha_prefetch.py"
-        )
+        or freeze["tests_sha256_by_path"] != sha_prefetch_test_hashes()
         or not isinstance(freeze["frozen_epoch_s"], (int, float))
         or not math.isfinite(float(freeze["frozen_epoch_s"]))
     ):
@@ -202,6 +211,7 @@ def _validate_sha_prefetch_quality(
         if not isinstance(attempt, dict) or set(attempt) != {
             "schema_version", "arm", "mode", "candidate_commit",
             "binary_sha256", "configuration_sha256", "fixture_sha256",
+            "quality_fixture_content_sha256", "ordered_case_ids",
             "output_sha256", "rows",
         }:
             raise ValueError("quality attempt schema is invalid")
@@ -215,6 +225,8 @@ def _validate_sha_prefetch_quality(
             or attempt["configuration_sha256"]
             != configuration_sha256_by_arm[arm]
             or attempt["fixture_sha256"] != fixture_sha256
+            or attempt["quality_fixture_content_sha256"]
+            != QUALITY_FIXTURE_CONTENT_SHA256
             or re.fullmatch(r"[0-9a-f]{64}", attempt["output_sha256"]) is None
             or not isinstance(rows, list)
             or len(rows) != 100
@@ -244,6 +256,8 @@ def _validate_sha_prefetch_quality(
             ids.append(case_id)
         if len(set(ids)) != 100:
             raise ValueError("quality case IDs are duplicated")
+        if attempt["ordered_case_ids"] != ids:
+            raise ValueError("quality rows differ from their ordered fixture IDs")
         if case_ids is None:
             case_ids = ids
             canonical_rows = rows
@@ -342,7 +356,7 @@ def score_sha_prefetch_campaign(
     expected_freeze_keys = {
         "schema_version", "candidate_commit", "binary_sha256",
         "quality_binary_sha256", "source_sha256", "scorer_sha256",
-        "tests_sha256", "frozen_epoch_s",
+        "tests_sha256_by_path", "frozen_epoch_s",
     }
     if (
         not isinstance(freeze, dict) or set(freeze) != expected_freeze_keys
@@ -352,8 +366,9 @@ def score_sha_prefetch_campaign(
         or freeze["quality_binary_sha256"] != quality_binary
         or any(
             re.fullmatch(r"[0-9a-f]{64}", freeze[name]) is None
-            for name in ("source_sha256", "scorer_sha256", "tests_sha256")
+            for name in ("source_sha256", "scorer_sha256")
         )
+        or freeze["tests_sha256_by_path"] != sha_prefetch_test_hashes()
         or not isinstance(freeze["frozen_epoch_s"], (int, float))
         or not math.isfinite(float(freeze["frozen_epoch_s"]))
         or manifest["freeze_sha256"] != _canonical_object_sha256(freeze)
@@ -371,9 +386,6 @@ def score_sha_prefetch_campaign(
     if (
         freeze["source_sha256"] != expected_source
         or freeze["scorer_sha256"] != sha256_file(Path(__file__).resolve())
-        or freeze["tests_sha256"] != sha256_file(
-            ROOT / "scripts/tests/test_glm_rung0_sha_prefetch.py"
-        )
     ):
         raise ValueError("frozen source, scorer, or acceptance test changed")
     randomness = manifest["randomness"]
@@ -392,6 +404,7 @@ def score_sha_prefetch_campaign(
         "server_instance_id", "candidate_commit", "binary_sha256",
         "configuration_sha256", "fixture_sha256", "access_stream_sha256",
         "recorded_monotonic_ns", "reps", "engine", "safety",
+        "artifact_sha256",
     }
     expected_mode = expected_modes
     servers: set[str] = set()
@@ -429,6 +442,18 @@ def score_sha_prefetch_campaign(
         recorded = integer(record["recorded_monotonic_ns"], "record time", minimum=1)
         if not started <= recorded <= finished:
             raise ValueError("historical or out-of-window arm is forbidden")
+        artifacts = record["artifact_sha256"]
+        expected_artifacts = {
+            "server.log", "result.json", "nvme-inflight.log",
+            "safety.main.log", "safety.samples.log", "safety.kernel.log",
+            "safety.cmd.log",
+        }
+        if (
+            not isinstance(artifacts, dict) or set(artifacts) != expected_artifacts
+            or any(re.fullmatch(r"[0-9a-f]{64}", value) is None
+                   for value in artifacts.values())
+        ):
+            raise ValueError("arm source-artifact binding is incomplete")
 
         reps = record["reps"]
         if not isinstance(reps, list) or len(reps) != 2 or [
@@ -437,13 +462,15 @@ def score_sha_prefetch_campaign(
             raise ValueError("each fresh server requires cold then warm reps")
         for rep_index, rep in enumerate(reps):
             exact_rep_keys = {
-                "phase", "request_sha256", "generated_bytes_sha256",
+                "phase", "request_ordinal", "request_sha256", "generated_bytes_sha256",
                 "token_ids", "completion_tokens", "raw_token_timestamps_ns",
                 "client_token_timestamps_ns", "client_request_started_ns",
                 "client_first_token_ns", "client_last_token_ns", "ttft_seconds",
             }
             if not isinstance(rep, dict) or set(rep) != exact_rep_keys:
                 raise ValueError("rep schema is invalid")
+            if rep["request_ordinal"] != rep_index:
+                raise ValueError("cold/warm request order is not fresh-server ordinal 0/1")
             count = integer(rep["completion_tokens"], "completion tokens", minimum=128)
             token_ids = rep["token_ids"]
             raw_times = rep["raw_token_timestamps_ns"]
@@ -1307,7 +1334,9 @@ def normalize_sha_prefetch_reps(reps: Any) -> list[dict[str, Any]]:
     if not isinstance(reps, list) or len(reps) != 2:
         raise ValueError("SHA-prefetch arm needs exactly two measured reps")
     normalized: list[dict[str, Any]] = []
-    for phase, rep in zip(("cold", "warm"), reps, strict=True):
+    for ordinal, (phase, rep) in enumerate(
+        zip(("cold", "warm"), reps, strict=True)
+    ):
         if not isinstance(rep, dict) or rep.get("valid") is not True:
             raise ValueError("speed harness rep is invalid")
         raw = rep.get("token_timestamps_ns")
@@ -1340,6 +1369,7 @@ def normalize_sha_prefetch_reps(reps: Any) -> list[dict[str, Any]]:
             raise ValueError("speed harness byte identity is malformed")
         normalized.append({
             "phase": phase,
+            "request_ordinal": ordinal,
             "request_sha256": request,
             "generated_bytes_sha256": hashlib.sha256(
                 f"{reasoning}:{content}".encode("ascii")
@@ -1999,7 +2029,7 @@ def execute_arm(args: argparse.Namespace) -> int:
                     str(server_log_path),
                     "--reps",
                     "2",
-                    "--warmup", "1",
+                    "--warmup", "0",
                     "--request-timeout", "2700",
                     "--context-levels",
                     "0",
@@ -2774,8 +2804,112 @@ def _copy_and_parse_arm_safety(
     )
 
 
+def sha_prefetch_artifact_hashes(arm_out: Path) -> dict[str, str]:
+    names = (
+        "server.log", "result.json", "nvme-inflight.log", "safety.main.log",
+        "safety.samples.log", "safety.kernel.log", "safety.cmd.log",
+    )
+    if any(not (arm_out / name).is_file() for name in names):
+        raise ValueError("arm is missing an authoritative source artifact")
+    return {name: sha256_file(arm_out / name) for name in names}
+
+
+def derive_sha_prefetch_record_from_artifacts(
+    arm_out: Path, record: dict[str, Any], mode: str, model_generation: int,
+) -> None:
+    """Reparse independent timing, engine and safety sources at scoring time."""
+    if record.get("artifact_sha256") != sha_prefetch_artifact_hashes(arm_out):
+        raise ValueError("arm source artifact changed after collection")
+    result = strict_json(arm_out / "result.json")
+    cells = result.get("cells")
+    if (
+        result.get("suite_valid") is not True or not isinstance(cells, list)
+        or len(cells) != 1 or cells[0].get("ctx_tokens") != 0
+    ):
+        raise ValueError("arm speed source is incomplete")
+    log_text = (arm_out / "server.log").read_text(encoding="utf-8")
+    generic = parse_engine_log(log_text, "off" if mode == "off" else "on")
+    engine = parse_sha_prefetch_engine_log(
+        log_text, mode, model_generation=model_generation
+    )
+    safety = parse_safety_logs(
+        (arm_out / "safety.main.log").read_text(encoding="utf-8"),
+        (arm_out / "safety.samples.log").read_text(encoding="utf-8"),
+        (arm_out / "safety.kernel.log").read_text(encoding="utf-8"),
+    )
+    main_log = (arm_out / "safety.main.log").read_text(encoding="utf-8")
+    if (
+        f"executed_binary_sha256={record.get('binary_sha256')}" not in main_log
+        or f"executed_environment_sha256={record.get('configuration_sha256')}"
+        not in main_log
+        or record.get("fixture_sha256") != sha256_file(FIXTURE)
+        or record.get("access_stream_sha256") != generic["access_stream_sha256"]
+        or record.get("reps") != normalize_sha_prefetch_reps(cells[0].get("reps"))
+        or record.get("engine") != engine
+        or record.get("safety") != safety
+    ):
+        raise ValueError("derived arm record differs from authoritative artifacts")
+
+
+def verified_sha_prefetch_probe_receipt(
+    path: Path, candidate_commit: str, binary_sha256: str,
+    freeze_sha256: str, randomness: dict[str, Any], model_generation: int,
+) -> dict[str, Any]:
+    receipt = strict_json(path)
+    expected_keys = {
+        "schema_version", "verdict", "candidate_commit", "binary_sha256",
+        "freeze_sha256", "randomness", "raw_sha256", "arm_count",
+        "access_stream_sha256", "completed_fetch_ratio", "model_generation",
+    }
+    ratio = receipt.get("completed_fetch_ratio")
+    if (
+        set(receipt) != expected_keys or receipt.get("schema_version") != 1
+        or receipt.get("verdict") != "PASS" or receipt.get("arm_count") != 2
+        or receipt.get("candidate_commit") != candidate_commit
+        or receipt.get("binary_sha256") != binary_sha256
+        or receipt.get("freeze_sha256") != freeze_sha256
+        or receipt.get("model_generation") != model_generation
+        or receipt.get("randomness") != randomness
+        or re.fullmatch(r"[0-9a-f]{64}", receipt.get("raw_sha256", "")) is None
+        or re.fullmatch(
+            r"[0-9a-f]{64}", receipt.get("access_stream_sha256", "")
+        ) is None
+        or isinstance(ratio, bool) or not isinstance(ratio, (int, float))
+        or not math.isfinite(float(ratio)) or not 0 < float(ratio) <= 0.90
+    ):
+        raise ValueError("bounded SHA-prefetch probe receipt is not a PASS")
+    raw_path = path.parent / "raw.jsonl"
+    if not raw_path.is_file() or receipt["raw_sha256"] != sha256_file(raw_path):
+        raise ValueError("bounded probe raw evidence differs from its receipt")
+    records = [json.loads(line) for line in raw_path.read_text().splitlines() if line]
+    if len(records) != 2 or [row.get("arm") for row in records] != ["B", "C"]:
+        raise ValueError("bounded probe does not contain exact B/C records")
+    for record, (sequence, arm) in zip(records, ((0, "B"), (1, "C")), strict=True):
+        derive_sha_prefetch_record_from_artifacts(
+            path.parent / "arms" / f"sha-b0s{sequence}{arm.lower()}", record,
+            "demand_sha" if arm == "B" else "prefetch_sha", model_generation,
+        )
+    recomputed_ratio = statistics.median(
+        records[1]["engine"]["completed_fetch_ms"]
+    ) / statistics.median(records[0]["engine"]["completed_fetch_ms"])
+    if (
+        not math.isclose(float(ratio), recomputed_ratio, rel_tol=1e-12)
+        or len({row["access_stream_sha256"] for row in records}) != 1
+        or receipt["access_stream_sha256"] != records[0]["access_stream_sha256"]
+    ):
+        raise ValueError("bounded probe metrics differ from raw artifacts")
+    return receipt
+
+
+def run_sha_prefetch_probe(args: argparse.Namespace) -> int:
+    args._sha_prefetch_probe = True
+    args.probe_receipt = Path("/nonexistent-probe-receipt")
+    return run_sha_prefetch_campaign(args)
+
+
 def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
     """Run the fixed 15-arm SHA-prefetch campaign through glm_safe_run."""
+    probe_mode = bool(getattr(args, "_sha_prefetch_probe", False))
     candidate = args.candidate.resolve()
     quality_candidate = args.quality_candidate.resolve()
     binary = candidate / "ds4-server"
@@ -2794,7 +2928,7 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
         or not binary.is_file() or sha256_file(binary) != args.binary_sha256
         or not quality_binary.is_file()
         or sha256_file(quality_binary) != args.quality_binary_sha256
-        or re.fullmatch(r"[0-9a-f]{64}", args.access_stream_sha256) is None
+        or (not probe_mode and not args.probe_receipt.is_file())
         or args.model_generation <= 0
         or not 1024 <= args.port <= 65535
     ):
@@ -2809,7 +2943,19 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
         max(freeze_path.stat().st_mtime, binary.stat().st_mtime,
             quality_binary.stat().st_mtime),
     )
-    schedule = sha_prefetch_schedule(bool(confirmation["flip"]))
+    schedule = (
+        ((0, 0, "B"), (0, 1, "C")) if probe_mode
+        else sha_prefetch_schedule(bool(confirmation["flip"]))
+    )
+    if probe_mode:
+        expected_access_stream: str | None = None
+    else:
+        probe = verified_sha_prefetch_probe_receipt(
+            args.probe_receipt.resolve(), args.candidate_commit,
+            args.binary_sha256, sha256_file(freeze_path), confirmation,
+            args.model_generation,
+        )
+        expected_access_stream = probe["access_stream_sha256"]
     memory_high_gib = envelope["memory_high_gib"]
     services_are_stopped()
     no_large_engines()
@@ -2822,11 +2968,13 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
     if sha256_file(slab) != SLAB_SHA256:
         raise ValueError("full expert sidecar identity mismatch")
     out.mkdir(mode=0o700, parents=True)
+    shutil.copy2(args.drand_json.resolve(), out / "randomness.json")
     arms_root = out / "arms"
     arms_root.mkdir(mode=0o700)
     raw_path = out / "raw.jsonl"
     started_ns = time.monotonic_ns()
     seed = int(confirmation["seed_sha256"][:8], 16)
+    probe_records: list[dict[str, Any]] = []
     with raw_path.open("x", encoding="utf-8") as raw_stream:
         for block, sequence, arm in schedule:
             services_are_stopped()
@@ -2882,20 +3030,56 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
                 raise RuntimeError(f"contained arm {label} failed rc={completed.returncode}")
             safety = _copy_and_parse_arm_safety(label, arm_out, crash_before)
             record = strict_json(arm_out / "partial.json")
-            if record.get("access_stream_sha256") != args.access_stream_sha256:
+            if expected_access_stream is None:
+                expected_access_stream = record.get("access_stream_sha256")
+            if record.get("access_stream_sha256") != expected_access_stream:
                 raise ValueError("arm access stream differs from preregistration")
             record["safety"] = safety
+            record["artifact_sha256"] = sha_prefetch_artifact_hashes(arm_out)
             write_json_exclusive(arm_out / "record.json", record)
             raw_stream.write(json.dumps(
                 record, sort_keys=True, separators=(",", ":"), allow_nan=False
             ) + "\n")
             raw_stream.flush()
             os.fsync(raw_stream.fileno())
+            probe_records.append(record)
             no_large_engines()
     finished_ns = time.monotonic_ns()
     sidecar_after = artifact_stat(slab)
     if sidecar_after != sidecar_before or sha256_file(slab) != SLAB_SHA256:
         raise RuntimeError("expert sidecar changed during campaign")
+    if probe_mode:
+        if len(probe_records) != 2 or [row["arm"] for row in probe_records] != ["B", "C"]:
+            raise ValueError("bounded probe did not complete exact B/C arms")
+        b_record, c_record = probe_records
+        signatures = lambda row: [
+            (
+                rep["request_sha256"], rep["generated_bytes_sha256"],
+                rep["token_ids"], rep["completion_tokens"],
+            ) for rep in row["reps"]
+        ]
+        b_fetch = b_record["engine"]["completed_fetch_ms"]
+        c_fetch = c_record["engine"]["completed_fetch_ms"]
+        ratio = statistics.median(c_fetch) / statistics.median(b_fetch)
+        verdict = "PASS" if (
+            signatures(b_record) == signatures(c_record)
+            and len(b_fetch) >= 3 and len(c_fetch) >= 3 and ratio <= 0.90
+        ) else "FAIL"
+        receipt = {
+            "schema_version": 1, "verdict": verdict,
+            "candidate_commit": args.candidate_commit,
+            "binary_sha256": args.binary_sha256,
+            "freeze_sha256": sha256_file(freeze_path),
+            "randomness": confirmation,
+            "raw_sha256": sha256_file(raw_path),
+            "arm_count": 2,
+            "access_stream_sha256": expected_access_stream,
+            "completed_fetch_ratio": ratio,
+            "model_generation": args.model_generation,
+        }
+        write_json_exclusive(out / "probe-receipt.json", receipt)
+        print(f"RUNG0_SHA_PREFETCH_PROBE_{verdict} out={out}")
+        return 0 if verdict == "PASS" else 1
     environments = {
         arm: canonical_sha_prefetch_environment(mode)
         for arm, mode in {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}.items()
@@ -2912,7 +3096,7 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
             for arm, value in environments.items()
         },
         "fixture_sha256": sha256_file(FIXTURE),
-        "access_stream_sha256": args.access_stream_sha256,
+        "access_stream_sha256": expected_access_stream,
         "campaign_started_monotonic_ns": started_ns,
         "campaign_finished_monotonic_ns": finished_ns,
         "freeze_sha256": _canonical_object_sha256(freeze),
@@ -2925,6 +3109,7 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
         "manifest_sha256": sha256_file(out / "manifest.json"),
         "raw_sha256": sha256_file(raw_path),
         "freeze_sha256": sha256_file(freeze_path),
+        "randomness_raw_sha256": sha256_file(out / "randomness.json"),
         "sidecar_stat_after": sidecar_after,
     })
     print(f"RUNG0_SHA_PREFETCH_PERF_DONE out={out}")
@@ -2958,6 +3143,12 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
         args.memory_envelope.resolve(), server_binary, args.server_binary_sha256,
         binary, args.quality_binary_sha256, args.candidate_commit,
     )
+    fixture_ids = fixture_manifest_case_ids(fixture_manifest)
+    fixture_content_before = content_complete_fixture_sha256(
+        fixture_root, [fixture_manifest]
+    )
+    if fixture_content_before != QUALITY_FIXTURE_CONTENT_SHA256:
+        raise ValueError("official quality fixture content hash mismatch")
     services_are_stopped()
     no_large_engines()
     memory_high_gib = envelope["memory_high_gib"]
@@ -3029,6 +3220,8 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
                     engine_environment
                 ),
                 "fixture_sha256": sha256_file(FIXTURE),
+                "quality_fixture_content_sha256": fixture_content_before,
+                "ordered_case_ids": fixture_ids,
                 "output_sha256": sha256_file(result_path), "rows": rows,
             }
             attempts.append(attempt)
@@ -3045,10 +3238,18 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
             for arm, mode in {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}.items()
         },
     )
+    fixture_content_after = content_complete_fixture_sha256(
+        fixture_root, [fixture_manifest]
+    )
+    if fixture_content_after != fixture_content_before:
+        raise RuntimeError("quality fixture changed during the three arms")
     write_json_exclusive(out / "quality-stage.json", {
         "status": "COMPLETE", "arm_count": 3,
         "quality_raw_sha256": sha256_file(out / "quality-raw.jsonl"),
         "fixture_manifest_sha256": manifest_sha256,
+        "fixture_content_sha256": fixture_content_before,
+        "fixture_content_sha256_after": fixture_content_after,
+        "ordered_case_ids": fixture_ids,
     })
     print(f"RUNG0_SHA_PREFETCH_QUALITY_DONE out={out}")
     return 0
@@ -3059,6 +3260,7 @@ def score_sha_prefetch_directory(args: argparse.Namespace) -> int:
     campaign = args.campaign.resolve()
     quality = args.quality_campaign.resolve()
     freeze = strict_json(args.freeze.resolve())
+    manifest = strict_json(campaign / "manifest.json")
     stage = strict_json(campaign / "performance-stage.json")
     quality_stage = strict_json(quality / "quality-stage.json")
     raw_path = campaign / "raw.jsonl"
@@ -3069,15 +3271,66 @@ def score_sha_prefetch_directory(args: argparse.Namespace) -> int:
         or stage.get("manifest_sha256") != sha256_file(campaign / "manifest.json")
         or stage.get("raw_sha256") != sha256_file(raw_path)
         or stage.get("freeze_sha256") != sha256_file(args.freeze.resolve())
+        or stage.get("randomness_raw_sha256")
+        != sha256_file(campaign / "randomness.json")
         or quality_stage.get("status") != "COMPLETE"
         or quality_stage.get("arm_count") != 3
         or quality_stage.get("quality_raw_sha256") != sha256_file(quality_path)
     ):
         raise ValueError("SHA-prefetch stage receipt does not bind raw evidence")
+    authenticated = authenticate_confirmation(
+        campaign / "randomness.json", manifest["candidate_commit"],
+        manifest["binary_sha256"], manifest["quality_binary_sha256"],
+        float(freeze["frozen_epoch_s"]),
+    )
+    if authenticated != manifest["randomness"]:
+        raise ValueError("scoring-time public randomness authentication differs")
     records = [json.loads(line) for line in raw_path.read_text().splitlines() if line]
+    for record, (block, sequence, arm) in zip(
+        records, sha_prefetch_schedule(bool(manifest["randomness"]["flip"])),
+        strict=True,
+    ):
+        derive_sha_prefetch_record_from_artifacts(
+            campaign / "arms" / f"sha-b{block}s{sequence}{arm.lower()}",
+            record, {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[arm],
+            manifest["model_generation"],
+        )
     attempts = [json.loads(line) for line in quality_path.read_text().splitlines() if line]
+    fixture_root = args.fixture_root.resolve()
+    fixture_manifest = args.manifest.resolve()
+    fixture_content_sha256 = content_complete_fixture_sha256(
+        fixture_root, [fixture_manifest]
+    )
+    ordered_case_ids = fixture_manifest_case_ids(fixture_manifest)
+    if (
+        fixture_manifest != fixture_root / QUALITY_FIXTURE_RELATIVE
+        or fixture_content_sha256 != QUALITY_FIXTURE_CONTENT_SHA256
+        or quality_stage.get("fixture_content_sha256") != fixture_content_sha256
+        or quality_stage.get("fixture_content_sha256_after") != fixture_content_sha256
+        or quality_stage.get("ordered_case_ids") != ordered_case_ids
+        or quality_stage.get("fixture_manifest_sha256") != sha256_file(fixture_manifest)
+    ):
+        raise ValueError("quality stage differs from the fixed complete fixture")
+    for attempt, arm in zip(attempts, "ABC", strict=True):
+        result_path = quality / f"sha-quality-{arm.lower()}.tsv"
+        parsed_rows = [
+            {
+                "case_id": row["case_id"], "target_tokens": row["tokens"],
+                "total_nll": row["nll_sum"],
+                "top1_matches": row["top1_correct"],
+            }
+            for row in parse_quality_tsv(result_path)
+        ]
+        if (
+            attempt.get("output_sha256") != sha256_file(result_path)
+            or attempt.get("rows") != parsed_rows
+            or attempt.get("ordered_case_ids") != ordered_case_ids
+            or attempt.get("quality_fixture_content_sha256")
+            != fixture_content_sha256
+        ):
+            raise ValueError("quality attempt differs from its official TSV")
     summary = score_sha_prefetch_campaign(
-        records, strict_json(campaign / "manifest.json"),
+        records, manifest,
         freeze=freeze, quality_attempts=attempts,
     )
     write_json_exclusive(campaign / "summary.json", summary)
@@ -3260,11 +3513,23 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     sha_run.add_argument("--binary-sha256", required=True)
     sha_run.add_argument("--quality-binary-sha256", required=True)
     sha_run.add_argument("--model-generation", type=int, required=True)
-    sha_run.add_argument("--access-stream-sha256", required=True)
+    sha_run.add_argument("--probe-receipt", type=Path, required=True)
     sha_run.add_argument("--freeze", type=Path, required=True)
     sha_run.add_argument("--drand-json", type=Path, required=True)
     sha_run.add_argument("--memory-envelope", type=Path, required=True)
     sha_run.add_argument("--port", type=int, default=8032)
+    sha_probe = subparsers.add_parser("sha-prefetch-probe")
+    sha_probe.add_argument("--tag", required=True)
+    sha_probe.add_argument("--candidate", type=Path, required=True)
+    sha_probe.add_argument("--quality-candidate", type=Path, required=True)
+    sha_probe.add_argument("--candidate-commit", required=True)
+    sha_probe.add_argument("--binary-sha256", required=True)
+    sha_probe.add_argument("--quality-binary-sha256", required=True)
+    sha_probe.add_argument("--model-generation", type=int, required=True)
+    sha_probe.add_argument("--freeze", type=Path, required=True)
+    sha_probe.add_argument("--drand-json", type=Path, required=True)
+    sha_probe.add_argument("--memory-envelope", type=Path, required=True)
+    sha_probe.add_argument("--port", type=int, default=8032)
     sha_quality = subparsers.add_parser("sha-prefetch-quality")
     sha_quality.add_argument("--tag", required=True)
     sha_quality.add_argument("--quality-candidate", type=Path, required=True)
@@ -3280,6 +3545,8 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     sha_score.add_argument("--campaign", type=Path, required=True)
     sha_score.add_argument("--quality-campaign", type=Path, required=True)
     sha_score.add_argument("--freeze", type=Path, required=True)
+    sha_score.add_argument("--fixture-root", type=Path, required=True)
+    sha_score.add_argument("--manifest", type=Path, required=True)
     score = subparsers.add_parser("score")
     score.add_argument("--campaign", type=Path, required=True)
     score.add_argument("--quality-campaign", type=Path, required=True)
@@ -3303,6 +3570,8 @@ def main(argv: list[str] | None = None) -> int:
             return run_campaign(args)
         if args.command == "sha-prefetch-run":
             return run_sha_prefetch_campaign(args)
+        if args.command == "sha-prefetch-probe":
+            return run_sha_prefetch_probe(args)
         if args.command == "sha-prefetch-quality":
             return run_sha_prefetch_quality_campaign(args)
         if args.command == "sha-prefetch-score":

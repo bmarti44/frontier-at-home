@@ -1,5 +1,5 @@
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 2399598..e8f14db 100644
+index 2399598..e8cdba1 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -23,6 +23,7 @@
@@ -496,7 +496,9 @@ index 2399598..e8f14db 100644
 +        fprintf(stderr, "ds4: expert prefetch DISABLED (state machine allocation)\n");
 +        ds4_pf_cleanup();
 +        return -1;
-+    }
+     }
+-    pthread_mutex_init(&g_pf.mu, NULL);
+-    pthread_cond_init(&g_pf.cv, NULL);
 +    if (pthread_mutex_init(&g_pf.mu, NULL) != 0) {
 +        fprintf(stderr, "ds4: expert prefetch DISABLED (mutex)\n");
 +        ds4_pf_cleanup();
@@ -507,9 +509,7 @@ index 2399598..e8f14db 100644
 +        fprintf(stderr, "ds4: expert prefetch DISABLED (condition)\n");
 +        ds4_pf_cleanup();
 +        return -1;
-     }
--    pthread_mutex_init(&g_pf.mu, NULL);
--    pthread_cond_init(&g_pf.cv, NULL);
++    }
 +    g_pf.cond_initialized = 1;
 +    g_pf.stop = 0;
      for (int i = 0; i < g_pf.n_threads; i++) {
@@ -593,7 +593,7 @@ index 2399598..e8f14db 100644
          ds4_pf_req *r = &g_pf.reqs[g_pf.n_req++];
          r->key = key;
          r->gate_off = table->gate_offset + (uint64_t)e * table->gate_expert_bytes;
-@@ -24696,45 +24923,45 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
+@@ -24696,45 +24923,47 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
          r->down_off = table->down_offset + (uint64_t)e * table->down_expert_bytes;
          r->generation = g_model_load_generation;
          r->epoch = ep;
@@ -639,9 +639,6 @@ index 2399598..e8f14db 100644
  
 -static void ds4_pf_release(int slot) {
 -    if (slot < 0) return;
--    pthread_mutex_lock(&g_pf.mu);
--    g_pf.slots[slot].state = 0;
--    pthread_mutex_unlock(&g_pf.mu);
 +/* Main-thread-only consumer. Returns 1 on a validated prefetch copy, 0 for a
 + * clean not-ready prediction (the normal full-SHA demand path may run), and
 + * -1 after integrity/copy failure (no demand fallback is permitted). */
@@ -668,12 +665,15 @@ index 2399598..e8f14db 100644
 +                           g_pf.gate_bytes, g_pf.down_bytes,
 +                           key, gate_off, down_off, publish);
 +    if (!g_pf.machine->copy_sync(lease, backend)) return -1;
+     pthread_mutex_lock(&g_pf.mu);
+-    g_pf.slots[slot].state = 0;
 +    ++g_pf.served;
+     pthread_mutex_unlock(&g_pf.mu);
 +    return 1;
  }
  
  /* Read-only residency peek for the prefetch-profitability probe. Does NOT
-@@ -24759,6 +24986,33 @@ extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
+@@ -24759,6 +24988,33 @@ extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
              (unsigned long long)g_expert_cache_run_stats.lookup_bytes,
              (unsigned long long)g_expert_cache_run_stats.hit_bytes,
              hex);
@@ -707,7 +707,7 @@ index 2399598..e8f14db 100644
      ec_sha256_init(&g_expert_cache_run_stats.stream);
      g_expert_cache_run_stats.lookup_bytes = 0;
      g_expert_cache_run_stats.hit_bytes = 0;
-@@ -25137,7 +25391,6 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -25137,7 +25393,6 @@ static int cuda_stream_selected_cache_begin_load(
  
      cuda_expert_cache_init_once(table->gate_expert_bytes,
                                  table->down_expert_bytes);
@@ -715,7 +715,7 @@ index 2399598..e8f14db 100644
      cuda_expert_cache_flush_for_model();
      struct cuda_miss_job { uint64_t gate_src, up_src, down_src, gate_dst, down_dst, key; };
      std::vector<cuda_miss_job> miss_jobs;
-@@ -25170,6 +25423,10 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -25170,6 +25425,10 @@ static int cuda_stream_selected_cache_begin_load(
                                                 "explicit expert slab activation");
          }
      }
@@ -726,7 +726,7 @@ index 2399598..e8f14db 100644
      cuda_expert_slab_window slab_window{};
      const int persist_ok = !g_expert_persist_cache.disabled &&
          g_expert_persist_cache.gate_bytes == table->gate_expert_bytes &&
-@@ -25232,55 +25489,18 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -25232,55 +25491,18 @@ static int cuda_stream_selected_cache_begin_load(
          {
              /* prefetched slab available? copy it in place of the disk read.
               * Identical bytes to a demand read of the same offsets. */
@@ -792,7 +792,7 @@ index 2399598..e8f14db 100644
              }
          }
          if (persist_ok && getenv("DS4_CUDA_MISS_IDS") != NULL) {
-@@ -25414,22 +25634,28 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -25414,22 +25636,28 @@ static int cuda_stream_selected_cache_begin_load(
                  if (slab_mode) {
                      const uint8_t *payload = NULL;
                      const uint32_t expert = (uint32_t)j.key;
@@ -829,7 +829,7 @@ index 2399598..e8f14db 100644
                          failed.store(1);
                      }
                      continue;
-@@ -25520,14 +25746,22 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -25520,14 +25748,22 @@ static int cuda_stream_selected_cache_begin_load(
                      tot > 0 ? 100.0 * (double)g_expert_persist_cache.hits / tot : 0.0,
                      g_expert_persist_cache.used,
                      g_expert_persist_cache.n_slots);
@@ -858,7 +858,7 @@ index 2399598..e8f14db 100644
          }
      }
      if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
-@@ -25564,7 +25798,8 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -25564,7 +25800,8 @@ static int cuda_stream_selected_cache_begin_load(
                  "LOADPROF L%u uniq=%u hits=%u miss=%zu hit_ms=%.2f "
                  "fetch_ms=%.2f fill_ms=%.2f total_ms=%.2f slab_mode=%s "
                  "slab_reads=%llu slab_bytes=%llu slab_actual_bytes=%llu "
@@ -868,7 +868,7 @@ index 2399598..e8f14db 100644
                  table->layer, (uint32_t)compact_count, lp_hits,
                  miss_jobs.size(), lp_hit_ms, lp_fetch_ms, lp_fill_ms,
                  ec_prof_now_ms() - lp_t0,
-@@ -25577,7 +25812,9 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -25577,7 +25814,9 @@ static int cuda_stream_selected_cache_begin_load(
                  slab_window.last_complete_ns.load() >
                          slab_window.first_submit_ns.load() ?
                      (double)(slab_window.last_complete_ns.load() -

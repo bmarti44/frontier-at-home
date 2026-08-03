@@ -651,7 +651,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         for marker in (
             "scripts/30_bench_speed.py",
-            '"--warmup", "1"',
+            '"--warmup", "0"',
             '"--request-timeout", "2700"',
             "/sys/class/block/nvme0n1/inflight",
             'f"/proc/{pid}/io"',

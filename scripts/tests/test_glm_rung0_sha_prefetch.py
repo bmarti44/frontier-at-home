@@ -13,6 +13,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -82,6 +83,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 client = [first + index * step_ns for index in range(128)]
                 reps.append({
                     "phase": phase,
+                    "request_ordinal": rep,
                     "request_sha256": request,
                     "generated_bytes_sha256": output,
                     "token_ids": list(range(128)),
@@ -148,6 +150,14 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     "xid": False,
                     "survivors": [],
                 },
+                "artifact_sha256": {
+                    name: hashlib.sha256(name.encode()).hexdigest()
+                    for name in (
+                        "server.log", "result.json", "nvme-inflight.log",
+                        "safety.main.log", "safety.samples.log",
+                        "safety.kernel.log", "safety.cmd.log",
+                    )
+                },
             })
         source_hash = campaign._canonical_object_sha256({
             "patch_sha256": campaign.sha256_file(
@@ -163,7 +173,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             "quality_binary_sha256": quality_binary,
             "source_sha256": source_hash,
             "scorer_sha256": campaign.sha256_file(CAMPAIGN_PATH),
-            "tests_sha256": campaign.sha256_file(Path(__file__)),
+            "tests_sha256_by_path": campaign.sha_prefetch_test_hashes(),
             "frozen_epoch_s": 100,
         }
         manifest = {
@@ -199,6 +209,9 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 "binary_sha256": binary,
                 "configuration_sha256": configs[arm],
                 "fixture_sha256": fixture,
+                "quality_fixture_content_sha256":
+                    campaign.QUALITY_FIXTURE_CONTENT_SHA256,
+                "ordered_case_ids": [row["case_id"] for row in rows],
                 "output_sha256": hashlib.sha256(
                     json.dumps(rows, sort_keys=True).encode()
                 ).hexdigest(),
@@ -358,12 +371,90 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             run_source.index("out.mkdir"),
         )
 
+    def test_probe_receipt_rejects_stale_or_rewritten_evidence(self):
+        campaign = self.load_campaign()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            raw = root / "raw.jsonl"
+            probe_rows = [
+                {"arm": "B", "access_stream_sha256": "4" * 64,
+                 "engine": {"completed_fetch_ms": [10.0, 10.0, 10.0]}},
+                {"arm": "C", "access_stream_sha256": "4" * 64,
+                 "engine": {"completed_fetch_ms": [8.0, 8.0, 8.0]}},
+            ]
+            raw.write_text("\n".join(json.dumps(row) for row in probe_rows) + "\n",
+                           encoding="utf-8")
+            randomness = {"round": 1}
+            receipt = {
+                "schema_version": 1, "verdict": "PASS",
+                "candidate_commit": "1" * 40, "binary_sha256": "2" * 64,
+                "freeze_sha256": "3" * 64, "randomness": randomness,
+                "raw_sha256": campaign.sha256_file(raw), "arm_count": 2,
+                "access_stream_sha256": "4" * 64,
+                "completed_fetch_ratio": 0.8,
+                "model_generation": 9,
+            }
+            path = root / "probe-receipt.json"
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            with mock.patch.object(
+                campaign, "derive_sha_prefetch_record_from_artifacts"
+            ):
+                campaign.verified_sha_prefetch_probe_receipt(
+                    path, "1" * 40, "2" * 64, "3" * 64, randomness, 9
+                )
+            for field, value in (
+                ("verdict", "FAIL"), ("binary_sha256", "5" * 64),
+                ("completed_fetch_ratio", 0.91),
+            ):
+                changed = copy.deepcopy(receipt)
+                changed[field] = value
+                path.write_text(json.dumps(changed), encoding="utf-8")
+                with self.assertRaises(ValueError), mock.patch.object(
+                    campaign, "derive_sha_prefetch_record_from_artifacts"
+                ):
+                    campaign.verified_sha_prefetch_probe_receipt(
+                        path, "1" * 40, "2" * 64, "3" * 64, randomness, 9
+                    )
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            raw.write_text('{"fabricated":true}\n', encoding="utf-8")
+            with self.assertRaises(ValueError), mock.patch.object(
+                campaign, "derive_sha_prefetch_record_from_artifacts"
+            ):
+                campaign.verified_sha_prefetch_probe_receipt(
+                    path, "1" * 40, "2" * 64, "3" * 64, randomness, 9
+                )
+
+    def test_arm_artifact_map_changes_when_any_witness_changes(self):
+        campaign = self.load_campaign()
+        names = (
+            "server.log", "result.json", "nvme-inflight.log",
+            "safety.main.log", "safety.samples.log", "safety.kernel.log",
+            "safety.cmd.log",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in names:
+                (root / name).write_text(name, encoding="utf-8")
+            before = campaign.sha_prefetch_artifact_hashes(root)
+            for name in names:
+                with self.subTest(name=name):
+                    path = root / name
+                    original = path.read_text(encoding="utf-8")
+                    path.write_text(original + "-changed", encoding="utf-8")
+                    self.assertNotEqual(
+                        campaign.sha_prefetch_artifact_hashes(root), before
+                    )
+                    path.write_text(original, encoding="utf-8")
+
     def test_score_reauthenticates_randomness_and_rederives_raw_artifacts(self):
         campaign = self.load_campaign()
         score_source = inspect.getsource(campaign.score_sha_prefetch_directory)
         self.assertIn("authenticate_confirmation", score_source)
         self.assertIn("derive_sha_prefetch_record_from_artifacts", score_source)
-        self.assertIn("artifact_sha256", score_source)
+        self.assertIn(
+            "artifact_sha256",
+            inspect.getsource(campaign.derive_sha_prefetch_record_from_artifacts),
+        )
 
     def test_freeze_binds_every_declared_acceptance_test(self):
         campaign = self.load_campaign()
