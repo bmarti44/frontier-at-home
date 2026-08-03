@@ -314,14 +314,21 @@ class Rung0SlabCampaignTests(unittest.TestCase):
     def test_memory_envelope_is_derived_from_measured_non_arena_peak(self):
         envelope = CAMPAIGN.derive_memory_envelope(
             non_arena_peak_bytes=30 * 1024**3,
+            non_arena_cgroup_peak_bytes=1 * 1024**3,
             host_total_bytes=120 * 1024**3,
         )
         self.assertEqual(envelope["arena_bytes"], 68_000_000_000)
         self.assertEqual(envelope["margin_bytes"], 4 * 1024**3)
-        self.assertEqual(envelope["memory_high_gib"], 98)
-        self.assertEqual(envelope["memory_max_gib"], 100)
+        self.assertEqual(envelope["memory_high_gib"], 69)
+        self.assertEqual(envelope["memory_max_gib"], 71)
         self.assertGreaterEqual(
             envelope["memory_high_bytes"],
+            envelope["non_arena_cgroup_peak_bytes"]
+            + envelope["arena_bytes"]
+            + envelope["margin_bytes"],
+        )
+        self.assertEqual(
+            envelope["projected_physical_peak_bytes"],
             envelope["non_arena_peak_bytes"]
             + envelope["arena_bytes"]
             + envelope["margin_bytes"],
@@ -329,6 +336,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             CAMPAIGN.derive_memory_envelope(
                 non_arena_peak_bytes=35 * 1024**3,
+                non_arena_cgroup_peak_bytes=1 * 1024**3,
                 host_total_bytes=120 * 1024**3,
             )
 
