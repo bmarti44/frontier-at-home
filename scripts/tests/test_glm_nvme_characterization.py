@@ -61,13 +61,31 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
         )
         joined = "\n".join(argv)
         for required in (
-            "--readonly=1", "--rw=randread", "--direct=1",
+            "--readonly", "--rw=randread", "--direct=1",
             "--ioengine=io_uring", "--output-format=json",
             "--bs=9732096", "--iodepth=16", "--numjobs=4",
             "--runtime=60", "--time_based=1",
         ):
             self.assertIn(required, joined)
+        self.assertNotIn("--readonly=1", argv)
         self.assertNotIn("write", "\n".join(argv).lower())
+
+    def test_failed_cell_preserves_stderr(self):
+        probe = load_probe()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stderr_path = root / "fio.stderr"
+            returncode, _ = probe.run_cell(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.stderr.write('fio-readonly-error\\n'); sys.exit(3)",
+                ],
+                root,
+                stderr_path=stderr_path,
+            )
+            self.assertEqual(returncode, 3)
+            self.assertEqual(stderr_path.read_text(), "fio-readonly-error\n")
 
     def test_target_validation_rejects_symlinks_and_non_regular_files(self):
         probe = load_probe()
