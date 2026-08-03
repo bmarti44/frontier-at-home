@@ -230,6 +230,15 @@ least 80% of the matched 9.28 MiB fio bandwidth. This work is coupled to the
 Rung 0.5 expert-address oracle because cross-token lookahead may be required to
 keep QD16+ occupied.
 
+The same fio curve also gates an evidence-only identity-scan acceleration. The
+live `b1fd7e6` campaign preflight read the 211 GB model at roughly 0.66 GB/s,
+making serialized hashing a repeated multi-minute setup cost. Implement bounded
+high-QD O_DIRECT reads feeding the unchanged digest algorithm, with the source
+artifact opened read-only. Acceptance requires exact digest parity with the
+stock scanner on model and slab, a one-byte corruption mutation that fails
+closed, bounded memory, and at least 80% of the matched fio sequential rate.
+This changes evidence setup time only; it is not a serving-performance claim.
+
 After the sweep, re-derive rather than scale by analogy: all-miss decode,
 cache-hit/miss decode with compute overlap, the faithful streamed decode
 ceiling, and the ub2048 streamed-prefill ceiling. The currently documented
