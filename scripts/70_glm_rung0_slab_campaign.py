@@ -1731,6 +1731,11 @@ def parse_quality_engine_log(text: str, mode: str) -> dict[str, Any]:
 
 def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
     """Fail closed on containment, memory, process, or kernel evidence."""
+    bindings = parse_safe_run_safety_artifact_bindings(main)
+    for name, content in (("samples.log", samples), ("kernel.log", kernel)):
+        encoded = content.encode("utf-8")
+        if bindings[name] != (hashlib.sha256(encoded).hexdigest(), len(encoded)):
+            raise ValueError("parsed safety log differs from wrapper receipt")
     for marker in (
         "executed candidate was verified alive at least once; no identity "
         "contradiction observed by the periodic sampler; actual cadence is "
@@ -2041,16 +2046,7 @@ def require_safe_run_safety_artifact_bindings(
     main_log: str, expected: dict[str, Path]
 ) -> None:
     """Require wrapper-finalized hashes for copied sampler and kernel logs."""
-    matches = re.findall(
-        r"safety_artifact_verified name=(samples\.log|kernel\.log) "
-        r"sha256=([0-9a-f]{64}) size=(\d+)",
-        main_log,
-    )
-    bindings: dict[str, tuple[str, int]] = {}
-    for name, digest, size in matches:
-        if name in bindings:
-            raise ValueError("safe-run repeats a safety artifact binding")
-        bindings[name] = (digest, int(size))
+    bindings = parse_safe_run_safety_artifact_bindings(main_log)
     if set(bindings) != set(expected):
         raise ValueError("safe-run safety artifact bindings are incomplete")
     for name, path in expected.items():
@@ -2061,6 +2057,25 @@ def require_safe_run_safety_artifact_bindings(
             raise ValueError("a wrapper safety artifact is absent") from error
         if bindings[name] != (digest, size):
             raise ValueError("wrapper safety artifact differs from its receipt")
+
+
+def parse_safe_run_safety_artifact_bindings(
+    main_log: str,
+) -> dict[str, tuple[str, int]]:
+    """Parse the wrapper-owned sampler/kernel receipts exactly once."""
+    matches = re.findall(
+        r"safety_artifact_verified name=(samples\.log|kernel\.log) "
+        r"sha256=([0-9a-f]{64}) size=(\d+)",
+        main_log,
+    )
+    bindings: dict[str, tuple[str, int]] = {}
+    for name, digest, size in matches:
+        if name in bindings:
+            raise ValueError("safe-run repeats a safety artifact binding")
+        bindings[name] = (digest, int(size))
+    if set(bindings) != {"samples.log", "kernel.log"}:
+        raise ValueError("safe-run safety artifact bindings are incomplete")
+    return bindings
 
 
 def terminate_exact(process: subprocess.Popen[Any], start_ticks: int) -> None:
