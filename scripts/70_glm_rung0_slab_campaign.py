@@ -873,6 +873,12 @@ def derive_memory_envelope(
     )
     memory_high_gib = math.ceil(cgroup_required_bytes / 1024**3)
     memory_max_gib = memory_high_gib + MEMORY_MAX_EXCURSION_GIB
+    minimum_start_available_gib = math.ceil(
+        (
+            projected_physical_peak_bytes
+            + HOST_KILL_FLOOR_GIB * 1024**3
+        ) / 1024**3
+    )
     if (
         memory_high_gib < 32
         or memory_high_gib > 101
@@ -890,6 +896,7 @@ def derive_memory_envelope(
         "memory_high_bytes": memory_high_gib * 1024**3,
         "memory_high_gib": memory_high_gib,
         "memory_max_gib": memory_max_gib,
+        "minimum_start_available_gib": minimum_start_available_gib,
         "host_total_bytes": host_total_bytes,
         "host_kill_floor_gib": HOST_KILL_FLOOR_GIB,
     }
@@ -1242,6 +1249,68 @@ def measured_cgroup_peak_bytes(samples: str) -> int:
     if len(values) < 2:
         raise ValueError("memory probe lacks repeated cgroup peak samples")
     return max(values)
+
+
+MEMORY_PROBE_ARTIFACT_NAMES = (
+    "partial.json", "safety.main.log", "safety.samples.log", "safety.kernel.log",
+)
+
+
+def derive_memory_probe_evidence(
+    probe_root: Path, binary_sha256: str
+) -> dict[str, Any]:
+    """Strictly rederive the reusable envelope inputs from preserved raw logs."""
+    paths = {name: probe_root / name for name in MEMORY_PROBE_ARTIFACT_NAMES}
+    if any(not path.is_file() for path in paths.values()):
+        raise ValueError("memory probe is missing a raw authority artifact")
+    partial = strict_json(paths["partial.json"])
+    expected_environment_sha256 = observed_environment_sha256(
+        memory_probe_environment()
+    )
+    if (
+        partial != {
+            "schema_version": 1,
+            "binary_sha256": binary_sha256,
+            "mode": "off",
+            "probe_environment_sha256": expected_environment_sha256,
+        }
+    ):
+        raise ValueError("memory probe partial identity is invalid")
+    main = paths["safety.main.log"].read_text(encoding="utf-8")
+    samples = paths["safety.samples.log"].read_text(encoding="utf-8")
+    kernel = paths["safety.kernel.log"].read_text(encoding="utf-8")
+    executed_hashes = re.findall(
+        r"executed_candidate_verified .*\bexecuted_binary_sha256=([0-9a-f]{64})\b",
+        main,
+    )
+    environment_hashes = re.findall(
+        r"\bexecuted_environment_sha256=([0-9a-f]{64})\b", main
+    )
+    total_matches = re.findall(r"^MemTotal:\s+(\d+) kB$", main, re.MULTILINE)
+    if (
+        executed_hashes != [binary_sha256]
+        or environment_hashes != [expected_environment_sha256]
+        or len(total_matches) != 1
+    ):
+        raise ValueError("memory probe safe-run identity is incomplete")
+    return {
+        "probe_artifact_sha256": {
+            name: sha256_file(path) for name, path in paths.items()
+        },
+        "probe_environment_sha256": expected_environment_sha256,
+        "probe_safety": parse_safety_logs(main, samples, kernel),
+        "non_arena_peak_bytes": measured_non_arena_peak_bytes(samples, main),
+        "non_arena_cgroup_peak_bytes": measured_cgroup_peak_bytes(samples),
+        "host_total_bytes": int(total_matches[0]) * 1024,
+    }
+
+
+def require_memory_probe_evidence(
+    probe_root: Path, expected: dict[str, Any], binary_sha256: str
+) -> None:
+    derived = derive_memory_probe_evidence(probe_root, binary_sha256)
+    if any(expected.get(name) != value for name, value in derived.items()):
+        raise ValueError("memory envelope differs from bound raw probe evidence")
 
 
 def quality_command(
@@ -2490,6 +2559,7 @@ def verified_memory_envelope(
         "quality_binary_stat",
         "candidate_commit",
         "probe_environment_sha256",
+        "probe_artifact_sha256",
         "probe_safety",
         "non_arena_peak_bytes",
         "non_arena_cgroup_peak_bytes",
@@ -2499,6 +2569,7 @@ def verified_memory_envelope(
         "memory_high_bytes",
         "memory_high_gib",
         "memory_max_gib",
+        "minimum_start_available_gib",
         "host_total_bytes",
         "host_kill_floor_gib",
     }
@@ -2517,6 +2588,7 @@ def verified_memory_envelope(
         or not re.fullmatch(r"[0-9a-f]{64}", envelope["probe_environment_sha256"])
     ):
         raise ValueError("memory envelope identity or safety evidence is invalid")
+    require_memory_probe_evidence(path.parent / "probe", envelope, binary_sha256)
     derived = derive_memory_envelope(
         envelope["non_arena_peak_bytes"],
         envelope["non_arena_cgroup_peak_bytes"],
@@ -2612,17 +2684,7 @@ def run_memory_probe(args: argparse.Namespace) -> int:
         if not source.is_file():
             raise RuntimeError(f"memory probe lacks safety artifact {name}")
         shutil.copy2(source, arm_out / f"safety.{name}")
-    main = (arm_out / "safety.main.log").read_text(encoding="utf-8")
-    samples = (arm_out / "safety.samples.log").read_text(encoding="utf-8")
-    kernel = (arm_out / "safety.kernel.log").read_text(encoding="utf-8")
-    safety = parse_safety_logs(main, samples, kernel)
-    non_arena_peak_bytes = measured_non_arena_peak_bytes(samples, main)
-    non_arena_cgroup_peak_bytes = measured_cgroup_peak_bytes(samples)
-    host_total_bytes = next(
-        int(line.split()[1]) * 1024
-        for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines()
-        if line.startswith("MemTotal:")
-    )
+    probe_evidence = derive_memory_probe_evidence(arm_out, args.binary_sha256)
     envelope = {
         "schema_version": 1,
         "binary_sha256": args.binary_sha256,
@@ -2630,12 +2692,11 @@ def run_memory_probe(args: argparse.Namespace) -> int:
         "quality_binary_sha256": args.quality_binary_sha256,
         "quality_binary_stat": artifact_stat(quality_binary),
         "candidate_commit": args.candidate_commit,
-        "probe_environment_sha256": observed_environment_sha256(
-            probe_environment
-        ),
-        "probe_safety": safety,
+        **probe_evidence,
         **derive_memory_envelope(
-            non_arena_peak_bytes, non_arena_cgroup_peak_bytes, host_total_bytes
+            probe_evidence["non_arena_peak_bytes"],
+            probe_evidence["non_arena_cgroup_peak_bytes"],
+            probe_evidence["host_total_bytes"],
         ),
     }
     write_json_exclusive(out / "memory-envelope.json", envelope)
@@ -2699,9 +2760,10 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
     )
     schedule = quality_schedule(flip=confirmation["flip"])
     memory_high_gib = envelope["memory_high_gib"]
+    minimum_start_gib = envelope["minimum_start_available_gib"]
     services_are_stopped()
     no_large_engines()
-    stable_start_memory(max(110.0, memory_high_gib + 20.0))
+    stable_start_memory(minimum_start_gib)
     verify_global_lock_access()
     out.mkdir(mode=0o700, parents=True)
     manifest_sha256 = sha256_file(manifest)
@@ -2711,7 +2773,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
         for index, arm in enumerate(schedule):
             services_are_stopped()
             no_large_engines()
-            stable_start_memory(max(110.0, memory_high_gib + 20.0))
+            stable_start_memory(minimum_start_gib)
             mode = "off" if arm == "A" else "on"
             safe_timeout = quality_timeout_seconds(mode)
             label = f"quality-{index:02d}-{arm.lower()}"
@@ -2735,7 +2797,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
                     ),
                     "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
                     "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
-                    "GLM_SAFE_MIN_START_GIB": "110",
+                    "GLM_SAFE_MIN_START_GIB": str(minimum_start_gib),
                     "GLM_SAFE_TIMEOUT_S": str(safe_timeout),
                 }
             )
@@ -2879,9 +2941,10 @@ def run_campaign(args: argparse.Namespace) -> int:
     )
     schedule = arm_schedule(flip=confirmation["flip"])
     memory_high_gib = envelope["memory_high_gib"]
+    minimum_start_gib = envelope["minimum_start_available_gib"]
     services_are_stopped()
     no_large_engines()
-    stable_start_memory(max(110.0, memory_high_gib + 20.0))
+    stable_start_memory(minimum_start_gib)
     verify_global_lock_access()
     if sha256_file(MODEL_PATH) != MODEL_SHA256:
         raise ValueError("full mapped model identity mismatch")
@@ -2930,7 +2993,7 @@ def run_campaign(args: argparse.Namespace) -> int:
         for block, sequence, arm in schedule:
             services_are_stopped()
             no_large_engines()
-            stable_start_memory(max(110.0, memory_high_gib + 20.0))
+            stable_start_memory(minimum_start_gib)
             mode = "off" if arm == "A" else "on"
             safe_timeout = safe_timeout_seconds(mode)
             label = f"r0-b{block}s{sequence}{arm.lower()}"
@@ -2956,7 +3019,7 @@ def run_campaign(args: argparse.Namespace) -> int:
                     ),
                     "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
                     "GLM_SAFE_KILL_FLOOR_GIB": "18",
-                    "GLM_SAFE_MIN_START_GIB": "110",
+                    "GLM_SAFE_MIN_START_GIB": str(minimum_start_gib),
                     "GLM_SAFE_TIMEOUT_S": str(safe_timeout),
                 }
             )
@@ -3284,9 +3347,10 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
         )
         expected_access_stream = probe["access_stream_sha256"]
     memory_high_gib = envelope["memory_high_gib"]
+    minimum_start_gib = envelope["minimum_start_available_gib"]
     services_are_stopped()
     no_large_engines()
-    stable_start_memory(max(110.0, memory_high_gib + 20.0))
+    stable_start_memory(minimum_start_gib)
     verify_global_lock_access()
     if sha256_file(MODEL_PATH) != MODEL_SHA256:
         raise ValueError("full mapped model identity mismatch")
@@ -3306,7 +3370,7 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
         for block, sequence, arm in schedule:
             services_are_stopped()
             no_large_engines()
-            stable_start_memory(max(110.0, memory_high_gib + 20.0))
+            stable_start_memory(minimum_start_gib)
             mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[arm]
             safe_timeout = 7200 if arm == "C" else safe_timeout_seconds(
                 "off" if arm == "A" else "on"
@@ -3331,7 +3395,7 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
                 ),
                 "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
                 "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
-                "GLM_SAFE_MIN_START_GIB": "110",
+                "GLM_SAFE_MIN_START_GIB": str(minimum_start_gib),
                 "GLM_SAFE_TIMEOUT_S": str(safe_timeout),
                 "GLM_SAFE_FINAL_ARTIFACTS": ",".join(
                     os.fspath(arm_out / name)
@@ -3486,7 +3550,8 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
     services_are_stopped()
     no_large_engines()
     memory_high_gib = envelope["memory_high_gib"]
-    stable_start_memory(max(110.0, memory_high_gib + 20.0))
+    minimum_start_gib = envelope["minimum_start_available_gib"]
+    stable_start_memory(minimum_start_gib)
     verify_global_lock_access()
     out.mkdir(mode=0o700, parents=True)
     manifest_sha256 = sha256_file(fixture_manifest)
@@ -3516,7 +3581,7 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
                 ),
                 "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
                 "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
-                "GLM_SAFE_MIN_START_GIB": "110",
+                "GLM_SAFE_MIN_START_GIB": str(minimum_start_gib),
                 "GLM_SAFE_TIMEOUT_S": "9000",
                 "GLM_SAFE_FINAL_ARTIFACTS": os.fspath(result_path),
             })
