@@ -177,6 +177,7 @@ map_allowlist = {
     "evalset_sha256",
     "model_files",
     "shared_libraries",
+    "tests_sha256_by_path",
 }
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
