@@ -277,6 +277,12 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             )
 
     def test_safety_log_parser_requires_clean_external_evidence(self):
+        samples = "\n".join(
+            f"t mem_avail_kb={20 * 1048576} eng_rss_kb=1 read_bytes={index} "
+            "cgroup_current_bytes=1 cgroup_peak_bytes=2 cgroup_swap_current_bytes=0"
+            for index in range(3)
+        )
+        kernel = "kernel clean"
         main = "\n".join(
             (
                 "candidate_binary_sha256=" + "a" * 64,
@@ -285,21 +291,28 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                 "executed candidate was verified alive at least once; no identity "
                 "contradiction observed by the periodic sampler; actual cadence "
                 "is recorded in samples.log; wrapper and descendant checks clean",
+                "safety_artifact_verified name=samples.log sha256="
+                + hashlib.sha256(samples.encode()).hexdigest()
+                + f" size={len(samples.encode())}",
+                "safety_artifact_verified name=kernel.log sha256="
+                + hashlib.sha256(kernel.encode()).hexdigest()
+                + f" size={len(kernel.encode())}",
                 "SAFE_RUN end rc=0 killed=no",
             )
         )
-        samples = "\n".join(
-            f"t mem_avail_kb={20 * 1048576} eng_rss_kb=1 read_bytes={index} "
-            "cgroup_current_bytes=1 cgroup_peak_bytes=2 cgroup_swap_current_bytes=0"
-            for index in range(3)
-        )
-        parsed = CAMPAIGN.parse_safety_logs(main, samples, "kernel clean")
+        parsed = CAMPAIGN.parse_safety_logs(main, samples, kernel)
         self.assertEqual(parsed["cgroup_high_events"], 0)
         self.assertGreaterEqual(parsed["minimum_available_gib"], 10)
         with self.assertRaises(ValueError):
             CAMPAIGN.parse_safety_logs(
-                main.replace("high 0", "high 1"), samples, "kernel clean"
+                main.replace("high 0", "high 1"), samples, kernel
             )
+        with self.assertRaises(ValueError):
+            CAMPAIGN.parse_safety_logs(
+                main, samples.replace("read_bytes=1", "read_bytes=9"), kernel
+            )
+        with self.assertRaises(ValueError):
+            CAMPAIGN.parse_safety_logs(main, samples, "different clean kernel")
 
     def test_external_io_summary_uses_completed_proc_bytes_and_block_qd(self):
         result = CAMPAIGN.summarize_external_io(
