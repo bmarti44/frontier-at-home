@@ -15,8 +15,8 @@ ENGINE_PATCHES = (
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-allocation-telemetry.patch",
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-cuda-memory-telemetry.patch",
 )
-HOT_REPEAT_CHECK_PATCH = (
-    ROOT / "results/glm52-gates/harness/ds4-expert-slab-hot-repeat-check.patch"
+PREFETCH_SHA_PIPELINE_PATCH = (
+    ROOT / "results/glm52-gates/harness/ds4-expert-slab-prefetch-sha-pipeline.patch"
 )
 
 
@@ -24,7 +24,8 @@ class ExpertSlabSourceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         patches = ENGINE_PATCHES + (
-            (HOT_REPEAT_CHECK_PATCH,) if HOT_REPEAT_CHECK_PATCH.exists() else ()
+            (PREFETCH_SHA_PIPELINE_PATCH,)
+            if PREFETCH_SHA_PIPELINE_PATCH.exists() else ()
         )
         cls.source = "\n".join(
             patch.read_text(encoding="utf-8") for patch in patches
@@ -96,34 +97,37 @@ class ExpertSlabSourceTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.source)
 
-    def test_repeat_read_fast_check_stays_bound_to_first_sha_and_generation(self) -> None:
-        """Repeated records may be cheaper only after authentic first use.
+    def test_prefetch_pipeline_keeps_full_sha_and_generation_binding(self) -> None:
+        """Hide record authentication; never weaken or skip it.
 
         The e637 cached arm spent a median 5.77 ms fetching a one-miss layer
         although its O_DIRECT read occupied only 1.01 ms.  A bounded checksum
         probe measured the existing SHA at about 3.87 ms per 9,732,096-byte
-        record.  The candidate may cache a faster repeat checksum only after
-        the frozen record SHA matches, and must discard that state at model
-        generation or lifecycle boundaries.
+        record. The candidate must perform that full SHA in the background and
+        publish a prefetch slot only after it matches the frozen record digest.
         """
         for marker in (
-            'getenv("DS4_CUDA_EXPERT_SLAB_FAST_REPEAT_CHECK")',
-            "cuda_expert_slab_repeat_checksum",
-            "first_sha_verified",
-            "repeat_checksum_ready",
-            "expert slab repeat checksum mismatch",
-            "repeat_sha_checks=%llu",
-            "repeat_fast_checks=%llu",
-            "repeat_fast_failures=%llu",
+            'getenv("DS4_CUDA_EXPERT_SLAB_PREFETCH_SHA")',
+            "cuda_expert_slab_prefetch_read_sha256",
+            "DS4_SLAB_PF_READING",
+            "DS4_SLAB_PF_READY",
+            "expert slab prefetch checksum mismatch",
+            "slab_prefetch_sha_success=%llu",
+            "slab_prefetch_sha_failures=%llu",
+            "slab_prefetch_ready=%llu",
+            "slab_prefetch_late=%llu",
+            "slab_prefetch_fallback=%llu",
             "slab_validation_ms=%.3f",
             "slab_copy_ms=%.3f",
-            "repeat_checks.clear()",
+            "slab_wait_ms=%.3f",
+            "validated_bytes",
+            "copied_bytes",
             "model_generation != g_model_load_generation",
         ):
             self.assertIn(marker, self.source)
 
-        # The fast path supplements rather than replaces the frozen first-use
-        # SHA chain.  This existing call must remain in the composed source.
+        # The background path supplements rather than replaces the frozen
+        # SHA chain. This existing digest call must remain in composed source.
         self.assertIn("cuda_expert_slab_sha256(buffer", self.source)
 
     def test_lifecycle_and_worker_device_are_explicit(self) -> None:

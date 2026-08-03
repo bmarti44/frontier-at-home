@@ -318,30 +318,48 @@ bytes and overlap remain measured inputs; total decode/prefill and the
 lossless plateau therefore remain provisional until the matched engine-stage
 gate below closes.
 
-#### Rung 0.2 - repeated-record validation and bounded submission
+#### Rung 0.2 - collision-resistant validation pipeline and bounded submission
 
-Before changing prediction policy, isolate the reproduced roughly 4.8-5.0 ms
-post-read cost. The next candidate is default-off. A record's first use must
-still match its frozen SHA-256. Only after that match may the model-generation-
-bound record state cache a fast checksum for repeated reads; cleanup or model
-generation change clears it. A repeated read must validate the exact pinned
-bytes before any CUDA copy, and a one-byte mutation must fail closed. The
-implementation must label the fast checksum honestly, must not claim
-cryptographic collision resistance, and must retain the frozen whole-file and
-first-use SHA-256 chain.
+Round-28 review falsified the proposed non-cryptographic repeated-record
+checksum before implementation: a compensating multi-byte mutation can collide
+while passing a one-byte mutation test. Do not build or adopt that design.
+Every demand or speculative slab read continues to match the record's frozen
+SHA-256 before its bytes become CUDA-copy-eligible. Performance comes from
+moving the complete O_DIRECT read plus SHA-256 into the cross-layer prefetch
+window and overlapping it with useful compute, not from weakening validation.
 
-The production-path RED test and scorer are frozen before implementation.
-Telemetry must independently count first-use SHA checks, fast-check hits and
-failures, read time, validation time and copy time. First run a bounded serving
-probe. Continue to a matched campaign only if the fast-check arm materially
-reduces completed fetch time without a safety regression. Adoption requires
-both a positive decode lower confidence bound versus repeated SHA and a
-positive decode lower confidence bound versus the then-current slab-off best,
-byte-identical outputs, control TTFT no worse than 1.05x, corruption mutations
-that fail closed, no swap/Xid/OOM/survivor, and the fixed quality suite if the
-lever is retained. If it improves slab transport but does not beat slab-off,
-keep it only as an unadopted component for the immediately following corrected
-cross-layer-prefetch candidate; do not call it a serving win.
+The next candidate is default-off and uses one bounded QD4-QD8 staging ring.
+The background worker publishes a slot `READY` only after the exact record key,
+offset, length, model generation and frozen SHA-256 all match. The main thread
+is the only cache/admission owner. Each pinned buffer remains exclusively owned
+from read submission through digest validation and until its synchronous CUDA
+copy returns or its completion event fires; it cannot be recycled or published
+to the arena sooner. A prediction miss or late completion falls back to the
+unchanged demand path, which performs the same full SHA-256. No predicted bytes
+may bypass validation.
+
+Before implementation, freeze the three contemporaneous arms and scorer:
+`A=slab-off`, `B=slab-on demand-SHA`, and `C=slab-on prefetch-SHA`. All arms use
+one source/binary and identical request/access fixtures in five fresh-server,
+counterbalanced blocks. A bounded probe continues only if C reduces median
+completed-fetch time by at least 10% versus B, produces at least 128 tokens,
+and has no safety or byte-identity failure. Final adoption is an
+intersection-union gate: on both the client-wall and raw-token clocks, C's
+decode 95% lower ratio must exceed 1.0 independently versus A and B; its warm
+and cold TTFT 95% upper ratio must be at most 1.05 versus both. Because all
+comparisons must pass, no favorable historical arm may substitute and no
+single-comparison win is sufficient.
+
+Telemetry is generation- and mode-labeled and reconciles read attempts into
+SHA successes/failures, prefetch READY/late/stale/fallback outcomes, CUDA-copy
+counts/bytes, and arena publications. Copy bytes can never exceed successfully
+SHA-validated bytes; any digest mismatch permits zero fallback, CUDA copies or
+publication and invalidates the slab globally. Timers separately cover read,
+SHA, wait, copy and completed fetch and must be finite and nonnegative. Mutation
+tests cover first/middle/last byte, compensating multi-byte edits, wrong equal-
+size record, offset/length, truncation, stale generation, concurrent completion
+and buffer reuse between validation and copy. Require byte-identical outputs,
+the fixed quality suite if retained, and no swap/Xid/OOM/survivor.
 
 ### DSV4 bounded cold-load acceleration
 
@@ -356,9 +374,10 @@ owner to stop or restart it.
 Start with an external bounded readahead window of 2-4 GiB over the stock
 loader, paced ahead of its file offset and issuing `POSIX_FADV_DONTNEED` behind
 the consumed range. This has the smallest serving-code surface. If it cannot
-reach the gate, option A is an O_DIRECT/io_uring loader at the fio-supported
-QD16-32, reading aligned superblocks directly into allocated weight storage and
-copying only unaligned GGUF edges. At no point may the loader retain a second
+reach the gate, option A is an O_DIRECT/io_uring loader using the measured
+single-stream 16 MiB path (QD1 first; QD4 only if the loader's own trace proves
+overlap is needed), reading aligned superblocks directly into allocated weight
+storage and copying only unaligned GGUF edges. At no point may the loader retain a second
 90.2 GiB weight copy; transient memory is bounded to the declared window and
 must fail closed before the host safety floor.
 

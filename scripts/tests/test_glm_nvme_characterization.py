@@ -192,6 +192,44 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             result.write_text(json.dumps(base), encoding="utf-8")
             with self.assertRaises(ValueError):
                 probe.parse_fio_result(result)
+
+    def test_parser_binds_achieved_queue_depth_not_only_requested_depth(self):
+        probe = load_probe()
+        document = {
+            "fio version": "fio-3.41",
+            "jobs": [{
+                "jobname": "matched-qd4",
+                "error": 0,
+                "read": {
+                    "bw_bytes": 12_000_000_000,
+                    "io_bytes": 720_000_000_000,
+                    "runtime": 60_000,
+                    "total_ios": 720_000,
+                },
+                "write": {"io_bytes": 0, "total_ios": 0},
+                "trim": {"io_bytes": 0, "total_ios": 0},
+                "iodepth_level": {
+                    "1": 0.1, "2": 0.1, "4": 99.99, "8": 0.0,
+                    "16": 0.0, "32": 0.0, ">=64": 0.0,
+                },
+            }],
+        }
+        expected = {
+            "name": "matched-qd4", "block_size": 1_000_000,
+            "iodepth": 4,
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            result = Path(temporary) / "fio.json"
+            result.write_text(json.dumps(document), encoding="utf-8")
+            parsed = probe.parse_fio_result(result, expected)
+            self.assertEqual(parsed["achieved_iodepth_level"]["4"], 99.99)
+            document["jobs"][0]["iodepth_level"] = {
+                "1": 100.0, "2": 0.0, "4": 0.0, "8": 0.0,
+                "16": 0.0, "32": 0.0, ">=64": 0.0,
+            }
+            result.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "achieved queue depth"):
+                probe.parse_fio_result(result, expected)
             base["jobs"][0]["read"]["bw_bytes"] = 12_000_000_000
             base["jobs"][0]["write"]["io_bytes"] = 4096
             result.write_text(json.dumps(base), encoding="utf-8")
@@ -262,6 +300,17 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                     row["iodepth"] == 1 and row["numjobs"] == 1):
                 row["bandwidth_gb_s"] = 1.0
         self.assertEqual(probe.score_sweep(bad)["verdict"], "NO_RESULT")
+
+        # Method reproduction is a sustained result. A favorable fio average
+        # must not hide a device-tail value outside the frozen band.
+        tail_bad = [dict(row) for row in rows]
+        for row in tail_bad:
+            if (row["kind"] == "primary" and
+                    row["block_size"] == probe.MATCHED_RECORD_BYTES and
+                    row["iodepth"] == 1 and row["numjobs"] == 1):
+                row["bandwidth_gb_s"] = 4.0
+                row["device_tail_gb_s"] = 3.4
+        self.assertEqual(probe.score_sweep(tail_bad)["verdict"], "NO_RESULT")
         self.assertEqual(probe.score_sweep(rows[:-1] + [rows[0]])["verdict"], "FAIL")
 
         high_qd = [row for row in rows if
