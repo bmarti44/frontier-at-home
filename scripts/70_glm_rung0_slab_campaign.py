@@ -125,7 +125,7 @@ def score_sha_prefetch_campaign(
 ) -> dict[str, Any]:
     """Score the frozen A=off/B=demand-SHA/C=prefetch-SHA campaign."""
     expected_manifest_keys = {
-        "schema_version", "candidate_commit", "binary_sha256",
+        "schema_version", "candidate_commit", "binary_sha256", "model_generation",
         "configuration_sha256_by_arm", "fixture_sha256",
         "access_stream_sha256", "campaign_started_monotonic_ns",
         "campaign_finished_monotonic_ns", "quality",
@@ -159,6 +159,9 @@ def score_sha_prefetch_campaign(
             any(character not in "0123456789abcdef" for character in commit)):
         raise ValueError("candidate commit is invalid")
     binary = sha256(manifest["binary_sha256"], "manifest binary")
+    model_generation = integer(
+        manifest["model_generation"], "manifest model generation", minimum=1
+    )
     fixture = sha256(manifest["fixture_sha256"], "manifest fixture")
     access = sha256(manifest["access_stream_sha256"], "manifest access stream")
     configurations = manifest["configuration_sha256_by_arm"]
@@ -291,7 +294,7 @@ def score_sha_prefetch_campaign(
             "completed_fetch_ms", "telemetry",
         } or engine["mode"] != mode or integer(
             engine["model_generation"], "model generation", minimum=1
-        ) != 9:
+        ) != model_generation:
             raise ValueError("engine mode/generation evidence is invalid")
         reads = integer(engine["slab_reads"], "slab reads")
         qd = integer(engine["slab_peak_qd"], "slab queue depth")
@@ -313,6 +316,7 @@ def score_sha_prefetch_campaign(
             "attempts", "sha_successes", "sha_failures", "ready", "late",
             "stale", "fallback", "copies", "validated_bytes", "copied_bytes",
             "publications", "read_ns", "sha_ns", "wait_ns", "copy_ns",
+            "current_ready",
         }
         if not isinstance(telemetry, dict) or set(telemetry) != telemetry_keys:
             raise ValueError("prefetch telemetry schema is invalid")
@@ -327,8 +331,9 @@ def score_sha_prefetch_campaign(
         if arm == "B" and (t["ready"] or t["late"] or t["stale"] or t["fallback"]):
             raise ValueError("demand-only arm emitted prefetch outcomes")
         if arm == "C" and (
-            t["ready"] + t["late"] + t["stale"] != t["sha_successes"] or
-            t["fallback"] > t["late"]
+            t["ready"] != t["sha_successes"] or
+            t["copies"] + t["stale"] + t["current_ready"] != t["ready"] or
+            t["fallback"] != t["late"]
         ):
             raise ValueError("prefetch terminal outcomes do not reconcile")
 

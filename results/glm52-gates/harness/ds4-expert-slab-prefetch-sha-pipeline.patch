@@ -1,5 +1,5 @@
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index 2399598..e130e95 100644
+index 2399598..834cff7 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -23,6 +23,7 @@
@@ -56,7 +56,7 @@ index 2399598..e130e95 100644
      uint8_t *buf;           /* gate|up|down, slot_bytes */
  } ds4_pf_slot;
  
-@@ -24502,66 +24507,125 @@ static struct {
+@@ -24502,66 +24507,155 @@ static struct {
      uint8_t *stage_raw[8], *stage[8];   /* per-worker private staging */
      uint64_t stage_bytes;
      int n_threads;
@@ -106,13 +106,20 @@ index 2399598..e130e95 100644
 +    return identity;
 +}
 +
++static uint32_t cuda_expert_cache_insert(uint64_t key,
++                                         uint64_t gate_off,
++                                         uint64_t down_off);
++
 +class ds4_pf_backend final : public ds4_slab_prefetch::Backend {
 +public:
 +    explicit ds4_pf_backend(int worker_id) : worker_id_(worker_id) {}
 +    ds4_pf_backend(char *gate_dst, char *up_dst, char *down_dst,
-+                   uint64_t gate_bytes, uint64_t down_bytes)
++                   uint64_t gate_bytes, uint64_t down_bytes,
++                   uint64_t key, uint64_t gate_off, uint64_t down_off,
++                   bool publish)
 +        : gate_dst_(gate_dst), up_dst_(up_dst), down_dst_(down_dst),
-+          gate_bytes_(gate_bytes), down_bytes_(down_bytes) {}
++          gate_bytes_(gate_bytes), down_bytes_(down_bytes), key_(key),
++          gate_off_(gate_off), down_off_(down_off), publish_(publish) {}
 +
 +    ds4_slab_prefetch::ReadResult read(
 +            const ds4_slab_prefetch::Identity &identity,
@@ -163,18 +170,37 @@ index 2399598..e130e95 100644
 +    bool copy_sync(const uint8_t *buffer, size_t bytes) override {
 +        if (!gate_dst_ || !up_dst_ || !down_dst_ ||
 +            bytes != 2u * gate_bytes_ + down_bytes_) return false;
-+        return cuda_ok(cudaMemcpy(gate_dst_, buffer, gate_bytes_, cudaMemcpyDefault),
++        const bool copied = cuda_ok(cudaMemcpy(gate_dst_, buffer, gate_bytes_, cudaMemcpyDefault),
 +                       "prefetch gate copy") &&
 +            cuda_ok(cudaMemcpy(up_dst_, buffer + gate_bytes_, gate_bytes_,
 +                               cudaMemcpyDefault), "prefetch up copy") &&
 +            cuda_ok(cudaMemcpy(down_dst_, buffer + 2u * gate_bytes_, down_bytes_,
 +                               cudaMemcpyDefault), "prefetch down copy");
++        if (!copied || !publish_) return copied;
++        const uint32_t slot = cuda_expert_cache_insert(key_, gate_off_, down_off_);
++        if (slot == UINT32_MAX) return false;
++        uint8_t *fill = g_expert_persist_cache.arena +
++            (uint64_t)slot * g_expert_persist_cache.slot_bytes;
++        const bool published =
++            cuda_ok(cudaMemcpy(fill, gate_dst_, gate_bytes_, cudaMemcpyDefault),
++                    "pf arena gate") &&
++            cuda_ok(cudaMemcpy(fill + gate_bytes_, up_dst_, gate_bytes_,
++                               cudaMemcpyDefault), "pf arena up") &&
++            cuda_ok(cudaMemcpy(fill + 2u * gate_bytes_, down_dst_, down_bytes_,
++                               cudaMemcpyDefault), "pf arena down");
++        if (!published) {
++            g_expert_persist_cache.map->erase(key_);
++            g_expert_persist_cache.meta[slot].key = UINT64_MAX;
++        }
++        return published;
 +    }
 +    bool copy_async(const uint8_t *, size_t, uint64_t *) override { return false; }
 +    bool event_complete(uint64_t) override { return false; }
 +    void invalidate_slab() override {
 +        (void)cuda_expert_slab_fail("prefetch read/SHA/lease integrity failure");
 +    }
++    uint64_t now_ns() override { return cuda_expert_slab_now_ns(); }
++    bool publication_expected() const override { return publish_; }
 +private:
 +    int worker_id_ = -1;
 +    char *gate_dst_ = NULL;
@@ -182,6 +208,10 @@ index 2399598..e130e95 100644
 +    char *down_dst_ = NULL;
 +    uint64_t gate_bytes_ = 0;
 +    uint64_t down_bytes_ = 0;
++    uint64_t key_ = 0;
++    uint64_t gate_off_ = 0;
++    uint64_t down_off_ = 0;
++    bool publish_ = false;
 +};
  
  static void *ds4_pf_worker(void *arg) {
@@ -225,7 +255,7 @@ index 2399598..e130e95 100644
      }
      return NULL;
  }
-@@ -24570,7 +24634,14 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
+@@ -24570,7 +24664,14 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
      static int done = 0;
      if (done) return;
      done = 1;
@@ -241,7 +271,7 @@ index 2399598..e130e95 100644
      g_pf.gate_bytes = gate_bytes;
      g_pf.down_bytes = down_bytes;
      g_pf.slot_bytes = 2u * gate_bytes + down_bytes;
-@@ -24593,12 +24664,7 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
+@@ -24593,12 +24694,7 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
      g_pf.n_threads = nt ? atoi(nt) : 6;
      if (g_pf.n_threads < 1) g_pf.n_threads = 1;
      if (g_pf.n_threads > 8) g_pf.n_threads = 8;
@@ -255,7 +285,7 @@ index 2399598..e130e95 100644
      for (int i = 0; alloc_ok && i < DS4_PF_SLOTS; i++) {
          /* page-aligned so it can be pinned: pinned staging turns the
           * consume-path host->device copy into a DMA transfer (pageable
-@@ -24612,13 +24678,30 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
+@@ -24612,13 +24708,30 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
          }
          if (cudaHostRegister(g_pf.slots[i].buf, (size_t)g_pf.slot_bytes,
                               cudaHostRegisterPortable) != cudaSuccess) {
@@ -287,7 +317,7 @@ index 2399598..e130e95 100644
      pthread_mutex_init(&g_pf.mu, NULL);
      pthread_cond_init(&g_pf.cv, NULL);
      for (int i = 0; i < g_pf.n_threads; i++) {
-@@ -24632,8 +24715,9 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
+@@ -24632,8 +24745,9 @@ static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
      g_pf.started = 1;
      g_pf.enabled = 1;
      fprintf(stderr, "ds4: cross-layer expert prefetch enabled (%d workers, "
@@ -299,7 +329,7 @@ index 2399598..e130e95 100644
  }
  
  /* main thread: hand the worker a predicted (layer,expert) set */
-@@ -24649,26 +24733,18 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
+@@ -24649,26 +24763,18 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
           * carry a matching request generation. Disable rather than serve
           * stale weights. */
          pthread_mutex_lock(&g_pf.mu);
@@ -330,7 +360,7 @@ index 2399598..e130e95 100644
      g_pf.n_req = 0;   /* stale requests are worthless once a new layer is predicted */
      for (uint32_t i = 0; i < n_ids && g_pf.n_req < DS4_PF_SLOTS; i++) {
          const int32_t e = ids[i];
-@@ -24686,9 +24762,23 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
+@@ -24686,9 +24792,23 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
          }
          int dup = 0;
          for (int q = 0; q < g_pf.n_req; q++) if (g_pf.reqs[q].key == key) dup = 1;
@@ -356,7 +386,7 @@ index 2399598..e130e95 100644
          ds4_pf_req *r = &g_pf.reqs[g_pf.n_req++];
          r->key = key;
          r->gate_off = table->gate_offset + (uint64_t)e * table->gate_expert_bytes;
-@@ -24696,45 +24786,44 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
+@@ -24696,45 +24816,45 @@ extern "C" void ds4_gpu_expert_prefetch_hint(
          r->down_off = table->down_offset + (uint64_t)e * table->down_expert_bytes;
          r->generation = g_model_load_generation;
          r->epoch = ep;
@@ -410,7 +440,7 @@ index 2399598..e130e95 100644
 + * -1 after integrity/copy failure (no demand fallback is permitted). */
 +static int ds4_pf_consume(
 +        uint64_t key, uint64_t gate_off, uint64_t up_off, uint64_t down_off,
-+        char *gate_dst, char *up_dst, char *down_dst) {
++        char *gate_dst, char *up_dst, char *down_dst, bool publish) {
 +    if (!g_pf.enabled || !g_pf.machine) return 0;
 +    auto found = g_expert_slab.by_key.find(key);
 +    if (found == g_expert_slab.by_key.end()) return -1;
@@ -428,14 +458,49 @@ index 2399598..e130e95 100644
 +    if (!lease.valid)
 +        return g_pf.machine->demand_fallback_allowed() ? 0 : -1;
 +    ds4_pf_backend backend(gate_dst, up_dst, down_dst,
-+                           g_pf.gate_bytes, g_pf.down_bytes);
++                           g_pf.gate_bytes, g_pf.down_bytes,
++                           key, gate_off, down_off, publish);
 +    if (!g_pf.machine->copy_sync(lease, backend)) return -1;
 +    ++g_pf.served;
 +    return 1;
  }
  
  /* Read-only residency peek for the prefetch-profitability probe. Does NOT
-@@ -25232,26 +25321,13 @@ static int cuda_stream_selected_cache_begin_load(
+@@ -24759,6 +24879,33 @@ extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
+             (unsigned long long)g_expert_cache_run_stats.lookup_bytes,
+             (unsigned long long)g_expert_cache_run_stats.hit_bytes,
+             hex);
++    if (g_pf.enabled && g_pf.machine) {
++        const ds4_slab_prefetch::Telemetry t = g_pf.machine->telemetry();
++        fprintf(stderr,
++                "PREFETCHSHA mode=prefetch_sha generation=%llu attempts=%llu "
++                "sha_successes=%llu sha_failures=%llu ready=%llu late=%llu "
++                "stale=%llu fallback=%llu copies=%llu validated_bytes=%llu "
++                "copied_bytes=%llu publications=%llu read_ns=%llu sha_ns=%llu "
++                "wait_ns=%llu copy_ns=%llu current_ready=%llu peak_qd=%u\n",
++                (unsigned long long)g_model_load_generation,
++                (unsigned long long)t.attempts,
++                (unsigned long long)t.sha_successes,
++                (unsigned long long)t.sha_failures,
++                (unsigned long long)t.ready,
++                (unsigned long long)t.late,
++                (unsigned long long)t.stale,
++                (unsigned long long)t.fallback,
++                (unsigned long long)t.copies,
++                (unsigned long long)t.validated_bytes,
++                (unsigned long long)t.copied_bytes,
++                (unsigned long long)t.publications,
++                (unsigned long long)t.read_ns,
++                (unsigned long long)t.sha_ns,
++                (unsigned long long)t.wait_ns,
++                (unsigned long long)t.copy_ns,
++                (unsigned long long)t.current_ready,
++                g_pf.slab_window.peak_in_flight.load());
++    }
+     ec_sha256_init(&g_expert_cache_run_stats.stream);
+     g_expert_cache_run_stats.lookup_bytes = 0;
+     g_expert_cache_run_stats.hit_bytes = 0;
+@@ -25232,55 +25379,18 @@ static int cuda_stream_selected_cache_begin_load(
          {
              /* prefetched slab available? copy it in place of the disk read.
               * Identical bytes to a demand read of the same offsets. */
@@ -459,22 +524,38 @@ index 2399598..e130e95 100644
 -                                       table->down_expert_bytes,
 -                                       cudaMemcpyDefault), "prefetch down copy");
 -                if (copy_ok && persist_ok) {
+-                    /* fill the arena from DEVICE staging exactly like the
+-                     * demand path: a CPU memcpy of the 9.28 MiB slab costs
+-                     * ~65 ms/token (measured), the DMA path ~1 ms. */
+-                    const uint32_t fs = cuda_expert_cache_insert(key, gate_src, down_src);
+-                    if (fs != UINT32_MAX) {
+-                        uint8_t *fill = g_expert_persist_cache.arena +
+-                            (uint64_t)fs * g_expert_persist_cache.slot_bytes;
+-                        if (!cuda_ok(cudaMemcpy(fill,
+-                                        g_stream_selected_cache.gate_ptr + gate_dst,
+-                                        table->gate_expert_bytes,
+-                                        cudaMemcpyDefault), "pf arena gate") ||
+-                            !cuda_ok(cudaMemcpy(fill + table->gate_expert_bytes,
+-                                        g_stream_selected_cache.up_ptr + gate_dst,
+-                                        table->gate_expert_bytes,
+-                                        cudaMemcpyDefault), "pf arena up") ||
+-                            !cuda_ok(cudaMemcpy(fill + 2u * table->gate_expert_bytes,
+-                                        g_stream_selected_cache.down_ptr + down_dst,
+-                                        table->down_expert_bytes,
+-                                        cudaMemcpyDefault), "pf arena down")) {
+-                            g_expert_persist_cache.map->erase(key);
+-                            g_expert_persist_cache.meta[fs].key = UINT64_MAX;
+-                        }
+-                    }
+-                }
+-                ds4_pf_release(pf_slot);
+-                if (copy_ok) continue;
 +            const int pf_result = ds4_pf_consume(
 +                key, gate_src, up_src, down_src,
 +                g_stream_selected_cache.gate_ptr + gate_dst,
 +                g_stream_selected_cache.up_ptr + gate_dst,
-+                g_stream_selected_cache.down_ptr + down_dst);
++                g_stream_selected_cache.down_ptr + down_dst, persist_ok);
 +            if (pf_result > 0) {
-+                if (persist_ok) {
-                     /* fill the arena from DEVICE staging exactly like the
-                      * demand path: a CPU memcpy of the 9.28 MiB slab costs
-                      * ~65 ms/token (measured), the DMA path ~1 ms. */
-@@ -25276,11 +25352,12 @@ static int cuda_stream_selected_cache_begin_load(
-                         }
-                     }
-                 }
--                ds4_pf_release(pf_slot);
--                if (copy_ok) continue;
 +                continue;
 +            }
 +            if (pf_result < 0) {
@@ -487,10 +568,10 @@ index 2399598..e130e95 100644
          if (persist_ok && getenv("DS4_CUDA_MISS_IDS") != NULL) {
 diff --git a/ds4_slab_prefetch_state.h b/ds4_slab_prefetch_state.h
 new file mode 100644
-index 0000000..7012a8c
+index 0000000..092ccfc
 --- /dev/null
 +++ b/ds4_slab_prefetch_state.h
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,374 @@
 +#ifndef DS4_SLAB_PREFETCH_STATE_H
 +#define DS4_SLAB_PREFETCH_STATE_H
 +
@@ -536,6 +617,11 @@ index 0000000..7012a8c
 +    uint64_t validated_bytes = 0;
 +    uint64_t copied_bytes = 0;
 +    uint64_t publications = 0;
++    uint64_t current_ready = 0;
++    uint64_t read_ns = 0;
++    uint64_t sha_ns = 0;
++    uint64_t wait_ns = 0;
++    uint64_t copy_ns = 0;
 +};
 +
 +struct ReadResult { bool ok = false; size_t actual_length = 0; };
@@ -549,6 +635,8 @@ index 0000000..7012a8c
 +    virtual bool copy_async(const uint8_t *, size_t, uint64_t *event) = 0;
 +    virtual bool event_complete(uint64_t event) = 0;
 +    virtual void invalidate_slab() = 0;
++    virtual uint64_t now_ns() = 0;
++    virtual bool publication_expected() const = 0;
 +};
 +
 +class Ring {
@@ -600,31 +688,40 @@ index 0000000..7012a8c
 +            capacity = slot.capacity;
 +            identity = slot.identity;
 +        }
++        const uint64_t read_start = backend.now_ns();
 +        const ReadResult result = backend.read(identity, buffer, capacity);
++        const uint64_t read_end = backend.now_ns();
++        if (!add_elapsed(read_start, read_end, &Telemetry::read_ns)) {
++            integrity_failure(lease, backend);
++            return false;
++        }
 +        if (!result.ok || result.actual_length != identity.expected_length ||
 +            result.actual_length > capacity) {
 +            integrity_failure(lease, backend);
 +            return false;
 +        }
 +        uint8_t actual[32];
-+        if (!backend.sha256(buffer, result.actual_length, actual) ||
++        const uint64_t sha_start = backend.now_ns();
++        const bool sha_ok = backend.sha256(buffer, result.actual_length, actual);
++        const uint64_t sha_end = backend.now_ns();
++        if (!add_elapsed(sha_start, sha_end, &Telemetry::sha_ns) || !sha_ok ||
 +            std::memcmp(actual, identity.expected_sha256.data(), sizeof(actual)) != 0) {
 +            integrity_failure(lease, backend);
 +            return false;
 +        }
 +        std::lock_guard<std::mutex> guard(mu_);
-+        if (!matches_locked(lease, State::reading) ||
-+            slots_[lease.slot].identity.model_generation != generation_) {
++        if (!matches_locked(lease, State::reading)) return false;
++        ++telemetry_.sha_successes;
++        telemetry_.validated_bytes += result.actual_length;
++        if (slots_[lease.slot].identity.model_generation != generation_) {
 +            ++telemetry_.stale;
-+            if (matches_locked(lease, State::reading))
-+                recycle_locked(slots_[lease.slot]);
++            recycle_locked(slots_[lease.slot]);
 +            return false;
 +        }
 +        slots_[lease.slot].actual_length = result.actual_length;
 +        slots_[lease.slot].state = State::ready;
-+        ++telemetry_.sha_successes;
 +        ++telemetry_.ready;
-+        telemetry_.validated_bytes += result.actual_length;
++        ++telemetry_.current_ready;
 +        return true;
 +    }
 +
@@ -635,6 +732,7 @@ index 0000000..7012a8c
 +            Slot &slot = slots_[i];
 +            if (slot.state == State::ready && same_identity(slot.identity, identity)) {
 +                slot.state = State::main_owned;
++                --telemetry_.current_ready;
 +                return {i, slot.lease, true};
 +            }
 +        }
@@ -647,10 +745,14 @@ index 0000000..7012a8c
 +        BufferSnapshot snapshot;
 +        if (!snapshot_for_copy(lease, snapshot)) return false;
 +        if (!revalidate_before_copy(lease, snapshot, backend)) return false;
++        const uint64_t copy_start = backend.now_ns();
 +        const bool ok = backend.copy_sync(snapshot.buffer, snapshot.length);
++        const uint64_t copy_end = backend.now_ns();
++        if (!add_elapsed(copy_start, copy_end, &Telemetry::copy_ns)) return false;
 +        std::lock_guard<std::mutex> guard(mu_);
 +        if (!matches_locked(lease, State::main_owned)) return false;
-+        if (ok) account_copy_locked(snapshot.length);
++        if (ok) account_copy_locked(
++            snapshot.length, backend.publication_expected());
 +        recycle_locked(slots_[lease.slot]);
 +        return ok;
 +    }
@@ -660,7 +762,12 @@ index 0000000..7012a8c
 +        if (!snapshot_for_copy(lease, snapshot)) return false;
 +        if (!revalidate_before_copy(lease, snapshot, backend)) return false;
 +        uint64_t event = 0;
-+        if (!backend.copy_async(snapshot.buffer, snapshot.length, &event) || event == 0)
++        const uint64_t copy_start = backend.now_ns();
++        const bool submitted = backend.copy_async(
++            snapshot.buffer, snapshot.length, &event);
++        const uint64_t copy_end = backend.now_ns();
++        if (!add_elapsed(copy_start, copy_end, &Telemetry::copy_ns) ||
++            !submitted || event == 0)
 +            return false;
 +        std::lock_guard<std::mutex> guard(mu_);
 +        if (!matches_locked(lease, State::main_owned)) return false;
@@ -678,11 +785,15 @@ index 0000000..7012a8c
 +            event = slots_[lease.slot].event;
 +            length = slots_[lease.slot].actual_length;
 +        }
-+        if (!backend.event_complete(event)) return false;
++        const uint64_t wait_start = backend.now_ns();
++        const bool complete = backend.event_complete(event);
++        const uint64_t wait_end = backend.now_ns();
++        if (!add_elapsed(wait_start, wait_end, &Telemetry::wait_ns) || !complete)
++            return false;
 +        std::lock_guard<std::mutex> guard(mu_);
 +        if (!matches_locked(lease, State::copying) ||
 +            slots_[lease.slot].event != event) return false;
-+        account_copy_locked(length);
++        account_copy_locked(length, backend.publication_expected());
 +        recycle_locked(slots_[lease.slot]);
 +        return true;
 +    }
@@ -694,6 +805,7 @@ index 0000000..7012a8c
 +        for (Slot &slot : slots_) {
 +            if (slot.state == State::ready) {
 +                ++telemetry_.stale;
++                --telemetry_.current_ready;
 +                recycle_locked(slot);
 +            }
 +            // READING and COPYING retain their physical buffers until the
@@ -707,6 +819,7 @@ index 0000000..7012a8c
 +        for (Slot &slot : slots_) {
 +            if (slot.state == State::ready) {
 +                ++telemetry_.stale;
++                --telemetry_.current_ready;
 +                recycle_locked(slot);
 +            }
 +        }
@@ -777,7 +890,10 @@ index 0000000..7012a8c
 +    bool revalidate_before_copy(Lease lease, const BufferSnapshot &snapshot,
 +                                Backend &backend) {
 +        uint8_t actual[32];
-+        if (!backend.sha256(snapshot.buffer, snapshot.length, actual) ||
++        const uint64_t sha_start = backend.now_ns();
++        const bool sha_ok = backend.sha256(snapshot.buffer, snapshot.length, actual);
++        const uint64_t sha_end = backend.now_ns();
++        if (!add_elapsed(sha_start, sha_end, &Telemetry::sha_ns) || !sha_ok ||
 +            std::memcmp(actual, snapshot.digest.data(), sizeof(actual)) != 0) {
 +            integrity_failure(lease, backend);
 +            return false;
@@ -792,6 +908,7 @@ index 0000000..7012a8c
 +            invalidated_ = true;
 +            ++telemetry_.sha_failures;
 +            for (Slot &slot : slots_) recycle_locked(slot);
++            telemetry_.current_ready = 0;
 +        }
 +        if (notify) backend.invalidate_slab();
 +        (void)lease;
@@ -804,10 +921,17 @@ index 0000000..7012a8c
 +        // Deliberately retain the lease token: issue() must advance it before
 +        // this physical buffer can be owned again.
 +    }
-+    void account_copy_locked(size_t bytes) {
++    void account_copy_locked(size_t bytes, bool published) {
 +        ++telemetry_.copies;
-+        ++telemetry_.publications;
++        telemetry_.publications += published ? 1 : 0;
 +        telemetry_.copied_bytes += bytes;
++    }
++    bool add_elapsed(uint64_t start, uint64_t end,
++                     uint64_t Telemetry::*field) {
++        if (end < start) return false;
++        std::lock_guard<std::mutex> guard(mu_);
++        telemetry_.*field += end - start;
++        return true;
 +    }
 +
 +    mutable std::mutex mu_;

@@ -32,6 +32,7 @@ struct FakeBackend final : Backend {
     uint64_t next_event = 17;
     uint64_t copy_calls = 0;
     uint64_t copied_bytes = 0;
+    uint64_t clock_ns = 1000;
 
     explicit FakeBackend(size_t bytes) : canonical(bytes), source(bytes), reported_length(bytes) {
         for (size_t i = 0; i < bytes; ++i) canonical[i] = source[i] = uint8_t(i * 37u + 11u);
@@ -55,6 +56,8 @@ struct FakeBackend final : Backend {
     }
     bool event_complete(uint64_t) override { return event_done; }
     void invalidate_slab() override { invalidated = true; }
+    uint64_t now_ns() override { clock_ns += 10; return clock_ns; }
+    bool publication_expected() const override { return true; }
 };
 
 static Identity identity(size_t bytes, uint64_t generation = 7) {

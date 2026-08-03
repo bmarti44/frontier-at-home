@@ -66,7 +66,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 })
             attempts = 0 if arm == "A" else 100
             sha_success = 0 if arm == "A" else 100
-            ready = 80 if arm == "C" else 0
+            ready = 100 if arm == "C" else 0
             late = 20 if arm == "C" else 0
             fallback = 20 if arm == "C" else 0
             copies = 70 if arm == "C" else 100 if arm == "B" else 0
@@ -105,6 +105,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                         "validated_bytes": validated,
                         "copied_bytes": copied,
                         "publications": copies,
+                        "current_ready": 30 if arm == "C" else 0,
                         "read_ns": attempts * 100,
                         "sha_ns": attempts * 50,
                         "wait_ns": attempts * 10,
@@ -123,6 +124,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             "schema_version": 1,
             "candidate_commit": commit,
             "binary_sha256": binary,
+            "model_generation": 9,
             "configuration_sha256_by_arm": configs,
             "fixture_sha256": fixture,
             "access_stream_sha256": access,
@@ -266,7 +268,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             "attempts": ("attempts", 101),
             "sha successes": ("sha_successes", 99),
             "sha failures": ("sha_failures", 1),
-            "ready": ("ready", 81),
+            "ready": ("ready", 99),
             "late": ("late", 21),
             "stale": ("stale", 1),
             "fallback": ("fallback", 21),
@@ -274,6 +276,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             "validated bytes": ("validated_bytes", 1),
             "copied bytes": ("copied_bytes", 25_601),
             "publications": ("publications", 71),
+            "current ready": ("current_ready", 31),
             "read timer": ("read_ns", -1),
             "sha timer": ("sha_ns", -1),
             "wait timer": ("wait_ns", -1),
