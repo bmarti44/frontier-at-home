@@ -172,8 +172,9 @@ class ExpertSlabSourceTests(unittest.TestCase):
     def test_evidence_mode_emits_per_attempt_demand_and_prefetch_auth(self) -> None:
         for marker in (
             'getenv("DS4_CUDA_EXPERT_SLAB_AUTH_TRACE")',
-            "SLABAUTH mode=demand_sha",
-            "SLABAUTH mode=prefetch_sha",
+            "SLABAUTH mode=%s",
+            '"demand_sha", g_model_load_generation',
+            '"prefetch_sha", req.generation',
             "attempt=%llu",
             "submit_ns=%llu complete_ns=%llu",
             "payload_bytes=%llu ok=%d",

@@ -61,6 +61,10 @@ PROVENANCE_NAMES = tuple(
             "DS4_CUDA_EXPERT_SLAB_SHA256",
             "DS4_CUDA_EXPERT_SLAB_MODEL_SHA256",
             "DS4_CUDA_EXPERT_SLAB_TRACE",
+            "DS4_CUDA_EXPERT_SLAB_AUTH_TRACE",
+            "DS4_GLM_PREFETCH",
+            "DS4_CUDA_EXPERT_SLAB_PREFETCH_SHA",
+            "DS4_GLM_PREFETCH_THREADS",
         }
     )
 )
@@ -94,6 +98,7 @@ QUALITY_FIXTURE_CONTENT_SHA256 = (
     "11c5dc7234a21f645141c5431dd80eb5"
     "5ff9b36bc5eb8ca1baff377012bdc0d3"
 )
+EXPERT_RECORD_PAYLOAD_BYTES = 9_732_096
 
 
 def arm_schedule(*, flip: bool = False) -> tuple[tuple[int, int, str], ...]:
@@ -117,20 +122,127 @@ def sha_prefetch_schedule(flip: bool = False) -> tuple[tuple[int, int, str], ...
     )
 
 
+def canonical_sha_prefetch_environment(mode: str) -> dict[str, str]:
+    """Exact A/B/C environment; absence is represented by an unset key."""
+    if mode not in {"off", "demand_sha", "prefetch_sha"}:
+        raise ValueError("invalid SHA-prefetch mode")
+    result = canonical_engine_environment("off")
+    result["DS4_CUDA_EXPERT_SLAB_AUTH_TRACE"] = "1"
+    if mode != "off":
+        result.update({
+            "DS4_CUDA_EXPERT_SLAB_PATH": SLAB_PATH,
+            "DS4_CUDA_EXPERT_SLAB_SHA256": SLAB_SHA256,
+            "DS4_CUDA_EXPERT_SLAB_MODEL_SHA256": MODEL_SHA256,
+        })
+    if mode == "prefetch_sha":
+        result.update({
+            "DS4_GLM_PREFETCH": "1",
+            "DS4_CUDA_EXPERT_SLAB_PREFETCH_SHA": "1",
+            "DS4_GLM_PREFETCH_THREADS": "8",
+        })
+    return result
+
+
+def _canonical_object_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":"),
+                   ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+
+
+def _validate_sha_prefetch_quality(
+    attempts: list[dict[str, Any]], candidate_commit: str,
+    binary_sha256: str, fixture_sha256: str,
+    configuration_sha256_by_arm: dict[str, str],
+) -> dict[str, Any]:
+    """Derive the lossless result from three complete raw 100-case attempts."""
+    if not isinstance(attempts, list) or len(attempts) != 3:
+        raise ValueError("quality evidence requires exact A/B/C attempts")
+    expected_mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}
+    canonical_rows: list[dict[str, Any]] | None = None
+    case_ids: list[str] | None = None
+    for attempt, arm in zip(attempts, "ABC", strict=True):
+        if not isinstance(attempt, dict) or set(attempt) != {
+            "schema_version", "arm", "mode", "candidate_commit",
+            "binary_sha256", "configuration_sha256", "fixture_sha256",
+            "output_sha256", "rows",
+        }:
+            raise ValueError("quality attempt schema is invalid")
+        rows = attempt["rows"]
+        if (
+            attempt["schema_version"] != 1
+            or attempt["arm"] != arm
+            or attempt["mode"] != expected_mode[arm]
+            or attempt["candidate_commit"] != candidate_commit
+            or attempt["binary_sha256"] != binary_sha256
+            or attempt["configuration_sha256"]
+            != configuration_sha256_by_arm[arm]
+            or attempt["fixture_sha256"] != fixture_sha256
+            or re.fullmatch(r"[0-9a-f]{64}", attempt["output_sha256"]) is None
+            or not isinstance(rows, list)
+            or len(rows) != 100
+        ):
+            raise ValueError("quality attempt is incomplete or unbound")
+        ids: list[str] = []
+        for row in rows:
+            if not isinstance(row, dict) or set(row) != {
+                "case_id", "target_tokens", "total_nll", "top1_matches",
+            }:
+                raise ValueError("quality row schema is invalid")
+            case_id = row["case_id"]
+            target_tokens = row["target_tokens"]
+            total_nll = row["total_nll"]
+            top1_matches = row["top1_matches"]
+            if (
+                not isinstance(case_id, str) or not case_id
+                or isinstance(target_tokens, bool) or not isinstance(target_tokens, int)
+                or target_tokens <= 0
+                or isinstance(top1_matches, bool) or not isinstance(top1_matches, int)
+                or not 0 <= top1_matches <= target_tokens
+                or isinstance(total_nll, bool)
+                or not isinstance(total_nll, (int, float))
+                or not math.isfinite(float(total_nll)) or total_nll < 0
+            ):
+                raise ValueError("quality row contains invalid values")
+            ids.append(case_id)
+        if len(set(ids)) != 100:
+            raise ValueError("quality case IDs are duplicated")
+        if case_ids is None:
+            case_ids = ids
+            canonical_rows = rows
+        elif ids != case_ids or rows != canonical_rows:
+            raise ValueError("lossless candidate changed quality rows")
+    assert canonical_rows is not None
+    total_tokens = sum(row["target_tokens"] for row in canonical_rows)
+    return {
+        "case_count": 100,
+        "target_tokens": total_tokens,
+        "mean_nll": sum(float(row["total_nll"]) for row in canonical_rows)
+        / total_tokens,
+        "top1_agreement": sum(row["top1_matches"] for row in canonical_rows)
+        / total_tokens,
+        "token_weighted_delta_nll": 0.0,
+        "top1_loss_pp": 0.0,
+        "deterministic": True,
+    }
+
+
 def score_sha_prefetch_campaign(
     records: list[dict[str, Any]],
     manifest: dict[str, Any],
     *,
-    schedule_flip: bool = False,
+    freeze: dict[str, Any],
+    quality_attempts: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Score the frozen A=off/B=demand-SHA/C=prefetch-SHA campaign."""
     expected_manifest_keys = {
-        "schema_version", "candidate_commit", "binary_sha256", "model_generation",
-        "configuration_sha256_by_arm", "fixture_sha256",
+        "schema_version", "candidate_commit", "binary_sha256",
+        "quality_binary_sha256", "model_generation",
+        "configuration_by_arm", "configuration_sha256_by_arm", "fixture_sha256",
         "access_stream_sha256", "campaign_started_monotonic_ns",
-        "campaign_finished_monotonic_ns", "quality",
+        "campaign_finished_monotonic_ns", "freeze_sha256", "randomness",
     }
-    if set(manifest) != expected_manifest_keys or manifest["schema_version"] != 1:
+    if set(manifest) != expected_manifest_keys or manifest["schema_version"] != 2:
         raise ValueError("prefetch manifest schema is invalid")
 
     def sha256(value: Any, label: str) -> str:
@@ -159,20 +271,29 @@ def score_sha_prefetch_campaign(
             any(character not in "0123456789abcdef" for character in commit)):
         raise ValueError("candidate commit is invalid")
     binary = sha256(manifest["binary_sha256"], "manifest binary")
+    quality_binary = sha256(
+        manifest["quality_binary_sha256"], "manifest quality binary"
+    )
     model_generation = integer(
         manifest["model_generation"], "manifest model generation", minimum=1
     )
     fixture = sha256(manifest["fixture_sha256"], "manifest fixture")
     access = sha256(manifest["access_stream_sha256"], "manifest access stream")
+    environments = manifest["configuration_by_arm"]
     configurations = manifest["configuration_sha256_by_arm"]
-    if not isinstance(configurations, dict) or set(configurations) != {"A", "B", "C"}:
+    if (
+        not isinstance(environments, dict) or set(environments) != {"A", "B", "C"}
+        or not isinstance(configurations, dict) or set(configurations) != {"A", "B", "C"}
+    ):
         raise ValueError("manifest arm configurations are invalid")
-    configurations = {
-        arm: sha256(value, f"configuration {arm}")
-        for arm, value in configurations.items()
-    }
-    if len(set(configurations.values())) != 3:
-        raise ValueError("campaign configurations are not distinct")
+    expected_modes = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}
+    for arm, mode in expected_modes.items():
+        expected_environment = canonical_sha_prefetch_environment(mode)
+        if environments[arm] != expected_environment:
+            raise ValueError(f"arm {arm} environment differs from the fixed mode")
+        expected_hash = canonical_environment_sha256(expected_environment)
+        if sha256(configurations[arm], f"configuration {arm}") != expected_hash:
+            raise ValueError(f"arm {arm} configuration hash is not derived")
     started = integer(
         manifest["campaign_started_monotonic_ns"], "campaign start", minimum=1
     )
@@ -181,15 +302,52 @@ def score_sha_prefetch_campaign(
     )
     if not started < finished or finished - started > 86_400 * 1_000_000_000:
         raise ValueError("campaign is not a bounded contemporaneous window")
-    quality = manifest["quality"]
-    if (not isinstance(quality, dict) or set(quality) != {
-            "case_count", "token_weighted_delta_nll", "top1_loss_pp",
-            "deterministic"} or quality["case_count"] != 100 or
-            quality["token_weighted_delta_nll"] != 0.0 or
-            quality["top1_loss_pp"] != 0.0 or quality["deterministic"] is not True):
-        raise ValueError("lossless campaign quality binding is invalid")
+    expected_freeze_keys = {
+        "schema_version", "candidate_commit", "binary_sha256",
+        "quality_binary_sha256", "source_sha256", "scorer_sha256",
+        "tests_sha256", "frozen_epoch_s",
+    }
+    if (
+        not isinstance(freeze, dict) or set(freeze) != expected_freeze_keys
+        or freeze["schema_version"] != 1
+        or freeze["candidate_commit"] != commit
+        or freeze["binary_sha256"] != binary
+        or freeze["quality_binary_sha256"] != quality_binary
+        or any(
+            re.fullmatch(r"[0-9a-f]{64}", freeze[name]) is None
+            for name in ("source_sha256", "scorer_sha256", "tests_sha256")
+        )
+        or not isinstance(freeze["frozen_epoch_s"], (int, float))
+        or not math.isfinite(float(freeze["frozen_epoch_s"]))
+        or manifest["freeze_sha256"] != _canonical_object_sha256(freeze)
+    ):
+        raise ValueError("campaign is not bound to the frozen candidate")
+    expected_source = _canonical_object_sha256({
+        "patch_sha256": sha256_file(
+            ROOT / "results/glm52-gates/harness/"
+            "ds4-expert-slab-prefetch-sha-pipeline.patch"
+        ),
+        "state_header_sha256": sha256_file(
+            ROOT / "results/glm52-gates/harness/ds4_slab_prefetch_state.h"
+        ),
+    })
+    if (
+        freeze["source_sha256"] != expected_source
+        or freeze["scorer_sha256"] != sha256_file(Path(__file__).resolve())
+        or freeze["tests_sha256"] != sha256_file(
+            ROOT / "scripts/tests/test_glm_rung0_sha_prefetch.py"
+        )
+    ):
+        raise ValueError("frozen source, scorer, or acceptance test changed")
+    randomness = manifest["randomness"]
+    validate_confirmation_record(randomness, commit, binary, quality_binary)
+    if randomness["published_epoch_s"] <= freeze["frozen_epoch_s"]:
+        raise ValueError("campaign randomness predates the freeze")
+    quality = _validate_sha_prefetch_quality(
+        quality_attempts, commit, binary, fixture, configurations
+    )
 
-    schedule = sha_prefetch_schedule(schedule_flip)
+    schedule = sha_prefetch_schedule(bool(randomness["flip"]))
     if not isinstance(records, list) or len(records) != len(schedule):
         raise ValueError("campaign requires exactly 15 fresh-server arms")
     exact_record_keys = {
@@ -198,7 +356,7 @@ def score_sha_prefetch_campaign(
         "configuration_sha256", "fixture_sha256", "access_stream_sha256",
         "recorded_monotonic_ns", "reps", "engine", "safety",
     }
-    expected_mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}
+    expected_mode = expected_modes
     servers: set[str] = set()
     paired_outputs: dict[tuple[int, int], set[tuple[Any, ...]]] = {}
     metrics: dict[str, dict[str, dict[int, list[float]]]] = {
@@ -255,7 +413,7 @@ def score_sha_prefetch_campaign(
             client_times = rep["client_token_timestamps_ns"]
             if (not isinstance(token_ids, list) or len(token_ids) != count or
                     not isinstance(raw_times, list) or len(raw_times) != count or
-                    not isinstance(client_times, list) or len(client_times) != count or
+                    not isinstance(client_times, list) or len(client_times) < 2 or
                     any(isinstance(value, bool) or not isinstance(value, int)
                         for value in token_ids + raw_times + client_times) or
                     any(right <= left for left, right in zip(raw_times, raw_times[1:])) or
@@ -265,7 +423,9 @@ def score_sha_prefetch_campaign(
             first = integer(rep["client_first_token_ns"], "first token", minimum=1)
             last = integer(rep["client_last_token_ns"], "last token", minimum=1)
             if (client_times[0] != first or client_times[-1] != last or
-                    not request_started < first < last):
+                    not request_started < first < last or
+                    not started <= request_started or last > finished or
+                    raw_times[0] < started or raw_times[-1] > finished):
                 raise ValueError("client timing endpoints are inconsistent")
             ttft = (first - request_started) / 1e9
             if not math.isclose(
@@ -324,16 +484,27 @@ def score_sha_prefetch_campaign(
         if (t["attempts"] != t["sha_successes"] + t["sha_failures"] or
                 t["sha_failures"] != 0 or t["copies"] > t["sha_successes"] or
                 t["publications"] > t["copies"] or
-                t["copied_bytes"] > t["validated_bytes"]):
+                t["validated_bytes"]
+                != t["sha_successes"] * EXPERT_RECORD_PAYLOAD_BYTES or
+                t["copied_bytes"] != t["copies"] * EXPERT_RECORD_PAYLOAD_BYTES):
             raise ValueError("prefetch telemetry does not reconcile")
         if arm == "A" and any(t.values()):
             raise ValueError("slab-off telemetry is nonzero")
-        if arm == "B" and (t["ready"] or t["late"] or t["stale"] or t["fallback"]):
-            raise ValueError("demand-only arm emitted prefetch outcomes")
+        if arm == "B" and (
+            t["attempts"] != reads or t["sha_successes"] != reads
+            or t["copies"] != reads or t["publications"] != reads
+            or any(t[name] for name in (
+                "ready", "late", "stale", "fallback", "current_ready", "wait_ns"
+            ))
+            or min(t["read_ns"], t["sha_ns"], t["copy_ns"]) <= 0
+        ):
+            raise ValueError("demand-only arm lacks exact full-SHA coverage")
         if arm == "C" and (
+            t["attempts"] <= 0 or t["sha_successes"] <= 0 or t["copies"] <= 0 or
             t["ready"] != t["sha_successes"] or
             t["copies"] + t["stale"] + t["current_ready"] != t["ready"] or
-            t["fallback"] != t["late"]
+            t["fallback"] != t["late"] or
+            min(t["read_ns"], t["sha_ns"], t["copy_ns"]) <= 0
         ):
             raise ValueError("prefetch terminal outcomes do not reconcile")
 
@@ -966,6 +1137,188 @@ def observed_environment_sha256(environment: dict[str, str]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def parse_sha_prefetch_engine_log(
+    text: str, mode: str, *, model_generation: int
+) -> dict[str, Any]:
+    """Reduce only authenticated production log records into scorer input."""
+    if mode not in {"off", "demand_sha", "prefetch_sha"}:
+        raise ValueError("invalid SHA-prefetch log mode")
+    if not isinstance(text, str) or model_generation <= 0:
+        raise ValueError("invalid SHA-prefetch log input")
+    auth_pattern = re.compile(
+        r"^SLABAUTH mode=(demand_sha|prefetch_sha) generation=(\d+) "
+        r"attempt=(\d+) key=(\d+) submit_ns=(\d+) complete_ns=(\d+) "
+        r"payload_bytes=(\d+) ok=([01])$",
+        re.MULTILINE,
+    )
+    auth = [
+        {
+            "mode": match[0], "generation": int(match[1]),
+            "attempt": int(match[2]), "key": int(match[3]),
+            "submit_ns": int(match[4]), "complete_ns": int(match[5]),
+            "payload_bytes": int(match[6]), "ok": int(match[7]),
+        }
+        for match in auth_pattern.findall(text)
+        if match[0] == mode
+    ]
+    identifiers = [(row["generation"], row["attempt"]) for row in auth]
+    if len(set(identifiers)) != len(identifiers):
+        raise ValueError("duplicate SHA-auth attempt")
+    if any(
+        row["generation"] != model_generation or row["ok"] != 1
+        or row["payload_bytes"] != EXPERT_RECORD_PAYLOAD_BYTES
+        or row["submit_ns"] <= 0 or row["complete_ns"] <= row["submit_ns"]
+        for row in auth
+    ):
+        raise ValueError("failed or malformed SHA-auth attempt")
+
+    load_pattern = re.compile(
+        r"^LOADPROF L\d+ .*?fetch_ms=([0-9]+(?:\.[0-9]+)?) .*?"
+        r"slab_mode=(on|off|error) slab_reads=(\d+) slab_bytes=(\d+) "
+        r"slab_actual_bytes=(\d+) slab_peak_qd=(\d+) "
+        r"slab_io_ms=([0-9]+(?:\.[0-9]+)?)"
+        r"(?: slab_validation_ms=([0-9]+(?:\.[0-9]+)?) "
+        r"slab_copy_ms=([0-9]+(?:\.[0-9]+)?))?$",
+        re.MULTILINE,
+    )
+    loads = load_pattern.findall(text)
+    if not loads:
+        raise ValueError("SHA-prefetch log has no complete LOADPROF records")
+    expected_slab_mode = "off" if mode == "off" else "on"
+    if any(row[1] != expected_slab_mode for row in loads):
+        raise ValueError("LOADPROF mode differs from requested arm")
+    reads = sum(int(row[2]) for row in loads)
+    logical_bytes = sum(int(row[3]) for row in loads)
+    peak_qd = max(int(row[5]) for row in loads)
+    if mode == "off":
+        if auth or reads or logical_bytes or peak_qd:
+            raise ValueError("off arm performed authenticated slab work")
+        zero = {
+            name: 0 for name in (
+                "attempts", "sha_successes", "sha_failures", "ready", "late",
+                "stale", "fallback", "copies", "validated_bytes", "copied_bytes",
+                "publications", "read_ns", "sha_ns", "wait_ns", "copy_ns",
+                "current_ready",
+            )
+        }
+        return {
+            "mode": mode, "model_generation": model_generation,
+            "slab_reads": 0, "slab_peak_qd": 0,
+            "completed_fetch_ms": [], "telemetry": zero,
+        }
+    completed_ms = [
+        (row["complete_ns"] - row["submit_ns"]) / 1e6 for row in auth
+    ]
+    if len(auth) < 3:
+        raise ValueError("arm lacks per-attempt SHA-auth coverage")
+
+    if mode == "demand_sha":
+        if any(not row[7] or not row[8] for row in loads):
+            raise ValueError("demand SHA timing fields are absent")
+        if reads != len(auth) or logical_bytes != len(auth) * EXPERT_RECORD_PAYLOAD_BYTES:
+            raise ValueError("demand SHA attempts do not reconcile with LOADPROF")
+        sha_ns = round(sum(float(row[7]) for row in loads) * 1e6)
+        copy_ns = round(sum(float(row[8]) for row in loads) * 1e6)
+        total_ns = sum(row["complete_ns"] - row["submit_ns"] for row in auth)
+        telemetry = {
+            "attempts": reads, "sha_successes": reads, "sha_failures": 0,
+            "ready": 0, "late": 0, "stale": 0, "fallback": 0,
+            "copies": reads, "validated_bytes": logical_bytes,
+            "copied_bytes": logical_bytes, "publications": reads,
+            "read_ns": max(1, total_ns - sha_ns), "sha_ns": sha_ns,
+            "wait_ns": 0, "copy_ns": copy_ns, "current_ready": 0,
+        }
+    else:
+        marker = re.compile(
+            r"^PREFETCHSHA mode=prefetch_sha generation=(\d+) attempts=(\d+) "
+            r"sha_successes=(\d+) sha_failures=(\d+) ready=(\d+) late=(\d+) "
+            r"stale=(\d+) fallback=(\d+) copies=(\d+) validated_bytes=(\d+) "
+            r"copied_bytes=(\d+) publications=(\d+) read_ns=(\d+) sha_ns=(\d+) "
+            r"wait_ns=(\d+) copy_ns=(\d+) current_ready=(\d+) peak_qd=(\d+)$",
+            re.MULTILINE,
+        )
+        markers = marker.findall(text)
+        if not markers:
+            raise ValueError("prefetch arm has no authoritative telemetry")
+        values = [int(value) for value in markers[-1]]
+        if values[0] != model_generation or values[1] != len(auth):
+            raise ValueError("prefetch attempts do not match raw auth records")
+        names = (
+            "attempts", "sha_successes", "sha_failures", "ready", "late",
+            "stale", "fallback", "copies", "validated_bytes", "copied_bytes",
+            "publications", "read_ns", "sha_ns", "wait_ns", "copy_ns",
+            "current_ready",
+        )
+        telemetry = dict(zip(names, values[1:17], strict=True))
+        if (
+            telemetry["sha_successes"] != len(auth)
+            or telemetry["sha_failures"] != 0
+            or telemetry["validated_bytes"]
+            != len(auth) * EXPERT_RECORD_PAYLOAD_BYTES
+        ):
+            raise ValueError("prefetch telemetry differs from raw auth records")
+        peak_qd = max(peak_qd, values[17])
+    return {
+        "mode": mode, "model_generation": model_generation,
+        "slab_reads": reads, "slab_peak_qd": peak_qd,
+        "completed_fetch_ms": completed_ms, "telemetry": telemetry,
+    }
+
+
+def normalize_sha_prefetch_reps(reps: Any) -> list[dict[str, Any]]:
+    """Convert the existing independent speed harness output without invention."""
+    if not isinstance(reps, list) or len(reps) != 2:
+        raise ValueError("SHA-prefetch arm needs exactly two measured reps")
+    normalized: list[dict[str, Any]] = []
+    for phase, rep in zip(("cold", "warm"), reps, strict=True):
+        if not isinstance(rep, dict) or rep.get("valid") is not True:
+            raise ValueError("speed harness rep is invalid")
+        raw = rep.get("token_timestamps_ns")
+        client = rep.get("sse_token_timestamps_ns")
+        tokens = rep.get("token_ids")
+        count = rep.get("completion_tokens")
+        request_started = rep.get("client_request_started_ns")
+        first = rep.get("client_first_content_ns")
+        last = rep.get("client_last_content_ns")
+        if (
+            not isinstance(count, int) or isinstance(count, bool) or count < 128
+            or rep.get("server_completion_tokens") != count
+            or not isinstance(tokens, list) or len(tokens) != count
+            or not isinstance(raw, list) or len(raw) != count
+            or not isinstance(client, list) or len(client) < 2
+            or client[0] != first or client[-1] != last
+            or not all(isinstance(value, int) and not isinstance(value, bool)
+                       for value in [*tokens, *raw, *client,
+                                     request_started, first, last])
+            or not request_started < first < last
+            or any(right <= left for left, right in zip(raw, raw[1:]))
+            or any(right <= left for left, right in zip(client, client[1:]))
+        ):
+            raise ValueError("speed harness token evidence is incomplete")
+        reasoning = rep.get("generated_reasoning_sha256")
+        content = rep.get("generated_content_sha256")
+        request = rep.get("request_sha256")
+        if any(re.fullmatch(r"[0-9a-f]{64}", value or "") is None
+               for value in (reasoning, content, request)):
+            raise ValueError("speed harness byte identity is malformed")
+        normalized.append({
+            "phase": phase,
+            "request_sha256": request,
+            "generated_bytes_sha256": hashlib.sha256(
+                f"{reasoning}:{content}".encode("ascii")
+            ).hexdigest(),
+            "token_ids": tokens,
+            "completion_tokens": count,
+            "raw_token_timestamps_ns": raw,
+            "client_token_timestamps_ns": client,
+            "client_request_started_ns": request_started,
+            "client_first_token_ns": first,
+            "client_last_token_ns": last,
+            "ttft_seconds": (first - request_started) / 1e9,
+        })
+    return normalized
+
+
 def parse_engine_log(text: str, mode: str) -> dict[str, Any]:
     """Reduce aggregate slab/cache telemetry without trusting its timings."""
     if mode not in {"off", "on"}:
@@ -1493,8 +1846,13 @@ def execute_quality_arm(args: argparse.Namespace) -> int:
 
 def execute_arm(args: argparse.Namespace) -> int:
     """Run one fresh server; outer glm_safe_run owns containment and safety."""
-    mode = "off" if args.arm == "A" else "on"
-    expected_environment = canonical_engine_environment(mode)
+    sha_prefetch = args.command == "sha-prefetch-arm"
+    if sha_prefetch:
+        mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[args.arm]
+        expected_environment = canonical_sha_prefetch_environment(mode)
+    else:
+        mode = "off" if args.arm == "A" else "on"
+        expected_environment = canonical_engine_environment(mode)
     observed_environment = {
         name: os.environ[name] for name in PROVENANCE_NAMES if name in os.environ
     }
@@ -1653,10 +2011,35 @@ def execute_arm(args: argparse.Namespace) -> int:
                 raise ValueError("existing speed scorer result shape is invalid")
             server_log.flush()
             os.fsync(server_log.fileno())
-            engine = parse_engine_log(
-                server_log_path.read_text(encoding="utf-8"), mode
-            )
-            record = {
+            log_text = server_log_path.read_text(encoding="utf-8")
+            if sha_prefetch:
+                generic = parse_engine_log(
+                    log_text, "off" if mode == "off" else "on"
+                )
+                engine = parse_sha_prefetch_engine_log(
+                    log_text, mode, model_generation=args.model_generation
+                )
+                record = {
+                    "schema_version": 1,
+                    "block": args.block,
+                    "sequence": args.sequence,
+                    "arm": args.arm,
+                    "mode": mode,
+                    "server_instance_id": server_instance_id,
+                    "candidate_commit": args.candidate_commit,
+                    "binary_sha256": args.binary_sha256,
+                    "configuration_sha256": canonical_environment_sha256(
+                        expected_environment
+                    ),
+                    "fixture_sha256": sha256_file(FIXTURE),
+                    "access_stream_sha256": generic["access_stream_sha256"],
+                    "recorded_monotonic_ns": time.monotonic_ns(),
+                    "reps": normalize_sha_prefetch_reps(cells[0].get("reps")),
+                    "engine": engine,
+                }
+            else:
+                engine = parse_engine_log(log_text, mode)
+                record = {
                 "schema_version": 1,
                 "block": args.block,
                 "sequence": args.sequence,
@@ -1673,7 +2056,7 @@ def execute_arm(args: argparse.Namespace) -> int:
                 "engine": engine,
                 "external_io": external_io,
                 "server_start_to_ready_seconds": ready_seconds,
-            }
+                }
             write_json_exclusive(out / "partial.json", record)
         finally:
             if server is not None and server_start_ticks is not None:
@@ -2429,6 +2812,18 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     arm.add_argument("--model", type=Path, required=True)
     arm.add_argument("--port", type=int, required=True)
     arm.add_argument("--seed", type=int, required=True)
+    sha_arm = subparsers.add_parser("sha-prefetch-arm")
+    sha_arm.add_argument("--out", type=Path, required=True)
+    sha_arm.add_argument("--block", type=int, required=True)
+    sha_arm.add_argument("--sequence", type=int, required=True)
+    sha_arm.add_argument("--arm", choices=("A", "B", "C"), required=True)
+    sha_arm.add_argument("--binary", type=Path, required=True)
+    sha_arm.add_argument("--binary-sha256", required=True)
+    sha_arm.add_argument("--candidate-commit", required=True)
+    sha_arm.add_argument("--model-generation", type=int, required=True)
+    sha_arm.add_argument("--model", type=Path, required=True)
+    sha_arm.add_argument("--port", type=int, required=True)
+    sha_arm.add_argument("--seed", type=int, required=True)
     probe_arm = subparsers.add_parser("memory-probe-arm")
     probe_arm.add_argument("--out", type=Path, required=True)
     probe_arm.add_argument("--binary", type=Path, required=True)
@@ -2482,7 +2877,7 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_cli(argv)
     try:
-        if args.command == "arm":
+        if args.command in {"arm", "sha-prefetch-arm"}:
             return execute_arm(args)
         if args.command == "memory-probe-arm":
             return execute_memory_probe_arm(args)

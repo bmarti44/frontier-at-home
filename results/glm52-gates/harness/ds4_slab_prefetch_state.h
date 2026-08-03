@@ -13,7 +13,7 @@
 
 namespace ds4_slab_prefetch {
 
-enum class State : uint8_t { empty, reading, ready, main_owned, copying };
+enum class State : uint8_t { empty, reading, ready, main_owned, retired };
 
 struct Identity {
     uint64_t key = 0;
@@ -58,8 +58,6 @@ public:
     virtual ReadResult read(const Identity &, uint8_t *, size_t) = 0;
     virtual bool sha256(const uint8_t *, size_t, uint8_t out[32]) = 0;
     virtual bool copy_sync(const uint8_t *, size_t) = 0;
-    virtual bool copy_async(const uint8_t *, size_t, uint64_t *event) = 0;
-    virtual bool event_complete(uint64_t event) = 0;
     virtual void invalidate_slab() = 0;
     virtual uint64_t now_ns() = 0;
     virtual bool publication_expected() const = 0;
@@ -93,7 +91,6 @@ public:
             if (slot.state != State::empty) continue;
             slot.state = State::reading;
             slot.identity = identity;
-            slot.event = 0;
             slot.lease = next_lease_++;
             ++telemetry_.attempts;
             return {i, slot.lease, true};
@@ -136,7 +133,11 @@ public:
             return false;
         }
         std::lock_guard<std::mutex> guard(mu_);
-        if (!matches_locked(lease, State::reading)) return false;
+        if (matches_locked(lease, State::retired)) {
+            recycle_locked(slots_[lease.slot]);
+            return false;
+        }
+        if (invalidated_ || !matches_locked(lease, State::reading)) return false;
         ++telemetry_.sha_successes;
         telemetry_.validated_bytes += result.actual_length;
         if (slots_[lease.slot].identity.model_generation != generation_) {
@@ -171,73 +172,36 @@ public:
         BufferSnapshot snapshot;
         if (!snapshot_for_copy(lease, snapshot)) return false;
         if (!revalidate_before_copy(lease, snapshot, backend)) return false;
+        /* Publication is a side effect. Serialize the authorization check and
+         * the production copy so an integrity failure cannot become visible
+         * between them and permit a post-failure cache insertion. */
+        std::lock_guard<std::mutex> guard(mu_);
+        if (matches_locked(lease, State::retired)) {
+            recycle_locked(slots_[lease.slot]);
+            return false;
+        }
+        if (invalidated_ || !matches_locked(lease, State::main_owned)) return false;
         const uint64_t copy_start = backend.now_ns();
         const bool ok = backend.copy_sync(snapshot.buffer, snapshot.length);
         const uint64_t copy_end = backend.now_ns();
-        if (!add_elapsed(copy_start, copy_end, &Telemetry::copy_ns)) return false;
-        std::lock_guard<std::mutex> guard(mu_);
-        if (!matches_locked(lease, State::main_owned)) return false;
+        if (copy_end < copy_start) {
+            recycle_locked(slots_[lease.slot]);
+            return false;
+        }
+        telemetry_.copy_ns += copy_end - copy_start;
         if (ok) account_copy_locked(
             snapshot.length, backend.publication_expected());
         recycle_locked(slots_[lease.slot]);
         return ok;
     }
 
-    bool copy_async(Lease lease, Backend &backend) {
-        BufferSnapshot snapshot;
-        if (!snapshot_for_copy(lease, snapshot)) return false;
-        if (!revalidate_before_copy(lease, snapshot, backend)) return false;
-        uint64_t event = 0;
-        const uint64_t copy_start = backend.now_ns();
-        const bool submitted = backend.copy_async(
-            snapshot.buffer, snapshot.length, &event);
-        const uint64_t copy_end = backend.now_ns();
-        if (!add_elapsed(copy_start, copy_end, &Telemetry::copy_ns) ||
-            !submitted || event == 0)
-            return false;
+    bool reload(uint64_t generation) {
         std::lock_guard<std::mutex> guard(mu_);
-        if (!matches_locked(lease, State::main_owned)) return false;
-        slots_[lease.slot].event = event;
-        slots_[lease.slot].state = State::copying;
-        return true;
-    }
-
-    bool poll(Lease lease, Backend &backend) {
-        uint64_t event = 0;
-        size_t length = 0;
-        {
-            std::lock_guard<std::mutex> guard(mu_);
-            if (!matches_locked(lease, State::copying)) return false;
-            event = slots_[lease.slot].event;
-            length = slots_[lease.slot].actual_length;
-        }
-        const uint64_t wait_start = backend.now_ns();
-        const bool complete = backend.event_complete(event);
-        const uint64_t wait_end = backend.now_ns();
-        if (!add_elapsed(wait_start, wait_end, &Telemetry::wait_ns) || !complete)
-            return false;
-        std::lock_guard<std::mutex> guard(mu_);
-        if (!matches_locked(lease, State::copying) ||
-            slots_[lease.slot].event != event) return false;
-        account_copy_locked(length, backend.publication_expected());
-        recycle_locked(slots_[lease.slot]);
-        return true;
-    }
-
-    void reload(uint64_t generation) {
-        std::lock_guard<std::mutex> guard(mu_);
+        for (const Slot &slot : slots_)
+            if (slot.state != State::empty) return false;
         generation_ = generation;
         invalidated_ = false;
-        for (Slot &slot : slots_) {
-            if (slot.state == State::ready) {
-                ++telemetry_.stale;
-                --telemetry_.current_ready;
-                recycle_locked(slot);
-            }
-            // READING and COPYING retain their physical buffers until the
-            // read returns or the CUDA event completes. MAIN_OWNED is
-            // rejected and recycled by snapshot_for_copy below.
-        }
+        return true;
     }
 
     void discard_ready() {
@@ -273,7 +237,6 @@ private:
     struct Slot {
         State state = State::empty;
         uint64_t lease = 0;
-        uint64_t event = 0;
         uint8_t *buffer = nullptr;
         size_t capacity = 0;
         size_t actual_length = 0;
@@ -333,7 +296,20 @@ private:
             if (!invalidated_) notify = true;
             invalidated_ = true;
             ++telemetry_.sha_failures;
-            for (Slot &slot : slots_) recycle_locked(slot);
+            for (size_t index = 0; index < slots_.size(); ++index) {
+                Slot &slot = slots_[index];
+                const bool current = lease.valid && lease.slot == index &&
+                    slot.lease == lease.token;
+                if (current || slot.state == State::ready) {
+                    recycle_locked(slot);
+                } else if (slot.state == State::reading ||
+                           slot.state == State::main_owned) {
+                    /* The buffer is still physically owned by a read or by a
+                     * pre-copy digest. It becomes reusable only when that
+                     * exact lease returns through complete_read/copy_sync. */
+                    slot.state = State::retired;
+                }
+            }
             telemetry_.current_ready = 0;
         }
         if (notify) backend.invalidate_slab();
@@ -341,7 +317,6 @@ private:
     }
     static void recycle_locked(Slot &slot) {
         slot.state = State::empty;
-        slot.event = 0;
         slot.actual_length = 0;
         slot.identity = {};
         // Deliberately retain the lease token: issue() must advance it before
