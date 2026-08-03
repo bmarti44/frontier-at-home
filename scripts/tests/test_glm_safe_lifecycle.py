@@ -377,6 +377,32 @@ class CurrentUserTimestampTests(unittest.TestCase):
         cls.digest = hashlib.sha256(
             (cls.candidate_src / "ds4-server").read_bytes()
         ).hexdigest()
+        cls.shim_dir = cls.local_tmp / "shim"
+        cls.shim_dir.mkdir()
+        cls.readlink_count = cls.local_tmp / "readlink-count"
+        cls.readlink_count.write_text("0\n", encoding="ascii")
+        os.chmod(cls.readlink_count, 0o666)
+        readlink_shim = cls.shim_dir / "readlink"
+        readlink_shim.write_text(
+            "#!/bin/bash\n"
+            "target=${!#}\n"
+            "if [[ $target =~ ^/proc/([0-9]+)/exe$ ]]; then\n"
+            "  count=$(<\"$GLM_TEST_READLINK_COUNT\")\n"
+            "  count=$((count + 1))\n"
+            "  printf '%s\\n' \"$count\" >\"$GLM_TEST_READLINK_COUNT\"\n"
+            "  if (( count == 2 )); then\n"
+            "    /bin/kill -TERM \"${BASH_REMATCH[1]}\" 2>/dev/null || true\n"
+            "    for _ in $(/usr/bin/seq 1 100); do\n"
+            "      [[ ! -e $target ]] && break\n"
+            "      /bin/sleep 0.005\n"
+            "    done\n"
+            "    exit 1\n"
+            "  fi\n"
+            "fi\n"
+            "exec /usr/bin/readlink \"$@\"\n",
+            encoding="utf-8",
+        )
+        os.chmod(readlink_shim, 0o755)
 
     @classmethod
     def tearDownClass(cls):
@@ -386,7 +412,7 @@ class CurrentUserTimestampTests(unittest.TestCase):
             shutil.rmtree(cls.local_tmp)
 
     def run_current_user_mutation(
-        self, mode: str
+        self, mode: str, extra_environment: dict[str, str] | None = None
     ) -> subprocess.CompletedProcess[str]:
         environment = {
             "HOME": "/home/bmarti44",
@@ -402,6 +428,8 @@ class CurrentUserTimestampTests(unittest.TestCase):
             "GLM_SAFE_TIMEOUT_S": "30",
             "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
         }
+        if extra_environment:
+            environment.update(extra_environment)
         return subprocess.run(
             [
                 "env",
@@ -424,6 +452,27 @@ class CurrentUserTimestampTests(unittest.TestCase):
             timeout=45,
             check=False,
         )
+
+    def test_exit_between_live_stat_and_executable_identity_is_attested(self):
+        self.readlink_count.write_text("0\n", encoding="ascii")
+        result = self.run_current_user_mutation(
+            "identity-race",
+            {
+                "PATH": f"{self.shim_dir}:/usr/local/sbin:/usr/local/bin:"
+                "/usr/sbin:/usr/bin:/sbin:/bin",
+                "GLM_TEST_READLINK_COUNT": str(self.readlink_count),
+            },
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        match = re.search(r" dir=(\S+)", result.stdout)
+        self.assertIsNotNone(match, result.stdout)
+        main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+        self.assertIn(
+            "executed candidate exited during identity sample; "
+            "monitoring controller and process group",
+            main,
+        )
+        self.assertNotIn("executed candidate identity changed", main)
 
     def test_clean_reaped_candidate_between_sampler_ticks_is_attested(self):
         result = self.run_current_user_mutation("reaped")

@@ -26,6 +26,7 @@ static pid_t start_unrelated_helper(void) {
 int main(int argc, char **argv) {
     if (argc != 3 ||
         (strcmp(argv[1], "clean") && strcmp(argv[1], "reaped") &&
+         strcmp(argv[1], "identity-race") &&
          strcmp(argv[1], "postprocess") &&
          strcmp(argv[1], "replace") &&
          strcmp(argv[1], "fail") && strcmp(argv[1], "linger") &&
@@ -34,6 +35,11 @@ int main(int argc, char **argv) {
     pid_t first = start_candidate(argv[2]);
     if (first <= 0) return 3;
     sleep(1);
+    if (!strcmp(argv[1], "identity-race")) {
+        if (waitpid(first, NULL, 0) != first) return 6;
+        sleep(2);
+        return 0;
+    }
     if (kill(first, SIGTERM)) return 4;
     if (!strcmp(argv[1], "reaped") || !strcmp(argv[1], "postprocess")) {
         if (waitpid(first, NULL, 0) != first) return 6;
