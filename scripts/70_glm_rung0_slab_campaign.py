@@ -87,6 +87,7 @@ MODEL_PATH = Path(
     "GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf"
 )
 INFLIGHT = Path("/sys/class/block/nvme0n1/inflight")
+PREAD64_SYSCALL_NR = 67  # asm-generic/aarch64 __NR_pread64
 ARENA_BYTES = 68_000_000_000
 MEMORY_MARGIN_BYTES = 4 * 1024**3
 MEMORY_MAX_EXCURSION_GIB = 2
@@ -619,13 +620,19 @@ def score_sha_prefetch_campaign(
             raise ValueError("arm safety evidence is invalid")
         external = record["external_io"]
         if not isinstance(external, dict) or set(external) != {
-            "read_bytes_delta", "elapsed_seconds", "sample_count", "peak_read_qd",
+            "read_bytes_delta", "elapsed_seconds", "sample_count",
+            "peak_global_read_qd", "peak_candidate_slab_qd",
             "sample_started_ns", "sample_finished_ns",
         } or integer(external["sample_count"], "external sample count", minimum=2) < 2 or \
                 finite(external["elapsed_seconds"], "external elapsed", positive=True) <= 0 or \
                 integer(external["read_bytes_delta"], "external read bytes", minimum=1) < 1:
             raise ValueError("external I/O evidence is invalid")
-        external_peak = integer(external["peak_read_qd"], "external peak QD")
+        global_peak = integer(
+            external["peak_global_read_qd"], "global device peak QD"
+        )
+        candidate_peak = integer(
+            external["peak_candidate_slab_qd"], "candidate slab peak QD"
+        )
         sample_started = integer(
             external["sample_started_ns"], "external first sample", minimum=1
         )
@@ -637,7 +644,9 @@ def score_sha_prefetch_campaign(
             or sample_finished < max(rep["client_last_token_ns"] for rep in reps)
         ):
             raise ValueError("external NVMe samples do not span measured requests")
-        if arm != "A" and not 4 <= external_peak <= 8:
+        if candidate_peak > global_peak:
+            raise ValueError("candidate slab QD exceeds global device QD")
+        if arm != "A" and not 4 <= candidate_peak <= 8:
             raise ValueError("external NVMe trace did not achieve bounded ring QD")
 
     if len(paired_outputs) != 10 or any(
@@ -1758,13 +1767,13 @@ def parse_nvme_inflight_log(
     if not meta:
         raise ValueError("external NVMe trace metadata is malformed")
     read_before, read_after, start_ns, end_ns = map(int, meta.groups())
-    samples: list[tuple[int, int]] = []
+    samples: list[tuple[int, int, int]] = []
     for line in lines[1:]:
-        match = re.fullmatch(r"(\d+) (\d+)", line)
+        match = re.fullmatch(r"(\d+) (\d+) (\d+)", line)
         if not match:
             raise ValueError("external NVMe sample is malformed")
-        samples.append((int(match[1]), int(match[2])))
-    timestamps = [timestamp for timestamp, _ in samples]
+        samples.append((int(match[1]), int(match[2]), int(match[3])))
+    timestamps = [timestamp for timestamp, _, _ in samples]
     if (
         read_after <= read_before or start_ns <= 0 or end_ns <= start_ns
         or len(samples) < 2
@@ -1774,14 +1783,18 @@ def parse_nvme_inflight_log(
         or end_ns - timestamps[-1] > 100_000_000
     ):
         raise ValueError("external NVMe trace timing or byte coverage is invalid")
-    peak = max(qd for _, qd in samples)
-    if require_ring_qd and not 4 <= peak <= 8:
+    global_peak = max(global_qd for _, global_qd, _ in samples)
+    candidate_peak = max(candidate_qd for _, _, candidate_qd in samples)
+    if any(candidate_qd > global_qd for _, global_qd, candidate_qd in samples):
+        raise ValueError("candidate slab queue depth exceeds device queue depth")
+    if require_ring_qd and not 4 <= candidate_peak <= 8:
         raise ValueError("external NVMe trace did not achieve QD4-QD8")
     return {
         "read_bytes_delta": read_after - read_before,
         "elapsed_seconds": (end_ns - start_ns) / 1e9,
         "sample_count": len(samples),
-        "peak_read_qd": peak,
+        "peak_global_read_qd": global_peak,
+        "peak_candidate_slab_qd": candidate_peak,
         "sample_started_ns": timestamps[0],
         "sample_finished_ns": timestamps[-1],
     }
@@ -1840,6 +1853,72 @@ def read_qd() -> int:
     if value < 0:
         raise RuntimeError("block inflight counter is negative")
     return value
+
+
+def candidate_slab_pread_qd(
+    pid: int, *, proc_root: Path = Path("/proc"), slab_path: Path = Path(SLAB_PATH)
+) -> int:
+    """Count this candidate's threads blocked in pread64 on the slab sidecar."""
+    task_root = proc_root / str(pid) / "task"
+    count = 0
+    for task in task_root.iterdir():
+        try:
+            fields = (task / "syscall").read_text(encoding="ascii").split()
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        if not fields or fields[0] == "running":
+            continue
+        try:
+            syscall_nr = int(fields[0], 0)
+        except ValueError as error:
+            raise RuntimeError("candidate syscall record is malformed") from error
+        if syscall_nr != PREAD64_SYSCALL_NR:
+            continue
+        if len(fields) < 2:
+            raise RuntimeError("candidate pread64 record lacks a descriptor")
+        fd = int(fields[1], 0)
+        try:
+            target = os.readlink(proc_root / str(pid) / "fd" / str(fd))
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        if target == os.fspath(slab_path):
+            count += 1
+    return count
+
+
+def parse_safe_run_final_artifacts(main_log: str) -> dict[str, dict[str, str]]:
+    matches = re.findall(
+        r"final_artifact_verified path=(\S+) sha256=([0-9a-f]{64}) "
+        r"device_inode=(\d+:\d+:\d+)",
+        main_log,
+    )
+    bindings: dict[str, dict[str, str]] = {}
+    for path, digest, identity in matches:
+        if path in bindings:
+            raise ValueError("safe-run log repeats a final artifact binding")
+        bindings[path] = {"sha256": digest, "device_inode": identity}
+    return bindings
+
+
+def require_safe_run_artifact_bindings(
+    main_log: str, expected: dict[str, str]
+) -> None:
+    bindings = parse_safe_run_final_artifacts(main_log)
+    try:
+        identities: dict[str, str] = {}
+        for path in expected:
+            observed = Path(path).stat()
+            identities[path] = ":".join(str(value) for value in (
+                observed.st_dev, observed.st_ino, observed.st_size,
+            ))
+    except OSError as error:
+        raise ValueError("a scored final artifact is absent") from error
+    if set(bindings) != set(expected) or any(
+        bindings[path]["sha256"] != digest
+        or bindings[path]["device_inode"] != identities[path]
+        for path, digest in expected.items()
+    ):
+        raise ValueError("safe-run final artifacts differ from scored outputs")
 
 
 def terminate_exact(process: subprocess.Popen[Any], start_ticks: int) -> None:
@@ -2143,22 +2222,29 @@ def execute_arm(args: argparse.Namespace) -> int:
                 f"{boot_id}:{server.pid}:{start_ticks}".encode("ascii")
             ).hexdigest()
             read_before = proc_read_bytes(server.pid)
-            io_samples: list[tuple[int, int]] = []
+            io_samples: list[tuple[int, int, int]] = []
             sampler_error: list[str] = []
             stop_sampler = threading.Event()
 
             def sample_io() -> None:
                 while not stop_sampler.is_set():
                     try:
-                        io_samples.append((time.monotonic_ns(), read_qd()))
+                        global_before = read_qd()
+                        candidate_qd = candidate_slab_pread_qd(server.pid)
+                        global_after = read_qd()
+                        io_samples.append((
+                            time.monotonic_ns(),
+                            max(global_before, global_after),
+                            candidate_qd,
+                        ))
                     except Exception as error:  # recorded and failed closed below
                         sampler_error.append(f"{type(error).__name__}: {error}")
                         return
                     stop_sampler.wait(0.002)
 
             sampler = threading.Thread(target=sample_io, daemon=True)
-            sampler.start()
             probe_started_ns = time.monotonic_ns()
+            sampler.start()
             probe_started = time.monotonic()
             completed = subprocess.run(
                 [
@@ -2220,8 +2306,8 @@ def execute_arm(args: argparse.Namespace) -> int:
                     f"META read_before={read_before} read_after={read_after} "
                     f"start_ns={probe_started_ns} end_ns={probe_finished_ns}\n"
                 )
-                for timestamp_ns, qd in io_samples:
-                    stream.write(f"{timestamp_ns} {qd}\n")
+                for timestamp_ns, global_qd, candidate_qd in io_samples:
+                    stream.write(f"{timestamp_ns} {global_qd} {candidate_qd}\n")
                 stream.flush()
                 os.fsync(stream.fileno())
             external_io = parse_nvme_inflight_log(
@@ -3017,6 +3103,10 @@ def derive_sha_prefetch_record_from_artifacts(
         require_ring_qd=mode != "off",
     )
     main_log = (arm_out / "safety.main.log").read_text(encoding="utf-8")
+    require_safe_run_artifact_bindings(main_log, {
+        os.fspath(arm_out / name): sha256_file(arm_out / name)
+        for name in ("server.log", "result.json", "nvme-inflight.log")
+    })
     command_binding = (
         f"sha-prefetch-arm --out {arm_out} --block {record.get('block')} "
         f"--sequence {record.get('sequence')} --arm {record.get('arm')} "
@@ -3207,6 +3297,10 @@ def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
                 "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
                 "GLM_SAFE_MIN_START_GIB": "110",
                 "GLM_SAFE_TIMEOUT_S": str(safe_timeout),
+                "GLM_SAFE_FINAL_ARTIFACTS": ",".join(
+                    os.fspath(arm_out / name)
+                    for name in ("server.log", "result.json", "nvme-inflight.log")
+                ),
             })
             completed = subprocess.run(
                 [
@@ -3388,6 +3482,7 @@ def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
                 "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
                 "GLM_SAFE_MIN_START_GIB": "110",
                 "GLM_SAFE_TIMEOUT_S": "9000",
+                "GLM_SAFE_FINAL_ARTIFACTS": os.fspath(result_path),
             })
             completed = subprocess.run(
                 [
@@ -3524,6 +3619,9 @@ def score_sha_prefetch_directory(args: argparse.Namespace) -> int:
         result_path = quality / f"sha-quality-{arm.lower()}.tsv"
         arm_root = quality / f"sha-quality-{arm.lower()}"
         main_log = (arm_root / "safety.main.log").read_text(encoding="utf-8")
+        require_safe_run_artifact_bindings(
+            main_log, {os.fspath(result_path): sha256_file(result_path)}
+        )
         safety = parse_safety_logs(
             main_log,
             (arm_root / "safety.samples.log").read_text(encoding="utf-8"),

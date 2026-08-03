@@ -575,6 +575,23 @@ class CurrentUserTimestampTests(unittest.TestCase):
         finally:
             shutil.rmtree(artifact_root)
 
+    def test_missing_final_artifact_fails_closed(self):
+        state = Path("/home/bmarti44/.local/state")
+        state.mkdir(parents=True, exist_ok=True)
+        artifact_root = Path(tempfile.mkdtemp(prefix="glm52-final-missing-", dir=state))
+        try:
+            result = self.run_current_user_mutation(
+                "postprocess",
+                {"GLM_SAFE_FINAL_ARTIFACTS": str(artifact_root / "missing.json")},
+            )
+            self.assertEqual(result.returncode, 17, result.stdout + result.stderr)
+            match = re.search(r" dir=(\S+)", result.stdout)
+            self.assertIsNotNone(match, result.stdout)
+            main = (Path(match.group(1)) / "main.log").read_text(encoding="utf-8")
+            self.assertIn("final artifact is absent or unsafe", main)
+        finally:
+            shutil.rmtree(artifact_root)
+
     def test_unrelated_live_descendant_is_rejected_and_cleaned_up(self):
         result = self.run_current_user_mutation("survivor")
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)

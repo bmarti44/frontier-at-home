@@ -28,6 +28,7 @@ CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
 EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
 PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
 EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
+FINAL_ARTIFACTS=${GLM_SAFE_FINAL_ARTIFACTS:-}
 CKV_RUN_NONCE=${DS4_GLM_CKV_RUN_NONCE:-}
 WITNESS_NONCE=${GLM_SAFE_WITNESS_NONCE:-}
 WITNESS_ARTIFACT=${GLM_SAFE_WITNESS_ARTIFACT:-}
@@ -129,6 +130,27 @@ if [[ -n $PROVENANCE_ENV_ALLOWLIST || -n $EXPECTED_ENV_SHA256 ]]; then
     config_error "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST duplicates"
   PROVENANCE_ENV_ALLOWLIST=$(paste -sd, <<<"$PROVENANCE_ENV_NAMES")
   ENV_PROVENANCE=1
+fi
+FINAL_ARTIFACT_PATHS=()
+if [[ -n $FINAL_ARTIFACTS ]]; then
+  [[ $CANDIDATE_PROVENANCE == 1 ]] ||
+    config_error "final artifacts require candidate provenance"
+  IFS=, read -r -a FINAL_ARTIFACT_PATHS <<<"$FINAL_ARTIFACTS"
+  (( ${#FINAL_ARTIFACT_PATHS[@]} >= 1 && ${#FINAL_ARTIFACT_PATHS[@]} <= 8 )) ||
+    config_error "GLM_SAFE_FINAL_ARTIFACTS count"
+  declare -A FINAL_ARTIFACT_SEEN=()
+  for artifact in "${FINAL_ARTIFACT_PATHS[@]}"; do
+    [[ $artifact =~ ^/home/bmarti44/\.local/state/glm52-[A-Za-z0-9._/-]+$ ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS path"
+    parent=$(realpath -m -- "$(dirname -- "$artifact")" 2>/dev/null || true)
+    [[ $parent == /home/bmarti44/.local/state/glm52-* ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS parent"
+    [[ $artifact == "$parent"/"$(basename -- "$artifact")" ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS normalization"
+    [[ -z ${FINAL_ARTIFACT_SEEN[$artifact]+x} ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS duplicate"
+    FINAL_ARTIFACT_SEEN[$artifact]=1
+  done
 fi
 if [[ "${1:-}" == --tag ]]; then
   [[ -n ${2:-} ]] || config_error "tag"
@@ -583,6 +605,20 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
   CGROUP_PEAK_END=$(<"$CGROUP_DIR/memory.peak")
   CGROUP_SWAP_CURRENT_END=$(<"$CGROUP_DIR/memory.swap.current")
   plog "cgroup_final current_bytes=$CGROUP_CURRENT_END peak_bytes=$CGROUP_PEAK_END swap_current_bytes=$CGROUP_SWAP_CURRENT_END events=$(tr '\n' ',' <"$CGROUP_DIR/memory.events.local")"
+fi
+if [[ $RC == 0 && ${#FINAL_ARTIFACT_PATHS[@]} -gt 0 ]]; then
+  for artifact in "${FINAL_ARTIFACT_PATHS[@]}"; do
+    parent=$(realpath -e -- "$(dirname -- "$artifact")" 2>/dev/null || true)
+    if [[ ! -f $artifact || -L $artifact ||
+          $artifact != "$parent"/"$(basename -- "$artifact")" ]]; then
+      plog "FATAL final artifact is absent or unsafe path=$artifact"
+      RC=17
+      break
+    fi
+    artifact_sha256=$(sha256sum -- "$artifact" | awk '{print $1}')
+    artifact_identity=$(stat -Lc '%d:%i:%s' -- "$artifact")
+    plog "final_artifact_verified path=$artifact sha256=$artifact_sha256 device_inode=$artifact_identity"
+  done
 fi
 if [[ $CANDIDATE_PROVENANCE == 1 &&
       $EXECUTED_CANDIDATE_OBSERVED == 1 &&

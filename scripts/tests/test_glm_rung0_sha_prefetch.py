@@ -549,6 +549,36 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             source.index("sampler.start()"),
         )
 
+    def test_candidate_slab_qd_uses_only_matching_pread_descriptors(self):
+        campaign = self.load_campaign()
+        with tempfile.TemporaryDirectory() as temporary:
+            proc = Path(temporary)
+            pid = 123
+            task = proc / str(pid) / "task"
+            fd_root = proc / str(pid) / "fd"
+            slab = proc / "slab.bin"
+            other = proc / "model.gguf"
+            slab.write_bytes(b"")
+            other.write_bytes(b"")
+            fd_root.mkdir(parents=True)
+            for tid, fd, target, syscall in (
+                (1, 7, slab, campaign.PREAD64_SYSCALL_NR),
+                (2, 8, other, campaign.PREAD64_SYSCALL_NR),
+                (3, 9, slab, 63),
+            ):
+                root = task / str(tid)
+                root.mkdir(parents=True)
+                (root / "syscall").write_text(
+                    f"{syscall} {fd} 0 0 0 0 0 0 0\n", encoding="ascii"
+                )
+                (fd_root / str(fd)).symlink_to(target)
+            self.assertEqual(
+                campaign.candidate_slab_pread_qd(
+                    pid, proc_root=proc, slab_path=slab
+                ),
+                1,
+            )
+
     def test_safe_run_artifact_binding_rejects_cross_mixed_output(self):
         campaign = self.load_campaign()
         path = "/home/bmarti44/.local/state/glm52-test/arms/b/result.json"
