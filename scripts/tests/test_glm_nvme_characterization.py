@@ -236,6 +236,34 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "achieved queue depth"):
                 probe.parse_fio_result(result, expected)
 
+            # A requested-depth bucket by itself is not a distribution.  In
+            # particular, accepting it would let a truncated fio result pass.
+            document["jobs"][0]["iodepth_level"] = {"4": 99.0}
+            result.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "achieved queue depth"):
+                probe.parse_fio_result(result, expected)
+
+            # Each bucket may be individually plausible while the aggregate is
+            # impossible.  fio rounds percentages, so the production check may
+            # allow a narrow tolerance around 100, but not double counting.
+            document["jobs"][0]["iodepth_level"] = {
+                "1": 99.0, "2": 0.0, "4": 99.0, "8": 0.0,
+                "16": 0.0, "32": 0.0, ">=64": 0.0,
+            }
+            result.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "achieved queue depth"):
+                probe.parse_fio_result(result, expected)
+
+    def test_final_nvme_artifact_recommends_collision_resistant_prefetch(self):
+        artifact = json.loads((
+            ROOT / "results/glm52-gates/NVME-characterization-final-2026-08-03.json"
+        ).read_text(encoding="utf-8"))
+        recommendation = artifact["decision"]["next_candidate"].lower()
+        self.assertIn("full-sha", recommendation)
+        self.assertIn("prefetch", recommendation)
+        for retired in ("fast-check", "repeat checksum", "fast_repeat"):
+            self.assertNotIn(retired, recommendation)
+
     def test_parser_rejects_short_or_missing_status(self):
         probe = load_probe()
         malformed = {"jobs": [{
