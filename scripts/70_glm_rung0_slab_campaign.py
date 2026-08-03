@@ -1906,7 +1906,13 @@ def parse_nvme_inflight_log(
         raise ValueError("external NVMe trace timing or byte coverage is invalid")
     global_peak = max(global_qd for _, global_qd, _ in samples)
     candidate_peak = max(candidate_qd for _, _, candidate_qd in samples)
-    if any(candidate_qd > global_qd for _, global_qd, candidate_qd in samples):
+    # These observations are deliberately independent: the block-layer counter
+    # is sampled before and after a non-atomic scan of /proc/TID/syscall.  A
+    # pread64 may therefore still be returning after its bio has completed (or
+    # enter between the two block samples).  Corroborate the candidate's exact
+    # slab-fd attribution over the trace, rather than inventing a same-instant
+    # ordering between the two kernel layers.
+    if candidate_peak > global_peak:
         raise ValueError("candidate slab queue depth exceeds device queue depth")
     if require_ring_qd and not 4 <= candidate_peak <= 8:
         raise ValueError("external NVMe trace did not achieve QD4-QD8")

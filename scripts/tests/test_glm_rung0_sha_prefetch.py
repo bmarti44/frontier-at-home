@@ -527,7 +527,12 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             [line.replace("2000 4 4", "2000 4 1").replace("3000 8 8", "3000 8 1")
              for line in good],
             [line.replace("3000 8 8", "3000 9 9") for line in good],
-            [line.replace("2000 4 4", "2000 1 4") for line in good],
+            [
+                line.replace("2000 4 4", "2000 1 4").replace(
+                    "3000 8 8", "3000 1 8"
+                )
+                for line in good
+            ],
             [good[0], good[2], good[1], *good[3:]],
         ):
             with self.assertRaises(ValueError):
