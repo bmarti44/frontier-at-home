@@ -733,6 +733,34 @@ class Rung0SlabCampaignTests(unittest.TestCase):
         )
         self.assertEqual(result["verdict"], "PASS")
 
+    def test_fixed_scorer_rejects_arm_differential_client_envelopes(self):
+        records = self.passing_records()
+        for record in records:
+            ratio = 0.75 if record["mode"] == "off" else 1.25
+            for rep in record["reps"]:
+                raw = rep["token_timestamps_ns"]
+                raw_step = 100_000_000
+                rep["token_timestamps_ns"] = [
+                    raw[0] + index * raw_step for index in range(128)
+                ]
+                raw_elapsed = 127 * raw_step
+                client_elapsed = round(raw_elapsed / ratio)
+                first = rep["client_first_content_ns"]
+                last = first + client_elapsed
+                rep["client_last_content_ns"] = last
+                rep["sse_token_timestamps_ns"] = [
+                    first + index * client_elapsed // 124 for index in range(125)
+                ]
+                rep["raw_client_timing_ratio"] = raw_elapsed / client_elapsed
+        result = CAMPAIGN.score_campaign(
+            records, self.passing_nll(), quality_bound=True
+        )
+        self.assertGreater(result["decode_ratio_lower_95_by_clock"]["client_wall"], 1.0)
+        self.assertLessEqual(
+            result["decode_ratio_lower_95_by_clock"]["raw_token"], 1.0
+        )
+        self.assertEqual(result["verdict"], "FAIL")
+
     def test_slab_arm_requires_full_identity_physical_reads(self):
         records = self.passing_records()
         slab = next(record for record in records if record["mode"] == "on")
