@@ -150,6 +150,43 @@ def _canonical_object_sha256(value: Any) -> str:
     ).hexdigest()
 
 
+def validate_sha_prefetch_freeze(
+    freeze: Any, candidate_commit: str, binary_sha256: str,
+    quality_binary_sha256: str,
+) -> dict[str, Any]:
+    """Fail before an expensive arm when code differs from its frozen hashes."""
+    expected_keys = {
+        "schema_version", "candidate_commit", "binary_sha256",
+        "quality_binary_sha256", "source_sha256", "scorer_sha256",
+        "tests_sha256", "frozen_epoch_s",
+    }
+    expected_source = _canonical_object_sha256({
+        "patch_sha256": sha256_file(
+            ROOT / "results/glm52-gates/harness/"
+            "ds4-expert-slab-prefetch-sha-pipeline.patch"
+        ),
+        "state_header_sha256": sha256_file(
+            ROOT / "results/glm52-gates/harness/ds4_slab_prefetch_state.h"
+        ),
+    })
+    if (
+        not isinstance(freeze, dict) or set(freeze) != expected_keys
+        or freeze["schema_version"] != 1
+        or freeze["candidate_commit"] != candidate_commit
+        or freeze["binary_sha256"] != binary_sha256
+        or freeze["quality_binary_sha256"] != quality_binary_sha256
+        or freeze["source_sha256"] != expected_source
+        or freeze["scorer_sha256"] != sha256_file(Path(__file__).resolve())
+        or freeze["tests_sha256"] != sha256_file(
+            ROOT / "scripts/tests/test_glm_rung0_sha_prefetch.py"
+        )
+        or not isinstance(freeze["frozen_epoch_s"], (int, float))
+        or not math.isfinite(float(freeze["frozen_epoch_s"]))
+    ):
+        raise ValueError("SHA-prefetch freeze differs from current candidate")
+    return freeze
+
+
 def _validate_sha_prefetch_quality(
     attempts: list[dict[str, Any]], candidate_commit: str,
     binary_sha256: str, fixture_sha256: str,
@@ -1808,8 +1845,13 @@ def execute_memory_probe_arm(args: argparse.Namespace) -> int:
 
 def execute_quality_arm(args: argparse.Namespace) -> int:
     """Validate identities, then replace this process with the frozen scorer."""
-    mode = "off" if args.arm == "A" else "on"
-    expected_environment = canonical_engine_environment(mode)
+    sha_prefetch = args.command == "sha-prefetch-quality-arm"
+    if sha_prefetch:
+        mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[args.arm]
+        expected_environment = canonical_sha_prefetch_environment(mode)
+    else:
+        mode = "off" if args.arm == "A" else "on"
+        expected_environment = canonical_engine_environment(mode)
     observed_environment = {
         name: os.environ[name] for name in PROVENANCE_NAMES if name in os.environ
     }
@@ -2709,6 +2751,340 @@ def run_campaign(args: argparse.Namespace) -> int:
     return 0
 
 
+def _copy_and_parse_arm_safety(
+    label: str, arm_out: Path, crash_before: set[Path]
+) -> dict[str, Any]:
+    """Copy the existing safe-run witness and reduce it without self-report."""
+    crash_after = set(CRASH_ROOT.glob("*"))
+    matches = [
+        path for path in crash_after - crash_before
+        if path.name.endswith(f"-{label}")
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(f"arm {label} lacks one safety evidence directory")
+    for name in ("main.log", "samples.log", "kernel.log", "cmd.log"):
+        source = matches[0] / name
+        if not source.is_file():
+            raise RuntimeError(f"arm {label} lacks safety artifact {name}")
+        shutil.copy2(source, arm_out / f"safety.{name}")
+    return parse_safety_logs(
+        (arm_out / "safety.main.log").read_text(encoding="utf-8"),
+        (arm_out / "safety.samples.log").read_text(encoding="utf-8"),
+        (arm_out / "safety.kernel.log").read_text(encoding="utf-8"),
+    )
+
+
+def run_sha_prefetch_campaign(args: argparse.Namespace) -> int:
+    """Run the fixed 15-arm SHA-prefetch campaign through glm_safe_run."""
+    candidate = args.candidate.resolve()
+    quality_candidate = args.quality_candidate.resolve()
+    binary = candidate / "ds4-server"
+    quality_binary = quality_candidate / "ds4-server"
+    freeze_path = args.freeze.resolve()
+    freeze = validate_sha_prefetch_freeze(
+        strict_json(freeze_path), args.candidate_commit,
+        args.binary_sha256, args.quality_binary_sha256,
+    )
+    out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
+    if (
+        out.exists()
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,39}", args.tag) is None
+        or not str(candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not str(quality_candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not binary.is_file() or sha256_file(binary) != args.binary_sha256
+        or not quality_binary.is_file()
+        or sha256_file(quality_binary) != args.quality_binary_sha256
+        or re.fullmatch(r"[0-9a-f]{64}", args.access_stream_sha256) is None
+        or args.model_generation <= 0
+        or not 1024 <= args.port <= 65535
+    ):
+        raise ValueError("SHA-prefetch campaign identity is invalid")
+    envelope = verified_memory_envelope(
+        args.memory_envelope.resolve(), binary, args.binary_sha256,
+        quality_binary, args.quality_binary_sha256, args.candidate_commit,
+    )
+    confirmation = authenticate_confirmation(
+        args.drand_json.resolve(), args.candidate_commit,
+        args.binary_sha256, args.quality_binary_sha256,
+        max(freeze_path.stat().st_mtime, binary.stat().st_mtime,
+            quality_binary.stat().st_mtime),
+    )
+    schedule = sha_prefetch_schedule(bool(confirmation["flip"]))
+    memory_high_gib = envelope["memory_high_gib"]
+    services_are_stopped()
+    no_large_engines()
+    stable_start_memory(max(110.0, memory_high_gib + 20.0))
+    verify_global_lock_access()
+    if sha256_file(MODEL_PATH) != MODEL_SHA256:
+        raise ValueError("full mapped model identity mismatch")
+    slab = Path(SLAB_PATH)
+    sidecar_before = artifact_stat(slab)
+    if sha256_file(slab) != SLAB_SHA256:
+        raise ValueError("full expert sidecar identity mismatch")
+    out.mkdir(mode=0o700, parents=True)
+    arms_root = out / "arms"
+    arms_root.mkdir(mode=0o700)
+    raw_path = out / "raw.jsonl"
+    started_ns = time.monotonic_ns()
+    seed = int(confirmation["seed_sha256"][:8], 16)
+    with raw_path.open("x", encoding="utf-8") as raw_stream:
+        for block, sequence, arm in schedule:
+            services_are_stopped()
+            no_large_engines()
+            stable_start_memory(max(110.0, memory_high_gib + 20.0))
+            mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[arm]
+            safe_timeout = 7200 if arm == "C" else safe_timeout_seconds(
+                "off" if arm == "A" else "on"
+            )
+            label = f"sha-b{block}s{sequence}{arm.lower()}"
+            arm_out = arms_root / label
+            crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
+            engine_environment = canonical_sha_prefetch_environment(mode)
+            environment = os.environ.copy()
+            for name in list(environment):
+                if name.startswith("DS4_") or name.startswith("GLM_"):
+                    del environment[name]
+            environment.update(engine_environment)
+            environment.update({
+                "GLM_CANDIDATE_SRC": str(candidate),
+                "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+                "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+                "GLM_SAFE_EXPECTED_BINARY_SHA256": args.binary_sha256,
+                "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(PROVENANCE_NAMES),
+                "GLM_SAFE_EXPECTED_ENV_SHA256": canonical_environment_sha256(
+                    engine_environment
+                ),
+                "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
+                "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
+                "GLM_SAFE_MIN_START_GIB": "110",
+                "GLM_SAFE_TIMEOUT_S": str(safe_timeout),
+            })
+            completed = subprocess.run(
+                [
+                    str(CGROUP_RUNNER), "--tag", label, "--", sys.executable,
+                    str(Path(__file__).resolve()), "sha-prefetch-arm",
+                    "--out", str(arm_out), "--block", str(block),
+                    "--sequence", str(sequence), "--arm", arm,
+                    "--binary", str(binary), "--binary-sha256", args.binary_sha256,
+                    "--candidate-commit", args.candidate_commit,
+                    "--model-generation", str(args.model_generation),
+                    "--model", str(MODEL_PATH), "--port", str(args.port),
+                    "--seed", str(seed),
+                ],
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, env=environment,
+                timeout=safe_timeout + 100, check=False,
+            )
+            if arm_out.is_dir():
+                (arm_out / "containment.stdout.log").write_bytes(completed.stdout)
+                (arm_out / "containment.stderr.log").write_bytes(completed.stderr)
+            if completed.returncode != 0:
+                raise RuntimeError(f"contained arm {label} failed rc={completed.returncode}")
+            safety = _copy_and_parse_arm_safety(label, arm_out, crash_before)
+            record = strict_json(arm_out / "partial.json")
+            if record.get("access_stream_sha256") != args.access_stream_sha256:
+                raise ValueError("arm access stream differs from preregistration")
+            record["safety"] = safety
+            write_json_exclusive(arm_out / "record.json", record)
+            raw_stream.write(json.dumps(
+                record, sort_keys=True, separators=(",", ":"), allow_nan=False
+            ) + "\n")
+            raw_stream.flush()
+            os.fsync(raw_stream.fileno())
+            no_large_engines()
+    finished_ns = time.monotonic_ns()
+    sidecar_after = artifact_stat(slab)
+    if sidecar_after != sidecar_before or sha256_file(slab) != SLAB_SHA256:
+        raise RuntimeError("expert sidecar changed during campaign")
+    environments = {
+        arm: canonical_sha_prefetch_environment(mode)
+        for arm, mode in {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}.items()
+    }
+    manifest = {
+        "schema_version": 2,
+        "candidate_commit": args.candidate_commit,
+        "binary_sha256": args.binary_sha256,
+        "quality_binary_sha256": args.quality_binary_sha256,
+        "model_generation": args.model_generation,
+        "configuration_by_arm": environments,
+        "configuration_sha256_by_arm": {
+            arm: canonical_environment_sha256(value)
+            for arm, value in environments.items()
+        },
+        "fixture_sha256": sha256_file(FIXTURE),
+        "access_stream_sha256": args.access_stream_sha256,
+        "campaign_started_monotonic_ns": started_ns,
+        "campaign_finished_monotonic_ns": finished_ns,
+        "freeze_sha256": _canonical_object_sha256(freeze),
+        "randomness": confirmation,
+    }
+    write_json_exclusive(out / "manifest.json", manifest)
+    write_json_exclusive(out / "performance-stage.json", {
+        "status": "COMPLETE_PENDING_QUALITY",
+        "arm_count": len(schedule),
+        "manifest_sha256": sha256_file(out / "manifest.json"),
+        "raw_sha256": sha256_file(raw_path),
+        "freeze_sha256": sha256_file(freeze_path),
+        "sidecar_stat_after": sidecar_after,
+    })
+    print(f"RUNG0_SHA_PREFETCH_PERF_DONE out={out}")
+    return 0
+
+
+def run_sha_prefetch_quality_campaign(args: argparse.Namespace) -> int:
+    """Run exact A/B/C 100-case quality arms through the existing witness."""
+    candidate = args.quality_candidate.resolve()
+    server_candidate = args.server_candidate.resolve()
+    binary = candidate / "ds4-server"
+    server_binary = server_candidate / "ds4-server"
+    fixture_root = args.fixture_root.resolve()
+    fixture_manifest = args.manifest.resolve()
+    validate_sha_prefetch_freeze(
+        strict_json(args.freeze.resolve()), args.candidate_commit,
+        args.server_binary_sha256, args.quality_binary_sha256,
+    )
+    out = Path(f"/home/bmarti44/.local/state/glm52-rung0-{args.tag}")
+    if (
+        out.exists()
+        or not str(candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or not str(server_candidate).startswith("/home/bmarti44/.cache/glm52-")
+        or sha256_file(binary) != args.quality_binary_sha256
+        or sha256_file(server_binary) != args.server_binary_sha256
+        or fixture_manifest != fixture_root / QUALITY_FIXTURE_RELATIVE
+        or not fixture_manifest.is_file()
+    ):
+        raise ValueError("SHA-prefetch quality identity is invalid")
+    envelope = verified_memory_envelope(
+        args.memory_envelope.resolve(), server_binary, args.server_binary_sha256,
+        binary, args.quality_binary_sha256, args.candidate_commit,
+    )
+    services_are_stopped()
+    no_large_engines()
+    memory_high_gib = envelope["memory_high_gib"]
+    stable_start_memory(max(110.0, memory_high_gib + 20.0))
+    verify_global_lock_access()
+    out.mkdir(mode=0o700, parents=True)
+    manifest_sha256 = sha256_file(fixture_manifest)
+    attempts: list[dict[str, Any]] = []
+    with (out / "quality-raw.jsonl").open("x", encoding="utf-8") as stream:
+        for arm in "ABC":
+            mode = {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[arm]
+            label = f"sha-quality-{arm.lower()}"
+            result_path = out / f"{label}.tsv"
+            arm_out = out / label
+            arm_out.mkdir(mode=0o700)
+            crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
+            engine_environment = canonical_sha_prefetch_environment(mode)
+            environment = os.environ.copy()
+            for name in list(environment):
+                if name.startswith("DS4_") or name.startswith("GLM_"):
+                    del environment[name]
+            environment.update(engine_environment)
+            environment.update({
+                "GLM_CANDIDATE_SRC": str(candidate),
+                "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+                "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+                "GLM_SAFE_EXPECTED_BINARY_SHA256": args.quality_binary_sha256,
+                "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(PROVENANCE_NAMES),
+                "GLM_SAFE_EXPECTED_ENV_SHA256": canonical_environment_sha256(
+                    engine_environment
+                ),
+                "GLM_SAFE_MEMORY_HIGH_GIB": str(memory_high_gib),
+                "GLM_SAFE_KILL_FLOOR_GIB": str(HOST_KILL_FLOOR_GIB),
+                "GLM_SAFE_MIN_START_GIB": "110",
+                "GLM_SAFE_TIMEOUT_S": "9000",
+            })
+            completed = subprocess.run(
+                [
+                    str(CGROUP_RUNNER), "--tag", label, "--", sys.executable,
+                    str(Path(__file__).resolve()), "sha-prefetch-quality-arm",
+                    "--arm", arm, "--binary", str(binary),
+                    "--binary-sha256", args.quality_binary_sha256,
+                    "--manifest", str(fixture_manifest),
+                    "--manifest-sha256", manifest_sha256,
+                    "--fixture-root", str(fixture_root), "--output", str(result_path),
+                ],
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, env=environment, timeout=9100, check=False,
+            )
+            (arm_out / "containment.stdout.log").write_bytes(completed.stdout)
+            (arm_out / "containment.stderr.log").write_bytes(completed.stderr)
+            if completed.returncode != 0:
+                raise RuntimeError(f"quality arm {arm} failed rc={completed.returncode}")
+            _copy_and_parse_arm_safety(label, arm_out, crash_before)
+            rows = [
+                {
+                    "case_id": row["case_id"],
+                    "target_tokens": row["tokens"],
+                    "total_nll": row["nll_sum"],
+                    "top1_matches": row["top1_correct"],
+                }
+                for row in parse_quality_tsv(result_path)
+            ]
+            attempt = {
+                "schema_version": 1, "arm": arm, "mode": mode,
+                "candidate_commit": args.candidate_commit,
+                "binary_sha256": args.server_binary_sha256,
+                "configuration_sha256": canonical_environment_sha256(
+                    engine_environment
+                ),
+                "fixture_sha256": sha256_file(FIXTURE),
+                "output_sha256": sha256_file(result_path), "rows": rows,
+            }
+            attempts.append(attempt)
+            stream.write(json.dumps(
+                attempt, sort_keys=True, separators=(",", ":"), allow_nan=False
+            ) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+            no_large_engines()
+    _validate_sha_prefetch_quality(
+        attempts, args.candidate_commit, args.server_binary_sha256,
+        sha256_file(FIXTURE), {
+            arm: canonical_environment_sha256(canonical_sha_prefetch_environment(mode))
+            for arm, mode in {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}.items()
+        },
+    )
+    write_json_exclusive(out / "quality-stage.json", {
+        "status": "COMPLETE", "arm_count": 3,
+        "quality_raw_sha256": sha256_file(out / "quality-raw.jsonl"),
+        "fixture_manifest_sha256": manifest_sha256,
+    })
+    print(f"RUNG0_SHA_PREFETCH_QUALITY_DONE out={out}")
+    return 0
+
+
+def score_sha_prefetch_directory(args: argparse.Namespace) -> int:
+    """Verify immutable stage receipts, then invoke the only fixed scorer."""
+    campaign = args.campaign.resolve()
+    quality = args.quality_campaign.resolve()
+    freeze = strict_json(args.freeze.resolve())
+    stage = strict_json(campaign / "performance-stage.json")
+    quality_stage = strict_json(quality / "quality-stage.json")
+    raw_path = campaign / "raw.jsonl"
+    quality_path = quality / "quality-raw.jsonl"
+    if (
+        stage.get("status") != "COMPLETE_PENDING_QUALITY"
+        or stage.get("arm_count") != 15
+        or stage.get("manifest_sha256") != sha256_file(campaign / "manifest.json")
+        or stage.get("raw_sha256") != sha256_file(raw_path)
+        or stage.get("freeze_sha256") != sha256_file(args.freeze.resolve())
+        or quality_stage.get("status") != "COMPLETE"
+        or quality_stage.get("arm_count") != 3
+        or quality_stage.get("quality_raw_sha256") != sha256_file(quality_path)
+    ):
+        raise ValueError("SHA-prefetch stage receipt does not bind raw evidence")
+    records = [json.loads(line) for line in raw_path.read_text().splitlines() if line]
+    attempts = [json.loads(line) for line in quality_path.read_text().splitlines() if line]
+    summary = score_sha_prefetch_campaign(
+        records, strict_json(campaign / "manifest.json"),
+        freeze=freeze, quality_attempts=attempts,
+    )
+    write_json_exclusive(campaign / "summary.json", summary)
+    print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
 def score_directory(args: argparse.Namespace) -> int:
     campaign = args.campaign.resolve()
     performance_manifest = strict_json(campaign / "manifest.json")
@@ -2847,6 +3223,14 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     quality_arm.add_argument("--manifest-sha256", required=True)
     quality_arm.add_argument("--fixture-root", type=Path, required=True)
     quality_arm.add_argument("--output", type=Path, required=True)
+    sha_quality_arm = subparsers.add_parser("sha-prefetch-quality-arm")
+    sha_quality_arm.add_argument("--arm", choices=("A", "B", "C"), required=True)
+    sha_quality_arm.add_argument("--binary", type=Path, required=True)
+    sha_quality_arm.add_argument("--binary-sha256", required=True)
+    sha_quality_arm.add_argument("--manifest", type=Path, required=True)
+    sha_quality_arm.add_argument("--manifest-sha256", required=True)
+    sha_quality_arm.add_argument("--fixture-root", type=Path, required=True)
+    sha_quality_arm.add_argument("--output", type=Path, required=True)
     quality = subparsers.add_parser("quality")
     quality.add_argument("--tag", required=True)
     quality.add_argument("--quality-candidate", type=Path, required=True)
@@ -2868,6 +3252,34 @@ def parse_cli(argv: list[str] | None = None) -> argparse.Namespace:
     run.add_argument("--drand-json", type=Path, required=True)
     run.add_argument("--memory-envelope", type=Path, required=True)
     run.add_argument("--port", type=int, default=8032)
+    sha_run = subparsers.add_parser("sha-prefetch-run")
+    sha_run.add_argument("--tag", required=True)
+    sha_run.add_argument("--candidate", type=Path, required=True)
+    sha_run.add_argument("--quality-candidate", type=Path, required=True)
+    sha_run.add_argument("--candidate-commit", required=True)
+    sha_run.add_argument("--binary-sha256", required=True)
+    sha_run.add_argument("--quality-binary-sha256", required=True)
+    sha_run.add_argument("--model-generation", type=int, required=True)
+    sha_run.add_argument("--access-stream-sha256", required=True)
+    sha_run.add_argument("--freeze", type=Path, required=True)
+    sha_run.add_argument("--drand-json", type=Path, required=True)
+    sha_run.add_argument("--memory-envelope", type=Path, required=True)
+    sha_run.add_argument("--port", type=int, default=8032)
+    sha_quality = subparsers.add_parser("sha-prefetch-quality")
+    sha_quality.add_argument("--tag", required=True)
+    sha_quality.add_argument("--quality-candidate", type=Path, required=True)
+    sha_quality.add_argument("--server-candidate", type=Path, required=True)
+    sha_quality.add_argument("--quality-binary-sha256", required=True)
+    sha_quality.add_argument("--server-binary-sha256", required=True)
+    sha_quality.add_argument("--candidate-commit", required=True)
+    sha_quality.add_argument("--fixture-root", type=Path, required=True)
+    sha_quality.add_argument("--manifest", type=Path, required=True)
+    sha_quality.add_argument("--memory-envelope", type=Path, required=True)
+    sha_quality.add_argument("--freeze", type=Path, required=True)
+    sha_score = subparsers.add_parser("sha-prefetch-score")
+    sha_score.add_argument("--campaign", type=Path, required=True)
+    sha_score.add_argument("--quality-campaign", type=Path, required=True)
+    sha_score.add_argument("--freeze", type=Path, required=True)
     score = subparsers.add_parser("score")
     score.add_argument("--campaign", type=Path, required=True)
     score.add_argument("--quality-campaign", type=Path, required=True)
@@ -2883,12 +3295,18 @@ def main(argv: list[str] | None = None) -> int:
             return execute_memory_probe_arm(args)
         if args.command == "memory-probe":
             return run_memory_probe(args)
-        if args.command == "quality-arm":
+        if args.command in {"quality-arm", "sha-prefetch-quality-arm"}:
             return execute_quality_arm(args)
         if args.command == "quality":
             return run_quality_campaign(args)
         if args.command == "run":
             return run_campaign(args)
+        if args.command == "sha-prefetch-run":
+            return run_sha_prefetch_campaign(args)
+        if args.command == "sha-prefetch-quality":
+            return run_sha_prefetch_quality_campaign(args)
+        if args.command == "sha-prefetch-score":
+            return score_sha_prefetch_directory(args)
         if args.command == "score":
             return score_directory(args)
         raise ValueError("unknown command")

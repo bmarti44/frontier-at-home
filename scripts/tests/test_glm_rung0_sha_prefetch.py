@@ -302,7 +302,11 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         )
         self.assertIn("CGROUP_RUNNER", run_source)
         self.assertIn('"sha-prefetch-arm"', run_source)
-        self.assertIn("parse_safety_logs", run_source)
+        self.assertIn("_copy_and_parse_arm_safety", run_source)
+        self.assertIn(
+            "parse_safety_logs",
+            inspect.getsource(campaign._copy_and_parse_arm_safety),
+        )
         self.assertIn('"raw.jsonl"', run_source)
         self.assertIn("CGROUP_RUNNER", quality_source)
         self.assertIn('"sha-prefetch-quality-arm"', quality_source)
