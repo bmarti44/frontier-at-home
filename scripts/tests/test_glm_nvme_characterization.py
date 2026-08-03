@@ -192,6 +192,11 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             result.write_text(json.dumps(base), encoding="utf-8")
             with self.assertRaises(ValueError):
                 probe.parse_fio_result(result)
+            base["jobs"][0]["read"]["bw_bytes"] = 12_000_000_000
+            base["jobs"][0]["write"]["io_bytes"] = 4096
+            result.write_text(json.dumps(base), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                probe.parse_fio_result(result)
 
     def test_parser_binds_achieved_queue_depth_not_only_requested_depth(self):
         probe = load_probe()
@@ -230,11 +235,6 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             result.write_text(json.dumps(document), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "achieved queue depth"):
                 probe.parse_fio_result(result, expected)
-            base["jobs"][0]["read"]["bw_bytes"] = 12_000_000_000
-            base["jobs"][0]["write"]["io_bytes"] = 4096
-            result.write_text(json.dumps(base), encoding="utf-8")
-            with self.assertRaises(ValueError):
-                probe.parse_fio_result(result)
 
     def test_parser_rejects_short_or_missing_status(self):
         probe = load_probe()
@@ -455,6 +455,12 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                 total_ios = round(desired * 1e9 * 60 / block_size)
                 io_bytes = total_ios * block_size
                 bandwidth = io_bytes / 60
+                depth = int(options["iodepth"])
+                levels = {
+                    "1": 0.0, "2": 0.0, "4": 0.0, "8": 0.0,
+                    "16": 0.0, "32": 0.0, ">=64": 0.0,
+                }
+                levels[str(depth)] = 100.0
                 document = {
                     "fio version": "fio-3.36",
                     "jobs": [{
@@ -463,6 +469,7 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
                                  "runtime": 60_000, "total_ios": total_ios},
                         "write": {"io_bytes": 0, "total_ios": 0},
                         "trim": {"io_bytes": 0, "total_ios": 0},
+                        "iodepth_level": levels,
                     }],
                 }
                 Path(options["output"]).write_text(json.dumps(document), encoding="utf-8")

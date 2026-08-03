@@ -461,6 +461,7 @@ def parse_fio_result(path: Path, expected: dict[str, Any] | None = None) -> dict
     bandwidth = 0.0
     io_bytes = 0
     runtime_ms = 0
+    achieved_iodepth_level: dict[str, float] = {}
     for job in jobs:
         if job.get("error") != 0:
             raise ValueError("fio job failed")
@@ -483,6 +484,24 @@ def parse_fio_result(path: Path, expected: dict[str, Any] | None = None) -> dict
             raise ValueError("fio completed no reads")
         if expected is not None and total_ios * expected["block_size"] != int(read["io_bytes"]):
             raise ValueError("fio read count and byte count disagree")
+        levels = job.get("iodepth_level")
+        if levels is not None:
+            if not isinstance(levels, dict):
+                raise ValueError("fio achieved queue-depth distribution is malformed")
+            for key, value in levels.items():
+                if key not in {"1", "2", "4", "8", "16", "32", ">=64"}:
+                    raise ValueError("fio achieved queue-depth bucket is unexpected")
+                numeric = float(value)
+                if not math.isfinite(numeric) or numeric < 0 or numeric > 100.1:
+                    raise ValueError("fio achieved queue-depth percentage is invalid")
+                achieved_iodepth_level[key] = numeric
+        if expected is not None and "iodepth" in expected:
+            requested = str(expected["iodepth"])
+            if (not achieved_iodepth_level or
+                    achieved_iodepth_level.get(requested, 0.0) < 99.0):
+                raise ValueError(
+                    "fio achieved queue depth does not match requested depth"
+                )
     if not math.isfinite(bandwidth) or bandwidth <= 0 or io_bytes <= 0:
         raise ValueError("fio bandwidth is missing or non-finite")
     if runtime_ms < 59_000 or runtime_ms > 75_000:
@@ -495,6 +514,7 @@ def parse_fio_result(path: Path, expected: dict[str, Any] | None = None) -> dict
         "bandwidth_gb_s": bandwidth / 1e9,
         "read_bytes": io_bytes,
         "runtime_ms": runtime_ms,
+        "achieved_iodepth_level": achieved_iodepth_level,
     }
 
 
@@ -599,13 +619,16 @@ def score_sweep(rows: list[dict[str, Any]]) -> dict[str, Any]:
                row["iodepth"] == 1 and row["numjobs"] == 1)
     low = QD1_REFERENCE_GB_S * (1.0 - QD1_RELATIVE_TOLERANCE)
     high = QD1_REFERENCE_GB_S * (1.0 + QD1_RELATIVE_TOLERANCE)
-    if not low <= qd1["bandwidth_gb_s"] <= high:
+    qd1_sustained = min(qd1["bandwidth_gb_s"], qd1["device_tail_gb_s"])
+    if not low <= qd1_sustained <= high:
         return {
             "verdict": "NO_RESULT",
             "reason": "matched QD1 cell did not reproduce the committed method",
             "qd1_expected_gb_s": QD1_REFERENCE_GB_S,
             "qd1_allowed_gb_s": [low, high],
-            "qd1_observed_gb_s": qd1["bandwidth_gb_s"],
+            "qd1_observed_gb_s": qd1_sustained,
+            "qd1_fio_average_gb_s": qd1["bandwidth_gb_s"],
+            "qd1_device_tail_gb_s": qd1["device_tail_gb_s"],
         }
     matched = [row for row in rows if
                row["kind"] == "primary" and
@@ -634,7 +657,9 @@ def score_sweep(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "verdict": "PASS",
         "qd1_expected_gb_s": QD1_REFERENCE_GB_S,
         "qd1_allowed_gb_s": [low, high],
-        "qd1_observed_gb_s": qd1["bandwidth_gb_s"],
+        "qd1_observed_gb_s": qd1_sustained,
+        "qd1_fio_average_gb_s": qd1["bandwidth_gb_s"],
+        "qd1_device_tail_gb_s": qd1["device_tail_gb_s"],
         "matched_sustained_reference_gb_s": matched_value,
         "matched_reference_cells": matched_cells,
         "future_engine_80pct_target_gb_s": 0.8 * matched_value,
