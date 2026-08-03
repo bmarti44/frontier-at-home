@@ -488,13 +488,21 @@ def parse_fio_result(path: Path, expected: dict[str, Any] | None = None) -> dict
         if levels is not None:
             if not isinstance(levels, dict):
                 raise ValueError("fio achieved queue-depth distribution is malformed")
+            expected_depth_buckets = {"1", "2", "4", "8", "16", "32", ">=64"}
+            if set(levels) != expected_depth_buckets:
+                raise ValueError(
+                    "fio achieved queue depth distribution has missing or extra buckets"
+                )
             for key, value in levels.items():
-                if key not in {"1", "2", "4", "8", "16", "32", ">=64"}:
-                    raise ValueError("fio achieved queue-depth bucket is unexpected")
                 numeric = float(value)
                 if not math.isfinite(numeric) or numeric < 0 or numeric > 100.1:
                     raise ValueError("fio achieved queue-depth percentage is invalid")
                 achieved_iodepth_level[key] = numeric
+            achieved_total = sum(achieved_iodepth_level.values())
+            if not 99.0 <= achieved_total <= 101.0:
+                raise ValueError(
+                    "fio achieved queue depth distribution total is implausible"
+                )
         if expected is not None and "iodepth" in expected:
             requested = str(expected["iodepth"])
             if (not achieved_iodepth_level or

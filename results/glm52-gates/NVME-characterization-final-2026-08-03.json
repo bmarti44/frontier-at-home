@@ -633,7 +633,7 @@
     }
   ],
   "decision": {
-    "next_candidate": "Default-off repeated-record fast-check path after first cryptographic verification, then corrected cross-layer prefetch into one QD4-QD8 ring. Require byte identity, corruption fail-closed mutations, bounded pinned buffers, and a positive matched decode lower bound.",
+    "next_candidate": "Default-off collision-resistant full-SHA cross-layer prefetch pipeline using one bounded QD4-QD8 ring. Every demand and prefetched record requires its frozen SHA-256 before READY or device copy; require byte identity, corruption fail-closed mutations, bounded pinned buffers, and positive matched decode lower bounds against both slab-off and demand-only baselines.",
     "physics_recalibration": "PARTIAL_DIAGNOSTIC_ONLY",
     "reason": "The preregistered 4.8 GB/s QD1 method did not reproduce, so this gate cannot formally replace serving constants. It falsifies a raw-drive QD1 bottleneck and sets bounded engineering targets. A matched engine-stage measurement is required for total serving ceilings."
   },
