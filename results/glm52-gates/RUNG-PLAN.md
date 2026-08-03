@@ -330,6 +330,99 @@ lookahead is needed. Oracle prefetch therefore uses token-level lookahead while
 leaving target computation exact. This is the intended path toward the faithful
 6-8 tok/s streaming ceiling.
 
+### Rung 0.5 prototype - calibrated union-probe prediction
+
+This byte-identical prototype predicts the set union of experts needed over
+future tokens; it never chooses the target model's executed experts. A miss may
+stall and a false positive may consume bandwidth or cache, but neither may alter
+target outputs. No NLL gate applies. Decode non-regression and byte identity do.
+
+The lineage is explicit. Griffioen and Appleton's 1994 predictive file
+prefetching work introduced probability thresholds; [TIP at SOSP
+1995](https://doi.org/10.1145/224057.224064) and Vellanki and Chervenak's
+[SC 1999 cost-benefit scheme](https://dblp.org/rec/conf/sc/VellankiC99.html)
+framed prefetch economics; [TransFetch](https://arxiv.org/abs/2205.02269)
+predicts unordered address sets over a future window;
+[MoE-SpeQ](https://arxiv.org/abs/2511.14102) uses a draft model to predict
+future-token expert needs; and
+[DraftExpert](https://arxiv.org/abs/2607.24434) formalizes the cost of marginal
+expert-set expansion. The proposed cheap direct multi-token-union probe,
+per-expert conformal calibration, and NVMe queue-slot allocation by marginal
+probability are the research additions. They must be described as a composition
+of that lineage, not as invention of predictive prefetching.
+
+[WiSP](https://arxiv.org/abs/2606.21868) found little single-stream decode value
+from predicted expert prefetch when bandwidth, rather than prediction accuracy,
+was limiting; its stronger result came from working-set allocation. The owner's
+review reports a 46-55% prefetch regression in its relevant configurations, and
+the current incomplete GLM slab diagnostics also show slab-on slower than
+slab-off. Therefore every prediction feeds two independently gated consumers:
+
+1. calibrated admission/eviction, ranking residents and candidates by the
+   probability of use within the next K tokens; and
+2. idle-slot prefetch, which may submit only below fio's measured sustainable
+   in-flight depth, in descending marginal-probability order, without displacing
+   demand reads.
+
+The admission result and the prefetch result are attributed separately. An
+admission-only win with rejected prefetch is a successful endpoint.
+
+#### P0 - frozen trace corpus
+
+Prefer extending existing `DS4_TOKEN_TIMING`/`LOADPROF` records rather than a
+new telemetry framework. For each sampled token/layer record the eight routed
+expert IDs, top-32 gate IDs/logits stored as FP16, and a compact gate-input
+feature (initial candidate: 4-bit quantized, with layer subsampling allowed).
+Use the existing 100-case quality prompts plus frozen long agent transcripts,
+with train/calibration/test splits fixed by content hashes before training.
+Target at least one million token-layer routing events. Telemetry is rate-limited
+and default-off; if it cannot piggyback on an already-approved quality run, P0
+waits rather than consuming an unplanned GPU evidence window. Raw trace schema,
+quantization error, dropped-event count, and fixture lineage are committed.
+
+#### P1 - direct-union probe and decisive baselines
+
+Train per-layer rank 8, 16, and 32 heads in the style of
+[SpecPrefetch](https://arxiv.org/abs/2607.24787), using gate input plus recent
+expert history and multi-label BCE targets for the layer-local expert union at
+K = 2, 4, and 8. Freeze optimizer, seed, splits, parameter count, training time,
+and inference cost. On the untouched test split, report recall-versus-prefetch-
+budget and precision/wasted-byte curves against:
+
+- frequency-prior top N (mandatory null baseline for the flat router);
+- gate replay;
+- two-step shared-expert correction; and
+- K-step MTP rollout, evaluated on exactly the same events and budgets.
+
+If frequency prior is not beaten, stop the probe. If MTP rollout dominates the
+probe and the cheaper baselines at equal end-to-end cost, merge the probe result
+into the Rung 0.5 oracle as a refinement rather than creating another runtime
+mechanism. Preserve the full comparison table either way.
+
+#### P2 - split-conformal calibration
+
+Use the frozen calibration split to turn raw per-expert scores into prediction
+sets. The preregistered headline target is at least 90% empirical containment of
+the true K-token union on the untouched test split; report finite-sample coverage
+assumptions and confidence intervals rather than implying a guarantee under
+distribution shift. Deliver per-layer reliability diagrams and coverage-versus-
+set-size/wasted-byte curves. If the flat 256-expert router requires sets too
+large for the fio-derived spare-bandwidth/cache budget, record the negative
+result and stop before online integration.
+
+#### P3 - online consumers after campaign and fio
+
+P3 is blocked until the active `e637b6f` campaign is terminal and the fio curve
+has established sustainable bandwidth and queue depth. Implement admission and
+prefetch behind separate default-off flags and A/B each against the then-current
+best OFF configuration. Both require matched requests, byte-identical target
+outputs, no demand-read displacement, no safety regression, and decode
+throughput whose lower confidence bound is non-negative versus that best OFF
+configuration. Prefetch may use only measured spare queue slots and its coverage
+budget. If combined mode wins, also run admission-only and prefetch-only arms so
+the gain is attributable; if prefetch regresses, reject it and retain any passing
+admission-only policy.
+
 ### Rung 0.6 - multi-turn TTFT (W7)
 
 Keep the strict resume guard. First resolve the L40 same-lineage store/load
