@@ -108,27 +108,65 @@ class ExpertSlabSourceTests(unittest.TestCase):
         """
         for marker in (
             'getenv("DS4_CUDA_EXPERT_SLAB_PREFETCH_SHA")',
-            "cuda_expert_slab_prefetch_read_sha256",
-            "DS4_SLAB_PF_READING",
-            "DS4_SLAB_PF_READY",
-            "expert slab prefetch checksum mismatch",
-            "slab_prefetch_sha_success=%llu",
-            "slab_prefetch_sha_failures=%llu",
-            "slab_prefetch_ready=%llu",
-            "slab_prefetch_late=%llu",
-            "slab_prefetch_fallback=%llu",
-            "slab_validation_ms=%.3f",
-            "slab_copy_ms=%.3f",
-            "slab_wait_ms=%.3f",
+            "g_pf.machine->complete_read(lease, backend)",
+            "backend.sha256(buffer, result.actual_length, actual)",
+            "PREFETCHSHA mode=prefetch_sha",
+            "sha_successes=%llu sha_failures=%llu",
+            "ready=%llu late=%llu",
+            "fallback=%llu copies=%llu validated_bytes=%llu",
             "validated_bytes",
             "copied_bytes",
-            "model_generation != g_model_load_generation",
+            "identity.model_generation != g_model_load_generation",
         ):
             self.assertIn(marker, self.source)
 
         # The background path supplements rather than replaces the frozen
         # SHA chain. This existing digest call must remain in composed source.
         self.assertIn("cuda_expert_slab_sha256(buffer", self.source)
+
+    def test_prefetch_initializes_after_slab_and_can_retry(self) -> None:
+        """The first selected load must not permanently disable candidate C."""
+        slab = self.source.index("slab_mode_for_load = cuda_expert_slab_init(table)")
+        prefetch = self.source.index(
+            "ds4_pf_init(table->gate_expert_bytes, table->down_expert_bytes)"
+        )
+        self.assertLess(slab, prefetch)
+        self.assertNotIn("static int done = 0", self.source)
+        self.assertIn("ds4_pf_cleanup();", self.source)
+        self.assertIn("expert prefetch enabled", self.source)
+
+    def test_prefetch_teardown_precedes_slab_and_cuda_teardown(self) -> None:
+        """Workers may not outlive the fd, crypto provider, or CUDA runtime."""
+        cleanup = self.source.index('extern "C" void ds4_gpu_cleanup(void)')
+        body = self.source[cleanup:]
+        prefetch = body.index("ds4_pf_cleanup();")
+        slab = body.index("cuda_expert_slab_cleanup();")
+        synchronize = body.index("cudaDeviceSynchronize()")
+        self.assertLess(prefetch, slab)
+        self.assertLess(prefetch, synchronize)
+        for marker in (
+            "g_pf.stop = 1",
+            "pthread_cond_broadcast(&g_pf.cv)",
+            "pthread_join(g_pf.threads[i]",
+            "cudaHostUnregister(g_pf.slots[i].buf)",
+            "free(g_pf.slots[i].buf)",
+            "delete g_pf.machine",
+            "close(g_pf.fd)",
+            "pthread_cond_destroy(&g_pf.cv)",
+            "pthread_mutex_destroy(&g_pf.mu)",
+        ):
+            self.assertIn(marker, self.source)
+
+    def test_prefetch_reads_from_its_private_descriptor(self) -> None:
+        self.assertIn(
+            "cuda_pread_full(g_pf.fd, buffer, read_bytes",
+            self.source,
+        )
+        self.assertNotIn(
+            "cuda_pread_full(g_expert_slab.fd, buffer, read_bytes,\n"
+            "                                       record.expert_slab_offset)",
+            self.source,
+        )
 
     def test_lifecycle_and_worker_device_are_explicit(self) -> None:
         for marker in (

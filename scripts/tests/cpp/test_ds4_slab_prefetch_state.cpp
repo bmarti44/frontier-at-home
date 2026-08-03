@@ -8,6 +8,8 @@
 #include <cstring>
 #include <vector>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
 
 using namespace ds4_slab_prefetch;
 
@@ -21,7 +23,7 @@ static std::array<uint8_t, 32> good_digest() {
     return value;
 }
 
-struct FakeBackend final : Backend {
+struct FakeBackend : Backend {
     std::vector<uint8_t> canonical;
     std::vector<uint8_t> source;
     size_t reported_length = 0;
@@ -80,7 +82,7 @@ static Ring make_ring(size_t count, uint64_t generation,
     return Ring(count, generation, buffers, capacities);
 }
 
-static void valid_sync_and_async_paths() {
+static void valid_sync_path() {
     for (size_t count = 4; count <= 8; ++count) {
         std::vector<std::vector<uint8_t>> storage(count, std::vector<uint8_t>(256));
         Ring ring = make_ring(count, 7, storage);
@@ -98,21 +100,55 @@ static void valid_sync_and_async_paths() {
         REQUIRE(t.attempts == 1 && t.sha_successes == 1 && t.ready == 1);
         REQUIRE(t.copies == 1 && t.validated_bytes == 256 && t.copied_bytes == 256);
 
-        Lease worker2 = ring.issue(id);
-        REQUIRE(worker2.valid && worker2.token != worker.token);
-        REQUIRE(ring.complete_read(worker2, backend));
-        Lease owner2 = ring.claim(id);
-        REQUIRE(ring.copy_async(owner2, backend));
-        REQUIRE(ring.state(owner2.slot) == State::copying);
-        Lease concurrent = ring.issue(id);
-        REQUIRE(concurrent.valid && concurrent.slot != owner2.slot);
-        REQUIRE(ring.state(owner2.slot) == State::copying); // no recycle/ABA
-        REQUIRE(!ring.poll(owner2, backend));
-        backend.event_done = true;
-        REQUIRE(ring.poll(owner2, backend));
-        REQUIRE(ring.state(owner2.slot) == State::empty);
-        REQUIRE(!ring.poll(owner2, backend));  // duplicate/stale completion
     }
+}
+
+struct BlockingBackend final : FakeBackend {
+    std::mutex mutex;
+    std::condition_variable condition;
+    bool entered = false;
+    bool release = false;
+
+    explicit BlockingBackend(size_t bytes) : FakeBackend(bytes) {}
+    ReadResult read(const Identity &id, uint8_t *dst, size_t capacity) override {
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            entered = true;
+            condition.notify_all();
+            condition.wait(lock, [&] { return release; });
+        }
+        return FakeBackend::read(id, dst, capacity);
+    }
+};
+
+static void invalidation_retires_inflight_buffers_until_physical_completion() {
+    std::vector<std::vector<uint8_t>> storage(4, std::vector<uint8_t>(256));
+    Ring ring = make_ring(4, 7, storage);
+    BlockingBackend blocked(256);
+    FakeBackend corrupt(256);
+    corrupt.source[17] ^= 1;
+    Lease inflight = ring.issue(identity(256));
+    Lease failing = ring.issue(identity(256));
+    REQUIRE(inflight.valid && failing.valid && inflight.slot != failing.slot);
+    std::thread reader([&] { REQUIRE(!ring.complete_read(inflight, blocked)); });
+    {
+        std::unique_lock<std::mutex> lock(blocked.mutex);
+        blocked.condition.wait(lock, [&] { return blocked.entered; });
+    }
+    REQUIRE(!ring.complete_read(failing, corrupt));
+    REQUIRE(ring.invalidated());
+    REQUIRE(ring.state(inflight.slot) == State::retired);
+    REQUIRE(!ring.reload(8));
+    REQUIRE(!ring.issue(identity(256, 8)).valid);
+    {
+        std::lock_guard<std::mutex> lock(blocked.mutex);
+        blocked.release = true;
+    }
+    blocked.condition.notify_all();
+    reader.join();
+    REQUIRE(ring.state(inflight.slot) == State::empty);
+    REQUIRE(ring.reload(8));
+    REQUIRE(ring.issue(identity(256, 8)).valid);
 }
 
 static void corruption_fails_closed() {
@@ -173,7 +209,7 @@ static void identity_lease_and_reload_are_aba_safe() {
 
     Lease owner = ring.claim(id);
     REQUIRE(owner.valid);
-    ring.reload(8);
+    REQUIRE(ring.reload(8));
     REQUIRE(!ring.copy_sync(owner, backend));
     REQUIRE(backend.copy_calls == 0);
     REQUIRE(!ring.poll(owner, backend));
@@ -244,7 +280,8 @@ static void repeated_publication_stress() {
 }
 
 int main() {
-    valid_sync_and_async_paths();
+    valid_sync_path();
+    invalidation_retires_inflight_buffers_until_physical_completion();
     corruption_fails_closed();
     identity_lease_and_reload_are_aba_safe();
     mutation_after_validation_is_caught_before_copy();

@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import copy
 import hashlib
+import inspect
 import math
 from pathlib import Path
 import subprocess
@@ -156,7 +157,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             self.assertEqual(run.returncode, 0, run.stderr)
 
     def test_engine_uses_state_machine_as_sole_transition_authority(self):
-        engine = Path("/tmp/glm52-score-official/ds4_cuda.cu")
+        engine = Path("/tmp/glm52-rung0-prefetch-candidate/ds4_cuda.cu")
         self.assertTrue(engine.is_file(), "frozen compiled engine source is absent")
         source = engine.read_text(encoding="utf-8")
         self.assertTrue(
@@ -192,6 +193,51 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             set(scored["decode_ratio_lower_95_by_comparator_and_clock"]),
             {"C/A:client_wall", "C/A:raw_token", "C/B:client_wall", "C/B:raw_token"},
         )
+
+    def test_prefetch_flags_are_part_of_the_observed_environment(self):
+        campaign = self.load_campaign()
+        self.assertTrue(
+            {
+                "DS4_GLM_PREFETCH",
+                "DS4_CUDA_EXPERT_SLAB_PREFETCH_SHA",
+                "DS4_GLM_PREFETCH_THREADS",
+            }.issubset(campaign.PROVENANCE_NAMES)
+        )
+
+    def test_scorer_does_not_accept_caller_selected_schedule_or_manifest_quality(self):
+        campaign = self.load_campaign()
+        parameters = inspect.signature(
+            campaign.score_sha_prefetch_campaign
+        ).parameters
+        self.assertNotIn("schedule_flip", parameters)
+        self.assertIn("freeze", parameters)
+        self.assertIn("quality_attempts", parameters)
+
+    def test_scorer_rejects_arbitrary_configuration_digests(self):
+        campaign = self.load_campaign()
+        records, manifest = self.passing_campaign(campaign)
+        # These are syntactically valid and distinct, but are not hashes of the
+        # exact A=off/B=demand-SHA/C=prefetch-SHA environment maps.
+        with self.assertRaises((TypeError, ValueError)):
+            campaign.score_sha_prefetch_campaign(records, manifest)
+
+    def test_scorer_rejects_zero_sha_coverage_and_count_byte_fabrication(self):
+        campaign = self.load_campaign()
+        records, manifest = self.passing_campaign(campaign)
+        zero = copy.deepcopy(records)
+        for row in zero:
+            if row["arm"] in {"B", "C"}:
+                row["engine"]["telemetry"] = {
+                    name: 0 for name in row["engine"]["telemetry"]
+                }
+        with self.assertRaises((TypeError, ValueError)):
+            campaign.score_sha_prefetch_campaign(zero, manifest)
+
+        mismatch = copy.deepcopy(records)
+        target = next(row for row in mismatch if row["arm"] == "C")
+        target["engine"]["telemetry"]["copied_bytes"] = 0
+        with self.assertRaises((TypeError, ValueError)):
+            campaign.score_sha_prefetch_campaign(mismatch, manifest)
 
     def test_three_arm_scorer_rejects_malformed_or_partial_evidence(self):
         campaign = self.load_campaign()
