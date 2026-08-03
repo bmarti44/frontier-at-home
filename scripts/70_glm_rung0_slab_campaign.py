@@ -163,6 +163,10 @@ SHA_PREFETCH_SOURCE_PATHS = (
     "results/glm52-gates/harness/ds4_slab_prefetch_state.h",
     "results/glm52-gates/harness/glm_safe_run.sh",
     "results/glm52-gates/harness/glm_cgroup_run.sh",
+    "scripts/03_memory_guard.py",
+    "scripts/30_bench_speed.py",
+    "scripts/glm52_goal.py",
+    "scripts/glm52_w1_affine_campaign.py",
 )
 
 
