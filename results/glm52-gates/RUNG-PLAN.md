@@ -125,17 +125,26 @@ Current Rung 0.1 candidate reconciliation:
   24.878883 GiB available at the low point, and recorded zero cgroup events,
   swap, Xid, OOM, or survivor. Its 277.226-second TTFT includes the evidence-
   only 401 GB identity scan and is not a serving-profile TTFT;
-- the prior 2.2231-2.2373 tok/s OFF calibration used the superseded binary and
-  remains useful diagnostic history only. Both OFF and ON performance arms
-  must be rerun on `e637b6f`; no Rung 0.1 A/B adoption result exists yet;
+- the terminal five-block A/B on the same frozen `e637b6f` binary measured
+  **2.2977581991 tok/s OFF** and **1.5485937026 tok/s ON** on the independent
+  client-wall clock. The decode lower 95% ratio is **0.6732533994** and the
+  control-config TTFT upper 95% ratio is **1.4938309019**, so slab ON is
+  decisively rejected. These TTFTs isolate the slab in a stripped control
+  configuration and are not serving-profile TTFT;
+- the four-arm B/A/A/B 100-case campaign was deterministic and byte-identical:
+  token-weighted delta NLL **0.0**, top-1 loss **0.0 pp**, baseline mean NLL
+  **0.45145226406**, and hosted-reference top-1 agreement **0.83384090914**.
+  Every arm had zero cgroup/OOM/swap/Xid/survivor failure and at least
+  24.69 GiB available. `R0-e637-slab-final-2026-08-03.json` binds the terminal
+  raw, manifest, receipt, summary, and quality hashes;
 - post-reconciliation public randomness round `6342798` is authenticated and
   bound to the two frozen hashes. Its campaign attempt is terminal
   `NO_RESULT`: two complete arms and the third arm's requests were safe and
   valid, but a normal exit between `/proc` identity reads triggered a
   fail-closed rc=11 and aborted the schedule.
   `R0-e637-campaign-attempt-2026-08-02.json` preserves the raw bindings.
-  Commits `62fbd4d` and `a4109b1` reproduce and repair that race; the full
-  schedule must restart under a new harness freeze and fresh randomness.
+  Commits `62fbd4d` and `a4109b1` reproduce and repair that race. The later
+  completed campaign above supersedes this attempt without deleting it.
 
 The retired W8 branch is not an implementation dependency. Its affine-INT8
 cache result remains a separate lossy datum and cannot be merged into Rung 0.

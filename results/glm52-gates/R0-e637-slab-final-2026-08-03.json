@@ -1,0 +1,99 @@
+{
+  "artifact": "GLM-5.2 Rung 0.1 coalesced expert-slab terminal A/B result",
+  "schema_version": 1,
+  "candidate_engine_commit": "e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004",
+  "candidate_binary_sha256": "5a7caa3e7fded039797e6a0158dd4687b932d3b3c5f225c05ac7a656021fbd1a",
+  "quality_binary_sha256": "3f4f6d197a37369ec20413e7ee77b87508803511106d0250ecc45671ac01e349",
+  "scorer": {
+    "id": "glm.rung0.slab.v2-client-wall",
+    "repo_commit": "cf2812a",
+    "formula": "decode=(N_raw-1)/(client_last_content_ns-client_first_content_ns), where N_raw is independently bound by token_ids, raw token timestamps, completion_tokens, and server_completion_tokens; TTFT=(client_first_content_ns-client_request_started_ns)",
+    "red_test_commits": [
+      "2f1cb81",
+      "80b1d99"
+    ],
+    "implementation_commits": [
+      "ad2cb83",
+      "cf2812a"
+    ],
+    "reason_for_v2": "SSE content fragments and separately retokenized reasoning/content channels are not one-to-one with generated raw tokens. The v1 reducer incorrectly rejected authentic 160-token reps containing 157 or 159 SSE fragments. Raw output coverage remains fixed at at least 128 tokens; SSE timestamps remain a monotonic client-wall envelope."
+  },
+  "performance_campaign": {
+    "path": "/home/bmarti44/.local/state/glm52-rung0-e637-ab-b1fd-20260802a",
+    "arm_count": 20,
+    "blocks": 5,
+    "reps_per_arm": 2,
+    "manifest_sha256": "a2a87bced4516518184c3ad250509e8dea9fb769258f5762a15af6a7cf35ca9b",
+    "raw_sha256": "3a9d779963529c3e5e5a0eac3236691646df0bb373bb333b5f2384e4d708d2bc",
+    "stage_receipt_sha256": "b9959710aa784607c73100ed6057b617b2df6ede4f4ef2cdab094083b1af36de",
+    "summary_sha256": "27e66410639fd3b5dfe085088789bf196cd4b2f934f44d81dc37f3bfa73511ba"
+  },
+  "quality_campaign": {
+    "path": "/home/bmarti44/.local/state/glm52-rung0-e637-quality-b1fd-20260803b",
+    "schedule": [
+      "B",
+      "A",
+      "A",
+      "B"
+    ],
+    "case_count_per_arm": 100,
+    "manifest_sha256": "3ba621ab3af7f1202edb0f83b3a4b532ee14e06b2fd105c2d956ce6ce43f2980",
+    "raw_sha256": "3443f798f41872e76358fa1c677dde35eb6469fe909fddb570f4dadd742b19f6",
+    "nll_sha256": "42311f4499af3e5eb33d4c2d081f36bd0d3b20497f01af15a8b4a6aee7555151",
+    "all_arm_tsv_sha256": "1cb0254dd2442798c58938172b2cf1c3ddc3e02636810b67fc50d28dbc753ec0",
+    "all_arms_byte_identical": true
+  },
+  "measurements": {
+    "decode_tps_mean": {
+      "slab_off": 2.2977581991022125,
+      "slab_on": 1.5485937025681544
+    },
+    "decode_tps_block_means": {
+      "slab_off": [
+        2.2998007435869097,
+        2.296533831204978,
+        2.2986346931902033,
+        2.2970042004314197,
+        2.296817527097551
+      ],
+      "slab_on": [
+        1.5474350057491748,
+        1.5491599542879515,
+        1.5484213885337035,
+        1.549672395780489,
+        1.5482797684894525
+      ]
+    },
+    "decode_ratio_lower_95": 0.6732533993567755,
+    "control_config_ttft_seconds_mean": {
+      "slab_off": 29.8515156581,
+      "slab_on": 44.52654697845
+    },
+    "control_config_ttft_ratio_upper_95": 1.493830901911131,
+    "minimum_available_gib": {
+      "performance_slab_off": 24.74565887451172,
+      "performance_slab_on": 24.69182586669922,
+      "quality_all_arms": 24.871173858642578
+    },
+    "safety": {
+      "cgroup_high_events": 0,
+      "cgroup_max_events": 0,
+      "cgroup_oom_events": 0,
+      "cgroup_swap_bytes": 0,
+      "xid": false,
+      "survivors": 0
+    }
+  },
+  "fidelity": {
+    "token_weighted_delta_nll": 0.0,
+    "top1_loss_pp": 0.0,
+    "deterministic": true,
+    "baseline_mean_avg_nll": 0.45145226406,
+    "hosted_reference_top1_agreement": 0.83384090914,
+    "hosted_reference_pair_agreement": 0.75316503141,
+    "hosted_reference_target_logprob_mae_nat": 0.38550036026
+  },
+  "verdict": "FAIL",
+  "decision": "REJECT slab-on candidate. It is byte-identical and safe but its decode lower 95% ratio is 0.6732533993567755, below the preregistered requirement that the lower bound exceed 1.0; its TTFT upper ratio also exceeds 1.05.",
+  "reporting_caveat": "The 29.85 s and 44.53 s TTFT values are stripped control-configuration measurements used only to isolate the slab lever. They are not GLM serving-profile TTFT; the separately established exact-replay warm serving measurement is 1.755 s."
+}
