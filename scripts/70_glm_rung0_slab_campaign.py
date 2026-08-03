@@ -787,7 +787,8 @@ def parse_quality_engine_log(text: str, mode: str) -> dict[str, Any]:
 def parse_safety_logs(main: str, samples: str, kernel: str) -> dict[str, Any]:
     """Fail closed on containment, memory, process, or kernel evidence."""
     for marker in (
-        "executed candidate clean exit verified after wrapper and descendant checks",
+        "executed candidate was verified alive at least once; no identity "
+        "contradiction observed at 4 Hz; wrapper and descendant checks clean",
         "SAFE_RUN end rc=0 killed=no",
         "cgroup_final ",
     ):
