@@ -13,6 +13,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -75,15 +76,18 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             stderr_path = root / "fio.stderr"
-            returncode, _ = probe.run_cell(
-                [
-                    sys.executable,
-                    "-c",
-                    "import sys; sys.stderr.write('fio-readonly-error\\n'); sys.exit(3)",
-                ],
-                root,
-                stderr_path=stderr_path,
-            )
+            with mock.patch.object(
+                probe, "thermal_sample", return_value={"temperatures_c": {}}
+            ):
+                returncode, _ = probe.run_cell(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import sys; sys.stderr.write('fio-readonly-error\\n'); sys.exit(3)",
+                    ],
+                    root,
+                    stderr_path=stderr_path,
+                )
             self.assertEqual(returncode, 3)
             self.assertEqual(stderr_path.read_text(), "fio-readonly-error\n")
 
@@ -339,7 +343,11 @@ class GlmNvmeCharacterizationTests(unittest.TestCase):
             }
 
             def fake_run_cell(argv, _hwmon, _raw, **_kwargs):
-                options = dict(part[2:].split("=", 1) for part in argv if part.startswith("--"))
+                options = dict(
+                    part[2:].split("=", 1)
+                    for part in argv
+                    if part.startswith("--") and "=" in part
+                )
                 block_size = int(options["bs"])
                 desired = 4.8 if (
                     block_size == probe.MATCHED_RECORD_BYTES and

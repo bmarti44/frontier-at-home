@@ -1,0 +1,22 @@
+{
+  "artifact": "GLM-5.2 read-only NVMe characterization failed fio invocation attempt",
+  "schema_version": 1,
+  "verdict": "NO_RESULT",
+  "completed_cells": 0,
+  "path": "/home/bmarti44/.local/state/glm52-nvme-qd-sweep-20260803a",
+  "summary_sha256": "448c4d0b4b257e7cf262d587e28079bf7f6f714eda903a2fd65f01d97a1c5295",
+  "raw_sha256": "9472bda7e30b0ff7ffcafdbd4bbcb7961e710e116f1c9ac68bc6b20c070799ec",
+  "fio": {
+    "version": "fio-3.41",
+    "binary_sha256": "0d8c5613b2414147faa1e7ef3c8bb6493c4547bbba353625770c342d6d1471ad"
+  },
+  "failure": "fio 3.41 treats --readonly as an argument-free flag and rejected the preregistered --readonly=1 spelling before opening the target for I/O",
+  "safety": {
+    "target_opened_by_fio": false,
+    "writes_issued": false,
+    "engine_or_gpu_process_active": false,
+    "survivors": 0
+  },
+  "red_test_commit": "5bc20f4",
+  "resolution": "Use the portable --readonly flag and preserve per-cell fio stderr as hashed raw evidence. The complete schedule must restart in a new output directory."
+}

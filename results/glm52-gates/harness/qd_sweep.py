@@ -182,7 +182,7 @@ def build_fio_argv(
         str(fio),
         f"--name={job_name}",
         f"--filename={target}",
-        "--readonly=1",
+        "--readonly",
         f"--rw={access}",
         "--direct=1",
         "--ioengine=io_uring",
@@ -670,12 +670,20 @@ def terminate_process_group(process: subprocess.Popen[Any]) -> None:
 def run_cell(
     argv: list[str], hwmon: Path, raw_log: Path | None = None,
     *, block: Path | None = None, cell_name: str = "test-cell",
+    stderr_path: Path | None = None,
 ) -> tuple[int, list[dict[str, Any]]]:
     samples = [thermal_sample(hwmon, block)]
-    process = subprocess.Popen(
-        argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL, start_new_session=True,
-    )
+    stderr_stream = stderr_path.open("xb") if stderr_path is not None else None
+    try:
+        process = subprocess.Popen(
+            argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=(stderr_stream if stderr_stream is not None else subprocess.DEVNULL),
+            start_new_session=True,
+        )
+    except BaseException:
+        if stderr_stream is not None:
+            stderr_stream.close()
+        raise
     try:
         while process.poll() is None:
             time.sleep(1)
@@ -686,9 +694,17 @@ def run_cell(
         return process.returncode, samples
     finally:
         terminate_process_group(process)
+        if stderr_stream is not None:
+            stderr_stream.close()
         if raw_log is not None:
             for sample in samples:
                 append_jsonl(raw_log, {"type": "telemetry", "cell": cell_name, **sample})
+            if stderr_path is not None:
+                append_jsonl(raw_log, {
+                    "type": "cell_stderr", "cell": cell_name,
+                    "bytes": stderr_path.stat().st_size,
+                    "sha256": file_sha256(stderr_path),
+                })
 
 
 def run_sweep(args: argparse.Namespace) -> int:
@@ -761,6 +777,7 @@ def run_sweep(args: argparse.Namespace) -> int:
                 })
                 returncode, samples = run_cell(
                     argv, hwmon, raw_log, block=block, cell_name=name,
+                    stderr_path=cells_dir / f"{name}.stderr",
                 )
                 if returncode != 0:
                     raise RuntimeError(f"fio failed for {name}: rc={returncode}")
