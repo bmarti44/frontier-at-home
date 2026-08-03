@@ -1,0 +1,22 @@
+{
+  "artifact": "GLM-5.2 read-only NVMe characterization fio-worker exclusivity attempt",
+  "schema_version": 1,
+  "verdict": "NO_RESULT",
+  "completed_cells": 0,
+  "path": "/home/bmarti44/.local/state/glm52-nvme-qd-sweep-20260803b",
+  "summary_sha256": "a2b60db22bb0f98cf9f3537915be19f4488ed78033e004bc79a55960f06630f3",
+  "raw_sha256": "9351ac0b976b3cebb600501ff813bd68bb3a1dc63f7239dee1d4789f5f60ff01",
+  "fio": {
+    "version": "fio-3.41",
+    "binary_sha256": "0d8c5613b2414147faa1e7ef3c8bb6493c4547bbba353625770c342d6d1471ad"
+  },
+  "failure": "fio forked its own worker outside the launcher process group; the exclusivity monitor classified that exact worker as an unrelated fio process and terminated the cell fail-closed",
+  "safety": {
+    "writes_issued": false,
+    "engine_or_gpu_process_active": false,
+    "fio_stderr_bytes": 0,
+    "survivors": 0
+  },
+  "red_test_commit": "c388051",
+  "resolution": "Allow only a fio process whose complete argv is byte-for-byte equal to the frozen launched command. Any other fio, model engine, evidence process, or accelerator user remains a conflict."
+}

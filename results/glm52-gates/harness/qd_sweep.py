@@ -372,7 +372,11 @@ def wait_for_thermal_window(
         time.sleep(5)
 
 
-def conflicting_processes(*, allowed_process_group: int | None = None) -> list[dict[str, Any]]:
+def conflicting_processes(
+    *,
+    allowed_process_group: int | None = None,
+    allowed_fio_argv: tuple[str, ...] | None = None,
+) -> list[dict[str, Any]]:
     conflicts: list[dict[str, Any]] = []
     own_pid = os.getpid()
     for entry in Path("/proc").iterdir():
@@ -382,10 +386,18 @@ def conflicting_processes(*, allowed_process_group: int | None = None) -> list[d
             if allowed_process_group is not None and os.getpgid(int(entry.name)) == allowed_process_group:
                 continue
             comm = (entry / "comm").read_text(encoding="utf-8").strip()
-            cmdline = (entry / "cmdline").read_bytes().replace(b"\0", b" ").decode(
+            raw_cmdline = (entry / "cmdline").read_bytes()
+            command = tuple(
+                part.decode("utf-8", errors="replace")
+                for part in raw_cmdline.split(b"\0")
+                if part
+            )
+            cmdline = raw_cmdline.replace(b"\0", b" ").decode(
                 "utf-8", errors="replace"
             )
         except (FileNotFoundError, PermissionError, ProcessLookupError):
+            continue
+        if comm == "fio" and allowed_fio_argv is not None and command == allowed_fio_argv:
             continue
         accelerator = False
         try:
@@ -687,7 +699,10 @@ def run_cell(
     try:
         while process.poll() is None:
             time.sleep(1)
-            conflicts = conflicting_processes(allowed_process_group=process.pid)
+            conflicts = conflicting_processes(
+                allowed_process_group=process.pid,
+                allowed_fio_argv=tuple(argv),
+            )
             if conflicts:
                 raise RuntimeError(f"exclusive workload appeared during cell: {conflicts}")
             samples.append(thermal_sample(hwmon, block))
