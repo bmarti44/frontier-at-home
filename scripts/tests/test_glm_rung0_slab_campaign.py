@@ -350,6 +350,7 @@ class Rung0SlabCampaignTests(unittest.TestCase):
 
     def test_memory_envelope_rederives_bound_raw_probe(self):
         binary_sha256 = "a" * 64
+        candidate_commit = "b" * 40
         environment_sha256 = CAMPAIGN.observed_environment_sha256(
             CAMPAIGN.memory_probe_environment()
         )
@@ -381,21 +382,28 @@ class Rung0SlabCampaignTests(unittest.TestCase):
             (probe / "safety.kernel.log").write_text("kernel clean\n", encoding="utf-8")
             (probe / "partial.json").write_text(
                 '{"binary_sha256":"' + binary_sha256
+                + '","candidate_commit":"' + candidate_commit
                 + '","mode":"off","probe_environment_sha256":"'
                 + environment_sha256 + '","schema_version":1}\n',
                 encoding="utf-8",
             )
-            evidence = CAMPAIGN.derive_memory_probe_evidence(probe, binary_sha256)
-            CAMPAIGN.require_memory_probe_evidence(
-                probe, evidence, binary_sha256
+            evidence = CAMPAIGN.derive_memory_probe_evidence(
+                probe, binary_sha256, candidate_commit
             )
+            CAMPAIGN.require_memory_probe_evidence(
+                probe, evidence, binary_sha256, candidate_commit
+            )
+            with self.assertRaises(ValueError):
+                CAMPAIGN.require_memory_probe_evidence(
+                    probe, evidence, binary_sha256, "c" * 40
+                )
             (probe / "safety.samples.log").write_text(
                 samples.replace(str(110 * 1048576), str(100 * 1048576)),
                 encoding="utf-8",
             )
             with self.assertRaises(ValueError):
                 CAMPAIGN.require_memory_probe_evidence(
-                    probe, evidence, binary_sha256
+                    probe, evidence, binary_sha256, candidate_commit
                 )
 
     def test_full_quality_parser_and_comparator_require_exact_100_case_identity(self):
