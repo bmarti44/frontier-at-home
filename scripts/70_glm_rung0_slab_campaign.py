@@ -1984,7 +1984,16 @@ def candidate_slab_pread_qd(
     count = 0
     for task in task_root.iterdir():
         try:
-            fields = (task / "syscall").read_text(encoding="ascii").split()
+            for permission_attempt in range(2):
+                try:
+                    fields = (task / "syscall").read_text(
+                        encoding="ascii"
+                    ).split()
+                    break
+                except PermissionError:
+                    if permission_attempt:
+                        raise
+                    time.sleep(0.0001)
         except (FileNotFoundError, ProcessLookupError):
             continue
         if not fields or fields[0] == "running":
