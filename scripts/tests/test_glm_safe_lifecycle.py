@@ -182,9 +182,13 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_CUDA_EXPERT_SLAB_SHA256",
             "DS4_CUDA_EXPERT_SLAB_MODEL_SHA256",
             "DS4_CUDA_EXPERT_SLAB_TRACE",
+            "DS4_CUDA_EXPERT_SLAB_AUTH_TRACE",
+            "DS4_CUDA_EXPERT_SLAB_PREFETCH_SHA",
             "DS4_CUDA_LOAD_PROFILE",
             "DS4_TOKEN_TIMING_LOG",
             "DS4_GLM_TP_DEBUG",
+            "DS4_GLM_PREFETCH",
+            "DS4_GLM_PREFETCH_THREADS",
         ):
             self.assertIn(name, launcher)
 
