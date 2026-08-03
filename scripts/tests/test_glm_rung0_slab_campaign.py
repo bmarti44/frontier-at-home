@@ -80,7 +80,8 @@ class Rung0SlabCampaignTests(unittest.TestCase):
                         "client_first_content_ns": first_client_ns,
                         "client_last_content_ns": last_client_ns,
                         "raw_client_timing_ratio": raw_elapsed_ns
-                        / (last_client_ns - first_client_ns),
+                        / (last_client_ns - first_client_ns)
+                        + 2e-12,
                         "ttft_s": ttft_s,
                         "client_prompt_tokens": 256,
                     }
