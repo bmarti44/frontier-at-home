@@ -1,7 +1,29 @@
+status: diagnostic_only (legacy 96,000-event ID-only trace; not P0 acceptance)
+split: chronological 70/30 per layer; request boundaries unavailable
+limitations: no top-32 logits, hidden features, gate-replay, corrected-router, MTP, or conformal results
 decode steps per layer: 1280, layers: 75, batch loads: 1500
 consecutive-token overlap: mean 0.238, min 0.046, max 0.337
+future-union K=2 samples=95850 mean=14.096 p95=16
+future-union K=4 samples=95700 mean=24.498 p95=30
+future-union K=8 samples=95400 mean=41.630 p95=53
+frequency-prior K=2 budget=8 samples=28650 recall=0.135082 set_coverage=0.000000
+frequency-prior K=2 budget=16 samples=28650 recall=0.219230 set_coverage=0.000105
+frequency-prior K=2 budget=32 samples=28650 recall=0.349832 set_coverage=0.000140
+frequency-prior K=2 budget=48 samples=28650 recall=0.454055 set_coverage=0.001187
+frequency-prior K=2 budget=64 samples=28650 recall=0.542561 set_coverage=0.004223
+frequency-prior K=4 budget=8 samples=28500 recall=0.117257 set_coverage=0.000000
+frequency-prior K=4 budget=16 samples=28500 recall=0.196413 set_coverage=0.000000
+frequency-prior K=4 budget=32 samples=28500 recall=0.323048 set_coverage=0.000000
+frequency-prior K=4 budget=48 samples=28500 recall=0.427110 set_coverage=0.000035
+frequency-prior K=4 budget=64 samples=28500 recall=0.516639 set_coverage=0.000211
+frequency-prior K=8 budget=8 samples=28200 recall=0.098893 set_coverage=0.000000
+frequency-prior K=8 budget=16 samples=28200 recall=0.171875 set_coverage=0.000000
+frequency-prior K=8 budget=32 samples=28200 recall=0.292904 set_coverage=0.000000
+frequency-prior K=8 budget=48 samples=28200 recall=0.395937 set_coverage=0.000000
+frequency-prior K=8 budget=64 samples=28200 recall=0.486062 set_coverage=0.000000
 top 1% of (layer,expert) pairs serve 7.4% of selections; top 5% of (layer,expert) pairs serve 22.1% of selections; top 10% of (layer,expert) pairs serve 33.7% of selections; top 20% of (layer,expert) pairs serve 50.5% of selections; top 50% of (layer,expert) pairs serve 81.4% of selections
 distinct (layer,expert) pairs touched: 18564 of 19200
+legacy LRU I/O ceiling below assumes 10.7 GB/s; recalibrate after fio
 LRU  10 GiB ( 1103 slots): hit  30.0%  -> I/O-ceiling ~2.8 tok/s
 LRU  20 GiB ( 2206 slots): hit  43.8%  -> I/O-ceiling ~3.5 tok/s
 LRU  30 GiB ( 3310 slots): hit  52.8%  -> I/O-ceiling ~4.2 tok/s
