@@ -64,7 +64,7 @@ fi
 if (( MIN_START_GIB < 110 || MIN_START_GIB > 119 )); then
   config_error "GLM_SAFE_MIN_START_GIB"
 fi
-if (( TIMEOUT_S < 1 || TIMEOUT_S > 5400 )); then
+if (( TIMEOUT_S < 1 || TIMEOUT_S > 9000 )); then
   config_error "GLM_SAFE_TIMEOUT_S"
 fi
 if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then

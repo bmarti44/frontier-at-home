@@ -114,6 +114,13 @@ def safe_timeout_seconds(mode: str) -> int:
     raise ValueError("unknown slab mode")
 
 
+def quality_timeout_seconds(mode: str) -> int:
+    """Bound one complete 100-case scorer arm, including identity scans."""
+    if mode not in {"off", "on"}:
+        raise ValueError("unknown slab mode")
+    return 9000
+
+
 def confirmation_seed(
     randomness: str,
     candidate_commit: str,
@@ -1693,7 +1700,7 @@ def run_quality_campaign(args: argparse.Namespace) -> int:
             no_large_engines()
             stable_start_memory(max(110.0, memory_high_gib + 20.0))
             mode = "off" if arm == "A" else "on"
-            safe_timeout = safe_timeout_seconds(mode)
+            safe_timeout = quality_timeout_seconds(mode)
             label = f"quality-{index:02d}-{arm.lower()}"
             result_path = out / f"{label}.tsv"
             crash_before = set(CRASH_ROOT.glob("*")) if CRASH_ROOT.exists() else set()
