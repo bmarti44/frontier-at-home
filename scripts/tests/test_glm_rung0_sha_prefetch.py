@@ -7,6 +7,7 @@ import importlib.util
 import copy
 import hashlib
 import inspect
+import json
 import math
 from pathlib import Path
 import subprocess
@@ -31,12 +32,39 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
 
     @staticmethod
     def passing_campaign(campaign):
-        schedule = campaign.sha_prefetch_schedule(False)
         binary = "a" * 64
+        quality_binary = "7" * 64
         fixture = "b" * 64
         access = "c" * 64
-        configs = {"A": "d" * 64, "B": "e" * 64, "C": "f" * 64}
         commit = "1" * 40
+        environments = {
+            arm: campaign.canonical_sha_prefetch_environment(mode)
+            for arm, mode in {
+                "A": "off", "B": "demand_sha", "C": "prefetch_sha"
+            }.items()
+        }
+        configs = {
+            arm: campaign.canonical_environment_sha256(environment)
+            for arm, environment in environments.items()
+        }
+        for marker in range(256):
+            signature = bytes([marker]) * 96
+            randomness_hex = hashlib.sha256(signature).hexdigest()
+            seed = campaign.confirmation_seed(
+                randomness_hex, commit, binary, quality_binary
+            )
+            if not bool(int(seed[:2], 16) & 1):
+                break
+        randomness = {
+            "round": 1,
+            "randomness": randomness_hex,
+            "signature": signature.hex(),
+            "chain_hash": "8" * 64,
+            "published_epoch_s": 200,
+            "seed_sha256": seed,
+            "flip": False,
+        }
+        schedule = campaign.sha_prefetch_schedule(False)
         start_ns = 2_000_000_000_000
         records = []
         for ordinal, (block, sequence, arm) in enumerate(schedule):
@@ -71,8 +99,8 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             late = 20 if arm == "C" else 0
             fallback = 20 if arm == "C" else 0
             copies = 70 if arm == "C" else 100 if arm == "B" else 0
-            validated = sha_success * 256
-            copied = copies * 256
+            validated = sha_success * campaign.EXPERT_RECORD_PAYLOAD_BYTES
+            copied = copies * campaign.EXPERT_RECORD_PAYLOAD_BYTES
             records.append({
                 "schema_version": 1,
                 "block": block,
@@ -109,7 +137,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                         "current_ready": 30 if arm == "C" else 0,
                         "read_ns": attempts * 100,
                         "sha_ns": attempts * 50,
-                        "wait_ns": attempts * 10,
+                        "wait_ns": attempts * 10 if arm == "C" else 0,
                         "copy_ns": copies * 20,
                     },
                 },
@@ -121,24 +149,71 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     "survivors": [],
                 },
             })
-        manifest = {
+        source_hash = campaign._canonical_object_sha256({
+            "patch_sha256": campaign.sha256_file(
+                ROOT / "results/glm52-gates/harness/"
+                "ds4-expert-slab-prefetch-sha-pipeline.patch"
+            ),
+            "state_header_sha256": campaign.sha256_file(HEADER),
+        })
+        freeze = {
             "schema_version": 1,
             "candidate_commit": commit,
             "binary_sha256": binary,
+            "quality_binary_sha256": quality_binary,
+            "source_sha256": source_hash,
+            "scorer_sha256": campaign.sha256_file(CAMPAIGN_PATH),
+            "tests_sha256": campaign.sha256_file(Path(__file__)),
+            "frozen_epoch_s": 100,
+        }
+        manifest = {
+            "schema_version": 2,
+            "candidate_commit": commit,
+            "binary_sha256": binary,
+            "quality_binary_sha256": quality_binary,
             "model_generation": 9,
+            "configuration_by_arm": environments,
             "configuration_sha256_by_arm": configs,
             "fixture_sha256": fixture,
             "access_stream_sha256": access,
             "campaign_started_monotonic_ns": start_ns - 1,
             "campaign_finished_monotonic_ns": start_ns + 15 * 10**12,
-            "quality": {
-                "case_count": 100,
-                "token_weighted_delta_nll": 0.0,
-                "top1_loss_pp": 0.0,
-                "deterministic": True,
-            },
+            "freeze_sha256": campaign._canonical_object_sha256(freeze),
+            "randomness": randomness,
         }
-        return records, manifest
+        rows = [
+            {
+                "case_id": f"case-{index:03d}",
+                "target_tokens": 1,
+                "total_nll": 0.4515,
+                "top1_matches": int(index < 83),
+            }
+            for index in range(100)
+        ]
+        quality_attempts = [
+            {
+                "schema_version": 1,
+                "arm": arm,
+                "mode": {"A": "off", "B": "demand_sha", "C": "prefetch_sha"}[arm],
+                "candidate_commit": commit,
+                "binary_sha256": binary,
+                "configuration_sha256": configs[arm],
+                "fixture_sha256": fixture,
+                "output_sha256": hashlib.sha256(
+                    json.dumps(rows, sort_keys=True).encode()
+                ).hexdigest(),
+                "rows": copy.deepcopy(rows),
+            }
+            for arm in "ABC"
+        ]
+        return records, manifest, freeze, quality_attempts
+
+    @staticmethod
+    def score(campaign, evidence):
+        records, manifest, freeze, quality_attempts = evidence
+        return campaign.score_sha_prefetch_campaign(
+            records, manifest, freeze=freeze, quality_attempts=quality_attempts
+        )
 
     def test_executable_slot_state_and_corruption_contract(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -166,7 +241,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         )
         required_calls = (
             "->issue(", "->complete_read(", "->claim(", "->copy_sync(",
-            "->discard_ready(", "->reload(",
+            "->discard_ready(", "ds4_pf_cleanup();",
         )
         for call in required_calls:
             self.assertIn(call, source)
@@ -185,8 +260,8 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
              (3, 0, "C"), (3, 1, "B"), (3, 2, "A"),
              (4, 0, "A"), (4, 1, "C"), (4, 2, "B")),
         )
-        records, manifest = self.passing_campaign(campaign)
-        scored = campaign.score_sha_prefetch_campaign(records, manifest)
+        evidence = self.passing_campaign(campaign)
+        scored = self.score(campaign, evidence)
         self.assertEqual(scored["verdict"], "PASS")
         self.assertLessEqual(scored["probe_completed_fetch_ratio"], 0.90)
         self.assertEqual(
@@ -215,15 +290,20 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
 
     def test_scorer_rejects_arbitrary_configuration_digests(self):
         campaign = self.load_campaign()
-        records, manifest = self.passing_campaign(campaign)
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
         # These are syntactically valid and distinct, but are not hashes of the
         # exact A=off/B=demand-SHA/C=prefetch-SHA environment maps.
+        manifest["configuration_sha256_by_arm"] = {
+            "A": "d" * 64, "B": "e" * 64, "C": "f" * 64
+        }
         with self.assertRaises((TypeError, ValueError)):
-            campaign.score_sha_prefetch_campaign(records, manifest)
+            campaign.score_sha_prefetch_campaign(
+                records, manifest, freeze=freeze, quality_attempts=quality
+            )
 
     def test_scorer_rejects_zero_sha_coverage_and_count_byte_fabrication(self):
         campaign = self.load_campaign()
-        records, manifest = self.passing_campaign(campaign)
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
         zero = copy.deepcopy(records)
         for row in zero:
             if row["arm"] in {"B", "C"}:
@@ -231,17 +311,56 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     name: 0 for name in row["engine"]["telemetry"]
                 }
         with self.assertRaises((TypeError, ValueError)):
-            campaign.score_sha_prefetch_campaign(zero, manifest)
+            campaign.score_sha_prefetch_campaign(
+                zero, manifest, freeze=freeze, quality_attempts=quality
+            )
 
         mismatch = copy.deepcopy(records)
         target = next(row for row in mismatch if row["arm"] == "C")
         target["engine"]["telemetry"]["copied_bytes"] = 0
         with self.assertRaises((TypeError, ValueError)):
-            campaign.score_sha_prefetch_campaign(mismatch, manifest)
+            campaign.score_sha_prefetch_campaign(
+                mismatch, manifest, freeze=freeze, quality_attempts=quality
+            )
+
+    def test_raw_log_parser_requires_unique_per_attempt_auth_records(self):
+        campaign = self.load_campaign()
+        payload = campaign.EXPERT_RECORD_PAYLOAD_BYTES
+        lines = [
+            (
+                f"SLABAUTH mode=demand_sha generation=9 attempt={index} "
+                f"key={index} submit_ns={1000 + index * 100} "
+                f"complete_ns={1050 + index * 100} "
+                f"payload_bytes={payload} ok=1"
+            )
+            for index in range(1, 5)
+        ]
+        lines.append(
+            "LOADPROF L3 uniq=8 hits=4 miss=4 hit_ms=1.00 fetch_ms=8.00 "
+            "fill_ms=1.00 total_ms=10.00 slab_mode=on slab_reads=4 "
+            f"slab_bytes={4 * payload} slab_actual_bytes={4 * payload} "
+            "slab_peak_qd=4 slab_io_ms=7.000 slab_validation_ms=1.000 "
+            "slab_copy_ms=1.000"
+        )
+        parsed = campaign.parse_sha_prefetch_engine_log(
+            "\n".join(lines), "demand_sha", model_generation=9
+        )
+        self.assertEqual(parsed["completed_fetch_ms"], [0.00005] * 4)
+        self.assertEqual(parsed["telemetry"]["attempts"], 4)
+        for mutation in (
+            lines[:-1],
+            [*lines, lines[0]],
+            [line.replace("ok=1", "ok=0") if index == 0 else line
+             for index, line in enumerate(lines)],
+        ):
+            with self.assertRaises(ValueError):
+                campaign.parse_sha_prefetch_engine_log(
+                    "\n".join(mutation), "demand_sha", model_generation=9
+                )
 
     def test_three_arm_scorer_rejects_malformed_or_partial_evidence(self):
         campaign = self.load_campaign()
-        records, manifest = self.passing_campaign(campaign)
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
         mutations = {
             "missing arm": lambda r, m: r.pop(),
             "duplicate arm": lambda r, m: r.__setitem__(1, copy.deepcopy(r[0])),
@@ -271,12 +390,13 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 mutate(changed_records, changed_manifest)
                 with self.assertRaises((TypeError, ValueError)):
                     campaign.score_sha_prefetch_campaign(
-                        changed_records, changed_manifest
+                        changed_records, changed_manifest,
+                        freeze=freeze, quality_attempts=quality,
                     )
 
     def test_three_arm_scorer_requires_every_comparator_clock_and_ttft_state(self):
         campaign = self.load_campaign()
-        records, manifest = self.passing_campaign(campaign)
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
         cases = {}
         # C loses only to B on the independent client clock.
         client_loss = copy.deepcopy(records)
@@ -304,12 +424,14 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             cases[f"{phase} TTFT"] = changed
         for label, changed in cases.items():
             with self.subTest(label=label):
-                scored = campaign.score_sha_prefetch_campaign(changed, manifest)
+                scored = campaign.score_sha_prefetch_campaign(
+                    changed, manifest, freeze=freeze, quality_attempts=quality
+                )
                 self.assertEqual(scored["verdict"], "FAIL")
 
     def test_three_arm_scorer_reconciles_every_telemetry_class(self):
         campaign = self.load_campaign()
-        records, manifest = self.passing_campaign(campaign)
+        records, manifest, freeze, quality = self.passing_campaign(campaign)
         mutations = {
             "attempts": ("attempts", 101),
             "sha successes": ("sha_successes", 99),
@@ -334,7 +456,9 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 changed = copy.deepcopy(records)
                 changed[c_index]["engine"]["telemetry"][field] = value
                 with self.assertRaises(ValueError):
-                    campaign.score_sha_prefetch_campaign(changed, manifest)
+                    campaign.score_sha_prefetch_campaign(
+                        changed, manifest, freeze=freeze, quality_attempts=quality
+                    )
 
 
 if __name__ == "__main__":

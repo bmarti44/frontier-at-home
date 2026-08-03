@@ -29,9 +29,7 @@ struct FakeBackend : Backend {
     size_t reported_length = 0;
     bool read_ok = true;
     bool copy_ok = true;
-    bool event_done = false;
     bool invalidated = false;
-    uint64_t next_event = 17;
     uint64_t copy_calls = 0;
     uint64_t copied_bytes = 0;
     uint64_t clock_ns = 1000;
@@ -53,10 +51,6 @@ struct FakeBackend : Backend {
     bool copy_sync(const uint8_t *, size_t bytes) override {
         ++copy_calls; copied_bytes += bytes; return copy_ok;
     }
-    bool copy_async(const uint8_t *, size_t bytes, uint64_t *event) override {
-        ++copy_calls; copied_bytes += bytes; *event = next_event++; return copy_ok;
-    }
-    bool event_complete(uint64_t) override { return event_done; }
     void invalidate_slab() override { invalidated = true; }
     uint64_t now_ns() override { clock_ns += 10; return clock_ns; }
     bool publication_expected() const override { return true; }
@@ -209,10 +203,10 @@ static void identity_lease_and_reload_are_aba_safe() {
 
     Lease owner = ring.claim(id);
     REQUIRE(owner.valid);
+    REQUIRE(!ring.reload(8));
+    REQUIRE(ring.copy_sync(owner, backend));
     REQUIRE(ring.reload(8));
-    REQUIRE(!ring.copy_sync(owner, backend));
-    REQUIRE(backend.copy_calls == 0);
-    REQUIRE(!ring.poll(owner, backend));
+    REQUIRE(backend.copy_calls == 1);
     REQUIRE(ring.state(owner.slot) == State::empty);
     REQUIRE(!ring.issue(identity(256, 7)).valid);
     REQUIRE(ring.issue(identity(256, 8)).valid);
