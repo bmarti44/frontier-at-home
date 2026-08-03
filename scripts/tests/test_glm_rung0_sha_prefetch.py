@@ -573,6 +573,49 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 1,
             )
 
+    def test_candidate_slab_qd_retries_only_transient_syscall_permission(self):
+        campaign = self.load_campaign()
+        with tempfile.TemporaryDirectory() as temporary:
+            proc = Path(temporary)
+            pid = 123
+            syscall = proc / str(pid) / "task" / "1" / "syscall"
+            syscall.parent.mkdir(parents=True)
+            syscall.write_text(
+                f"{campaign.PREAD64_SYSCALL_NR} 7 0 0 0 0 0 0 0\n",
+                encoding="ascii",
+            )
+            fd_root = proc / str(pid) / "fd"
+            fd_root.mkdir(parents=True)
+            slab = proc / "slab.bin"
+            slab.write_bytes(b"")
+            (fd_root / "7").symlink_to(slab)
+            original = Path.read_text
+            attempts = 0
+
+            def transient(path, *args, **kwargs):
+                nonlocal attempts
+                if path == syscall and attempts == 0:
+                    attempts += 1
+                    raise PermissionError("transient procfs race")
+                return original(path, *args, **kwargs)
+
+            with mock.patch.object(Path, "read_text", transient):
+                self.assertEqual(
+                    campaign.candidate_slab_pread_qd(
+                        pid, proc_root=proc, slab_path=slab
+                    ),
+                    1,
+                )
+            self.assertEqual(attempts, 1)
+
+            with mock.patch.object(
+                Path, "read_text", side_effect=PermissionError("persistent")
+            ):
+                with self.assertRaises(PermissionError):
+                    campaign.candidate_slab_pread_qd(
+                        pid, proc_root=proc, slab_path=slab
+                    )
+
     def test_safe_run_artifact_binding_rejects_cross_mixed_output(self):
         campaign = self.load_campaign()
         path = "/home/bmarti44/.local/state/glm52-test/arms/b/result.json"
