@@ -22,6 +22,7 @@ SCORER = ROOT / "scripts/72_glm_shared_router_score.py"
 BENCH = ROOT / "scripts/30_bench_speed.py"
 FREEZE_MANIFEST = ROOT / "results/glm52-gates/R0a-shared-router-freeze.json"
 RANDOMNESS_RECEIPT = ROOT / "results/glm52-gates/R0a-shared-router-randomness.json"
+DRAND_ENDPOINT = "https://api.drand.sh/public/{round}"
 MODEL = Path("/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf")
 MODEL_BYTES = 211075856448
 MODEL_SHA256 = "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
@@ -112,6 +113,13 @@ def frozen_inputs() -> dict[str, object]:
             not isinstance(raw, str) or re.fullmatch(r"[0-9a-f]{64}", raw) is None or
             randomness["seed"] != int(raw[:16], 16) % 2147483647):
         raise ValueError("public-randomness seed derivation is invalid")
+    with urllib.request.urlopen(
+        DRAND_ENDPOINT.format(round=randomness["round"]), timeout=15
+    ) as response:
+        public = json.loads(response.read().decode("utf-8"))
+    if (public.get("round") != randomness["round"] or
+            public.get("randomness") != raw):
+        raise ValueError("committed randomness differs from the public drand round")
     return {**freeze, "candidate_hash": head, "seed": randomness["seed"]}
 
 

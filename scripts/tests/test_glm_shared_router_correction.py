@@ -166,6 +166,10 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
         destinations = {action.dest for action in subparsers.choices["run"]._actions}
         self.assertEqual(destinations, {"help", "tag", "port"})
 
+    def test_runner_verifies_the_committed_public_randomness_round(self) -> None:
+        self.assertIn("https://api.drand.sh/public/{round}", self.source)
+        self.assertIn('public.get("randomness") != raw', self.source)
+
 
 if __name__ == "__main__":
     unittest.main()
