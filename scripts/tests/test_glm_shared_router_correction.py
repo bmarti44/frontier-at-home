@@ -114,6 +114,14 @@ class SharedRouterSourceContractTests(unittest.TestCase):
         self.assertIn("predacc_pair_event", self.source)
         self.assertNotIn("static uint32_t pair_layer", self.source)
 
+    def test_probe_failures_close_and_rebalance_command_ownership(self) -> None:
+        for marker in (
+            "if (!ended || !read_actual || !restarted)",
+            "if (!pf_base_valid) ok = false",
+            "corrected_ok = corrected_ok && corrected_ended && corrected_restarted",
+        ):
+            self.assertIn(marker, self.source)
+
     def test_prefetch_hint_stays_after_current_selected_load(self) -> None:
         self.assertIn("shared correction waits for current selected load", self.source)
 
@@ -125,8 +133,9 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
 
     def test_runner_uses_existing_containment_and_one_request_slot(self) -> None:
         self.assertIn("glm_cgroup_run.sh", self.source)
-        self.assertIn('"--parallel", "1"', self.source)
-        self.assertIn('"DS4_GLM_PREDACC_SHARED": "1"', self.source)
+        self.assertIn("SINGLE_REQUEST_SLOT = 1", self.source)
+        self.assertIn("--batched-sessions", self.source)
+        self.assertIn('result["DS4_GLM_PREDACC_SHARED"] = "1"', self.source)
 
     def test_runner_binds_candidate_and_safety_artifacts(self) -> None:
         for marker in (

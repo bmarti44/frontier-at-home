@@ -10,12 +10,15 @@ from pathlib import Path
 
 
 LINE = re.compile(
-    r"^PREDPAIR L(?P<layer>[0-9]+) actual:(?P<actual>(?: [0-9]+){8})"
+    r"^PREDPAIR E(?P<event>[0-9]+) P(?P<position>[0-9]+)"
+    r" L(?P<layer>[0-9]+) actual:(?P<actual>(?: [0-9]+){8})"
     r" base:(?P<base>(?: [0-9]+){8})"
     r" shared:(?P<shared>(?: [0-9]+){8})$"
 )
 MIN_SAMPLES = 1000
 MIN_RECALL_GAIN = 0.02
+MIN_POSITIONS = 14
+EXPECTED_LAYERS = set(range(4, 78))
 
 
 def parse_ids(value: str) -> tuple[int, ...]:
@@ -28,6 +31,10 @@ def parse_ids(value: str) -> tuple[int, ...]:
 def score(path: Path) -> dict[str, object]:
     samples = baseline_hits = shared_hits = 0
     malformed = 0
+    events: list[int] = []
+    event_keys: set[tuple[int, int, int]] = set()
+    positions: set[int] = set()
+    layers: set[int] = set()
     for raw in path.read_text(encoding="utf-8", errors="strict").splitlines():
         if not raw.startswith("PREDPAIR "):
             continue
@@ -35,6 +42,8 @@ def score(path: Path) -> dict[str, object]:
         if match is None:
             malformed += 1
             continue
+        event = int(match.group("event"))
+        position = int(match.group("position"))
         layer = int(match.group("layer"))
         if layer < 4 or layer > 77:
             malformed += 1
@@ -48,15 +57,23 @@ def score(path: Path) -> dict[str, object]:
             continue
         baseline_hits += len(actual & baseline)
         shared_hits += len(actual & shared)
+        events.append(event)
+        event_keys.add((event, position, layer))
+        positions.add(position)
+        layers.add(layer)
         samples += 1
 
     denominator = samples * 8
     baseline_recall = baseline_hits / denominator if denominator else 0.0
     shared_recall = shared_hits / denominator if denominator else 0.0
     gain = shared_recall - baseline_recall
+    expected_events = list(range(1, samples + 1))
     checks = {
         "minimum_samples": samples >= MIN_SAMPLES,
         "no_malformed_rows": malformed == 0,
+        "unique_event_keys": len(event_keys) == samples and events == expected_events,
+        "position_coverage": len(positions) >= MIN_POSITIONS,
+        "layer_coverage": layers == EXPECTED_LAYERS,
         "shared_recall_gain": gain >= MIN_RECALL_GAIN,
     }
     return {
@@ -64,10 +81,15 @@ def score(path: Path) -> dict[str, object]:
         "formula": "recall=sum(|predicted_top8 intersect actual_top8|)/(8*samples)",
         "acceptance": {
             "minimum_samples": MIN_SAMPLES,
+            "minimum_unique_positions": MIN_POSITIONS,
+            "expected_layers": sorted(EXPECTED_LAYERS),
             "minimum_absolute_recall_gain": MIN_RECALL_GAIN,
         },
         "samples": samples,
         "malformed_rows": malformed,
+        "unique_event_keys": len(event_keys),
+        "unique_positions": len(positions),
+        "observed_layers": sorted(layers),
         "baseline_recall": baseline_recall,
         "shared_recall": shared_recall,
         "absolute_recall_gain": gain,

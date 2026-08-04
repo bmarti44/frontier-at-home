@@ -430,14 +430,22 @@ increase from 73.6% to 76.7%; each point avoids about 58 MB/token of wasted
 NVMe traffic on this model.
 
 Implementation status (2026-08-04): the production-source candidate is engine
-commit `592aadb` on parent `3187250`, exported exactly as
+commit `5b44fea` on parent `3187250`, reproduced by
 `harness/ds4-shared-router-correction.patch`. The correction and its matched
-trace probe are default-off. Before any serving A/B, run the contained trace
-probe and require at least 1,000 matched token-layer rows with zero malformed
-rows and an absolute top-8 recall gain of at least 0.02 over stale gate replay.
-The fixed scorer is `scripts/72_glm_shared_router_score.py`. A failure ends
-this item without a serving campaign; a pass permits review and a small
-runtime-performance probe, but is not itself an adoption result.
+trace probe are default-off. Review round 50 found that the first scorer could
+count copied rows and that pending state was function-static; that candidate
+was not run. The corrected trace uses graph-scoped lineage plus contiguous
+event, position, and layer keys and fails closed while balancing command
+ownership on read/router failures. `scripts/73_run_glm_shared_router_probe.py`
+runs one request on each of two fresh contained servers and binds the binary,
+model, tokenizer, environment, response, raw trace, cgroup, memory, and kernel
+artifacts. Before any serving A/B, require at least 1,000 unique token-layer
+rows, all compared layers, at least 14 positions, zero malformed rows,
+byte/token-identical probe-off/on output, and an absolute top-8 recall gain of
+at least 0.02 over stale gate replay. The fixed scorer is
+`scripts/72_glm_shared_router_score.py`. A failure ends this item without a
+serving campaign; a pass permits review and a small runtime-performance probe,
+but is not itself an adoption result.
 
 Fetch asynchronously and hand completed entries through a staging queue so the
 single-threaded arena map remains single-owner. Require Sol review of event
