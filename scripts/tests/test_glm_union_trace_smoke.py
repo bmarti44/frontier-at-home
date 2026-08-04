@@ -77,6 +77,9 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         self.assertFalse(MODULE.randomness_is_after_freeze(1, 1595431050))
         self.assertFalse(MODULE.randomness_is_after_freeze(2, 1595431080))
 
+    def test_committed_randomness_postdates_committed_freeze(self) -> None:
+        MODULE.validate_randomness_order()
+
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     @classmethod
