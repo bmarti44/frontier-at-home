@@ -145,6 +145,7 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
         self.assertIn("--batched-sessions", self.source)
         self.assertIn('result["DS4_GLM_PREDACC_SHARED"] = "1"', self.source)
         self.assertIn('"DS4_TOKEN_TIMING_LOG": "1"', self.source)
+        self.assertIn('"--max-tokens", "128", "--min-completion-tokens", "128"', self.source)
         self.assertIn('"DS4_LOCK_FILE"', self.source)
         self.assertIn('out / "runtime.lock"', self.source)
 

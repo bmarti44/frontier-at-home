@@ -172,7 +172,7 @@ def response_signature(path: Path) -> dict[str, object]:
     if len(reps) != 1 or reps[0].get("valid") is not True:
         raise ValueError("benchmark repetition is incomplete")
     rep = reps[0]
-    if rep.get("completion_tokens", 0) < 64:
+    if rep.get("completion_tokens", 0) < 128:
         raise ValueError("completion is too short")
     keys = (
         "request_sha256", "token_ids", "completion_tokens",
@@ -245,7 +245,7 @@ def arm(args: argparse.Namespace) -> int:
                 "--output-tokenizer-sha256", TOKENIZER_SHA256, "--token-timing-log",
                 str(server_log_path), "--reps", "1", "--warmup", "0",
                 "--request-timeout", "2700", "--context-levels", "0",
-                "--max-tokens", "64", "--min-completion-tokens", "64",
+                "--max-tokens", "128", "--min-completion-tokens", "128",
                 "--seed", str(args.seed),
             ], stdin=subprocess.DEVNULL, capture_output=True, timeout=3000, check=False)
             (out / "bench.stdout.log").write_bytes(completed.stdout)
