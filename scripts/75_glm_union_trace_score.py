@@ -19,7 +19,7 @@ EVENT_RE = re.compile(
     r"layer=(\d+) pos=(\d+) rows=(\d+)$"
 )
 FILE_RE = re.compile(
-    r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_selected)-"
+    r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_selected|router_bias)-"
     r"(?P<layer>\d+)_pos(?P<pos>\d+)\.(?P<ext>f32|i32)$"
 )
 
@@ -37,6 +37,20 @@ def _finite_variable_f32(path: Path) -> bool:
     with path.open("rb") as handle:
         values.fromfile(handle, path.stat().st_size // values.itemsize)
     return bool(values) and all(math.isfinite(value) for value in values) and min(values) < max(values)
+
+
+def _read_f32(path: Path) -> array:
+    values = array("f")
+    with path.open("rb") as handle:
+        values.fromfile(handle, path.stat().st_size // values.itemsize)
+    return values
+
+
+def _sigmoid(value: float) -> float:
+    if value >= 0.0:
+        return 1.0 / (1.0 + math.exp(-value))
+    exp_value = math.exp(value)
+    return exp_value / (1.0 + exp_value)
 
 
 def _selected_rows(path: Path, rows: int) -> list[tuple[int, ...]] | None:
@@ -149,7 +163,8 @@ def score_trace(
     shapes_ok = True
     values_ok = True
     all_selected_rows: list[tuple[int, ...]] = []
-    wanted = {"ffn_norm", "router_logits", "router_selected"}
+    wanted = {"ffn_norm", "router_logits", "router_selected", "router_bias"}
+    formula_ok = True
     for key, rows in expected.items():
         group = files.get(key, {})
         if set(group) != wanted or rows <= 0:
@@ -159,6 +174,7 @@ def score_trace(
             "ffn_norm": rows * N_EMBD * 4,
             "router_logits": rows * N_EXPERT * 4,
             "router_selected": rows * N_EXPERT_USED * 4,
+            "router_bias": N_EXPERT * 4,
         }
         if any(group[kind].stat().st_size != size
                for kind, size in expected_sizes.items()):
@@ -172,10 +188,28 @@ def score_trace(
             values_ok = False
         else:
             all_selected_rows.extend(selected_rows)
+            logits = _read_f32(group["router_logits"])
+            bias = _read_f32(group["router_bias"])
+            if len(bias) != N_EXPERT or not all(math.isfinite(value) for value in bias):
+                formula_ok = False
+            else:
+                for row_index, observed in enumerate(selected_rows):
+                    start = row_index * N_EXPERT
+                    scores = [
+                        _sigmoid(float(logits[start + expert])) +
+                        float(bias[expert])
+                        for expert in range(N_EXPERT)
+                    ]
+                    expected_selected = tuple(sorted(
+                        range(N_EXPERT), key=lambda expert: (-scores[expert], expert)
+                    )[:N_EXPERT_USED])
+                    if observed != expected_selected:
+                        formula_ok = False
     if len(all_selected_rows) < 2 or len(set(all_selected_rows)) < 2:
         values_ok = False
     checks["exact_triplet_shapes"] = shapes_ok
     checks["finite_values_and_valid_ids"] = values_ok
+    checks["selected_matches_router_formula"] = formula_ok
 
     result.update({
         "events": len(expected),
