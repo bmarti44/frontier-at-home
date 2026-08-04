@@ -276,7 +276,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             "engine does not include the shared prefetch state authority",
         )
         required_calls = (
-            "->issue(", "->complete_read(", "->claim(", "->copy_sync(",
+            "->issue(", "->complete_read(", "->claim_or_wait(", "->copy_sync(",
             "->discard_ready(", "ds4_pf_cleanup();",
         )
         for call in required_calls:
