@@ -361,18 +361,32 @@ size record, offset/length, truncation, stale generation, concurrent completion
 and buffer reuse between validation and copy. Require byte-identical outputs,
 the fixed quality suite if retained, and no swap/Xid/OOM/survivor.
 
-Implementation status (2026-08-03): candidate `53a70cfdd3b225de9153a44309bdb84d418e0401`
-implements the default-off synchronous-copy form of this contract. A shared
+Implementation status (2026-08-04): the final bounded successor used repo
+candidate `6885a458496822405995c60dbcb2cfad96b0818a`, engine source
+`3187250cae7c16cf62c6a401df6c7b5cb210e06a`, and byte-reproducible binary
+SHA-256 `753ac03cc6e8d4b643727d366b2b5233033ab8d85702c9a9aa4cb4da9ae978c7`.
+It implements the default-off synchronous-copy form of this contract. A shared
 state authority is used by the production CUDA source for issue, full SHA-256,
 READY publication, exact-identity claim, copy, arena publication, recycling,
 model reload, and integrity invalidation. Its executable tests mutate real
 buffers before and after validation, exercise leases/concurrency/ring
 exhaustion, and the fixed scorer rejects partial wins and malformed telemetry.
 The patch applies to a fresh `e637b6f` tree and two deterministic max-`-j2`
-builds produced the same binary SHA-256 recorded in the frozen JSON artifact.
-This is build evidence only: no engine or GPU measurement has run. The exact
-freeze is `R0.2-prefetch-build-freeze-2026-08-03.json`; reviewer clearance and
-the bounded completed-fetch probe remain mandatory before any campaign.
+builds produced that same binary.
+
+The preregistered bounded B/C probe is now terminal **FAIL**. Demand-SHA's
+median completed fetch was 6.435168 ms; prefetch-SHA measured 6.815296 ms, a
+C/B ratio of **1.0590704081074496** against the required `<=0.90`. Median
+decode fell from **1.4809392882696675** to **0.9869088852045461 tok/s** and
+warm control-config TTFT rose from **45.986219305** to **73.422772407 s**.
+Matched outputs were byte-identical, both arms produced two complete 160-token
+repetitions, candidate QD stayed at eight, minimum available memory was
+24.774864 GiB, and there were no cgroup, swap, Xid, OOM, or survivor failures.
+Telemetry attributes the regression to 22,809 stale prefetches, 19,705 demand
+fallbacks, and 22.3% more external bytes in C. Preserve the result in
+`R0.2-prefetch-probe-6885a45-final-2026-08-04.json`; do not run the full
+campaign or adopt this prefetch path. The TTFT values are evidence-control
+numbers, not serving-profile TTFT.
 
 ### DSV4 bounded cold-load acceleration
 
