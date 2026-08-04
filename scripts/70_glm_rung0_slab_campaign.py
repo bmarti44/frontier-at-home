@@ -602,14 +602,8 @@ def score_sha_prefetch_campaign(
             or min(t["read_ns"], t["sha_ns"], t["copy_ns"]) <= 0
         ):
             raise ValueError("demand-only arm lacks exact full-SHA coverage")
-        if arm == "C" and (
-            t["attempts"] <= 0 or t["sha_successes"] <= 0 or t["copies"] <= 0 or
-            t["ready"] != t["sha_successes"] or
-            t["copies"] + t["stale"] + t["current_ready"] != t["ready"] or
-            t["fallback"] != t["late"] or t["fallback"] != reads or
-            min(t["read_ns"], t["sha_ns"], t["copy_ns"]) <= 0
-        ):
-            raise ValueError("prefetch terminal outcomes do not reconcile")
+        if arm == "C":
+            validate_prefetch_terminal_telemetry(t, reads)
 
         safety = record["safety"]
         if not isinstance(safety, dict) or set(safety) != {
@@ -1388,6 +1382,51 @@ def observed_environment_sha256(environment: dict[str, str]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def validate_prefetch_terminal_telemetry(
+    telemetry: Any, demand_reads: Any
+) -> dict[str, int]:
+    """Apply the same fail-closed terminal equations to probe and campaign."""
+    expected = {
+        "attempts", "issue_dropped", "sha_successes", "sha_failures",
+        "ready", "late", "stale", "fallback", "copies",
+        "validated_bytes", "copied_bytes", "publications", "read_ns",
+        "sha_ns", "wait_ns", "copy_ns", "current_ready",
+    }
+    if not isinstance(telemetry, dict) or set(telemetry) != expected:
+        raise ValueError("prefetch telemetry schema is invalid")
+    def nonnegative_integer(value: Any, label: str) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{label} is not a nonnegative integer")
+        return value
+
+    values = {
+        name: nonnegative_integer(value, f"prefetch telemetry {name}")
+        for name, value in telemetry.items()
+    }
+    reads = nonnegative_integer(demand_reads, "prefetch demand reads")
+    if (
+        values["attempts"] <= 0
+        or values["attempts"]
+        != values["sha_successes"] + values["sha_failures"]
+        or values["sha_failures"] != 0
+        or values["sha_successes"] <= 0
+        or values["ready"] != values["sha_successes"]
+        or values["copies"] <= 0
+        or values["copies"] + values["stale"] + values["current_ready"]
+        != values["ready"]
+        or values["fallback"] != values["late"]
+        or values["fallback"] != reads
+        or values["publications"] > values["copies"]
+        or values["validated_bytes"]
+        != values["sha_successes"] * EXPERT_RECORD_PAYLOAD_BYTES
+        or values["copied_bytes"]
+        != values["copies"] * EXPERT_RECORD_PAYLOAD_BYTES
+        or min(values["read_ns"], values["sha_ns"], values["copy_ns"]) <= 0
+    ):
+        raise ValueError("prefetch terminal outcomes do not reconcile")
+    return values
+
+
 def parse_sha_prefetch_engine_log(
     text: str, mode: str, *, model_generation: int
 ) -> dict[str, Any]:
@@ -1550,6 +1589,7 @@ def parse_sha_prefetch_engine_log(
             != len(auth) * EXPERT_RECORD_PAYLOAD_BYTES
         ):
             raise ValueError("prefetch telemetry differs from raw auth records")
+        validate_prefetch_terminal_telemetry(telemetry, len(demand_auth))
         prefetch_peak_qd, shared_peak_qd = values[18], values[19]
         if not 1 <= prefetch_peak_qd <= 8 or not 4 <= shared_peak_qd <= 8:
             raise ValueError("prefetch shared read-credit depth is invalid")
@@ -3401,6 +3441,13 @@ def verified_sha_prefetch_probe_receipt(
             or record.get("engine", {}).get("model_generation") != model_generation
         ):
             raise ValueError("bounded probe record differs from its receipt identity")
+        if arm == "C":
+            engine = record.get("engine")
+            if not isinstance(engine, dict):
+                raise ValueError("bounded probe lacks prefetch engine evidence")
+            validate_prefetch_terminal_telemetry(
+                engine.get("telemetry"), engine.get("slab_reads")
+            )
         derive_sha_prefetch_record_from_artifacts(
             path.parent / "arms" / f"sha-b0s{sequence}{arm.lower()}", record,
             mode, model_generation,
