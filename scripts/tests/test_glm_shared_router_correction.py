@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
 from pathlib import Path
 import tempfile
 import unittest
@@ -22,6 +23,18 @@ RUNNER_SPEC = importlib.util.spec_from_file_location("shared_router_runner", RUN
 assert RUNNER_SPEC and RUNNER_SPEC.loader
 RUNNER_MODULE = importlib.util.module_from_spec(RUNNER_SPEC)
 RUNNER_SPEC.loader.exec_module(RUNNER_MODULE)
+
+
+def valid_response_signature() -> dict[str, object]:
+    return {
+        "request_sha256": "a" * 64,
+        "token_ids": list(range(128)),
+        "completion_tokens": 128,
+        "generated_reasoning_sha256": "e" * 64,
+        "generated_reasoning_bytes": 512,
+        "generated_content_sha256": "f" * 64,
+        "generated_content_bytes": 0,
+    }
 
 def row(event: int, position: int, layer: int, actual: range, baseline: range, shared: range) -> str:
     values = lambda items: " ".join(str(item) for item in items)
@@ -238,7 +251,7 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
                 "decode_tokens_per_second": 2.1 if mode == "corrected" else 2.0,
                 "ttft_seconds": 1.0,
                 "completion_tokens": 128,
-                "response_signature": {"token_ids": [1, 2, 3]},
+                "response_signature": valid_response_signature(),
                 "fixture_sha256": "a" * 64,
                 "server_boot_id": f"boot-{block}-{sequence}",
                 "binary_sha256": "b" * 64,
@@ -264,7 +277,7 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
                 "decode_tokens_per_second": 2.1 if mode == "corrected" else 2.0,
                 "ttft_seconds": 1.0,
                 "completion_tokens": 128,
-                "response_signature": {"token_ids": [1, 2, 3]},
+                "response_signature": valid_response_signature(),
                 "fixture_sha256": "a" * 64,
                 "server_boot_id": f"boot-{block}-{sequence}",
                 "binary_sha256": "b" * 64,
@@ -272,9 +285,44 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
             })
         with self.assertRaises(ValueError):
             RUNNER_MODULE.campaign_verdict(rows, False)
-        rows[-1]["response_signature"] = {"token_ids": [9]}
+        rows[-1]["response_signature"]["token_ids"][-1] = 999
         with self.assertRaises(ValueError):
             RUNNER_MODULE.campaign_verdict(rows, True)
+
+    def test_balanced_campaign_rejects_malformed_response_signatures(self) -> None:
+        def rows() -> list[dict[str, object]]:
+            return [{
+                "block": block,
+                "sequence": sequence,
+                "mode": mode,
+                "decode_tokens_per_second": 2.1 if mode == "corrected" else 2.0,
+                "ttft_seconds": 1.0,
+                "completion_tokens": 128,
+                "response_signature": valid_response_signature(),
+                "fixture_sha256": "a" * 64,
+                "server_boot_id": f"boot-{block}-{sequence}",
+                "binary_sha256": "b" * 64,
+                "configuration_sha256": ("c" if mode == "off" else "d") * 64,
+            } for block, sequence, mode in RUNNER_MODULE.campaign_schedule(False)]
+
+        mutations = (
+            lambda row: row.update(response_signature={}),
+            lambda row: row.update(response_signature="invalid"),
+            lambda row: row["response_signature"].pop("request_sha256"),
+            lambda row: row["response_signature"].update(request_sha256="b" * 64),
+            lambda row: row["response_signature"].update(token_ids=list(range(127))),
+            lambda row: row["response_signature"]["token_ids"].__setitem__(0, True),
+            lambda row: row["response_signature"].update(generated_content_sha256="BAD"),
+            lambda row: row["response_signature"].update(generated_content_bytes=-1),
+            lambda row: row["response_signature"].update(completion_tokens=127),
+        )
+        for mutate in mutations:
+            candidate = copy.deepcopy(rows())
+            for row in candidate:
+                mutate(row)
+            with self.subTest(mutation=mutate):
+                with self.assertRaises(ValueError):
+                    RUNNER_MODULE.campaign_verdict(candidate, False)
 
 
 if __name__ == "__main__":
