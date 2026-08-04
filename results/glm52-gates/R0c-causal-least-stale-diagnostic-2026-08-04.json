@@ -1,0 +1,35 @@
+{
+  "artifact": "GLM-5.2 R0-UPGRADE-c causal least-stale bootstrap screen",
+  "classification": "POSTHOC_DIAGNOSTIC_ONLY",
+  "decision": "STOP_STANDALONE_DIAGNOSTIC",
+  "interpretation": "The trace contains substantial oracle eviction headroom, but a causal last-interval predictor is materially worse than LRU. Do not implement history-only least-stale in the engine. Reconsider predictor-driven least-stale only after R0-UPGRADE-b produces held-out calibrated future-use probabilities.",
+  "metrics": {
+    "accesses": 768000,
+    "belady_hit_rate": 0.880451,
+    "causal_gain_percentage_points": -13.205078,
+    "causal_interval_hit_rate": 0.605353,
+    "cache_slots": 7398,
+    "decode_steps": 1280,
+    "layers": 75,
+    "lru_hit_rate": 0.737404,
+    "oracle_gain_percentage_points": 14.304688
+  },
+  "method": {
+    "acceptance_formula": "PROCEED_DIAGNOSTIC only if Belady-LRU >= 3 percentage points and causal-interval-LRU >= 3 percentage points",
+    "causal_policy": "predict next use from only the most recently observed inter-arrival interval; bypass a miss when its predicted next use is no sooner than the farthest predicted resident",
+    "limitations": [
+      "The trace predates the P0 fixture-grouped split and lacks request boundaries.",
+      "The deterministic trace was inspected before this artifact was frozen.",
+      "This result cannot qualify or reject a trained predictor and cannot adopt an engine policy."
+    ],
+    "oracle_policy": "exact future-use Belady with miss bypass",
+    "trace_order": "token-major, then routed layer, then selected expert"
+  },
+  "provenance": {
+    "harness_sha256": "d5d1bfc32d4ad711f674962df0a252dd884fe459a3f68f19a68432d93cc86e7d",
+    "repository_commit": "57f65c6dffda4af2464034792fb07f41fec66bd0",
+    "harness_tests_sha256": "f0a90ec7d106b316125aeaaf3dd842f4ed9a0c0d46be0ce7a4b60a171089e81e",
+    "raw_sha256": "806325dd3338583a85165047750164bca6cd1d05eb8a0d075a99759c10a480d9"
+  },
+  "schema_version": 1
+}

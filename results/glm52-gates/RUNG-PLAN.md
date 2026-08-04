@@ -503,6 +503,18 @@ measurements count. Require byte identity and a positive completed-time/cache-
 miss result. The previously preregistered 3 percentage-point hit-rate threshold
 remains the minimum for engine adoption.
 
+Bootstrap diagnostic (2026-08-04): the 1,280-token, 75-layer G4a trace confirms
+large oracle headroom at the production-sized 7,398-slot cache: LRU hit rate
+0.737404 versus exact Belady 0.880451 (+14.304688 percentage points). A causal
+history-only least-stale null, using the most recent inter-arrival interval and
+scan-resistant admission bypass, reached only 0.605353 (-13.205078 points
+versus LRU). This is `POSTHOC_DIAGNOSTIC_ONLY` because the old trace lacks
+fixture boundaries and was already inspected. It nevertheless falsifies engine
+work on standalone interval/history least-stale. R0-UPGRADE c is now coupled to
+R0-UPGRADE b: reconsider it only if a held-out trained probe produces calibrated
+future-use probabilities that beat the frequency prior. See
+`R0c-causal-least-stale-diagnostic-2026-08-04.json`.
+
 ### Remaining lossless transport - zero-copy expert-slot GEMV (W3)
 
 Consume pinned arena pointers directly, hold slot ownership through a CUDA
