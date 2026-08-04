@@ -27,6 +27,7 @@ def arm(mode: str) -> dict[str, object]:
         "fixture_sha256": "d" * 64,
         "configuration_sha256": "e" * 64,
         "response_signature": {"request_sha256": "d" * 64, "token_ids": [1, 2]},
+        "prompt_tokens": 4136,
         "full_indexed_chunks": [[0, 2048], [2048, 2048], [4096, 40]],
         "trace_files": 0 if mode == "off" else 9,
     }
@@ -44,6 +45,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         for mutation in (
             "binary", "model", "tokenizer", "fixture", "configuration",
             "output", "chunks", "off_trace", "score", "containment",
+            "prompt_tokens", "shared_truncation",
         ):
             with self.subTest(mutation=mutation):
                 off, on = arm("off"), arm("on")
@@ -55,6 +57,10 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     on["response_signature"] = {"request_sha256": "d" * 64, "token_ids": [9]}
                 elif mutation == "chunks":
                     on["full_indexed_chunks"] = [[0, 2048]]
+                elif mutation == "prompt_tokens":
+                    on["prompt_tokens"] = 4000
+                elif mutation == "shared_truncation":
+                    off["full_indexed_chunks"] = on["full_indexed_chunks"] = [[0, 1]]
                 elif mutation == "off_trace":
                     off["trace_files"] = 1
                 elif mutation == "score":
@@ -65,6 +71,11 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     MODULE.smoke_verdict(off, on, score, off_c, on_c)["verdict"],
                     "FAIL",
                 )
+
+    def test_randomness_must_postdate_freeze_commit(self) -> None:
+        self.assertTrue(MODULE.randomness_is_after_freeze(100, 1595431050))
+        self.assertFalse(MODULE.randomness_is_after_freeze(1, 1595431050))
+        self.assertFalse(MODULE.randomness_is_after_freeze(2, 1595431080))
 
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
@@ -95,6 +106,21 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(name, self.runner)
             self.assertIn(name, self.cgroup)
+
+    def test_freeze_binds_runtime_transitive_dependencies(self) -> None:
+        for relative in (
+            "scripts/73_run_glm_shared_router_probe.py",
+            "scripts/30_bench_speed.py",
+            "scripts/glm52_goal.py",
+            "scripts/03_memory_guard.py",
+            "results/glm52-gates/harness/glm_safe_run.sh",
+            "fixtures/ctx-32k.txt",
+        ):
+            self.assertIn(relative, self.runner)
+
+    def test_summary_binds_both_containment_records(self) -> None:
+        self.assertIn('"off_containment_sha256"', self.runner)
+        self.assertIn('"on_containment_sha256"', self.runner)
 
 
 if __name__ == "__main__":
