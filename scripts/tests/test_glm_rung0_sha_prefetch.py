@@ -414,8 +414,22 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                      campaign.canonical_sha_prefetch_environment("prefetch_sha")),
                  "fixture_sha256": campaign.sha256_file(campaign.FIXTURE),
                  "server_instance_id": "7" * 64,
-                 "engine": {"completed_fetch_ms": [8.0, 8.0, 8.0],
-                            "model_generation": 9}},
+                 "engine": {
+                     "completed_fetch_ms": [8.0, 8.0, 8.0],
+                     "model_generation": 9,
+                     "slab_reads": 2,
+                     "telemetry": {
+                         "attempts": 4, "issue_dropped": 0,
+                         "sha_successes": 4, "sha_failures": 0,
+                         "ready": 4, "late": 2, "stale": 1,
+                         "fallback": 2, "copies": 2,
+                         "validated_bytes": 4 * campaign.EXPERT_RECORD_PAYLOAD_BYTES,
+                         "copied_bytes": 2 * campaign.EXPERT_RECORD_PAYLOAD_BYTES,
+                         "publications": 2, "read_ns": 400,
+                         "sha_ns": 200, "wait_ns": 100, "copy_ns": 80,
+                         "current_ready": 1,
+                     },
+                 }},
             ]
             raw.write_text("\n".join(json.dumps(row) for row in probe_rows) + "\n",
                            encoding="utf-8")
@@ -450,6 +464,28 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                     campaign.verified_sha_prefetch_probe_receipt(
                         path, "1" * 40, "2" * 64, "3" * 64, randomness, 9
                     )
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            mutated_rows = copy.deepcopy(probe_rows)
+            mutated_rows[1]["engine"]["telemetry"]["fallback"] = 1
+            raw.write_text(
+                "\n".join(json.dumps(row) for row in mutated_rows) + "\n",
+                encoding="utf-8",
+            )
+            mutated_receipt = copy.deepcopy(receipt)
+            mutated_receipt["raw_sha256"] = campaign.sha256_file(raw)
+            path.write_text(json.dumps(mutated_receipt), encoding="utf-8")
+            with self.assertRaises(ValueError), mock.patch.object(
+                campaign, "derive_sha_prefetch_record_from_artifacts"
+            ):
+                campaign.verified_sha_prefetch_probe_receipt(
+                    path, "1" * 40, "2" * 64, "3" * 64, randomness, 9
+                )
+
+            raw.write_text(
+                "\n".join(json.dumps(row) for row in probe_rows) + "\n",
+                encoding="utf-8",
+            )
+            receipt["raw_sha256"] = campaign.sha256_file(raw)
             path.write_text(json.dumps(receipt), encoding="utf-8")
             raw.write_text('{"fabricated":true}\n', encoding="utf-8")
             with self.assertRaises(ValueError), mock.patch.object(
@@ -848,8 +884,8 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
         )
         marker = (
             "PREFETCHSHA mode=prefetch_sha generation=9 attempts=4 "
-            "issue_dropped=2 sha_successes=4 sha_failures=0 ready=3 late=1 stale=0 "
-            f"fallback=1 copies=2 validated_bytes={4 * payload} "
+            "issue_dropped=2 sha_successes=4 sha_failures=0 ready=4 late=2 stale=1 "
+            f"fallback=2 copies=2 validated_bytes={4 * payload} "
             f"copied_bytes={2 * payload} publications=2 read_ns=400 "
             "sha_ns=200 wait_ns=100 copy_ns=80 current_ready=1 peak_qd=4 "
             "shared_peak_qd=7"
@@ -867,6 +903,10 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             marker.replace("attempts=4", "attempts=3"),
             marker.replace("sha_successes=4", "sha_successes=3"),
             marker.replace("sha_failures=0", "sha_failures=1"),
+            marker.replace("ready=4", "ready=3"),
+            marker.replace("late=2", "late=1"),
+            marker.replace("fallback=2", "fallback=1"),
+            marker.replace("stale=1", "stale=0"),
             marker.replace("shared_peak_qd=7", "shared_peak_qd=9"),
         ):
             with self.subTest(marker=bad_marker):
