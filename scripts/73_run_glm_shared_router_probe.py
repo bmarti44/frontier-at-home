@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 SCORER = ROOT / "scripts/72_glm_shared_router_score.py"
 BENCH = ROOT / "scripts/30_bench_speed.py"
+FREEZE_MANIFEST = ROOT / "results/glm52-gates/R0a-shared-router-freeze.json"
+RANDOMNESS_RECEIPT = ROOT / "results/glm52-gates/R0a-shared-router-randomness.json"
 MODEL = Path("/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf")
 MODEL_BYTES = 211075856448
 MODEL_SHA256 = "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
@@ -53,6 +55,63 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def strict_json(path: Path) -> dict[str, object]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{path} is not a JSON object")
+    return value
+
+
+def frozen_inputs() -> dict[str, object]:
+    freeze = strict_json(FREEZE_MANIFEST)
+    randomness = strict_json(RANDOMNESS_RECEIPT)
+    required = {
+        "schema_version", "repository_parent_commit", "engine_commit",
+        "candidate_directory", "binary_sha256", "binary_mtime_ns",
+        "model_sha256", "model_stat", "artifacts",
+    }
+    if set(freeze) != required or freeze["schema_version"] != 1:
+        raise ValueError("freeze manifest schema is invalid")
+    if not isinstance(freeze["artifacts"], dict):
+        raise ValueError("freeze artifact map is invalid")
+    for relative, digest in freeze["artifacts"].items():
+        path = (ROOT / str(relative)).resolve()
+        if (not str(path).startswith(str(ROOT) + "/") or
+                not re.fullmatch(r"[0-9a-f]{64}", str(digest)) or
+                sha256(path) != digest):
+            raise ValueError(f"frozen artifact changed: {relative}")
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True,
+                          capture_output=True, check=True).stdout.strip()
+    clean = subprocess.run(["git", "status", "--short"], cwd=ROOT, text=True,
+                           capture_output=True, check=True).stdout
+    ancestor = subprocess.run([
+        "git", "merge-base", "--is-ancestor", str(freeze["repository_parent_commit"]), head
+    ], cwd=ROOT, check=False)
+    if clean or ancestor.returncode != 0:
+        raise ValueError("repository is dirty or not descended from frozen harness")
+    candidate = Path(str(freeze["candidate_directory"])).resolve()
+    binary = candidate / "ds4-server"
+    if (not str(candidate).startswith("/home/bmarti44/.cache/glm52-") or
+            sha256(binary) != freeze["binary_sha256"] or
+            binary.stat().st_mtime_ns != freeze["binary_mtime_ns"]):
+        raise ValueError("frozen candidate binary changed")
+    expected_stat = freeze["model_stat"]
+    current = MODEL.stat()
+    observed_stat = [current.st_dev, current.st_ino, current.st_size,
+                     current.st_mtime_ns, current.st_ctime_ns]
+    if (freeze["model_sha256"] != MODEL_SHA256 or observed_stat != expected_stat):
+        raise ValueError("previously full-hashed model identity changed")
+    if set(randomness) != {"schema_version", "round", "randomness", "seed"}:
+        raise ValueError("randomness receipt schema is invalid")
+    raw = randomness["randomness"]
+    if (randomness["schema_version"] != 1 or
+            not isinstance(randomness["round"], int) or
+            not isinstance(raw, str) or re.fullmatch(r"[0-9a-f]{64}", raw) is None or
+            randomness["seed"] != int(raw[:16], 16) % 2147483647):
+        raise ValueError("public-randomness seed derivation is invalid")
+    return {**freeze, "candidate_hash": head, "seed": randomness["seed"]}
 
 
 def environment_for(mode: str) -> dict[str, str]:
@@ -218,12 +277,13 @@ def arm(args: argparse.Namespace) -> int:
 def run(args: argparse.Namespace) -> int:
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}", args.tag) is None:
         raise ValueError("invalid tag")
-    binary = args.candidate.resolve() / "ds4-server"
-    if not str(binary).startswith("/home/bmarti44/.cache/glm52-"):
-        raise ValueError("candidate is outside the frozen cache")
-    if (sha256(binary) != args.binary_sha256 or args.model_sha256 != MODEL_SHA256
-            or MODEL.stat().st_size != MODEL_BYTES):
-        raise ValueError("frozen artifact identity mismatch")
+    freeze = frozen_inputs()
+    candidate = Path(str(freeze["candidate_directory"])).resolve()
+    binary = candidate / "ds4-server"
+    binary_sha256 = str(freeze["binary_sha256"])
+    model_sha256 = str(freeze["model_sha256"])
+    engine_commit = str(freeze["engine_commit"])
+    seed = int(freeze["seed"])
     if sha256(TOKENIZER) != TOKENIZER_SHA256:
         raise ValueError("tokenizer identity mismatch")
     no_other_inference()
@@ -244,9 +304,9 @@ def run(args: argparse.Namespace) -> int:
                 environment.pop(name)
         environment.update(values)
         environment.update({
-            "GLM_CANDIDATE_SRC": str(args.candidate.resolve()),
+            "GLM_CANDIDATE_SRC": str(candidate),
             "GLM_SAFE_RUN_AS_CURRENT_USER": "1", "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
-            "GLM_SAFE_EXPECTED_BINARY_SHA256": args.binary_sha256,
+            "GLM_SAFE_EXPECTED_BINARY_SHA256": binary_sha256,
             "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(ENV_NAMES),
             "GLM_SAFE_EXPECTED_ENV_SHA256": environment_sha256(values),
             "GLM_SAFE_MEMORY_HIGH_GIB": "69", "GLM_SAFE_KILL_FLOOR_GIB": "18",
@@ -258,9 +318,9 @@ def run(args: argparse.Namespace) -> int:
         completed = subprocess.run([
             str(CGROUP), "--tag", f"{args.tag}-{mode}", "--", sys.executable,
             str(Path(__file__).resolve()), "_arm", "--mode", mode, "--out", str(out),
-            "--binary", str(binary), "--binary-sha256", args.binary_sha256,
-            "--model-sha256", args.model_sha256, "--engine-commit", args.engine_commit,
-            "--seed", str(args.seed), "--port", str(args.port + index),
+            "--binary", str(binary), "--binary-sha256", binary_sha256,
+            "--model-sha256", model_sha256, "--engine-commit", engine_commit,
+            "--seed", str(seed), "--port", str(args.port + index),
         ], env=environment, stdin=subprocess.DEVNULL, capture_output=True, timeout=3700, check=False)
         (root / f"{mode}.containment.stdout.log").write_bytes(completed.stdout)
         (root / f"{mode}.containment.stderr.log").write_bytes(completed.stderr)
@@ -278,10 +338,12 @@ def run(args: argparse.Namespace) -> int:
     scored = subprocess.run([sys.executable, str(SCORER), str(root / "on/server.log"),
                              "--out", str(score_path)], check=False)
     score = json.loads(score_path.read_text())
+    # Recheck the stat-bound, previously full-hashed model after both arms.
+    frozen_inputs()
     summary = {
-        "schema_version": 1, "candidate_hash": args.candidate_hash,
-        "engine_commit": args.engine_commit, "binary_sha256": args.binary_sha256,
-        "model_sha256": args.model_sha256, "seed": args.seed,
+        "schema_version": 1, "candidate_hash": freeze["candidate_hash"],
+        "engine_commit": engine_commit, "binary_sha256": binary_sha256,
+        "model_sha256": model_sha256, "seed": seed,
         "off_arm_sha256": sha256(root / "off/arm.json"),
         "on_arm_sha256": sha256(root / "on/arm.json"),
         "off_containment_sha256": sha256(root / "off.containment.json"),
@@ -302,12 +364,6 @@ def parser() -> argparse.ArgumentParser:
     sub = result.add_subparsers(dest="command", required=True)
     public = sub.add_parser("run")
     public.add_argument("--tag", required=True)
-    public.add_argument("--candidate", type=Path, required=True)
-    public.add_argument("--candidate-hash", required=True)
-    public.add_argument("--engine-commit", required=True)
-    public.add_argument("--binary-sha256", required=True)
-    public.add_argument("--model-sha256", required=True)
-    public.add_argument("--seed", type=int, required=True)
     public.add_argument("--port", type=int, default=8040)
     public.set_defaults(func=run)
     internal = sub.add_parser("_arm")

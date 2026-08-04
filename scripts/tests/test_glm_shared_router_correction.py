@@ -12,14 +12,15 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 SCORER = ROOT / "scripts/72_glm_shared_router_score.py"
 PATCH = ROOT / "results/glm52-gates/harness/ds4-shared-router-correction.patch"
+RUNNER = ROOT / "scripts/73_run_glm_shared_router_probe.py"
 SPEC = importlib.util.spec_from_file_location("shared_router_score", SCORER)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
-
-
-RUNNER = ROOT / "scripts/73_run_glm_shared_router_probe.py"
-
+RUNNER_SPEC = importlib.util.spec_from_file_location("shared_router_runner", RUNNER)
+assert RUNNER_SPEC and RUNNER_SPEC.loader
+RUNNER_MODULE = importlib.util.module_from_spec(RUNNER_SPEC)
+RUNNER_SPEC.loader.exec_module(RUNNER_MODULE)
 
 def row(event: int, position: int, layer: int, actual: range, baseline: range, shared: range) -> str:
     values = lambda items: " ".join(str(item) for item in items)
@@ -155,6 +156,13 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
             "generated_token_ids",
         ):
             self.assertIn(marker, self.source)
+
+    def test_public_runner_does_not_accept_identity_or_seed_overrides(self) -> None:
+        parser = RUNNER_MODULE.parser()
+        subparsers = next(action for action in parser._actions
+                          if isinstance(action.choices, dict))
+        destinations = {action.dest for action in subparsers.choices["run"]._actions}
+        self.assertEqual(destinations, {"help", "tag", "port"})
 
 
 if __name__ == "__main__":
