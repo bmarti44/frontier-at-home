@@ -18,10 +18,13 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
-def row(layer: int, actual: range, baseline: range, shared: range) -> str:
+RUNNER = ROOT / "scripts/73_run_glm_shared_router_probe.py"
+
+
+def row(event: int, position: int, layer: int, actual: range, baseline: range, shared: range) -> str:
     values = lambda items: " ".join(str(item) for item in items)
     return (
-        f"PREDPAIR L{layer} actual: {values(actual)}"
+        f"PREDPAIR E{event} P{position} L{layer} actual: {values(actual)}"
         f" base: {values(baseline)} shared: {values(shared)}"
     )
 
@@ -34,34 +37,53 @@ class SharedRouterScorerTests(unittest.TestCase):
             return MODULE.score(path)
 
     def test_accepts_matched_trace_with_two_point_recall_gain(self) -> None:
-        rows = [
-            row(4 + index % 74, range(8), range(8), range(8))
-            for index in range(1000)
-        ]
+        rows = [row(index + 1, index // 74, 4 + index % 74,
+                    range(8), range(8), range(8)) for index in range(1000)]
         # Lower the baseline by exactly two of eight experts in 80 samples:
         # 160 / 8000 = 0.02 absolute recall.
         for index in range(80):
-            rows[index] = row(4 + index % 74, range(8), range(2, 10), range(8))
+            rows[index] = row(index + 1, index // 74, 4 + index % 74,
+                              range(8), range(2, 10), range(8))
         result = self.score_rows(rows)
         self.assertEqual(result["verdict"], "PASS")
         self.assertAlmostEqual(result["absolute_recall_gain"], 0.02)
 
     def test_rejects_too_few_rows(self) -> None:
-        result = self.score_rows([row(4, range(8), range(2, 10), range(8))] * 999)
+        result = self.score_rows([
+            row(index + 1, index // 74, 4 + index % 74,
+                range(8), range(2, 10), range(8)) for index in range(999)
+        ])
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["minimum_samples"])
 
     def test_rejects_no_gain(self) -> None:
-        result = self.score_rows([row(4, range(8), range(8), range(8))] * 1000)
+        result = self.score_rows([
+            row(index + 1, index // 74, 4 + index % 74,
+                range(8), range(8), range(8)) for index in range(1000)
+        ])
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["shared_recall_gain"])
 
     def test_rejects_malformed_or_duplicate_ids(self) -> None:
-        rows = [row(4, range(8), range(2, 10), range(8))] * 1000
-        rows[0] = "PREDPAIR L4 actual: 0 0 1 2 3 4 5 6 base: 2 3 4 5 6 7 8 9 shared: 0 1 2 3 4 5 6 7"
+        rows = [row(index + 1, index // 74, 4 + index % 74,
+                    range(8), range(2, 10), range(8)) for index in range(1000)]
+        rows[0] = "PREDPAIR E1 P0 L4 actual: 0 0 1 2 3 4 5 6 base: 2 3 4 5 6 7 8 9 shared: 0 1 2 3 4 5 6 7"
         result = self.score_rows(rows)
         self.assertEqual(result["verdict"], "FAIL")
         self.assertEqual(result["malformed_rows"], 1)
+
+    def test_rejects_a_duplicated_favorable_observation(self) -> None:
+        favorable = row(1, 0, 4, range(8), range(2, 10), range(8))
+        result = self.score_rows([favorable] * 1000)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertFalse(result["checks"]["unique_event_keys"])
+
+    def test_rejects_one_token_layer_sweep_replayed_to_sample_floor(self) -> None:
+        sweep = [row(index + 1, 0, 4 + index, range(8), range(2, 10), range(8))
+                 for index in range(74)]
+        result = self.score_rows((sweep * 14)[:1000])
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertFalse(result["checks"]["position_coverage"])
 
 
 class SharedRouterSourceContractTests(unittest.TestCase):
@@ -84,11 +106,38 @@ class SharedRouterSourceContractTests(unittest.TestCase):
             self.assertIn(marker, self.source)
 
     def test_probe_logs_matched_actual_baseline_and_shared_sets(self) -> None:
-        self.assertIn("PREDPAIR L%u actual:", self.source)
+        self.assertIn("PREDPAIR E%llu P%u L%u actual:", self.source)
         self.assertIn('getenv("DS4_GLM_PREDACC_SHARED")', self.source)
+
+    def test_pending_pair_state_is_graph_scoped(self) -> None:
+        self.assertIn("predacc_pair_layer", self.source)
+        self.assertIn("predacc_pair_event", self.source)
+        self.assertNotIn("static uint32_t pair_layer", self.source)
 
     def test_prefetch_hint_stays_after_current_selected_load(self) -> None:
         self.assertIn("shared correction waits for current selected load", self.source)
+
+
+class SharedRouterRunnerContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.source = RUNNER.read_text(encoding="utf-8") if RUNNER.exists() else ""
+
+    def test_runner_uses_existing_containment_and_one_request_slot(self) -> None:
+        self.assertIn("glm_cgroup_run.sh", self.source)
+        self.assertIn('"--parallel", "1"', self.source)
+        self.assertIn('"DS4_GLM_PREDACC_SHARED": "1"', self.source)
+
+    def test_runner_binds_candidate_and_safety_artifacts(self) -> None:
+        for marker in (
+            "GLM_SAFE_EXPECTED_BINARY_SHA256",
+            "GLM_SAFE_EXPECTED_ENV_SHA256",
+            "GLM_SAFE_FINAL_ARTIFACTS",
+            "memory.events.local",
+            "kernel.log",
+            "generated_token_ids",
+        ):
+            self.assertIn(marker, self.source)
 
 
 if __name__ == "__main__":
