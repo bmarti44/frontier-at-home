@@ -185,6 +185,7 @@ class SharedRouterSourceContractTests(unittest.TestCase):
             '"glm_indexed_ffn_norm"',
             '"glm_indexed_router_logits"',
             '"glm_indexed_router_selected"',
+            '"glm_indexed_router_bias"',
             "O_CREAT | O_EXCL",
             "fsync(fd)",
             "GLM_UNION_TRACE_ERROR",
