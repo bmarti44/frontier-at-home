@@ -617,8 +617,16 @@ events, not the fixture-grouped P0 corpus. It measures mean/P95 true union sizes
 of 14.096/16 at K=2, 24.498/30 at K=4, and 41.630/53 at K=8. A chronological
 70/30 diagnostic frequency prior with a 64-expert budget reaches only 54.2561%
 K=2 recall and 48.6062% K=8 recall, with effectively zero full-set coverage.
-This is a frozen null-baseline diagnostic in `logs/g4a/trace-analysis.txt`, not
-P1 acceptance; it confirms that flat-router popularity alone is insufficient.
+An expert-history Markov baseline trained only on the first 70% and evaluated
+on the final 30% raises recall materially: at budget 32, K=2 improves from
+34.9832% to 54.7135% (+19.7303 percentage points), K=4 from 32.3048% to
+45.8401% (+13.5353 points), and K=8 from 29.2904% to 38.4113% (+9.1209
+points). Full-set coverage remains poor (0.6946% even at K=2/budget 32), so
+calibrated sets may still prove uneconomic. These are reproducible post-hoc
+diagnostics in `harness/g4a_trace_analysis.py`, not P1 acceptance. They show
+that recent routing carries useful signal beyond flat popularity and justify
+collecting the fixture-grouped hidden/logit P0 corpus; they do not justify an
+online predictor yet.
 
 #### P2 - split-conformal calibration
 
