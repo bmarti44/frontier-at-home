@@ -161,6 +161,12 @@ class SharedRouterSourceContractTests(unittest.TestCase):
     def test_prefetch_hint_stays_after_current_selected_load(self) -> None:
         self.assertIn("shared correction waits for current selected load", self.source)
 
+    def test_union_probe_reuses_default_off_graph_dump_for_gate_inputs(self) -> None:
+        self.assertIn(
+            'metal_graph_debug_dump_tensor("glm_indexed_ffn_norm"',
+            self.added_source,
+        )
+
 
 class SharedRouterRunnerContractTests(unittest.TestCase):
     @classmethod
