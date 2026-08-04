@@ -72,6 +72,20 @@ class G4ATraceAnalysisTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("cache slots must be positive", completed.stderr)
 
+    def test_markov_history_baseline_uses_training_prefix_only(self):
+        rows = [
+            f"XTRACE L3 N8: {expert}"
+            for expert in (1, 2, 3, 1, 2, 3, 1, 2, 3, 1)
+        ]
+        completed = self.run_trace(rows)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            "markov-history K=2 budget=2 samples=1 recall=1.000000 "
+            "set_coverage=1.000000 frequency_recall=0.500000 "
+            "recall_gain_pp=50.000000",
+            completed.stdout,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
