@@ -34,6 +34,7 @@ ENV_NAMES = sorted((
     "DS4_CUDA_FETCH_THREADS",
     "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
     "DS4_GLM_PREDACC_SHARED",
+    "DS4_LOCK_FILE",
     "DS4_TOKEN_TIMING_LOG",
 ))
 COMMON_ENV = {
@@ -114,8 +115,9 @@ def frozen_inputs() -> dict[str, object]:
     return {**freeze, "candidate_hash": head, "seed": randomness["seed"]}
 
 
-def environment_for(mode: str) -> dict[str, str]:
+def environment_for(mode: str, lock_file: Path) -> dict[str, str]:
     result = dict(COMMON_ENV)
+    result["DS4_LOCK_FILE"] = str(lock_file)
     if mode == "on":
         result["DS4_GLM_PREDACC_SHARED"] = "1"
     return result
@@ -204,7 +206,7 @@ def containment_record(stdout_path: Path) -> dict[str, object]:
 def arm(args: argparse.Namespace) -> int:
     binary = args.binary.resolve()
     out = args.out.resolve()
-    expected = environment_for(args.mode)
+    expected = environment_for(args.mode, out / "runtime.lock")
     observed = {name: os.environ[name] for name in ENV_NAMES if name in os.environ}
     if observed != expected:
         raise ValueError("arm environment is not the fixed configuration")
@@ -297,7 +299,7 @@ def run(args: argparse.Namespace) -> int:
     root.mkdir(mode=0o700, parents=True)
     for index, mode in enumerate(("off", "on")):
         out = root / mode
-        values = environment_for(mode)
+        values = environment_for(mode, out / "runtime.lock")
         environment = os.environ.copy()
         for name in list(environment):
             if name.startswith("DS4_") or name.startswith("GLM_SAFE_"):
