@@ -430,11 +430,14 @@ increase from 73.6% to 76.7%; each point avoids about 58 MB/token of wasted
 NVMe traffic on this model.
 
 Implementation status (2026-08-04): the production-source candidate is engine
-commit `5b44fea` on parent `3187250`, reproduced by
+commit `3332c25` on parent `3187250`, reproduced by
 `harness/ds4-shared-router-correction.patch`. The correction and its matched
 trace probe are default-off. Review round 50 found that the first scorer could
 count copied rows and that pending state was function-static; that candidate
-was not run. The corrected trace uses graph-scoped lineage plus contiguous
+was not run. The first live candidate then exposed a normal-layer/MTP-layer
+boundary bug after one complete token sweep; its failed attempt is preserved.
+The RED-first fix uses `glm_graph_normal_layer_count()` for every next-layer
+predictor and prevents stale L78 state. The corrected trace uses graph-scoped lineage plus contiguous
 event, position, and layer keys and fails closed while balancing command
 ownership on read/router failures. `scripts/73_run_glm_shared_router_probe.py`
 runs one request on each of two fresh contained servers and binds the binary,
@@ -446,6 +449,19 @@ at least 0.02 over stale gate replay. The fixed scorer is
 `scripts/72_glm_shared_router_score.py`. A failure ends this item without a
 serving campaign; a pass permits review and a small runtime-performance probe,
 but is not itself an adoption result.
+
+The corrected falsifier passed on candidate `f9812ec`: 13,838 unique matched
+rows across 187 complete positions raised top-8 recall from
+0.7596744471744472 to 0.7895378667437492, an absolute gain of
+0.02986341956930194. Both arms completed 128 tokens with identical token IDs
+and output bytes; containment had no pressure, OOM, swap, Xid, or survivor and
+kept at least 24.522499084472656 GiB available. The terminal evidence is
+`R0a-shared-router-f9812ec-final-2026-08-04.json`. This is a recall result, not
+a serving-speed result: the trace arm synchronously reads and logs every set.
+Next, compare the actual corrected-prefetch flag against prefetch-off with a
+small matched throughput falsifier. Reject before a full campaign if corrected
+decode is below 95% of off; passing that cheap screen only permits the existing
+five-block serving campaign and its positive completed-time lower-bound gate.
 
 Fetch asynchronously and hand completed entries through a staging queue so the
 single-threaded arena map remains single-owner. Require Sol review of event

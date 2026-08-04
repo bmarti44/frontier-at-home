@@ -56,8 +56,8 @@
       "on/result.json": "2be073c09e3fb964fa4997a0497ed75e61d58ff64f70a7c05e44b1309ea7215e",
       "off/server.log": "5667d39acabc4cd8bdd6cd2ad1258d7fb9a2c7ae97b33db8ecc7313de19b7448",
       "on/server.log": "3f1e08bad71e65632a27c91c091e34bc201f56f04753b7870478cd8961be29ea",
-      "off/safety-samples.log": "7dae46a6809c24ebbae88fdef2960c637cfd14d581c936bb773d4d5275be5c3c",
-      "on/safety-samples.log": "17f03f013d6b3ebbdcded999808f6368432f818f86d1c3c4074068075677c052"
+      "../glm52-crashlog/20260804-173057-glm52-r0a-f9812ec-off/samples.log": "7dae46a6809c24ebbae88fdef2960c637cfd14d581c936bb773d4d5275be5c3c",
+      "../glm52-crashlog/20260804-173248-glm52-r0a-f9812ec-on/samples.log": "17f03f013d6b3ebbdcded999808f6368432f818f86d1c3c4074068075677c052"
     }
   },
   "reporting_caveat": "This is a predictor-recall falsifier, not a serving-performance qualification. The ON arm synchronously reads and logs every predicted and actual expert set, so its timing is instrumentation-dominated. The TTFT and prefill values use the stripped control configuration and must not be reported as the adopted GLM serving profile. Byte identity makes an NLL rerun unnecessary for this diagnostic; the eventual production prefetch integration must again prove byte identity and non-regressing matched throughput."
