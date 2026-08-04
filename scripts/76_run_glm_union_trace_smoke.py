@@ -23,6 +23,14 @@ FREEZE = ROOT / "results/glm52-gates/R0b-union-trace-smoke-freeze.json"
 RANDOMNESS = ROOT / "results/glm52-gates/R0b-union-trace-smoke-randomness.json"
 SHARED_PATH = ROOT / "scripts/73_run_glm_shared_router_probe.py"
 SCORER_PATH = ROOT / "scripts/75_glm_union_trace_score.py"
+FROZEN_RUNTIME_DEPENDENCIES = (
+    "scripts/73_run_glm_shared_router_probe.py",
+    "scripts/30_bench_speed.py",
+    "scripts/glm52_goal.py",
+    "scripts/03_memory_guard.py",
+    "results/glm52-gates/harness/glm_safe_run.sh",
+    "fixtures/ctx-32k.txt",
+)
 
 
 def _load(name: str, path: Path):
@@ -57,6 +65,27 @@ ENV_NAMES = sorted(set(SHARED.ENV_NAMES) | {
 SYNC_RE = re.compile(
     r"ds4: GLM sync branch=full_indexed pos=(\d+) chunk=(\d+) logits=\d+"
 )
+DRAND_GENESIS_UNIX = 1595431050
+DRAND_PERIOD_SECONDS = 30
+
+
+def randomness_is_after_freeze(round_number: int, freeze_commit_time: int) -> bool:
+    if round_number < 1 or freeze_commit_time < 0:
+        return False
+    round_time = DRAND_GENESIS_UNIX + (round_number - 1) * DRAND_PERIOD_SECONDS
+    return round_time > freeze_commit_time
+
+
+def validate_randomness_order() -> None:
+    relative = str(FREEZE.relative_to(ROOT))
+    completed = subprocess.run(
+        ["git", "log", "-1", "--format=%ct", "--", relative],
+        cwd=ROOT, text=True, capture_output=True, check=True,
+    )
+    freeze_time = int(completed.stdout.strip())
+    randomness = SHARED.strict_json(RANDOMNESS)
+    if not randomness_is_after_freeze(int(randomness["round"]), freeze_time):
+        raise ValueError("public randomness does not postdate the freeze commit")
 
 
 def configuration_sha256(values: dict[str, str]) -> str:
@@ -112,11 +141,21 @@ def smoke_verdict(
         "binary_sha256", "model_sha256", "tokenizer_sha256",
         "fixture_sha256", "configuration_sha256",
     )
+    prompt_tokens = off.get("prompt_tokens")
+    chunks = off.get("full_indexed_chunks")
+    exact_coverage = (
+        isinstance(prompt_tokens, int) and not isinstance(prompt_tokens, bool) and
+        prompt_tokens >= 4096 and on.get("prompt_tokens") == prompt_tokens and
+        isinstance(chunks, list) and bool(chunks) and chunks[0][0] == 0 and
+        sum(row[1] for row in chunks) == prompt_tokens and
+        chunks[-1][0] + chunks[-1][1] == prompt_tokens
+    )
     checks = {
         "arm_modes": off.get("mode") == "off" and on.get("mode") == "on",
         "frozen_identity": all(off.get(key) == on.get(key) for key in common_hashes),
         "byte_and_token_identity": off.get("response_signature") == on.get("response_signature"),
         "matched_indexed_chunks": off.get("full_indexed_chunks") == on.get("full_indexed_chunks"),
+        "prompt_tokens_and_exact_coverage": exact_coverage,
         "off_emitted_no_trace": off.get("trace_files") == 0,
         "on_emitted_trace": isinstance(on.get("trace_files"), int) and on.get("trace_files", 0) > 0,
         "trace_score_passed": trace_score.get("verdict") == "PASS",
@@ -132,7 +171,9 @@ def _arm(args: argparse.Namespace) -> int:
     observed = {name: os.environ[name] for name in ENV_NAMES if name in os.environ}
     if observed != expected:
         raise ValueError("trace arm environment differs from frozen configuration")
-    if SHARED.sha256(binary) != args.binary_sha256:
+    if (SHARED.sha256(binary) != args.binary_sha256 or
+            args.model_sha256 != SHARED.MODEL_SHA256 or
+            SHARED.sha256(SHARED.TOKENIZER) != SHARED.TOKENIZER_SHA256):
         raise ValueError("candidate binary changed")
     if out.exists() or not str(out).startswith("/home/bmarti44/.local/state/glm52-"):
         raise ValueError("unsafe or existing output directory")
@@ -166,6 +207,12 @@ def _arm(args: argparse.Namespace) -> int:
             if completed.returncode != 0:
                 raise RuntimeError(f"benchmark failed rc={completed.returncode}")
             signature = SHARED.response_signature(result_path)
+            payload = SHARED.strict_json(result_path)
+            reps = payload["cells"][0]["reps"]
+            prompt_tokens = reps[0].get("prompt_tokens") if len(reps) == 1 else None
+            if (not isinstance(prompt_tokens, int) or isinstance(prompt_tokens, bool) or
+                    prompt_tokens < 4096):
+                raise ValueError("benchmark prompt-token coverage is insufficient")
         finally:
             if server is not None and server.poll() is None:
                 server.send_signal(signal.SIGTERM)
@@ -196,6 +243,7 @@ def _arm(args: argparse.Namespace) -> int:
         "configuration_sha256": matched_configuration_sha256(),
         "environment_sha256": configuration_sha256(expected),
         "response_signature": signature,
+        "prompt_tokens": prompt_tokens,
         "full_indexed_chunks": chunks,
         "trace_files": len(files),
         "trace_bytes": total_trace_bytes,
@@ -213,6 +261,7 @@ def run(args: argparse.Namespace) -> int:
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}", args.tag) is None:
         raise ValueError("invalid tag")
     freeze = SHARED.frozen_inputs(FREEZE, RANDOMNESS)
+    validate_randomness_order()
     candidate = Path(str(freeze["candidate_directory"])).resolve()
     binary = candidate / "ds4-server"
     SHARED.no_other_inference()
@@ -294,6 +343,8 @@ def run(args: argparse.Namespace) -> int:
         "max_trace_bytes": MAX_TRACE_BYTES,
         "off_arm_sha256": SHARED.sha256(root / "off/arm.json"),
         "on_arm_sha256": SHARED.sha256(root / "on/arm.json"),
+        "off_containment_sha256": SHARED.sha256(root / "off.containment.json"),
+        "on_containment_sha256": SHARED.sha256(root / "on.containment.json"),
         "trace_score": trace_score,
         **verdict,
     }
