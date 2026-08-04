@@ -75,9 +75,10 @@ class SharedRouterSourceContractTests(unittest.TestCase):
 
     def test_correction_uses_shared_residual_and_next_layer_norm(self) -> None:
         for marker in (
-            "ds4_gpu_add_tensor(pf_corrected_state, after_attn, ffn_sum",
+            "pf_corrected_state, after_attn, ffn_sum",
             "lnext->ffn_norm->abs_offset",
-            "ds4_gpu_rms_norm_weight_tensor(pf_corrected_norm",
+            "ds4_gpu_rms_norm_weight_tensor(",
+            "pf_corrected_norm, pf_corrected_state",
             "g->batch_router_logits",
         ):
             self.assertIn(marker, self.source)

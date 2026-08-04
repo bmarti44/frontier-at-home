@@ -429,6 +429,16 @@ The measured GLM-5.2 result reported in colibri issue 200 is a prefetch-recall
 increase from 73.6% to 76.7%; each point avoids about 58 MB/token of wasted
 NVMe traffic on this model.
 
+Implementation status (2026-08-04): the production-source candidate is engine
+commit `592aadb` on parent `3187250`, exported exactly as
+`harness/ds4-shared-router-correction.patch`. The correction and its matched
+trace probe are default-off. Before any serving A/B, run the contained trace
+probe and require at least 1,000 matched token-layer rows with zero malformed
+rows and an absolute top-8 recall gain of at least 0.02 over stale gate replay.
+The fixed scorer is `scripts/72_glm_shared_router_score.py`. A failure ends
+this item without a serving campaign; a pass permits review and a small
+runtime-performance probe, but is not itself an adoption result.
+
 Fetch asynchronously and hand completed entries through a staging queue so the
 single-threaded arena map remains single-owner. Require Sol review of event
 lifetime and ownership before a serving run. Gate on byte-identical target
