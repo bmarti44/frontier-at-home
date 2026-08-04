@@ -125,3 +125,162 @@ diff --git a/ds4_cuda.cu b/ds4_cuda.cu
      }
      ec_sha256_init(&g_expert_cache_run_stats.stream);
      g_expert_cache_run_stats.lookup_bytes = 0;
+diff --git a/ds4_slab_prefetch_state.h b/ds4_slab_prefetch_state.h
+--- a/ds4_slab_prefetch_state.h
++++ b/ds4_slab_prefetch_state.h
+@@ -8,6 +8,7 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <cstring>
++#include <condition_variable>
+ #include <mutex>
+ #include <vector>
+ 
+@@ -33,6 +34,7 @@ struct Lease {
+ 
+ struct Telemetry {
+     uint64_t attempts = 0;
++    uint64_t issue_dropped = 0;
+     uint64_t sha_successes = 0;
+     uint64_t sha_failures = 0;
+     uint64_t ready = 0;
+@@ -50,6 +52,55 @@ struct Telemetry {
+     uint64_t copy_ns = 0;
+ };
+ 
++class ReadCredits {
++public:
++    explicit ReadCredits(size_t capacity)
++        : capacity_(capacity), usable_(capacity >= 4 && capacity <= 8) {}
++
++    void acquire_demand() {
++        std::unique_lock<std::mutex> lock(mu_);
++        ++demand_waiters_;
++        cv_.wait(lock, [&] { return usable_ && active_ < capacity_; });
++        --demand_waiters_;
++        ++active_;
++        if (active_ > peak_) peak_ = active_;
++    }
++
++    void acquire_prefetch() {
++        std::unique_lock<std::mutex> lock(mu_);
++        cv_.wait(lock, [&] {
++            return usable_ && active_ < capacity_ && demand_waiters_ == 0;
++        });
++        ++active_;
++        if (active_ > peak_) peak_ = active_;
++    }
++
++    void release() {
++        std::lock_guard<std::mutex> lock(mu_);
++        if (active_ == 0) return;
++        --active_;
++        cv_.notify_all();
++    }
++
++    size_t active() const {
++        std::lock_guard<std::mutex> lock(mu_);
++        return active_;
++    }
++    size_t peak() const {
++        std::lock_guard<std::mutex> lock(mu_);
++        return peak_;
++    }
++
++private:
++    mutable std::mutex mu_;
++    std::condition_variable cv_;
++    size_t capacity_ = 0;
++    size_t active_ = 0;
++    size_t peak_ = 0;
++    size_t demand_waiters_ = 0;
++    bool usable_ = false;
++};
++
+ struct ReadResult { bool ok = false; size_t actual_length = 0; };
+ 
+ class Backend {
+@@ -95,7 +146,7 @@ public:
+             ++telemetry_.attempts;
+             return {i, slot.lease, true};
+         }
+-        ++telemetry_.late;
++        ++telemetry_.issue_dropped;
+         return {};
+     }
+ 
+@@ -149,6 +200,7 @@ public:
+         slots_[lease.slot].state = State::ready;
+         ++telemetry_.ready;
+         ++telemetry_.current_ready;
++        cv_.notify_all();
+         return true;
+     }
+ 
+@@ -168,6 +220,42 @@ public:
+         return {};
+     }
+ 
++    Lease claim_or_wait(const Identity &identity) {
++        std::unique_lock<std::mutex> lock(mu_);
++        if (!usable_ || invalidated_) return {};
++        for (;;) {
++            bool matching_read = false;
++            size_t matching_slot = 0;
++            uint64_t matching_lease = 0;
++            for (size_t i = 0; i < slots_.size(); ++i) {
++                Slot &slot = slots_[i];
++                if (!same_identity(slot.identity, identity)) continue;
++                if (slot.state == State::ready) {
++                    slot.state = State::main_owned;
++                    --telemetry_.current_ready;
++                    return {i, slot.lease, true};
++                }
++                if (slot.state == State::reading) {
++                    matching_read = true;
++                    matching_slot = i;
++                    matching_lease = slot.lease;
++                    break;
++                }
++            }
++            if (!matching_read) {
++                ++telemetry_.late;
++                ++telemetry_.fallback;
++                return {};
++            }
++            cv_.wait(lock, [&] {
++                return invalidated_ || matching_slot >= slots_.size() ||
++                    slots_[matching_slot].lease != matching_lease ||
++                    slots_[matching_slot].state != State::reading;
++            });
++            if (invalidated_) return {};
++        }
++    }
++
+     bool copy_sync(Lease lease, Backend &backend) {
+         BufferSnapshot snapshot;
+         if (!snapshot_for_copy(lease, snapshot)) return false;
+@@ -213,6 +301,7 @@ public:
+                 recycle_locked(slot);
+             }
+         }
++        cv_.notify_all();
+     }
+ 
+     bool invalidated() const {
+@@ -313,6 +402,7 @@ private:
+             telemetry_.current_ready = 0;
+         }
+         if (notify) backend.invalidate_slab();
++        cv_.notify_all();
+         (void)lease;
+     }
+     static void recycle_locked(Slot &slot) {
+@@ -336,6 +426,7 @@ private:
+     }
+ 
+     mutable std::mutex mu_;
++    std::condition_variable cv_;
+     std::vector<Slot> slots_;
+     uint64_t generation_ = 0;
+     uint64_t next_lease_ = 1;
