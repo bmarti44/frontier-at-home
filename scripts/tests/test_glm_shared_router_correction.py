@@ -219,6 +219,15 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
         source = CGROUP.read_text(encoding="utf-8")
         self.assertIn("DS4_GLM_PREFETCH_SHARED_CORRECTION", source)
 
+    def test_campaign_configuration_identity_ignores_only_arm_lock_path(self) -> None:
+        off_a = RUNNER_MODULE.campaign_configuration_sha256("off", Path("/tmp/a.lock"))
+        off_b = RUNNER_MODULE.campaign_configuration_sha256("off", Path("/tmp/b.lock"))
+        corrected = RUNNER_MODULE.campaign_configuration_sha256(
+            "corrected", Path("/tmp/c.lock")
+        )
+        self.assertEqual(off_a, off_b)
+        self.assertNotEqual(off_a, corrected)
+
     def test_balanced_campaign_requires_positive_decode_lower_bound(self) -> None:
         rows = []
         for block, sequence, mode in RUNNER_MODULE.campaign_schedule(False):
