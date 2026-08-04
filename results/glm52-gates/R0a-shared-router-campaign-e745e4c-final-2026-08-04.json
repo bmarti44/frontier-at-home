@@ -1,0 +1,55 @@
+{
+  "binary_sha256": "33800c87e8c2171b62befd01fe79413e8a108be52455521eddea18026964c572",
+  "candidate_hash": "e745e4c03233484b9ac975b5ff27a01f27c54568",
+  "engine_commit": "3332c25b310ff1bca58ee3bc028f1a545db7e95b",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "row_sha256": {
+    "b0s0-off.json": "1abbdb2c9050694354cc2ecec2807f179a9a58cd42bb670096b1369bed2d8340",
+    "b0s1-corrected.json": "7bb64cd2060728c22434d2702a5cc7acecf262e646413fd4c378f7da213536f7",
+    "b0s2-corrected.json": "443b8f904971c231609fd3b893490053e3555dcbd3a32287e993c71632727afa",
+    "b0s3-off.json": "5d9f09dd6b0534d4aaee6a7573c514bc591e93d6eb488d9ab00a20713ea754f4",
+    "b1s0-corrected.json": "2ae625f88ebe180147109ab214b165210de09da5771fb808896cfd4391d7af65",
+    "b1s1-off.json": "429eb6ac987571ec5b9c2a9f35a78bbe2ec51a3ca796ee72341d9719eb2c8e02",
+    "b1s2-off.json": "60bacc06687738c57badd5d0b52a1e541a909011d69523bb25458e6eb8a724b4",
+    "b1s3-corrected.json": "6b566bc849d44c44fce27cb61ece38892e0447e001ef2b6b2ad278af7326fd39",
+    "b2s0-off.json": "0ecf97ebd0124267716b2a14cd01a29dab7c2aed9a2f2a8a8d2307117973fcde",
+    "b2s1-corrected.json": "d8e3670111b521eb1bee2955f4f1b0a32fd5953da2154bcc28a0c38ab896e1ae",
+    "b2s2-corrected.json": "0cfd28d1478122e6dbd9470236b5a4d061777d56e5ecf36d8345b37d4fd180cc",
+    "b2s3-off.json": "8fcdeadb7c0127effd5081fa3907682aa7b5cf0f6551297b8f63515d80706e8e",
+    "b3s0-corrected.json": "9d1684b19346b684e81614dddfae72a9027a6d4d40b1347dc45f8b62183a3f7d",
+    "b3s1-off.json": "eb4e0fac6095245916d2049cf52b671fe44b9ae60d5869bbb8da9fc1a3f39584",
+    "b3s2-off.json": "76b5e71fcb7222c85f2bba9298590c509ae37ca8912e429365e5079743f175d4",
+    "b3s3-corrected.json": "b3afa2c9094e9f3c3c994aebbec79aed1753bd47074a6f56e76506019c07f699",
+    "b4s0-off.json": "318405f8c8585e12166ddd3937ae37db038f62849376b3c0545f3ab23c334e88",
+    "b4s1-corrected.json": "0c48c27880cf67dd8e3a0c3fbfb4cdc024e0d9fe86b306333b87e0e9a0aff730",
+    "b4s2-corrected.json": "69f6e2db0fd70cf1d89432f6cba851d0ca59d2831d662ddfe2431db6e03683b5",
+    "b4s3-off.json": "8da22d6782521eccf18b866255180bc4c69b1f411206cc9c70a21637d5b466b4"
+  },
+  "schedule_flip": false,
+  "schema_version": 1,
+  "score": {
+    "acceptance": {
+      "decode_ratio_lower_95_strictly_greater_than": 1.0,
+      "ttft_ratio_upper_95_maximum": 1.05
+    },
+    "block_decode_tokens_per_second": {
+      "corrected": [2.195563496095196, 2.1867591280809604, 2.186427452799714, 2.184180300651419, 2.1866425964161693],
+      "off": [2.2200837315962043, 2.2089555437793003, 2.2117649792713645, 2.2079969870233684, 2.20750772060099]
+    },
+    "block_ttft_seconds": {
+      "corrected": [46.612904856, 45.870213314, 49.2340897055, 48.618314544499995, 48.1738730125],
+      "off": [45.5503646775, 43.898630437, 48.7164189045, 46.7308292815, 49.448638896999995]
+    },
+    "checks": {
+      "byte_and_token_identity": true,
+      "decode_improvement_lower_95": false,
+      "ttft_non_regression_upper_95": true
+    },
+    "decode_ratio_lower_95": 0.9886772305621901,
+    "formula": "one-sided 95% paired geometric ratio bounds over five block means",
+    "ttft_ratio_upper_95": 1.0460583955158789,
+    "verdict": "FAIL"
+  },
+  "seed": 646385734,
+  "verdict": "FAIL"
+}

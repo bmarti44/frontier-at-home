@@ -181,6 +181,7 @@ map_allowlist = {
     "evidence_archive",
     "evalset_sha256",
     "model_files",
+    "row_sha256",
     "shared_libraries",
     "tests_sha256_by_path",
 }
