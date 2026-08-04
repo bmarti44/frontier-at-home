@@ -5,6 +5,7 @@ path = sys.argv[1]
 cache_slots = int(sys.argv[2]) if len(sys.argv) > 2 else 7398
 if cache_slots <= 0:
     raise SystemExit("cache slots must be positive")
+N_EXPERT = 256
 # decode steps: N8 lines (one per layer per token). batch prefill: N>8.
 decode = defaultdict(list)   # layer -> [set(ids) per step in order]
 batch  = defaultdict(list)
@@ -92,6 +93,72 @@ for horizon in (2, 4, 8):
             f"frequency-prior K={horizon} budget={budget} samples={samples} "
             f"recall={hit_experts / target_experts:.6f} "
             f"set_coverage={contained_sets / samples:.6f}"
+        )
+
+# Causal expert-history baseline. Fit expert-to-future-union transitions only
+# on the first 70% of each layer and score the final 30%. This tests whether
+# recent routing contains signal beyond a static popularity prior before paying
+# to capture hidden-state features for a trained low-rank probe.
+for horizon in (2, 4, 8):
+    budgets = (2, 8, 16, 32, 48, 64)
+    totals = {
+        budget: {
+            "hits": 0, "targets": 0, "covered": 0,
+            "frequency_hits": 0, "samples": 0,
+        }
+        for budget in budgets
+    }
+    for layer in layers:
+        sequence = [set(ids) for _, ids in decode[layer]]
+        split = max(1, len(sequence) * 7 // 10)
+        frequency = Counter(
+            expert
+            for selected in sequence[:split]
+            for expert in selected
+        )
+        transitions = defaultdict(Counter)
+        for token in range(max(0, split - horizon)):
+            target = set().union(*sequence[token + 1:token + horizon + 1])
+            for source in sequence[token]:
+                transitions[source].update(target)
+        frequency_order = sorted(
+            range(N_EXPERT),
+            key=lambda expert: (-frequency[expert], expert),
+        )
+        for token in range(split, len(sequence) - horizon):
+            target = set().union(*sequence[token + 1:token + horizon + 1])
+            scores = Counter()
+            for source in sequence[token]:
+                scores.update(transitions[source])
+            ranked = sorted(
+                range(N_EXPERT),
+                key=lambda expert: (-scores[expert], -frequency[expert], expert),
+            )
+            for budget in budgets:
+                predicted = set(ranked[:budget])
+                frequency_predicted = set(frequency_order[:budget])
+                total = totals[budget]
+                total["hits"] += len(predicted & target)
+                total["targets"] += len(target)
+                total["covered"] += int(target <= predicted)
+                total["frequency_hits"] += len(frequency_predicted & target)
+                total["samples"] += 1
+    for budget in budgets:
+        total = totals[budget]
+        if total["samples"] == 0 or total["targets"] == 0:
+            print(
+                f"markov-history K={horizon} budget={budget} "
+                "samples=0 status=NO_RESULT"
+            )
+            continue
+        recall = total["hits"] / total["targets"]
+        frequency_recall = total["frequency_hits"] / total["targets"]
+        print(
+            f"markov-history K={horizon} budget={budget} "
+            f"samples={total['samples']} recall={recall:.6f} "
+            f"set_coverage={total['covered'] / total['samples']:.6f} "
+            f"frequency_recall={frequency_recall:.6f} "
+            f"recall_gain_pp={100.0 * (recall - frequency_recall):.6f}"
         )
 
 # 2. popularity skew (decode selections)
