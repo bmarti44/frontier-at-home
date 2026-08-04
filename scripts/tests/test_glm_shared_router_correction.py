@@ -230,6 +230,10 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
                 "ttft_seconds": 1.0,
                 "completion_tokens": 128,
                 "response_signature": {"token_ids": [1, 2, 3]},
+                "fixture_sha256": "a" * 64,
+                "server_boot_id": f"boot-{block}-{sequence}",
+                "binary_sha256": "b" * 64,
+                "configuration_sha256": ("c" if mode == "off" else "d") * 64,
             })
         passed = RUNNER_MODULE.campaign_verdict(rows, False)
         self.assertEqual(len(rows), 20)
@@ -252,6 +256,10 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
                 "ttft_seconds": 1.0,
                 "completion_tokens": 128,
                 "response_signature": {"token_ids": [1, 2, 3]},
+                "fixture_sha256": "a" * 64,
+                "server_boot_id": f"boot-{block}-{sequence}",
+                "binary_sha256": "b" * 64,
+                "configuration_sha256": ("c" if mode == "off" else "d") * 64,
             })
         with self.assertRaises(ValueError):
             RUNNER_MODULE.campaign_verdict(rows, False)

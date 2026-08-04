@@ -11,10 +11,17 @@ import os
 from pathlib import Path
 import re
 import signal
+import statistics
 import subprocess
 import sys
 import time
 import urllib.request
+
+
+SCRIPT_DIRECTORY = Path(__file__).resolve().parent
+if str(SCRIPT_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIRECTORY))
+from glm52_goal import paired_ratio_bound, validate_ab_blocks
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +32,8 @@ FREEZE_MANIFEST = ROOT / "results/glm52-gates/R0a-shared-router-freeze.json"
 RANDOMNESS_RECEIPT = ROOT / "results/glm52-gates/R0a-shared-router-randomness.json"
 PERF_FREEZE_MANIFEST = ROOT / "results/glm52-gates/R0a-shared-router-perf-freeze.json"
 PERF_RANDOMNESS_RECEIPT = ROOT / "results/glm52-gates/R0a-shared-router-perf-randomness.json"
+CAMPAIGN_FREEZE_MANIFEST = ROOT / "results/glm52-gates/R0a-shared-router-campaign-freeze.json"
+CAMPAIGN_RANDOMNESS_RECEIPT = ROOT / "results/glm52-gates/R0a-shared-router-campaign-randomness.json"
 DRAND_ENDPOINT = "https://api.drand.sh/public/{round}"
 MODEL = Path("/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf")
 MODEL_BYTES = 211075856448
@@ -169,6 +178,104 @@ def performance_verdict(
         "formula": "corrected_decode_tokens_per_second / off_decode_tokens_per_second",
         "minimum_decode_ratio": 0.95,
         "decode_ratio": ratio,
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
+def campaign_schedule(flip: bool) -> tuple[tuple[int, int, str], ...]:
+    if not isinstance(flip, bool):
+        raise ValueError("campaign orientation must be boolean")
+    rows: list[tuple[int, int, str]] = []
+    for block in range(5):
+        order = "ABBA" if (block + int(flip)) % 2 == 0 else "BAAB"
+        rows.extend(
+            (block, sequence, "off" if arm == "A" else "corrected")
+            for sequence, arm in enumerate(order)
+        )
+    return tuple(rows)
+
+
+def campaign_verdict(rows: list[dict[str, object]], flip: bool) -> dict[str, object]:
+    expected_keys = {
+        "block", "sequence", "mode", "decode_tokens_per_second",
+        "ttft_seconds", "completion_tokens", "response_signature",
+        "fixture_sha256", "server_boot_id", "binary_sha256",
+        "configuration_sha256",
+    }
+    if len(rows) != 20 or any(not isinstance(row, dict) or set(row) != expected_keys
+                              for row in rows):
+        raise ValueError("campaign requires 20 exact-schema rows")
+    expected = campaign_schedule(flip)
+    observed = tuple((row["block"], row["sequence"], row["mode"]) for row in rows)
+    if observed != expected:
+        raise ValueError("campaign execution order differs from the frozen schedule")
+    validation_rows = []
+    signatures: set[str] = set()
+    for row in rows:
+        mode = row["mode"]
+        if mode not in {"off", "corrected"}:
+            raise ValueError("campaign row has invalid mode")
+        decode = row["decode_tokens_per_second"]
+        ttft = row["ttft_seconds"]
+        if (isinstance(decode, bool) or not isinstance(decode, (int, float)) or
+                not math.isfinite(float(decode)) or float(decode) <= 0 or
+                isinstance(ttft, bool) or not isinstance(ttft, (int, float)) or
+                not math.isfinite(float(ttft)) or float(ttft) <= 0 or
+                row["completion_tokens"] != 128):
+            raise ValueError("campaign timing or completion coverage is invalid")
+        signature = json.dumps(
+            row["response_signature"], sort_keys=True, separators=(",", ":"),
+            allow_nan=False,
+        )
+        signatures.add(signature)
+        validation_rows.append({
+            "block": row["block"],
+            "sequence": row["sequence"],
+            "arm": "A" if mode == "off" else "B",
+            "fixture_sha256": row["fixture_sha256"],
+            "server_boot_id": row["server_boot_id"],
+            "binary_sha256": row["binary_sha256"],
+            "configuration_sha256": row["configuration_sha256"],
+        })
+    if len(signatures) != 1:
+        raise ValueError("campaign response signatures differ")
+    validate_ab_blocks(validation_rows, flip=flip)
+    off_decode: list[float] = []
+    corrected_decode: list[float] = []
+    off_ttft: list[float] = []
+    corrected_ttft: list[float] = []
+    for block in range(5):
+        for mode, decode_target, ttft_target in (
+            ("off", off_decode, off_ttft),
+            ("corrected", corrected_decode, corrected_ttft),
+        ):
+            group = [row for row in rows if row["block"] == block and row["mode"] == mode]
+            if len(group) != 2:
+                raise ValueError("campaign block lacks two observations per arm")
+            decode_target.append(statistics.fmean(
+                float(row["decode_tokens_per_second"]) for row in group
+            ))
+            ttft_target.append(statistics.fmean(float(row["ttft_seconds"]) for row in group))
+    decode_lower = paired_ratio_bound(corrected_decode, off_decode, side="lower")
+    ttft_upper = paired_ratio_bound(corrected_ttft, off_ttft, side="upper")
+    checks = {
+        "decode_improvement_lower_95": decode_lower > 1.0,
+        "ttft_non_regression_upper_95": ttft_upper <= 1.05,
+        "byte_and_token_identity": len(signatures) == 1,
+    }
+    return {
+        "formula": "one-sided 95% paired geometric ratio bounds over five block means",
+        "acceptance": {
+            "decode_ratio_lower_95_strictly_greater_than": 1.0,
+            "ttft_ratio_upper_95_maximum": 1.05,
+        },
+        "decode_ratio_lower_95": decode_lower,
+        "ttft_ratio_upper_95": ttft_upper,
+        "block_decode_tokens_per_second": {
+            "off": off_decode, "corrected": corrected_decode,
+        },
+        "block_ttft_seconds": {"off": off_ttft, "corrected": corrected_ttft},
         "checks": checks,
         "verdict": "PASS" if all(checks.values()) else "FAIL",
     }
@@ -545,6 +652,144 @@ def performance_run(args: argparse.Namespace) -> int:
     return 0 if summary["verdict"] == "PASS" else 1
 
 
+def _result_metrics(path: Path) -> tuple[float, float, int]:
+    payload = strict_json(path)
+    cells = payload.get("cells")
+    if not isinstance(cells, list) or len(cells) != 1:
+        raise ValueError("campaign result has an invalid cell count")
+    reps = cells[0].get("reps") if isinstance(cells[0], dict) else None
+    if not isinstance(reps, list) or len(reps) != 1 or reps[0].get("valid") is not True:
+        raise ValueError("campaign result has no valid repetition")
+    decode = reps[0].get("decode_tok_s")
+    ttft = reps[0].get("ttft_s")
+    completion = reps[0].get("completion_tokens")
+    if (isinstance(decode, bool) or not isinstance(decode, (int, float)) or
+            not math.isfinite(float(decode)) or float(decode) <= 0 or
+            isinstance(ttft, bool) or not isinstance(ttft, (int, float)) or
+            not math.isfinite(float(ttft)) or float(ttft) <= 0 or
+            completion != 128):
+        raise ValueError("campaign result has invalid timing or completion")
+    return float(decode), float(ttft), int(completion)
+
+
+def campaign_run(args: argparse.Namespace) -> int:
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,19}", args.tag) is None:
+        raise ValueError("invalid campaign tag")
+    freeze = frozen_inputs(CAMPAIGN_FREEZE_MANIFEST, CAMPAIGN_RANDOMNESS_RECEIPT)
+    candidate = Path(str(freeze["candidate_directory"])).resolve()
+    binary = candidate / "ds4-server"
+    binary_sha256 = str(freeze["binary_sha256"])
+    model_sha256 = str(freeze["model_sha256"])
+    engine_commit = str(freeze["engine_commit"])
+    seed = int(freeze["seed"])
+    flip = bool(seed & 1)
+    if sha256(TOKENIZER) != TOKENIZER_SHA256:
+        raise ValueError("tokenizer identity mismatch")
+    no_other_inference()
+    available_gib = int(next(
+        line.split()[1] for line in Path("/proc/meminfo").read_text().splitlines()
+        if line.startswith("MemAvailable:")
+    )) / 1048576
+    if available_gib < 110:
+        raise RuntimeError(f"only {available_gib:.3f} GiB available")
+    root = Path(f"/home/bmarti44/.local/state/glm52-{args.tag}")
+    if root.exists():
+        raise FileExistsError(root)
+    root.mkdir(mode=0o700, parents=True)
+    rows: list[dict[str, object]] = []
+    for block, sequence, mode in campaign_schedule(flip):
+        label = f"b{block}s{sequence}-{mode}"
+        out = root / label
+        values = performance_environment_for(mode, out / "runtime.lock")
+        environment = os.environ.copy()
+        for name in list(environment):
+            if name.startswith("DS4_") or name.startswith("GLM_SAFE_"):
+                environment.pop(name)
+        environment.update(values)
+        environment.update({
+            "GLM_CANDIDATE_SRC": str(candidate),
+            "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+            "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+            "GLM_SAFE_EXPECTED_BINARY_SHA256": binary_sha256,
+            "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(ENV_NAMES),
+            "GLM_SAFE_EXPECTED_ENV_SHA256": environment_sha256(values),
+            "GLM_SAFE_MEMORY_HIGH_GIB": "69",
+            "GLM_SAFE_KILL_FLOOR_GIB": "18",
+            "GLM_SAFE_MIN_START_GIB": "110",
+            "GLM_SAFE_TIMEOUT_S": "3600",
+            "GLM_SAFE_FINAL_ARTIFACTS": ",".join((
+                str(out / "arm.json"), str(out / "result.json"),
+                str(out / "server.log"),
+            )),
+        })
+        completed = subprocess.run([
+            str(CGROUP), "--tag", f"{args.tag}-b{block}s{sequence}-{mode}",
+            "--", sys.executable, str(Path(__file__).resolve()), "_arm",
+            "--purpose", "performance", "--mode", mode, "--out", str(out),
+            "--binary", str(binary), "--binary-sha256", binary_sha256,
+            "--model-sha256", model_sha256, "--engine-commit", engine_commit,
+            "--seed", str(seed), "--port", str(args.port),
+        ], env=environment, stdin=subprocess.DEVNULL, capture_output=True,
+           timeout=3700, check=False)
+        stdout_path = root / f"{label}.containment.stdout.log"
+        stderr_path = root / f"{label}.containment.stderr.log"
+        stdout_path.write_bytes(completed.stdout)
+        stderr_path.write_bytes(completed.stderr)
+        if completed.returncode != 0:
+            raise RuntimeError(f"contained campaign arm {label} failed rc={completed.returncode}")
+        containment = containment_record(stdout_path)
+        containment_path = root / f"{label}.containment.json"
+        containment_path.write_text(
+            json.dumps(containment, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+        )
+        arm_record = strict_json(out / "arm.json")
+        decode, ttft, completion = _result_metrics(out / "result.json")
+        row = {
+            "block": block,
+            "sequence": sequence,
+            "mode": mode,
+            "decode_tokens_per_second": decode,
+            "ttft_seconds": ttft,
+            "completion_tokens": completion,
+            "response_signature": arm_record["response_signature"],
+            "fixture_sha256": arm_record["response_signature"]["request_sha256"],
+            "server_boot_id": containment["crash_directory"],
+            "binary_sha256": binary_sha256,
+            "configuration_sha256": arm_record["environment_sha256"],
+        }
+        row_path = root / f"{label}.json"
+        row_path.write_text(
+            json.dumps(row, sort_keys=True, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+        rows.append(row)
+        no_other_inference()
+    score = campaign_verdict(rows, flip)
+    frozen_inputs(CAMPAIGN_FREEZE_MANIFEST, CAMPAIGN_RANDOMNESS_RECEIPT)
+    summary = {
+        "schema_version": 1,
+        "candidate_hash": freeze["candidate_hash"],
+        "engine_commit": engine_commit,
+        "binary_sha256": binary_sha256,
+        "model_sha256": model_sha256,
+        "seed": seed,
+        "schedule_flip": flip,
+        "row_sha256": {
+            f"b{row['block']}s{row['sequence']}-{row['mode']}.json": sha256(
+                root / f"b{row['block']}s{row['sequence']}-{row['mode']}.json"
+            ) for row in rows
+        },
+        "score": score,
+        "verdict": score["verdict"],
+    }
+    (root / "summary.json").write_text(
+        json.dumps(summary, sort_keys=True, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps(summary, sort_keys=True, indent=2, allow_nan=False))
+    return 0 if summary["verdict"] == "PASS" else 1
+
+
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
     sub = result.add_subparsers(dest="command", required=True)
@@ -556,6 +801,10 @@ def parser() -> argparse.ArgumentParser:
     perf.add_argument("--tag", required=True)
     perf.add_argument("--port", type=int, default=8040)
     perf.set_defaults(func=performance_run)
+    campaign = sub.add_parser("campaign")
+    campaign.add_argument("--tag", required=True)
+    campaign.add_argument("--port", type=int, default=8040)
+    campaign.set_defaults(func=campaign_run)
     internal = sub.add_parser("_arm")
     internal.add_argument("--purpose", choices=("recall", "performance"), required=True)
     internal.add_argument("--mode", choices=("off", "on", "corrected"), required=True)
