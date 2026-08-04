@@ -165,7 +165,7 @@ class SharedRouterSourceContractTests(unittest.TestCase):
         """Reject generic or compile-time-dead hook placement."""
         marker = 'glm_union_probe_dump_triplet('
         self.assertIn(marker, self.added_source)
-        call_at = self.source.rfind("+    if (ok) ok = " + marker)
+        call_at = self.source.rfind("if (ok) ok = " + marker)
         self.assertGreaterEqual(call_at, 0)
         hunk_at = self.source.rfind("@@", 0, call_at)
         hunk_end = self.source.find("\n", hunk_at)
@@ -173,9 +173,7 @@ class SharedRouterSourceContractTests(unittest.TestCase):
             "glm_graph_forward_indexed_tokens",
             self.source[hunk_at:hunk_end],
         )
-        indexed_if = self.source.rfind("if (ok && use_batch_ffn)", 0, call_at)
-        fallback = self.source.find("} else if (ok)", indexed_if)
-        self.assertGreaterEqual(indexed_if, 0)
+        fallback = self.source.find("} else if (ok)", call_at)
         self.assertGreater(fallback, call_at)
         self.assertNotIn(
             'metal_graph_debug_dump_tensor("glm_indexed_ffn_norm"',

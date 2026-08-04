@@ -14,7 +14,10 @@ from typing import Any
 N_EMBD = 7168
 N_EXPERT = 256
 N_EXPERT_USED = 8
-EVENT_RE = re.compile(r"^GLM_UNION_TRACE_OK layer=(\d+) pos=(\d+) rows=(\d+)$")
+EVENT_RE = re.compile(
+    r"^GLM_UNION_TRACE_OK path=full_indexed_batch_ffn "
+    r"layer=(\d+) pos=(\d+) rows=(\d+)$"
+)
 FILE_RE = re.compile(
     r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_selected)-"
     r"(?P<layer>\d+)_pos(?P<pos>\d+)\.(?P<ext>f32|i32)$"
@@ -29,33 +32,60 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _finite_f32(path: Path) -> bool:
+def _finite_variable_f32(path: Path) -> bool:
     values = array("f")
     with path.open("rb") as handle:
         values.fromfile(handle, path.stat().st_size // values.itemsize)
-    return all(math.isfinite(value) for value in values)
+    return bool(values) and all(math.isfinite(value) for value in values) and min(values) < max(values)
 
 
-def _valid_selected(path: Path, rows: int) -> bool:
+def _selected_rows(path: Path, rows: int) -> list[tuple[int, ...]] | None:
     values = array("i")
     with path.open("rb") as handle:
         values.fromfile(handle, path.stat().st_size // values.itemsize)
     if len(values) != rows * N_EXPERT_USED:
-        return False
+        return None
+    result: list[tuple[int, ...]] = []
     for offset in range(0, len(values), N_EXPERT_USED):
-        row = values[offset:offset + N_EXPERT_USED]
+        row = tuple(values[offset:offset + N_EXPERT_USED])
         if any(value < 0 or value >= N_EXPERT for value in row):
-            return False
+            return None
         if len(set(row)) != N_EXPERT_USED:
-            return False
-    return True
+            return None
+        result.append(row)
+    return result
 
 
-def score_trace(directory: Path, server_log: Path, *, max_bytes: int) -> dict[str, Any]:
+def score_trace(
+    directory: Path,
+    server_log: Path,
+    *,
+    max_bytes: int,
+    expected_layers: set[int],
+    expected_chunks: list[tuple[int, int]],
+) -> dict[str, Any]:
     """Return a fail-closed result for one trace attempt."""
     checks: dict[str, bool] = {}
     result: dict[str, Any] = {"verdict": "FAIL", "checks": checks}
-    if not directory.is_dir() or not server_log.is_file() or max_bytes <= 0:
+    valid_layers = (
+        isinstance(expected_layers, set) and bool(expected_layers) and
+        all(isinstance(layer, int) and not isinstance(layer, bool) and layer >= 4
+            for layer in expected_layers)
+    )
+    valid_chunks = bool(expected_chunks)
+    previous_end: int | None = None
+    for chunk in expected_chunks:
+        if (not isinstance(chunk, tuple) or len(chunk) != 2 or
+                any(not isinstance(value, int) or isinstance(value, bool) for value in chunk)):
+            valid_chunks = False
+            break
+        pos, rows = chunk
+        if pos < 0 or rows <= 0 or (previous_end is not None and pos != previous_end):
+            valid_chunks = False
+            break
+        previous_end = pos + rows
+    if (not directory.is_dir() or not server_log.is_file() or max_bytes <= 0 or
+            not valid_layers or not valid_chunks):
         checks["inputs"] = False
         return result
     checks["inputs"] = True
@@ -73,6 +103,12 @@ def score_trace(directory: Path, server_log: Path, *, max_bytes: int) -> dict[st
             duplicate_log_key = True
         expected[key] = int(match.group(3))
     checks["unique_nonempty_log_events"] = bool(expected) and not duplicate_log_key
+    expected_keys = {
+        (layer, pos): rows
+        for layer in expected_layers
+        for pos, rows in expected_chunks
+    }
+    checks["exact_indexed_chunk_coverage"] = expected == expected_keys
 
     files: dict[tuple[int, int], dict[str, Path]] = {}
     prefixes: set[str] = set()
@@ -92,6 +128,10 @@ def score_trace(directory: Path, server_log: Path, *, max_bytes: int) -> dict[st
         layer, pos = int(match.group("layer")), int(match.group("pos"))
         key = (layer, pos)
         kind = match.group("kind")
+        expected_extension = "i32" if kind == "router_selected" else "f32"
+        if match.group("ext") != expected_extension:
+            recognized = False
+            continue
         if kind in files.setdefault(key, {}):
             duplicate_file_key = True
         files[key][kind] = path
@@ -108,6 +148,7 @@ def score_trace(directory: Path, server_log: Path, *, max_bytes: int) -> dict[st
 
     shapes_ok = True
     values_ok = True
+    all_selected_rows: list[tuple[int, ...]] = []
     wanted = {"ffn_norm", "router_logits", "router_selected"}
     for key, rows in expected.items():
         group = files.get(key, {})
@@ -123,15 +164,22 @@ def score_trace(directory: Path, server_log: Path, *, max_bytes: int) -> dict[st
                for kind, size in expected_sizes.items()):
             shapes_ok = False
             continue
-        if not _finite_f32(group["ffn_norm"]) or not _finite_f32(group["router_logits"]):
+        if (not _finite_variable_f32(group["ffn_norm"]) or
+                not _finite_variable_f32(group["router_logits"])):
             values_ok = False
-        if not _valid_selected(group["router_selected"], rows):
+        selected_rows = _selected_rows(group["router_selected"], rows)
+        if selected_rows is None:
             values_ok = False
+        else:
+            all_selected_rows.extend(selected_rows)
+    if len(all_selected_rows) < 2 or len(set(all_selected_rows)) < 2:
+        values_ok = False
     checks["exact_triplet_shapes"] = shapes_ok
     checks["finite_values_and_valid_ids"] = values_ok
 
     result.update({
         "events": len(expected),
+        "total_rows": sum(expected.values()),
         "total_bytes": total_bytes,
         "artifacts": artifacts,
     })
