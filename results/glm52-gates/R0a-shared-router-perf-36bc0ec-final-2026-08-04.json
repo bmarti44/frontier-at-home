@@ -1,0 +1,60 @@
+{
+  "artifact": "GLM-5.2 R0-UPGRADE-a corrected-prefetch serving-speed screen",
+  "schema_version": 1,
+  "status": "PASS_SCREEN",
+  "decision": "The corrected production prefetch path retained at least 95% of matched prefetch-off decode speed with identical output. Proceed to balanced multi-block qualification; do not adopt from this one-pair screen.",
+  "candidate": {
+    "repo_commit": "36bc0ec1ddbe2d07a7376085f8484438342021c1",
+    "engine_commit": "3332c25b310ff1bca58ee3bc028f1a545db7e95b",
+    "binary_sha256": "33800c87e8c2171b62befd01fe79413e8a108be52455521eddea18026964c572",
+    "freeze_commit": "7c153c82a5b124a47721a3f5e918607175037029",
+    "randomness_round": 6348295,
+    "randomness": "399500a2ea486eabac141d801d78ef96b1c5a18745bfabeabe0109894bcacef4",
+    "seed": 1567780849,
+    "arm_order": ["corrected", "off"]
+  },
+  "acceptance": {
+    "formula": "corrected_decode_tokens_per_second / off_decode_tokens_per_second",
+    "minimum_decode_ratio": 0.95,
+    "observed_decode_ratio": 0.9878038171323348,
+    "output_identity_required": true,
+    "verdict": "PASS"
+  },
+  "measurements": {
+    "corrected_decode_tokens_per_second": 2.2740340117812883,
+    "off_decode_tokens_per_second": 2.3021109782537303,
+    "corrected_completion_tokens": 128,
+    "off_completion_tokens": 128,
+    "request_sha256": "695f533c8efafb5eb08f572402bc3ff078f900b288a8abdceb90885bba5fdc95",
+    "matched_outputs_byte_and_token_identical": true,
+    "corrected_activation_marker_present": true,
+    "diagnostic_predpair_rows": 0
+  },
+  "safety": {
+    "cgroup_high_events": 0,
+    "cgroup_max_events": 0,
+    "cgroup_oom_events": 0,
+    "cgroup_oom_kill_events": 0,
+    "cgroup_swap_bytes": 0,
+    "xid": false,
+    "surviving_ds4_server_processes": 0,
+    "host_minimum_available_gib": 24.528148651123047
+  },
+  "evidence": {
+    "path": "/home/bmarti44/.local/state/glm52-glm52-r0a-perf-36bc0ec",
+    "artifact_sha256": {
+      "summary.json": "72b8720f2487b81831883059e3e362cf723af99690c082ebbdc9f1601947705e",
+      "corrected/arm.json": "38bf2a4a87d3c38d8b1e702d12bf5d44e70f470649253957b87ab0c554a3da91",
+      "corrected/result.json": "9ae8714e5390ab63aa166dfb2c954922c73748557a7ab731c1092acb837640fe",
+      "corrected/server.log": "347b3771ae8ea19719ef9a656cf572a6a01d58b1131c624d71b40feb8f78f874",
+      "corrected.containment.json": "a92a6b3c79dfa09888526463006059ed7aa5aa2dada58305295cb664d45ebd4d",
+      "off/arm.json": "9fb3a30dbfca8c48153f11a33807c622d14dae73a0d249956f32edc582adfdcd",
+      "off/result.json": "42d5e9cc73c4998f9210c086645a5b8e1fea3cc9f9150d3f4fc2a0eb9e4c9cfe",
+      "off/server.log": "0d930c92c0570be2158c7d4871ab5c1bdc5707af9679fa019e8bc6c8cc6c768c",
+      "off.containment.json": "03c3aa98ad677ee1bf9f28dae9db88d414168623da8cb6e849ca6ec9c99ecca9",
+      "../glm52-crashlog/20260804-174729-glm52-r0a-perf-36bc0ec-corrected/samples.log": "e1cf060bc45014c903bd8d3e4dcc2910bb67d208ebda52491bc049e7b445c120",
+      "../glm52-crashlog/20260804-174920-glm52-r0a-perf-36bc0ec-off/samples.log": "7458333a59770664656874daec51ca98eb7ab3fdc163171cb9cb23185f4745d5"
+    }
+  },
+  "reporting_caveat": "This is a randomized one-pair rejection screen, not a confidence-bound speed qualification or adoption result. Its TTFT and prefill timings use the stripped control configuration and are not the adopted serving-profile metrics. The next gate must use balanced multi-block arm orders and the existing lower-bound acceptance rule."
+}
