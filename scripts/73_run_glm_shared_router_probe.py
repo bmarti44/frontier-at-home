@@ -297,6 +297,12 @@ def environment_sha256(values: dict[str, str]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def campaign_configuration_sha256(mode: str, lock_file: Path) -> str:
+    values = performance_environment_for(mode, lock_file)
+    values["DS4_LOCK_FILE"] = "<ARM_LOCAL>"
+    return environment_sha256(values)
+
+
 def no_other_inference() -> None:
     found = subprocess.run(
         ["pgrep", "-x", "ds4-server"], capture_output=True, text=True, check=False
@@ -755,7 +761,9 @@ def campaign_run(args: argparse.Namespace) -> int:
             "fixture_sha256": arm_record["response_signature"]["request_sha256"],
             "server_boot_id": containment["crash_directory"],
             "binary_sha256": binary_sha256,
-            "configuration_sha256": arm_record["environment_sha256"],
+            "configuration_sha256": campaign_configuration_sha256(
+                mode, out / "runtime.lock"
+            ),
         }
         row_path = root / f"{label}.json"
         row_path.write_text(
