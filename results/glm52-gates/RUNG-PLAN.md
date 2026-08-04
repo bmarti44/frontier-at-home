@@ -458,12 +458,26 @@ and output bytes; containment had no pressure, OOM, swap, Xid, or survivor and
 kept at least 24.522499084472656 GiB available. The terminal evidence is
 `R0a-shared-router-f9812ec-final-2026-08-04.json`. This is a recall result, not
 a serving-speed result: the trace arm synchronously reads and logs every set.
-Next, compare the actual corrected-prefetch flag against prefetch-off with a
-small matched throughput falsifier. Reject before a full campaign if corrected
-decode is below 95% of off; passing that cheap screen only permits the existing
-five-block serving campaign and its positive completed-time lower-bound gate.
+The small serving screen passed its 95% non-regression falsifier at 2.2740
+tok/s corrected versus 2.3021 tok/s off (ratio 0.9878), so the item advanced to
+the frozen five-block campaign.
 
-Fetch asynchronously and hand completed entries through a staging queue so the
+Terminal serving result (2026-08-04): **FAIL; default-off; do not adopt.** The
+20-arm `ABBA/BAAB/ABBA/BAAB/ABBA` fresh-server campaign produced identical
+128-token outputs and no containment, OOM, swap-growth, Xid, or survivor
+failure. Across five paired block means, corrected decode was consistently
+slower: its one-sided 95% lower ratio was 0.9886772305621901, while adoption
+required a value strictly above 1.0. TTFT passed its non-regression gate with a
+one-sided 95% upper ratio of 1.0460583955158789 against the 1.05 ceiling. The
+TTFT values are control-configuration timings and are not the adopted warm
+prefix profile's 1.76-second TTFT. Terminal evidence is
+`R0a-shared-router-campaign-e745e4c-final-2026-08-04.json`. This closes
+R0-UPGRADE a without spending fidelity: better recall did not overcome the
+correction's serving overhead. Continue to R0-UPGRADE b/c; do not compose this
+rejected correction into their baseline.
+
+For any future predictor that passes its offline gate, fetch asynchronously and
+hand completed entries through a staging queue so the
 single-threaded arena map remains single-owner. Require Sol review of event
 lifetime and ownership before a serving run. Gate on byte-identical target
 output, equal target access streams, no stale slot reuse, measured recall/I/O,
