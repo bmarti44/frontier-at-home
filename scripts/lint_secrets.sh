@@ -139,6 +139,8 @@ allowlist = {
     "response_sha256",
     "result_sha256",
     "scorer_sha256",
+    "scorer_tests_sha256",
+    "source_contract_tests_sha256",
     "server_sha256",
     "server_log_sha256",
     "containment_stdout_sha256",
