@@ -606,7 +606,7 @@ def score_sha_prefetch_campaign(
             t["attempts"] <= 0 or t["sha_successes"] <= 0 or t["copies"] <= 0 or
             t["ready"] != t["sha_successes"] or
             t["copies"] + t["stale"] + t["current_ready"] != t["ready"] or
-            t["fallback"] != t["late"] or
+            t["fallback"] != t["late"] or t["fallback"] != reads or
             min(t["read_ns"], t["sha_ns"], t["copy_ns"]) <= 0
         ):
             raise ValueError("prefetch terminal outcomes do not reconcile")
@@ -1402,7 +1402,7 @@ def parse_sha_prefetch_engine_log(
         r"payload_bytes=(\d+) ok=([01])$",
         re.MULTILINE,
     )
-    auth = [
+    all_auth = [
         {
             "mode": match[0], "generation": int(match[1]),
             "attempt": int(match[2]), "key": int(match[3]),
@@ -1410,18 +1410,23 @@ def parse_sha_prefetch_engine_log(
             "payload_bytes": int(match[6]), "ok": int(match[7]),
         }
         for match in auth_pattern.findall(text)
-        if match[0] == mode
     ]
-    identifiers = [(row["generation"], row["attempt"]) for row in auth]
+    identifiers = [
+        (row["mode"], row["generation"], row["attempt"])
+        for row in all_auth
+    ]
     if len(set(identifiers)) != len(identifiers):
         raise ValueError("duplicate SHA-auth attempt")
     if any(
         row["generation"] != model_generation or row["ok"] != 1
         or row["payload_bytes"] != EXPERT_RECORD_PAYLOAD_BYTES
         or row["submit_ns"] <= 0 or row["complete_ns"] <= row["submit_ns"]
-        for row in auth
+        for row in all_auth
     ):
         raise ValueError("failed or malformed SHA-auth attempt")
+    demand_auth = [row for row in all_auth if row["mode"] == "demand_sha"]
+    prefetch_auth = [row for row in all_auth if row["mode"] == "prefetch_sha"]
+    auth = demand_auth if mode == "demand_sha" else prefetch_auth
 
     load_pattern = re.compile(
         r"^LOADPROF L\d+ .*?fetch_ms=([0-9]+(?:\.[0-9]+)?) .*?"
@@ -1442,7 +1447,7 @@ def parse_sha_prefetch_engine_log(
     logical_bytes = sum(int(row[3]) for row in loads)
     peak_qd = max(int(row[5]) for row in loads)
     if mode == "off":
-        if auth or reads or logical_bytes or peak_qd:
+        if all_auth or reads or logical_bytes or peak_qd:
             raise ValueError("off arm performed authenticated slab work")
         zero = {
             name: 0 for name in (
@@ -1457,6 +1462,40 @@ def parse_sha_prefetch_engine_log(
             "slab_reads": 0, "slab_peak_qd": 0,
             "completed_fetch_ms": [], "telemetry": zero,
         }
+    if (
+        len(demand_auth) != reads
+        or logical_bytes != len(demand_auth) * EXPERT_RECORD_PAYLOAD_BYTES
+        or (mode == "demand_sha" and prefetch_auth)
+    ):
+        raise ValueError("demand SHA records do not reconcile with LOADPROF")
+    if mode == "prefetch_sha":
+        demand_by_key: dict[tuple[int, int], list[dict[str, int]]] = {}
+        prefetch_by_key: dict[tuple[int, int], list[dict[str, int]]] = {}
+        for row in demand_auth:
+            demand_by_key.setdefault(
+                (row["generation"], row["key"]), []
+            ).append(row)
+        for row in prefetch_auth:
+            prefetch_by_key.setdefault(
+                (row["generation"], row["key"]), []
+            ).append(row)
+        for key in demand_by_key.keys() & prefetch_by_key.keys():
+            demands = sorted(demand_by_key[key], key=lambda row: row["submit_ns"])
+            prefetches = sorted(
+                prefetch_by_key[key], key=lambda row: row["submit_ns"]
+            )
+            demand_index = prefetch_index = 0
+            while demand_index < len(demands) and prefetch_index < len(prefetches):
+                demand = demands[demand_index]
+                prefetch = prefetches[prefetch_index]
+                if max(demand["submit_ns"], prefetch["submit_ns"]) < min(
+                    demand["complete_ns"], prefetch["complete_ns"]
+                ):
+                    raise ValueError("matching demand and prefetch reads overlap")
+                if demand["complete_ns"] <= prefetch["complete_ns"]:
+                    demand_index += 1
+                else:
+                    prefetch_index += 1
     completed_ms = [
         (row["complete_ns"] - row["submit_ns"]) / 1e6 for row in auth
     ]
