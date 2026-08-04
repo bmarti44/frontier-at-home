@@ -39,14 +39,17 @@ class UnionTraceScoreTests(unittest.TestCase):
         (Path(stem + "glm_indexed_router_logits-4_pos0.f32")).write_bytes(
             struct.pack(f"<{rows * N_EXPERT}f", *logits)
         )
+        probs = [1.0 / (1.0 + math.exp(-value)) for value in logits]
+        (Path(stem + "glm_indexed_router_probs-4_pos0.f32")).write_bytes(
+            struct.pack(f"<{rows * N_EXPERT}f", *probs)
+        )
         bias = [0.0] * N_EXPERT
         (Path(stem + "glm_indexed_router_bias-4_pos0.f32")).write_bytes(
             struct.pack(f"<{N_EXPERT}f", *bias)
         )
         selected = []
         for row in range(rows):
-            scores = [1.0 / (1.0 + math.exp(-logits[row * N_EXPERT + expert]))
-                      for expert in range(N_EXPERT)]
+            scores = [probs[row * N_EXPERT + expert] for expert in range(N_EXPERT)]
             selected.extend(sorted(range(N_EXPERT), key=lambda expert: (-scores[expert], expert))[:N_USED])
         (Path(stem + "glm_indexed_router_selected-4_pos0.i32")).write_bytes(
             struct.pack(f"<{len(selected)}i", *selected)
@@ -70,7 +73,7 @@ class UnionTraceScoreTests(unittest.TestCase):
             result = self.score(trace, log)
         self.assertEqual(result["verdict"], "PASS")
         self.assertEqual(result["events"], 1)
-        self.assertEqual(len(result["artifacts"]), 4)
+        self.assertEqual(len(result["artifacts"]), 5)
 
     def test_rejects_missing_truncated_and_trailing_files(self) -> None:
         for mutation in ("missing", "truncated", "trailing"):
@@ -194,6 +197,21 @@ class UnionTraceScoreTests(unittest.TestCase):
             values = list(struct.unpack("<16i", target.read_bytes()))
             values[0], values[1] = values[1], values[0]
             target.write_bytes(struct.pack("<16i", *values))
+            result = self.score(trace, log)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertFalse(result["checks"]["selected_matches_router_formula"])
+
+    def test_rejects_double_precision_reordering_of_a_float32_tie(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            trace, log = self.make_attempt(Path(tmp))
+            probs_path = next(trace.glob("*router_probs*"))
+            probs = list(struct.unpack("<512f", probs_path.read_bytes()))
+            probs[0] = probs[1] = struct.unpack("<f", struct.pack("<f", 0.75))[0]
+            probs_path.write_bytes(struct.pack("<512f", *probs))
+            selected_path = next(trace.glob("*router_selected*"))
+            selected = list(struct.unpack("<16i", selected_path.read_bytes()))
+            selected[0], selected[1] = 1, 0
+            selected_path.write_bytes(struct.pack("<16i", *selected))
             result = self.score(trace, log)
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["selected_matches_router_formula"])
