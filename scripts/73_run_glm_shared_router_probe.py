@@ -196,6 +196,40 @@ def campaign_schedule(flip: bool) -> tuple[tuple[int, int, str], ...]:
     return tuple(rows)
 
 
+def validate_campaign_response_signature(
+    signature: object, fixture_sha256: object, completion_tokens: object
+) -> None:
+    expected_keys = {
+        "request_sha256", "token_ids", "completion_tokens",
+        "generated_reasoning_sha256", "generated_reasoning_bytes",
+        "generated_content_sha256", "generated_content_bytes",
+    }
+    if not isinstance(signature, dict) or set(signature) != expected_keys:
+        raise ValueError("campaign response signature schema is invalid")
+    hashes = (
+        signature["request_sha256"], signature["generated_reasoning_sha256"],
+        signature["generated_content_sha256"],
+    )
+    if any(not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None
+           for value in hashes):
+        raise ValueError("campaign response signature hash is invalid")
+    if signature["request_sha256"] != fixture_sha256:
+        raise ValueError("campaign response signature fixture differs")
+    token_ids = signature["token_ids"]
+    if (not isinstance(token_ids, list) or len(token_ids) != 128 or
+            any(isinstance(token, bool) or not isinstance(token, int) or token < 0
+                for token in token_ids)):
+        raise ValueError("campaign response token IDs are invalid")
+    if (isinstance(signature["completion_tokens"], bool) or
+            signature["completion_tokens"] != completion_tokens or
+            signature["completion_tokens"] != 128):
+        raise ValueError("campaign response completion count differs")
+    for key in ("generated_reasoning_bytes", "generated_content_bytes"):
+        value = signature[key]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError("campaign response byte count is invalid")
+
+
 def campaign_verdict(rows: list[dict[str, object]], flip: bool) -> dict[str, object]:
     expected_keys = {
         "block", "sequence", "mode", "decode_tokens_per_second",
@@ -224,6 +258,9 @@ def campaign_verdict(rows: list[dict[str, object]], flip: bool) -> dict[str, obj
                 not math.isfinite(float(ttft)) or float(ttft) <= 0 or
                 row["completion_tokens"] != 128):
             raise ValueError("campaign timing or completion coverage is invalid")
+        validate_campaign_response_signature(
+            row["response_signature"], row["fixture_sha256"], row["completion_tokens"]
+        )
         signature = json.dumps(
             row["response_signature"], sort_keys=True, separators=(",", ":"),
             allow_nan=False,
