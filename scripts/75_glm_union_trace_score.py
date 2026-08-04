@@ -8,6 +8,7 @@ import hashlib
 import math
 from pathlib import Path
 import re
+import struct
 from typing import Any
 
 
@@ -19,7 +20,7 @@ EVENT_RE = re.compile(
     r"layer=(\d+) pos=(\d+) rows=(\d+)$"
 )
 FILE_RE = re.compile(
-    r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_selected|router_bias)-"
+    r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_probs|router_selected|router_bias)-"
     r"(?P<layer>\d+)_pos(?P<pos>\d+)\.(?P<ext>f32|i32)$"
 )
 
@@ -51,6 +52,10 @@ def _sigmoid(value: float) -> float:
         return 1.0 / (1.0 + math.exp(-value))
     exp_value = math.exp(value)
     return exp_value / (1.0 + exp_value)
+
+
+def _f32(value: float) -> float:
+    return struct.unpack("<f", struct.pack("<f", value))[0]
 
 
 def _selected_rows(path: Path, rows: int) -> list[tuple[int, ...]] | None:
@@ -163,8 +168,9 @@ def score_trace(
     shapes_ok = True
     values_ok = True
     all_selected_rows: list[tuple[int, ...]] = []
-    wanted = {"ffn_norm", "router_logits", "router_selected", "router_bias"}
+    wanted = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
     formula_ok = True
+    probs_match_logits = True
     for key, rows in expected.items():
         group = files.get(key, {})
         if set(group) != wanted or rows <= 0:
@@ -174,6 +180,7 @@ def score_trace(
             "ffn_norm": rows * N_EMBD * 4,
             "router_logits": rows * N_EXPERT * 4,
             "router_selected": rows * N_EXPERT_USED * 4,
+            "router_probs": rows * N_EXPERT * 4,
             "router_bias": N_EXPERT * 4,
         }
         if any(group[kind].stat().st_size != size
@@ -181,7 +188,8 @@ def score_trace(
             shapes_ok = False
             continue
         if (not _finite_variable_f32(group["ffn_norm"]) or
-                not _finite_variable_f32(group["router_logits"])):
+                not _finite_variable_f32(group["router_logits"]) or
+                not _finite_variable_f32(group["router_probs"])):
             values_ok = False
         selected_rows = _selected_rows(group["router_selected"], rows)
         if selected_rows is None:
@@ -189,15 +197,20 @@ def score_trace(
         else:
             all_selected_rows.extend(selected_rows)
             logits = _read_f32(group["router_logits"])
+            probs = _read_f32(group["router_probs"])
             bias = _read_f32(group["router_bias"])
             if len(bias) != N_EXPERT or not all(math.isfinite(value) for value in bias):
                 formula_ok = False
             else:
                 for row_index, observed in enumerate(selected_rows):
                     start = row_index * N_EXPERT
+                    for expert in range(N_EXPERT):
+                        probability = float(probs[start + expert])
+                        if (probability < 0.0 or probability > 1.0 or
+                                abs(probability - _sigmoid(float(logits[start + expert]))) > 1e-4):
+                            probs_match_logits = False
                     scores = [
-                        _sigmoid(float(logits[start + expert])) +
-                        float(bias[expert])
+                        _f32(float(probs[start + expert]) + float(bias[expert]))
                         for expert in range(N_EXPERT)
                     ]
                     expected_selected = tuple(sorted(
@@ -210,6 +223,7 @@ def score_trace(
     checks["exact_triplet_shapes"] = shapes_ok
     checks["finite_values_and_valid_ids"] = values_ok
     checks["selected_matches_router_formula"] = formula_ok
+    checks["router_probs_match_logits"] = probs_match_logits
 
     result.update({
         "events": len(expected),

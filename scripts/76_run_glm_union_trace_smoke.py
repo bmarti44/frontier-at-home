@@ -38,7 +38,7 @@ SHARED = _load("shared_router_runner", SHARED_PATH)
 TRACE_SCORER = _load("union_trace_scorer", SCORER_PATH)
 TRACE_LAYER = 4
 TRACE_CONTEXT_CAP = 8192
-TRACE_BYTES_PER_TOKEN_LAYER = (7168 + 256 + 8 + 256) * 4
+TRACE_BYTES_PER_TOKEN_LAYER = (7168 + 256 + 256 + 8 + 256) * 4
 MAX_TRACE_BYTES = TRACE_CONTEXT_CAP * TRACE_BYTES_PER_TOKEN_LAYER
 TRACE_DISK_RESERVE_BYTES = 20 * 1024**3
 TRACE_NAMES = ",".join((
@@ -46,6 +46,7 @@ TRACE_NAMES = ",".join((
     "glm_indexed_router_logits",
     "glm_indexed_router_selected",
     "glm_indexed_router_bias",
+    "glm_indexed_router_probs",
 ))
 ENV_NAMES = sorted(set(SHARED.ENV_NAMES) | {
     "DS4_GLM_SYNC_TRACE",
