@@ -1,5 +1,5 @@
 diff --git a/ds4.c b/ds4.c
-index 34d26f7..0d3c344 100644
+index 34d26f7..e30a37a 100644
 --- a/ds4.c
 +++ b/ds4.c
 @@ -37223,6 +37223,12 @@ typedef struct {
@@ -12,8 +12,7 @@ index 34d26f7..0d3c344 100644
 +    int32_t predacc_pair_base[DS4_MAX_EXPERT_USED];
 +    int32_t predacc_pair_shared[DS4_MAX_EXPERT_USED];
 +    bool predacc_pair_valid;
--
-+
+ 
      ds4_gpu_tensor *prefill_tokens;
      ds4_gpu_tensor *batch_cur;
 @@ -40007,7 +40013,14 @@ static bool glm_graph_encode_sparse_ffn_one(
@@ -41,10 +40,11 @@ index 34d26f7..0d3c344 100644
          /* Cross-layer expert prefetch: predict layer il+1's experts from the
           * CURRENT hidden state and hand them to the background reader so the
           * bytes land while layer il's kernels run. Measured on this model:
-@@ -40076,6 +40090,69 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40076,7 +40090,70 @@ static bool glm_graph_encode_sparse_ffn_one(
              if (ds4_gpu_begin_commands() == 0) ok = false;
          }
      }
+-    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < DS4_N_LAYER) {
 +    if (ok && pf_pair_probe) {
 +        /* The trace probe compares both predictors against the same real
 +         * router selection. Pending state is graph-scoped and matched by
@@ -108,10 +108,10 @@ index 34d26f7..0d3c344 100644
 +            if (!pf_base_valid) ok = false;
 +        }
 +    }
--    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < DS4_N_LAYER) {
 +    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < normal_layers) {
          /* Cross-layer prediction-accuracy probe (prefetch lever gate):
           * run layer il+1's router on the CURRENT hidden state, then compare
+          * its top-k against the ids layer il+1 actually selects next step.
 @@ -40345,6 +40422,87 @@ static bool glm_graph_encode_sparse_ffn_one(
                                               1,
                                               stage_t0);
@@ -209,3 +209,18 @@ index 34d26f7..0d3c344 100644
          ds4_gpu_expert_prefetch_hint(&pf_table, pf_ids, DS4_N_EXPERT_USED);
          pf_hint_pending = false;
      }
+@@ -44926,6 +45086,14 @@ static bool glm_graph_forward_indexed_tokens(
+                 use_batch_ffn_norm &&
+                 il >= DS4_N_LEADING_DENSE &&
+                 glm_graph_indexed_prefill_batch_routed_moe()) {
++                /* Reuse the existing default-off graph-dump path for the P0
++                 * union-probe gate input. Router logits and selected IDs are
++                 * dumped inside the routed-MoE helper on the same batch. */
++                metal_graph_debug_dump_tensor("glm_indexed_ffn_norm",
++                                              g->batch_ffn_norm,
++                                              (uint64_t)n_tokens * DS4_N_EMBD,
++                                              il,
++                                              pos0);
+                 ok = glm_graph_encode_sparse_ffn_indexed_batch_routed_moe(
+                         g,
+                         model,
