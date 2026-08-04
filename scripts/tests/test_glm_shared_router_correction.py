@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCORER = ROOT / "scripts/72_glm_shared_router_score.py"
 PATCH = ROOT / "results/glm52-gates/harness/ds4-shared-router-correction.patch"
 RUNNER = ROOT / "scripts/73_run_glm_shared_router_probe.py"
+CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 SPEC = importlib.util.spec_from_file_location("shared_router_score", SCORER)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -184,6 +185,35 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
     def test_runner_verifies_the_committed_public_randomness_round(self) -> None:
         self.assertIn("https://api.drand.sh/public/{round}", self.source)
         self.assertIn('public.get("randomness") != raw', self.source)
+
+    def test_small_perf_gate_is_fixed_at_five_percent_non_regression(self) -> None:
+        passed = RUNNER_MODULE.performance_verdict(2.0, 1.9, True)
+        failed = RUNNER_MODULE.performance_verdict(2.0, 1.899, True)
+        unequal = RUNNER_MODULE.performance_verdict(2.0, 2.1, False)
+        self.assertEqual(passed["verdict"], "PASS")
+        self.assertEqual(passed["decode_ratio"], 0.95)
+        self.assertEqual(failed["verdict"], "FAIL")
+        self.assertEqual(unequal["verdict"], "FAIL")
+
+    def test_perf_arm_enables_only_the_production_correction_flags(self) -> None:
+        lock = Path("/tmp/perf-contract.lock")
+        off = RUNNER_MODULE.performance_environment_for("off", lock)
+        corrected = RUNNER_MODULE.performance_environment_for("corrected", lock)
+        self.assertNotIn("DS4_GLM_PREFETCH", off)
+        self.assertNotIn("DS4_GLM_PREFETCH_SHARED_CORRECTION", off)
+        self.assertNotIn("DS4_GLM_PREDACC_SHARED", corrected)
+        self.assertEqual(corrected["DS4_GLM_PREFETCH"], "1")
+        self.assertEqual(corrected["DS4_GLM_PREFETCH_SHARED_CORRECTION"], "1")
+        self.assertEqual(corrected["DS4_GLM_PREFETCH_THREADS"], "8")
+
+    def test_actual_server_command_is_single_slot(self) -> None:
+        command = RUNNER_MODULE.server_command(Path("/tmp/ds4-server"), 8040)
+        self.assertNotIn("--batched-sessions", command)
+        self.assertEqual(command.count("--port"), 1)
+
+    def test_containment_forwards_the_correction_flag(self) -> None:
+        source = CGROUP.read_text(encoding="utf-8")
+        self.assertIn("DS4_GLM_PREFETCH_SHARED_CORRECTION", source)
 
 
 if __name__ == "__main__":
