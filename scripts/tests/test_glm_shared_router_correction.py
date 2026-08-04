@@ -161,11 +161,33 @@ class SharedRouterSourceContractTests(unittest.TestCase):
     def test_prefetch_hint_stays_after_current_selected_load(self) -> None:
         self.assertIn("shared correction waits for current selected load", self.source)
 
-    def test_union_probe_reuses_default_off_graph_dump_for_gate_inputs(self) -> None:
+    def test_union_probe_triplet_is_in_live_batch_ffn_helper(self) -> None:
+        """Reject hooks placed only in the compile-time-dead indexed fallback."""
+        marker = 'glm_union_probe_dump_triplet('
+        self.assertIn(marker, self.added_source)
+        call_at = self.added_source.rfind(marker)
+        hunk_at = self.added_source.rfind("@@", 0, call_at)
+        hunk_end = self.added_source.find("\n", hunk_at)
         self.assertIn(
+            "glm_graph_encode_ffn_batch",
+            self.added_source[hunk_at:hunk_end],
+        )
+        self.assertNotIn(
             'metal_graph_debug_dump_tensor("glm_indexed_ffn_norm"',
             self.added_source,
         )
+
+    def test_union_probe_triplet_is_fail_closed_and_immutable(self) -> None:
+        for marker in (
+            '"glm_indexed_ffn_norm"',
+            '"glm_indexed_router_logits"',
+            '"glm_indexed_router_selected"',
+            "O_CREAT | O_EXCL",
+            "fsync(fd)",
+            "GLM_UNION_TRACE_ERROR",
+        ):
+            self.assertIn(marker, self.added_source)
+        self.assertIn("if (ok) ok = glm_union_probe_dump_triplet(", self.added_source)
 
 
 class SharedRouterRunnerContractTests(unittest.TestCase):
