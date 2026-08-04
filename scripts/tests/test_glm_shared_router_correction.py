@@ -161,8 +161,8 @@ class SharedRouterSourceContractTests(unittest.TestCase):
     def test_prefetch_hint_stays_after_current_selected_load(self) -> None:
         self.assertIn("shared correction waits for current selected load", self.source)
 
-    def test_union_probe_triplet_is_in_live_batch_ffn_helper(self) -> None:
-        """Reject hooks placed only in the compile-time-dead indexed fallback."""
+    def test_union_probe_triplet_is_in_live_indexed_batch_branch(self) -> None:
+        """Reject generic or compile-time-dead hook placement."""
         marker = 'glm_union_probe_dump_triplet('
         self.assertIn(marker, self.added_source)
         call_at = self.source.rfind("+    if (ok) ok = " + marker)
@@ -170,9 +170,13 @@ class SharedRouterSourceContractTests(unittest.TestCase):
         hunk_at = self.source.rfind("@@", 0, call_at)
         hunk_end = self.source.find("\n", hunk_at)
         self.assertIn(
-            "glm_graph_encode_ffn_batch",
+            "glm_graph_forward_indexed_tokens",
             self.source[hunk_at:hunk_end],
         )
+        indexed_if = self.source.rfind("if (ok && use_batch_ffn)", 0, call_at)
+        fallback = self.source.find("} else if (ok)", indexed_if)
+        self.assertGreaterEqual(indexed_if, 0)
+        self.assertGreater(fallback, call_at)
         self.assertNotIn(
             'metal_graph_debug_dump_tensor("glm_indexed_ffn_norm"',
             self.added_source,
@@ -186,6 +190,7 @@ class SharedRouterSourceContractTests(unittest.TestCase):
             "O_CREAT | O_EXCL",
             "fsync(fd)",
             "GLM_UNION_TRACE_ERROR",
+            "path=full_indexed_batch_ffn",
         ):
             self.assertIn(marker, self.added_source)
         self.assertIn("if (ok) ok = glm_union_probe_dump_triplet(", self.added_source)

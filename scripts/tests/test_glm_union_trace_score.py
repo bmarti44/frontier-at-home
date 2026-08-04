@@ -29,24 +29,37 @@ class UnionTraceScoreTests(unittest.TestCase):
         trace.mkdir()
         prefix = trace / "request-a"
         stem = f"{prefix}_"
+        norm = [0.25] * (rows * N_EMBD)
+        norm[-1] = 0.5
         (Path(stem + "glm_indexed_ffn_norm-4_pos0.f32")).write_bytes(
-            struct.pack(f"<{rows * N_EMBD}f", *([0.25] * (rows * N_EMBD)))
+            struct.pack(f"<{rows * N_EMBD}f", *norm)
         )
+        logits = [0.5] * (rows * N_EXPERT)
+        logits[-1] = 0.75
         (Path(stem + "glm_indexed_router_logits-4_pos0.f32")).write_bytes(
-            struct.pack(f"<{rows * N_EXPERT}f", *([0.5] * (rows * N_EXPERT)))
+            struct.pack(f"<{rows * N_EXPERT}f", *logits)
         )
-        selected = list(range(N_USED)) * rows
+        selected = [value for row in range(rows) for value in range(row, row + N_USED)]
         (Path(stem + "glm_indexed_router_selected-4_pos0.i32")).write_bytes(
             struct.pack(f"<{len(selected)}i", *selected)
         )
         log = root / "server.log"
-        log.write_text("GLM_UNION_TRACE_OK layer=4 pos=0 rows=2\n", encoding="utf-8")
+        log.write_text(
+            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn layer=4 pos=0 rows=2\n",
+            encoding="utf-8",
+        )
         return trace, log
+
+    def score(self, trace: Path, log: Path, *, max_bytes: int = 1_000_000):
+        return MODULE.score_trace(
+            trace, log, max_bytes=max_bytes,
+            expected_layers={4}, expected_chunks=[(0, 2)],
+        )
 
     def test_accepts_one_complete_finite_triplet(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             trace, log = self.make_attempt(Path(tmp))
-            result = MODULE.score_trace(trace, log, max_bytes=1_000_000)
+            result = self.score(trace, log)
         self.assertEqual(result["verdict"], "PASS")
         self.assertEqual(result["events"], 1)
         self.assertEqual(len(result["artifacts"]), 3)
@@ -63,20 +76,20 @@ class UnionTraceScoreTests(unittest.TestCase):
                 else:
                     target.write_bytes(target.read_bytes() + b"xxxx")
                 self.assertEqual(
-                    MODULE.score_trace(trace, log, max_bytes=1_000_000)["verdict"],
+                    self.score(trace, log)["verdict"],
                     "FAIL",
                 )
 
     def test_rejects_duplicate_log_key_and_trace_error(self) -> None:
         for extra in (
-            "GLM_UNION_TRACE_OK layer=4 pos=0 rows=2\n",
+            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn layer=4 pos=0 rows=2\n",
             "GLM_UNION_TRACE_ERROR stage=capture layer=4 pos=0 rows=2\n",
         ):
             with self.subTest(extra=extra), tempfile.TemporaryDirectory() as tmp:
                 trace, log = self.make_attempt(Path(tmp))
                 log.write_text(log.read_text() + extra, encoding="utf-8")
                 self.assertEqual(
-                    MODULE.score_trace(trace, log, max_bytes=1_000_000)["verdict"],
+                    self.score(trace, log)["verdict"],
                     "FAIL",
                 )
 
@@ -94,7 +107,7 @@ class UnionTraceScoreTests(unittest.TestCase):
                     data[:4] = struct.pack("<i", 256 if mutation == "range" else 1)
                 target.write_bytes(data)
                 self.assertEqual(
-                    MODULE.score_trace(trace, log, max_bytes=1_000_000)["verdict"],
+                    self.score(trace, log)["verdict"],
                     "FAIL",
                 )
 
@@ -115,9 +128,56 @@ class UnionTraceScoreTests(unittest.TestCase):
                 else:
                     max_bytes = 1
                 self.assertEqual(
-                    MODULE.score_trace(trace, log, max_bytes=max_bytes)["verdict"],
+                    self.score(trace, log, max_bytes=max_bytes)["verdict"],
                     "FAIL",
                 )
+
+    def test_rejects_swapped_extensions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            trace, log = self.make_attempt(Path(tmp))
+            renames = {
+                next(trace.glob("*ffn_norm*")): ".i32",
+                next(trace.glob("*router_logits*")): ".i32",
+                next(trace.glob("*router_selected*")): ".f32",
+            }
+            for source, extension in renames.items():
+                source.rename(source.with_suffix(extension))
+            self.assertEqual(self.score(trace, log)["verdict"], "FAIL")
+
+    def test_rejects_wrong_path_layer_or_chunk_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            trace, log = self.make_attempt(Path(tmp))
+            for expected_layers, expected_chunks in (
+                ({5}, [(0, 2)]),
+                ({4}, [(1, 2)]),
+                ({4}, [(0, 1)]),
+            ):
+                result = MODULE.score_trace(
+                    trace, log, max_bytes=1_000_000,
+                    expected_layers=expected_layers,
+                    expected_chunks=expected_chunks,
+                )
+                self.assertEqual(result["verdict"], "FAIL")
+            log.write_text(log.read_text().replace("full_indexed_batch_ffn", "verify_rows"))
+            self.assertEqual(self.score(trace, log)["verdict"], "FAIL")
+
+    def test_rejects_overlapping_ranges_and_degenerate_values(self) -> None:
+        for mutation in ("overlap", "zero_norm", "zero_logits", "fixed_ids"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
+                trace, log = self.make_attempt(Path(tmp))
+                if mutation == "overlap":
+                    log.write_text(log.read_text() +
+                        "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn layer=4 pos=1 rows=2\n")
+                elif mutation == "zero_norm":
+                    target = next(trace.glob("*ffn_norm*"))
+                    target.write_bytes(bytes(target.stat().st_size))
+                elif mutation == "zero_logits":
+                    target = next(trace.glob("*router_logits*"))
+                    target.write_bytes(bytes(target.stat().st_size))
+                else:
+                    target = next(trace.glob("*router_selected*"))
+                    target.write_bytes(struct.pack("<16i", *(list(range(8)) * 2)))
+                self.assertEqual(self.score(trace, log)["verdict"], "FAIL")
 
 
 if __name__ == "__main__":
