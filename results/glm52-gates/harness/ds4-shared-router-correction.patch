@@ -1,8 +1,120 @@
 diff --git a/ds4.c b/ds4.c
-index 34d26f7..e30a37a 100644
+index 34d26f7..ff4c2c8 100644
 --- a/ds4.c
 +++ b/ds4.c
-@@ -37223,6 +37223,12 @@ typedef struct {
+@@ -16171,6 +16171,111 @@ static void metal_graph_debug_dump_i32_tensor(
+     }
+ }
+ 
++/* Default-off, fail-closed capture for the R0b union-probe corpus.  A trace
++ * attempt owns a fresh prefix; exclusive atomic publication prevents a later
++ * request from silently replacing an earlier event with the same layer/pos. */
++static bool glm_union_trace_write_exclusive(
++        const char *path, const void *data, size_t nbytes) {
++    char tmp[1100];
++    if (snprintf(tmp, sizeof(tmp), "%s.tmp.%ld", path, (long)getpid()) >=
++        (int)sizeof(tmp)) {
++        return false;
++    }
++    const int fd = open(tmp, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
++    if (fd < 0) return false;
++
++    const uint8_t *src = data;
++    size_t off = 0;
++    bool ok = true;
++    while (off < nbytes) {
++        const ssize_t nw = write(fd, src + off, nbytes - off);
++        if (nw < 0 && errno == EINTR) continue;
++        if (nw <= 0) {
++            ok = false;
++            break;
++        }
++        off += (size_t)nw;
++    }
++    if (ok && fsync(fd) != 0) ok = false;
++    if (close(fd) != 0) ok = false;
++    if (ok && link(tmp, path) != 0) ok = false;
++    if (unlink(tmp) != 0 && errno != ENOENT) ok = false;
++    return ok;
++}
++
++static bool glm_union_probe_dump_triplet(
++        ds4_gpu_tensor *norm,
++        ds4_gpu_tensor *logits,
++        ds4_gpu_tensor *selected,
++        uint32_t        n_tokens,
++        uint32_t        il,
++        uint32_t        pos) {
++    const char *norm_name = "glm_indexed_ffn_norm";
++    const char *logits_name = "glm_indexed_router_logits";
++    const char *selected_name = "glm_indexed_router_selected";
++    const bool want_norm = metal_graph_debug_wants(norm_name, il, pos);
++    const bool want_logits = metal_graph_debug_wants(logits_name, il, pos);
++    const bool want_selected = metal_graph_debug_wants(selected_name, il, pos);
++    if (!want_norm && !want_logits && !want_selected) return true;
++    if (!want_norm || !want_logits || !want_selected || !norm || !logits ||
++        !selected || n_tokens == 0 ||
++        (uint64_t)n_tokens * DS4_N_EMBD > SIZE_MAX / sizeof(float) ||
++        (uint64_t)n_tokens * DS4_N_EXPERT > SIZE_MAX / sizeof(float) ||
++        (uint64_t)n_tokens * DS4_N_EXPERT_USED > SIZE_MAX / sizeof(int32_t)) {
++        fprintf(stderr, "GLM_UNION_TRACE_ERROR stage=validate layer=%u pos=%u\n",
++                il, pos);
++        return false;
++    }
++
++    const size_t norm_bytes =
++        (size_t)n_tokens * DS4_N_EMBD * sizeof(float);
++    const size_t logits_bytes =
++        (size_t)n_tokens * DS4_N_EXPERT * sizeof(float);
++    const size_t selected_bytes =
++        (size_t)n_tokens * DS4_N_EXPERT_USED * sizeof(int32_t);
++    float *norm_buf = xmalloc(norm_bytes);
++    float *logits_buf = xmalloc(logits_bytes);
++    int32_t *selected_buf = xmalloc(selected_bytes);
++
++    const bool ended = ds4_gpu_end_commands() != 0;
++    const bool read_norm = ended &&
++        ds4_gpu_tensor_read(norm, 0, norm_buf, norm_bytes) != 0;
++    const bool read_logits = read_norm &&
++        ds4_gpu_tensor_read(logits, 0, logits_buf, logits_bytes) != 0;
++    const bool read_selected = read_logits &&
++        ds4_gpu_tensor_read(selected, 0, selected_buf, selected_bytes) != 0;
++    const bool restarted = ds4_gpu_begin_commands() != 0;
++    bool ok = ended && read_norm && read_logits && read_selected && restarted;
++
++    char norm_path[1024], logits_path[1024], selected_path[1024];
++    const char *prefix = metal_graph_debug_prefix_for(norm_name, il, pos);
++    if (ok) {
++        ok = prefix &&
++            snprintf(norm_path, sizeof(norm_path), "%s_%s-%u_pos%u.f32",
++                     prefix, norm_name, il, pos) < (int)sizeof(norm_path) &&
++            snprintf(logits_path, sizeof(logits_path), "%s_%s-%u_pos%u.f32",
++                     prefix, logits_name, il, pos) < (int)sizeof(logits_path) &&
++            snprintf(selected_path, sizeof(selected_path), "%s_%s-%u_pos%u.i32",
++                     prefix, selected_name, il, pos) < (int)sizeof(selected_path);
++    }
++    if (ok) ok = glm_union_trace_write_exclusive(norm_path, norm_buf, norm_bytes);
++    if (ok) ok = glm_union_trace_write_exclusive(logits_path, logits_buf, logits_bytes);
++    if (ok) ok = glm_union_trace_write_exclusive(selected_path, selected_buf, selected_bytes);
++    free(selected_buf);
++    free(logits_buf);
++    free(norm_buf);
++
++    if (!ok) {
++        fprintf(stderr,
++                "GLM_UNION_TRACE_ERROR stage=capture layer=%u pos=%u rows=%u\n",
++                il, pos, n_tokens);
++        return false;
++    }
++    fprintf(stderr, "GLM_UNION_TRACE_OK layer=%u pos=%u rows=%u\n",
++            il, pos, n_tokens);
++    return true;
++}
++
+ static bool metal_graph_needs_ffn_out(const ds4_gpu_graph *g, uint32_t il, uint32_t pos) {
+     return metal_graph_directional_steering_ffn_enabled(g) ||
+            g->materialize_ffn_out ||
+@@ -37223,6 +37328,12 @@ typedef struct {
      ds4_gpu_tensor *prefill_seed_router_selected;
      uint32_t prefill_seed_tokens;
      bool prefill_seed_layer_captured[DS4_MAX_LAYER];
@@ -15,7 +127,7 @@ index 34d26f7..e30a37a 100644
  
      ds4_gpu_tensor *prefill_tokens;
      ds4_gpu_tensor *batch_cur;
-@@ -40007,7 +40013,14 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40007,7 +40118,14 @@ static bool glm_graph_encode_sparse_ffn_one(
      uint64_t up_in = 0, up_out = 0, up_row_bytes = 0;
      uint64_t down_in = 0, down_out = 0, down_row_bytes = 0;
      bool pf_hint_pending = false;
@@ -30,7 +142,7 @@ index 34d26f7..e30a37a 100644
      ds4_gpu_stream_expert_table pf_table = {};
      (void)tensor_expert_bytes(model, l->ffn_gate_exps, 0, &gate_in, &gate_out, &gate_row_bytes);
      (void)tensor_expert_bytes(model, l->ffn_up_exps, 0, &up_in, &up_out, &up_row_bytes);
-@@ -40034,7 +40047,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40034,7 +40152,8 @@ static bool glm_graph_encode_sparse_ffn_one(
                                                    DS4_N_EXPERT,
                                                    DS4_N_EXPERT_USED,
                                                    DS4_EXPERT_WEIGHT_SCALE) != 0;
@@ -40,7 +152,7 @@ index 34d26f7..e30a37a 100644
          /* Cross-layer expert prefetch: predict layer il+1's experts from the
           * CURRENT hidden state and hand them to the background reader so the
           * bytes land while layer il's kernels run. Measured on this model:
-@@ -40076,7 +40090,70 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40076,7 +40195,70 @@ static bool glm_graph_encode_sparse_ffn_one(
              if (ds4_gpu_begin_commands() == 0) ok = false;
          }
      }
@@ -112,7 +224,7 @@ index 34d26f7..e30a37a 100644
          /* Cross-layer prediction-accuracy probe (prefetch lever gate):
           * run layer il+1's router on the CURRENT hidden state, then compare
           * its top-k against the ids layer il+1 actually selects next step.
-@@ -40345,6 +40422,87 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40345,6 +40527,87 @@ static bool glm_graph_encode_sparse_ffn_one(
                                               1,
                                               stage_t0);
      }
@@ -200,7 +312,7 @@ index 34d26f7..e30a37a 100644
      if (async_profile) {
          const double now_ms = glm_graph_streaming_async_profile_ms();
          if (async_path_profiled) {
-@@ -40375,6 +40533,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40375,6 +40638,8 @@ static bool glm_graph_encode_sparse_ffn_one(
          }
      }
      if (ok && pf_hint_pending) {
@@ -209,18 +321,16 @@ index 34d26f7..e30a37a 100644
          ds4_gpu_expert_prefetch_hint(&pf_table, pf_ids, DS4_N_EXPERT_USED);
          pf_hint_pending = false;
      }
-@@ -44926,6 +45086,14 @@ static bool glm_graph_forward_indexed_tokens(
-                 use_batch_ffn_norm &&
-                 il >= DS4_N_LEADING_DENSE &&
-                 glm_graph_indexed_prefill_batch_routed_moe()) {
-+                /* Reuse the existing default-off graph-dump path for the P0
-+                 * union-probe gate input. Router logits and selected IDs are
-+                 * dumped inside the routed-MoE helper on the same batch. */
-+                metal_graph_debug_dump_tensor("glm_indexed_ffn_norm",
-+                                              g->batch_ffn_norm,
-+                                              (uint64_t)n_tokens * DS4_N_EMBD,
-+                                              il,
-+                                              pos0);
-                 ok = glm_graph_encode_sparse_ffn_indexed_batch_routed_moe(
-                         g,
-                         model,
+@@ -42009,6 +42274,12 @@ static bool glm_graph_encode_ffn_batch(
+                                                           il,
+                                                           pos0,
+                                                           n_tokens);
++    if (ok) ok = glm_union_probe_dump_triplet(g->batch_ffn_norm,
++                                               g->batch_router_logits,
++                                               g->batch_router_selected,
++                                               n_tokens,
++                                               il,
++                                               pos0);
+     const bool tp_batch_split_ffn = g->tp_world == 2;
+     if (ok && tp_batch_split_ffn) {
+         ok = glm_graph_tp_batch_bounce_ready(g, n_tokens);

@@ -165,12 +165,13 @@ class SharedRouterSourceContractTests(unittest.TestCase):
         """Reject hooks placed only in the compile-time-dead indexed fallback."""
         marker = 'glm_union_probe_dump_triplet('
         self.assertIn(marker, self.added_source)
-        call_at = self.added_source.rfind(marker)
-        hunk_at = self.added_source.rfind("@@", 0, call_at)
-        hunk_end = self.added_source.find("\n", hunk_at)
+        call_at = self.source.rfind("+    if (ok) ok = " + marker)
+        self.assertGreaterEqual(call_at, 0)
+        hunk_at = self.source.rfind("@@", 0, call_at)
+        hunk_end = self.source.find("\n", hunk_at)
         self.assertIn(
             "glm_graph_encode_ffn_batch",
-            self.added_source[hunk_at:hunk_end],
+            self.source[hunk_at:hunk_end],
         )
         self.assertNotIn(
             'metal_graph_debug_dump_tensor("glm_indexed_ffn_norm"',
