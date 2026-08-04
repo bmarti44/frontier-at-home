@@ -16,7 +16,7 @@ index 34d26f7..0d3c344 100644
 +
      ds4_gpu_tensor *prefill_tokens;
      ds4_gpu_tensor *batch_cur;
-@@ -40007,7 +40013,13 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40007,7 +40013,14 @@ static bool glm_graph_encode_sparse_ffn_one(
      uint64_t up_in = 0, up_out = 0, up_row_bytes = 0;
      uint64_t down_in = 0, down_out = 0, down_row_bytes = 0;
      bool pf_hint_pending = false;
@@ -24,23 +24,24 @@ index 34d26f7..0d3c344 100644
 +        getenv("DS4_GLM_PREFETCH") != NULL &&
 +        getenv("DS4_GLM_PREFETCH_SHARED_CORRECTION") != NULL;
 +    const bool pf_pair_probe = getenv("DS4_GLM_PREDACC_SHARED") != NULL;
++    const uint32_t normal_layers = glm_graph_normal_layer_count();
      int32_t pf_ids[DS4_MAX_EXPERT_USED] = {0};
 +    int32_t pf_base_ids[DS4_MAX_EXPERT_USED] = {0};
 +    bool pf_base_valid = false;
      ds4_gpu_stream_expert_table pf_table = {};
      (void)tensor_expert_bytes(model, l->ffn_gate_exps, 0, &gate_in, &gate_out, &gate_row_bytes);
      (void)tensor_expert_bytes(model, l->ffn_up_exps, 0, &up_in, &up_out, &up_row_bytes);
-@@ -40034,7 +40046,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40034,7 +40047,8 @@ static bool glm_graph_encode_sparse_ffn_one(
                                                    DS4_N_EXPERT,
                                                    DS4_N_EXPERT_USED,
                                                    DS4_EXPERT_WEIGHT_SCALE) != 0;
 -    if (ok && getenv("DS4_GLM_PREFETCH") != NULL && il + 1u < DS4_N_LAYER) {
 +    if (ok && getenv("DS4_GLM_PREFETCH") != NULL &&
-+        !pf_shared_correction && il + 1u < DS4_N_LAYER) {
++        !pf_shared_correction && il + 1u < normal_layers) {
          /* Cross-layer expert prefetch: predict layer il+1's experts from the
           * CURRENT hidden state and hand them to the background reader so the
           * bytes land while layer il's kernels run. Measured on this model:
-@@ -40076,6 +40089,69 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40076,6 +40090,69 @@ static bool glm_graph_encode_sparse_ffn_one(
              if (ds4_gpu_begin_commands() == 0) ok = false;
          }
      }
@@ -78,7 +79,7 @@ index 34d26f7..0d3c344 100644
 +            }
 +        }
 +        g->predacc_pair_valid = false;
-+        if (ok && il + 1u < DS4_N_LAYER) {
++        if (ok && il + 1u < normal_layers) {
 +            const ds4_layer_weights *lnext = l + 1;
 +            bool baseline_ok = lnext->ffn_gate_inp &&
 +                lnext->ffn_exp_probs_b && g->batch_router_logits &&
@@ -107,15 +108,16 @@ index 34d26f7..0d3c344 100644
 +            if (!pf_base_valid) ok = false;
 +        }
 +    }
-     if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < DS4_N_LAYER) {
+-    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < DS4_N_LAYER) {
++    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < normal_layers) {
          /* Cross-layer prediction-accuracy probe (prefetch lever gate):
           * run layer il+1's router on the CURRENT hidden state, then compare
-@@ -40345,6 +40421,87 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40345,6 +40422,87 @@ static bool glm_graph_encode_sparse_ffn_one(
                                               1,
                                               stage_t0);
      }
 +    if (ok && shared_first && (pf_shared_correction || pf_pair_probe) &&
-+        il + 1u < DS4_N_LAYER) {
++        il + 1u < normal_layers) {
 +        const ds4_layer_weights *lnext = l + 1;
 +        ds4_gpu_tensor *pf_corrected_state = g->batch_cur;
 +        ds4_gpu_tensor *pf_corrected_norm = g->batch_ffn_norm;
@@ -198,7 +200,7 @@ index 34d26f7..0d3c344 100644
      if (async_profile) {
          const double now_ms = glm_graph_streaming_async_profile_ms();
          if (async_path_profiled) {
-@@ -40375,6 +40532,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40375,6 +40533,8 @@ static bool glm_graph_encode_sparse_ffn_one(
          }
      }
      if (ok && pf_hint_pending) {
