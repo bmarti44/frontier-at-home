@@ -830,6 +830,15 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             )
             for index in range(1, 5)
         ]
+        demand_auth = [
+            (
+                f"SLABAUTH mode=demand_sha generation=9 attempt={index} "
+                f"key={200 + index} submit_ns={2000 + index * 100} "
+                f"complete_ns={2080 + index * 100} "
+                f"payload_bytes={payload} ok=1"
+            )
+            for index in range(1, 3)
+        ]
         load = (
             "LOADPROF L3 uniq=8 hits=4 miss=4 hit_ms=1.00 fetch_ms=8.00 "
             "fill_ms=1.00 total_ms=10.00 slab_mode=on slab_reads=2 "
@@ -846,7 +855,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             "shared_peak_qd=7"
         )
         parsed = campaign.parse_sha_prefetch_engine_log(
-            "\n".join([*auth, load, marker]),
+            "\n".join([*auth, *demand_auth, load, marker]),
             "prefetch_sha",
             model_generation=9,
         )
@@ -863,10 +872,26 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             with self.subTest(marker=bad_marker):
                 with self.assertRaises(ValueError):
                     campaign.parse_sha_prefetch_engine_log(
-                        "\n".join([*auth, load, bad_marker]),
+                        "\n".join([*auth, *demand_auth, load, bad_marker]),
                         "prefetch_sha",
                         model_generation=9,
                     )
+
+        overlapping_demand = (
+            "SLABAUTH mode=demand_sha generation=9 attempt=1 key=101 "
+            "submit_ns=1105 complete_ns=1170 "
+            f"payload_bytes={payload} ok=1"
+        )
+        for label, mutated_demand in (
+            ("missing demand authentication", demand_auth[:1]),
+            ("overlapping duplicate read", [overlapping_demand, demand_auth[1]]),
+        ):
+            with self.subTest(label=label), self.assertRaises(ValueError):
+                campaign.parse_sha_prefetch_engine_log(
+                    "\n".join([*auth, *mutated_demand, load, marker]),
+                    "prefetch_sha",
+                    model_generation=9,
+                )
 
     def test_three_arm_scorer_rejects_malformed_or_partial_evidence(self):
         campaign = self.load_campaign()
