@@ -382,8 +382,9 @@ warm control-config TTFT rose from **45.986219305** to **73.422772407 s**.
 Matched outputs were byte-identical, both arms produced two complete 160-token
 repetitions, candidate QD stayed at eight, minimum available memory was
 24.774864 GiB, and there were no cgroup, swap, Xid, OOM, or survivor failures.
-Telemetry attributes the regression to 22,809 stale prefetches, 19,705 demand
-fallbacks, and 22.3% more external bytes in C. Preserve the result in
+The regression coincided with 22,809 stale prefetches, 19,705 demand
+fallbacks, and 22.3% more external bytes in C; those counters are correlated
+diagnostics, not an isolated causal decomposition. Preserve the result in
 `R0.2-prefetch-probe-6885a45-final-2026-08-04.json`; do not run the full
 campaign or adopt this prefetch path. The TTFT values are evidence-control
 numbers, not serving-profile TTFT.
