@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-04T23:54:00Z",
+  "classification": "DIAGNOSTIC_FAIL",
+  "candidate_binary_sha256": "4662243e633b7e44e4d3e0dabf6c764840b76044c33043a91d2fc28227dc5972",
+  "candidate_engine_commit": "0574070b8f4854d01b3c4a6bc2f77f39e066c85f",
+  "attempts": [
+    {
+      "tag": "r0b-4k-tpdebug-4c648d8",
+      "note": "The public runner stripped the unregistered debug variable before containment; this attempt reproduced the original failure but was not diagnostic.",
+      "result_sha256": "f747f72acdc1753c66c034fc71eff23963b8ec9166b4dac83a9173e74b955b14",
+      "server_log_sha256": "acb75242c8725135f0d3485a1ccbbf37cb39fbb7d6868a72d2392f87edb4d36f",
+      "main_log_sha256": "86ae18849c8d87dac7bbc26d70983b16cbfd6b2986d82c46ac918d5001dd184e"
+    },
+    {
+      "tag": "r0b-4k-tpdebug2",
+      "note": "DS4_GLM_TP_DEBUG=1 was provenance-bound and verified in the executed environment. The server still emitted no indexed-prefill failure-stage marker before the client received an empty-ID SSE failure and stopped the request.",
+      "result_sha256": "3b096fd4cdb87f65cb540409ffbed7bcf15193b578a1119aded4055483ef7fb0",
+      "server_log_sha256": "8face583e209a42bdf10b5dd20e8772e92132443e5f8e5a5c9b6cd67b3523ce8",
+      "main_log_sha256": "5d521c6e242cc8a4777de870c530965357cb3130d8d6005737f0dca49185207c"
+    }
+  ],
+  "last_production_event": "GLM sync branch=full_indexed pos=0 chunk=2048 logits=0",
+  "resource_safety": {
+    "oom": false,
+    "xid": false,
+    "swap_bytes": 0,
+    "cgroup_peak_bytes": 1047289856,
+    "server_survived_until_cleanup": true
+  },
+  "conclusion": "The 2048-row indexed-prefill path remains OPEN. Existing diagnostics did not localize the internal stage, so this run cannot justify an engine fix. Proceed with a separately frozen short single-batch trace smoke; it must not be cited as 2048-row or multi-chunk qualification."
+}

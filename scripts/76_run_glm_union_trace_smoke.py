@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Run the contained R0b production-path trace smoke."""
+"""Run the contained R0b short, single-indexed-batch trace smoke.
+
+This authorizes the capture mechanism for short P0 fixtures only.  The failed
+2,048-row indexed-prefill path remains a separate open engine defect.
+"""
 
 from __future__ import annotations
 
@@ -45,7 +49,8 @@ def _load(name: str, path: Path):
 SHARED = _load("shared_router_runner", SHARED_PATH)
 TRACE_SCORER = _load("union_trace_scorer", SCORER_PATH)
 TRACE_LAYER = 4
-TRACE_CONTEXT_CAP = 8192
+TRACE_CONTEXT_CAP = 1024
+MIN_PROMPT_TOKENS = 512
 TRACE_BYTES_PER_TOKEN_LAYER = (7168 + 256 + 256 + 8 + 256) * 4
 MAX_TRACE_BYTES = TRACE_CONTEXT_CAP * TRACE_BYTES_PER_TOKEN_LAYER
 TRACE_DISK_RESERVE_BYTES = 20 * 1024**3
@@ -145,8 +150,8 @@ def smoke_verdict(
     chunks = off.get("full_indexed_chunks")
     exact_coverage = (
         isinstance(prompt_tokens, int) and not isinstance(prompt_tokens, bool) and
-        prompt_tokens >= 4096 and on.get("prompt_tokens") == prompt_tokens and
-        isinstance(chunks, list) and bool(chunks) and chunks[0][0] == 0 and
+        prompt_tokens >= MIN_PROMPT_TOKENS and on.get("prompt_tokens") == prompt_tokens and
+        isinstance(chunks, list) and len(chunks) == 1 and chunks[0][0] == 0 and
         sum(row[1] for row in chunks) == prompt_tokens and
         chunks[-1][0] + chunks[-1][1] == prompt_tokens
     )
@@ -198,7 +203,7 @@ def _arm(args: argparse.Namespace) -> int:
                 "--output-tokenizer-path", str(SHARED.TOKENIZER),
                 "--output-tokenizer-sha256", SHARED.TOKENIZER_SHA256,
                 "--token-timing-log", str(server_log), "--reps", "1", "--warmup", "0",
-                "--context-levels", "4096", "--max-tokens", "128",
+                "--context-levels", "512", "--max-tokens", "128",
                 "--min-completion-tokens", "128", "--request-timeout", "2700",
                 "--seed", str(args.seed),
             ], stdin=subprocess.DEVNULL, capture_output=True, timeout=3000, check=False)
@@ -211,7 +216,7 @@ def _arm(args: argparse.Namespace) -> int:
             reps = payload["cells"][0]["reps"]
             prompt_tokens = reps[0].get("prompt_tokens") if len(reps) == 1 else None
             if (not isinstance(prompt_tokens, int) or isinstance(prompt_tokens, bool) or
-                    prompt_tokens < 4096):
+                    prompt_tokens < MIN_PROMPT_TOKENS):
                 raise ValueError("benchmark prompt-token coverage is insufficient")
         finally:
             if server is not None and server.poll() is None:
@@ -334,6 +339,8 @@ def run(args: argparse.Namespace) -> int:
     SHARED.frozen_inputs(FREEZE, RANDOMNESS)
     summary = {
         "schema_version": 1,
+        "scope": "short_single_indexed_batch_only",
+        "high_row_2048_status": "OPEN",
         "candidate_hash": freeze["candidate_hash"],
         "engine_commit": freeze["engine_commit"],
         "binary_sha256": freeze["binary_sha256"],
