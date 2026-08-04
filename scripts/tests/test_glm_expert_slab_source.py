@@ -18,21 +18,27 @@ ENGINE_PATCHES = (
 PREFETCH_SHA_PIPELINE_PATCH = (
     ROOT / "results/glm52-gates/harness/ds4-expert-slab-prefetch-sha-pipeline.patch"
 )
+PREFETCH_SHARED_AUTHORITY_PATCH = (
+    ROOT / "results/glm52-gates/harness/ds4-prefetch-shared-read-authority.patch"
+)
 
 
 class ExpertSlabSourceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        patches = ENGINE_PATCHES + (
-            (PREFETCH_SHA_PIPELINE_PATCH,)
-            if PREFETCH_SHA_PIPELINE_PATCH.exists() else ()
+        patches = ENGINE_PATCHES + tuple(
+            patch for patch in (
+                PREFETCH_SHA_PIPELINE_PATCH, PREFETCH_SHARED_AUTHORITY_PATCH
+            ) if patch.exists()
         )
         cls.source = "\n".join(
             patch.read_text(encoding="utf-8") for patch in patches
         )
-        cls.prefetch_source = PREFETCH_SHA_PIPELINE_PATCH.read_text(
-            encoding="utf-8"
-        ) if PREFETCH_SHA_PIPELINE_PATCH.exists() else ""
+        cls.prefetch_source = "\n".join(
+            patch.read_text(encoding="utf-8") for patch in (
+                PREFETCH_SHA_PIPELINE_PATCH, PREFETCH_SHARED_AUTHORITY_PATCH
+            ) if patch.exists()
+        )
         cls.compiled_source = Path(
             "/tmp/glm52-rung0-prefetch-candidate/ds4_cuda.cu"
         ).read_text(encoding="utf-8")

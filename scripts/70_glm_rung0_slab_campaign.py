@@ -161,6 +161,7 @@ SHA_PREFETCH_TEST_PATHS = (
 
 SHA_PREFETCH_SOURCE_PATHS = (
     "results/glm52-gates/harness/ds4-expert-slab-prefetch-sha-pipeline.patch",
+    "results/glm52-gates/harness/ds4-prefetch-shared-read-authority.patch",
     "results/glm52-gates/harness/ds4_slab_prefetch_state.h",
     "results/glm52-gates/harness/glm_safe_run.sh",
     "results/glm52-gates/harness/glm_cgroup_run.sh",
@@ -574,10 +575,10 @@ def score_sha_prefetch_campaign(
             fetch_ms[arm].extend(float(value) for value in fetch)
         telemetry = engine["telemetry"]
         telemetry_keys = {
-            "attempts", "sha_successes", "sha_failures", "ready", "late",
-            "stale", "fallback", "copies", "validated_bytes", "copied_bytes",
-            "publications", "read_ns", "sha_ns", "wait_ns", "copy_ns",
-            "current_ready",
+            "attempts", "issue_dropped", "sha_successes", "sha_failures",
+            "ready", "late", "stale", "fallback", "copies",
+            "validated_bytes", "copied_bytes", "publications", "read_ns",
+            "sha_ns", "wait_ns", "copy_ns", "current_ready",
         }
         if not isinstance(telemetry, dict) or set(telemetry) != telemetry_keys:
             raise ValueError("prefetch telemetry schema is invalid")
@@ -595,7 +596,8 @@ def score_sha_prefetch_campaign(
             t["attempts"] != reads or t["sha_successes"] != reads
             or t["copies"] != reads or t["publications"] != reads
             or any(t[name] for name in (
-                "ready", "late", "stale", "fallback", "current_ready", "wait_ns"
+                "issue_dropped", "ready", "late", "stale", "fallback",
+                "current_ready", "wait_ns"
             ))
             or min(t["read_ns"], t["sha_ns"], t["copy_ns"]) <= 0
         ):
@@ -1444,10 +1446,10 @@ def parse_sha_prefetch_engine_log(
             raise ValueError("off arm performed authenticated slab work")
         zero = {
             name: 0 for name in (
-                "attempts", "sha_successes", "sha_failures", "ready", "late",
-                "stale", "fallback", "copies", "validated_bytes", "copied_bytes",
-                "publications", "read_ns", "sha_ns", "wait_ns", "copy_ns",
-                "current_ready",
+                "attempts", "issue_dropped", "sha_successes", "sha_failures",
+                "ready", "late", "stale", "fallback", "copies",
+                "validated_bytes", "copied_bytes", "publications", "read_ns",
+                "sha_ns", "wait_ns", "copy_ns", "current_ready",
             )
         }
         return {
@@ -1470,7 +1472,8 @@ def parse_sha_prefetch_engine_log(
         copy_ns = round(sum(float(row[8]) for row in loads) * 1e6)
         total_ns = sum(row["complete_ns"] - row["submit_ns"] for row in auth)
         telemetry = {
-            "attempts": reads, "sha_successes": reads, "sha_failures": 0,
+            "attempts": reads, "issue_dropped": 0,
+            "sha_successes": reads, "sha_failures": 0,
             "ready": 0, "late": 0, "stale": 0, "fallback": 0,
             "copies": reads, "validated_bytes": logical_bytes,
             "copied_bytes": logical_bytes, "publications": reads,
@@ -1480,10 +1483,12 @@ def parse_sha_prefetch_engine_log(
     else:
         marker = re.compile(
             r"^PREFETCHSHA mode=prefetch_sha generation=(\d+) attempts=(\d+) "
-            r"sha_successes=(\d+) sha_failures=(\d+) ready=(\d+) late=(\d+) "
+            r"issue_dropped=(\d+) sha_successes=(\d+) sha_failures=(\d+) "
+            r"ready=(\d+) late=(\d+) "
             r"stale=(\d+) fallback=(\d+) copies=(\d+) validated_bytes=(\d+) "
             r"copied_bytes=(\d+) publications=(\d+) read_ns=(\d+) sha_ns=(\d+) "
-            r"wait_ns=(\d+) copy_ns=(\d+) current_ready=(\d+) peak_qd=(\d+)$",
+            r"wait_ns=(\d+) copy_ns=(\d+) current_ready=(\d+) peak_qd=(\d+) "
+            r"shared_peak_qd=(\d+)$",
             re.MULTILINE,
         )
         markers = marker.findall(text)
@@ -1493,12 +1498,12 @@ def parse_sha_prefetch_engine_log(
         if values[0] != model_generation or values[1] != len(auth):
             raise ValueError("prefetch attempts do not match raw auth records")
         names = (
-            "attempts", "sha_successes", "sha_failures", "ready", "late",
-            "stale", "fallback", "copies", "validated_bytes", "copied_bytes",
-            "publications", "read_ns", "sha_ns", "wait_ns", "copy_ns",
-            "current_ready",
+            "attempts", "issue_dropped", "sha_successes", "sha_failures",
+            "ready", "late", "stale", "fallback", "copies",
+            "validated_bytes", "copied_bytes", "publications", "read_ns",
+            "sha_ns", "wait_ns", "copy_ns", "current_ready",
         )
-        telemetry = dict(zip(names, values[1:17], strict=True))
+        telemetry = dict(zip(names, values[1:18], strict=True))
         if (
             telemetry["sha_successes"] != len(auth)
             or telemetry["sha_failures"] != 0
@@ -1506,7 +1511,10 @@ def parse_sha_prefetch_engine_log(
             != len(auth) * EXPERT_RECORD_PAYLOAD_BYTES
         ):
             raise ValueError("prefetch telemetry differs from raw auth records")
-        peak_qd = max(peak_qd, values[17])
+        prefetch_peak_qd, shared_peak_qd = values[18], values[19]
+        if not 1 <= prefetch_peak_qd <= 8 or not 4 <= shared_peak_qd <= 8:
+            raise ValueError("prefetch shared read-credit depth is invalid")
+        peak_qd = max(peak_qd, prefetch_peak_qd, shared_peak_qd)
     return {
         "mode": mode, "model_generation": model_generation,
         "slab_reads": reads, "slab_peak_qd": peak_qd,

@@ -1,0 +1,127 @@
+diff --git a/ds4.c b/ds4.c
+--- a/ds4.c
++++ b/ds4.c
+@@ -40006,6 +40006,9 @@ static bool glm_graph_encode_sparse_ffn_one(
+     uint64_t gate_in = 0, gate_out = 0, gate_row_bytes = 0;
+     uint64_t up_in = 0, up_out = 0, up_row_bytes = 0;
+     uint64_t down_in = 0, down_out = 0, down_row_bytes = 0;
++    bool pf_hint_pending = false;
++    int32_t pf_ids[DS4_MAX_EXPERT_USED] = {0};
++    ds4_gpu_stream_expert_table pf_table = {};
+     (void)tensor_expert_bytes(model, l->ffn_gate_exps, 0, &gate_in, &gate_out, &gate_row_bytes);
+     (void)tensor_expert_bytes(model, l->ffn_up_exps, 0, &up_in, &up_out, &up_row_bytes);
+     (void)tensor_expert_bytes(model, l->ffn_down_exps, 0, &down_in, &down_out, &down_row_bytes);
+@@ -40042,7 +40045,6 @@ static bool glm_graph_encode_sparse_ffn_one(
+          * touched: no save/restore, no re-run of this layer's router, and
+          * only ONE extra device sync per layer (two extra syncs cost more
+          * than the prefetch saved — measured). */
+-        int32_t pf_ids[DS4_MAX_EXPERT_USED];
+         const ds4_layer_weights *lnext = l + 1;
+         uint64_t nb_gate = 0, nb_down = 0;
+         if (lnext->ffn_gate_inp && lnext->ffn_exp_probs_b &&
+@@ -40067,10 +40069,9 @@ static bool glm_graph_encode_sparse_ffn_one(
+             if (ds4_gpu_tensor_read(g->batch_router_selected, 0, pf_ids,
+                                     (uint64_t)DS4_N_EXPERT_USED *
+                                         sizeof(pf_ids[0])) != 0) {
+-                const ds4_gpu_stream_expert_table ntab =
+-                    graph_stream_expert_table_make(model, lnext, il + 1u,
+-                                                   nb_gate, nb_down);
+-                ds4_gpu_expert_prefetch_hint(&ntab, pf_ids, DS4_N_EXPERT_USED);
++                pf_table = graph_stream_expert_table_make(
++                    model, lnext, il + 1u, nb_gate, nb_down);
++                pf_hint_pending = true;
+             }
+             if (ds4_gpu_begin_commands() == 0) ok = false;
+         }
+@@ -40310,6 +40311,10 @@ static bool glm_graph_encode_sparse_ffn_one(
+             }
+         }
+     }
++    if (ok && pf_hint_pending && !async_load_started) {
++        ds4_gpu_expert_prefetch_hint(&pf_table, pf_ids, DS4_N_EXPERT_USED);
++        pf_hint_pending = false;
++    }
+     if (ok && shared_first) {
+         ok = glm_graph_encode_shared_swiglu_one(ffn_mid,
+                                                 ffn_gate,
+@@ -40369,6 +40374,10 @@ static bool glm_graph_encode_sparse_ffn_one(
+             stream_t0 = glm_graph_streaming_async_profile_ms();
+         }
+     }
++    if (ok && pf_hint_pending) {
++        ds4_gpu_expert_prefetch_hint(&pf_table, pf_ids, DS4_N_EXPERT_USED);
++        pf_hint_pending = false;
++    }
+     /* 50/50 TP: this rank's routed partial goes straight into the
+      * slab out slot, the gate exchanges it with the peer's half, and the
+      * commutative add rebuilds the full routed output on both ranks
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -24379,6 +24379,8 @@ static int cuda_expert_slab_init(const ds4_gpu_stream_expert_table *table) {
+     return 1;
+ }
+ 
++static ds4_slab_prefetch::ReadCredits g_expert_slab_read_credits(8);
++
+ static int cuda_expert_slab_read(uint32_t layer, uint32_t expert,
+                                  uint64_t gate_bytes, uint64_t down_bytes,
+                                  void *buffer, uint64_t buffer_bytes,
+@@ -24414,8 +24416,10 @@ static int cuda_expert_slab_read(uint32_t layer, uint32_t expert,
+     const uint32_t in_flight = window->in_flight.fetch_add(1) + 1u;
+     cuda_expert_slab_window_max(&window->peak_in_flight, in_flight);
+     cuda_expert_slab_window_min(&window->first_submit_ns, submit_ns);
++    g_expert_slab_read_credits.acquire_demand();
+     const int read_ok = cuda_pread_full(g_expert_slab.fd, buffer, read_bytes,
+                                         record.expert_slab_offset);
++    g_expert_slab_read_credits.release();
+     const uint64_t complete_ns = cuda_expert_slab_now_ns();
+     window->in_flight.fetch_sub(1);
+     cuda_expert_slab_window_max64(&window->last_complete_ns, complete_ns);
+@@ -24607,8 +24611,10 @@ public:
+         const uint32_t in_flight = g_pf.slab_window.in_flight.fetch_add(1) + 1;
+         cuda_expert_slab_window_max(&g_pf.slab_window.peak_in_flight, in_flight);
+         cuda_expert_slab_window_min(&g_pf.slab_window.first_submit_ns, submit_ns);
++        g_expert_slab_read_credits.acquire_prefetch();
+         const int ok = cuda_pread_full(g_pf.fd, buffer, read_bytes,
+                                        record.expert_slab_offset);
++        g_expert_slab_read_credits.release();
+         const uint64_t complete_ns = cuda_expert_slab_now_ns();
+         g_pf.slab_window.in_flight.fetch_sub(1);
+         cuda_expert_slab_window_max64(&g_pf.slab_window.last_complete_ns, complete_ns);
+@@ -24953,7 +24959,7 @@ static int ds4_pf_consume(
+     req.payload_bytes = record.payload_bytes;
+     memcpy(req.payload_sha256, record.payload_sha256, sizeof(req.payload_sha256));
+     const ds4_slab_prefetch::Lease lease =
+-        g_pf.machine->claim(ds4_pf_identity(req));
++        g_pf.machine->claim_or_wait(ds4_pf_identity(req));
+     if (!lease.valid)
+         return g_pf.machine->demand_fallback_allowed() ? 0 : -1;
+     ds4_pf_backend backend(gate_dst, up_dst, down_dst,
+@@ -24992,12 +24998,15 @@ extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
+         const ds4_slab_prefetch::Telemetry t = g_pf.machine->telemetry();
+         fprintf(stderr,
+                 "PREFETCHSHA mode=prefetch_sha generation=%llu attempts=%llu "
++                "issue_dropped=%llu "
+                 "sha_successes=%llu sha_failures=%llu ready=%llu late=%llu "
+                 "stale=%llu fallback=%llu copies=%llu validated_bytes=%llu "
+                 "copied_bytes=%llu publications=%llu read_ns=%llu sha_ns=%llu "
+-                "wait_ns=%llu copy_ns=%llu current_ready=%llu peak_qd=%u\n",
++                "wait_ns=%llu copy_ns=%llu current_ready=%llu peak_qd=%u "
++                "shared_peak_qd=%u\n",
+                 (unsigned long long)g_model_load_generation,
+                 (unsigned long long)t.attempts,
++                (unsigned long long)t.issue_dropped,
+                 (unsigned long long)t.sha_successes,
+                 (unsigned long long)t.sha_failures,
+                 (unsigned long long)t.ready,
+@@ -25013,7 +25022,8 @@ extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
+                 (unsigned long long)t.wait_ns,
+                 (unsigned long long)t.copy_ns,
+                 (unsigned long long)t.current_ready,
+-                g_pf.slab_window.peak_in_flight.load());
++                g_pf.slab_window.peak_in_flight.load(),
++                (unsigned)g_expert_slab_read_credits.peak());
+     }
+     ec_sha256_init(&g_expert_cache_run_stats.stream);
+     g_expert_cache_run_stats.lookup_bytes = 0;
