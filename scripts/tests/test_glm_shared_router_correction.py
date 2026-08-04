@@ -219,6 +219,46 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
         source = CGROUP.read_text(encoding="utf-8")
         self.assertIn("DS4_GLM_PREFETCH_SHARED_CORRECTION", source)
 
+    def test_balanced_campaign_requires_positive_decode_lower_bound(self) -> None:
+        rows = []
+        for block, sequence, mode in RUNNER_MODULE.campaign_schedule(False):
+            rows.append({
+                "block": block,
+                "sequence": sequence,
+                "mode": mode,
+                "decode_tokens_per_second": 2.1 if mode == "corrected" else 2.0,
+                "ttft_seconds": 1.0,
+                "completion_tokens": 128,
+                "response_signature": {"token_ids": [1, 2, 3]},
+            })
+        passed = RUNNER_MODULE.campaign_verdict(rows, False)
+        self.assertEqual(len(rows), 20)
+        self.assertEqual(passed["verdict"], "PASS")
+        self.assertGreater(passed["decode_ratio_lower_95"], 1.0)
+        for row in rows:
+            if row["mode"] == "corrected":
+                row["decode_tokens_per_second"] = 1.99
+        failed = RUNNER_MODULE.campaign_verdict(rows, False)
+        self.assertEqual(failed["verdict"], "FAIL")
+
+    def test_balanced_campaign_rejects_wrong_order_or_output(self) -> None:
+        rows = []
+        for block, sequence, mode in RUNNER_MODULE.campaign_schedule(True):
+            rows.append({
+                "block": block,
+                "sequence": sequence,
+                "mode": mode,
+                "decode_tokens_per_second": 2.1 if mode == "corrected" else 2.0,
+                "ttft_seconds": 1.0,
+                "completion_tokens": 128,
+                "response_signature": {"token_ids": [1, 2, 3]},
+            })
+        with self.assertRaises(ValueError):
+            RUNNER_MODULE.campaign_verdict(rows, False)
+        rows[-1]["response_signature"] = {"token_ids": [9]}
+        with self.assertRaises(ValueError):
+            RUNNER_MODULE.campaign_verdict(rows, True)
+
 
 if __name__ == "__main__":
     unittest.main()
