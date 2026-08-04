@@ -27,8 +27,8 @@ def arm(mode: str) -> dict[str, object]:
         "fixture_sha256": "d" * 64,
         "configuration_sha256": "e" * 64,
         "response_signature": {"request_sha256": "d" * 64, "token_ids": [1, 2]},
-        "prompt_tokens": 4136,
-        "full_indexed_chunks": [[0, 2048], [2048, 2048], [4096, 40]],
+        "prompt_tokens": 573,
+        "full_indexed_chunks": [[0, 573]],
         "trace_files": 0 if mode == "off" else 9,
     }
 
@@ -58,7 +58,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                 elif mutation == "chunks":
                     on["full_indexed_chunks"] = [[0, 2048]]
                 elif mutation == "prompt_tokens":
-                    on["prompt_tokens"] = 4000
+                    on["prompt_tokens"] = 500
                 elif mutation == "shared_truncation":
                     off["full_indexed_chunks"] = on["full_indexed_chunks"] = [[0, 1]]
                 elif mutation == "off_trace":
@@ -84,13 +84,17 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         cls.runner = RUNNER.read_text(encoding="utf-8")
         cls.cgroup = CGROUP.read_text(encoding="utf-8")
 
-    def test_runner_uses_existing_containment_and_fixed_large_enough_fixture(self) -> None:
+    def test_runner_uses_existing_containment_and_fixed_single_batch_fixture(self) -> None:
         for marker in (
-            "glm_cgroup_run.sh", '"--context-levels", "4096"',
+            "glm_cgroup_run.sh", '"--context-levels", "512"',
             '"--max-tokens", "128"', "GLM_SAFE_MEMORY_HIGH_GIB",
             "GLM_SAFE_KILL_FLOOR_GIB", "GLM_SAFE_MIN_START_GIB",
         ):
             self.assertIn(marker, self.runner)
+
+    def test_short_smoke_does_not_claim_2048_row_coverage(self) -> None:
+        self.assertIn('"scope": "short_single_indexed_batch_only"', self.runner)
+        self.assertIn('"high_row_2048_status": "OPEN"', self.runner)
 
     def test_runner_has_prewrite_disk_bound_and_preservation_reserve(self) -> None:
         for marker in (
