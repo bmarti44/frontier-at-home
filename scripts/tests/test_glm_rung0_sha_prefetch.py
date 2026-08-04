@@ -120,7 +120,7 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
                 "engine": {
                     "mode": mode,
                     "model_generation": 9,
-                    "slab_reads": attempts,
+                    "slab_reads": fallback if arm == "C" else attempts,
                     "slab_peak_qd": 0 if arm == "A" else 4,
                     "completed_fetch_ms": [] if arm == "A" else
                         ([10.0, 10.2, 9.8] if arm == "B" else [8.5, 8.6, 8.4]),
@@ -911,6 +911,9 @@ class GlmRung0ShaPrefetchTests(unittest.TestCase):
             ),
             "nan fetch": lambda r, m: r[1]["engine"]["completed_fetch_ms"].__setitem__(0, math.nan),
             "telemetry mismatch": lambda r, m: r[2]["engine"]["telemetry"].__setitem__("copies", 101),
+            "fallback read mismatch": lambda r, m: r[2]["engine"].__setitem__(
+                "slab_reads", r[2]["engine"]["slab_reads"] + 1
+            ),
             "historical row": lambda r, m: r[7].__setitem__(
                 "recorded_monotonic_ns", m["campaign_started_monotonic_ns"] - 1
             ),
