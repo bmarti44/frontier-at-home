@@ -98,6 +98,10 @@ class SharedRouterSourceContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = PATCH.read_text(encoding="utf-8") if PATCH.exists() else ""
+        cls.added_source = "\n".join(
+            line[1:] for line in cls.source.splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        )
 
     def test_correction_is_explicit_and_default_off(self) -> None:
         self.assertIn('getenv("DS4_GLM_PREFETCH_SHARED_CORRECTION")', self.source)
@@ -121,6 +125,16 @@ class SharedRouterSourceContractTests(unittest.TestCase):
         self.assertIn("predacc_pair_layer", self.source)
         self.assertIn("predacc_pair_event", self.source)
         self.assertNotIn("static uint32_t pair_layer", self.source)
+
+    def test_predictor_stops_at_normal_layer_boundary_not_mtp_layer(self) -> None:
+        self.assertIn(
+            "const uint32_t normal_layers = glm_graph_normal_layer_count();",
+            self.added_source,
+        )
+        self.assertGreaterEqual(
+            self.added_source.count("il + 1u < normal_layers"), 2
+        )
+        self.assertNotIn("il + 1u < DS4_N_LAYER", self.added_source)
 
     def test_probe_failures_close_and_rebalance_command_ownership(self) -> None:
         for marker in (
