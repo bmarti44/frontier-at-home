@@ -32,6 +32,7 @@ ENV_NAMES = sorted((
     "DS4_CUDA_FETCH_THREADS",
     "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
     "DS4_GLM_PREDACC_SHARED",
+    "DS4_TOKEN_TIMING_LOG",
 ))
 COMMON_ENV = {
     "DS4_CUDA_EXPERT_CACHE_GB": "68",
@@ -39,6 +40,7 @@ COMMON_ENV = {
     "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
     "DS4_CUDA_FETCH_THREADS": "8",
     "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+    "DS4_TOKEN_TIMING_LOG": "1",
 }
 # ds4-server defaults to one slot unless --batched-sessions is supplied. The
 # runner issues exactly one request and never supplies that option.
@@ -198,7 +200,7 @@ def arm(args: argparse.Namespace) -> int:
     pair_count = sum(line.startswith("PREDPAIR ") for line in log_text.splitlines())
     if args.mode == "off" and pair_count != 0:
         raise ValueError("off arm emitted probe rows")
-    if args.mode == "on" and pair_count < 1000:
+    if args.mode == "on" and pair_count < 1036:
         raise ValueError("on arm emitted too few probe rows")
     record = {
         "schema_version": 1, "mode": args.mode, "engine_commit": args.engine_commit,

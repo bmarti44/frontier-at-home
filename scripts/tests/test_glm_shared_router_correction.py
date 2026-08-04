@@ -39,8 +39,8 @@ class SharedRouterScorerTests(unittest.TestCase):
     def test_accepts_matched_trace_with_two_point_recall_gain(self) -> None:
         rows = [row(index + 1, index // 74, 4 + index % 74,
                     range(8), range(8), range(8)) for index in range(1036)]
-        # Lower the baseline by exactly two of eight experts in 80 samples:
-        # 160 / 8000 = 0.02 absolute recall.
+        # Lower the baseline by two of eight experts in enough samples to
+        # cross the preregistered 0.02 absolute-recall threshold.
         for index in range(83):
             rows[index] = row(index + 1, index // 74, 4 + index % 74,
                               range(8), range(2, 10), range(8))

@@ -15,7 +15,7 @@ LINE = re.compile(
     r" base:(?P<base>(?: [0-9]+){8})"
     r" shared:(?P<shared>(?: [0-9]+){8})$"
 )
-MIN_SAMPLES = 1000
+MIN_SAMPLES = 1036
 MIN_RECALL_GAIN = 0.02
 MIN_POSITIONS = 14
 EXPECTED_LAYERS = set(range(4, 78))
@@ -35,6 +35,7 @@ def score(path: Path) -> dict[str, object]:
     event_keys: set[tuple[int, int, int]] = set()
     positions: set[int] = set()
     layers: set[int] = set()
+    ordered_position_layers: list[tuple[int, int]] = []
     for raw in path.read_text(encoding="utf-8", errors="strict").splitlines():
         if not raw.startswith("PREDPAIR "):
             continue
@@ -61,6 +62,7 @@ def score(path: Path) -> dict[str, object]:
         event_keys.add((event, position, layer))
         positions.add(position)
         layers.add(layer)
+        ordered_position_layers.append((position, layer))
         samples += 1
 
     denominator = samples * 8
@@ -68,12 +70,23 @@ def score(path: Path) -> dict[str, object]:
     shared_recall = shared_hits / denominator if denominator else 0.0
     gain = shared_recall - baseline_recall
     expected_events = list(range(1, samples + 1))
+    ordered_positions = sorted(positions)
+    contiguous_positions = bool(ordered_positions) and ordered_positions == list(
+        range(ordered_positions[0], ordered_positions[-1] + 1)
+    )
+    expected_sweeps = [
+        (position, layer)
+        for position in ordered_positions
+        for layer in sorted(EXPECTED_LAYERS)
+    ]
+    complete_sweeps = contiguous_positions and ordered_position_layers == expected_sweeps
     checks = {
         "minimum_samples": samples >= MIN_SAMPLES,
         "no_malformed_rows": malformed == 0,
         "unique_event_keys": len(event_keys) == samples and events == expected_events,
         "position_coverage": len(positions) >= MIN_POSITIONS,
         "layer_coverage": layers == EXPECTED_LAYERS,
+        "complete_position_sweeps": complete_sweeps,
         "shared_recall_gain": gain >= MIN_RECALL_GAIN,
     }
     return {
@@ -90,6 +103,7 @@ def score(path: Path) -> dict[str, object]:
         "unique_event_keys": len(event_keys),
         "unique_positions": len(positions),
         "observed_layers": sorted(layers),
+        "complete_position_sweeps": complete_sweeps,
         "baseline_recall": baseline_recall,
         "shared_recall": shared_recall,
         "absolute_recall_gain": gain,
