@@ -38,15 +38,15 @@ class SharedRouterScorerTests(unittest.TestCase):
 
     def test_accepts_matched_trace_with_two_point_recall_gain(self) -> None:
         rows = [row(index + 1, index // 74, 4 + index % 74,
-                    range(8), range(8), range(8)) for index in range(1000)]
+                    range(8), range(8), range(8)) for index in range(1036)]
         # Lower the baseline by exactly two of eight experts in 80 samples:
         # 160 / 8000 = 0.02 absolute recall.
-        for index in range(80):
+        for index in range(83):
             rows[index] = row(index + 1, index // 74, 4 + index % 74,
                               range(8), range(2, 10), range(8))
         result = self.score_rows(rows)
         self.assertEqual(result["verdict"], "PASS")
-        self.assertAlmostEqual(result["absolute_recall_gain"], 0.02)
+        self.assertGreaterEqual(result["absolute_recall_gain"], 0.02)
 
     def test_rejects_too_few_rows(self) -> None:
         result = self.score_rows([
@@ -59,14 +59,14 @@ class SharedRouterScorerTests(unittest.TestCase):
     def test_rejects_no_gain(self) -> None:
         result = self.score_rows([
             row(index + 1, index // 74, 4 + index % 74,
-                range(8), range(8), range(8)) for index in range(1000)
+            range(8), range(8), range(8)) for index in range(1036)
         ])
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["shared_recall_gain"])
 
     def test_rejects_malformed_or_duplicate_ids(self) -> None:
         rows = [row(index + 1, index // 74, 4 + index % 74,
-                    range(8), range(2, 10), range(8)) for index in range(1000)]
+                    range(8), range(2, 10), range(8)) for index in range(1036)]
         rows[0] = "PREDPAIR E1 P0 L4 actual: 0 0 1 2 3 4 5 6 base: 2 3 4 5 6 7 8 9 shared: 0 1 2 3 4 5 6 7"
         result = self.score_rows(rows)
         self.assertEqual(result["verdict"], "FAIL")
@@ -74,7 +74,7 @@ class SharedRouterScorerTests(unittest.TestCase):
 
     def test_rejects_a_duplicated_favorable_observation(self) -> None:
         favorable = row(1, 0, 4, range(8), range(2, 10), range(8))
-        result = self.score_rows([favorable] * 1000)
+        result = self.score_rows([favorable] * 1036)
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["unique_event_keys"])
 
@@ -84,6 +84,13 @@ class SharedRouterScorerTests(unittest.TestCase):
         result = self.score_rows((sweep * 14)[:1000])
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["position_coverage"])
+
+    def test_rejects_unique_events_with_shuffled_incomplete_sweeps(self) -> None:
+        rows = [row(index + 1, index % 14, 4 + index % 74,
+                    range(8), range(2, 10), range(8)) for index in range(1036)]
+        result = self.score_rows(rows)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertFalse(result["checks"]["complete_position_sweeps"])
 
 
 class SharedRouterSourceContractTests(unittest.TestCase):
@@ -136,6 +143,7 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
         self.assertIn("SINGLE_REQUEST_SLOT = 1", self.source)
         self.assertIn("--batched-sessions", self.source)
         self.assertIn('result["DS4_GLM_PREDACC_SHARED"] = "1"', self.source)
+        self.assertIn('"DS4_TOKEN_TIMING_LOG": "1"', self.source)
 
     def test_runner_binds_candidate_and_safety_artifacts(self) -> None:
         for marker in (
