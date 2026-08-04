@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -22,6 +23,8 @@ SCORER = ROOT / "scripts/72_glm_shared_router_score.py"
 BENCH = ROOT / "scripts/30_bench_speed.py"
 FREEZE_MANIFEST = ROOT / "results/glm52-gates/R0a-shared-router-freeze.json"
 RANDOMNESS_RECEIPT = ROOT / "results/glm52-gates/R0a-shared-router-randomness.json"
+PERF_FREEZE_MANIFEST = ROOT / "results/glm52-gates/R0a-shared-router-perf-freeze.json"
+PERF_RANDOMNESS_RECEIPT = ROOT / "results/glm52-gates/R0a-shared-router-perf-randomness.json"
 DRAND_ENDPOINT = "https://api.drand.sh/public/{round}"
 MODEL = Path("/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf")
 MODEL_BYTES = 211075856448
@@ -35,6 +38,9 @@ ENV_NAMES = sorted((
     "DS4_CUDA_FETCH_THREADS",
     "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
     "DS4_GLM_PREDACC_SHARED",
+    "DS4_GLM_PREFETCH",
+    "DS4_GLM_PREFETCH_SHARED_CORRECTION",
+    "DS4_GLM_PREFETCH_THREADS",
     "DS4_LOCK_FILE",
     "DS4_TOKEN_TIMING_LOG",
 ))
@@ -66,9 +72,12 @@ def strict_json(path: Path) -> dict[str, object]:
     return value
 
 
-def frozen_inputs() -> dict[str, object]:
-    freeze = strict_json(FREEZE_MANIFEST)
-    randomness = strict_json(RANDOMNESS_RECEIPT)
+def frozen_inputs(
+    freeze_path: Path = FREEZE_MANIFEST,
+    randomness_path: Path = RANDOMNESS_RECEIPT,
+) -> dict[str, object]:
+    freeze = strict_json(freeze_path)
+    randomness = strict_json(randomness_path)
     required = {
         "schema_version", "repository_parent_commit", "engine_commit",
         "candidate_directory", "binary_sha256", "binary_mtime_ns",
@@ -129,6 +138,48 @@ def environment_for(mode: str, lock_file: Path) -> dict[str, str]:
     if mode == "on":
         result["DS4_GLM_PREDACC_SHARED"] = "1"
     return result
+
+
+def performance_environment_for(mode: str, lock_file: Path) -> dict[str, str]:
+    if mode not in {"off", "corrected"}:
+        raise ValueError("invalid performance arm")
+    result = dict(COMMON_ENV)
+    result["DS4_LOCK_FILE"] = str(lock_file)
+    if mode == "corrected":
+        result.update({
+            "DS4_GLM_PREFETCH": "1",
+            "DS4_GLM_PREFETCH_SHARED_CORRECTION": "1",
+            "DS4_GLM_PREFETCH_THREADS": "8",
+        })
+    return result
+
+
+def performance_verdict(
+    off_decode: float, corrected_decode: float, output_identity: bool
+) -> dict[str, object]:
+    valid = all(math.isfinite(value) and value > 0.0
+                for value in (off_decode, corrected_decode))
+    ratio = corrected_decode / off_decode if valid else 0.0
+    checks = {
+        "finite_positive_decode": valid,
+        "byte_and_token_identity": output_identity,
+        "decode_non_regression": valid and ratio >= 0.95,
+    }
+    return {
+        "formula": "corrected_decode_tokens_per_second / off_decode_tokens_per_second",
+        "minimum_decode_ratio": 0.95,
+        "decode_ratio": ratio,
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
+def server_command(binary: Path, port: int) -> list[str]:
+    return [
+        str(binary), "--cuda", "-m", str(MODEL), "-c", "8192",
+        "--host", "127.0.0.1", "--port", str(port),
+        "--ssd-streaming", "--ssd-streaming-cache-experts", "40GB",
+    ]
 
 
 def environment_sha256(values: dict[str, str]) -> str:
@@ -212,9 +263,16 @@ def containment_record(stdout_path: Path) -> dict[str, object]:
 
 
 def arm(args: argparse.Namespace) -> int:
+    if ((args.purpose == "recall" and args.mode not in {"off", "on"}) or
+            (args.purpose == "performance" and args.mode not in {"off", "corrected"})):
+        raise ValueError("arm purpose/mode mismatch")
     binary = args.binary.resolve()
     out = args.out.resolve()
-    expected = environment_for(args.mode, out / "runtime.lock")
+    expected = (
+        environment_for(args.mode, out / "runtime.lock")
+        if args.purpose == "recall"
+        else performance_environment_for(args.mode, out / "runtime.lock")
+    )
     observed = {name: os.environ[name] for name in ENV_NAMES if name in os.environ}
     if observed != expected:
         raise ValueError("arm environment is not the fixed configuration")
@@ -227,11 +285,7 @@ def arm(args: argparse.Namespace) -> int:
     result_path = out / "result.json"
     server_log_path = out / "server.log"
     arm_path = out / "arm.json"
-    command = [
-        str(binary), "--cuda", "-m", str(MODEL), "-c", "8192",
-        "--host", "127.0.0.1", "--port", str(args.port),
-        "--ssd-streaming", "--ssd-streaming-cache-experts", "40GB",
-    ]
+    command = server_command(binary, args.port)
     server: subprocess.Popen[bytes] | None = None
     with server_log_path.open("xb") as log:
         try:
@@ -240,7 +294,8 @@ def arm(args: argparse.Namespace) -> int:
             wait_ready(server, args.port)
             completed = subprocess.run([
                 sys.executable, str(BENCH), "--base-url", f"http://127.0.0.1:{args.port}",
-                "--out", str(result_path), "--stack-label", f"shared-router-{args.mode}",
+                "--out", str(result_path), "--stack-label",
+                f"shared-router-{args.purpose}-{args.mode}",
                 "--model-id", "glm-5.2", "--output-tokenizer-path", str(TOKENIZER),
                 "--output-tokenizer-sha256", TOKENIZER_SHA256, "--token-timing-log",
                 str(server_log_path), "--reps", "1", "--warmup", "0",
@@ -267,12 +322,20 @@ def arm(args: argparse.Namespace) -> int:
         raise RuntimeError(f"server did not exit cleanly rc={getattr(server, 'returncode', None)}")
     log_text = server_log_path.read_text(encoding="utf-8", errors="strict")
     pair_count = sum(line.startswith("PREDPAIR ") for line in log_text.splitlines())
-    if args.mode == "off" and pair_count != 0:
-        raise ValueError("off arm emitted probe rows")
-    if args.mode == "on" and pair_count < 1036:
-        raise ValueError("on arm emitted too few probe rows")
+    if args.purpose == "recall":
+        if args.mode == "off" and pair_count != 0:
+            raise ValueError("off arm emitted probe rows")
+        if args.mode == "on" and pair_count < 1036:
+            raise ValueError("on arm emitted too few probe rows")
+    else:
+        if pair_count != 0:
+            raise ValueError("performance arm emitted diagnostic probe rows")
+        correction_marker = "ds4: shared-expert router correction enabled"
+        if (args.mode == "corrected") != (correction_marker in log_text):
+            raise ValueError("performance correction marker mismatch")
     record = {
-        "schema_version": 1, "mode": args.mode, "engine_commit": args.engine_commit,
+        "schema_version": 1, "purpose": args.purpose, "mode": args.mode,
+        "engine_commit": args.engine_commit,
         "binary_sha256": args.binary_sha256, "model_sha256": args.model_sha256,
         "tokenizer_sha256": TOKENIZER_SHA256, "environment_sha256": environment_sha256(expected),
         "seed": args.seed, "pair_rows": pair_count, "single_request_slots": SINGLE_REQUEST_SLOT,
@@ -327,7 +390,8 @@ def run(args: argparse.Namespace) -> int:
         })
         completed = subprocess.run([
             str(CGROUP), "--tag", f"{args.tag}-{mode}", "--", sys.executable,
-            str(Path(__file__).resolve()), "_arm", "--mode", mode, "--out", str(out),
+            str(Path(__file__).resolve()), "_arm", "--purpose", "recall",
+            "--mode", mode, "--out", str(out),
             "--binary", str(binary), "--binary-sha256", binary_sha256,
             "--model-sha256", model_sha256, "--engine-commit", engine_commit,
             "--seed", str(seed), "--port", str(args.port + index),
@@ -369,6 +433,118 @@ def run(args: argparse.Namespace) -> int:
     return 0 if summary["verdict"] == "PASS" else 1
 
 
+def _decode_rate(path: Path) -> float:
+    payload = strict_json(path)
+    cells = payload.get("cells")
+    if not isinstance(cells, list) or len(cells) != 1:
+        raise ValueError("performance result has an invalid cell count")
+    reps = cells[0].get("reps") if isinstance(cells[0], dict) else None
+    if not isinstance(reps, list) or len(reps) != 1 or reps[0].get("valid") is not True:
+        raise ValueError("performance result has no valid repetition")
+    value = reps[0].get("decode_tok_s")
+    if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+        raise ValueError("performance result has invalid decode throughput")
+    return float(value)
+
+
+def performance_run(args: argparse.Namespace) -> int:
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}", args.tag) is None:
+        raise ValueError("invalid tag")
+    freeze = frozen_inputs(PERF_FREEZE_MANIFEST, PERF_RANDOMNESS_RECEIPT)
+    candidate = Path(str(freeze["candidate_directory"])).resolve()
+    binary = candidate / "ds4-server"
+    binary_sha256 = str(freeze["binary_sha256"])
+    model_sha256 = str(freeze["model_sha256"])
+    engine_commit = str(freeze["engine_commit"])
+    seed = int(freeze["seed"])
+    if sha256(TOKENIZER) != TOKENIZER_SHA256:
+        raise ValueError("tokenizer identity mismatch")
+    no_other_inference()
+    available_gib = int(next(
+        line.split()[1] for line in Path("/proc/meminfo").read_text().splitlines()
+        if line.startswith("MemAvailable:")
+    )) / 1048576
+    if available_gib < 110:
+        raise RuntimeError(f"only {available_gib:.3f} GiB available")
+    root = Path(f"/home/bmarti44/.local/state/glm52-{args.tag}")
+    if root.exists():
+        raise FileExistsError(root)
+    root.mkdir(mode=0o700, parents=True)
+    order = ("off", "corrected") if seed % 2 == 0 else ("corrected", "off")
+    for index, mode in enumerate(order):
+        out = root / mode
+        values = performance_environment_for(mode, out / "runtime.lock")
+        environment = os.environ.copy()
+        for name in list(environment):
+            if name.startswith("DS4_") or name.startswith("GLM_SAFE_"):
+                environment.pop(name)
+        environment.update(values)
+        environment.update({
+            "GLM_CANDIDATE_SRC": str(candidate),
+            "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+            "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+            "GLM_SAFE_EXPECTED_BINARY_SHA256": binary_sha256,
+            "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(ENV_NAMES),
+            "GLM_SAFE_EXPECTED_ENV_SHA256": environment_sha256(values),
+            "GLM_SAFE_MEMORY_HIGH_GIB": "69",
+            "GLM_SAFE_KILL_FLOOR_GIB": "18",
+            "GLM_SAFE_MIN_START_GIB": "110",
+            "GLM_SAFE_TIMEOUT_S": "3600",
+            "GLM_SAFE_FINAL_ARTIFACTS": ",".join((
+                str(out / "arm.json"), str(out / "result.json"),
+                str(out / "server.log"),
+            )),
+        })
+        completed = subprocess.run([
+            str(CGROUP), "--tag", f"{args.tag}-{mode}", "--", sys.executable,
+            str(Path(__file__).resolve()), "_arm", "--purpose", "performance",
+            "--mode", mode, "--out", str(out), "--binary", str(binary),
+            "--binary-sha256", binary_sha256, "--model-sha256", model_sha256,
+            "--engine-commit", engine_commit, "--seed", str(seed),
+            "--port", str(args.port + index),
+        ], env=environment, stdin=subprocess.DEVNULL, capture_output=True,
+           timeout=3700, check=False)
+        (root / f"{mode}.containment.stdout.log").write_bytes(completed.stdout)
+        (root / f"{mode}.containment.stderr.log").write_bytes(completed.stderr)
+        if completed.returncode != 0:
+            raise RuntimeError(f"contained {mode} performance arm failed rc={completed.returncode}")
+        containment = containment_record(root / f"{mode}.containment.stdout.log")
+        (root / f"{mode}.containment.json").write_text(
+            json.dumps(containment, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+        )
+        no_other_inference()
+    off = strict_json(root / "off/arm.json")
+    corrected = strict_json(root / "corrected/arm.json")
+    identity = off["response_signature"] == corrected["response_signature"]
+    off_decode = _decode_rate(root / "off/result.json")
+    corrected_decode = _decode_rate(root / "corrected/result.json")
+    score = performance_verdict(off_decode, corrected_decode, identity)
+    frozen_inputs(PERF_FREEZE_MANIFEST, PERF_RANDOMNESS_RECEIPT)
+    summary = {
+        "schema_version": 1,
+        "candidate_hash": freeze["candidate_hash"],
+        "engine_commit": engine_commit,
+        "binary_sha256": binary_sha256,
+        "model_sha256": model_sha256,
+        "seed": seed,
+        "arm_order": list(order),
+        "off_decode_tokens_per_second": off_decode,
+        "corrected_decode_tokens_per_second": corrected_decode,
+        "off_arm_sha256": sha256(root / "off/arm.json"),
+        "corrected_arm_sha256": sha256(root / "corrected/arm.json"),
+        "off_containment_sha256": sha256(root / "off.containment.json"),
+        "corrected_containment_sha256": sha256(root / "corrected.containment.json"),
+        "score": score,
+        "verdict": score["verdict"],
+    }
+    (root / "summary.json").write_text(
+        json.dumps(summary, sort_keys=True, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps(summary, sort_keys=True, indent=2, allow_nan=False))
+    return 0 if summary["verdict"] == "PASS" else 1
+
+
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
     sub = result.add_subparsers(dest="command", required=True)
@@ -376,8 +552,13 @@ def parser() -> argparse.ArgumentParser:
     public.add_argument("--tag", required=True)
     public.add_argument("--port", type=int, default=8040)
     public.set_defaults(func=run)
+    perf = sub.add_parser("perf")
+    perf.add_argument("--tag", required=True)
+    perf.add_argument("--port", type=int, default=8040)
+    perf.set_defaults(func=performance_run)
     internal = sub.add_parser("_arm")
-    internal.add_argument("--mode", choices=("off", "on"), required=True)
+    internal.add_argument("--purpose", choices=("recall", "performance"), required=True)
+    internal.add_argument("--mode", choices=("off", "on", "corrected"), required=True)
     internal.add_argument("--out", type=Path, required=True)
     internal.add_argument("--binary", type=Path, required=True)
     internal.add_argument("--binary-sha256", required=True)

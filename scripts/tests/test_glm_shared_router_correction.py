@@ -132,8 +132,8 @@ class SharedRouterSourceContractTests(unittest.TestCase):
             "const uint32_t normal_layers = glm_graph_normal_layer_count();",
             self.added_source,
         )
-        self.assertGreaterEqual(
-            self.added_source.count("il + 1u < normal_layers"), 2
+        self.assertEqual(
+            self.added_source.count("il + 1u < normal_layers"), 4
         )
         self.assertNotIn("il + 1u < DS4_N_LAYER", self.added_source)
 
@@ -190,10 +190,14 @@ class SharedRouterRunnerContractTests(unittest.TestCase):
         passed = RUNNER_MODULE.performance_verdict(2.0, 1.9, True)
         failed = RUNNER_MODULE.performance_verdict(2.0, 1.899, True)
         unequal = RUNNER_MODULE.performance_verdict(2.0, 2.1, False)
+        nonfinite = RUNNER_MODULE.performance_verdict(2.0, float("nan"), True)
+        zero = RUNNER_MODULE.performance_verdict(0.0, 2.1, True)
         self.assertEqual(passed["verdict"], "PASS")
         self.assertEqual(passed["decode_ratio"], 0.95)
         self.assertEqual(failed["verdict"], "FAIL")
         self.assertEqual(unequal["verdict"], "FAIL")
+        self.assertEqual(nonfinite["verdict"], "FAIL")
+        self.assertEqual(zero["verdict"], "FAIL")
 
     def test_perf_arm_enables_only_the_production_correction_flags(self) -> None:
         lock = Path("/tmp/perf-contract.lock")
