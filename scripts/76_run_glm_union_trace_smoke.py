@@ -59,6 +59,7 @@ TRACE_BYTES_PER_TOKEN_LAYER = (6144 + 256 + 256 + 8 + 256) * 4
 TRACE_DISK_RESERVE_BYTES = 20 * 1024**3
 CORPUS_CACHE_EXPERTS = "32GB"
 CORPUS_CUDA_CACHE_GB = "56"
+CORPUS_MEMORY_HIGH_GIB = "70"
 TRACE_NAMES = ",".join((
     "glm_indexed_ffn_norm",
     "glm_indexed_router_logits",
@@ -511,7 +512,9 @@ def run(args: argparse.Namespace) -> int:
             "GLM_SAFE_EXPECTED_BINARY_SHA256": str(freeze["binary_sha256"]),
             "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(ENV_NAMES),
             "GLM_SAFE_EXPECTED_ENV_SHA256": configuration_sha256(values),
-            "GLM_SAFE_MEMORY_HIGH_GIB": "69",
+            "GLM_SAFE_MEMORY_HIGH_GIB": (
+                CORPUS_MEMORY_HIGH_GIB if args.corpus_smoke else "69"
+            ),
             "GLM_SAFE_KILL_FLOOR_GIB": "18",
             "GLM_SAFE_MIN_START_GIB": "110",
             "GLM_SAFE_TIMEOUT_S": "3600",
