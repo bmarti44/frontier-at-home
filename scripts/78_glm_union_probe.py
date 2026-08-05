@@ -191,7 +191,75 @@ def validate_training_sources(
     train_fit_dir: Path, long_train_dirs: list[Path],
 ) -> dict[str, object]:
     """Bind the only archives authorized to contribute P1 fitting rows."""
-    raise NotImplementedError
+    if not isinstance(long_train_dirs, list) or len(long_train_dirs) != 2:
+        raise ValueError("exactly two grouped long-training shards are required")
+    train_fit_dir = train_fit_dir.resolve(strict=True)
+    long_train_dirs = [path.resolve(strict=True) for path in long_train_dirs]
+    if len(set(long_train_dirs)) != 2:
+        raise ValueError("long-training shard paths are duplicated")
+
+    split_receipt = json.loads(_tracked_bytes(P1_SPLIT_RECEIPT).decode("utf-8"))
+    try:
+        train_binding = split_receipt["observed"]["splits"]["train-fit"]
+    except (KeyError, TypeError) as error:
+        raise ValueError("P1 split receipt has no train-fit binding") from error
+    train_manifest_path = train_fit_dir / "manifest.json"
+    train_records_path = train_fit_dir / "records.npz"
+    train_manifest_bytes = train_manifest_path.read_bytes()
+    train_manifest = json.loads(train_manifest_bytes.decode("utf-8", errors="strict"))
+    if (
+        train_manifest.get("format") != "glm52-union-p1-split-npz-v1" or
+        train_manifest.get("split") != "train-fit" or
+        hashlib.sha256(train_manifest_bytes).hexdigest() != train_binding.get("manifest_sha256") or
+        _sha256(train_records_path) != train_binding.get("output_sha256") or
+        train_records_path.stat().st_size != train_binding.get("output_bytes")
+    ):
+        raise ValueError("train-fit archive differs from its authoritative binding")
+
+    long_receipt = json.loads(_tracked_bytes(LONG_COMPACTION_RECEIPT).decode("utf-8"))
+    shard_bindings = long_receipt.get("shards")
+    if not isinstance(shard_bindings, list) or len(shard_bindings) != 2:
+        raise ValueError("long-training receipt has the wrong shard count")
+    by_directory = {}
+    for binding in shard_bindings:
+        if not isinstance(binding, dict) or not isinstance(binding.get("directory"), str):
+            raise ValueError("long-training shard binding is malformed")
+        directory = Path(binding["directory"]).resolve(strict=True)
+        if directory in by_directory:
+            raise ValueError("long-training receipt duplicates a shard")
+        by_directory[directory] = binding
+    if set(long_train_dirs) != set(by_directory):
+        raise ValueError("training input includes an unauthorized long shard")
+
+    accepted_long = []
+    for directory in long_train_dirs:
+        binding = by_directory[directory]
+        manifest_path = directory / "manifest.json"
+        records_path = directory / "records.npz"
+        manifest_bytes = manifest_path.read_bytes()
+        manifest = json.loads(manifest_bytes.decode("utf-8", errors="strict"))
+        if (
+            manifest.get("format") != "glm52-union-p0-npz-v1" or
+            hashlib.sha256(manifest_bytes).hexdigest() != binding.get("manifest_sha256") or
+            _sha256(records_path) != binding.get("output_sha256") or
+            records_path.stat().st_size != binding.get("records_bytes")
+        ):
+            raise ValueError("long-training archive differs from its authoritative binding")
+        accepted_long.append({
+            "directory": str(directory),
+            "manifest_sha256": binding["manifest_sha256"],
+            "output_sha256": binding["output_sha256"],
+            "output_bytes": binding["records_bytes"],
+        })
+    return {
+        "train_fit": {
+            "directory": str(train_fit_dir),
+            "manifest_sha256": train_binding["manifest_sha256"],
+            "output_sha256": train_binding["output_sha256"],
+            "output_bytes": train_binding["output_bytes"],
+        },
+        "long_train": accepted_long,
+    }
 
 
 def _tracked_bytes(path: Path) -> bytes:
