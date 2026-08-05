@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "classification": "PASS",
+  "scope": "canonical_ge1m_p0_raw_source_compaction",
+  "candidate_hash": "2ff949cbded44cda543d58d9325a409f8566ee3e",
+  "repository_head_at_compaction": "6ee229264037d0cfab160fce3786e8deb4e6ea46",
+  "source_receipt": "results/glm52-gates/R0b-union-corpus-pass-2ff949c.json",
+  "source_receipt_sha256": "d3b549cb8c5ea67eed7f0e52b0661d58ce21bb7cba4562d3edbd8be84a7fc508",
+  "source_summary_sha256": "3f882a2b3d45b073b468524645b4726395971477e210461a0221b3a2b53eca12",
+  "compactor_sha256": "6ddfca0d194d09370e0e22fb6521aaa03a1f2c3288153974d3ebc4d92561ee78",
+  "format": "glm52-union-p0-npz-v1",
+  "total_rows": 1209150,
+  "total_output_bytes": 4311832668,
+  "shards": [
+    {
+      "request_index": 1,
+      "fixture_sha256": "30549ed2974f3bcbd2cdc3fa929d11841ca1507b45298258e3ade259acb23665",
+      "seed": 603035164,
+      "directory": "/home/bmarti44/.local/state/glm52-p0-shards/2ff949c-request-00000001",
+      "rows": 604575,
+      "manifest_sha256": "1c7357474144f7351db8dcc43c7e7a3021f0b2b5772de780bfd692be18fc3079",
+      "output_sha256": "c0662ff0427c9a18a711b9970843647a7ab71048a143bbd0f67e53a072ff2ac0",
+      "records_bytes": 2155916334,
+      "hidden_max_abs_error": 0.36069443821907043,
+      "hidden_rmse": 0.02573503967634364,
+      "hidden_nrmse_max_by_chunk": 0.13815192062923207,
+      "router_probability_max_abs_error": 1.7881393432617188e-07,
+      "top_logit_max_abs_error": 0.0078125
+    },
+    {
+      "request_index": 2,
+      "fixture_sha256": "351c20aa240b19dd3e5ffc2de2f5cacec0a6c7e2c7d3e729cb1eb33e7f7fa551",
+      "seed": 603035165,
+      "directory": "/home/bmarti44/.local/state/glm52-p0-shards/2ff949c-request-00000002",
+      "rows": 604575,
+      "manifest_sha256": "7a5c9dc91a196f52cddb69dee24957b73be40c960669a3c884db1288c4562cc8",
+      "output_sha256": "a78e1e5f4cddb7a6753913146adfe47afe46311e171e69096f08ac4ddd7e8edb",
+      "records_bytes": 2155916334,
+      "hidden_max_abs_error": 0.36069443821907043,
+      "hidden_rmse": 0.025747371821813667,
+      "hidden_nrmse_max_by_chunk": 0.1381431017421214,
+      "router_probability_max_abs_error": 1.7881393432617188e-07,
+      "top_logit_max_abs_error": 0.0078105926513671875
+    }
+  ],
+  "checks": {
+    "fixed_scorer_reproduced_before_each_shard": true,
+    "source_receipt_equal_to_tracked_head_blob": true,
+    "request_lineage_distinct": true,
+    "exact_layers_3_through_77": true,
+    "exact_chunk_coverage": true,
+    "records_hashes_match_manifests": true,
+    "atomic_no_replace_publication": true,
+    "total_rows_at_least_one_million": true
+  },
+  "open_requirements": [
+    "Build fixture-grouped immutable train/calibration/test splits from the planned 100 quality prompts and long transcripts; reject duplicate or cross-split content hashes.",
+    "Keep a small fp16 hidden-state holdout so probe accuracy can distinguish int4 feature loss from predictor failure; worst observed int4 hidden NRMSE is 0.13815192062923207.",
+    "This compaction does not qualify high-row status, serving performance, fidelity, 1M context, or parity."
+  ]
+}

@@ -593,6 +593,30 @@ and default-off; if it cannot piggyback on an already-approved quality run, P0
 waits rather than consuming an unplanned GPU evidence window. Raw trace schema,
 quantization error, dropped-event count, and fixture lineage are committed.
 
+Status (2026-08-05): the raw-event volume and capture-safety floor now pass.
+Candidate `2ff949c` captured 1,209,150 token-layer events from two distinct
+8,061-token requests across exact routed layers 3 through 77. The fixed scorer
+validated 450 layer/chunk events and 2,250 files (32,231,563,200 bytes), with
+byte/token-identical OFF/ON outputs, zero pressure/OOM/swap events, and at least
+31.934 GiB host memory available. Engine commit `4d878c2` prevents the prior
+30-GiB trace page-cache accumulation by applying `POSIX_FADV_DONTNEED` only
+after each trace file is fully written and fsynced; both persistent reviewers
+qualified the run and Nash independently replayed the complete scorer. The
+reviewed receipt is `R0b-union-corpus-pass-2ff949c.json`.
+
+The two atomic compacted shards contain 604,575 rows each and are bound by
+`R0b-union-corpus-compaction-pass-2ff949c.json`. Router probabilities retain a
+maximum absolute error of `1.7881393432617188e-07` and FP16 top logits at most
+`0.0078125`; the int4 hidden feature's worst per-chunk NRMSE is
+`0.13815192062923207`. Keep the raw corpus until P1 is terminal and preserve a
+small FP16 hidden-state holdout before interpreting predictor failures.
+
+P0 is not otherwise complete: these two requests share one long-fixture
+lineage. Before training, add the frozen 100-case quality prompts and long-agent
+transcripts, reject duplicate/cross-split content hashes, and commit immutable
+fixture-grouped train/calibration/test assignments. This remaining diversity
+work may add examples but must not weaken or replace the qualified >=1M source.
+
 #### P1 - direct-union probe and decisive baselines
 
 Train per-layer rank 8, 16, and 32 heads in the style of
