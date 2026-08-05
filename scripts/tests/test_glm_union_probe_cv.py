@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import copy
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -22,6 +23,83 @@ SPEC.loader.exec_module(MODULE)
 
 
 class CVMetricTests(unittest.TestCase):
+    def production_fixture(self):
+        request = np.repeat(np.asarray([1, 2, 3], dtype=np.uint16), 12)
+        layer = np.full(request.size, 3, dtype=np.uint16)
+        position = np.tile(np.arange(12, dtype=np.uint32), 3)
+        selected = np.asarray([
+            (np.arange(8, dtype=np.uint16) + int(pos) * 8) % 256
+            for pos in position
+        ], dtype=np.uint8)
+        source = {
+            "request_index": request,
+            "layer": layer,
+            "token_position": position,
+            "selected_ids": selected,
+            "hidden_q4": np.zeros((request.size, 1), dtype=np.uint8),
+            "hidden_scale": np.ones((request.size, 1), dtype=np.float16),
+        }
+        groups = {}
+        for identity in (1, 2, 3):
+            for candidate in range(1000):
+                group = f"fixture-{identity}-{candidate}"
+                if MODULE.PROBE.grouped_fold(group) == identity - 1:
+                    groups[identity] = group
+                    break
+        return [source], groups
+
+    def fake_layer_run(self, data, groups, layer_id):
+        rows, targets, valid = MODULE.PROBE.multi_k_targets(
+            data["request_index"], data["layer"], data["token_position"], data["selected_ids"],
+        )
+        evidence = {}
+        frequency = {}
+        for k_index, k in enumerate(MODULE.K_VALUES):
+            active = valid[:, k_index]
+            event_rows = rows[active]
+            rankings = np.tile(np.arange(256, dtype=np.uint16), (int(active.sum()), 1))
+            raw = MODULE.event_evidence(
+                data["request_index"][event_rows], targets[active, k_index], rankings,
+            )
+            evidence[f"k{k}_row"] = event_rows.astype(np.uint32)
+            evidence[f"k{k}_request"] = raw["request"]
+            evidence[f"k{k}_target_size"] = raw["target_size"]
+            evidence[f"k{k}_frequency_hits"] = raw["hits"]
+            for rank in MODULE.RANKS:
+                evidence[f"k{k}_probe_{rank}_hits"] = raw["hits"].copy()
+            frequency[str(k)] = MODULE.score_event_evidence(
+                raw["request"], raw["target_size"], raw["hits"], MODULE.BUDGETS,
+            )
+        contract = MODULE.expected_layer_contract(data, groups, layer_id)
+        training = {}
+        for rank in MODULE.RANKS:
+            training[str(rank)] = {}
+            for fold in range(3):
+                training[str(rank)][str(fold)] = {
+                    "fit_rows": contract["fit_rows_by_fold"][str(fold)],
+                    "rank": rank,
+                    "epochs": 8,
+                    "batch_rows": 512,
+                    "seed": 20260805,
+                    "positive_weights": [1.0, 1.0, 1.0],
+                    "epoch_losses": [1.0] * 8,
+                    "epoch_k_losses": [[1.0, 1.0, 1.0]] * 8,
+                    "deterministic_algorithms": True,
+                }
+        return {
+            "schema_version": 1,
+            "classification": "TRAIN_ONLY_LAYER_CV",
+            "layer": layer_id,
+            "source_rows": int(data["request_index"].size),
+            "prediction_rows": int(rows.size),
+            "requests": 3,
+            "frequency": frequency,
+            "probe": {
+                str(rank): copy.deepcopy(frequency) for rank in MODULE.RANKS
+            },
+            "training": training,
+        }, evidence
+
     def test_runtime_fault_scan_rejects_xid_and_oom_without_false_positive(self) -> None:
         clean = "NVRM: GPU initialized\ntorch allocator ready\n"
         self.assertEqual(MODULE.runtime_fault_lines(clean), [])
@@ -83,6 +161,7 @@ class CVMetricTests(unittest.TestCase):
             "event_evidence_file": "layer-003-events.npz",
             "event_evidence_sha256": "6" * 64,
             "event_evidence_bytes": 123,
+            "event_evidence_schema": {},
             "frequency": metric(),
             "probe": {str(rank): metric() for rank in MODULE.RANKS},
             "training": training,
@@ -181,6 +260,47 @@ class CVMetricTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     MODULE._write_npz_exclusive(output, arrays)
             self.assertFalse(output.exists())
+
+    def test_fresh_production_execute_reopens_and_rejects_mutated_outputs(self) -> None:
+        sources, groups = self.production_fixture()
+        source_binding = {"fixture": "bounded-production-path"}
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "cv"
+            with (
+                mock.patch.object(MODULE, "LAYERS", (3,)),
+                mock.patch.object(MODULE.PROBE, "_tracked_bytes", side_effect=lambda path: Path(path).read_bytes()),
+                mock.patch.object(MODULE.PROBE, "validate_training_sources", return_value=source_binding),
+                mock.patch.object(MODULE, "_load_authorized_sources", return_value=(sources, groups)),
+                mock.patch.object(MODULE, "run_layer", side_effect=self.fake_layer_run),
+                mock.patch.object(MODULE, "_repository_head", return_value="1" * 40),
+                mock.patch.object(MODULE, "_gpu_snapshot", return_value={"gpu": "ok", "compute_applications": ""}),
+                mock.patch.object(MODULE, "_mem_available_kib", return_value=120_000_000),
+                mock.patch.object(MODULE, "_kernel_log_since", return_value="clean kernel\n"),
+            ):
+                self.assertEqual(MODULE.execute("run", output), 0)
+                manifest = MODULE._read_json_snapshot(output / "manifest.json")
+                identity = {
+                    "repository_head": manifest["repository_head"],
+                    "driver_sha256": manifest["driver_sha256"],
+                    "probe_sha256": manifest["probe_sha256"],
+                    "training_source_binding_sha256": manifest["training_source_binding_sha256"],
+                }
+                MODULE.validate_completed_output(output, source_binding, sources, groups, identity)
+                targets = [output / "runtime-start.json", output / "layer-003-events.npz"]
+                for target in targets:
+                    original = target.read_bytes()
+                    target.write_bytes(original + b" ")
+                    with self.subTest(target=target.name), self.assertRaises(ValueError):
+                        MODULE.validate_completed_output(output, source_binding, sources, groups, identity)
+                    target.write_bytes(original)
+                summary_path = output / "summary.json"
+                summary = MODULE._read_json_snapshot(summary_path)
+                summary["selected_rank"] = 16
+                summary_path.write_text(json.dumps(summary), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    MODULE.validate_completed_output(output, source_binding, sources, groups, identity)
+                with self.assertRaises(FileExistsError):
+                    MODULE.execute("run", output)
 
     def test_aggregation_rejects_duplicate_rankings_and_request_drift(self) -> None:
         requests = np.asarray([1], dtype=np.uint16)

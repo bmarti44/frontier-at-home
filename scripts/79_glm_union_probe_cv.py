@@ -11,8 +11,10 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import time
+import zipfile
 
 import numpy as np
 
@@ -97,6 +99,8 @@ def score_event_evidence(
             for budget in budgets) or len(set(budgets)) != len(budgets)
     ):
         raise ValueError("event evidence schema is invalid")
+    if hits.shape[1] > 1 and np.any(np.diff(hits.astype(np.int16), axis=1) < 0):
+        raise ValueError("event evidence hit counts are not monotonic by budget")
     output: dict[str, dict[str, dict[str, float | int]]] = {}
     for budget_index, budget in enumerate(budgets):
         observed_hits = hits[:, budget_index].astype(np.int64)
@@ -124,6 +128,51 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _read_json_snapshot(path: Path) -> dict[str, object]:
+    """Parse and hash-sensitive JSON from one stable regular-file snapshot."""
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path, flags)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError(f"JSON artifact is not a regular file: {path}")
+        payload = bytearray()
+        remaining = before.st_size
+        while remaining:
+            block = os.read(descriptor, min(1024 * 1024, remaining))
+            if not block:
+                raise ValueError(f"JSON artifact ended early: {path}")
+            payload.extend(block)
+            remaining -= len(block)
+        if os.read(descriptor, 1):
+            raise ValueError(f"JSON artifact grew during validation: {path}")
+        after = os.fstat(descriptor)
+        if ((before.st_dev, before.st_ino, before.st_size) !=
+                (after.st_dev, after.st_ino, after.st_size)):
+            raise ValueError(f"JSON artifact identity changed: {path}")
+    finally:
+        os.close(descriptor)
+
+    def pairs(values):
+        output = {}
+        for key, value in values:
+            if key in output:
+                raise ValueError(f"duplicate JSON key: {key}")
+            output[key] = value
+        return output
+
+    value = json.loads(
+        bytes(payload).decode("utf-8", errors="strict"),
+        object_pairs_hook=pairs,
+        parse_constant=lambda token: (_ for _ in ()).throw(ValueError(token)),
+    )
+    if not isinstance(value, dict):
+        raise ValueError("JSON artifact must contain an object")
+    return value
 
 
 def _repository_head() -> str:
@@ -199,26 +248,89 @@ def _write_json_exclusive(path: Path, value: dict[str, object]) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def _write_npz_exclusive(path: Path, arrays: dict[str, np.ndarray]) -> None:
+def _array_schema(value: np.ndarray) -> dict[str, object]:
+    contiguous = np.ascontiguousarray(value)
+    return {
+        "dtype": contiguous.dtype.str,
+        "shape": list(contiguous.shape),
+        "sha256": hashlib.sha256(contiguous.tobytes(order="C")).hexdigest(),
+    }
+
+
+def _read_bound_npz(
+    path: Path, expected_schema: dict[str, dict[str, object]],
+) -> dict[str, np.ndarray]:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path, flags)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("event evidence archive is not a regular file")
+        payload = bytearray()
+        remaining = before.st_size
+        while remaining:
+            block = os.read(descriptor, min(1024 * 1024, remaining))
+            if not block:
+                raise ValueError("event evidence archive ended early")
+            payload.extend(block)
+            remaining -= len(block)
+        if os.read(descriptor, 1):
+            raise ValueError("event evidence archive grew during validation")
+        after = os.fstat(descriptor)
+        if ((before.st_dev, before.st_ino, before.st_size) !=
+                (after.st_dev, after.st_ino, after.st_size)):
+            raise ValueError("event evidence archive identity changed")
+    finally:
+        os.close(descriptor)
+    import io
+    snapshot = bytes(payload)
+    expected_members = {f"{name}.npy" for name in expected_schema}
+    with zipfile.ZipFile(io.BytesIO(snapshot), "r") as archive:
+        names = archive.namelist()
+        if len(names) != len(expected_members) or set(names) != expected_members:
+            raise ValueError("event evidence archive member set differs")
+        if archive.testzip() is not None:
+            raise ValueError("event evidence archive checksum failed")
+    output: dict[str, np.ndarray] = {}
+    with np.load(io.BytesIO(snapshot), allow_pickle=False) as archive:
+        if set(archive.files) != set(expected_schema):
+            raise ValueError("event evidence array set differs")
+        for name, schema in expected_schema.items():
+            value = np.ascontiguousarray(archive[name])
+            if value.dtype.hasobject or _array_schema(value) != schema:
+                raise ValueError(f"event evidence array binding differs: {name}")
+            output[name] = value.copy()
+    return output
+
+
+def _write_npz_exclusive(
+    path: Path, arrays: dict[str, np.ndarray],
+) -> dict[str, object]:
     if not arrays or any(not isinstance(value, np.ndarray) or value.dtype.hasobject for value in arrays.values()):
         raise ValueError("event evidence arrays are malformed")
+    frozen = {name: np.ascontiguousarray(value).copy() for name, value in arrays.items()}
+    schema = {name: _array_schema(value) for name, value in frozen.items()}
     temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
     try:
         with temporary.open("xb") as handle:
-            np.savez(handle, **arrays)
+            np.savez(handle, **frozen)
             handle.flush()
             os.fsync(handle.fileno())
-        with np.load(temporary, allow_pickle=False) as archive:
-            if set(archive.files) != set(arrays) or any(
-                not np.array_equal(archive[name], expected) for name, expected in arrays.items()
-            ):
-                raise ValueError("published event evidence differs")
+        _read_bound_npz(temporary, schema)
         os.link(temporary, path)
         directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
         try:
             os.fsync(directory_fd)
         finally:
             os.close(directory_fd)
+        _read_bound_npz(path, schema)
+        return {
+            "sha256": _sha256(path),
+            "bytes": path.stat().st_size,
+            "schema": schema,
+        }
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -351,6 +463,7 @@ def validate_layer_checkpoint(
         "probe_sha256", "training_source_binding_sha256", "previous_checkpoint_sha256",
         "layer", "source_rows", "prediction_rows", "requests", "frequency", "probe",
         "training", "event_evidence_file", "event_evidence_sha256", "event_evidence_bytes",
+        "event_evidence_schema",
     }
     if (
         not isinstance(checkpoint, dict) or set(checkpoint) != top_keys or
@@ -377,7 +490,8 @@ def validate_layer_checkpoint(
         not isinstance(checkpoint.get("event_evidence_sha256"), str) or
         len(checkpoint["event_evidence_sha256"]) != 64 or
         not isinstance(checkpoint.get("event_evidence_bytes"), int) or
-        checkpoint["event_evidence_bytes"] <= 0
+        checkpoint["event_evidence_bytes"] <= 0 or
+        not isinstance(checkpoint.get("event_evidence_schema"), dict)
     ):
         raise ValueError("CV layer event evidence binding differs")
     if (
@@ -598,6 +712,207 @@ def run_layer(
     return result, evidence
 
 
+def replay_layer_event_evidence(
+    path: Path,
+    binding: dict[str, object],
+    data: dict[str, np.ndarray],
+    result: dict[str, object],
+) -> dict[str, object]:
+    """Rebuild authoritative metrics from the final persisted layer archive."""
+    if (
+        not isinstance(binding, dict) or set(binding) != {"sha256", "bytes", "schema"} or
+        binding.get("sha256") != _sha256(path) or
+        binding.get("bytes") != path.stat().st_size or
+        not isinstance(binding.get("schema"), dict)
+    ):
+        raise ValueError("persisted event evidence file binding differs")
+    expected_names = {
+        f"k{k}_{name}"
+        for k in K_VALUES
+        for name in (
+            "row", "request", "target_size", "frequency_hits",
+            *(f"probe_{rank}_hits" for rank in RANKS),
+        )
+    }
+    if set(binding["schema"]) != expected_names:
+        raise ValueError("persisted event evidence schema names differ")
+    evidence = _read_bound_npz(path, binding["schema"])
+    request = data["request_index"]
+    rows, targets, valid = PROBE.multi_k_targets(
+        request, data["layer"], data["token_position"], data["selected_ids"],
+    )
+    frequency: dict[str, object] = {}
+    probe: dict[str, dict[str, object]] = {str(rank): {} for rank in RANKS}
+    for k_index, k in enumerate(K_VALUES):
+        active = valid[:, k_index]
+        expected_rows = rows[active].astype(np.uint32)
+        expected_request = request[expected_rows].astype(np.uint16)
+        expected_target_size = targets[active, k_index].sum(axis=1).astype(np.uint8)
+        exact = {
+            "row": expected_rows,
+            "request": expected_request,
+            "target_size": expected_target_size,
+        }
+        for name, expected in exact.items():
+            observed = evidence[f"k{k}_{name}"]
+            if observed.dtype != expected.dtype or not np.array_equal(observed, expected):
+                raise ValueError(f"persisted event evidence source contract differs: k{k}_{name}")
+        frequency[str(k)] = score_event_evidence(
+            expected_request, expected_target_size, evidence[f"k{k}_frequency_hits"], BUDGETS,
+        )
+        for rank in RANKS:
+            probe[str(rank)][str(k)] = score_event_evidence(
+                expected_request, expected_target_size,
+                evidence[f"k{k}_probe_{rank}_hits"], BUDGETS,
+            )
+    if frequency != result.get("frequency") or probe != result.get("probe"):
+        raise ValueError("persisted event evidence does not replay the layer result")
+    replayed = dict(result)
+    replayed["frequency"] = frequency
+    replayed["probe"] = probe
+    return replayed
+
+
+def build_cv_summary(
+    layers: list[dict[str, object]],
+    repository_head: str,
+    manifest_sha256: str,
+    source_binding: dict[str, object],
+    checkpoint_tail_sha256: str,
+) -> dict[str, object]:
+    frequency_summary = {
+        str(k): aggregate_request_metrics([layer["frequency"][str(k)] for layer in layers])
+        for k in K_VALUES
+    }
+    probe_summary = {
+        str(rank): {
+            str(k): aggregate_request_metrics([
+                layer["probe"][str(rank)][str(k)] for layer in layers
+            ])
+            for k in K_VALUES
+        }
+        for rank in RANKS
+    }
+    selected_rank = max(
+        RANKS,
+        key=lambda rank: (
+            probe_summary[str(rank)]["4"]["32"]["macro_request_recall"], -rank,
+        ),
+    )
+    return {
+        "schema_version": 1,
+        "classification": "TRAIN_ONLY_CV_COMPLETE",
+        "repository_head": repository_head,
+        "manifest_sha256": manifest_sha256,
+        "training_source_binding": source_binding,
+        "checkpoint_chain_tail_sha256": checkpoint_tail_sha256,
+        "completed_layers": list(LAYERS),
+        "frequency": frequency_summary,
+        "probe": probe_summary,
+        "selected_rank": selected_rank,
+        "selection_formula": "maximum K=4 budget=32 macro-request recall; exact tie chooses smaller rank",
+        "claim_limit": "Train-only rank selection; no diagnostic, calibration, or test metric was opened.",
+    }
+
+
+def validate_completed_output(
+    requested: Path,
+    source_binding: dict[str, object],
+    sources: list[dict[str, np.ndarray]],
+    groups: dict[int, str],
+    identity: dict[str, str],
+) -> dict[str, object]:
+    """Reopen the complete run and replay every reported metric from persisted evidence."""
+    expected_files = {"manifest.json", "runtime-start.json", "runtime-final.json", "summary.json"}
+    expected_files.update(f"layer-{layer:03d}.json" for layer in LAYERS)
+    expected_files.update(f"layer-{layer:03d}-events.npz" for layer in LAYERS)
+    if {path.name for path in requested.iterdir()} != expected_files:
+        raise ValueError("completed CV artifact set differs")
+    manifest_path = requested / "manifest.json"
+    manifest = _read_json_snapshot(manifest_path)
+    expected_manifest_keys = {
+        "schema_version", "classification", "repository_head", "driver_sha256",
+        "probe_sha256", "training_freeze_sha256", "training_source_binding",
+        "training_source_binding_sha256", "layers", "ranks", "K", "budgets",
+        "runtime_start_sha256",
+    }
+    if (
+        set(manifest) != expected_manifest_keys or manifest.get("schema_version") != 1 or
+        manifest.get("classification") != "TRAIN_ONLY_CV_IN_PROGRESS" or
+        manifest.get("repository_head") != identity["repository_head"] or
+        manifest.get("driver_sha256") != identity["driver_sha256"] or
+        manifest.get("probe_sha256") != identity["probe_sha256"] or
+        manifest.get("training_source_binding") != source_binding or
+        manifest.get("training_source_binding_sha256") != identity["training_source_binding_sha256"] or
+        manifest.get("layers") != list(LAYERS) or manifest.get("ranks") != list(RANKS) or
+        manifest.get("K") != list(K_VALUES) or manifest.get("budgets") != list(BUDGETS)
+    ):
+        raise ValueError("completed CV manifest differs")
+    runtime_start_path = requested / "runtime-start.json"
+    runtime_start = _read_json_snapshot(runtime_start_path)
+    if (
+        set(runtime_start) != {
+            "schema_version", "classification", "start_epoch", "mem_available_kib",
+            "gpu", "kernel_faults_at_start",
+        } or runtime_start.get("schema_version") != 1 or
+        runtime_start.get("classification") != "TRAIN_ONLY_CV_RUNTIME_START" or
+        not isinstance(runtime_start.get("start_epoch"), int) or
+        not isinstance(runtime_start.get("mem_available_kib"), int) or
+        runtime_start["mem_available_kib"] <= 0 or
+        not isinstance(runtime_start.get("gpu"), dict) or
+        runtime_start.get("kernel_faults_at_start") != [] or
+        manifest.get("runtime_start_sha256") != _sha256(runtime_start_path)
+    ):
+        raise ValueError("completed CV runtime start differs")
+    previous = _sha256(manifest_path)
+    layers: list[dict[str, object]] = []
+    for layer_id in LAYERS:
+        data = _layer_arrays(sources, layer_id)
+        contract = expected_layer_contract(data, groups, layer_id)
+        layer_path = requested / f"layer-{layer_id:03d}.json"
+        layer = _read_json_snapshot(layer_path)
+        validate_layer_checkpoint(layer, contract, identity, previous)
+        event_path = requested / str(layer["event_evidence_file"])
+        binding = {
+            "sha256": layer["event_evidence_sha256"],
+            "bytes": layer["event_evidence_bytes"],
+            "schema": layer["event_evidence_schema"],
+        }
+        layers.append(replay_layer_event_evidence(event_path, binding, data, layer))
+        previous = _sha256(layer_path)
+    runtime_final_path = requested / "runtime-final.json"
+    runtime_final = _read_json_snapshot(runtime_final_path)
+    if (
+        set(runtime_final) != {
+            "schema_version", "classification", "start_epoch", "end_epoch",
+            "kernel_log_sha256", "kernel_log", "kernel_faults", "post_gpu",
+            "post_mem_available_kib", "deterministic_algorithms",
+        } or runtime_final.get("schema_version") != 1 or
+        runtime_final.get("classification") != "TRAIN_ONLY_CV_RUNTIME_PASS" or
+        runtime_final.get("start_epoch") != runtime_start["start_epoch"] or
+        not isinstance(runtime_final.get("end_epoch"), int) or
+        runtime_final["end_epoch"] < runtime_start["start_epoch"] or
+        not isinstance(runtime_final.get("kernel_log"), str) or
+        runtime_final.get("kernel_log_sha256") != hashlib.sha256(
+            runtime_final["kernel_log"].encode("utf-8")
+        ).hexdigest() or runtime_final.get("kernel_faults") != [] or
+        runtime_fault_lines(runtime_final["kernel_log"]) or
+        not isinstance(runtime_final.get("post_gpu"), dict) or
+        not isinstance(runtime_final.get("post_mem_available_kib"), int) or
+        runtime_final["post_mem_available_kib"] <= 0 or
+        runtime_final.get("deterministic_algorithms") is not True
+    ):
+        raise ValueError("completed CV runtime final differs")
+    expected_summary = build_cv_summary(
+        layers, identity["repository_head"], _sha256(manifest_path), source_binding, previous,
+    )
+    expected_summary["runtime_final_sha256"] = _sha256(runtime_final_path)
+    summary = _read_json_snapshot(requested / "summary.json")
+    if summary != expected_summary:
+        raise ValueError("completed CV summary does not replay persisted evidence")
+    return summary
+
+
 def execute(command: str, out_dir: Path) -> int:
     PROBE._tracked_bytes(PROBE_PATH)
     PROBE._tracked_bytes(Path(__file__).resolve())
@@ -659,13 +974,17 @@ def execute(command: str, out_dir: Path) -> int:
         if output.exists() or event_output.exists():
             raise FileExistsError("fresh CV path contains a layer artifact")
         result, event_arrays = run_layer(data, groups, layer_id)
-        _write_npz_exclusive(event_output, event_arrays)
+        event_binding = _write_npz_exclusive(event_output, event_arrays)
+        result = replay_layer_event_evidence(
+            event_output, event_binding, data, result,
+        )
         result.update({
             **identity,
             "previous_checkpoint_sha256": previous_checkpoint_sha256,
             "event_evidence_file": event_output.name,
-            "event_evidence_sha256": _sha256(event_output),
-            "event_evidence_bytes": event_output.stat().st_size,
+            "event_evidence_sha256": event_binding["sha256"],
+            "event_evidence_bytes": event_binding["bytes"],
+            "event_evidence_schema": event_binding["schema"],
         })
         validate_layer_checkpoint(
             result, contract, identity, previous_checkpoint_sha256,
@@ -678,37 +997,14 @@ def execute(command: str, out_dir: Path) -> int:
         print(json.dumps({"completed_layer": layer_id}, sort_keys=True), flush=True)
         del data
         gc.collect()
-    frequency_summary = {
-        str(k): aggregate_request_metrics([layer["frequency"][str(k)] for layer in layers])
-        for k in K_VALUES
-    }
-    probe_summary = {
-        str(rank): {
-            str(k): aggregate_request_metrics([layer["probe"][str(rank)][str(k)] for layer in layers])
-            for k in K_VALUES
-        }
-        for rank in RANKS
-    }
-    selected_rank = max(
-        RANKS,
-        key=lambda rank: (
-            probe_summary[str(rank)]["4"]["32"]["macro_request_recall"], -rank,
-        ),
+    summary = build_cv_summary(
+        layers, head, _sha256(requested / "manifest.json"), source_binding,
+        previous_checkpoint_sha256,
     )
-    summary = {
-        "schema_version": 1,
-        "classification": "TRAIN_ONLY_CV_COMPLETE",
-        "repository_head": head,
-        "manifest_sha256": _sha256(requested / "manifest.json"),
-        "training_source_binding": source_binding,
-        "checkpoint_chain_tail_sha256": previous_checkpoint_sha256,
-        "completed_layers": list(LAYERS),
-        "frequency": frequency_summary,
-        "probe": probe_summary,
-        "selected_rank": selected_rank,
-        "selection_formula": "maximum K=4 budget=32 macro-request recall; exact tie chooses smaller rank",
-        "claim_limit": "Train-only rank selection; no diagnostic, calibration, or test metric was opened.",
-    }
+    if _sha256(runtime_start_path) != manifest["runtime_start_sha256"]:
+        raise RuntimeError("CV runtime start binding changed before completion")
+    post_gpu = _gpu_snapshot()
+    post_mem_available_kib = _mem_available_kib()
     kernel_log = _kernel_log_since(start_epoch)
     faults = runtime_fault_lines(kernel_log)
     if faults:
@@ -721,15 +1017,18 @@ def execute(command: str, out_dir: Path) -> int:
         "kernel_log_sha256": hashlib.sha256(kernel_log.encode("utf-8")).hexdigest(),
         "kernel_log": kernel_log,
         "kernel_faults": faults,
-        "post_gpu": _gpu_snapshot(),
-        "post_mem_available_kib": _mem_available_kib(),
+        "post_gpu": post_gpu,
+        "post_mem_available_kib": post_mem_available_kib,
         "deterministic_algorithms": True,
     }
     runtime_final_path = requested / "runtime-final.json"
     _write_json_exclusive(runtime_final_path, runtime_final)
     summary["runtime_final_sha256"] = _sha256(runtime_final_path)
     _write_json_exclusive(requested / "summary.json", summary)
-    print(json.dumps(summary, sort_keys=True, indent=2, allow_nan=False))
+    validated_summary = validate_completed_output(
+        requested, source_binding, sources, groups, identity,
+    )
+    print(json.dumps(validated_summary, sort_keys=True, indent=2, allow_nan=False))
     return 0
 
 
