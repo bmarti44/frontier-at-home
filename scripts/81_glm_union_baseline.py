@@ -375,6 +375,235 @@ def score_baseline_table(
     }
 
 
+def validate_two_control_record(record: dict[str, object]) -> None:
+    """Validate process-isolated diagnostic bracketing and its fault suite."""
+    expected = {
+        "schema_version", "request_index", "request_id", "stage_order",
+        "diagnostic", "control_before", "control_after", "failure_injection",
+    }
+    if (
+        not isinstance(record, dict) or set(record) != expected or
+        record.get("schema_version") != 1 or
+        not isinstance(record.get("request_index"), int) or
+        isinstance(record.get("request_index"), bool) or
+        int(record["request_index"]) <= 0 or
+        not isinstance(record.get("request_id"), str) or
+        not re.fullmatch(r"[0-9a-f]{64}", str(record["request_id"])) or
+        record.get("stage_order") != [
+            "control_before", "diagnostic", "control_after",
+        ]
+    ):
+        raise ValueError("two-control record schema differs")
+    control_keys = {
+        "fresh_process", "cache_namespace", "continuation_sha256",
+        "token_ids_sha256", "exit_code",
+    }
+    controls = []
+    namespaces = []
+    for name in ("control_before", "control_after"):
+        control = record.get(name)
+        if (
+            not isinstance(control, dict) or set(control) != control_keys or
+            control.get("fresh_process") is not True or
+            not isinstance(control.get("cache_namespace"), str) or
+            not control["cache_namespace"] or
+            control.get("exit_code") != 0 or
+            any(
+                not isinstance(control.get(key), str) or
+                not re.fullmatch(r"[0-9a-f]{64}", str(control[key]))
+                for key in ("continuation_sha256", "token_ids_sha256")
+            )
+        ):
+            raise ValueError("two-control arm differs")
+        controls.append(control)
+        namespaces.append(str(control["cache_namespace"]))
+    diagnostic = record.get("diagnostic")
+    if (
+        not isinstance(diagnostic, dict) or set(diagnostic) != {
+            "fresh_process", "resident_arena_bytes", "cache_namespace", "exit_code",
+        } or
+        diagnostic.get("fresh_process") is not True or
+        diagnostic.get("resident_arena_bytes") != 0 or
+        not isinstance(diagnostic.get("cache_namespace"), str) or
+        not diagnostic["cache_namespace"] or diagnostic.get("exit_code") != 0
+    ):
+        raise ValueError("isolated diagnostic record differs")
+    namespaces.append(str(diagnostic["cache_namespace"]))
+    if len(set(namespaces)) != 3:
+        raise ValueError("two-control cache/process namespaces are not isolated")
+    if any(
+        controls[0][key] != controls[1][key]
+        for key in ("continuation_sha256", "token_ids_sha256")
+    ):
+        raise ValueError("two-control continuation differs")
+    failure = record.get("failure_injection")
+    if (
+        not isinstance(failure, dict) or set(failure) != {
+            "stages", "all_destroyed", "all_control_continuations_equal",
+        } or failure.get("stages") != [
+            "mtp_call", "target_eval", "route_capture", "disposal",
+        ] or failure.get("all_destroyed") is not True or
+        failure.get("all_control_continuations_equal") is not True
+    ):
+        raise ValueError("two-control failure-injection coverage differs")
+
+
+def score_cost_table(rows: list[dict[str, object]]) -> dict[str, object]:
+    """Score the preregistered five-block cold/warm completed-cost table."""
+    methods = ("gate_replay", "shared_correction", "mtp", "probe")
+    temperatures = ("cold", "warm")
+    expected_keys = {
+        "block", "temperature", "method", "completed_ms", "persistent_bytes",
+        "peak_temporary_bytes", "target_expert_bytes_read", "completed_events",
+        "synchronized",
+    }
+    expected_cells = {
+        (block, temperature, method)
+        for block in range(5) for temperature in temperatures for method in methods
+    }
+    observed: dict[tuple[int, str, str], dict[str, object]] = {}
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != expected_keys:
+            raise ValueError("cost row schema differs")
+        key = (row.get("block"), row.get("temperature"), row.get("method"))
+        if key not in expected_cells or key in observed:
+            raise ValueError("cost cell coverage differs")
+        milliseconds = row.get("completed_ms")
+        integers = tuple(row.get(name) for name in (
+            "persistent_bytes", "peak_temporary_bytes",
+            "target_expert_bytes_read", "completed_events",
+        ))
+        if (
+            not isinstance(milliseconds, (int, float)) or isinstance(milliseconds, bool) or
+            not np.isfinite(float(milliseconds)) or float(milliseconds) <= 0.0 or
+            any(not isinstance(value, int) or isinstance(value, bool) or value < 0
+                for value in integers) or integers[-1] <= 0 or
+            row.get("synchronized") is not True
+        ):
+            raise ValueError("cost row values differ")
+        observed[key] = row
+    if set(observed) != expected_cells:
+        raise ValueError("cost table is incomplete")
+    for block in range(5):
+        for temperature in temperatures:
+            events = {
+                int(observed[(block, temperature, method)]["completed_events"])
+                for method in methods
+            }
+            if len(events) != 1:
+                raise ValueError("matched cost event coverage differs")
+
+    summary: dict[str, dict[str, dict[str, object]]] = {method: {} for method in methods}
+    for method in methods:
+        for temperature in temperatures:
+            cells = [observed[(block, temperature, method)] for block in range(5)]
+            values = np.asarray([float(cell["completed_ms"]) for cell in cells])
+            mean = float(values.mean())
+            half = float(2.7764451051977987 * values.std(ddof=1) / np.sqrt(5.0))
+            summary[method][temperature] = {
+                "blocks": 5,
+                "completed_events_per_block": int(cells[0]["completed_events"]),
+                "mean_completed_ms": mean,
+                "two_sided_95_lower": mean - half,
+                "two_sided_95_upper": mean + half,
+                "persistent_bytes": max(int(cell["persistent_bytes"]) for cell in cells),
+                "peak_temporary_bytes": max(
+                    int(cell["peak_temporary_bytes"]) for cell in cells
+                ),
+                "target_expert_bytes_read": max(
+                    int(cell["target_expert_bytes_read"]) for cell in cells
+                ),
+            }
+
+    def equal_cost(reference: str) -> bool:
+        for temperature in temperatures:
+            mtp = summary["mtp"][temperature]
+            other = summary[reference][temperature]
+            if (
+                float(mtp["two_sided_95_upper"]) >
+                    1.05 * float(other["two_sided_95_lower"]) or
+                int(mtp["persistent_bytes"]) > int(other["persistent_bytes"]) or
+                int(mtp["peak_temporary_bytes"]) > int(other["peak_temporary_bytes"]) or
+                int(mtp["target_expert_bytes_read"]) >
+                    int(other["target_expert_bytes_read"])
+            ):
+                return False
+        return True
+
+    return {
+        "schema_version": 1,
+        "verdict": "PASS",
+        "methods": summary,
+        "mtp_equal_cost_to_gate_replay": equal_cost("gate_replay"),
+        "mtp_equal_cost_to_shared_correction": equal_cost("shared_correction"),
+        "mtp_equal_cost_to_probe": equal_cost("probe"),
+        "confidence_method": "two-sided Student-t over five matched blocks",
+    }
+
+
+def write_canonical_scorer_input(
+    path: Path,
+    requests: np.ndarray,
+    targets: dict[int, np.ndarray],
+    rankings: dict[str, dict[int, np.ndarray]],
+) -> None:
+    """Persist the exact arrays needed for independent fixed-score replay."""
+    arrays: dict[str, np.ndarray] = {"requests": requests}
+    for k in K_VALUES:
+        arrays[f"target_k{k}"] = targets[k]
+    for method in sorted(rankings):
+        for k in K_VALUES:
+            arrays[f"ranking_{method}_k{k}"] = rankings[method][k]
+    with path.open("xb") as stream:
+        np.savez(stream, **arrays)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _load_canonical_scorer_input(
+    path: Path,
+) -> tuple[np.ndarray, dict[int, np.ndarray], dict[str, dict[int, np.ndarray]]]:
+    payload = _snapshot_regular(path)
+    with np.load(io.BytesIO(payload), allow_pickle=False) as archive:
+        expected = {"requests", *(f"target_k{k}" for k in K_VALUES)}
+        methods = ("frequency", "gate_replay", "shared_correction", "mtp", "probe")
+        expected.update(
+            f"ranking_{method}_k{k}" for method in methods for k in K_VALUES
+        )
+        if set(archive.files) != expected:
+            raise ValueError("canonical scorer input schema differs")
+        requests = archive["requests"].copy()
+        targets = {k: archive[f"target_k{k}"].copy() for k in K_VALUES}
+        rankings = {
+            method: {
+                k: archive[f"ranking_{method}_k{k}"].copy() for k in K_VALUES
+            } for method in methods
+        }
+    return requests, targets, rankings
+
+
+def validate_completed_result(
+    root: Path,
+    *,
+    bootstrap_resamples: int = 10000,
+    expected_summary: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Strict-reopen and independently replay the canonical completed result."""
+    root = root.resolve(strict=True)
+    summary_payload = _snapshot_regular(root / "summary.json")
+    summary = _strict_json(summary_payload, "completed summary")
+    requests, targets, rankings = _load_canonical_scorer_input(root / "canonical.npz")
+    reconstructed = score_baseline_table(
+        requests, targets, rankings, bootstrap_resamples=bootstrap_resamples,
+    )
+    for key, value in reconstructed.items():
+        if summary.get(key) != value:
+            raise ValueError(f"completed summary differs from canonical replay: {key}")
+    if expected_summary is not None and summary != expected_summary:
+        raise ValueError("completed summary differs from in-memory result")
+    return summary
+
+
 def _snapshot_regular(path: Path, expected_bytes: int | None = None) -> bytes:
     flags = os.O_RDONLY | os.O_CLOEXEC
     if hasattr(os, "O_NOFOLLOW"):
@@ -924,6 +1153,7 @@ def _score_opened_heldout(
     test_manifest: dict[str, object],
     freeze: dict[str, object],
     expected_prompt_token_ids: dict[int, np.ndarray],
+    canonical_path: Path | None = None,
 ) -> dict[str, object]:
     """Score one already-authorized in-memory opening without reopening it."""
     common_mask = (arrays["layer"] >= FIRST_LAYER) & (arrays["layer"] <= LAST_LAYER)
@@ -1047,6 +1277,10 @@ def _score_opened_heldout(
         "mtp": mtp_rankings,
         "probe": probe_rankings,
     }
+    if canonical_path is not None:
+        write_canonical_scorer_input(
+            canonical_path, event_requests, targets, rankings,
+        )
     scored = score_baseline_table(event_requests, targets, rankings)
     scored.update({
         "schema_version": 1,
@@ -1358,6 +1592,7 @@ def _run_atomic_lifecycle(
     score,
     ledger_path: Path | None = None,
     reserve_authority=None,
+    validate_complete=None,
 ) -> dict[str, object]:
     """Run one preflight/open/capture/score attempt and seal every opened outcome."""
     requested = output_root.absolute()
@@ -1405,6 +1640,10 @@ def _run_atomic_lifecycle(
         if not isinstance(result, dict):
             raise ValueError("atomic lifecycle scorer result is malformed")
         _write_json_exclusive(staging / "summary.json", result)
+        if validate_complete is not None:
+            validated = validate_complete(staging, result)
+            if validated != result:
+                raise ValueError("completed-result validation differs before publication")
         attempt.update({"status": "COMPLETE", "completed_epoch_ns": time.time_ns()})
         _write_json_replace(staging / "attempt.json", attempt)
     except BaseException as error:
@@ -1430,6 +1669,10 @@ def _run_atomic_lifecycle(
             os.close(descriptor)
         raise
     _rename_noreplace(staging, output_root)
+    if validate_complete is not None:
+        validated = validate_complete(output_root, result)
+        if validated != result:
+            raise ValueError("completed-result validation differs after publication")
     if ledger is not None:
         _write_json_replace(ledger, {
             **attempt,
@@ -2060,7 +2303,7 @@ def _score_authorized_gate(
     _preflight: dict[str, object],
     opened: dict[str, object],
     captured: dict[str, object],
-    _staging: Path,
+    staging: Path,
 ) -> dict[str, object]:
     cases = opened["cases"]
     expected_prompt_token_ids = {
@@ -2071,6 +2314,7 @@ def _score_authorized_gate(
         Path(captured["capture_root"]), str(configuration["device"]),
         opened["probe"], opened["cv"], opened["precision"], opened["arrays"],
         opened["test_manifest"], opened["freeze"], expected_prompt_token_ids,
+        canonical_path=staging / "canonical.npz",
     )
 
 
@@ -2105,6 +2349,9 @@ def _run_authorized_gate(configuration: dict[str, object]) -> dict[str, object]:
             Path(configuration["output_root"]), preflight, opener, capture, score,
             ledger_path=AUTHORIZED_LEDGER_PATH,
             reserve_authority=_reserve_global_authority,
+            validate_complete=lambda root, result: validate_completed_result(
+                root, expected_summary=result,
+            ),
         )
     finally:
         runtime = state.get("runtime")

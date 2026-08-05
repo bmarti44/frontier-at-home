@@ -599,7 +599,10 @@ class AtomicLifecycleTests(unittest.TestCase):
                 MODULE, "_capture_authorized_set", return_value={"captured": True},
             ) as capture, mock.patch.object(
                 MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
-            ) as scorer:
+            ) as scorer, mock.patch.object(
+                MODULE, "validate_completed_result",
+                side_effect=lambda _root, *, expected_summary, **_kwargs: expected_summary,
+            ):
                 result = MODULE._run_authorized_gate(configuration)
             self.assertEqual(result, {"verdict": "PASS"})
             preflight.assert_called_once_with(configuration)
@@ -630,6 +633,9 @@ class AtomicLifecycleTests(unittest.TestCase):
                 MODULE, "_capture_authorized_set", return_value={"captured": True},
             ), mock.patch.object(
                 MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
+            ), mock.patch.object(
+                MODULE, "validate_completed_result",
+                side_effect=lambda _root, *, expected_summary, **_kwargs: expected_summary,
             ):
                 MODULE._run_authorized_gate({"output_root": root / "first", "device": "cpu"})
                 with self.assertRaises(FileExistsError):
@@ -673,12 +679,16 @@ class AtomicLifecycleTests(unittest.TestCase):
                     MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
                 ),
                 mock.patch.object(
+                    MODULE, "validate_completed_result",
+                    side_effect=lambda _root, *, expected_summary, **_kwargs: expected_summary,
+                ),
+                mock.patch.object(
                     MODULE, "_reserve_global_authority", side_effect=reserve,
                 ),
             )
             with (
                 patches[0], patches[1], patches[2], patches[3], patches[4],
-                patches[5],
+                patches[5], patches[6],
             ):
                 MODULE._run_authorized_gate({
                     "output_root": root / "first", "device": "cpu",
@@ -761,6 +771,9 @@ class AtomicLifecycleTests(unittest.TestCase):
                         MODULE, "_capture_authorized_set", return_value={"captured": True},
                     ), mock.patch.object(
                         MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
+                    ), mock.patch.object(
+                        MODULE, "validate_completed_result",
+                        side_effect=lambda _root, *, expected_summary, **_kwargs: expected_summary,
                     ):
                         try:
                             MODULE._run_authorized_gate({
