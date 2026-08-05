@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "classification": "PREREGISTERED",
+  "scope": "glm52_direct_union_probe_feature_precision_diagnostic",
+  "selection_receipt": "results/glm52-gates/R0c-union-probe-p1-cv-pass-6ade34d.json",
+  "selected_rank": 32,
+  "training": {
+    "inputs": "The same 55 train-fit requests and two grouped long-training shards used by the qualifying CV; no other split may contribute fitting rows or statistics.",
+    "procedure": "For every routed layer, fit one rank-32 head for the already-frozen eight epochs on every authorized training row, using the frozen int4 feature transform, causal history, request balancing, optimizer, seed, numeric mode, and resource limits.",
+    "model_output": "Persist every final head tensor and training report with exact array schemas and SHA-256 bindings before opening the diagnostic archive."
+  },
+  "diagnostic": {
+    "input": "Only the isolated train-precision-diagnostic shard containing the five cases excluded from fitting and rank selection.",
+    "pairing": "On each retained FP16 holdout row that has a valid K-token target, score the identical frozen head twice. One arm uses the stored FP16 gate input and the other uses the frozen int4 reconstruction; causal-history features, targets, row order, and budgets are identical.",
+    "K": [2, 4, 8],
+    "budgets": [16, 32, 64],
+    "headline": "K=4, budget=32, unweighted macro-request recall",
+    "secondary": [
+      "K=4 budget=32 event-weighted recall",
+      "mean top-32 expert-set overlap",
+      "all K/budget recall, precision, waste, and full-set coverage"
+    ]
+  },
+  "acceptance": {
+    "macro_request_recall_deficit_pp_max": 2.0,
+    "event_weighted_recall_deficit_pp_max": 2.0,
+    "mean_top32_overlap_min": 0.9,
+    "formula": "deficit_pp = 100 * (FP16 metric - int4 metric); negative values are not clipped",
+    "failure_action": "Do not attribute later held-out failure to the probe concept and do not adopt the int4 feature online; report the paired result before deciding whether a new higher-precision corpus is worth collecting."
+  },
+  "isolation": {
+    "forbidden": "Calibration and test archives remain unopened. Diagnostic results cannot change rank, optimizer, epochs, feature definition, or thresholds.",
+    "claim_limit": "This measures feature-quantization sensitivity on five known diagnostic cases. It is not held-out probe performance and is not a serving-speed claim."
+  }
+}
