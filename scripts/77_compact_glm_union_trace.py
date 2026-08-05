@@ -1383,6 +1383,13 @@ def validate_source_bundle(
 def publish_bundle(
     destination: Path, arrays: dict[str, np.ndarray], manifest: dict[str, Any],
 ) -> dict[str, Any]:
+    if (
+        not arrays or any(not isinstance(name, str) or not name for name in arrays) or
+        any(not isinstance(value, np.ndarray) or value.dtype.hasobject for value in arrays.values()) or
+        any(np.issubdtype(value.dtype, np.floating) and not np.isfinite(value).all()
+            for value in arrays.values())
+    ):
+        raise ValueError("output arrays are empty, non-numeric, or non-finite")
     requested = destination.absolute()
     if requested.exists() or requested.is_symlink():
         raise FileExistsError(requested)
@@ -1397,11 +1404,33 @@ def publish_bundle(
             np.savez(handle, **arrays)
             handle.flush()
             os.fsync(handle.fileno())
+        try:
+            with np.load(records, allow_pickle=False) as loaded:
+                if set(loaded.files) != set(arrays):
+                    raise ValueError("published NPZ array set differs")
+                for name, expected in arrays.items():
+                    observed = loaded[name]
+                    if (
+                        observed.dtype != expected.dtype or observed.shape != expected.shape or
+                        not np.array_equal(observed, expected)
+                    ):
+                        raise ValueError(f"published NPZ array differs: {name}")
+        except (OSError, ValueError, EOFError) as error:
+            raise ValueError("published NPZ failed closed validation") from error
+        array_schema = {
+            name: {
+                "dtype": value.dtype.str,
+                "shape": list(value.shape),
+                "sha256": _sha256_bytes(np.ascontiguousarray(value).tobytes()),
+            }
+            for name, value in sorted(arrays.items())
+        }
         final_manifest = {
             **manifest,
             "output_file": "records.npz",
             "output_sha256": _sha256(records),
             "output_bytes": records.stat().st_size,
+            "array_schema": array_schema,
         }
         manifest_path = temporary / "manifest.json"
         with manifest_path.open("x", encoding="utf-8") as handle:
@@ -1479,14 +1508,25 @@ def _read_bound_array(
     return array_value.reshape(shape)
 
 
-def run(args: argparse.Namespace) -> int:
-    source = validate_source_bundle(
-        args.source_root, args.source_receipt, request_index=args.request_index,
-    )
-    trace = source["trace"]
+def _checked_fp16_holdout(hidden: np.ndarray) -> np.ndarray:
+    if not isinstance(hidden, np.ndarray) or hidden.ndim != 2 or hidden.shape[1] != N_EMBD:
+        raise ValueError("FP16 holdout input shape is invalid")
+    with np.errstate(over="ignore", invalid="ignore"):
+        result = hidden.astype(np.float16)
+    if result.shape != hidden.shape or not np.isfinite(result).all():
+        raise ValueError("FP16 holdout conversion overflowed or became non-finite")
+    return result
+
+
+def _assemble_compact_arrays(
+    source: dict[str, Any],
+) -> tuple[dict[str, np.ndarray], list[dict[str, int | float]], dict[str, str]]:
+    """Consume one validated source in canonical row order."""
     quality_corpus = "request_chunks" in source
     if quality_corpus:
         request_ids = sorted(source["request_chunks"])
+        if request_ids != list(range(1, len(request_ids) + 1)):
+            raise ValueError("quality request indices are missing or reordered")
         work = [
             (request, layer, pos, rows)
             for request in request_ids for layer in source["layers"]
@@ -1517,10 +1557,16 @@ def run(args: argparse.Namespace) -> int:
     global_row = 0
     for request, layer, pos, rows in work:
         file_map = source["request_files"][request] if quality_corpus else source["files"]
-        files = {
-            kind: file_map[(layer, pos, kind)]
-            for kind in ("ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias")
-        }
+        try:
+            files = {
+                kind: file_map[(layer, pos, kind)]
+                for kind in (
+                    "ffn_norm", "router_logits", "router_probs", "router_selected",
+                    "router_bias",
+                )
+            }
+        except KeyError as error:
+            raise ValueError("validated source tensor map is incomplete") from error
         hidden = _read_bound_array(
             files["ffn_norm"], "<f4", (rows, N_EMBD),
             source["artifacts"][files["ffn_norm"].name],
@@ -1560,7 +1606,7 @@ def run(args: argparse.Namespace) -> int:
                 holdout_rows.append(np.asarray(
                     [global_row + row for row in selected_holdout], dtype=np.uint32,
                 ))
-                holdout_hidden.append(hidden[selected_holdout].astype(np.float16))
+                holdout_hidden.append(_checked_fp16_holdout(hidden[selected_holdout]))
         global_row += rows
         metric_parts.append(metrics)
         for path in files.values():
@@ -1570,9 +1616,39 @@ def run(args: argparse.Namespace) -> int:
     arrays["layer"] = np.concatenate(layers)
     arrays["token_position"] = np.concatenate(token_positions)
     if quality_corpus:
+        if global_row != int(source["total_rows"]):
+            raise ValueError("quality compact row total differs from its validated source")
         arrays["request_index"] = np.concatenate(request_indices)
         arrays["hidden_fp16_holdout_row"] = np.concatenate(holdout_rows)
         arrays["hidden_fp16_holdout"] = np.concatenate(holdout_hidden, axis=0)
+        if (
+            arrays["hidden_fp16_holdout_row"].size != len(holdout_targets) or
+            not np.array_equal(
+                arrays["hidden_fp16_holdout_row"],
+                np.asarray(sorted(holdout_targets), dtype=np.uint32),
+            ) or
+            arrays["hidden_fp16_holdout"].shape != (len(holdout_targets), N_EMBD)
+        ):
+            raise ValueError("quality FP16 holdout coverage differs")
+    row_count = arrays["layer"].size
+    if (
+        row_count <= 0 or arrays["token_position"].size != row_count or
+        any(value.shape[0] != row_count for name, value in arrays.items()
+            if name not in {"hidden_fp16_holdout_row", "hidden_fp16_holdout"}) or
+        any(np.issubdtype(value.dtype, np.floating) and not np.isfinite(value).all()
+            for value in arrays.values())
+    ):
+        raise ValueError("compact array row coverage or finiteness differs")
+    return arrays, metric_parts, sources
+
+
+def run(args: argparse.Namespace) -> int:
+    source = validate_source_bundle(
+        args.source_root, args.source_receipt, request_index=args.request_index,
+    )
+    quality_corpus = "request_chunks" in source
+    request_ids = sorted(source["request_chunks"]) if quality_corpus else []
+    arrays, metric_parts, sources = _assemble_compact_arrays(source)
     total_values = sum(int(part["hidden_values"]) for part in metric_parts)
     weighted_squared = sum(
         float(part["hidden_rmse"]) ** 2 * int(part["hidden_values"])
