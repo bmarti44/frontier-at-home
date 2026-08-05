@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "attempt": "candidate-13-non-heldout-real-fault-smoke-2",
+  "verdict": "FAIL",
+  "candidate_head": "8b3b9f6ef48aa5138934cc6667918eb59c1ded3a",
+  "harness_sha256": "7bfbd9eace88f82d3de72aaaff0d0a6104afa8232b7332f60b149bc958153b08",
+  "engine_head": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+  "binary_sha256": "be8b0ed00864d3fba6e1f7dabed4adc0646efaf7968f1bcb6da6c3a6ce172121",
+  "heldout_opened": false,
+  "root_helper_used": false,
+  "staging_directory": "/home/bmarti44/.local/state/glm52-c13-fault-smoke2.a00d73kj",
+  "observed": {
+    "real_fault_stages_completed": [
+      "mtp_call",
+      "target_eval",
+      "route_capture",
+      "disposal"
+    ],
+    "fresh_post_fault_controls_completed": 4,
+    "injected_exit_code": 86,
+    "candidate_processes_survived": 0,
+    "cache_namespaces_survived": 0,
+    "final_available_memory_bytes": 123756048384,
+    "final_swap_used_bytes": 808476672
+  },
+  "failure": {
+    "exception": "ValueError: failure-injection execution differs",
+    "cause": "The validator required runtime_log.path to start with runtime-logs/fault-, while the launcher deliberately names preserved directories runtime-logs/p1-fault-. The four real executions, identities, exit codes, markers, cleanup checks, and recovery controls completed; only this internal path-prefix assertion rejected aggregation.",
+    "bounded_next_change": "Make the validator require the exact launcher-generated runtime-logs/p1-fault- prefix and add a regression test for the observed mismatch."
+  },
+  "fault_main_logs": {
+    "disposal": {
+      "bytes": 4553,
+      "sha256": "ae370c7281c9f9014377def72e8d2937b0dc713e3a492bc546e59d40e4885c49"
+    },
+    "mtp_call": {
+      "bytes": 4552,
+      "sha256": "1042deb33e3f6c37a1972b959e76a13e45f726bb1330ce89b9b1e92db4b32543"
+    },
+    "route_capture": {
+      "bytes": 4568,
+      "sha256": "40440464044ac39c5b770493b7be67b37619cb57438c7d5202e0daa6b59577ea"
+    },
+    "target_eval": {
+      "bytes": 4561,
+      "sha256": "da124b3710c6f32feff2ab2d120da2890cd39e86ba7782ffeeb1fc0f91a5d606"
+    }
+  },
+  "artifact_sha256": {
+    "post_fault_disposal_main.log": "be6f2a969b16d3a485d1665b64638187113531c898888f823c19d8fac6d5ffff",
+    "post_fault_mtp_call_main.log": "2dcd4ade8374cab5faea8ff2a42d9e7e6334b82e98c9558da7a1b668e2b71f76",
+    "post_fault_route_capture_main.log": "30c7240c919b6dc0ddece199f32d52ff7b3b1074170a28a642d6870924aedd4a",
+    "post_fault_target_eval_main.log": "726764ac262a72b51c8164b6916fd19e0c8358abe69a55f8495145f260205277"
+  }
+}
