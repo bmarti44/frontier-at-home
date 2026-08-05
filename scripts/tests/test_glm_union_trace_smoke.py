@@ -110,6 +110,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         requests = [
             {
                 "request_id": request_id,
+                "seed": 99 + request_id,
                 "prompt_tokens": 512,
                 "full_indexed_chunks": [[0, 512]],
                 "response_signature": {
@@ -127,9 +128,10 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         }
         result = MODULE.smoke_verdict(
             off, on, score, {"clean": True}, {"clean": True},
+            expected_corpus_seed=100,
         )
         self.assertEqual(result["verdict"], "PASS")
-        for mutation in ("id", "output", "event_floor"):
+        for mutation in ("id", "output", "event_floor", "seed", "duplicate_fixture"):
             with self.subTest(mutation=mutation):
                 bad_on = copy.deepcopy(on)
                 bad_score = copy.deepcopy(score)
@@ -137,12 +139,18 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     bad_on["corpus_requests"][1]["request_id"] = 3
                 elif mutation == "output":
                     bad_on["corpus_requests"][1]["response_signature"]["token_ids"] = [7]
-                else:
+                elif mutation == "event_floor":
                     bad_score["token_layer_events"] = 76799
+                elif mutation == "seed":
+                    bad_on["corpus_requests"][1]["seed"] = 100
+                else:
+                    duplicate = bad_on["corpus_requests"][0]["response_signature"]["request_sha256"]
+                    bad_on["corpus_requests"][1]["response_signature"]["request_sha256"] = duplicate
                 self.assertEqual(
                     MODULE.smoke_verdict(
                         off, bad_on, bad_score,
                         {"clean": True}, {"clean": True},
+                        expected_corpus_seed=100,
                     )["verdict"],
                     "FAIL",
                 )

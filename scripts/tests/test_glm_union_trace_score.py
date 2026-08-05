@@ -252,19 +252,30 @@ class UnionTraceScoreTests(unittest.TestCase):
         self.assertEqual(result["requests"], 2)
         self.assertEqual(result["token_layer_events"], 4)
 
-    def test_corpus_mode_rejects_legacy_gap_duplicate_and_missing_files(self) -> None:
-        for mutation in ("legacy", "gap", "duplicate", "missing"):
+    def test_corpus_mode_rejects_legacy_gap_duplicate_missing_and_bias_drift(self) -> None:
+        for mutation in ("legacy", "legacy_log", "gap", "duplicate", "missing", "bias"):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
                 trace, log = self.make_corpus_attempt(Path(tmp))
                 if mutation == "legacy":
                     target = next(trace.glob("*r00000002*router_probs*"))
                     target.rename(trace / target.name.replace("_r00000002", ""))
+                elif mutation == "legacy_log":
+                    log.write_text(
+                        log.read_text() +
+                        "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn "
+                        "layer=4 pos=0 rows=2\n"
+                    )
                 elif mutation == "gap":
                     log.write_text(log.read_text().replace("request=2", "request=3"))
                 elif mutation == "duplicate":
                     log.write_text(log.read_text() + log.read_text().splitlines(True)[0])
-                else:
+                elif mutation == "missing":
                     next(trace.glob("*r00000002*router_probs*")).unlink()
+                else:
+                    target = next(trace.glob("*r00000002*router_bias*"))
+                    values = list(struct.unpack("<256f", target.read_bytes()))
+                    values[255] = 0.01
+                    target.write_bytes(struct.pack("<256f", *values))
                 result = MODULE.score_trace(
                     trace, log, max_bytes=2_000_000, expected_layers={4},
                     expected_chunks=[],
