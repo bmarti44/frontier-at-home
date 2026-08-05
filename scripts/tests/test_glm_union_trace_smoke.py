@@ -103,6 +103,27 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                 str(Path(temporary).resolve()),
             )
 
+    def test_cuda_cache_runtime_requires_one_bounded_resolved_arena(self) -> None:
+        marker = (
+            "ds4: CUDA persistent expert cache enabled: "
+            "6000 slots x 9.28 MiB = 54.38 GiB (fixed arena)\n"
+        )
+        self.assertEqual(
+            MODULE.cuda_cache_runtime(marker),
+            {"slots": 6000, "arena_gib": 54.38},
+        )
+        for bad in (
+            "",
+            marker + marker,
+            "ds4: CUDA persistent expert cache enabled: malformed\n",
+            "ds4: CUDA persistent expert cache enabled: "
+            "6987 slots x 9.28 MiB = 63.33 GiB (fixed arena)\n",
+            "ds4: CUDA persistent expert cache enabled: "
+            "6000 slots x 9.28 MiB = 50.00 GiB (fixed arena)\n",
+        ):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                MODULE.cuda_cache_runtime(bad)
+
     def test_accepts_bound_identical_contained_arms(self) -> None:
         result = MODULE.smoke_verdict(
             arm("off"), arm("on"), {"verdict": "PASS", "events": 3},

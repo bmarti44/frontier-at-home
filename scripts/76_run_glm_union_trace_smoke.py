@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -57,6 +58,7 @@ MAX_CONTEXT_LEVEL = 8192
 TRACE_BYTES_PER_TOKEN_LAYER = (6144 + 256 + 256 + 8 + 256) * 4
 TRACE_DISK_RESERVE_BYTES = 20 * 1024**3
 CORPUS_CACHE_EXPERTS = "32GB"
+CORPUS_CUDA_CACHE_GB = "56"
 TRACE_NAMES = ",".join((
     "glm_indexed_ffn_norm",
     "glm_indexed_router_logits",
@@ -73,6 +75,11 @@ ENV_NAMES = sorted(set(SHARED.ENV_NAMES) | {
 })
 SYNC_RE = re.compile(
     r"ds4: GLM sync branch=full_indexed pos=(\d+) chunk=(\d+) logits=\d+"
+)
+CUDA_CACHE_RE = re.compile(
+    r"ds4: CUDA persistent expert cache enabled: ([1-9][0-9]*) slots x "
+    r"([0-9]+(?:\.[0-9]+)?) MiB = ([0-9]+(?:\.[0-9]+)?) GiB "
+    r"\(fixed arena\)"
 )
 DRAND_GENESIS_UNIX = 1595431050
 DRAND_PERIOD_SECONDS = 30
@@ -115,6 +122,8 @@ def trace_environment(mode: str, out: Path, *, corpus_smoke: bool = False) -> di
         "DS4_LOCK_FILE": str(out / "runtime.lock"),
         "DS4_GLM_SYNC_TRACE": "1",
     })
+    if corpus_smoke:
+        values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
     if mode == "on":
         values.update({
             "DS4_METAL_GRAPH_DUMP_PREFIX": str(out / "trace/request"),
@@ -126,9 +135,11 @@ def trace_environment(mode: str, out: Path, *, corpus_smoke: bool = False) -> di
     return values
 
 
-def matched_configuration_sha256() -> str:
+def matched_configuration_sha256(*, corpus_smoke: bool = False) -> str:
     values = dict(SHARED.COMMON_ENV)
     values.update({"DS4_LOCK_FILE": "<ARM_LOCAL>", "DS4_GLM_SYNC_TRACE": "1"})
+    if corpus_smoke:
+        values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
     return configuration_sha256(values)
 
 
@@ -145,6 +156,23 @@ def full_indexed_chunks_text(text: str) -> list[list[int]]:
         if count <= 0 or (index and pos != rows[index - 1][0] + rows[index - 1][1]):
             raise ValueError("full-indexed chunks overlap or have a gap")
     return rows
+
+
+def cuda_cache_runtime(text: str) -> dict[str, int | float]:
+    matches = CUDA_CACHE_RE.findall(text)
+    if len(matches) != 1:
+        raise ValueError("one resolved CUDA expert-cache arena record is required")
+    slots_text, expert_mib_text, arena_gib_text = matches[0]
+    slots = int(slots_text)
+    expert_mib = float(expert_mib_text)
+    arena_gib = float(arena_gib_text)
+    derived_gib = slots * expert_mib / 1024.0
+    if (not all(math.isfinite(value) and value > 0.0
+                for value in (expert_mib, arena_gib)) or
+            arena_gib > float(CORPUS_CUDA_CACHE_GB) or
+            abs(derived_gib - arena_gib) > 0.02):
+        raise ValueError("resolved CUDA expert-cache arena is invalid")
+    return {"slots": slots, "arena_gib": arena_gib}
 
 
 def smoke_verdict(
@@ -194,6 +222,7 @@ def smoke_verdict(
     corpus_mode = off_corpus is not None or on_corpus is not None
     corpus_scope = True
     corpus_event_floor = True
+    corpus_cuda_cache = True
     if corpus_mode:
         def valid_requests(value: Any) -> bool:
             if (not isinstance(value, list) or len(value) != 2 or
@@ -249,6 +278,21 @@ def smoke_verdict(
             isinstance(trace_score.get("token_layer_events"), int) and
             trace_score["token_layer_events"] >= 76800
         )
+        off_runtime = off.get("cuda_cache_runtime")
+        on_runtime = on.get("cuda_cache_runtime")
+        corpus_cuda_cache = (
+            off.get("cuda_expert_cache_gb") == CORPUS_CUDA_CACHE_GB and
+            on.get("cuda_expert_cache_gb") == CORPUS_CUDA_CACHE_GB and
+            isinstance(off_runtime, dict) and set(off_runtime) == {"slots", "arena_gib"} and
+            off_runtime == on_runtime and
+            isinstance(off_runtime.get("slots"), int) and
+            not isinstance(off_runtime.get("slots"), bool) and
+            off_runtime["slots"] > 0 and
+            isinstance(off_runtime.get("arena_gib"), (int, float)) and
+            not isinstance(off_runtime.get("arena_gib"), bool) and
+            math.isfinite(float(off_runtime["arena_gib"])) and
+            0.0 < float(off_runtime["arena_gib"]) <= float(CORPUS_CUDA_CACHE_GB)
+        )
     checks = {
         "arm_modes": off.get("mode") == "off" and on.get("mode") == "on",
         "frozen_identity": all(off.get(key) == on.get(key) for key in common_hashes),
@@ -261,6 +305,7 @@ def smoke_verdict(
         "containment_clean": off_containment.get("clean") is True and on_containment.get("clean") is True,
         "corpus_request_scope": corpus_scope,
         "corpus_event_floor": corpus_event_floor,
+        "corpus_cuda_cache": corpus_cuda_cache,
     }
     return {"checks": checks, "verdict": "PASS" if all(checks.values()) else "FAIL"}
 
@@ -352,9 +397,9 @@ def _arm(args: argparse.Namespace) -> int:
             os.fsync(log.fileno())
     if server is None or server.returncode != 0:
         raise RuntimeError(f"server did not exit cleanly rc={getattr(server, 'returncode', None)}")
-    SHARED.require_no_gpu_fault(
-        server_log.read_text(encoding="utf-8", errors="strict"), "server log"
-    )
+    log_text = server_log.read_text(encoding="utf-8", errors="strict")
+    SHARED.require_no_gpu_fault(log_text, "server log")
+    resolved_cuda_cache = cuda_cache_runtime(log_text) if args.corpus_smoke else None
     if not request_records:
         raise RuntimeError("arm produced no requests")
     chunks = request_records[0]["full_indexed_chunks"]
@@ -380,7 +425,7 @@ def _arm(args: argparse.Namespace) -> int:
         "model_sha256": args.model_sha256,
         "tokenizer_sha256": SHARED.TOKENIZER_SHA256,
         "fixture_sha256": fixture_digest,
-        "configuration_sha256": matched_configuration_sha256(),
+        "configuration_sha256": matched_configuration_sha256(corpus_smoke=args.corpus_smoke),
         "environment_sha256": configuration_sha256(expected),
         "response_signature": ([item["response_signature"] for item in request_records]
                                if args.corpus_smoke else request_records[0]["response_signature"]),
@@ -394,6 +439,8 @@ def _arm(args: argparse.Namespace) -> int:
     if args.corpus_smoke:
         record["corpus_requests"] = request_records
         record["expert_cache_budget"] = CORPUS_CACHE_EXPERTS
+        record["cuda_expert_cache_gb"] = CORPUS_CUDA_CACHE_GB
+        record["cuda_cache_runtime"] = resolved_cuda_cache
     (out / "arm.json").write_text(
         json.dumps(record, sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
