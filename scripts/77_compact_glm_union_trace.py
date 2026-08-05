@@ -4,19 +4,38 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
+import errno
 import hashlib
+import importlib.util
 import json
 import math
 import os
 from pathlib import Path
 import re
 import shutil
+import stat
+import subprocess
 import tempfile
 from typing import Any
 
 import numpy as np
 
 
+ROOT = Path(__file__).resolve().parents[1]
+SCORER_PATH = ROOT / "scripts/75_glm_union_trace_score.py"
+
+
+def _load(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+TRACE_SCORER = _load("union_trace_scorer_for_compact", SCORER_PATH)
 N_EMBD = 6144
 N_EXPERT = 256
 N_EXPERT_USED = 8
@@ -26,6 +45,15 @@ FILE_RE = re.compile(
     r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_probs|router_selected|router_bias)-"
     r"(?P<layer>\d+)_pos(?P<pos>\d+)\.(?P<ext>f32|i32)$"
 )
+HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
+COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+SCORER_CHECKS = {
+    "inputs", "no_trace_errors", "unique_nonempty_log_events",
+    "exact_indexed_chunk_coverage", "regular_files_only", "recognized_files_only",
+    "one_prefix", "unique_file_keys", "byte_budget", "event_keys_match",
+    "exact_triplet_shapes", "finite_values_and_valid_ids",
+    "selected_matches_router_formula", "router_probs_match_logits",
+}
 
 
 def _sha256(path: Path) -> str:
@@ -191,12 +219,42 @@ def _valid_chunks(value: Any) -> list[tuple[int, int]]:
     return result
 
 
-def validate_source_bundle(source_root: Path, receipt_path: Path) -> dict[str, Any]:
+def _require_tracked_receipt(receipt_path: Path, repository_root: Path) -> None:
+    repository_root = repository_root.resolve(strict=True)
+    try:
+        relative = receipt_path.relative_to(repository_root)
+    except ValueError as error:
+        raise ValueError("source receipt is outside the trusted repository") from error
+    if not str(relative).startswith("results/glm52-gates/"):
+        raise ValueError("source receipt is outside the gate evidence directory")
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "--", str(relative)],
+        cwd=repository_root, stdin=subprocess.DEVNULL, capture_output=True,
+    )
+    committed = subprocess.run(
+        ["git", "show", f"HEAD:{relative}"], cwd=repository_root,
+        stdin=subprocess.DEVNULL, capture_output=True,
+    )
+    if (tracked.returncode != 0 or committed.returncode != 0 or
+            committed.stdout != receipt_path.read_bytes()):
+        raise ValueError("source receipt is not tracked and clean at HEAD")
+
+
+def validate_source_bundle(
+    source_root: Path,
+    receipt_path: Path,
+    *,
+    repository_root: Path = ROOT,
+    require_tracked_receipt: bool = True,
+    minimum_prompt_tokens: int = 512,
+) -> dict[str, Any]:
     """Validate and bind one already-qualified capture bundle."""
     if source_root.is_symlink() or receipt_path.is_symlink():
         raise ValueError("qualified source paths may not be symlinks")
     source_root = source_root.resolve(strict=True)
     receipt_path = receipt_path.resolve(strict=True)
+    if require_tracked_receipt:
+        _require_tracked_receipt(receipt_path, repository_root)
     summary_path = source_root / "summary.json"
     arm_path = source_root / "on" / "arm.json"
     server_log = source_root / "on" / "server.log"
@@ -206,9 +264,40 @@ def validate_source_bundle(source_root: Path, receipt_path: Path) -> dict[str, A
     receipt = _strict_json(receipt_path)
     summary = _strict_json(summary_path)
     arm = _strict_json(arm_path)
+    receipt_keys = {
+        "schema_version", "candidate_hash", "engine_commit", "classification", "scope",
+        "high_row_2048_status", "summary_sha256", "off_arm_sha256", "on_arm_sha256",
+        "off_result_sha256", "on_result_sha256", "off_server_log_sha256",
+        "on_server_log_sha256", "observed", "pre_runtime_authorization_review",
+        "post_runtime_review", "conclusion",
+    }
+    summary_keys = {
+        "schema_version", "scope", "high_row_2048_status", "candidate_hash",
+        "engine_commit", "binary_sha256", "model_sha256", "tokenizer_sha256", "seed",
+        "context_level", "max_trace_bytes", "off_arm_sha256", "on_arm_sha256",
+        "off_containment_sha256", "on_containment_sha256", "trace_score", "checks", "verdict",
+    }
+    if set(receipt) != receipt_keys or set(summary) != summary_keys:
+        raise ValueError("source receipt or summary schema differs from the qualified runner")
+    valid_scope = (
+        (summary.get("scope") == "high_row_multichunk" and
+         summary.get("high_row_2048_status") == "PASS") or
+        (summary.get("scope") == "short_single_indexed_batch_only" and
+         summary.get("high_row_2048_status") == "OPEN")
+    )
     if (receipt.get("classification") != "PASS" or summary.get("verdict") != "PASS" or
-            arm.get("mode") != "on"):
+            arm.get("mode") != "on" or receipt.get("scope") != summary.get("scope") or
+            receipt.get("high_row_2048_status") != summary.get("high_row_2048_status") or
+            not valid_scope or minimum_prompt_tokens <= 0):
         raise ValueError("source bundle is not qualified")
+    post_review = receipt.get("post_runtime_review")
+    if (not isinstance(post_review, dict) or set(post_review) != {
+            "round", "gap_reviewer_score", "adversarial_reviewer_score", "critical", "high"} or
+            not isinstance(post_review["round"], int) or
+            not all(isinstance(post_review[key], int) and post_review[key] >= 90
+                    for key in ("gap_reviewer_score", "adversarial_reviewer_score")) or
+            post_review["critical"] != [] or post_review["high"] != []):
+        raise ValueError("source post-runtime review is incomplete")
     bound_hashes = {
         "summary_sha256": _sha256(summary_path),
         "on_arm_sha256": _sha256(arm_path),
@@ -218,20 +307,29 @@ def validate_source_bundle(source_root: Path, receipt_path: Path) -> dict[str, A
         raise ValueError("source receipt hashes do not match the capture")
     if summary.get("on_arm_sha256") != bound_hashes["on_arm_sha256"]:
         raise ValueError("source summary does not bind the ON arm")
-    if receipt.get("candidate_hash") != summary.get("candidate_hash"):
+    if (receipt.get("candidate_hash") != summary.get("candidate_hash") or
+            receipt.get("engine_commit") != summary.get("engine_commit") or
+            not COMMIT_RE.fullmatch(str(summary.get("candidate_hash", ""))) or
+            not COMMIT_RE.fullmatch(str(summary.get("engine_commit", "")))):
         raise ValueError("source candidate lineage differs")
     for key in ("binary_sha256", "model_sha256", "tokenizer_sha256"):
-        if summary.get(key) != arm.get(key):
+        if summary.get(key) != arm.get(key) or not HEX64_RE.fullmatch(str(summary.get(key, ""))):
             raise ValueError(f"source {key} lineage differs")
 
     chunks = _valid_chunks(arm.get("full_indexed_chunks"))
-    if (arm.get("prompt_tokens") != sum(rows for _, rows in chunks) or
+    response = arm.get("response_signature")
+    if (not isinstance(response, dict) or
+            arm.get("fixture_sha256") != response.get("request_sha256") or
+            not HEX64_RE.fullmatch(str(arm.get("fixture_sha256", ""))) or
+            not HEX64_RE.fullmatch(str(arm.get("configuration_sha256", ""))) or
+            arm.get("prompt_tokens") != sum(rows for _, rows in chunks) or
             receipt.get("observed", {}).get("full_indexed_chunks") != arm.get("full_indexed_chunks")):
         raise ValueError("source chunk coverage differs from the qualified receipt")
     trace_score = summary.get("trace_score")
     if (not isinstance(trace_score, dict) or trace_score.get("verdict") != "PASS" or
             not isinstance(trace_score.get("checks"), dict) or
-            not trace_score["checks"] or not all(value is True for value in trace_score["checks"].values())):
+            set(trace_score["checks"]) != SCORER_CHECKS or
+            not all(value is True for value in trace_score["checks"].values())):
         raise ValueError("source fixed-scorer verdict is not PASS")
     artifact_rows = trace_score.get("artifacts")
     if not isinstance(artifact_rows, list) or not artifact_rows:
@@ -248,6 +346,9 @@ def validate_source_bundle(source_root: Path, receipt_path: Path) -> dict[str, A
         match = FILE_RE.fullmatch(item["name"])
         if not match:
             raise ValueError("source artifact name is unrecognized")
+        expected_extension = "i32" if match.group("kind") == "router_selected" else "f32"
+        if match.group("ext") != expected_extension:
+            raise ValueError("source artifact extension is invalid for its kind")
         key = (int(match.group("layer")), int(match.group("pos")), match.group("kind"))
         if key in keys:
             raise ValueError("source artifact key is duplicated")
@@ -279,6 +380,83 @@ def validate_source_bundle(source_root: Path, receipt_path: Path) -> dict[str, A
             trace_score.get("total_bytes") != total_bytes or arm.get("trace_files") != len(artifacts) or
             arm.get("trace_bytes") != total_bytes):
         raise ValueError("source scorer totals are inconsistent")
+    rescored = TRACE_SCORER.score_trace(
+        trace, server_log, max_bytes=summary.get("max_trace_bytes", 0),
+        expected_layers=set(layers), expected_chunks=chunks,
+    )
+    if rescored != trace_score:
+        raise ValueError("fixed scorer does not reproduce the qualified trace result")
+
+    off_arm_path = source_root / "off" / "arm.json"
+    off_result_path = source_root / "off" / "result.json"
+    on_result_path = source_root / "on" / "result.json"
+    off_server_log = source_root / "off" / "server.log"
+    off_containment_path = source_root / "off.containment.json"
+    on_containment_path = source_root / "on.containment.json"
+    off_arm = _strict_json(off_arm_path)
+    off_containment = _strict_json(off_containment_path)
+    on_containment = _strict_json(on_containment_path)
+    path_bindings = {
+        "off_arm_sha256": _sha256(off_arm_path),
+        "on_arm_sha256": bound_hashes["on_arm_sha256"],
+        "off_result_sha256": _sha256(off_result_path),
+        "on_result_sha256": _sha256(on_result_path),
+        "off_server_log_sha256": _sha256(off_server_log),
+        "on_server_log_sha256": bound_hashes["on_server_log_sha256"],
+    }
+    if any(receipt.get(key) != value for key, value in path_bindings.items()):
+        raise ValueError("source receipt does not bind all OFF/ON runtime artifacts")
+    if (summary.get("off_arm_sha256") != path_bindings["off_arm_sha256"] or
+            summary.get("off_containment_sha256") != _sha256(off_containment_path) or
+            summary.get("on_containment_sha256") != _sha256(on_containment_path) or
+            off_arm.get("result_sha256") != path_bindings["off_result_sha256"] or
+            arm.get("result_sha256") != path_bindings["on_result_sha256"] or
+            off_arm.get("server_log_sha256") != path_bindings["off_server_log_sha256"]):
+        raise ValueError("source summary or arm runtime hashes differ")
+    common_hashes = (
+        "binary_sha256", "model_sha256", "tokenizer_sha256",
+        "fixture_sha256", "configuration_sha256",
+    )
+    prompt_tokens = off_arm.get("prompt_tokens")
+    off_chunks = off_arm.get("full_indexed_chunks")
+    require_multichunk = summary["scope"] == "high_row_multichunk"
+    exact_coverage = (
+        isinstance(prompt_tokens, int) and not isinstance(prompt_tokens, bool) and
+        prompt_tokens >= minimum_prompt_tokens and arm.get("prompt_tokens") == prompt_tokens and
+        off_chunks == arm.get("full_indexed_chunks") and off_chunks == [list(row) for row in chunks] and
+        (not require_multichunk or (
+            prompt_tokens > 2048 and len(chunks) >= 2 and any(rows == 2048 for _, rows in chunks)
+        ))
+    )
+    recomputed_checks = {
+        "arm_modes": off_arm.get("mode") == "off" and arm.get("mode") == "on",
+        "frozen_identity": all(off_arm.get(key) == arm.get(key) for key in common_hashes),
+        "byte_and_token_identity": off_arm.get("response_signature") == arm.get("response_signature"),
+        "matched_indexed_chunks": off_chunks == arm.get("full_indexed_chunks"),
+        "prompt_tokens_and_exact_coverage": exact_coverage,
+        "off_emitted_no_trace": off_arm.get("trace_files") == 0,
+        "on_emitted_trace": isinstance(arm.get("trace_files"), int) and arm.get("trace_files", 0) > 0,
+        "trace_score_passed": rescored.get("verdict") == "PASS",
+        "containment_clean": off_containment.get("clean") is True and on_containment.get("clean") is True,
+    }
+    if summary.get("checks") != recomputed_checks or not all(recomputed_checks.values()):
+        raise ValueError("source top-level OFF/ON qualification does not reproduce")
+    observed = receipt.get("observed")
+    expected_observed = {
+        "context_level": summary.get("context_level"),
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens_per_arm": arm.get("response_signature", {}).get("completion_tokens"),
+        "full_indexed_chunks": arm.get("full_indexed_chunks"),
+        "byte_and_token_identity": recomputed_checks["byte_and_token_identity"],
+        "containment_clean": recomputed_checks["containment_clean"],
+        "off_trace_files": off_arm.get("trace_files"),
+        "on_trace_files": arm.get("trace_files"),
+        "on_trace_bytes": arm.get("trace_bytes"),
+        "trace_events": rescored.get("events"),
+        "trace_score_verdict": rescored.get("verdict"),
+    }
+    if observed != expected_observed:
+        raise ValueError("source receipt observations do not reproduce")
     file_map = {
         (int(match.group("layer")), int(match.group("pos")), match.group("kind")): trace / name
         for name in artifacts
@@ -290,9 +468,6 @@ def validate_source_bundle(source_root: Path, receipt_path: Path) -> dict[str, A
         if len(bias_hashes) != 1:
             raise ValueError("router bias differs across chunks of one layer")
 
-    response = arm.get("response_signature")
-    if not isinstance(response, dict) or not isinstance(response.get("request_sha256"), str):
-        raise ValueError("source request identity is missing")
     lineage = {
         "source_receipt_sha256": _sha256(receipt_path),
         "source_summary_sha256": bound_hashes["summary_sha256"],
@@ -350,7 +525,24 @@ def publish_bundle(
             os.fsync(directory_fd)
         finally:
             os.close(directory_fd)
-        os.rename(temporary, destination)
+        libc = ctypes.CDLL(None, use_errno=True)
+        renameat2 = getattr(libc, "renameat2", None)
+        if renameat2 is None:
+            raise RuntimeError("atomic no-replace rename is unavailable")
+        renameat2.argtypes = (
+            ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint,
+        )
+        renameat2.restype = ctypes.c_int
+        at_fdcwd = -100
+        rename_noreplace = 1
+        if renameat2(
+            at_fdcwd, os.fsencode(temporary), at_fdcwd, os.fsencode(destination),
+            rename_noreplace,
+        ) != 0:
+            error_number = ctypes.get_errno()
+            if error_number in (errno.EEXIST, errno.ENOTEMPTY):
+                raise FileExistsError(error_number, os.strerror(error_number), destination)
+            raise OSError(error_number, os.strerror(error_number), destination)
         parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
         try:
             os.fsync(parent_fd)
@@ -360,6 +552,42 @@ def publish_bundle(
     finally:
         if temporary.exists():
             shutil.rmtree(temporary)
+
+
+def _read_bound_array(
+    path: Path, dtype: str, shape: tuple[int, ...], expected: dict[str, Any],
+) -> np.ndarray:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path, flags)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_size != expected["bytes"]:
+            raise ValueError("source tensor descriptor is not the qualified regular file")
+        blocks: list[bytes] = []
+        remaining = before.st_size
+        while remaining:
+            block = os.read(descriptor, min(1024 * 1024, remaining))
+            if not block:
+                raise ValueError("source tensor ended before its qualified size")
+            blocks.append(block)
+            remaining -= len(block)
+        if os.read(descriptor, 1):
+            raise ValueError("source tensor exceeds its qualified size")
+        after = os.fstat(descriptor)
+        payload = b"".join(blocks)
+        if ((before.st_dev, before.st_ino, before.st_size) !=
+                (after.st_dev, after.st_ino, after.st_size) or
+                hashlib.sha256(payload).hexdigest() != expected["sha256"]):
+            raise ValueError("source tensor bytes differ from the qualified scorer artifact")
+    finally:
+        os.close(descriptor)
+    expected_values = math.prod(shape)
+    array_value = np.frombuffer(payload, dtype=dtype)
+    if array_value.size != expected_values:
+        raise ValueError("source tensor shape differs from the qualified schema")
+    return array_value.reshape(shape)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -380,11 +608,26 @@ def run(args: argparse.Namespace) -> int:
                 kind: source["files"][(layer, pos, kind)]
                 for kind in ("ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias")
             }
-            hidden = np.fromfile(files["ffn_norm"], dtype="<f4").reshape(rows, N_EMBD)
-            logits = np.fromfile(files["router_logits"], dtype="<f4").reshape(rows, N_EXPERT)
-            probabilities = np.fromfile(files["router_probs"], dtype="<f4").reshape(rows, N_EXPERT)
-            bias = np.fromfile(files["router_bias"], dtype="<f4").reshape(N_EXPERT)
-            selected = np.fromfile(files["router_selected"], dtype="<i4").reshape(rows, N_EXPERT_USED)
+            hidden = _read_bound_array(
+                files["ffn_norm"], "<f4", (rows, N_EMBD),
+                source["artifacts"][files["ffn_norm"].name],
+            )
+            logits = _read_bound_array(
+                files["router_logits"], "<f4", (rows, N_EXPERT),
+                source["artifacts"][files["router_logits"].name],
+            )
+            probabilities = _read_bound_array(
+                files["router_probs"], "<f4", (rows, N_EXPERT),
+                source["artifacts"][files["router_probs"].name],
+            )
+            bias = _read_bound_array(
+                files["router_bias"], "<f4", (N_EXPERT,),
+                source["artifacts"][files["router_bias"].name],
+            )
+            selected = _read_bound_array(
+                files["router_selected"], "<i4", (rows, N_EXPERT_USED),
+                source["artifacts"][files["router_selected"].name],
+            )
             compact, metrics = compact_arrays(
                 hidden, logits, bias, selected, router_probs=probabilities,
             )
@@ -394,7 +637,7 @@ def run(args: argparse.Namespace) -> int:
             token_positions.append(np.arange(pos, pos + rows, dtype=np.uint32))
             metric_parts.append(metrics)
             for path in files.values():
-                sources[path.name] = _sha256(path)
+                sources[path.name] = source["artifacts"][path.name]["sha256"]
 
     arrays = {name: np.concatenate(parts, axis=0) for name, parts in compact_parts.items()}
     arrays["layer"] = np.concatenate(layers)

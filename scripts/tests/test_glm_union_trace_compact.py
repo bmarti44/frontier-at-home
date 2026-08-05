@@ -7,6 +7,7 @@ import importlib.util
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -20,6 +21,11 @@ SPEC = importlib.util.spec_from_file_location("glm_union_trace_compact", SCRIPT)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+SCORE_SCRIPT = ROOT / "scripts/75_glm_union_trace_score.py"
+SCORE_SPEC = importlib.util.spec_from_file_location("glm_union_trace_score_for_compact", SCORE_SCRIPT)
+assert SCORE_SPEC and SCORE_SPEC.loader
+SCORE_MODULE = importlib.util.module_from_spec(SCORE_SPEC)
+SCORE_SPEC.loader.exec_module(SCORE_MODULE)
 
 
 class CompactArrayTests(unittest.TestCase):
@@ -114,47 +120,127 @@ class QualifiedBundleTests(unittest.TestCase):
         source = root / "source"
         trace = source / "on" / "trace"
         trace.mkdir(parents=True)
-        artifacts = []
         for pos, rows in ((0, 2), (2, 1)):
-            for kind, ext in (
-                ("ffn_norm", "f32"), ("router_logits", "f32"),
-                ("router_probs", "f32"), ("router_selected", "i32"),
-                ("router_bias", "f32"),
-            ):
+            hidden = (
+                (np.arange(rows * SCORE_MODULE.N_EMBD, dtype=np.float32).reshape(rows, -1) % 31)
+                / np.float32(100.0) + np.float32(pos) / np.float32(1000.0)
+            )
+            base_logits = np.linspace(-2.0, 2.0, SCORE_MODULE.N_EXPERT, dtype=np.float32)
+            logits = np.stack([
+                np.roll(base_logits, pos + row) for row in range(rows)
+            ]).astype(np.float32)
+            probabilities = (1.0 / (1.0 + np.exp(-logits))).astype(np.float32)
+            bias = np.zeros(SCORE_MODULE.N_EXPERT, dtype=np.float32)
+            selected = np.argsort(-(probabilities + bias), axis=1, kind="stable")[
+                :, :SCORE_MODULE.N_EXPERT_USED
+            ].astype(np.int32)
+            payloads = {
+                "ffn_norm": ("f32", hidden), "router_logits": ("f32", logits),
+                "router_probs": ("f32", probabilities),
+                "router_selected": ("i32", selected), "router_bias": ("f32", bias),
+            }
+            for kind, (ext, values) in payloads.items():
                 path = trace / f"request_glm_indexed_{kind}-4_pos{pos}.{ext}"
-                payload = b"same-bias" if kind == "router_bias" else f"{kind}:{pos}:{rows}".encode()
-                path.write_bytes(payload)
-                artifacts.append({"name": path.name, "bytes": len(payload), "sha256": sha256(path)})
+                path.write_bytes(values.tobytes())
         server_log = source / "on" / "server.log"
-        server_log.write_text("qualified\n")
+        server_log.write_text(
+            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn layer=4 pos=0 rows=2\n"
+            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn layer=4 pos=2 rows=1\n"
+        )
+        trace_score = SCORE_MODULE.score_trace(
+            trace, server_log, max_bytes=10**7,
+            expected_layers={4}, expected_chunks=[(0, 2), (2, 1)],
+        )
+        self.assertEqual(trace_score["verdict"], "PASS")
+        artifacts = trace_score["artifacts"]
         arm = {
             "mode": "on", "binary_sha256": "a" * 64, "model_sha256": "b" * 64,
             "tokenizer_sha256": "c" * 64, "fixture_sha256": "d" * 64,
-            "configuration_sha256": "e" * 64, "prompt_tokens": 3,
+            "configuration_sha256": "e" * 64, "environment_sha256": "1" * 64,
+            "prompt_tokens": 3,
             "full_indexed_chunks": [[0, 2], [2, 1]], "trace_files": 10,
             "trace_bytes": sum(item["bytes"] for item in artifacts),
-            "response_signature": {"request_sha256": "f" * 64},
+            "response_signature": {
+                "request_sha256": "d" * 64, "completion_tokens": 128,
+                "token_ids": [1, 2], "generated_content_sha256": "f" * 64,
+            },
             "server_log_sha256": sha256(server_log),
         }
+        result_path = source / "on" / "result.json"
+        result_path.write_text("{}\n")
+        arm["result_sha256"] = sha256(result_path)
         arm_path = source / "on" / "arm.json"
         arm_path.write_text(json.dumps(arm, sort_keys=True, indent=2) + "\n")
+        off_dir = source / "off"
+        off_dir.mkdir()
+        off_server_log = off_dir / "server.log"
+        off_server_log.write_text("no trace\n")
+        off_result = off_dir / "result.json"
+        off_result.write_text("{}\n")
+        off_arm = dict(arm)
+        off_arm.update({
+            "mode": "off", "environment_sha256": "2" * 64, "trace_files": 0,
+            "trace_bytes": 0, "server_log_sha256": sha256(off_server_log),
+            "result_sha256": sha256(off_result),
+        })
+        off_arm_path = off_dir / "arm.json"
+        off_arm_path.write_text(json.dumps(off_arm, sort_keys=True, indent=2) + "\n")
+        containment = {
+            "clean": True, "crash_directory": "/tmp/test", "kernel_sha256": "3" * 64,
+            "main_sha256": "4" * 64, "samples_sha256": "5" * 64,
+        }
+        off_containment = source / "off.containment.json"
+        on_containment = source / "on.containment.json"
+        off_containment.write_text(json.dumps(containment, sort_keys=True) + "\n")
+        on_containment.write_text(json.dumps(containment, sort_keys=True) + "\n")
         summary = {
-            "verdict": "PASS", "candidate_hash": "1" * 40,
+            "schema_version": 1, "scope": "short_single_indexed_batch_only",
+            "high_row_2048_status": "OPEN", "verdict": "PASS",
+            "candidate_hash": "1" * 40,
             "engine_commit": "2" * 40, "binary_sha256": "a" * 64,
             "model_sha256": "b" * 64, "tokenizer_sha256": "c" * 64,
-            "seed": 7, "on_arm_sha256": sha256(arm_path),
-            "trace_score": {
-                "verdict": "PASS", "checks": {"all": True}, "events": 2,
-                "total_rows": 3, "total_bytes": arm["trace_bytes"], "artifacts": artifacts,
+            "seed": 7, "context_level": 4096,
+            "off_arm_sha256": sha256(off_arm_path), "on_arm_sha256": sha256(arm_path),
+            "off_containment_sha256": sha256(off_containment),
+            "on_containment_sha256": sha256(on_containment),
+            "max_trace_bytes": 10**7, "trace_score": trace_score,
+            "checks": {
+                "arm_modes": True, "byte_and_token_identity": True,
+                "containment_clean": True, "frozen_identity": True,
+                "matched_indexed_chunks": True, "off_emitted_no_trace": True,
+                "on_emitted_trace": True, "prompt_tokens_and_exact_coverage": True,
+                "trace_score_passed": True,
             },
         }
         summary_path = source / "summary.json"
         summary_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n")
         receipt = {
-            "classification": "PASS", "candidate_hash": "1" * 40,
+            "schema_version": 1, "classification": "PASS", "candidate_hash": "1" * 40,
+            "engine_commit": "2" * 40, "scope": "short_single_indexed_batch_only",
+            "high_row_2048_status": "OPEN",
             "summary_sha256": sha256(summary_path), "on_arm_sha256": sha256(arm_path),
+            "off_arm_sha256": sha256(off_arm_path),
+            "off_result_sha256": sha256(off_result), "on_result_sha256": sha256(result_path),
+            "off_server_log_sha256": sha256(off_server_log),
             "on_server_log_sha256": sha256(server_log),
-            "observed": {"full_indexed_chunks": [[0, 2], [2, 1]]},
+            "observed": {
+                "context_level": 4096, "prompt_tokens": 3,
+                "completion_tokens_per_arm": 128,
+                "full_indexed_chunks": [[0, 2], [2, 1]],
+                "byte_and_token_identity": True, "containment_clean": True,
+                "off_trace_files": 0, "on_trace_files": 10,
+                "on_trace_bytes": arm["trace_bytes"], "trace_events": 2,
+                "trace_score_verdict": "PASS",
+            },
+            "pre_runtime_authorization_review": {
+                "round": 1, "gap_reviewer_score": 100,
+                "adversarial_reviewer_score": 100, "critical": [], "high": [],
+            },
+            "post_runtime_review": {
+                "round": 2, "gap_reviewer_score": 100,
+                "adversarial_reviewer_score": 100, "critical": [], "high": [],
+            },
+            "conclusion": "test fixture",
         }
         receipt_path = root / "receipt.json"
         receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
@@ -165,6 +251,7 @@ class QualifiedBundleTests(unittest.TestCase):
             source, receipt = self.make_bundle(Path(directory))
             validated = MODULE.validate_source_bundle(
                 source, receipt, repository_root=Path(directory), require_tracked_receipt=False,
+                minimum_prompt_tokens=1,
             )
             self.assertEqual(validated["layers"], [4])
             self.assertEqual(validated["chunks"], [(0, 2), (2, 1)])
@@ -177,7 +264,9 @@ class QualifiedBundleTests(unittest.TestCase):
                 self.assertIn(field, validated["lineage"])
 
     def test_rejects_ambiguous_unknown_symlink_and_lineage_mutations(self) -> None:
-        for mutation in ("duplicate", "unknown", "symlink", "bias", "receipt", "chunks"):
+        for mutation in (
+            "duplicate", "unknown", "symlink", "extension", "bias", "receipt", "chunks",
+        ):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
                 source, receipt = self.make_bundle(Path(directory))
                 trace = source / "on" / "trace"
@@ -189,6 +278,19 @@ class QualifiedBundleTests(unittest.TestCase):
                     target = trace / "request_glm_indexed_router_probs-4_pos0.f32"
                     target.unlink()
                     target.symlink_to("request_glm_indexed_router_probs-4_pos2.f32")
+                elif mutation == "extension":
+                    old = trace / "request_glm_indexed_router_selected-4_pos0.i32"
+                    new = trace / "request_glm_indexed_router_selected-4_pos0.f32"
+                    old.rename(new)
+                    summary_path = source / "summary.json"
+                    summary = json.loads(summary_path.read_text())
+                    for artifact in summary["trace_score"]["artifacts"]:
+                        if artifact["name"] == old.name:
+                            artifact["name"] = new.name
+                    summary_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n")
+                    data = json.loads(receipt.read_text())
+                    data["summary_sha256"] = sha256(summary_path)
+                    receipt.write_text(json.dumps(data, sort_keys=True, indent=2) + "\n")
                 elif mutation == "bias":
                     (trace / "request_glm_indexed_router_bias-4_pos2.f32").write_bytes(b"different")
                 elif mutation == "receipt":
@@ -203,6 +305,7 @@ class QualifiedBundleTests(unittest.TestCase):
                     MODULE.validate_source_bundle(
                         source, receipt, repository_root=Path(directory),
                         require_tracked_receipt=False,
+                        minimum_prompt_tokens=1,
                     )
 
     def test_fixed_scorer_is_authoritative(self) -> None:
@@ -215,7 +318,47 @@ class QualifiedBundleTests(unittest.TestCase):
                     MODULE.validate_source_bundle(
                         source, receipt, repository_root=Path(directory),
                         require_tracked_receipt=False,
+                        minimum_prompt_tokens=1,
                     )
+
+    def test_consumed_tensor_bytes_remain_bound_after_path_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source, receipt = self.make_bundle(Path(directory))
+            validated = MODULE.validate_source_bundle(
+                source, receipt, repository_root=Path(directory),
+                require_tracked_receipt=False, minimum_prompt_tokens=1,
+            )
+            key = (4, 0, "router_probs")
+            path = validated["files"][key]
+            payload = bytearray(path.read_bytes())
+            payload[0] ^= 1
+            replacement = path.with_suffix(".replacement")
+            replacement.write_bytes(payload)
+            replacement.replace(path)
+            with self.assertRaises(ValueError):
+                MODULE._read_bound_array(
+                    path, "<f4", (2, SCORE_MODULE.N_EXPERT),
+                    validated["artifacts"][path.name],
+                )
+
+    def test_trusted_receipt_must_equal_tracked_head_blob(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            receipt = repository / "results/glm52-gates/receipt.json"
+            receipt.parent.mkdir(parents=True)
+            receipt.write_text("{}\n")
+            for command in (
+                ["git", "init", "-q"],
+                ["git", "config", "user.email", "test@example.invalid"],
+                ["git", "config", "user.name", "Test"],
+                ["git", "add", str(receipt.relative_to(repository))],
+                ["git", "commit", "-qm", "receipt"],
+            ):
+                subprocess.run(command, cwd=repository, check=True)
+            MODULE._require_tracked_receipt(receipt, repository)
+            receipt.write_text('{"changed":true}\n')
+            with self.assertRaises(ValueError):
+                MODULE._require_tracked_receipt(receipt, repository)
 
     def test_atomic_bundle_publication_refuses_existing_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

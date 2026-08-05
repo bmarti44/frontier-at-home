@@ -37,7 +37,7 @@
       "reason": "Arithmetic is valid, but the generic CLI accepted ambiguous input, lacked qualified-source lineage, and did not publish the NPZ and manifest as one exclusive bundle."
     },
     {
-      "classification": "FIX_CANDIDATE",
+      "classification": "REJECTED_FOR_CORPUS",
       "format": "qualified-source-group32-int4-bundle",
       "manifest_sha256": "f94b6c4198f3ccd5ef9aa5d502c72a4497be84cfca79c4503011aa5ae7298196",
       "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
@@ -47,8 +47,25 @@
       "source_summary_sha256": "46d3b2132adc0bbeabbbfe535405f8482188fff5a3aa67b5a87d9ce47cff13d2",
       "selected_ids_exact": true,
       "top_ids_follow_captured_effective_scores": true,
-      "publication": "exclusive atomic directory rename"
+      "publication": "atomic directory rename without no-replace",
+      "review_round": 77,
+      "review_scores": [84, 67],
+      "reason": "The source PASS was self-asserted rather than fixed-scorer and tracked-receipt authoritative; source consumption had a pathname TOCTOU; directory rename could replace a racing empty destination."
+    },
+    {
+      "classification": "FIX_CANDIDATE",
+      "format": "tracked-qualified-same-descriptor-group32-int4-bundle",
+      "manifest_sha256": "6887f3cb2b34c209f7c82d1ede2b12e8fb38d39fbc23ea707004695cefba064e",
+      "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
+      "output_bytes": 14825646,
+      "compactor_sha256": "c69a70a1ccf3daf85bedd867004b8349bc0bd5c9c8572338f508df55d47f65e1",
+      "source_receipt_sha256": "b5b5d074f6d24a554a2d98020aa3a363dd3b2578fbdce9be22fea2b4f1459b9b",
+      "source_summary_sha256": "46d3b2132adc0bbeabbbfe535405f8482188fff5a3aa67b5a87d9ce47cff13d2",
+      "fixed_scorer_reproduced": true,
+      "top_level_off_on_checks_reproduced": true,
+      "source_bytes_hash_and_parse_same_descriptor": true,
+      "publication": "renameat2-RENAME_NOREPLACE after fsync"
     }
   ],
-  "conclusion": "The fixed candidate accepts only a hash-bound qualified source bundle, preserves exact routing labels and effective-score top-32 IDs, and publishes records plus manifest atomically. It still makes no probe-accuracy or corpus-completeness claim; reviewer verification is pending."
+  "conclusion": "The latest fix requires a tracked-clean reviewed receipt, reproduces the fixed scorer and top-level OFF/ON checks, consumes hash-verified bytes from the same no-follow descriptor, and publishes with atomic no-replace. It still makes no probe-accuracy or corpus-completeness claim; reviewer verification is pending."
 }
