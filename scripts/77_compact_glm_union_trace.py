@@ -69,6 +69,7 @@ N_EXPERT = 256
 N_EXPERT_USED = 8
 TOP_K = 32
 HIDDEN_GROUP_SIZE = 32
+CORPUS_MIN_TOKEN_LAYER_EVENTS = 76800
 FILE_RE = re.compile(
     r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_probs|router_selected|router_bias)-"
     r"(?P<layer>\d+)_pos(?P<pos>\d+)\.(?P<ext>f32|i32)$"
@@ -309,8 +310,10 @@ def _review_is_accepted(value: Any) -> bool:
             "round", "gap_reviewer_score", "adversarial_reviewer_score", "critical", "high",
         } and
         isinstance(value["round"], int) and not isinstance(value["round"], bool) and
+        value["round"] >= 1 and
         all(
-            isinstance(value[key], int) and not isinstance(value[key], bool) and value[key] >= 90
+            isinstance(value[key], int) and not isinstance(value[key], bool) and
+            90 <= value[key] <= 100
             for key in ("gap_reviewer_score", "adversarial_reviewer_score")
         ) and value["critical"] == [] and value["high"] == []
     )
@@ -478,12 +481,14 @@ def _validate_corpus_source_bundle(
         corpus_requests["on"][index]["prompt_tokens"] for index in sorted(request_ids)
     ]
     cache = on_arm.get("cuda_cache_runtime")
+    cache_arena = cache.get("arena_gib") if isinstance(cache, dict) else None
     cache_ok = (
         off_arm.get("expert_cache_budget") == on_arm.get("expert_cache_budget") == "32GB" and
         off_arm.get("cuda_expert_cache_gb") == on_arm.get("cuda_expert_cache_gb") == "56" and
         isinstance(cache, dict) and cache == off_arm.get("cuda_cache_runtime") and
         cache.get("slots") == 5754 and isinstance(cache.get("arena_gib"), (int, float)) and
-        cache["arena_gib"] <= 56.0
+        not isinstance(cache_arena, bool) and math.isfinite(float(cache_arena)) and
+        0.0 < float(cache_arena) <= 56.0
     )
 
     trace_score = summary.get("trace_score")
@@ -533,13 +538,9 @@ def _validate_corpus_source_bundle(
     observed = receipt.get("observed")
     first_layer = observed.get("routed_layer_first") if isinstance(observed, dict) else None
     last_layer = observed.get("routed_layer_last") if isinstance(observed, dict) else None
-    if (
-        not isinstance(first_layer, int) or isinstance(first_layer, bool) or
-        not isinstance(last_layer, int) or isinstance(last_layer, bool) or
-        not 0 <= first_layer <= last_layer < 79
-    ):
+    if first_layer != 3 or last_layer != 77:
         raise ValueError("corpus routed layer range is malformed")
-    layers = list(range(first_layer, last_layer + 1))
+    layers = list(range(3, 78))
     wanted_kinds = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
     request_chunks = {
         index: _valid_chunks(corpus_requests["on"][index]["full_indexed_chunks"])
@@ -557,13 +558,15 @@ def _validate_corpus_source_bundle(
         len(layers) * sum(rows for _, rows in request_chunks[index]) for index in request_ids
     )
     total_bytes = sum(item["bytes"] for item in artifacts.values())
+    qualified_floor = summary.get("minimum_token_layer_events")
     if (
         trace_score.get("events") != expected_events or
         trace_score.get("total_rows") != expected_rows or
         trace_score.get("token_layer_events") != expected_rows or
         trace_score.get("total_bytes") != total_bytes or
         on_arm.get("trace_files") != len(artifacts) or on_arm.get("trace_bytes") != total_bytes or
-        summary.get("minimum_token_layer_events", 0) > expected_rows
+        not isinstance(qualified_floor, int) or isinstance(qualified_floor, bool) or
+        qualified_floor < CORPUS_MIN_TOKEN_LAYER_EVENTS or expected_rows < qualified_floor
     ):
         raise ValueError("corpus scorer totals are inconsistent")
     with tempfile.TemporaryDirectory(prefix="glm52-corpus-score.") as snapshot_directory:
@@ -606,12 +609,39 @@ def _validate_corpus_source_bundle(
         "trace_score_passed": rescored.get("verdict") == "PASS",
         "containment_clean": all(value.get("clean") is True for value in containments.values()),
         "corpus_request_scope": len(request_ids) == 2 and len(request_hashes) == 2,
-        "corpus_event_floor": expected_rows >= summary.get("minimum_token_layer_events", 0),
+        "corpus_event_floor": expected_rows >= qualified_floor,
         "corpus_cuda_cache": cache_ok,
     }
     if summary.get("checks") != recomputed_checks or not all(recomputed_checks.values()):
         raise ValueError("corpus top-level OFF/ON qualification does not reproduce")
+    observed_keys = {
+        "context_level", "requests", "prompt_tokens_per_request",
+        "completion_tokens_per_request", "full_indexed_chunks_per_request",
+        "distinct_request_fixtures", "byte_and_token_identity", "containment_clean",
+        "streaming_cache_budget", "cuda_cache_environment_gb", "cuda_cache_slots",
+        "cuda_cache_arena_gib", "off_trace_files", "on_trace_files", "on_trace_bytes",
+        "trace_events", "token_layer_events", "routed_layer_first", "routed_layer_last",
+        "minimum_available_memory_gib", "maximum_cgroup_memory_bytes",
+        "maximum_cgroup_swap_bytes", "kernel_oom_or_xid", "trace_score_verdict",
+    }
+    available_memory = observed.get("minimum_available_memory_gib")
+    cgroup_memory = observed.get("maximum_cgroup_memory_bytes")
+    safe_available_memory = (
+        isinstance(available_memory, dict) and set(available_memory) == {"off", "on"} and
+        all(
+            isinstance(value, (int, float)) and not isinstance(value, bool) and
+            math.isfinite(float(value)) and float(value) >= 18.0
+            for value in available_memory.values()
+        )
+    )
+    safe_cgroup_memory = (
+        isinstance(cgroup_memory, dict) and set(cgroup_memory) == {"off", "on"} and
+        all(isinstance(value, int) and not isinstance(value, bool) and value > 0
+            for value in cgroup_memory.values())
+    )
     if (
+        set(observed) != observed_keys or
+        observed.get("context_level") != summary.get("context_level") or
         observed.get("requests") != len(request_ids) or
         observed.get("prompt_tokens_per_request") != expected_prompt_tokens or
         observed.get("completion_tokens_per_request") != [
@@ -620,11 +650,20 @@ def _validate_corpus_source_bundle(
         observed.get("distinct_request_fixtures") != len(request_hashes) or
         observed.get("byte_and_token_identity") is not True or
         observed.get("containment_clean") is not True or
+        observed.get("streaming_cache_budget") != "32GB" or
+        observed.get("cuda_cache_environment_gb") != 56 or
+        observed.get("cuda_cache_slots") != cache.get("slots") or
+        observed.get("cuda_cache_arena_gib") != cache_arena or
         observed.get("off_trace_files") != 0 or
         observed.get("on_trace_files") != len(artifacts) or
         observed.get("on_trace_bytes") != total_bytes or
         observed.get("trace_events") != expected_events or
         observed.get("token_layer_events") != expected_rows or
+        observed.get("routed_layer_first") != first_layer or
+        observed.get("routed_layer_last") != last_layer or
+        not safe_available_memory or not safe_cgroup_memory or
+        observed.get("maximum_cgroup_swap_bytes") != 0 or
+        observed.get("kernel_oom_or_xid") is not False or
         observed.get("trace_score_verdict") != "PASS"
     ):
         raise ValueError("corpus receipt observations do not reproduce")
