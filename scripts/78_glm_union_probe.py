@@ -33,6 +33,7 @@ def partition_request_rows(
     request_index: np.ndarray,
     request_metadata: list[dict[str, object]],
     expected_counts: dict[str, int] = SPLIT_COUNTS,
+    expected_case_splits: dict[str, str] | None = None,
 ) -> dict[str, np.ndarray]:
     """Return exact row indices for the preregistered request-grouped splits."""
     if (

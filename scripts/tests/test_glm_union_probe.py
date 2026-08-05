@@ -128,6 +128,26 @@ class UnionTargetTests(unittest.TestCase):
             with self.subTest(metadata=metadata), self.assertRaises(ValueError):
                 MODULE.partition_request_rows(request, metadata, expected)
 
+    def test_partition_rejects_balanced_relabel_and_cross_split_group(self) -> None:
+        request = np.asarray([1, 2, 3, 4], dtype=np.uint16)
+        valid = [
+            {"request_index": 1, "case_id": "a", "group_id": "a", "split": "train-fit"},
+            {"request_index": 2, "case_id": "b", "group_id": "b", "split": "train-precision-diagnostic"},
+            {"request_index": 3, "case_id": "c", "group_id": "c", "split": "calibration"},
+            {"request_index": 4, "case_id": "d", "group_id": "d", "split": "test"},
+        ]
+        expected_counts = {name: 1 for name in MODULE.SPLIT_COUNTS}
+        expected_mapping = {str(row["case_id"]): str(row["split"]) for row in valid}
+        balanced = [dict(row) for row in valid]
+        balanced[0]["split"], balanced[2]["split"] = balanced[2]["split"], balanced[0]["split"]
+        duplicate_group = [dict(row) for row in valid]
+        duplicate_group[2]["group_id"] = duplicate_group[0]["group_id"]
+        for metadata in (balanced, duplicate_group):
+            with self.subTest(metadata=metadata), self.assertRaises(ValueError):
+                MODULE.partition_request_rows(
+                    request, metadata, expected_counts, expected_mapping,
+                )
+
     def test_split_arrays_remaps_fp16_holdout_without_leaking_rows(self) -> None:
         rows = {
             "train-fit": np.asarray([0, 1]),
