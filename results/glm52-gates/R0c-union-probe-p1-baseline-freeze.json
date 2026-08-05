@@ -1,6 +1,19 @@
 {
   "schema_version": 1,
   "classification": "PREREGISTERED",
+  "review_resolution": {
+    "prior_candidate": "a6ae3bdf1f3543ccc1d502e369482a380ca81a5f",
+    "review_record": "results/glm52-gates/R0c-union-probe-p1-baseline-review-r140.json",
+    "per_gate_candidate": 2,
+    "BASE-R140-H1": "FIXED: explicit nested hybrid q1-main-head/q2..q8-one-step-MTP recurrence and exact token/route lineage.",
+    "BASE-R140-H2": "FIXED: separate diagnostic session, exhaustive authoritative-state/continuation comparison, failure injection, and inclusive isolation/target-evaluation costs.",
+    "BASE-R140-H3": "FIXED: embargo covers all test-corresponding raw, mapped, captured, and derived values.",
+    "P1-BASE-H1-TEST-OPEN-CONTRADICTION": "FIXED: claim now preserves the schema-materialization incident and protects the audited still-unseen value boundary.",
+    "P1-BASE-H2-MTP-POSITION-ROLLBACK": "FIXED: qj maps to route position t+j without future-token input; isolation and nested-prefix failure rules are explicit.",
+    "BASE-R140-M1": "FIXED: numeric time/bytes/expert-read Pareto rule.",
+    "BASE-R140-M2": "FIXED: acceptance uses captured production F32 score bits and exact top-8 conformance.",
+    "P1-BASE-M1-COST-COMPARABILITY": "FIXED: five matched fresh-server blocks, synchronized inclusive boundaries, K-specific costs, confidence intervals, and memory definitions."
+  },
   "scope": "P1 held-out direct-union probe versus frequency, gate-replay, shared-correction, and MTP baselines",
   "parent_plan": "results/glm52-gates/R0c-union-probe-p1-plan.json",
   "selected_probe_receipt": "results/glm52-gates/R0c-union-probe-p1-precision-pass-a416101.json",
@@ -13,7 +26,15 @@
     "manifest_sha256": "6a946988689f84c9744e34604c1639564d471f4a921f6942d7c49b0d83bd569d",
     "output_sha256": "13eddb3c567bec720820f059c40ad18ffb16deb9fab854d3ad681837fff3ef09",
     "output_bytes": 193307634,
-    "opening_rule": "Do not open records.npz until every scorer, baseline ranking definition, capture schema, model binding, K, budget, common-coverage rule, bootstrap seed, and decision threshold below is committed and reviewed."
+    "opening_rule": "Before the capture and scorer candidate is committed and reviewed, do not read any value from test records.npz or from a test-corresponding raw trace, capture, mapping, or derived artifact. The preserved split-isolation incident disclosed that NumPy previously materialized archive member names, shapes, and dtypes; therefore this is a value-isolation claim, not a literal never-opened claim."
+  },
+  "held_out_isolation": {
+    "preserved_incident": "results/glm52-gates/R0c-split-isolation-incident-2026-08-05.json",
+    "already_observed": "Archive member names, shapes, and dtypes only; NumPy materialized members while reporting that schema.",
+    "still_unseen": "Test request IDs and case mapping, token positions, selected expert IDs, hidden-feature values, router logits/scores, baseline/probe predictions, targets, per-case metrics, and aggregate metrics.",
+    "embargo_scope": "The test records.npz plus every test-corresponding row in the retained exact-router trace, future baseline captures, request/case mappings, manifests that reveal those mappings, and derived artifacts.",
+    "authorized_opener": "After capture and scorer review, one hash-logged scorer invocation may atomically bind and open all test-corresponding sources. Synthetic fixtures and authorized training rows are the only pre-review execution inputs.",
+    "failure_rule": "Any additional value-level test access before that reviewed opener is a gate failure and requires a replacement held-out split."
   },
   "sources": {
     "frequency_training": "Only the 55 train-fit requests and two grouped long-training shards already authorized by the P1 plan.",
@@ -25,22 +46,37 @@
   },
   "common_event_contract": {
     "layers": "Exact routed layers 4 through 77. Layer 3 is excluded for every method because the shared-correction comparator structurally predicts layer L from L-1 and has no layer-2 routed source.",
-    "source_row": "One exact (request, layer, token_position=t) row with a complete same-request, same-layer future window.",
+    "source_row": "For every test request, select exactly the last eight token positions that have a complete K=8 same-request future window. Score those same eight positions at every common layer. A request with fewer than eight such positions is FAIL. This structural rule is fixed before request lengths or values are opened.",
     "target": "The Boolean union of exact selected expert IDs at positions t+1 through t+K for K in {2,4,8}.",
     "pairing": "Every method must score the identical ordered event keys for every K. Missing, extra, duplicated, reordered, or cross-request/layer rows are FAIL.",
     "budgets": [16, 32, 64]
   },
   "ranking_definitions": {
     "frequency": "For each layer, count selected-expert occurrences only in authorized training rows; rank by descending count then ascending expert ID.",
-    "gate_replay": "At source row (request,L,t), use its exact captured F32 router logits and F32 exp_probs_b bias. Compute sigmoid(logit) in F32, add bias in F32, and rank all 256 experts by descending effective score then ascending expert ID. The same current-state ranking predicts each future K union.",
-    "shared_correction": "For source row (request,L,t), use the reviewed two-step predictor computed while executing layer L-1 at t: add that layer's shared-expert output to its post-attention residual, apply layer L RMSNorm and router, then rank all 256 effective F32 scores by descending value and ascending expert ID. The same corrected current-state ranking predicts each future K union.",
-    "mtp_rollout": "Starting from the exact committed source prefix at t, greedily roll the bound MTP head for K predicted token IDs. In an isolated rollback-safe diagnostic target evaluation, collect the full effective router scores for those predicted tokens at each common layer. For each expert take the maximum effective score across the first K drafts, then rank descending with ascending expert-ID ties. Rollout state is discarded; the target request continues byte-identically.",
+    "gate_replay": "At source row (request,L,t), capture the production router's exact 256 effective F32 scores after sigmoid and exp_probs_b bias. Rank those captured score bits by descending value then ascending expert ID; do not recompute them in the acceptance scorer. The same current-state ranking predicts each future K union.",
+    "shared_correction": "For source row (request,L,t), use the reviewed two-step predictor computed while executing layer L-1 at t: add that layer's shared-expert output to its post-attention residual, apply layer L RMSNorm and router, then capture and rank all 256 production effective F32 scores by descending value and ascending expert ID. The same corrected current-state ranking predicts each future K union.",
+    "mtp_rollout": "This is an explicit hybrid main-head/MTP recurrence, because GLM-5.2 has one nextn block rather than a K-token MTP-only head. From an isolated session containing the exact source prefix through t, q1 is the greedy argmax of the target logits already produced at t; no known future test token is read. For j=1..8, evaluate qj with the target at position t+j and capture that token's full 256 effective F32 router scores at every common layer. Before evaluating qj, use hidden h[t+j-1] and qj in the bound one-step nextn block to produce q(j+1), except after j=8. Thus q2=MTP(h[t],q1), q3=MTP(h[t+1],q2), and so on. K=2 and K=4 are exact prefixes of the single K=8 rollout. For each K and expert, take the maximum captured effective score over q1..qK, then rank descending with ascending expert-ID ties. Every qj, route position t+j, hidden-state lineage, main-head/MTP provenance, and raw score bits are recorded; missing or misaligned steps are FAIL.",
     "probe": "Use the exact selected rank-32 head on the qualified int4 gate-input feature plus causal selected-expert history. Its separate K logits rank all 256 experts by descending value then ascending expert ID."
   },
   "cost_accounting": {
-    "required": "Report parameters, persistent bytes, temporary bytes, and synchronized completed inference time per source event for every non-frequency method. Capture/logging time is excluded only when separately measured and explicitly labeled.",
-    "mtp_interpretation": "MTP rollout is an offline comparator unless an address-only online implementation avoids target expert reads. Any target evaluation needed to obtain routes counts against end-to-end MTP cost and cannot be described as free prefetch lookahead.",
-    "shared_interpretation": "Use the already measured serving campaign failure as cost evidence in addition to capture-local timing; better recall does not erase its measured decode regression."
+    "required": "Report parameters, incremental persistent bytes, peak temporary bytes, target expert bytes read, and synchronized completed inference time per source event for every non-frequency method. Persistent means bytes retained between tokens beyond the then-current serving configuration; temporary means the peak additional live allocation. Capture formatting and file writes may be excluded only through a separately measured paired arm, while score movement required by an online consumer remains included.",
+    "timing_protocol": "For each K and non-frequency method, run five fresh-server matched blocks on identical source events and order them with the campaign's frozen public-random arm scheduler. Time from required feature construction or isolated-session creation through device synchronization, prediction, any target evaluations and expert reads, required score movement, and teardown/disposal. Report every completed event, the unrounded mean, a request-paired 95% interval, and cold and warm results separately. Missing, timed-out, unequal, or unsynchronized arms are FAIL.",
+    "mtp_interpretation": "MTP rollout is an offline comparator unless an address-only online implementation avoids target expert reads. K-specific cost includes q1 argmax, seven-or-fewer MTP calls, all K target evaluations, target expert I/O, isolated-session prefix construction, synchronization, and disposal. Capture-only F32 file serialization is the only excluded component and must be measured separately. It cannot be described as free prefetch lookahead.",
+    "shared_interpretation": "Include normalization, all router matmuls, stable ranking/score movement, and synchronization required online. Use the already measured serving campaign failure as cost evidence in addition to capture-local timing; better recall does not erase its measured decode regression.",
+    "equal_cost_rule": "MTP is equal-cost to another method only if its upper 95% completed-time bound is no more than 1.05 times that method's lower 95% bound, its incremental persistent and peak temporary bytes are each no larger, and its target expert bytes read are no larger. MTP dominates only if it is equal-cost by all three dimensions and its recall point estimate is strictly higher in all nine K/budget cells. Otherwise report both methods on the Pareto table without folding the probe into MTP."
+  },
+  "mtp_isolation_contract": {
+    "mechanism": "Run MTP capture in a standalone diagnostic engine process with its own graph, KV caches, MTP fields, and expert-cache namespace; never load or roll drafts in the authoritative target/control process. Disable the shared resident expert arena in the diagnostic process so no cache-residency state crosses the process boundary. Create a fresh diagnostic session for each structural source position, replay only the exact known prefix through t, execute the frozen hybrid recurrence, then destroy the session.",
+    "future_data_rule": "Only prefix tokens through t may seed the isolated session. Actual test tokens at t+1 or later are targets only and must never be inputs to q1 or later drafts.",
+    "state_proof": "The authoritative/control process is never attached to the diagnostic process or namespace. Before and after every diagnostic rollout, hash the control process's checkpoint, logits, dense/compact/indexer KV metadata and contents, MTP fields/caches, and cache-residency map and require no change. Continue a fixed suffix in that untouched control and in a separately fresh clean control; logits, greedy tokens, output bytes, checkpoint selection, and cache residency must be identical.",
+    "failure_injection": "Synthetic tests inject failure after each MTP call, target evaluation, route capture, and disposal stage. Every path must destroy the diagnostic session and leave the authoritative state and continuation identical.",
+    "coverage": "One K=8 rollout must produce the nested K=2 and K=4 prefixes. Missing drafts, partial layer scores, state drift, non-byte-identical continuation, or shrinking common coverage is FAIL."
+  },
+  "router_score_conformance": {
+    "scores": "Capture all 256 effective F32 production-router score bits for gate-replay, shared correction, and every MTP-evaluated token. Reject NaN/Inf before ranking.",
+    "ranking": "Rank captured scores directly by descending F32 value and ascending expert ID; do not recompute sigmoid or bias in the acceptance scorer.",
+    "production_check": "For every event, the first eight experts of the scorer's stable full ranking must exactly equal the production router-selected IDs captured in that same event. Any mismatch is FAIL.",
+    "offline_recompute": "CPU sigmoid(logit)+bias recomputation is diagnostic only and must bit-bind its implementation; it has no acceptance authority."
   },
   "metrics": {
     "K": [2, 4, 8],
@@ -63,13 +99,14 @@
     "shared_correction": "Report it in the table but do not revive its rejected serving configuration unless a new completed-time gate independently passes."
   },
   "mandatory_failures": [
-    "test records opened before this freeze and its capture/scorer implementation are committed and reviewed",
+    "any held-out value or test-corresponding trace/capture/mapping value opened before the capture/scorer implementation is committed and reviewed, beyond the preserved schema-only incident",
     "any method sees different target events or fixture order",
     "ranking is partial, duplicated, out of range, malformed, or uses non-stable ties",
     "shared correction emits only top-8 while a 16/32/64 cell is claimed",
-    "MTP rollout mutates committed target state or omits target-evaluation cost",
+    "MTP reads any actual future test token, misaligns qj with route position t+j, produces non-nested K prefixes, mutates authoritative state/cache residency/continuation, or omits any target-evaluation/isolation cost",
     "frequency/probe fitting reads precision-diagnostic, calibration, or test rows",
     "reported macro-request metrics are replaced by layer or event weighting",
+    "captured production top-8 differs from the scorer's full stable ranking",
     "source, model, scorer, capture, split, or receipt binding differs"
   ],
   "claim_limit": "This gate measures held-out expert-address prediction on 20 fixed cases. It does not measure NLL, semantic quality, decode throughput, useful-prefetch rate, cache admission benefit, or 1M-context capability."
