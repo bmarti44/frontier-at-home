@@ -23,7 +23,7 @@
     "optimizer": "AdamW, learning_rate=0.001, weight_decay=0.0001",
     "epochs": 8,
     "batch_rows": 512,
-    "numeric_mode": "FP16 CUDA inputs and parameters with FP32 loss accumulation; non-finite input, gradient, parameter, or score is FAIL."
+    "numeric_mode": "FP16 CUDA autocast for matrix operations with FP32 master parameters, optimizer state, and loss accumulation; non-finite input, gradient, parameter, or score is FAIL."
   },
   "cross_validation": {
     "folds": 3,
