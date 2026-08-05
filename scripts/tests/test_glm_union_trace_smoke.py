@@ -308,6 +308,8 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                 "generated_content_bytes": 0,
                 "token_ids": list(range(8)),
                 "sse_content_events": 5,
+                "finish_reason": "length",
+                "utf8_regression_reproduced": False,
             }
             for row in ledger
         ]
@@ -448,7 +450,8 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
             "_prompts": {"case_1": "one", "case_2": "two"},
         }
         probe = MODULE.quality_probe_ledger(bundle)
-        self.assertEqual(probe["cases"], [bundle["cases"][0]])
+        self.assertEqual(probe["cases"][0]["case_id"], bundle["cases"][0]["case_id"])
+        self.assertEqual(probe["cases"][0]["request_id"], 1)
         self.assertEqual(probe["_prompts"], {"case_1": "one"})
         self.assertEqual(probe["total_expected_prompt_tokens"], 2)
         self.assertEqual(probe["expected_token_layer_events"], 150)
@@ -465,7 +468,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
             "_prompts": {"case_1": "one", "case_021": "two"},
         }
         probe = MODULE.quality_probe_ledger(bundle, case_id="case_021")
-        self.assertEqual(probe["cases"], [bundle["cases"][1]])
+        self.assertEqual(probe["cases"][0]["case_id"], "case_021")
         self.assertEqual(probe["_prompts"], {"case_021": "two"})
         self.assertEqual(probe["total_expected_prompt_tokens"], 3)
         self.assertEqual(probe["cases"][0]["request_id"], 1)
@@ -502,6 +505,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
             "case_id": "case_021", "group_id": "case_021", "split": "train-fit",
             "request_id": 1, "request_sha256": "1" * 64,
             "expected_prompt_tokens": 2, "token_ids": [11, 12],
+            "utf8_regression_expected": True,
         }]
         request = {
             "case_id": "case_021", "group_id": "case_021", "split": "train-fit",

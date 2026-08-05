@@ -104,6 +104,10 @@ QUALITY_DISK_MAX_TOKENS = 512
 QUALITY_REQUEST_COUNT = 100
 QUALITY_FIXTURE_CONTENT_SHA256 = "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0a"
 UTF8_NORMALIZATION_LOG = "ds4-server: invalid UTF-8 model bytes normalized to U+FFFD"
+UTF8_REGRESSION_CASE_ID = "case_021"
+UTF8_REGRESSION_SEED = 805105121
+UTF8_REGRESSION_TOKEN_PREFIX = (8507, 228, 35457, 11, 323, 279, 1008)
+UTF8_REGRESSION_VISIBLE_PREFIX = "宆\uFFFD, and the other"
 
 
 def render_quality_prompt(prompt: str) -> str:
@@ -294,12 +298,19 @@ def quality_probe_ledger(
     )
     if selected is None:
         raise ValueError("quality probe case is not present in the frozen ledger")
-    first = selected
+    first = dict(selected)
     case_id = first.get("case_id")
     tokens = first.get("expected_prompt_tokens")
     if (not isinstance(case_id, str) or case_id not in prompts or
             not isinstance(tokens, int) or isinstance(tokens, bool) or tokens <= 0):
         raise ValueError("quality probe case is invalid")
+    first["request_id"] = 1
+    if case_id == UTF8_REGRESSION_CASE_ID:
+        first["seed"] = UTF8_REGRESSION_SEED
+        first["request_sha256"] = hashlib.sha256(
+            quality_wire_body(prompts[case_id], UTF8_REGRESSION_SEED)
+        ).hexdigest()
+        first["utf8_regression_expected"] = True
     return {
         **{key: value for key, value in bundle.items()
            if key not in {"cases", "_prompts", "total_expected_prompt_tokens",
@@ -380,12 +391,14 @@ def quality_capture_verdict(
     output_keys = (
         "completion_tokens", "generated_reasoning_sha256",
         "generated_reasoning_bytes", "generated_content_sha256",
-        "generated_content_bytes", "token_ids",
+        "generated_content_bytes", "token_ids", "finish_reason",
+        "utf8_regression_reproduced",
     )
 
     def output_valid(observed: dict[str, Any]) -> bool:
         return (
             observed.get("completion_tokens") == QUALITY_MAX_TOKENS and
+            observed.get("finish_reason") == "length" and
             isinstance(observed.get("token_ids"), list) and
             len(observed["token_ids"]) == QUALITY_MAX_TOKENS and
             all(isinstance(token, int) and not isinstance(token, bool) and token >= 0
@@ -419,6 +432,15 @@ def quality_capture_verdict(
             all(left.get(key) == right.get(key) for key in output_keys)
             for left, right in zip(off_requests, on_requests))
     )
+    regression_reproduced = (
+        off_matches and on_matches and
+        all(
+            not expected.get("utf8_regression_expected") or
+            (left.get("utf8_regression_reproduced") is True and
+             right.get("utf8_regression_reproduced") is True)
+            for expected, left, right in zip(ledger, off_requests, on_requests)
+        )
+    )
     expected_events = (
         75 * sum(row["expected_prompt_tokens"] for row in ledger)
         if ledger_valid else -1
@@ -428,6 +450,7 @@ def quality_capture_verdict(
         "off_exact_coverage": off_matches,
         "on_exact_coverage": on_matches,
         "per_case_output_identity": outputs_match,
+        "exact_utf8_regression_reproduced": regression_reproduced,
         "scorer_passed": trace_score.get("verdict") == "PASS",
         "exact_request_count": trace_score.get("requests") == len(ledger),
         "exact_token_layer_events": trace_score.get("token_layer_events") == expected_events,
@@ -824,6 +847,7 @@ def _run_quality_requests(
         usage = stream.get("usage")
         if (stream.get("done") is not True or not isinstance(usage, dict) or
                 stream.get("request_sha256") != expected["request_sha256"] or
+                stream.get("finish_reason") != "length" or
                 usage.get("prompt_tokens") != expected["expected_prompt_tokens"] or
                 usage.get("completion_tokens") != QUALITY_MAX_TOKENS):
             raise ValueError(f"quality request {expected['case_id']} was incomplete")
@@ -844,6 +868,15 @@ def _run_quality_requests(
             output_errors.append("no content-bearing SSE event was observed")
         if output_errors:
             raise ValueError(f"quality output is not independently observable: {output_errors}")
+        combined_visible = reasoning + content
+        utf8_regression_reproduced = (
+            raw_timing["token_ids"][:len(UTF8_REGRESSION_TOKEN_PREFIX)] ==
+            list(UTF8_REGRESSION_TOKEN_PREFIX) and
+            combined_visible.startswith(UTF8_REGRESSION_VISIBLE_PREFIX)
+        )
+        if (expected.get("utf8_regression_expected") is True and
+                not utf8_regression_reproduced):
+            raise ValueError("known invalid-UTF-8 regression was not reproduced")
         records.append({
             "case_id": expected["case_id"],
             "group_id": expected["group_id"],
@@ -853,12 +886,14 @@ def _run_quality_requests(
             "prompt_tokens": usage["prompt_tokens"],
             "full_indexed_chunks": full_indexed_chunks_text(request_log),
             "completion_tokens": usage["completion_tokens"],
+            "finish_reason": stream["finish_reason"],
             "generated_reasoning_sha256": hashlib.sha256(reasoning.encode()).hexdigest(),
             "generated_reasoning_bytes": len(reasoning.encode()),
             "generated_content_sha256": hashlib.sha256(content.encode()).hexdigest(),
             "generated_content_bytes": len(content.encode()),
             "token_ids": raw_timing["token_ids"],
             "sse_content_events": sse_content_events,
+            "utf8_regression_reproduced": utf8_regression_reproduced,
         })
     response_path = out / "responses.json"
     response_path.write_text(

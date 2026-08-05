@@ -334,6 +334,7 @@ class Client:
         done = False
         data_chunks = 0
         response_ids: set[str] = set()
+        finish_reasons: list[str] = []
         try:
             with response:
                 if response.status != 200:
@@ -366,6 +367,13 @@ class Client:
                     if not isinstance(choices, list):
                         raise RuntimeError("SSE choices is not a list")
                     for choice in choices:
+                        if not isinstance(choice, dict):
+                            raise RuntimeError("SSE choice is not an object")
+                        finish_reason = choice.get("finish_reason")
+                        if finish_reason is not None:
+                            if not isinstance(finish_reason, str) or not finish_reason:
+                                raise RuntimeError("SSE finish_reason is invalid")
+                            finish_reasons.append(finish_reason)
                         delta = choice.get("delta", {})
                         if not isinstance(delta, dict):
                             raise RuntimeError("SSE delta is not an object")
@@ -393,6 +401,10 @@ class Client:
             raise RuntimeError(
                 f"SSE stream has ambiguous response ids: {sorted(response_ids)!r}"
             )
+        if len(finish_reasons) != 1:
+            raise RuntimeError(
+                f"SSE stream has {len(finish_reasons)} terminal finish reasons"
+            )
 
         return {
             "response_id": next(iter(response_ids)),
@@ -406,6 +418,7 @@ class Client:
             "generated_content": "".join(content_parts),
             "usage": usage,
             "done": done,
+            "finish_reason": finish_reasons[0],
             "data_chunks": data_chunks,
             "token_timestamps_ns": token_timestamps_ns,
         }
