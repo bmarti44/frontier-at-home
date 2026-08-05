@@ -489,7 +489,7 @@ def run(args: argparse.Namespace) -> int:
         }
         trace_score = TRACE_SCORER.score_trace(
             root / "on/trace", root / "on/server.log", max_bytes=max_trace_bytes,
-            expected_layers=set(range(4, 79)), expected_chunks=[],
+            expected_layers=set(range(3, 78)), expected_chunks=[],
             expected_requests=expected_requests,
         )
     else:

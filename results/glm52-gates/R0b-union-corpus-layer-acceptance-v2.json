@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "classification": "PREREGISTERED_ACCEPTANCE_CORRECTION",
+  "supersedes_runtime_layer_range": [4, 78],
+  "exact_main_inference_routed_layer_range": [3, 77],
+  "exact_main_inference_routed_layer_count": 75,
+  "excluded_mtp_layer": 78,
+  "acceptance": {
+    "requests": 2,
+    "minimum_prompt_tokens_per_request": 512,
+    "minimum_token_layer_events": 76800,
+    "exact_request_ids": [1, 2],
+    "exact_routed_layers": [3, 77],
+    "off_on_byte_and_token_identity": true,
+    "all_fixed_scorer_checks": true,
+    "containment_clean": true
+  },
+  "basis": "The preserved r85 FAIL and the frozen GGUF header establish that main inference routes through zero-based layers 3-77. Layer 78 contains the MTP/next-token block and must not replace main layer 3 in the expected set.",
+  "rerun_rule": "The r85 attempt remains FAIL. This corrected acceptance formula requires a new reviewed candidate, runtime freeze, post-freeze public-randomness seed, and full OFF/ON rerun."
+}
