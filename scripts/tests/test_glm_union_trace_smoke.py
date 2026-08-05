@@ -478,6 +478,19 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
             tokenizer, [*raw_ids[:3], 91, *raw_ids[4:]], "害\n", "害\n\n|",
         ))
 
+    def test_quality_raw_output_uses_first_reasoning_boundary(self) -> None:
+        tokenizer = MODULE.Tokenizer.from_file(str(MODULE.SHARED.TOKENIZER))
+        raw_ids = [8507, 81272, 13, 154842, 154842, 154842, 154842, 154842]
+        self.assertEqual(
+            MODULE.quality_raw_visible_output_errors(
+                tokenizer, raw_ids, "守权.", "</think></think></think></think>",
+            ),
+            [],
+        )
+        self.assertTrue(MODULE.quality_raw_visible_output_errors(
+            tokenizer, raw_ids, "守权.", "",
+        ))
+
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     @classmethod
