@@ -219,6 +219,59 @@ class UnionTraceScoreTests(unittest.TestCase):
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["selected_matches_router_formula"])
 
+    def make_corpus_attempt(self, root: Path) -> tuple[Path, Path]:
+        trace = root / "trace"
+        trace.mkdir()
+        log_lines = []
+        for request_id in (1, 2):
+            request_root = root / f"source-{request_id}"
+            request_root.mkdir()
+            source_trace, _ = self.make_attempt(request_root)
+            for path in source_trace.iterdir():
+                suffix = path.name.split("_glm_indexed_", 1)[1]
+                path.rename(
+                    trace / f"request_r{request_id:08d}_glm_indexed_{suffix}"
+                )
+            log_lines.append(
+                "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn "
+                f"request={request_id} layer=4 pos=0 rows=2\n"
+            )
+        log = root / "server.log"
+        log.write_text("".join(log_lines), encoding="utf-8")
+        return trace, log
+
+    def test_corpus_mode_binds_two_exact_request_scopes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            trace, log = self.make_corpus_attempt(Path(tmp))
+            result = MODULE.score_trace(
+                trace, log, max_bytes=2_000_000, expected_layers={4},
+                expected_chunks=[],
+                expected_requests={1: [(0, 2)], 2: [(0, 2)]},
+            )
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(result["requests"], 2)
+        self.assertEqual(result["token_layer_events"], 4)
+
+    def test_corpus_mode_rejects_legacy_gap_duplicate_and_missing_files(self) -> None:
+        for mutation in ("legacy", "gap", "duplicate", "missing"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
+                trace, log = self.make_corpus_attempt(Path(tmp))
+                if mutation == "legacy":
+                    target = next(trace.glob("*r00000002*router_probs*"))
+                    target.rename(trace / target.name.replace("_r00000002", ""))
+                elif mutation == "gap":
+                    log.write_text(log.read_text().replace("request=2", "request=3"))
+                elif mutation == "duplicate":
+                    log.write_text(log.read_text() + log.read_text().splitlines(True)[0])
+                else:
+                    next(trace.glob("*r00000002*router_probs*")).unlink()
+                result = MODULE.score_trace(
+                    trace, log, max_bytes=2_000_000, expected_layers={4},
+                    expected_chunks=[],
+                    expected_requests={1: [(0, 2)], 2: [(0, 2)]},
+                )
+                self.assertEqual(result["verdict"], "FAIL")
+
 
 if __name__ == "__main__":
     unittest.main()
