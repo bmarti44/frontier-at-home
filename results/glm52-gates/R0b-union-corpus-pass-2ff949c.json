@@ -26,8 +26,6 @@
       [[0, 2048], [2048, 4096], [6144, 1917]]
     ],
     "distinct_request_fixtures": 2,
-    "fixture_lineages": 1,
-    "fixture_diversity_status": "OPEN",
     "byte_and_token_identity": true,
     "containment_clean": true,
     "streaming_cache_budget": "32GB",
@@ -50,13 +48,8 @@
       "on": 57577259008
     },
     "maximum_cgroup_swap_bytes": 0,
-    "cgroup_memory_event_deltas": {
-      "off": {"high": 0, "max": 0, "oom": 0, "oom_kill": 0, "oom_group_kill": 0},
-      "on": {"high": 0, "max": 0, "oom": 0, "oom_kill": 0, "oom_group_kill": 0}
-    },
     "kernel_oom_or_xid": false,
-    "trace_score_verdict": "PASS",
-    "duplicate_read_only_scorer_disclosure": "After both arms completed, a redundant read-only scorer ran concurrently with the canonical scorer for about 78 seconds and was stopped. It wrote no corpus or summary. Both reviewers independently determined this did not affect the immutable raw artifacts, containment, accepted timing, or canonical verdict; Nash then reproduced the full scorer result over all 2250 files."
+    "trace_score_verdict": "PASS"
   },
   "pre_runtime_authorization_review": {
     "round": 97,
@@ -73,5 +66,5 @@
     "high": []
   },
   "retained_directory": "/home/bmarti44/.local/state/glm52-p0-corpus-long8000-r99-pcache",
-  "conclusion": "This is the canonical reviewed raw source for at least one million GLM P0 token-layer events. It does not complete the planned fixture-diverse 100-case-plus-transcript corpus or frozen train/calibration/test splits; it does not qualify high-row status, serving performance, 1M context, fidelity, or parity."
+  "conclusion": "This is the canonical reviewed raw source for at least one million GLM P0 token-layer events. It contains two distinct requests from one long-fixture lineage and therefore does not complete the planned fixture-diverse 100-case-plus-transcript corpus or frozen train/calibration/test splits. After both arms completed, a redundant read-only scorer ran concurrently with the canonical scorer for about 78 seconds and was stopped; it wrote no corpus or summary, both reviewers found no effect on immutable evidence or accepted timing, and Nash independently reproduced the full scorer result over all 2250 files. This does not qualify high-row status, serving performance, 1M context, fidelity, or parity."
 }
