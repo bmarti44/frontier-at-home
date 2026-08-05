@@ -328,8 +328,11 @@ class AtomicLifecycleTests(unittest.TestCase):
     def test_authorized_gate_wires_real_phases_through_atomic_lifecycle(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             output = Path(raw) / "authorized"
+            ledger = Path(raw) / "global-ledger.json"
             configuration = {"output_root": output, "device": "cpu"}
             with mock.patch.object(
+                MODULE, "AUTHORIZED_LEDGER_PATH", ledger,
+            ), mock.patch.object(
                 MODULE, "_preflight_authorized_gate", return_value={"frozen": True},
             ) as preflight, mock.patch.object(
                 MODULE, "_open_authorized_heldout", return_value={"opened": True},
@@ -412,6 +415,154 @@ class AtomicLifecycleTests(unittest.TestCase):
                     MODULE._run_authorized_gate({
                         "output_root": root / "retry", "device": "cpu",
                     })
+
+    def test_concurrent_output_names_share_one_global_reservation(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            ledger = root / "global-ledger.json"
+            marker = root / "open-count"
+            read_end, write_end = os.pipe()
+            children = []
+            for index in range(2):
+                child = os.fork()
+                if child == 0:
+                    os.close(write_end)
+                    os.read(read_end, 1)
+
+                    def opener(*_args):
+                        descriptor = os.open(
+                            marker, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600,
+                        )
+                        try:
+                            os.write(descriptor, b"opened\n")
+                            os.fsync(descriptor)
+                        finally:
+                            os.close(descriptor)
+                        return {"opened": True}
+
+                    with mock.patch.object(
+                        MODULE, "AUTHORIZED_LEDGER_PATH", ledger, create=True,
+                    ), mock.patch.object(
+                        MODULE, "_preflight_authorized_gate", return_value={"frozen": True},
+                    ), mock.patch.object(
+                        MODULE, "_open_authorized_heldout", side_effect=opener,
+                    ), mock.patch.object(
+                        MODULE, "_capture_authorized_set", return_value={"captured": True},
+                    ), mock.patch.object(
+                        MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
+                    ):
+                        try:
+                            MODULE._run_authorized_gate({
+                                "output_root": root / f"concurrent-{index}",
+                                "device": "cpu",
+                            })
+                        except FileExistsError:
+                            pass
+                    os._exit(0)
+                children.append(child)
+            os.close(read_end)
+            os.write(write_end, b"xx")
+            os.close(write_end)
+            for child in children:
+                _pid, status = os.waitpid(child, 0)
+                self.assertEqual(os.waitstatus_to_exitcode(status), 0)
+            self.assertEqual(marker.read_text(encoding="utf-8"), "opened\n")
+
+    def test_launch_environment_discards_all_ambient_values(self) -> None:
+        ds4_values = {
+            "DS4_CUDA_FETCH_THREADS": "8",
+            "DS4_LOCK_FILE": "/run/lock/frontier-at-home/inference.lock",
+        }
+        injected = {
+            "LD_PRELOAD": "/tmp/injected.so",
+            "LD_LIBRARY_PATH": "/tmp/injected",
+            "CUDA_VISIBLE_DEVICES": "none",
+            "DS4_GLM_PREFETCH": "1",
+            "PYTHONPATH": "/tmp/injected",
+            "PATH": "/tmp/injected",
+        }
+        with mock.patch.dict(os.environ, injected, clear=True):
+            environment = MODULE._build_launch_environment(
+                ds4_values, Path("/home/bmarti44/.cache/glm52-candidate"),
+            )
+        self.assertTrue(set(ds4_values).issubset(environment))
+        self.assertEqual(environment["PATH"], MODULE.FIXED_LAUNCH_PATH)
+        for name in injected:
+            if name != "PATH":
+                self.assertNotIn(name, environment)
+        self.assertEqual(
+            environment["GLM_SAFE_EXPECTED_ENV_SHA256"],
+            MODULE._environment_sha256(ds4_values, list(ds4_values)),
+        )
+
+    def test_authenticated_runtime_uses_private_script_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            wrapper_payload = b"#!/bin/bash\necho bound\n"
+            guard_payload = b"print('bound')\n"
+            wrapper = MODULE._publish_authenticated_runtime(root, {
+                "safe_run_payload": wrapper_payload,
+                "memory_guard_payload": guard_payload,
+            })
+            self.assertEqual(wrapper.read_bytes(), wrapper_payload)
+            self.assertEqual(
+                (root / "authenticated-runtime/scripts/03_memory_guard.py").read_bytes(),
+                guard_payload,
+            )
+
+    def test_authenticated_binary_is_private_named_and_hash_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "source-binary"
+            source.write_bytes(b"authenticated executable bytes")
+            descriptor = MODULE._open_regular(source)
+            try:
+                digest, identity = MODULE._hash_open_descriptor(descriptor, source)
+                candidate_root, binary = MODULE._publish_authenticated_binary(
+                    {
+                        "candidate_root": str(root),
+                        "binary_sha256": digest,
+                        "binary_stat": list(identity),
+                    },
+                    {"binary_descriptor": descriptor},
+                    parent=root,
+                )
+                self.assertEqual(binary.name, "ds4-server")
+                self.assertEqual(binary.parent, candidate_root)
+                self.assertEqual(binary.read_bytes(), b"authenticated executable bytes")
+                self.assertEqual(MODULE._hash_regular(binary)[0], digest)
+                self.assertEqual(candidate_root.stat().st_mode & 0o777, 0o700)
+            finally:
+                os.close(descriptor)
+
+    def test_engine_capture_uses_normal_glm_prompt_templating(self) -> None:
+        command = MODULE._engine_capture_command(
+            Path("/private/glm_safe_run.sh"), "tag", Path("/private/ds4-server"),
+            Path("/proc/controller/fd/model"), Path("/private/prompt.txt"),
+        )
+        self.assertNotIn("--raw-prompt", command)
+        self.assertEqual(
+            command[command.index("--prompt-file") + 1], "/private/prompt.txt",
+        )
+
+    def test_retained_model_descriptor_defeats_path_swap_restore(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            model = root / "model.gguf"
+            displaced = root / "approved.gguf"
+            model.write_bytes(b"approved-model")
+            descriptor = MODULE._open_regular(model)
+            try:
+                expected = MODULE._hash_open_descriptor(descriptor, model)
+                model.rename(displaced)
+                model.write_bytes(b"replacement-model")
+                observed = MODULE._hash_open_descriptor(descriptor, model)
+                self.assertEqual(observed[0], expected[0])
+                self.assertEqual(observed[1][:3], expected[1][:3])
+                self.assertNotEqual(observed[1], expected[1])
+                self.assertNotEqual(model.read_bytes(), displaced.read_bytes())
+            finally:
+                os.close(descriptor)
 
 
 class BaselineTableTests(unittest.TestCase):

@@ -62,6 +62,13 @@ FROZEN_SCRIPT_HASHES = {
     SAFE_RUN_PATH: "7d8bb58e526a5cbdd1980597506079fd2dadac294e255e577bb9fba9f6fdfd1f",
     MEMORY_GUARD_PATH: "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
 }
+AUTHORIZED_LEDGER_PATH = Path(
+    "/home/bmarti44/.local/state/glm52-p1-baseline-heldout-ledger.json"
+)
+FIXED_LAUNCH_PATH = (
+    "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
+    "/usr/sbin:/usr/bin:/sbin:/bin"
+)
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -567,6 +574,7 @@ def _manifest_rows(payload: bytes) -> list[tuple[str, str, str, str]]:
 def _load_authorized_test_cases(
     fixture_root: Path,
     test_manifest: dict[str, object],
+    tokenizer_payload: bytes,
 ) -> list[dict[str, object]]:
     """Open the frozen fixture mapping only inside the authorized lifecycle."""
     plan_payload = _tracked_snapshot(QUALITY_SPLIT_PLAN)
@@ -586,7 +594,6 @@ def _load_authorized_test_cases(
     fixture = (fixture_root / QUALITY_FIXTURE_RELATIVE).resolve(strict=True)
     if fixture_root not in fixture.parents or not fixture.is_dir():
         raise ValueError("quality fixture root is invalid")
-    tokenizer_payload = _snapshot_regular(TOKENIZER_PATH)
     if _sha256_bytes(tokenizer_payload) != FROZEN_TOKENIZER_SHA256:
         raise ValueError("quality tokenizer differs")
     tokenizer = Tokenizer.from_str(tokenizer_payload.decode("utf-8", errors="strict"))
@@ -1108,6 +1115,7 @@ def _run_atomic_lifecycle(
     open_heldout,
     capture,
     score,
+    ledger_path: Path | None = None,
 ) -> dict[str, object]:
     """Run one preflight/open/capture/score attempt and seal every opened outcome."""
     requested = output_root.absolute()
@@ -1118,12 +1126,26 @@ def _run_atomic_lifecycle(
     preflight_binding = preflight()
     if not isinstance(preflight_binding, dict):
         raise ValueError("atomic lifecycle preflight binding is malformed")
+    started_epoch_ns = time.time_ns()
+    ledger = None
+    if ledger_path is not None:
+        ledger_requested = ledger_path.absolute()
+        ledger_parent = ledger_requested.parent.resolve(strict=True)
+        ledger = ledger_parent / ledger_requested.name
+        _write_json_exclusive(ledger, {
+            "schema_version": 1,
+            "classification": "P1_HELD_OUT_GLOBAL_LEDGER",
+            "status": "STARTED",
+            "started_epoch_ns": started_epoch_ns,
+            "output_root": str(output_root),
+            "preflight": preflight_binding,
+        })
     staging = Path(tempfile.mkdtemp(prefix=f".{output_root.name}.tmp.", dir=parent))
     attempt = {
         "schema_version": 1,
         "classification": "P1_HELD_OUT_ATOMIC_ATTEMPT",
         "status": "STARTED",
-        "started_epoch_ns": time.time_ns(),
+        "started_epoch_ns": started_epoch_ns,
         "preflight": preflight_binding,
     }
     _write_json_replace(staging / "attempt.json", attempt)
@@ -1145,6 +1167,12 @@ def _run_atomic_lifecycle(
             "failure_message": str(error),
         })
         _write_json_replace(staging / "attempt.json", attempt)
+        if ledger is not None:
+            _write_json_replace(ledger, {
+                **attempt,
+                "classification": "P1_HELD_OUT_GLOBAL_LEDGER",
+                "output_root": str(output_root),
+            })
         _rename_noreplace(staging, output_root)
         descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
         try:
@@ -1153,6 +1181,12 @@ def _run_atomic_lifecycle(
             os.close(descriptor)
         raise
     _rename_noreplace(staging, output_root)
+    if ledger is not None:
+        _write_json_replace(ledger, {
+            **attempt,
+            "classification": "P1_HELD_OUT_GLOBAL_LEDGER",
+            "output_root": str(output_root),
+        })
     descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
     try:
         os.fsync(descriptor)
@@ -1161,21 +1195,63 @@ def _run_atomic_lifecycle(
     return result
 
 
-def _hash_regular(path: Path) -> tuple[str, tuple[int, int, int, int, int]]:
+def _hash_open_descriptor(
+    descriptor: int,
+    path: Path,
+) -> tuple[str, tuple[int, int, int, int, int]]:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    before = os.fstat(descriptor)
+    if not stat.S_ISREG(before.st_mode):
+        raise ValueError(f"identity input is not regular: {path}")
+    digest = hashlib.sha256()
+    while True:
+        block = os.read(descriptor, 4 * 1024 * 1024)
+        if not block:
+            break
+        digest.update(block)
+    after = os.fstat(descriptor)
+    identity = (
+        before.st_dev, before.st_ino, before.st_size,
+        before.st_mtime_ns, before.st_ctime_ns,
+    )
+    if identity != (
+        after.st_dev, after.st_ino, after.st_size,
+        after.st_mtime_ns, after.st_ctime_ns,
+    ):
+        raise ValueError(f"identity input changed while hashing: {path}")
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    return digest.hexdigest(), identity
+
+
+def _open_regular(path: Path) -> int:
     flags = os.O_RDONLY | os.O_CLOEXEC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
-    descriptor = os.open(path, flags)
+    return os.open(path, flags)
+
+
+def _hash_regular(path: Path) -> tuple[str, tuple[int, int, int, int, int]]:
+    descriptor = _open_regular(path)
+    try:
+        return _hash_open_descriptor(descriptor, path)
+    finally:
+        os.close(descriptor)
+
+
+def _snapshot_bound_regular(
+    path: Path,
+) -> tuple[bytes, tuple[int, int, int, int, int]]:
+    descriptor = _open_regular(path)
     try:
         before = os.fstat(descriptor)
         if not stat.S_ISREG(before.st_mode):
-            raise ValueError(f"identity input is not regular: {path}")
-        digest = hashlib.sha256()
+            raise ValueError(f"snapshot input is not regular: {path}")
+        chunks = []
         while True:
             block = os.read(descriptor, 4 * 1024 * 1024)
             if not block:
                 break
-            digest.update(block)
+            chunks.append(block)
         after = os.fstat(descriptor)
         identity = (
             before.st_dev, before.st_ino, before.st_size,
@@ -1185,13 +1261,43 @@ def _hash_regular(path: Path) -> tuple[str, tuple[int, int, int, int, int]]:
             after.st_dev, after.st_ino, after.st_size,
             after.st_mtime_ns, after.st_ctime_ns,
         ):
-            raise ValueError(f"identity input changed while hashing: {path}")
-        return digest.hexdigest(), identity
+            raise ValueError(f"snapshot input changed while reading: {path}")
+        return b"".join(chunks), identity
     finally:
         os.close(descriptor)
 
 
-def _preflight_authorized_gate(configuration: dict[str, object]) -> dict[str, object]:
+def _snapshot_open_descriptor(
+    descriptor: int,
+    path: Path,
+) -> tuple[bytes, tuple[int, int, int, int, int]]:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    before = os.fstat(descriptor)
+    if not stat.S_ISREG(before.st_mode):
+        raise ValueError(f"snapshot descriptor is not regular: {path}")
+    chunks = []
+    while True:
+        block = os.read(descriptor, 4 * 1024 * 1024)
+        if not block:
+            break
+        chunks.append(block)
+    after = os.fstat(descriptor)
+    identity = (
+        before.st_dev, before.st_ino, before.st_size,
+        before.st_mtime_ns, before.st_ctime_ns,
+    )
+    if identity != (
+        after.st_dev, after.st_ino, after.st_size,
+        after.st_mtime_ns, after.st_ctime_ns,
+    ):
+        raise ValueError(f"snapshot descriptor changed while reading: {path}")
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    return b"".join(chunks), identity
+
+
+def _preflight_authorized_gate(
+    configuration: dict[str, object],
+) -> tuple[dict[str, object], dict[str, object]]:
     expected_keys = {"output_root", "device", "candidate_root", "model", "fixture_root"}
     if set(configuration) != expected_keys or configuration.get("device") not in ("cpu", "cuda"):
         raise ValueError("authorized gate configuration is malformed")
@@ -1225,17 +1331,13 @@ def _preflight_authorized_gate(configuration: dict[str, object]) -> dict[str, ob
     )
     if processes.returncode not in (0, 1) or processes.stdout.strip():
         raise RuntimeError("a DS4 engine process is already active")
-    binary_sha256, binary_stat = _hash_regular(binary)
-    if binary_sha256 != FROZEN_BINARY_SHA256:
-        raise ValueError("authorized gate binary differs")
-    model_sha256, model_stat = _hash_regular(model)
-    if model_sha256 != FROZEN_MODEL_SHA256 or model_stat != FROZEN_MODEL_STAT:
-        raise ValueError("authorized gate model differs")
-    tokenizer_sha256, tokenizer_stat = _hash_regular(TOKENIZER_PATH)
+    tokenizer_payload, tokenizer_stat = _snapshot_bound_regular(TOKENIZER_PATH)
+    tokenizer_sha256 = _sha256_bytes(tokenizer_payload)
     if tokenizer_sha256 != FROZEN_TOKENIZER_SHA256:
         raise ValueError("authorized gate tokenizer differs")
+    runtime_payloads = {path: _tracked_snapshot(path) for path in FROZEN_SCRIPT_HASHES}
     for path, expected in FROZEN_SCRIPT_HASHES.items():
-        if _sha256_bytes(_tracked_snapshot(path)) != expected:
+        if _sha256_bytes(runtime_payloads[path]) != expected:
             raise ValueError(f"authorized gate runtime differs: {path.name}")
     fixture = fixture_root / QUALITY_FIXTURE_RELATIVE
     if not fixture.is_dir() or fixture.is_symlink():
@@ -1246,7 +1348,23 @@ def _preflight_authorized_gate(configuration: dict[str, object]) -> dict[str, ob
     )
     if available_kib < 110 * 1024 * 1024:
         raise MemoryError("authorized gate lacks 110 GiB available memory")
-    return {
+    binary_descriptor = _open_regular(binary)
+    try:
+        binary_sha256, binary_stat = _hash_open_descriptor(binary_descriptor, binary)
+        if binary_sha256 != FROZEN_BINARY_SHA256:
+            raise ValueError("authorized gate binary differs")
+        model_descriptor = _open_regular(model)
+        try:
+            model_sha256, model_stat = _hash_open_descriptor(model_descriptor, model)
+            if model_sha256 != FROZEN_MODEL_SHA256 or model_stat != FROZEN_MODEL_STAT:
+                raise ValueError("authorized gate model differs")
+        except BaseException:
+            os.close(model_descriptor)
+            raise
+    except BaseException:
+        os.close(binary_descriptor)
+        raise
+    binding = {
         "engine_commit": FROZEN_ENGINE_COMMIT,
         "binary_sha256": binary_sha256,
         "binary_stat": list(binary_stat),
@@ -1260,16 +1378,30 @@ def _preflight_authorized_gate(configuration: dict[str, object]) -> dict[str, ob
         "fixture_root": str(fixture_root),
         "mem_available_kib": available_kib,
     }
+    runtime = {
+        "binary_descriptor": binary_descriptor,
+        "model_descriptor": model_descriptor,
+        "tokenizer_payload": tokenizer_payload,
+        "safe_run_payload": runtime_payloads[SAFE_RUN_PATH],
+        "memory_guard_payload": runtime_payloads[MEMORY_GUARD_PATH],
+    }
+    return binding, runtime
 
 
 def _open_authorized_heldout(
     configuration: dict[str, object],
     preflight: dict[str, object],
+    runtime: dict[str, object],
     _staging: Path,
 ) -> dict[str, object]:
     probe, cv, precision = _load_frozen_module_graph()
     arrays, test_manifest, freeze = _load_test_archive(cv)
-    cases = _load_authorized_test_cases(Path(str(preflight["fixture_root"])), test_manifest)
+    tokenizer_payload = runtime.get("tokenizer_payload")
+    if not isinstance(tokenizer_payload, bytes):
+        raise ValueError("authorized tokenizer snapshot is missing")
+    cases = _load_authorized_test_cases(
+        Path(str(preflight["fixture_root"])), test_manifest, tokenizer_payload,
+    )
     return {
         "probe": probe,
         "cv": cv,
@@ -1291,6 +1423,109 @@ def _environment_sha256(values: dict[str, str], names: list[str]) -> str:
 def _file_binding(path: Path) -> dict[str, object]:
     digest, identity = _hash_regular(path)
     return {"bytes": identity[2], "sha256": digest}
+
+
+def _write_runtime_file(path: Path, payload: bytes, mode: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, mode)
+    try:
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError("short authenticated runtime write")
+            view = view[written:]
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    parent_descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(parent_descriptor)
+    finally:
+        os.close(parent_descriptor)
+
+
+def _publish_authenticated_runtime(
+    staging: Path,
+    runtime: dict[str, object],
+) -> Path:
+    root = staging / "authenticated-runtime"
+    wrapper = root / "results/glm52-gates/harness/glm_safe_run.sh"
+    guard = root / "scripts/03_memory_guard.py"
+    safe_run_payload = runtime.get("safe_run_payload")
+    memory_guard_payload = runtime.get("memory_guard_payload")
+    if not isinstance(safe_run_payload, bytes) or not isinstance(memory_guard_payload, bytes):
+        raise ValueError("authenticated runtime snapshots are missing")
+    _write_runtime_file(wrapper, safe_run_payload, 0o500)
+    _write_runtime_file(guard, memory_guard_payload, 0o400)
+    return wrapper
+
+
+def _publish_authenticated_binary(
+    preflight: dict[str, object],
+    runtime: dict[str, object],
+    parent: Path = Path("/home/bmarti44/.cache"),
+) -> tuple[Path, Path]:
+    descriptor = runtime.get("binary_descriptor")
+    if not isinstance(descriptor, int):
+        raise ValueError("authenticated binary descriptor is missing")
+    payload, identity = _snapshot_open_descriptor(
+        descriptor, Path(str(preflight["candidate_root"])) / "ds4-server",
+    )
+    if (
+        _sha256_bytes(payload) != preflight.get("binary_sha256") or
+        list(identity) != preflight.get("binary_stat")
+    ):
+        raise ValueError("authenticated binary descriptor changed")
+    candidate_root = Path(tempfile.mkdtemp(
+        prefix="glm52-baseline-authorized.", dir=parent.resolve(strict=True),
+    ))
+    binary = candidate_root / "ds4-server"
+    _write_runtime_file(binary, payload, 0o500)
+    digest, published_identity = _hash_regular(binary)
+    if digest != preflight.get("binary_sha256") or published_identity[2] != len(payload):
+        raise ValueError("published authenticated binary differs")
+    return candidate_root, binary
+
+
+def _build_launch_environment(
+    ds4_values: dict[str, str],
+    candidate_root: Path,
+) -> dict[str, str]:
+    names = sorted(ds4_values)
+    return {
+        "PATH": FIXED_LAUNCH_PATH,
+        "HOME": "/home/bmarti44",
+        "USER": "bmarti44",
+        "LOGNAME": "bmarti44",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        **ds4_values,
+        "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+        "GLM_SAFE_MIN_START_GIB": "110",
+        "GLM_SAFE_KILL_FLOOR_GIB": "18",
+        "GLM_SAFE_TIMEOUT_S": "2400",
+        "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
+        "GLM_SAFE_EXPECTED_BINARY_SHA256": FROZEN_BINARY_SHA256,
+        "GLM_CANDIDATE_SRC": str(candidate_root),
+        "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(names),
+        "GLM_SAFE_EXPECTED_ENV_SHA256": _environment_sha256(ds4_values, names),
+    }
+
+
+def _engine_capture_command(
+    safe_run_path: Path,
+    tag: str,
+    binary: Path,
+    model: Path,
+    prompt_path: Path,
+) -> list[str]:
+    return [
+        "/usr/bin/bash", str(safe_run_path), "--tag", tag, "--", str(binary),
+        "--cuda", "-m", str(model), "-c", "1024", "--ssd-streaming",
+        "--ssd-streaming-cache-experts", "6GB", "--glm-mtp",
+        "--prompt-file", str(prompt_path), "-n", "1", "--temp", "0",
+    ]
 
 
 def _validate_safe_run_artifacts(
@@ -1317,6 +1552,7 @@ def _validate_safe_run_artifacts(
 def _capture_authorized_set(
     configuration: dict[str, object],
     preflight: dict[str, object],
+    runtime: dict[str, object],
     opened: dict[str, object],
     staging: Path,
 ) -> dict[str, object]:
@@ -1340,9 +1576,40 @@ def _capture_authorized_set(
     prompt_root.mkdir()
     crash_root = Path("/home/bmarti44/.local/state/glm52-crashlog")
     crash_root.mkdir(parents=True, exist_ok=True)
-    candidate_root = Path(str(preflight["candidate_root"]))
-    binary = candidate_root / "ds4-server"
     model = Path(str(preflight["model"]))
+    binary_descriptor = runtime.get("binary_descriptor")
+    model_descriptor = runtime.get("model_descriptor")
+    if (
+        not isinstance(binary_descriptor, int) or
+        not isinstance(model_descriptor, int)
+    ):
+        raise ValueError("authenticated executable/model runtime is missing")
+    candidate_root, binary_command = _publish_authenticated_binary(preflight, runtime)
+    model_command = Path(f"/proc/{os.getpid()}/fd/{model_descriptor}")
+    safe_run_path = _publish_authenticated_runtime(staging, runtime)
+    return _capture_authorized_set_with_runtime(
+        preflight, runtime, opened, staging, capture_root, prompt_root,
+        crash_root, candidate_root, binary_command, model, model_command,
+        safe_run_path, expected_positions, freeze,
+    )
+
+
+def _capture_authorized_set_with_runtime(
+    preflight: dict[str, object],
+    runtime: dict[str, object],
+    opened: dict[str, object],
+    staging: Path,
+    capture_root: Path,
+    prompt_root: Path,
+    crash_root: Path,
+    candidate_root: Path,
+    binary: Path,
+    model: Path,
+    model_command: Path,
+    safe_run_path: Path,
+    expected_positions: dict[int, list[int]],
+    freeze: dict[str, object],
+) -> dict[str, object]:
     entries = []
     runtime_logs = []
     cases = opened.get("cases")
@@ -1355,38 +1622,21 @@ def _capture_authorized_set(
         request_dir = capture_root / f"request-{request:08d}"
         prompt_path = prompt_root / f"request-{request:08d}.txt"
         with prompt_path.open("x", encoding="utf-8") as handle:
-            handle.write(str(case["rendered_prompt"]))
+            handle.write(str(case["prompt"]))
             handle.flush()
             os.fsync(handle.fileno())
         ds4_values = {
             "DS4_CUDA_FETCH_THREADS": "8",
             "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
             "DS4_GLM_BASELINE_CAPTURE_DIR": str(request_dir),
-            "DS4_LOCK_FILE": "/run/dsv4/inference.lock",
+            "DS4_LOCK_FILE": "/run/lock/frontier-at-home/inference.lock",
         }
-        names = sorted(ds4_values)
-        environment = {
-            **os.environ,
-            **ds4_values,
-            "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
-            "GLM_SAFE_MIN_START_GIB": "110",
-            "GLM_SAFE_KILL_FLOOR_GIB": "18",
-            "GLM_SAFE_TIMEOUT_S": "2400",
-            "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
-            "GLM_SAFE_EXPECTED_BINARY_SHA256": FROZEN_BINARY_SHA256,
-            "GLM_CANDIDATE_SRC": str(candidate_root),
-            "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(names),
-            "GLM_SAFE_EXPECTED_ENV_SHA256": _environment_sha256(ds4_values, names),
-        }
+        environment = _build_launch_environment(ds4_values, candidate_root)
         tag = f"p1-baseline-r{request:03d}-{os.getpid()}"
         before_logs = set(crash_root.glob(f"*-{tag}"))
-        command = [
-            "bash", str(SAFE_RUN_PATH), "--tag", tag, "--", str(binary),
-            "--cuda", "-m", str(model), "-c", "1024", "--ssd-streaming",
-            "--ssd-streaming-cache-experts", "6GB", "--glm-mtp",
-            "--prompt-file", str(prompt_path), "--raw-prompt", "-n", "1",
-            "--temp", "0",
-        ]
+        command = _engine_capture_command(
+            safe_run_path, tag, binary, model_command, prompt_path,
+        )
         completed = subprocess.run(
             command, cwd=ROOT, env=environment, stdin=subprocess.DEVNULL,
             capture_output=True, text=True, timeout=2500, check=False,
@@ -1447,6 +1697,9 @@ def _capture_authorized_set(
             "wrapper_exit_code": completed.returncode,
             "wrapper_stdout_sha256": _sha256_bytes(stdout_payload),
             "wrapper_stderr_sha256": _sha256_bytes(completed.stderr.encode("utf-8")),
+            "launch_environment_sha256": _environment_sha256(
+                environment, list(environment),
+            ),
         })
         prompt_path.unlink()
     manifest = {
@@ -1461,7 +1714,10 @@ def _capture_authorized_set(
         "requests": entries,
     }
     _write_json_exclusive(capture_root / "manifest.json", manifest)
-    final_model_sha256, final_model_stat = _hash_regular(model)
+    model_descriptor = runtime.get("model_descriptor")
+    if not isinstance(model_descriptor, int):
+        raise ValueError("authorized model descriptor is missing")
+    final_model_sha256, final_model_stat = _hash_open_descriptor(model_descriptor, model)
     if (
         final_model_sha256 != preflight["model_sha256"] or
         list(final_model_stat) != preflight["model_stat"]
@@ -1469,6 +1725,8 @@ def _capture_authorized_set(
         raise ValueError("authorized model changed during capture")
     binding = {
         "manifest": _file_binding(capture_root / "manifest.json"),
+        "authenticated_binary": _file_binding(binary),
+        "authenticated_candidate_root": str(candidate_root),
         "runtime_logs": runtime_logs,
     }
     _write_json_exclusive(staging / "raw.json", binding)
@@ -1498,15 +1756,21 @@ def _run_authorized_gate(configuration: dict[str, object]) -> dict[str, object]:
     state: dict[str, object] = {}
 
     def preflight():
-        state["preflight"] = _preflight_authorized_gate(configuration)
+        prepared = _preflight_authorized_gate(configuration)
+        if isinstance(prepared, tuple):
+            state["preflight"], state["runtime"] = prepared
+        else:
+            state["preflight"], state["runtime"] = prepared, {}
         return state["preflight"]
 
     def opener(staging):
-        return _open_authorized_heldout(configuration, state["preflight"], staging)
+        return _open_authorized_heldout(
+            configuration, state["preflight"], state["runtime"], staging,
+        )
 
     def capture(opened, staging):
         return _capture_authorized_set(
-            configuration, state["preflight"], opened, staging,
+            configuration, state["preflight"], state["runtime"], opened, staging,
         )
 
     def score(opened, captured, staging):
@@ -1514,9 +1778,18 @@ def _run_authorized_gate(configuration: dict[str, object]) -> dict[str, object]:
             configuration, state["preflight"], opened, captured, staging,
         )
 
-    return _run_atomic_lifecycle(
-        Path(configuration["output_root"]), preflight, opener, capture, score,
-    )
+    try:
+        return _run_atomic_lifecycle(
+            Path(configuration["output_root"]), preflight, opener, capture, score,
+            ledger_path=AUTHORIZED_LEDGER_PATH,
+        )
+    finally:
+        runtime = state.get("runtime")
+        if isinstance(runtime, dict):
+            for name in ("binary_descriptor", "model_descriptor"):
+                descriptor = runtime.get(name)
+                if isinstance(descriptor, int):
+                    os.close(descriptor)
 
 
 def parser() -> argparse.ArgumentParser:
