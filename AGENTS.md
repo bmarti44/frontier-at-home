@@ -66,6 +66,25 @@ Use this sequence for production-path changes:
     high or critical issues. Reviewers choose their own scores; do not prescribe
     a scoring formula.
 
+Candidate iteration is governed by convergence, not a hard retry count. Continue
+publishing candidates for a gate autonomously only while all three conditions
+hold:
+
+1. The candidate changes only what is needed to close findings named in the
+   latest review; do not add scope.
+2. The complete pre-submission audit passes before publication.
+3. Open critical/high findings strictly decrease with every candidate: no
+   finding reopens and no new finding class appears.
+
+Pause the gate and report the exact open findings to the owner only when
+convergence breaks: blocking findings fail to strictly decrease across two
+consecutive candidates, a new critical finding lands in previously frozen
+scope, or one gate exceeds eight total candidates. Report both the per-gate
+candidate count and the campaign-global review round. Medium and low findings
+do not trigger a full review cycle; close them with a focused regression test
+and attestation unless they reveal a critical/high measurement-validity defect.
+Never re-review a component whose evidence and sign-off are already frozen.
+
 Do not add a permanent semantic variant merely because a diagnostic flag passes.
 First use the flag to prove the representation or algorithm. Then implement and
 requalify the single intended production path.

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "classification": "NO_RESULT",
+  "scope": "75-layer five-case FP16-versus-int4 feature-precision diagnostic",
+  "candidate_hash": "d4a1264b451b47fe304c2b8907f0beb5b382d0c6",
+  "review": {
+    "campaign_round": 138,
+    "per_gate_candidate": 6,
+    "adversarial_score": 100,
+    "critical": [],
+    "high": [],
+    "verdict": "APPROVE_FOR_FULL_PRECISION_RUN"
+  },
+  "evidence_directory": "/home/bmarti44/.local/state/glm52-p1-precision-r138-d4a1264",
+  "run_log": "/home/bmarti44/.local/state/glm52-p1-precision-r138-d4a1264.run.log",
+  "artifacts": {
+    "file_count": 79,
+    "directory_bytes": 69791606,
+    "manifest_sha256": "8b0ab60f0c9194d7e72f6ecb8be1dbc23ee0ca2042836df387a9988062c3cfca",
+    "model_manifest_sha256": "30ed8caf93f425b774b3dc9f18242156240df1c116f45e6ed987b7d5a8c35c2c",
+    "diagnostic_events_sha256": "e36f77f0233f66196faa2e91916132db264075db6728637e5201445559a0c760",
+    "runtime_start_sha256": "7d5fbbaacc93088f4f8715614bafe998662673ba9908064a87617f02444a506f",
+    "run_log_sha256": "e2f3e11f133e503fc00a745d7dc0d8836d24f60706db2b7819c09b08a081fb31",
+    "run_log_bytes": 11872
+  },
+  "observed": {
+    "trained_layers": 75,
+    "semantic_event_regeneration_layers": 150,
+    "independent_retraining_layers": 0,
+    "diagnostic_holdout_rows": 203,
+    "scorable_events_by_K": {
+      "2": 190,
+      "4": 177,
+      "8": 152
+    },
+    "requests_by_K": {
+      "2": [39, 44, 70, 74, 99],
+      "4": [39, 44, 70, 74, 99],
+      "8": [39, 44, 70, 74, 99]
+    },
+    "runtime_final_written": false,
+    "summary_written": false,
+    "kernel_faults_at_start": [],
+    "kernel_faults_since_start": [],
+    "final_mem_available_kib_observed_externally": 120819708,
+    "swap_growth_observed": false
+  },
+  "failure": {
+    "exception": "ValueError: CV request coverage differs across layers",
+    "location": "scripts/79_glm_union_probe_cv.py:aggregate_request_metrics",
+    "cause": "The CV-only aggregator requires every layer to contain the same request set. The preregistered 203-row FP16 diagnostic holdout is sparse across layers, although all five diagnostic requests have aggregate coverage for every K.",
+    "stage": "first persisted-event metric replay, before independent model retraining and before runtime-final/summary publication"
+  },
+  "open_finding": {
+    "id": "P1-PREC-H3-SPARSE-AGGREGATION",
+    "severity": "high",
+    "finding_class": "real-data coverage contract",
+    "convergence_status": "BROKEN_NEW_FINDING_CLASS",
+    "proposed_bounded_fix": "Add a precision-specific request-macro aggregator that permits sparse per-layer request coverage, requires the exact five-request union for every K, sums event numerators and denominators within request across all available layers, then macro-averages the five request means. Do not weaken the frozen CV aggregator.",
+    "proposed_acceptance_test": "A production-path test with uneven and zero per-layer cells must reproduce the failure on candidate d4a1264, then require exact five-request aggregate coverage, exact event counts 190/177/152, correct request-macro and event-weighted formulas, rejection of missing/extra requests, and unchanged behavior of the frozen CV aggregator."
+  },
+  "verdict": "NO_RESULT",
+  "claim_limit": "No precision metric was produced. This attempt proves model fitting and semantic event generation reached all 75 routed layers, but it does not prove deterministic retraining or feature-precision acceptance."
+}
