@@ -159,6 +159,11 @@ class RootAttestorContractTests(unittest.TestCase):
 
     def test_completed_validator_uses_only_root_owned_offline_python_runtime(self):
         submitter = load_submitter()
+        self.assertEqual(
+            submitter.P1_PYTHON_RUNTIME.parent,
+            Path("/usr/local/libexec/glm52-w1"),
+        )
+        self.assertNotEqual(submitter.P1_PYTHON_RUNTIME.parent, submitter.INSTALLED_HARNESS)
         source = inspect.getsource(submitter._run_p1_completed_validator)
         self.assertIn("P1_PYTHON_RUNTIME", source)
         self.assertIn('"PYTHONNOUSERSITE": "1"', source)
@@ -166,6 +171,36 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn('"-S"', source)
         self.assertNotIn('"--device", "cpu"', source)
         self.assertIn("_python_dependency_tree_sha256", source)
+
+    def test_python_runtime_tree_hash_rejects_package_mutation(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as raw:
+            runtime = Path(raw)
+            package = runtime / "numpy"
+            package.mkdir()
+            module = package / "__init__.py"
+            module.write_bytes(b"version = 1\n")
+            runtime.chmod(0o555)
+            package.chmod(0o555)
+            module.chmod(0o444)
+            with (
+                mock.patch.object(submitter, "P1_PYTHON_DEPENDENCIES", ("numpy",)),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+            ):
+                expected = submitter._python_dependency_tree_sha256(runtime)
+                self.assertRegex(expected, r"^[0-9a-f]{64}$")
+                module.chmod(0o644)
+                module.write_bytes(b"version = 2\n")
+                module.chmod(0o444)
+                self.assertNotEqual(
+                    submitter._python_dependency_tree_sha256(runtime), expected,
+                )
+                package.chmod(0o755)
+                (package / "redirect").symlink_to(runtime, target_is_directory=True)
+                package.chmod(0o555)
+                with self.assertRaisesRegex(ValueError, "directory identity"):
+                    submitter._python_dependency_tree_sha256(runtime)
 
     def test_p1_result_publication_rejects_digest_race_but_preserves_attempt(self):
         submitter = load_submitter()
@@ -903,8 +938,8 @@ class RootAttestorContractTests(unittest.TestCase):
             r"(?m)^readonly PYTHON_DEPENDENCY_SHA256=[0-9a-f]{64}$",
         )
         self.assertIn("dependency_tree_sha", source)
-        self.assertIn('"$PYTHON_DEPENDENCY_SOURCE"', source)
-        self.assertIn('"$PYTHON_RUNTIME"', source)
+        self.assertIn('"$PYTHON_DEPENDENCY_SOURCE/$dependency"', source)
+        self.assertIn('dependency_tree_sha "$PYTHON_RUNTIME"', source)
         self.assertIn("PYTHONNOUSERSITE=1", source)
         self.assertIn("PYTHONDONTWRITEBYTECODE=1", source)
         self.assertIn("import numpy, tokenizers, torch", source)

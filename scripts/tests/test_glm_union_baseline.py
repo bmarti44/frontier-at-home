@@ -1087,6 +1087,45 @@ class BaselineTableTests(unittest.TestCase):
         self.assertIn("_validate_expected_failure_artifacts(", source)
         self.assertIn("fault_payloads", source)
 
+    def test_expected_failure_artifacts_reject_kernel_and_stdout_mutations(self) -> None:
+        stage = "mtp_call"
+        environment = "1" * 64
+        kernel = b"NO_KERNEL_FAULTS\n"
+        samples = b"now mem_avail_kb=120000000 eng_rss_kb=1 read_bytes=0\n"
+        marker = f"ds4: GLM baseline injected failure stage={stage}".encode()
+        main = b"\n".join((
+            f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}".encode(),
+            f"executed_environment_sha256={environment}".encode(),
+            b"executed_candidate_verified pid=123 start_ticks=456 path=/sealed/ds4",
+            b"FATAL wrapper command failed after candidate exit rc=86",
+            marker,
+            b"safety_artifact_verified name=samples.log sha256=" +
+                MODULE._sha256_bytes(samples).encode(),
+            b"safety_artifact_verified name=kernel.log sha256=" +
+                MODULE._sha256_bytes(kernel).encode(),
+            b"SAFE_RUN end rc=86 killed=no",
+        )) + b"\n"
+        payloads = {
+            "cmd.log": marker + b"\n", "kernel.log": kernel,
+            "main.log": main, "samples.log": samples,
+            "wrapper.stdout": b"SAFE_RUN_DONE rc=86 killed=no dir=/tmp/run\n",
+            "wrapper.stderr": b"",
+        }
+        self.assertEqual(
+            MODULE._validate_expected_failure_artifacts(payloads, stage, environment),
+            (123, 456),
+        )
+        for name, value in (
+            ("kernel.log", b"NVRM: Xid 31\n"),
+            ("wrapper.stdout", b"SAFE_RUN_DONE rc=0 killed=no dir=/tmp/run\n"),
+            ("wrapper.stderr", b"unexpected\n"),
+        ):
+            changed = {**payloads, name: value}
+            with self.assertRaises(RuntimeError):
+                MODULE._validate_expected_failure_artifacts(
+                    changed, stage, environment,
+                )
+
     def fixture(self):
         requests = np.repeat(np.arange(1, 21, dtype=np.uint16), 2)
         targets = {}
@@ -1386,6 +1425,7 @@ class BaselineTableTests(unittest.TestCase):
             summary.update({
                 "schema_version": 1,
                 "classification": "P1_HELD_OUT_BASELINE_SCORE",
+                "scoring_backend": MODULE._scoring_backend("cpu"),
             })
             cost = MODULE.unqualified_cost_result()
             (root / "cost.json").write_text(
@@ -1400,6 +1440,11 @@ class BaselineTableTests(unittest.TestCase):
             runtime_root = root / "runtime-logs"
             runtime_root.mkdir()
             environment_sha256 = "9" * 64
+            kernel_payload = b"NO_KERNEL_FAULTS\n"
+            samples_payload = (
+                b"2026-08-05T00:00:00+00:00 mem_avail_kb=120000000 "
+                b"eng_rss_kb=1 read_bytes=0\n"
+            )
             success_main = (
                 f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}\n"
                 f"memory_guard_descriptor_path=/proc/1/fd/4 memory_guard_sha256="
@@ -1421,10 +1466,15 @@ class BaselineTableTests(unittest.TestCase):
                 directory = root / binding["directory"]
                 directory.mkdir(parents=True, exist_ok=True)
                 payloads = {
-                    "cmd.log": b"command\n",
-                    "kernel.log": b"NO_KERNEL_FAULTS\n",
+                    "cmd.log": (
+                        next(
+                            line + b"\n" for line in main_payload.splitlines()
+                            if line.startswith(b"ds4: GLM baseline injected failure stage=")
+                        ) if exit_code == 86 else b"command\n"
+                    ),
+                    "kernel.log": kernel_payload,
                     "main.log": main_payload,
-                    "samples.log": b"sample\n",
+                    "samples.log": samples_payload,
                     "wrapper.stdout": (
                         b"SAFE_RUN_DONE rc=0 killed=no dir=/tmp/run\n"
                         if exit_code == 0 else b"SAFE_RUN_DONE rc=86 killed=no dir=/tmp/run\n"
@@ -1452,8 +1502,10 @@ class BaselineTableTests(unittest.TestCase):
                 ).encode("ascii") + marker + (
                     f"executed_candidate_verified pid={fault['process_pid']} "
                     f"start_ticks={fault['process_start_ticks']}\n"
-                    "safety_artifact_verified name=samples.log sha256=1\n"
-                    "safety_artifact_verified name=kernel.log sha256=2\n"
+                    "safety_artifact_verified name=samples.log sha256="
+                    f"{MODULE._sha256_bytes(samples_payload)}\n"
+                    "safety_artifact_verified name=kernel.log sha256="
+                    f"{MODULE._sha256_bytes(kernel_payload)}\n"
                     "SAFE_RUN end rc=86 killed=no\n"
                 ).encode("ascii")
                 materialize_runtime(fault["fault_log"], payload, 86)
@@ -1516,6 +1568,7 @@ class BaselineTableTests(unittest.TestCase):
                 },
                 "authenticated_binary": {},
                 "authenticated_candidate_root": "/tmp/candidate",
+                "scoring_backend": MODULE._scoring_backend("cpu"),
                 "runtime_logs": runtime_logs,
             }) + "\n", encoding="utf-8")
             summary["two_control"] = {
