@@ -363,17 +363,22 @@ class Client:
                             raise RuntimeError("SSE response id is invalid")
                         response_ids.add(response_id)
                     event_usage = event.get("usage")
-                    if event_usage is not None:
-                        if not isinstance(event_usage, dict):
-                            raise RuntimeError("SSE usage is not an object")
-                        if usage is not None or len(finish_reasons) != 1:
-                            raise RuntimeError(
-                                "SSE usage is duplicate or precedes terminal finish_reason"
-                            )
-                        usage = event_usage
                     choices = event.get("choices", [])
                     if not isinstance(choices, list):
                         raise RuntimeError("SSE choices is not a list")
+                    if usage is not None:
+                        raise RuntimeError("received SSE event after usage")
+                    if event_usage is not None:
+                        if not isinstance(event_usage, dict):
+                            raise RuntimeError("SSE usage is not an object")
+                        if len(finish_reasons) != 1 or choices:
+                            raise RuntimeError(
+                                "SSE usage precedes finish_reason or has nonempty choices"
+                            )
+                        usage = event_usage
+                        continue
+                    if finish_reasons:
+                        raise RuntimeError("received SSE event after finish_reason")
                     for choice in choices:
                         if not isinstance(choice, dict):
                             raise RuntimeError("SSE choice is not an object")
@@ -381,9 +386,6 @@ class Client:
                         if finish_reason is not None:
                             if not isinstance(finish_reason, str) or not finish_reason:
                                 raise RuntimeError("SSE finish_reason is invalid")
-                            if usage is not None:
-                                raise RuntimeError("SSE finish_reason arrived after usage")
-                            finish_reasons.append(finish_reason)
                         delta = choice.get("delta", {})
                         if not isinstance(delta, dict):
                             raise RuntimeError("SSE delta is not an object")
@@ -398,7 +400,13 @@ class Client:
                                     reasoning_parts.append(fragment)
                                 else:
                                     content_parts.append(fragment)
-                        if fragments:
+                        if finish_reason is not None:
+                            if len(choices) != 1 or fragments:
+                                raise RuntimeError(
+                                    "terminal finish_reason event carries content or choices"
+                                )
+                            finish_reasons.append(finish_reason)
+                        elif fragments:
                             now_ns = time.perf_counter_ns()
                             generated_parts.extend(fragments)
                             token_timestamps_ns.append(now_ns)
