@@ -775,6 +775,18 @@ class RootAttestorContractTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, source)
 
+    def test_installer_requires_reviewed_root_owned_staged_copy(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        for required in (
+            "GLM52_REVIEWED_INSTALLER_SHA256",
+            "installer must be executed from a reviewed root-owned staged copy",
+            "/usr/bin/sha256sum -- \"$0\"",
+            "/usr/bin/stat -Lc '%u:%g:%a:%F' -- \"$0\"",
+            "0:0:500:regular file",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, source)
+
     def test_untrusted_engine_builds_as_dsv4_in_a_root_cgroup(self):
         campaign = (
             ROOT / "scripts/glm52_w1_affine_campaign.py"
