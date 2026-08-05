@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
+import errno
 import hashlib
 import importlib.util
 import io
@@ -13,6 +15,8 @@ from pathlib import Path
 import re
 import stat
 import subprocess
+import tempfile
+import time
 import types
 import zipfile
 
@@ -683,6 +687,11 @@ def _stable_logit_rankings(logits: np.ndarray) -> np.ndarray:
 
 def score_heldout(capture_root: Path, device: str = "cuda") -> dict[str, object]:
     """Authorized one-shot opener and fixed held-out baseline scorer."""
+    if capture_root.is_symlink():
+        raise ValueError("capture root may not be a symlink")
+    capture_root = capture_root.resolve(strict=True)
+    if not capture_root.is_dir():
+        raise ValueError("capture root is not a directory")
     probe, cv, precision = _load_frozen_module_graph()
     arrays, test_manifest, freeze = _load_test_archive(cv)
     common_mask = (arrays["layer"] >= FIRST_LAYER) & (arrays["layer"] <= LAST_LAYER)
@@ -839,6 +848,97 @@ def _write_json_exclusive(path: Path, value: dict[str, object]) -> None:
             os.close(descriptor)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _write_json_replace(path: Path, value: dict[str, object]) -> None:
+    temporary = path.parent / f".{path.name}.tmp.{os.getpid()}"
+    try:
+        with temporary.open("x", encoding="utf-8") as handle:
+            json.dump(value, handle, sort_keys=True, indent=2, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _rename_noreplace(source: Path, destination: Path) -> None:
+    renameat2 = getattr(ctypes.CDLL(None, use_errno=True), "renameat2", None)
+    if renameat2 is None:
+        raise RuntimeError("atomic no-replace rename is unavailable")
+    renameat2.argtypes = (
+        ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint,
+    )
+    renameat2.restype = ctypes.c_int
+    if renameat2(-100, os.fsencode(source), -100, os.fsencode(destination), 1) != 0:
+        number = ctypes.get_errno()
+        if number in (errno.EEXIST, errno.ENOTEMPTY):
+            raise FileExistsError(number, os.strerror(number), destination)
+        raise OSError(number, os.strerror(number), destination)
+
+
+def _run_atomic_lifecycle(
+    output_root: Path,
+    preflight,
+    open_heldout,
+    capture,
+    score,
+) -> dict[str, object]:
+    """Run one preflight/open/capture/score attempt and seal every opened outcome."""
+    requested = output_root.absolute()
+    if requested.exists() or requested.is_symlink():
+        raise FileExistsError(requested)
+    parent = requested.parent.resolve(strict=True)
+    output_root = parent / requested.name
+    preflight_binding = preflight()
+    if not isinstance(preflight_binding, dict):
+        raise ValueError("atomic lifecycle preflight binding is malformed")
+    staging = Path(tempfile.mkdtemp(prefix=f".{output_root.name}.tmp.", dir=parent))
+    attempt = {
+        "schema_version": 1,
+        "classification": "P1_HELD_OUT_ATOMIC_ATTEMPT",
+        "status": "STARTED",
+        "started_epoch_ns": time.time_ns(),
+        "preflight": preflight_binding,
+    }
+    _write_json_replace(staging / "attempt.json", attempt)
+    try:
+        opened = open_heldout(staging)
+        captured = capture(opened, staging)
+        result = score(opened, captured, staging)
+        if not isinstance(result, dict):
+            raise ValueError("atomic lifecycle scorer result is malformed")
+        _write_json_exclusive(staging / "summary.json", result)
+        attempt.update({"status": "COMPLETE", "completed_epoch_ns": time.time_ns()})
+        _write_json_replace(staging / "attempt.json", attempt)
+    except BaseException as error:
+        attempt.update({
+            "status": "FAILED",
+            "completed_epoch_ns": time.time_ns(),
+            "failure_type": type(error).__name__,
+            "failure_message": str(error),
+        })
+        _write_json_replace(staging / "attempt.json", attempt)
+        _rename_noreplace(staging, output_root)
+        descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        raise
+    _rename_noreplace(staging, output_root)
+    descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    return result
 
 
 def parser() -> argparse.ArgumentParser:
