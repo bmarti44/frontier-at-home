@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 7,
+  "campaign_review_round_next": 145,
+  "candidate_hash": "3e386430df319cf024169ac5990f39269df481c1",
+  "engine_base_commit": "183b236bbda50dc0e92d2a641a0ef1c8bdf4d620",
+  "engine_commit": "b8a152f29bb68197796b89ba755afb4aefe45dee",
+  "scope": "Close only the named atomic-controller, one-shot held-out embargo, authoritative capture, and exact prompt-token lineage blockers; preserve the runtime binary reproducibility failure and bind its canonical artifact.",
+  "held_out_values_opened": false,
+  "artifacts": {
+    ".gitleaks.toml": "1c3ab5da758e60d4892aba970a70d804b587b76cf85e2c46cf3f02a4be3285cf",
+    "scripts/lint_secrets.sh": "fa3fcccc81ef31f15f6480bc69fa1218d2117aed6aa518ad77a83819703e549b",
+    "scripts/81_glm_union_baseline.py": "cffaafa3a17929617dea53c3fbb2a406da0da38f26e3e092c42892e3e777724c",
+    "scripts/tests/test_glm_union_baseline.py": "0c97e7dd32df7ecafc1606d15d992a7e344c6ef40271a6b0d048d9a9bd4f028c",
+    "scripts/82_canonicalize_glm_binary.sh": "e1d511322b65798181f991611d47d3f7f6119e17af781b99fe64b4eef7b248bf",
+    "results/glm52-gates/harness/0006-test-require-exact-baseline-prompt-lineage.patch": "7fa4423ccc5162f0115128b383070c39a415a696441ef790dcc0dec73025823c",
+    "results/glm52-gates/harness/0007-feat-bind-baseline-prompt-token-lineage.patch": "bbacfbfa1671e571641ec964b141726faea2a88baa7bab7fb881a9e8253cd9b0",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-prompt-lineage-smoke-b8a152f.json": "bcc3ff95b0b0a6cbc963e1fd9899336e3fa49c4e526f518bb5e0babc5e79d87e",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-prompt-lineage-canonical-smoke-b8a152f.json": "b388d6d53bdd53044ed19510428f8eaff9441b5f4dabac3d37118927e591cfdb",
+    "/tmp/glm52-utf8-engine/ds4.c": "b1d968be29f1a3c3c98480b9e443a093176581ec6693e64743afd5a211ab91e4",
+    "/tmp/glm52-utf8-engine/tests/test_glm_baseline_capture_source.py": "529487c7f65f1d028a671d54fa3161695c8ce28f2f4c1fea4057c68b07f8da05"
+  },
+  "runtime_binary": {
+    "path": "/home/bmarti44/.cache/glm52-baseline-b8a152f-canonical/ds4-server",
+    "sha256": "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b",
+    "bytes": 5378088,
+    "canonicalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "two_clean_builds_canonical_byte_identical": true,
+    "non_heldout_runtime_smoke": "PASS"
+  },
+  "pre_submission_audit": {
+    "targeted_and_parent_tests": "53 passed",
+    "engine_source_tests": "6 passed",
+    "python_compile": "PASS",
+    "seven_patch_replay": "PASS; replay tree exactly equals engine commit b8a152f",
+    "canonicalizer_replay_and_existing_destination_rejection": "PASS",
+    "secret_scan": "PASS",
+    "diff_check": "PASS; mail-format patch trailers excluded",
+    "frozen_probe_cv_precision_hashes_unchanged": true,
+    "machine_idle_after_smoke": true,
+    "scope_frozen": true
+  },
+  "acceptance": {
+    "attempt_started_before_exactly_one_held_out_open": true,
+    "standalone_held_out_score_path_rejected": true,
+    "every_capture_uses_glm_safe_run_and_global_inference_lock": true,
+    "binary_model_tokenizer_fixture_and_runtime_hashes_bound": true,
+    "exact_prompt_token_ids_bound_for_every_structural_source": true,
+    "wrapper_identity_environment_exit_and_kernel_logs_fail_closed": true,
+    "failed_attempt_is_durably_sealed_without_summary": true,
+    "canonical_binary_non_heldout_smoke_passed": true
+  },
+  "convergence": {
+    "prior_blocking_count": 8,
+    "expected_blocking_count_after_review": 4,
+    "expected_remaining": [
+      "P1-BASE-R142-H3 two-control isolation",
+      "P1-BASE-R142-H4 and P1-H3 cost bound",
+      "P1-H5 completed-result authority"
+    ],
+    "new_scope": false,
+    "finding_reopened": false,
+    "escalation_triggered": false
+  },
+  "held_out_boundary": {
+    "values_opened_by_this_candidate": false,
+    "test_records_invoked": false,
+    "authorized_next_action": "The same persistent Nash and Singer reviewers inspect candidate 7. No held-out run occurs until both report no critical/high issue in this candidate scope."
+  },
+  "claim_limit": "Controller and capture authority candidate only; no held-out baseline metric, serving throughput, NLL, fidelity, or quality claim."
+}
