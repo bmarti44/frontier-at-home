@@ -141,7 +141,11 @@ def score_trace(
         return result
     if corpus_mode:
         checks["utf8_server_log"] = True
-    checks["no_trace_errors"] = not any("GLM_UNION_TRACE_ERROR" in line for line in log_lines)
+    checks["no_trace_errors"] = not any(
+        marker in line
+        for line in log_lines
+        for marker in ("GLM_UNION_TRACE_ERROR", "GLM_UNION_TRACE_DROPPED")
+    )
     expected: dict[tuple[int, ...], int] = {}
     duplicate_log_key = False
     recognized_log_events = True

@@ -375,7 +375,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     def test_corpus_capture_has_room_above_the_measured_70_gib_peak(self) -> None:
         self.assertIn('CORPUS_MEMORY_HIGH_GIB = "71"', self.runner)
         self.assertIn('"GLM_SAFE_MEMORY_HIGH_GIB": (', self.runner)
-        self.assertIn('CORPUS_MEMORY_HIGH_GIB if args.corpus_smoke else "69"', self.runner)
+        self.assertIn('CORPUS_MEMORY_HIGH_GIB if large_corpus else "69"', self.runner)
 
     def test_short_smoke_does_not_claim_2048_row_coverage(self) -> None:
         self.assertIn('"scope": "short_single_indexed_batch_only"', self.runner)
@@ -413,7 +413,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             'public.add_argument("--corpus-smoke", action="store_true")',
             '"DS4_GLM_UNION_TRACE_CORPUS"',
             '"DS4_METAL_GRAPH_DUMP_LAYER": "all"',
-            'for request_index in range(2 if args.corpus_smoke else 1)',
+            'for request_index in range(0 if args.quality_corpus else (2 if args.corpus_smoke else 1))',
             '"minimum_token_layer_events": 76800',
         ):
             self.assertIn(marker, self.runner)
@@ -422,6 +422,29 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         self.assertIn("cache_experts=(CORPUS_CACHE_EXPERTS", self.runner)
         self.assertIn('values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB', self.runner)
         self.assertIn("cuda_cache_runtime", self.runner)
+
+    def test_quality_mode_is_exactly_bounded_and_frozen(self) -> None:
+        for marker in (
+            'public.add_argument("--quality-corpus", action="store_true")',
+            'QUALITY_REQUEST_COUNT = 100',
+            'QUALITY_DISK_MAX_TOKENS = 512',
+            '"scope": "quality_100_case_all_routed_layer_corpus"',
+            'QUALITY_FREEZE',
+            'QUALITY_RANDOMNESS',
+            '"GLM_SAFE_TIMEOUT_S": "7200" if args.quality_corpus else "3600"',
+            'str(out / "ledger.json"), str(out / "responses.json")',
+            'set(range(3, 78))',
+        ):
+            self.assertIn(marker, self.runner)
+
+    def test_quality_arms_bind_the_same_complete_ledger(self) -> None:
+        for marker in (
+            'raise ValueError("quality arm ledgers differ")',
+            'arm.get("quality_ledger_sha256")',
+            'arm.get("expected_token_layer_events")',
+            'arm.get("fixture_sha256")',
+        ):
+            self.assertIn(marker, self.runner)
 
     def test_corpus_scores_exact_zero_based_main_routed_layers(self) -> None:
         self.assertIn("expected_layers=set(range(3, 78))", self.runner)

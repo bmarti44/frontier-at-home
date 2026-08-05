@@ -9,18 +9,23 @@ indexed-prefill chunks, including a full 2,048-row chunk.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import importlib.util
 import json
 import math
 import os
 from pathlib import Path
+import random
 import re
 import shutil
 import signal
 import subprocess
 import sys
 from typing import Any
+import unicodedata
+
+from tokenizers import Tokenizer
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +34,9 @@ FREEZE = ROOT / "results/glm52-gates/R0b-union-trace-smoke-freeze.json"
 RANDOMNESS = ROOT / "results/glm52-gates/R0b-union-trace-smoke-randomness.json"
 CORPUS_FREEZE = ROOT / "results/glm52-gates/R0b-union-corpus-runtime-freeze.json"
 CORPUS_RANDOMNESS = ROOT / "results/glm52-gates/R0b-union-corpus-runtime-randomness.json"
+QUALITY_SPLIT_PLAN = ROOT / "results/glm52-gates/R0b-union-p0-split-plan.json"
+QUALITY_FREEZE = ROOT / "results/glm52-gates/R0b-union-quality-runtime-freeze.json"
+QUALITY_RANDOMNESS = ROOT / "results/glm52-gates/R0b-union-quality-runtime-randomness.json"
 SHARED_PATH = ROOT / "scripts/73_run_glm_shared_router_probe.py"
 SCORER_PATH = ROOT / "scripts/75_glm_union_trace_score.py"
 FROZEN_RUNTIME_DEPENDENCIES = (
@@ -52,6 +60,7 @@ def _load(name: str, path: Path):
 
 SHARED = _load("shared_router_runner", SHARED_PATH)
 TRACE_SCORER = _load("union_trace_scorer", SCORER_PATH)
+BENCH_CLIENT = _load("union_trace_bench_client", SHARED.BENCH)
 TRACE_LAYER = 4
 MIN_PROMPT_TOKENS = 512
 MAX_CONTEXT_LEVEL = 8192
@@ -85,6 +94,296 @@ CUDA_CACHE_RE = re.compile(
 )
 DRAND_GENESIS_UNIX = 1595431050
 DRAND_PERIOD_SECONDS = 30
+QUALITY_MAX_TOKENS = 8
+QUALITY_FIXTURE_RELATIVE = Path(
+    "gguf-tools/quality-testing/data/glm52-openrouter-100"
+)
+QUALITY_DISK_MAX_TOKENS = 512
+QUALITY_REQUEST_COUNT = 100
+
+
+def render_quality_prompt(prompt: str) -> str:
+    if not isinstance(prompt, str):
+        raise TypeError("quality prompt must be text")
+    return (
+        "[gMASK]<sop><|system|>Reasoning Effort: High"
+        "<|system|>You are a helpful assistant"
+        f"<|user|>{prompt}<|assistant|><think>"
+    )
+
+
+def quality_request_payload(prompt: str, seed: int) -> dict[str, Any]:
+    if not isinstance(seed, int) or isinstance(seed, bool) or seed < 0:
+        raise ValueError("quality request seed is invalid")
+    return {
+        "model": "glm-5.2",
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": prompt},
+        ],
+        "max_tokens": QUALITY_MAX_TOKENS,
+        "temperature": 0,
+        "seed": seed,
+        "ignore_eos": True,
+    }
+
+
+def quality_wire_body(prompt: str, seed: int) -> bytes:
+    payload = quality_request_payload(prompt, seed)
+    payload["stream"] = True
+    payload["stream_options"] = {"include_usage": True}
+    return json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+
+def _quality_manifest_rows(path: Path) -> list[tuple[str, str, str, str]]:
+    with path.open(encoding="utf-8", newline="") as stream:
+        rows = [
+            tuple(row)
+            for row in csv.reader(
+                (line for line in stream if not line.startswith("#")), delimiter="\t",
+            )
+            if row
+        ]
+    if any(len(row) != 4 for row in rows):
+        raise ValueError("quality fixture manifest is malformed")
+    return rows  # type: ignore[return-value]
+
+
+def _normalized_text_sha256(payload: bytes) -> str:
+    text = payload.decode("utf-8", errors="strict")
+    normalized = " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def build_quality_case_ledger(
+    candidate: Path, *, seed: int,
+    plan_path: Path = QUALITY_SPLIT_PLAN,
+    tokenizer_path: Path = SHARED.TOKENIZER,
+) -> dict[str, Any]:
+    """Build the frozen, independently tokenized 100-case request ledger."""
+    candidate = candidate.resolve(strict=True)
+    plan = SHARED.strict_json(plan_path)
+    if (plan.get("schema_version") != 2 or
+            plan.get("classification") != "PREREGISTERED" or
+            plan.get("scope") != "glm52_union_probe_case_grouped_splits"):
+        raise ValueError("quality split plan schema is invalid")
+    fixture = candidate / QUALITY_FIXTURE_RELATIVE
+    master = fixture / "manifest.tsv"
+    if (not fixture.is_dir() or fixture.is_symlink() or
+            SHARED.sha256(master) != plan.get("fixture_sha256")):
+        raise ValueError("quality master fixture changed")
+    tokenizer = Tokenizer.from_file(str(tokenizer_path))
+    holdout = set(plan["full_precision_hidden_holdout"]["case_ids"])
+    cases: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    exact_hashes = {kind: set() for kind in ("prompt", "continuation", "response")}
+    normalized_hashes = {kind: set() for kind in ("prompt", "continuation")}
+    content_digest = hashlib.sha256()
+    role_names = ("train", "calibration", "test")
+    for split in role_names:
+        split_record = plan["splits"][split]
+        observed_count = 0
+        for manifest_record in split_record["block_manifests"]:
+            relative_manifest = str(manifest_record["path"])
+            manifest = (ROOT / relative_manifest).resolve(strict=True)
+            if (not manifest.is_relative_to(ROOT) or
+                    SHARED.sha256(manifest) != manifest_record["sha256"]):
+                raise ValueError("quality block manifest changed")
+            manifest_bytes = manifest.read_bytes()
+            relative_bytes = relative_manifest.encode("utf-8")
+            content_digest.update(len(relative_bytes).to_bytes(8, "big"))
+            content_digest.update(relative_bytes)
+            content_digest.update(len(manifest_bytes).to_bytes(8, "big"))
+            content_digest.update(manifest_bytes)
+            for case_id, prompt_relative, continuation_relative, response_relative in _quality_manifest_rows(manifest):
+                if case_id in seen_ids:
+                    raise ValueError("quality case is duplicated across splits")
+                seen_ids.add(case_id)
+                observed_count += 1
+                raw_by_kind: dict[str, bytes] = {}
+                for kind, relative in (
+                    ("prompt", prompt_relative),
+                    ("continuation", continuation_relative),
+                    ("response", response_relative),
+                ):
+                    path = (candidate / relative).resolve(strict=True)
+                    if not path.is_relative_to(candidate) or not path.is_file() or path.is_symlink():
+                        raise ValueError("quality fixture path is unsafe")
+                    raw = path.read_bytes()
+                    raw_by_kind[kind] = raw
+                    digest = hashlib.sha256(raw).hexdigest()
+                    if digest in exact_hashes[kind]:
+                        raise ValueError("quality content is duplicated")
+                    exact_hashes[kind].add(digest)
+                    if kind != "response":
+                        normalized = _normalized_text_sha256(raw)
+                        if normalized in normalized_hashes[kind]:
+                            raise ValueError("normalized quality content is duplicated")
+                        normalized_hashes[kind].add(normalized)
+                    relative_bytes = relative.encode("utf-8")
+                    content_digest.update(len(relative_bytes).to_bytes(8, "big"))
+                    content_digest.update(relative_bytes)
+                    content_digest.update(len(raw).to_bytes(8, "big"))
+                    content_digest.update(raw)
+                prompt = raw_by_kind["prompt"].decode("utf-8", errors="strict")
+                rendered = render_quality_prompt(prompt)
+                token_ids = tokenizer.encode(rendered, add_special_tokens=False).ids
+                if not 1 <= len(token_ids) <= QUALITY_DISK_MAX_TOKENS:
+                    raise ValueError("quality prompt token count exceeds the frozen bound")
+                case_seed = (seed + int(case_id.removeprefix("case_"))) % 2147483647
+                cases.append({
+                    "case_id": case_id,
+                    "group_id": case_id,
+                    "split": (
+                        "train-precision-diagnostic" if case_id in holdout else
+                        "train-fit" if split == "train" else split
+                    ),
+                    "prompt_sha256": hashlib.sha256(raw_by_kind["prompt"]).hexdigest(),
+                    "continuation_sha256": hashlib.sha256(raw_by_kind["continuation"]).hexdigest(),
+                    "response_sha256": hashlib.sha256(raw_by_kind["response"]).hexdigest(),
+                    "seed": case_seed,
+                    "token_ids": token_ids,
+                    "expected_prompt_tokens": len(token_ids),
+                    "request_sha256": hashlib.sha256(quality_wire_body(prompt, case_seed)).hexdigest(),
+                    "prompt": prompt,
+                })
+        if observed_count != split_record["quality_cases"]:
+            raise ValueError("quality split count changed")
+    if (len(cases) != QUALITY_REQUEST_COUNT or len(seen_ids) != QUALITY_REQUEST_COUNT or
+            len([case for case in cases if case["split"] == "train-fit"]) != 55 or
+            len([case for case in cases if case["split"] == "train-precision-diagnostic"]) != 5):
+        raise ValueError("quality case ledger is incomplete")
+    random.Random(seed).shuffle(cases)
+    for request_id, case in enumerate(cases, 1):
+        case["request_id"] = request_id
+    public_cases = [
+        {key: value for key, value in case.items() if key != "prompt"}
+        for case in cases
+    ]
+    return {
+        "schema_version": 1,
+        "split_plan_sha256": SHARED.sha256(plan_path),
+        "fixture_content_sha256": content_digest.hexdigest(),
+        "tokenizer_sha256": SHARED.sha256(tokenizer_path),
+        "seed": seed,
+        "total_expected_prompt_tokens": sum(case["expected_prompt_tokens"] for case in cases),
+        "expected_token_layer_events": 75 * sum(case["expected_prompt_tokens"] for case in cases),
+        "cases": public_cases,
+        "_prompts": {case["case_id"]: case["prompt"] for case in cases},
+    }
+
+
+def quality_window_indices(rows: list[dict[str, Any]], *, horizon: int) -> list[list[int]]:
+    if not isinstance(horizon, int) or isinstance(horizon, bool) or horizon <= 0:
+        raise ValueError("quality horizon must be positive")
+    windows: list[list[int]] = []
+    start = 0
+    while start < len(rows):
+        first = rows[start]
+        required = (first.get("case_id"), first.get("split"), first.get("layer"))
+        end = start + 1
+        while end < len(rows):
+            current = rows[end]
+            identity = (current.get("case_id"), current.get("split"), current.get("layer"))
+            if identity != required or current.get("position") != rows[end - 1].get("position") + 1:
+                break
+            end += 1
+        for offset in range(start, end - horizon):
+            windows.append(list(range(offset, offset + horizon + 1)))
+        start = end
+    return windows
+
+
+def _exact_chunks(chunks: Any, expected_tokens: int) -> bool:
+    if not isinstance(chunks, list) or not chunks:
+        return False
+    if not all(
+        isinstance(row, list) and len(row) == 2 and
+        all(isinstance(value, int) and not isinstance(value, bool) for value in row) and
+        row[0] >= 0 and row[1] > 0
+        for row in chunks
+    ):
+        return False
+    return (
+        chunks[0][0] == 0 and
+        all(chunks[index][0] == chunks[index - 1][0] + chunks[index - 1][1]
+            for index in range(1, len(chunks))) and
+        chunks[-1][0] + chunks[-1][1] == expected_tokens
+    )
+
+
+def quality_capture_verdict(
+    ledger: list[dict[str, Any]],
+    off_requests: list[dict[str, Any]],
+    on_requests: list[dict[str, Any]],
+    trace_score: dict[str, Any],
+    off_containment: dict[str, Any],
+    on_containment: dict[str, Any],
+) -> dict[str, Any]:
+    """Apply the fixed case/request/token/layer coverage formula."""
+    ledger_valid = (
+        isinstance(ledger, list) and bool(ledger) and
+        all(isinstance(row, dict) for row in ledger) and
+        [row.get("request_id") for row in ledger] == list(range(1, len(ledger) + 1)) and
+        len({row.get("case_id") for row in ledger}) == len(ledger) and
+        len({row.get("request_sha256") for row in ledger}) == len(ledger) and
+        all(
+            isinstance(row.get("expected_prompt_tokens"), int) and
+            not isinstance(row.get("expected_prompt_tokens"), bool) and
+            1 <= row["expected_prompt_tokens"] <= 512 and
+            isinstance(row.get("token_ids"), list) and
+            len(row["token_ids"]) == row["expected_prompt_tokens"]
+            for row in ledger
+        )
+    )
+    identity_keys = (
+        "case_id", "group_id", "split", "request_id", "request_sha256",
+    )
+    output_keys = (
+        "completion_tokens", "generated_reasoning_sha256",
+        "generated_content_sha256", "token_ids",
+    )
+
+    def arm_matches(requests: Any) -> bool:
+        if not ledger_valid or not isinstance(requests, list) or len(requests) != len(ledger):
+            return False
+        for expected, observed in zip(ledger, requests):
+            if (not isinstance(observed, dict) or
+                    any(observed.get(key) != expected.get(key) for key in identity_keys) or
+                    observed.get("prompt_tokens") != expected["expected_prompt_tokens"] or
+                    not _exact_chunks(observed.get("full_indexed_chunks"),
+                                      expected["expected_prompt_tokens"])):
+                return False
+        return True
+
+    off_matches = arm_matches(off_requests)
+    on_matches = arm_matches(on_requests)
+    outputs_match = (
+        off_matches and on_matches and
+        all(all(left.get(key) == right.get(key) for key in output_keys)
+            for left, right in zip(off_requests, on_requests))
+    )
+    expected_events = (
+        75 * sum(row["expected_prompt_tokens"] for row in ledger)
+        if ledger_valid else -1
+    )
+    checks = {
+        "ledger_complete": ledger_valid,
+        "off_exact_coverage": off_matches,
+        "on_exact_coverage": on_matches,
+        "per_case_output_identity": outputs_match,
+        "scorer_passed": trace_score.get("verdict") == "PASS",
+        "exact_request_count": trace_score.get("requests") == len(ledger),
+        "exact_token_layer_events": trace_score.get("token_layer_events") == expected_events,
+        "containment_clean": (
+            off_containment.get("clean") is True and on_containment.get("clean") is True
+        ),
+    }
+    return {
+        "expected_token_layer_events": expected_events,
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
 
 
 def randomness_is_after_freeze(round_number: int, freeze_commit_time: int) -> bool:
@@ -116,7 +415,9 @@ def configuration_sha256(values: dict[str, str]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
-def trace_environment(mode: str, out: Path, *, corpus_smoke: bool = False) -> dict[str, str]:
+def trace_environment(
+    mode: str, out: Path, *, corpus_smoke: bool = False, quality_corpus: bool = False,
+) -> dict[str, str]:
     if mode not in {"off", "on"}:
         raise ValueError("invalid trace arm")
     values = dict(SHARED.COMMON_ENV)
@@ -124,23 +425,26 @@ def trace_environment(mode: str, out: Path, *, corpus_smoke: bool = False) -> di
         "DS4_LOCK_FILE": str(out / "runtime.lock"),
         "DS4_GLM_SYNC_TRACE": "1",
     })
-    if corpus_smoke:
+    large_corpus = corpus_smoke or quality_corpus
+    if large_corpus:
         values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
     if mode == "on":
         values.update({
             "DS4_METAL_GRAPH_DUMP_PREFIX": str(out / "trace/request"),
             "DS4_METAL_GRAPH_DUMP_NAME": TRACE_NAMES,
-            "DS4_METAL_GRAPH_DUMP_LAYER": "all" if corpus_smoke else "4",
+            "DS4_METAL_GRAPH_DUMP_LAYER": "all" if large_corpus else "4",
         })
-        if corpus_smoke:
+        if large_corpus:
             values["DS4_GLM_UNION_TRACE_CORPUS"] = "1"
     return values
 
 
-def matched_configuration_sha256(*, corpus_smoke: bool = False) -> str:
+def matched_configuration_sha256(
+    *, corpus_smoke: bool = False, quality_corpus: bool = False,
+) -> str:
     values = dict(SHARED.COMMON_ENV)
     values.update({"DS4_LOCK_FILE": "<ARM_LOCAL>", "DS4_GLM_SYNC_TRACE": "1"})
-    if corpus_smoke:
+    if corpus_smoke or quality_corpus:
         values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
     return configuration_sha256(values)
 
@@ -316,10 +620,68 @@ def smoke_verdict(
     return {"checks": checks, "verdict": "PASS" if all(checks.values()) else "FAIL"}
 
 
+def _run_quality_requests(
+    *, port: int, out: Path, server_log: Path, log: Any,
+    ledger_bundle: dict[str, Any],
+) -> list[dict[str, Any]]:
+    client = BENCH_CLIENT.Client(
+        f"http://127.0.0.1:{port}", None, request_timeout_s=1200,
+    )
+    client.get_model("glm-5.2")
+    tokenizer = Tokenizer.from_file(str(SHARED.TOKENIZER))
+    prompts = ledger_bundle["_prompts"]
+    records: list[dict[str, Any]] = []
+    for expected in ledger_bundle["cases"]:
+        prompt = prompts[expected["case_id"]]
+        log.flush()
+        os.fsync(log.fileno())
+        log_start = server_log.stat().st_size
+        stream = client.stream_chat(quality_request_payload(prompt, expected["seed"]))
+        log.flush()
+        os.fsync(log.fileno())
+        with server_log.open("rb") as log_reader:
+            log_reader.seek(log_start)
+            request_log = log_reader.read().decode("utf-8", errors="strict")
+        usage = stream.get("usage")
+        if (stream.get("done") is not True or not isinstance(usage, dict) or
+                stream.get("request_sha256") != expected["request_sha256"] or
+                usage.get("prompt_tokens") != expected["expected_prompt_tokens"] or
+                usage.get("completion_tokens") != QUALITY_MAX_TOKENS):
+            raise ValueError(f"quality request {expected['case_id']} was incomplete")
+        generated = stream.get("generated_text")
+        reasoning = stream.get("generated_reasoning")
+        content = stream.get("generated_content")
+        if not all(isinstance(value, str) for value in (generated, reasoning, content)):
+            raise ValueError("quality response text schema is invalid")
+        generated_ids = tokenizer.encode(generated, add_special_tokens=False).ids
+        records.append({
+            "case_id": expected["case_id"],
+            "group_id": expected["group_id"],
+            "split": expected["split"],
+            "request_id": expected["request_id"],
+            "request_sha256": expected["request_sha256"],
+            "prompt_tokens": usage["prompt_tokens"],
+            "full_indexed_chunks": full_indexed_chunks_text(request_log),
+            "completion_tokens": usage["completion_tokens"],
+            "generated_reasoning_sha256": hashlib.sha256(reasoning.encode()).hexdigest(),
+            "generated_content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+            "token_ids": generated_ids,
+        })
+    response_path = out / "responses.json"
+    response_path.write_text(
+        json.dumps(records, sort_keys=True, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    return records
+
+
 def _arm(args: argparse.Namespace) -> int:
     out = args.out.resolve()
     binary = args.binary.resolve()
-    expected = trace_environment(args.mode, out, corpus_smoke=args.corpus_smoke)
+    expected = trace_environment(
+        args.mode, out, corpus_smoke=args.corpus_smoke,
+        quality_corpus=args.quality_corpus,
+    )
     observed = {name: os.environ[name] for name in ENV_NAMES if name in os.environ}
     if observed != expected:
         raise ValueError("trace arm environment differs from frozen configuration")
@@ -334,10 +696,24 @@ def _arm(args: argparse.Namespace) -> int:
     trace.mkdir(mode=0o700)
     result_path = out / "result.json"
     server_log = out / "server.log"
+    large_corpus = args.corpus_smoke or args.quality_corpus
     command = SHARED.server_command(
         binary, args.port,
-        cache_experts=(CORPUS_CACHE_EXPERTS if args.corpus_smoke else "40GB"),
+        cache_experts=(CORPUS_CACHE_EXPERTS if large_corpus else "40GB"),
     )
+    ledger_bundle = (
+        build_quality_case_ledger(Path(args.candidate), seed=args.seed)
+        if args.quality_corpus else None
+    )
+    if ledger_bundle is not None:
+        ledger_path = out / "ledger.json"
+        ledger_path.write_text(
+            json.dumps(
+                {key: value for key, value in ledger_bundle.items() if key != "_prompts"},
+                sort_keys=True, indent=2, allow_nan=False,
+            ) + "\n",
+            encoding="utf-8",
+        )
     server = None
     with server_log.open("xb") as log:
         try:
@@ -345,7 +721,12 @@ def _arm(args: argparse.Namespace) -> int:
                                       stderr=subprocess.STDOUT, start_new_session=False)
             SHARED.wait_ready(server, args.port)
             request_records: list[dict[str, Any]] = []
-            for request_index in range(2 if args.corpus_smoke else 1):
+            if ledger_bundle is not None:
+                request_records = _run_quality_requests(
+                    port=args.port, out=out, server_log=server_log, log=log,
+                    ledger_bundle=ledger_bundle,
+                )
+            for request_index in range(0 if args.quality_corpus else (2 if args.corpus_smoke else 1)):
                 current_result = (out / f"result-{request_index + 1}.json"
                                   if args.corpus_smoke else result_path)
                 log.flush()
@@ -405,7 +786,7 @@ def _arm(args: argparse.Namespace) -> int:
         raise RuntimeError(f"server did not exit cleanly rc={getattr(server, 'returncode', None)}")
     log_text = server_log.read_text(encoding="utf-8", errors="strict")
     SHARED.require_no_gpu_fault(log_text, "server log")
-    resolved_cuda_cache = cuda_cache_runtime(log_text) if args.corpus_smoke else None
+    resolved_cuda_cache = cuda_cache_runtime(log_text) if large_corpus else None
     if not request_records:
         raise RuntimeError("arm produced no requests")
     chunks = request_records[0]["full_indexed_chunks"]
@@ -417,12 +798,14 @@ def _arm(args: argparse.Namespace) -> int:
         raise RuntimeError("off arm emitted trace files")
     if args.mode == "on" and not files:
         raise RuntimeError("on arm emitted no trace files")
-    fixture_digest = (hashlib.sha256(
+    fixture_digest = (str(ledger_bundle["fixture_content_sha256"])
+                      if ledger_bundle is not None else hashlib.sha256(
         b"".join(bytes.fromhex(str(item["response_signature"]["request_sha256"]))
                  for item in request_records)
     ).hexdigest() if args.corpus_smoke else
         str(request_records[0]["response_signature"]["request_sha256"]))
-    result_digest = (hashlib.sha256(
+    result_digest = (SHARED.sha256(out / "responses.json")
+                     if ledger_bundle is not None else hashlib.sha256(
         b"".join(bytes.fromhex(str(item["result_sha256"])) for item in request_records)
     ).hexdigest() if args.corpus_smoke else str(request_records[0]["result_sha256"]))
     record = {
@@ -431,9 +814,13 @@ def _arm(args: argparse.Namespace) -> int:
         "model_sha256": args.model_sha256,
         "tokenizer_sha256": SHARED.TOKENIZER_SHA256,
         "fixture_sha256": fixture_digest,
-        "configuration_sha256": matched_configuration_sha256(corpus_smoke=args.corpus_smoke),
+        "configuration_sha256": matched_configuration_sha256(
+            corpus_smoke=args.corpus_smoke, quality_corpus=args.quality_corpus,
+        ),
         "environment_sha256": configuration_sha256(expected),
-        "response_signature": ([item["response_signature"] for item in request_records]
+        "response_signature": (request_records
+                               if args.quality_corpus else
+                               [item["response_signature"] for item in request_records]
                                if args.corpus_smoke else request_records[0]["response_signature"]),
         "prompt_tokens": request_records[0]["prompt_tokens"],
         "full_indexed_chunks": chunks,
@@ -442,11 +829,15 @@ def _arm(args: argparse.Namespace) -> int:
         "result_sha256": result_digest,
         "server_log_sha256": SHARED.sha256(server_log),
     }
-    if args.corpus_smoke:
+    if large_corpus:
         record["corpus_requests"] = request_records
         record["expert_cache_budget"] = CORPUS_CACHE_EXPERTS
         record["cuda_expert_cache_gb"] = CORPUS_CUDA_CACHE_GB
         record["cuda_cache_runtime"] = resolved_cuda_cache
+    if ledger_bundle is not None:
+        record["quality_ledger_sha256"] = SHARED.sha256(out / "ledger.json")
+        record["split_plan_sha256"] = ledger_bundle["split_plan_sha256"]
+        record["expected_token_layer_events"] = ledger_bundle["expected_token_layer_events"]
     (out / "arm.json").write_text(
         json.dumps(record, sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
@@ -461,20 +852,30 @@ def run(args: argparse.Namespace) -> int:
         raise ValueError("context level is outside the bounded trace range")
     if args.require_multichunk and args.context_level <= 2048:
         raise ValueError("multi-chunk qualification requires context level above 2048")
-    if args.require_multichunk and args.corpus_smoke:
-        raise ValueError("corpus smoke and single-request multichunk modes are exclusive")
-    layer_count = 75 if args.corpus_smoke else 1
-    request_count = 2 if args.corpus_smoke else 1
-    max_trace_bytes = (
-        (args.context_level + 1024) * TRACE_BYTES_PER_TOKEN_LAYER *
-        layer_count * request_count
+    if args.require_multichunk and (args.corpus_smoke or args.quality_corpus):
+        raise ValueError("corpus and single-request multichunk modes are exclusive")
+    if args.corpus_smoke and args.quality_corpus:
+        raise ValueError("corpus modes are mutually exclusive")
+    large_corpus = args.corpus_smoke or args.quality_corpus
+    layer_count = 75 if large_corpus else 1
+    request_count = QUALITY_REQUEST_COUNT if args.quality_corpus else 2 if args.corpus_smoke else 1
+    per_request_tokens = (
+        QUALITY_DISK_MAX_TOKENS if args.quality_corpus else args.context_level + 1024
     )
-    freeze_path = CORPUS_FREEZE if args.corpus_smoke else FREEZE
-    randomness_path = CORPUS_RANDOMNESS if args.corpus_smoke else RANDOMNESS
+    max_trace_bytes = per_request_tokens * TRACE_BYTES_PER_TOKEN_LAYER * layer_count * request_count
+    freeze_path = QUALITY_FREEZE if args.quality_corpus else CORPUS_FREEZE if args.corpus_smoke else FREEZE
+    randomness_path = (
+        QUALITY_RANDOMNESS if args.quality_corpus else
+        CORPUS_RANDOMNESS if args.corpus_smoke else RANDOMNESS
+    )
     freeze = SHARED.frozen_inputs(freeze_path, randomness_path)
     validate_randomness_order(freeze_path, randomness_path)
     candidate = Path(str(freeze["candidate_directory"])).resolve()
     binary = candidate / "ds4-server"
+    quality_ledger = (
+        build_quality_case_ledger(candidate, seed=int(freeze["seed"]))
+        if args.quality_corpus else None
+    )
     SHARED.no_other_inference()
     available_gib = int(next(
         line.split()[1] for line in Path("/proc/meminfo").read_text().splitlines()
@@ -492,7 +893,10 @@ def run(args: argparse.Namespace) -> int:
     containment: dict[str, dict[str, Any]] = {}
     for index, mode in enumerate(("off", "on")):
         out = root / mode
-        values = trace_environment(mode, out, corpus_smoke=args.corpus_smoke)
+        values = trace_environment(
+            mode, out, corpus_smoke=args.corpus_smoke,
+            quality_corpus=args.quality_corpus,
+        )
         environment = os.environ.copy()
         for name in list(environment):
             if name.startswith("DS4_") or name.startswith("GLM_SAFE_"):
@@ -502,6 +906,8 @@ def run(args: argparse.Namespace) -> int:
         if args.corpus_smoke:
             final_artifacts.extend(str(out / f"result-{request_id}.json")
                                    for request_id in (1, 2))
+        elif args.quality_corpus:
+            final_artifacts.extend((str(out / "ledger.json"), str(out / "responses.json")))
         else:
             final_artifacts.append(str(out / "result.json"))
         final_artifacts.append(str(out / "server.log"))
@@ -513,11 +919,11 @@ def run(args: argparse.Namespace) -> int:
             "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(ENV_NAMES),
             "GLM_SAFE_EXPECTED_ENV_SHA256": configuration_sha256(values),
             "GLM_SAFE_MEMORY_HIGH_GIB": (
-                CORPUS_MEMORY_HIGH_GIB if args.corpus_smoke else "69"
+                CORPUS_MEMORY_HIGH_GIB if large_corpus else "69"
             ),
             "GLM_SAFE_KILL_FLOOR_GIB": "18",
             "GLM_SAFE_MIN_START_GIB": "110",
-            "GLM_SAFE_TIMEOUT_S": "3600",
+            "GLM_SAFE_TIMEOUT_S": "7200" if args.quality_corpus else "3600",
             "GLM_SAFE_FINAL_ARTIFACTS": ",".join(final_artifacts),
         })
         completed = subprocess.run([
@@ -527,12 +933,14 @@ def run(args: argparse.Namespace) -> int:
             "--binary-sha256", str(freeze["binary_sha256"]),
             "--model-sha256", str(freeze["model_sha256"]),
             "--seed", str(freeze["seed"]), "--port", str(args.port + index),
+            "--candidate", str(candidate),
             "--context-level", str(args.context_level),
             "--max-trace-bytes", str(max_trace_bytes),
             *(["--require-multichunk"] if args.require_multichunk else []),
             *(["--corpus-smoke"] if args.corpus_smoke else []),
+            *(["--quality-corpus"] if args.quality_corpus else []),
         ], env=environment, stdin=subprocess.DEVNULL, capture_output=True,
-           timeout=3700, check=False)
+           timeout=7300 if args.quality_corpus else 3700, check=False)
         (root / f"{mode}.containment.stdout.log").write_bytes(completed.stdout)
         (root / f"{mode}.containment.stderr.log").write_bytes(completed.stderr)
         if completed.returncode != 0:
@@ -547,12 +955,35 @@ def run(args: argparse.Namespace) -> int:
 
     off = SHARED.strict_json(root / "off/arm.json")
     on = SHARED.strict_json(root / "on/arm.json")
+    if args.quality_corpus:
+        assert quality_ledger is not None
+        expected_ledger_sha256 = SHARED.sha256(root / "off/ledger.json")
+        if SHARED.sha256(root / "on/ledger.json") != expected_ledger_sha256:
+            raise ValueError("quality arm ledgers differ")
+        for mode, arm in (("off", off), ("on", on)):
+            if arm.get("quality_ledger_sha256") != expected_ledger_sha256:
+                raise ValueError(f"{mode} arm does not bind its quality ledger")
+            if arm.get("expected_token_layer_events") != quality_ledger["expected_token_layer_events"]:
+                raise ValueError(f"{mode} arm expected event count differs from frozen ledger")
+            if arm.get("fixture_sha256") != quality_ledger["fixture_content_sha256"]:
+                raise ValueError(f"{mode} arm fixture differs from frozen ledger")
     for mode in ("off", "on"):
         SHARED.require_no_gpu_fault(
             (root / mode / "server.log").read_text(encoding="utf-8", errors="strict"),
             f"{mode} server log",
         )
-    if args.corpus_smoke:
+    if args.quality_corpus:
+        assert quality_ledger is not None
+        expected_requests = {
+            int(item["request_id"]): [tuple(row) for row in item["full_indexed_chunks"]]
+            for item in on["corpus_requests"]
+        }
+        trace_score = TRACE_SCORER.score_trace(
+            root / "on/trace", root / "on/server.log", max_bytes=max_trace_bytes,
+            expected_layers=set(range(3, 78)), expected_chunks=[],
+            expected_requests=expected_requests,
+        )
+    elif args.corpus_smoke:
         expected_requests = {
             int(item["request_id"]): [tuple(row) for row in item["full_indexed_chunks"]]
             for item in on["corpus_requests"]
@@ -568,14 +999,29 @@ def run(args: argparse.Namespace) -> int:
             root / "on/trace", root / "on/server.log", max_bytes=max_trace_bytes,
             expected_layers={TRACE_LAYER}, expected_chunks=expected_chunks,
         )
-    verdict = smoke_verdict(
-        off, on, trace_score, containment["off"], containment["on"],
-        min_prompt_tokens=(2049 if args.require_multichunk else MIN_PROMPT_TOKENS),
-        require_multichunk=args.require_multichunk,
-        expected_corpus_seed=(int(freeze["seed"]) if args.corpus_smoke else None),
+    verdict = (
+        quality_capture_verdict(
+            quality_ledger["cases"], off["corpus_requests"], on["corpus_requests"],
+            trace_score, containment["off"], containment["on"],
+        ) if args.quality_corpus and quality_ledger is not None else
+        smoke_verdict(
+            off, on, trace_score, containment["off"], containment["on"],
+            min_prompt_tokens=(2049 if args.require_multichunk else MIN_PROMPT_TOKENS),
+            require_multichunk=args.require_multichunk,
+            expected_corpus_seed=(int(freeze["seed"]) if args.corpus_smoke else None),
+        )
     )
     SHARED.frozen_inputs(freeze_path, randomness_path)
-    if args.corpus_smoke:
+    if args.quality_corpus:
+        qualification = {
+            "scope": "quality_100_case_all_routed_layer_corpus",
+            "quality_cases": QUALITY_REQUEST_COUNT,
+            "expected_prompt_tokens": quality_ledger["total_expected_prompt_tokens"],
+            "expected_token_layer_events": quality_ledger["expected_token_layer_events"],
+            "fixture_content_sha256": quality_ledger["fixture_content_sha256"],
+            "split_plan_sha256": quality_ledger["split_plan_sha256"],
+        }
+    elif args.corpus_smoke:
         qualification = {
             "scope": "multi_request_all_routed_layer_corpus_smoke",
             "high_row_2048_status": "OPEN",
@@ -626,11 +1072,13 @@ def parser() -> argparse.ArgumentParser:
     public.add_argument("--context-level", type=int, default=512)
     public.add_argument("--require-multichunk", action="store_true")
     public.add_argument("--corpus-smoke", action="store_true")
+    public.add_argument("--quality-corpus", action="store_true")
     public.set_defaults(func=run)
     internal = sub.add_parser("_arm")
     internal.add_argument("--mode", choices=("off", "on"), required=True)
     internal.add_argument("--out", type=Path, required=True)
     internal.add_argument("--binary", type=Path, required=True)
+    internal.add_argument("--candidate", type=Path, required=True)
     internal.add_argument("--binary-sha256", required=True)
     internal.add_argument("--model-sha256", required=True)
     internal.add_argument("--seed", type=int, required=True)
@@ -639,6 +1087,7 @@ def parser() -> argparse.ArgumentParser:
     internal.add_argument("--max-trace-bytes", type=int, required=True)
     internal.add_argument("--require-multichunk", action="store_true")
     internal.add_argument("--corpus-smoke", action="store_true")
+    internal.add_argument("--quality-corpus", action="store_true")
     internal.set_defaults(func=_arm)
     return root
 
