@@ -272,6 +272,91 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
     def test_corpus_randomness_postdates_corpus_freeze(self) -> None:
         MODULE.validate_randomness_order(MODULE.CORPUS_FREEZE, MODULE.CORPUS_RANDOMNESS)
 
+    def test_quality_prompt_render_is_independently_tokenizable(self) -> None:
+        self.assertEqual(
+            MODULE.render_quality_prompt("Hello"),
+            "[gMASK]<sop><|system|>Reasoning Effort: High"
+            "<|system|>You are a helpful assistant"
+            "<|user|>Hello<|assistant|><think>",
+        )
+
+    def test_quality_verdict_requires_frozen_expected_token_coverage(self) -> None:
+        ledger = [
+            {
+                "case_id": "case_001", "group_id": "case_001", "split": "train-fit",
+                "request_id": 1, "request_sha256": "1" * 64,
+                "expected_prompt_tokens": 2, "token_ids": [11, 12],
+            },
+            {
+                "case_id": "case_002", "group_id": "case_002", "split": "test",
+                "request_id": 2, "request_sha256": "2" * 64,
+                "expected_prompt_tokens": 3, "token_ids": [21, 22, 23],
+            },
+        ]
+        requests = [
+            {
+                "case_id": row["case_id"], "group_id": row["group_id"],
+                "split": row["split"], "request_id": row["request_id"],
+                "request_sha256": row["request_sha256"],
+                "prompt_tokens": row["expected_prompt_tokens"],
+                "full_indexed_chunks": [[0, row["expected_prompt_tokens"]]],
+                "completion_tokens": 8,
+                "generated_reasoning_sha256": "a" * 64,
+                "generated_content_sha256": "b" * 64,
+                "token_ids": [7, 8],
+            }
+            for row in ledger
+        ]
+        score = {"verdict": "PASS", "requests": 2, "token_layer_events": 375}
+        result = MODULE.quality_capture_verdict(
+            ledger, requests, copy.deepcopy(requests), score,
+            {"clean": True}, {"clean": True},
+        )
+        self.assertEqual(result["verdict"], "PASS")
+
+        mutations = ("consistent_truncation", "missing_case", "relabel", "output", "rows")
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                off, on, bad_score = copy.deepcopy(requests), copy.deepcopy(requests), copy.deepcopy(score)
+                if mutation == "consistent_truncation":
+                    for arm_requests in (off, on):
+                        arm_requests[0]["prompt_tokens"] = 1
+                        arm_requests[0]["full_indexed_chunks"] = [[0, 1]]
+                    bad_score["token_layer_events"] = 300
+                elif mutation == "missing_case":
+                    off.pop()
+                    on.pop()
+                    bad_score["requests"] = 1
+                    bad_score["token_layer_events"] = 150
+                elif mutation == "relabel":
+                    on[1]["case_id"] = "case_001"
+                elif mutation == "output":
+                    on[1]["generated_reasoning_sha256"] = "c" * 64
+                else:
+                    bad_score["token_layer_events"] = 374
+                self.assertEqual(
+                    MODULE.quality_capture_verdict(
+                        ledger, off, on, bad_score,
+                        {"clean": True}, {"clean": True},
+                    )["verdict"],
+                    "FAIL",
+                )
+
+    def test_quality_windows_never_cross_case_or_split_boundaries(self) -> None:
+        rows = [
+            {"case_id": "a", "split": "train-fit", "layer": 3, "position": position}
+            for position in range(9)
+        ] + [
+            {"case_id": "b", "split": "test", "layer": 3, "position": position}
+            for position in range(9)
+        ]
+        windows = MODULE.quality_window_indices(rows, horizon=8)
+        self.assertEqual(len(windows), 2)
+        self.assertTrue(all(len(window) == 9 for window in windows))
+        for window in windows:
+            self.assertEqual(len({rows[index]["case_id"] for index in window}), 1)
+            self.assertEqual(len({rows[index]["split"] for index in window}), 1)
+
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     @classmethod

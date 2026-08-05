@@ -98,6 +98,7 @@ class UnionTraceScoreTests(unittest.TestCase):
         for extra in (
             "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn layer=4 pos=0 rows=2\n",
             "GLM_UNION_TRACE_ERROR stage=capture layer=4 pos=0 rows=2\n",
+            "GLM_UNION_TRACE_DROPPED stage=capture layer=4 pos=0 rows=2\n",
         ):
             with self.subTest(extra=extra), tempfile.TemporaryDirectory() as tmp:
                 trace, log = self.make_attempt(Path(tmp))
