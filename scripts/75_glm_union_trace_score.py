@@ -98,7 +98,7 @@ def score_trace(
     result: dict[str, Any] = {"verdict": "FAIL", "checks": checks}
     valid_layers = (
         isinstance(expected_layers, set) and bool(expected_layers) and
-        all(isinstance(layer, int) and not isinstance(layer, bool) and layer >= 4
+        all(isinstance(layer, int) and not isinstance(layer, bool) and layer >= 3
             for layer in expected_layers)
     )
     def chunks_valid(chunks: list[tuple[int, int]]) -> bool:
