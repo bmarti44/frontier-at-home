@@ -1,8 +1,8 @@
 diff --git a/ds4.c b/ds4.c
-index 34d26f7..6488cd7 100644
+index 34d26f7..247d186 100644
 --- a/ds4.c
 +++ b/ds4.c
-@@ -16171,6 +16171,130 @@ static void metal_graph_debug_dump_i32_tensor(
+@@ -16171,6 +16171,137 @@ static void metal_graph_debug_dump_i32_tensor(
      }
  }
  
@@ -39,11 +39,12 @@ index 34d26f7..6488cd7 100644
 +}
 +
 +static bool glm_union_probe_dump_triplet(
++        const ds4_model   *model,
++        const ds4_layer_weights *l,
 +        ds4_gpu_tensor *norm,
 +        ds4_gpu_tensor *logits,
 +        ds4_gpu_tensor *probs,
 +        ds4_gpu_tensor *selected,
-+        const float    *bias,
 +        uint32_t        n_tokens,
 +        uint32_t        il,
 +        uint32_t        pos) {
@@ -58,8 +59,12 @@ index 34d26f7..6488cd7 100644
 +    const bool want_probs = metal_graph_debug_wants(probs_name, il, pos);
 +    const bool want_bias = metal_graph_debug_wants(bias_name, il, pos);
 +    if (!want_norm && !want_logits && !want_probs && !want_selected && !want_bias) return true;
++    const size_t bias_bytes = (size_t)DS4_N_EXPERT * sizeof(float);
 +    if (!want_norm || !want_logits || !want_probs || !want_selected || !want_bias ||
-+        !norm || !logits || !probs || !selected || !bias || n_tokens == 0 ||
++        !model || !l || il < DS4_N_LEADING_DENSE || !l->ffn_exp_probs_b ||
++        l->ffn_exp_probs_b->abs_offset > model->size ||
++        bias_bytes > model->size - l->ffn_exp_probs_b->abs_offset ||
++        !norm || !logits || !probs || !selected || n_tokens == 0 ||
 +        (uint64_t)n_tokens * DS4_N_EMBD > SIZE_MAX / sizeof(float) ||
 +        (uint64_t)n_tokens * DS4_N_EXPERT > SIZE_MAX / sizeof(float) ||
 +        (uint64_t)n_tokens * DS4_N_EXPERT_USED > SIZE_MAX / sizeof(int32_t)) {
@@ -67,6 +72,8 @@ index 34d26f7..6488cd7 100644
 +                il, pos);
 +        return false;
 +    }
++    const float *bias = (const float *)((const uint8_t *)model->map +
++                                        l->ffn_exp_probs_b->abs_offset);
 +
 +    const size_t norm_bytes =
 +        (size_t)n_tokens * DS4_N_EMBD * sizeof(float);
@@ -133,7 +140,7 @@ index 34d26f7..6488cd7 100644
  static bool metal_graph_needs_ffn_out(const ds4_gpu_graph *g, uint32_t il, uint32_t pos) {
      return metal_graph_directional_steering_ffn_enabled(g) ||
             g->materialize_ffn_out ||
-@@ -37223,6 +37347,12 @@ typedef struct {
+@@ -37223,6 +37354,12 @@ typedef struct {
      ds4_gpu_tensor *prefill_seed_router_selected;
      uint32_t prefill_seed_tokens;
      bool prefill_seed_layer_captured[DS4_MAX_LAYER];
@@ -146,7 +153,7 @@ index 34d26f7..6488cd7 100644
  
      ds4_gpu_tensor *prefill_tokens;
      ds4_gpu_tensor *batch_cur;
-@@ -40007,7 +40137,14 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40007,7 +40144,14 @@ static bool glm_graph_encode_sparse_ffn_one(
      uint64_t up_in = 0, up_out = 0, up_row_bytes = 0;
      uint64_t down_in = 0, down_out = 0, down_row_bytes = 0;
      bool pf_hint_pending = false;
@@ -161,7 +168,7 @@ index 34d26f7..6488cd7 100644
      ds4_gpu_stream_expert_table pf_table = {};
      (void)tensor_expert_bytes(model, l->ffn_gate_exps, 0, &gate_in, &gate_out, &gate_row_bytes);
      (void)tensor_expert_bytes(model, l->ffn_up_exps, 0, &up_in, &up_out, &up_row_bytes);
-@@ -40034,7 +40171,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40034,7 +40178,8 @@ static bool glm_graph_encode_sparse_ffn_one(
                                                    DS4_N_EXPERT,
                                                    DS4_N_EXPERT_USED,
                                                    DS4_EXPERT_WEIGHT_SCALE) != 0;
@@ -171,7 +178,7 @@ index 34d26f7..6488cd7 100644
          /* Cross-layer expert prefetch: predict layer il+1's experts from the
           * CURRENT hidden state and hand them to the background reader so the
           * bytes land while layer il's kernels run. Measured on this model:
-@@ -40076,7 +40214,70 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40076,7 +40221,70 @@ static bool glm_graph_encode_sparse_ffn_one(
              if (ds4_gpu_begin_commands() == 0) ok = false;
          }
      }
@@ -243,7 +250,7 @@ index 34d26f7..6488cd7 100644
          /* Cross-layer prediction-accuracy probe (prefetch lever gate):
           * run layer il+1's router on the CURRENT hidden state, then compare
           * its top-k against the ids layer il+1 actually selects next step.
-@@ -40345,6 +40546,87 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40345,6 +40553,87 @@ static bool glm_graph_encode_sparse_ffn_one(
                                               1,
                                               stage_t0);
      }
@@ -331,7 +338,7 @@ index 34d26f7..6488cd7 100644
      if (async_profile) {
          const double now_ms = glm_graph_streaming_async_profile_ms();
          if (async_path_profiled) {
-@@ -40375,6 +40657,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+@@ -40375,6 +40664,8 @@ static bool glm_graph_encode_sparse_ffn_one(
          }
      }
      if (ok && pf_hint_pending) {
@@ -340,17 +347,16 @@ index 34d26f7..6488cd7 100644
          ds4_gpu_expert_prefetch_hint(&pf_table, pf_ids, DS4_N_EXPERT_USED);
          pf_hint_pending = false;
      }
-@@ -44906,6 +45190,16 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44906,6 +45197,15 @@ static bool glm_graph_forward_indexed_tokens(
                                              layer_stage_profile,
                                              stage_sync,
                                              layer_stage_profile ? &layer_stage_t0 : NULL);
-+            if (ok) ok = glm_union_probe_dump_triplet(g->batch_ffn_norm,
++            if (ok) ok = glm_union_probe_dump_triplet(model,
++                                                       l,
++                                                       g->batch_ffn_norm,
 +                                                       g->batch_router_logits,
 +                                                       g->batch_router_probs,
 +                                                       g->batch_router_selected,
-+                                                       (const float *)(
-+                                                           (const uint8_t *)model->map +
-+                                                           l->ffn_exp_probs_b->abs_offset),
 +                                                       n_tokens,
 +                                                       il,
 +                                                       pos0);
