@@ -20,6 +20,11 @@ SPEC = importlib.util.spec_from_file_location("glm_union_probe", SCRIPT)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+BASELINE_SCRIPT = ROOT / "scripts/81_glm_union_baseline.py"
+BASELINE_SPEC = importlib.util.spec_from_file_location("glm_union_baseline", BASELINE_SCRIPT)
+assert BASELINE_SPEC and BASELINE_SPEC.loader
+BASELINE = importlib.util.module_from_spec(BASELINE_SPEC)
+BASELINE_SPEC.loader.exec_module(BASELINE)
 
 
 class UnionTargetTests(unittest.TestCase):
@@ -146,10 +151,10 @@ class UnionTargetTests(unittest.TestCase):
             np.repeat(np.asarray([4, 5], dtype=np.uint16), 20), 2,
         )
         position = np.tile(np.arange(20, dtype=np.uint32), 4)
-        rows = MODULE.structural_baseline_rows(request, layer, position)
+        rows = BASELINE.structural_baseline_rows(request, layer, position)
         expected = []
         for group in range(4):
-            expected.extend(group * 20 + np.arange(4, 12).tolist())
+            expected.extend((group * 20 + np.arange(4, 12)).tolist())
         np.testing.assert_array_equal(rows, expected)
         self.assertEqual(rows.size, 2 * 2 * 8)
 
@@ -157,7 +162,7 @@ class UnionTargetTests(unittest.TestCase):
         keep = np.ones(position.size, dtype=np.bool_)
         keep[15:20] = False
         with self.assertRaises(ValueError):
-            MODULE.structural_baseline_rows(request[keep], layer[keep], too_short[keep])
+            BASELINE.structural_baseline_rows(request[keep], layer[keep], too_short[keep])
 
     def test_captured_router_ranking_is_full_stable_and_top8_conformant(self) -> None:
         scores = np.zeros((2, 256), dtype=np.float32)
@@ -167,7 +172,7 @@ class UnionTargetTests(unittest.TestCase):
             np.asarray([9, 2, 5, 7, 1, 3, 4, 6], dtype=np.int32),
             np.arange(255, 247, -1, dtype=np.int32),
         ])
-        ranking = MODULE.captured_router_rankings(scores, selected)
+        ranking = BASELINE.captured_router_rankings(scores, selected)
         np.testing.assert_array_equal(ranking[:, :8], selected)
         self.assertEqual(ranking.shape, (2, 256))
         self.assertEqual(np.unique(ranking[0]).size, 256)
@@ -175,7 +180,7 @@ class UnionTargetTests(unittest.TestCase):
         bad = selected.copy()
         bad[0, 0] = 8
         with self.assertRaises(ValueError):
-            MODULE.captured_router_rankings(scores, bad)
+            BASELINE.captured_router_rankings(scores, bad)
 
     def test_mtp_rankings_are_nested_prefix_maxima(self) -> None:
         scores = np.zeros((1, 8, 256), dtype=np.float32)
@@ -185,7 +190,7 @@ class UnionTargetTests(unittest.TestCase):
             np.argsort(-scores[0, step], kind="stable")[:8]
             for step in range(8)
         ]).astype(np.int32)[None, :, :]
-        rankings = MODULE.mtp_prefix_rankings(scores, selected)
+        rankings = BASELINE.mtp_prefix_rankings(scores, selected)
         self.assertEqual(set(rankings), {2, 4, 8})
         self.assertEqual(rankings[2][0, 0], 1)
         self.assertEqual(rankings[4][0, 0], 3)

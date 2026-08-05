@@ -1,0 +1,110 @@
+From 21095e2dab376879097691215001b205c76e4351 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Wed, 5 Aug 2026 10:55:03 -0400
+Subject: [PATCH 3/4] fix: record inclusive GLM baseline step costs
+
+---
+ ds4.c | 30 ++++++++++++++++++++++++++++--
+ 1 file changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/ds4.c b/ds4.c
+index 27fbc2e..fbe2742 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -60674,6 +60674,10 @@ static bool glm_baseline_capture_publish(
+         uint32_t source_pos,
+         uint32_t token_count,
+         const int predicted[DS4_GLM_BASELINE_MAX_K],
++        double source_ready_ms,
++        const double mtp_ms[DS4_GLM_BASELINE_MAX_K - 1u],
++        const double target_ms[DS4_GLM_BASELINE_MAX_K],
++        const double cumulative_ms[DS4_GLM_BASELINE_MAX_K],
+         double elapsed_ms,
+         const ds4_glm_gpu_graph *g) {
+     char base[1024];
+@@ -60709,17 +60713,28 @@ static bool glm_baseline_capture_publish(
+             return false;
+         }
+     }
+-    char metadata[2048];
++    char metadata[4096];
+     const int length = snprintf(
+         metadata, sizeof(metadata),
+         "{\"format\":\"glm52-p1-baseline-source-v1\","
+         "\"source_position\":%u,\"prompt_tokens\":%u,"
+         "\"layers_first\":4,\"layers_last\":77,"
+         "\"experts\":%u,\"selected\":%u,\"K\":8,"
++        "\"source_ready_ms\":%.17g,"
++        "\"mtp_ms\":[%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g],"
++        "\"target_ms\":[%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g],"
++        "\"cumulative_ms\":[%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g],"
+         "\"elapsed_ms\":%.17g,"
+         "\"predicted_tokens\":[%d,%d,%d,%d,%d,%d,%d,%d]}\n",
+         source_pos, token_count, (unsigned)DS4_N_EXPERT,
+-        (unsigned)DS4_N_EXPERT_USED, elapsed_ms,
++        (unsigned)DS4_N_EXPERT_USED, source_ready_ms,
++        mtp_ms[0], mtp_ms[1], mtp_ms[2], mtp_ms[3],
++        mtp_ms[4], mtp_ms[5], mtp_ms[6],
++        target_ms[0], target_ms[1], target_ms[2], target_ms[3],
++        target_ms[4], target_ms[5], target_ms[6], target_ms[7],
++        cumulative_ms[0], cumulative_ms[1], cumulative_ms[2], cumulative_ms[3],
++        cumulative_ms[4], cumulative_ms[5], cumulative_ms[6], cumulative_ms[7],
++        elapsed_ms,
+         predicted[0], predicted[1], predicted[2], predicted[3],
+         predicted[4], predicted[5], predicted[6], predicted[7]);
+     if (length <= 0 || length >= (int)sizeof(metadata) ||
+@@ -60776,6 +60791,10 @@ int ds4_session_glm_baseline_capture(
+         ds4_session *session = NULL;
+         ds4_tokens prefix = {0};
+         int predicted[DS4_GLM_BASELINE_MAX_K] = {0};
++        double mtp_ms[DS4_GLM_BASELINE_MAX_K - 1u] = {0};
++        double target_ms[DS4_GLM_BASELINE_MAX_K] = {0};
++        double cumulative_ms[DS4_GLM_BASELINE_MAX_K] = {0};
++        double source_ready_ms = 0.0;
+         float *hidden = NULL;
+         const double started = now_sec();
+         if (ds4_session_create(&session, engine, ctx_size) != 0 || !session ||
+@@ -60801,6 +60820,7 @@ int ds4_session_glm_baseline_capture(
+         }
+         if (!baseline_capture_failed) {
+             predicted[0] = glm_session_logits_argmax(session->logits);
++            source_ready_ms = (now_sec() - started) * 1000.0;
+             hidden = malloc((size_t)DS4_N_EMBD * sizeof(float));
+             if (!hidden) baseline_capture_failed = true;
+         }
+@@ -60809,6 +60829,7 @@ int ds4_session_glm_baseline_capture(
+              step++) {
+             if (step < DS4_GLM_BASELINE_MAX_K) {
+                 int next = -1;
++                const double mtp_started = now_sec();
+                 if (ds4_gpu_tensor_read(g->cur, 0, hidden,
+                                         (uint64_t)DS4_N_EMBD * sizeof(float)) == 0 ||
+                     !glm_graph_mtp_step(g, &engine->model, &engine->weights,
+@@ -60820,19 +60841,24 @@ int ds4_session_glm_baseline_capture(
+                     baseline_capture_failed = true;
+                     break;
+                 }
++                mtp_ms[step - 1u] = (now_sec() - mtp_started) * 1000.0;
+                 predicted[step] = next;
+             }
+             g->baseline_capture_step = step;
+             g->baseline_capture_active = true;
++            const double target_started = now_sec();
+             if (ds4_session_eval(session, predicted[step - 1u], err, errlen) != 0) {
+                 baseline_capture_failed = true;
+             }
++            target_ms[step - 1u] = (now_sec() - target_started) * 1000.0;
++            cumulative_ms[step - 1u] = (now_sec() - started) * 1000.0;
+             g->baseline_capture_active = false;
+         }
+         if (!baseline_capture_failed &&
+             (!glm_graph_baseline_capture_complete(g) ||
+              !glm_baseline_capture_publish(
+                  directory, source_pos, token_count, predicted,
++                 source_ready_ms, mtp_ms, target_ms, cumulative_ms,
+                  (now_sec() - started) * 1000.0, g))) {
+             baseline_capture_failed = true;
+         }
+-- 
+2.43.0
+
