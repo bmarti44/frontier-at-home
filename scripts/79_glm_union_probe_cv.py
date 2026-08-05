@@ -3,7 +3,313 @@
 
 from __future__ import annotations
 
+import argparse
+import gc
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+
 import numpy as np
+
+
+ROOT = Path(__file__).resolve().parents[1]
+PROBE_PATH = ROOT / "scripts/78_glm_union_probe.py"
+TRAIN_FREEZE = ROOT / "results/glm52-gates/R0c-union-probe-p1-training-freeze.json"
+QUALITY = Path("/home/bmarti44/.local/state/glm52-p1-splits-r127-76faed9/train-fit")
+LONGS = [
+    Path("/home/bmarti44/.local/state/glm52-p0-shards/2ff949c-request-00000001"),
+    Path("/home/bmarti44/.local/state/glm52-p0-shards/2ff949c-request-00000002"),
+]
+LAYERS = tuple(range(3, 78))
+RANKS = (8, 16, 32)
+K_VALUES = (2, 4, 8)
+BUDGETS = (16, 32, 64)
+
+
+def _load_probe_module():
+    specification = importlib.util.spec_from_file_location("glm_union_probe_for_cv", PROBE_PATH)
+    if specification is None or specification.loader is None:
+        raise RuntimeError("cannot load frozen probe implementation")
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
+
+
+PROBE = _load_probe_module()
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _repository_head() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    if len(result) != 40 or any(character not in "0123456789abcdef" for character in result):
+        raise ValueError("repository HEAD is malformed")
+    return result
+
+
+def _write_json_exclusive(path: Path, value: dict[str, object]) -> None:
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        with temporary.open("x", encoding="utf-8") as handle:
+            json.dump(value, handle, sort_keys=True, indent=2, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temporary, path)
+        path_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(path_fd)
+        finally:
+            os.close(path_fd)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _load_authorized_sources() -> tuple[list[dict[str, np.ndarray]], dict[int, str], dict[str, object]]:
+    binding = PROBE.validate_training_sources(QUALITY, LONGS)
+    sources: list[dict[str, np.ndarray]] = []
+    with np.load(QUALITY / "records.npz", allow_pickle=False) as archive:
+        sources.append({
+            name: archive[name].copy() for name in (
+                "request_index", "layer", "token_position", "selected_ids",
+                "hidden_q4", "hidden_scale",
+            )
+        })
+    metadata = json.loads((QUALITY / "manifest.json").read_text(encoding="utf-8"))[
+        "request_metadata"
+    ]
+    groups = {int(row["request_index"]): str(row["group_id"]) for row in metadata}
+    for request_id, directory in enumerate(LONGS, 101):
+        with np.load(directory / "records.npz", allow_pickle=False) as archive:
+            source = {
+                name: archive[name].copy() for name in (
+                    "layer", "token_position", "selected_ids", "hidden_q4", "hidden_scale",
+                )
+            }
+        source["request_index"] = np.full(source["layer"].size, request_id, dtype=np.uint16)
+        sources.append(source)
+        groups[request_id] = "long-fixture-lineage-2ff949c"
+    if set(groups) != set(int(value) for source in sources for value in np.unique(source["request_index"])):
+        raise ValueError("authorized training group map differs from source requests")
+    return sources, groups, binding
+
+
+def _layer_arrays(
+    sources: list[dict[str, np.ndarray]], layer_id: int,
+) -> dict[str, np.ndarray]:
+    names = ("request_index", "layer", "token_position", "selected_ids", "hidden_q4", "hidden_scale")
+    pieces = {name: [] for name in names}
+    for source in sources:
+        mask = source["layer"] == layer_id
+        if not mask.any():
+            raise ValueError(f"training source has no routed layer {layer_id}")
+        for name in names:
+            pieces[name].append(source[name][mask])
+    return {name: np.concatenate(values) for name, values in pieces.items()}
+
+
+def _merge_disjoint(
+    destination: dict[str, dict[str, dict[str, float | int]]],
+    addition: dict[str, dict[str, dict[str, float | int]]],
+) -> None:
+    if set(destination) != set(addition):
+        raise ValueError("CV metric budget sets differ")
+    for budget in destination:
+        overlap = set(destination[budget]).intersection(addition[budget])
+        if overlap:
+            raise ValueError("CV request was scored in more than one fold")
+        destination[budget].update(addition[budget])
+
+
+def _empty_metric() -> dict[str, dict[str, dict[str, float | int]]]:
+    return {str(budget): {} for budget in BUDGETS}
+
+
+def run_layer(
+    sources: list[dict[str, np.ndarray]], groups: dict[int, str], layer_id: int,
+) -> dict[str, object]:
+    data = _layer_arrays(sources, layer_id)
+    request = data["request_index"]
+    rows, targets, valid = PROBE.multi_k_targets(
+        request, data["layer"], data["token_position"], data["selected_ids"],
+    )
+    weights = PROBE.request_balanced_weights(request, rows, valid)
+    history = PROBE.causal_expert_history(
+        request, data["layer"], data["token_position"], data["selected_ids"],
+    )
+    hidden = PROBE.unpack_probe_hidden(data["hidden_q4"], data["hidden_scale"]).astype(np.float16)
+    features = np.concatenate((hidden, history.astype(np.float16)), axis=1)[rows]
+    del hidden, history
+    request_fold = {identity: PROBE.grouped_fold(group) for identity, group in groups.items()}
+    source_folds = np.asarray([request_fold[int(value)] for value in request], dtype=np.uint8)
+    prediction_folds = source_folds[rows]
+    frequency = {str(k): _empty_metric() for k in K_VALUES}
+    probe = {str(rank): {str(k): _empty_metric() for k in K_VALUES} for rank in RANKS}
+    training: dict[str, dict[str, object]] = {str(rank): {} for rank in RANKS}
+    for fold in range(3):
+        validation = prediction_folds == fold
+        fitting = np.flatnonzero(~validation).astype(np.int64)
+        if not validation.any() or fitting.size == 0:
+            raise ValueError("grouped CV fold is empty")
+        fit_source = source_folds != fold
+        frequency_order = PROBE.frequency_prior_by_layer(
+            data["layer"][fit_source], data["selected_ids"][fit_source],
+        )[layer_id]
+        for k_index, k in enumerate(K_VALUES):
+            active = validation & valid[:, k_index]
+            rankings = np.tile(frequency_order, (int(active.sum()), 1))
+            observed = accumulate_request_metrics(
+                request[rows[active]], targets[active, k_index], rankings,
+            )
+            _merge_disjoint(frequency[str(k)], observed)
+        for rank in RANKS:
+            state, report = PROBE.train_probe_head(
+                features, targets, valid, weights, fitting, rank,
+                epochs=8, batch_rows=512, seed=20260805, device="cuda",
+            )
+            logits = PROBE.predict_probe_head(
+                features[validation], state, rank, batch_rows=512, device="cuda",
+            )
+            training[str(rank)][str(fold)] = report
+            for k_index, k in enumerate(K_VALUES):
+                active_all = np.flatnonzero(validation & valid[:, k_index])
+                active_validation = valid[validation, k_index]
+                rankings = np.argsort(
+                    -logits[active_validation, k_index], axis=1, kind="stable",
+                ).astype(np.uint16)
+                observed = accumulate_request_metrics(
+                    request[rows[active_all]], targets[active_all, k_index], rankings,
+                )
+                _merge_disjoint(probe[str(rank)][str(k)], observed)
+            del state, logits
+    expected_requests = set(str(value) for value in np.unique(request))
+    for method in [frequency, *probe.values()]:
+        for by_k in method.values():
+            if any(set(by_k[str(budget)]) != expected_requests for budget in BUDGETS):
+                raise ValueError("CV method does not cover every training request")
+    return {
+        "schema_version": 1,
+        "classification": "TRAIN_ONLY_LAYER_CV",
+        "layer": layer_id,
+        "source_rows": int(request.size),
+        "prediction_rows": int(rows.size),
+        "requests": len(expected_requests),
+        "frequency": frequency,
+        "probe": probe,
+        "training": training,
+    }
+
+
+def execute(command: str, out_dir: Path) -> int:
+    PROBE._tracked_bytes(PROBE_PATH)
+    PROBE._tracked_bytes(Path(__file__).resolve())
+    freeze_bytes = PROBE._tracked_bytes(TRAIN_FREEZE)
+    head = _repository_head()
+    requested = out_dir.absolute()
+    if command == "run":
+        if requested.exists() or requested.is_symlink():
+            raise FileExistsError(requested)
+        requested.mkdir(mode=0o700, parents=False)
+        manifest = {
+            "schema_version": 1,
+            "classification": "TRAIN_ONLY_CV_IN_PROGRESS",
+            "repository_head": head,
+            "driver_sha256": _sha256(Path(__file__).resolve()),
+            "probe_sha256": _sha256(PROBE_PATH),
+            "training_freeze_sha256": hashlib.sha256(freeze_bytes).hexdigest(),
+            "layers": list(LAYERS),
+            "ranks": list(RANKS),
+            "K": list(K_VALUES),
+            "budgets": list(BUDGETS),
+        }
+        _write_json_exclusive(requested / "manifest.json", manifest)
+    else:
+        requested = requested.resolve(strict=True)
+        manifest = json.loads((requested / "manifest.json").read_text(encoding="utf-8"))
+        expected = {
+            "repository_head": head,
+            "driver_sha256": _sha256(Path(__file__).resolve()),
+            "probe_sha256": _sha256(PROBE_PATH),
+            "training_freeze_sha256": hashlib.sha256(freeze_bytes).hexdigest(),
+        }
+        if any(manifest.get(key) != value for key, value in expected.items()):
+            raise ValueError("CV resume candidate differs")
+    if (requested / "summary.json").exists():
+        raise FileExistsError("CV summary already exists")
+    sources, groups, binding = _load_authorized_sources()
+    for layer_id in LAYERS:
+        output = requested / f"layer-{layer_id:03d}.json"
+        if output.exists():
+            prior = json.loads(output.read_text(encoding="utf-8"))
+            if prior.get("layer") != layer_id:
+                raise ValueError("CV layer checkpoint differs")
+            continue
+        result = run_layer(sources, groups, layer_id)
+        result.update({
+            "repository_head": head,
+            "driver_sha256": manifest["driver_sha256"],
+            "probe_sha256": manifest["probe_sha256"],
+        })
+        _write_json_exclusive(output, result)
+        print(json.dumps({"completed_layer": layer_id}, sort_keys=True), flush=True)
+        gc.collect()
+    layers = [json.loads((requested / f"layer-{layer:03d}.json").read_text()) for layer in LAYERS]
+    frequency_summary = {
+        str(k): aggregate_request_metrics([layer["frequency"][str(k)] for layer in layers])
+        for k in K_VALUES
+    }
+    probe_summary = {
+        str(rank): {
+            str(k): aggregate_request_metrics([layer["probe"][str(rank)][str(k)] for layer in layers])
+            for k in K_VALUES
+        }
+        for rank in RANKS
+    }
+    selected_rank = max(
+        RANKS,
+        key=lambda rank: (
+            probe_summary[str(rank)]["4"]["32"]["macro_request_recall"], -rank,
+        ),
+    )
+    summary = {
+        "schema_version": 1,
+        "classification": "TRAIN_ONLY_CV_COMPLETE",
+        "repository_head": head,
+        "manifest_sha256": _sha256(requested / "manifest.json"),
+        "training_source_binding": binding,
+        "completed_layers": list(LAYERS),
+        "frequency": frequency_summary,
+        "probe": probe_summary,
+        "selected_rank": selected_rank,
+        "selection_formula": "maximum K=4 budget=32 macro-request recall; exact tie chooses smaller rank",
+        "claim_limit": "Train-only rank selection; no diagnostic, calibration, or test metric was opened.",
+    }
+    _write_json_exclusive(requested / "summary.json", summary)
+    print(json.dumps(summary, sort_keys=True, indent=2, allow_nan=False))
+    return 0
+
+
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument("command", choices=("run", "resume"))
+    result.add_argument("--out-dir", required=True, type=Path)
+    return result
+
+
+if __name__ == "__main__":
+    arguments = parser().parse_args()
+    raise SystemExit(execute(arguments.command, arguments.out_dir))
 
 
 def accumulate_request_metrics(
