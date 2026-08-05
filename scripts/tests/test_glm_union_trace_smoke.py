@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 from pathlib import Path
 import tempfile
@@ -303,7 +304,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                 "completion_tokens": 8,
                 "generated_reasoning_sha256": "a" * 64,
                 "generated_content_sha256": "b" * 64,
-                "token_ids": [7, 8],
+                "token_ids": list(range(8)),
             }
             for row in ledger
         ]
@@ -314,7 +315,10 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         )
         self.assertEqual(result["verdict"], "PASS")
 
-        mutations = ("consistent_truncation", "missing_case", "relabel", "output", "rows")
+        mutations = (
+            "consistent_truncation", "missing_case", "relabel", "output", "rows",
+            "empty_output", "false_usage", "missing_output",
+        )
         for mutation in mutations:
             with self.subTest(mutation=mutation):
                 off, on, bad_score = copy.deepcopy(requests), copy.deepcopy(requests), copy.deepcopy(score)
@@ -332,6 +336,18 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     on[1]["case_id"] = "case_001"
                 elif mutation == "output":
                     on[1]["generated_reasoning_sha256"] = "c" * 64
+                elif mutation == "empty_output":
+                    for arm_requests in (off, on):
+                        arm_requests[0]["token_ids"] = []
+                        arm_requests[0]["generated_reasoning_sha256"] = hashlib.sha256(b"").hexdigest()
+                        arm_requests[0]["generated_content_sha256"] = hashlib.sha256(b"").hexdigest()
+                elif mutation == "false_usage":
+                    for arm_requests in (off, on):
+                        arm_requests[0]["completion_tokens"] = 7
+                        arm_requests[0]["token_ids"] = list(range(7))
+                elif mutation == "missing_output":
+                    for arm_requests in (off, on):
+                        arm_requests[0].pop("generated_content_sha256")
                 else:
                     bad_score["token_layer_events"] = 374
                 self.assertEqual(
@@ -341,6 +357,65 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     )["verdict"],
                     "FAIL",
                 )
+
+    def test_quality_arm_identity_rejects_copied_and_mutated_arms(self) -> None:
+        expected = {
+            "binary_sha256": "1" * 64,
+            "model_sha256": "2" * 64,
+            "tokenizer_sha256": "3" * 64,
+            "fixture_sha256": "4" * 64,
+            "split_plan_sha256": "5" * 64,
+            "configuration_sha256": "6" * 64,
+            "off_environment_sha256": "7" * 64,
+            "on_environment_sha256": "8" * 64,
+        }
+        off = {
+            **{key: value for key, value in expected.items() if not key.endswith("environment_sha256")},
+            "mode": "off", "environment_sha256": expected["off_environment_sha256"],
+            "trace_files": 0, "trace_bytes": 0,
+        }
+        on = {
+            **{key: value for key, value in expected.items() if not key.endswith("environment_sha256")},
+            "mode": "on", "environment_sha256": expected["on_environment_sha256"],
+            "trace_files": 10, "trace_bytes": 1000,
+        }
+        score = {"verdict": "PASS", "artifacts": [{}] * 10, "total_bytes": 1000}
+        self.assertTrue(all(MODULE.quality_arm_identity_checks(off, on, score, expected).values()))
+        for mutation in ("copied", "identity", "off_trace", "on_count", "on_bytes"):
+            with self.subTest(mutation=mutation):
+                bad_off, bad_on, bad_score = copy.deepcopy(off), copy.deepcopy(on), copy.deepcopy(score)
+                if mutation == "copied":
+                    bad_off = copy.deepcopy(on)
+                elif mutation == "identity":
+                    bad_on["binary_sha256"] = "9" * 64
+                elif mutation == "off_trace":
+                    bad_off["trace_files"] = 1
+                elif mutation == "on_count":
+                    bad_on["trace_files"] = 9
+                else:
+                    bad_on["trace_bytes"] = 999
+                self.assertFalse(all(MODULE.quality_arm_identity_checks(
+                    bad_off, bad_on, bad_score, expected,
+                ).values()))
+
+    def test_final_artifact_receipts_reject_post_containment_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact = root / "arm.json"
+            artifact.write_text("original", encoding="utf-8")
+            stat = artifact.stat()
+            main = root / "main.log"
+            main.write_text(
+                "final_artifact_verified path=" + str(artifact) +
+                " sha256=" + hashlib.sha256(b"original").hexdigest() +
+                f" device_inode={stat.st_dev}:{stat.st_ino}:{stat.st_size}\n",
+                encoding="utf-8",
+            )
+            containment = {"crash_directory": str(root), "main_sha256": MODULE.SHARED.sha256(main)}
+            MODULE.verify_final_artifact_receipts(containment, [artifact])
+            artifact.write_text("replacement", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "final artifact"):
+                MODULE.verify_final_artifact_receipts(containment, [artifact])
 
     def test_quality_windows_never_cross_case_or_split_boundaries(self) -> None:
         rows = [
