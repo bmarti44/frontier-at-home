@@ -19,6 +19,7 @@ actual_installer_sha=$(/usr/bin/sha256sum -- "$0")
 unset GLM52_REVIEWED_INSTALLER_SHA256 reviewed_installer_sha actual_installer_sha
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
+readonly SOURCE_UPLOAD_PACK="/usr/bin/git -c safe.directory=$REPO/.git upload-pack"
 readonly SOURCE=scripts/65_glm52_w1_submit.py
 readonly SUBMITTER=/usr/local/sbin/glm52-w1-submit
 readonly LIBEXEC=/usr/local/libexec/glm52-w1
@@ -161,6 +162,7 @@ actual_submitter_sha=$(/usr/bin/sha256sum "$submitter_temporary")
 /usr/bin/python3 -m py_compile "$submitter_temporary" ||
     die "reviewed submitter is not valid Python"
 /usr/bin/git -c core.hooksPath=/dev/null clone --no-local --no-checkout \
+    --upload-pack="$SOURCE_UPLOAD_PACK" \
     "$REPO" "$harness_temporary/repository"
 /usr/bin/git -c core.hooksPath=/dev/null -C "$harness_temporary/repository" \
     checkout --detach "$CANDIDATE_HASH"
