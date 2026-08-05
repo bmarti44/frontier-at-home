@@ -1109,6 +1109,60 @@ class BaselineTableTests(unittest.TestCase):
         self.assertEqual(record["failure_injection"], failure)
         MODULE.validate_two_control_record(record)
 
+    def test_failure_injection_requires_executed_stage_records(self) -> None:
+        fabricated = {
+            "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
+            "all_destroyed": True,
+            "all_control_continuations_equal": True,
+        }
+        with self.assertRaises(ValueError):
+            MODULE.validate_failure_injection_evidence(fabricated)
+        stages = []
+        for index, stage in enumerate(
+            ("mtp_call", "target_eval", "route_capture", "disposal"), start=1,
+        ):
+            stages.append({
+                "stage": stage,
+                "process_pid": 1000 + index,
+                "process_start_ticks": 2000 + index,
+                "cache_namespace": f"fault-{stage}-{index}",
+                "authenticated_marker_sha256": f"{index:064x}",
+                "injected_exit_code": 86,
+                "process_group_empty": True,
+                "cache_namespace_absent": True,
+                "post_control_continuation_sha256": "a" * 64,
+                "post_control_token_ids_sha256": "b" * 64,
+                "runtime_log": {
+                    "path": f"runtime-logs/fault-{stage}.log",
+                    "sha256": f"{index + 10:064x}",
+                    "bytes": 128 + index,
+                },
+            })
+        MODULE.validate_failure_injection_evidence({
+            "schema_version": 1,
+            "records": stages,
+            "reference_continuation_sha256": "a" * 64,
+            "reference_token_ids_sha256": "b" * 64,
+        })
+        for mutation in ("missing", "exit", "reused_pid", "unreaped"):
+            changed = json.loads(json.dumps(stages))
+            if mutation == "missing":
+                changed.pop()
+            elif mutation == "exit":
+                changed[0]["injected_exit_code"] = 0
+            elif mutation == "reused_pid":
+                changed[1]["process_pid"] = changed[0]["process_pid"]
+                changed[1]["process_start_ticks"] = changed[0]["process_start_ticks"]
+            else:
+                changed[0]["process_group_empty"] = False
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                MODULE.validate_failure_injection_evidence({
+                    "schema_version": 1,
+                    "records": changed,
+                    "reference_continuation_sha256": "a" * 64,
+                    "reference_token_ids_sha256": "b" * 64,
+                })
+
     def test_control_fingerprint_uses_exact_tokens_logits_and_rejects_short_output(self):
         selected = [
             f'ds4: decode-consistency selected[{index}]={{"token":{index}}}'.encode()
@@ -1186,6 +1240,30 @@ class BaselineTableTests(unittest.TestCase):
         self.assertTrue(MODULE.decide_mtp_fold(metrics, cost)["fold_into_mtp"])
         cost["mtp_equal_cost_to_probe"] = False
         self.assertFalse(MODULE.decide_mtp_fold(metrics, cost)["fold_into_mtp"])
+
+    def test_incomparable_cost_is_no_result_and_cannot_authorize_mtp_fold(self) -> None:
+        requests, targets, rankings = self.fixture()
+        metrics = MODULE.score_baseline_table(
+            requests, targets, rankings, bootstrap_resamples=100,
+        )
+        for k in (2, 4, 8):
+            for budget in (16, 32, 64):
+                metrics["methods"]["probe"][str(k)][str(budget)][
+                    "macro_request_recall"
+                ] = 0.0
+                metrics["methods"]["mtp"][str(k)][str(budget)][
+                    "macro_request_recall"
+                ] = 1.0
+        cost = MODULE.unqualified_cost_result()
+        self.assertEqual(cost, {
+            "schema_version": 2,
+            "verdict": "NO_RESULT",
+            "reason": "MATCHED_DIRECT_ARMS_NOT_MEASURED",
+            "fold_authority": False,
+        })
+        decision = MODULE.decide_mtp_fold(metrics, cost)
+        self.assertFalse(decision["fold_into_mtp"])
+        self.assertEqual(decision["verdict"], "KEEP_PARETO_SEPARATE")
 
     def test_completed_result_is_independently_reconstructed_and_strict_reopened(self) -> None:
         requests, targets, rankings = self.fixture()

@@ -46,6 +46,81 @@ def load_controller():
 
 
 class RootAttestorContractTests(unittest.TestCase):
+    def test_p1_result_publication_moves_into_root_authority_and_binds_manifest(self):
+        submitter = load_submitter()
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-p1-result"
+            source.mkdir()
+            (source / "attempt.json").write_text(
+                '{"status":"COMPLETE"}\n', encoding="utf-8",
+            )
+            (source / "summary.json").write_text(
+                '{"decision":{"verdict":"STOP_PROBE"}}\n', encoding="utf-8",
+            )
+            manifest = submitter._tree_manifest(source)
+            digest = submitter._manifest_sha256(manifest)
+            with mock.patch.object(submitter.os, "chown") as chown:
+                receipt = submitter.publish_p1_result(
+                    candidate, source.name, digest,
+                    source_parent=source_parent, state_root=state_root,
+                    approval_reader=lambda: ({
+                        "candidate_hash": candidate,
+                        "controller_sha256": "2" * 64,
+                    }, {
+                        "approval_sha256": "3" * 64,
+                        "approval_device": 1,
+                        "approval_inode": 2,
+                    }),
+                )
+            self.assertTrue(chown.called)
+            self.assertFalse(source.exists())
+            destination = Path(receipt["authoritative_root"])
+            self.assertTrue(destination.is_dir())
+            self.assertEqual(receipt["manifest_sha256"], digest)
+            self.assertEqual(destination.stat().st_mode & 0o777, 0o555)
+            self.assertEqual((destination / "summary.json").stat().st_mode & 0o777, 0o444)
+
+    def test_p1_result_publication_rejects_digest_race_but_preserves_attempt(self):
+        submitter = load_submitter()
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-p1-result"
+            source.mkdir()
+            (source / "attempt.json").write_text(
+                '{"status":"FAILED"}\n', encoding="utf-8",
+            )
+            with (
+                mock.patch.object(submitter.os, "chown"),
+                self.assertRaisesRegex(ValueError, "manifest"),
+            ):
+                submitter.publish_p1_result(
+                        candidate, source.name, "4" * 64,
+                        source_parent=source_parent, state_root=state_root,
+                        approval_reader=lambda: ({
+                            "candidate_hash": candidate,
+                            "controller_sha256": "2" * 64,
+                        }, {
+                            "approval_sha256": "3" * 64,
+                            "approval_device": 1,
+                            "approval_inode": 2,
+                        }),
+                    )
+            self.assertFalse(source.exists())
+            quarantined = list((state_root / "p1-results").glob("glm52-p1-result*"))
+            self.assertEqual(len(quarantined), 1)
+            self.assertEqual(quarantined[0].stat().st_mode & 0o777, 0o500)
+
     def test_submitter_accepts_hashes_only(self):
         submitter = load_submitter()
         sha1 = "1" * 40
