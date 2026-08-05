@@ -198,6 +198,7 @@ allowlist = {
     "wrapper_log_sha256",
     "samples_log_sha256",
     "kernel_log_sha256",
+    "installer_sha256",
     "cmd_sha256",
     "kernel_sha256",
     "main_sha256",
