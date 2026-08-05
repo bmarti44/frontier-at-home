@@ -140,6 +140,26 @@ class UnionTargetTests(unittest.TestCase):
             ]
             self.assertAlmostEqual(min(masses), max(masses))
 
+    def test_probe_head_training_path_is_finite_and_replayable_on_cpu(self) -> None:
+        features = np.linspace(-1, 1, 96, dtype=np.float32).reshape(16, 6)
+        targets = np.zeros((16, 3, 256), dtype=np.bool_)
+        for row in range(16):
+            targets[row, :, row] = True
+        valid = np.ones((16, 3), dtype=np.bool_)
+        weights = np.ones((16, 3), dtype=np.float32)
+        fit = np.arange(16, dtype=np.int64)
+        state, report = MODULE.train_probe_head(
+            features, targets, valid, weights, fit, 8,
+            epochs=1, batch_rows=8, device="cpu",
+        )
+        logits = MODULE.predict_probe_head(
+            features, state, 8, batch_rows=7, device="cpu",
+        )
+        self.assertEqual(logits.shape, (16, 3, 256))
+        self.assertTrue(np.isfinite(logits).all())
+        self.assertTrue(np.isfinite(report["epoch_losses"]).all())
+        self.assertEqual(set(state), {"down.weight", "up.weight", "up.bias"})
+
     def test_scoring_rejects_duplicate_rankings_or_cross_row_mismatch(self) -> None:
         request, layer, position, selected = self.fixture()
         rows, target = MODULE.future_union_targets(

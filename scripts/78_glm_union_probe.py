@@ -745,6 +745,35 @@ def request_balanced_weights(
     return weights
 
 
+def train_probe_head(
+    features: np.ndarray,
+    targets: np.ndarray,
+    valid: np.ndarray,
+    weights: np.ndarray,
+    fit_rows: np.ndarray,
+    rank: int,
+    *,
+    epochs: int = 8,
+    batch_rows: int = 512,
+    seed: int = 20260805,
+    device: str = "cuda",
+) -> tuple[dict[str, np.ndarray], dict[str, object]]:
+    """Fit one frozen low-rank multi-K head and return CPU state plus training evidence."""
+    raise NotImplementedError
+
+
+def predict_probe_head(
+    features: np.ndarray,
+    state: dict[str, np.ndarray],
+    rank: int,
+    *,
+    batch_rows: int = 512,
+    device: str = "cuda",
+) -> np.ndarray:
+    """Return finite [row,K,expert] logits from a frozen head state."""
+    raise NotImplementedError
+
+
 def score_rankings(
     row_indices: np.ndarray,
     targets: np.ndarray,
