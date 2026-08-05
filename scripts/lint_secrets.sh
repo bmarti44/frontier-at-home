@@ -125,6 +125,8 @@ allowlist = {
     "generated_reasoning_sha256",
     "diff_sha256",
     "patch_sha256",
+    "engine_source_sha256",
+    "engine_test_sha256",
     "ds4_cuda_sha256",
     "state_header_sha256",
     "state_header_engine_copy_sha256",
