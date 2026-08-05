@@ -131,7 +131,10 @@ def diagnostic_pair_metrics(
     }
 
 
-def aggregate_overlap(layers: list[dict[str, dict[str, int]]]) -> dict[str, float | int]:
+def aggregate_overlap(
+    layers: list[dict[str, dict[str, int]]],
+    expected_requests: set[str] | None = None,
+) -> dict[str, float | int]:
     if not layers:
         raise ValueError("top-32 overlap evidence is missing")
     totals: dict[str, dict[str, int]] = {}
@@ -142,6 +145,8 @@ def aggregate_overlap(layers: list[dict[str, dict[str, int]]]) -> dict[str, floa
             target = totals.setdefault(request, {"overlap_sum": 0, "events": 0})
             target["overlap_sum"] += record["overlap_sum"]
             target["events"] += record["events"]
+    if expected_requests is not None and set(totals) != expected_requests:
+        raise ValueError("precision overlap request coverage differs")
     return {
         "requests": len(totals),
         "events": sum(value["events"] for value in totals.values()),
@@ -153,6 +158,66 @@ def aggregate_overlap(layers: list[dict[str, dict[str, int]]]) -> dict[str, floa
             value["overlap_sum"] / (32 * value["events"]) for value in totals.values()
         ])),
     }
+
+
+def aggregate_sparse_request_metrics(
+    layers: list[dict[str, dict[str, dict[str, float | int]]]],
+    expected_requests: set[str],
+) -> dict[str, dict[str, float | int]]:
+    """Aggregate sparse layer events within request, then macro-average requests."""
+    if (
+        not isinstance(layers, list) or not layers or
+        any(not isinstance(layer, dict) for layer in layers) or
+        not isinstance(expected_requests, set) or not expected_requests or
+        any(not isinstance(request, str) or not request.isdigit() for request in expected_requests)
+    ):
+        raise ValueError("precision sparse metrics are missing")
+    budgets = set(layers[0])
+    if not budgets or any(set(layer) != budgets for layer in layers):
+        raise ValueError("precision sparse metric budget sets differ")
+    required = {"recall_sum", "precision_sum", "wasted_sum", "coverage_sum", "events"}
+    output: dict[str, dict[str, float | int]] = {}
+    for budget in sorted(budgets, key=int):
+        observed_requests = set().union(*(set(layer[budget]) for layer in layers))
+        if observed_requests != expected_requests:
+            raise ValueError("precision sparse request coverage differs")
+        totals = {
+            request: {name: 0.0 for name in required - {"events"}} | {"events": 0}
+            for request in sorted(expected_requests, key=int)
+        }
+        for layer in layers:
+            for request, record in layer[budget].items():
+                if (
+                    request not in expected_requests or set(record) != required or
+                    not isinstance(record["events"], int) or record["events"] <= 0
+                ):
+                    raise ValueError("precision sparse request metric record is malformed")
+                for name in required - {"events"}:
+                    value = record[name]
+                    if not isinstance(value, (int, float)) or not np.isfinite(value):
+                        raise ValueError("precision sparse request metric is non-finite")
+                    totals[request][name] += float(value)
+                totals[request]["events"] += record["events"]
+        if any(record["events"] <= 0 for record in totals.values()):
+            raise ValueError("precision sparse request has no events")
+        request_means = {
+            name: [totals[request][name] / totals[request]["events"] for request in totals]
+            for name in required - {"events"}
+        }
+        event_count = sum(record["events"] for record in totals.values())
+        output[budget] = {
+            "requests": len(totals),
+            "events": event_count,
+            "macro_request_recall": float(np.mean(request_means["recall_sum"])),
+            "macro_request_precision": float(np.mean(request_means["precision_sum"])),
+            "macro_request_wasted_experts": float(np.mean(request_means["wasted_sum"])),
+            "macro_request_full_set_coverage": float(np.mean(request_means["coverage_sum"])),
+            "event_weighted_recall": sum(value["recall_sum"] for value in totals.values()) / event_count,
+            "event_weighted_precision": sum(value["precision_sum"] for value in totals.values()) / event_count,
+            "event_weighted_wasted_experts": sum(value["wasted_sum"] for value in totals.values()) / event_count,
+            "event_weighted_full_set_coverage": sum(value["coverage_sum"] for value in totals.values()) / event_count,
+        }
+    return output
 
 
 def _load_diagnostic() -> tuple[dict[str, np.ndarray], dict[str, object]]:
@@ -437,6 +502,7 @@ def replay_diagnostic_events(
     q4_layers = {str(k): [] for k in CV.K_VALUES}
     fp16_layers = {str(k): [] for k in CV.K_VALUES}
     overlap_layers = {str(k): [] for k in CV.K_VALUES}
+    expected_requests = {str(k): set() for k in CV.K_VALUES}
     zero_cells = []
     for layer_id in CV.LAYERS:
         _data, contracts, _selected, _scorable = diagnostic_layer_contract(diagnostic, layer_id)
@@ -459,6 +525,7 @@ def replay_diagnostic_events(
             if count == 0:
                 zero_cells.append({"layer": layer_id, "K": k})
                 continue
+            expected_requests[str(k)].update(map(str, np.unique(contract["request"])))
             q4 = CV.score_event_evidence(
                 contract["request"], contract["target_size"], evidence[prefix + "q4_hits"],
                 CV.BUDGETS,
@@ -482,13 +549,25 @@ def replay_diagnostic_events(
             overlap_layers[str(k)].append(overlap_record)
     if any(not values for values in [*q4_layers.values(), *fp16_layers.values(), *overlap_layers.values()]):
         raise ValueError("precision evidence has no nonempty K coverage")
+    diagnostic_requests = set(map(str, np.unique(diagnostic["request_index"])))
+    if any(requests != diagnostic_requests for requests in expected_requests.values()):
+        raise ValueError("precision diagnostic request coverage differs by K")
     scorable_rows = int(sum(
         diagnostic_layer_contract(diagnostic, layer)[3].sum() for layer in CV.LAYERS
     ))
     return {
-        "q4": {k: CV.aggregate_request_metrics(values) for k, values in q4_layers.items()},
-        "fp16": {k: CV.aggregate_request_metrics(values) for k, values in fp16_layers.items()},
-        "top32_overlap": {k: aggregate_overlap(values) for k, values in overlap_layers.items()},
+        "q4": {
+            k: aggregate_sparse_request_metrics(values, expected_requests[k])
+            for k, values in q4_layers.items()
+        },
+        "fp16": {
+            k: aggregate_sparse_request_metrics(values, expected_requests[k])
+            for k, values in fp16_layers.items()
+        },
+        "top32_overlap": {
+            k: aggregate_overlap(values, expected_requests[k])
+            for k, values in overlap_layers.items()
+        },
         "coverage": {
             "holdout_rows": int(diagnostic["hidden_fp16_holdout_row"].size),
             "scorable_rows": scorable_rows,

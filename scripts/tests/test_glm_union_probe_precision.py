@@ -141,11 +141,26 @@ class PrecisionDiagnosticTests(unittest.TestCase):
                 path = Path(temporary) / "events.npz"
                 binding = MODULE.CV._write_npz_exclusive(path, evidence)
                 replayed = MODULE.replay_diagnostic_events(path, binding, diagnostic)
+        expected_recall = {"2": 1.0, "4": 1.0, "8": 0.5}
         for k in map(str, MODULE.CV.K_VALUES):
             self.assertEqual(replayed["q4"][k]["32"]["requests"], 2)
             self.assertEqual(replayed["q4"][k]["32"]["events"], 2)
-            self.assertEqual(replayed["q4"][k]["32"]["macro_request_recall"], 1.0)
-            self.assertEqual(replayed["q4"][k]["32"]["event_weighted_recall"], 1.0)
+            self.assertEqual(
+                replayed["q4"][k]["32"]["macro_request_recall"], expected_recall[k],
+            )
+            self.assertEqual(
+                replayed["q4"][k]["32"]["event_weighted_recall"], expected_recall[k],
+            )
+        sparse_record = {
+            "16": {
+                "1": {
+                    "recall_sum": 1.0, "precision_sum": 1.0,
+                    "wasted_sum": 0.0, "coverage_sum": 1.0, "events": 1,
+                },
+            },
+        }
+        with self.assertRaisesRegex(ValueError, "request coverage differs"):
+            MODULE.aggregate_sparse_request_metrics([sparse_record], {"1", "2"})
 
     def test_diagnostic_contract_rejects_row_and_expert_mutations(self) -> None:
         rows = 12225
