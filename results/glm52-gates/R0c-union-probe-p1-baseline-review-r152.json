@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "ae9a43ba6be529c35e70c860a2ab51ca9cf5b5a0",
+  "review_round": 152,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 85,
+    "critical": [],
+    "high": [
+      "P1-BASE-C14-H1-ROOT-VALIDATOR-PYTHON-ENV"
+    ],
+    "verdict": "REJECT; ROOT-STAGED INSTALL MAY_NOT_PROCEED"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 65,
+    "critical": [],
+    "high": [
+      "P1-BASE-C14-H1-ROOT-VALIDATOR-RUNTIME-ABSENT",
+      "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY",
+      "BASE-R142-H3"
+    ],
+    "verdict": "REJECT; ROOT-STAGED INSTALL MUST_NOT_PROCEED"
+  },
+  "verified_closed": [
+    "P1-BASE-IMPL-H5-ROOT-COPY-AND-CANONICAL-RECONSTRUCTION",
+    "P1-BASE-C13-H1-ROOT-ONLY-RESULT-READABILITY",
+    "BASE-R142-H4",
+    "P1-BASE-R149-C1-USER-WRITABLE-ROOT-INSTALLER",
+    "P1-BASE-R149-H1-APPROVED-COMMIT-NOT-ENFORCED-BY-CONTROLLER"
+  ],
+  "open_blockers": [
+    {
+      "id": "P1-BASE-C14-H1-ROOT-VALIDATOR-RUNTIME-ABSENT",
+      "severity": "high",
+      "finding": "The sanitized root validator lacks NumPy and tokenizers. Every valid publication would fail before replay; importing the benchmark owner's user-writable site-packages as root is not an acceptable fix."
+    },
+    {
+      "id": "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY",
+      "severity": "high",
+      "finding": "The held-out scorer defaults to CUDA FP16 while root replay is forced to CPU. Singer reproduced different probe rankings in 64 of 64 rows, so exact canonical comparison is not cross-device valid."
+    },
+    {
+      "id": "BASE-R142-H3",
+      "severity": "high",
+      "finding": "Fault main.log is semantically checked, but fault kernel.log and wrapper stdout/stderr are only hash-bound. An injected Xid or extra unrelated fatal condition can remain uninterpreted."
+    }
+  ],
+  "independent_reproduction": {
+    "root_python_runtime": "CONFIRMED by root agent and both reviewers with the exact sanitized environment",
+    "cross_device_rankings": "CONFIRMED by Singer: maximum logit delta 0.0012606382369995117 and ranking differences in 64/64 synthetic rows",
+    "fault_safety_gap": "CONFIRMED by source inspection: fault replay passes only main.log to the expected-failure validator"
+  },
+  "convergence": {
+    "candidate_14_blocking_count_before": 3,
+    "candidate_14_blocking_count_after": 3,
+    "consecutive_non_shrinking_candidates": 1,
+    "owner_override_active": true,
+    "autonomous_candidate_15_allowed": true
+  },
+  "candidate_15_scope": [
+    "Install and hash-bind an offline root-owned minimal Python dependency snapshot; never import root scorer code from user-writable site-packages.",
+    "Bind the scoring device/backend and replay on the identical CUDA path, with a real non-held-out installed-boundary smoke before held-out access.",
+    "Semantically validate every expected-failure wrapper artifact and reject Xid, unrelated fatal, wrong stdout/stderr, memory/cgroup and cleanup failures."
+  ],
+  "next_action": "Commit RED tests for all three blocker classes, implement only those closures as Candidate 15, run the full audit, and return the frozen diff to Nash and Singer. Do not install or open held-out values."
+}
