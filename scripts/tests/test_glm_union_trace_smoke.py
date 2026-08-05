@@ -189,7 +189,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         ]
         off["corpus_requests"] = copy.deepcopy(requests)
         on["corpus_requests"] = copy.deepcopy(requests)
-        off["expert_cache_budget"] = on["expert_cache_budget"] = "36GB"
+        off["expert_cache_budget"] = on["expert_cache_budget"] = "32GB"
         score = {
             "verdict": "PASS", "events": 150, "requests": 2,
             "token_layer_events": 76800,
@@ -295,7 +295,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             '"minimum_token_layer_events": 76800',
         ):
             self.assertIn(marker, self.runner)
-        self.assertIn('CORPUS_CACHE_EXPERTS = "36GB"', self.runner)
+        self.assertIn('CORPUS_CACHE_EXPERTS = "32GB"', self.runner)
         self.assertIn("cache_experts=(CORPUS_CACHE_EXPERTS", self.runner)
 
     def test_corpus_scores_exact_zero_based_main_routed_layers(self) -> None:
