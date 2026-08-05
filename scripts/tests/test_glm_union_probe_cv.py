@@ -19,6 +19,75 @@ SPEC.loader.exec_module(MODULE)
 
 
 class CVMetricTests(unittest.TestCase):
+    def checkpoint_fixture(self):
+        events = {"2": 8, "4": 6, "8": 2}
+        def metric():
+            return {
+                str(k): {
+                    str(budget): {"1": {
+                        "recall_sum": 0.0,
+                        "precision_sum": 0.0,
+                        "wasted_sum": float(budget * events[str(k)]),
+                        "coverage_sum": 0.0,
+                        "events": events[str(k)],
+                    }} for budget in MODULE.BUDGETS
+                } for k in MODULE.K_VALUES
+            }
+        training = {
+            str(rank): {
+                str(fold): {
+                    "fit_rows": 5 + fold,
+                    "rank": rank,
+                    "epochs": 8,
+                    "batch_rows": 512,
+                    "seed": 20260805,
+                    "positive_weights": [10.0, 11.0, 12.0],
+                    "epoch_losses": [1.0] * 8,
+                    "epoch_k_losses": [[1.0, 1.0, 1.0]] * 8,
+                    "deterministic_algorithms": True,
+                } for fold in range(3)
+            } for rank in MODULE.RANKS
+        }
+        identity = {
+            "repository_head": "1" * 40,
+            "driver_sha256": "2" * 64,
+            "probe_sha256": "3" * 64,
+            "training_source_binding_sha256": "4" * 64,
+        }
+        contract = {
+            "layer": 3,
+            "source_rows": 10,
+            "prediction_rows": 8,
+            "requests": 1,
+            "request_events": {str(k): {"1": events[str(k)]} for k in MODULE.K_VALUES},
+            "fit_rows_by_fold": {str(fold): 5 + fold for fold in range(3)},
+        }
+        checkpoint = {
+            "schema_version": 1,
+            "classification": "TRAIN_ONLY_LAYER_CV",
+            **identity,
+            "previous_checkpoint_sha256": "5" * 64,
+            "layer": 3,
+            "source_rows": 10,
+            "prediction_rows": 8,
+            "requests": 1,
+            "frequency": metric(),
+            "probe": {str(rank): metric() for rank in MODULE.RANKS},
+            "training": training,
+        }
+        return checkpoint, contract, identity
+
+    def test_layer_checkpoint_rejects_metric_and_identity_mutations(self) -> None:
+        checkpoint, contract, identity = self.checkpoint_fixture()
+        MODULE.validate_layer_checkpoint(checkpoint, contract, identity, "5" * 64)
+        checkpoint["frequency"]["4"]["32"]["1"]["recall_sum"] = 999.0
+        with self.assertRaises(ValueError):
+            MODULE.validate_layer_checkpoint(checkpoint, contract, identity, "5" * 64)
+        checkpoint, contract, identity = self.checkpoint_fixture()
+        checkpoint["driver_sha256"] = "9" * 64
+        with self.assertRaises(ValueError):
+            MODULE.validate_layer_checkpoint(checkpoint, contract, identity, "5" * 64)
+
     def test_production_main_runs_only_after_metric_definitions(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertGreater(source.rfind('if __name__ == "__main__"'), source.rfind("def aggregate_request_metrics"))
@@ -57,7 +126,7 @@ class CVMetricTests(unittest.TestCase):
         request = np.asarray([1] * 10 + [2] * 4 + [3] * 6, dtype=np.uint16)
         rows = np.arange(20, dtype=np.int64)
         valid = np.ones((20, 3), dtype=np.bool_)
-        valid[8:, 2] = False
+        valid[[8, 9, 18, 19], 2] = False
         folds = np.asarray([0] * 10 + [1] * 10, dtype=np.uint8)
         weights, fitting = MODULE.fold_training_weights(request, rows, valid, folds, 0)
         np.testing.assert_array_equal(fitting, np.arange(10, 20))

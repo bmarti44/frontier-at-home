@@ -144,6 +144,31 @@ def fold_training_weights(
     validation_fold: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Derive request-balanced weights from fitting rows only."""
+    if (
+        not isinstance(prediction_folds, np.ndarray) or prediction_folds.ndim != 1 or
+        prediction_folds.size != rows.size or not np.issubdtype(prediction_folds.dtype, np.integer) or
+        not isinstance(validation_fold, int) or isinstance(validation_fold, bool) or
+        validation_fold not in (0, 1, 2)
+    ):
+        raise ValueError("fold weight input is invalid")
+    fitting = np.flatnonzero(prediction_folds != validation_fold).astype(np.int64)
+    if fitting.size == 0 or not np.any(prediction_folds == validation_fold):
+        raise ValueError("grouped CV fold is empty")
+    fitting_weights = PROBE.request_balanced_weights(
+        request, rows[fitting], valid[fitting],
+    )
+    weights = np.zeros(valid.shape, dtype=np.float32)
+    weights[fitting] = fitting_weights
+    return weights, fitting
+
+
+def validate_layer_checkpoint(
+    checkpoint: dict[str, object],
+    contract: dict[str, object],
+    identity: dict[str, str],
+    previous_checkpoint_sha256: str,
+) -> None:
+    """Fail closed on stale, malformed, or physically impossible CV layer evidence."""
     raise NotImplementedError
 
 
@@ -155,7 +180,6 @@ def run_layer(
     rows, targets, valid = PROBE.multi_k_targets(
         request, data["layer"], data["token_position"], data["selected_ids"],
     )
-    weights = PROBE.request_balanced_weights(request, rows, valid)
     history = PROBE.causal_expert_history(
         request, data["layer"], data["token_position"], data["selected_ids"],
     )
@@ -170,9 +194,9 @@ def run_layer(
     training: dict[str, dict[str, object]] = {str(rank): {} for rank in RANKS}
     for fold in range(3):
         validation = prediction_folds == fold
-        fitting = np.flatnonzero(~validation).astype(np.int64)
-        if not validation.any() or fitting.size == 0:
-            raise ValueError("grouped CV fold is empty")
+        weights, fitting = fold_training_weights(
+            request, rows, valid, prediction_folds, fold,
+        )
         fit_source = source_folds != fold
         frequency_order = PROBE.frequency_prior_by_layer(
             data["layer"][fit_source], data["selected_ids"][fit_source],
@@ -318,11 +342,6 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
-if __name__ == "__main__":
-    arguments = parser().parse_args()
-    raise SystemExit(execute(arguments.command, arguments.out_dir))
-
-
 def accumulate_request_metrics(
     requests: np.ndarray,
     targets: np.ndarray,
@@ -416,3 +435,8 @@ def aggregate_request_metrics(
             "event_weighted_full_set_coverage": sum(totals[r]["coverage_sum"] for r in requests) / event_count,
         }
     return output
+
+
+if __name__ == "__main__":
+    arguments = parser().parse_args()
+    raise SystemExit(execute(arguments.command, arguments.out_dir))
