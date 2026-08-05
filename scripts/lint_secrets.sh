@@ -93,6 +93,7 @@ allowlist = {
     "runtime_start_sha256",
     "run_log_sha256",
     "canonical_sha256",
+    "canonical_tree_sha256",
     "source_summary_sha256",
     "source_receipt_sha256",
     "source_transcript_sha256",
