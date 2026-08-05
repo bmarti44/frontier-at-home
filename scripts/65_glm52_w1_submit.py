@@ -38,6 +38,7 @@ P1_RESULT_SOURCE_ROOT = Path("/home/bmarti44/.local/state")
 P1_RESULT_ROOT = STATE_ROOT / "p1-results"
 P1_RESULT_RECEIPTS = STATE_ROOT / "p1-result-receipts"
 INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
+P1_CONTROLLER = INSTALLED_HARNESS / "scripts/81_glm_union_baseline.py"
 P1_APPROVAL = Path("/usr/local/libexec/glm52-w1/p1-approved.json")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
@@ -57,7 +58,7 @@ OWNER_UID = 1000
 DSV4 = "dsv4"
 HASH40 = re.compile(r"^[0-9a-f]{40}$")
 HASH64 = re.compile(r"^[0-9a-f]{64}$")
-MAX_RECEIPT_FILES = 1024
+MAX_RECEIPT_FILES = 4096
 MAX_RECEIPT_BYTES = 2 * 1024 * 1024 * 1024
 MAX_DIAGNOSTIC_JSON_BYTES = 64 * 1024
 ROOT_UID = 0
@@ -83,19 +84,19 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
     ):
         return tuple(argv)
     if (
-        len(argv) == 3
+        len(argv) == 4
         and argv[0] in {
             "reserve-p1", "reserve-p1-smoke", "reserve-p1-approval-smoke",
         }
         and HASH40.fullmatch(argv[1])
         and HASH64.fullmatch(argv[2])
+        and HASH64.fullmatch(argv[3])
     ):
         return tuple(argv)
     if (
-        len(argv) == 4 and argv[0] == "publish-p1" and
+        len(argv) == 3 and argv[0] == "publish-p1" and
         HASH40.fullmatch(argv[1]) and
-        re.fullmatch(r"glm52-[A-Za-z0-9._-]{1,120}", argv[2]) and
-        HASH64.fullmatch(argv[3])
+        re.fullmatch(r"glm52-[A-Za-z0-9._-]{1,120}", argv[2])
     ):
         return tuple(argv)
     raise ValueError(
@@ -103,10 +104,10 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
         "       glm52-w1-submit status COMPOSITE_SHA256\n"
         "       glm52-w1-submit diagnose COMPOSITE_SHA256\n"
         "       glm52-w1-submit p1-authority\n"
-        "       glm52-w1-submit reserve-p1 CANDIDATE_HASH RESERVATION_SHA256\n"
-        "       glm52-w1-submit reserve-p1-smoke CANDIDATE_HASH RESERVATION_SHA256\n"
-        "       glm52-w1-submit reserve-p1-approval-smoke CANDIDATE_HASH RESERVATION_SHA256\n"
-        "       glm52-w1-submit publish-p1 CANDIDATE_HASH OUTPUT_NAME MANIFEST_SHA256"
+        "       glm52-w1-submit reserve-p1 CANDIDATE_HASH RESERVATION_SHA256 OUTPUT_SHA256\n"
+        "       glm52-w1-submit reserve-p1-smoke CANDIDATE_HASH RESERVATION_SHA256 OUTPUT_SHA256\n"
+        "       glm52-w1-submit reserve-p1-approval-smoke CANDIDATE_HASH RESERVATION_SHA256 OUTPUT_SHA256\n"
+        "       glm52-w1-submit publish-p1 CANDIDATE_HASH OUTPUT_NAME"
     )
 
 
@@ -242,12 +243,18 @@ def _read_p1_reservation(
         raise ValueError("P1 reservation is malformed") from exc
     if (
         not isinstance(value, dict) or
+        set(value) != {
+            "schema_version", "classification", "candidate_hash",
+            "reservation_sha256", "output_sha256", "created_epoch_ns",
+        } or
         value.get("schema_version") != 1 or
         value.get("classification") != classification or
         not isinstance(value.get("candidate_hash"), str) or
         not HASH40.fullmatch(value["candidate_hash"]) or
         not isinstance(value.get("reservation_sha256"), str) or
         not HASH64.fullmatch(value["reservation_sha256"]) or
+        not isinstance(value.get("output_sha256"), str) or
+        not HASH64.fullmatch(value["output_sha256"]) or
         not isinstance(value.get("created_epoch_ns"), int) or
         isinstance(value.get("created_epoch_ns"), bool)
     ):
@@ -334,12 +341,15 @@ def show_p1_authority() -> int:
 def reserve_p1(
     candidate_hash: str,
     reservation_sha256: str,
+    output_sha256: str,
     *,
     marker_root: Path = P1_RESERVATION_ROOT,
     marker: Path = P1_RESERVATION,
     classification: str = "GLM52_P1_PERMANENT_RESERVATION",
 ) -> int:
     """Create the permanent root-owned one-shot marker before held-out access."""
+    if not HASH64.fullmatch(output_sha256):
+        raise ValueError("P1 reservation output identity differs")
     try:
         existing = _read_p1_reservation(marker, classification)
     except FileNotFoundError:
@@ -350,6 +360,7 @@ def reserve_p1(
             "status": "ALREADY_RESERVED",
             "candidate_hash": existing["candidate_hash"],
             "reservation_sha256": existing["reservation_sha256"],
+            "output_sha256": existing["output_sha256"],
         }, sort_keys=True, separators=(",", ":")))
         return 17
 
@@ -374,6 +385,7 @@ def reserve_p1(
         "classification": classification,
         "candidate_hash": candidate_hash,
         "reservation_sha256": reservation_sha256,
+        "output_sha256": output_sha256,
         "created_epoch_ns": time.time_ns(),
     }
     payload = (
@@ -413,6 +425,7 @@ def reserve_p1(
         "status": "RESERVED",
         "candidate_hash": candidate_hash,
         "reservation_sha256": reservation_sha256,
+        "output_sha256": output_sha256,
         "marker_sha256": hashlib.sha256(payload).hexdigest(),
         "marker_device": details.st_dev,
         "marker_inode": details.st_ino,
@@ -691,20 +704,139 @@ def _seal_public_root_tree(root: Path) -> None:
                 os.close(descriptor)
 
 
+def _copy_tree_root_owned(source: Path, destination: Path) -> list[dict[str, object]]:
+    """Snapshot a user tree into new root-owned inodes using stable descriptors."""
+    before = _tree_manifest(source)
+    destination.mkdir(mode=0o700)
+    os.chown(destination, ROOT_UID, ROOT_GID)
+    for path in sorted(source.rglob("*")):
+        relative = path.relative_to(source)
+        details = path.lstat()
+        if stat.S_ISLNK(details.st_mode):
+            raise ValueError("P1 result source contains a symlink")
+        target = destination / relative
+        if stat.S_ISDIR(details.st_mode):
+            target.mkdir(mode=0o700)
+            os.chown(target, ROOT_UID, ROOT_GID)
+        elif not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
+            raise ValueError("P1 result source contains an unsafe file")
+    for row in before:
+        relative = Path(str(row["path"]))
+        source_path = source / relative
+        target = destination / relative
+        source_fd = os.open(source_path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+        try:
+            source_before = os.fstat(source_fd)
+            visible = source_path.lstat()
+            if (
+                not stat.S_ISREG(source_before.st_mode) or source_before.st_nlink != 1 or
+                source_before.st_dev != visible.st_dev or
+                source_before.st_ino != visible.st_ino or
+                source_before.st_size != row["size"]
+            ):
+                raise ValueError("P1 result source identity differs")
+            target_fd = os.open(
+                target,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
+                0o400,
+            )
+            try:
+                remaining = source_before.st_size
+                while remaining:
+                    block = os.read(source_fd, min(1024 * 1024, remaining))
+                    if not block:
+                        raise ValueError("P1 result source ended early")
+                    view = memoryview(block)
+                    while view:
+                        written = os.write(target_fd, view)
+                        if written <= 0:
+                            raise OSError("short P1 result snapshot write")
+                        view = view[written:]
+                    remaining -= len(block)
+                if os.read(source_fd, 1):
+                    raise ValueError("P1 result source grew during snapshot")
+                os.fchown(target_fd, ROOT_UID, ROOT_GID)
+                os.fchmod(target_fd, 0o400)
+                os.fsync(target_fd)
+            finally:
+                os.close(target_fd)
+            source_after = os.fstat(source_fd)
+            if (
+                source_before.st_dev, source_before.st_ino, source_before.st_size,
+                source_before.st_mtime_ns, source_before.st_ctime_ns,
+            ) != (
+                source_after.st_dev, source_after.st_ino, source_after.st_size,
+                source_after.st_mtime_ns, source_after.st_ctime_ns,
+            ):
+                raise ValueError("P1 result source changed during snapshot")
+        finally:
+            os.close(source_fd)
+    observed = _tree_manifest(destination)
+    if observed != before or _tree_manifest(source) != before:
+        raise ValueError("P1 result source changed across snapshot")
+    return observed
+
+
+def _run_p1_completed_validator(
+    destination: Path, approval: dict[str, Any],
+) -> dict[str, object]:
+    """Execute the root-installed fixed scorer over the root-owned snapshot."""
+    controller_details = P1_CONTROLLER.lstat()
+    if (
+        not stat.S_ISREG(controller_details.st_mode) or
+        controller_details.st_uid != ROOT_UID or
+        controller_details.st_gid != ROOT_GID or
+        controller_details.st_mode & 0o022 or
+        _sha256(P1_CONTROLLER) != approval.get("controller_sha256")
+    ):
+        raise ValueError("P1 completed validator authority differs")
+    completed = subprocess.run(
+        [
+            "/usr/bin/python3", str(P1_CONTROLLER), "validate-completed",
+            "--result-root", str(destination), "--device", "cpu",
+        ],
+        cwd=INSTALLED_HARNESS, stdin=subprocess.DEVNULL,
+        capture_output=True, text=True, timeout=1800, check=False,
+        env={
+            "HOME": "/nonexistent", "PATH": "/usr/bin:/bin",
+            "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
+            "PYTHONDONTWRITEBYTECODE": "1",
+        },
+    )
+    if completed.returncode != 0 or completed.stderr:
+        raise ValueError("P1 completed fixed replay failed")
+    try:
+        result = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError("P1 completed fixed replay response is malformed") from exc
+    if (
+        not isinstance(result, dict) or set(result) != {
+            "schema_version", "classification", "summary_sha256",
+            "decision_verdict",
+        } or result.get("schema_version") != 1 or
+        result.get("classification") != "P1_ROOT_FIXED_REPLAY_PASS" or
+        not isinstance(result.get("summary_sha256"), str) or
+        not HASH64.fullmatch(result["summary_sha256"]) or
+        not isinstance(result.get("decision_verdict"), str)
+    ):
+        raise ValueError("P1 completed fixed replay response differs")
+    return result
+
+
 def publish_p1_result(
     candidate_hash: str,
     output_name: str,
-    expected_manifest_sha256: str,
     *,
     source_parent: Path = P1_RESULT_SOURCE_ROOT,
     state_root: Path = STATE_ROOT,
     approval_reader=_read_p1_approval,
+    reservation_reader=_read_p1_reservation,
+    completed_validator=_run_p1_completed_validator,
 ) -> dict[str, object]:
-    """Atomically revoke owner access, verify, and seal one P1 result tree."""
+    """Copy, independently replay, and seal one P1 completed result."""
     if (
         not HASH40.fullmatch(candidate_hash) or
-        not re.fullmatch(r"glm52-[A-Za-z0-9._-]{1,120}", output_name) or
-        not HASH64.fullmatch(expected_manifest_sha256)
+        not re.fullmatch(r"glm52-[A-Za-z0-9._-]{1,120}", output_name)
     ):
         raise ValueError("P1 result publication request differs")
     approval, approval_identity = approval_reader()
@@ -712,6 +844,16 @@ def publish_p1_result(
         raise ValueError("P1 result candidate differs from root approval")
     source_parent = source_parent.resolve(strict=True)
     source = source_parent / output_name
+    try:
+        reservation = reservation_reader()
+    except FileNotFoundError as exc:
+        raise ValueError("P1 result has no permanent reservation") from exc
+    output_sha256 = hashlib.sha256(os.fsencode(source)).hexdigest()
+    if (
+        reservation.get("candidate_hash") != candidate_hash or
+        reservation.get("output_sha256") != output_sha256
+    ):
+        raise ValueError("P1 result differs from permanent reservation")
     source_details = source.lstat()
     if stat.S_ISLNK(source_details.st_mode) or not stat.S_ISDIR(source_details.st_mode):
         raise ValueError("P1 result source is unsafe")
@@ -724,14 +866,18 @@ def publish_p1_result(
     destination = result_root / output_name
     if destination.exists() or destination.is_symlink():
         raise FileExistsError("P1 authoritative result already exists")
-    # The rename is the authority transition: once under a root-only parent,
-    # the owner UID cannot race validation or chmod files back to writable.
-    os.rename(source, destination)
     try:
-        rows = _tree_manifest(destination)
+        rows = _copy_tree_root_owned(source, destination)
         observed_manifest_sha256 = _manifest_sha256(rows)
-        if observed_manifest_sha256 != expected_manifest_sha256:
-            raise ValueError("P1 result manifest differs after authority transition")
+        replay = completed_validator(destination, approval)
+        summary_binding = next(
+            (row for row in rows if row["path"] == "summary.json"), None,
+        )
+        if (
+            not isinstance(summary_binding, dict) or
+            replay.get("summary_sha256") != summary_binding.get("sha256")
+        ):
+            raise ValueError("P1 fixed replay summary binding differs")
         _seal_public_root_tree(destination)
         receipt = {
             "schema_version": 1,
@@ -740,6 +886,11 @@ def publish_p1_result(
             "authoritative_root": str(destination),
             "manifest_sha256": observed_manifest_sha256,
             "files": rows,
+            "output_sha256": output_sha256,
+            "reservation_sha256": reservation["reservation_sha256"],
+            "reservation_created_epoch_ns": reservation["created_epoch_ns"],
+            "summary_sha256": replay["summary_sha256"],
+            "decision_verdict": replay["decision_verdict"],
             **approval_identity,
         }
         receipt_path = receipt_root / f"{output_name}.json"
@@ -1508,22 +1659,22 @@ def main(argv: list[str]) -> int:
         if request[0] == "p1-authority":
             return show_p1_authority()
         if request[0] == "reserve-p1":
-            return reserve_p1(request[1], request[2])
+            return reserve_p1(request[1], request[2], request[3])
         if request[0] == "reserve-p1-smoke":
             return reserve_p1(
-                request[1], request[2], marker_root=P1_SMOKE_ROOT,
+                request[1], request[2], request[3], marker_root=P1_SMOKE_ROOT,
                 marker=P1_SMOKE_RESERVATION,
                 classification="GLM52_P1_NONHELDOUT_SMOKE_RESERVATION",
             )
         if request[0] == "reserve-p1-approval-smoke":
             return reserve_p1(
-                request[1], request[2], marker_root=P1_APPROVAL_SMOKE_ROOT,
+                request[1], request[2], request[3], marker_root=P1_APPROVAL_SMOKE_ROOT,
                 marker=P1_APPROVAL_SMOKE_RESERVATION,
                 classification="GLM52_P1_NONHELDOUT_APPROVAL_SMOKE_RESERVATION",
             )
         if request[0] == "publish-p1":
             print(json.dumps(
-                publish_p1_result(request[1], request[2], request[3]),
+                publish_p1_result(request[1], request[2]),
                 sort_keys=True, separators=(",", ":"),
             ))
             return 0

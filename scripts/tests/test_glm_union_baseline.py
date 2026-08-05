@@ -58,6 +58,9 @@ def executed_failure_fixture() -> dict[str, object]:
                 "sha256": f"{index + 10:064x}",
                 "bytes": 128 + index,
             },
+            "fault_log": runtime_binding(
+                f"runtime-logs/p1-fault-{stage}-r001-{1000 + index}", 86,
+            ),
             "post_control_log": runtime_binding(
                 f"runtime-logs/p1-post-fault-{stage}-r001-{1000 + index}",
             ),
@@ -383,6 +386,7 @@ class AtomicLifecycleTests(unittest.TestCase):
             "status": "RESERVED",
             "candidate_hash": candidate,
             "reservation_sha256": reservation,
+            "output_sha256": fields["GLM52_P1_OUTPUT_SHA256"],
             "marker_sha256": "4" * 64,
             "marker_device": 5,
             "marker_inode": 6,
@@ -414,7 +418,9 @@ class AtomicLifecycleTests(unittest.TestCase):
         self.assertEqual(command[:4], [
             "/usr/bin/sudo", "-n", str(MODULE.ROOT_SUBMITTER_PATH), "reserve-p1",
         ])
-        self.assertEqual(command[4:], [candidate, reservation])
+        self.assertEqual(command[4:], [
+            candidate, reservation, fields["GLM52_P1_OUTPUT_SHA256"],
+        ])
 
     def test_existing_root_tombstone_fails_closed(self) -> None:
         installed_sha256 = MODULE._hash_regular(MODULE.ROOT_SUBMITTER_PATH)[0]
@@ -1223,6 +1229,9 @@ class BaselineTableTests(unittest.TestCase):
                     "sha256": f"{index + 10:064x}",
                     "bytes": 128 + index,
                 },
+                "fault_log": runtime_binding(
+                    f"runtime-logs/p1-fault-{stage}-r001-{1000 + index}", 86,
+                ),
                 "post_control_log": runtime_binding(
                     f"runtime-logs/p1-post-fault-{stage}-r001-{1000 + index}",
                 ),
@@ -1379,21 +1388,74 @@ class BaselineTableTests(unittest.TestCase):
             runtime_logs = []
             runtime_root = root / "runtime-logs"
             runtime_root.mkdir()
+            environment_sha256 = "9" * 64
+            success_main = (
+                f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}\n"
+                f"memory_guard_descriptor_path=/proc/1/fd/4 memory_guard_sha256="
+                f"{MODULE.FROZEN_SCRIPT_HASHES[MODULE.MEMORY_GUARD_PATH]}\n"
+                f"executed_environment_sha256={environment_sha256}\n"
+                "executed candidate was verified alive at least once\n" +
+                "".join(
+                    f"ds4: decode-consistency selected[{index}]=1\n"
+                    for index in range(8)
+                ) +
+                "ds4: decode-consistency compared prefix_tokens=8\n"
+                "ds4: live_top: 1\n"
+                "ds4: fresh_top: 1\n"
+                "SAFE_RUN end rc=0 killed=no\n"
+            ).encode("ascii")
+            control_fingerprint = MODULE._control_fingerprint(success_main)
+
+            def materialize_runtime(binding, main_payload, exit_code):
+                directory = root / binding["directory"]
+                directory.mkdir(parents=True, exist_ok=True)
+                payloads = {
+                    "cmd.log": b"command\n",
+                    "kernel.log": b"NO_KERNEL_FAULTS\n",
+                    "main.log": main_payload,
+                    "samples.log": b"sample\n",
+                    "wrapper.stdout": (
+                        b"SAFE_RUN_DONE rc=0 killed=no dir=/tmp/run\n"
+                        if exit_code == 0 else b"SAFE_RUN_DONE rc=86 killed=no dir=/tmp/run\n"
+                    ),
+                    "wrapper.stderr": b"",
+                }
+                binding["wrapper_exit_code"] = exit_code
+                binding["launch_environment_sha256"] = environment_sha256
+                binding["artifacts"] = {}
+                for name, payload in payloads.items():
+                    (directory / name).write_bytes(payload)
+                    binding["artifacts"][name] = {
+                        "sha256": MODULE._sha256_bytes(payload),
+                        "bytes": len(payload),
+                    }
+
             for fault in failure["records"]:
                 marker = (
                     f"ds4: GLM baseline injected failure stage={fault['stage']}\n"
                 ).encode("ascii")
-                payload = marker + (
+                payload = (
+                    f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}\n"
+                    f"executed_environment_sha256={environment_sha256}\n"
+                    "FATAL wrapper command failed after candidate exit rc=86\n"
+                ).encode("ascii") + marker + (
                     f"executed_candidate_verified pid={fault['process_pid']} "
                     f"start_ticks={fault['process_start_ticks']}\n"
+                    "safety_artifact_verified name=samples.log sha256=1\n"
+                    "safety_artifact_verified name=kernel.log sha256=2\n"
+                    "SAFE_RUN end rc=86 killed=no\n"
                 ).encode("ascii")
+                materialize_runtime(fault["fault_log"], payload, 86)
                 path = root / fault["runtime_log"]["path"]
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(payload)
                 fault["runtime_log"].update({
                     "sha256": MODULE._sha256_bytes(payload), "bytes": len(payload),
                 })
                 fault["authenticated_marker_sha256"] = MODULE._sha256_bytes(marker)
+                materialize_runtime(fault["post_control_log"], success_main, 0)
+                fault["post_control_continuation_sha256"] = control_fingerprint[0]
+                fault["post_control_token_ids_sha256"] = control_fingerprint[1]
+            failure["reference_continuation_sha256"] = control_fingerprint[0]
+            failure["reference_token_ids_sha256"] = control_fingerprint[1]
             for request in range(1, 21):
                 control = {
                     "schema_version": 1,
@@ -1407,46 +1469,44 @@ class BaselineTableTests(unittest.TestCase):
                     "control_before": {
                         "fresh_process": True,
                         "cache_namespace": f"before-{request}",
-                        "continuation_sha256": "2" * 64,
-                        "token_ids_sha256": "3" * 64, "exit_code": 0,
+                        "continuation_sha256": control_fingerprint[0],
+                        "token_ids_sha256": control_fingerprint[1], "exit_code": 0,
                     },
                     "control_after": {
                         "fresh_process": True,
                         "cache_namespace": f"after-{request}",
-                        "continuation_sha256": "2" * 64,
-                        "token_ids_sha256": "3" * 64, "exit_code": 0,
+                        "continuation_sha256": control_fingerprint[0],
+                        "token_ids_sha256": control_fingerprint[1], "exit_code": 0,
                     },
                     "failure_injection": failure,
                 }
                 arms = {}
                 for arm in ("control_before", "diagnostic", "control_after"):
-                    directory = runtime_root / f"request-{request}-{arm}"
-                    directory.mkdir()
-                    artifacts = {}
-                    for name in (
-                        "cmd.log", "kernel.log", "main.log", "samples.log",
-                        "wrapper.stdout", "wrapper.stderr",
-                    ):
-                        payload = f"{request}:{arm}:{name}\n".encode()
-                        (directory / name).write_bytes(payload)
-                        artifacts[name] = {
-                            "sha256": MODULE._sha256_bytes(payload),
-                            "bytes": len(payload),
-                        }
                     arms[arm] = {
-                        "directory": directory.relative_to(root).as_posix(),
-                        "artifacts": artifacts,
+                        "directory": f"runtime-logs/request-{request}-{arm}",
+                        "artifacts": {},
                         "wrapper_exit_code": 0,
-                        "launch_environment_sha256": "4" * 64,
+                        "launch_environment_sha256": environment_sha256,
                     }
+                    materialize_runtime(arms[arm], success_main, 0)
                 runtime_logs.append({
                     "request_index": request,
                     "two_control": control,
                     "arms": arms,
                 })
-            (root / "raw.json").write_text(
-                json.dumps({"runtime_logs": runtime_logs}) + "\n", encoding="utf-8",
-            )
+            capture = root / "capture"
+            capture.mkdir()
+            capture_payload = b"{}\n"
+            (capture / "manifest.json").write_bytes(capture_payload)
+            (root / "raw.json").write_text(json.dumps({
+                "manifest": {
+                    "bytes": len(capture_payload),
+                    "sha256": MODULE._sha256_bytes(capture_payload),
+                },
+                "authenticated_binary": {},
+                "authenticated_candidate_root": "/tmp/candidate",
+                "runtime_logs": runtime_logs,
+            }) + "\n", encoding="utf-8")
             summary["two_control"] = {
                 "requests": 20,
                 "all_isolated": True,

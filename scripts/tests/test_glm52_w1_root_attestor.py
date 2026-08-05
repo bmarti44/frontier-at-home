@@ -68,10 +68,11 @@ class RootAttestorContractTests(unittest.TestCase):
             digest = submitter._manifest_sha256(manifest)
             with (
                 mock.patch.object(submitter.os, "chown"),
+                mock.patch.object(submitter.os, "fchown"),
                 self.assertRaisesRegex(ValueError, "reservation|completed"),
             ):
                 submitter.publish_p1_result(
-                    candidate, source.name, digest,
+                    candidate, source.name,
                     source_parent=source_parent, state_root=state_root,
                     approval_reader=lambda: ({
                         "candidate_hash": candidate,
@@ -81,13 +82,71 @@ class RootAttestorContractTests(unittest.TestCase):
                         "approval_device": 1,
                         "approval_inode": 2,
                     }),
+                    reservation_reader=lambda: {
+                        "candidate_hash": candidate,
+                        "output_sha256": hashlib.sha256(
+                            os.fsencode(source),
+                        ).hexdigest(),
+                        "reservation_sha256": "4" * 64,
+                        "created_epoch_ns": 5,
+                    },
+                    completed_validator=lambda _root, _approval: (_ for _ in ()).throw(
+                        ValueError("completed fixed replay failed"),
+                    ),
                 )
 
     def test_p1_publication_cannot_treat_rename_as_fd_revocation(self):
         submitter = load_submitter()
-        source = inspect.getsource(submitter.publish_p1_result)
-        self.assertNotIn("os.rename(source, destination)", source)
-        self.assertIn("O_NOFOLLOW", inspect.getsource(submitter))
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-valid-result"
+            source.mkdir()
+            summary = source / "summary.json"
+            summary_payload = b'{"decision":{"verdict":"KEEP_PARETO_SEPARATE"}}\n'
+            summary.write_bytes(summary_payload)
+            retained = os.open(summary, os.O_RDWR)
+            try:
+                with (
+                    mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                    mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                ):
+                    receipt = submitter.publish_p1_result(
+                        candidate, source.name,
+                        source_parent=source_parent, state_root=state_root,
+                        approval_reader=lambda: ({
+                            "candidate_hash": candidate,
+                            "controller_sha256": "2" * 64,
+                        }, {
+                            "approval_sha256": "3" * 64,
+                            "approval_device": 1,
+                            "approval_inode": 2,
+                        }),
+                        reservation_reader=lambda: {
+                            "candidate_hash": candidate,
+                            "output_sha256": hashlib.sha256(
+                                os.fsencode(source),
+                            ).hexdigest(),
+                            "reservation_sha256": "4" * 64,
+                            "created_epoch_ns": 5,
+                        },
+                        completed_validator=lambda _root, _approval: {
+                            "summary_sha256": hashlib.sha256(summary_payload).hexdigest(),
+                            "decision_verdict": "KEEP_PARETO_SEPARATE",
+                        },
+                    )
+                os.lseek(retained, 0, os.SEEK_SET)
+                os.write(retained, b"FAKE")
+                authoritative = Path(receipt["authoritative_root"])
+                self.assertEqual(
+                    (authoritative / "summary.json").read_bytes(), summary_payload,
+                )
+            finally:
+                os.close(retained)
 
     def test_controller_never_reopens_root_only_authoritative_result(self):
         module_path = ROOT / "scripts" / "81_glm_union_baseline.py"
@@ -114,10 +173,11 @@ class RootAttestorContractTests(unittest.TestCase):
             )
             with (
                 mock.patch.object(submitter.os, "chown"),
-                self.assertRaisesRegex(ValueError, "manifest"),
+                mock.patch.object(submitter.os, "fchown"),
+                self.assertRaisesRegex(ValueError, "completed"),
             ):
                 submitter.publish_p1_result(
-                        candidate, source.name, "4" * 64,
+                        candidate, source.name,
                         source_parent=source_parent, state_root=state_root,
                         approval_reader=lambda: ({
                             "candidate_hash": candidate,
@@ -127,8 +187,19 @@ class RootAttestorContractTests(unittest.TestCase):
                             "approval_device": 1,
                             "approval_inode": 2,
                         }),
+                        reservation_reader=lambda: {
+                            "candidate_hash": candidate,
+                            "output_sha256": hashlib.sha256(
+                                os.fsencode(source),
+                            ).hexdigest(),
+                            "reservation_sha256": "4" * 64,
+                            "created_epoch_ns": 5,
+                        },
+                        completed_validator=lambda _root, _approval: (_ for _ in ()).throw(
+                            ValueError("completed fixed replay failed"),
+                        ),
                     )
-            self.assertFalse(source.exists())
+            self.assertTrue(source.exists())
             quarantined = list((state_root / "p1-results").glob("glm52-p1-result*"))
             self.assertEqual(len(quarantined), 1)
             self.assertEqual(quarantined[0].stat().st_mode & 0o777, 0o500)
@@ -150,16 +221,16 @@ class RootAttestorContractTests(unittest.TestCase):
             ("diagnose", sha256),
         )
         self.assertEqual(
-            submitter.parse_request(["reserve-p1", sha1, sha256]),
-            ("reserve-p1", sha1, sha256),
+            submitter.parse_request(["reserve-p1", sha1, sha256, sha256]),
+            ("reserve-p1", sha1, sha256, sha256),
         )
         self.assertEqual(
-            submitter.parse_request(["reserve-p1-smoke", sha1, sha256]),
-            ("reserve-p1-smoke", sha1, sha256),
+            submitter.parse_request(["reserve-p1-smoke", sha1, sha256, sha256]),
+            ("reserve-p1-smoke", sha1, sha256, sha256),
         )
         self.assertEqual(
-            submitter.parse_request(["reserve-p1-approval-smoke", sha1, sha256]),
-            ("reserve-p1-approval-smoke", sha1, sha256),
+            submitter.parse_request(["reserve-p1-approval-smoke", sha1, sha256, sha256]),
+            ("reserve-p1-approval-smoke", sha1, sha256, sha256),
         )
         self.assertEqual(
             submitter.parse_request(["p1-authority"]),
@@ -175,9 +246,9 @@ class RootAttestorContractTests(unittest.TestCase):
             ["diagnose", sha256, "extra"],
             ["reserve-p1", sha1],
             ["reserve-p1", "../candidate", sha256],
-            ["reserve-p1", sha1, sha256, "extra"],
-            ["reserve-p1-smoke", sha1, sha256, "extra"],
-            ["reserve-p1-approval-smoke", sha1, sha256, "extra"],
+            ["reserve-p1", sha1, sha256],
+            ["reserve-p1-smoke", sha1, sha256],
+            ["reserve-p1-approval-smoke", sha1, sha256],
             ["p1-authority", "extra"],
             ["shell", sha256],
         ):
@@ -189,6 +260,7 @@ class RootAttestorContractTests(unittest.TestCase):
         submitter = load_submitter()
         candidate = "1" * 40
         reservation = "2" * 64
+        output = "3" * 64
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
             marker_root = state / "p1-baseline-heldout-v1"
@@ -213,18 +285,20 @@ class RootAttestorContractTests(unittest.TestCase):
                 mock.patch("builtins.print") as printer,
             ):
                 self.assertEqual(submitter.reserve_p1(
-                    candidate, reservation, marker_root=marker_root, marker=marker,
+                    candidate, reservation, output,
+                    marker_root=marker_root, marker=marker,
                 ), 0)
                 approval_reader.assert_called_once()
                 first = json.loads(marker.read_text(encoding="utf-8"))
                 self.assertEqual(first["candidate_hash"], candidate)
                 self.assertEqual(first["reservation_sha256"], reservation)
+                self.assertEqual(first["output_sha256"], output)
                 self.assertEqual(marker.stat().st_mode & 0o777, 0o444)
                 self.assertEqual(marker_root.stat().st_mode & 0o777, 0o555)
                 first_inode = marker.stat().st_ino
                 self.assertEqual(
                     submitter.reserve_p1(
-                        "3" * 40, "4" * 64,
+                        "3" * 40, "4" * 64, "5" * 64,
                         marker_root=marker_root, marker=marker,
                     ), 17,
                 )
@@ -274,7 +348,7 @@ class RootAttestorContractTests(unittest.TestCase):
                     self.assertRaisesRegex(ValueError, "root-approved"),
                 ):
                     submitter.reserve_p1(
-                        attacker_selected, "4" * 64,
+                        attacker_selected, "4" * 64, "5" * 64,
                         marker_root=marker_root, marker=marker,
                     )
             finally:
@@ -321,6 +395,7 @@ class RootAttestorContractTests(unittest.TestCase):
                 "classification": "GLM52_P1_PERMANENT_RESERVATION",
                 "candidate_hash": "1" * 40,
                 "reservation_sha256": "2" * 64,
+                "output_sha256": "3" * 64,
                 "created_epoch_ns": 123,
             }) + "\n", encoding="utf-8")
             with (
@@ -811,6 +886,19 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual(match.group(1), expected)
 
+    def test_controller_pins_the_same_root_submitter_bytes_as_installer(self):
+        controller = (ROOT / "scripts/81_glm_union_baseline.py").read_text(
+            encoding="utf-8",
+        )
+        expected = hashlib.sha256(SUBMITTER.read_bytes()).hexdigest()
+        match = re.search(
+            r'^FROZEN_ROOT_SUBMITTER_SHA256 = "([0-9a-f]{64})"$',
+            controller,
+            re.MULTILINE,
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), expected)
+
     def test_installer_publishes_only_the_contained_runtime_read_surface(self):
         source = INSTALLER.read_text(encoding="utf-8")
         self.assertIn(
@@ -1015,8 +1103,8 @@ class RootAttestorContractTests(unittest.TestCase):
         publication = source.split("def publish_p1_result(", 1)[1].split(
             "\ndef _open_noatime", 1,
         )[0]
-        self.assertIn("os.rename(source, destination)", publication)
-        self.assertIn("_tree_manifest(destination)", publication)
+        self.assertIn("_copy_tree_root_owned(source, destination)", publication)
+        self.assertIn("completed_validator(destination, approval)", publication)
         self.assertNotIn("--uid=bmarti44", source + launcher)
         self.assertIn("--uid=dsv4", launcher)
         self.assertIn("MemorySwapMax=0", launcher)
