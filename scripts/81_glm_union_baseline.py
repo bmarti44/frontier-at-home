@@ -663,9 +663,6 @@ def validate_completed_result(
     reconstructed = score_baseline_table(
         requests, targets, rankings, bootstrap_resamples=bootstrap_resamples,
     )
-    for key, value in reconstructed.items():
-        if summary.get(key) != value:
-            raise ValueError(f"completed summary differs from canonical replay: {key}")
     cost_payload = _snapshot_regular(root / "cost.json")
     cost_document = _strict_json(cost_payload, "completed cost evidence")
     if set(cost_document) != {"schema_version", "rows"} or cost_document.get(
@@ -673,6 +670,12 @@ def validate_completed_result(
     ) != 1 or not isinstance(cost_document.get("rows"), list):
         raise ValueError("completed cost evidence schema differs")
     reconstructed_cost = score_cost_table(cost_document["rows"])
+    reconstructed["decision"].update(decide_mtp_fold(
+        reconstructed, reconstructed_cost,
+    ))
+    for key, value in reconstructed.items():
+        if summary.get(key) != value:
+            raise ValueError(f"completed summary differs from canonical replay: {key}")
     if summary.get("cost") != reconstructed_cost:
         raise ValueError("completed cost table differs from canonical replay")
     raw_payload = _snapshot_regular(root / "raw.json")
@@ -1960,9 +1963,32 @@ def _run_atomic_lifecycle(
         raise
     _rename_noreplace(staging, output_root)
     if validate_complete is not None:
-        validated = validate_complete(output_root, result)
-        if validated != result:
-            raise ValueError("completed-result validation differs after publication")
+        try:
+            validated = validate_complete(output_root, result)
+            if validated != result:
+                raise ValueError("completed-result validation differs after publication")
+        except BaseException as error:
+            attempt.update({
+                "status": "FAILED",
+                "completed_epoch_ns": time.time_ns(),
+                "failure_phase": "post_publish_validation",
+                "failure_type": type(error).__name__,
+                "failure_message": str(error),
+            })
+            _write_json_replace(output_root / "attempt.json", attempt)
+            if ledger is not None:
+                _write_json_replace(ledger, {
+                    **attempt,
+                    "classification": "P1_HELD_OUT_GLOBAL_LEDGER",
+                    "output_root": str(output_root),
+                })
+            _seal_completed_tree(output_root)
+            descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            raise
     if ledger is not None:
         _write_json_replace(ledger, {
             **attempt,
