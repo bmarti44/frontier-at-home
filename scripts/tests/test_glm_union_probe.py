@@ -120,6 +120,26 @@ class UnionTargetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             MODULE.causal_expert_history(request, layer, gapped, selected)
 
+    def test_multi_k_targets_keep_short_windows_and_balance_requests(self) -> None:
+        request = np.asarray([1] * 10 + [2] * 4, dtype=np.uint16)
+        layer = np.asarray([3] * 14, dtype=np.uint16)
+        position = np.asarray(list(range(10)) + list(range(4)), dtype=np.uint32)
+        selected = np.asarray([[index % 32] for index in range(14)], dtype=np.uint8)
+        rows, targets, valid = MODULE.multi_k_targets(request, layer, position, selected)
+        np.testing.assert_array_equal(rows, [0, 1, 2, 3, 4, 5, 6, 7, 10, 11])
+        self.assertEqual(targets.shape, (10, 3, 256))
+        np.testing.assert_array_equal(valid.sum(axis=0), [10, 6, 2])
+        self.assertTrue(targets[0, 0, 1] and targets[0, 0, 2])
+        weights = MODULE.request_balanced_weights(request, rows, valid)
+        for k_index in range(3):
+            active = valid[:, k_index]
+            self.assertAlmostEqual(float(weights[active, k_index].mean()), 1.0)
+            masses = [
+                float(weights[active & (request[rows] == request_id), k_index].sum())
+                for request_id in np.unique(request[rows][active])
+            ]
+            self.assertAlmostEqual(min(masses), max(masses))
+
     def test_scoring_rejects_duplicate_rankings_or_cross_row_mismatch(self) -> None:
         request, layer, position, selected = self.fixture()
         rows, target = MODULE.future_union_targets(

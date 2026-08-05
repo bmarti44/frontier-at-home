@@ -686,6 +686,23 @@ def grouped_fold(group_id: str, folds: int = 3) -> int:
     return int.from_bytes(digest, "big") % folds
 
 
+def multi_k_targets(
+    request_index: np.ndarray,
+    layer: np.ndarray,
+    token_position: np.ndarray,
+    selected_ids: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build aligned K=2/4/8 targets and validity masks without dropping shorter windows."""
+    raise NotImplementedError
+
+
+def request_balanced_weights(
+    request_index: np.ndarray, row_indices: np.ndarray, valid: np.ndarray,
+) -> np.ndarray:
+    """Return per-K row weights whose mean is one and whose requests have equal mass."""
+    raise NotImplementedError
+
+
 def score_rankings(
     row_indices: np.ndarray,
     targets: np.ndarray,
