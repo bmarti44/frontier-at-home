@@ -225,6 +225,10 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.runner)
 
+    def test_corpus_scores_exact_zero_based_main_routed_layers(self) -> None:
+        self.assertIn("expected_layers=set(range(3, 78))", self.runner)
+        self.assertNotIn("expected_layers=set(range(4, 79))", self.runner)
+
     def test_freeze_binds_runtime_transitive_dependencies(self) -> None:
         for relative in (
             "scripts/73_run_glm_shared_router_probe.py",
