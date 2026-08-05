@@ -23,7 +23,55 @@ def partition_request_rows(
     expected_counts: dict[str, int] = SPLIT_COUNTS,
 ) -> dict[str, np.ndarray]:
     """Return exact row indices for the preregistered request-grouped splits."""
-    raise NotImplementedError
+    if (
+        not isinstance(request_index, np.ndarray) or request_index.ndim != 1 or
+        request_index.size == 0 or not np.issubdtype(request_index.dtype, np.integer) or
+        np.any(request_index <= 0) or np.any(np.diff(request_index.astype(np.int64)) < 0) or
+        not isinstance(request_metadata, list) or not request_metadata or
+        not isinstance(expected_counts, dict) or set(expected_counts) != set(SPLIT_COUNTS) or
+        any(not isinstance(value, int) or isinstance(value, bool) or value <= 0
+            for value in expected_counts.values())
+    ):
+        raise ValueError("split input schema is invalid")
+    metadata_by_request: dict[int, dict[str, object]] = {}
+    case_ids: set[str] = set()
+    split_counts = {name: 0 for name in expected_counts}
+    for row in request_metadata:
+        if not isinstance(row, dict):
+            raise ValueError("request metadata row is malformed")
+        request = row.get("request_index")
+        case = row.get("case_id")
+        split = row.get("split")
+        if (
+            not isinstance(request, int) or isinstance(request, bool) or request <= 0 or
+            request in metadata_by_request or not isinstance(case, str) or not case or
+            case in case_ids or split not in expected_counts
+        ):
+            raise ValueError("request metadata identity or split is invalid")
+        metadata_by_request[request] = row
+        case_ids.add(case)
+        split_counts[str(split)] += 1
+    if split_counts != expected_counts:
+        raise ValueError("request split counts differ from the frozen plan")
+    observed_requests = set(int(value) for value in np.unique(request_index))
+    if observed_requests != set(metadata_by_request):
+        raise ValueError("request rows and metadata are not a bijection")
+    split_by_request = {
+        request: str(row["split"]) for request, row in metadata_by_request.items()
+    }
+    result = {
+        split: np.flatnonzero(np.asarray([
+            split_by_request[int(request)] == split for request in request_index
+        ], dtype=np.bool_)).astype(np.int64)
+        for split in expected_counts
+    }
+    combined = np.concatenate(list(result.values()))
+    if (
+        combined.size != request_index.size or
+        not np.array_equal(np.sort(combined), np.arange(request_index.size))
+    ):
+        raise ValueError("split rows are incomplete or overlap")
+    return result
 
 
 def future_union_targets(
