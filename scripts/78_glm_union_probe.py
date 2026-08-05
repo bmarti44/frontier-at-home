@@ -27,6 +27,10 @@ QUALITY_COMPACTION_RECEIPT = (
     ROOT / "results/glm52-gates/R0b-union-quality-corpus-compaction-pass-440d15d.json"
 )
 SPLIT_PLAN = ROOT / "results/glm52-gates/R0b-union-p0-split-plan.json"
+P1_SPLIT_RECEIPT = ROOT / "results/glm52-gates/R0c-union-probe-splits-pass-76faed9.json"
+LONG_COMPACTION_RECEIPT = (
+    ROOT / "results/glm52-gates/R0b-union-corpus-compaction-pass-2ff949c.json"
+)
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 SPLIT_COUNTS = {
     "train-fit": 55,
@@ -181,6 +185,13 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def validate_training_sources(
+    train_fit_dir: Path, long_train_dirs: list[Path],
+) -> dict[str, object]:
+    """Bind the only archives authorized to contribute P1 fitting rows."""
+    raise NotImplementedError
 
 
 def _tracked_bytes(path: Path) -> bytes:

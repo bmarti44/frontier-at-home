@@ -321,6 +321,58 @@ class UnionTargetTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 MODULE._tracked_bytes(SCRIPT)
 
+    def test_training_source_gate_accepts_only_train_fit_and_two_bound_long_shards(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            train = root / "train"
+            train.mkdir()
+            (train / "records.npz").write_bytes(b"train-records")
+            train_manifest = {"format": "glm52-union-p1-split-npz-v1", "split": "train-fit"}
+            (train / "manifest.json").write_text(json.dumps(train_manifest), encoding="utf-8")
+            longs = []
+            shards = []
+            for index in (1, 2):
+                directory = root / f"long-{index}"
+                directory.mkdir()
+                (directory / "records.npz").write_bytes(f"long-{index}".encode())
+                (directory / "manifest.json").write_text(
+                    json.dumps({"format": "glm52-union-p0-npz-v1"}), encoding="utf-8",
+                )
+                longs.append(directory)
+                shards.append({
+                    "directory": str(directory),
+                    "manifest_sha256": MODULE._sha256(directory / "manifest.json"),
+                    "output_sha256": MODULE._sha256(directory / "records.npz"),
+                    "records_bytes": (directory / "records.npz").stat().st_size,
+                })
+            split_receipt = root / "split-receipt.json"
+            split_receipt.write_text(json.dumps({"observed": {"splits": {"train-fit": {
+                "manifest_sha256": MODULE._sha256(train / "manifest.json"),
+                "output_sha256": MODULE._sha256(train / "records.npz"),
+                "output_bytes": (train / "records.npz").stat().st_size,
+            }}}}), encoding="utf-8")
+            long_receipt = root / "long-receipt.json"
+            long_receipt.write_text(json.dumps({"shards": shards}), encoding="utf-8")
+            with (
+                mock.patch.object(MODULE, "P1_SPLIT_RECEIPT", split_receipt),
+                mock.patch.object(MODULE, "LONG_COMPACTION_RECEIPT", long_receipt),
+                mock.patch.object(MODULE, "_tracked_bytes", side_effect=lambda path: Path(path).read_bytes()),
+            ):
+                accepted = MODULE.validate_training_sources(train, longs)
+                self.assertEqual(len(accepted["long_train"]), 2)
+                changed = dict(train_manifest)
+                changed["split"] = "calibration"
+                (train / "manifest.json").write_text(json.dumps(changed), encoding="utf-8")
+                split_data = json.loads(split_receipt.read_text())
+                split_data["observed"]["splits"]["train-fit"]["manifest_sha256"] = MODULE._sha256(
+                    train / "manifest.json"
+                )
+                split_receipt.write_text(json.dumps(split_data), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    MODULE.validate_training_sources(train, longs)
+                with self.assertRaises(ValueError):
+                    MODULE.validate_training_sources(train, longs[:1])
+
 
 if __name__ == "__main__":
     unittest.main()
