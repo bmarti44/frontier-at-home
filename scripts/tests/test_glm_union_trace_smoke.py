@@ -72,6 +72,34 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     "FAIL",
                 )
 
+    def test_high_row_requires_exact_contiguous_multichunk_coverage(self) -> None:
+        off, on = arm("off"), arm("on")
+        for candidate in (off, on):
+            candidate["prompt_tokens"] = 4157
+            candidate["full_indexed_chunks"] = [[0, 2048], [2048, 2048], [4096, 61]]
+        result = MODULE.smoke_verdict(
+            off, on, {"verdict": "PASS", "events": 3},
+            {"clean": True}, {"clean": True},
+            min_prompt_tokens=2049, require_multichunk=True,
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        for bad_chunks in (
+            [[0, 4157]],
+            [[0, 2048], [2049, 2108]],
+            [[0, 2048], [2048, 2048]],
+        ):
+            with self.subTest(chunks=bad_chunks):
+                bad_off, bad_on = copy.deepcopy(off), copy.deepcopy(on)
+                bad_off["full_indexed_chunks"] = bad_on["full_indexed_chunks"] = bad_chunks
+                self.assertEqual(
+                    MODULE.smoke_verdict(
+                        bad_off, bad_on, {"verdict": "PASS", "events": 3},
+                        {"clean": True}, {"clean": True},
+                        min_prompt_tokens=2049, require_multichunk=True,
+                    )["verdict"],
+                    "FAIL",
+                )
+
     def test_randomness_must_postdate_freeze_commit(self) -> None:
         self.assertTrue(MODULE.randomness_is_after_freeze(100, 1595431050))
         self.assertFalse(MODULE.randomness_is_after_freeze(1, 1595431050))
@@ -87,9 +115,9 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         cls.runner = RUNNER.read_text(encoding="utf-8")
         cls.cgroup = CGROUP.read_text(encoding="utf-8")
 
-    def test_runner_uses_existing_containment_and_fixed_single_batch_fixture(self) -> None:
+    def test_runner_uses_existing_containment_and_bounded_fixture(self) -> None:
         for marker in (
-            "glm_cgroup_run.sh", '"--context-levels", "512"',
+            "glm_cgroup_run.sh", '"--context-levels", str(args.context_level)',
             '"--max-tokens", "128"', "GLM_SAFE_MEMORY_HIGH_GIB",
             "GLM_SAFE_KILL_FLOOR_GIB", "GLM_SAFE_MIN_START_GIB",
         ):
@@ -98,6 +126,16 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     def test_short_smoke_does_not_claim_2048_row_coverage(self) -> None:
         self.assertIn('"scope": "short_single_indexed_batch_only"', self.runner)
         self.assertIn('"high_row_2048_status": "OPEN"', self.runner)
+
+    def test_high_row_mode_is_explicit_and_requires_multichunk(self) -> None:
+        for marker in (
+            '"scope": "high_row_multichunk"',
+            '"high_row_2048_status": "PASS"',
+            'public.add_argument("--context-level", type=int, default=512)',
+            'public.add_argument("--require-multichunk", action="store_true")',
+            '"--require-multichunk" if args.require_multichunk else',
+        ):
+            self.assertIn(marker, self.runner)
 
     def test_runner_has_prewrite_disk_bound_and_preservation_reserve(self) -> None:
         for marker in (
