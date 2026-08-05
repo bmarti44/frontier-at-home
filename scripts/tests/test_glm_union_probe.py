@@ -91,6 +91,43 @@ class UnionTargetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             MODULE.score_rankings(rows[:-1], target, rankings, request)
 
+    def test_partition_is_request_grouped_complete_and_disjoint(self) -> None:
+        request = np.asarray([1, 1, 2, 3, 3, 4], dtype=np.uint16)
+        metadata = [
+            {"request_index": 1, "case_id": "a", "split": "train-fit"},
+            {"request_index": 2, "case_id": "b", "split": "train-precision-diagnostic"},
+            {"request_index": 3, "case_id": "c", "split": "calibration"},
+            {"request_index": 4, "case_id": "d", "split": "test"},
+        ]
+        expected = {name: 1 for name in MODULE.SPLIT_COUNTS}
+        observed = MODULE.partition_request_rows(request, metadata, expected)
+        np.testing.assert_array_equal(observed["train-fit"], [0, 1])
+        np.testing.assert_array_equal(observed["train-precision-diagnostic"], [2])
+        np.testing.assert_array_equal(observed["calibration"], [3, 4])
+        np.testing.assert_array_equal(observed["test"], [5])
+        np.testing.assert_array_equal(
+            np.sort(np.concatenate(list(observed.values()))), np.arange(6),
+        )
+
+    def test_partition_rejects_missing_duplicate_or_wrong_split_metadata(self) -> None:
+        request = np.asarray([1, 2, 3, 4], dtype=np.uint16)
+        valid = [
+            {"request_index": 1, "case_id": "a", "split": "train-fit"},
+            {"request_index": 2, "case_id": "b", "split": "train-precision-diagnostic"},
+            {"request_index": 3, "case_id": "c", "split": "calibration"},
+            {"request_index": 4, "case_id": "d", "split": "test"},
+        ]
+        expected = {name: 1 for name in MODULE.SPLIT_COUNTS}
+        mutations = [
+            valid[:-1],
+            [valid[0], valid[0], *valid[2:]],
+            [{**valid[0], "split": "test"}, *valid[1:]],
+            [{**valid[0], "case_id": "b"}, *valid[1:]],
+        ]
+        for metadata in mutations:
+            with self.subTest(metadata=metadata), self.assertRaises(ValueError):
+                MODULE.partition_request_rows(request, metadata, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

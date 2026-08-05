@@ -9,6 +9,21 @@ import numpy as np
 K_VALUES = (2, 4, 8)
 BUDGETS = (16, 32, 64)
 N_EXPERT = 256
+SPLIT_COUNTS = {
+    "train-fit": 55,
+    "train-precision-diagnostic": 5,
+    "calibration": 20,
+    "test": 20,
+}
+
+
+def partition_request_rows(
+    request_index: np.ndarray,
+    request_metadata: list[dict[str, object]],
+    expected_counts: dict[str, int] = SPLIT_COUNTS,
+) -> dict[str, np.ndarray]:
+    """Return exact row indices for the preregistered request-grouped splits."""
+    raise NotImplementedError
 
 
 def future_union_targets(
