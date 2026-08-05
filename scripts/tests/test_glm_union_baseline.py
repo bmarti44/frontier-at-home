@@ -309,6 +309,7 @@ class AtomicLifecycleTests(unittest.TestCase):
 
     def test_root_tombstone_helper_response_is_exactly_bound(self) -> None:
         installed_sha256 = MODULE._hash_regular(MODULE.ROOT_SUBMITTER_PATH)[0]
+        controller_sha256 = MODULE._hash_regular(Path(MODULE.__file__).resolve())[0]
         candidate = "1" * 40
         fields = {
             "GLM52_P1_PREFLIGHT_SHA256": "2" * 64,
@@ -322,6 +323,15 @@ class AtomicLifecycleTests(unittest.TestCase):
             **fields,
         }, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
         reservation = MODULE._sha256_bytes(reservation_payload)
+        authority = {
+            "schema_version": 1,
+            "status": "APPROVED",
+            "candidate_hash": candidate,
+            "controller_sha256": controller_sha256,
+            "approval_sha256": "7" * 64,
+            "approval_device": 8,
+            "approval_inode": 9,
+        }
         response = {
             "schema_version": 1,
             "status": "RESERVED",
@@ -330,20 +340,31 @@ class AtomicLifecycleTests(unittest.TestCase):
             "marker_sha256": "4" * 64,
             "marker_device": 5,
             "marker_inode": 6,
+            "approved_controller_sha256": controller_sha256,
+            "approval_sha256": authority["approval_sha256"],
+            "approval_device": authority["approval_device"],
+            "approval_inode": authority["approval_inode"],
         }
-        completed = subprocess.CompletedProcess(
+        authority_completed = subprocess.CompletedProcess(
+            ["sudo"], 0, json.dumps(authority, sort_keys=True) + "\n", "",
+        )
+        reserve_completed = subprocess.CompletedProcess(
             ["sudo"], 0, json.dumps(response, sort_keys=True) + "\n", "",
         )
         with mock.patch.object(
             MODULE, "FROZEN_ROOT_SUBMITTER_SHA256", installed_sha256,
         ), mock.patch.object(
-            MODULE.subprocess, "run", return_value=completed,
+            MODULE.subprocess, "run",
+            side_effect=(authority_completed, reserve_completed),
         ) as runner:
             observed = MODULE._reserve_root_tombstone(
                 {"harness_commit": candidate}, fields,
             )
-        self.assertEqual(observed, response)
-        command = runner.call_args.args[0]
+        self.assertEqual(observed, {**response, "root_approval": authority})
+        self.assertEqual(runner.call_args_list[0].args[0], [
+            "/usr/bin/sudo", "-n", str(MODULE.ROOT_SUBMITTER_PATH), "p1-authority",
+        ])
+        command = runner.call_args_list[1].args[0]
         self.assertEqual(command[:4], [
             "/usr/bin/sudo", "-n", str(MODULE.ROOT_SUBMITTER_PATH), "reserve-p1",
         ])
@@ -351,11 +372,26 @@ class AtomicLifecycleTests(unittest.TestCase):
 
     def test_existing_root_tombstone_fails_closed(self) -> None:
         installed_sha256 = MODULE._hash_regular(MODULE.ROOT_SUBMITTER_PATH)[0]
+        controller_sha256 = MODULE._hash_regular(Path(MODULE.__file__).resolve())[0]
+        authority = {
+            "schema_version": 1,
+            "status": "APPROVED",
+            "candidate_hash": "1" * 40,
+            "controller_sha256": controller_sha256,
+            "approval_sha256": "4" * 64,
+            "approval_device": 5,
+            "approval_inode": 6,
+        }
         with mock.patch.object(
             MODULE, "FROZEN_ROOT_SUBMITTER_SHA256", installed_sha256,
         ), mock.patch.object(
             MODULE.subprocess, "run",
-            return_value=subprocess.CompletedProcess(["sudo"], 17, "", ""),
+            side_effect=(
+                subprocess.CompletedProcess(
+                    ["sudo"], 0, json.dumps(authority) + "\n", "",
+                ),
+                subprocess.CompletedProcess(["sudo"], 17, "", ""),
+            ),
         ), self.assertRaises(FileExistsError):
             MODULE._reserve_root_tombstone(
                 {"harness_commit": "1" * 40},
@@ -365,6 +401,35 @@ class AtomicLifecycleTests(unittest.TestCase):
                     "GLM52_P1_STARTED_NS": "123",
                 },
             )
+
+    def test_root_authority_rejects_changed_executing_controller(self) -> None:
+        installed_sha256 = MODULE._hash_regular(MODULE.ROOT_SUBMITTER_PATH)[0]
+        authority = {
+            "schema_version": 1,
+            "status": "APPROVED",
+            "candidate_hash": "1" * 40,
+            "controller_sha256": "9" * 64,
+            "approval_sha256": "4" * 64,
+            "approval_device": 5,
+            "approval_inode": 6,
+        }
+        with mock.patch.object(
+            MODULE, "FROZEN_ROOT_SUBMITTER_SHA256", installed_sha256,
+        ), mock.patch.object(
+            MODULE.subprocess, "run",
+            return_value=subprocess.CompletedProcess(
+                ["sudo"], 0, json.dumps(authority) + "\n", "",
+            ),
+        ) as runner, self.assertRaisesRegex(RuntimeError, "executing controller"):
+            MODULE._reserve_root_tombstone(
+                {"harness_commit": "1" * 40},
+                {
+                    "GLM52_P1_PREFLIGHT_SHA256": "2" * 64,
+                    "GLM52_P1_OUTPUT_SHA256": "3" * 64,
+                    "GLM52_P1_STARTED_NS": "123",
+                },
+            )
+        self.assertEqual(runner.call_count, 1)
 
     def test_journal_eviction_cannot_reopen_permanent_authority(self) -> None:
         retained: list[dict[str, object]] = []

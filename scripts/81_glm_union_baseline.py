@@ -71,7 +71,7 @@ AUTHORITY_MESSAGE_ID = "9b0125b612d7480da990ad79e8c4c2fb"
 AUTHORITY_GATE_ID = "glm52-p1-baseline-heldout-v1"
 AUTHORITY_IDENTIFIER = "glm52-p1-baseline-authority"
 ROOT_SUBMITTER_PATH = Path("/usr/local/sbin/glm52-w1-submit")
-FROZEN_ROOT_SUBMITTER_SHA256 = "35d03c97cb6a9a433cf980468e2d0d5477465d06846decc5b1ecec7c9fa65e11"
+FROZEN_ROOT_SUBMITTER_SHA256 = "1594b10566877b67d67007fcbdf72b3582ee829087b55989a9370fd7c813c602"
 FIXED_LAUNCH_PATH = (
     "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
@@ -1179,13 +1179,7 @@ def _emit_journal_authority(fields: dict[str, str]) -> None:
         raise RuntimeError("system-journal authority publication failed")
 
 
-def _reserve_root_tombstone(
-    preflight: dict[str, object],
-    fields: dict[str, str],
-) -> dict[str, object]:
-    candidate = preflight.get("harness_commit")
-    if not isinstance(candidate, str) or not re.fullmatch(r"[0-9a-f]{40}", candidate):
-        raise ValueError("root tombstone candidate binding is missing")
+def _root_p1_authority() -> dict[str, object]:
     details = ROOT_SUBMITTER_PATH.lstat()
     if (
         ROOT_SUBMITTER_PATH.is_symlink() or not stat.S_ISREG(details.st_mode) or
@@ -1195,6 +1189,47 @@ def _reserve_root_tombstone(
     submitter_sha256, _identity = _hash_regular(ROOT_SUBMITTER_PATH)
     if submitter_sha256 != FROZEN_ROOT_SUBMITTER_SHA256:
         raise RuntimeError("root tombstone submitter content differs")
+    completed = subprocess.run(
+        ["/usr/bin/sudo", "-n", str(ROOT_SUBMITTER_PATH), "p1-authority"],
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60,
+        check=False, env=_authority_environment(),
+    )
+    if completed.returncode != 0 or completed.stderr:
+        raise RuntimeError("root P1 authority query failed")
+    try:
+        response = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("root P1 authority response is malformed") from error
+    expected_keys = {
+        "schema_version", "status", "candidate_hash", "controller_sha256",
+        "approval_sha256", "approval_device", "approval_inode",
+    }
+    controller_sha256, _controller_identity = _hash_regular(
+        Path(__file__).resolve(strict=True),
+    )
+    if (
+        not isinstance(response, dict) or set(response) != expected_keys or
+        response.get("schema_version") != 1 or response.get("status") != "APPROVED" or
+        not isinstance(response.get("candidate_hash"), str) or
+        not re.fullmatch(r"[0-9a-f]{40}", response["candidate_hash"]) or
+        response.get("controller_sha256") != controller_sha256 or
+        not isinstance(response.get("approval_sha256"), str) or
+        not re.fullmatch(r"[0-9a-f]{64}", response["approval_sha256"]) or
+        not isinstance(response.get("approval_device"), int) or
+        isinstance(response.get("approval_device"), bool) or
+        not isinstance(response.get("approval_inode"), int) or
+        isinstance(response.get("approval_inode"), bool)
+    ):
+        raise RuntimeError("root P1 authority differs from executing controller")
+    return response
+
+
+def _reserve_root_tombstone(
+    _preflight: dict[str, object],
+    fields: dict[str, str],
+) -> dict[str, object]:
+    authority = _root_p1_authority()
+    candidate = str(authority["candidate_hash"])
     reservation_payload = json.dumps({
         "schema_version": 1,
         "classification": "GLM52_P1_PERMANENT_RESERVATION_REQUEST",
@@ -1221,18 +1256,25 @@ def _reserve_root_tombstone(
     expected_keys = {
         "schema_version", "status", "candidate_hash", "reservation_sha256",
         "marker_sha256", "marker_device", "marker_inode",
+        "approved_controller_sha256", "approval_sha256", "approval_device",
+        "approval_inode",
     }
     if (
         not isinstance(response, dict) or set(response) != expected_keys or
         response.get("schema_version") != 1 or response.get("status") != "RESERVED" or
         response.get("candidate_hash") != candidate or
         response.get("reservation_sha256") != reservation_sha256 or
+        response.get("approved_controller_sha256") != authority["controller_sha256"] or
+        response.get("approval_sha256") != authority["approval_sha256"] or
+        response.get("approval_device") != authority["approval_device"] or
+        response.get("approval_inode") != authority["approval_inode"] or
         not isinstance(response.get("marker_sha256"), str) or
         not re.fullmatch(r"[0-9a-f]{64}", response["marker_sha256"]) or
         not isinstance(response.get("marker_device"), int) or
         not isinstance(response.get("marker_inode"), int)
     ):
         raise RuntimeError("permanent root-held reservation response differs")
+    response["root_approval"] = authority
     return response
 
 

@@ -69,6 +69,14 @@ class RootAttestorContractTests(unittest.TestCase):
             submitter.parse_request(["reserve-p1-smoke", sha1, sha256]),
             ("reserve-p1-smoke", sha1, sha256),
         )
+        self.assertEqual(
+            submitter.parse_request(["reserve-p1-approval-smoke", sha1, sha256]),
+            ("reserve-p1-approval-smoke", sha1, sha256),
+        )
+        self.assertEqual(
+            submitter.parse_request(["p1-authority"]),
+            ("p1-authority",),
+        )
         for malformed in (
             [],
             ["run", sha1, sha1],
@@ -81,6 +89,8 @@ class RootAttestorContractTests(unittest.TestCase):
             ["reserve-p1", "../candidate", sha256],
             ["reserve-p1", sha1, sha256, "extra"],
             ["reserve-p1-smoke", sha1, sha256, "extra"],
+            ["reserve-p1-approval-smoke", sha1, sha256, "extra"],
+            ["p1-authority", "extra"],
             ["shell", sha256],
         ):
             with self.subTest(malformed=malformed):
@@ -101,13 +111,23 @@ class RootAttestorContractTests(unittest.TestCase):
                 mock.patch.object(submitter, "P1_RESERVATION", marker),
                 mock.patch.object(submitter, "ROOT_UID", os.getuid()),
                 mock.patch.object(submitter, "ROOT_GID", os.getgid()),
-                mock.patch.object(submitter, "_assert_repository") as repository,
+                mock.patch.object(
+                    submitter, "_read_p1_approval",
+                    return_value=({
+                        "candidate_hash": candidate,
+                        "controller_sha256": "5" * 64,
+                    }, {
+                        "approval_sha256": "6" * 64,
+                        "approval_device": 7,
+                        "approval_inode": 8,
+                    }),
+                ) as approval_reader,
                 mock.patch("builtins.print") as printer,
             ):
                 self.assertEqual(submitter.reserve_p1(
                     candidate, reservation, marker_root=marker_root, marker=marker,
                 ), 0)
-                repository.assert_called_once()
+                approval_reader.assert_called_once()
                 first = json.loads(marker.read_text(encoding="utf-8"))
                 self.assertEqual(first["candidate_hash"], candidate)
                 self.assertEqual(first["reservation_sha256"], reservation)
@@ -150,10 +170,19 @@ class RootAttestorContractTests(unittest.TestCase):
                     mock.patch.object(submitter, "STATE_ROOT", state),
                     mock.patch.object(submitter, "P1_RESERVATION_ROOT", marker_root),
                     mock.patch.object(submitter, "P1_RESERVATION", marker),
-                    mock.patch.object(submitter, "P1_APPROVAL", approval, create=True),
                     mock.patch.object(submitter, "ROOT_UID", os.getuid()),
                     mock.patch.object(submitter, "ROOT_GID", os.getgid()),
-                    mock.patch.object(submitter, "_assert_repository"),
+                    mock.patch.object(
+                        submitter, "_read_p1_approval",
+                        return_value=({
+                            "candidate_hash": approved,
+                            "controller_sha256": "2" * 64,
+                        }, {
+                            "approval_sha256": "5" * 64,
+                            "approval_device": 6,
+                            "approval_inode": 7,
+                        }),
+                    ),
                     self.assertRaisesRegex(ValueError, "root-approved"),
                 ):
                     submitter.reserve_p1(
@@ -166,6 +195,33 @@ class RootAttestorContractTests(unittest.TestCase):
                 if marker.exists():
                     marker.chmod(0o600)
                 approval.chmod(0o600)
+
+    def test_p1_root_approval_is_exact_root_owned_and_canonical(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            approval = root / "p1-approved.json"
+            value = {
+                "schema_version": 1,
+                "classification": "GLM52_P1_ROOT_APPROVED_CANDIDATE",
+                "candidate_hash": "1" * 40,
+                "controller_sha256": "2" * 64,
+            }
+            approval.write_text(
+                json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n",
+                encoding="utf-8",
+            )
+            approval.chmod(0o444)
+            with (
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+            ):
+                observed, identity = submitter._read_p1_approval(approval)
+                self.assertEqual(observed, value)
+                self.assertRegex(identity["approval_sha256"], r"^[0-9a-f]{64}$")
+                approval.chmod(0o644)
+                with self.assertRaisesRegex(ValueError, "identity"):
+                    submitter._read_p1_approval(approval)
 
     def test_p1_reservation_reader_rejects_mutable_or_linked_marker(self):
         submitter = load_submitter()
@@ -645,6 +701,19 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn("/usr/sbin/visudo -cf", source)
         self.assertIn("NOPASSWD: /usr/local/sbin/glm52-w1-submit *", source)
         self.assertNotRegex(source, r"NOPASSWD:\\s*ALL")
+        self.assertIn(
+            'readonly APPROVAL=/usr/local/libexec/glm52-w1/p1-approved.json',
+            source,
+        )
+        self.assertIn(
+            'readonly CONTROLLER_SOURCE=scripts/81_glm_union_baseline.py',
+            source,
+        )
+        self.assertIn(
+            '/usr/bin/install -o root -g root -m 0444 "$approval_temporary" "$APPROVAL"',
+            source,
+        )
+        self.assertIn('"controller_sha256": controller', source)
         expected = hashlib.sha256(SUBMITTER.read_bytes()).hexdigest()
         match = re.search(
             r"^readonly SUBMITTER_SHA256=([0-9a-f]{64})$",

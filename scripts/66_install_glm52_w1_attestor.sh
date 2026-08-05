@@ -9,11 +9,13 @@ readonly SOURCE=scripts/65_glm52_w1_submit.py
 readonly SUBMITTER=/usr/local/sbin/glm52-w1-submit
 readonly LIBEXEC=/usr/local/libexec/glm52-w1
 readonly HARNESS=/usr/local/libexec/glm52-w1/harness
+readonly APPROVAL=/usr/local/libexec/glm52-w1/p1-approved.json
+readonly CONTROLLER_SOURCE=scripts/81_glm_union_baseline.py
 readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
-readonly SUBMITTER_SHA256=35d03c97cb6a9a433cf980468e2d0d5477465d06846decc5b1ecec7c9fa65e11
+readonly SUBMITTER_SHA256=1594b10566877b67d67007fcbdf72b3582ee829087b55989a9370fd7c813c602
 readonly CONTAINED_RUNTIME_DIRS=(
     "$HARNESS"
     "$HARNESS/results"
@@ -47,6 +49,7 @@ actual=$(git_as_user -C "$REPO" rev-parse --verify "$CANDIDATE_HASH^{commit}") |
     die "repository is not clean"
 
 submitter_temporary=$(/usr/bin/mktemp /run/glm52-w1-submit.XXXXXX)
+approval_temporary=$(/usr/bin/mktemp /run/glm52-p1-approval.XXXXXX)
 sudoers_temporary=$(/usr/bin/mktemp /etc/sudoers.d/.glm52-w1-attestor.XXXXXX)
 harness_temporary=$(/usr/bin/mktemp -d /run/glm52-w1-harness.XXXXXX)
 install_complete=0
@@ -58,7 +61,7 @@ cleanup() {
             /usr/bin/mv -- "$harness_temporary/previous-harness" "$HARNESS"
         fi
     fi
-    /usr/bin/rm -f -- "$submitter_temporary" "$sudoers_temporary"
+    /usr/bin/rm -f -- "$submitter_temporary" "$approval_temporary" "$sudoers_temporary"
     /usr/bin/rm -rf -- "$harness_temporary"
 }
 trap cleanup EXIT
@@ -79,6 +82,31 @@ harness_head=$(
 [[ $harness_head == "$CANDIDATE_HASH" ]] || die "root harness candidate differs"
 [[ -z $(/usr/bin/git -C "$harness_temporary/repository" status --porcelain) ]] ||
     die "root harness is not clean"
+controller_sha=$(/usr/bin/sha256sum \
+    "$harness_temporary/repository/$CONTROLLER_SOURCE")
+controller_sha=${controller_sha%% *}
+[[ $controller_sha =~ ^[0-9a-f]{64}$ ]] ||
+    die "reviewed controller digest is invalid"
+/usr/bin/python3 - "$approval_temporary" "$CANDIDATE_HASH" "$controller_sha" <<'PY'
+import json
+import os
+import sys
+
+path, candidate, controller = sys.argv[1:]
+payload = {
+    "schema_version": 1,
+    "classification": "GLM52_P1_ROOT_APPROVED_CANDIDATE",
+    "candidate_hash": candidate,
+    "controller_sha256": controller,
+}
+with open(path, "w", encoding="utf-8") as stream:
+    json.dump(payload, stream, sort_keys=True, separators=(",", ":"))
+    stream.write("\n")
+    stream.flush()
+    os.fsync(stream.fileno())
+PY
+/usr/bin/chown root:root "$approval_temporary"
+/usr/bin/chmod 0444 "$approval_temporary"
 
 /usr/bin/printf '%s\n' \
     'bmarti44 ALL=(root) NOPASSWD: /usr/local/sbin/glm52-w1-submit *' \
@@ -225,6 +253,7 @@ for path in "${CONTAINED_RUNTIME_FILES[@]}"; do
         die "contained account cannot read runtime file"
 done
 /usr/bin/install -o root -g root -m 0755 "$submitter_temporary" "$SUBMITTER"
+/usr/bin/install -o root -g root -m 0444 "$approval_temporary" "$APPROVAL"
 /usr/bin/install -o root -g root -m 0440 "$sudoers_temporary" "$RULE"
 /usr/sbin/visudo -c
 

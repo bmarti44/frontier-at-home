@@ -32,7 +32,10 @@ P1_RESERVATION_ROOT = STATE_ROOT / "p1-baseline-heldout-v1"
 P1_RESERVATION = P1_RESERVATION_ROOT / "reservation.json"
 P1_SMOKE_ROOT = STATE_ROOT / "p1-baseline-smoke-v1"
 P1_SMOKE_RESERVATION = P1_SMOKE_ROOT / "reservation.json"
+P1_APPROVAL_SMOKE_ROOT = STATE_ROOT / "p1-baseline-approval-smoke-v1"
+P1_APPROVAL_SMOKE_RESERVATION = P1_APPROVAL_SMOKE_ROOT / "reservation.json"
 INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
+P1_APPROVAL = Path("/usr/local/libexec/glm52-w1/p1-approved.json")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
 LEGACY_INFERENCE_LOCK = Path("/run/dsv4/inference.lock")
@@ -60,6 +63,8 @@ ACTIVE_REQUEST: dict[str, Any] | None = None
 
 
 def parse_request(argv: list[str]) -> tuple[str, ...]:
+    if argv == ["p1-authority"]:
+        return tuple(argv)
     if (
         len(argv) == 4
         and argv[0] == "run"
@@ -76,7 +81,9 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
         return tuple(argv)
     if (
         len(argv) == 3
-        and argv[0] in {"reserve-p1", "reserve-p1-smoke"}
+        and argv[0] in {
+            "reserve-p1", "reserve-p1-smoke", "reserve-p1-approval-smoke",
+        }
         and HASH40.fullmatch(argv[1])
         and HASH64.fullmatch(argv[2])
     ):
@@ -85,8 +92,10 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
         "usage: glm52-w1-submit run HARNESS_COMMIT ENGINE_COMMIT MODEL_SHA256\n"
         "       glm52-w1-submit status COMPOSITE_SHA256\n"
         "       glm52-w1-submit diagnose COMPOSITE_SHA256\n"
+        "       glm52-w1-submit p1-authority\n"
         "       glm52-w1-submit reserve-p1 CANDIDATE_HASH RESERVATION_SHA256\n"
-        "       glm52-w1-submit reserve-p1-smoke CANDIDATE_HASH RESERVATION_SHA256"
+        "       glm52-w1-submit reserve-p1-smoke CANDIDATE_HASH RESERVATION_SHA256\n"
+        "       glm52-w1-submit reserve-p1-approval-smoke CANDIDATE_HASH RESERVATION_SHA256"
     )
 
 
@@ -235,6 +244,82 @@ def _read_p1_reservation(
     return value
 
 
+def _read_p1_approval(
+    path: Path = P1_APPROVAL,
+) -> tuple[dict[str, Any], dict[str, int | str]]:
+    parent = path.parent.lstat()
+    if (
+        not stat.S_ISDIR(parent.st_mode) or stat.S_ISLNK(parent.st_mode) or
+        parent.st_uid != ROOT_UID or parent.st_gid != ROOT_GID or
+        parent.st_mode & 0o022
+    ):
+        raise ValueError("P1 root approval parent identity differs")
+    descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+    try:
+        details = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(details.st_mode) or details.st_uid != ROOT_UID or
+            details.st_gid != ROOT_GID or stat.S_IMODE(details.st_mode) != 0o444 or
+            details.st_nlink != 1
+        ):
+            raise ValueError("P1 root approval identity differs")
+        payload = bytearray()
+        while block := os.read(descriptor, 4096):
+            payload.extend(block)
+            if len(payload) > 16 * 1024:
+                raise ValueError("P1 root approval is unexpectedly large")
+        after = os.fstat(descriptor)
+        if (
+            details.st_dev, details.st_ino, details.st_size,
+            details.st_mtime_ns, details.st_ctime_ns,
+        ) != (
+            after.st_dev, after.st_ino, after.st_size,
+            after.st_mtime_ns, after.st_ctime_ns,
+        ):
+            raise ValueError("P1 root approval changed while reading")
+    finally:
+        os.close(descriptor)
+    try:
+        value = json.loads(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("P1 root approval is malformed") from exc
+    if (
+        not isinstance(value, dict) or set(value) != {
+            "schema_version", "classification", "candidate_hash",
+            "controller_sha256",
+        } or
+        value.get("schema_version") != 1 or
+        value.get("classification") != "GLM52_P1_ROOT_APPROVED_CANDIDATE" or
+        not isinstance(value.get("candidate_hash"), str) or
+        not HASH40.fullmatch(value["candidate_hash"]) or
+        not isinstance(value.get("controller_sha256"), str) or
+        not HASH64.fullmatch(value["controller_sha256"])
+    ):
+        raise ValueError("P1 root approval fields differ")
+    canonical = (
+        json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode("utf-8")
+    if bytes(payload) != canonical:
+        raise ValueError("P1 root approval encoding differs")
+    return value, {
+        "approval_sha256": hashlib.sha256(canonical).hexdigest(),
+        "approval_device": details.st_dev,
+        "approval_inode": details.st_ino,
+    }
+
+
+def show_p1_authority() -> int:
+    approval, identity = _read_p1_approval()
+    print(json.dumps({
+        "schema_version": 1,
+        "status": "APPROVED",
+        "candidate_hash": approval["candidate_hash"],
+        "controller_sha256": approval["controller_sha256"],
+        **identity,
+    }, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
 def reserve_p1(
     candidate_hash: str,
     reservation_sha256: str,
@@ -244,10 +329,6 @@ def reserve_p1(
     classification: str = "GLM52_P1_PERMANENT_RESERVATION",
 ) -> int:
     """Create the permanent root-owned one-shot marker before held-out access."""
-    _assert_repository(
-        REPOSITORY, candidate_hash, reject_untracked=True,
-        required_path=Path("scripts/81_glm_union_baseline.py"),
-    )
     try:
         existing = _read_p1_reservation(marker, classification)
     except FileNotFoundError:
@@ -260,6 +341,10 @@ def reserve_p1(
             "reservation_sha256": existing["reservation_sha256"],
         }, sort_keys=True, separators=(",", ":")))
         return 17
+
+    approval, approval_identity = _read_p1_approval()
+    if candidate_hash != approval["candidate_hash"]:
+        raise ValueError("candidate differs from root-approved P1 authority")
 
     try:
         marker_root.mkdir(mode=0o700, parents=False)
@@ -320,6 +405,8 @@ def reserve_p1(
         "marker_sha256": hashlib.sha256(payload).hexdigest(),
         "marker_device": details.st_dev,
         "marker_inode": details.st_ino,
+        "approved_controller_sha256": approval["controller_sha256"],
+        **approval_identity,
     }, sort_keys=True, separators=(",", ":")))
     return 0
 
@@ -1319,6 +1406,8 @@ def main(argv: list[str]) -> int:
                 )
             )
             return 0
+        if request[0] == "p1-authority":
+            return show_p1_authority()
         if request[0] == "reserve-p1":
             return reserve_p1(request[1], request[2])
         if request[0] == "reserve-p1-smoke":
@@ -1326,6 +1415,12 @@ def main(argv: list[str]) -> int:
                 request[1], request[2], marker_root=P1_SMOKE_ROOT,
                 marker=P1_SMOKE_RESERVATION,
                 classification="GLM52_P1_NONHELDOUT_SMOKE_RESERVATION",
+            )
+        if request[0] == "reserve-p1-approval-smoke":
+            return reserve_p1(
+                request[1], request[2], marker_root=P1_APPROVAL_SMOKE_ROOT,
+                marker=P1_APPROVAL_SMOKE_RESERVATION,
+                classification="GLM52_P1_NONHELDOUT_APPROVAL_SMOKE_RESERVATION",
             )
         return show_status(request[1])
 
