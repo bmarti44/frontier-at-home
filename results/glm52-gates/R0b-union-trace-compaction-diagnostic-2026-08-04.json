@@ -53,7 +53,7 @@
       "reason": "The source PASS was self-asserted rather than fixed-scorer and tracked-receipt authoritative; source consumption had a pathname TOCTOU; directory rename could replace a racing empty destination."
     },
     {
-      "classification": "FIX_CANDIDATE",
+      "classification": "REJECTED_FOR_CORPUS",
       "format": "tracked-qualified-same-descriptor-group32-int4-bundle",
       "manifest_sha256": "6887f3cb2b34c209f7c82d1ede2b12e8fb38d39fbc23ea707004695cefba064e",
       "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
@@ -64,8 +64,28 @@
       "fixed_scorer_reproduced": true,
       "top_level_off_on_checks_reproduced": true,
       "source_bytes_hash_and_parse_same_descriptor": true,
+      "publication": "renameat2-RENAME_NOREPLACE after fsync",
+      "review_round": 78,
+      "review_scores": [87],
+      "reason": "The tracked receipt, control JSON, logs, and scorer were still reopened through separate paths; the scorer identity was not recorded. Fable independently confirmed both findings."
+    },
+    {
+      "classification": "FIX_CANDIDATE",
+      "candidate_hash": "f412a5a5823c3df1c935cb628dc07dce4a94037e",
+      "format": "immutable-control-snapshot-group32-int4-bundle",
+      "manifest_sha256": "0eca950c7014912f1b8f3b602feea12e93a73e829b6ea7078840c6c091174693",
+      "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
+      "output_bytes": 14825646,
+      "compactor_sha256": "04ccc23043d857f74d6794133f6dd3b4ed8b716dc07d18a8f27068399abe2643",
+      "scorer_sha256": "0a0cf0ba48944803c2fc5886c5ab95cca77e5eade09e4d3a21701f22e4644d9b",
+      "source_receipt_sha256": "b5b5d074f6d24a554a2d98020aa3a363dd3b2578fbdce9be22fea2b4f1459b9b",
+      "source_summary_sha256": "46d3b2132adc0bbeabbbfe535405f8482188fff5a3aa67b5a87d9ce47cff13d2",
+      "fixed_scorer_reproduced_from_tracked_snapshot": true,
+      "control_files_hash_and_parse_same_snapshot": true,
+      "trace_scored_from_verified_snapshot": true,
+      "deterministic_repeat": true,
       "publication": "renameat2-RENAME_NOREPLACE after fsync"
     }
   ],
-  "conclusion": "The latest fix requires a tracked-clean reviewed receipt, reproduces the fixed scorer and top-level OFF/ON checks, consumes hash-verified bytes from the same no-follow descriptor, and publishes with atomic no-replace. It still makes no probe-accuracy or corpus-completeness claim; reviewer verification is pending."
+  "conclusion": "Candidate f412a5a closes the two independently confirmed round-78 gaps by consuming each control artifact from one no-follow snapshot and binding the loaded scorer to tracked HEAD bytes. The deterministic output is unchanged. It still makes no probe-accuracy or corpus-completeness claim; round-79 reviewer verification is pending."
 }
