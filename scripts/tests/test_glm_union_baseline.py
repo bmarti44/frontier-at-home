@@ -1084,6 +1084,24 @@ class BaselineTableTests(unittest.TestCase):
         self.assertEqual(record["failure_injection"], failure)
         MODULE.validate_two_control_record(record)
 
+    def test_control_fingerprint_uses_exact_tokens_logits_and_rejects_short_output(self):
+        selected = [
+            f'ds4: decode-consistency selected[{index}]={{"token":{index}}}'.encode()
+            for index in range(8)
+        ]
+        payload = b"\n".join([
+            b"unrelated timing line",
+            *selected,
+            b"ds4: decode-consistency compared prefix_tokens=32 vocab=64 max_abs=0 at token=0 live=1 fresh=1 rms=0",
+            b"ds4: live_top: {\"token\":1}@1",
+            b"ds4: fresh_top: {\"token\":1}@1",
+        ]) + b"\n"
+        continuation, tokens = MODULE._control_fingerprint(payload)
+        self.assertRegex(continuation, r"^[0-9a-f]{64}$")
+        self.assertRegex(tokens, r"^[0-9a-f]{64}$")
+        with self.assertRaises(RuntimeError):
+            MODULE._control_fingerprint(payload.replace(selected[-1] + b"\n", b""))
+
     def test_cost_table_requires_five_matched_cold_warm_blocks_and_fails_closed(self) -> None:
         rows = []
         for block in range(5):
@@ -1121,6 +1139,26 @@ class BaselineTableTests(unittest.TestCase):
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 MODULE.score_cost_table(changed)
 
+    def test_mtp_fold_requires_equal_cost_and_strict_recall_dominance(self) -> None:
+        requests, targets, rankings = self.fixture()
+        metrics = MODULE.score_baseline_table(
+            requests, targets, rankings, bootstrap_resamples=100,
+        )
+        cost = {
+            "mtp_equal_cost_to_gate_replay": True,
+            "mtp_equal_cost_to_shared_correction": True,
+            "mtp_equal_cost_to_probe": True,
+        }
+        self.assertFalse(MODULE.decide_mtp_fold(metrics, cost)["fold_into_mtp"])
+        for k in (2, 4, 8):
+            for budget in (16, 32, 64):
+                metrics["methods"]["mtp"][str(k)][str(budget)][
+                    "macro_request_recall"
+                ] = 1.0
+        self.assertTrue(MODULE.decide_mtp_fold(metrics, cost)["fold_into_mtp"])
+        cost["mtp_equal_cost_to_probe"] = False
+        self.assertFalse(MODULE.decide_mtp_fold(metrics, cost)["fold_into_mtp"])
+
     def test_completed_result_is_independently_reconstructed_and_strict_reopened(self) -> None:
         requests, targets, rankings = self.fixture()
         with tempfile.TemporaryDirectory() as raw:
@@ -1134,6 +1172,70 @@ class BaselineTableTests(unittest.TestCase):
                 "schema_version": 1,
                 "classification": "P1_HELD_OUT_BASELINE_SCORE",
             })
+            cost_rows = []
+            for block in range(5):
+                for temperature in ("cold", "warm"):
+                    for method, milliseconds in (
+                        ("gate_replay", 1.0), ("shared_correction", 1.2),
+                        ("mtp", 10.0), ("probe", 2.0),
+                    ):
+                        cost_rows.append({
+                            "block": block,
+                            "temperature": temperature,
+                            "method": method,
+                            "completed_ms": milliseconds + block / 100.0,
+                            "persistent_bytes": 0,
+                            "peak_temporary_bytes": 1024,
+                            "target_expert_bytes_read": (
+                                100000 if method == "mtp" else 0
+                            ),
+                            "completed_events": 32,
+                            "synchronized": True,
+                        })
+            (root / "cost.json").write_text(json.dumps({
+                "schema_version": 1, "rows": cost_rows,
+            }) + "\n", encoding="utf-8")
+            summary["cost"] = MODULE.score_cost_table(cost_rows)
+            failure = {
+                "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
+                "all_destroyed": True,
+                "all_control_continuations_equal": True,
+            }
+            runtime_logs = []
+            for request in range(1, 21):
+                control = {
+                    "schema_version": 1,
+                    "request_index": request,
+                    "request_id": f"{request:064x}",
+                    "stage_order": ["control_before", "diagnostic", "control_after"],
+                    "diagnostic": {
+                        "fresh_process": True, "resident_arena_bytes": 0,
+                        "cache_namespace": f"diagnostic-{request}", "exit_code": 0,
+                    },
+                    "control_before": {
+                        "fresh_process": True,
+                        "cache_namespace": f"before-{request}",
+                        "continuation_sha256": "2" * 64,
+                        "token_ids_sha256": "3" * 64, "exit_code": 0,
+                    },
+                    "control_after": {
+                        "fresh_process": True,
+                        "cache_namespace": f"after-{request}",
+                        "continuation_sha256": "2" * 64,
+                        "token_ids_sha256": "3" * 64, "exit_code": 0,
+                    },
+                    "failure_injection": failure,
+                }
+                runtime_logs.append({"two_control": control})
+            (root / "raw.json").write_text(
+                json.dumps({"runtime_logs": runtime_logs}) + "\n", encoding="utf-8",
+            )
+            summary["two_control"] = {
+                "requests": 20,
+                "all_isolated": True,
+                "all_continuations_equal": True,
+                "failure_injection_stages": failure["stages"],
+            }
             summary_path = root / "summary.json"
             summary_path.write_text(
                 json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n",
