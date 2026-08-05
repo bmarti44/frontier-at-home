@@ -670,6 +670,19 @@ that recent routing carries useful signal beyond flat popularity and justify
 collecting the fixture-grouped hidden/logit P0 corpus; they do not justify an
 online predictor yet.
 
+Train-only P1 status (2026-08-05): candidate `6ade34d` completed the frozen
+three-fold cross-validation over all 75 routed layers, 57 training requests,
+and 1,324,350 valid K=4 events without a CUDA/Xid/OOM fault. At the
+preregistered K=4, budget=32 selection point, macro-request recall was 25.9584%
+for the fold-local frequency prior and 51.4214%, 58.1163%, and 63.7837% for
+ranks 8, 16, and 32 respectively, so rank 32 is frozen. Its event-weighted
+recall was 17.9106% versus 14.2103% for frequency. These are train-only
+cross-validation measurements, not held-out performance. The bound receipt is
+`R0c-union-probe-p1-cv-pass-6ade34d.json`; next comes the already-frozen
+five-case FP16-versus-int4 feature diagnostic, followed by the separately
+captured gate-replay/shared-correction/MTP baselines before the test split is
+opened once.
+
 #### P2 - split-conformal calibration
 
 Use the frozen calibration split to turn raw per-expert scores into prediction
