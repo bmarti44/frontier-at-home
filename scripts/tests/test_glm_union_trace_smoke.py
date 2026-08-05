@@ -191,6 +191,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         for name in (
             "DS4_GLM_SYNC_TRACE", "DS4_METAL_GRAPH_DUMP_PREFIX",
             "DS4_METAL_GRAPH_DUMP_NAME", "DS4_METAL_GRAPH_DUMP_LAYER",
+            "DS4_GLM_UNION_TRACE_CORPUS",
         ):
             self.assertIn(name, self.runner)
             self.assertIn(name, self.cgroup)
@@ -200,7 +201,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             'public.add_argument("--corpus-smoke", action="store_true")',
             '"DS4_GLM_UNION_TRACE_CORPUS"',
             '"DS4_METAL_GRAPH_DUMP_LAYER": "all"',
-            'for request_index in range(2)',
+            'for request_index in range(2 if args.corpus_smoke else 1)',
             '"minimum_token_layer_events": 76800',
         ):
             self.assertIn(marker, self.runner)

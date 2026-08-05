@@ -26,6 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 FREEZE = ROOT / "results/glm52-gates/R0b-union-trace-smoke-freeze.json"
 RANDOMNESS = ROOT / "results/glm52-gates/R0b-union-trace-smoke-randomness.json"
+CORPUS_FREEZE = ROOT / "results/glm52-gates/R0b-union-corpus-runtime-freeze.json"
+CORPUS_RANDOMNESS = ROOT / "results/glm52-gates/R0b-union-corpus-runtime-randomness.json"
 SHARED_PATH = ROOT / "scripts/73_run_glm_shared_router_probe.py"
 SCORER_PATH = ROOT / "scripts/75_glm_union_trace_score.py"
 FROZEN_RUNTIME_DEPENDENCIES = (
@@ -66,6 +68,7 @@ ENV_NAMES = sorted(set(SHARED.ENV_NAMES) | {
     "DS4_METAL_GRAPH_DUMP_PREFIX",
     "DS4_METAL_GRAPH_DUMP_NAME",
     "DS4_METAL_GRAPH_DUMP_LAYER",
+    "DS4_GLM_UNION_TRACE_CORPUS",
 })
 SYNC_RE = re.compile(
     r"ds4: GLM sync branch=full_indexed pos=(\d+) chunk=(\d+) logits=\d+"
@@ -81,14 +84,16 @@ def randomness_is_after_freeze(round_number: int, freeze_commit_time: int) -> bo
     return round_time > freeze_commit_time
 
 
-def validate_randomness_order() -> None:
-    relative = str(FREEZE.relative_to(ROOT))
+def validate_randomness_order(
+    freeze_path: Path = FREEZE, randomness_path: Path = RANDOMNESS,
+) -> None:
+    relative = str(freeze_path.relative_to(ROOT))
     completed = subprocess.run(
         ["git", "log", "-1", "--format=%ct", "--", relative],
         cwd=ROOT, text=True, capture_output=True, check=True,
     )
     freeze_time = int(completed.stdout.strip())
-    randomness = SHARED.strict_json(RANDOMNESS)
+    randomness = SHARED.strict_json(randomness_path)
     if not randomness_is_after_freeze(int(randomness["round"]), freeze_time):
         raise ValueError("public randomness does not postdate the freeze commit")
 
@@ -101,7 +106,7 @@ def configuration_sha256(values: dict[str, str]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
-def trace_environment(mode: str, out: Path) -> dict[str, str]:
+def trace_environment(mode: str, out: Path, *, corpus_smoke: bool = False) -> dict[str, str]:
     if mode not in {"off", "on"}:
         raise ValueError("invalid trace arm")
     values = dict(SHARED.COMMON_ENV)
@@ -113,8 +118,10 @@ def trace_environment(mode: str, out: Path) -> dict[str, str]:
         values.update({
             "DS4_METAL_GRAPH_DUMP_PREFIX": str(out / "trace/request"),
             "DS4_METAL_GRAPH_DUMP_NAME": TRACE_NAMES,
-            "DS4_METAL_GRAPH_DUMP_LAYER": "4",
+            "DS4_METAL_GRAPH_DUMP_LAYER": "all" if corpus_smoke else "4",
         })
+        if corpus_smoke:
+            values["DS4_GLM_UNION_TRACE_CORPUS"] = "1"
     return values
 
 
@@ -125,8 +132,12 @@ def matched_configuration_sha256() -> str:
 
 
 def full_indexed_chunks(log: Path) -> list[list[int]]:
+    return full_indexed_chunks_text(log.read_text(encoding="utf-8", errors="strict"))
+
+
+def full_indexed_chunks_text(text: str) -> list[list[int]]:
     rows = [[int(match.group(1)), int(match.group(2))]
-            for match in SYNC_RE.finditer(log.read_text(encoding="utf-8", errors="strict"))]
+            for match in SYNC_RE.finditer(text)]
     if not rows or len({tuple(row) for row in rows}) != len(rows):
         raise ValueError("full-indexed chunk evidence is missing or duplicated")
     for index, (pos, count) in enumerate(rows):
@@ -176,6 +187,48 @@ def smoke_verdict(
             any(row[1] == 2048 for row in chunks)
         ))
     )
+    off_corpus = off.get("corpus_requests")
+    on_corpus = on.get("corpus_requests")
+    corpus_mode = off_corpus is not None or on_corpus is not None
+    corpus_scope = True
+    corpus_event_floor = True
+    if corpus_mode:
+        def valid_requests(value: Any) -> bool:
+            if not isinstance(value, list) or len(value) != 2:
+                return False
+            for expected_id, item in enumerate(value, 1):
+                if (not isinstance(item, dict) or item.get("request_id") != expected_id or
+                        not isinstance(item.get("prompt_tokens"), int) or
+                        item["prompt_tokens"] < MIN_PROMPT_TOKENS):
+                    return False
+                item_chunks = item.get("full_indexed_chunks")
+                if (not isinstance(item_chunks, list) or not item_chunks or
+                        item_chunks[0][0] != 0 or
+                        any(not isinstance(row, list) or len(row) != 2 or
+                            any(not isinstance(number, int) or isinstance(number, bool)
+                                for number in row) or row[1] <= 0
+                            for row in item_chunks) or
+                        any(item_chunks[index][0] !=
+                            item_chunks[index - 1][0] + item_chunks[index - 1][1]
+                            for index in range(1, len(item_chunks))) or
+                        sum(row[1] for row in item_chunks) != item["prompt_tokens"]):
+                    return False
+            return True
+
+        corpus_scope = (
+            valid_requests(off_corpus) and valid_requests(on_corpus) and
+            all(
+                all(left.get(key) == right.get(key) for key in (
+                    "request_id", "prompt_tokens", "full_indexed_chunks",
+                    "response_signature",
+                ))
+                for left, right in zip(off_corpus, on_corpus)
+            ) and trace_score.get("requests") == 2
+        )
+        corpus_event_floor = (
+            isinstance(trace_score.get("token_layer_events"), int) and
+            trace_score["token_layer_events"] >= 76800
+        )
     checks = {
         "arm_modes": off.get("mode") == "off" and on.get("mode") == "on",
         "frozen_identity": all(off.get(key) == on.get(key) for key in common_hashes),
@@ -186,6 +239,8 @@ def smoke_verdict(
         "on_emitted_trace": isinstance(on.get("trace_files"), int) and on.get("trace_files", 0) > 0,
         "trace_score_passed": trace_score.get("verdict") == "PASS",
         "containment_clean": off_containment.get("clean") is True and on_containment.get("clean") is True,
+        "corpus_request_scope": corpus_scope,
+        "corpus_event_floor": corpus_event_floor,
     }
     return {"checks": checks, "verdict": "PASS" if all(checks.values()) else "FAIL"}
 
@@ -193,7 +248,7 @@ def smoke_verdict(
 def _arm(args: argparse.Namespace) -> int:
     out = args.out.resolve()
     binary = args.binary.resolve()
-    expected = trace_environment(args.mode, out)
+    expected = trace_environment(args.mode, out, corpus_smoke=args.corpus_smoke)
     observed = {name: os.environ[name] for name in ENV_NAMES if name in os.environ}
     if observed != expected:
         raise ValueError("trace arm environment differs from frozen configuration")
@@ -215,30 +270,52 @@ def _arm(args: argparse.Namespace) -> int:
             server = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=log,
                                       stderr=subprocess.STDOUT, start_new_session=False)
             SHARED.wait_ready(server, args.port)
-            completed = subprocess.run([
-                sys.executable, str(SHARED.BENCH),
-                "--base-url", f"http://127.0.0.1:{args.port}",
-                "--out", str(result_path), "--stack-label", f"union-trace-{args.mode}",
-                "--model-id", "glm-5.2", "--tokenizer-path", str(SHARED.TOKENIZER),
-                "--tokenizer-sha256", SHARED.TOKENIZER_SHA256,
-                "--output-tokenizer-path", str(SHARED.TOKENIZER),
-                "--output-tokenizer-sha256", SHARED.TOKENIZER_SHA256,
-                "--token-timing-log", str(server_log), "--reps", "1", "--warmup", "0",
-                "--context-levels", str(args.context_level), "--max-tokens", "128",
-                "--min-completion-tokens", "128", "--request-timeout", "2700",
-                "--seed", str(args.seed),
-            ], stdin=subprocess.DEVNULL, capture_output=True, timeout=3000, check=False)
-            (out / "bench.stdout.log").write_bytes(completed.stdout)
-            (out / "bench.stderr.log").write_bytes(completed.stderr)
-            if completed.returncode != 0:
-                raise RuntimeError(f"benchmark failed rc={completed.returncode}")
-            signature = SHARED.response_signature(result_path)
-            payload = SHARED.strict_json(result_path)
-            reps = payload["cells"][0]["reps"]
-            prompt_tokens = reps[0].get("prompt_tokens") if len(reps) == 1 else None
-            if (not isinstance(prompt_tokens, int) or isinstance(prompt_tokens, bool) or
-                    prompt_tokens < max(MIN_PROMPT_TOKENS, args.context_level)):
-                raise ValueError("benchmark prompt-token coverage is insufficient")
+            request_records: list[dict[str, Any]] = []
+            for request_index in range(2 if args.corpus_smoke else 1):
+                current_result = (out / f"result-{request_index + 1}.json"
+                                  if args.corpus_smoke else result_path)
+                log.flush()
+                os.fsync(log.fileno())
+                log_start = server_log.stat().st_size
+                completed = subprocess.run([
+                    sys.executable, str(SHARED.BENCH),
+                    "--base-url", f"http://127.0.0.1:{args.port}",
+                    "--out", str(current_result),
+                    "--stack-label", f"union-trace-{args.mode}-r{request_index + 1}",
+                    "--model-id", "glm-5.2", "--tokenizer-path", str(SHARED.TOKENIZER),
+                    "--tokenizer-sha256", SHARED.TOKENIZER_SHA256,
+                    "--output-tokenizer-path", str(SHARED.TOKENIZER),
+                    "--output-tokenizer-sha256", SHARED.TOKENIZER_SHA256,
+                    "--token-timing-log", str(server_log), "--reps", "1", "--warmup", "0",
+                    "--context-levels", str(args.context_level), "--max-tokens", "128",
+                    "--min-completion-tokens", "128", "--request-timeout", "2700",
+                    "--seed", str(args.seed + request_index),
+                ], stdin=subprocess.DEVNULL, capture_output=True, timeout=3000, check=False)
+                (out / f"bench-{request_index + 1}.stdout.log").write_bytes(completed.stdout)
+                (out / f"bench-{request_index + 1}.stderr.log").write_bytes(completed.stderr)
+                if completed.returncode != 0:
+                    raise RuntimeError(
+                        f"benchmark request {request_index + 1} failed rc={completed.returncode}"
+                    )
+                log.flush()
+                os.fsync(log.fileno())
+                with server_log.open("rb") as log_reader:
+                    log_reader.seek(log_start)
+                    request_log = log_reader.read().decode("utf-8", errors="strict")
+                signature = SHARED.response_signature(current_result)
+                payload = SHARED.strict_json(current_result)
+                reps = payload["cells"][0]["reps"]
+                prompt_tokens = reps[0].get("prompt_tokens") if len(reps) == 1 else None
+                if (not isinstance(prompt_tokens, int) or isinstance(prompt_tokens, bool) or
+                        prompt_tokens < max(MIN_PROMPT_TOKENS, args.context_level)):
+                    raise ValueError("benchmark prompt-token coverage is insufficient")
+                request_records.append({
+                    "request_id": request_index + 1,
+                    "prompt_tokens": prompt_tokens,
+                    "full_indexed_chunks": full_indexed_chunks_text(request_log),
+                    "response_signature": signature,
+                    "result_sha256": SHARED.sha256(current_result),
+                })
         finally:
             if server is not None and server.poll() is None:
                 server.send_signal(signal.SIGTERM)
@@ -251,7 +328,9 @@ def _arm(args: argparse.Namespace) -> int:
             os.fsync(log.fileno())
     if server is None or server.returncode != 0:
         raise RuntimeError(f"server did not exit cleanly rc={getattr(server, 'returncode', None)}")
-    chunks = full_indexed_chunks(server_log)
+    if not request_records:
+        raise RuntimeError("arm produced no requests")
+    chunks = request_records[0]["full_indexed_chunks"]
     files = [path for path in trace.iterdir()]
     total_trace_bytes = sum(path.stat().st_size for path in files if path.is_file())
     if total_trace_bytes > args.max_trace_bytes:
@@ -260,22 +339,33 @@ def _arm(args: argparse.Namespace) -> int:
         raise RuntimeError("off arm emitted trace files")
     if args.mode == "on" and not files:
         raise RuntimeError("on arm emitted no trace files")
+    fixture_digest = (hashlib.sha256(
+        b"".join(bytes.fromhex(str(item["response_signature"]["request_sha256"]))
+                 for item in request_records)
+    ).hexdigest() if args.corpus_smoke else
+        str(request_records[0]["response_signature"]["request_sha256"]))
+    result_digest = (hashlib.sha256(
+        b"".join(bytes.fromhex(str(item["result_sha256"])) for item in request_records)
+    ).hexdigest() if args.corpus_smoke else str(request_records[0]["result_sha256"]))
     record = {
         "mode": args.mode,
         "binary_sha256": args.binary_sha256,
         "model_sha256": args.model_sha256,
         "tokenizer_sha256": SHARED.TOKENIZER_SHA256,
-        "fixture_sha256": signature["request_sha256"],
+        "fixture_sha256": fixture_digest,
         "configuration_sha256": matched_configuration_sha256(),
         "environment_sha256": configuration_sha256(expected),
-        "response_signature": signature,
-        "prompt_tokens": prompt_tokens,
+        "response_signature": ([item["response_signature"] for item in request_records]
+                               if args.corpus_smoke else request_records[0]["response_signature"]),
+        "prompt_tokens": request_records[0]["prompt_tokens"],
         "full_indexed_chunks": chunks,
         "trace_files": len(files),
         "trace_bytes": total_trace_bytes,
-        "result_sha256": SHARED.sha256(result_path),
+        "result_sha256": result_digest,
         "server_log_sha256": SHARED.sha256(server_log),
     }
+    if args.corpus_smoke:
+        record["corpus_requests"] = request_records
     (out / "arm.json").write_text(
         json.dumps(record, sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
@@ -290,9 +380,18 @@ def run(args: argparse.Namespace) -> int:
         raise ValueError("context level is outside the bounded trace range")
     if args.require_multichunk and args.context_level <= 2048:
         raise ValueError("multi-chunk qualification requires context level above 2048")
-    max_trace_bytes = (args.context_level + 1024) * TRACE_BYTES_PER_TOKEN_LAYER
-    freeze = SHARED.frozen_inputs(FREEZE, RANDOMNESS)
-    validate_randomness_order()
+    if args.require_multichunk and args.corpus_smoke:
+        raise ValueError("corpus smoke and single-request multichunk modes are exclusive")
+    layer_count = 75 if args.corpus_smoke else 1
+    request_count = 2 if args.corpus_smoke else 1
+    max_trace_bytes = (
+        (args.context_level + 1024) * TRACE_BYTES_PER_TOKEN_LAYER *
+        layer_count * request_count
+    )
+    freeze_path = CORPUS_FREEZE if args.corpus_smoke else FREEZE
+    randomness_path = CORPUS_RANDOMNESS if args.corpus_smoke else RANDOMNESS
+    freeze = SHARED.frozen_inputs(freeze_path, randomness_path)
+    validate_randomness_order(freeze_path, randomness_path)
     candidate = Path(str(freeze["candidate_directory"])).resolve()
     binary = candidate / "ds4-server"
     SHARED.no_other_inference()
@@ -312,12 +411,19 @@ def run(args: argparse.Namespace) -> int:
     containment: dict[str, dict[str, Any]] = {}
     for index, mode in enumerate(("off", "on")):
         out = root / mode
-        values = trace_environment(mode, out)
+        values = trace_environment(mode, out, corpus_smoke=args.corpus_smoke)
         environment = os.environ.copy()
         for name in list(environment):
             if name.startswith("DS4_") or name.startswith("GLM_SAFE_"):
                 environment.pop(name)
         environment.update(values)
+        final_artifacts = [str(out / "arm.json")]
+        if args.corpus_smoke:
+            final_artifacts.extend(str(out / f"result-{request_id}.json")
+                                   for request_id in (1, 2))
+        else:
+            final_artifacts.append(str(out / "result.json"))
+        final_artifacts.append(str(out / "server.log"))
         environment.update({
             "GLM_CANDIDATE_SRC": str(candidate),
             "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
@@ -329,9 +435,7 @@ def run(args: argparse.Namespace) -> int:
             "GLM_SAFE_KILL_FLOOR_GIB": "18",
             "GLM_SAFE_MIN_START_GIB": "110",
             "GLM_SAFE_TIMEOUT_S": "3600",
-            "GLM_SAFE_FINAL_ARTIFACTS": ",".join((
-                str(out / "arm.json"), str(out / "result.json"), str(out / "server.log"),
-            )),
+            "GLM_SAFE_FINAL_ARTIFACTS": ",".join(final_artifacts),
         })
         completed = subprocess.run([
             str(CGROUP), "--tag", f"{args.tag}-{mode}", "--", sys.executable,
@@ -343,6 +447,7 @@ def run(args: argparse.Namespace) -> int:
             "--context-level", str(args.context_level),
             "--max-trace-bytes", str(max_trace_bytes),
             *(["--require-multichunk"] if args.require_multichunk else []),
+            *(["--corpus-smoke"] if args.corpus_smoke else []),
         ], env=environment, stdin=subprocess.DEVNULL, capture_output=True,
            timeout=3700, check=False)
         (root / f"{mode}.containment.stdout.log").write_bytes(completed.stdout)
@@ -359,18 +464,35 @@ def run(args: argparse.Namespace) -> int:
 
     off = SHARED.strict_json(root / "off/arm.json")
     on = SHARED.strict_json(root / "on/arm.json")
-    expected_chunks = [tuple(row) for row in off["full_indexed_chunks"]]
-    trace_score = TRACE_SCORER.score_trace(
-        root / "on/trace", root / "on/server.log", max_bytes=max_trace_bytes,
-        expected_layers={TRACE_LAYER}, expected_chunks=expected_chunks,
-    )
+    if args.corpus_smoke:
+        expected_requests = {
+            int(item["request_id"]): [tuple(row) for row in item["full_indexed_chunks"]]
+            for item in on["corpus_requests"]
+        }
+        trace_score = TRACE_SCORER.score_trace(
+            root / "on/trace", root / "on/server.log", max_bytes=max_trace_bytes,
+            expected_layers=set(range(4, 79)), expected_chunks=[],
+            expected_requests=expected_requests,
+        )
+    else:
+        expected_chunks = [tuple(row) for row in off["full_indexed_chunks"]]
+        trace_score = TRACE_SCORER.score_trace(
+            root / "on/trace", root / "on/server.log", max_bytes=max_trace_bytes,
+            expected_layers={TRACE_LAYER}, expected_chunks=expected_chunks,
+        )
     verdict = smoke_verdict(
         off, on, trace_score, containment["off"], containment["on"],
         min_prompt_tokens=(2049 if args.require_multichunk else MIN_PROMPT_TOKENS),
         require_multichunk=args.require_multichunk,
     )
-    SHARED.frozen_inputs(FREEZE, RANDOMNESS)
-    if args.require_multichunk:
+    SHARED.frozen_inputs(freeze_path, randomness_path)
+    if args.corpus_smoke:
+        qualification = {
+            "scope": "multi_request_all_routed_layer_corpus_smoke",
+            "high_row_2048_status": "OPEN",
+            "minimum_token_layer_events": 76800,
+        }
+    elif args.require_multichunk:
         qualification = {
             "scope": "high_row_multichunk",
             "high_row_2048_status": "PASS" if verdict["verdict"] == "PASS" else "FAIL",
@@ -414,6 +536,7 @@ def parser() -> argparse.ArgumentParser:
     public.add_argument("--port", type=int, default=18090)
     public.add_argument("--context-level", type=int, default=512)
     public.add_argument("--require-multichunk", action="store_true")
+    public.add_argument("--corpus-smoke", action="store_true")
     public.set_defaults(func=run)
     internal = sub.add_parser("_arm")
     internal.add_argument("--mode", choices=("off", "on"), required=True)
@@ -426,6 +549,7 @@ def parser() -> argparse.ArgumentParser:
     internal.add_argument("--context-level", type=int, required=True)
     internal.add_argument("--max-trace-bytes", type=int, required=True)
     internal.add_argument("--require-multichunk", action="store_true")
+    internal.add_argument("--corpus-smoke", action="store_true")
     internal.set_defaults(func=_arm)
     return root
 
