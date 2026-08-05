@@ -431,6 +431,36 @@ class AtomicLifecycleTests(unittest.TestCase):
             )
         self.assertEqual(runner.call_count, 1)
 
+    def test_root_authority_rejects_unapproved_executing_commit(self) -> None:
+        installed_sha256 = MODULE._hash_regular(MODULE.ROOT_SUBMITTER_PATH)[0]
+        controller_sha256 = MODULE._hash_regular(Path(MODULE.__file__).resolve())[0]
+        authority = {
+            "schema_version": 1,
+            "status": "APPROVED",
+            "candidate_hash": "1" * 40,
+            "controller_sha256": controller_sha256,
+            "approval_sha256": "4" * 64,
+            "approval_device": 5,
+            "approval_inode": 6,
+        }
+        with mock.patch.object(
+            MODULE, "FROZEN_ROOT_SUBMITTER_SHA256", installed_sha256,
+        ), mock.patch.object(
+            MODULE.subprocess, "run",
+            return_value=subprocess.CompletedProcess(
+                ["sudo"], 0, json.dumps(authority) + "\n", "",
+            ),
+        ) as runner, self.assertRaisesRegex(RuntimeError, "approved candidate"):
+            MODULE._reserve_root_tombstone(
+                {"harness_commit": "2" * 40},
+                {
+                    "GLM52_P1_PREFLIGHT_SHA256": "3" * 64,
+                    "GLM52_P1_OUTPUT_SHA256": "5" * 64,
+                    "GLM52_P1_STARTED_NS": "123",
+                },
+            )
+        self.assertEqual(runner.call_count, 1)
+
     def test_journal_eviction_cannot_reopen_permanent_authority(self) -> None:
         retained: list[dict[str, object]] = []
         permanent = False
