@@ -70,7 +70,7 @@
       "reason": "The tracked receipt, control JSON, logs, and scorer were still reopened through separate paths; the scorer identity was not recorded. Fable independently confirmed both findings."
     },
     {
-      "classification": "FIX_CANDIDATE",
+      "classification": "PASS",
       "candidate_hash": "f412a5a5823c3df1c935cb628dc07dce4a94037e",
       "format": "immutable-control-snapshot-group32-int4-bundle",
       "manifest_sha256": "0eca950c7014912f1b8f3b602feea12e93a73e829b6ea7078840c6c091174693",
@@ -84,8 +84,15 @@
       "control_files_hash_and_parse_same_snapshot": true,
       "trace_scored_from_verified_snapshot": true,
       "deterministic_repeat": true,
-      "publication": "renameat2-RENAME_NOREPLACE after fsync"
+      "publication": "renameat2-RENAME_NOREPLACE after fsync",
+      "review_round": 79,
+      "review_scores": [97, 97],
+      "critical": [],
+      "high": [],
+      "deferred_medium": [
+        "Concurrent mutation of Git HEAD between receipt/scorer checks can mix repository lineage. The reviewed real artifact is independently bound to f412a5a and both reviewers accepted this as outside the current artifact's validity risk."
+      ]
     }
   ],
-  "conclusion": "Candidate f412a5a closes the two independently confirmed round-78 gaps by consuming each control artifact from one no-follow snapshot and binding the loaded scorer to tracked HEAD bytes. The deterministic output is unchanged. It still makes no probe-accuracy or corpus-completeness claim; round-79 reviewer verification is pending."
+  "conclusion": "Candidate f412a5a closes the two independently confirmed round-78 gaps by consuming each control artifact from one no-follow snapshot and binding the loaded scorer to tracked HEAD bytes. The deterministic output is unchanged. Nash and Singer each scored it 97 with no critical or high issues, so the compact format is authorized for P0 corpus use. This is not a probe-accuracy or corpus-completeness result."
 }
