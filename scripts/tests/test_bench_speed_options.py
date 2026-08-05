@@ -60,6 +60,9 @@ class BenchOptionTests(unittest.TestCase):
             "conflicting": [valid_content, event('{"delta":{},"finish_reason":"stop"}'),
                             event('{"delta":{},"finish_reason":"length"}'), usage,
                             "data: [DONE]\n"],
+            "after_usage": [valid_content, usage,
+                            event('{"delta":{},"finish_reason":"length"}'),
+                            "data: [DONE]\n"],
         }
         client = bench.Client("http://127.0.0.1:1", None)
         for name, lines in mutations.items():
@@ -68,6 +71,15 @@ class BenchOptionTests(unittest.TestCase):
                 return_value=self._StreamResponse(lines),
             ), self.assertRaises(RuntimeError):
                 client.stream_chat({"max_tokens": 8, "ignore_eos": True})
+
+        valid = [valid_content, event('{"delta":{},"finish_reason":"length"}'),
+                 usage, "data: [DONE]\n"]
+        with mock.patch.object(
+            bench.urllib.request, "urlopen", return_value=self._StreamResponse(valid),
+        ):
+            result = client.stream_chat({"max_tokens": 8, "ignore_eos": True})
+        self.assertTrue(result["done"])
+        self.assertEqual(result["finish_reason"], "length")
 
     def test_decisive_subset_options(self):
         bench = load_module()
