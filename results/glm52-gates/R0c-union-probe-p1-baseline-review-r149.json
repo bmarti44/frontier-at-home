@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_RESULT",
+  "candidate_hash": "38711adf3bd2c893e22b50ea69dbc591041dd9e6",
+  "freeze_commit": "7a47b12873913dc5f4a07305772dd2c7a3db957f",
+  "review_round": 149,
+  "per_gate_candidate": 11,
+  "held_out_values_opened": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 60,
+    "critical": [
+      {
+        "id": "P1-BASE-R149-C1-USER-WRITABLE-ROOT-INSTALLER",
+        "evidence": "The proposed sudo entrypoint is bmarti44-owned mode 0775 under user-writable directories. Root begins interpreting it before authenticating its own bytes, so an in-place/path rewrite race can execute unreviewed trailing commands while internal Git checks see a restored clean tree.",
+        "affected_gate": "root installation authority and host integrity",
+        "reproduction_instructions": "In an isolated fixture, pause a multi-stage shell script after initial parsing, replace unread trailing commands, restore the visible source, and resume.",
+        "proposed_acceptance_test": "Use trusted root utilities to copy the exact reviewed installer into a root-owned non-writable temporary file, verify its reviewed SHA-256, and execute only that copy. A concurrent source mutation must either leave the exact staged bytes or fail before execution."
+      }
+    ],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_PREINSTALLATION_DO_NOT_RUN_USER_WRITABLE_INSTALLER"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 82,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-R149-H1-APPROVED-COMMIT-NOT-ENFORCED-BY-CONTROLLER",
+        "evidence": "The controller validates its script-81 hash but discards preflight when choosing the root-approved candidate. Reservation succeeds when the actual clean executing HEAD differs but script 81 is unchanged.",
+        "affected_gate": "frozen candidate authority, repository replacement, and unapproved descendants",
+        "reproduction_instructions": "Return valid root approval for commit A and call _reserve_root_tombstone with preflight commit B; the current exact reserve response for A is accepted.",
+        "proposed_acceptance_test": "Require exact preflight harness commit equality with the root-approved candidate before reservation. Reject byte-identical-controller descendants, changed tracked receipts/freezes, alternate trees, stale HEAD, and repository replacement."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_PREINSTALL_DO_NOT_INSTALL_7A47B128"
+  },
+  "verified_candidate_11_progress": [
+    "The helper no longer accepts a caller-selected candidate that differs from the root approval.",
+    "Executing controller bytes must match the root-approved controller hash.",
+    "Stale existing-marker retries fail closed before repository-lineage validation.",
+    "The root approval format, helper grammar, marker permanence, and fixed non-held-out smoke namespace passed bounded tests."
+  ],
+  "prior_issue_status": [
+    {"id": "P1-BASE-R148-H1-ROOT-HELPER-ACCEPTS-UNREVIEWED-HEAD", "status": "OPEN"},
+    {"id": "P1-BASE-R147-H1-JOURNAL-RETENTION-REOPENS-ONE-SHOT", "status": "FIXED"},
+    {"id": "P1-BASE-R147-H1-ROTATING-JOURNAL-NOT-PERMANENT", "status": "FIXED"},
+    {"id": "P1-BASE-R146-H1-DELETABLE-GLOBAL-LEDGER", "status": "FIXED"},
+    {"id": "P1-BASE-R145-H1-GLOBAL-ONE-SHOT-AUTHORITY", "status": "FIXED"},
+    {"id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO", "status": "FIXED"},
+    {"id": "BASE-R142-H5", "status": "FIXED"},
+    {"id": "BASE-R142-H3", "status": "OPEN"},
+    {"id": "BASE-R142-H4", "status": "OPEN"},
+    {"id": "P1-BASE-IMPL-H3-COST-OMITTED", "status": "OPEN"},
+    {"id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY", "status": "OPEN"}
+  ],
+  "convergence": {
+    "candidate_10_blocking_classes_before": 1,
+    "candidate_10_blocking_classes_after": 1,
+    "candidate_11_blocking_classes_before": 1,
+    "candidate_11_blocking_classes_after": 2,
+    "two_consecutive_candidates_without_strict_decrease": true,
+    "owner_escalation_triggered": true,
+    "gate_status": "PAUSED_FOR_OWNER_DIRECTION",
+    "bounded_resolution": "One controller equality check plus regression mutations, and a root-owned staged installer invocation authenticated by reviewed SHA-256."
+  },
+  "remaining_independent_blocking_classes": [
+    "BASE-R142-H3 two-control rollback-safe hybrid observation",
+    "BASE-R142-H4 / P1-BASE-IMPL-H3 matched cost and Pareto authority",
+    "P1-BASE-IMPL-H5 completed-result authority"
+  ],
+  "claim_limit": "Preinstall authority review only; no root installation, production reservation, held-out baseline, cost, NLL, fidelity, performance, or serving claim."
+}
