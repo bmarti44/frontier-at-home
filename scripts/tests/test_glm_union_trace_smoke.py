@@ -287,8 +287,8 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.runner)
 
-    def test_corpus_capture_has_room_above_the_measured_69_gib_peak(self) -> None:
-        self.assertIn('CORPUS_MEMORY_HIGH_GIB = "70"', self.runner)
+    def test_corpus_capture_has_room_above_the_measured_70_gib_peak(self) -> None:
+        self.assertIn('CORPUS_MEMORY_HIGH_GIB = "71"', self.runner)
         self.assertIn('"GLM_SAFE_MEMORY_HIGH_GIB": (', self.runner)
         self.assertIn('CORPUS_MEMORY_HIGH_GIB if args.corpus_smoke else "69"', self.runner)
 
