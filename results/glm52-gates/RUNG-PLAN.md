@@ -683,6 +683,18 @@ five-case FP16-versus-int4 feature diagnostic, followed by the separately
 captured gate-replay/shared-correction/MTP baselines before the test split is
 opened once.
 
+Feature-precision status (2026-08-05): candidate `a416101` passed the complete
+75-layer five-case diagnostic after exact deterministic retraining of every
+rank-32 head. At K=4/budget=32, int4-minus-FP16 macro-request recall was
+`+0.0008668429684277612` percentage points and event-weighted recall was
+`+0.016643735847832186` points; top-32 overlap was
+`0.9890536723163842`. This qualifies the compact int4 feature for P1 but is not
+a held-out probe or serving result. The receipt is
+`R0c-union-probe-p1-precision-pass-a416101.json`. Baseline semantics and common
+coverage are frozen separately in
+`R0c-union-probe-p1-baseline-freeze.json` before the untouched test split is
+opened.
+
 #### P2 - split-conformal calibration
 
 Use the frozen calibration split to turn raw per-expert scores into prediction

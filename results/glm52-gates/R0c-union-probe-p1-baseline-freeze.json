@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "classification": "PREREGISTERED",
+  "scope": "P1 held-out direct-union probe versus frequency, gate-replay, shared-correction, and MTP baselines",
+  "parent_plan": "results/glm52-gates/R0c-union-probe-p1-plan.json",
+  "selected_probe_receipt": "results/glm52-gates/R0c-union-probe-p1-precision-pass-a416101.json",
+  "selected_probe_candidate": "a416101142047830cff646817a00b7306675b483",
+  "selected_rank": 32,
+  "test_split": {
+    "directory": "/home/bmarti44/.local/state/glm52-p1-splits-r127-76faed9/test",
+    "requests": 20,
+    "rows": 51225,
+    "manifest_sha256": "6a946988689f84c9744e34604c1639564d471f4a921f6942d7c49b0d83bd569d",
+    "output_sha256": "13eddb3c567bec720820f059c40ad18ffb16deb9fab854d3ad681837fff3ef09",
+    "output_bytes": 193307634,
+    "opening_rule": "Do not open records.npz until every scorer, baseline ranking definition, capture schema, model binding, K, budget, common-coverage rule, bootstrap seed, and decision threshold below is committed and reviewed."
+  },
+  "sources": {
+    "frequency_training": "Only the 55 train-fit requests and two grouped long-training shards already authorized by the P1 plan.",
+    "probe_training": "The exact 75 rank-32 states and training reports bound by the selected probe receipt; completed validation must independently retrain and exact-compare them.",
+    "exact_router_trace": "/home/bmarti44/.local/state/glm52-p0q100-r118-utf8/on/trace",
+    "exact_router_trace_receipt": "results/glm52-gates/R0b-union-quality-corpus-pass-eef2f27.json",
+    "shared_correction_source": "A fresh default-off diagnostic capture from the reviewed two-step correction implementation. It must emit a full stable 256-expert ranking, not only the existing top-8 PREDPAIR row.",
+    "mtp_source": "A fresh default-off diagnostic rollout from the model's bound MTP head plus rollback-safe target evaluation used only to observe predicted-token routes. It must not commit speculative target state or change target outputs."
+  },
+  "common_event_contract": {
+    "layers": "Exact routed layers 4 through 77. Layer 3 is excluded for every method because the shared-correction comparator structurally predicts layer L from L-1 and has no layer-2 routed source.",
+    "source_row": "One exact (request, layer, token_position=t) row with a complete same-request, same-layer future window.",
+    "target": "The Boolean union of exact selected expert IDs at positions t+1 through t+K for K in {2,4,8}.",
+    "pairing": "Every method must score the identical ordered event keys for every K. Missing, extra, duplicated, reordered, or cross-request/layer rows are FAIL.",
+    "budgets": [16, 32, 64]
+  },
+  "ranking_definitions": {
+    "frequency": "For each layer, count selected-expert occurrences only in authorized training rows; rank by descending count then ascending expert ID.",
+    "gate_replay": "At source row (request,L,t), use its exact captured F32 router logits and F32 exp_probs_b bias. Compute sigmoid(logit) in F32, add bias in F32, and rank all 256 experts by descending effective score then ascending expert ID. The same current-state ranking predicts each future K union.",
+    "shared_correction": "For source row (request,L,t), use the reviewed two-step predictor computed while executing layer L-1 at t: add that layer's shared-expert output to its post-attention residual, apply layer L RMSNorm and router, then rank all 256 effective F32 scores by descending value and ascending expert ID. The same corrected current-state ranking predicts each future K union.",
+    "mtp_rollout": "Starting from the exact committed source prefix at t, greedily roll the bound MTP head for K predicted token IDs. In an isolated rollback-safe diagnostic target evaluation, collect the full effective router scores for those predicted tokens at each common layer. For each expert take the maximum effective score across the first K drafts, then rank descending with ascending expert-ID ties. Rollout state is discarded; the target request continues byte-identically.",
+    "probe": "Use the exact selected rank-32 head on the qualified int4 gate-input feature plus causal selected-expert history. Its separate K logits rank all 256 experts by descending value then ascending expert ID."
+  },
+  "cost_accounting": {
+    "required": "Report parameters, persistent bytes, temporary bytes, and synchronized completed inference time per source event for every non-frequency method. Capture/logging time is excluded only when separately measured and explicitly labeled.",
+    "mtp_interpretation": "MTP rollout is an offline comparator unless an address-only online implementation avoids target expert reads. Any target evaluation needed to obtain routes counts against end-to-end MTP cost and cannot be described as free prefetch lookahead.",
+    "shared_interpretation": "Use the already measured serving campaign failure as cost evidence in addition to capture-local timing; better recall does not erase its measured decode regression."
+  },
+  "metrics": {
+    "K": [2, 4, 8],
+    "budgets": [16, 32, 64],
+    "primary": "K=4 budget=32 unweighted macro-request recall",
+    "secondary": [
+      "event-weighted recall",
+      "precision",
+      "wasted experts",
+      "full-set coverage",
+      "method cost"
+    ],
+    "aggregation": "Sum event numerators and denominators within each request over all common layers, compute request means, then arithmetic-mean the 20 request means. Event-weighted values remain secondary.",
+    "uncertainty": "Paired bootstrap over the exact 20 test requests, 10000 resamples, seed 20260805; report unrounded two-sided 95% intervals and paired one-sided 95% lower bounds for probe-minus-frequency recall."
+  },
+  "decision": {
+    "continue_probe_to_P2": "The probe's K=4/B32 macro-request recall point estimate exceeds frequency and its paired one-sided 95% lower bound for probe-minus-frequency is strictly positive, and the probe point estimate exceeds frequency in all nine K/budget cells.",
+    "stop_probe": "If the frequency rule fails, preserve the table and stop before conformal calibration.",
+    "fold_into_mtp": "If MTP dominates probe and both cheaper baselines at equal end-to-end cost, retain the probe only as a refinement candidate inside the MTP-oracle path, not as a separate online mechanism.",
+    "shared_correction": "Report it in the table but do not revive its rejected serving configuration unless a new completed-time gate independently passes."
+  },
+  "mandatory_failures": [
+    "test records opened before this freeze and its capture/scorer implementation are committed and reviewed",
+    "any method sees different target events or fixture order",
+    "ranking is partial, duplicated, out of range, malformed, or uses non-stable ties",
+    "shared correction emits only top-8 while a 16/32/64 cell is claimed",
+    "MTP rollout mutates committed target state or omits target-evaluation cost",
+    "frequency/probe fitting reads precision-diagnostic, calibration, or test rows",
+    "reported macro-request metrics are replaced by layer or event weighting",
+    "source, model, scorer, capture, split, or receipt binding differs"
+  ],
+  "claim_limit": "This gate measures held-out expert-address prediction on 20 fixed cases. It does not measure NLL, semantic quality, decode throughput, useful-prefetch rate, cache admission benefit, or 1M-context capability."
+}
