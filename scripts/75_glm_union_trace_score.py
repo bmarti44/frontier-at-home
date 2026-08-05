@@ -134,7 +134,13 @@ def score_trace(
         return result
     checks["inputs"] = True
 
-    log_lines = server_log.read_text(encoding="utf-8", errors="replace").splitlines()
+    try:
+        log_lines = server_log.read_text(encoding="utf-8", errors="strict").splitlines()
+    except UnicodeDecodeError:
+        checks["utf8_server_log"] = False
+        return result
+    if corpus_mode:
+        checks["utf8_server_log"] = True
     checks["no_trace_errors"] = not any("GLM_UNION_TRACE_ERROR" in line for line in log_lines)
     expected: dict[tuple[int, ...], int] = {}
     duplicate_log_key = False
