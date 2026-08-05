@@ -133,13 +133,13 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             '"high_row_2048_status": "PASS"',
             'public.add_argument("--context-level", type=int, default=512)',
             'public.add_argument("--require-multichunk", action="store_true")',
-            '"--require-multichunk" if args.require_multichunk else',
+            '["--require-multichunk"] if args.require_multichunk else []',
         ):
             self.assertIn(marker, self.runner)
 
     def test_runner_has_prewrite_disk_bound_and_preservation_reserve(self) -> None:
         for marker in (
-            "MAX_TRACE_BYTES", "TRACE_DISK_RESERVE_BYTES", "shutil.disk_usage",
+            "max_trace_bytes", "TRACE_DISK_RESERVE_BYTES", "shutil.disk_usage",
             "DS4_METAL_GRAPH_DUMP_LAYER", '"4"',
             "(6144 + 256 + 256 + 8 + 256) * 4",
         ):
