@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "classification": "CONVERGING_FIX_CANDIDATE_FROZEN",
+  "gate": "R0c/P1 held-out address-baseline capture and scorer",
+  "per_gate_candidate": 3,
+  "prior_review_round": 142,
+  "repository_commit": "a1ac86c95cb8cabb9b4e711d05a641084eacbd8e",
+  "engine_commit": "bed0754b31e1547c91d6a5b6d9aaf66577f8857c",
+  "binary_sha256": "df19bf4bef85d5582859af6a328853247959c616fbe82160132deca87b7240b1",
+  "artifacts": {
+    "scripts/81_glm_union_baseline.py": "9e7ffdb2bc444a809e5f02e76699b18144c90979d337394e52b7037ed100c134",
+    "scripts/tests/test_glm_union_baseline.py": "b5d300c34410dfea7a080248d7d0940959423bf066275fa9067c83088dfd678d",
+    "engine/ds4.c": "76df6ee2561265219bb55216ae8f78ae855ff0f018776e7e490d6639157c055e",
+    "engine/test_glm_baseline_capture_source.py": "841609b5aa501607ec4e8d9ccb079c8072180be8e66968c09e834efa3890eb67",
+    "harness/0001.patch": "af26e5ff19ea528cda9c4e497874be3fc294b89df7a1808e29cbeaeb48367a93",
+    "harness/0002.patch": "3ad6850d0374f1b15df9a674649abdce50a81e862790db06ec62b89b01d51615",
+    "harness/0003.patch": "abd53ddbf47ad5c613905d397e1597169c393dedc9b85966884f5bb7427d3b78",
+    "harness/0004.patch": "83899332b8c6e988f7e9e7647755618682bc6183a65fef58aec6e3db598e713a",
+    "harness/0005.patch": "e155541948b88646c4c8de6eb160c81322fd206986e2397da8501691d301d30b"
+  },
+  "tests_sha256_by_path": {
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6"
+  },
+  "named_finding_resolution": {
+    "BASE-R142-C1": "FIXED: engine and scorer share the observed 79-layer capture schema; an eight-source real non-held-out CUDA capture produced 64 artifacts and all eight scorer validations passed; short and extra-row mutations fail.",
+    "BASE-R142-H1": "FIXED: capture converts production sigmoid probabilities to the exact effective F32 score by adding the bound exp_probs_b value before publication; real top-eight conformance passed for all gate/shared/MTP rows.",
+    "BASE-R142-H6": "FIXED: review record and this freeze use existing exact Git object IDs.",
+    "P1-BASE-IMPL-H0-CANDIDATE-ID": "FIXED: exact immutable candidate ID is recorded and will be copied directly into the review request.",
+    "P1-BASE-IMPL-H4-MODULE-TOCTOU": "FIXED: frozen module bytes are read/hash-checked once, compiled from that authenticated snapshot, and executed without a second pathname read; replacement-path regression test passes.",
+    "P1-BASE-IMPL-M1-MALFORMED-METADATA": "FIXED: source metadata rejects duplicate and extra keys, binds total layers/vocabulary, and range-checks predicted tokens."
+  },
+  "blocking_findings_remaining_unchanged": [
+    "BASE-R142-H2",
+    "BASE-R142-H3",
+    "BASE-R142-H4",
+    "BASE-R142-H5",
+    "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY",
+    "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+    "P1-BASE-IMPL-H3-COST-OMITTED",
+    "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY"
+  ],
+  "pre_submission_audit": {
+    "main_tests": "44 passed",
+    "engine_source_tests": "5 passed",
+    "engine_compile": "PASS",
+    "patch_replay": "PASS",
+    "real_nonheldout_capture": "PASS",
+    "secret_scan": "PASS",
+    "held_out_values_opened": false
+  },
+  "convergence": {
+    "prior_blocking_count": 13,
+    "claimed_blocking_count_after_candidate": 8,
+    "strictly_shrinks": true,
+    "new_scope": false,
+    "escalation_triggered": false
+  },
+  "claim_limit": "Candidate 3 closes named schema, effective-score, module-authority, candidate-ID, and malformed-metadata defects only. It does not authorize held-out opening or claim full gate passage."
+}
