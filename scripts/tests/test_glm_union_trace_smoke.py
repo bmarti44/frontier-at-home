@@ -31,6 +31,8 @@ def arm(mode: str) -> dict[str, object]:
         "prompt_tokens": 573,
         "full_indexed_chunks": [[0, 573]],
         "trace_files": 0 if mode == "off" else 9,
+        "cuda_expert_cache_gb": "60",
+        "cuda_cache_runtime": {"slots": 6200, "arena_gib": 56.25},
     }
 
 
@@ -202,7 +204,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         for mutation in (
             "id", "output", "event_floor", "seed", "duplicate_fixture",
             "empty_chunks", "short_chunk", "null_chunks", "scalar_chunk",
-            "cache_budget",
+            "cache_budget", "cuda_cache_environment", "cuda_cache_runtime",
         ):
             with self.subTest(mutation=mutation):
                 bad_on = copy.deepcopy(on)
@@ -226,6 +228,10 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     bad_on["corpus_requests"][1]["full_indexed_chunks"] = None
                 elif mutation == "scalar_chunk":
                     bad_on["corpus_requests"][1]["full_indexed_chunks"] = [1]
+                elif mutation == "cuda_cache_environment":
+                    bad_on["cuda_expert_cache_gb"] = "68"
+                elif mutation == "cuda_cache_runtime":
+                    bad_on["cuda_cache_runtime"] = {"slots": 6987, "arena_gib": 63.33}
                 else:
                     bad_on["expert_cache_budget"] = "40GB"
                 self.assertEqual(
@@ -296,7 +302,10 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.runner)
         self.assertIn('CORPUS_CACHE_EXPERTS = "32GB"', self.runner)
+        self.assertIn('CORPUS_CUDA_CACHE_GB = "60"', self.runner)
         self.assertIn("cache_experts=(CORPUS_CACHE_EXPERTS", self.runner)
+        self.assertIn('values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB', self.runner)
+        self.assertIn("cuda_cache_runtime", self.runner)
 
     def test_corpus_scores_exact_zero_based_main_routed_layers(self) -> None:
         self.assertIn("expected_layers=set(range(3, 78))", self.runner)
