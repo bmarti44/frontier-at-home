@@ -284,6 +284,28 @@ class AtomicLifecycleTests(unittest.TestCase):
             self.assertEqual(attempt["failure_type"], "RuntimeError")
             self.assertFalse((output / "summary.json").exists())
 
+    def test_authorized_gate_wires_real_phases_through_atomic_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            output = Path(raw) / "authorized"
+            configuration = {"output_root": output, "device": "cpu"}
+            with mock.patch.object(
+                MODULE, "_preflight_authorized_gate", return_value={"frozen": True},
+            ) as preflight, mock.patch.object(
+                MODULE, "_open_authorized_heldout", return_value={"opened": True},
+            ) as opener, mock.patch.object(
+                MODULE, "_capture_authorized_set", return_value={"captured": True},
+            ) as capture, mock.patch.object(
+                MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
+            ) as scorer:
+                result = MODULE._run_authorized_gate(configuration)
+            self.assertEqual(result, {"verdict": "PASS"})
+            preflight.assert_called_once_with(configuration)
+            opener.assert_called_once()
+            capture.assert_called_once()
+            scorer.assert_called_once()
+            attempt = json.loads((output / "attempt.json").read_text(encoding="utf-8"))
+            self.assertEqual(attempt["status"], "COMPLETE")
+
 
 class BaselineTableTests(unittest.TestCase):
     def fixture(self):

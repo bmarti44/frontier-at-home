@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "classification": "RED_ACCEPTANCE_PREREGISTRATION",
+  "gate": "R0c/P1 authorized capture-and-score command wiring",
+  "parent_commit": "1c4ab95",
+  "per_gate_candidate_next": 5,
+  "held_out_values_opened": false,
+  "expected_red": "The reviewed atomic lifecycle exists, but no authorized gate entry point yet wires immutable preflight, held-out opening, capture construction, and scoring into that lifecycle.",
+  "observed": {
+    "command": "python3 -m pytest -q scripts/tests/test_glm_union_baseline.py::AtomicLifecycleTests::test_authorized_gate_wires_real_phases_through_atomic_lifecycle",
+    "passed": 0,
+    "failed": 1,
+    "failure": "The concrete _preflight_authorized_gate phase and authorized gate entry point are absent."
+  },
+  "acceptance": "One production entry point must wire the four concrete phases through the atomic lifecycle and publish its COMPLETE attempt and summary only after all phases succeed.",
+  "verdict": "RED_CONFIRMED"
+}
