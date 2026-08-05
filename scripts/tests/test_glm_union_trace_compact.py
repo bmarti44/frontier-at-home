@@ -116,6 +116,56 @@ def sha256(path: Path) -> str:
 
 
 class QualifiedBundleTests(unittest.TestCase):
+    def make_quality_assembly_source(self, root: Path) -> dict:
+        trace = root / "trace"
+        trace.mkdir()
+        artifacts = {}
+        request_files = {1: {}, 2: {}}
+        for request in (1, 2):
+            rows = 2
+            hidden = np.full(
+                (rows, SCORE_MODULE.N_EMBD), np.float32(request), dtype=np.float32,
+            )
+            hidden[1] += np.float32(0.25)
+            logits = np.stack([
+                np.linspace(-2.0, 2.0, SCORE_MODULE.N_EXPERT, dtype=np.float32) +
+                np.float32(request + row) / np.float32(100.0)
+                for row in range(rows)
+            ])
+            probabilities = (1.0 / (1.0 + np.exp(-logits))).astype(np.float32)
+            bias = np.zeros(SCORE_MODULE.N_EXPERT, dtype=np.float32)
+            selected = np.argsort(
+                -(probabilities + bias), axis=1, kind="stable",
+            )[:, :SCORE_MODULE.N_EXPERT_USED].astype(np.int32)
+            payloads = {
+                "ffn_norm": ("f32", hidden),
+                "router_logits": ("f32", logits),
+                "router_probs": ("f32", probabilities),
+                "router_selected": ("i32", selected),
+                "router_bias": ("f32", bias),
+            }
+            for kind, (extension, values) in payloads.items():
+                path = trace / (
+                    f"request_r{request:08d}_glm_indexed_{kind}-3_pos0.{extension}"
+                )
+                path.write_bytes(values.tobytes())
+                artifacts[path.name] = {
+                    "name": path.name, "bytes": path.stat().st_size, "sha256": sha256(path),
+                }
+                request_files[request][(3, 0, kind)] = path
+        return {
+            "trace": trace,
+            "layers": [3],
+            "artifacts": artifacts,
+            "request_chunks": {1: [(0, 2)], 2: [(0, 2)]},
+            "request_files": request_files,
+            "request_metadata": {
+                request: {"request_index": request} for request in (1, 2)
+            },
+            "total_rows": 4,
+            "lineage": {"source_receipt_sha256": "a" * 64},
+        }
+
     def make_bundle(self, root: Path) -> tuple[Path, Path]:
         source = root / "source"
         trace = source / "on" / "trace"
@@ -695,6 +745,41 @@ class QualifiedBundleTests(unittest.TestCase):
             self.assertIs(observed, sentinel)
             validator.assert_called_once()
 
+    def test_quality_assembly_preserves_request_layer_row_order_and_holdout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = self.make_quality_assembly_source(Path(directory))
+            arrays, metrics, source_hashes = MODULE._assemble_compact_arrays(source)
+            np.testing.assert_array_equal(arrays["request_index"], [1, 1, 2, 2])
+            np.testing.assert_array_equal(arrays["layer"], [3, 3, 3, 3])
+            np.testing.assert_array_equal(arrays["token_position"], [0, 1, 0, 1])
+            np.testing.assert_array_equal(arrays["hidden_fp16_holdout_row"], [0, 1, 2, 3])
+            np.testing.assert_array_equal(
+                arrays["hidden_fp16_holdout"][:, 0],
+                np.asarray([1.0, 1.25, 2.0, 2.25], dtype=np.float16),
+            )
+            self.assertEqual(len(metrics), 2)
+            self.assertEqual(set(source_hashes), set(source["artifacts"]))
+            for name, digest in source_hashes.items():
+                self.assertEqual(digest, source["artifacts"][name]["sha256"])
+
+    def test_quality_assembly_rejects_changed_missing_and_overflowing_source(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = self.make_quality_assembly_source(Path(directory))
+            path = source["request_files"][1][(3, 0, "ffn_norm")]
+            payload = bytearray(path.read_bytes())
+            payload[0] ^= 1
+            path.write_bytes(payload)
+            with self.assertRaises(ValueError):
+                MODULE._assemble_compact_arrays(source)
+        with tempfile.TemporaryDirectory() as directory:
+            source = self.make_quality_assembly_source(Path(directory))
+            del source["request_files"][2][(3, 0, "router_probs")]
+            with self.assertRaises(ValueError):
+                MODULE._assemble_compact_arrays(source)
+        overflowing = np.full((1, SCORE_MODULE.N_EMBD), 70000.0, dtype=np.float32)
+        with self.assertRaises(ValueError):
+            MODULE._checked_fp16_holdout(overflowing)
+
     def test_atomic_bundle_publication_refuses_existing_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "published"
@@ -724,6 +809,48 @@ class QualifiedBundleTests(unittest.TestCase):
                 with self.assertRaises(FileExistsError):
                     MODULE.publish_bundle(destination, arrays, {"schema_version": 1})
             self.assertTrue(destination.is_dir())
+
+    def test_atomic_bundle_publication_rejects_corrupt_or_changed_npz(self) -> None:
+        original_savez = MODULE.np.savez
+        arrays = {
+            "ids": np.array([[1, 2]], dtype=np.uint8),
+            "score": np.array([0.5], dtype=np.float16),
+        }
+
+        def corrupt(handle, **_values):
+            handle.write(b"not-an-npz")
+
+        def missing(handle, **_values):
+            original_savez(handle, ids=arrays["ids"])
+
+        def extra(handle, **values):
+            original_savez(handle, **values, extra=np.array([1], dtype=np.uint8))
+
+        def wrong_dtype(handle, **values):
+            changed = dict(values)
+            changed["ids"] = changed["ids"].astype(np.uint16)
+            original_savez(handle, **changed)
+
+        def wrong_shape(handle, **values):
+            changed = dict(values)
+            changed["ids"] = changed["ids"].reshape(2, 1)
+            original_savez(handle, **changed)
+
+        def wrong_value(handle, **values):
+            changed = {key: value.copy() for key, value in values.items()}
+            changed["ids"][0, 0] ^= np.uint8(1)
+            original_savez(handle, **changed)
+
+        for name, mutation in (
+            ("corrupt", corrupt), ("missing", missing), ("extra", extra),
+            ("dtype", wrong_dtype), ("shape", wrong_shape), ("value", wrong_value),
+        ):
+            with self.subTest(mutation=name), tempfile.TemporaryDirectory() as directory:
+                destination = Path(directory) / "published"
+                with mock.patch.object(MODULE.np, "savez", side_effect=mutation):
+                    with self.assertRaises(ValueError):
+                        MODULE.publish_bundle(destination, arrays, {"schema_version": 1})
+                self.assertFalse(destination.exists())
 
 
 if __name__ == "__main__":
