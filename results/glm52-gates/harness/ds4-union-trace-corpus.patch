@@ -1,8 +1,18 @@
 diff --git a/ds4.c b/ds4.c
-index 247d186..f8c1914 100644
+index 247d186..4620ce9 100644
 --- a/ds4.c
 +++ b/ds4.c
-@@ -16203,6 +16203,26 @@ static bool glm_union_trace_write_exclusive(
+@@ -16197,12 +16197,36 @@ static bool glm_union_trace_write_exclusive(
+         off += (size_t)nw;
+     }
+     if (ok && fsync(fd) != 0) ok = false;
++    /* Corpus captures can exceed 30 GiB.  The bytes are durable after fsync,
++     * so keeping their clean pages charged to the capture cgroup only creates
++     * memory pressure and does not accelerate the production path. */
++    if (ok && posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED) != 0) ok = false;
+     if (close(fd) != 0) ok = false;
+     if (ok && link(tmp, path) != 0) ok = false;
+     if (unlink(tmp) != 0 && errno != ENOENT) ok = false;
      return ok;
  }
  
@@ -29,7 +39,7 @@ index 247d186..f8c1914 100644
  static bool glm_union_probe_dump_triplet(
          const ds4_model   *model,
          const ds4_layer_weights *l,
-@@ -16224,17 +16244,38 @@ static bool glm_union_probe_dump_triplet(
+@@ -16224,17 +16248,38 @@ static bool glm_union_probe_dump_triplet(
      const bool want_probs = metal_graph_debug_wants(probs_name, il, pos);
      const bool want_bias = metal_graph_debug_wants(bias_name, il, pos);
      if (!want_norm && !want_logits && !want_probs && !want_selected && !want_bias) return true;
@@ -71,7 +81,7 @@ index 247d186..f8c1914 100644
          return false;
      }
      const float *bias = (const float *)((const uint8_t *)model->map +
-@@ -16267,17 +16308,31 @@ static bool glm_union_probe_dump_triplet(
+@@ -16267,17 +16312,31 @@ static bool glm_union_probe_dump_triplet(
      char selected_path[1024], bias_path[1024];
      const char *prefix = metal_graph_debug_prefix_for(norm_name, il, pos);
      if (ok) {
@@ -114,7 +124,7 @@ index 247d186..f8c1914 100644
      }
      if (ok) ok = glm_union_trace_write_exclusive(norm_path, norm_buf, norm_bytes);
      if (ok) ok = glm_union_trace_write_exclusive(logits_path, logits_buf, logits_bytes);
-@@ -16291,14 +16346,26 @@ static bool glm_union_probe_dump_triplet(
+@@ -16291,14 +16350,26 @@ static bool glm_union_probe_dump_triplet(
      free(norm_buf);
  
      if (!ok) {
@@ -148,10 +158,10 @@ index 247d186..f8c1914 100644
  
 diff --git a/tests/test_union_trace_corpus_source.py b/tests/test_union_trace_corpus_source.py
 new file mode 100644
-index 0000000..3250457
+index 0000000..347e7f7
 --- /dev/null
 +++ b/tests/test_union_trace_corpus_source.py
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,213 @@
 +#!/usr/bin/env python3
 +"""Source contract for default-off multi-request GLM union-trace capture."""
 +
@@ -165,6 +175,104 @@ index 0000000..3250457
 +
 +
 +class UnionTraceCorpusSourceTests(unittest.TestCase):
++    def test_trace_write_drops_synced_pages_before_publication(self) -> None:
++        start = SOURCE.index("static bool glm_union_trace_write_exclusive")
++        brace = SOURCE.index("{", start)
++        depth = 0
++        end = None
++        for offset in range(brace, len(SOURCE)):
++            if SOURCE[offset] == "{":
++                depth += 1
++            elif SOURCE[offset] == "}":
++                depth -= 1
++                if depth == 0:
++                    end = offset + 1
++                    break
++        self.assertIsNotNone(end)
++        helper = SOURCE[start:end]
++        program = f'''\
++#define _GNU_SOURCE
++#include <assert.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/syscall.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++static char events[16];
++static size_t n_events;
++static bool fail_advice;
++static int traced_fsync(int fd) {{
++    events[n_events++] = 'F';
++    return (int)syscall(SYS_fsync, fd);
++}}
++static int __attribute__((used)) traced_fadvise(
++        int fd, off_t offset, off_t length, int advice) {{
++    (void)fd; (void)offset; (void)length;
++    assert(advice == POSIX_FADV_DONTNEED);
++    events[n_events++] = 'A';
++    return fail_advice ? EIO : 0;
++}}
++static int traced_close(int fd) {{
++    events[n_events++] = 'C';
++    return (int)syscall(SYS_close, fd);
++}}
++static int traced_link(const char *oldpath, const char *newpath) {{
++    events[n_events++] = 'L';
++    return (int)syscall(SYS_linkat, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
++}}
++#define fsync traced_fsync
++#define posix_fadvise traced_fadvise
++#define close traced_close
++#define link traced_link
++{helper}
++#undef fsync
++#undef posix_fadvise
++#undef close
++#undef link
++
++int main(void) {{
++    char directory[] = "/tmp/ds4-trace-write.XXXXXX";
++    assert(mkdtemp(directory));
++    char path[512];
++    assert(snprintf(path, sizeof(path), "%s/output", directory) > 0);
++    const char payload[] = "bound trace bytes";
++    assert(glm_union_trace_write_exclusive(path, payload, sizeof(payload)));
++    assert(strcmp(events, "FACL") == 0);
++    int fd = open(path, O_RDONLY | O_CLOEXEC);
++    assert(fd >= 0);
++    char observed[sizeof(payload)] = {{0}};
++    assert(read(fd, observed, sizeof(observed)) == (ssize_t)sizeof(observed));
++    assert(syscall(SYS_close, fd) == 0);
++    assert(memcmp(observed, payload, sizeof(payload)) == 0);
++    assert(unlink(path) == 0);
++
++    memset(events, 0, sizeof(events));
++    n_events = 0;
++    fail_advice = true;
++    assert(!glm_union_trace_write_exclusive(path, payload, sizeof(payload)));
++    assert(strcmp(events, "FAC") == 0);
++    assert(access(path, F_OK) != 0 && errno == ENOENT);
++    assert(rmdir(directory) == 0);
++    return 0;
++}}
++'''
++        with tempfile.TemporaryDirectory() as directory:
++            root = Path(directory)
++            source = root / "write.c"
++            binary = root / "write"
++            source.write_text(program, encoding="utf-8")
++            subprocess.run(
++                ["cc", "-std=c99", "-Wall", "-Werror", str(source), "-o", str(binary)],
++                check=True,
++            )
++            subprocess.run([str(binary)], check=True)
++
 +    def test_corpus_mode_is_default_off_and_request_scoped(self) -> None:
 +        for marker in (
 +            'getenv("DS4_GLM_UNION_TRACE_CORPUS")',
