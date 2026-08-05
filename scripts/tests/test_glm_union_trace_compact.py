@@ -675,6 +675,26 @@ class QualifiedBundleTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 MODULE._require_tracked_receipt(receipt, repository)
 
+    def test_quality_corpus_receipt_uses_one_full_source_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            source = repository / "quality-source"
+            source.mkdir()
+            receipt = repository / "quality-receipt.json"
+            receipt.write_text(json.dumps({
+                "scope": "quality_100_case_all_routed_layer_corpus",
+            }) + "\n")
+            sentinel = {"request_sources": [{"lineage": {"request_index": 1}}]}
+            with mock.patch.object(
+                MODULE, "_validate_quality_source_bundle", return_value=sentinel,
+            ) as validator:
+                observed = MODULE.validate_source_bundle(
+                    source, receipt, repository_root=repository,
+                    require_tracked_receipt=False, require_tracked_scorer=False,
+                )
+            self.assertIs(observed, sentinel)
+            validator.assert_called_once()
+
     def test_atomic_bundle_publication_refuses_existing_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "published"
