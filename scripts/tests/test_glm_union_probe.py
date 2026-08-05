@@ -158,6 +158,10 @@ class UnionTargetTests(unittest.TestCase):
         self.assertEqual(logits.shape, (16, 3, 256))
         self.assertTrue(np.isfinite(logits).all())
         self.assertTrue(np.isfinite(report["epoch_losses"]).all())
+        self.assertEqual(len(report["epoch_k_losses"]), 1)
+        self.assertAlmostEqual(
+            report["epoch_losses"][0], float(np.mean(report["epoch_k_losses"][0])),
+        )
         self.assertEqual(set(state), {"down.weight", "up.weight", "up.bias"})
 
     def test_scoring_rejects_duplicate_rankings_or_cross_row_mismatch(self) -> None:

@@ -136,6 +136,17 @@ def _empty_metric() -> dict[str, dict[str, dict[str, float | int]]]:
     return {str(budget): {} for budget in BUDGETS}
 
 
+def fold_training_weights(
+    request: np.ndarray,
+    rows: np.ndarray,
+    valid: np.ndarray,
+    prediction_folds: np.ndarray,
+    validation_fold: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Derive request-balanced weights from fitting rows only."""
+    raise NotImplementedError
+
+
 def run_layer(
     sources: list[dict[str, np.ndarray]], groups: dict[int, str], layer_id: int,
 ) -> dict[str, object]:
