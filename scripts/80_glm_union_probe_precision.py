@@ -274,6 +274,95 @@ def diagnostic_layer_contract(
     return data, contracts, selected_mask, scorable
 
 
+def regenerate_diagnostic_events(
+    requested: Path,
+    model_layers: dict[str, object],
+    diagnostic: dict[str, np.ndarray],
+    *,
+    device: str = "cuda",
+) -> dict[str, np.ndarray]:
+    """Regenerate integer evidence from bound states and exact paired features."""
+    event_arrays: dict[str, np.ndarray] = {}
+    for layer_id in CV.LAYERS:
+        data, contracts, selected_mask, scorable = diagnostic_layer_contract(diagnostic, layer_id)
+        selected_global = diagnostic["hidden_fp16_holdout_row"].astype(np.int64)[selected_mask]
+        scorable_global = selected_global[scorable]
+        if scorable_global.size:
+            global_rows = np.flatnonzero(diagnostic["layer"] == layer_id)
+            local_rows = np.searchsorted(global_rows, scorable_global)
+            history = PROBE.causal_expert_history(
+                data["request_index"], data["layer"], data["token_position"], data["selected_ids"],
+            )
+            q4_hidden = PROBE.unpack_probe_hidden(data["hidden_q4"], data["hidden_scale"])
+            fp16_hidden = diagnostic["hidden_fp16_holdout"][selected_mask][scorable].astype(np.float32)
+            q4_features = np.concatenate(
+                (q4_hidden[local_rows], history[local_rows]), axis=1,
+            ).astype(np.float16)
+            fp16_features = np.concatenate(
+                (fp16_hidden, history[local_rows]), axis=1,
+            ).astype(np.float16)
+            state_record = model_layers[str(layer_id)]
+            state = _state_from_file(requested / state_record["file"], state_record["schema"])
+            q4_logits = PROBE.predict_probe_head(q4_features, state, RANK, device=device)
+            fp16_logits = PROBE.predict_probe_head(fp16_features, state, RANK, device=device)
+        for k_index, k in enumerate(CV.K_VALUES):
+            contract = contracts[str(k)]
+            count = contract["request"].size
+            prefix = f"layer{layer_id}_k{k}_"
+            if count:
+                active = np.isin(scorable_global, contract["global_row"])
+                paired = diagnostic_pair_metrics(
+                    contract["request"], contract["targets"],
+                    q4_logits[active, k_index], fp16_logits[active, k_index],
+                )
+                values = paired["evidence"]
+            else:
+                values = {
+                    "request": np.empty(0, dtype=np.uint16),
+                    "target_size": np.empty(0, dtype=np.uint8),
+                    "q4_hits": np.empty((0, len(CV.BUDGETS)), dtype=np.uint8),
+                    "fp16_hits": np.empty((0, len(CV.BUDGETS)), dtype=np.uint8),
+                    "top32_overlap_count": np.empty(0, dtype=np.uint8),
+                }
+            for field in ("global_row", "local_row", "prediction_row"):
+                event_arrays[prefix + field] = contract[field]
+            for field in ("request", "target_size", "q4_hits", "fp16_hits", "top32_overlap_count"):
+                event_arrays[prefix + field] = values[field]
+        print(json.dumps({
+            "diagnosed_layer": layer_id, "paired_rows": int(scorable_global.size),
+            "retained_rows": int(selected_global.size),
+        }, sort_keys=True), flush=True)
+    return event_arrays
+
+
+def validate_semantic_events(
+    event_path: Path,
+    binding: dict[str, object],
+    requested: Path,
+    model_layers: dict[str, object],
+    diagnostic: dict[str, np.ndarray],
+    *,
+    device: str = "cuda",
+) -> None:
+    """Require persisted event evidence to equal fresh model inference exactly."""
+    if not isinstance(binding, dict) or not isinstance(binding.get("schema"), dict):
+        raise ValueError("precision semantic event binding differs")
+    persisted = CV._read_bound_npz(event_path, binding["schema"])
+    regenerated = regenerate_diagnostic_events(
+        requested, model_layers, diagnostic, device=device,
+    )
+    if set(persisted) != set(regenerated):
+        raise ValueError("precision semantic event members differ")
+    for name, expected in regenerated.items():
+        observed = persisted[name]
+        if (
+            observed.dtype != expected.dtype or
+            observed.shape != expected.shape or
+            not np.array_equal(observed, expected)
+        ):
+            raise ValueError(f"precision semantic event differs: {name}")
+
+
 def replay_diagnostic_events(
     event_path: Path,
     binding: dict[str, object],
@@ -485,6 +574,10 @@ def validate_completed_output(requested: Path) -> dict[str, object]:
     diagnostic, diagnostic_binding = _load_diagnostic()
     summary = CV._read_json_snapshot(requested / "summary.json")
     event_binding = summary.get("diagnostic_event_binding")
+    validate_semantic_events(
+        requested / "diagnostic-events.npz", event_binding, requested,
+        model_manifest["layers"], diagnostic,
+    )
     replayed = replay_diagnostic_events(
         requested / "diagnostic-events.npz", event_binding, diagnostic,
     )
@@ -599,57 +692,14 @@ def execute(out_dir: Path) -> int:
     gc.collect()
 
     diagnostic, diagnostic_binding = _load_diagnostic()
-    event_arrays: dict[str, np.ndarray] = {}
-    for layer_id in CV.LAYERS:
-        data, contracts, selected_mask, scorable = diagnostic_layer_contract(diagnostic, layer_id)
-        selected_global = diagnostic["hidden_fp16_holdout_row"].astype(np.int64)[selected_mask]
-        scorable_global = selected_global[scorable]
-        if scorable_global.size:
-            global_rows = np.flatnonzero(diagnostic["layer"] == layer_id)
-            local_rows = np.searchsorted(global_rows, scorable_global)
-            history = PROBE.causal_expert_history(
-                data["request_index"], data["layer"], data["token_position"], data["selected_ids"],
-            )
-            q4_hidden = PROBE.unpack_probe_hidden(data["hidden_q4"], data["hidden_scale"])
-            fp16_hidden = diagnostic["hidden_fp16_holdout"][selected_mask][scorable].astype(np.float32)
-            q4_features = np.concatenate(
-                (q4_hidden[local_rows], history[local_rows]), axis=1,
-            ).astype(np.float16)
-            fp16_features = np.concatenate(
-                (fp16_hidden, history[local_rows]), axis=1,
-            ).astype(np.float16)
-            state_record = model_layers[str(layer_id)]
-            state = _state_from_file(requested / state_record["file"], state_record["schema"])
-            q4_logits = PROBE.predict_probe_head(q4_features, state, RANK, device="cuda")
-            fp16_logits = PROBE.predict_probe_head(fp16_features, state, RANK, device="cuda")
-        for k_index, k in enumerate(CV.K_VALUES):
-            contract = contracts[str(k)]
-            count = contract["request"].size
-            prefix = f"layer{layer_id}_k{k}_"
-            if count:
-                active = np.isin(scorable_global, contract["global_row"])
-                paired = diagnostic_pair_metrics(
-                    contract["request"], contract["targets"],
-                    q4_logits[active, k_index], fp16_logits[active, k_index],
-                )
-                values = paired["evidence"]
-            else:
-                values = {
-                    "request": np.empty(0, dtype=np.uint16),
-                    "target_size": np.empty(0, dtype=np.uint8),
-                    "q4_hits": np.empty((0, len(CV.BUDGETS)), dtype=np.uint8),
-                    "fp16_hits": np.empty((0, len(CV.BUDGETS)), dtype=np.uint8),
-                    "top32_overlap_count": np.empty(0, dtype=np.uint8),
-                }
-            for field in ("global_row", "local_row", "prediction_row"):
-                event_arrays[prefix + field] = contract[field]
-            for field in ("request", "target_size", "q4_hits", "fp16_hits", "top32_overlap_count"):
-                event_arrays[prefix + field] = values[field]
-        print(json.dumps({
-            "diagnosed_layer": layer_id, "paired_rows": int(scorable_global.size),
-            "retained_rows": int(selected_global.size),
-        }, sort_keys=True), flush=True)
+    event_arrays = regenerate_diagnostic_events(
+        requested, model_layers, diagnostic, device="cuda",
+    )
     event_binding = CV._write_npz_exclusive(requested / "diagnostic-events.npz", event_arrays)
+    validate_semantic_events(
+        requested / "diagnostic-events.npz", event_binding, requested,
+        model_layers, diagnostic, device="cuda",
+    )
     replayed = replay_diagnostic_events(
         requested / "diagnostic-events.npz", event_binding, diagnostic,
     )

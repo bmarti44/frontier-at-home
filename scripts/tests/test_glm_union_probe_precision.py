@@ -179,6 +179,33 @@ class PrecisionDiagnosticTests(unittest.TestCase):
                     MODULE.replay_diagnostic_events(
                         dropped_path, dropped_binding, diagnostic,
                     )
+                with np.load(event_path, allow_pickle=False) as archive:
+                    fabricated = {name: archive[name].copy() for name in archive.files}
+                for name in fabricated:
+                    if name.endswith(("_q4_hits", "_fp16_hits")):
+                        fabricated[name].fill(0)
+                    elif name.endswith("_top32_overlap_count"):
+                        fabricated[name].fill(32)
+                original_event_path = output.parent / "original-events.npz"
+                event_path.rename(original_event_path)
+                fabricated_binding = MODULE.CV._write_npz_exclusive(event_path, fabricated)
+                fabricated_replay = MODULE.replay_diagnostic_events(
+                    event_path, fabricated_binding, diagnostic,
+                )
+                fabricated_summary = MODULE.build_precision_summary(
+                    "1" * 40,
+                    MODULE._sha256(output / "manifest.json"),
+                    MODULE._sha256(output / "model-manifest.json"),
+                    diagnostic_binding,
+                    fabricated_binding,
+                    fabricated_replay,
+                    MODULE._sha256(output / "runtime-final.json"),
+                )
+                summary_path.write_text(
+                    json.dumps(fabricated_summary, sort_keys=True, indent=2), encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, "precision semantic event differs"):
+                    MODULE.validate_completed_output(output)
                 state_path = output / "layer-004-rank32.npz"
                 original_state = state_path.read_bytes()
                 state_path.write_bytes(original_state + b"x")
