@@ -812,7 +812,7 @@ class QualifiedBundleTests(unittest.TestCase):
 
     def test_atomic_bundle_publication_rejects_corrupt_or_changed_npz(self) -> None:
         original_savez = MODULE.np.savez
-        arrays = {
+        original_arrays = {
             "ids": np.array([[1, 2]], dtype=np.uint8),
             "score": np.array([0.5], dtype=np.float16),
         }
@@ -820,8 +820,8 @@ class QualifiedBundleTests(unittest.TestCase):
         def corrupt(handle, **_values):
             handle.write(b"not-an-npz")
 
-        def missing(handle, **_values):
-            original_savez(handle, ids=arrays["ids"])
+        def missing(handle, **values):
+            original_savez(handle, ids=values["ids"])
 
         def extra(handle, **values):
             original_savez(handle, **values, extra=np.array([1], dtype=np.uint8))
@@ -845,13 +845,24 @@ class QualifiedBundleTests(unittest.TestCase):
             values["ids"][0, 0] ^= np.uint8(1)
             original_savez(handle, **values)
 
+        def mutate_dtype_in_place(handle, **values):
+            values["ids"].dtype = np.int8
+            original_savez(handle, **values)
+
+        def mutate_shape_in_place(handle, **values):
+            values["ids"].shape = (2, 1)
+            original_savez(handle, **values)
+
         for name, mutation in (
             ("corrupt", corrupt), ("missing", missing), ("extra", extra),
             ("dtype", wrong_dtype), ("shape", wrong_shape), ("value", wrong_value),
             ("in_place", mutate_input_in_place),
+            ("in_place_dtype", mutate_dtype_in_place),
+            ("in_place_shape", mutate_shape_in_place),
         ):
             with self.subTest(mutation=name), tempfile.TemporaryDirectory() as directory:
                 destination = Path(directory) / "published"
+                arrays = {key: value.copy() for key, value in original_arrays.items()}
                 with mock.patch.object(MODULE.np, "savez", side_effect=mutation):
                     with self.assertRaises(ValueError):
                         MODULE.publish_bundle(destination, arrays, {"schema_version": 1})
