@@ -48,14 +48,16 @@ class CompactArrayTests(unittest.TestCase):
     def test_int4_round_trip_obeys_per_row_half_step_bound(self) -> None:
         hidden, logits, bias, selected = self.fixture()
         compact, metrics = MODULE.compact_arrays(
-            hidden, logits, bias, selected, top_k=4,
+            hidden, logits, bias, selected, top_k=4, hidden_group_size=4,
         )
+        self.assertEqual(compact["hidden_scale"].shape, (2, 2))
+        self.assertEqual(metrics["hidden_group_size"], 4)
         restored = MODULE.unpack_hidden_int4(
             compact["hidden_q4"], compact["hidden_scale"], hidden.shape[1],
         )
         error = np.abs(restored - hidden)
-        bound = compact["hidden_scale"].astype(np.float32)[:, None] / 2 + 1e-6
-        self.assertTrue(np.all(error <= bound))
+        bound = np.repeat(compact["hidden_scale"].astype(np.float32), 4, axis=1) / 2 + 1e-6
+        self.assertTrue(np.all(error <= bound[:, :hidden.shape[1]]))
         self.assertAlmostEqual(metrics["hidden_max_abs_error"], float(error.max()), places=6)
         self.assertGreaterEqual(metrics["hidden_nrmse"], 0.0)
 
