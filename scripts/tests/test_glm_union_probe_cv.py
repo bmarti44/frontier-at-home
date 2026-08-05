@@ -6,7 +6,9 @@ from __future__ import annotations
 import importlib.util
 import copy
 from pathlib import Path
+import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -157,6 +159,28 @@ class CVMetricTests(unittest.TestCase):
             MODULE.score_event_evidence(
                 observed["request"], observed["target_size"], broken, budgets=(2, 4),
             )
+        nonmonotonic = observed["hits"].copy()
+        nonmonotonic[0] = [2, 1]
+        with self.assertRaises(ValueError):
+            MODULE.score_event_evidence(
+                observed["request"], observed["target_size"], nonmonotonic,
+                budgets=(2, 4),
+            )
+
+    def test_event_archive_rejects_writer_side_input_mutation(self) -> None:
+        arrays = {"k2_hits": np.asarray([[1, 2, 2]], dtype=np.uint8)}
+        original_savez = MODULE.np.savez
+
+        def mutate_then_save(handle, **values):
+            values["k2_hits"][0, 0] = 2
+            return original_savez(handle, **values)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "events.npz"
+            with mock.patch.object(MODULE.np, "savez", side_effect=mutate_then_save):
+                with self.assertRaises(ValueError):
+                    MODULE._write_npz_exclusive(output, arrays)
+            self.assertFalse(output.exists())
 
     def test_aggregation_rejects_duplicate_rankings_and_request_drift(self) -> None:
         requests = np.asarray([1], dtype=np.uint16)
