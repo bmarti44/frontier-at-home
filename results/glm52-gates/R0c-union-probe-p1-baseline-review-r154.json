@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "251937793dcc9d0e0fbf336d4cf940127c7b9fd5",
+  "review_round": 154,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 96,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "PASS; ROOT-STAGED INSTALL MAY PROCEED"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 96,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "ACCEPT; ROOT-STAGED INSTALL MAY PROCEED"
+  },
+  "verified_closed": [
+    "P1-BASE-C15-H1-AUTHORIZED-CPU-BACKEND-DOWNGRADE",
+    "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY",
+    "P1-BASE-C14-H1-ROOT-VALIDATOR-RUNTIME-ABSENT",
+    "BASE-R142-H3",
+    "P1-BASE-IMPL-H5"
+  ],
+  "open_blockers": [],
+  "independent_reproduction": {
+    "cpu_cli": "Both reviewers confirmed argparse rejects --device cpu with exit 2.",
+    "cpu_preflight": "Both reviewers confirmed preflight raises before model, fixture, reservation or held-out access.",
+    "pre_exposure_binding": "Both reviewers traced the exact CUDA object through preflight, journal digest, independent root authority and immutable reservation.",
+    "completed_replay": "Both reviewers confirmed CPU substitution fails before frozen scorer loading and the fixed replay returns the exact CUDA backend.",
+    "publication": "Both reviewers confirmed root and controller exact-check the backend and the root-owned final receipt carries it."
+  },
+  "release_conditions": {
+    "both_scores_at_least_90": true,
+    "verified_critical_or_high": 0,
+    "root_staged_install_authorized": true,
+    "installed_boundary_nonheldout_cuda_smoke_required": true,
+    "heldout_may_open_before_smoke": false
+  },
+  "next_action": "Run the single SHA-verified root-staged installer for this exact candidate, then execute the preregistered installed-boundary non-held-out CUDA smoke. Open no held-out values until that smoke passes."
+}
