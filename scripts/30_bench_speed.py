@@ -349,6 +349,10 @@ class Client:
                         raise RuntimeError(f"unexpected SSE line: {line[:200]!r}")
                     data = line[5:].strip()
                     if data == "[DONE]":
+                        if len(finish_reasons) != 1 or usage is None:
+                            raise RuntimeError(
+                                "SSE [DONE] arrived before terminal reason and usage"
+                            )
                         done = True
                         continue
                     data_chunks += 1
@@ -362,6 +366,10 @@ class Client:
                     if event_usage is not None:
                         if not isinstance(event_usage, dict):
                             raise RuntimeError("SSE usage is not an object")
+                        if usage is not None or len(finish_reasons) != 1:
+                            raise RuntimeError(
+                                "SSE usage is duplicate or precedes terminal finish_reason"
+                            )
                         usage = event_usage
                     choices = event.get("choices", [])
                     if not isinstance(choices, list):
@@ -373,6 +381,8 @@ class Client:
                         if finish_reason is not None:
                             if not isinstance(finish_reason, str) or not finish_reason:
                                 raise RuntimeError("SSE finish_reason is invalid")
+                            if usage is not None:
+                                raise RuntimeError("SSE finish_reason arrived after usage")
                             finish_reasons.append(finish_reason)
                         delta = choice.get("delta", {})
                         if not isinstance(delta, dict):
