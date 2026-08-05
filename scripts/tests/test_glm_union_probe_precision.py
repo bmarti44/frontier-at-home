@@ -54,6 +54,26 @@ class PrecisionDiagnosticTests(unittest.TestCase):
             "hidden_fp16_holdout": np.zeros((2, 6144), dtype=np.float16),
         }
 
+    def sparse_layer_diagnostic(self):
+        request = np.repeat(np.asarray([1, 2], dtype=np.uint16), 10)
+        layer = np.repeat(np.asarray([4, 5], dtype=np.uint16), 10)
+        position = np.tile(np.arange(10, dtype=np.uint32), 2)
+        selected = np.asarray([
+            (np.arange(8, dtype=np.uint16) + int(value) * 8) % 256 for value in position
+        ], dtype=np.uint8)
+        return {
+            "request_index": request,
+            "layer": layer,
+            "token_position": position,
+            "selected_ids": selected,
+            "hidden_q4": np.full((20, 3072), 0x88, dtype=np.uint8),
+            "hidden_scale": np.ones((20, 192), dtype=np.float16),
+            "top_ids": np.tile(np.arange(32, dtype=np.uint8), (20, 1)),
+            "top_logits": np.zeros((20, 32), dtype=np.float16),
+            "hidden_fp16_holdout_row": np.asarray([0, 10], dtype=np.uint32),
+            "hidden_fp16_holdout": np.zeros((2, 6144), dtype=np.float16),
+        }
+
     def test_paired_metrics_preserve_rows_and_measure_top32_overlap(self) -> None:
         requests = np.asarray([1, 1, 2], dtype=np.uint16)
         targets = np.zeros((3, 256), dtype=np.bool_)
@@ -94,6 +114,38 @@ class PrecisionDiagnosticTests(unittest.TestCase):
         self.assertEqual(result["events"], 5)
         self.assertEqual(result["event_weighted_overlap"], 0.8)
         self.assertEqual(result["macro_request_overlap"], 0.75)
+
+    def test_replay_aggregates_sparse_layer_request_coverage(self) -> None:
+        diagnostic = self.sparse_layer_diagnostic()
+        evidence = {}
+        with mock.patch.object(MODULE.CV, "LAYERS", (4, 5)):
+            for layer_id in MODULE.CV.LAYERS:
+                _data, contracts, _selected, _scorable = MODULE.diagnostic_layer_contract(
+                    diagnostic, layer_id,
+                )
+                for k in MODULE.CV.K_VALUES:
+                    contract = contracts[str(k)]
+                    prefix = f"layer{layer_id}_k{k}_"
+                    hits = np.minimum(
+                        contract["target_size"][:, None],
+                        np.asarray(MODULE.CV.BUDGETS, dtype=np.uint8)[None, :],
+                    ).astype(np.uint8)
+                    for field in ("global_row", "local_row", "prediction_row", "request", "target_size"):
+                        evidence[prefix + field] = contract[field]
+                    evidence[prefix + "q4_hits"] = hits
+                    evidence[prefix + "fp16_hits"] = hits.copy()
+                    evidence[prefix + "top32_overlap_count"] = np.full(
+                        contract["request"].size, 32, dtype=np.uint8,
+                    )
+            with tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "events.npz"
+                binding = MODULE.CV._write_npz_exclusive(path, evidence)
+                replayed = MODULE.replay_diagnostic_events(path, binding, diagnostic)
+        for k in map(str, MODULE.CV.K_VALUES):
+            self.assertEqual(replayed["q4"][k]["32"]["requests"], 2)
+            self.assertEqual(replayed["q4"][k]["32"]["events"], 2)
+            self.assertEqual(replayed["q4"][k]["32"]["macro_request_recall"], 1.0)
+            self.assertEqual(replayed["q4"][k]["32"]["event_weighted_recall"], 1.0)
 
     def test_diagnostic_contract_rejects_row_and_expert_mutations(self) -> None:
         rows = 12225
