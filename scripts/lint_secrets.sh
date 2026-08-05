@@ -129,6 +129,8 @@ allowlist = {
     "on_ledger_sha256",
     "off_responses_sha256",
     "on_responses_sha256",
+    "manifest_sha256",
+    "stdout_manifest_sha256",
     "off_server_log_sha256",
     "on_server_log_sha256",
     "nll_sha256",
