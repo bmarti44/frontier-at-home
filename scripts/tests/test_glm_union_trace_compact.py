@@ -246,6 +246,191 @@ class QualifiedBundleTests(unittest.TestCase):
         receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
         return source, receipt_path
 
+    def make_corpus_bundle(self, root: Path) -> tuple[Path, Path]:
+        source = root / "corpus-source"
+        trace = source / "on" / "trace"
+        trace.mkdir(parents=True)
+        request_hashes = {1: "d" * 64, 2: "e" * 64}
+        for request_id in (1, 2):
+            rows = 2
+            hidden = (
+                np.arange(rows * SCORE_MODULE.N_EMBD, dtype=np.float32).reshape(rows, -1)
+                / np.float32(1000.0) + np.float32(request_id)
+            )
+            base_logits = np.linspace(-2.0, 2.0, SCORE_MODULE.N_EXPERT, dtype=np.float32)
+            logits = np.stack([
+                np.roll(base_logits, request_id + row) for row in range(rows)
+            ]).astype(np.float32)
+            probabilities = (1.0 / (1.0 + np.exp(-logits))).astype(np.float32)
+            bias = np.zeros(SCORE_MODULE.N_EXPERT, dtype=np.float32)
+            selected = np.argsort(-probabilities, axis=1, kind="stable")[
+                :, :SCORE_MODULE.N_EXPERT_USED
+            ].astype(np.int32)
+            payloads = {
+                "ffn_norm": ("f32", hidden), "router_logits": ("f32", logits),
+                "router_probs": ("f32", probabilities),
+                "router_selected": ("i32", selected), "router_bias": ("f32", bias),
+            }
+            for kind, (ext, values) in payloads.items():
+                path = trace / (
+                    f"request_r{request_id:08d}_glm_indexed_{kind}-3_pos0.{ext}"
+                )
+                path.write_bytes(values.tobytes())
+        server_log = source / "on" / "server.log"
+        server_log.write_text(
+            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn request=1 layer=3 pos=0 rows=2\n"
+            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn request=2 layer=3 pos=0 rows=2\n"
+        )
+        trace_score = SCORE_MODULE.score_trace(
+            trace, server_log, max_bytes=10**7, expected_layers={3}, expected_chunks=[],
+            expected_requests={1: [(0, 2)], 2: [(0, 2)]},
+        )
+        self.assertEqual(trace_score["verdict"], "PASS")
+
+        def signature(request_id: int) -> dict[str, object]:
+            return {
+                "request_sha256": request_hashes[request_id],
+                "completion_tokens": 128,
+                "token_ids": [request_id, 9],
+                "generated_reasoning_sha256": str(request_id) * 64,
+                "generated_reasoning_bytes": 2,
+                "generated_content_sha256": "f" * 64,
+                "generated_content_bytes": 0,
+            }
+
+        result_paths: dict[tuple[str, int], Path] = {}
+        for mode in ("off", "on"):
+            directory = source / mode
+            directory.mkdir(exist_ok=True)
+            for request_id in (1, 2):
+                path = directory / f"result-{request_id}.json"
+                path.write_text(json.dumps({"mode": mode, "request": request_id}) + "\n")
+                result_paths[(mode, request_id)] = path
+        corpus_requests = {
+            mode: [
+                {
+                    "request_id": request_id,
+                    "seed": 7 + request_id - 1,
+                    "prompt_tokens": 2,
+                    "full_indexed_chunks": [[0, 2]],
+                    "response_signature": signature(request_id),
+                    "result_sha256": sha256(result_paths[(mode, request_id)]),
+                }
+                for request_id in (1, 2)
+            ]
+            for mode in ("off", "on")
+        }
+        fixture_digest = hashlib.sha256(
+            b"".join(bytes.fromhex(request_hashes[index]) for index in (1, 2))
+        ).hexdigest()
+        arms: dict[str, dict[str, object]] = {}
+        arm_paths: dict[str, Path] = {}
+        for mode in ("off", "on"):
+            mode_log = source / mode / "server.log"
+            if mode == "on":
+                mode_log = server_log
+            else:
+                mode_log.write_text("no trace\n")
+            result_digest = hashlib.sha256(b"".join(
+                bytes.fromhex(sha256(result_paths[(mode, request_id)]))
+                for request_id in (1, 2)
+            )).hexdigest()
+            arm = {
+                "mode": mode, "binary_sha256": "a" * 64,
+                "model_sha256": "b" * 64, "tokenizer_sha256": "c" * 64,
+                "fixture_sha256": fixture_digest, "configuration_sha256": "9" * 64,
+                "environment_sha256": ("1" if mode == "on" else "2") * 64,
+                "response_signature": [signature(1), signature(2)],
+                "prompt_tokens": 2, "full_indexed_chunks": [[0, 2]],
+                "trace_files": 10 if mode == "on" else 0,
+                "trace_bytes": trace_score["total_bytes"] if mode == "on" else 0,
+                "result_sha256": result_digest, "server_log_sha256": sha256(mode_log),
+                "corpus_requests": corpus_requests[mode],
+                "expert_cache_budget": "32GB", "cuda_expert_cache_gb": "56",
+                "cuda_cache_runtime": {"slots": 5754, "arena_gib": 52.15},
+            }
+            arms[mode] = arm
+            arm_path = source / mode / "arm.json"
+            arm_path.write_text(json.dumps(arm, sort_keys=True, indent=2) + "\n")
+            arm_paths[mode] = arm_path
+        containment = {
+            "clean": True, "crash_directory": "/tmp/test", "kernel_sha256": "3" * 64,
+            "main_sha256": "4" * 64, "samples_sha256": "5" * 64,
+        }
+        containment_paths = {}
+        for mode in ("off", "on"):
+            path = source / f"{mode}.containment.json"
+            path.write_text(json.dumps(containment, sort_keys=True) + "\n")
+            containment_paths[mode] = path
+        checks = {
+            "arm_modes": True, "byte_and_token_identity": True,
+            "containment_clean": True, "corpus_cuda_cache": True,
+            "corpus_event_floor": True, "corpus_request_scope": True,
+            "frozen_identity": True, "matched_indexed_chunks": True,
+            "off_emitted_no_trace": True, "on_emitted_trace": True,
+            "prompt_tokens_and_exact_coverage": True, "trace_score_passed": True,
+        }
+        summary = {
+            "schema_version": 1, "scope": "multi_request_all_routed_layer_corpus_smoke",
+            "high_row_2048_status": "OPEN", "candidate_hash": "1" * 40,
+            "engine_commit": "2" * 40, "binary_sha256": "a" * 64,
+            "model_sha256": "b" * 64, "tokenizer_sha256": "c" * 64,
+            "seed": 7, "context_level": 2, "max_trace_bytes": 10**7,
+            "minimum_token_layer_events": 4,
+            "off_arm_sha256": sha256(arm_paths["off"]),
+            "on_arm_sha256": sha256(arm_paths["on"]),
+            "off_containment_sha256": sha256(containment_paths["off"]),
+            "on_containment_sha256": sha256(containment_paths["on"]),
+            "trace_score": trace_score, "checks": checks, "verdict": "PASS",
+        }
+        summary_path = source / "summary.json"
+        summary_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n")
+        receipt = {
+            "schema_version": 1, "candidate_hash": "1" * 40,
+            "engine_commit": "2" * 40, "classification": "PASS",
+            "scope": "multi_request_all_routed_layer_corpus_smoke",
+            "high_row_2048_status": "OPEN", "summary_sha256": sha256(summary_path),
+            "off_arm_sha256": sha256(arm_paths["off"]),
+            "on_arm_sha256": sha256(arm_paths["on"]),
+            "off_result_1_sha256": sha256(result_paths[("off", 1)]),
+            "off_result_2_sha256": sha256(result_paths[("off", 2)]),
+            "on_result_1_sha256": sha256(result_paths[("on", 1)]),
+            "on_result_2_sha256": sha256(result_paths[("on", 2)]),
+            "off_server_log_sha256": sha256(source / "off/server.log"),
+            "on_server_log_sha256": sha256(server_log),
+            "off_containment_sha256": sha256(containment_paths["off"]),
+            "on_containment_sha256": sha256(containment_paths["on"]),
+            "observed": {
+                "context_level": 2, "requests": 2,
+                "prompt_tokens_per_request": [2, 2],
+                "completion_tokens_per_request": [128, 128],
+                "full_indexed_chunks_per_request": [[[0, 2]], [[0, 2]]],
+                "distinct_request_fixtures": 2, "byte_and_token_identity": True,
+                "containment_clean": True, "streaming_cache_budget": "32GB",
+                "cuda_cache_environment_gb": 56, "cuda_cache_slots": 5754,
+                "cuda_cache_arena_gib": 52.15, "off_trace_files": 0,
+                "on_trace_files": 10, "on_trace_bytes": trace_score["total_bytes"],
+                "trace_events": 2, "token_layer_events": 4,
+                "routed_layer_first": 3, "routed_layer_last": 3,
+                "minimum_available_memory_gib": {"off": 32.0, "on": 32.0},
+                "maximum_cgroup_memory_bytes": {"off": 1, "on": 1},
+                "maximum_cgroup_swap_bytes": 0, "kernel_oom_or_xid": False,
+                "trace_score_verdict": "PASS",
+            },
+            "pre_runtime_authorization_review": {
+                "round": 1, "gap_reviewer_score": 100,
+                "adversarial_reviewer_score": 100, "critical": [], "high": [],
+            },
+            "post_runtime_review": {
+                "round": 2, "gap_reviewer_score": 100,
+                "adversarial_reviewer_score": 100, "critical": [], "high": [],
+            },
+            "retained_directory": str(source), "conclusion": "test corpus fixture",
+        }
+        receipt_path = root / "corpus-receipt.json"
+        receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
+        return source, receipt_path
+
     def test_accepts_exact_qualified_bundle_and_emits_lineage(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source, receipt = self.make_bundle(Path(directory))
@@ -262,6 +447,36 @@ class QualifiedBundleTests(unittest.TestCase):
                 "request_id", "seed", "scorer_sha256", "repository_head",
             ):
                 self.assertIn(field, validated["lineage"])
+
+    def test_accepts_corpus_receipt_and_selects_one_request_shard(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source, receipt = self.make_corpus_bundle(Path(directory))
+            validated = MODULE.validate_source_bundle(
+                source, receipt, repository_root=Path(directory),
+                require_tracked_receipt=False, minimum_prompt_tokens=1,
+                request_index=2,
+            )
+            self.assertEqual(validated["layers"], [3])
+            self.assertEqual(validated["chunks"], [(0, 2)])
+            self.assertEqual(validated["lineage"]["request_index"], 2)
+            self.assertEqual(validated["lineage"]["request_id"], "e" * 64)
+            self.assertEqual(len(validated["files"]), 5)
+
+    def test_corpus_source_requires_explicit_valid_request_index(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source, receipt = self.make_corpus_bundle(Path(directory))
+            for request_index in (None, 0, 3):
+                with self.subTest(request_index=request_index), self.assertRaises(ValueError):
+                    MODULE.validate_source_bundle(
+                        source, receipt, repository_root=Path(directory),
+                        require_tracked_receipt=False, minimum_prompt_tokens=1,
+                        request_index=request_index,
+                    )
+
+    def test_cli_exposes_request_scoped_corpus_shards(self) -> None:
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('result.add_argument("--request-index", type=int)', source)
+        self.assertIn("request_index=args.request_index", source)
 
     def test_consumes_the_exact_tracked_receipt_snapshot(self) -> None:
         """A path replacement after the HEAD comparison cannot change authority."""
