@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -34,6 +35,72 @@ def arm(mode: str) -> dict[str, object]:
 
 
 class UnionTraceSmokeVerdictTests(unittest.TestCase):
+    def contained_receipt(
+        self,
+        directory: Path,
+        *,
+        kernel_text: str = "kernel clean\n",
+        main_suffix: str = "",
+        command_text: str = "command clean\n",
+    ) -> Path:
+        (directory / "main.log").write_text(
+            "executed candidate was verified alive at least once\n"
+            "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 events=\n"
+            f"{main_suffix}"
+            "SAFE_RUN end rc=0 killed=no\n",
+            encoding="utf-8",
+        )
+        (directory / "samples.log").write_text("sample clean\n", encoding="utf-8")
+        (directory / "kernel.log").write_text(kernel_text, encoding="utf-8")
+        (directory / "cmd.log").write_text(command_text, encoding="utf-8")
+        stdout = directory / "stdout.log"
+        stdout.write_text(
+            f"SAFE_RUN_DONE rc=0 killed=no dir={directory}\n",
+            encoding="utf-8",
+        )
+        return stdout
+
+    def test_python_containment_rejects_driver_and_host_oom_mutations(self) -> None:
+        mutations = (
+            "NVRM: Xid (PCI:0000:0f:00): 31, pid=1\n",
+            "NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory "
+            "[NV_ERR_NO_MEMORY] (0x00000051)\n",
+            "kernel: oom-kill:constraint=CONSTRAINT_MEMCG\n",
+            "kernel: Out of memory: Killed process 123 (ds4-server)\n",
+        )
+        for index, marker in enumerate(mutations):
+            with self.subTest(marker=marker), tempfile.TemporaryDirectory() as temporary:
+                receipt = self.contained_receipt(Path(temporary), kernel_text=marker)
+                with self.assertRaisesRegex(ValueError, "GPU|OOM|kernel"):
+                    MODULE.SHARED.containment_record(receipt)
+
+    def test_python_containment_rejects_cuda_userspace_oom_mutations(self) -> None:
+        mutations = (
+            "CUDA_ERROR_OUT_OF_MEMORY\n",
+            "cudaErrorMemoryAllocation: out of memory\n",
+            "CUDA allocation failed while creating expert buffer\n",
+        )
+        for location in ("main", "command"):
+            for marker in mutations:
+                with self.subTest(location=location, marker=marker), tempfile.TemporaryDirectory() as temporary:
+                    kwargs = ({"main_suffix": marker} if location == "main" else
+                              {"command_text": marker})
+                    receipt = self.contained_receipt(Path(temporary), **kwargs)
+                    with self.assertRaisesRegex(ValueError, "GPU|OOM|CUDA"):
+                        MODULE.SHARED.containment_record(receipt)
+
+    def test_python_containment_accepts_benign_nvidia_runtime_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            receipt = self.contained_receipt(
+                Path(temporary),
+                kernel_text="NVRM: loading NVIDIA UNIX Open Kernel Module 2.0\n",
+                command_text="CUDA device 0 initialized successfully\n",
+            )
+            self.assertEqual(
+                MODULE.SHARED.containment_record(receipt)["crash_directory"],
+                str(Path(temporary).resolve()),
+            )
+
     def test_accepts_bound_identical_contained_arms(self) -> None:
         result = MODULE.smoke_verdict(
             arm("off"), arm("on"), {"verdict": "PASS", "events": 3},
@@ -249,6 +316,10 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     def test_summary_binds_both_containment_records(self) -> None:
         self.assertIn('"off_containment_sha256"', self.runner)
         self.assertIn('"on_containment_sha256"', self.runner)
+
+    def test_server_log_is_checked_for_userspace_gpu_oom(self) -> None:
+        self.assertIn("SHARED.require_no_gpu_fault", self.runner)
+        self.assertIn("server_log", self.runner)
 
 
 if __name__ == "__main__":
