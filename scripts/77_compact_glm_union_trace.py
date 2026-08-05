@@ -18,6 +18,7 @@ import subprocess
 import tempfile
 import types
 from typing import Any
+import zipfile
 
 import numpy as np
 
@@ -1413,8 +1414,16 @@ def publish_bundle(
             handle.flush()
             os.fsync(handle.fileno())
         try:
+            with zipfile.ZipFile(records, "r") as archive:
+                member_names = archive.namelist()
+                expected_members = {f"{name}.npy" for name in arrays}
+                if (
+                    len(member_names) != len(expected_members) or
+                    set(member_names) != expected_members or archive.testzip() is not None
+                ):
+                    raise ValueError("published NPZ member set differs")
             with np.load(records, allow_pickle=False) as loaded:
-                if set(loaded.files) != set(arrays):
+                if len(loaded.files) != len(arrays) or set(loaded.files) != set(arrays):
                     raise ValueError("published NPZ array set differs")
                 for name, expected in arrays.items():
                     observed = loaded[name]
@@ -1426,7 +1435,7 @@ def publish_bundle(
                         array_schema[name]["sha256"]
                     ):
                         raise ValueError(f"published NPZ array differs: {name}")
-        except (OSError, ValueError, EOFError) as error:
+        except (OSError, ValueError, EOFError, zipfile.BadZipFile) as error:
             raise ValueError("published NPZ failed closed validation") from error
         final_manifest = {
             **manifest,
