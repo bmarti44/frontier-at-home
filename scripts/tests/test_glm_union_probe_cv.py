@@ -286,6 +286,14 @@ class CVMetricTests(unittest.TestCase):
                     "training_source_binding_sha256": manifest["training_source_binding_sha256"],
                 }
                 MODULE.validate_completed_output(output, source_binding, sources, groups, identity)
+                substituted = [{name: value.copy() for name, value in sources[0].items()}]
+                substituted[0]["selected_ids"] = (
+                    (substituted[0]["selected_ids"].astype(np.uint16) + 128) % 256
+                ).astype(np.uint8)
+                with self.assertRaises(ValueError):
+                    MODULE.validate_completed_output(
+                        output, source_binding, substituted, groups, identity,
+                    )
                 targets = [output / "runtime-start.json", output / "layer-003-events.npz"]
                 for target in targets:
                     original = target.read_bytes()
