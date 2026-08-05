@@ -693,14 +693,56 @@ def multi_k_targets(
     selected_ids: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Build aligned K=2/4/8 targets and validity masks without dropping shorter windows."""
-    raise NotImplementedError
+    generated = [
+        future_union_targets(request_index, layer, token_position, selected_ids, k)
+        for k in K_VALUES
+    ]
+    rows = generated[0][0]
+    lookup = np.full(request_index.size, -1, dtype=np.int64)
+    lookup[rows] = np.arange(rows.size)
+    targets = np.zeros((rows.size, len(K_VALUES), N_EXPERT), dtype=np.bool_)
+    valid = np.zeros((rows.size, len(K_VALUES)), dtype=np.bool_)
+    for k_index, (k_rows, k_targets) in enumerate(generated):
+        locations = lookup[k_rows]
+        if np.any(locations < 0) or np.unique(locations).size != locations.size:
+            raise ValueError("multi-K target rows are not nested")
+        targets[locations, k_index] = k_targets
+        valid[locations, k_index] = True
+    if not valid[:, 0].all() or any(not valid[:, index].any() for index in range(len(K_VALUES))):
+        raise ValueError("multi-K target coverage is incomplete")
+    return rows, targets, valid
 
 
 def request_balanced_weights(
     request_index: np.ndarray, row_indices: np.ndarray, valid: np.ndarray,
 ) -> np.ndarray:
     """Return per-K row weights whose mean is one and whose requests have equal mass."""
-    raise NotImplementedError
+    if (
+        not isinstance(request_index, np.ndarray) or request_index.ndim != 1 or
+        not np.issubdtype(request_index.dtype, np.integer) or
+        not isinstance(row_indices, np.ndarray) or row_indices.ndim != 1 or
+        not np.issubdtype(row_indices.dtype, np.integer) or row_indices.size == 0 or
+        np.any(row_indices < 0) or np.any(row_indices >= request_index.size) or
+        np.unique(row_indices).size != row_indices.size or
+        not isinstance(valid, np.ndarray) or valid.shape != (row_indices.size, len(K_VALUES)) or
+        valid.dtype != np.bool_
+    ):
+        raise ValueError("request-balanced weight schema is invalid")
+    requests = request_index[row_indices].astype(np.int64, copy=False)
+    weights = np.zeros(valid.shape, dtype=np.float32)
+    for k_index in range(valid.shape[1]):
+        active = valid[:, k_index]
+        active_requests = requests[active]
+        unique, counts = np.unique(active_requests, return_counts=True)
+        if unique.size == 0 or np.any(unique <= 0):
+            raise ValueError("request-balanced target has no valid requests")
+        per_request = dict(zip(unique.tolist(), counts.tolist()))
+        active_count = int(active.sum())
+        for row in np.flatnonzero(active):
+            weights[row, k_index] = active_count / (
+                unique.size * per_request[int(requests[row])]
+            )
+    return weights
 
 
 def score_rankings(
