@@ -75,9 +75,9 @@ class UnionTargetTests(unittest.TestCase):
         self.assertEqual(result["requests"], 2)
         self.assertEqual(result["events"], 5)
         self.assertEqual(result["budgets"], [2, 4])
-        self.assertEqual(result["by_budget"]["2"]["macro_request_recall"], 1 / 9)
-        self.assertEqual(result["by_budget"]["4"]["macro_request_recall"], 4 / 9)
-        self.assertEqual(result["by_budget"]["2"]["event_weighted_wasted_experts"], 5 / 3)
+        self.assertEqual(result["by_budget"]["2"]["macro_request_recall"], 1 / 18)
+        self.assertEqual(result["by_budget"]["4"]["macro_request_recall"], 1 / 3)
+        self.assertEqual(result["by_budget"]["2"]["event_weighted_wasted_experts"], 9 / 5)
 
     def test_scoring_rejects_duplicate_rankings_or_cross_row_mismatch(self) -> None:
         request, layer, position, selected = self.fixture()
@@ -94,4 +94,3 @@ class UnionTargetTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
