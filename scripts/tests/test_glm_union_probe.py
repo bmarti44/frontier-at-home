@@ -164,6 +164,24 @@ class UnionTargetTests(unittest.TestCase):
         )
         self.assertEqual(set(state), {"down.weight", "up.weight", "up.bias"})
 
+        isolated_weights = weights.copy()
+        isolated_weights[8:] = 0
+        fit_half = np.arange(8, dtype=np.int64)
+        state_a, _ = MODULE.train_probe_head(
+            features, targets, valid, isolated_weights, fit_half, 8,
+            epochs=1, batch_rows=8, device="cpu",
+        )
+        mutated_features = features.copy()
+        mutated_targets = targets.copy()
+        mutated_features[8:] *= -19
+        mutated_targets[8:] = ~mutated_targets[8:]
+        state_b, _ = MODULE.train_probe_head(
+            mutated_features, mutated_targets, valid, isolated_weights, fit_half, 8,
+            epochs=1, batch_rows=8, device="cpu",
+        )
+        for name in state_a:
+            np.testing.assert_array_equal(state_a[name], state_b[name])
+
     def test_scoring_rejects_duplicate_rankings_or_cross_row_mismatch(self) -> None:
         request, layer, position, selected = self.fixture()
         rows, target = MODULE.future_union_targets(

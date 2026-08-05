@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
 from pathlib import Path
 import unittest
 
@@ -93,6 +94,26 @@ class CVMetricTests(unittest.TestCase):
         checkpoint["driver_sha256"] = "9" * 64
         with self.assertRaises(ValueError):
             MODULE.validate_layer_checkpoint(checkpoint, contract, identity, "5" * 64)
+        checkpoint, contract, identity = self.checkpoint_fixture()
+        mutations = []
+        missing_request = copy.deepcopy(checkpoint)
+        missing_request["probe"]["8"]["2"]["16"].pop("1")
+        mutations.append(missing_request)
+        nonfinite = copy.deepcopy(checkpoint)
+        nonfinite["frequency"]["2"]["16"]["1"]["precision_sum"] = float("nan")
+        mutations.append(nonfinite)
+        wrong_events = copy.deepcopy(checkpoint)
+        wrong_events["frequency"]["8"]["64"]["1"]["events"] = 3
+        mutations.append(wrong_events)
+        missing_rank = copy.deepcopy(checkpoint)
+        missing_rank["probe"].pop("32")
+        mutations.append(missing_rank)
+        extra_key = copy.deepcopy(checkpoint)
+        extra_key["unexpected"] = True
+        mutations.append(extra_key)
+        for mutation in mutations:
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                MODULE.validate_layer_checkpoint(mutation, contract, identity, "5" * 64)
 
     def test_production_main_runs_only_after_metric_definitions(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")

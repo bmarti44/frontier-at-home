@@ -10,7 +10,9 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
+import time
 
 import numpy as np
 
@@ -60,7 +62,48 @@ def _repository_head() -> str:
 
 def runtime_fault_lines(kernel_log: str) -> list[str]:
     """Extract CUDA/Xid/OOM fault lines that invalidate a training run."""
-    raise NotImplementedError
+    if not isinstance(kernel_log, str):
+        raise ValueError("kernel log must be text")
+    pattern = re.compile(
+        r"(?:NVRM:\s*Xid\b|\boom-kill\b|Out of memory:\s*Killed process|CUDA[^\n]*(?:fault|error))",
+        re.IGNORECASE,
+    )
+    return [line for line in kernel_log.splitlines() if pattern.search(line)]
+
+
+def _kernel_log_since(start_epoch: int) -> str:
+    completed = subprocess.run(
+        ["journalctl", "-k", "--since", f"@{start_epoch}", "--no-pager", "-o", "cat"],
+        stdin=subprocess.DEVNULL, capture_output=True, text=True,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(f"kernel fault log is unavailable: {completed.stderr.strip()}")
+    return completed.stdout
+
+
+def _gpu_snapshot() -> dict[str, str]:
+    gpu = subprocess.run(
+        [
+            "nvidia-smi", "--query-gpu=uuid,temperature.gpu,pstate",
+            "--format=csv,noheader,nounits",
+        ], stdin=subprocess.DEVNULL, capture_output=True, text=True,
+    )
+    applications = subprocess.run(
+        [
+            "nvidia-smi", "--query-compute-apps=pid,process_name,used_memory",
+            "--format=csv,noheader,nounits",
+        ], stdin=subprocess.DEVNULL, capture_output=True, text=True,
+    )
+    if gpu.returncode != 0 or applications.returncode != 0 or not gpu.stdout.strip():
+        raise RuntimeError("GPU runtime snapshot is unavailable")
+    return {"gpu": gpu.stdout.strip(), "compute_applications": applications.stdout.strip()}
+
+
+def _mem_available_kib() -> int:
+    for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+        if line.startswith("MemAvailable:"):
+            return int(line.split()[1])
+    raise RuntimeError("MemAvailable is unavailable")
 
 
 def _write_json_exclusive(path: Path, value: dict[str, object]) -> None:
@@ -433,6 +476,18 @@ def execute(command: str, out_dir: Path) -> int:
         if requested.exists() or requested.is_symlink():
             raise FileExistsError(requested)
         requested.mkdir(mode=0o700, parents=False)
+        start_epoch = int(time.time())
+        runtime_start = {
+            "schema_version": 1,
+            "classification": "TRAIN_ONLY_CV_RUNTIME_START",
+            "start_epoch": start_epoch,
+            "mem_available_kib": _mem_available_kib(),
+            "gpu": _gpu_snapshot(),
+            "kernel_faults_at_start": runtime_fault_lines(_kernel_log_since(start_epoch)),
+        }
+        if runtime_start["kernel_faults_at_start"]:
+            raise RuntimeError("GPU/OOM fault appeared at CV start")
+        _write_json_exclusive(requested / "runtime-start.json", runtime_start)
         manifest = expected_manifest
         _write_json_exclusive(requested / "manifest.json", manifest)
     else:
@@ -440,8 +495,24 @@ def execute(command: str, out_dir: Path) -> int:
         manifest = json.loads((requested / "manifest.json").read_text(encoding="utf-8"))
         if manifest != expected_manifest:
             raise ValueError("CV resume candidate differs")
+        runtime_start = json.loads((requested / "runtime-start.json").read_text(encoding="utf-8"))
+        if (
+            not isinstance(runtime_start, dict) or
+            set(runtime_start) != {
+                "schema_version", "classification", "start_epoch", "mem_available_kib",
+                "gpu", "kernel_faults_at_start",
+            } or
+            runtime_start.get("schema_version") != 1 or
+            runtime_start.get("classification") != "TRAIN_ONLY_CV_RUNTIME_START" or
+            not isinstance(runtime_start.get("start_epoch"), int) or
+            runtime_start.get("kernel_faults_at_start") != []
+        ):
+            raise ValueError("CV runtime-start evidence differs")
+        start_epoch = runtime_start["start_epoch"]
     if (requested / "summary.json").exists():
         raise FileExistsError("CV summary already exists")
+    if runtime_fault_lines(_kernel_log_since(start_epoch)):
+        raise RuntimeError("GPU/OOM fault exists in CV runtime interval")
     identity = {
         "repository_head": head,
         "driver_sha256": manifest["driver_sha256"],
@@ -460,6 +531,7 @@ def execute(command: str, out_dir: Path) -> int:
                 prior, contract, identity, previous_checkpoint_sha256,
             )
             previous_checkpoint_sha256 = _sha256(output)
+            del data
             continue
         result = run_layer(data, groups, layer_id)
         result.update({
@@ -469,6 +541,8 @@ def execute(command: str, out_dir: Path) -> int:
         validate_layer_checkpoint(
             result, contract, identity, previous_checkpoint_sha256,
         )
+        if runtime_fault_lines(_kernel_log_since(start_epoch)):
+            raise RuntimeError("GPU/OOM fault appeared during CV layer")
         _write_json_exclusive(output, result)
         previous_checkpoint_sha256 = _sha256(output)
         print(json.dumps({"completed_layer": layer_id}, sort_keys=True), flush=True)
@@ -506,6 +580,35 @@ def execute(command: str, out_dir: Path) -> int:
         "selection_formula": "maximum K=4 budget=32 macro-request recall; exact tie chooses smaller rank",
         "claim_limit": "Train-only rank selection; no diagnostic, calibration, or test metric was opened.",
     }
+    kernel_log = _kernel_log_since(start_epoch)
+    faults = runtime_fault_lines(kernel_log)
+    if faults:
+        raise RuntimeError("GPU/OOM fault appeared before CV completion")
+    runtime_final = {
+        "schema_version": 1,
+        "classification": "TRAIN_ONLY_CV_RUNTIME_PASS",
+        "start_epoch": start_epoch,
+        "end_epoch": int(time.time()),
+        "kernel_log_sha256": hashlib.sha256(kernel_log.encode("utf-8")).hexdigest(),
+        "kernel_faults": faults,
+        "post_gpu": _gpu_snapshot(),
+        "post_mem_available_kib": _mem_available_kib(),
+        "deterministic_algorithms": True,
+    }
+    runtime_final_path = requested / "runtime-final.json"
+    if runtime_final_path.exists():
+        existing_runtime = json.loads(runtime_final_path.read_text(encoding="utf-8"))
+        if (
+            not isinstance(existing_runtime, dict) or
+            existing_runtime.get("classification") != "TRAIN_ONLY_CV_RUNTIME_PASS" or
+            existing_runtime.get("start_epoch") != start_epoch or
+            existing_runtime.get("kernel_faults") != [] or
+            existing_runtime.get("deterministic_algorithms") is not True
+        ):
+            raise ValueError("CV runtime-final evidence differs")
+    else:
+        _write_json_exclusive(runtime_final_path, runtime_final)
+    summary["runtime_final_sha256"] = _sha256(runtime_final_path)
     _write_json_exclusive(requested / "summary.json", summary)
     print(json.dumps(summary, sort_keys=True, indent=2, allow_nan=False))
     return 0
@@ -576,9 +679,10 @@ def aggregate_request_metrics(
     output: dict[str, dict[str, float]] = {}
     required = {"recall_sum", "precision_sum", "wasted_sum", "coverage_sum", "events"}
     for budget in sorted(budgets, key=int):
-        requests = set(layers[0][budget])
-        if not requests or any(set(layer[budget]) != requests for layer in layers):
+        request_set = set(layers[0][budget])
+        if not request_set or any(set(layer[budget]) != request_set for layer in layers):
             raise ValueError("CV request coverage differs across layers")
+        requests = sorted(request_set, key=int)
         totals = {
             request: {name: 0.0 for name in required - {"events"}} | {"events": 0}
             for request in requests
