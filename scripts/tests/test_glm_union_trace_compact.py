@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -162,7 +163,9 @@ class QualifiedBundleTests(unittest.TestCase):
     def test_accepts_exact_qualified_bundle_and_emits_lineage(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source, receipt = self.make_bundle(Path(directory))
-            validated = MODULE.validate_source_bundle(source, receipt)
+            validated = MODULE.validate_source_bundle(
+                source, receipt, repository_root=Path(directory), require_tracked_receipt=False,
+            )
             self.assertEqual(validated["layers"], [4])
             self.assertEqual(validated["chunks"], [(0, 2), (2, 1)])
             for field in (
@@ -197,7 +200,22 @@ class QualifiedBundleTests(unittest.TestCase):
                     data["full_indexed_chunks"] = [[2, 1], [0, 2]]
                     (source / "on/arm.json").write_text(json.dumps(data))
                 with self.assertRaises(ValueError):
-                    MODULE.validate_source_bundle(source, receipt)
+                    MODULE.validate_source_bundle(
+                        source, receipt, repository_root=Path(directory),
+                        require_tracked_receipt=False,
+                    )
+
+    def test_fixed_scorer_is_authoritative(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source, receipt = self.make_bundle(Path(directory))
+            with mock.patch.object(MODULE.TRACE_SCORER, "score_trace", return_value={
+                "verdict": "FAIL", "checks": {"mutation": False},
+            }):
+                with self.assertRaises(ValueError):
+                    MODULE.validate_source_bundle(
+                        source, receipt, repository_root=Path(directory),
+                        require_tracked_receipt=False,
+                    )
 
     def test_atomic_bundle_publication_refuses_existing_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -213,6 +231,21 @@ class QualifiedBundleTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 MODULE.publish_bundle(dangling, arrays, {"schema_version": 1})
             self.assertFalse((Path(directory) / "redirected").exists())
+
+    def test_atomic_bundle_publication_loses_no_replace_race(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "published"
+            arrays = {"value": np.array([1, 2], dtype=np.uint8)}
+            original_savez = MODULE.np.savez
+
+            def racing_savez(*args, **kwargs):
+                destination.mkdir()
+                return original_savez(*args, **kwargs)
+
+            with mock.patch.object(MODULE.np, "savez", side_effect=racing_savez):
+                with self.assertRaises(FileExistsError):
+                    MODULE.publish_bundle(destination, arrays, {"schema_version": 1})
+            self.assertTrue(destination.is_dir())
 
 
 if __name__ == "__main__":
