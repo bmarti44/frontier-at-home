@@ -318,11 +318,15 @@ def campaign_verdict(rows: list[dict[str, object]], flip: bool) -> dict[str, obj
     }
 
 
-def server_command(binary: Path, port: int) -> list[str]:
+def server_command(
+    binary: Path, port: int, *, cache_experts: str = "40GB",
+) -> list[str]:
+    if re.fullmatch(r"[1-9][0-9]*GB", cache_experts) is None:
+        raise ValueError("invalid expert-cache budget")
     return [
         str(binary), "--cuda", "-m", str(MODEL), "-c", "8192",
         "--host", "127.0.0.1", "--port", str(port),
-        "--ssd-streaming", "--ssd-streaming-cache-experts", "40GB",
+        "--ssd-streaming", "--ssd-streaming-cache-experts", cache_experts,
     ]
 
 

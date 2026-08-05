@@ -56,6 +56,7 @@ MIN_PROMPT_TOKENS = 512
 MAX_CONTEXT_LEVEL = 8192
 TRACE_BYTES_PER_TOKEN_LAYER = (6144 + 256 + 256 + 8 + 256) * 4
 TRACE_DISK_RESERVE_BYTES = 20 * 1024**3
+CORPUS_CACHE_EXPERTS = "36GB"
 TRACE_NAMES = ",".join((
     "glm_indexed_ffn_norm",
     "glm_indexed_router_logits",
@@ -233,6 +234,8 @@ def smoke_verdict(
                      if valid_requests(on_corpus) else set())
         corpus_scope = (
             valid_requests(off_corpus) and valid_requests(on_corpus) and
+            off.get("expert_cache_budget") == CORPUS_CACHE_EXPERTS and
+            on.get("expert_cache_budget") == CORPUS_CACHE_EXPERTS and
             len(off_hashes) == 2 and off_hashes == on_hashes and
             all(
                 all(left.get(key) == right.get(key) for key in (
@@ -280,7 +283,10 @@ def _arm(args: argparse.Namespace) -> int:
     trace.mkdir(mode=0o700)
     result_path = out / "result.json"
     server_log = out / "server.log"
-    command = SHARED.server_command(binary, args.port)
+    command = SHARED.server_command(
+        binary, args.port,
+        cache_experts=(CORPUS_CACHE_EXPERTS if args.corpus_smoke else "40GB"),
+    )
     server = None
     with server_log.open("xb") as log:
         try:
@@ -384,6 +390,7 @@ def _arm(args: argparse.Namespace) -> int:
     }
     if args.corpus_smoke:
         record["corpus_requests"] = request_records
+        record["expert_cache_budget"] = CORPUS_CACHE_EXPERTS
     (out / "arm.json").write_text(
         json.dumps(record, sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",

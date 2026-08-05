@@ -229,7 +229,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.runner)
         self.assertIn('CORPUS_CACHE_EXPERTS = "36GB"', self.runner)
-        self.assertIn("cache_experts=CORPUS_CACHE_EXPERTS", self.runner)
+        self.assertIn("cache_experts=(CORPUS_CACHE_EXPERTS", self.runner)
 
     def test_corpus_scores_exact_zero_based_main_routed_layers(self) -> None:
         self.assertIn("expected_layers=set(range(3, 78))", self.runner)

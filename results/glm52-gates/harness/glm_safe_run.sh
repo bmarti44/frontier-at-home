@@ -633,8 +633,8 @@ if ! journalctl -k --since "@$RUN_STARTED_EPOCH" \
       --no-pager -o short-iso-precise >"$KERNEL_LOG" 2>&1; then
   plog "FATAL kernel journal could not be captured for Xid verification"
   RC=16
-elif grep -Eiq 'NVRM.*Xid' "$KERNEL_LOG"; then
-  plog "FATAL kernel Xid evidence appeared during run"
+elif grep -Eiq 'NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process' "$KERNEL_LOG"; then
+  plog "FATAL kernel GPU/OOM evidence appeared during run"
   RC=16
 fi
 sync -d "$KERNEL_LOG" 2>/dev/null || true
