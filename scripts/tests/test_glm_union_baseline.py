@@ -991,6 +991,118 @@ class BaselineTableTests(unittest.TestCase):
                 requests, targets, rankings, bootstrap_resamples=10,
             )
 
+    def test_two_control_contract_rejects_state_or_continuation_drift(self) -> None:
+        record = {
+            "schema_version": 1,
+            "request_index": 1,
+            "request_id": "1" * 64,
+            "stage_order": ["control_before", "diagnostic", "control_after"],
+            "diagnostic": {
+                "fresh_process": True,
+                "resident_arena_bytes": 0,
+                "cache_namespace": "diagnostic-1",
+                "exit_code": 0,
+            },
+            "control_before": {
+                "fresh_process": True,
+                "cache_namespace": "control-before-1",
+                "continuation_sha256": "2" * 64,
+                "token_ids_sha256": "3" * 64,
+                "exit_code": 0,
+            },
+            "control_after": {
+                "fresh_process": True,
+                "cache_namespace": "control-after-1",
+                "continuation_sha256": "2" * 64,
+                "token_ids_sha256": "3" * 64,
+                "exit_code": 0,
+            },
+            "failure_injection": {
+                "stages": [
+                    "mtp_call", "target_eval", "route_capture", "disposal",
+                ],
+                "all_destroyed": True,
+                "all_control_continuations_equal": True,
+            },
+        }
+        MODULE.validate_two_control_record(record)
+        for mutation in ("continuation", "namespace", "failure"):
+            changed = json.loads(json.dumps(record))
+            if mutation == "continuation":
+                changed["control_after"]["continuation_sha256"] = "9" * 64
+            elif mutation == "namespace":
+                changed["control_after"]["cache_namespace"] = "diagnostic-1"
+            else:
+                changed["failure_injection"]["all_destroyed"] = False
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                MODULE.validate_two_control_record(changed)
+
+    def test_cost_table_requires_five_matched_cold_warm_blocks_and_fails_closed(self) -> None:
+        rows = []
+        for block in range(5):
+            for temperature in ("cold", "warm"):
+                for method, milliseconds, persistent, temporary, expert_bytes in (
+                    ("gate_replay", 1.0, 0, 1024, 0),
+                    ("shared_correction", 1.2, 0, 2048, 0),
+                    ("mtp", 10.0, 4096, 8192, 100000),
+                    ("probe", 2.0, 2048, 4096, 0),
+                ):
+                    rows.append({
+                        "block": block,
+                        "temperature": temperature,
+                        "method": method,
+                        "completed_ms": milliseconds + block / 100.0,
+                        "persistent_bytes": persistent,
+                        "peak_temporary_bytes": temporary,
+                        "target_expert_bytes_read": expert_bytes,
+                        "completed_events": 32,
+                        "synchronized": True,
+                    })
+        table = MODULE.score_cost_table(rows)
+        self.assertEqual(table["verdict"], "PASS")
+        self.assertFalse(table["mtp_equal_cost_to_probe"])
+        for mutation in ("missing", "nan", "unsynchronized", "unequal"):
+            changed = json.loads(json.dumps(rows))
+            if mutation == "missing":
+                changed.pop()
+            elif mutation == "nan":
+                changed[0]["completed_ms"] = float("nan")
+            elif mutation == "unsynchronized":
+                changed[0]["synchronized"] = False
+            else:
+                changed[0]["completed_events"] = 31
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                MODULE.score_cost_table(changed)
+
+    def test_completed_result_is_independently_reconstructed_and_strict_reopened(self) -> None:
+        requests, targets, rankings = self.fixture()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            canonical = root / "canonical.npz"
+            MODULE.write_canonical_scorer_input(canonical, requests, targets, rankings)
+            summary = MODULE.score_baseline_table(
+                requests, targets, rankings, bootstrap_resamples=1000,
+            )
+            summary.update({
+                "schema_version": 1,
+                "classification": "P1_HELD_OUT_BASELINE_SCORE",
+            })
+            summary_path = root / "summary.json"
+            summary_path.write_text(
+                json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n",
+                encoding="utf-8",
+            )
+            MODULE.validate_completed_result(
+                root, bootstrap_resamples=1000, expected_summary=summary,
+            )
+            changed = json.loads(summary_path.read_text(encoding="utf-8"))
+            changed["decision"]["verdict"] = "STOP_PROBE"
+            summary_path.write_text(json.dumps(changed) + "\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                MODULE.validate_completed_result(
+                    root, bootstrap_resamples=1000, expected_summary=summary,
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
