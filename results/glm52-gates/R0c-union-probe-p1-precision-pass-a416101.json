@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "classification": "QUALIFYING_DIAGNOSTIC_PASS",
+  "scope": "75-layer five-case FP16-versus-int4 feature-precision diagnostic",
+  "candidate_hash": "a416101142047830cff646817a00b7306675b483",
+  "review": {
+    "campaign_round": 139,
+    "per_gate_candidate": 7,
+    "gap_review": {
+      "latest_score": 95,
+      "critical": [],
+      "high": [],
+      "nonblocking_final_fault_scan": "FIXED_AND_TESTED"
+    },
+    "adversarial_review": {
+      "score": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "verdict": "APPROVE"
+    }
+  },
+  "evidence_directory": "/home/bmarti44/.local/state/glm52-p1-precision-r139-a416101",
+  "run_log": "/home/bmarti44/.local/state/glm52-p1-precision-r139-a416101.run.log",
+  "artifacts": {
+    "file_count": 81,
+    "directory_bytes": 70158637,
+    "manifest_sha256": "bb63ac461e722d1d8de099ce1666900807c93daa649443c3499d2fa0829ddcac",
+    "model_manifest_sha256": "156ef7fd679cba1f268604f9ecd4281755e5fe9392b5fa1ea76aaa4ed999eb12",
+    "diagnostic_events_sha256": "e36f77f0233f66196faa2e91916132db264075db6728637e5201445559a0c760",
+    "runtime_start_sha256": "b03bfe7a6ea3a74927032b761de83f1af46be4f91298fa9817178638c9288411",
+    "runtime_final_sha256": "7800c36d2b27cf46b2fac5e923b018f4520ba3c3a8b983a81034291d9170881e",
+    "summary_sha256": "15c7769770cf577e337fc2821154058befe82fda2d3cca67baf1d7058cb179f5",
+    "run_log_sha256": "f42d59def824d2fef190812cfe241f5d7edb9c5a0d1b16360cfe8dc7fb8501c2",
+    "run_log_bytes": 383956
+  },
+  "coverage": {
+    "routed_layers": 75,
+    "trained_layers": 75,
+    "independently_retrained_layers": 75,
+    "semantic_event_regeneration_layers": 225,
+    "diagnostic_requests": 5,
+    "holdout_rows": 203,
+    "scorable_rows": 190,
+    "unscorable_rows": 13,
+    "events_by_K": {
+      "2": 190,
+      "4": 177,
+      "8": 152
+    },
+    "zero_cells": [
+      {"layer": 3, "K": 2},
+      {"layer": 3, "K": 4},
+      {"layer": 3, "K": 8},
+      {"layer": 20, "K": 8},
+      {"layer": 61, "K": 8},
+      {"layer": 63, "K": 8}
+    ]
+  },
+  "headline": {
+    "K": 4,
+    "budget": 32,
+    "int4_macro_request_recall": 0.7579518709061321,
+    "fp16_macro_request_recall": 0.7579432024764479,
+    "macro_request_recall_deficit_pp": -0.0008668429684277612,
+    "macro_request_recall_deficit_pp_max": 2.0,
+    "int4_event_weighted_recall": 0.7530341851958064,
+    "fp16_event_weighted_recall": 0.7528677478373281,
+    "event_weighted_recall_deficit_pp": -0.016643735847832186,
+    "event_weighted_recall_deficit_pp_max": 2.0,
+    "event_weighted_top32_overlap": 0.9890536723163842,
+    "mean_top32_overlap_min": 0.9
+  },
+  "runtime": {
+    "start_epoch": 1785939148,
+    "end_epoch": 1785939410,
+    "elapsed_seconds": 262,
+    "post_mem_available_kib": 119084708,
+    "kernel_faults": [],
+    "swap_growth_observed": false
+  },
+  "prior_attempt": "results/glm52-gates/R0c-union-probe-p1-precision-attempt-d4a1264.json",
+  "verdict": "PASS",
+  "claim_limit": "Five-case feature-precision diagnostic only. It shows the frozen int4 feature representation is effectively tied with FP16 for this selected probe. It is not held-out probe performance, an NLL/fidelity result, or a serving-speed result. Calibration/test values were not scored or used, but their NPZ members were previously materialized for schema inspection as disclosed in R0c-split-isolation-incident-2026-08-05.json."
+}
