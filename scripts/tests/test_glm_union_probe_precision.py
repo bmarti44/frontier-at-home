@@ -126,9 +126,9 @@ class PrecisionDiagnosticTests(unittest.TestCase):
         source_binding = {"fixture": "bounded"}
         diagnostic_binding = {"fixture": "precision"}
         state = {
-            "down.weight": np.zeros((32, 6400), dtype=np.float32),
-            "up.weight": np.zeros((768, 32), dtype=np.float32),
-            "up.bias": np.zeros(768, dtype=np.float32),
+            "down.weight": np.full((32, 6400), 0.25, dtype=np.float32),
+            "up.weight": np.full((768, 32), 0.125, dtype=np.float32),
+            "up.bias": np.full(768, 0.0625, dtype=np.float32),
         }
         report = {
             "fit_rows": 30, "rank": 32, "epochs": 8, "batch_rows": 512,
@@ -137,6 +137,16 @@ class PrecisionDiagnosticTests(unittest.TestCase):
             "deterministic_algorithms": True,
         }
         logits = np.tile(-np.arange(256, dtype=np.float32), (2, 3, 1))
+        operations = []
+
+        def predict(*_args, **_kwargs):
+            operations.append("predict")
+            return logits
+
+        def kernel_log(_start):
+            operations.append("fault-scan")
+            return "clean\n"
+
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "precision"
             with (
@@ -146,13 +156,14 @@ class PrecisionDiagnosticTests(unittest.TestCase):
                 mock.patch.object(MODULE.CV, "_load_authorized_sources", return_value=(sources, groups)),
                 mock.patch.object(MODULE, "_load_diagnostic", return_value=(diagnostic, diagnostic_binding)),
                 mock.patch.object(MODULE.PROBE, "train_probe_head", return_value=(state, report)),
-                mock.patch.object(MODULE.PROBE, "predict_probe_head", return_value=logits),
+                mock.patch.object(MODULE.PROBE, "predict_probe_head", side_effect=predict),
                 mock.patch.object(MODULE.CV, "_repository_head", return_value="1" * 40),
                 mock.patch.object(MODULE.CV, "_gpu_snapshot", return_value={"gpu": "ok", "compute_applications": ""}),
                 mock.patch.object(MODULE.CV, "_mem_available_kib", return_value=120_000_000),
-                mock.patch.object(MODULE.CV, "_kernel_log_since", return_value="clean\n"),
+                mock.patch.object(MODULE.CV, "_kernel_log_since", side_effect=kernel_log),
             ):
                 self.assertEqual(MODULE.execute(output), 0)
+                self.assertEqual(operations[-1], "fault-scan")
                 MODULE.validate_completed_output(output)
                 summary_path = output / "summary.json"
                 original_summary = summary_path.read_bytes()
@@ -205,6 +216,41 @@ class PrecisionDiagnosticTests(unittest.TestCase):
                     json.dumps(fabricated_summary, sort_keys=True, indent=2), encoding="utf-8",
                 )
                 with self.assertRaisesRegex(ValueError, "precision semantic event differs"):
+                    MODULE.validate_completed_output(output)
+                event_path.unlink()
+                original_event_path.rename(event_path)
+                summary_path.write_bytes(original_summary)
+
+                model_manifest_path = output / "model-manifest.json"
+                model_manifest = json.loads(model_manifest_path.read_bytes())
+                record = model_manifest["layers"]["4"]
+                state_path = output / record["file"]
+                original_state_path = output.parent / "original-state.npz"
+                state_path.rename(original_state_path)
+                zero_state = {
+                    name: np.zeros_like(value) for name, value in state.items()
+                }
+                zero_binding = MODULE.CV._write_npz_exclusive(state_path, zero_state)
+                record.update(zero_binding)
+                model_manifest_path.write_text(
+                    json.dumps(model_manifest, sort_keys=True, indent=2), encoding="utf-8",
+                )
+                original = json.loads(original_summary)
+                rebound_summary = MODULE.build_precision_summary(
+                    "1" * 40,
+                    MODULE._sha256(output / "manifest.json"),
+                    MODULE._sha256(model_manifest_path),
+                    diagnostic_binding,
+                    original["diagnostic_event_binding"],
+                    MODULE.replay_diagnostic_events(
+                        event_path, original["diagnostic_event_binding"], diagnostic,
+                    ),
+                    MODULE._sha256(output / "runtime-final.json"),
+                )
+                summary_path.write_text(
+                    json.dumps(rebound_summary, sort_keys=True, indent=2), encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, "precision trained model differs"):
                     MODULE.validate_completed_output(output)
                 state_path = output / "layer-004-rank32.npz"
                 original_state = state_path.read_bytes()

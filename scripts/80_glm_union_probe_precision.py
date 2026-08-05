@@ -235,6 +235,59 @@ def _state_from_file(path: Path, schema: dict[str, dict[str, object]]) -> dict[s
     return state
 
 
+def fit_rank32_layer(
+    sources: list[dict[str, np.ndarray]], layer_id: int, *, device: str = "cuda",
+) -> tuple[dict[str, np.ndarray], dict[str, object]]:
+    """Deterministically fit one final head from authorized training sources."""
+    data = CV._layer_arrays(sources, layer_id)
+    request = data["request_index"]
+    rows, targets, valid = PROBE.multi_k_targets(
+        request, data["layer"], data["token_position"], data["selected_ids"],
+    )
+    hidden = PROBE.unpack_probe_hidden(data["hidden_q4"], data["hidden_scale"]).astype(np.float16)
+    history = PROBE.causal_expert_history(
+        request, data["layer"], data["token_position"], data["selected_ids"],
+    )
+    features = np.concatenate((hidden, history.astype(np.float16)), axis=1)[rows]
+    weights = PROBE.request_balanced_weights(request, rows, valid)
+    fit_rows = np.arange(rows.size, dtype=np.int64)
+    return PROBE.train_probe_head(
+        features, targets, valid, weights, fit_rows, RANK,
+        epochs=8, batch_rows=512, seed=20260805, device=device,
+    )
+
+
+def validate_model_training(
+    requested: Path,
+    model_layers: dict[str, object],
+    source_binding: dict[str, object],
+    *,
+    device: str = "cuda",
+) -> None:
+    """Retrain independently and exact-compare every persisted model state."""
+    sources, groups = CV._load_authorized_sources(source_binding)
+    try:
+        for layer_id in CV.LAYERS:
+            record = model_layers[str(layer_id)]
+            observed = _state_from_file(requested / record["file"], record["schema"])
+            expected, report = fit_rank32_layer(sources, layer_id, device=device)
+            if report != record["training"] or set(observed) != set(expected):
+                raise ValueError(f"precision trained model differs: layer {layer_id}")
+            for name, value in expected.items():
+                if (
+                    observed[name].dtype != value.dtype or
+                    observed[name].shape != value.shape or
+                    not np.array_equal(observed[name], value)
+                ):
+                    raise ValueError(f"precision trained model differs: layer {layer_id} {name}")
+            print(json.dumps({"retrained_layer": layer_id}, sort_keys=True), flush=True)
+            del observed, expected
+            gc.collect()
+    finally:
+        del sources, groups
+        gc.collect()
+
+
 def diagnostic_layer_contract(
     diagnostic: dict[str, np.ndarray], layer_id: int,
 ) -> tuple[
@@ -571,6 +624,9 @@ def validate_completed_output(requested: Path) -> dict[str, object]:
         ):
             raise ValueError("precision model layer binding differs")
         _state_from_file(requested / record["file"], record["schema"])
+    validate_model_training(
+        requested, model_manifest["layers"], source_binding, device="cuda",
+    )
     diagnostic, diagnostic_binding = _load_diagnostic()
     summary = CV._read_json_snapshot(requested / "summary.json")
     event_binding = summary.get("diagnostic_event_binding")
@@ -649,22 +705,7 @@ def execute(out_dir: Path) -> int:
     sources, groups = CV._load_authorized_sources(source_binding)
     model_layers: dict[str, object] = {}
     for layer_id in CV.LAYERS:
-        data = CV._layer_arrays(sources, layer_id)
-        request = data["request_index"]
-        rows, targets, valid = PROBE.multi_k_targets(
-            request, data["layer"], data["token_position"], data["selected_ids"],
-        )
-        hidden = PROBE.unpack_probe_hidden(data["hidden_q4"], data["hidden_scale"]).astype(np.float16)
-        history = PROBE.causal_expert_history(
-            request, data["layer"], data["token_position"], data["selected_ids"],
-        )
-        features = np.concatenate((hidden, history.astype(np.float16)), axis=1)[rows]
-        weights = PROBE.request_balanced_weights(request, rows, valid)
-        fit_rows = np.arange(rows.size, dtype=np.int64)
-        state, report = PROBE.train_probe_head(
-            features, targets, valid, weights, fit_rows, RANK,
-            epochs=8, batch_rows=512, seed=20260805, device="cuda",
-        )
+        state, report = fit_rank32_layer(sources, layer_id, device="cuda")
         state_path = requested / f"layer-{layer_id:03d}-rank32.npz"
         binding = CV._write_npz_exclusive(state_path, state)
         model_layers[str(layer_id)] = {
@@ -677,7 +718,7 @@ def execute(out_dir: Path) -> int:
         if CV.runtime_fault_lines(CV._kernel_log_since(start_epoch)):
             raise RuntimeError("runtime fault appeared during final probe fitting")
         print(json.dumps({"trained_layer": layer_id}, sort_keys=True), flush=True)
-        del data, hidden, history, features, weights, state
+        del state
         gc.collect()
     model_manifest = {
         "schema_version": 1,
@@ -731,6 +772,9 @@ def execute(out_dir: Path) -> int:
     )
     CV._write_json_exclusive(requested / "summary.json", summary)
     validated = validate_completed_output(requested)
+    post_validation_faults = CV.runtime_fault_lines(CV._kernel_log_since(start_epoch))
+    if post_validation_faults:
+        raise RuntimeError("runtime fault appeared during completed precision validation")
     print(json.dumps(validated, sort_keys=True, indent=2, allow_nan=False))
     return 0 if validated["verdict"] == "PASS" else 2
 
