@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "classification": "NO_RESULT",
+  "candidate_hash": "a9c99720e93262b7bedd3c74720c94fe77ea81c5",
+  "tag": "p0qprobe-r104-a9c9972",
+  "arm": "off",
+  "observed": {
+    "resolved_cuda_arena_gib": 44.70,
+    "cgroup_peak_bytes": 49116729344,
+    "cgroup_swap_current_bytes": 0,
+    "cgroup_high_events": 0,
+    "cgroup_max_events": 0,
+    "cgroup_oom_events": 0,
+    "kernel_log_clean": true,
+    "raw_response_matched_token_records": 8,
+    "prompt_branch": "full_compact_token_major",
+    "indexed_chunk_records": 0,
+    "surviving_ds4_server": false
+  },
+  "diagnosis": "The reduced cache passed the OFF safety check, but the short quality fixture selected the engine's default token-major prefill path. No indexed trace could exist, so this run cannot authorize or contribute to the corpus.",
+  "required_correction": "Set the existing documented DS4_GLM_STREAMING_TOKEN_PREFILL_MAX=0 override in both exact quality environments, then refreeze, reseed, and repeat the safety probe.",
+  "artifacts": {
+    "server_sha256": "c5fcd28ac5c2b831aa393fdd6cd0368bed8e5498fda49ae40b6a109484979e2c",
+    "fixture_sha256": "a2616222f7e7ec71e9e0ac04a05fc7424804ce185d35a31ff240c9b84087b4fd",
+    "off_containment_stdout_sha256": "750d893df4bbf4df6c384d9af13b5ed93435603058010018de6f5309abd3ad33",
+    "main_log_sha256": "14bde29d4712094b0a6fd9a12fa1b09959cfd32a0071e48ccff08d6d153ff783",
+    "samples_log_sha256": "2bffe150bc77c3351e5f556a125071fbdf577e09c133e2b3a4d8578be3e5b35a",
+    "raw_artifact_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  }
+}

@@ -499,10 +499,21 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         for name in (
             "DS4_GLM_SYNC_TRACE", "DS4_METAL_GRAPH_DUMP_PREFIX",
             "DS4_METAL_GRAPH_DUMP_NAME", "DS4_METAL_GRAPH_DUMP_LAYER",
-            "DS4_GLM_UNION_TRACE_CORPUS",
+            "DS4_GLM_UNION_TRACE_CORPUS", "DS4_GLM_STREAMING_TOKEN_PREFILL_MAX",
         ):
             self.assertIn(name, self.runner)
             self.assertIn(name, self.cgroup)
+
+    def test_quality_capture_forces_the_indexed_prefill_path(self) -> None:
+        for mode in ("off", "on"):
+            values = MODULE.trace_environment(
+                mode, Path("/tmp/quality-indexed"), quality_corpus=True,
+            )
+            self.assertEqual(values["DS4_GLM_STREAMING_TOKEN_PREFILL_MAX"], "0")
+        self.assertNotIn(
+            "DS4_GLM_STREAMING_TOKEN_PREFILL_MAX",
+            MODULE.trace_environment("off", Path("/tmp/non-quality"), corpus_smoke=True),
+        )
 
     def test_runner_has_bounded_two_request_corpus_mode(self) -> None:
         for marker in (
