@@ -428,6 +428,8 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             'public.add_argument("--quality-corpus", action="store_true")',
             'QUALITY_REQUEST_COUNT = 100',
             'QUALITY_DISK_MAX_TOKENS = 512',
+            'QUALITY_FIXTURE_CONTENT_SHA256',
+            'quality fixture content differs from the preregistered freeze',
             '"scope": "quality_100_case_all_routed_layer_corpus"',
             'QUALITY_FREEZE',
             'QUALITY_RANDOMNESS',

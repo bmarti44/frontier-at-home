@@ -100,6 +100,7 @@ QUALITY_FIXTURE_RELATIVE = Path(
 )
 QUALITY_DISK_MAX_TOKENS = 512
 QUALITY_REQUEST_COUNT = 100
+QUALITY_FIXTURE_CONTENT_SHA256 = "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0a"
 
 
 def render_quality_prompt(prompt: str) -> str:
@@ -260,10 +261,13 @@ def build_quality_case_ledger(
         {key: value for key, value in case.items() if key != "prompt"}
         for case in cases
     ]
+    fixture_content_sha256 = content_digest.hexdigest()
+    if fixture_content_sha256 != QUALITY_FIXTURE_CONTENT_SHA256:
+        raise ValueError("quality fixture content differs from the preregistered freeze")
     return {
         "schema_version": 1,
         "split_plan_sha256": SHARED.sha256(plan_path),
-        "fixture_content_sha256": content_digest.hexdigest(),
+        "fixture_content_sha256": fixture_content_sha256,
         "tokenizer_sha256": SHARED.sha256(tokenizer_path),
         "seed": seed,
         "total_expected_prompt_tokens": sum(case["expected_prompt_tokens"] for case in cases),
