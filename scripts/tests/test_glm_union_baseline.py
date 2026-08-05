@@ -155,6 +155,58 @@ class CaptureBundleTests(unittest.TestCase):
             )
             self.assertEqual(module.VALUE, 17)
 
+    def test_authenticated_dependency_graph_never_executes_nested_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            probe_path = directory / "probe.py"
+            cv_path = directory / "cv.py"
+            precision_path = directory / "precision.py"
+            for path in (probe_path, cv_path, precision_path):
+                path.write_text("raise RuntimeError('path was reopened')\n", encoding="utf-8")
+            probe = MODULE._execute_module_snapshot(
+                "probe_fixture", probe_path, b"VALUE = 23\n",
+            )
+            cv = MODULE._execute_module_snapshot(
+                "cv_fixture",
+                cv_path,
+                b"def _load_probe_module():\n"
+                b"    raise RuntimeError('nested probe path was reopened')\n"
+                b"PROBE = _load_probe_module()\n",
+                injected={"__authenticated_probe__": probe},
+                substitutions=((
+                    b"PROBE = _load_probe_module()\n",
+                    b"PROBE = __authenticated_probe__\n",
+                ),),
+            )
+            precision = MODULE._execute_module_snapshot(
+                "precision_fixture",
+                precision_path,
+                b"def _load_module(name, path):\n"
+                b"    raise RuntimeError('nested CV path was reopened')\n"
+                b"CV = _load_module('cv', 'malicious-path')\n"
+                b"PROBE = CV.PROBE\n",
+                injected={"__authenticated_cv__": cv},
+                substitutions=((
+                    b"CV = _load_module('cv', 'malicious-path')\n",
+                    b"CV = __authenticated_cv__\n",
+                ),),
+            )
+            self.assertIs(cv.PROBE, probe)
+            self.assertIs(precision.CV, cv)
+            self.assertIs(precision.PROBE, probe)
+
+    def test_authenticated_dependency_edge_must_occur_exactly_once(self) -> None:
+        edge = b"PROBE = _load_probe_module()\n"
+        for payload in (b"VALUE = 1\n", edge + edge):
+            with self.subTest(payload=payload), self.assertRaises(ValueError):
+                MODULE._execute_module_snapshot(
+                    "bad_edge_fixture",
+                    Path("bad-edge.py"),
+                    payload,
+                    injected={"__authenticated_probe__": object()},
+                    substitutions=((edge, b"PROBE = __authenticated_probe__\n"),),
+                )
+
 
 class BaselineTableTests(unittest.TestCase):
     def fixture(self):

@@ -45,19 +45,60 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _execute_module_snapshot(name: str, path: Path, payload: bytes):
+def _execute_module_snapshot(
+    name: str,
+    path: Path,
+    payload: bytes,
+    *,
+    injected: dict[str, object] | None = None,
+    substitutions: tuple[tuple[bytes, bytes], ...] = (),
+):
+    executable = payload
+    for original, replacement in substitutions:
+        if executable.count(original) != 1:
+            raise ValueError(f"authenticated module dependency edge differs: {path.name}")
+        executable = executable.replace(original, replacement, 1)
     module = types.ModuleType(name)
     module.__file__ = str(path)
     module.__package__ = ""
-    exec(compile(payload, str(path), "exec", dont_inherit=True), module.__dict__)
+    if injected:
+        module.__dict__.update(injected)
+    exec(compile(executable, str(path), "exec", dont_inherit=True), module.__dict__)
     return module
 
 
-def _load_module(name: str, path: Path):
-    payload = _snapshot_regular(path)
-    if _sha256_bytes(payload) != FROZEN_MODULE_HASHES[path]:
-        raise ValueError(f"frozen module differs: {path.name}")
-    return _execute_module_snapshot(name, path, payload)
+def _load_frozen_module_graph():
+    payloads = {path: _snapshot_regular(path) for path in FROZEN_MODULE_HASHES}
+    for path, expected in FROZEN_MODULE_HASHES.items():
+        if _sha256_bytes(payloads[path]) != expected:
+            raise ValueError(f"frozen module differs: {path.name}")
+
+    probe = _execute_module_snapshot(
+        "glm_union_probe_for_baseline", PROBE_PATH, payloads[PROBE_PATH],
+    )
+    cv = _execute_module_snapshot(
+        "glm_union_cv_for_baseline",
+        CV_PATH,
+        payloads[CV_PATH],
+        injected={"__authenticated_probe__": probe},
+        substitutions=((
+            b"PROBE = _load_probe_module()\n",
+            b"PROBE = __authenticated_probe__\n",
+        ),),
+    )
+    precision = _execute_module_snapshot(
+        "glm_union_precision_for_baseline",
+        PRECISION_PATH,
+        payloads[PRECISION_PATH],
+        injected={"__authenticated_cv__": cv},
+        substitutions=((
+            b'CV = _load_module("glm_union_probe_cv_for_precision", CV_PATH)\n',
+            b"CV = __authenticated_cv__\n",
+        ),),
+    )
+    if cv.PROBE is not probe or precision.CV is not cv or precision.PROBE is not probe:
+        raise ValueError("authenticated module dependency graph identity differs")
+    return probe, cv, precision
 
 
 def structural_baseline_rows(
@@ -642,9 +683,7 @@ def _stable_logit_rankings(logits: np.ndarray) -> np.ndarray:
 
 def score_heldout(capture_root: Path, device: str = "cuda") -> dict[str, object]:
     """Authorized one-shot opener and fixed held-out baseline scorer."""
-    probe = _load_module("glm_union_probe_for_baseline", PROBE_PATH)
-    cv = _load_module("glm_union_cv_for_baseline", CV_PATH)
-    precision = _load_module("glm_union_precision_for_baseline", PRECISION_PATH)
+    probe, cv, precision = _load_frozen_module_graph()
     arrays, test_manifest, freeze = _load_test_archive(cv)
     common_mask = (arrays["layer"] >= FIRST_LAYER) & (arrays["layer"] <= LAST_LAYER)
     common = {name: value[common_mask] for name, value in arrays.items()
