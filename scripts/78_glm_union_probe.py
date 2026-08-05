@@ -74,6 +74,13 @@ def partition_request_rows(
     return result
 
 
+def split_compact_arrays(
+    arrays: dict[str, np.ndarray], split_rows: dict[str, np.ndarray],
+) -> dict[str, dict[str, np.ndarray]]:
+    """Project a combined compact corpus into isolated split archives."""
+    raise NotImplementedError
+
+
 def future_union_targets(
     request_index: np.ndarray,
     layer: np.ndarray,

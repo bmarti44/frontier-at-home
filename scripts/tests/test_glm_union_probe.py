@@ -128,6 +128,61 @@ class UnionTargetTests(unittest.TestCase):
             with self.subTest(metadata=metadata), self.assertRaises(ValueError):
                 MODULE.partition_request_rows(request, metadata, expected)
 
+    def test_split_arrays_remaps_fp16_holdout_without_leaking_rows(self) -> None:
+        rows = {
+            "train-fit": np.asarray([0, 1]),
+            "train-precision-diagnostic": np.asarray([2]),
+            "calibration": np.asarray([3, 4]),
+            "test": np.asarray([5]),
+        }
+        arrays = {
+            "request_index": np.asarray([1, 1, 2, 3, 3, 4], dtype=np.uint16),
+            "layer": np.asarray([3] * 6, dtype=np.uint16),
+            "token_position": np.asarray([0, 1, 0, 0, 1, 0], dtype=np.uint32),
+            "selected_ids": np.arange(12, dtype=np.uint8).reshape(6, 2),
+            "hidden_fp16_holdout_row": np.asarray([0, 2, 5], dtype=np.uint32),
+            "hidden_fp16_holdout": np.asarray([[10], [20], [30]], dtype=np.float16),
+        }
+        split = MODULE.split_compact_arrays(arrays, rows)
+        np.testing.assert_array_equal(split["train-fit"]["request_index"], [1, 1])
+        np.testing.assert_array_equal(split["calibration"]["request_index"], [3, 3])
+        np.testing.assert_array_equal(
+            split["train-fit"]["hidden_fp16_holdout_row"], [0],
+        )
+        np.testing.assert_array_equal(
+            split["train-precision-diagnostic"]["hidden_fp16_holdout"], [[20]],
+        )
+        np.testing.assert_array_equal(split["test"]["hidden_fp16_holdout_row"], [0])
+        self.assertEqual(sum(value["layer"].size for value in split.values()), 6)
+
+    def test_split_arrays_rejects_bad_holdout_or_row_coverage(self) -> None:
+        base = {
+            "request_index": np.asarray([1, 2], dtype=np.uint16),
+            "layer": np.asarray([3, 3], dtype=np.uint16),
+            "hidden_fp16_holdout_row": np.asarray([0], dtype=np.uint32),
+            "hidden_fp16_holdout": np.asarray([[1]], dtype=np.float16),
+        }
+        rows = {
+            "train-fit": np.asarray([0]),
+            "train-precision-diagnostic": np.asarray([], dtype=np.int64),
+            "calibration": np.asarray([], dtype=np.int64),
+            "test": np.asarray([1]),
+        }
+        mutations = []
+        duplicate = {key: value.copy() for key, value in base.items()}
+        duplicate["hidden_fp16_holdout_row"] = np.asarray([0, 0], dtype=np.uint32)
+        duplicate["hidden_fp16_holdout"] = np.asarray([[1], [1]], dtype=np.float16)
+        mutations.append(duplicate)
+        out_of_range = {key: value.copy() for key, value in base.items()}
+        out_of_range["hidden_fp16_holdout_row"] = np.asarray([2], dtype=np.uint32)
+        mutations.append(out_of_range)
+        short = {key: value.copy() for key, value in base.items()}
+        short["layer"] = short["layer"][:1]
+        mutations.append(short)
+        for arrays in mutations:
+            with self.subTest(arrays=arrays), self.assertRaises(ValueError):
+                MODULE.split_compact_arrays(arrays, rows)
+
 
 if __name__ == "__main__":
     unittest.main()
