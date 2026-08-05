@@ -133,6 +133,8 @@ submitter_temporary=$(/usr/bin/mktemp /run/glm52-w1-submit.XXXXXX)
 approval_temporary=$(/usr/bin/mktemp /run/glm52-p1-approval.XXXXXX)
 sudoers_temporary=$(/usr/bin/mktemp /etc/sudoers.d/.glm52-w1-attestor.XXXXXX)
 harness_temporary=$(/usr/bin/mktemp -d /run/glm52-w1-harness.XXXXXX)
+/usr/bin/install -d -o root -g root -m 0755 /usr/local/libexec
+python_temporary=$(/usr/bin/mktemp -d /usr/local/libexec/.glm52-w1-python.XXXXXX)
 install_complete=0
 harness_installed=0
 python_runtime_installed=0
@@ -151,6 +153,7 @@ cleanup() {
         fi
     fi
     /usr/bin/rm -f -- "$submitter_temporary" "$approval_temporary" "$sudoers_temporary"
+    /usr/bin/rm -rf -- "$python_temporary"
     /usr/bin/rm -rf -- "$harness_temporary"
 }
 trap cleanup EXIT
@@ -172,8 +175,6 @@ harness_head=$(
 [[ $harness_head == "$CANDIDATE_HASH" ]] || die "root harness candidate differs"
 [[ -z $(/usr/bin/git -C "$harness_temporary/repository" status --porcelain) ]] ||
     die "root harness is not clean"
-python_temporary=$harness_temporary/python-runtime
-/usr/bin/install -d -o root -g root -m 0700 "$python_temporary"
 for dependency in "${PYTHON_DEPENDENCIES[@]}"; do
     [[ -e $PYTHON_DEPENDENCY_SOURCE/$dependency &&
        ! -L $PYTHON_DEPENDENCY_SOURCE/$dependency ]] ||
