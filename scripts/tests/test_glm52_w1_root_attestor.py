@@ -47,6 +47,18 @@ def load_controller():
 
 
 class RootAttestorContractTests(unittest.TestCase):
+    def test_python_runtime_staging_is_not_below_noexec_run(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn(
+            "python_temporary=$(/usr/bin/mktemp -d "
+            "/usr/local/libexec/.glm52-w1-python.XXXXXX)",
+            source,
+        )
+        self.assertIn('/usr/bin/rm -rf -- "$python_temporary"', source)
+        self.assertNotIn(
+            "python_temporary=$harness_temporary/python-runtime", source,
+        )
+
     def test_root_clone_scopes_safe_directory_to_exact_source_gitdir(self):
         source = INSTALLER.read_text(encoding="utf-8")
         upload_pack = (
