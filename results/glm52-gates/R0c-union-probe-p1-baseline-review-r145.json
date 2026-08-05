@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_COMPLETE",
+  "candidate_hash": "3e386430df319cf024169ac5990f39269df481c1",
+  "review_round": 145,
+  "per_gate_candidate": 7,
+  "held_out_values_opened": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 62,
+    "critical": [],
+    "high": [
+      {
+        "id": "BASE-R142-H2",
+        "finding": "The engine reopens the model by mutable pathname after preflight, permitting swap-use-restore without changing the pre/final pathname hashes.",
+        "acceptance_test": "Bind the model actually opened by every engine process; swap-use-restore must fail."
+      },
+      {
+        "id": "BASE-R142-H5",
+        "finding": "Abrupt death after opening leaves only hidden STARTED staging, so the requested output can be retried.",
+        "acceptance_test": "Durably reserve the final authority before opening; SIGKILL/power-loss simulations must preserve the attempt and prevent reopening."
+      },
+      {
+        "id": "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY",
+        "finding": "The child inherits all os.environ values but the attested digest covers only four DS4 values.",
+        "acceptance_test": "Use a strict reviewed launch environment; mutations of LD, CUDA, PATH, PYTHON, and unlisted DS4 variables must be cleared or rejected."
+      },
+      {
+        "id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+        "finding": "Caller-selected output names and concurrent races can open the same held-out split more than once.",
+        "acceptance_test": "One globally locked immutable split-attempt ledger must permit exactly one opening across names, concurrency, and crash restart."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 55,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-R145-H1-GLOBAL-ONE-SHOT-AUTHORITY",
+        "finding": "The lifecycle is output-local; sequential alternate names, concurrent attempts, and abrupt death can reopen.",
+        "acceptance_test": "Use a fixed campaign ledger and exclusive global lock with durable STARTED reservation before opening."
+      },
+      {
+        "id": "P1-BASE-R145-H2-AMBIENT-ENV-AUTHORITY",
+        "finding": "Unlisted inherited runtime variables change execution without changing the provenance digest.",
+        "acceptance_test": "Launch from a fixed env-i style allowlist and attest the complete effective environment."
+      },
+      {
+        "id": "P1-BASE-R145-H3-AUTHENTICATED-RUNTIME-PATH-TOCTOU",
+        "finding": "The wrapper, memory guard, and model are authenticated before capture but later consumed through mutable paths.",
+        "acceptance_test": "Consume scripts from authenticated descriptors/snapshots and bind the engine's actual model FD; path swap-and-restore must fail."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "verified_passes": [
+    "exact prompt-token, prefix, source-token, and request lineage",
+    "canonical executable identity and periodic sampler",
+    "normal-exception attempt sealing",
+    "frozen module hashes and authenticated dependency graph",
+    "narrow public-digest allowlists",
+    "18 controller/scorer tests and 6 engine source tests"
+  ],
+  "prior_issue_status": {
+    "BASE-R142-H2": "OPEN",
+    "BASE-R142-H3": "OPEN",
+    "BASE-R142-H4": "OPEN",
+    "BASE-R142-H5": "OPEN",
+    "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY": "OPEN",
+    "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO": "OPEN",
+    "P1-BASE-IMPL-H3-COST-OMITTED": "OPEN",
+    "P1-BASE-IMPL-H4-MODULE-TOCTOU": "FIXED",
+    "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY": "OPEN"
+  },
+  "convergence": {
+    "blocking_finding_classes_before": 8,
+    "blocking_finding_classes_after": 7,
+    "strictly_shrank": true,
+    "candidate_8_authorized": true,
+    "escalation_triggered": false
+  }
+}
