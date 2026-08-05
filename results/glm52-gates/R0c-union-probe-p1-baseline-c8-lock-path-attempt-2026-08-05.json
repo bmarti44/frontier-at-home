@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_NON_HELDOUT_RUNTIME_ATTEMPT",
+  "gate": "R0c/P1 candidate-8 authenticated-runtime smoke",
+  "held_out_values_opened": false,
+  "runtime_directory": "/home/bmarti44/.local/state/glm52-c8-runtime-smoke.9ptb0tz3",
+  "containment_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260805-125117-p1-c8-runtime-nonheldout",
+  "observed": {
+    "wrapper_exit_code": 10,
+    "engine_capture_files": 0,
+    "surviving_engine_process": false,
+    "held_out_ledger_created": false,
+    "failure": "ds4: failed to open lock file /run/dsv4/inference.lock: Permission denied"
+  },
+  "artifacts": {
+    "main_log_sha256": "ecf90c6de5be45d82c2a57141a9f97623cda35a4a446d59c8fb13a0174e5f834",
+    "command_log_sha256": "544c8f32d2a051ea25d857b0c8f3bcf03ea158a64aa35fcd3b152909791e99a2"
+  },
+  "diagnosis": "The controller selected the inaccessible legacy lock. The installed global inference lock is /run/lock/frontier-at-home/inference.lock and carries an explicit bmarti44 read/write ACL.",
+  "bounded_fix": "Change only DS4_LOCK_FILE in the candidate-8 controller and its acceptance fixture to the installed ACL-authorized global lock, then rerun the same non-held-out authenticated-runtime smoke.",
+  "verdict": "NO_RESULT_REQUIRES_LOCK_PATH_FIX"
+}
