@@ -482,6 +482,57 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not present"):
             MODULE.quality_probe_ledger(bundle, case_id="missing")
 
+    def test_quality_probe_can_replay_exact_historical_prefix(self) -> None:
+        case_ids = ("case_095", "case_005", "case_004", "case_017", "case_021")
+        bundle = {
+            "schema_version": 1, "seed": MODULE.UTF8_REGRESSION_CAMPAIGN_SEED,
+            "total_expected_prompt_tokens": 5,
+            "expected_token_layer_events": 375,
+            "cases": [
+                {
+                    "case_id": case_id, "expected_prompt_tokens": 1,
+                    "request_id": index, "seed": 100 + index,
+                    "request_sha256": str(index) * 64,
+                }
+                for index, case_id in enumerate(case_ids, 1)
+            ],
+            "_prompts": {case_id: case_id for case_id in case_ids},
+        }
+        replay = MODULE.quality_probe_ledger(
+            bundle, case_id="case_021", replay_history=True,
+        )
+        self.assertEqual(
+            [case["case_id"] for case in replay["cases"]], list(case_ids),
+        )
+        self.assertEqual(replay["cases"][-1]["utf8_regression_expected"], True)
+        for index, expected in enumerate(MODULE.UTF8_REGRESSION_PREDECESSOR_TOKENS):
+            self.assertEqual(replay["cases"][index]["historical_raw_token_ids"], list(expected))
+
+    def test_quality_verdict_rejects_wrong_historical_trajectory(self) -> None:
+        ledger = [{
+            "case_id": "case_095", "group_id": "case_095", "split": "train-fit",
+            "request_id": 1, "request_sha256": "1" * 64,
+            "expected_prompt_tokens": 2, "token_ids": [11, 12],
+            "historical_raw_token_ids": [8, 9, 10, 11, 12, 13, 14, 15],
+        }]
+        request = {
+            "case_id": "case_095", "group_id": "case_095", "split": "train-fit",
+            "request_id": 1, "request_sha256": "1" * 64,
+            "prompt_tokens": 2, "full_indexed_chunks": [[0, 2]],
+            "completion_tokens": 8, "finish_reason": "length",
+            "generated_reasoning_sha256": "a" * 64, "generated_reasoning_bytes": 8,
+            "generated_content_sha256": "b" * 64, "generated_content_bytes": 0,
+            "token_ids": list(range(8)), "sse_content_events": 1,
+            "utf8_regression_reproduced": False,
+            "historical_trajectory_reproduced": False,
+        }
+        verdict = MODULE.quality_capture_verdict(
+            ledger, [request], [copy.deepcopy(request)],
+            {"verdict": "PASS", "requests": 1, "token_layer_events": 150},
+            {"clean": True}, {"clean": True},
+        )
+        self.assertEqual(verdict["verdict"], "FAIL")
+
     def test_quality_capture_enables_logged_server_utf8_normalization(self) -> None:
         self.assertIn("DS4_JSON_REPLACE_INVALID_UTF8", MODULE.ENV_NAMES)
         values = MODULE.trace_environment(
