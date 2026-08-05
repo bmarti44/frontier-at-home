@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "classification": "NON_HELDOUT_RUNTIME_SMOKE_POSTPROCESS_REPLAY",
+  "verdict": "PASS",
+  "candidate_head": "a979fdc80bb08308735ebd2591dbb525855af54b",
+  "engine_head": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+  "binary_sha256": "be8b0ed00864d3fba6e1f7dabed4adc0646efaf7968f1bcb6da6c3a6ce172121",
+  "harness_sha256": "ff6dd255a276c5ffc8a43a859fe814bf319ed9405f8f07d62018729b59d0dd59",
+  "heldout_opened": false,
+  "root_helper_used": false,
+  "source_attempt": "R0c-union-probe-p1-c13-fault-smoke-attempt2-2026-08-05.json",
+  "staging_directory": "/home/bmarti44/.local/state/glm52-c13-fault-smoke2.a00d73kj",
+  "replay": {
+    "method": "Reconstruct the four records from their preserved authenticated main.log files and fresh post-fault control logs, then call validate_failure_injection_evidence from the fixed candidate.",
+    "stage_order": [
+      "mtp_call",
+      "target_eval",
+      "route_capture",
+      "disposal"
+    ],
+    "unique_process_identities": 4,
+    "fresh_post_fault_controls": 4,
+    "all_injected_exit_codes": 86,
+    "all_process_groups_empty": true,
+    "all_cache_namespaces_absent": true,
+    "all_post_controls_match_reference": true,
+    "reference_continuation_sha256": "0359cb0c430a514f2da617497b1b4cf4520a4978e634138b6e44ef473e6766a1",
+    "reference_token_ids_sha256": "8ff0b6a91d5f190ca416c3a2d67d621c6b378d278ec5676db219699ced7aaf4e"
+  },
+  "process_identities": {
+    "mtp_call": "639605:76240596",
+    "target_eval": "705672:76249581",
+    "route_capture": "772294:76258650",
+    "disposal": "843673:76268256"
+  },
+  "artifact_sha256": {
+    "fault_disposal_main.log": "ae370c7281c9f9014377def72e8d2937b0dc713e3a492bc546e59d40e4885c49",
+    "fault_mtp_call_main.log": "1042deb33e3f6c37a1972b959e76a13e45f726bb1330ce89b9b1e92db4b32543",
+    "fault_route_capture_main.log": "40440464044ac39c5b770493b7be67b37619cb57438c7d5202e0daa6b59577ea",
+    "fault_target_eval_main.log": "da124b3710c6f32feff2ab2d120da2890cd39e86ba7782ffeeb1fc0f91a5d606",
+    "post_fault_disposal_main.log": "be6f2a969b16d3a485d1665b64638187113531c898888f823c19d8fac6d5ffff",
+    "post_fault_mtp_call_main.log": "2dcd4ade8374cab5faea8ff2a42d9e7e6334b82e98c9558da7a1b668e2b71f76",
+    "post_fault_route_capture_main.log": "30c7240c919b6dc0ddece199f32d52ff7b3b1074170a28a642d6870924aedd4a",
+    "post_fault_target_eval_main.log": "726764ac262a72b51c8164b6916fd19e0c8358abe69a55f8495145f260205277"
+  },
+  "tests": {
+    "focused_unittest_count": 97,
+    "focused_unittest_result": "PASS",
+    "red_test_commit": "60869ce",
+    "fix_commit": "a979fdc"
+  },
+  "limitations": [
+    "This is a non-held-out runtime smoke and does not qualify P1 scientific results.",
+    "The successful verdict is a deterministic postprocessing replay over the completed runtime evidence; the original aggregation attempt remains preserved as FAIL."
+  ]
+}

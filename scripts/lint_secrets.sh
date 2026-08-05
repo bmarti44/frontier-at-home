@@ -113,6 +113,8 @@ allowlist = {
     "randomness_sha256",
     "raw_jsonl_sha256",
     "raw_sha256",
+    "reference_continuation_sha256",
+    "reference_token_ids_sha256",
     "manifest_sha256",
     "stage_receipt_sha256",
     "all_arm_tsv_sha256",
