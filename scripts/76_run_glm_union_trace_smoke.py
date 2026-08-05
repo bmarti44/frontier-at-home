@@ -82,6 +82,7 @@ ENV_NAMES = sorted(set(SHARED.ENV_NAMES) | {
     "DS4_METAL_GRAPH_DUMP_NAME",
     "DS4_METAL_GRAPH_DUMP_LAYER",
     "DS4_GLM_UNION_TRACE_CORPUS",
+    "DS4_GLM_STREAMING_TOKEN_PREFILL_MAX",
 })
 SYNC_RE = re.compile(
     r"ds4: GLM sync branch=full_indexed pos=(\d+) chunk=(\d+) logits=\d+"
@@ -539,6 +540,8 @@ def trace_environment(
     large_corpus = corpus_smoke or quality_corpus
     if large_corpus:
         values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
+    if quality_corpus:
+        values["DS4_GLM_STREAMING_TOKEN_PREFILL_MAX"] = "0"
     if mode == "on":
         values.update({
             "DS4_METAL_GRAPH_DUMP_PREFIX": str(out / "trace/request"),
@@ -557,6 +560,8 @@ def matched_configuration_sha256(
     values.update({"DS4_LOCK_FILE": "<ARM_LOCAL>", "DS4_GLM_SYNC_TRACE": "1"})
     if corpus_smoke or quality_corpus:
         values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
+    if quality_corpus:
+        values["DS4_GLM_STREAMING_TOKEN_PREFILL_MAX"] = "0"
     return configuration_sha256(values)
 
 
