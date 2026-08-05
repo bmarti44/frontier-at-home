@@ -180,6 +180,24 @@ class SharedRouterSourceContractTests(unittest.TestCase):
             self.added_source,
         )
 
+    def test_union_probe_default_off_never_evaluates_sparse_dense_layer_state(self) -> None:
+        """Trace-off must return before touching routed-only layer metadata."""
+        helper_at = self.source.find("static bool glm_union_probe_dump_triplet(")
+        call_at = self.source.rfind("if (ok) ok = glm_union_probe_dump_triplet(")
+        self.assertGreaterEqual(helper_at, 0)
+        self.assertGreater(call_at, helper_at)
+        helper = self.source[helper_at:call_at]
+        early_return = helper.find(
+            "if (!want_norm && !want_logits && !want_probs && !want_selected && !want_bias) return true;"
+        )
+        sparse_guard = helper.find("il < DS4_N_LEADING_DENSE")
+        bias_access = helper.find("l->ffn_exp_probs_b->abs_offset")
+        self.assertGreaterEqual(early_return, 0)
+        self.assertGreater(sparse_guard, early_return)
+        self.assertGreater(bias_access, sparse_guard)
+        call = self.source[call_at:self.source.find(";", call_at) + 1]
+        self.assertNotIn("ffn_exp_probs_b", call)
+
     def test_union_probe_triplet_is_fail_closed_and_immutable(self) -> None:
         for marker in (
             '"glm_indexed_ffn_norm"',
