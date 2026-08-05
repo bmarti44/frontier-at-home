@@ -1115,6 +1115,19 @@ class BaselineTableTests(unittest.TestCase):
             MODULE._validate_expected_failure_artifacts(payloads, stage, environment),
             (123, 456),
         )
+        sampler_race = {
+            **payloads,
+            "wrapper.stderr": (
+                b"/proc/123/fd/3: line 436: /proc/456/stat: "
+                b"No such file or directory\n"
+            ),
+        }
+        self.assertEqual(
+            MODULE._validate_expected_failure_artifacts(
+                sampler_race, stage, environment,
+            ),
+            (123, 456),
+        )
         for name, value in (
             ("kernel.log", b"NVRM: Xid 31\n"),
             ("wrapper.stdout", b"SAFE_RUN_DONE rc=0 killed=no dir=/tmp/run\n"),
