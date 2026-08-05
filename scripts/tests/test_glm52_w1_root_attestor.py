@@ -47,6 +47,39 @@ def load_controller():
 
 
 class RootAttestorContractTests(unittest.TestCase):
+    def test_root_clone_scopes_safe_directory_to_exact_source_gitdir(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        upload_pack = (
+            "/usr/bin/git -c safe.directory="
+            "/home/bmarti44/spark-deepseek-v4-flash/.git upload-pack"
+        )
+        self.assertIn('readonly SOURCE_UPLOAD_PACK="/usr/bin/git -c safe.directory=$REPO/.git upload-pack"', source)
+        self.assertIn('--upload-pack="$SOURCE_UPLOAD_PACK"', source)
+        self.assertNotIn("git config --global", source)
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            environment = {**os.environ, "GIT_TEST_ASSUME_DIFFERENT_OWNER": "1"}
+            rejected = subprocess.run([
+                "/usr/bin/git", "clone", "--no-local", "--no-checkout",
+                str(ROOT), str(root / "without-safe-directory"),
+            ], capture_output=True, text=True, check=False, env=environment)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("dubious ownership", rejected.stderr)
+            accepted = subprocess.run([
+                "/usr/bin/git", "-c", "core.hooksPath=/dev/null", "clone",
+                "--no-local", "--no-checkout", f"--upload-pack={upload_pack}",
+                str(ROOT), str(root / "exact-safe-directory"),
+            ], capture_output=True, text=True, check=False, env=environment)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            cloned = subprocess.run([
+                "/usr/bin/git", "-C", str(root / "exact-safe-directory"),
+                "rev-parse", "HEAD",
+            ], capture_output=True, text=True, check=False)
+            self.assertEqual(cloned.returncode, 0, cloned.stderr)
+            self.assertEqual(cloned.stdout.strip(), subprocess.run([
+                "/usr/bin/git", "-C", str(ROOT), "rev-parse", "HEAD",
+            ], capture_output=True, text=True, check=True).stdout.strip())
+
     def test_p1_reservation_and_receipt_bind_exact_cuda_backend(self):
         submitter = load_submitter()
         self.assertEqual(submitter.P1_SCORING_BACKEND, {
