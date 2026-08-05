@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "dbe40753dac137daba113b9897fef891ebe6a091",
+  "review_round": 70,
+  "classification": "FAIL",
+  "scope": "short_single_indexed_batch_only",
+  "arm": "off",
+  "prompt_tokens": 573,
+  "last_production_event": "GLM sync branch=full_indexed pos=0 chunk=573 logits=1",
+  "client_error": "RuntimeError: SSE stream has ambiguous response ids: []",
+  "result_sha256": "1b59d081ee78d61c6db2ce76564719949468507160411e250f7a941e8b9fdb30",
+  "server_log_sha256": "9dac5a985aed2673ef3da3d0d7eb22b93d829fe4be53c85042c3801ef6d3bf6e",
+  "main_log_sha256": "aee94d436c11e01f05688ca38ecf8e218cd1dccc473b677922c1a674d1ba6d70",
+  "resource_safety": {
+    "oom": false,
+    "xid": false,
+    "swap_bytes": 0,
+    "server_survived_until_cleanup": true,
+    "surviving_ds4_server": false
+  },
+  "conclusion": "The default-off indexed-batch path fails at 573 rows as well as 2048 rows. No trace data was requested or emitted. R0b capture is not qualified; investigate the indexed-batch prerequisite or default-off regression before another smoke."
+}
