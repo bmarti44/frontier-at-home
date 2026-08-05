@@ -453,6 +453,42 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         self.assertEqual(probe["total_expected_prompt_tokens"], 2)
         self.assertEqual(probe["expected_token_layer_events"], 150)
 
+    def test_quality_probe_can_select_exact_regression_case(self) -> None:
+        bundle = {
+            "schema_version": 1, "seed": 7,
+            "total_expected_prompt_tokens": 5,
+            "expected_token_layer_events": 375,
+            "cases": [
+                {"case_id": "case_1", "expected_prompt_tokens": 2},
+                {"case_id": "case_021", "expected_prompt_tokens": 3},
+            ],
+            "_prompts": {"case_1": "one", "case_021": "two"},
+        }
+        probe = MODULE.quality_probe_ledger(bundle, case_id="case_021")
+        self.assertEqual(probe["cases"], [bundle["cases"][1]])
+        self.assertEqual(probe["_prompts"], {"case_021": "two"})
+        self.assertEqual(probe["total_expected_prompt_tokens"], 3)
+        with self.assertRaisesRegex(ValueError, "not present"):
+            MODULE.quality_probe_ledger(bundle, case_id="missing")
+
+    def test_quality_capture_enables_logged_server_utf8_normalization(self) -> None:
+        self.assertIn("DS4_JSON_REPLACE_INVALID_UTF8", MODULE.ENV_NAMES)
+        values = MODULE.trace_environment(
+            "off", Path("/tmp/arm"), quality_corpus=True,
+        )
+        self.assertEqual(values["DS4_JSON_REPLACE_INVALID_UTF8"], "1")
+        self.assertEqual(
+            MODULE.matched_configuration_sha256(quality_corpus=True),
+            MODULE.configuration_sha256({
+                **MODULE.SHARED.COMMON_ENV,
+                "DS4_LOCK_FILE": "<ARM_LOCAL>",
+                "DS4_GLM_SYNC_TRACE": "1",
+                "DS4_CUDA_EXPERT_CACHE_GB": MODULE.CORPUS_CUDA_CACHE_GB,
+                "DS4_GLM_STREAMING_TOKEN_PREFILL_MAX": "0",
+                "DS4_JSON_REPLACE_INVALID_UTF8": "1",
+            }),
+        )
+
     def test_quality_raw_output_accepts_exact_bytes_with_noncanonical_bpe(self) -> None:
         tokenizer = MODULE.Tokenizer.from_file(str(MODULE.SHARED.TOKENIZER))
         raw_ids = [8507, 111, 198, 154842, 8507, 111, 271, 91]
