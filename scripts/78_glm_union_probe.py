@@ -78,7 +78,66 @@ def split_compact_arrays(
     arrays: dict[str, np.ndarray], split_rows: dict[str, np.ndarray],
 ) -> dict[str, dict[str, np.ndarray]]:
     """Project a combined compact corpus into isolated split archives."""
-    raise NotImplementedError
+    if (
+        not isinstance(arrays, dict) or not arrays or
+        not isinstance(split_rows, dict) or set(split_rows) != set(SPLIT_COUNTS) or
+        any(not isinstance(value, np.ndarray) for value in arrays.values()) or
+        "request_index" not in arrays or "layer" not in arrays or
+        "hidden_fp16_holdout_row" not in arrays or "hidden_fp16_holdout" not in arrays
+    ):
+        raise ValueError("compact split input schema is invalid")
+    row_count = arrays["request_index"].shape[0]
+    holdout_names = {"hidden_fp16_holdout_row", "hidden_fp16_holdout"}
+    main_names = set(arrays) - holdout_names
+    if (
+        row_count <= 0 or any(value.ndim == 0 or value.shape[0] != row_count
+                              for name, value in arrays.items() if name in main_names) or
+        any(np.issubdtype(value.dtype, np.floating) and not np.isfinite(value).all()
+            for value in arrays.values())
+    ):
+        raise ValueError("compact split row coverage or finiteness differs")
+    holdout_row = arrays["hidden_fp16_holdout_row"]
+    holdout_hidden = arrays["hidden_fp16_holdout"]
+    if (
+        holdout_row.ndim != 1 or not np.issubdtype(holdout_row.dtype, np.integer) or
+        holdout_hidden.ndim != 2 or holdout_hidden.shape[0] != holdout_row.size or
+        np.any(holdout_row < 0) or np.any(holdout_row >= row_count) or
+        (holdout_row.size > 1 and np.any(np.diff(holdout_row.astype(np.int64)) <= 0))
+    ):
+        raise ValueError("compact split holdout coverage is invalid")
+    normalized_rows: dict[str, np.ndarray] = {}
+    for split, rows in split_rows.items():
+        if (
+            not isinstance(rows, np.ndarray) or rows.ndim != 1 or
+            not np.issubdtype(rows.dtype, np.integer) or np.any(rows < 0) or
+            np.any(rows >= row_count) or
+            (rows.size > 1 and np.any(np.diff(rows.astype(np.int64)) <= 0))
+        ):
+            raise ValueError(f"split row indices are invalid: {split}")
+        normalized_rows[split] = rows.astype(np.int64, copy=False)
+    combined = np.concatenate(list(normalized_rows.values()))
+    if combined.size != row_count or not np.array_equal(np.sort(combined), np.arange(row_count)):
+        raise ValueError("compact split rows are incomplete or overlap")
+
+    result: dict[str, dict[str, np.ndarray]] = {}
+    for split, rows in normalized_rows.items():
+        projected = {name: arrays[name][rows] for name in main_names}
+        old_to_new = np.full(row_count, -1, dtype=np.int64)
+        old_to_new[rows] = np.arange(rows.size)
+        selected_holdout = old_to_new[holdout_row.astype(np.int64)] >= 0
+        projected["hidden_fp16_holdout_row"] = old_to_new[
+            holdout_row[selected_holdout].astype(np.int64)
+        ].astype(np.uint32)
+        projected["hidden_fp16_holdout"] = holdout_hidden[selected_holdout]
+        if (
+            projected["hidden_fp16_holdout"].shape[0] !=
+            projected["hidden_fp16_holdout_row"].size or
+            any(value.shape[0] != rows.size for name, value in projected.items()
+                if name not in holdout_names)
+        ):
+            raise ValueError("projected compact split is inconsistent")
+        result[split] = projected
+    return result
 
 
 def future_union_targets(
