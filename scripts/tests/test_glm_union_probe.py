@@ -96,6 +96,30 @@ class UnionTargetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             MODULE.frequency_prior_by_layer(layer, duplicate)
 
+    def test_probe_feature_transforms_are_exact_causal_and_group_stable(self) -> None:
+        packed = np.asarray([[0xF1, 0x97]], dtype=np.uint8)
+        scale = np.asarray([[2.0, 1.0]], dtype=np.float16)
+        np.testing.assert_array_equal(
+            MODULE.unpack_probe_hidden(packed, scale, width=4),
+            np.asarray([[-14.0, 14.0, -1.0, 1.0]], dtype=np.float32),
+        )
+        request = np.asarray([1, 1, 1, 2, 2], dtype=np.uint16)
+        layer = np.asarray([3, 3, 3, 3, 3], dtype=np.uint16)
+        position = np.asarray([0, 1, 2, 0, 1], dtype=np.uint32)
+        selected = np.asarray([[1], [2], [3], [8], [9]], dtype=np.uint8)
+        history = MODULE.causal_expert_history(request, layer, position, selected)
+        self.assertEqual(history[2, 3], 1.0)
+        self.assertEqual(history[2, 2], 0.5)
+        self.assertEqual(history[2, 1], 0.25)
+        self.assertEqual(history[3, 8], 1.0)
+        self.assertEqual(history[3, 3], 0.0)
+        self.assertEqual(MODULE.grouped_fold("case_001"), MODULE.grouped_fold("case_001"))
+        self.assertIn(MODULE.grouped_fold("case_001"), range(3))
+        gapped = position.copy()
+        gapped[2] = 4
+        with self.assertRaises(ValueError):
+            MODULE.causal_expert_history(request, layer, gapped, selected)
+
     def test_scoring_rejects_duplicate_rankings_or_cross_row_mismatch(self) -> None:
         request, layer, position, selected = self.fixture()
         rows, target = MODULE.future_union_targets(

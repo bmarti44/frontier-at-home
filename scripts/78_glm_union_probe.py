@@ -599,6 +599,29 @@ def frequency_prior_by_layer(
     return result
 
 
+def unpack_probe_hidden(
+    packed: np.ndarray, scale: np.ndarray, width: int = 6144,
+) -> np.ndarray:
+    """Decode the frozen groupwise-int4 probe feature representation."""
+    raise NotImplementedError
+
+
+def causal_expert_history(
+    request_index: np.ndarray,
+    layer: np.ndarray,
+    token_position: np.ndarray,
+    selected_ids: np.ndarray,
+    lags: int = 4,
+) -> np.ndarray:
+    """Build the frozen causal selected-expert history feature."""
+    raise NotImplementedError
+
+
+def grouped_fold(group_id: str, folds: int = 3) -> int:
+    """Map an authoritative request group to its frozen CV fold."""
+    raise NotImplementedError
+
+
 def score_rankings(
     row_indices: np.ndarray,
     targets: np.ndarray,
