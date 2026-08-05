@@ -1390,6 +1390,14 @@ def publish_bundle(
             for value in arrays.values())
     ):
         raise ValueError("output arrays are empty, non-numeric, or non-finite")
+    array_schema = {
+        name: {
+            "dtype": value.dtype.str,
+            "shape": list(value.shape),
+            "sha256": _sha256_bytes(np.ascontiguousarray(value).tobytes()),
+        }
+        for name, value in sorted(arrays.items())
+    }
     requested = destination.absolute()
     if requested.exists() or requested.is_symlink():
         raise FileExistsError(requested)
@@ -1412,19 +1420,13 @@ def publish_bundle(
                     observed = loaded[name]
                     if (
                         observed.dtype != expected.dtype or observed.shape != expected.shape or
-                        not np.array_equal(observed, expected)
+                        not np.array_equal(observed, expected) or
+                        _sha256_bytes(np.ascontiguousarray(observed).tobytes()) !=
+                        array_schema[name]["sha256"]
                     ):
                         raise ValueError(f"published NPZ array differs: {name}")
         except (OSError, ValueError, EOFError) as error:
             raise ValueError("published NPZ failed closed validation") from error
-        array_schema = {
-            name: {
-                "dtype": value.dtype.str,
-                "shape": list(value.shape),
-                "sha256": _sha256_bytes(np.ascontiguousarray(value).tobytes()),
-            }
-            for name, value in sorted(arrays.items())
-        }
         final_manifest = {
             **manifest,
             "output_file": "records.npz",
