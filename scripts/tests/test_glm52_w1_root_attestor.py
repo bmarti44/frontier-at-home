@@ -781,7 +781,7 @@ class RootAttestorContractTests(unittest.TestCase):
             "GLM52_REVIEWED_INSTALLER_SHA256",
             "installer must be executed from a reviewed root-owned staged copy",
             "/usr/bin/sha256sum -- \"$0\"",
-            "/usr/bin/stat -Lc '%u:%g:%a:%F' -- \"$0\"",
+            "/usr/bin/stat -c '%u:%g:%a:%F' -- \"$0\"",
             "0:0:500:regular file",
         ):
             with self.subTest(required=required):

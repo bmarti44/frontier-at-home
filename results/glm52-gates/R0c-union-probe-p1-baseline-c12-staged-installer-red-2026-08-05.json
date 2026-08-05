@@ -8,5 +8,5 @@
   "test": "scripts/tests/test_glm52_w1_root_attestor.py::RootAttestorContractTests::test_installer_requires_reviewed_root_owned_staged_copy",
   "unchanged_implementation_commit": "38711adf3bd2c893e22b50ea69dbc591041dd9e6",
   "expected_before_fix": "FAIL because the installer accepts direct root interpretation from its user-writable repository path",
-  "acceptance": "The installer itself rejects direct invocation unless its executing file is root:root mode 0500 and its bytes match a reviewer-published SHA-256 supplied by the trusted staging command. The final root command must copy with trusted root utilities, verify the staged bytes, and execute only that immutable copy."
+  "acceptance": "The installer itself rejects direct invocation unless its non-symlink executing file is root:root mode 0500 and its bytes match a reviewer-published SHA-256 supplied by the trusted staging command. The final root command must copy with trusted root utilities, verify the staged bytes, and execute only that immutable copy."
 }
