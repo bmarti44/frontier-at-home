@@ -128,6 +128,45 @@ class RootAttestorContractTests(unittest.TestCase):
                 marker_root.chmod(0o700)
                 marker.chmod(0o600)
 
+    def test_p1_reservation_rejects_caller_selected_clean_head(self):
+        """The root helper, not the caller's repository, selects the candidate."""
+        submitter = load_submitter()
+        approved = "1" * 40
+        attacker_selected = "3" * 40
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            marker_root = state / "p1-baseline-heldout-v1"
+            marker = marker_root / "reservation.json"
+            approval = state / "p1-approved.json"
+            approval.write_text(json.dumps({
+                "schema_version": 1,
+                "classification": "GLM52_P1_ROOT_APPROVED_CANDIDATE",
+                "candidate_hash": approved,
+                "controller_sha256": "2" * 64,
+            }) + "\n", encoding="utf-8")
+            approval.chmod(0o444)
+            try:
+                with (
+                    mock.patch.object(submitter, "STATE_ROOT", state),
+                    mock.patch.object(submitter, "P1_RESERVATION_ROOT", marker_root),
+                    mock.patch.object(submitter, "P1_RESERVATION", marker),
+                    mock.patch.object(submitter, "P1_APPROVAL", approval, create=True),
+                    mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                    mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                    mock.patch.object(submitter, "_assert_repository"),
+                    self.assertRaisesRegex(ValueError, "root-approved"),
+                ):
+                    submitter.reserve_p1(
+                        attacker_selected, "4" * 64,
+                        marker_root=marker_root, marker=marker,
+                    )
+            finally:
+                if marker_root.exists():
+                    marker_root.chmod(0o700)
+                if marker.exists():
+                    marker.chmod(0o600)
+                approval.chmod(0o600)
+
     def test_p1_reservation_reader_rejects_mutable_or_linked_marker(self):
         submitter = load_submitter()
         with tempfile.TemporaryDirectory() as temporary:

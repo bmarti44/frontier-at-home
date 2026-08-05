@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "classification": "PREIMPLEMENTATION_RED_ATTEMPT",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 11,
+  "base_commit": "b15cf82eb5b581e19572712d47a9dc2394c16703",
+  "observed_at": "2026-08-05T15:40:00-04:00",
+  "held_out_values_opened": false,
+  "tests_sha256": "4cae4750669d9d08aaa5d702a8068f8311a0a53675f5ac244dfff92d6bef7695",
+  "raw_sha256": "9ce772785a446830781902ba6850144d09be1a450788108cb20dce82fcfe13d0",
+  "command": "python3 -m pytest -q scripts/tests/test_glm52_w1_root_attestor.py -k caller_selected_clean_head",
+  "exit_code": 1,
+  "observed_failure": {
+    "id": "P1-BASE-R148-H1-ROOT-HELPER-ACCEPTS-UNREVIEWED-HEAD",
+    "test": "RootAttestorContractTests.test_p1_reservation_rejects_caller_selected_clean_head",
+    "result": "RED: an attacker-selected candidate different from the root-approved candidate created the exclusive marker and returned RESERVED; the expected root-approved rejection was not raised."
+  },
+  "preregistered_fix_scope": "Install one root-owned exact approval record containing the owner-installed candidate commit and script-81 controller/scorer hash. The passwordless helper exposes that record read-only and permits marker creation only for its candidate. The controller exact-compares its executing bytes with the root-approved hash before requesting reservation. Do not modify frozen corpus, scorer algorithms, probe, CV, precision, model, engine, two-control, cost, or completed-result behavior.",
+  "acceptance": [
+    "An unrelated clean user-owned commit is rejected before marker creation.",
+    "A descendant evidence commit not installed by root cannot become authority merely by being HEAD.",
+    "Repository-directory replacement and changed script-81 bytes are rejected before held-out open.",
+    "The exact root-installed candidate plus exact controller bytes may reserve once; retries fail closed.",
+    "Existing marker lookup remains fail-closed even after user repository HEAD advances.",
+    "No production reservation or held-out value is opened during implementation or testing."
+  ],
+  "verdict": "RED_CONFIRMED"
+}
