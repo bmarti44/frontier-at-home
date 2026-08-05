@@ -2752,20 +2752,9 @@ def _run_contained_failure_process(
         raise ValueError("contained failure runtime log set differs")
     main_payload = _snapshot_regular(files["main.log"])
     marker = f"ds4: GLM baseline injected failure stage={stage}".encode("ascii")
-    identity = re.findall(
-        rb"executed_candidate_verified pid=([0-9]+) start_ticks=([0-9]+)",
-        main_payload,
+    pid, start_ticks = validate_expected_failure_wrapper(
+        main_payload, stage, environment["GLM_SAFE_EXPECTED_ENV_SHA256"],
     )
-    expected_environment = environment["GLM_SAFE_EXPECTED_ENV_SHA256"].encode("ascii")
-    if (
-        len(identity) != 1 or marker not in main_payload or
-        f"candidate_binary_sha256={FROZEN_BINARY_SHA256}".encode("ascii") not in main_payload or
-        b"executed_environment_sha256=" + expected_environment not in main_payload or
-        b"SAFE_RUN end rc=86 killed=no" not in main_payload or
-        b"wrapper and descendant checks clean" not in main_payload
-    ):
-        raise RuntimeError("contained failure runtime attestation differs")
-    pid, start_ticks = (int(value) for value in identity[0])
     if Path(f"/proc/{pid}").exists():
         raise RuntimeError("injected candidate process survived wrapper exit")
     preserved = preserve_root / tag
@@ -2787,6 +2776,32 @@ def _run_contained_failure_process(
             "bytes": len(main_payload),
         },
     }
+
+
+def validate_expected_failure_wrapper(
+    main_payload: bytes, stage: str, expected_environment_sha256: str,
+) -> tuple[int, int]:
+    """Validate the exact fail-closed wrapper path for an intentional rc=86."""
+    if stage not in FAILURE_INJECTION_STAGES or not re.fullmatch(
+        r"[0-9a-f]{64}", expected_environment_sha256,
+    ):
+        raise RuntimeError("expected failure wrapper input differs")
+    identity = re.findall(
+        rb"executed_candidate_verified pid=([0-9]+) start_ticks=([0-9]+)",
+        main_payload,
+    )
+    required = (
+        f"candidate_binary_sha256={FROZEN_BINARY_SHA256}".encode("ascii"),
+        f"executed_environment_sha256={expected_environment_sha256}".encode("ascii"),
+        b"FATAL wrapper command failed after candidate exit rc=86",
+        f"ds4: GLM baseline injected failure stage={stage}".encode("ascii"),
+        b"safety_artifact_verified name=samples.log sha256=",
+        b"safety_artifact_verified name=kernel.log sha256=",
+        b"SAFE_RUN end rc=86 killed=no",
+    )
+    if len(identity) != 1 or any(marker not in main_payload for marker in required):
+        raise RuntimeError("contained failure runtime attestation differs")
+    return tuple(int(value) for value in identity[0])
 
 
 def _run_failure_injection_suite(
