@@ -83,6 +83,7 @@ ENV_NAMES = sorted(set(SHARED.ENV_NAMES) | {
     "DS4_METAL_GRAPH_DUMP_LAYER",
     "DS4_GLM_UNION_TRACE_CORPUS",
     "DS4_GLM_STREAMING_TOKEN_PREFILL_MAX",
+    "DS4_JSON_REPLACE_INVALID_UTF8",
 })
 SYNC_RE = re.compile(
     r"ds4: GLM sync branch=full_indexed pos=(\d+) chunk=(\d+) logits=\d+"
@@ -102,6 +103,7 @@ QUALITY_FIXTURE_RELATIVE = Path(
 QUALITY_DISK_MAX_TOKENS = 512
 QUALITY_REQUEST_COUNT = 100
 QUALITY_FIXTURE_CONTENT_SHA256 = "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0a"
+UTF8_NORMALIZATION_LOG = "ds4-server: invalid UTF-8 model bytes normalized to U+FFFD"
 
 
 def render_quality_prompt(prompt: str) -> str:
@@ -278,14 +280,21 @@ def build_quality_case_ledger(
     }
 
 
-def quality_probe_ledger(bundle: dict[str, Any]) -> dict[str, Any]:
-    """Select the seeded first case for a safety-only fresh-server probe."""
+def quality_probe_ledger(
+    bundle: dict[str, Any], *, case_id: str | None = None,
+) -> dict[str, Any]:
+    """Select one frozen case for a safety or exact-regression probe."""
     cases = bundle.get("cases")
     prompts = bundle.get("_prompts")
     if (not isinstance(cases, list) or not cases or not isinstance(cases[0], dict) or
             not isinstance(prompts, dict)):
         raise ValueError("quality probe source ledger is invalid")
-    first = cases[0]
+    selected = cases[0] if case_id is None else next(
+        (case for case in cases if case.get("case_id") == case_id), None,
+    )
+    if selected is None:
+        raise ValueError("quality probe case is not present in the frozen ledger")
+    first = selected
     case_id = first.get("case_id")
     tokens = first.get("expected_prompt_tokens")
     if (not isinstance(case_id, str) or case_id not in prompts or
@@ -594,6 +603,7 @@ def trace_environment(
         values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
     if quality_corpus:
         values["DS4_GLM_STREAMING_TOKEN_PREFILL_MAX"] = "0"
+        values["DS4_JSON_REPLACE_INVALID_UTF8"] = "1"
     if mode == "on":
         values.update({
             "DS4_METAL_GRAPH_DUMP_PREFIX": str(out / "trace/request"),
@@ -614,6 +624,7 @@ def matched_configuration_sha256(
         values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB
     if quality_corpus:
         values["DS4_GLM_STREAMING_TOKEN_PREFILL_MAX"] = "0"
+        values["DS4_JSON_REPLACE_INVALID_UTF8"] = "1"
     return configuration_sha256(values)
 
 
@@ -888,7 +899,9 @@ def _arm(args: argparse.Namespace) -> int:
         if args.quality_corpus else None
     )
     if ledger_bundle is not None and args.quality_probe:
-        ledger_bundle = quality_probe_ledger(ledger_bundle)
+        ledger_bundle = quality_probe_ledger(
+            ledger_bundle, case_id=args.quality_probe_case,
+        )
     if ledger_bundle is not None:
         ledger_path = out / "ledger.json"
         ledger_path.write_text(
@@ -970,6 +983,8 @@ def _arm(args: argparse.Namespace) -> int:
         raise RuntimeError(f"server did not exit cleanly rc={getattr(server, 'returncode', None)}")
     log_text = server_log.read_text(encoding="utf-8", errors="strict")
     SHARED.require_no_gpu_fault(log_text, "server log")
+    if args.quality_corpus and log_text.count(UTF8_NORMALIZATION_LOG) != 1:
+        raise RuntimeError("UTF-8 normalization activation was not logged exactly once")
     resolved_cuda_cache = cuda_cache_runtime(log_text) if large_corpus else None
     if not request_records:
         raise RuntimeError("arm produced no requests")
@@ -1042,6 +1057,11 @@ def run(args: argparse.Namespace) -> int:
         raise ValueError("corpus modes are mutually exclusive")
     if args.quality_probe and not args.quality_corpus:
         raise ValueError("quality probe requires quality corpus mode")
+    if args.quality_probe_case is not None and not args.quality_probe:
+        raise ValueError("quality probe case requires quality probe mode")
+    if (args.quality_probe_case is not None and
+            re.fullmatch(r"case_[0-9]{3}", args.quality_probe_case) is None):
+        raise ValueError("quality probe case id is invalid")
     large_corpus = args.corpus_smoke or args.quality_corpus
     layer_count = 75 if large_corpus else 1
     request_count = 1 if args.quality_probe else QUALITY_REQUEST_COUNT if args.quality_corpus else 2 if args.corpus_smoke else 1
@@ -1063,7 +1083,9 @@ def run(args: argparse.Namespace) -> int:
         if args.quality_corpus else None
     )
     if quality_ledger is not None and args.quality_probe:
-        quality_ledger = quality_probe_ledger(quality_ledger)
+        quality_ledger = quality_probe_ledger(
+            quality_ledger, case_id=args.quality_probe_case,
+        )
     SHARED.no_other_inference()
     available_gib = int(next(
         line.split()[1] for line in Path("/proc/meminfo").read_text().splitlines()
@@ -1130,6 +1152,8 @@ def run(args: argparse.Namespace) -> int:
             *(["--corpus-smoke"] if args.corpus_smoke else []),
             *(["--quality-corpus"] if args.quality_corpus else []),
             *(["--quality-probe"] if args.quality_probe else []),
+            *(["--quality-probe-case", args.quality_probe_case]
+              if args.quality_probe_case is not None else []),
         ], env=environment, stdin=subprocess.DEVNULL, capture_output=True,
            timeout=7300 if args.quality_corpus else 3700, check=False)
         (root / f"{mode}.containment.stdout.log").write_bytes(completed.stdout)
@@ -1232,6 +1256,7 @@ def run(args: argparse.Namespace) -> int:
         qualification = {
             "scope": "quality_one_case_safety_probe",
             "quality_cases": 1,
+            "quality_case_id": quality_ledger["cases"][0]["case_id"],
             "expected_prompt_tokens": quality_ledger["total_expected_prompt_tokens"],
             "expected_token_layer_events": quality_ledger["expected_token_layer_events"],
             "fixture_content_sha256": quality_ledger["fixture_content_sha256"],
@@ -1299,6 +1324,7 @@ def parser() -> argparse.ArgumentParser:
     public.add_argument("--corpus-smoke", action="store_true")
     public.add_argument("--quality-corpus", action="store_true")
     public.add_argument("--quality-probe", action="store_true")
+    public.add_argument("--quality-probe-case")
     public.set_defaults(func=run)
     internal = sub.add_parser("_arm")
     internal.add_argument("--mode", choices=("off", "on"), required=True)
@@ -1315,6 +1341,7 @@ def parser() -> argparse.ArgumentParser:
     internal.add_argument("--corpus-smoke", action="store_true")
     internal.add_argument("--quality-corpus", action="store_true")
     internal.add_argument("--quality-probe", action="store_true")
+    internal.add_argument("--quality-probe-case")
     internal.set_defaults(func=_arm)
     return root
 
