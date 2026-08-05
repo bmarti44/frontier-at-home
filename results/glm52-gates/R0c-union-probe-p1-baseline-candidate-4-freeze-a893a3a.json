@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 4,
+  "candidate_hash": "a893a3a116200139f06820bf703b12d1fc1127ae",
+  "scope": "Close only P1-BASE-IMPL-H4-MODULE-TOCTOU by constructing the probe, CV, and precision dependency graph from authenticated snapshots.",
+  "held_out_values_opened": false,
+  "artifacts": {
+    "scripts/81_glm_union_baseline.py": "f456836e8bdb449a98b792a1ce8322ab0e55606cf1262a2a6a89deb3af68206e",
+    "scripts/tests/test_glm_union_baseline.py": "f3c421a3a475104e5a0ca676bda432d1750958b7f925f6f01524bab59c6b213c"
+  },
+  "tests_sha256_by_path": {
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6"
+  },
+  "pre_submission_audit": {
+    "targeted_and_parent_tests": "46 passed",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "frozen_module_hashes_unchanged": true,
+    "scope_frozen": true
+  },
+  "acceptance": {
+    "all_dependency_files_snapshotted_and_hash_checked_before_execution": true,
+    "nested_path_loader_assignments_must_match_exactly_once": true,
+    "nested_path_replacement_does_not_execute": true,
+    "probe_cv_precision_objects_are_identity_equal": true,
+    "missing_or_duplicate_dependency_edge_fails_closed": true
+  },
+  "convergence": {
+    "prior_blocking_count": 9,
+    "expected_blocking_count_after_review": 8,
+    "new_scope": false,
+    "escalation_triggered": false
+  }
+}
