@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_RESULT",
+  "candidate_hash": "b3f0ccd4e3eee8d9bccf933d1e4e589cd77e5d19",
+  "implementation_commit": "b238ab73e542bd7d270060465ec030fbdfa9aeec",
+  "review_round": 150,
+  "per_gate_candidate": 12,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 70,
+    "critical": [],
+    "high": [
+      {
+        "id": "BASE-R142-H3",
+        "summary": "Failure-injection coverage is copied from a hard-coded success object; no stage fault is executed or independently observed."
+      },
+      {
+        "id": "BASE-R142-H4",
+        "summary": "Cold and warm rows have unequal event counts and the four methods use incomparable timing/resource boundaries with self-declared synchronization."
+      },
+      {
+        "id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY",
+        "summary": "Completed evidence remains user-rewritable and strict replay does not reopen and bind every external runtime arm artifact."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_DO_NOT_INSTALL_OR_OPEN_HELD_OUT_VALUES"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 70,
+    "critical": [],
+    "high": [
+      {
+        "id": "BASE-R142-H3",
+        "summary": "A schema-valid fabricated failure-injection record passes without any production fault arm."
+      },
+      {
+        "id": "BASE-R142-H4",
+        "summary": "Self-asserted synchronization and incomparable common-work timing can manufacture an equal-cost MTP decision."
+      },
+      {
+        "id": "P1-BASE-IMPL-H5",
+        "summary": "Canonical replay is not reconstructed from the full raw engine evidence and chmod-only sealing is reversible by the owner UID."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT"
+  },
+  "verified_closures": [
+    "P1-BASE-R149-C1-USER-WRITABLE-ROOT-INSTALLER",
+    "P1-BASE-R149-H1-APPROVED-COMMIT-NOT-ENFORCED-BY-CONTROLLER",
+    "P1-BASE-IMPL-H3-COST-OMITTED"
+  ],
+  "open_blocking_classes": [
+    "BASE-R142-H3 executed stage-specific failure recovery",
+    "BASE-R142-H4 matched raw-bound completed cost",
+    "P1-BASE-IMPL-H5 completed-result raw binding and root authority"
+  ],
+  "convergence": {
+    "owner_authorized_candidate_12_sequence": true,
+    "post_resume_nonshrinking_candidates": 1,
+    "two_consecutive_candidates_without_strict_decrease": false,
+    "new_critical_in_frozen_scope": false,
+    "next_action": "Candidate 13 changes only the three independently aligned high findings."
+  },
+  "claim_limit": "No root installation, held-out opening, baseline result, cost conclusion, fidelity, performance, or serving claim."
+}
