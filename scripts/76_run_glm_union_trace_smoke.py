@@ -521,9 +521,11 @@ def quality_raw_visible_output_errors(
             index for index in range(len(framed_ids) - len(close_ids) + 1)
             if close_ids and framed_ids[index:index + len(close_ids)] == close_ids
         ]
-        if len(close_positions) > 1:
-            return ["raw timing contains multiple reasoning/content boundaries"]
         if close_positions:
+            # Match the frozen serving parser: its THINKING state uses strstr()
+            # and therefore the first close marker is the sole channel boundary.
+            # Later close markers are ordinary content and remain covered by the
+            # exact decoded-byte comparison below.
             close_index = close_positions[0]
             reasoning_ids = framed_ids[:close_index]
             content_ids = framed_ids[close_index + len(close_ids):]
