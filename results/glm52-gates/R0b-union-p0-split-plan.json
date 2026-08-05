@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "classification": "PREREGISTERED",
-  "scope": "glm52_union_probe_fixture_grouped_splits",
+  "scope": "glm52_union_probe_case_grouped_splits",
   "suite": "glm52-openrouter-100",
   "fixture_sha256": "c11db60f50445b9bdbab6ab0f253504f323a4f762be52d077854293b6e680edf",
   "split_source": {
@@ -27,6 +27,7 @@
         }
       ],
       "quality_cases": 60,
+      "probe_fit_cases": 55,
       "additional_grouped_sources": [
         {
           "source_receipt": "results/glm52-gates/R0b-union-corpus-pass-2ff949c.json",
@@ -56,15 +57,22 @@
     }
   },
   "full_precision_hidden_holdout": {
-    "split": "test",
+    "split": "train_precision_diagnostic",
     "case_ids": [
-      "case_084",
-      "case_069",
-      "case_064",
-      "case_097",
-      "case_011"
+      "case_053",
+      "case_056",
+      "case_058",
+      "case_027",
+      "case_065"
     ],
-    "required_storage": "Retain the captured float32 hidden tensors and derive an FP16 view for these five cases; compare probe recall against the int4 feature on identical events before attributing a failure to the predictor."
+    "selection": "The first five cases of frozen train block 02; selected before capture and excluded from every probe fit.",
+    "required_storage": "Retain float32 hidden tensors and derive FP16 and int4 views on identical events until P1 is terminal.",
+    "decision_rule": "After freezing probe weights, feature transforms, K values {2,4,8}, budgets {16,32,64}, and scorer, report paired recall deltas for all five cases. Reject int4 if its mean loss versus FP16 exceeds 1 percentage point or any case loses more than 5 points at any K/budget; reject FP16 if its mean loss versus FP32 exceeds 0.25 points or any case loses more than 2 points. Passing is diagnostic support only, not corpus-wide equivalence or causal attribution."
+  },
+  "grouping_scope": {
+    "authoritative_group_id": "The suite manifest defines one atomic fixture per case ID and exposes no broader family or transformation lineage.",
+    "normalization_check": "Unicode NFKC, case-fold, and collapse whitespace before hashing prompts and continuations; normalized hashes must be unique across splits.",
+    "claim_limit": "This is a held-out case split within glm52-openrouter-100, not evidence of independence from unknown semantic paraphrases or generalization beyond the suite. If authoritative family lineage is later supplied, related cases must be regrouped under a new preregistered candidate."
   },
   "pre_registered_checks": {
     "exactly_100_quality_cases": true,
@@ -72,21 +80,33 @@
     "prompt_content_hashes_unique_across_splits": true,
     "continuation_content_hashes_unique_across_splits": true,
     "response_content_hashes_unique_across_splits": true,
+    "normalized_prompt_hashes_unique_across_splits": true,
+    "normalized_continuation_hashes_unique_across_splits": true,
+    "authoritative_case_group_ids_disjoint_across_splits": true,
     "long_fixture_lineage_kept_in_one_split": true,
-    "calibration_untouched_by_training": true,
+    "five_precision_cases_excluded_from_probe_fit": true,
+    "calibration_untouched_by_training_and_p1_selection": true,
     "test_untouched_until_final_comparison": true,
     "raw_float32_holdout_retained_until_p1_terminal": true
   },
   "capture_acceptance": {
+    "freeze": "Before capture, commit and hash the clean engine source/diff, binary, model, tokenizer, runner, fixed scorer and mutation tests, configuration allowlist, this split plan, all five block manifests, and a content-complete digest over every manifest path and referenced prompt/continuation/response byte. Obtain new public randomness after that freeze.",
+    "case_ledger": "Before trace requests, derive exactly 100 canonical request bodies from the frozen case manifests. The ledger binds case ID, authoritative group ID, split, ordinal request ID, canonical request SHA-256, prompt/continuation/response content hashes, seed, and a maximum of 512 evaluated prompt tokens. Every case occurs exactly once.",
     "required_layers": "3 through 77 inclusive",
-    "required_fields": [
-      "eight selected expert IDs",
-      "top-32 expert IDs and FP16 logits",
-      "captured router probabilities",
-      "gate-input hidden feature"
-    ],
-    "output_identity": "Trace-enabled and trace-disabled matched requests must be byte- and token-identical.",
+    "raw_field_schema": {
+      "ffn_norm": "finite float32 [rows,6144]",
+      "router_logits": "finite float32 [rows,256]",
+      "router_probs": "finite float32 [rows,256] in [0,1] and matching sigmoid(router_logits) within 1e-4",
+      "router_selected": "int32 [rows,8], unique IDs in [0,255]",
+      "router_bias": "finite float32 [256], constant for a layer across requests/chunks"
+    },
+    "derived_top32": "Stable descending order of router_probs + router_bias, with equal scores retaining ascending expert ID; selected IDs must equal the first eight. Store derived top-32 IDs as uint8 and corresponding logits as finite FP16.",
+    "exact_coverage_formula": "For every case, OFF and ON must report the same positive prompt-token count and identical contiguous full-indexed chunks covering exactly [0,prompt_tokens). ON must contain exactly one raw field record for every (case_id, request_id, layer, chunk), with rows equal to the chunk length. The scorer requires token_layer_events = 75 * sum(prompt_tokens), no missing/duplicate/out-of-range key, no unrecognized file/event, and zero trace error or dropped-event marker.",
+    "output_identity": "Every one of the 100 canonical request hashes, prompt-token counts, completion-token counts, generated reasoning bytes, generated content bytes, and token IDs must match between trace-disabled OFF and trace-enabled ON.",
+    "window_confinement": "All K=2/4/8 targets are formed within one case, one split, one layer, and contiguous token positions; crossing a request, case, or split boundary is a scorer failure.",
+    "split_isolation": "Publish separate hash-bound train-fit, train-precision-diagnostic, calibration, and test shards. Training accepts only the train-fit shard plus the two grouped long-train shards; adding any diagnostic/calibration/test shard is a mutation-test failure. P1 selection uses train-only cross-validation; calibration remains reserved for P2 and test is opened once for the frozen P1 comparison.",
+    "disk": "Before launch, require free space for 100 * 512 * 75 token-layer rows at the raw schema byte width, per-chunk bias records, plus a 20 GiB preservation reserve. PASS also requires exclusive-create, complete write, fsync, post-fsync fadvise success, exact scorer-derived bytes, and no ENOSPC or short-write marker.",
     "safety": "glm_safe_run.sh containment; zero OOM, swap, Xid, cgroup pressure events, timeout, or survivor; at least 10 GiB MemAvailable.",
-    "precision": "All five holdout cases retain raw float32 hidden tensors; compaction may add FP16 and int4 views but may not replace the raw tensors before P1 is terminal."
+    "mandatory_mutations": "Drop one case/token/layer/field, duplicate or relabel a row, alter a request or fixture byte, inject NaN/Inf/bad ID/bad top-32 tie order/dropped-event marker, cross a K window boundary, include a non-train shard in fitting, force short write/ENOSPC, and mismatch OFF/ON output; every mutation must FAIL."
   }
 }
