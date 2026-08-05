@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 9,
+  "owner_authorized_beyond_eight": true,
+  "campaign_review_round_next": 147,
+  "candidate_hash": "86f7a628865e6b4d0a7061699122dd9cdf2dbc06",
+  "red_commit": "aba49b33befb2d9c7f3ca9d848913d1520ff4c27",
+  "engine_commit": "b8a152f29bb68197796b89ba755afb4aefe45dee",
+  "scope": "Close only P1-BASE-R146-H1-DELETABLE-GLOBAL-LEDGER and P1-BASE-R146-H2-PRIVATE-RUNTIME-STILL-PATH-MUTABLE. The former uses a CRIT-priority, root-managed journald reservation serialized by the existing ACL-authorized root-owned inference lock; the latter executes sealed wrapper and memory-guard memfds through retained descriptor paths. No scorer, corpus, probe, CV, precision, model, engine, or held-out fixture change is included.",
+  "held_out_values_opened": false,
+  "artifacts": {
+    "results/glm52-gates/harness/glm_safe_run.sh": "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
+    "scripts/81_glm_union_baseline.py": "a204fcdee233e001cb90cb1a03f9f9ea98fa66cd547d2fb0feda0afff8bf94f0",
+    "scripts/tests/test_glm_union_baseline.py": "489a595f55522f5ab39a7f58c0b551b3f84650a43dc2a03fad42607ce9e41150",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c9-authority-red-2026-08-05.json": "ebb45d7042509879a9919c7e4e48e6029fad031bac06a52eabff7141bdeb443b",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c9-authority-smoke-2026-08-05.json": "2a8b72e5be92348564a1744b30be5a9bf7db684510cc07a2115d0b1860d41bee",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6"
+  },
+  "runtime_binary": {
+    "sha256": "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "non_heldout_train_case": "case_048",
+    "wrapper_exit_code": 0,
+    "prompt_tokens": 32,
+    "source_bundles": 8,
+    "capture_files": 72,
+    "exact_prompt_tokens_match_all_sources": true,
+    "gpu_or_kernel_fault": false,
+    "post_run_mem_available_kib": 120747592,
+    "post_run_swap_free_kib": 15973192
+  },
+  "one_shot_authority": {
+    "storage": "root-managed persistent system journal",
+    "serialization": "/run/lock/frontier-at-home/inference.lock, root-owned and user ACL-openable but not replaceable",
+    "priority": "CRIT",
+    "durability": "The installed journald.conf(5) guarantees unconditional immediate synchronization after CRIT, ALERT, or EMERG messages.",
+    "query_visible_before_held_out_open": true,
+    "same_user_can_emit_fail_closed_marker": true,
+    "same_user_can_delete_or_replace_existing_marker": false,
+    "non_heldout_second_reservation_rejected": true,
+    "production_gate_record_count": 0
+  },
+  "runtime_authority": {
+    "wrapper": "MFD_ALLOW_SEALING memfd with WRITE, GROW, SHRINK, and SEAL seals",
+    "memory_guard": "MFD_ALLOW_SEALING memfd with WRITE, GROW, SHRINK, and SEAL seals",
+    "consumption": "Both are opened through retained /proc/controller/fd descriptors; wrapper independently hashes the guard descriptor before use.",
+    "same_user_unlink_write_rename_replace_link_symlink_mutations_rejected": true,
+    "default_serving_wrapper_path_unchanged_when_override_absent": true
+  },
+  "pre_submission_audit": {
+    "targeted_and_parent_tests": "66 passed",
+    "safe_lifecycle_tests": "23 passed, 5 environment-dependent skips",
+    "engine_source_tests": "6 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "shellcheck": "NO_RESULT: shellcheck is not installed; bash -n and the 23-test lifecycle suite cover the changed default-off branch",
+    "secret_scan": "PASS",
+    "diff_check": "PASS",
+    "frozen_probe_cv_precision_hashes_unchanged": true,
+    "real_held_out_local_ledger_absent": true,
+    "real_held_out_journal_reservation_absent": true,
+    "machine_idle_after_smoke": true,
+    "scope_frozen": true
+  },
+  "acceptance": {
+    "deleting_local_receipt_cannot_reopen": true,
+    "alternate_output_concurrency_abrupt_exit_and_restart_remain_fail_closed": true,
+    "journal_reservation_is_external_query_visible_and_immediately_synced_before_open": true,
+    "runtime_script_mutations_fail_or_are_detected_before_capture": true,
+    "real_engine_consumed_descriptor_bound_guard_and_completed_exact_train_capture": true,
+    "held_out_boundary_preserved": true
+  },
+  "convergence": {
+    "prior_aligned_blocking_classes": 2,
+    "expected_aligned_blocking_classes_after_review": 0,
+    "expected_remaining_outside_candidate_9_scope": [
+      "P1-BASE-R142-H3 two-control isolation",
+      "P1-BASE-R142-H4 and P1-H3 cost bound",
+      "P1-H5 completed-result authority"
+    ],
+    "new_scope": false,
+    "finding_reopened": false,
+    "owner_escalation_resolved": true
+  },
+  "held_out_boundary": {
+    "values_opened_by_this_candidate": false,
+    "test_records_invoked": false,
+    "authorized_next_action": "The same persistent Nash and Singer reviewers inspect only the Candidate 8 to Candidate 9 diff. No held-out run occurs while any critical/high issue remains in controller, capture, scorer, cost, two-control, or completed-result validation."
+  },
+  "claim_limit": "One-shot and descriptor runtime authority candidate only; no held-out baseline metric, serving throughput, NLL, fidelity, or quality claim."
+}
