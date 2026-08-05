@@ -155,6 +155,7 @@ def smoke_verdict(
     *,
     min_prompt_tokens: int = MIN_PROMPT_TOKENS,
     require_multichunk: bool = False,
+    expected_corpus_seed: int | None = None,
 ) -> dict[str, Any]:
     common_hashes = (
         "binary_sha256", "model_sha256", "tokenizer_sha256",
@@ -194,32 +195,48 @@ def smoke_verdict(
     corpus_event_floor = True
     if corpus_mode:
         def valid_requests(value: Any) -> bool:
-            if not isinstance(value, list) or len(value) != 2:
+            if (not isinstance(value, list) or len(value) != 2 or
+                    not isinstance(expected_corpus_seed, int) or
+                    isinstance(expected_corpus_seed, bool)):
                 return False
             for expected_id, item in enumerate(value, 1):
                 if (not isinstance(item, dict) or item.get("request_id") != expected_id or
+                        item.get("seed") != expected_corpus_seed + expected_id - 1 or
                         not isinstance(item.get("prompt_tokens"), int) or
+                        isinstance(item.get("prompt_tokens"), bool) or
                         item["prompt_tokens"] < MIN_PROMPT_TOKENS):
                     return False
                 item_chunks = item.get("full_indexed_chunks")
                 if (not isinstance(item_chunks, list) or not item_chunks or
-                        item_chunks[0][0] != 0 or
                         any(not isinstance(row, list) or len(row) != 2 or
                             any(not isinstance(number, int) or isinstance(number, bool)
                                 for number in row) or row[1] <= 0
-                            for row in item_chunks) or
+                            for row in item_chunks)):
+                    return False
+                if (item_chunks[0][0] != 0 or
                         any(item_chunks[index][0] !=
                             item_chunks[index - 1][0] + item_chunks[index - 1][1]
                             for index in range(1, len(item_chunks))) or
                         sum(row[1] for row in item_chunks) != item["prompt_tokens"]):
                     return False
+                signature = item.get("response_signature")
+                request_sha256 = (signature.get("request_sha256")
+                                  if isinstance(signature, dict) else None)
+                if (not isinstance(request_sha256, str) or
+                        re.fullmatch(r"[0-9a-f]{64}", request_sha256) is None):
+                    return False
             return True
 
+        off_hashes = ({item["response_signature"]["request_sha256"] for item in off_corpus}
+                      if valid_requests(off_corpus) else set())
+        on_hashes = ({item["response_signature"]["request_sha256"] for item in on_corpus}
+                     if valid_requests(on_corpus) else set())
         corpus_scope = (
             valid_requests(off_corpus) and valid_requests(on_corpus) and
+            len(off_hashes) == 2 and off_hashes == on_hashes and
             all(
                 all(left.get(key) == right.get(key) for key in (
-                    "request_id", "prompt_tokens", "full_indexed_chunks",
+                    "request_id", "seed", "prompt_tokens", "full_indexed_chunks",
                     "response_signature",
                 ))
                 for left, right in zip(off_corpus, on_corpus)
@@ -288,9 +305,9 @@ def _arm(args: argparse.Namespace) -> int:
                     "--output-tokenizer-sha256", SHARED.TOKENIZER_SHA256,
                     "--token-timing-log", str(server_log), "--reps", "1", "--warmup", "0",
                     "--context-levels", str(args.context_level), "--max-tokens", "128",
-                    "--min-completion-tokens", "128", "--request-timeout", "2700",
+                    "--min-completion-tokens", "128", "--request-timeout", "1200",
                     "--seed", str(args.seed + request_index),
-                ], stdin=subprocess.DEVNULL, capture_output=True, timeout=3000, check=False)
+                ], stdin=subprocess.DEVNULL, capture_output=True, timeout=1350, check=False)
                 (out / f"bench-{request_index + 1}.stdout.log").write_bytes(completed.stdout)
                 (out / f"bench-{request_index + 1}.stderr.log").write_bytes(completed.stderr)
                 if completed.returncode != 0:
@@ -311,6 +328,7 @@ def _arm(args: argparse.Namespace) -> int:
                     raise ValueError("benchmark prompt-token coverage is insufficient")
                 request_records.append({
                     "request_id": request_index + 1,
+                    "seed": args.seed + request_index,
                     "prompt_tokens": prompt_tokens,
                     "full_indexed_chunks": full_indexed_chunks_text(request_log),
                     "response_signature": signature,
@@ -484,6 +502,7 @@ def run(args: argparse.Namespace) -> int:
         off, on, trace_score, containment["off"], containment["on"],
         min_prompt_tokens=(2049 if args.require_multichunk else MIN_PROMPT_TOKENS),
         require_multichunk=args.require_multichunk,
+        expected_corpus_seed=(int(freeze["seed"]) if args.corpus_smoke else None),
     )
     SHARED.frozen_inputs(freeze_path, randomness_path)
     if args.corpus_smoke:

@@ -138,9 +138,13 @@ def score_trace(
     checks["no_trace_errors"] = not any("GLM_UNION_TRACE_ERROR" in line for line in log_lines)
     expected: dict[tuple[int, ...], int] = {}
     duplicate_log_key = False
+    recognized_log_events = True
     for line in log_lines:
-        match = (CORPUS_EVENT_RE if corpus_mode else EVENT_RE).fullmatch(line.strip())
+        stripped = line.strip()
+        match = (CORPUS_EVENT_RE if corpus_mode else EVENT_RE).fullmatch(stripped)
         if not match:
+            if corpus_mode and "GLM_UNION_TRACE_OK" in stripped:
+                recognized_log_events = False
             continue
         key = (tuple(int(match.group(index)) for index in (1, 2, 3))
                if corpus_mode else
@@ -149,6 +153,8 @@ def score_trace(
             duplicate_log_key = True
         expected[key] = int(match.group(4 if corpus_mode else 3))
     checks["unique_nonempty_log_events"] = bool(expected) and not duplicate_log_key
+    if corpus_mode:
+        checks["recognized_log_events_only"] = recognized_log_events
     if corpus_mode:
         assert expected_requests is not None
         expected_keys = {
@@ -208,6 +214,8 @@ def score_trace(
     wanted = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
     formula_ok = True
     probs_match_logits = True
+    bias_sha256_by_layer: dict[int, str] = {}
+    bias_constant_per_layer = True
     for key, rows in expected.items():
         group = files.get(key, {})
         if set(group) != wanted or rows <= 0:
@@ -229,6 +237,11 @@ def score_trace(
                 not _finite_variable_f32(group["router_probs"])):
             values_ok = False
         selected_rows = _selected_rows(group["router_selected"], rows)
+        layer = key[-2]
+        bias_sha256 = _sha256(group["router_bias"])
+        previous_bias_sha256 = bias_sha256_by_layer.setdefault(layer, bias_sha256)
+        if previous_bias_sha256 != bias_sha256:
+            bias_constant_per_layer = False
         if selected_rows is None:
             values_ok = False
         else:
@@ -261,6 +274,8 @@ def score_trace(
     checks["finite_values_and_valid_ids"] = values_ok
     checks["selected_matches_router_formula"] = formula_ok
     checks["router_probs_match_logits"] = probs_match_logits
+    if corpus_mode:
+        checks["router_bias_constant_per_layer"] = bias_constant_per_layer
 
     result.update({
         "events": len(expected),
