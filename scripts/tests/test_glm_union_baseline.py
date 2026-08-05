@@ -346,6 +346,13 @@ class AtomicLifecycleTests(unittest.TestCase):
         self.assertEqual(result["journal_cursor"], "test-cursor")
         self.assertEqual(result["started_epoch_ns"], 123)
         self.assertRegex(result["preflight_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            emitted["GLM52_P1_SCORING_BACKEND_SHA256"],
+            MODULE._sha256_bytes(json.dumps(
+                MODULE.P1_SCORING_BACKEND, sort_keys=True,
+                separators=(",", ":"), allow_nan=False,
+            ).encode("utf-8")),
+        )
 
     def test_existing_journal_reservation_blocks_before_publication(self) -> None:
         with mock.patch.object(
@@ -378,6 +385,7 @@ class AtomicLifecycleTests(unittest.TestCase):
             "status": "APPROVED",
             "candidate_hash": candidate,
             "controller_sha256": controller_sha256,
+            "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
             "approval_sha256": "7" * 64,
             "approval_device": 8,
             "approval_inode": 9,
@@ -388,6 +396,7 @@ class AtomicLifecycleTests(unittest.TestCase):
             "candidate_hash": candidate,
             "reservation_sha256": reservation,
             "output_sha256": fields["GLM52_P1_OUTPUT_SHA256"],
+            "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
             "marker_sha256": "4" * 64,
             "marker_device": 5,
             "marker_inode": 6,
@@ -409,7 +418,10 @@ class AtomicLifecycleTests(unittest.TestCase):
             side_effect=(authority_completed, reserve_completed),
         ) as runner:
             observed = MODULE._reserve_root_tombstone(
-                {"harness_commit": candidate}, fields,
+                {
+                    "harness_commit": candidate,
+                    "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
+                }, fields,
             )
         self.assertEqual(observed, {**response, "root_approval": authority})
         self.assertEqual(runner.call_args_list[0].args[0], [
@@ -431,6 +443,7 @@ class AtomicLifecycleTests(unittest.TestCase):
             "status": "APPROVED",
             "candidate_hash": "1" * 40,
             "controller_sha256": controller_sha256,
+            "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
             "approval_sha256": "4" * 64,
             "approval_device": 5,
             "approval_inode": 6,
@@ -447,7 +460,10 @@ class AtomicLifecycleTests(unittest.TestCase):
             ),
         ), self.assertRaises(FileExistsError):
             MODULE._reserve_root_tombstone(
-                {"harness_commit": "1" * 40},
+                {
+                    "harness_commit": "1" * 40,
+                    "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
+                },
                 {
                     "GLM52_P1_PREFLIGHT_SHA256": "2" * 64,
                     "GLM52_P1_OUTPUT_SHA256": "3" * 64,
@@ -462,6 +478,7 @@ class AtomicLifecycleTests(unittest.TestCase):
             "status": "APPROVED",
             "candidate_hash": "1" * 40,
             "controller_sha256": "9" * 64,
+            "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
             "approval_sha256": "4" * 64,
             "approval_device": 5,
             "approval_inode": 6,
@@ -475,7 +492,10 @@ class AtomicLifecycleTests(unittest.TestCase):
             ),
         ) as runner, self.assertRaisesRegex(RuntimeError, "executing controller"):
             MODULE._reserve_root_tombstone(
-                {"harness_commit": "1" * 40},
+                {
+                    "harness_commit": "1" * 40,
+                    "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
+                },
                 {
                     "GLM52_P1_PREFLIGHT_SHA256": "2" * 64,
                     "GLM52_P1_OUTPUT_SHA256": "3" * 64,
@@ -492,6 +512,7 @@ class AtomicLifecycleTests(unittest.TestCase):
             "status": "APPROVED",
             "candidate_hash": "1" * 40,
             "controller_sha256": controller_sha256,
+            "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
             "approval_sha256": "4" * 64,
             "approval_device": 5,
             "approval_inode": 6,
@@ -505,7 +526,10 @@ class AtomicLifecycleTests(unittest.TestCase):
             ),
         ) as runner, self.assertRaisesRegex(RuntimeError, "approved candidate"):
             MODULE._reserve_root_tombstone(
-                {"harness_commit": "2" * 40},
+                {
+                    "harness_commit": "2" * 40,
+                    "scoring_backend": dict(MODULE.P1_SCORING_BACKEND),
+                },
                 {
                     "GLM52_P1_PREFLIGHT_SHA256": "3" * 64,
                     "GLM52_P1_OUTPUT_SHA256": "5" * 64,
@@ -1078,9 +1102,10 @@ class BaselineTableTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 MODULE.validate_expected_failure_wrapper(mutation, stage, environment)
 
-    def test_root_replay_uses_recorded_scoring_backend_not_forced_cpu(self) -> None:
+    def test_root_replay_requires_reserved_cuda_backend(self) -> None:
         source = inspect.getsource(MODULE.validate_completed_capture_reconstruction)
-        self.assertIn('recorded["scoring_backend"]', source)
+        self.assertIn("P1_SCORING_BACKEND", source)
+        self.assertNotIn('device = recorded["scoring_backend"]', source)
 
     def test_authoritative_run_rejects_cpu_before_reservation(self) -> None:
         with self.assertRaises(SystemExit):
@@ -1100,6 +1125,15 @@ class BaselineTableTests(unittest.TestCase):
     def test_root_replay_response_carries_exact_cuda_backend(self) -> None:
         source = inspect.getsource(MODULE.main)
         self.assertIn('"scoring_backend": scored["scoring_backend"]', source)
+
+    def test_cpu_substitution_fails_before_completed_scoring(self) -> None:
+        with tempfile.TemporaryDirectory() as raw, mock.patch.object(
+            MODULE, "validate_completed_result",
+            return_value={"scoring_backend": MODULE._scoring_backend("cpu")},
+        ), mock.patch.object(MODULE, "_load_frozen_module_graph") as loader:
+            with self.assertRaisesRegex(ValueError, "CUDA reservation"):
+                MODULE.validate_completed_capture_reconstruction(Path(raw))
+        loader.assert_not_called()
 
     def test_completed_replay_interprets_all_expected_failure_artifacts(self) -> None:
         source = inspect.getsource(MODULE.validate_completed_result)

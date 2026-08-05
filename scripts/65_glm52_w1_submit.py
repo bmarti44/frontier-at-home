@@ -45,6 +45,10 @@ P1_PYTHON_DEPENDENCIES = (
     "numpy", "numpy.libs", "nvidia", "tokenizers", "torch", "torchgen",
     "typing_extensions.py",
 )
+P1_SCORING_BACKEND = {
+    "device": "cuda",
+    "probe_compute": "torch-float32-weights-fp16-autocast",
+}
 P1_APPROVAL = Path("/usr/local/libexec/glm52-w1/p1-approved.json")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
@@ -322,6 +326,7 @@ def _read_p1_reservation(
         set(value) != {
             "schema_version", "classification", "candidate_hash",
             "reservation_sha256", "output_sha256", "created_epoch_ns",
+            "scoring_backend",
         } or
         value.get("schema_version") != 1 or
         value.get("classification") != classification or
@@ -332,7 +337,8 @@ def _read_p1_reservation(
         not isinstance(value.get("output_sha256"), str) or
         not HASH64.fullmatch(value["output_sha256"]) or
         not isinstance(value.get("created_epoch_ns"), int) or
-        isinstance(value.get("created_epoch_ns"), bool)
+        isinstance(value.get("created_epoch_ns"), bool) or
+        value.get("scoring_backend") != P1_SCORING_BACKEND
     ):
         raise ValueError("P1 reservation fields differ")
     return value
@@ -409,6 +415,7 @@ def show_p1_authority() -> int:
         "status": "APPROVED",
         "candidate_hash": approval["candidate_hash"],
         "controller_sha256": approval["controller_sha256"],
+        "scoring_backend": P1_SCORING_BACKEND,
         **identity,
     }, sort_keys=True, separators=(",", ":")))
     return 0
@@ -463,6 +470,7 @@ def reserve_p1(
         "reservation_sha256": reservation_sha256,
         "output_sha256": output_sha256,
         "created_epoch_ns": time.time_ns(),
+        "scoring_backend": P1_SCORING_BACKEND,
     }
     payload = (
         json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n"
@@ -502,6 +510,7 @@ def reserve_p1(
         "candidate_hash": candidate_hash,
         "reservation_sha256": reservation_sha256,
         "output_sha256": output_sha256,
+        "scoring_backend": P1_SCORING_BACKEND,
         "marker_sha256": hashlib.sha256(payload).hexdigest(),
         "marker_device": details.st_dev,
         "marker_inode": details.st_ino,
@@ -894,12 +903,13 @@ def _run_p1_completed_validator(
     if (
         not isinstance(result, dict) or set(result) != {
             "schema_version", "classification", "summary_sha256",
-            "decision_verdict",
+            "decision_verdict", "scoring_backend",
         } or result.get("schema_version") != 1 or
         result.get("classification") != "P1_ROOT_FIXED_REPLAY_PASS" or
         not isinstance(result.get("summary_sha256"), str) or
         not HASH64.fullmatch(result["summary_sha256"]) or
-        not isinstance(result.get("decision_verdict"), str)
+        not isinstance(result.get("decision_verdict"), str) or
+        result.get("scoring_backend") != P1_SCORING_BACKEND
     ):
         raise ValueError("P1 completed fixed replay response differs")
     return result
@@ -933,7 +943,8 @@ def publish_p1_result(
     output_sha256 = hashlib.sha256(os.fsencode(source)).hexdigest()
     if (
         reservation.get("candidate_hash") != candidate_hash or
-        reservation.get("output_sha256") != output_sha256
+        reservation.get("output_sha256") != output_sha256 or
+        reservation.get("scoring_backend") != P1_SCORING_BACKEND
     ):
         raise ValueError("P1 result differs from permanent reservation")
     source_details = source.lstat()
@@ -952,6 +963,8 @@ def publish_p1_result(
         rows = _copy_tree_root_owned(source, destination)
         observed_manifest_sha256 = _manifest_sha256(rows)
         replay = completed_validator(destination, approval)
+        if replay.get("scoring_backend") != P1_SCORING_BACKEND:
+            raise ValueError("P1 completed replay scoring backend differs")
         summary_binding = next(
             (row for row in rows if row["path"] == "summary.json"), None,
         )
@@ -973,6 +986,7 @@ def publish_p1_result(
             "reservation_created_epoch_ns": reservation["created_epoch_ns"],
             "summary_sha256": replay["summary_sha256"],
             "decision_verdict": replay["decision_verdict"],
+            "scoring_backend": P1_SCORING_BACKEND,
             **approval_identity,
         }
         receipt_path = receipt_root / f"{output_name}.json"

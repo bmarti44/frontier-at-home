@@ -72,7 +72,7 @@ AUTHORITY_MESSAGE_ID = "9b0125b612d7480da990ad79e8c4c2fb"
 AUTHORITY_GATE_ID = "glm52-p1-baseline-heldout-v1"
 AUTHORITY_IDENTIFIER = "glm52-p1-baseline-authority"
 ROOT_SUBMITTER_PATH = Path("/usr/local/sbin/glm52-w1-submit")
-FROZEN_ROOT_SUBMITTER_SHA256 = "dd9922eb92c1bfefe116c1c07e48bcb474c487af2d4b7b96250978456f5edce2"
+FROZEN_ROOT_SUBMITTER_SHA256 = "31d2ea2d72db874767ca647d124c829bed755a8d10529a924796a9332c54309f"
 FIXED_LAUNCH_PATH = (
     "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
@@ -93,6 +93,9 @@ def _scoring_backend(device: str) -> dict[str, str]:
     if device == "cpu":
         return {"device": "cpu", "probe_compute": "torch-float32"}
     raise ValueError("scoring backend differs")
+
+
+P1_SCORING_BACKEND = _scoring_backend("cuda")
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -931,7 +934,9 @@ def validate_completed_capture_reconstruction(root: Path) -> dict[str, object]:
     """Rebuild the canonical score from captured tensors and frozen inputs."""
     root = root.resolve(strict=True)
     recorded = validate_completed_result(root)
-    device = recorded["scoring_backend"]["device"]
+    if recorded.get("scoring_backend") != P1_SCORING_BACKEND:
+        raise ValueError("completed scoring backend differs from CUDA reservation")
+    device = P1_SCORING_BACKEND["device"]
     probe, cv, precision = _load_frozen_module_graph()
     arrays, test_manifest, freeze = _load_test_archive(cv)
     tokenizer_payload = _snapshot_regular(TOKENIZER_PATH)
@@ -2000,6 +2005,7 @@ def _publish_root_result(
         "authoritative_root", "manifest_sha256", "files",
         "output_sha256", "reservation_sha256", "reservation_created_epoch_ns",
         "summary_sha256", "decision_verdict",
+        "scoring_backend",
         "approval_sha256", "approval_device", "approval_inode",
     }
     summary_payload = _snapshot_regular(output_root / "summary.json")
@@ -2013,6 +2019,7 @@ def _publish_root_result(
         receipt.get("files") != rows or
         receipt.get("output_sha256") != output_sha256 or
         receipt.get("summary_sha256") != _sha256_bytes(summary_payload) or
+        receipt.get("scoring_backend") != P1_SCORING_BACKEND or
         not isinstance(receipt.get("decision_verdict"), str) or
         not isinstance(receipt.get("reservation_sha256"), str) or
         not re.fullmatch(r"[0-9a-f]{64}", receipt["reservation_sha256"]) or
@@ -2114,6 +2121,7 @@ def _root_p1_authority() -> dict[str, object]:
         raise RuntimeError("root P1 authority response is malformed") from error
     expected_keys = {
         "schema_version", "status", "candidate_hash", "controller_sha256",
+        "scoring_backend",
         "approval_sha256", "approval_device", "approval_inode",
     }
     controller_sha256, _controller_identity = _hash_regular(
@@ -2125,6 +2133,7 @@ def _root_p1_authority() -> dict[str, object]:
         not isinstance(response.get("candidate_hash"), str) or
         not re.fullmatch(r"[0-9a-f]{40}", response["candidate_hash"]) or
         response.get("controller_sha256") != controller_sha256 or
+        response.get("scoring_backend") != P1_SCORING_BACKEND or
         not isinstance(response.get("approval_sha256"), str) or
         not re.fullmatch(r"[0-9a-f]{64}", response["approval_sha256"]) or
         not isinstance(response.get("approval_device"), int) or
@@ -2144,6 +2153,8 @@ def _reserve_root_tombstone(
     candidate = str(authority["candidate_hash"])
     if preflight.get("harness_commit") != candidate:
         raise RuntimeError("executing harness commit differs from root-approved candidate")
+    if preflight.get("scoring_backend") != P1_SCORING_BACKEND:
+        raise RuntimeError("preflight scoring backend differs from CUDA authority")
     reservation_payload = json.dumps({
         "schema_version": 1,
         "classification": "GLM52_P1_PERMANENT_RESERVATION_REQUEST",
@@ -2170,6 +2181,7 @@ def _reserve_root_tombstone(
     expected_keys = {
         "schema_version", "status", "candidate_hash", "reservation_sha256",
         "output_sha256",
+        "scoring_backend",
         "marker_sha256", "marker_device", "marker_inode",
         "approved_controller_sha256", "approval_sha256", "approval_device",
         "approval_inode",
@@ -2180,6 +2192,7 @@ def _reserve_root_tombstone(
         response.get("candidate_hash") != candidate or
         response.get("reservation_sha256") != reservation_sha256 or
         response.get("output_sha256") != fields["GLM52_P1_OUTPUT_SHA256"] or
+        response.get("scoring_backend") != P1_SCORING_BACKEND or
         response.get("approved_controller_sha256") != authority["controller_sha256"] or
         response.get("approval_sha256") != authority["approval_sha256"] or
         response.get("approval_device") != authority["approval_device"] or
@@ -2223,6 +2236,10 @@ def _reserve_global_authority(
         fields = {
             "GLM52_P1_PREFLIGHT_SHA256": _sha256_bytes(canonical_preflight),
             "GLM52_P1_OUTPUT_SHA256": _sha256_bytes(os.fsencode(output_root)),
+            "GLM52_P1_SCORING_BACKEND_SHA256": _sha256_bytes(json.dumps(
+                P1_SCORING_BACKEND, sort_keys=True, separators=(",", ":"),
+                allow_nan=False,
+            ).encode("utf-8")),
             "GLM52_P1_STARTED_NS": str(started_epoch_ns),
         }
         root_tombstone = _reserve_root_tombstone(preflight, fields)
@@ -2496,8 +2513,10 @@ def _preflight_authorized_gate(
     configuration: dict[str, object],
 ) -> tuple[dict[str, object], dict[str, object]]:
     expected_keys = {"output_root", "device", "candidate_root", "model", "fixture_root"}
-    if set(configuration) != expected_keys or configuration.get("device") not in ("cpu", "cuda"):
+    if set(configuration) != expected_keys:
         raise ValueError("authorized gate configuration is malformed")
+    if configuration.get("device") != "cuda":
+        raise ValueError("authorized held-out gate requires CUDA")
     output_requested = Path(configuration["output_root"]).absolute()
     candidate_requested = Path(configuration["candidate_root"]).absolute()
     binary_requested = candidate_requested / "ds4-server"
@@ -2589,6 +2608,7 @@ def _preflight_authorized_gate(
         "tokenizer_sha256": tokenizer_sha256,
         "tokenizer_stat": list(tokenizer_stat),
         "fixture_content_sha256": FROZEN_FIXTURE_SHA256,
+        "scoring_backend": dict(P1_SCORING_BACKEND),
         "candidate_root": str(candidate_root),
         "model": str(model),
         "fixture_root": str(fixture_root),
@@ -3443,7 +3463,7 @@ def parser() -> argparse.ArgumentParser:
         ),
     )
     run.add_argument("--fixture-root", type=Path, default=Path("/tmp/glm52-utf8-engine"))
-    run.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
+    run.add_argument("--device", choices=("cuda",), default="cuda")
     return result
 
 
@@ -3461,6 +3481,7 @@ def main() -> int:
             "classification": "P1_ROOT_FIXED_REPLAY_PASS",
             "summary_sha256": _sha256_bytes(summary_payload),
             "decision_verdict": scored["decision"]["verdict"],
+            "scoring_backend": scored["scoring_backend"],
         }, sort_keys=True, separators=(",", ":")))
         return 0
     if args.command == "run":

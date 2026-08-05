@@ -67,6 +67,8 @@ class RootAttestorContractTests(unittest.TestCase):
             with (
                 mock.patch.object(submitter, "ROOT_UID", os.getuid()),
                 mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                mock.patch.object(submitter.os, "chown"),
+                mock.patch.object(submitter.os, "fchown"),
                 self.assertRaisesRegex(ValueError, "scoring backend"),
             ):
                 submitter.publish_p1_result(
@@ -140,6 +142,7 @@ class RootAttestorContractTests(unittest.TestCase):
                         ).hexdigest(),
                         "reservation_sha256": "4" * 64,
                         "created_epoch_ns": 5,
+                        "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
                     },
                     completed_validator=lambda _root, _approval: (_ for _ in ()).throw(
                         ValueError("completed fixed replay failed"),
@@ -184,10 +187,12 @@ class RootAttestorContractTests(unittest.TestCase):
                             ).hexdigest(),
                             "reservation_sha256": "4" * 64,
                             "created_epoch_ns": 5,
+                            "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
                         },
                         completed_validator=lambda _root, _approval: {
                             "summary_sha256": hashlib.sha256(summary_payload).hexdigest(),
                             "decision_verdict": "KEEP_PARETO_SEPARATE",
+                            "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
                         },
                     )
                 os.lseek(retained, 0, os.SEEK_SET)
@@ -290,6 +295,7 @@ class RootAttestorContractTests(unittest.TestCase):
                             ).hexdigest(),
                             "reservation_sha256": "4" * 64,
                             "created_epoch_ns": 5,
+                            "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
                         },
                         completed_validator=lambda _root, _approval: (_ for _ in ()).throw(
                             ValueError("completed fixed replay failed"),
@@ -389,6 +395,9 @@ class RootAttestorContractTests(unittest.TestCase):
                 self.assertEqual(first["candidate_hash"], candidate)
                 self.assertEqual(first["reservation_sha256"], reservation)
                 self.assertEqual(first["output_sha256"], output)
+                self.assertEqual(
+                    first["scoring_backend"], submitter.P1_SCORING_BACKEND,
+                )
                 self.assertEqual(marker.stat().st_mode & 0o777, 0o444)
                 self.assertEqual(marker_root.stat().st_mode & 0o777, 0o555)
                 first_inode = marker.stat().st_ino
@@ -493,6 +502,7 @@ class RootAttestorContractTests(unittest.TestCase):
                 "reservation_sha256": "2" * 64,
                 "output_sha256": "3" * 64,
                 "created_epoch_ns": 123,
+                "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
             }) + "\n", encoding="utf-8")
             with (
                 mock.patch.object(submitter, "P1_RESERVATION", marker),

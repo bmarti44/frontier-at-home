@@ -32,7 +32,7 @@ readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
-readonly SUBMITTER_SHA256=dd9922eb92c1bfefe116c1c07e48bcb474c487af2d4b7b96250978456f5edce2
+readonly SUBMITTER_SHA256=31d2ea2d72db874767ca647d124c829bed755a8d10529a924796a9332c54309f
 readonly CONTAINED_RUNTIME_DIRS=(
     "$HARNESS"
     "$HARNESS/results"
