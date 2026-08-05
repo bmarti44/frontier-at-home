@@ -82,6 +82,10 @@ SCORER_CHECKS = {
     "exact_triplet_shapes", "finite_values_and_valid_ids",
     "selected_matches_router_formula", "router_probs_match_logits",
 }
+CORPUS_SCORER_CHECKS = SCORER_CHECKS | {
+    "recognized_log_events_only", "router_bias_constant_per_layer", "utf8_server_log",
+}
+REQUEST_PREFIX_RE = re.compile(r"^request_r(?P<request>[0-9]{8})$")
 
 
 def _sha256(path: Path) -> str:
@@ -298,6 +302,373 @@ def _repository_head(repository_root: Path) -> str:
     return value
 
 
+def _review_is_accepted(value: Any) -> bool:
+    return (
+        isinstance(value, dict) and
+        set(value) == {
+            "round", "gap_reviewer_score", "adversarial_reviewer_score", "critical", "high",
+        } and
+        isinstance(value["round"], int) and not isinstance(value["round"], bool) and
+        all(
+            isinstance(value[key], int) and not isinstance(value[key], bool) and value[key] >= 90
+            for key in ("gap_reviewer_score", "adversarial_reviewer_score")
+        ) and value["critical"] == [] and value["high"] == []
+    )
+
+
+def _validate_corpus_source_bundle(
+    source_root: Path,
+    receipt_path: Path,
+    receipt_bytes: bytes,
+    receipt: dict[str, Any],
+    repository_head: str,
+    request_index: int | None,
+    minimum_prompt_tokens: int,
+) -> dict[str, Any]:
+    """Validate the complete qualified corpus, then expose exactly one request shard."""
+    if not isinstance(request_index, int) or isinstance(request_index, bool) or request_index <= 0:
+        raise ValueError("a positive request index is required for a corpus source")
+    trace = source_root / "on" / "trace"
+    control_paths = {
+        "summary": source_root / "summary.json",
+        "on_arm": source_root / "on" / "arm.json",
+        "off_arm": source_root / "off" / "arm.json",
+        "on_server_log": source_root / "on" / "server.log",
+        "off_server_log": source_root / "off" / "server.log",
+        "off_containment": source_root / "off.containment.json",
+        "on_containment": source_root / "on.containment.json",
+    }
+    for mode in ("off", "on"):
+        for index in (1, 2):
+            control_paths[f"{mode}_result_{index}"] = source_root / mode / f"result-{index}.json"
+    if not trace.is_dir() or trace.is_symlink():
+        raise ValueError("qualified corpus trace layout is invalid")
+    controls = {name: _read_regular_snapshot(path) for name, path in control_paths.items()}
+    summary = _strict_json_bytes(controls["summary"], str(control_paths["summary"]))
+    arms = {
+        mode: _strict_json_bytes(controls[f"{mode}_arm"], str(control_paths[f"{mode}_arm"]))
+        for mode in ("off", "on")
+    }
+    containments = {
+        mode: _strict_json_bytes(
+            controls[f"{mode}_containment"], str(control_paths[f"{mode}_containment"]),
+        ) for mode in ("off", "on")
+    }
+    receipt_keys = {
+        "schema_version", "candidate_hash", "engine_commit", "classification", "scope",
+        "high_row_2048_status", "summary_sha256", "off_arm_sha256", "on_arm_sha256",
+        "off_result_1_sha256", "off_result_2_sha256", "on_result_1_sha256",
+        "on_result_2_sha256", "off_server_log_sha256", "on_server_log_sha256",
+        "off_containment_sha256", "on_containment_sha256", "observed",
+        "pre_runtime_authorization_review", "post_runtime_review", "retained_directory",
+        "conclusion",
+    }
+    summary_keys = {
+        "schema_version", "scope", "high_row_2048_status", "candidate_hash",
+        "engine_commit", "binary_sha256", "model_sha256", "tokenizer_sha256", "seed",
+        "context_level", "max_trace_bytes", "minimum_token_layer_events",
+        "off_arm_sha256", "on_arm_sha256", "off_containment_sha256",
+        "on_containment_sha256", "trace_score", "checks", "verdict",
+    }
+    if set(receipt) != receipt_keys or set(summary) != summary_keys:
+        raise ValueError("corpus receipt or summary schema differs from the qualified runner")
+    if (
+        receipt.get("classification") != "PASS" or summary.get("verdict") != "PASS" or
+        receipt.get("scope") != "multi_request_all_routed_layer_corpus_smoke" or
+        summary.get("scope") != receipt.get("scope") or
+        receipt.get("high_row_2048_status") != summary.get("high_row_2048_status") or
+        minimum_prompt_tokens <= 0 or
+        not _review_is_accepted(receipt.get("pre_runtime_authorization_review")) or
+        not _review_is_accepted(receipt.get("post_runtime_review"))
+    ):
+        raise ValueError("corpus bundle is not qualified")
+
+    bindings = {
+        "summary_sha256": _sha256_bytes(controls["summary"]),
+        "off_arm_sha256": _sha256_bytes(controls["off_arm"]),
+        "on_arm_sha256": _sha256_bytes(controls["on_arm"]),
+        "off_server_log_sha256": _sha256_bytes(controls["off_server_log"]),
+        "on_server_log_sha256": _sha256_bytes(controls["on_server_log"]),
+        "off_containment_sha256": _sha256_bytes(controls["off_containment"]),
+        "on_containment_sha256": _sha256_bytes(controls["on_containment"]),
+    }
+    for mode in ("off", "on"):
+        for index in (1, 2):
+            bindings[f"{mode}_result_{index}_sha256"] = _sha256_bytes(
+                controls[f"{mode}_result_{index}"]
+            )
+    if any(receipt.get(key) != value for key, value in bindings.items()):
+        raise ValueError("corpus receipt does not bind every control artifact")
+    if any(summary.get(key) != bindings[key] for key in (
+            "off_arm_sha256", "on_arm_sha256", "off_containment_sha256",
+            "on_containment_sha256")):
+        raise ValueError("corpus summary does not bind its arms and containment evidence")
+    if (
+        receipt.get("candidate_hash") != summary.get("candidate_hash") or
+        receipt.get("engine_commit") != summary.get("engine_commit") or
+        not COMMIT_RE.fullmatch(str(summary.get("candidate_hash", ""))) or
+        not COMMIT_RE.fullmatch(str(summary.get("engine_commit", "")))
+    ):
+        raise ValueError("corpus candidate lineage differs")
+    for key in ("binary_sha256", "model_sha256", "tokenizer_sha256"):
+        if (
+            not HEX64_RE.fullmatch(str(summary.get(key, ""))) or
+            any(arm.get(key) != summary.get(key) for arm in arms.values())
+        ):
+            raise ValueError(f"corpus {key} lineage differs")
+
+    corpus_requests: dict[str, dict[int, dict[str, Any]]] = {}
+    for mode, arm in arms.items():
+        rows = arm.get("corpus_requests")
+        if not isinstance(rows, list) or len(rows) != 2:
+            raise ValueError("corpus arm does not contain exactly two requests")
+        indexed: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            if not isinstance(row, dict) or set(row) != {
+                    "request_id", "seed", "prompt_tokens", "full_indexed_chunks",
+                    "response_signature", "result_sha256"}:
+                raise ValueError("corpus request schema is malformed")
+            index = row.get("request_id")
+            if not isinstance(index, int) or isinstance(index, bool) or index in indexed:
+                raise ValueError("corpus request id is malformed or duplicated")
+            chunks = _valid_chunks(row.get("full_indexed_chunks"))
+            response = row.get("response_signature")
+            if (
+                row.get("prompt_tokens") != sum(count for _, count in chunks) or
+                row.get("prompt_tokens", 0) < minimum_prompt_tokens or
+                not isinstance(response, dict) or
+                not HEX64_RE.fullmatch(str(response.get("request_sha256", ""))) or
+                row.get("result_sha256") != bindings.get(f"{mode}_result_{index}_sha256")
+            ):
+                raise ValueError("corpus request coverage or binding differs")
+            indexed[index] = row
+        corpus_requests[mode] = indexed
+    request_ids = set(corpus_requests["off"])
+    if request_ids != {1, 2} or set(corpus_requests["on"]) != request_ids:
+        raise ValueError("corpus request set differs")
+    if request_index not in request_ids:
+        raise ValueError("requested corpus shard is not qualified")
+    for index in sorted(request_ids):
+        left, right = corpus_requests["off"][index], corpus_requests["on"][index]
+        if (
+            left["seed"] != right["seed"] or
+            left["prompt_tokens"] != right["prompt_tokens"] or
+            left["full_indexed_chunks"] != right["full_indexed_chunks"] or
+            left["response_signature"] != right["response_signature"]
+        ):
+            raise ValueError("corpus OFF/ON request fixtures or outputs differ")
+    request_hashes = {
+        corpus_requests["on"][index]["response_signature"]["request_sha256"]
+        for index in request_ids
+    }
+    if len(request_hashes) != len(request_ids):
+        raise ValueError("corpus request fixtures are not distinct")
+    on_arm, off_arm = arms["on"], arms["off"]
+    common_hashes = (
+        "binary_sha256", "model_sha256", "tokenizer_sha256", "fixture_sha256",
+        "configuration_sha256",
+    )
+    expected_response_list = [
+        corpus_requests["on"][index]["response_signature"] for index in sorted(request_ids)
+    ]
+    expected_chunks_list = [
+        corpus_requests["on"][index]["full_indexed_chunks"] for index in sorted(request_ids)
+    ]
+    expected_prompt_tokens = [
+        corpus_requests["on"][index]["prompt_tokens"] for index in sorted(request_ids)
+    ]
+    cache = on_arm.get("cuda_cache_runtime")
+    cache_ok = (
+        off_arm.get("expert_cache_budget") == on_arm.get("expert_cache_budget") == "32GB" and
+        off_arm.get("cuda_expert_cache_gb") == on_arm.get("cuda_expert_cache_gb") == "56" and
+        isinstance(cache, dict) and cache == off_arm.get("cuda_cache_runtime") and
+        cache.get("slots") == 5754 and isinstance(cache.get("arena_gib"), (int, float)) and
+        cache["arena_gib"] <= 56.0
+    )
+
+    trace_score = summary.get("trace_score")
+    if (
+        not isinstance(trace_score, dict) or trace_score.get("verdict") != "PASS" or
+        not isinstance(trace_score.get("checks"), dict) or
+        set(trace_score["checks"]) != CORPUS_SCORER_CHECKS or
+        not all(value is True for value in trace_score["checks"].values())
+    ):
+        raise ValueError("corpus fixed-scorer verdict is not PASS")
+    artifact_rows = trace_score.get("artifacts")
+    if not isinstance(artifact_rows, list) or not artifact_rows:
+        raise ValueError("corpus scorer has no artifacts")
+    artifacts: dict[str, dict[str, Any]] = {}
+    keys: set[tuple[int, int, int, str]] = set()
+    for item in artifact_rows:
+        if (
+            not isinstance(item, dict) or set(item) != {"name", "bytes", "sha256"} or
+            not isinstance(item["name"], str) or item["name"] in artifacts or
+            not isinstance(item["bytes"], int) or item["bytes"] < 0 or
+            not HEX64_RE.fullmatch(str(item["sha256"]))
+        ):
+            raise ValueError("corpus artifact receipt is malformed")
+        match = FILE_RE.fullmatch(item["name"])
+        prefix = REQUEST_PREFIX_RE.fullmatch(match.group("prefix")) if match else None
+        if match is None or prefix is None:
+            raise ValueError("corpus artifact name is unrecognized")
+        expected_extension = "i32" if match.group("kind") == "router_selected" else "f32"
+        if match.group("ext") != expected_extension:
+            raise ValueError("corpus artifact extension is invalid for its kind")
+        key = (
+            int(prefix.group("request")), int(match.group("layer")),
+            int(match.group("pos")), match.group("kind"),
+        )
+        if key in keys:
+            raise ValueError("corpus artifact key is duplicated")
+        keys.add(key)
+        artifacts[item["name"]] = item
+    if {key[0] for key in keys} != request_ids:
+        raise ValueError("corpus trace request prefixes differ")
+    observed_paths = list(trace.iterdir())
+    if (
+        any(path.is_symlink() or not path.is_file() for path in observed_paths) or
+        {path.name for path in observed_paths} != set(artifacts)
+    ):
+        raise ValueError("corpus trace file set is not exact and regular")
+    observed = receipt.get("observed")
+    first_layer = observed.get("routed_layer_first") if isinstance(observed, dict) else None
+    last_layer = observed.get("routed_layer_last") if isinstance(observed, dict) else None
+    if (
+        not isinstance(first_layer, int) or isinstance(first_layer, bool) or
+        not isinstance(last_layer, int) or isinstance(last_layer, bool) or
+        not 0 <= first_layer <= last_layer < 79
+    ):
+        raise ValueError("corpus routed layer range is malformed")
+    layers = list(range(first_layer, last_layer + 1))
+    wanted_kinds = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
+    request_chunks = {
+        index: _valid_chunks(corpus_requests["on"][index]["full_indexed_chunks"])
+        for index in request_ids
+    }
+    expected_keys = {
+        (index, layer, pos, kind)
+        for index in request_ids for layer in layers
+        for pos, _ in request_chunks[index] for kind in wanted_kinds
+    }
+    if keys != expected_keys:
+        raise ValueError("corpus request/layer/chunk tensor coverage is incomplete")
+    expected_events = sum(len(layers) * len(request_chunks[index]) for index in request_ids)
+    expected_rows = sum(
+        len(layers) * sum(rows for _, rows in request_chunks[index]) for index in request_ids
+    )
+    total_bytes = sum(item["bytes"] for item in artifacts.values())
+    if (
+        trace_score.get("events") != expected_events or
+        trace_score.get("total_rows") != expected_rows or
+        trace_score.get("token_layer_events") != expected_rows or
+        trace_score.get("total_bytes") != total_bytes or
+        on_arm.get("trace_files") != len(artifacts) or on_arm.get("trace_bytes") != total_bytes or
+        summary.get("minimum_token_layer_events", 0) > expected_rows
+    ):
+        raise ValueError("corpus scorer totals are inconsistent")
+    with tempfile.TemporaryDirectory(prefix="glm52-corpus-score.") as snapshot_directory:
+        score_root = Path(snapshot_directory)
+        score_trace = score_root / "trace"
+        score_trace.mkdir()
+        for path in observed_paths:
+            item = artifacts[path.name]
+            payload = _read_regular_snapshot(path)
+            if len(payload) != item["bytes"] or _sha256_bytes(payload) != item["sha256"]:
+                raise ValueError("corpus trace artifact differs from scorer receipt")
+            (score_trace / path.name).write_bytes(payload)
+        score_log = score_root / "server.log"
+        score_log.write_bytes(controls["on_server_log"])
+        rescored = TRACE_SCORER.score_trace(
+            score_trace, score_log, max_bytes=summary.get("max_trace_bytes", 0),
+            expected_layers=set(layers), expected_chunks=[],
+            expected_requests={index: request_chunks[index] for index in request_ids},
+        )
+    if rescored != trace_score:
+        raise ValueError("fixed scorer does not reproduce the qualified corpus")
+
+    recomputed_checks = {
+        "arm_modes": off_arm.get("mode") == "off" and on_arm.get("mode") == "on",
+        "frozen_identity": all(off_arm.get(key) == on_arm.get(key) for key in common_hashes),
+        "byte_and_token_identity": (
+            off_arm.get("response_signature") == on_arm.get("response_signature") ==
+            expected_response_list
+        ),
+        "matched_indexed_chunks": (
+            off_arm.get("full_indexed_chunks") == on_arm.get("full_indexed_chunks") ==
+            expected_chunks_list[0] and len({repr(value) for value in expected_chunks_list}) == 1
+        ),
+        "prompt_tokens_and_exact_coverage": (
+            off_arm.get("prompt_tokens") == on_arm.get("prompt_tokens") == expected_prompt_tokens[0] and
+            len(set(expected_prompt_tokens)) == 1
+        ),
+        "off_emitted_no_trace": off_arm.get("trace_files") == 0 and off_arm.get("trace_bytes") == 0,
+        "on_emitted_trace": on_arm.get("trace_files", 0) > 0 and on_arm.get("trace_bytes", 0) > 0,
+        "trace_score_passed": rescored.get("verdict") == "PASS",
+        "containment_clean": all(value.get("clean") is True for value in containments.values()),
+        "corpus_request_scope": len(request_ids) == 2 and len(request_hashes) == 2,
+        "corpus_event_floor": expected_rows >= summary.get("minimum_token_layer_events", 0),
+        "corpus_cuda_cache": cache_ok,
+    }
+    if summary.get("checks") != recomputed_checks or not all(recomputed_checks.values()):
+        raise ValueError("corpus top-level OFF/ON qualification does not reproduce")
+    if (
+        observed.get("requests") != len(request_ids) or
+        observed.get("prompt_tokens_per_request") != expected_prompt_tokens or
+        observed.get("completion_tokens_per_request") != [
+            row["completion_tokens"] for row in expected_response_list
+        ] or observed.get("full_indexed_chunks_per_request") != expected_chunks_list or
+        observed.get("distinct_request_fixtures") != len(request_hashes) or
+        observed.get("byte_and_token_identity") is not True or
+        observed.get("containment_clean") is not True or
+        observed.get("off_trace_files") != 0 or
+        observed.get("on_trace_files") != len(artifacts) or
+        observed.get("on_trace_bytes") != total_bytes or
+        observed.get("trace_events") != expected_events or
+        observed.get("token_layer_events") != expected_rows or
+        observed.get("trace_score_verdict") != "PASS"
+    ):
+        raise ValueError("corpus receipt observations do not reproduce")
+
+    selected_files: dict[tuple[int, int, str], Path] = {}
+    for name in artifacts:
+        match = FILE_RE.fullmatch(name)
+        prefix = REQUEST_PREFIX_RE.fullmatch(match.group("prefix")) if match else None
+        if prefix and int(prefix.group("request")) == request_index:
+            selected_files[(int(match.group("layer")), int(match.group("pos")), match.group("kind"))] = trace / name
+    for layer in layers:
+        bias_hashes = {
+            artifacts[selected_files[(layer, pos, "router_bias")].name]["sha256"]
+            for pos, _ in request_chunks[request_index]
+        }
+        if len(bias_hashes) != 1:
+            raise ValueError("router bias differs across chunks of selected request layer")
+    selected_request = corpus_requests["on"][request_index]
+    lineage = {
+        "source_receipt_sha256": _sha256_bytes(receipt_bytes),
+        "source_summary_sha256": bindings["summary_sha256"],
+        "source_arm_sha256": bindings["on_arm_sha256"],
+        "source_server_log_sha256": bindings["on_server_log_sha256"],
+        "candidate_hash": summary.get("candidate_hash"),
+        "engine_commit": summary.get("engine_commit"),
+        "binary_sha256": summary.get("binary_sha256"),
+        "model_sha256": summary.get("model_sha256"),
+        "tokenizer_sha256": summary.get("tokenizer_sha256"),
+        "fixture_sha256": selected_request["response_signature"]["request_sha256"],
+        "configuration_sha256": on_arm.get("configuration_sha256"),
+        "request_index": request_index,
+        "request_id": selected_request["response_signature"]["request_sha256"],
+        "seed": selected_request["seed"],
+        "scorer_sha256": SCORER_SHA256,
+        "repository_head": repository_head,
+    }
+    if any(value is None for value in lineage.values()):
+        raise ValueError("corpus source lineage is incomplete")
+    return {
+        "trace": trace, "layers": layers, "chunks": request_chunks[request_index],
+        "files": selected_files, "artifacts": artifacts, "lineage": lineage,
+    }
+
+
 def validate_source_bundle(
     source_root: Path,
     receipt_path: Path,
@@ -306,6 +677,7 @@ def validate_source_bundle(
     require_tracked_receipt: bool = True,
     require_tracked_scorer: bool | None = None,
     minimum_prompt_tokens: int = 512,
+    request_index: int | None = None,
 ) -> dict[str, Any]:
     """Validate and bind one already-qualified capture bundle."""
     if source_root.is_symlink() or receipt_path.is_symlink():
@@ -321,6 +693,14 @@ def validate_source_bundle(
         if scorer_bytes != SCORER_SOURCE:
             raise ValueError("loaded scorer differs from the tracked scorer snapshot")
     repository_head = _repository_head(ROOT)
+    receipt = _strict_json_bytes(receipt_bytes, str(receipt_path))
+    if receipt.get("scope") == "multi_request_all_routed_layer_corpus_smoke":
+        return _validate_corpus_source_bundle(
+            source_root, receipt_path, receipt_bytes, receipt, repository_head,
+            request_index, minimum_prompt_tokens,
+        )
+    if request_index is not None:
+        raise ValueError("request index is only valid for a corpus source")
     summary_path = source_root / "summary.json"
     arm_path = source_root / "on" / "arm.json"
     server_log = source_root / "on" / "server.log"
@@ -339,7 +719,6 @@ def validate_source_bundle(
         "on_containment": source_root / "on.containment.json",
     }
     controls = {name: _read_regular_snapshot(path) for name, path in control_paths.items()}
-    receipt = _strict_json_bytes(receipt_bytes, str(receipt_path))
     summary = _strict_json_bytes(controls["summary"], str(summary_path))
     arm = _strict_json_bytes(controls["arm"], str(arm_path))
     receipt_keys = {
@@ -679,7 +1058,9 @@ def _read_bound_array(
 
 
 def run(args: argparse.Namespace) -> int:
-    source = validate_source_bundle(args.source_root, args.source_receipt)
+    source = validate_source_bundle(
+        args.source_root, args.source_receipt, request_index=args.request_index,
+    )
     trace = source["trace"]
     chunks = source["chunks"]
 
@@ -764,6 +1145,7 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--source-root", required=True, type=Path)
     result.add_argument("--source-receipt", required=True, type=Path)
+    result.add_argument("--request-index", type=int)
     result.add_argument("--out-dir", required=True, type=Path)
     return result
 
