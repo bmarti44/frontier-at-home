@@ -379,6 +379,44 @@ class AtomicLifecycleTests(unittest.TestCase):
                     })
             self.assertEqual(calls, 1)
 
+    def test_deleting_local_ledger_cannot_reopen_authorized_gate(self) -> None:
+        """The user-owned receipt must not be the global one-shot authority."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            ledger = root / "deletable-local-ledger.json"
+            calls = 0
+
+            def opener(*_args):
+                nonlocal calls
+                calls += 1
+                return {"opened": True}
+
+            patches = (
+                mock.patch.object(MODULE, "AUTHORIZED_LEDGER_PATH", ledger, create=True),
+                mock.patch.object(
+                    MODULE, "_preflight_authorized_gate", return_value={"frozen": True},
+                ),
+                mock.patch.object(
+                    MODULE, "_open_authorized_heldout", side_effect=opener,
+                ),
+                mock.patch.object(
+                    MODULE, "_capture_authorized_set", return_value={"captured": True},
+                ),
+                mock.patch.object(
+                    MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
+                ),
+            )
+            with patches[0], patches[1], patches[2], patches[3], patches[4]:
+                MODULE._run_authorized_gate({
+                    "output_root": root / "first", "device": "cpu",
+                })
+                ledger.unlink()
+                with self.assertRaises(FileExistsError):
+                    MODULE._run_authorized_gate({
+                        "output_root": root / "second", "device": "cpu",
+                    })
+            self.assertEqual(calls, 1)
+
     def test_abrupt_death_after_open_permanently_blocks_retry(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -509,6 +547,28 @@ class AtomicLifecycleTests(unittest.TestCase):
                 (root / "authenticated-runtime/scripts/03_memory_guard.py").read_bytes(),
                 guard_payload,
             )
+
+    def test_authenticated_runtime_cannot_be_replaced_after_publication(self) -> None:
+        """Published script authority must survive same-user pathname mutation."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            runtime = {
+                "safe_run_payload": b"#!/bin/bash\necho bound\n",
+                "memory_guard_payload": b"print('bound')\n",
+            }
+            wrapper = MODULE._publish_authenticated_runtime(root, runtime)
+            guard = Path(runtime.get(
+                "memory_guard_path",
+                root / "authenticated-runtime/scripts/03_memory_guard.py",
+            ))
+            with self.assertRaises(OSError):
+                wrapper.unlink()
+            with self.assertRaises(OSError):
+                guard.unlink()
+            with self.assertRaises(OSError):
+                wrapper.write_bytes(b"#!/bin/bash\necho forged\n")
+            with self.assertRaises(OSError):
+                guard.write_bytes(b"print('forged')\n")
 
     def test_authenticated_binary_is_private_named_and_hash_bound(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

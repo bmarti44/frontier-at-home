@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "classification": "PREIMPLEMENTATION_RED_ATTEMPT",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 9,
+  "owner_authorized_beyond_eight": true,
+  "base_commit": "948f0b213c9302d3a9cc697d9184540ace489565",
+  "observed_at": "2026-08-05T13:46:07-04:00",
+  "held_out_values_opened": false,
+  "tests_sha256": "2d0b5a4a39b0818abca43652aa0c0a6f8ad0e834adabe52663d8a5261195cd8f",
+  "raw_sha256": "70b15af221d66326fc88ef37a9a999c873b9207e012bcbfd3cbb3b3c0bf3e099",
+  "command": "python3 -m pytest -q scripts/tests/test_glm_union_baseline.py -k 'deleting_local_ledger or authenticated_runtime_cannot_be_replaced'",
+  "exit_code": 1,
+  "observed_failures": [
+    {
+      "id": "P1-BASE-R146-H1-DELETABLE-GLOBAL-LEDGER",
+      "test": "AtomicLifecycleTests.test_deleting_local_ledger_cannot_reopen_authorized_gate",
+      "result": "RED: after the first lifecycle, the bmarti44 principal unlinked the local ledger and a second lifecycle opened successfully; assertRaises(FileExistsError) failed."
+    },
+    {
+      "id": "P1-BASE-R146-H2-PRIVATE-RUNTIME-STILL-PATH-MUTABLE",
+      "test": "AtomicLifecycleTests.test_authenticated_runtime_cannot_be_replaced_after_publication",
+      "result": "RED: unlinking the published wrapper from its user-writable parent succeeded; assertRaises(OSError) failed."
+    }
+  ],
+  "preregistered_fix_scope": [
+    "Make the global one-shot reservation independently witnessed outside bmarti44-owned storage, serialized before the held-out opener, and fail closed unless the witness is query-visible.",
+    "Consume the authenticated wrapper and memory guard through retained, sealed descriptors rather than owner-mutable pathname copies."
+  ],
+  "acceptance": [
+    "Deleting or replacing the local attempt receipt cannot permit another opener.",
+    "Alternate output, concurrency, abrupt exit, restart, and local receipt mutations preserve one-shot behavior.",
+    "Wrapper and memory-guard unlink, write, rename, symlink, and swap attempts fail or are rejected before capture.",
+    "Frozen scripts 78, 79, and 80 remain byte-identical; no held-out values are opened."
+  ],
+  "verdict": "RED_CONFIRMED"
+}
