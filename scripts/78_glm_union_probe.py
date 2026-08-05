@@ -579,7 +579,24 @@ def frequency_prior_by_layer(
     layer: np.ndarray, selected_ids: np.ndarray,
 ) -> dict[int, np.ndarray]:
     """Fit stable per-layer expert rankings from authorized training selections."""
-    raise NotImplementedError
+    if (
+        not isinstance(layer, np.ndarray) or layer.ndim != 1 or layer.size == 0 or
+        not np.issubdtype(layer.dtype, np.integer) or np.any(layer < 0) or
+        not isinstance(selected_ids, np.ndarray) or selected_ids.ndim != 2 or
+        selected_ids.shape[0] != layer.size or selected_ids.shape[1] <= 0 or
+        not np.issubdtype(selected_ids.dtype, np.integer) or
+        np.any(selected_ids < 0) or np.any(selected_ids >= N_EXPERT) or
+        any(np.unique(row).size != row.size for row in selected_ids)
+    ):
+        raise ValueError("frequency-prior training schema is invalid")
+    expert_ids = np.arange(N_EXPERT, dtype=np.int64)
+    result: dict[int, np.ndarray] = {}
+    for layer_id in np.unique(layer.astype(np.int64)):
+        counts = np.bincount(
+            selected_ids[layer.astype(np.int64) == layer_id].reshape(-1), minlength=N_EXPERT,
+        ).astype(np.int64)
+        result[int(layer_id)] = np.lexsort((expert_ids, -counts)).astype(np.uint16)
+    return result
 
 
 def score_rankings(
