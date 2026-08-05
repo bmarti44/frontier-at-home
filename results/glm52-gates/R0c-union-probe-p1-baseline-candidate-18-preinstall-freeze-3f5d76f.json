@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 18,
+  "campaign_review_round_next": 157,
+  "implementation_head": "3f5d76fd6ec2c8dfc886a651a5dfcb41f1029b94",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "scope": "Close only the observed Candidate-17 noexec temporary Python-runtime failure. Candidate-17 Git fix and Candidate-16 controller, submitter, corpus, probe, engine, backend and dependency bytes remain unchanged.",
+  "artifacts": {
+    "scripts/65_glm52_w1_submit.py": "31d2ea2d72db874767ca647d124c829bed755a8d10529a924796a9332c54309f",
+    "scripts/66_install_glm52_w1_attestor.sh": "60a7063ae89c02110101613e8625fcc98d244960973fb4a75d530857ce870427",
+    "scripts/81_glm_union_baseline.py": "c40d22c3ce08518049808520f72b468d6ccc7f22dea65038184b92f71ce4677c",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "182e7960cd10c5609b3342de01a2955da394fe98febdbd2ee3ba318065c1b221",
+    "scripts/tests/test_glm_union_baseline.py": "1ca4bd87d0d7e2f7f465321d3f818c8d39cfb690fbcf7c3d2aeab7f18fcce6c2",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c17-root-install-noexec-python-runtime-failure-2026-08-05.json": "0ebf62758469d376dc6c5130993db1073cddaafc3cea4e95b45c8b31326ddcfc"
+  },
+  "bounded_change": {
+    "old_temporary_runtime": "/run/glm52-w1-harness.*/python-runtime",
+    "new_temporary_runtime": "/usr/local/libexec/.glm52-w1-python.*",
+    "new_mount": "/",
+    "new_mount_exec_enabled": true,
+    "temporary_mode": "0700 then sealed 0555/0444",
+    "cleanup_on_success_or_failure": true,
+    "installed_runtime_path_unchanged": "/usr/local/libexec/glm52-w1/python",
+    "other_installer_behavior_changed": false
+  },
+  "runtime_reproduction": {
+    "noexec_failure": "The preserved owner-run attempt reached the isolated import and failed mapping numpy._core._multiarray_umath from the /run temporary runtime.",
+    "exec_mount_dress_rehearsal": {
+      "environment": "/usr/bin/python3 -S; HOME=/nonexistent; isolated PYTHONPATH; no user site; no bytecode writes",
+      "numpy_version": "2.2.6",
+      "tokenizers_version": "0.22.2",
+      "torch_version": "2.11.0+cu128",
+      "cuda_available": true,
+      "cuda_tensor_result": 13.0,
+      "temporary_copy_removed": true
+    }
+  },
+  "unchanged_frozen_inputs": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_sha256": "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0",
+    "canonical_tree_sha256": "39eccffb7a0a2c627bad322ab42a2f07a3b9c55f4952d2867819766c3870bddf",
+    "candidate_17_git_fix_unchanged": true,
+    "candidate_16_controller_submitter_engine_backend_unchanged": true,
+    "heldout_reservation_absent": true,
+    "root_approval_absent": true
+  },
+  "pre_submission_audit": {
+    "p1_controller_probe_tests": "147 passed, 4 warnings",
+    "engine_source_tests": "7 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan_self_test": "PASS",
+    "repository_wide_tests_run": 621,
+    "repository_wide_passed": 608,
+    "repository_wide_failed": 4,
+    "repository_wide_skipped": 9,
+    "repository_wide_new_failures": 0,
+    "engine_processes_active": 0,
+    "fio_processes_active": 0,
+    "mem_available_kib": 120793844,
+    "swap_used_kib": 773468
+  },
+  "repository_wide_failure_disposition": "The four failures are the same unrelated stale test_engine_switch, test_matched_memory_safety (two), and test_model_claim_catalog assertions recorded for Candidates 14-17.",
+  "finding_disposition": [
+    {
+      "id": "P1-BASE-C17-RUNTIME-NOEXEC-PYTHON-STAGING",
+      "status": "FIXED",
+      "evidence": "The actual failed attempt is preserved. Only the temporary runtime moved to an executable mount, a production-shaped isolated copy imported the exact dependencies, and a synchronized CUDA tensor operation passed."
+    }
+  ],
+  "convergence": {
+    "runtime_blocking_set_before": [
+      "P1-BASE-C17-RUNTIME-NOEXEC-PYTHON-STAGING"
+    ],
+    "blocking_set_claimed_after": [],
+    "strictly_shrunk": true,
+    "new_scope": false,
+    "owner_authorization": "The owner reported the exact runtime failure and requested continuation."
+  },
+  "staged_install_contract": {
+    "installer_sha256": "60a7063ae89c02110101613e8625fcc98d244960973fb4a75d530857ce870427",
+    "timing": "Only after both persistent reviewers report no critical/high issues on this bounded runtime fix.",
+    "operator_involvement": "Run the corrected executable-mount launcher once, then perform the passwordless installed-boundary non-held-out CUDA smoke."
+  },
+  "next_action": "Nash and Singer review only the preserved noexec failure, RED test and three-line staging/cleanup fix. If both clear critical/high, pin this exact freeze, update the external launcher, and ask the owner to retry once."
+}
