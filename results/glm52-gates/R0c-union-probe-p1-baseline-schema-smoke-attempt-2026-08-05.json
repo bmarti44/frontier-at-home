@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RUNTIME_ATTEMPT",
+  "gate": "R0c/P1 non-held-out engine-to-scorer schema smoke",
+  "candidate_engine_commit": "bed0754b31e1547c91d6a5b6d9aaf66577f8857c",
+  "binary_sha256": "df19bf4bef85d5582859af6a328853247959c616fbe82160132deca87b7240b1",
+  "held_out_values_opened": false,
+  "attempts": [
+    {
+      "attempt": 1,
+      "tag": "baseline-schema-c3-bed0754",
+      "configuration": {
+        "context_tokens": 512,
+        "streaming_cache_budget": "1GB",
+        "safe_min_start_gib": 110,
+        "safe_kill_floor_gib": 18,
+        "safe_timeout_seconds": 2400
+      },
+      "observed_failure": "Engine rejected the launch before model load because the 1.00 GiB cache budget is below the measured 5.91 GiB minimum for two routed prefill layers.",
+      "exit_code": 1,
+      "killed": false,
+      "gpu_or_kernel_fault": false,
+      "artifacts": {
+        "main.log": "8f8403fda14ac8ee823ef6acad449d161950bc1633234066883eb328e54249a9",
+        "samples.log": "5a18be7bcd72c9970f5f372d6622ef62d065b3f871bf5c4ee5b2399c5ccb67f5",
+        "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+      },
+      "artifact_bytes": {
+        "main.log": 1726,
+        "samples.log": 159,
+        "kernel.log": 17
+      }
+    }
+  ],
+  "bounded_fix": "Change only the smoke invocation cache budget from 1GB to 6GB, the smallest whole-GiB budget above the engine-reported 5.91 GiB floor. No source, scorer, test, prompt, or held-out input changes.",
+  "acceptance_test": "The contained non-held-out engine must publish eight complete 79-layer capture bundles; the fixed scorer must accept every bundle and reject truncated and extra-layer mutations; wrapper and fault logs must be clean.",
+  "verdict": "NO_RESULT"
+}
