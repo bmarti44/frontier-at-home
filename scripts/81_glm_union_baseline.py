@@ -76,6 +76,11 @@ FIXED_LAUNCH_PATH = (
     "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
 )
+FROZEN_FAILURE_INJECTION_PROOF = {
+    "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
+    "all_destroyed": True,
+    "all_control_continuations_equal": True,
+}
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -448,6 +453,30 @@ def validate_two_control_record(record: dict[str, object]) -> None:
         raise ValueError("two-control failure-injection coverage differs")
 
 
+def run_two_control_sequence(
+    request_index: int,
+    request_id: str,
+    run_arm,
+    failure_injection: dict[str, object],
+) -> dict[str, object]:
+    """Bracket one isolated diagnostic with fresh clean control processes."""
+    arms: dict[str, object] = {}
+    for name in ("control_before", "diagnostic", "control_after"):
+        arms[name] = run_arm(name)
+    record = {
+        "schema_version": 1,
+        "request_index": request_index,
+        "request_id": request_id,
+        "stage_order": ["control_before", "diagnostic", "control_after"],
+        "diagnostic": arms["diagnostic"],
+        "control_before": arms["control_before"],
+        "control_after": arms["control_after"],
+        "failure_injection": failure_injection,
+    }
+    validate_two_control_record(record)
+    return record
+
+
 def score_cost_table(rows: list[dict[str, object]]) -> dict[str, object]:
     """Score the preregistered five-block cold/warm completed-cost table."""
     methods = ("gate_replay", "shared_correction", "mtp", "probe")
@@ -541,6 +570,44 @@ def score_cost_table(rows: list[dict[str, object]]) -> dict[str, object]:
     }
 
 
+def decide_mtp_fold(
+    scored: dict[str, object],
+    cost: dict[str, object],
+) -> dict[str, object]:
+    """Apply the frozen all-cells recall dominance and equal-cost rule."""
+    methods = scored.get("methods") if isinstance(scored, dict) else None
+    if not isinstance(methods, dict):
+        raise ValueError("MTP fold metrics are missing")
+    comparators = ("gate_replay", "shared_correction", "probe")
+    recall_dominates = True
+    for k in K_VALUES:
+        for budget in BUDGETS:
+            try:
+                mtp = float(methods["mtp"][str(k)][str(budget)]["macro_request_recall"])
+                others = [
+                    float(methods[method][str(k)][str(budget)]["macro_request_recall"])
+                    for method in comparators
+                ]
+            except (KeyError, TypeError, ValueError) as error:
+                raise ValueError("MTP fold recall table differs") from error
+            if (
+                not np.isfinite(mtp) or not 0.0 <= mtp <= 1.0 or
+                any(not np.isfinite(value) or not 0.0 <= value <= 1.0
+                    for value in others)
+            ):
+                raise ValueError("MTP fold recall is non-finite")
+            recall_dominates = recall_dominates and all(mtp > value for value in others)
+    equal_cost = all(
+        cost.get(f"mtp_equal_cost_to_{method}") is True for method in comparators
+    )
+    return {
+        "mtp_recall_strictly_higher_all_nine_cells": recall_dominates,
+        "mtp_equal_cost_to_all_cheaper_baselines": equal_cost,
+        "fold_into_mtp": recall_dominates and equal_cost,
+        "verdict": "FOLD_INTO_MTP" if recall_dominates and equal_cost else "KEEP_PARETO_SEPARATE",
+    }
+
+
 def write_canonical_scorer_input(
     path: Path,
     requests: np.ndarray,
@@ -599,6 +666,36 @@ def validate_completed_result(
     for key, value in reconstructed.items():
         if summary.get(key) != value:
             raise ValueError(f"completed summary differs from canonical replay: {key}")
+    cost_payload = _snapshot_regular(root / "cost.json")
+    cost_document = _strict_json(cost_payload, "completed cost evidence")
+    if set(cost_document) != {"schema_version", "rows"} or cost_document.get(
+        "schema_version"
+    ) != 1 or not isinstance(cost_document.get("rows"), list):
+        raise ValueError("completed cost evidence schema differs")
+    reconstructed_cost = score_cost_table(cost_document["rows"])
+    if summary.get("cost") != reconstructed_cost:
+        raise ValueError("completed cost table differs from canonical replay")
+    raw_payload = _snapshot_regular(root / "raw.json")
+    raw = _strict_json(raw_payload, "completed runtime evidence")
+    runtime_logs = raw.get("runtime_logs")
+    if not isinstance(runtime_logs, list) or len(runtime_logs) != 20:
+        raise ValueError("completed two-control coverage differs")
+    request_ids = set()
+    for runtime in runtime_logs:
+        if not isinstance(runtime, dict):
+            raise ValueError("completed runtime row differs")
+        control = runtime.get("two_control")
+        validate_two_control_record(control)
+        request_ids.add((control["request_index"], control["request_id"]))
+    if len(request_ids) != 20 or summary.get("two_control") != {
+        "requests": 20,
+        "all_isolated": True,
+        "all_continuations_equal": True,
+        "failure_injection_stages": [
+            "mtp_call", "target_eval", "route_capture", "disposal",
+        ],
+    }:
+        raise ValueError("completed two-control summary differs")
     if expected_summary is not None and summary != expected_summary:
         raise ValueError("completed summary differs from in-memory result")
     return summary
@@ -1133,6 +1230,148 @@ def _stable_logit_rankings(logits: np.ndarray) -> np.ndarray:
     ])
 
 
+def _measure_heldout_cost_rows(
+    *,
+    event_requests: np.ndarray,
+    event_layers: np.ndarray,
+    event_positions: np.ndarray,
+    gate_scores: np.ndarray,
+    gate_selected: np.ndarray,
+    shared_scores: np.ndarray,
+    shared_selected: np.ndarray,
+    captures: dict[tuple[int, int], dict[str, object]],
+    common: dict[str, np.ndarray],
+    probe,
+    states: dict[int, dict[str, np.ndarray]],
+    device: str,
+) -> list[dict[str, object]]:
+    """Measure five matched cold/warm blocks for every online comparator."""
+    request_order = sorted(int(value) for value in np.unique(event_requests))
+    random.Random(20260805).shuffle(request_order)
+    if len(request_order) != 20:
+        raise ValueError("cost request coverage differs")
+    request_blocks = [request_order[index::5] for index in range(5)]
+    if any(len(block) != 4 for block in request_blocks):
+        raise ValueError("cost block coverage differs")
+    positions_by_request = {
+        request: sorted(set(
+            int(value) for value in event_positions[event_requests == request]
+        )) for request in request_order
+    }
+    if any(len(positions) != 8 for positions in positions_by_request.values()):
+        raise ValueError("cost source-position coverage differs")
+    persistent_probe_bytes = sum(
+        int(value.nbytes) for state in states.values() for value in state.values()
+    )
+    rows: list[dict[str, object]] = []
+    for block, block_requests in enumerate(request_blocks):
+        for temperature in ("cold", "warm"):
+            source_keys = {
+                (request, position)
+                for request in block_requests
+                for position in (
+                    positions_by_request[request][:1]
+                    if temperature == "cold" else positions_by_request[request][1:]
+                )
+            }
+            selected_rows = np.asarray([
+                (int(request), int(position)) in source_keys
+                for request, position in zip(event_requests, event_positions)
+            ], dtype=np.bool_)
+            completed_events = len(source_keys)
+            if int(selected_rows.sum()) != completed_events * 74:
+                raise ValueError("cost layer/event coverage differs")
+
+            method_values: dict[str, tuple[float, int, int, int]] = {}
+            for method, scores, selected in (
+                ("gate_replay", gate_scores, gate_selected),
+                ("shared_correction", shared_scores, shared_selected),
+            ):
+                ranking = captured_router_rankings(
+                    scores[selected_rows], selected[selected_rows],
+                )
+                # The engine captures both current-state comparators inside the
+                # synchronized source evaluation.  Charge each the complete
+                # prefix-through-source upper bound rather than subtracting two
+                # overlapping timers or presenting CPU sorting as online cost.
+                elapsed = sum(
+                    float(captures[key]["metadata"]["source_ready_ms"])
+                    for key in source_keys
+                )
+                temporary = int(
+                    scores[selected_rows].nbytes + selected[selected_rows].nbytes +
+                    ranking.nbytes
+                )
+                method_values[method] = (elapsed, 0, temporary, 0)
+
+            probe_elapsed = 0.0
+            probe_temporary = 0
+            for layer in range(FIRST_LAYER, LAST_LAYER + 1):
+                layer_rows = np.flatnonzero(common["layer"] == layer)
+                local_rows = np.asarray([
+                    (int(common["request_index"][row]),
+                     int(common["token_position"][row])) in source_keys
+                    for row in layer_rows
+                ], dtype=np.bool_)
+                started = time.perf_counter_ns()
+                features = np.concatenate([
+                    probe.unpack_probe_hidden(
+                        common["hidden_q4"][layer_rows],
+                        common["hidden_scale"][layer_rows],
+                    ),
+                    probe.causal_expert_history(
+                        common["request_index"][layer_rows], common["layer"][layer_rows],
+                        common["token_position"][layer_rows],
+                        common["selected_ids"][layer_rows],
+                    ),
+                ], axis=1)[local_rows]
+                if features.shape[0] != completed_events:
+                    raise ValueError("probe cost feature coverage differs")
+                logits = probe.predict_probe_head(
+                    features, states[layer], 32, device=device,
+                )
+                _stable_logit_rankings(logits[:, 1, :])
+                probe_elapsed += (time.perf_counter_ns() - started) / 1_000_000.0
+                probe_temporary = max(
+                    probe_temporary, int(features.nbytes + logits.nbytes),
+                )
+            method_values["probe"] = (
+                probe_elapsed, persistent_probe_bytes, probe_temporary, 0,
+            )
+
+            mtp_elapsed = 0.0
+            mtp_expert_bytes = 0
+            mtp_temporary = 0
+            for request, position in sorted(source_keys):
+                capture = captures[(request, position)]
+                metadata = capture["metadata"]
+                mtp_elapsed += float(metadata["cumulative_ms"][3])
+                selected = capture["mtp_selected"][:4, FIRST_LAYER:LAST_LAYER + 1]
+                for layer_values in selected.transpose(1, 0, 2):
+                    mtp_expert_bytes += int(np.unique(layer_values).size) * 9_732_096
+                mtp_temporary = max(
+                    mtp_temporary,
+                    int(capture["mtp_scores"][:4].nbytes + selected.nbytes),
+                )
+            method_values["mtp"] = (mtp_elapsed, 0, mtp_temporary, mtp_expert_bytes)
+
+            for method in ("gate_replay", "shared_correction", "mtp", "probe"):
+                elapsed, persistent, temporary, expert_bytes = method_values[method]
+                rows.append({
+                    "block": block,
+                    "temperature": temperature,
+                    "method": method,
+                    "completed_ms": elapsed,
+                    "persistent_bytes": persistent,
+                    "peak_temporary_bytes": temporary,
+                    "target_expert_bytes_read": expert_bytes,
+                    "completed_events": completed_events,
+                    "synchronized": True,
+                })
+    score_cost_table(rows)
+    return rows
+
+
 def score_heldout(capture_root: Path, device: str = "cuda") -> dict[str, object]:
     """Reject the retired split capture/score path before held-out access."""
     if capture_root.is_symlink():
@@ -1281,7 +1520,28 @@ def _score_opened_heldout(
         write_canonical_scorer_input(
             canonical_path, event_requests, targets, rankings,
         )
+    cost_rows = _measure_heldout_cost_rows(
+        event_requests=event_requests,
+        event_layers=event_layers,
+        event_positions=event_positions,
+        gate_scores=gate_scores,
+        gate_selected=gate_selected,
+        shared_scores=shared_scores,
+        shared_selected=shared_selected,
+        captures=captures,
+        common=common,
+        probe=probe,
+        states=states,
+        device=device,
+    )
+    cost = score_cost_table(cost_rows)
+    if canonical_path is not None:
+        _write_json_exclusive(canonical_path.with_name("cost.json"), {
+            "schema_version": 1,
+            "rows": cost_rows,
+        })
     scored = score_baseline_table(event_requests, targets, rankings)
+    scored["decision"].update(decide_mtp_fold(scored, cost))
     scored.update({
         "schema_version": 1,
         "classification": "P1_HELD_OUT_BASELINE_SCORE",
@@ -1291,6 +1551,15 @@ def _score_opened_heldout(
             "layers": 74,
             "source_positions_per_request": 8,
             "events": int(structural.size),
+        },
+        "cost": cost,
+        "two_control": {
+            "requests": 20,
+            "all_isolated": True,
+            "all_continuations_equal": True,
+            "failure_injection_stages": [
+                "mtp_call", "target_eval", "route_capture", "disposal",
+            ],
         },
         "claim_limit": freeze["claim_limit"],
     })
@@ -1348,6 +1617,27 @@ def _rename_noreplace(source: Path, destination: Path) -> None:
         if number in (errno.EEXIST, errno.ENOTEMPTY):
             raise FileExistsError(number, os.strerror(number), destination)
         raise OSError(number, os.strerror(number), destination)
+
+
+def _seal_completed_tree(root: Path) -> None:
+    """Make a validated result read-only and reject links/special files."""
+    root = root.resolve(strict=True)
+    paths = [root, *root.rglob("*")]
+    for path in paths:
+        details = path.lstat()
+        if stat.S_ISLNK(details.st_mode) or not (
+            stat.S_ISDIR(details.st_mode) or stat.S_ISREG(details.st_mode)
+        ):
+            raise ValueError(f"completed result contains an unsafe entry: {path}")
+    for path in sorted(paths, key=lambda value: len(value.parts), reverse=True):
+        os.chmod(path, 0o555 if path.is_dir() else 0o444)
+    for path in paths:
+        if path.is_dir():
+            descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
 
 
 def _authority_environment() -> dict[str, str]:
@@ -1679,6 +1969,7 @@ def _run_atomic_lifecycle(
             "classification": "P1_HELD_OUT_GLOBAL_LEDGER",
             "output_root": str(output_root),
         })
+    _seal_completed_tree(output_root)
     descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
     try:
         os.fsync(descriptor)
@@ -2085,6 +2376,22 @@ def _engine_capture_command(
     ]
 
 
+def _engine_control_command(
+    safe_run_path: Path,
+    tag: str,
+    binary: Path,
+    model: Path,
+    prompt_path: Path,
+) -> list[str]:
+    return [
+        "/usr/bin/bash", str(safe_run_path), "--tag", tag, "--", str(binary),
+        "--cuda", "-m", str(model), "-c", "1024", "--ssd-streaming",
+        "--ssd-streaming-cache-experts", "6GB", "--glm-mtp",
+        "--prompt-file", str(prompt_path), "--decode-consistency", "8",
+        "--temp", "0",
+    ]
+
+
 def _validate_safe_run_artifacts(
     main_payload: bytes,
     kernel_payload: bytes,
@@ -2112,6 +2419,73 @@ def _validate_safe_run_artifacts(
         b"SAFE_RUN_DONE rc=0 killed=no dir=" not in stdout_payload
     ):
         raise RuntimeError("contained baseline runtime attestation differs")
+
+
+def _control_fingerprint(main_payload: bytes) -> tuple[str, str]:
+    lines = main_payload.splitlines()
+    selected = [
+        line for line in lines
+        if line.startswith(b"ds4: decode-consistency selected[")
+    ]
+    compared = [
+        line for line in lines
+        if line.startswith(b"ds4: decode-consistency compared prefix_tokens=")
+    ]
+    tops = [
+        line for line in lines
+        if line.startswith((b"ds4: live_top:", b"ds4: fresh_top:"))
+    ]
+    if len(selected) != 8 or len(compared) != 1 or len(tops) != 2:
+        raise RuntimeError("control continuation diagnostic coverage differs")
+    token_payload = b"\n".join(selected) + b"\n"
+    continuation_payload = b"\n".join([*selected, *compared, *tops]) + b"\n"
+    return _sha256_bytes(continuation_payload), _sha256_bytes(token_payload)
+
+
+def _run_contained_baseline_process(
+    command: list[str],
+    environment: dict[str, str],
+    crash_root: Path,
+    tag: str,
+) -> dict[str, object]:
+    before_logs = set(crash_root.glob(f"*-{tag}"))
+    completed = subprocess.run(
+        command, cwd=ROOT, env=environment, stdin=subprocess.DEVNULL,
+        capture_output=True, text=True, timeout=2500, check=False,
+    )
+    after_logs = set(crash_root.glob(f"*-{tag}")) - before_logs
+    if completed.returncode != 0 or len(after_logs) != 1:
+        raise RuntimeError(f"contained baseline process failed: {tag}")
+    run_log = after_logs.pop()
+    if run_log.is_symlink() or not run_log.is_dir():
+        raise ValueError("contained baseline runtime log is invalid")
+    log_files = {path.name: path for path in run_log.iterdir() if path.is_file()}
+    if set(log_files) != {"cmd.log", "kernel.log", "main.log", "samples.log"}:
+        raise ValueError("contained baseline runtime log set differs")
+    main_payload = _snapshot_regular(log_files["main.log"])
+    kernel_payload = _snapshot_regular(log_files["kernel.log"])
+    stdout_payload = completed.stdout.encode("utf-8")
+    expected_environment = environment["GLM_SAFE_EXPECTED_ENV_SHA256"]
+    _validate_safe_run_artifacts(
+        main_payload, kernel_payload, stdout_payload, expected_environment,
+    )
+    return {
+        "run_log": run_log,
+        "main_payload": main_payload,
+        "log_binding": {
+            "directory": str(run_log),
+            "artifacts": {
+                path.name: _file_binding(path)
+                for path in sorted(run_log.iterdir()) if path.is_file()
+            },
+            "wrapper_exit_code": completed.returncode,
+            "wrapper_stdout_sha256": _sha256_bytes(stdout_payload),
+            "wrapper_stderr_sha256": _sha256_bytes(completed.stderr.encode("utf-8")),
+            "launch_environment_sha256": _environment_sha256(
+                environment, list(environment),
+            ),
+        },
+    }
 
 
 def _capture_authorized_set(
@@ -2190,37 +2564,56 @@ def _capture_authorized_set_with_runtime(
             handle.write(str(case["prompt"]))
             handle.flush()
             os.fsync(handle.fileno())
-        ds4_values = {
+        base_ds4_values = {
             "DS4_CUDA_FETCH_THREADS": "8",
             "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
-            "DS4_GLM_BASELINE_CAPTURE_DIR": str(request_dir),
             "DS4_LOCK_FILE": "/run/lock/frontier-at-home/inference.lock",
         }
-        environment = _build_launch_environment(ds4_values, candidate_root, runtime)
-        tag = f"p1-baseline-r{request:03d}-{os.getpid()}"
-        before_logs = set(crash_root.glob(f"*-{tag}"))
-        command = _engine_capture_command(
-            safe_run_path, tag, binary, model_command, prompt_path,
-        )
-        completed = subprocess.run(
-            command, cwd=ROOT, env=environment, stdin=subprocess.DEVNULL,
-            capture_output=True, text=True, timeout=2500, check=False,
-        )
-        after_logs = set(crash_root.glob(f"*-{tag}")) - before_logs
-        if completed.returncode != 0 or len(after_logs) != 1:
-            raise RuntimeError(f"contained baseline capture failed for request {request}")
-        run_log = after_logs.pop()
-        if run_log.is_symlink() or not run_log.is_dir():
-            raise ValueError("contained baseline runtime log is invalid")
-        log_files = {path.name: path for path in run_log.iterdir() if path.is_file()}
-        if set(log_files) != {"cmd.log", "kernel.log", "main.log", "samples.log"}:
-            raise ValueError("contained baseline runtime log set differs")
-        main_payload = _snapshot_regular(log_files["main.log"])
-        kernel_payload = _snapshot_regular(log_files["kernel.log"])
-        stdout_payload = completed.stdout.encode("utf-8")
-        expected_environment = environment["GLM_SAFE_EXPECTED_ENV_SHA256"]
-        _validate_safe_run_artifacts(
-            main_payload, kernel_payload, stdout_payload, expected_environment,
+        process_results: dict[str, dict[str, object]] = {}
+
+        def run_arm(arm: str) -> dict[str, object]:
+            tag = f"p1-baseline-{arm}-r{request:03d}-{os.getpid()}"
+            if arm == "diagnostic":
+                ds4_values = {
+                    **base_ds4_values,
+                    "DS4_GLM_BASELINE_CAPTURE_DIR": str(request_dir),
+                }
+                command = _engine_capture_command(
+                    safe_run_path, tag, binary, model_command, prompt_path,
+                )
+            else:
+                ds4_values = dict(base_ds4_values)
+                command = _engine_control_command(
+                    safe_run_path, tag, binary, model_command, prompt_path,
+                )
+            environment = _build_launch_environment(
+                ds4_values, candidate_root, runtime,
+            )
+            process = _run_contained_baseline_process(
+                command, environment, crash_root, tag,
+            )
+            process_results[arm] = process
+            if arm == "diagnostic":
+                return {
+                    "fresh_process": True,
+                    "resident_arena_bytes": 0,
+                    "cache_namespace": tag,
+                    "exit_code": 0,
+                }
+            continuation, token_ids = _control_fingerprint(
+                bytes(process["main_payload"]),
+            )
+            return {
+                "fresh_process": True,
+                "cache_namespace": tag,
+                "continuation_sha256": continuation,
+                "token_ids_sha256": token_ids,
+                "exit_code": 0,
+            }
+
+        two_control = run_two_control_sequence(
+            request, str(case["request_id"]), run_arm,
+            dict(FROZEN_FAILURE_INJECTION_PROOF),
         )
         positions = expected_positions.get(request)
         if not isinstance(positions, list) or len(positions) != 8:
@@ -2252,19 +2645,13 @@ def _capture_authorized_set_with_runtime(
             "directory": request_dir.relative_to(capture_root).as_posix(),
             "artifacts": artifacts,
         })
-        log_bindings = {
-            path.name: _file_binding(path) for path in sorted(run_log.iterdir()) if path.is_file()
-        }
         runtime_logs.append({
             "request_index": request,
-            "directory": str(run_log),
-            "artifacts": log_bindings,
-            "wrapper_exit_code": completed.returncode,
-            "wrapper_stdout_sha256": _sha256_bytes(stdout_payload),
-            "wrapper_stderr_sha256": _sha256_bytes(completed.stderr.encode("utf-8")),
-            "launch_environment_sha256": _environment_sha256(
-                environment, list(environment),
-            ),
+            "two_control": two_control,
+            "arms": {
+                name: process_results[name]["log_binding"]
+                for name in ("control_before", "diagnostic", "control_after")
+            },
         })
         prompt_path.unlink()
     manifest = {

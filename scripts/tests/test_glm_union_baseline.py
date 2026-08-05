@@ -1152,6 +1152,9 @@ class BaselineTableTests(unittest.TestCase):
         self.assertFalse(MODULE.decide_mtp_fold(metrics, cost)["fold_into_mtp"])
         for k in (2, 4, 8):
             for budget in (16, 32, 64):
+                metrics["methods"]["probe"][str(k)][str(budget)][
+                    "macro_request_recall"
+                ] = 0.9
                 metrics["methods"]["mtp"][str(k)][str(budget)][
                     "macro_request_recall"
                 ] = 1.0
