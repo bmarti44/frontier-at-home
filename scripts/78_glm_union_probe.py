@@ -603,7 +603,28 @@ def unpack_probe_hidden(
     packed: np.ndarray, scale: np.ndarray, width: int = 6144,
 ) -> np.ndarray:
     """Decode the frozen groupwise-int4 probe feature representation."""
-    raise NotImplementedError
+    if (
+        not isinstance(packed, np.ndarray) or packed.ndim != 2 or packed.dtype != np.uint8 or
+        not isinstance(scale, np.ndarray) or scale.ndim != 2 or
+        not np.issubdtype(scale.dtype, np.floating) or packed.shape[0] != scale.shape[0] or
+        packed.shape[0] == 0 or scale.shape[1] == 0 or
+        not isinstance(width, int) or isinstance(width, bool) or width <= 0 or
+        packed.shape[1] != (width + 1) // 2 or width % scale.shape[1] != 0 or
+        not np.isfinite(scale).all() or np.any(scale <= 0)
+    ):
+        raise ValueError("packed probe hidden feature is malformed")
+    low = packed & np.uint8(0x0F)
+    high = packed >> np.uint8(4)
+    required_low = (width + 1) // 2
+    required_high = width // 2
+    if np.any(low[:, :required_low] == 0) or np.any(high[:, :required_high] == 0):
+        raise ValueError("packed probe hidden feature contains the unused -8 code")
+    unpacked = np.empty((packed.shape[0], packed.shape[1] * 2), dtype=np.int8)
+    unpacked[:, 0::2] = low.astype(np.int8) - 8
+    unpacked[:, 1::2] = high.astype(np.int8) - 8
+    group_size = width // scale.shape[1]
+    expanded_scale = np.repeat(scale.astype(np.float32), group_size, axis=1)
+    return unpacked[:, :width].astype(np.float32) * expanded_scale
 
 
 def causal_expert_history(
@@ -614,12 +635,55 @@ def causal_expert_history(
     lags: int = 4,
 ) -> np.ndarray:
     """Build the frozen causal selected-expert history feature."""
-    raise NotImplementedError
+    arrays = (request_index, layer, token_position, selected_ids)
+    if (
+        any(not isinstance(value, np.ndarray) for value in arrays) or
+        request_index.ndim != 1 or layer.ndim != 1 or token_position.ndim != 1 or
+        selected_ids.ndim != 2 or selected_ids.shape[0] != request_index.size or
+        layer.size != request_index.size or token_position.size != request_index.size or
+        request_index.size == 0 or
+        any(not np.issubdtype(value.dtype, np.integer) for value in arrays) or
+        np.any(request_index <= 0) or np.any(layer < 0) or np.any(token_position < 0) or
+        np.any(selected_ids < 0) or np.any(selected_ids >= N_EXPERT) or
+        any(np.unique(row).size != row.size for row in selected_ids) or
+        not isinstance(lags, int) or isinstance(lags, bool) or lags <= 0
+    ):
+        raise ValueError("causal history input schema is invalid")
+    result = np.zeros((request_index.size, N_EXPERT), dtype=np.float32)
+    group_start = 0
+    previous_key: tuple[int, int] | None = None
+    seen: set[tuple[int, int]] = set()
+    for row in range(request_index.size + 1):
+        key = None if row == request_index.size else (
+            int(request_index[row]), int(layer[row]),
+        )
+        if row < request_index.size and key == previous_key:
+            continue
+        if previous_key is not None:
+            if key is not None and (key in seen or key <= previous_key):
+                raise ValueError("causal history groups are repeated or reordered")
+            positions = token_position[group_start:row].astype(np.int64, copy=False)
+            if not np.array_equal(positions, np.arange(positions[0], positions[0] + positions.size)):
+                raise ValueError("causal history positions are gapped or reordered")
+            for current in range(group_start, row):
+                for lag in range(min(lags, current - group_start + 1)):
+                    experts = selected_ids[current - lag]
+                    result[current, experts] += np.float32(2.0 ** -lag)
+            seen.add(previous_key)
+        group_start = row
+        previous_key = key
+    return result
 
 
 def grouped_fold(group_id: str, folds: int = 3) -> int:
     """Map an authoritative request group to its frozen CV fold."""
-    raise NotImplementedError
+    if (
+        not isinstance(group_id, str) or not group_id or
+        not isinstance(folds, int) or isinstance(folds, bool) or folds < 2
+    ):
+        raise ValueError("grouped-fold input is invalid")
+    digest = hashlib.sha256(b"glm52-p1-fold-v1\0" + group_id.encode("utf-8")).digest()
+    return int.from_bytes(digest, "big") % folds
 
 
 def score_rankings(
