@@ -11,6 +11,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest import mock
+import zipfile
 
 import numpy as np
 
@@ -311,11 +312,39 @@ class CVMetricTests(unittest.TestCase):
                 loaded, groups = MODULE._load_authorized_sources(accepted)
                 self.assertEqual(groups[1], "quality-1")
                 self.assertEqual(len(loaded), 3)
+                original = (quality / "records.npz").read_bytes()
                 changed = arrays(True)
                 changed["selected_ids"] = (changed["selected_ids"] + 1).astype(np.uint8)
                 np.savez(quality / "records.npz", **changed)
                 with self.assertRaises(ValueError):
                     MODULE._load_authorized_sources(accepted)
+                alternate = (quality / "records.npz").read_bytes()
+                self.assertEqual(len(original), len(alternate))
+                (quality / "records.npz").write_bytes(original)
+                original_load = MODULE.np.load
+                swapped = False
+
+                def rewrite_during_parse(handle, *args, **kwargs):
+                    nonlocal swapped
+                    if not swapped:
+                        swapped = True
+                        with (quality / "records.npz").open("r+b") as output:
+                            output.write(alternate)
+                            output.flush()
+                    return original_load(handle, *args, **kwargs)
+
+                with mock.patch.object(MODULE.np, "load", side_effect=rewrite_during_parse):
+                    with self.assertRaises(ValueError):
+                        MODULE._load_authorized_sources(accepted)
+                (quality / "records.npz").write_bytes(original)
+                with zipfile.ZipFile(quality / "records.npz", "a") as archive:
+                    duplicate = archive.read("selected_ids.npy")
+                    archive.writestr("selected_ids.npy", duplicate)
+                duplicate_binding = {
+                    "train_fit": binding(quality), "long_train": [binding(path) for path in longs],
+                }
+                with self.assertRaises(ValueError):
+                    MODULE._load_authorized_sources(duplicate_binding)
 
     def test_fresh_production_execute_reopens_and_rejects_mutated_outputs(self) -> None:
         sources, groups = self.production_fixture()
