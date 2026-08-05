@@ -713,7 +713,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             'internal.add_argument("--quality-probe", action="store_true")',
             '"scope": "quality_one_case_safety_probe"',
             'quality probe requires quality corpus mode',
-            'request_count = 1 if args.quality_probe else',
+            'else 1 if args.quality_probe else',
             '(["--quality-probe"] if args.quality_probe else [])',
         ):
             self.assertIn(marker, self.runner)

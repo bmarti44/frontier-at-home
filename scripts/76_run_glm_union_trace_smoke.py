@@ -105,9 +105,19 @@ QUALITY_REQUEST_COUNT = 100
 QUALITY_FIXTURE_CONTENT_SHA256 = "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0a"
 UTF8_NORMALIZATION_LOG = "ds4-server: invalid UTF-8 model bytes normalized to U+FFFD"
 UTF8_REGRESSION_CASE_ID = "case_021"
+UTF8_REGRESSION_CAMPAIGN_SEED = 805105100
 UTF8_REGRESSION_SEED = 805105121
 UTF8_REGRESSION_TOKEN_PREFIX = (8507, 228, 35457, 11, 323, 279, 1008)
 UTF8_REGRESSION_VISIBLE_PREFIX = "宆\uFFFD, and the other"
+UTF8_REGRESSION_HISTORY_CASES = (
+    "case_095", "case_005", "case_004", "case_017", "case_021",
+)
+UTF8_REGRESSION_PREDECESSOR_TOKENS = (
+    (8507, 81272, 13, 154842, 154842, 154842, 154842, 154842),
+    (8507, 101, 16, 8507, 101, 16, 271, 2146),
+    (8507, 222, 20, 271, 565, 220, 21, 271),
+    (8507, 228, 198, 220, 17, 13, 576, 198),
+)
 
 
 def render_quality_prompt(prompt: str) -> str:
@@ -286,6 +296,7 @@ def build_quality_case_ledger(
 
 def quality_probe_ledger(
     bundle: dict[str, Any], *, case_id: str | None = None,
+    replay_history: bool = False,
 ) -> dict[str, Any]:
     """Select one frozen case for a safety or exact-regression probe."""
     cases = bundle.get("cases")
@@ -298,6 +309,30 @@ def quality_probe_ledger(
     )
     if selected is None:
         raise ValueError("quality probe case is not present in the frozen ledger")
+    if replay_history:
+        if (case_id != UTF8_REGRESSION_CASE_ID or
+                bundle.get("seed") != UTF8_REGRESSION_CAMPAIGN_SEED):
+            raise ValueError("historical replay requires the frozen regression campaign")
+        selected_index = cases.index(selected)
+        replay_cases = [dict(case) for case in cases[:selected_index + 1]]
+        if tuple(case.get("case_id") for case in replay_cases) != UTF8_REGRESSION_HISTORY_CASES:
+            raise ValueError("historical regression request order changed")
+        for case, token_ids in zip(
+            replay_cases[:-1], UTF8_REGRESSION_PREDECESSOR_TOKENS,
+        ):
+            case["historical_raw_token_ids"] = list(token_ids)
+        replay_cases[-1]["utf8_regression_expected"] = True
+        prompt_tokens = sum(int(case["expected_prompt_tokens"]) for case in replay_cases)
+        return {
+            **{key: value for key, value in bundle.items()
+               if key not in {"cases", "_prompts", "total_expected_prompt_tokens",
+                              "expected_token_layer_events"}},
+            "cases": replay_cases,
+            "_prompts": {case["case_id"]: prompts[case["case_id"]]
+                         for case in replay_cases},
+            "total_expected_prompt_tokens": prompt_tokens,
+            "expected_token_layer_events": 75 * prompt_tokens,
+        }
     first = dict(selected)
     case_id = first.get("case_id")
     tokens = first.get("expected_prompt_tokens")
@@ -392,7 +427,7 @@ def quality_capture_verdict(
         "completion_tokens", "generated_reasoning_sha256",
         "generated_reasoning_bytes", "generated_content_sha256",
         "generated_content_bytes", "token_ids", "finish_reason",
-        "utf8_regression_reproduced",
+        "utf8_regression_reproduced", "historical_trajectory_reproduced",
     )
 
     def output_valid(observed: dict[str, Any]) -> bool:
@@ -441,6 +476,15 @@ def quality_capture_verdict(
             for expected, left, right in zip(ledger, off_requests, on_requests)
         )
     )
+    historical_trajectory_reproduced = (
+        off_matches and on_matches and
+        all(
+            "historical_raw_token_ids" not in expected or
+            (left.get("historical_trajectory_reproduced") is True and
+             right.get("historical_trajectory_reproduced") is True)
+            for expected, left, right in zip(ledger, off_requests, on_requests)
+        )
+    )
     expected_events = (
         75 * sum(row["expected_prompt_tokens"] for row in ledger)
         if ledger_valid else -1
@@ -451,6 +495,7 @@ def quality_capture_verdict(
         "on_exact_coverage": on_matches,
         "per_case_output_identity": outputs_match,
         "exact_utf8_regression_reproduced": regression_reproduced,
+        "historical_prefix_trajectory_reproduced": historical_trajectory_reproduced,
         "scorer_passed": trace_score.get("verdict") == "PASS",
         "exact_request_count": trace_score.get("requests") == len(ledger),
         "exact_token_layer_events": trace_score.get("token_layer_events") == expected_events,
@@ -874,9 +919,10 @@ def _run_quality_requests(
             list(UTF8_REGRESSION_TOKEN_PREFIX) and
             combined_visible.startswith(UTF8_REGRESSION_VISIBLE_PREFIX)
         )
-        if (expected.get("utf8_regression_expected") is True and
-                not utf8_regression_reproduced):
-            raise ValueError("known invalid-UTF-8 regression was not reproduced")
+        historical_trajectory_reproduced = (
+            "historical_raw_token_ids" not in expected or
+            raw_timing["token_ids"] == expected["historical_raw_token_ids"]
+        )
         records.append({
             "case_id": expected["case_id"],
             "group_id": expected["group_id"],
@@ -894,12 +940,25 @@ def _run_quality_requests(
             "token_ids": raw_timing["token_ids"],
             "sse_content_events": sse_content_events,
             "utf8_regression_reproduced": utf8_regression_reproduced,
+            "historical_trajectory_reproduced": historical_trajectory_reproduced,
         })
     response_path = out / "responses.json"
     response_path.write_text(
         json.dumps(records, sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    if any(
+        "historical_raw_token_ids" in expected and
+        record["historical_trajectory_reproduced"] is not True
+        for expected, record in zip(ledger_bundle["cases"], records)
+    ):
+        raise ValueError("historical predecessor trajectory was not reproduced")
+    if any(
+        expected.get("utf8_regression_expected") is True and
+        record["utf8_regression_reproduced"] is not True
+        for expected, record in zip(ledger_bundle["cases"], records)
+    ):
+        raise ValueError("known invalid-UTF-8 regression was not reproduced")
     return records
 
 
@@ -930,12 +989,17 @@ def _arm(args: argparse.Namespace) -> int:
         cache_experts=(CORPUS_CACHE_EXPERTS if large_corpus else "40GB"),
     )
     ledger_bundle = (
-        build_quality_case_ledger(Path(args.candidate), seed=args.seed)
+        build_quality_case_ledger(
+            Path(args.candidate),
+            seed=(UTF8_REGRESSION_CAMPAIGN_SEED
+                  if args.quality_probe_replay_history else args.seed),
+        )
         if args.quality_corpus else None
     )
     if ledger_bundle is not None and args.quality_probe:
         ledger_bundle = quality_probe_ledger(
             ledger_bundle, case_id=args.quality_probe_case,
+            replay_history=args.quality_probe_replay_history,
         )
     if ledger_bundle is not None:
         ledger_path = out / "ledger.json"
@@ -1097,9 +1161,12 @@ def run(args: argparse.Namespace) -> int:
     if (args.quality_probe_case is not None and
             re.fullmatch(r"case_[0-9]{3}", args.quality_probe_case) is None):
         raise ValueError("quality probe case id is invalid")
+    if (args.quality_probe_replay_history and
+            (not args.quality_probe or args.quality_probe_case != UTF8_REGRESSION_CASE_ID)):
+        raise ValueError("historical replay requires the exact regression probe")
     large_corpus = args.corpus_smoke or args.quality_corpus
     layer_count = 75 if large_corpus else 1
-    request_count = 1 if args.quality_probe else QUALITY_REQUEST_COUNT if args.quality_corpus else 2 if args.corpus_smoke else 1
+    request_count = 5 if args.quality_probe_replay_history else 1 if args.quality_probe else QUALITY_REQUEST_COUNT if args.quality_corpus else 2 if args.corpus_smoke else 1
     per_request_tokens = (
         QUALITY_DISK_MAX_TOKENS if args.quality_corpus else args.context_level + 1024
     )
@@ -1114,12 +1181,17 @@ def run(args: argparse.Namespace) -> int:
     candidate = Path(str(freeze["candidate_directory"])).resolve()
     binary = candidate / "ds4-server"
     quality_ledger = (
-        build_quality_case_ledger(candidate, seed=int(freeze["seed"]))
+        build_quality_case_ledger(
+            candidate,
+            seed=(UTF8_REGRESSION_CAMPAIGN_SEED
+                  if args.quality_probe_replay_history else int(freeze["seed"])),
+        )
         if args.quality_corpus else None
     )
     if quality_ledger is not None and args.quality_probe:
         quality_ledger = quality_probe_ledger(
             quality_ledger, case_id=args.quality_probe_case,
+            replay_history=args.quality_probe_replay_history,
         )
     SHARED.no_other_inference()
     available_gib = int(next(
@@ -1189,6 +1261,8 @@ def run(args: argparse.Namespace) -> int:
             *(["--quality-probe"] if args.quality_probe else []),
             *(["--quality-probe-case", args.quality_probe_case]
               if args.quality_probe_case is not None else []),
+            *(["--quality-probe-replay-history"]
+              if args.quality_probe_replay_history else []),
         ], env=environment, stdin=subprocess.DEVNULL, capture_output=True,
            timeout=7300 if args.quality_corpus else 3700, check=False)
         (root / f"{mode}.containment.stdout.log").write_bytes(completed.stdout)
@@ -1287,7 +1361,16 @@ def run(args: argparse.Namespace) -> int:
                 containment[mode], final_artifacts_by_mode[mode],
             )
     SHARED.frozen_inputs(freeze_path, randomness_path)
-    if args.quality_probe:
+    if args.quality_probe_replay_history:
+        qualification = {
+            "scope": "quality_historical_five_request_regression_probe",
+            "quality_cases": len(quality_ledger["cases"]),
+            "expected_prompt_tokens": quality_ledger["total_expected_prompt_tokens"],
+            "expected_token_layer_events": quality_ledger["expected_token_layer_events"],
+            "fixture_content_sha256": quality_ledger["fixture_content_sha256"],
+            "split_plan_sha256": quality_ledger["split_plan_sha256"],
+        }
+    elif args.quality_probe:
         qualification = {
             "scope": "quality_one_case_safety_probe",
             "quality_cases": 1,
@@ -1360,6 +1443,7 @@ def parser() -> argparse.ArgumentParser:
     public.add_argument("--quality-corpus", action="store_true")
     public.add_argument("--quality-probe", action="store_true")
     public.add_argument("--quality-probe-case")
+    public.add_argument("--quality-probe-replay-history", action="store_true")
     public.set_defaults(func=run)
     internal = sub.add_parser("_arm")
     internal.add_argument("--mode", choices=("off", "on"), required=True)
@@ -1377,6 +1461,7 @@ def parser() -> argparse.ArgumentParser:
     internal.add_argument("--quality-corpus", action="store_true")
     internal.add_argument("--quality-probe", action="store_true")
     internal.add_argument("--quality-probe-case")
+    internal.add_argument("--quality-probe-replay-history", action="store_true")
     internal.set_defaults(func=_arm)
     return root
 
