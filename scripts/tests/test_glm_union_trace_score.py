@@ -252,6 +252,19 @@ class UnionTraceScoreTests(unittest.TestCase):
         self.assertEqual(result["requests"], 2)
         self.assertEqual(result["token_layer_events"], 4)
 
+    def test_corpus_mode_accepts_first_zero_based_routed_layer_three(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            trace, log = self.make_corpus_attempt(Path(tmp))
+            for path in list(trace.iterdir()):
+                path.rename(trace / path.name.replace("-4_pos", "-3_pos"))
+            log.write_text(log.read_text().replace("layer=4", "layer=3"))
+            result = MODULE.score_trace(
+                trace, log, max_bytes=2_000_000, expected_layers={3},
+                expected_chunks=[],
+                expected_requests={1: [(0, 2)], 2: [(0, 2)]},
+            )
+        self.assertEqual(result["verdict"], "PASS")
+
     def test_corpus_mode_rejects_legacy_gap_duplicate_missing_and_bias_drift(self) -> None:
         for mutation in ("legacy", "legacy_log", "gap", "duplicate", "missing", "bias"):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
