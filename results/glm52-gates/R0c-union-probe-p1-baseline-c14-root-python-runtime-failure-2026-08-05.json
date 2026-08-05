@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_PREINSTALL_RUNTIME_FAILURE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "ae9a43ba6be529c35e70c860a2ab51ca9cf5b5a0",
+  "candidate_number": 14,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "command": "env -i HOME=/nonexistent PATH=/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -c 'import numpy, tokenizers'",
+  "exit_code": 1,
+  "stderr_class": "ModuleNotFoundError: No module named 'numpy'",
+  "diagnosis": "The candidate-14 root completed-result replay intentionally clears the environment, but NumPy and tokenizers are installed only in the benchmark owner's user-writable site-packages directory. The fixed root replay therefore cannot start. Adding that user-writable directory to root PYTHONPATH would invalidate the authority boundary.",
+  "affected_finding": "P1-BASE-C14-H1-ROOT-PYTHON-DEPS-ABSENT",
+  "required_acceptance_test": "The sanitized fixed replay imports and executes only from a root-owned, non-writable, digest-pinned dependency snapshot; changing or omitting any dependency byte fails closed; the root helper still rejects caller-controlled PYTHONPATH and ambient site-packages.",
+  "disposition": "FAIL_CLOSED_BEFORE_INSTALL; bounded Candidate 15 dependency-snapshot fix required"
+}
