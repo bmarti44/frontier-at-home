@@ -72,7 +72,7 @@ AUTHORITY_MESSAGE_ID = "9b0125b612d7480da990ad79e8c4c2fb"
 AUTHORITY_GATE_ID = "glm52-p1-baseline-heldout-v1"
 AUTHORITY_IDENTIFIER = "glm52-p1-baseline-authority"
 ROOT_SUBMITTER_PATH = Path("/usr/local/sbin/glm52-w1-submit")
-FROZEN_ROOT_SUBMITTER_SHA256 = "11775b2f51b28acdb2678556384d32e0ca8e3136528b7833a9caeecaf73f9d01"
+FROZEN_ROOT_SUBMITTER_SHA256 = "dd9922eb92c1bfefe116c1c07e48bcb474c487af2d4b7b96250978456f5edce2"
 FIXED_LAUNCH_PATH = (
     "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
@@ -82,6 +82,17 @@ RUNTIME_ARTIFACT_NAMES = {
     "cmd.log", "kernel.log", "main.log", "samples.log",
     "wrapper.stdout", "wrapper.stderr",
 }
+
+
+def _scoring_backend(device: str) -> dict[str, str]:
+    if device == "cuda":
+        return {
+            "device": "cuda",
+            "probe_compute": "torch-float32-weights-fp16-autocast",
+        }
+    if device == "cpu":
+        return {"device": "cpu", "probe_compute": "torch-float32"}
+    raise ValueError("scoring backend differs")
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -785,6 +796,13 @@ def validate_completed_result(
     reconstructed["decision"].update(decide_mtp_fold(
         reconstructed, reconstructed_cost,
     ))
+    scoring_backend = summary.get("scoring_backend") if isinstance(summary, dict) else None
+    if (
+        not isinstance(scoring_backend, dict) or
+        scoring_backend != _scoring_backend(str(scoring_backend.get("device")))
+    ):
+        raise ValueError("completed scoring backend differs")
+    reconstructed["scoring_backend"] = scoring_backend
     for key, value in reconstructed.items():
         if summary.get(key) != value:
             raise ValueError(f"completed summary differs from canonical replay: {key}")
@@ -794,9 +812,11 @@ def validate_completed_result(
     raw = _strict_json(raw_payload, "completed runtime evidence")
     if not isinstance(raw, dict) or set(raw) != {
         "manifest", "authenticated_binary", "authenticated_candidate_root",
-        "runtime_logs",
+        "runtime_logs", "scoring_backend",
     }:
         raise ValueError("completed raw evidence schema differs")
+    if raw.get("scoring_backend") != scoring_backend:
+        raise ValueError("completed raw scoring backend differs")
     capture_manifest = raw.get("manifest")
     if not isinstance(capture_manifest, dict):
         raise ValueError("completed capture manifest binding differs")
@@ -832,8 +852,8 @@ def validate_completed_result(
             marker = (
                 f"ds4: GLM baseline injected failure stage={fault['stage']}\n"
             ).encode("ascii")
-            observed_identity = validate_expected_failure_wrapper(
-                payload, fault["stage"],
+            observed_identity = _validate_expected_failure_artifacts(
+                fault_payloads, fault["stage"],
                 fault["fault_log"]["launch_environment_sha256"],
             )
             if (
@@ -907,12 +927,11 @@ def validate_completed_result(
     return summary
 
 
-def validate_completed_capture_reconstruction(
-    root: Path, *, device: str = "cpu",
-) -> dict[str, object]:
+def validate_completed_capture_reconstruction(root: Path) -> dict[str, object]:
     """Rebuild the canonical score from captured tensors and frozen inputs."""
     root = root.resolve(strict=True)
     recorded = validate_completed_result(root)
+    device = recorded["scoring_backend"]["device"]
     probe, cv, precision = _load_frozen_module_graph()
     arrays, test_manifest, freeze = _load_test_archive(cv)
     tokenizer_payload = _snapshot_regular(TOKENIZER_PATH)
@@ -1827,6 +1846,7 @@ def _score_opened_heldout(
     scored.update({
         "schema_version": 1,
         "classification": "P1_HELD_OUT_BASELINE_SCORE",
+        "scoring_backend": _scoring_backend(device),
         "capture_binding": capture_binding,
         "coverage": {
             "requests": 20,
@@ -2815,6 +2835,58 @@ def _validate_safe_run_artifacts(
         raise RuntimeError("contained baseline runtime attestation differs")
 
 
+def _validate_expected_failure_artifacts(
+    payloads: dict[str, bytes], stage: str, expected_environment_sha256: str,
+) -> tuple[int, int]:
+    """Interpret every preserved artifact for one intentional rc=86 failure."""
+    if set(payloads) != RUNTIME_ARTIFACT_NAMES:
+        raise RuntimeError("expected failure artifact coverage differs")
+    main_payload = payloads["main.log"]
+    identity = validate_expected_failure_wrapper(
+        main_payload, stage, expected_environment_sha256,
+    )
+    marker = f"ds4: GLM baseline injected failure stage={stage}".encode("ascii")
+    fatal_lines = [line for line in main_payload.splitlines() if b"FATAL" in line]
+    sample_match = re.search(
+        rb"safety_artifact_verified name=samples\.log sha256=([0-9a-f]{64})",
+        main_payload,
+    )
+    kernel_match = re.search(
+        rb"safety_artifact_verified name=kernel\.log sha256=([0-9a-f]{64})",
+        main_payload,
+    )
+    samples = payloads["samples.log"]
+    sample_lines = samples.splitlines()
+    stderr_is_expected = re.fullmatch(
+        rb"(?:/proc/[0-9]+/fd/[0-9]+: line [0-9]+: "
+        rb"/proc/[0-9]+/stat: No such file or directory\n)?",
+        payloads["wrapper.stderr"],
+    ) is not None
+    available = [
+        re.search(rb"(?:^| )mem_avail_kb=([0-9]+)(?: |$)", line)
+        for line in sample_lines
+    ]
+    if (
+        len(fatal_lines) != 1 or
+        b"FATAL wrapper command failed after candidate exit rc=86" not in fatal_lines[0] or
+        payloads["kernel.log"] not in (b"NO_KERNEL_FAULTS\n", b"-- No entries --\n") or
+        re.fullmatch(
+            rb"SAFE_RUN_DONE rc=86 killed=no dir=/[^\n]+\n",
+            payloads["wrapper.stdout"],
+        ) is None or
+        not stderr_is_expected or
+        payloads["cmd.log"].count(marker) != 1 or
+        re.search(rb"FATAL|NVRM.*Xid|oom-kill|Out of memory", payloads["cmd.log"], re.I) or
+        sample_match is None or kernel_match is None or not sample_lines or
+        any(match is None for match in available) or
+        any(int(match.group(1)) < 18 * 1024 * 1024 for match in available if match) or
+        sample_match.group(1).decode("ascii") != _sha256_bytes(samples) or
+        kernel_match.group(1).decode("ascii") != _sha256_bytes(payloads["kernel.log"])
+    ):
+        raise RuntimeError("contained expected-failure safety evidence differs")
+    return identity
+
+
 def _control_fingerprint(main_payload: bytes) -> tuple[str, str]:
     lines = main_payload.splitlines()
     selected = [
@@ -2973,7 +3045,12 @@ def validate_expected_failure_wrapper(
         b"safety_artifact_verified name=kernel.log sha256=",
         b"SAFE_RUN end rc=86 killed=no",
     )
-    if len(identity) != 1 or any(marker not in main_payload for marker in required):
+    fatal_lines = [line for line in main_payload.splitlines() if b"FATAL" in line]
+    if (
+        len(identity) != 1 or any(marker not in main_payload for marker in required) or
+        len(fatal_lines) != 1 or
+        b"FATAL wrapper command failed after candidate exit rc=86" not in fatal_lines[0]
+    ):
         raise RuntimeError("contained failure runtime attestation differs")
     return tuple(int(value) for value in identity[0])
 
@@ -3257,6 +3334,7 @@ def _capture_authorized_set_with_runtime(
         "manifest": _file_binding(capture_root / "manifest.json"),
         "authenticated_binary": _file_binding(binary),
         "authenticated_candidate_root": str(candidate_root),
+        "scoring_backend": _scoring_backend(str(configuration["device"])),
         "runtime_logs": runtime_logs,
     }
     _write_json_exclusive(staging / "raw.json", binding)
@@ -3351,7 +3429,6 @@ def parser() -> argparse.ArgumentParser:
     validate.add_argument("--source-position", required=True, type=int)
     completed = commands.add_parser("validate-completed")
     completed.add_argument("--result-root", required=True, type=Path)
-    completed.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     run = commands.add_parser("run")
     run.add_argument("--output-root", required=True, type=Path)
     run.add_argument(
@@ -3377,9 +3454,7 @@ def main() -> int:
         print(json.dumps({"metadata": loaded["metadata"], "verdict": "PASS"}, sort_keys=True))
         return 0
     if args.command == "validate-completed":
-        scored = validate_completed_capture_reconstruction(
-            args.result_root, device=args.device,
-        )
+        scored = validate_completed_capture_reconstruction(args.result_root)
         summary_payload = _snapshot_regular(args.result_root / "summary.json")
         print(json.dumps({
             "schema_version": 1,

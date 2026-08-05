@@ -39,6 +39,12 @@ P1_RESULT_ROOT = STATE_ROOT / "p1-results"
 P1_RESULT_RECEIPTS = STATE_ROOT / "p1-result-receipts"
 INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
 P1_CONTROLLER = INSTALLED_HARNESS / "scripts/81_glm_union_baseline.py"
+P1_PYTHON_RUNTIME = Path("/usr/local/libexec/glm52-w1/python")
+P1_PYTHON_DEPENDENCY_SHA256 = "39eccffb7a0a2c627bad322ab42a2f07a3b9c55f4952d2867819766c3870bddf"
+P1_PYTHON_DEPENDENCIES = (
+    "numpy", "numpy.libs", "nvidia", "tokenizers", "torch", "torchgen",
+    "typing_extensions.py",
+)
 P1_APPROVAL = Path("/usr/local/libexec/glm52-w1/p1-approved.json")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
@@ -202,6 +208,76 @@ def _sha256(path: Path) -> str:
     with path.open("rb") as stream:
         while block := stream.read(8 * 1024 * 1024):
             digest.update(block)
+    return digest.hexdigest()
+
+
+def _python_dependency_tree_sha256(root: Path) -> str:
+    """Hash the exact immutable Python runtime without importing from it."""
+    details = root.lstat()
+    if (
+        not stat.S_ISDIR(details.st_mode) or stat.S_ISLNK(details.st_mode) or
+        details.st_uid != ROOT_UID or details.st_gid != ROOT_GID or
+        details.st_mode & 0o022
+    ):
+        raise ValueError("P1 Python runtime root identity differs")
+    if {path.name for path in root.iterdir()} != set(P1_PYTHON_DEPENDENCIES):
+        raise ValueError("P1 Python runtime package set differs")
+    entries: list[tuple[str, str, int, str]] = []
+    for name in P1_PYTHON_DEPENDENCIES:
+        start = root / name
+        start_details = start.lstat()
+        if stat.S_ISREG(start_details.st_mode):
+            if (
+                start_details.st_nlink != 1 or start_details.st_uid != ROOT_UID or
+                start_details.st_gid != ROOT_GID or start_details.st_mode & 0o022
+            ):
+                raise ValueError("P1 Python runtime file identity differs")
+            entries.append(("F", name, start_details.st_size, _sha256(start)))
+            continue
+        if (
+            not stat.S_ISDIR(start_details.st_mode) or
+            stat.S_ISLNK(start_details.st_mode) or
+            start_details.st_uid != ROOT_UID or start_details.st_gid != ROOT_GID or
+            start_details.st_mode & 0o022
+        ):
+            raise ValueError("P1 Python runtime directory identity differs")
+        for base, directories, files in os.walk(start, topdown=True, followlinks=False):
+            directories.sort()
+            files.sort()
+            base_path = Path(base)
+            base_details = base_path.lstat()
+            if (
+                not stat.S_ISDIR(base_details.st_mode) or
+                stat.S_ISLNK(base_details.st_mode) or
+                base_details.st_uid != ROOT_UID or base_details.st_gid != ROOT_GID or
+                base_details.st_mode & 0o022
+            ):
+                raise ValueError("P1 Python runtime directory identity differs")
+            entries.append(("D", base_path.relative_to(root).as_posix(), 0, ""))
+            for item in directories:
+                child_details = (base_path / item).lstat()
+                if not stat.S_ISDIR(child_details.st_mode) or stat.S_ISLNK(
+                    child_details.st_mode
+                ):
+                    raise ValueError("P1 Python runtime directory identity differs")
+            for item in files:
+                path = base_path / item
+                file_details = path.lstat()
+                if (
+                    not stat.S_ISREG(file_details.st_mode) or
+                    file_details.st_nlink != 1 or file_details.st_uid != ROOT_UID or
+                    file_details.st_gid != ROOT_GID or file_details.st_mode & 0o022
+                ):
+                    raise ValueError("P1 Python runtime file identity differs")
+                entries.append((
+                    "F", path.relative_to(root).as_posix(),
+                    file_details.st_size, _sha256(path),
+                ))
+    digest = hashlib.sha256()
+    for kind, relative, size, content_sha256 in entries:
+        digest.update(
+            f"{kind}\0{relative}\0{size}\0{content_sha256}\0".encode("utf-8")
+        )
     return digest.hexdigest()
 
 
@@ -790,17 +866,23 @@ def _run_p1_completed_validator(
         _sha256(P1_CONTROLLER) != approval.get("controller_sha256")
     ):
         raise ValueError("P1 completed validator authority differs")
+    if (
+        _python_dependency_tree_sha256(P1_PYTHON_RUNTIME) !=
+        P1_PYTHON_DEPENDENCY_SHA256
+    ):
+        raise ValueError("P1 Python runtime content differs")
     completed = subprocess.run(
         [
-            "/usr/bin/python3", str(P1_CONTROLLER), "validate-completed",
-            "--result-root", str(destination), "--device", "cpu",
+            "/usr/bin/python3", "-S", str(P1_CONTROLLER), "validate-completed",
+            "--result-root", str(destination),
         ],
         cwd=INSTALLED_HARNESS, stdin=subprocess.DEVNULL,
         capture_output=True, text=True, timeout=1800, check=False,
         env={
             "HOME": "/nonexistent", "PATH": "/usr/bin:/bin",
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
-            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1", "PYTHONNOUSERSITE": "1",
+            "PYTHONPATH": str(P1_PYTHON_RUNTIME),
         },
     )
     if completed.returncode != 0 or completed.stderr:

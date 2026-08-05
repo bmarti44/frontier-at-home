@@ -23,13 +23,16 @@ readonly SOURCE=scripts/65_glm52_w1_submit.py
 readonly SUBMITTER=/usr/local/sbin/glm52-w1-submit
 readonly LIBEXEC=/usr/local/libexec/glm52-w1
 readonly HARNESS=/usr/local/libexec/glm52-w1/harness
+readonly PYTHON_RUNTIME=$LIBEXEC/python
+readonly PYTHON_DEPENDENCY_SOURCE=/home/bmarti44/.local/lib/python3.12/site-packages
+readonly PYTHON_DEPENDENCY_SHA256=39eccffb7a0a2c627bad322ab42a2f07a3b9c55f4952d2867819766c3870bddf
 readonly APPROVAL=/usr/local/libexec/glm52-w1/p1-approved.json
 readonly CONTROLLER_SOURCE=scripts/81_glm_union_baseline.py
 readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
-readonly SUBMITTER_SHA256=11775b2f51b28acdb2678556384d32e0ca8e3136528b7833a9caeecaf73f9d01
+readonly SUBMITTER_SHA256=dd9922eb92c1bfefe116c1c07e48bcb474c487af2d4b7b96250978456f5edce2
 readonly CONTAINED_RUNTIME_DIRS=(
     "$HARNESS"
     "$HARNESS/results"
@@ -41,12 +44,77 @@ readonly CONTAINED_RUNTIME_FILES=(
     "$HARNESS/results/glm52-gates/harness/glm_safe_run.sh"
     "$HARNESS/scripts/03_memory_guard.py"
 )
+readonly PYTHON_DEPENDENCIES=(
+    numpy numpy.libs nvidia tokenizers torch torchgen typing_extensions.py
+)
 
 git_as_user() {
     /usr/sbin/runuser -u bmarti44 -- /usr/bin/env -i \
         HOME=/nonexistent PATH=/usr/bin:/bin LANG=C.UTF-8 \
         GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
         /usr/bin/git -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"
+}
+
+dependency_tree_sha() {
+    /usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin LANG=C.UTF-8 \
+        LC_ALL=C.UTF-8 PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
+        /usr/bin/python3 -S - "$1" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+
+root = os.path.realpath(sys.argv[1])
+names = (
+    "numpy", "numpy.libs", "nvidia", "tokenizers", "torch", "torchgen",
+    "typing_extensions.py",
+)
+if set(os.listdir(root)) != set(names):
+    raise SystemExit("Python dependency package set differs")
+entries = []
+for name in names:
+    start = os.path.join(root, name)
+    details = os.lstat(start)
+    if stat.S_ISREG(details.st_mode):
+        if details.st_nlink != 1:
+            raise SystemExit("unsafe Python dependency file")
+        digest = hashlib.sha256()
+        with open(start, "rb", buffering=0) as stream:
+            for block in iter(lambda: stream.read(4 * 1024 * 1024), b""):
+                digest.update(block)
+        entries.append(("F", name, details.st_size, digest.hexdigest()))
+        continue
+    if not stat.S_ISDIR(details.st_mode) or stat.S_ISLNK(details.st_mode):
+        raise SystemExit("unsafe Python dependency root")
+    for base, directories, files in os.walk(start, topdown=True, followlinks=False):
+        directories.sort()
+        files.sort()
+        base_details = os.lstat(base)
+        if not stat.S_ISDIR(base_details.st_mode):
+            raise SystemExit("unsafe Python dependency directory")
+        entries.append(("D", os.path.relpath(base, root), 0, ""))
+        for item in directories:
+            child_details = os.lstat(os.path.join(base, item))
+            if not stat.S_ISDIR(child_details.st_mode) or stat.S_ISLNK(child_details.st_mode):
+                raise SystemExit("unsafe Python dependency directory")
+        for item in files:
+            path = os.path.join(base, item)
+            file_details = os.lstat(path)
+            if not stat.S_ISREG(file_details.st_mode) or file_details.st_nlink != 1:
+                raise SystemExit("unsafe Python dependency file")
+            digest = hashlib.sha256()
+            with open(path, "rb", buffering=0) as stream:
+                for block in iter(lambda: stream.read(4 * 1024 * 1024), b""):
+                    digest.update(block)
+            entries.append((
+                "F", os.path.relpath(path, root), file_details.st_size,
+                digest.hexdigest(),
+            ))
+result = hashlib.sha256()
+for kind, relative, size, digest in entries:
+    result.update(f"{kind}\0{relative}\0{size}\0{digest}\0".encode("utf-8"))
+print(result.hexdigest())
+PY
 }
 
 [[ $# == 1 ]] || die "usage: $0 CANDIDATE_HASH"
@@ -66,7 +134,15 @@ sudoers_temporary=$(/usr/bin/mktemp /etc/sudoers.d/.glm52-w1-attestor.XXXXXX)
 harness_temporary=$(/usr/bin/mktemp -d /run/glm52-w1-harness.XXXXXX)
 install_complete=0
 harness_installed=0
+python_runtime_installed=0
 cleanup() {
+    if (( install_complete == 0 && python_runtime_installed == 1 )); then
+        /usr/bin/rm -rf -- "$PYTHON_RUNTIME"
+        if [[ -d $harness_temporary/previous-python-runtime ]]; then
+            /usr/bin/mv -- "$harness_temporary/previous-python-runtime" \
+                "$PYTHON_RUNTIME"
+        fi
+    fi
     if (( install_complete == 0 && harness_installed == 1 )); then
         /usr/bin/rm -rf -- "$HARNESS"
         if [[ -d $harness_temporary/previous-harness ]]; then
@@ -94,6 +170,29 @@ harness_head=$(
 [[ $harness_head == "$CANDIDATE_HASH" ]] || die "root harness candidate differs"
 [[ -z $(/usr/bin/git -C "$harness_temporary/repository" status --porcelain) ]] ||
     die "root harness is not clean"
+python_temporary=$harness_temporary/python-runtime
+/usr/bin/install -d -o root -g root -m 0700 "$python_temporary"
+for dependency in "${PYTHON_DEPENDENCIES[@]}"; do
+    [[ -e $PYTHON_DEPENDENCY_SOURCE/$dependency &&
+       ! -L $PYTHON_DEPENDENCY_SOURCE/$dependency ]] ||
+        die "frozen Python dependency is absent or unsafe: $dependency"
+    /usr/bin/cp -a --reflink=auto -- \
+        "$PYTHON_DEPENDENCY_SOURCE/$dependency" "$python_temporary/$dependency"
+done
+[[ $(dependency_tree_sha "$python_temporary") == "$PYTHON_DEPENDENCY_SHA256" ]] ||
+    die "frozen Python dependency content differs"
+/usr/bin/chown -R root:root "$python_temporary"
+/usr/bin/find "$python_temporary" -type d -exec /usr/bin/chmod 0555 '{}' +
+/usr/bin/find "$python_temporary" -type f -exec /usr/bin/chmod 0444 '{}' +
+[[ $(dependency_tree_sha "$python_temporary") == "$PYTHON_DEPENDENCY_SHA256" ]] ||
+    die "sealed Python dependency content differs"
+/usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+    PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="$python_temporary" /usr/bin/python3 -S - <<'PY'
+import numpy, tokenizers, torch
+if not torch.cuda.is_available():
+    raise SystemExit("frozen root scorer CUDA runtime is unavailable")
+PY
 controller_sha=$(/usr/bin/sha256sum \
     "$harness_temporary/repository/$CONTROLLER_SOURCE")
 controller_sha=${controller_sha%% *}
@@ -248,6 +347,15 @@ fi
 /usr/bin/cp -a -- "$harness_temporary/repository" "$HARNESS"
 harness_installed=1
 /usr/bin/chown -R root:root "$HARNESS"
+if [[ -e $PYTHON_RUNTIME ]]; then
+    /usr/bin/mv -- "$PYTHON_RUNTIME" \
+        "$harness_temporary/previous-python-runtime"
+fi
+python_runtime_installed=1
+/usr/bin/cp -a -- "$python_temporary" "$PYTHON_RUNTIME"
+/usr/bin/chown -R root:root "$PYTHON_RUNTIME"
+[[ $(dependency_tree_sha "$PYTHON_RUNTIME") == "$PYTHON_DEPENDENCY_SHA256" ]] ||
+    die "installed Python dependency content differs"
 for path in "${CONTAINED_RUNTIME_DIRS[@]}"; do
     [[ -d $path && ! -L $path ]] ||
         die "contained runtime directory is absent or unsafe"
