@@ -631,7 +631,9 @@ case split within this suite, not a claim that unknown paraphrases are
 independent. The split contract requires a content-complete fixture digest,
 exact 100-case request ledger, per-token/layer/field bijection, case-confined
 K windows, split-specific shards, deterministic failure mutations, and a
-precomputed disk/safety envelope before capture.
+precomputed disk/safety envelope before capture. Expected prompt tokens are
+independently frozen from the exact GLM rendered-prompt template and tokenizer,
+so identically truncated OFF/ON arms cannot pass by agreeing with each other.
 
 #### P1 - direct-union probe and decisive baselines
 
