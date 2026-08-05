@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
+import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -19,6 +22,38 @@ SPEC.loader.exec_module(MODULE)
 
 
 class PrecisionDiagnosticTests(unittest.TestCase):
+    def bounded_sources(self):
+        request = np.repeat(np.asarray([1, 2, 3], dtype=np.uint16), 12)
+        position = np.tile(np.arange(12, dtype=np.uint32), 3)
+        source = {
+            "request_index": request,
+            "layer": np.full(request.size, 4, dtype=np.uint16),
+            "token_position": position,
+            "selected_ids": np.asarray([
+                (np.arange(8, dtype=np.uint16) + int(value) * 8) % 256 for value in position
+            ], dtype=np.uint8),
+            "hidden_q4": np.full((request.size, 3072), 0x88, dtype=np.uint8),
+            "hidden_scale": np.ones((request.size, 192), dtype=np.float16),
+        }
+        return [source], {1: "a", 2: "b", 3: "c"}
+
+    def bounded_diagnostic(self):
+        position = np.arange(12, dtype=np.uint32)
+        return {
+            "request_index": np.ones(12, dtype=np.uint16),
+            "layer": np.full(12, 4, dtype=np.uint16),
+            "token_position": position,
+            "selected_ids": np.asarray([
+                (np.arange(8, dtype=np.uint16) + int(value) * 8) % 256 for value in position
+            ], dtype=np.uint8),
+            "hidden_q4": np.full((12, 3072), 0x88, dtype=np.uint8),
+            "hidden_scale": np.ones((12, 192), dtype=np.float16),
+            "top_ids": np.tile(np.arange(32, dtype=np.uint8), (12, 1)),
+            "top_logits": np.zeros((12, 32), dtype=np.float16),
+            "hidden_fp16_holdout_row": np.asarray([0, 1], dtype=np.uint32),
+            "hidden_fp16_holdout": np.zeros((2, 6144), dtype=np.float16),
+        }
+
     def test_paired_metrics_preserve_rows_and_measure_top32_overlap(self) -> None:
         requests = np.asarray([1, 1, 2], dtype=np.uint16)
         targets = np.zeros((3, 256), dtype=np.bool_)
@@ -59,6 +94,96 @@ class PrecisionDiagnosticTests(unittest.TestCase):
         self.assertEqual(result["events"], 5)
         self.assertEqual(result["event_weighted_overlap"], 0.8)
         self.assertEqual(result["macro_request_overlap"], 0.75)
+
+    def test_diagnostic_contract_rejects_row_and_expert_mutations(self) -> None:
+        rows = 12225
+        arrays = {
+            "request_index": np.ones(rows, dtype=np.uint16),
+            "layer": np.full(rows, 4, dtype=np.uint16),
+            "token_position": np.arange(rows, dtype=np.uint32),
+            "selected_ids": np.tile(np.arange(8, dtype=np.uint8), (rows, 1)),
+            "hidden_q4": np.full((rows, 3072), 0x88, dtype=np.uint8),
+            "hidden_scale": np.ones((rows, 192), dtype=np.float16),
+            "top_ids": np.tile(np.arange(32, dtype=np.uint8), (rows, 1)),
+            "top_logits": np.zeros((rows, 32), dtype=np.float16),
+            "hidden_fp16_holdout_row": np.arange(203, dtype=np.uint32),
+            "hidden_fp16_holdout": np.zeros((203, 6144), dtype=np.float16),
+        }
+        MODULE.validate_diagnostic_arrays(arrays)
+        duplicate_row = {name: value.copy() for name, value in arrays.items()}
+        duplicate_row["hidden_fp16_holdout_row"][1] = 0
+        duplicate_expert = {name: value.copy() for name, value in arrays.items()}
+        duplicate_expert["selected_ids"][0, 1] = 0
+        wrong_dtype = dict(arrays)
+        wrong_dtype["layer"] = wrong_dtype["layer"].astype(np.uint8)
+        for mutation in (duplicate_row, duplicate_expert, wrong_dtype):
+            with self.assertRaises(ValueError):
+                MODULE.validate_diagnostic_arrays(mutation)
+
+    def test_bounded_execute_replays_and_rejects_output_mutations(self) -> None:
+        sources, groups = self.bounded_sources()
+        diagnostic = self.bounded_diagnostic()
+        source_binding = {"fixture": "bounded"}
+        diagnostic_binding = {"fixture": "precision"}
+        state = {
+            "down.weight": np.zeros((32, 6400), dtype=np.float32),
+            "up.weight": np.zeros((768, 32), dtype=np.float32),
+            "up.bias": np.zeros(768, dtype=np.float32),
+        }
+        report = {
+            "fit_rows": 30, "rank": 32, "epochs": 8, "batch_rows": 512,
+            "seed": 20260805, "positive_weights": [1.0, 1.0, 1.0],
+            "epoch_losses": [1.0] * 8, "epoch_k_losses": [[1.0] * 3] * 8,
+            "deterministic_algorithms": True,
+        }
+        logits = np.tile(-np.arange(256, dtype=np.float32), (2, 3, 1))
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "precision"
+            with (
+                mock.patch.object(MODULE.CV, "LAYERS", (4,)),
+                mock.patch.object(MODULE.PROBE, "_tracked_bytes", side_effect=lambda path: Path(path).read_bytes()),
+                mock.patch.object(MODULE.PROBE, "validate_training_sources", return_value=source_binding),
+                mock.patch.object(MODULE.CV, "_load_authorized_sources", return_value=(sources, groups)),
+                mock.patch.object(MODULE, "_load_diagnostic", return_value=(diagnostic, diagnostic_binding)),
+                mock.patch.object(MODULE.PROBE, "train_probe_head", return_value=(state, report)),
+                mock.patch.object(MODULE.PROBE, "predict_probe_head", return_value=logits),
+                mock.patch.object(MODULE.CV, "_repository_head", return_value="1" * 40),
+                mock.patch.object(MODULE.CV, "_gpu_snapshot", return_value={"gpu": "ok", "compute_applications": ""}),
+                mock.patch.object(MODULE.CV, "_mem_available_kib", return_value=120_000_000),
+                mock.patch.object(MODULE.CV, "_kernel_log_since", return_value="clean\n"),
+            ):
+                self.assertEqual(MODULE.execute(output), 0)
+                MODULE.validate_completed_output(output)
+                summary_path = output / "summary.json"
+                original_summary = summary_path.read_bytes()
+                summary = json.loads(original_summary)
+                summary["verdict"] = "FAIL"
+                summary_path.write_text(json.dumps(summary), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    MODULE.validate_completed_output(output)
+                summary_path.write_bytes(original_summary)
+                event_path = output / "diagnostic-events.npz"
+                original_event = event_path.read_bytes()
+                event_path.write_bytes(original_event + b"x")
+                with self.assertRaises(ValueError):
+                    MODULE.validate_completed_output(output)
+                event_path.write_bytes(original_event)
+                with np.load(event_path, allow_pickle=False) as archive:
+                    dropped = {name: archive[name].copy() for name in archive.files}
+                for name in list(dropped):
+                    if name.startswith("layer4_k4_"):
+                        dropped[name] = dropped[name][1:]
+                dropped_path = output.parent / "dropped-events.npz"
+                dropped_binding = MODULE.CV._write_npz_exclusive(dropped_path, dropped)
+                with self.assertRaises(ValueError):
+                    MODULE.replay_diagnostic_events(
+                        dropped_path, dropped_binding, diagnostic,
+                    )
+                state_path = output / "layer-004-rank32.npz"
+                original_state = state_path.read_bytes()
+                state_path.write_bytes(original_state + b"x")
+                with self.assertRaises(ValueError):
+                    MODULE.validate_completed_output(output)
 
 
 if __name__ == "__main__":

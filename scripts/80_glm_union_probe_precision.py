@@ -24,6 +24,10 @@ FREEZE = ROOT / "results/glm52-gates/R0c-union-probe-p1-precision-freeze.json"
 SPLIT_RECEIPT = ROOT / "results/glm52-gates/R0c-union-probe-splits-pass-76faed9.json"
 DIAGNOSTIC = Path("/home/bmarti44/.local/state/glm52-p1-splits-r127-76faed9/train-precision-diagnostic")
 RANK = 32
+EVENT_FIELDS = (
+    "global_row", "local_row", "prediction_row", "request", "target_size",
+    "q4_hits", "fp16_hits", "top32_overlap_count",
+)
 
 
 def _load_module(name: str, path: Path):
@@ -187,13 +191,41 @@ def _load_diagnostic() -> tuple[dict[str, np.ndarray], dict[str, object]]:
         if set(archive.files) != expected_names:
             raise ValueError("precision-diagnostic array set differs")
         arrays = {name: archive[name].copy() for name in archive.files}
-    if (
-        arrays["hidden_fp16_holdout_row"].shape != (203,) or
-        arrays["hidden_fp16_holdout"].shape != (203, 6144) or
-        arrays["hidden_fp16_holdout"].dtype != np.float16
-    ):
-        raise ValueError("precision-diagnostic FP16 holdout differs")
+    validate_diagnostic_arrays(arrays)
     return arrays, binding
+
+
+def validate_diagnostic_arrays(arrays: dict[str, np.ndarray]) -> None:
+    expected = {
+        "request_index": ((12225,), np.dtype(np.uint16)),
+        "layer": ((12225,), np.dtype(np.uint16)),
+        "token_position": ((12225,), np.dtype(np.uint32)),
+        "selected_ids": ((12225, 8), np.dtype(np.uint8)),
+        "hidden_q4": ((12225, 3072), np.dtype(np.uint8)),
+        "hidden_scale": ((12225, 192), np.dtype(np.float16)),
+        "top_ids": ((12225, 32), np.dtype(np.uint8)),
+        "top_logits": ((12225, 32), np.dtype(np.float16)),
+        "hidden_fp16_holdout_row": ((203,), np.dtype(np.uint32)),
+        "hidden_fp16_holdout": ((203, 6144), np.dtype(np.float16)),
+    }
+    if (
+        not isinstance(arrays, dict) or set(arrays) != set(expected) or
+        any(not isinstance(arrays[name], np.ndarray) or arrays[name].shape != shape or
+            arrays[name].dtype != dtype for name, (shape, dtype) in expected.items())
+    ):
+        raise ValueError("precision-diagnostic tensor schema differs")
+    holdout = arrays["hidden_fp16_holdout_row"].astype(np.int64)
+    if (
+        np.any(arrays["request_index"] <= 0) or
+        np.any((arrays["layer"] < 3) | (arrays["layer"] > 77)) or
+        np.any(np.diff(holdout) <= 0) or holdout[0] < 0 or holdout[-1] >= 12225 or
+        any(np.unique(row).size != 8 for row in arrays["selected_ids"]) or
+        any(np.unique(row).size != 32 for row in arrays["top_ids"]) or
+        not np.isfinite(arrays["hidden_scale"]).all() or
+        not np.isfinite(arrays["top_logits"]).all() or
+        not np.isfinite(arrays["hidden_fp16_holdout"]).all()
+    ):
+        raise ValueError("precision-diagnostic tensor values violate the frozen contract")
 
 
 def _state_from_file(path: Path, schema: dict[str, dict[str, object]]) -> dict[str, np.ndarray]:
@@ -201,6 +233,288 @@ def _state_from_file(path: Path, schema: dict[str, dict[str, object]]) -> dict[s
     if set(state) != {"down.weight", "up.weight", "up.bias"}:
         raise ValueError("final probe state tensor set differs")
     return state
+
+
+def diagnostic_layer_contract(
+    diagnostic: dict[str, np.ndarray], layer_id: int,
+) -> tuple[
+    dict[str, np.ndarray], dict[str, dict[str, np.ndarray]], np.ndarray, np.ndarray,
+]:
+    global_rows = np.flatnonzero(diagnostic["layer"] == layer_id)
+    holdout_global = diagnostic["hidden_fp16_holdout_row"].astype(np.int64)
+    selected_mask = np.isin(holdout_global, global_rows)
+    selected_global = holdout_global[selected_mask]
+    local_rows = np.searchsorted(global_rows, selected_global).astype(np.int64)
+    if selected_global.size and not np.array_equal(global_rows[local_rows], selected_global):
+        raise ValueError("diagnostic holdout row does not map to its layer")
+    data = {
+        name: value[global_rows] for name, value in diagnostic.items()
+        if name not in {"hidden_fp16_holdout_row", "hidden_fp16_holdout"}
+    }
+    rows, targets, valid = PROBE.multi_k_targets(
+        data["request_index"], data["layer"], data["token_position"], data["selected_ids"],
+    )
+    prediction_index = np.full(data["layer"].size, -1, dtype=np.int64)
+    prediction_index[rows] = np.arange(rows.size)
+    selected_prediction = prediction_index[local_rows]
+    scorable = selected_prediction >= 0
+    contracts = {}
+    for k_index, k in enumerate(CV.K_VALUES):
+        active = np.zeros(selected_prediction.size, dtype=np.bool_)
+        active[scorable] = valid[selected_prediction[scorable], k_index]
+        active_prediction = selected_prediction[active]
+        contracts[str(k)] = {
+            "global_row": selected_global[active].astype(np.uint32),
+            "local_row": local_rows[active].astype(np.uint32),
+            "prediction_row": active_prediction.astype(np.uint32),
+            "request": data["request_index"][local_rows[active]].astype(np.uint16),
+            "target_size": targets[active_prediction, k_index].sum(axis=1).astype(np.uint8),
+            "targets": targets[active_prediction, k_index],
+        }
+    return data, contracts, selected_mask, scorable
+
+
+def replay_diagnostic_events(
+    event_path: Path,
+    binding: dict[str, object],
+    diagnostic: dict[str, np.ndarray],
+) -> dict[str, object]:
+    expected_names = {
+        f"layer{layer}_k{k}_{field}"
+        for layer in CV.LAYERS for k in CV.K_VALUES for field in EVENT_FIELDS
+    }
+    if (
+        not isinstance(binding, dict) or set(binding) != {"sha256", "bytes", "schema"} or
+        binding.get("sha256") != _sha256(event_path) or
+        binding.get("bytes") != event_path.stat().st_size or
+        not isinstance(binding.get("schema"), dict) or
+        set(binding["schema"]) != expected_names
+    ):
+        raise ValueError("precision event archive binding differs")
+    evidence = CV._read_bound_npz(event_path, binding["schema"])
+    q4_layers = {str(k): [] for k in CV.K_VALUES}
+    fp16_layers = {str(k): [] for k in CV.K_VALUES}
+    overlap_layers = {str(k): [] for k in CV.K_VALUES}
+    zero_cells = []
+    for layer_id in CV.LAYERS:
+        _data, contracts, _selected, _scorable = diagnostic_layer_contract(diagnostic, layer_id)
+        for k in CV.K_VALUES:
+            prefix = f"layer{layer_id}_k{k}_"
+            contract = contracts[str(k)]
+            for field in ("global_row", "local_row", "prediction_row", "request", "target_size"):
+                if not np.array_equal(evidence[prefix + field], contract[field]):
+                    raise ValueError(f"precision event row contract differs: layer {layer_id} K{k}")
+            count = contract["request"].size
+            expected_shapes = {
+                "q4_hits": (count, len(CV.BUDGETS)),
+                "fp16_hits": (count, len(CV.BUDGETS)),
+                "top32_overlap_count": (count,),
+            }
+            for field, shape in expected_shapes.items():
+                value = evidence[prefix + field]
+                if value.dtype != np.uint8 or value.shape != shape:
+                    raise ValueError("precision event metric schema differs")
+            if count == 0:
+                zero_cells.append({"layer": layer_id, "K": k})
+                continue
+            q4 = CV.score_event_evidence(
+                contract["request"], contract["target_size"], evidence[prefix + "q4_hits"],
+                CV.BUDGETS,
+            )
+            fp16 = CV.score_event_evidence(
+                contract["request"], contract["target_size"], evidence[prefix + "fp16_hits"],
+                CV.BUDGETS,
+            )
+            overlap = evidence[prefix + "top32_overlap_count"]
+            if np.any(overlap > 32):
+                raise ValueError("precision top-32 overlap is impossible")
+            overlap_record = {
+                str(int(request)): {
+                    "overlap_sum": int(overlap[contract["request"] == request].sum()),
+                    "events": int(np.sum(contract["request"] == request)),
+                }
+                for request in np.unique(contract["request"])
+            }
+            q4_layers[str(k)].append(q4)
+            fp16_layers[str(k)].append(fp16)
+            overlap_layers[str(k)].append(overlap_record)
+    if any(not values for values in [*q4_layers.values(), *fp16_layers.values(), *overlap_layers.values()]):
+        raise ValueError("precision evidence has no nonempty K coverage")
+    scorable_rows = int(sum(
+        diagnostic_layer_contract(diagnostic, layer)[3].sum() for layer in CV.LAYERS
+    ))
+    return {
+        "q4": {k: CV.aggregate_request_metrics(values) for k, values in q4_layers.items()},
+        "fp16": {k: CV.aggregate_request_metrics(values) for k, values in fp16_layers.items()},
+        "top32_overlap": {k: aggregate_overlap(values) for k, values in overlap_layers.items()},
+        "coverage": {
+            "holdout_rows": int(diagnostic["hidden_fp16_holdout_row"].size),
+            "scorable_rows": scorable_rows,
+            "unscorable_rows": int(diagnostic["hidden_fp16_holdout_row"].size) - scorable_rows,
+            "events_by_K": {
+                k: int(sum(
+                    diagnostic_layer_contract(diagnostic, layer)[1][k]["request"].size
+                    for layer in CV.LAYERS
+                )) for k in map(str, CV.K_VALUES)
+            },
+            "zero_cells": zero_cells,
+        },
+    }
+
+
+def build_precision_summary(
+    repository_head: str,
+    manifest_sha256: str,
+    model_manifest_sha256: str,
+    diagnostic_binding: dict[str, object],
+    event_binding: dict[str, object],
+    replayed: dict[str, object],
+    runtime_final_sha256: str,
+) -> dict[str, object]:
+    q4_headline = replayed["q4"]["4"]["32"]
+    fp16_headline = replayed["fp16"]["4"]["32"]
+    macro_deficit = 100 * (
+        fp16_headline["macro_request_recall"] - q4_headline["macro_request_recall"]
+    )
+    event_deficit = 100 * (
+        fp16_headline["event_weighted_recall"] - q4_headline["event_weighted_recall"]
+    )
+    overlap = replayed["top32_overlap"]["4"]["event_weighted_overlap"]
+    verdict = "PASS" if (
+        macro_deficit <= 2.0 and event_deficit <= 2.0 and overlap >= 0.9
+    ) else "FAIL"
+    return {
+        "schema_version": 1,
+        "classification": "P1_FEATURE_PRECISION_COMPLETE",
+        "verdict": verdict,
+        "repository_head": repository_head,
+        "manifest_sha256": manifest_sha256,
+        "model_manifest_sha256": model_manifest_sha256,
+        "diagnostic_binding": diagnostic_binding,
+        "diagnostic_event_binding": event_binding,
+        "q4": replayed["q4"],
+        "fp16": replayed["fp16"],
+        "top32_overlap": replayed["top32_overlap"],
+        "coverage": replayed["coverage"],
+        "headline": {
+            "K": 4,
+            "budget": 32,
+            "macro_request_recall_deficit_pp": macro_deficit,
+            "event_weighted_recall_deficit_pp": event_deficit,
+            "event_weighted_top32_overlap": overlap,
+            "macro_request_recall_deficit_pp_max": 2.0,
+            "event_weighted_recall_deficit_pp_max": 2.0,
+            "mean_top32_overlap_min": 0.9,
+        },
+        "runtime_final_sha256": runtime_final_sha256,
+        "claim_limit": (
+            "Five-case feature-precision diagnostic only. Calibration/test values were not scored "
+            "or used, but their NPZ members were previously materialized for schema inspection; "
+            "see R0c-split-isolation-incident-2026-08-05.json."
+        ),
+    }
+
+
+def validate_completed_output(requested: Path) -> dict[str, object]:
+    expected_files = {
+        "manifest.json", "runtime-start.json", "model-manifest.json",
+        "diagnostic-events.npz", "runtime-final.json", "summary.json",
+        *(f"layer-{layer:03d}-rank32.npz" for layer in CV.LAYERS),
+    }
+    if {path.name for path in requested.iterdir()} != expected_files:
+        raise ValueError("precision completed artifact set differs")
+    manifest_path = requested / "manifest.json"
+    manifest = CV._read_json_snapshot(manifest_path)
+    source_binding = PROBE.validate_training_sources(CV.QUALITY, CV.LONGS)
+    if (
+        set(manifest) != {
+            "schema_version", "classification", "repository_head", "driver_sha256",
+            "cv_driver_sha256", "probe_sha256", "freeze_sha256", "runtime_start_sha256",
+            "training_source_binding", "selected_rank", "layers",
+        } or manifest.get("schema_version") != 1 or
+        manifest.get("classification") != "P1_PRECISION_IN_PROGRESS" or
+        manifest.get("repository_head") != CV._repository_head() or
+        manifest.get("driver_sha256") != _sha256(Path(__file__).resolve()) or
+        manifest.get("cv_driver_sha256") != _sha256(CV_PATH) or
+        manifest.get("probe_sha256") != _sha256(CV.PROBE_PATH) or
+        manifest.get("freeze_sha256") != _sha256(FREEZE) or
+        manifest.get("training_source_binding") != source_binding or
+        manifest.get("selected_rank") != RANK or manifest.get("layers") != list(CV.LAYERS)
+    ):
+        raise ValueError("precision completed manifest differs")
+    runtime_start_path = requested / "runtime-start.json"
+    runtime_start = CV._read_json_snapshot(runtime_start_path)
+    if (
+        manifest["runtime_start_sha256"] != _sha256(runtime_start_path) or
+        runtime_start.get("classification") != "P1_PRECISION_RUNTIME_START" or
+        runtime_start.get("kernel_faults_at_start") != []
+    ):
+        raise ValueError("precision runtime-start binding differs")
+    model_manifest_path = requested / "model-manifest.json"
+    model_manifest = CV._read_json_snapshot(model_manifest_path)
+    if (
+        set(model_manifest) != {
+            "schema_version", "classification", "parent_manifest_sha256",
+            "diagnostic_opened", "layers",
+        } or model_manifest.get("schema_version") != 1 or
+        model_manifest.get("classification") != "P1_RANK32_FINAL_MODELS" or
+        model_manifest.get("parent_manifest_sha256") != _sha256(manifest_path) or
+        model_manifest.get("diagnostic_opened") is not False or
+        not isinstance(model_manifest.get("layers"), dict) or
+        set(model_manifest["layers"]) != {str(layer) for layer in CV.LAYERS}
+    ):
+        raise ValueError("precision model manifest differs")
+    for layer in CV.LAYERS:
+        record = model_manifest["layers"][str(layer)]
+        if (
+            not isinstance(record, dict) or set(record) != {
+                "file", "sha256", "bytes", "schema", "training",
+            } or record.get("file") != f"layer-{layer:03d}-rank32.npz" or
+            record.get("sha256") != _sha256(requested / record["file"]) or
+            record.get("bytes") != (requested / record["file"]).stat().st_size or
+            not isinstance(record.get("schema"), dict) or
+            not isinstance(record.get("training"), dict) or
+            record["training"].get("rank") != RANK or
+            record["training"].get("epochs") != 8 or
+            record["training"].get("batch_rows") != 512 or
+            record["training"].get("seed") != 20260805 or
+            record["training"].get("deterministic_algorithms") is not True
+        ):
+            raise ValueError("precision model layer binding differs")
+        _state_from_file(requested / record["file"], record["schema"])
+    diagnostic, diagnostic_binding = _load_diagnostic()
+    summary = CV._read_json_snapshot(requested / "summary.json")
+    event_binding = summary.get("diagnostic_event_binding")
+    replayed = replay_diagnostic_events(
+        requested / "diagnostic-events.npz", event_binding, diagnostic,
+    )
+    runtime_final_path = requested / "runtime-final.json"
+    runtime_final = CV._read_json_snapshot(runtime_final_path)
+    if (
+        set(runtime_final) != {
+            "schema_version", "classification", "start_epoch", "end_epoch", "post_gpu",
+            "post_mem_available_kib", "kernel_log", "kernel_log_sha256", "kernel_faults",
+        } or runtime_final.get("schema_version") != 1 or
+        runtime_final.get("classification") != "P1_PRECISION_RUNTIME_PASS" or
+        runtime_final.get("start_epoch") != runtime_start.get("start_epoch") or
+        not isinstance(runtime_final.get("end_epoch"), int) or
+        runtime_final["end_epoch"] < runtime_start["start_epoch"] or
+        not isinstance(runtime_final.get("kernel_log"), str) or
+        runtime_final.get("kernel_log_sha256") != hashlib.sha256(
+            runtime_final["kernel_log"].encode()
+        ).hexdigest() or runtime_final.get("kernel_faults") != [] or
+        CV.runtime_fault_lines(runtime_final["kernel_log"]) or
+        not isinstance(runtime_final.get("post_mem_available_kib"), int) or
+        runtime_final["post_mem_available_kib"] <= 0
+    ):
+        raise ValueError("precision runtime-final evidence differs")
+    expected = build_precision_summary(
+        manifest["repository_head"], _sha256(manifest_path), _sha256(model_manifest_path),
+        diagnostic_binding, event_binding, replayed, _sha256(runtime_final_path),
+    )
+    if summary != expected:
+        raise ValueError("precision summary does not replay persisted evidence")
+    return summary
 
 
 def execute(out_dir: Path) -> int:
@@ -285,73 +599,63 @@ def execute(out_dir: Path) -> int:
     gc.collect()
 
     diagnostic, diagnostic_binding = _load_diagnostic()
-    q4_layers = {str(k): [] for k in CV.K_VALUES}
-    fp16_layers = {str(k): [] for k in CV.K_VALUES}
-    overlap_layers = {str(k): [] for k in CV.K_VALUES}
     event_arrays: dict[str, np.ndarray] = {}
-    holdout_global = diagnostic["hidden_fp16_holdout_row"].astype(np.int64)
     for layer_id in CV.LAYERS:
-        global_rows = np.flatnonzero(diagnostic["layer"] == layer_id)
-        selected_mask = np.isin(holdout_global, global_rows)
-        selected_global = holdout_global[selected_mask]
-        if selected_global.size == 0:
-            print(json.dumps({"diagnosed_layer": layer_id, "paired_rows": 0}, sort_keys=True), flush=True)
-            continue
-        local_rows = np.searchsorted(global_rows, selected_global)
-        if not np.array_equal(global_rows[local_rows], selected_global):
-            raise ValueError("diagnostic holdout row does not map to its layer")
-        data = {name: value[global_rows] for name, value in diagnostic.items()
-                if name not in {"hidden_fp16_holdout_row", "hidden_fp16_holdout"}}
-        rows, targets, valid = PROBE.multi_k_targets(
-            data["request_index"], data["layer"], data["token_position"], data["selected_ids"],
-        )
-        prediction_index = np.full(data["layer"].size, -1, dtype=np.int64)
-        prediction_index[rows] = np.arange(rows.size)
-        selected_prediction = prediction_index[local_rows]
-        if np.any(selected_prediction < 0):
-            raise ValueError("diagnostic holdout row has no prediction target")
-        history = PROBE.causal_expert_history(
-            data["request_index"], data["layer"], data["token_position"], data["selected_ids"],
-        )
-        q4_hidden = PROBE.unpack_probe_hidden(data["hidden_q4"], data["hidden_scale"])
-        fp16_hidden = diagnostic["hidden_fp16_holdout"][selected_mask].astype(np.float32)
-        q4_features = np.concatenate((q4_hidden[local_rows], history[local_rows]), axis=1).astype(np.float16)
-        fp16_features = np.concatenate((fp16_hidden, history[local_rows]), axis=1).astype(np.float16)
-        state_record = model_layers[str(layer_id)]
-        state = _state_from_file(requested / state_record["file"], state_record["schema"])
-        q4_logits = PROBE.predict_probe_head(q4_features, state, RANK, device="cuda")
-        fp16_logits = PROBE.predict_probe_head(fp16_features, state, RANK, device="cuda")
-        for k_index, k in enumerate(CV.K_VALUES):
-            active = valid[selected_prediction, k_index]
-            if not active.any():
-                continue
-            paired = diagnostic_pair_metrics(
-                data["request_index"][local_rows[active]],
-                targets[selected_prediction[active], k_index],
-                q4_logits[active, k_index], fp16_logits[active, k_index],
+        data, contracts, selected_mask, scorable = diagnostic_layer_contract(diagnostic, layer_id)
+        selected_global = diagnostic["hidden_fp16_holdout_row"].astype(np.int64)[selected_mask]
+        scorable_global = selected_global[scorable]
+        if scorable_global.size:
+            global_rows = np.flatnonzero(diagnostic["layer"] == layer_id)
+            local_rows = np.searchsorted(global_rows, scorable_global)
+            history = PROBE.causal_expert_history(
+                data["request_index"], data["layer"], data["token_position"], data["selected_ids"],
             )
-            q4_layers[str(k)].append(paired["q4"])
-            fp16_layers[str(k)].append(paired["fp16"])
-            overlap_layers[str(k)].append(paired["top32_overlap"])
-            for name, value in paired["evidence"].items():
-                event_arrays[f"layer{layer_id}_k{k}_{name}"] = value
-        print(json.dumps({"diagnosed_layer": layer_id}, sort_keys=True), flush=True)
+            q4_hidden = PROBE.unpack_probe_hidden(data["hidden_q4"], data["hidden_scale"])
+            fp16_hidden = diagnostic["hidden_fp16_holdout"][selected_mask][scorable].astype(np.float32)
+            q4_features = np.concatenate(
+                (q4_hidden[local_rows], history[local_rows]), axis=1,
+            ).astype(np.float16)
+            fp16_features = np.concatenate(
+                (fp16_hidden, history[local_rows]), axis=1,
+            ).astype(np.float16)
+            state_record = model_layers[str(layer_id)]
+            state = _state_from_file(requested / state_record["file"], state_record["schema"])
+            q4_logits = PROBE.predict_probe_head(q4_features, state, RANK, device="cuda")
+            fp16_logits = PROBE.predict_probe_head(fp16_features, state, RANK, device="cuda")
+        for k_index, k in enumerate(CV.K_VALUES):
+            contract = contracts[str(k)]
+            count = contract["request"].size
+            prefix = f"layer{layer_id}_k{k}_"
+            if count:
+                active = np.isin(scorable_global, contract["global_row"])
+                paired = diagnostic_pair_metrics(
+                    contract["request"], contract["targets"],
+                    q4_logits[active, k_index], fp16_logits[active, k_index],
+                )
+                values = paired["evidence"]
+            else:
+                values = {
+                    "request": np.empty(0, dtype=np.uint16),
+                    "target_size": np.empty(0, dtype=np.uint8),
+                    "q4_hits": np.empty((0, len(CV.BUDGETS)), dtype=np.uint8),
+                    "fp16_hits": np.empty((0, len(CV.BUDGETS)), dtype=np.uint8),
+                    "top32_overlap_count": np.empty(0, dtype=np.uint8),
+                }
+            for field in ("global_row", "local_row", "prediction_row"):
+                event_arrays[prefix + field] = contract[field]
+            for field in ("request", "target_size", "q4_hits", "fp16_hits", "top32_overlap_count"):
+                event_arrays[prefix + field] = values[field]
+        print(json.dumps({
+            "diagnosed_layer": layer_id, "paired_rows": int(scorable_global.size),
+            "retained_rows": int(selected_global.size),
+        }, sort_keys=True), flush=True)
     event_binding = CV._write_npz_exclusive(requested / "diagnostic-events.npz", event_arrays)
-    q4_summary = {k: CV.aggregate_request_metrics(values) for k, values in q4_layers.items()}
-    fp16_summary = {k: CV.aggregate_request_metrics(values) for k, values in fp16_layers.items()}
-    overlap_summary = {k: aggregate_overlap(values) for k, values in overlap_layers.items()}
-    q4_headline = q4_summary["4"]["32"]
-    fp16_headline = fp16_summary["4"]["32"]
-    macro_deficit = 100 * (
-        fp16_headline["macro_request_recall"] - q4_headline["macro_request_recall"]
+    replayed = replay_diagnostic_events(
+        requested / "diagnostic-events.npz", event_binding, diagnostic,
     )
-    event_deficit = 100 * (
-        fp16_headline["event_weighted_recall"] - q4_headline["event_weighted_recall"]
-    )
-    verdict = "PASS" if (
-        macro_deficit <= 2.0 and event_deficit <= 2.0 and
-        overlap_summary["4"]["event_weighted_overlap"] >= 0.9
-    ) else "FAIL"
+    q4_summary = replayed["q4"]
+    fp16_summary = replayed["fp16"]
+    overlap_summary = replayed["top32_overlap"]
     post_gpu = CV._gpu_snapshot()
     post_mem = CV._mem_available_kib()
     kernel_log = CV._kernel_log_since(start_epoch)
@@ -370,38 +674,15 @@ def execute(out_dir: Path) -> int:
         "kernel_faults": faults,
     }
     CV._write_json_exclusive(requested / "runtime-final.json", runtime_final)
-    summary = {
-        "schema_version": 1,
-        "classification": "P1_FEATURE_PRECISION_COMPLETE",
-        "verdict": verdict,
-        "repository_head": manifest["repository_head"],
-        "manifest_sha256": _sha256(requested / "manifest.json"),
-        "model_manifest_sha256": model_manifest_sha256,
-        "diagnostic_binding": diagnostic_binding,
-        "diagnostic_event_binding": event_binding,
-        "q4": q4_summary,
-        "fp16": fp16_summary,
-        "top32_overlap": overlap_summary,
-        "headline": {
-            "K": 4,
-            "budget": 32,
-            "macro_request_recall_deficit_pp": macro_deficit,
-            "event_weighted_recall_deficit_pp": event_deficit,
-            "event_weighted_top32_overlap": overlap_summary["4"]["event_weighted_overlap"],
-            "macro_request_recall_deficit_pp_max": 2.0,
-            "event_weighted_recall_deficit_pp_max": 2.0,
-            "mean_top32_overlap_min": 0.9,
-        },
-        "runtime_final_sha256": _sha256(requested / "runtime-final.json"),
-        "claim_limit": (
-            "Five-case feature-precision diagnostic only. Calibration/test values were not scored "
-            "or used, but their NPZ members were previously materialized for schema inspection; "
-            "see R0c-split-isolation-incident-2026-08-05.json."
-        ),
-    }
+    summary = build_precision_summary(
+        manifest["repository_head"], _sha256(requested / "manifest.json"),
+        model_manifest_sha256, diagnostic_binding, event_binding, replayed,
+        _sha256(requested / "runtime-final.json"),
+    )
     CV._write_json_exclusive(requested / "summary.json", summary)
-    print(json.dumps(summary, sort_keys=True, indent=2, allow_nan=False))
-    return 0 if verdict == "PASS" else 2
+    validated = validate_completed_output(requested)
+    print(json.dumps(validated, sort_keys=True, indent=2, allow_nan=False))
+    return 0 if validated["verdict"] == "PASS" else 2
 
 
 def parser() -> argparse.ArgumentParser:
