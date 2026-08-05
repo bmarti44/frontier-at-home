@@ -41,7 +41,13 @@
   "resource_policy": {
     "host_available_floor_gib": 30,
     "cuda_allocator_cap_gib": 10,
-    "execution": "Load only authorized archives, train one layer/rank/fold at a time, release CUDA tensors between fits, and stop on any allocator error, OOM indicator, Xid, or non-finite value."
+    "execution": "Load only authorized archives, train one layer/rank/fold at a time, release CUDA tensors between fits, and stop on any allocator error, OOM indicator, Xid, or non-finite value.",
+    "qualification_restart_policy": "A qualifying CV attempt uses a fresh exclusive output directory and is never resumed from aggregate checkpoints. An interrupted attempt is retained as NO_RESULT and the next attempt starts from a new directory."
+  },
+  "replay_evidence": {
+    "per_event": "For every routed layer, K, method, rank, and budget, preserve integer request ID, source row, true target cardinality, and hit count. Full-set coverage is derived as hits==target cardinality; precision, waste, recall, and macro aggregation are produced only by the fixed scorer.",
+    "aggregation": "The fresh process aggregates its in-memory fixed-scorer results. Layer JSON files bind the corresponding event NPZ but are not accepted as resumable rank-selection inputs.",
+    "runtime": "The manifest hash-binds the immutable runtime-start snapshot. Runtime-final preserves the exact raw kernel-journal interval plus its SHA-256, start/end times, GPU snapshots, memory, deterministic-algorithm status, and zero fault list."
   },
   "selection_claim_limit": "Train-only cross-validation selects a candidate but cannot establish held-out improvement. Calibration remains reserved for P2. Test is opened once only after the probe, exact baselines, scorer, hashes, and output format are frozen."
 }
