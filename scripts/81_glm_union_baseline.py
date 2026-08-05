@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import random
 import re
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -53,11 +54,11 @@ QUALITY_FIXTURE_RELATIVE = Path("gguf-tools/quality-testing/data/glm52-openroute
 TOKENIZER_PATH = Path("/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json")
 SAFE_RUN_PATH = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
 MEMORY_GUARD_PATH = ROOT / "scripts/03_memory_guard.py"
-FROZEN_BINARY_SHA256 = "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b"
+FROZEN_BINARY_SHA256 = "be8b0ed00864d3fba6e1f7dabed4adc0646efaf7968f1bcb6da6c3a6ce172121"
 FROZEN_MODEL_SHA256 = "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
 FROZEN_TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
 FROZEN_FIXTURE_SHA256 = "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0a"
-FROZEN_ENGINE_COMMIT = "b8a152f29bb68197796b89ba755afb4aefe45dee"
+FROZEN_ENGINE_COMMIT = "fa788b63042a7f647924f56a4db6d8ce2be2f63c"
 FROZEN_MODEL_STAT = (66306, 679227, 211075856448, 1784912383428586016, 1784912515922318687)
 FROZEN_SCRIPT_HASHES = {
     SAFE_RUN_PATH: "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
@@ -71,16 +72,12 @@ AUTHORITY_MESSAGE_ID = "9b0125b612d7480da990ad79e8c4c2fb"
 AUTHORITY_GATE_ID = "glm52-p1-baseline-heldout-v1"
 AUTHORITY_IDENTIFIER = "glm52-p1-baseline-authority"
 ROOT_SUBMITTER_PATH = Path("/usr/local/sbin/glm52-w1-submit")
-FROZEN_ROOT_SUBMITTER_SHA256 = "1594b10566877b67d67007fcbdf72b3582ee829087b55989a9370fd7c813c602"
+FROZEN_ROOT_SUBMITTER_SHA256 = "7c44a54746a85069403d396e6d6fd4310a8fbf480faf632ae595f5ff207a7538"
 FIXED_LAUNCH_PATH = (
     "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
 )
-FROZEN_FAILURE_INJECTION_PROOF = {
-    "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
-    "all_destroyed": True,
-    "all_control_continuations_equal": True,
-}
+FAILURE_INJECTION_STAGES = ("mtp_call", "target_eval", "route_capture", "disposal")
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -380,6 +377,78 @@ def score_baseline_table(
     }
 
 
+def validate_failure_injection_evidence(evidence: dict[str, object]) -> None:
+    """Reject declared success; accept only four concrete fault executions."""
+    if (
+        not isinstance(evidence, dict) or set(evidence) != {
+            "schema_version", "records", "reference_continuation_sha256",
+            "reference_token_ids_sha256",
+        } or evidence.get("schema_version") != 1 or
+        any(
+            not isinstance(evidence.get(name), str) or
+            not re.fullmatch(r"[0-9a-f]{64}", str(evidence[name]))
+            for name in (
+                "reference_continuation_sha256", "reference_token_ids_sha256",
+            )
+        )
+    ):
+        raise ValueError("failure-injection evidence schema differs")
+    records = evidence.get("records")
+    if not isinstance(records, list) or len(records) != len(FAILURE_INJECTION_STAGES):
+        raise ValueError("failure-injection stage coverage differs")
+    expected_keys = {
+        "stage", "process_pid", "process_start_ticks", "cache_namespace",
+        "authenticated_marker_sha256", "injected_exit_code",
+        "process_group_empty", "cache_namespace_absent",
+        "post_control_continuation_sha256", "post_control_token_ids_sha256",
+        "runtime_log",
+    }
+    identities: set[tuple[int, int]] = set()
+    namespaces: set[str] = set()
+    observed_stages = []
+    for record in records:
+        if not isinstance(record, dict) or set(record) != expected_keys:
+            raise ValueError("failure-injection record schema differs")
+        identity = (record.get("process_pid"), record.get("process_start_ticks"))
+        runtime_log = record.get("runtime_log")
+        if (
+            any(not isinstance(value, int) or isinstance(value, bool) or value <= 0
+                for value in identity) or identity in identities or
+            not isinstance(record.get("cache_namespace"), str) or
+            not record["cache_namespace"] or record["cache_namespace"] in namespaces or
+            record.get("injected_exit_code") != 86 or
+            record.get("process_group_empty") is not True or
+            record.get("cache_namespace_absent") is not True or
+            any(
+                not isinstance(record.get(name), str) or
+                not re.fullmatch(r"[0-9a-f]{64}", str(record[name]))
+                for name in (
+                    "authenticated_marker_sha256",
+                    "post_control_continuation_sha256",
+                    "post_control_token_ids_sha256",
+                )
+            ) or
+            record["post_control_continuation_sha256"] !=
+                evidence["reference_continuation_sha256"] or
+            record["post_control_token_ids_sha256"] !=
+                evidence["reference_token_ids_sha256"] or
+            not isinstance(runtime_log, dict) or set(runtime_log) != {
+                "path", "sha256", "bytes",
+            } or not isinstance(runtime_log.get("path"), str) or
+            not runtime_log["path"].startswith("runtime-logs/fault-") or
+            not isinstance(runtime_log.get("sha256"), str) or
+            not re.fullmatch(r"[0-9a-f]{64}", runtime_log["sha256"]) or
+            not isinstance(runtime_log.get("bytes"), int) or
+            isinstance(runtime_log.get("bytes"), bool) or runtime_log["bytes"] <= 0
+        ):
+            raise ValueError("failure-injection execution differs")
+        identities.add(identity)
+        namespaces.add(record["cache_namespace"])
+        observed_stages.append(record.get("stage"))
+    if observed_stages != list(FAILURE_INJECTION_STAGES):
+        raise ValueError("failure-injection stages are missing or reordered")
+
+
 def validate_two_control_record(record: dict[str, object]) -> None:
     """Validate process-isolated diagnostic bracketing and its fault suite."""
     expected = {
@@ -441,16 +510,7 @@ def validate_two_control_record(record: dict[str, object]) -> None:
         for key in ("continuation_sha256", "token_ids_sha256")
     ):
         raise ValueError("two-control continuation differs")
-    failure = record.get("failure_injection")
-    if (
-        not isinstance(failure, dict) or set(failure) != {
-            "stages", "all_destroyed", "all_control_continuations_equal",
-        } or failure.get("stages") != [
-            "mtp_call", "target_eval", "route_capture", "disposal",
-        ] or failure.get("all_destroyed") is not True or
-        failure.get("all_control_continuations_equal") is not True
-    ):
-        raise ValueError("two-control failure-injection coverage differs")
+    validate_failure_injection_evidence(record.get("failure_injection"))
 
 
 def run_two_control_sequence(
@@ -570,6 +630,16 @@ def score_cost_table(rows: list[dict[str, object]]) -> dict[str, object]:
     }
 
 
+def unqualified_cost_result() -> dict[str, object]:
+    """Retract incomparable post-hoc timings; they have no fold authority."""
+    return {
+        "schema_version": 2,
+        "verdict": "NO_RESULT",
+        "reason": "MATCHED_DIRECT_ARMS_NOT_MEASURED",
+        "fold_authority": False,
+    }
+
+
 def decide_mtp_fold(
     scored: dict[str, object],
     cost: dict[str, object],
@@ -597,7 +667,7 @@ def decide_mtp_fold(
             ):
                 raise ValueError("MTP fold recall is non-finite")
             recall_dominates = recall_dominates and all(mtp > value for value in others)
-    equal_cost = all(
+    equal_cost = cost.get("fold_authority") is not False and all(
         cost.get(f"mtp_equal_cost_to_{method}") is True for method in comparators
     )
     return {
@@ -665,11 +735,9 @@ def validate_completed_result(
     )
     cost_payload = _snapshot_regular(root / "cost.json")
     cost_document = _strict_json(cost_payload, "completed cost evidence")
-    if set(cost_document) != {"schema_version", "rows"} or cost_document.get(
-        "schema_version"
-    ) != 1 or not isinstance(cost_document.get("rows"), list):
-        raise ValueError("completed cost evidence schema differs")
-    reconstructed_cost = score_cost_table(cost_document["rows"])
+    reconstructed_cost = unqualified_cost_result()
+    if cost_document != reconstructed_cost:
+        raise ValueError("completed cost NO_RESULT differs")
     reconstructed["decision"].update(decide_mtp_fold(
         reconstructed, reconstructed_cost,
     ))
@@ -685,10 +753,33 @@ def validate_completed_result(
         raise ValueError("completed two-control coverage differs")
     request_ids = set()
     for runtime in runtime_logs:
-        if not isinstance(runtime, dict):
+        if not isinstance(runtime, dict) or set(runtime) != {
+            "request_index", "two_control", "arms",
+        }:
             raise ValueError("completed runtime row differs")
         control = runtime.get("two_control")
         validate_two_control_record(control)
+        for fault in control["failure_injection"]["records"]:
+            payload = validate_preserved_runtime_log(root, fault["runtime_log"])
+            marker = (
+                f"ds4: GLM baseline injected failure stage={fault['stage']}\n"
+            ).encode("ascii")
+            identity = (
+                f"executed_candidate_verified pid={fault['process_pid']} "
+                f"start_ticks={fault['process_start_ticks']}"
+            ).encode("ascii")
+            if (
+                marker not in payload or identity not in payload or
+                _sha256_bytes(marker) != fault["authenticated_marker_sha256"]
+            ):
+                raise ValueError("completed failure-injection raw evidence differs")
+        arms = runtime.get("arms")
+        if not isinstance(arms, dict) or set(arms) != {
+            "control_before", "diagnostic", "control_after",
+        }:
+            raise ValueError("completed runtime arm coverage differs")
+        for binding in arms.values():
+            validate_preserved_runtime_directory(root, binding)
         request_ids.add((control["request_index"], control["request_id"]))
     if len(request_ids) != 20 or summary.get("two_control") != {
         "requests": 20,
@@ -733,6 +824,62 @@ def _snapshot_regular(path: Path, expected_bytes: int | None = None) -> bytes:
     finally:
         os.close(descriptor)
     return bytes(payload)
+
+
+def validate_preserved_runtime_log(
+    root: Path, binding: dict[str, object],
+) -> bytes:
+    """Reopen one result-relative runtime artifact and bind its exact bytes."""
+    if (
+        not isinstance(binding, dict) or set(binding) != {"path", "sha256", "bytes"} or
+        not isinstance(binding.get("path"), str) or
+        Path(binding["path"]).is_absolute() or ".." in Path(binding["path"]).parts or
+        not isinstance(binding.get("sha256"), str) or
+        not re.fullmatch(r"[0-9a-f]{64}", binding["sha256"]) or
+        not isinstance(binding.get("bytes"), int) or isinstance(binding.get("bytes"), bool) or
+        binding["bytes"] < 0
+    ):
+        raise ValueError("preserved runtime log binding differs")
+    path = root / binding["path"]
+    payload = _snapshot_regular(path, binding["bytes"])
+    if _sha256_bytes(payload) != binding["sha256"]:
+        raise ValueError("preserved runtime log bytes differ")
+    return payload
+
+
+def validate_preserved_runtime_directory(
+    root: Path, binding: dict[str, object],
+) -> None:
+    expected = {
+        "directory", "artifacts", "wrapper_exit_code",
+        "launch_environment_sha256",
+    }
+    if (
+        not isinstance(binding, dict) or set(binding) != expected or
+        not isinstance(binding.get("directory"), str) or
+        Path(binding["directory"]).is_absolute() or
+        ".." in Path(binding["directory"]).parts or
+        binding.get("wrapper_exit_code") != 0 or
+        not isinstance(binding.get("launch_environment_sha256"), str) or
+        not re.fullmatch(r"[0-9a-f]{64}", binding["launch_environment_sha256"])
+    ):
+        raise ValueError("preserved runtime directory binding differs")
+    artifacts = binding.get("artifacts")
+    if not isinstance(artifacts, dict) or set(artifacts) != {
+        "cmd.log", "kernel.log", "main.log", "samples.log",
+        "wrapper.stdout", "wrapper.stderr",
+    }:
+        raise ValueError("preserved runtime artifact coverage differs")
+    directory = Path(binding["directory"])
+    for name, artifact in artifacts.items():
+        if not isinstance(artifact, dict):
+            raise ValueError("preserved runtime artifact binding differs")
+        validate_preserved_runtime_log(root, {
+            "path": (directory / name).as_posix(), **artifact,
+        })
+    actual = root / directory
+    if sorted(path.name for path in actual.iterdir()) != sorted(artifacts):
+        raise ValueError("preserved runtime directory file set differs")
 
 
 def load_capture_source(directory: Path, source_position: int) -> dict[str, object]:
@@ -1523,26 +1670,11 @@ def _score_opened_heldout(
         write_canonical_scorer_input(
             canonical_path, event_requests, targets, rankings,
         )
-    cost_rows = _measure_heldout_cost_rows(
-        event_requests=event_requests,
-        event_layers=event_layers,
-        event_positions=event_positions,
-        gate_scores=gate_scores,
-        gate_selected=gate_selected,
-        shared_scores=shared_scores,
-        shared_selected=shared_selected,
-        captures=captures,
-        common=common,
-        probe=probe,
-        states=states,
-        device=device,
-    )
-    cost = score_cost_table(cost_rows)
+    # The engine and offline probe expose different clocks and include different
+    # common work.  Preserve no cost claim until matched direct arms exist.
+    cost = unqualified_cost_result()
     if canonical_path is not None:
-        _write_json_exclusive(canonical_path.with_name("cost.json"), {
-            "schema_version": 1,
-            "rows": cost_rows,
-        })
+        _write_json_exclusive(canonical_path.with_name("cost.json"), cost)
     scored = score_baseline_table(event_requests, targets, rankings)
     scored["decision"].update(decide_mtp_fold(scored, cost))
     scored.update({
@@ -1641,6 +1773,80 @@ def _seal_completed_tree(root: Path) -> None:
                 os.fsync(descriptor)
             finally:
                 os.close(descriptor)
+
+
+def _result_tree_manifest(root: Path) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for path in sorted(root.rglob("*")):
+        details = path.lstat()
+        if stat.S_ISLNK(details.st_mode):
+            raise ValueError("result tree contains a symlink")
+        if path.is_dir():
+            continue
+        if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
+            raise ValueError("result tree contains an unsafe file")
+        payload = _snapshot_regular(path, details.st_size)
+        rows.append({
+            "path": path.relative_to(root).as_posix(),
+            "sha256": _sha256_bytes(payload),
+            "size": len(payload),
+        })
+    if not rows:
+        raise ValueError("result tree is empty")
+    return rows
+
+
+def _result_manifest_sha256(rows: list[dict[str, object]]) -> str:
+    return _sha256_bytes(json.dumps(
+        rows, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode("utf-8"))
+
+
+def _publish_root_result(
+    output_root: Path, candidate_hash: str,
+) -> dict[str, object]:
+    """Move a locally replayed result behind root authority and verify receipt."""
+    output_root = output_root.absolute()
+    if (
+        output_root.parent.resolve(strict=True) != Path("/home/bmarti44/.local/state") or
+        not re.fullmatch(r"glm52-[A-Za-z0-9._-]{1,120}", output_root.name)
+    ):
+        raise ValueError("root result publication path differs")
+    rows = _result_tree_manifest(output_root)
+    manifest_sha256 = _result_manifest_sha256(rows)
+    completed = subprocess.run(
+        [
+            "/usr/bin/sudo", "-n", str(ROOT_SUBMITTER_PATH), "publish-p1",
+            candidate_hash, output_root.name, manifest_sha256,
+        ],
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120,
+        check=False, env=_authority_environment(),
+    )
+    if completed.returncode != 0 or completed.stderr:
+        raise RuntimeError("root result publication failed")
+    try:
+        receipt = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("root result publication response is malformed") from error
+    expected = {
+        "schema_version", "classification", "candidate_hash",
+        "authoritative_root", "manifest_sha256", "files",
+        "approval_sha256", "approval_device", "approval_inode",
+    }
+    if (
+        not isinstance(receipt, dict) or set(receipt) != expected or
+        receipt.get("schema_version") != 1 or
+        receipt.get("classification") != "GLM52_P1_ROOT_HELD_RESULT" or
+        receipt.get("candidate_hash") != candidate_hash or
+        receipt.get("manifest_sha256") != manifest_sha256 or
+        receipt.get("files") != rows or output_root.exists() or
+        not isinstance(receipt.get("authoritative_root"), str)
+    ):
+        raise RuntimeError("root result publication response differs")
+    authoritative = Path(receipt["authoritative_root"])
+    if _result_tree_manifest(authoritative) != rows:
+        raise RuntimeError("root authoritative result differs")
+    return receipt
 
 
 def _authority_environment() -> dict[str, str]:
@@ -2473,6 +2679,7 @@ def _run_contained_baseline_process(
     environment: dict[str, str],
     crash_root: Path,
     tag: str,
+    preserve_root: Path,
 ) -> dict[str, object]:
     before_logs = set(crash_root.glob(f"*-{tag}"))
     completed = subprocess.run(
@@ -2495,23 +2702,159 @@ def _run_contained_baseline_process(
     _validate_safe_run_artifacts(
         main_payload, kernel_payload, stdout_payload, expected_environment,
     )
+    preserved = preserve_root / tag
+    preserved.mkdir(parents=True)
+    payloads = {
+        **{name: _snapshot_regular(path) for name, path in log_files.items()},
+        "wrapper.stdout": stdout_payload,
+        "wrapper.stderr": completed.stderr.encode("utf-8"),
+    }
+    artifacts: dict[str, dict[str, object]] = {}
+    for name, payload in sorted(payloads.items()):
+        target = preserved / name
+        _write_runtime_file(target, payload, 0o400)
+        artifacts[name] = {"bytes": len(payload), "sha256": _sha256_bytes(payload)}
+    relative_directory = preserved.relative_to(preserve_root.parent).as_posix()
     return {
         "run_log": run_log,
         "main_payload": main_payload,
         "log_binding": {
-            "directory": str(run_log),
-            "artifacts": {
-                path.name: _file_binding(path)
-                for path in sorted(run_log.iterdir()) if path.is_file()
-            },
+            "directory": relative_directory,
+            "artifacts": artifacts,
             "wrapper_exit_code": completed.returncode,
-            "wrapper_stdout_sha256": _sha256_bytes(stdout_payload),
-            "wrapper_stderr_sha256": _sha256_bytes(completed.stderr.encode("utf-8")),
             "launch_environment_sha256": _environment_sha256(
                 environment, list(environment),
             ),
         },
     }
+
+
+def _run_contained_failure_process(
+    command: list[str],
+    environment: dict[str, str],
+    crash_root: Path,
+    tag: str,
+    preserve_root: Path,
+    stage: str,
+) -> dict[str, object]:
+    """Run one real engine fault arm and preserve its authenticated wrapper log."""
+    before_logs = set(crash_root.glob(f"*-{tag}"))
+    completed = subprocess.run(
+        command, cwd=ROOT, env=environment, stdin=subprocess.DEVNULL,
+        capture_output=True, text=True, timeout=2500, check=False,
+    )
+    after_logs = set(crash_root.glob(f"*-{tag}")) - before_logs
+    if completed.returncode != 86 or len(after_logs) != 1:
+        raise RuntimeError(f"contained failure process did not inject: {stage}")
+    run_log = after_logs.pop()
+    files = {path.name: path for path in run_log.iterdir() if path.is_file()}
+    if set(files) != {"cmd.log", "kernel.log", "main.log", "samples.log"}:
+        raise ValueError("contained failure runtime log set differs")
+    main_payload = _snapshot_regular(files["main.log"])
+    marker = f"ds4: GLM baseline injected failure stage={stage}".encode("ascii")
+    identity = re.findall(
+        rb"executed_candidate_verified pid=([0-9]+) start_ticks=([0-9]+)",
+        main_payload,
+    )
+    expected_environment = environment["GLM_SAFE_EXPECTED_ENV_SHA256"].encode("ascii")
+    if (
+        len(identity) != 1 or marker not in main_payload or
+        f"candidate_binary_sha256={FROZEN_BINARY_SHA256}".encode("ascii") not in main_payload or
+        b"executed_environment_sha256=" + expected_environment not in main_payload or
+        b"SAFE_RUN end rc=86 killed=no" not in main_payload or
+        b"wrapper and descendant checks clean" not in main_payload
+    ):
+        raise RuntimeError("contained failure runtime attestation differs")
+    pid, start_ticks = (int(value) for value in identity[0])
+    if Path(f"/proc/{pid}").exists():
+        raise RuntimeError("injected candidate process survived wrapper exit")
+    preserved = preserve_root / tag
+    preserved.mkdir(parents=True)
+    for name, payload in {
+        **{name: _snapshot_regular(path) for name, path in files.items()},
+        "wrapper.stdout": completed.stdout.encode("utf-8"),
+        "wrapper.stderr": completed.stderr.encode("utf-8"),
+    }.items():
+        _write_runtime_file(preserved / name, payload, 0o400)
+    relative_main = (preserved / "main.log").relative_to(preserve_root.parent)
+    return {
+        "process_pid": pid,
+        "process_start_ticks": start_ticks,
+        "authenticated_marker_sha256": _sha256_bytes(marker + b"\n"),
+        "runtime_log": {
+            "path": relative_main.as_posix(),
+            "sha256": _sha256_bytes(main_payload),
+            "bytes": len(main_payload),
+        },
+    }
+
+
+def _run_failure_injection_suite(
+    *,
+    request: int,
+    prompt_path: Path,
+    reference: dict[str, object],
+    safe_run_path: Path,
+    binary: Path,
+    model_command: Path,
+    candidate_root: Path,
+    runtime: dict[str, object],
+    crash_root: Path,
+    staging: Path,
+    base_ds4_values: dict[str, str],
+) -> dict[str, object]:
+    """Execute each engine fault boundary and prove a clean continuation after it."""
+    reference_continuation = str(reference["continuation_sha256"])
+    reference_tokens = str(reference["token_ids_sha256"])
+    records = []
+    namespaces_root = staging / "fault-namespaces"
+    namespaces_root.mkdir()
+    for index, stage in enumerate(FAILURE_INJECTION_STAGES, start=1):
+        namespace = namespaces_root / f"{request:08d}-{stage}"
+        tag = f"p1-fault-{stage}-r{request:03d}-{os.getpid()}"
+        ds4_values = {
+            **base_ds4_values,
+            "DS4_GLM_BASELINE_CAPTURE_DIR": str(namespace),
+            "DS4_GLM_BASELINE_FAIL_STAGE": stage,
+        }
+        environment = _build_launch_environment(ds4_values, candidate_root, runtime)
+        fault = _run_contained_failure_process(
+            _engine_capture_command(
+                safe_run_path, tag, binary, model_command, prompt_path,
+            ),
+            environment, crash_root, tag, staging / "runtime-logs", stage,
+        )
+        if namespace.exists():
+            shutil.rmtree(namespace)
+        control_tag = f"p1-post-fault-{stage}-r{request:03d}-{os.getpid()}"
+        control_environment = _build_launch_environment(
+            dict(base_ds4_values), candidate_root, runtime,
+        )
+        control = _run_contained_baseline_process(
+            _engine_control_command(
+                safe_run_path, control_tag, binary, model_command, prompt_path,
+            ),
+            control_environment, crash_root, control_tag, staging / "runtime-logs",
+        )
+        continuation, token_ids = _control_fingerprint(bytes(control["main_payload"]))
+        records.append({
+            "stage": stage,
+            **fault,
+            "cache_namespace": namespace.relative_to(staging).as_posix(),
+            "injected_exit_code": 86,
+            "process_group_empty": True,
+            "cache_namespace_absent": not namespace.exists(),
+            "post_control_continuation_sha256": continuation,
+            "post_control_token_ids_sha256": token_ids,
+        })
+    evidence = {
+        "schema_version": 1,
+        "records": records,
+        "reference_continuation_sha256": reference_continuation,
+        "reference_token_ids_sha256": reference_tokens,
+    }
+    validate_failure_injection_evidence(evidence)
+    return evidence
 
 
 def _capture_authorized_set(
@@ -2577,6 +2920,7 @@ def _capture_authorized_set_with_runtime(
 ) -> dict[str, object]:
     entries = []
     runtime_logs = []
+    failure_injection_evidence: dict[str, object] | None = None
     cases = opened.get("cases")
     if not isinstance(cases, list) or len(cases) != 20:
         raise ValueError("authorized test case coverage differs")
@@ -2616,7 +2960,7 @@ def _capture_authorized_set_with_runtime(
                 ds4_values, candidate_root, runtime,
             )
             process = _run_contained_baseline_process(
-                command, environment, crash_root, tag,
+                command, environment, crash_root, tag, staging / "runtime-logs",
             )
             process_results[arm] = process
             if arm == "diagnostic":
@@ -2637,9 +2981,27 @@ def _capture_authorized_set_with_runtime(
                 "exit_code": 0,
             }
 
+        bracket = {
+            name: run_arm(name)
+            for name in ("control_before", "diagnostic", "control_after")
+        }
+        if failure_injection_evidence is None:
+            failure_injection_evidence = _run_failure_injection_suite(
+                request=request,
+                prompt_path=prompt_path,
+                reference=bracket["control_before"],
+                safe_run_path=safe_run_path,
+                binary=binary,
+                model_command=model_command,
+                candidate_root=candidate_root,
+                runtime=runtime,
+                crash_root=crash_root,
+                staging=staging,
+                base_ds4_values=base_ds4_values,
+            )
         two_control = run_two_control_sequence(
-            request, str(case["request_id"]), run_arm,
-            dict(FROZEN_FAILURE_INJECTION_PROOF),
+            request, str(case["request_id"]), lambda name: bracket[name],
+            failure_injection_evidence,
         )
         positions = expected_positions.get(request)
         if not isinstance(positions, list) or len(positions) != 8:
@@ -2733,6 +3095,7 @@ def _score_authorized_gate(
 
 def _run_authorized_gate(configuration: dict[str, object]) -> dict[str, object]:
     state: dict[str, object] = {}
+    output_root = Path(configuration["output_root"])
 
     def preflight():
         prepared = _preflight_authorized_gate(configuration)
@@ -2758,14 +3121,33 @@ def _run_authorized_gate(configuration: dict[str, object]) -> dict[str, object]:
         )
 
     try:
-        return _run_atomic_lifecycle(
-            Path(configuration["output_root"]), preflight, opener, capture, score,
+        result = _run_atomic_lifecycle(
+            output_root, preflight, opener, capture, score,
             ledger_path=AUTHORIZED_LEDGER_PATH,
             reserve_authority=_reserve_global_authority,
             validate_complete=lambda root, result: validate_completed_result(
                 root, expected_summary=result,
             ),
         )
+        candidate = str(state["preflight"].get("harness_commit", ""))
+        if (
+            re.fullmatch(r"[0-9a-f]{40}", candidate) and
+            output_root.absolute().parent == Path("/home/bmarti44/.local/state")
+        ):
+            receipt = _publish_root_result(output_root, candidate)
+            validate_completed_result(
+                Path(str(receipt["authoritative_root"])), expected_summary=result,
+            )
+            state["root_result_receipt"] = receipt
+        return result
+    except BaseException:
+        # A failed lifecycle is still evidence.  Once it has published a local
+        # attempt tree, revoke owner write access and preserve it under root.
+        if output_root.exists() and isinstance(state.get("preflight"), dict):
+            candidate = str(state["preflight"].get("harness_commit", ""))
+            if re.fullmatch(r"[0-9a-f]{40}", candidate):
+                _publish_root_result(output_root, candidate)
+        raise
     finally:
         runtime = state.get("runtime")
         if isinstance(runtime, dict):
@@ -2788,7 +3170,7 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("--output-root", required=True, type=Path)
     run.add_argument(
         "--candidate-root", type=Path,
-        default=Path("/home/bmarti44/.cache/glm52-baseline-b8a152f-canonical"),
+        default=Path("/home/bmarti44/.cache/glm52-baseline-fa788b6-canonical"),
     )
     run.add_argument(
         "--model", type=Path,

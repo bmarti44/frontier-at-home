@@ -1,0 +1,149 @@
+From fa788b63042a7f647924f56a4db6d8ce2be2f63c Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Wed, 5 Aug 2026 16:42:25 -0400
+Subject: [PATCH 9/9] test(glm): inject baseline failures at real stages
+
+---
+ ds4.c     | 35 +++++++++++++++++++++++++++++++++++
+ ds4.h     |  9 +++++++++
+ ds4_cli.c | 18 ++++++++++++++++++
+ 3 files changed, 62 insertions(+)
+
+diff --git a/ds4.c b/ds4.c
+index 23c8039..abb0253 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -60766,6 +60766,7 @@ int ds4_session_glm_baseline_capture(
+         const ds4_tokens *tokens,
+         int ctx_size,
+         const char *directory,
++        ds4_glm_baseline_fail_stage fail_stage,
+         char *err,
+         size_t errlen) {
+     /* Publication uses glm_union_trace_write_exclusive (O_EXCL + fsync),
+@@ -60800,6 +60801,8 @@ int ds4_session_glm_baseline_capture(
+         return 1;
+     }
+     bool baseline_capture_failed = false;
++    bool injected_failure = false;
++    const char *injected_stage = NULL;
+     for (uint32_t source_pos = first_source;
+          !baseline_capture_failed && source_pos <= last_source;
+          source_pos++) {
+@@ -60858,6 +60861,12 @@ int ds4_session_glm_baseline_capture(
+                 }
+                 mtp_ms[step - 1u] = (now_sec() - mtp_started) * 1000.0;
+                 predicted[step] = next;
++                if (fail_stage == DS4_GLM_BASELINE_FAIL_MTP_CALL) {
++                    injected_stage = "mtp_call";
++                    injected_failure = true;
++                    baseline_capture_failed = true;
++                    break;
++                }
+             }
+             g->baseline_capture_step = step;
+             g->baseline_capture_active = true;
+@@ -60868,6 +60877,19 @@ int ds4_session_glm_baseline_capture(
+             target_ms[step - 1u] = (now_sec() - target_started) * 1000.0;
+             cumulative_ms[step - 1u] = (now_sec() - started) * 1000.0;
+             g->baseline_capture_active = false;
++            if (!baseline_capture_failed &&
++                fail_stage == DS4_GLM_BASELINE_FAIL_TARGET_EVAL) {
++                injected_stage = "target_eval";
++                injected_failure = true;
++                baseline_capture_failed = true;
++            }
++        }
++        if (!baseline_capture_failed &&
++            fail_stage == DS4_GLM_BASELINE_FAIL_ROUTE_CAPTURE &&
++            glm_graph_baseline_capture_complete(g)) {
++            injected_stage = "route_capture";
++            injected_failure = true;
++            baseline_capture_failed = true;
+         }
+         if (!baseline_capture_failed &&
+             (!glm_graph_baseline_capture_complete(g) ||
+@@ -60880,11 +60902,24 @@ int ds4_session_glm_baseline_capture(
+         free(hidden);
+         ds4_tokens_free(&prefix);
+         ds4_session_free(session);
++        if (!baseline_capture_failed &&
++            fail_stage == DS4_GLM_BASELINE_FAIL_DISPOSAL) {
++            injected_stage = "disposal";
++            injected_failure = true;
++            baseline_capture_failed = true;
++        }
+     }
+     const int directory_fd = open(directory, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+     if (directory_fd < 0 || fsync(directory_fd) != 0) baseline_capture_failed = true;
+     if (directory_fd >= 0 && close(directory_fd) != 0) baseline_capture_failed = true;
+     if (baseline_capture_failed) {
++        if (injected_failure) {
++            fprintf(stderr, "ds4: GLM baseline injected failure stage=%s\n",
++                    injected_stage ? injected_stage : "unknown");
++            if (errlen) snprintf(err, errlen, "injected GLM baseline failure stage=%s",
++                                 injected_stage ? injected_stage : "unknown");
++            return 86;
++        }
+         if (errlen && (!err || !err[0])) snprintf(err, errlen, "GLM baseline capture failed");
+         return 1;
+     }
+diff --git a/ds4.h b/ds4.h
+index 30ebb8b..a5cd63e 100644
+--- a/ds4.h
++++ b/ds4.h
+@@ -383,11 +383,20 @@ void ds4_session_gpu_warmup(ds4_session *s);
+ int ds4_session_eval(ds4_session *s, int token, char *err, size_t errlen);
+ /* Default-off CLI diagnostic: capture exact gate/shared/hybrid-MTP full router
+  * rankings for the last eight K=8-complete structural positions. */
++typedef enum {
++    DS4_GLM_BASELINE_FAIL_NONE = 0,
++    DS4_GLM_BASELINE_FAIL_MTP_CALL,
++    DS4_GLM_BASELINE_FAIL_TARGET_EVAL,
++    DS4_GLM_BASELINE_FAIL_ROUTE_CAPTURE,
++    DS4_GLM_BASELINE_FAIL_DISPOSAL,
++} ds4_glm_baseline_fail_stage;
++
+ int ds4_session_glm_baseline_capture(
+         ds4_engine *engine,
+         const ds4_tokens *tokens,
+         int ctx_size,
+         const char *directory,
++        ds4_glm_baseline_fail_stage fail_stage,
+         char *err,
+         size_t errlen);
+ 
+diff --git a/ds4_cli.c b/ds4_cli.c
+index a90acb7..fa68fb2 100644
+--- a/ds4_cli.c
++++ b/ds4_cli.c
+@@ -1173,8 +1173,26 @@ static int run_generation(ds4_engine *engine, const cli_config *cfg) {
+     const char *baseline_capture_dir = getenv("DS4_GLM_BASELINE_CAPTURE_DIR");
+     if (baseline_capture_dir && baseline_capture_dir[0]) {
+         char err[256] = {0};
++        ds4_glm_baseline_fail_stage fail_stage_value = DS4_GLM_BASELINE_FAIL_NONE;
++        const char *fail_stage = getenv("DS4_GLM_BASELINE_FAIL_STAGE");
++        if (fail_stage && fail_stage[0]) {
++            if (strcmp(fail_stage, "mtp_call") == 0) {
++                fail_stage_value = DS4_GLM_BASELINE_FAIL_MTP_CALL;
++            } else if (strcmp(fail_stage, "target_eval") == 0) {
++                fail_stage_value = DS4_GLM_BASELINE_FAIL_TARGET_EVAL;
++            } else if (strcmp(fail_stage, "route_capture") == 0) {
++                fail_stage_value = DS4_GLM_BASELINE_FAIL_ROUTE_CAPTURE;
++            } else if (strcmp(fail_stage, "disposal") == 0) {
++                fail_stage_value = DS4_GLM_BASELINE_FAIL_DISPOSAL;
++            } else {
++                fprintf(stderr, "ds4: invalid GLM baseline failure stage\n");
++                ds4_tokens_free(&prompt);
++                return 2;
++            }
++        }
+         const int rc = ds4_session_glm_baseline_capture(
+             engine, &prompt, cfg->gen.ctx_size, baseline_capture_dir,
++            fail_stage_value,
+             err, sizeof(err));
+         if (rc != 0) {
+             fprintf(stderr, "ds4: GLM baseline capture failed: %s\n",
+-- 
+2.43.0
+

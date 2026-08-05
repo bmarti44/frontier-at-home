@@ -990,13 +990,21 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn("validate_w1_root_receipt", controller)
         self.assertIn("/var/lib/glm52-w1/by-composite", controller)
 
-    def test_submitter_does_not_ingest_user_campaign_trees(self):
+    def test_submitter_only_ingests_the_exact_p1_publication_tree(self):
         source = SUBMITTER.read_text(encoding="utf-8")
         launcher = (
             ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
         ).read_text(encoding="utf-8")
         self.assertNotIn("shutil.copytree", source)
-        self.assertNotIn("/home/bmarti44/.local/state", source)
+        campaign = source.split("def run_campaign(", 1)[1].split(
+            "\ndef show_status", 1,
+        )[0]
+        self.assertNotIn("/home/bmarti44/.local/state", campaign)
+        publication = source.split("def publish_p1_result(", 1)[1].split(
+            "\ndef _open_noatime", 1,
+        )[0]
+        self.assertIn("os.rename(source, destination)", publication)
+        self.assertIn("_tree_manifest(destination)", publication)
         self.assertNotIn("--uid=bmarti44", source + launcher)
         self.assertIn("--uid=dsv4", launcher)
         self.assertIn("MemorySwapMax=0", launcher)

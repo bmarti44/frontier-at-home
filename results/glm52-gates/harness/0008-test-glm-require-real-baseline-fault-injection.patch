@@ -1,0 +1,37 @@
+From bb7faecb932c877b1d623b039674acc4c39e2d38 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Wed, 5 Aug 2026 16:40:35 -0400
+Subject: [PATCH 8/9] test(glm): require real baseline fault injection
+
+---
+ tests/test_glm_baseline_capture_source.py | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/tests/test_glm_baseline_capture_source.py b/tests/test_glm_baseline_capture_source.py
+index 7a9c503..05488bd 100644
+--- a/tests/test_glm_baseline_capture_source.py
++++ b/tests/test_glm_baseline_capture_source.py
+@@ -64,6 +64,20 @@ class GlmBaselineCaptureSourceTests(unittest.TestCase):
+         self.assertIn("fsync", body)
+         self.assertIn("return 1", body)
+ 
++    def test_default_off_fault_injection_hits_real_cleanup_boundaries(self) -> None:
++        body = SOURCE[SOURCE.index("int ds4_session_glm_baseline_capture("):]
++        self.assertIn("DS4_GLM_BASELINE_FAIL_MTP_CALL", body)
++        self.assertIn("DS4_GLM_BASELINE_FAIL_TARGET_EVAL", body)
++        self.assertIn("DS4_GLM_BASELINE_FAIL_ROUTE_CAPTURE", body)
++        self.assertIn("DS4_GLM_BASELINE_FAIL_DISPOSAL", body)
++        self.assertIn("GLM baseline injected failure stage=%s", body)
++        self.assertIn('getenv("DS4_GLM_BASELINE_FAIL_STAGE")', CLI)
++        self.assertIn('strcmp(fail_stage, "mtp_call")', CLI)
++        self.assertIn('strcmp(fail_stage, "target_eval")', CLI)
++        self.assertIn('strcmp(fail_stage, "route_capture")', CLI)
++        self.assertIn('strcmp(fail_stage, "disposal")', CLI)
++        self.assertIn("fail_stage_value", CLI)
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
+-- 
+2.43.0
+

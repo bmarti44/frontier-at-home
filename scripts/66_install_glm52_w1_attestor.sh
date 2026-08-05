@@ -29,7 +29,7 @@ readonly STATE_ROOT=/var/lib/glm52-w1
 readonly RULE=/etc/sudoers.d/glm52-w1-attestor
 readonly TMPFILES_RULE=/etc/tmpfiles.d/frontier-at-home.conf
 readonly LEGACY_LOCK=/run/dsv4/inference.lock
-readonly SUBMITTER_SHA256=1594b10566877b67d67007fcbdf72b3582ee829087b55989a9370fd7c813c602
+readonly SUBMITTER_SHA256=7c44a54746a85069403d396e6d6fd4310a8fbf480faf632ae595f5ff207a7538
 readonly CONTAINED_RUNTIME_DIRS=(
     "$HARNESS"
     "$HARNESS/results"
@@ -218,6 +218,8 @@ fi
 /usr/bin/install -d -o root -g root -m 0711 "$STATE_ROOT/requests"
 /usr/bin/install -d -o root -g root -m 0755 "$STATE_ROOT/by-composite"
 /usr/bin/install -d -o root -g root -m 0755 "$STATE_ROOT/controller-attempts"
+/usr/bin/install -d -o root -g root -m 0700 "$STATE_ROOT/p1-results"
+/usr/bin/install -d -o root -g root -m 0700 "$STATE_ROOT/p1-result-receipts"
 /usr/bin/install -d -o root -g root -m 0755 "$LIBEXEC"
 /usr/bin/printf '%s\n' \
     'd /run/dsv4 1770 root dsv4 -' \

@@ -34,6 +34,9 @@ P1_SMOKE_ROOT = STATE_ROOT / "p1-baseline-smoke-v1"
 P1_SMOKE_RESERVATION = P1_SMOKE_ROOT / "reservation.json"
 P1_APPROVAL_SMOKE_ROOT = STATE_ROOT / "p1-baseline-approval-smoke-v1"
 P1_APPROVAL_SMOKE_RESERVATION = P1_APPROVAL_SMOKE_ROOT / "reservation.json"
+P1_RESULT_SOURCE_ROOT = Path("/home/bmarti44/.local/state")
+P1_RESULT_ROOT = STATE_ROOT / "p1-results"
+P1_RESULT_RECEIPTS = STATE_ROOT / "p1-result-receipts"
 INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
 P1_APPROVAL = Path("/usr/local/libexec/glm52-w1/p1-approved.json")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
@@ -88,6 +91,13 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
         and HASH64.fullmatch(argv[2])
     ):
         return tuple(argv)
+    if (
+        len(argv) == 4 and argv[0] == "publish-p1" and
+        HASH40.fullmatch(argv[1]) and
+        re.fullmatch(r"glm52-[A-Za-z0-9._-]{1,120}", argv[2]) and
+        HASH64.fullmatch(argv[3])
+    ):
+        return tuple(argv)
     raise ValueError(
         "usage: glm52-w1-submit run HARNESS_COMMIT ENGINE_COMMIT MODEL_SHA256\n"
         "       glm52-w1-submit status COMPOSITE_SHA256\n"
@@ -95,7 +105,8 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
         "       glm52-w1-submit p1-authority\n"
         "       glm52-w1-submit reserve-p1 CANDIDATE_HASH RESERVATION_SHA256\n"
         "       glm52-w1-submit reserve-p1-smoke CANDIDATE_HASH RESERVATION_SHA256\n"
-        "       glm52-w1-submit reserve-p1-approval-smoke CANDIDATE_HASH RESERVATION_SHA256"
+        "       glm52-w1-submit reserve-p1-approval-smoke CANDIDATE_HASH RESERVATION_SHA256\n"
+        "       glm52-w1-submit publish-p1 CANDIDATE_HASH OUTPUT_NAME MANIFEST_SHA256"
     )
 
 
@@ -656,6 +667,94 @@ def _manifest_sha256(rows: list[dict[str, object]]) -> str:
     return hashlib.sha256(
         json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
+
+
+def _seal_public_root_tree(root: Path) -> None:
+    """Root-own a result tree and make every entry owner-immutable."""
+    paths = [root, *root.rglob("*")]
+    for path in paths:
+        details = path.lstat()
+        if stat.S_ISLNK(details.st_mode) or not (
+            stat.S_ISDIR(details.st_mode) or
+            (stat.S_ISREG(details.st_mode) and details.st_nlink == 1)
+        ):
+            raise ValueError("P1 result contains an unsafe entry")
+    for path in sorted(paths, key=lambda value: len(value.parts), reverse=True):
+        os.chown(path, ROOT_UID, ROOT_GID, follow_symlinks=False)
+        os.chmod(path, 0o555 if path.is_dir() else 0o444, follow_symlinks=False)
+    for path in paths:
+        if path.is_dir():
+            descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+
+
+def publish_p1_result(
+    candidate_hash: str,
+    output_name: str,
+    expected_manifest_sha256: str,
+    *,
+    source_parent: Path = P1_RESULT_SOURCE_ROOT,
+    state_root: Path = STATE_ROOT,
+    approval_reader=_read_p1_approval,
+) -> dict[str, object]:
+    """Atomically revoke owner access, verify, and seal one P1 result tree."""
+    if (
+        not HASH40.fullmatch(candidate_hash) or
+        not re.fullmatch(r"glm52-[A-Za-z0-9._-]{1,120}", output_name) or
+        not HASH64.fullmatch(expected_manifest_sha256)
+    ):
+        raise ValueError("P1 result publication request differs")
+    approval, approval_identity = approval_reader()
+    if candidate_hash != approval.get("candidate_hash"):
+        raise ValueError("P1 result candidate differs from root approval")
+    source_parent = source_parent.resolve(strict=True)
+    source = source_parent / output_name
+    source_details = source.lstat()
+    if stat.S_ISLNK(source_details.st_mode) or not stat.S_ISDIR(source_details.st_mode):
+        raise ValueError("P1 result source is unsafe")
+    result_root = state_root / "p1-results"
+    receipt_root = state_root / "p1-result-receipts"
+    for directory in (result_root, receipt_root):
+        directory.mkdir(mode=0o700, parents=False, exist_ok=True)
+        os.chown(directory, ROOT_UID, ROOT_GID)
+        os.chmod(directory, 0o700)
+    destination = result_root / output_name
+    if destination.exists() or destination.is_symlink():
+        raise FileExistsError("P1 authoritative result already exists")
+    # The rename is the authority transition: once under a root-only parent,
+    # the owner UID cannot race validation or chmod files back to writable.
+    os.rename(source, destination)
+    try:
+        rows = _tree_manifest(destination)
+        observed_manifest_sha256 = _manifest_sha256(rows)
+        if observed_manifest_sha256 != expected_manifest_sha256:
+            raise ValueError("P1 result manifest differs after authority transition")
+        _seal_public_root_tree(destination)
+        receipt = {
+            "schema_version": 1,
+            "classification": "GLM52_P1_ROOT_HELD_RESULT",
+            "candidate_hash": candidate_hash,
+            "authoritative_root": str(destination),
+            "manifest_sha256": observed_manifest_sha256,
+            "files": rows,
+            **approval_identity,
+        }
+        receipt_path = receipt_root / f"{output_name}.json"
+        _canonical_json(receipt_path, receipt, mode=0o444)
+        os.chown(receipt_path, ROOT_UID, ROOT_GID)
+        for directory in (result_root, receipt_root, state_root):
+            descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+        return receipt
+    except BaseException:
+        _quarantine_seal(destination)
+        raise
 
 
 def _open_noatime(path: Path, flags: int, *, dir_fd: int | None = None) -> int:
@@ -1422,6 +1521,12 @@ def main(argv: list[str]) -> int:
                 marker=P1_APPROVAL_SMOKE_RESERVATION,
                 classification="GLM52_P1_NONHELDOUT_APPROVAL_SMOKE_RESERVATION",
             )
+        if request[0] == "publish-p1":
+            print(json.dumps(
+                publish_p1_result(request[1], request[2], request[3]),
+                sort_keys=True, separators=(",", ":"),
+            ))
+            return 0
         return show_status(request[1])
 
 

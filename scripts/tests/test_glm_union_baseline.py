@@ -24,6 +24,34 @@ SPEC.loader.exec_module(MODULE)
 REAL_RESERVE_GLOBAL_AUTHORITY = MODULE._reserve_global_authority
 
 
+def executed_failure_fixture() -> dict[str, object]:
+    records = []
+    for index, stage in enumerate(MODULE.FAILURE_INJECTION_STAGES, start=1):
+        records.append({
+            "stage": stage,
+            "process_pid": 1000 + index,
+            "process_start_ticks": 2000 + index,
+            "cache_namespace": f"fault-{stage}-{index}",
+            "authenticated_marker_sha256": f"{index:064x}",
+            "injected_exit_code": 86,
+            "process_group_empty": True,
+            "cache_namespace_absent": True,
+            "post_control_continuation_sha256": "2" * 64,
+            "post_control_token_ids_sha256": "3" * 64,
+            "runtime_log": {
+                "path": f"runtime-logs/fault-{stage}.log",
+                "sha256": f"{index + 10:064x}",
+                "bytes": 128 + index,
+            },
+        })
+    return {
+        "schema_version": 1,
+        "records": records,
+        "reference_continuation_sha256": "2" * 64,
+        "reference_token_ids_sha256": "3" * 64,
+    }
+
+
 class CaptureBundleTests(unittest.TestCase):
     def publish(self, directory: Path, source: int = 4) -> None:
         base = directory / f"source-{source:08d}"
@@ -1080,13 +1108,7 @@ class BaselineTableTests(unittest.TestCase):
                 "token_ids_sha256": "3" * 64,
                 "exit_code": 0,
             },
-            "failure_injection": {
-                "stages": [
-                    "mtp_call", "target_eval", "route_capture", "disposal",
-                ],
-                "all_destroyed": True,
-                "all_control_continuations_equal": True,
-            },
+            "failure_injection": executed_failure_fixture(),
         }
         MODULE.validate_two_control_record(record)
         for mutation in ("continuation", "namespace", "failure"):
@@ -1096,7 +1118,7 @@ class BaselineTableTests(unittest.TestCase):
             elif mutation == "namespace":
                 changed["control_after"]["cache_namespace"] = "diagnostic-1"
             else:
-                changed["failure_injection"]["all_destroyed"] = False
+                changed["failure_injection"]["records"][0]["process_group_empty"] = False
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 MODULE.validate_two_control_record(changed)
 
@@ -1122,11 +1144,7 @@ class BaselineTableTests(unittest.TestCase):
                 "exit_code": 0,
             }
 
-        failure = {
-            "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
-            "all_destroyed": True,
-            "all_control_continuations_equal": True,
-        }
+        failure = executed_failure_fixture()
         record = MODULE.run_two_control_sequence(
             1, "1" * 64, run_arm, failure,
         )
@@ -1303,39 +1321,32 @@ class BaselineTableTests(unittest.TestCase):
                 "schema_version": 1,
                 "classification": "P1_HELD_OUT_BASELINE_SCORE",
             })
-            cost_rows = []
-            for block in range(5):
-                for temperature in ("cold", "warm"):
-                    for method, milliseconds in (
-                        ("gate_replay", 1.0), ("shared_correction", 1.2),
-                        ("mtp", 10.0), ("probe", 2.0),
-                    ):
-                        cost_rows.append({
-                            "block": block,
-                            "temperature": temperature,
-                            "method": method,
-                            "completed_ms": milliseconds + block / 100.0,
-                            "persistent_bytes": 0,
-                            "peak_temporary_bytes": 1024,
-                            "target_expert_bytes_read": (
-                                100000 if method == "mtp" else 0
-                            ),
-                            "completed_events": 32,
-                            "synchronized": True,
-                        })
-            (root / "cost.json").write_text(json.dumps({
-                "schema_version": 1, "rows": cost_rows,
-            }) + "\n", encoding="utf-8")
-            summary["cost"] = MODULE.score_cost_table(cost_rows)
+            cost = MODULE.unqualified_cost_result()
+            (root / "cost.json").write_text(
+                json.dumps(cost) + "\n", encoding="utf-8",
+            )
+            summary["cost"] = cost
             summary["decision"].update(MODULE.decide_mtp_fold(
                 summary, summary["cost"],
             ))
-            failure = {
-                "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
-                "all_destroyed": True,
-                "all_control_continuations_equal": True,
-            }
+            failure = executed_failure_fixture()
             runtime_logs = []
+            runtime_root = root / "runtime-logs"
+            runtime_root.mkdir()
+            for fault in failure["records"]:
+                marker = (
+                    f"ds4: GLM baseline injected failure stage={fault['stage']}\n"
+                ).encode("ascii")
+                payload = marker + (
+                    f"executed_candidate_verified pid={fault['process_pid']} "
+                    f"start_ticks={fault['process_start_ticks']}\n"
+                ).encode("ascii")
+                path = root / fault["runtime_log"]["path"]
+                path.write_bytes(payload)
+                fault["runtime_log"].update({
+                    "sha256": MODULE._sha256_bytes(payload), "bytes": len(payload),
+                })
+                fault["authenticated_marker_sha256"] = MODULE._sha256_bytes(marker)
             for request in range(1, 21):
                 control = {
                     "schema_version": 1,
@@ -1360,7 +1371,32 @@ class BaselineTableTests(unittest.TestCase):
                     },
                     "failure_injection": failure,
                 }
-                runtime_logs.append({"two_control": control})
+                arms = {}
+                for arm in ("control_before", "diagnostic", "control_after"):
+                    directory = runtime_root / f"request-{request}-{arm}"
+                    directory.mkdir()
+                    artifacts = {}
+                    for name in (
+                        "cmd.log", "kernel.log", "main.log", "samples.log",
+                        "wrapper.stdout", "wrapper.stderr",
+                    ):
+                        payload = f"{request}:{arm}:{name}\n".encode()
+                        (directory / name).write_bytes(payload)
+                        artifacts[name] = {
+                            "sha256": MODULE._sha256_bytes(payload),
+                            "bytes": len(payload),
+                        }
+                    arms[arm] = {
+                        "directory": directory.relative_to(root).as_posix(),
+                        "artifacts": artifacts,
+                        "wrapper_exit_code": 0,
+                        "launch_environment_sha256": "4" * 64,
+                    }
+                runtime_logs.append({
+                    "request_index": request,
+                    "two_control": control,
+                    "arms": arms,
+                })
             (root / "raw.json").write_text(
                 json.dumps({"runtime_logs": runtime_logs}) + "\n", encoding="utf-8",
             )
@@ -1368,7 +1404,7 @@ class BaselineTableTests(unittest.TestCase):
                 "requests": 20,
                 "all_isolated": True,
                 "all_continuations_equal": True,
-                "failure_injection_stages": failure["stages"],
+                "failure_injection_stages": list(MODULE.FAILURE_INJECTION_STAGES),
             }
             summary_path = root / "summary.json"
             summary_path.write_text(
