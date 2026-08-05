@@ -974,6 +974,31 @@ class AtomicLifecycleTests(unittest.TestCase):
 
 
 class BaselineTableTests(unittest.TestCase):
+    def test_authorized_gate_publishes_to_root_after_local_replay(self) -> None:
+        source = SCRIPT.read_text(encoding="utf-8")
+        body = source.split(
+            "def _run_authorized_gate(configuration: dict[str, object])", 1,
+        )[1].split("\ndef parser()", 1)[0]
+        self.assertIn("_publish_root_result", body)
+        self.assertLess(body.index("_run_atomic_lifecycle"), body.index("_publish_root_result"))
+
+    def test_runtime_log_binding_must_reopen_exact_preserved_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            logs = root / "runtime-logs"
+            logs.mkdir()
+            path = logs / "control.log"
+            path.write_bytes(b"authenticated control\n")
+            binding = {
+                "path": "runtime-logs/control.log",
+                "sha256": MODULE._sha256_bytes(path.read_bytes()),
+                "bytes": path.stat().st_size,
+            }
+            MODULE.validate_preserved_runtime_log(root, binding)
+            path.write_bytes(b"changed\n")
+            with self.assertRaises(ValueError):
+                MODULE.validate_preserved_runtime_log(root, binding)
+
     def fixture(self):
         requests = np.repeat(np.arange(1, 21, dtype=np.uint16), 2)
         targets = {}
