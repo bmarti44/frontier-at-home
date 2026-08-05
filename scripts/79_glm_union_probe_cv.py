@@ -58,6 +58,11 @@ def _repository_head() -> str:
     return result
 
 
+def runtime_fault_lines(kernel_log: str) -> list[str]:
+    """Extract CUDA/Xid/OOM fault lines that invalidate a training run."""
+    raise NotImplementedError
+
+
 def _write_json_exclusive(path: Path, value: dict[str, object]) -> None:
     temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
     try:
@@ -76,8 +81,9 @@ def _write_json_exclusive(path: Path, value: dict[str, object]) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def _load_authorized_sources() -> tuple[list[dict[str, np.ndarray]], dict[int, str], dict[str, object]]:
-    binding = PROBE.validate_training_sources(QUALITY, LONGS)
+def _load_authorized_sources(
+    binding: dict[str, object],
+) -> tuple[list[dict[str, np.ndarray]], dict[int, str]]:
     sources: list[dict[str, np.ndarray]] = []
     with np.load(QUALITY / "records.npz", allow_pickle=False) as archive:
         sources.append({
@@ -102,7 +108,7 @@ def _load_authorized_sources() -> tuple[list[dict[str, np.ndarray]], dict[int, s
         groups[request_id] = "long-fixture-lineage-2ff949c"
     if set(groups) != set(int(value) for source in sources for value in np.unique(source["request_index"])):
         raise ValueError("authorized training group map differs from source requests")
-    return sources, groups, binding
+    return sources, groups
 
 
 def _layer_arrays(
@@ -134,6 +140,35 @@ def _merge_disjoint(
 
 def _empty_metric() -> dict[str, dict[str, dict[str, float | int]]]:
     return {str(budget): {} for budget in BUDGETS}
+
+
+def expected_layer_contract(
+    data: dict[str, np.ndarray], groups: dict[int, str], layer_id: int,
+) -> dict[str, object]:
+    request = data["request_index"]
+    rows, _targets, valid = PROBE.multi_k_targets(
+        request, data["layer"], data["token_position"], data["selected_ids"],
+    )
+    request_events = {}
+    for k_index, k in enumerate(K_VALUES):
+        active_requests = request[rows[valid[:, k_index]]]
+        identities, counts = np.unique(active_requests, return_counts=True)
+        request_events[str(k)] = {
+            str(int(identity)): int(count) for identity, count in zip(identities, counts)
+        }
+    prediction_folds = np.asarray(
+        [PROBE.grouped_fold(groups[int(value)]) for value in request[rows]], dtype=np.uint8,
+    )
+    return {
+        "layer": layer_id,
+        "source_rows": int(request.size),
+        "prediction_rows": int(rows.size),
+        "requests": int(np.unique(request).size),
+        "request_events": request_events,
+        "fit_rows_by_fold": {
+            str(fold): int(np.sum(prediction_folds != fold)) for fold in range(3)
+        },
+    }
 
 
 def fold_training_weights(
@@ -169,13 +204,137 @@ def validate_layer_checkpoint(
     previous_checkpoint_sha256: str,
 ) -> None:
     """Fail closed on stale, malformed, or physically impossible CV layer evidence."""
-    raise NotImplementedError
+    top_keys = {
+        "schema_version", "classification", "repository_head", "driver_sha256",
+        "probe_sha256", "training_source_binding_sha256", "previous_checkpoint_sha256",
+        "layer", "source_rows", "prediction_rows", "requests", "frequency", "probe",
+        "training",
+    }
+    if (
+        not isinstance(checkpoint, dict) or set(checkpoint) != top_keys or
+        checkpoint.get("schema_version") != 1 or
+        checkpoint.get("classification") != "TRAIN_ONLY_LAYER_CV" or
+        not isinstance(contract, dict) or
+        set(contract) != {
+            "layer", "source_rows", "prediction_rows", "requests",
+            "request_events", "fit_rows_by_fold",
+        } or
+        not isinstance(identity, dict) or
+        set(identity) != {
+            "repository_head", "driver_sha256", "probe_sha256",
+            "training_source_binding_sha256",
+        } or
+        any(checkpoint.get(key) != value for key, value in identity.items()) or
+        checkpoint.get("previous_checkpoint_sha256") != previous_checkpoint_sha256 or
+        any(checkpoint.get(key) != contract[key]
+            for key in ("layer", "source_rows", "prediction_rows", "requests"))
+    ):
+        raise ValueError("CV layer checkpoint identity or schema differs")
+    if (
+        len(identity["repository_head"]) != 40 or
+        any(len(identity[key]) != 64 for key in identity if key != "repository_head") or
+        len(previous_checkpoint_sha256) != 64
+    ):
+        raise ValueError("CV layer checkpoint digest is malformed")
+
+    expected_events = contract["request_events"]
+    metric_record_keys = {
+        "recall_sum", "precision_sum", "wasted_sum", "coverage_sum", "events",
+    }
+
+    def validate_method(method: object) -> None:
+        if not isinstance(method, dict) or set(method) != {str(k) for k in K_VALUES}:
+            raise ValueError("CV checkpoint K coverage differs")
+        for k in K_VALUES:
+            by_budget = method[str(k)]
+            expected_requests = expected_events[str(k)]
+            if not isinstance(by_budget, dict) or set(by_budget) != {str(b) for b in BUDGETS}:
+                raise ValueError("CV checkpoint budget coverage differs")
+            for budget in BUDGETS:
+                records = by_budget[str(budget)]
+                if not isinstance(records, dict) or set(records) != set(expected_requests):
+                    raise ValueError("CV checkpoint request coverage differs")
+                for request, expected_count in expected_requests.items():
+                    record = records[request]
+                    if (
+                        not isinstance(record, dict) or set(record) != metric_record_keys or
+                        record.get("events") != expected_count or
+                        not isinstance(expected_count, int) or expected_count <= 0
+                    ):
+                        raise ValueError("CV checkpoint event count differs")
+                    values = [record[name] for name in metric_record_keys - {"events"}]
+                    if any(
+                        not isinstance(value, (int, float)) or isinstance(value, bool) or
+                        not np.isfinite(value) for value in values
+                    ):
+                        raise ValueError("CV checkpoint metric is non-finite")
+                    recall = float(record["recall_sum"])
+                    precision = float(record["precision_sum"])
+                    wasted = float(record["wasted_sum"])
+                    coverage = float(record["coverage_sum"])
+                    if (
+                        not 0 <= recall <= expected_count or
+                        not 0 <= precision <= expected_count or
+                        not 0 <= coverage <= expected_count or
+                        not 0 <= wasted <= budget * expected_count or
+                        coverage > recall + 1e-9 or
+                        not np.isclose(
+                            precision * budget + wasted,
+                            budget * expected_count,
+                            rtol=0.0, atol=1e-6,
+                        ) or
+                        not np.isclose(precision * budget, round(precision * budget), atol=1e-6) or
+                        not np.isclose(wasted, round(wasted), atol=1e-6)
+                    ):
+                        raise ValueError("CV checkpoint metric violates physical bounds")
+
+    validate_method(checkpoint["frequency"])
+    probe = checkpoint["probe"]
+    if not isinstance(probe, dict) or set(probe) != {str(rank) for rank in RANKS}:
+        raise ValueError("CV checkpoint rank coverage differs")
+    for method in probe.values():
+        validate_method(method)
+
+    training = checkpoint["training"]
+    report_keys = {
+        "fit_rows", "rank", "epochs", "batch_rows", "seed", "positive_weights",
+        "epoch_losses", "epoch_k_losses", "deterministic_algorithms",
+    }
+    if not isinstance(training, dict) or set(training) != {str(rank) for rank in RANKS}:
+        raise ValueError("CV checkpoint training rank coverage differs")
+    for rank in RANKS:
+        folds = training[str(rank)]
+        if not isinstance(folds, dict) or set(folds) != {"0", "1", "2"}:
+            raise ValueError("CV checkpoint training fold coverage differs")
+        for fold in range(3):
+            report = folds[str(fold)]
+            if (
+                not isinstance(report, dict) or set(report) != report_keys or
+                report.get("fit_rows") != contract["fit_rows_by_fold"][str(fold)] or
+                report.get("rank") != rank or report.get("epochs") != 8 or
+                report.get("batch_rows") != 512 or report.get("seed") != 20260805 or
+                report.get("deterministic_algorithms") is not True
+            ):
+                raise ValueError("CV checkpoint training report differs")
+            positive = report["positive_weights"]
+            losses = report["epoch_losses"]
+            k_losses = report["epoch_k_losses"]
+            if (
+                not isinstance(positive, list) or len(positive) != 3 or
+                not isinstance(losses, list) or len(losses) != 8 or
+                not isinstance(k_losses, list) or len(k_losses) != 8 or
+                any(not isinstance(row, list) or len(row) != 3 for row in k_losses) or
+                any(not isinstance(value, (int, float)) or not np.isfinite(value) or value <= 0
+                    for value in [*positive, *losses, *(v for row in k_losses for v in row)]) or
+                any(not np.isclose(losses[index], np.mean(k_losses[index]), rtol=0, atol=1e-12)
+                    for index in range(8))
+            ):
+                raise ValueError("CV checkpoint training losses differ")
 
 
 def run_layer(
-    sources: list[dict[str, np.ndarray]], groups: dict[int, str], layer_id: int,
+    data: dict[str, np.ndarray], groups: dict[int, str], layer_id: int,
 ) -> dict[str, object]:
-    data = _layer_arrays(sources, layer_id)
     request = data["request_index"]
     rows, targets, valid = PROBE.multi_k_targets(
         request, data["layer"], data["token_position"], data["selected_ids"],
@@ -251,53 +410,69 @@ def execute(command: str, out_dir: Path) -> int:
     PROBE._tracked_bytes(Path(__file__).resolve())
     freeze_bytes = PROBE._tracked_bytes(TRAIN_FREEZE)
     head = _repository_head()
+    source_binding = PROBE.validate_training_sources(QUALITY, LONGS)
+    source_binding_sha256 = hashlib.sha256(json.dumps(
+        source_binding, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    expected_manifest = {
+        "schema_version": 1,
+        "classification": "TRAIN_ONLY_CV_IN_PROGRESS",
+        "repository_head": head,
+        "driver_sha256": _sha256(Path(__file__).resolve()),
+        "probe_sha256": _sha256(PROBE_PATH),
+        "training_freeze_sha256": hashlib.sha256(freeze_bytes).hexdigest(),
+        "training_source_binding": source_binding,
+        "training_source_binding_sha256": source_binding_sha256,
+        "layers": list(LAYERS),
+        "ranks": list(RANKS),
+        "K": list(K_VALUES),
+        "budgets": list(BUDGETS),
+    }
     requested = out_dir.absolute()
     if command == "run":
         if requested.exists() or requested.is_symlink():
             raise FileExistsError(requested)
         requested.mkdir(mode=0o700, parents=False)
-        manifest = {
-            "schema_version": 1,
-            "classification": "TRAIN_ONLY_CV_IN_PROGRESS",
-            "repository_head": head,
-            "driver_sha256": _sha256(Path(__file__).resolve()),
-            "probe_sha256": _sha256(PROBE_PATH),
-            "training_freeze_sha256": hashlib.sha256(freeze_bytes).hexdigest(),
-            "layers": list(LAYERS),
-            "ranks": list(RANKS),
-            "K": list(K_VALUES),
-            "budgets": list(BUDGETS),
-        }
+        manifest = expected_manifest
         _write_json_exclusive(requested / "manifest.json", manifest)
     else:
         requested = requested.resolve(strict=True)
         manifest = json.loads((requested / "manifest.json").read_text(encoding="utf-8"))
-        expected = {
-            "repository_head": head,
-            "driver_sha256": _sha256(Path(__file__).resolve()),
-            "probe_sha256": _sha256(PROBE_PATH),
-            "training_freeze_sha256": hashlib.sha256(freeze_bytes).hexdigest(),
-        }
-        if any(manifest.get(key) != value for key, value in expected.items()):
+        if manifest != expected_manifest:
             raise ValueError("CV resume candidate differs")
     if (requested / "summary.json").exists():
         raise FileExistsError("CV summary already exists")
-    sources, groups, binding = _load_authorized_sources()
+    identity = {
+        "repository_head": head,
+        "driver_sha256": manifest["driver_sha256"],
+        "probe_sha256": manifest["probe_sha256"],
+        "training_source_binding_sha256": source_binding_sha256,
+    }
+    sources, groups = _load_authorized_sources(source_binding)
+    previous_checkpoint_sha256 = _sha256(requested / "manifest.json")
     for layer_id in LAYERS:
         output = requested / f"layer-{layer_id:03d}.json"
+        data = _layer_arrays(sources, layer_id)
+        contract = expected_layer_contract(data, groups, layer_id)
         if output.exists():
             prior = json.loads(output.read_text(encoding="utf-8"))
-            if prior.get("layer") != layer_id:
-                raise ValueError("CV layer checkpoint differs")
+            validate_layer_checkpoint(
+                prior, contract, identity, previous_checkpoint_sha256,
+            )
+            previous_checkpoint_sha256 = _sha256(output)
             continue
-        result = run_layer(sources, groups, layer_id)
+        result = run_layer(data, groups, layer_id)
         result.update({
-            "repository_head": head,
-            "driver_sha256": manifest["driver_sha256"],
-            "probe_sha256": manifest["probe_sha256"],
+            **identity,
+            "previous_checkpoint_sha256": previous_checkpoint_sha256,
         })
+        validate_layer_checkpoint(
+            result, contract, identity, previous_checkpoint_sha256,
+        )
         _write_json_exclusive(output, result)
+        previous_checkpoint_sha256 = _sha256(output)
         print(json.dumps({"completed_layer": layer_id}, sort_keys=True), flush=True)
+        del data
         gc.collect()
     layers = [json.loads((requested / f"layer-{layer:03d}.json").read_text()) for layer in LAYERS]
     frequency_summary = {
@@ -322,7 +497,8 @@ def execute(command: str, out_dir: Path) -> int:
         "classification": "TRAIN_ONLY_CV_COMPLETE",
         "repository_head": head,
         "manifest_sha256": _sha256(requested / "manifest.json"),
-        "training_source_binding": binding,
+        "training_source_binding": source_binding,
+        "checkpoint_chain_tail_sha256": previous_checkpoint_sha256,
         "completed_layers": list(LAYERS),
         "frequency": frequency_summary,
         "probe": probe_summary,

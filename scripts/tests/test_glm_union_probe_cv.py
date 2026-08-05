@@ -19,6 +19,12 @@ SPEC.loader.exec_module(MODULE)
 
 
 class CVMetricTests(unittest.TestCase):
+    def test_runtime_fault_scan_rejects_xid_and_oom_without_false_positive(self) -> None:
+        clean = "NVRM: GPU initialized\ntorch allocator ready\n"
+        self.assertEqual(MODULE.runtime_fault_lines(clean), [])
+        faulted = clean + "NVRM: Xid (PCI:000f:01:00): 31, pid=2\noom-kill:constraint=CONSTRAINT_NONE\n"
+        self.assertEqual(len(MODULE.runtime_fault_lines(faulted)), 2)
+
     def checkpoint_fixture(self):
         events = {"2": 8, "4": 6, "8": 2}
         def metric():

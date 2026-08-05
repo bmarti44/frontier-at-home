@@ -759,6 +759,7 @@ def train_probe_head(
     device: str = "cuda",
 ) -> tuple[dict[str, np.ndarray], dict[str, object]]:
     """Fit one frozen low-rank multi-K head and return CPU state plus training evidence."""
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     import torch
     import torch.nn.functional as functional
 
@@ -806,6 +807,9 @@ def train_probe_head(
             )
 
     torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
     if device == "cuda":
         torch.cuda.manual_seed_all(seed)
     model = ProbeHead(features.shape[1], rank).to(device=device, dtype=torch.float32)
@@ -823,10 +827,11 @@ def train_probe_head(
     ).reshape(1, len(K_VALUES), 1)
     generator = np.random.default_rng(seed)
     epoch_losses: list[float] = []
+    epoch_k_losses: list[list[float]] = []
     for _epoch in range(epochs):
         order = generator.permutation(fit_rows)
-        loss_numerator = 0.0
-        loss_denominator = 0.0
+        loss_numerator = np.zeros(len(K_VALUES), dtype=np.float64)
+        loss_denominator = np.zeros(len(K_VALUES), dtype=np.float64)
         model.train()
         for start in range(0, order.size, batch_rows):
             batch = order[start:start + batch_rows]
@@ -841,10 +846,11 @@ def train_probe_head(
             element_loss = functional.binary_cross_entropy_with_logits(
                 logits.float(), target_batch, pos_weight=positive_weight_tensor, reduction="none",
             ).mean(dim=2)
-            denominator = weight_batch.sum()
-            if not torch.isfinite(element_loss).all() or denominator.item() <= 0:
+            denominator = weight_batch.sum(dim=0)
+            if not torch.isfinite(element_loss).all() or torch.any(denominator <= 0):
                 raise FloatingPointError("probe loss is non-finite or empty")
-            loss = (element_loss * weight_batch).sum() / denominator
+            k_loss = (element_loss * weight_batch).sum(dim=0) / denominator
+            loss = k_loss.mean()
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
             if any(
@@ -856,9 +862,11 @@ def train_probe_head(
             scaler.update()
             if any(not torch.isfinite(parameter).all() for parameter in model.parameters()):
                 raise FloatingPointError("probe parameter is non-finite")
-            loss_numerator += float((element_loss * weight_batch).sum().detach().cpu())
-            loss_denominator += float(denominator.detach().cpu())
-        epoch_losses.append(loss_numerator / loss_denominator)
+            loss_numerator += (element_loss * weight_batch).sum(dim=0).detach().cpu().numpy()
+            loss_denominator += denominator.detach().cpu().numpy()
+        observed_k = (loss_numerator / loss_denominator).tolist()
+        epoch_k_losses.append(observed_k)
+        epoch_losses.append(float(np.mean(observed_k)))
     state = {
         name: parameter.detach().cpu().numpy().copy()
         for name, parameter in model.state_dict().items()
@@ -874,6 +882,8 @@ def train_probe_head(
         "seed": seed,
         "positive_weights": positive_weight,
         "epoch_losses": epoch_losses,
+        "epoch_k_losses": epoch_k_losses,
+        "deterministic_algorithms": True,
     }
 
 
