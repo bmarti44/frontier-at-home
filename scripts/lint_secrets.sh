@@ -123,6 +123,8 @@ allowlist = {
     "on_result_sha256",
     "off_result_1_sha256",
     "off_result_2_sha256",
+    "on_result_1_sha256",
+    "on_result_2_sha256",
     "off_server_log_sha256",
     "on_server_log_sha256",
     "nll_sha256",

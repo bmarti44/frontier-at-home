@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "a9caa15887c53b86931dd65ac114b9da8aca6a8e",
+  "engine_commit": "970b4218b2238fc973b96992e0e600f28b09c8c7",
+  "classification": "PASS",
+  "scope": "multi_request_all_routed_layer_corpus_smoke",
+  "high_row_2048_status": "OPEN",
+  "summary_sha256": "e023dd5d1c69a63420441d52b41d82631c5b13b3fcb568219f7755af8f0e5a96",
+  "off_arm_sha256": "0b747e2d13a2d8b9f6b359805c09b6ad9af6c755ff7c0e1d50fdc3c9e7199983",
+  "on_arm_sha256": "398276b13ae7c85b44e78ea9204b5de78ecbed2530d71e4b0c918dbb107b9ea8",
+  "off_result_1_sha256": "65215480179f10c8210ddf7a2ac1348481636fedd20dbd73dd68156804819e3b",
+  "off_result_2_sha256": "96167713f0014926bc08a86882132f3d04a04f5a95a05710599b48fa43e624ff",
+  "on_result_1_sha256": "30c619a1a7f3cf95ded37393ed12d9a10462c00502918a8a6235dd1a56899bec",
+  "on_result_2_sha256": "3e0dd3cc2f9e6d1258ab91fd10270c53a4f5a9da81bb6089c5c6b4d0dad16888",
+  "off_server_log_sha256": "dc76edc8d1353f8be05eabffa7c439ec57d023edcd19b4691bc08614ec2c8d2a",
+  "on_server_log_sha256": "51b22354c0bd665f16f6839418872bea62536cda2392f413835bec8f1a333cbb",
+  "off_containment_sha256": "5515be6ebf9a70f043e03dcb3bf0ec256bcd13c925b05dc4ad87102ffebb4133",
+  "on_containment_sha256": "03f65ca61494a450457306ee5ab1eac175d64e0f75a0c9dbc318ea97b6681ce7",
+  "observed": {
+    "context_level": 512,
+    "requests": 2,
+    "prompt_tokens_per_request": [573, 573],
+    "completion_tokens_per_request": [128, 128],
+    "full_indexed_chunks_per_request": [[[0, 573]], [[0, 573]]],
+    "distinct_request_fixtures": 2,
+    "byte_and_token_identity": true,
+    "containment_clean": true,
+    "streaming_cache_budget": "32GB",
+    "cuda_cache_environment_gb": 56,
+    "cuda_cache_slots": 5754,
+    "cuda_cache_arena_gib": 52.15,
+    "off_trace_files": 0,
+    "on_trace_files": 750,
+    "on_trace_bytes": 2291236800,
+    "trace_events": 150,
+    "token_layer_events": 85950,
+    "routed_layer_first": 3,
+    "routed_layer_last": 77,
+    "minimum_available_memory_gib": {
+      "off": 32.505577,
+      "on": 32.458538
+    },
+    "maximum_cgroup_memory_bytes": {
+      "off": 57412562944,
+      "on": 59798601728
+    },
+    "maximum_cgroup_swap_bytes": 0,
+    "kernel_oom_or_xid": false,
+    "trace_score_verdict": "PASS"
+  },
+  "pre_runtime_authorization_review": {
+    "round": 93,
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 99,
+    "critical": [],
+    "high": []
+  },
+  "post_runtime_review": {
+    "round": 94,
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 99,
+    "critical": [],
+    "high": []
+  },
+  "retained_directory": "/home/bmarti44/.local/state/glm52-p0-corpus-r93-1069149610",
+  "conclusion": "The bounded two-request capture is the canonical P0 raw corpus source: both arms were safe and matched, outputs were byte-identical, and all tensors for main routed layers 3 through 77 passed the fixed scorer. This does not qualify the million-event corpus, serving performance, 1M context, or parity goal."
+}
