@@ -25,11 +25,20 @@
     "captured_ffn_norm_width": 6144,
     "trace_score_verdict": "PASS"
   },
-  "review": {
+  "pre_runtime_authorization_review": {
+    "round": 72,
     "gap_reviewer_score": 100,
     "adversarial_reviewer_score": 100,
     "critical": [],
     "high": []
+  },
+  "post_runtime_review": {
+    "round": 73,
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 99,
+    "critical": [],
+    "high": [],
+    "remaining_low": ["R73-L1 corrected by explicit review-phase labels"]
   },
   "conclusion": "The default-off production path is byte-identical to the trace-enabled path and the enabled path records a valid complete single indexed batch. This result does not qualify 2048-row or multi-chunk capture."
 }
