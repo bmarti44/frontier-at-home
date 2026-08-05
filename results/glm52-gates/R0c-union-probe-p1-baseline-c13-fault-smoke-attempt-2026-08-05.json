@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RUNTIME_ATTEMPT",
+  "candidate_commit": "b3590bb",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "terminal_state": "NO_RESULT",
+  "stage_reached": "mtp_call",
+  "engine_injection_observed": true,
+  "engine_exit_code": 86,
+  "engine_pid": 572670,
+  "engine_start_ticks": 76220739,
+  "process_survived": false,
+  "memory_available_low_gib": 92.7,
+  "swap_changed": false,
+  "failure": "The harness required the success-only text 'wrapper and descendant checks clean'. For an expected rc=86 injection, glm_safe_run.sh instead emits the exact fail-closed marker 'FATAL wrapper command failed after candidate exit rc=86', verifies safety artifacts, and exits cleanly with killed=no.",
+  "acceptance_fix": "Accept only the exact expected-nonzero wrapper sequence: authenticated engine identity, exact stage marker, expected FATAL rc=86 marker, verified samples/kernel artifacts, SAFE_RUN end rc=86 killed=no, and an absent process PID. Do not weaken ordinary successful-arm validation.",
+  "raw_artifacts": {
+    "path": "/home/bmarti44/.local/state/glm52-crashlog/20260805-165456-p1-fault-mtp_call-r048-517607",
+    "cmd.log": {"bytes": 1980, "sha256": "57f4e67418294170f658971953f19d9b4019da796d542a6252b5e6bfbc9d9e56"},
+    "kernel.log": {"bytes": 17, "sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"},
+    "main.log": {"bytes": 4498, "sha256": "0f1d29941ff66f0df800fae4ee18aed2e3e520ade09b587e8f376371cd877dac"},
+    "samples.log": {"bytes": 8998, "sha256": "5fae228d60c60dfd8ed136a4cb5ed9e4019e8a6934573b9dfc267b2f84e2f8b4"}
+  }
+}
