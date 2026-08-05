@@ -31,8 +31,8 @@ def arm(mode: str) -> dict[str, object]:
         "prompt_tokens": 573,
         "full_indexed_chunks": [[0, 573]],
         "trace_files": 0 if mode == "off" else 9,
-        "cuda_expert_cache_gb": "60",
-        "cuda_cache_runtime": {"slots": 6200, "arena_gib": 56.25},
+        "cuda_expert_cache_gb": "56",
+        "cuda_cache_runtime": {"slots": 6000, "arena_gib": 54.38},
     }
 
 
@@ -302,7 +302,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.runner)
         self.assertIn('CORPUS_CACHE_EXPERTS = "32GB"', self.runner)
-        self.assertIn('CORPUS_CUDA_CACHE_GB = "60"', self.runner)
+        self.assertIn('CORPUS_CUDA_CACHE_GB = "56"', self.runner)
         self.assertIn("cache_experts=(CORPUS_CACHE_EXPERTS", self.runner)
         self.assertIn('values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB', self.runner)
         self.assertIn("cuda_cache_runtime", self.runner)
