@@ -708,6 +708,383 @@ def _validate_corpus_source_bundle(
     }
 
 
+def _validate_quality_source_bundle(
+    source_root: Path,
+    receipt_path: Path,
+    receipt_bytes: bytes,
+    receipt: dict[str, Any],
+    repository_head: str,
+) -> dict[str, Any]:
+    """Validate the complete 100-case source once and expose all request shards."""
+    trace = source_root / "on" / "trace"
+    control_paths = {
+        "summary": source_root / "summary.json",
+        "off_arm": source_root / "off" / "arm.json",
+        "on_arm": source_root / "on" / "arm.json",
+        "off_ledger": source_root / "off" / "ledger.json",
+        "on_ledger": source_root / "on" / "ledger.json",
+        "off_responses": source_root / "off" / "responses.json",
+        "on_responses": source_root / "on" / "responses.json",
+        "off_server_log": source_root / "off" / "server.log",
+        "on_server_log": source_root / "on" / "server.log",
+        "off_containment": source_root / "off.containment.json",
+        "on_containment": source_root / "on.containment.json",
+    }
+    if not trace.is_dir() or trace.is_symlink():
+        raise ValueError("qualified quality trace layout is invalid")
+    controls = {name: _read_regular_snapshot(path) for name, path in control_paths.items()}
+    documents = {
+        name: _strict_json_bytes(payload, str(control_paths[name]))
+        for name, payload in controls.items()
+        if name not in {"off_server_log", "on_server_log", "off_responses", "on_responses"}
+    }
+    response_lists = {}
+    for mode in ("off", "on"):
+        payload = controls[f"{mode}_responses"]
+        try:
+            value = json.loads(payload.decode("utf-8", errors="strict"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError("quality response input is malformed") from error
+        if not isinstance(value, list):
+            raise ValueError("quality response input is not a list")
+        response_lists[mode] = value
+    summary = documents["summary"]
+    arms = {mode: documents[f"{mode}_arm"] for mode in ("off", "on")}
+    ledgers = {mode: documents[f"{mode}_ledger"] for mode in ("off", "on")}
+    containments = {mode: documents[f"{mode}_containment"] for mode in ("off", "on")}
+    receipt_keys = {
+        "schema_version", "candidate_hash", "engine_commit", "classification", "scope",
+        "summary_sha256", "off_arm_sha256", "on_arm_sha256", "off_ledger_sha256",
+        "on_ledger_sha256", "off_responses_sha256", "on_responses_sha256",
+        "off_server_log_sha256", "on_server_log_sha256", "off_containment_sha256",
+        "on_containment_sha256", "crashlog_bindings", "observed",
+        "pre_runtime_authorization_review", "post_runtime_review", "retained_directory",
+        "conclusion",
+    }
+    summary_keys = {
+        "schema_version", "scope", "candidate_hash", "engine_commit", "binary_sha256",
+        "model_sha256", "tokenizer_sha256", "seed", "context_level", "max_trace_bytes",
+        "quality_cases", "expected_prompt_tokens", "expected_token_layer_events",
+        "fixture_content_sha256", "split_plan_sha256", "off_arm_sha256", "on_arm_sha256",
+        "off_containment_sha256", "on_containment_sha256", "trace_score", "checks", "verdict",
+    }
+    if set(receipt) != receipt_keys or set(summary) != summary_keys:
+        raise ValueError("quality receipt or summary schema differs from the qualified runner")
+    if (
+        receipt.get("classification") != "PASS" or summary.get("verdict") != "PASS" or
+        receipt.get("scope") != summary.get("scope") or
+        summary.get("scope") != "quality_100_case_all_routed_layer_corpus" or
+        summary.get("quality_cases") != 100 or
+        not _review_is_accepted(receipt.get("pre_runtime_authorization_review")) or
+        not _review_is_accepted(receipt.get("post_runtime_review"))
+    ):
+        raise ValueError("quality corpus bundle is not qualified")
+    bindings = {
+        f"{name}_sha256": _sha256_bytes(payload)
+        for name, payload in controls.items()
+    }
+    if any(receipt.get(key) != value for key, value in bindings.items()):
+        raise ValueError("quality receipt does not bind every control artifact")
+    if any(summary.get(key) != bindings[key] for key in (
+            "off_arm_sha256", "on_arm_sha256", "off_containment_sha256",
+            "on_containment_sha256")):
+        raise ValueError("quality summary does not bind its arms and containment evidence")
+    if (
+        receipt.get("candidate_hash") != summary.get("candidate_hash") or
+        receipt.get("engine_commit") != summary.get("engine_commit") or
+        not COMMIT_RE.fullmatch(str(summary.get("candidate_hash", ""))) or
+        not COMMIT_RE.fullmatch(str(summary.get("engine_commit", "")))
+    ):
+        raise ValueError("quality candidate lineage differs")
+    common = (
+        "binary_sha256", "model_sha256", "tokenizer_sha256", "fixture_sha256",
+        "split_plan_sha256", "configuration_sha256", "quality_ledger_sha256",
+        "expected_token_layer_events",
+    )
+    if any(
+        arms["off"].get(key) != arms["on"].get(key)
+        for key in common
+    ) or any(not HEX64_RE.fullmatch(str(summary.get(key, ""))) for key in (
+            "binary_sha256", "model_sha256", "tokenizer_sha256",
+            "fixture_content_sha256", "split_plan_sha256")):
+        raise ValueError("quality arm identity differs")
+    if any(arms[mode].get(key) != summary.get(key) for mode in ("off", "on") for key in (
+            "binary_sha256", "model_sha256", "tokenizer_sha256", "split_plan_sha256")):
+        raise ValueError("quality summary lineage differs from its arms")
+    if (
+        arms["off"].get("mode") != "off" or arms["on"].get("mode") != "on" or
+        controls["off_ledger"] != controls["on_ledger"] or
+        controls["off_responses"] != controls["on_responses"] or
+        arms["off"].get("corpus_requests") != response_lists["off"] or
+        arms["on"].get("corpus_requests") != response_lists["on"] or
+        arms["off"].get("response_signature") != response_lists["off"] or
+        arms["on"].get("response_signature") != response_lists["on"]
+    ):
+        raise ValueError("quality OFF/ON ledgers, responses, or modes differ")
+    ledger = ledgers["on"]
+    cases = ledger.get("cases")
+    responses = response_lists["on"]
+    if (
+        not isinstance(cases, list) or len(cases) != 100 or len(responses) != 100 or
+        ledger.get("expected_token_layer_events") != summary.get("expected_token_layer_events") or
+        ledger.get("total_expected_prompt_tokens") != summary.get("expected_prompt_tokens") or
+        ledger.get("fixture_content_sha256") != summary.get("fixture_content_sha256") or
+        ledger.get("split_plan_sha256") != summary.get("split_plan_sha256") or
+        ledger.get("tokenizer_sha256") != summary.get("tokenizer_sha256") or
+        ledger.get("seed") != summary.get("seed")
+    ):
+        raise ValueError("quality ledger coverage or lineage differs")
+    request_chunks: dict[int, list[tuple[int, int]]] = {}
+    request_metadata: dict[int, dict[str, Any]] = {}
+    for expected, observed in zip(cases, responses):
+        request_id = expected.get("request_id") if isinstance(expected, dict) else None
+        if (
+            not isinstance(request_id, int) or isinstance(request_id, bool) or
+            request_id != len(request_chunks) + 1 or not isinstance(observed, dict) or
+            observed.get("request_id") != request_id or
+            any(observed.get(key) != expected.get(key) for key in (
+                "case_id", "group_id", "split", "request_sha256")) or
+            observed.get("prompt_tokens") != expected.get("expected_prompt_tokens") or
+            observed.get("completion_tokens") != 8 or observed.get("finish_reason") != "length"
+        ):
+            raise ValueError("quality request identity or completion differs")
+        chunks = _valid_chunks(observed.get("full_indexed_chunks"))
+        if sum(rows for _, rows in chunks) != observed.get("prompt_tokens"):
+            raise ValueError("quality request chunk coverage differs")
+        request_chunks[request_id] = chunks
+        request_metadata[request_id] = {
+            "request_index": request_id,
+            "request_id": observed["request_sha256"],
+            "case_id": observed["case_id"],
+            "group_id": observed["group_id"],
+            "split": observed["split"],
+            "seed": expected.get("seed"),
+            "prompt_tokens": observed["prompt_tokens"],
+        }
+    if len({item["request_id"] for item in request_metadata.values()}) != 100:
+        raise ValueError("quality request fixtures are not distinct")
+
+    trace_score = summary.get("trace_score")
+    if (
+        not isinstance(trace_score, dict) or trace_score.get("verdict") != "PASS" or
+        not isinstance(trace_score.get("checks"), dict) or
+        set(trace_score["checks"]) != CORPUS_SCORER_CHECKS or
+        not all(value is True for value in trace_score["checks"].values())
+    ):
+        raise ValueError("quality fixed-scorer verdict is not PASS")
+    artifact_rows = trace_score.get("artifacts")
+    if not isinstance(artifact_rows, list) or len(artifact_rows) != 37500:
+        raise ValueError("quality scorer artifact count differs")
+    artifacts: dict[str, dict[str, Any]] = {}
+    keys: set[tuple[int, int, int, str]] = set()
+    for item in artifact_rows:
+        if (
+            not isinstance(item, dict) or set(item) != {"name", "bytes", "sha256"} or
+            not isinstance(item["name"], str) or item["name"] in artifacts or
+            not isinstance(item["bytes"], int) or item["bytes"] < 0 or
+            not HEX64_RE.fullmatch(str(item["sha256"]))
+        ):
+            raise ValueError("quality artifact receipt is malformed")
+        match = FILE_RE.fullmatch(item["name"])
+        prefix = REQUEST_PREFIX_RE.fullmatch(match.group("prefix")) if match else None
+        if match is None or prefix is None:
+            raise ValueError("quality artifact name is unrecognized")
+        key = (int(prefix.group("request")), int(match.group("layer")),
+               int(match.group("pos")), match.group("kind"))
+        if key in keys:
+            raise ValueError("quality artifact key is duplicated")
+        keys.add(key)
+        artifacts[item["name"]] = item
+    observed_paths = list(trace.iterdir())
+    if (
+        any(path.is_symlink() or not path.is_file() for path in observed_paths) or
+        {path.name for path in observed_paths} != set(artifacts)
+    ):
+        raise ValueError("quality trace file set is not exact and regular")
+    layers = list(range(3, 78))
+    wanted = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
+    expected_keys = {
+        (request, layer, pos, kind)
+        for request, chunks in request_chunks.items() for layer in layers
+        for pos, _ in chunks for kind in wanted
+    }
+    if keys != expected_keys:
+        raise ValueError("quality request/layer/chunk tensor coverage is incomplete")
+    expected_rows = sum(
+        len(layers) * sum(rows for _, rows in chunks) for chunks in request_chunks.values()
+    )
+    total_bytes = sum(item["bytes"] for item in artifacts.values())
+    if (
+        trace_score.get("requests") != 100 or trace_score.get("events") != 7500 or
+        trace_score.get("total_rows") != expected_rows or
+        trace_score.get("token_layer_events") != expected_rows or
+        trace_score.get("total_bytes") != total_bytes or
+        expected_rows != summary.get("expected_token_layer_events") or
+        arms["off"].get("trace_files") != 0 or arms["off"].get("trace_bytes") != 0 or
+        arms["on"].get("trace_files") != len(artifacts) or
+        arms["on"].get("trace_bytes") != total_bytes
+    ):
+        raise ValueError("quality scorer totals are inconsistent")
+    with tempfile.TemporaryDirectory(prefix="glm52-quality-score.") as snapshot_directory:
+        score_root = Path(snapshot_directory)
+        score_trace = score_root / "trace"
+        score_trace.mkdir()
+        for path in observed_paths:
+            item = artifacts[path.name]
+            payload = _read_regular_snapshot(path)
+            if len(payload) != item["bytes"] or _sha256_bytes(payload) != item["sha256"]:
+                raise ValueError("quality trace artifact differs from scorer receipt")
+            (score_trace / path.name).write_bytes(payload)
+        score_log = score_root / "server.log"
+        score_log.write_bytes(controls["on_server_log"])
+        rescored = TRACE_SCORER.score_trace(
+            score_trace, score_log, max_bytes=summary.get("max_trace_bytes", 0),
+            expected_layers=set(layers), expected_chunks=[], expected_requests=request_chunks,
+        )
+    if rescored != trace_score:
+        raise ValueError("fixed scorer does not reproduce the quality corpus")
+    if not isinstance(summary.get("checks"), dict) or not all(summary["checks"].values()):
+        raise ValueError("quality top-level checks are not PASS")
+    if any(containments[mode].get("clean") is not True for mode in ("off", "on")):
+        raise ValueError("quality containment is not clean")
+    crashlog_bindings = receipt.get("crashlog_bindings")
+    if not isinstance(crashlog_bindings, dict) or set(crashlog_bindings) != {"off", "on"}:
+        raise ValueError("quality crashlog bindings are malformed")
+    safety: dict[str, dict[str, int | float]] = {}
+    for mode in ("off", "on"):
+        directory = Path(str(containments[mode].get("crash_directory", "")))
+        expected = crashlog_bindings[mode]
+        if not isinstance(expected, dict) or set(expected) != {
+                "cmd_sha256", "kernel_sha256", "main_sha256", "samples_sha256"}:
+            raise ValueError("quality crashlog binding schema is malformed")
+        crash_payloads = {
+            name: _read_regular_snapshot(directory / f"{name}.log")
+            for name in ("cmd", "kernel", "main", "samples")
+        }
+        actual = {f"{name}_sha256": _sha256_bytes(payload)
+                  for name, payload in crash_payloads.items()}
+        if actual != expected or any(
+            containments[mode].get(key) != expected[key]
+            for key in ("kernel_sha256", "main_sha256", "samples_sha256")
+        ):
+            raise ValueError("quality crashlog bytes differ from their receipt")
+        minimum_available_kib: int | None = None
+        maximum_cgroup_bytes = 0
+        maximum_swap_bytes = 0
+        for line in crash_payloads["samples"].decode("utf-8", errors="strict").splitlines():
+            values = {}
+            for field in line.split()[1:]:
+                if "=" not in field:
+                    continue
+                key, value = field.split("=", 1)
+                if value.isdigit():
+                    values[key] = int(value)
+            available = values.get("mem_avail_kb")
+            if available is not None:
+                minimum_available_kib = (
+                    available if minimum_available_kib is None
+                    else min(minimum_available_kib, available)
+                )
+            maximum_cgroup_bytes = max(
+                maximum_cgroup_bytes, values.get("cgroup_peak_bytes", 0),
+            )
+            maximum_swap_bytes = max(
+                maximum_swap_bytes, values.get("cgroup_swap_current_bytes", 0),
+            )
+        if minimum_available_kib is None or maximum_cgroup_bytes <= 0:
+            raise ValueError("quality safety samples are incomplete")
+        fault_text = b"\n".join((
+            crash_payloads["kernel"], controls[f"{mode}_server_log"],
+        )).decode("utf-8", errors="strict")
+        safety[mode] = {
+            "minimum_available_gib": minimum_available_kib / 1048576,
+            "maximum_cgroup_memory_bytes": maximum_cgroup_bytes,
+            "maximum_cgroup_swap_bytes": maximum_swap_bytes,
+            "kernel_oom_or_xid": bool(re.search(
+                r"(?:\bXid\b|out of memory|oom-kill)", fault_text, re.IGNORECASE,
+            )),
+        }
+    observed = receipt.get("observed")
+    expected_observed = {
+        "quality_cases_per_arm": 100,
+        "prompt_tokens": summary["expected_prompt_tokens"],
+        "completion_tokens_per_request": 8,
+        "byte_and_token_identity": controls["off_responses"] == controls["on_responses"],
+        "containment_clean": all(containments[mode]["clean"] is True for mode in ("off", "on")),
+        "off_trace_files": arms["off"]["trace_files"],
+        "on_trace_files": arms["on"]["trace_files"],
+        "on_trace_bytes": arms["on"]["trace_bytes"],
+        "trace_events": rescored["events"],
+        "token_layer_events": rescored["token_layer_events"],
+        "routed_layer_first": layers[0],
+        "routed_layer_last": layers[-1],
+        "minimum_available_memory_gib": {
+            mode: safety[mode]["minimum_available_gib"] for mode in ("off", "on")
+        },
+        "maximum_cgroup_memory_bytes": {
+            mode: safety[mode]["maximum_cgroup_memory_bytes"] for mode in ("off", "on")
+        },
+        "maximum_cgroup_swap_bytes": max(
+            int(safety[mode]["maximum_cgroup_swap_bytes"]) for mode in ("off", "on")
+        ),
+        "kernel_oom_or_xid": any(
+            bool(safety[mode]["kernel_oom_or_xid"]) for mode in ("off", "on")
+        ),
+        "trace_score_verdict": rescored["verdict"],
+        "natural_malformed_utf8_requests": sum(
+            item.get("utf8_regression_reproduced") is True for item in responses
+        ),
+    }
+    if (
+        not isinstance(observed, dict) or set(observed) != set(expected_observed) or
+        any(
+            abs(float(observed["minimum_available_memory_gib"][mode]) -
+                float(expected_observed["minimum_available_memory_gib"][mode])) > 1e-9
+            for mode in ("off", "on")
+        ) or
+        {key: value for key, value in observed.items()
+         if key != "minimum_available_memory_gib"} !=
+        {key: value for key, value in expected_observed.items()
+         if key != "minimum_available_memory_gib"} or
+        Path(str(receipt.get("retained_directory", ""))).resolve(strict=True) != source_root
+    ):
+        raise ValueError("quality receipt observations do not reproduce")
+
+    file_maps: dict[int, dict[tuple[int, int, str], Path]] = {
+        request: {} for request in request_chunks
+    }
+    for name in artifacts:
+        match = FILE_RE.fullmatch(name)
+        assert match is not None
+        prefix = REQUEST_PREFIX_RE.fullmatch(match.group("prefix"))
+        assert prefix is not None
+        request = int(prefix.group("request"))
+        file_maps[request][(
+            int(match.group("layer")), int(match.group("pos")), match.group("kind"),
+        )] = trace / name
+    lineage = {
+        "source_receipt_sha256": _sha256_bytes(receipt_bytes),
+        "source_summary_sha256": bindings["summary_sha256"],
+        "source_arm_sha256": bindings["on_arm_sha256"],
+        "source_server_log_sha256": bindings["on_server_log_sha256"],
+        "candidate_hash": summary["candidate_hash"],
+        "engine_commit": summary["engine_commit"],
+        "binary_sha256": summary["binary_sha256"],
+        "model_sha256": summary["model_sha256"],
+        "tokenizer_sha256": summary["tokenizer_sha256"],
+        "fixture_sha256": summary["fixture_content_sha256"],
+        "configuration_sha256": arms["on"]["configuration_sha256"],
+        "seed": summary["seed"],
+        "scorer_sha256": SCORER_SHA256,
+        "repository_head": repository_head,
+    }
+    return {
+        "trace": trace, "layers": layers, "artifacts": artifacts, "lineage": lineage,
+        "request_chunks": request_chunks, "request_files": file_maps,
+        "request_metadata": request_metadata, "total_rows": expected_rows,
+    }
+
+
 def validate_source_bundle(
     source_root: Path,
     receipt_path: Path,
@@ -733,6 +1110,12 @@ def validate_source_bundle(
             raise ValueError("loaded scorer differs from the tracked scorer snapshot")
     repository_head = _repository_head(ROOT)
     receipt = _strict_json_bytes(receipt_bytes, str(receipt_path))
+    if receipt.get("scope") == "quality_100_case_all_routed_layer_corpus":
+        if request_index is not None:
+            raise ValueError("quality corpus compaction always validates and emits all requests")
+        return _validate_quality_source_bundle(
+            source_root, receipt_path, receipt_bytes, receipt, repository_head,
+        )
     if receipt.get("scope") == "multi_request_all_routed_layer_corpus_smoke":
         return _validate_corpus_source_bundle(
             source_root, receipt_path, receipt_bytes, receipt, repository_head,
@@ -1101,55 +1484,95 @@ def run(args: argparse.Namespace) -> int:
         args.source_root, args.source_receipt, request_index=args.request_index,
     )
     trace = source["trace"]
-    chunks = source["chunks"]
+    quality_corpus = "request_chunks" in source
+    if quality_corpus:
+        request_ids = sorted(source["request_chunks"])
+        work = [
+            (request, layer, pos, rows)
+            for request in request_ids for layer in source["layers"]
+            for pos, rows in source["request_chunks"][request]
+        ]
+        holdout_count = min(4096, int(source["total_rows"]))
+        holdout_targets = set(np.linspace(
+            0, int(source["total_rows"]) - 1, holdout_count, dtype=np.int64,
+        ).tolist())
+    else:
+        request_ids = []
+        work = [
+            (None, layer, pos, rows)
+            for layer in source["layers"] for pos, rows in source["chunks"]
+        ]
+        holdout_targets = set()
 
     compact_parts: dict[str, list[np.ndarray]] = {
         name: [] for name in ("selected_ids", "top_ids", "top_logits", "hidden_q4", "hidden_scale")
     }
     layers: list[np.ndarray] = []
     token_positions: list[np.ndarray] = []
+    request_indices: list[np.ndarray] = []
+    holdout_rows: list[np.ndarray] = []
+    holdout_hidden: list[np.ndarray] = []
     metric_parts: list[dict[str, int | float]] = []
     sources: dict[str, str] = {}
-    for layer in source["layers"]:
-        for pos, rows in chunks:
-            files = {
-                kind: source["files"][(layer, pos, kind)]
-                for kind in ("ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias")
-            }
-            hidden = _read_bound_array(
-                files["ffn_norm"], "<f4", (rows, N_EMBD),
-                source["artifacts"][files["ffn_norm"].name],
-            )
-            logits = _read_bound_array(
-                files["router_logits"], "<f4", (rows, N_EXPERT),
-                source["artifacts"][files["router_logits"].name],
-            )
-            probabilities = _read_bound_array(
-                files["router_probs"], "<f4", (rows, N_EXPERT),
-                source["artifacts"][files["router_probs"].name],
-            )
-            bias = _read_bound_array(
-                files["router_bias"], "<f4", (N_EXPERT,),
-                source["artifacts"][files["router_bias"].name],
-            )
-            selected = _read_bound_array(
-                files["router_selected"], "<i4", (rows, N_EXPERT_USED),
-                source["artifacts"][files["router_selected"].name],
-            )
-            compact, metrics = compact_arrays(
-                hidden, logits, bias, selected, router_probs=probabilities,
-            )
-            for name, value in compact.items():
-                compact_parts[name].append(value)
-            layers.append(np.full(rows, layer, dtype=np.uint16))
-            token_positions.append(np.arange(pos, pos + rows, dtype=np.uint32))
-            metric_parts.append(metrics)
-            for path in files.values():
-                sources[path.name] = source["artifacts"][path.name]["sha256"]
+    global_row = 0
+    for request, layer, pos, rows in work:
+        file_map = source["request_files"][request] if quality_corpus else source["files"]
+        files = {
+            kind: file_map[(layer, pos, kind)]
+            for kind in ("ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias")
+        }
+        hidden = _read_bound_array(
+            files["ffn_norm"], "<f4", (rows, N_EMBD),
+            source["artifacts"][files["ffn_norm"].name],
+        )
+        logits = _read_bound_array(
+            files["router_logits"], "<f4", (rows, N_EXPERT),
+            source["artifacts"][files["router_logits"].name],
+        )
+        probabilities = _read_bound_array(
+            files["router_probs"], "<f4", (rows, N_EXPERT),
+            source["artifacts"][files["router_probs"].name],
+        )
+        bias = _read_bound_array(
+            files["router_bias"], "<f4", (N_EXPERT,),
+            source["artifacts"][files["router_bias"].name],
+        )
+        selected = _read_bound_array(
+            files["router_selected"], "<i4", (rows, N_EXPERT_USED),
+            source["artifacts"][files["router_selected"].name],
+        )
+        compact, metrics = compact_arrays(
+            hidden, logits, bias, selected, router_probs=probabilities,
+        )
+        for name, value in compact.items():
+            compact_parts[name].append(value)
+        layers.append(np.full(rows, layer, dtype=np.uint16))
+        token_positions.append(np.arange(pos, pos + rows, dtype=np.uint32))
+        if quality_corpus:
+            assert request is not None
+            request_indices.append(np.full(rows, request, dtype=np.uint16))
+            selected_holdout = [
+                row - global_row
+                for row in sorted(holdout_targets)
+                if global_row <= row < global_row + rows
+            ]
+            if selected_holdout:
+                holdout_rows.append(np.asarray(
+                    [global_row + row for row in selected_holdout], dtype=np.uint32,
+                ))
+                holdout_hidden.append(hidden[selected_holdout].astype(np.float16))
+        global_row += rows
+        metric_parts.append(metrics)
+        for path in files.values():
+            sources[path.name] = source["artifacts"][path.name]["sha256"]
 
     arrays = {name: np.concatenate(parts, axis=0) for name, parts in compact_parts.items()}
     arrays["layer"] = np.concatenate(layers)
     arrays["token_position"] = np.concatenate(token_positions)
+    if quality_corpus:
+        arrays["request_index"] = np.concatenate(request_indices)
+        arrays["hidden_fp16_holdout_row"] = np.concatenate(holdout_rows)
+        arrays["hidden_fp16_holdout"] = np.concatenate(holdout_hidden, axis=0)
     total_values = sum(int(part["hidden_values"]) for part in metric_parts)
     weighted_squared = sum(
         float(part["hidden_rmse"]) ** 2 * int(part["hidden_values"])
@@ -1157,10 +1580,13 @@ def run(args: argparse.Namespace) -> int:
     )
     record: dict[str, Any] = {
         "schema_version": 1,
-        "format": "glm52-union-p0-npz-v1",
+        "format": "glm52-union-p0-npz-v2" if quality_corpus else "glm52-union-p0-npz-v1",
         "rows": int(arrays["layer"].size),
         "layers": source["layers"],
-        "chunks": chunks,
+        "chunks": (
+            {str(request): source["request_chunks"][request] for request in request_ids}
+            if quality_corpus else source["chunks"]
+        ),
         "top_k": TOP_K,
         "hidden_quantization": "symmetric-groupwise-int4-range-minus7-plus7-fp16-scale",
         "hidden_group_size": HIDDEN_GROUP_SIZE,
@@ -1175,6 +1601,14 @@ def run(args: argparse.Namespace) -> int:
         "compactor_sha256": _sha256(Path(__file__).resolve()),
         "lineage": source["lineage"],
     }
+    if quality_corpus:
+        record.update({
+            "requests": len(request_ids),
+            "request_metadata": [source["request_metadata"][request] for request in request_ids],
+            "hidden_fp16_holdout_rows": int(arrays["hidden_fp16_holdout_row"].size),
+            "hidden_fp16_holdout_selection": "4096-evenly-spaced-global-rows",
+            "raw_source_retained": str(args.source_root.resolve()),
+        })
     final_manifest = publish_bundle(args.out_dir, arrays, record)
     print(json.dumps(final_manifest, sort_keys=True, indent=2, allow_nan=False))
     return 0
