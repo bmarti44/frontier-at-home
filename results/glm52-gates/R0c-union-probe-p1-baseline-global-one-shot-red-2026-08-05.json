@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RED_TEST",
+  "gate": "R0c/P1 global one-shot held-out authority",
+  "candidate": 8,
+  "held_out_values_opened": false,
+  "command": "python3 -m pytest -q scripts/tests/test_glm_union_baseline.py::AtomicLifecycleTests::test_authorized_gate_is_globally_one_shot_across_output_names scripts/tests/test_glm_union_baseline.py::AtomicLifecycleTests::test_abrupt_death_after_open_permanently_blocks_retry",
+  "observed": {
+    "tests_failed": 2,
+    "alternate_output_reopened": true,
+    "abrupt_death_retry_reopened": true,
+    "failure_type": "AssertionError: FileExistsError not raised"
+  },
+  "review_findings": [
+    "P1-BASE-R145-H1-GLOBAL-ONE-SHOT-AUTHORITY",
+    "BASE-R142-H5",
+    "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO"
+  ],
+  "acceptance": "One fixed durable ledger is exclusively reserved before held-out opening; alternate output names and abrupt-death retries must never invoke the opener a second time.",
+  "verdict": "RED_CONFIRMED"
+}

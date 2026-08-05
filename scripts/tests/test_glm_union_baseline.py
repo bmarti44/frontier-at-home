@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -345,6 +346,72 @@ class AtomicLifecycleTests(unittest.TestCase):
             scorer.assert_called_once()
             attempt = json.loads((output / "attempt.json").read_text(encoding="utf-8"))
             self.assertEqual(attempt["status"], "COMPLETE")
+
+    def test_authorized_gate_is_globally_one_shot_across_output_names(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            ledger = root / "global-ledger.json"
+            calls = 0
+
+            def opener(*_args):
+                nonlocal calls
+                calls += 1
+                return {"opened": True}
+
+            with mock.patch.object(
+                MODULE, "AUTHORIZED_LEDGER_PATH", ledger, create=True,
+            ), mock.patch.object(
+                MODULE, "_preflight_authorized_gate", return_value={"frozen": True},
+            ), mock.patch.object(
+                MODULE, "_open_authorized_heldout", side_effect=opener,
+            ), mock.patch.object(
+                MODULE, "_capture_authorized_set", return_value={"captured": True},
+            ), mock.patch.object(
+                MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
+            ):
+                MODULE._run_authorized_gate({"output_root": root / "first", "device": "cpu"})
+                with self.assertRaises(FileExistsError):
+                    MODULE._run_authorized_gate({
+                        "output_root": root / "alternate", "device": "cpu",
+                    })
+            self.assertEqual(calls, 1)
+
+    def test_abrupt_death_after_open_permanently_blocks_retry(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            ledger = root / "global-ledger.json"
+            marker = root / "opened"
+            configuration = {"output_root": root / "attempt", "device": "cpu"}
+            child = os.fork()
+            if child == 0:
+                with mock.patch.object(
+                    MODULE, "AUTHORIZED_LEDGER_PATH", ledger, create=True,
+                ), mock.patch.object(
+                    MODULE, "_preflight_authorized_gate", return_value={"frozen": True},
+                ), mock.patch.object(
+                    MODULE, "_open_authorized_heldout",
+                    side_effect=lambda *_args: (marker.write_text("opened"), os._exit(91)),
+                ):
+                    MODULE._run_authorized_gate(configuration)
+                os._exit(92)
+            _pid, status = os.waitpid(child, 0)
+            self.assertEqual(os.waitstatus_to_exitcode(status), 91)
+            self.assertTrue(marker.exists())
+            with mock.patch.object(
+                MODULE, "AUTHORIZED_LEDGER_PATH", ledger, create=True,
+            ), mock.patch.object(
+                MODULE, "_preflight_authorized_gate", return_value={"frozen": True},
+            ), mock.patch.object(
+                MODULE, "_open_authorized_heldout", return_value={"opened": True},
+            ), mock.patch.object(
+                MODULE, "_capture_authorized_set", return_value={"captured": True},
+            ), mock.patch.object(
+                MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
+            ):
+                with self.assertRaises(FileExistsError):
+                    MODULE._run_authorized_gate({
+                        "output_root": root / "retry", "device": "cpu",
+                    })
 
 
 class BaselineTableTests(unittest.TestCase):
