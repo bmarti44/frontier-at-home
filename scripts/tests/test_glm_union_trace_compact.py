@@ -29,7 +29,7 @@ class CompactArrayTests(unittest.TestCase):
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         ], dtype=np.float32)
         bias = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5], dtype=np.float32)
-        selected = np.array([[3, 5], [6, 7]], dtype=np.int32)
+        selected = np.array([[7, 6], [6, 7]], dtype=np.int32)
         return hidden, logits, bias, selected
 
     def test_preserves_labels_and_stable_effective_score_topk(self) -> None:
@@ -38,7 +38,7 @@ class CompactArrayTests(unittest.TestCase):
             hidden, logits, bias, selected, top_k=4,
         )
         np.testing.assert_array_equal(compact["selected_ids"], selected.astype(np.uint8))
-        np.testing.assert_array_equal(compact["top_ids"][0], [3, 5, 1, 4])
+        np.testing.assert_array_equal(compact["top_ids"][0], [7, 6, 3, 5])
         np.testing.assert_array_equal(compact["top_ids"][1], [6, 7, 0, 1])
         gathered = np.take_along_axis(logits, compact["top_ids"], axis=1)
         np.testing.assert_array_equal(compact["top_logits"], gathered.astype(np.float16))
