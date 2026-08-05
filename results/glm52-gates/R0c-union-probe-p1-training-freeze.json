@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "classification": "PREREGISTERED",
+  "scope": "glm52_direct_union_probe_train_only_selection",
+  "parent_plan": "results/glm52-gates/R0c-union-probe-p1-plan.json",
+  "isolated_split_receipt": "results/glm52-gates/R0c-union-probe-splits-pass-76faed9.json",
+  "training_inputs": {
+    "quality": "Only the authoritative train-fit shard: 55 grouped requests and 132300 token-layer rows.",
+    "long": "Both authoritative long-trace shards remain together in training and are assigned synthetic group identities distinct from quality requests.",
+    "forbidden": "The precision-diagnostic, calibration, and test archives may not contribute fitting, hyperparameter selection, stopping, or feature statistics."
+  },
+  "feature_transform": {
+    "hidden": "Decode the frozen symmetric groupwise int4 gate-input feature with its per-32-value FP16 scales into FP16 training batches; retain the five-case FP32/FP16 diagnostic for the later frozen precision check.",
+    "causal_history": "For each source row t, form a 256-way vector from selected experts at t,t-1,t-2,t-3 in the same request and layer, weighted 1,1/2,1/4,1/8. Missing causal positions are zero and no request/layer boundary may be crossed.",
+    "input_width": 6400
+  },
+  "probe": {
+    "scope": "One independent head per routed layer, with a shared selected rank across layers.",
+    "ranks": [8, 16, 32],
+    "architecture": "bias-free Linear(6400,rank), GELU, Linear(rank,768) with output slices ordered K=2,K=4,K=8 and expert ID ascending",
+    "loss": "Mean over K of request-balanced BCEWithLogits. Within each training fold and K, positive weight is (256-mean target cardinality)/mean target cardinality, derived only from that fold's fitting rows.",
+    "initialization_seed": 20260805,
+    "optimizer": "AdamW, learning_rate=0.001, weight_decay=0.0001",
+    "epochs": 8,
+    "batch_rows": 512,
+    "numeric_mode": "FP16 CUDA inputs and parameters with FP32 loss accumulation; non-finite input, gradient, parameter, or score is FAIL."
+  },
+  "cross_validation": {
+    "folds": 3,
+    "group_assignment": "sha256('glm52-p1-fold-v1\\0' + authoritative_group_id) interpreted big-endian modulo 3; both long requests share one authoritative lineage group and therefore one fold.",
+    "aggregation": "For each K/budget cell, arithmetic mean within each validation request and then an unweighted arithmetic mean across validation requests; concatenate out-of-fold request results before the final macro mean.",
+    "rank_selection": "Choose the rank with the highest K=4,budget=32 macro-request recall; an exact tie selects the smaller rank. No other metric or split may change the choice.",
+    "final_epochs": "Eight fixed epochs on all authorized training rows after rank selection; no held-out early stopping."
+  },
+  "baselines": {
+    "frequency": "Per-layer selected-expert counts from each fitting fold only; descending count with ascending expert ID for ties.",
+    "gate_replay": "Exact full 256-expert current-state effective-router ordering. The existing top-32 compact view is insufficient for budget 64; derive and hash-bind the full ordering from retained raw router probability and bias tensors before any comparison.",
+    "two_step_shared_correction": "Measured separately from a frozen engine/capture path because the compact gate input does not contain the shared-expert residual needed to recompute the next router.",
+    "mtp_rollout": "Measured separately from a frozen MTP capture path; do not approximate it from accepted token IDs or frequency."
+  },
+  "resource_policy": {
+    "host_available_floor_gib": 30,
+    "cuda_allocator_cap_gib": 10,
+    "execution": "Load only authorized archives, train one layer/rank/fold at a time, release CUDA tensors between fits, and stop on any allocator error, OOM indicator, Xid, or non-finite value."
+  },
+  "selection_claim_limit": "Train-only cross-validation selects a candidate but cannot establish held-out improvement. Calibration remains reserved for P2. Test is opened once only after the probe, exact baselines, scorer, hashes, and output format are frozen."
+}
