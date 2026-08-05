@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_COMPLETE",
+  "candidate_hash": "a893a3a116200139f06820bf703b12d1fc1127ae",
+  "freeze_commit": "7aef46845b931fd9ed84180c5550c5856ca749c0",
+  "review_round": 144,
+  "per_gate_candidate": 4,
+  "held_out_values_opened": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 100,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "SCOPED_FIX_PASS_GATE_REMAINS_BLOCKED_DO_NOT_OPEN_HELD_OUT"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 100,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "APPROVE_BOUNDED_H4_FIX"
+  },
+  "verified_closure": {
+    "id": "P1-BASE-IMPL-H4-MODULE-TOCTOU",
+    "status": "FIXED",
+    "evidence": "All three frozen modules are snapshotted and hash-checked before execution; the two exact nested loader edges receive authenticated child objects; identity assertions pass; missing, duplicate, corrupted, and pathname-poison mutations fail closed or cannot execute replacement bytes. The targeted suite passed 11/11 and both reviewers independently reproduced the closure."
+  },
+  "prior_issue_status": {
+    "BASE-R142-H2": "OPEN",
+    "BASE-R142-H3": "OPEN",
+    "BASE-R142-H4": "OPEN",
+    "BASE-R142-H5": "OPEN",
+    "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY": "OPEN",
+    "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO": "OPEN",
+    "P1-BASE-IMPL-H3-COST-OMITTED": "OPEN",
+    "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY": "OPEN"
+  },
+  "convergence": {
+    "prior_blocking_count": 9,
+    "blocking_count_after_review": 8,
+    "strictly_shrinks": true,
+    "new_finding_class": false,
+    "escalation_triggered": false
+  },
+  "gate_verdict": "BLOCKED_DO_NOT_OPEN_HELD_OUT_VALUES"
+}
