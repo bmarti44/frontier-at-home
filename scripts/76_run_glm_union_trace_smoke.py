@@ -76,8 +76,9 @@ ENV_NAMES = sorted(set(SHARED.ENV_NAMES) | {
 SYNC_RE = re.compile(
     r"ds4: GLM sync branch=full_indexed pos=(\d+) chunk=(\d+) logits=\d+"
 )
+CUDA_CACHE_PREFIX = "ds4: CUDA persistent expert cache enabled: "
 CUDA_CACHE_RE = re.compile(
-    r"ds4: CUDA persistent expert cache enabled: ([1-9][0-9]*) slots x "
+    re.escape(CUDA_CACHE_PREFIX) + r"([1-9][0-9]*) slots x "
     r"([0-9]+(?:\.[0-9]+)?) MiB = ([0-9]+(?:\.[0-9]+)?) GiB "
     r"\(fixed arena\)"
 )
@@ -159,10 +160,14 @@ def full_indexed_chunks_text(text: str) -> list[list[int]]:
 
 
 def cuda_cache_runtime(text: str) -> dict[str, int | float]:
-    matches = CUDA_CACHE_RE.findall(text)
-    if len(matches) != 1:
+    candidates = [line for line in text.splitlines()
+                  if line.startswith(CUDA_CACHE_PREFIX)]
+    if len(candidates) != 1:
         raise ValueError("one resolved CUDA expert-cache arena record is required")
-    slots_text, expert_mib_text, arena_gib_text = matches[0]
+    match = CUDA_CACHE_RE.fullmatch(candidates[0])
+    if match is None:
+        raise ValueError("resolved CUDA expert-cache arena record is malformed")
+    slots_text, expert_mib_text, arena_gib_text = match.groups()
     slots = int(slots_text)
     expert_mib = float(expert_mib_text)
     arena_gib = float(arena_gib_text)
