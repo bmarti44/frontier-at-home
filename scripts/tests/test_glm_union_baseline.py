@@ -20,6 +20,7 @@ SPEC = importlib.util.spec_from_file_location("glm_union_baseline_tests", SCRIPT
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+REAL_RESERVE_GLOBAL_AUTHORITY = MODULE._reserve_global_authority
 
 
 class CaptureBundleTests(unittest.TestCase):
@@ -233,10 +234,22 @@ class CaptureBundleTests(unittest.TestCase):
 
 
 class AtomicLifecycleTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.authority_patch = mock.patch.object(
+            MODULE, "_reserve_global_authority",
+            return_value={"classification": "TEST_EXTERNAL_AUTHORITY"},
+        )
+        self.authority_patch.start()
+        self.addCleanup(self.authority_patch.stop)
+
     def test_safe_run_attestation_accepts_real_clean_kernel_forms(self) -> None:
         environment = "1" * 64
         main = b"\n".join((
             f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}".encode(),
+            (
+                "memory_guard_descriptor_path=/proc/123/fd/9 memory_guard_sha256=" +
+                MODULE.FROZEN_SCRIPT_HASHES[MODULE.MEMORY_GUARD_PATH]
+            ).encode(),
             f"executed_environment_sha256={environment}".encode(),
             b"executed candidate was verified alive at least once",
             b"SAFE_RUN end rc=0 killed=no",
@@ -246,10 +259,58 @@ class AtomicLifecycleTests(unittest.TestCase):
             with self.subTest(kernel=kernel):
                 MODULE._validate_safe_run_artifacts(main, kernel, stdout, environment)
 
+    def test_root_managed_journal_reservation_is_visible_before_return(self) -> None:
+        emitted: dict[str, str] = {}
+
+        def emit(fields):
+            emitted.update(fields)
+
+        def records():
+            if not emitted:
+                return []
+            return [{
+                "MESSAGE_ID": MODULE.AUTHORITY_MESSAGE_ID,
+                "GLM52_P1_GATE": MODULE.AUTHORITY_GATE_ID,
+                "GLM52_P1_EVENT": "STARTED",
+                "PRIORITY": "2",
+                "SYSLOG_IDENTIFIER": MODULE.AUTHORITY_IDENTIFIER,
+                **emitted,
+                "__CURSOR": "test-cursor",
+                "_BOOT_ID": "test-boot",
+                "__REALTIME_TIMESTAMP": "123456789",
+            }]
+
+        with mock.patch.object(
+            MODULE, "_journal_authority_records", side_effect=records,
+        ), mock.patch.object(
+            MODULE, "_emit_journal_authority", side_effect=emit,
+        ) as publisher:
+            result = REAL_RESERVE_GLOBAL_AUTHORITY(
+                {"candidate": "bound"}, Path("/tmp/nonheldout-test"), 123,
+            )
+        publisher.assert_called_once()
+        self.assertEqual(result["journal_cursor"], "test-cursor")
+        self.assertEqual(result["started_epoch_ns"], 123)
+        self.assertRegex(result["preflight_sha256"], r"^[0-9a-f]{64}$")
+
+    def test_existing_journal_reservation_blocks_before_publication(self) -> None:
+        with mock.patch.object(
+            MODULE, "_journal_authority_records", return_value=[{"existing": True}],
+        ), mock.patch.object(MODULE, "_emit_journal_authority") as publisher:
+            with self.assertRaises(FileExistsError):
+                REAL_RESERVE_GLOBAL_AUTHORITY(
+                    {"candidate": "bound"}, Path("/tmp/retry"), 124,
+                )
+        publisher.assert_not_called()
+
     def test_safe_run_attestation_rejects_fault_or_missing_identity(self) -> None:
         environment = "2" * 64
         good = b"\n".join((
             f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}".encode(),
+            (
+                "memory_guard_descriptor_path=/proc/123/fd/9 memory_guard_sha256=" +
+                MODULE.FROZEN_SCRIPT_HASHES[MODULE.MEMORY_GUARD_PATH]
+            ).encode(),
             f"executed_environment_sha256={environment}".encode(),
             b"executed candidate was verified alive at least once",
             b"SAFE_RUN end rc=0 killed=no",
@@ -385,11 +446,19 @@ class AtomicLifecycleTests(unittest.TestCase):
             root = Path(raw)
             ledger = root / "deletable-local-ledger.json"
             calls = 0
+            reserved = False
 
             def opener(*_args):
                 nonlocal calls
                 calls += 1
                 return {"opened": True}
+
+            def reserve(*_args):
+                nonlocal reserved
+                if reserved:
+                    raise FileExistsError("external authority already reserved")
+                reserved = True
+                return {"classification": "TEST_EXTERNAL_AUTHORITY"}
 
             patches = (
                 mock.patch.object(MODULE, "AUTHORIZED_LEDGER_PATH", ledger, create=True),
@@ -405,8 +474,14 @@ class AtomicLifecycleTests(unittest.TestCase):
                 mock.patch.object(
                     MODULE, "_score_authorized_gate", return_value={"verdict": "PASS"},
                 ),
+                mock.patch.object(
+                    MODULE, "_reserve_global_authority", side_effect=reserve,
+                ),
             )
-            with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            with (
+                patches[0], patches[1], patches[2], patches[3], patches[4],
+                patches[5],
+            ):
                 MODULE._run_authorized_gate({
                     "output_root": root / "first", "device": "cpu",
                 })
@@ -533,20 +608,46 @@ class AtomicLifecycleTests(unittest.TestCase):
             MODULE._environment_sha256(ds4_values, list(ds4_values)),
         )
 
-    def test_authenticated_runtime_uses_private_script_snapshots(self) -> None:
+    def test_launch_environment_binds_descriptor_memory_guard(self) -> None:
+        environment = MODULE._build_launch_environment(
+            {"DS4_LOCK_FILE": "/run/lock/frontier-at-home/inference.lock"},
+            Path("/home/bmarti44/.cache/glm52-candidate"),
+            {
+                "memory_guard_path": "/proc/123/fd/9",
+                "memory_guard_sha256": "a" * 64,
+            },
+        )
+        self.assertEqual(environment["GLM_SAFE_MEMORY_GUARD_PATH"], "/proc/123/fd/9")
+        self.assertEqual(environment["GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256"], "a" * 64)
+
+    def test_authenticated_runtime_uses_sealed_script_snapshots(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             wrapper_payload = b"#!/bin/bash\necho bound\n"
             guard_payload = b"print('bound')\n"
-            wrapper = MODULE._publish_authenticated_runtime(root, {
+            runtime = {
                 "safe_run_payload": wrapper_payload,
                 "memory_guard_payload": guard_payload,
-            })
-            self.assertEqual(wrapper.read_bytes(), wrapper_payload)
-            self.assertEqual(
-                (root / "authenticated-runtime/scripts/03_memory_guard.py").read_bytes(),
-                guard_payload,
-            )
+            }
+            wrapper = MODULE._publish_authenticated_runtime(root, runtime)
+            try:
+                guard = Path(runtime["memory_guard_path"])
+                self.assertEqual(wrapper.read_bytes(), wrapper_payload)
+                self.assertEqual(guard.read_bytes(), guard_payload)
+                expected_seals = (
+                    MODULE.fcntl.F_SEAL_WRITE | MODULE.fcntl.F_SEAL_GROW |
+                    MODULE.fcntl.F_SEAL_SHRINK | MODULE.fcntl.F_SEAL_SEAL
+                )
+                for name in ("safe_run_descriptor", "memory_guard_descriptor"):
+                    self.assertEqual(
+                        MODULE.fcntl.fcntl(
+                            runtime[name], MODULE.fcntl.F_GET_SEALS,
+                        ),
+                        expected_seals,
+                    )
+            finally:
+                os.close(runtime["safe_run_descriptor"])
+                os.close(runtime["memory_guard_descriptor"])
 
     def test_authenticated_runtime_cannot_be_replaced_after_publication(self) -> None:
         """Published script authority must survive same-user pathname mutation."""
@@ -557,18 +658,29 @@ class AtomicLifecycleTests(unittest.TestCase):
                 "memory_guard_payload": b"print('bound')\n",
             }
             wrapper = MODULE._publish_authenticated_runtime(root, runtime)
-            guard = Path(runtime.get(
-                "memory_guard_path",
-                root / "authenticated-runtime/scripts/03_memory_guard.py",
-            ))
-            with self.assertRaises(OSError):
-                wrapper.unlink()
-            with self.assertRaises(OSError):
-                guard.unlink()
-            with self.assertRaises(OSError):
-                wrapper.write_bytes(b"#!/bin/bash\necho forged\n")
-            with self.assertRaises(OSError):
-                guard.write_bytes(b"print('forged')\n")
+            try:
+                guard = Path(runtime["memory_guard_path"])
+                with self.assertRaises(OSError):
+                    wrapper.unlink()
+                with self.assertRaises(OSError):
+                    guard.unlink()
+                with self.assertRaises(OSError):
+                    wrapper.write_bytes(b"#!/bin/bash\necho forged\n")
+                with self.assertRaises(OSError):
+                    guard.write_bytes(b"print('forged')\n")
+                replacement = root / "forged-wrapper"
+                replacement.write_bytes(b"#!/bin/bash\necho forged\n")
+                with self.assertRaises(OSError):
+                    os.replace(replacement, wrapper)
+                with self.assertRaises(OSError):
+                    os.rename(wrapper, root / "moved-wrapper")
+                with self.assertRaises(OSError):
+                    os.link(wrapper, root / "linked-wrapper")
+                with self.assertRaises(OSError):
+                    os.symlink(root / "forged-wrapper", wrapper)
+            finally:
+                os.close(runtime["safe_run_descriptor"])
+                os.close(runtime["memory_guard_descriptor"])
 
     def test_authenticated_binary_is_private_named_and_hash_bound(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

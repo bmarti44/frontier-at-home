@@ -7,6 +7,7 @@ import argparse
 import csv
 import ctypes
 import errno
+import fcntl
 import hashlib
 import importlib.util
 import io
@@ -59,12 +60,16 @@ FROZEN_FIXTURE_SHA256 = "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4b
 FROZEN_ENGINE_COMMIT = "b8a152f29bb68197796b89ba755afb4aefe45dee"
 FROZEN_MODEL_STAT = (66306, 679227, 211075856448, 1784912383428586016, 1784912515922318687)
 FROZEN_SCRIPT_HASHES = {
-    SAFE_RUN_PATH: "7d8bb58e526a5cbdd1980597506079fd2dadac294e255e577bb9fba9f6fdfd1f",
+    SAFE_RUN_PATH: "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
     MEMORY_GUARD_PATH: "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
 }
 AUTHORIZED_LEDGER_PATH = Path(
     "/home/bmarti44/.local/state/glm52-p1-baseline-heldout-ledger.json"
 )
+AUTHORITY_LOCK_PATH = Path("/run/lock/frontier-at-home/inference.lock")
+AUTHORITY_MESSAGE_ID = "9b0125b612d7480da990ad79e8c4c2fb"
+AUTHORITY_GATE_ID = "glm52-p1-baseline-heldout-v1"
+AUTHORITY_IDENTIFIER = "glm52-p1-baseline-authority"
 FIXED_LAUNCH_PATH = (
     "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
@@ -1109,6 +1114,137 @@ def _rename_noreplace(source: Path, destination: Path) -> None:
         raise OSError(number, os.strerror(number), destination)
 
 
+def _authority_environment() -> dict[str, str]:
+    return {
+        "HOME": "/home/bmarti44",
+        "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+    }
+
+
+def _journal_authority_records() -> list[dict[str, object]]:
+    completed = subprocess.run(
+        [
+            "/usr/bin/journalctl", "--no-pager", "--quiet", "--output=json",
+            f"MESSAGE_ID={AUTHORITY_MESSAGE_ID}",
+            f"GLM52_P1_GATE={AUTHORITY_GATE_ID}",
+        ],
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15,
+        check=False, env=_authority_environment(),
+    )
+    if completed.returncode != 0 or completed.stderr:
+        raise RuntimeError("system-journal authority query failed")
+    records = []
+    for line in completed.stdout.splitlines():
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise RuntimeError("system-journal authority record is malformed") from error
+        if not isinstance(record, dict):
+            raise RuntimeError("system-journal authority record is not an object")
+        if (
+            record.get("MESSAGE_ID") != AUTHORITY_MESSAGE_ID or
+            record.get("GLM52_P1_GATE") != AUTHORITY_GATE_ID or
+            record.get("GLM52_P1_EVENT") != "STARTED" or
+            record.get("PRIORITY") != "2" or
+            record.get("SYSLOG_IDENTIFIER") != AUTHORITY_IDENTIFIER
+        ):
+            raise RuntimeError("system-journal authority record differs")
+        records.append(record)
+    return records
+
+
+def _emit_journal_authority(fields: dict[str, str]) -> None:
+    lines = [
+        f"MESSAGE_ID={AUTHORITY_MESSAGE_ID}",
+        # journald.conf guarantees immediate on-disk sync for CRIT (2),
+        # unlike NOTICE/INFO records governed by SyncIntervalSec.
+        "PRIORITY=2",
+        f"SYSLOG_IDENTIFIER={AUTHORITY_IDENTIFIER}",
+        f"GLM52_P1_GATE={AUTHORITY_GATE_ID}",
+        "GLM52_P1_EVENT=STARTED",
+        *(f"{name}={value}" for name, value in sorted(fields.items())),
+        "MESSAGE=GLM52 P1 held-out global one-shot reservation STARTED",
+        "",
+    ]
+    completed = subprocess.run(
+        ["/usr/bin/logger", "--journald"], input="\n".join(lines), text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15, check=False,
+        env=_authority_environment(),
+    )
+    if completed.returncode != 0 or completed.stdout or completed.stderr:
+        raise RuntimeError("system-journal authority publication failed")
+
+
+def _reserve_global_authority(
+    preflight: dict[str, object],
+    output_root: Path,
+    started_epoch_ns: int,
+) -> dict[str, object]:
+    """Reserve the split in root-managed journald before any held-out open."""
+    flags = os.O_RDWR | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(AUTHORITY_LOCK_PATH, flags)
+    try:
+        details = os.fstat(descriptor)
+        parent = AUTHORITY_LOCK_PATH.parent.stat()
+        if (
+            not stat.S_ISREG(details.st_mode) or details.st_uid != 0 or
+            parent.st_uid != 0 or parent.st_mode & 0o022
+        ):
+            raise RuntimeError("global authority lock ownership differs")
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        existing = _journal_authority_records()
+        if existing:
+            raise FileExistsError("global held-out journal reservation already exists")
+        canonical_preflight = json.dumps(
+            preflight, sort_keys=True, separators=(",", ":"), allow_nan=False,
+        ).encode("utf-8")
+        fields = {
+            "GLM52_P1_PREFLIGHT_SHA256": _sha256_bytes(canonical_preflight),
+            "GLM52_P1_OUTPUT_SHA256": _sha256_bytes(os.fsencode(output_root)),
+            "GLM52_P1_STARTED_NS": str(started_epoch_ns),
+        }
+        _emit_journal_authority(fields)
+        deadline = time.monotonic() + 5.0
+        while True:
+            observed = _journal_authority_records()
+            if len(observed) > 1:
+                raise RuntimeError("multiple system-journal authority records observed")
+            matching = [
+                row for row in observed
+                if all(row.get(name) == value for name, value in fields.items())
+            ]
+            if len(observed) == 1 and len(matching) == 1:
+                record = matching[0]
+                break
+            if observed and not matching:
+                raise RuntimeError("system-journal authority publication differs")
+            if time.monotonic() >= deadline:
+                raise TimeoutError("system-journal authority was not query-visible")
+            time.sleep(0.05)
+        cursor = record.get("__CURSOR")
+        boot_id = record.get("_BOOT_ID")
+        realtime = record.get("__REALTIME_TIMESTAMP")
+        if not all(isinstance(value, str) and value for value in (cursor, boot_id, realtime)):
+            raise RuntimeError("system-journal authority identity is incomplete")
+        return {
+            "classification": "ROOT_MANAGED_JOURNAL_ONE_SHOT_AUTHORITY",
+            "message_id": AUTHORITY_MESSAGE_ID,
+            "gate_id": AUTHORITY_GATE_ID,
+            "journal_cursor": cursor,
+            "boot_id": boot_id,
+            "realtime_timestamp": realtime,
+            "preflight_sha256": fields["GLM52_P1_PREFLIGHT_SHA256"],
+            "output_sha256": fields["GLM52_P1_OUTPUT_SHA256"],
+            "started_epoch_ns": started_epoch_ns,
+        }
+    finally:
+        os.close(descriptor)
+
+
 def _run_atomic_lifecycle(
     output_root: Path,
     preflight,
@@ -1116,6 +1252,7 @@ def _run_atomic_lifecycle(
     capture,
     score,
     ledger_path: Path | None = None,
+    reserve_authority=None,
 ) -> dict[str, object]:
     """Run one preflight/open/capture/score attempt and seal every opened outcome."""
     requested = output_root.absolute()
@@ -1127,6 +1264,11 @@ def _run_atomic_lifecycle(
     if not isinstance(preflight_binding, dict):
         raise ValueError("atomic lifecycle preflight binding is malformed")
     started_epoch_ns = time.time_ns()
+    authority = None
+    if reserve_authority is not None:
+        authority = reserve_authority(preflight_binding, output_root, started_epoch_ns)
+        if not isinstance(authority, dict) or not authority:
+            raise ValueError("global one-shot authority binding is malformed")
     ledger = None
     if ledger_path is not None:
         ledger_requested = ledger_path.absolute()
@@ -1139,6 +1281,7 @@ def _run_atomic_lifecycle(
             "started_epoch_ns": started_epoch_ns,
             "output_root": str(output_root),
             "preflight": preflight_binding,
+            "global_authority": authority,
         })
     staging = Path(tempfile.mkdtemp(prefix=f".{output_root.name}.tmp.", dir=parent))
     attempt = {
@@ -1147,6 +1290,7 @@ def _run_atomic_lifecycle(
         "status": "STARTED",
         "started_epoch_ns": started_epoch_ns,
         "preflight": preflight_binding,
+        "global_authority": authority,
     }
     _write_json_replace(staging / "attempt.json", attempt)
     try:
@@ -1445,19 +1589,56 @@ def _write_runtime_file(path: Path, payload: bytes, mode: int) -> None:
         os.close(parent_descriptor)
 
 
+def _sealed_memfd(name: str, payload: bytes) -> int:
+    if not hasattr(os, "memfd_create") or not hasattr(os, "MFD_ALLOW_SEALING"):
+        raise RuntimeError("sealed memfd runtime is unavailable")
+    descriptor = os.memfd_create(
+        name, flags=os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING,
+    )
+    try:
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError("short sealed runtime write")
+            view = view[written:]
+        os.fsync(descriptor)
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        seals = (
+            fcntl.F_SEAL_WRITE | fcntl.F_SEAL_GROW |
+            fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_SEAL
+        )
+        fcntl.fcntl(descriptor, fcntl.F_ADD_SEALS, seals)
+        if fcntl.fcntl(descriptor, fcntl.F_GET_SEALS) != seals:
+            raise RuntimeError("authenticated runtime memfd seals differ")
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
 def _publish_authenticated_runtime(
     staging: Path,
     runtime: dict[str, object],
 ) -> Path:
-    root = staging / "authenticated-runtime"
-    wrapper = root / "results/glm52-gates/harness/glm_safe_run.sh"
-    guard = root / "scripts/03_memory_guard.py"
+    del staging
     safe_run_payload = runtime.get("safe_run_payload")
     memory_guard_payload = runtime.get("memory_guard_payload")
     if not isinstance(safe_run_payload, bytes) or not isinstance(memory_guard_payload, bytes):
         raise ValueError("authenticated runtime snapshots are missing")
-    _write_runtime_file(wrapper, safe_run_payload, 0o500)
-    _write_runtime_file(guard, memory_guard_payload, 0o400)
+    wrapper_descriptor = _sealed_memfd("glm52-safe-run", safe_run_payload)
+    try:
+        guard_descriptor = _sealed_memfd("glm52-memory-guard", memory_guard_payload)
+    except BaseException:
+        os.close(wrapper_descriptor)
+        raise
+    runtime["safe_run_descriptor"] = wrapper_descriptor
+    runtime["memory_guard_descriptor"] = guard_descriptor
+    wrapper = Path(f"/proc/{os.getpid()}/fd/{wrapper_descriptor}")
+    guard = Path(f"/proc/{os.getpid()}/fd/{guard_descriptor}")
+    runtime["safe_run_path"] = str(wrapper)
+    runtime["memory_guard_path"] = str(guard)
+    runtime["memory_guard_sha256"] = _sha256_bytes(memory_guard_payload)
     return wrapper
 
 
@@ -1491,9 +1672,10 @@ def _publish_authenticated_binary(
 def _build_launch_environment(
     ds4_values: dict[str, str],
     candidate_root: Path,
+    runtime: dict[str, object] | None = None,
 ) -> dict[str, str]:
     names = sorted(ds4_values)
-    return {
+    environment = {
         "PATH": FIXED_LAUNCH_PATH,
         "HOME": "/home/bmarti44",
         "USER": "bmarti44",
@@ -1511,6 +1693,14 @@ def _build_launch_environment(
         "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(names),
         "GLM_SAFE_EXPECTED_ENV_SHA256": _environment_sha256(ds4_values, names),
     }
+    if runtime is not None:
+        guard_path = runtime.get("memory_guard_path")
+        guard_sha256 = runtime.get("memory_guard_sha256")
+        if not isinstance(guard_path, str) or not isinstance(guard_sha256, str):
+            raise ValueError("authenticated memory guard authority is missing")
+        environment["GLM_SAFE_MEMORY_GUARD_PATH"] = guard_path
+        environment["GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256"] = guard_sha256
+    return environment
 
 
 def _engine_capture_command(
@@ -1536,6 +1726,9 @@ def _validate_safe_run_artifacts(
 ) -> None:
     required_markers = (
         f"candidate_binary_sha256={FROZEN_BINARY_SHA256}".encode("ascii"),
+        (
+            "memory_guard_sha256=" + FROZEN_SCRIPT_HASHES[MEMORY_GUARD_PATH]
+        ).encode("ascii"),
         f"executed_environment_sha256={expected_environment_sha256}".encode("ascii"),
         b"executed candidate was verified alive at least once",
         b"SAFE_RUN end rc=0 killed=no",
@@ -1543,6 +1736,11 @@ def _validate_safe_run_artifacts(
     if (
         b"FATAL" in main_payload or
         any(marker not in main_payload for marker in required_markers) or
+        re.search(
+            rb"memory_guard_descriptor_path=/proc/[0-9]+/fd/[0-9]+ "
+            rb"memory_guard_sha256=[0-9a-f]{64}",
+            main_payload,
+        ) is None or
         kernel_payload not in (b"NO_KERNEL_FAULTS\n", b"-- No entries --\n") or
         b"SAFE_RUN_DONE rc=0 killed=no dir=" not in stdout_payload
     ):
@@ -1631,7 +1829,7 @@ def _capture_authorized_set_with_runtime(
             "DS4_GLM_BASELINE_CAPTURE_DIR": str(request_dir),
             "DS4_LOCK_FILE": "/run/lock/frontier-at-home/inference.lock",
         }
-        environment = _build_launch_environment(ds4_values, candidate_root)
+        environment = _build_launch_environment(ds4_values, candidate_root, runtime)
         tag = f"p1-baseline-r{request:03d}-{os.getpid()}"
         before_logs = set(crash_root.glob(f"*-{tag}"))
         command = _engine_capture_command(
@@ -1782,11 +1980,15 @@ def _run_authorized_gate(configuration: dict[str, object]) -> dict[str, object]:
         return _run_atomic_lifecycle(
             Path(configuration["output_root"]), preflight, opener, capture, score,
             ledger_path=AUTHORIZED_LEDGER_PATH,
+            reserve_authority=_reserve_global_authority,
         )
     finally:
         runtime = state.get("runtime")
         if isinstance(runtime, dict):
-            for name in ("binary_descriptor", "model_descriptor"):
+            for name in (
+                "binary_descriptor", "model_descriptor", "safe_run_descriptor",
+                "memory_guard_descriptor",
+            ):
                 descriptor = runtime.get(name)
                 if isinstance(descriptor, int):
                     os.close(descriptor)

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "classification": "NON_HELDOUT_AUTHORITY_AND_RUNTIME_SMOKE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 9,
+  "held_out_values_opened": false,
+  "journal_authority": {
+    "classification": "ROOT_MANAGED_JOURNAL_ONE_SHOT_AUTHORITY",
+    "message_id": "4efa8b64a2d77c890228ab5f73bacb58",
+    "gate_id": "glm52-p1-c9-crit-nonheldout-a00fe235ae264f96",
+    "journal_cursor": "s=82754e20356347a8a0d0b845752f9901;i=395137;b=4c36a0468dd3411e920077af47ef981f;m=af11260753;t=658509604b767;x=25aee6768f88f930",
+    "boot_id": "4c36a0468dd3411e920077af47ef981f",
+    "realtime_timestamp": "1785952997783399",
+    "started_epoch_ns": 1785952997761483033,
+    "configuration_sha256": "790cc3e755765a72a9692d5f17bf5dcf8302247e7a1201a72608399e1bc63758",
+    "output_sha256": "85fe6f569d6ec060a424d525ecc7dc538d6c343b3de95aa2efdb5d954ec36673",
+    "priority": 2,
+    "priority_name": "CRIT",
+    "immediate_disk_sync_contract": "The installed journald.conf(5) states that CRIT, ALERT, and EMERG records are unconditionally synchronized immediately rather than waiting for SyncIntervalSec.",
+    "second_reservation_blocked": true,
+    "production_gate_record_count_after_smoke": 0,
+    "authority_filesystem": "/var/log/journal is root:systemd-journal; the bmarti44 principal can read as adm but cannot delete archived journal files",
+    "claim_limit": "Unique non-held-out gate key only; the production held-out gate key remains unused."
+  },
+  "descriptor_runtime": {
+    "wrapper_storage": "sealed memfd consumed through controller /proc fd",
+    "memory_guard_storage": "sealed memfd consumed through controller /proc fd with wrapper-side SHA-256 verification",
+    "non_gpu_attempts": [
+      {
+        "tag": "p1-c9-descriptor-nongpu",
+        "wrapper_exit_code": 10,
+        "result": "REJECTED_ATTEMPT_PRESERVED",
+        "reason": "/usr/bin/true exited before process-group sampling; no code change was made for this expected short-process limitation",
+        "artifacts": {
+          "main.log": "0380e4465cd35bbd50fcfaeb476a8b8f70dc0eae758a369b9536750861d4e235",
+          "cmd.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      {
+        "tag": "p1-c9-descriptor-nongpu-2",
+        "wrapper_exit_code": 0,
+        "result": "PASS",
+        "artifacts": {
+          "main.log": "c3ba57eccdbc247a732a83e62a154e0cabbcfb6ed389214427509f2ed1daf852",
+          "cmd.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "samples.log": "1181e9ca949c6168cd2cc7cbf8c01e686e4c99db04a034dfec304de58681353a",
+          "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+        }
+      }
+    ]
+  },
+  "real_engine_train_case": {
+    "case_id": "case_048",
+    "split": "train",
+    "wrapper_exit_code": 0,
+    "killed": false,
+    "gpu_or_kernel_fault": false,
+    "prompt_tokens": 32,
+    "source_positions": [16, 17, 18, 19, 20, 21, 22, 23],
+    "source_bundles": 8,
+    "capture_files": 72,
+    "exact_prompt_tokens_match_all_sources": true,
+    "binary_sha256": "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b",
+    "raw_artifact_sha256": "98c816161d73d99a87e1e187d037bbc4106e153ec04fc62c7357962b9b39aac0",
+    "artifacts": {
+      "main.log": "4258d53b3d9adf7ba67723be3ce153abb5008da3a84c257db547c468175afe0d",
+      "cmd.log": "8439284b7b300bae6cfb771a22a3bb929e759bcd732d36997f2bf5c6ecd097be",
+      "samples.log": "41551cd44b57161aa1553701823ab91ea7b42b06aac38b1e3b99fbdc44a05a70",
+      "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+    }
+  },
+  "post_run": {
+    "engine_processes": 0,
+    "production_journal_reservations": 0,
+    "local_held_out_ledger_exists": false,
+    "mem_available_kib": 120747592,
+    "swap_free_kib": 15973192
+  },
+  "verdict": "PASS",
+  "claim_limit": "Candidate-9 non-held-out authority and runtime-path smoke only; no held-out baseline, cost, NLL, fidelity, performance, or serving claim."
+}

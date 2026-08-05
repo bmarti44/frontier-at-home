@@ -37,6 +37,8 @@ EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
 ROOT_AUTHORITY=${GLM_W1_ROOT_AUTHORITY:-0}
 AUTHORITY_CRASH_ROOT=${GLM_SAFE_CRASH_ROOT:-}
+MEMORY_GUARD_OVERRIDE=${GLM_SAFE_MEMORY_GUARD_PATH:-}
+EXPECTED_MEMORY_GUARD_SHA256=${GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256:-}
 KERNEL_GPU_FAULT_RE='NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process'
 USERSPACE_GPU_OOM_RE='CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|CUDA.{0,160}(allocation failed|out of memory)'
 TAG=run
@@ -287,7 +289,19 @@ fi
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
 HARNESS_ROOT=$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")")
-MEMORY_GUARD=$HARNESS_ROOT/scripts/03_memory_guard.py
+if [[ -n $MEMORY_GUARD_OVERRIDE ]]; then
+  [[ $MEMORY_GUARD_OVERRIDE =~ ^/proc/[0-9]+/fd/[0-9]+$ ]] ||
+    config_error "GLM_SAFE_MEMORY_GUARD_PATH"
+  [[ $EXPECTED_MEMORY_GUARD_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
+    config_error "GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256"
+  MEMORY_GUARD=$MEMORY_GUARD_OVERRIDE
+  MEMORY_GUARD_SHA256=$(sha256sum -- "$MEMORY_GUARD" 2>/dev/null | awk '{print $1}')
+  [[ $MEMORY_GUARD_SHA256 == "$EXPECTED_MEMORY_GUARD_SHA256" ]] ||
+    config_error "GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256 mismatch"
+  plog "memory_guard_descriptor_path=$MEMORY_GUARD memory_guard_sha256=$MEMORY_GUARD_SHA256"
+else
+  MEMORY_GUARD=$HARNESS_ROOT/scripts/03_memory_guard.py
+fi
 python3 "$MEMORY_GUARD" \
   --required-gib "$MIN_START_GIB" --stable-samples 3 --timeout-seconds 0 \
   >>"$MAIN" || { plog "FATAL insufficient stable memory before launch"; exit 8; }
