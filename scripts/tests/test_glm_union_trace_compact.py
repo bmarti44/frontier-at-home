@@ -853,12 +853,25 @@ class QualifiedBundleTests(unittest.TestCase):
             values["ids"].shape = (2, 1)
             original_savez(handle, **values)
 
+        def duplicate_member(handle, **values):
+            import io
+            import zipfile
+
+            with zipfile.ZipFile(handle, "w") as archive:
+                for key, value in values.items():
+                    payload = io.BytesIO()
+                    np.save(payload, value)
+                    archive.writestr(f"{key}.npy", payload.getvalue())
+                    if key == "ids":
+                        archive.writestr(f"{key}.npy", payload.getvalue())
+
         for name, mutation in (
             ("corrupt", corrupt), ("missing", missing), ("extra", extra),
             ("dtype", wrong_dtype), ("shape", wrong_shape), ("value", wrong_value),
             ("in_place", mutate_input_in_place),
             ("in_place_dtype", mutate_dtype_in_place),
             ("in_place_shape", mutate_shape_in_place),
+            ("duplicate_member", duplicate_member),
         ):
             with self.subTest(mutation=name), tempfile.TemporaryDirectory() as directory:
                 destination = Path(directory) / "published"
