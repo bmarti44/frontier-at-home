@@ -434,8 +434,12 @@ def validate_failure_injection_evidence(evidence: dict[str, object]) -> None:
                 evidence["reference_token_ids_sha256"] or
             not isinstance(runtime_log, dict) or set(runtime_log) != {
                 "path", "sha256", "bytes",
-            } or not isinstance(runtime_log.get("path"), str) or
-            not runtime_log["path"].startswith("runtime-logs/fault-") or
+            } or record.get("stage") not in FAILURE_INJECTION_STAGES or
+            not isinstance(runtime_log.get("path"), str) or
+            not re.fullmatch(
+                rf"runtime-logs/p1-fault-{record['stage']}-r[0-9]{{3}}-[0-9]+/main[.]log",
+                runtime_log["path"],
+            ) or
             not isinstance(runtime_log.get("sha256"), str) or
             not re.fullmatch(r"[0-9a-f]{64}", runtime_log["sha256"]) or
             not isinstance(runtime_log.get("bytes"), int) or

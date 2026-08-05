@@ -39,7 +39,7 @@ def executed_failure_fixture() -> dict[str, object]:
             "post_control_continuation_sha256": "2" * 64,
             "post_control_token_ids_sha256": "3" * 64,
             "runtime_log": {
-                "path": f"runtime-logs/p1-fault-{stage}/main.log",
+                "path": f"runtime-logs/p1-fault-{stage}-r001-{1000 + index}/main.log",
                 "sha256": f"{index + 10:064x}",
                 "bytes": 128 + index,
             },
@@ -1201,7 +1201,7 @@ class BaselineTableTests(unittest.TestCase):
                 "post_control_continuation_sha256": "a" * 64,
                 "post_control_token_ids_sha256": "b" * 64,
                 "runtime_log": {
-                    "path": f"runtime-logs/p1-fault-{stage}/main.log",
+                    "path": f"runtime-logs/p1-fault-{stage}-r001-{1000 + index}/main.log",
                     "sha256": f"{index + 10:064x}",
                     "bytes": 128 + index,
                 },
@@ -1367,6 +1367,7 @@ class BaselineTableTests(unittest.TestCase):
                     f"start_ticks={fault['process_start_ticks']}\n"
                 ).encode("ascii")
                 path = root / fault["runtime_log"]["path"]
+                path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(payload)
                 fault["runtime_log"].update({
                     "sha256": MODULE._sha256_bytes(payload), "bytes": len(payload),
