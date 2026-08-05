@@ -3,12 +3,24 @@
 
 from __future__ import annotations
 
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+
 import numpy as np
 
 
 K_VALUES = (2, 4, 8)
 BUDGETS = (16, 32, 64)
 N_EXPERT = 256
+ROOT = Path(__file__).resolve().parents[1]
+QUALITY_COMPACTION_RECEIPT = (
+    ROOT / "results/glm52-gates/R0b-union-quality-corpus-compaction-pass-440d15d.json"
+)
 SPLIT_COUNTS = {
     "train-fit": 55,
     "train-precision-diagnostic": 5,
@@ -121,7 +133,7 @@ def split_compact_arrays(
 
     result: dict[str, dict[str, np.ndarray]] = {}
     for split, rows in normalized_rows.items():
-        projected = {name: arrays[name][rows] for name in main_names}
+        projected = {name: arrays[name][rows] for name in sorted(main_names)}
         old_to_new = np.full(row_count, -1, dtype=np.int64)
         old_to_new[rows] = np.arange(rows.size)
         selected_holdout = old_to_new[holdout_row.astype(np.int64)] >= 0
@@ -137,6 +149,160 @@ def split_compact_arrays(
         ):
             raise ValueError("projected compact split is inconsistent")
         result[split] = projected
+    return result
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _tracked_bytes(path: Path) -> bytes:
+    """Read a repository input once and require byte equality with HEAD."""
+    path = path.resolve(strict=True)
+    relative = path.relative_to(ROOT)
+    observed = path.read_bytes()
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "--", str(relative)],
+        cwd=ROOT, stdin=subprocess.DEVNULL, capture_output=True,
+    )
+    committed = subprocess.run(
+        ["git", "show", f"HEAD:{relative}"], cwd=ROOT,
+        stdin=subprocess.DEVNULL, capture_output=True,
+    )
+    if tracked.returncode != 0 or committed.returncode != 0 or committed.stdout != observed:
+        raise ValueError(f"trusted input is not tracked and clean at HEAD: {relative}")
+    return observed
+
+
+def _load_compactor():
+    path = ROOT / "scripts/77_compact_glm_union_trace.py"
+    _tracked_bytes(path)
+    specification = importlib.util.spec_from_file_location("glm_union_compactor_for_split", path)
+    if specification is None or specification.loader is None:
+        raise RuntimeError("cannot load the frozen corpus publisher")
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
+
+
+def split_archive(source_dir: Path, out_root: Path) -> dict[str, object]:
+    """Validate and publish isolated quality splits without analyzing held-out labels."""
+    source_dir = source_dir.resolve(strict=True)
+    manifest_path = source_dir / "manifest.json"
+    records_path = source_dir / "records.npz"
+    receipt = json.loads(_tracked_bytes(QUALITY_COMPACTION_RECEIPT).decode("utf-8"))
+    split_plan_path = ROOT / "results/glm52-gates/R0b-union-p0-split-plan.json"
+    split_plan_bytes = _tracked_bytes(split_plan_path)
+    split_plan_sha256 = hashlib.sha256(split_plan_bytes).hexdigest()
+    manifest_bytes = manifest_path.read_bytes()
+    manifest = json.loads(manifest_bytes.decode("utf-8", errors="strict"))
+    if (
+        hashlib.sha256(manifest_bytes).hexdigest() != receipt.get("manifest_sha256") or
+        _sha256(records_path) != receipt.get("output_sha256") or
+        records_path.stat().st_size != receipt.get("output_bytes") or
+        manifest.get("format") != "glm52-union-p0-npz-v2" or
+        manifest.get("requests") != 100 or manifest.get("rows") != 244650 or
+        manifest.get("output_sha256") != receipt.get("output_sha256") or
+        manifest.get("raw_source_retained") != receipt.get("retained_raw_directory")
+    ):
+        raise ValueError("quality compact source differs from its reviewed receipt")
+    schema = manifest.get("array_schema")
+    if not isinstance(schema, dict) or len(schema) != 10:
+        raise ValueError("quality compact array schema is malformed")
+    with np.load(records_path, allow_pickle=False) as archive:
+        if len(archive.files) != len(schema) or set(archive.files) != set(schema):
+            raise ValueError("quality compact array set differs")
+        arrays = {}
+        for name in archive.files:
+            value = archive[name]
+            expected = schema[name]
+            if (
+                value.dtype.str != expected.get("dtype") or
+                list(value.shape) != expected.get("shape") or
+                hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest() !=
+                expected.get("sha256") or
+                (np.issubdtype(value.dtype, np.floating) and not np.isfinite(value).all())
+            ):
+                raise ValueError(f"quality compact array differs: {name}")
+            arrays[name] = value.copy()
+    metadata = manifest.get("request_metadata")
+    split_rows = partition_request_rows(arrays["request_index"], metadata)
+    projected = split_compact_arrays(arrays, split_rows)
+
+    publisher = _load_compactor()
+    requested = out_root.absolute()
+    if requested.exists() or requested.is_symlink():
+        raise FileExistsError(requested)
+    parent = requested.parent.resolve(strict=True)
+    out_root = parent / requested.name
+    out_root.mkdir(mode=0o700)
+    published = {}
+    for split in SPLIT_COUNTS:
+        request_ids = sorted(set(int(value) for value in projected[split]["request_index"]))
+        split_metadata = [
+            row for row in metadata if int(row["request_index"]) in request_ids
+        ]
+        record = {
+            "schema_version": 1,
+            "format": "glm52-union-p1-split-npz-v1",
+            "split": split,
+            "requests": len(request_ids),
+            "rows": int(projected[split]["request_index"].size),
+            "request_metadata": split_metadata,
+            "source_manifest_sha256": receipt["manifest_sha256"],
+            "source_output_sha256": receipt["output_sha256"],
+            "split_plan_sha256": split_plan_sha256,
+            "splitter_sha256": _sha256(Path(__file__).resolve()),
+        }
+        split_manifest = publisher.publish_bundle(
+            out_root / split, projected[split], record,
+        )
+        published[split] = {
+            "requests": record["requests"],
+            "rows": record["rows"],
+            "manifest_sha256": _sha256(out_root / split / "manifest.json"),
+            "output_sha256": split_manifest["output_sha256"],
+            "output_bytes": split_manifest["output_bytes"],
+        }
+    result = {
+        "schema_version": 1,
+        "classification": "DERIVED_SPLITS",
+        "source_manifest_sha256": receipt["manifest_sha256"],
+        "source_output_sha256": receipt["output_sha256"],
+        "split_plan_sha256": split_plan_sha256,
+        "splitter_sha256": _sha256(Path(__file__).resolve()),
+        "splits": published,
+    }
+    top = out_root / "manifest.json"
+    with top.open("x", encoding="utf-8") as handle:
+        json.dump(result, handle, sort_keys=True, indent=2, allow_nan=False)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    directory_fd = os.open(out_root, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+    return result
+
+
+def run(args: argparse.Namespace) -> int:
+    result = split_archive(args.source_dir, args.out_root)
+    print(json.dumps(result, sort_keys=True, indent=2, allow_nan=False))
+    return 0
+
+
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(description=__doc__)
+    subcommands = result.add_subparsers(dest="command", required=True)
+    split = subcommands.add_parser("split", help="publish the frozen grouped corpus splits")
+    split.add_argument("--source-dir", required=True, type=Path)
+    split.add_argument("--out-root", required=True, type=Path)
     return result
 
 
@@ -265,3 +431,10 @@ def score_rankings(
         "budgets": list(budgets),
         "by_budget": by_budget,
     }
+
+
+if __name__ == "__main__":
+    arguments = parser().parse_args()
+    if arguments.command == "split":
+        raise SystemExit(run(arguments))
+    raise SystemExit("unsupported command")
