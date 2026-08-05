@@ -4,12 +4,17 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
+import errno
 import hashlib
 import importlib.util
 import json
 import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
+import tempfile
 
 import numpy as np
 
@@ -21,6 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 QUALITY_COMPACTION_RECEIPT = (
     ROOT / "results/glm52-gates/R0b-union-quality-corpus-compaction-pass-440d15d.json"
 )
+SPLIT_PLAN = ROOT / "results/glm52-gates/R0b-union-p0-split-plan.json"
+COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 SPLIT_COUNTS = {
     "train-fit": 55,
     "train-precision-diagnostic": 5,
@@ -48,12 +55,14 @@ def partition_request_rows(
         raise ValueError("split input schema is invalid")
     metadata_by_request: dict[int, dict[str, object]] = {}
     case_ids: set[str] = set()
+    group_ids: set[str] = set()
     split_counts = {name: 0 for name in expected_counts}
     for row in request_metadata:
         if not isinstance(row, dict):
             raise ValueError("request metadata row is malformed")
         request = row.get("request_index")
         case = row.get("case_id")
+        group = row.get("group_id")
         split = row.get("split")
         if (
             not isinstance(request, int) or isinstance(request, bool) or request <= 0 or
@@ -61,9 +70,22 @@ def partition_request_rows(
             case in case_ids or split not in expected_counts
         ):
             raise ValueError("request metadata identity or split is invalid")
+        if expected_case_splits is not None and (
+            not isinstance(group, str) or not group or group != case or group in group_ids or
+            expected_case_splits.get(case) != split
+        ):
+            raise ValueError("request metadata differs from the preregistered case split")
         metadata_by_request[request] = row
         case_ids.add(case)
+        if isinstance(group, str):
+            group_ids.add(group)
         split_counts[str(split)] += 1
+    if expected_case_splits is not None and (
+        not isinstance(expected_case_splits, dict) or
+        set(expected_case_splits) != case_ids or
+        any(split not in expected_counts for split in expected_case_splits.values())
+    ):
+        raise ValueError("preregistered case split coverage differs")
     if split_counts != expected_counts:
         raise ValueError("request split counts differ from the frozen plan")
     observed_requests = set(int(value) for value in np.unique(request_index))
@@ -190,15 +212,107 @@ def _load_compactor():
     return module
 
 
+def _repository_head() -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, stdin=subprocess.DEVNULL,
+        capture_output=True, text=True, check=True,
+    )
+    value = completed.stdout.strip()
+    if not COMMIT_RE.fullmatch(value):
+        raise ValueError("repository HEAD is malformed")
+    return value
+
+
+def _case_ids_from_manifest(path: Path, expected_sha256: str) -> list[str]:
+    content = _tracked_bytes(path)
+    if hashlib.sha256(content).hexdigest() != expected_sha256:
+        raise ValueError("split block manifest hash differs")
+    lines = content.decode("utf-8", errors="strict").splitlines()
+    if not lines or lines[0] != "# id\tprompt_file\tcontinuation_file\tresponse_file":
+        raise ValueError("split block manifest header differs")
+    result: list[str] = []
+    for line in lines[1:]:
+        fields = line.split("\t")
+        if len(fields) != 4 or not re.fullmatch(r"case_[0-9]{3}", fields[0]):
+            raise ValueError("split block manifest row is malformed")
+        result.append(fields[0])
+    if not result or len(result) != len(set(result)):
+        raise ValueError("split block manifest case IDs are empty or duplicated")
+    return result
+
+
+def expected_case_splits(split_plan: dict[str, object]) -> dict[str, str]:
+    """Derive the exact frozen case-to-split mapping from the bound block manifests."""
+    if not isinstance(split_plan, dict):
+        raise ValueError("split plan is malformed")
+    splits = split_plan.get("splits")
+    holdout = split_plan.get("full_precision_hidden_holdout")
+    if not isinstance(splits, dict) or not isinstance(holdout, dict):
+        raise ValueError("split plan schema differs")
+    result: dict[str, str] = {}
+    for plan_name, output_name in (
+        ("train", "train-fit"), ("calibration", "calibration"), ("test", "test"),
+    ):
+        specification = splits.get(plan_name)
+        if not isinstance(specification, dict):
+            raise ValueError("split plan block differs")
+        block_manifests = specification.get("block_manifests")
+        if not isinstance(block_manifests, list) or not block_manifests:
+            raise ValueError("split plan has no block manifests")
+        for block in block_manifests:
+            if not isinstance(block, dict) or set(block) != {"path", "sha256"}:
+                raise ValueError("split plan manifest binding differs")
+            path_value, digest = block["path"], block["sha256"]
+            if not isinstance(path_value, str) or not isinstance(digest, str):
+                raise ValueError("split plan manifest binding is malformed")
+            for case_id in _case_ids_from_manifest(ROOT / path_value, digest):
+                if case_id in result:
+                    raise ValueError("case ID crosses frozen split blocks")
+                result[case_id] = output_name
+    diagnostic = holdout.get("case_ids")
+    if (
+        not isinstance(diagnostic, list) or len(diagnostic) != 5 or
+        len(set(diagnostic)) != len(diagnostic) or
+        any(result.get(case_id) != "train-fit" for case_id in diagnostic)
+    ):
+        raise ValueError("precision diagnostic cases differ")
+    for case_id in diagnostic:
+        result[case_id] = "train-precision-diagnostic"
+    observed_counts = {name: sum(value == name for value in result.values()) for name in SPLIT_COUNTS}
+    if observed_counts != SPLIT_COUNTS:
+        raise ValueError("frozen case split counts differ")
+    return result
+
+
+def _rename_noreplace(source: Path, destination: Path) -> None:
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = getattr(libc, "renameat2", None)
+    if renameat2 is None:
+        raise RuntimeError("atomic no-replace rename is unavailable")
+    renameat2.argtypes = (
+        ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint,
+    )
+    renameat2.restype = ctypes.c_int
+    if renameat2(-100, os.fsencode(source), -100, os.fsencode(destination), 1) != 0:
+        number = ctypes.get_errno()
+        if number in (errno.EEXIST, errno.ENOTEMPTY):
+            raise FileExistsError(number, os.strerror(number), destination)
+        raise OSError(number, os.strerror(number), destination)
+
+
 def split_archive(source_dir: Path, out_root: Path) -> dict[str, object]:
     """Validate and publish isolated quality splits without analyzing held-out labels."""
     source_dir = source_dir.resolve(strict=True)
     manifest_path = source_dir / "manifest.json"
     records_path = source_dir / "records.npz"
+    splitter_bytes = _tracked_bytes(Path(__file__))
+    splitter_sha256 = hashlib.sha256(splitter_bytes).hexdigest()
+    repository_head = _repository_head()
     receipt = json.loads(_tracked_bytes(QUALITY_COMPACTION_RECEIPT).decode("utf-8"))
-    split_plan_path = ROOT / "results/glm52-gates/R0b-union-p0-split-plan.json"
-    split_plan_bytes = _tracked_bytes(split_plan_path)
+    split_plan_bytes = _tracked_bytes(SPLIT_PLAN)
     split_plan_sha256 = hashlib.sha256(split_plan_bytes).hexdigest()
+    split_plan = json.loads(split_plan_bytes.decode("utf-8", errors="strict"))
+    case_splits = expected_case_splits(split_plan)
     manifest_bytes = manifest_path.read_bytes()
     manifest = json.loads(manifest_bytes.decode("utf-8", errors="strict"))
     if (
@@ -206,7 +320,8 @@ def split_archive(source_dir: Path, out_root: Path) -> dict[str, object]:
         _sha256(records_path) != receipt.get("output_sha256") or
         records_path.stat().st_size != receipt.get("output_bytes") or
         manifest.get("format") != "glm52-union-p0-npz-v2" or
-        manifest.get("requests") != 100 or manifest.get("rows") != 244650 or
+        manifest.get("requests") != receipt.get("observed", {}).get("requests") or
+        manifest.get("rows") != receipt.get("observed", {}).get("rows") or
         manifest.get("output_sha256") != receipt.get("output_sha256") or
         manifest.get("raw_source_retained") != receipt.get("retained_raw_directory")
     ):
@@ -231,7 +346,9 @@ def split_archive(source_dir: Path, out_root: Path) -> dict[str, object]:
                 raise ValueError(f"quality compact array differs: {name}")
             arrays[name] = value.copy()
     metadata = manifest.get("request_metadata")
-    split_rows = partition_request_rows(arrays["request_index"], metadata)
+    split_rows = partition_request_rows(
+        arrays["request_index"], metadata, SPLIT_COUNTS, case_splits,
+    )
     projected = split_compact_arrays(arrays, split_rows)
 
     publisher = _load_compactor()
@@ -240,56 +357,69 @@ def split_archive(source_dir: Path, out_root: Path) -> dict[str, object]:
         raise FileExistsError(requested)
     parent = requested.parent.resolve(strict=True)
     out_root = parent / requested.name
-    out_root.mkdir(mode=0o700)
+    staging = Path(tempfile.mkdtemp(prefix=f".{out_root.name}.tmp.", dir=parent))
     published = {}
-    for split in SPLIT_COUNTS:
-        request_ids = sorted(set(int(value) for value in projected[split]["request_index"]))
-        split_metadata = [
-            row for row in metadata if int(row["request_index"]) in request_ids
-        ]
-        record = {
+    try:
+        for split in SPLIT_COUNTS:
+            request_ids = sorted(set(int(value) for value in projected[split]["request_index"]))
+            split_metadata = [
+                row for row in metadata if int(row["request_index"]) in request_ids
+            ]
+            record = {
+                "schema_version": 1,
+                "format": "glm52-union-p1-split-npz-v1",
+                "split": split,
+                "requests": len(request_ids),
+                "rows": int(projected[split]["request_index"].size),
+                "request_metadata": split_metadata,
+                "source_manifest_sha256": receipt["manifest_sha256"],
+                "source_output_sha256": receipt["output_sha256"],
+                "split_plan_sha256": split_plan_sha256,
+                "splitter_sha256": splitter_sha256,
+                "repository_head": repository_head,
+            }
+            split_manifest = publisher.publish_bundle(
+                staging / split, projected[split], record,
+            )
+            published[split] = {
+                "requests": record["requests"],
+                "rows": record["rows"],
+                "manifest_sha256": _sha256(staging / split / "manifest.json"),
+                "output_sha256": split_manifest["output_sha256"],
+                "output_bytes": split_manifest["output_bytes"],
+            }
+        result = {
             "schema_version": 1,
-            "format": "glm52-union-p1-split-npz-v1",
-            "split": split,
-            "requests": len(request_ids),
-            "rows": int(projected[split]["request_index"].size),
-            "request_metadata": split_metadata,
+            "classification": "DERIVED_SPLITS",
             "source_manifest_sha256": receipt["manifest_sha256"],
             "source_output_sha256": receipt["output_sha256"],
             "split_plan_sha256": split_plan_sha256,
-            "splitter_sha256": _sha256(Path(__file__).resolve()),
+            "splitter_sha256": splitter_sha256,
+            "repository_head": repository_head,
+            "splits": published,
         }
-        split_manifest = publisher.publish_bundle(
-            out_root / split, projected[split], record,
-        )
-        published[split] = {
-            "requests": record["requests"],
-            "rows": record["rows"],
-            "manifest_sha256": _sha256(out_root / split / "manifest.json"),
-            "output_sha256": split_manifest["output_sha256"],
-            "output_bytes": split_manifest["output_bytes"],
-        }
-    result = {
-        "schema_version": 1,
-        "classification": "DERIVED_SPLITS",
-        "source_manifest_sha256": receipt["manifest_sha256"],
-        "source_output_sha256": receipt["output_sha256"],
-        "split_plan_sha256": split_plan_sha256,
-        "splitter_sha256": _sha256(Path(__file__).resolve()),
-        "splits": published,
-    }
-    top = out_root / "manifest.json"
-    with top.open("x", encoding="utf-8") as handle:
-        json.dump(result, handle, sort_keys=True, indent=2, allow_nan=False)
-        handle.write("\n")
-        handle.flush()
-        os.fsync(handle.fileno())
-    directory_fd = os.open(out_root, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(directory_fd)
+        top = staging / "manifest.json"
+        with top.open("x", encoding="utf-8") as handle:
+            json.dump(result, handle, sort_keys=True, indent=2, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        directory_fd = os.open(staging, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        _rename_noreplace(staging, out_root)
+        staging = None
+        parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
+        return result
     finally:
-        os.close(directory_fd)
-    return result
+        if staging is not None:
+            shutil.rmtree(staging)
 
 
 def run(args: argparse.Namespace) -> int:

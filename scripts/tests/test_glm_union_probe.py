@@ -3,9 +3,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
+import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -202,6 +206,120 @@ class UnionTargetTests(unittest.TestCase):
         for arrays in mutations:
             with self.subTest(arrays=arrays), self.assertRaises(ValueError):
                 MODULE.split_compact_arrays(arrays, rows)
+
+    def test_split_archive_publishes_four_isolated_bound_shards(self) -> None:
+        compactor = MODULE._load_compactor()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            arrays = {
+                "request_index": np.asarray([1, 2, 3, 4], dtype=np.uint16),
+                "layer": np.asarray([3, 3, 3, 3], dtype=np.uint16),
+                "token_position": np.asarray([0, 0, 0, 0], dtype=np.uint32),
+                "selected_ids": np.tile(np.arange(8, dtype=np.uint8), (4, 1)),
+                "top_ids": np.tile(np.arange(32, dtype=np.uint8), (4, 1)),
+                "top_logits": np.zeros((4, 32), dtype=np.float16),
+                "hidden_q4": np.zeros((4, 2), dtype=np.uint8),
+                "hidden_scale": np.ones((4, 1), dtype=np.float16),
+                "hidden_fp16_holdout_row": np.asarray([0, 3], dtype=np.uint32),
+                "hidden_fp16_holdout": np.ones((2, 4), dtype=np.float16),
+            }
+            splits = list(MODULE.SPLIT_COUNTS)
+            metadata = [
+                {"request_index": index + 1, "case_id": f"case_{index:03d}",
+                 "group_id": f"case_{index:03d}", "split": split}
+                for index, split in enumerate(splits)
+            ]
+            source_manifest = compactor.publish_bundle(source, arrays, {
+                "schema_version": 1,
+                "format": "glm52-union-p0-npz-v2",
+                "requests": 4,
+                "rows": 4,
+                "request_metadata": metadata,
+                "raw_source_retained": str(root / "raw"),
+            })
+            receipt_path = root / "receipt.json"
+            receipt = {
+                "manifest_sha256": MODULE._sha256(source / "manifest.json"),
+                "output_sha256": source_manifest["output_sha256"],
+                "output_bytes": source_manifest["output_bytes"],
+                "retained_raw_directory": str(root / "raw"),
+                "observed": {"requests": 4, "rows": 4},
+            }
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+            plan_path = root / "plan.json"
+            plan_path.write_text("{}", encoding="utf-8")
+            case_mapping = {str(row["case_id"]): str(row["split"]) for row in metadata}
+            counts = {split: 1 for split in splits}
+
+            def trusted_read(path):
+                return Path(path).read_bytes()
+
+            output = root / "output"
+            with (
+                mock.patch.object(MODULE, "QUALITY_COMPACTION_RECEIPT", receipt_path),
+                mock.patch.object(MODULE, "SPLIT_PLAN", plan_path),
+                mock.patch.object(MODULE, "SPLIT_COUNTS", counts),
+                mock.patch.object(MODULE, "_tracked_bytes", side_effect=trusted_read),
+                mock.patch.object(MODULE, "_repository_head", return_value="1" * 40),
+                mock.patch.object(MODULE, "expected_case_splits", return_value=case_mapping),
+            ):
+                result = MODULE.split_archive(source, output)
+            self.assertEqual(set(result["splits"]), set(splits))
+            self.assertEqual(result["repository_head"], "1" * 40)
+            self.assertEqual(result["splitter_sha256"], hashlib.sha256(SCRIPT.read_bytes()).hexdigest())
+            for split in splits:
+                child = json.loads((output / split / "manifest.json").read_text())
+                self.assertEqual(child["split"], split)
+                self.assertEqual(child["requests"], 1)
+                self.assertEqual(child["rows"], 1)
+                with np.load(output / split / "records.npz", allow_pickle=False) as shard:
+                    self.assertEqual(shard["request_index"].size, 1)
+            self.assertFalse(any(root.glob(".output.tmp.*")))
+
+            calls = 0
+            def fail_second_publish(*args, **kwargs):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise RuntimeError("injected publisher failure")
+                return compactor.publish_bundle(*args, **kwargs)
+            failing_publisher = mock.Mock(publish_bundle=mock.Mock(side_effect=fail_second_publish))
+            with (
+                mock.patch.object(MODULE, "QUALITY_COMPACTION_RECEIPT", receipt_path),
+                mock.patch.object(MODULE, "SPLIT_PLAN", plan_path),
+                mock.patch.object(MODULE, "SPLIT_COUNTS", counts),
+                mock.patch.object(MODULE, "_tracked_bytes", side_effect=trusted_read),
+                mock.patch.object(MODULE, "_repository_head", return_value="1" * 40),
+                mock.patch.object(MODULE, "expected_case_splits", return_value=case_mapping),
+                mock.patch.object(MODULE, "_load_compactor", return_value=failing_publisher),
+                self.assertRaises(RuntimeError),
+            ):
+                MODULE.split_archive(source, root / "atomic-fail")
+            self.assertFalse((root / "atomic-fail").exists())
+            self.assertFalse(any(root.glob(".atomic-fail.tmp.*")))
+
+            broken_receipt = dict(receipt)
+            broken_receipt["output_sha256"] = "0" * 64
+            receipt_path.write_text(json.dumps(broken_receipt), encoding="utf-8")
+            with (
+                mock.patch.object(MODULE, "QUALITY_COMPACTION_RECEIPT", receipt_path),
+                mock.patch.object(MODULE, "SPLIT_PLAN", plan_path),
+                mock.patch.object(MODULE, "SPLIT_COUNTS", counts),
+                mock.patch.object(MODULE, "_tracked_bytes", side_effect=trusted_read),
+                mock.patch.object(MODULE, "_repository_head", return_value="1" * 40),
+                mock.patch.object(MODULE, "expected_case_splits", return_value=case_mapping),
+                self.assertRaises(ValueError),
+            ):
+                MODULE.split_archive(source, root / "must-not-exist")
+            self.assertFalse((root / "must-not-exist").exists())
+
+    def test_tracked_input_rejects_worktree_bytes_that_differ_from_head(self) -> None:
+        completed = mock.Mock(returncode=0, stdout=b"")
+        committed = mock.Mock(returncode=0, stdout=b"different")
+        with mock.patch.object(MODULE.subprocess, "run", side_effect=[completed, committed]):
+            with self.assertRaises(ValueError):
+                MODULE._tracked_bytes(SCRIPT)
 
 
 if __name__ == "__main__":
