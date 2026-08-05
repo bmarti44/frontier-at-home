@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "2c7dae99156dd9b413a1f60bcbc480e97eb8ccaa",
+  "engine_commit": "681b90f92e0399b9d4f1c8b396ba8cb0504e3fa0",
+  "classification": "PASS",
+  "scope": "high_row_multichunk",
+  "high_row_2048_status": "PASS",
+  "summary_sha256": "46d3b2132adc0bbeabbbfe535405f8482188fff5a3aa67b5a87d9ce47cff13d2",
+  "off_arm_sha256": "08c40f31ef57f377aac5b60522ad3f729c1a3a69fc56c5c8c84cb9bb02c2e972",
+  "on_arm_sha256": "8a16cd2b57c6aebdb779311f89549a56df43e0599ebcf5cc0d9b8065453a275c",
+  "off_result_sha256": "444007b0d6b9f5153e7ced7e38f748d03f398fecee617ecffc360bb797aa0737",
+  "on_result_sha256": "9aa6ce3bf378564c4853e451a3d9ef9e95dadb64ee975bc2145ad1fa90c7cfc8",
+  "off_server_log_sha256": "867589e55722d21349021a6e9126ed3e883172e591e51b3a300d8e12380c9031",
+  "on_server_log_sha256": "f44811fb2f48cfb6f8f1fbcb059c21af04b1756a48d5c4a31afb84504513e4ab",
+  "observed": {
+    "context_level": 4096,
+    "prompt_tokens": 4157,
+    "completion_tokens_per_arm": 128,
+    "full_indexed_chunks": [[0, 2048], [2048, 2109]],
+    "byte_and_token_identity": true,
+    "containment_clean": true,
+    "off_trace_files": 0,
+    "on_trace_files": 10,
+    "on_trace_bytes": 110811040,
+    "trace_events": 2,
+    "trace_score_verdict": "PASS"
+  },
+  "pre_runtime_authorization_review": {
+    "round": 74,
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 100,
+    "critical": [],
+    "high": []
+  },
+  "conclusion": "The production trace path records complete valid tensors across the 2048-row indexed-prefill boundary without changing output. This qualifies bounded multichunk P0 capture; it is not a serving-performance or full-corpus result."
+}
