@@ -473,6 +473,54 @@ class QualifiedBundleTests(unittest.TestCase):
                         request_index=request_index,
                     )
 
+    def test_corpus_rejects_boolean_cache_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source, receipt_path = self.make_corpus_bundle(Path(directory))
+            arms = {}
+            for mode in ("off", "on"):
+                arm_path = source / mode / "arm.json"
+                arm = json.loads(arm_path.read_text())
+                arm["cuda_cache_runtime"]["arena_gib"] = True
+                arm_path.write_text(json.dumps(arm, sort_keys=True, indent=2) + "\n")
+                arms[mode] = arm_path
+            summary_path = source / "summary.json"
+            summary = json.loads(summary_path.read_text())
+            summary["off_arm_sha256"] = sha256(arms["off"])
+            summary["on_arm_sha256"] = sha256(arms["on"])
+            summary_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n")
+            receipt = json.loads(receipt_path.read_text())
+            receipt["off_arm_sha256"] = sha256(arms["off"])
+            receipt["on_arm_sha256"] = sha256(arms["on"])
+            receipt["summary_sha256"] = sha256(summary_path)
+            receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
+            with self.assertRaises(ValueError):
+                MODULE.validate_source_bundle(
+                    source, receipt_path, repository_root=Path(directory),
+                    require_tracked_receipt=False, minimum_prompt_tokens=1, request_index=1,
+                )
+
+    def test_corpus_rejects_mutated_safety_observations(self) -> None:
+        mutations = {
+            "kernel_fault": lambda value: value.__setitem__("kernel_oom_or_xid", True),
+            "low_available": lambda value: value.__setitem__(
+                "minimum_available_memory_gib", {"off": 9.0, "on": 32.0},
+            ),
+            "swap": lambda value: value.__setitem__("maximum_cgroup_swap_bytes", 1),
+            "cache_slots": lambda value: value.__setitem__("cuda_cache_slots", 1),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                source, receipt_path = self.make_corpus_bundle(Path(directory))
+                receipt = json.loads(receipt_path.read_text())
+                mutate(receipt["observed"])
+                receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
+                with self.assertRaises(ValueError):
+                    MODULE.validate_source_bundle(
+                        source, receipt_path, repository_root=Path(directory),
+                        require_tracked_receipt=False, minimum_prompt_tokens=1,
+                        request_index=1,
+                    )
+
     def test_cli_exposes_request_scoped_corpus_shards(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn('result.add_argument("--request-index", type=int)', source)
