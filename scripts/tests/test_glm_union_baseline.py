@@ -1082,6 +1082,25 @@ class BaselineTableTests(unittest.TestCase):
         source = inspect.getsource(MODULE.validate_completed_capture_reconstruction)
         self.assertIn('recorded["scoring_backend"]', source)
 
+    def test_authoritative_run_rejects_cpu_before_reservation(self) -> None:
+        with self.assertRaises(SystemExit):
+            MODULE.parser().parse_args([
+                "run", "--output-root", "/tmp/glm52-cpu-authoritative",
+                "--device", "cpu",
+            ])
+        with self.assertRaisesRegex(ValueError, "CUDA"):
+            MODULE._preflight_authorized_gate({
+                "output_root": Path("/tmp/glm52-cpu-authoritative"),
+                "candidate_root": Path("/does/not/matter"),
+                "model": Path("/does/not/matter"),
+                "fixture_root": Path("/does/not/matter"),
+                "device": "cpu",
+            })
+
+    def test_root_replay_response_carries_exact_cuda_backend(self) -> None:
+        source = inspect.getsource(MODULE.main)
+        self.assertIn('"scoring_backend": scored["scoring_backend"]', source)
+
     def test_completed_replay_interprets_all_expected_failure_artifacts(self) -> None:
         source = inspect.getsource(MODULE.validate_completed_result)
         self.assertIn("_validate_expected_failure_artifacts(", source)

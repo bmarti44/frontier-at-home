@@ -47,6 +47,57 @@ def load_controller():
 
 
 class RootAttestorContractTests(unittest.TestCase):
+    def test_p1_reservation_and_receipt_bind_exact_cuda_backend(self):
+        submitter = load_submitter()
+        self.assertEqual(submitter.P1_SCORING_BACKEND, {
+            "device": "cuda",
+            "probe_compute": "torch-float32-weights-fp16-autocast",
+        })
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-cpu-substitution"
+            source.mkdir()
+            summary_payload = b'{"decision":{"verdict":"STOP_PROBE"}}\n'
+            (source / "summary.json").write_bytes(summary_payload)
+            with (
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                self.assertRaisesRegex(ValueError, "scoring backend"),
+            ):
+                submitter.publish_p1_result(
+                    candidate, source.name,
+                    source_parent=source_parent, state_root=state_root,
+                    approval_reader=lambda: ({
+                        "candidate_hash": candidate,
+                        "controller_sha256": "2" * 64,
+                    }, {
+                        "approval_sha256": "3" * 64,
+                        "approval_device": 1,
+                        "approval_inode": 2,
+                    }),
+                    reservation_reader=lambda: {
+                        "candidate_hash": candidate,
+                        "output_sha256": hashlib.sha256(
+                            os.fsencode(source),
+                        ).hexdigest(),
+                        "reservation_sha256": "4" * 64,
+                        "created_epoch_ns": 5,
+                        "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
+                    },
+                    completed_validator=lambda _root, _approval: {
+                        "summary_sha256": hashlib.sha256(summary_payload).hexdigest(),
+                        "decision_verdict": "STOP_PROBE",
+                        "scoring_backend": {
+                            "device": "cpu", "probe_compute": "torch-float32",
+                        },
+                    },
+                )
+
     def test_p1_result_publication_moves_into_root_authority_and_binds_manifest(self):
         submitter = load_submitter()
         candidate = "1" * 40
