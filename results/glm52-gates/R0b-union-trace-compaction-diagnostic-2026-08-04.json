@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "classification": "DIAGNOSTIC_PASS",
+  "source_candidate_hash": "2c7dae99156dd9b413a1f60bcbc480e97eb8ccaa",
+  "source_rows": 4157,
+  "source_chunks": [[0, 2048], [2048, 2109]],
+  "attempts": [
+    {
+      "classification": "FAIL",
+      "format": "recomputed-router-probabilities",
+      "cause": "One row in the second chunk changed the order of experts 61 and 189 after sigmoid was recomputed from f32 logits. The validated captured probability tensor preserves the engine's exact f32 tie order and is now mandatory. No output was published."
+    },
+    {
+      "classification": "REJECTED_DIAGNOSTIC",
+      "format": "per-row-int4-hidden-scale",
+      "manifest_sha256": "6f082cb98d497f7b2f32279d9f88dab270e160344982e715bebacf23b07969d0",
+      "output_sha256": "43625577e581704b114790de9ab006310fa5bdcefe2189ecb05951a73666059f",
+      "output_bytes": 13245986,
+      "hidden_nrmse_max_by_chunk": 0.3142815651164351,
+      "reason": "A single scale for 6144 values is too sensitive to outliers for a useful probe feature."
+    },
+    {
+      "classification": "CANDIDATE",
+      "format": "group32-int4-hidden-scale-fp16",
+      "manifest_sha256": "6ade4d271269ce4a2b40c98e5aacce6dd05be7b31ae44400ea87d8cfd95f2572",
+      "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
+      "output_bytes": 14825646,
+      "hidden_rmse": 0.0016348367466464508,
+      "hidden_nrmse_max_by_chunk": 0.11384608063671296,
+      "hidden_max_abs_error": 0.04323720186948776,
+      "top_logit_max_abs_error": 0.0009753704071044922,
+      "router_probability_max_abs_error": 1.1920928955078125e-07,
+      "selected_ids_exact": true,
+      "top_ids_follow_captured_effective_scores": true
+    }
+  ],
+  "conclusion": "Group-32 int4 plus fp16 scales is the compact-feature candidate. It preserves exact routing labels and effective-score top-32 IDs, reduces the validated 110811040-byte trace to 14825646 bytes, and records rather than hides feature quantization error. Probe accuracy on held-out P1 data remains the adoption gate."
+}

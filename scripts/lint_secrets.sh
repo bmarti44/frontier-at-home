@@ -145,6 +145,7 @@ allowlist = {
     "request_sha256",
     "response_sha256",
     "result_sha256",
+    "output_sha256",
     "scorer_sha256",
     "scorer_tests_sha256",
     "source_contract_tests_sha256",
