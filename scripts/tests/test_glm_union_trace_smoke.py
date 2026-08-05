@@ -115,6 +115,8 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         for bad in (
             "",
             marker + marker,
+            marker + "ds4: CUDA persistent expert cache enabled: malformed\n",
+            marker.rstrip("\n") + " unexpected suffix\n",
             "ds4: CUDA persistent expert cache enabled: malformed\n",
             "ds4: CUDA persistent expert cache enabled: "
             "6987 slots x 9.28 MiB = 63.33 GiB (fixed arena)\n",
