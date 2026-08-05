@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "classification": "Genuine_RED",
+  "gate": "R0c/P1 exact engine prompt-token lineage",
+  "engine_parent_commit": "bed0754b31e1547c91d6a5b6d9aaf66577f8857c",
+  "engine_test_commit": "73ff6ea",
+  "held_out_values_opened": false,
+  "command": "python3 tests/test_glm_baseline_capture_source.py",
+  "observed": {
+    "passed": 5,
+    "failed": 1,
+    "failure": "The capture publishes prompt length but no exact prompt-token artifact."
+  },
+  "named_findings": [
+    "BASE-R142-H2",
+    "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY"
+  ],
+  "acceptance": "Every source bundle must publish the exact int32 prompt token sequence supplied to the engine; the fixed scorer must compare it byte-for-byte with the independently tokenized frozen fixture and bind exact prefix and source-token lineage.",
+  "verdict": "RED_CONFIRMED"
+}
