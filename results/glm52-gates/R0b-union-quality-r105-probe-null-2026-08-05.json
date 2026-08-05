@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "classification": "NO_RESULT",
+  "candidate_hash": "6b0536c99f81660ba9fe713400140100ba01519b",
+  "tag": "p0qprobe-r105-6b0536c",
+  "arm": "off",
+  "observed": {
+    "resolved_cuda_arena_gib": 44.70,
+    "cgroup_peak_bytes": 49237504000,
+    "cgroup_swap_current_bytes": 0,
+    "cgroup_memory_events": 0,
+    "kernel_log_clean": true,
+    "prompt_branch": "full_indexed",
+    "prompt_tokens": 29,
+    "raw_token_ids": [8507, 111, 198, 154842, 8507, 111, 271, 91],
+    "raw_decoded_text": "害\n</think>害\n\n|",
+    "canonical_reencoded_ids": [99192, 198, 154842, 99192, 271, 91],
+    "raw_client_byte_mismatch": false,
+    "raw_canonical_segmentation_mismatch": true,
+    "surviving_ds4_server": false
+  },
+  "diagnosis": "The indexed and safety gates reached the request, but BPE byte-fallback IDs need not equal the canonical re-encoding of the same bytes. Requiring identical segmentation is invalid; exact decoded channel bytes and exact cross-arm raw IDs are authoritative.",
+  "artifacts": {
+    "server_sha256": "5a5a2b2428ff734f58a2551a6803d3c366f6e3ca3fd52850ef79377f0628ca99",
+    "fixture_sha256": "105e496120493c108bbed302e5a8b081cee2cca4f0780544c2dd1b2df34bbc1f",
+    "off_containment_stdout_sha256": "42c9ee0396bb1b06acd44b6fc786b158214695a8ae1250bb34a498713f5c7912",
+    "main_log_sha256": "6d6f06a875dc2047487247eca488370553eacec656e13cac7a8fe4232808faf2",
+    "samples_log_sha256": "8ac1ae401abf4fe8248cdf8dee8a878101d83f179ef1a4d08c8dc6179ff5d0f0",
+    "raw_artifact_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  }
+}

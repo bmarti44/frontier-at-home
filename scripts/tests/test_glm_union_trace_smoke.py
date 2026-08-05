@@ -453,6 +453,23 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         self.assertEqual(probe["total_expected_prompt_tokens"], 2)
         self.assertEqual(probe["expected_token_layer_events"], 150)
 
+    def test_quality_raw_output_accepts_exact_bytes_with_noncanonical_bpe(self) -> None:
+        tokenizer = MODULE.Tokenizer.from_file(str(MODULE.SHARED.TOKENIZER))
+        raw_ids = [8507, 111, 198, 154842, 8507, 111, 271, 91]
+        self.assertEqual(
+            MODULE.quality_raw_visible_output_errors(
+                tokenizer, raw_ids, "害\n", "害\n\n|",
+            ),
+            [],
+        )
+        self.assertTrue(MODULE.quality_raw_visible_output_errors(
+            tokenizer, raw_ids, "different", "害\n\n|",
+        ))
+        self.assertTrue(MODULE.quality_raw_visible_output_errors(
+            tokenizer, raw_ids[:-1] + [tokenizer.get_vocab_size() + 1],
+            "害\n", "害\n\n|",
+        ))
+
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     @classmethod
