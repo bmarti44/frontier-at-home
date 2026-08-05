@@ -19,8 +19,17 @@ EVENT_RE = re.compile(
     r"^GLM_UNION_TRACE_OK path=full_indexed_batch_ffn "
     r"layer=(\d+) pos=(\d+) rows=(\d+)$"
 )
+CORPUS_EVENT_RE = re.compile(
+    r"^GLM_UNION_TRACE_OK path=full_indexed_batch_ffn "
+    r"request=(\d+) layer=(\d+) pos=(\d+) rows=(\d+)$"
+)
 FILE_RE = re.compile(
     r"^(?P<prefix>.+)_glm_indexed_(?P<kind>ffn_norm|router_logits|router_probs|router_selected|router_bias)-"
+    r"(?P<layer>\d+)_pos(?P<pos>\d+)\.(?P<ext>f32|i32)$"
+)
+CORPUS_FILE_RE = re.compile(
+    r"^(?P<prefix>.+)_r(?P<request>\d{8})_glm_indexed_"
+    r"(?P<kind>ffn_norm|router_logits|router_probs|router_selected|router_bias)-"
     r"(?P<layer>\d+)_pos(?P<pos>\d+)\.(?P<ext>f32|i32)$"
 )
 
@@ -82,6 +91,7 @@ def score_trace(
     max_bytes: int,
     expected_layers: set[int],
     expected_chunks: list[tuple[int, int]],
+    expected_requests: dict[int, list[tuple[int, int]]] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed result for one trace attempt."""
     checks: dict[str, bool] = {}
@@ -91,18 +101,33 @@ def score_trace(
         all(isinstance(layer, int) and not isinstance(layer, bool) and layer >= 4
             for layer in expected_layers)
     )
-    valid_chunks = bool(expected_chunks)
-    previous_end: int | None = None
-    for chunk in expected_chunks:
-        if (not isinstance(chunk, tuple) or len(chunk) != 2 or
-                any(not isinstance(value, int) or isinstance(value, bool) for value in chunk)):
-            valid_chunks = False
-            break
-        pos, rows = chunk
-        if pos < 0 or rows <= 0 or (previous_end is not None and pos != previous_end):
-            valid_chunks = False
-            break
-        previous_end = pos + rows
+    def chunks_valid(chunks: list[tuple[int, int]]) -> bool:
+        if not chunks:
+            return False
+        previous_end: int | None = None
+        for chunk in chunks:
+            if (not isinstance(chunk, tuple) or len(chunk) != 2 or
+                    any(not isinstance(value, int) or isinstance(value, bool)
+                        for value in chunk)):
+                return False
+            pos, rows = chunk
+            if pos < 0 or rows <= 0 or (previous_end is not None and pos != previous_end):
+                return False
+            previous_end = pos + rows
+        return True
+
+    corpus_mode = expected_requests is not None
+    if corpus_mode:
+        valid_requests = (
+            isinstance(expected_requests, dict) and bool(expected_requests) and
+            sorted(expected_requests) == list(range(1, len(expected_requests) + 1)) and
+            all(isinstance(request, int) and not isinstance(request, bool) and
+                chunks_valid(chunks)
+                for request, chunks in expected_requests.items())
+        )
+        valid_chunks = valid_requests and expected_chunks == []
+    else:
+        valid_chunks = chunks_valid(expected_chunks)
     if (not directory.is_dir() or not server_log.is_file() or max_bytes <= 0 or
             not valid_layers or not valid_chunks):
         checks["inputs"] = False
@@ -111,25 +136,36 @@ def score_trace(
 
     log_lines = server_log.read_text(encoding="utf-8", errors="replace").splitlines()
     checks["no_trace_errors"] = not any("GLM_UNION_TRACE_ERROR" in line for line in log_lines)
-    expected: dict[tuple[int, int], int] = {}
+    expected: dict[tuple[int, ...], int] = {}
     duplicate_log_key = False
     for line in log_lines:
-        match = EVENT_RE.fullmatch(line.strip())
+        match = (CORPUS_EVENT_RE if corpus_mode else EVENT_RE).fullmatch(line.strip())
         if not match:
             continue
-        key = (int(match.group(1)), int(match.group(2)))
+        key = (tuple(int(match.group(index)) for index in (1, 2, 3))
+               if corpus_mode else
+               (int(match.group(1)), int(match.group(2))))
         if key in expected:
             duplicate_log_key = True
-        expected[key] = int(match.group(3))
+        expected[key] = int(match.group(4 if corpus_mode else 3))
     checks["unique_nonempty_log_events"] = bool(expected) and not duplicate_log_key
-    expected_keys = {
-        (layer, pos): rows
-        for layer in expected_layers
-        for pos, rows in expected_chunks
-    }
+    if corpus_mode:
+        assert expected_requests is not None
+        expected_keys = {
+            (request, layer, pos): rows
+            for request, chunks in expected_requests.items()
+            for layer in expected_layers
+            for pos, rows in chunks
+        }
+    else:
+        expected_keys = {
+            (layer, pos): rows
+            for layer in expected_layers
+            for pos, rows in expected_chunks
+        }
     checks["exact_indexed_chunk_coverage"] = expected == expected_keys
 
-    files: dict[tuple[int, int], dict[str, Path]] = {}
+    files: dict[tuple[int, ...], dict[str, Path]] = {}
     prefixes: set[str] = set()
     artifacts: list[dict[str, Any]] = []
     total_bytes = 0
@@ -140,12 +176,13 @@ def score_trace(
         if path.is_symlink() or not path.is_file():
             regular = False
             continue
-        match = FILE_RE.fullmatch(path.name)
+        match = (CORPUS_FILE_RE if corpus_mode else FILE_RE).fullmatch(path.name)
         if not match:
             recognized = False
             continue
         layer, pos = int(match.group("layer")), int(match.group("pos"))
-        key = (layer, pos)
+        key = ((int(match.group("request")), layer, pos)
+               if corpus_mode else (layer, pos))
         kind = match.group("kind")
         expected_extension = "i32" if kind == "router_selected" else "f32"
         if match.group("ext") != expected_extension:
@@ -231,5 +268,8 @@ def score_trace(
         "total_bytes": total_bytes,
         "artifacts": artifacts,
     })
+    if corpus_mode:
+        result["requests"] = len(expected_requests or {})
+        result["token_layer_events"] = sum(expected.values())
     result["verdict"] = "PASS" if checks and all(checks.values()) else "FAIL"
     return result
