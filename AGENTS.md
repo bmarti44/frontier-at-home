@@ -85,6 +85,16 @@ do not trigger a full review cycle; close them with a focused regression test
 and attestation unless they reveal a critical/high measurement-validity defect.
 Never re-review a component whose evidence and sign-off are already frozen.
 
+Defects discovered by executing a gate—runtime failures, aggregation errors,
+and harness mismatches—are eligible for autonomous fix candidates under the
+same convergence rule as reviewer findings. The fix must target only the
+observed failure, the failed attempt and proposed acceptance test must already
+be preserved in a committed record, frozen components must remain
+byte-identical, and the full pre-submission audit must pass. These execution
+defects do not create an additional escalation condition. Escalate only when
+one of the three conditions above literally occurs; resolve ambiguity against
+those enumerated conditions, not an inferred broader intent.
+
 Do not add a permanent semantic variant merely because a diagnostic flag passes.
 First use the flag to prove the representation or algorithm. Then implement and
 requalify the single intended production path.
