@@ -759,7 +759,122 @@ def train_probe_head(
     device: str = "cuda",
 ) -> tuple[dict[str, np.ndarray], dict[str, object]]:
     """Fit one frozen low-rank multi-K head and return CPU state plus training evidence."""
-    raise NotImplementedError
+    import torch
+    import torch.nn.functional as functional
+
+    if (
+        not isinstance(features, np.ndarray) or features.ndim != 2 or features.shape[0] == 0 or
+        not np.issubdtype(features.dtype, np.floating) or not np.isfinite(features).all() or
+        not isinstance(targets, np.ndarray) or
+        targets.shape != (features.shape[0], len(K_VALUES), N_EXPERT) or targets.dtype != np.bool_ or
+        not isinstance(valid, np.ndarray) or valid.shape != targets.shape[:2] or valid.dtype != np.bool_ or
+        not isinstance(weights, np.ndarray) or weights.shape != valid.shape or
+        not np.issubdtype(weights.dtype, np.floating) or not np.isfinite(weights).all() or
+        np.any(weights < 0) or np.any(weights[~valid] != 0) or
+        not isinstance(fit_rows, np.ndarray) or fit_rows.ndim != 1 or fit_rows.size == 0 or
+        not np.issubdtype(fit_rows.dtype, np.integer) or np.any(fit_rows < 0) or
+        np.any(fit_rows >= features.shape[0]) or np.unique(fit_rows).size != fit_rows.size or
+        rank not in (8, 16, 32) or not isinstance(epochs, int) or epochs <= 0 or
+        not isinstance(batch_rows, int) or batch_rows <= 0 or
+        not isinstance(seed, int) or isinstance(seed, bool) or device not in ("cpu", "cuda")
+    ):
+        raise ValueError("probe training schema is invalid")
+    if any(not valid[fit_rows, index].any() for index in range(len(K_VALUES))):
+        raise ValueError("probe fitting rows lack a K target")
+    if device == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA is unavailable")
+        available_kib = 0
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                available_kib = int(line.split()[1])
+                break
+        if available_kib < 30 * 1024 * 1024:
+            raise MemoryError("host available-memory floor is not met")
+        total_bytes = torch.cuda.get_device_properties(0).total_memory
+        torch.cuda.set_per_process_memory_fraction(min((10 * 1024**3) / total_bytes, 0.5), 0)
+
+    class ProbeHead(torch.nn.Module):
+        def __init__(self, input_width: int, low_rank: int):
+            super().__init__()
+            self.down = torch.nn.Linear(input_width, low_rank, bias=False)
+            self.up = torch.nn.Linear(low_rank, len(K_VALUES) * N_EXPERT, bias=True)
+
+        def forward(self, value):
+            return self.up(functional.gelu(self.down(value))).reshape(
+                value.shape[0], len(K_VALUES), N_EXPERT,
+            )
+
+    torch.manual_seed(seed)
+    if device == "cuda":
+        torch.cuda.manual_seed_all(seed)
+    model = ProbeHead(features.shape[1], rank).to(device=device, dtype=torch.float32)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.0001)
+    scaler = torch.amp.GradScaler("cuda", enabled=device == "cuda")
+    cardinality = targets[fit_rows].sum(axis=2).astype(np.float64)
+    positive_weight = []
+    for k_index in range(len(K_VALUES)):
+        mean_cardinality = float(cardinality[valid[fit_rows, k_index], k_index].mean())
+        if not 0 < mean_cardinality < N_EXPERT:
+            raise ValueError("probe target cardinality is invalid")
+        positive_weight.append((N_EXPERT - mean_cardinality) / mean_cardinality)
+    positive_weight_tensor = torch.tensor(
+        positive_weight, dtype=torch.float32, device=device,
+    ).reshape(1, len(K_VALUES), 1)
+    generator = np.random.default_rng(seed)
+    epoch_losses: list[float] = []
+    for _epoch in range(epochs):
+        order = generator.permutation(fit_rows)
+        loss_numerator = 0.0
+        loss_denominator = 0.0
+        model.train()
+        for start in range(0, order.size, batch_rows):
+            batch = order[start:start + batch_rows]
+            feature_batch = torch.from_numpy(features[batch]).to(device=device, dtype=torch.float32)
+            target_batch = torch.from_numpy(targets[batch]).to(device=device, dtype=torch.float32)
+            weight_batch = torch.from_numpy(weights[batch]).to(device=device, dtype=torch.float32)
+            optimizer.zero_grad(set_to_none=True)
+            with torch.autocast(
+                device_type=device, dtype=torch.float16, enabled=device == "cuda",
+            ):
+                logits = model(feature_batch)
+            element_loss = functional.binary_cross_entropy_with_logits(
+                logits.float(), target_batch, pos_weight=positive_weight_tensor, reduction="none",
+            ).mean(dim=2)
+            denominator = weight_batch.sum()
+            if not torch.isfinite(element_loss).all() or denominator.item() <= 0:
+                raise FloatingPointError("probe loss is non-finite or empty")
+            loss = (element_loss * weight_batch).sum() / denominator
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            if any(
+                parameter.grad is not None and not torch.isfinite(parameter.grad).all()
+                for parameter in model.parameters()
+            ):
+                raise FloatingPointError("probe gradient is non-finite")
+            scaler.step(optimizer)
+            scaler.update()
+            if any(not torch.isfinite(parameter).all() for parameter in model.parameters()):
+                raise FloatingPointError("probe parameter is non-finite")
+            loss_numerator += float((element_loss * weight_batch).sum().detach().cpu())
+            loss_denominator += float(denominator.detach().cpu())
+        epoch_losses.append(loss_numerator / loss_denominator)
+    state = {
+        name: parameter.detach().cpu().numpy().copy()
+        for name, parameter in model.state_dict().items()
+    }
+    if device == "cuda":
+        del model, optimizer, scaler
+        torch.cuda.empty_cache()
+    return state, {
+        "fit_rows": int(fit_rows.size),
+        "rank": rank,
+        "epochs": epochs,
+        "batch_rows": batch_rows,
+        "seed": seed,
+        "positive_weights": positive_weight,
+        "epoch_losses": epoch_losses,
+    }
 
 
 def predict_probe_head(
@@ -771,7 +886,50 @@ def predict_probe_head(
     device: str = "cuda",
 ) -> np.ndarray:
     """Return finite [row,K,expert] logits from a frozen head state."""
-    raise NotImplementedError
+    import torch
+    import torch.nn.functional as functional
+
+    if (
+        not isinstance(features, np.ndarray) or features.ndim != 2 or features.shape[0] == 0 or
+        not np.issubdtype(features.dtype, np.floating) or not np.isfinite(features).all() or
+        rank not in (8, 16, 32) or set(state) != {"down.weight", "up.weight", "up.bias"} or
+        not isinstance(batch_rows, int) or batch_rows <= 0 or device not in ("cpu", "cuda")
+    ):
+        raise ValueError("probe prediction schema is invalid")
+
+    class ProbeHead(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.down = torch.nn.Linear(features.shape[1], rank, bias=False)
+            self.up = torch.nn.Linear(rank, len(K_VALUES) * N_EXPERT, bias=True)
+
+        def forward(self, value):
+            return self.up(functional.gelu(self.down(value))).reshape(
+                value.shape[0], len(K_VALUES), N_EXPERT,
+            )
+
+    model = ProbeHead().to(device=device, dtype=torch.float32)
+    tensors = {name: torch.from_numpy(value) for name, value in state.items()}
+    model.load_state_dict(tensors, strict=True)
+    model.eval()
+    output = []
+    with torch.no_grad():
+        for start in range(0, features.shape[0], batch_rows):
+            batch = torch.from_numpy(features[start:start + batch_rows]).to(
+                device=device, dtype=torch.float32,
+            )
+            with torch.autocast(
+                device_type=device, dtype=torch.float16, enabled=device == "cuda",
+            ):
+                logits = model(batch)
+            output.append(logits.float().cpu().numpy())
+    result = np.concatenate(output)
+    if result.shape != (features.shape[0], len(K_VALUES), N_EXPERT) or not np.isfinite(result).all():
+        raise FloatingPointError("probe prediction is malformed or non-finite")
+    if device == "cuda":
+        del model
+        torch.cuda.empty_cache()
+    return result
 
 
 def score_rankings(
