@@ -22,6 +22,53 @@ def load_module():
 
 
 class BenchOptionTests(unittest.TestCase):
+    class _StreamResponse:
+        status = 200
+
+        def __init__(self, lines):
+            self.lines = [line.encode("utf-8") for line in lines]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def __iter__(self):
+            return iter(self.lines)
+
+    def test_stream_requires_one_terminal_length_finish_reason(self):
+        bench = load_module()
+
+        def event(choice):
+            return (
+                'data: {"id":"chatcmpl-regression","choices":['
+                + choice + ']}\n'
+            )
+
+        valid_content = event(
+            '{"delta":{"reasoning_content":"x"},"finish_reason":null}'
+        )
+        usage = 'data: {"id":"chatcmpl-regression","choices":[],"usage":{"prompt_tokens":32,"completion_tokens":8}}\n'
+        mutations = {
+            "missing": [valid_content, usage, "data: [DONE]\n"],
+            "duplicate": [valid_content, event('{"delta":{},"finish_reason":"length"}'),
+                          event('{"delta":{},"finish_reason":"length"}'), usage,
+                          "data: [DONE]\n"],
+            "non_string": [valid_content, event('{"delta":{},"finish_reason":7}'),
+                           usage, "data: [DONE]\n"],
+            "conflicting": [valid_content, event('{"delta":{},"finish_reason":"stop"}'),
+                            event('{"delta":{},"finish_reason":"length"}'), usage,
+                            "data: [DONE]\n"],
+        }
+        client = bench.Client("http://127.0.0.1:1", None)
+        for name, lines in mutations.items():
+            with self.subTest(name=name), mock.patch.object(
+                bench.urllib.request, "urlopen",
+                return_value=self._StreamResponse(lines),
+            ), self.assertRaises(RuntimeError):
+                client.stream_chat({"max_tokens": 8, "ignore_eos": True})
+
     def test_decisive_subset_options(self):
         bench = load_module()
         argv = [

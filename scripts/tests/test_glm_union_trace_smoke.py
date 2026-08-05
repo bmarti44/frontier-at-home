@@ -468,6 +468,14 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         self.assertEqual(probe["cases"], [bundle["cases"][1]])
         self.assertEqual(probe["_prompts"], {"case_021": "two"})
         self.assertEqual(probe["total_expected_prompt_tokens"], 3)
+        self.assertEqual(probe["cases"][0]["request_id"], 1)
+        self.assertEqual(probe["cases"][0]["seed"], MODULE.UTF8_REGRESSION_SEED)
+        self.assertEqual(
+            probe["cases"][0]["request_sha256"],
+            hashlib.sha256(MODULE.quality_wire_body(
+                "two", MODULE.UTF8_REGRESSION_SEED,
+            )).hexdigest(),
+        )
         with self.assertRaisesRegex(ValueError, "not present"):
             MODULE.quality_probe_ledger(bundle, case_id="missing")
 
@@ -488,6 +496,29 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                 "DS4_JSON_REPLACE_INVALID_UTF8": "1",
             }),
         )
+
+    def test_case021_verdict_rejects_a_vacuous_valid_utf8_response(self) -> None:
+        ledger = [{
+            "case_id": "case_021", "group_id": "case_021", "split": "train-fit",
+            "request_id": 1, "request_sha256": "1" * 64,
+            "expected_prompt_tokens": 2, "token_ids": [11, 12],
+        }]
+        request = {
+            "case_id": "case_021", "group_id": "case_021", "split": "train-fit",
+            "request_id": 1, "request_sha256": "1" * 64,
+            "prompt_tokens": 2, "full_indexed_chunks": [[0, 2]],
+            "completion_tokens": 8, "finish_reason": "length",
+            "generated_reasoning_sha256": "a" * 64, "generated_reasoning_bytes": 8,
+            "generated_content_sha256": "b" * 64, "generated_content_bytes": 0,
+            "token_ids": list(range(8)), "sse_content_events": 1,
+            "utf8_regression_reproduced": False,
+        }
+        verdict = MODULE.quality_capture_verdict(
+            ledger, [request], [copy.deepcopy(request)],
+            {"verdict": "PASS", "requests": 1, "token_layer_events": 150},
+            {"clean": True}, {"clean": True},
+        )
+        self.assertEqual(verdict["verdict"], "FAIL")
 
     def test_quality_raw_output_accepts_exact_bytes_with_noncanonical_bpe(self) -> None:
         tokenizer = MODULE.Tokenizer.from_file(str(MODULE.SHARED.TOKENIZER))
@@ -574,6 +605,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             "DS4_GLM_SYNC_TRACE", "DS4_METAL_GRAPH_DUMP_PREFIX",
             "DS4_METAL_GRAPH_DUMP_NAME", "DS4_METAL_GRAPH_DUMP_LAYER",
             "DS4_GLM_UNION_TRACE_CORPUS", "DS4_GLM_STREAMING_TOKEN_PREFILL_MAX",
+            "DS4_JSON_REPLACE_INVALID_UTF8",
         ):
             self.assertIn(name, self.runner)
             self.assertIn(name, self.cgroup)
