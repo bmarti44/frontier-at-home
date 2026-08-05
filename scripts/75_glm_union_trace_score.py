@@ -12,7 +12,7 @@ import struct
 from typing import Any
 
 
-N_EMBD = 7168
+N_EMBD = 6144
 N_EXPERT = 256
 N_EXPERT_USED = 8
 EVENT_RE = re.compile(
