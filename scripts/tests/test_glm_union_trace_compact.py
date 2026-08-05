@@ -259,9 +259,32 @@ class QualifiedBundleTests(unittest.TestCase):
                 "source_receipt_sha256", "source_summary_sha256", "source_arm_sha256",
                 "candidate_hash", "engine_commit", "binary_sha256", "model_sha256",
                 "tokenizer_sha256", "fixture_sha256", "configuration_sha256",
-                "request_id", "seed",
+                "request_id", "seed", "scorer_sha256", "repository_head",
             ):
                 self.assertIn(field, validated["lineage"])
+
+    def test_consumes_the_exact_tracked_receipt_snapshot(self) -> None:
+        """A path replacement after the HEAD comparison cannot change authority."""
+        with tempfile.TemporaryDirectory() as directory:
+            source, receipt = self.make_bundle(Path(directory))
+            committed = receipt.read_bytes()
+
+            def verified_snapshot(path: Path, repository_root: Path) -> bytes:
+                self.assertEqual(path, receipt.resolve())
+                receipt.write_text('{"substituted":true}\n')
+                return committed
+
+            with mock.patch.object(
+                MODULE, "_require_tracked_receipt", side_effect=verified_snapshot,
+            ):
+                validated = MODULE.validate_source_bundle(
+                    source, receipt, repository_root=Path(directory),
+                    require_tracked_receipt=True, minimum_prompt_tokens=1,
+                )
+            self.assertEqual(
+                validated["lineage"]["source_receipt_sha256"],
+                hashlib.sha256(committed).hexdigest(),
+            )
 
     def test_rejects_ambiguous_unknown_symlink_and_lineage_mutations(self) -> None:
         for mutation in (
