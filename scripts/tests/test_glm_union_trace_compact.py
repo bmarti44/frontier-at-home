@@ -208,6 +208,11 @@ class QualifiedBundleTests(unittest.TestCase):
             self.assertTrue((destination / "manifest.json").is_file())
             with self.assertRaises(FileExistsError):
                 MODULE.publish_bundle(destination, arrays, {"schema_version": 1})
+            dangling = Path(directory) / "dangling"
+            dangling.symlink_to(Path(directory) / "redirected")
+            with self.assertRaises(FileExistsError):
+                MODULE.publish_bundle(dangling, arrays, {"schema_version": 1})
+            self.assertFalse((Path(directory) / "redirected").exists())
 
 
 if __name__ == "__main__":
