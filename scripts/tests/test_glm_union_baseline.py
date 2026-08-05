@@ -1027,6 +1027,31 @@ class BaselineTableTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 MODULE.validate_preserved_runtime_log(root, binding)
 
+    def test_expected_fault_wrapper_requires_exact_fail_closed_markers(self) -> None:
+        stage = "mtp_call"
+        environment = "1" * 64
+        payload = b"\n".join((
+            f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}".encode(),
+            f"executed_environment_sha256={environment}".encode(),
+            b"executed_candidate_verified pid=123 start_ticks=456 path=/sealed/ds4",
+            b"FATAL wrapper command failed after candidate exit rc=86",
+            b"ds4: GLM baseline injected failure stage=mtp_call",
+            b"safety_artifact_verified name=samples.log sha256=" + b"2" * 64,
+            b"safety_artifact_verified name=kernel.log sha256=" + b"3" * 64,
+            b"SAFE_RUN end rc=86 killed=no",
+        )) + b"\n"
+        self.assertEqual(
+            MODULE.validate_expected_failure_wrapper(payload, stage, environment),
+            (123, 456),
+        )
+        for mutation in (
+            payload.replace(b"rc=86", b"rc=0", 1),
+            payload.replace(b"stage=mtp_call", b"stage=target_eval"),
+            payload.replace(b"killed=no", b"killed=yes"),
+        ):
+            with self.assertRaises(RuntimeError):
+                MODULE.validate_expected_failure_wrapper(mutation, stage, environment)
+
     def fixture(self):
         requests = np.repeat(np.arange(1, 21, dtype=np.uint16), 2)
         targets = {}
