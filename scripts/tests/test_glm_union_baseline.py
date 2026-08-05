@@ -303,6 +303,36 @@ class AtomicLifecycleTests(unittest.TestCase):
                 )
         publisher.assert_not_called()
 
+    def test_journal_eviction_cannot_reopen_permanent_authority(self) -> None:
+        retained: list[dict[str, object]] = []
+
+        def emit(fields):
+            retained.append({
+                "MESSAGE_ID": MODULE.AUTHORITY_MESSAGE_ID,
+                "GLM52_P1_GATE": MODULE.AUTHORITY_GATE_ID,
+                "GLM52_P1_EVENT": "STARTED",
+                "PRIORITY": "2",
+                "SYSLOG_IDENTIFIER": MODULE.AUTHORITY_IDENTIFIER,
+                **fields,
+                "__CURSOR": "first-cursor",
+                "_BOOT_ID": "first-boot",
+                "__REALTIME_TIMESTAMP": "123456789",
+            })
+
+        with mock.patch.object(
+            MODULE, "_journal_authority_records", side_effect=lambda: list(retained),
+        ), mock.patch.object(
+            MODULE, "_emit_journal_authority", side_effect=emit,
+        ):
+            REAL_RESERVE_GLOBAL_AUTHORITY(
+                {"candidate": "bound"}, Path("/tmp/first"), 125,
+            )
+            retained.clear()  # Simulate ordinary journal rotation/vacuum.
+            with self.assertRaises(FileExistsError):
+                REAL_RESERVE_GLOBAL_AUTHORITY(
+                    {"candidate": "bound"}, Path("/tmp/after-rotation"), 126,
+                )
+
     def test_safe_run_attestation_rejects_fault_or_missing_identity(self) -> None:
         environment = "2" * 64
         good = b"\n".join((
