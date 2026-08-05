@@ -841,9 +841,14 @@ class QualifiedBundleTests(unittest.TestCase):
             changed["ids"][0, 0] ^= np.uint8(1)
             original_savez(handle, **changed)
 
+        def mutate_input_in_place(handle, **values):
+            values["ids"][0, 0] ^= np.uint8(1)
+            original_savez(handle, **values)
+
         for name, mutation in (
             ("corrupt", corrupt), ("missing", missing), ("extra", extra),
             ("dtype", wrong_dtype), ("shape", wrong_shape), ("value", wrong_value),
+            ("in_place", mutate_input_in_place),
         ):
             with self.subTest(mutation=name), tempfile.TemporaryDirectory() as directory:
                 destination = Path(directory) / "published"
