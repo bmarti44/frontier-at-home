@@ -140,6 +140,59 @@ class UnionTargetTests(unittest.TestCase):
             ]
             self.assertAlmostEqual(min(masses), max(masses))
 
+    def test_structural_baseline_rows_are_last_eight_k8_complete_positions(self) -> None:
+        request = np.repeat(np.asarray([1, 2], dtype=np.uint16), 2 * 20)
+        layer = np.tile(
+            np.repeat(np.asarray([4, 5], dtype=np.uint16), 20), 2,
+        )
+        position = np.tile(np.arange(20, dtype=np.uint32), 4)
+        rows = MODULE.structural_baseline_rows(request, layer, position)
+        expected = []
+        for group in range(4):
+            expected.extend(group * 20 + np.arange(4, 12).tolist())
+        np.testing.assert_array_equal(rows, expected)
+        self.assertEqual(rows.size, 2 * 2 * 8)
+
+        too_short = position.copy()
+        keep = np.ones(position.size, dtype=np.bool_)
+        keep[15:20] = False
+        with self.assertRaises(ValueError):
+            MODULE.structural_baseline_rows(request[keep], layer[keep], too_short[keep])
+
+    def test_captured_router_ranking_is_full_stable_and_top8_conformant(self) -> None:
+        scores = np.zeros((2, 256), dtype=np.float32)
+        scores[0, [9, 2, 5, 7, 1, 3, 4, 6]] = np.arange(8, 0, -1)
+        scores[1] = np.linspace(-1, 1, 256, dtype=np.float32)
+        selected = np.stack([
+            np.asarray([9, 2, 5, 7, 1, 3, 4, 6], dtype=np.int32),
+            np.arange(255, 247, -1, dtype=np.int32),
+        ])
+        ranking = MODULE.captured_router_rankings(scores, selected)
+        np.testing.assert_array_equal(ranking[:, :8], selected)
+        self.assertEqual(ranking.shape, (2, 256))
+        self.assertEqual(np.unique(ranking[0]).size, 256)
+        self.assertLess(np.where(ranking[0] == 0)[0][0], np.where(ranking[0] == 8)[0][0])
+        bad = selected.copy()
+        bad[0, 0] = 8
+        with self.assertRaises(ValueError):
+            MODULE.captured_router_rankings(scores, bad)
+
+    def test_mtp_rankings_are_nested_prefix_maxima(self) -> None:
+        scores = np.zeros((1, 8, 256), dtype=np.float32)
+        for step in range(8):
+            scores[0, step, step] = np.float32(10 + step)
+        selected = np.stack([
+            np.argsort(-scores[0, step], kind="stable")[:8]
+            for step in range(8)
+        ]).astype(np.int32)[None, :, :]
+        rankings = MODULE.mtp_prefix_rankings(scores, selected)
+        self.assertEqual(set(rankings), {2, 4, 8})
+        self.assertEqual(rankings[2][0, 0], 1)
+        self.assertEqual(rankings[4][0, 0], 3)
+        self.assertEqual(rankings[8][0, 0], 7)
+        for value in rankings.values():
+            self.assertEqual(np.unique(value[0]).size, 256)
+
     def test_probe_head_training_path_is_finite_and_replayable_on_cpu(self) -> None:
         features = np.linspace(-1, 1, 96, dtype=np.float32).reshape(16, 6)
         targets = np.zeros((16, 3, 256), dtype=np.bool_)
