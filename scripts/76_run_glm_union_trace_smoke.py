@@ -59,7 +59,7 @@ TRACE_BYTES_PER_TOKEN_LAYER = (6144 + 256 + 256 + 8 + 256) * 4
 TRACE_DISK_RESERVE_BYTES = 20 * 1024**3
 CORPUS_CACHE_EXPERTS = "32GB"
 CORPUS_CUDA_CACHE_GB = "56"
-CORPUS_MEMORY_HIGH_GIB = "70"
+CORPUS_MEMORY_HIGH_GIB = "71"
 TRACE_NAMES = ",".join((
     "glm_indexed_ffn_norm",
     "glm_indexed_router_logits",
