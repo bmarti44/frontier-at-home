@@ -64,6 +64,13 @@ COMMON_ENV = {
 # ds4-server defaults to one slot unless --batched-sessions is supplied. The
 # runner issues exactly one request and never supplies that option.
 SINGLE_REQUEST_SLOT = 1
+GPU_FAULT_RE = re.compile(
+    r"NVRM[^\n]*(?:Xid|NV_ERR_NO_MEMORY|Out of memory)|"
+    r"oom-kill|Out of memory: Killed process|"
+    r"CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|"
+    r"CUDA[^\n]{0,160}(?:allocation failed|out of memory)",
+    re.I,
+)
 
 
 def sha256(path: Path) -> str:
@@ -79,6 +86,12 @@ def strict_json(path: Path) -> dict[str, object]:
     if not isinstance(value, dict):
         raise ValueError(f"{path} is not a JSON object")
     return value
+
+
+def require_no_gpu_fault(text: str, source: str) -> None:
+    """Reject driver, host, or CUDA userspace OOM evidence from one run."""
+    if GPU_FAULT_RE.search(text):
+        raise ValueError(f"GPU/OOM evidence appeared in {source}")
 
 
 def frozen_inputs(
@@ -399,7 +412,9 @@ def containment_record(stdout_path: Path) -> dict[str, object]:
     main = crash / "main.log"
     samples = crash / "samples.log"
     kernel = crash / "kernel.log"
-    if not all(path.is_file() and not path.is_symlink() for path in (main, samples, kernel)):
+    command = crash / "cmd.log"
+    if not all(path.is_file() and not path.is_symlink()
+               for path in (main, samples, kernel, command)):
         raise ValueError("contained safety artifacts are missing")
     main_text = main.read_text(encoding="utf-8", errors="strict")
     if "executed candidate was verified alive at least once" not in main_text:
@@ -408,8 +423,13 @@ def containment_record(stdout_path: Path) -> dict[str, object]:
     # wrapper exits nonzero for any high/max/oom/oom_kill delta.
     if "cgroup_final " not in main_text or "SAFE_RUN end rc=0 killed=no" not in main_text:
         raise ValueError("cgroup or clean-exit evidence is absent")
-    if re.search(r"NVRM.*Xid", kernel.read_text(encoding="utf-8", errors="replace"), re.I):
-        raise ValueError("kernel Xid appeared during arm")
+    require_no_gpu_fault(main_text, "containment main log")
+    require_no_gpu_fault(
+        command.read_text(encoding="utf-8", errors="strict"), "containment command log"
+    )
+    require_no_gpu_fault(
+        kernel.read_text(encoding="utf-8", errors="strict"), "containment kernel log"
+    )
     return {
         "crash_directory": str(crash), "main_sha256": sha256(main),
         "samples_sha256": sha256(samples), "kernel_sha256": sha256(kernel),
@@ -475,6 +495,7 @@ def arm(args: argparse.Namespace) -> int:
     if server is None or server.returncode != 0:
         raise RuntimeError(f"server did not exit cleanly rc={getattr(server, 'returncode', None)}")
     log_text = server_log_path.read_text(encoding="utf-8", errors="strict")
+    require_no_gpu_fault(log_text, "server log")
     pair_count = sum(line.startswith("PREDPAIR ") for line in log_text.splitlines())
     if args.purpose == "recall":
         if args.mode == "off" and pair_count != 0:

@@ -37,6 +37,8 @@ EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
 ROOT_AUTHORITY=${GLM_W1_ROOT_AUTHORITY:-0}
 AUTHORITY_CRASH_ROOT=${GLM_SAFE_CRASH_ROOT:-}
+KERNEL_GPU_FAULT_RE='NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process'
+USERSPACE_GPU_OOM_RE='CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|CUDA.{0,160}(allocation failed|out of memory)'
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -620,24 +622,28 @@ if [[ $RC == 0 && ${#FINAL_ARTIFACT_PATHS[@]} -gt 0 ]]; then
     plog "final_artifact_verified path=$artifact sha256=$artifact_sha256 device_inode=$artifact_identity"
   done
 fi
-if [[ $CANDIDATE_PROVENANCE == 1 &&
-      $EXECUTED_CANDIDATE_OBSERVED == 1 &&
-      -z $PROVENANCE_FAILURE && $RC == 0 ]]; then
-  EXECUTED_CANDIDATE_CLEAN_EXIT=1
-  plog "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler; actual cadence is recorded in samples.log; wrapper and descendant checks clean"
-fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
+if grep -Eiq "$USERSPACE_GPU_OOM_RE" "$MAIN" "$DIR/cmd.log"; then
+  plog "FATAL CUDA userspace GPU/OOM evidence appeared during run"
+  RC=16
+fi
 RUN_ENDED_EPOCH=$(date -u +%s)
 if ! journalctl -k --since "@$RUN_STARTED_EPOCH" \
       --until "@$((RUN_ENDED_EPOCH + 1))" \
       --no-pager -o short-iso-precise >"$KERNEL_LOG" 2>&1; then
   plog "FATAL kernel journal could not be captured for Xid verification"
   RC=16
-elif grep -Eiq 'NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process' "$KERNEL_LOG"; then
+elif grep -Eiq "$KERNEL_GPU_FAULT_RE" "$KERNEL_LOG"; then
   plog "FATAL kernel GPU/OOM evidence appeared during run"
   RC=16
 fi
 sync -d "$KERNEL_LOG" 2>/dev/null || true
+if [[ $CANDIDATE_PROVENANCE == 1 &&
+      $EXECUTED_CANDIDATE_OBSERVED == 1 &&
+      -z $PROVENANCE_FAILURE && $RC == 0 ]]; then
+  EXECUTED_CANDIDATE_CLEAN_EXIT=1
+  plog "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler; actual cadence is recorded in samples.log; wrapper and descendant checks clean"
+fi
 for safety_artifact in "$SAMP" "$KERNEL_LOG"; do
   if [[ ! -f $safety_artifact || -L $safety_artifact ]]; then
     plog "FATAL wrapper safety artifact is absent or unsafe path=$safety_artifact"

@@ -352,6 +352,9 @@ def _arm(args: argparse.Namespace) -> int:
             os.fsync(log.fileno())
     if server is None or server.returncode != 0:
         raise RuntimeError(f"server did not exit cleanly rc={getattr(server, 'returncode', None)}")
+    SHARED.require_no_gpu_fault(
+        server_log.read_text(encoding="utf-8", errors="strict"), "server log"
+    )
     if not request_records:
         raise RuntimeError("arm produced no requests")
     chunks = request_records[0]["full_indexed_chunks"]
@@ -489,6 +492,11 @@ def run(args: argparse.Namespace) -> int:
 
     off = SHARED.strict_json(root / "off/arm.json")
     on = SHARED.strict_json(root / "on/arm.json")
+    for mode in ("off", "on"):
+        SHARED.require_no_gpu_fault(
+            (root / mode / "server.log").read_text(encoding="utf-8", errors="strict"),
+            f"{mode} server log",
+        )
     if args.corpus_smoke:
         expected_requests = {
             int(item["request_id"]): [tuple(row) for row in item["full_indexed_chunks"]]
