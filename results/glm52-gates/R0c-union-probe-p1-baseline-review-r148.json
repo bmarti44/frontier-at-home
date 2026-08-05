@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_RESULT",
+  "candidate_hash": "c17101a489fa77bca09e017e4a4091305339a3c8",
+  "freeze_commit": "99f2f357463c66e3333e4b266e8020287d9f6c7b",
+  "review_round": 148,
+  "per_gate_candidate": 10,
+  "held_out_values_opened": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 96,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [
+      {
+        "id": "P1-BASE-R148-L1-STALE-SMOKE-RETRY-STATUS",
+        "evidence": "A smoke retry with the original implementation commit returned generic failure after repository HEAD advanced; retry with current exact HEAD returned 17. Both paths failed closed and the marker stayed unchanged.",
+        "affected_gate": "smoke replay audit ergonomics",
+        "reproduction_instructions": "Retry the non-held-out smoke marker with stale and current repository commits.",
+        "proposed_acceptance_test": "A valid existing marker may return ALREADY_RESERVED before current repository-lineage validation."
+      }
+    ],
+    "verdict": "SCOPED_FIX_PASS_HELD_OUT_REMAINS_FORBIDDEN"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 78,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-R148-H1-ROOT-HELPER-ACCEPTS-UNREVIEWED-HEAD",
+        "evidence": "The passwordless helper accepts any caller-selected clean repository HEAD. Neither helper nor controller binds that commit and controller hash to the root-installed reviewed harness.",
+        "affected_gate": "frozen candidate authority and delegated-command abuse",
+        "reproduction_instructions": "In a disposable repository, create a clean commit changing script 81 and supply that same commit to the current repository assertion; it is accepted.",
+        "proposed_acceptance_test": "Bind reservation to the exact root-installed harness commit and critical controller hash. Reject unrelated clean commits, descendants not installed by root, repository replacement, and changed controller bytes before marker creation."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "verified_closures": [
+    "BASE-R142-H5",
+    "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+    "P1-BASE-R145-H1-GLOBAL-ONE-SHOT-AUTHORITY",
+    "P1-BASE-R146-H1-DELETABLE-GLOBAL-LEDGER",
+    "P1-BASE-R147-H1-ROTATING-JOURNAL-NOT-PERMANENT",
+    "P1-BASE-R147-H1-JOURNAL-RETENTION-REOPENS-ONE-SHOT"
+  ],
+  "remaining_independent_blocking_classes": [
+    "BASE-R142-H3 two-control rollback-safe hybrid observation",
+    "BASE-R142-H4 / P1-BASE-IMPL-H3 matched cost and Pareto authority",
+    "P1-BASE-IMPL-H5 completed-result authority"
+  ],
+  "convergence": {
+    "prior_aligned_blocking_classes": 1,
+    "closed_aligned_blocking_classes": 1,
+    "new_blocking_classes": 1,
+    "blocking_set_strictly_shrank": false,
+    "consecutive_nonshrinking_candidates": 1,
+    "owner_escalation_triggered": false,
+    "next_action": "Candidate 11 closes only the newly named root-approved-candidate binding defect. Held-out values remain sealed."
+  },
+  "claim_limit": "Candidate-10 authority review only; no held-out baseline, cost, NLL, fidelity, performance, or serving claim."
+}
