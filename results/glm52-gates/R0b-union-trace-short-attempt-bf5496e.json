@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "bf5496efa0d2d0181c358fcdeda99c9701200c79",
+  "review_round": 71,
+  "classification": "FAIL",
+  "scope": "short_single_indexed_batch_only",
+  "summary_sha256": "889d7f0abf73029b1c871f8d0a33b318bcd7658289aca54b84d0e490cec404b8",
+  "off_arm_sha256": "54ef070d0421162ebd188cf4105838912f7f48b86a1afa2a0783c8935001a09e",
+  "on_arm_sha256": "525993204143a75fdb5dd1841b76b9176015e8078d19cb163ddaa3f87b938f05",
+  "on_server_log_sha256": "d8fbeebac77f84a00b4e9cdff523eb1cc09449616189417f85285ce40e76f1ef",
+  "observed": {
+    "prompt_tokens": 573,
+    "completion_tokens_per_arm": 128,
+    "full_indexed_chunks": [[0, 573]],
+    "byte_and_token_identity": true,
+    "containment_clean": true,
+    "trace_files": 5,
+    "trace_bytes": 15274912,
+    "captured_ffn_norm_width": 6144,
+    "engine_glm52_shape_width": 6144
+  },
+  "failed_checks": [
+    "exact_triplet_shapes",
+    "finite_values_and_valid_ids"
+  ],
+  "cause": "The frozen scorer used the DeepSeek V4 Pro width 7168 for ffn_norm. GLM-5.2 production shape DS4_SHAPE_GLM52 uses width 6144, exactly matching the captured byte count 14082048 / (573 rows * 4 bytes). Shape rejection short-circuited value validation.",
+  "conclusion": "Preserve as FAIL. Correct the fixed scorer and trace byte ceiling to the verified GLM-5.2 width 6144, then create a new freeze, public-randomness seed, reviewer round, and OFF/ON run."
+}
