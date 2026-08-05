@@ -435,6 +435,24 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
             self.assertEqual(len({rows[index]["case_id"] for index in window}), 1)
             self.assertEqual(len({rows[index]["split"] for index in window}), 1)
 
+    def test_quality_probe_ledger_is_one_frozen_case_only(self) -> None:
+        bundle = {
+            "schema_version": 1, "split_plan_sha256": "a" * 64,
+            "fixture_content_sha256": "b" * 64, "tokenizer_sha256": "c" * 64,
+            "seed": 7, "total_expected_prompt_tokens": 5,
+            "expected_token_layer_events": 375,
+            "cases": [
+                {"case_id": "case_1", "expected_prompt_tokens": 2},
+                {"case_id": "case_2", "expected_prompt_tokens": 3},
+            ],
+            "_prompts": {"case_1": "one", "case_2": "two"},
+        }
+        probe = MODULE.quality_probe_ledger(bundle)
+        self.assertEqual(probe["cases"], [bundle["cases"][0]])
+        self.assertEqual(probe["_prompts"], {"case_1": "one"})
+        self.assertEqual(probe["total_expected_prompt_tokens"], 2)
+        self.assertEqual(probe["expected_token_layer_events"], 150)
+
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     @classmethod
@@ -514,6 +532,17 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             '"GLM_SAFE_TIMEOUT_S": "7200" if args.quality_corpus else "3600"',
             'str(out / "ledger.json"), str(out / "responses.json")',
             'set(range(3, 78))',
+        ):
+            self.assertIn(marker, self.runner)
+
+    def test_quality_probe_is_explicit_one_case_safety_only(self) -> None:
+        for marker in (
+            'public.add_argument("--quality-probe", action="store_true")',
+            'internal.add_argument("--quality-probe", action="store_true")',
+            '"scope": "quality_one_case_safety_probe"',
+            'quality probe requires quality corpus mode',
+            'request_count = 1 if args.quality_probe else',
+            '(["--quality-probe"] if args.quality_probe else [])',
         ):
             self.assertIn(marker, self.runner)
 
