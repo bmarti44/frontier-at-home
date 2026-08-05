@@ -307,7 +307,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                 "generated_content_sha256": "b" * 64,
                 "generated_content_bytes": 0,
                 "token_ids": list(range(8)),
-                "sse_token_events": 8,
+                "sse_content_events": 5,
             }
             for row in ledger
         ]
@@ -496,7 +496,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.runner)
         self.assertIn('CORPUS_CACHE_EXPERTS = "32GB"', self.runner)
-        self.assertIn('CORPUS_CUDA_CACHE_GB = "56"', self.runner)
+        self.assertIn('CORPUS_CUDA_CACHE_GB = "48"', self.runner)
         self.assertIn("cache_experts=(CORPUS_CACHE_EXPERTS", self.runner)
         self.assertIn('values["DS4_CUDA_EXPERT_CACHE_GB"] = CORPUS_CUDA_CACHE_GB', self.runner)
         self.assertIn("cuda_cache_runtime", self.runner)

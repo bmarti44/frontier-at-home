@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "classification": "FAIL",
+  "candidate_hash": "1374ee58ca1f945ca0cb202610fad295f9e87f64",
+  "tag": "p0q100-r103-1374ee5",
+  "arm": "off",
+  "observed": {
+    "raw_response_matched_token_records": 8,
+    "raw_token_indices": [1, 2, 3, 4, 5, 6, 7, 8],
+    "sse_content_events": 5,
+    "cgroup_peak_bytes": 57007419392,
+    "cgroup_swap_current_bytes": 0,
+    "cgroup_high_events": 0,
+    "cgroup_max_events": 0,
+    "cgroup_oom_events": 0,
+    "cgroup_oom_kill_events": 0,
+    "kernel_marker": "NVRM NV_ERR_NO_MEMORY during CUDA model loading",
+    "wrapper_return_code": 16,
+    "surviving_ds4_server": false
+  },
+  "diagnosis": {
+    "sse_gate": "Invalid: one SSE content delta can contain more than one generated token. Exact response-matched raw token timing plus frozen-tokenizer visible-output reconciliation remains authoritative.",
+    "memory": "The wrapper correctly rejected the kernel allocation failure despite a completed request and zero cgroup memory events. This attempt cannot qualify the corpus."
+  },
+  "artifacts": {
+    "server_path": "/home/bmarti44/.local/state/glm52-p0q100-r103-1374ee5/off/server.log",
+    "server_sha256": "ad13e51306b914a0eadd85b8d89fcd92441bfd0c4031c9ca1ef806232fdfe598",
+    "fixture_path": "/home/bmarti44/.local/state/glm52-p0q100-r103-1374ee5/off/ledger.json",
+    "fixture_sha256": "c6dadfa89c53ef012e701b2990a5d42f99e2a365a02c198ebec6bca1db49b394",
+    "off_containment_stdout_sha256": "a67ec0a79dbbe818186eb6ffe3aa46f666f770e22e883483c536c6ca0daea04a",
+    "main_log_sha256": "10b5e95342e6cbb019241be147f8add8ddcf7915e420a2f5f49988803b25d8c6",
+    "samples_log_sha256": "34f3a38ddd53fea7cd74216475afcb52d37cd8de08443de6b8b2adcd5cd68833",
+    "raw_artifact_sha256": "e3cd22143fc3be12b8efb0ee49c17d6f5814f04ad4f6359155979ee3fa555d6f"
+  }
+}
