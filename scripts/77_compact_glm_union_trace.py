@@ -7,7 +7,6 @@ import argparse
 import ctypes
 import errno
 import hashlib
-import importlib.util
 import json
 import math
 import os
@@ -17,6 +16,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import types
 from typing import Any
 
 import numpy as np
@@ -26,16 +26,44 @@ ROOT = Path(__file__).resolve().parents[1]
 SCORER_PATH = ROOT / "scripts/75_glm_union_trace_score.py"
 
 
-def _load(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+def _read_regular_snapshot(path: Path) -> bytes:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path, flags)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError(f"input is not a regular file: {path}")
+        blocks: list[bytes] = []
+        remaining = before.st_size
+        while remaining:
+            block = os.read(descriptor, min(1024 * 1024, remaining))
+            if not block:
+                raise ValueError(f"input ended before its observed size: {path}")
+            blocks.append(block)
+            remaining -= len(block)
+        if os.read(descriptor, 1):
+            raise ValueError(f"input grew while being snapshotted: {path}")
+        after = os.fstat(descriptor)
+        if ((before.st_dev, before.st_ino, before.st_size) !=
+                (after.st_dev, after.st_ino, after.st_size)):
+            raise ValueError(f"input identity changed while being snapshotted: {path}")
+        return b"".join(blocks)
+    finally:
+        os.close(descriptor)
+
+
+def _load_bytes(name: str, payload: bytes, origin: Path):
+    module = types.ModuleType(name)
+    module.__file__ = str(origin)
+    exec(compile(payload, str(origin), "exec"), module.__dict__)
     return module
 
 
-TRACE_SCORER = _load("union_trace_scorer_for_compact", SCORER_PATH)
+SCORER_SOURCE = _read_regular_snapshot(SCORER_PATH)
+SCORER_SHA256 = hashlib.sha256(SCORER_SOURCE).hexdigest()
+TRACE_SCORER = _load_bytes("union_trace_scorer_for_compact", SCORER_SOURCE, SCORER_PATH)
 N_EMBD = 6144
 N_EXPERT = 256
 N_EXPERT_USED = 8
@@ -64,10 +92,11 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _strict_json(path: Path) -> dict[str, Any]:
-    if path.is_symlink() or not path.is_file():
-        raise ValueError(f"JSON input is not a regular file: {path}")
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
 
+
+def _strict_json_bytes(payload: bytes, label: str) -> dict[str, Any]:
     def pairs(values):
         result = {}
         for key, value in values:
@@ -76,13 +105,21 @@ def _strict_json(path: Path) -> dict[str, Any]:
             result[key] = value
         return result
 
+    try:
+        text = payload.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise ValueError(f"JSON input is not UTF-8: {label}") from error
     value = json.loads(
-        path.read_text(encoding="utf-8"), object_pairs_hook=pairs,
+        text, object_pairs_hook=pairs,
         parse_constant=lambda token: (_ for _ in ()).throw(ValueError(token)),
     )
     if not isinstance(value, dict):
         raise ValueError("JSON document must be an object")
     return value
+
+
+def _strict_json(path: Path) -> dict[str, Any]:
+    return _strict_json_bytes(_read_regular_snapshot(path), str(path))
 
 
 def unpack_hidden_int4(packed: np.ndarray, scale: np.ndarray, width: int) -> np.ndarray:
@@ -219,14 +256,17 @@ def _valid_chunks(value: Any) -> list[tuple[int, int]]:
     return result
 
 
-def _require_tracked_receipt(receipt_path: Path, repository_root: Path) -> None:
+def _require_tracked_snapshot(
+    path: Path, repository_root: Path, *, required_prefix: str | None = None,
+) -> bytes:
     repository_root = repository_root.resolve(strict=True)
+    snapshot = _read_regular_snapshot(path)
     try:
-        relative = receipt_path.relative_to(repository_root)
+        relative = path.relative_to(repository_root)
     except ValueError as error:
-        raise ValueError("source receipt is outside the trusted repository") from error
-    if not str(relative).startswith("results/glm52-gates/"):
-        raise ValueError("source receipt is outside the gate evidence directory")
+        raise ValueError("trusted input is outside the repository") from error
+    if required_prefix is not None and not str(relative).startswith(required_prefix):
+        raise ValueError("trusted input is outside its required repository directory")
     tracked = subprocess.run(
         ["git", "ls-files", "--error-unmatch", "--", str(relative)],
         cwd=repository_root, stdin=subprocess.DEVNULL, capture_output=True,
@@ -236,8 +276,26 @@ def _require_tracked_receipt(receipt_path: Path, repository_root: Path) -> None:
         stdin=subprocess.DEVNULL, capture_output=True,
     )
     if (tracked.returncode != 0 or committed.returncode != 0 or
-            committed.stdout != receipt_path.read_bytes()):
-        raise ValueError("source receipt is not tracked and clean at HEAD")
+            committed.stdout != snapshot):
+        raise ValueError("trusted input is not tracked and clean at HEAD")
+    return snapshot
+
+
+def _require_tracked_receipt(receipt_path: Path, repository_root: Path) -> bytes:
+    return _require_tracked_snapshot(
+        receipt_path, repository_root, required_prefix="results/glm52-gates/",
+    )
+
+
+def _repository_head(repository_root: Path) -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repository_root,
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True,
+    )
+    value = completed.stdout.strip()
+    if not COMMIT_RE.fullmatch(value):
+        raise ValueError("repository HEAD is malformed")
+    return value
 
 
 def validate_source_bundle(
@@ -246,6 +304,7 @@ def validate_source_bundle(
     *,
     repository_root: Path = ROOT,
     require_tracked_receipt: bool = True,
+    require_tracked_scorer: bool | None = None,
     minimum_prompt_tokens: int = 512,
 ) -> dict[str, Any]:
     """Validate and bind one already-qualified capture bundle."""
@@ -253,17 +312,36 @@ def validate_source_bundle(
         raise ValueError("qualified source paths may not be symlinks")
     source_root = source_root.resolve(strict=True)
     receipt_path = receipt_path.resolve(strict=True)
-    if require_tracked_receipt:
-        _require_tracked_receipt(receipt_path, repository_root)
+    if require_tracked_scorer is None:
+        require_tracked_scorer = require_tracked_receipt
+    receipt_bytes = (_require_tracked_receipt(receipt_path, repository_root)
+                     if require_tracked_receipt else _read_regular_snapshot(receipt_path))
+    if require_tracked_scorer:
+        scorer_bytes = _require_tracked_snapshot(SCORER_PATH, repository_root)
+        if scorer_bytes != SCORER_SOURCE:
+            raise ValueError("loaded scorer differs from the tracked scorer snapshot")
+    repository_head = _repository_head(ROOT)
     summary_path = source_root / "summary.json"
     arm_path = source_root / "on" / "arm.json"
     server_log = source_root / "on" / "server.log"
     trace = source_root / "on" / "trace"
     if not trace.is_dir() or trace.is_symlink() or server_log.is_symlink() or not server_log.is_file():
         raise ValueError("qualified source layout is invalid")
-    receipt = _strict_json(receipt_path)
-    summary = _strict_json(summary_path)
-    arm = _strict_json(arm_path)
+    control_paths = {
+        "summary": summary_path,
+        "arm": arm_path,
+        "server_log": server_log,
+        "off_arm": source_root / "off" / "arm.json",
+        "off_result": source_root / "off" / "result.json",
+        "on_result": source_root / "on" / "result.json",
+        "off_server_log": source_root / "off" / "server.log",
+        "off_containment": source_root / "off.containment.json",
+        "on_containment": source_root / "on.containment.json",
+    }
+    controls = {name: _read_regular_snapshot(path) for name, path in control_paths.items()}
+    receipt = _strict_json_bytes(receipt_bytes, str(receipt_path))
+    summary = _strict_json_bytes(controls["summary"], str(summary_path))
+    arm = _strict_json_bytes(controls["arm"], str(arm_path))
     receipt_keys = {
         "schema_version", "candidate_hash", "engine_commit", "classification", "scope",
         "high_row_2048_status", "summary_sha256", "off_arm_sha256", "on_arm_sha256",
@@ -299,9 +377,9 @@ def validate_source_bundle(
             post_review["critical"] != [] or post_review["high"] != []):
         raise ValueError("source post-runtime review is incomplete")
     bound_hashes = {
-        "summary_sha256": _sha256(summary_path),
-        "on_arm_sha256": _sha256(arm_path),
-        "on_server_log_sha256": _sha256(server_log),
+        "summary_sha256": _sha256_bytes(controls["summary"]),
+        "on_arm_sha256": _sha256_bytes(controls["arm"]),
+        "on_server_log_sha256": _sha256_bytes(controls["server_log"]),
     }
     if any(receipt.get(key) != value for key, value in bound_hashes.items()):
         raise ValueError("source receipt hashes do not match the capture")
@@ -361,11 +439,6 @@ def validate_source_bundle(
     if (any(path.is_symlink() or not path.is_file() for path in observed_paths) or
             {path.name for path in observed_paths} != set(artifacts)):
         raise ValueError("source trace file set is not exact and regular")
-    for path in observed_paths:
-        item = artifacts[path.name]
-        if path.stat().st_size != item["bytes"] or _sha256(path) != item["sha256"]:
-            raise ValueError("source trace artifact differs from scorer receipt")
-
     layers = sorted({layer for layer, _, _ in keys})
     wanted_kinds = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
     expected_keys = {
@@ -380,35 +453,45 @@ def validate_source_bundle(
             trace_score.get("total_bytes") != total_bytes or arm.get("trace_files") != len(artifacts) or
             arm.get("trace_bytes") != total_bytes):
         raise ValueError("source scorer totals are inconsistent")
-    rescored = TRACE_SCORER.score_trace(
-        trace, server_log, max_bytes=summary.get("max_trace_bytes", 0),
-        expected_layers=set(layers), expected_chunks=chunks,
-    )
-    if rescored != trace_score:
-        raise ValueError("fixed scorer does not reproduce the qualified trace result")
+    with tempfile.TemporaryDirectory(prefix="glm52-trace-score.") as snapshot_directory:
+        score_root = Path(snapshot_directory)
+        score_trace = score_root / "trace"
+        score_trace.mkdir()
+        for path in observed_paths:
+            item = artifacts[path.name]
+            payload = _read_regular_snapshot(path)
+            if len(payload) != item["bytes"] or _sha256_bytes(payload) != item["sha256"]:
+                raise ValueError("source trace artifact differs from scorer receipt")
+            (score_trace / path.name).write_bytes(payload)
+        score_log = score_root / "server.log"
+        score_log.write_bytes(controls["server_log"])
+        rescored = TRACE_SCORER.score_trace(
+            score_trace, score_log, max_bytes=summary.get("max_trace_bytes", 0),
+            expected_layers=set(layers), expected_chunks=chunks,
+        )
+        if rescored != trace_score:
+            raise ValueError("fixed scorer does not reproduce the qualified trace result")
 
-    off_arm_path = source_root / "off" / "arm.json"
-    off_result_path = source_root / "off" / "result.json"
-    on_result_path = source_root / "on" / "result.json"
-    off_server_log = source_root / "off" / "server.log"
-    off_containment_path = source_root / "off.containment.json"
-    on_containment_path = source_root / "on.containment.json"
-    off_arm = _strict_json(off_arm_path)
-    off_containment = _strict_json(off_containment_path)
-    on_containment = _strict_json(on_containment_path)
+    off_arm = _strict_json_bytes(controls["off_arm"], str(control_paths["off_arm"]))
+    off_containment = _strict_json_bytes(
+        controls["off_containment"], str(control_paths["off_containment"]),
+    )
+    on_containment = _strict_json_bytes(
+        controls["on_containment"], str(control_paths["on_containment"]),
+    )
     path_bindings = {
-        "off_arm_sha256": _sha256(off_arm_path),
+        "off_arm_sha256": _sha256_bytes(controls["off_arm"]),
         "on_arm_sha256": bound_hashes["on_arm_sha256"],
-        "off_result_sha256": _sha256(off_result_path),
-        "on_result_sha256": _sha256(on_result_path),
-        "off_server_log_sha256": _sha256(off_server_log),
+        "off_result_sha256": _sha256_bytes(controls["off_result"]),
+        "on_result_sha256": _sha256_bytes(controls["on_result"]),
+        "off_server_log_sha256": _sha256_bytes(controls["off_server_log"]),
         "on_server_log_sha256": bound_hashes["on_server_log_sha256"],
     }
     if any(receipt.get(key) != value for key, value in path_bindings.items()):
         raise ValueError("source receipt does not bind all OFF/ON runtime artifacts")
     if (summary.get("off_arm_sha256") != path_bindings["off_arm_sha256"] or
-            summary.get("off_containment_sha256") != _sha256(off_containment_path) or
-            summary.get("on_containment_sha256") != _sha256(on_containment_path) or
+            summary.get("off_containment_sha256") != _sha256_bytes(controls["off_containment"]) or
+            summary.get("on_containment_sha256") != _sha256_bytes(controls["on_containment"]) or
             off_arm.get("result_sha256") != path_bindings["off_result_sha256"] or
             arm.get("result_sha256") != path_bindings["on_result_sha256"] or
             off_arm.get("server_log_sha256") != path_bindings["off_server_log_sha256"]):
@@ -464,12 +547,15 @@ def validate_source_bundle(
         if match is not None
     }
     for layer in layers:
-        bias_hashes = {_sha256(file_map[(layer, pos, "router_bias")]) for pos, _ in chunks}
+        bias_hashes = {
+            artifacts[file_map[(layer, pos, "router_bias")].name]["sha256"]
+            for pos, _ in chunks
+        }
         if len(bias_hashes) != 1:
             raise ValueError("router bias differs across chunks of one layer")
 
     lineage = {
-        "source_receipt_sha256": _sha256(receipt_path),
+        "source_receipt_sha256": _sha256_bytes(receipt_bytes),
         "source_summary_sha256": bound_hashes["summary_sha256"],
         "source_arm_sha256": bound_hashes["on_arm_sha256"],
         "source_server_log_sha256": bound_hashes["on_server_log_sha256"],
@@ -482,6 +568,8 @@ def validate_source_bundle(
         "configuration_sha256": arm.get("configuration_sha256"),
         "request_id": response["request_sha256"],
         "seed": summary.get("seed"),
+        "scorer_sha256": SCORER_SHA256,
+        "repository_head": repository_head,
     }
     if any(value is None for value in lineage.values()):
         raise ValueError("source lineage is incomplete")

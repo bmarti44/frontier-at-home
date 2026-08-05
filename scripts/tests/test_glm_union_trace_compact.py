@@ -279,7 +279,8 @@ class QualifiedBundleTests(unittest.TestCase):
             ):
                 validated = MODULE.validate_source_bundle(
                     source, receipt, repository_root=Path(directory),
-                    require_tracked_receipt=True, minimum_prompt_tokens=1,
+                    require_tracked_receipt=True, require_tracked_scorer=False,
+                    minimum_prompt_tokens=1,
                 )
             self.assertEqual(
                 validated["lineage"]["source_receipt_sha256"],
