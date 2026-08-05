@@ -236,8 +236,9 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn("cgroup_peak_bytes=", source)
         self.assertIn("cgroup_swap_current_bytes=", source)
         self.assertIn('KERNEL_LOG="$DIR/kernel.log"', source)
-        self.assertIn("NVRM.*Xid", source)
-        self.assertIn("FATAL kernel Xid evidence appeared during run", source)
+        for marker in ("NVRM.*Xid", "NV_ERR_NO_MEMORY", "oom-kill"):
+            self.assertIn(marker, source)
+        self.assertIn("FATAL kernel GPU/OOM evidence appeared during run", source)
 
 
 class CandidateLifecycleTests(unittest.TestCase):

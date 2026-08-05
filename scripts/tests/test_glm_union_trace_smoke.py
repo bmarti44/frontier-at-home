@@ -122,6 +122,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         ]
         off["corpus_requests"] = copy.deepcopy(requests)
         on["corpus_requests"] = copy.deepcopy(requests)
+        off["expert_cache_budget"] = on["expert_cache_budget"] = "36GB"
         score = {
             "verdict": "PASS", "events": 150, "requests": 2,
             "token_layer_events": 76800,
@@ -134,6 +135,7 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         for mutation in (
             "id", "output", "event_floor", "seed", "duplicate_fixture",
             "empty_chunks", "short_chunk", "null_chunks", "scalar_chunk",
+            "cache_budget",
         ):
             with self.subTest(mutation=mutation):
                 bad_on = copy.deepcopy(on)
@@ -155,8 +157,10 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     bad_on["corpus_requests"][1]["full_indexed_chunks"] = [[0]]
                 elif mutation == "null_chunks":
                     bad_on["corpus_requests"][1]["full_indexed_chunks"] = None
-                else:
+                elif mutation == "scalar_chunk":
                     bad_on["corpus_requests"][1]["full_indexed_chunks"] = [1]
+                else:
+                    bad_on["expert_cache_budget"] = "40GB"
                 self.assertEqual(
                     MODULE.smoke_verdict(
                         off, bad_on, bad_score,
@@ -224,6 +228,8 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
             '"minimum_token_layer_events": 76800',
         ):
             self.assertIn(marker, self.runner)
+        self.assertIn('CORPUS_CACHE_EXPERTS = "36GB"', self.runner)
+        self.assertIn("cache_experts=CORPUS_CACHE_EXPERTS", self.runner)
 
     def test_corpus_scores_exact_zero_based_main_routed_layers(self) -> None:
         self.assertIn("expected_layers=set(range(3, 78))", self.runner)
