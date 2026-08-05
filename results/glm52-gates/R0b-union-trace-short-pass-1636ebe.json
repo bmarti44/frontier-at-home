@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "1636ebeef24c711d50404c5a142fa53dfad45f78",
+  "engine_commit": "681b90f92e0399b9d4f1c8b396ba8cb0504e3fa0",
+  "review_round": 72,
+  "classification": "PASS",
+  "scope": "short_single_indexed_batch_only",
+  "high_row_2048_status": "OPEN",
+  "summary_sha256": "0ecb2f49362976b13d8b0f538ab04107aa2c772b6c78061a5395ca16ebf8d0c7",
+  "off_arm_sha256": "d905a6f790d04f0636e91f2652cd3d3db1b6e14e735ca30cd906deaeaabe9932",
+  "on_arm_sha256": "ef9da52507dcfb70cb98c77a08b6601e8cc9e425aaa1ed39663612a35d6ea28f",
+  "off_result_sha256": "6a453890c1fd6ee83feb1778a254970782c39c61f5eafdde2c824d50ea887f96",
+  "on_result_sha256": "a2f23997a3164b91962fcdab938f1107c109a886c373563e96398b0481afd955",
+  "off_server_log_sha256": "d4b28dd028beeb07dd933cfd82877518695c24595c28720e40177c4c0681e471",
+  "on_server_log_sha256": "a39f60fd3389d18c46abd96dbe3a2ee11071fde76a0368a3b8362d4494a5d372",
+  "observed": {
+    "prompt_tokens": 573,
+    "completion_tokens_per_arm": 128,
+    "full_indexed_chunks": [[0, 573]],
+    "byte_and_token_identity": true,
+    "containment_clean": true,
+    "off_trace_files": 0,
+    "on_trace_files": 5,
+    "on_trace_bytes": 15274912,
+    "captured_ffn_norm_width": 6144,
+    "trace_score_verdict": "PASS"
+  },
+  "review": {
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 100,
+    "critical": [],
+    "high": []
+  },
+  "conclusion": "The default-off production path is byte-identical to the trace-enabled path and the enabled path records a valid complete single indexed batch. This result does not qualify 2048-row or multi-chunk capture."
+}
