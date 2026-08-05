@@ -303,8 +303,11 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                 "full_indexed_chunks": [[0, row["expected_prompt_tokens"]]],
                 "completion_tokens": 8,
                 "generated_reasoning_sha256": "a" * 64,
+                "generated_reasoning_bytes": 8,
                 "generated_content_sha256": "b" * 64,
+                "generated_content_bytes": 0,
                 "token_ids": list(range(8)),
+                "sse_token_events": 8,
             }
             for row in ledger
         ]

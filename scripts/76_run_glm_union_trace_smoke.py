@@ -345,8 +345,26 @@ def quality_capture_verdict(
     )
     output_keys = (
         "completion_tokens", "generated_reasoning_sha256",
-        "generated_content_sha256", "token_ids",
+        "generated_reasoning_bytes", "generated_content_sha256",
+        "generated_content_bytes", "token_ids", "sse_token_events",
     )
+
+    def output_valid(observed: dict[str, Any]) -> bool:
+        return (
+            observed.get("completion_tokens") == QUALITY_MAX_TOKENS and
+            observed.get("sse_token_events") == QUALITY_MAX_TOKENS and
+            isinstance(observed.get("token_ids"), list) and
+            len(observed["token_ids"]) == QUALITY_MAX_TOKENS and
+            all(isinstance(token, int) and not isinstance(token, bool) and token >= 0
+                for token in observed["token_ids"]) and
+            all(isinstance(observed.get(key), str) and
+                re.fullmatch(r"[0-9a-f]{64}", observed[key]) is not None
+                for key in ("generated_reasoning_sha256", "generated_content_sha256")) and
+            all(isinstance(observed.get(key), int) and
+                not isinstance(observed[key], bool) and observed[key] >= 0
+                for key in ("generated_reasoning_bytes", "generated_content_bytes")) and
+            observed["generated_reasoning_bytes"] + observed["generated_content_bytes"] > 0
+        )
 
     def arm_matches(requests: Any) -> bool:
         if not ledger_valid or not isinstance(requests, list) or len(requests) != len(ledger):
@@ -364,7 +382,8 @@ def quality_capture_verdict(
     on_matches = arm_matches(on_requests)
     outputs_match = (
         off_matches and on_matches and
-        all(all(left.get(key) == right.get(key) for key in output_keys)
+        all(output_valid(left) and output_valid(right) and
+            all(left.get(key) == right.get(key) for key in output_keys)
             for left, right in zip(off_requests, on_requests))
     )
     expected_events = (
@@ -388,6 +407,71 @@ def quality_capture_verdict(
         "checks": checks,
         "verdict": "PASS" if all(checks.values()) else "FAIL",
     }
+
+
+def quality_arm_identity_checks(
+    off: dict[str, Any], on: dict[str, Any], trace_score: dict[str, Any],
+    expected: dict[str, str],
+) -> dict[str, bool]:
+    """Bind distinct quality arms to the frozen identity and scored trace."""
+    common = (
+        "binary_sha256", "model_sha256", "tokenizer_sha256", "fixture_sha256",
+        "split_plan_sha256", "configuration_sha256",
+    )
+    return {
+        "distinct_arm_modes": off.get("mode") == "off" and on.get("mode") == "on",
+        "frozen_arm_identity": all(
+            off.get(key) == expected.get(key) and on.get(key) == expected.get(key)
+            for key in common
+        ),
+        "mode_environment_identity": (
+            off.get("environment_sha256") == expected.get("off_environment_sha256") and
+            on.get("environment_sha256") == expected.get("on_environment_sha256")
+        ),
+        "off_trace_absent": off.get("trace_files") == 0 and off.get("trace_bytes") == 0,
+        "on_trace_matches_scorer": (
+            trace_score.get("verdict") == "PASS" and
+            isinstance(trace_score.get("artifacts"), list) and
+            len(trace_score["artifacts"]) > 0 and
+            on.get("trace_files") == len(trace_score["artifacts"]) and
+            on.get("trace_bytes") == trace_score.get("total_bytes")
+        ),
+    }
+
+
+FINAL_ARTIFACT_RE = re.compile(
+    r"final_artifact_verified path=(\S+) sha256=([0-9a-f]{64}) "
+    r"device_inode=([0-9]+):([0-9]+):([0-9]+)"
+)
+
+
+def verify_final_artifact_receipts(
+    containment: dict[str, Any], expected_paths: list[Path],
+) -> None:
+    """Require current artifacts to match the wrapper's post-exit receipts."""
+    crash = Path(str(containment.get("crash_directory", ""))).resolve(strict=True)
+    main = crash / "main.log"
+    if SHARED.sha256(main) != containment.get("main_sha256"):
+        raise ValueError("containment main log changed after verification")
+    receipts: dict[str, tuple[str, int, int, int]] = {}
+    for match in FINAL_ARTIFACT_RE.finditer(main.read_text(encoding="utf-8", errors="strict")):
+        path = str(Path(match.group(1)).resolve())
+        if path in receipts:
+            raise ValueError("duplicate final artifact receipt")
+        receipts[path] = (
+            match.group(2), int(match.group(3)), int(match.group(4)), int(match.group(5)),
+        )
+    expected = {str(path.resolve()) for path in expected_paths}
+    if set(receipts) != expected:
+        raise ValueError("final artifact receipt set differs")
+    for text_path, (digest, device, inode, size) in receipts.items():
+        path = Path(text_path)
+        if not path.is_file() or path.is_symlink():
+            raise ValueError("final artifact is absent or unsafe")
+        stat = path.stat()
+        if ((stat.st_dev, stat.st_ino, stat.st_size) != (device, inode, size) or
+                SHARED.sha256(path) != digest):
+            raise ValueError("final artifact differs from containment receipt")
 
 
 def randomness_is_after_freeze(round_number: int, freeze_commit_time: int) -> bool:
@@ -657,7 +741,19 @@ def _run_quality_requests(
         content = stream.get("generated_content")
         if not all(isinstance(value, str) for value in (generated, reasoning, content)):
             raise ValueError("quality response text schema is invalid")
-        generated_ids = tokenizer.encode(generated, add_special_tokens=False).ids
+        raw_timing = BENCH_CLIENT.read_token_timing(
+            server_log, log_start, expected_request=stream["response_id"],
+            expected_count=QUALITY_MAX_TOKENS,
+        )
+        output_errors = BENCH_CLIENT.observable_output_errors(
+            usage["completion_tokens"], len(stream["token_timestamps_ns"]),
+            QUALITY_MAX_TOKENS,
+        )
+        output_errors.extend(BENCH_CLIENT.raw_visible_output_errors(
+            tokenizer, raw_timing["token_ids"], reasoning, content,
+        ))
+        if output_errors:
+            raise ValueError(f"quality output is not independently observable: {output_errors}")
         records.append({
             "case_id": expected["case_id"],
             "group_id": expected["group_id"],
@@ -668,8 +764,11 @@ def _run_quality_requests(
             "full_indexed_chunks": full_indexed_chunks_text(request_log),
             "completion_tokens": usage["completion_tokens"],
             "generated_reasoning_sha256": hashlib.sha256(reasoning.encode()).hexdigest(),
+            "generated_reasoning_bytes": len(reasoning.encode()),
             "generated_content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-            "token_ids": generated_ids,
+            "generated_content_bytes": len(content.encode()),
+            "token_ids": raw_timing["token_ids"],
+            "sse_token_events": len(stream["token_timestamps_ns"]),
         })
     response_path = out / "responses.json"
     response_path.write_text(
@@ -895,6 +994,7 @@ def run(args: argparse.Namespace) -> int:
     root.mkdir(mode=0o700, parents=True)
 
     containment: dict[str, dict[str, Any]] = {}
+    final_artifacts_by_mode: dict[str, list[Path]] = {}
     for index, mode in enumerate(("off", "on")):
         out = root / mode
         values = trace_environment(
@@ -915,6 +1015,7 @@ def run(args: argparse.Namespace) -> int:
         else:
             final_artifacts.append(str(out / "result.json"))
         final_artifacts.append(str(out / "server.log"))
+        final_artifacts_by_mode[mode] = [Path(path) for path in final_artifacts]
         environment.update({
             "GLM_CANDIDATE_SRC": str(candidate),
             "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
@@ -951,6 +1052,7 @@ def run(args: argparse.Namespace) -> int:
             raise RuntimeError(f"contained {mode} arm failed rc={completed.returncode}")
         record = SHARED.containment_record(root / f"{mode}.containment.stdout.log")
         containment[mode] = {"clean": True, **record}
+        verify_final_artifact_receipts(containment[mode], final_artifacts_by_mode[mode])
         (root / f"{mode}.containment.json").write_text(
             json.dumps(containment[mode], sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
@@ -987,6 +1089,23 @@ def run(args: argparse.Namespace) -> int:
             expected_layers=set(range(3, 78)), expected_chunks=[],
             expected_requests=expected_requests,
         )
+        expected_identity = {
+            "binary_sha256": str(freeze["binary_sha256"]),
+            "model_sha256": str(freeze["model_sha256"]),
+            "tokenizer_sha256": SHARED.TOKENIZER_SHA256,
+            "fixture_sha256": quality_ledger["fixture_content_sha256"],
+            "split_plan_sha256": quality_ledger["split_plan_sha256"],
+            "configuration_sha256": matched_configuration_sha256(quality_corpus=True),
+            "off_environment_sha256": configuration_sha256(trace_environment(
+                "off", root / "off", quality_corpus=True,
+            )),
+            "on_environment_sha256": configuration_sha256(trace_environment(
+                "on", root / "on", quality_corpus=True,
+            )),
+        }
+        arm_identity_checks = quality_arm_identity_checks(
+            off, on, trace_score, expected_identity,
+        )
     elif args.corpus_smoke:
         expected_requests = {
             int(item["request_id"]): [tuple(row) for row in item["full_indexed_chunks"]]
@@ -1015,6 +1134,13 @@ def run(args: argparse.Namespace) -> int:
             expected_corpus_seed=(int(freeze["seed"]) if args.corpus_smoke else None),
         )
     )
+    if args.quality_corpus:
+        verdict["checks"].update(arm_identity_checks)
+        verdict["verdict"] = "PASS" if all(verdict["checks"].values()) else "FAIL"
+        for mode in ("off", "on"):
+            verify_final_artifact_receipts(
+                containment[mode], final_artifacts_by_mode[mode],
+            )
     SHARED.frozen_inputs(freeze_path, randomness_path)
     if args.quality_corpus:
         qualification = {
