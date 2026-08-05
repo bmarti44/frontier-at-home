@@ -115,6 +115,8 @@ allowlist = {
     "arm_sha256",
     "off_arm_sha256",
     "on_arm_sha256",
+    "off_containment_sha256",
+    "on_containment_sha256",
     "off_result_sha256",
     "on_result_sha256",
     "off_server_log_sha256",
