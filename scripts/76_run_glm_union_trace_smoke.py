@@ -277,6 +277,30 @@ def build_quality_case_ledger(
     }
 
 
+def quality_probe_ledger(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Select the seeded first case for a safety-only fresh-server probe."""
+    cases = bundle.get("cases")
+    prompts = bundle.get("_prompts")
+    if (not isinstance(cases, list) or not cases or not isinstance(cases[0], dict) or
+            not isinstance(prompts, dict)):
+        raise ValueError("quality probe source ledger is invalid")
+    first = cases[0]
+    case_id = first.get("case_id")
+    tokens = first.get("expected_prompt_tokens")
+    if (not isinstance(case_id, str) or case_id not in prompts or
+            not isinstance(tokens, int) or isinstance(tokens, bool) or tokens <= 0):
+        raise ValueError("quality probe case is invalid")
+    return {
+        **{key: value for key, value in bundle.items()
+           if key not in {"cases", "_prompts", "total_expected_prompt_tokens",
+                          "expected_token_layer_events"}},
+        "total_expected_prompt_tokens": tokens,
+        "expected_token_layer_events": 75 * tokens,
+        "cases": [first],
+        "_prompts": {case_id: prompts[case_id]},
+    }
+
+
 def quality_window_indices(rows: list[dict[str, Any]], *, horizon: int) -> list[list[int]]:
     if not isinstance(horizon, int) or isinstance(horizon, bool) or horizon <= 0:
         raise ValueError("quality horizon must be positive")
@@ -806,6 +830,8 @@ def _arm(args: argparse.Namespace) -> int:
         build_quality_case_ledger(Path(args.candidate), seed=args.seed)
         if args.quality_corpus else None
     )
+    if ledger_bundle is not None and args.quality_probe:
+        ledger_bundle = quality_probe_ledger(ledger_bundle)
     if ledger_bundle is not None:
         ledger_path = out / "ledger.json"
         ledger_path.write_text(
@@ -957,9 +983,11 @@ def run(args: argparse.Namespace) -> int:
         raise ValueError("corpus and single-request multichunk modes are exclusive")
     if args.corpus_smoke and args.quality_corpus:
         raise ValueError("corpus modes are mutually exclusive")
+    if args.quality_probe and not args.quality_corpus:
+        raise ValueError("quality probe requires quality corpus mode")
     large_corpus = args.corpus_smoke or args.quality_corpus
     layer_count = 75 if large_corpus else 1
-    request_count = QUALITY_REQUEST_COUNT if args.quality_corpus else 2 if args.corpus_smoke else 1
+    request_count = 1 if args.quality_probe else QUALITY_REQUEST_COUNT if args.quality_corpus else 2 if args.corpus_smoke else 1
     per_request_tokens = (
         QUALITY_DISK_MAX_TOKENS if args.quality_corpus else args.context_level + 1024
     )
@@ -977,6 +1005,8 @@ def run(args: argparse.Namespace) -> int:
         build_quality_case_ledger(candidate, seed=int(freeze["seed"]))
         if args.quality_corpus else None
     )
+    if quality_ledger is not None and args.quality_probe:
+        quality_ledger = quality_probe_ledger(quality_ledger)
     SHARED.no_other_inference()
     available_gib = int(next(
         line.split()[1] for line in Path("/proc/meminfo").read_text().splitlines()
@@ -1042,6 +1072,7 @@ def run(args: argparse.Namespace) -> int:
             *(["--require-multichunk"] if args.require_multichunk else []),
             *(["--corpus-smoke"] if args.corpus_smoke else []),
             *(["--quality-corpus"] if args.quality_corpus else []),
+            *(["--quality-probe"] if args.quality_probe else []),
         ], env=environment, stdin=subprocess.DEVNULL, capture_output=True,
            timeout=7300 if args.quality_corpus else 3700, check=False)
         (root / f"{mode}.containment.stdout.log").write_bytes(completed.stdout)
@@ -1140,7 +1171,16 @@ def run(args: argparse.Namespace) -> int:
                 containment[mode], final_artifacts_by_mode[mode],
             )
     SHARED.frozen_inputs(freeze_path, randomness_path)
-    if args.quality_corpus:
+    if args.quality_probe:
+        qualification = {
+            "scope": "quality_one_case_safety_probe",
+            "quality_cases": 1,
+            "expected_prompt_tokens": quality_ledger["total_expected_prompt_tokens"],
+            "expected_token_layer_events": quality_ledger["expected_token_layer_events"],
+            "fixture_content_sha256": quality_ledger["fixture_content_sha256"],
+            "split_plan_sha256": quality_ledger["split_plan_sha256"],
+        }
+    elif args.quality_corpus:
         qualification = {
             "scope": "quality_100_case_all_routed_layer_corpus",
             "quality_cases": QUALITY_REQUEST_COUNT,
@@ -1201,6 +1241,7 @@ def parser() -> argparse.ArgumentParser:
     public.add_argument("--require-multichunk", action="store_true")
     public.add_argument("--corpus-smoke", action="store_true")
     public.add_argument("--quality-corpus", action="store_true")
+    public.add_argument("--quality-probe", action="store_true")
     public.set_defaults(func=run)
     internal = sub.add_parser("_arm")
     internal.add_argument("--mode", choices=("off", "on"), required=True)
@@ -1216,6 +1257,7 @@ def parser() -> argparse.ArgumentParser:
     internal.add_argument("--require-multichunk", action="store_true")
     internal.add_argument("--corpus-smoke", action="store_true")
     internal.add_argument("--quality-corpus", action="store_true")
+    internal.add_argument("--quality-probe", action="store_true")
     internal.set_defaults(func=_arm)
     return root
 
