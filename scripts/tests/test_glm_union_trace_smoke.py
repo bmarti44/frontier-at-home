@@ -103,6 +103,7 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         for marker in (
             "MAX_TRACE_BYTES", "TRACE_DISK_RESERVE_BYTES", "shutil.disk_usage",
             "DS4_METAL_GRAPH_DUMP_LAYER", '"4"',
+            "(6144 + 256 + 256 + 8 + 256) * 4",
         ):
             self.assertIn(marker, self.runner)
 

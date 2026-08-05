@@ -18,12 +18,15 @@ assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
-N_EMBD = 7168
+N_EMBD = 6144
 N_EXPERT = 256
 N_USED = 8
 
 
 class UnionTraceScoreTests(unittest.TestCase):
+    def test_scorer_uses_glm52_not_deepseek_pro_hidden_width(self) -> None:
+        self.assertEqual(MODULE.N_EMBD, 6144)
+
     def make_attempt(self, root: Path, *, rows: int = 2) -> tuple[Path, Path]:
         trace = root / "trace"
         trace.mkdir()
