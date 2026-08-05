@@ -10,6 +10,8 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
+import tempfile
 from typing import Any
 
 import numpy as np
@@ -32,6 +34,27 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _strict_json(path: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"JSON input is not a regular file: {path}")
+
+    def pairs(values):
+        result = {}
+        for key, value in values:
+            if key in result:
+                raise ValueError(f"duplicate JSON key: {key}")
+            result[key] = value
+        return result
+
+    value = json.loads(
+        path.read_text(encoding="utf-8"), object_pairs_hook=pairs,
+        parse_constant=lambda token: (_ for _ in ()).throw(ValueError(token)),
+    )
+    if not isinstance(value, dict):
+        raise ValueError("JSON document must be an object")
+    return value
 
 
 def unpack_hidden_int4(packed: np.ndarray, scale: np.ndarray, width: int) -> np.ndarray:
@@ -76,7 +99,9 @@ def compact_arrays(
     hidden_group_size: int = HIDDEN_GROUP_SIZE,
 ) -> tuple[dict[str, np.ndarray], dict[str, int | float]]:
     """Return compact arrays and measured representation error."""
-    arrays = (hidden, logits, bias, selected) + (() if router_probs is None else (router_probs,))
+    if router_probs is None:
+        raise ValueError("captured router probabilities are mandatory")
+    arrays = (hidden, logits, bias, selected, router_probs)
     if any(not isinstance(value, np.ndarray) for value in arrays):
         raise ValueError("all inputs must be numpy arrays")
     if (hidden.ndim != 2 or logits.ndim != 2 or bias.ndim != 1 or selected.ndim != 2 or
@@ -84,15 +109,15 @@ def compact_arrays(
             bias.shape[0] != logits.shape[1] or selected.shape[0] != hidden.shape[0] or
             not 1 <= top_k <= logits.shape[1] or selected.shape[1] > top_k):
         raise ValueError("trace array shapes are inconsistent")
-    if router_probs is not None and router_probs.shape != logits.shape:
+    if router_probs.shape != logits.shape:
         raise ValueError("captured router probability shape is inconsistent")
     if (not np.issubdtype(hidden.dtype, np.floating) or
             not np.issubdtype(logits.dtype, np.floating) or
             not np.issubdtype(bias.dtype, np.floating) or
             not np.issubdtype(selected.dtype, np.integer) or
-            (router_probs is not None and not np.issubdtype(router_probs.dtype, np.floating))):
+            not np.issubdtype(router_probs.dtype, np.floating)):
         raise ValueError("trace array dtypes are invalid")
-    finite_arrays = (hidden, logits, bias) + (() if router_probs is None else (router_probs,))
+    finite_arrays = (hidden, logits, bias, router_probs)
     if not all(np.isfinite(value).all() for value in finite_arrays):
         raise ValueError("trace contains non-finite values")
     n_expert = logits.shape[1]
@@ -108,13 +133,11 @@ def compact_arrays(
     probabilities[positive] = 1.0 / (1.0 + np.exp(-logits32[positive]))
     exponent = np.exp(logits32[~positive])
     probabilities[~positive] = exponent / (1.0 + exponent)
-    probability_delta = 0.0
-    if router_probs is not None:
-        captured_probs = router_probs.astype(np.float32, copy=False)
-        probability_delta = float(np.max(np.abs(probabilities - captured_probs)))
-        if probability_delta > 1e-4 or np.any(captured_probs < 0.0) or np.any(captured_probs > 1.0):
-            raise ValueError("captured router probabilities do not match logits")
-        probabilities = captured_probs
+    captured_probs = router_probs.astype(np.float32, copy=False)
+    probability_delta = float(np.max(np.abs(probabilities - captured_probs)))
+    if probability_delta > 1e-4 or np.any(captured_probs < 0.0) or np.any(captured_probs > 1.0):
+        raise ValueError("captured router probabilities do not match logits")
+    probabilities = captured_probs
     effective_scores = np.add(probabilities, bias32[None, :], dtype=np.float32)
     top_ids = np.argsort(-effective_scores, axis=1, kind="stable")[:, :top_k]
     expected_selected = top_ids[:, :selected.shape[1]]
@@ -151,41 +174,198 @@ def compact_arrays(
     }, metrics
 
 
-def _parse_chunk(value: str) -> tuple[int, int]:
-    try:
-        pos, rows = (int(item) for item in value.split(":", 1))
-    except (ValueError, TypeError) as error:
-        raise argparse.ArgumentTypeError("chunk must be POS:ROWS") from error
-    if pos < 0 or rows <= 0:
-        raise argparse.ArgumentTypeError("chunk values are out of range")
-    return pos, rows
+def _valid_chunks(value: Any) -> list[tuple[int, int]]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("qualified source has no chunks")
+    result: list[tuple[int, int]] = []
+    previous_end = 0
+    for item in value:
+        if (not isinstance(item, list) or len(item) != 2 or
+                any(not isinstance(number, int) or isinstance(number, bool) for number in item)):
+            raise ValueError("qualified source chunk schema is invalid")
+        pos, rows = item
+        if pos != previous_end or rows <= 0:
+            raise ValueError("qualified source chunks are not ordered and contiguous")
+        result.append((pos, rows))
+        previous_end = pos + rows
+    return result
 
 
-def _atomic_npz(path: Path, arrays: dict[str, np.ndarray]) -> None:
-    if path.exists():
-        raise FileExistsError(path)
-    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+def validate_source_bundle(source_root: Path, receipt_path: Path) -> dict[str, Any]:
+    """Validate and bind one already-qualified capture bundle."""
+    if source_root.is_symlink() or receipt_path.is_symlink():
+        raise ValueError("qualified source paths may not be symlinks")
+    source_root = source_root.resolve(strict=True)
+    receipt_path = receipt_path.resolve(strict=True)
+    summary_path = source_root / "summary.json"
+    arm_path = source_root / "on" / "arm.json"
+    server_log = source_root / "on" / "server.log"
+    trace = source_root / "on" / "trace"
+    if not trace.is_dir() or trace.is_symlink() or server_log.is_symlink() or not server_log.is_file():
+        raise ValueError("qualified source layout is invalid")
+    receipt = _strict_json(receipt_path)
+    summary = _strict_json(summary_path)
+    arm = _strict_json(arm_path)
+    if (receipt.get("classification") != "PASS" or summary.get("verdict") != "PASS" or
+            arm.get("mode") != "on"):
+        raise ValueError("source bundle is not qualified")
+    bound_hashes = {
+        "summary_sha256": _sha256(summary_path),
+        "on_arm_sha256": _sha256(arm_path),
+        "on_server_log_sha256": _sha256(server_log),
+    }
+    if any(receipt.get(key) != value for key, value in bound_hashes.items()):
+        raise ValueError("source receipt hashes do not match the capture")
+    if summary.get("on_arm_sha256") != bound_hashes["on_arm_sha256"]:
+        raise ValueError("source summary does not bind the ON arm")
+    if receipt.get("candidate_hash") != summary.get("candidate_hash"):
+        raise ValueError("source candidate lineage differs")
+    for key in ("binary_sha256", "model_sha256", "tokenizer_sha256"):
+        if summary.get(key) != arm.get(key):
+            raise ValueError(f"source {key} lineage differs")
+
+    chunks = _valid_chunks(arm.get("full_indexed_chunks"))
+    if (arm.get("prompt_tokens") != sum(rows for _, rows in chunks) or
+            receipt.get("observed", {}).get("full_indexed_chunks") != arm.get("full_indexed_chunks")):
+        raise ValueError("source chunk coverage differs from the qualified receipt")
+    trace_score = summary.get("trace_score")
+    if (not isinstance(trace_score, dict) or trace_score.get("verdict") != "PASS" or
+            not isinstance(trace_score.get("checks"), dict) or
+            not trace_score["checks"] or not all(value is True for value in trace_score["checks"].values())):
+        raise ValueError("source fixed-scorer verdict is not PASS")
+    artifact_rows = trace_score.get("artifacts")
+    if not isinstance(artifact_rows, list) or not artifact_rows:
+        raise ValueError("source scorer has no artifacts")
+    artifacts: dict[str, dict[str, Any]] = {}
+    keys: set[tuple[int, int, str]] = set()
+    prefixes: set[str] = set()
+    for item in artifact_rows:
+        if (not isinstance(item, dict) or set(item) != {"name", "bytes", "sha256"} or
+                not isinstance(item["name"], str) or item["name"] in artifacts or
+                not isinstance(item["bytes"], int) or item["bytes"] < 0 or
+                not isinstance(item["sha256"], str)):
+            raise ValueError("source artifact receipt is malformed")
+        match = FILE_RE.fullmatch(item["name"])
+        if not match:
+            raise ValueError("source artifact name is unrecognized")
+        key = (int(match.group("layer")), int(match.group("pos")), match.group("kind"))
+        if key in keys:
+            raise ValueError("source artifact key is duplicated")
+        keys.add(key)
+        prefixes.add(match.group("prefix"))
+        artifacts[item["name"]] = item
+    if len(prefixes) != 1:
+        raise ValueError("source artifacts have mixed prefixes")
+    observed_paths = list(trace.iterdir())
+    if (any(path.is_symlink() or not path.is_file() for path in observed_paths) or
+            {path.name for path in observed_paths} != set(artifacts)):
+        raise ValueError("source trace file set is not exact and regular")
+    for path in observed_paths:
+        item = artifacts[path.name]
+        if path.stat().st_size != item["bytes"] or _sha256(path) != item["sha256"]:
+            raise ValueError("source trace artifact differs from scorer receipt")
+
+    layers = sorted({layer for layer, _, _ in keys})
+    wanted_kinds = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
+    expected_keys = {
+        (layer, pos, kind) for layer in layers for pos, _ in chunks for kind in wanted_kinds
+    }
+    if keys != expected_keys or any(not 4 <= layer < 79 for layer in layers):
+        raise ValueError("source layer/chunk tensor coverage is incomplete")
+    expected_events = len(layers) * len(chunks)
+    expected_rows = len(layers) * sum(rows for _, rows in chunks)
+    total_bytes = sum(item["bytes"] for item in artifacts.values())
+    if (trace_score.get("events") != expected_events or trace_score.get("total_rows") != expected_rows or
+            trace_score.get("total_bytes") != total_bytes or arm.get("trace_files") != len(artifacts) or
+            arm.get("trace_bytes") != total_bytes):
+        raise ValueError("source scorer totals are inconsistent")
+    file_map = {
+        (int(match.group("layer")), int(match.group("pos")), match.group("kind")): trace / name
+        for name in artifacts
+        for match in [FILE_RE.fullmatch(name)]
+        if match is not None
+    }
+    for layer in layers:
+        bias_hashes = {_sha256(file_map[(layer, pos, "router_bias")]) for pos, _ in chunks}
+        if len(bias_hashes) != 1:
+            raise ValueError("router bias differs across chunks of one layer")
+
+    response = arm.get("response_signature")
+    if not isinstance(response, dict) or not isinstance(response.get("request_sha256"), str):
+        raise ValueError("source request identity is missing")
+    lineage = {
+        "source_receipt_sha256": _sha256(receipt_path),
+        "source_summary_sha256": bound_hashes["summary_sha256"],
+        "source_arm_sha256": bound_hashes["on_arm_sha256"],
+        "source_server_log_sha256": bound_hashes["on_server_log_sha256"],
+        "candidate_hash": summary.get("candidate_hash"),
+        "engine_commit": summary.get("engine_commit"),
+        "binary_sha256": summary.get("binary_sha256"),
+        "model_sha256": summary.get("model_sha256"),
+        "tokenizer_sha256": summary.get("tokenizer_sha256"),
+        "fixture_sha256": arm.get("fixture_sha256"),
+        "configuration_sha256": arm.get("configuration_sha256"),
+        "request_id": response["request_sha256"],
+        "seed": summary.get("seed"),
+    }
+    if any(value is None for value in lineage.values()):
+        raise ValueError("source lineage is incomplete")
+    return {
+        "trace": trace, "layers": layers, "chunks": chunks,
+        "files": file_map, "artifacts": artifacts, "lineage": lineage,
+    }
+
+
+def publish_bundle(
+    destination: Path, arrays: dict[str, np.ndarray], manifest: dict[str, Any],
+) -> dict[str, Any]:
+    requested = destination.absolute()
+    if requested.exists() or requested.is_symlink():
+        raise FileExistsError(requested)
+    parent = requested.parent.resolve(strict=True)
+    destination = parent / requested.name
+    if not parent.is_dir():
+        raise FileExistsError(destination)
+    temporary = Path(tempfile.mkdtemp(prefix=f".{destination.name}.tmp.", dir=parent))
     try:
-        with temporary.open("xb") as handle:
+        records = temporary / "records.npz"
+        with records.open("xb") as handle:
             np.savez(handle, **arrays)
             handle.flush()
             os.fsync(handle.fileno())
-        os.link(temporary, path)
+        final_manifest = {
+            **manifest,
+            "output_file": "records.npz",
+            "output_sha256": _sha256(records),
+            "output_bytes": records.stat().st_size,
+        }
+        manifest_path = temporary / "manifest.json"
+        with manifest_path.open("x", encoding="utf-8") as handle:
+            json.dump(final_manifest, handle, sort_keys=True, indent=2, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        directory_fd = os.open(temporary, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        os.rename(temporary, destination)
+        parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
+        return final_manifest
     finally:
-        temporary.unlink(missing_ok=True)
+        if temporary.exists():
+            shutil.rmtree(temporary)
 
 
 def run(args: argparse.Namespace) -> int:
-    trace = args.trace.resolve()
-    output = args.output.resolve()
-    manifest = args.manifest.resolve()
-    if not trace.is_dir() or output.parent != manifest.parent or not output.parent.is_dir():
-        raise ValueError("trace/output paths are invalid")
-    if output.exists() or manifest.exists():
-        raise FileExistsError("compact output already exists")
-    chunks = args.chunk
-    if len(set(chunks)) != len(chunks):
-        raise ValueError("duplicate expected chunks")
+    source = validate_source_bundle(args.source_root, args.source_receipt)
+    trace = source["trace"]
+    chunks = source["chunks"]
 
     compact_parts: dict[str, list[np.ndarray]] = {
         name: [] for name in ("selected_ids", "top_ids", "top_logits", "hidden_q4", "hidden_scale")
@@ -194,16 +374,12 @@ def run(args: argparse.Namespace) -> int:
     token_positions: list[np.ndarray] = []
     metric_parts: list[dict[str, int | float]] = []
     sources: dict[str, str] = {}
-    for layer in args.layer:
+    for layer in source["layers"]:
         for pos, rows in chunks:
-            files: dict[str, Path] = {}
-            for path in trace.iterdir():
-                match = FILE_RE.fullmatch(path.name)
-                if match and int(match.group("layer")) == layer and int(match.group("pos")) == pos:
-                    files[match.group("kind")] = path
-            required = {"ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias"}
-            if set(files) < required:
-                raise ValueError(f"missing trace tensors for layer={layer} pos={pos}")
+            files = {
+                kind: source["files"][(layer, pos, kind)]
+                for kind in ("ffn_norm", "router_logits", "router_probs", "router_selected", "router_bias")
+            }
             hidden = np.fromfile(files["ffn_norm"], dtype="<f4").reshape(rows, N_EMBD)
             logits = np.fromfile(files["router_logits"], dtype="<f4").reshape(rows, N_EXPERT)
             probabilities = np.fromfile(files["router_probs"], dtype="<f4").reshape(rows, N_EXPERT)
@@ -223,7 +399,6 @@ def run(args: argparse.Namespace) -> int:
     arrays = {name: np.concatenate(parts, axis=0) for name, parts in compact_parts.items()}
     arrays["layer"] = np.concatenate(layers)
     arrays["token_position"] = np.concatenate(token_positions)
-    _atomic_npz(output, arrays)
     total_values = sum(int(part["hidden_values"]) for part in metric_parts)
     weighted_squared = sum(
         float(part["hidden_rmse"]) ** 2 * int(part["hidden_values"])
@@ -233,7 +408,7 @@ def run(args: argparse.Namespace) -> int:
         "schema_version": 1,
         "format": "glm52-union-p0-npz-v1",
         "rows": int(arrays["layer"].size),
-        "layers": args.layer,
+        "layers": source["layers"],
         "chunks": chunks,
         "top_k": TOP_K,
         "hidden_quantization": "symmetric-groupwise-int4-range-minus7-plus7-fp16-scale",
@@ -246,21 +421,19 @@ def run(args: argparse.Namespace) -> int:
             float(part["router_probability_max_abs_error"]) for part in metric_parts
         ),
         "source_sha256": dict(sorted(sources.items())),
-        "output_sha256": _sha256(output),
-        "output_bytes": output.stat().st_size,
+        "compactor_sha256": _sha256(Path(__file__).resolve()),
+        "lineage": source["lineage"],
     }
-    manifest.write_text(json.dumps(record, sort_keys=True, indent=2, allow_nan=False) + "\n")
-    print(json.dumps(record, sort_keys=True, indent=2, allow_nan=False))
+    final_manifest = publish_bundle(args.out_dir, arrays, record)
+    print(json.dumps(final_manifest, sort_keys=True, indent=2, allow_nan=False))
     return 0
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--trace", required=True, type=Path)
-    result.add_argument("--output", required=True, type=Path)
-    result.add_argument("--manifest", required=True, type=Path)
-    result.add_argument("--layer", required=True, type=int, action="append")
-    result.add_argument("--chunk", required=True, type=_parse_chunk, action="append")
+    result.add_argument("--source-root", required=True, type=Path)
+    result.add_argument("--source-receipt", required=True, type=Path)
+    result.add_argument("--out-dir", required=True, type=Path)
     return result
 
 
