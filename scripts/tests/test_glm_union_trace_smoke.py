@@ -269,6 +269,9 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
     def test_committed_randomness_postdates_committed_freeze(self) -> None:
         MODULE.validate_randomness_order()
 
+    def test_corpus_randomness_postdates_corpus_freeze(self) -> None:
+        MODULE.validate_randomness_order(MODULE.CORPUS_FREEZE, MODULE.CORPUS_RANDOMNESS)
+
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
     @classmethod
