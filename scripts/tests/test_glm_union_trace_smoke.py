@@ -131,7 +131,10 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
             expected_corpus_seed=100,
         )
         self.assertEqual(result["verdict"], "PASS")
-        for mutation in ("id", "output", "event_floor", "seed", "duplicate_fixture"):
+        for mutation in (
+            "id", "output", "event_floor", "seed", "duplicate_fixture",
+            "empty_chunks", "short_chunk", "null_chunks", "scalar_chunk",
+        ):
             with self.subTest(mutation=mutation):
                 bad_on = copy.deepcopy(on)
                 bad_score = copy.deepcopy(score)
@@ -143,9 +146,17 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
                     bad_score["token_layer_events"] = 76799
                 elif mutation == "seed":
                     bad_on["corpus_requests"][1]["seed"] = 100
-                else:
+                elif mutation == "duplicate_fixture":
                     duplicate = bad_on["corpus_requests"][0]["response_signature"]["request_sha256"]
                     bad_on["corpus_requests"][1]["response_signature"]["request_sha256"] = duplicate
+                elif mutation == "empty_chunks":
+                    bad_on["corpus_requests"][1]["full_indexed_chunks"] = []
+                elif mutation == "short_chunk":
+                    bad_on["corpus_requests"][1]["full_indexed_chunks"] = [[0]]
+                elif mutation == "null_chunks":
+                    bad_on["corpus_requests"][1]["full_indexed_chunks"] = None
+                else:
+                    bad_on["corpus_requests"][1]["full_indexed_chunks"] = [1]
                 self.assertEqual(
                     MODULE.smoke_verdict(
                         off, bad_on, bad_score,

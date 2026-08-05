@@ -283,6 +283,26 @@ class UnionTraceScoreTests(unittest.TestCase):
                 )
                 self.assertEqual(result["verdict"], "FAIL")
 
+    def test_corpus_mode_rejects_invalid_utf8_anywhere_in_log(self) -> None:
+        for position in ("before", "between", "after"):
+            with self.subTest(position=position), tempfile.TemporaryDirectory() as tmp:
+                trace, log = self.make_corpus_attempt(Path(tmp))
+                lines = log.read_bytes().splitlines(keepends=True)
+                invalid = b"corrupt:\xff\n"
+                payload = {
+                    "before": invalid + b"".join(lines),
+                    "between": lines[0] + invalid + b"".join(lines[1:]),
+                    "after": b"".join(lines) + invalid,
+                }[position]
+                log.write_bytes(payload)
+                result = MODULE.score_trace(
+                    trace, log, max_bytes=2_000_000, expected_layers={4},
+                    expected_chunks=[],
+                    expected_requests={1: [(0, 2)], 2: [(0, 2)]},
+                )
+                self.assertEqual(result["verdict"], "FAIL")
+                self.assertFalse(result["checks"]["utf8_server_log"])
+
 
 if __name__ == "__main__":
     unittest.main()
