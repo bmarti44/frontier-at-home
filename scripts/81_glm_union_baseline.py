@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import stat
 import subprocess
+import types
 import zipfile
 
 import numpy as np
@@ -24,7 +25,7 @@ N_EXPERT = 256
 N_SELECTED = 8
 FIRST_LAYER = 4
 LAST_LAYER = 77
-CAPTURE_LAYERS = 78
+CAPTURE_LAYERS = 79
 ROOT = Path(__file__).resolve().parents[1]
 PROBE_PATH = ROOT / "scripts/78_glm_union_probe.py"
 CV_PATH = ROOT / "scripts/79_glm_union_probe_cv.py"
@@ -44,16 +45,19 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _execute_module_snapshot(name: str, path: Path, payload: bytes):
+    module = types.ModuleType(name)
+    module.__file__ = str(path)
+    module.__package__ = ""
+    exec(compile(payload, str(path), "exec", dont_inherit=True), module.__dict__)
+    return module
+
+
 def _load_module(name: str, path: Path):
     payload = _snapshot_regular(path)
     if _sha256_bytes(payload) != FROZEN_MODULE_HASHES[path]:
         raise ValueError(f"frozen module differs: {path.name}")
-    specification = importlib.util.spec_from_file_location(name, path)
-    if specification is None or specification.loader is None:
-        raise RuntimeError(f"cannot load frozen module: {path}")
-    module = importlib.util.module_from_spec(specification)
-    specification.loader.exec_module(module)
-    return module
+    return _execute_module_snapshot(name, path, payload)
 
 
 def structural_baseline_rows(
@@ -337,24 +341,30 @@ def load_capture_source(directory: Path, source_position: int) -> dict[str, obje
             "sha256": _sha256_bytes(metadata_bytes),
         }
     }
-    metadata = json.loads(
-        metadata_bytes.decode("utf-8", errors="strict"),
-        parse_constant=lambda token: (_ for _ in ()).throw(ValueError(token)),
-    )
+    metadata = _strict_json(metadata_bytes, "capture source metadata")
     expected = {
         "format": "glm52-p1-baseline-source-v1",
         "source_position": source_position,
         "mtp_min_position": source_position,
+        "layers_total": CAPTURE_LAYERS,
         "layers_first": FIRST_LAYER,
         "layers_last": LAST_LAYER,
         "experts": N_EXPERT,
         "selected": N_SELECTED,
         "K": 8,
     }
-    if not isinstance(metadata, dict) or any(metadata.get(key) != value for key, value in expected.items()):
+    expected_keys = set(expected) | {
+        "prompt_tokens", "vocab", "source_ready_ms", "mtp_ms", "target_ms",
+        "cumulative_ms", "elapsed_ms", "predicted_tokens",
+    }
+    if set(metadata) != expected_keys or any(
+        metadata.get(key) != value for key, value in expected.items()
+    ):
         raise ValueError("capture metadata differs")
     if (
         not isinstance(metadata.get("prompt_tokens"), int) or metadata["prompt_tokens"] < 16 or
+        not isinstance(metadata.get("vocab"), int) or isinstance(metadata.get("vocab"), bool) or
+        metadata["vocab"] <= 0 or
         not isinstance(metadata.get("source_ready_ms"), (int, float)) or
         isinstance(metadata.get("source_ready_ms"), bool) or
         not np.isfinite(metadata["source_ready_ms"]) or metadata["source_ready_ms"] <= 0 or
@@ -363,7 +373,8 @@ def load_capture_source(directory: Path, source_position: int) -> dict[str, obje
         not np.isfinite(metadata["elapsed_ms"]) or metadata["elapsed_ms"] <= 0 or
         not isinstance(metadata.get("predicted_tokens"), list) or
         len(metadata["predicted_tokens"]) != 8 or
-        any(not isinstance(value, int) or isinstance(value, bool) or value < 0
+        any(not isinstance(value, int) or isinstance(value, bool) or
+            value < 0 or value >= metadata["vocab"]
             for value in metadata["predicted_tokens"])
     ):
         raise ValueError("capture metadata values are invalid")

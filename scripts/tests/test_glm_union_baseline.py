@@ -23,12 +23,12 @@ SPEC.loader.exec_module(MODULE)
 class CaptureBundleTests(unittest.TestCase):
     def publish(self, directory: Path, source: int = 4) -> None:
         base = directory / f"source-{source:08d}"
-        gate = np.zeros((78, 256), dtype="<f4")
-        shared = np.zeros((78, 256), dtype="<f4")
-        mtp = np.zeros((8, 78, 256), dtype="<f4")
-        gate_selected = np.full((78, 8), -1, dtype="<i4")
-        shared_selected = np.full((78, 8), -1, dtype="<i4")
-        mtp_selected = np.full((8, 78, 8), -1, dtype="<i4")
+        gate = np.zeros((79, 256), dtype="<f4")
+        shared = np.zeros((79, 256), dtype="<f4")
+        mtp = np.zeros((8, 79, 256), dtype="<f4")
+        gate_selected = np.full((79, 8), -1, dtype="<i4")
+        shared_selected = np.full((79, 8), -1, dtype="<i4")
+        mtp_selected = np.full((8, 79, 8), -1, dtype="<i4")
         for layer in range(4, 78):
             for rank, expert in enumerate(range(8)):
                 gate[layer, expert] = np.float32(20 - rank)
@@ -54,6 +54,8 @@ class CaptureBundleTests(unittest.TestCase):
             "source_position": source,
             "mtp_min_position": source,
             "prompt_tokens": 20,
+            "layers_total": 79,
+            "vocab": 1000,
             "layers_first": 4,
             "layers_last": 77,
             "experts": 256,
@@ -73,10 +75,10 @@ class CaptureBundleTests(unittest.TestCase):
             self.publish(directory)
             result = MODULE.load_capture_source(directory, 4)
             self.assertEqual(result["metadata"]["source_position"], 4)
-            self.assertEqual(result["mtp_scores"].shape, (8, 78, 256))
+            self.assertEqual(result["mtp_scores"].shape, (8, 79, 256))
 
     def test_rejects_missing_short_nan_or_top8_mismatch(self) -> None:
-        for mutation in ("missing", "short", "nan", "top8"):
+        for mutation in ("missing", "short", "extra", "nan", "top8"):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as raw:
                 directory = Path(raw)
                 self.publish(directory)
@@ -86,6 +88,9 @@ class CaptureBundleTests(unittest.TestCase):
                 elif mutation == "short":
                     path = Path(f"{base}-gate-scores.f32")
                     path.write_bytes(path.read_bytes()[:-4])
+                elif mutation == "extra":
+                    path = Path(f"{base}-gate-scores.f32")
+                    path.write_bytes(path.read_bytes() + b"\0\0\0\0")
                 elif mutation == "nan":
                     path = Path(f"{base}-shared-scores.f32")
                     values = np.frombuffer(path.read_bytes(), dtype="<f4").copy()
@@ -120,6 +125,35 @@ class CaptureBundleTests(unittest.TestCase):
             path.write_text(json.dumps(value) + "\n", encoding="utf-8")
             with self.assertRaises(ValueError):
                 MODULE.load_capture_source(directory, 4)
+
+    def test_rejects_duplicate_or_extra_metadata(self) -> None:
+        for mutation in ("duplicate", "extra"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as raw:
+                directory = Path(raw)
+                self.publish(directory)
+                path = directory / "source-00000004.json"
+                if mutation == "duplicate":
+                    payload = path.read_text(encoding="utf-8")
+                    path.write_text(
+                        payload.replace('"source_position": 4',
+                                        '"source_position": 999, "source_position": 4'),
+                        encoding="utf-8",
+                    )
+                else:
+                    value = json.loads(path.read_text(encoding="utf-8"))
+                    value["unexpected"] = True
+                    path.write_text(json.dumps(value) + "\n", encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    MODULE.load_capture_source(directory, 4)
+
+    def test_authenticated_module_executes_snapshot_not_path(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "module.py"
+            path.write_text("raise RuntimeError('path was reopened')\n", encoding="utf-8")
+            module = MODULE._execute_module_snapshot(
+                "snapshot_fixture", path, b"VALUE = 17\n",
+            )
+            self.assertEqual(module.VALUE, 17)
 
 
 class BaselineTableTests(unittest.TestCase):
