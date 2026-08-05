@@ -338,25 +338,146 @@ def _write_npz_exclusive(
 def _load_authorized_sources(
     binding: dict[str, object],
 ) -> tuple[list[dict[str, np.ndarray]], dict[int, str]]:
+    required = ("layer", "token_position", "selected_ids", "hidden_q4", "hidden_scale")
+
+    def load_archive(
+        path: Path, expected_sha256: str, expected_bytes: int, expected_names: set[str],
+    ) -> dict[str, np.ndarray]:
+        if (
+            not isinstance(expected_sha256, str) or len(expected_sha256) != 64 or
+            any(character not in "0123456789abcdef" for character in expected_sha256) or
+            not isinstance(expected_bytes, int) or isinstance(expected_bytes, bool) or
+            expected_bytes <= 0
+        ):
+            raise ValueError("authorized training archive binding is malformed")
+        flags = os.O_RDONLY | os.O_CLOEXEC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(path, flags)
+        try:
+            before = os.fstat(descriptor)
+            if not stat.S_ISREG(before.st_mode) or before.st_size != expected_bytes:
+                raise ValueError("authorized training archive size or type differs")
+            digest = hashlib.sha256()
+            remaining = before.st_size
+            while remaining:
+                block = os.read(descriptor, min(4 * 1024 * 1024, remaining))
+                if not block:
+                    raise ValueError("authorized training archive ended early")
+                digest.update(block)
+                remaining -= len(block)
+            if os.read(descriptor, 1) or digest.hexdigest() != expected_sha256:
+                raise ValueError("authorized training archive content differs")
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            with os.fdopen(os.dup(descriptor), "rb") as handle, np.load(handle, allow_pickle=False) as archive:
+                if set(archive.files) != expected_names:
+                    raise ValueError("authorized training archive array set differs")
+                loaded = {name: archive[name].copy() for name in required if name in archive.files}
+                if "request_index" in archive.files:
+                    loaded["request_index"] = archive["request_index"].copy()
+            after = os.fstat(descriptor)
+            if ((before.st_dev, before.st_ino, before.st_size) !=
+                    (after.st_dev, after.st_ino, after.st_size)):
+                raise ValueError("authorized training archive identity changed")
+        finally:
+            os.close(descriptor)
+        rows = loaded["layer"].size
+        if (
+            loaded["layer"].dtype != np.uint16 or loaded["layer"].shape != (rows,) or
+            loaded["token_position"].dtype != np.uint32 or
+            loaded["token_position"].shape != (rows,) or
+            loaded["selected_ids"].dtype != np.uint8 or
+            loaded["selected_ids"].shape != (rows, 8) or
+            loaded["hidden_q4"].dtype != np.uint8 or
+            loaded["hidden_q4"].shape != (rows, 3072) or
+            loaded["hidden_scale"].dtype != np.float16 or
+            loaded["hidden_scale"].shape != (rows, 192) or
+            ("request_index" in loaded and (
+                loaded["request_index"].dtype != np.uint16 or
+                loaded["request_index"].shape != (rows,)
+            ))
+        ):
+            raise ValueError("authorized training archive tensor schema differs")
+        return loaded
+
+    def bound_manifest(path: Path, expected_sha256: str) -> dict[str, object]:
+        flags = os.O_RDONLY | os.O_CLOEXEC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(path, flags)
+        try:
+            before = os.fstat(descriptor)
+            if not stat.S_ISREG(before.st_mode):
+                raise ValueError("authorized training manifest is not regular")
+            payload = bytearray()
+            remaining = before.st_size
+            while remaining:
+                block = os.read(descriptor, min(1024 * 1024, remaining))
+                if not block:
+                    raise ValueError("authorized training manifest ended early")
+                payload.extend(block)
+                remaining -= len(block)
+            if os.read(descriptor, 1):
+                raise ValueError("authorized training manifest grew during validation")
+            after = os.fstat(descriptor)
+            if ((before.st_dev, before.st_ino, before.st_size) !=
+                    (after.st_dev, after.st_ino, after.st_size)):
+                raise ValueError("authorized training manifest identity changed")
+        finally:
+            os.close(descriptor)
+        payload = bytes(payload)
+        if hashlib.sha256(payload).hexdigest() != expected_sha256:
+            raise ValueError("authorized training manifest content differs")
+        value = json.loads(payload.decode("utf-8", errors="strict"))
+        if not isinstance(value, dict):
+            raise ValueError("authorized training manifest is malformed")
+        return value
+
+    if not isinstance(binding, dict) or set(binding) != {"train_fit", "long_train"}:
+        raise ValueError("authorized training source binding schema differs")
+    train_binding = binding["train_fit"]
+    long_bindings = binding["long_train"]
+    if (
+        not isinstance(train_binding, dict) or
+        set(train_binding) != {"directory", "manifest_sha256", "output_sha256", "output_bytes"} or
+        not isinstance(long_bindings, list) or len(long_bindings) != 2 or
+        any(not isinstance(value, dict) or set(value) != {
+            "directory", "manifest_sha256", "output_sha256", "output_bytes",
+        } for value in long_bindings)
+    ):
+        raise ValueError("authorized training source binding is malformed")
+    if Path(str(train_binding["directory"])).resolve(strict=True) != QUALITY.resolve(strict=True):
+        raise ValueError("authorized train-fit directory differs")
+    long_by_path = {
+        Path(str(value["directory"])).resolve(strict=True): value for value in long_bindings
+    }
+    if len(long_by_path) != 2 or set(long_by_path) != {path.resolve(strict=True) for path in LONGS}:
+        raise ValueError("authorized long-training directories differ")
     sources: list[dict[str, np.ndarray]] = []
-    with np.load(QUALITY / "records.npz", allow_pickle=False) as archive:
-        sources.append({
-            name: archive[name].copy() for name in (
-                "request_index", "layer", "token_position", "selected_ids",
-                "hidden_q4", "hidden_scale",
-            )
-        })
-    metadata = json.loads((QUALITY / "manifest.json").read_text(encoding="utf-8"))[
-        "request_metadata"
-    ]
+    sources.append(load_archive(
+        QUALITY / "records.npz", str(train_binding["output_sha256"]),
+        int(train_binding["output_bytes"]),
+        {
+            "hidden_q4", "hidden_scale", "layer", "request_index", "selected_ids",
+            "token_position", "top_ids", "top_logits", "hidden_fp16_holdout_row",
+            "hidden_fp16_holdout",
+        },
+    ))
+    metadata = bound_manifest(
+        QUALITY / "manifest.json", str(train_binding["manifest_sha256"]),
+    )["request_metadata"]
     groups = {int(row["request_index"]): str(row["group_id"]) for row in metadata}
     for request_id, directory in enumerate(LONGS, 101):
-        with np.load(directory / "records.npz", allow_pickle=False) as archive:
-            source = {
-                name: archive[name].copy() for name in (
-                    "layer", "token_position", "selected_ids", "hidden_q4", "hidden_scale",
-                )
-            }
+        accepted = long_by_path[directory.resolve(strict=True)]
+        bound_manifest(directory / "manifest.json", str(accepted["manifest_sha256"]))
+        source = load_archive(
+            directory / "records.npz", str(accepted["output_sha256"]),
+            int(accepted["output_bytes"]),
+            {
+                "selected_ids", "top_ids", "top_logits", "hidden_q4", "hidden_scale",
+                "layer", "token_position",
+            },
+        )
         source["request_index"] = np.full(source["layer"].size, request_id, dtype=np.uint16)
         sources.append(source)
         groups[request_id] = "long-fixture-lineage-2ff949c"
@@ -823,6 +944,17 @@ def validate_completed_output(
     identity: dict[str, str],
 ) -> dict[str, object]:
     """Reopen the complete run and replay every reported metric from persisted evidence."""
+    trusted_sources, trusted_groups = _load_authorized_sources(source_binding)
+    if groups != trusted_groups or len(sources) != len(trusted_sources):
+        raise ValueError("completed CV source identity differs from its binding")
+    for observed, trusted in zip(sources, trusted_sources):
+        if set(observed) != set(trusted) or any(
+            value.dtype != trusted[name].dtype or value.shape != trusted[name].shape or
+            not np.array_equal(value, trusted[name])
+            for name, value in observed.items()
+        ):
+            raise ValueError("completed CV source content differs from its binding")
+    del trusted_sources
     expected_files = {"manifest.json", "runtime-start.json", "runtime-final.json", "summary.json"}
     expected_files.update(f"layer-{layer:03d}.json" for layer in LAYERS)
     expected_files.update(f"layer-{layer:03d}-events.npz" for layer in LAYERS)

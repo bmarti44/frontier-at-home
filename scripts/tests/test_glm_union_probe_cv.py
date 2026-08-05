@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import copy
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -260,6 +261,61 @@ class CVMetricTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     MODULE._write_npz_exclusive(output, arrays)
             self.assertFalse(output.exists())
+
+    def test_authorized_loader_rejects_archive_replacement_after_binding(self) -> None:
+        def arrays(quality):
+            value = {
+                "layer": np.asarray([3], dtype=np.uint16),
+                "token_position": np.asarray([0], dtype=np.uint32),
+                "selected_ids": np.arange(8, dtype=np.uint8).reshape(1, 8),
+                "hidden_q4": np.zeros((1, 3072), dtype=np.uint8),
+                "hidden_scale": np.ones((1, 192), dtype=np.float16),
+                "top_ids": np.arange(32, dtype=np.uint8).reshape(1, 32),
+                "top_logits": np.zeros((1, 32), dtype=np.float16),
+            }
+            if quality:
+                value.update({
+                    "request_index": np.asarray([1], dtype=np.uint16),
+                    "hidden_fp16_holdout_row": np.asarray([], dtype=np.uint32),
+                    "hidden_fp16_holdout": np.empty((0, 6144), dtype=np.float16),
+                })
+            return value
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            quality = root / "quality"
+            longs = [root / "long1", root / "long2"]
+            for directory in [quality, *longs]:
+                directory.mkdir()
+            (quality / "manifest.json").write_text(json.dumps({
+                "request_metadata": [{"request_index": 1, "group_id": "quality-1"}],
+            }), encoding="utf-8")
+            for directory in longs:
+                (directory / "manifest.json").write_text("{}", encoding="utf-8")
+            np.savez(quality / "records.npz", **arrays(True))
+            for directory in longs:
+                np.savez(directory / "records.npz", **arrays(False))
+
+            def binding(directory):
+                manifest = directory / "manifest.json"
+                records = directory / "records.npz"
+                return {
+                    "directory": str(directory.resolve()),
+                    "manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+                    "output_sha256": hashlib.sha256(records.read_bytes()).hexdigest(),
+                    "output_bytes": records.stat().st_size,
+                }
+
+            accepted = {"train_fit": binding(quality), "long_train": [binding(path) for path in longs]}
+            with mock.patch.object(MODULE, "QUALITY", quality), mock.patch.object(MODULE, "LONGS", longs):
+                loaded, groups = MODULE._load_authorized_sources(accepted)
+                self.assertEqual(groups[1], "quality-1")
+                self.assertEqual(len(loaded), 3)
+                changed = arrays(True)
+                changed["selected_ids"] = (changed["selected_ids"] + 1).astype(np.uint8)
+                np.savez(quality / "records.npz", **changed)
+                with self.assertRaises(ValueError):
+                    MODULE._load_authorized_sources(accepted)
 
     def test_fresh_production_execute_reopens_and_rejects_mutated_outputs(self) -> None:
         sources, groups = self.production_fixture()
