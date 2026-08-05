@@ -105,6 +105,48 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
         self.assertFalse(MODULE.randomness_is_after_freeze(1, 1595431050))
         self.assertFalse(MODULE.randomness_is_after_freeze(2, 1595431080))
 
+    def test_corpus_verdict_binds_two_requests_and_event_floor(self) -> None:
+        off, on = arm("off"), arm("on")
+        requests = [
+            {
+                "request_id": request_id,
+                "prompt_tokens": 512,
+                "full_indexed_chunks": [[0, 512]],
+                "response_signature": {
+                    "request_sha256": str(request_id) * 64,
+                    "token_ids": [request_id, 9],
+                },
+            }
+            for request_id in (1, 2)
+        ]
+        off["corpus_requests"] = copy.deepcopy(requests)
+        on["corpus_requests"] = copy.deepcopy(requests)
+        score = {
+            "verdict": "PASS", "events": 150, "requests": 2,
+            "token_layer_events": 76800,
+        }
+        result = MODULE.smoke_verdict(
+            off, on, score, {"clean": True}, {"clean": True},
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        for mutation in ("id", "output", "event_floor"):
+            with self.subTest(mutation=mutation):
+                bad_on = copy.deepcopy(on)
+                bad_score = copy.deepcopy(score)
+                if mutation == "id":
+                    bad_on["corpus_requests"][1]["request_id"] = 3
+                elif mutation == "output":
+                    bad_on["corpus_requests"][1]["response_signature"]["token_ids"] = [7]
+                else:
+                    bad_score["token_layer_events"] = 76799
+                self.assertEqual(
+                    MODULE.smoke_verdict(
+                        off, bad_on, bad_score,
+                        {"clean": True}, {"clean": True},
+                    )["verdict"],
+                    "FAIL",
+                )
+
     def test_committed_randomness_postdates_committed_freeze(self) -> None:
         MODULE.validate_randomness_order()
 
@@ -152,6 +194,16 @@ class UnionTraceSmokeSourceContractTests(unittest.TestCase):
         ):
             self.assertIn(name, self.runner)
             self.assertIn(name, self.cgroup)
+
+    def test_runner_has_bounded_two_request_corpus_mode(self) -> None:
+        for marker in (
+            'public.add_argument("--corpus-smoke", action="store_true")',
+            '"DS4_GLM_UNION_TRACE_CORPUS"',
+            '"DS4_METAL_GRAPH_DUMP_LAYER": "all"',
+            'for request_index in range(2)',
+            '"minimum_token_layer_events": 76800',
+        ):
+            self.assertIn(marker, self.runner)
 
     def test_freeze_binds_runtime_transitive_dependencies(self) -> None:
         for relative in (
