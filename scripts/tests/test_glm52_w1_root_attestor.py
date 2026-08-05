@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import inspect
 import fcntl
 import json
 import os
@@ -65,8 +66,11 @@ class RootAttestorContractTests(unittest.TestCase):
             )
             manifest = submitter._tree_manifest(source)
             digest = submitter._manifest_sha256(manifest)
-            with mock.patch.object(submitter.os, "chown") as chown:
-                receipt = submitter.publish_p1_result(
+            with (
+                mock.patch.object(submitter.os, "chown"),
+                self.assertRaisesRegex(ValueError, "reservation|completed"),
+            ):
+                submitter.publish_p1_result(
                     candidate, source.name, digest,
                     source_parent=source_parent, state_root=state_root,
                     approval_reader=lambda: ({
@@ -78,13 +82,21 @@ class RootAttestorContractTests(unittest.TestCase):
                         "approval_inode": 2,
                     }),
                 )
-            self.assertTrue(chown.called)
-            self.assertFalse(source.exists())
-            destination = Path(receipt["authoritative_root"])
-            self.assertTrue(destination.is_dir())
-            self.assertEqual(receipt["manifest_sha256"], digest)
-            self.assertEqual(destination.stat().st_mode & 0o777, 0o555)
-            self.assertEqual((destination / "summary.json").stat().st_mode & 0o777, 0o444)
+
+    def test_p1_publication_cannot_treat_rename_as_fd_revocation(self):
+        submitter = load_submitter()
+        source = inspect.getsource(submitter.publish_p1_result)
+        self.assertNotIn("os.rename(source, destination)", source)
+        self.assertIn("O_NOFOLLOW", inspect.getsource(submitter))
+
+    def test_controller_never_reopens_root_only_authoritative_result(self):
+        module_path = ROOT / "scripts" / "81_glm_union_baseline.py"
+        spec = importlib.util.spec_from_file_location("p1_controller", module_path)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        source = inspect.getsource(module._publish_root_result)
+        self.assertNotIn("_result_tree_manifest(authoritative)", source)
 
     def test_p1_result_publication_rejects_digest_race_but_preserves_attempt(self):
         submitter = load_submitter()

@@ -24,6 +24,21 @@ SPEC.loader.exec_module(MODULE)
 REAL_RESERVE_GLOBAL_AUTHORITY = MODULE._reserve_global_authority
 
 
+def runtime_binding(directory: str, exit_code: int = 0) -> dict[str, object]:
+    return {
+        "directory": directory,
+        "artifacts": {
+            name: {"bytes": 1, "sha256": f"{index:064x}"}
+            for index, name in enumerate((
+                "cmd.log", "kernel.log", "main.log", "samples.log",
+                "wrapper.stderr", "wrapper.stdout",
+            ), start=20)
+        },
+        "wrapper_exit_code": exit_code,
+        "launch_environment_sha256": "9" * 64,
+    }
+
+
 def executed_failure_fixture() -> dict[str, object]:
     records = []
     for index, stage in enumerate(MODULE.FAILURE_INJECTION_STAGES, start=1):
@@ -43,6 +58,9 @@ def executed_failure_fixture() -> dict[str, object]:
                 "sha256": f"{index + 10:064x}",
                 "bytes": 128 + index,
             },
+            "post_control_log": runtime_binding(
+                f"runtime-logs/p1-post-fault-{stage}-r001-{1000 + index}",
+            ),
         })
     return {
         "schema_version": 1,
@@ -1205,6 +1223,9 @@ class BaselineTableTests(unittest.TestCase):
                     "sha256": f"{index + 10:064x}",
                     "bytes": 128 + index,
                 },
+                "post_control_log": runtime_binding(
+                    f"runtime-logs/p1-post-fault-{stage}-r001-{1000 + index}",
+                ),
             })
         MODULE.validate_failure_injection_evidence({
             "schema_version": 1,
