@@ -111,6 +111,7 @@ allowlist = {
     "manifest_sha256",
     "stage_receipt_sha256",
     "all_arm_tsv_sha256",
+    "arm_sha256",
     "nll_sha256",
     "summary_sha256",
     "generated_content_sha256",
