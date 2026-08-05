@@ -617,6 +617,17 @@ transcripts, reject duplicate/cross-split content hashes, and commit immutable
 fixture-grouped train/calibration/test assignments. This remaining diversity
 work may add examples but must not weaken or replace the qualified >=1M source.
 
+The immutable quality split is now preregistered in
+`R0b-union-p0-split-plan.json`. It reuses the committed drand-round-6329090
+five-block ordering rather than reshuffling after observing routing data:
+blocks 00-02 are train (60 cases), block 03 is calibration (20), and block 04
+is untouched test (20). The two qualified long requests stay together in train
+because they share one fixture lineage. The first five test cases in that
+frozen order retain raw float32 hidden tensors and an FP16 view alongside int4,
+so P1 can measure feature-quantization loss separately from predictor failure.
+The split file hash-binds every block manifest and preregisters identity,
+content-disjointness, trace completeness, and safety checks for capture.
+
 #### P1 - direct-union probe and decisive baselines
 
 Train per-layer rank 8, 16, and 32 heads in the style of
