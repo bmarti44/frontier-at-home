@@ -59,6 +59,19 @@ class CompactArrayTests(unittest.TestCase):
         self.assertAlmostEqual(metrics["hidden_max_abs_error"], float(error.max()), places=6)
         self.assertGreaterEqual(metrics["hidden_nrmse"], 0.0)
 
+    def test_captured_probabilities_preserve_fp32_tie_order(self) -> None:
+        hidden = np.array([[0.0, 1.0]], dtype=np.float32)
+        logits = np.zeros((1, 4), dtype=np.float32)
+        bias = np.zeros(4, dtype=np.float32)
+        probabilities = np.full((1, 4), 0.5, dtype=np.float32)
+        probabilities[0, 1] = np.nextafter(np.float32(0.5), np.float32(1.0))
+        selected = np.array([[1, 0]], dtype=np.int32)
+        compact, _ = MODULE.compact_arrays(
+            hidden, logits, bias, selected, top_k=2,
+            router_probs=probabilities,
+        )
+        np.testing.assert_array_equal(compact["top_ids"], [[1, 0]])
+
     def test_rejects_nonfinite_and_malformed_inputs(self) -> None:
         hidden, logits, bias, selected = self.fixture()
         for mutation in ("nan", "rows", "selected", "top_k"):
