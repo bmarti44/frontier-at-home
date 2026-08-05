@@ -56,9 +56,33 @@
         "samples.log": 172,
         "kernel.log": 17
       }
+    },
+    {
+      "attempt": 3,
+      "tag": "baseline-schema-c3-bed0754-a3",
+      "configuration": {
+        "context_tokens": 512,
+        "streaming_cache_budget": "6GB",
+        "cli_argument": "--mtp without its required support-file operand",
+        "safe_min_start_gib": 110,
+        "safe_kill_floor_gib": 18,
+        "safe_timeout_seconds": 2400
+      },
+      "observed_failure": "CLI exited during argument parsing because --mtp requires a support-file operand; the wrapper then failed closed on the sub-sampler process-group race before safety sampling began.",
+      "exit_code": 1,
+      "killed": false,
+      "gpu_or_kernel_fault": false,
+      "artifacts": {
+        "main.log": "b1beac8f9af811043d562ba650755fbf74ba504dc7e1cd170965dcdd917a42f8",
+        "cmd.log": "88ea36086569de113c42630345ffd2ac73c6dba47a9fa6948e5c86204f49b37f"
+      },
+      "artifact_bytes": {
+        "main.log": 1033,
+        "cmd.log": 5039
+      }
     }
   ],
-  "bounded_fix": "Keep the corrected 6GB cache budget and add only the CLI --mtp flag required by the capture precondition. No source, scorer, test, prompt, or held-out input changes.",
+  "bounded_fix": "Keep the corrected 6GB cache budget and replace the mistaken --mtp option with --glm-mtp, the integrated GLM nextn-head flag required by the capture precondition. No source, scorer, test, prompt, or held-out input changes.",
   "acceptance_test": "The contained non-held-out engine must publish eight complete 79-layer capture bundles; the fixed scorer must accept every bundle and reject truncated and extra-layer mutations; wrapper and fault logs must be clean.",
   "verdict": "NO_RESULT"
 }
