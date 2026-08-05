@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_NON_HELDOUT_RUNTIME_ATTEMPT",
+  "gate": "R0c/P1 candidate-8 authenticated-runtime and exact-token smoke",
+  "held_out_values_opened": false,
+  "runtime_directory": "/home/bmarti44/.local/state/glm52-c8-named-smoke.krfzol8f",
+  "containment_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260805-131526-p1-c8-named-runtime-final",
+  "observed": {
+    "wrapper_exit_code": 0,
+    "engine_capture_files": 72,
+    "surviving_engine_process": false,
+    "held_out_ledger_created": false,
+    "process_name": "ds4-server",
+    "frozen_tokenizer_prompt_tokens": 59,
+    "engine_prompt_tokens": 78,
+    "exact_prompt_tokens_match_all_sources": false
+  },
+  "artifacts": {
+    "main_log_sha256": "cf8f9695d330ab6ebe2efde278239823b82a0177166fbfbe3d6556c3f6b96b22",
+    "command_log_sha256": "b47596379647ecbbae0f0c33f9f61cc37c3c451563ca7d38e8c5f6d46155ac57",
+    "samples_log_sha256": "02337e702cfebb46ac5504e614068e2e379575b83776e36b49ec784810106ba3",
+    "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  },
+  "diagnosis": "The controller wrote a fully rendered special-token string and also selected --raw-prompt. The engine therefore tokenized the special-token spellings as ordinary text. The earlier canonical non-held-out smoke proved that a natural prompt with normal GLM templating produces the exact frozen 59-token lineage.",
+  "bounded_fix": "Write the natural fixture prompt to the private prompt file and remove only --raw-prompt from the engine invocation; retain the independent expected rendered-token comparison.",
+  "verdict": "NO_RESULT_REQUIRES_NORMAL_GLM_PROMPT_TEMPLATE"
+}
