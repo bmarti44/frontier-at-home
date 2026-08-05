@@ -1419,7 +1419,8 @@ def publish_bundle(
                 for name, expected in arrays.items():
                     observed = loaded[name]
                     if (
-                        observed.dtype != expected.dtype or observed.shape != expected.shape or
+                        observed.dtype.str != array_schema[name]["dtype"] or
+                        list(observed.shape) != array_schema[name]["shape"] or
                         not np.array_equal(observed, expected) or
                         _sha256_bytes(np.ascontiguousarray(observed).tobytes()) !=
                         array_schema[name]["sha256"]
