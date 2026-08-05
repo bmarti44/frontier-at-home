@@ -4,6 +4,20 @@ set -Eeuo pipefail
 umask 077
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
+die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
+
+(( EUID == 0 )) || die "must run as root"
+reviewed_installer_sha=${GLM52_REVIEWED_INSTALLER_SHA256-}
+[[ $reviewed_installer_sha =~ ^[0-9a-f]{64}$ ]] ||
+    die "installer must be executed from a reviewed root-owned staged copy"
+[[ $(/usr/bin/stat -c '%u:%g:%a:%F' -- "$0") == \
+    "0:0:500:regular file" ]] ||
+    die "installer must be executed from a reviewed root-owned staged copy"
+actual_installer_sha=$(/usr/bin/sha256sum -- "$0")
+[[ ${actual_installer_sha%% *} == "$reviewed_installer_sha" ]] ||
+    die "reviewed staged installer digest differs"
+unset GLM52_REVIEWED_INSTALLER_SHA256 reviewed_installer_sha actual_installer_sha
+
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly SOURCE=scripts/65_glm52_w1_submit.py
 readonly SUBMITTER=/usr/local/sbin/glm52-w1-submit
@@ -28,7 +42,6 @@ readonly CONTAINED_RUNTIME_FILES=(
     "$HARNESS/scripts/03_memory_guard.py"
 )
 
-die() { printf '66_install_glm52_w1_attestor.sh: %s\n' "$*" >&2; exit 1; }
 git_as_user() {
     /usr/sbin/runuser -u bmarti44 -- /usr/bin/env -i \
         HOME=/nonexistent PATH=/usr/bin:/bin LANG=C.UTF-8 \
@@ -36,7 +49,6 @@ git_as_user() {
         /usr/bin/git -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"
 }
 
-(( EUID == 0 )) || die "must run as root"
 [[ $# == 1 ]] || die "usage: $0 CANDIDATE_HASH"
 CANDIDATE_HASH=$1
 [[ $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ ]] || die "invalid candidate hash"

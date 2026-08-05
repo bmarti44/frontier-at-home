@@ -1225,11 +1225,13 @@ def _root_p1_authority() -> dict[str, object]:
 
 
 def _reserve_root_tombstone(
-    _preflight: dict[str, object],
+    preflight: dict[str, object],
     fields: dict[str, str],
 ) -> dict[str, object]:
     authority = _root_p1_authority()
     candidate = str(authority["candidate_hash"])
+    if preflight.get("harness_commit") != candidate:
+        raise RuntimeError("executing harness commit differs from root-approved candidate")
     reservation_payload = json.dumps({
         "schema_version": 1,
         "classification": "GLM52_P1_PERMANENT_RESERVATION_REQUEST",
