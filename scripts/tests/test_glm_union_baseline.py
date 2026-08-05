@@ -1050,6 +1050,40 @@ class BaselineTableTests(unittest.TestCase):
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 MODULE.validate_two_control_record(changed)
 
+    def test_two_control_sequence_brackets_diagnostic_in_distinct_processes(self) -> None:
+        calls = []
+        continuation = "2" * 64
+        tokens = "3" * 64
+
+        def run_arm(name):
+            calls.append(name)
+            if name == "diagnostic":
+                return {
+                    "fresh_process": True,
+                    "resident_arena_bytes": 0,
+                    "cache_namespace": "diagnostic-1",
+                    "exit_code": 0,
+                }
+            return {
+                "fresh_process": True,
+                "cache_namespace": f"{name}-1",
+                "continuation_sha256": continuation,
+                "token_ids_sha256": tokens,
+                "exit_code": 0,
+            }
+
+        failure = {
+            "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
+            "all_destroyed": True,
+            "all_control_continuations_equal": True,
+        }
+        record = MODULE.run_two_control_sequence(
+            1, "1" * 64, run_arm, failure,
+        )
+        self.assertEqual(calls, ["control_before", "diagnostic", "control_after"])
+        self.assertEqual(record["failure_injection"], failure)
+        MODULE.validate_two_control_record(record)
+
     def test_cost_table_requires_five_matched_cold_warm_blocks_and_fails_closed(self) -> None:
         rows = []
         for block in range(5):
