@@ -584,6 +584,31 @@ class AtomicLifecycleTests(unittest.TestCase):
             self.assertEqual(attempt["failure_type"], "RuntimeError")
             self.assertFalse((output / "summary.json").exists())
 
+    def test_post_publish_validation_failure_reopens_terminal_state_as_failed(self):
+        with tempfile.TemporaryDirectory() as raw:
+            output = Path(raw) / "invalid-complete"
+            calls = 0
+
+            def validate(_root, result):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise ValueError("injected strict-reopen mismatch")
+                return result
+
+            with self.assertRaisesRegex(ValueError, "strict-reopen mismatch"):
+                MODULE._run_atomic_lifecycle(
+                    output,
+                    lambda: {"candidate": "bound"},
+                    lambda _staging: {"opened": True},
+                    lambda _opened, _staging: {"captured": True},
+                    lambda _opened, _captured, _staging: {"verdict": "PASS"},
+                    validate_complete=validate,
+                )
+            attempt = json.loads((output / "attempt.json").read_text(encoding="utf-8"))
+            self.assertEqual(attempt["status"], "FAILED")
+            self.assertEqual(attempt["failure_phase"], "post_publish_validation")
+
     def test_authorized_gate_wires_real_phases_through_atomic_lifecycle(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             output = Path(raw) / "authorized"
@@ -1199,6 +1224,9 @@ class BaselineTableTests(unittest.TestCase):
                 "schema_version": 1, "rows": cost_rows,
             }) + "\n", encoding="utf-8")
             summary["cost"] = MODULE.score_cost_table(cost_rows)
+            summary["decision"].update(MODULE.decide_mtp_fold(
+                summary, summary["cost"],
+            ))
             failure = {
                 "stages": ["mtp_call", "target_eval", "route_capture", "disposal"],
                 "all_destroyed": True,
