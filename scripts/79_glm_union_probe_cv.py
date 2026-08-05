@@ -7,6 +7,7 @@ import argparse
 import gc
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -284,7 +285,6 @@ def _read_bound_npz(
             raise ValueError("event evidence archive identity changed")
     finally:
         os.close(descriptor)
-    import io
     snapshot = bytes(payload)
     expected_members = {f"{name}.npy" for name in expected_schema}
     with zipfile.ZipFile(io.BytesIO(snapshot), "r") as archive:
@@ -359,22 +359,44 @@ def _load_authorized_sources(
             if not stat.S_ISREG(before.st_mode) or before.st_size != expected_bytes:
                 raise ValueError("authorized training archive size or type differs")
             digest = hashlib.sha256()
+            blocks: list[bytes] = []
             remaining = before.st_size
             while remaining:
                 block = os.read(descriptor, min(4 * 1024 * 1024, remaining))
                 if not block:
                     raise ValueError("authorized training archive ended early")
                 digest.update(block)
+                blocks.append(block)
                 remaining -= len(block)
             if os.read(descriptor, 1) or digest.hexdigest() != expected_sha256:
                 raise ValueError("authorized training archive content differs")
-            os.lseek(descriptor, 0, os.SEEK_SET)
-            with os.fdopen(os.dup(descriptor), "rb") as handle, np.load(handle, allow_pickle=False) as archive:
+            snapshot = b"".join(blocks)
+            del blocks
+            expected_members = {f"{name}.npy" for name in expected_names}
+            with zipfile.ZipFile(io.BytesIO(snapshot), "r") as raw_archive:
+                members = raw_archive.namelist()
+                if len(members) != len(expected_members) or set(members) != expected_members:
+                    raise ValueError("authorized training archive ZIP members differ")
+                if raw_archive.testzip() is not None:
+                    raise ValueError("authorized training archive CRC failed")
+            with np.load(io.BytesIO(snapshot), allow_pickle=False) as archive:
                 if set(archive.files) != expected_names:
                     raise ValueError("authorized training archive array set differs")
                 loaded = {name: archive[name].copy() for name in required if name in archive.files}
                 if "request_index" in archive.files:
                     loaded["request_index"] = archive["request_index"].copy()
+            del snapshot
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            final_digest = hashlib.sha256()
+            remaining = before.st_size
+            while remaining:
+                block = os.read(descriptor, min(4 * 1024 * 1024, remaining))
+                if not block:
+                    raise ValueError("authorized training archive changed during parsing")
+                final_digest.update(block)
+                remaining -= len(block)
+            if os.read(descriptor, 1) or final_digest.hexdigest() != expected_sha256:
+                raise ValueError("authorized training archive changed during parsing")
             after = os.fstat(descriptor)
             if ((before.st_dev, before.st_ino, before.st_size) !=
                     (after.st_dev, after.st_ino, after.st_size)):
