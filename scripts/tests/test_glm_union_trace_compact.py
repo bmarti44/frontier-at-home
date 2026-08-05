@@ -246,7 +246,9 @@ class QualifiedBundleTests(unittest.TestCase):
         receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
         return source, receipt_path
 
-    def make_corpus_bundle(self, root: Path) -> tuple[Path, Path]:
+    def make_corpus_bundle(
+        self, root: Path, *, layers: range = range(3, 78), minimum_events: int = 300,
+    ) -> tuple[Path, Path]:
         source = root / "corpus-source"
         trace = source / "on" / "trace"
         trace.mkdir(parents=True)
@@ -271,18 +273,20 @@ class QualifiedBundleTests(unittest.TestCase):
                 "router_probs": ("f32", probabilities),
                 "router_selected": ("i32", selected), "router_bias": ("f32", bias),
             }
-            for kind, (ext, values) in payloads.items():
-                path = trace / (
-                    f"request_r{request_id:08d}_glm_indexed_{kind}-3_pos0.{ext}"
-                )
-                path.write_bytes(values.tobytes())
+            for layer in layers:
+                for kind, (ext, values) in payloads.items():
+                    path = trace / (
+                        f"request_r{request_id:08d}_glm_indexed_{kind}-{layer}_pos0.{ext}"
+                    )
+                    path.write_bytes(values.tobytes())
         server_log = source / "on" / "server.log"
-        server_log.write_text(
-            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn request=1 layer=3 pos=0 rows=2\n"
-            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn request=2 layer=3 pos=0 rows=2\n"
-        )
+        server_log.write_text("".join(
+            f"GLM_UNION_TRACE_OK path=full_indexed_batch_ffn request={request_id} "
+            f"layer={layer} pos=0 rows=2\n"
+            for request_id in (1, 2) for layer in layers
+        ))
         trace_score = SCORE_MODULE.score_trace(
-            trace, server_log, max_bytes=10**7, expected_layers={3}, expected_chunks=[],
+            trace, server_log, max_bytes=10**8, expected_layers=set(layers), expected_chunks=[],
             expected_requests={1: [(0, 2)], 2: [(0, 2)]},
         )
         self.assertEqual(trace_score["verdict"], "PASS")
@@ -342,7 +346,7 @@ class QualifiedBundleTests(unittest.TestCase):
                 "environment_sha256": ("1" if mode == "on" else "2") * 64,
                 "response_signature": [signature(1), signature(2)],
                 "prompt_tokens": 2, "full_indexed_chunks": [[0, 2]],
-                "trace_files": 10 if mode == "on" else 0,
+                "trace_files": len(layers) * 10 if mode == "on" else 0,
                 "trace_bytes": trace_score["total_bytes"] if mode == "on" else 0,
                 "result_sha256": result_digest, "server_log_sha256": sha256(mode_log),
                 "corpus_requests": corpus_requests[mode],
@@ -375,8 +379,8 @@ class QualifiedBundleTests(unittest.TestCase):
             "high_row_2048_status": "OPEN", "candidate_hash": "1" * 40,
             "engine_commit": "2" * 40, "binary_sha256": "a" * 64,
             "model_sha256": "b" * 64, "tokenizer_sha256": "c" * 64,
-            "seed": 7, "context_level": 2, "max_trace_bytes": 10**7,
-            "minimum_token_layer_events": 4,
+            "seed": 7, "context_level": 2, "max_trace_bytes": 10**8,
+            "minimum_token_layer_events": minimum_events,
             "off_arm_sha256": sha256(arm_paths["off"]),
             "on_arm_sha256": sha256(arm_paths["on"]),
             "off_containment_sha256": sha256(containment_paths["off"]),
@@ -409,9 +413,11 @@ class QualifiedBundleTests(unittest.TestCase):
                 "containment_clean": True, "streaming_cache_budget": "32GB",
                 "cuda_cache_environment_gb": 56, "cuda_cache_slots": 5754,
                 "cuda_cache_arena_gib": 52.15, "off_trace_files": 0,
-                "on_trace_files": 10, "on_trace_bytes": trace_score["total_bytes"],
-                "trace_events": 2, "token_layer_events": 4,
-                "routed_layer_first": 3, "routed_layer_last": 3,
+                "on_trace_files": len(layers) * 10,
+                "on_trace_bytes": trace_score["total_bytes"],
+                "trace_events": len(layers) * 2,
+                "token_layer_events": len(layers) * 4,
+                "routed_layer_first": layers.start, "routed_layer_last": layers.stop - 1,
                 "minimum_available_memory_gib": {"off": 32.0, "on": 32.0},
                 "maximum_cgroup_memory_bytes": {"off": 1, "on": 1},
                 "maximum_cgroup_swap_bytes": 0, "kernel_oom_or_xid": False,
@@ -451,27 +457,47 @@ class QualifiedBundleTests(unittest.TestCase):
     def test_accepts_corpus_receipt_and_selects_one_request_shard(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source, receipt = self.make_corpus_bundle(Path(directory))
-            validated = MODULE.validate_source_bundle(
-                source, receipt, repository_root=Path(directory),
-                require_tracked_receipt=False, minimum_prompt_tokens=1,
-                request_index=2,
-            )
-            self.assertEqual(validated["layers"], [3])
+            with mock.patch.object(MODULE, "CORPUS_MIN_TOKEN_LAYER_EVENTS", 300, create=True):
+                validated = MODULE.validate_source_bundle(
+                    source, receipt, repository_root=Path(directory),
+                    require_tracked_receipt=False, minimum_prompt_tokens=1,
+                    request_index=2,
+                )
+            self.assertEqual(validated["layers"], list(range(3, 78)))
             self.assertEqual(validated["chunks"], [(0, 2)])
             self.assertEqual(validated["lineage"]["request_index"], 2)
             self.assertEqual(validated["lineage"]["request_id"], "e" * 64)
-            self.assertEqual(len(validated["files"]), 5)
+            self.assertEqual(len(validated["files"]), 375)
 
     def test_corpus_source_requires_explicit_valid_request_index(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source, receipt = self.make_corpus_bundle(Path(directory))
             for request_index in (None, 0, 3):
                 with self.subTest(request_index=request_index), self.assertRaises(ValueError):
-                    MODULE.validate_source_bundle(
-                        source, receipt, repository_root=Path(directory),
-                        require_tracked_receipt=False, minimum_prompt_tokens=1,
-                        request_index=request_index,
-                    )
+                    with mock.patch.object(MODULE, "CORPUS_MIN_TOKEN_LAYER_EVENTS", 300, create=True):
+                        MODULE.validate_source_bundle(
+                            source, receipt, repository_root=Path(directory),
+                            require_tracked_receipt=False, minimum_prompt_tokens=1,
+                            request_index=request_index,
+                        )
+
+    def test_corpus_rejects_incomplete_layer_range_and_lowered_event_floor(self) -> None:
+        for name, layers, minimum_events in (
+            ("missing_first_layer", range(4, 78), 296),
+            ("missing_last_layer", range(3, 77), 296),
+            ("lowered_floor", range(3, 78), 299),
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                source, receipt = self.make_corpus_bundle(
+                    Path(directory), layers=layers, minimum_events=minimum_events,
+                )
+                with mock.patch.object(MODULE, "CORPUS_MIN_TOKEN_LAYER_EVENTS", 300, create=True):
+                    with self.assertRaises(ValueError):
+                        MODULE.validate_source_bundle(
+                            source, receipt, repository_root=Path(directory),
+                            require_tracked_receipt=False, minimum_prompt_tokens=1,
+                            request_index=1,
+                        )
 
     def test_corpus_rejects_boolean_cache_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -493,11 +519,12 @@ class QualifiedBundleTests(unittest.TestCase):
             receipt["on_arm_sha256"] = sha256(arms["on"])
             receipt["summary_sha256"] = sha256(summary_path)
             receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
-            with self.assertRaises(ValueError):
-                MODULE.validate_source_bundle(
-                    source, receipt_path, repository_root=Path(directory),
-                    require_tracked_receipt=False, minimum_prompt_tokens=1, request_index=1,
-                )
+            with mock.patch.object(MODULE, "CORPUS_MIN_TOKEN_LAYER_EVENTS", 300, create=True):
+                with self.assertRaises(ValueError):
+                    MODULE.validate_source_bundle(
+                        source, receipt_path, repository_root=Path(directory),
+                        require_tracked_receipt=False, minimum_prompt_tokens=1, request_index=1,
+                    )
 
     def test_corpus_rejects_mutated_safety_observations(self) -> None:
         mutations = {
@@ -514,12 +541,13 @@ class QualifiedBundleTests(unittest.TestCase):
                 receipt = json.loads(receipt_path.read_text())
                 mutate(receipt["observed"])
                 receipt_path.write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n")
-                with self.assertRaises(ValueError):
-                    MODULE.validate_source_bundle(
-                        source, receipt_path, repository_root=Path(directory),
-                        require_tracked_receipt=False, minimum_prompt_tokens=1,
-                        request_index=1,
-                    )
+                with mock.patch.object(MODULE, "CORPUS_MIN_TOKEN_LAYER_EVENTS", 300, create=True):
+                    with self.assertRaises(ValueError):
+                        MODULE.validate_source_bundle(
+                            source, receipt_path, repository_root=Path(directory),
+                            require_tracked_receipt=False, minimum_prompt_tokens=1,
+                            request_index=1,
+                        )
 
     def test_cli_exposes_request_scoped_corpus_shards(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")
