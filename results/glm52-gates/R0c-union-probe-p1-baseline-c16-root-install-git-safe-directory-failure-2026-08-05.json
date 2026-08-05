@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_ROOT_INSTALL_RUNTIME_FAILURE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "251937793dcc9d0e0fbf336d4cf940127c7b9fd5",
+  "installer_sha256": "b65729dced9970d7dd8ae216053e4d24d7fab29930ee5ea7476601dc20fd7162",
+  "held_out_values_opened": false,
+  "production_reservation_created": false,
+  "failure": {
+    "phase": "root clone of the reviewed user-owned repository",
+    "stderr": [
+      "fatal: detected dubious ownership in repository at '/home/bmarti44/spark-deepseek-v4-flash/.git'",
+      "fatal: Could not read from remote repository."
+    ],
+    "root_cause": "The installer invokes root git clone --no-local against a repository owned by bmarti44. Git's upload-pack process enters the source .git directory and rejects it unless that exact source metadata directory is explicitly marked safe for this one clone."
+  },
+  "post_failure_state": {
+    "temporary_root_clone_absent": true,
+    "temporary_staged_installer_absent": true,
+    "new_root_approval_absent": true,
+    "new_root_python_runtime_absent": true,
+    "engine_processes_active": 0,
+    "fio_processes_active": 0,
+    "mem_available_kib": 120798564,
+    "swap_used_kib": 775656
+  },
+  "bounded_fix": "Add only an invocation-scoped safe.directory entry for the exact reviewed source .git directory to the already hook-disabled root clone. Preserve --no-local, detached exact-candidate checkout, clean-clone checks, source hashes and all later installer validation.",
+  "acceptance": "A root-equivalent isolated clone of this exact user-owned repository must succeed only with the exact safe.directory entry, checkout Candidate 16 exactly, remain clean, and reject an incorrect safe-directory path. All existing root-attestor and P1 tests must remain green before another owner invocation.",
+  "verdict": "FAIL_PRESERVED_NO_INSTALL"
+}
