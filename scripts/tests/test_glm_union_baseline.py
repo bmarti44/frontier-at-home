@@ -7,6 +7,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -284,6 +285,9 @@ class AtomicLifecycleTests(unittest.TestCase):
             MODULE, "_journal_authority_records", side_effect=records,
         ), mock.patch.object(
             MODULE, "_emit_journal_authority", side_effect=emit,
+        ), mock.patch.object(
+            MODULE, "_reserve_root_tombstone",
+            return_value={"status": "RESERVED"},
         ) as publisher:
             result = REAL_RESERVE_GLOBAL_AUTHORITY(
                 {"candidate": "bound"}, Path("/tmp/nonheldout-test"), 123,
@@ -303,8 +307,68 @@ class AtomicLifecycleTests(unittest.TestCase):
                 )
         publisher.assert_not_called()
 
+    def test_root_tombstone_helper_response_is_exactly_bound(self) -> None:
+        installed_sha256 = MODULE._hash_regular(MODULE.ROOT_SUBMITTER_PATH)[0]
+        candidate = "1" * 40
+        fields = {
+            "GLM52_P1_PREFLIGHT_SHA256": "2" * 64,
+            "GLM52_P1_OUTPUT_SHA256": "3" * 64,
+            "GLM52_P1_STARTED_NS": "123",
+        }
+        reservation_payload = json.dumps({
+            "schema_version": 1,
+            "classification": "GLM52_P1_PERMANENT_RESERVATION_REQUEST",
+            "candidate_hash": candidate,
+            **fields,
+        }, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        reservation = MODULE._sha256_bytes(reservation_payload)
+        response = {
+            "schema_version": 1,
+            "status": "RESERVED",
+            "candidate_hash": candidate,
+            "reservation_sha256": reservation,
+            "marker_sha256": "4" * 64,
+            "marker_device": 5,
+            "marker_inode": 6,
+        }
+        completed = subprocess.CompletedProcess(
+            ["sudo"], 0, json.dumps(response, sort_keys=True) + "\n", "",
+        )
+        with mock.patch.object(
+            MODULE, "FROZEN_ROOT_SUBMITTER_SHA256", installed_sha256,
+        ), mock.patch.object(
+            MODULE.subprocess, "run", return_value=completed,
+        ) as runner:
+            observed = MODULE._reserve_root_tombstone(
+                {"harness_commit": candidate}, fields,
+            )
+        self.assertEqual(observed, response)
+        command = runner.call_args.args[0]
+        self.assertEqual(command[:4], [
+            "/usr/bin/sudo", "-n", str(MODULE.ROOT_SUBMITTER_PATH), "reserve-p1",
+        ])
+        self.assertEqual(command[4:], [candidate, reservation])
+
+    def test_existing_root_tombstone_fails_closed(self) -> None:
+        installed_sha256 = MODULE._hash_regular(MODULE.ROOT_SUBMITTER_PATH)[0]
+        with mock.patch.object(
+            MODULE, "FROZEN_ROOT_SUBMITTER_SHA256", installed_sha256,
+        ), mock.patch.object(
+            MODULE.subprocess, "run",
+            return_value=subprocess.CompletedProcess(["sudo"], 17, "", ""),
+        ), self.assertRaises(FileExistsError):
+            MODULE._reserve_root_tombstone(
+                {"harness_commit": "1" * 40},
+                {
+                    "GLM52_P1_PREFLIGHT_SHA256": "2" * 64,
+                    "GLM52_P1_OUTPUT_SHA256": "3" * 64,
+                    "GLM52_P1_STARTED_NS": "123",
+                },
+            )
+
     def test_journal_eviction_cannot_reopen_permanent_authority(self) -> None:
         retained: list[dict[str, object]] = []
+        permanent = False
 
         def emit(fields):
             retained.append({
@@ -319,10 +383,19 @@ class AtomicLifecycleTests(unittest.TestCase):
                 "__REALTIME_TIMESTAMP": "123456789",
             })
 
+        def tombstone(*_args):
+            nonlocal permanent
+            if permanent:
+                raise FileExistsError("permanent root tombstone exists")
+            permanent = True
+            return {"status": "RESERVED"}
+
         with mock.patch.object(
             MODULE, "_journal_authority_records", side_effect=lambda: list(retained),
         ), mock.patch.object(
             MODULE, "_emit_journal_authority", side_effect=emit,
+        ), mock.patch.object(
+            MODULE, "_reserve_root_tombstone", side_effect=tombstone,
         ):
             REAL_RESERVE_GLOBAL_AUTHORITY(
                 {"candidate": "bound"}, Path("/tmp/first"), 125,

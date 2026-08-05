@@ -61,6 +61,14 @@ class RootAttestorContractTests(unittest.TestCase):
             submitter.parse_request(["diagnose", sha256]),
             ("diagnose", sha256),
         )
+        self.assertEqual(
+            submitter.parse_request(["reserve-p1", sha1, sha256]),
+            ("reserve-p1", sha1, sha256),
+        )
+        self.assertEqual(
+            submitter.parse_request(["reserve-p1-smoke", sha1, sha256]),
+            ("reserve-p1-smoke", sha1, sha256),
+        )
         for malformed in (
             [],
             ["run", sha1, sha1],
@@ -69,11 +77,82 @@ class RootAttestorContractTests(unittest.TestCase):
             ["status", sha256, "extra"],
             ["diagnose", "../attempt"],
             ["diagnose", sha256, "extra"],
+            ["reserve-p1", sha1],
+            ["reserve-p1", "../candidate", sha256],
+            ["reserve-p1", sha1, sha256, "extra"],
+            ["reserve-p1-smoke", sha1, sha256, "extra"],
             ["shell", sha256],
         ):
             with self.subTest(malformed=malformed):
                 with self.assertRaises(ValueError):
                     submitter.parse_request(malformed)
+
+    def test_p1_reservation_is_exclusive_root_owned_and_persistent(self):
+        submitter = load_submitter()
+        candidate = "1" * 40
+        reservation = "2" * 64
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            marker_root = state / "p1-baseline-heldout-v1"
+            marker = marker_root / "reservation.json"
+            with (
+                mock.patch.object(submitter, "STATE_ROOT", state),
+                mock.patch.object(submitter, "P1_RESERVATION_ROOT", marker_root),
+                mock.patch.object(submitter, "P1_RESERVATION", marker),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                mock.patch.object(submitter, "_assert_repository") as repository,
+                mock.patch("builtins.print") as printer,
+            ):
+                self.assertEqual(submitter.reserve_p1(
+                    candidate, reservation, marker_root=marker_root, marker=marker,
+                ), 0)
+                repository.assert_called_once()
+                first = json.loads(marker.read_text(encoding="utf-8"))
+                self.assertEqual(first["candidate_hash"], candidate)
+                self.assertEqual(first["reservation_sha256"], reservation)
+                self.assertEqual(marker.stat().st_mode & 0o777, 0o444)
+                self.assertEqual(marker_root.stat().st_mode & 0o777, 0o555)
+                first_inode = marker.stat().st_ino
+                self.assertEqual(
+                    submitter.reserve_p1(
+                        "3" * 40, "4" * 64,
+                        marker_root=marker_root, marker=marker,
+                    ), 17,
+                )
+                self.assertEqual(marker.stat().st_ino, first_inode)
+                self.assertEqual(
+                    json.loads(marker.read_text(encoding="utf-8")), first,
+                )
+                self.assertEqual(printer.call_count, 2)
+                marker_root.chmod(0o700)
+                marker.chmod(0o600)
+
+    def test_p1_reservation_reader_rejects_mutable_or_linked_marker(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            marker = root / "reservation.json"
+            marker.write_text(json.dumps({
+                "schema_version": 1,
+                "classification": "GLM52_P1_PERMANENT_RESERVATION",
+                "candidate_hash": "1" * 40,
+                "reservation_sha256": "2" * 64,
+                "created_epoch_ns": 123,
+            }) + "\n", encoding="utf-8")
+            with (
+                mock.patch.object(submitter, "P1_RESERVATION", marker),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+            ):
+                marker.chmod(0o600)
+                with self.assertRaisesRegex(ValueError, "identity"):
+                    submitter._read_p1_reservation(marker)
+                marker.chmod(0o444)
+                linked = root / "linked.json"
+                os.link(marker, linked)
+                with self.assertRaisesRegex(ValueError, "identity"):
+                    submitter._read_p1_reservation(marker)
 
     def test_first_drand_round_is_strictly_after_freeze(self):
         submitter = load_submitter()
@@ -529,12 +608,12 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertNotRegex(source, r"NOPASSWD:\\s*ALL")
         expected = hashlib.sha256(SUBMITTER.read_bytes()).hexdigest()
         match = re.search(
-            r"^readonly SUBMITTER_SHA256='([0-9a-f]{32})''([0-9a-f]{32})'$",
+            r"^readonly SUBMITTER_SHA256=([0-9a-f]{64})$",
             source,
             re.MULTILINE,
         )
         self.assertIsNotNone(match)
-        self.assertEqual("".join(match.groups()), expected)
+        self.assertEqual(match.group(1), expected)
 
     def test_installer_publishes_only_the_contained_runtime_read_surface(self):
         source = INSTALLER.read_text(encoding="utf-8")

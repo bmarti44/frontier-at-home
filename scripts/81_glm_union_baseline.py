@@ -70,6 +70,8 @@ AUTHORITY_LOCK_PATH = Path("/run/lock/frontier-at-home/inference.lock")
 AUTHORITY_MESSAGE_ID = "9b0125b612d7480da990ad79e8c4c2fb"
 AUTHORITY_GATE_ID = "glm52-p1-baseline-heldout-v1"
 AUTHORITY_IDENTIFIER = "glm52-p1-baseline-authority"
+ROOT_SUBMITTER_PATH = Path("/usr/local/sbin/glm52-w1-submit")
+FROZEN_ROOT_SUBMITTER_SHA256 = "35d03c97cb6a9a433cf980468e2d0d5477465d06846decc5b1ecec7c9fa65e11"
 FIXED_LAUNCH_PATH = (
     "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
@@ -1177,6 +1179,63 @@ def _emit_journal_authority(fields: dict[str, str]) -> None:
         raise RuntimeError("system-journal authority publication failed")
 
 
+def _reserve_root_tombstone(
+    preflight: dict[str, object],
+    fields: dict[str, str],
+) -> dict[str, object]:
+    candidate = preflight.get("harness_commit")
+    if not isinstance(candidate, str) or not re.fullmatch(r"[0-9a-f]{40}", candidate):
+        raise ValueError("root tombstone candidate binding is missing")
+    details = ROOT_SUBMITTER_PATH.lstat()
+    if (
+        ROOT_SUBMITTER_PATH.is_symlink() or not stat.S_ISREG(details.st_mode) or
+        details.st_uid != 0 or details.st_gid != 0 or details.st_mode & 0o022
+    ):
+        raise RuntimeError("root tombstone submitter identity differs")
+    submitter_sha256, _identity = _hash_regular(ROOT_SUBMITTER_PATH)
+    if submitter_sha256 != FROZEN_ROOT_SUBMITTER_SHA256:
+        raise RuntimeError("root tombstone submitter content differs")
+    reservation_payload = json.dumps({
+        "schema_version": 1,
+        "classification": "GLM52_P1_PERMANENT_RESERVATION_REQUEST",
+        "candidate_hash": candidate,
+        **fields,
+    }, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    reservation_sha256 = _sha256_bytes(reservation_payload)
+    completed = subprocess.run(
+        [
+            "/usr/bin/sudo", "-n", str(ROOT_SUBMITTER_PATH), "reserve-p1",
+            candidate, reservation_sha256,
+        ],
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60,
+        check=False, env=_authority_environment(),
+    )
+    if completed.returncode == 17:
+        raise FileExistsError("permanent root-held reservation already exists")
+    if completed.returncode != 0 or completed.stderr:
+        raise RuntimeError("permanent root-held reservation failed")
+    try:
+        response = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("permanent root-held reservation response is malformed") from error
+    expected_keys = {
+        "schema_version", "status", "candidate_hash", "reservation_sha256",
+        "marker_sha256", "marker_device", "marker_inode",
+    }
+    if (
+        not isinstance(response, dict) or set(response) != expected_keys or
+        response.get("schema_version") != 1 or response.get("status") != "RESERVED" or
+        response.get("candidate_hash") != candidate or
+        response.get("reservation_sha256") != reservation_sha256 or
+        not isinstance(response.get("marker_sha256"), str) or
+        not re.fullmatch(r"[0-9a-f]{64}", response["marker_sha256"]) or
+        not isinstance(response.get("marker_device"), int) or
+        not isinstance(response.get("marker_inode"), int)
+    ):
+        raise RuntimeError("permanent root-held reservation response differs")
+    return response
+
+
 def _reserve_global_authority(
     preflight: dict[str, object],
     output_root: Path,
@@ -1207,6 +1266,7 @@ def _reserve_global_authority(
             "GLM52_P1_OUTPUT_SHA256": _sha256_bytes(os.fsencode(output_root)),
             "GLM52_P1_STARTED_NS": str(started_epoch_ns),
         }
+        root_tombstone = _reserve_root_tombstone(preflight, fields)
         _emit_journal_authority(fields)
         deadline = time.monotonic() + 5.0
         while True:
@@ -1240,6 +1300,7 @@ def _reserve_global_authority(
             "preflight_sha256": fields["GLM52_P1_PREFLIGHT_SHA256"],
             "output_sha256": fields["GLM52_P1_OUTPUT_SHA256"],
             "started_epoch_ns": started_epoch_ns,
+            "root_tombstone": root_tombstone,
         }
     finally:
         os.close(descriptor)
@@ -1492,6 +1553,24 @@ def _preflight_authorized_gate(
     )
     if available_kib < 110 * 1024 * 1024:
         raise MemoryError("authorized gate lacks 110 GiB available memory")
+    repository = subprocess.run(
+        ["/usr/bin/git", "rev-parse", "HEAD"], cwd=ROOT,
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15,
+        check=False, env=_authority_environment(),
+    )
+    repository_status = subprocess.run(
+        ["/usr/bin/git", "status", "--porcelain", "--untracked-files=all"],
+        cwd=ROOT, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+        timeout=15, check=False, env=_authority_environment(),
+    )
+    harness_commit = repository.stdout.strip()
+    if (
+        repository.returncode != 0 or repository.stderr or
+        not re.fullmatch(r"[0-9a-f]{40}", harness_commit) or
+        repository_status.returncode != 0 or repository_status.stderr or
+        repository_status.stdout
+    ):
+        raise ValueError("authorized gate repository is not a clean exact commit")
     binary_descriptor = _open_regular(binary)
     try:
         binary_sha256, binary_stat = _hash_open_descriptor(binary_descriptor, binary)
@@ -1509,6 +1588,7 @@ def _preflight_authorized_gate(
         os.close(binary_descriptor)
         raise
     binding = {
+        "harness_commit": harness_commit,
         "engine_commit": FROZEN_ENGINE_COMMIT,
         "binary_sha256": binary_sha256,
         "binary_stat": list(binary_stat),

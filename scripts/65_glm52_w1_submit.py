@@ -28,6 +28,10 @@ MODEL = Path(
 )
 STATE_ROOT = Path("/var/lib/glm52-w1")
 CONTROLLER_ATTEMPTS = STATE_ROOT / "controller-attempts"
+P1_RESERVATION_ROOT = STATE_ROOT / "p1-baseline-heldout-v1"
+P1_RESERVATION = P1_RESERVATION_ROOT / "reservation.json"
+P1_SMOKE_ROOT = STATE_ROOT / "p1-baseline-smoke-v1"
+P1_SMOKE_RESERVATION = P1_SMOKE_ROOT / "reservation.json"
 INSTALLED_HARNESS = Path("/usr/local/libexec/glm52-w1/harness")
 LOCK = Path("/run/lock/glm52-w1-submit.lock")
 INFERENCE_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
@@ -70,10 +74,19 @@ def parse_request(argv: list[str]) -> tuple[str, ...]:
         and HASH64.fullmatch(argv[1])
     ):
         return tuple(argv)
+    if (
+        len(argv) == 3
+        and argv[0] in {"reserve-p1", "reserve-p1-smoke"}
+        and HASH40.fullmatch(argv[1])
+        and HASH64.fullmatch(argv[2])
+    ):
+        return tuple(argv)
     raise ValueError(
         "usage: glm52-w1-submit run HARNESS_COMMIT ENGINE_COMMIT MODEL_SHA256\n"
         "       glm52-w1-submit status COMPOSITE_SHA256\n"
-        "       glm52-w1-submit diagnose COMPOSITE_SHA256"
+        "       glm52-w1-submit diagnose COMPOSITE_SHA256\n"
+        "       glm52-w1-submit reserve-p1 CANDIDATE_HASH RESERVATION_SHA256\n"
+        "       glm52-w1-submit reserve-p1-smoke CANDIDATE_HASH RESERVATION_SHA256"
     )
 
 
@@ -180,6 +193,135 @@ def _canonical_json(path: Path, value: object, mode: int = 0o400) -> None:
         os.fsync(stream.fileno())
     os.chmod(temporary, mode)
     os.replace(temporary, path)
+
+
+def _read_p1_reservation(
+    marker: Path = P1_RESERVATION,
+    classification: str = "GLM52_P1_PERMANENT_RESERVATION",
+) -> dict[str, Any]:
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
+    descriptor = os.open(marker, flags)
+    try:
+        details = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(details.st_mode) or details.st_uid != ROOT_UID or
+            details.st_gid != ROOT_GID or stat.S_IMODE(details.st_mode) != 0o444 or
+            details.st_nlink != 1
+        ):
+            raise ValueError("P1 reservation identity differs")
+        payload = bytearray()
+        while block := os.read(descriptor, 4096):
+            payload.extend(block)
+            if len(payload) > 16 * 1024:
+                raise ValueError("P1 reservation is unexpectedly large")
+    finally:
+        os.close(descriptor)
+    try:
+        value = json.loads(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("P1 reservation is malformed") from exc
+    if (
+        not isinstance(value, dict) or
+        value.get("schema_version") != 1 or
+        value.get("classification") != classification or
+        not isinstance(value.get("candidate_hash"), str) or
+        not HASH40.fullmatch(value["candidate_hash"]) or
+        not isinstance(value.get("reservation_sha256"), str) or
+        not HASH64.fullmatch(value["reservation_sha256"]) or
+        not isinstance(value.get("created_epoch_ns"), int) or
+        isinstance(value.get("created_epoch_ns"), bool)
+    ):
+        raise ValueError("P1 reservation fields differ")
+    return value
+
+
+def reserve_p1(
+    candidate_hash: str,
+    reservation_sha256: str,
+    *,
+    marker_root: Path = P1_RESERVATION_ROOT,
+    marker: Path = P1_RESERVATION,
+    classification: str = "GLM52_P1_PERMANENT_RESERVATION",
+) -> int:
+    """Create the permanent root-owned one-shot marker before held-out access."""
+    _assert_repository(
+        REPOSITORY, candidate_hash, reject_untracked=True,
+        required_path=Path("scripts/81_glm_union_baseline.py"),
+    )
+    try:
+        existing = _read_p1_reservation(marker, classification)
+    except FileNotFoundError:
+        existing = None
+    if existing is not None:
+        print(json.dumps({
+            "schema_version": 1,
+            "status": "ALREADY_RESERVED",
+            "candidate_hash": existing["candidate_hash"],
+            "reservation_sha256": existing["reservation_sha256"],
+        }, sort_keys=True, separators=(",", ":")))
+        return 17
+
+    try:
+        marker_root.mkdir(mode=0o700, parents=False)
+    except FileExistsError:
+        root_details = marker_root.lstat()
+        if (
+            not stat.S_ISDIR(root_details.st_mode) or
+            root_details.st_uid != ROOT_UID or root_details.st_gid != ROOT_GID or
+            stat.S_IMODE(root_details.st_mode) not in (0o700, 0o555)
+        ):
+            raise ValueError("P1 reservation root identity differs")
+    os.chown(marker_root, ROOT_UID, ROOT_GID)
+    os.chmod(marker_root, 0o700)
+    value = {
+        "schema_version": 1,
+        "classification": classification,
+        "candidate_hash": candidate_hash,
+        "reservation_sha256": reservation_sha256,
+        "created_epoch_ns": time.time_ns(),
+    }
+    payload = (
+        json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode("utf-8")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW
+    descriptor = os.open(marker, flags, 0o400)
+    try:
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError("short P1 reservation write")
+            view = view[written:]
+        os.fchown(descriptor, ROOT_UID, ROOT_GID)
+        os.fchmod(descriptor, 0o444)
+        os.fsync(descriptor)
+        details = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    os.chmod(marker_root, 0o555)
+    parent_descriptor = os.open(marker_root, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(parent_descriptor)
+    finally:
+        os.close(parent_descriptor)
+    parent_descriptor = os.open(STATE_ROOT, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(parent_descriptor)
+    finally:
+        os.close(parent_descriptor)
+    observed = _read_p1_reservation(marker, classification)
+    if observed != value:
+        raise ValueError("P1 reservation readback differs")
+    print(json.dumps({
+        "schema_version": 1,
+        "status": "RESERVED",
+        "candidate_hash": candidate_hash,
+        "reservation_sha256": reservation_sha256,
+        "marker_sha256": hashlib.sha256(payload).hexdigest(),
+        "marker_device": details.st_dev,
+        "marker_inode": details.st_ino,
+    }, sort_keys=True, separators=(",", ":")))
+    return 0
 
 
 def _assert_root() -> None:
@@ -1177,6 +1319,14 @@ def main(argv: list[str]) -> int:
                 )
             )
             return 0
+        if request[0] == "reserve-p1":
+            return reserve_p1(request[1], request[2])
+        if request[0] == "reserve-p1-smoke":
+            return reserve_p1(
+                request[1], request[2], marker_root=P1_SMOKE_ROOT,
+                marker=P1_SMOKE_RESERVATION,
+                classification="GLM52_P1_NONHELDOUT_SMOKE_RESERVATION",
+            )
         return show_status(request[1])
 
 
