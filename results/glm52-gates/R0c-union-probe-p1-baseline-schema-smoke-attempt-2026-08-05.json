@@ -30,9 +30,35 @@
         "samples.log": 159,
         "kernel.log": 17
       }
+    },
+    {
+      "attempt": 2,
+      "tag": "baseline-schema-c3-bed0754-a2",
+      "configuration": {
+        "context_tokens": 512,
+        "streaming_cache_budget": "6GB",
+        "mtp_flag": false,
+        "safe_min_start_gib": 110,
+        "safe_kill_floor_gib": 18,
+        "safe_timeout_seconds": 2400
+      },
+      "observed_failure": "Engine loaded safely, then rejected baseline capture because the CLI invocation had not enabled the model's bound MTP head.",
+      "exit_code": 1,
+      "killed": false,
+      "gpu_or_kernel_fault": false,
+      "artifacts": {
+        "main.log": "2adc43ff9213c7f5b3c9e13675e403093075be60220bb7f3e228f3bbe3ba1b38",
+        "samples.log": "9c26263e05b8339deb2f5a7f48fed3544b6848f335464d2f7299a900153c2b0b",
+        "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+      },
+      "artifact_bytes": {
+        "main.log": 2998,
+        "samples.log": 172,
+        "kernel.log": 17
+      }
     }
   ],
-  "bounded_fix": "Change only the smoke invocation cache budget from 1GB to 6GB, the smallest whole-GiB budget above the engine-reported 5.91 GiB floor. No source, scorer, test, prompt, or held-out input changes.",
+  "bounded_fix": "Keep the corrected 6GB cache budget and add only the CLI --mtp flag required by the capture precondition. No source, scorer, test, prompt, or held-out input changes.",
   "acceptance_test": "The contained non-held-out engine must publish eight complete 79-layer capture bundles; the fixed scorer must accept every bundle and reject truncated and extra-layer mutations; wrapper and fault logs must be clean.",
   "verdict": "NO_RESULT"
 }
