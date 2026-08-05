@@ -135,6 +135,26 @@ class CVMetricTests(unittest.TestCase):
         self.assertEqual(result["2"]["macro_request_recall"], 0.75)
         self.assertEqual(result["2"]["event_weighted_recall"], 2 / 3)
 
+    def test_integer_event_evidence_is_replayable_and_rejects_impossible_hits(self) -> None:
+        requests = np.asarray([1, 2], dtype=np.uint16)
+        targets = np.zeros((2, 256), dtype=np.bool_)
+        targets[0, [1, 2]] = True
+        targets[1, [8, 9, 10]] = True
+        rankings = np.tile(np.arange(256, dtype=np.uint16), (2, 1))
+        observed = MODULE.event_evidence(requests, targets, rankings, budgets=(2, 4))
+        np.testing.assert_array_equal(observed["target_size"], [2, 3])
+        np.testing.assert_array_equal(observed["hits"], [[1, 2], [0, 0]])
+        scored = MODULE.score_event_evidence(
+            observed["request"], observed["target_size"], observed["hits"], budgets=(2, 4),
+        )
+        self.assertEqual(scored["4"]["1"]["coverage_sum"], 1.0)
+        broken = observed["hits"].copy()
+        broken[0, 0] = 3
+        with self.assertRaises(ValueError):
+            MODULE.score_event_evidence(
+                observed["request"], observed["target_size"], broken, budgets=(2, 4),
+            )
+
     def test_aggregation_rejects_duplicate_rankings_and_request_drift(self) -> None:
         requests = np.asarray([1], dtype=np.uint16)
         targets = np.zeros((1, 256), dtype=np.bool_)

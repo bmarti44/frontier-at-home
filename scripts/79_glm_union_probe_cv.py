@@ -43,6 +43,26 @@ def _load_probe_module():
 PROBE = _load_probe_module()
 
 
+def event_evidence(
+    requests: np.ndarray,
+    targets: np.ndarray,
+    rankings: np.ndarray,
+    budgets: tuple[int, ...] = BUDGETS,
+) -> dict[str, np.ndarray]:
+    """Return scorer-replayable integer hit evidence for one K/method/layer."""
+    raise NotImplementedError
+
+
+def score_event_evidence(
+    requests: np.ndarray,
+    target_size: np.ndarray,
+    hits: np.ndarray,
+    budgets: tuple[int, ...] = BUDGETS,
+) -> dict[str, dict[str, dict[str, float | int]]]:
+    """Derive exact request metrics only from integer event evidence."""
+    raise NotImplementedError
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
