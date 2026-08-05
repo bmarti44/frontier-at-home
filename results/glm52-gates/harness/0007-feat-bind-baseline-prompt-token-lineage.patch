@@ -1,0 +1,55 @@
+From b8a152f29bb68197796b89ba755afb4aefe45dee Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Wed, 5 Aug 2026 12:01:47 -0400
+Subject: [PATCH 7/7] feat: bind baseline prompt token lineage
+
+---
+ ds4.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/ds4.c b/ds4.c
+index 3fcbefb..23c8039 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -60681,7 +60681,7 @@ static bool glm_graph_baseline_capture_complete(const ds4_glm_gpu_graph *g) {
+ static bool glm_baseline_capture_publish(
+         const char *directory,
+         uint32_t source_pos,
+-        uint32_t token_count,
++        const ds4_tokens *tokens,
+         const int predicted[DS4_GLM_BASELINE_MAX_K],
+         double source_ready_ms,
+         const double mtp_ms[DS4_GLM_BASELINE_MAX_K - 1u],
+@@ -60690,9 +60690,10 @@ static bool glm_baseline_capture_publish(
+         double elapsed_ms,
+         const ds4_glm_gpu_graph *g) {
+     char base[1024];
+-    if (!directory || !g ||
++    if (!directory || !tokens || tokens->len <= 0 || !g ||
+         snprintf(base, sizeof(base), "%s/source-%08u", directory, source_pos) >=
+             (int)sizeof(base)) return false;
++    const uint32_t token_count = (uint32_t)tokens->len;
+     struct artifact {
+         const char *suffix;
+         const void *data;
+@@ -60712,6 +60713,8 @@ static bool glm_baseline_capture_publish(
+          (size_t)DS4_GLM_BASELINE_MAX_K * DS4_N_LAYER * DS4_N_EXPERT_USED * sizeof(int32_t)},
+         {"-predicted.i32", predicted,
+          (size_t)DS4_GLM_BASELINE_MAX_K * sizeof(int32_t)},
++        {"-prompt-tokens.i32", tokens->v,
++         (size_t)token_count * sizeof(int32_t)},
+     };
+     char path[1100];
+     for (size_t i = 0; i < sizeof(artifacts) / sizeof(artifacts[0]); i++) {
+@@ -60869,7 +60872,7 @@ int ds4_session_glm_baseline_capture(
+         if (!baseline_capture_failed &&
+             (!glm_graph_baseline_capture_complete(g) ||
+              !glm_baseline_capture_publish(
+-                 directory, source_pos, token_count, predicted,
++                 directory, source_pos, tokens, predicted,
+                  source_ready_ms, mtp_ms, target_ms, cumulative_ms,
+                  (now_sec() - started) * 1000.0, g))) {
+             baseline_capture_failed = true;
+-- 
+2.43.0
+

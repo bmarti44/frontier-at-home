@@ -47,6 +47,7 @@ class CaptureBundleTests(unittest.TestCase):
             "-mtp-scores.f32": mtp,
             "-mtp-selected.i32": mtp_selected,
             "-predicted.i32": np.arange(8, dtype="<i4"),
+            "-prompt-tokens.i32": np.arange(20, dtype="<i4"),
         }
         for suffix, value in artifacts.items():
             Path(f"{base}{suffix}").write_bytes(value.tobytes(order="C"))
@@ -113,6 +114,15 @@ class CaptureBundleTests(unittest.TestCase):
             value = json.loads(path.read_text(encoding="utf-8"))
             value["predicted_tokens"][3] = 99
             path.write_text(json.dumps(value) + "\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                MODULE.load_capture_source(directory, 4)
+
+    def test_rejects_prompt_token_artifact_length_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            self.publish(directory)
+            path = directory / "source-00000004-prompt-tokens.i32"
+            path.write_bytes(path.read_bytes()[:-4])
             with self.assertRaises(ValueError):
                 MODULE.load_capture_source(directory, 4)
 
@@ -222,6 +232,36 @@ class CaptureBundleTests(unittest.TestCase):
 
 
 class AtomicLifecycleTests(unittest.TestCase):
+    def test_safe_run_attestation_accepts_real_clean_kernel_forms(self) -> None:
+        environment = "1" * 64
+        main = b"\n".join((
+            f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}".encode(),
+            f"executed_environment_sha256={environment}".encode(),
+            b"executed candidate was verified alive at least once",
+            b"SAFE_RUN end rc=0 killed=no",
+        ))
+        stdout = b"SAFE_RUN_DONE rc=0 killed=no dir=/tmp/log\n"
+        for kernel in (b"NO_KERNEL_FAULTS\n", b"-- No entries --\n"):
+            with self.subTest(kernel=kernel):
+                MODULE._validate_safe_run_artifacts(main, kernel, stdout, environment)
+
+    def test_safe_run_attestation_rejects_fault_or_missing_identity(self) -> None:
+        environment = "2" * 64
+        good = b"\n".join((
+            f"candidate_binary_sha256={MODULE.FROZEN_BINARY_SHA256}".encode(),
+            f"executed_environment_sha256={environment}".encode(),
+            b"executed candidate was verified alive at least once",
+            b"SAFE_RUN end rc=0 killed=no",
+        ))
+        stdout = b"SAFE_RUN_DONE rc=0 killed=no dir=/tmp/log\n"
+        for main, kernel in (
+            (good, b"NVRM: Xid 31\n"),
+            (good.replace(b"verified alive", b"not sampled"), b"-- No entries --\n"),
+            (good + b"\nFATAL replacement", b"-- No entries --\n"),
+        ):
+            with self.subTest(main=main, kernel=kernel), self.assertRaises(RuntimeError):
+                MODULE._validate_safe_run_artifacts(main, kernel, stdout, environment)
+
     def test_attempt_precedes_single_open_and_success_is_sealed(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             output = Path(raw) / "result"
