@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "classification": "FAILED_TEST_ATTEMPT",
+  "candidate_hash": "36b3a09bdcb062c1f7d111bad2e39c6d8ca037d8",
+  "per_gate_candidate": 1,
+  "held_out_values_opened": false,
+  "command": "python3 -m unittest scripts.tests.test_glm_union_probe.UnionTargetTests.test_structural_baseline_rows_are_last_eight_k8_complete_positions scripts.tests.test_glm_union_probe.UnionTargetTests.test_captured_router_ranking_is_full_stable_and_top8_conformant scripts.tests.test_glm_union_probe.UnionTargetTests.test_mtp_rankings_are_nested_prefix_maxima",
+  "failure": {
+    "test": "test_structural_baseline_rows_are_last_eight_k8_complete_positions",
+    "exception": "TypeError",
+    "message": "unsupported operand type(s) for +: 'int' and 'list'",
+    "expression": "group * 20 + np.arange(4, 12).tolist()"
+  },
+  "diagnosis": "The RED test's expected-row builder evaluated integer-plus-list instead of offsetting the NumPy array. The other two newly implemented ranking tests passed.",
+  "bounded_fix": "Move .tolist() after the vectorized integer offset; do not change the acceptance values or production implementation.",
+  "frozen_scope": "Baseline specification, corpus, split, probe states, and engine implementation remain byte-identical.",
+  "verdict": "FAIL"
+}
