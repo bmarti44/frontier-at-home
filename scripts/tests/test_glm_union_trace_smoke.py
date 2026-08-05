@@ -32,8 +32,8 @@ def arm(mode: str) -> dict[str, object]:
         "prompt_tokens": 573,
         "full_indexed_chunks": [[0, 573]],
         "trace_files": 0 if mode == "off" else 9,
-        "cuda_expert_cache_gb": "56",
-        "cuda_cache_runtime": {"slots": 6000, "arena_gib": 54.38},
+        "cuda_expert_cache_gb": "48",
+        "cuda_cache_runtime": {"slots": 4800, "arena_gib": 43.50},
     }
 
 
@@ -107,11 +107,11 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
     def test_cuda_cache_runtime_requires_one_bounded_resolved_arena(self) -> None:
         marker = (
             "ds4: CUDA persistent expert cache enabled: "
-            "6000 slots x 9.28 MiB = 54.38 GiB (fixed arena)\n"
+            "4800 slots x 9.28 MiB = 43.50 GiB (fixed arena)\n"
         )
         self.assertEqual(
             MODULE.cuda_cache_runtime(marker),
-            {"slots": 6000, "arena_gib": 54.38},
+            {"slots": 4800, "arena_gib": 43.50},
         )
         for bad in (
             "",

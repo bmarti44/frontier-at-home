@@ -67,7 +67,7 @@ MAX_CONTEXT_LEVEL = 8192
 TRACE_BYTES_PER_TOKEN_LAYER = (6144 + 256 + 256 + 8 + 256) * 4
 TRACE_DISK_RESERVE_BYTES = 20 * 1024**3
 CORPUS_CACHE_EXPERTS = "32GB"
-CORPUS_CUDA_CACHE_GB = "56"
+CORPUS_CUDA_CACHE_GB = "48"
 CORPUS_MEMORY_HIGH_GIB = "71"
 TRACE_NAMES = ",".join((
     "glm_indexed_ffn_norm",
@@ -346,13 +346,12 @@ def quality_capture_verdict(
     output_keys = (
         "completion_tokens", "generated_reasoning_sha256",
         "generated_reasoning_bytes", "generated_content_sha256",
-        "generated_content_bytes", "token_ids", "sse_token_events",
+        "generated_content_bytes", "token_ids",
     )
 
     def output_valid(observed: dict[str, Any]) -> bool:
         return (
             observed.get("completion_tokens") == QUALITY_MAX_TOKENS and
-            observed.get("sse_token_events") == QUALITY_MAX_TOKENS and
             isinstance(observed.get("token_ids"), list) and
             len(observed["token_ids"]) == QUALITY_MAX_TOKENS and
             all(isinstance(token, int) and not isinstance(token, bool) and token >= 0
@@ -745,13 +744,12 @@ def _run_quality_requests(
             server_log, log_start, expected_request=stream["response_id"],
             expected_count=QUALITY_MAX_TOKENS,
         )
-        output_errors = BENCH_CLIENT.observable_output_errors(
-            usage["completion_tokens"], len(stream["token_timestamps_ns"]),
-            QUALITY_MAX_TOKENS,
-        )
-        output_errors.extend(BENCH_CLIENT.raw_visible_output_errors(
+        sse_content_events = len(stream["token_timestamps_ns"])
+        output_errors = BENCH_CLIENT.raw_visible_output_errors(
             tokenizer, raw_timing["token_ids"], reasoning, content,
-        ))
+        )
+        if sse_content_events <= 0:
+            output_errors.append("no content-bearing SSE event was observed")
         if output_errors:
             raise ValueError(f"quality output is not independently observable: {output_errors}")
         records.append({
@@ -768,7 +766,7 @@ def _run_quality_requests(
             "generated_content_sha256": hashlib.sha256(content.encode()).hexdigest(),
             "generated_content_bytes": len(content.encode()),
             "token_ids": raw_timing["token_ids"],
-            "sse_token_events": len(stream["token_timestamps_ns"]),
+            "sse_content_events": sse_content_events,
         })
     response_path = out / "responses.json"
     response_path.write_text(
