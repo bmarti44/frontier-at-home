@@ -575,6 +575,13 @@ def future_union_targets(
     return np.asarray(output_rows, dtype=np.int64), np.stack(output_targets)
 
 
+def frequency_prior_by_layer(
+    layer: np.ndarray, selected_ids: np.ndarray,
+) -> dict[int, np.ndarray]:
+    """Fit stable per-layer expert rankings from authorized training selections."""
+    raise NotImplementedError
+
+
 def score_rankings(
     row_indices: np.ndarray,
     targets: np.ndarray,

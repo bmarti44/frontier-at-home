@@ -83,6 +83,19 @@ class UnionTargetTests(unittest.TestCase):
         self.assertEqual(result["by_budget"]["4"]["macro_request_recall"], 1 / 3)
         self.assertEqual(result["by_budget"]["2"]["event_weighted_wasted_experts"], 9 / 5)
 
+    def test_frequency_prior_is_per_layer_count_ranked_with_stable_ties(self) -> None:
+        layer = np.asarray([3, 3, 4], dtype=np.uint16)
+        selected = np.asarray([[2, 1], [2, 3], [9, 8]], dtype=np.uint8)
+        rankings = MODULE.frequency_prior_by_layer(layer, selected)
+        self.assertEqual(set(rankings), {3, 4})
+        np.testing.assert_array_equal(rankings[3][:5], [2, 1, 3, 0, 4])
+        np.testing.assert_array_equal(rankings[4][:4], [8, 9, 0, 1])
+        self.assertEqual(np.unique(rankings[3]).size, 256)
+        duplicate = selected.copy()
+        duplicate[0] = [2, 2]
+        with self.assertRaises(ValueError):
+            MODULE.frequency_prior_by_layer(layer, duplicate)
+
     def test_scoring_rejects_duplicate_rankings_or_cross_row_mismatch(self) -> None:
         request, layer, position, selected = self.fixture()
         rows, target = MODULE.future_union_targets(
