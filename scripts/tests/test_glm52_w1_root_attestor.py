@@ -157,6 +157,16 @@ class RootAttestorContractTests(unittest.TestCase):
         source = inspect.getsource(module._publish_root_result)
         self.assertNotIn("_result_tree_manifest(authoritative)", source)
 
+    def test_completed_validator_uses_only_root_owned_offline_python_runtime(self):
+        submitter = load_submitter()
+        source = inspect.getsource(submitter._run_p1_completed_validator)
+        self.assertIn("P1_PYTHON_RUNTIME", source)
+        self.assertIn('"PYTHONNOUSERSITE": "1"', source)
+        self.assertIn('"PYTHONPATH": str(P1_PYTHON_RUNTIME)', source)
+        self.assertIn('"-S"', source)
+        self.assertNotIn('"--device", "cpu"', source)
+        self.assertIn("_python_dependency_tree_sha256", source)
+
     def test_p1_result_publication_rejects_digest_race_but_preserves_attempt(self):
         submitter = load_submitter()
         candidate = "1" * 40
@@ -885,6 +895,19 @@ class RootAttestorContractTests(unittest.TestCase):
         )
         self.assertIsNotNone(match)
         self.assertEqual(match.group(1), expected)
+
+    def test_installer_copies_and_hash_verifies_offline_scorer_dependencies(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        self.assertRegex(
+            source,
+            r"(?m)^readonly PYTHON_DEPENDENCY_SHA256=[0-9a-f]{64}$",
+        )
+        self.assertIn("dependency_tree_sha", source)
+        self.assertIn('"$PYTHON_DEPENDENCY_SOURCE"', source)
+        self.assertIn('"$PYTHON_RUNTIME"', source)
+        self.assertIn("PYTHONNOUSERSITE=1", source)
+        self.assertIn("PYTHONDONTWRITEBYTECODE=1", source)
+        self.assertIn("import numpy, tokenizers, torch", source)
 
     def test_controller_pins_the_same_root_submitter_bytes_as_installer(self):
         controller = (ROOT / "scripts/81_glm_union_baseline.py").read_text(

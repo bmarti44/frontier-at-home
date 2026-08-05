@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import json
 import os
 from pathlib import Path
@@ -1072,9 +1073,19 @@ class BaselineTableTests(unittest.TestCase):
             payload.replace(b"rc=86", b"rc=0", 1),
             payload.replace(b"stage=mtp_call", b"stage=target_eval"),
             payload.replace(b"killed=no", b"killed=yes"),
+            payload + b"FATAL unrelated cleanup failure\n",
         ):
             with self.assertRaises(RuntimeError):
                 MODULE.validate_expected_failure_wrapper(mutation, stage, environment)
+
+    def test_root_replay_uses_recorded_scoring_backend_not_forced_cpu(self) -> None:
+        source = inspect.getsource(MODULE.validate_completed_capture_reconstruction)
+        self.assertIn('recorded["scoring_backend"]', source)
+
+    def test_completed_replay_interprets_all_expected_failure_artifacts(self) -> None:
+        source = inspect.getsource(MODULE.validate_completed_result)
+        self.assertIn("_validate_expected_failure_artifacts(", source)
+        self.assertIn("fault_payloads", source)
 
     def fixture(self):
         requests = np.repeat(np.arange(1, 21, dtype=np.uint16), 2)
