@@ -148,10 +148,10 @@ index 247d186..f8c1914 100644
  
 diff --git a/tests/test_union_trace_corpus_source.py b/tests/test_union_trace_corpus_source.py
 new file mode 100644
-index 0000000..d59855a
+index 0000000..3250457
 --- /dev/null
 +++ b/tests/test_union_trace_corpus_source.py
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,115 @@
 +#!/usr/bin/env python3
 +"""Source contract for default-off multi-request GLM union-trace capture."""
 +
@@ -195,22 +195,23 @@ index 0000000..d59855a
 +#include <stdint.h>
 +#include <stdlib.h>
 +#include <string.h>
-+#define DS4_N_LEADING_DENSE 4u
++#define DS4_N_LEADING_DENSE 3u
 +{helper}
 +int main(void) {{
 +    uint64_t id;
 +    unsetenv("DS4_GLM_UNION_TRACE_CORPUS");
-+    assert(glm_union_trace_request_id(4, 0) == 0);
++    assert(glm_union_trace_request_id(3, 0) == 0);
 +    setenv("DS4_GLM_UNION_TRACE_CORPUS", "0", 1);
-+    assert(glm_union_trace_request_id(4, 0) == 0);
++    assert(glm_union_trace_request_id(3, 0) == 0);
 +    setenv("DS4_GLM_UNION_TRACE_CORPUS", "1", 1);
-+    id = glm_union_trace_request_id(4, 0); assert(id == 1);
-+    assert(glm_union_trace_request_id(5, 0) == id);
-+    assert(glm_union_trace_request_id(4, 2048) == id);
-+    assert(glm_union_trace_request_id(78, 2048) == id);
-+    id = glm_union_trace_request_id(4, 0); assert(id == 2);
-+    assert(glm_union_trace_request_id(5, 0) == id);
-+    assert(glm_union_trace_request_id(4, 2048) == id);
++    assert(glm_union_trace_request_id(2, 0) == 0);
++    id = glm_union_trace_request_id(3, 0); assert(id == 1);
++    assert(glm_union_trace_request_id(4, 0) == id);
++    assert(glm_union_trace_request_id(3, 2048) == id);
++    assert(glm_union_trace_request_id(77, 2048) == id);
++    id = glm_union_trace_request_id(3, 0); assert(id == 2);
++    assert(glm_union_trace_request_id(4, 0) == id);
++    assert(glm_union_trace_request_id(3, 2048) == id);
 +    return 0;
 +}}
 +"""
