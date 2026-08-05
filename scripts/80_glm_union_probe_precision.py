@@ -294,6 +294,9 @@ def execute(out_dir: Path) -> int:
         global_rows = np.flatnonzero(diagnostic["layer"] == layer_id)
         selected_mask = np.isin(holdout_global, global_rows)
         selected_global = holdout_global[selected_mask]
+        if selected_global.size == 0:
+            print(json.dumps({"diagnosed_layer": layer_id, "paired_rows": 0}, sort_keys=True), flush=True)
+            continue
         local_rows = np.searchsorted(global_rows, selected_global)
         if not np.array_equal(global_rows[local_rows], selected_global):
             raise ValueError("diagnostic holdout row does not map to its layer")
@@ -320,6 +323,8 @@ def execute(out_dir: Path) -> int:
         fp16_logits = PROBE.predict_probe_head(fp16_features, state, RANK, device="cuda")
         for k_index, k in enumerate(CV.K_VALUES):
             active = valid[selected_prediction, k_index]
+            if not active.any():
+                continue
             paired = diagnostic_pair_metrics(
                 data["request_index"][local_rows[active]],
                 targets[selected_prediction[active], k_index],
