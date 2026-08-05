@@ -393,7 +393,11 @@ def execute(out_dir: Path) -> int:
             "mean_top32_overlap_min": 0.9,
         },
         "runtime_final_sha256": _sha256(requested / "runtime-final.json"),
-        "claim_limit": "Five-case feature-precision diagnostic only; calibration and test were not opened.",
+        "claim_limit": (
+            "Five-case feature-precision diagnostic only. Calibration/test values were not scored "
+            "or used, but their NPZ members were previously materialized for schema inspection; "
+            "see R0c-split-isolation-incident-2026-08-05.json."
+        ),
     }
     CV._write_json_exclusive(requested / "summary.json", summary)
     print(json.dumps(summary, sort_keys=True, indent=2, allow_nan=False))
