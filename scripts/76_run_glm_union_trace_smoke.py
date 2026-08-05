@@ -498,6 +498,56 @@ def verify_final_artifact_receipts(
             raise ValueError("final artifact differs from containment receipt")
 
 
+def quality_raw_visible_output_errors(
+    tokenizer: Tokenizer, token_ids: list[int],
+    generated_reasoning: str, generated_content: str,
+) -> list[str]:
+    """Bind raw token IDs to exact client bytes without assuming canonical BPE."""
+    try:
+        vocab_size = tokenizer.get_vocab_size(with_added_tokens=True)
+    except Exception as error:
+        return [f"cannot determine frozen tokenizer vocabulary: {error}"]
+    if (not isinstance(vocab_size, int) or vocab_size <= 0 or
+            any(not isinstance(token, int) or isinstance(token, bool) or
+                token < 0 or token >= vocab_size for token in token_ids)):
+        return ["raw timing contains a token outside the frozen tokenizer vocabulary"]
+    try:
+        open_ids = tokenizer.encode("<think>", add_special_tokens=False).ids
+        close_ids = tokenizer.encode("</think>", add_special_tokens=False).ids
+        framed_ids = list(token_ids)
+        if open_ids and framed_ids[:len(open_ids)] == open_ids:
+            del framed_ids[:len(open_ids)]
+        close_positions = [
+            index for index in range(len(framed_ids) - len(close_ids) + 1)
+            if close_ids and framed_ids[index:index + len(close_ids)] == close_ids
+        ]
+        if len(close_positions) > 1:
+            return ["raw timing contains multiple reasoning/content boundaries"]
+        if close_positions:
+            close_index = close_positions[0]
+            reasoning_ids = framed_ids[:close_index]
+            content_ids = framed_ids[close_index + len(close_ids):]
+        elif generated_reasoning and not generated_content:
+            reasoning_ids, content_ids = framed_ids, []
+        elif generated_content and not generated_reasoning:
+            reasoning_ids, content_ids = [], framed_ids
+        else:
+            return ["raw timing has no unambiguous reasoning/content token boundary"]
+        decoded_reasoning = tokenizer.decode(reasoning_ids, skip_special_tokens=False)
+        decoded_content = tokenizer.decode(content_ids, skip_special_tokens=False)
+    except Exception as error:
+        return [f"cannot bind raw timing tokens to client output: {error}"]
+    if decoded_reasoning == generated_reasoning and decoded_content == generated_content:
+        return []
+    return [
+        "raw token/client byte mismatch: "
+        f"raw_reasoning_bytes={len(decoded_reasoning.encode('utf-8'))}, "
+        f"client_reasoning_bytes={len(generated_reasoning.encode('utf-8'))}, "
+        f"raw_content_bytes={len(decoded_content.encode('utf-8'))}, "
+        f"client_content_bytes={len(generated_content.encode('utf-8'))}"
+    ]
+
+
 def randomness_is_after_freeze(round_number: int, freeze_commit_time: int) -> bool:
     if round_number < 1 or freeze_commit_time < 0:
         return False
@@ -774,7 +824,7 @@ def _run_quality_requests(
             expected_count=QUALITY_MAX_TOKENS,
         )
         sse_content_events = len(stream["token_timestamps_ns"])
-        output_errors = BENCH_CLIENT.raw_visible_output_errors(
+        output_errors = quality_raw_visible_output_errors(
             tokenizer, raw_timing["token_ids"], reasoning, content,
         )
         if sse_content_events <= 0:

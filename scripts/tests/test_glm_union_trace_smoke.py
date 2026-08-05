@@ -469,6 +469,14 @@ class UnionTraceSmokeVerdictTests(unittest.TestCase):
             tokenizer, raw_ids[:-1] + [tokenizer.get_vocab_size() + 1],
             "害\n", "害\n\n|",
         ))
+        for invalid in (-1, True, "8507"):
+            with self.subTest(invalid=invalid):
+                self.assertTrue(MODULE.quality_raw_visible_output_errors(
+                    tokenizer, [invalid, *raw_ids[1:]], "害\n", "害\n\n|",
+                ))
+        self.assertTrue(MODULE.quality_raw_visible_output_errors(
+            tokenizer, [*raw_ids[:3], 91, *raw_ids[4:]], "害\n", "害\n\n|",
+        ))
 
 
 class UnionTraceSmokeSourceContractTests(unittest.TestCase):
