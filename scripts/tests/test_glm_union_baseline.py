@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -206,6 +207,82 @@ class CaptureBundleTests(unittest.TestCase):
                     injected={"__authenticated_probe__": object()},
                     substitutions=((edge, b"PROBE = __authenticated_probe__\n"),),
                 )
+
+    def test_missing_capture_root_fails_before_heldout_open(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            missing = Path(raw) / "missing-capture"
+            with mock.patch.object(
+                MODULE, "_load_frozen_module_graph", return_value=(object(), object(), object()),
+            ), mock.patch.object(
+                MODULE, "_load_test_archive", side_effect=AssertionError("held-out opened"),
+            ) as opener:
+                with self.assertRaises(FileNotFoundError):
+                    MODULE.score_heldout(missing, device="cpu")
+            opener.assert_not_called()
+
+
+class AtomicLifecycleTests(unittest.TestCase):
+    def test_attempt_precedes_single_open_and_success_is_sealed(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            output = Path(raw) / "result"
+            events: list[str] = []
+
+            def preflight():
+                events.append("preflight")
+                return {"candidate": "bound"}
+
+            def open_heldout(staging):
+                attempt = json.loads((staging / "attempt.json").read_text(encoding="utf-8"))
+                self.assertEqual(attempt["status"], "STARTED")
+                events.append("open")
+                return {"secret": 17}
+
+            def capture(opened, staging):
+                self.assertEqual(opened, {"secret": 17})
+                events.append("capture")
+                return {"capture": "bound"}
+
+            def score(opened, captured, staging):
+                self.assertEqual(captured, {"capture": "bound"})
+                events.append("score")
+                return {"verdict": "PASS"}
+
+            result = MODULE._run_atomic_lifecycle(
+                output, preflight, open_heldout, capture, score,
+            )
+            self.assertEqual(result, {"verdict": "PASS"})
+            self.assertEqual(events, ["preflight", "open", "capture", "score"])
+            self.assertEqual(
+                json.loads((output / "attempt.json").read_text(encoding="utf-8"))["status"],
+                "COMPLETE",
+            )
+            self.assertEqual(
+                json.loads((output / "summary.json").read_text(encoding="utf-8")), result,
+            )
+
+    def test_post_open_failure_is_sealed_without_retry(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            output = Path(raw) / "failed"
+            open_count = 0
+
+            def open_heldout(_staging):
+                nonlocal open_count
+                open_count += 1
+                return {"secret": 17}
+
+            def fail_capture(_opened, _staging):
+                raise RuntimeError("injected capture failure")
+
+            with self.assertRaisesRegex(RuntimeError, "injected capture failure"):
+                MODULE._run_atomic_lifecycle(
+                    output, lambda: {"candidate": "bound"}, open_heldout,
+                    fail_capture, lambda *_args: {"verdict": "PASS"},
+                )
+            self.assertEqual(open_count, 1)
+            attempt = json.loads((output / "attempt.json").read_text(encoding="utf-8"))
+            self.assertEqual(attempt["status"], "FAILED")
+            self.assertEqual(attempt["failure_type"], "RuntimeError")
+            self.assertFalse((output / "summary.json").exists())
 
 
 class BaselineTableTests(unittest.TestCase):
