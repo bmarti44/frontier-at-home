@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -786,6 +787,47 @@ class RootAttestorContractTests(unittest.TestCase):
         ):
             with self.subTest(required=required):
                 self.assertIn(required, source)
+
+    def test_staging_copy_race_yields_reviewed_bytes_or_hash_failure(self):
+        reviewed = b"#!/bin/bash\nprintf 'reviewed\\n'\n" + b"#" * 65536
+        replacement = b"#!/bin/bash\nprintf 'unreviewed\\n'\n" + b"!" * 65534
+        expected = hashlib.sha256(reviewed).hexdigest()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "user-installer"
+            source.write_bytes(reviewed)
+            stop = threading.Event()
+
+            def mutate():
+                while not stop.is_set():
+                    source.write_bytes(replacement)
+                    source.write_bytes(reviewed)
+
+            writer = threading.Thread(target=mutate)
+            writer.start()
+            try:
+                for index in range(32):
+                    staged = root / f"staged-{index}"
+                    subprocess.run(
+                        ["/usr/bin/install", "-m", "0500", source, staged],
+                        check=True,
+                    )
+                    check = subprocess.run(
+                        ["/usr/bin/sha256sum", "-c"],
+                        input=f"{expected}  {staged}\n",
+                        text=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    if check.returncode == 0:
+                        self.assertEqual(staged.read_bytes(), reviewed)
+                    else:
+                        self.assertNotEqual(
+                            hashlib.sha256(staged.read_bytes()).hexdigest(), expected,
+                        )
+            finally:
+                stop.set()
+                writer.join()
 
     def test_untrusted_engine_builds_as_dsv4_in_a_root_cgroup(self):
         campaign = (
