@@ -243,6 +243,12 @@ exit 0
         ):
             self.assertIn(contract, probe)
 
+    def test_w3_memory_envelope_fits_post_arm_recovery(self):
+        probe = W3_PROBE_V3.read_text(encoding="utf-8")
+        self.assertIn("GLM_SAFE_MEMORY_HIGH_GIB=94", probe)
+        self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=18", probe)
+        self.assertIn("GLM_SAFE_MIN_START_GIB=110", probe)
+
     def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
         safe_environment = {
             "PATH": "/usr/bin:/bin",
