@@ -1,0 +1,21 @@
+{
+  "schema": "glm52-mtp-proxy-behavioral-red-attempt-v1",
+  "recorded_at_utc": "2026-08-06T19:36:00Z",
+  "classification": "REJECTED_TEST_RUNNER_ATTEMPT",
+  "main_candidate_base": "97b8e11aa96ca0ef2baa24293980f43752aa5f17",
+  "engine_base": "2b7522d70bca614578f4c730deb99905ac3e200a",
+  "command": "make -j2 test-glm-mtp-proxy-contract",
+  "exit_code": 2,
+  "intended_red": "Four independent weak production entry points should link and then fail at runtime on the unchanged engine.",
+  "observed_failure": "The test target selected ds4_cpu.o, but the inherited engine snapshot's CPU-only build fails before link because CUDA-only GLM diagnostic types and constants are not guarded under DS4_NO_GPU.",
+  "representative_errors": [
+    "ds4.c:50642: unknown type name ds4_glm_gpu_graph",
+    "ds4.c:50642: ds4_session has no member named glm_graph",
+    "ds4.c:60775: DS4_GLM_BASELINE_MAX_K undeclared"
+  ],
+  "disposition": "NO_RESULT for the CPU-linked runner. Do not treat this as proxy RED evidence. Link the same executable test against the normal production CORE_OBJS/CUDA link path; execution does not initialize CUDA or open a model while the weak entry points are absent.",
+  "frozen_scope_unchanged": true,
+  "engine_started": false,
+  "gpu_used": false,
+  "model_opened": false
+}
