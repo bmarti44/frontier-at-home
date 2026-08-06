@@ -217,6 +217,22 @@ exit 0
         ):
             self.assertIn(contract, probe)
 
+    def test_w3_supports_bound_129_token_balanced_campaign_arms(self):
+        probe = W3_PROBE_V3.read_text(encoding="utf-8")
+        for contract in (
+            'readonly TOKENS=${3:-64}',
+            'readonly ARM_ORDER=${4:-off-on}',
+            '[[ $TOKENS == 64 || $TOKENS == 129 ]]',
+            '[[ $ARM_ORDER == off-on || $ARM_ORDER == on-off ]]',
+            'DS4_TOKEN_TIMING_LOG=1',
+            '"arm_order": arm_order',
+            '"required_completion_tokens": required_tokens',
+            'if [[ $ARM_ORDER == off-on ]]',
+            'run_arm on 18164 1',
+            'run_arm off 18163 0',
+        ):
+            self.assertIn(contract, probe)
+
     def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
         safe_environment = {
             "PATH": "/usr/bin:/bin",
