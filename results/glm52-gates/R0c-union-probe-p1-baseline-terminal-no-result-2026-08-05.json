@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "classification": "TERMINAL_NO_RESULT",
+  "gate": "R0c-union-probe-p1-baseline-heldout-v1",
+  "candidate_hash": "a964bd67ad0f623e2a5940a0e9443f1b8b22f047",
+  "attempt_record": "results/glm52-gates/R0c-union-probe-p1-baseline-c18-heldout-runtime-attestation-failure-2026-08-05.json",
+  "review_record": "results/glm52-gates/R0c-union-probe-p1-baseline-review-r158.json",
+  "attempt_status": "FAILED",
+  "scientific_status": "NO_RESULT",
+  "reason": "The single authorized held-out run opened all test mappings but stopped after nine complete requests and a partial tenth when unrelated firmware-notifier AppArmor records violated the preregistered literal-empty kernel-log assertion. Complete 20-request coverage and a fixed-scorer summary do not exist.",
+  "root_verified_facts": {
+    "engine_completed_failed_arm_with_rc_zero": true,
+    "oom_xid_orphan_observed": false,
+    "permanent_root_reservation_present": true,
+    "repeat_reservation_exit": 17,
+    "repeat_reservation_status": "ALREADY_RESERVED",
+    "reservation_inode": 6083344,
+    "reservation_sha256": "1aeb8b334abcd678a6096038d5d4f5cc68fa135246657228713c44d3753e8e4a"
+  },
+  "prohibited_uses": [
+    "Do not rerun heldout-v1.",
+    "Do not score, summarize, publish, or inspect its partial scientific captures.",
+    "Do not complete its missing requests from retained captures.",
+    "Do not combine its nine completed requests with replacement cases.",
+    "Do not create a v2 namespace or replacement split to repair the same P1 scientific question.",
+    "Do not use v1 prompts, captures, mappings, labels, predictions, or case behavior to tune any future candidate."
+  ],
+  "permitted_uses": [
+    "Retain the failed tree and its committed hashes as failure evidence.",
+    "Use only lifecycle logs to prospectively test a fail-closed kernel-log parser for a separately preregistered future gate."
+  ],
+  "p2_status": "SKIPPED",
+  "p2_reason": "P2 conformal calibration requires a complete accepted P1 held-out comparison; that prerequisite is absent.",
+  "replacement_experiment": "NOT_SCHEDULED",
+  "replacement_rationale": "The existing 100-case corpus is exhausted across train, calibration, and opened test partitions. A clean replacement requires a genuinely independent corpus, new question, fresh randomness, new root authority, and substantial scope; it is lower value than returning to the fidelity-free engine bottlenecks.",
+  "next_work": "Resume lossless Rung 0/Rung 0.5 engine work: high-QD demand submission, staging/copy overhead removal, then prediction-driven admission once justified by independent data."
+}
