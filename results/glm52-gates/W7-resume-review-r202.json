@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate_hash": "98c607ffe40786974cc6d1cc705daa96b25ff7b3",
+  "review_round": 202,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 90,
+      "critical": [],
+      "high": [
+        {
+          "id": "W7-R202-H1-FIXTURE-TOKENIZES-PRE-RENDER-REQUEST",
+          "status": "OPEN",
+          "evidence": "Attempt 2 observed the deployed completion parser's live request frontier 5055 and cold-store prefix 5044, contradicting the raw-text pool's 5037 and 5028.",
+          "affected_gate": "W7 production lineage and evaluator coverage",
+          "acceptance_test": "Freeze caller and exact C-rendered bytes; require offline and runtime geometry 5044/5045/5055/5066."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "W7-R200-H1-FROZEN-FIXTURE-COMMITMENT-IS-WIRE-ONLY", "status": "OPEN"},
+        {"id": "W7-R200-M2-ATTEMPT-ID-IS-NOT-EXECUTION-UNIQUE", "status": "FIXED"},
+        {"id": "ADV-W7-201-M09", "status": "OPEN"},
+        {"id": "W7-ATTEMPT1-LOCK-IDENTITY", "status": "FIXED"}
+      ],
+      "verdict": "CURRENT_CANDIDATE_NO_RESULT_AUTHORIZE_BOUNDED_CANDIDATE_8"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 78,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W7-202-H11",
+          "status": "OPEN",
+          "evidence": "A Python renderer could remain internally consistent while drifting from JSON decoding, thinking-mode selection, model syntax, controls, or later C changes.",
+          "affected_gate": "W7 production fixture authority",
+          "acceptance_test": "A test-only oracle must include the frozen ds4_server.c, call its static completion parser, emit prompt_text, and agree with a deployed-binary geometry smoke."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W7-202-M12",
+          "status": "OPEN",
+          "evidence": "The production-authoritative-fixture issue survived the candidate-6 correction.",
+          "affected_gate": "W7 convergence ledger",
+          "acceptance_test": "Use a new pool/scorer hash and seed; stop if the C oracle and deployed trace still disagree."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "W7-R200-H1-FROZEN-FIXTURE-COMMITMENT-IS-WIRE-ONLY", "status": "OPEN"},
+        {"id": "ADV-W7-197-M03", "status": "OPEN"},
+        {"id": "ADV-W7-201-M09", "status": "VERIFIED"},
+        {"id": "W7-R200-M2-ATTEMPT-ID-IS-CALLER-RENAMEABLE", "status": "FIXED"},
+        {"id": "ADV-W7-200-L08", "status": "FIXED"},
+        {"id": "ADV-W7-198-H06", "status": "FIXED"},
+        {"id": "ADV-W7-196-H04", "status": "FIXED"},
+        {"id": "ADV-W7-198-H07", "status": "FIXED"}
+      ],
+      "verdict": "AUTHORIZE_ONLY_C_PARSER_BOUND_FIXTURE_AND_GEOMETRY_SMOKE"
+    }
+  },
+  "root_disposition": {
+    "candidate_7": "NO_RESULT",
+    "candidate_8_authorized": true,
+    "geometry": {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066},
+    "generated_tokens": 0,
+    "new_seed_required": true,
+    "engine_implementation_authorized": false
+  }
+}

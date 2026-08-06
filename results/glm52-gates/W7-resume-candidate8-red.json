@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate": 8,
+  "status": "RED_CONFIRMED",
+  "review_authority": "results/glm52-gates/W7-resume-review-r202.json",
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_compiled_red.W7CompiledRedHarnessTests.test_fixture_pool_binds_completion_parser_rendered_wire",
+  "exit_code": 1,
+  "failure": "The committed pool is schema v1 with raw caller-text vectors; candidate 8 requires schema v2 with exact C-parser-rendered vectors and geometry 5044/5045/5055/5066.",
+  "artifacts": {
+    "test_sha256": "5916abdbb064f8e74c54a1b8cb20398de48b9886d9c3200e65ecaf7295c079cc",
+    "fixture_sha256": "74829fc094143b4a494e104c186e4146f2e669eaceedbb354a7ab35251083d90",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "e768e7cd80b541e649f9397047f99f4cd9d6130cec6788fb959e210fc1181230"
+  },
+  "implementation_scope": [
+    "test-only frozen C completion-parser oracle",
+    "fixture generator and pool",
+    "W7 scorer pool expectations",
+    "compiled RED geometry assertions"
+  ],
+  "frozen_unchanged": [
+    "engine source",
+    "production binary",
+    "model",
+    "safe wrapper",
+    "cgroup wrapper",
+    "numerical thresholds"
+  ]
+}

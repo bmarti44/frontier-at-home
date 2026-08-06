@@ -9,6 +9,35 @@ HARNESS = ROOT / "results/glm52-gates/harness/w7_resume_compiled_red_v1.sh"
 
 
 class W7CompiledRedHarnessTests(unittest.TestCase):
+    def test_fixture_pool_binds_completion_parser_rendered_wire(self):
+        pool = json.loads(
+            (ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json").read_text()
+        )
+        self.assertEqual(pool["schema"], "glm52-w7-production-fixture-pool-v2")
+        self.assertEqual(
+            pool["render_contract"],
+            {
+                "api": "/v1/completions",
+                "context_tokens": 8192,
+                "model": "default",
+                "reasoning_effort": "high",
+                "thinking": True,
+                "system": "You are a helpful assistant",
+                "oracle": "frozen-ds4-server-c-parser",
+            },
+        )
+        primary = pool["variants"][0]
+        self.assertEqual(primary["variant"], "primary-fixed")
+        self.assertEqual(
+            {
+                "selected": primary["selected_tokens"],
+                "common": primary["common_tokens"],
+                "live": primary["live_tokens"],
+                "prompt": primary["prompt_tokens"],
+            },
+            {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066},
+        )
+
     def test_frozen_production_geometry_and_binary_are_available(self):
         completed = subprocess.run(
             ["/usr/bin/bash", str(HARNESS), "--self-test"],
