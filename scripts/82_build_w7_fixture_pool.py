@@ -21,6 +21,8 @@ RUNTIME_INIT_SHA256 = "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc05
 RUNTIME_NATIVE_SHA256 = "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910"
 LIVE_SUFFIX = "\n\nOne two three four five six seven."
 SERVER_SOURCE_SHA256 = "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07"
+ORACLE_SOURCE_SHA256 = "9590b8eaa238e311ca0468e6983280b798cbb94c3d727920f5e839ac8ee20539"
+ORACLE_BINARY_SHA256 = "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66"
 
 
 def sha256(path: Path) -> str:
@@ -67,8 +69,12 @@ def main() -> int:
             raise RuntimeError(f"frozen dependency mismatch: {path}")
     if sha256(args.server_source) != SERVER_SOURCE_SHA256:
         raise RuntimeError("frozen ds4_server.c mismatch")
+    if sha256(args.oracle_source) != ORACLE_SOURCE_SHA256:
+        raise RuntimeError("frozen completion-render oracle source mismatch")
     if not args.render_oracle.is_file() or not args.render_oracle.stat().st_mode & 0o111:
         raise RuntimeError("C completion-render oracle is unavailable")
+    if sha256(args.render_oracle) != ORACLE_BINARY_SHA256:
+        raise RuntimeError("frozen completion-render oracle binary mismatch")
 
     def render(raw_prompt: str) -> bytes:
         body = json.dumps({

@@ -10,6 +10,7 @@ readonly SCRIPT=$(readlink -f -- "$0")
 readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
+readonly TRACE_SCORER=$REPO/scripts/83_score_w7_deployed_trace.py
 readonly STEM=$REPO/results/glm52-gates/harness/fixture-glm-long8.json
 readonly POOL=$REPO/results/glm52-gates/harness/w7-production-fixture-pool-v1.json
 readonly POOL_SHA256=c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9
@@ -30,26 +31,27 @@ readonly PORT=8097
 readonly CACHE_GIB=40
 
 fixture_check() {
-  /usr/bin/python3 -I -B - "$STEM" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$RENDER_ORACLE" <<'PY'
+  [[ $# == 1 ]] || return 2
+  /usr/bin/python3 -I -B - "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$RENDER_ORACLE" "$1" <<'PY'
 import base64
 import json
+import pathlib
 import struct
 import subprocess
 import sys
 import zlib
-sys.path.insert(0, sys.argv[4])
+sys.path.insert(0, sys.argv[3])
 from tokenizers import Tokenizer
 
-stem_path, pool_path, tokenizer_path = sys.argv[1:4]
-stem = json.load(open(stem_path, encoding="utf-8"))["prompt"]
+pool_path, tokenizer_path = sys.argv[1:3]
 pool = json.load(open(pool_path, encoding="utf-8"))
 primary = next(item for item in pool["variants"] if item["variant"] == "primary-fixed")
-suffix = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
-def render(raw):
-    body = json.dumps({"model":"default","prompt":raw,"max_tokens":0,"temperature":0,"thinking":True,"reasoning_effort":"high"}, ensure_ascii=False, separators=(",", ":")).encode()
-    return subprocess.run([sys.argv[5]], input=body, capture_output=True, check=True).stdout
-live_wire = render(stem + pool["live"]["suffix_utf8"])
-primary_wire = render(stem + suffix)
+request_dir = pathlib.Path(sys.argv[5])
+def render(name):
+    body = (request_dir / name).read_bytes()
+    return subprocess.run([sys.argv[4]], input=body, capture_output=True, check=True).stdout
+live_wire = render("live-request.json")
+primary_wire = render("primary-request.json")
 if live_wire != base64.b64decode(pool["live"]["rendered_wire_utf8_b64"]):
     raise SystemExit("live C-rendered wire differs")
 if primary_wire != base64.b64decode(primary["rendered_wire_utf8_b64"]):
@@ -92,8 +94,8 @@ stem = json.load(open(stem_path, encoding="utf-8"))["prompt"]
 pool = json.load(open(pool_path, encoding="utf-8"))
 primary_suffix = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
 requests = {
-    "live-request.json": {"model": "default", "prompt": stem + pool["live"]["suffix_utf8"], "max_tokens": 0, "temperature": 0},
-    "primary-request.json": {"model": "default", "prompt": stem + primary_suffix, "max_tokens": 0, "temperature": 0},
+    "live-request.json": {"model": "default", "prompt": stem + pool["live"]["suffix_utf8"], "max_tokens": 0, "temperature": 0, "thinking": True, "reasoning_effort": "high"},
+    "primary-request.json": {"model": "default", "prompt": stem + primary_suffix, "max_tokens": 0, "temperature": 0, "thinking": True, "reasoning_effort": "high"},
 }
 for name, payload in requests.items():
     (out / name).write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -118,9 +120,10 @@ stop_server() {
 driver() {
   [[ $# == 2 ]] || exit 2
   local out=$1 port=$2 code
-  write_requests "$out"
+  [[ -f $out/live-request.json && -f $out/primary-request.json ]] || return 2
   mkdir "$out/kv"
   "$BIN" --cuda -m "$MODEL" -c 8192 --host 127.0.0.1 --port "$port" \
+    --trace "$out/request.trace" \
     --ssd-streaming --ssd-streaming-cache-experts 40GB \
     --kv-disk-dir "$out/kv" --kv-disk-space-mb 4096 \
     --kv-cache-boundary-align-tokens 4 --kv-cache-boundary-trim-tokens 8 \
@@ -155,17 +158,36 @@ driver() {
 
 score_red() {
   local out=$1
-  /usr/bin/python3 -I -B - "$out" <<'PY'
+  /usr/bin/python3 -I -B - "$out" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$TRACE_SCORER" <<'PY'
 import hashlib
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 out = pathlib.Path(sys.argv[1])
 log = (out / "server.log").read_text(encoding="utf-8", errors="replace")
 live = json.loads((out / "live-response.json").read_text(encoding="utf-8"))
 primary = json.loads((out / "primary-response.json").read_text(encoding="utf-8"))
+trace_run = subprocess.run([
+    sys.executable, "-I", "-B", sys.argv[5],
+    "--trace", str(out / "request.trace"),
+    "--pool", sys.argv[2],
+    "--live-request", str(out / "live-request.json"),
+    "--primary-request", str(out / "primary-request.json"),
+    "--tokenizer", sys.argv[3],
+    "--tokenizer-runtime", sys.argv[4],
+], text=True, capture_output=True, check=False)
+try:
+    trace_result = json.loads(trace_run.stdout)
+except Exception:
+    trace_result = {"checks": {
+        "trace_exactly_two_requests": False,
+        "trace_request_bytes_exact": False,
+        "trace_rendered_bytes_exact": False,
+        "trace_token_vectors_exact": False,
+    }, "error": "trace scorer produced malformed output"}
 checks = {
     "live_http_200": (out / "live-http-status").read_text().strip() == "200",
     "primary_http_200": (out / "primary-http-status").read_text().strip() == "200",
@@ -176,9 +198,10 @@ checks = {
     "strict_guard_cold_restart": "GLM resume guard: prompt (5066) extends/diverges past evaluated frontier 5055 (checkpoint 5044)" in log,
     "cold_sync_after_guard": re.search(r"GLM sync start=0 prompt=5066 suffix=5066\\b", log) is not None,
     "legacy_guard_bypass_absent": "DS4_GLM_RESUME_GUARD_OFF" not in log,
+    **trace_result["checks"],
 }
 desired_resume_pass = (
-    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5055", "primary_prompt_tokens_5066", "live_miss_geometry", "selected_checkpoint_5044", "legacy_guard_bypass_absent"))
+    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5055", "primary_prompt_tokens_5066", "live_miss_geometry", "selected_checkpoint_5044", "legacy_guard_bypass_absent", "trace_exactly_two_requests", "trace_request_bytes_exact", "trace_rendered_bytes_exact", "trace_token_vectors_exact"))
     and not checks["strict_guard_cold_restart"]
     and re.search(r"GLM sync start=5044 prompt=5066 suffix=22\\b", log) is not None
 )
@@ -188,11 +211,13 @@ summary = {
     "gate": "W7-resume-bpe-lineage-v1",
     "classification": "fresh production-path reproduction",
     "geometry": {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066},
-    "acceptance_formula": "HTTP/prompt/selection geometry exact; no strict cold restart; sync start=5044,prompt=5066,suffix=22",
+    "acceptance_formula": "deployed request/rendered/token vectors and HTTP/prompt/selection geometry exact; no strict cold restart; sync start=5044,prompt=5066,suffix=22",
     "checks": checks,
     "desired_resume_pass": desired_resume_pass,
     "red_confirmed": red_confirmed,
     "server_log_sha256": hashlib.sha256((out / "server.log").read_bytes()).hexdigest(),
+    "request_trace_sha256": hashlib.sha256((out / "request.trace").read_bytes()).hexdigest() if (out / "request.trace").is_file() else None,
+    "trace_scorer": trace_result,
     "verdict": "RED_CONFIRMED" if red_confirmed else ("PASS" if desired_resume_pass else "NO_RESULT"),
 }
 (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -206,7 +231,10 @@ if [[ ${1:-} == --self-test ]]; then
   [[ $(sha256sum -- "$RENDER_ORACLE" | awk '{print $1}') == "$RENDER_ORACLE_SHA256" ]]
   [[ $(sha256sum -- "$BIN" | awk '{print $1}') == "$BINARY_SHA256" ]]
   [[ $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]]
-  fixture_check >/dev/null
+  test_requests=$(mktemp -d)
+  trap 'rm -rf -- "$test_requests"' EXIT
+  write_requests "$test_requests"
+  fixture_check "$test_requests" >/dev/null
   echo W7_RED_SELFTEST_OK
   exit 0
 elif [[ ${1:-} == --driver ]]; then
@@ -219,7 +247,7 @@ fi
   echo "usage: $0" >&2
   exit 2
 }
-[[ -x $BIN && -r $MODEL && -r $STEM && -r $POOL && -r $SAFE && -x $CGROUP ]] || exit 2
+[[ -x $BIN && -r $MODEL && -r $STEM && -r $POOL && -r $SAFE && -x $CGROUP && -r $TRACE_SCORER ]] || exit 2
 [[ $(sha256sum -- "$BIN" | awk '{print $1}') == "$BINARY_SHA256" ]] || exit 2
 [[ $(sha256sum -- "$POOL" | awk '{print $1}') == "$POOL_SHA256" ]] || exit 2
 [[ $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]] || exit 2
@@ -238,14 +266,14 @@ readonly engine_lock_identity=$(stat -Lc '%d:%i' -- "$ENGINE_LOCK")
 swap_used_kib=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t-f}' /proc/meminfo)
 (( swap_used_kib < 1048576 )) || exit 8
 /usr/bin/python3 -I -B "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 0 >/dev/null
-fixture_check >/dev/null
-
 mkdir -p "$OUT_PARENT"
 nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 readonly nonce
 readonly out=$OUT_PARENT/attempt-$nonce
 readonly tag=w7red-${nonce:0:12}
 mkdir "$out"
+write_requests "$out"
+fixture_check "$out" >/dev/null
 printf '%s\n' "$BINARY_SHA256" >"$out/binary.sha256"
 printf '%s\n' "$MODEL_SHA256" >"$out/model-known.sha256"
 printf '%s\n' "$POOL_SHA256" >"$out/fixture-pool.sha256"
