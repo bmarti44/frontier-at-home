@@ -1355,6 +1355,25 @@ class FormulaTests(unittest.TestCase):
                 continue
             self.assertEqual(result["verdict"], "FAIL")
 
+    def test_w7_resume_scorer_rejects_confirmation_that_removes_divergent_append(self):
+        record = w7_resume_record()
+        for regime in record["regimes"][1:]:
+            for case_id in ("strict-primary", "candidate-primary"):
+                case = next(
+                    item for item in regime["cases"] if item["case_id"] == case_id
+                )
+                raw = zlib.decompress(
+                    base64.b64decode(case["canonical_token_ids_zlib_b64"])
+                )
+                canonical = list(
+                    struct.unpack(f"<{case['prompt_tokens']}i", raw)
+                )
+                case["live_token_count"] = len(canonical)
+                case["live_token_ids_zlib_b64"] = _compressed_i32(canonical)
+        _rebind_w7_fixture_hashes(record)
+        with self.assertRaisesRegex(ValueError, "confirmation.*divergent append"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [record])
+
     def test_w7_resume_scorer_rejects_malformed_or_nonfinite_artifacts(self):
         malformed = w7_resume_record()
         next(case for case in malformed["regimes"][0]["cases"]
