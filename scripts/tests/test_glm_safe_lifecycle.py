@@ -67,6 +67,46 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.strip(), "isolated")
             self.assertFalse(marker.exists())
+
+    def test_w3_engine_environment_hash_uses_launch_assignments(self):
+        probe = W3_PROBE_V3.read_text(encoding="utf-8")
+        self.assertIn('local -a engine_environment=(', probe)
+        self.assertIn(
+            'env_sha=$(environment_sha256 "${engine_environment[@]}")', probe
+        )
+        self.assertIn('"${engine_environment[@]}" \\\n+    "$CGROUP"', probe)
+        self.assertNotIn("export DS4_", probe)
+
+        names = [
+            "DS4_CUDA_EXPERT_CACHE_GB",
+            "DS4_CUDA_EXPERT_CACHE_PIN",
+            "DS4_CUDA_EXPERT_CACHE_SLRU",
+            "DS4_CUDA_FETCH_THREADS",
+            "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS",
+            "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
+            "DS4_GLM_TP_DEBUG",
+        ]
+        off = {
+            "DS4_CUDA_EXPERT_CACHE_GB": "68",
+            "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+            "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+            "DS4_CUDA_FETCH_THREADS": "6",
+            "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+            "DS4_GLM_TP_DEBUG": "1",
+        }
+        on = dict(off, DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS="1")
+
+        def digest(values):
+            canonical = b"".join(
+                f"{name}={values.get(name, '<UNSET>')}\n".encode("ascii")
+                for name in names
+            )
+            return hashlib.sha256(canonical).hexdigest()
+
+        self.assertNotEqual(digest(off), digest(on))
+        mutated = dict(on)
+        del mutated["DS4_CUDA_FETCH_THREADS"]
+        self.assertNotEqual(digest(on), digest(mutated))
         self.assertNotIn("sort -n | tail -1", probe)
         self.assertNotIn('a["completion_tokens"] >= 64', probe)
         self.assertIn('a["independent_completion_tokens"] == 64', probe)
