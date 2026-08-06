@@ -1418,6 +1418,46 @@ class FormulaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invocation identity"):
             self.goal.score_registered_gate("W7", "w7.resume.v1", [stale_attempt])
 
+    def test_w7_resume_scorer_requires_production_tokens_and_derived_attempt_identity(self):
+        record = w7_resume_record()
+        expected = {
+            "confirmation-1": (
+                5046,
+                "2c3e801847ece5c5ef25977956ca1c70c39b71dc0613fe54a692f09e1b08d40c",
+                "c618156f27ebfd4122de70a48f0a048e97e6c0968137c79505dc8df3520966aa",
+            ),
+            "confirmation-2": (
+                5048,
+                "ba4f1ad1188715f12a26b5500ca12283ff6b61243ffee6d005cb451c76cbb52e",
+                "53e318bfd8f52a5a3db17df24d4ca459fd0f27e09e4ab0f10c8638baf3204360",
+            ),
+        }
+        for regime in record["regimes"][1:]:
+            case = regime["cases"][0]
+            count, token_sha, offset_sha = expected[regime["regime_id"]]
+            self.assertEqual(case["prompt_tokens"], count)
+            token_raw = zlib.decompress(
+                base64.b64decode(case["canonical_token_ids_zlib_b64"])
+            )
+            offset_raw = zlib.decompress(
+                base64.b64decode(case["wire_token_end_offsets_zlib_b64"])
+            )
+            self.assertEqual(hashlib.sha256(token_raw).hexdigest(), token_sha)
+            self.assertEqual(hashlib.sha256(offset_raw).hexdigest(), offset_sha)
+
+        renamed = w7_resume_record()
+        old_attempt = renamed["attempt_id"]
+        renamed["attempt_id"] = "f" * 64
+        for regime in renamed["regimes"]:
+            for case in regime["cases"]:
+                case["invocation_id"] = case["invocation_id"].replace(
+                    old_attempt[:16], renamed["attempt_id"][:16], 1
+                )
+                for event in case["events"]:
+                    event["invocation_id"] = case["invocation_id"]
+        with self.assertRaisesRegex(ValueError, "attempt identity"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [renamed])
+
     def test_w7_resume_scorer_rejects_malformed_or_nonfinite_artifacts(self):
         malformed = w7_resume_record()
         next(case for case in malformed["regimes"][0]["cases"]
