@@ -6,6 +6,7 @@ readonly SECRET_PATTERN='[0-9a-f]{64}|Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPE
 # every other secret pattern via SECRET_PATTERN_NOHEX.
 readonly SECRET_PATTERN_NOHEX='Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPENSSH)? PRIVATE KEY|hf_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|tskey-[A-Za-z0-9-]{20,}'
 readonly PUBLIC_DIGEST_ALLOWLIST='^scripts/65_glm52_w1_submit\.py:[0-9]+:P1_PYTHON_DEPENDENCY_SHA256 = "[0-9a-f]{64}"$|^scripts/66_install_glm52_w1_attestor\.sh:[0-9]+:readonly (SUBMITTER|PYTHON_DEPENDENCY)_SHA256=[0-9a-f]{64}$|^scripts/71_install_glm_benchmark_lock_acl\.sh:[0-9]+:readonly SOURCE_SHA256=[0-9a-f]{64}$|^scripts/73_run_glm_shared_router_probe\.py:[0-9]+:(MODEL|TOKENIZER)_SHA256 = "[0-9a-f]{64}"$|^scripts/76_run_glm_union_trace_smoke\.py:[0-9]+:QUALITY_FIXTURE_CONTENT_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:FROZEN_(BINARY|MODEL|TOKENIZER|FIXTURE|ROOT_SUBMITTER)_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:    (PROBE_PATH|CV_PATH|PRECISION_PATH|SAFE_RUN_PATH|MEMORY_GUARD_PATH): "[0-9a-f]{64}",$|^results/glm52-gates/harness/w3_direct_slot_probe_v[123]\.sh:[0-9]+:readonly (BINARY|MODEL)_SHA256=[0-9a-f]{64}$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:  `[0-9a-f]{64}`[.;]$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:SHA-256 `[0-9a-f]{64}`\.$|^scripts/tests/test_glm_rung0_slab_campaign\.py:[0-9]+:            "[0-9a-f]{64}",$'
+readonly W3_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W3-slot-lifetime-probe-v11-pass/crash/(off|on)/cmd\.log:[0-9]+:ds4: expert-cache window tag=[^ ]+ lookup_bytes=[0-9]+ hit_bytes=[0-9]+ stream_sha256=[0-9a-f]{64}$|^results/glm52-gates/W3-slot-lifetime-probe-v11-pass/crash/(off|on)/main\.log:[0-9]+:[0-9T:+,.-]+ (candidate_src=[^ ]+ candidate_binary_sha256=[0-9a-f]{64} candidate_device_inode=[0-9:]+|executed_environment_allowlist=[A-Z0-9_,]+ executed_environment_sha256=[0-9a-f]{64}|executed_candidate_verified pid=[0-9]+ start_ticks=[0-9]+ path=[^ ]+ executed_binary_sha256=[0-9a-f]{64} device_inode=[0-9:]+|safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+)$'
 
 is_checksum_file() {
   case "$1" in
@@ -60,7 +61,7 @@ redact_matches() {
 
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST" || true)"
+  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
@@ -150,13 +151,17 @@ allowlist = {
     "nll_sha256",
     "summary_sha256",
     "runtime_final_sha256",
+    "runtime_init_sha256",
+    "runtime_native_sha256",
     "checkpoint_chain_tail_sha256",
     "console_log_sha256",
     "generated_content_sha256",
     "generated_reasoning_sha256",
+    "generated_sha256",
     "diff_sha256",
     "patch_sha256",
     "engine_source_sha256",
+    "environment_sha256",
     "engine_test_sha256",
     "test_sha256",
     "production_cuda_source_sha256",
@@ -170,6 +175,7 @@ allowlist = {
     "build_2_binary_sha256",
     "fixture_sha256",
     "freeze_json_sha256",
+    "freeze_sha256",
     "harness_sha256",
     "harness_tests_sha256",
     "fio_result_sha256",
@@ -178,6 +184,7 @@ allowlist = {
     "slab_on_configuration_sha256",
     "output_tokenizer_sha256",
     "profile_sha256",
+    "public_randomness",
     "randomness",
     "signature",
     "request_sha256",
@@ -244,7 +251,9 @@ map_allowlist = {
     "accuracy_result_sha256",
     "artifact_sha256",
     "artifacts",
+    "crash_artifact_sha256",
     "engine_source_sha256",
+    "environment_sha256",
     "evidence_archive",
     "evalset_sha256",
     "model_files",

@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "8a101f2970d47326308d4a245c8b4cc132e3d932",
+  "review_round": 175,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": {
+        "W3-R174-H1-LOCK-HARDLINK-TRUNCATION": "FIXED",
+        "W3-R174-M1-ZOMBIE-RUNNER-LIVENESS": "FIXED",
+        "W3-R173-H1-DEFAULT-ENGINE-LOCK": "VERIFIED",
+        "W3-R170-H1-ENV-HASH-LAUNCH-DIVERGENCE": "VERIFIED"
+      },
+      "verdict": "PASS"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 99,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [
+        {
+          "id": "ADV-W3-R173-L1",
+          "status": "DEFERRED",
+          "rationale": "Optional stronger extracted-shell coverage predates and is outside the round-175 lock/runner closure."
+        }
+      ],
+      "prior_issue_status": {
+        "ADV-W3-R174-H1": "FIXED",
+        "ADV-W3-R173-L1": "DEFERRED"
+      },
+      "verdict": "CLEARED_FOR_CONTAINED_EXECUTION"
+    }
+  },
+  "release_condition": {
+    "both_scores_at_least_90": true,
+    "verified_critical_or_high": 0,
+    "deterministic_gate_still_required": true
+  }
+}
