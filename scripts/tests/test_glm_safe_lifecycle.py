@@ -16,13 +16,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SAFE = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
-W3_PROBE_V2 = ROOT / "results/glm52-gates/harness/w3_direct_slot_probe_v2.sh"
+W3_PROBE_V3 = ROOT / "results/glm52-gates/harness/w3_direct_slot_probe_v3.sh"
 FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
 class CandidateLifecycleSourceTests(unittest.TestCase):
     def test_w3_probe_closes_reviewed_false_pass_routes(self):
-        probe = W3_PROBE_V2.read_text(encoding="utf-8")
+        probe = W3_PROBE_V3.read_text(encoding="utf-8")
         for contract in (
             'OBSERVED_MODEL_SHA256=$(sha256sum -- "$MODEL"',
             "/usr/bin/env -i",
@@ -33,9 +33,15 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             'unique W3 evidence tag was already consumed',
             'drand relay disagreement',
             'wait "$runner_pid"',
+            'changed != [str(relative)]',
+            'independent_exact_64_token_outputs',
+            'Tokenizer.from_file(tokenizer_path)',
         ):
             self.assertIn(contract, probe)
         self.assertNotIn("sort -n | tail -1", probe)
+        self.assertNotIn('a["completion_tokens"] >= 64', probe)
+        self.assertIn('a["independent_completion_tokens"] == 64', probe)
+        self.assertIn('a["independent_warm_completion_tokens"] == 64', probe)
 
     def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
         safe_environment = {
