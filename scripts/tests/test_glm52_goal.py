@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import base64
 import copy
 import json
 import math
@@ -13,6 +14,8 @@ import sys
 import tempfile
 import unittest
 import hashlib
+import struct
+import zlib
 from pathlib import Path
 from unittest import mock
 
@@ -53,6 +56,117 @@ def replacement_dsv4_profile(_candidate_hash):
         "profile": "dsv4",
         "binary_sha256": "a" * 64,
         "configuration_sha256": "b" * 64,
+    }
+
+
+def _compressed_f32(count, peak_index=3, peak_value=1.0):
+    raw = bytearray(count * 4)
+    struct.pack_into("<f", raw, peak_index * 4, peak_value)
+    return base64.b64encode(zlib.compress(bytes(raw), 9)).decode("ascii")
+
+
+def w7_resume_record():
+    wire = "1" * 64
+    canonical = "2" * 64
+    payload = "3" * 64
+    inventory = "4" * 64
+    state_probe = _compressed_f32(256, 7, 0.5)
+    logits = _compressed_f32(154880, 13, 2.0)
+    safety = {
+        "wrapper_ok": True,
+        "oom": False,
+        "xid": False,
+        "swap_growth": False,
+        "survivor": False,
+        "minimum_available_gib": 12.0,
+    }
+
+    def case(case_id, *, mode="reject", flag="unset", family="glm"):
+        return {
+            "case_id": case_id,
+            "model_family": family,
+            "flag_value": flag,
+            "eligible": False,
+            "mode": mode,
+            "wire_text_sha256": wire,
+            "canonical_tokens_sha256": canonical,
+            "sync_tokens_sha256": canonical,
+            "final_lineage_sha256": canonical,
+            "live_tokens": 5063,
+            "common_tokens": 5045,
+            "prompt_tokens": 5066,
+            "selected_checkpoint_tokens": 0,
+            "selected_payload_sha256": None,
+            "expected_payload_sha256": None,
+            "payload_bytes_read": 0,
+            "reset_count": 0,
+            "invalidate_count": 0,
+            "eval_ranges": [],
+            "output_token_ids": [],
+            "logits_f32_zlib_b64": "",
+            "state": {
+                "checkpoint_sha256": canonical,
+                "lineage_sha256": canonical,
+                "logical_frontiers": [5066] * 75,
+                "tensor_inventory_sha256": inventory,
+                "probe_f32_zlib_b64": state_probe,
+            },
+            "safety": copy.deepcopy(safety),
+        }
+
+    cold = case("cold-primary", mode="cold")
+    cold.update({
+        "live_tokens": 0,
+        "common_tokens": 0,
+        "eval_ranges": [[0, 5066]],
+        "reset_count": 1,
+        "output_token_ids": list(range(64)),
+        "logits_f32_zlib_b64": logits,
+    })
+    strict = case("strict-primary", mode="cold")
+    strict.update({
+        "eval_ranges": [[0, 5066]],
+        "reset_count": 1,
+        "output_token_ids": list(range(64)),
+        "logits_f32_zlib_b64": logits,
+    })
+    candidate = case("candidate-primary", mode="resume", flag="1")
+    candidate.update({
+        "eligible": True,
+        "selected_checkpoint_tokens": 5044,
+        "selected_payload_sha256": payload,
+        "expected_payload_sha256": payload,
+        "payload_bytes_read": 4096,
+        "eval_ranges": [[5044, 5066]],
+        "output_token_ids": list(range(64)),
+        "logits_f32_zlib_b64": logits,
+    })
+    rows = [cold, strict, candidate]
+    rows.extend([
+        case("exact-off", mode="replay"),
+        case("exact-on", mode="replay", flag="1"),
+        case("divergence-off"),
+        case("divergence-on", flag="1"),
+        case("shorten-off"),
+        case("shorten-on", flag="1"),
+        case("malformed-off"),
+        case("malformed-on", flag="1"),
+        case("wrong-lineage-off"),
+        case("wrong-lineage-on", flag="1"),
+        case("non-glm-off", family="non-glm"),
+        case("non-glm-on", flag="1", family="non-glm"),
+        case("flag-zero", flag="0"),
+        case("flag-garbage", flag="garbage"),
+    ])
+    return {
+        "record_type": "w7_resume_observation",
+        "gate": "W7",
+        "binary_sha256": "a" * 64,
+        "configuration_sha256": "b" * 64,
+        "fixture_sha256": "c" * 64,
+        "guard_off_present": False,
+        "cases": rows,
+        "failures": [],
     }
 
 
@@ -757,6 +871,94 @@ class FormulaTests(unittest.TestCase):
             )["verdict"],
             "FAIL",
         )
+
+    def test_w7_resume_scorer_derives_resume_and_numerical_checks(self):
+        record = w7_resume_record()
+        result = self.goal.score_registered_gate(
+            "W7", "w7.resume.v1", [record]
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(result["derived_metrics"]["max_abs_logit_delta"], 0.0)
+        self.assertEqual(result["derived_metrics"]["max_abs_state_probe_delta"], 0.0)
+
+    def test_w7_resume_scorer_rejects_cold_fallback_and_guard_bypass(self):
+        for name, mutate in (
+            (
+                "cold-fallback",
+                lambda row: row["cases"][2].update(
+                    mode="cold", eval_ranges=[[0, 5066]], reset_count=1,
+                    selected_payload_sha256=None, payload_bytes_read=0,
+                ),
+            ),
+            (
+                "claimed-resume-after-reset",
+                lambda row: row["cases"][2].update(reset_count=1),
+            ),
+            (
+                "flag-on-broad-bypass",
+                lambda row: next(
+                    case for case in row["cases"]
+                    if case["case_id"] == "divergence-on"
+                ).update(
+                    mode="resume", selected_payload_sha256="3" * 64,
+                    payload_bytes_read=4096,
+                ),
+            ),
+            (
+                "legacy-guard-off",
+                lambda row: row.update(guard_off_present=True),
+            ),
+        ):
+            with self.subTest(name=name):
+                record = w7_resume_record()
+                mutate(record)
+                try:
+                    result = self.goal.score_registered_gate(
+                        "W7", "w7.resume.v1", [record]
+                    )
+                except ValueError:
+                    continue
+                self.assertEqual(result["verdict"], "FAIL")
+
+    def test_w7_resume_scorer_rejects_lineage_output_state_and_safety_mutations(self):
+        mutations = []
+        lineage = w7_resume_record()
+        lineage["cases"][2]["sync_tokens_sha256"] = "9" * 64
+        mutations.append(lineage)
+        output = w7_resume_record()
+        output["cases"][2]["output_token_ids"][-1] = 999
+        mutations.append(output)
+        state = w7_resume_record()
+        state["cases"][2]["state"]["logical_frontiers"][40] = 5065
+        mutations.append(state)
+        unsafe = w7_resume_record()
+        unsafe["cases"][2]["safety"]["minimum_available_gib"] = 9.9
+        mutations.append(unsafe)
+        for mutation in mutations:
+            self.assertEqual(
+                self.goal.score_registered_gate(
+                    "W7", "w7.resume.v1", [mutation]
+                )["verdict"],
+                "FAIL",
+            )
+
+    def test_w7_resume_scorer_rejects_malformed_or_nonfinite_artifacts(self):
+        malformed = w7_resume_record()
+        malformed["cases"][2]["logits_f32_zlib_b64"] = "not-base64"
+        with self.assertRaisesRegex(ValueError, "compressed F32"):
+            self.goal.score_registered_gate(
+                "W7", "w7.resume.v1", [malformed]
+            )
+        nonfinite = w7_resume_record()
+        raw = bytearray(154880 * 4)
+        struct.pack_into("<f", raw, 0, float("nan"))
+        nonfinite["cases"][2]["logits_f32_zlib_b64"] = base64.b64encode(
+            zlib.compress(bytes(raw), 9)
+        ).decode("ascii")
+        with self.assertRaisesRegex(ValueError, "non-finite"):
+            self.goal.score_registered_gate(
+                "W7", "w7.resume.v1", [nonfinite]
+            )
 
     def test_w11_requires_timestamped_memory_coverage(self):
         record = w11_record()

@@ -9,6 +9,8 @@ raw.jsonl and summary.json under the immutable attempt directory.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import csv
 import fcntl
 import hashlib
@@ -20,9 +22,11 @@ import os
 import re
 import stat
 import statistics
+import struct
 import subprocess
 import sys
 import tempfile
+import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -3011,6 +3015,242 @@ def _score_workstream(
     }
 
 
+def _w7_f32_vector(encoded: Any, label: str, expected_count: int) -> tuple[float, ...]:
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError(f"{label} must be non-empty base64")
+    try:
+        compressed = base64.b64decode(encoded, validate=True)
+        inflater = zlib.decompressobj()
+        raw = inflater.decompress(compressed, expected_count * 4 + 1)
+        raw += inflater.flush()
+    except (binascii.Error, zlib.error, ValueError) as exc:
+        raise ValueError(f"{label} is not canonical compressed F32") from exc
+    if (
+        not inflater.eof or inflater.unused_data or inflater.unconsumed_tail or
+        len(raw) != expected_count * 4
+    ):
+        raise ValueError(f"{label} has the wrong F32 length")
+    values = struct.unpack(f"<{expected_count}f", raw)
+    if any(not math.isfinite(value) for value in values):
+        raise ValueError(f"{label} contains non-finite values")
+    return values
+
+
+def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive W7 from exact raw operation receipts, not caller booleans."""
+    if len(records) != 1:
+        raise ValueError("W7 resume requires exactly one raw observation")
+    record = records[0]
+    _require_exact_keys(
+        record,
+        {
+            "record_type", "gate", "binary_sha256", "configuration_sha256",
+            "fixture_sha256", "guard_off_present", "cases", "failures",
+        },
+        "W7 resume observation",
+    )
+    if record["record_type"] != "w7_resume_observation" or record["gate"] != "W7":
+        raise ValueError("W7 resume observation identity is invalid")
+    for field in ("binary_sha256", "configuration_sha256", "fixture_sha256"):
+        if not _is_sha256(record[field]):
+            raise ValueError(f"W7 {field} is invalid")
+    if record["guard_off_present"] is not False:
+        raise ValueError("W7 legacy guard bypass must be absent")
+    if not isinstance(record["failures"], list):
+        raise ValueError("W7 failures must be a list")
+    cases = record["cases"]
+    if not isinstance(cases, list):
+        raise ValueError("W7 cases must be a list")
+    expected = {
+        "cold-primary", "strict-primary", "candidate-primary",
+        "exact-off", "exact-on", "divergence-off", "divergence-on",
+        "shorten-off", "shorten-on", "malformed-off", "malformed-on",
+        "wrong-lineage-off", "wrong-lineage-on", "non-glm-off",
+        "non-glm-on", "flag-zero", "flag-garbage",
+    }
+    by_id: dict[str, dict[str, Any]] = {}
+    case_keys = {
+        "case_id", "model_family", "flag_value", "eligible", "mode",
+        "wire_text_sha256", "canonical_tokens_sha256",
+        "sync_tokens_sha256", "final_lineage_sha256", "live_tokens",
+        "common_tokens", "prompt_tokens", "selected_checkpoint_tokens",
+        "selected_payload_sha256", "expected_payload_sha256",
+        "payload_bytes_read", "reset_count", "invalidate_count",
+        "eval_ranges", "output_token_ids", "logits_f32_zlib_b64",
+        "state", "safety",
+    }
+    for index, case in enumerate(cases):
+        if not isinstance(case, dict):
+            raise ValueError(f"W7 case {index} must be an object")
+        _require_exact_keys(case, case_keys, f"W7 case {index}")
+        case_id = case["case_id"]
+        if case_id not in expected or case_id in by_id:
+            raise ValueError("W7 case IDs are missing, duplicated, or unknown")
+        by_id[case_id] = case
+        if case["model_family"] not in {"glm", "non-glm"}:
+            raise ValueError(f"W7 {case_id} model family is invalid")
+        if case["flag_value"] not in {"unset", "1", "0", "garbage"}:
+            raise ValueError(f"W7 {case_id} flag value is invalid")
+        if not isinstance(case["eligible"], bool):
+            raise ValueError(f"W7 {case_id} eligibility is invalid")
+        if case["mode"] not in {"cold", "resume", "replay", "reject"}:
+            raise ValueError(f"W7 {case_id} mode is invalid")
+        for field in (
+            "wire_text_sha256", "canonical_tokens_sha256",
+            "sync_tokens_sha256", "final_lineage_sha256",
+        ):
+            if not _is_sha256(case[field]):
+                raise ValueError(f"W7 {case_id} {field} is invalid")
+        for field in ("selected_payload_sha256", "expected_payload_sha256"):
+            if case[field] is not None and not _is_sha256(case[field]):
+                raise ValueError(f"W7 {case_id} {field} is invalid")
+        for field in (
+            "live_tokens", "common_tokens", "prompt_tokens",
+            "selected_checkpoint_tokens", "payload_bytes_read", "reset_count",
+            "invalidate_count",
+        ):
+            value = case[field]
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                raise ValueError(f"W7 {case_id} {field} is invalid")
+        ranges = case["eval_ranges"]
+        if (
+            not isinstance(ranges, list) or
+            any(
+                not isinstance(item, list) or len(item) != 2 or
+                any(not isinstance(value, int) or isinstance(value, bool) for value in item) or
+                item[0] < 0 or item[1] <= item[0]
+                for item in ranges
+            )
+        ):
+            raise ValueError(f"W7 {case_id} eval ranges are invalid")
+        outputs = case["output_token_ids"]
+        if (
+            not isinstance(outputs, list) or
+            any(not isinstance(value, int) or isinstance(value, bool) for value in outputs)
+        ):
+            raise ValueError(f"W7 {case_id} output tokens are invalid")
+        state = case["state"]
+        _require_exact_keys(
+            state,
+            {
+                "checkpoint_sha256", "lineage_sha256", "logical_frontiers",
+                "tensor_inventory_sha256", "probe_f32_zlib_b64",
+            },
+            f"W7 {case_id} state",
+        )
+        if any(
+            not _is_sha256(state[field])
+            for field in ("checkpoint_sha256", "lineage_sha256", "tensor_inventory_sha256")
+        ):
+            raise ValueError(f"W7 {case_id} state hashes are invalid")
+        frontiers = state["logical_frontiers"]
+        if (
+            not isinstance(frontiers, list) or len(frontiers) != 75 or
+            any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in frontiers)
+        ):
+            raise ValueError(f"W7 {case_id} logical frontiers are invalid")
+        safety = case["safety"]
+        _require_exact_keys(
+            safety,
+            {"wrapper_ok", "oom", "xid", "swap_growth", "survivor", "minimum_available_gib"},
+            f"W7 {case_id} safety",
+        )
+        if any(not isinstance(safety[field], bool) for field in ("wrapper_ok", "oom", "xid", "swap_growth", "survivor")):
+            raise ValueError(f"W7 {case_id} safety flags are invalid")
+        _finite_number(safety["minimum_available_gib"], f"W7 {case_id} memory", minimum=-1.0)
+    if set(by_id) != expected:
+        raise ValueError("W7 case matrix is incomplete")
+
+    cold = by_id["cold-primary"]
+    strict = by_id["strict-primary"]
+    candidate = by_id["candidate-primary"]
+    primary_identity = (
+        cold["wire_text_sha256"] == strict["wire_text_sha256"] == candidate["wire_text_sha256"] and
+        cold["canonical_tokens_sha256"] == strict["canonical_tokens_sha256"] == candidate["canonical_tokens_sha256"] and
+        cold["prompt_tokens"] == strict["prompt_tokens"] == candidate["prompt_tokens"] == 5066
+    )
+    exact_resume = (
+        candidate["model_family"] == "glm" and candidate["flag_value"] == "1" and
+        candidate["eligible"] is True and candidate["mode"] == "resume" and
+        candidate["live_tokens"] == 5063 and candidate["common_tokens"] == 5045 and
+        candidate["selected_checkpoint_tokens"] == 5044 and
+        candidate["selected_payload_sha256"] == candidate["expected_payload_sha256"] and
+        candidate["payload_bytes_read"] > 0 and candidate["reset_count"] == 0 and
+        candidate["invalidate_count"] == 0 and candidate["eval_ranges"] == [[5044, 5066]] and
+        candidate["sync_tokens_sha256"] == candidate["canonical_tokens_sha256"] and
+        candidate["final_lineage_sha256"] == candidate["canonical_tokens_sha256"]
+    )
+    cold_controls = (
+        cold["mode"] == "cold" and cold["eval_ranges"] == [[0, 5066]] and
+        strict["mode"] == "cold" and strict["flag_value"] == "unset" and
+        strict["eval_ranges"] == [[0, 5066]]
+    )
+    ineligible_ids = expected - {"cold-primary", "strict-primary", "candidate-primary", "exact-off", "exact-on"}
+    guard_matrix = all(
+        by_id[case_id]["mode"] in {"cold", "reject"} and
+        by_id[case_id]["selected_payload_sha256"] is None and
+        by_id[case_id]["payload_bytes_read"] == 0
+        for case_id in ineligible_ids
+    )
+    replay_matrix = all(
+        by_id[case_id]["mode"] == "replay" and
+        by_id[case_id]["eval_ranges"] == [] and
+        by_id[case_id]["reset_count"] == 0 and
+        by_id[case_id]["invalidate_count"] == 0
+        for case_id in ("exact-off", "exact-on")
+    )
+    cold_logits = _w7_f32_vector(cold["logits_f32_zlib_b64"], "W7 cold logits", 154880)
+    candidate_logits = _w7_f32_vector(candidate["logits_f32_zlib_b64"], "W7 candidate logits", 154880)
+    max_logit_delta = max(abs(left - right) for left, right in zip(cold_logits, candidate_logits))
+    argmax_cold = max(range(len(cold_logits)), key=cold_logits.__getitem__)
+    argmax_candidate = max(range(len(candidate_logits)), key=candidate_logits.__getitem__)
+    output_equal = (
+        len(cold["output_token_ids"]) == 64 and
+        candidate["output_token_ids"] == cold["output_token_ids"]
+    )
+    cold_probe = _w7_f32_vector(cold["state"]["probe_f32_zlib_b64"], "W7 cold state probe", 256)
+    candidate_probe = _w7_f32_vector(candidate["state"]["probe_f32_zlib_b64"], "W7 candidate state probe", 256)
+    max_state_delta = max(abs(left - right) for left, right in zip(cold_probe, candidate_probe))
+    state_equal = (
+        candidate["state"]["checkpoint_sha256"] == cold["state"]["checkpoint_sha256"] and
+        candidate["state"]["lineage_sha256"] == cold["state"]["lineage_sha256"] and
+        candidate["state"]["logical_frontiers"] == cold["state"]["logical_frontiers"] and
+        candidate["state"]["tensor_inventory_sha256"] == cold["state"]["tensor_inventory_sha256"] and
+        max_state_delta < 1e-2
+    )
+    safety = all(
+        case["safety"]["wrapper_ok"] and not case["safety"]["oom"] and
+        not case["safety"]["xid"] and not case["safety"]["swap_growth"] and
+        not case["safety"]["survivor"] and case["safety"]["minimum_available_gib"] >= 10.0
+        for case in cases
+    )
+    checks = {
+        "primary_identity": primary_identity,
+        "exact_resume_without_cold_fallback": exact_resume,
+        "cold_controls": cold_controls,
+        "flag_on_and_off_guard_matrix": guard_matrix,
+        "exact_replay_matrix": replay_matrix,
+        "full_logits": max_logit_delta < 1e-2 and argmax_cold == argmax_candidate,
+        "completed_generation": output_equal,
+        "canonical_state": state_equal,
+        "safety": safety,
+        "no_failures": not record["failures"],
+    }
+    return {
+        "scorer_id": "w7.resume.v1",
+        "formula_version": 1,
+        "gate": "W7",
+        "derived_metrics": {
+            "max_abs_logit_delta": max_logit_delta,
+            "max_abs_state_probe_delta": max_state_delta,
+            "argmax_cold": argmax_cold,
+            "argmax_candidate": argmax_candidate,
+        },
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 _FROZEN_SCORER_IDENTITIES = frozenset(
     {
         (
@@ -3103,6 +3343,13 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _finite_number,
             _is_sha256,
         ),
+        "w7.resume.v1": (
+            _score_w7_resume,
+            _w7_f32_vector,
+            _require_exact_keys,
+            _finite_number,
+            _is_sha256,
+        ),
         "w1.affine-quality.v2": (
             _score_w1_affine_raw,
             _w1_single_match,
@@ -3171,6 +3418,7 @@ def score_registered_gate(
         ("parity", "parity.performance.v1"): _score_parity,
         ("parity", "parity.reviewed-no-go.v1"): _score_reviewed_no_go,
         ("review", "review.final.v1"): _score_review,
+        ("W7", "w7.resume.v1"): _score_w7_resume,
     }
     if scorer_id == "workstream.terminal.v1" and gate in {
         *(f"W{index}" for index in range(1, 11)),
