@@ -1,0 +1,78 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "41e693d66b4c65466177d2afdb8480a848ddcae6",
+  "review_round": 197,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate_number_for_gate": 2,
+  "implementation_authorized": false,
+  "compiled_red_authorized": true,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 62,
+      "critical": [],
+      "high": [
+        "W7-R197-H1-OPERATION-RECEIPTS-REMAIN-DERIVED-SELF-REPORTS",
+        "W7-R197-H2-CHECKPOINT-INVENTORY-AND-RESTORED-LINEAGE-ARE-NOT-SCORER-BOUND",
+        "W7-R197-H3-FLAG-MATRIX-CASE-NAMES-ARE-NOT-SEMANTICALLY-ENFORCED",
+        "W7-R197-H4-CANONICAL-STATE-SCHEMA-IS-STILL-NOT-A-COMPLETE-DUMP"
+      ],
+      "medium": [
+        "W7-R197-M1-CONFIRMATION-REGIME-CONTRACT-WAS-DROPPED",
+        "W7-R197-M2-OUTPUT-TOKEN-DOMAIN-AND-DELTA-OVERFLOW-UNCHECKED"
+      ],
+      "low": [],
+      "verdict": "BLOCKING SET STRICTLY SHRANK; AUTHORIZE BOUNDED SCORER CORRECTIONS AND COMPILED RED ONLY"
+    },
+    "Singer": {
+      "score_0_to_100": 29,
+      "critical": [
+        "ADV-W7-196-C01"
+      ],
+      "high": [
+        "ADV-W7-196-H02",
+        "ADV-W7-196-H03",
+        "ADV-W7-196-H04",
+        "ADV-W7-197-H05"
+      ],
+      "medium": [
+        "ADV-W7-197-M03",
+        "ADV-W7-197-M04"
+      ],
+      "low": [],
+      "verdict": "REJECT_ENGINE_IMPLEMENTATION; AUTHORIZE ONLY BOUNDED RED SCORER CORRECTIONS"
+    }
+  },
+  "blocking_classes": [
+    {
+      "class": "operation-receipts",
+      "required_closure": "Derive checkpoint selection, payload reads, reset/invalidation counts, evaluation ranges, and resume mode from an ordered primitive event stream."
+    },
+    {
+      "class": "checkpoint-inventory-and-lineage",
+      "required_closure": "Score the complete decoy inventory, independently select the longest valid checkpoint, and bind restored, synchronized, cold, and final token lineages."
+    },
+    {
+      "class": "exact-guard-case-contract",
+      "required_closure": "Bind every case name to exact family, flag value including empty, eligibility, mutation, expected mode, reads, resets, and evaluation ranges."
+    },
+    {
+      "class": "complete-state-manifest",
+      "required_closure": "Require self-describing coverage and content hashes for every correctness-relevant state member and reject missing or unprobed ranges."
+    },
+    {
+      "class": "launch-safety-receipts",
+      "required_closure": "Validate start memory, wrapper and lock identity, cgroup containment, terminal status, and absence of a bare-engine launch."
+    }
+  ],
+  "bounded_medium_corrections": [
+    "Restore two post-freeze confirmation triplets.",
+    "Bound decompression and output token domains; reject non-finite derived deltas."
+  ],
+  "convergence": {
+    "blocking_set_strictly_shrank": true,
+    "consecutive_nonshrinking_candidates": 0,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "next_candidate_allowed": true
+  }
+}
