@@ -81,7 +81,30 @@ class GlmMtpProxyPackTests(unittest.TestCase):
         receipt = self.build()
         receipt["pack_sha256"] = "0" * 64
         self.receipt.write_text(json.dumps(receipt, sort_keys=True) + "\n")
-        with self.assertRaisesRegex(ValueError, "whole-pack receipt hash differs"):
+        with self.assertRaisesRegex(ValueError, "receipt fields differ"):
+            PACK.verify(self.output, self.inventory, self.receipt)
+
+    def test_every_receipt_field_is_authoritative(self) -> None:
+        original = self.build()
+        mutations = {
+            "record_count": 254,
+            "forbidden_record_count": 224,
+            "pack_bytes": original["pack_bytes"] - 1,
+            "model_bytes": original["model_bytes"] - 1,
+            "inventory_sha256": "0" * 64,
+            "schema": "forged",
+        }
+        for key, value in mutations.items():
+            with self.subTest(key=key):
+                forged = dict(original)
+                forged[key] = value
+                self.receipt.write_text(json.dumps(forged, sort_keys=True) + "\n")
+                with self.assertRaisesRegex(ValueError, "receipt fields differ"):
+                    PACK.verify(self.output, self.inventory, self.receipt)
+        forged = dict(original)
+        forged["unknown"] = "field"
+        self.receipt.write_text(json.dumps(forged, sort_keys=True) + "\n")
+        with self.assertRaisesRegex(ValueError, "receipt fields differ"):
             PACK.verify(self.output, self.inventory, self.receipt)
 
     def test_forbidden_overlap_fails_before_publication(self) -> None:

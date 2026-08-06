@@ -286,9 +286,22 @@ def verify(pack: Path, inventory_path: Path, receipt: Path) -> dict:
             raise ValueError("trailing pack padding is nonzero")
     validate_source_ranges(rows, forbidden, inventory["model_bytes"])
     actual_sha = sha256_path(pack)
-    if expected_receipt.get("pack_sha256") != actual_sha:
-        raise ValueError("whole-pack receipt hash differs")
-    return expected_receipt
+    recomputed_receipt = {
+        "schema": "glm52-mtp-proxy-pack-receipt-v1",
+        "pack": str(pack),
+        "pack_bytes": file_bytes,
+        "pack_sha256": actual_sha,
+        "model_bytes": model_bytes,
+        "model_sha256": model_sha.hex(),
+        "inventory_sha256": inventory_sha.hex(),
+        "record_count": count,
+        "forbidden_record_count": len(forbidden),
+        "header_bytes": header_bytes,
+        "record_bytes": record_bytes,
+    }
+    if expected_receipt != recomputed_receipt:
+        raise ValueError("pack receipt fields differ from independently recomputed values")
+    return recomputed_receipt
 
 
 def main() -> int:
