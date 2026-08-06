@@ -84,7 +84,19 @@ def _w7_payload_bytes(token_count):
 def w7_resume_record():
     logits = _compressed_f32(154880, 13, 2.0)
     confirmation_seed = "d" * 64
-    attempt_id = "e" * 64
+    binary_sha256 = "a" * 64
+    configuration_sha256 = "b" * 64
+    pool_path = ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json"
+    pool_raw = pool_path.read_bytes()
+    pool = json.loads(pool_raw)
+    pool_sha256 = hashlib.sha256(pool_raw).hexdigest()
+    pool_by_variant = {item["variant"]: item for item in pool["variants"]}
+    live_raw = zlib.decompress(base64.b64decode(pool["live"]["token_ids_zlib_b64"]))
+    frozen_live = list(struct.unpack(f"<{pool['live']['token_count']}i", live_raw))
+    attempt_id = hashlib.sha256(
+        bytes.fromhex(binary_sha256) + bytes.fromhex(configuration_sha256) +
+        bytes.fromhex(confirmation_seed) + bytes.fromhex(pool_sha256)
+    ).hexdigest()
     stem = json.loads(
         (ROOT / "results/glm52-gates/harness/fixture-glm-long8.json").read_text()
     )["prompt"].encode("utf-8")
@@ -140,12 +152,21 @@ def w7_resume_record():
         else:
             base = int(selection_seed[:4], 16) % 8
             variant = base if regime_id == "confirmation-1" else 8 + base
-        tokens = [(index * 17 + len(regime_id)) % 154880 for index in range(prompt)]
+        specification = pool_by_variant[variant]
+        prompt = specification["prompt_tokens"]
+        common = specification["common_tokens"]
+        live = specification["live_tokens"]
+        selected = specification["selected_tokens"]
+        token_raw = zlib.decompress(
+            base64.b64decode(specification["canonical_token_ids_zlib_b64"])
+        )
+        tokens = list(struct.unpack(f"<{prompt}i", token_raw))
         suffix = primary_suffix if regime_id == "primary" else confirmation_suffixes[variant]
         wire_bytes = stem + suffix.encode("utf-8")
-        wire_prefix_bytes = [
-            (index * len(wire_bytes)) // prompt for index in range(prompt + 1)
-        ]
+        offset_raw = zlib.decompress(
+            base64.b64decode(specification["wire_token_end_offsets_zlib_b64"])
+        )
+        wire_prefix_bytes = [0, *struct.unpack(f"<{prompt}i", offset_raw)]
         payload = hashlib.sha256(f"payload:{regime_id}:{selected}".encode()).hexdigest()
 
         def inventory_item(record_id, token_length, inode, *, valid=True,
@@ -254,13 +275,11 @@ def w7_resume_record():
                 "survivor_pids": [],
             }
 
-        live_base = tokens[:common] + [
-            (tokens[index] + 1) % 154880 for index in range(common, live)
-        ]
+        live_base = frozen_live
 
         def case(case_id):
             family, flag, mutation = contracts[case_id]
-            invocation_id = f"invoke:{attempt_id[:16]}:{regime_id}:{case_id}"
+            invocation_id = f"invoke:{attempt_id}:{regime_id}:{case_id}"
             live_ids = [] if case_id == "cold-primary" else (
                 tokens if case_id in {"exact-off", "exact-on"} else live_base
             )
@@ -379,8 +398,8 @@ def w7_resume_record():
     return {
         "record_type": "w7_resume_observation",
         "gate": "W7", "attempt_id": attempt_id,
-        "binary_sha256": "a" * 64,
-        "configuration_sha256": "b" * 64,
+        "binary_sha256": binary_sha256,
+        "configuration_sha256": configuration_sha256,
         "fixture_sha256": hashlib.sha256(
             "".join(item["fixture_sha256"] for item in regimes).encode()
         ).hexdigest(),
@@ -1395,7 +1414,7 @@ class FormulaTests(unittest.TestCase):
                 case["live_token_count"] = len(canonical)
                 case["live_token_ids_zlib_b64"] = _compressed_i32(canonical)
         _rebind_w7_fixture_hashes(record)
-        with self.assertRaisesRegex(ValueError, "confirmation.*divergent append"):
+        with self.assertRaisesRegex(ValueError, "frozen production live lineage"):
             self.goal.score_registered_gate("W7", "w7.resume.v1", [record])
 
     def test_w7_resume_scorer_rejects_post_seed_fixture_and_cross_attempt_receipts(self):
@@ -1415,7 +1434,7 @@ class FormulaTests(unittest.TestCase):
 
         stale_attempt = w7_resume_record()
         stale_attempt["attempt_id"] = "f" * 64
-        with self.assertRaisesRegex(ValueError, "invocation identity"):
+        with self.assertRaisesRegex(ValueError, "attempt identity"):
             self.goal.score_registered_gate("W7", "w7.resume.v1", [stale_attempt])
 
     def test_w7_resume_scorer_requires_production_tokens_and_derived_attempt_identity(self):
@@ -1451,7 +1470,7 @@ class FormulaTests(unittest.TestCase):
         for regime in renamed["regimes"]:
             for case in regime["cases"]:
                 case["invocation_id"] = case["invocation_id"].replace(
-                    old_attempt[:16], renamed["attempt_id"][:16], 1
+                    old_attempt, renamed["attempt_id"], 1
                 )
                 for event in case["events"]:
                     event["invocation_id"] = case["invocation_id"]

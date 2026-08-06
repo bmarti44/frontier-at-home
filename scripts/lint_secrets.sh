@@ -7,12 +7,12 @@ readonly SECRET_PATTERN='[0-9a-f]{64}|Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPE
 readonly SECRET_PATTERN_NOHEX='Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPENSSH)? PRIVATE KEY|hf_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|tskey-[A-Za-z0-9-]{20,}'
 readonly PUBLIC_DIGEST_ALLOWLIST='^scripts/65_glm52_w1_submit\.py:[0-9]+:P1_PYTHON_DEPENDENCY_SHA256 = "[0-9a-f]{64}"$|^scripts/66_install_glm52_w1_attestor\.sh:[0-9]+:readonly (SUBMITTER|PYTHON_DEPENDENCY)_SHA256=[0-9a-f]{64}$|^scripts/71_install_glm_benchmark_lock_acl\.sh:[0-9]+:readonly SOURCE_SHA256=[0-9a-f]{64}$|^scripts/73_run_glm_shared_router_probe\.py:[0-9]+:(MODEL|TOKENIZER)_SHA256 = "[0-9a-f]{64}"$|^scripts/76_run_glm_union_trace_smoke\.py:[0-9]+:QUALITY_FIXTURE_CONTENT_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:FROZEN_(BINARY|MODEL|TOKENIZER|FIXTURE|ROOT_SUBMITTER)_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:    (PROBE_PATH|CV_PATH|PRECISION_PATH|SAFE_RUN_PATH|MEMORY_GUARD_PATH): "[0-9a-f]{64}",$|^scripts/glm52_goal\.py:[0-9]+:_W7_SAFE_WRAPPER_SHA256 = "[0-9a-f]{64}"$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "wrapper_sha256": "[0-9a-f]{64}",$|^results/glm52-gates/harness/w3_direct_slot_probe_v[123]\.sh:[0-9]+:readonly (BINARY|MODEL)_SHA256=[0-9a-f]{64}$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:  `[0-9a-f]{64}`[.;]$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:SHA-256 `[0-9a-f]{64}`\.$|^scripts/tests/test_glm_rung0_slab_campaign\.py:[0-9]+:            "[0-9a-f]{64}",$|^scripts/tests/test_glm_mtp_proxy_seed_contract\.py:[0-9]+:(EXPECTED = |    "(manifest|drand)": )"[0-9a-f]{64}"[,]?$|^results/glm52-gates/harness/0012-test-glm-reject-compact-pack-identity-mutations\.patch:[0-9]+:\+                "[0-9a-f]{64}"\);$|^results/glm52-gates/harness/0015-test-require-exact-frozen-MTP-proxy-pack\.patch:[0-9]+:[+-](    parse_digest\((pack|model|inventory)_sha, |                )"[0-9a-f]{64}"\);$|^results/glm52-gates/harness/0016-test-require-canonical-crash-safe-proxy-publication\.patch:[0-9]+:\+        "\{\\"bytes\\":[0-9]+,\\"name\\":\\"[a-z0-9.-]+\\",\\"sha256\\":\\"[0-9a-f]{64}\\"\}[,]?"$|^results/glm52-gates/harness/0020-test-close-round-194-MTP-proxy-gaps\.patch:[0-9]+:[ +-](                 |        )("[0-9a-f]{64}"\);|"\{\\"bytes\\":[0-9]+,\\"name\\":\\"[a-z0-9.-]+\\",\\"sha256\\":\\"[0-9a-f]{64}\\"\}[,]?"?)$'
 readonly W3_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W3-slot-lifetime-probe-v11-pass/crash/(off|on)/cmd\.log:[0-9]+:ds4: expert-cache window tag=[^ ]+ lookup_bytes=[0-9]+ hit_bytes=[0-9]+ stream_sha256=[0-9a-f]{64}$|^results/glm52-gates/W3-slot-lifetime-probe-v11-pass/crash/(off|on)/main\.log:[0-9]+:[0-9T:+,.-]+ (candidate_src=[^ ]+ candidate_binary_sha256=[0-9a-f]{64} candidate_device_inode=[0-9:]+|executed_environment_allowlist=[A-Z0-9_,]+ executed_environment_sha256=[0-9a-f]{64}|executed_candidate_verified pid=[0-9]+ start_ticks=[0-9]+ path=[^ ]+ executed_binary_sha256=[0-9a-f]{64} device_inode=[0-9:]+|safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+)$'
-readonly W7_PUBLIC_DIGEST_ALLOWLIST='^scripts/glm52_goal\.py:[0-9]+:_W7_STEM_(FILE|TEXT)_SHA256 = "[0-9a-f]{64}"$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "[0-9a-f]{64}",$'
+readonly W7_PUBLIC_DIGEST_ALLOWLIST='^scripts/glm52_goal\.py:[0-9]+:_W7_(STEM_FILE|STEM_TEXT|POOL|TOKENIZER|TOKENIZER_INIT|TOKENIZER_NATIVE)_SHA256 = "[0-9a-f]{64}"$|^scripts/82_build_w7_fixture_pool\.py:[0-9]+:(TOKENIZER|RUNTIME_INIT|RUNTIME_NATIVE)_SHA256 = "[0-9a-f]{64}"$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "[0-9a-f]{64}",$'
 
 is_checksum_file() {
   case "$1" in
     verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/speed-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-gates/G6-rung0-io-sidecar-build.json|results/glm52-gates/G6-rung0-io-slab-calibration-no-results.json|results/glm52-gates/G6-rung0-io-accelerated-sha-falsifier.json|results/glm52-gates/R0-slab-canary-attempts-2026-08-02.json|results/glm52-gates/R0-e637-campaign-attempt-2026-08-02.json|results/glm52-gates/R0-e637-quality-timeout-attempt-2026-08-03.json|results/glm52-gates/R0-e637-slab-final-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-freeze-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-*.json|results/glm52-gates/R0.2-prefetch-freeze-*.json|results/glm52-gates/R0.2-prefetch-randomness-*.json|results/glm52-gates/R0.2-prefetch-probe-*-attempt-*.json|results/glm52-gates/R0.2-prefetch-probe-6885a45-final-2026-08-04.json|results/glm52-gates/R0[abc]-*.json|results/glm52-gates/W3-slot-gemv-*.json|results/glm52-gates/W3-slot-lifetime-*.json|results/glm52-gates/W3-performance-*.json|results/glm52-gates/NVME-characterization-attempt-*.json|results/glm52-gates/NVME-characterization-final-*.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/dsv4-decode-*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/evidence/w1-affine-*/manifest.json|results/glm52-goal/evidence/w1-affine-*/raw.jsonl|results/glm52-goal/evidence/w1-affine-*/raw-inputs/randomness.json|results/glm52-goal/evidence/w1-telemetry-probe-*/manifest.json|results/glm52-goal/evidence/w1-telemetry-probe-*/raw.jsonl|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
-    results/glm52-gates/W3-performance-campaign-*/raw.jsonl|results/glm52-gates/R0.5-*.json|results/glm52-gates/W7-resume-correctness-plan-v[15].json|results/glm52-gates/W7-resume-candidate*-red.json) return 0 ;;
+    results/glm52-gates/W3-performance-campaign-*/raw.jsonl|results/glm52-gates/R0.5-*.json|results/glm52-gates/W7-resume-correctness-plan-v[156].json|results/glm52-gates/W7-resume-candidate*-red.json|results/glm52-gates/harness/w7-production-fixture-pool-v1.json) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -298,9 +298,12 @@ r05_proxy_review_r195 = display_path == (
     "results/glm52-gates/R0.5-mtp-proxy-router-review-r195.json"
 )
 w7_resume_plan = re.fullmatch(
-    r"results/glm52-gates/W7-resume-correctness-plan-v[15]\.json",
+    r"results/glm52-gates/W7-resume-correctness-plan-v[156]\.json",
     display_path,
 ) is not None
+w7_fixture_pool = display_path == (
+    "results/glm52-gates/harness/w7-production-fixture-pool-v1.json"
+)
 w3_campaign_allowlist = set()
 if w3_campaign_manifest:
     w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
@@ -352,7 +355,11 @@ w7_resume_plan_allowlist = {
     "ds4_cuda_cu_sha256",
     "stem_file_sha256",
     "stem_text_sha256",
+    "sha256",
 } if w7_resume_plan else set()
+w7_fixture_pool_allowlist = {
+    "wire_sha256",
+} if w7_fixture_pool else set()
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -410,6 +417,7 @@ def walk(value, path, allowed_string=False):
                 key in r05_proxy_red_candidate_4_allowlist or
                 key in r05_proxy_review_r195_allowlist or
                 key in w7_resume_plan_allowlist
+                or key in w7_fixture_pool_allowlist
             )
             if isinstance(item, list):
                 for index, element in enumerate(item):

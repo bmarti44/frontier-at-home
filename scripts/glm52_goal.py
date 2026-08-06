@@ -3075,6 +3075,11 @@ _W7_SAFE_WRAPPER_SHA256 = "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f2135578
 _W7_STEM_PATH = ROOT / "results/glm52-gates/harness/fixture-glm-long8.json"
 _W7_STEM_FILE_SHA256 = "4b46547667dd4d84b8da83c0ccca358e725e33e8de8bbfe25701ab0d878ae469"
 _W7_STEM_TEXT_SHA256 = "a2ff948826dd9a1b4c74fe599ba4b668ae4285e44b275006afc9d3c7541655cf"
+_W7_POOL_PATH = ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json"
+_W7_POOL_SHA256 = "74829fc094143b4a494e104c186e4146f2e669eaceedbb354a7ab35251083d90"
+_W7_TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+_W7_TOKENIZER_INIT_SHA256 = "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4"
+_W7_TOKENIZER_NATIVE_SHA256 = "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910"
 _W7_PRIMARY_SUFFIX = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
 _W7_CONFIRMATION_SUFFIXES = tuple(
     f"\n\n[W7 confirmation {index:02d}] " + instruction
@@ -3135,6 +3140,86 @@ def _w7_frozen_wire(variant: str | int) -> bytes:
     else:
         raise ValueError("W7 frozen fixture variant is invalid")
     return stem + suffix.encode("utf-8")
+
+
+def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...], dict[str, int]]:
+    if _sha256(_W7_POOL_PATH) != _W7_POOL_SHA256:
+        raise ValueError("W7 production fixture pool hash is invalid")
+    document = _read_strict_json(_W7_POOL_PATH)
+    _require_exact_keys(
+        document, {"schema", "tokenizer", "live", "inventory_recipe", "variants"},
+        "W7 production fixture pool",
+    )
+    if document["schema"] != "glm52-w7-production-fixture-pool-v1":
+        raise ValueError("W7 production fixture pool schema is invalid")
+    expected_tokenizer = {
+        "tokenizer_sha256": _W7_TOKENIZER_SHA256,
+        "runtime_init_sha256": _W7_TOKENIZER_INIT_SHA256,
+        "runtime_native_sha256": _W7_TOKENIZER_NATIVE_SHA256,
+        "add_special_tokens": False,
+    }
+    if document["tokenizer"] != expected_tokenizer:
+        raise ValueError("W7 production tokenizer identity is invalid")
+    recipe = document["inventory_recipe"]
+    if recipe != {
+        "alignment_tokens": 4, "older_delta_tokens": -4,
+        "wrong_lineage_delta_tokens": 1, "malformed_delta_tokens": 2,
+    }:
+        raise ValueError("W7 checkpoint inventory recipe is invalid")
+    live = document["live"]
+    _require_exact_keys(
+        live, {"suffix_utf8", "wire_sha256", "token_ids_zlib_b64", "token_count"},
+        "W7 live fixture",
+    )
+    if live["suffix_utf8"] != "\n\nOne two three four five six seven.":
+        raise ValueError("W7 live fixture suffix is invalid")
+    live_tokens = _w7_i32_vector(
+        live["token_ids_zlib_b64"], "W7 live fixture tokens", live["token_count"],
+    )
+    variants = document["variants"]
+    if not isinstance(variants, list) or len(variants) != 17:
+        raise ValueError("W7 production fixture variants are incomplete")
+    by_variant: dict[str | int, dict[str, Any]] = {}
+    for index, item in enumerate(variants):
+        _require_exact_keys(
+            item,
+            {
+                "variant", "wire_sha256", "canonical_token_ids_zlib_b64",
+                "wire_token_end_offsets_zlib_b64", "prompt_tokens", "common_tokens",
+                "live_tokens", "selected_tokens",
+            },
+            f"W7 production fixture variant {index}",
+        )
+        variant = item["variant"]
+        expected_variant: str | int = "primary-fixed" if index == 0 else index - 1
+        if variant != expected_variant or variant in by_variant:
+            raise ValueError("W7 production fixture variant identity is invalid")
+        wire = _w7_frozen_wire(variant)
+        if item["wire_sha256"] != hashlib.sha256(wire).hexdigest():
+            raise ValueError("W7 production fixture wire hash is invalid")
+        canonical = _w7_i32_vector(
+            item["canonical_token_ids_zlib_b64"],
+            f"W7 production fixture {variant} tokens", item["prompt_tokens"],
+        )
+        offsets = _w7_i32_vector(
+            item["wire_token_end_offsets_zlib_b64"],
+            f"W7 production fixture {variant} offsets", item["prompt_tokens"],
+        )
+        common = 0
+        while (
+            common < len(canonical) and common < len(live_tokens) and
+            canonical[common] == live_tokens[common]
+        ):
+            common += 1
+        if (
+            offsets[-1] != len(wire) or
+            any(now < before for before, now in zip((0,) + offsets, offsets)) or
+            item["common_tokens"] != common or item["live_tokens"] != len(live_tokens) or
+            item["selected_tokens"] != common - (common % recipe["alignment_tokens"])
+        ):
+            raise ValueError("W7 production fixture geometry is invalid")
+        by_variant[variant] = {**item, "canonical": canonical, "offsets": offsets}
+    return by_variant, live_tokens, recipe
 
 
 def _w7_expected_payload_bytes(token_count: int) -> int:
@@ -3290,6 +3375,15 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
     regime_ids = [item.get("regime_id") if isinstance(item, dict) else None for item in regimes]
     if regime_ids != ["primary", "confirmation-1", "confirmation-2"]:
         raise ValueError("W7 regime identities are invalid")
+    fixture_pool, frozen_live_tokens, inventory_recipe = _w7_fixture_pool()
+    expected_attempt_id = hashlib.sha256(
+        bytes.fromhex(record["binary_sha256"]) +
+        bytes.fromhex(record["configuration_sha256"]) +
+        bytes.fromhex(record["confirmation_seed_sha256"]) +
+        bytes.fromhex(_W7_POOL_SHA256)
+    ).hexdigest()
+    if record["attempt_id"] != expected_attempt_id:
+        raise ValueError("W7 attempt identity is not derived from immutable inputs")
 
     case_keys = {
         "case_id", "invocation_id", "model_family", "flag_value",
@@ -3357,6 +3451,7 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
         if regime["fixture_variant"] != expected_variant:
             raise ValueError(f"W7 {regime['regime_id']} fixture variant is not seed-selected")
         expected_wire = _w7_frozen_wire(expected_variant)
+        expected_fixture = fixture_pool[expected_variant]
         all_fixture_hashes.add(regime["fixture_sha256"])
         all_selection_seeds.add(regime["selection_seed_sha256"])
         cases = regime["cases"]
@@ -3378,7 +3473,7 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
             ):
                 raise ValueError(f"W7 {case_id} does not match its frozen contract")
             expected_invocation = (
-                f"invoke:{record['attempt_id'][:16]}:{regime['regime_id']}:{case_id}"
+                f"invoke:{record['attempt_id']}:{regime['regime_id']}:{case_id}"
             )
             if case["invocation_id"] != expected_invocation or expected_invocation in all_invocation_ids:
                 raise ValueError(f"W7 {case_id} invocation identity is invalid")
@@ -3396,6 +3491,11 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
                 case["canonical_token_ids_zlib_b64"],
                 f"W7 {case_id} canonical tokens", case["prompt_tokens"],
             )
+            if (
+                canonical != expected_fixture["canonical"] or
+                case["prompt_tokens"] != expected_fixture["prompt_tokens"]
+            ):
+                raise ValueError(f"W7 {case_id} does not use frozen production tokens")
             if any(token < 0 or token >= 154880 for token in canonical):
                 raise ValueError(f"W7 {case_id} canonical token is outside vocabulary")
             wire_offsets = _w7_i32_vector(
@@ -3407,6 +3507,8 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
                 any(current < previous for previous, current in zip((0,) + wire_offsets, wire_offsets))
             ):
                 raise ValueError(f"W7 {case_id} wire/token boundary map is invalid")
+            if wire_offsets != expected_fixture["offsets"]:
+                raise ValueError(f"W7 {case_id} does not use frozen production offsets")
             if case["live_token_count"] == 0:
                 if case["live_token_ids_zlib_b64"] is not None:
                     raise ValueError(f"W7 {case_id} zero live lineage has encoded tokens")
@@ -3418,6 +3520,14 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
                 )
                 if any(token < 0 or token >= 154880 for token in live_tokens):
                     raise ValueError(f"W7 {case_id} live token is outside vocabulary")
+            if case_id == "cold-primary":
+                expected_live: tuple[int, ...] = ()
+            elif case_id in {"exact-off", "exact-on"}:
+                expected_live = expected_fixture["canonical"]
+            else:
+                expected_live = frozen_live_tokens
+            if live_tokens != expected_live:
+                raise ValueError(f"W7 {case_id} does not use frozen production live lineage")
             common_tokens = 0
             while (
                 common_tokens < len(live_tokens) and
@@ -3425,6 +3535,13 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
                 live_tokens[common_tokens] == canonical[common_tokens]
             ):
                 common_tokens += 1
+            expected_common = (
+                0 if case_id == "cold-primary" else
+                case["prompt_tokens"] if case_id in {"exact-off", "exact-on"} else
+                expected_fixture["common_tokens"]
+            )
+            if common_tokens != expected_common:
+                raise ValueError(f"W7 {case_id} common frontier is not frozen")
             lineage = _w7_token_sha256(canonical)
             if case["sync_tokens_sha256"] != lineage or case["final_lineage_sha256"] != lineage:
                 raise ValueError(f"W7 {case_id} synchronized lineage is invalid")
@@ -3486,6 +3603,41 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
                 if item["structurally_valid"] and item["token_sha256"] != computed_prefix:
                     raise ValueError(f"W7 {case_id} checkpoint tokens contradict canonical prefix")
                 inventory_by_id[record_id] = item
+            selected_fixture = expected_fixture["selected_tokens"]
+            full_recipe = [
+                ("older", selected_fixture + inventory_recipe["older_delta_tokens"], True, True, True),
+                ("selected", selected_fixture, True, True, True),
+                ("wrong-lineage", selected_fixture + inventory_recipe["wrong_lineage_delta_tokens"], True, True, False),
+                ("malformed", selected_fixture + inventory_recipe["malformed_delta_tokens"], False, True, True),
+            ]
+            if case_id in {
+                "strict-primary", "candidate-primary", "flag-zero",
+                "flag-empty", "flag-garbage",
+            }:
+                expected_inventory_recipe = full_recipe
+            elif case_id.startswith("malformed-"):
+                expected_inventory_recipe = [full_recipe[3]]
+            elif case_id.startswith("wrong-lineage-"):
+                expected_inventory_recipe = [full_recipe[2]]
+            elif case_id.startswith("divergence-"):
+                expected_inventory_recipe = [
+                    ("selected", selected_fixture, True, False, True),
+                ]
+            elif case_id.startswith("shorten-"):
+                expected_inventory_recipe = [
+                    ("selected", expected_fixture["common_tokens"] + 1, True, True, True),
+                ]
+            else:
+                expected_inventory_recipe = []
+            observed_recipe = [
+                (
+                    item["record_id"], item["token_length"], item["structurally_valid"],
+                    item["matches_wire_prefix"], item["matches_lineage"],
+                )
+                for item in inventory
+            ]
+            if observed_recipe != expected_inventory_recipe:
+                raise ValueError(f"W7 {case_id} checkpoint inventory recipe is not frozen")
             eligible = [
                 item for item in inventory
                 if item["structurally_valid"] and item["matches_wire_prefix"] and
@@ -3764,10 +3916,11 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
         if regime["regime_id"] == "primary":
             primary_identity = primary_identity and (
                 len(derived["strict-primary"]["live"]) ==
-                len(derived["candidate-primary"]["live"]) == 5063 and
+                len(derived["candidate-primary"]["live"]) == expected_fixture["live_tokens"] and
                 derived["strict-primary"]["common"] ==
-                derived["candidate-primary"]["common"] == 5045 and
-                candidate["prompt_tokens"] == 5066 and selected_checkpoints[-1:] == [5044]
+                derived["candidate-primary"]["common"] == expected_fixture["common_tokens"] and
+                candidate["prompt_tokens"] == expected_fixture["prompt_tokens"] and
+                selected_checkpoints[-1:] == [expected_fixture["selected_tokens"]]
             )
         comparison_cases = (
             cold, strict, candidate, by_id["exact-off"], by_id["exact-on"],
@@ -3937,6 +4090,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _w7_i32_vector,
             _w7_utf8_bytes,
             _w7_frozen_wire,
+            _w7_fixture_pool,
             _w7_token_sha256,
             _w7_expected_payload_bytes,
             _w7_state_manifest,
@@ -4009,6 +4163,10 @@ def registered_scorer_digest(scorer_id: str) -> str:
                     "stem_text_sha256": _W7_STEM_TEXT_SHA256,
                     "primary_suffix": _W7_PRIMARY_SUFFIX,
                     "confirmation_suffixes": _W7_CONFIRMATION_SUFFIXES,
+                    "fixture_pool_sha256": _W7_POOL_SHA256,
+                    "tokenizer_sha256": _W7_TOKENIZER_SHA256,
+                    "tokenizer_init_sha256": _W7_TOKENIZER_INIT_SHA256,
+                    "tokenizer_native_sha256": _W7_TOKENIZER_NATIVE_SHA256,
                 },
                 sort_keys=True,
                 separators=(",", ":"),
