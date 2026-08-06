@@ -122,6 +122,46 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "local arm=$1 port=$2 direct=$3 tag=\"w3s${DRAND_ROUND}-${arm}\"",
             probe,
         )
+
+    def test_w3_uses_validated_private_engine_lock_and_runner_identity(self):
+        probe = W3_PROBE_V3.read_text(encoding="utf-8")
+        for contract in (
+            "readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock",
+            "readonly OUTER_LOCK=/run/lock/frontier-at-home/inference.lock",
+            '[[ $ENGINE_LOCK != "$OUTER_LOCK" ]]',
+            'DS4_LOCK_FILE=$ENGINE_LOCK',
+            '"DS4_LOCK_FILE"',
+            "validate_engine_lock",
+            'flock -n -E 75 -- "$ENGINE_LOCK"',
+            "runner_start_ticks",
+            "runner_is_exact",
+            'runner exited before the frozen W3 engine appeared',
+        ):
+            self.assertIn(contract, probe)
+        self.assertIn("runner_is_exact || return 1", probe)
+
+        shell = r'''
+set -u
+runner_pid=
+runner_start_ticks=
+runner_is_exact() {
+  [[ -n ${runner_pid:-} && -n ${runner_start_ticks:-} &&
+     -r /proc/$runner_pid/stat ]] || return 1
+  [[ $(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true) ==
+     "$runner_start_ticks" ]]
+}
+(exit 7) &
+runner_pid=$!
+runner_start_ticks=$(awk '{print $22}' "/proc/$runner_pid/stat")
+wait "$runner_pid" || true
+runner_is_exact && exit 99
+exit 0
+'''
+        result = subprocess.run(
+            ["/usr/bin/bash", "-c", shell], text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("sort -n | tail -1", probe)
         self.assertNotIn('a["completion_tokens"] >= 64', probe)
         self.assertIn('a["independent_completion_tokens"] == 64', probe)
