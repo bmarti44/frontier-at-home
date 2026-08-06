@@ -254,6 +254,7 @@ map_allowlist = {
     "crash_artifact_sha256",
     "engine_source_sha256",
     "environment_sha256",
+    "external_artifacts",
     "evidence_archive",
     "evalset_sha256",
     "model_files",

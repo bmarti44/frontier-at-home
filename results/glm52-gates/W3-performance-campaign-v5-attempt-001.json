@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "718792ba4995dbc320a561662d36a35701c12e78",
+  "status": "NO_RESULT",
+  "stage": "pair-1 ON-arm containment preflight",
+  "reason": "After the valid OFF arm released memory, MemAvailable recovered to 114.557 GiB. The launcher correctly refused the 95+2+18=115 GiB requested envelope before starting the ON engine.",
+  "safety": {
+    "engine_started_for_failed_arm": false,
+    "oom": false,
+    "xid": false,
+    "reboot": false,
+    "off_arm_safe_returncode": 0,
+    "off_arm_cgroup_swap_bytes": 0,
+    "off_arm_min_available_gib": 24.544483184814453
+  },
+  "off_arm_diagnostic_only": {
+    "completion_tokens": 129,
+    "measured_wall_seconds": 85.014472,
+    "warm_wall_seconds": 99.13723,
+    "completed_decode_seconds": 58.767774912,
+    "decode_tokens_per_second": 2.178064427174071
+  },
+  "external_artifacts": {
+    "/home/bmarti44/.local/state/glm52-w3-direct-slot-probe-v3.LGgDfX/off/arm.json": "7dcfd4821a0422220d768d4343d863d3c9086902e80d4d6603c3903afc914c7d",
+    "/home/bmarti44/.local/state/glm52-w3-direct-slot-probe-v3.LGgDfX/off/containment.stdout": "38d2e63d050f30fb678c949001cb7882fe38a2d27e1e58440baf65a739cd6d5b",
+    "/home/bmarti44/.local/state/glm52-w3-direct-slot-probe-v3.LGgDfX/on/containment.stderr": "a64e4108e1b6486143c8be36c28369045ef0061d68b5efef7e74b07e64ca070a",
+    "/home/bmarti44/.local/state/glm52-w3-direct-slot-probe-v3.LGgDfX/on/memory-preflight.json": "23e6032a2eef516f231abed3f92eeaac4a1435516730af6bfb48eb59bd2c1088",
+    "/home/bmarti44/.local/state/glm52-w3-campaign-v5/pair-0-launch.log": "e3d0fd1c29537c3c7aada1ae4db90f5f7c6f079ede58ef587f0dd2ebdb0d380a"
+  },
+  "bounded_fix": "Reduce GLM_SAFE_MEMORY_HIGH_GIB from 95 to 94 for this harness only. MemoryMax becomes 96 GiB; the 18 GiB whole-system kill floor, zero-swap cgroup, and 110 GiB start preflight remain unchanged."
+}
