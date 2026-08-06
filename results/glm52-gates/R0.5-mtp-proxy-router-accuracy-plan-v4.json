@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "candidate": 5,
+  "classification": "FINAL_PERMITTED_PREREGISTERED_AUTHORITY_AMENDMENT",
+  "base_contracts": [
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v2.json", "sha256": "d1e3ec4597aca237e9861d6d82a33b1b3639c0e300f1bab5ef005ed0a5f1896b"},
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v3.json", "sha256": "562bd0aa270b3f620cf69979b778f56eaf324c51553eb8c7228775117666a90a"}
+  ],
+  "contract_rule": "All prior clauses remain mandatory unless explicitly strengthened here. The scorer hash-checks every contract. This candidate is the last autonomous amendment unless round 189 strictly shrinks the blocking set; a second consecutive non-shrink pauses this branch.",
+  "scope": {
+    "claim": "Greedy-argmax causal accuracy only; no cost, cache, prefetch, serving, or heldout claim.",
+    "implementation_authorized": false,
+    "next_step_if_review_passes": "Write and review RED packer/source/candidate/replay/scorer tests before implementation."
+  },
+  "frozen_tensor_inventory": {
+    "path": "results/glm52-gates/R0.5-mtp-proxy-tensor-inventory.json",
+    "sha256": "b37b9ef2906596b5acd29d8f1538a47c527f74338c5e9386b2370388e8b75b12",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "reader": {
+      "path": "results/glm52-gates/harness/gguf-py/gguf/gguf_reader.py",
+      "sha256": "91cb9e81f1a67f5856f012cf3f526ad9ffdb6b887d2aa66e2593ee6f63764aad"
+    },
+    "counts": {"global_allowed": 3, "mtp_allowed": 27, "target_router_allowed": 225, "forbidden_target_experts": 225},
+    "replacement": "The v3 blk.78 wildcard is deleted. The pack exact-name/type/shape/original-range set is precisely the 255 allowed rows in this inventory; every other model tensor and any non-tensor/trailing/padding payload is forbidden. The 225 forbidden normal-expert ranges must be absent and inaccessible."
+  },
+  "canonical_source_authority": {
+    "source_sandbox": "A clean reproducibly built source-only binary runs under a read sandbox that admits exactly the bound prompt, model, tokenizer/runtime, frozen binary/libraries, CUDA devices, and a fresh output directory. Corpus, split records, retained routes, candidate/replay/Phase-B results, network, IPC, ptrace, process_vm and other processes are inaccessible.",
+    "execution": "Tokenize the exact prompt, evaluate exactly the prompt token vector through position t, capture pre-output-norm h_t as z0, full source logits, q1=greedy argmax, checkpoint length, token vector, target-eval count, process/maps/FD identity, then publish and exit. The source helper has no future-eval loop or candidate/router scoring code. Exactly prompt_token_count target evals are allowed; any later eval or post-t checkpoint is FAIL.",
+    "canonical_files": {
+      "z0.f32le": "exactly 6144 little-endian finite F32 values, 24576 bytes",
+      "source-logits.f32le": "exactly 154880 little-endian finite F32 values, 619520 bytes",
+      "q1.i32le": "exactly one little-endian signed I32, 4 bytes",
+      "prompt-tokens.i32le": "exactly prompt_token_count little-endian signed I32 values; count and bytes must equal independent tokenizer output",
+      "source-meta.json": "RFC8259 canonical sorted-key compact JSON with one instance of the fixed keys schema_version, case_id, request_id, prompt_sha256, prompt_token_sha256, prompt_token_count, source_position, checkpoint_length, target_eval_count, model_sha256, tokenizer_sha256, binary_sha256, and artifact sha256/size map; unknown, duplicate, missing, noncanonical or trailing bytes FAIL"
+    },
+    "independent_phase_b_check": "Only after source and candidate/replay artifacts freeze, a distinct production-path Phase-B binary re-tokenizes the prompt and evaluates exactly through t in a fresh session. Before reading q1..q8 it publishes its own prompt tokens, h_t, full logits, q1, checkpoint length and eval count. These must be bit-identical to every canonical source artifact/value. Phase B then evaluates exactly the frozen q branch and captures target routes. Candidate metrics are not scored until this comparison passes.",
+    "mutations": [
+      "alter z0 while preserving q1 and fail bit comparison",
+      "alter one source logit without changing argmax and fail",
+      "perform one future target eval and fail eval/checkpoint count even when canonical outputs are unchanged",
+      "append a byte/key/file, NaN payload or padding and fail exact schema/size",
+      "give source access to corpus/route/result path and fail sandbox preflight"
+    ]
+  },
+  "admitted_payload_integrity": {
+    "candidate_controlled_code": "Source, candidate, replay, packer, validator, Phase-B helper and scorer each have explicit disjoint source inventories. Every executable is clean-built twice from reviewed tracked-clean source with the frozen compiler/linker command and toolchain/container hashes; its two outputs must be byte-identical. Candidate and replay are distinct binaries and neither has a mode that implements the other.",
+    "runtime_libraries": "Only root-owned system/CUDA runtime libraries already used by the frozen production engine may be admitted. Resolve each through O_NOFOLLOW, require root ownership and no group/world write, freeze dev:inode:size:SHA-256, and scan bytes. No user-writable library, LD path/preload/audit variable, JIT source/cache, plugin, config or helper executable is admitted.",
+    "anti_canning_scan": "Before freeze, scan all admitted source, diffs, executable/library bytes, symbols, strings, pack/source artifacts and build inputs for the five case IDs, request IDs, prompt hashes/content, forbidden tensor ranges/byte signatures, selected-ID tables, benchmark branches and hash/prompt detection. Also inspect disassembly/source for encoded/compressed lookup paths. Any match outside declarative evidence metadata FAILS.",
+    "post_freeze_randomness": "After every binary/library/pack/scorer hash freezes, obtain a fresh public-random seed. Derive at least five synthetic source tuples containing finite F32 z0 vectors, valid q1 tokens and valid positions/min_pos values from the seed with a fixed counter-mode SHA-256 generator. Neither known fixture identity nor Phase-B target data is an input. Candidate and replay must agree bit-identically on all synthetic recurrence/router/head transcripts before open-fixture capture; these synthetic results cannot grant the accuracy PASS.",
+    "smuggling_mutations": [
+      "fixture IDs/routes in candidate rodata, replay rodata or shared library fail scan",
+      "compressed/encoded lookup decoder or fixture branch fails source/disassembly review",
+      "one trailing source or pack byte and one extra tensor name fail",
+      "one admitted user-writable library/config/JIT cache fails ownership/env preflight",
+      "binary rebuilt after public seed or target capture invalidates candidate"
+    ]
+  },
+  "implementation_independent_replay": {
+    "candidate": "Production ds4 diagnostic source owns candidate orchestration: source-state ingestion, eight calls to the already-reviewed glm_graph_mtp_step CUDA primitive, direct post-residual capture, and candidate artifact publication. It contains no replay, scoring or target-route reader.",
+    "replay": "A separately reviewed standalone source file and binary owns replay orchestration. It consumes only canonical z0/q1/t/min_pos, the exact tensor pack and synthetic tuple. It independently allocates/updates private MTP KV, invokes the frozen primitive CUDA operations in explicit j=1..8 order, captures post-residual z/head logits, recomputes all router/baseline ranks, and publishes its transcript. It has no fixture/case/request input and no candidate source file or candidate-specific orchestration linkage.",
+    "shared_boundary": "Candidate and replay may share only the frozen production CUDA tensor primitives and immutable model-format constants. They may not share candidate-specific loops, stage receipt/publication code, score aggregation, source parsing, case dispatch, result schema writer or test fixtures.",
+    "independent_scorer": "The Python scorer separately parses candidate and replay canonical artifacts, rejects any non-bit-identical z/logit/q/position/KV/rank value, derives metrics only from replay ranks plus Phase-B target selections, and never imports either orchestration implementation.",
+    "differential_mutations": [
+      "alter candidate-only recurrence/tensor/position and fail against replay",
+      "alter replay-only recurrence/tensor/position and fail against candidate",
+      "link one shared candidate-specific loop or enable dual-mode binary and fail source inventory",
+      "canned outputs that pass known cases fail post-freeze synthetic tuples",
+      "candidate/replay process or binary identity equality fails"
+    ]
+  },
+  "determinism": {
+    "rule": "Every frozen operation and artifact comparison is bit-identical. Any nondeterminism is unconditional FAIL/NO_RESULT for this candidate. No tolerance, rounding, majority vote, retry selection or comparison relaxation may be introduced after any trace value is observed; doing so requires a new preregistered candidate and seed.",
+    "mutation": "A one-ULP difference in any z/logit or a retry-only match FAILS."
+  },
+  "review_resolution": {
+    "R05-R188-H1-SOURCE-Z0-AUTHORITY-UNVERIFIED": "Phase B independently recomputes and bit-compares prompt tokens, h_t/z0, full logits/q1, checkpoint and eval count after candidate freeze.",
+    "ADV-R05-R188-H1-SOURCE-Z0-AUTHORITY-IS-SELF-REPORTED": "Canonical exact source schema, source sandbox/eval boundary, independent Phase-B replay and crafted/future-eval mutations close source self-attestation.",
+    "ADV-R05-R188-H2-ALLOWED-CHANNEL-PACK-AND-BINARY-SMUGGLING": "Exact 480-row tensor inventory replaces wildcard; exact-size canonical artifacts, reproducible disjoint builds, root-owned hashed libraries, anti-canning scans and post-freeze random tuples close admitted payload channels.",
+    "ADV-R05-R188-H3-REPLAY-IS-PROCESS-SEPARATE-NOT-IMPLEMENTATION-INDEPENDENT": "Candidate and replay have disjoint reviewed orchestration sources/binaries and schemas, share only production primitives, and face independent/differential synthetic mutations.",
+    "ADV-R05-R188-M1-BIT-IDENTITY-MAY-CONFLATE-CORRECTNESS-WITH-DETERMINISM": "Nondeterminism is now unconditional FAIL/NO_RESULT; tolerance requires a new candidate before observation."
+  },
+  "convergence": {
+    "gate_candidate": 5,
+    "campaign_review_next": 189,
+    "previous_consecutive_non_shrink": 1,
+    "total_candidates": 5,
+    "trigger": "If round 189 does not strictly shrink the blocking set, pause this proxy gate and report exact blockers; do not publish candidate 6."
+  }
+}
