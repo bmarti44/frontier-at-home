@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline-terminal-disposition",
+  "candidate_hash": "41f91a83a2fd8c7f1c25ff74d54e4eb6210367b5",
+  "review_round": 159,
+  "attempt_status": "FAILED",
+  "scientific_status": "NO_RESULT",
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 94,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "P1-BASE-C18-M2-KERNEL-EMPTY-LOG-FALSE-NEGATIVE",
+      "INSTALLER-CLEANUP-DYNAMIC-TEST-GAP"
+    ],
+    "low": [],
+    "verdict": "ACCEPT_TERMINAL_NO_RESULT"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 94,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "ADV-R159-M1-CAMPAIGN-ALIAS-GUARD-DOCUMENTARY",
+      "ADV-R157-M1-CLEANUP-ROLLBACK-TEST-GAP"
+    ],
+    "low": [],
+    "verdict": "ACCEPT_TERMINAL_DISPOSITION"
+  },
+  "prior_issue_status": [
+    {
+      "id": "P1-BASE-C18-H1-V1-ONE-SHOT-CONSUMED",
+      "status": "FIXED",
+      "resolution": "The consumed held-out-v1 namespace is terminal NO_RESULT and cannot be retried."
+    },
+    {
+      "id": "P1-BASE-V2-H1-REPLACEMENT-CORPUS-LEAKAGE",
+      "status": "FIXED",
+      "resolution": "No v2 alias, replacement split, partial completion, or reuse is scheduled."
+    },
+    {
+      "id": "P1-BASE-V2-H2-SEPARATE-ROOT-AUTHORITY-ABSENT",
+      "status": "FIXED",
+      "resolution": "The replacement experiment is abandoned, so no new authority is claimed or required."
+    },
+    {
+      "id": "ADV-R158-H1-POST-OPEN-NAMESPACE-RETRY",
+      "status": "FIXED",
+      "resolution": "The opened namespace is permanently closed and its partial scientific captures are prohibited from use."
+    }
+  ],
+  "terminal_disposition": {
+    "heldout_v1": "NO_RESULT",
+    "same_split_retry": "PROHIBITED",
+    "replacement_namespace": "NOT_SCHEDULED",
+    "partial_scoring_or_reuse": "PROHIBITED",
+    "p2": "SKIPPED",
+    "p3": "SKIPPED"
+  },
+  "verdict": "ACCEPTED_TERMINAL_NO_RESULT; RETURN_TO_LOSSLESS_ENGINE_WORK"
+}

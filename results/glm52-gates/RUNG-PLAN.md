@@ -695,7 +695,27 @@ coverage are frozen separately in
 `R0c-union-probe-p1-baseline-freeze.json` before the untouched test split is
 opened.
 
+Held-out status (2026-08-05): the one authorized candidate-18 run opened the
+sealed 20-case test mappings, completed nine requests and part of the tenth,
+then failed closed when unrelated firmware-notifier AppArmor audit records
+violated an over-broad literal-empty kernel-log assertion. There was no OOM,
+Xid, survivor, or engine failure, but complete coverage and a fixed-scorer
+summary do not exist. The attempt is immutable **FAILED** evidence and its
+scientific result is terminal **NO_RESULT**. It may not be rerun, completed,
+partially scored, combined with replacement cases, or aliased under a new
+namespace. No held-out scientific values were inspected. P2 and P3 are
+therefore skipped. The failure, terminal disposition, and final Nash/Singer
+acceptance (94/94, no high or critical findings) are bound by
+`R0c-union-probe-p1-baseline-c18-heldout-runtime-attestation-failure-2026-08-05.json`,
+`R0c-union-probe-p1-baseline-terminal-no-result-2026-08-05.json`, and
+`R0c-union-probe-p1-baseline-review-r159.json`. Future work returns to the
+lossless engine bottleneck; the trained probe is not qualified for online use.
+
 #### P2 - split-conformal calibration
+
+Status: **SKIPPED**. P2 requires a complete accepted P1 held-out comparison;
+the terminal P1 `NO_RESULT` does not satisfy that prerequisite. Do not open or
+reuse the calibration split to manufacture a substitute result.
 
 Use the frozen calibration split to turn raw per-expert scores into prediction
 sets. The preregistered headline target is at least 90% empirical containment of
