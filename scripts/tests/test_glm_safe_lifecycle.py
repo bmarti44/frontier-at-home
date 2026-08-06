@@ -88,6 +88,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS",
             "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
             "DS4_GLM_TP_DEBUG",
+            "DS4_LOCK_EXPECTED_DEV_INO",
             "DS4_LOCK_FILE",
         ]
         off = {
@@ -97,6 +98,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_CUDA_FETCH_THREADS": "6",
             "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
             "DS4_GLM_TP_DEBUG": "1",
+            "DS4_LOCK_EXPECTED_DEV_INO": "31:12345",
             "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
         }
         on = dict(off, DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS="1")
@@ -151,9 +153,14 @@ set -u
 runner_pid=
 runner_start_ticks=
 runner_is_exact() {
+  local runner_state observed_start_ticks
   [[ -n ${runner_pid:-} && -n ${runner_start_ticks:-} &&
      -r /proc/$runner_pid/stat ]] || return 1
-  [[ $(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true) == "$runner_start_ticks" ]]
+  read -r runner_state observed_start_ticks < <(
+    awk '{print $3, $22}' "/proc/$runner_pid/stat" 2>/dev/null
+  ) || return 1
+  [[ $runner_state != Z && $runner_state != X ]] || return 1
+  [[ $observed_start_ticks == "$runner_start_ticks" ]]
 }
 zombie_file=$(mktemp)
 /usr/bin/python3 - "$zombie_file" <<'PY' &
@@ -380,6 +387,8 @@ exit 0
             "DS4_GLM_PREFETCH",
             "DS4_GLM_PREFETCH_THREADS",
             "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS",
+            "DS4_LOCK_EXPECTED_DEV_INO",
+            "DS4_LOCK_FILE",
         ):
             self.assertIn(name, launcher)
 
