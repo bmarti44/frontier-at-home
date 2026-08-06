@@ -1,0 +1,52 @@
+{
+  "candidate_hash": "c78b2aec275456cb1618660b064e25c0dc608248",
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "review_round": 191,
+  "reviewers": [
+    {
+      "name": "Nash",
+      "score_0_to_100": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "R05-R190-H1-BLINDED-FREQUENCY-BASELINE-CONTRADICTION", "status": "FIXED"},
+        {"id": "ADV-R05-R190-H1-BEACON-FLOOR-HAS-NO-PRE-ROUND-COMMITMENT", "status": "FIXED"},
+        {"id": "ADV-R05-R190-M1-FREQUENCY-BASELINE-AUTHORITY-IS-CONTRADICTORY", "status": "FIXED"}
+      ],
+      "verdict": "APPROVE_RED_TEST_AUTHORING_ONLY"
+    },
+    {
+      "name": "Singer",
+      "score_0_to_100": 97,
+      "critical": [],
+      "high": [],
+      "medium": [
+        {
+          "id": "ADV-R05-R191-M1-EXTENDED-SEED-DOMAIN-SERIALIZATION-UNSPECIFIED",
+          "evidence": "V6 says GitHub event identity enters the v5 seed without exact field order, encoding, framing, raw/hex choice, or domain tag.",
+          "affected_gate": "Deterministic fixture selection and independent scorer reproduction",
+          "reproduction": "Omit event id or use alternate self-consistent concatenation in selector and scorer.",
+          "proposed_acceptance_test": "Freeze exact length-prefixed serialization, field order and raw digest encodings with a fixed vector; independently reject omitted/reordered/raw-vs-hex/normalization mutations."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-R05-R190-H1-BEACON-FLOOR-HAS-NO-PRE-ROUND-COMMITMENT", "status": "FIXED"},
+        {"id": "R05-R190-H1-BLINDED-FREQUENCY-BASELINE-CONTRADICTION", "status": "FIXED"},
+        {"id": "ADV-R05-R190-M1-FREQUENCY-BASELINE-AUTHORITY-IS-CONTRADICTORY", "status": "FIXED"},
+        {"id": "ADV-R05-R189-H1-POSTFREEZE-SYNTHETICS-DO-NOT-BLIND-SCORING-FIXTURES", "status": "FIXED"}
+      ],
+      "verdict": "APPROVE_RED_TEST_AUTHORING_ONLY"
+    }
+  ],
+  "terminal_disposition": "APPROVED_FOR_RED_TEST_AUTHORING_ONLY",
+  "convergence": {
+    "candidate": 7,
+    "blocking_set_strictly_shrank": true,
+    "critical_or_high_remaining": 0,
+    "pause_trigger": false,
+    "implementation_or_trace_authorized": false
+  }
+}

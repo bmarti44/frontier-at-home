@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "classification": "TARGETED_MEDIUM_RESOLUTION",
+  "resolves": "ADV-R05-R191-M1-EXTENDED-SEED-DOMAIN-SERIALIZATION-UNSPECIFIED",
+  "base_contract": {
+    "path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v6.json",
+    "sha256": "fc9ac89580de0656091d9823fa7a18ab98a8af8b816b4d2c36a6ed3cccadbd2d"
+  },
+  "formula": [
+    "Start with exact bytes UTF8('R05-BLINDED-REAL-V2') followed by one NUL byte.",
+    "Append GitHub PushEvent id, ref, and created_at in that exact order. Each is unmodified ASCII/UTF-8 from the exact canonical GitHub JSON and is framed as uint32 little-endian byte length followed by those bytes. No Unicode normalization, whitespace change, case change, NUL or alternate timestamp spelling is permitted.",
+    "Append raw 20 bytes decoded from the lowercase 40-hex manifest git commit.",
+    "Append raw 32 bytes decoded from the lowercase 64-hex canonical freeze-manifest SHA-256.",
+    "Append raw 32 bytes decoded from the lowercase 64-hex BLS-verified drand randomness.",
+    "No field count, delimiter, terminator or trailing byte follows. seed32 is SHA-256 of the resulting bytes."
+  ],
+  "test_vector": {
+    "event_id": "12345678901",
+    "ref": "refs/heads/glm52-rung0-io-submission",
+    "created_at": "2026-08-06T19:15:00Z",
+    "manifest_commit_hex": "000102030405060708090a0b0c0d0e0f10111213",
+    "freeze_manifest_sha256_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "drand_randomness_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "serialized_bytes": 183,
+    "seed32_sha256": "84103b930e97824f02bc39736bd684595367e2f07a4fc22f5a1d8ca948558daa"
+  },
+  "required_tests": [
+    "Selector and scorer use separate implementations and both equal the fixed vector.",
+    "Omitted/reordered event fields, raw-vs-hex commit/manifest/randomness, big-endian length, normalized timestamp/ref, changed domain/NUL and trailing bytes each differ from the fixed vector.",
+    "Any selector/scorer disagreement or noncanonical input fails before fixture selection."
+  ],
+  "review_policy": "Medium-only targeted fix; no full reviewer round. This does not authorize implementation beyond the already-approved RED-test authoring boundary."
+}
