@@ -170,8 +170,21 @@ class W3PerformanceCampaignTests(unittest.TestCase):
                 "arms": arms,
             })
         with tempfile.TemporaryDirectory() as temporary:
-            with self.assertRaisesRegex(ValueError, "reuses crash identities"):
+            with self.assertRaisesRegex(ValueError, "validated CLI authority"):
                 SCORER_MODULE.write_result(Path(temporary) / "result", rows)
+
+    def test_scorer_recomputes_runtime_evidence(self):
+        source = SCORER.read_text(encoding="utf-8")
+        for contract in (
+            'cmd_log.count("direct expert-slot arena mapping enabled")',
+            'cmd_log.count("direct expert-slot dispatch layer=")',
+            'fault_re.findall(cmd_log + "\\n" + main_log + "\\n" + kernel_log)',
+            'memory-preflight.json',
+            'stored checks differ from recomputed runtime evidence',
+            'response-bound timing receipt is invalid',
+            '__name__ != "__main__"',
+        ):
+            self.assertIn(contract, source)
 
     def test_mutations_fail_closed(self):
         mutations = ("short", "schedule", "fixture", "digest", "safety", "nan")

@@ -28,6 +28,7 @@ TOKEN_RE = re.compile(
     r"monotonic_ns=(\d+) token=(-?\d+)"
 )
 T95_DF4 = 2.1318
+_CLI_AUTHORITY_TOKEN = object()
 ALLOWED_ENVIRONMENT = {
     "HOME": "/nonexistent",
     "PATH": "/usr/bin:/bin",
@@ -69,7 +70,7 @@ ARM_KEYS = {
     "measured_dispatch_delta", "clean_exit_attestation", "fault_markers",
     "environment_sha256", "request_sha256", "binary_sha256", "model_sha256",
     "tokenizer_sha256", "engine_commit", "crash_evidence",
-    "crash_evidence_identity", "crash_artifact_sha256",
+    "crash_evidence_identity", "crash_artifact_sha256", "timing_receipt",
 }
 TOKEN_RECORD_KEYS = {
     "schema_version", "label", "reference_token_count", "content_bytes",
@@ -128,6 +129,12 @@ def sha256(path: Path) -> str:
 def stat_identity(path: Path) -> str:
     value = path.stat()
     return f"{value.st_dev}:{value.st_ino}"
+
+
+def file_identity(path: Path) -> str:
+    value = path.stat()
+    return (f"{value.st_dev}:{value.st_ino}:{value.st_size}:"
+            f"{value.st_mtime_ns}:{value.st_ctime_ns}")
 
 
 def exact_int(value: Any, label: str) -> int:
@@ -299,9 +306,12 @@ def measured_timing(cmd_path: Path, expected_sha: str) -> dict[str, Any]:
         "warm_request_id": warm_request,
         "token_timestamps_ns": timestamps,
         "token_ids": [row[2] for row in rows],
+        "warm_token_timestamps_ns": [row[1] for row in groups[0][1]],
+        "warm_token_ids": [row[2] for row in groups[0][1]],
         "completed_seconds": seconds,
         "decode_tokens_per_second": 128.0 / seconds,
         "cmd_log_sha256": expected_sha,
+        "cmd_log_identity": file_identity(cmd_path),
     }
 
 
@@ -414,6 +424,8 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
         if receipt.strip() != f"SAFE_RUN_DONE rc=0 killed=no dir={crash}":
             raise ValueError(f"{pair}: {name} safe-run receipt is invalid")
         main_log = (crash / "main.log").read_text(encoding="utf-8", errors="strict")
+        cmd_log = (crash / "cmd.log").read_text(encoding="utf-8", errors="strict")
+        kernel_log = (crash / "kernel.log").read_text(encoding="utf-8", errors="strict")
         identity_match = re.search(
             r"executed_candidate_verified pid=(\d+) start_ticks=(\d+) path=\S+ "
             r"executed_binary_sha256=([0-9a-f]{64}) device_inode=([0-9:]+)", main_log,
@@ -423,6 +435,49 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
                 "no identity contradiction observed" not in main_log):
             raise ValueError(f"{pair}: {name} lifecycle attestation is invalid")
         measured[name]["executed_identity"] = identity_match.groups()
+        environment_match = re.search(
+            r"executed_environment_allowlist=[A-Z0-9_,]+ "
+            r"executed_environment_sha256=([0-9a-f]{64})", main_log,
+        )
+        if environment_match is None or environment_match.group(1) != arm.get("environment_sha256"):
+            raise ValueError(f"{pair}: {name} executed environment is unbound")
+        warm_counts = [int(value) for value in
+                       (pair / name / "warm.dispatch-counts").read_text().split()]
+        measured_counts = [int(value) for value in
+                           (pair / name / "measured.dispatch-counts").read_text().split()]
+        if len(warm_counts) != 2 or len(measured_counts) != 2:
+            raise ValueError(f"{pair}: {name} dispatch receipts are malformed")
+        mapping_markers = cmd_log.count("direct expert-slot arena mapping enabled")
+        admission_markers = cmd_log.count("direct expert-slot hit layer=")
+        dispatch_markers = cmd_log.count("direct expert-slot dispatch layer=")
+        if (arm.get("mapping_markers") != mapping_markers or
+                arm.get("admission_markers") != admission_markers or
+                arm.get("dispatch_markers") != dispatch_markers or
+                arm.get("warm_dispatch_delta") != warm_counts[1] - warm_counts[0] or
+                arm.get("measured_dispatch_delta") != measured_counts[1] - measured_counts[0]):
+            raise ValueError(f"{pair}: {name} direct-path marker claims are inconsistent")
+        fault_re = re.compile(
+            r"FATAL|CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|"
+            r"Out of memory|NVRM.*Xid", re.I,
+        )
+        if arm.get("fault_markers") != len(fault_re.findall(cmd_log + "\n" + main_log + "\n" + kernel_log)):
+            raise ValueError(f"{pair}: {name} fault-marker claim is inconsistent")
+        if ("memory_swap_max=0" not in main_log or
+                re.search(r"cgroup_final .*swap_current_bytes=0 .*oom_kill 0", main_log) is None):
+            raise ValueError(f"{pair}: {name} cgroup safety receipt is invalid")
+        sample_values = [
+            int(match.group(1)) / 1_048_576
+            for match in re.finditer(r"mem_avail_kb=(\d+)",
+                                     (crash / "samples.log").read_text(encoding="utf-8"))
+        ]
+        if not sample_values or min(sample_values) < 10.0:
+            raise ValueError(f"{pair}: {name} memory evidence crossed the safety floor")
+        preflight_raw, preflight = strict_json(pair / name / "memory-preflight.json")
+        if (preflight.get("pass") is not True or preflight.get("required_gib") != 110.0 or
+                not isinstance(preflight.get("mem_available_gib"), (int, float)) or
+                preflight["mem_available_gib"] < 110.0):
+            raise ValueError(f"{pair}: {name} memory preflight did not pass")
+        phase_records: dict[str, tuple[dict[str, Any], dict[str, Any], bytes]] = {}
         for phase in ("warm", "measured"):
             response_raw, response = strict_json(pair / name / f"{phase}.json")
             _, token_record = strict_json(pair / name / f"{phase}.tokens.json")
@@ -437,16 +492,96 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
                                   else measured[name]["request_id"])
             if response.get("id") != expected_timing_id:
                 raise ValueError(f"{pair}: {name} {phase} timing request is unbound")
+            http_fields = (pair / name / f"{phase}.http").read_text().split()
+            if (len(http_fields) != 2 or int(http_fields[0]) != 200 or
+                    arm.get(f"{phase}_http_code") != 200 or
+                    not math.isclose(float(http_fields[1]), arm.get(f"{phase}_wall_seconds"),
+                                     rel_tol=0.0, abs_tol=5e-7)):
+                raise ValueError(f"{pair}: {name} {phase} HTTP receipt is inconsistent")
+            phase_records[phase] = (response, token_record, response_raw)
         canonical = json.dumps(
             measured[name]["measured_generated"], sort_keys=True,
             separators=(",", ":"), ensure_ascii=False,
         ).encode("utf-8")
         if arm.get("generated_sha256") != sha256_bytes(canonical):
             raise ValueError(f"{pair}: {name} generated digest is self-reported")
+        if arm.get("generated_bytes") != len(canonical):
+            raise ValueError(f"{pair}: {name} generated byte count is inconsistent")
+        expected_timing_receipt = {
+            "warm": {
+                "request_id": measured[name]["warm_request_id"],
+                "token_indices": list(range(1, 130)),
+                "token_timestamps_ns": measured[name]["warm_token_timestamps_ns"],
+                "token_ids": measured[name]["warm_token_ids"],
+                "response_sha256": sha256_bytes(phase_records["warm"][2]),
+                "response_identity": phase_records["warm"][1]["response_identity"],
+            },
+            "measured": {
+                "request_id": measured[name]["request_id"],
+                "token_indices": list(range(1, 130)),
+                "token_timestamps_ns": measured[name]["token_timestamps_ns"],
+                "token_ids": measured[name]["token_ids"],
+                "response_sha256": sha256_bytes(phase_records["measured"][2]),
+                "response_identity": phase_records["measured"][1]["response_identity"],
+            },
+            "cmd_log_identity": measured[name]["cmd_log_identity"],
+            "cmd_log_sha256": measured[name]["cmd_log_sha256"],
+        }
+        if arm.get("timing_receipt") != expected_timing_receipt:
+            raise ValueError(f"{pair}: {name} response-bound timing receipt is invalid")
+        if (arm.get("completion_tokens") != phase_records["measured"][0]["usage"]["completion_tokens"] or
+                arm.get("warm_completion_tokens") != phase_records["warm"][0]["usage"]["completion_tokens"] or
+                arm.get("measured_token_scorer") != phase_records["measured"][1] or
+                arm.get("warm_token_scorer") != phase_records["warm"][1] or
+                arm.get("measured_reasoning_bytes") != phase_records["measured"][1]["reasoning_bytes"] or
+                arm.get("warm_reasoning_bytes") != phase_records["warm"][1]["reasoning_bytes"]):
+            raise ValueError(f"{pair}: {name} response metrics are inconsistent")
     if (arms["off"].get("generated_sha256") != arms["on"].get("generated_sha256") or
             measured["off"]["measured_generated"] != measured["on"]["measured_generated"] or
             measured["off"]["warm_generated"] != measured["on"]["warm_generated"]):
         raise ValueError(f"{pair}: measured generated bytes differ across arms")
+    recomputed_checks = {
+        "same_frozen_binary": all(arm["binary_sha256"] == frozen["binary_sha256"]
+                                  for arm in arms.values()),
+        "same_model": all(arm["model_sha256"] == frozen["model_sha256"]
+                          for arm in arms.values()),
+        "same_request": all(arm["request_sha256"] == request_sha for arm in arms.values()),
+        "safe_returncodes_zero": all(arm["safe_returncode"] == 0 for arm in arms.values()),
+        "http_200": all(arm["warm_http_code"] == 200 and arm["measured_http_code"] == 200
+                        for arm in arms.values()),
+        "independent_exact_output_tokens": all(
+            arm["independent_completion_tokens"] == 129 and
+            arm["independent_warm_completion_tokens"] == 129 for arm in arms.values()
+        ),
+        "thinking_disabled_no_reasoning_channel": all(
+            arm["measured_reasoning_bytes"] == 0 and arm["warm_reasoning_bytes"] == 0
+            for arm in arms.values()
+        ),
+        "all_generated_outputs_nonempty": all(
+            measured[name]["measured_generated"]["content"] and
+            measured[name]["warm_generated"]["content"] for name in ("off", "on")
+        ),
+        "generated_output_byte_identical": (
+            measured["off"]["measured_generated"] == measured["on"]["measured_generated"]
+        ),
+        "warm_generated_output_byte_identical": (
+            measured["off"]["warm_generated"] == measured["on"]["warm_generated"]
+        ),
+        "off_path_not_mapped": arms["off"]["mapping_markers"] == 0,
+        "off_path_has_no_direct_dispatches": arms["off"]["dispatch_markers"] == 0,
+        "on_path_mapped": arms["on"]["mapping_markers"] >= 1,
+        "on_path_dispatched_for_compared_warm_response": arms["on"]["warm_dispatch_delta"] >= 1,
+        "on_path_dispatched_for_compared_measured_response": arms["on"]["measured_dispatch_delta"] >= 1,
+        "clean_exit_attested": all(arm["clean_exit_attestation"] is True for arm in arms.values()),
+        "no_fault_markers": all(arm["fault_markers"] == 0 for arm in arms.values()),
+    }
+    if recomputed_checks != checks or any(value is not True for value in recomputed_checks.values()):
+        raise ValueError(f"{pair}: stored checks differ from recomputed runtime evidence")
+    if (summary.get("environment_sha256") != {
+            name: arms[name]["environment_sha256"] for name in ("off", "on")} or
+            manifest.get("environment_sha256") != summary["environment_sha256"] or
+            arms["off"]["environment_sha256"] == arms["on"]["environment_sha256"]):
+        raise ValueError(f"{pair}: arm environments are not independently bound")
     return {
         "path": str(pair),
         "arm_order": expected_order,
@@ -467,7 +602,18 @@ def upper_ratio(candidate: list[float], baseline: list[float]) -> float:
     return math.exp(mean + T95_DF4 * sem)
 
 
-def write_result(output: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+def write_result(
+    output: Path,
+    rows: list[dict[str, Any]],
+    *,
+    authority: dict[str, Any] | None = None,
+    cli_token: object | None = None,
+) -> dict[str, Any]:
+    if __name__ != "__main__" or cli_token is not _CLI_AUTHORITY_TOKEN:
+        raise ValueError("campaign writer requires validated CLI authority")
+    assert authority is not None
+    if set(authority) != {"freeze", "freeze_sha256", "freeze_commit", "harness_sha256"}:
+        raise ValueError("campaign writer authority is incomplete")
     if len(rows) != 10:
         raise ValueError("W3 requires exactly ten fresh-server pairs")
     request_hashes = [row["request_sha256"] for row in rows]
@@ -555,6 +701,11 @@ def write_result(output: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
     manifest = {
         "schema_version": 1,
         "scorer_sha256": sha256(scorer),
+        "freeze_sha256": authority["freeze_sha256"],
+        "freeze_commit": authority["freeze_commit"],
+        "harness_sha256": authority["harness_sha256"],
+        "binary_sha256": authority["freeze"]["binary_sha256"],
+        "model_sha256": authority["freeze"]["model_sha256"],
         "raw_sha256": sha256(raw_path),
         "summary_sha256": sha256(summary_path),
         "input_manifest_sha256": [row["manifest_sha256"] for row in rows],
@@ -583,7 +734,10 @@ def main() -> int:
     authority = committed_authority(repo, args.freeze.resolve())
     rows = [score_pair(path.resolve(), order, authority)
             for path, order in zip(args.pairs, EXPECTED_ORDERS, strict=True)]
-    summary = write_result(args.output.resolve(), rows)
+    summary = write_result(
+        args.output.resolve(), rows, authority=authority,
+        cli_token=_CLI_AUTHORITY_TOKEN,
+    )
     print(json.dumps({"output": str(args.output.resolve()), "status": summary["status"],
                       "completed_time_ratio_upper_95": summary["completed_time_ratio_upper_95"]},
                      sort_keys=True))

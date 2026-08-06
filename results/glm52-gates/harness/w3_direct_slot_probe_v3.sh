@@ -641,6 +641,46 @@ canonical = json.dumps(generated, sort_keys=True, separators=(",", ":"),
                        ensure_ascii=False).encode("utf-8")
 fault_re = re.compile(r"FATAL|CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|"
                       r"Out of memory|NVRM.*Xid", re.I)
+timing_re = re.compile(
+    r"DS4_TOKEN_TIMING request=(\S+) index=(\d+) "
+    r"monotonic_ns=(\d+) token=(-?\d+)"
+)
+timing_groups = []
+for line in cmd.splitlines():
+    match = timing_re.fullmatch(line)
+    if match is None:
+        if "DS4_TOKEN_TIMING" in line:
+            raise SystemExit(f"{arm} has a malformed token timing marker")
+        continue
+    request_id = match.group(1)
+    if not timing_groups or timing_groups[-1]["request_id"] != request_id:
+        if any(group["request_id"] == request_id for group in timing_groups):
+            raise SystemExit(f"{arm} has interleaved token timing groups")
+        timing_groups.append({"request_id": request_id, "rows": []})
+    timing_groups[-1]["rows"].append([int(match.group(i)) for i in (2, 3, 4)])
+if len(timing_groups) != 2:
+    raise SystemExit(f"{arm} does not have exact warm/measured timing groups")
+timing_receipt = {}
+for phase, group, response_raw, token_record in zip(
+    ("warm", "measured"), timing_groups, (warm_raw, measured_raw),
+    (warm_token_record, measured_token_record), strict=True,
+):
+    timing_receipt[phase] = {
+        "request_id": group["request_id"],
+        "token_indices": [row[0] for row in group["rows"]],
+        "token_timestamps_ns": [row[1] for row in group["rows"]],
+        "token_ids": [row[2] for row in group["rows"]],
+        "response_sha256": hashlib.sha256(response_raw).hexdigest(),
+        "response_identity": token_record["response_identity"],
+    }
+cmd_stat = (crash / "cmd.log").stat()
+timing_receipt["cmd_log_identity"] = (
+    f"{cmd_stat.st_dev}:{cmd_stat.st_ino}:{cmd_stat.st_size}:"
+    f"{cmd_stat.st_mtime_ns}:{cmd_stat.st_ctime_ns}"
+)
+timing_receipt["cmd_log_sha256"] = hashlib.sha256(
+    (crash / "cmd.log").read_bytes()
+).hexdigest()
 record = {
     "schema_version": 1,
     "arm": arm,
@@ -675,6 +715,7 @@ record = {
     "model_sha256": model_sha,
     "tokenizer_sha256": tokenizer_sha,
     "engine_commit": engine_commit,
+    "timing_receipt": timing_receipt,
     "crash_evidence": str(crash),
     "crash_evidence_identity": crash_identity,
     "crash_artifact_sha256": {
