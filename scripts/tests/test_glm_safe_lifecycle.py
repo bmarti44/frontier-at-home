@@ -36,6 +36,8 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             'changed != [str(relative)]',
             'independent_exact_64_token_outputs',
             'Tokenizer.from_file(tokenizer_path)',
+            '/usr/bin/python3 -I',
+            '84_count_glm_output_tokens.py',
         ):
             self.assertIn(contract, probe)
         self.assertNotIn("sort -n | tail -1", probe)
