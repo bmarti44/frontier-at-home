@@ -1,0 +1,85 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "02f991a4c3b1a762316a95f7ce4e0104408b6a38",
+  "engine_test_hash": "4fc42c82d20a7306589d2588eddc9182f16c1ed0",
+  "review_round": 194,
+  "candidate_number_for_red_gate": 3,
+  "implementation_authorized": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 58,
+      "critical": [],
+      "high": [
+        "R05-R194-H1-COMPILED-REFERENCE-DOES-NOT-PROVE-RUNTIME-DATAFLOW",
+        "R05-R194-H2-PRODUCTION-PACK-OPEN-PAYLOAD-VALIDATION-UNFORCED",
+        "R05-R194-H3-CANDIDATE-SANDBOX-STILL-HAS-NO-RED-CONTRACT",
+        "R05-R194-H4-PUBLICATION-DURABILITY-AND-RECEIPT-AUTHORITY-INCOMPLETE"
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "REJECT_IMPLEMENTATION"
+    },
+    "Singer": {
+      "score_0_to_100": 52,
+      "critical": [],
+      "high": [
+        "ADV-R05-R194-H1-RELOCATION-PRESENCE-AND-SHALLOW-CLI-DO-NOT-PROVE-LIVE-CALLCHAIN",
+        "ADV-R05-R194-H2-EXACT-PACK-TESTS-ALLOW-SIZE-AND-CONSTANT-SHAPED-VALIDATION",
+        "ADV-R05-R194-H3-NAMED-FAULT-RETURNS-STILL-DO-NOT-TEST-CRASH-DURABILITY"
+      ],
+      "medium": [
+        "ADV-R05-R194-M1-FIXED-RANK-VECTORS-REMAIN-SPECIAL-CASEABLE"
+      ],
+      "low": [],
+      "verdict": "REJECT_IMPLEMENTATION"
+    }
+  },
+  "verified_progress": {
+    "exact_255_record_pack_replaces_three_record_pseudopack": true,
+    "capture_add3_order_fixture": true,
+    "K2_K4_K8_and_nonfinite_rank_coverage": true,
+    "canonical_artifact_names_sizes_hashes": true
+  },
+  "open_blocking_classes_for_candidate_4": [
+    {
+      "class": "live-runtime-dataflow",
+      "ids": [
+        "R05-R194-H1-COMPILED-REFERENCE-DOES-NOT-PROVE-RUNTIME-DATAFLOW",
+        "ADV-R05-R194-H1-RELOCATION-PRESENCE-AND-SHALLOW-CLI-DO-NOT-PROVE-LIVE-CALLCHAIN"
+      ],
+      "bounded_acceptance_test": "The real CLI executor runs selector, exact pack/source, eight steps, 600 routes, K2/K4/K8 rank and canonical publisher through injected non-GPU operations; exact call counts and outputs are observed at runtime, and bypass mutations fail."
+    },
+    {
+      "class": "same-size-pack-and-receipt-authority",
+      "ids": [
+        "R05-R194-H2-PRODUCTION-PACK-OPEN-PAYLOAD-VALIDATION-UNFORCED",
+        "ADV-R05-R194-H2-EXACT-PACK-TESTS-ALLOW-SIZE-AND-CONSTANT-SHAPED-VALIDATION"
+      ],
+      "bounded_acceptance_test": "A differently named, full-size copy with header, payload, padding and record-digest mutations is rejected by pack_open and real CLI; builder verify independently recomputes every receipt field and rejects unknown/missing/changed fields."
+    },
+    {
+      "class": "candidate-sandbox",
+      "ids": [
+        "R05-R194-H3-CANDIDATE-SANDBOX-STILL-HAS-NO-RED-CONTRACT"
+      ],
+      "bounded_acceptance_test": "The real candidate child has no full-model FD/map, applies the frozen policy, and fails closed on model reopen, socket, ptrace/process_vm and unexpected device access."
+    },
+    {
+      "class": "externally-observed-crash-publication",
+      "ids": [
+        "R05-R194-H4-PUBLICATION-DURABILITY-AND-RECEIPT-AUTHORITY-INCOMPLETE",
+        "ADV-R05-R194-H3-NAMED-FAULT-RETURNS-STILL-DO-NOT-TEST-CRASH-DURABILITY"
+      ],
+      "bounded_acceptance_test": "External syscall interception/SIGKILL covers actual write/fsync/rename/directory-fsync boundaries, short write/EINTR/ENOSPC, and completion-last recovery; canonical stage receipts are hashed."
+    }
+  ],
+  "convergence": {
+    "round_193_singer_blocking_count": 3,
+    "round_194_singer_blocking_count": 3,
+    "consecutive_nonshrinking_candidates": 1,
+    "candidate_4_allowed": true,
+    "next_same_or_larger_blocking_set_requires_pause": true,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false
+  }
+}
