@@ -36,6 +36,11 @@ readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_E
 readonly FREEZE=$1
 readonly DRAND=$2
 
+isolated_python() {
+  /usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin \
+    LANG=C.UTF-8 LC_ALL=C.UTF-8 /usr/bin/python3 -I -B "$@"
+}
+
 [[ $(id -un) == bmarti44 ]] || {
   echo "W3 probe must run as bmarti44" >&2
   exit 2
@@ -55,12 +60,12 @@ swap_used_kib=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t-f}' /proc/memi
   echo "W3 probe refuses to start with >=1 GiB swap in use" >&2
   exit 8
 }
-python3 "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 0
+isolated_python "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 0
 
 # Git is the authority root for this bounded evidence harness. The committed
 # freeze manifest binds the harness, transitive safety helpers, compiled engine
 # source and binary. No self-reported digest can substitute for these checks.
-python3 - "$REPO" "$FREEZE" "$0" "$CGROUP" "$SAFE" "$MEMORY_GUARD" \
+isolated_python - "$REPO" "$FREEZE" "$0" "$CGROUP" "$SAFE" "$MEMORY_GUARD" \
     "$TOKEN_SCORER" "$BIN" "$TOKENIZER" "$TOKENIZERS_INIT" "$TOKENIZERS_SO" \
     "$ENGINE_SOURCE" "$ENGINE_COMMIT" "$BINARY_SHA256" <<'PY'
 import hashlib
@@ -159,7 +164,7 @@ readonly OBSERVED_MODEL_SHA256=$(sha256sum -- "$MODEL" | awk '{print $1}')
 # Authenticate a beacon obtained after the committed freeze against three
 # registered public relays. The request nonce and seed are derived from it.
 read -r DRAND_ROUND DRAND_RANDOMNESS DRAND_SIGNATURE DRAND_FLOOR < <(
-  python3 - "$FREEZE" "$DRAND" <<'PY'
+  isolated_python - "$FREEZE" "$DRAND" <<'PY'
 import hashlib
 import json
 from pathlib import Path
@@ -198,7 +203,7 @@ readonly DRAND_ROUND DRAND_RANDOMNESS DRAND_SIGNATURE DRAND_FLOOR
 OUT=$(mktemp -d "$STATE_PARENT/glm52-w3-direct-slot-probe-v3.XXXXXX")
 readonly OUT
 printf '%s\n' "$OUT" >"$OUT/output-directory.txt"
-python3 - "$OUT/request.json" "$DRAND_RANDOMNESS" <<'PY'
+isolated_python - "$OUT/request.json" "$DRAND_RANDOMNESS" <<'PY'
 import json
 import sys
 
@@ -255,7 +260,7 @@ trap 'exit 143' TERM
 trap 'exit 129' HUP
 
 environment_sha256() {
-  python3 - "$ENV_NAMES" <<'PY'
+  isolated_python - "$ENV_NAMES" <<'PY'
 import hashlib
 import os
 import sys
@@ -305,7 +310,7 @@ wait_for_ready() {
 run_arm() {
   local arm=$1 port=$2 direct=$3 tag="w3s${DRAND_ROUND}-${arm}" arm_dir="$OUT/$arm"
   mkdir "$arm_dir"
-  python3 "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 900 \
+  isolated_python "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 900 \
     >"$arm_dir/memory-preflight.json"
   if curl -sS -o /dev/null --max-time 2 "http://127.0.0.1:$port/v1/models"; then
     echo "probe port $port is already occupied" >&2
@@ -401,16 +406,12 @@ run_arm() {
     -w '%{http_code} %{time_total}' --max-time 900 \
     -H 'Content-Type: application/json' -d @"$OUT/request.json" \
     "http://127.0.0.1:$port/v1/chat/completions")
-  /usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin \
-    LANG=C.UTF-8 LC_ALL=C.UTF-8 \
-    /usr/bin/python3 -I -B "$TOKEN_SCORER" \
+  isolated_python "$TOKEN_SCORER" \
       "$arm_dir/warm.json" "$TOKENIZER" "$TOKENIZER_RUNTIME" \
       "$OBSERVED_TOKENIZER_SHA256" "$OBSERVED_TOKENIZERS_INIT_SHA256" \
       "$OBSERVED_TOKENIZERS_SO_SHA256" "$arm-warm" \
       >"$arm_dir/warm.tokens.json"
-  /usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin \
-    LANG=C.UTF-8 LC_ALL=C.UTF-8 \
-    /usr/bin/python3 -I -B "$TOKEN_SCORER" \
+  isolated_python "$TOKEN_SCORER" \
       "$arm_dir/measured.json" "$TOKENIZER" "$TOKENIZER_RUNTIME" \
       "$OBSERVED_TOKENIZER_SHA256" "$OBSERVED_TOKENIZERS_INIT_SHA256" \
       "$OBSERVED_TOKENIZERS_SO_SHA256" "$arm-measured" \
@@ -445,7 +446,7 @@ run_arm() {
     return 1
   }
 
-  python3 - "$arm_dir/arm.json" "$arm" "$direct" "$safe_rc" \
+  isolated_python - "$arm_dir/arm.json" "$arm" "$direct" "$safe_rc" \
       "$env_sha" "$crash_dir" "$REQUEST_SHA256" "$BINARY_SHA256" \
       "$OBSERVED_MODEL_SHA256" "$ENGINE_COMMIT" "$arm_dir" \
       "$crash_identity" "$OBSERVED_TOKENIZER_SHA256" \
@@ -584,7 +585,7 @@ run_arm on 18164 1
   exit 2
 }
 
-python3 - "$OUT" "$REQUEST_SHA256" "$BINARY_SHA256" "$OBSERVED_MODEL_SHA256" \
+isolated_python - "$OUT" "$REQUEST_SHA256" "$BINARY_SHA256" "$OBSERVED_MODEL_SHA256" \
     "$ENGINE_COMMIT" "$0" "$DRAND_ROUND" "$DRAND_RANDOMNESS" \
     "$DRAND_SIGNATURE" "$DRAND_FLOOR" "$FREEZE" \
     "$OBSERVED_REPOSITORY_HEAD" "$OBSERVED_FREEZE_SHA256" \
