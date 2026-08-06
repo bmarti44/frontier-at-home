@@ -9,6 +9,7 @@ readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
+readonly TOKEN_SCORER=$REPO/scripts/84_count_glm_output_tokens.py
 readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w3-cc5e674
 readonly BIN=$CANDIDATE_SRC/ds4-server
 readonly BINARY_SHA256=e779b83a50da0c820f2eef8ebddb566c2c367d31025042235282af9d4817ea13
@@ -18,8 +19,9 @@ readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_b
 readonly MODEL_SHA256=a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0
 readonly MODEL_BYTES=211075856448
 readonly TOKENIZER=/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json
-readonly TOKENIZERS_INIT=/home/bmarti44/.local/lib/python3.12/site-packages/tokenizers/__init__.py
-readonly TOKENIZERS_SO=/home/bmarti44/.local/lib/python3.12/site-packages/tokenizers/tokenizers.abi3.so
+readonly TOKENIZER_RUNTIME=/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2
+readonly TOKENIZERS_INIT=$TOKENIZER_RUNTIME/tokenizers/__init__.py
+readonly TOKENIZERS_SO=$TOKENIZER_RUNTIME/tokenizers/tokenizers.abi3.so
 readonly CACHE_GIB=68
 readonly CTX=8192
 readonly TOKENS=64
@@ -38,7 +40,8 @@ readonly DRAND=$2
   echo "W3 probe must run as bmarti44" >&2
   exit 2
 }
-[[ -x $BIN && -x $CGROUP && -x $SAFE && -r $MODEL && -r $TOKENIZER &&
+[[ -x $BIN && -x $CGROUP && -x $SAFE && -x $TOKEN_SCORER &&
+   -r $MODEL && -r $TOKENIZER &&
    -r $TOKENIZERS_INIT && -r $TOKENIZERS_SO && -r $FREEZE && -r $DRAND ]] || {
   echo "W3 probe inputs are unavailable" >&2
   exit 2
@@ -58,7 +61,7 @@ python3 "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 
 # freeze manifest binds the harness, transitive safety helpers, compiled engine
 # source and binary. No self-reported digest can substitute for these checks.
 python3 - "$REPO" "$FREEZE" "$0" "$CGROUP" "$SAFE" "$MEMORY_GUARD" \
-    "$BIN" "$TOKENIZER" "$TOKENIZERS_INIT" "$TOKENIZERS_SO" \
+    "$TOKEN_SCORER" "$BIN" "$TOKENIZER" "$TOKENIZERS_INIT" "$TOKENIZERS_SO" \
     "$ENGINE_SOURCE" "$ENGINE_COMMIT" "$BINARY_SHA256" <<'PY'
 import hashlib
 import json
@@ -67,7 +70,7 @@ import subprocess
 import sys
 
 (repo_raw, freeze_raw, harness_raw, cgroup_raw, safe_raw, guard_raw,
- binary_raw, tokenizer_raw, tokenizers_init_raw, tokenizers_so_raw,
+ scorer_raw, binary_raw, tokenizer_raw, tokenizers_init_raw, tokenizers_so_raw,
  source_raw, engine_commit, binary_sha) = sys.argv[1:]
 repo = Path(repo_raw).resolve()
 freeze = Path(freeze_raw).resolve()
@@ -76,6 +79,7 @@ paths = {
     "cgroup": Path(cgroup_raw).resolve(),
     "safe": Path(safe_raw).resolve(),
     "memory_guard": Path(guard_raw).resolve(),
+    "token_scorer_sha256": Path(scorer_raw).resolve(),
     "binary": Path(binary_raw).resolve(),
     "tokenizer_sha256": Path(tokenizer_raw).resolve(),
     "tokenizers_init_sha256": Path(tokenizers_init_raw).resolve(),
@@ -138,6 +142,8 @@ PY
 readonly OBSERVED_REPOSITORY_HEAD=$(git -C "$REPO" rev-parse HEAD)
 readonly OBSERVED_FREEZE_SHA256=$(sha256sum -- "$FREEZE" | awk '{print $1}')
 readonly OBSERVED_TOKENIZER_SHA256=$(sha256sum -- "$TOKENIZER" | awk '{print $1}')
+readonly OBSERVED_TOKENIZERS_INIT_SHA256=$(sha256sum -- "$TOKENIZERS_INIT" | awk '{print $1}')
+readonly OBSERVED_TOKENIZERS_SO_SHA256=$(sha256sum -- "$TOKENIZERS_SO" | awk '{print $1}')
 
 readonly MODEL_IDENTITY_BEFORE=$(stat -Lc '%d:%i:%s:%Y:%Z' -- "$MODEL")
 [[ $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]] || {
@@ -395,6 +401,20 @@ run_arm() {
     -w '%{http_code} %{time_total}' --max-time 900 \
     -H 'Content-Type: application/json' -d @"$OUT/request.json" \
     "http://127.0.0.1:$port/v1/chat/completions")
+  /usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin \
+    LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+    /usr/bin/python3 -I -B "$TOKEN_SCORER" \
+      "$arm_dir/warm.json" "$TOKENIZER" "$TOKENIZER_RUNTIME" \
+      "$OBSERVED_TOKENIZER_SHA256" "$OBSERVED_TOKENIZERS_INIT_SHA256" \
+      "$OBSERVED_TOKENIZERS_SO_SHA256" "$arm-warm" \
+      >"$arm_dir/warm.tokens.json"
+  /usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin \
+    LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+    /usr/bin/python3 -I -B "$TOKEN_SCORER" \
+      "$arm_dir/measured.json" "$TOKENIZER" "$TOKENIZER_RUNTIME" \
+      "$OBSERVED_TOKENIZER_SHA256" "$OBSERVED_TOKENIZERS_INIT_SHA256" \
+      "$OBSERVED_TOKENIZERS_SO_SHA256" "$arm-measured" \
+      >"$arm_dir/measured.tokens.json"
   measured_dispatch_after=$(grep -c 'direct expert-slot dispatch layer=' \
     "$crash_dir/cmd.log" || true)
   printf '%s\n' "$warm_meta" >"$arm_dir/warm.http"
@@ -428,7 +448,7 @@ run_arm() {
   python3 - "$arm_dir/arm.json" "$arm" "$direct" "$safe_rc" \
       "$env_sha" "$crash_dir" "$REQUEST_SHA256" "$BINARY_SHA256" \
       "$OBSERVED_MODEL_SHA256" "$ENGINE_COMMIT" "$arm_dir" \
-      "$crash_identity" "$TOKENIZER" "$OBSERVED_TOKENIZER_SHA256" <<'PY'
+      "$crash_identity" "$OBSERVED_TOKENIZER_SHA256" <<'PY'
 import hashlib
 import json
 from pathlib import Path
@@ -436,9 +456,8 @@ import re
 import sys
 
 (out_path, arm, direct, safe_rc, env_sha, crash_dir, request_sha,
- binary_sha, model_sha, engine_commit, arm_dir, crash_identity, tokenizer_path,
+ binary_sha, model_sha, engine_commit, arm_dir, crash_identity,
  tokenizer_sha) = sys.argv[1:]
-from tokenizers import Tokenizer
 arm_path = Path(arm_dir)
 crash = Path(crash_dir)
 cmd = (crash / "cmd.log").read_text(encoding="utf-8", errors="replace")
@@ -452,7 +471,12 @@ measured_counts = [int(value) for value in
                    (arm_path / "measured.dispatch-counts").read_text().split()]
 warm_payload = json.loads((arm_path / "warm.json").read_text(encoding="utf-8"))
 payload = json.loads((arm_path / "measured.json").read_text(encoding="utf-8"))
-tokenizer = Tokenizer.from_file(tokenizer_path)
+warm_token_record = json.loads(
+    (arm_path / "warm.tokens.json").read_text(encoding="utf-8")
+)
+measured_token_record = json.loads(
+    (arm_path / "measured.tokens.json").read_text(encoding="utf-8")
+)
 choice = payload["choices"][0]
 message = choice["message"]
 warm_message = warm_payload["choices"][0]["message"]
@@ -462,8 +486,6 @@ generated = {
 }
 canonical = json.dumps(generated, sort_keys=True, separators=(",", ":"),
                        ensure_ascii=False).encode("utf-8")
-measured_text = message.get("content", "")
-warm_text = warm_message.get("content", "")
 fault_re = re.compile(r"FATAL|CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|"
                       r"Out of memory|NVRM.*Xid", re.I)
 record = {
@@ -477,18 +499,12 @@ record = {
     "measured_wall_seconds": float(measured_http[1]),
     "completion_tokens": payload["usage"]["completion_tokens"],
     "warm_completion_tokens": warm_payload["usage"]["completion_tokens"],
-    "independent_completion_tokens": len(
-        tokenizer.encode(measured_text, add_special_tokens=False).ids
-    ),
-    "independent_warm_completion_tokens": len(
-        tokenizer.encode(warm_text, add_special_tokens=False).ids
-    ),
-    "measured_reasoning_bytes": len(
-        message.get("reasoning_content", "").encode("utf-8")
-    ),
-    "warm_reasoning_bytes": len(
-        warm_message.get("reasoning_content", "").encode("utf-8")
-    ),
+    "independent_completion_tokens": measured_token_record["reference_token_count"],
+    "independent_warm_completion_tokens": warm_token_record["reference_token_count"],
+    "measured_reasoning_bytes": measured_token_record["reasoning_bytes"],
+    "warm_reasoning_bytes": warm_token_record["reasoning_bytes"],
+    "measured_token_scorer": measured_token_record,
+    "warm_token_scorer": warm_token_record,
     "generated_sha256": hashlib.sha256(canonical).hexdigest(),
     "generated_bytes": len(canonical),
     "mapping_markers": cmd.count("direct expert-slot arena mapping enabled"),

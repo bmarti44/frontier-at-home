@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SAFE = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 W3_PROBE_V3 = ROOT / "results/glm52-gates/harness/w3_direct_slot_probe_v3.sh"
+W3_TOKEN_SCORER = ROOT / "scripts/84_count_glm_output_tokens.py"
 FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
@@ -35,7 +36,6 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             'wait "$runner_pid"',
             'changed != [str(relative)]',
             'independent_exact_64_token_outputs',
-            'Tokenizer.from_file(tokenizer_path)',
             '/usr/bin/python3 -I',
             '84_count_glm_output_tokens.py',
         ):
@@ -44,6 +44,16 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertNotIn('a["completion_tokens"] >= 64', probe)
         self.assertIn('a["independent_completion_tokens"] == 64', probe)
         self.assertIn('a["independent_warm_completion_tokens"] == 64', probe)
+        scorer = W3_TOKEN_SCORER.read_text(encoding="utf-8")
+        for contract in (
+            "sys.flags.isolated != 1",
+            "os.environ != ALLOWED_ENVIRONMENT",
+            "loaded tokenizer module path differs from the frozen runtime",
+            "tokenizer runtime changed during import",
+            "tokenizer dependency changed during scoring",
+            "tokenizer.encode(content, add_special_tokens=False).ids",
+        ):
+            self.assertIn(contract, scorer)
 
     def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
         safe_environment = {
