@@ -77,9 +77,9 @@ paths = {
     "safe": Path(safe_raw).resolve(),
     "memory_guard": Path(guard_raw).resolve(),
     "binary": Path(binary_raw).resolve(),
-    "tokenizer": Path(tokenizer_raw).resolve(),
-    "tokenizers_init": Path(tokenizers_init_raw).resolve(),
-    "tokenizers_so": Path(tokenizers_so_raw).resolve(),
+    "tokenizer_sha256": Path(tokenizer_raw).resolve(),
+    "tokenizers_init_sha256": Path(tokenizers_init_raw).resolve(),
+    "tokenizers_so_sha256": Path(tokenizers_so_raw).resolve(),
 }
 source = Path(source_raw).resolve()
 
