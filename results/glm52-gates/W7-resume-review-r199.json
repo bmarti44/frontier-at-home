@@ -1,0 +1,81 @@
+{
+  "candidate_hash": "3836167f7cefee1f215cf093e39ea16b75469fb1",
+  "review_round": 199,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 97,
+      "critical": [],
+      "high": [],
+      "medium": [
+        {
+          "id": "W7-R198-M1-CONFIRMATION-SEED-DOES-NOT-DETERMINE-FIXTURES",
+          "status": "OPEN",
+          "evidence": "The seed selects a variant number and marker, but the full fixture is not derived from a frozen generator or pool.",
+          "affected_gate": "W7 confirmation anti-cheating qualification",
+          "reproduction": "Supply arbitrary coherent confirmation content after observing the seed, append the selected marker, and recompute the content hashes.",
+          "acceptance_test": "Freeze a deterministic generator or all 16 complete variants before randomness and require byte-for-byte regeneration."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "W7-R198-H1", "status": "FIXED"},
+        {"id": "W7-R198-H2", "status": "FIXED"},
+        {"id": "W7-R198-H3", "status": "FIXED"},
+        {"id": "W7-R198-M1", "status": "OPEN"},
+        {"id": "W7-R198-M2", "status": "FIXED"}
+      ],
+      "verdict": "AUTHORIZE_COMPILED_UNCHANGED-ENGINE_RED_WITH_MEDIUM_DEFERRED"
+    },
+    "Singer": {
+      "score_0_to_100": 84,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W7-197-M03",
+          "status": "OPEN",
+          "evidence": "Changing both confirmation strict/candidate live lineages to the complete canonical lineage and rebinding content hashes still passes, turning confirmation into safe prefix replay.",
+          "affected_gate": "W7 seed-selected confirmation variants",
+          "reproduction": "Replace confirmation strict/candidate live vectors with full canonical vectors, set counts to prompt length, rebind hashes, and score.",
+          "acceptance_test": "Freeze substantive confirmation content and require selected<=common<live<prompt with a minimum divergent suffix."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W7-199-M06",
+          "status": "OPEN",
+          "evidence": "Invocation IDs are unique within one observation but deterministic across attempts.",
+          "affected_gate": "W7 invocation identity",
+          "acceptance_test": "Bind invocation IDs to an immutable attempt identifier."
+        },
+        {
+          "id": "ADV-W7-199-M07",
+          "status": "OPEN",
+          "evidence": "Candidate-4 RED records prose rather than an executable command and reports process rc zero despite the captured ValueError.",
+          "affected_gate": "W7 behavioral RED evidence",
+          "acceptance_test": "Record an executable command, old scorer and fixture hashes, output hashes, and explicit failing assertion or nonzero exit."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-W7-196-C01", "status": "FIXED"},
+        {"id": "ADV-W7-196-H01", "status": "FIXED"},
+        {"id": "ADV-W7-196-H02", "status": "FIXED"},
+        {"id": "ADV-W7-196-H03", "status": "FIXED"},
+        {"id": "ADV-W7-196-H04", "status": "FIXED"},
+        {"id": "ADV-W7-197-H05", "status": "FIXED"},
+        {"id": "ADV-W7-197-M03", "status": "OPEN"},
+        {"id": "ADV-W7-197-M04", "status": "FIXED"},
+        {"id": "ADV-W7-198-H06", "status": "FIXED"},
+        {"id": "ADV-W7-198-H07", "status": "FIXED"},
+        {"id": "ADV-W7-198-M05", "status": "FIXED"}
+      ],
+      "verdict": "DO_NOT_AUTHORIZE_COMPILED_RED; AUTHORIZE_ONE_BOUNDED_CONFIRMATION-BINDING_CORRECTION"
+    }
+  },
+  "root_disposition": {
+    "blocking": ["ADV-W7-197-M03"],
+    "bounded_candidate_authorized": true,
+    "next_candidate": 5,
+    "scope": "Freeze substantive confirmation variants, enforce divergent suffix geometry, bind invocations to attempt identity, and make the existing behavioral RED directly replayable. No engine changes."
+  }
+}
