@@ -281,6 +281,9 @@ r05_proxy_accuracy_plan = display_path == (
 r05_proxy_seed_domain = display_path == (
     "results/glm52-gates/R0.5-mtp-proxy-seed-domain-v2.json"
 )
+r05_proxy_pack_evidence = display_path == (
+    "results/glm52-gates/R0.5-mtp-proxy-pack-v1.json"
+)
 w3_campaign_allowlist = set()
 if w3_campaign_manifest:
     w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
@@ -300,6 +303,14 @@ r05_proxy_seed_allowlist = {
     "drand_randomness_hex",
     "seed32_sha256",
 } if r05_proxy_seed_domain else set()
+r05_proxy_pack_allowlist = {
+    "builder_sha256",
+    "inventory_sha256",
+    "model_sha256",
+    "pack_sha256",
+    "receipt_sha256",
+    "test_sha256",
+} if r05_proxy_pack_evidence else set()
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -350,7 +361,8 @@ def walk(value, path, allowed_string=False):
                 key in allowlist or
                 key in w3_campaign_allowlist or
                 key in r05_proxy_accuracy_allowlist or
-                key in r05_proxy_seed_allowlist
+                key in r05_proxy_seed_allowlist or
+                key in r05_proxy_pack_allowlist
             )
             if isinstance(item, list):
                 for index, element in enumerate(item):
