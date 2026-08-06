@@ -260,15 +260,25 @@ trap 'exit 143' TERM
 trap 'exit 129' HUP
 
 environment_sha256() {
-  isolated_python - "$ENV_NAMES" <<'PY'
+  isolated_python - "$ENV_NAMES" "$@" <<'PY'
 import hashlib
-import os
 import sys
 
 names = sys.argv[1].split(",")
+entries = {}
+for assignment in sys.argv[2:]:
+    if "=" not in assignment:
+        raise SystemExit("malformed explicit engine environment assignment")
+    name, value = assignment.split("=", 1)
+    if name not in names or name in entries or not value.isascii():
+        raise SystemExit("invalid explicit engine environment assignment")
+    entries[name] = value
+direct = "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS"
+if set(entries) not in (set(names), set(names) - {direct}):
+    raise SystemExit("explicit engine environment inventory is incomplete")
 canonical = b"".join(
     name.encode("ascii") + b"=" +
-    os.environ.get(name, "<UNSET>").encode("ascii") + b"\n"
+    entries.get(name, "<UNSET>").encode("ascii") + b"\n"
     for name in names
 )
 print(hashlib.sha256(canonical).hexdigest())
@@ -322,22 +332,18 @@ run_arm() {
     return 1
   fi
 
-  export DS4_CUDA_EXPERT_CACHE_GB=$CACHE_GIB
-  export DS4_CUDA_EXPERT_CACHE_PIN=1
-  export DS4_CUDA_EXPERT_CACHE_SLRU=1
-  export DS4_CUDA_FETCH_THREADS=6
-  export DS4_CUDA_MOE_NO_ATOMIC_DOWN=1
-  export DS4_GLM_TP_DEBUG=1
-  if [[ $direct == 1 ]]; then
-    export DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS=1
-  else
-    unset DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS
-  fi
+  local -a engine_environment=(
+    "DS4_CUDA_EXPERT_CACHE_GB=$CACHE_GIB"
+    DS4_CUDA_EXPERT_CACHE_PIN=1
+    DS4_CUDA_EXPERT_CACHE_SLRU=1
+    DS4_CUDA_FETCH_THREADS=6
+    DS4_CUDA_MOE_NO_ATOMIC_DOWN=1
+    DS4_GLM_TP_DEBUG=1
+  )
+  [[ $direct == 1 ]] && engine_environment+=(DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS=1)
   local env_sha
-  env_sha=$(environment_sha256)
+  env_sha=$(environment_sha256 "${engine_environment[@]}")
 
-  local -a direct_environment=()
-  [[ $direct == 1 ]] && direct_environment=(DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS=1)
   set +e
   /usr/bin/env -i \
   HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
@@ -355,13 +361,7 @@ run_arm() {
   GLM_CANDIDATE_SRC=$CANDIDATE_SRC \
   GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=$ENV_NAMES \
   GLM_SAFE_EXPECTED_ENV_SHA256=$env_sha \
-  DS4_CUDA_EXPERT_CACHE_GB=$CACHE_GIB \
-  DS4_CUDA_EXPERT_CACHE_PIN=1 \
-  DS4_CUDA_EXPERT_CACHE_SLRU=1 \
-  DS4_CUDA_FETCH_THREADS=6 \
-  DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
-  DS4_GLM_TP_DEBUG=1 \
-  "${direct_environment[@]}" \
+  "${engine_environment[@]}" \
     "$CGROUP" --tag "$tag" -- \
       "$BIN" --cuda -m "$MODEL" -c "$CTX" \
       --host 127.0.0.1 --port "$port" \

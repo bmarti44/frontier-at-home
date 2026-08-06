@@ -74,7 +74,8 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         self.assertIn(
             'env_sha=$(environment_sha256 "${engine_environment[@]}")', probe
         )
-        self.assertIn('"${engine_environment[@]}" \\\n+    "$CGROUP"', probe)
+        self.assertIn('"${engine_environment[@]}" \\', probe)
+        self.assertIn('"$CGROUP" --tag', probe)
         self.assertNotIn("export DS4_", probe)
 
         names = [
