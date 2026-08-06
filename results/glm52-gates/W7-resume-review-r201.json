@@ -1,0 +1,56 @@
+{
+  "candidate_hash": "717bd4007585dfbceaedaabfcbd72b4dce4ba491",
+  "review_round": 201,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 97,
+      "critical": [],
+      "high": [],
+      "medium": [
+        {
+          "id": "W7-R200-M2-ATTEMPT-ID-IS-NOT-EXECUTION-UNIQUE",
+          "status": "OPEN",
+          "evidence": "Identical binary/configuration/seed/pool inputs produce the same attempt and invocation IDs across reruns.",
+          "acceptance_test": "Include a wrapper-created unique execution nonce in the derived attempt identity and prove two reruns are disjoint."
+        }
+      ],
+      "low": [],
+      "verdict": "AUTHORIZE_COMPILED_UNCHANGED-ENGINE_RED"
+    },
+    "Singer": {
+      "score_0_to_100": 94,
+      "critical": [],
+      "high": [],
+      "medium": [
+        {
+          "id": "ADV-W7-201-M09",
+          "status": "OPEN",
+          "evidence": "The frozen production-tokenized geometry is selected=5028, common=5029, live=5037, prompt=5048 rather than the historical counts.",
+          "acceptance_test": "Label the compiled RED a fresh production-path reproduction and separately disposition the historical exact-count claim."
+        }
+      ],
+      "low": [
+        {
+          "id": "ADV-W7-201-L10",
+          "status": "OPEN",
+          "evidence": "The successful fixture-pool regeneration dependency paths are not yet in the evidence record.",
+          "acceptance_test": "Preserve the exact successful regeneration command and dependency paths with compiled RED evidence."
+        }
+      ],
+      "verdict": "AUTHORIZE_COMPILED_UNCHANGED_ENGINE_RED_ONLY"
+    }
+  },
+  "verified": {
+    "generator_sha256": "53f7e1f7a9dc919fac34ece8a3fc0c8c7577c41bc56221b301618186e2c639c7",
+    "pool_sha256": "74829fc094143b4a494e104c186e4146f2e669eaceedbb354a7ab35251083d90",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "pool_regeneration": "BYTE_IDENTICAL",
+    "critical_or_high_open": false
+  },
+  "root_disposition": {
+    "compiled_red_authorized": true,
+    "engine_implementation_authorized": false,
+    "medium_fix_without_full_review": "Add an execution nonce with a targeted regression test under the owner-approved severity policy.",
+    "historical_geometry": "The old exact-count failure remains preserved historical evidence; the next run is explicitly a fresh production-path reproduction at the frozen pool geometry."
+  }
+}
