@@ -135,8 +135,12 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             ',DS4_LOCK_FILE',
             "validate_engine_lock",
             'flock -n -E 75 -- "$ENGINE_LOCK"',
+            "'%U:%G:%a:%h'",
+            "DS4_LOCK_EXPECTED_DEV_INO",
+            "revalidate_engine_lock",
             "runner_start_ticks",
             "runner_is_exact",
+            '[[ $runner_state != Z && $runner_state != X ]]',
             'runner exited before the frozen W3 engine appeared',
         ):
             self.assertIn(contract, probe)
@@ -151,11 +155,31 @@ runner_is_exact() {
      -r /proc/$runner_pid/stat ]] || return 1
   [[ $(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true) == "$runner_start_ticks" ]]
 }
-(exit 7) &
-runner_pid=$!
+zombie_file=$(mktemp)
+/usr/bin/python3 - "$zombie_file" <<'PY' &
+import os
+from pathlib import Path
+import sys
+import time
+pid = os.fork()
+if pid == 0:
+    os._exit(7)
+Path(sys.argv[1]).write_text(str(pid))
+time.sleep(10)
+PY
+zombie_parent=$!
+trap 'kill "$zombie_parent" 2>/dev/null || true; rm -f "$zombie_file"' EXIT
+for _ in $(seq 1 100); do
+  [[ -s $zombie_file ]] && break
+  sleep 0.01
+done
+runner_pid=$(<"$zombie_file")
 runner_start_ticks=$(awk '{print $22}' "/proc/$runner_pid/stat")
-wait "$runner_pid" || true
 runner_is_exact && exit 99
+kill "$zombie_parent" 2>/dev/null || true
+wait "$zombie_parent" 2>/dev/null || true
+rm -f "$zombie_file"
+trap - EXIT
 exit 0
 '''
         result = subprocess.run(
