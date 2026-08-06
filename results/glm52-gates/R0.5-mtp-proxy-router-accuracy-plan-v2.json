@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "candidate": 3,
+  "classification": "PREREGISTERED_OPEN_FIXTURE_CAUSAL_ACCURACY_SCREEN",
+  "scope": {
+    "claim": "Determine only whether recursively generated NextN proxy states contain useful advance routing information on the exact drafted branch.",
+    "not_claimed": [
+      "No cache, latency, byte-amplification, NVMe, serving-throughput, or online-prefetch qualification is made by this screen.",
+      "A PASS authorizes only a separately preregistered cost/cache/lead-time falsifier; it does not authorize online integration.",
+      "A FAIL stops this proxy branch before any cost or serving implementation."
+    ],
+    "default_off": true,
+    "heldout_prohibited": "No candidate-18 held-out, calibration, or test split artifact may be opened, mapped, named by case, or used."
+  },
+  "authorities": {
+    "engine": {
+      "root": "/tmp/glm52-utf8-engine",
+      "commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+      "ds4_c_sha256": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+      "ds4_cuda_cu_sha256": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f"
+    },
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_index": {
+      "path": "results/glm52-goal/evidence/w1-affine-6c15949-r6329090/raw-inputs/manifest-02.tsv",
+      "sha256": "41e845c411319138f77deaa2e43f1c7b3533b449ce55492055f7815a95358d47"
+    },
+    "evaluation_prompts": [
+      {"case_id": "case_053", "sha256": "faee0e43295ac512306d5882137f1a5b1f4fdfcdff4e3c82d77f0ebc3f44c3d1", "request_id": "9f50daed458af7dc1de3fe03a2f6561b3af6a45661f26a306ad4fc83183da9f8"},
+      {"case_id": "case_056", "sha256": "36c894e8ef394fd3dd86ff064c33d6cb35f133ca26ca2336b33f83e42fbb997a", "request_id": "71fcc2cd5e0fd4adae85a3527e56143c82c1c09c0972a069e84cefe85f5a1bc8"},
+      {"case_id": "case_058", "sha256": "0977f04bc7029dbf8d45c0b5fdc6c7956e206abfd98e999afcdd6cdbf8797cc9", "request_id": "7edbfb2678bfc08172698d555988718a92ebbb86d22dc2a3158beb848bcf949a"},
+      {"case_id": "case_027", "sha256": "17516c01dfd0b6d1893aa77c4989c1d39d8bcc97067581ca659e5869f23cd3eb", "request_id": "4d16fd2eab1fa4c910ec5d07b4023081a77fa2c1ce6114eb15bec865c388dd0d"},
+      {"case_id": "case_065", "sha256": "1b9236d047b9273dabc65a92af391f7a424d2f2a339ccc94d8d23fa5c8f6cd7a", "request_id": "c7fd23e09e636a0a85c26e55b0e92442f33101519ee58457d9dca9f9c7117838"}
+    ],
+    "open_split_proof": {
+      "train_precision_manifest_path": "/home/bmarti44/.local/state/glm52-p1-splits-r127-76faed9/train-precision-diagnostic/manifest.json",
+      "train_precision_manifest_sha256": "d60dd6ba9fa3200971de2a942e863ca8a0d389c84f7d0cceecc460d3891cebe0",
+      "train_precision_records_sha256": "948bc302e29013e2f176762bf3793d773f8f66ae5c9dad5d77229a2788042ba7",
+      "train_fit_manifest_path": "/home/bmarti44/.local/state/glm52-p1-splits-r127-76faed9/train-fit/manifest.json",
+      "train_fit_manifest_sha256": "7c1d5d2259daa804d024ee2a195f5c6eac49e7e04a82e6c8696b7f16766a5874",
+      "train_fit_records_sha256": "e3e20959de4a132babb30b2701920c54ab4e23abfc433a9a60e4ba35143718b5",
+      "split_plan_sha256": "95abff08caabc930b842e40883acc59f4184002521cf58d24d726fc5f8511ba5",
+      "rule": "Frequency counts use all and only train-fit selected_ids rows. Evaluation uses all and only the five listed train-precision cases. Any request overlap, unlisted request, digest mismatch, missing file, or different split metadata FAILS."
+    },
+    "future_scorer": {
+      "path": "scripts/78_score_glm_mtp_proxy_accuracy.py",
+      "freeze_rule": "The scorer, schema, tests, and mutation suite must be committed, tracked-clean at HEAD, hash-recorded in an execution manifest, and reviewed before trace implementation or any value capture. No scorer exists or is authorized at this plan-only candidate."
+    }
+  },
+  "causal_protocol": {
+    "source": "For each listed prompt, tokenize the exact prompt bytes and set t to the final prompt-token position. Evaluate only that prompt through the normal target once to obtain pre-output-norm h_t in g->cur and q1=argmax(target logits after t). This source work precedes the measured candidate boundary and is identical in both phases.",
+    "candidate_process": [
+      "Start a new process with only the exact prompt, h_t/q1 produced inside that process, model/tokenizer, MTP private KV, MTP weights, and non-expert target RMSNorm/router weights available. The target-route output path must not exist yet.",
+      "Set z_0=h_t, q_1=q1, min_pos=t. For j=1..8, call glm_graph_mtp_step with g->cur=z_(j-1), next_token=q_j, pos=t+j-1, min_pos=t. After its residual stage and before nextn_shared_head_norm, copy exact g->next into a dedicated z_j buffer. Its greedy head result is q_(j+1). Before the next call copy z_j byte-for-byte into g->cur; retain the same private MTP KV so slots t..t+j-1 form the causal window.",
+      "For every j and every target routed layer l=3..77, compute RMSNorm(z_j, layer[l].ffn_norm, DS4_RMS_EPS), then its 256-way ffn_gate_inp projection and ffn_exp_probs_b adjustment. Rank by adjusted score descending and expert ID ascending. Aggregate each expert over j=1..K by its maximum adjusted score, again tie-breaking by lower expert ID, and emit top budget IDs.",
+      "Write O_EXCL records containing case_id, prompt_sha256, source_position, source_prefix_token_sha256, j, q_j, absolute_position=t+j, layer, all adjusted scores, ranked IDs, stage ID, monotonic timestamps, MTP min/selected positions, and target-expert-dispatch count. Fsync files and directory, write their SHA-256 manifest, then exit successfully. The immutable candidate manifest must exist before Phase B begins."
+    ],
+    "target_process": [
+      "Start a separate new process after candidate-process exit. Re-tokenize and re-evaluate the same bound prompt, require identical source prefix token hash, source position, q1, and model/tokenizer identities, then read the frozen q1..q8 sequence from the candidate manifest.",
+      "Evaluate exactly q1..q8 through all normal target layers and capture the actual eight selected expert IDs for each absolute position and each layer 3..77. Candidate records are read-only; target records are published separately with O_EXCL, fsync, and hashes.",
+      "The scorer requires byte-identical q1..q8 and exact position equality across the candidate manifest and target records, exactly one row for every case x j x layer, and strictly increasing j/positions. Any premature target artifact, shifted token/position, duplicate, reorder, missing layer, extra layer, or hash mismatch FAILS. Old retained target routes are prohibited because their recursive token-vector identity is not established."
+    ],
+    "expert_prohibition": "After the source_ready marker and through candidate manifest fsync, the normal routed-expert dispatch counter for layers 3..77 must remain exactly zero. Layer-78 NextN expert work is allowed and reported. Source-prefix target work is outside this interval."
+  },
+  "baselines": {
+    "frequency": "For each layer, count selected_ids occurrences over all and only hash-bound train-fit rows; order by count descending then expert ID ascending. Use the fixed top budget for every K.",
+    "gate_replay": "At source_ready, for each target layer apply that layer's RMSNorm/router/bias to the single h_t. Repeat the resulting per-layer ranking for j=1..K and aggregate with the same maximum-score and tie rules as the proxy.",
+    "isolation": "Neither baseline may read train-precision selected_ids, Phase-B actual routes, candidate scores, or held-out artifacts while it is produced. Baseline records freeze in the candidate manifest before Phase B."
+  },
+  "fixed_scorer_specification": {
+    "sets": "For each case, layer, K in {2,4,8}, and budget in {8,16}, true_union is the set union of the eight actual selected IDs at j=1..K; prediction is the first budget unique IDs in the frozen ranking. Duplicate predicted IDs FAIL.",
+    "case_recall": "For a fixed case/K/budget, sum |prediction intersect true_union| over exactly 75 layers and divide by the sum of |true_union| over those layers.",
+    "macro": "Unweighted arithmetic mean of the five case recalls.",
+    "paired_difference": "For each baseline separately, proxy case_recall minus baseline case_recall on the same case. Lower bound = mean(d) - 2.131846786326649 * sample_sd(d, denominator n-1) / sqrt(5). No clipping. If sample_sd is exactly zero, lower bound equals mean. Exactly n=5 is mandatory.",
+    "absolute_lower_bound": "Apply the same one-sided t formula to the five proxy case recalls.",
+    "per_layer_recall": "For each exact layer and primary K/budget, sum intersections across the five cases divided by the sum of true-union sizes across the five cases.",
+    "failure_semantics": "Any NaN, Inf, missing value/file/hash/row, zero denominator, wrong n, malformed ID, duplicate, unexpected case/layer/j/K/budget, target access before candidate freeze, or scorer exception is FAIL. Exact comparisons are unrounded.",
+    "reported_only": "Report precision, full-union coverage, event-weighted recall, candidate elapsed time, NextN expert work, router work, and raw byte counters, but none can grant PASS in this accuracy-only screen.",
+    "mutations": [
+      "wrong post-head-normalized tensor instead of post-residual g->next",
+      "one-position and one-token shift",
+      "reset or advance min_pos incorrectly",
+      "candidate access to Phase-B target routes before freeze",
+      "candidate equals frequency baseline",
+      "candidate equals gate-replay baseline",
+      "delete, duplicate, or reorder layer 3 or any layer",
+      "include one train-precision row in frequency fitting",
+      "alternate z/normal/bootstrap/clipped confidence formula",
+      "NaN, Inf, zero denominator, digest mismatch, and held-out path"
+    ]
+  },
+  "acceptance": {
+    "primary": "K=2, budget=16",
+    "proxy_macro_recall_one_sided_95_lower_min": 0.80,
+    "proxy_minus_frequency_one_sided_95_lower_min": 0.03,
+    "proxy_minus_gate_replay_one_sided_95_lower_min": 0.03,
+    "every_layer_point_recall_min": 0.50,
+    "exact_layer_range": [3, 77],
+    "candidate_interval_normal_target_expert_dispatches": 0,
+    "pass": "Every condition passes and all mutations fail. Proceed only to a new, separately reviewed physical cost/cache/lead-time contract.",
+    "fail": "Preserve the negative accuracy curves and stop this recursive proxy branch."
+  },
+  "deferred_cost_gate": {
+    "status": "MANDATORY_BEFORE_ONLINE_WORK_IF_ACCURACY_PASSES",
+    "required_scope": "Bind exact target-expert, layer-78 MTP-expert, 75 router-head, and other tensor offset inventories; deterministic cache snapshots/simulator; logical and physical reads; page faults; staging; QD; address-to-use lead; and total incremental time/bytes against avoided true misses. The fio QD4-8 curve is the storage authority. Prefetch and admission consumers remain separate arms.",
+    "reason": "Separating causal accuracy from physical economics prevents an accuracy screen from making a serving claim and avoids building cache/I/O machinery for a predictor that may fail cheaply."
+  },
+  "review_resolution": {
+    "R05-R186-H1-PROXY-RECURRENCE-UNDERSPECIFIED": "Exact z_j tensor boundary, recurrence copy, q indexing, absolute positions, min_pos, and private-KV progression are frozen with wrong-tensor/shift mutations.",
+    "R05-R186-H2-OPEN-EVIDENCE-AUTHORITY-UNBOUND": "Engine/model/tokenizer, prompt/index, open split manifests/records, exact cases/request IDs, split isolation, and future scorer freeze rule are hash-bound.",
+    "R05-R186-H3-LATENCY-BYTE-PHYSICS-INCOMPLETE": "No physical-feasibility claim can pass this screen; all cache/byte/lead economics are a mandatory separately preregistered gate after an accuracy PASS.",
+    "ADV-R05-R186-H1-UNSEALED-TOKEN-BRANCH-ALIGNMENT": "Candidate and verifier are separate processes; candidate token/position records freeze before verifier evaluates exactly that branch; retained target routes are prohibited.",
+    "ADV-R05-R186-H2-ZERO-DELTA-BASELINE-CLONE-PASSES": "Both paired lower bounds must exceed baselines by at least 0.03 and baseline-clone mutations must fail.",
+    "ADV-R05-R186-H3-INCOMPLETE-CAUSAL-BYTE-AND-MISS-ACCOUNTING": "Online/cache claims are removed; the mandatory follow-on cost gate is explicitly specified and cannot be skipped.",
+    "ADV-R05-R186-H4-SELECTABLE-FIVE-CASE-SCORER": "The exact five-case t statistic, critical value, zero-variance/no-clipping rules, schemas, tie ordering, hashes, and mutations are fixed.",
+    "ADV-R05-R186-M1-AGGREGATE-QUALITY-CAN-HIDE-DEAD-LAYERS": "Every one of the 75 layers must have point recall at least 0.50."
+  },
+  "convergence": {
+    "gate_candidate": 3,
+    "campaign_review_next": 187,
+    "previous_consecutive_non_shrink": 1,
+    "escalation_rule": "Pause if round 187 is a second consecutive candidate without strict blocking-set shrinkage, if a new critical requires changing frozen scope, or if this gate exceeds eight candidates."
+  }
+}

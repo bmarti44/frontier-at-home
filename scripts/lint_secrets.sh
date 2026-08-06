@@ -275,11 +275,23 @@ w3_campaign_summary = re.fullmatch(
     r"results/glm52-gates/W3-performance-campaign-[^/]+/summary\.json",
     display_path,
 ) is not None
+r05_proxy_accuracy_plan = display_path == (
+    "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v2.json"
+)
 w3_campaign_allowlist = set()
 if w3_campaign_manifest:
     w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
 if w3_campaign_summary:
     w3_campaign_allowlist.add("pair_request_sha256")
+r05_proxy_accuracy_allowlist = {
+    "ds4_c_sha256",
+    "ds4_cuda_cu_sha256",
+    "request_id",
+    "train_precision_manifest_sha256",
+    "train_precision_records_sha256",
+    "train_fit_manifest_sha256",
+    "train_fit_records_sha256",
+} if r05_proxy_accuracy_plan else set()
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -326,7 +338,11 @@ def walk(value, path, allowed_string=False):
                 isinstance(child, str) for child in item.values()
             ):
                 continue
-            leaf_allowed = key in allowlist or key in w3_campaign_allowlist
+            leaf_allowed = (
+                key in allowlist or
+                key in w3_campaign_allowlist or
+                key in r05_proxy_accuracy_allowlist
+            )
             if isinstance(item, list):
                 for index, element in enumerate(item):
                     walk(
@@ -553,6 +569,27 @@ self_test() {
       | scan_digest_json 'results/decision.json' >/dev/null 2>&1; then
     printf '%s\n' \
       'self-test failed: W3 campaign fields were allowed outside their path' >&2
+    return 1
+  fi
+  local r05_proxy_plan_path
+  r05_proxy_plan_path='results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v2.json'
+  if ! printf '{"request_id":"%s","train_fit_records_sha256":"%s"}\n' \
+      "$fake_secret" "$fake_secret" \
+      | scan_digest_json "$r05_proxy_plan_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: R0.5 proxy-plan public bindings were rejected' >&2
+    return 1
+  fi
+  if printf '{"request_id":"%s"}\n' "$fake_secret" \
+      | scan_digest_json 'results/decision.json' >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: R0.5 proxy-plan digest allowlist escaped its exact path' >&2
+    return 1
+  fi
+  if printf '{"unrelated":"%s"}\n' "$fake_secret" \
+      | scan_digest_json "$r05_proxy_plan_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: R0.5 proxy-plan digest allowlist was too broad' >&2
     return 1
   fi
   local decode_evidence_path
