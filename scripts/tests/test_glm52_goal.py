@@ -74,6 +74,13 @@ def _i32_sha256(values):
     return hashlib.sha256(struct.pack(f"<{len(values)}i", *values)).hexdigest()
 
 
+def _w7_payload_bytes(token_count):
+    return (
+        13 * 4 + token_count * 4 + 154880 * 4 + 78 * 4 * 2 +
+        token_count * (78 * (512 + 64) * 4 + 21 * 128 * 4)
+    )
+
+
 def w7_resume_record():
     logits = _compressed_f32(154880, 13, 2.0)
     confirmation_seed = "d" * 64
@@ -118,7 +125,9 @@ def w7_resume_record():
         payload = hashlib.sha256(f"payload:{regime_id}:{selected}".encode()).hexdigest()
 
         def inventory_item(record_id, token_length, inode, *, valid=True,
-                           wire_match=True, lineage_match=True, payload_bytes=4096):
+                           wire_match=True, lineage_match=True, payload_bytes=None):
+            if payload_bytes is None:
+                payload_bytes = _w7_payload_bytes(token_length)
             prefix_hash = _i32_sha256(tokens[:token_length])
             return {
                 "record_id": record_id,
@@ -1207,6 +1216,22 @@ class FormulaTests(unittest.TestCase):
         ).hexdigest()
         mutations.append(unprobed_state)
 
+        truncated_member = w7_resume_record()
+        manifest = next(case for case in truncated_member["regimes"][0]["cases"]
+                        if case["case_id"] == "candidate-primary")["state_manifest"]
+        section_index = next(
+            index for index, section in enumerate(manifest["sections"])
+            if section["name"] == "layer.00.kv_lora"
+        )
+        section = manifest["sections"][section_index]
+        removed = section["byte_count"] - 4
+        section["shape"] = [1]
+        section["byte_count"] = 4
+        for later in manifest["sections"][section_index + 1:]:
+            later["offset"] -= removed
+        manifest["total_bytes"] -= removed
+        mutations.append(truncated_member)
+
         duplicate_confirmation = w7_resume_record()
         duplicate_confirmation["regimes"][2]["fixture_sha256"] = duplicate_confirmation["regimes"][1]["fixture_sha256"]
         mutations.append(duplicate_confirmation)
@@ -1230,7 +1255,8 @@ class FormulaTests(unittest.TestCase):
 
     def test_w7_resume_scorer_rejects_partial_reads_ambiguous_selection_and_live_lineage(self):
         mutations = []
-        for byte_count in (1, 4095, 4097):
+        expected_payload = _w7_payload_bytes(5044)
+        for byte_count in (1, expected_payload - 1, expected_payload + 1):
             record = w7_resume_record()
             candidate = next(case for case in record["regimes"][0]["cases"]
                              if case["case_id"] == "candidate-primary")
