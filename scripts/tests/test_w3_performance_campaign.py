@@ -239,6 +239,27 @@ class W3PerformanceCampaignTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 SCORER_MODULE.validate_memory_samples(mutated, main)
 
+    def test_memory_samples_accept_verified_identity_sample_exit(self):
+        main = (
+            "2026-08-06T00:00:00.000000000+00:00 executed_candidate_verified x\n"
+            "2026-08-06T00:00:01.000000000+00:00 "
+            "executed candidate exited during identity sample; x\n"
+        )
+        samples = (
+            "2026-08-06T00:00:00.100000000+00:00 mem_avail_kb=20971520 "
+            "eng_rss_kb=1 read_bytes=1 cgroup_current_bytes=1 "
+            "cgroup_peak_bytes=1 cgroup_swap_current_bytes=0\n"
+            "2026-08-06T00:00:00.500000000+00:00 mem_avail_kb=20971520 "
+            "eng_rss_kb=1 read_bytes=1 cgroup_current_bytes=1 "
+            "cgroup_peak_bytes=1 cgroup_swap_current_bytes=0\n"
+            "2026-08-06T00:00:01.000000000+00:00 mem_avail_kb=20971520 "
+            "eng_rss_kb=1 read_bytes=1 cgroup_current_bytes=1 "
+            "cgroup_peak_bytes=1 cgroup_swap_current_bytes=0\n"
+        )
+        self.assertEqual(
+            SCORER_MODULE.validate_memory_samples(samples, main), 20.0
+        )
+
     def test_historical_identity_survives_byte_identical_copy(self):
         recorded = "41:195:570:1000000:1000001"
         self.assertEqual(
