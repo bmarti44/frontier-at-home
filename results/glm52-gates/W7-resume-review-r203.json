@@ -1,0 +1,28 @@
+{
+  "candidate_hash": "efd0dd6219022a5a358e47687ff31e0d5e111ce9",
+  "review_round": 203,
+  "reviewers": {
+    "Nash": {
+      "score": 97,
+      "critical": [],
+      "high": [],
+      "medium": ["W7-R203-M1-ORACLE-BINARY-BUILD-RECIPE-NOT-PRESERVED"],
+      "verdict": "AUTHORIZE_DEPLOYED_GEOMETRY_SMOKE"
+    },
+    "Singer": {
+      "score": 86,
+      "critical": [],
+      "high": ["ADV-W7-202-H11"],
+      "medium": ["ADV-W7-203-M13"],
+      "low": ["ADV-W7-203-L14"],
+      "verdict": "TRACE_SMOKE_CORRECTION_REQUIRED"
+    }
+  },
+  "root_disposition": {
+    "ADV-W7-202-H11": "OPEN: candidate 9 must bind deployed trace request bytes, rendered bytes, and independently tokenized vectors to the frozen pool",
+    "ADV-W7-203-M13": "OPEN: candidate 9 must use identical explicit thinking and reasoning_effort fields in oracle and deployed requests",
+    "W7-R203-M1-ORACLE-BINARY-BUILD-RECIPE-NOT-PRESERVED": "DEFERRED_NONBLOCKING: preserve the already-used deterministic compile command in candidate 9 without changing oracle behavior",
+    "ADV-W7-203-L14": "DEFERRED_NONBLOCKING: candidate 9 will bind the frozen oracle artifacts and recipe; the current candidate remains hash-bound"
+  },
+  "next_scope": "candidate 9 is limited to the named deployed trace equivalence and oracle recipe findings; no engine implementation is authorized"
+}

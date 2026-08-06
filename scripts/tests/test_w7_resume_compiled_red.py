@@ -61,6 +61,15 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         ]
         self.assertEqual(assignments, [])
 
+    def test_deployed_trace_binds_exact_c_rendered_fixture(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn('--trace "$out/request.trace"', source)
+        self.assertIn('"thinking": True', source)
+        self.assertIn('"reasoning_effort": "high"', source)
+        self.assertIn('"trace_request_bytes_exact"', source)
+        self.assertIn('"trace_rendered_bytes_exact"', source)
+        self.assertIn('"trace_token_vectors_exact"', source)
+
     def test_preregistered_plan_authorizes_compiled_red(self):
         plan = json.loads(
             (ROOT / "results/glm52-gates/W7-resume-correctness-plan-v8.json").read_text()

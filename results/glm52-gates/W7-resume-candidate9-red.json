@@ -1,0 +1,16 @@
+{
+  "candidate": 9,
+  "classification": "review-finding RED before bounded harness correction",
+  "parent_candidate_hash": "efd0dd6219022a5a358e47687ff31e0d5e111ce9",
+  "review_round": 203,
+  "blocking_finding": "ADV-W7-202-H11",
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_compiled_red",
+  "exit_code": 1,
+  "tests_run": 5,
+  "failures": 1,
+  "failing_test": "test_deployed_trace_binds_exact_c_rendered_fixture",
+  "failure": "the frozen candidate did not launch with --trace and therefore could not bind deployed request/rendered/token-vector evidence",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "1d095d483fa50490aa6075f1a8351dedaf7eeab1bdb8549e9729494c24431d38",
+  "acceptance": "the deployed trace must contain exactly two unambiguous request sections whose raw JSON bytes and rendered prompt bytes match the frozen pool, and independent tokenization of the traced prompts must match the frozen token vectors"
+}
