@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "633fccd3db99d9da11ca5ac047d63bb37d19fe1a",
+  "review_round": 170,
+  "status": "REJECT_BEFORE_EXECUTION",
+  "execution_started": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "verdict": "PASS"
+    },
+    "Singer": {
+      "score_0_to_100": 88,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W3-R170-H1",
+          "evidence": "environment_sha256 ran inside the new closed environment and therefore hashed every DS4 allowlist name as UNSET, while both engine arms receive explicit DS4 values. Safe-run would reject both arms for environment mismatch.",
+          "affected_gate": "engine configuration provenance and arm completion",
+          "acceptance_test": "Construct one explicit arm environment, use it for both the expected canonical hash and engine launch, prove OFF and ON hashes match their effective environments and differ, and prove an omitted or changed assignment is rejected."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W3-R167-M1",
+          "disposition": "DEFERRED",
+          "rationale": "Eligibility-only scope remains explicit."
+        }
+      ],
+      "low": [],
+      "verdict": "REJECT_EXECUTION"
+    }
+  },
+  "prior_blocker_status": {
+    "ambient_python_authority": "FIXED",
+    "explicit_engine_environment_hash": "OPEN"
+  },
+  "blocking_set_size": 1,
+  "model_or_gpu_started": false
+}
