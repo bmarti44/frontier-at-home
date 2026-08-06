@@ -11,6 +11,7 @@ readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
 readonly TOKEN_SCORER=$REPO/scripts/84_count_glm_output_tokens.py
+readonly CAMPAIGN_SCORER=$REPO/scripts/85_score_w3_performance_campaign.py
 readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w3-cbc22b0
 readonly BIN=$CANDIDATE_SRC/ds4-server
 readonly BINARY_SHA256=1a60e0887bd26e95d286041dc38d1e7ac7ca81d51d910227e37b26cc516f0b58
@@ -119,7 +120,7 @@ isolated_python "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-
 # freeze manifest binds the harness, transitive safety helpers, compiled engine
 # source and binary. No self-reported digest can substitute for these checks.
 isolated_python - "$REPO" "$FREEZE" "$0" "$CGROUP" "$SAFE" "$MEMORY_GUARD" \
-    "$TOKEN_SCORER" "$BIN" "$TOKENIZER" "$TOKENIZERS_INIT" "$TOKENIZERS_SO" \
+    "$TOKEN_SCORER" "$CAMPAIGN_SCORER" "$BIN" "$TOKENIZER" "$TOKENIZERS_INIT" "$TOKENIZERS_SO" \
     "$ENGINE_SOURCE" "$ENGINE_COMMIT" "$BINARY_SHA256" <<'PY'
 import hashlib
 import json
@@ -128,7 +129,7 @@ import subprocess
 import sys
 
 (repo_raw, freeze_raw, harness_raw, cgroup_raw, safe_raw, guard_raw,
- scorer_raw, binary_raw, tokenizer_raw, tokenizers_init_raw, tokenizers_so_raw,
+ scorer_raw, campaign_scorer_raw, binary_raw, tokenizer_raw, tokenizers_init_raw, tokenizers_so_raw,
  source_raw, engine_commit, binary_sha) = sys.argv[1:]
 repo = Path(repo_raw).resolve()
 freeze = Path(freeze_raw).resolve()
@@ -138,6 +139,7 @@ paths = {
     "safe": Path(safe_raw).resolve(),
     "memory_guard": Path(guard_raw).resolve(),
     "token_scorer_sha256": Path(scorer_raw).resolve(),
+    "campaign_scorer": Path(campaign_scorer_raw).resolve(),
     "binary": Path(binary_raw).resolve(),
     "tokenizer_sha256": Path(tokenizer_raw).resolve(),
     "tokenizers_init_sha256": Path(tokenizers_init_raw).resolve(),
@@ -162,8 +164,8 @@ if committed != freeze.read_bytes():
     raise SystemExit("freeze manifest differs from HEAD")
 record = json.loads(committed)
 required = {"schema_version", "repository_parent_commit", "engine_commit",
-            "binary_sha256", "drand_floor_round", "artifacts",
-            "engine_source_sha256"}
+            "binary_sha256", "model_sha256", "drand_floor_round", "artifacts",
+            "campaign_contract", "engine_source_sha256"}
 if set(record) != required or record["schema_version"] != 1:
     raise SystemExit("freeze manifest schema is invalid")
 head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, text=True,
@@ -179,6 +181,15 @@ if changed != [str(relative)]:
     raise SystemExit("freeze commit changed files other than its receipt")
 if record["engine_commit"] != engine_commit or record["binary_sha256"] != binary_sha:
     raise SystemExit("freeze candidate identity is inconsistent")
+expected_contract = {
+    "completion_tokens": 129,
+    "decode_formula": "128/(t129-t1)",
+    "block_schedule": ["ABBA", "BAAB", "ABBA", "BAAB", "ABBA"],
+    "block_value": "arithmetic mean of the two same-arm completed seconds",
+    "acceptance": "one-sided 95% upper bound of the geometric paired candidate/baseline completed-time ratio <= 0.95",
+}
+if record["campaign_contract"] != expected_contract:
+    raise SystemExit("freeze campaign contract is inconsistent")
 if set(record["artifacts"]) != set(paths):
     raise SystemExit("freeze artifact inventory is incomplete")
 for name, path in paths.items():
@@ -211,6 +222,15 @@ readonly MODEL_IDENTITY_BEFORE=$(stat -Lc '%d:%i:%s:%Y:%Z' -- "$MODEL")
 readonly OBSERVED_MODEL_SHA256=$(sha256sum -- "$MODEL" | awk '{print $1}')
 [[ $OBSERVED_MODEL_SHA256 == "$MODEL_SHA256" ]] || {
   echo "GLM model digest mismatch" >&2
+  exit 2
+}
+[[ $OBSERVED_MODEL_SHA256 == $(isolated_python - "$FREEZE" <<'PY'
+import json
+import sys
+print(json.load(open(sys.argv[1], encoding="utf-8"))["model_sha256"])
+PY
+) ]] || {
+  echo "GLM model digest differs from campaign freeze" >&2
   exit 2
 }
 
