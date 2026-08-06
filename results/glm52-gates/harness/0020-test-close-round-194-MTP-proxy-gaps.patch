@@ -1,0 +1,735 @@
+From d652a9b5ec48c0e8cbb0f42c5d55bc411f51cc25 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 16:24:59 -0400
+Subject: [PATCH] test: close round 194 MTP proxy gaps
+
+---
+ Makefile                                      |  17 +-
+ tests/glm_mtp_proxy_publish_worker.c          |  65 ++++++
+ tests/test_glm_mtp_proxy_callgraph.py         |  18 +-
+ tests/test_glm_mtp_proxy_cli.py               |   9 +-
+ tests/test_glm_mtp_proxy_contract.c           | 200 ++++++++++++++++--
+ ...test_glm_mtp_proxy_publication_syscalls.py | 124 +++++++++++
+ tests/test_glm_mtp_proxy_sandbox.py           | 114 ++++++++++
+ 7 files changed, 520 insertions(+), 27 deletions(-)
+ create mode 100644 tests/glm_mtp_proxy_publish_worker.c
+ create mode 100644 tests/test_glm_mtp_proxy_publication_syscalls.py
+ create mode 100644 tests/test_glm_mtp_proxy_sandbox.py
+
+diff --git a/Makefile b/Makefile
+index 9473152..8c48c02 100644
+--- a/Makefile
++++ b/Makefile
+@@ -370,12 +370,27 @@ else
+ 	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
+ endif
+ 
+-test-glm-mtp-proxy-contract: tests/test_glm_mtp_proxy_contract ds4
++tests/glm_mtp_proxy_publish_worker.o: tests/glm_mtp_proxy_publish_worker.c
++	$(CC) $(CFLAGS) -I. -c -o $@ $<
++
++tests/glm_mtp_proxy_publish_worker: tests/glm_mtp_proxy_publish_worker.o $(CORE_OBJS)
++ifeq ($(UNAME_S),Darwin)
++	$(CC) $(CFLAGS) -o $@ $^ $(METAL_LDLIBS)
++else
++	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
++endif
++
++test-glm-mtp-proxy-contract: tests/test_glm_mtp_proxy_contract tests/glm_mtp_proxy_publish_worker ds4
+ 	@rc=0; \
+ 	./tests/test_glm_mtp_proxy_contract || rc=1; \
+ 	python3 tests/test_glm_mtp_proxy_callgraph.py ds4.o ds4_cli.o || rc=1; \
++	python3 tests/test_glm_mtp_proxy_publication_syscalls.py \
++		tests/glm_mtp_proxy_publish_worker || rc=1; \
+ 	DS4_GLM_MTP_PROXY_TEST_PACK="$${DS4_GLM_MTP_PROXY_TEST_PACK:?exact proxy pack required}" \
+ 		python3 tests/test_glm_mtp_proxy_cli.py ./ds4 || rc=1; \
++	DS4_GLM_MTP_PROXY_TEST_PACK="$${DS4_GLM_MTP_PROXY_TEST_PACK:?exact proxy pack required}" \
++	DS4_GLM_MTP_PROXY_TEST_FULL_MODEL="$${DS4_GLM_MTP_PROXY_TEST_FULL_MODEL:?full model required}" \
++		python3 tests/test_glm_mtp_proxy_sandbox.py ./ds4 || rc=1; \
+ 	exit $$rc
+ 
+ ds4_test: ds4_test.o ds4_help.o ds4_kvstore.o rax.o $(CORE_OBJS)
+diff --git a/tests/glm_mtp_proxy_publish_worker.c b/tests/glm_mtp_proxy_publish_worker.c
+new file mode 100644
+index 0000000..aac7d01
+--- /dev/null
++++ b/tests/glm_mtp_proxy_publish_worker.c
+@@ -0,0 +1,65 @@
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++typedef struct {
++    const char *name;
++    const void *data;
++    uint64_t size;
++} proxy_artifact;
++
++typedef struct {
++    uint32_t step;
++    uint32_t position;
++    uint32_t slot;
++    uint32_t boundary;
++    uint64_t monotonic_ns;
++} proxy_stage_receipt;
++
++extern int ds4_glm_mtp_proxy_publish_contract(
++    const char *, const proxy_artifact *, uint32_t, const char *)
++    __attribute__((weak));
++
++int main(int argc, char **argv) {
++    if (argc != 2) return 64;
++    if (!ds4_glm_mtp_proxy_publish_contract) return 77;
++    static const struct {
++        const char *name;
++        uint64_t size;
++    } expected[] = {
++        {"states.f32le", 221184},
++        {"head-logits.f32le", 5575680},
++        {"tokens.i32le", 36},
++        {"positions.u32le", 32},
++        {"slots.u32le", 32},
++        {"router-scores.f32le", 614400},
++        {"router-ranks.u8", 153600},
++        {"prefix-max-scores.f32le", 230400},
++        {"prefix-max-ranks.u8", 57600},
++        {"stage-receipts.u64le", 192},
++    };
++    proxy_artifact artifacts[sizeof(expected) / sizeof(expected[0])];
++    for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); i++) {
++        uint8_t *data = calloc(1u, (size_t)expected[i].size);
++        if (!data) return 70;
++        data[0] = (uint8_t)(i + 1u);
++        artifacts[i] = (proxy_artifact){expected[i].name, data, expected[i].size};
++    }
++    proxy_stage_receipt *stages = (proxy_stage_receipt *)artifacts[9].data;
++    for (uint32_t i = 0; i < 8u; i++) {
++        stages[i] = (proxy_stage_receipt){
++            .step = i + 1u,
++            .position = 4096u + i,
++            .slot = 4096u + i,
++            .boundary = 1u,
++            .monotonic_ns = 1000001u + i,
++        };
++    }
++    const int rc = ds4_glm_mtp_proxy_publish_contract(
++        argv[1], artifacts,
++        (uint32_t)(sizeof(artifacts) / sizeof(artifacts[0])), NULL);
++    for (size_t i = 0; i < sizeof(artifacts) / sizeof(artifacts[0]); i++) {
++        free((void *)artifacts[i].data);
++    }
++    return rc;
++}
+diff --git a/tests/test_glm_mtp_proxy_callgraph.py b/tests/test_glm_mtp_proxy_callgraph.py
+index 28ac47f..719e56e 100644
+--- a/tests/test_glm_mtp_proxy_callgraph.py
++++ b/tests/test_glm_mtp_proxy_callgraph.py
+@@ -54,19 +54,29 @@ class GlmMtpProxyProductionCallgraphTests(unittest.TestCase):
+         require_reference(
+             function_body(self.disassembly, "main"),
+             "main",
+-            "ds4_glm_mtp_proxy_cli_execute",
++            "ds4_glm_mtp_proxy_cli_execute_from_env",
+         )
+ 
+     def test_executor_owns_all_candidate_stages_and_actual_callbacks(self) -> None:
++        env_body = function_body(
++            self.disassembly, "ds4_glm_mtp_proxy_cli_execute_from_env"
++        )
++        for callee in (
++            "ds4_glm_mtp_proxy_source_open",
++            "ds4_glm_mtp_proxy_cli_execute",
++            "ds4_glm_mtp_proxy_step_actual",
++            "ds4_glm_mtp_proxy_route_actual",
++        ):
++            with self.subTest(env_callee=callee):
++                require_reference(
++                    env_body, "ds4_glm_mtp_proxy_cli_execute_from_env", callee
++                )
+         body = function_body(self.disassembly, "ds4_glm_mtp_proxy_cli_execute")
+         for callee in (
+             "ds4_glm_mtp_proxy_pack_open",
+-            "ds4_glm_mtp_proxy_source_open",
+             "ds4_glm_mtp_proxy_contract_run",
+             "ds4_glm_mtp_proxy_rank_contract",
+             "ds4_glm_mtp_proxy_publish_contract",
+-            "ds4_glm_mtp_proxy_step_actual",
+-            "ds4_glm_mtp_proxy_route_actual",
+         ):
+             with self.subTest(callee=callee):
+                 require_reference(body, "ds4_glm_mtp_proxy_cli_execute", callee)
+diff --git a/tests/test_glm_mtp_proxy_cli.py b/tests/test_glm_mtp_proxy_cli.py
+index 3355459..8677865 100644
+--- a/tests/test_glm_mtp_proxy_cli.py
++++ b/tests/test_glm_mtp_proxy_cli.py
+@@ -5,6 +5,7 @@ import os
+ from pathlib import Path
+ import hashlib
+ import json
++import shutil
+ import struct
+ import subprocess
+ import sys
+@@ -144,11 +145,11 @@ class GlmMtpProxyCliTests(unittest.TestCase):
+             source = root / "source"
+             self.write_source(source)
+             mutation = root / "pack.bin"
+-            with open(PACK_ARG, "rb", buffering=0) as src, mutation.open("w+b", buffering=0) as dst:
+-                dst.write(src.read(49152))
+-                dst.seek(16)
++            shutil.copyfile(PACK_ARG, mutation)
++            with mutation.open("r+b", buffering=0) as dst:
++                dst.seek(49152)
+                 byte = dst.read(1)
+-                dst.seek(16)
++                dst.seek(49152)
+                 dst.write(bytes([byte[0] ^ 1]))
+                 dst.flush()
+                 os.fsync(dst.fileno())
+diff --git a/tests/test_glm_mtp_proxy_contract.c b/tests/test_glm_mtp_proxy_contract.c
+index 18c76d1..3596a26 100644
+--- a/tests/test_glm_mtp_proxy_contract.c
++++ b/tests/test_glm_mtp_proxy_contract.c
+@@ -98,6 +98,25 @@ typedef struct {
+     int (*head_norm)(void *, const float *, uint32_t);
+ } proxy_residual_ops;
+ 
++typedef struct {
++    const char *pack_path;
++    uint8_t expected_pack_sha256[32];
++    uint8_t expected_model_sha256[32];
++    uint8_t expected_inventory_sha256[32];
++    proxy_request request;
++    const proxy_ops *ops;
++    void *ops_context;
++    const char *output_directory;
++} proxy_execute_request;
++
++typedef struct {
++    uint32_t step;
++    uint32_t position;
++    uint32_t slot;
++    uint32_t boundary;
++    uint64_t monotonic_ns;
++} proxy_stage_receipt;
++
+ extern int ds4_glm_mtp_proxy_contract_run(const proxy_request *,
+                                            const proxy_ops *,
+                                            void *,
+@@ -120,9 +139,17 @@ extern int ds4_glm_mtp_proxy_residual_capture(
+     const proxy_residual_ops *, void *, float *, const float *, const float *,
+     const float *, float *, uint32_t)
+     __attribute__((weak));
++extern int ds4_glm_mtp_proxy_cli_execute(const proxy_execute_request *)
++    __attribute__((weak));
+ 
+ static int failures;
+ 
++static void parse_digest(uint8_t out[32], const char *digest_hex);
++static int path_exists(const char *dir, const char *name);
++static int file_equals(const char *dir, const char *name,
++                       const void *expected, size_t expected_size);
++static void remove_temp_dir(const char *dir);
++
+ #define CHECK(cond, ...) do {                                                \
+     if (!(cond)) {                                                           \
+         fprintf(stderr, "FAIL %s:%d: ", __func__, __LINE__);                \
+@@ -325,6 +352,83 @@ static void test_capture_is_exactly_after_completed_residual(void) {
+     }
+ }
+ 
++static void test_live_executor_runs_every_stage(void) {
++    CHECK(ds4_glm_mtp_proxy_cli_execute != NULL,
++          "production MTP proxy executor is absent");
++    const char *pack = getenv("DS4_GLM_MTP_PROXY_TEST_PACK");
++    CHECK(pack && *pack, "DS4_GLM_MTP_PROXY_TEST_PACK is required");
++    char dir[] = "/tmp/ds4-glm-proxy-live-executor.XXXXXX";
++    CHECK(mkdtemp(dir) != NULL, "live executor mkdtemp failed: %s", strerror(errno));
++    const proxy_ops ops = {
++        .capture_z0 = fake_capture,
++        .mtp_step = fake_step,
++        .route_layer = fake_route,
++        .stage_receipt = fake_receipt,
++    };
++    fake_ctx ctx = {0};
++    proxy_execute_request exec = {
++        .pack_path = pack,
++        .request = {
++            .abi_version = PROXY_ABI,
++            .steps = PROXY_STEPS,
++            .first_layer = PROXY_FIRST_LAYER,
++            .layer_count = PROXY_LAYER_COUNT,
++            .n_embd = PROXY_EMBD,
++            .n_vocab = PROXY_VOCAB,
++            .n_expert = PROXY_EXPERTS,
++            .source_position = 4096u,
++            .min_position = 4080u,
++            .q1 = 1001,
++        },
++        .ops = &ops,
++        .ops_context = &ctx,
++        .output_directory = dir,
++    };
++    parse_digest(exec.expected_pack_sha256,
++                 "aacc0fe9a79833ff118888e33924d77a737ca247841a6bd501cc393e97aa1809");
++    parse_digest(exec.expected_model_sha256,
++                 "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0");
++    parse_digest(exec.expected_inventory_sha256,
++                 "b37b9ef2906596b5acd29d8f1538a47c527f74338c5e9386b2370388e8b75b12");
++    CHECK(ds4_glm_mtp_proxy_cli_execute(&exec) == 0,
++          "live injected-ops executor rejected the exact candidate path");
++    CHECK(ctx.callback_error == 0 && ctx.capture_calls == 1u &&
++          ctx.step_calls == 8u && ctx.route_calls == 600u &&
++          ctx.receipt_calls == 8u,
++          "live executor did not run exact capture/8-step/600-route/receipt flow");
++    static const int32_t expected_tokens[9] = {
++        1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009,
++    };
++    CHECK(file_equals(dir, "tokens.i32le", expected_tokens,
++                      sizeof(expected_tokens)),
++          "live executor token recurrence artifact differs");
++    CHECK(path_exists(dir, "states.f32le") &&
++          path_exists(dir, "head-logits.f32le") &&
++          path_exists(dir, "router-scores.f32le") &&
++          path_exists(dir, "router-ranks.u8") &&
++          path_exists(dir, "prefix-max-scores.f32le") &&
++          path_exists(dir, "prefix-max-ranks.u8") &&
++          path_exists(dir, "stage-receipts.u64le") &&
++          path_exists(dir, "complete.json"),
++          "live executor omitted a ranked canonical transcript artifact");
++    char receipt_path[512];
++    CHECK(snprintf(receipt_path, sizeof(receipt_path), "%s/stage-receipts.u64le", dir) <
++              (int)sizeof(receipt_path),
++          "stage receipt path overflow");
++    proxy_stage_receipt stages[8];
++    int stage_fd = open(receipt_path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
++    CHECK(stage_fd >= 0 && read(stage_fd, stages, sizeof(stages)) == (ssize_t)sizeof(stages),
++          "could not read exact stage receipts");
++    close(stage_fd);
++    for (uint32_t i = 0; i < 8u; i++) {
++        CHECK(stages[i].step == i + 1u && stages[i].position == 4096u + i &&
++              stages[i].slot == 4096u + i && stages[i].boundary == 1u &&
++              stages[i].monotonic_ns > (i ? stages[i - 1u].monotonic_ns : 0u),
++              "stage receipt %u does not bind monotonic post-residual boundary", i);
++    }
++    remove_temp_dir(dir);
++}
++
+ static void parse_digest(uint8_t out[32], const char *digest_hex) {
+     for (uint32_t i = 0; i < 32u; i++) {
+         unsigned byte = 0;
+@@ -333,28 +437,29 @@ static void parse_digest(uint8_t out[32], const char *digest_hex) {
+     }
+ }
+ 
+-static int short_header_mutation(const char *source, char path[128], off_t offset) {
++static int full_pack_copy(const char *source, char path[128]) {
+     strcpy(path, "/tmp/ds4-glm-mtp-pack-mutation.XXXXXX");
+     int out = mkstemp(path);
+     if (out < 0) return -1;
+     int in = open(source, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+-    uint8_t header[49152];
+-    if (in < 0 || pread(in, header, sizeof(header), 0) != (ssize_t)sizeof(header) ||
+-        write(out, header, sizeof(header)) != (ssize_t)sizeof(header)) {
++    if (in < 0) {
+         if (in >= 0) close(in);
+         close(out);
+         unlink(path);
+         return -1;
+     }
+-    close(in);
+-    uint8_t value;
+-    if (pread(out, &value, 1, offset) != 1) {
+-        close(out);
+-        unlink(path);
+-        return -1;
++    for (;;) {
++        ssize_t copied = copy_file_range(in, NULL, out, NULL, 16u << 20, 0);
++        if (copied == 0) break;
++        if (copied < 0) {
++            close(in);
++            close(out);
++            unlink(path);
++            return -1;
++        }
+     }
+-    value ^= 1u;
+-    if (pwrite(out, &value, 1, offset) != 1 || fsync(out) != 0) {
++    close(in);
++    if (fsync(out) != 0) {
+         close(out);
+         unlink(path);
+         return -1;
+@@ -363,6 +468,26 @@ static int short_header_mutation(const char *source, char path[128], off_t offse
+     return 0;
+ }
+ 
++static int mutate_byte(const char *path, off_t offset, uint8_t *saved) {
++    int fd = open(path, O_RDWR | O_CLOEXEC | O_NOFOLLOW);
++    if (fd < 0 || pread(fd, saved, 1, offset) != 1) {
++        if (fd >= 0) close(fd);
++        return -1;
++    }
++    const uint8_t changed = *saved ^ 1u;
++    const int ok = pwrite(fd, &changed, 1, offset) == 1 && fsync(fd) == 0;
++    close(fd);
++    return ok ? 0 : -1;
++}
++
++static int restore_byte(const char *path, off_t offset, uint8_t saved) {
++    int fd = open(path, O_RDWR | O_CLOEXEC | O_NOFOLLOW);
++    if (fd < 0) return -1;
++    const int ok = pwrite(fd, &saved, 1, offset) == 1 && fsync(fd) == 0;
++    close(fd);
++    return ok ? 0 : -1;
++}
++
+ static void test_exact_compact_pack_and_mutations(void) {
+     CHECK(ds4_glm_mtp_proxy_pack_open != NULL,
+           "production compact-pack validator entry point is absent");
+@@ -391,11 +516,25 @@ static void test_exact_compact_pack_and_mutations(void) {
+                                       inventory_sha, &receipt) != 0,
+           "wrong expected whole-pack digest accepted");
+     char mutation[128];
+-    CHECK(short_header_mutation(pack, mutation, 16) == 0,
+-          "could not create header mutation: %s", strerror(errno));
+-    CHECK(ds4_glm_mtp_proxy_pack_open(mutation, pack_sha, model_sha,
+-                                      inventory_sha, &receipt) != 0,
+-          "mutated exact pack accepted");
++    CHECK(full_pack_copy(pack, mutation) == 0,
++          "could not create full-size differently-named pack: %s", strerror(errno));
++    static const off_t mutation_offsets[] = {
++        16,       /* header cardinality/size field */
++        288,      /* first record's payload digest */
++        49151,    /* zero header padding */
++        49152,    /* first allowed payload byte */
++    };
++    for (uint32_t i = 0; i < sizeof(mutation_offsets) / sizeof(mutation_offsets[0]); i++) {
++        uint8_t saved = 0;
++        CHECK(mutate_byte(mutation, mutation_offsets[i], &saved) == 0,
++              "could not mutate full-size pack offset %lld", (long long)mutation_offsets[i]);
++        CHECK(ds4_glm_mtp_proxy_pack_open(mutation, pack_sha, model_sha,
++                                          inventory_sha, &receipt) != 0,
++              "full-size pack mutation accepted at offset %lld",
++              (long long)mutation_offsets[i]);
++        CHECK(restore_byte(mutation, mutation_offsets[i], saved) == 0,
++              "could not restore pack mutation offset %lld", (long long)mutation_offsets[i]);
++    }
+     unlink(mutation);
+ }
+ 
+@@ -575,6 +714,7 @@ static void test_fail_closed_publication(void) {
+         {"router-ranks.u8", 8ull * 75ull * 256ull},
+         {"prefix-max-scores.f32le", 3ull * 75ull * 256ull * sizeof(float)},
+         {"prefix-max-ranks.u8", 3ull * 75ull * 256ull},
++        {"stage-receipts.u64le", 8ull * (4ull * sizeof(uint32_t) + sizeof(uint64_t))},
+     };
+     static const char expected_complete[] =
+         "{\"abi_version\":1,\"artifacts\":["
+@@ -586,7 +726,8 @@ static void test_fail_closed_publication(void) {
+         "{\"bytes\":614400,\"name\":\"router-scores.f32le\",\"sha256\":\"1ff02fbb2f745b8803b64e1d7ef0f046cf35f5be20691a53cd424537798f8da7\"},"
+         "{\"bytes\":153600,\"name\":\"router-ranks.u8\",\"sha256\":\"625831e47a131bdbeda0c357169ae1587abb2d480cd340496e4832ddc01635ab\"},"
+         "{\"bytes\":230400,\"name\":\"prefix-max-scores.f32le\",\"sha256\":\"df5c1f96e918d4d9ceaad71d9d55962564dcec75d3a760e742890a1ea174e2a2\"},"
+-        "{\"bytes\":57600,\"name\":\"prefix-max-ranks.u8\",\"sha256\":\"ca1c1ad9796bf3f2771fc827bb244a9f65f2dbc90d87b32323a0e359b68d8593\"}"
++        "{\"bytes\":57600,\"name\":\"prefix-max-ranks.u8\",\"sha256\":\"ca1c1ad9796bf3f2771fc827bb244a9f65f2dbc90d87b32323a0e359b68d8593\"},"
++        "{\"bytes\":192,\"name\":\"stage-receipts.u64le\",\"sha256\":\"1d933eaa77f35d4329c327e6f8dcd60c589bbaf8ad7fba206686a6fda41aaba1\"}"
+         "],\"first_layer\":3,\"layer_count\":75,\"n_embd\":6144,"
+         "\"n_expert\":256,\"n_vocab\":154880,"
+         "\"schema\":\"glm52-mtp-proxy-transcript-v1\",\"steps\":8}\n";
+@@ -597,6 +738,16 @@ static void test_fail_closed_publication(void) {
+         ((uint8_t *)data)[0] = (uint8_t)(i + 1u);
+         artifacts[i] = (proxy_artifact){expected[i].name, data, expected[i].size};
+     }
++    proxy_stage_receipt *stage_data = (proxy_stage_receipt *)artifacts[9].data;
++    for (uint32_t i = 0; i < 8u; i++) {
++        stage_data[i] = (proxy_stage_receipt){
++            .step = i + 1u,
++            .position = 4096u + i,
++            .slot = 4096u + i,
++            .boundary = 1u,
++            .monotonic_ns = 1000001u + i,
++        };
++    }
+     char dir[] = "/tmp/ds4-glm-proxy-publish.XXXXXX";
+     CHECK(mkdtemp(dir) != NULL, "mkdtemp failed: %s", strerror(errno));
+     int rc = ds4_glm_mtp_proxy_publish_contract(
+@@ -627,6 +778,18 @@ static void test_fail_closed_publication(void) {
+           "caller-controlled completion marker was published");
+     remove_temp_dir(forbidden_dir);
+ 
++    char bad_stage_dir[] = "/tmp/ds4-glm-proxy-bad-stage.XXXXXX";
++    CHECK(mkdtemp(bad_stage_dir) != NULL, "bad-stage mkdtemp failed");
++    stage_data[4].monotonic_ns = stage_data[3].monotonic_ns;
++    CHECK(ds4_glm_mtp_proxy_publish_contract(
++              bad_stage_dir, artifacts,
++              (uint32_t)(sizeof(artifacts) / sizeof(artifacts[0])), NULL) != 0,
++          "nonmonotonic direct stage receipts accepted");
++    CHECK(!path_exists(bad_stage_dir, "complete.json"),
++          "invalid stage receipts left completion marker");
++    stage_data[4].monotonic_ns = 1000005u;
++    remove_temp_dir(bad_stage_dir);
++
+     static const char *stages[] = {
+         "artifact_write", "artifact_fsync", "artifact_rename",
+         "directory_fsync", "completion_write", "completion_fsync",
+@@ -651,6 +814,7 @@ static void test_fail_closed_publication(void) {
+ int main(void) {
+     test_exact_causal_recurrence_and_router_coverage();
+     test_capture_is_exactly_after_completed_residual();
++    test_live_executor_runs_every_stage();
+     test_exact_compact_pack_and_mutations();
+     test_router_max_aggregation_and_tie_order();
+     test_default_off_cli_dispatch();
+diff --git a/tests/test_glm_mtp_proxy_publication_syscalls.py b/tests/test_glm_mtp_proxy_publication_syscalls.py
+new file mode 100644
+index 0000000..d8dd792
+--- /dev/null
++++ b/tests/test_glm_mtp_proxy_publication_syscalls.py
+@@ -0,0 +1,124 @@
++#!/usr/bin/env python3
++"""Observe and fault the real publisher at actual syscall boundaries."""
++
++from __future__ import annotations
++
++import json
++import os
++from pathlib import Path
++import re
++import subprocess
++import sys
++import tempfile
++import unittest
++
++
++WORKER = Path(sys.argv.pop(1) if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "tests/glm_mtp_proxy_publish_worker").resolve()
++ARTIFACTS = (
++    "states.f32le", "head-logits.f32le", "tokens.i32le",
++    "positions.u32le", "slots.u32le", "router-scores.f32le",
++    "router-ranks.u8", "prefix-max-scores.f32le",
++    "prefix-max-ranks.u8", "stage-receipts.u64le",
++)
++
++
++def run_traced(directory: Path, injection: str | None = None) -> tuple[subprocess.CompletedProcess[str], str]:
++    trace = directory.parent / f"{directory.name}.trace"
++    command = [
++        "/usr/bin/strace", "-qq", "-f", "-o", str(trace),
++        "-e", "trace=openat,write,fsync,rename,renameat,renameat2",
++    ]
++    if injection:
++        command += ["-e", f"inject={injection}"]
++    command += [str(WORKER), str(directory)]
++    result = subprocess.run(
++        command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
++        timeout=30, check=False,
++    )
++    return result, trace.read_text()
++
++
++def validate_if_complete(directory: Path) -> None:
++    complete = directory / "complete.json"
++    if not complete.exists():
++        return
++    manifest = json.loads(complete.read_bytes())
++    assert manifest["schema"] == "glm52-mtp-proxy-transcript-v1"
++    assert tuple(item["name"] for item in manifest["artifacts"]) == ARTIFACTS
++    for item in manifest["artifacts"]:
++        path = directory / item["name"]
++        assert path.is_file() and path.stat().st_size == item["bytes"]
++
++
++class GlmMtpProxyPublicationSyscallTests(unittest.TestCase):
++    def test_success_uses_atomic_completion_last_and_real_durability_calls(self) -> None:
++        with tempfile.TemporaryDirectory(prefix="glm-mtp-publish-syscall-") as td:
++            directory = Path(td) / "output"
++            directory.mkdir()
++            result, trace = run_traced(directory)
++            self.assertEqual(result.returncode, 0, result.stderr)
++            renames = [line for line in trace.splitlines() if "renameat2(" in line]
++            self.assertEqual(len(renames), len(ARTIFACTS) + 1)
++            self.assertIn('"complete.json"', renames[-1])
++            for name in ARTIFACTS:
++                self.assertTrue(any(f'"{name}"' in line for line in renames))
++            staging_opens = [
++                line for line in trace.splitlines()
++                if "openat(" in line and ".tmp." in line
++            ]
++            self.assertEqual(len(staging_opens), len(ARTIFACTS) + 1)
++            self.assertTrue(all("O_EXCL" in line and "O_NOFOLLOW" in line for line in staging_opens))
++            fsyncs = [line for line in trace.splitlines() if "fsync(" in line]
++            self.assertGreaterEqual(len(fsyncs), len(ARTIFACTS) + 3)
++            validate_if_complete(directory)
++
++    def test_real_syscall_faults_and_kills_never_leave_partial_admissible_output(self) -> None:
++        with tempfile.TemporaryDirectory(prefix="glm-mtp-publish-counts-") as td:
++            baseline_directory = Path(td) / "output"
++            baseline_directory.mkdir()
++            baseline, baseline_trace = run_traced(baseline_directory)
++            self.assertEqual(baseline.returncode, 0, baseline.stderr)
++        recoverable_injections = (
++            "write:error=ENOSPC:when=1",
++            "write:error=EINTR:when=1",
++            "write:retval=1:when=1",
++            "fsync:error=EIO:when=1",
++            "renameat2:error=EIO:when=1",
++        )
++        for index, injection in enumerate(recoverable_injections):
++            with self.subTest(injection=injection), tempfile.TemporaryDirectory(
++                prefix=f"glm-mtp-publish-fault-{index}-"
++            ) as td:
++                directory = Path(td) / "output"
++                directory.mkdir()
++                result, _ = run_traced(directory, injection)
++                if "error=EINTR" in injection or "retval=1" in injection:
++                    self.assertEqual(result.returncode, 0, result.stderr)
++                else:
++                    self.assertNotEqual(result.returncode, 0)
++                validate_if_complete(directory)
++                if result.returncode != 0:
++                    self.assertFalse((directory / "complete.json").exists())
++        for syscall in ("write", "fsync", "renameat2"):
++            count = len([
++                line for line in baseline_trace.splitlines()
++                if re.search(rf"\b{syscall}\(", line)
++            ])
++            self.assertGreater(count, 0, f"successful publisher made no {syscall} syscall")
++            for occurrence in range(1, count + 1):
++                injection = f"{syscall}:signal=SIGKILL:when={occurrence}"
++                with self.subTest(injection=injection), tempfile.TemporaryDirectory(
++                    prefix=f"glm-mtp-publish-kill-{syscall}-{occurrence}-"
++                ) as td:
++                    directory = Path(td) / "output"
++                    directory.mkdir()
++                    result, _ = run_traced(directory, injection)
++                    self.assertNotEqual(result.returncode, 0)
++                    # A kill before completion leaves no admissible marker. A
++                    # kill during/after the final directory fsync may leave the
++                    # fully written atomic transcript, which must validate.
++                    validate_if_complete(directory)
++
++
++if __name__ == "__main__":
++    unittest.main(verbosity=2)
+diff --git a/tests/test_glm_mtp_proxy_sandbox.py b/tests/test_glm_mtp_proxy_sandbox.py
+new file mode 100644
+index 0000000..7e9b954
+--- /dev/null
++++ b/tests/test_glm_mtp_proxy_sandbox.py
+@@ -0,0 +1,114 @@
++#!/usr/bin/env python3
++"""Externally inspect the default-off candidate sandbox before GPU work."""
++
++from __future__ import annotations
++
++import hashlib
++import json
++import os
++from pathlib import Path
++import select
++import struct
++import subprocess
++import sys
++import tempfile
++import unittest
++
++
++BINARY = Path(sys.argv.pop(1) if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "./ds4").resolve()
++PACK = Path(os.environ.get("DS4_GLM_MTP_PROXY_TEST_PACK", ""))
++FULL_MODEL = Path(os.environ.get("DS4_GLM_MTP_PROXY_TEST_FULL_MODEL", ""))
++
++
++def write_source(directory: Path) -> None:
++    directory.mkdir()
++    artifacts = {
++        "z0.f32le": b"".join(struct.pack("<f", i * 0.0001) for i in range(6144)),
++        "q1.i32le": struct.pack("<i", 42),
++        "source-position.u32le": struct.pack("<I", 4096),
++        "min-position.u32le": struct.pack("<I", 4080),
++    }
++    manifest = {"schema": "glm52-mtp-proxy-source-v1", "artifacts": []}
++    for name, data in artifacts.items():
++        (directory / name).write_bytes(data)
++        manifest["artifacts"].append(
++            {"bytes": len(data), "name": name, "sha256": hashlib.sha256(data).hexdigest()}
++        )
++    (directory / "complete.json").write_text(
++        json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n"
++    )
++
++
++@unittest.skipUnless(PACK.is_file() and FULL_MODEL.is_file(), "exact pack/model required")
++class GlmMtpProxySandboxTests(unittest.TestCase):
++    def test_real_candidate_child_drops_full_model_and_denies_escape(self) -> None:
++        with tempfile.TemporaryDirectory(prefix="ds4-glm-proxy-sandbox-") as td:
++            root = Path(td)
++            source = root / "source"
++            output = root / "output"
++            forbidden = root / "forbidden-model.gguf"
++            forbidden.write_bytes(b"forbidden")
++            write_source(source)
++            ready_r, ready_w = os.pipe()
++            release_r, release_w = os.pipe()
++            inherited_model_fd = os.open(FULL_MODEL, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
++            env = {
++                "HOME": os.environ.get("HOME", "/tmp"),
++                "LANG": "C.UTF-8",
++                "LC_ALL": "C.UTF-8",
++                "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
++                "DS4_LOCK_FILE": str(root / "engine.lock"),
++                "DS4_GLM_MTP_PROXY_CANDIDATE_DIR": str(output),
++                "DS4_GLM_MTP_PROXY_PACK": str(PACK.resolve()),
++                "DS4_GLM_MTP_PROXY_SOURCE_STATE": str(source),
++                "DS4_GLM_MTP_PROXY_SANDBOX_READY_FD": str(ready_w),
++                "DS4_GLM_MTP_PROXY_SANDBOX_RELEASE_FD": str(release_r),
++                "DS4_GLM_MTP_PROXY_SANDBOX_FORBIDDEN_PATH": str(forbidden),
++                "DS4_GLM_MTP_PROXY_SANDBOX_UNEXPECTED_DEVICE": "/dev/zero",
++            }
++            process = subprocess.Popen(
++                [str(BINARY), "--model", str(forbidden), "--prompt", "sandbox probe"],
++                env=env,
++                pass_fds=(ready_w, release_r, inherited_model_fd),
++                text=True,
++                stdout=subprocess.PIPE,
++                stderr=subprocess.PIPE,
++            )
++            os.close(ready_w)
++            os.close(release_r)
++            os.close(inherited_model_fd)
++            try:
++                readable, _, _ = select.select([ready_r], [], [], 15)
++                self.assertTrue(readable, "candidate did not reach sandbox inspection barrier")
++                self.assertEqual(os.read(ready_r, 1), b"R")
++                fd_targets = []
++                for entry in (Path("/proc") / str(process.pid) / "fd").iterdir():
++                    try:
++                        fd_targets.append(os.readlink(entry))
++                    except FileNotFoundError:
++                        pass
++                maps = (Path("/proc") / str(process.pid) / "maps").read_text()
++                self.assertFalse(any(str(FULL_MODEL) in target for target in fd_targets))
++                self.assertNotIn(str(FULL_MODEL), maps)
++                self.assertFalse(any(str(forbidden) in target for target in fd_targets))
++                os.write(release_w, b"G")
++                stdout, stderr = process.communicate(timeout=15)
++            finally:
++                os.close(ready_r)
++                os.close(release_w)
++                if process.poll() is None:
++                    process.kill()
++                    process.wait()
++            self.assertNotEqual(process.returncode, 0)
++            self.assertEqual(stdout, "")
++            self.assertIn("GLM MTP proxy sandbox active", stderr)
++            self.assertIn(
++                "sandbox probe model_reopen=DENIED socket=DENIED ptrace=DENIED "
++                "process_vm=DENIED unexpected_device=DENIED inherited_full_model=ABSENT",
++                stderr,
++            )
++            self.assertNotIn("cannot open model", stderr)
++
++
++if __name__ == "__main__":
++    unittest.main(verbosity=2)
+-- 
+2.43.0
+
