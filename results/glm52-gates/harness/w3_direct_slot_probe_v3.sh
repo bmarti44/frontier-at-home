@@ -564,7 +564,7 @@ run_arm() {
       "$OBSERVED_MODEL_SHA256" "$ENGINE_COMMIT" "$arm_dir" \
       "$crash_identity" "$OBSERVED_TOKENIZER_SHA256" \
       "$OBSERVED_TOKENIZERS_INIT_SHA256" "$OBSERVED_TOKENIZERS_SO_SHA256" \
-      "$TOKENIZERS_INIT" "$TOKENIZERS_SO" <<'PY'
+      "$TOKENIZERS_INIT" "$TOKENIZERS_SO" "$engine_lock_identity" <<'PY'
 import hashlib
 import json
 from pathlib import Path
@@ -573,7 +573,8 @@ import sys
 
 (out_path, arm, direct, safe_rc, env_sha, crash_dir, request_sha,
  binary_sha, model_sha, engine_commit, arm_dir, crash_identity,
- tokenizer_sha, init_sha, native_sha, init_path, native_path) = sys.argv[1:]
+ tokenizer_sha, init_sha, native_sha, init_path, native_path,
+ engine_lock_identity) = sys.argv[1:]
 arm_path = Path(arm_dir)
 crash = Path(crash_dir)
 
@@ -681,6 +682,31 @@ timing_receipt["cmd_log_identity"] = (
 timing_receipt["cmd_log_sha256"] = hashlib.sha256(
     (crash / "cmd.log").read_bytes()
 ).hexdigest()
+environment_names = [
+    "DS4_CUDA_EXPERT_CACHE_GB", "DS4_CUDA_EXPERT_CACHE_PIN",
+    "DS4_CUDA_EXPERT_CACHE_SLRU", "DS4_CUDA_FETCH_THREADS",
+    "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS", "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
+    "DS4_GLM_TP_DEBUG", "DS4_LOCK_EXPECTED_DEV_INO", "DS4_LOCK_FILE",
+    "DS4_TOKEN_TIMING_LOG",
+]
+environment_values = {
+    "DS4_CUDA_EXPERT_CACHE_GB": "68",
+    "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+    "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+    "DS4_CUDA_FETCH_THREADS": "6",
+    "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS": "1" if direct == "1" else "<UNSET>",
+    "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+    "DS4_GLM_TP_DEBUG": "1",
+    "DS4_LOCK_EXPECTED_DEV_INO": engine_lock_identity,
+    "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
+    "DS4_TOKEN_TIMING_LOG": "1",
+}
+environment_canonical = b"".join(
+    name.encode("ascii") + b"=" + environment_values[name].encode("ascii") + b"\n"
+    for name in environment_names
+)
+if hashlib.sha256(environment_canonical).hexdigest() != env_sha:
+    raise SystemExit(f"{arm} canonical environment differs from launch digest")
 record = {
     "schema_version": 1,
     "arm": arm,
@@ -710,6 +736,11 @@ record = {
     ),
     "fault_markers": len(fault_re.findall(cmd + "\n" + main + "\n" + kernel)),
     "environment_sha256": env_sha,
+    "environment_receipt": {
+        "allowlist": environment_names,
+        "values": environment_values,
+        "canonical_sha256": env_sha,
+    },
     "request_sha256": request_sha,
     "binary_sha256": binary_sha,
     "model_sha256": model_sha,

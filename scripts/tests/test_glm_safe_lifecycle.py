@@ -233,6 +233,8 @@ exit 0
             '"timing_receipt": timing_receipt',
             '"cmd_log_identity"',
             '"token_timestamps_ns"',
+            '"environment_receipt"',
+            '"DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS": "1" if direct == "1" else "<UNSET>"',
             '"arm_order": arm_order',
             '"required_completion_tokens": required_tokens',
             'if [[ $ARM_ORDER == off-on ]]',

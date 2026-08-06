@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import hashlib
 import json
 import math
@@ -71,6 +72,7 @@ ARM_KEYS = {
     "environment_sha256", "request_sha256", "binary_sha256", "model_sha256",
     "tokenizer_sha256", "engine_commit", "crash_evidence",
     "crash_evidence_identity", "crash_artifact_sha256", "timing_receipt",
+    "environment_receipt",
 }
 TOKEN_RECORD_KEYS = {
     "schema_version", "label", "reference_token_count", "content_bytes",
@@ -315,6 +317,64 @@ def measured_timing(cmd_path: Path, expected_sha: str) -> dict[str, Any]:
     }
 
 
+def dispatch_counts(path: Path) -> tuple[int, int]:
+    match = re.fullmatch(r"([0-9]+) ([0-9]+)\n?", path.read_text(encoding="ascii"))
+    if match is None:
+        raise ValueError(f"{path}: dispatch receipt is malformed")
+    return int(match.group(1)), int(match.group(2))
+
+
+def validate_dispatch_chain(
+    arm: str, warm: tuple[int, int], measured: tuple[int, int], final: int
+) -> None:
+    if not (warm[0] <= warm[1] == measured[0] <= measured[1] == final):
+        raise ValueError(f"{arm} dispatch count chain is inconsistent")
+    if arm == "off" and any((*warm, *measured, final)):
+        raise ValueError("OFF arm dispatched through the candidate path")
+    if arm == "on" and (warm[1] - warm[0] < 1 or measured[1] - measured[0] < 1):
+        raise ValueError("ON arm lacks compared-response dispatch coverage")
+
+
+def validate_cgroup_safety(main_log: str) -> None:
+    matches = re.findall(
+        r"^\S+ cgroup_final current_bytes=(\d+) peak_bytes=(\d+) "
+        r"swap_current_bytes=(\d+) events=low (\d+),high (\d+),max (\d+),"
+        r"oom (\d+),oom_kill (\d+),oom_group_kill (\d+),$", main_log, re.M,
+    )
+    if ("memory_swap_max=0" not in main_log or len(matches) != 1 or
+            any(int(value) != 0 for value in matches[0][2:])):
+        raise ValueError("cgroup safety receipt is invalid")
+
+
+def validate_memory_samples(samples_log: str, main_log: str) -> float:
+    pattern = re.compile(
+        r"^(\S+) mem_avail_kb=(\d+) eng_rss_kb=(\d+) read_bytes=(\d+) "
+        r"cgroup_current_bytes=(\d+) cgroup_peak_bytes=(\d+) "
+        r"cgroup_swap_current_bytes=(\d+)$"
+    )
+    lines = samples_log.splitlines()
+    rows = [pattern.fullmatch(line) for line in lines]
+    if not rows or any(match is None for match in rows):
+        raise ValueError("memory samples are malformed or absent")
+    times = [datetime.fromisoformat(match.group(1).replace(",", ".")).timestamp()
+             for match in rows if match is not None]
+    values = [int(match.group(2)) / 1_048_576 for match in rows if match is not None]
+    if (min(values) < 10.0 or
+            any(int(match.group(7)) != 0 for match in rows if match is not None) or
+            any(not 0.0 < right - left <= 0.6
+                for left, right in zip(times, times[1:]))):
+        raise ValueError("memory samples violate the safety or cadence contract")
+    verified = re.search(r"^(\S+) executed_candidate_verified ", main_log, re.M)
+    exited = re.search(r"^(\S+) executed candidate exited;", main_log, re.M)
+    if verified is None or exited is None:
+        raise ValueError("lifecycle coverage anchors are absent")
+    verified_at = datetime.fromisoformat(verified.group(1).replace(",", ".")).timestamp()
+    exited_at = datetime.fromisoformat(exited.group(1).replace(",", ".")).timestamp()
+    if times[0] > verified_at + 0.6 or times[-1] < exited_at:
+        raise ValueError("memory samples do not cover execution")
+    return min(values)
+
+
 def generated(payload: dict[str, Any]) -> dict[str, str]:
     message = payload["choices"][0]["message"]
     return {"content": message.get("content", ""),
@@ -441,12 +501,41 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
         )
         if environment_match is None or environment_match.group(1) != arm.get("environment_sha256"):
             raise ValueError(f"{pair}: {name} executed environment is unbound")
-        warm_counts = [int(value) for value in
-                       (pair / name / "warm.dispatch-counts").read_text().split()]
-        measured_counts = [int(value) for value in
-                           (pair / name / "measured.dispatch-counts").read_text().split()]
-        if len(warm_counts) != 2 or len(measured_counts) != 2:
-            raise ValueError(f"{pair}: {name} dispatch receipts are malformed")
+        environment_names = [
+            "DS4_CUDA_EXPERT_CACHE_GB", "DS4_CUDA_EXPERT_CACHE_PIN",
+            "DS4_CUDA_EXPERT_CACHE_SLRU", "DS4_CUDA_FETCH_THREADS",
+            "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS", "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
+            "DS4_GLM_TP_DEBUG", "DS4_LOCK_EXPECTED_DEV_INO", "DS4_LOCK_FILE",
+            "DS4_TOKEN_TIMING_LOG",
+        ]
+        environment_values = {
+            "DS4_CUDA_EXPERT_CACHE_GB": "68", "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+            "DS4_CUDA_EXPERT_CACHE_SLRU": "1", "DS4_CUDA_FETCH_THREADS": "6",
+            "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS": "1" if name == "on" else "<UNSET>",
+            "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1", "DS4_GLM_TP_DEBUG": "1",
+            "DS4_LOCK_EXPECTED_DEV_INO": arm.get("environment_receipt", {}).get(
+                "values", {}).get("DS4_LOCK_EXPECTED_DEV_INO"),
+            "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
+            "DS4_TOKEN_TIMING_LOG": "1",
+        }
+        if (not re.fullmatch(r"[0-9]+:[0-9]+", environment_values["DS4_LOCK_EXPECTED_DEV_INO"] or "") or
+                environment_values["DS4_LOCK_EXPECTED_DEV_INO"] !=
+                stat_identity(Path("/run/user/1000/ds4-engine.lock"))):
+            raise ValueError(f"{pair}: {name} engine-lock environment identity is stale")
+        canonical_environment = b"".join(
+            key.encode("ascii") + b"=" + environment_values[key].encode("ascii") + b"\n"
+            for key in environment_names
+        )
+        expected_environment_receipt = {
+            "allowlist": environment_names,
+            "values": environment_values,
+            "canonical_sha256": sha256_bytes(canonical_environment),
+        }
+        if (arm.get("environment_receipt") != expected_environment_receipt or
+                arm.get("environment_sha256") != expected_environment_receipt["canonical_sha256"]):
+            raise ValueError(f"{pair}: {name} canonical environment is invalid")
+        warm_counts = dispatch_counts(pair / name / "warm.dispatch-counts")
+        measured_counts = dispatch_counts(pair / name / "measured.dispatch-counts")
         mapping_markers = cmd_log.count("direct expert-slot arena mapping enabled")
         admission_markers = cmd_log.count("direct expert-slot hit layer=")
         dispatch_markers = cmd_log.count("direct expert-slot dispatch layer=")
@@ -456,22 +545,17 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
                 arm.get("warm_dispatch_delta") != warm_counts[1] - warm_counts[0] or
                 arm.get("measured_dispatch_delta") != measured_counts[1] - measured_counts[0]):
             raise ValueError(f"{pair}: {name} direct-path marker claims are inconsistent")
+        validate_dispatch_chain(name, warm_counts, measured_counts, dispatch_markers)
         fault_re = re.compile(
             r"FATAL|CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|"
             r"Out of memory|NVRM.*Xid", re.I,
         )
         if arm.get("fault_markers") != len(fault_re.findall(cmd_log + "\n" + main_log + "\n" + kernel_log)):
             raise ValueError(f"{pair}: {name} fault-marker claim is inconsistent")
-        if ("memory_swap_max=0" not in main_log or
-                re.search(r"cgroup_final .*swap_current_bytes=0 .*oom_kill 0", main_log) is None):
-            raise ValueError(f"{pair}: {name} cgroup safety receipt is invalid")
-        sample_values = [
-            int(match.group(1)) / 1_048_576
-            for match in re.finditer(r"mem_avail_kb=(\d+)",
-                                     (crash / "samples.log").read_text(encoding="utf-8"))
-        ]
-        if not sample_values or min(sample_values) < 10.0:
-            raise ValueError(f"{pair}: {name} memory evidence crossed the safety floor")
+        validate_cgroup_safety(main_log)
+        validate_memory_samples(
+            (crash / "samples.log").read_text(encoding="utf-8"), main_log,
+        )
         preflight_raw, preflight = strict_json(pair / name / "memory-preflight.json")
         if (preflight.get("pass") is not True or preflight.get("required_gib") != 110.0 or
                 not isinstance(preflight.get("mem_available_gib"), (int, float)) or
@@ -479,11 +563,13 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
             raise ValueError(f"{pair}: {name} memory preflight did not pass")
         phase_records: dict[str, tuple[dict[str, Any], dict[str, Any], bytes]] = {}
         for phase in ("warm", "measured"):
-            response_raw, response = strict_json(pair / name / f"{phase}.json")
+            response_path = pair / name / f"{phase}.json"
+            response_raw, response = strict_json(response_path)
             _, token_record = strict_json(pair / name / f"{phase}.tokens.json")
             if (set(token_record) != TOKEN_RECORD_KEYS or token_record.get("schema_version") != 1 or
                     token_record.get("label") != f"{name}-{phase}" or
                     token_record.get("response_sha256") != sha256_bytes(response_raw) or
+                    token_record.get("response_identity") != file_identity(response_path) or
                     token_record.get("reference_token_count") != 129 or
                     token_record.get("tokenizer_sha256") != frozen["artifacts"]["tokenizer_sha256"]):
                 raise ValueError(f"{pair}: {name} {phase} response/token record is invalid")

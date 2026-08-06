@@ -183,8 +183,61 @@ class W3PerformanceCampaignTests(unittest.TestCase):
             'stored checks differ from recomputed runtime evidence',
             'response-bound timing receipt is invalid',
             '__name__ != "__main__"',
+            'warm[1] == measured[0]',
+            'measured[1] == final',
+            'oom_group_kill (\\d+)',
+            'right - left <= 0.6',
+            'memory samples do not cover execution',
+            'canonical environment is invalid',
         ):
             self.assertIn(contract, source)
+
+    def test_dispatch_chain_mutations_fail(self):
+        SCORER_MODULE.validate_dispatch_chain("off", (0, 0), (0, 0), 0)
+        SCORER_MODULE.validate_dispatch_chain("on", (0, 2), (2, 4), 4)
+        for arm, warm, measured, final in (
+            ("on", (0, 1), (1, 2), 1),
+            ("on", (0, 0), (0, 1), 1),
+            ("off", (0, 1), (1, 1), 1),
+            ("on", (2, 1), (1, 2), 2),
+        ):
+            with self.subTest(arm=arm, warm=warm, measured=measured, final=final):
+                with self.assertRaises(ValueError):
+                    SCORER_MODULE.validate_dispatch_chain(arm, warm, measured, final)
+
+    def test_cgroup_event_mutations_fail(self):
+        prefix = "2026-08-06T00:00:00.000000000+00:00 cgroup_verified memory_swap_max=0\n"
+        clean = (
+            prefix + "2026-08-06T00:01:00.000000000+00:00 cgroup_final "
+            "current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
+            "events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n"
+        )
+        SCORER_MODULE.validate_cgroup_safety(clean)
+        for field in ("max", "oom", "oom_kill", "oom_group_kill"):
+            mutated = clean.replace(f"{field} 0", f"{field} 1")
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                SCORER_MODULE.validate_cgroup_safety(mutated)
+
+    def test_memory_sample_coverage_mutations_fail(self):
+        main = (
+            "2026-08-06T00:00:00.000000000+00:00 executed_candidate_verified x\n"
+            "2026-08-06T00:00:01.000000000+00:00 executed candidate exited; x\n"
+        )
+        def row(offset: str, available: int = 20_971_520) -> str:
+            return (f"2026-08-06T00:00:{offset}+00:00 mem_avail_kb={available} "
+                    "eng_rss_kb=1 read_bytes=1 cgroup_current_bytes=1 "
+                    "cgroup_peak_bytes=1 cgroup_swap_current_bytes=0")
+        clean = "\n".join((row("00.100000000"), row("00.400000000"),
+                            row("00.700000000"), row("01.000000000"))) + "\n"
+        self.assertEqual(SCORER_MODULE.validate_memory_samples(clean, main), 20.0)
+        for mutated in (
+            row("00.100000000") + "\n",
+            clean.replace(row("00.400000000") + "\n", ""),
+            clean.replace("cgroup_swap_current_bytes=0", "cgroup_swap_current_bytes=1", 1),
+            clean + "malformed\n",
+        ):
+            with self.assertRaises(ValueError):
+                SCORER_MODULE.validate_memory_samples(mutated, main)
 
     def test_mutations_fail_closed(self):
         mutations = ("short", "schedule", "fixture", "digest", "safety", "nan")
