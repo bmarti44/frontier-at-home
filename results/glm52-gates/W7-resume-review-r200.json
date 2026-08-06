@@ -1,0 +1,62 @@
+{
+  "candidate_hash": "2f927c89578cee93b4a7622c673901fbe5373eb4",
+  "review_round": 200,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 87,
+      "critical": [],
+      "high": [
+        {
+          "id": "W7-R200-H1-FROZEN-FIXTURE-COMMITMENT-IS-WIRE-ONLY",
+          "status": "OPEN",
+          "evidence": "Exact wire bytes are frozen, but synthetic caller-selected canonical/live token vectors and uniformly interpolated byte offsets still pass.",
+          "affected_gate": "W7 content-bound confirmation and production-tokenizer lineage",
+          "reproduction": "Coherently replace canonical/live vectors, offsets, lineage, inventory and restored hashes while retaining frozen wire bytes.",
+          "acceptance_test": "Freeze exact tokenizer identity, canonical/live vectors, offsets, frontiers and inventory recipe for all 17 variants and regenerate them in the scorer."
+        }
+      ],
+      "medium": [
+        {
+          "id": "W7-R200-M2-ATTEMPT-ID-IS-CALLER-RENAMEABLE",
+          "status": "OPEN",
+          "evidence": "A caller can coherently rename attempt_id and invocation IDs; only the first 16 digest characters are used.",
+          "acceptance_test": "Derive attempt identity from verified immutable inputs and use the complete digest."
+        }
+      ],
+      "low": [],
+      "verdict": "DO_NOT_AUTHORIZE_COMPILED_UNCHANGED-ENGINE_RED"
+    },
+    "Singer": {
+      "score_0_to_100": 97,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [
+        {
+          "id": "ADV-W7-200-L08",
+          "status": "OPEN",
+          "evidence": "Only the first 16 hexadecimal attempt-id characters enter invocation IDs.",
+          "acceptance_test": "Use the complete attempt ID."
+        }
+      ],
+      "prior_issue_status": [
+        {"id": "ADV-W7-197-M03", "status": "FIXED"},
+        {"id": "ADV-W7-199-M06", "status": "FIXED"},
+        {"id": "ADV-W7-199-M07", "status": "FIXED"},
+        {"id": "ADV-W7-198-H06", "status": "FIXED"},
+        {"id": "ADV-W7-196-H02", "status": "FIXED"},
+        {"id": "ADV-W7-196-H04", "status": "FIXED"},
+        {"id": "ADV-W7-198-H07", "status": "FIXED"},
+        {"id": "ADV-W7-198-M05", "status": "FIXED"}
+      ],
+      "verdict": "AUTHORIZE_COMPILED_UNCHANGED_ENGINE_RED_ONLY"
+    }
+  },
+  "root_disposition": {
+    "blocking": ["W7-R200-H1-FROZEN-FIXTURE-COMMITMENT-IS-WIRE-ONLY"],
+    "compiled_red_authorized": false,
+    "next_candidate": 6,
+    "convergence": "Candidate 5 closed Singer's concrete no-divergence exploit but Nash generalized the same fixture-binding class to production tokenization. This is the first non-shrinking candidate; candidate 6 remains autonomous under the convergence rule.",
+    "scope": "Freeze the complete production-tokenized variant pool and derive full attempt identity from immutable inputs. No engine changes."
+  }
+}
