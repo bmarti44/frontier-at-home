@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_HELDOUT_RUNTIME_FAILURE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "a964bd67ad0f623e2a5940a0e9443f1b8b22f047",
+  "candidate_tree": "59f54ed05d316715a1eb17e4035e717deec0a138",
+  "held_out_values_opened": true,
+  "scientific_metrics_inspected_by_root_agent": false,
+  "terminal_state": "FAILED",
+  "failure_type": "RuntimeError",
+  "failure_message": "contained baseline runtime attestation differs",
+  "progress_at_failure": {
+    "complete_requests": 9,
+    "total_requests": 20,
+    "request_10_control_before_complete": true,
+    "request_10_diagnostic_engine_completed": true,
+    "request_10_diagnostic_runtime_attestation_accepted": false,
+    "preserved_runtime_log_directories": 36
+  },
+  "observed_cause": {
+    "engine_exit_code": 0,
+    "safe_run_end_marker": "SAFE_RUN end rc=0 killed=no",
+    "candidate_identity_marker_present": true,
+    "environment_identity_marker_present": true,
+    "verified_alive_marker_present": true,
+    "fatal_marker_present": false,
+    "kernel_log_literal_empty_contract_passed": false,
+    "kernel_log_lines": 5,
+    "kernel_log_content_class": "Unrelated AppArmor DENIED audit records from snap.firmware-updater.firmware-notifier reading /proc/sys/vm/max_map_count",
+    "kernel_log_contains_cuda_xid_oom_or_nvrm_fault": false,
+    "deterministic_failing_assertion": "scripts/81_glm_union_baseline.py:2852 accepts only NO_KERNEL_FAULTS or -- No entries --, while the completed safe-run kernel artifact contained unrelated AppArmor audit records"
+  },
+  "local_evidence": {
+    "failed_result_root": "/home/bmarti44/.local/state/glm52-p1-baseline-heldout-v1",
+    "failed_tree_files": 938,
+    "failed_tree_bytes": 68986105,
+    "failed_tree_manifest_sha256": "63ff0ccbf57fec6713a0a2393851c6cb702ec7b101ef9ede6bc53547299bbb46",
+    "ledger_sha256": "0e05bd1bb6054910d4fbe7bdcd2307b420a4d8ae6a262306981f322991de503e",
+    "attempt_sha256": "c7b12192d4a4230d4b3284018ebdd0f7d21dccbd683caceefd46ad7ae07115f2",
+    "root_reservation_sha256": "1aeb8b334abcd678a6096038d5d4f5cc68fa135246657228713c44d3753e8e4a",
+    "failed_runtime_log": "/home/bmarti44/.local/state/glm52-crashlog/20260805-205926-p1-baseline-diagnostic-r047-999004",
+    "cmd_log_sha256": "574af6cd3430f54491d142e8fe083f0707c77f0eb1856f3693f4a873624bc45c",
+    "kernel_log_sha256": "3d6fcae3e72287f39353f3cd26e1f21f622f93082321ef4adec044dd4b2a5a59",
+    "main_log_sha256": "e26fdae28293f5cdc19b8d6be7a5733713157668423d17497bf5d9c16f7e52f6",
+    "samples_log_sha256": "e87d00832ca435234dcfc1f887e6eb948414452e95ff36a85893f38e76419928"
+  },
+  "root_authority": {
+    "permanent_reservation_present": true,
+    "candidate_hash": "a964bd67ad0f623e2a5940a0e9443f1b8b22f047",
+    "reservation_sha256": "fae6114402d5cb1a0168697f7c7e122a5f6dc7e97e071dca504d9fd3a4431939",
+    "output_sha256": "6068834349ad1297e206b94375c40312dbeb8407d6afa68d73e06b3220ad9448",
+    "same_gate_rerun_permitted": false
+  },
+  "safety": {
+    "ds4_server_processes_after_failure": 0,
+    "controller_processes_after_failure": 0,
+    "mem_available_kib_after_failure": 120813188,
+    "swap_used_kib_after_failure": 770928,
+    "oom_observed": false,
+    "xid_observed": false,
+    "orphan_process_observed": false
+  },
+  "bounded_fix_candidate_not_yet_created": true,
+  "disposition_pending": "Review must decide whether the permanent one-shot makes this gate terminal NO_RESULT or whether recovery requires a newly frozen replacement split and separately root-authorized gate namespace. The existing held-out split must not be rerun or rescored as a complete 20-case result."
+}
