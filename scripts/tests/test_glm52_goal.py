@@ -99,114 +99,120 @@ def w7_resume_record():
     }
 
     def regime(regime_id, live, common, selected, prompt):
+        selection_seed = hashlib.sha256(
+            bytes.fromhex(confirmation_seed) + regime_id.encode("ascii")
+        ).hexdigest()
+        if regime_id == "primary":
+            variant = "primary-fixed"
+        else:
+            base = int(selection_seed[:4], 16) % 8
+            variant = base if regime_id == "confirmation-1" else 8 + base
         tokens = [(index * 17 + len(regime_id)) % 154880 for index in range(prompt)]
-        token_hash = _i32_sha256(tokens)
         wire_chunks = [f"{token},".encode("utf-8") for token in tokens]
+        if regime_id != "primary":
+            wire_chunks[-1] += f"\nW7-CONFIRMATION-VARIANT-{variant:02d}".encode("ascii")
         wire_bytes = b"".join(wire_chunks)
         wire_prefix_bytes = [0]
         for chunk in wire_chunks:
             wire_prefix_bytes.append(wire_prefix_bytes[-1] + len(chunk))
         payload = hashlib.sha256(f"payload:{regime_id}:{selected}".encode()).hexdigest()
+
+        def inventory_item(record_id, token_length, inode, *, valid=True,
+                           wire_match=True, lineage_match=True, payload_bytes=4096):
+            prefix_hash = _i32_sha256(tokens[:token_length])
+            return {
+                "record_id": record_id,
+                "path_sha256": hashlib.sha256(f"{regime_id}:{record_id}".encode()).hexdigest(),
+                "device": 259, "inode": inode, "size": payload_bytes + 256,
+                "mtime_ns": inode * 10, "payload_bytes": payload_bytes,
+                "token_length": token_length,
+                "rendered_prefix_bytes": wire_prefix_bytes[token_length],
+                "rendered_prefix_sha256": (
+                    hashlib.sha256(wire_bytes[:wire_prefix_bytes[token_length]]).hexdigest()
+                    if wire_match else "7" * 64
+                ),
+                "token_sha256": prefix_hash,
+                "lineage_sha256": prefix_hash if lineage_match else "9" * 64,
+                "payload_sha256": (
+                    payload if record_id == "selected" else
+                    hashlib.sha256(f"{regime_id}:{record_id}:payload".encode()).hexdigest()
+                ),
+                "structurally_valid": valid,
+                "matches_wire_prefix": wire_match,
+                "matches_lineage": lineage_match,
+            }
+
         inventory = [
-            {
-                "record_id": "older",
-                "path_sha256": hashlib.sha256(f"{regime_id}:older".encode()).hexdigest(),
-                "device": 259, "inode": 1001, "size": 4096, "mtime_ns": 10,
-                "token_length": selected - 4,
-                "rendered_prefix_bytes": wire_prefix_bytes[selected - 4],
-                "rendered_prefix_sha256": hashlib.sha256(
-                    wire_bytes[:wire_prefix_bytes[selected - 4]]
-                ).hexdigest(),
-                "token_sha256": _i32_sha256(tokens[:selected - 4]),
-                "lineage_sha256": token_hash,
-                "payload_sha256": hashlib.sha256(f"{regime_id}:old-payload".encode()).hexdigest(),
-                "structurally_valid": True, "matches_wire_prefix": True,
-                "matches_lineage": True,
-            },
-            {
-                "record_id": "selected",
-                "path_sha256": hashlib.sha256(f"{regime_id}:selected".encode()).hexdigest(),
-                "device": 259, "inode": 1002, "size": 4096, "mtime_ns": 20,
-                "token_length": selected,
-                "rendered_prefix_bytes": wire_prefix_bytes[selected],
-                "rendered_prefix_sha256": hashlib.sha256(
-                    wire_bytes[:wire_prefix_bytes[selected]]
-                ).hexdigest(),
-                "token_sha256": _i32_sha256(tokens[:selected]),
-                "lineage_sha256": token_hash, "payload_sha256": payload,
-                "structurally_valid": True, "matches_wire_prefix": True,
-                "matches_lineage": True,
-            },
-            {
-                "record_id": "wrong-lineage",
-                "path_sha256": hashlib.sha256(f"{regime_id}:wrong".encode()).hexdigest(),
-                "device": 259, "inode": 1003, "size": 4096, "mtime_ns": 30,
-                "token_length": selected + 1,
-                "rendered_prefix_bytes": wire_prefix_bytes[selected + 1],
-                "rendered_prefix_sha256": hashlib.sha256(
-                    wire_bytes[:wire_prefix_bytes[selected + 1]]
-                ).hexdigest(),
-                "token_sha256": _i32_sha256(tokens[:selected + 1]),
-                "lineage_sha256": "9" * 64,
-                "payload_sha256": hashlib.sha256(f"{regime_id}:wrong-payload".encode()).hexdigest(),
-                "structurally_valid": True, "matches_wire_prefix": True,
-                "matches_lineage": False,
-            },
-            {
-                "record_id": "malformed",
-                "path_sha256": hashlib.sha256(f"{regime_id}:malformed".encode()).hexdigest(),
-                "device": 259, "inode": 1004, "size": 17, "mtime_ns": 40,
-                "token_length": selected + 2,
-                "rendered_prefix_bytes": wire_prefix_bytes[selected + 2],
-                "rendered_prefix_sha256": hashlib.sha256(
-                    wire_bytes[:wire_prefix_bytes[selected + 2]]
-                ).hexdigest(),
-                "token_sha256": _i32_sha256(tokens[:selected + 2]),
-                "lineage_sha256": token_hash,
-                "payload_sha256": hashlib.sha256(f"{regime_id}:bad-payload".encode()).hexdigest(),
-                "structurally_valid": False, "matches_wire_prefix": True,
-                "matches_lineage": True,
-            },
+            inventory_item("older", selected - 4, 1001),
+            inventory_item("selected", selected, 1002),
+            inventory_item("wrong-lineage", selected + 1, 1003, lineage_match=False),
+            inventory_item("malformed", selected + 2, 1004, valid=False, payload_bytes=0),
         ]
 
-        def event(seq, kind, *, record_id=None, checkpoint_tokens=None,
-                  payload_sha256=None, start=None, end=None, byte_count=0,
-                  status="ok"):
+        def event(invocation_id, seq, kind, *, record_id=None,
+                  checkpoint_tokens=None, payload_sha256=None, start=None,
+                  end=None, byte_count=0, status="ok"):
             return {
-                "seq": seq, "invocation_id": f"invoke:{regime_id}", "kind": kind,
+                "seq": seq, "invocation_id": invocation_id, "kind": kind,
                 "record_id": record_id, "checkpoint_tokens": checkpoint_tokens,
                 "payload_sha256": payload_sha256, "start": start, "end": end,
                 "byte_count": byte_count, "status": status,
             }
 
+        indexer_layers = [0, 1, 2] + list(range(6, 78, 4))
+
         def state_manifest():
+            config = {
+                "normal_layers": 78, "vocab": 154880, "kv_lora": 512,
+                "rope": 64, "indexer_dim": 128, "full_live": 0,
+                "compact_live": prompt, "indexer_layers": indexer_layers,
+            }
+            members = [
+                ("header", "u32", [13]),
+                ("checkpoint_tokens", "u32", [prompt]),
+                ("logits", "f32", [154880]),
+                ("compact_live_rows", "u32", [78]),
+                ("index_live_rows", "u32", [78]),
+            ]
+            for layer in range(78):
+                members.extend([
+                    (f"layer.{layer:02d}.kv_lora", "f32", [prompt, 512]),
+                    (f"layer.{layer:02d}.k_rope", "f32", [prompt, 64]),
+                ])
+                if layer in indexer_layers:
+                    members.append(
+                        (f"layer.{layer:02d}.indexer_key", "f32", [prompt, 128])
+                    )
             sections = []
             offset = 0
-            for name in ["header"] + [f"layer.{layer:02d}" for layer in range(75)]:
-                size = 32 if name == "header" else 64
+            for name, dtype, shape in members:
+                count = math.prod(shape)
+                size = count * 4
                 sections.append({
-                    "name": name, "offset": offset, "byte_count": size,
+                    "name": name, "dtype": dtype, "shape": shape,
+                    "offset": offset, "byte_count": size,
                     "content_sha256": hashlib.sha256(
                         f"{regime_id}:state:{name}".encode()
                     ).hexdigest(),
                 })
                 offset += size
-            blob_hash = hashlib.sha256(
+            root = hashlib.sha256(
                 "".join(item["content_sha256"] for item in sections).encode()
             ).hexdigest()
             return {
-                "format": "ds4-glm-session-canonical-v1", "total_bytes": offset,
-                "content_sha256": blob_hash, "token_lineage_sha256": token_hash,
-                "logical_frontiers": [prompt] * 75, "sections": sections,
+                "format": "ds4-glm-session-canonical-v2", "config": config,
+                "total_bytes": offset, "content_sha256": root,
+                "token_lineage_sha256": _i32_sha256(tokens),
+                "logical_frontiers": [prompt] * 78, "sections": sections,
             }
 
-        def safety():
+        def safety(case_id):
             return {
                 "wrapper_path": "results/glm52-gates/harness/glm_safe_run.sh",
                 "wrapper_sha256": "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
                 "lock_path": "/run/dsv4/inference.lock", "lock_owner_uid": 0,
                 "lock_mode_octal": "0660", "lock_acquired": True,
-                "cgroup_path": "/sys/fs/cgroup/system.slice/glm52-w7.scope",
+                "cgroup_path": f"/sys/fs/cgroup/system.slice/glm52-w7-{regime_id}-{case_id}.scope",
                 "cgroup_identity_sha256": "8" * 64,
                 "start_available_gib": 112.0, "minimum_available_gib": 12.0,
                 "bare_engine_detected": False, "terminal_rc": 0,
@@ -215,31 +221,44 @@ def w7_resume_record():
                 "survivor_pids": [],
             }
 
+        live_base = tokens[:common] + [
+            (tokens[index] + 1) % 154880 for index in range(common, live)
+        ]
+
         def case(case_id):
             family, flag, mutation = contracts[case_id]
+            invocation_id = f"invoke:{regime_id}:{case_id}"
+            live_ids = [] if case_id == "cold-primary" else (
+                tokens if case_id in {"exact-off", "exact-on"} else live_base
+            )
             row = {
-                "case_id": case_id, "invocation_id": f"invoke:{regime_id}",
+                "case_id": case_id, "invocation_id": invocation_id,
                 "model_family": family, "flag_value": flag,
                 "fixture_mutation": mutation,
                 "wire_text_utf8_b64": base64.b64encode(wire_bytes).decode("ascii"),
                 "wire_token_end_offsets_zlib_b64": _compressed_i32(wire_prefix_bytes[1:]),
                 "canonical_token_ids_zlib_b64": _compressed_i32(tokens),
+                "live_token_count": len(live_ids),
+                "live_token_ids_zlib_b64": _compressed_i32(live_ids) if live_ids else None,
                 "restored_checkpoint_token_ids_zlib_b64": None,
-                "sync_tokens_sha256": token_hash, "final_lineage_sha256": token_hash,
-                "live_tokens": live, "common_tokens": common,
+                "sync_tokens_sha256": _i32_sha256(tokens),
+                "final_lineage_sha256": _i32_sha256(tokens),
                 "prompt_tokens": prompt, "checkpoint_inventory": [], "events": [],
                 "output_token_ids": None, "logits_f32_zlib_b64": None,
-                "state_manifest": None, "safety": safety(),
+                "state_manifest": None, "safety": safety(case_id),
             }
-            if case_id in {"cold-primary", "strict-primary", "candidate-primary"}:
+            if case_id in {
+                "cold-primary", "strict-primary", "candidate-primary",
+                "exact-off", "exact-on",
+            }:
                 row["output_token_ids"] = list(range(64))
                 row["logits_f32_zlib_b64"] = logits
                 row["state_manifest"] = state_manifest()
             if case_id == "cold-primary":
-                row["live_tokens"] = 0
-                row["common_tokens"] = 0
                 row["events"] = [
-                    event(0, "reset"), event(1, "evaluate", start=0, end=prompt),
+                    event(invocation_id, 0, "reset"),
+                    event(invocation_id, 1, "evaluate", start=0, end=prompt - 2),
+                    event(invocation_id, 2, "evaluate", start=prompt - 2, end=prompt),
                 ]
             elif case_id in {
                 "strict-primary", "candidate-primary", "flag-zero",
@@ -248,95 +267,118 @@ def w7_resume_record():
                 row["checkpoint_inventory"] = copy.deepcopy(inventory)
                 row["restored_checkpoint_token_ids_zlib_b64"] = _compressed_i32(tokens[:selected])
                 events = [
-                    event(index, "matcher_candidate", record_id=item["record_id"],
+                    event(invocation_id, index, "matcher_candidate",
+                          record_id=item["record_id"],
                           checkpoint_tokens=item["token_length"],
                           payload_sha256=item["payload_sha256"], status="observed")
                     for index, item in enumerate(inventory)
                 ]
                 events.extend([
-                    event(4, "matcher_selected", record_id="selected",
+                    event(invocation_id, 4, "matcher_selected", record_id="selected",
                           checkpoint_tokens=selected, payload_sha256=payload),
-                    event(5, "payload_read", record_id="selected",
+                    event(invocation_id, 5, "payload_read", record_id="selected",
                           checkpoint_tokens=selected, payload_sha256=payload,
-                          byte_count=4096),
+                          byte_count=inventory[1]["payload_bytes"]),
                 ])
                 if case_id != "candidate-primary":
                     events.extend([
-                        event(6, "reset"),
-                        event(7, "evaluate", start=0, end=prompt),
+                        event(invocation_id, 6, "reset"),
+                        event(invocation_id, 7, "evaluate", start=0, end=prompt - 2),
+                        event(invocation_id, 8, "evaluate", start=prompt - 2, end=prompt),
                     ])
                 else:
-                    events.append(event(6, "evaluate", start=selected, end=prompt))
+                    events.extend([
+                        event(invocation_id, 6, "evaluate", start=selected, end=prompt - 1),
+                        event(invocation_id, 7, "evaluate", start=prompt - 1, end=prompt),
+                    ])
                 row["events"] = events
             elif case_id.startswith("malformed-"):
                 row["checkpoint_inventory"] = [copy.deepcopy(inventory[3])]
-                item = row["checkpoint_inventory"][0]
-                row["events"] = [
-                    event(0, "matcher_candidate", record_id=item["record_id"],
-                          checkpoint_tokens=item["token_length"],
-                          payload_sha256=item["payload_sha256"], status="observed")
-                ]
             elif case_id.startswith("wrong-lineage-"):
                 row["checkpoint_inventory"] = [copy.deepcopy(inventory[2])]
+            elif case_id.startswith("divergence-"):
+                item = inventory_item("selected", selected, 1002, wire_match=False)
+                row["checkpoint_inventory"] = [item]
+            elif case_id.startswith("shorten-"):
+                row["checkpoint_inventory"] = [
+                    inventory_item("selected", common + 1, 1002)
+                ]
+            if row["checkpoint_inventory"] and not row["events"]:
                 item = row["checkpoint_inventory"][0]
                 row["events"] = [
-                    event(0, "matcher_candidate", record_id=item["record_id"],
+                    event(invocation_id, 0, "matcher_candidate",
+                          record_id=item["record_id"],
                           checkpoint_tokens=item["token_length"],
                           payload_sha256=item["payload_sha256"], status="observed")
                 ]
-            elif case_id.startswith("divergence-"):
-                item = copy.deepcopy(inventory[1])
-                item["rendered_prefix_sha256"] = "7" * 64
-                item["matches_wire_prefix"] = False
-                row["checkpoint_inventory"] = [item]
-                row["events"] = [
-                    event(0, "matcher_candidate", record_id=item["record_id"],
-                          checkpoint_tokens=item["token_length"],
-                          payload_sha256=item["payload_sha256"], status="observed")
-                ]
-            elif case_id.startswith("shorten-"):
-                item = copy.deepcopy(inventory[1])
-                item["token_length"] = common + 1
-                item["rendered_prefix_bytes"] = wire_prefix_bytes[common + 1]
-                item["rendered_prefix_sha256"] = hashlib.sha256(
-                    wire_bytes[:wire_prefix_bytes[common + 1]]
-                ).hexdigest()
-                item["token_sha256"] = _i32_sha256(tokens[:common + 1])
-                row["checkpoint_inventory"] = [item]
-                row["events"] = [
-                    event(0, "matcher_candidate", record_id=item["record_id"],
-                          checkpoint_tokens=item["token_length"],
-                          payload_sha256=item["payload_sha256"], status="observed")
-                ]
-            elif case_id in {"exact-off", "exact-on"}:
-                row["live_tokens"] = prompt
-                row["common_tokens"] = prompt
             return row
 
+        cases = [case(case_id) for case_id in contracts]
+        fixture_material = {
+            "fixture_variant": variant,
+            "cases": [
+                {
+                    key: row[key] for key in (
+                        "case_id", "model_family", "flag_value", "fixture_mutation",
+                        "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+                        "canonical_token_ids_zlib_b64", "live_token_count",
+                        "live_token_ids_zlib_b64", "prompt_tokens",
+                        "checkpoint_inventory",
+                    )
+                }
+                for row in cases
+            ],
+        }
+        fixture_sha = hashlib.sha256(
+            json.dumps(fixture_material, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
         return {
-            "regime_id": regime_id,
-            "fixture_sha256": hashlib.sha256(f"fixture:{regime_id}".encode()).hexdigest(),
-            "selection_seed_sha256": hashlib.sha256(
-                bytes.fromhex(confirmation_seed) + regime_id.encode("ascii")
-            ).hexdigest(),
-            "cases": [case(case_id) for case_id in contracts],
+            "regime_id": regime_id, "fixture_variant": variant,
+            "fixture_sha256": fixture_sha,
+            "selection_seed_sha256": selection_seed, "cases": cases,
         }
 
+    regimes = [
+        regime("primary", 5063, 5045, 5044, 5066),
+        regime("confirmation-1", 137, 111, 109, 143),
+        regime("confirmation-2", 271, 240, 238, 284),
+    ]
     return {
         "record_type": "w7_resume_observation",
         "gate": "W7",
         "binary_sha256": "a" * 64,
         "configuration_sha256": "b" * 64,
-        "fixture_sha256": "c" * 64,
+        "fixture_sha256": hashlib.sha256(
+            "".join(item["fixture_sha256"] for item in regimes).encode()
+        ).hexdigest(),
         "guard_off_present": False,
         "confirmation_seed_sha256": confirmation_seed,
-        "regimes": [
-            regime("primary", 5063, 5045, 5044, 5066),
-            regime("confirmation-1", 137, 111, 109, 143),
-            regime("confirmation-2", 271, 240, 238, 284),
-        ],
+        "regimes": regimes,
         "failures": [],
     }
+
+
+def _rebind_w7_fixture_hashes(record):
+    fixture_keys = (
+        "case_id", "model_family", "flag_value", "fixture_mutation",
+        "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+        "canonical_token_ids_zlib_b64", "live_token_count",
+        "live_token_ids_zlib_b64", "prompt_tokens", "checkpoint_inventory",
+    )
+    for regime in record["regimes"]:
+        material = {
+            "fixture_variant": regime["fixture_variant"],
+            "cases": [
+                {key: row[key] for key in fixture_keys}
+                for row in regime["cases"]
+            ],
+        }
+        regime["fixture_sha256"] = hashlib.sha256(
+            json.dumps(material, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    record["fixture_sha256"] = hashlib.sha256(
+        "".join(item["fixture_sha256"] for item in record["regimes"]).encode()
+    ).hexdigest()
 
 
 def w11_record(hashes=None):
@@ -1057,15 +1099,17 @@ class FormulaTests(unittest.TestCase):
             if case["case_id"] == "candidate-primary"
         )
         # A summary-only scorer cannot see this real cold reset/evaluation.
+        invocation_id = candidate["invocation_id"]
+        sequence = len(candidate["events"])
         candidate["events"].extend([
             {
-                "seq": 7, "invocation_id": "invoke:primary", "kind": "reset",
+                "seq": sequence, "invocation_id": invocation_id, "kind": "reset",
                 "record_id": None, "checkpoint_tokens": None,
                 "payload_sha256": None, "start": None, "end": None,
                 "byte_count": 0, "status": "ok",
             },
             {
-                "seq": 8, "invocation_id": "invoke:primary", "kind": "evaluate",
+                "seq": sequence + 1, "invocation_id": invocation_id, "kind": "evaluate",
                 "record_id": None, "checkpoint_tokens": None,
                 "payload_sha256": None, "start": 0, "end": 5066,
                 "byte_count": 0, "status": "ok",
@@ -1108,6 +1152,7 @@ class FormulaTests(unittest.TestCase):
             with self.subTest(name=name):
                 record = w7_resume_record()
                 mutate(record)
+                _rebind_w7_fixture_hashes(record)
                 try:
                     result = self.goal.score_registered_gate(
                         "W7", "w7.resume.v1", [record]
@@ -1175,6 +1220,107 @@ class FormulaTests(unittest.TestCase):
         next(case for case in flag_empty["regimes"][0]["cases"]
              if case["case_id"] == "flag-empty")["flag_value"] = "unset"
         mutations.append(flag_empty)
+
+        for mutation in mutations:
+            try:
+                result = self.goal.score_registered_gate("W7", "w7.resume.v1", [mutation])
+            except ValueError:
+                continue
+            self.assertEqual(result["verdict"], "FAIL")
+
+    def test_w7_resume_scorer_rejects_partial_reads_ambiguous_selection_and_live_lineage(self):
+        mutations = []
+        for byte_count in (1, 4095, 4097):
+            record = w7_resume_record()
+            candidate = next(case for case in record["regimes"][0]["cases"]
+                             if case["case_id"] == "candidate-primary")
+            next(event for event in candidate["events"]
+                 if event["kind"] == "payload_read")["byte_count"] = byte_count
+            mutations.append(record)
+
+        ambiguous = w7_resume_record()
+        candidate = next(case for case in ambiguous["regimes"][0]["cases"]
+                         if case["case_id"] == "candidate-primary")
+        older, selected = candidate["checkpoint_inventory"][:2]
+        for field in (
+            "token_length", "rendered_prefix_bytes", "rendered_prefix_sha256",
+            "token_sha256", "lineage_sha256", "matches_wire_prefix",
+            "matches_lineage",
+        ):
+            older[field] = selected[field]
+        candidate["events"][0]["checkpoint_tokens"] = selected["token_length"]
+        _rebind_w7_fixture_hashes(ambiguous)
+        mutations.append(ambiguous)
+
+        wrong_live = w7_resume_record()
+        candidate = next(case for case in wrong_live["regimes"][0]["cases"]
+                         if case["case_id"] == "candidate-primary")
+        count = candidate["live_token_count"]
+        raw = zlib.decompress(base64.b64decode(candidate["live_token_ids_zlib_b64"]))
+        values = list(struct.unpack(f"<{count}i", raw))
+        values[100] = (values[100] + 1) % 154880
+        candidate["live_token_ids_zlib_b64"] = _compressed_i32(values)
+        _rebind_w7_fixture_hashes(wrong_live)
+        mutations.append(wrong_live)
+
+        multiple_reads = w7_resume_record()
+        candidate = next(case for case in multiple_reads["regimes"][0]["cases"]
+                         if case["case_id"] == "candidate-primary")
+        duplicate = copy.deepcopy(next(event for event in candidate["events"]
+                                       if event["kind"] == "payload_read"))
+        candidate["events"].insert(6, duplicate)
+        for index, event in enumerate(candidate["events"]):
+            event["seq"] = index
+        mutations.append(multiple_reads)
+
+        for index, mutation in enumerate(mutations):
+            with self.subTest(index=index):
+                with self.assertRaises(ValueError):
+                    self.goal.score_registered_gate("W7", "w7.resume.v1", [mutation])
+
+    def test_w7_resume_scorer_rejects_eval_gaps_cross_case_reuse_and_replay_drift(self):
+        mutations = []
+        for edit in ("gap", "overlap", "hidden-prefix"):
+            record = w7_resume_record()
+            candidate = next(case for case in record["regimes"][0]["cases"]
+                             if case["case_id"] == "candidate-primary")
+            evaluations = [event for event in candidate["events"]
+                           if event["kind"] == "evaluate"]
+            if edit == "gap":
+                evaluations[1]["start"] += 1
+            elif edit == "overlap":
+                evaluations[1]["start"] -= 1
+            else:
+                evaluations[0]["start"] = 0
+            mutations.append(record)
+
+        reused = w7_resume_record()
+        exact_off = next(case for case in reused["regimes"][0]["cases"]
+                         if case["case_id"] == "exact-off")
+        exact_on = next(case for case in reused["regimes"][0]["cases"]
+                        if case["case_id"] == "exact-on")
+        exact_on["invocation_id"] = exact_off["invocation_id"]
+        mutations.append(reused)
+
+        replay_drift = w7_resume_record()
+        exact_on = next(case for case in replay_drift["regimes"][0]["cases"]
+                        if case["case_id"] == "exact-on")
+        exact_on["output_token_ids"][-1] += 1
+        mutations.append(replay_drift)
+
+        cloned_confirmation = w7_resume_record()
+        source = cloned_confirmation["regimes"][1]
+        target = cloned_confirmation["regimes"][2]
+        fixture_keys = (
+            "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+            "canonical_token_ids_zlib_b64", "live_token_count",
+            "live_token_ids_zlib_b64", "prompt_tokens", "checkpoint_inventory",
+        )
+        for source_case, target_case in zip(source["cases"], target["cases"]):
+            for key in fixture_keys:
+                target_case[key] = copy.deepcopy(source_case[key])
+        _rebind_w7_fixture_hashes(cloned_confirmation)
+        mutations.append(cloned_confirmation)
 
         for mutation in mutations:
             try:
