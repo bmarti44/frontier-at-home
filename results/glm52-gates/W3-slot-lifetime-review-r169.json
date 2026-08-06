@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "1af0eab14c4805b90524f66438b4879b69c518ca",
+  "review_round": 169,
+  "status": "REJECT_BEFORE_EXECUTION",
+  "execution_started": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 90,
+      "critical": [],
+      "high": [
+        {
+          "id": "W3-R169-H1-AMBIENT-AGGREGATOR",
+          "evidence": "Freeze authority, fixture construction, arm validation and final verdict heredocs used ambient python3, allowing PYTHONPATH/sitecustomize to execute before their authority code.",
+          "affected_gate": "W3 contained direct-slot probe",
+          "acceptance_test": "Use the closed env -i /usr/bin/python3 -I -B launcher for every harness Python entrypoint and prove an ambient sitecustomize marker never executes."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "REJECT_BEFORE_EXECUTION"
+    },
+    "Singer": {
+      "score_0_to_100": 96,
+      "critical": [],
+      "high": [],
+      "medium": [
+        {
+          "id": "ADV-W3-R167-M1",
+          "disposition": "DEFERRED",
+          "rationale": "The probe remains eligibility-only; later performance evidence must use actual token IDs and timestamps with N at least 128."
+        }
+      ],
+      "low": [],
+      "verdict": "CLEARED_FOR_CONTAINED_EXECUTION"
+    }
+  },
+  "prior_blocker_status": {
+    "cached_bytecode": "FIXED",
+    "tokenizer_path_reopen": "FIXED",
+    "ambient_aggregator": "OPEN"
+  },
+  "blocking_set_size": 1,
+  "model_or_gpu_started": false
+}
