@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "gate": "W3-production-direct-slot-lifetime",
+  "candidate_hash": "7105621a0ba5b9b0a9e8c9989bc36fb0aea201d5",
+  "review_round": 163,
+  "candidate_number": 1,
+  "status": "FAIL",
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 77,
+    "critical": [],
+    "high": [
+      "W3-R163-H1-DIRECT-ADMISSION-BROADER-THAN-DISPATCH",
+      "W3-R163-H2-LIFETIME-TEST-CANNOT-DETECT-MISSING-WAIT"
+    ],
+    "medium": ["W3-R163-M1-RELEASE-DISCARDS-WAIT-FAILURE"],
+    "verdict": "REJECT_BEFORE_CONTAINED_SERVING_PROBE"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 77,
+    "critical": [],
+    "high": [
+      "ADV-R163-H1-LIFETIME-MUTATION-NONDISCRIMINATING",
+      "ADV-R163-H2-OFFCLASS-DIRECT-ACTIVATION-UNQUALIFIED"
+    ],
+    "medium": ["ADV-R163-M1-LARGE-MAPPING-ACTIVATION-UNPROVEN"],
+    "verdict": "REJECT_CONTAINED_SERVING_PROBE"
+  },
+  "root_disposition": "Reproduced; no model loaded. Candidate 2 is limited to a shared exact GLM layout predicate, a genuinely discriminating skip-wait test, production eviction blocking, and fail-closed release handling."
+}
