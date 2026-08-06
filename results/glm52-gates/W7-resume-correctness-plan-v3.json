@@ -1,0 +1,120 @@
+{
+  "schema_version": 3,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "PREREGISTERED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v2.json",
+  "review_findings_addressed": "results/glm52-gates/W7-resume-review-r197.json",
+  "behavioral_red": "results/glm52-gates/W7-resume-candidate3-red.json",
+  "scorer": {
+    "id": "w7.resume.v1",
+    "implementation": "scripts/glm52_goal.py:_score_w7_resume",
+    "tests": "scripts/tests/test_glm52_goal.py",
+    "authority": "The scorer derives selection, payload reads, reset/invalidation counts, evaluated ranges, and execution mode from a consecutive ordered primitive-event stream. No caller-supplied verdict, mode, eligibility, selected payload, reset count, or evaluated range exists in the schema."
+  },
+  "regimes": {
+    "required": [
+      "primary",
+      "confirmation-1",
+      "confirmation-2"
+    ],
+    "primary": {
+      "live_tokens": 5063,
+      "common_tokens": 5045,
+      "selected_checkpoint_tokens": 5044,
+      "prompt_tokens": 5066,
+      "compared_f32_logits": 154880,
+      "generated_tokens": 64
+    },
+    "confirmation": "After candidate freeze, two distinct fixtures and their selection hashes are derived from one fresh public-randomness digest. Both must satisfy the complete primary, guard, state, numerical, and containment contract."
+  },
+  "checkpoint_inventory": {
+    "fields": [
+      "record_id",
+      "path_sha256",
+      "device",
+      "inode",
+      "size",
+      "mtime_ns",
+      "token_length",
+      "rendered_prefix_bytes",
+      "rendered_prefix_sha256",
+      "token_sha256",
+      "lineage_sha256",
+      "payload_sha256",
+      "structurally_valid",
+      "matches_wire_prefix",
+      "matches_lineage"
+    ],
+    "required_primary_records": [
+      "older valid matching checkpoint",
+      "longest valid matching checkpoint",
+      "newer wrong-lineage decoy",
+      "newer malformed decoy"
+    ],
+    "selection_formula": "Choose the unique longest structurally valid record whose rendered prefix, canonical token prefix, and complete lineage match and whose length does not exceed the independently observed common-token frontier."
+  },
+  "operation_receipts": {
+    "ordered_kinds": [
+      "matcher_candidate",
+      "matcher_selected",
+      "payload_read",
+      "reset",
+      "invalidate",
+      "evaluate"
+    ],
+    "binding": "Every event has a consecutive sequence number and invocation ID. Candidate observations bind record identity, checkpoint length, payload hash, completed bytes, and exact evaluator start/end positions to the inventory.",
+    "false_pass_rejection": "Any reset, invalidation, evaluation before the selected checkpoint, wrong payload read, reordered primitive, or full cold evaluation in a candidate invocation rejects even if logits and output happen to match."
+  },
+  "guard_matrix": {
+    "exact_case_semantics": true,
+    "flag_values": [
+      "unset",
+      "1",
+      "0",
+      "empty",
+      "garbage"
+    ],
+    "controls": [
+      "exact replay off/on",
+      "divergence off/on",
+      "shortening off/on",
+      "malformed checkpoint off/on",
+      "wrong lineage off/on",
+      "non-GLM off/on"
+    ],
+    "legacy_bypass": "DS4_GLM_RESUME_GUARD_OFF is absent in every launch. Only DS4_GLM_LIVE_REWIND_V1=1 may enable the eligible GLM extension case; all other values retain strict behavior."
+  },
+  "lineage_and_state": {
+    "tokens": "Canonical complete I32 token vectors, full UTF-8 wire bytes, and the tokenizer-produced monotonic token-to-wire byte boundary map are scorer-decoded. Inventory prefix lengths and hashes are recomputed from that map. Cold, strict, candidate, synchronized, restored-prefix, and final lineage hashes are recomputed from token vectors; every token ID must be in the GLM vocabulary.",
+    "state_format": "ds4-glm-session-canonical-v1",
+    "coverage": "The complete canonical session payload is partitioned contiguously into a header and exactly 75 layer sections. Each section has its own byte count and content hash; the manifest root, total bytes, token lineage, and all 75 logical frontiers are checked.",
+    "equality": "Cold, strict, and candidate complete manifests must be exactly equal. Removing a section or changing any unprobed row rejects."
+  },
+  "numerical_acceptance": {
+    "max_abs_logit_delta_strictly_less_than": 0.01,
+    "argmax_identical": true,
+    "generated_token_ids_identical": 64,
+    "output_token_domain": "[0,154880)",
+    "malformed_policy": "Non-finite data, non-finite derived metrics, malformed base64, trailing streams, and decompression beyond the exact bounded size reject."
+  },
+  "containment": {
+    "safe_wrapper": "results/glm52-gates/harness/glm_safe_run.sh",
+    "safe_wrapper_hash_frozen_in_scorer": true,
+    "exclusive_lock": "/run/dsv4/inference.lock",
+    "root_owned_lock_receipt": true,
+    "system_cgroup_receipt": true,
+    "minimum_start_available_gib": 110,
+    "minimum_observed_available_gib": 10,
+    "no_swap_growth": true,
+    "no_oom_or_xid": true,
+    "clean_terminal_status": true,
+    "bare_engine_forbidden": true,
+    "reboot_forbidden": true
+  },
+  "next_sequence": [
+    "Persistent Nash and Singer review this bounded scorer/schema candidate.",
+    "If no critical/high findings remain, add observer hooks beneath the real matcher, loader, reset/invalidate, evaluator, and canonical session serializer and reproduce the unchanged-code runtime RED through glm_safe_run.sh.",
+    "Only after a genuine contained RED, implement behind default-off DS4_GLM_LIVE_REWIND_V1=1.",
+    "Freeze source/binary hashes, derive confirmation fixtures from fresh public randomness, and run cold/strict/candidate comparisons."
+  ]
+}

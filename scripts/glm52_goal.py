@@ -3020,14 +3020,16 @@ def _w7_f32_vector(encoded: Any, label: str, expected_count: int) -> tuple[float
         raise ValueError(f"{label} must be non-empty base64")
     try:
         compressed = base64.b64decode(encoded, validate=True)
+        expected_bytes = expected_count * 4
+        if len(compressed) > expected_bytes + 1024:
+            raise ValueError(f"{label} compressed input is oversized")
         inflater = zlib.decompressobj()
-        raw = inflater.decompress(compressed, expected_count * 4 + 1)
-        raw += inflater.flush()
+        raw = inflater.decompress(compressed, expected_bytes + 1)
     except (binascii.Error, zlib.error, ValueError) as exc:
         raise ValueError(f"{label} is not canonical compressed F32") from exc
     if (
         not inflater.eof or inflater.unused_data or inflater.unconsumed_tail or
-        len(raw) != expected_count * 4
+        len(raw) != expected_bytes
     ):
         raise ValueError(f"{label} has the wrong F32 length")
     values = struct.unpack(f"<{expected_count}f", raw)
@@ -3036,8 +3038,119 @@ def _w7_f32_vector(encoded: Any, label: str, expected_count: int) -> tuple[float
     return values
 
 
+def _w7_i32_vector(encoded: Any, label: str, expected_count: int) -> tuple[int, ...]:
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError(f"{label} must be non-empty base64")
+    expected_bytes = expected_count * 4
+    try:
+        compressed = base64.b64decode(encoded, validate=True)
+        if len(compressed) > expected_bytes + 1024:
+            raise ValueError(f"{label} compressed input is oversized")
+        inflater = zlib.decompressobj()
+        raw = inflater.decompress(compressed, expected_bytes + 1)
+    except (binascii.Error, zlib.error, ValueError) as exc:
+        raise ValueError(f"{label} is not canonical compressed I32") from exc
+    if (
+        not inflater.eof or inflater.unused_data or inflater.unconsumed_tail or
+        len(raw) != expected_bytes
+    ):
+        raise ValueError(f"{label} has the wrong I32 length")
+    return struct.unpack(f"<{expected_count}i", raw)
+
+
+def _w7_utf8_bytes(encoded: Any, label: str) -> bytes:
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError(f"{label} must be non-empty base64")
+    try:
+        value = base64.b64decode(encoded, validate=True)
+        if not value or len(value) > 16 * 1024 * 1024:
+            raise ValueError(f"{label} has invalid length")
+        value.decode("utf-8", errors="strict")
+    except (binascii.Error, UnicodeDecodeError, ValueError) as exc:
+        raise ValueError(f"{label} is not canonical UTF-8 base64") from exc
+    return value
+
+
+_W7_SAFE_WRAPPER_SHA256 = "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801"
+_W7_CASE_CONTRACT = {
+    "cold-primary": ("glm", "unset", "primary-cold", "cold"),
+    "strict-primary": ("glm", "unset", "primary-extension", "cold"),
+    "candidate-primary": ("glm", "1", "primary-extension", "resume"),
+    "exact-off": ("glm", "unset", "exact-replay", "replay"),
+    "exact-on": ("glm", "1", "exact-replay", "replay"),
+    "divergence-off": ("glm", "unset", "divergence", "reject"),
+    "divergence-on": ("glm", "1", "divergence", "reject"),
+    "shorten-off": ("glm", "unset", "shorten", "reject"),
+    "shorten-on": ("glm", "1", "shorten", "reject"),
+    "malformed-off": ("glm", "unset", "malformed-checkpoint", "reject"),
+    "malformed-on": ("glm", "1", "malformed-checkpoint", "reject"),
+    "wrong-lineage-off": ("glm", "unset", "wrong-lineage", "reject"),
+    "wrong-lineage-on": ("glm", "1", "wrong-lineage", "reject"),
+    "non-glm-off": ("non-glm", "unset", "primary-extension", "reject"),
+    "non-glm-on": ("non-glm", "1", "primary-extension", "reject"),
+    "flag-zero": ("glm", "0", "primary-extension", "cold"),
+    "flag-empty": ("glm", "", "primary-extension", "cold"),
+    "flag-garbage": ("glm", "garbage", "primary-extension", "cold"),
+}
+
+
+def _w7_token_sha256(values: tuple[int, ...]) -> str:
+    return hashlib.sha256(struct.pack(f"<{len(values)}i", *values)).hexdigest()
+
+
+def _w7_state_manifest(value: Any, label: str, lineage: str, prompt: int) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+    _require_exact_keys(
+        value,
+        {
+            "format", "total_bytes", "content_sha256", "token_lineage_sha256",
+            "logical_frontiers", "sections",
+        },
+        label,
+    )
+    if value["format"] != "ds4-glm-session-canonical-v1":
+        raise ValueError(f"{label} format is invalid")
+    if value["token_lineage_sha256"] != lineage:
+        raise ValueError(f"{label} token lineage is invalid")
+    frontiers = value["logical_frontiers"]
+    if (
+        not isinstance(frontiers, list) or len(frontiers) != 75 or
+        any(item != prompt for item in frontiers)
+    ):
+        raise ValueError(f"{label} logical frontiers are incomplete")
+    sections = value["sections"]
+    expected_names = ["header"] + [f"layer.{layer:02d}" for layer in range(75)]
+    if not isinstance(sections, list) or len(sections) != len(expected_names):
+        raise ValueError(f"{label} state section coverage is incomplete")
+    offset = 0
+    content_hashes: list[str] = []
+    for index, (section, expected_name) in enumerate(zip(sections, expected_names)):
+        if not isinstance(section, dict):
+            raise ValueError(f"{label} section {index} must be an object")
+        _require_exact_keys(
+            section, {"name", "offset", "byte_count", "content_sha256"},
+            f"{label} section {index}",
+        )
+        if section["name"] != expected_name or section["offset"] != offset:
+            raise ValueError(f"{label} section coverage is not canonical")
+        byte_count = section["byte_count"]
+        if not isinstance(byte_count, int) or isinstance(byte_count, bool) or byte_count <= 0:
+            raise ValueError(f"{label} section byte count is invalid")
+        if not _is_sha256(section["content_sha256"]):
+            raise ValueError(f"{label} section hash is invalid")
+        offset += byte_count
+        content_hashes.append(section["content_sha256"])
+    if value["total_bytes"] != offset or offset <= 0:
+        raise ValueError(f"{label} total byte coverage is invalid")
+    manifest_root = hashlib.sha256("".join(content_hashes).encode("ascii")).hexdigest()
+    if value["content_sha256"] != manifest_root:
+        raise ValueError(f"{label} content root is invalid")
+    return value
+
+
 def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
-    """Derive W7 from exact raw operation receipts, not caller booleans."""
+    """Derive W7 exclusively from inventories, ordered primitive events and dumps."""
     if len(records) != 1:
         raise ValueError("W7 resume requires exactly one raw observation")
     record = records[0]
@@ -3045,195 +3158,459 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
         record,
         {
             "record_type", "gate", "binary_sha256", "configuration_sha256",
-            "fixture_sha256", "guard_off_present", "cases", "failures",
+            "fixture_sha256", "guard_off_present", "confirmation_seed_sha256",
+            "regimes", "failures",
         },
         "W7 resume observation",
     )
     if record["record_type"] != "w7_resume_observation" or record["gate"] != "W7":
         raise ValueError("W7 resume observation identity is invalid")
-    for field in ("binary_sha256", "configuration_sha256", "fixture_sha256"):
+    for field in (
+        "binary_sha256", "configuration_sha256", "fixture_sha256",
+        "confirmation_seed_sha256",
+    ):
         if not _is_sha256(record[field]):
             raise ValueError(f"W7 {field} is invalid")
     if record["guard_off_present"] is not False:
         raise ValueError("W7 legacy guard bypass must be absent")
     if not isinstance(record["failures"], list):
         raise ValueError("W7 failures must be a list")
-    cases = record["cases"]
-    if not isinstance(cases, list):
-        raise ValueError("W7 cases must be a list")
-    expected = {
-        "cold-primary", "strict-primary", "candidate-primary",
-        "exact-off", "exact-on", "divergence-off", "divergence-on",
-        "shorten-off", "shorten-on", "malformed-off", "malformed-on",
-        "wrong-lineage-off", "wrong-lineage-on", "non-glm-off",
-        "non-glm-on", "flag-zero", "flag-garbage",
-    }
-    by_id: dict[str, dict[str, Any]] = {}
-    case_keys = {
-        "case_id", "model_family", "flag_value", "eligible", "mode",
-        "wire_text_sha256", "canonical_tokens_sha256",
-        "sync_tokens_sha256", "final_lineage_sha256", "live_tokens",
-        "common_tokens", "prompt_tokens", "selected_checkpoint_tokens",
-        "selected_payload_sha256", "expected_payload_sha256",
-        "payload_bytes_read", "reset_count", "invalidate_count",
-        "eval_ranges", "output_token_ids", "logits_f32_zlib_b64",
-        "state", "safety",
-    }
-    for index, case in enumerate(cases):
-        if not isinstance(case, dict):
-            raise ValueError(f"W7 case {index} must be an object")
-        _require_exact_keys(case, case_keys, f"W7 case {index}")
-        case_id = case["case_id"]
-        if case_id not in expected or case_id in by_id:
-            raise ValueError("W7 case IDs are missing, duplicated, or unknown")
-        by_id[case_id] = case
-        if case["model_family"] not in {"glm", "non-glm"}:
-            raise ValueError(f"W7 {case_id} model family is invalid")
-        if case["flag_value"] not in {"unset", "1", "0", "garbage"}:
-            raise ValueError(f"W7 {case_id} flag value is invalid")
-        if not isinstance(case["eligible"], bool):
-            raise ValueError(f"W7 {case_id} eligibility is invalid")
-        if case["mode"] not in {"cold", "resume", "replay", "reject"}:
-            raise ValueError(f"W7 {case_id} mode is invalid")
-        for field in (
-            "wire_text_sha256", "canonical_tokens_sha256",
-            "sync_tokens_sha256", "final_lineage_sha256",
-        ):
-            if not _is_sha256(case[field]):
-                raise ValueError(f"W7 {case_id} {field} is invalid")
-        for field in ("selected_payload_sha256", "expected_payload_sha256"):
-            if case[field] is not None and not _is_sha256(case[field]):
-                raise ValueError(f"W7 {case_id} {field} is invalid")
-        for field in (
-            "live_tokens", "common_tokens", "prompt_tokens",
-            "selected_checkpoint_tokens", "payload_bytes_read", "reset_count",
-            "invalidate_count",
-        ):
-            value = case[field]
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                raise ValueError(f"W7 {case_id} {field} is invalid")
-        ranges = case["eval_ranges"]
-        if (
-            not isinstance(ranges, list) or
-            any(
-                not isinstance(item, list) or len(item) != 2 or
-                any(not isinstance(value, int) or isinstance(value, bool) for value in item) or
-                item[0] < 0 or item[1] <= item[0]
-                for item in ranges
-            )
-        ):
-            raise ValueError(f"W7 {case_id} eval ranges are invalid")
-        outputs = case["output_token_ids"]
-        if (
-            not isinstance(outputs, list) or
-            any(not isinstance(value, int) or isinstance(value, bool) for value in outputs)
-        ):
-            raise ValueError(f"W7 {case_id} output tokens are invalid")
-        state = case["state"]
-        _require_exact_keys(
-            state,
-            {
-                "checkpoint_sha256", "lineage_sha256", "logical_frontiers",
-                "tensor_inventory_sha256", "probe_f32_zlib_b64",
-            },
-            f"W7 {case_id} state",
-        )
-        if any(
-            not _is_sha256(state[field])
-            for field in ("checkpoint_sha256", "lineage_sha256", "tensor_inventory_sha256")
-        ):
-            raise ValueError(f"W7 {case_id} state hashes are invalid")
-        frontiers = state["logical_frontiers"]
-        if (
-            not isinstance(frontiers, list) or len(frontiers) != 75 or
-            any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in frontiers)
-        ):
-            raise ValueError(f"W7 {case_id} logical frontiers are invalid")
-        safety = case["safety"]
-        _require_exact_keys(
-            safety,
-            {"wrapper_ok", "oom", "xid", "swap_growth", "survivor", "minimum_available_gib"},
-            f"W7 {case_id} safety",
-        )
-        if any(not isinstance(safety[field], bool) for field in ("wrapper_ok", "oom", "xid", "swap_growth", "survivor")):
-            raise ValueError(f"W7 {case_id} safety flags are invalid")
-        _finite_number(safety["minimum_available_gib"], f"W7 {case_id} memory", minimum=-1.0)
-    if set(by_id) != expected:
-        raise ValueError("W7 case matrix is incomplete")
+    regimes = record["regimes"]
+    if not isinstance(regimes, list) or len(regimes) != 3:
+        raise ValueError("W7 requires one primary and two confirmation regimes")
+    regime_ids = [item.get("regime_id") if isinstance(item, dict) else None for item in regimes]
+    if regime_ids != ["primary", "confirmation-1", "confirmation-2"]:
+        raise ValueError("W7 regime identities are invalid")
 
-    cold = by_id["cold-primary"]
-    strict = by_id["strict-primary"]
-    candidate = by_id["candidate-primary"]
-    primary_identity = (
-        cold["wire_text_sha256"] == strict["wire_text_sha256"] == candidate["wire_text_sha256"] and
-        cold["canonical_tokens_sha256"] == strict["canonical_tokens_sha256"] == candidate["canonical_tokens_sha256"] and
-        cold["prompt_tokens"] == strict["prompt_tokens"] == candidate["prompt_tokens"] == 5066
-    )
-    exact_resume = (
-        candidate["model_family"] == "glm" and candidate["flag_value"] == "1" and
-        candidate["eligible"] is True and candidate["mode"] == "resume" and
-        candidate["live_tokens"] == 5063 and candidate["common_tokens"] == 5045 and
-        candidate["selected_checkpoint_tokens"] == 5044 and
-        candidate["selected_payload_sha256"] == candidate["expected_payload_sha256"] and
-        candidate["payload_bytes_read"] > 0 and candidate["reset_count"] == 0 and
-        candidate["invalidate_count"] == 0 and candidate["eval_ranges"] == [[5044, 5066]] and
-        candidate["sync_tokens_sha256"] == candidate["canonical_tokens_sha256"] and
-        candidate["final_lineage_sha256"] == candidate["canonical_tokens_sha256"]
-    )
-    cold_controls = (
-        cold["mode"] == "cold" and cold["eval_ranges"] == [[0, 5066]] and
-        strict["mode"] == "cold" and strict["flag_value"] == "unset" and
-        strict["eval_ranges"] == [[0, 5066]]
-    )
-    ineligible_ids = expected - {"cold-primary", "strict-primary", "candidate-primary", "exact-off", "exact-on"}
-    guard_matrix = all(
-        by_id[case_id]["mode"] in {"cold", "reject"} and
-        by_id[case_id]["selected_payload_sha256"] is None and
-        by_id[case_id]["payload_bytes_read"] == 0
-        for case_id in ineligible_ids
-    )
-    replay_matrix = all(
-        by_id[case_id]["mode"] == "replay" and
-        by_id[case_id]["eval_ranges"] == [] and
-        by_id[case_id]["reset_count"] == 0 and
-        by_id[case_id]["invalidate_count"] == 0
-        for case_id in ("exact-off", "exact-on")
-    )
-    cold_logits = _w7_f32_vector(cold["logits_f32_zlib_b64"], "W7 cold logits", 154880)
-    candidate_logits = _w7_f32_vector(candidate["logits_f32_zlib_b64"], "W7 candidate logits", 154880)
-    max_logit_delta = max(abs(left - right) for left, right in zip(cold_logits, candidate_logits))
-    argmax_cold = max(range(len(cold_logits)), key=cold_logits.__getitem__)
-    argmax_candidate = max(range(len(candidate_logits)), key=candidate_logits.__getitem__)
-    output_equal = (
-        len(cold["output_token_ids"]) == 64 and
-        candidate["output_token_ids"] == cold["output_token_ids"]
-    )
-    cold_probe = _w7_f32_vector(cold["state"]["probe_f32_zlib_b64"], "W7 cold state probe", 256)
-    candidate_probe = _w7_f32_vector(candidate["state"]["probe_f32_zlib_b64"], "W7 candidate state probe", 256)
-    max_state_delta = max(abs(left - right) for left, right in zip(cold_probe, candidate_probe))
-    state_equal = (
-        candidate["state"]["checkpoint_sha256"] == cold["state"]["checkpoint_sha256"] and
-        candidate["state"]["lineage_sha256"] == cold["state"]["lineage_sha256"] and
-        candidate["state"]["logical_frontiers"] == cold["state"]["logical_frontiers"] and
-        candidate["state"]["tensor_inventory_sha256"] == cold["state"]["tensor_inventory_sha256"] and
-        max_state_delta < 1e-2
-    )
-    safety = all(
-        case["safety"]["wrapper_ok"] and not case["safety"]["oom"] and
-        not case["safety"]["xid"] and not case["safety"]["swap_growth"] and
-        not case["safety"]["survivor"] and case["safety"]["minimum_available_gib"] >= 10.0
-        for case in cases
-    )
+    case_keys = {
+        "case_id", "invocation_id", "model_family", "flag_value",
+        "fixture_mutation", "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+        "canonical_token_ids_zlib_b64",
+        "restored_checkpoint_token_ids_zlib_b64", "sync_tokens_sha256",
+        "final_lineage_sha256", "live_tokens", "common_tokens", "prompt_tokens",
+        "checkpoint_inventory", "events", "output_token_ids",
+        "logits_f32_zlib_b64", "state_manifest", "safety",
+    }
+    inventory_keys = {
+        "record_id", "path_sha256", "device", "inode", "size", "mtime_ns",
+        "token_length", "rendered_prefix_bytes", "rendered_prefix_sha256", "token_sha256",
+        "lineage_sha256", "payload_sha256", "structurally_valid",
+        "matches_wire_prefix", "matches_lineage",
+    }
+    event_keys = {
+        "seq", "invocation_id", "kind", "record_id", "checkpoint_tokens",
+        "payload_sha256", "start", "end", "byte_count", "status",
+    }
+    safety_keys = {
+        "wrapper_path", "wrapper_sha256", "lock_path", "lock_owner_uid",
+        "lock_mode_octal", "lock_acquired", "cgroup_path",
+        "cgroup_identity_sha256", "start_available_gib", "minimum_available_gib",
+        "bare_engine_detected", "terminal_rc", "oom_events_before",
+        "oom_events_after", "xid_count", "swap_used_before_bytes",
+        "swap_used_after_bytes", "survivor_pids",
+    }
+    all_fixture_hashes: set[str] = set()
+    all_selection_seeds: set[str] = set()
+    maximum_logit_delta = 0.0
+    selected_checkpoints: list[int] = []
+    all_checks: list[bool] = []
+
+    for regime_index, regime in enumerate(regimes):
+        _require_exact_keys(
+            regime, {"regime_id", "fixture_sha256", "selection_seed_sha256", "cases"},
+            f"W7 regime {regime_index}",
+        )
+        for field in ("fixture_sha256", "selection_seed_sha256"):
+            if not _is_sha256(regime[field]):
+                raise ValueError(f"W7 {regime['regime_id']} {field} is invalid")
+        expected_selection_seed = hashlib.sha256(
+            bytes.fromhex(record["confirmation_seed_sha256"]) +
+            regime["regime_id"].encode("ascii")
+        ).hexdigest()
+        if regime["selection_seed_sha256"] != expected_selection_seed:
+            raise ValueError(f"W7 {regime['regime_id']} selection seed is not bound")
+        all_fixture_hashes.add(regime["fixture_sha256"])
+        all_selection_seeds.add(regime["selection_seed_sha256"])
+        cases = regime["cases"]
+        if not isinstance(cases, list) or len(cases) != len(_W7_CASE_CONTRACT):
+            raise ValueError(f"W7 {regime['regime_id']} case matrix is incomplete")
+        by_id: dict[str, dict[str, Any]] = {}
+        derived: dict[str, dict[str, Any]] = {}
+        for case_index, case in enumerate(cases):
+            if not isinstance(case, dict):
+                raise ValueError("W7 case must be an object")
+            _require_exact_keys(case, case_keys, f"W7 case {regime_index}:{case_index}")
+            case_id = case["case_id"]
+            if case_id not in _W7_CASE_CONTRACT or case_id in by_id:
+                raise ValueError("W7 case IDs are missing, duplicated, or unknown")
+            family, flag, mutation, expected_mode = _W7_CASE_CONTRACT[case_id]
+            if (
+                case["model_family"] != family or case["flag_value"] != flag or
+                case["fixture_mutation"] != mutation
+            ):
+                raise ValueError(f"W7 {case_id} does not match its frozen contract")
+            if case["invocation_id"] != f"invoke:{regime['regime_id']}":
+                raise ValueError(f"W7 {case_id} invocation identity is invalid")
+            wire_bytes = _w7_utf8_bytes(case["wire_text_utf8_b64"], f"W7 {case_id} wire text")
+            for field in ("live_tokens", "common_tokens", "prompt_tokens"):
+                value = case[field]
+                if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                    raise ValueError(f"W7 {case_id} {field} is invalid")
+            if case["prompt_tokens"] <= 0 or case["common_tokens"] > case["live_tokens"]:
+                raise ValueError(f"W7 {case_id} token frontiers are invalid")
+            canonical = _w7_i32_vector(
+                case["canonical_token_ids_zlib_b64"],
+                f"W7 {case_id} canonical tokens", case["prompt_tokens"],
+            )
+            if any(token < 0 or token >= 154880 for token in canonical):
+                raise ValueError(f"W7 {case_id} canonical token is outside vocabulary")
+            wire_offsets = _w7_i32_vector(
+                case["wire_token_end_offsets_zlib_b64"],
+                f"W7 {case_id} wire token offsets", case["prompt_tokens"],
+            )
+            if (
+                not wire_offsets or wire_offsets[-1] != len(wire_bytes) or
+                any(current <= previous for previous, current in zip((0,) + wire_offsets, wire_offsets))
+            ):
+                raise ValueError(f"W7 {case_id} wire/token boundary map is invalid")
+            lineage = _w7_token_sha256(canonical)
+            if case["sync_tokens_sha256"] != lineage or case["final_lineage_sha256"] != lineage:
+                raise ValueError(f"W7 {case_id} synchronized lineage is invalid")
+
+            inventory = case["checkpoint_inventory"]
+            if not isinstance(inventory, list):
+                raise ValueError(f"W7 {case_id} inventory is invalid")
+            inventory_by_id: dict[str, dict[str, Any]] = {}
+            for item_index, item in enumerate(inventory):
+                if not isinstance(item, dict):
+                    raise ValueError(f"W7 {case_id} inventory item is invalid")
+                _require_exact_keys(item, inventory_keys, f"W7 {case_id} inventory {item_index}")
+                record_id = item["record_id"]
+                if not isinstance(record_id, str) or not record_id or record_id in inventory_by_id:
+                    raise ValueError(f"W7 {case_id} inventory identity is invalid")
+                for field in (
+                    "path_sha256", "rendered_prefix_sha256", "token_sha256",
+                    "lineage_sha256", "payload_sha256",
+                ):
+                    if not _is_sha256(item[field]):
+                        raise ValueError(f"W7 {case_id} inventory hash is invalid")
+                for field in (
+                    "device", "inode", "size", "mtime_ns", "token_length",
+                    "rendered_prefix_bytes",
+                ):
+                    value = item[field]
+                    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                        raise ValueError(f"W7 {case_id} inventory number is invalid")
+                for field in ("structurally_valid", "matches_wire_prefix", "matches_lineage"):
+                    if not isinstance(item[field], bool):
+                        raise ValueError(f"W7 {case_id} inventory flag is invalid")
+                token_length = item["token_length"]
+                computed_prefix = (
+                    _w7_token_sha256(canonical[:token_length])
+                    if token_length <= len(canonical) else None
+                )
+                if item["matches_lineage"] != (item["lineage_sha256"] == lineage):
+                    raise ValueError(f"W7 {case_id} lineage receipt contradicts inventory")
+                prefix_bytes = item["rendered_prefix_bytes"]
+                expected_prefix_bytes = (
+                    wire_offsets[token_length - 1]
+                    if 0 < token_length <= len(wire_offsets) else None
+                )
+                computed_rendered_prefix = (
+                    hashlib.sha256(wire_bytes[:prefix_bytes]).hexdigest()
+                    if prefix_bytes <= len(wire_bytes) else None
+                )
+                if prefix_bytes != expected_prefix_bytes:
+                    raise ValueError(f"W7 {case_id} rendered prefix length contradicts token boundary map")
+                if item["matches_wire_prefix"] != (item["rendered_prefix_sha256"] == computed_rendered_prefix):
+                    raise ValueError(f"W7 {case_id} wire receipt contradicts inventory")
+                if item["structurally_valid"] and item["token_sha256"] != computed_prefix:
+                    raise ValueError(f"W7 {case_id} checkpoint tokens contradict canonical prefix")
+                inventory_by_id[record_id] = item
+            eligible = [
+                item for item in inventory
+                if item["structurally_valid"] and item["matches_wire_prefix"] and
+                item["matches_lineage"] and item["token_length"] <= case["common_tokens"]
+            ]
+            expected_record = max(eligible, key=lambda item: item["token_length"]) if eligible else None
+            selection_cases = {
+                "strict-primary", "candidate-primary", "flag-zero",
+                "flag-empty", "flag-garbage",
+            }
+            if case_id in selection_cases:
+                if [item["record_id"] for item in inventory] != [
+                    "older", "selected", "wrong-lineage", "malformed",
+                ]:
+                    raise ValueError(f"W7 {case_id} required decoy inventory is incomplete")
+                older, selected, wrong, malformed = inventory
+                if not (
+                    older["structurally_valid"] and older["matches_wire_prefix"] and older["matches_lineage"] and
+                    selected["structurally_valid"] and selected["matches_wire_prefix"] and selected["matches_lineage"] and
+                    selected["token_length"] > older["token_length"] and
+                    wrong["structurally_valid"] and wrong["matches_wire_prefix"] and not wrong["matches_lineage"] and
+                    not malformed["structurally_valid"] and malformed["matches_wire_prefix"] and malformed["matches_lineage"] and
+                    expected_record is selected
+                ):
+                    raise ValueError(f"W7 {case_id} decoy semantics are invalid")
+
+            events = case["events"]
+            if not isinstance(events, list):
+                raise ValueError(f"W7 {case_id} events are invalid")
+            kinds: dict[str, list[dict[str, Any]]] = {}
+            for event_index, event in enumerate(events):
+                if not isinstance(event, dict):
+                    raise ValueError(f"W7 {case_id} event must be an object")
+                _require_exact_keys(event, event_keys, f"W7 {case_id} event {event_index}")
+                if event["seq"] != event_index or event["invocation_id"] != case["invocation_id"]:
+                    raise ValueError(f"W7 {case_id} event ordering/identity is invalid")
+                if event["kind"] not in {
+                    "matcher_candidate", "matcher_selected", "payload_read",
+                    "reset", "invalidate", "evaluate",
+                } or event["status"] not in {"observed", "ok"}:
+                    raise ValueError(f"W7 {case_id} event type/status is invalid")
+                for field in ("checkpoint_tokens", "start", "end", "byte_count"):
+                    value = event[field]
+                    if value is not None and (
+                        not isinstance(value, int) or isinstance(value, bool) or value < 0
+                    ):
+                        raise ValueError(f"W7 {case_id} event number is invalid")
+                if event["record_id"] is not None and event["record_id"] not in inventory_by_id:
+                    raise ValueError(f"W7 {case_id} event references an unknown record")
+                if event["payload_sha256"] is not None and not _is_sha256(event["payload_sha256"]):
+                    raise ValueError(f"W7 {case_id} event payload hash is invalid")
+                kinds.setdefault(event["kind"], []).append(event)
+            candidate_events = kinds.get("matcher_candidate", [])
+            if [event["record_id"] for event in candidate_events] != [item["record_id"] for item in inventory]:
+                raise ValueError(f"W7 {case_id} matcher candidates do not bind inventory")
+            for event, item in zip(candidate_events, inventory):
+                if (
+                    event["checkpoint_tokens"] != item["token_length"] or
+                    event["payload_sha256"] != item["payload_sha256"] or
+                    event["status"] != "observed" or event["byte_count"] != 0 or
+                    event["start"] is not None or event["end"] is not None
+                ):
+                    raise ValueError(f"W7 {case_id} matcher candidate receipt is invalid")
+            selected_events = kinds.get("matcher_selected", [])
+            read_events = kinds.get("payload_read", [])
+            resets = kinds.get("reset", [])
+            invalidates = kinds.get("invalidate", [])
+            evaluations = kinds.get("evaluate", [])
+            selected_event = selected_events[0] if len(selected_events) == 1 else None
+            read_event = read_events[0] if len(read_events) == 1 else None
+            if len(selected_events) > 1 or len(read_events) > 1:
+                raise ValueError(f"W7 {case_id} has duplicate selection/read events")
+            if selected_event is not None:
+                if expected_record is None or any(
+                    (
+                        selected_event["record_id"] != expected_record["record_id"],
+                        selected_event["checkpoint_tokens"] != expected_record["token_length"],
+                        selected_event["payload_sha256"] != expected_record["payload_sha256"],
+                        selected_event["status"] != "ok",
+                        selected_event["start"] is not None,
+                        selected_event["end"] is not None,
+                        selected_event["byte_count"] != 0,
+                    )
+                ):
+                    raise ValueError(f"W7 {case_id} selected the wrong checkpoint")
+            if read_event is not None:
+                if selected_event is None or any(
+                    (
+                        read_event["record_id"] != selected_event["record_id"],
+                        read_event["checkpoint_tokens"] != selected_event["checkpoint_tokens"],
+                        read_event["payload_sha256"] != selected_event["payload_sha256"],
+                        read_event["status"] != "ok", read_event["byte_count"] <= 0,
+                        read_event["start"] is not None, read_event["end"] is not None,
+                    )
+                ):
+                    raise ValueError(f"W7 {case_id} payload read is not selected-record-bound")
+            eval_ranges = []
+            for event in evaluations:
+                if (
+                    event["status"] != "ok" or event["start"] is None or event["end"] is None or
+                    event["end"] <= event["start"] or event["byte_count"] != 0
+                ):
+                    raise ValueError(f"W7 {case_id} evaluation receipt is invalid")
+                eval_ranges.append([event["start"], event["end"]])
+            for event in resets + invalidates:
+                if any(
+                    event[field] is not None
+                    for field in ("record_id", "checkpoint_tokens", "payload_sha256", "start", "end")
+                ) or event["byte_count"] != 0 or event["status"] != "ok":
+                    raise ValueError(f"W7 {case_id} reset/invalidate receipt is malformed")
+            if resets:
+                mode = "cold"
+            elif read_event is not None:
+                mode = "resume"
+            elif not events and expected_mode == "replay":
+                mode = "replay"
+            elif not events or (
+                set(kinds) == {"matcher_candidate"} and
+                selected_event is None and read_event is None
+            ):
+                mode = "reject"
+            else:
+                mode = "invalid"
+            if mode != expected_mode:
+                raise ValueError(f"W7 {case_id} operation-derived mode is {mode}, expected {expected_mode}")
+
+            restored_encoded = case["restored_checkpoint_token_ids_zlib_b64"]
+            if read_event is not None:
+                selected_tokens = int(read_event["checkpoint_tokens"])
+                restored = _w7_i32_vector(
+                    restored_encoded, f"W7 {case_id} restored tokens", selected_tokens,
+                )
+                if restored != canonical[:selected_tokens]:
+                    raise ValueError(f"W7 {case_id} restored tokens differ from canonical prefix")
+            elif restored_encoded is not None:
+                raise ValueError(f"W7 {case_id} has restored tokens without a payload read")
+
+            if case_id == "cold-primary":
+                behavior = (
+                    not inventory and len(resets) == 1 and not invalidates and
+                    read_event is None and eval_ranges == [[0, case["prompt_tokens"]]] and
+                    case["live_tokens"] == 0 and case["common_tokens"] == 0 and
+                    [event["kind"] for event in events] == ["reset", "evaluate"]
+                )
+            elif case_id in {"strict-primary", "flag-zero", "flag-empty", "flag-garbage"}:
+                behavior = (
+                    len(inventory) == 4 and read_event is not None and len(resets) == 1 and
+                    not invalidates and eval_ranges == [[0, case["prompt_tokens"]]] and
+                    [event["kind"] for event in events] ==
+                    ["matcher_candidate"] * 4 + ["matcher_selected", "payload_read", "reset", "evaluate"]
+                )
+            elif case_id == "candidate-primary":
+                behavior = (
+                    len(inventory) == 4 and expected_record is not None and
+                    read_event is not None and not resets and not invalidates and
+                    eval_ranges == [[expected_record["token_length"], case["prompt_tokens"]]] and
+                    [event["kind"] for event in events] ==
+                    ["matcher_candidate"] * 4 + ["matcher_selected", "payload_read", "evaluate"]
+                )
+                if behavior:
+                    selected_checkpoints.append(expected_record["token_length"])
+            elif expected_mode == "replay":
+                behavior = (
+                    not inventory and not events and case["live_tokens"] == case["prompt_tokens"] and
+                    case["common_tokens"] == case["prompt_tokens"]
+                )
+            else:
+                behavior = (
+                    selected_event is None and read_event is None and not resets and
+                    not invalidates and not evaluations
+                )
+                if case_id.startswith("malformed-"):
+                    behavior = behavior and len(inventory) == 1 and not inventory[0]["structurally_valid"] and [event["kind"] for event in events] == ["matcher_candidate"]
+                elif case_id.startswith("wrong-lineage-"):
+                    behavior = behavior and len(inventory) == 1 and not inventory[0]["matches_lineage"] and [event["kind"] for event in events] == ["matcher_candidate"]
+                elif case_id.startswith("divergence-"):
+                    behavior = behavior and len(inventory) == 1 and not inventory[0]["matches_wire_prefix"] and [event["kind"] for event in events] == ["matcher_candidate"]
+                elif case_id.startswith("shorten-"):
+                    behavior = behavior and len(inventory) == 1 and inventory[0]["token_length"] > case["common_tokens"] and [event["kind"] for event in events] == ["matcher_candidate"]
+                else:
+                    behavior = behavior and not inventory and not events
+
+            safety = case["safety"]
+            if not isinstance(safety, dict):
+                raise ValueError(f"W7 {case_id} safety receipt is invalid")
+            _require_exact_keys(safety, safety_keys, f"W7 {case_id} safety")
+            if (
+                not isinstance(safety["lock_owner_uid"], int) or
+                isinstance(safety["lock_owner_uid"], bool)
+            ):
+                raise ValueError(f"W7 {case_id} lock owner is invalid")
+            if (
+                safety["wrapper_path"] != "results/glm52-gates/harness/glm_safe_run.sh" or
+                safety["wrapper_sha256"] != _W7_SAFE_WRAPPER_SHA256 or
+                safety["lock_path"] != "/run/dsv4/inference.lock" or
+                safety["lock_owner_uid"] != 0 or safety["lock_mode_octal"] != "0660" or
+                safety["lock_acquired"] is not True or
+                not isinstance(safety["cgroup_path"], str) or
+                not safety["cgroup_path"].startswith("/sys/fs/cgroup/system.slice/") or
+                not _is_sha256(safety["cgroup_identity_sha256"]) or
+                safety["bare_engine_detected"] is not False or safety["terminal_rc"] != 0 or
+                safety["oom_events_after"] != safety["oom_events_before"] or
+                safety["xid_count"] != 0 or
+                safety["swap_used_after_bytes"] > safety["swap_used_before_bytes"] or
+                safety["survivor_pids"] != []
+            ):
+                raise ValueError(f"W7 {case_id} containment receipt is unsafe")
+            for field in ("start_available_gib", "minimum_available_gib"):
+                _finite_number(safety[field], f"W7 {case_id} {field}", minimum=0.0)
+            if safety["start_available_gib"] < 110.0 or safety["minimum_available_gib"] < 10.0:
+                behavior = False
+            for field in (
+                "terminal_rc", "oom_events_before", "oom_events_after", "xid_count",
+                "swap_used_before_bytes", "swap_used_after_bytes",
+            ):
+                if not isinstance(safety[field], int) or isinstance(safety[field], bool) or safety[field] < 0:
+                    raise ValueError(f"W7 {case_id} safety counter is invalid")
+            by_id[case_id] = case
+            derived[case_id] = {
+                "canonical": canonical, "lineage": lineage, "wire": wire_bytes,
+                "behavior": behavior,
+            }
+        if set(by_id) != set(_W7_CASE_CONTRACT):
+            raise ValueError(f"W7 {regime['regime_id']} case matrix is incomplete")
+
+        cold = by_id["cold-primary"]
+        strict = by_id["strict-primary"]
+        candidate = by_id["candidate-primary"]
+        primary_identity = (
+            derived["cold-primary"]["wire"] == derived["strict-primary"]["wire"] ==
+            derived["candidate-primary"]["wire"] and
+            derived["cold-primary"]["canonical"] == derived["strict-primary"]["canonical"] ==
+            derived["candidate-primary"]["canonical"] and
+            cold["prompt_tokens"] == strict["prompt_tokens"] == candidate["prompt_tokens"]
+        )
+        if regime["regime_id"] == "primary":
+            primary_identity = primary_identity and (
+                strict["live_tokens"] == candidate["live_tokens"] == 5063 and
+                strict["common_tokens"] == candidate["common_tokens"] == 5045 and
+                candidate["prompt_tokens"] == 5066 and selected_checkpoints[-1:] == [5044]
+            )
+        outputs = [cold["output_token_ids"], strict["output_token_ids"], candidate["output_token_ids"]]
+        if any(
+            not isinstance(output, list) or len(output) != 64 or
+            any(not isinstance(token, int) or isinstance(token, bool) or token < 0 or token >= 154880 for token in output)
+            for output in outputs
+        ):
+            raise ValueError(f"W7 {regime['regime_id']} completed output is invalid")
+        output_equal = outputs[0] == outputs[1] == outputs[2]
+        logits = [
+            _w7_f32_vector(case["logits_f32_zlib_b64"], f"W7 {case['case_id']} logits", 154880)
+            for case in (cold, strict, candidate)
+        ]
+        deltas = [
+            max(abs(left - right) for left, right in zip(logits[0], comparison))
+            for comparison in logits[1:]
+        ]
+        if any(not math.isfinite(delta) for delta in deltas):
+            raise ValueError("W7 derived logit delta is non-finite")
+        maximum_logit_delta = max(maximum_logit_delta, *deltas)
+        argmaxes = [max(range(len(vector)), key=vector.__getitem__) for vector in logits]
+        state_manifests = [
+            _w7_state_manifest(
+                case["state_manifest"], f"W7 {case['case_id']} state",
+                derived[case["case_id"]]["lineage"], case["prompt_tokens"],
+            )
+            for case in (cold, strict, candidate)
+        ]
+        state_equal = state_manifests[0] == state_manifests[1] == state_manifests[2]
+        all_checks.extend([
+            primary_identity,
+            all(item["behavior"] for item in derived.values()),
+            output_equal,
+            max(deltas) < 1e-2 and argmaxes[0] == argmaxes[1] == argmaxes[2],
+            state_equal,
+        ])
+
+    if len(all_fixture_hashes) != 3 or len(all_selection_seeds) != 3:
+        raise ValueError("W7 confirmation fixtures/seeds are not independent")
     checks = {
-        "primary_identity": primary_identity,
-        "exact_resume_without_cold_fallback": exact_resume,
-        "cold_controls": cold_controls,
-        "flag_on_and_off_guard_matrix": guard_matrix,
-        "exact_replay_matrix": replay_matrix,
-        "full_logits": max_logit_delta < 1e-2 and argmax_cold == argmax_candidate,
-        "completed_generation": output_equal,
-        "canonical_state": state_equal,
-        "safety": safety,
+        "three_independent_regimes": len(all_fixture_hashes) == len(all_selection_seeds) == 3,
+        "receipt_derived_case_matrix": all(all_checks),
+        "full_logits": maximum_logit_delta < 1e-2,
+        "complete_state_manifests": all(all_checks),
         "no_failures": not record["failures"],
     }
     return {
@@ -3241,10 +3618,9 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
         "formula_version": 1,
         "gate": "W7",
         "derived_metrics": {
-            "max_abs_logit_delta": max_logit_delta,
-            "max_abs_state_probe_delta": max_state_delta,
-            "argmax_cold": argmax_cold,
-            "argmax_candidate": argmax_candidate,
+            "max_abs_logit_delta": maximum_logit_delta,
+            "qualified_regimes": 3,
+            "selected_checkpoint_tokens": selected_checkpoints,
         },
         "checks": checks,
         "verdict": "PASS" if all(checks.values()) else "FAIL",
@@ -3346,6 +3722,10 @@ def registered_scorer_digest(scorer_id: str) -> str:
         "w7.resume.v1": (
             _score_w7_resume,
             _w7_f32_vector,
+            _w7_i32_vector,
+            _w7_utf8_bytes,
+            _w7_token_sha256,
+            _w7_state_manifest,
             _require_exact_keys,
             _finite_number,
             _is_sha256,
@@ -3402,6 +3782,17 @@ def registered_scorer_digest(scorer_id: str) -> str:
     if scorer_id == "parity.performance.v1":
         digest.update(
             json.dumps(_T95, sort_keys=True, separators=(",", ":")).encode()
+        )
+    if scorer_id == "w7.resume.v1":
+        digest.update(
+            json.dumps(
+                {
+                    "case_contract": _W7_CASE_CONTRACT,
+                    "safe_wrapper_sha256": _W7_SAFE_WRAPPER_SHA256,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
         )
     return digest.hexdigest()
 
