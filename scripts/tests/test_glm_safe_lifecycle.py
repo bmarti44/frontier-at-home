@@ -16,10 +16,27 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SAFE = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+W3_PROBE_V2 = ROOT / "results/glm52-gates/harness/w3_direct_slot_probe_v2.sh"
 FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
 class CandidateLifecycleSourceTests(unittest.TestCase):
+    def test_w3_probe_closes_reviewed_false_pass_routes(self):
+        probe = W3_PROBE_V2.read_text(encoding="utf-8")
+        for contract in (
+            'OBSERVED_MODEL_SHA256=$(sha256sum -- "$MODEL"',
+            "/usr/bin/env -i",
+            'direct expert-slot dispatch layer=',
+            'measured_dispatch_delta',
+            'warm_generated_output_byte_identical',
+            'freeze manifest differs from HEAD',
+            'unique W3 evidence tag was already consumed',
+            'drand relay disagreement',
+            'wait "$runner_pid"',
+        ):
+            self.assertIn(contract, probe)
+        self.assertNotIn("sort -n | tail -1", probe)
+
     def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
         safe_environment = {
             "PATH": "/usr/bin:/bin",
