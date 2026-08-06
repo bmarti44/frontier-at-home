@@ -10,10 +10,10 @@ readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
 readonly TOKEN_SCORER=$REPO/scripts/84_count_glm_output_tokens.py
-readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w3-cc5e674
+readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w3-cbc22b0
 readonly BIN=$CANDIDATE_SRC/ds4-server
-readonly BINARY_SHA256=e779b83a50da0c820f2eef8ebddb566c2c367d31025042235282af9d4817ea13
-readonly ENGINE_COMMIT=cc5e6744718271a151593dc380c0e396229ecfc2
+readonly BINARY_SHA256=1a60e0887bd26e95d286041dc38d1e7ac7ca81d51d910227e37b26cc516f0b58
+readonly ENGINE_COMMIT=cbc22b06063d2f5cf346b3d5b0c2f7064fa51090
 readonly ENGINE_SOURCE=/tmp/glm52-slot-prod-v1
 readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 readonly MODEL_SHA256=a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0
@@ -29,7 +29,7 @@ readonly STATE_PARENT=/home/bmarti44/.local/state
 readonly CRASH_ROOT=$STATE_PARENT/glm52-crashlog
 readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock
 readonly OUTER_LOCK=/run/lock/frontier-at-home/inference.lock
-readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_GLM_TP_DEBUG,DS4_LOCK_FILE
+readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_GLM_TP_DEBUG,DS4_LOCK_EXPECTED_DEV_INO,DS4_LOCK_FILE
 
 [[ $# == 2 ]] || {
   echo "usage: $0 FREEZE_JSON DRAND_JSON" >&2
@@ -53,6 +53,28 @@ isolated_python() {
   echo "W3 probe inputs are unavailable" >&2
   exit 2
 }
+engine_lock_identity=
+[[ ! -L $OUTER_LOCK && -f $OUTER_LOCK ]] || {
+  echo "outer inference lock is unsafe" >&2
+  exit 2
+}
+OUTER_LOCK_IDENTITY=$(stat -Lc '%d:%i' -- "$OUTER_LOCK")
+readonly OUTER_LOCK_IDENTITY
+revalidate_engine_lock() {
+  local observed_identity
+  [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
+     $(stat -Lc '%U:%G:%a:%h' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600:1 ]] || {
+    echo "W3 engine lock is unsafe" >&2
+    return 1
+  }
+  observed_identity=$(stat -Lc '%d:%i' -- "$ENGINE_LOCK")
+  [[ $observed_identity != "$OUTER_LOCK_IDENTITY" &&
+     ( -z ${engine_lock_identity:-} || $observed_identity == "$engine_lock_identity" ) ]] || {
+    echo "W3 engine lock identity changed or aliases the outer lock" >&2
+    return 1
+  }
+  engine_lock_identity=$observed_identity
+}
 validate_engine_lock() {
   local parent=/run/user/1000
   [[ $ENGINE_LOCK != "$OUTER_LOCK" ]] || {
@@ -66,7 +88,7 @@ validate_engine_lock() {
   }
   if [[ -e $ENGINE_LOCK || -L $ENGINE_LOCK ]]; then
     [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
-       $(stat -Lc '%U:%G:%a' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600 ]] || {
+       $(stat -Lc '%U:%G:%a:%h' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600:1 ]] || {
       echo "W3 engine lock is unsafe" >&2
       return 1
     }
@@ -75,11 +97,7 @@ validate_engine_lock() {
     echo "W3 engine lock is held" >&2
     return 1
   }
-  [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
-     $(stat -Lc '%U:%G:%a' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600 ]] || {
-    echo "W3 engine lock creation was unsafe" >&2
-    return 1
-  }
+  revalidate_engine_lock
 }
 validate_engine_lock
 if pgrep -x ds4-server >/dev/null || pgrep -x fio >/dev/null; then
@@ -264,9 +282,14 @@ active_pid=
 runner_pid=
 runner_start_ticks=
 runner_is_exact() {
+  local runner_state observed_start_ticks
   [[ -n ${runner_pid:-} && -n ${runner_start_ticks:-} &&
      -r /proc/$runner_pid/stat ]] || return 1
-  [[ $(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true) == "$runner_start_ticks" ]]
+  read -r runner_state observed_start_ticks < <(
+    awk '{print $3, $22}' "/proc/$runner_pid/stat" 2>/dev/null
+  ) || return 1
+  [[ $runner_state != Z && $runner_state != X ]] || return 1
+  [[ $observed_start_ticks == "$runner_start_ticks" ]]
 }
 cleanup() {
   if [[ -n ${active_pid:-} && -r /proc/$active_pid/exe &&
@@ -364,6 +387,7 @@ run_arm() {
   local arm=$1 port=$2 direct=$3
   local tag="w3s${DRAND_ROUND}-${arm}" arm_dir="$OUT/$arm"
   mkdir "$arm_dir"
+  validate_engine_lock
   isolated_python "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 900 \
     >"$arm_dir/memory-preflight.json"
   if curl -sS -o /dev/null --max-time 2 "http://127.0.0.1:$port/v1/models"; then
@@ -383,6 +407,7 @@ run_arm() {
     DS4_CUDA_FETCH_THREADS=6
     DS4_CUDA_MOE_NO_ATOMIC_DOWN=1
     DS4_GLM_TP_DEBUG=1
+    "DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity"
     "DS4_LOCK_FILE=$ENGINE_LOCK"
   )
   [[ $direct == 1 ]] && engine_environment+=(DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS=1)
@@ -427,7 +452,7 @@ run_arm() {
     return 1
   }
 
-  if ! wait_for_exact_engine || ! wait_for_ready "$port"; then
+  if ! wait_for_exact_engine || ! revalidate_engine_lock || ! wait_for_ready "$port"; then
     local failed_runner_pid=$runner_pid
     cleanup
     set +e
