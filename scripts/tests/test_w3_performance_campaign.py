@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import subprocess
@@ -12,6 +13,10 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCORER = ROOT / "scripts/85_score_w3_performance_campaign.py"
+SPEC = importlib.util.spec_from_file_location("w3_campaign_scorer", SCORER)
+assert SPEC and SPEC.loader
+SCORER_MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(SCORER_MODULE)
 
 
 def digest(path: Path) -> str:
@@ -92,7 +97,10 @@ class W3PerformanceCampaignTests(unittest.TestCase):
 
     def run_scorer(self, pairs: list[Path], output: Path) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["python3", "-I", str(SCORER), "--output", str(output),
+            ["/usr/bin/env", "-i", "HOME=/nonexistent", "PATH=/usr/bin:/bin",
+             "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "/usr/bin/python3", "-I", "-B",
+             str(SCORER), "--output", str(output), "--repo", str(output.parent),
+             "--freeze", str(output.parent / "freeze.json"),
              *map(str, pairs)],
             text=True,
             stdout=subprocess.PIPE,
@@ -100,7 +108,7 @@ class W3PerformanceCampaignTests(unittest.TestCase):
             check=False,
         )
 
-    def test_valid_five_block_campaign_passes(self):
+    def test_internally_consistent_synthetic_campaign_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             orders = ["off-on", "on-off", "on-off", "off-on"] * 2 + [
@@ -108,12 +116,62 @@ class W3PerformanceCampaignTests(unittest.TestCase):
             ]
             pairs = [self.make_pair(root, i, order) for i, order in enumerate(orders)]
             result = self.run_scorer(pairs, root / "result")
-            self.assertEqual(result.returncode, 0, result.stderr)
-            summary = json.loads((root / "result/summary.json").read_text())
-            self.assertEqual(summary["status"], "PASS")
-            self.assertLessEqual(summary["completed_time_ratio_upper_95"], 0.95)
-            self.assertEqual(len(summary["baseline_seconds"]), 5)
-            self.assertEqual(len(summary["candidate_seconds"]), 5)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((root / "result/summary.json").exists())
+
+    def test_fixed_completed_time_bound(self):
+        baseline = [10.0] * 5
+        candidate = [8.0] * 5
+        self.assertAlmostEqual(
+            SCORER_MODULE.upper_ratio(candidate, baseline), 0.8, places=14
+        )
+
+    def test_ambient_python_is_rejected(self):
+        result = subprocess.run(
+            ["python3", str(SCORER), "--output", "/tmp/not-created"],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("isolated Python", result.stderr)
+
+    def test_malformed_timing_marker_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "cmd.log"
+            rows = []
+            for phase in range(2):
+                for index in range(1, 130):
+                    rows.append(
+                        f"DS4_TOKEN_TIMING request=r{phase} index={index} "
+                        f"monotonic_ns={phase * 1000 + index} token={index}\n"
+                    )
+            rows.insert(5, "DS4_TOKEN_TIMING malformed\n")
+            path.write_text("".join(rows), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "malformed token timing"):
+                SCORER_MODULE.measured_timing(path, digest(path))
+
+    def test_reused_crash_evidence_is_rejected(self):
+        rows = []
+        for index in range(10):
+            arms = {}
+            for arm in ("off", "on"):
+                arms[arm] = {
+                    "completed_seconds": 8.0 if arm == "on" else 10.0,
+                    "crash_identity": "shared",
+                    "cmd_log_sha256": ("a" if arm == "off" else "b") * 64,
+                    "executed_identity": ("1", "2", "c" * 64, "3:4"),
+                    "request_id": f"{index}-{arm}",
+                }
+            rows.append({
+                "path": f"/pair/{index}",
+                "request_sha256": f"{index:064x}",
+                "randomness_round": 100 + index,
+                "randomness": f"{1000 + index:064x}",
+                "bindings": {"same": True},
+                "arms": arms,
+            })
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(ValueError, "reuses crash identities"):
+                SCORER_MODULE.write_result(Path(temporary) / "result", rows)
 
     def test_mutations_fail_closed(self):
         mutations = ("short", "schedule", "fixture", "digest", "safety", "nan")

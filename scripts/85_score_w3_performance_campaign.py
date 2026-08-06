@@ -7,9 +7,11 @@ import argparse
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import statistics
+import subprocess
 import sys
 from typing import Any
 
@@ -26,6 +28,70 @@ TOKEN_RE = re.compile(
     r"monotonic_ns=(\d+) token=(-?\d+)"
 )
 T95_DF4 = 2.1318
+ALLOWED_ENVIRONMENT = {
+    "HOME": "/nonexistent",
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+}
+SUMMARY_KEYS = {
+    "schema_version", "gate", "status", "scope", "acceptance_formula",
+    "checks", "engine_commit", "binary_sha256", "model_sha256",
+    "tokenizer_sha256", "repository_head", "freeze_sha256",
+    "freeze_bindings", "environment_sha256", "request_sha256", "arm_order",
+    "required_completion_tokens", "public_randomness", "arms",
+}
+MANIFEST_KEYS = {
+    "schema_version", "engine_commit", "binary_sha256", "model_sha256",
+    "tokenizer_sha256", "repository_head", "freeze_sha256", "freeze_bindings",
+    "environment_sha256", "request_sha256", "arm_order",
+    "required_completion_tokens", "public_randomness_round", "public_randomness",
+    "public_randomness_signature", "harness_sha256", "artifact_sha256",
+}
+CHECK_KEYS = {
+    "same_frozen_binary", "same_model", "same_request", "safe_returncodes_zero",
+    "http_200", "independent_exact_output_tokens",
+    "thinking_disabled_no_reasoning_channel", "all_generated_outputs_nonempty",
+    "generated_output_byte_identical", "warm_generated_output_byte_identical",
+    "off_path_not_mapped", "off_path_has_no_direct_dispatches", "on_path_mapped",
+    "on_path_dispatched_for_compared_warm_response",
+    "on_path_dispatched_for_compared_measured_response", "clean_exit_attested",
+    "no_fault_markers",
+}
+ARM_KEYS = {
+    "schema_version", "arm", "direct_requested", "safe_returncode",
+    "warm_http_code", "warm_wall_seconds", "measured_http_code",
+    "measured_wall_seconds", "completion_tokens", "warm_completion_tokens",
+    "independent_completion_tokens", "independent_warm_completion_tokens",
+    "measured_reasoning_bytes", "warm_reasoning_bytes", "measured_token_scorer",
+    "warm_token_scorer", "generated_sha256", "generated_bytes", "mapping_markers",
+    "admission_markers", "dispatch_markers", "warm_dispatch_delta",
+    "measured_dispatch_delta", "clean_exit_attestation", "fault_markers",
+    "environment_sha256", "request_sha256", "binary_sha256", "model_sha256",
+    "tokenizer_sha256", "engine_commit", "crash_evidence",
+    "crash_evidence_identity", "crash_artifact_sha256",
+}
+TOKEN_RECORD_KEYS = {
+    "schema_version", "label", "reference_token_count", "content_bytes",
+    "reasoning_bytes", "response_sha256", "response_identity", "tokenizer_sha256",
+    "tokenizer_identity", "runtime_init_sha256", "runtime_init_identity",
+    "runtime_native_sha256", "runtime_native_identity", "runtime_init_path",
+    "runtime_native_path", "runtime_native_loaded_path",
+}
+PAIR_ARTIFACTS = {
+    "output-directory.txt", "request.json", "summary.json",
+    *(f"{arm}/{name}" for arm in ("off", "on") for name in (
+        "arm.json", "containment.stderr", "containment.stdout",
+        "measured.dispatch-counts", "measured.http", "measured.json",
+        "measured.tokens.json", "memory-preflight.json", "warm.dispatch-counts",
+        "warm.http", "warm.json", "warm.tokens.json",
+    )),
+}
+FREEZE_KEYS = {
+    "schema_version", "repository_parent_commit", "engine_commit", "binary_sha256",
+    "model_sha256", "drand_floor_round", "campaign_contract", "artifacts",
+    "engine_source_sha256",
+}
 
 
 def strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -59,6 +125,11 @@ def sha256(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
 
 
+def stat_identity(path: Path) -> str:
+    value = path.stat()
+    return f"{value.st_dev}:{value.st_ino}"
+
+
 def exact_int(value: Any, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{label} must be an exact integer")
@@ -71,10 +142,114 @@ def require_digest(value: Any, label: str, length: int = 64) -> str:
     return value
 
 
+def committed_authority(repo: Path, freeze_path: Path) -> dict[str, Any]:
+    if subprocess.run(
+        ["git", "status", "--porcelain"], cwd=repo, text=True,
+        capture_output=True, check=True,
+    ).stdout:
+        raise ValueError("repository is not clean at campaign scoring")
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repo, text=True,
+        capture_output=True, check=True,
+    ).stdout.strip()
+    parent = subprocess.run(
+        ["git", "rev-parse", "HEAD^"], cwd=repo, text=True,
+        capture_output=True, check=True,
+    ).stdout.strip()
+    relative = freeze_path.relative_to(repo)
+    committed = subprocess.run(
+        ["git", "show", f"HEAD:{relative}"], cwd=repo,
+        capture_output=True, check=True,
+    ).stdout
+    freeze_raw, freeze = strict_json(freeze_path)
+    if committed != freeze_raw or set(freeze) != FREEZE_KEYS or freeze.get("schema_version") != 1:
+        raise ValueError("campaign freeze is not the exact committed authority")
+    if parent != freeze.get("repository_parent_commit"):
+        raise ValueError("campaign freeze is not a freeze-only commit")
+    changed = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD^", "HEAD"], cwd=repo,
+        text=True, capture_output=True, check=True,
+    ).stdout.splitlines()
+    if changed != [str(relative)]:
+        raise ValueError("campaign freeze commit changed additional files")
+    artifact_paths = {
+        "harness": repo / "results/glm52-gates/harness/w3_direct_slot_probe_v3.sh",
+        "campaign_scorer": Path(__file__).resolve(),
+        "token_scorer_sha256": repo / "scripts/84_count_glm_output_tokens.py",
+        "cgroup": repo / "results/glm52-gates/harness/glm_cgroup_run.sh",
+        "safe": repo / "results/glm52-gates/harness/glm_safe_run.sh",
+        "memory_guard": repo / "scripts/03_memory_guard.py",
+    }
+    artifacts = freeze.get("artifacts")
+    if (not isinstance(artifacts, dict) or set(artifacts) != {
+            "harness", "campaign_scorer", "token_scorer_sha256", "cgroup", "safe",
+            "memory_guard", "binary", "tokenizer_sha256", "tokenizers_init_sha256",
+            "tokenizers_so_sha256"}):
+        raise ValueError("freeze artifact inventory is malformed")
+    if (artifacts["binary"] != freeze.get("binary_sha256") or
+            not all(re.fullmatch(r"[0-9a-f]{64}", value or "")
+                    for value in artifacts.values())):
+        raise ValueError("freeze artifact digests are malformed")
+    engine_source = freeze.get("engine_source_sha256")
+    if (not isinstance(engine_source, dict) or set(engine_source) != {
+            "ds4.c", "ds4_cuda.cu", "Makefile",
+            "tests/test_gpu_expert_slot_dispatch_marker.sh",
+            "tests/test_gpu_expert_slot_lifetime.c",
+            "tests/test_gpu_expert_slot_gemv.c", "tests/test_instance_lock_safety.sh"} or
+            not all(re.fullmatch(r"[0-9a-f]{64}", value or "")
+                    for value in engine_source.values())):
+        raise ValueError("freeze engine-source inventory is malformed")
+    for name, path in artifact_paths.items():
+        if artifacts.get(name) != sha256(path):
+            raise ValueError(f"frozen authority artifact changed: {name}")
+    contract = freeze.get("campaign_contract")
+    if contract != {
+        "completion_tokens": 129,
+        "decode_formula": "128/(t129-t1)",
+        "block_schedule": ["ABBA", "BAAB", "ABBA", "BAAB", "ABBA"],
+        "block_value": "arithmetic mean of the two same-arm completed seconds",
+        "acceptance": "one-sided 95% upper bound of the geometric paired candidate/baseline completed-time ratio <= 0.95",
+    }:
+        raise ValueError("campaign contract differs from the fixed scorer")
+    return {
+        "freeze": freeze,
+        "freeze_sha256": sha256_bytes(freeze_raw),
+        "freeze_commit": head,
+        "harness_sha256": artifacts["harness"],
+    }
+
+
+def authenticate_drand(record: dict[str, Any], floor: int) -> None:
+    if set(record) != {"round", "randomness", "signature", "freeze_floor_round"}:
+        raise ValueError("public randomness schema is invalid")
+    round_number = exact_int(record["round"], "drand round")
+    recorded_floor = exact_int(record["freeze_floor_round"], "drand freeze floor")
+    randomness = require_digest(record["randomness"], "drand randomness")
+    signature = require_digest(record["signature"], "drand signature", 192)
+    if recorded_floor != floor or round_number <= floor:
+        raise ValueError("drand record predates or changes the frozen floor")
+    if hashlib.sha256(bytes.fromhex(signature)).hexdigest() != randomness:
+        raise ValueError("drand signature does not derive the recorded randomness")
+    expected = {"round": round_number, "randomness": randomness, "signature": signature}
+    for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
+        response = subprocess.run(
+            ["/usr/bin/curl", "--disable", "--silent", "--show-error", "--fail",
+             "--max-time", "15", "--proto", "=https",
+             f"https://{host}/public/{round_number}"],
+            env=ALLOWED_ENVIRONMENT, capture_output=True, check=True,
+        )
+        published = json.loads(response.stdout, object_pairs_hook=strict_object)
+        if any(published.get(key) != value for key, value in expected.items()):
+            raise ValueError(f"drand relay disagreement: {host}")
+
+
 def verified_manifest(pair: Path, summary_raw: bytes) -> dict[str, Any]:
     _, manifest = strict_json(pair / "manifest.json")
+    if set(manifest) != MANIFEST_KEYS or manifest.get("schema_version") != 1:
+        raise ValueError(f"{pair}: manifest schema is not exact")
     artifacts = manifest.get("artifact_sha256")
-    if not isinstance(artifacts, dict) or artifacts.get("summary.json") != sha256_bytes(summary_raw):
+    if (not isinstance(artifacts, dict) or set(artifacts) != PAIR_ARTIFACTS or
+            artifacts.get("summary.json") != sha256_bytes(summary_raw)):
         raise ValueError(f"{pair}: manifest does not bind summary.json")
     for relative, expected in artifacts.items():
         if not isinstance(relative, str) or relative.startswith("/") or ".." in Path(relative).parts:
@@ -95,6 +270,8 @@ def measured_timing(cmd_path: Path, expected_sha: str) -> dict[str, Any]:
     for raw_line in raw.decode("utf-8", errors="strict").splitlines():
         match = TOKEN_RE.fullmatch(raw_line)
         if match is None:
+            if "DS4_TOKEN_TIMING" in raw_line:
+                raise ValueError(f"{cmd_path}: malformed token timing marker")
             continue
         request = match.group(1)
         row = tuple(int(match.group(i)) for i in (2, 3, 4))
@@ -111,6 +288,7 @@ def measured_timing(cmd_path: Path, expected_sha: str) -> dict[str, Any]:
         stamps = [row[1] for row in rows]
         if any(right <= left for left, right in zip(stamps, stamps[1:])):
             raise ValueError(f"{cmd_path}: {phase} timestamps are not strictly increasing")
+    warm_request = groups[0][0]
     request, rows = groups[1]
     timestamps = [row[1] for row in rows]
     seconds = (timestamps[-1] - timestamps[0]) / 1_000_000_000
@@ -118,6 +296,7 @@ def measured_timing(cmd_path: Path, expected_sha: str) -> dict[str, Any]:
         raise ValueError(f"{cmd_path}: invalid completed decode time")
     return {
         "request_id": request,
+        "warm_request_id": warm_request,
         "token_timestamps_ns": timestamps,
         "token_ids": [row[2] for row in rows],
         "completed_seconds": seconds,
@@ -126,21 +305,42 @@ def measured_timing(cmd_path: Path, expected_sha: str) -> dict[str, Any]:
     }
 
 
-def score_pair(pair: Path, expected_order: str) -> dict[str, Any]:
+def generated(payload: dict[str, Any]) -> dict[str, str]:
+    message = payload["choices"][0]["message"]
+    return {"content": message.get("content", ""),
+            "reasoning_content": message.get("reasoning_content", "")}
+
+
+def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> dict[str, Any]:
     summary_raw, summary = strict_json(pair / "summary.json")
     manifest = verified_manifest(pair, summary_raw)
-    if summary.get("status") != "PASS" or summary.get("arm_order") != expected_order:
+    if (set(summary) != SUMMARY_KEYS or summary.get("schema_version") != 1 or
+            summary.get("status") != "PASS" or summary.get("arm_order") != expected_order):
         raise ValueError(f"{pair}: pair status or randomized arm order is invalid")
     if exact_int(summary.get("required_completion_tokens"), f"{pair}: token count") != 129:
         raise ValueError(f"{pair}: pair does not require 129 completion tokens")
     checks = summary.get("checks")
-    if not isinstance(checks, dict) or not checks or any(value is not True for value in checks.values()):
+    if (not isinstance(checks, dict) or set(checks) != CHECK_KEYS or
+            any(value is not True for value in checks.values())):
         raise ValueError(f"{pair}: runtime eligibility checks did not all pass")
+    frozen = authority["freeze"]
+    if (summary.get("freeze_bindings") != frozen or
+            manifest.get("freeze_bindings") != frozen or
+            summary.get("freeze_sha256") != authority["freeze_sha256"] or
+            summary.get("repository_head") != authority["freeze_commit"] or
+            manifest.get("harness_sha256") != authority["harness_sha256"]):
+        raise ValueError(f"{pair}: pair is not bound to the exact campaign freeze")
     bindings = ("binary_sha256", "model_sha256", "tokenizer_sha256", "freeze_sha256")
     for key in bindings:
         require_digest(summary.get(key), f"{pair}:{key}")
         if manifest.get(key) != summary[key]:
             raise ValueError(f"{pair}: manifest {key} mismatch")
+    if (summary["binary_sha256"] != frozen["binary_sha256"] or
+            summary["model_sha256"] != frozen["model_sha256"] or
+            summary["tokenizer_sha256"] != frozen["artifacts"]["tokenizer_sha256"] or
+            summary.get("engine_commit") != frozen["engine_commit"] or
+            manifest.get("engine_commit") != frozen["engine_commit"]):
+        raise ValueError(f"{pair}: candidate bindings differ from the campaign freeze")
     repository_head = require_digest(summary.get("repository_head"), f"{pair}:repository_head", 40)
     if manifest.get("repository_head") != repository_head:
         raise ValueError(f"{pair}: manifest repository head mismatch")
@@ -150,19 +350,47 @@ def score_pair(pair: Path, expected_order: str) -> dict[str, Any]:
     randomness = summary.get("public_randomness")
     if not isinstance(randomness, dict):
         raise ValueError(f"{pair}: public randomness is missing")
+    authenticate_drand(randomness, frozen["drand_floor_round"])
     round_number = exact_int(randomness.get("round"), f"{pair}: randomness round")
     floor = exact_int(randomness.get("freeze_floor_round"), f"{pair}: freeze floor")
     require_digest(randomness.get("randomness"), f"{pair}: randomness")
     require_digest(randomness.get("signature"), f"{pair}: randomness signature", 192)
-    if round_number <= floor:
-        raise ValueError(f"{pair}: public randomness predates freeze")
+    if (round_number <= floor or manifest.get("public_randomness_round") != round_number or
+            manifest.get("public_randomness") != randomness["randomness"] or
+            manifest.get("public_randomness_signature") != randomness["signature"] or
+            manifest.get("arm_order") != expected_order or
+            manifest.get("required_completion_tokens") != 129):
+        raise ValueError(f"{pair}: public randomness or campaign fields differ from manifest")
+    request_raw, request = strict_json(pair / "request.json")
+    if sha256_bytes(request_raw) != request_sha:
+        raise ValueError(f"{pair}: request digest mismatch")
+    expected_request = {
+        "model": "glm-5.2",
+        "messages": [{
+            "role": "user",
+            "content": (
+                "Generate a deterministic sequence of exactly 200 lowercase letters "
+                "by repeating the alphabet in order. Do not stop early. "
+                f"Confirmation nonce: {randomness['randomness'][:24]}."
+            ),
+        }],
+        "max_tokens": 129,
+        "temperature": 0,
+        "seed": int(randomness["randomness"][:16], 16) % 2147483647,
+        "thinking_enabled": False,
+    }
+    if request != expected_request:
+        raise ValueError(f"{pair}: request is not derived from authenticated randomness")
     arms = summary.get("arms")
     if not isinstance(arms, dict) or set(arms) != {"off", "on"}:
         raise ValueError(f"{pair}: expected exact off/on arms")
     measured: dict[str, Any] = {}
     for name in ("off", "on"):
         arm = arms[name]
-        if not isinstance(arm, dict) or arm.get("arm") != name:
+        _, local_arm = strict_json(pair / name / "arm.json")
+        if (not isinstance(arm, dict) or set(arm) != ARM_KEYS or arm != local_arm or
+                arm.get("schema_version") != 1 or arm.get("arm") != name or
+                arm.get("direct_requested") != (name == "on")):
             raise ValueError(f"{pair}: malformed {name} arm")
         if (arm.get("safe_returncode") != 0 or
                 arm.get("independent_completion_tokens") != 129 or
@@ -170,10 +398,54 @@ def score_pair(pair: Path, expected_order: str) -> dict[str, Any]:
             raise ValueError(f"{pair}: {name} arm is short or unsafe")
         crash = Path(arm.get("crash_evidence", ""))
         crash_hashes = arm.get("crash_artifact_sha256")
-        if not isinstance(crash_hashes, dict) or not crash.is_dir():
+        if (not isinstance(crash_hashes, dict) or
+                set(crash_hashes) != {"main.log", "cmd.log", "samples.log", "kernel.log"} or
+                not crash.is_dir()):
             raise ValueError(f"{pair}: {name} crash evidence is missing")
         measured[name] = measured_timing(crash / "cmd.log", crash_hashes.get("cmd.log", ""))
-    if arms["off"].get("generated_sha256") != arms["on"].get("generated_sha256"):
+        crash_identity = stat_identity(crash)
+        if crash_identity != arm.get("crash_evidence_identity"):
+            raise ValueError(f"{pair}: {name} crash identity changed")
+        measured[name]["crash_identity"] = crash_identity
+        for log_name in ("main.log", "samples.log", "kernel.log"):
+            if sha256(crash / log_name) != crash_hashes.get(log_name):
+                raise ValueError(f"{pair}: {name} crash artifact changed: {log_name}")
+        receipt = (pair / name / "containment.stdout").read_text(encoding="utf-8")
+        if receipt.strip() != f"SAFE_RUN_DONE rc=0 killed=no dir={crash}":
+            raise ValueError(f"{pair}: {name} safe-run receipt is invalid")
+        main_log = (crash / "main.log").read_text(encoding="utf-8", errors="strict")
+        identity_match = re.search(
+            r"executed_candidate_verified pid=(\d+) start_ticks=(\d+) path=\S+ "
+            r"executed_binary_sha256=([0-9a-f]{64}) device_inode=([0-9:]+)", main_log,
+        )
+        if (identity_match is None or identity_match.group(3) != frozen["binary_sha256"] or
+                "SAFE_RUN end rc=0 killed=no" not in main_log or
+                "no identity contradiction observed" not in main_log):
+            raise ValueError(f"{pair}: {name} lifecycle attestation is invalid")
+        measured[name]["executed_identity"] = identity_match.groups()
+        for phase in ("warm", "measured"):
+            response_raw, response = strict_json(pair / name / f"{phase}.json")
+            _, token_record = strict_json(pair / name / f"{phase}.tokens.json")
+            if (set(token_record) != TOKEN_RECORD_KEYS or token_record.get("schema_version") != 1 or
+                    token_record.get("label") != f"{name}-{phase}" or
+                    token_record.get("response_sha256") != sha256_bytes(response_raw) or
+                    token_record.get("reference_token_count") != 129 or
+                    token_record.get("tokenizer_sha256") != frozen["artifacts"]["tokenizer_sha256"]):
+                raise ValueError(f"{pair}: {name} {phase} response/token record is invalid")
+            measured[name][f"{phase}_generated"] = generated(response)
+            expected_timing_id = (measured[name]["warm_request_id"] if phase == "warm"
+                                  else measured[name]["request_id"])
+            if response.get("id") != expected_timing_id:
+                raise ValueError(f"{pair}: {name} {phase} timing request is unbound")
+        canonical = json.dumps(
+            measured[name]["measured_generated"], sort_keys=True,
+            separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")
+        if arm.get("generated_sha256") != sha256_bytes(canonical):
+            raise ValueError(f"{pair}: {name} generated digest is self-reported")
+    if (arms["off"].get("generated_sha256") != arms["on"].get("generated_sha256") or
+            measured["off"]["measured_generated"] != measured["on"]["measured_generated"] or
+            measured["off"]["warm_generated"] != measured["on"]["warm_generated"]):
         raise ValueError(f"{pair}: measured generated bytes differ across arms")
     return {
         "path": str(pair),
@@ -203,6 +475,21 @@ def write_result(output: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
     random_values = [row["randomness"] for row in rows]
     if len(set(request_hashes)) != 10 or len(set(rounds)) != 10 or len(set(random_values)) != 10:
         raise ValueError("fixtures and public-randomness records must be fresh and unique")
+    pair_paths = [row["path"] for row in rows]
+    crash_identities = [row["arms"][arm]["crash_identity"]
+                        for row in rows for arm in ("off", "on")]
+    cmd_hashes = [row["arms"][arm]["cmd_log_sha256"]
+                  for row in rows for arm in ("off", "on")]
+    executed = [row["arms"][arm]["executed_identity"]
+                for row in rows for arm in ("off", "on")]
+    for values, expected, label in (
+        (pair_paths, 10, "pair paths"),
+        (crash_identities, 20, "crash identities"),
+        (cmd_hashes, 20, "timing logs"),
+        (executed, 20, "executed process identities"),
+    ):
+        if len(set(map(str, values))) != expected:
+            raise ValueError(f"campaign reuses {label}")
     frozen = rows[0]["bindings"]
     if any(row["bindings"] != frozen for row in rows[1:]):
         raise ValueError("campaign pairs do not share one frozen candidate")
@@ -225,6 +512,11 @@ def write_result(output: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
             "pair_request_sha256": [left["request_sha256"], right["request_sha256"]],
         })
     bound = upper_ratio(candidate, baseline)
+    log_ratios = [math.log(c / b) for c, b in zip(candidate, baseline, strict=True)]
+    log_mean = statistics.fmean(log_ratios)
+    log_stdev = statistics.stdev(log_ratios)
+    log_sem = log_stdev / math.sqrt(5)
+    log_upper = log_mean + T95_DF4 * log_sem
     passed = bound <= 0.95
     output.mkdir(mode=0o700, parents=False, exist_ok=False)
     raw_path = output / "raw.jsonl"
@@ -244,6 +536,16 @@ def write_result(output: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
         "baseline_seconds": baseline,
         "candidate_seconds": candidate,
         "completed_time_ratio_upper_95": bound,
+        "confidence_derivation": {
+            "paired_log_ratios": log_ratios,
+            "mean_log_ratio": log_mean,
+            "sample_standard_deviation": log_stdev,
+            "standard_error": log_sem,
+            "degrees_of_freedom": 4,
+            "one_sided_t_critical_95": T95_DF4,
+            "upper_log_bound": log_upper,
+            "upper_ratio_bound": math.exp(log_upper),
+        },
         "blocks": blocks,
         "frozen_bindings": frozen,
     }
@@ -265,13 +567,21 @@ def write_result(output: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def main() -> int:
+    if sys.flags.isolated != 1 or sys.flags.dont_write_bytecode != 1:
+        raise ValueError("scorer requires isolated Python with bytecode disabled")
+    if os.environ != ALLOWED_ENVIRONMENT:
+        raise ValueError("scorer environment differs from the exact allowlist")
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--repo", required=True, type=Path)
+    parser.add_argument("--freeze", required=True, type=Path)
     parser.add_argument("pairs", nargs="+", type=Path)
     args = parser.parse_args()
     if len(args.pairs) != 10:
         raise ValueError("expected exactly ten chronological pair directories")
-    rows = [score_pair(path.resolve(), order)
+    repo = args.repo.resolve()
+    authority = committed_authority(repo, args.freeze.resolve())
+    rows = [score_pair(path.resolve(), order, authority)
             for path, order in zip(args.pairs, EXPECTED_ORDERS, strict=True)]
     summary = write_result(args.output.resolve(), rows)
     print(json.dumps({"output": str(args.output.resolve()), "status": summary["status"],
@@ -283,6 +593,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, subprocess.CalledProcessError) as exc:
         print(f"W3 campaign scoring failed: {exc}", file=sys.stderr)
         raise SystemExit(2)
