@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "PREREGISTERED_NOT_EXECUTED",
+  "purpose": "Prove or falsify a default-off GLM live-resume fix for the BPE-junction disk-checkpoint/long-suffix failure without weakening the global resume guard.",
+  "scope": {
+    "allowed": [
+      "A production-path test that enters the real server request matcher, disk-KV loader, GLM session sync, and logit path.",
+      "A logged DS4_GLM_LIVE_REWIND_V1 flag that defaults off.",
+      "The smallest GLM-only lineage/frontier change needed for a branch-matched suffix to resume correctly."
+    ],
+    "forbidden": [
+      "Changing the default strict guard.",
+      "Treating token equality, byte equality, or projected TTFT as a substitute for full-logit comparison.",
+      "Running the engine outside results/glm52-gates/harness/glm_safe_run.sh.",
+      "Using the unsafe legacy f13 scripts as runtime launchers.",
+      "Changing expert-cache, quantization, prefetch, model, tokenizer, or sampling behavior."
+    ]
+  },
+  "authoritative_prior_red": {
+    "fixture_shape": "A live BPE-junction miss followed by a shorter disk checkpoint and a long suffix, compared with a fresh evaluation of the same complete 5066-token prompt at the same final position.",
+    "resumed_start": 5044,
+    "resumed_suffix_tokens": 22,
+    "reference_start": 5064,
+    "reference_suffix_tokens": 2,
+    "compared_logits": 154880,
+    "max_abs_logit_delta": 5.911,
+    "mean_abs_logit_delta": 1.19,
+    "argmax_identical": false,
+    "source": "results/glm52-gates/loadprof-2026-07-25.json",
+    "classification": "INHERITED_RED_TO_REPRODUCE_BEFORE_IMPLEMENTATION"
+  },
+  "current_source_snapshot": {
+    "classification": "DIAGNOSTIC_NOT_A_FREEZE",
+    "readable_engine_tree": "/tmp/glm52-utf8-engine",
+    "engine_head": "d652a9b5ec48c0e8cbb0f42c5d55bc411f51cc25",
+    "ds4_c_sha256": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+    "ds4_cuda_cu_sha256": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f",
+    "existing_guard": "DS4_GLM_RESUME_GUARD_OFF is absent by default; extension or divergence after a shortened checkpoint forces the proven cold path.",
+    "existing_server_behavior": "Exact token-prefix and rendered-text-prefix continuations exist; canonical suffix replacement still reports REBUILD_NEEDED and may load an older disk checkpoint."
+  },
+  "arms": [
+    {
+      "id": "COLD",
+      "description": "Fresh server, empty private KV directory, complete prompt evaluated to the final position."
+    },
+    {
+      "id": "STRICT",
+      "description": "Unchanged default strict guard after the prime request; establishes correct-or-cold behavior and proves the guard remains effective."
+    },
+    {
+      "id": "CANDIDATE",
+      "description": "Same frozen binary and fixture with DS4_GLM_LIVE_REWIND_V1=1; all unrelated environment values byte-identical to STRICT."
+    }
+  ],
+  "fixture_contract": {
+    "primary": "Reproduce the preserved 5044/5066/22 BPE-junction regime exactly before implementation.",
+    "confirmation": "After source and binary freeze, use fresh public randomness to choose at least two suffix texts from a committed candidate-independent generator; each must reproduce common < live and a branch-matched suffix longer than four tokens.",
+    "answer_budget_minimum_tokens": 64,
+    "temperature": 0,
+    "pairing": "All arms use byte-identical complete prompt text and token IDs for each fixture. Full logits are compared only at the same final prompt position.",
+    "negative_controls": [
+      "Exact replay of the already evaluated lineage remains byte-identical.",
+      "A deliberately non-branch-matched suffix remains rejected by the strict guard and takes the cold path.",
+      "A shorter or malformed disk checkpoint cannot be reported as the selected common-prefix checkpoint."
+    ]
+  },
+  "required_raw_observations": [
+    "Complete prompt text SHA-256 and full token-id dump per arm.",
+    "Server-computed live length, common prefix, selected checkpoint length, suffix length, and named sync branch.",
+    "Full final-position float32 logit dump and argmax per arm.",
+    "Complete session/checkpoint dump sufficient to compare the selected lineage and restored frontier.",
+    "Externally observed token timestamps, process/binary identity, memory samples, cgroup events, swap, Xid/OOM, and wrapper terminal record."
+  ],
+  "fixed_acceptance": {
+    "registered_scorer": "scripts/glm52_goal.py W7 workstream.v1",
+    "required_metrics": {
+      "complete_dumps_equal": true,
+      "max_abs_logit_delta_strictly_less_than": 0.01,
+      "argmax_identical": true,
+      "checkpoint_correct": true,
+      "global_guard_preserved": true
+    },
+    "comparison": "CANDIDATE versus COLD for full dumps/logits/argmax; STRICT and both negative controls establish that default behavior and the global guard are not weakened.",
+    "failure_rules": "Missing dumps, unequal prompts or token IDs, wrong final positions, incomplete logits, scorer failure, timeout, short output, OOM/Xid, swap growth, survivor, or unavailable memory below 10 GiB is FAIL.",
+    "performance_reporting": "Warm append TTFT and evaluated suffix tokens are reported, but cannot override a failed correctness check. No projected TTFT is labeled measured."
+  },
+  "execution_safety": {
+    "exclusive_inference_lock": true,
+    "safe_wrapper_required": "results/glm52-gates/harness/glm_safe_run.sh",
+    "system_cgroup_required": true,
+    "minimum_start_available_gib": 110,
+    "whole_system_kill_floor_gib": 18,
+    "no_bare_engine": true,
+    "no_reboot": true,
+    "launch_status": "NOT_AUTHORIZED_UNTIL_RED_TEST_REVIEW_PASSES"
+  },
+  "sequence": [
+    "Review this plan and the production-path RED design with the two persistent reviewers.",
+    "Commit the production-path test and reproduce the inherited RED on unchanged code under containment.",
+    "Implement only behind DS4_GLM_LIVE_REWIND_V1=1 and preserve default strict behavior.",
+    "Clean-build with at most two jobs, freeze hashes, obtain fresh public randomness, and run the confirmation arms.",
+    "Score through the registered W7 formula and preserve every attempt.",
+    "Do not relax the default guard or promote the flag without an owner decision on the completed evidence."
+  ]
+}

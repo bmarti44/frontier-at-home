@@ -11,7 +11,7 @@ readonly W3_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W3-slot-lifetime-probe
 is_checksum_file() {
   case "$1" in
     verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/speed-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-gates/G6-rung0-io-sidecar-build.json|results/glm52-gates/G6-rung0-io-slab-calibration-no-results.json|results/glm52-gates/G6-rung0-io-accelerated-sha-falsifier.json|results/glm52-gates/R0-slab-canary-attempts-2026-08-02.json|results/glm52-gates/R0-e637-campaign-attempt-2026-08-02.json|results/glm52-gates/R0-e637-quality-timeout-attempt-2026-08-03.json|results/glm52-gates/R0-e637-slab-final-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-freeze-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-*.json|results/glm52-gates/R0.2-prefetch-freeze-*.json|results/glm52-gates/R0.2-prefetch-randomness-*.json|results/glm52-gates/R0.2-prefetch-probe-*-attempt-*.json|results/glm52-gates/R0.2-prefetch-probe-6885a45-final-2026-08-04.json|results/glm52-gates/R0[abc]-*.json|results/glm52-gates/W3-slot-gemv-*.json|results/glm52-gates/W3-slot-lifetime-*.json|results/glm52-gates/W3-performance-*.json|results/glm52-gates/NVME-characterization-attempt-*.json|results/glm52-gates/NVME-characterization-final-*.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/dsv4-decode-*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/evidence/w1-affine-*/manifest.json|results/glm52-goal/evidence/w1-affine-*/raw.jsonl|results/glm52-goal/evidence/w1-affine-*/raw-inputs/randomness.json|results/glm52-goal/evidence/w1-telemetry-probe-*/manifest.json|results/glm52-goal/evidence/w1-telemetry-probe-*/raw.jsonl|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
-    results/glm52-gates/W3-performance-campaign-*/raw.jsonl|results/glm52-gates/R0.5-*.json) return 0 ;;
+    results/glm52-gates/W3-performance-campaign-*/raw.jsonl|results/glm52-gates/R0.5-*.json|results/glm52-gates/W7-resume-correctness-plan-v1.json) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -296,6 +296,9 @@ r05_proxy_red_candidate_4 = display_path == (
 r05_proxy_review_r195 = display_path == (
     "results/glm52-gates/R0.5-mtp-proxy-router-review-r195.json"
 )
+w7_resume_plan = display_path == (
+    "results/glm52-gates/W7-resume-correctness-plan-v1.json"
+)
 w3_campaign_allowlist = set()
 if w3_campaign_manifest:
     w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
@@ -342,6 +345,10 @@ r05_proxy_red_candidate_4_allowlist = {
 r05_proxy_review_r195_allowlist = {
     "pack_sha256",
 } if r05_proxy_review_r195 else set()
+w7_resume_plan_allowlist = {
+    "ds4_c_sha256",
+    "ds4_cuda_cu_sha256",
+} if w7_resume_plan else set()
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -397,7 +404,8 @@ def walk(value, path, allowed_string=False):
                 key in r05_proxy_red_candidate_3_allowlist or
                 key in r05_proxy_pack_v2_allowlist or
                 key in r05_proxy_red_candidate_4_allowlist or
-                key in r05_proxy_review_r195_allowlist
+                key in r05_proxy_review_r195_allowlist or
+                key in w7_resume_plan_allowlist
             )
             if isinstance(item, list):
                 for index, element in enumerate(item):
