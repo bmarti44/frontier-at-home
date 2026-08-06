@@ -11,6 +11,7 @@ readonly W3_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W3-slot-lifetime-probe
 is_checksum_file() {
   case "$1" in
     verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/speed-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-gates/G6-rung0-io-sidecar-build.json|results/glm52-gates/G6-rung0-io-slab-calibration-no-results.json|results/glm52-gates/G6-rung0-io-accelerated-sha-falsifier.json|results/glm52-gates/R0-slab-canary-attempts-2026-08-02.json|results/glm52-gates/R0-e637-campaign-attempt-2026-08-02.json|results/glm52-gates/R0-e637-quality-timeout-attempt-2026-08-03.json|results/glm52-gates/R0-e637-slab-final-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-freeze-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-*.json|results/glm52-gates/R0.2-prefetch-freeze-*.json|results/glm52-gates/R0.2-prefetch-randomness-*.json|results/glm52-gates/R0.2-prefetch-probe-*-attempt-*.json|results/glm52-gates/R0.2-prefetch-probe-6885a45-final-2026-08-04.json|results/glm52-gates/R0[abc]-*.json|results/glm52-gates/W3-slot-gemv-*.json|results/glm52-gates/W3-slot-lifetime-*.json|results/glm52-gates/W3-performance-*.json|results/glm52-gates/NVME-characterization-attempt-*.json|results/glm52-gates/NVME-characterization-final-*.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/dsv4-decode-*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/evidence/w1-affine-*/manifest.json|results/glm52-goal/evidence/w1-affine-*/raw.jsonl|results/glm52-goal/evidence/w1-affine-*/raw-inputs/randomness.json|results/glm52-goal/evidence/w1-telemetry-probe-*/manifest.json|results/glm52-goal/evidence/w1-telemetry-probe-*/raw.jsonl|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
+    results/glm52-gates/W3-performance-campaign-*/raw.jsonl) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -96,12 +97,16 @@ allowlist = {
     "canonical_sha256",
     "canonical_tree_sha256",
     "source_summary_sha256",
+    "input_manifest_sha256",
+    "input_summary_sha256",
+    "pair_request_sha256",
     "source_receipt_sha256",
     "source_transcript_sha256",
     "tokenizer_sha256",
     "tsa_certificate_sha256",
     "binary_sha256",
     "executed_binary_sha256",
+    "executed_identity",
     "build_manifest_sha256",
     "ca_certificate_sha256",
     "configuration_sha256",
@@ -496,6 +501,22 @@ self_test() {
   if ! printf '{"sha256":"%s"}\n' "$fake_secret" \
       | scan_digest_json 'self-test-sha256.json' >/dev/null 2>&1; then
     printf '%s\n' 'self-test failed: allowed JSON sha256 was rejected' >&2
+    return 1
+  fi
+  local w3_campaign_raw_path
+  w3_campaign_raw_path='results/glm52-gates/W3-performance-campaign-self-test/raw.jsonl'
+  if ! is_checksum_file "$w3_campaign_raw_path" ||
+      ! printf '{"executed_identity":["1","2","%s","3:4"],"bindings":{"binary_sha256":"%s"}}\n' \
+        "$fake_secret" "$fake_secret" \
+        | scan_digest_json "$w3_campaign_raw_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: W3 campaign identity digests were rejected' >&2
+    return 1
+  fi
+  if printf '{"unrelated":"%s"}\n' "$fake_secret" \
+      | scan_digest_json "$w3_campaign_raw_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: W3 campaign digest allowlist was too broad' >&2
     return 1
   fi
   local decode_evidence_path
