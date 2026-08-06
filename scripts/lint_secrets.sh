@@ -242,6 +242,7 @@ map_allowlist = {
     "accuracy_result_sha256",
     "artifact_sha256",
     "artifacts",
+    "engine_source_sha256",
     "evidence_archive",
     "evalset_sha256",
     "model_files",
