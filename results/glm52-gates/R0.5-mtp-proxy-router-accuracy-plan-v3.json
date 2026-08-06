@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "candidate": 4,
+  "classification": "PREREGISTERED_CAUSAL_ACCURACY_SCREEN_AMENDMENT",
+  "base_contract": {
+    "path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v2.json",
+    "sha256": "d1e3ec4597aca237e9861d6d82a33b1b3639c0e300f1bab5ef005ed0a5f1896b",
+    "rule": "Every base-contract clause remains mandatory except where this amendment explicitly replaces it. A scorer must load and hash-check both documents and reject contradictions or missing documents."
+  },
+  "scope_preserved": {
+    "claim": "Greedy-argmax, open-fixture, causal proxy accuracy only.",
+    "no_online_claim": true,
+    "no_physical_cost_claim": true,
+    "heldout_prohibited": true,
+    "implementation_authority": "This candidate authorizes only contract review. Scorer, packer, replay helper, and trace code remain unauthorized until both reviewers report no critical/high findings."
+  },
+  "router_semantics_replacement": {
+    "projection": "For each z_j and target layer l, first run the frozen source operation ds4_gpu_rms_norm_weight_tensor with F32 z_j, the layer's F32 ffn_norm tensor, DS4_N_EMBD=6144, DS4_RMS_EPS, and F32 output. Then run the frozen ds4_gpu_matmul_f32_tensor operation with the layer's F32 ffn_gate_inp tensor, 6144 inputs, 256 outputs, one row, and F32 logits. The reviewed replay helper uses the same frozen CUDA operations; a CPU reimplementation may report diagnostics but cannot grant PASS.",
+    "selection": "For expert e, p_e is the CUDA float result of 1.0f/(1.0f+expf(-logit_e)); selection_e is the CUDA float addition p_e + bias_e where bias is the layer's F32 ffn_exp_probs_b value. Per-step ranks sort selection descending, then expert ID ascending on exact float equality, exactly matching glm_router_select_parallel_kernel in ds4_cuda.c SHA-256 1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f.",
+    "cross_step_aggregation": "For each expert and K, aggregate max(selection_e) over exactly j=1..K using F32 stored values. Rank the maxima descending then expert ID ascending. Raw logits, p_e alone, normalized routed weights, sums/means, F16/TF32 substitutions, or any other transform are invalid.",
+    "tests": [
+      "raw-logit-plus-bias mutation fails",
+      "probability-only mutation fails",
+      "normalized-router-weight mutation fails",
+      "F16 and TF32 projection/aggregation mutations fail",
+      "mean-over-j mutation fails",
+      "reverse-ID tie mutation fails"
+    ]
+  },
+  "candidate_only_tensor_pack": {
+    "purpose": "Remove the full model and every normal target expert byte from the candidate process input surface after source_ready.",
+    "builder": "A separately frozen deterministic packer parses the hash-bound GGUF before either phase and copies only the exact allowed tensor names and bytes into a compact O_EXCL pack. It records name, GGUF dtype, dimensions, original absolute offset/length, blob offset/length, and per-blob SHA-256, then fsyncs pack/manifest/directory. No free-form or padding payload is permitted; unused bytes are zero and included in the pack hash.",
+    "allowed_tensor_names": [
+      "token_embd.weight",
+      "output.weight",
+      "output_norm.weight",
+      "every tensor whose exact name begins blk.78.",
+      "only blk.L.ffn_norm.weight, blk.L.ffn_gate_inp.weight, and blk.L.ffn_exp_probs_b for each integer L=3..77"
+    ],
+    "forbidden_inventory": "The packer must also publish the exact original [offset,length) inventory for blk.L.ffn_gate_exps.weight, blk.L.ffn_up_exps.weight, and blk.L.ffn_down_exps.weight for every L=3..77. It rejects overlap, aliasing, duplicate names/ranges, overflow, unexpected shapes/types, noncanonical order, or any pack blob not in the finite allowed-name expansion.",
+    "authority": "Before candidate execution, an independent validator rereads the model and pack through single O_NOFOLLOW descriptors, recomputes every allowed blob against its original GGUF range, proves that none intersects the forbidden inventory, and freezes the pack/manifest/validator hashes. The full model descriptor is then closed and the validator exits.",
+    "candidate_process_policy": [
+      "The source process runs the normal target only through the prompt, writes raw F32 z_0=h_t plus q1/source identity, fsyncs, and exits before candidate start.",
+      "The candidate starts as a fresh process with no inherited descriptor, mapping, CUDA registration, IPC handle, or live source/target process. It is passed only the compact pack, source artifact, output directory, frozen binary/libraries, and required CUDA device handles.",
+      "Before parsing untrusted candidate inputs, the launcher applies unprivileged Landlock ABI 7 to allow reads only from the frozen binary/libraries, compact pack, source artifact, CUDA device nodes, and required read-only system runtime paths, and writes only to a fresh output directory. The full GGUF path and its parents are not allowed. Seccomp denies socket creation, ptrace/process_vm access, namespace creation, and opening additional device classes. Environment and inherited FDs are enumerated; any unexpected FD/map fails.",
+      "The replay/scorer helper runs in a separate equivalent sandbox over the same pack and raw candidate state. Phase B starts only after both candidate and replay helpers exit and their artifacts freeze."
+    ],
+    "enforcement_evidence": "Record Landlock ABI/rules, seccomp filter hash, /proc/self/maps, /proc/self/fd targets, pack tensor inventory, forbidden model ranges, model-open EACCES result, and process ancestry. Absence of the full model is an externally checked acceptance condition, not a candidate-owned counter.",
+    "mandatory_mutations": [
+      "attempt to open/read the full GGUF after sandboxing fails with EACCES",
+      "add or rename one layer-3 expert blob into the pack and validator fails",
+      "direct layer-3 expert lookup has no pack entry and fails independently of dispatch telemetry",
+      "relabel a target expert range as blk.78 and validator fails against exact name/shape/range inventory",
+      "inherit a full-model descriptor or mapping and preflight fails",
+      "unexpected socket, ptrace, process_vm, FD, map, tensor blob, padding payload, or process remains and fails"
+    ]
+  },
+  "independent_replay_replacement": {
+    "raw_candidate_authority": "Candidate output must include little-endian contiguous F32 z_0 through z_8 (9 x 6144 values per case), q1 through q9, full F32 head logits for q1 through q9, exact source/min/absolute positions, prompt token-vector hash, MTP selected-slot vector per step, monotonic stage receipts emitted directly at the post-residual boundary, and hashes/sizes for every artifact. Stored router scores/ranks are comparison-only.",
+    "replay": "The separately frozen replay helper ignores stored router scores/ranks. Starting only from frozen z_0, q1, t/min_pos, empty private MTP KV, and the compact pack, it reruns all eight glm_graph_mtp_step operations. It independently derives z_1..z_8, head logits/q2..q9, all 75 RMSNorm/router outputs, per-step selection scores/ranks, max-over-j ranks, and both baselines. Candidate and replay z tensors and logits must be bit-identical because they use the same frozen binary/GPU operations; every token, position, slot and integer rank must be exact. Any difference FAILS before target accuracy is scored.",
+    "q1_check": "The replay helper recomputes q1 from z_0 with the normal output_norm and shared output head in the compact pack and requires bit-identical logits and argmax to the source artifact.",
+    "scorer_authority": "The fixed Python scorer accepts metrics only from replay-derived ranks and Phase-B exact target selections. It hash-checks the base/amendment contracts, pack/manifest, source/candidate/replay/target artifacts, frozen helper binaries and tests, then applies the unchanged v2 n=5 formulas. Candidate-emitted scores/ranks can only cause mismatch failure and never grant a hit.",
+    "mandatory_mutations": [
+      "canned candidate rankings fail against replay",
+      "post-head-normalized or other wrong hidden fails bit comparison",
+      "stage label with altered z bytes fails",
+      "wrong q/head logits/argmax fails",
+      "changed MTP min_pos or selected-slot receipt fails",
+      "candidate and replay implemented as the same process fails phase/process identity"
+    ]
+  },
+  "acceptance_amendment": {
+    "all_v2_accuracy_thresholds_remain": true,
+    "additional_mandatory_checks": [
+      "exact router semantics and all transform mutations pass/fail as specified",
+      "candidate tensor pack contains the exact finite allowlist and zero forbidden target-expert bytes",
+      "full model is inaccessible to candidate and replay processes after source_ready",
+      "candidate/replay raw z, logits, q, positions, KV slots, ranks, and baselines match independently",
+      "every sandbox/access/relabel/canned-state mutation fails",
+      "every artifact and report remains labeled greedy-argmax-only"
+    ],
+    "pass_authority": "Still authorizes only the separately preregistered physical cost/cache/lead-time gate; no serving change.",
+    "fail_authority": "Preserve the negative result and stop this recursive proxy branch."
+  },
+  "review_resolution": {
+    "R05-R187-H1-ROUTER-SCORE-TRANSFORM-UNFROZEN": "Exact frozen CUDA RMSNorm/projection/sigmoid/bias/float/max/tie operations and rejecting mutations are specified.",
+    "R05-R187-H2-TARGET-EXPERT-READ-PROHIBITION-UNENFORCED": "A finite compact tensor pack, independent original-range validator, fresh process, Landlock/seccomp policy, no inherited model state, and direct-read/relabel mutations replace the self-reported counter.",
+    "ADV-R05-R187-H1-CANDIDATE-PROCESS-CAN-READ-TARGET-EXPERTS": "The candidate never receives the full model and the OS sandbox denies reopening or cross-process recovery; the pack has no target experts.",
+    "ADV-R05-R187-H2-PROXY-SCORES-ARE-SELF-REPORTED": "Raw z/head/KV authority is independently replayed; stored rankings cannot grant PASS.",
+    "ADV-R05-R187-M1-GREEDY-BRANCH-SCOPE-MUST-PERSIST": "All claims and artifacts remain explicitly greedy-argmax-only."
+  },
+  "convergence": {
+    "gate_candidate": 4,
+    "campaign_review_next": 188,
+    "previous_blocking_set_strictly_shrank": true,
+    "consecutive_non_shrink": 0,
+    "total_candidates": 4
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "candidate_hash": "b6c9ea286f7da88cc1214fd0d91db7b9c62c4d48",
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "review_round": 187,
+  "reviewers": [
+    {
+      "name": "Nash",
+      "score_0_to_100": 80,
+      "critical": [],
+      "high": [
+        {
+          "id": "R05-R187-H1-ROUTER-SCORE-TRANSFORM-UNFROZEN",
+          "evidence": "Projection and bias adjustment did not freeze sigmoid(float32 logit)+bias, projection arithmetic/precision, or the score aggregated across j.",
+          "affected_gate": "Causal proxy accuracy",
+          "reproduction": "Rank one proxy state with raw-logit-plus-bias, sigmoid-plus-bias, and probability-only scores.",
+          "proposed_acceptance_test": "Freeze exact operations, dtypes, aggregation score, and ties; reject raw-logit, probability-only, and altered-precision mutations."
+        },
+        {
+          "id": "R05-R187-H2-TARGET-EXPERT-READ-PROHIBITION-UNENFORCED",
+          "evidence": "A zero dispatch counter does not prevent direct reads/GEMVs over normal expert offsets while the full model remains mapped.",
+          "affected_gate": "Expert-free causal validity",
+          "reproduction": "Read one normal expert row directly without incrementing the routed-dispatch counter.",
+          "proposed_acceptance_test": "Freeze the normal-expert offset inventory and make those ranges inaccessible or count every logical read; the direct-read mutation must fail."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "R05-R186-H1-PROXY-RECURRENCE-UNDERSPECIFIED", "status": "FIXED"},
+        {"id": "R05-R186-H2-OPEN-EVIDENCE-AUTHORITY-UNBOUND", "status": "FIXED"},
+        {"id": "R05-R186-H3-LATENCY-BYTE-PHYSICS-INCOMPLETE", "status": "FIXED"},
+        {"id": "ADV-R05-R186-H1-UNSEALED-TOKEN-BRANCH-ALIGNMENT", "status": "FIXED"},
+        {"id": "ADV-R05-R186-H2-ZERO-DELTA-BASELINE-CLONE-PASSES", "status": "FIXED"},
+        {"id": "ADV-R05-R186-H3-INCOMPLETE-CAUSAL-BYTE-AND-MISS-ACCOUNTING", "status": "FIXED"},
+        {"id": "ADV-R05-R186-H4-SELECTABLE-FIVE-CASE-SCORER", "status": "FIXED"},
+        {"id": "ADV-R05-R186-M1-AGGREGATE-QUALITY-CAN-HIDE-DEAD-LAYERS", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_SCORER_OR_TRACE_IMPLEMENTATION"
+    },
+    {
+      "name": "Singer",
+      "score_0_to_100": 76,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-R05-R187-H1-CANDIDATE-PROCESS-CAN-READ-TARGET-EXPERTS",
+          "evidence": "The candidate receives the full model; separate processes and a self-reported dispatch counter do not independently make target expert ranges inaccessible.",
+          "affected_gate": "R0.5 causal expert-free proxy validity",
+          "reproduction": "Invoke a layer-3 expert through a helper that does not increment the named counter or relabel it as layer-78 work.",
+          "proposed_acceptance_test": "Give the candidate only a permitted tensor view, bind exact inventories and access policy, and reject alternate-helper reads and target-as-MTP relabeling independently of its counter."
+        },
+        {
+          "id": "ADV-R05-R187-H2-PROXY-SCORES-ARE-SELF-REPORTED",
+          "evidence": "Stored scores/ranks and stage labels are not independently recomputable because raw z states and head/argmax lineage are absent.",
+          "affected_gate": "R0.5 harness-derived accuracy and recurrence integrity",
+          "reproduction": "Emit canned rankings with expected labels, tokens, positions, and zero counter.",
+          "proposed_acceptance_test": "Freeze raw F32 z states and enough MTP/head authority for a fixed scorer to independently replay recurrence, q transitions, routers, rankings, aggregation, and baselines; canned/wrong-state mutations must fail."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-R05-R187-M1-GREEDY-BRANCH-SCOPE-MUST-PERSIST",
+          "evidence": "The q branch is greedy argmax and does not qualify sampled serving.",
+          "affected_gate": "Scope of later claims",
+          "reproduction": "Compare the fixed q construction with a temperature/top-p branch.",
+          "proposed_acceptance_test": "Label every result greedy-only; separately preregister any sampled-branch use."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-R05-R186-H1-UNSEALED-TOKEN-BRANCH-ALIGNMENT", "status": "PARTIALLY_FIXED"},
+        {"id": "ADV-R05-R186-H2-ZERO-DELTA-BASELINE-CLONE-PASSES", "status": "FIXED"},
+        {"id": "ADV-R05-R186-H3-INCOMPLETE-CAUSAL-BYTE-AND-MISS-ACCOUNTING", "status": "FIXED_FOR_ACCURACY_SCOPE"},
+        {"id": "ADV-R05-R186-H4-SELECTABLE-FIVE-CASE-SCORER", "status": "FIXED"},
+        {"id": "ADV-R05-R186-M1-AGGREGATE-QUALITY-CAN-HIDE-DEAD-LAYERS", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_SCORER_OR_TRACE_IMPLEMENTATION"
+    }
+  ],
+  "terminal_disposition": "REJECTED_BEFORE_IMPLEMENTATION",
+  "convergence": {
+    "candidate": 3,
+    "blocking_set_strictly_shrank": true,
+    "consecutive_non_shrink": 0,
+    "next_candidate_permitted": true
+  }
+}
