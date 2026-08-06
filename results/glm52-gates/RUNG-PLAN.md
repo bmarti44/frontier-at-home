@@ -524,6 +524,23 @@ the serving gate is byte identity and a positive decode lower bound. Any new
 device-copy path must use pinned memory or carry an explicit measured
 justification in review.
 
+Terminal result (2026-08-06): **FAIL; default-off; do not adopt.** Ten fresh
+paired arms in five `ABBA/BAAB` blocks completed with exact 129-token output,
+byte-identical OFF/ON responses, valid event/slot ownership, and no OOM, Xid,
+swap growth, survivor, truncation, or memory-floor failure. Mean completed time
+fell from `59.0415113424` to `57.0098507536` seconds, a `3.4439267281%`
+geometric point improvement (approximately `2.1680` to `2.2452` tok/s in this
+control configuration). The one-sided 95% upper candidate/baseline ratio was
+`0.9690380685669832`; adoption required `<= 0.95`, so the measured improvement
+is real but too small for W3's preregistered bar. The fixed scorer and all ten
+pair bindings replayed exactly for both persistent reviewers. Nash scored the
+final record 100 and Singer 99 with no critical, high, or medium issues. Singer
+left one nonblocking linter-syntax note: uppercase hexadecimal is accepted in
+the exact path-scoped binary-digest slot, while the frozen scorer requires the
+lowercase digest actually recorded. Evidence is
+`W3-performance-campaign-v8-fail/{manifest.json,raw.jsonl,summary.json}`. Do not
+rerun or weaken this gate; continue to the MTP address-oracle work.
+
 ### Rung 0.5 - MTP as an expert-address oracle
 
 Use the MTP head K tokens ahead only to predict expert IDs and keep the NVMe
