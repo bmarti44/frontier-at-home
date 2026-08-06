@@ -23,6 +23,7 @@ readonly MODEL_BYTES=211075856448
 readonly MODEL_SHA256=a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0
 readonly OUT_PARENT=/home/bmarti44/.local/state/glm52-w7-red
 readonly CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
+readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock
 readonly PORT=8097
 readonly CACHE_GIB=40
 
@@ -209,6 +210,13 @@ fi
   exit 2
 }
 ! pgrep -x ds4-server >/dev/null && ! pgrep -x fio >/dev/null || exit 75
+[[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
+   $(stat -Lc '%U:%G:%a:%h' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600:1 ]] || {
+  echo "W7 engine lock is unsafe" >&2
+  exit 2
+}
+/usr/bin/flock -n -E 75 -- "$ENGINE_LOCK" /usr/bin/true || exit 75
+readonly engine_lock_identity=$(stat -Lc '%d:%i' -- "$ENGINE_LOCK")
 swap_used_kib=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t-f}' /proc/meminfo)
 (( swap_used_kib < 1048576 )) || exit 8
 /usr/bin/python3 -I -B "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 0 >/dev/null
@@ -237,6 +245,7 @@ set +e
   DS4_CUDA_EXPERT_CACHE_GB=$CACHE_GIB DS4_CUDA_EXPERT_CACHE_PIN=1 \
   DS4_CUDA_EXPERT_CACHE_SLRU=1 DS4_CUDA_FETCH_THREADS=6 \
   DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_GLM_SYNC_TRACE=1 \
+  DS4_LOCK_FILE=$ENGINE_LOCK DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity \
     "$CGROUP" --tag "$tag" -- /usr/bin/bash "$SCRIPT" --driver "$out" "$PORT" \
     >"$out/containment.stdout" 2>"$out/containment.stderr"
 containment_rc=$?

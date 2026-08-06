@@ -24,6 +24,8 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         source = HARNESS.read_text(encoding="utf-8")
         self.assertIn("GLM sync start=5028 prompt=5048 suffix=20", source)
         self.assertIn("strict_guard_cold_restart", source)
+        self.assertIn("readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock", source)
+        self.assertIn("DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity", source)
         assignments = [
             line for line in source.splitlines()
             if line.strip().startswith("DS4_GLM_RESUME_GUARD_OFF=")
