@@ -88,6 +88,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS",
             "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
             "DS4_GLM_TP_DEBUG",
+            "DS4_LOCK_FILE",
         ]
         off = {
             "DS4_CUDA_EXPERT_CACHE_GB": "68",
@@ -96,6 +97,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_CUDA_FETCH_THREADS": "6",
             "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
             "DS4_GLM_TP_DEBUG": "1",
+            "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
         }
         on = dict(off, DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS="1")
 
@@ -130,7 +132,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "readonly OUTER_LOCK=/run/lock/frontier-at-home/inference.lock",
             '[[ $ENGINE_LOCK != "$OUTER_LOCK" ]]',
             'DS4_LOCK_FILE=$ENGINE_LOCK',
-            '"DS4_LOCK_FILE"',
+            ',DS4_LOCK_FILE',
             "validate_engine_lock",
             'flock -n -E 75 -- "$ENGINE_LOCK"',
             "runner_start_ticks",
@@ -147,8 +149,7 @@ runner_start_ticks=
 runner_is_exact() {
   [[ -n ${runner_pid:-} && -n ${runner_start_ticks:-} &&
      -r /proc/$runner_pid/stat ]] || return 1
-  [[ $(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true) ==
-     "$runner_start_ticks" ]]
+  [[ $(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true) == "$runner_start_ticks" ]]
 }
 (exit 7) &
 runner_pid=$!

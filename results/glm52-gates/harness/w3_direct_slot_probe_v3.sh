@@ -27,7 +27,9 @@ readonly CTX=8192
 readonly TOKENS=64
 readonly STATE_PARENT=/home/bmarti44/.local/state
 readonly CRASH_ROOT=$STATE_PARENT/glm52-crashlog
-readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_GLM_TP_DEBUG
+readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock
+readonly OUTER_LOCK=/run/lock/frontier-at-home/inference.lock
+readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_GLM_TP_DEBUG,DS4_LOCK_FILE
 
 [[ $# == 2 ]] || {
   echo "usage: $0 FREEZE_JSON DRAND_JSON" >&2
@@ -51,6 +53,35 @@ isolated_python() {
   echo "W3 probe inputs are unavailable" >&2
   exit 2
 }
+validate_engine_lock() {
+  local parent=/run/user/1000
+  [[ $ENGINE_LOCK != "$OUTER_LOCK" ]] || {
+    echo "W3 engine lock aliases the outer inference lock" >&2
+    return 1
+  }
+  [[ ! -L $parent && $(readlink -f -- "$parent") == "$parent" && -d $parent &&
+     $(stat -Lc '%U:%G:%a' -- "$parent") == bmarti44:bmarti44:700 ]] || {
+    echo "W3 engine-lock parent is unsafe" >&2
+    return 1
+  }
+  if [[ -e $ENGINE_LOCK || -L $ENGINE_LOCK ]]; then
+    [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
+       $(stat -Lc '%U:%G:%a' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600 ]] || {
+      echo "W3 engine lock is unsafe" >&2
+      return 1
+    }
+  fi
+  /usr/bin/flock -n -E 75 -- "$ENGINE_LOCK" /usr/bin/true || {
+    echo "W3 engine lock is held" >&2
+    return 1
+  }
+  [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
+     $(stat -Lc '%U:%G:%a' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600 ]] || {
+    echo "W3 engine lock creation was unsafe" >&2
+    return 1
+  }
+}
+validate_engine_lock
 if pgrep -x ds4-server >/dev/null || pgrep -x fio >/dev/null; then
   echo "exclusive W3 probe preflight found an active engine or fio" >&2
   exit 75
@@ -231,12 +262,18 @@ readonly REQUEST_SHA256=$(sha256sum -- "$OUT/request.json" | awk '{print $1}')
 
 active_pid=
 runner_pid=
+runner_start_ticks=
+runner_is_exact() {
+  [[ -n ${runner_pid:-} && -n ${runner_start_ticks:-} &&
+     -r /proc/$runner_pid/stat ]] || return 1
+  [[ $(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true) == "$runner_start_ticks" ]]
+}
 cleanup() {
   if [[ -n ${active_pid:-} && -r /proc/$active_pid/exe &&
         $(readlink -f -- "/proc/$active_pid/exe" 2>/dev/null || true) == "$BIN" ]]; then
     kill -TERM "$active_pid" 2>/dev/null || true
   fi
-  if [[ -n ${runner_pid:-} ]] && kill -0 "$runner_pid" 2>/dev/null; then
+  if runner_is_exact; then
     kill -TERM "$runner_pid" 2>/dev/null || true
     for _ in $(seq 1 180); do
       kill -0 "$runner_pid" 2>/dev/null || break
@@ -247,6 +284,7 @@ cleanup() {
   fi
   active_pid=
   runner_pid=
+  runner_start_ticks=
 }
 on_exit() {
   local rc=$?
@@ -288,6 +326,10 @@ PY
 wait_for_exact_engine() {
   local deadline=$((SECONDS + 900))
   while (( SECONDS < deadline )); do
+    runner_is_exact || {
+      echo "runner exited before the frozen W3 engine appeared" >&2
+      return 1
+    }
     mapfile -t candidates < <(pgrep -x ds4-server || true)
     if (( ${#candidates[@]} == 1 )); then
       local candidate=${candidates[0]}
@@ -308,6 +350,7 @@ wait_for_exact_engine() {
 wait_for_ready() {
   local port=$1 deadline=$((SECONDS + 900)) code=
   while (( SECONDS < deadline )); do
+    runner_is_exact || return 1
     kill -0 "$active_pid" 2>/dev/null || return 1
     code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 \
       "http://127.0.0.1:$port/v1/models" || true)
@@ -340,6 +383,7 @@ run_arm() {
     DS4_CUDA_FETCH_THREADS=6
     DS4_CUDA_MOE_NO_ATOMIC_DOWN=1
     DS4_GLM_TP_DEBUG=1
+    "DS4_LOCK_FILE=$ENGINE_LOCK"
   )
   [[ $direct == 1 ]] && engine_environment+=(DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS=1)
   local env_sha
@@ -369,12 +413,28 @@ run_arm() {
       --ssd-streaming --ssd-streaming-cache-experts 40GB \
       >"$arm_dir/containment.stdout" 2>"$arm_dir/containment.stderr" &
   runner_pid=$!
+  runner_start_ticks=$(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true)
   set -e
 
+  [[ $runner_start_ticks =~ ^[0-9]+$ ]] || {
+    set +e
+    wait "$runner_pid"
+    local early_runner_rc=$?
+    set -e
+    runner_pid=
+    runner_start_ticks=
+    echo "W3 $arm runner exited before identity capture rc=$early_runner_rc" >&2
+    return 1
+  }
+
   if ! wait_for_exact_engine || ! wait_for_ready "$port"; then
+    local failed_runner_pid=$runner_pid
     cleanup
-    wait "$runner_pid" || true
-    echo "W3 $arm arm did not become ready" >&2
+    set +e
+    wait "$failed_runner_pid"
+    local failed_runner_rc=$?
+    set -e
+    echo "W3 $arm arm did not become ready runner_rc=$failed_runner_rc" >&2
     return 1
   fi
 
@@ -433,6 +493,7 @@ run_arm() {
   local safe_rc=$?
   set -e
   runner_pid=
+  runner_start_ticks=
 
   [[ $(stat -Lc '%d:%i' -- "$crash_dir") == "$crash_identity" &&
       -f $crash_dir/main.log && -f $crash_dir/cmd.log ]] || {
