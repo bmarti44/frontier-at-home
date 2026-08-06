@@ -45,7 +45,7 @@ isolated_python() {
   echo "W3 probe must run as bmarti44" >&2
   exit 2
 }
-[[ -x $BIN && -x $CGROUP && -x $SAFE && -x $TOKEN_SCORER &&
+[[ -x $BIN && -x $CGROUP && -r $SAFE && -x $TOKEN_SCORER &&
    -r $MODEL && -r $TOKENIZER &&
    -r $TOKENIZERS_INIT && -r $TOKENIZERS_SO && -r $FREEZE && -r $DRAND ]] || {
   echo "W3 probe inputs are unavailable" >&2
