@@ -1,0 +1,39 @@
+{
+  "schema_version": 8,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "C_PARSER_FIXTURE_CORRECTION_AUTHORIZED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v7.json",
+  "review_authority": "results/glm52-gates/W7-resume-review-r202.json",
+  "runtime_falsifier": "results/glm52-gates/W7-resume-compiled-red-attempt2.json",
+  "behavioral_red": "results/glm52-gates/W7-resume-candidate8-red.json",
+  "inherits_unchanged_acceptance": "All v4-v7 payload, evaluator, complete-state, numerical, execution-identity, confirmation and safety requirements remain unchanged.",
+  "production_render_contract": {
+    "api": "/v1/completions",
+    "context_tokens": 8192,
+    "model": "default",
+    "thinking": true,
+    "reasoning_effort": "high",
+    "system": "You are a helpful assistant",
+    "oracle": "A test-only translation unit includes frozen ds4_server.c and calls its static parse_completion_request; narrow stubs replace model identity, thinking mapping and token emission without reimplementing JSON or rendering.",
+    "ds4_server_source_sha256": "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07",
+    "oracle_source_sha256": "9590b8eaa238e311ca0468e6983280b798cbb94c3d727920f5e839ac8ee20539",
+    "oracle_binary_sha256": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66"
+  },
+  "compiled_red_classification": {
+    "label": "fresh production-path reproduction",
+    "geometry": {
+      "selected": 5044,
+      "common": 5045,
+      "live": 5055,
+      "prompt": 5066
+    },
+    "generated_live_tokens": 0,
+    "desired_sync": {
+      "start": 5044,
+      "prompt": 5066,
+      "suffix": 22
+    },
+    "unchanged_engine_expected": "The strict guard observes evaluated frontier 5055 beyond restored checkpoint 5044 and forces a cold start at zero."
+  },
+  "next": "Regenerate the pool from the C oracle, run the offline oracle/tokenizer test, then run only the contained deployed-binary geometry smoke. A full RED and engine implementation remain unauthorized until both agree exactly and candidate 8 clears review with a new seed."
+}

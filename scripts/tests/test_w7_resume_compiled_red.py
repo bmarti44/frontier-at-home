@@ -51,7 +51,7 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
 
     def test_acceptance_is_resume_not_guard_bypass(self):
         source = HARNESS.read_text(encoding="utf-8")
-        self.assertIn("GLM sync start=5028 prompt=5048 suffix=20", source)
+        self.assertIn("GLM sync start=5044 prompt=5066 suffix=22", source)
         self.assertIn("strict_guard_cold_restart", source)
         self.assertIn("readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock", source)
         self.assertIn("DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity", source)
@@ -63,12 +63,12 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
 
     def test_preregistered_plan_authorizes_compiled_red(self):
         plan = json.loads(
-            (ROOT / "results/glm52-gates/W7-resume-correctness-plan-v7.json").read_text()
+            (ROOT / "results/glm52-gates/W7-resume-correctness-plan-v8.json").read_text()
         )
-        self.assertEqual(plan["status"], "COMPILED_RED_AUTHORIZED_NOT_EXECUTED")
+        self.assertEqual(plan["status"], "C_PARSER_FIXTURE_CORRECTION_AUTHORIZED_NOT_EXECUTED")
         self.assertEqual(
             plan["compiled_red_classification"]["geometry"],
-            {"selected": 5028, "common": 5029, "live": 5037, "prompt": 5048},
+            {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066},
         )
 
 

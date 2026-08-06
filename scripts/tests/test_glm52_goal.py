@@ -98,31 +98,6 @@ def w7_resume_record(execution_nonce_sha256="c" * 64):
         bytes.fromhex(confirmation_seed) + bytes.fromhex(pool_sha256) +
         bytes.fromhex(execution_nonce_sha256)
     ).hexdigest()
-    stem = json.loads(
-        (ROOT / "results/glm52-gates/harness/fixture-glm-long8.json").read_text()
-    )["prompt"].encode("utf-8")
-    primary_suffix = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
-    confirmation_suffixes = tuple(
-        f"\n\n[W7 confirmation {index:02d}] " + instruction
-        for index, instruction in enumerate((
-            "Name the cache frontier invariant and give one counterexample.",
-            "Describe the UTF-8/BPE boundary risk in exactly three sentences.",
-            "Return a concise checklist for validating a resumed append.",
-            "Explain why exact replay alone cannot qualify suffix divergence.",
-            "State which rows must be invalidated before evaluating the suffix.",
-            "Contrast a cold restart with a live rewind without using a table.",
-            "Give a deterministic test for a checkpoint selected at a byte boundary.",
-            "Identify the first observable symptom of stale frontier contamination.",
-            "Explain why a longer stored record with wrong lineage must be ignored.",
-            "State the required relationship among selected, common, live, and prompt.",
-            "Describe a mutation that proves a short payload read is rejected.",
-            "Explain why generated-token equality does not replace logit comparison.",
-            "List the state members that make a GLM checkpoint complete.",
-            "Describe how to prove evaluator ranges contain no hidden prefix work.",
-            "Explain why the default-off flag must not affect non-GLM models.",
-            "Summarize the fail-closed behavior for a malformed checkpoint.",
-        ))
-    )
     contracts = {
         "cold-primary": ("glm", "unset", "primary-cold"),
         "strict-primary": ("glm", "unset", "primary-extension"),
@@ -162,8 +137,7 @@ def w7_resume_record(execution_nonce_sha256="c" * 64):
             base64.b64decode(specification["canonical_token_ids_zlib_b64"])
         )
         tokens = list(struct.unpack(f"<{prompt}i", token_raw))
-        suffix = primary_suffix if regime_id == "primary" else confirmation_suffixes[variant]
-        wire_bytes = stem + suffix.encode("utf-8")
+        wire_bytes = base64.b64decode(specification["rendered_wire_utf8_b64"])
         offset_raw = zlib.decompress(
             base64.b64decode(specification["wire_token_end_offsets_zlib_b64"])
         )
@@ -1456,14 +1430,14 @@ class FormulaTests(unittest.TestCase):
         )
         expected = {
             "confirmation-1": (
-                5046,
-                "2c3e801847ece5c5ef25977956ca1c70c39b71dc0613fe54a692f09e1b08d40c",
-                "c618156f27ebfd4122de70a48f0a048e97e6c0968137c79505dc8df3520966aa",
+                5064,
+                "ffadfb3cdb935fac755a5dfd1d24f20712ca9ede93639e4d054e54c55f35f440",
+                "b0d3d893e1a4a0fb52f55233bffa158065b456bded386e855f1d66dd2a396585",
             ),
             "confirmation-2": (
-                5048,
-                "ba4f1ad1188715f12a26b5500ca12283ff6b61243ffee6d005cb451c76cbb52e",
-                "53e318bfd8f52a5a3db17df24d4ca459fd0f27e09e4ab0f10c8638baf3204360",
+                5066,
+                "a5a8a6f5f171fbbf503eac01fda2e60e8eeccfade88218bcaab823db237f60d4",
+                "b9a235f59d267fb6d85528a093df642f9352bd3de5594bcf7cdf1e79d285b4b8",
             ),
         }
         for regime in record["regimes"][1:]:

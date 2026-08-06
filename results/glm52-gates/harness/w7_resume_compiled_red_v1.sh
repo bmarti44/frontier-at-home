@@ -1,7 +1,7 @@
 #!/bin/bash
 # Production-path RED for W7. This intentionally runs the unchanged GLM
 # engine and fails its desired-behavior assertion when the strict resume guard
-# converts the selected 5,028-token disk checkpoint into a full cold restart.
+# converts the selected 5,044-token disk checkpoint into a full cold restart.
 set -Eeuo pipefail
 umask 077
 
@@ -12,9 +12,11 @@ readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
 readonly STEM=$REPO/results/glm52-gates/harness/fixture-glm-long8.json
 readonly POOL=$REPO/results/glm52-gates/harness/w7-production-fixture-pool-v1.json
-readonly POOL_SHA256=74829fc094143b4a494e104c186e4146f2e669eaceedbb354a7ab35251083d90
+readonly POOL_SHA256=c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9
 readonly TOKENIZER=/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json
 readonly TOKENIZER_RUNTIME=/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2
+readonly RENDER_ORACLE=/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle
+readonly RENDER_ORACLE_SHA256=6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66
 readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-d652a9b5
 readonly BIN=$CANDIDATE_SRC/ds4-server
 readonly BINARY_SHA256=56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4
@@ -28,9 +30,13 @@ readonly PORT=8097
 readonly CACHE_GIB=40
 
 fixture_check() {
-  /usr/bin/python3 -I -B - "$STEM" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" <<'PY'
+  /usr/bin/python3 -I -B - "$STEM" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$RENDER_ORACLE" <<'PY'
+import base64
 import json
+import struct
+import subprocess
 import sys
+import zlib
 sys.path.insert(0, sys.argv[4])
 from tokenizers import Tokenizer
 
@@ -39,11 +45,22 @@ stem = json.load(open(stem_path, encoding="utf-8"))["prompt"]
 pool = json.load(open(pool_path, encoding="utf-8"))
 primary = next(item for item in pool["variants"] if item["variant"] == "primary-fixed")
 suffix = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
+def render(raw):
+    body = json.dumps({"model":"default","prompt":raw,"max_tokens":0,"temperature":0,"thinking":True,"reasoning_effort":"high"}, ensure_ascii=False, separators=(",", ":")).encode()
+    return subprocess.run([sys.argv[5]], input=body, capture_output=True, check=True).stdout
+live_wire = render(stem + pool["live"]["suffix_utf8"])
+primary_wire = render(stem + suffix)
+if live_wire != base64.b64decode(pool["live"]["rendered_wire_utf8_b64"]):
+    raise SystemExit("live C-rendered wire differs")
+if primary_wire != base64.b64decode(primary["rendered_wire_utf8_b64"]):
+    raise SystemExit("primary C-rendered wire differs")
 tokenizer = Tokenizer.from_file(tokenizer_path)
-live_wire = stem + pool["live"]["suffix_utf8"]
-primary_wire = stem + suffix
-live_tokens = tokenizer.encode(live_wire, add_special_tokens=False).ids
-primary_tokens = tokenizer.encode(primary_wire, add_special_tokens=False).ids
+live_tokens = tokenizer.encode(live_wire.decode(), add_special_tokens=False).ids
+primary_tokens = tokenizer.encode(primary_wire.decode(), add_special_tokens=False).ids
+frozen_live = struct.unpack(f"<{pool['live']['token_count']}i", zlib.decompress(base64.b64decode(pool["live"]["token_ids_zlib_b64"])))
+frozen_primary = struct.unpack(f"<{primary['prompt_tokens']}i", zlib.decompress(base64.b64decode(primary["canonical_token_ids_zlib_b64"])))
+if tuple(live_tokens) != frozen_live or tuple(primary_tokens) != frozen_primary:
+    raise SystemExit("C-rendered tokens differ from frozen vectors")
 common = 0
 for left, right in zip(live_tokens, primary_tokens):
     if left != right:
@@ -55,7 +72,7 @@ observed = {
     "live": len(live_tokens),
     "prompt": len(primary_tokens),
 }
-expected = {"selected": 5028, "common": 5029, "live": 5037, "prompt": 5048}
+expected = {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066}
 if observed != expected:
     raise SystemExit(f"frozen W7 geometry mismatch: {observed!r}")
 print(json.dumps(observed, sort_keys=True, separators=(",", ":")))
@@ -152,26 +169,26 @@ primary = json.loads((out / "primary-response.json").read_text(encoding="utf-8")
 checks = {
     "live_http_200": (out / "live-http-status").read_text().strip() == "200",
     "primary_http_200": (out / "primary-http-status").read_text().strip() == "200",
-    "live_prompt_tokens_5037": live.get("usage", {}).get("prompt_tokens") == 5037,
-    "primary_prompt_tokens_5048": primary.get("usage", {}).get("prompt_tokens") == 5048,
-    "live_miss_geometry": "live kv cache miss live=5037 prompt=5048 common=5029" in log,
-    "selected_checkpoint_5028": re.search(r"kv cache hit text tokens=5028\\b", log) is not None,
-    "strict_guard_cold_restart": "GLM resume guard: prompt (5048) extends/diverges past evaluated frontier 5037 (checkpoint 5028)" in log,
-    "cold_sync_after_guard": re.search(r"GLM sync start=0 prompt=5048 suffix=5048\\b", log) is not None,
+    "live_prompt_tokens_5055": live.get("usage", {}).get("prompt_tokens") == 5055,
+    "primary_prompt_tokens_5066": primary.get("usage", {}).get("prompt_tokens") == 5066,
+    "live_miss_geometry": "live kv cache miss live=5055 prompt=5066 common=5045" in log,
+    "selected_checkpoint_5044": re.search(r"kv cache hit text tokens=5044\\b", log) is not None,
+    "strict_guard_cold_restart": "GLM resume guard: prompt (5066) extends/diverges past evaluated frontier 5055 (checkpoint 5044)" in log,
+    "cold_sync_after_guard": re.search(r"GLM sync start=0 prompt=5066 suffix=5066\\b", log) is not None,
     "legacy_guard_bypass_absent": "DS4_GLM_RESUME_GUARD_OFF" not in log,
 }
 desired_resume_pass = (
-    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5037", "primary_prompt_tokens_5048", "live_miss_geometry", "selected_checkpoint_5028", "legacy_guard_bypass_absent"))
+    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5055", "primary_prompt_tokens_5066", "live_miss_geometry", "selected_checkpoint_5044", "legacy_guard_bypass_absent"))
     and not checks["strict_guard_cold_restart"]
-    and re.search(r"GLM sync start=5028 prompt=5048 suffix=20\\b", log) is not None
+    and re.search(r"GLM sync start=5044 prompt=5066 suffix=22\\b", log) is not None
 )
 red_confirmed = all(checks.values()) and not desired_resume_pass
 summary = {
     "schema_version": 1,
     "gate": "W7-resume-bpe-lineage-v1",
     "classification": "fresh production-path reproduction",
-    "geometry": {"selected": 5028, "common": 5029, "live": 5037, "prompt": 5048},
-    "acceptance_formula": "HTTP/prompt/selection geometry exact; no strict cold restart; sync start=5028,prompt=5048,suffix=20",
+    "geometry": {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066},
+    "acceptance_formula": "HTTP/prompt/selection geometry exact; no strict cold restart; sync start=5044,prompt=5066,suffix=22",
     "checks": checks,
     "desired_resume_pass": desired_resume_pass,
     "red_confirmed": red_confirmed,
@@ -186,6 +203,7 @@ PY
 
 if [[ ${1:-} == --self-test ]]; then
   [[ $(sha256sum -- "$POOL" | awk '{print $1}') == "$POOL_SHA256" ]]
+  [[ $(sha256sum -- "$RENDER_ORACLE" | awk '{print $1}') == "$RENDER_ORACLE_SHA256" ]]
   [[ $(sha256sum -- "$BIN" | awk '{print $1}') == "$BINARY_SHA256" ]]
   [[ $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]]
   fixture_check >/dev/null

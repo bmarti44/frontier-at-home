@@ -3076,10 +3076,15 @@ _W7_STEM_PATH = ROOT / "results/glm52-gates/harness/fixture-glm-long8.json"
 _W7_STEM_FILE_SHA256 = "4b46547667dd4d84b8da83c0ccca358e725e33e8de8bbfe25701ab0d878ae469"
 _W7_STEM_TEXT_SHA256 = "a2ff948826dd9a1b4c74fe599ba4b668ae4285e44b275006afc9d3c7541655cf"
 _W7_POOL_PATH = ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json"
-_W7_POOL_SHA256 = "74829fc094143b4a494e104c186e4146f2e669eaceedbb354a7ab35251083d90"
+_W7_POOL_SHA256 = "c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9"
 _W7_TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
 _W7_TOKENIZER_INIT_SHA256 = "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4"
 _W7_TOKENIZER_NATIVE_SHA256 = "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910"
+_W7_SERVER_SOURCE_SHA256 = "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07"
+_W7_RENDER_ORACLE_SOURCE_SHA256 = "9590b8eaa238e311ca0468e6983280b798cbb94c3d727920f5e839ac8ee20539"
+_W7_RENDER_ORACLE_BINARY_SHA256 = "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66"
+_W7_RENDER_PREFIX = b"[gMASK]<sop><|system|>Reasoning Effort: High<|system|>You are a helpful assistant<|user|>"
+_W7_RENDER_SUFFIX = b"<|assistant|><think>"
 _W7_PRIMARY_SUFFIX = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
 _W7_CONFIRMATION_SUFFIXES = tuple(
     f"\n\n[W7 confirmation {index:02d}] " + instruction
@@ -3124,7 +3129,7 @@ _W7_CASE_CONTRACT = {
 }
 
 
-def _w7_frozen_wire(variant: str | int) -> bytes:
+def _w7_caller_wire(variant: str | int) -> bytes:
     if _sha256(_W7_STEM_PATH) != _W7_STEM_FILE_SHA256:
         raise ValueError("W7 frozen stem file hash is invalid")
     document = _read_strict_json(_W7_STEM_PATH)
@@ -3147,10 +3152,11 @@ def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...]
         raise ValueError("W7 production fixture pool hash is invalid")
     document = _read_strict_json(_W7_POOL_PATH)
     _require_exact_keys(
-        document, {"schema", "tokenizer", "live", "inventory_recipe", "variants"},
+        document,
+        {"schema", "tokenizer", "render_contract", "oracle", "live", "inventory_recipe", "variants"},
         "W7 production fixture pool",
     )
-    if document["schema"] != "glm52-w7-production-fixture-pool-v1":
+    if document["schema"] != "glm52-w7-production-fixture-pool-v2":
         raise ValueError("W7 production fixture pool schema is invalid")
     expected_tokenizer = {
         "tokenizer_sha256": _W7_TOKENIZER_SHA256,
@@ -3160,6 +3166,18 @@ def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...]
     }
     if document["tokenizer"] != expected_tokenizer:
         raise ValueError("W7 production tokenizer identity is invalid")
+    if document["render_contract"] != {
+        "api": "/v1/completions", "context_tokens": 8192, "model": "default",
+        "reasoning_effort": "high", "thinking": True,
+        "system": "You are a helpful assistant", "oracle": "frozen-ds4-server-c-parser",
+    }:
+        raise ValueError("W7 production render contract is invalid")
+    if document["oracle"] != {
+        "ds4_server_source_sha256": _W7_SERVER_SOURCE_SHA256,
+        "oracle_source_sha256": _W7_RENDER_ORACLE_SOURCE_SHA256,
+        "oracle_binary_sha256": _W7_RENDER_ORACLE_BINARY_SHA256,
+    }:
+        raise ValueError("W7 C render oracle identity is invalid")
     recipe = document["inventory_recipe"]
     if recipe != {
         "alignment_tokens": 4, "older_delta_tokens": -4,
@@ -3168,11 +3186,25 @@ def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...]
         raise ValueError("W7 checkpoint inventory recipe is invalid")
     live = document["live"]
     _require_exact_keys(
-        live, {"suffix_utf8", "wire_sha256", "token_ids_zlib_b64", "token_count"},
+        live,
+        {
+            "suffix_utf8", "caller_wire_sha256", "rendered_wire_utf8_b64",
+            "rendered_wire_sha256", "token_ids_zlib_b64", "token_count",
+        },
         "W7 live fixture",
     )
     if live["suffix_utf8"] != "\n\nOne two three four five six seven.":
         raise ValueError("W7 live fixture suffix is invalid")
+    stem = _w7_caller_wire("primary-fixed")[:-len(_W7_PRIMARY_SUFFIX.encode("utf-8"))]
+    live_caller = stem + live["suffix_utf8"].encode("utf-8")
+    if live["caller_wire_sha256"] != hashlib.sha256(live_caller).hexdigest():
+        raise ValueError("W7 live caller wire is invalid")
+    live_wire = _w7_utf8_bytes(live["rendered_wire_utf8_b64"], "W7 live rendered wire")
+    if (
+        live["rendered_wire_sha256"] != hashlib.sha256(live_wire).hexdigest() or
+        live_wire != _W7_RENDER_PREFIX + live_caller + _W7_RENDER_SUFFIX
+    ):
+        raise ValueError("W7 live C-rendered wire is invalid")
     live_tokens = _w7_i32_vector(
         live["token_ids_zlib_b64"], "W7 live fixture tokens", live["token_count"],
     )
@@ -3184,7 +3216,8 @@ def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...]
         _require_exact_keys(
             item,
             {
-                "variant", "wire_sha256", "canonical_token_ids_zlib_b64",
+                "variant", "caller_wire_sha256", "rendered_wire_utf8_b64",
+                "rendered_wire_sha256", "canonical_token_ids_zlib_b64",
                 "wire_token_end_offsets_zlib_b64", "prompt_tokens", "common_tokens",
                 "live_tokens", "selected_tokens",
             },
@@ -3194,9 +3227,17 @@ def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...]
         expected_variant: str | int = "primary-fixed" if index == 0 else index - 1
         if variant != expected_variant or variant in by_variant:
             raise ValueError("W7 production fixture variant identity is invalid")
-        wire = _w7_frozen_wire(variant)
-        if item["wire_sha256"] != hashlib.sha256(wire).hexdigest():
-            raise ValueError("W7 production fixture wire hash is invalid")
+        caller_wire = _w7_caller_wire(variant)
+        if item["caller_wire_sha256"] != hashlib.sha256(caller_wire).hexdigest():
+            raise ValueError("W7 production caller wire hash is invalid")
+        wire = _w7_utf8_bytes(
+            item["rendered_wire_utf8_b64"], f"W7 production fixture {variant} wire",
+        )
+        if (
+            item["rendered_wire_sha256"] != hashlib.sha256(wire).hexdigest() or
+            wire != _W7_RENDER_PREFIX + caller_wire + _W7_RENDER_SUFFIX
+        ):
+            raise ValueError("W7 production C-rendered wire is invalid")
         canonical = _w7_i32_vector(
             item["canonical_token_ids_zlib_b64"],
             f"W7 production fixture {variant} tokens", item["prompt_tokens"],
@@ -3218,7 +3259,9 @@ def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...]
             item["selected_tokens"] != common - (common % recipe["alignment_tokens"])
         ):
             raise ValueError("W7 production fixture geometry is invalid")
-        by_variant[variant] = {**item, "canonical": canonical, "offsets": offsets}
+        by_variant[variant] = {
+            **item, "wire": wire, "canonical": canonical, "offsets": offsets,
+        }
     return by_variant, live_tokens, recipe
 
 
@@ -3453,8 +3496,8 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
             )
         if regime["fixture_variant"] != expected_variant:
             raise ValueError(f"W7 {regime['regime_id']} fixture variant is not seed-selected")
-        expected_wire = _w7_frozen_wire(expected_variant)
         expected_fixture = fixture_pool[expected_variant]
+        expected_wire = expected_fixture["wire"]
         all_fixture_hashes.add(regime["fixture_sha256"])
         all_selection_seeds.add(regime["selection_seed_sha256"])
         cases = regime["cases"]
@@ -4092,7 +4135,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _w7_f32_vector,
             _w7_i32_vector,
             _w7_utf8_bytes,
-            _w7_frozen_wire,
+            _w7_caller_wire,
             _w7_fixture_pool,
             _w7_token_sha256,
             _w7_expected_payload_bytes,
