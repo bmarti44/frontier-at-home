@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "gate": "W3-direct-slot-gemv-microgate",
+  "candidate_hash": "f630db777e00738e3d4a7fd4b777bc57050f1451",
+  "review_round": 160,
+  "candidate_number": 1,
+  "status": "FAIL",
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 22,
+    "critical": [
+      "W3-R160-C1-STALE-BUFFER-NOOP-DIRECT-PASSES"
+    ],
+    "high": [
+      "W3-R160-H1-TEST-ONLY-NONPRODUCTION-DISPATCH",
+      "W3-R160-H2-SYNTHETIC-MAPPING-OMITS-SLOT-OWNERSHIP",
+      "W3-R160-H3-IDENTITY-FIXTURE-HIDES-ADDRESSING-BUGS",
+      "W3-R160-H4-INCOMPLETE-COMPLETED-TIME-COMPARISON",
+      "W3-R160-H5-PASS-EVIDENCE-AND-CONFIRMATION-UNBOUND"
+    ],
+    "medium": [
+      "W3-R160-M1-HOMOGENEOUS-SLAB-COVERAGE"
+    ],
+    "verdict": "REJECT_BEFORE_PRODUCTION_INTEGRATION"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 42,
+    "critical": [
+      "ADV-R160-C1-STALE-SHARED-OUTPUT-FALSE-PASS"
+    ],
+    "high": [
+      "ADV-R160-H1-DEGENERATE-IDENTITY-ROUTING",
+      "ADV-R160-H2-PRODUCTION-SLOT-LIFETIME-UNEXERCISED",
+      "ADV-R160-H3-GREEN-EVIDENCE-UNBOUND"
+    ],
+    "medium": [
+      "ADV-R160-M1-NO-UNCERTAINTY-BOUND"
+    ],
+    "verdict": "REJECT_AS_PRODUCTION_INTEGRATION_AUTHORITY"
+  },
+  "root_reproduction": {
+    "mutation": "skip every direct-arm repetition while preserving timing and comparison",
+    "status": "FALSE_PASS_REPRODUCED",
+    "output_mismatches": 0,
+    "compact_median_ms": 163.475159,
+    "direct_median_ms": 0.00079999998,
+    "direct_over_compact_ratio": 0.0000048937097611293246
+  },
+  "root_fact_check": {
+    "glm52_total_experts": 256,
+    "glm52_routed_experts": 8,
+    "source": "DS4_SHAPE_GLM52 in ds4.c",
+    "note": "The gap review's six-selected claim describes DeepSeek V4 Flash, not GLM-5.2. The other mapping and ownership findings remain valid."
+  },
+  "required_next_candidate_scope": [
+    "disjoint or freshly poisoned arm state with independent output validation",
+    "nonidentity global expert IDs and decoy pointer-table entries",
+    "mutations that skip direct stages or use route-slot addressing must fail",
+    "production-shaped mapped arena ownership and reuse safety",
+    "matched complete timing and bound positive evidence before integration"
+  ],
+  "verdict": "REJECTED; NO PRODUCTION INTEGRATION OR W3 CREDIT"
+}
