@@ -189,6 +189,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_GLM_TP_DEBUG",
             "DS4_GLM_PREFETCH",
             "DS4_GLM_PREFETCH_THREADS",
+            "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS",
         ):
             self.assertIn(name, launcher)
 
