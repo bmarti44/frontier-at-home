@@ -1,7 +1,8 @@
 #!/bin/bash
-# Contained production-path eligibility probe for the default-off W3 direct
-# expert-slot path. This is not the W3 performance campaign: it proves that
-# the frozen production server reaches the path and remains byte-identical.
+# Contained production-path probe for the default-off W3 direct expert-slot
+# path. Its optional 129-token mode emits one balanced campaign pair, but only
+# the frozen campaign scorer may combine five ABBA/BAAB blocks and grant W3
+# completed-time performance credit.
 set -Eeuo pipefail
 umask 077
 
@@ -24,17 +25,20 @@ readonly TOKENIZERS_INIT=$TOKENIZER_RUNTIME/tokenizers/__init__.py
 readonly TOKENIZERS_SO=$TOKENIZER_RUNTIME/tokenizers/tokenizers.abi3.so
 readonly CACHE_GIB=68
 readonly CTX=8192
-readonly TOKENS=64
+readonly TOKENS=${3:-64}
+readonly ARM_ORDER=${4:-off-on}
 readonly STATE_PARENT=/home/bmarti44/.local/state
 readonly CRASH_ROOT=$STATE_PARENT/glm52-crashlog
 readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock
 readonly OUTER_LOCK=/run/lock/frontier-at-home/inference.lock
-readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_GLM_TP_DEBUG,DS4_LOCK_EXPECTED_DEV_INO,DS4_LOCK_FILE
+readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_GLM_TP_DEBUG,DS4_LOCK_EXPECTED_DEV_INO,DS4_LOCK_FILE,DS4_TOKEN_TIMING_LOG
 
-[[ $# == 2 ]] || {
-  echo "usage: $0 FREEZE_JSON DRAND_JSON" >&2
+(( $# >= 2 && $# <= 4 )) || {
+  echo "usage: $0 FREEZE_JSON DRAND_JSON [64|129] [off-on|on-off]" >&2
   exit 2
 }
+[[ $TOKENS == 64 || $TOKENS == 129 ]] || exit 2
+[[ $ARM_ORDER == off-on || $ARM_ORDER == on-off ]] || exit 2
 readonly FREEZE=$1
 readonly DRAND=$2
 
@@ -252,11 +256,12 @@ readonly DRAND_ROUND DRAND_RANDOMNESS DRAND_SIGNATURE DRAND_FLOOR
 OUT=$(mktemp -d "$STATE_PARENT/glm52-w3-direct-slot-probe-v3.XXXXXX")
 readonly OUT
 printf '%s\n' "$OUT" >"$OUT/output-directory.txt"
-isolated_python - "$OUT/request.json" "$DRAND_RANDOMNESS" <<'PY'
+isolated_python - "$OUT/request.json" "$DRAND_RANDOMNESS" "$TOKENS" <<'PY'
 import json
 import sys
 
 randomness = sys.argv[2]
+required_tokens = int(sys.argv[3])
 request = {
     "model": "glm-5.2",
     "messages": [{
@@ -267,7 +272,7 @@ request = {
             f"Confirmation nonce: {randomness[:24]}."
         ),
     }],
-    "max_tokens": 64,
+    "max_tokens": required_tokens,
     "temperature": 0,
     "seed": int(randomness[:16], 16) % 2147483647,
     "thinking_enabled": False,
@@ -409,6 +414,7 @@ run_arm() {
     DS4_GLM_TP_DEBUG=1
     "DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity"
     "DS4_LOCK_FILE=$ENGINE_LOCK"
+    DS4_TOKEN_TIMING_LOG=1
   )
   [[ $direct == 1 ]] && engine_environment+=(DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS=1)
   local env_sha
@@ -661,22 +667,27 @@ Path(out_path).write_text(json.dumps(record, indent=2, sort_keys=True) + "\n",
 PY
 }
 
-run_arm off 18163 0
-[[ $(stat -Lc '%d:%i:%s:%Y:%Z' -- "$MODEL") == "$MODEL_IDENTITY_BEFORE" ]] || {
-  echo "GLM model identity changed after OFF arm" >&2
-  exit 2
+run_checked_arm() {
+  local arm=$1 port=$2 direct=$3
+  run_arm "$arm" "$port" "$direct"
+  [[ $(stat -Lc '%d:%i:%s:%Y:%Z' -- "$MODEL") == "$MODEL_IDENTITY_BEFORE" ]] || {
+    echo "GLM model identity changed after $arm arm" >&2
+    exit 2
+  }
 }
-run_arm on 18164 1
-[[ $(stat -Lc '%d:%i:%s:%Y:%Z' -- "$MODEL") == "$MODEL_IDENTITY_BEFORE" ]] || {
-  echo "GLM model identity changed after ON arm" >&2
-  exit 2
-}
+if [[ $ARM_ORDER == off-on ]]; then
+  run_checked_arm off 18163 0
+  run_checked_arm on 18164 1
+else
+  run_checked_arm on 18164 1
+  run_checked_arm off 18163 0
+fi
 
 isolated_python - "$OUT" "$REQUEST_SHA256" "$BINARY_SHA256" "$OBSERVED_MODEL_SHA256" \
     "$ENGINE_COMMIT" "$0" "$DRAND_ROUND" "$DRAND_RANDOMNESS" \
     "$DRAND_SIGNATURE" "$DRAND_FLOOR" "$FREEZE" \
     "$OBSERVED_REPOSITORY_HEAD" "$OBSERVED_FREEZE_SHA256" \
-    "$OBSERVED_TOKENIZER_SHA256" <<'PY'
+    "$OBSERVED_TOKENIZER_SHA256" "$TOKENS" "$ARM_ORDER" <<'PY'
 import hashlib
 import json
 from pathlib import Path
@@ -685,7 +696,8 @@ import sys
 out = Path(sys.argv[1])
 (request_sha, binary_sha, model_sha, engine_commit, harness_path, drand_round,
  drand_randomness, drand_signature, drand_floor, freeze_path, repository_head,
- freeze_sha, tokenizer_sha) = sys.argv[2:]
+ freeze_sha, tokenizer_sha, required_tokens_raw, arm_order) = sys.argv[2:]
+required_tokens = int(required_tokens_raw)
 freeze = json.loads(Path(freeze_path).read_text())
 arms = {name: json.loads((out / name / "arm.json").read_text())
         for name in ("off", "on")}
@@ -712,9 +724,9 @@ checks = {
     "safe_returncodes_zero": all(a["safe_returncode"] == 0 for a in arms.values()),
     "http_200": all(a["warm_http_code"] == 200 and a["measured_http_code"] == 200
                     for a in arms.values()),
-    "independent_exact_64_token_outputs": all(
-        a["independent_completion_tokens"] == 64 and
-        a["independent_warm_completion_tokens"] == 64
+    "independent_exact_output_tokens": all(
+        a["independent_completion_tokens"] == required_tokens and
+        a["independent_warm_completion_tokens"] == required_tokens
         for a in arms.values()
     ),
     "thinking_disabled_no_reasoning_channel": all(
@@ -757,6 +769,8 @@ summary = {
         name: arms[name]["environment_sha256"] for name in ("off", "on")
     },
     "request_sha256": request_sha,
+    "arm_order": arm_order,
+    "required_completion_tokens": required_tokens,
     "public_randomness": {
         "round": int(drand_round),
         "randomness": drand_randomness,
@@ -781,6 +795,8 @@ manifest = {
         name: arms[name]["environment_sha256"] for name in ("off", "on")
     },
     "request_sha256": request_sha,
+    "arm_order": arm_order,
+    "required_completion_tokens": required_tokens,
     "public_randomness_round": int(drand_round),
     "public_randomness": drand_randomness,
     "public_randomness_signature": drand_signature,

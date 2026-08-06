@@ -37,7 +37,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             'drand relay disagreement',
             'wait "$runner_pid"',
             'changed != [str(relative)]',
-            'independent_exact_64_token_outputs',
+            'independent_exact_output_tokens',
             '/usr/bin/python3 -I',
             '84_count_glm_output_tokens.py',
         ):
@@ -90,6 +90,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_GLM_TP_DEBUG",
             "DS4_LOCK_EXPECTED_DEV_INO",
             "DS4_LOCK_FILE",
+            "DS4_TOKEN_TIMING_LOG",
         ]
         off = {
             "DS4_CUDA_EXPERT_CACHE_GB": "68",
@@ -100,6 +101,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_GLM_TP_DEBUG": "1",
             "DS4_LOCK_EXPECTED_DEV_INO": "31:12345",
             "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
+            "DS4_TOKEN_TIMING_LOG": "1",
         }
         on = dict(off, DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS="1")
 
@@ -196,8 +198,8 @@ exit 0
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("sort -n | tail -1", probe)
         self.assertNotIn('a["completion_tokens"] >= 64', probe)
-        self.assertIn('a["independent_completion_tokens"] == 64', probe)
-        self.assertIn('a["independent_warm_completion_tokens"] == 64', probe)
+        self.assertIn('a["independent_completion_tokens"] == required_tokens', probe)
+        self.assertIn('a["independent_warm_completion_tokens"] == required_tokens', probe)
         scorer = W3_TOKEN_SCORER.read_text(encoding="utf-8")
         for contract in (
             "sys.flags.isolated != 1",
@@ -228,8 +230,8 @@ exit 0
             '"arm_order": arm_order',
             '"required_completion_tokens": required_tokens',
             'if [[ $ARM_ORDER == off-on ]]',
-            'run_arm on 18164 1',
-            'run_arm off 18163 0',
+            'run_checked_arm on 18164 1',
+            'run_checked_arm off 18163 0',
         ):
             self.assertIn(contract, probe)
 
