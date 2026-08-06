@@ -171,10 +171,8 @@ class W3TokenCounterTests(unittest.TestCase):
 
     def test_scorer_consumes_authenticated_tokenizer_bytes(self):
         source = SCORER.read_text(encoding="utf-8")
-        self.assertIn(
-            "Tokenizer.from_str(tokenizer_raw.decode(\"utf-8\", errors=\"strict\"))",
-            source,
-        )
+        self.assertIn("native.Tokenizer.from_str", source)
+        self.assertIn("tokenizer_raw.decode(\"utf-8\", errors=\"strict\")", source)
         self.assertNotIn("Tokenizer.from_file", source)
 
 

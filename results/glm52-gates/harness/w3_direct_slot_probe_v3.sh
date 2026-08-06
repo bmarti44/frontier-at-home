@@ -448,7 +448,9 @@ run_arm() {
   python3 - "$arm_dir/arm.json" "$arm" "$direct" "$safe_rc" \
       "$env_sha" "$crash_dir" "$REQUEST_SHA256" "$BINARY_SHA256" \
       "$OBSERVED_MODEL_SHA256" "$ENGINE_COMMIT" "$arm_dir" \
-      "$crash_identity" "$OBSERVED_TOKENIZER_SHA256" <<'PY'
+      "$crash_identity" "$OBSERVED_TOKENIZER_SHA256" \
+      "$OBSERVED_TOKENIZERS_INIT_SHA256" "$OBSERVED_TOKENIZERS_SO_SHA256" \
+      "$TOKENIZERS_INIT" "$TOKENIZERS_SO" <<'PY'
 import hashlib
 import json
 from pathlib import Path
@@ -457,9 +459,26 @@ import sys
 
 (out_path, arm, direct, safe_rc, env_sha, crash_dir, request_sha,
  binary_sha, model_sha, engine_commit, arm_dir, crash_identity,
- tokenizer_sha) = sys.argv[1:]
+ tokenizer_sha, init_sha, native_sha, init_path, native_path) = sys.argv[1:]
 arm_path = Path(arm_dir)
 crash = Path(crash_dir)
+
+def strict_json(path):
+    raw = path.read_bytes()
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise SystemExit(f"duplicate JSON key in {path}: {key}")
+            result[key] = value
+        return result
+    value = json.loads(raw, object_pairs_hook=pairs,
+                       parse_constant=lambda value: (_ for _ in ()).throw(
+                           SystemExit(f"non-finite JSON value in {path}: {value}")))
+    if not isinstance(value, dict):
+        raise SystemExit(f"JSON artifact is not an object: {path}")
+    return raw, value
+
 cmd = (crash / "cmd.log").read_text(encoding="utf-8", errors="replace")
 main = (crash / "main.log").read_text(encoding="utf-8", errors="replace")
 kernel = (crash / "kernel.log").read_text(encoding="utf-8", errors="replace")
@@ -469,14 +488,34 @@ warm_counts = [int(value) for value in
                (arm_path / "warm.dispatch-counts").read_text().split()]
 measured_counts = [int(value) for value in
                    (arm_path / "measured.dispatch-counts").read_text().split()]
-warm_payload = json.loads((arm_path / "warm.json").read_text(encoding="utf-8"))
-payload = json.loads((arm_path / "measured.json").read_text(encoding="utf-8"))
-warm_token_record = json.loads(
-    (arm_path / "warm.tokens.json").read_text(encoding="utf-8")
-)
-measured_token_record = json.loads(
-    (arm_path / "measured.tokens.json").read_text(encoding="utf-8")
-)
+warm_raw, warm_payload = strict_json(arm_path / "warm.json")
+measured_raw, payload = strict_json(arm_path / "measured.json")
+_, warm_token_record = strict_json(arm_path / "warm.tokens.json")
+_, measured_token_record = strict_json(arm_path / "measured.tokens.json")
+token_record_keys = {
+    "schema_version", "label", "reference_token_count", "content_bytes",
+    "reasoning_bytes", "response_sha256", "response_identity",
+    "tokenizer_sha256", "tokenizer_identity", "runtime_init_sha256",
+    "runtime_init_identity", "runtime_native_sha256",
+    "runtime_native_identity", "runtime_init_path", "runtime_native_path",
+    "runtime_native_loaded_path",
+}
+for phase, token_record, response_raw in (
+    ("warm", warm_token_record, warm_raw),
+    ("measured", measured_token_record, measured_raw),
+):
+    if (set(token_record) != token_record_keys or
+            token_record["schema_version"] != 1 or
+            token_record["label"] != f"{arm}-{phase}" or
+            token_record["response_sha256"] != hashlib.sha256(response_raw).hexdigest() or
+            token_record["tokenizer_sha256"] != tokenizer_sha or
+            token_record["runtime_init_sha256"] != init_sha or
+            token_record["runtime_native_sha256"] != native_sha or
+            token_record["runtime_init_path"] != init_path or
+            token_record["runtime_native_path"] != native_path or
+            re.fullmatch(r"/proc/self/fd/[0-9]+",
+                         token_record["runtime_native_loaded_path"]) is None):
+        raise SystemExit(f"{arm} {phase} token record is not bound to its response")
 choice = payload["choices"][0]
 message = choice["message"]
 warm_message = warm_payload["choices"][0]["message"]

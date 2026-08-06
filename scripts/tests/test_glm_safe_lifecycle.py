@@ -48,12 +48,20 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         for contract in (
             "sys.flags.isolated != 1",
             "os.environ != ALLOWED_ENVIRONMENT",
-            "loaded tokenizer module path differs from the frozen runtime",
-            "tokenizer runtime changed during import",
+            "native tokenizer did not load through its bound descriptor",
+            "native tokenizer changed during import",
             "tokenizer dependency changed during scoring",
             "tokenizer.encode(content, add_special_tokens=False).ids",
+            "native.Tokenizer.from_str",
         ):
             self.assertIn(contract, scorer)
+        for contract in (
+            'token_record["response_sha256"]',
+            'token_record["label"]',
+            'token_record["runtime_native_sha256"]',
+            'token_record["runtime_native_loaded_path"]',
+        ):
+            self.assertIn(contract, probe)
 
     def test_evidence_timeout_ceiling_is_consistent_across_containment(self):
         safe_environment = {

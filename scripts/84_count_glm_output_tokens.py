@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.machinery
+import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import stat
 import sys
+import types
 from typing import Any
 
 
@@ -30,36 +33,49 @@ def validate_sha256(value: str, label: str) -> None:
         fail(f"invalid expected digest: {label}")
 
 
-def bound_bytes(path: Path) -> tuple[bytes, str, str]:
+def read_bound_descriptor(descriptor: int, path: Path) -> tuple[bytes, str, str]:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    before = os.fstat(descriptor)
+    if not stat.S_ISREG(before.st_mode):
+        fail(f"bound input is not regular: {path}")
+    chunks: list[bytes] = []
+    digest = hashlib.sha256()
+    while True:
+        chunk = os.read(descriptor, 8 * 1024 * 1024)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        digest.update(chunk)
+    after = os.fstat(descriptor)
+    identity_before = (
+        before.st_dev, before.st_ino, before.st_size,
+        before.st_mtime_ns, before.st_ctime_ns,
+    )
+    identity_after = (
+        after.st_dev, after.st_ino, after.st_size,
+        after.st_mtime_ns, after.st_ctime_ns,
+    )
+    if identity_before != identity_after:
+        fail(f"bound input changed while read: {path}")
+    identity = ":".join(str(value) for value in identity_after)
+    return b"".join(chunks), digest.hexdigest(), identity
+
+
+def open_bound(path: Path) -> tuple[int, bytes, str, str]:
     flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(path, flags)
     try:
-        before = os.fstat(descriptor)
-        if not stat.S_ISREG(before.st_mode):
-            fail(f"bound input is not regular: {path}")
-        chunks: list[bytes] = []
-        digest = hashlib.sha256()
-        while True:
-            chunk = os.read(descriptor, 8 * 1024 * 1024)
-            if not chunk:
-                break
-            chunks.append(chunk)
-            digest.update(chunk)
-        after = os.fstat(descriptor)
-        identity_before = (
-            before.st_dev, before.st_ino, before.st_size,
-            before.st_mtime_ns, before.st_ctime_ns,
-        )
-        identity_after = (
-            after.st_dev, after.st_ino, after.st_size,
-            after.st_mtime_ns, after.st_ctime_ns,
-        )
-        if identity_before != identity_after:
-            fail(f"bound input changed while read: {path}")
-        identity = ":".join(str(value) for value in identity_after)
-        return b"".join(chunks), digest.hexdigest(), identity
-    finally:
+        raw, digest, identity = read_bound_descriptor(descriptor, path)
+        return descriptor, raw, digest, identity
+    except BaseException:
         os.close(descriptor)
+        raise
+
+
+def bound_bytes(path: Path) -> tuple[bytes, str, str]:
+    descriptor, raw, digest, identity = open_bound(path)
+    os.close(descriptor)
+    return raw, digest, identity
 
 
 def strict_object(raw: bytes, label: str) -> dict[str, Any]:
@@ -110,39 +126,55 @@ def main() -> int:
     package = runtime_root / "tokenizers"
     init_path = package / "__init__.py"
     native_path = package / "tokenizers.abi3.so"
-    inventory = sorted(
-        str(path.relative_to(runtime_root))
-        for path in runtime_root.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
-    )
-    if inventory != ["tokenizers/__init__.py", "tokenizers/tokenizers.abi3.so"]:
+    inventory = sorted(str(path.relative_to(runtime_root))
+                       for path in runtime_root.rglob("*"))
+    if inventory != [
+        "tokenizers",
+        "tokenizers/__init__.py",
+        "tokenizers/tokenizers.abi3.so",
+    ]:
         fail("frozen tokenizer runtime inventory changed")
-    for path in (init_path, native_path):
+    for path in (runtime_root, package, init_path, native_path):
         if path.is_symlink() or path.stat().st_mode & 0o022:
             fail(f"tokenizer runtime file is unsafe: {path}")
 
     tokenizer_raw, tokenizer_sha, tokenizer_identity = bound_bytes(tokenizer_path)
     init_raw, init_sha, init_identity = bound_bytes(init_path)
-    _, native_sha, native_identity = bound_bytes(native_path)
+    native_descriptor, _, native_sha, native_identity = open_bound(native_path)
     if (tokenizer_sha != expected_tokenizer or init_sha != expected_init or
             native_sha != expected_so):
+        os.close(native_descriptor)
         fail("frozen tokenizer dependency digest mismatch")
     # Validate the tokenizer JSON before native code consumes it.
     strict_object(tokenizer_raw, "tokenizer")
 
-    sys.path.insert(0, str(runtime_root))
-    import tokenizers  # type: ignore[import-not-found]  # noqa: PLC0415
-    import tokenizers.tokenizers as native  # type: ignore[import-not-found]  # noqa: PLC0415
+    # Load the native extension through the already authenticated descriptor.
+    # This neither executes package bytecode nor reopens a replaceable pathname.
+    descriptor_path = f"/proc/self/fd/{native_descriptor}"
+    package_module = types.ModuleType("tokenizers")
+    package_module.__path__ = []  # type: ignore[attr-defined]
+    sys.modules["tokenizers"] = package_module
+    loader = importlib.machinery.ExtensionFileLoader(
+        "tokenizers.tokenizers", descriptor_path
+    )
+    spec = importlib.util.spec_from_loader("tokenizers.tokenizers", loader)
+    if spec is None:
+        os.close(native_descriptor)
+        fail("could not construct the frozen native tokenizer module")
+    native = importlib.util.module_from_spec(spec)
+    sys.modules["tokenizers.tokenizers"] = native
+    loader.exec_module(native)
+    if Path(native.__file__).as_posix() != descriptor_path:
+        os.close(native_descriptor)
+        fail("native tokenizer did not load through its bound descriptor")
+    if read_bound_descriptor(native_descriptor, native_path)[1] != expected_so:
+        os.close(native_descriptor)
+        fail("native tokenizer changed during import")
+    os.close(native_descriptor)
 
-    if (Path(tokenizers.__file__).resolve() != init_path or
-            Path(native.__file__).resolve() != native_path):
-        fail("loaded tokenizer module path differs from the frozen runtime")
-    # Re-read after import so an at-use replacement is rejected.
-    if (bound_bytes(init_path)[1] != expected_init or
-            bound_bytes(native_path)[1] != expected_so):
-        fail("tokenizer runtime changed during import")
-
-    tokenizer = tokenizers.Tokenizer.from_file(str(tokenizer_path))
+    tokenizer = native.Tokenizer.from_str(
+        tokenizer_raw.decode("utf-8", errors="strict")
+    )
     response_raw, response_sha, response_identity = bound_bytes(response_path)
     response = strict_object(response_raw, "response")
     choices = response.get("choices")
@@ -179,6 +211,7 @@ def main() -> int:
         "runtime_native_identity": native_identity,
         "runtime_init_path": str(init_path),
         "runtime_native_path": str(native_path),
+        "runtime_native_loaded_path": descriptor_path,
     }
     print(json.dumps(record, sort_keys=True, separators=(",", ":")))
     return 0
