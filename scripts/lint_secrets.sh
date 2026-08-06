@@ -293,6 +293,9 @@ r05_proxy_pack_evidence_v2 = display_path == (
 r05_proxy_red_candidate_4 = display_path == (
     "results/glm52-gates/R0.5-mtp-proxy-behavioral-red-candidate-4.json"
 )
+r05_proxy_review_r195 = display_path == (
+    "results/glm52-gates/R0.5-mtp-proxy-router-review-r195.json"
+)
 w3_campaign_allowlist = set()
 if w3_campaign_manifest:
     w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
@@ -336,6 +339,9 @@ r05_proxy_pack_v2_allowlist = {
 r05_proxy_red_candidate_4_allowlist = {
     "pack_sha256",
 } if r05_proxy_red_candidate_4 else set()
+r05_proxy_review_r195_allowlist = {
+    "pack_sha256",
+} if r05_proxy_review_r195 else set()
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -390,7 +396,8 @@ def walk(value, path, allowed_string=False):
                 key in r05_proxy_pack_allowlist or
                 key in r05_proxy_red_candidate_3_allowlist or
                 key in r05_proxy_pack_v2_allowlist or
-                key in r05_proxy_red_candidate_4_allowlist
+                key in r05_proxy_red_candidate_4_allowlist or
+                key in r05_proxy_review_r195_allowlist
             )
             if isinstance(item, list):
                 for index, element in enumerate(item):

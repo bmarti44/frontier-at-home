@@ -1,0 +1,78 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "16cef431abe6b6ca255ef1cb3053db0095a4bfaa",
+  "engine_test_hash": "d652a9b5ec48c0e8cbb0f42c5d55bc411f51cc25",
+  "pack_sha256": "aacc0fe9a79833ff118888e33924d77a737ca247841a6bd501cc393e97aa1809",
+  "review_round": 195,
+  "candidate_number_for_red_gate": 4,
+  "implementation_authorized": false,
+  "trace_or_campaign_authorized": false,
+  "branch_paused_by_convergence_rule": true,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 55,
+      "critical": [],
+      "high": [
+        "R05-R194-H1-RUNTIME-PRODUCTION-OPS-BINDING-STILL-BYPASSABLE",
+        "R05-R194-H2-RENAMED-PACK-HAS-NO-VALID-CONTROL",
+        "R05-R194-H3-SANDBOX-DENIALS-REMAIN-CHILD-SELF-REPORT",
+        "R05-R194-H4-PUBLICATION-SYSCALL-ORDER-AND-DURABILITY-NOT-ESTABLISHED"
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "PAUSE_BRANCH_REJECT_IMPLEMENTATION"
+    },
+    "Singer": {
+      "score_0_to_100": 34,
+      "critical": [],
+      "high": [
+        "ADV-R05-R195-H1-INJECTED-EXECUTOR-DOES-NOT-BIND-FROM-ENV-ACTUAL-DATAFLOW",
+        "ADV-R05-R195-H2-PACK-PATH-SHORTCUT-STILL-PASSES-FULL-SIZE-MUTATIONS",
+        "ADV-R05-R195-H3-SIGKILL-VALIDATOR-DOES-NOT-CHECK-HASHES-OR-FSYNC-ORDER",
+        "ADV-R05-R195-H4-INHERITED-FULL-MODEL-CAN-BE-READ-BEFORE-SELF-CLEANUP"
+      ],
+      "medium": [
+        "ADV-R05-R195-M1-PACK-BUILDER-SAME-FD-CLAIM-OMITS-POSTCOPY-STABILITY"
+      ],
+      "low": [],
+      "verdict": "REJECT_IMPLEMENTATION_AND_PAUSE_RED_BRANCH_CONVERGENCE"
+    }
+  },
+  "verified_progress": {
+    "strict_pack_receipt_recomputation": true,
+    "full_size_pack_mutations": true,
+    "live_injected_executor_red": true,
+    "external_publication_syscall_red": true,
+    "external_fd_and_map_inspection_red": true,
+    "stage_receipt_schema_red": true
+  },
+  "open_blocking_classes": [
+    {
+      "class": "actual-from-env-runtime-dataflow",
+      "summary": "The injected core executor is exercised, but the real main/from-env construction of actual operations and published bytes can still diverge or be bypassed."
+    },
+    {
+      "class": "path-independent-pack-authority",
+      "summary": "No unmodified unpredictable-name copy is required to pass before content mutations, leaving a canonical-path shortcut and post-hash source mutation route."
+    },
+    {
+      "class": "externally-enforced-sandbox",
+      "summary": "The child can consume an inherited model descriptor before the inspection barrier and can self-report denial probes without externally witnessed denials."
+    },
+    {
+      "class": "publication-durability-and-content",
+      "summary": "The syscall test does not bind fsync ordering to each path, exercise recoverable faults at every occurrence, or hash-validate surviving completed artifacts."
+    }
+  ],
+  "convergence": {
+    "round_193_singer_blocking_count": 3,
+    "round_194_singer_blocking_count": 3,
+    "round_195_singer_blocking_count": 4,
+    "blocking_set_strictly_shrank": false,
+    "consecutive_nonshrinking_candidates": 2,
+    "pause_triggered": true,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "required_disposition": "Preserve the ledger and pause this RED branch; do not publish candidate 5, implement the proxy, or launch a trace/campaign without owner direction."
+  }
+}
