@@ -58,6 +58,12 @@ class W3PerformanceCampaignTests(unittest.TestCase):
             "repository_head": "r" * 40,
             "freeze_sha256": "f" * 64,
             "request_sha256": f"{index:064x}",
+            "public_randomness": {
+                "round": 7000000 + index,
+                "randomness": f"{index + 100:064x}",
+                "signature": f"{index + 200:192x}",
+                "freeze_floor_round": 6999999,
+            },
             "checks": {"all": True},
             "arms": arms,
         }
@@ -97,7 +103,9 @@ class W3PerformanceCampaignTests(unittest.TestCase):
     def test_valid_five_block_campaign_passes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            orders = ["off-on", "on-off"] * 5
+            orders = ["off-on", "on-off", "on-off", "off-on"] * 2 + [
+                "off-on", "on-off"
+            ]
             pairs = [self.make_pair(root, i, order) for i, order in enumerate(orders)]
             result = self.run_scorer(pairs, root / "result")
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -112,7 +120,9 @@ class W3PerformanceCampaignTests(unittest.TestCase):
         for mutation in mutations:
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
-                orders = ["off-on", "on-off"] * 5
+                orders = ["off-on", "on-off", "on-off", "off-on"] * 2 + [
+                    "off-on", "on-off"
+                ]
                 pairs = [self.make_pair(root, i, order) for i, order in enumerate(orders)]
                 target = pairs[0]
                 summary_path = target / "summary.json"
