@@ -1,0 +1,132 @@
+From 47901b39c3a3d03baba7bde51acf319c565c8321 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 16:01:59 -0400
+Subject: [PATCH 14/19] test: cover all MTP proxy prefix ranks
+
+---
+ tests/test_glm_mtp_proxy_contract.c | 95 +++++++++++++++++++----------
+ 1 file changed, 63 insertions(+), 32 deletions(-)
+
+diff --git a/tests/test_glm_mtp_proxy_contract.c b/tests/test_glm_mtp_proxy_contract.c
+index 77c8392..dabe1b7 100644
+--- a/tests/test_glm_mtp_proxy_contract.c
++++ b/tests/test_glm_mtp_proxy_contract.c
+@@ -397,52 +397,83 @@ static void independent_rank(const float *scores, uint32_t experts,
+ static void test_router_max_aggregation_and_tie_order(void) {
+     CHECK(ds4_glm_mtp_proxy_rank_contract != NULL,
+           "production router-rank entry point is absent");
+-    float step_scores[2u * PROXY_EXPERTS];
+-    uint8_t expected_step_rank[2u * PROXY_EXPERTS];
++    float step_scores[8u * PROXY_EXPERTS];
++    uint8_t expected_step_rank[8u * PROXY_EXPERTS];
+     float expected_max[PROXY_EXPERTS];
+     uint8_t expected_max_rank[PROXY_EXPERTS];
+-    for (uint32_t e = 0; e < PROXY_EXPERTS; e++) {
+-        step_scores[e] = (float)(e % 13u) * 0.01f;
+-        step_scores[PROXY_EXPERTS + e] = (float)((255u - e) % 17u) * 0.01f;
+-        expected_max[e] = fmaxf(step_scores[e], step_scores[PROXY_EXPERTS + e]);
+-    }
+-    /* Exact ties must rank by lower expert ID. */
+-    step_scores[4] = step_scores[7] = 0.75f;
+-    step_scores[PROXY_EXPERTS + 4] = step_scores[PROXY_EXPERTS + 7] = 0.75f;
+-    expected_max[4] = expected_max[7] = 0.75f;
+-    independent_rank(step_scores, PROXY_EXPERTS, expected_step_rank);
+-    independent_rank(step_scores + PROXY_EXPERTS, PROXY_EXPERTS,
+-                     expected_step_rank + PROXY_EXPERTS);
+-    independent_rank(expected_max, PROXY_EXPERTS, expected_max_rank);
+-
+-    uint8_t actual_step_rank[2u * PROXY_EXPERTS];
++    uint8_t actual_step_rank[8u * PROXY_EXPERTS];
+     float actual_max[PROXY_EXPERTS];
+     uint8_t actual_max_rank[PROXY_EXPERTS];
+-    memset(actual_step_rank, 0xff, sizeof(actual_step_rank));
+-    memset(actual_max, 0, sizeof(actual_max));
+-    memset(actual_max_rank, 0xff, sizeof(actual_max_rank));
+-    int rc = ds4_glm_mtp_proxy_rank_contract(
+-        step_scores, 2u, PROXY_EXPERTS, actual_step_rank,
+-        actual_max, actual_max_rank);
+-    CHECK(rc == 0, "valid rank fixture rejected: rc=%d", rc);
+-    CHECK(memcmp(actual_step_rank, expected_step_rank,
+-                 sizeof(actual_step_rank)) == 0,
+-          "per-step descending/expert-ascending ranks differ");
+-    CHECK(memcmp(actual_max, expected_max, sizeof(actual_max)) == 0,
+-          "cross-step aggregation is not exact F32 max");
+-    CHECK(memcmp(actual_max_rank, expected_max_rank,
+-                 sizeof(actual_max_rank)) == 0,
+-          "max ranks differ or reverse exact ties");
++    static const uint32_t prefixes[] = {2u, 4u, 8u};
++    for (uint32_t p = 0; p < 3u; p++) {
++        const uint32_t steps = prefixes[p];
++        for (uint32_t e = 0; e < PROXY_EXPERTS; e++) {
++            expected_max[e] = -1000.0f;
++            for (uint32_t s = 0; s < steps; s++) {
++                float value = (float)((e * 11u + s * 17u) % 97u) * 0.01f;
++                if (s == (e % steps)) value += 2.0f + (float)s * 0.1f;
++                step_scores[s * PROXY_EXPERTS + e] = value;
++                if (value > expected_max[e]) expected_max[e] = value;
++            }
++        }
++        /* Exact score ties rank by lower expert ID; mixed signed zero
++         * aggregates to canonical positive zero. */
++        for (uint32_t s = 0; s < steps; s++) {
++            step_scores[s * PROXY_EXPERTS + 4u] = 3.75f;
++            step_scores[s * PROXY_EXPERTS + 7u] = 3.75f;
++            step_scores[s * PROXY_EXPERTS + 9u] = s & 1u ? -0.0f : 0.0f;
++            independent_rank(step_scores + s * PROXY_EXPERTS, PROXY_EXPERTS,
++                             expected_step_rank + s * PROXY_EXPERTS);
++        }
++        expected_max[4] = expected_max[7] = 3.75f;
++        expected_max[9] = 0.0f;
++        independent_rank(expected_max, PROXY_EXPERTS, expected_max_rank);
++
++        memset(actual_step_rank, 0xff, sizeof(actual_step_rank));
++        memset(actual_max, 0xa5, sizeof(actual_max));
++        memset(actual_max_rank, 0xff, sizeof(actual_max_rank));
++        int rc = ds4_glm_mtp_proxy_rank_contract(
++            step_scores, steps, PROXY_EXPERTS, actual_step_rank,
++            actual_max, actual_max_rank);
++        CHECK(rc == 0, "valid K=%u rank fixture rejected: rc=%d", steps, rc);
++        CHECK(memcmp(actual_step_rank, expected_step_rank,
++                     steps * PROXY_EXPERTS) == 0,
++              "K=%u per-step descending/expert-ascending ranks differ", steps);
++        CHECK(memcmp(actual_max, expected_max, sizeof(actual_max)) == 0,
++              "K=%u cross-step aggregation is not exact F32 max", steps);
++        CHECK(memcmp(actual_max_rank, expected_max_rank,
++                     sizeof(actual_max_rank)) == 0,
++              "K=%u max ranks differ or reverse exact ties", steps);
++    }
+ 
+     step_scores[9] = NAN;
+     CHECK(ds4_glm_mtp_proxy_rank_contract(
+               step_scores, 2u, PROXY_EXPERTS, actual_step_rank,
+               actual_max, actual_max_rank) != 0,
+           "NaN router score accepted");
++    step_scores[9] = INFINITY;
++    CHECK(ds4_glm_mtp_proxy_rank_contract(
++              step_scores, 2u, PROXY_EXPERTS, actual_step_rank,
++              actual_max, actual_max_rank) != 0,
++          "+Inf router score accepted");
++    step_scores[9] = -INFINITY;
++    CHECK(ds4_glm_mtp_proxy_rank_contract(
++              step_scores, 2u, PROXY_EXPERTS, actual_step_rank,
++              actual_max, actual_max_rank) != 0,
++          "-Inf router score accepted");
++    step_scores[9] = 0.0f;
+     CHECK(ds4_glm_mtp_proxy_rank_contract(
+               step_scores, 0u, PROXY_EXPERTS, actual_step_rank,
+               actual_max, actual_max_rank) != 0,
+           "zero-step aggregation accepted");
++    CHECK(ds4_glm_mtp_proxy_rank_contract(
++              step_scores, 3u, PROXY_EXPERTS, actual_step_rank,
++              actual_max, actual_max_rank) != 0,
++          "unsupported K=3 aggregation accepted");
++    CHECK(ds4_glm_mtp_proxy_rank_contract(
++              step_scores, 2u, PROXY_EXPERTS - 1u, actual_step_rank,
++              actual_max, actual_max_rank) != 0,
++          "wrong expert count accepted");
+ }
+ 
+ static void test_default_off_cli_dispatch(void) {
+-- 
+2.43.0
+

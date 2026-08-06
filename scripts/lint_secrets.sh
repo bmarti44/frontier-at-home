@@ -5,7 +5,7 @@ readonly SECRET_PATTERN='[0-9a-f]{64}|Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPE
 # Digest-bearing files get field/format-aware 64-hex validation. They still get
 # every other secret pattern via SECRET_PATTERN_NOHEX.
 readonly SECRET_PATTERN_NOHEX='Bearer [A-Za-z0-9._-]{20,}|BEGIN( RSA| OPENSSH)? PRIVATE KEY|hf_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|tskey-[A-Za-z0-9-]{20,}'
-readonly PUBLIC_DIGEST_ALLOWLIST='^scripts/65_glm52_w1_submit\.py:[0-9]+:P1_PYTHON_DEPENDENCY_SHA256 = "[0-9a-f]{64}"$|^scripts/66_install_glm52_w1_attestor\.sh:[0-9]+:readonly (SUBMITTER|PYTHON_DEPENDENCY)_SHA256=[0-9a-f]{64}$|^scripts/71_install_glm_benchmark_lock_acl\.sh:[0-9]+:readonly SOURCE_SHA256=[0-9a-f]{64}$|^scripts/73_run_glm_shared_router_probe\.py:[0-9]+:(MODEL|TOKENIZER)_SHA256 = "[0-9a-f]{64}"$|^scripts/76_run_glm_union_trace_smoke\.py:[0-9]+:QUALITY_FIXTURE_CONTENT_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:FROZEN_(BINARY|MODEL|TOKENIZER|FIXTURE|ROOT_SUBMITTER)_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:    (PROBE_PATH|CV_PATH|PRECISION_PATH|SAFE_RUN_PATH|MEMORY_GUARD_PATH): "[0-9a-f]{64}",$|^results/glm52-gates/harness/w3_direct_slot_probe_v[123]\.sh:[0-9]+:readonly (BINARY|MODEL)_SHA256=[0-9a-f]{64}$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:  `[0-9a-f]{64}`[.;]$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:SHA-256 `[0-9a-f]{64}`\.$|^scripts/tests/test_glm_rung0_slab_campaign\.py:[0-9]+:            "[0-9a-f]{64}",$|^scripts/tests/test_glm_mtp_proxy_seed_contract\.py:[0-9]+:(EXPECTED = |    "(manifest|drand)": )"[0-9a-f]{64}"[,]?$|^results/glm52-gates/harness/0012-test-glm-reject-compact-pack-identity-mutations\.patch:[0-9]+:\+                "[0-9a-f]{64}"\);$'
+readonly PUBLIC_DIGEST_ALLOWLIST='^scripts/65_glm52_w1_submit\.py:[0-9]+:P1_PYTHON_DEPENDENCY_SHA256 = "[0-9a-f]{64}"$|^scripts/66_install_glm52_w1_attestor\.sh:[0-9]+:readonly (SUBMITTER|PYTHON_DEPENDENCY)_SHA256=[0-9a-f]{64}$|^scripts/71_install_glm_benchmark_lock_acl\.sh:[0-9]+:readonly SOURCE_SHA256=[0-9a-f]{64}$|^scripts/73_run_glm_shared_router_probe\.py:[0-9]+:(MODEL|TOKENIZER)_SHA256 = "[0-9a-f]{64}"$|^scripts/76_run_glm_union_trace_smoke\.py:[0-9]+:QUALITY_FIXTURE_CONTENT_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:FROZEN_(BINARY|MODEL|TOKENIZER|FIXTURE|ROOT_SUBMITTER)_SHA256 = "[0-9a-f]{64}"$|^scripts/81_glm_union_baseline\.py:[0-9]+:    (PROBE_PATH|CV_PATH|PRECISION_PATH|SAFE_RUN_PATH|MEMORY_GUARD_PATH): "[0-9a-f]{64}",$|^results/glm52-gates/harness/w3_direct_slot_probe_v[123]\.sh:[0-9]+:readonly (BINARY|MODEL)_SHA256=[0-9a-f]{64}$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:  `[0-9a-f]{64}`[.;]$|^results/glm52-gates/RUNG-PLAN\.md:[0-9]+:SHA-256 `[0-9a-f]{64}`\.$|^scripts/tests/test_glm_rung0_slab_campaign\.py:[0-9]+:            "[0-9a-f]{64}",$|^scripts/tests/test_glm_mtp_proxy_seed_contract\.py:[0-9]+:(EXPECTED = |    "(manifest|drand)": )"[0-9a-f]{64}"[,]?$|^results/glm52-gates/harness/0012-test-glm-reject-compact-pack-identity-mutations\.patch:[0-9]+:\+                "[0-9a-f]{64}"\);$|^results/glm52-gates/harness/0015-test-require-exact-frozen-MTP-proxy-pack\.patch:[0-9]+:[+-](    parse_digest\((pack|model|inventory)_sha, |                )"[0-9a-f]{64}"\);$|^results/glm52-gates/harness/0016-test-require-canonical-crash-safe-proxy-publication\.patch:[0-9]+:\+        "\{\\"bytes\\":[0-9]+,\\"name\\":\\"[a-z0-9.-]+\\",\\"sha256\\":\\"[0-9a-f]{64}\\"\}[,]?"$'
 readonly W3_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W3-slot-lifetime-probe-v11-pass/crash/(off|on)/cmd\.log:[0-9]+:ds4: expert-cache window tag=[^ ]+ lookup_bytes=[0-9]+ hit_bytes=[0-9]+ stream_sha256=[0-9a-f]{64}$|^results/glm52-gates/W3-slot-lifetime-probe-v11-pass/crash/(off|on)/main\.log:[0-9]+:[0-9T:+,.-]+ (candidate_src=[^ ]+ candidate_binary_sha256=[0-9a-f]{64} candidate_device_inode=[0-9:]+|executed_environment_allowlist=[A-Z0-9_,]+ executed_environment_sha256=[0-9a-f]{64}|executed_candidate_verified pid=[0-9]+ start_ticks=[0-9]+ path=[^ ]+ executed_binary_sha256=[0-9a-f]{64} device_inode=[0-9:]+|safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+)$'
 
 is_checksum_file() {
@@ -284,6 +284,9 @@ r05_proxy_seed_domain = display_path == (
 r05_proxy_pack_evidence = display_path == (
     "results/glm52-gates/R0.5-mtp-proxy-pack-v1.json"
 )
+r05_proxy_red_candidate_3 = display_path == (
+    "results/glm52-gates/R0.5-mtp-proxy-behavioral-red-candidate-3.json"
+)
 w3_campaign_allowlist = set()
 if w3_campaign_manifest:
     w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
@@ -311,6 +314,11 @@ r05_proxy_pack_allowlist = {
     "receipt_sha256",
     "test_sha256",
 } if r05_proxy_pack_evidence else set()
+r05_proxy_red_candidate_3_allowlist = {
+    "inventory_sha256",
+    "model_sha256",
+    "pack_sha256",
+} if r05_proxy_red_candidate_3 else set()
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -362,7 +370,8 @@ def walk(value, path, allowed_string=False):
                 key in w3_campaign_allowlist or
                 key in r05_proxy_accuracy_allowlist or
                 key in r05_proxy_seed_allowlist or
-                key in r05_proxy_pack_allowlist
+                key in r05_proxy_pack_allowlist or
+                key in r05_proxy_red_candidate_3_allowlist
             )
             if isinstance(item, list):
                 for index, element in enumerate(item):

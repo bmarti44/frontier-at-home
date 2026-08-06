@@ -1,0 +1,122 @@
+From 33e19276514b17de5c98ce645d3dce81b2e073aa Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 16:04:49 -0400
+Subject: [PATCH 16/19] test: require canonical crash-safe proxy publication
+
+---
+ tests/test_glm_mtp_proxy_contract.c | 84 +++++++++++++++++++++++------
+ 1 file changed, 69 insertions(+), 15 deletions(-)
+
+diff --git a/tests/test_glm_mtp_proxy_contract.c b/tests/test_glm_mtp_proxy_contract.c
+index 4eefc0f..5c841a2 100644
+--- a/tests/test_glm_mtp_proxy_contract.c
++++ b/tests/test_glm_mtp_proxy_contract.c
+@@ -487,36 +487,90 @@ static void remove_temp_dir(const char *dir) {
+ static void test_fail_closed_publication(void) {
+     CHECK(ds4_glm_mtp_proxy_publish_contract != NULL,
+           "production publication entry point is absent");
+-    static const uint8_t z[] = {0, 1, 2, 3, 4, 5, 6, 7};
+-    static const uint8_t q[] = {9, 0, 0, 0};
+-    static const char complete[] = "{\"schema_version\":1}\n";
+-    const proxy_artifact artifacts[] = {
+-        {"z-0.f32le", z, sizeof(z)},
+-        {"tokens.i32le", q, sizeof(q)},
+-        {"complete.json", complete, sizeof(complete) - 1u},
++    static const struct {
++        const char *name;
++        uint64_t size;
++    } expected[] = {
++        {"states.f32le", 9ull * PROXY_EMBD * sizeof(float)},
++        {"head-logits.f32le", 9ull * PROXY_VOCAB * sizeof(float)},
++        {"tokens.i32le", 9ull * sizeof(int32_t)},
++        {"positions.u32le", 8ull * sizeof(uint32_t)},
++        {"slots.u32le", 8ull * sizeof(uint32_t)},
++        {"router-scores.f32le", 8ull * 75ull * 256ull * sizeof(float)},
++        {"router-ranks.u8", 8ull * 75ull * 256ull},
++        {"prefix-max-scores.f32le", 3ull * 75ull * 256ull * sizeof(float)},
++        {"prefix-max-ranks.u8", 3ull * 75ull * 256ull},
+     };
++    static const char expected_complete[] =
++        "{\"abi_version\":1,\"artifacts\":["
++        "{\"bytes\":221184,\"name\":\"states.f32le\",\"sha256\":\"b0eb50e024f9843dd54a38401feef49455b504950b93fbc885c4c9430330eeaf\"},"
++        "{\"bytes\":5575680,\"name\":\"head-logits.f32le\",\"sha256\":\"c59473c9a4d024fad010f6ad184cda7d1140ec63f8a0b9416f4a2c1b04f852dc\"},"
++        "{\"bytes\":36,\"name\":\"tokens.i32le\",\"sha256\":\"1116024b539f6519eac34eab4c733c9cd09768a47f3e9a52c6b24c3db74d239e\"},"
++        "{\"bytes\":32,\"name\":\"positions.u32le\",\"sha256\":\"4b78063b9c224da311bd1d3fb969bba19e7e91ee07b506f9c4c438828915563f\"},"
++        "{\"bytes\":32,\"name\":\"slots.u32le\",\"sha256\":\"aae761377f3b4f1f07d982783b902314b61a9cbe6ccfdfa96559039f07e332ed\"},"
++        "{\"bytes\":614400,\"name\":\"router-scores.f32le\",\"sha256\":\"1ff02fbb2f745b8803b64e1d7ef0f046cf35f5be20691a53cd424537798f8da7\"},"
++        "{\"bytes\":153600,\"name\":\"router-ranks.u8\",\"sha256\":\"625831e47a131bdbeda0c357169ae1587abb2d480cd340496e4832ddc01635ab\"},"
++        "{\"bytes\":230400,\"name\":\"prefix-max-scores.f32le\",\"sha256\":\"df5c1f96e918d4d9ceaad71d9d55962564dcec75d3a760e742890a1ea174e2a2\"},"
++        "{\"bytes\":57600,\"name\":\"prefix-max-ranks.u8\",\"sha256\":\"ca1c1ad9796bf3f2771fc827bb244a9f65f2dbc90d87b32323a0e359b68d8593\"}"
++        "],\"first_layer\":3,\"layer_count\":75,\"n_embd\":6144,"
++        "\"n_expert\":256,\"n_vocab\":154880,"
++        "\"schema\":\"glm52-mtp-proxy-transcript-v1\",\"steps\":8}\n";
++    proxy_artifact artifacts[sizeof(expected) / sizeof(expected[0])];
++    for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); i++) {
++        void *data = calloc(1u, (size_t)expected[i].size);
++        CHECK(data != NULL, "artifact allocation failed for %s", expected[i].name);
++        ((uint8_t *)data)[0] = (uint8_t)(i + 1u);
++        artifacts[i] = (proxy_artifact){expected[i].name, data, expected[i].size};
++    }
+     char dir[] = "/tmp/ds4-glm-proxy-publish.XXXXXX";
+     CHECK(mkdtemp(dir) != NULL, "mkdtemp failed: %s", strerror(errno));
+-    int rc = ds4_glm_mtp_proxy_publish_contract(dir, artifacts, 3u, NULL);
++    int rc = ds4_glm_mtp_proxy_publish_contract(
++        dir, artifacts, (uint32_t)(sizeof(artifacts) / sizeof(artifacts[0])), NULL);
+     CHECK(rc == 0, "valid publication rejected: rc=%d", rc);
+-    CHECK(file_equals(dir, "z-0.f32le", z, sizeof(z)), "z artifact mismatch");
+-    CHECK(file_equals(dir, "tokens.i32le", q, sizeof(q)), "token artifact mismatch");
+-    CHECK(file_equals(dir, "complete.json", complete, sizeof(complete) - 1u),
+-          "completion marker mismatch");
+-    CHECK(ds4_glm_mtp_proxy_publish_contract(dir, artifacts, 3u, NULL) != 0,
++    for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); i++) {
++        CHECK(file_equals(dir, expected[i].name, artifacts[i].data,
++                          (size_t)artifacts[i].size),
++              "published artifact mismatch: %s", expected[i].name);
++    }
++    CHECK(file_equals(dir, "complete.json", expected_complete,
++                      sizeof(expected_complete) - 1u),
++          "publisher did not own the exact canonical completion schema/hashes");
++    CHECK(ds4_glm_mtp_proxy_publish_contract(
++              dir, artifacts, (uint32_t)(sizeof(artifacts) / sizeof(artifacts[0])), NULL) != 0,
+           "O_EXCL collision was accepted");
+     remove_temp_dir(dir);
+ 
+-    static const char *stages[] = {"pack", "recurrence", "router", "publish", "dispose"};
++    proxy_artifact caller_complete = {
++        "complete.json", artifacts[0].data, artifacts[0].size,
++    };
++    char forbidden_dir[] = "/tmp/ds4-glm-proxy-forbidden.XXXXXX";
++    CHECK(mkdtemp(forbidden_dir) != NULL, "forbidden mkdtemp failed");
++    CHECK(ds4_glm_mtp_proxy_publish_contract(
++              forbidden_dir, &caller_complete, 1u, NULL) != 0,
++          "caller-controlled completion marker accepted");
++    CHECK(!path_exists(forbidden_dir, "complete.json"),
++          "caller-controlled completion marker was published");
++    remove_temp_dir(forbidden_dir);
++
++    static const char *stages[] = {
++        "artifact_write", "artifact_fsync", "artifact_rename",
++        "directory_fsync", "completion_write", "completion_fsync",
++        "completion_rename", "final_directory_fsync", "dispose",
++    };
+     for (size_t i = 0; i < sizeof(stages) / sizeof(stages[0]); i++) {
+         char failed_dir[] = "/tmp/ds4-glm-proxy-fault.XXXXXX";
+         CHECK(mkdtemp(failed_dir) != NULL, "fault mkdtemp failed");
+-        rc = ds4_glm_mtp_proxy_publish_contract(failed_dir, artifacts, 3u, stages[i]);
++        rc = ds4_glm_mtp_proxy_publish_contract(
++            failed_dir, artifacts,
++            (uint32_t)(sizeof(artifacts) / sizeof(artifacts[0])), stages[i]);
+         CHECK(rc != 0, "fault stage %s returned success", stages[i]);
+         CHECK(!path_exists(failed_dir, "complete.json"),
+               "fault stage %s left an admissible completion marker", stages[i]);
+         remove_temp_dir(failed_dir);
+     }
++    for (size_t i = 0; i < sizeof(artifacts) / sizeof(artifacts[0]); i++) {
++        free((void *)artifacts[i].data);
++    }
+ }
+ 
+ int main(void) {
+-- 
+2.43.0
+

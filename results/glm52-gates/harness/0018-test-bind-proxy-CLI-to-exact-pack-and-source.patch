@@ -1,0 +1,181 @@
+From 2d7f052efc9079f6784e541acadfb40613f9e360 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 16:06:49 -0400
+Subject: [PATCH 18/19] test: bind proxy CLI to exact pack and source
+
+---
+ Makefile                            |  3 +-
+ tests/test_glm_mtp_proxy_cli.py     | 71 +++++++++++++++++++++++++++++
+ tests/test_glm_mtp_proxy_contract.c | 12 +++--
+ 3 files changed, 80 insertions(+), 6 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 31bf723..52bad09 100644
+--- a/Makefile
++++ b/Makefile
+@@ -373,7 +373,8 @@ endif
+ test-glm-mtp-proxy-contract: tests/test_glm_mtp_proxy_contract ds4
+ 	@rc=0; \
+ 	./tests/test_glm_mtp_proxy_contract || rc=1; \
+-	python3 tests/test_glm_mtp_proxy_cli.py ./ds4 || rc=1; \
++	DS4_GLM_MTP_PROXY_TEST_PACK="$${DS4_GLM_MTP_PROXY_TEST_PACK:?exact proxy pack required}" \
++		python3 tests/test_glm_mtp_proxy_cli.py ./ds4 || rc=1; \
+ 	exit $$rc
+ 
+ ds4_test: ds4_test.o ds4_help.o ds4_kvstore.o rax.o $(CORE_OBJS)
+diff --git a/tests/test_glm_mtp_proxy_cli.py b/tests/test_glm_mtp_proxy_cli.py
+index 86e7002..3355459 100644
+--- a/tests/test_glm_mtp_proxy_cli.py
++++ b/tests/test_glm_mtp_proxy_cli.py
+@@ -3,6 +3,9 @@
+ 
+ import os
+ from pathlib import Path
++import hashlib
++import json
++import struct
+ import subprocess
+ import sys
+ import tempfile
+@@ -11,6 +14,7 @@ import unittest
+ BINARY_ARG = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "./ds4"
+ if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+     del sys.argv[1]
++PACK_ARG = os.environ.get("DS4_GLM_MTP_PROXY_TEST_PACK", "")
+ 
+ 
+ class GlmMtpProxyCliTests(unittest.TestCase):
+@@ -45,6 +49,25 @@ class GlmMtpProxyCliTests(unittest.TestCase):
+                 check=False,
+             )
+ 
++    @staticmethod
++    def write_source(directory: Path) -> None:
++        directory.mkdir()
++        artifacts = {
++            "z0.f32le": b"".join(struct.pack("<f", i * 0.0001) for i in range(6144)),
++            "q1.i32le": struct.pack("<i", 42),
++            "source-position.u32le": struct.pack("<I", 4096),
++            "min-position.u32le": struct.pack("<I", 4080),
++        }
++        manifest = {"schema": "glm52-mtp-proxy-source-v1", "artifacts": []}
++        for name, data in artifacts.items():
++            (directory / name).write_bytes(data)
++            manifest["artifacts"].append(
++                {"bytes": len(data), "name": name, "sha256": hashlib.sha256(data).hexdigest()}
++            )
++        (directory / "complete.json").write_text(
++            json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n"
++        )
++
+     def test_empty_environment_stays_on_ordinary_model_path(self) -> None:
+         result = self.invoke({})
+         self.assertNotEqual(result.returncode, 0)
+@@ -94,6 +117,54 @@ class GlmMtpProxyCliTests(unittest.TestCase):
+         self.assertNotIn("cannot open model", result.stderr)
+         self.assertNotIn("cannot open GLM MTP proxy pack", result.stderr)
+ 
++    @unittest.skipUnless(PACK_ARG, "exact MTP proxy test pack was not supplied")
++    def test_real_cli_validates_exact_pack_then_source(self) -> None:
++        with tempfile.TemporaryDirectory(prefix="ds4-glm-proxy-source-") as td:
++            root = Path(td)
++            source = root / "source"
++            self.write_source(source)
++            result = self.invoke(
++                {
++                    "DS4_GLM_MTP_PROXY_CANDIDATE_DIR": str(root / "output"),
++                    "DS4_GLM_MTP_PROXY_PACK": str(Path(PACK_ARG).resolve()),
++                    "DS4_GLM_MTP_PROXY_SOURCE_STATE": str(source),
++                    "DS4_GLM_PROXY_FAIL_STAGE": "source",
++                }
++            )
++        self.assertNotEqual(result.returncode, 0)
++        self.assertIn("GLM MTP proxy pack verified records=255", result.stderr)
++        self.assertIn("GLM MTP proxy source verified", result.stderr)
++        self.assertIn("injected GLM MTP proxy failure stage=source", result.stderr)
++        self.assertNotIn("cannot open model", result.stderr)
++
++    @unittest.skipUnless(PACK_ARG, "exact MTP proxy test pack was not supplied")
++    def test_real_cli_rejects_mutated_pack_before_source(self) -> None:
++        with tempfile.TemporaryDirectory(prefix="ds4-glm-proxy-pack-mutation-") as td:
++            root = Path(td)
++            source = root / "source"
++            self.write_source(source)
++            mutation = root / "pack.bin"
++            with open(PACK_ARG, "rb", buffering=0) as src, mutation.open("w+b", buffering=0) as dst:
++                dst.write(src.read(49152))
++                dst.seek(16)
++                byte = dst.read(1)
++                dst.seek(16)
++                dst.write(bytes([byte[0] ^ 1]))
++                dst.flush()
++                os.fsync(dst.fileno())
++            result = self.invoke(
++                {
++                    "DS4_GLM_MTP_PROXY_CANDIDATE_DIR": str(root / "output"),
++                    "DS4_GLM_MTP_PROXY_PACK": str(mutation),
++                    "DS4_GLM_MTP_PROXY_SOURCE_STATE": str(source),
++                    "DS4_GLM_PROXY_FAIL_STAGE": "source",
++                }
++            )
++        self.assertNotEqual(result.returncode, 0)
++        self.assertIn("GLM MTP proxy pack validation failed", result.stderr)
++        self.assertNotIn("GLM MTP proxy source verified", result.stderr)
++        self.assertNotIn("cannot open model", result.stderr)
++
+ 
+ if __name__ == "__main__":
+     unittest.main(verbosity=2)
+diff --git a/tests/test_glm_mtp_proxy_contract.c b/tests/test_glm_mtp_proxy_contract.c
+index 266b217..18c76d1 100644
+--- a/tests/test_glm_mtp_proxy_contract.c
++++ b/tests/test_glm_mtp_proxy_contract.c
+@@ -16,10 +16,8 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <sys/stat.h>
+-#include <sys/ioctl.h>
+ #include <sys/types.h>
+ #include <unistd.h>
+-#include <linux/fs.h>
+ 
+ #define PROXY_ABI 1u
+ #define PROXY_STEPS 8u
+@@ -335,12 +333,14 @@ static void parse_digest(uint8_t out[32], const char *digest_hex) {
+     }
+ }
+ 
+-static int reflink_mutation(const char *source, char path[128], off_t offset) {
++static int short_header_mutation(const char *source, char path[128], off_t offset) {
+     strcpy(path, "/tmp/ds4-glm-mtp-pack-mutation.XXXXXX");
+     int out = mkstemp(path);
+     if (out < 0) return -1;
+     int in = open(source, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+-    if (in < 0 || ioctl(out, FICLONE, in) != 0) {
++    uint8_t header[49152];
++    if (in < 0 || pread(in, header, sizeof(header), 0) != (ssize_t)sizeof(header) ||
++        write(out, header, sizeof(header)) != (ssize_t)sizeof(header)) {
+         if (in >= 0) close(in);
+         close(out);
+         unlink(path);
+@@ -391,7 +391,7 @@ static void test_exact_compact_pack_and_mutations(void) {
+                                       inventory_sha, &receipt) != 0,
+           "wrong expected whole-pack digest accepted");
+     char mutation[128];
+-    CHECK(reflink_mutation(pack, mutation, 16) == 0,
++    CHECK(short_header_mutation(pack, mutation, 16) == 0,
+           "could not create header mutation: %s", strerror(errno));
+     CHECK(ds4_glm_mtp_proxy_pack_open(mutation, pack_sha, model_sha,
+                                       inventory_sha, &receipt) != 0,
+@@ -510,6 +510,8 @@ static void test_default_off_cli_dispatch(void) {
+           mode == 1, "complete candidate environment rejected");
+     CHECK(ds4_glm_mtp_proxy_cli_contract_select("out", "pack", "state", "router", &mode) == 0 &&
+           mode == 1, "known fault stage rejected");
++    CHECK(ds4_glm_mtp_proxy_cli_contract_select("out", "pack", "state", "source", &mode) == 0 &&
++          mode == 1, "source-boundary fault stage rejected");
+     CHECK(ds4_glm_mtp_proxy_cli_contract_select("out", "pack", "state", "unknown", &mode) != 0,
+           "unknown fault stage accepted");
+ }
+-- 
+2.43.0
+
