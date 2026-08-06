@@ -374,7 +374,11 @@ def validate_memory_samples(samples_log: str, main_log: str) -> float:
                 for left, right in zip(times, times[1:]))):
         raise ValueError("memory samples violate the safety or cadence contract")
     verified = re.search(r"^(\S+) executed_candidate_verified ", main_log, re.M)
-    exited = re.search(r"^(\S+) executed candidate exited;", main_log, re.M)
+    exited = re.search(
+        r"^(\S+) executed candidate exited(?: during identity sample)?;",
+        main_log,
+        re.M,
+    )
     if verified is None or exited is None:
         raise ValueError("lifecycle coverage anchors are absent")
     verified_at = datetime.fromisoformat(verified.group(1).replace(",", ".")).timestamp()
