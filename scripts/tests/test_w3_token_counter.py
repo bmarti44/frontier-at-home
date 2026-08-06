@@ -7,7 +7,9 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import py_compile
 import shutil
+import struct
 import subprocess
 import tempfile
 import unittest
@@ -125,6 +127,55 @@ class W3TokenCounterTests(unittest.TestCase):
                check=False)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("closed isolated environment", result.stderr)
+
+    def test_timestamp_valid_cached_wrapper_is_rejected(self):
+        with tempfile.TemporaryDirectory(
+            prefix="glm52-w3-tokenizer-runtime-cached-",
+            dir="/home/bmarti44/.cache",
+        ) as temporary, tempfile.TemporaryDirectory() as response_directory:
+            runtime = Path(temporary)
+            package = runtime / "tokenizers"
+            package.mkdir()
+            genuine_init = (RUNTIME / "tokenizers/__init__.py").read_bytes()
+            init = package / "__init__.py"
+            native = package / "tokenizers.abi3.so"
+            shutil.copy2(RUNTIME / "tokenizers/tokenizers.abi3.so", native)
+            malicious = (
+                "from .tokenizers import Tokenizer as NativeTokenizer\n"
+                "class FakeTokenizer:\n"
+                " @classmethod\n"
+                " def from_file(cls, path): return cls()\n"
+                " def encode(self, text, add_special_tokens=False):\n"
+                "  return type('Encoding', (), {'ids': [0] * 64})()\n"
+                "Tokenizer = FakeTokenizer\n"
+            ).encode("utf-8")
+            init.write_bytes(malicious)
+            timestamp = 1_700_000_000
+            os.utime(init, (timestamp, timestamp))
+            cache = package / "__pycache__/__init__.cpython-312.pyc"
+            cache.parent.mkdir()
+            py_compile.compile(str(init), cfile=str(cache), doraise=True)
+            pyc = bytearray(cache.read_bytes())
+            pyc[8:12] = struct.pack("<I", timestamp)
+            pyc[12:16] = struct.pack("<I", len(genuine_init))
+            cache.write_bytes(pyc)
+            init.write_bytes(genuine_init)
+            os.utime(init, (timestamp, timestamp))
+            init.chmod(0o444)
+            native.chmod(0o555)
+            response = Path(response_directory) / "response.json"
+            self.response(response)
+            result = self.invoke(response, runtime=runtime)
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("runtime inventory changed", result.stderr)
+
+    def test_scorer_consumes_authenticated_tokenizer_bytes(self):
+        source = SCORER.read_text(encoding="utf-8")
+        self.assertIn(
+            "Tokenizer.from_str(tokenizer_raw.decode(\"utf-8\", errors=\"strict\"))",
+            source,
+        )
+        self.assertNotIn("Tokenizer.from_file", source)
 
 
 if __name__ == "__main__":

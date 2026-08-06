@@ -185,6 +185,8 @@ allowlist = {
     "result_sha256",
     "output_sha256",
     "scorer_sha256",
+    "unchanged_scorer_sha256",
+    "red_test_sha256",
     "compactor_sha256",
     "scorer_tests_sha256",
     "source_contract_tests_sha256",

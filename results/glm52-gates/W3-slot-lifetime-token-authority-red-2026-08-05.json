@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "gate": "W3 independent token-scorer authority",
+  "status": "RED_CONFIRMED",
+  "repository_head_before_fix": "a5521eaa150df6e73f16b4302af3dd1215bfcb7b",
+  "unchanged_scorer_sha256": "6af53f0bd3e55388704d29beeece9e8926b3a953d0318336f87a10f62c00d433",
+  "red_test_sha256": "9b6b2aaf5bd476b0fbe47bc03fc1683d4d78e41ae15b9382ca51f01ffc60b598",
+  "command": "python3 -m unittest scripts.tests.test_w3_token_counter.W3TokenCounterTests.test_timestamp_valid_cached_wrapper_is_rejected scripts.tests.test_w3_token_counter.W3TokenCounterTests.test_scorer_consumes_authenticated_tokenizer_bytes",
+  "returncode": 1,
+  "observed": {
+    "tests_run": 2,
+    "failures": 2,
+    "cached_wrapper_scorer_returncode": 0,
+    "cached_wrapper_input_content": "x",
+    "cached_wrapper_false_reference_token_count": 64,
+    "tokenizer_constructor": "Tokenizer.from_file(str(tokenizer_path))"
+  },
+  "acceptance_formula": "PASS only when an otherwise-valid runtime containing any cached bytecode is rejected before import and semantic tokenizer construction consumes tokenizer_raw rather than reopening tokenizer_path.",
+  "model_or_gpu_started": false
+}
