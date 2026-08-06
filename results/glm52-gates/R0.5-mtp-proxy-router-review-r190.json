@@ -1,0 +1,63 @@
+{
+  "candidate_hash": "e98bd820149e2bce77233ec5bfddaebb0dcf53ef",
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "review_round": 190,
+  "reviewers": [
+    {
+      "name": "Nash",
+      "score_0_to_100": 90,
+      "critical": [],
+      "high": [
+        {
+          "id": "R05-R190-H1-BLINDED-FREQUENCY-BASELINE-CONTRADICTION",
+          "evidence": "Anonymous replay is required to derive both baselines but cannot know which five secret post-beacon cases to exclude from the 55-case frequency fit.",
+          "affected_gate": "Blinded baseline integrity and executable contract consistency",
+          "reproduction": "Give replay only anonymous inputs: it cannot derive the leave-five-out prior; give it IDs and it violates isolation.",
+          "proposed_acceptance_test": "Use a distinct frozen baseline helper after selection, independently recompute its exact 50-case table in the scorer, and keep identities/frequency records unreadable to candidate/replay."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-R05-R189-H1-POSTFREEZE-SYNTHETICS-DO-NOT-BLIND-SCORING-FIXTURES", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_RED_TEST_IMPLEMENTATION"
+    },
+    {
+      "name": "Singer",
+      "score_0_to_100": 87,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-R05-R190-H1-BEACON-FLOOR-HAS-NO-PRE-ROUND-COMMITMENT",
+          "evidence": "A local manifest fsync/floor does not prove the manifest existed before the chosen drand round; a favorable historical authentic round can be paired with floor=round-1 afterward. Relay equality is not BLS verification.",
+          "affected_gate": "Unbiased post-freeze fixture selection and nonce unpredictability",
+          "reproduction": "Grind historical rounds, write a manifest with the chosen round minus one as floor, and pass the old verifier.",
+          "proposed_acceptance_test": "Externally timestamp the exact manifest before the selected round, require one exact next round, verify BLS against a frozen chain key/hash, and reject historical-beacon/later-manifest mutation."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-R05-R190-M1-FREQUENCY-BASELINE-AUTHORITY-IS-CONTRADICTORY",
+          "evidence": "The anonymous recurrence replay cannot construct the post-selection leave-five-out frequency prior.",
+          "affected_gate": "Frequency comparison and identity isolation",
+          "reproduction": "Implement the inherited replay inputs literally and observe the required prior is unavailable.",
+          "proposed_acceptance_test": "Use a separate frozen baseline helper and canonical output inaccessible to candidate/replay, then independently recompute in the scorer."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-R05-R189-H1-POSTFREEZE-SYNTHETICS-DO-NOT-BLIND-SCORING-FIXTURES", "status": "PARTIALLY_FIXED"},
+        {"id": "ADV-R05-R188-H2-ALLOWED-CHANNEL-PACK-AND-BINARY-SMUGGLING", "status": "PARTIALLY_FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_RED_TEST_IMPLEMENTATION"
+    }
+  ],
+  "terminal_disposition": "REJECTED_BEFORE_IMPLEMENTATION",
+  "convergence": {
+    "candidate": 6,
+    "blocking_set_strictly_shrank": false,
+    "consecutive_non_shrink": 1,
+    "next_candidate_permitted": true
+  }
+}
