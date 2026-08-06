@@ -40,6 +40,33 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             '84_count_glm_output_tokens.py',
         ):
             self.assertIn(contract, probe)
+
+    def test_w3_probe_isolates_every_python_authority(self):
+        probe = W3_PROBE_V3.read_text(encoding="utf-8")
+        self.assertIn("isolated_python()", probe)
+        self.assertIn("/usr/bin/env -i", probe)
+        self.assertIn("/usr/bin/python3 -I -B", probe)
+        self.assertNotRegex(probe, r"(?m)^\s*python3(?:\s|$)")
+        self.assertNotRegex(probe, r"(?m)^\s*/usr/bin/python3(?:\s|$)")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            marker = root / "ambient-python-loaded"
+            (root / "sitecustomize.py").write_text(
+                f"from pathlib import Path\nPath({str(marker)!r}).touch()\n",
+                encoding="utf-8",
+            )
+            environment = dict(os.environ)
+            environment["PYTHONPATH"] = str(root)
+            result = subprocess.run([
+                "/usr/bin/env", "-i", "HOME=/nonexistent", "PATH=/usr/bin:/bin",
+                "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "/usr/bin/python3", "-I", "-B",
+                "-c", "print('isolated')",
+            ], env=environment, text=True, stdout=subprocess.PIPE,
+               stderr=subprocess.PIPE, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), "isolated")
+            self.assertFalse(marker.exists())
         self.assertNotIn("sort -n | tail -1", probe)
         self.assertNotIn('a["completion_tokens"] >= 64', probe)
         self.assertIn('a["independent_completion_tokens"] == 64', probe)

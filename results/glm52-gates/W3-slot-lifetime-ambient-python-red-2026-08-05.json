@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "gate": "W3 closed Python authority",
+  "status": "RED_CONFIRMED",
+  "repository_head_before_fix": "4384d9e53a50c9d60ffa02ffc775af197353a1dc",
+  "harness_sha256": "40cee6c7408917ab3f4795b753930ec8cf57a675c04d0ea2d711285591c54600",
+  "test_sha256": "c336b3b95020f618c98e6e9c2ed66025de16214a5155f857995f867a655d1c56",
+  "command": "python3 -m unittest scripts.tests.test_glm_safe_lifecycle.CandidateLifecycleSourceTests.test_w3_probe_isolates_every_python_authority",
+  "returncode": 1,
+  "observed": {
+    "tests_run": 1,
+    "failures": 1,
+    "isolated_python_launcher_absent": true,
+    "ambient_python_entrypoints": 7
+  },
+  "acceptance_formula": "PASS only when every Python entrypoint in the W3 probe uses a single closed env -i, /usr/bin/python3 -I -B launcher and an outer PYTHONPATH/sitecustomize marker does not execute.",
+  "model_or_gpu_started": false
+}
