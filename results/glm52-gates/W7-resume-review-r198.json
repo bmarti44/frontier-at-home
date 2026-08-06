@@ -1,0 +1,72 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "4554f051e06dee4f72891bfd26106fa074f1531d",
+  "review_round": 198,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate_number_for_gate": 3,
+  "implementation_authorized": false,
+  "compiled_red_authorized": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 68,
+      "critical": [],
+      "high": [
+        "W7-R198-H1-PRIMITIVE-RECEIPTS-CANNOT-FAITHFULLY-REPRESENT-REAL-EVALUATION",
+        "W7-R198-H2-CHECKPOINT-LINEAGE-SELECTION-AND-COMPLETED-READ-AUTHORITY-ARE-INVALID",
+        "W7-R198-H3-CANONICAL-STATE-MANIFEST-PROVES-CONTIGUITY-NOT-COMPLETENESS"
+      ],
+      "medium": [
+        "W7-R198-M1-CONFIRMATION-SEED-DOES-NOT-DETERMINE-FIXTURES",
+        "W7-R198-M2-TOKEN-TO-WIRE-MAP-ASSUMES-EVERY-TOKEN-CONSUMES-BYTES"
+      ],
+      "low": [],
+      "verdict": "DO NOT AUTHORIZE COMPILED RED; THREE BOUNDED SCHEMA CORRECTIONS REMAIN"
+    },
+    "Singer": {
+      "score_0_to_100": 47,
+      "critical": [],
+      "high": [
+        "ADV-W7-198-H06",
+        "ADV-W7-196-H02",
+        "ADV-W7-196-H04",
+        "ADV-W7-197-M03",
+        "ADV-W7-198-H07"
+      ],
+      "medium": [
+        "ADV-W7-198-M05"
+      ],
+      "low": [],
+      "verdict": "REJECT COMPILED RED; AUTHORIZE ONLY BOUNDED W7 SCORER/SCHEMA/TEST CORRECTIONS"
+    }
+  },
+  "blocking_classes": [
+    {
+      "class": "case-unique-multichunk-receipts",
+      "required_closure": "Use globally unique regime/case invocation IDs and normalize one or more contiguous evaluator receipts without accepting gaps, overlaps, duplicates, or hidden pre-checkpoint work."
+    },
+    {
+      "class": "live-prefix-lineage-and-complete-payload",
+      "required_closure": "Derive live/common frontiers from complete token vectors, define stored lineage from checkpoint-local prefix data, require a unique longest eligible record, and require exact payload bytes read."
+    },
+    {
+      "class": "exact-state-layout",
+      "required_closure": "Freeze the production GLM session member inventory, dimensions, encodings, and byte-size formulas instead of accepting caller-chosen positive layer sizes."
+    },
+    {
+      "class": "content-bound-confirmation",
+      "required_closure": "Derive fixture hashes from all scorer-decoded fixture content and bind public-random selection to a frozen generator or pool."
+    },
+    {
+      "class": "exact-replay-output-state",
+      "required_closure": "Require exact-off and exact-on to carry and match complete state, logits, and generated output rather than accepting empty action lists alone."
+    }
+  ],
+  "bounded_medium_correction": "Permit tokenizer-confirmed nondecreasing wire offsets so zero-width control tokens are representable while retaining final byte coverage.",
+  "convergence": {
+    "blocking_set_strictly_shrank": true,
+    "consecutive_nonshrinking_candidates": 0,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "next_candidate_allowed": true
+  }
+}
