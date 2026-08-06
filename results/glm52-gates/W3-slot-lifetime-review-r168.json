@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "c48fd33c43af23d07be1b2115b33a1dd252d93d4",
+  "review_round": 168,
+  "status": "REJECT_BEFORE_EXECUTION",
+  "execution_started": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 65,
+      "critical": [],
+      "high": [
+        {
+          "id": "W3-R168-H1-UNBOUND-PYC-BYPASSES-PINNED-TOKENIZER-WRAPPER",
+          "evidence": "The runtime contained tokenizers/__pycache__/__init__.cpython-312.pyc, the scorer excluded __pycache__ from inventory, Python -B still reads existing bytecode, and the runtime directories were writable.",
+          "affected_gate": "independent output-token scorer authority",
+          "acceptance_test": "Reject every extra runtime entry, remove bytecode, avoid package bytecode execution, and reject a forged valid pyc mutation."
+        },
+        {
+          "id": "W3-R168-H2-HASHED-TOKENIZER-BYTES-NOT-CONSUMED",
+          "evidence": "The scorer authenticated tokenizer_raw but discarded it and reopened tokenizer_path with Tokenizer.from_file.",
+          "affected_gate": "frozen tokenizer data binding",
+          "acceptance_test": "Construct the tokenizer from the exact authenticated bytes and prove a path replacement cannot affect scoring."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "REJECT_BEFORE_EXECUTION"
+    },
+    "Singer": {
+      "score_0_to_100": 72,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W3-R168-H1",
+          "evidence": "A timestamp-valid cached wrapper returned 64 reference tokens for one-character content while every declared dependency digest still matched.",
+          "affected_gate": "short-output rejection and scorer authority",
+          "acceptance_test": "Forbid cache entries, remove cached bytecode, load only authenticated implementation bytes, and require the forged-pyc mutation to fail before import."
+        },
+        {
+          "id": "ADV-W3-R168-H2",
+          "evidence": "Tokenizer.from_file reopened a pathname after the authoritative descriptor read, so the semantic bytes were not bound to the attested digest.",
+          "affected_gate": "fixed tokenizer authority",
+          "acceptance_test": "Instantiate from tokenizer_raw with strict UTF-8 and prove later pathname replacement cannot alter the result."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W3-R167-M1",
+          "disposition": "DEFERRED",
+          "rationale": "This probe remains labeled runtime eligibility only; completed-time performance uses actual token timestamps and at least 128 tokens."
+        },
+        {
+          "id": "ADV-W3-R167-M2",
+          "disposition": "FIX_IN_CURRENT_BOUNDED_CANDIDATE",
+          "rationale": "Validate labels, response and dependency digests, paths, and re-hash the response consumed by aggregation."
+        }
+      ],
+      "low": [],
+      "verdict": "REJECT_EXECUTION_AS_AUTHORITATIVE_PROBE"
+    }
+  },
+  "root_reproduction": {
+    "pycache_present": true,
+    "python_reported_cached_path": "/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2/tokenizers/__pycache__/__init__.cpython-312.pyc",
+    "runtime_directories_mode": "0775",
+    "tokenizer_semantic_constructor": "Tokenizer.from_file(path)",
+    "conclusion": "Both blocking finding classes independently reproduced; no GPU/model run was started."
+  },
+  "blocking_set": [
+    "unbound cached Python bytecode can control the independent scorer",
+    "semantic tokenizer construction reopens rather than consumes authenticated bytes"
+  ]
+}
