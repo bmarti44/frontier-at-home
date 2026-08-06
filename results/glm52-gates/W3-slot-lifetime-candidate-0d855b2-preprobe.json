@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "gate": "W3-production-direct-slot-preprobe",
+  "status": "PASS",
+  "scope": "contained-probe authorization only; no serving-performance credit",
+  "candidate": {
+    "engine_commit": "0d855b2dc3067bc15f907ecfb022d0c18ec37185",
+    "binary_sha256": "2de667d928f376d69f07ca252a9890e899ec425567633e742e505dff916c94cb",
+    "binary_reproducible_builds": 2,
+    "source_artifacts": [
+      {
+        "path": "ds4.c",
+        "engine_source_sha256": "a41dc169b224f87690d57763a325efb208f67ad52b7ae92da6e9284427f5d39d"
+      },
+      {
+        "path": "ds4_cuda.cu",
+        "engine_source_sha256": "827e035981737c86b145e7306823628a2088736a6b970eeab388bff55eefb977"
+      },
+      {
+        "path": "Makefile",
+        "engine_source_sha256": "b8e3c997d7e87df133d48ac0265c587c883463576d3d3cd764fccb042ca1eb02"
+      },
+      {
+        "path": "tests/test_gpu_expert_slot_lifetime.c",
+        "engine_source_sha256": "edfd1dc150b37be35a35dc2310935186e9b1d19b8d710f14ffd8f9ca2d450273"
+      },
+      {
+        "path": "tests/test_gpu_expert_slot_gemv.c",
+        "engine_source_sha256": "fb45b947a70d97d850fe4e5dddfea66755cf1ce58a4b5b375099c95c81e8faf0"
+      }
+    ]
+  },
+  "targeted_medium_fixes": [
+    "release direct-slot reader ownership before unpinning the mapped arena",
+    "advance the model generation only after a successful reader-safe cache flush"
+  ],
+  "tests": {
+    "lifetime_normal": {
+      "returncode": 0,
+      "observed": 1369948382,
+      "status": "PASS"
+    },
+    "lifetime_skip_wait_mutation": {
+      "returncode": 1,
+      "observed": 3735928559,
+      "status": "REJECTED"
+    },
+    "safe_launcher_forwarding": {
+      "returncode": 0,
+      "status": "PASS"
+    }
+  },
+  "review": {
+    "round": 164,
+    "gap_reviewer_score": 94,
+    "adversarial_reviewer_score": 94,
+    "critical": [],
+    "high": []
+  },
+  "next_gate": "contained matched OFF/ON runtime probe"
+}
