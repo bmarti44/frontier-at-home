@@ -84,6 +84,32 @@ def _w7_payload_bytes(token_count):
 def w7_resume_record():
     logits = _compressed_f32(154880, 13, 2.0)
     confirmation_seed = "d" * 64
+    attempt_id = "e" * 64
+    stem = json.loads(
+        (ROOT / "results/glm52-gates/harness/fixture-glm-long8.json").read_text()
+    )["prompt"].encode("utf-8")
+    primary_suffix = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
+    confirmation_suffixes = tuple(
+        f"\n\n[W7 confirmation {index:02d}] " + instruction
+        for index, instruction in enumerate((
+            "Name the cache frontier invariant and give one counterexample.",
+            "Describe the UTF-8/BPE boundary risk in exactly three sentences.",
+            "Return a concise checklist for validating a resumed append.",
+            "Explain why exact replay alone cannot qualify suffix divergence.",
+            "State which rows must be invalidated before evaluating the suffix.",
+            "Contrast a cold restart with a live rewind without using a table.",
+            "Give a deterministic test for a checkpoint selected at a byte boundary.",
+            "Identify the first observable symptom of stale frontier contamination.",
+            "Explain why a longer stored record with wrong lineage must be ignored.",
+            "State the required relationship among selected, common, live, and prompt.",
+            "Describe a mutation that proves a short payload read is rejected.",
+            "Explain why generated-token equality does not replace logit comparison.",
+            "List the state members that make a GLM checkpoint complete.",
+            "Describe how to prove evaluator ranges contain no hidden prefix work.",
+            "Explain why the default-off flag must not affect non-GLM models.",
+            "Summarize the fail-closed behavior for a malformed checkpoint.",
+        ))
+    )
     contracts = {
         "cold-primary": ("glm", "unset", "primary-cold"),
         "strict-primary": ("glm", "unset", "primary-extension"),
@@ -115,13 +141,11 @@ def w7_resume_record():
             base = int(selection_seed[:4], 16) % 8
             variant = base if regime_id == "confirmation-1" else 8 + base
         tokens = [(index * 17 + len(regime_id)) % 154880 for index in range(prompt)]
-        wire_chunks = [f"{token},".encode("utf-8") for token in tokens]
-        if regime_id != "primary":
-            wire_chunks[-1] += f"\nW7-CONFIRMATION-VARIANT-{variant:02d}".encode("ascii")
-        wire_bytes = b"".join(wire_chunks)
-        wire_prefix_bytes = [0]
-        for chunk in wire_chunks:
-            wire_prefix_bytes.append(wire_prefix_bytes[-1] + len(chunk))
+        suffix = primary_suffix if regime_id == "primary" else confirmation_suffixes[variant]
+        wire_bytes = stem + suffix.encode("utf-8")
+        wire_prefix_bytes = [
+            (index * len(wire_bytes)) // prompt for index in range(prompt + 1)
+        ]
         payload = hashlib.sha256(f"payload:{regime_id}:{selected}".encode()).hexdigest()
 
         def inventory_item(record_id, token_length, inode, *, valid=True,
@@ -236,7 +260,7 @@ def w7_resume_record():
 
         def case(case_id):
             family, flag, mutation = contracts[case_id]
-            invocation_id = f"invoke:{regime_id}:{case_id}"
+            invocation_id = f"invoke:{attempt_id[:16]}:{regime_id}:{case_id}"
             live_ids = [] if case_id == "cold-primary" else (
                 tokens if case_id in {"exact-off", "exact-on"} else live_base
             )
@@ -354,7 +378,7 @@ def w7_resume_record():
     ]
     return {
         "record_type": "w7_resume_observation",
-        "gate": "W7",
+        "gate": "W7", "attempt_id": attempt_id,
         "binary_sha256": "a" * 64,
         "configuration_sha256": "b" * 64,
         "fixture_sha256": hashlib.sha256(
@@ -1373,6 +1397,26 @@ class FormulaTests(unittest.TestCase):
         _rebind_w7_fixture_hashes(record)
         with self.assertRaisesRegex(ValueError, "confirmation.*divergent append"):
             self.goal.score_registered_gate("W7", "w7.resume.v1", [record])
+
+    def test_w7_resume_scorer_rejects_post_seed_fixture_and_cross_attempt_receipts(self):
+        post_seed = w7_resume_record()
+        case = post_seed["regimes"][1]["cases"][0]
+        wire = base64.b64decode(case["wire_text_utf8_b64"]) + b" post-seed"
+        case["wire_text_utf8_b64"] = base64.b64encode(wire).decode("ascii")
+        offsets_raw = zlib.decompress(
+            base64.b64decode(case["wire_token_end_offsets_zlib_b64"])
+        )
+        offsets = list(struct.unpack(f"<{case['prompt_tokens']}i", offsets_raw))
+        offsets[-1] = len(wire)
+        case["wire_token_end_offsets_zlib_b64"] = _compressed_i32(offsets)
+        _rebind_w7_fixture_hashes(post_seed)
+        with self.assertRaisesRegex(ValueError, "not frozen and seed-selected"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [post_seed])
+
+        stale_attempt = w7_resume_record()
+        stale_attempt["attempt_id"] = "f" * 64
+        with self.assertRaisesRegex(ValueError, "invocation identity"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [stale_attempt])
 
     def test_w7_resume_scorer_rejects_malformed_or_nonfinite_artifacts(self):
         malformed = w7_resume_record()

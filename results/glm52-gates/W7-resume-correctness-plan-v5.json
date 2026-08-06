@@ -1,0 +1,33 @@
+{
+  "schema_version": 5,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "PREREGISTERED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v4.json",
+  "inherits_unchanged_acceptance": "All production payload, checkpoint selection, evaluator coverage, numerical, state-completeness, and safety requirements from v4 remain unchanged.",
+  "review_findings_addressed": "results/glm52-gates/W7-resume-review-r199.json",
+  "behavioral_red": "results/glm52-gates/W7-resume-candidate5-red.json",
+  "frozen_fixture_generator": {
+    "stem_path": "results/glm52-gates/harness/fixture-glm-long8.json",
+    "stem_file_sha256": "4b46547667dd4d84b8da83c0ccca358e725e33e8de8bbfe25701ab0d878ae469",
+    "stem_text_sha256": "a2ff948826dd9a1b4c74fe599ba4b668ae4285e44b275006afc9d3c7541655cf",
+    "primary": "The exact frozen stem plus the fixed primary suffix compiled into the registered scorer.",
+    "confirmations": "The public-random digest selects variants 0-7 and 8-15; the exact frozen stem plus the selected substantive suffix compiled into the scorer is required byte-for-byte.",
+    "post_seed_mutation": "Any different stem, suffix, or additional byte rejects even when all caller-provided hashes and token receipts are coherently rebound."
+  },
+  "confirmation_geometry": {
+    "formula": "selected <= common < live < prompt",
+    "minimum_live_divergent_tokens": 8,
+    "minimum_appended_prompt_tokens": 4,
+    "derivation": "common is derived from complete canonical/live token vectors; selected is derived from the unique completed checkpoint read."
+  },
+  "attempt_isolation": {
+    "attempt_id": "A canonical SHA-256 attempt identity is mandatory.",
+    "invocation_id": "invoke:<first16(attempt_id)>:<regime_id>:<case_id>",
+    "stale_receipts": "Receipts copied from another attempt reject before behavioral scoring."
+  },
+  "next_sequence": [
+    "Nash and Singer review candidate 5 only.",
+    "Proceed to the compiled unchanged-engine RED only when neither reviewer reports a critical or high issue.",
+    "Keep the engine untouched until that authorization is recorded."
+  ]
+}

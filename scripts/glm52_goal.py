@@ -3072,6 +3072,31 @@ def _w7_utf8_bytes(encoded: Any, label: str) -> bytes:
 
 
 _W7_SAFE_WRAPPER_SHA256 = "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801"
+_W7_STEM_PATH = ROOT / "results/glm52-gates/harness/fixture-glm-long8.json"
+_W7_STEM_FILE_SHA256 = "4b46547667dd4d84b8da83c0ccca358e725e33e8de8bbfe25701ab0d878ae469"
+_W7_STEM_TEXT_SHA256 = "a2ff948826dd9a1b4c74fe599ba4b668ae4285e44b275006afc9d3c7541655cf"
+_W7_PRIMARY_SUFFIX = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
+_W7_CONFIRMATION_SUFFIXES = tuple(
+    f"\n\n[W7 confirmation {index:02d}] " + instruction
+    for index, instruction in enumerate((
+        "Name the cache frontier invariant and give one counterexample.",
+        "Describe the UTF-8/BPE boundary risk in exactly three sentences.",
+        "Return a concise checklist for validating a resumed append.",
+        "Explain why exact replay alone cannot qualify suffix divergence.",
+        "State which rows must be invalidated before evaluating the suffix.",
+        "Contrast a cold restart with a live rewind without using a table.",
+        "Give a deterministic test for a checkpoint selected at a byte boundary.",
+        "Identify the first observable symptom of stale frontier contamination.",
+        "Explain why a longer stored record with wrong lineage must be ignored.",
+        "State the required relationship among selected, common, live, and prompt.",
+        "Describe a mutation that proves a short payload read is rejected.",
+        "Explain why generated-token equality does not replace logit comparison.",
+        "List the state members that make a GLM checkpoint complete.",
+        "Describe how to prove evaluator ranges contain no hidden prefix work.",
+        "Explain why the default-off flag must not affect non-GLM models.",
+        "Summarize the fail-closed behavior for a malformed checkpoint.",
+    ))
+)
 _W7_CASE_CONTRACT = {
     "cold-primary": ("glm", "unset", "primary-cold", "cold"),
     "strict-primary": ("glm", "unset", "primary-extension", "cold"),
@@ -3092,6 +3117,24 @@ _W7_CASE_CONTRACT = {
     "flag-empty": ("glm", "", "primary-extension", "cold"),
     "flag-garbage": ("glm", "garbage", "primary-extension", "cold"),
 }
+
+
+def _w7_frozen_wire(variant: str | int) -> bytes:
+    if _sha256(_W7_STEM_PATH) != _W7_STEM_FILE_SHA256:
+        raise ValueError("W7 frozen stem file hash is invalid")
+    document = _read_strict_json(_W7_STEM_PATH)
+    if not isinstance(document, dict) or not isinstance(document.get("prompt"), str):
+        raise ValueError("W7 frozen stem document is invalid")
+    stem = document["prompt"].encode("utf-8")
+    if hashlib.sha256(stem).hexdigest() != _W7_STEM_TEXT_SHA256:
+        raise ValueError("W7 frozen stem text hash is invalid")
+    if variant == "primary-fixed":
+        suffix = _W7_PRIMARY_SUFFIX
+    elif isinstance(variant, int) and not isinstance(variant, bool) and 0 <= variant < 16:
+        suffix = _W7_CONFIRMATION_SUFFIXES[variant]
+    else:
+        raise ValueError("W7 frozen fixture variant is invalid")
+    return stem + suffix.encode("utf-8")
 
 
 def _w7_expected_payload_bytes(token_count: int) -> int:
@@ -3223,7 +3266,7 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
     _require_exact_keys(
         record,
         {
-            "record_type", "gate", "binary_sha256", "configuration_sha256",
+            "record_type", "gate", "attempt_id", "binary_sha256", "configuration_sha256",
             "fixture_sha256", "guard_off_present", "confirmation_seed_sha256",
             "regimes", "failures",
         },
@@ -3232,7 +3275,7 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
     if record["record_type"] != "w7_resume_observation" or record["gate"] != "W7":
         raise ValueError("W7 resume observation identity is invalid")
     for field in (
-        "binary_sha256", "configuration_sha256", "fixture_sha256",
+        "attempt_id", "binary_sha256", "configuration_sha256", "fixture_sha256",
         "confirmation_seed_sha256",
     ):
         if not _is_sha256(record[field]):
@@ -3313,6 +3356,7 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
             )
         if regime["fixture_variant"] != expected_variant:
             raise ValueError(f"W7 {regime['regime_id']} fixture variant is not seed-selected")
+        expected_wire = _w7_frozen_wire(expected_variant)
         all_fixture_hashes.add(regime["fixture_sha256"])
         all_selection_seeds.add(regime["selection_seed_sha256"])
         cases = regime["cases"]
@@ -3333,15 +3377,15 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
                 case["fixture_mutation"] != mutation
             ):
                 raise ValueError(f"W7 {case_id} does not match its frozen contract")
-            expected_invocation = f"invoke:{regime['regime_id']}:{case_id}"
+            expected_invocation = (
+                f"invoke:{record['attempt_id'][:16]}:{regime['regime_id']}:{case_id}"
+            )
             if case["invocation_id"] != expected_invocation or expected_invocation in all_invocation_ids:
                 raise ValueError(f"W7 {case_id} invocation identity is invalid")
             all_invocation_ids.add(expected_invocation)
             wire_bytes = _w7_utf8_bytes(case["wire_text_utf8_b64"], f"W7 {case_id} wire text")
-            if regime["regime_id"] != "primary":
-                marker = f"\nW7-CONFIRMATION-VARIANT-{int(expected_variant):02d}".encode("ascii")
-                if not wire_bytes.endswith(marker):
-                    raise ValueError(f"W7 {case_id} confirmation fixture is not seed-selected")
+            if wire_bytes != expected_wire:
+                raise ValueError(f"W7 {case_id} fixture is not frozen and seed-selected")
             for field in ("live_token_count", "prompt_tokens"):
                 value = case[field]
                 if not isinstance(value, int) or isinstance(value, bool) or value < 0:
@@ -3593,6 +3637,18 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
                     raise ValueError(f"W7 {case_id} restored tokens differ from canonical prefix")
             elif restored_encoded is not None:
                 raise ValueError(f"W7 {case_id} has restored tokens without a payload read")
+
+            if regime["regime_id"] != "primary" and case_id in {
+                "strict-primary", "candidate-primary",
+            }:
+                if not (
+                    selected_tokens <= common_tokens < len(live_tokens) < case["prompt_tokens"] and
+                    len(live_tokens) - common_tokens >= 8 and
+                    case["prompt_tokens"] - len(live_tokens) >= 4
+                ):
+                    raise ValueError(
+                        f"W7 {case_id} confirmation lacks the preregistered divergent append"
+                    )
 
             if case_id == "cold-primary":
                 behavior = (
@@ -3880,6 +3936,7 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _w7_f32_vector,
             _w7_i32_vector,
             _w7_utf8_bytes,
+            _w7_frozen_wire,
             _w7_token_sha256,
             _w7_expected_payload_bytes,
             _w7_state_manifest,
@@ -3948,6 +4005,10 @@ def registered_scorer_digest(scorer_id: str) -> str:
                 {
                     "case_contract": _W7_CASE_CONTRACT,
                     "safe_wrapper_sha256": _W7_SAFE_WRAPPER_SHA256,
+                    "stem_file_sha256": _W7_STEM_FILE_SHA256,
+                    "stem_text_sha256": _W7_STEM_TEXT_SHA256,
+                    "primary_suffix": _W7_PRIMARY_SUFFIX,
+                    "confirmation_suffixes": _W7_CONFIRMATION_SUFFIXES,
                 },
                 sort_keys=True,
                 separators=(",", ":"),
