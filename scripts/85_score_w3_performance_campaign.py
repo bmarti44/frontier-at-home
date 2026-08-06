@@ -139,6 +139,15 @@ def file_identity(path: Path) -> str:
             f"{value.st_mtime_ns}:{value.st_ctime_ns}")
 
 
+def validate_historical_file_identity(value: Any, expected_size: int) -> str:
+    if not isinstance(value, str):
+        raise ValueError("historical file identity is not a string")
+    match = re.fullmatch(r"([0-9]+):([0-9]+):([0-9]+):([0-9]+):([0-9]+)", value)
+    if match is None or int(match.group(3)) != expected_size:
+        raise ValueError("historical file identity is malformed or size-inconsistent")
+    return value
+
+
 def exact_int(value: Any, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{label} must be an exact integer")
@@ -518,10 +527,8 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
             "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
             "DS4_TOKEN_TIMING_LOG": "1",
         }
-        if (not re.fullmatch(r"[0-9]+:[0-9]+", environment_values["DS4_LOCK_EXPECTED_DEV_INO"] or "") or
-                environment_values["DS4_LOCK_EXPECTED_DEV_INO"] !=
-                stat_identity(Path("/run/user/1000/ds4-engine.lock"))):
-            raise ValueError(f"{pair}: {name} engine-lock environment identity is stale")
+        if not re.fullmatch(r"[0-9]+:[0-9]+", environment_values["DS4_LOCK_EXPECTED_DEV_INO"] or ""):
+            raise ValueError(f"{pair}: {name} historical engine-lock identity is malformed")
         canonical_environment = b"".join(
             key.encode("ascii") + b"=" + environment_values[key].encode("ascii") + b"\n"
             for key in environment_names
@@ -569,7 +576,9 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
             if (set(token_record) != TOKEN_RECORD_KEYS or token_record.get("schema_version") != 1 or
                     token_record.get("label") != f"{name}-{phase}" or
                     token_record.get("response_sha256") != sha256_bytes(response_raw) or
-                    token_record.get("response_identity") != file_identity(response_path) or
+                    validate_historical_file_identity(
+                        token_record.get("response_identity"), len(response_raw)
+                    ) != token_record.get("response_identity") or
                     token_record.get("reference_token_count") != 129 or
                     token_record.get("tokenizer_sha256") != frozen["artifacts"]["tokenizer_sha256"]):
                 raise ValueError(f"{pair}: {name} {phase} response/token record is invalid")
@@ -668,12 +677,18 @@ def score_pair(pair: Path, expected_order: str, authority: dict[str, Any]) -> di
             manifest.get("environment_sha256") != summary["environment_sha256"] or
             arms["off"]["environment_sha256"] == arms["on"]["environment_sha256"]):
         raise ValueError(f"{pair}: arm environments are not independently bound")
+    if (arms["off"]["environment_receipt"]["values"]["DS4_LOCK_EXPECTED_DEV_INO"] !=
+            arms["on"]["environment_receipt"]["values"]["DS4_LOCK_EXPECTED_DEV_INO"]):
+        raise ValueError(f"{pair}: arms used different historical engine locks")
     return {
         "path": str(pair),
         "arm_order": expected_order,
         "request_sha256": request_sha,
         "randomness_round": round_number,
         "randomness": randomness["randomness"],
+        "lock_identity": arms["off"]["environment_receipt"]["values"][
+            "DS4_LOCK_EXPECTED_DEV_INO"
+        ],
         "bindings": {key: summary[key] for key in (*bindings, "repository_head")},
         "arms": measured,
         "summary_sha256": sha256_bytes(summary_raw),
@@ -707,6 +722,8 @@ def write_result(
     random_values = [row["randomness"] for row in rows]
     if len(set(request_hashes)) != 10 or len(set(rounds)) != 10 or len(set(random_values)) != 10:
         raise ValueError("fixtures and public-randomness records must be fresh and unique")
+    if len({row["lock_identity"] for row in rows}) != 1:
+        raise ValueError("campaign crosses historical engine-lock identities")
     pair_paths = [row["path"] for row in rows]
     crash_identities = [row["arms"][arm]["crash_identity"]
                         for row in rows for arm in ("off", "on")]

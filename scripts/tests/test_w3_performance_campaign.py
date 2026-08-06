@@ -239,6 +239,19 @@ class W3PerformanceCampaignTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 SCORER_MODULE.validate_memory_samples(mutated, main)
 
+    def test_historical_identity_survives_byte_identical_copy(self):
+        recorded = "41:195:570:1000000:1000001"
+        self.assertEqual(
+            SCORER_MODULE.validate_historical_file_identity(recorded, 570), recorded
+        )
+        for mutated, size in (("41:195:571:1000000:1000001", 570),
+                              ("not-an-identity", 570)):
+            with self.assertRaises(ValueError):
+                SCORER_MODULE.validate_historical_file_identity(mutated, size)
+        source = SCORER.read_text(encoding="utf-8")
+        self.assertNotIn('stat_identity(Path("/run/user/1000/ds4-engine.lock"))', source)
+        self.assertNotIn("file_identity(response_path)", source)
+
     def test_mutations_fail_closed(self):
         mutations = ("short", "schedule", "fixture", "digest", "safety", "nan")
         for mutation in mutations:
