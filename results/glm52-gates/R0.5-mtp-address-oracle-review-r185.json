@@ -1,0 +1,51 @@
+{
+  "candidate_hash": "d1074aa0906b3b2cc497d9e59932742753eb49c2",
+  "gate": "R0.5-mtp-address-oracle",
+  "review_round": 185,
+  "reviewers": [
+    {
+      "critical": [],
+      "high": [],
+      "low": [],
+      "medium": [],
+      "name": "Nash",
+      "prior_issue_status": [],
+      "score_0_to_100": 100,
+      "verdict": "STOP_R0_5_SOURCE_FALSIFIED_NO_TRACE"
+    },
+    {
+      "critical": [],
+      "high": [
+        {
+          "affected_gate": "R0.5 source falsifier",
+          "evidence": "The MTP block exposes a future proxy hidden state, and all target router heads are expert-free projections. Applying every target router to that proxy was not tested by the static stop.",
+          "id": "ADV-R05-R185-H1-PROXY-ROUTER-ORACLE-NOT-FALSIFIED",
+          "proposed_acceptance_test": "Capture MTP proxy states on open fixtures, apply all target router heads without target expert reads, and score fixed accuracy, byte, coverage, and latency metrics.",
+          "reproduction": "Trace glm_graph_mtp_step's proxy state and the existing cross-layer proxy router at ds4.c lines 40360-40399."
+        },
+        {
+          "affected_gate": "R0.5 coverage",
+          "evidence": "The prior baseline capture validates routed layers 4 through 77, omitting routed layer 3.",
+          "id": "ADV-R05-R185-H2-FIRST-ROUTED-LAYER-OMITTED",
+          "proposed_acceptance_test": "Require layers DS4_N_LEADING_DENSE through glm_graph_normal_layer_count()-1 and fail when any of the 75 layers is absent.",
+          "reproduction": "Compare n_layer=79, n_nextn_predict=1, n_leading_dense=3 with glm_graph_baseline_capture_complete's 4..77 loop."
+        }
+      ],
+      "low": [],
+      "medium": [
+        {
+          "affected_gate": "R0.5 deterministic disposition",
+          "evidence": "The first plan did not define proxy accuracy or byte-amplification thresholds.",
+          "id": "ADV-R05-R185-M1-CANDIDATE-QUALITY-UNDEFINED",
+          "proposed_acceptance_test": "Freeze recall, precision, miss-conditioned coverage, byte amplification, all-layer coverage, latency, and confidence bounds before tracing.",
+          "reproduction": "Substitute arbitrary ordered IDs and observe that the first plan had no numerical proxy-quality decision."
+        }
+      ],
+      "name": "Singer",
+      "prior_issue_status": [],
+      "score_0_to_100": 62,
+      "verdict": "REJECT_STATIC_STOP; REQUIRE_REPREREGISTERED_OPEN-FIXTURE_PROXY-ROUTER_TRACE"
+    }
+  ],
+  "terminal_disposition": "REJECTED_STATIC_STOP"
+}
