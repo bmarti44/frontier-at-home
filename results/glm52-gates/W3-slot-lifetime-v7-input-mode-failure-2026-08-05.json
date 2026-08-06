@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "gate": "W3 contained direct-slot runtime eligibility",
+  "status": "FAIL",
+  "candidate_hash": "1713f440ed26b98f1c2230bde91976cab4ddf5a0",
+  "public_randomness_round": 6351915,
+  "command": "results/glm52-gates/harness/w3_direct_slot_probe_v3.sh results/glm52-gates/W3-slot-lifetime-probe-v7-freeze.json /tmp/w3-v7-postfreeze-drand.json",
+  "returncode": 2,
+  "stdout": "",
+  "stderr": "W3 probe inputs are unavailable",
+  "root_reproduction": {
+    "failing_assertion": "SAFE required executable mode",
+    "safe_mode_worktree": "0664",
+    "safe_mode_git": "0644",
+    "actual_execution_contract": "/usr/bin/bash SAFE",
+    "engine_or_gpu_started": false,
+    "model_hash_started": false
+  },
+  "acceptance_formula": "The executable cgroup launcher must be executable; the hash-frozen safe wrapper invoked through /usr/bin/bash must be readable and need not have executable mode."
+}

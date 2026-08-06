@@ -24,6 +24,8 @@ FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 class CandidateLifecycleSourceTests(unittest.TestCase):
     def test_w3_probe_closes_reviewed_false_pass_routes(self):
         probe = W3_PROBE_V3.read_text(encoding="utf-8")
+        self.assertIn('-x $CGROUP && -r $SAFE', probe)
+        self.assertNotIn('-x $CGROUP && -x $SAFE', probe)
         for contract in (
             'OBSERVED_MODEL_SHA256=$(sha256sum -- "$MODEL"',
             "/usr/bin/env -i",
