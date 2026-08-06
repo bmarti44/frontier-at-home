@@ -3351,7 +3351,8 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
     _require_exact_keys(
         record,
         {
-            "record_type", "gate", "attempt_id", "binary_sha256", "configuration_sha256",
+            "record_type", "gate", "attempt_id", "execution_nonce_sha256",
+            "binary_sha256", "configuration_sha256",
             "fixture_sha256", "guard_off_present", "confirmation_seed_sha256",
             "regimes", "failures",
         },
@@ -3360,7 +3361,8 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
     if record["record_type"] != "w7_resume_observation" or record["gate"] != "W7":
         raise ValueError("W7 resume observation identity is invalid")
     for field in (
-        "attempt_id", "binary_sha256", "configuration_sha256", "fixture_sha256",
+        "attempt_id", "execution_nonce_sha256", "binary_sha256",
+        "configuration_sha256", "fixture_sha256",
         "confirmation_seed_sha256",
     ):
         if not _is_sha256(record[field]):
@@ -3380,7 +3382,8 @@ def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
         bytes.fromhex(record["binary_sha256"]) +
         bytes.fromhex(record["configuration_sha256"]) +
         bytes.fromhex(record["confirmation_seed_sha256"]) +
-        bytes.fromhex(_W7_POOL_SHA256)
+        bytes.fromhex(_W7_POOL_SHA256) +
+        bytes.fromhex(record["execution_nonce_sha256"])
     ).hexdigest()
     if record["attempt_id"] != expected_attempt_id:
         raise ValueError("W7 attempt identity is not derived from immutable inputs")

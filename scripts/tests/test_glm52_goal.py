@@ -81,7 +81,7 @@ def _w7_payload_bytes(token_count):
     )
 
 
-def w7_resume_record():
+def w7_resume_record(execution_nonce_sha256="c" * 64):
     logits = _compressed_f32(154880, 13, 2.0)
     confirmation_seed = "d" * 64
     binary_sha256 = "a" * 64
@@ -95,7 +95,8 @@ def w7_resume_record():
     frozen_live = list(struct.unpack(f"<{pool['live']['token_count']}i", live_raw))
     attempt_id = hashlib.sha256(
         bytes.fromhex(binary_sha256) + bytes.fromhex(configuration_sha256) +
-        bytes.fromhex(confirmation_seed) + bytes.fromhex(pool_sha256)
+        bytes.fromhex(confirmation_seed) + bytes.fromhex(pool_sha256) +
+        bytes.fromhex(execution_nonce_sha256)
     ).hexdigest()
     stem = json.loads(
         (ROOT / "results/glm52-gates/harness/fixture-glm-long8.json").read_text()
@@ -398,6 +399,7 @@ def w7_resume_record():
     return {
         "record_type": "w7_resume_observation",
         "gate": "W7", "attempt_id": attempt_id,
+        "execution_nonce_sha256": execution_nonce_sha256,
         "binary_sha256": binary_sha256,
         "configuration_sha256": configuration_sha256,
         "fixture_sha256": hashlib.sha256(
@@ -1439,6 +1441,19 @@ class FormulaTests(unittest.TestCase):
 
     def test_w7_resume_scorer_requires_production_tokens_and_derived_attempt_identity(self):
         record = w7_resume_record()
+        rerun = w7_resume_record("d" * 64)
+        self.assertNotEqual(record["attempt_id"], rerun["attempt_id"])
+        first_invocations = {
+            case["invocation_id"] for regime in record["regimes"] for case in regime["cases"]
+        }
+        rerun_invocations = {
+            case["invocation_id"] for regime in rerun["regimes"] for case in regime["cases"]
+        }
+        self.assertTrue(first_invocations.isdisjoint(rerun_invocations))
+        self.assertEqual(
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [rerun])["verdict"],
+            "PASS",
+        )
         expected = {
             "confirmation-1": (
                 5046,
