@@ -97,16 +97,12 @@ allowlist = {
     "canonical_sha256",
     "canonical_tree_sha256",
     "source_summary_sha256",
-    "input_manifest_sha256",
-    "input_summary_sha256",
-    "pair_request_sha256",
     "source_receipt_sha256",
     "source_transcript_sha256",
     "tokenizer_sha256",
     "tsa_certificate_sha256",
     "binary_sha256",
     "executed_binary_sha256",
-    "executed_identity",
     "build_manifest_sha256",
     "ca_certificate_sha256",
     "configuration_sha256",
@@ -267,6 +263,23 @@ map_allowlist = {
     "shared_libraries",
     "tests_sha256_by_path",
 }
+w3_campaign_raw = re.fullmatch(
+    r"results/glm52-gates/W3-performance-campaign-[^/]+/raw\.jsonl",
+    display_path,
+) is not None
+w3_campaign_manifest = re.fullmatch(
+    r"results/glm52-gates/W3-performance-campaign-[^/]+/manifest\.json",
+    display_path,
+) is not None
+w3_campaign_summary = re.fullmatch(
+    r"results/glm52-gates/W3-performance-campaign-[^/]+/summary\.json",
+    display_path,
+) is not None
+w3_campaign_allowlist = set()
+if w3_campaign_manifest:
+    w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
+if w3_campaign_summary:
+    w3_campaign_allowlist.add("pair_request_sha256")
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -299,11 +312,21 @@ def walk(value, path, allowed_string=False):
     if isinstance(value, dict):
         for key, item in value.items():
             item_path = child_path(path, key)
+            if (
+                w3_campaign_raw and key == "executed_identity" and
+                isinstance(item, list) and len(item) == 4 and
+                all(isinstance(child, str) for child in item) and
+                re.fullmatch(r"[0-9]+", item[0]) and
+                re.fullmatch(r"[0-9]+", item[1]) and
+                hex64.fullmatch(item[2]) and
+                re.fullmatch(r"[0-9]+:[0-9]+", item[3])
+            ):
+                continue
             if key in map_allowlist and isinstance(item, dict) and all(
                 isinstance(child, str) for child in item.values()
             ):
                 continue
-            leaf_allowed = key in allowlist
+            leaf_allowed = key in allowlist or key in w3_campaign_allowlist
             if isinstance(item, list):
                 for index, element in enumerate(item):
                     walk(
@@ -517,6 +540,19 @@ self_test() {
       | scan_digest_json "$w3_campaign_raw_path" >/dev/null 2>&1; then
     printf '%s\n' \
       'self-test failed: W3 campaign digest allowlist was too broad' >&2
+    return 1
+  fi
+  if printf '{"executed_identity":["%s","2","%s","3:4"]}\n' \
+      "$fake_secret" "$fake_secret" \
+      | scan_digest_json "$w3_campaign_raw_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: malformed W3 executed identity was accepted' >&2
+    return 1
+  fi
+  if printf '{"executed_identity":["%s"]}\n' "$fake_secret" \
+      | scan_digest_json 'results/decision.json' >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: W3 campaign fields were allowed outside their path' >&2
     return 1
   fi
   local decode_evidence_path
