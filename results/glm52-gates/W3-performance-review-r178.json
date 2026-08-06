@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "f0fb70f123e7bc506125fb98e8f321ad2d86fd2e",
+  "review_round": 178,
+  "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION_CONVERGENCE_PAUSE",
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 65,
+      "critical": [],
+      "high": [
+        {
+          "id": "W3-R176-H1-STALE-TIMING-REUSE", "status": "OPEN",
+          "evidence": "The response-bound timing receipt is reconstructed from the same caller-rewritable artifacts; a copied trace with rewritten request IDs and affine-shifted timestamps can be consistently rehashed.",
+          "affected_gate": "Ten fresh-server timing observations",
+          "reproduction": "Copy and affine-shift a favorable trace, then update timing receipt and hashes.",
+          "proposed_acceptance_test": "Use an independently isolated/rooted witness and reject copied affine-shifted vectors."
+        },
+        {
+          "id": "W3-R178-H1-CGROUP-OOM-EVENT-IGNORED", "status": "OPEN",
+          "evidence": "The cgroup predicate requires swap and oom_kill zero but does not reject nonzero max, oom or oom_group_kill counters.",
+          "affected_gate": "W3 event safety",
+          "reproduction": "Set max=1 and oom=1 with oom_kill=0 in the bound cgroup-final line.",
+          "proposed_acceptance_test": "Strictly parse all cgroup event counters and require each to be zero."
+        }
+      ],
+      "medium": [], "low": [],
+      "prior_issue_status": [
+        {"id": "W3-R176-C1-SYNTHETIC-CAMPAIGN-PASS", "status": "FIXED"},
+        {"id": "W3-R176-H1-STALE-TIMING-REUSE", "status": "OPEN"},
+        {"id": "W3-R176-H2-AMBIENT-SCORER-AUTHORITY", "status": "VERIFIED"}
+      ],
+      "verdict": "REJECT"
+    },
+    "Singer": {
+      "score_0_to_100": 64,
+      "critical": [
+        {
+          "id": "ADV-W3-R176-C2-REUSED-SELF-REPORTED-EVIDENCE", "status": "OPEN",
+          "evidence": "Dispatch count receipts are not chained to each other and the final recomputed marker count; exact canonical OFF/ON environments are not reconstructed.",
+          "affected_gate": "W3 compared-response path attribution",
+          "reproduction": "Use one final dispatch marker with receipts 0 1 and 1 2, or substitute self-consistent unmatched environment hashes.",
+          "proposed_acceptance_test": "Enforce exact count-chain invariants and canonical environments differing only by the direct-slot flag."
+        }
+      ],
+      "high": [
+        {
+          "id": "ADV-W3-R178-H1-MEMORY-SAMPLE-COVERAGE", "status": "OPEN",
+          "evidence": "Any single retained high-memory sample passes; exact sample grammar, count, cadence and lifecycle coverage are not required.",
+          "affected_gate": "W3 resource-safety evidence",
+          "reproduction": "Replace samples.log with one high mem_avail sample and refresh hashes.",
+          "proposed_acceptance_test": "Require exact sample schema, count, order, cadence and start-to-termination coverage."
+        }
+      ],
+      "medium": [],
+      "low": [{"id": "ADV-W3-R173-L1", "status": "DEFERRED", "evidence": "Optional older test remains deferred.", "affected_gate": "W3 regression depth", "reproduction": "See round 173.", "proposed_acceptance_test": "See round 173."}],
+      "prior_issue_status": [
+        {"id": "ADV-W3-R176-C1-UNANCHORED-CAMPAIGN-AUTHORITY", "status": "FIXED"},
+        {"id": "ADV-W3-R176-C2-REUSED-SELF-REPORTED-EVIDENCE", "status": "OPEN"},
+        {"id": "ADV-W3-R177-C1-IMPORT-BYPASSES-COMMITTED-AUTHORITY", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION"
+    }
+  },
+  "convergence": {
+    "candidate_count_for_gate": 3,
+    "blocking_set_strictly_shrank_candidate_1_to_2": false,
+    "blocking_set_strictly_shrank_candidate_2_to_3": false,
+    "pause_trigger": "blocking findings failed to strictly decrease across two consecutive candidates"
+  }
+}
