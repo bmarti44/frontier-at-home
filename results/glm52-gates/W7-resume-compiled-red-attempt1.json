@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "attempt": 1,
+  "status": "NO_RESULT",
+  "candidate_commit": "6edf5af420100702f3d6b07bea7b367e1f34ca29",
+  "started_utc": "2026-08-06T22:30:28Z",
+  "evidence_directory": "/home/bmarti44/.local/state/glm52-w7-red/attempt-9fae73bd4c629aa82c327d4c7e5f22b1",
+  "crashlog_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260806-183028-w7red-9fae73bd4c62",
+  "failure": {
+    "assertion": "The frozen unchanged engine must remain alive long enough for binary provenance observation and readiness.",
+    "observed": "ds4: failed to open lock file /tmp/ds4.lock: Permission denied",
+    "cause": "/tmp/ds4.lock is an existing dsv4-owned mode-0600 file, while the approved current-user containment runs the engine as bmarti44.",
+    "containment_rc": 11,
+    "model_loaded": false,
+    "gpu_measurement_started": false
+  },
+  "bounded_fix": {
+    "scope": "Pass the already-established bmarti44-owned /run/user/1000/ds4-engine.lock and its device:inode identity through the contained engine environment.",
+    "frozen_components_unchanged": [
+      "engine source",
+      "engine binary",
+      "model",
+      "fixture pool",
+      "acceptance formula",
+      "safe wrapper",
+      "cgroup wrapper"
+    ],
+    "acceptance_test": "The next attempt must observe the exact frozen binary, start loading under the user lock, and retain the same W7 behavioral assertions."
+  },
+  "artifact_sha256": {
+    "server.log": "793b3b6b18763037fb1d3cbb5ba77e72afea6402dbcea7a462c8d23e3d659b20",
+    "main.log": "8ebbea789ca7b48665019657c8562cfe4078362bc9eedc3347a6ede6e58ab341",
+    "cmd.log": "d6d699ab9c22dfdfe8f4bd3e1804bd85339a1645e4847d7c3b17ae75bf743e20",
+    "samples.log": "0a5f2fb8e4be81903ce7c0dcf8aa94cdf192c663762fb2bc19620cae680bc7fe",
+    "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  },
+  "safety": {
+    "minimum_mem_available_gib": 115.026,
+    "cgroup_memory_peak_bytes": 105746432,
+    "cgroup_swap_current_bytes": 0,
+    "oom": false,
+    "xid": false,
+    "surviving_engine": false
+  }
+}
