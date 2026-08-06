@@ -110,6 +110,18 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
         mutated = dict(on)
         del mutated["DS4_CUDA_FETCH_THREADS"]
         self.assertNotEqual(digest(on), digest(mutated))
+
+    def test_w3_run_arm_derives_locals_after_positional_assignment(self):
+        probe = W3_PROBE_V3.read_text(encoding="utf-8")
+        self.assertIn(
+            "local arm=$1 port=$2 direct=$3\n"
+            "  local tag=\"w3s${DRAND_ROUND}-${arm}\" arm_dir=\"$OUT/$arm\"",
+            probe,
+        )
+        self.assertNotIn(
+            "local arm=$1 port=$2 direct=$3 tag=\"w3s${DRAND_ROUND}-${arm}\"",
+            probe,
+        )
         self.assertNotIn("sort -n | tail -1", probe)
         self.assertNotIn('a["completion_tokens"] >= 64', probe)
         self.assertIn('a["independent_completion_tokens"] == 64', probe)
