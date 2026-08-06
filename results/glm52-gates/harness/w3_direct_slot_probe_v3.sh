@@ -318,7 +318,8 @@ wait_for_ready() {
 }
 
 run_arm() {
-  local arm=$1 port=$2 direct=$3 tag="w3s${DRAND_ROUND}-${arm}" arm_dir="$OUT/$arm"
+  local arm=$1 port=$2 direct=$3
+  local tag="w3s${DRAND_ROUND}-${arm}" arm_dir="$OUT/$arm"
   mkdir "$arm_dir"
   isolated_python "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 900 \
     >"$arm_dir/memory-preflight.json"
