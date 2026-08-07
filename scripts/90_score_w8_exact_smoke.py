@@ -364,12 +364,15 @@ def self_test() -> None:
             root.mkdir()
             request_blob = b'{"model":"default","prompt":"fixture","max_tokens":0}'
             request_sha = hashlib.sha256(request_blob).hexdigest()
+            receipt_blob = b'{"round":1,"randomness":"fixture"}'
+            receipt_sha = hashlib.sha256(receipt_blob).hexdigest()
             manifest = {
                 "schema": "glm52-w8-exact-smoke-manifest-v1",
                 "arm_order": list(ARMS),
                 "binary_sha256": "a" * 64,
                 "model_sha256": "b" * 64,
                 "request_sha256": request_sha,
+                "randomness_receipt_sha256": receipt_sha,
                 "arms": {
                     arm: {
                         "binary_sha256": "a" * 64,
@@ -384,6 +387,7 @@ def self_test() -> None:
                 },
             }
             (root / "manifest.json").write_text(json.dumps(manifest))
+            (root / "randomness-receipt.json").write_bytes(receipt_blob)
             blob = array.array("f", [0.0] * LOGIT_COUNT).tobytes()
             for arm in ARMS:
                 path = root / arm
@@ -502,6 +506,19 @@ def self_test() -> None:
             pass
         else:
             raise AssertionError("post-score artifact mutation passed")
+
+        root = fixture("post-score-randomness-mutation")
+        rows, summary = score(root, root / "manifest.json")
+        write_terminal(root, root / "manifest.json", root / "raw.jsonl",
+                       root / "summary.json", rows, summary)
+        (root / "randomness-receipt.json").write_text("replaced\n")
+        try:
+            verify_terminal(root, root / "manifest.json", root / "raw.jsonl",
+                            root / "summary.json")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("post-score randomness mutation passed")
 
 
 def main() -> int:

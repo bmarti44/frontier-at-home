@@ -53,6 +53,8 @@ class W8ExactSmokeContractTests(unittest.TestCase):
             raw = root / "raw.jsonl"
             summary = root / "summary.json"
             manifest.write_text('{"schema":"failed-smoke"}\n')
+            captured = root / "captured-main.log"
+            captured.write_text("original failure evidence\n")
             result = subprocess.run(
                 ["python3", str(SCORER), "--root", str(root),
                  "--manifest", str(manifest), "--raw", str(raw),
@@ -63,13 +65,14 @@ class W8ExactSmokeContractTests(unittest.TestCase):
             self.assertEqual(json.loads(summary.read_text())["verdict"], "FAIL")
             self.assertTrue(raw.read_text().strip())
             self.assertTrue((root / "terminal-receipt.json").is_file())
+            captured.write_text("mutated failure evidence\n")
             verified = subprocess.run(
                 ["python3", str(SCORER), "--root", str(root),
                  "--manifest", str(manifest), "--raw", str(raw),
                  "--summary", str(summary), "--verify-terminal"],
                 cwd=ROOT, capture_output=True, text=True, check=False,
             )
-            self.assertEqual(verified.returncode, 0, verified.stderr)
+            self.assertNotEqual(verified.returncode, 0)
 
 
 if __name__ == "__main__":
