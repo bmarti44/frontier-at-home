@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "review_round": 210,
+  "reviewed_engine_commit": "91e2e1eb2484b5d760c55bcbbda05e021b9c3216",
+  "review_scope": ["3933b76", "91e2e1e"],
+  "gap_reviewer": {
+    "name": "Nash",
+    "score": 97,
+    "critical": [],
+    "high": [],
+    "medium": ["W7-R210-M1-LOADER-INTEGRATION-UNTESTED"],
+    "verdict": "AUTHORIZE_CONTAINED_RUNTIME_SMOKE"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score": 94,
+    "critical": [],
+    "high": [],
+    "medium": ["ADV-W7-210-M19", "ADV-W7-210-M20"],
+    "verdict": "CLEARED_FOR_CONTAINED_DIAGNOSTIC_SMOKE"
+  },
+  "focused_medium_disposition": {
+    "W7-R210-M1-LOADER-INTEGRATION-UNTESTED": "FIXED by RED 0ffc05b and implementation ee6abc5; the test now mutates actual evaluated-token state and fails if the production copy helper is absent.",
+    "ADV-W7-210-M19": "FIXED by the same RED/implementation pair and passing ds4_server_test.",
+    "ADV-W7-210-M20": "DEFERRED to W8 for content checksums. W7 claims structural completeness only; the exact checkpoint payload is hash-bound in each contained attempt."
+  },
+  "post_review_engine_commit": "ee6abc565cc20385eae1a22b9d8d129d6eae9c68",
+  "blocking_findings_open": 0,
+  "global_resume_guard_unchanged": true,
+  "diagnostic_default_off": true
+}
