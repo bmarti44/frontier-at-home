@@ -278,6 +278,13 @@ class W9RealCaptureScorerTests(unittest.TestCase):
         self.assertIn('if [[ $arm == on ]]', source)
         self.assertNotIn("-n 0", source)
 
+        # The executable candidate must fail closed against its own future
+        # passing review, never a rejected prior-candidate receipt.
+        self.assertEqual(
+            source.count("W9-real-capture-review-r250.json"), 2
+        )
+        self.assertNotIn("W9-real-capture-review-r248.json", source)
+
         match = re.search(r"(?ms)^arm_output_path\(\) \{.*?^\}", source)
         self.assertIsNotNone(match)
         script = "set -u\n" + match.group(0) + "\n" + \
