@@ -6,7 +6,7 @@ set -Eeuo pipefail
 umask 077
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
-readonly SCRIPT=$(readlink -f -- "$0")
+readonly INVOKED_SCRIPT=$0
 readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
@@ -56,13 +56,23 @@ verify_runtime_dependencies() {
 validate_execution_authority() {
   [[ $# == 2 && $1 =~ ^[0-9a-f]{64}$ && $2 =~ ^[0-9a-f]{40}$ ]] || return 2
   local expected_sha256=$1 candidate_commit=$2 candidate_blob_sha256
-  [[ -f $SCRIPT && ! -L $SCRIPT ]] || return 2
-  [[ $(sha256sum -- "$SCRIPT" | awk '{print $1}') == "$expected_sha256" ]] || return 2
+  [[ -r $INVOKED_SCRIPT ]] || return 2
+  [[ $(sha256sum -- "$INVOKED_SCRIPT" | awk '{print $1}') == "$expected_sha256" ]] || return 2
   git -C "$REPO" cat-file -e "$candidate_commit^{commit}" 2>/dev/null || return 2
   candidate_blob_sha256=$(git -C "$REPO" show \
     "$candidate_commit:results/glm52-gates/harness/w7_resume_compiled_red_v1.sh" |
     sha256sum | awk '{print $1}')
   [[ $candidate_blob_sha256 == "$expected_sha256" ]]
+}
+
+require_execution_authority() {
+  [[ ${W7_EXECUTED_HARNESS_SHA256:-} =~ ^[0-9a-f]{64}$ &&
+     ${W7_FROZEN_CANDIDATE_COMMIT:-} =~ ^[0-9a-f]{40}$ ]] || {
+    echo "W7 frozen execution authority is required" >&2
+    return 2
+  }
+  validate_execution_authority \
+    "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT"
 }
 
 trace_result_contract() {
@@ -281,7 +291,7 @@ score_red() {
   set -e
   printf '%s\n' "$trace_scorer_rc" >"$out/trace-scorer.rc"
   printf '%s\n' "$trace_contract_rc" >"$out/trace-contract.rc"
-  /usr/bin/python3 -I -B - "$out" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$TRACE_SCORER" "$trace_contract_rc" "$trace_scorer_rc" "$TOKENIZER_INIT" "$TOKENIZER_NATIVE" "$SCRIPT" "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT" "$TRACE_SCORER_SHA256" "$TOKENIZER_SHA256" "$TOKENIZER_INIT_SHA256" "$TOKENIZER_NATIVE_SHA256" <<'PY'
+  /usr/bin/python3 -I -B - "$out" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$TRACE_SCORER" "$trace_contract_rc" "$trace_scorer_rc" "$TOKENIZER_INIT" "$TOKENIZER_NATIVE" "$INVOKED_SCRIPT" "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT" "$TRACE_SCORER_SHA256" "$TOKENIZER_SHA256" "$TOKENIZER_INIT_SHA256" "$TOKENIZER_NATIVE_SHA256" <<'PY'
 import hashlib
 import json
 import pathlib
@@ -386,6 +396,7 @@ elif [[ ${1:-} == --self-test ]]; then
   exit 0
 elif [[ ${1:-} == --driver ]]; then
   shift
+  require_execution_authority
   driver "$@"
   exit 0
 fi
@@ -394,13 +405,7 @@ fi
   echo "usage: $0" >&2
   exit 2
 }
-[[ ${W7_EXECUTED_HARNESS_SHA256:-} =~ ^[0-9a-f]{64}$ &&
-   ${W7_FROZEN_CANDIDATE_COMMIT:-} =~ ^[0-9a-f]{40}$ ]] || {
-  echo "W7 frozen execution authority is required" >&2
-  exit 2
-}
-validate_execution_authority \
-  "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT" || exit 2
+require_execution_authority
 [[ -x $BIN && -r $MODEL && -r $STEM && -r $POOL && -r $SAFE && -x $CGROUP && -r $TRACE_SCORER ]] || exit 2
 verify_runtime_dependencies
 [[ $(sha256sum -- "$BIN" | awk '{print $1}') == "$BINARY_SHA256" ]] || exit 2
@@ -432,6 +437,9 @@ fixture_check "$out" >/dev/null
 printf '%s\n' "$BINARY_SHA256" >"$out/binary.sha256"
 printf '%s\n' "$MODEL_SHA256" >"$out/model-known.sha256"
 printf '%s\n' "$POOL_SHA256" >"$out/fixture-pool.sha256"
+exec {harness_fd}<"$INVOKED_SCRIPT"
+[[ $(sha256sum -- "/proc/$$/fd/$harness_fd" | awk '{print $1}') ==
+   "$W7_EXECUTED_HARNESS_SHA256" ]] || exit 2
 
 set +e
 /usr/bin/env -i \
@@ -447,11 +455,13 @@ set +e
   DS4_CUDA_EXPERT_CACHE_SLRU=1 DS4_CUDA_FETCH_THREADS=6 \
   DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_GLM_SYNC_TRACE=1 \
   DS4_LOCK_FILE=$ENGINE_LOCK DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity \
-  W7_EXECUTED_HARNESS_SHA256=$W7_EXECUTED_HARNESS_SHA256 \
-  W7_FROZEN_CANDIDATE_COMMIT=$W7_FROZEN_CANDIDATE_COMMIT \
-    "$CGROUP" --tag "$tag" -- /usr/bin/bash "$SCRIPT" --driver "$out" "$PORT" \
+    "$CGROUP" --tag "$tag" -- /usr/bin/env \
+      W7_EXECUTED_HARNESS_SHA256="$W7_EXECUTED_HARNESS_SHA256" \
+      W7_FROZEN_CANDIDATE_COMMIT="$W7_FROZEN_CANDIDATE_COMMIT" \
+      /usr/bin/bash "/proc/$$/fd/$harness_fd" --driver "$out" "$PORT" \
     >"$out/containment.stdout" 2>"$out/containment.stderr"
 containment_rc=$?
+exec {harness_fd}<&-
 set -e
 printf '%s\n' "$containment_rc" >"$out/containment.rc"
 (( containment_rc == 0 )) || {
