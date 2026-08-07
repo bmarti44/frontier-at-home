@@ -432,6 +432,7 @@ doc = json.loads(raw, object_pairs_hook=strict)
 required = {
     "schema_version", "source", "freeze_floor_round", "round", "randomness",
     "signature", "previous_signature", "relay_agreement",
+    "launcher_commit", "launcher_sha256",
 }
 if (set(doc) != required or type(doc["schema_version"]) is not int
         or doc["schema_version"] != 1
@@ -439,6 +440,12 @@ if (set(doc) != required or type(doc["schema_version"]) is not int
         or type(doc["freeze_floor_round"]) is not int
         or type(doc["round"]) is not int
         or doc["round"] <= doc["freeze_floor_round"]
+        or not isinstance(doc["launcher_commit"], str)
+        or len(doc["launcher_commit"]) != 40
+        or any(c not in "0123456789abcdef" for c in doc["launcher_commit"])
+        or not isinstance(doc["launcher_sha256"], str)
+        or len(doc["launcher_sha256"]) != 64
+        or any(c not in "0123456789abcdef" for c in doc["launcher_sha256"])
         or doc["relay_agreement"] != ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"]):
     raise SystemExit("invalid randomness receipt")
 for key, length in (("randomness", 64), ("signature", 192), ("previous_signature", 192)):
@@ -448,6 +455,15 @@ for key, length in (("randomness", 64), ("signature", 192), ("previous_signature
     bytes.fromhex(value)
 if hashlib.sha256(bytes.fromhex(doc["signature"])).hexdigest() != doc["randomness"]:
     raise SystemExit("randomness signature derivation mismatch")
+import subprocess
+launcher = subprocess.run(
+    ["/usr/bin/git", "-C", "/home/bmarti44/spark-deepseek-v4-flash", "show",
+     doc["launcher_commit"] + ":scripts/88_run_w7_resume_production.py"],
+    env={"HOME": "/home/bmarti44", "PATH": "/usr/bin:/bin"},
+    capture_output=True, check=True,
+).stdout
+if hashlib.sha256(launcher).hexdigest() != doc["launcher_sha256"]:
+    raise SystemExit("launcher receipt binding mismatch")
 material = (b"GLM52-W7-ARM-ORDER-V1\0" + candidate.encode() + b"\0"
             + str(doc["round"]).encode() + b"\0" + doc["randomness"].encode())
 if hashlib.sha256(material).hexdigest() != seed:
