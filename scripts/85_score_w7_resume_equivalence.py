@@ -36,7 +36,7 @@ REQUIRED_BINDINGS = {
     "tokenizer_init_sha256", "tokenizer_native_sha256", "cgroup_sha256",
     "safe_sha256", "memory_guard_sha256", "engine_freeze_sha256",
     "configuration_sha256", "seed_sha256", "live_request_sha256",
-    "primary_request_sha256",
+    "primary_request_sha256", "randomness_receipt_sha256",
 }
 
 
@@ -610,6 +610,7 @@ def main() -> int:
     parser.add_argument("--engine-freeze-sha256", required=True)
     parser.add_argument("--configuration-sha256", required=True)
     parser.add_argument("--engine-source-commit", required=True)
+    parser.add_argument("--randomness-receipt-sha256", required=True)
     parser.add_argument("--binary-path", required=True)
     parser.add_argument("--binary-device-inode", required=True)
     parser.add_argument("--arm-order", type=Path, required=True)
@@ -636,6 +637,7 @@ def main() -> int:
             "configuration_sha256": args.configuration_sha256,
             "live_request_sha256": LIVE_SHA256,
             "primary_request_sha256": PRIMARY_SHA256,
+            "randomness_receipt_sha256": args.randomness_receipt_sha256,
         }
     write_evidence_contract(
         args.strict.parent, bindings,

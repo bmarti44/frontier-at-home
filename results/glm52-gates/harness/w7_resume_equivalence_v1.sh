@@ -38,7 +38,7 @@ readonly TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4
 readonly TOKENIZER_INIT_SHA256=eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4
 readonly TOKENIZER_NATIVE_SHA256=fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910
 readonly TRACE_SCORER_SHA256=6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985
-readonly SCORER_SHA256=197131308e73bb83a783f3d697157f78b0802c04ec2e14f280c609a934ff20ce
+readonly SCORER_SHA256=69055136ce93545c410bed1fb8590e0c45376bddbb77c9ac01954317e9c0b6bf
 readonly CGROUP_SHA256=e5a37b35d3ff1e8a7ee08d0f2c1396441b0dbc4abd64220389362ae6c6994c32
 readonly SAFE_SHA256=6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801
 readonly MEMORY_GUARD_SHA256=3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58
@@ -265,7 +265,16 @@ run_arm() {
   if [[ $arm != cold ]]; then score_trace "$arm_out"; fi
 }
 
-if [[ ${1:-} == --self-test ]]; then
+if [[ ${1:-} == --validate-sealed-runtime ]]; then
+  [[ $# == 1 ]]
+  validate_execution_authority
+  [[ ${W7_RANDOM_SEED_SHA256:-} =~ ^[0-9a-f]{64}$ ]]
+  verify_sealed_fd "${W7_SEALED_HARNESS_FD:-}" "$W7_EXECUTED_HARNESS_SHA256"
+  verify_sealed_fd "${W7_SEALED_SCORER_FD:-}" "$SCORER_SHA256"
+  verify_sealed_fd "${W7_SEALED_TRACE_SCORER_FD:-}" "$TRACE_SCORER_SHA256"
+  echo W7_SEALED_RUNTIME_OK
+  exit 0
+elif [[ ${1:-} == --self-test ]]; then
   verify_dependencies
   python3 -m unittest scripts.tests.test_w7_resume_equivalence_scorer >/dev/null
   echo W7_EQUIVALENCE_SELFTEST_OK
@@ -296,6 +305,7 @@ validate_execution_authority
 verify_dependencies
 verify_file "$MODEL" "$MODEL_SHA256"
 [[ ${W7_RANDOM_SEED_SHA256:-} =~ ^[0-9a-f]{64}$ ]] || exit 2
+[[ -n ${W7_RANDOMNESS_RECEIPT_JSON:-} ]] || exit 2
 readonly runtime_seed_sha256=$W7_RANDOM_SEED_SHA256
 readonly harness_fd=${W7_SEALED_HARNESS_FD:-}
 readonly scorer_fd=${W7_SEALED_SCORER_FD:-}
@@ -316,6 +326,50 @@ mkdir -p "$OUT_PARENT" "$CRASH_ROOT"
 nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 readonly attempt_out=$OUT_PARENT/attempt-$nonce
 mkdir "$attempt_out"
+/usr/bin/python3 -I -B - "$runtime_seed_sha256" \
+  "$W7_FROZEN_CANDIDATE_COMMIT" "$W7_RANDOMNESS_RECEIPT_JSON" \
+  "$attempt_out/randomness.json" <<'PY'
+import hashlib, json, os, pathlib, sys
+seed, candidate, raw, output = sys.argv[1:]
+def strict(pairs):
+    out = {}
+    for key, value in pairs:
+        if key in out: raise ValueError("duplicate randomness key")
+        out[key] = value
+    return out
+doc = json.loads(raw, object_pairs_hook=strict)
+required = {
+    "schema_version", "source", "freeze_floor_round", "round", "randomness",
+    "signature", "previous_signature", "relay_agreement",
+}
+if (set(doc) != required or type(doc["schema_version"]) is not int
+        or doc["schema_version"] != 1
+        or doc["source"] != "drand-default-latest-three-relay"
+        or type(doc["freeze_floor_round"]) is not int
+        or type(doc["round"]) is not int
+        or doc["round"] <= doc["freeze_floor_round"]
+        or doc["relay_agreement"] != ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"]):
+    raise SystemExit("invalid randomness receipt")
+for key, length in (("randomness", 64), ("signature", 192), ("previous_signature", 192)):
+    value = doc[key]
+    if not isinstance(value, str) or len(value) != length:
+        raise SystemExit("invalid randomness field")
+    bytes.fromhex(value)
+if hashlib.sha256(bytes.fromhex(doc["signature"])).hexdigest() != doc["randomness"]:
+    raise SystemExit("randomness signature derivation mismatch")
+material = (b"GLM52-W7-ARM-ORDER-V1\0" + candidate.encode() + b"\0"
+            + str(doc["round"]).encode() + b"\0" + doc["randomness"].encode())
+if hashlib.sha256(material).hexdigest() != seed:
+    raise SystemExit("randomness seed derivation mismatch")
+encoded = (json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n").encode()
+fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+try:
+    os.write(fd, encoded)
+    os.fsync(fd)
+finally:
+    os.close(fd)
+PY
+readonly randomness_receipt_sha256=$(sha256sum -- "$attempt_out/randomness.json" | awk '{print $1}')
 /usr/bin/python3 -I -B - "$runtime_seed_sha256" "$attempt_out/arm-order" <<'PY'
 import hashlib, pathlib, sys
 seed = bytes.fromhex(sys.argv[1])
@@ -341,6 +395,7 @@ verify_dependencies
   --engine-freeze-sha256 "$ENGINE_FREEZE_SHA256" \
   --configuration-sha256 "$CONFIGURATION_SHA256" \
   --engine-source-commit "$ENGINE_SOURCE_COMMIT" \
+  --randomness-receipt-sha256 "$randomness_receipt_sha256" \
   --binary-path "$BIN" --binary-device-inode "$(stat -Lc '%d:%i' -- "$BIN")" \
   --arm-order "$attempt_out/arm-order" \
   >"$attempt_out/scorer.stdout" 2>"$attempt_out/scorer.stderr"
