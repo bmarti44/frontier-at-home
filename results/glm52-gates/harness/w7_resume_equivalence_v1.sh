@@ -344,7 +344,7 @@ required = {
 }
 if (set(doc) != required or type(doc["schema_version"]) is not int
         or doc["schema_version"] != 1
-        or doc["source"] != "drand-default-latest-three-relay"
+        or doc["source"] != "drand-default-preregistered-three-relay"
         or type(doc["freeze_floor_round"]) is not int
         or type(doc["round"]) is not int
         or doc["round"] <= doc["freeze_floor_round"]
