@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "gate": "W7-production-runtime-equivalence",
+  "candidate_hash": "3ed41af68b33cba70729c161b6da77055eb0d6ba",
+  "review_round": 229,
+  "runtime_executed": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 35,
+      "verdict": "REJECT_PRE_RUN",
+      "critical": ["GAP-W7-229-C1-IDENTICAL-STRICT-CANDIDATE"],
+      "high": [
+        "GAP-W7-229-H2-KVCV2-NORMALIZATION",
+        "GAP-W7-229-H3-NOT-EXACT-LOGITS"
+      ],
+      "medium": ["GAP-W7-229-M4-STRICT-DIAGNOSTIC-LEAK"]
+    },
+    "Singer": {
+      "score_0_to_100": 55,
+      "verdict": "BLOCK_RUNTIME_EXECUTION",
+      "critical": [],
+      "high": [
+        "ADV-W7-229-H44-STRICT-CANDIDATE-ARMS-ARE-IDENTICAL",
+        "ADV-W7-229-H45-KVC-V2-NORMALIZATION-CANNOT-MATCH-FRESH-ARMS",
+        "ADV-W7-229-H46-PUBLIC-RANDOMNESS-IS-SELF-ASSERTED"
+      ],
+      "medium": ["ADV-W7-229-M47-CONFIGURATION-BINDING-IS-OPAQUE"]
+    }
+  },
+  "independent_reproduction": {
+    "identical_strict_candidate_inputs": true,
+    "kvc_v2_header_bytes": 80,
+    "kvc_v2_digest_offset": 48,
+    "logit_threshold_was_0_01": true,
+    "launcher_not_yet_bound": true,
+    "configuration_digest_not_derived": true
+  },
+  "bounded_fix": [
+    "use the already-reviewed pre-graduation binary as the fresh strict reference arm",
+    "bind per-arm binary identities in evidence",
+    "parse and authenticate KVC v2 ABI3 records and compare semantic checkpoint identities",
+    "require byte-identical candidate/cold logits and reject all diagnostic markers",
+    "derive a canonical configuration artifact from arm argv/environment",
+    "bind and seal the reviewed three-relay randomness launcher before runtime"
+  ],
+  "verdict": "FAIL"
+}
