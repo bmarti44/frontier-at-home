@@ -1,0 +1,27 @@
+{
+  "schema": "glm52-w8-exact-smoke-review-v1",
+  "candidate_hash": "6d3423523bc9dc437bfbae73d131d9f910ed096c",
+  "engine_candidate_hash": "364eea1d66eda0cabb12ed5f1cd328e8e248f03c",
+  "review_round": 242,
+  "candidate_count": 8,
+  "critical": [],
+  "high": [
+    "ADV-W8-242-H59-PADDING-INFLATES-PRODUCTION-SELECTED-ROW-TELEMETRY"
+  ],
+  "reviewers": {
+    "nash": {
+      "score": 97,
+      "severity": "medium",
+      "verdict": "PASS_RUNTIME_ALLOWED"
+    },
+    "singer": {
+      "score": 90,
+      "severity": "high",
+      "verdict": "BLOCK_W8_SMOKE_RUNTIME"
+    }
+  },
+  "finding": "The cKV store excludes UINT32_MAX padding from stats.selected_rows, but glm_graph_stage_ckv_exact_selected increments the authoritative request counter by all n_selected slots.",
+  "acceptance_test": "A production-stage selection containing valid and padding IDs must emit selected_rows equal to the non-padding count, and a padding-only mutation must not satisfy positive exact-I/O telemetry.",
+  "convergence": "PAUSED: candidate count reached 8 and resolving the remaining reviewer-high finding would require candidate 9.",
+  "verdict": "FAIL"
+}
