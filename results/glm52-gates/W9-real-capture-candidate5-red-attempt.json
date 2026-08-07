@@ -1,0 +1,14 @@
+{
+  "schema": "glm52-w9-red-attempt-v1",
+  "gate": "W9-real-capture",
+  "candidate": 5,
+  "test_commit": "a86e6ab",
+  "observed_at_utc": "2026-08-07T23:25:47Z",
+  "initial_command_status": "INVALID_RED",
+  "initial_command_failure": "The first focused unittest command used the nonexistent class name W9RealCaptureTests and failed during test discovery. It is not acceptance evidence and is preserved rather than discarded.",
+  "genuine_red_command": "python3 -m unittest scripts.tests.test_w9_real_capture_scorer.W9RealCaptureScorerTests.test_harness_runs_matched_contained_arms",
+  "genuine_red_status": "RED_CONFIRMED",
+  "genuine_red_assertion": "source.count(\"W9-real-capture-review-r250.json\") expected 2 but observed 0",
+  "unchanged_launcher_observation": "The launcher still contains two W9-real-capture-review-r248.json references.",
+  "acceptance_formula": "Exactly two round-250 receipt references, zero round-248 references, followed by the complete focused W9 and containment suite passing."
+}
