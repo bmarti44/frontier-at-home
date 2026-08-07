@@ -1,0 +1,28 @@
+{
+  "schema": "glm52-w9-candidate2-behavioral-red-v1",
+  "gate": "W9",
+  "candidate_sequence": 2,
+  "engine_test_seam_commit": "ab2a3a4e181c8a12cca34803c206499591364464",
+  "engine_test_commit": "869ecb36a9f0341e76166c6088374a16e50a50f8",
+  "prior_implementation_commit": "e4bf781ed244ba17e7bf41fb608ac0e30161b443",
+  "command": "make -j2 test-glm-w9-capture-behavior",
+  "exit_code": 2,
+  "test_source_sha256": "be45d7176324cc085f2c8c9e5a47e7873e20f6b756e812636085a788101824af",
+  "stdout_sha256": "fd4bcd0ae6159a185fabc6fa847c480222fe0a3f79f2d4967ac1d23f0a298bb4",
+  "stderr_sha256": "5541263618d800f96f4bb16d26434a2d307dde55e79e2220970c1f1204283648",
+  "observed_failures": [
+    "persistent staging covers the 4096-row production chunk",
+    "production causal padding sentinel is accepted",
+    "directory replacement cannot receive a false-success marker"
+  ],
+  "passing_controls": [
+    "8 MiB maximum ceiling",
+    "visible causal ID acceptance",
+    "invalid non-sentinel ID rejection",
+    "exact and missing row-count behavior",
+    "duplicate-row rejection",
+    "finite-row acceptance and NaN/Inf rejection"
+  ],
+  "classification": "GENUINE_BEHAVIORAL_RED",
+  "runtime_scope": "Compiled production helpers with a test-only seam; no model or engine process was started."
+}
