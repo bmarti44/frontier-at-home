@@ -53,6 +53,18 @@ verify_runtime_dependencies() {
     "$TOKENIZER_NATIVE" "$TOKENIZER_NATIVE_SHA256"
 }
 
+validate_execution_authority() {
+  [[ $# == 2 && $1 =~ ^[0-9a-f]{64}$ && $2 =~ ^[0-9a-f]{40}$ ]] || return 2
+  local expected_sha256=$1 candidate_commit=$2 candidate_blob_sha256
+  [[ -f $SCRIPT && ! -L $SCRIPT ]] || return 2
+  [[ $(sha256sum -- "$SCRIPT" | awk '{print $1}') == "$expected_sha256" ]] || return 2
+  git -C "$REPO" cat-file -e "$candidate_commit^{commit}" 2>/dev/null || return 2
+  candidate_blob_sha256=$(git -C "$REPO" show \
+    "$candidate_commit:results/glm52-gates/harness/w7_resume_compiled_red_v1.sh" |
+    sha256sum | awk '{print $1}')
+  [[ $candidate_blob_sha256 == "$expected_sha256" ]]
+}
+
 trace_result_contract() {
   [[ $# == 2 && $1 =~ ^[0-9]+$ && -f $2 ]] || return 2
   /usr/bin/python3 -I -B - "$1" "$2" <<'PY'
@@ -84,7 +96,7 @@ expected_checks = {
     "trace_rendered_bytes_exact",
     "trace_token_vectors_exact",
 }
-if document["schema_version"] != 1 or isinstance(document["schema_version"], bool):
+if type(document["schema_version"]) is not int or document["schema_version"] != 1:
     raise SystemExit("trace scorer schema version mismatch")
 if not isinstance(document["checks"], dict) or set(document["checks"]) != expected_checks:
     raise SystemExit("trace scorer check schema mismatch")
@@ -234,9 +246,19 @@ driver() {
 }
 
 score_red() {
-  local out=$1 trace_scorer_rc trace_contract_rc
+  local out=$1 trace_scorer_rc trace_contract_rc trace_scorer_fd fd_path
+  verify_runtime_dependencies || return 2
+  validate_execution_authority \
+    "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT" || return 2
+  exec {trace_scorer_fd}<"$TRACE_SCORER" || return 2
+  fd_path=/proc/$$/fd/$trace_scorer_fd
+  [[ $(sha256sum -- "$fd_path" | awk '{print $1}') == "$TRACE_SCORER_SHA256" ]] || {
+    exec {trace_scorer_fd}<&-
+    return 2
+  }
+  printf '%s\n' "$TRACE_SCORER_SHA256" >"$out/trace-scorer-executed.sha256"
   set +e
-  /usr/bin/python3 -I -B "$TRACE_SCORER" \
+  /usr/bin/python3 -I -B "/proc/$$/fd/$trace_scorer_fd" \
     --trace "$out/request.trace" \
     --pool "$POOL" \
     --live-request "$out/live-request.json" \
@@ -245,13 +267,21 @@ score_red() {
     --tokenizer-runtime "$TOKENIZER_RUNTIME" \
     >"$out/trace-scorer.stdout" 2>"$out/trace-scorer.stderr"
   trace_scorer_rc=$?
+  if ! verify_runtime_dependencies ||
+     ! validate_execution_authority "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT" ||
+     [[ $(sha256sum -- "$fd_path" | awk '{print $1}') != "$TRACE_SCORER_SHA256" ]]; then
+    echo "runtime dependency or execution authority changed during scoring" \
+      >>"$out/trace-scorer.stderr"
+    trace_scorer_rc=125
+  fi
+  exec {trace_scorer_fd}<&-
   trace_result_contract "$trace_scorer_rc" "$out/trace-scorer.stdout" \
     >"$out/trace-result.validated.json" 2>"$out/trace-contract.stderr"
   trace_contract_rc=$?
   set -e
   printf '%s\n' "$trace_scorer_rc" >"$out/trace-scorer.rc"
   printf '%s\n' "$trace_contract_rc" >"$out/trace-contract.rc"
-  /usr/bin/python3 -I -B - "$out" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$TRACE_SCORER" "$trace_contract_rc" "$trace_scorer_rc" "$TOKENIZER_INIT" "$TOKENIZER_NATIVE" <<'PY'
+  /usr/bin/python3 -I -B - "$out" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$TRACE_SCORER" "$trace_contract_rc" "$trace_scorer_rc" "$TOKENIZER_INIT" "$TOKENIZER_NATIVE" "$SCRIPT" "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT" "$TRACE_SCORER_SHA256" "$TOKENIZER_SHA256" "$TOKENIZER_INIT_SHA256" "$TOKENIZER_NATIVE_SHA256" <<'PY'
 import hashlib
 import json
 import pathlib
@@ -264,6 +294,21 @@ live = json.loads((out / "live-response.json").read_text(encoding="utf-8"))
 primary = json.loads((out / "primary-response.json").read_text(encoding="utf-8"))
 trace_contract_rc = int(sys.argv[6])
 trace_scorer_rc = int(sys.argv[7])
+expected = {
+    "harness": sys.argv[11],
+    "trace_scorer": sys.argv[13],
+    "tokenizer": sys.argv[14],
+    "tokenizer_init": sys.argv[15],
+    "tokenizer_native": sys.argv[16],
+}
+observed_dependencies = {
+    "harness": hashlib.sha256(pathlib.Path(sys.argv[10]).read_bytes()).hexdigest(),
+    "trace_scorer": hashlib.sha256(pathlib.Path(sys.argv[5]).read_bytes()).hexdigest(),
+    "tokenizer": hashlib.sha256(pathlib.Path(sys.argv[3]).read_bytes()).hexdigest(),
+    "tokenizer_init": hashlib.sha256(pathlib.Path(sys.argv[8]).read_bytes()).hexdigest(),
+    "tokenizer_native": hashlib.sha256(pathlib.Path(sys.argv[9]).read_bytes()).hexdigest(),
+}
+executed_scorer_sha256 = (out / "trace-scorer-executed.sha256").read_text().strip()
 if trace_contract_rc == 0:
     trace_result = json.loads((out / "trace-result.validated.json").read_text(encoding="utf-8"))
 else:
@@ -284,10 +329,12 @@ checks = {
     "strict_guard_cold_restart": "GLM resume guard: prompt (5066) extends/diverges past evaluated frontier 5055 (checkpoint 5044)" in log,
     "cold_sync_after_guard": re.search(r"GLM sync start=0 prompt=5066 suffix=5066\\b", log) is not None,
     "legacy_guard_bypass_absent": "DS4_GLM_RESUME_GUARD_OFF" not in log,
+    "executed_harness_bound": observed_dependencies["harness"] == expected["harness"],
+    "runtime_dependencies_unchanged": observed_dependencies == expected and executed_scorer_sha256 == expected["trace_scorer"],
     **trace_result["checks"],
 }
 desired_resume_pass = (
-    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5055", "primary_prompt_tokens_5066", "live_miss_geometry", "selected_checkpoint_5044", "legacy_guard_bypass_absent", "trace_exactly_two_requests", "trace_request_ids_exact", "trace_request_bytes_exact", "trace_rendered_bytes_exact", "trace_token_vectors_exact"))
+    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5055", "primary_prompt_tokens_5066", "live_miss_geometry", "selected_checkpoint_5044", "legacy_guard_bypass_absent", "executed_harness_bound", "runtime_dependencies_unchanged", "trace_exactly_two_requests", "trace_request_ids_exact", "trace_request_bytes_exact", "trace_rendered_bytes_exact", "trace_token_vectors_exact"))
     and not checks["strict_guard_cold_restart"]
     and re.search(r"GLM sync start=5044 prompt=5066 suffix=22\\b", log) is not None
 )
@@ -306,12 +353,9 @@ summary = {
     "trace_scorer": trace_result,
     "trace_scorer_exit_code": trace_scorer_rc,
     "trace_contract_exit_code": trace_contract_rc,
-    "runtime_dependency_sha256": {
-        "trace_scorer": hashlib.sha256(pathlib.Path(sys.argv[5]).read_bytes()).hexdigest(),
-        "tokenizer": hashlib.sha256(pathlib.Path(sys.argv[3]).read_bytes()).hexdigest(),
-        "tokenizer_init": hashlib.sha256(pathlib.Path(sys.argv[8]).read_bytes()).hexdigest(),
-        "tokenizer_native": hashlib.sha256(pathlib.Path(sys.argv[9]).read_bytes()).hexdigest(),
-    },
+    "frozen_candidate_commit": sys.argv[12],
+    "executed_trace_scorer_sha256": executed_scorer_sha256,
+    "runtime_dependency_sha256": observed_dependencies,
     "verdict": "RED_CONFIRMED" if red_confirmed else ("PASS" if desired_resume_pass else "NO_RESULT"),
 }
 (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -323,6 +367,10 @@ PY
 if [[ ${1:-} == --validate-trace-result ]]; then
   [[ $# == 3 ]] || exit 2
   trace_result_contract "$2" "$3"
+  exit $?
+elif [[ ${1:-} == --validate-execution-authority ]]; then
+  [[ $# == 3 ]] || exit 2
+  validate_execution_authority "$2" "$3"
   exit $?
 elif [[ ${1:-} == --self-test ]]; then
   verify_runtime_dependencies
@@ -346,6 +394,13 @@ fi
   echo "usage: $0" >&2
   exit 2
 }
+[[ ${W7_EXECUTED_HARNESS_SHA256:-} =~ ^[0-9a-f]{64}$ &&
+   ${W7_FROZEN_CANDIDATE_COMMIT:-} =~ ^[0-9a-f]{40}$ ]] || {
+  echo "W7 frozen execution authority is required" >&2
+  exit 2
+}
+validate_execution_authority \
+  "$W7_EXECUTED_HARNESS_SHA256" "$W7_FROZEN_CANDIDATE_COMMIT" || exit 2
 [[ -x $BIN && -r $MODEL && -r $STEM && -r $POOL && -r $SAFE && -x $CGROUP && -r $TRACE_SCORER ]] || exit 2
 verify_runtime_dependencies
 [[ $(sha256sum -- "$BIN" | awk '{print $1}') == "$BINARY_SHA256" ]] || exit 2
@@ -392,6 +447,8 @@ set +e
   DS4_CUDA_EXPERT_CACHE_SLRU=1 DS4_CUDA_FETCH_THREADS=6 \
   DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_GLM_SYNC_TRACE=1 \
   DS4_LOCK_FILE=$ENGINE_LOCK DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity \
+  W7_EXECUTED_HARNESS_SHA256=$W7_EXECUTED_HARNESS_SHA256 \
+  W7_FROZEN_CANDIDATE_COMMIT=$W7_FROZEN_CANDIDATE_COMMIT \
     "$CGROUP" --tag "$tag" -- /usr/bin/bash "$SCRIPT" --driver "$out" "$PORT" \
     >"$out/containment.stdout" 2>"$out/containment.stderr"
 containment_rc=$?
