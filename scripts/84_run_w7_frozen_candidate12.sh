@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env -S -i HOME=/home/bmarti44 PATH=/usr/bin:/bin /usr/bin/bash --noprofile --norc
 # Independent launcher for the reviewed W7 candidate. The candidate cannot
 # nominate its own commit or digest: both constants live outside its blob.
 set -Eeuo pipefail
@@ -9,16 +9,17 @@ readonly CANDIDATE_COMMIT=d327d63bee1a93319a05f8f9b467edbae0cf49d8
 readonly HARNESS_SHA256=e9521f2b096bee1803f5d65fad81da6d473ce582fdc79c82433fcff1cecc3b45
 readonly HARNESS_PATH=results/glm52-gates/harness/w7_resume_compiled_red_v1.sh
 
-[[ $(id -un) == bmarti44 ]] || exit 2
-git -C "$REPO" cat-file -e "$CANDIDATE_COMMIT^{commit}"
-staged=$(mktemp /tmp/glm52-w7-frozen.XXXXXX)
-cleanup() { rm -f -- "$staged"; }
+[[ $(/usr/bin/id -un) == bmarti44 ]] || exit 2
+/usr/bin/git -C "$REPO" cat-file -e "$CANDIDATE_COMMIT^{commit}"
+staged=$(/usr/bin/mktemp /tmp/glm52-w7-frozen.XXXXXX)
+cleanup() { /usr/bin/rm -f -- "$staged"; }
 trap cleanup EXIT
-git -C "$REPO" show "$CANDIDATE_COMMIT:$HARNESS_PATH" >"$staged"
-chmod 0400 "$staged"
-[[ $(sha256sum -- "$staged" | awk '{print $1}') == "$HARNESS_SHA256" ]] || exit 2
+/usr/bin/git -C "$REPO" show "$CANDIDATE_COMMIT:$HARNESS_PATH" >"$staged"
+/usr/bin/chmod 0400 "$staged"
 exec {harness_fd}<"$staged"
-rm -f -- "$staged"
+read -r actual_sha256 _ < <(/usr/bin/sha256sum -- "/proc/$$/fd/$harness_fd")
+[[ $actual_sha256 == "$HARNESS_SHA256" ]] || exit 2
+/usr/bin/rm -f -- "$staged"
 trap - EXIT
 
 if [[ ${1:-} == --self-test ]]; then
