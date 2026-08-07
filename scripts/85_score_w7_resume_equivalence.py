@@ -10,6 +10,7 @@ import json
 import math
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 
@@ -80,34 +81,119 @@ def _trace_pass(path: Path) -> bool:
     try:
         value = _json(path)
         checks = value.get("checks")
+        observed = value.get("observed")
+        expected_checks = {
+            "trace_exactly_two_requests",
+            "trace_request_ids_exact",
+            "trace_request_bytes_exact",
+            "trace_rendered_bytes_exact",
+            "trace_token_vectors_exact",
+        }
+        observation_keys = {
+            "request_sha256", "rendered_sha256", "token_count", "token_ids_sha256"
+        }
         return (
-            value.get("verdict") == "PASS"
+            set(value) == {"schema_version", "checks", "observed", "error", "verdict"}
+            and value.get("schema_version") == 1
+            and value.get("verdict") == "PASS"
+            and value.get("error") is None
             and isinstance(checks, dict)
-            and bool(checks)
+            and set(checks) == expected_checks
             and all(item is True for item in checks.values())
+            and isinstance(observed, list)
+            and len(observed) == 2
+            and all(
+                isinstance(item, dict)
+                and set(item) == observation_keys
+                and isinstance(item["token_count"], int)
+                and not isinstance(item["token_count"], bool)
+                and item["token_count"] > 0
+                and all(
+                    isinstance(item[key], str)
+                    and re.fullmatch(r"[0-9a-f]{64}", item[key]) is not None
+                    for key in ("request_sha256", "rendered_sha256", "token_ids_sha256")
+                )
+                for item in observed
+            )
+            and path.with_name("trace-scorer.rc").read_text().strip() == "0"
         )
     except (OSError, ValueError, json.JSONDecodeError):
         return False
 
 
-def _selected_kv_unchanged(arm: Path, log: str) -> bool:
+def _selected_kv_identity(
+    arm: Path, log: str
+) -> tuple[str, str, tuple[tuple[str, str], ...]] | None:
     try:
         matches = re.findall(
             r"kv cache hit text tokens=5044[^\n]* file=([^\s]+\.kv)", log
         )
         if len(matches) != 1:
-            return False
+            return None
         selected = Path(matches[0])
         if selected.parent != arm / "kv":
-            return False
+            return None
         before = _inventory(arm / "kv-before.sha256")
         after = _inventory(arm / "kv-after.sha256")
-        return (
+        if not (
             selected.name in before
             and selected.name in after
             and before[selected.name] == after[selected.name]
-        )
+        ):
+            return None
+        return selected.name, before[selected.name], tuple(sorted(before.items()))
     except (OSError, ValueError):
+        return None
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _safety_pass(arm: Path) -> bool:
+    try:
+        if (arm / "containment.rc").read_text().strip() != "0":
+            return False
+        stdout = (arm / "containment.stdout").read_text(encoding="utf-8")
+        if len(re.findall(r"^SAFE_RUN_DONE rc=0 killed=no dir=\S+$", stdout, re.M)) != 1:
+            return False
+        main = (arm / "safety/main.log").read_text(encoding="utf-8")
+        kernel = (arm / "safety/kernel.log").read_text(encoding="utf-8")
+        samples = (arm / "safety/samples.log").read_text(encoding="utf-8")
+        required = (
+            "executed_candidate_verified " in main,
+            re.search(
+                r"cgroup_final .*swap_current_bytes=0 "
+                r"events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,",
+                main,
+            ) is not None,
+            "wrapper and descendant checks clean" in main,
+            "SAFE_RUN end rc=0 killed=no" in main,
+            kernel == "-- No entries --\n",
+        )
+        if not all(required):
+            return False
+        rows = [line for line in samples.splitlines() if line]
+        if not rows:
+            return False
+        minimum = None
+        for row in rows:
+            match = re.fullmatch(
+                r"\S+ mem_avail_kb=([0-9]+) eng_rss_kb=[0-9]+ read_bytes=[0-9]+ "
+                r"cgroup_current_bytes=[0-9]+ cgroup_peak_bytes=[0-9]+ "
+                r"cgroup_swap_current_bytes=0",
+                row,
+            )
+            if match is None:
+                return False
+            value = int(match.group(1))
+            minimum = value if minimum is None else min(minimum, value)
+        return minimum is not None and minimum >= 10 * 1024 * 1024
+    except (OSError, UnicodeError):
         return False
 
 
@@ -119,6 +205,103 @@ def _response_ok(arm: Path, role: str, expected_tokens: int) -> bool:
             and response.get("usage", {}).get("prompt_tokens") == expected_tokens
         )
     except (OSError, ValueError, json.JSONDecodeError):
+        return False
+
+
+def _recompute_trace(
+    arm: Path,
+    trace_scorer: Path,
+    pool: Path,
+    tokenizer: Path,
+    tokenizer_runtime: Path,
+) -> None:
+    result = subprocess.run(
+        [
+            "/usr/bin/python3", "-I", "-B", str(trace_scorer),
+            "--trace", str(arm / "request.trace"),
+            "--pool", str(pool),
+            "--live-request", str(arm / "live-request.json"),
+            "--primary-request", str(arm / "primary-request.json"),
+            "--tokenizer", str(tokenizer),
+            "--tokenizer-runtime", str(tokenizer_runtime),
+        ],
+        capture_output=True,
+        check=False,
+        timeout=300,
+    )
+    (arm / "trace-scorer.recomputed.stderr").write_bytes(result.stderr)
+    (arm / "trace-scorer.rc").write_text(f"{result.returncode}\n")
+    (arm / "trace-result.json").write_bytes(result.stdout)
+    if result.returncode != 0:
+        raise RuntimeError(f"authoritative trace scorer failed for {arm}")
+
+
+def _artifact_rows(root: Path) -> list[dict]:
+    rows = []
+    for arm_name in ("strict", "candidate", "cold"):
+        arm = root / arm_name
+        artifacts = {}
+        for path in sorted(arm.rglob("*")):
+            if not path.is_file() or path.is_symlink() or "kv" in path.relative_to(arm).parts[:1]:
+                continue
+            artifacts[str(path.relative_to(arm))] = _sha256(path)
+        rows.append({"schema_version": 1, "arm": arm_name, "artifacts": artifacts})
+    return rows
+
+
+def write_evidence_contract(
+    root: Path, bindings: dict[str, str], arm_order: list[str]
+) -> None:
+    if set(arm_order) != {"strict", "candidate", "cold"} or len(arm_order) != 3:
+        raise ValueError("invalid arm order")
+    if not bindings or any(
+        re.fullmatch(r"[0-9a-f]{64}", value) is None for value in bindings.values()
+    ):
+        raise ValueError("invalid evidence binding")
+    rows = _artifact_rows(root)
+    raw_bytes = b"".join(
+        (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        for row in rows
+    )
+    (root / "raw.jsonl").write_bytes(raw_bytes)
+    manifest = {
+        "schema_version": 1,
+        "gate": "W7-resume-bpe-lineage-v1",
+        "bindings": bindings,
+        "arm_order": arm_order,
+        "raw_sha256": hashlib.sha256(raw_bytes).hexdigest(),
+    }
+    (root / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def _evidence_contract_pass(root: Path) -> bool:
+    try:
+        manifest = _json(root / "manifest.json")
+        raw_bytes = (root / "raw.jsonl").read_bytes()
+        rows = [
+            json.loads(line, object_pairs_hook=_pairs, parse_constant=_constant)
+            for line in raw_bytes.splitlines()
+        ]
+        bindings = manifest.get("bindings")
+        return (
+            set(manifest) == {"schema_version", "gate", "bindings", "arm_order", "raw_sha256"}
+            and manifest["schema_version"] == 1
+            and manifest["gate"] == "W7-resume-bpe-lineage-v1"
+            and isinstance(bindings, dict)
+            and bool(bindings)
+            and all(
+                isinstance(value, str)
+                and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+                for value in bindings.values()
+            )
+            and set(manifest["arm_order"]) == {"strict", "candidate", "cold"}
+            and len(manifest["arm_order"]) == 3
+            and manifest["raw_sha256"] == hashlib.sha256(raw_bytes).hexdigest()
+            and rows == _artifact_rows(root)
+        )
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
         return False
 
 
@@ -148,10 +331,26 @@ def score(strict: Path, candidate: Path, cold: Path) -> dict:
         "candidate": {"live": LIVE_SHA256, "primary": PRIMARY_SHA256},
         "cold": {"primary": PRIMARY_SHA256},
     }
-    checks["request_hashes_exact"] = all(
-        metadata[name].get("request_sha256") == expected_requests[name]
-        for name in arms
-    )
+    actual_requests: dict[str, dict[str, str]] = {}
+    try:
+        for name, arm in arms.items():
+            actual_requests[name] = {"primary": _sha256(arm / "primary-request.json")}
+            if name != "cold":
+                actual_requests[name]["live"] = _sha256(arm / "live-request.json")
+        checks["request_hashes_exact"] = all(
+            actual_requests[name] == expected_requests[name]
+            and metadata[name].get("request_sha256") == actual_requests[name]
+            for name in arms
+        ) and (
+            strict.joinpath("primary-request.json").read_bytes()
+            == candidate.joinpath("primary-request.json").read_bytes()
+            == cold.joinpath("primary-request.json").read_bytes()
+        ) and (
+            strict.joinpath("live-request.json").read_bytes()
+            == candidate.joinpath("live-request.json").read_bytes()
+        )
+    except OSError:
+        checks["request_hashes_exact"] = False
     checks["http_and_prompt_tokens_exact"] = (
         _response_ok(strict, "live", 5055)
         and _response_ok(strict, "primary", 5066)
@@ -159,9 +358,19 @@ def score(strict: Path, candidate: Path, cold: Path) -> dict:
         and _response_ok(candidate, "primary", 5066)
         and _response_ok(cold, "primary", 5066)
     )
-    checks["traces_pass"] = _trace_pass(strict / "trace-result.json") and _trace_pass(
-        candidate / "trace-result.json"
+    checks["traces_pass"] = (
+        _trace_pass(strict / "trace-result.json")
+        and _trace_pass(candidate / "trace-result.json")
     )
+    if checks["traces_pass"]:
+        strict_trace = _json(strict / "trace-result.json")
+        candidate_trace = _json(candidate / "trace-result.json")
+        expected_observed = [LIVE_SHA256, PRIMARY_SHA256]
+        checks["traces_pass"] = all(
+            [item["request_sha256"] for item in trace["observed"]]
+            == expected_observed
+            for trace in (strict_trace, candidate_trace)
+        )
     checks["dump_sets_exact"] = all(
         {path.name for path in arm.glob("logits*")} == EXPECTED_DUMPS[name]
         for name, arm in arms.items()
@@ -183,9 +392,14 @@ def score(strict: Path, candidate: Path, cold: Path) -> dict:
         and "GLM resume guard:" not in logs["cold"]
         and "restored-frontier diagnostic:" not in logs["cold"]
     )
-    checks["selected_kv_unchanged"] = _selected_kv_unchanged(
-        strict, logs["strict"]
-    ) and _selected_kv_unchanged(candidate, logs["candidate"])
+    strict_kv = _selected_kv_identity(strict, logs["strict"])
+    candidate_kv = _selected_kv_identity(candidate, logs["candidate"])
+    checks["selected_kv_unchanged"] = strict_kv is not None and candidate_kv is not None
+    checks["selected_kv_cross_arm_exact"] = (
+        strict_kv is not None and strict_kv == candidate_kv
+    )
+    checks["safety_evidence_pass"] = all(_safety_pass(arm) for arm in arms.values())
+    checks["evidence_contract_pass"] = _evidence_contract_pass(strict.parent)
 
     observed = {
         "candidate_argmax": None,
@@ -274,7 +488,32 @@ def main() -> int:
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--cold", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--trace-scorer", type=Path, required=True)
+    parser.add_argument("--pool", type=Path, required=True)
+    parser.add_argument("--tokenizer", type=Path, required=True)
+    parser.add_argument("--tokenizer-runtime", type=Path, required=True)
+    parser.add_argument("--harness-sha256", required=True)
+    parser.add_argument("--binary-sha256", required=True)
+    parser.add_argument("--model-sha256", required=True)
+    parser.add_argument("--scorer-sha256", required=True)
+    parser.add_argument("--seed-sha256", required=True)
+    parser.add_argument("--arm-order", type=Path, required=True)
     args = parser.parse_args()
+    for arm in (args.strict, args.candidate):
+        _recompute_trace(
+            arm, args.trace_scorer, args.pool, args.tokenizer, args.tokenizer_runtime
+        )
+    write_evidence_contract(
+        args.strict.parent,
+        {
+            "harness_sha256": args.harness_sha256,
+            "binary_sha256": args.binary_sha256,
+            "model_sha256": args.model_sha256,
+            "scorer_sha256": args.scorer_sha256,
+            "seed_sha256": args.seed_sha256,
+        },
+        args.arm_order.read_text(encoding="utf-8").splitlines(),
+    )
     result = score(args.strict, args.candidate, args.cold)
     args.output.write_text(
         json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n",

@@ -38,7 +38,7 @@ readonly TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4
 readonly TOKENIZER_INIT_SHA256=eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4
 readonly TOKENIZER_NATIVE_SHA256=fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910
 readonly TRACE_SCORER_SHA256=6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985
-readonly SCORER_SHA256=0e497e8f425d215db122ff6f3e7cf5ede0872c5e98ab93f69b5758b0595188ae
+readonly SCORER_SHA256=f4d2f6458da63d0f77fddbf8275ae983b85fd512a9628ef62c764774080a7532
 readonly CGROUP_SHA256=e5a37b35d3ff1e8a7ee08d0f2c1396441b0dbc4abd64220389362ae6c6994c32
 readonly SAFE_SHA256=6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801
 readonly MEMORY_GUARD_SHA256=3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58
@@ -51,11 +51,22 @@ verify_file() {
 validate_execution_authority() {
   [[ ${W7_EXECUTED_HARNESS_SHA256:-} =~ ^[0-9a-f]{64}$ &&
      ${W7_FROZEN_CANDIDATE_COMMIT:-} =~ ^[0-9a-f]{40}$ ]] || return 2
-  verify_file "$INVOKED_SCRIPT" "$W7_EXECUTED_HARNESS_SHA256" || return 2
+  [[ -r $INVOKED_SCRIPT &&
+     $(sha256sum -- "$INVOKED_SCRIPT" | awk '{print $1}') == "$W7_EXECUTED_HARNESS_SHA256" ]] || return 2
   git -C "$REPO" cat-file -e "$W7_FROZEN_CANDIDATE_COMMIT^{commit}" 2>/dev/null || return 2
   git -C "$REPO" show \
     "$W7_FROZEN_CANDIDATE_COMMIT:results/glm52-gates/harness/w7_resume_equivalence_v1.sh" \
     | sha256sum | awk -v expected="$W7_EXECUTED_HARNESS_SHA256" '$1 == expected {ok=1} END{exit !ok}'
+}
+
+arm_tag() {
+  [[ $# == 2 && $2 =~ ^[0-9a-f]{32}$ ]] || return 2
+  case "$1" in
+    strict) printf 'w7eq-s-%.12s\n' "$2" ;;
+    candidate) printf 'w7eq-c-%.12s\n' "$2" ;;
+    cold) printf 'w7eq-o-%.12s\n' "$2" ;;
+    *) return 2 ;;
+  esac
 }
 
 verify_dependencies() {
@@ -139,18 +150,34 @@ driver() {
 write_arm_metadata() {
   local arm=$1 arm_out=$2 rc=$3
   /usr/bin/python3 -I -B - "$arm" "$arm_out" "$rc" "$LIVE_SHA256" "$PRIMARY_SHA256" <<'PY'
-import json, pathlib, sys
+import hashlib, json, pathlib, sys
 arm, out_raw, rc_raw, live_sha, primary_sha = sys.argv[1:]
-requests = {"primary": primary_sha}
-if arm != "cold": requests["live"] = live_sha
+out = pathlib.Path(out_raw)
+requests = {"primary": hashlib.sha256((out / "primary-request.json").read_bytes()).hexdigest()}
+if arm != "cold": requests["live"] = hashlib.sha256((out / "live-request.json").read_bytes()).hexdigest()
+if requests["primary"] != primary_sha or (arm != "cold" and requests["live"] != live_sha):
+    raise SystemExit("actual arm request digest mismatch")
 doc = {"schema_version": 1, "arm": arm, "containment_rc": int(rc_raw), "request_sha256": requests}
-pathlib.Path(out_raw, "arm.json").write_text(json.dumps(doc, sort_keys=True) + "\n")
+(out / "arm.json").write_text(json.dumps(doc, sort_keys=True) + "\n")
 PY
+}
+
+bind_safety_evidence() {
+  local arm_out=$1 safe_dir
+  safe_dir=$(sed -n 's/^SAFE_RUN_DONE rc=0 killed=no dir=\(\/home\/bmarti44\/.local\/state\/glm52-crashlog\/[^[:space:]]*\)$/\1/p' \
+    "$arm_out/containment.stdout")
+  [[ -n $safe_dir && $safe_dir == "$CRASH_ROOT"/* && -d $safe_dir && ! -L $safe_dir ]] || return 2
+  mkdir "$arm_out/safety"
+  local name
+  for name in main.log samples.log kernel.log; do
+    [[ -f $safe_dir/$name && ! -L $safe_dir/$name ]] || return 2
+    install -m 0600 "$safe_dir/$name" "$arm_out/safety/$name"
+  done
 }
 
 score_trace() {
   local arm_out=$1
-  /usr/bin/python3 -I -B "$TRACE_SCORER" \
+  /usr/bin/python3 -I -B "/proc/$$/fd/$trace_scorer_fd" \
     --trace "$arm_out/request.trace" --pool "$POOL" \
     --live-request "$arm_out/live-request.json" \
     --primary-request "$arm_out/primary-request.json" \
@@ -159,7 +186,8 @@ score_trace() {
 }
 
 run_arm() {
-  local arm=$1 root=$2 arm_out=$root/$arm tag=w7eq-${arm}-${root##*-} rc
+  local arm=$1 root=$2 arm_out=$root/$arm tag rc
+  tag=$(arm_tag "$arm" "${root##*-}")
   mkdir "$arm_out"
   install -m 0600 "$PRIMARY_SOURCE" "$arm_out/primary-request.json"
   if [[ $arm != cold ]]; then install -m 0600 "$LIVE_SOURCE" "$arm_out/live-request.json"; fi
@@ -186,11 +214,12 @@ run_arm() {
       "$CGROUP" --tag "$tag" -- /usr/bin/env \
         W7_EXECUTED_HARNESS_SHA256="$W7_EXECUTED_HARNESS_SHA256" \
         W7_FROZEN_CANDIDATE_COMMIT="$W7_FROZEN_CANDIDATE_COMMIT" \
-        /usr/bin/bash "$INVOKED_SCRIPT" --driver "$arm" "$arm_out" \
+        /usr/bin/bash "/proc/$$/fd/$harness_fd" --driver "$arm" "$arm_out" \
       >"$arm_out/containment.stdout" 2>"$arm_out/containment.stderr"
   rc=$?
   set -e
   printf '%s\n' "$rc" >"$arm_out/containment.rc"
+  if (( rc == 0 )); then bind_safety_evidence "$arm_out"; fi
   write_arm_metadata "$arm" "$arm_out" "$rc"
   (( rc == 0 )) || return 2
   if [[ $arm != cold ]]; then score_trace "$arm_out"; fi
@@ -201,6 +230,20 @@ if [[ ${1:-} == --self-test ]]; then
   python3 -m unittest scripts.tests.test_w7_resume_equivalence_scorer >/dev/null
   echo W7_EQUIVALENCE_SELFTEST_OK
   exit 0
+elif [[ ${1:-} == --validate-tag ]]; then
+  [[ $# == 3 ]]
+  tag=$(arm_tag "$2" "$3")
+  set +e
+  validator_output=$("$CGROUP" --tag "$tag" -- 2>&1)
+  validator_rc=$?
+  set -e
+  [[ $validator_rc == 2 && $validator_output == "missing cgroup command" ]]
+  printf '%s\n' "$tag"
+  exit 0
+elif [[ ${1:-} == --verify-model ]]; then
+  [[ $# == 3 ]]
+  verify_file "$2" "$3"
+  exit $?
 elif [[ ${1:-} == --driver ]]; then
   shift
   validate_execution_authority
@@ -211,6 +254,7 @@ fi
 [[ $# == 0 && $(id -un) == bmarti44 ]] || exit 2
 validate_execution_authority
 verify_dependencies
+verify_file "$MODEL" "$MODEL_SHA256"
 [[ -z $(git -C "$REPO" status --porcelain) ]] || exit 2
 ! pgrep -x ds4-server >/dev/null && ! pgrep -x fio >/dev/null || exit 75
 [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
@@ -224,6 +268,12 @@ mkdir -p "$OUT_PARENT" "$CRASH_ROOT"
 nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 readonly attempt_out=$OUT_PARENT/attempt-$nonce
 mkdir "$attempt_out"
+exec {harness_fd}<"$INVOKED_SCRIPT"
+exec {scorer_fd}<"$SCORER"
+exec {trace_scorer_fd}<"$TRACE_SCORER"
+[[ $(sha256sum -- "/proc/$$/fd/$harness_fd" | awk '{print $1}') == "$W7_EXECUTED_HARNESS_SHA256" ]]
+[[ $(sha256sum -- "/proc/$$/fd/$scorer_fd" | awk '{print $1}') == "$SCORER_SHA256" ]]
+[[ $(sha256sum -- "/proc/$$/fd/$trace_scorer_fd" | awk '{print $1}') == "$TRACE_SCORER_SHA256" ]]
 /usr/bin/python3 -I -B - "$RANDOM_SEED_SHA256" "$attempt_out/arm-order" <<'PY'
 import hashlib, pathlib, sys
 seed = bytes.fromhex(sys.argv[1])
@@ -232,9 +282,16 @@ pathlib.Path(sys.argv[2]).write_text("\n".join(arms) + "\n")
 PY
 while IFS= read -r arm; do run_arm "$arm" "$attempt_out"; done <"$attempt_out/arm-order"
 verify_dependencies
-/usr/bin/python3 -I -B "$SCORER" \
+/usr/bin/python3 -I -B "/proc/$$/fd/$scorer_fd" \
   --strict "$attempt_out/strict" --candidate "$attempt_out/candidate" \
   --cold "$attempt_out/cold" --output "$attempt_out/summary.json" \
+  --trace-scorer "/proc/$$/fd/$trace_scorer_fd" --pool "$POOL" \
+  --tokenizer "$TOKENIZER" --tokenizer-runtime "$TOKENIZER_RUNTIME" \
+  --harness-sha256 "$W7_EXECUTED_HARNESS_SHA256" \
+  --binary-sha256 "$BINARY_SHA256" --model-sha256 "$MODEL_SHA256" \
+  --scorer-sha256 "$SCORER_SHA256" --seed-sha256 "$RANDOM_SEED_SHA256" \
+  --arm-order "$attempt_out/arm-order" \
   >"$attempt_out/scorer.stdout" 2>"$attempt_out/scorer.stderr"
+[[ -s $attempt_out/manifest.json && -s $attempt_out/raw.jsonl && -s $attempt_out/summary.json ]]
 sync -f "$attempt_out"
 echo "W7 equivalence evidence: $attempt_out"

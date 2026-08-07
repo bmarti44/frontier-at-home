@@ -37,6 +37,10 @@ class W7ScorerTest(unittest.TestCase):
         self.strict = self._arm("strict")
         self.candidate = self._arm("candidate")
         self.cold = self._arm("cold")
+        MODULE.write_evidence_contract(
+            self.root, {"test_sha256": "9" * 64},
+            ["strict", "candidate", "cold"],
+        )
 
     def tearDown(self) -> None:
         MODULE.PRIMARY_SHA256 = self.original_primary

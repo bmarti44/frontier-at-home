@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
+import hashlib
 import subprocess
+import tempfile
 import unittest
 
 
@@ -54,6 +56,22 @@ class W7HarnessTest(unittest.TestCase):
         self.assertIn('verify_file "$MODEL" "$MODEL_SHA256"', source)
         self.assertIn('/proc/$$/fd/$harness_fd', source)
         self.assertIn('/proc/$$/fd/$scorer_fd', source)
+
+        with tempfile.TemporaryDirectory() as raw:
+            model = Path(raw) / "model.gguf"
+            model.write_bytes(b"reviewed-model")
+            digest = hashlib.sha256(model.read_bytes()).hexdigest()
+            passed = subprocess.run(
+                ["/usr/bin/bash", str(HARNESS), "--verify-model", str(model), digest],
+                cwd=ROOT, capture_output=True, timeout=10,
+            )
+            self.assertEqual(passed.returncode, 0)
+            model.write_bytes(b"mutated-model!")  # equal byte length
+            failed = subprocess.run(
+                ["/usr/bin/bash", str(HARNESS), "--verify-model", str(model), digest],
+                cwd=ROOT, capture_output=True, timeout=10,
+            )
+            self.assertNotEqual(failed.returncode, 0)
 
     def test_required_evidence_contract_is_emitted(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")
