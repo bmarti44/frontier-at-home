@@ -41,7 +41,7 @@ class W7EquivalenceLauncherTest(unittest.TestCase):
     def test_public_randomness_rejects_stale_forged_and_disagreement(self) -> None:
         signature = "61" * 96
         record = {
-            "round": MODULE.DRAND_FLOOR_ROUND + 1,
+            "round": MODULE.DRAND_TARGET_ROUND,
             "randomness": hashlib.sha256(bytes.fromhex(signature)).hexdigest(),
             "signature": signature,
             "previous_signature": "62" * 96,
@@ -58,7 +58,7 @@ class W7EquivalenceLauncherTest(unittest.TestCase):
         self.assertEqual(len(seed), 64)
         self.assertEqual(json.loads(receipt)["round"], record["round"])
 
-        stale = {**record, "round": MODULE.DRAND_FLOOR_ROUND}
+        stale = {**record, "round": MODULE.DRAND_TARGET_ROUND - 1}
         forged = {**record, "randomness": "0" * 64}
         disagree = {**record, "round": record["round"] + 1}
         for values in ([stale] * 3, [forged] * 3, [record, record, disagree]):

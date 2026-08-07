@@ -11,9 +11,9 @@ import subprocess
 
 
 REPO = "/home/bmarti44/spark-deepseek-v4-flash"
-DRAND_FLOOR_ROUND = 6356215
-CANDIDATE_COMMIT = "d11a8751f6e4de82c23b20d161efa855bd5ef6ba"
-HARNESS_SHA256 = "939701c2ce014d24d6ef9012315e9d3e84974ddf621dde4fc8b35bfe4464fcc4"
+DRAND_TARGET_ROUND = 6356249
+CANDIDATE_COMMIT = "2055428c7d4ee45c482dd68f259268e70ebe23af"
+HARNESS_SHA256 = "6523792246cd5645ca3bc352f4d8a588b6a46c4c6e1241cd232eba883429c113"
 SCORER_SHA256 = "69055136ce93545c410bed1fb8590e0c45376bddbb77c9ac01954317e9c0b6bf"
 TRACE_SCORER_SHA256 = "6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985"
 FROZEN = {
@@ -122,7 +122,7 @@ def _public_randomness() -> tuple[str, str]:
             [
                 "/usr/bin/curl", "--disable", "--silent", "--show-error",
                 "--fail", "--max-time", "15", "--proto", "=https",
-                f"https://{host}/public/latest",
+                f"https://{host}/public/{DRAND_TARGET_ROUND}",
             ],
             env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin"},
             capture_output=True,
@@ -145,7 +145,7 @@ def _public_randomness() -> tuple[str, str]:
     signature = record["signature"]
     previous = record["previous_signature"]
     if (
-        type(round_number) is not int or round_number <= DRAND_FLOOR_ROUND
+        type(round_number) is not int or round_number != DRAND_TARGET_ROUND
         or not isinstance(randomness, str) or len(randomness) != 64
         or not isinstance(signature, str) or len(signature) != 192
         or not isinstance(previous, str) or len(previous) != 192
@@ -161,8 +161,8 @@ def _public_randomness() -> tuple[str, str]:
         raise SystemExit("drand randomness does not derive from signature")
     receipt = {
         "schema_version": 1,
-        "source": "drand-default-latest-three-relay",
-        "freeze_floor_round": DRAND_FLOOR_ROUND,
+        "source": "drand-default-preregistered-three-relay",
+        "freeze_floor_round": DRAND_TARGET_ROUND - 1,
         **record,
         "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
     }
