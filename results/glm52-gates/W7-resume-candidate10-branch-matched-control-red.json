@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate": 10,
+  "test_commit": "aff03e5",
+  "classification": "RED",
+  "trigger": "The first contained equivalence campaign showed that the preregistered cold arm used the 5056+10 server boundary while the resumed candidate used 5044+22.",
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_equivalence_scorer scripts.tests.test_w7_resume_equivalence_harness -v",
+  "observed": {
+    "tests_run": 20,
+    "failures": 3,
+    "errors": 0,
+    "failed_tests": [
+      "test_passing_equivalence",
+      "test_cold_control_uses_branch_matched_5044_boundary",
+      "test_self_test_passes_without_starting_model"
+    ]
+  },
+  "required_behavior": "The cold reference must evaluate the exact 5066-token primary as 0->5044 followed by 5044->5066, and the scorer must compare its final 22-token-suffix logits against the candidate's final 22-token-suffix logits while independently retaining the strict guard control.",
+  "scope": "Only the fixed dump schedule, cold boundary trim, and final-logit pairing may change. The engine binary, model, requests, strict guard, candidate diagnostic, safety wrapper, containment, and max-absolute-delta threshold remain frozen.",
+  "acceptance": "All scorer and harness tests pass; missing/extra dumps, a cold start other than 0->5044, a cold suffix other than 5044->5066, non-finite logits, unequal final positions, or max absolute candidate-vs-cold logit delta >=0.01 fails."
+}
