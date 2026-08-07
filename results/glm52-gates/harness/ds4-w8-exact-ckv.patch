@@ -1,0 +1,3216 @@
+diff --git a/Makefile b/Makefile
+index 8c48c02..287e63b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -25,8 +25,8 @@ DS4_DSPARK_SUPPORT ?= gguf/DeepSeek-V4-Flash-DSpark-support.gguf
+ 
+ ifeq ($(UNAME_S),Darwin)
+ METAL_LDLIBS := $(LDLIBS) -framework Foundation -framework Metal
+-CORE_OBJS = ds4.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_metal.o ds4_layer_pack.o
+-CPU_CORE_OBJS = ds4_cpu.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_layer_pack.o
++CORE_OBJS = ds4.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_ckvstore.o ds4_metal.o ds4_layer_pack.o
++CPU_CORE_OBJS = ds4_cpu.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_ckvstore.o ds4_layer_pack.o
+ else
+ CFLAGS += -D_GNU_SOURCE -fno-finite-math-only
+ CUDA_HOME ?= /usr/local/cuda
+@@ -36,8 +36,8 @@ ifneq ($(strip $(CUDA_ARCH)),)
+ NVCC_ARCH_FLAGS := -arch=$(CUDA_ARCH)
+ endif
+ NVCCFLAGS ?= -O3 -g -lineinfo --use_fast_math $(NVCC_ARCH_FLAGS) -Xcompiler $(NATIVE_CPU_FLAG) -Xcompiler -pthread
+-CORE_OBJS = ds4.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_cuda.o ds4_layer_pack.o
+-CPU_CORE_OBJS = ds4_cpu.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_layer_pack.o
++CORE_OBJS = ds4.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_ckvstore.o ds4_cuda.o ds4_layer_pack.o
++CPU_CORE_OBJS = ds4_cpu.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_ckvstore.o ds4_layer_pack.o
+ CUDA_LDLIBS ?= -lm -Xcompiler -pthread -L$(CUDA_HOME)/targets/sbsa-linux/lib -L$(CUDA_HOME)/lib64 -lcudart -lcublas
+ HIPCC ?= $(shell command -v hipcc 2>/dev/null || echo /opt/rocm/bin/hipcc)
+ ROCM_ARCH ?= gfx1151
+@@ -136,7 +136,7 @@ cuda:
+ 
+ strix-halo:
+ 	$(MAKE) -B ds4 ds4-server ds4-bench ds4-eval ds4-agent \
+-		CORE_OBJS="ds4.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_rocm.o ds4_rocm_compat.o ds4_rocm_unavailable.o ds4_layer_pack.o" \
++		CORE_OBJS="ds4.o ds4_distributed.o ds4_tp.o ds4_ssd.o ds4_ckvstore.o ds4_rocm.o ds4_rocm_compat.o ds4_rocm_unavailable.o ds4_layer_pack.o" \
+ 		CFLAGS="$(CFLAGS) -DDS4_ROCM_BUILD" \
+ 		DS4_LINK="$(HIPCC) $(ROCM_CFLAGS)" \
+ 		DS4_LINK_LIBS="$(ROCM_LDLIBS)"
+@@ -220,6 +220,9 @@ ds4_web.o: ds4_web.c ds4_web.h
+ ds4_kvstore.o: ds4_kvstore.c ds4_kvstore.h ds4.h ds4_ssd.h
+ 	$(CC) $(CFLAGS) -c -o $@ ds4_kvstore.c
+ 
++ds4_ckvstore.o: ds4_ckvstore.c ds4_ckvstore.h
++	$(CC) $(CFLAGS) -c -o $@ ds4_ckvstore.c
++
+ ds4_test.o: tests/ds4_test.c ds4_server.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
+ 	$(CC) $(CFLAGS) -Wno-unused-function -c -o $@ tests/ds4_test.c
+ 
+@@ -280,6 +283,24 @@ tests/test_layer_pack.o: tests/test_layer_pack.c ds4_layer_pack.h
+ tests/test_layer_pack: tests/test_layer_pack.o ds4_layer_pack.o
+ 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+ 
++tests/test_glm_ckvstore.o: tests/test_glm_ckvstore.c ds4_ckvstore.h
++	$(CC) $(CFLAGS) -I. -c -o $@ $<
++
++tests/test_glm_ckvstore: tests/test_glm_ckvstore.o ds4_ckvstore.o
++	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
++
++tests/test_glm_ckvstore_1m.o: tests/test_glm_ckvstore_1m.c ds4_ckvstore.h
++	$(CC) $(CFLAGS) -I. -c -o $@ $<
++
++tests/test_glm_ckvstore_1m: tests/test_glm_ckvstore_1m.o ds4_ckvstore.o
++	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
++
++tests/test_glm_ckv_exact_direct_cuda.o: tests/test_glm_ckv_exact_direct_cuda.c ds4_gpu.h
++	$(CC) $(CFLAGS) -I. -c -o $@ $<
++
++tests/test_glm_ckv_exact_direct_cuda: tests/test_glm_ckv_exact_direct_cuda.o ds4_cuda.o
++	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
++
+ tests/test_gpu_args.o: tests/test_gpu_args.c ds4_gpu_args.h ds4_gpu_mgpu.h
+ 	$(CC) $(CFLAGS) -I. -DDS4_NO_GPU -c -o $@ $<
+ 
+@@ -408,11 +429,13 @@ else
+ endif
+ 
+ test: ds4_test ds4_agent_test ds4-eval q4k-dot-test \
++	tests/test_glm_ckvstore \
+ 	tests/test_layer_pack tests/test_engine_mgpu_placement tests/test_gpu_args \
+ 	$(SAMPLING_TEST) ds4 ds4-server ds4-bench ds4-agent
+ 	./ds4-eval --self-test-extractors
+ 	./ds4_agent_test
+ 	./ds4_test
++	./tests/test_glm_ckvstore
+ 	./tests/test_layer_pack
+ 	./tests/test_engine_mgpu_placement
+ 	./tests/test_gpu_args
+@@ -451,4 +474,4 @@ q4k-dot-test: tests/test_q4k_dot.c
+ 	./tests/test_q4k_dot
+ 
+ clean:
+-	rm -f ds4 ds4-server ds4-bench ds4-eval ds4-agent ds4_cpu ds4_native ds4_server_test ds4_test ds4_agent_test gguf-tools/quality-testing/score_official $(QUALITY_SCORE_OBJ) tests/test_q4k_dot tests/test_metal_session_batch tests/test_gpu_xdev tests/test_gpu_model_cache tests/test_gpu_lookup_cache_strict tests/test_engine_mgpu_refusal tests/test_engine_mgpu_runtime tests/test_engine_correctness tests/test_sampling tests/test_cuda_session_batch tests/test_cuda_mixed_batch tests/*.o *.o tests/cuda_long_context_smoke tests/cuda_long_context_smoke.o
++	rm -f ds4 ds4-server ds4-bench ds4-eval ds4-agent ds4_cpu ds4_native ds4_server_test ds4_test ds4_agent_test gguf-tools/quality-testing/score_official $(QUALITY_SCORE_OBJ) tests/test_q4k_dot tests/test_glm_ckvstore tests/test_glm_ckvstore_1m tests/test_glm_ckv_exact_direct_cuda tests/test_metal_session_batch tests/test_gpu_xdev tests/test_gpu_model_cache tests/test_gpu_lookup_cache_strict tests/test_engine_mgpu_refusal tests/test_engine_mgpu_runtime tests/test_engine_correctness tests/test_sampling tests/test_cuda_session_batch tests/test_cuda_mixed_batch tests/*.o *.o tests/cuda_long_context_smoke tests/cuda_long_context_smoke.o
+diff --git a/ds4.c b/ds4.c
+index f0527d5..6bd7be9 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -41,6 +41,7 @@
+ #include <unistd.h>
+ 
+ #include "ds4.h"
++#include "ds4_ckvstore.h"
+ #include "ds4_distributed.h"
+ #include "ds4_tp.h"
+ 
+@@ -34597,6 +34598,7 @@ static uint32_t glm_graph_resume_prefill_min_tokens(void) {
+ #define DS4_GLM_METAL_LONG_CONTEXT_FULL_ATTN_CONTEXT 4096u
+ #define DS4_GLM_METAL_INDEXED_PREFILL_CHUNK_TOKENS 4096u
+ #define DS4_GLM_METAL_INDEXED_PREFILL_SCORE_SCRATCH_MB 256u
++#define DS4_GLM_CKV_SYNC_INTERVAL_BYTES (256ull * 1024ull * 1024ull)
+ 
+ static uint32_t glm_graph_full_attention_cap(uint32_t ctx_size,
+                                              bool     ssd_streaming);
+@@ -34606,6 +34608,7 @@ static uint32_t glm_graph_indexed_prefill_chunk_tokens(
+ static uint32_t glm_graph_indexed_prefill_score_tokens(
+         uint32_t indexed_prefill_cap,
+         uint32_t compact_cap);
++static bool glm_graph_ckv_exact_enabled(void);
+ 
+ static uint64_t glm_graph_compact_cache_elem_bytes(void) {
+     return DS4_GPU_GLM_COMPACT_CACHE_F16 ? sizeof(uint16_t) : sizeof(float);
+@@ -34615,6 +34618,23 @@ static uint32_t glm_graph_compact_cache_is_f16(void) {
+     return DS4_GPU_GLM_COMPACT_CACHE_F16 ? 1u : 0u;
+ }
+ 
++#define DS4_GLM_CKV_EXACT_SELECTED_CAP 2048u
++#define DS4_GLM_CKV_RECORD_ROWS 64u
++#define DS4_GLM_CKV_CACHE_RECORDS 64u
++
++static uint64_t glm_graph_compact_latent_row_bytes(void) {
++    return (uint64_t)DS4_N_KV_LORA * glm_graph_compact_cache_elem_bytes();
++}
++
++static uint64_t glm_graph_compact_rope_row_bytes(void) {
++    return (uint64_t)DS4_N_ROT * glm_graph_compact_cache_elem_bytes();
++}
++
++static uint64_t glm_graph_compact_indexer_row_bytes(void) {
++    return (uint64_t)DS4_N_INDEXER_HEAD_DIM *
++           glm_graph_compact_cache_elem_bytes();
++}
++
+ static bool glm_graph_expanded_kv_cache_enabled(bool ssd_streaming) {
+     (void)ssd_streaming;
+     return false;
+@@ -34888,6 +34908,47 @@ static uint64_t glm_graph_compact_cache_bytes_for_cap(
+         uint32_t indexer_layers,
+         uint32_t compact_cap) {
+     if (compact_cap == 0) return 0;
++    if (glm_graph_ckv_exact_enabled()) {
++        const uint64_t write_rows =
++            glm_graph_indexed_prefill_chunk_tokens(
++                glm_graph_full_attention_cap(compact_cap, false),
++                compact_cap);
++        const uint64_t row_bytes =
++            glm_graph_compact_latent_row_bytes() +
++            glm_graph_compact_rope_row_bytes();
++        const uint64_t host_rows =
++            write_rows > DS4_GLM_CKV_EXACT_SELECTED_CAP
++                ? write_rows : DS4_GLM_CKV_EXACT_SELECTED_CAP;
++        const uint64_t ckv_host_buffer_bytes =
++            2u * host_rows * row_bytes +
++            DS4_GLM_CKV_EXACT_SELECTED_CAP * sizeof(uint32_t);
++        const uint64_t ckv_block_cache_bytes =
++            DS4_GLM_CKV_CACHE_RECORDS * normal_layers *
++            DS4_GLM_CKV_RECORD_ROWS * row_bytes;
++        const uint64_t ckv_records_per_layer =
++            ((uint64_t)compact_cap + DS4_GLM_CKV_RECORD_ROWS - 1u) /
++            DS4_GLM_CKV_RECORD_ROWS;
++        /* The store grows both its descriptor vector and each epoch's record
++         * ID vector geometrically.  128 bytes per logical record bounds both
++         * arrays including their worst-case doubling slack; the per-layer
++         * term also covers the epoch object and allocator metadata. */
++        const uint64_t ckv_record_index_bytes =
++            (uint64_t)normal_layers *
++            (ckv_records_per_layer * 128u + 256u);
++        const uint64_t ckv_tail_memory_bytes =
++            (uint64_t)normal_layers * DS4_GLM_CKV_RECORD_ROWS * row_bytes;
++        const uint64_t ckv_tail_buffer_bytes =
++            (uint64_t)normal_layers * DS4_GLM_CKV_RECORD_ROWS * row_bytes;
++        uint64_t total =
++            (uint64_t)indexer_layers * compact_cap *
++            glm_graph_compact_indexer_row_bytes();
++        total += (write_rows + DS4_GLM_CKV_EXACT_SELECTED_CAP) * row_bytes;
++        total += ckv_host_buffer_bytes + ckv_block_cache_bytes;
++        total += ckv_record_index_bytes + ckv_tail_memory_bytes;
++        total += ckv_tail_buffer_bytes;
++        total += DS4_GLM_CKV_SYNC_INTERVAL_BYTES;
++        return total;
++    }
+     const uint64_t elem = glm_graph_compact_cache_elem_bytes();
+     uint64_t total =
+         (uint64_t)normal_layers *
+@@ -37553,6 +37614,21 @@ typedef struct {
+     ds4_gpu_tensor *batch_indexer_selected;
+     ds4_gpu_tensor *batch_qk_low;
+     ds4_gpu_tensor *batch_attn_lora;
++    bool ckv_nvme_exact;
++    uint32_t ckv_exact_write_rows;
++    uint32_t ckv_exact_selected_rows;
++    ds4_gpu_tensor *ckv_write_lora;
++    ds4_gpu_tensor *ckv_write_rope;
++    ds4_gpu_tensor *ckv_selected_lora;
++    ds4_gpu_tensor *ckv_selected_rope;
++    ds4_ckvstore *ckv_store;
++    uint64_t ckv_generation;
++    uint8_t *ckv_io_host;
++    bool ckv_io_host_pinned;
++    uint8_t *ckv_record_host;
++    uint32_t *ckv_selected_ids_host;
++    uint64_t ckv_host_rows;
++    char *ckv_path;
+     ds4_gpu_tensor *layer_kv_lora_cache[DS4_MAX_LAYER];
+     ds4_gpu_tensor *layer_k_rope_cache[DS4_MAX_LAYER];
+     /* GLM MTP (nextn block) drafting: private compact caches for the nextn
+@@ -37622,6 +37698,11 @@ static bool glm_graph_env_disabled(const char *name) {
+            strcasecmp(env, "no") == 0;
+ }
+ 
++static bool glm_graph_ckv_exact_enabled(void) {
++    const char *flag = getenv("DS4_GLM_CKV_NVME_EXACT");
++    return flag && strcmp(flag, "1") == 0;
++}
++
+ static double glm_graph_env_double(
+         const char *name,
+         double      fallback,
+@@ -39007,6 +39088,25 @@ static void glm_graph_free(ds4_glm_gpu_graph *g) {
+     free(g->baseline_capture_shared_scores);
+     free(g->baseline_capture_selected);
+     free(g->baseline_capture_scores);
++    ds4_ckvstore_close(g->ckv_store);
++    if (g->ckv_path && unlink(g->ckv_path) != 0 && errno != ENOENT) {
++        fprintf(stderr, "ds4: failed to remove exact cKV request store: %s\n",
++                strerror(errno));
++    }
++#if defined(__APPLE__) || defined(DS4_ROCM_BUILD)
++    free(g->ckv_io_host);
++#else
++    if (g->ckv_io_host_pinned)
++        ds4_gpu_host_free_pinned(g->ckv_io_host);
++    else
++        free(g->ckv_io_host);
++#endif
++    free(g->ckv_record_host);
++    free(g->ckv_path);
++    ds4_gpu_tensor_free(g->ckv_write_lora);
++    ds4_gpu_tensor_free(g->ckv_write_rope);
++    ds4_gpu_tensor_free(g->ckv_selected_lora);
++    ds4_gpu_tensor_free(g->ckv_selected_rope);
+     ds4_gpu_tensor_free(g->mtp_kv_lora_cache);
+     ds4_gpu_tensor_free(g->mtp_k_rope_cache);
+     ds4_gpu_tensor_free(g->mtp_concat);
+@@ -39184,6 +39284,239 @@ static bool glm_graph_warm_compact_indexer_store(
+     return ok;
+ }
+ 
++static int glm_graph_ckv_hex_nibble(char c) {
++    if (c >= '0' && c <= '9') return c - '0';
++    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
++    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
++    return -1;
++}
++
++static bool glm_graph_ckv_parse_sha256(const char *hex, uint8_t out[32]) {
++    if (!hex || strlen(hex) != 64) return false;
++    for (uint32_t i = 0; i < 32; i++) {
++        const int hi = glm_graph_ckv_hex_nibble(hex[2u * i]);
++        const int lo = glm_graph_ckv_hex_nibble(hex[2u * i + 1u]);
++        if (hi < 0 || lo < 0) return false;
++        out[i] = (uint8_t)((hi << 4) | lo);
++    }
++    return true;
++}
++
++static bool glm_graph_ckv_random_bytes(void *ptr, size_t bytes) {
++    int fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
++    if (fd < 0) return false;
++    uint8_t *p = ptr;
++    while (bytes) {
++        ssize_t n = read(fd, p, bytes);
++        if (n < 0 && errno == EINTR) continue;
++        if (n <= 0) { close(fd); return false; }
++        p += n;
++        bytes -= (size_t)n;
++    }
++    return close(fd) == 0;
++}
++
++static uint64_t glm_graph_ckv_max_file_bytes(void) {
++    uint64_t gib = 192u;
++    const char *env = getenv("DS4_GLM_CKV_MAX_GIB");
++    if (env && env[0]) {
++        char *end = NULL;
++        errno = 0;
++        unsigned long long value = strtoull(env, &end, 10);
++        if (end == env || *end != '\0' || errno != 0 ||
++            value < 1u || value > 512u) return 0;
++        gib = value;
++    }
++    return gib * 1024ull * 1024ull * 1024ull;
++}
++
++static bool glm_graph_ckv_exact_open(ds4_glm_gpu_graph *g) {
++    if (!g || !g->ckv_nvme_exact) return true;
++    if (g->ckv_store) return false;
++    const char *directory = getenv("DS4_GLM_CKV_DIR");
++    const char *model_sha = getenv("DS4_GLM_CKV_MODEL_SHA256");
++    if (!directory || !directory[0] || !model_sha || !model_sha[0]) {
++        fprintf(stderr,
++                "ds4: W8 requires private DS4_GLM_CKV_DIR and "
++                "DS4_GLM_CKV_MODEL_SHA256\n");
++        return false;
++    }
++    ds4_ckvstore_config cfg = {
++        .row_bytes = (uint32_t)(glm_graph_compact_latent_row_bytes() +
++                                glm_graph_compact_rope_row_bytes()),
++        .rows_per_record = DS4_GLM_CKV_RECORD_ROWS,
++        .max_cached_records = DS4_GLM_CKV_CACHE_RECORDS,
++        .max_epochs = g->layer_count,
++        .generation = g->ckv_generation + 1u,
++        .max_file_bytes = glm_graph_ckv_max_file_bytes(),
++        .sync_interval_bytes = DS4_GLM_CKV_SYNC_INTERVAL_BYTES,
++        .buffer_tail_rows = true,
++    };
++    if (cfg.generation == 0) {
++        fprintf(stderr, "ds4: W8 request generation exhausted\n");
++        return false;
++    }
++    if (!cfg.max_file_bytes ||
++        !glm_graph_ckv_parse_sha256(model_sha, cfg.model_binding) ||
++        !glm_graph_ckv_random_bytes(cfg.session_id, sizeof(cfg.session_id))) {
++        fprintf(stderr, "ds4: invalid W8 identity or file-size configuration\n");
++        return false;
++    }
++    static const char format_binding[] = "glm-ckv-exact-f32-v1";
++    _Static_assert(sizeof(format_binding) <= sizeof(cfg.format_binding),
++                   "exact cKV format binding must fit the record header");
++    memcpy(cfg.format_binding, format_binding, sizeof(format_binding));
++    char err[256] = {0};
++    char created_path[PATH_MAX];
++    const int rc = ds4_ckvstore_create_request(
++        &g->ckv_store, directory, &cfg, created_path, sizeof(created_path),
++        err, sizeof(err));
++    if (rc != DS4_CKVSTORE_OK) {
++        fprintf(stderr, "ds4: failed to create W8 cKV store: %s\n", err);
++        return false;
++    }
++    free(g->ckv_path);
++    g->ckv_path = strdup(created_path);
++    g->ckv_host_rows = g->ckv_exact_write_rows > g->ckv_exact_selected_rows
++        ? g->ckv_exact_write_rows : g->ckv_exact_selected_rows;
++    const uint64_t host_bytes = g->ckv_host_rows * cfg.row_bytes;
++    const uint64_t selected_id_bytes =
++        (uint64_t)g->ckv_exact_selected_rows * sizeof(uint32_t);
++    if (!g->ckv_path || host_bytes > SIZE_MAX ||
++        selected_id_bytes > SIZE_MAX - host_bytes) return false;
++    const uint64_t host_alloc_bytes = host_bytes + selected_id_bytes;
++    if (!g->ckv_io_host) {
++#if defined(__APPLE__) || defined(DS4_ROCM_BUILD)
++        g->ckv_io_host = malloc((size_t)host_alloc_bytes);
++#else
++        if (!ds4_gpu_host_alloc_pinned((void **)&g->ckv_io_host,
++                                       host_alloc_bytes)) {
++            fprintf(stderr,
++                    "ds4: exact cKV requires persistent pinned staging\n");
++            return false;
++        }
++        g->ckv_io_host_pinned = true;
++#endif
++    }
++    g->ckv_selected_ids_host =
++        (uint32_t *)(g->ckv_io_host + host_bytes);
++    if (!g->ckv_record_host)
++        g->ckv_record_host = malloc((size_t)host_bytes);
++    if (!g->ckv_io_host || !g->ckv_record_host ||
++        !g->ckv_selected_ids_host) {
++        ds4_ckvstore_close(g->ckv_store);
++        g->ckv_store = NULL;
++        free(g->ckv_path);
++        g->ckv_path = NULL;
++        return false;
++    }
++    g->ckv_generation = cfg.generation;
++    fprintf(stderr,
++            "ds4: W8 request cKV store=%s write_rows=%u selected_rows=%u "
++            "host_buffers=%.2f MiB max_file=%.2f GiB\n",
++            g->ckv_path, g->ckv_exact_write_rows,
++            g->ckv_exact_selected_rows,
++            (double)(2u * host_bytes +
++                (uint64_t)g->ckv_exact_selected_rows * sizeof(uint32_t)) /
++                (1024.0 * 1024.0),
++            (double)cfg.max_file_bytes / (1024.0 * 1024.0 * 1024.0));
++    return true;
++}
++
++static bool glm_graph_ckv_exact_reset_lineage(ds4_glm_gpu_graph *g) {
++    if (!g || !g->ckv_nvme_exact) return true;
++    ds4_ckvstore_close(g->ckv_store);
++    g->ckv_store = NULL;
++    free(g->ckv_path);
++    g->ckv_path = NULL;
++    return glm_graph_ckv_exact_open(g);
++}
++
++static bool glm_graph_store_ckv_exact_rows(
++        ds4_glm_gpu_graph *g, uint32_t layer,
++        const ds4_gpu_tensor *kv_norm, const ds4_gpu_tensor *kv_raw,
++        uint32_t pos0, uint32_t n_tokens, uint32_t kv_raw_dim) {
++    if (!g || layer >= DS4_MAX_LAYER) return false;
++    ds4_gpu_tensor *lora = g->ckv_nvme_exact
++        ? g->ckv_write_lora : g->layer_kv_lora_cache[layer];
++    ds4_gpu_tensor *rope = g->ckv_nvme_exact
++        ? g->ckv_write_rope : g->layer_k_rope_cache[layer];
++    const uint32_t target_pos = g->ckv_nvme_exact ? 0u : pos0;
++    const uint32_t target_cap = g->ckv_nvme_exact
++        ? g->ckv_exact_write_rows : g->compact_cache_cap;
++    if (!lora || !rope || !n_tokens || n_tokens > target_cap) return false;
++    bool ok = ds4_gpu_glm_store_compact_kv_tensor(
++        lora, rope, kv_norm, kv_raw, target_pos, n_tokens, target_cap,
++        kv_raw_dim, DS4_N_KV_LORA, DS4_N_ROT,
++        glm_graph_compact_cache_is_f16()) != 0;
++    if (!ok || !g->ckv_nvme_exact) return ok;
++    if (!g->ckv_store || !g->ckv_io_host || !g->ckv_record_host ||
++        !ds4_gpu_synchronize()) return false;
++    const uint64_t latent_row = glm_graph_compact_latent_row_bytes();
++    const uint64_t rope_row = glm_graph_compact_rope_row_bytes();
++    const uint64_t latent_bytes = (uint64_t)n_tokens * latent_row;
++    const uint64_t rope_bytes = (uint64_t)n_tokens * rope_row;
++    if (!ds4_gpu_tensor_read(lora, 0, g->ckv_io_host, latent_bytes) ||
++        !ds4_gpu_tensor_read(rope, 0, g->ckv_io_host + latent_bytes,
++                             rope_bytes)) return false;
++    for (uint32_t row = 0; row < n_tokens; row++) {
++        uint8_t *dst = g->ckv_record_host +
++            (uint64_t)row * (latent_row + rope_row);
++        memcpy(dst, g->ckv_io_host + (uint64_t)row * latent_row,
++               (size_t)latent_row);
++        memcpy(dst + latent_row,
++               g->ckv_io_host + latent_bytes + (uint64_t)row * rope_row,
++               (size_t)rope_row);
++    }
++    char err[256] = {0};
++    const int rc = ds4_ckvstore_put(
++        g->ckv_store, layer, pos0, n_tokens, 1u, g->ckv_record_host,
++        (size_t)(latent_bytes + rope_bytes), err, sizeof(err));
++    if (rc != DS4_CKVSTORE_OK) {
++        fprintf(stderr, "ds4: W8 cKV append failed layer=%u rows=[%u,%u): %s\n",
++                layer, pos0, pos0 + n_tokens, err);
++        return false;
++    }
++    return true;
++}
++
++static bool glm_graph_stage_ckv_exact_selected(
++        ds4_glm_gpu_graph *g, uint32_t layer,
++        const ds4_gpu_tensor *selected, uint64_t selected_offset,
++        uint32_t n_selected) {
++    if (!g || !g->ckv_nvme_exact || !g->ckv_store || !selected ||
++        !n_selected || n_selected > g->ckv_exact_selected_rows) return false;
++    if (!ds4_gpu_tensor_read(selected, selected_offset,
++                             g->ckv_selected_ids_host,
++                             (uint64_t)n_selected * sizeof(uint32_t))) return false;
++    char err[256] = {0};
++    const uint64_t latent_row = glm_graph_compact_latent_row_bytes();
++    const uint64_t rope_row = glm_graph_compact_rope_row_bytes();
++    const uint64_t latent_bytes = (uint64_t)n_selected * latent_row;
++    const int rc = ds4_ckvstore_read_selected(
++        g->ckv_store, layer, 0u, g->ckv_selected_ids_host, n_selected,
++        g->ckv_record_host, (size_t)((uint64_t)n_selected *
++            (latent_row + rope_row)), err, sizeof(err));
++    if (rc != DS4_CKVSTORE_OK) {
++        fprintf(stderr, "ds4: W8 selected-row read failed layer=%u: %s\n",
++                layer, err);
++        return false;
++    }
++    for (uint32_t row = 0; row < n_selected; row++) {
++        const uint8_t *src = g->ckv_record_host +
++            (uint64_t)row * (latent_row + rope_row);
++        memcpy(g->ckv_io_host + (uint64_t)row * latent_row,
++               src, (size_t)latent_row);
++        memcpy(g->ckv_io_host + latent_bytes + (uint64_t)row * rope_row,
++               src + latent_row, (size_t)rope_row);
++    }
++    return ds4_gpu_tensor_write(g->ckv_selected_lora, 0, g->ckv_io_host,
++                                latent_bytes) != 0 &&
++           ds4_gpu_tensor_write(g->ckv_selected_rope, 0,
++                                g->ckv_io_host + latent_bytes,
++                                (uint64_t)n_selected * rope_row) != 0;
++}
++
+ static bool glm_graph_alloc_slice(
+         ds4_glm_gpu_graph *g,
+         const ds4_model   *model,
+@@ -39197,9 +39530,11 @@ static bool glm_graph_alloc_slice(
+         bool               require_token_embd,
+         bool               require_output_head) {
+     if (!g || !model || !weights || ctx_size <= 0) return false;
++    const bool ckv_nvme_exact = glm_graph_ckv_exact_enabled();
+     const int *placement = g->placement;
+     memset(g, 0, sizeof(*g));
+     g->placement = placement;
++    g->ckv_nvme_exact = ckv_nvme_exact;
+     g->ssd_streaming = ssd_streaming;
+     g->ssd_streaming_cold = ssd_streaming_cold;
+ 
+@@ -39238,6 +39573,11 @@ static bool glm_graph_alloc_slice(
+     g->indexed_prefill_score_cap =
+         glm_graph_indexed_prefill_score_tokens(g->indexed_prefill_cap,
+                                                g->compact_cache_cap);
++    if (g->ckv_nvme_exact) {
++        g->ckv_exact_write_rows = g->indexed_prefill_cap
++            ? g->indexed_prefill_cap : 1u;
++        g->ckv_exact_selected_rows = DS4_GLM_CKV_EXACT_SELECTED_CAP;
++    }
+     g->indexer_full_layers =
+         glm_graph_full_indexer_layer_count_range(g->layer_start,
+                                                  g->layer_end);
+@@ -39326,20 +39666,25 @@ static bool glm_graph_alloc_slice(
+                 "ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped\n");
+     }
+     if (g->compact_cache_cap != 0) {
+-        const uint64_t compact_kv_total =
+-            (uint64_t)g->layer_count * (compact_kv_lora_bytes + compact_k_rope_bytes);
++        const uint64_t compact_kv_total = g->ckv_nvme_exact
++            ? (uint64_t)(g->ckv_exact_write_rows + g->ckv_exact_selected_rows) *
++                (glm_graph_compact_latent_row_bytes() +
++                 glm_graph_compact_rope_row_bytes())
++            : (uint64_t)g->layer_count *
++                (compact_kv_lora_bytes + compact_k_rope_bytes);
+         const uint64_t compact_indexer_total =
+             (uint64_t)g->indexer_full_layers * compact_indexer_key_bytes;
+         const double compact_gib =
+             (double)(compact_kv_total + compact_indexer_total) /
+             (1024.0 * 1024.0 * 1024.0);
+         fprintf(stderr,
+-                "ds4: GLM graph allocating compact DSA cache: rows=%u logical_ctx=%u kv_layers=%u indexer_layers=%u %s %.2f GiB\n",
++                "ds4: GLM graph allocating compact DSA cache: rows=%u logical_ctx=%u kv_layers=%u indexer_layers=%u %s%s %.2f GiB\n",
+                 g->compact_cache_cap,
+                 g->ctx_size,
+                 g->layer_count,
+                 g->indexer_full_layers,
+                 glm_graph_compact_cache_is_f16() ? "f16" : "f32",
++                g->ckv_nvme_exact ? "+nvme-direct-slot" : "",
+                 compact_gib);
+         fprintf(stderr,
+                 "ds4: GLM compact indexed prefill chunk=%u score_rows=%u score_scratch=%.2f MiB\n",
+@@ -39441,6 +39786,17 @@ static bool glm_graph_alloc_slice(
+     }
+     DS4_GLM_GRAPH_ALLOC_TENSOR(g->batch_ffn_out, batch_rows * emb_bytes);
+ 
++    if (g->ckv_nvme_exact) {
++        DS4_GLM_GRAPH_ALLOC_TENSOR(g->ckv_write_lora,
++            (uint64_t)g->ckv_exact_write_rows * glm_graph_compact_latent_row_bytes());
++        DS4_GLM_GRAPH_ALLOC_TENSOR(g->ckv_write_rope,
++            (uint64_t)g->ckv_exact_write_rows * glm_graph_compact_rope_row_bytes());
++        DS4_GLM_GRAPH_ALLOC_TENSOR(g->ckv_selected_lora,
++            (uint64_t)g->ckv_exact_selected_rows * glm_graph_compact_latent_row_bytes());
++        DS4_GLM_GRAPH_ALLOC_TENSOR(g->ckv_selected_rope,
++            (uint64_t)g->ckv_exact_selected_rows * glm_graph_compact_rope_row_bytes());
++    }
++
+     for (uint32_t il = g->layer_start; ok && il <= g->layer_end; il++) {
+         int cache_tier = 0;
+         if (g->placement && g->placement[il + 1u] >= 0 &&
+@@ -39461,8 +39817,10 @@ static bool glm_graph_alloc_slice(
+             DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_value_cache[il], value_cache_bytes);
+         }
+         if (g->compact_cache_cap != 0) {
+-            DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_kv_lora_cache[il], compact_kv_lora_bytes);
+-            DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_k_rope_cache[il], compact_k_rope_bytes);
++            if (!g->ckv_nvme_exact) {
++                DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_kv_lora_cache[il], compact_kv_lora_bytes);
++                DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_k_rope_cache[il], compact_k_rope_bytes);
++            }
+             if (glm_graph_layer_uses_full_indexer(il)) {
+                 DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_indexer_key_cache[il],
+                                                 compact_indexer_key_bytes);
+@@ -39472,6 +39830,7 @@ static bool glm_graph_alloc_slice(
+     }
+ #undef DS4_GLM_GRAPH_ALLOC_TENSOR
+ 
++    if (ok && g->ckv_nvme_exact) ok = glm_graph_ckv_exact_open(g);
+     if (!ok) {
+         glm_graph_free(g);
+         return false;
+@@ -43366,17 +43725,8 @@ static bool glm_graph_verify_rows(
+                                                          kv_raw_dim,
+                                                          DS4_N_KV_LORA,
+                                                          DS4_RMS_EPS) != 0;
+-        if (ok) ok = ds4_gpu_glm_store_compact_kv_tensor(g->layer_kv_lora_cache[il],
+-                                                         g->layer_k_rope_cache[il],
+-                                                         g->batch_kv_norm,
+-                                                         g->batch_kv_raw,
+-                                                         pos,
+-                                                         n,
+-                                                         g->compact_cache_cap,
+-                                                         kv_raw_dim,
+-                                                         DS4_N_KV_LORA,
+-                                                         DS4_N_ROT,
+-                                                         glm_graph_compact_cache_is_f16()) != 0;
++        if (ok) ok = glm_graph_store_ckv_exact_rows(
++            g, il, g->batch_kv_norm, g->batch_kv_raw, pos, n, kv_raw_dim);
+         if (ok) ok = ds4_gpu_glm_qk_lowrank_typed_batch_tensor(g->batch_qk_low,
+                                                                g->batch_q,
+                                                                model->map,
+@@ -43962,19 +44312,10 @@ static bool glm_graph_forward_tokens(
+                                                          kv_raw_dim,
+                                                          DS4_N_KV_LORA,
+                                                          DS4_RMS_EPS) != 0;
+-        if (ok && g->compact_cache_cap != 0) {
+-            ok = ds4_gpu_glm_store_compact_kv_tensor(g->layer_kv_lora_cache[il],
+-                                                     g->layer_k_rope_cache[il],
+-                                                     g->batch_kv_norm,
+-                                                     g->batch_kv_raw,
+-                                                     pos0,
+-                                                     n_tokens,
+-                                                     g->compact_cache_cap,
+-                                                     kv_raw_dim,
+-                                                     DS4_N_KV_LORA,
+-                                                     DS4_N_ROT,
+-                                                     glm_graph_compact_cache_is_f16()) != 0;
+-        }
++        if (ok && g->compact_cache_cap != 0)
++            ok = glm_graph_store_ckv_exact_rows(
++                g, il, g->batch_kv_norm, g->batch_kv_raw,
++                pos0, n_tokens, kv_raw_dim);
+         if (ok) ok = ds4_gpu_glm_k_b_project_typed_tensor(g->batch_k_nope,
+                                                           g->batch_kv_norm,
+                                                           model->map,
+@@ -44530,7 +44871,8 @@ static bool glm_graph_forward_indexed_tokens(
+     const bool use_batch_qk_low =
+         !force_scalar_attn && glm_graph_indexed_prefill_batch_qk_low();
+     const bool use_batch_attn_kernel =
+-        !force_scalar_attn && glm_graph_indexed_prefill_batch_attn_kernel();
++        !g->ckv_nvme_exact && !force_scalar_attn &&
++        glm_graph_indexed_prefill_batch_attn_kernel();
+     const bool use_split_value_proj =
+         use_batch_attn_kernel &&
+         g->batch_attn_lora;
+@@ -44886,19 +45228,9 @@ static bool glm_graph_forward_indexed_tokens(
+                                                          kv_raw_dim,
+                                                          DS4_N_KV_LORA,
+                                                          DS4_RMS_EPS) != 0;
+-        if (ok) {
+-            ok = ds4_gpu_glm_store_compact_kv_tensor(g->layer_kv_lora_cache[il],
+-                                                     g->layer_k_rope_cache[il],
+-                                                     g->batch_kv_norm,
+-                                                     g->batch_kv_raw,
+-                                                     pos0,
+-                                                     n_tokens,
+-                                                     g->compact_cache_cap,
+-                                                     kv_raw_dim,
+-                                                     DS4_N_KV_LORA,
+-                                                     DS4_N_ROT,
+-                                                     glm_graph_compact_cache_is_f16()) != 0;
+-        }
++        if (ok) ok = glm_graph_store_ckv_exact_rows(
++            g, il, g->batch_kv_norm, g->batch_kv_raw,
++            pos0, n_tokens, kv_raw_dim);
+         DS4_GLM_PROFILE_INDEXED_STAGE("glm_indexed_attn", "kv_path");
+ 
+         if (ok && glm_graph_layer_uses_full_indexer(il)) {
+@@ -45346,7 +45678,32 @@ static bool glm_graph_forward_indexed_tokens(
+                 ok = q_view && qk_low_view && heads_view && selected_view;
+                 if (!ok) fprintf(stderr, "ds4: GLM scalar indexed prefill failed to create attention row views at layer %u token %u\n", il, t);
+                 if (ok) {
+-                    int rc = ds4_gpu_glm_attention_indexed_decode_typed_tensor(heads_view,
++                    int rc = 0;
++                    if (g->ckv_nvme_exact) {
++                        ok = glm_graph_stage_ckv_exact_selected(
++                            g, il, selected_view, 0,
++                            last_indexer_selected_count);
++                        if (ok) rc =
++                            ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
++                                heads_view, q_view, qk_low_view,
++                                g->ckv_selected_lora,
++                                g->ckv_selected_rope,
++                                model->map, model->size,
++                                l->attn_v_b->abs_offset,
++                                l->attn_v_b->type, selected_view,
++                                g->ckv_selected_ids_host,
++                                last_indexer_selected_count,
++                                g->ckv_exact_selected_rows,
++                                g->compact_cache_cap,
++                                glm_graph_compact_cache_is_f16(),
++                                DS4_N_HEAD, DS4_N_KV_LORA,
++                                (uint32_t)g->q_nope, DS4_N_ROT,
++                                DS4_N_VALUE_MLA, 0, rope_base,
++                                rope_scale, 0.0f, 1.0f,
++                                DS4_ROPE_YARN_BETA_FAST,
++                                DS4_ROPE_YARN_BETA_SLOW);
++                    } else {
++                        rc = ds4_gpu_glm_attention_indexed_decode_typed_tensor(heads_view,
+                                                                                q_view,
+                                                                                qk_low_view,
+                                                                                g->layer_kv_lora_cache[il],
+@@ -45371,6 +45728,7 @@ static bool glm_graph_forward_indexed_tokens(
+                                                                                1.0f,
+                                                                                DS4_ROPE_YARN_BETA_FAST,
+                                                                                DS4_ROPE_YARN_BETA_SLOW);
++                    }
+                     ok = rc != 0;
+                     if (!ok) fprintf(stderr, "ds4: GLM scalar indexed prefill indexed attention failed at layer %u token %u\n", il, t);
+                 }
+@@ -46281,7 +46639,8 @@ static bool glm_graph_forward_token(
+         }
+         const bool fuse_qkv_norm_store = use_indexed_attention &&
+                                          !decode_stage_profile &&
+-                                         g->compact_cache_cap != 0;
++                                         g->compact_cache_cap != 0 &&
++                                         !g->ckv_nvme_exact;
+         const bool fuse_qkv_norm = !decode_stage_profile && !fuse_qkv_norm_store;
+         if (ok && fuse_qkv_norm_store) {
+             ok = glm_graph_matmul_q8_0_decode_profiled_tensor(g->kv_raw,
+@@ -46441,17 +46800,8 @@ static bool glm_graph_forward_token(
+                                                              DS4_RMS_EPS) != 0;
+         }
+         if (ok && g->compact_cache_cap != 0 && !fuse_qkv_norm_store) {
+-            ok = ds4_gpu_glm_store_compact_kv_tensor(g->layer_kv_lora_cache[il],
+-                                                     g->layer_k_rope_cache[il],
+-                                                     g->kv_norm,
+-                                                     g->kv_raw,
+-                                                     pos,
+-                                                     1,
+-                                                     g->compact_cache_cap,
+-                                                     kv_raw_dim,
+-                                                     DS4_N_KV_LORA,
+-                                                     DS4_N_ROT,
+-                                                     glm_graph_compact_cache_is_f16()) != 0;
++            ok = glm_graph_store_ckv_exact_rows(
++                g, il, g->kv_norm, g->kv_raw, pos, 1u, kv_raw_dim);
+         }
+         if (use_indexed_attention) {
+             if (ok && glm_graph_layer_uses_full_indexer(il)) {
+@@ -46554,6 +46904,25 @@ static bool glm_graph_forward_token(
+                  * rest of the layer stays finite (timing-only). */
+                 ok = ds4_gpu_tensor_fill_f32(g->heads, 0.0f,
+                                              (uint64_t)g->heads_dim) != 0;
++            } else if (ok && g->ckv_nvme_exact) {
++                ok = glm_graph_stage_ckv_exact_selected(
++                    g, il, last_indexer_selected, 0,
++                    last_indexer_selected_count);
++                if (ok) {
++                    ok = ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
++                        g->heads, g->q, g->qk_low,
++                        g->ckv_selected_lora, g->ckv_selected_rope,
++                        model->map, model->size, l->attn_v_b->abs_offset,
++                        l->attn_v_b->type, last_indexer_selected,
++                        g->ckv_selected_ids_host,
++                        last_indexer_selected_count, g->ckv_exact_selected_rows,
++                        g->compact_cache_cap,
++                        glm_graph_compact_cache_is_f16(), DS4_N_HEAD,
++                        DS4_N_KV_LORA, (uint32_t)g->q_nope, DS4_N_ROT,
++                        DS4_N_VALUE_MLA, 0, rope_base, rope_scale,
++                        0.0f, 1.0f, DS4_ROPE_YARN_BETA_FAST,
++                        DS4_ROPE_YARN_BETA_SLOW) != 0;
++                }
+             } else if (ok && glm_graph_indexed_decode_split_group8_available(last_indexer_selected_count)) {
+                 const uint32_t split_block_rows =
+                     glm_graph_indexed_decode_split_block_rows_for(last_indexer_selected_count);
+@@ -47899,7 +48268,10 @@ static size_t engine_glm_per_layer_kv_bytes_planner(uint32_t il,
+ 
+     const uint64_t elem_bytes =
+         DS4_PLANNER_ATTN_COMP_CACHE_F16 ? sizeof(uint16_t) : sizeof(float);
+-    uint64_t row_width = (uint64_t)DS4_N_KV_LORA + DS4_N_ROT;
++    const char *ckv_nvme_exact = getenv("DS4_GLM_CKV_NVME_EXACT");
++    const bool external_ckv = ckv_nvme_exact && strcmp(ckv_nvme_exact, "1") == 0;
++    uint64_t row_width = external_ckv
++        ? 0u : (uint64_t)DS4_N_KV_LORA + DS4_N_ROT;
+     if (engine_glm_layer_uses_full_indexer(il)) {
+         row_width += DS4_N_INDEXER_HEAD_DIM;
+     }
+@@ -50302,6 +50674,7 @@ uint64_t ds4_session_payload_bytes(ds4_session *s) {
+         return 0;
+ #else
+         if (!s->glm_graph_ready) return 0;
++        if (s->glm_graph.ckv_nvme_exact) return 0;
+         const ds4_glm_gpu_graph *g = &s->glm_graph;
+         const uint32_t checkpoint_len = (uint32_t)s->checkpoint.len;
+         const uint32_t full_live =
+@@ -50369,6 +50742,14 @@ int ds4_session_stage_payload(ds4_session *s, ds4_session_payload_file *out,
+         payload_set_err(err, errlen, "session has no valid checkpoint to stage");
+         return 1;
+     }
++#ifndef DS4_NO_GPU
++    if (ds4_session_is_glm(s) && s->glm_graph_ready &&
++        s->glm_graph.ckv_nvme_exact) {
++        payload_set_err(err, errlen,
++            "external cKV checkpoint snapshot is not implemented");
++        return 1;
++    }
++#endif
+ 
+     char tmpl[] = "/tmp/ds4-session-payload.XXXXXX";
+     int fd = mkstemp(tmpl);
+@@ -50417,6 +50798,14 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
+         payload_set_err(err, errlen, "session has no valid checkpoint to save");
+         return 1;
+     }
++#ifndef DS4_NO_GPU
++    if (ds4_session_is_glm(s) && s->glm_graph_ready &&
++        s->glm_graph.ckv_nvme_exact) {
++        payload_set_err(err, errlen,
++            "external cKV checkpoint snapshot is not implemented");
++        return 1;
++    }
++#endif
+     if (s->distributed) {
+         return ds4_dist_session_save_payload(s->distributed, s, fp, err, errlen);
+     }
+@@ -50772,6 +51161,14 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+         payload_set_err(err, errlen, "invalid session payload load");
+         return 1;
+     }
++#ifndef DS4_NO_GPU
++    if (ds4_session_is_glm(s) && s->glm_graph_ready &&
++        s->glm_graph.ckv_nvme_exact) {
++        payload_set_err(err, errlen,
++            "external cKV checkpoint snapshot is not implemented");
++        return 1;
++    }
++#endif
+     if (s->distributed) {
+         return ds4_dist_session_load_payload(s->distributed, s, fp, payload_bytes, err, errlen);
+     }
+@@ -59009,6 +59406,12 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+             }
+         }
+         if (!resumed_checkpoint) {
++            if (s->glm_graph.ckv_nvme_exact &&
++                !glm_graph_ckv_exact_reset_lineage(&s->glm_graph)) {
++                snprintf(err, errlen,
++                         "GLM W8 could not create a fresh exact cKV lineage");
++                return 1;
++            }
+             s->checkpoint.len = 0;
+             s->checkpoint_valid = false;
+             s->mtp_draft_valid = false;
+diff --git a/ds4_ckvstore.c b/ds4_ckvstore.c
+new file mode 100644
+index 0000000..41758ef
+--- /dev/null
++++ b/ds4_ckvstore.c
+@@ -0,0 +1,907 @@
++#include "ds4_ckvstore.h"
++
++#include <errno.h>
++#include <fcntl.h>
++#include <stdarg.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#ifndef O_CLOEXEC
++#define O_CLOEXEC 0
++#endif
++#ifndef O_NOFOLLOW
++#define O_NOFOLLOW 0
++#endif
++
++#define CKV_VERSION 1u
++#define CKV_PAYLOAD_DIGEST_OFFSET 152u
++#define CKV_HEADER_DIGEST_OFFSET 184u
++#define CKV_DIGEST_BYTES 32u
++
++static const uint8_t ckv_magic[8] = {'D','S','4','C','K','V','1',0};
++
++typedef struct {
++    uint32_t epoch;
++    uint32_t first_row;
++    uint32_t row_count;
++    uint16_t layer_count;
++    uint64_t offset;
++    uint64_t payload_bytes;
++} ckv_record;
++
++typedef struct {
++    size_t record_index;
++    uint8_t *payload;
++    uint64_t last_use;
++    bool valid;
++} ckv_cache_entry;
++
++typedef struct {
++    uint32_t epoch;
++    size_t cache_base;
++    size_t *record_ids;
++    size_t count;
++    size_t capacity;
++    uint32_t tail_first_row;
++    uint32_t tail_row_count;
++    uint8_t *tail_payload;
++} ckv_epoch_index;
++
++typedef struct {
++    size_t record_index;
++    uint32_t output_index;
++    uint32_t row;
++} ckv_selection_item;
++
++struct ds4_ckvstore {
++    int fd;
++    int cleanup_dirfd;
++    char *cleanup_name;
++    ds4_ckvstore_config config;
++    ckv_record *records;
++    size_t record_count;
++    size_t record_capacity;
++    ckv_epoch_index *epochs;
++    size_t epoch_count;
++    size_t epoch_capacity;
++    ckv_cache_entry *cache;
++    size_t cache_capacity;
++    uint64_t use_clock;
++    uint64_t file_bytes;
++    uint64_t cache_hits;
++    uint64_t cache_misses;
++    uint64_t lookup_comparisons;
++    uint64_t sync_calls;
++    uint64_t pending_write_bytes;
++    uint64_t last_advised_offset;
++    uint64_t physical_read_bytes;
++    uint64_t checksum_failures;
++    bool failed;
++};
++
++static void set_error(char *err, size_t err_len, const char *fmt, ...) {
++    if (!err || err_len == 0) return;
++    va_list ap;
++    va_start(ap, fmt);
++    vsnprintf(err, err_len, fmt, ap);
++    va_end(ap);
++}
++
++static void put16(uint8_t *p, uint16_t v) {
++    p[0] = (uint8_t)v;
++    p[1] = (uint8_t)(v >> 8);
++}
++
++static uint16_t get16(const uint8_t *p) {
++    return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
++}
++
++static void put32(uint8_t *p, uint32_t v) {
++    for (int i = 0; i < 4; i++) p[i] = (uint8_t)(v >> (8 * i));
++}
++
++static uint32_t get32(const uint8_t *p) {
++    uint32_t v = 0;
++    for (int i = 3; i >= 0; i--) v = (v << 8) | p[i];
++    return v;
++}
++
++static void put64(uint8_t *p, uint64_t v) {
++    for (int i = 0; i < 8; i++) p[i] = (uint8_t)(v >> (8 * i));
++}
++
++static uint64_t get64(const uint8_t *p) {
++    uint64_t v = 0;
++    for (int i = 7; i >= 0; i--) v = (v << 8) | p[i];
++    return v;
++}
++
++static bool mul_u64(uint64_t a, uint64_t b, uint64_t *out) {
++    if (a != 0 && b > UINT64_MAX / a) return false;
++    *out = a * b;
++    return true;
++}
++
++/* Small dependency-free SHA-256 used to bind immutable record metadata and
++ * payload bytes. Disk fields are encoded explicitly; no C struct is persisted. */
++typedef struct {
++    uint32_t h[8];
++    uint64_t bits;
++    uint8_t block[64];
++    size_t used;
++} sha256_ctx;
++
++static uint32_t ror32(uint32_t v, unsigned n) {
++    return (v >> n) | (v << (32 - n));
++}
++
++static void sha256_transform(sha256_ctx *c, const uint8_t b[64]) {
++    static const uint32_t k[64] = {
++        0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
++        0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
++        0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
++        0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
++        0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
++        0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
++        0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
++        0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
++    };
++    uint32_t w[64];
++    for (int i = 0; i < 16; i++)
++        w[i] = ((uint32_t)b[4*i] << 24) | ((uint32_t)b[4*i+1] << 16) |
++               ((uint32_t)b[4*i+2] << 8) | b[4*i+3];
++    for (int i = 16; i < 64; i++) {
++        uint32_t s0 = ror32(w[i-15],7) ^ ror32(w[i-15],18) ^ (w[i-15] >> 3);
++        uint32_t s1 = ror32(w[i-2],17) ^ ror32(w[i-2],19) ^ (w[i-2] >> 10);
++        w[i] = w[i-16] + s0 + w[i-7] + s1;
++    }
++    uint32_t a=c->h[0], d=c->h[3], e=c->h[4], f=c->h[5], g=c->h[6], h=c->h[7];
++    uint32_t bb=c->h[1], cc=c->h[2];
++    for (int i = 0; i < 64; i++) {
++        uint32_t s1=ror32(e,6)^ror32(e,11)^ror32(e,25);
++        uint32_t ch=(e&f)^((~e)&g);
++        uint32_t t1=h+s1+ch+k[i]+w[i];
++        uint32_t s0=ror32(a,2)^ror32(a,13)^ror32(a,22);
++        uint32_t maj=(a&bb)^(a&cc)^(bb&cc);
++        uint32_t t2=s0+maj;
++        h=g; g=f; f=e; e=d+t1; d=cc; cc=bb; bb=a; a=t1+t2;
++    }
++    c->h[0]+=a; c->h[1]+=bb; c->h[2]+=cc; c->h[3]+=d;
++    c->h[4]+=e; c->h[5]+=f; c->h[6]+=g; c->h[7]+=h;
++}
++
++static void sha256_init(sha256_ctx *c) {
++    static const uint32_t initial[8] = {
++        0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
++        0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19
++    };
++    memcpy(c->h, initial, sizeof(initial));
++    c->bits = 0;
++    c->used = 0;
++}
++
++static void sha256_update(sha256_ctx *c, const void *data, size_t len) {
++    const uint8_t *p = data;
++    c->bits += (uint64_t)len * 8;
++    while (len) {
++        size_t n = 64 - c->used;
++        if (n > len) n = len;
++        memcpy(c->block + c->used, p, n);
++        c->used += n;
++        p += n;
++        len -= n;
++        if (c->used == 64) {
++            sha256_transform(c, c->block);
++            c->used = 0;
++        }
++    }
++}
++
++static void sha256_final(sha256_ctx *c, uint8_t out[32]) {
++    uint64_t bits = c->bits;
++    c->block[c->used++] = 0x80;
++    if (c->used > 56) {
++        memset(c->block + c->used, 0, 64 - c->used);
++        sha256_transform(c, c->block);
++        c->used = 0;
++    }
++    memset(c->block + c->used, 0, 56 - c->used);
++    for (int i = 0; i < 8; i++) c->block[63-i] = (uint8_t)(bits >> (8*i));
++    sha256_transform(c, c->block);
++    for (int i = 0; i < 8; i++) {
++        out[4*i]=(uint8_t)(c->h[i]>>24); out[4*i+1]=(uint8_t)(c->h[i]>>16);
++        out[4*i+2]=(uint8_t)(c->h[i]>>8); out[4*i+3]=(uint8_t)c->h[i];
++    }
++}
++
++static void payload_digest(const uint8_t *payload, size_t payload_bytes,
++                           uint8_t out[32]) {
++    sha256_ctx sha;
++    sha256_init(&sha);
++    sha256_update(&sha, payload, payload_bytes);
++    sha256_final(&sha, out);
++}
++
++static void header_digest(const uint8_t header[DS4_CKVSTORE_HEADER_BYTES],
++                          uint8_t out[32]) {
++    uint8_t copy[DS4_CKVSTORE_HEADER_BYTES];
++    memcpy(copy, header, sizeof(copy));
++    memset(copy + CKV_HEADER_DIGEST_OFFSET, 0, CKV_DIGEST_BYTES);
++    sha256_ctx sha;
++    sha256_init(&sha);
++    sha256_update(&sha, copy, sizeof(copy));
++    sha256_final(&sha, out);
++}
++
++static int pread_all(int fd, void *buf, size_t len, uint64_t off) {
++    uint8_t *p = buf;
++    while (len) {
++        ssize_t n = pread(fd, p, len, (off_t)off);
++        if (n < 0 && errno == EINTR) continue;
++        if (n < 0) return -1;
++        if (n == 0) return 1;
++        p += n; len -= (size_t)n; off += (uint64_t)n;
++    }
++    return 0;
++}
++
++static int pwrite_all(int fd, const void *buf, size_t len, uint64_t off) {
++    const uint8_t *p = buf;
++    while (len) {
++        ssize_t n = pwrite(fd, p, len, (off_t)off);
++        if (n < 0 && errno == EINTR) continue;
++        if (n <= 0) return -1;
++        p += n; len -= (size_t)n; off += (uint64_t)n;
++    }
++    return 0;
++}
++
++static bool valid_config(const ds4_ckvstore_config *c) {
++    uint64_t n;
++    if (!c || !c->row_bytes || !c->rows_per_record ||
++        !c->max_cached_records || !c->max_epochs ||
++        !c->max_file_bytes) return false;
++    if (!mul_u64(c->max_cached_records, c->max_epochs, &n) ||
++        n > SIZE_MAX / sizeof(ckv_cache_entry)) return false;
++    if (!mul_u64(c->row_bytes, c->rows_per_record, &n)) return false;
++    if (!mul_u64(n, UINT16_MAX, &n)) return false;
++    return n <= SIZE_MAX && c->max_file_bytes >= DS4_CKVSTORE_HEADER_BYTES;
++}
++
++static ckv_epoch_index *find_epoch(ds4_ckvstore *s, uint32_t epoch) {
++    for (size_t i = 0; i < s->epoch_count; i++)
++        if (s->epochs[i].epoch == epoch) return &s->epochs[i];
++    return NULL;
++}
++
++static ckv_epoch_index *ensure_epoch(ds4_ckvstore *s, uint32_t epoch_value,
++                                     char *err, size_t err_len) {
++    ckv_epoch_index *epoch = find_epoch(s, epoch_value);
++    if (epoch) return epoch;
++    if (s->epoch_count >= s->config.max_epochs) {
++        set_error(err, err_len, "cKV epoch bound reached");
++        return NULL;
++    }
++    if (s->epoch_count == s->epoch_capacity) {
++        size_t cap = s->epoch_capacity ? s->epoch_capacity * 2 : 16;
++        if (cap < s->epoch_capacity || cap > SIZE_MAX / sizeof(*s->epochs))
++            return NULL;
++        void *p = realloc(s->epochs, cap * sizeof(*s->epochs));
++        if (!p) return NULL;
++        s->epochs = p;
++        s->epoch_capacity = cap;
++    }
++    epoch = &s->epochs[s->epoch_count];
++    memset(epoch, 0, sizeof(*epoch));
++    epoch->epoch = epoch_value;
++    epoch->cache_base = s->epoch_count * s->config.max_cached_records;
++    s->epoch_count++;
++    return epoch;
++}
++
++static int add_record(ds4_ckvstore *s, const ckv_record *r,
++                      char *err, size_t err_len) {
++    if (s->record_count == s->record_capacity) {
++        size_t cap = s->record_capacity ? s->record_capacity * 2 : 64;
++        if (cap < s->record_capacity || cap > SIZE_MAX / sizeof(*s->records))
++            return -1;
++        void *p = realloc(s->records, cap * sizeof(*s->records));
++        if (!p) return -1;
++        s->records = p;
++        s->record_capacity = cap;
++    }
++    ckv_epoch_index *epoch = ensure_epoch(s, r->epoch, err, err_len);
++    if (!epoch) return s->epoch_count >= s->config.max_epochs ? -3 : -1;
++    if (epoch->count) {
++        const ckv_record *last = &s->records[epoch->record_ids[epoch->count - 1]];
++        uint64_t last_end = (uint64_t)last->first_row + last->row_count;
++        if (r->first_row < last_end) {
++            set_error(err, err_len,
++                      "cKV records must be non-overlapping and ordered per epoch");
++            return -2;
++        }
++    }
++    if (epoch->count == epoch->capacity) {
++        size_t cap = epoch->capacity ? epoch->capacity * 2 : 64;
++        if (cap < epoch->capacity || cap > SIZE_MAX / sizeof(*epoch->record_ids))
++            return -1;
++        void *p = realloc(epoch->record_ids, cap * sizeof(*epoch->record_ids));
++        if (!p) return -1;
++        epoch->record_ids = p;
++        epoch->capacity = cap;
++    }
++    epoch->record_ids[epoch->count++] = s->record_count;
++    s->records[s->record_count++] = *r;
++    return 0;
++}
++
++static void encode_header(const ds4_ckvstore *s, const ckv_record *r,
++                          uint8_t h[DS4_CKVSTORE_HEADER_BYTES]) {
++    memset(h, 0, DS4_CKVSTORE_HEADER_BYTES);
++    memcpy(h, ckv_magic, sizeof(ckv_magic));
++    put32(h+8, CKV_VERSION); put32(h+12, DS4_CKVSTORE_HEADER_BYTES);
++    put32(h+16, r->epoch); put32(h+20, r->first_row);
++    put32(h+24, r->row_count); put16(h+28, r->layer_count);
++    put32(h+32, s->config.row_bytes);
++    put32(h+36, s->config.rows_per_record);
++    put64(h+40, s->config.generation); put64(h+48, r->payload_bytes);
++    put64(h+56, DS4_CKVSTORE_HEADER_BYTES + r->payload_bytes);
++    memcpy(h+64, s->config.model_binding, 32);
++    memcpy(h+96, s->config.format_binding, 32);
++    memcpy(h+128, s->config.session_id, 16);
++    put64(h+144, (uint64_t)r->first_row + r->row_count);
++}
++
++static int decode_header(ds4_ckvstore *s, const uint8_t *h, uint64_t off,
++                         ckv_record *r, char *err, size_t err_len) {
++    uint8_t digest[CKV_DIGEST_BYTES];
++    header_digest(h, digest);
++    if (memcmp(h + CKV_HEADER_DIGEST_OFFSET, digest, sizeof(digest))) {
++        set_error(err, err_len, "cKV record header checksum mismatch at byte %llu",
++                  (unsigned long long)off);
++        return DS4_CKVSTORE_ERR_CHECKSUM;
++    }
++    if (memcmp(h, ckv_magic, 8) || get32(h+8) != CKV_VERSION ||
++        get32(h+12) != DS4_CKVSTORE_HEADER_BYTES) {
++        set_error(err, err_len, "invalid record header at byte %llu",
++                  (unsigned long long)off);
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    if (get32(h+32) != s->config.row_bytes ||
++        get32(h+36) != s->config.rows_per_record ||
++        get64(h+40) != s->config.generation ||
++        memcmp(h+64, s->config.model_binding, 32) ||
++        memcmp(h+96, s->config.format_binding, 32) ||
++        memcmp(h+128, s->config.session_id, 16)) {
++        set_error(err, err_len, "record identity mismatch at byte %llu",
++                  (unsigned long long)off);
++        return DS4_CKVSTORE_ERR_IDENTITY;
++    }
++    r->epoch=get32(h+16); r->first_row=get32(h+20);
++    r->row_count=get32(h+24); r->layer_count=get16(h+28);
++    r->offset=off; r->payload_bytes=get64(h+48);
++    uint64_t expected;
++    if (!r->row_count || r->row_count > s->config.rows_per_record ||
++        !r->layer_count ||
++        (uint64_t)r->first_row + r->row_count > UINT32_MAX ||
++        get64(h+144) != (uint64_t)r->first_row + r->row_count ||
++        !mul_u64(r->row_count, r->layer_count, &expected) ||
++        !mul_u64(expected, s->config.row_bytes, &expected) ||
++        expected != r->payload_bytes ||
++        get64(h+56) != DS4_CKVSTORE_HEADER_BYTES + expected) {
++        set_error(err, err_len, "unsafe record shape at byte %llu",
++                  (unsigned long long)off);
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    return DS4_CKVSTORE_OK;
++}
++
++static void invalidate(ds4_ckvstore *s) {
++    s->failed = true;
++    for (size_t i = 0; i < s->cache_capacity; i++) {
++        free(s->cache[i].payload);
++        memset(&s->cache[i], 0, sizeof(s->cache[i]));
++    }
++}
++
++static int ds4_ckvstore_open_impl(ds4_ckvstore **out, int dirfd,
++                                  const char *path,
++                                  const ds4_ckvstore_config *config,
++                                  bool create, char *err, size_t err_len) {
++    if (out) *out = NULL;
++    if (!out || !path || !valid_config(config)) {
++        set_error(err, err_len, "invalid cKV store configuration");
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    int flags = O_RDWR | O_CLOEXEC | O_NOFOLLOW;
++    if (create) flags |= O_CREAT | O_EXCL;
++    int fd = dirfd >= 0 ? openat(dirfd, path, flags, 0600)
++                        : open(path, flags, 0600);
++    if (fd < 0) {
++        set_error(err, err_len, "open: %s", strerror(errno));
++        return DS4_CKVSTORE_ERR_IO;
++    }
++    struct stat st;
++    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != geteuid() ||
++        st.st_nlink != 1 || (st.st_mode & 077) != 0 || st.st_size < 0) {
++        set_error(err, err_len, "unsafe cKV backing file");
++        close(fd);
++        return DS4_CKVSTORE_ERR_IO;
++    }
++    if ((uint64_t)st.st_size > config->max_file_bytes) {
++        set_error(err, err_len, "cKV file exceeds configured bound");
++        close(fd);
++        return DS4_CKVSTORE_ERR_LIMIT;
++    }
++    ds4_ckvstore *s = calloc(1, sizeof(*s));
++    if (!s) { close(fd); return DS4_CKVSTORE_ERR_IO; }
++    s->fd = fd; s->cleanup_dirfd = -1;
++    s->config = *config; s->file_bytes = (uint64_t)st.st_size;
++    s->cache_capacity =
++        (size_t)config->max_cached_records * config->max_epochs;
++    s->cache = calloc(s->cache_capacity, sizeof(*s->cache));
++    if (!s->cache) { ds4_ckvstore_close(s); return DS4_CKVSTORE_ERR_IO; }
++
++    uint64_t off = 0;
++    while (off < s->file_bytes) {
++        if (s->file_bytes - off < DS4_CKVSTORE_HEADER_BYTES) {
++            set_error(err, err_len, "truncated record header");
++            ds4_ckvstore_close(s); return DS4_CKVSTORE_ERR_TRUNCATED;
++        }
++        uint8_t h[DS4_CKVSTORE_HEADER_BYTES];
++        int rr = pread_all(fd, h, sizeof(h), off);
++        if (rr != 0) { ds4_ckvstore_close(s); return rr > 0 ? DS4_CKVSTORE_ERR_TRUNCATED : DS4_CKVSTORE_ERR_IO; }
++        ckv_record r;
++        int rc = decode_header(s, h, off, &r, err, err_len);
++        if (rc != 0) { ds4_ckvstore_close(s); return rc; }
++        uint64_t end = off + DS4_CKVSTORE_HEADER_BYTES + r.payload_bytes;
++        if (end < off || end > s->file_bytes) {
++            set_error(err, err_len, "truncated record payload");
++            ds4_ckvstore_close(s); return DS4_CKVSTORE_ERR_TRUNCATED;
++        }
++        int ar = add_record(s, &r, err, err_len);
++        if (ar != 0) {
++            ds4_ckvstore_close(s);
++            return ar == -2 ? DS4_CKVSTORE_ERR_INVALID :
++                   ar == -3 ? DS4_CKVSTORE_ERR_LIMIT : DS4_CKVSTORE_ERR_IO;
++        }
++        off = end;
++    }
++    *out = s;
++    return DS4_CKVSTORE_OK;
++}
++
++int ds4_ckvstore_open(ds4_ckvstore **out, const char *path,
++                      const ds4_ckvstore_config *config, bool create,
++                      char *err, size_t err_len) {
++    return ds4_ckvstore_open_impl(out, -1, path, config, create,
++                                  err, err_len);
++}
++
++int ds4_ckvstore_create_request(ds4_ckvstore **out, const char *directory,
++                                const ds4_ckvstore_config *config,
++                                char *created_path, size_t created_path_len,
++                                char *err, size_t err_len) {
++    if (out) *out = NULL;
++    if (created_path && created_path_len) created_path[0] = '\0';
++    if (!out || !directory || !directory[0] || !created_path ||
++        !created_path_len || !valid_config(config)) {
++        set_error(err, err_len, "invalid request-store configuration");
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    int dirfd = open(directory, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_DIRECTORY);
++    if (dirfd < 0) {
++        set_error(err, err_len, "open request directory: %s", strerror(errno));
++        return DS4_CKVSTORE_ERR_IO;
++    }
++    struct stat st;
++    if (fstat(dirfd, &st) != 0 || !S_ISDIR(st.st_mode) ||
++        st.st_uid != geteuid() || (st.st_mode & 077) != 0) {
++        set_error(err, err_len, "unsafe cKV request directory");
++        close(dirfd);
++        return DS4_CKVSTORE_ERR_IO;
++    }
++    static const char hex[] = "0123456789abcdef";
++    char name[4 + 2 * sizeof(config->session_id) + 5];
++    memcpy(name, "ckv-", 4);
++    for (size_t i = 0; i < sizeof(config->session_id); i++) {
++        name[4 + 2 * i] = hex[config->session_id[i] >> 4];
++        name[5 + 2 * i] = hex[config->session_id[i] & 15u];
++    }
++    memcpy(name + 4 + 2 * sizeof(config->session_id), ".bin", 5);
++    int n = snprintf(created_path, created_path_len, "%s/%s", directory, name);
++    if (n < 0 || (size_t)n >= created_path_len) {
++        set_error(err, err_len, "request-store path is too long");
++        created_path[0] = '\0';
++        close(dirfd);
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    int rc = ds4_ckvstore_open_impl(out, dirfd, name, config, true,
++                                    err, err_len);
++    if (rc != DS4_CKVSTORE_OK) {
++        created_path[0] = '\0';
++        close(dirfd);
++        return rc;
++    }
++    /* The request store is ephemeral working state, not evidence.  Remove its
++     * directory entry immediately while retaining the open descriptor.  The
++     * kernel then reclaims it on normal close, SIGKILL, or process crash, and
++     * no later pathname cleanup can race or target an unrelated file. */
++    if (unlinkat(dirfd, name, 0) != 0) {
++        set_error(err, err_len, "anonymize request store: %s", strerror(errno));
++        ds4_ckvstore_close(*out);
++        *out = NULL;
++        (void)unlinkat(dirfd, name, 0);
++        close(dirfd);
++        created_path[0] = '\0';
++        return DS4_CKVSTORE_ERR_IO;
++    }
++    close(dirfd);
++    return DS4_CKVSTORE_OK;
++}
++
++static int put_record(ds4_ckvstore *s, uint32_t epoch,
++                      uint32_t first_row, uint32_t row_count,
++                      uint16_t layer_count, const void *payload,
++                      size_t payload_bytes, char *err, size_t err_len) {
++    if (!s || s->failed) return DS4_CKVSTORE_ERR_FAILED;
++    ckv_record r = {.epoch=epoch,.first_row=first_row,.row_count=row_count,
++                    .layer_count=layer_count,.offset=s->file_bytes,
++                    .payload_bytes=payload_bytes};
++    uint64_t expected;
++    if (!payload || !row_count || row_count > s->config.rows_per_record ||
++        !layer_count ||
++        (uint64_t)first_row + row_count > UINT32_MAX ||
++        !mul_u64(row_count, layer_count, &expected) ||
++        !mul_u64(expected, s->config.row_bytes, &expected) ||
++        expected != payload_bytes) {
++        set_error(err, err_len, "invalid cKV record shape");
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    ckv_epoch_index *epoch_index = find_epoch(s, epoch);
++    if (epoch_index && epoch_index->count) {
++        const ckv_record *last =
++            &s->records[epoch_index->record_ids[epoch_index->count - 1]];
++        if (first_row < (uint64_t)last->first_row + last->row_count) {
++            set_error(err, err_len,
++                      "cKV records must be non-overlapping and ordered per epoch");
++            return DS4_CKVSTORE_ERR_INVALID;
++        }
++    }
++    uint64_t record_bytes=DS4_CKVSTORE_HEADER_BYTES+expected;
++    if (record_bytes < expected || record_bytes > s->config.max_file_bytes ||
++        s->file_bytes > s->config.max_file_bytes-record_bytes) {
++        set_error(err, err_len, "cKV file bound reached");
++        return DS4_CKVSTORE_ERR_LIMIT;
++    }
++    uint8_t h[DS4_CKVSTORE_HEADER_BYTES], digest[32];
++    encode_header(s, &r, h);
++    payload_digest(payload, payload_bytes, digest);
++    memcpy(h+CKV_PAYLOAD_DIGEST_OFFSET, digest, sizeof(digest));
++    header_digest(h, digest);
++    memcpy(h+CKV_HEADER_DIGEST_OFFSET, digest, sizeof(digest));
++    if (pwrite_all(s->fd, h, sizeof(h), s->file_bytes) != 0 ||
++        pwrite_all(s->fd, payload, payload_bytes,
++                   s->file_bytes+DS4_CKVSTORE_HEADER_BYTES) != 0) {
++        set_error(err, err_len, "cKV append failed: %s", strerror(errno));
++        invalidate(s);
++        return DS4_CKVSTORE_ERR_IO;
++    }
++    const uint64_t new_file_bytes = s->file_bytes + record_bytes;
++    if (s->pending_write_bytes > UINT64_MAX - record_bytes) {
++        set_error(err, err_len, "cKV pending-write accounting overflow");
++        invalidate(s);
++        return DS4_CKVSTORE_ERR_LIMIT;
++    }
++    s->pending_write_bytes += record_bytes;
++    if (s->config.sync_interval_bytes == 0 ||
++        s->pending_write_bytes >= s->config.sync_interval_bytes) {
++        if (fdatasync(s->fd) != 0) {
++            set_error(err, err_len, "cKV group commit failed: %s",
++                      strerror(errno));
++            invalidate(s);
++            return DS4_CKVSTORE_ERR_IO;
++        }
++        s->sync_calls++;
++#ifdef POSIX_FADV_DONTNEED
++        if (new_file_bytes > s->last_advised_offset) {
++            (void)posix_fadvise(s->fd, (off_t)s->last_advised_offset,
++                                (off_t)(new_file_bytes - s->last_advised_offset),
++                                POSIX_FADV_DONTNEED);
++        }
++#endif
++        s->last_advised_offset = new_file_bytes;
++        s->pending_write_bytes = 0;
++    }
++    int ar = add_record(s, &r, err, err_len);
++    if (ar != 0) {
++        if (ar == -2) return DS4_CKVSTORE_ERR_INVALID;
++        if (ar == -3) return DS4_CKVSTORE_ERR_LIMIT;
++        invalidate(s); return DS4_CKVSTORE_ERR_IO;
++    }
++    s->file_bytes += record_bytes;
++    return DS4_CKVSTORE_OK;
++}
++
++int ds4_ckvstore_put(ds4_ckvstore *s, uint32_t epoch,
++                     uint32_t first_row, uint32_t row_count,
++                     uint16_t layer_count, const void *payload,
++                     size_t payload_bytes, char *err, size_t err_len) {
++    if (!s || s->failed) return DS4_CKVSTORE_ERR_FAILED;
++    if (!s->config.buffer_tail_rows)
++        return put_record(s, epoch, first_row, row_count, layer_count,
++                          payload, payload_bytes, err, err_len);
++    uint64_t expected;
++    if (!payload || !row_count ||
++        layer_count != 1u ||
++        (uint64_t)first_row + row_count > UINT32_MAX ||
++        !mul_u64(row_count, s->config.row_bytes, &expected) ||
++        expected != payload_bytes) {
++        set_error(err, err_len, "invalid buffered cKV row shape");
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    ckv_epoch_index *index = ensure_epoch(s, epoch, err, err_len);
++    if (!index) return s->epoch_count >= s->config.max_epochs
++        ? DS4_CKVSTORE_ERR_LIMIT : DS4_CKVSTORE_ERR_IO;
++    uint64_t expected_first = first_row;
++    if (index->tail_row_count) {
++        expected_first = (uint64_t)index->tail_first_row + index->tail_row_count;
++    } else if (index->count) {
++        const ckv_record *last =
++            &s->records[index->record_ids[index->count - 1]];
++        expected_first = (uint64_t)last->first_row + last->row_count;
++    }
++    if (first_row != expected_first) {
++        set_error(err, err_len, "buffered cKV rows must be contiguous");
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    if (!index->tail_payload) {
++        uint64_t capacity_bytes;
++        if (!mul_u64(s->config.rows_per_record, s->config.row_bytes,
++                     &capacity_bytes) || capacity_bytes > SIZE_MAX) {
++            return DS4_CKVSTORE_ERR_INVALID;
++        }
++        index->tail_payload = malloc((size_t)capacity_bytes);
++        if (!index->tail_payload) return DS4_CKVSTORE_ERR_IO;
++    }
++    const uint8_t *source = payload;
++    uint32_t consumed = 0;
++    while (consumed < row_count) {
++        if (index->tail_row_count == 0)
++            index->tail_first_row = first_row + consumed;
++        uint32_t take = s->config.rows_per_record - index->tail_row_count;
++        if (take > row_count - consumed) take = row_count - consumed;
++        memcpy(index->tail_payload +
++                   (uint64_t)index->tail_row_count * s->config.row_bytes,
++               source + (uint64_t)consumed * s->config.row_bytes,
++               (size_t)((uint64_t)take * s->config.row_bytes));
++        index->tail_row_count += take;
++        consumed += take;
++        if (index->tail_row_count == s->config.rows_per_record) {
++            const size_t bytes =
++                (size_t)((uint64_t)index->tail_row_count * s->config.row_bytes);
++            int rc = put_record(s, epoch, index->tail_first_row,
++                                index->tail_row_count, 1u,
++                                index->tail_payload, bytes, err, err_len);
++            if (rc != DS4_CKVSTORE_OK) return rc;
++            index->tail_row_count = 0;
++        }
++    }
++    return DS4_CKVSTORE_OK;
++}
++
++static int load_record(ds4_ckvstore *s, size_t idx, uint8_t **out,
++                       char *err, size_t err_len) {
++    ckv_epoch_index *epoch = find_epoch(s, s->records[idx].epoch);
++    if (!epoch) return DS4_CKVSTORE_ERR_FAILED;
++    const size_t first = epoch->cache_base;
++    const size_t end = first + s->config.max_cached_records;
++    for (size_t i=first; i<end; i++) {
++        if (s->cache[i].valid && s->cache[i].record_index == idx) {
++            s->cache[i].last_use=++s->use_clock; s->cache_hits++; *out=s->cache[i].payload;
++            return DS4_CKVSTORE_OK;
++        }
++    }
++    s->cache_misses++;
++    ckv_record *r=&s->records[idx];
++    uint8_t h[DS4_CKVSTORE_HEADER_BYTES];
++    uint8_t *payload=malloc((size_t)r->payload_bytes);
++    if (!payload) return DS4_CKVSTORE_ERR_IO;
++    int rh=pread_all(s->fd,h,sizeof(h),r->offset);
++    int rp=rh ? rh : pread_all(s->fd,payload,(size_t)r->payload_bytes,
++                              r->offset+DS4_CKVSTORE_HEADER_BYTES);
++    if (rp != 0) {
++        free(payload); invalidate(s); set_error(err,err_len,"short or failed cKV read");
++        return rp > 0 ? DS4_CKVSTORE_ERR_TRUNCATED : DS4_CKVSTORE_ERR_IO;
++    }
++    s->physical_read_bytes += sizeof(h)+r->payload_bytes;
++    ckv_record current;
++    int rc=decode_header(s,h,r->offset,&current,err,err_len);
++    if (rc || current.epoch!=r->epoch || current.first_row!=r->first_row ||
++        current.row_count!=r->row_count || current.layer_count!=r->layer_count) {
++        free(payload); invalidate(s); return rc ? rc : DS4_CKVSTORE_ERR_IDENTITY;
++    }
++    uint8_t digest[32]; payload_digest(payload,(size_t)r->payload_bytes,digest);
++    if (memcmp(digest,h+CKV_PAYLOAD_DIGEST_OFFSET,32)) {
++        free(payload); s->checksum_failures++; invalidate(s);
++        set_error(err,err_len,"cKV record checksum mismatch");
++        return DS4_CKVSTORE_ERR_CHECKSUM;
++    }
++    size_t victim=first;
++    for (size_t i=first;i<end;i++) {
++        if (!s->cache[i].valid) { victim=i; break; }
++        if (s->cache[i].last_use < s->cache[victim].last_use) victim=i;
++    }
++    free(s->cache[victim].payload);
++    s->cache[victim]=(ckv_cache_entry){.record_index=idx,.payload=payload,
++                                      .last_use=++s->use_clock,.valid=true};
++    *out=payload;
++    return DS4_CKVSTORE_OK;
++}
++
++static ssize_t find_record(ds4_ckvstore *s, uint32_t epoch, uint32_t row) {
++    ckv_epoch_index *index = find_epoch(s, epoch);
++    if (!index) return -1;
++    size_t lo = 0, hi = index->count;
++    while (lo < hi) {
++        size_t mid = lo + (hi - lo) / 2;
++        const ckv_record *r = &s->records[index->record_ids[mid]];
++        s->lookup_comparisons++;
++        if (row < r->first_row) {
++            hi = mid;
++        } else if ((uint64_t)row >= (uint64_t)r->first_row + r->row_count) {
++            lo = mid + 1;
++        } else {
++            return (ssize_t)index->record_ids[mid];
++        }
++    }
++    return -1;
++}
++
++static int compare_selection_items(const void *a, const void *b) {
++    const ckv_selection_item *aa = a;
++    const ckv_selection_item *bb = b;
++    if (aa->record_index < bb->record_index) return -1;
++    if (aa->record_index > bb->record_index) return 1;
++    if (aa->output_index < bb->output_index) return -1;
++    if (aa->output_index > bb->output_index) return 1;
++    return 0;
++}
++
++static int read_selected_flat(ds4_ckvstore *s, uint32_t epoch,
++                              uint16_t layer, const uint32_t *rows,
++                              uint32_t count, uint32_t max_count,
++                              void *output, size_t output_bytes,
++                              char *err, size_t err_len) {
++    if (!s || s->failed) return DS4_CKVSTORE_ERR_FAILED;
++    uint64_t needed;
++    if (!rows || !output || !count || count>max_count ||
++        !mul_u64(count,s->config.row_bytes,&needed) || needed>output_bytes) {
++        set_error(err,err_len,"invalid selected-row request");
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    ckv_selection_item *items=malloc(count*sizeof(*items));
++    uint8_t *tmp=malloc((size_t)needed);
++    if (!items || !tmp) { free(items); free(tmp); return DS4_CKVSTORE_ERR_IO; }
++    ckv_epoch_index *epoch_index = find_epoch(s, epoch);
++    for (uint32_t i=0;i<count;i++) {
++        ssize_t record_id=find_record(s,epoch,rows[i]);
++        bool in_tail = record_id < 0 && epoch_index && layer == 0u &&
++            rows[i] >= epoch_index->tail_first_row &&
++            (uint64_t)rows[i] < (uint64_t)epoch_index->tail_first_row +
++                                epoch_index->tail_row_count;
++        if ((!in_tail && record_id<0) ||
++            (record_id>=0 && layer>=s->records[record_id].layer_count)) {
++            free(items); free(tmp); set_error(err,err_len,"required cKV row is absent");
++            return DS4_CKVSTORE_ERR_NOT_FOUND;
++        }
++        items[i]=(ckv_selection_item){.record_index=in_tail ? SIZE_MAX :
++                                                        (size_t)record_id,
++                                     .output_index=i,.row=rows[i]};
++    }
++    qsort(items,count,sizeof(*items),compare_selection_items);
++    for (uint32_t first=0;first<count;) {
++        uint32_t end=first+1;
++        while (end<count && items[end].record_index==items[first].record_index)
++            end++;
++        if (items[first].record_index == SIZE_MAX) {
++            for (uint32_t i=first;i<end;i++) {
++                uint64_t local =
++                    (uint64_t)(items[i].row - epoch_index->tail_first_row);
++                memcpy(tmp +
++                           (uint64_t)items[i].output_index * s->config.row_bytes,
++                       epoch_index->tail_payload + local * s->config.row_bytes,
++                       s->config.row_bytes);
++            }
++            first=end;
++            continue;
++        }
++        ckv_record *r=&s->records[items[first].record_index];
++        uint8_t *payload=NULL;
++        int rc=load_record(s,items[first].record_index,&payload,err,err_len);
++        if (rc) { free(items); free(tmp); return rc; }
++        for (uint32_t i=first;i<end;i++) {
++            uint64_t local=(uint64_t)(items[i].row-r->first_row);
++            uint64_t source=((uint64_t)layer*r->row_count+local)*s->config.row_bytes;
++            memcpy(tmp+(uint64_t)items[i].output_index*s->config.row_bytes,
++                   payload+source,s->config.row_bytes);
++        }
++        first=end;
++    }
++    memcpy(output,tmp,(size_t)needed);
++    free(items); free(tmp);
++    return DS4_CKVSTORE_OK;
++}
++
++int ds4_ckvstore_read_selected(ds4_ckvstore *s, uint32_t epoch,
++                               uint16_t layer, const uint32_t *rows,
++                               uint32_t count, void *output,
++                               size_t output_bytes, char *err,
++                               size_t err_len) {
++    return read_selected_flat(s, epoch, layer, rows, count,
++                              DS4_CKVSTORE_MAX_SELECTED_ROWS,
++                              output, output_bytes, err, err_len);
++}
++
++int ds4_ckvstore_read_selected_batch(ds4_ckvstore *s, uint32_t epoch,
++                                     uint16_t layer, const uint32_t *rows,
++                                     uint32_t query_count,
++                                     uint32_t rows_per_query,
++                                     void *output, size_t output_bytes,
++                                     char *err, size_t err_len) {
++    uint64_t count64;
++    if (!query_count || query_count > DS4_CKVSTORE_MAX_BATCH_QUERIES ||
++        !rows_per_query ||
++        rows_per_query > DS4_CKVSTORE_MAX_SELECTED_ROWS ||
++        !mul_u64(query_count, rows_per_query, &count64) ||
++        count64 > UINT32_MAX) {
++        set_error(err, err_len, "invalid batched selected-row request");
++        return DS4_CKVSTORE_ERR_INVALID;
++    }
++    return read_selected_flat(
++        s, epoch, layer, rows, (uint32_t)count64,
++        DS4_CKVSTORE_MAX_BATCH_QUERIES * DS4_CKVSTORE_MAX_SELECTED_ROWS,
++        output, output_bytes, err, err_len);
++}
++
++void ds4_ckvstore_get_stats(const ds4_ckvstore *s, ds4_ckvstore_stats *out) {
++    if (!out) return;
++    memset(out,0,sizeof(*out));
++    if (!s) return;
++    out->records=s->record_count; out->file_bytes=s->file_bytes;
++    out->cache_hits=s->cache_hits; out->cache_misses=s->cache_misses;
++    out->lookup_comparisons=s->lookup_comparisons;
++    out->sync_calls=s->sync_calls;
++    out->pending_write_bytes=s->pending_write_bytes;
++    out->physical_read_bytes=s->physical_read_bytes;
++    out->checksum_failures=s->checksum_failures;
++    for (size_t i=0;i<s->epoch_count;i++) {
++        out->pending_rows += s->epochs[i].tail_row_count;
++        out->pending_row_bytes +=
++            (uint64_t)s->epochs[i].tail_row_count * s->config.row_bytes;
++    }
++    for (size_t i=0;i<s->cache_capacity;i++) if (s->cache[i].valid) {
++        out->cache_records++;
++        out->cache_bytes+=s->records[s->cache[i].record_index].payload_bytes;
++    }
++}
++
++void ds4_ckvstore_close(ds4_ckvstore *s) {
++    if (!s) return;
++    if (s->fd>=0) close(s->fd);
++    if (s->cleanup_name && s->cleanup_dirfd >= 0)
++        (void)unlinkat(s->cleanup_dirfd, s->cleanup_name, 0);
++    if (s->cleanup_dirfd >= 0) close(s->cleanup_dirfd);
++    if (s->cache) for (size_t i=0;i<s->cache_capacity;i++)
++        free(s->cache[i].payload);
++    for (size_t i=0;i<s->epoch_count;i++) {
++        free(s->epochs[i].tail_payload);
++        free(s->epochs[i].record_ids);
++    }
++    free(s->cleanup_name); free(s->epochs); free(s->cache); free(s->records);
++    free(s);
++}
+diff --git a/ds4_ckvstore.h b/ds4_ckvstore.h
+new file mode 100644
+index 0000000..5382daa
+--- /dev/null
++++ b/ds4_ckvstore.h
+@@ -0,0 +1,86 @@
++#ifndef DS4_CKVSTORE_H
++#define DS4_CKVSTORE_H
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <stdint.h>
++
++#define DS4_CKVSTORE_HEADER_BYTES 256u
++#define DS4_CKVSTORE_MAX_SELECTED_ROWS 2048u
++#define DS4_CKVSTORE_MAX_BATCH_QUERIES 8u
++
++typedef enum {
++    DS4_CKVSTORE_OK = 0,
++    DS4_CKVSTORE_ERR_INVALID = -1,
++    DS4_CKVSTORE_ERR_IO = -2,
++    DS4_CKVSTORE_ERR_TRUNCATED = -3,
++    DS4_CKVSTORE_ERR_CHECKSUM = -4,
++    DS4_CKVSTORE_ERR_IDENTITY = -5,
++    DS4_CKVSTORE_ERR_NOT_FOUND = -6,
++    DS4_CKVSTORE_ERR_FAILED = -7,
++    DS4_CKVSTORE_ERR_LIMIT = -8,
++} ds4_ckvstore_status;
++
++typedef struct {
++    uint32_t row_bytes;
++    uint32_t rows_per_record;
++    uint32_t max_cached_records;
++    uint32_t max_epochs;
++    uint64_t generation;
++    uint64_t max_file_bytes;
++    uint64_t sync_interval_bytes;
++    bool buffer_tail_rows;
++    uint8_t model_binding[32];
++    uint8_t format_binding[32];
++    uint8_t session_id[16];
++} ds4_ckvstore_config;
++
++typedef struct {
++    uint64_t records;
++    uint64_t file_bytes;
++    uint64_t cache_records;
++    uint64_t cache_bytes;
++    uint64_t cache_hits;
++    uint64_t cache_misses;
++    uint64_t lookup_comparisons;
++    uint64_t sync_calls;
++    uint64_t pending_write_bytes;
++    uint64_t pending_rows;
++    uint64_t pending_row_bytes;
++    uint64_t physical_read_bytes;
++    uint64_t checksum_failures;
++} ds4_ckvstore_stats;
++
++typedef struct ds4_ckvstore ds4_ckvstore;
++
++int ds4_ckvstore_open(ds4_ckvstore **out, const char *path,
++                      const ds4_ckvstore_config *config, bool create,
++                      char *err, size_t err_len);
++int ds4_ckvstore_create_request(ds4_ckvstore **out, const char *directory,
++                                const ds4_ckvstore_config *config,
++                                char *created_path, size_t created_path_len,
++                                char *err, size_t err_len);
++int ds4_ckvstore_put(ds4_ckvstore *store, uint32_t selection_epoch,
++                     uint32_t first_row, uint32_t row_count,
++                     uint16_t layer_count, const void *payload,
++                     size_t payload_bytes, char *err, size_t err_len);
++int ds4_ckvstore_read_selected(ds4_ckvstore *store,
++                               uint32_t selection_epoch,
++                               uint16_t layer,
++                               const uint32_t *logical_rows,
++                               uint32_t selected_count,
++                               void *output, size_t output_bytes,
++                               char *err, size_t err_len);
++int ds4_ckvstore_read_selected_batch(ds4_ckvstore *store,
++                                     uint32_t selection_epoch,
++                                     uint16_t layer,
++                                     const uint32_t *logical_rows,
++                                     uint32_t query_count,
++                                     uint32_t rows_per_query,
++                                     void *output, size_t output_bytes,
++                                     char *err, size_t err_len);
++void ds4_ckvstore_get_stats(const ds4_ckvstore *store,
++                            ds4_ckvstore_stats *out);
++void ds4_ckvstore_close(ds4_ckvstore *store);
++
++#endif
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index ba5d339..0de28ff 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -2402,6 +2402,17 @@ extern "C" void ds4_gpu_tensor_free_in_place(ds4_gpu_tensor *t) {
+     t->owner = 0;
+ }
+ 
++extern "C" int ds4_gpu_host_alloc_pinned(void **out, uint64_t bytes) {
++    if (out) *out = NULL;
++    if (!out || bytes == 0u || bytes > SIZE_MAX) return 0;
++    return cuda_ok(cudaHostAlloc(out, (size_t)bytes, cudaHostAllocPortable),
++                   "persistent pinned host allocation");
++}
++
++extern "C" void ds4_gpu_host_free_pinned(void *ptr) {
++    if (ptr) (void)cudaFreeHost(ptr);
++}
++
+ extern "C" ds4_gpu_tensor *ds4_gpu_tensor_alloc(uint64_t bytes) {
+     ds4_gpu_tensor *t = (ds4_gpu_tensor *)calloc(1, sizeof(*t));
+     if (!t) return NULL;
+@@ -26663,6 +26674,148 @@ __global__ static void glm_attention_decode_lora_staged_kernel(
+     out[1] = acc1 / denom[head_index];
+ }
+ 
++/* Exact W8 direct-slot attention separates the logical token position used
++ * by RoPE from the physical row in the bounded selected-row stage.  The score,
++ * softmax, latent accumulation, and value projection keep the resident F32
++ * path's operation order. */
++template <typename CT>
++__global__ static void glm_attention_decode_weights_direct_kernel(
++        float *weights,
++        float *denom,
++        const float *q,
++        const float *qk_low,
++        const CT *kv_lora_stage,
++        const CT *k_rope_stage,
++        const uint32_t *logical_selected,
++        uint32_t n_selected,
++        uint32_t stage_cap,
++        uint32_t logical_cap,
++        uint32_t n_head,
++        uint32_t kv_lora_dim,
++        uint32_t qk_nope,
++        uint32_t qk_rope,
++        float scale,
++        uint32_t n_ctx_orig,
++        float freq_base,
++        float freq_scale,
++        float ext_factor,
++        float attn_factor,
++        float beta_fast,
++        float beta_slow,
++        bool score_vec2) {
++    const uint32_t head = blockIdx.x;
++    const uint32_t tid = threadIdx.x;
++    const uint32_t nth = blockDim.x;
++    if (head >= n_head || n_selected == 0u) return;
++    const uint32_t qk_dim = qk_nope + qk_rope;
++    extern __shared__ float sh[];
++    float *red = sh;
++    float *scores = sh + 256u;
++    const float *qh = q + (uint64_t)head * qk_dim;
++    const float *low = qk_low + (uint64_t)head * kv_lora_dim;
++    float corr_dims[2] = {0.0f, 0.0f};
++    if (ext_factor != 0.0f) {
++        corr_dims[0] = fmaxf(0.0f,
++            floorf(glm_rope_yarn_corr_factor_dev((int)qk_rope,
++                    (int)n_ctx_orig, beta_fast, freq_base)));
++        corr_dims[1] = fminf((float)qk_rope - 1.0f,
++            ceilf(glm_rope_yarn_corr_factor_dev((int)qk_rope,
++                    (int)n_ctx_orig, beta_slow, freq_base)));
++    }
++    float local_max = -FLT_MAX;
++    for (uint32_t s = tid; s < n_selected; s += nth) {
++        const uint32_t logical_row = logical_selected[s];
++        const uint32_t physical_row = s;
++        float score = -FLT_MAX;
++        if (logical_row < logical_cap && physical_row < stage_cap) {
++            float dotv = 0.0f;
++            const uint64_t lora_base =
++                (uint64_t)physical_row * kv_lora_dim;
++            if (score_vec2) {
++                for (uint32_t j = 0; j < kv_lora_dim; j += 2u) {
++                    const float2 x = *(const float2 *)(low + j);
++                    const float2 y = glm_cache_value_pair_dev(
++                        kv_lora_stage + lora_base + j);
++                    dotv += x.x * y.x;
++                    dotv += x.y * y.y;
++                }
++            } else {
++                for (uint32_t j = 0; j < kv_lora_dim; j++) {
++                    dotv += low[j] *
++                        (float)kv_lora_stage[lora_base + j];
++                }
++            }
++            const uint64_t rope_base =
++                (uint64_t)physical_row * qk_rope;
++            for (uint32_t r = 0; r < qk_rope; r += 2u) {
++                const float2 y = glm_cache_rope_pair_f16_dev<CT>(
++                    k_rope_stage, rope_base, r, logical_row, qk_rope,
++                    freq_base, freq_scale, ext_factor, attn_factor,
++                    corr_dims);
++                dotv += qh[qk_nope + r] * y.x +
++                        qh[qk_nope + r + 1u] * y.y;
++            }
++            score = dotv * scale;
++        }
++        scores[s] = score;
++        local_max = fmaxf(local_max, score);
++    }
++    red[tid] = local_max;
++    __syncthreads();
++    for (uint32_t step = nth >> 1; step > 0; step >>= 1) {
++        if (tid < step) red[tid] = fmaxf(red[tid], red[tid + step]);
++        __syncthreads();
++    }
++    const float max_score = red[0];
++    __syncthreads();
++    float local_sum = 0.0f;
++    for (uint32_t s = tid; s < n_selected; s += nth) {
++        const float w = expf(scores[s] - max_score);
++        scores[s] = w;
++        local_sum += w;
++    }
++    red[tid] = local_sum;
++    __syncthreads();
++    for (uint32_t step = nth >> 1; step > 0; step >>= 1) {
++        if (tid < step) red[tid] += red[tid + step];
++        __syncthreads();
++    }
++    if (tid == 0u) denom[head] = fmaxf(red[0], 1.0e-20f);
++    float *head_weights = weights + (uint64_t)head * n_selected;
++    for (uint32_t s = tid; s < n_selected; s += nth) {
++        head_weights[s] = scores[s];
++    }
++}
++
++template <typename CT>
++__global__ static void glm_attention_decode_lora_direct_kernel(
++        float *lora_sum,
++        const float *scores,
++        const float *denom,
++        const CT *kv_lora_stage,
++        uint32_t n_selected,
++        uint32_t stage_cap,
++        uint32_t n_head,
++        uint32_t kv_lora_dim) {
++    const uint32_t head = blockIdx.y;
++    const uint32_t pair = blockIdx.x * blockDim.x + threadIdx.x;
++    const uint32_t j = pair * 2u;
++    if (head >= n_head || j >= kv_lora_dim) return;
++    const float *head_scores = scores + (uint64_t)head * n_selected;
++    float acc0 = 0.0f;
++    float acc1 = 0.0f;
++    for (uint32_t s = 0; s < n_selected && s < stage_cap; s++) {
++        const float2 v = glm_cache_value_pair_dev(
++            kv_lora_stage + (uint64_t)s * kv_lora_dim + j);
++        const float w = head_scores[s];
++        acc0 += w * v.x;
++        acc1 += w * v.y;
++    }
++    float *out = lora_sum + (uint64_t)head * kv_lora_dim + j;
++    out[0] = acc0 / denom[head];
++    out[1] = acc1 / denom[head];
++}
++
+ template <bool TOK2 = false>
+ __global__ static void glm_attention_decode_value_staged_kernel(
+         float *heads,
+@@ -27156,6 +27309,140 @@ extern "C" int ds4_gpu_glm_attention_indexed_decode_typed_tensor(
+     return cuda_ok(cudaGetLastError(), "glm indexed decode attention");
+ }
+ 
++extern "C" int ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
++        ds4_gpu_tensor       *heads,
++        const ds4_gpu_tensor *q,
++        const ds4_gpu_tensor *qk_low,
++        const ds4_gpu_tensor *staged_kv_lora,
++        const ds4_gpu_tensor *staged_k_rope,
++        const void           *model_map,
++        uint64_t              model_size,
++        uint64_t              value_weight_offset,
++        uint32_t              value_weight_type,
++        const ds4_gpu_tensor *logical_selected,
++        const uint32_t       *logical_selected_host,
++        uint32_t              n_selected,
++        uint32_t              stage_cap,
++        uint32_t              logical_cap,
++        bool                  cache_f16,
++        uint32_t              n_head,
++        uint32_t              kv_lora_dim,
++        uint32_t              qk_nope,
++        uint32_t              qk_rope,
++        uint32_t              value_dim,
++        uint32_t              n_ctx_orig,
++        float                 freq_base,
++        float                 freq_scale,
++        float                 ext_factor,
++        float                 attn_factor,
++        float                 beta_fast,
++        float                 beta_slow) {
++    const uint32_t qk_dim = qk_nope + qk_rope;
++    const uint64_t cache_elem = cache_f16 ? sizeof(__half) : sizeof(float);
++    if (!heads || !q || !qk_low || !staged_kv_lora || !staged_k_rope ||
++        !model_map || !logical_selected || !logical_selected_host ||
++        value_weight_type != 8u ||
++        n_selected == 0u || n_selected > 2048u || stage_cap < n_selected ||
++        logical_cap == 0u || n_head == 0u || kv_lora_dim == 0u ||
++        (kv_lora_dim & 31u) != 0u || qk_nope == 0u || qk_rope == 0u ||
++        (qk_rope & 1u) != 0u || value_dim == 0u ||
++        heads->bytes < (uint64_t)n_head * value_dim * sizeof(float) ||
++        q->bytes < (uint64_t)n_head * qk_dim * sizeof(float) ||
++        qk_low->bytes < (uint64_t)n_head * kv_lora_dim * sizeof(float) ||
++        staged_kv_lora->bytes <
++            (uint64_t)stage_cap * kv_lora_dim * cache_elem ||
++        staged_k_rope->bytes <
++            (uint64_t)stage_cap * qk_rope * cache_elem ||
++        logical_selected->bytes <
++            (uint64_t)n_selected * sizeof(uint32_t)) {
++        return 0;
++    }
++    const uint64_t value_row_bytes =
++        ((uint64_t)kv_lora_dim / 32u) * 34u;
++    const uint64_t value_weight_bytes =
++        (uint64_t)n_head * value_dim * value_row_bytes;
++    if (value_weight_offset > model_size ||
++        value_weight_bytes > model_size - value_weight_offset) {
++        return 0;
++    }
++    for (uint32_t i = 0; i < n_selected; i++) {
++        if (logical_selected_host[i] >= logical_cap) {
++            fprintf(stderr,
++                    "ds4: GLM exact direct-slot row %u exceeds cap %u\n",
++                    logical_selected_host[i], logical_cap);
++            return 0;
++        }
++    }
++    const int logical_tier = cuda_current_tier();
++    const char *vw = cuda_resolve_weight_ptr(
++        model_map, value_weight_offset, value_weight_bytes, logical_tier,
++        "glm_v_b_exact_direct_slot");
++    if (!vw) return 0;
++    const uint64_t score_count = (uint64_t)n_head * n_selected;
++    const uint64_t lora_count = (uint64_t)n_head * kv_lora_dim;
++    if (score_count > UINT64_MAX - n_head - lora_count ||
++        score_count + n_head + lora_count > UINT64_MAX / sizeof(float)) {
++        return 0;
++    }
++    const uint64_t scratch_bytes =
++        (score_count + n_head + lora_count) * sizeof(float);
++    float *scratch = (float *)cuda_tmp_alloc_on(
++        ds4_tensor_device_idx(heads), scratch_bytes,
++        "glm exact direct-slot attention");
++    if (!scratch) return 0;
++    float *denom = scratch + score_count;
++    float *lora_sum = denom + n_head;
++    const float scale = 1.0f / sqrtf((float)qk_dim);
++    const bool score_vec2 = getenv("DS4_GLM_ATTN_NO_SCORE_VEC2") == NULL;
++    const uint32_t weight_shmem =
++        (256u + n_selected) * (uint32_t)sizeof(float);
++    if (cache_f16) {
++        glm_attention_decode_weights_direct_kernel<__half>
++            <<<n_head, 256, weight_shmem>>>(
++                scratch, denom, (const float *)q->ptr,
++                (const float *)qk_low->ptr,
++                (const __half *)staged_kv_lora->ptr,
++                (const __half *)staged_k_rope->ptr,
++                (const uint32_t *)logical_selected->ptr, n_selected,
++                stage_cap, logical_cap, n_head, kv_lora_dim, qk_nope,
++                qk_rope, scale, n_ctx_orig, freq_base, freq_scale,
++                ext_factor, attn_factor, beta_fast, beta_slow, score_vec2);
++    } else {
++        glm_attention_decode_weights_direct_kernel<float>
++            <<<n_head, 256, weight_shmem>>>(
++                scratch, denom, (const float *)q->ptr,
++                (const float *)qk_low->ptr,
++                (const float *)staged_kv_lora->ptr,
++                (const float *)staged_k_rope->ptr,
++                (const uint32_t *)logical_selected->ptr, n_selected,
++                stage_cap, logical_cap, n_head, kv_lora_dim, qk_nope,
++                qk_rope, scale, n_ctx_orig, freq_base, freq_scale,
++                ext_factor, attn_factor, beta_fast, beta_slow, score_vec2);
++    }
++    if (!cuda_ok(cudaGetLastError(),
++                 "glm exact direct-slot weights launch")) return 0;
++    const dim3 lora_grid((kv_lora_dim / 2u + 63u) / 64u, n_head, 1u);
++    if (cache_f16) {
++        glm_attention_decode_lora_direct_kernel<__half><<<lora_grid, 64>>>(
++            lora_sum, scratch, denom,
++            (const __half *)staged_kv_lora->ptr, n_selected, stage_cap,
++            n_head, kv_lora_dim);
++    } else {
++        glm_attention_decode_lora_direct_kernel<float><<<lora_grid, 64>>>(
++            lora_sum, scratch, denom,
++            (const float *)staged_kv_lora->ptr, n_selected, stage_cap,
++            n_head, kv_lora_dim);
++    }
++    if (!cuda_ok(cudaGetLastError(),
++                 "glm exact direct-slot lora launch")) return 0;
++    const dim3 value_grid((value_dim + 127u) / 128u, n_head, 1u);
++    glm_attention_decode_value_staged_kernel<false><<<value_grid, 128>>>(
++        (float *)heads->ptr, lora_sum, vw, n_head, kv_lora_dim, value_dim,
++        (uint32_t)value_row_bytes);
++    return cuda_ok(cudaGetLastError(),
++                   "glm exact direct-slot value launch");
++}
++
+ extern "C" int ds4_gpu_glm_build_kv_cache_flash_tensor(
+         ds4_gpu_tensor       *key_cache,
+         ds4_gpu_tensor       *value_cache,
+diff --git a/ds4_gpu.h b/ds4_gpu.h
+index af04e27..419e61b 100644
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -44,6 +44,9 @@ typedef struct {
+ int ds4_gpu_init(void);
+ void ds4_gpu_cleanup(void);
+ 
++int ds4_gpu_host_alloc_pinned(void **out, uint64_t bytes);
++void ds4_gpu_host_free_pinned(void *ptr);
++
+ ds4_gpu_tensor *ds4_gpu_tensor_alloc(uint64_t bytes);
+ ds4_gpu_tensor *ds4_gpu_tensor_alloc_managed(uint64_t bytes);
+ ds4_gpu_tensor *ds4_gpu_tensor_view(const ds4_gpu_tensor *base, uint64_t offset, uint64_t bytes);
+@@ -1305,6 +1308,37 @@ int ds4_gpu_glm_attention_indexed_decode_typed_tensor(
+         float                 beta_fast,
+         float                 beta_slow);
+ 
++/* Exact W8 direct-slot decode: logical_selected retains absolute token rows
++ * for RoPE while the cache tensors hold those rows densely in slot order. */
++int ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
++        ds4_gpu_tensor       *heads,
++        const ds4_gpu_tensor *q,
++        const ds4_gpu_tensor *qk_low,
++        const ds4_gpu_tensor *staged_kv_lora,
++        const ds4_gpu_tensor *staged_k_rope,
++        const void           *model_map,
++        uint64_t              model_size,
++        uint64_t              value_weight_offset,
++        uint32_t              value_weight_type,
++        const ds4_gpu_tensor *logical_selected,
++        const uint32_t       *logical_selected_host,
++        uint32_t              n_selected,
++        uint32_t              stage_cap,
++        uint32_t              logical_cap,
++        bool                  cache_f16,
++        uint32_t              n_head,
++        uint32_t              kv_lora_dim,
++        uint32_t              qk_nope,
++        uint32_t              qk_rope,
++        uint32_t              value_dim,
++        uint32_t              n_ctx_orig,
++        float                 freq_base,
++        float                 freq_scale,
++        float                 ext_factor,
++        float                 attn_factor,
++        float                 beta_fast,
++        float                 beta_slow);
++
+ int ds4_gpu_glm_attention_indexed_decode_split_group8_tensor(
+         ds4_gpu_tensor       *heads,
+         ds4_gpu_tensor       *partial_lora,
+diff --git a/tests/test_glm_ckv_exact_direct_cuda.c b/tests/test_glm_ckv_exact_direct_cuda.c
+new file mode 100644
+index 0000000..585271d
+--- /dev/null
++++ b/tests/test_glm_ckv_exact_direct_cuda.c
+@@ -0,0 +1,139 @@
++#include "ds4_gpu.h"
++
++#include <math.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#define CHECK(c, m) do { if (!(c)) {                                        \
++    fprintf(stderr, "FAIL: %s (line %d)\n", (m), __LINE__); goto cleanup;  \
++} } while (0)
++
++static void make_q8(uint8_t *model, uint32_t rows, uint32_t cols) {
++    for (uint32_t row = 0; row < rows; row++) {
++        for (uint32_t block = 0; block < cols / 32u; block++) {
++            uint8_t *dst = model +
++                ((uint64_t)row * (cols / 32u) + block) * 34u;
++            const uint16_t one = 0x3c00u;
++            memcpy(dst, &one, 2);
++            for (uint32_t i = 0; i < 32; i++) {
++                ((int8_t *)(dst + 2))[i] =
++                    (int8_t)((int)((row * 3u + block + i) % 7u) - 3);
++            }
++        }
++    }
++}
++
++int main(void) {
++    const uint32_t cap = 4096, nsel = 2048, latent = 512, rope = 64;
++    const uint32_t q_nope = 64, q_dim = q_nope + rope;
++    const uint32_t nhead = 1, value_dim = 4;
++    const uint64_t latent_bytes = (uint64_t)cap * latent * sizeof(float);
++    const uint64_t rope_bytes = (uint64_t)cap * rope * sizeof(float);
++    const uint64_t stage_bytes = (uint64_t)nsel * latent * sizeof(float);
++    const uint64_t stage_rope_bytes = (uint64_t)nsel * rope * sizeof(float);
++    const uint64_t model_bytes = (uint64_t)value_dim * (latent / 32u) * 34u;
++    float *resident = malloc((size_t)latent_bytes);
++    float *ropes = malloc((size_t)rope_bytes);
++    float *stage = malloc((size_t)stage_bytes);
++    float *stage_ropes = malloc((size_t)stage_rope_bytes);
++    float *q = calloc(q_dim, sizeof(float));
++    float *low = calloc(latent, sizeof(float));
++    uint32_t *ids = calloc(nsel, sizeof(uint32_t));
++    uint8_t *model = calloc((size_t)model_bytes, 1);
++    float baseline[4] = {0}, direct[4] = {0};
++    int rc = 1;
++    ds4_gpu_tensor *resident_t = NULL, *rope_t = NULL, *stage_t = NULL;
++    ds4_gpu_tensor *stage_rope_t = NULL, *short_t = NULL, *q_t = NULL;
++    ds4_gpu_tensor *low_t = NULL, *ids_t = NULL, *base_t = NULL;
++    ds4_gpu_tensor *direct_t = NULL;
++
++    CHECK(resident && ropes && stage && stage_ropes && q && low && ids && model,
++          "host allocations");
++    for (uint32_t row = 0; row < cap; row++) {
++        for (uint32_t i = 0; i < latent; i++) {
++            resident[(uint64_t)row * latent + i] =
++                (float)((int)((row * 19u + i * 11u) % 113u) - 56) / 37.0f;
++        }
++        for (uint32_t i = 0; i < rope; i++) {
++            ropes[(uint64_t)row * rope + i] =
++                (float)((int)((row * 7u + i * 5u) % 67u) - 33) / 29.0f;
++        }
++    }
++    for (uint32_t i = 0; i < q_dim; i++) q[i] = (float)((int)(i % 17u) - 8) / 31.0f;
++    for (uint32_t i = 0; i < latent; i++) low[i] = (float)((int)((i * 13u) % 43u) - 21) / 47.0f;
++    for (uint32_t i = 0; i < nsel; i++) ids[i] = (i * 2053u + 17u) % cap;
++    ids[0] = cap - 1u; ids[1] = 0u; ids[2] = 64u; ids[127] = ids[0];
++    for (uint32_t slot = 0; slot < nsel; slot++) {
++        memcpy(stage + (uint64_t)slot * latent,
++               resident + (uint64_t)ids[slot] * latent,
++               latent * sizeof(float));
++        memcpy(stage_ropes + (uint64_t)slot * rope,
++               ropes + (uint64_t)ids[slot] * rope,
++               rope * sizeof(float));
++    }
++    make_q8(model, value_dim, latent);
++
++    CHECK(ds4_gpu_init(), "CUDA init");
++    CHECK(ds4_gpu_set_model_map(model, model_bytes), "model map");
++    resident_t = ds4_gpu_tensor_alloc(latent_bytes);
++    rope_t = ds4_gpu_tensor_alloc(rope_bytes);
++    stage_t = ds4_gpu_tensor_alloc(stage_bytes);
++    stage_rope_t = ds4_gpu_tensor_alloc(stage_rope_bytes);
++    short_t = ds4_gpu_tensor_alloc(stage_bytes - 1u);
++    q_t = ds4_gpu_tensor_alloc(q_dim * sizeof(float));
++    low_t = ds4_gpu_tensor_alloc(latent * sizeof(float));
++    ids_t = ds4_gpu_tensor_alloc(nsel * sizeof(uint32_t));
++    base_t = ds4_gpu_tensor_alloc(value_dim * sizeof(float));
++    direct_t = ds4_gpu_tensor_alloc(value_dim * sizeof(float));
++    CHECK(resident_t && rope_t && stage_t && stage_rope_t && short_t && q_t &&
++          low_t && ids_t && base_t && direct_t, "device allocations");
++    CHECK(ds4_gpu_tensor_write(resident_t, 0, resident, latent_bytes) &&
++          ds4_gpu_tensor_write(rope_t, 0, ropes, rope_bytes) &&
++          ds4_gpu_tensor_write(stage_t, 0, stage, stage_bytes) &&
++          ds4_gpu_tensor_write(stage_rope_t, 0, stage_ropes, stage_rope_bytes) &&
++          ds4_gpu_tensor_write(q_t, 0, q, q_dim * sizeof(float)) &&
++          ds4_gpu_tensor_write(low_t, 0, low, latent * sizeof(float)) &&
++          ds4_gpu_tensor_write(ids_t, 0, ids, nsel * sizeof(uint32_t)),
++          "fixture uploads");
++    CHECK(ds4_gpu_glm_attention_indexed_decode_typed_tensor(
++          base_t, q_t, low_t, resident_t, rope_t, model, model_bytes, 0, 8,
++          ids_t, nsel, cap, false, nhead, latent, q_nope, rope, value_dim,
++          0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f), "resident reference");
++    CHECK(ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
++          direct_t, q_t, low_t, stage_t, stage_rope_t, model, model_bytes,
++          0, 8, ids_t, ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
++          value_dim, 0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f),
++          "exact direct slots");
++    CHECK(ds4_gpu_synchronize() &&
++          ds4_gpu_tensor_read(base_t, 0, baseline, sizeof(baseline)) &&
++          ds4_gpu_tensor_read(direct_t, 0, direct, sizeof(direct)), "outputs");
++    CHECK(memcmp(baseline, direct, sizeof(baseline)) == 0,
++          "byte-identical output with logical RoPE positions");
++    for (uint32_t i = 0; i < value_dim; i++) CHECK(isfinite(direct[i]), "finite output");
++    CHECK(!ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
++          direct_t, q_t, low_t, short_t, stage_rope_t, model, model_bytes,
++          0, 8, ids_t, ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
++          value_dim, 0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f),
++          "undersized stage rejected");
++    ids[17] = cap;
++    CHECK(ds4_gpu_tensor_write(ids_t, 0, ids, nsel * sizeof(uint32_t)), "invalid ID upload");
++    CHECK(!ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
++          direct_t, q_t, low_t, stage_t, stage_rope_t, model, model_bytes,
++          0, 8, ids_t, ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
++          value_dim, 0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f),
++          "invalid logical ID rejected");
++    rc = 0;
++cleanup:
++    ds4_gpu_tensor_free(resident_t); ds4_gpu_tensor_free(rope_t);
++    ds4_gpu_tensor_free(stage_t); ds4_gpu_tensor_free(stage_rope_t);
++    ds4_gpu_tensor_free(short_t); ds4_gpu_tensor_free(q_t);
++    ds4_gpu_tensor_free(low_t); ds4_gpu_tensor_free(ids_t);
++    ds4_gpu_tensor_free(base_t); ds4_gpu_tensor_free(direct_t);
++    ds4_gpu_cleanup();
++    free(resident); free(ropes); free(stage); free(stage_ropes);
++    free(q); free(low); free(ids); free(model);
++    if (!rc) fprintf(stderr, "test_glm_ckv_exact_direct_cuda: PASS\n");
++    return rc;
++}
+diff --git a/tests/test_glm_ckv_exact_source.py b/tests/test_glm_ckv_exact_source.py
+new file mode 100644
+index 0000000..9eb23b6
+--- /dev/null
++++ b/tests/test_glm_ckv_exact_source.py
+@@ -0,0 +1,90 @@
++#!/usr/bin/env python3
++"""Production-path contract for exact, default-off GLM cKV offload.
++
++Acceptance is deliberately representation-free: when enabled, the graph must
++write the unmodified F32 latent and RoPE rows to a checksummed request store,
++keep the full indexer resident, retrieve the exact top-k row IDs in their
++original order (including duplicates), and run attention from a bounded
++2,048-row stage.  When disabled, allocation and execution remain the reviewed
++resident W7 path.  Runtime unit and model-backed tests prove the byte equality;
++this guard binds those properties to the production call graph.
++"""
++
++from pathlib import Path
++import re
++
++ROOT = Path(__file__).resolve().parents[1]
++SOURCE = (ROOT / "ds4.c").read_text(encoding="utf-8")
++MAKEFILE = (ROOT / "Makefile").read_text(encoding="utf-8")
++
++
++def require(label: str, needle: str, haystack: str = SOURCE) -> None:
++    assert needle in haystack, f"missing production behavior: {label}"
++
++
++require("exact default-off environment gate", 'getenv("DS4_GLM_CKV_NVME_EXACT")')
++require("exact graph mode", "bool ckv_nvme_exact;")
++require("checksummed request store", "ds4_ckvstore *ckv_store;")
++require("bounded exact write stage", "ckv_exact_write_rows")
++require("bounded exact selected stage", "ckv_exact_selected_rows")
++require("2,048-row physical stage", "DS4_GLM_CKV_EXACT_SELECTED_CAP 2048u")
++require("exact F32 format binding", '"glm-ckv-exact-f32-v1"')
++require("selected-row store read", "ds4_ckvstore_read_selected")
++require("selected IDs copied without normalization", "ckv_selected_ids_host")
++require("production selected-row staging", "glm_graph_stage_ckv_exact_selected")
++require("request lineage rotation", "glm_graph_ckv_exact_reset_lineage")
++require("persistent pinned host staging", "ds4_gpu_host_alloc_pinned")
++require("pinned staging ownership", "ckv_io_host_pinned")
++require("store linked into every backend", "ds4_ckvstore.o", MAKEFILE)
++require("one-million exact store default", "uint64_t gib = 192u;")
++require("row-store index memory admission", "ckv_record_index_bytes")
++require("row-store tail memory admission", "ckv_tail_memory_bytes")
++
++assert re.search(
++    r"if \(!g->ckv_nvme_exact\) \{\s*"
++    r"DS4_GLM_GRAPH_ALLOC_TENSOR_TIER\(g->layer_kv_lora_cache\[il\]",
++    SOURCE,
++), "resident exact cKV allocation is not gated off in NVMe mode"
++
++assert re.search(
++    r"glm_graph_store_ckv_exact_rows\([^;]+\).*?"
++    r"ds4_ckvstore_put\(",
++    SOURCE,
++    re.S,
++), "production F32 rows do not reach the checksummed request store"
++
++assert re.search(
++    r"glm_graph_stage_ckv_exact_selected\([^;]+\).*?"
++    r"ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor",
++    SOURCE,
++    re.S,
++), "indexed attention is not fed by the bounded exact selected-row stage"
++
++CUDA_SOURCE = (ROOT / "ds4_cuda.cu").read_text(encoding="utf-8")
++direct_start = CUDA_SOURCE.index(
++    'extern "C" int ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor'
++)
++direct_end = CUDA_SOURCE.index(
++    'extern "C" int ds4_gpu_glm_build_kv_cache_flash_tensor',
++    direct_start,
++)
++direct_body = CUDA_SOURCE[direct_start:direct_end]
++assert "const uint32_t       *logical_selected_host" in direct_body, (
++    "exact direct-slot validation does not consume the staged host IDs"
++)
++assert "cudaMemcpy" not in direct_body, (
++    "exact direct-slot validation repeats a synchronous selected-ID readback"
++)
++
++# Exact W8 is fidelity-free.  Its format declaration and row-store bridge must
++# never silently inherit the retired affine/int8 representation.
++exact_section = SOURCE[
++    SOURCE.index("glm_graph_ckv_exact_open") :
++    SOURCE.index("glm_graph_ckv_exact_reset_lineage")
++]
++for forbidden in ("affine", "int8", "e4m3", "fp4"):
++    assert forbidden not in exact_section.lower(), (
++        f"lossy representation leaked into exact cKV bridge: {forbidden}"
++    )
++
++print("test_glm_ckv_exact_source: PASS")
+diff --git a/tests/test_glm_ckvstore.c b/tests/test_glm_ckvstore.c
+new file mode 100644
+index 0000000..5579f54
+--- /dev/null
++++ b/tests/test_glm_ckvstore.c
+@@ -0,0 +1,654 @@
++#include "ds4_ckvstore.h"
++
++#include <fcntl.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
++static int failed;
++
++#define CHECK(cond, msg) do {                                                \
++    if (!(cond)) {                                                           \
++        fprintf(stderr, "FAIL: %s (line %d)\n", (msg), __LINE__);          \
++        failed++;                                                            \
++    }                                                                        \
++} while (0)
++
++static void fill_payload(uint8_t *dst, uint32_t first_row,
++                         uint32_t rows, uint16_t layers, uint32_t row_bytes) {
++    for (uint16_t layer = 0; layer < layers; layer++) {
++        for (uint32_t row = 0; row < rows; row++) {
++            for (uint32_t byte = 0; byte < row_bytes; byte++) {
++                *dst++ = (uint8_t)(17u * layer + 7u * (first_row + row) + byte);
++            }
++        }
++    }
++}
++
++static void expected_row(uint8_t *dst, uint16_t layer, uint32_t row,
++                         uint32_t row_bytes) {
++    for (uint32_t byte = 0; byte < row_bytes; byte++)
++        dst[byte] = (uint8_t)(17u * layer + 7u * row + byte);
++}
++
++static ds4_ckvstore_config test_config(void) {
++    ds4_ckvstore_config cfg = {
++        .row_bytes = 8,
++        .rows_per_record = 4,
++        .max_cached_records = 1,
++        .max_epochs = 4,
++        .generation = 7,
++        .max_file_bytes = 1024 * 1024,
++        .sync_interval_bytes =
++            2u * (DS4_CKVSTORE_HEADER_BYTES + 3u * 4u * 8u),
++    };
++    for (size_t i = 0; i < sizeof(cfg.model_binding); i++) {
++        cfg.model_binding[i] = (uint8_t)(0x10 + i);
++        cfg.format_binding[i] = (uint8_t)(0x80 + i);
++    }
++    for (size_t i = 0; i < sizeof(cfg.session_id); i++)
++        cfg.session_id[i] = (uint8_t)(0x40 + i);
++    return cfg;
++}
++
++static void test_cache_is_partitioned_by_epoch(void) {
++    char path[] = "/tmp/ds4-ckvstore-cache-partition.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp cache partition");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++    ds4_ckvstore_config cfg = test_config();
++    cfg.rows_per_record = 1;
++    cfg.max_cached_records = 1;
++    cfg.max_epochs = 2;
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create partitioned cache fixture");
++    if (!store) goto cleanup;
++    uint8_t row[8];
++    fill_payload(row, 0, 1, 1, sizeof(row));
++    CHECK(ds4_ckvstore_put(store, 20, 0, 1, 1, row, sizeof(row),
++                           err, sizeof(err)) == 0,
++          "write first layer block");
++    fill_payload(row, 0, 1, 1, sizeof(row));
++    CHECK(ds4_ckvstore_put(store, 21, 0, 1, 1, row, sizeof(row),
++                           err, sizeof(err)) == 0,
++          "write second layer block");
++    const uint32_t selected[] = {0};
++    uint8_t output[8];
++    CHECK(ds4_ckvstore_read_selected(store, 20, 0, selected, 1, output,
++                                     sizeof(output), err, sizeof(err)) == 0,
++          "warm first layer block");
++    CHECK(ds4_ckvstore_read_selected(store, 21, 0, selected, 1, output,
++                                     sizeof(output), err, sizeof(err)) == 0,
++          "warm second layer block");
++    ds4_ckvstore_stats before = {0}, after = {0};
++    ds4_ckvstore_get_stats(store, &before);
++    CHECK(ds4_ckvstore_read_selected(store, 20, 0, selected, 1, output,
++                                     sizeof(output), err, sizeof(err)) == 0,
++          "revisit first layer block");
++    ds4_ckvstore_get_stats(store, &after);
++    CHECK(after.cache_hits == before.cache_hits + 1,
++          "another layer cannot evict this layer's cache partition");
++    CHECK(after.physical_read_bytes == before.physical_read_bytes,
++          "partitioned cache avoids a repeated physical read");
++cleanup:
++    if (store) ds4_ckvstore_close(store);
++    unlink(path);
++}
++
++static void test_buffered_decode_tail(void) {
++    char path[] = "/tmp/ds4-ckvstore-tail.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp buffered tail");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++    ds4_ckvstore_config cfg = test_config();
++    cfg.rows_per_record = 4;
++    cfg.max_epochs = 2;
++    cfg.buffer_tail_rows = true;
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create buffered-tail fixture");
++    if (!store) goto cleanup;
++    uint8_t rows[4 * 8];
++    fill_payload(rows, 0, 3, 1, 8);
++    CHECK(ds4_ckvstore_put(store, 30, 0, 3, 1, rows, 3 * 8,
++                           err, sizeof(err)) == 0,
++          "buffer partial prefill tail");
++    ds4_ckvstore_stats stats = {0};
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.records == 0 && stats.pending_rows == 3,
++          "partial tail is bounded in memory without a short disk record");
++    CHECK(stats.pending_row_bytes == 3 * 8,
++          "pending tail memory is measured exactly");
++    const uint32_t selected_tail[] = {2, 0, 2};
++    uint8_t output[3 * 8];
++    CHECK(ds4_ckvstore_read_selected(store, 30, 0, selected_tail, 3,
++                                     output, sizeof(output), err,
++                                     sizeof(err)) == 0,
++          "pending tail rows are immediately selectable");
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.physical_read_bytes == 0,
++          "pending tail selection performs no physical read");
++    for (uint32_t i = 0; i < 3; i++) {
++        uint8_t want[8];
++        expected_row(want, 0, selected_tail[i], sizeof(want));
++        CHECK(memcmp(output + i * 8, want, 8) == 0,
++              "pending tail selection remains byte exact");
++    }
++    fill_payload(rows, 3, 1, 1, 8);
++    CHECK(ds4_ckvstore_put(store, 30, 3, 1, 1, rows, 8,
++                           err, sizeof(err)) == 0,
++          "append decode row to partial tail");
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.records == 1 && stats.pending_rows == 0,
++          "full tail publishes one immutable checksummed record");
++    const uint32_t selected_full[] = {3, 1};
++    CHECK(ds4_ckvstore_read_selected(store, 30, 0, selected_full, 2,
++                                     output, 2 * 8, err, sizeof(err)) == 0,
++          "flushed tail remains selectable");
++cleanup:
++    if (store) ds4_ckvstore_close(store);
++    unlink(path);
++}
++
++static void test_production_width_buffered_prefill(void) {
++    enum { PREFILL_ROWS = 4096, EXTRA_ROWS = 65, ROW_BYTES = 8 };
++    char path[] = "/tmp/ds4-ckvstore-prefill-width.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp production-width prefill");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++    ds4_ckvstore_config cfg = test_config();
++    cfg.rows_per_record = 64;
++    cfg.max_cached_records = 64;
++    cfg.max_epochs = 1;
++    cfg.sync_interval_bytes = cfg.max_file_bytes;
++    cfg.buffer_tail_rows = true;
++    ds4_ckvstore *store = NULL;
++    uint8_t *payload = malloc((PREFILL_ROWS + EXTRA_ROWS) * ROW_BYTES);
++    char err[256] = {0};
++    CHECK(payload != NULL, "allocate production-width payload");
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create production-width prefill fixture");
++    if (!store || !payload) goto cleanup;
++
++    fill_payload(payload, 0, PREFILL_ROWS, 1, ROW_BYTES);
++    const int prefill_rc = ds4_ckvstore_put(
++        store, 44, 0, PREFILL_ROWS, 1, payload,
++        PREFILL_ROWS * ROW_BYTES, err, sizeof(err));
++    CHECK(prefill_rc == 0,
++          "split one 4096-row production prefill call into records");
++    if (prefill_rc != 0) goto cleanup;
++    ds4_ckvstore_stats stats = {0};
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.records == PREFILL_ROWS / cfg.rows_per_record &&
++              stats.pending_rows == 0,
++          "production prefill publishes ordered 64-row records");
++
++    const uint32_t boundary_rows[] = {0, 63, 64, 2047, 2048, 4095, 64};
++    uint8_t output[sizeof(boundary_rows) / sizeof(boundary_rows[0]) * ROW_BYTES];
++    CHECK(ds4_ckvstore_read_selected(
++              store, 44, 0, boundary_rows,
++              (uint32_t)(sizeof(boundary_rows) / sizeof(boundary_rows[0])),
++              output, sizeof(output), err, sizeof(err)) == 0,
++          "read exact rows across split-record boundaries and duplicates");
++    for (uint32_t i = 0;
++         i < sizeof(boundary_rows) / sizeof(boundary_rows[0]); i++) {
++        uint8_t want[ROW_BYTES];
++        expected_row(want, 0, boundary_rows[i], ROW_BYTES);
++        CHECK(memcmp(output + (size_t)i * ROW_BYTES, want, ROW_BYTES) == 0,
++              "production prefill boundary row remains byte exact");
++    }
++
++    fill_payload(payload, PREFILL_ROWS, EXTRA_ROWS, 1, ROW_BYTES);
++    CHECK(ds4_ckvstore_put(store, 44, PREFILL_ROWS, EXTRA_ROWS, 1, payload,
++                           EXTRA_ROWS * ROW_BYTES, err, sizeof(err)) == 0,
++          "split full records while retaining one bounded decode tail row");
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.records == PREFILL_ROWS / cfg.rows_per_record + 1 &&
++              stats.pending_rows == 1,
++          "production-width append leaves only the incomplete tail resident");
++    const uint32_t tail_rows[] = {4095, 4096, 4159, 4160, 4160};
++    CHECK(ds4_ckvstore_read_selected(
++              store, 44, 0, tail_rows,
++              (uint32_t)(sizeof(tail_rows) / sizeof(tail_rows[0])),
++              output, sizeof(tail_rows) / sizeof(tail_rows[0]) * ROW_BYTES,
++              err, sizeof(err)) == 0,
++          "read both immutable records and the pending tail");
++    for (uint32_t i = 0; i < sizeof(tail_rows) / sizeof(tail_rows[0]); i++) {
++        uint8_t want[ROW_BYTES];
++        expected_row(want, 0, tail_rows[i], ROW_BYTES);
++        CHECK(memcmp(output + (size_t)i * ROW_BYTES, want, ROW_BYTES) == 0,
++              "split prefill and pending-tail reads remain byte exact");
++    }
++
++cleanup:
++    free(payload);
++    if (store) ds4_ckvstore_close(store);
++    unlink(path);
++}
++
++static void test_dynamic_exact_selected_rows(void) {
++    char path[] = "/tmp/ds4-ckvstore-test.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++
++    ds4_ckvstore_config cfg = test_config();
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) ==
++              DS4_CKVSTORE_OK,
++          "create dynamic request store");
++    if (!store) goto cleanup;
++
++    uint8_t payload[3 * 4 * 8];
++    fill_payload(payload, 0, 4, 3, 8);
++    CHECK(ds4_ckvstore_put(store, 2, 0, 4, 3, payload, sizeof(payload),
++                           err, sizeof(err)) == DS4_CKVSTORE_OK,
++          "append first request-owned record");
++    static const uint8_t expected_sha256[32] = {
++        0x37,0xce,0x45,0xb7,0x21,0xb2,0x52,0x1a,
++        0x68,0x27,0x1c,0xe1,0x71,0x35,0x63,0x68,
++        0x75,0xb8,0xe4,0x90,0x3a,0xa7,0xeb,0x8f,
++        0xc3,0x3e,0xed,0x8d,0x64,0x57,0x15,0xce,
++    };
++    int verify_fd = open(path, O_RDONLY);
++    uint8_t stored_sha256[32];
++    CHECK(verify_fd >= 0, "open record for public SHA-256 vector");
++    if (verify_fd >= 0) {
++        CHECK(pread(verify_fd, stored_sha256, sizeof(stored_sha256), 152) ==
++                  (ssize_t)sizeof(stored_sha256),
++              "read payload SHA-256");
++        CHECK(memcmp(stored_sha256, expected_sha256,
++                     sizeof(expected_sha256)) == 0,
++              "payload digest matches the public SHA-256 algorithm");
++        close(verify_fd);
++    }
++    fill_payload(payload, 4, 4, 3, 8);
++    CHECK(ds4_ckvstore_put(store, 2, 4, 4, 3, payload, sizeof(payload),
++                           err, sizeof(err)) == DS4_CKVSTORE_OK,
++          "grow store with context");
++    fill_payload(payload, 8, 1, 3, 8);
++    CHECK(ds4_ckvstore_put(store, 2, 8, 1, 3, payload, 3 * 8,
++                           err, sizeof(err)) == DS4_CKVSTORE_OK,
++          "append first decode row after a prefill block");
++    fill_payload(payload, 9, 1, 3, 8);
++    CHECK(ds4_ckvstore_put(store, 2, 9, 1, 3, payload, 3 * 8,
++                           err, sizeof(err)) == DS4_CKVSTORE_OK,
++          "append unaligned decode row without rewriting prior records");
++
++    const uint32_t selected[] = {6, 1, 6, 4, 0};
++    uint8_t got[sizeof(selected) / sizeof(selected[0]) * 8];
++    CHECK(ds4_ckvstore_read_selected(store, 2, 1, selected, 5, got,
++                                     sizeof(got), err, sizeof(err)) ==
++              DS4_CKVSTORE_OK,
++          "read selected rows across records");
++    for (size_t i = 0; i < 5; i++) {
++        uint8_t want[8];
++        expected_row(want, 1, selected[i], sizeof(want));
++        CHECK(memcmp(got + i * sizeof(want), want, sizeof(want)) == 0,
++              "selection order and duplicates are byte exact");
++    }
++
++    ds4_ckvstore_stats stats = {0};
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.records == 4, "file grows only with written context records");
++    CHECK(stats.cache_records <= 1, "resident block cache obeys hard bound");
++    CHECK(stats.cache_bytes <= sizeof(payload), "resident bytes obey hard bound");
++    CHECK(stats.physical_read_bytes ==
++              2u * (DS4_CKVSTORE_HEADER_BYTES + 3u * 4u * 8u),
++          "one selection reads each required record exactly once");
++    CHECK(stats.sync_calls == 1,
++          "bounded group commit replaces per-record durability barriers");
++    CHECK(stats.pending_write_bytes < cfg.sync_interval_bytes,
++          "unsynchronized write bytes stay below the configured bound");
++
++    const uint32_t absent[] = {10};
++    CHECK(ds4_ckvstore_read_selected(store, 2, 0, absent, 1, got, 8,
++                                     err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_NOT_FOUND,
++          "unwritten context row fails closed");
++    ds4_ckvstore_close(store);
++    store = NULL;
++
++    struct stat st;
++    CHECK(stat(path, &st) == 0, "stat request store");
++    CHECK((st.st_mode & 0777) == 0600, "request cache is owner-only");
++
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, false, err, sizeof(err)) ==
++              DS4_CKVSTORE_OK,
++          "reopen durable request store");
++    CHECK(ds4_ckvstore_read_selected(store, 2, 2, selected, 5, got,
++                                     sizeof(got), err, sizeof(err)) ==
++              DS4_CKVSTORE_OK,
++          "durable index reconstructs exact rows");
++    ds4_ckvstore_close(store);
++    store = NULL;
++
++    ds4_ckvstore_config stale = cfg;
++    stale.generation++;
++    CHECK(ds4_ckvstore_open(&store, path, &stale, false, err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_IDENTITY,
++          "stale request generation cannot be reopened");
++    CHECK(store == NULL, "identity mismatch returns no usable store");
++
++cleanup:
++    if (store) ds4_ckvstore_close(store);
++    unlink(path);
++}
++
++static void test_batch_selection_coalesces_records(void) {
++    char path[] = "/tmp/ds4-ckvstore-batch.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp batch selection");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++
++    ds4_ckvstore_config cfg = test_config();
++    cfg.max_cached_records = 4;
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create batched selection fixture");
++    if (!store) goto cleanup;
++
++    uint8_t payload[4 * 8];
++    for (uint32_t first = 0; first < 16; first += 4) {
++        fill_payload(payload, first, 4, 1, 8);
++        CHECK(ds4_ckvstore_put(store, 12, first, 4, 1, payload,
++                               sizeof(payload), err, sizeof(err)) == 0,
++              "append batched selection record");
++    }
++
++    /* Query-major input deliberately revisits every physical record from the
++     * second query.  The acceptance formula is exactly four physical record
++     * reads, rather than four reads per query, while preserving every output
++     * row and duplicate in query-major order. */
++    const uint32_t selected[2][5] = {
++        {0, 4, 8, 12, 0},
++        {1, 5, 9, 13, 1},
++    };
++    uint8_t got[2 * 5 * 8];
++    ds4_ckvstore_stats before = {0}, after = {0};
++    ds4_ckvstore_get_stats(store, &before);
++    CHECK(ds4_ckvstore_read_selected_batch(
++              store, 12, 0, &selected[0][0], 2, 5, got, sizeof(got),
++              err, sizeof(err)) == DS4_CKVSTORE_OK,
++          "read two query selections as one bounded batch");
++    ds4_ckvstore_get_stats(store, &after);
++    CHECK(after.physical_read_bytes - before.physical_read_bytes ==
++              4u * (DS4_CKVSTORE_HEADER_BYTES + sizeof(payload)),
++          "batched queries load each unique physical record once");
++    for (uint32_t query = 0; query < 2; query++) {
++        for (uint32_t slot = 0; slot < 5; slot++) {
++            uint8_t want[8];
++            expected_row(want, 0, selected[query][slot], sizeof(want));
++            CHECK(memcmp(got + ((uint64_t)query * 5u + slot) * 8u,
++                         want, sizeof(want)) == 0,
++                  "batched selection is byte exact and query-major");
++        }
++    }
++
++cleanup:
++    if (store) ds4_ckvstore_close(store);
++    unlink(path);
++}
++
++static void test_indexed_lookup_cost(void) {
++    char path[] = "/tmp/ds4-ckvstore-index.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp index");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++
++    ds4_ckvstore_config cfg = test_config();
++    cfg.rows_per_record = 1;
++    cfg.max_cached_records = 2;
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create indexed lookup fixture");
++    if (!store) goto cleanup;
++
++    uint8_t payload[8];
++    for (uint32_t row = 0; row < 257; row++) {
++        fill_payload(payload, row, 1, 1, sizeof(payload));
++        CHECK(ds4_ckvstore_put(store, 11, row, 1, 1, payload,
++                               sizeof(payload), err, sizeof(err)) == 0,
++              "append ordered indexed record");
++    }
++    const uint32_t selected[] = {256, 128, 0, 255};
++    uint8_t got[sizeof(selected) / sizeof(selected[0]) * sizeof(payload)];
++    CHECK(ds4_ckvstore_read_selected(store, 11, 0, selected, 4, got,
++                                     sizeof(got), err, sizeof(err)) == 0,
++          "look up dispersed rows through epoch index");
++    ds4_ckvstore_stats stats = {0};
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.lookup_comparisons > 0,
++          "lookup comparison accounting is production-derived");
++    CHECK(stats.lookup_comparisons <= 40,
++          "dispersed lookup cost is logarithmic, not a full-record scan");
++
++cleanup:
++    if (store) ds4_ckvstore_close(store);
++    unlink(path);
++}
++
++static void test_corruption_and_short_read_fail_closed(void) {
++    char path[] = "/tmp/ds4-ckvstore-corrupt.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp corruption");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++
++    ds4_ckvstore_config cfg = test_config();
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    uint8_t payload[2 * 4 * 8];
++    fill_payload(payload, 0, 4, 2, 8);
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create corrupt fixture");
++    CHECK(ds4_ckvstore_put(store, 0, 0, 4, 2, payload, sizeof(payload),
++                           err, sizeof(err)) == 0,
++          "write corrupt fixture");
++    ds4_ckvstore_close(store);
++    store = NULL;
++
++    int fd = open(path, O_RDWR);
++    CHECK(fd >= 0, "open fixture to mutate");
++    uint8_t byte = 0;
++    CHECK(pread(fd, &byte, 1, DS4_CKVSTORE_HEADER_BYTES + 7) == 1,
++          "read payload mutation byte");
++    byte ^= 0x80;
++    CHECK(pwrite(fd, &byte, 1, DS4_CKVSTORE_HEADER_BYTES + 7) == 1,
++          "mutate payload byte");
++    close(fd);
++
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, false, err, sizeof(err)) == 0,
++          "metadata scan does not trust payload");
++    const uint32_t selected[] = {0};
++    uint8_t got[8];
++    CHECK(ds4_ckvstore_read_selected(store, 0, 0, selected, 1, got,
++                                     sizeof(got), err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_CHECKSUM,
++          "payload corruption fails closed");
++    CHECK(ds4_ckvstore_read_selected(store, 0, 0, selected, 1, got,
++                                     sizeof(got), err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_FAILED,
++          "corruption permanently invalidates request store");
++    ds4_ckvstore_close(store);
++    store = NULL;
++
++    fd = open(path, O_WRONLY);
++    CHECK(fd >= 0, "open fixture to truncate");
++    CHECK(ftruncate(fd, DS4_CKVSTORE_HEADER_BYTES + 3) == 0,
++          "truncate payload");
++    close(fd);
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, false, err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_TRUNCATED,
++          "short record is rejected during reconstruction");
++    CHECK(store == NULL, "failed open returns no usable store");
++    unlink(path);
++}
++
++static void test_header_checksum_and_file_bound(void) {
++    char path[] = "/tmp/ds4-ckvstore-header.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp header");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++
++    ds4_ckvstore_config cfg = test_config();
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    uint8_t payload[2 * 4 * 8];
++    fill_payload(payload, 0, 4, 2, 8);
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create header fixture");
++    CHECK(ds4_ckvstore_put(store, 3, 0, 4, 2, payload, sizeof(payload),
++                           err, sizeof(err)) == 0,
++          "write header fixture");
++    ds4_ckvstore_close(store);
++    store = NULL;
++
++    int fd = open(path, O_RDWR);
++    CHECK(fd >= 0, "open header fixture to mutate");
++    uint8_t byte = 0;
++    CHECK(pread(fd, &byte, 1, 16) == 1, "read epoch header byte");
++    byte ^= 1;
++    CHECK(pwrite(fd, &byte, 1, 16) == 1, "mutate epoch header byte");
++    close(fd);
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, false, err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_CHECKSUM,
++          "header corruption is detected without trusting its index fields");
++    CHECK(store == NULL, "corrupt header publishes no store");
++    unlink(path);
++
++    char limit_path[] = "/tmp/ds4-ckvstore-limit.XXXXXX";
++    seed_fd = mkstemp(limit_path);
++    CHECK(seed_fd >= 0, "mkstemp limit");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(limit_path);
++    cfg.max_file_bytes = DS4_CKVSTORE_HEADER_BYTES + sizeof(payload) - 1;
++    CHECK(ds4_ckvstore_open(&store, limit_path, &cfg, true,
++                            err, sizeof(err)) == 0,
++          "create tightly bounded fixture");
++    CHECK(ds4_ckvstore_put(store, 0, 0, 4, 2, payload, sizeof(payload),
++                           err, sizeof(err)) == DS4_CKVSTORE_ERR_LIMIT,
++          "record larger than maximum is rejected without unsigned wrap");
++    struct stat st;
++    CHECK(stat(limit_path, &st) == 0 && st.st_size == 0,
++          "rejected record writes no partial bytes");
++    ds4_ckvstore_close(store);
++    unlink(limit_path);
++}
++
++static void test_rejects_unsafe_shapes_and_symlinks(void) {
++    char target[] = "/tmp/ds4-ckvstore-target.XXXXXX";
++    int fd = mkstemp(target);
++    CHECK(fd >= 0, "mkstemp symlink target");
++    if (fd < 0) return;
++    close(fd);
++    char linkpath[256];
++    snprintf(linkpath, sizeof(linkpath), "%s.link", target);
++    unlink(linkpath);
++    CHECK(symlink(target, linkpath) == 0, "create symlink fixture");
++
++    ds4_ckvstore_config cfg = test_config();
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    CHECK(ds4_ckvstore_open(&store, linkpath, &cfg, false, err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_IO,
++          "cache path symlink is rejected");
++
++    cfg.row_bytes = UINT32_MAX;
++    cfg.rows_per_record = UINT32_MAX;
++    CHECK(ds4_ckvstore_open(&store, target, &cfg, true, err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_INVALID,
++          "overflowing record shape is rejected before allocation");
++    unlink(linkpath);
++    unlink(target);
++}
++
++static void test_request_file_lifecycle(void) {
++    char dir[] = "/tmp/ds4-ckvstore-requests.XXXXXX";
++    CHECK(mkdtemp(dir) != NULL, "create private request directory");
++    if (access(dir, F_OK) != 0) return;
++    CHECK(chmod(dir, 0700) == 0, "set private request directory mode");
++
++    ds4_ckvstore_config first_cfg = test_config();
++    ds4_ckvstore_config second_cfg = test_config();
++    second_cfg.session_id[0] ^= 0x5a;
++    ds4_ckvstore *first = NULL, *second = NULL;
++    char first_path[512] = {0}, second_path[512] = {0}, err[256] = {0};
++    CHECK(ds4_ckvstore_create_request(&first, dir, &first_cfg,
++                                      first_path, sizeof(first_path),
++                                      err, sizeof(err)) == DS4_CKVSTORE_OK,
++          "create first isolated request file");
++    CHECK(ds4_ckvstore_create_request(&second, dir, &second_cfg,
++                                      second_path, sizeof(second_path),
++                                      err, sizeof(err)) == DS4_CKVSTORE_OK,
++          "create concurrent isolated request file");
++    CHECK(first && second, "both concurrent request stores are usable");
++    CHECK(strcmp(first_path, second_path) != 0,
++          "request lineage produces a unique file name");
++    CHECK(access(first_path, F_OK) != 0 && access(second_path, F_OK) != 0,
++          "request stores are unlinked immediately after their owners open them");
++
++    ds4_ckvstore_close(first);
++    first = NULL;
++    CHECK(access(first_path, F_OK) != 0,
++          "normal close removes the first request file");
++    CHECK(access(second_path, F_OK) != 0,
++          "another live request remains anonymous after its peer closes");
++    ds4_ckvstore_close(second);
++    second = NULL;
++    CHECK(access(second_path, F_OK) != 0,
++          "normal close removes the second request file");
++
++    CHECK(chmod(dir, 0755) == 0, "make request directory unsafe");
++    CHECK(ds4_ckvstore_create_request(&first, dir, &first_cfg,
++                                      first_path, sizeof(first_path),
++                                      err, sizeof(err)) == DS4_CKVSTORE_ERR_IO,
++          "shared request directory fails closed");
++    CHECK(first == NULL, "unsafe directory publishes no store");
++    CHECK(chmod(dir, 0700) == 0, "restore directory for cleanup");
++    CHECK(rmdir(dir) == 0, "request directory has no leaked files");
++}
++
++int main(void) {
++    test_dynamic_exact_selected_rows();
++    test_cache_is_partitioned_by_epoch();
++    test_buffered_decode_tail();
++    test_production_width_buffered_prefill();
++    test_batch_selection_coalesces_records();
++    test_indexed_lookup_cost();
++    test_corruption_and_short_read_fail_closed();
++    test_header_checksum_and_file_bound();
++    test_rejects_unsafe_shapes_and_symlinks();
++    test_request_file_lifecycle();
++    if (failed) {
++        fprintf(stderr, "test_glm_ckvstore: %d failure(s)\n", failed);
++        return 1;
++    }
++    fprintf(stderr, "test_glm_ckvstore: PASS\n");
++    return 0;
++}
+diff --git a/tests/test_glm_ckvstore_1m.c b/tests/test_glm_ckvstore_1m.c
+new file mode 100644
+index 0000000..aa2eb42
+--- /dev/null
++++ b/tests/test_glm_ckvstore_1m.c
+@@ -0,0 +1,105 @@
++#include "ds4_ckvstore.h"
++
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <time.h>
++#include <unistd.h>
++
++#define ROWS 1048576u
++#define ROW_BYTES 8u
++#define RECORD_ROWS 64u
++#define SELECTED 2048u
++
++static double seconds(void) {
++    struct timespec ts;
++    clock_gettime(CLOCK_MONOTONIC, &ts);
++    return (double)ts.tv_sec + (double)ts.tv_nsec / 1.0e9;
++}
++
++int main(void) {
++    char path[] = "/tmp/ds4-ckvstore-1m.XXXXXX";
++    int seed_fd = mkstemp(path);
++    if (seed_fd < 0) return 2;
++    close(seed_fd);
++    unlink(path);
++    ds4_ckvstore_config cfg = {
++        .row_bytes = ROW_BYTES,
++        .rows_per_record = RECORD_ROWS,
++        .max_cached_records = 64,
++        .max_epochs = 1,
++        .generation = 1,
++        .max_file_bytes = 32u * 1024u * 1024u,
++        .sync_interval_bytes = 8u * 1024u * 1024u,
++    };
++    memset(cfg.model_binding, 0x31, sizeof(cfg.model_binding));
++    memset(cfg.format_binding, 0x52, sizeof(cfg.format_binding));
++    memset(cfg.session_id, 0x73, sizeof(cfg.session_id));
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    if (ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) != 0) {
++        fprintf(stderr, "open: %s\n", err);
++        return 1;
++    }
++    uint8_t payload[RECORD_ROWS * ROW_BYTES];
++    const double put_t0 = seconds();
++    for (uint32_t first = 0; first < ROWS; first += RECORD_ROWS) {
++        for (uint32_t row = 0; row < RECORD_ROWS; row++) {
++            uint64_t value = first + row;
++            memcpy(payload + row * ROW_BYTES, &value, sizeof(value));
++        }
++        if (ds4_ckvstore_put(store, 77, first, RECORD_ROWS, 1, payload,
++                             sizeof(payload), err, sizeof(err)) != 0) {
++            fprintf(stderr, "put row %u: %s\n", first, err);
++            return 1;
++        }
++    }
++    const double put_seconds = seconds() - put_t0;
++    uint32_t selected[SELECTED];
++    uint8_t output[SELECTED * ROW_BYTES];
++    for (uint32_t i = 0; i < SELECTED; i++) {
++        uint32_t block = (i * 8191u) % (ROWS / RECORD_ROWS);
++        selected[i] = block * RECORD_ROWS + (i % RECORD_ROWS);
++    }
++    const double read_t0 = seconds();
++    if (ds4_ckvstore_read_selected(store, 77, 0, selected, SELECTED,
++                                   output, sizeof(output), err,
++                                   sizeof(err)) != 0) {
++        fprintf(stderr, "read: %s\n", err);
++        return 1;
++    }
++    const double read_seconds = seconds() - read_t0;
++    for (uint32_t i = 0; i < SELECTED; i++) {
++        uint64_t value = UINT64_MAX;
++        memcpy(&value, output + i * ROW_BYTES, sizeof(value));
++        if (value != selected[i]) {
++            fprintf(stderr, "row mismatch at %u\n", i);
++            return 1;
++        }
++    }
++    ds4_ckvstore_stats stats = {0};
++    ds4_ckvstore_get_stats(store, &stats);
++    const uint64_t expected_reads =
++        (uint64_t)SELECTED * (DS4_CKVSTORE_HEADER_BYTES +
++                              RECORD_ROWS * ROW_BYTES);
++    const uint64_t comparison_bound = SELECTED * 15u;
++    int failed = stats.records != ROWS / RECORD_ROWS ||
++                 stats.physical_read_bytes != expected_reads ||
++                 stats.lookup_comparisons == 0 ||
++                 stats.lookup_comparisons > comparison_bound ||
++                 stats.cache_records > cfg.max_cached_records ||
++                 stats.pending_write_bytes >= cfg.sync_interval_bytes;
++    printf("{\"rows\":%u,\"records\":%llu,\"selected\":%u,"
++           "\"physical_read_bytes\":%llu,\"lookup_comparisons\":%llu,"
++           "\"sync_calls\":%llu,\"put_seconds\":%.9f,"
++           "\"read_seconds\":%.9f,\"verdict\":\"%s\"}\n",
++           ROWS, (unsigned long long)stats.records, SELECTED,
++           (unsigned long long)stats.physical_read_bytes,
++           (unsigned long long)stats.lookup_comparisons,
++           (unsigned long long)stats.sync_calls, put_seconds, read_seconds,
++           failed ? "FAIL" : "PASS");
++    ds4_ckvstore_close(store);
++    unlink(path);
++    return failed ? 1 : 0;
++}
