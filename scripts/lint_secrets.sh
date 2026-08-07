@@ -164,6 +164,7 @@ allowlist = {
     "checkpoint_chain_tail_sha256",
     "candidate_semantic_sha256",
     "strict_semantic_sha256",
+    "selected_checkpoint_semantic_sha256",
     "console_log_sha256",
     "generated_content_sha256",
     "generated_reasoning_sha256",

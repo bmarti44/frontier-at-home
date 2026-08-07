@@ -758,13 +758,17 @@ admission-only policy.
 
 ### Rung 0.6 - multi-turn TTFT (W7)
 
-Keep the strict resume guard. First resolve the L40 same-lineage store/load
-round-trip with branch-matched suffix probes and logit comparison. Any guard
-relaxation requires `max|delta logit| < 1e-2`, matching argmax, correct
-checkpoint selection, Sol pre-registration, and owner sign-off. Then test, in
-order, removal of the redundant 920 MiB re-store, live rewind, and small-suffix
-batch prefill. The target is measured warm agent-turn TTFT below 2 seconds;
-projections are never reported as measurements.
+Status: **PASS for production correctness; TTFT target remains open.** The
+graduated source at `3ba062e5433e56df7c6da70b58cc9757e7777d54` preserves the
+global guard, authenticates KVC v2 records, selects the correct 5,044-token
+checkpoint, and resumes without a diagnostic opt-in. The frozen production
+campaign at `W7-resume-production-pass-2026-08-07.json` measured 154,880
+candidate/cold f32 logits byte-identical (`max|delta| = 0`, argmax 14,109),
+while the strict control restarted from zero as required. Both persistent
+reviewers gave terminal runtime PASS in round 232 with no high or critical
+issues. The resumed request took 3.58 seconds, so it does **not** meet the
+sub-two-second target. Continue only with byte-identical removal of remaining
+restore/store and suffix-processing overhead; do not weaken the global guard.
 
 ### Fidelity-free prefill work after decode/TTFT (W4/W5/W6)
 
