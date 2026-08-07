@@ -241,11 +241,11 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
 
     def test_frozen_launcher_pins_and_stably_executes_parent_and_driver(self):
         source = FROZEN_LAUNCHER.read_text(encoding="utf-8")
-        self.assertIn("readonly CANDIDATE_COMMIT=", source)
-        self.assertIn("readonly HARNESS_SHA256=", source)
-        self.assertIn("git -C \"$REPO\" show", source)
-        self.assertIn("exec {harness_fd}<", source)
-        self.assertIn('/proc/$$/fd/$harness_fd', source)
+        self.assertIn('CANDIDATE_COMMIT = "', source)
+        self.assertIn('HARNESS_SHA256 = "', source)
+        self.assertIn('["/usr/bin/git", "-C", REPO, "show"', source)
+        self.assertIn("os.memfd_create", source)
+        self.assertIn('f"/proc/self/fd/{fd}"', source)
         completed = subprocess.run(
             [str(FROZEN_LAUNCHER), "--self-test"],
             cwd=ROOT,
@@ -262,9 +262,9 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
     def test_frozen_launcher_rejects_hostile_ambient_execution_tools(self):
         launcher = FROZEN_LAUNCHER.read_text(encoding="utf-8")
         expected = next(
-            line.split("=", 1)[1]
+            line.split('"', 2)[1]
             for line in launcher.splitlines()
-            if line.startswith("readonly HARNESS_SHA256=")
+            if line.startswith("HARNESS_SHA256 = ")
         )
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
@@ -298,11 +298,8 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
             self.assertFalse(marker.exists(), completed.stdout + completed.stderr)
             self.assertNotIn("MALICIOUS", completed.stdout + completed.stderr)
         self.assertIn("/usr/bin/git", launcher)
-        self.assertIn("/usr/bin/sha256sum", launcher)
-        self.assertLess(
-            launcher.index('exec {harness_fd}<"$staged"'),
-            launcher.index('/usr/bin/sha256sum -- "/proc/$$/fd/$harness_fd"'),
-        )
+        self.assertIn("os.environ.clear()", launcher)
+        self.assertIn("hashlib.sha256(sealed_bytes)", launcher)
 
     def test_frozen_launcher_seals_verified_execution_bytes(self):
         launcher = FROZEN_LAUNCHER.read_text(encoding="utf-8")
