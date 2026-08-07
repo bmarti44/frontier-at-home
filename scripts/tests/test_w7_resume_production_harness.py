@@ -33,6 +33,26 @@ class W7ProductionHarnessTest(unittest.TestCase):
         self.assertIn("DS4_GLM_LOGIT_DUMP_ALL=1", source)
         self.assertNotIn("DS4_GLM_RESTORED_FRONTIER_DIAGNOSTIC", source)
 
+    def test_strict_reference_and_production_arms_are_distinct_and_bound(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("readonly STRICT_BIN=", source)
+        self.assertIn("readonly STRICT_BINARY_SHA256=", source)
+        resolved = {}
+        for arm in ("strict", "candidate", "cold"):
+            result = subprocess.run(
+                ["/usr/bin/bash", str(HARNESS), "--resolved-arm-config", arm],
+                cwd=ROOT, text=True, capture_output=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            resolved[arm] = result.stdout.strip()
+        self.assertNotEqual(resolved["strict"], resolved["candidate"])
+        self.assertEqual(resolved["candidate"], resolved["cold"])
+
+    def test_configuration_is_emitted_and_recomputed(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn('"$attempt_out/configuration.json"', source)
+        self.assertNotIn("readonly CONFIGURATION_SHA256=", source)
+
     def test_arm_roles_are_explicit_and_fresh(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")
         for arm in ("strict", "candidate", "cold"):

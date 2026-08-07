@@ -24,6 +24,32 @@ LIVE_SHA = "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a"
 N_VOCAB = 154880
 
 
+def _kvc_v2_record(*, created_at: int, last_used: int = 0,
+                   hits: int = 0, text: bytes = b"checkpoint-text",
+                   payload: bytes = b"checkpoint-payload") -> bytes:
+    header = bytearray(80)
+    header[0:4] = b"KVC\x02"
+    header[4] = 2
+    header[5] = 2
+    header[7] = 1
+    struct.pack_into("<I", header, 8, 5044)
+    struct.pack_into("<I", header, 12, hits)
+    struct.pack_into("<I", header, 16, 8192)
+    header[20] = 3
+    struct.pack_into("<Q", header, 24, created_at)
+    struct.pack_into("<Q", header, 32, last_used)
+    struct.pack_into("<Q", header, 40, len(payload))
+    text_len = struct.pack("<I", len(text))
+    digest_header = bytearray(header)
+    digest_header[12:16] = b"\0" * 4
+    digest_header[32:40] = b"\0" * 8
+    digest_header[48:80] = b"\0" * 32
+    header[48:80] = hashlib.sha256(
+        bytes(digest_header) + text_len + text + payload
+    ).digest()
+    return bytes(header) + text_len + text + payload
+
+
 class W7ProductionScorerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -98,11 +124,11 @@ class W7ProductionScorerTest(unittest.TestCase):
         selected = f"{'a' * 40}.kv"
         kv = arm / "kv"
         kv.mkdir()
-        header = bytearray(64)
-        header[0:4] = b"DS4K"
-        header[24:40] = bytes([1 if name == "strict" else 2]) * 16
-        payload = b"checkpoint-payload"
-        current = bytes(header) + payload
+        current = _kvc_v2_record(
+            created_at=100 if name == "strict" else 200,
+            last_used=300 if name == "strict" else 400,
+            hits=1 if name == "strict" else 2,
+        )
         (kv / selected).write_bytes(current)
         full = hashlib.sha256(current).hexdigest()
         normalized = MODULE._normalized_kv_sha256(kv / selected)
@@ -188,6 +214,44 @@ class W7ProductionScorerTest(unittest.TestCase):
         values[1], values[2], values[3] = 0.25, 0.98, -0.5
         target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
         self.assertEqual(self._score()["verdict"], "FAIL")
+
+    def test_rejects_sub_threshold_logit_drift(self) -> None:
+        target = self.candidate / "logits.sync3.start5044.prompt5066.suffix22"
+        values = [0.0] * N_VOCAB
+        values[1], values[2], values[3] = 0.255, 1.0, -0.5
+        target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
+        self.assertEqual(self._score()["verdict"], "FAIL")
+
+    def test_kvc_v2_semantic_identity_authenticates_and_normalizes_bookkeeping(self) -> None:
+        first = self.root / "first.kv"
+        second = self.root / "second.kv"
+        first.write_bytes(_kvc_v2_record(created_at=100, last_used=101, hits=1))
+        second.write_bytes(_kvc_v2_record(created_at=200, last_used=202, hits=9))
+        self.assertEqual(
+            MODULE._kvc_v2_semantic_sha256(first),
+            MODULE._kvc_v2_semantic_sha256(second),
+        )
+        corrupted = bytearray(second.read_bytes())
+        corrupted[-1] ^= 1
+        second.write_bytes(corrupted)
+        with self.assertRaises(ValueError):
+            MODULE._kvc_v2_semantic_sha256(second)
+
+    def test_rejects_any_diagnostic_marker_in_every_arm(self) -> None:
+        for arm in (self.strict, self.candidate, self.cold):
+            with self.subTest(arm=arm.name):
+                path = arm / "server.log"
+                original = path.read_text()
+                path.write_text(
+                    original + "ds4: GLM restored-frontier diagnostic: rejected\n"
+                )
+                MODULE.write_evidence_contract(
+                    self.root, self.bindings,
+                    MODULE._expected_arm_order(self.bindings["seed_sha256"]),
+                    self.source_commit,
+                )
+                self.assertEqual(self._score()["verdict"], "FAIL")
+                path.write_text(original)
 
     def test_rejects_unmatched_final_branch(self) -> None:
         marker = "ds4: GLM sync branch=indexed_resume pos=5044 chunk=22 logits=1\n"

@@ -10,6 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 SCORER = ROOT / "scripts/87_score_w7_resume_production.py"
 HARNESS = ROOT / "results/glm52-gates/harness/w7_resume_production_v1.sh"
+LAUNCHER = ROOT / "scripts/86_run_w7_equivalence.py"
 SPEC = importlib.util.spec_from_file_location("w7_equivalence_scorer", SCORER)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -39,6 +40,12 @@ class W7ProductionContractTest(unittest.TestCase):
             "readonly BIN=/home/bmarti44/.cache/glm52-w7-3ba062e-runtime/ds4-server",
             source,
         )
+
+    def test_reviewed_launcher_binds_production_runtime_inputs(self) -> None:
+        source = LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("w7_resume_production_v1.sh", source)
+        self.assertIn("87_score_w7_resume_production.py", source)
+        self.assertIn("3ed41af68b33cba70729c161b6da77055eb0d6ba", source)
 
 
 if __name__ == "__main__":
