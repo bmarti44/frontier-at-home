@@ -1,0 +1,28 @@
+{
+  "candidate_commit": "d327d63bee1a93319a05f8f9b467edbae0cf49d8",
+  "candidate_number": 13,
+  "campaign_review_round_next": 208,
+  "engine_scope": "unchanged",
+  "frozen_artifacts": {
+    "binary_sha256": "56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4",
+    "harness_sha256": "e9521f2b096bee1803f5d65fad81da6d473ce582fdc79c82433fcff1cecc3b45",
+    "launcher_commit": "fba76667dc45042ba8581fd3d3022ed0d2057550",
+    "source_sha256": "f7e5f483563a8e76a329855deeffc3c45c55911b744b3d6299539292a7f3554d",
+    "scorer_sha256": "6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985"
+  },
+  "pre_submission_audit": {
+    "diff_check": "PASS",
+    "frozen_launcher_self_test": "PASS",
+    "harness_self_test": "PASS",
+    "secret_lint": "PASS",
+    "tests": {"count": 91, "result": "PASS"}
+  },
+  "scope": [
+    "clear ambient environment in the launcher shebang before Bash reads BASH_ENV",
+    "use absolute paths for every trust-establishing executable",
+    "open the extracted candidate first and hash the stable descriptor",
+    "unlink only after descriptor verification",
+    "reject hostile PATH, BASH_ENV and pathname-replacement mutations"
+  ],
+  "schema_version": 1
+}
