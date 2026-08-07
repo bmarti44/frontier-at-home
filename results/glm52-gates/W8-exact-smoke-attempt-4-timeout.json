@@ -43,6 +43,22 @@
     "exact/containment.rc": "9961d158a7e0e2f990765971a9e490af826c0743b7d603020f34cc8944319fcb",
     "exact/http-status": "945e4893567554e68f6f28d5652917269341a5f3d295a16b7c708c9bfd95dc5d"
   },
+  "post_terminal_integrity_incident": {
+    "discovered_during_review_round": 244,
+    "local_attempt_pristine": false,
+    "affected_artifact": "exact/http-status",
+    "incident_time": "2026-08-07T18:02:55.830973316-04:00",
+    "incident": "The gap reviewer accidentally passed exact/http-status as xxd's output pathname while inspecting exact/containment.rc. This replaced the four-byte terminal artifact with an xxd text dump. The reviewer then restored the bytes to 000\\n from the hash-bound expected value.",
+    "observed_by": "the adversarial reviewer observed both the mismatching intermediate hash and the later restored hash",
+    "original_and_restored": {
+      "sha256": "945e4893567554e68f6f28d5652917269341a5f3d295a16b7c708c9bfd95dc5d"
+    },
+    "intermediate_mutated": {
+      "sha256": "600bccc6f38ed9202d2d2258d42074804c996267ff402eedd880c12bc4d1cf9b"
+    },
+    "other_terminal_artifacts": "Their mtimes and ctimes remained at terminalization; no other post-terminal write was observed.",
+    "disposition": "The local attempt is not represented as pristine or rehabilitated. Under the fixed formula, post-terminal artifact mutation is independently a failure. It cannot change the already-committed FAIL into a pass or authorize a rerun with relaxed limits. Reviewers must use private copies for all future mutation and formatting checks."
+  },
   "host_safety": {
     "samples": 6237,
     "minimum_mem_available_kib": 51590940,
@@ -58,6 +74,6 @@
     "host_swap_free_kib_before": 16620684,
     "host_swap_free_kib_after": 16620684
   },
-  "interpretation": "The representation remained fail-closed and host-safe, but it failed the bounded model-backed smoke before byte identity or selected-row telemetry could be scored. It must not be used for the direct-1M run or promoted into a serving profile.",
+  "interpretation": "The representation remained fail-closed and host-safe, but it failed the bounded model-backed smoke before byte identity or selected-row telemetry could be scored. The later review-time artifact mutation is an additional failure and makes the local attempt non-pristine. This candidate must not be used for the direct-1M run or promoted into a serving profile.",
   "verdict": "FAIL"
 }
