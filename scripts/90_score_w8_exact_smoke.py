@@ -118,6 +118,25 @@ def artifact_inventory(root: pathlib.Path, strict: bool = True) -> list[dict]:
     return rows
 
 
+def verify_inventory(base: pathlib.Path, inventory: list[dict]) -> None:
+    if not isinstance(inventory, list):
+        raise ValueError("artifact inventory is missing")
+    seen = set()
+    for artifact in inventory:
+        if not isinstance(artifact, dict) or artifact.get("unsafe"):
+            raise ValueError("unsafe artifact inventory entry")
+        relative = artifact.get("path")
+        pure = pathlib.PurePosixPath(relative) if isinstance(relative, str) else None
+        if (pure is None or pure.is_absolute() or ".." in pure.parts or
+                relative in seen):
+            raise ValueError("invalid artifact inventory path")
+        seen.add(relative)
+        path = base.joinpath(*pure.parts)
+        if (artifact.get("bytes") != regular(path).stat().st_size or
+                artifact.get("sha256") != sha(path)):
+            raise ValueError(f"post-score artifact mutation: {relative}")
+
+
 def safety(arm: pathlib.Path) -> dict:
     if (arm / "containment.rc").read_text().strip() != "0":
         raise ValueError(f"{arm.name}: containment failed")
@@ -191,6 +210,11 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
     manifest = strict_json(manifest_path)
     if manifest.get("schema") != "glm52-w8-exact-smoke-manifest-v1":
         raise ValueError("manifest schema mismatch")
+    receipt_hash = manifest.get("randomness_receipt_sha256")
+    if (not isinstance(receipt_hash, str) or
+            not re.fullmatch(r"[0-9a-f]{64}", receipt_hash) or
+            sha(regular(root / "randomness-receipt.json")) != receipt_hash):
+        raise ValueError("preserved randomness receipt does not match manifest")
     if sorted(manifest.get("arm_order", [])) != sorted(ARMS):
         raise ValueError("arm order is incomplete")
     configs = manifest.get("arms")
@@ -322,17 +346,20 @@ def verify_terminal(root: pathlib.Path, manifest_path: pathlib.Path,
         receipt.get(key) != value for key, value in expected.items()
     ):
         raise ValueError("terminal receipt hash mismatch")
+    manifest = strict_json(manifest_path)
+    if manifest.get("schema") == "glm52-w8-exact-smoke-manifest-v1":
+        receipt_hash = manifest.get("randomness_receipt_sha256")
+        if (not isinstance(receipt_hash, str) or
+                sha(regular(root / "randomness-receipt.json")) != receipt_hash):
+            raise ValueError("terminal randomness receipt mismatch")
     raw_rows = [json.loads(line) for line in raw_path.read_text().splitlines() if line]
     for row in raw_rows:
         arm = row.get("arm")
         inventory = row.get("artifacts")
-        if arm not in ARMS or not isinstance(inventory, list):
-            continue
-        for artifact in inventory:
-            path = root / arm / artifact["path"]
-            if (artifact.get("bytes") != regular(path).stat().st_size or
-                    artifact.get("sha256") != sha(path)):
-                raise ValueError(f"post-score artifact mutation: {arm}/{artifact['path']}")
+        if arm in ARMS:
+            verify_inventory(root / arm, inventory)
+        elif row.get("record_type") == "w8_smoke_failure":
+            verify_inventory(root, inventory)
 
 
 def write_failure(root: pathlib.Path, manifest_path: pathlib.Path,
