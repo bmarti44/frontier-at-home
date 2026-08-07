@@ -1,0 +1,94 @@
+{
+  "schema": "glm52-w9-real-capture-review-v1",
+  "candidate_hash": "main:d9d869b41f9a71c8e35988ce268a3683d6c956c2+engine:9ebc0f2879c126db095ecd25be0567166868d52c",
+  "review_round": 247,
+  "candidate": 2,
+  "verdict": "REJECT",
+  "runtime_allowed": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 54,
+      "critical": [],
+      "high": [
+        "GAP-W9-247-H1-UNBOUND-ARM-ROOT",
+        "GAP-W9-247-H2-ZERO-TOKEN-CLI-ARG-REJECTED",
+        "GAP-W9-247-H3-SCORER-ARTIFACT-TOCTOU"
+      ],
+      "medium": ["GAP-W9-247-M1-PRODUCTION-HARNESS-TESTS-ARE-NONEXECUTING"],
+      "low": []
+    },
+    "Singer": {
+      "score_0_to_100": 42,
+      "critical": ["ADV-W9-247-C1-LOGIT-PREPOSITION-FALSE-PASS"],
+      "high": [
+        "ADV-W9-247-H1-RUNTIME-MODEL-DIGEST-UNVERIFIED",
+        "ADV-W9-247-H2-PARTIAL-SELECTED-ROWS-ACCEPTED",
+        "ADV-W9-247-H3-SCORER-SAME-SIZE-TOCTOU"
+      ],
+      "medium": ["ADV-W9-247-M1-ENGINE-MARKER-STILL-UNBOUND"],
+      "low": []
+    }
+  },
+  "findings": [
+    {
+      "id": "GAP-W9-247-H1-UNBOUND-ARM-ROOT",
+      "severity": "high",
+      "evidence": "run_arm derives arm_out in the same local declaration that assigns arm_root; set -u expands arm_root first and exits.",
+      "reproduction": "bash -c 'set -u; root=/tmp/x; f(){ local arm=$1 arm_root=$2 arm_out=$arm_root/$arm rc tag; }; f off \"$root\"'",
+      "acceptance_test": "Execute the actual factored arm-path function under set -u for OFF and ON."
+    },
+    {
+      "id": "GAP-W9-247-H2-ZERO-TOKEN-CLI-ARG-REJECTED",
+      "severity": "high",
+      "evidence": "The frozen CLI parser rejects -n 0 before loading a model.",
+      "reproduction": "/home/bmarti44/.cache/glm52-w9-9ebc0f2-runtime/ds4-server -n 0",
+      "acceptance_test": "Use a supported no-generation CLI mode and execute its exact argument parse against a deliberately missing model."
+    },
+    {
+      "id": "ADV-W9-247-C1-LOGIT-PREPOSITION-FALSE-PASS",
+      "severity": "critical",
+      "evidence": "Exclusive logit publication failure is nonfatal to sync and the scorer did not require the exact success diagnostic or reject the failure diagnostic.",
+      "reproduction": "Precreate identical finite final logit paths in both fresh arm directories.",
+      "acceptance_test": "The driver and scorer require one exact successful publication and zero failures; a prepositioned final path fails."
+    },
+    {
+      "id": "ADV-W9-247-H1-RUNTIME-MODEL-DIGEST-UNVERIFIED",
+      "severity": "high",
+      "evidence": "Preflight asserted the model digest but checked only path type and size.",
+      "reproduction": "Substitute a same-sized regular model artifact.",
+      "acceptance_test": "Hash the complete runtime model before launch and pin its device/inode/size identity across both arms."
+    },
+    {
+      "id": "ADV-W9-247-H2-PARTIAL-SELECTED-ROWS-ACCEPTED",
+      "severity": "high",
+      "evidence": "The production frozen schedule selects 2048 entries, while the scorer and its positive fixture accepted count one.",
+      "reproduction": "Run the existing count-one validate_selected fixture.",
+      "acceptance_test": "Require exactly 2048 entries per row and reject reduced, zero, excessive, and malformed padding counts."
+    },
+    {
+      "id": "GAP-W9-247-H3-SCORER-ARTIFACT-TOCTOU/ADV-W9-247-H3-SCORER-SAME-SIZE-TOCTOU",
+      "severity": "high",
+      "evidence": "Hashing, semantic validation, and terminal inventory reopened artifact pathnames independently and terminal verification did not reject added paths.",
+      "reproduction": "Rewrite or replace a same-sized artifact between hash and semantic passes; add an artifact after receipt creation.",
+      "acceptance_test": "Hash and semantically validate through one descriptor with pre/post identity/timestamp checks, bind that digest to exact terminal inventory, and mutation-test rewrite/replacement/addition."
+    }
+  ],
+  "local_reproduction": {
+    "unbound_arm_root": {
+      "exit_code": 127,
+      "stderr_sha256": "4737f132a8e8d11e3c793a4ce02439f73e1e4f46f9a9ed9accb2c04c6558643a"
+    },
+    "zero_token_parser": {
+      "exit_code": 2,
+      "stderr_sha256": "d79fd309769390ab74b1fd8ca4d2a488e36e653af85039c29c63b5be1c43cf14"
+    }
+  },
+  "prior_issue_status": {
+    "staging_geometry": "FIXED_VERIFIED",
+    "causal_padding_sentinel": "FIXED_VERIFIED",
+    "directory_swap_TOCTOU": "FIXED_VERIFIED",
+    "compiled_behavioral_RED": "FIXED_VERIFIED",
+    "byte_identity_and_artifact_binding": "OPEN"
+  },
+  "next_candidate_scope": "Only the named round-247 launcher, logit-publication, runtime-model-identity, selected-count, stable-descriptor, exact-inventory, and executable-mutation findings."
+}
