@@ -92,6 +92,14 @@ class W7HarnessTest(unittest.TestCase):
         expected = Path(candidate_source.group(1)) / "ds4-server"
         self.assertTrue(expected.samefile(Path(binary.group(1))))
 
+    def test_run_arm_does_not_expand_unassigned_locals(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertNotIn(
+            "local arm=$1 root=$2 arm_out=$root/$arm tag rc", source
+        )
+        self.assertIn("local arm=$1 root=$2", source)
+        self.assertIn("local arm_out=$root/$arm", source)
+
     def test_required_evidence_contract_is_emitted(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")
         self.assertIn("manifest.json", source)
