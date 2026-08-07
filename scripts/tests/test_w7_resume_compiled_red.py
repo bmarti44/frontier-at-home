@@ -36,6 +36,17 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         )
         self.assertEqual(readonly_names & local_names, set())
 
+    def test_log_regexes_use_real_word_boundaries(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn(
+            're.search(r"kv cache hit text tokens=5044\\b", log)', source
+        )
+        self.assertIn(
+            're.search(r"GLM sync start=5044 prompt=5066 suffix=22\\b", log)', source
+        )
+        self.assertNotIn('tokens=5044\\\\b", log)', source)
+        self.assertNotIn('suffix=22\\\\b", log)', source)
+
     def test_fixture_pool_binds_completion_parser_rendered_wire(self):
         pool = json.loads(
             (ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json").read_text()
