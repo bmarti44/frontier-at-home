@@ -11,7 +11,7 @@ readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly SCORER=$REPO/scripts/91_score_w9_real_capture.py
 readonly PROMPT_BUILDER=$REPO/scripts/92_build_w9_prompt.py
 readonly DRAND_VERIFY=$REPO/scripts/89_verify_drand_receipt.mjs
-readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W9-real-capture-review-r247.json
+readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W9-real-capture-review-r248.json
 readonly NODE=/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node
 readonly RUNTIME_DIR=/home/bmarti44/.cache/glm52-w9-9ebc0f2-runtime
 readonly BIN=$RUNTIME_DIR/ds4-server
@@ -49,10 +49,21 @@ verify_reviewed_components() {
 driver() {
   [[ $# == 2 && ( $1 == off || $1 == on ) ]]
   local arm=$1 arm_out=$2
+  local -a publications=()
   "$BIN" --cuda -m "$MODEL" --raw-prompt --prompt-file "$arm_out/prompt.txt" \
-    -c 8193 -n 0 --temp 0 --ssd-streaming \
+    -c 8193 --temp 0 --dump-logits "$arm_out/next-logits.json" --ssd-streaming \
     --ssd-streaming-cache-experts 40GB \
     >"$arm_out/cli.stdout" 2>"$arm_out/cli.stderr"
+  ! grep -Fq 'prefill logits dump failed' "$arm_out/cli.stderr"
+  mapfile -t publications < <(sed -n 's/^ds4: prefill logits dumped to //p' \
+    "$arm_out/cli.stderr")
+  [[ ${#publications[@]} == 1 && ${publications[0]} == "$arm_out"/logits.sync* &&
+     -f ${publications[0]} && ! -L ${publications[0]} ]]
+}
+
+arm_output_path() {
+  [[ $# == 2 && ( $1 == off || $1 == on ) && $2 == /* ]]
+  printf '%s/%s\n' "$2" "$1"
 }
 
 bind_safety() {
@@ -68,7 +79,8 @@ bind_safety() {
 }
 
 run_arm() {
-  local arm=$1 arm_root=$2 arm_out=$arm_root/$arm rc tag
+  local arm=$1 arm_root=$2 arm_out rc tag
+  arm_out=$(arm_output_path "$arm" "$arm_root")
   mkdir "$arm_out"
   install -m 0600 "$arm_root/prompt.txt" "$arm_out/prompt.txt"
   tag=w9-${arm}-${W9_NONCE:0:12}
@@ -124,10 +136,14 @@ print(c,floor)
 PY
 )
 git -C "$REPO" merge-base --is-ancestor "$reviewed_commit" HEAD
+[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W9-real-capture-review-r248.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
 verify_reviewed_components "$reviewed_commit"
 [[ -x $BIN && ! -L $BIN && $(sha "$BIN") == "$BINARY_SHA256" ]]
 [[ $(git -C "$ENGINE_SRC" rev-parse HEAD) == "$ENGINE_COMMIT" && -z $(git -C "$ENGINE_SRC" status --porcelain) ]]
-[[ -f $MODEL && ! -L $MODEL && $(stat -Lc '%s' "$MODEL") == "$MODEL_BYTES" ]]
+[[ -f $MODEL && ! -L $MODEL &&
+   $(stat -Lc '%U:%G:%a:%h:%s' "$MODEL") == "dsv4:dsv4:664:1:$MODEL_BYTES" ]]
+[[ $(sha "$MODEL") == "$MODEL_SHA256" ]]
+readonly MODEL_IDENTITY=$(stat -Lc '%d:%i:%s:%y:%z' "$MODEL")
 [[ -f $TOKENIZER && ! -L $TOKENIZER && $(sha "$TOKENIZER") == "$TOKENIZER_SHA256" ]]
 [[ -r $SAFE && ! -L $SAFE && -x $CGROUP && -x $SCORER && -x $PROMPT_BUILDER && -x $NODE ]]
 ! pgrep -x ds4-server >/dev/null && ! pgrep -x ds4 >/dev/null && ! pgrep -x fio >/dev/null
@@ -135,6 +151,11 @@ verify_reviewed_components "$reviewed_commit"
 /usr/bin/flock -n -E 75 -- "$ENGINE_LOCK" /usr/bin/true
 readonly W9_LOCK_IDENTITY=$(stat -Lc '%d:%i' "$ENGINE_LOCK")
 export W9_LOCK_IDENTITY
+verify_model_identity() {
+  [[ -f $MODEL && ! -L $MODEL &&
+     $(stat -Lc '%U:%G:%a:%h' "$MODEL") == dsv4:dsv4:664:1 &&
+     $(stat -Lc '%d:%i:%s:%y:%z' "$MODEL") == "$MODEL_IDENTITY" ]]
+}
 swap_used_kib=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t-f}' /proc/meminfo)
 (( swap_used_kib < 1048576 ))
 python3 -I -B "$GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 0 >/dev/null
@@ -164,6 +185,7 @@ install -m 0600 "$randomness_receipt" "$root/randomness-receipt.json"
 readonly prompt_sha=$(sha "$root/prompt.txt")
 readonly base_config_sha=$(printf '%s\n' \
   'ctx=8193' 'tokens=0' 'temperature=0' 'ssd_streaming=1' \
+  'dump_logits_mode=1' \
   'expert_cache_gb=40' 'expert_cache_pin=1' 'expert_cache_slru=1' \
   'fetch_threads=6' 'moe_no_atomic_down=1' | sha256sum | awk '{print $1}')
 
@@ -202,6 +224,7 @@ trap 'finalize $?' EXIT
 for arm in "${arms[@]}"; do
   stage=arm-$arm
   run_arm "$arm" "$root"
+  verify_model_identity
 done
 stage=scorer
 python3 -I -B "$SCORER" --root "$root" --manifest "$root/manifest.json" \

@@ -57,15 +57,17 @@ def read_regular(path: pathlib.Path) -> bytes:
                 break
             pieces.append(chunk)
         after = os.fstat(fd)
-        if (before.st_dev, before.st_ino, before.st_size) != \
-                (after.st_dev, after.st_ino, after.st_size):
+        if (before.st_dev, before.st_ino, before.st_size,
+                before.st_mtime_ns, before.st_ctime_ns) != \
+                (after.st_dev, after.st_ino, after.st_size,
+                 after.st_mtime_ns, after.st_ctime_ns):
             raise ValueError(f"artifact changed while read: {path}")
         return b"".join(pieces)
     finally:
         os.close(fd)
 
 
-def sha_regular(path: pathlib.Path) -> tuple[str, int]:
+def scan_regular(path: pathlib.Path, consume=None) -> tuple[str, int]:
     fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
     digest = hashlib.sha256()
     try:
@@ -77,16 +79,24 @@ def sha_regular(path: pathlib.Path) -> tuple[str, int]:
             if not chunk:
                 break
             digest.update(chunk)
+            if consume is not None:
+                consume(chunk)
         after = os.fstat(fd)
-        if (before.st_dev, before.st_ino, before.st_size) != \
-                (after.st_dev, after.st_ino, after.st_size):
+        if (before.st_dev, before.st_ino, before.st_size,
+                before.st_mtime_ns, before.st_ctime_ns) != \
+                (after.st_dev, after.st_ino, after.st_size,
+                 after.st_mtime_ns, after.st_ctime_ns):
             raise ValueError(f"artifact changed while hashed: {path}")
         return digest.hexdigest(), before.st_size
     finally:
         os.close(fd)
 
 
-def strict_json(path: pathlib.Path):
+def sha_regular(path: pathlib.Path) -> tuple[str, int]:
+    return scan_regular(path)
+
+
+def parse_strict_json(payload: bytes):
     def pairs(items):
         result = {}
         for key, value in items:
@@ -98,15 +108,21 @@ def strict_json(path: pathlib.Path):
     def nonfinite(value):
         raise ValueError(f"non-finite JSON number: {value}")
 
-    return json.loads(read_regular(path), object_pairs_hook=pairs,
-                      parse_constant=nonfinite)
+    return json.loads(payload, object_pairs_hook=pairs, parse_constant=nonfinite)
+
+
+def strict_json(path: pathlib.Path):
+    return parse_strict_json(read_regular(path))
 
 
 def inventory(root: pathlib.Path) -> list[dict]:
     rows = []
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root).as_posix()
-        if path.is_dir() or relative in TERMINAL:
+        if relative in TERMINAL:
+            continue
+        if path.is_dir() and not path.is_symlink():
+            rows.append({"path": relative, "directory": True})
             continue
         digest, size = sha_regular(path)
         rows.append({"path": relative, "bytes": size, "sha256": digest})
@@ -123,29 +139,35 @@ def verify_inventory(root: pathlib.Path, rows: list[dict]) -> None:
         if pure is None or pure.is_absolute() or ".." in pure.parts or relative in seen:
             raise ValueError("invalid or duplicate inventory path")
         seen.add(relative)
-        digest, size = sha_regular(root.joinpath(*pure.parts))
+        path = root.joinpath(*pure.parts)
+        if row.get("directory") is True:
+            if not path.is_dir() or path.is_symlink() or set(row) != {"path", "directory"}:
+                raise ValueError(f"artifact directory mutation: {relative}")
+            continue
+        digest, size = sha_regular(path)
         if digest != row.get("sha256") or size != row.get("bytes"):
             raise ValueError(f"artifact mutation: {relative}")
+    current = {
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.relative_to(root).as_posix() not in TERMINAL
+    }
+    if current != seen:
+        raise ValueError("terminal artifact path set changed")
 
 
 def validate_f32(path: pathlib.Path, expected_bytes: int) -> str:
-    digest, size = sha_regular(path)
+    def consume(chunk: bytes) -> None:
+        if len(chunk) % 4:
+            raise ValueError(f"unaligned F32 artifact: {path.name}")
+        values = array.array("f")
+        values.frombytes(chunk)
+        if any(not math.isfinite(value) for value in values):
+            raise ValueError(f"non-finite F32 artifact: {path.name}")
+
+    digest, size = scan_regular(path, consume)
     if size != expected_bytes:
         raise ValueError(f"wrong F32 artifact size: {path.name}")
-    fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
-    try:
-        while True:
-            chunk = os.read(fd, 4 * 1024 * 1024)
-            if not chunk:
-                break
-            if len(chunk) % 4:
-                raise ValueError(f"unaligned F32 artifact: {path.name}")
-            values = array.array("f")
-            values.frombytes(chunk)
-            if any(not math.isfinite(value) for value in values):
-                raise ValueError(f"non-finite F32 artifact: {path.name}")
-    finally:
-        os.close(fd)
     return digest
 
 
@@ -155,31 +177,34 @@ def validate_selected(capture: pathlib.Path, sentinel: int) -> dict:
         raise ValueError("selected-count size mismatch")
     counts = array.array("I")
     counts.frombytes(counts_bytes)
-    if len(counts) != len(LAYERS) * 128 or any(count < 1 or count > 2048 for count in counts):
+    if len(counts) != len(LAYERS) * 128 or any(count != 2048 for count in counts):
         raise ValueError("selected counts are malformed")
     selected = capture / "selected.u32"
-    digest, size = sha_regular(selected)
-    if size != CAPTURE_SIZES["selected.u32"]:
-        raise ValueError("selected size mismatch")
-    fd = os.open(selected, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
-    try:
-        for row_index, count in enumerate(counts):
-            payload = os.read(fd, 2048 * 4)
-            if len(payload) != 2048 * 4:
-                raise ValueError("short selected row")
+    row_index = 0
+
+    def consume(chunk: bytes) -> None:
+        nonlocal row_index
+        if len(chunk) % (2048 * 4):
+            raise ValueError("short selected row")
+        for offset in range(0, len(chunk), 2048 * 4):
+            if row_index >= len(counts):
+                raise ValueError("extra selected row")
+            count = counts[row_index]
             ids = array.array("I")
-            ids.frombytes(payload)
+            ids.frombytes(chunk[offset:offset + 2048 * 4])
             visible = (row_index % 128) * 64 + 1
             if any(identifier >= visible and identifier != sentinel
                    for identifier in ids[:count]):
                 raise ValueError("noncausal selected ID")
             if any(identifier != 0xFFFFFFFF for identifier in ids[count:]):
                 raise ValueError("selected row padding mismatch")
-        if os.read(fd, 1):
-            raise ValueError("extra selected bytes")
-    finally:
-        os.close(fd)
+            row_index += 1
+
+    digest, size = scan_regular(selected, consume)
+    if size != CAPTURE_SIZES["selected.u32"] or row_index != len(counts):
+        raise ValueError("selected size mismatch")
     return {"sha256": digest, "rows": len(counts),
+            "count_sha256": hashlib.sha256(counts_bytes).hexdigest(),
             "minimum_count": min(counts), "maximum_count": max(counts)}
 
 
@@ -189,9 +214,11 @@ def validate_capture(capture: pathlib.Path) -> dict:
     names = {path.name for path in capture.iterdir()}
     if names != CAPTURE_NAMES:
         raise ValueError("capture inventory is incomplete or has extras")
-    if read_regular(capture / "W9_CAPTURE_COMPLETE") != b"W9_CAPTURE_COMPLETE\n":
+    marker = read_regular(capture / "W9_CAPTURE_COMPLETE")
+    if marker != b"W9_CAPTURE_COMPLETE\n":
         raise ValueError("capture completion marker mismatch")
-    metadata = strict_json(capture / "metadata.json")
+    metadata_payload = read_regular(capture / "metadata.json")
+    metadata = parse_strict_json(metadata_payload)
     expected = {
         "schema": "glm52-w9-real-capture-v1", "layers": list(LAYERS),
         "kv_rows_per_layer": 8192, "kv_width": 512,
@@ -207,16 +234,19 @@ def validate_capture(capture: pathlib.Path) -> dict:
     sentinel = metadata.get("selected_padding_sentinel")
     if not isinstance(sentinel, int) or sentinel < PROMPT_TOKENS:
         raise ValueError("capture padding sentinel is invalid")
+    selected = validate_selected(capture, sentinel)
     return {
         "kv_sha256": validate_f32(capture / "kv.f32", CAPTURE_SIZES["kv.f32"]),
         "query_sha256": validate_f32(capture / "query.f32", CAPTURE_SIZES["query.f32"]),
-        "selected": validate_selected(capture, sentinel),
-        "metadata_sha256": sha_regular(capture / "metadata.json")[0],
+        "selected": selected,
+        "selected_count_sha256": selected["count_sha256"],
+        "metadata_sha256": hashlib.sha256(metadata_payload).hexdigest(),
+        "marker_sha256": hashlib.sha256(marker).hexdigest(),
         "sentinel": sentinel,
     }
 
 
-def final_logits(arm: pathlib.Path) -> tuple[bytes, str]:
+def final_logits(arm: pathlib.Path) -> tuple[pathlib.Path, bytes, str]:
     candidates = []
     for path in arm.glob("logits.sync*.start*.prompt*.suffix*"):
         match = LOGIT_RE.fullmatch(path.name)
@@ -235,7 +265,16 @@ def final_logits(arm: pathlib.Path) -> tuple[bytes, str]:
     values.frombytes(payload)
     if any(not math.isfinite(value) for value in values):
         raise ValueError(f"{arm.name}: non-finite logits")
-    return payload, hashlib.sha256(payload).hexdigest()
+    return path, payload, hashlib.sha256(payload).hexdigest()
+
+
+def validate_logit_publication(stderr_text: str, logit_path: pathlib.Path) -> None:
+    if "prefill logits dump failed" in stderr_text:
+        raise ValueError("logit publication failure diagnostic")
+    publications = re.findall(r"^ds4: prefill logits dumped to (.+)$",
+                              stderr_text, re.M)
+    if publications != [str(logit_path)]:
+        raise ValueError("logit publication success binding mismatch")
 
 
 def safety(arm: pathlib.Path, expected_binary: str) -> dict:
@@ -290,21 +329,47 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
         prompt_hash, _ = sha_regular(arm / "prompt.txt")
         if prompt_hash != manifest["prompt_sha256"]:
             raise ValueError(f"{arm_name}: prompt differs from frozen fixture")
-        logits[arm_name], logit_hash = final_logits(arm)
+        logit_path, logits[arm_name], logit_hash = final_logits(arm)
         outputs[arm_name] = read_regular(arm / "cli.stdout")
-        server_text = read_regular(arm / "cli.stderr").decode(errors="replace")
+        stderr_payload = read_regular(arm / "cli.stderr")
+        server_text = stderr_payload.decode(errors="replace")
+        validate_logit_publication(server_text, logit_path)
         capture_path = arm / "capture"
         capture_result = validate_capture(capture_path) if arm_name == "on" else None
         if arm_name == "on" and server_text.count("W9 real capture complete") != 1:
             raise ValueError("ON arm lacks one production capture marker")
         if arm_name == "off" and (capture_path.exists() or "W9 real capture" in server_text):
             raise ValueError("OFF arm executed the W9 path")
+        arm_inventory = inventory(arm)
+        inventory_hashes = {row["path"]: row["sha256"] for row in arm_inventory
+                            if "sha256" in row}
+        semantic_arm_hashes = {
+            "prompt.txt": prompt_hash,
+            "cli.stdout": hashlib.sha256(outputs[arm_name]).hexdigest(),
+            "cli.stderr": hashlib.sha256(stderr_payload).hexdigest(),
+            logit_path.relative_to(arm).as_posix(): logit_hash,
+        }
+        if any(inventory_hashes.get(path) != digest
+               for path, digest in semantic_arm_hashes.items()):
+            raise ValueError("arm semantic/inventory digest mismatch")
+        if capture_result is not None:
+            semantic_hashes = {
+                "capture/kv.f32": capture_result["kv_sha256"],
+                "capture/query.f32": capture_result["query_sha256"],
+                "capture/selected.u32": capture_result["selected"]["sha256"],
+                "capture/selected-count.u32": capture_result["selected_count_sha256"],
+                "capture/metadata.json": capture_result["metadata_sha256"],
+                "capture/W9_CAPTURE_COMPLETE": capture_result["marker_sha256"],
+            }
+            if any(inventory_hashes.get(path) != digest
+                   for path, digest in semantic_hashes.items()):
+                raise ValueError("capture semantic/inventory digest mismatch")
         rows.append({"record_type": "w9_capture_arm", "arm": arm_name,
                      "prompt_tokens": PROMPT_TOKENS, "logit_sha256": logit_hash,
                      "stdout_sha256": hashlib.sha256(outputs[arm_name]).hexdigest(),
                      "safety": safety(arm, manifest["binary_sha256"]),
                      "capture": capture_result,
-                     "artifacts": inventory(arm)})
+                     "artifacts": arm_inventory})
     checks = {
         "matched_inputs_and_configuration": True,
         "off_path_clean": rows[0]["capture"] is None,
