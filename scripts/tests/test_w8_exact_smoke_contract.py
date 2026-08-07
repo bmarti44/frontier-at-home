@@ -40,7 +40,23 @@ class W8ExactSmokeContractTests(unittest.TestCase):
 
     def test_arm_runner_does_not_shadow_readonly_attempt_root(self):
         source = HARNESS.read_text(encoding="utf-8")
-        self.assertIn("local arm=$1 arm_root=$2", source)
+        start = source.index("run_arm() {")
+        end = source.index("  mkdir \"$arm_out\"", start)
+        declarations = source[start:end].splitlines()[1:]
+        script = "\n".join((
+            "set -u",
+            "readonly root=/tmp/attempt",
+            "run_arm() {",
+            *declarations,
+            "  printf '%s\\n' \"$arm_out\"",
+            "}",
+            "for arm in resident; do run_arm \"$arm\" \"$root\"; done",
+        ))
+        result = subprocess.run(
+            ["bash", "-c", script], capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "/tmp/attempt/resident\n")
         self.assertNotIn("local arm=$1 root=$2", source)
 
     def test_scorer_requires_io_counters_and_cgroup_events(self):
