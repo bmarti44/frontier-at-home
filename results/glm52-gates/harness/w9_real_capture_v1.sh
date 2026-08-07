@@ -11,7 +11,7 @@ readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly SCORER=$REPO/scripts/91_score_w9_real_capture.py
 readonly PROMPT_BUILDER=$REPO/scripts/92_build_w9_prompt.py
 readonly DRAND_VERIFY=$REPO/scripts/89_verify_drand_receipt.mjs
-readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W9-real-capture-review-r248.json
+readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W9-real-capture-review-r250.json
 readonly NODE=/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node
 readonly RUNTIME_DIR=/home/bmarti44/.cache/glm52-w9-9ebc0f2-runtime
 readonly BIN=$RUNTIME_DIR/ds4-server
@@ -136,7 +136,7 @@ print(c,floor)
 PY
 )
 git -C "$REPO" merge-base --is-ancestor "$reviewed_commit" HEAD
-[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W9-real-capture-review-r248.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
+[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W9-real-capture-review-r250.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
 verify_reviewed_components "$reviewed_commit"
 [[ -x $BIN && ! -L $BIN && $(sha "$BIN") == "$BINARY_SHA256" ]]
 [[ $(git -C "$ENGINE_SRC" rev-parse HEAD) == "$ENGINE_COMMIT" && -z $(git -C "$ENGINE_SRC" status --porcelain) ]]
