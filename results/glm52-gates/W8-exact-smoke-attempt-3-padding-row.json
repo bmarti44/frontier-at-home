@@ -1,0 +1,44 @@
+{
+  "schema": "glm52-w8-exact-smoke-execution-attempt-v1",
+  "candidate_hash": "1e2f13ba16a9378511d515b17a04cd67f6312617",
+  "engine_source_commit": "119996d9fa0ea3ffb046ce52c0765c78615de4be",
+  "authorizing_receipt_commit": "260a8d7e9e1e5b102368898bc01975347bb61543",
+  "randomness_round": 6356853,
+  "attempt_id": "e44b29f1b2754d62d65aefa2a9f1230e",
+  "attempt_path": "/home/bmarti44/.local/state/glm52-w8-exact-smoke/attempt-e44b29f1b2754d62d65aefa2a9f1230e",
+  "arm_order": ["resident", "exact"],
+  "resident_observation": {
+    "prompt_tokens": 5066,
+    "prompt_seconds": 146.314,
+    "prompt_tokens_per_second": 34.63,
+    "http_status": 200,
+    "containment_rc": 0
+  },
+  "exact_observation": {
+    "http_status": 500,
+    "containment_rc": 22,
+    "engine_error": "W8 selected-row read failed layer=0: required cKV row is absent",
+    "failure_location": "scalar indexed prefill layer 0 token 0"
+  },
+  "diagnosis": "causal range selection pads unused slots with compact_cache_cap; the resident kernel ignores that sentinel, but exact staging attempted to read it as a stored logical row",
+  "acceptance_formula": "padding sentinels produce zero-filled staging slots, identifiers above the one allowed sentinel fail closed, all non-padding rows remain checksummed store reads, and matched final F32 logits are byte-identical",
+  "artifacts": {
+    "manifest.json": "eba499646465804d5905505816bc6f6eb9e73cf2566d52ea5709e815b3772077",
+    "raw.jsonl": "e87c26bf3ce61d770fe1c3e3ea6e33f546d82c4ae9c9a2dd2b8e63999a943b12",
+    "summary.json": "c9ab2c657f16225835b302f68f361e2415a64cccf6bf1927087c0e572a145ffd",
+    "terminal-receipt.json": "db1e51d72459a11e7d6b28d4b5575a2545f0851cbcd436709eb1d37c040300b7",
+    "resident/server.log": "d4d9a8e87303bae825b962a599145610e39b3907f4fefbfddccdbf419f840434",
+    "exact/server.log": "e3d1133562333c5908364e0cbd248834835a7a77840ca49559c053674a997ca7",
+    "resident/safety/main.log": "4c1ae9662ea0d1d8e9e79271de044f43f6b40fd0c6f79dac69953ac1380acd98",
+    "exact/safety/main.log": "38f5b0a803f97f190a29d96fd20e9b41cee83a3f15145c3ceaee173b7ec77639"
+  },
+  "host_safety": {
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "swap_growth_bytes": 0,
+    "ds4_server_processes_after": 0,
+    "mem_available_kib_after": 121164084
+  },
+  "verdict": "FAIL"
+}
