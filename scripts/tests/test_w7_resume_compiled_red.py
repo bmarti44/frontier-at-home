@@ -102,6 +102,18 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         self.assertIn('"trace_rendered_bytes_exact"', source)
         self.assertIn('"trace_token_vectors_exact"', source)
 
+    def test_runtime_scorer_and_tokenizer_dependencies_are_hash_pinned(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        for name in (
+            "TRACE_SCORER_SHA256",
+            "TOKENIZER_SHA256",
+            "TOKENIZER_INIT_SHA256",
+            "TOKENIZER_NATIVE_SHA256",
+        ):
+            self.assertIn(f"readonly {name}=", source)
+            self.assertIn(f'== "${name}"', source)
+        self.assertIn("--validate-trace-result", source)
+
     def test_trace_scorer_rejects_equal_length_render_mutation(self):
         scorer = _load_trace_scorer()
         pool = json.loads(
@@ -153,6 +165,14 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
                 scorer.GENERATED_MARKER + scorer.RENDERED_MARKER,
                 1,
             ),
+            "leading-whitespace": b" \t\r\n" + good_trace,
+            "leading-nul": b"\x00" + good_trace,
+            "duplicate-request-id": good_trace.replace(
+                b"request 2", b"request 1"
+            ),
+            "reversed-request-ids": good_trace.replace(
+                b"request 1", b"request 9"
+            ).replace(b"request 2", b"request 1").replace(b"request 9", b"request 2"),
         }
         for name, trace in malformed.items():
             with self.subTest(name=name):

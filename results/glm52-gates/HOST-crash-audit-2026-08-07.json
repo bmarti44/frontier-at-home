@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-07T09:01:58-04:00",
+  "boot_id": "4c36a046-8dd3-411e-9200-77af47ef981f",
+  "boot_started_at": "2026-07-27 21:11:30",
+  "audit_window_start": "2026-08-06T00:00:00-04:00",
+  "kernel_matches": {
+    "oom_or_oom_kill": 0,
+    "cuda_xid": 0,
+    "kernel_panic_or_lockup": 0,
+    "thermal_shutdown": 0
+  },
+  "cgroup_oom_events_found": 0,
+  "last_glm_evidence_unit_exit": "2026-08-06T18:33:38-04:00",
+  "last_glm_evidence_unit_swap_peak": "0B",
+  "network_event": {
+    "observed": true,
+    "time": "2026-08-06T20:31:14-04:00",
+    "detail": "tailscaled stopped and restarted, recreated tailscale0, and re-established the SSH/proxy network path"
+  },
+  "conclusion": "No evidence of host OOM, CUDA Xid, kernel crash, thermal shutdown, or reboot. The observed interruption is consistent with the recorded Tailscale/network restart, not memory exhaustion.",
+  "runtime_action": "No reboot or memory-limit change required; retain existing safe-run containment and 110 GiB start preflight."
+}
