@@ -50,6 +50,24 @@ def _kvc_v2_record(*, created_at: int, last_used: int = 0,
     return bytes(header) + text_len + text + payload
 
 
+def _kvc_v1_record(*, created_at: int, last_used: int = 0,
+                   hits: int = 0, text: bytes = b"checkpoint-text",
+                   payload: bytes = b"checkpoint-payload") -> bytes:
+    header = bytearray(48)
+    header[0:4] = b"KVC\x01"
+    header[4] = 2
+    header[5] = 2
+    header[7] = 1
+    struct.pack_into("<I", header, 8, 5044)
+    struct.pack_into("<I", header, 12, hits)
+    struct.pack_into("<I", header, 16, 8192)
+    header[20] = 2
+    struct.pack_into("<Q", header, 24, created_at)
+    struct.pack_into("<Q", header, 32, last_used)
+    struct.pack_into("<Q", header, 40, len(payload))
+    return bytes(header) + struct.pack("<I", len(text)) + text + payload
+
+
 class W7ProductionScorerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -273,6 +291,16 @@ class W7ProductionScorerTest(unittest.TestCase):
         second.write_bytes(corrupted)
         with self.assertRaises(ValueError):
             MODULE._kvc_semantic_sha256(second)
+
+    def test_strict_v1_and_production_v2_records_share_semantic_identity(self) -> None:
+        strict = self.root / "strict-v1.kv"
+        production = self.root / "production-v2.kv"
+        strict.write_bytes(_kvc_v1_record(created_at=100, last_used=101, hits=1))
+        production.write_bytes(_kvc_v2_record(created_at=200, last_used=202, hits=9))
+        self.assertEqual(
+            MODULE._kvc_semantic_sha256(strict),
+            MODULE._kvc_semantic_sha256(production),
+        )
 
     def test_rejects_any_diagnostic_marker_in_every_arm(self) -> None:
         for arm in (self.strict, self.candidate, self.cold):
