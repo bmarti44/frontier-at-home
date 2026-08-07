@@ -20,6 +20,7 @@ SPEC.loader.exec_module(MODULE)
 
 PRIMARY_SHA = "a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3"
 LIVE_SHA = "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a"
+N_VOCAB = 154880
 
 
 class W7ScorerTest(unittest.TestCase):
@@ -78,9 +79,12 @@ class W7ScorerTest(unittest.TestCase):
             log = "ds4: GLM sync start=0 prompt=5066 suffix=5066\n"
             names = ["logits.sync1.start0.prompt5066.suffix5066"]
         (arm / "server.log").write_text(log)
-        values = [0.0, 0.25, 1.0, -0.5]
+        values = [0.0] * N_VOCAB
+        values[1] = 0.25
+        values[2] = 1.0
+        values[3] = -0.5
         for filename in names:
-            (arm / filename).write_bytes(struct.pack("<4f", *values))
+            (arm / filename).write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
         return arm
 
     def test_passing_equivalence(self) -> None:
@@ -91,12 +95,16 @@ class W7ScorerTest(unittest.TestCase):
 
     def test_rejects_logit_drift(self) -> None:
         target = self.candidate / "logits.sync2.start5044.prompt5066.suffix22"
-        target.write_bytes(struct.pack("<4f", 0.0, 0.25, 0.98, -0.5))
+        values = [0.0] * N_VOCAB
+        values[1], values[2], values[3] = 0.25, 0.98, -0.5
+        target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
         self.assertEqual(MODULE.score(self.strict, self.candidate, self.cold)["verdict"], "FAIL")
 
     def test_rejects_nonfinite_and_stale_selected_kv(self) -> None:
         target = self.candidate / "logits.sync2.start5044.prompt5066.suffix22"
-        target.write_bytes(struct.pack("<4f", 0.0, math.nan, 1.0, -0.5))
+        values = [0.0] * N_VOCAB
+        values[1], values[2], values[3] = math.nan, 1.0, -0.5
+        target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
         (self.candidate / "kv-after.sha256").write_text(f"{'2' * 64}  a.kv\n")
         result = MODULE.score(self.strict, self.candidate, self.cold)
         self.assertEqual(result["verdict"], "FAIL")
