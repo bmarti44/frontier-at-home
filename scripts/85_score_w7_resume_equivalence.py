@@ -165,6 +165,7 @@ def _selected_kv_identity(
             selected.name in before
             and selected.name in after
             and before[selected.name][1] == after[selected.name][1]
+            and _sha256(selected) == after[selected.name][0]
             and _normalized_kv_sha256(selected) == after[selected.name][1]
         ):
             return None
