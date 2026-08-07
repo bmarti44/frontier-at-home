@@ -13,7 +13,7 @@ readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
 readonly ENGINE_FREEZE=$REPO/results/glm52-gates/W7-resume-restored-frontier-freeze-v2.json
 readonly TRACE_SCORER=$REPO/scripts/83_score_w7_deployed_trace.py
 readonly SCORER=$REPO/scripts/85_score_w7_resume_equivalence.py
-readonly BIN=/home/bmarti44/.cache/glm52-w7-7822efd-build-v3/build1-ds4-server
+readonly BIN=/home/bmarti44/.cache/glm52-w7-7822efd-runtime/ds4-server
 readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 readonly LIVE_SOURCE=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/live-request.json
 readonly PRIMARY_SOURCE=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json
@@ -244,7 +244,7 @@ run_arm() {
     GLM_SAFE_RUN_AS_CURRENT_USER=1 GLM_SAFE_MEMORY_HIGH_GIB=78 \
     GLM_SAFE_KILL_FLOOR_GIB=24 GLM_SAFE_MIN_START_GIB=110 GLM_SAFE_TIMEOUT_S=2400 \
     GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 GLM_SAFE_EXPECTED_BINARY_SHA256=$BINARY_SHA256 \
-    GLM_CANDIDATE_SRC=/tmp/glm52-w7-build1.ob4Q0O/src \
+    GLM_CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-7822efd-runtime \
     DS4_CUDA_EXPERT_CACHE_GB=$CACHE_GIB DS4_CUDA_EXPERT_CACHE_PIN=1 \
     DS4_CUDA_EXPERT_CACHE_SLRU=1 DS4_CUDA_FETCH_THREADS=6 \
     DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_GLM_SYNC_TRACE=1 \
