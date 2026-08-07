@@ -52,7 +52,7 @@ class W7ScorerTest(unittest.TestCase):
         if name != "cold":
             (arm / "live-http-status").write_text("200\n")
             (arm / "live-response.json").write_text(json.dumps({"usage": {"prompt_tokens": 5055}}))
-        selected = "a.kv"
+        selected = f"{'a' * 40}.kv"
         (arm / "kv-before.sha256").write_text(f"{'1' * 64}  {selected}\n")
         (arm / "kv-after.sha256").write_text(f"{'1' * 64}  {selected}\n")
         if name == "candidate":
@@ -105,7 +105,9 @@ class W7ScorerTest(unittest.TestCase):
         values = [0.0] * N_VOCAB
         values[1], values[2], values[3] = math.nan, 1.0, -0.5
         target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
-        (self.candidate / "kv-after.sha256").write_text(f"{'2' * 64}  a.kv\n")
+        (self.candidate / "kv-after.sha256").write_text(
+            f"{'2' * 64}  {'a' * 40}.kv\n"
+        )
         result = MODULE.score(self.strict, self.candidate, self.cold)
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["candidate_logits_finite"])
