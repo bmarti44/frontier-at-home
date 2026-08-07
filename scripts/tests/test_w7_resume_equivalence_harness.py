@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import hashlib
+import re
 import subprocess
 import tempfile
 import unittest
@@ -79,6 +80,17 @@ class W7HarnessTest(unittest.TestCase):
         self.assertIn("F_SEAL_WRITE", source)
         self.assertIn("W7_SEALED_HARNESS_FD", source)
         self.assertNotIn('exec {harness_fd}<"$INVOKED_SCRIPT"', source)
+
+    def test_safe_wrapper_and_driver_bind_same_binary_inode(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        binary = re.search(r"^readonly BIN=(\S+)$", source, re.M)
+        candidate_source = re.search(
+            r"^\s+GLM_CANDIDATE_SRC=(\S+) \\$", source, re.M
+        )
+        self.assertIsNotNone(binary)
+        self.assertIsNotNone(candidate_source)
+        expected = Path(candidate_source.group(1)) / "ds4-server"
+        self.assertTrue(expected.samefile(Path(binary.group(1))))
 
     def test_required_evidence_contract_is_emitted(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")
