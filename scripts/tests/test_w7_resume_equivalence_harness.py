@@ -38,6 +38,29 @@ class W7HarnessTest(unittest.TestCase):
         self.assertIn("kv-before.sha256", source)
         self.assertIn("kv-after.sha256", source)
 
+    def test_real_arm_tags_pass_the_frozen_launcher_validator(self) -> None:
+        for arm in ("strict", "candidate", "cold"):
+            result = subprocess.run(
+                ["/usr/bin/bash", str(HARNESS), "--validate-tag", arm,
+                 "0123456789abcdef0123456789abcdef"],
+                cwd=ROOT, text=True, capture_output=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            tag = result.stdout.strip()
+            self.assertLessEqual(len(tag), 40)
+
+    def test_model_and_executables_are_bound_before_run(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn('verify_file "$MODEL" "$MODEL_SHA256"', source)
+        self.assertIn('/proc/$$/fd/$harness_fd', source)
+        self.assertIn('/proc/$$/fd/$scorer_fd', source)
+
+    def test_required_evidence_contract_is_emitted(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("manifest.json", source)
+        self.assertIn("raw.jsonl", source)
+        self.assertIn('"$arm_out/safety"', source)
+
 
 if __name__ == "__main__":
     unittest.main()
