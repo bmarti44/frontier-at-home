@@ -1,0 +1,46 @@
+{
+  "schema": "glm52-w9-real-capture-review-v1",
+  "candidate_hash": "main:f364f078596766341181a641d0eadb638bdcf6a4+engine:9ebc0f2879c126db095ecd25be0567166868d52c",
+  "review_round": 248,
+  "candidate": 3,
+  "verdict": "REJECT",
+  "runtime_allowed": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 93,
+      "critical": [],
+      "high": [],
+      "medium": ["GAP-W9-248-M1-NO-COMPLETE-PAIRED-SCORE-FIXTURE"],
+      "low": [],
+      "verdict": "PASS_RUNTIME_ALLOWED"
+    },
+    "Singer": {
+      "score_0_to_100": 84,
+      "critical": [],
+      "high": ["ADV-W9-248-H1-CROSS-PHASE-INVENTORY-TOCTOU"],
+      "medium": [
+        "ADV-W9-248-M1-ENGINE-TO-SCORER-BLOB-PROVENANCE",
+        "ADV-W9-248-M2-HARNESS-INTEGRATION-TEST-REMAINS-PARTIAL"
+      ],
+      "low": [],
+      "verdict": "BLOCK_RUNTIME_ONE_HIGH_REMAINS"
+    }
+  },
+  "finding": {
+    "id": "ADV-W9-248-H1-CROSS-PHASE-INVENTORY-TOCTOU",
+    "severity": "high",
+    "evidence": "Per-arm semantic inventories and the final root inventory were stable individually but independent; PASS did not equate generation A in raw arm rows with generation B in the summary/terminal receipt.",
+    "reproduction": "Rewrite one same-sized finite artifact after its arm inventory returns and before the final root inventory; the candidate-3 raw row and terminal receipt can bind different generations.",
+    "acceptance_test": "Require every per-arm inventory entry and semantic digest to equal the projected final-root entry, and execute a full paired-score timed rewrite mutation."
+  },
+  "prior_blocking_issue_status": {
+    "unbound_arm_root": "FIXED_VERIFIED",
+    "zero_token_argument": "FIXED_VERIFIED",
+    "logit_preposition": "FIXED_VERIFIED",
+    "runtime_model_digest": "FIXED_VERIFIED",
+    "partial_selected_counts": "FIXED_VERIFIED",
+    "single_scan_TOCTOU": "FIXED_VERIFIED",
+    "cross_phase_TOCTOU": "OPEN"
+  },
+  "next_candidate_scope": "Only final-root/per-arm inventory equality and the named compact full-score/timed-rewrite regression coverage."
+}
