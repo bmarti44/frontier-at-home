@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "attempt_id": "attempt-829f2fe44e0efa34193111893a45db76",
+  "attempt_path": "/home/bmarti44/.local/state/glm52-w7-equivalence/attempt-829f2fe44e0efa34193111893a45db76",
+  "verdict": "PASS",
+  "authority": {
+    "candidate_commit": "566029c9f7bb076d79cb14fba279798910f0c408",
+    "launcher_commit": "5456e76",
+    "engine_source_commit": "7822efd945f1c5366844d253b22e953b6721b650",
+    "manifest_sha256": "e378924a4fcad31c3029ce733780ab5494735795ac2354bdeed57df06024051e",
+    "raw_sha256": "eb959bacf04a9623794d477aa86791574c6d45dc4fbd7d4a05490a406452170a",
+    "summary_sha256": "b20ac107e524db6874099793c18088cc03c5bcd54635eb649e33e42bc37027af",
+    "randomness_sha256": "c1026bb65dddcca260b3ceb173e284b198cd63620c4e88b483908e8783be111c",
+    "binary_sha256": "2c586aef10c9d9d63827e1141ad2f00ad0d20b259a62e5b53405061eb11c036c",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "harness_sha256": "1eeff66595a30579639b4b765412929f195f73e0448286e6023d77d2c18f3f7f",
+    "scorer_sha256": "926c18fb49049676f2aff75cb5cbc10d8b7b67745e08731b1face4946ec6c187",
+    "seed_sha256": "a71534ceeeee57276312564ba94ef936aedb3d53daa9936d7b89638b4491c16b"
+  },
+  "arm_order": [
+    "candidate",
+    "cold",
+    "strict"
+  ],
+  "matched_comparison": {
+    "candidate_branch": "indexed_resume pos=5044 chunk=22 logits=1",
+    "cold_branch": "indexed_resume pos=5044 chunk=22 logits=1",
+    "candidate_dump": "candidate/logits.sync3.start5044.prompt5066.suffix22",
+    "cold_dump": "cold/logits.sync2.start5044.prompt5066.suffix22",
+    "output_sha256": "a1b2aef86512aaf3470993cf80f85c91cedd7b6028100e49130dd91d7f60c7a0",
+    "compared_f32_logits": 154880,
+    "candidate_argmax": 785,
+    "cold_argmax": 785,
+    "max_abs_logit_delta": 0.0,
+    "threshold_strictly_less_than": 0.01,
+    "candidate_primary_seconds": 8.132,
+    "cold_primary_seconds": 151.294
+  },
+  "strict_control": {
+    "guard_observed": true,
+    "full_restart_start": 0,
+    "prompt_tokens": 5066,
+    "primary_seconds": 136.073,
+    "argmax": 785,
+    "strict_vs_matched_cold_max_abs_logit_delta": 4.382786750793457,
+    "comparison_authority": false,
+    "note": "The strict full restart uses a different chunk schedule. Its numerical delta is diagnostic only; it proves why the matched no-load reference is required and does not affect the W7 PASS."
+  },
+  "checks": {
+    "arm_identity_exact": true,
+    "candidate_argmax_matches_cold": true,
+    "candidate_frontier_observed": true,
+    "candidate_logits_finite": true,
+    "candidate_max_abs_delta_lt_1e_2": true,
+    "cold_control_observed": true,
+    "cold_logits_finite": true,
+    "dump_sets_exact": true,
+    "evidence_contract_pass": true,
+    "http_and_prompt_tokens_exact": true,
+    "matched_final_branch_exact": true,
+    "request_hashes_exact": true,
+    "safety_evidence_pass": true,
+    "selected_kv_cross_arm_exact": true,
+    "selected_kv_unchanged": true,
+    "strict_guard_observed": true,
+    "strict_logits_finite": true,
+    "traces_pass": true
+  },
+  "safety": {
+    "minimum_mem_available_kib": {
+      "candidate": 49919556,
+      "cold": 50754464,
+      "strict": 50699728
+    },
+    "cgroup_swap_current_bytes": 0,
+    "oom_or_xid": false,
+    "containment_clean": true,
+    "surviving_engine": false
+  },
+  "interpretation": "The default-off restored-frontier diagnostic selected the exact 5044-token disk checkpoint and produced byte-identical final logits to a fresh process that never loaded a payload but followed the identical 5044+22 indexed schedule. The unchanged global guard still forced the unqualified path to restart from zero. W7 resume correctness therefore passes for this frozen fixture and binary."
+}
