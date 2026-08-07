@@ -8,8 +8,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SCORER = ROOT / "scripts/85_score_w7_resume_equivalence.py"
-HARNESS = ROOT / "results/glm52-gates/harness/w7_resume_equivalence_v1.sh"
+SCORER = ROOT / "scripts/87_score_w7_resume_production.py"
+HARNESS = ROOT / "results/glm52-gates/harness/w7_resume_production_v1.sh"
 SPEC = importlib.util.spec_from_file_location("w7_equivalence_scorer", SCORER)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
