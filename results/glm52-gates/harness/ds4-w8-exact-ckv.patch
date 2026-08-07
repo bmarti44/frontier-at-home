@@ -89,7 +89,7 @@ index 8c48c02..287e63b 100644
 -	rm -f ds4 ds4-server ds4-bench ds4-eval ds4-agent ds4_cpu ds4_native ds4_server_test ds4_test ds4_agent_test gguf-tools/quality-testing/score_official $(QUALITY_SCORE_OBJ) tests/test_q4k_dot tests/test_metal_session_batch tests/test_gpu_xdev tests/test_gpu_model_cache tests/test_gpu_lookup_cache_strict tests/test_engine_mgpu_refusal tests/test_engine_mgpu_runtime tests/test_engine_correctness tests/test_sampling tests/test_cuda_session_batch tests/test_cuda_mixed_batch tests/*.o *.o tests/cuda_long_context_smoke tests/cuda_long_context_smoke.o
 +	rm -f ds4 ds4-server ds4-bench ds4-eval ds4-agent ds4_cpu ds4_native ds4_server_test ds4_test ds4_agent_test gguf-tools/quality-testing/score_official $(QUALITY_SCORE_OBJ) tests/test_q4k_dot tests/test_glm_ckvstore tests/test_glm_ckvstore_1m tests/test_glm_ckv_exact_direct_cuda tests/test_metal_session_batch tests/test_gpu_xdev tests/test_gpu_model_cache tests/test_gpu_lookup_cache_strict tests/test_engine_mgpu_refusal tests/test_engine_mgpu_runtime tests/test_engine_correctness tests/test_sampling tests/test_cuda_session_batch tests/test_cuda_mixed_batch tests/*.o *.o tests/cuda_long_context_smoke tests/cuda_long_context_smoke.o
 diff --git a/ds4.c b/ds4.c
-index f0527d5..6bd7be9 100644
+index f0527d5..85e5159 100644
 --- a/ds4.c
 +++ b/ds4.c
 @@ -41,6 +41,7 @@
@@ -188,7 +188,7 @@ index f0527d5..6bd7be9 100644
      const uint64_t elem = glm_graph_compact_cache_elem_bytes();
      uint64_t total =
          (uint64_t)normal_layers *
-@@ -37553,6 +37614,21 @@ typedef struct {
+@@ -37553,6 +37614,26 @@ typedef struct {
      ds4_gpu_tensor *batch_indexer_selected;
      ds4_gpu_tensor *batch_qk_low;
      ds4_gpu_tensor *batch_attn_lora;
@@ -201,6 +201,11 @@ index f0527d5..6bd7be9 100644
 +    ds4_gpu_tensor *ckv_selected_rope;
 +    ds4_ckvstore *ckv_store;
 +    uint64_t ckv_generation;
++    uint64_t ckv_append_calls;
++    uint64_t ckv_appended_rows;
++    uint64_t ckv_selected_read_calls;
++    uint64_t ckv_selected_rows;
++    uint64_t ckv_direct_slot_calls;
 +    uint8_t *ckv_io_host;
 +    bool ckv_io_host_pinned;
 +    uint8_t *ckv_record_host;
@@ -210,7 +215,7 @@ index f0527d5..6bd7be9 100644
      ds4_gpu_tensor *layer_kv_lora_cache[DS4_MAX_LAYER];
      ds4_gpu_tensor *layer_k_rope_cache[DS4_MAX_LAYER];
      /* GLM MTP (nextn block) drafting: private compact caches for the nextn
-@@ -37622,6 +37698,11 @@ static bool glm_graph_env_disabled(const char *name) {
+@@ -37622,6 +37703,11 @@ static bool glm_graph_env_disabled(const char *name) {
             strcasecmp(env, "no") == 0;
  }
  
@@ -222,7 +227,7 @@ index f0527d5..6bd7be9 100644
  static double glm_graph_env_double(
          const char *name,
          double      fallback,
-@@ -39007,6 +39088,25 @@ static void glm_graph_free(ds4_glm_gpu_graph *g) {
+@@ -39007,6 +39093,25 @@ static void glm_graph_free(ds4_glm_gpu_graph *g) {
      free(g->baseline_capture_shared_scores);
      free(g->baseline_capture_selected);
      free(g->baseline_capture_scores);
@@ -248,7 +253,7 @@ index f0527d5..6bd7be9 100644
      ds4_gpu_tensor_free(g->mtp_kv_lora_cache);
      ds4_gpu_tensor_free(g->mtp_k_rope_cache);
      ds4_gpu_tensor_free(g->mtp_concat);
-@@ -39184,6 +39284,239 @@ static bool glm_graph_warm_compact_indexer_store(
+@@ -39184,6 +39289,248 @@ static bool glm_graph_warm_compact_indexer_store(
      return ok;
  }
  
@@ -397,6 +402,11 @@ index f0527d5..6bd7be9 100644
 +    g->ckv_store = NULL;
 +    free(g->ckv_path);
 +    g->ckv_path = NULL;
++    g->ckv_append_calls = 0;
++    g->ckv_appended_rows = 0;
++    g->ckv_selected_read_calls = 0;
++    g->ckv_selected_rows = 0;
++    g->ckv_direct_slot_calls = 0;
 +    return glm_graph_ckv_exact_open(g);
 +}
 +
@@ -445,6 +455,8 @@ index f0527d5..6bd7be9 100644
 +                layer, pos0, pos0 + n_tokens, err);
 +        return false;
 +    }
++    g->ckv_append_calls++;
++    g->ckv_appended_rows += n_tokens;
 +    return true;
 +}
 +
@@ -470,6 +482,8 @@ index f0527d5..6bd7be9 100644
 +                layer, err);
 +        return false;
 +    }
++    g->ckv_selected_read_calls++;
++    g->ckv_selected_rows += n_selected;
 +    for (uint32_t row = 0; row < n_selected; row++) {
 +        const uint8_t *src = g->ckv_record_host +
 +            (uint64_t)row * (latent_row + rope_row);
@@ -488,7 +502,7 @@ index f0527d5..6bd7be9 100644
  static bool glm_graph_alloc_slice(
          ds4_glm_gpu_graph *g,
          const ds4_model   *model,
-@@ -39197,9 +39530,11 @@ static bool glm_graph_alloc_slice(
+@@ -39197,9 +39544,11 @@ static bool glm_graph_alloc_slice(
          bool               require_token_embd,
          bool               require_output_head) {
      if (!g || !model || !weights || ctx_size <= 0) return false;
@@ -500,7 +514,7 @@ index f0527d5..6bd7be9 100644
      g->ssd_streaming = ssd_streaming;
      g->ssd_streaming_cold = ssd_streaming_cold;
  
-@@ -39238,6 +39573,11 @@ static bool glm_graph_alloc_slice(
+@@ -39238,6 +39587,11 @@ static bool glm_graph_alloc_slice(
      g->indexed_prefill_score_cap =
          glm_graph_indexed_prefill_score_tokens(g->indexed_prefill_cap,
                                                 g->compact_cache_cap);
@@ -512,7 +526,7 @@ index f0527d5..6bd7be9 100644
      g->indexer_full_layers =
          glm_graph_full_indexer_layer_count_range(g->layer_start,
                                                   g->layer_end);
-@@ -39326,20 +39666,25 @@ static bool glm_graph_alloc_slice(
+@@ -39326,20 +39680,25 @@ static bool glm_graph_alloc_slice(
                  "ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped\n");
      }
      if (g->compact_cache_cap != 0) {
@@ -541,7 +555,7 @@ index f0527d5..6bd7be9 100644
                  compact_gib);
          fprintf(stderr,
                  "ds4: GLM compact indexed prefill chunk=%u score_rows=%u score_scratch=%.2f MiB\n",
-@@ -39441,6 +39786,17 @@ static bool glm_graph_alloc_slice(
+@@ -39441,6 +39800,17 @@ static bool glm_graph_alloc_slice(
      }
      DS4_GLM_GRAPH_ALLOC_TENSOR(g->batch_ffn_out, batch_rows * emb_bytes);
  
@@ -559,7 +573,7 @@ index f0527d5..6bd7be9 100644
      for (uint32_t il = g->layer_start; ok && il <= g->layer_end; il++) {
          int cache_tier = 0;
          if (g->placement && g->placement[il + 1u] >= 0 &&
-@@ -39461,8 +39817,10 @@ static bool glm_graph_alloc_slice(
+@@ -39461,8 +39831,10 @@ static bool glm_graph_alloc_slice(
              DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_value_cache[il], value_cache_bytes);
          }
          if (g->compact_cache_cap != 0) {
@@ -572,7 +586,7 @@ index f0527d5..6bd7be9 100644
              if (glm_graph_layer_uses_full_indexer(il)) {
                  DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_indexer_key_cache[il],
                                                  compact_indexer_key_bytes);
-@@ -39472,6 +39830,7 @@ static bool glm_graph_alloc_slice(
+@@ -39472,6 +39844,7 @@ static bool glm_graph_alloc_slice(
      }
  #undef DS4_GLM_GRAPH_ALLOC_TENSOR
  
@@ -580,7 +594,7 @@ index f0527d5..6bd7be9 100644
      if (!ok) {
          glm_graph_free(g);
          return false;
-@@ -43366,17 +43725,8 @@ static bool glm_graph_verify_rows(
+@@ -43366,17 +43739,8 @@ static bool glm_graph_verify_rows(
                                                           kv_raw_dim,
                                                           DS4_N_KV_LORA,
                                                           DS4_RMS_EPS) != 0;
@@ -600,7 +614,7 @@ index f0527d5..6bd7be9 100644
          if (ok) ok = ds4_gpu_glm_qk_lowrank_typed_batch_tensor(g->batch_qk_low,
                                                                 g->batch_q,
                                                                 model->map,
-@@ -43962,19 +44312,10 @@ static bool glm_graph_forward_tokens(
+@@ -43962,19 +44326,10 @@ static bool glm_graph_forward_tokens(
                                                           kv_raw_dim,
                                                           DS4_N_KV_LORA,
                                                           DS4_RMS_EPS) != 0;
@@ -624,7 +638,7 @@ index f0527d5..6bd7be9 100644
          if (ok) ok = ds4_gpu_glm_k_b_project_typed_tensor(g->batch_k_nope,
                                                            g->batch_kv_norm,
                                                            model->map,
-@@ -44530,7 +44871,8 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44530,7 +44885,8 @@ static bool glm_graph_forward_indexed_tokens(
      const bool use_batch_qk_low =
          !force_scalar_attn && glm_graph_indexed_prefill_batch_qk_low();
      const bool use_batch_attn_kernel =
@@ -634,7 +648,7 @@ index f0527d5..6bd7be9 100644
      const bool use_split_value_proj =
          use_batch_attn_kernel &&
          g->batch_attn_lora;
-@@ -44886,19 +45228,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44886,19 +45242,9 @@ static bool glm_graph_forward_indexed_tokens(
                                                           kv_raw_dim,
                                                           DS4_N_KV_LORA,
                                                           DS4_RMS_EPS) != 0;
@@ -657,7 +671,7 @@ index f0527d5..6bd7be9 100644
          DS4_GLM_PROFILE_INDEXED_STAGE("glm_indexed_attn", "kv_path");
  
          if (ok && glm_graph_layer_uses_full_indexer(il)) {
-@@ -45346,7 +45678,32 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -45346,7 +45692,33 @@ static bool glm_graph_forward_indexed_tokens(
                  ok = q_view && qk_low_view && heads_view && selected_view;
                  if (!ok) fprintf(stderr, "ds4: GLM scalar indexed prefill failed to create attention row views at layer %u token %u\n", il, t);
                  if (ok) {
@@ -686,12 +700,13 @@ index f0527d5..6bd7be9 100644
 +                                rope_scale, 0.0f, 1.0f,
 +                                DS4_ROPE_YARN_BETA_FAST,
 +                                DS4_ROPE_YARN_BETA_SLOW);
++                        if (rc != 0) g->ckv_direct_slot_calls++;
 +                    } else {
 +                        rc = ds4_gpu_glm_attention_indexed_decode_typed_tensor(heads_view,
                                                                                 q_view,
                                                                                 qk_low_view,
                                                                                 g->layer_kv_lora_cache[il],
-@@ -45371,6 +45728,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -45371,6 +45743,7 @@ static bool glm_graph_forward_indexed_tokens(
                                                                                 1.0f,
                                                                                 DS4_ROPE_YARN_BETA_FAST,
                                                                                 DS4_ROPE_YARN_BETA_SLOW);
@@ -699,7 +714,7 @@ index f0527d5..6bd7be9 100644
                      ok = rc != 0;
                      if (!ok) fprintf(stderr, "ds4: GLM scalar indexed prefill indexed attention failed at layer %u token %u\n", il, t);
                  }
-@@ -46281,7 +46639,8 @@ static bool glm_graph_forward_token(
+@@ -46281,7 +46654,8 @@ static bool glm_graph_forward_token(
          }
          const bool fuse_qkv_norm_store = use_indexed_attention &&
                                           !decode_stage_profile &&
@@ -709,7 +724,7 @@ index f0527d5..6bd7be9 100644
          const bool fuse_qkv_norm = !decode_stage_profile && !fuse_qkv_norm_store;
          if (ok && fuse_qkv_norm_store) {
              ok = glm_graph_matmul_q8_0_decode_profiled_tensor(g->kv_raw,
-@@ -46441,17 +46800,8 @@ static bool glm_graph_forward_token(
+@@ -46441,17 +46815,8 @@ static bool glm_graph_forward_token(
                                                               DS4_RMS_EPS) != 0;
          }
          if (ok && g->compact_cache_cap != 0 && !fuse_qkv_norm_store) {
@@ -729,7 +744,7 @@ index f0527d5..6bd7be9 100644
          }
          if (use_indexed_attention) {
              if (ok && glm_graph_layer_uses_full_indexer(il)) {
-@@ -46554,6 +46904,25 @@ static bool glm_graph_forward_token(
+@@ -46554,6 +46919,26 @@ static bool glm_graph_forward_token(
                   * rest of the layer stays finite (timing-only). */
                  ok = ds4_gpu_tensor_fill_f32(g->heads, 0.0f,
                                               (uint64_t)g->heads_dim) != 0;
@@ -751,11 +766,12 @@ index f0527d5..6bd7be9 100644
 +                        DS4_N_VALUE_MLA, 0, rope_base, rope_scale,
 +                        0.0f, 1.0f, DS4_ROPE_YARN_BETA_FAST,
 +                        DS4_ROPE_YARN_BETA_SLOW) != 0;
++                    if (ok) g->ckv_direct_slot_calls++;
 +                }
              } else if (ok && glm_graph_indexed_decode_split_group8_available(last_indexer_selected_count)) {
                  const uint32_t split_block_rows =
                      glm_graph_indexed_decode_split_block_rows_for(last_indexer_selected_count);
-@@ -47899,7 +48268,10 @@ static size_t engine_glm_per_layer_kv_bytes_planner(uint32_t il,
+@@ -47899,7 +48284,10 @@ static size_t engine_glm_per_layer_kv_bytes_planner(uint32_t il,
  
      const uint64_t elem_bytes =
          DS4_PLANNER_ATTN_COMP_CACHE_F16 ? sizeof(uint16_t) : sizeof(float);
@@ -767,7 +783,7 @@ index f0527d5..6bd7be9 100644
      if (engine_glm_layer_uses_full_indexer(il)) {
          row_width += DS4_N_INDEXER_HEAD_DIM;
      }
-@@ -50302,6 +50674,7 @@ uint64_t ds4_session_payload_bytes(ds4_session *s) {
+@@ -50302,6 +50690,7 @@ uint64_t ds4_session_payload_bytes(ds4_session *s) {
          return 0;
  #else
          if (!s->glm_graph_ready) return 0;
@@ -775,7 +791,7 @@ index f0527d5..6bd7be9 100644
          const ds4_glm_gpu_graph *g = &s->glm_graph;
          const uint32_t checkpoint_len = (uint32_t)s->checkpoint.len;
          const uint32_t full_live =
-@@ -50369,6 +50742,14 @@ int ds4_session_stage_payload(ds4_session *s, ds4_session_payload_file *out,
+@@ -50369,6 +50758,14 @@ int ds4_session_stage_payload(ds4_session *s, ds4_session_payload_file *out,
          payload_set_err(err, errlen, "session has no valid checkpoint to stage");
          return 1;
      }
@@ -790,7 +806,7 @@ index f0527d5..6bd7be9 100644
  
      char tmpl[] = "/tmp/ds4-session-payload.XXXXXX";
      int fd = mkstemp(tmpl);
-@@ -50417,6 +50798,14 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
+@@ -50417,6 +50814,14 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
          payload_set_err(err, errlen, "session has no valid checkpoint to save");
          return 1;
      }
@@ -805,7 +821,7 @@ index f0527d5..6bd7be9 100644
      if (s->distributed) {
          return ds4_dist_session_save_payload(s->distributed, s, fp, err, errlen);
      }
-@@ -50772,6 +51161,14 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -50772,6 +51177,14 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
          payload_set_err(err, errlen, "invalid session payload load");
          return 1;
      }
@@ -820,7 +836,36 @@ index f0527d5..6bd7be9 100644
      if (s->distributed) {
          return ds4_dist_session_load_payload(s->distributed, s, fp, payload_bytes, err, errlen);
      }
-@@ -59009,6 +59406,12 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+@@ -58829,6 +59242,28 @@ int ds4_session_sync(ds4_session *s, const ds4_tokens *prompt, char *err, size_t
+             return rc != 0 ? rc : 1;
+         }
+     }
++    if (rc == 0 && s && s->glm_graph.ckv_nvme_exact) {
++        ds4_ckvstore_stats stats;
++        ds4_ckvstore_get_stats(s->glm_graph.ckv_store, &stats);
++        fprintf(stderr,
++                "ds4: W8 exact request complete append_calls=%" PRIu64
++                " appended_rows=%" PRIu64 " records=%" PRIu64
++                " selected_read_calls=%" PRIu64 " selected_rows=%" PRIu64
++                " checksum_validations=%" PRIu64
++                " checksum_failures=%" PRIu64
++                " cache_hits=%" PRIu64 " cache_misses=%" PRIu64
++                " direct_slot_calls=%" PRIu64 "\n",
++                s->glm_graph.ckv_append_calls,
++                s->glm_graph.ckv_appended_rows,
++                stats.records,
++                s->glm_graph.ckv_selected_read_calls,
++                s->glm_graph.ckv_selected_rows,
++                stats.checksum_validations,
++                stats.checksum_failures,
++                stats.cache_hits,
++                stats.cache_misses,
++                s->glm_graph.ckv_direct_slot_calls);
++    }
+     return rc;
+ }
+ 
+@@ -59009,6 +59444,12 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
              }
          }
          if (!resumed_checkpoint) {
@@ -835,10 +880,10 @@ index f0527d5..6bd7be9 100644
              s->mtp_draft_valid = false;
 diff --git a/ds4_ckvstore.c b/ds4_ckvstore.c
 new file mode 100644
-index 0000000..41758ef
+index 0000000..8605d77
 --- /dev/null
 +++ b/ds4_ckvstore.c
-@@ -0,0 +1,907 @@
+@@ -0,0 +1,913 @@
 +#include "ds4_ckvstore.h"
 +
 +#include <errno.h>
@@ -920,7 +965,9 @@ index 0000000..41758ef
 +    uint64_t pending_write_bytes;
 +    uint64_t last_advised_offset;
 +    uint64_t physical_read_bytes;
++    uint64_t checksum_validations;
 +    uint64_t checksum_failures;
++    uint64_t selected_rows;
 +    bool failed;
 +};
 +
@@ -1572,6 +1619,7 @@ index 0000000..41758ef
 +        set_error(err,err_len,"cKV record checksum mismatch");
 +        return DS4_CKVSTORE_ERR_CHECKSUM;
 +    }
++    s->checksum_validations++;
 +    size_t victim=first;
 +    for (size_t i=first;i<end;i++) {
 +        if (!s->cache[i].valid) { victim=i; break; }
@@ -1674,6 +1722,7 @@ index 0000000..41758ef
 +        first=end;
 +    }
 +    memcpy(output,tmp,(size_t)needed);
++    s->selected_rows += count;
 +    free(items); free(tmp);
 +    return DS4_CKVSTORE_OK;
 +}
@@ -1719,7 +1768,9 @@ index 0000000..41758ef
 +    out->sync_calls=s->sync_calls;
 +    out->pending_write_bytes=s->pending_write_bytes;
 +    out->physical_read_bytes=s->physical_read_bytes;
++    out->checksum_validations=s->checksum_validations;
 +    out->checksum_failures=s->checksum_failures;
++    out->selected_rows=s->selected_rows;
 +    for (size_t i=0;i<s->epoch_count;i++) {
 +        out->pending_rows += s->epochs[i].tail_row_count;
 +        out->pending_row_bytes +=
@@ -1748,10 +1799,10 @@ index 0000000..41758ef
 +}
 diff --git a/ds4_ckvstore.h b/ds4_ckvstore.h
 new file mode 100644
-index 0000000..5382daa
+index 0000000..23019bd
 --- /dev/null
 +++ b/ds4_ckvstore.h
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,88 @@
 +#ifndef DS4_CKVSTORE_H
 +#define DS4_CKVSTORE_H
 +
@@ -1802,7 +1853,9 @@ index 0000000..5382daa
 +    uint64_t pending_rows;
 +    uint64_t pending_row_bytes;
 +    uint64_t physical_read_bytes;
++    uint64_t checksum_validations;
 +    uint64_t checksum_failures;
++    uint64_t selected_rows;
 +} ds4_ckvstore_stats;
 +
 +typedef struct ds4_ckvstore ds4_ckvstore;
@@ -2349,10 +2402,10 @@ index 0000000..585271d
 +}
 diff --git a/tests/test_glm_ckv_exact_source.py b/tests/test_glm_ckv_exact_source.py
 new file mode 100644
-index 0000000..9eb23b6
+index 0000000..24dd5fd
 --- /dev/null
 +++ b/tests/test_glm_ckv_exact_source.py
-@@ -0,0 +1,90 @@
+@@ -0,0 +1,95 @@
 +#!/usr/bin/env python3
 +"""Production-path contract for exact, default-off GLM cKV offload.
 +
@@ -2394,6 +2447,11 @@ index 0000000..9eb23b6
 +require("one-million exact store default", "uint64_t gib = 192u;")
 +require("row-store index memory admission", "ckv_record_index_bytes")
 +require("row-store tail memory admission", "ckv_tail_memory_bytes")
++require("request success telemetry", "ds4: W8 exact request complete")
++require("appended-row counter", "ckv_appended_rows")
++require("selected-row counter", "ckv_selected_rows")
++require("direct-slot invocation counter", "ckv_direct_slot_calls")
++require("checksum validation telemetry", "checksum_validations")
 +
 +assert re.search(
 +    r"if \(!g->ckv_nvme_exact\) \{\s*"
@@ -2445,10 +2503,10 @@ index 0000000..9eb23b6
 +print("test_glm_ckv_exact_source: PASS")
 diff --git a/tests/test_glm_ckvstore.c b/tests/test_glm_ckvstore.c
 new file mode 100644
-index 0000000..5579f54
+index 0000000..eb40db7
 --- /dev/null
 +++ b/tests/test_glm_ckvstore.c
-@@ -0,0 +1,654 @@
+@@ -0,0 +1,690 @@
 +#include "ds4_ckvstore.h"
 +
 +#include <fcntl.h>
@@ -3085,6 +3143,41 @@ index 0000000..5579f54
 +    CHECK(rmdir(dir) == 0, "request directory has no leaked files");
 +}
 +
++static void test_success_telemetry_proves_exact_io(void) {
++    char path[] = "/tmp/ds4-ckvstore-telemetry.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp telemetry");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++
++    ds4_ckvstore_config cfg = test_config();
++    cfg.max_cached_records = 1;
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    uint8_t payload[2 * 4 * 8];
++    uint8_t output[2 * 4 * 8];
++    uint32_t rows[] = {0, 1, 2, 3};
++    fill_payload(payload, 0, 4, 2, 8);
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create telemetry fixture");
++    CHECK(ds4_ckvstore_put(store, 0, 0, 4, 2, payload, sizeof(payload),
++                           err, sizeof(err)) == 0,
++          "publish telemetry fixture record");
++    CHECK(ds4_ckvstore_read_selected(store, 0, 0, rows, 4, output,
++                                     sizeof(output), err, sizeof(err)) == 0,
++          "read telemetry fixture rows");
++    ds4_ckvstore_stats stats;
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.records == 1, "telemetry counts published records");
++    CHECK(stats.selected_rows == 4, "telemetry counts selected rows");
++    CHECK(stats.checksum_validations == 1,
++          "telemetry counts successful checksum validation");
++    CHECK(stats.checksum_failures == 0, "telemetry retains zero failures");
++    ds4_ckvstore_close(store);
++    unlink(path);
++}
++
 +int main(void) {
 +    test_dynamic_exact_selected_rows();
 +    test_cache_is_partitioned_by_epoch();
@@ -3096,6 +3189,7 @@ index 0000000..5579f54
 +    test_header_checksum_and_file_bound();
 +    test_rejects_unsafe_shapes_and_symlinks();
 +    test_request_file_lifecycle();
++    test_success_telemetry_proves_exact_io();
 +    if (failed) {
 +        fprintf(stderr, "test_glm_ckvstore: %d failure(s)\n", failed);
 +        return 1;

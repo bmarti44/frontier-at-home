@@ -29,10 +29,28 @@ SAMPLE_RE = re.compile(
     r"cgroup_current_bytes=(\d+).*?cgroup_peak_bytes=(\d+).*?"
     r"cgroup_swap_current_bytes=(\d+)"
 )
+CGROUP_RE = re.compile(
+    r"cgroup_final current_bytes=(\d+) peak_bytes=(\d+) "
+    r"swap_current_bytes=(\d+) events=low (\d+),high (\d+),max (\d+),"
+    r"oom (\d+),oom_kill (\d+),oom_group_kill (\d+),"
+)
+W8_COUNTER_RE = re.compile(
+    r"W8 exact request complete append_calls=(\d+) appended_rows=(\d+) "
+    r"records=(\d+) selected_read_calls=(\d+) selected_rows=(\d+) "
+    r"checksum_validations=(\d+) checksum_failures=(\d+) "
+    r"cache_hits=(\d+) cache_misses=(\d+) direct_slot_calls=(\d+)"
+)
+TERMINAL_NAMES = {"raw.jsonl", "summary.json", "terminal-receipt.json"}
 
 
 def sha(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def regular(path: pathlib.Path) -> pathlib.Path:
+    if not path.is_file() or path.is_symlink():
+        raise ValueError(f"missing or unsafe artifact: {path}")
+    return path
 
 
 def strict_json(path: pathlib.Path):
@@ -68,7 +86,7 @@ def final_logits(arm: pathlib.Path) -> tuple[pathlib.Path, int, int]:
     return path, start, suffix
 
 
-def response_text(path: pathlib.Path) -> str:
+def response(path: pathlib.Path) -> tuple[str, dict]:
     doc = strict_json(path)
     choices = doc.get("choices") if isinstance(doc, dict) else None
     if not isinstance(choices, list) or len(choices) != 1:
@@ -76,7 +94,28 @@ def response_text(path: pathlib.Path) -> str:
     text = choices[0].get("text") if isinstance(choices[0], dict) else None
     if not isinstance(text, str):
         raise ValueError("response text is missing")
-    return text
+    usage = doc.get("usage")
+    if not isinstance(usage, dict) or usage.get("prompt_tokens") != PROMPT_TOKENS:
+        raise ValueError("response prompt-token usage is invalid")
+    if usage.get("completion_tokens") != 0 or usage.get("total_tokens") != PROMPT_TOKENS:
+        raise ValueError("response completion/total usage is invalid")
+    return text, usage
+
+
+def artifact_inventory(root: pathlib.Path, strict: bool = True) -> list[dict]:
+    rows = []
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if relative in TERMINAL_NAMES or relative == "manifest.json" or path.is_dir():
+            continue
+        if path.is_symlink() or not path.is_file():
+            if strict:
+                raise ValueError(f"unsafe artifact in inventory: {relative}")
+            rows.append({"path": relative, "unsafe": True})
+            continue
+        rows.append({"path": relative, "bytes": path.stat().st_size,
+                     "sha256": sha(path)})
+    return rows
 
 
 def safety(arm: pathlib.Path) -> dict:
@@ -95,18 +134,57 @@ def safety(arm: pathlib.Path) -> dict:
     minimum = min(row[0] for row in samples) / 1024 / 1024
     if minimum < 24.0:
         raise ValueError(f"{arm.name}: memory floor violated")
-    fault_text = "\n".join(
-        (arm / "safety" / name).read_text(encoding="utf-8", errors="replace")
-        for name in ("main.log", "kernel.log")
-    )
+    main = regular(arm / "safety" / "main.log").read_text(
+        encoding="utf-8", errors="replace")
+    kernel = regular(arm / "safety" / "kernel.log").read_text(
+        encoding="utf-8", errors="replace")
+    fault_text = main + "\n" + kernel
     if re.search(r"out of memory|oom-kill|killed process|NVRM: Xid", fault_text, re.I):
         raise ValueError(f"{arm.name}: OOM/Xid evidence")
+    events = CGROUP_RE.findall(main)
+    if len(events) != 1 or any(int(value) != 0 for value in events[0][2:]):
+        raise ValueError(f"{arm.name}: cgroup event counters are missing or nonzero")
+    identity = re.findall(
+        r"executed_candidate_verified .*executed_binary_sha256=([0-9a-f]{64}) ",
+        main,
+    )
+    if len(identity) != 1:
+        raise ValueError(f"{arm.name}: executed binary identity is absent")
+    if main.count("wrapper and descendant checks clean") != 1:
+        raise ValueError(f"{arm.name}: descendant verification is absent")
+    if len(re.findall(r"SAFE_RUN end rc=0 killed=no", main)) != 1:
+        raise ValueError(f"{arm.name}: clean terminal wrapper record is absent")
     return {
         "minimum_mem_available_gib": minimum,
         "maximum_engine_rss_gib": max(row[1] for row in samples) / 1024 / 1024,
         "maximum_cgroup_bytes": max(row[3] for row in samples),
         "samples": len(samples),
+        "executed_binary_sha256": identity[0],
+        "cgroup_events": [int(value) for value in events[0][3:]],
     }
+
+
+def exact_counters(server: str) -> dict:
+    matches = W8_COUNTER_RE.findall(server)
+    if len(matches) != 1:
+        raise ValueError("exact arm lacks one terminal W8 counter record")
+    values = list(map(int, matches[0]))
+    names = ("append_calls", "appended_rows", "records", "selected_read_calls",
+             "selected_rows", "checksum_validations", "checksum_failures",
+             "cache_hits", "cache_misses", "direct_slot_calls")
+    counters = dict(zip(names, values))
+    positive = ("append_calls", "appended_rows", "records", "selected_read_calls",
+                "selected_rows", "checksum_validations", "cache_misses",
+                "direct_slot_calls")
+    if any(counters[name] <= 0 for name in positive):
+        raise ValueError("exact W8 counters are not positive")
+    if counters["checksum_failures"] != 0:
+        raise ValueError("exact W8 checksum failure observed")
+    if counters["checksum_validations"] != counters["cache_misses"]:
+        raise ValueError("exact W8 checksum/cache accounting mismatch")
+    if counters["selected_read_calls"] != counters["direct_slot_calls"]:
+        raise ValueError("exact W8 read/direct-slot accounting mismatch")
+    return counters
 
 
 def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], dict]:
@@ -133,18 +211,28 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
         raise ValueError("arm identities are invalid")
 
     rows, logits, texts, safety_rows = [], {}, {}, {}
+    expected_request = manifest["request_sha256"]
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_request):
+        raise ValueError("invalid frozen request hash")
     for arm_name in ARMS:
         arm = root / arm_name
+        if sha(regular(arm / "request.json")) != expected_request:
+            raise ValueError(f"{arm_name}: actual request differs from frozen fixture")
+        if regular(arm / "http-status").read_text().strip() != "200":
+            raise ValueError(f"{arm_name}: HTTP completion did not return 200")
         logit, start, suffix = final_logits(arm)
         logits[arm_name] = logit.read_bytes()
-        texts[arm_name] = response_text(arm / "response.json")
+        texts[arm_name], _ = response(regular(arm / "response.json"))
         safety_rows[arm_name] = safety(arm)
+        if safety_rows[arm_name]["executed_binary_sha256"] != manifest["binary_sha256"]:
+            raise ValueError(f"{arm_name}: executed binary differs from manifest")
         server = (arm / "server.log").read_text(encoding="utf-8", errors="replace")
         exact_marker = "W8 request cKV store=" in server and "+nvme-direct-slot" in server
+        counters = exact_counters(server) if arm_name == "exact" else None
         failures = re.findall(r"W8 (?:cKV append|selected-row read) failed", server)
         if arm_name == "exact" and (not exact_marker or failures):
             raise ValueError("exact arm did not execute the clean W8 path")
-        if arm_name == "resident" and exact_marker:
+        if arm_name == "resident" and (exact_marker or W8_COUNTER_RE.search(server)):
             raise ValueError("resident arm executed W8")
         rows.append({
             "record_type": "w8_smoke_arm",
@@ -158,6 +246,8 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
             "trace_sha256": sha(arm / "request.trace"),
             "safety": safety_rows[arm_name],
             "exact_marker": exact_marker,
+            "w8_counters": counters,
+            "artifacts": artifact_inventory(arm),
         })
 
     byte_equal = logits["resident"] == logits["exact"]
@@ -167,7 +257,7 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
         raise ValueError("exact logits are malformed or non-finite")
     argmax = max(range(len(floats)), key=floats.__getitem__)
     checks = {
-        "matched_inputs": True,
+        "matched_inputs": all(sha(root / arm / "request.json") == expected_request for arm in ARMS),
         "resident_path_clean": not rows[0]["exact_marker"],
         "exact_path_observed": rows[1]["exact_marker"],
         "final_logits_byte_identical": byte_equal,
@@ -194,6 +284,75 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
     if summary["verdict"] != "PASS":
         raise ValueError("W8 smoke acceptance formula failed")
     return rows, summary
+
+
+def write_terminal(root: pathlib.Path, manifest_path: pathlib.Path,
+                   raw_path: pathlib.Path, summary_path: pathlib.Path,
+                   rows: list[dict], summary: dict) -> None:
+    raw_path.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    summary_path.write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    receipt_path = root / "terminal-receipt.json"
+    receipt = {
+        "schema": "glm52-w8-exact-smoke-terminal-v1",
+        "verdict": summary.get("verdict"),
+        "manifest_sha256": sha(regular(manifest_path)),
+        "raw_sha256": sha(regular(raw_path)),
+        "summary_sha256": sha(regular(summary_path)),
+    }
+    receipt_path.write_text(
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    verify_terminal(root, manifest_path, raw_path, summary_path)
+
+
+def verify_terminal(root: pathlib.Path, manifest_path: pathlib.Path,
+                    raw_path: pathlib.Path, summary_path: pathlib.Path) -> None:
+    receipt = strict_json(regular(root / "terminal-receipt.json"))
+    expected = {
+        "manifest_sha256": sha(regular(manifest_path)),
+        "raw_sha256": sha(regular(raw_path)),
+        "summary_sha256": sha(regular(summary_path)),
+    }
+    if receipt.get("schema") != "glm52-w8-exact-smoke-terminal-v1" or any(
+        receipt.get(key) != value for key, value in expected.items()
+    ):
+        raise ValueError("terminal receipt hash mismatch")
+    raw_rows = [json.loads(line) for line in raw_path.read_text().splitlines() if line]
+    for row in raw_rows:
+        arm = row.get("arm")
+        inventory = row.get("artifacts")
+        if arm not in ARMS or not isinstance(inventory, list):
+            continue
+        for artifact in inventory:
+            path = root / arm / artifact["path"]
+            if (artifact.get("bytes") != regular(path).stat().st_size or
+                    artifact.get("sha256") != sha(path)):
+                raise ValueError(f"post-score artifact mutation: {arm}/{artifact['path']}")
+
+
+def write_failure(root: pathlib.Path, manifest_path: pathlib.Path,
+                  raw_path: pathlib.Path, summary_path: pathlib.Path,
+                  reason: str) -> None:
+    row = {
+        "record_type": "w8_smoke_failure",
+        "failure_reason": reason,
+        "artifacts": artifact_inventory(root, strict=False),
+    }
+    summary = {
+        "schema": "glm52-w8-exact-smoke-summary-v1",
+        "gate": "W8-model-backed-smoke",
+        "formula": "Any failed, interrupted, missing, unsafe, or unscorable arm is FAIL",
+        "checks": {"terminal_success": False},
+        "verdict": "FAIL",
+        "failure_reason": reason,
+        "scope": "Preserved terminal failure evidence; not a capability or performance result.",
+    }
+    write_terminal(root, manifest_path, raw_path, summary_path, [row], summary)
 
 
 def self_test() -> None:
@@ -243,6 +402,11 @@ def self_test() -> None:
                 (path / "request.trace").write_text("trace\n")
                 (path / "server.log").write_text(
                     "W8 request cKV store=x\n+nvme-direct-slot\n"
+                    "ds4: W8 exact request complete append_calls=10 "
+                    "appended_rows=100 records=2 selected_read_calls=3 "
+                    "selected_rows=12 checksum_validations=2 "
+                    "checksum_failures=0 cache_hits=1 cache_misses=2 "
+                    "direct_slot_calls=3\n"
                     if arm == "exact" else "resident\n"
                 )
                 (path / "safety" / "samples.log").write_text(
@@ -250,8 +414,19 @@ def self_test() -> None:
                     "cgroup_current_bytes=1 cgroup_peak_bytes=1 "
                     "cgroup_swap_current_bytes=0\n"
                 )
-                for log_name in ("main.log", "kernel.log"):
-                    (path / "safety" / log_name).write_text("clean\n")
+                (path / "safety" / "main.log").write_text(
+                    "executed_candidate_verified pid=1 start_ticks=1 path=/x "
+                    f"executed_binary_sha256={'a' * 64} device_inode=1:1\n"
+                    "cgroup_final current_bytes=0 peak_bytes=1 "
+                    "swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,"
+                    "oom_kill 0,oom_group_kill 0,\n"
+                    "executed candidate was verified alive at least once; "
+                    "no identity contradiction observed by the periodic sampler; "
+                    "actual cadence is recorded in samples.log; wrapper and "
+                    "descendant checks clean\n"
+                    "SAFE_RUN end rc=0 killed=no\n"
+                )
+                (path / "safety" / "kernel.log").write_text("clean\n")
             return root
 
         valid = fixture("valid")
@@ -296,12 +471,37 @@ def self_test() -> None:
         (root / "exact" / "response.json").write_text(json.dumps(response))
         mutations.append(("bad prompt-token usage", root))
 
+        root = fixture("cgroup-oom")
+        main = root / "exact" / "safety" / "main.log"
+        main.write_text(main.read_text().replace("oom 0,", "oom 1,"))
+        mutations.append(("positive cgroup OOM counter", root))
+
+        root = fixture("marker-only")
+        (root / "exact" / "server.log").write_text(
+            "W8 request cKV store=x\n+nvme-direct-slot\n"
+        )
+        mutations.append(("marker-only exact path", root))
+
         for label, root in mutations:
             try:
                 score(root, root / "manifest.json")
             except ValueError:
                 continue
             raise AssertionError(f"{label} mutation passed")
+
+        root = fixture("post-score-mutation")
+        rows, summary = score(root, root / "manifest.json")
+        write_terminal(root, root / "manifest.json", root / "raw.jsonl",
+                       root / "summary.json", rows, summary)
+        main = root / "exact" / "safety" / "main.log"
+        main.write_text(main.read_text() + "mutated\n")
+        try:
+            verify_terminal(root, root / "manifest.json", root / "raw.jsonl",
+                            root / "summary.json")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("post-score artifact mutation passed")
 
 
 def main() -> int:
@@ -311,14 +511,24 @@ def main() -> int:
     parser.add_argument("--raw", type=pathlib.Path)
     parser.add_argument("--summary", type=pathlib.Path)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--failure-reason")
+    parser.add_argument("--verify-terminal", action="store_true")
     args = parser.parse_args()
     if args.self_test:
         self_test(); print("W8_SMOKE_SCORER_SELFTEST_OK"); return 0
     if not all((args.root, args.manifest, args.raw, args.summary)):
         parser.error("--root, --manifest, --raw and --summary are required")
+    if args.verify_terminal:
+        verify_terminal(args.root, args.manifest, args.raw, args.summary)
+        print("W8_SMOKE_TERMINAL_OK")
+        return 0
+    if args.failure_reason is not None:
+        write_failure(args.root, args.manifest, args.raw, args.summary,
+                      args.failure_reason)
+        print("FAIL")
+        return 2
     rows, summary = score(args.root, args.manifest)
-    args.raw.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows))
-    args.summary.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    write_terminal(args.root, args.manifest, args.raw, args.summary, rows, summary)
     print(summary["verdict"])
     return 0
 

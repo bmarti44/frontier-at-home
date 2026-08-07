@@ -1,0 +1,25 @@
+{
+  "schema": "glm52-w8-exact-engine-freeze-v1",
+  "engine_base": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "engine_commit": "119996d9fa0ea3ffb046ce52c0765c78615de4be",
+  "binary_sha256": "0c80fda2d7b135dc1d6f763ca0a1b40cecdc9facdf5bc493238860a1aa660091",
+  "binary_bytes": 6767872,
+  "patch_sha256": "f6468a476411f1d7cc161737f8de404b20a60e22789b34830cdcc3df70fde9a2",
+  "build": {
+    "jobs": 2,
+    "clean_builds": 2,
+    "cuda_arch": "sm_121",
+    "normalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "build_1_binary_sha256": "0c80fda2d7b135dc1d6f763ca0a1b40cecdc9facdf5bc493238860a1aa660091",
+    "build_2_binary_sha256": "0c80fda2d7b135dc1d6f763ca0a1b40cecdc9facdf5bc493238860a1aa660091",
+    "byte_identical": true
+  },
+  "tests": {
+    "row_store": "PASS",
+    "one_million_shape": "PASS",
+    "production_source_contract": "PASS",
+    "positive_io_telemetry_red": "a2fca83",
+    "positive_io_telemetry_fix": "119996d"
+  },
+  "scope": "Candidate 2 plus bounded positive exact-I/O telemetry required by review round 235. No representation or output arithmetic changed."
+}

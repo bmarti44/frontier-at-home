@@ -1,5 +1,7 @@
 import pathlib
+import json
 import subprocess
+import tempfile
 import unittest
 
 
@@ -43,6 +45,31 @@ class W8ExactSmokeContractTests(unittest.TestCase):
             "terminal-receipt.json",
         ):
             self.assertIn(needle, source)
+
+    def test_failure_mode_always_writes_terminal_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            manifest = root / "manifest.json"
+            raw = root / "raw.jsonl"
+            summary = root / "summary.json"
+            manifest.write_text('{"schema":"failed-smoke"}\n')
+            result = subprocess.run(
+                ["python3", str(SCORER), "--root", str(root),
+                 "--manifest", str(manifest), "--raw", str(raw),
+                 "--summary", str(summary), "--failure-reason", "startup-death"],
+                cwd=ROOT, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(json.loads(summary.read_text())["verdict"], "FAIL")
+            self.assertTrue(raw.read_text().strip())
+            self.assertTrue((root / "terminal-receipt.json").is_file())
+            verified = subprocess.run(
+                ["python3", str(SCORER), "--root", str(root),
+                 "--manifest", str(manifest), "--raw", str(raw),
+                 "--summary", str(summary), "--verify-terminal"],
+                cwd=ROOT, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(verified.returncode, 0, verified.stderr)
 
 
 if __name__ == "__main__":

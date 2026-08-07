@@ -11,9 +11,10 @@ readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly SCORER=$REPO/scripts/90_score_w8_exact_smoke.py
 readonly ENGINE_PATCH=$REPO/results/glm52-gates/harness/ds4-w8-exact-ckv.patch
+readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W8-exact-smoke-review-r236.json
 readonly DRAND_VERIFY=$REPO/scripts/89_verify_drand_receipt.mjs
 readonly NODE=/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node
-readonly BIN=/home/bmarti44/.cache/glm52-w8-f0fab6d-runtime/ds4-server
+readonly BIN=/home/bmarti44/.cache/glm52-w8-119996d-runtime/ds4-server
 readonly SRC=/home/bmarti44/.cache/glm52-w8-exact-current
 readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 readonly REQUEST=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json
@@ -22,14 +23,32 @@ readonly CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
 readonly LOCK=/run/user/1000/ds4-engine.lock
 readonly PORT=8098
 
-readonly SOURCE_COMMIT=f0fab6d6a121d95ef38f1d8b10a60e085486e64d
-readonly BINARY_SHA256=ed0dd638dca7fdc3aec8c5688cf8671a52d6c6008c6263e205cdd0abdd13c9fe
+readonly SOURCE_COMMIT=119996d9fa0ea3ffb046ce52c0765c78615de4be
+readonly BINARY_SHA256=0c80fda2d7b135dc1d6f763ca0a1b40cecdc9facdf5bc493238860a1aa660091
 readonly MODEL_SHA256=a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0
 readonly MODEL_BYTES=211075856448
 readonly REQUEST_SHA256=a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3
-readonly ENGINE_PATCH_SHA256=af2459da346279aa30bed242eb6dfe8973c296d276c8f927c2968eded5828fd0
+readonly ENGINE_PATCH_SHA256=f6468a476411f1d7cc161737f8de404b20a60e22789b34830cdcc3df70fde9a2
 
 sha() { sha256sum -- "$1" | awk '{print $1}'; }
+
+verify_reviewed_components() {
+  local commit=$1 relative path expected
+  for relative in \
+    results/glm52-gates/harness/w8_exact_smoke_v1.sh \
+    scripts/90_score_w8_exact_smoke.py \
+    results/glm52-gates/harness/glm_cgroup_run.sh \
+    results/glm52-gates/harness/glm_safe_run.sh \
+    scripts/03_memory_guard.py \
+    scripts/89_verify_drand_receipt.mjs \
+    results/glm52-gates/harness/ds4-w8-exact-ckv.patch
+  do
+    path=$REPO/$relative
+    [[ -f $path && ! -L $path ]]
+    expected=$(git -C "$REPO" show "$commit:$relative" | sha256sum | awk '{print $1}')
+    [[ $(sha "$path") == "$expected" ]]
+  done
+}
 
 stop_server() {
   local pid=${server_pid:-}
@@ -73,10 +92,10 @@ driver() {
 
 bind_safety() {
   local arm_out=$1 safe_dir
-  safe_dir=$(sed -n 's/^SAFE_RUN_DONE rc=0 killed=no dir=\([^[:space:]]*\)$/\1/p' \
+  safe_dir=$(sed -n 's/^SAFE_RUN_DONE rc=[0-9][0-9]* killed=[^[:space:]]* dir=\([^[:space:]]*\)$/\1/p' \
     "$arm_out/containment.stdout")
   [[ $safe_dir == "$CRASH_ROOT"/* && -d $safe_dir && ! -L $safe_dir ]]
-  mkdir "$arm_out/safety"
+  mkdir -p "$arm_out/safety"
   local name
   for name in main.log samples.log kernel.log; do
     [[ -f $safe_dir/$name && ! -L $safe_dir/$name ]]
@@ -118,8 +137,10 @@ run_arm() {
   rc=$?
   set -e
   printf '%s\n' "$rc" >"$arm_out/containment.rc"
+  bind_safety "$arm_out" || true
   (( rc == 0 )) || return 2
-  bind_safety "$arm_out"
+  [[ -f $arm_out/safety/main.log && -f $arm_out/safety/samples.log &&
+     -f $arm_out/safety/kernel.log ]]
 }
 
 if [[ ${1:-} == --driver ]]; then
@@ -131,6 +152,22 @@ fi
 [[ $# == 1 && -f $1 && ! -L $1 ]]
 readonly randomness_receipt=$1
 [[ $(id -un) == bmarti44 && -z $(git -C "$REPO" status --porcelain) ]]
+[[ -f $REVIEW_RECEIPT && ! -L $REVIEW_RECEIPT ]]
+read -r reviewed_commit drand_min_round < <(python3 -I -B - "$REVIEW_RECEIPT" <<'PY'
+import json,re,sys
+d=json.load(open(sys.argv[1],encoding="utf-8"))
+commit=d.get("candidate_hash",""); floor=d.get("drand_min_round")
+if (d.get("schema")!="glm52-w8-exact-smoke-review-v1" or
+    d.get("verdict")!="PASS_RUNTIME_ALLOWED" or
+    d.get("critical")!=[] or d.get("high")!=[] or
+    not isinstance(commit,str) or not re.fullmatch(r"[0-9a-f]{40}",commit) or
+    not isinstance(floor,int) or floor<1): raise SystemExit(2)
+print(commit,floor)
+PY
+)
+git -C "$REPO" merge-base --is-ancestor "$reviewed_commit" HEAD
+[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W8-exact-smoke-review-r236.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
+verify_reviewed_components "$reviewed_commit"
 [[ -x $BIN && $(sha "$BIN") == "$BINARY_SHA256" ]]
 [[ $(git -C "$SRC" rev-parse HEAD) == "$SOURCE_COMMIT" && -z $(git -C "$SRC" status --porcelain) ]]
 [[ -f $MODEL && ! -L $MODEL && $(stat -Lc '%s' "$MODEL") == "$MODEL_BYTES" ]]
@@ -155,6 +192,7 @@ print(*values)
 PY
 )
 "$NODE" "$DRAND_VERIFY" "$round" "$randomness" "$signature" "$previous" >/dev/null
+(( round > drand_min_round ))
 readonly W8_ATTEMPT_NONCE=$(printf '%s' "$randomness$SOURCE_COMMIT" | sha256sum | awk '{print $1}')
 export W8_ATTEMPT_NONCE
 if (( 16#${W8_ATTEMPT_NONCE:0:2} % 2 )); then
@@ -166,14 +204,17 @@ fi
 mkdir -p "$OUT_PARENT" "$CRASH_ROOT"
 readonly root=$OUT_PARENT/attempt-${W8_ATTEMPT_NONCE:0:32}
 mkdir "$root"
+install -m 0600 "$randomness_receipt" "$root/randomness-receipt.json"
 python3 -I -B - "$root/manifest.json" "$randomness_receipt" "${arms[*]}" \
   "$SOURCE_COMMIT" "$BINARY_SHA256" "$MODEL_SHA256" "$REQUEST_SHA256" \
-  "$(sha "$SCORER")" "$(sha "$0")" "$ENGINE_PATCH_SHA256" <<'PY'
+  "$(sha "$SCORER")" "$(sha "$0")" "$ENGINE_PATCH_SHA256" \
+  "$reviewed_commit" "$round" <<'PY'
 import hashlib,json,pathlib,sys
-out,receipt,order,source,binary,model,request,scorer,harness,patch=sys.argv[1:]
+out,receipt,order,source,binary,model,request,scorer,harness,patch,reviewed,round_s=sys.argv[1:]
 doc={"schema":"glm52-w8-exact-smoke-manifest-v1","source_commit":source,
      "binary_sha256":binary,"model_sha256":model,"request_sha256":request,
      "scorer_sha256":scorer,"harness_sha256":harness,"engine_patch_sha256":patch,
+     "reviewed_candidate_commit":reviewed,"drand_round":int(round_s),
      "randomness_receipt_sha256":hashlib.sha256(pathlib.Path(receipt).read_bytes()).hexdigest(),
      "arm_order":order.split(),"arms":{}}
 for arm in ("resident","exact"):
@@ -183,7 +224,27 @@ for arm in ("resident","exact"):
 pathlib.Path(out).write_text(json.dumps(doc,indent=2,sort_keys=True)+"\n")
 PY
 
-for arm in "${arms[@]}"; do run_arm "$arm" "$root"; done
+stage=arms
+finalize_attempt() {
+  local rc=$1
+  [[ ${attempt_terminal:-0} == 1 ]] && return 0
+  set +e
+  python3 -I -B "$SCORER" --root "$root" --manifest "$root/manifest.json" \
+    --raw "$root/raw.jsonl" --summary "$root/summary.json" \
+    --failure-reason "harness_exit_rc=$rc stage=${stage:-unknown}" >/dev/null 2>&1
+  set -e
+}
+attempt_terminal=0
+trap 'finalize_attempt $?' EXIT
+for arm in "${arms[@]}"; do
+  stage=arm-$arm
+  run_arm "$arm" "$root"
+done
+stage=scorer
 python3 -I -B "$SCORER" --root "$root" --manifest "$root/manifest.json" \
   --raw "$root/raw.jsonl" --summary "$root/summary.json"
+python3 -I -B "$SCORER" --root "$root" --manifest "$root/manifest.json" \
+  --raw "$root/raw.jsonl" --summary "$root/summary.json" --verify-terminal
+attempt_terminal=1
+trap - EXIT
 printf 'W8_EXACT_SMOKE_DONE %s\n' "$root"
