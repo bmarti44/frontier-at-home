@@ -259,6 +259,51 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         self.assertIn('exec {harness_fd}<"$INVOKED_SCRIPT"', harness_source)
         self.assertIn('"/proc/$$/fd/$harness_fd" --driver', harness_source)
 
+    def test_frozen_launcher_rejects_hostile_ambient_execution_tools(self):
+        launcher = FROZEN_LAUNCHER.read_text(encoding="utf-8")
+        expected = next(
+            line.split("=", 1)[1]
+            for line in launcher.splitlines()
+            if line.startswith("readonly HARNESS_SHA256=")
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            marker = root / "attacker-executed"
+            fake_git = root / "git"
+            fake_git.write_text(
+                "#!/bin/bash\n"
+                "if [[ $* == *' show '* ]]; then\n"
+                f"  printf '#!/bin/bash\\ntouch {marker}\\nexit 0\\n'\n"
+                "fi\n"
+                "exit 0\n"
+            )
+            fake_sha = root / "sha256sum"
+            fake_sha.write_text(f"#!/bin/bash\nprintf '{expected}  %s\\n' \"$1\"\n")
+            bash_env = root / "bash-env"
+            bash_env.write_text(f"touch {marker}\n")
+            for path in (fake_git, fake_sha):
+                path.chmod(0o700)
+            env = dict(os.environ)
+            env["PATH"] = f"{root}:/usr/bin:/bin"
+            env["BASH_ENV"] = str(bash_env)
+            completed = subprocess.run(
+                [str(FROZEN_LAUNCHER), "--self-test"],
+                cwd=ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertFalse(marker.exists(), completed.stdout + completed.stderr)
+            self.assertNotIn("MALICIOUS", completed.stdout + completed.stderr)
+        self.assertIn("/usr/bin/git", launcher)
+        self.assertIn("/usr/bin/sha256sum", launcher)
+        self.assertLess(
+            launcher.index('exec {harness_fd}<"$staged"'),
+            launcher.index('/usr/bin/sha256sum -- "/proc/$$/fd/$harness_fd"'),
+        )
+
     def test_self_test_rejects_runtime_dependency_path_substitution(self):
         source = HARNESS.read_text(encoding="utf-8")
         substitutions = {
