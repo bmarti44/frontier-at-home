@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "attempt": 2,
+  "attempt_id": "attempt-42e8ca705bf79047f94a102a31f7b42e",
+  "attempt_path": "/home/bmarti44/.local/state/glm52-w7-equivalence/attempt-42e8ca705bf79047f94a102a31f7b42e",
+  "recorded_at": "2026-08-07",
+  "verdict": "FAIL",
+  "authority": {
+    "fixed_scorer_verdict": "FAIL",
+    "summary_sha256": "10777b52162eef485000f361ecdde3da42f01595b2b4d8b9629e006919de7065",
+    "manifest_sha256": "7ec7505a1b5582023c085b7e16d0338b566117c39ae3f51c6d99217e7a2ed158",
+    "raw_sha256": "80de127e06faa98b0772296a533861425e1b2871f4743ac479a602adb911025b",
+    "scorer_sha256": "69055136ce93545c410bed1fb8590e0c45376bddbb77c9ac01954317e9c0b6bf"
+  },
+  "frozen_candidate": {
+    "repository_commit": "4cf049a",
+    "launcher_commit": "8f1163a",
+    "engine_source_commit": "7822efd945f1c5366844d253b22e953b6721b650",
+    "binary_sha256": "2c586aef10c9d9d63827e1141ad2f00ad0d20b259a62e5b53405061eb11c036c",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "harness_sha256": "193c9691995092c59a9c3f8e5c5f3ed9a2eaa03f83b12192eca5584938badaf7",
+    "seed_sha256": "d4836b7b78dc6bfca1d70a0e09affec126879340944e9e562ae6f7b5ab04d49a"
+  },
+  "arm_order": [
+    "candidate",
+    "strict",
+    "cold"
+  ],
+  "authoritative_checks": {
+    "passed": [
+      "arm_identity_exact",
+      "candidate_frontier_observed",
+      "evidence_contract_pass",
+      "http_and_prompt_tokens_exact",
+      "request_hashes_exact",
+      "safety_evidence_pass",
+      "selected_kv_cross_arm_exact",
+      "selected_kv_unchanged",
+      "strict_guard_observed",
+      "traces_pass"
+    ],
+    "failed": [
+      "dump_sets_exact",
+      "candidate_logits_finite",
+      "cold_logits_finite",
+      "strict_logits_finite",
+      "candidate_argmax_matches_cold",
+      "candidate_max_abs_delta_lt_1e_2",
+      "strict_control_matches_cold",
+      "cold_control_observed"
+    ],
+    "explanation": "The preregistered scorer expected the wrong dump boundaries. The server emitted additional public syncs because the KV-disk store split the prompt at its internal checkpoint boundary. The scorer therefore failed closed before loading or comparing logits."
+  },
+  "observed_dump_sets": {
+    "candidate": [
+      "logits.sync1.start0.prompt5044.suffix5044",
+      "logits.sync2.start5044.prompt5055.suffix11",
+      "logits.sync3.start5044.prompt5066.suffix22"
+    ],
+    "strict": [
+      "logits.sync1.start0.prompt5044.suffix5044",
+      "logits.sync2.start5044.prompt5055.suffix11",
+      "logits.sync3.start0.prompt5066.suffix5066"
+    ],
+    "cold": [
+      "logits.sync1.start0.prompt5056.suffix5056",
+      "logits.sync2.start5056.prompt5066.suffix10"
+    ]
+  },
+  "artifact_sha256": {
+    "candidate": "a1b2aef86512aaf3470993cf80f85c91cedd7b6028100e49130dd91d7f60c7a0",
+    "strict": "89ab5f551d5413a2dc8cf6323485c2c6ef450015a6e3961ac0fe44f37921cc21",
+    "cold": "0231cea89bb0f1b3e118779a0cc35d5e05f27e2c9ce2eaec4ad06526701fa1eb"
+  },
+  "posthoc_diagnostic_only": {
+    "acceptance_authority": false,
+    "all_arrays_finite": true,
+    "argmax": {
+      "candidate": 785,
+      "strict": 785,
+      "cold": 785
+    },
+    "candidate_vs_strict": {
+      "max_abs_logit_delta": 4.382786750793457,
+      "mean_abs_logit_delta": 0.6908216857
+    },
+    "candidate_vs_cold": {
+      "max_abs_logit_delta": 4.371706485748291,
+      "mean_abs_logit_delta": 0.6660759398
+    },
+    "strict_vs_cold": {
+      "max_abs_logit_delta": 3.8157851696014404,
+      "mean_abs_logit_delta": 0.5858636493
+    },
+    "interpretation": "Matching argmax does not satisfy W7. Every comparison exceeds the preregistered max-absolute-delta threshold of 0.01 by orders of magnitude. Strict-versus-cold drift also shows that the existing cold control is not chunk-schedule matched. This diagnostic must not be promoted into a PASS by changing the formula."
+  },
+  "behavior": {
+    "candidate": "Selected checkpoint 5044 and evaluated the 22-token suffix through the default-off restored-frontier diagnostic.",
+    "strict": "Observed the strict guard and restarted the 5066-token primary prompt from zero.",
+    "cold": "Started from an empty arm but internally stored at 5056 and evaluated the final 10-token suffix."
+  },
+  "safety": {
+    "containment_rc": {
+      "candidate": 0,
+      "strict": 0,
+      "cold": 0
+    },
+    "minimum_mem_available_kib": {
+      "candidate": 49816608,
+      "strict": 50583500,
+      "cold": 50540488
+    },
+    "cgroup_swap_current_bytes": 0,
+    "oom_or_xid": false,
+    "surviving_engine": false
+  },
+  "next_action": "Diagnose and fix the frontier-state or comparison-semantics defect with a branch-matched suffix probe. Preserve the max-absolute-logit threshold below 0.01 and the strict global guard; do not weaken the scorer to argmax-only."
+}
