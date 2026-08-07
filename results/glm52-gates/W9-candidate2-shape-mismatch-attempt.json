@@ -1,0 +1,23 @@
+{
+  "schema": "glm52-w9-runtime-attempt-v1",
+  "attempt": "candidate-2-precommit-shape-mismatch",
+  "observed_at": "2026-08-07T18:45:18-04:00",
+  "verdict": "FAIL",
+  "scope": "CPU-only compiled W9 behavioral test; no model or engine was started",
+  "engine_head": "869ecb36a9f0341e76166c6088374a16e50a50f8",
+  "diff_sha256": "78d118672d4f0858f8c2d02d8bc8a4c95e41c7ae24c611d8d1473cb9f21f5ef9",
+  "engine_source_sha256": "e140b77c6a5f5442f5d6dd3bb6106974cbd9f484d3dd16e1398e0ea982ca550d",
+  "test_source_sha256": "be45d7176324cc085f2c8c9e5a47e7873e20f6b756e812636085a788101824af",
+  "command": "make -j2 test-glm-w9-capture-behavior",
+  "reproduction_exit_code": 1,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "158ebc08c80ed746213a31b209c71dde337bfab6b59e70e766284e9f213b8096",
+  "failed_assertion": "directory replacement cannot receive a false-success marker",
+  "diagnosis": {
+    "production_glm_layer_count": 79,
+    "capture_initializer_required_layer_count": 78,
+    "effect": "glm_w9_capture_begin returns false before creating the capture directory, so the directory-swap behavior test returns its initialization-error sentinel"
+  },
+  "bounded_fix": "Require the actual 79-layer GLM shape in the W9 initializer; do not change the preregistered sampled-layer set.",
+  "frozen_components_changed": []
+}
