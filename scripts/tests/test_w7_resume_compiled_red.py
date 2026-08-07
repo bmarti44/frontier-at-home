@@ -304,6 +304,30 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
             launcher.index('/usr/bin/sha256sum -- "/proc/$$/fd/$harness_fd"'),
         )
 
+    def test_frozen_launcher_seals_verified_execution_bytes(self):
+        launcher = FROZEN_LAUNCHER.read_text(encoding="utf-8")
+        for contract in (
+            "os.memfd_create",
+            "MFD_ALLOW_SEALING",
+            "F_ADD_SEALS",
+            "F_GET_SEALS",
+            "F_SEAL_WRITE",
+            "F_SEAL_GROW",
+            "F_SEAL_SHRINK",
+            "F_SEAL_SEAL",
+        ):
+            self.assertIn(contract, launcher)
+        completed = subprocess.run(
+            [str(FROZEN_LAUNCHER), "--self-test"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("W7_SEALED_MUTATION_REJECTED", completed.stdout)
+        self.assertIn("W7_FROZEN_LAUNCHER_OK", completed.stdout)
+
     def test_self_test_rejects_runtime_dependency_path_substitution(self):
         source = HARNESS.read_text(encoding="utf-8")
         substitutions = {
