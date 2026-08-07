@@ -1,5 +1,6 @@
 import json
 import base64
+import hashlib
 import importlib.util
 import pathlib
 import shutil
@@ -162,6 +163,10 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
             changed = json.loads(json.dumps(valid))
             changed[key] = value
             mutations.append((changed, 0))
+        for invalid_version in (1.0, "1", True, None):
+            changed = json.loads(json.dumps(valid))
+            changed["schema_version"] = invalid_version
+            mutations.append((changed, 0))
         extra = json.loads(json.dumps(valid))
         extra["unexpected"] = True
         mutations.append((extra, 0))
@@ -174,6 +179,43 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         for document, returncode in mutations:
             with self.subTest(returncode=returncode, document=document):
                 self.assertNotEqual(validate(document, returncode).returncode, 0)
+
+    def test_execution_authority_rejects_harness_descendant(self):
+        original = HARNESS.read_bytes()
+        expected_sha256 = hashlib.sha256(original).hexdigest()
+        candidate = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip()
+        valid = subprocess.run(
+            [str(HARNESS), "--validate-execution-authority", expected_sha256, candidate],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(valid.returncode, 0, valid.stderr)
+        with tempfile.TemporaryDirectory() as directory:
+            descendant = pathlib.Path(directory) / HARNESS.name
+            descendant.write_bytes(original + b"\n# descendant mutation\n")
+            descendant.chmod(0o700)
+            rejected = subprocess.run(
+                [str(descendant), "--validate-execution-authority", expected_sha256, candidate],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+
+    def test_score_phase_uses_stable_scorer_descriptor_and_rechecks_dependencies(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        score_phase = source[source.index("score_red() {"):source.index("if [[ ${1:-}")]
+        self.assertIn('verify_runtime_dependencies', score_phase)
+        self.assertIn('exec {trace_scorer_fd}<"$TRACE_SCORER"', score_phase)
+        self.assertIn('/proc/$$/fd/$trace_scorer_fd', score_phase)
+        self.assertGreaterEqual(score_phase.count('verify_runtime_dependencies'), 2)
+        self.assertIn('W7_EXECUTED_HARNESS_SHA256', source)
+        self.assertIn('W7_FROZEN_CANDIDATE_COMMIT', source)
 
     def test_self_test_rejects_runtime_dependency_path_substitution(self):
         source = HARNESS.read_text(encoding="utf-8")
