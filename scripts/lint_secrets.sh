@@ -250,6 +250,7 @@ allowlist = {
     "source_raw_sha256",
     "preserved_archive_sha256",
     "randomness_receipt_sha256",
+    "terminal_receipt_sha256",
     "drand_randomness",
     "drand_signature",
     "pin_sha256",

@@ -38,6 +38,11 @@ class W8ExactSmokeContractTests(unittest.TestCase):
         self.assertIn("[[ -r $SAFE", source)
         self.assertNotIn("[[ -x $SAFE", source)
 
+    def test_arm_runner_does_not_shadow_readonly_attempt_root(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("local arm=$1 arm_root=$2", source)
+        self.assertNotIn("local arm=$1 root=$2", source)
+
     def test_scorer_requires_io_counters_and_cgroup_events(self):
         source = SCORER.read_text(encoding="utf-8")
         for needle in (
