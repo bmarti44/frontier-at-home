@@ -32,7 +32,9 @@ class W7EquivalenceLauncherTest(unittest.TestCase):
     def test_seed_is_derived_from_latest_public_randomness(self) -> None:
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertNotIn('parser.add_argument("--seed-sha256")', source)
-        self.assertIn('f"https://{host}/public/latest"', source)
+        self.assertNotIn("/public/latest", source)
+        self.assertIn('f"https://{host}/public/{DRAND_TARGET_ROUND}"', source)
+        self.assertIn('round_number != DRAND_TARGET_ROUND', source)
         self.assertIn("hashlib.sha256(bytes.fromhex(signature))", source)
         self.assertIn("W7_RANDOM_SEED_SHA256=seed_sha256", source)
 
