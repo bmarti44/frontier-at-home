@@ -429,14 +429,14 @@ swap_used_kib=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t-f}' /proc/memi
 mkdir -p "$OUT_PARENT"
 nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 readonly nonce
-readonly out=$OUT_PARENT/attempt-$nonce
+readonly attempt_out=$OUT_PARENT/attempt-$nonce
 readonly tag=w7red-${nonce:0:12}
-mkdir "$out"
-write_requests "$out"
-fixture_check "$out" >/dev/null
-printf '%s\n' "$BINARY_SHA256" >"$out/binary.sha256"
-printf '%s\n' "$MODEL_SHA256" >"$out/model-known.sha256"
-printf '%s\n' "$POOL_SHA256" >"$out/fixture-pool.sha256"
+mkdir "$attempt_out"
+write_requests "$attempt_out"
+fixture_check "$attempt_out" >/dev/null
+printf '%s\n' "$BINARY_SHA256" >"$attempt_out/binary.sha256"
+printf '%s\n' "$MODEL_SHA256" >"$attempt_out/model-known.sha256"
+printf '%s\n' "$POOL_SHA256" >"$attempt_out/fixture-pool.sha256"
 exec {harness_fd}<"$INVOKED_SCRIPT"
 [[ $(sha256sum -- "/proc/$$/fd/$harness_fd" | awk '{print $1}') == "$W7_EXECUTED_HARNESS_SHA256" ]] || exit 2
 
@@ -457,20 +457,20 @@ set +e
     "$CGROUP" --tag "$tag" -- /usr/bin/env \
       W7_EXECUTED_HARNESS_SHA256="$W7_EXECUTED_HARNESS_SHA256" \
       W7_FROZEN_CANDIDATE_COMMIT="$W7_FROZEN_CANDIDATE_COMMIT" \
-      /usr/bin/bash "/proc/$$/fd/$harness_fd" --driver "$out" "$PORT" \
-    >"$out/containment.stdout" 2>"$out/containment.stderr"
+      /usr/bin/bash "/proc/$$/fd/$harness_fd" --driver "$attempt_out" "$PORT" \
+    >"$attempt_out/containment.stdout" 2>"$attempt_out/containment.stderr"
 containment_rc=$?
 exec {harness_fd}<&-
 set -e
-printf '%s\n' "$containment_rc" >"$out/containment.rc"
+printf '%s\n' "$containment_rc" >"$attempt_out/containment.rc"
 (( containment_rc == 0 )) || {
-  echo "W7 RED containment failed rc=$containment_rc evidence=$out" >&2
+  echo "W7 RED containment failed rc=$containment_rc evidence=$attempt_out" >&2
   exit 2
 }
 
 set +e
-score_red "$out"
+score_red "$attempt_out"
 score_rc=$?
 set -e
-echo "W7 RED evidence: $out"
+echo "W7 RED evidence: $attempt_out"
 exit "$score_rc"
