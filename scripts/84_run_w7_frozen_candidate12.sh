@@ -10,8 +10,8 @@ import subprocess
 import sys
 
 REPO = "/home/bmarti44/spark-deepseek-v4-flash"
-CANDIDATE_COMMIT = "f559546f3cbc51840819aa47fd84d9ef38fdf3a0"
-HARNESS_SHA256 = "066a475ded03bd4a54ac27363b27fd77562d56340c66b4c7c69ddebf9ed5e91e"
+CANDIDATE_COMMIT = "c3a874704c54520dcb8377a6b5108eed802e6840"
+HARNESS_SHA256 = "555ed71955b2db105b73c4668bc1cfc75f246b61c1e95120f5dcc5adc9d14e2a"
 HARNESS_PATH = "results/glm52-gates/harness/w7_resume_compiled_red_v1.sh"
 BASE_ENV = {
     "HOME": "/home/bmarti44",
