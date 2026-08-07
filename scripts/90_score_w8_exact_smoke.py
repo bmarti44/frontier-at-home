@@ -203,17 +203,19 @@ def self_test() -> None:
         def fixture(name: str) -> pathlib.Path:
             root = parent / name
             root.mkdir()
+            request_blob = b'{"model":"default","prompt":"fixture","max_tokens":0}'
+            request_sha = hashlib.sha256(request_blob).hexdigest()
             manifest = {
                 "schema": "glm52-w8-exact-smoke-manifest-v1",
                 "arm_order": list(ARMS),
                 "binary_sha256": "a" * 64,
                 "model_sha256": "b" * 64,
-                "request_sha256": "c" * 64,
+                "request_sha256": request_sha,
                 "arms": {
                     arm: {
                         "binary_sha256": "a" * 64,
                         "model_sha256": "b" * 64,
-                        "request_sha256": "c" * 64,
+                        "request_sha256": request_sha,
                         "context": 8192,
                         "ckv_mode": (
                             "resident" if arm == "resident" else "exact-f32-nvme"
@@ -228,7 +230,14 @@ def self_test() -> None:
                 path = root / arm
                 (path / "safety").mkdir(parents=True)
                 (path / f"logits.sync1.start0.prompt{PROMPT_TOKENS}.suffix{PROMPT_TOKENS}").write_bytes(blob)
-                (path / "response.json").write_text(json.dumps({"choices": [{"text": "ok"}]}))
+                (path / "request.json").write_bytes(request_blob)
+                (path / "http-status").write_text("200\n")
+                (path / "response.json").write_text(json.dumps({
+                    "choices": [{"text": "ok"}],
+                    "usage": {"prompt_tokens": PROMPT_TOKENS,
+                              "completion_tokens": 0,
+                              "total_tokens": PROMPT_TOKENS},
+                }))
                 (path / "containment.rc").write_text("0\n")
                 (path / "containment.stdout").write_text("SAFE_RUN_DONE rc=0 killed=no dir=/x\n")
                 (path / "request.trace").write_text("trace\n")
@@ -272,6 +281,20 @@ def self_test() -> None:
             "cgroup_peak_bytes=1 cgroup_swap_current_bytes=4096\n"
         )
         mutations.append(("swap use", root))
+
+        root = fixture("actual-unequal-request")
+        (root / "exact" / "request.json").write_bytes(b"different")
+        mutations.append(("actual unequal request", root))
+
+        root = fixture("bad-http-status")
+        (root / "exact" / "http-status").write_text("500\n")
+        mutations.append(("bad HTTP status", root))
+
+        root = fixture("bad-usage")
+        response = strict_json(root / "exact" / "response.json")
+        response["usage"]["prompt_tokens"] = PROMPT_TOKENS - 1
+        (root / "exact" / "response.json").write_text(json.dumps(response))
+        mutations.append(("bad prompt-token usage", root))
 
         for label, root in mutations:
             try:
