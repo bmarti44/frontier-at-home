@@ -45,7 +45,7 @@ class W7ProductionContractTest(unittest.TestCase):
         source = LAUNCHER.read_text(encoding="utf-8")
         self.assertIn("w7_resume_production_v1.sh", source)
         self.assertIn("87_score_w7_resume_production.py", source)
-        self.assertIn("79332541785007fad3440ff026b09966d560f145", source)
+        self.assertIn("6b6ca50b3a9ee0f93c981a572508383691707ca6", source)
 
 
 if __name__ == "__main__":
