@@ -226,7 +226,9 @@ score_trace() {
 }
 
 run_arm() {
-  local arm=$1 root=$2 arm_out=$root/$arm tag rc
+  local arm=$1 root=$2
+  local arm_out=$root/$arm
+  local tag rc
   tag=$(arm_tag "$arm" "${root##*-}")
   mkdir "$arm_out"
   install -m 0600 "$PRIMARY_SOURCE" "$arm_out/primary-request.json"
