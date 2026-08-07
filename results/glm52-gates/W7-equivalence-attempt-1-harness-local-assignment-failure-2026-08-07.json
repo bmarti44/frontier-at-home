@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate_commit": "8e2caa801bd69b4ac0b4b9a9defd80790a71b7d7",
+  "frozen_target_commit": "2055428c7d4ee45c482dd68f259268e70ebe23af",
+  "attempt_directory": "/home/bmarti44/.local/state/glm52-w7-equivalence/attempt-b35cff3551150e875178964dda97207d",
+  "randomness_receipt_sha256": "dddbda699dd2e598d5d2219237f36817a3e95273f40fb903ec456d904831597d",
+  "arm_order_sha256": "489caf9119ebd751709c3210798ad1d8f82466030fb63fd348af458ea6d754db",
+  "arm_order": ["strict", "cold", "candidate"],
+  "observed": {
+    "arm_directories_created": 0,
+    "engine_started": false,
+    "minimum_mem_available_kib_observed_after_failure": 121409588,
+    "swap_free_kib_after_failure": 16620712,
+    "kernel_oom_xid_or_panic_after_launch": false
+  },
+  "failure": {
+    "class": "harness_runtime_local_assignment",
+    "location": "run_arm local declaration",
+    "assertion": "arm_out must equal root/arm",
+    "reproduction": "With set -u, `local arm=$1 root=$2 arm_out=$root/$arm` expands root before its local assignment and exits with `root: unbound variable`.",
+    "effect": "The launcher preserved randomness and arm order, then exited before containment or model startup."
+  },
+  "verdict": "NO_RESULT"
+}

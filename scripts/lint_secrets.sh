@@ -10,6 +10,7 @@ readonly W3_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W3-slot-lifetime-probe
 readonly W7_PUBLIC_DIGEST_ALLOWLIST='^scripts/glm52_goal\.py:[0-9]+:_W7_(STEM_FILE|STEM_TEXT|POOL|TOKENIZER|TOKENIZER_INIT|TOKENIZER_NATIVE|SERVER_SOURCE|RENDER_ORACLE_SOURCE|RENDER_ORACLE_BINARY)_SHA256 = "[0-9a-f]{64}"$|^scripts/82_build_w7_fixture_pool\.py:[0-9]+:(TOKENIZER|RUNTIME_INIT|RUNTIME_NATIVE|SERVER_SOURCE|ORACLE_SOURCE|ORACLE_BINARY)_SHA256 = "[0-9a-f]{64}"$|^scripts/82_build_w7_render_oracle\.sh:[0-9]+:readonly (CC|SERVER|SOURCE|OUTPUT)_SHA256=[0-9a-f]{64}$|^scripts/83_score_w7_deployed_trace\.py:[0-9]+:TOKENIZER_(SHA256|INIT_SHA256|NATIVE_SHA256) = "[0-9a-f]{64}"$|^scripts/84_run_w7_frozen_candidate12\.sh:[0-9]+:(readonly HARNESS_SHA256=[0-9a-f]{64}|HARNESS_SHA256 = "[0-9a-f]{64}")$|^scripts/85_score_w7_resume_equivalence\.py:[0-9]+:(PRIMARY|LIVE)_SHA256 = "[0-9a-f]{64}"$|^scripts/86_run_w7_equivalence\.py:[0-9]+:        "[0-9a-f]{64}",$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "[0-9a-f]{64}",$|^scripts/tests/test_w7_resume_compiled_red\.py:[0-9]+:                "[0-9a-f]{64}",$|^scripts/tests/test_w7_resume_equivalence_scorer\.py:[0-9]+:(PRIMARY|LIVE)_SHA = "[0-9a-f]{64}"$|^results/glm52-gates/harness/w7_resume_compiled_red_v1\.sh:[0-9]+:readonly (POOL|BINARY|MODEL|RENDER_ORACLE|TRACE_SCORER|TOKENIZER|TOKENIZER_INIT|TOKENIZER_NATIVE)_SHA256=[0-9a-f]{64}$|^results/glm52-gates/harness/w7_resume_equivalence_v1\.sh:[0-9]+:readonly (RANDOM_SEED|BINARY|MODEL|LIVE|PRIMARY|POOL|TOKENIZER|TOKENIZER_INIT|TOKENIZER_NATIVE|TRACE_SCORER|SCORER|CGROUP|SAFE|MEMORY_GUARD|ENGINE_FREEZE|CONFIGURATION)_SHA256=[0-9a-f]{64}$'
 
 readonly W7_LAUNCHER_DIGEST_ALLOWLIST='^scripts/86_run_w7_equivalence\.py:[0-9]+:(HARNESS|SCORER|TRACE_SCORER)_SHA256 = "[0-9a-f]{64}"$'
+readonly W7_ATTEMPT_DIGEST_ALLOWLIST='^results/glm52-gates/W7-equivalence-attempt-[0-9]+-[a-z0-9-]+-2026-08-07\.json:[0-9]+:  "(randomness_receipt|arm_order)_sha256": "[0-9a-f]{64}",$'
 
 is_checksum_file() {
   case "$1" in
@@ -65,7 +66,7 @@ redact_matches() {
 
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST" || true)"
+  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
