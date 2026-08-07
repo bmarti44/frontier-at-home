@@ -21,6 +21,85 @@ SPEC.loader.exec_module(MODULE)
 
 
 class W9RealCaptureScorerTests(unittest.TestCase):
+    def _paired_fixture(self, root: pathlib.Path) -> pathlib.Path:
+        binary = "b" * 64
+        model = "c" * 64
+        tokenizer = "d" * 64
+        configuration = "e" * 64
+        prompt = b"matched prompt"
+        prompt_hash = MODULE.hashlib.sha256(prompt).hexdigest()
+        arms = {}
+        for arm_name in MODULE.ARMS:
+            arm = root / arm_name
+            arm.mkdir()
+            (arm / "prompt.txt").write_bytes(prompt)
+            (arm / "cli.stdout").write_bytes(b"")
+            logit = arm / "logits.sync0.start0.prompt8192.suffix8192"
+            logit.write_bytes(array.array("f", [0.0] * MODULE.LOGIT_COUNT).tobytes())
+            stderr = f"ds4: prefill logits dumped to {logit}\n"
+            if arm_name == "on":
+                stderr += "ds4: W9 real capture complete rows=8192 query_rows=128 layers=1\n"
+            (arm / "cli.stderr").write_text(stderr, encoding="utf-8")
+            (arm / "containment.rc").write_text("0\n", encoding="utf-8")
+            (arm / "containment.stdout").write_text(
+                "SAFE_RUN_DONE rc=0 killed=no dir=/tmp/safe\n", encoding="utf-8")
+            (arm / "containment.stderr").write_bytes(b"")
+            safety = arm / "safety"
+            safety.mkdir()
+            (safety / "samples.log").write_text(
+                "mem_avail_kb=30000000 eng_rss_kb=1 cgroup_current_bytes=1 "
+                "cgroup_peak_bytes=1 cgroup_swap_current_bytes=0\n", encoding="utf-8")
+            (safety / "kernel.log").write_bytes(b"")
+            (safety / "main.log").write_text(
+                "executed_candidate_verified pid=1 start_ticks=1 path=/candidate "
+                f"executed_binary_sha256={binary} device_inode=1:2 \n"
+                "wrapper and descendant checks clean\n"
+                "cgroup_final current_bytes=0 peak_bytes=1 swap_current_bytes=0 "
+                "events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n",
+                encoding="utf-8")
+            if arm_name == "on":
+                capture = arm / "capture"
+                capture.mkdir()
+                (capture / "kv.f32").write_bytes(array.array("f", [0.0] * 4).tobytes())
+                (capture / "query.f32").write_bytes(array.array("f", [0.0] * 4).tobytes())
+                counts = array.array("I", [2048] * 128)
+                (capture / "selected-count.u32").write_bytes(counts.tobytes())
+                row = array.array("I", [0] + [8193] * 2047).tobytes()
+                with (capture / "selected.u32").open("wb") as handle:
+                    for _ in counts:
+                        handle.write(row)
+                metadata = {
+                    "schema": "glm52-w9-real-capture-v1", "layers": [0],
+                    "kv_rows_per_layer": 8192, "kv_width": 512,
+                    "query_rows_per_layer": 128, "query_heads": 64,
+                    "query_width": 512, "selected_capacity": 2048,
+                    "sample_position_start": 0, "sample_position_stride": 64,
+                    "selected_padding_sentinel": 8193,
+                    "storage_padding_sentinel": 0xFFFFFFFF,
+                    "artifacts": MODULE.CAPTURE_SIZES,
+                    "dtype": {"kv": "f32", "query": "f32", "selected": "u32"},
+                }
+                (capture / "metadata.json").write_text(
+                    json.dumps(metadata), encoding="utf-8")
+                (capture / "W9_CAPTURE_COMPLETE").write_text(
+                    "W9_CAPTURE_COMPLETE\n", encoding="utf-8")
+            arms[arm_name] = {
+                "binary_sha256": binary, "model_sha256": model,
+                "tokenizer_sha256": tokenizer, "prompt_sha256": prompt_hash,
+                "configuration_sha256": configuration, "context": 8193,
+                "capture": arm_name == "on",
+            }
+        manifest = {
+            "schema": "glm52-w9-real-capture-manifest-v1",
+            "binary_sha256": binary, "model_sha256": model,
+            "tokenizer_sha256": tokenizer, "prompt_sha256": prompt_hash,
+            "configuration_sha256": configuration,
+            "arm_order": ["off", "on"], "arms": arms,
+        }
+        path = root / "manifest.json"
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+        return path
+
     def test_strict_json_rejects_duplicate_and_nonfinite(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = pathlib.Path(temporary) / "record.json"
@@ -126,6 +205,42 @@ class W9RealCaptureScorerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "binding"):
             MODULE.validate_logit_publication(
                 "ds4: prefill logits dumped to /attempt/off/substitute\n", path)
+
+    def test_complete_paired_score_and_cross_phase_rewrite(self) -> None:
+        compact_sizes = {"kv.f32": 16, "query.f32": 16,
+                         "selected.u32": 128 * 2048 * 4,
+                         "selected-count.u32": 128 * 4}
+        with mock.patch.object(MODULE, "LAYERS", (0,)), \
+                mock.patch.object(MODULE, "LOGIT_COUNT", 4), \
+                mock.patch.object(MODULE, "CAPTURE_SIZES", compact_sizes), \
+                mock.patch.object(MODULE, "CAPTURE_NAMES",
+                                  set(compact_sizes) |
+                                  {"metadata.json", "W9_CAPTURE_COMPLETE"}):
+            with tempfile.TemporaryDirectory() as temporary:
+                root = pathlib.Path(temporary)
+                manifest = self._paired_fixture(root)
+                rows, summary = MODULE.score(root, manifest)
+                self.assertEqual(summary["verdict"], "PASS")
+                self.assertEqual([row["arm"] for row in rows], ["off", "on"])
+
+            with tempfile.TemporaryDirectory() as temporary:
+                root = pathlib.Path(temporary)
+                manifest = self._paired_fixture(root)
+                real_inventory = MODULE.inventory
+                calls = 0
+
+                def inventory_then_rewrite(path):
+                    nonlocal calls
+                    result = real_inventory(path)
+                    calls += 1
+                    if calls == 2:
+                        target = root / "on/logits.sync0.start0.prompt8192.suffix8192"
+                        target.write_bytes(array.array("f", [1.0, 0.0, 0.0, 0.0]).tobytes())
+                    return result
+
+                with mock.patch.object(MODULE, "inventory", side_effect=inventory_then_rewrite):
+                    with self.assertRaisesRegex(ValueError, "arm/final inventory"):
+                        MODULE.score(root, manifest)
 
     def test_scorer_contract_is_fixed(self) -> None:
         source = SCORER.read_text(encoding="utf-8")

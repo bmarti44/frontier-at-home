@@ -156,6 +156,22 @@ def verify_inventory(root: pathlib.Path, rows: list[dict]) -> None:
         raise ValueError("terminal artifact path set changed")
 
 
+def bind_arm_inventories(rows: list[dict], root_rows: list[dict]) -> None:
+    for row in rows:
+        arm = row.get("arm")
+        artifacts = row.get("artifacts")
+        if arm not in ARMS or not isinstance(artifacts, list):
+            raise ValueError("arm inventory binding is malformed")
+        prefix = f"{arm}/"
+        projected = []
+        for root_row in root_rows:
+            path = root_row.get("path") if isinstance(root_row, dict) else None
+            if isinstance(path, str) and path.startswith(prefix):
+                projected.append({**root_row, "path": path[len(prefix):]})
+        if projected != artifacts:
+            raise ValueError(f"{arm}: arm/final inventory generation mismatch")
+
+
 def validate_f32(path: pathlib.Path, expected_bytes: int) -> str:
     def consume(chunk: bytes) -> None:
         if len(chunk) % 4:
@@ -378,6 +394,8 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
         "zero_token_stdout_byte_identical": outputs["off"] == outputs["on"],
         "containment_and_memory_clean": True,
     }
+    root_inventory = inventory(root)
+    bind_arm_inventories(rows, root_inventory)
     summary = {
         "schema": "glm52-w9-real-capture-summary-v1", "gate": "W9-real-capture",
         "formula": "PASS iff every check is true; zero-token stdout is corroboration only, final F32 logit identity is authoritative",
@@ -386,7 +404,7 @@ def score(root: pathlib.Path, manifest_path: pathlib.Path) -> tuple[list[dict], 
             "captured_kv_rows": len(LAYERS) * 8192,
             "captured_query_rows": len(LAYERS) * 128},
         "verdict": "PASS" if all(checks.values()) else "FAIL",
-        "artifacts": inventory(root),
+        "artifacts": root_inventory,
     }
     if summary["verdict"] != "PASS":
         raise ValueError("one or more W9 acceptance checks failed")
