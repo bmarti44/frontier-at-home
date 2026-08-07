@@ -513,6 +513,13 @@ def self_test() -> None:
         )
         mutations.append(("marker-only exact path", root))
 
+        root = fixture("padding-only-selected-rows")
+        server = root / "exact" / "server.log"
+        server.write_text(server.read_text().replace(
+            "selected_rows=12", "selected_rows=0"
+        ))
+        mutations.append(("padding-only selected-row telemetry", root))
+
         for label, root in mutations:
             try:
                 score(root, root / "manifest.json")

@@ -80,6 +80,7 @@ class W8ExactSmokeContractTests(unittest.TestCase):
             "executed_candidate_verified",
             "artifact_inventory",
             "terminal-receipt.json",
+            "padding-only selected-row telemetry",
         ):
             self.assertIn(needle, source)
 
