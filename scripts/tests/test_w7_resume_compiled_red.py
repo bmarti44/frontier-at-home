@@ -44,8 +44,10 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         self.assertIn(
             're.search(r"GLM sync start=5044 prompt=5066 suffix=22\\b", log)', source
         )
-        self.assertNotIn('tokens=5044\\\\b", log)', source)
-        self.assertNotIn('suffix=22\\\\b", log)', source)
+        self.assertIn(
+            're.search(r"GLM sync start=0 prompt=5066 suffix=5066\\b", log)', source
+        )
+        self.assertNotIn("\\\\\\\\b", source)
 
     def test_fixture_pool_binds_completion_parser_rendered_wire(self):
         pool = json.loads(
