@@ -403,6 +403,7 @@ exit 0
         self.assertIn("date -u --iso-8601=ns", safe)
         for name in (
             "DS4_GLM_CKV_NVME",
+            "DS4_GLM_CKV_NVME_EXACT",
             "DS4_GLM_CKV_DIR",
             "DS4_GLM_CKV_MODEL_SHA256",
             "DS4_GLM_CKV_RUN_NONCE",
