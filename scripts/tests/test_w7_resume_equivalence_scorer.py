@@ -120,8 +120,9 @@ class W7ScorerTest(unittest.TestCase):
                 "ds4: GLM sync start=5044 prompt=5066 suffix=22\n"
             )
             names = [
-                "logits.sync1.start0.prompt5055.suffix5055",
-                "logits.sync2.start5044.prompt5066.suffix22",
+                "logits.sync1.start0.prompt5044.suffix5044",
+                "logits.sync2.start5044.prompt5055.suffix11",
+                "logits.sync3.start5044.prompt5066.suffix22",
             ]
         elif name == "strict":
             log = (
@@ -130,12 +131,19 @@ class W7ScorerTest(unittest.TestCase):
                 "ds4: GLM sync start=0 prompt=5066 suffix=5066\n"
             )
             names = [
-                "logits.sync1.start0.prompt5055.suffix5055",
-                "logits.sync2.start0.prompt5066.suffix5066",
+                "logits.sync1.start0.prompt5044.suffix5044",
+                "logits.sync2.start5044.prompt5055.suffix11",
+                "logits.sync3.start0.prompt5066.suffix5066",
             ]
         else:
-            log = "ds4: GLM sync start=0 prompt=5066 suffix=5066\n"
-            names = ["logits.sync1.start0.prompt5066.suffix5066"]
+            log = (
+                "ds4: GLM sync start=0 prompt=5044 suffix=5044\n"
+                "ds4: GLM sync start=5044 prompt=5066 suffix=22\n"
+            )
+            names = [
+                "logits.sync1.start0.prompt5044.suffix5044",
+                "logits.sync2.start5044.prompt5066.suffix22",
+            ]
         (arm / "server.log").write_text(log)
         (arm / "containment.rc").write_text("0\n")
         (arm / "containment.stdout").write_text(
@@ -173,14 +181,14 @@ class W7ScorerTest(unittest.TestCase):
         self.assertEqual(result["observed"]["max_abs_logit_delta"], 0.0)
 
     def test_rejects_logit_drift(self) -> None:
-        target = self.candidate / "logits.sync2.start5044.prompt5066.suffix22"
+        target = self.candidate / "logits.sync3.start5044.prompt5066.suffix22"
         values = [0.0] * N_VOCAB
         values[1], values[2], values[3] = 0.25, 0.98, -0.5
         target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
         self.assertEqual(self._score()["verdict"], "FAIL")
 
     def test_rejects_nonfinite_and_stale_selected_kv(self) -> None:
-        target = self.candidate / "logits.sync2.start5044.prompt5066.suffix22"
+        target = self.candidate / "logits.sync3.start5044.prompt5066.suffix22"
         values = [0.0] * N_VOCAB
         values[1], values[2], values[3] = math.nan, 1.0, -0.5
         target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))

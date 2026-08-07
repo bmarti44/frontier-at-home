@@ -100,6 +100,16 @@ class W7HarnessTest(unittest.TestCase):
         self.assertIn("local arm=$1 root=$2", source)
         self.assertIn("local arm_out=$root/$arm", source)
 
+    def test_cold_control_uses_branch_matched_5044_boundary(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("local boundary_trim=8", source)
+        self.assertIn('[[ $arm == cold ]] && boundary_trim=20', source)
+        self.assertIn(
+            '--kv-cache-boundary-align-tokens 4 '
+            '--kv-cache-boundary-trim-tokens "$boundary_trim"',
+            source,
+        )
+
     def test_required_evidence_contract_is_emitted(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")
         self.assertIn("manifest.json", source)
