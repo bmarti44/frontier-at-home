@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "FROZEN_NOT_EXECUTED",
+  "classification": "default-off restored-frontier diagnostic with semantic per-sync logit witnesses",
+  "supersedes": "results/glm52-gates/W7-resume-restored-frontier-freeze-v1.json",
+  "prior_randomness_disposition": "STALE_UNEXECUTED; instrumentation changed after freeze",
+  "repository_parent_commit": "4646630",
+  "review_authority": "results/glm52-gates/W7-resume-logit-witness-review-r211-r213.json",
+  "engine": {
+    "source_commit": "7822efd945f1c5366844d253b22e953b6721b650",
+    "reviewed_behavior_commit": "3bd95adb0d5b45bc7c2bfb2c38e3f422a578d6d3",
+    "base_commit": "d652a9b5ec48c0e8cbb0f42c5d55bc411f51cc25",
+    "source_tree": "335c53f3634a54819424aca7b47aa2a127be6c58",
+    "replay_tree": "335c53f3634a54819424aca7b47aa2a127be6c58",
+    "replay_result": "PASS",
+    "readable_source": "/tmp/glm52-w7-build1.ob4Q0O/src",
+    "source_files": [
+      {"path": "ds4.c", "source_sha256": "3038f2ddbdb5771f7c4e582587f67244f9b5a2d1950502503c55708f7e8ebe25"},
+      {"path": "ds4.h", "source_sha256": "cc435a9dccf4db61dbf1658b16f489cfb91e65b31d83cdca35068434970514de"},
+      {"path": "ds4_server.c", "source_sha256": "6d7be43db03e185a1ecb84a10ce3e4dec0bf48777b3b6a231ffadf13060c16aa"},
+      {"path": "tests/test_glm_logit_dump_callsite.py", "source_sha256": "e2bb007bc9591de6dd8bfbd731783747f465adb37941e38c27fd721ff6c89792"},
+      {"path": "ds4_kvstore.c", "source_sha256": "929df5271da4075cf5977f7ff601c300a6f7620f557dd985ff76ae5390d2d44a"},
+      {"path": "ds4_cuda.cu", "source_sha256": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f"}
+    ],
+    "patches_0021_through_0031": true,
+    "new_patches": [
+      {"path": "0025-test-require-tagged-GLM-logits-for-every-sync.patch", "patch_sha256": "a6198f03d52a5eca571f5a7c6d79899a6d402f3db74995001eeb005d75166eda"},
+      {"path": "0026-feat-dump-tagged-GLM-logits-for-diagnostic-syncs.patch", "patch_sha256": "cc854b352a885e377ccafa72b248052c959825c7c62ef9b5510598f753d60f46"},
+      {"path": "0027-test-require-atomic-semantic-GLM-logit-dumps.patch", "patch_sha256": "2b54b4faf645e7a1f729ff90b4d27806f81fbc8bf1e6ffe0008f3b92d2bfc8d0"},
+      {"path": "0028-fix-publish-one-semantic-GLM-logit-witness-per-sync.patch", "patch_sha256": "6d6914b2a57278e629954c92a95a176a38fe144eab95aed20fdfe3d4a9b879c9"},
+      {"path": "0029-test-require-GLM-witness-on-early-sync-branches.patch", "patch_sha256": "6c0e816a2ec66b4bdb83e4a580dba06669f5a25e14555d3f3b51cdd387b4c168"},
+      {"path": "0030-fix-arm-GLM-witness-before-every-sync-branch.patch", "patch_sha256": "bb3344dd1d7bcab8ae03ac764311f90de31cb6d7d5601988a73fd583792ad7b4"},
+      {"path": "0031-test-scope-GLM-witness-ordering-to-sync-implementati.patch", "patch_sha256": "5ae531cf09391891a1a7aa3f51573fd0a509fbcb8df28bf3bbc8609cafc825c0"}
+    ]
+  },
+  "build": {
+    "binary": "/home/bmarti44/.cache/glm52-w7-7822efd-build-v3/build1-ds4-server",
+    "binary_sha256": "2c586aef10c9d9d63827e1141ad2f00ad0d20b259a62e5b53405061eb11c036c",
+    "binary_bytes": 14628576,
+    "builds": 2,
+    "byte_identical": true,
+    "parallel_jobs": 2,
+    "nvcc_random_seed": "7822efd9",
+    "stable_nvcc_keep_dir": "/tmp/glm52-w7-7822efd-nvcc-keep",
+    "artifacts": {
+      "build1.log": "6ceba92813e1d98316d7a239adf1b8a67070246aecd52047f22177952c59ac23",
+      "build2.log": "6ceba92813e1d98316d7a239adf1b8a67070246aecd52047f22177952c59ac23",
+      "build1.time": "9514125bd1a301e90d0c2a8be8c96ee741f2f14ff888f2799b3c308110a2d64f",
+      "build2.time": "e272a84c88e7695929d6f1e71375e697683c4f00b7f0221e5ffa9febc123f100"
+    }
+  },
+  "model": {
+    "path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "bytes": 211075856448,
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
+  },
+  "acceptance": {
+    "candidate_vs_cold_max_abs_logit_delta_strictly_less_than": 0.01,
+    "candidate_vs_cold_argmax_identical": true,
+    "candidate_sync": {"start": 5044, "prompt": 5066, "suffix": 22},
+    "strict_default_still_cold_restarts": true,
+    "request_inputs": [
+      {"role": "primary", "fixture_sha256": "a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3"},
+      {"role": "live", "fixture_sha256": "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a"}
+    ],
+    "payload_claim": "Structurally complete and exact-file hash-bound; content checksums remain W8 scope."
+  }
+}

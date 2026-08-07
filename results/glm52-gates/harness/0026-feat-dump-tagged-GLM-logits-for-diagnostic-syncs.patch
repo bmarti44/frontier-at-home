@@ -1,0 +1,56 @@
+From 449563fe7bb46bac2228bb32dc8ad5be69f54bd3 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:44:00 -0400
+Subject: [PATCH 26/31] feat: dump tagged GLM logits for diagnostic syncs
+
+---
+ ds4.c | 29 ++++++++++++++++++++++++-----
+ 1 file changed, 24 insertions(+), 5 deletions(-)
+
+diff --git a/ds4.c b/ds4.c
+index dbc8c95..1906f50 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -34745,16 +34745,35 @@ static void glm_debug_dump_hidden_layer(const ds4_gpu_tensor *t,
+     free(buf);
+ }
+
+-/* Correctness isolation: dump the post-prefill logits vector once. */
++bool ds4_glm_logit_dump_path(char *out, size_t out_len,
++                             const char *base, const char *dump_all,
++                             uint32_t call_index) {
++    if (!out || out_len == 0 || !base || !base[0]) return false;
++    if (!dump_all || strcmp(dump_all, "1")) {
++        if (call_index != 0) return false;
++        const int n = snprintf(out, out_len, "%s", base);
++        return n >= 0 && (size_t)n < out_len;
++    }
++    if (call_index == UINT32_MAX) return false;
++    const int n = snprintf(out, out_len, "%s.%u", base, call_index + 1u);
++    return n >= 0 && (size_t)n < out_len;
++}
++
++/* Correctness isolation: dump post-prefill logits once by default, or every
++ * sync under the exact default-off diagnostic flag. */
+ static void glm_debug_dump_prefill_logits(const float *logits) {
+-    static int dumped;
+-    const char *path = getenv("DS4_GLM_LOGIT_DUMP");
+-    if (!path || !path[0] || dumped || !logits) return;
++    static uint32_t dump_calls;
++    const char *base = getenv("DS4_GLM_LOGIT_DUMP");
++    char path[1024];
++    if (!logits ||
++        !ds4_glm_logit_dump_path(path, sizeof(path), base,
++                                 getenv("DS4_GLM_LOGIT_DUMP_ALL"), dump_calls))
++        return;
++    dump_calls++;
+     FILE *f = fopen(path, "wb");
+     if (!f) return;
+     fwrite(logits, sizeof(float), (size_t)DS4_N_VOCAB, f);
+     fclose(f);
+-    dumped = 1;
+     fprintf(stderr, "ds4: prefill logits dumped to %s\n", path);
+ }
+
+--
+2.43.0

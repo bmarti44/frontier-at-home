@@ -1,0 +1,29 @@
+From 7822efd945f1c5366844d253b22e953b6721b650 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:55:50 -0400
+Subject: [PATCH 31/31] test: scope GLM witness ordering to sync implementation
+
+---
+ tests/test_glm_logit_dump_callsite.py | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/tests/test_glm_logit_dump_callsite.py b/tests/test_glm_logit_dump_callsite.py
+index 773efa8..0de7933 100644
+--- a/tests/test_glm_logit_dump_callsite.py
++++ b/tests/test_glm_logit_dump_callsite.py
+@@ -24,7 +24,12 @@ class GlmLogitDumpCallsiteTest(unittest.TestCase):
+
+     def test_metadata_is_armed_before_every_success_branch(self) -> None:
+         source = SOURCE.read_text(encoding="utf-8")
+-        glm_sync = source[source.index("if (ds4_session_is_glm(s)) {") :]
++        internal = source.index(
++            "static int ds4_session_sync_internal(ds4_session *s, "
++            "const ds4_tokens *prompt, char *err, size_t errlen) {"
++        )
++        glm_sync_start = source.index("if (ds4_session_is_glm(s)) {", internal)
++        glm_sync = source[glm_sync_start:]
+         armed = glm_sync.index("s->glm_logit_sync_valid = true;")
+         early_branch = glm_sync.index("if (s->engine->glm_tp_token_prefill ||")
+         self.assertLess(armed, early_branch)
+--
+2.43.0

@@ -1,0 +1,83 @@
+From 85d1e2c468c8a7b98eacddf01668ccbbd826b8d7 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:49:15 -0400
+Subject: [PATCH 27/31] test: require atomic semantic GLM logit dumps
+
+---
+ ds4.h        |  4 +++-
+ ds4_server.c | 44 +++++++++++++++++++++++++++++++++++---------
+ 2 files changed, 38 insertions(+), 10 deletions(-)
+
+diff --git a/ds4.h b/ds4.h
+index febcf31..1e53af8 100644
+--- a/ds4.h
++++ b/ds4.h
+@@ -371,7 +371,9 @@ bool ds4_glm_apply_restored_frontier(ds4_tokens *evaluated,
+                                      uint32_t compact_rows);
+ bool ds4_glm_logit_dump_path(char *out, size_t out_len,
+                              const char *base, const char *dump_all,
+-                             uint32_t call_index);
++                             uint32_t call_index, uint32_t start,
++                             uint32_t prompt, uint32_t suffix);
++bool ds4_glm_publish_exact(const char *path, const void *data, size_t bytes);
+ ds4_session_rewrite_result ds4_session_rewrite_from_common(
+         ds4_session *s, const ds4_tokens *prompt, int common,
+         char *err, size_t errlen);
+diff --git a/ds4_server.c b/ds4_server.c
+index f3c9aa2..c2cfc7b 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -16779,16 +16779,42 @@ static void test_glm_restored_frontier_requires_complete_opt_in_snapshot(void) {
+
+ static void test_glm_logit_dump_all_names_each_sync_without_changing_default(void) {
+     char path[64];
+-    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", NULL, 0));
++    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", NULL,
++                                        0, 5044, 5066, 22));
+     TEST_ASSERT(!strcmp(path, "/tmp/logits"));
+-    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", NULL, 1));
+-    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "1", 0));
+-    TEST_ASSERT(!strcmp(path, "/tmp/logits.1"));
+-    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "1", 2));
+-    TEST_ASSERT(!strcmp(path, "/tmp/logits.3"));
+-    TEST_ASSERT(!ds4_glm_logit_dump_path(path, 8, "/tmp/logits", "1", 0));
+-    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "", "1", 0));
+-    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "yes", 1));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", NULL,
++                                         1, 5044, 5066, 22));
++    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "1",
++                                        0, 5044, 5066, 22));
++    TEST_ASSERT(!strcmp(path, "/tmp/logits.sync1.start5044.prompt5066.suffix22"));
++    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "1",
++                                        2, 0, 5066, 5066));
++    TEST_ASSERT(!strcmp(path, "/tmp/logits.sync3.start0.prompt5066.suffix5066"));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, 8, "/tmp/logits", "1",
++                                         0, 5044, 5066, 22));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "", "1",
++                                         0, 5044, 5066, 22));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "yes",
++                                         1, 5044, 5066, 22));
++
++    char dir[] = "/tmp/ds4-logit-publish.XXXXXX";
++    TEST_ASSERT(mkdtemp(dir) != NULL);
++    char artifact[256];
++    TEST_ASSERT(snprintf(artifact, sizeof(artifact), "%s/logits", dir) > 0);
++    const unsigned char first[] = { 1, 2, 3, 4 };
++    const unsigned char replacement[] = { 9, 9, 9, 9 };
++    TEST_ASSERT(ds4_glm_publish_exact(artifact, first, sizeof(first)));
++    TEST_ASSERT(!ds4_glm_publish_exact(artifact, replacement, sizeof(replacement)));
++    FILE *f = fopen(artifact, "rb");
++    TEST_ASSERT(f != NULL);
++    unsigned char observed[sizeof(first)] = {0};
++    TEST_ASSERT(fread(observed, 1, sizeof(observed), f) == sizeof(observed));
++    TEST_ASSERT(fclose(f) == 0);
++    TEST_ASSERT(!memcmp(observed, first, sizeof(first)));
++    TEST_ASSERT(!ds4_glm_publish_exact("/missing-ds4-logit-dir/logits",
++                                       first, sizeof(first)));
++    TEST_ASSERT(unlink(artifact) == 0);
++    TEST_ASSERT(rmdir(dir) == 0);
+ }
+
+ static void test_kv_cache_store_len_uses_configured_boundary(void) {
+--
+2.43.0
