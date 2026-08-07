@@ -59,6 +59,17 @@ class W8ExactSmokeContractTests(unittest.TestCase):
         self.assertEqual(result.stdout, "/tmp/attempt/resident\n")
         self.assertNotIn("local arm=$1 root=$2", source)
 
+    def test_safe_wrapper_candidate_source_contains_frozen_binary(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        runtime = pathlib.Path(
+            "/home/bmarti44/.cache/glm52-w8-119996d-runtime"
+        )
+        binary = runtime / "ds4-server"
+        self.assertIn(f"readonly RUNTIME_DIR={runtime}", source)
+        self.assertIn("GLM_CANDIDATE_SRC=$RUNTIME_DIR", source)
+        self.assertTrue(binary.is_file())
+        self.assertEqual(binary.resolve().parent, runtime.resolve())
+
     def test_scorer_requires_io_counters_and_cgroup_events(self):
         source = SCORER.read_text(encoding="utf-8")
         for needle in (
