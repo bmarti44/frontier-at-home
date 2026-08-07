@@ -1,0 +1,30 @@
+{
+  "candidate_commit": "8900ca76f75cdddd0fed7ce2100f73cd5654514e",
+  "candidate_number": 10,
+  "campaign_review_round": 205,
+  "freeze_commit": "5f1a8533638b3a0e478806bbc51520ce4736ec96",
+  "gate": "W7-resume-bpe-lineage-v1",
+  "root_disposition": {
+    "ADV-W7-204-H15": "OPEN: candidate 11 must bind the executing harness to the reviewed candidate and record that identity",
+    "ADV-W7-204-H15-SCORER-TOCTOU": "OPEN: candidate 11 must execute the prevalidated scorer through a stable descriptor and reject before/after dependency drift",
+    "ADV-W7-205-M18": "OPEN_NONBLOCKING: candidate 11 will require an exact integer schema version and add mutations",
+    "engine_scope": "UNCHANGED",
+    "runtime_smoke": "NOT_AUTHORIZED_FOR_CANDIDATE_10"
+  },
+  "reviewers": {
+    "gap_reviewer": {
+      "critical": [],
+      "high": ["ADV-W7-204-H15-SCORER-TOCTOU"],
+      "score": 90,
+      "verdict": "CHANGES_REQUIRED_BEFORE_RUNTIME_SMOKE"
+    },
+    "adversarial_reviewer": {
+      "critical": [],
+      "high": ["ADV-W7-204-H15"],
+      "medium": ["ADV-W7-205-M18"],
+      "score": 86,
+      "verdict": "CHANGES_REQUIRED_BEFORE_RUNTIME_SMOKE"
+    }
+  },
+  "schema_version": 1
+}
