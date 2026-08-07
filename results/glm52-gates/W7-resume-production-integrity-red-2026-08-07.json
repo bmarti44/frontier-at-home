@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-production-graduation",
+  "attempt": "integrity-RED",
+  "review_finding": "ADV-W7-226-C41-UNCHECKSUMMED-PAYLOAD-CAN-BYPASS-GUARD",
+  "engine_test_commit": "0499aee913803b96d22f137a311307d8418167fd",
+  "blocked_candidate_commit": "d2520d9a580f3a0bd8d7861091e2ae197998bf6c",
+  "acceptance_formula": "A persisted record is eligible for ds4_session_load_payload only if a strong digest over its immutable header, cached text, and exact payload verifies. Any saved-token mutation, tensor/state mutation, or equal-size payload substitution must fail before restoration and be discarded so the cold guard remains authoritative.",
+  "command": "make -j2 ds4_server_test && ./ds4_server_test",
+  "observed_exit_code": 1,
+  "mutations_injected": [
+    "saved-token byte",
+    "tensor/state byte",
+    "equal-size payload substitution"
+  ],
+  "observed_false_accepts": 3,
+  "logs": [
+    {
+      "name": "build",
+      "sha256": "12e5e6d131ef3661b9919d28f6de71b4ebc31e2097c5833a924fc2ae87d16657"
+    },
+    {
+      "name": "run",
+      "sha256": "b19bc5c2d5e36bbddbcb760bdf875ca289a74e10fcfef217b73582102e64792e"
+    }
+  ],
+  "result": "RED_CONFIRMED"
+}
