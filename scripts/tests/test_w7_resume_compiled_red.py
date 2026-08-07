@@ -3,6 +3,7 @@ import base64
 import hashlib
 import importlib.util
 import os
+import re
 import pathlib
 import shutil
 import subprocess
@@ -25,6 +26,16 @@ def _load_trace_scorer():
 
 
 class W7CompiledRedHarnessTests(unittest.TestCase):
+    def test_function_locals_do_not_collide_with_readonly_globals(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        readonly_names = set(
+            re.findall(r"^readonly\s+([A-Za-z_][A-Za-z0-9_]*)=", source, re.MULTILINE)
+        )
+        local_names = set(
+            re.findall(r"^\s*local\s+([A-Za-z_][A-Za-z0-9_]*)[= ]", source, re.MULTILINE)
+        )
+        self.assertEqual(readonly_names & local_names, set())
+
     def test_fixture_pool_binds_completion_parser_rendered_wire(self):
         pool = json.loads(
             (ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json").read_text()
