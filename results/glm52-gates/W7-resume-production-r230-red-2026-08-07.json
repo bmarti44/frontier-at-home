@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "gate": "W7-production-runtime-equivalence",
+  "review_round": 230,
+  "finding": "GAP-W7-230-H5-RANDOMNESS-RECEIPT-NOT-VERIFIED-BY-SCORER",
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_production_scorer.W7ProductionScorerTest.test_rejects_missing_randomness_receipt",
+  "observed": {
+    "returncode": 1,
+    "tests_run": 1,
+    "failures": 1,
+    "detail": "the fixed scorer returned PASS when randomness.json was absent"
+  },
+  "expected_after_fix": {
+    "receipt_required": true,
+    "receipt_sha_recomputed": true,
+    "schema_strict": true,
+    "seed_recomputed": true,
+    "future_round_committed_before_publication": true,
+    "bls_signature_verified_against_pinned_default_chain_key": true
+  },
+  "verdict": "RED_CONFIRMED"
+}

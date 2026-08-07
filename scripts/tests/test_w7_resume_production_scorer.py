@@ -426,6 +426,14 @@ class W7ProductionScorerTest(unittest.TestCase):
         result = self._score()
         self.assertFalse(result["checks"]["evidence_contract_pass"])
 
+    def test_rejects_missing_randomness_receipt(self) -> None:
+        receipt = self.root / "randomness.json"
+        receipt.write_text("{}\n")
+        receipt.unlink()
+        result = self._score()
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertFalse(result["checks"]["evidence_contract_pass"])
+
 
 if __name__ == "__main__":
     unittest.main()
