@@ -2,6 +2,7 @@ import json
 import base64
 import hashlib
 import importlib.util
+import os
 import pathlib
 import shutil
 import subprocess
@@ -12,6 +13,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "results/glm52-gates/harness/w7_resume_compiled_red_v1.sh"
 TRACE_SCORER_PATH = ROOT / "scripts/83_score_w7_deployed_trace.py"
+FROZEN_LAUNCHER = ROOT / "scripts/84_run_w7_frozen_candidate12.sh"
 
 
 def _load_trace_scorer():
@@ -216,6 +218,46 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
         self.assertGreaterEqual(score_phase.count('verify_runtime_dependencies'), 2)
         self.assertIn('W7_EXECUTED_HARNESS_SHA256', source)
         self.assertIn('W7_FROZEN_CANDIDATE_COMMIT', source)
+
+    def test_driver_requires_authority_before_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = pathlib.Path(directory)
+            (out / "live-request.json").write_text("{}")
+            (out / "primary-request.json").write_text("{}")
+            (out / "kv").mkdir()
+            env = dict(os.environ)
+            env.pop("W7_EXECUTED_HARNESS_SHA256", None)
+            env.pop("W7_FROZEN_CANDIDATE_COMMIT", None)
+            completed = subprocess.run(
+                [str(HARNESS), "--driver", str(out), "8097"],
+                cwd=ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("frozen execution authority is required", completed.stderr)
+
+    def test_frozen_launcher_pins_and_stably_executes_parent_and_driver(self):
+        source = FROZEN_LAUNCHER.read_text(encoding="utf-8")
+        self.assertIn("readonly CANDIDATE_COMMIT=", source)
+        self.assertIn("readonly HARNESS_SHA256=", source)
+        self.assertIn("git -C \"$REPO\" show", source)
+        self.assertIn("exec {harness_fd}<", source)
+        self.assertIn('/proc/$$/fd/$harness_fd', source)
+        completed = subprocess.run(
+            [str(FROZEN_LAUNCHER), "--self-test"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("W7_FROZEN_LAUNCHER_OK", completed.stdout)
+        harness_source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn('exec {harness_fd}<"$INVOKED_SCRIPT"', harness_source)
+        self.assertIn('"/proc/$$/fd/$harness_fd" --driver', harness_source)
 
     def test_self_test_rejects_runtime_dependency_path_substitution(self):
         source = HARNESS.read_text(encoding="utf-8")
