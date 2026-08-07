@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate": 11,
+  "test_commit": "24a729c",
+  "classification": "RED",
+  "review_authority": "ADV-W7-222-H39-UNMATCHED-FINAL-SCHEDULE-ORACLE, review round 223",
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_equivalence_scorer.W7ScorerTest.test_rejects_unmatched_final_branch -v",
+  "observed": {
+    "tests_run": 1,
+    "subtest_failures": 5,
+    "false_passes": [
+      "missing final branch",
+      "decode-resume substitution",
+      "wrong start position",
+      "split 11+11 indexed chunks",
+      "final branch without logits"
+    ]
+  },
+  "required_behavior": "Candidate and fresh no-load reference must each emit exactly one final indexed-resume branch at position 5044 with one 22-token chunk and final logits enabled. Any alternative branch geometry fails before numerical comparison.",
+  "frozen_scope": "Engine, model, requests, containment, outer sync boundaries, strict guard, selected checkpoint identity, full-vocabulary comparison, and the 0.01 threshold remain unchanged."
+}
