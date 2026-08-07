@@ -11,9 +11,10 @@ readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly SCORER=$REPO/scripts/90_score_w8_exact_smoke.py
 readonly ENGINE_PATCH=$REPO/results/glm52-gates/harness/ds4-w8-exact-ckv.patch
-readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W8-exact-smoke-review-r240.json
+readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W8-exact-smoke-review-r241.json
 readonly DRAND_VERIFY=$REPO/scripts/89_verify_drand_receipt.mjs
 readonly NODE=/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node
+readonly RUNTIME_DIR=/home/bmarti44/.cache/glm52-w8-119996d-runtime
 readonly BIN=/home/bmarti44/.cache/glm52-w8-119996d-runtime/ds4-server
 readonly SRC=/home/bmarti44/.cache/glm52-w8-exact-current
 readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
@@ -126,7 +127,7 @@ run_arm() {
     GLM_SAFE_RUN_AS_CURRENT_USER=1 GLM_SAFE_MEMORY_HIGH_GIB=78 \
     GLM_SAFE_KILL_FLOOR_GIB=24 GLM_SAFE_MIN_START_GIB=110 \
     GLM_SAFE_TIMEOUT_S=3600 GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
-    GLM_SAFE_EXPECTED_BINARY_SHA256=$BINARY_SHA256 GLM_CANDIDATE_SRC=$SRC \
+    GLM_SAFE_EXPECTED_BINARY_SHA256=$BINARY_SHA256 GLM_CANDIDATE_SRC=$RUNTIME_DIR \
     DS4_CUDA_EXPERT_CACHE_GB=40 DS4_CUDA_EXPERT_CACHE_PIN=1 \
     DS4_CUDA_EXPERT_CACHE_SLRU=1 DS4_CUDA_FETCH_THREADS=6 \
     DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_GLM_SYNC_TRACE=1 \
@@ -167,9 +168,10 @@ print(commit,floor)
 PY
 )
 git -C "$REPO" merge-base --is-ancestor "$reviewed_commit" HEAD
-[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W8-exact-smoke-review-r240.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
+[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W8-exact-smoke-review-r241.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
 verify_reviewed_components "$reviewed_commit"
 [[ -x $BIN && $(sha "$BIN") == "$BINARY_SHA256" ]]
+[[ $(realpath -e -- "$RUNTIME_DIR/ds4-server") == $(realpath -e -- "$BIN") ]]
 [[ $(git -C "$SRC" rev-parse HEAD) == "$SOURCE_COMMIT" && -z $(git -C "$SRC" status --porcelain) ]]
 [[ -f $MODEL && ! -L $MODEL && $(stat -Lc '%s' "$MODEL") == "$MODEL_BYTES" ]]
 [[ -f $REQUEST && ! -L $REQUEST && $(sha "$REQUEST") == "$REQUEST_SHA256" ]]
