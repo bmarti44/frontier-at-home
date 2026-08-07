@@ -11,7 +11,7 @@ readonly W7_PUBLIC_DIGEST_ALLOWLIST='^scripts/glm52_goal\.py:[0-9]+:_W7_(STEM_FI
 
 readonly W7_LAUNCHER_DIGEST_ALLOWLIST='^scripts/(86_run_w7_equivalence|88_run_w7_resume_production)\.py:[0-9]+:(HARNESS|SCORER|TRACE_SCORER|DRAND_VERIFIER|DRAND_NODE|DRAND_RUNTIME_TREE)_SHA256 = "[0-9a-f]{64}"$'
 readonly W7_ATTEMPT_DIGEST_ALLOWLIST='^results/glm52-gates/W7-equivalence-attempt-[0-9]+-[a-z0-9-]+-2026-08-07\.json:[0-9]+:  "(randomness_receipt|arm_order)_sha256": "[0-9a-f]{64}",$'
-readonly W8_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W8-exact-preflight-review-r233-r234\.json:[0-9]+:  "(binary|patch)_sha256": "[0-9a-f]{64}",?$|^results/glm52-gates/harness/w8_exact_smoke_v1\.sh:[0-9]+:readonly (BINARY|MODEL|REQUEST|ENGINE_PATCH)_SHA256=[0-9a-f]{64}$'
+readonly W8_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W8-exact-preflight-review-r233-r234\.json:[0-9]+:  "(binary|patch)_sha256": "[0-9a-f]{64}",?$|^results/glm52-gates/harness/w8_exact_smoke_v1\.sh:[0-9]+:readonly (BINARY|MODEL|REQUEST|ENGINE_PATCH)_SHA256=[0-9a-f]{64}$|^results/glm52-gates/harness/ds4-w8-exact-ckv\.patch:[0-9]+:\+  (ordinary build [12]: )?[0-9a-f]{64}$'
 
 is_checksum_file() {
   case "$1" in

@@ -1,0 +1,30 @@
+{
+  "schema": "glm52-w8-exact-engine-freeze-v1",
+  "engine_base": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "engine_commit": "364eea1d66eda0cabb12ed5f1cd328e8e248f03c",
+  "binary_sha256": "6181aaafd25711cc40dcf32963b9a75f894fb4cb29766d51e20accc475f86d70",
+  "binary_bytes": 6702368,
+  "patch_sha256": "4ca75c4055d3e8b5519b14eff84f43791f0e699c20df1be290817eb447a4477a",
+  "build": {
+    "jobs": 2,
+    "clean_builds": 2,
+    "cuda_arch": "sm_121",
+    "normalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "build_1_binary_sha256": "6181aaafd25711cc40dcf32963b9a75f894fb4cb29766d51e20accc475f86d70",
+    "build_2_binary_sha256": "6181aaafd25711cc40dcf32963b9a75f894fb4cb29766d51e20accc475f86d70",
+    "byte_identical": true
+  },
+  "red_commits": {
+    "store_padding": "6272169cc6569ab3e50e69a1f824ad8db882baae",
+    "cuda_direct_slot_padding": "b4873a438584211db63be8aab138de6d49f961cc"
+  },
+  "tests": {
+    "selected_padding_store": "PASS",
+    "direct_slot_byte_identity_with_padding": "PASS",
+    "non_sentinel_out_of_range_rejection": "PASS",
+    "one_million_shape": "PASS",
+    "production_source_contract": "PASS"
+  },
+  "acceptance_formula": "UINT32_MAX is the only zero-filled selected-row padding sentinel; all other absent/out-of-range rows fail closed; valid rows remain checksummed exact reads; matched final F32 logits must be byte-identical",
+  "scope": "Candidate 3 plus the bounded runtime-discovered causal-padding fix. Representation and output arithmetic are unchanged."
+}

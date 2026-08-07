@@ -89,7 +89,7 @@ index 8c48c02..287e63b 100644
 -	rm -f ds4 ds4-server ds4-bench ds4-eval ds4-agent ds4_cpu ds4_native ds4_server_test ds4_test ds4_agent_test gguf-tools/quality-testing/score_official $(QUALITY_SCORE_OBJ) tests/test_q4k_dot tests/test_metal_session_batch tests/test_gpu_xdev tests/test_gpu_model_cache tests/test_gpu_lookup_cache_strict tests/test_engine_mgpu_refusal tests/test_engine_mgpu_runtime tests/test_engine_correctness tests/test_sampling tests/test_cuda_session_batch tests/test_cuda_mixed_batch tests/*.o *.o tests/cuda_long_context_smoke tests/cuda_long_context_smoke.o
 +	rm -f ds4 ds4-server ds4-bench ds4-eval ds4-agent ds4_cpu ds4_native ds4_server_test ds4_test ds4_agent_test gguf-tools/quality-testing/score_official $(QUALITY_SCORE_OBJ) tests/test_q4k_dot tests/test_glm_ckvstore tests/test_glm_ckvstore_1m tests/test_glm_ckv_exact_direct_cuda tests/test_metal_session_batch tests/test_gpu_xdev tests/test_gpu_model_cache tests/test_gpu_lookup_cache_strict tests/test_engine_mgpu_refusal tests/test_engine_mgpu_runtime tests/test_engine_correctness tests/test_sampling tests/test_cuda_session_batch tests/test_cuda_mixed_batch tests/*.o *.o tests/cuda_long_context_smoke tests/cuda_long_context_smoke.o
 diff --git a/ds4.c b/ds4.c
-index f0527d5..85e5159 100644
+index f0527d5..a87381e 100644
 --- a/ds4.c
 +++ b/ds4.c
 @@ -41,6 +41,7 @@
@@ -253,7 +253,7 @@ index f0527d5..85e5159 100644
      ds4_gpu_tensor_free(g->mtp_kv_lora_cache);
      ds4_gpu_tensor_free(g->mtp_k_rope_cache);
      ds4_gpu_tensor_free(g->mtp_concat);
-@@ -39184,6 +39289,248 @@ static bool glm_graph_warm_compact_indexer_store(
+@@ -39184,6 +39289,258 @@ static bool glm_graph_warm_compact_indexer_store(
      return ok;
  }
  
@@ -469,6 +469,16 @@ index f0527d5..85e5159 100644
 +    if (!ds4_gpu_tensor_read(selected, selected_offset,
 +                             g->ckv_selected_ids_host,
 +                             (uint64_t)n_selected * sizeof(uint32_t))) return false;
++    for (uint32_t row = 0; row < n_selected; row++) {
++        if (g->ckv_selected_ids_host[row] == g->compact_cache_cap) {
++            g->ckv_selected_ids_host[row] = UINT32_MAX;
++        } else if (g->ckv_selected_ids_host[row] > g->compact_cache_cap) {
++            fprintf(stderr,
++                    "ds4: W8 selected-row id %u exceeds padding sentinel %u\n",
++                    g->ckv_selected_ids_host[row], g->compact_cache_cap);
++            return false;
++        }
++    }
 +    char err[256] = {0};
 +    const uint64_t latent_row = glm_graph_compact_latent_row_bytes();
 +    const uint64_t rope_row = glm_graph_compact_rope_row_bytes();
@@ -502,7 +512,7 @@ index f0527d5..85e5159 100644
  static bool glm_graph_alloc_slice(
          ds4_glm_gpu_graph *g,
          const ds4_model   *model,
-@@ -39197,9 +39544,11 @@ static bool glm_graph_alloc_slice(
+@@ -39197,9 +39554,11 @@ static bool glm_graph_alloc_slice(
          bool               require_token_embd,
          bool               require_output_head) {
      if (!g || !model || !weights || ctx_size <= 0) return false;
@@ -514,7 +524,7 @@ index f0527d5..85e5159 100644
      g->ssd_streaming = ssd_streaming;
      g->ssd_streaming_cold = ssd_streaming_cold;
  
-@@ -39238,6 +39587,11 @@ static bool glm_graph_alloc_slice(
+@@ -39238,6 +39597,11 @@ static bool glm_graph_alloc_slice(
      g->indexed_prefill_score_cap =
          glm_graph_indexed_prefill_score_tokens(g->indexed_prefill_cap,
                                                 g->compact_cache_cap);
@@ -526,7 +536,7 @@ index f0527d5..85e5159 100644
      g->indexer_full_layers =
          glm_graph_full_indexer_layer_count_range(g->layer_start,
                                                   g->layer_end);
-@@ -39326,20 +39680,25 @@ static bool glm_graph_alloc_slice(
+@@ -39326,20 +39690,25 @@ static bool glm_graph_alloc_slice(
                  "ds4: GLM graph using compact DSA KV only; expanded full-attention KV cache is skipped\n");
      }
      if (g->compact_cache_cap != 0) {
@@ -555,7 +565,7 @@ index f0527d5..85e5159 100644
                  compact_gib);
          fprintf(stderr,
                  "ds4: GLM compact indexed prefill chunk=%u score_rows=%u score_scratch=%.2f MiB\n",
-@@ -39441,6 +39800,17 @@ static bool glm_graph_alloc_slice(
+@@ -39441,6 +39810,17 @@ static bool glm_graph_alloc_slice(
      }
      DS4_GLM_GRAPH_ALLOC_TENSOR(g->batch_ffn_out, batch_rows * emb_bytes);
  
@@ -573,7 +583,7 @@ index f0527d5..85e5159 100644
      for (uint32_t il = g->layer_start; ok && il <= g->layer_end; il++) {
          int cache_tier = 0;
          if (g->placement && g->placement[il + 1u] >= 0 &&
-@@ -39461,8 +39831,10 @@ static bool glm_graph_alloc_slice(
+@@ -39461,8 +39841,10 @@ static bool glm_graph_alloc_slice(
              DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_value_cache[il], value_cache_bytes);
          }
          if (g->compact_cache_cap != 0) {
@@ -586,7 +596,7 @@ index f0527d5..85e5159 100644
              if (glm_graph_layer_uses_full_indexer(il)) {
                  DS4_GLM_GRAPH_ALLOC_TENSOR_TIER(g->layer_indexer_key_cache[il],
                                                  compact_indexer_key_bytes);
-@@ -39472,6 +39844,7 @@ static bool glm_graph_alloc_slice(
+@@ -39472,6 +39854,7 @@ static bool glm_graph_alloc_slice(
      }
  #undef DS4_GLM_GRAPH_ALLOC_TENSOR
  
@@ -594,7 +604,7 @@ index f0527d5..85e5159 100644
      if (!ok) {
          glm_graph_free(g);
          return false;
-@@ -43366,17 +43739,8 @@ static bool glm_graph_verify_rows(
+@@ -43366,17 +43749,8 @@ static bool glm_graph_verify_rows(
                                                           kv_raw_dim,
                                                           DS4_N_KV_LORA,
                                                           DS4_RMS_EPS) != 0;
@@ -614,7 +624,7 @@ index f0527d5..85e5159 100644
          if (ok) ok = ds4_gpu_glm_qk_lowrank_typed_batch_tensor(g->batch_qk_low,
                                                                 g->batch_q,
                                                                 model->map,
-@@ -43962,19 +44326,10 @@ static bool glm_graph_forward_tokens(
+@@ -43962,19 +44336,10 @@ static bool glm_graph_forward_tokens(
                                                           kv_raw_dim,
                                                           DS4_N_KV_LORA,
                                                           DS4_RMS_EPS) != 0;
@@ -638,7 +648,7 @@ index f0527d5..85e5159 100644
          if (ok) ok = ds4_gpu_glm_k_b_project_typed_tensor(g->batch_k_nope,
                                                            g->batch_kv_norm,
                                                            model->map,
-@@ -44530,7 +44885,8 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44530,7 +44895,8 @@ static bool glm_graph_forward_indexed_tokens(
      const bool use_batch_qk_low =
          !force_scalar_attn && glm_graph_indexed_prefill_batch_qk_low();
      const bool use_batch_attn_kernel =
@@ -648,7 +658,7 @@ index f0527d5..85e5159 100644
      const bool use_split_value_proj =
          use_batch_attn_kernel &&
          g->batch_attn_lora;
-@@ -44886,19 +45242,9 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -44886,19 +45252,9 @@ static bool glm_graph_forward_indexed_tokens(
                                                           kv_raw_dim,
                                                           DS4_N_KV_LORA,
                                                           DS4_RMS_EPS) != 0;
@@ -671,7 +681,7 @@ index f0527d5..85e5159 100644
          DS4_GLM_PROFILE_INDEXED_STAGE("glm_indexed_attn", "kv_path");
  
          if (ok && glm_graph_layer_uses_full_indexer(il)) {
-@@ -45346,7 +45692,33 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -45346,7 +45702,33 @@ static bool glm_graph_forward_indexed_tokens(
                  ok = q_view && qk_low_view && heads_view && selected_view;
                  if (!ok) fprintf(stderr, "ds4: GLM scalar indexed prefill failed to create attention row views at layer %u token %u\n", il, t);
                  if (ok) {
@@ -706,7 +716,7 @@ index f0527d5..85e5159 100644
                                                                                 q_view,
                                                                                 qk_low_view,
                                                                                 g->layer_kv_lora_cache[il],
-@@ -45371,6 +45743,7 @@ static bool glm_graph_forward_indexed_tokens(
+@@ -45371,6 +45753,7 @@ static bool glm_graph_forward_indexed_tokens(
                                                                                 1.0f,
                                                                                 DS4_ROPE_YARN_BETA_FAST,
                                                                                 DS4_ROPE_YARN_BETA_SLOW);
@@ -714,7 +724,7 @@ index f0527d5..85e5159 100644
                      ok = rc != 0;
                      if (!ok) fprintf(stderr, "ds4: GLM scalar indexed prefill indexed attention failed at layer %u token %u\n", il, t);
                  }
-@@ -46281,7 +46654,8 @@ static bool glm_graph_forward_token(
+@@ -46281,7 +46664,8 @@ static bool glm_graph_forward_token(
          }
          const bool fuse_qkv_norm_store = use_indexed_attention &&
                                           !decode_stage_profile &&
@@ -724,7 +734,7 @@ index f0527d5..85e5159 100644
          const bool fuse_qkv_norm = !decode_stage_profile && !fuse_qkv_norm_store;
          if (ok && fuse_qkv_norm_store) {
              ok = glm_graph_matmul_q8_0_decode_profiled_tensor(g->kv_raw,
-@@ -46441,17 +46815,8 @@ static bool glm_graph_forward_token(
+@@ -46441,17 +46825,8 @@ static bool glm_graph_forward_token(
                                                               DS4_RMS_EPS) != 0;
          }
          if (ok && g->compact_cache_cap != 0 && !fuse_qkv_norm_store) {
@@ -744,7 +754,7 @@ index f0527d5..85e5159 100644
          }
          if (use_indexed_attention) {
              if (ok && glm_graph_layer_uses_full_indexer(il)) {
-@@ -46554,6 +46919,26 @@ static bool glm_graph_forward_token(
+@@ -46554,6 +46929,26 @@ static bool glm_graph_forward_token(
                   * rest of the layer stays finite (timing-only). */
                  ok = ds4_gpu_tensor_fill_f32(g->heads, 0.0f,
                                               (uint64_t)g->heads_dim) != 0;
@@ -771,7 +781,7 @@ index f0527d5..85e5159 100644
              } else if (ok && glm_graph_indexed_decode_split_group8_available(last_indexer_selected_count)) {
                  const uint32_t split_block_rows =
                      glm_graph_indexed_decode_split_block_rows_for(last_indexer_selected_count);
-@@ -47899,7 +48284,10 @@ static size_t engine_glm_per_layer_kv_bytes_planner(uint32_t il,
+@@ -47899,7 +48294,10 @@ static size_t engine_glm_per_layer_kv_bytes_planner(uint32_t il,
  
      const uint64_t elem_bytes =
          DS4_PLANNER_ATTN_COMP_CACHE_F16 ? sizeof(uint16_t) : sizeof(float);
@@ -783,7 +793,7 @@ index f0527d5..85e5159 100644
      if (engine_glm_layer_uses_full_indexer(il)) {
          row_width += DS4_N_INDEXER_HEAD_DIM;
      }
-@@ -50302,6 +50690,7 @@ uint64_t ds4_session_payload_bytes(ds4_session *s) {
+@@ -50302,6 +50700,7 @@ uint64_t ds4_session_payload_bytes(ds4_session *s) {
          return 0;
  #else
          if (!s->glm_graph_ready) return 0;
@@ -791,7 +801,7 @@ index f0527d5..85e5159 100644
          const ds4_glm_gpu_graph *g = &s->glm_graph;
          const uint32_t checkpoint_len = (uint32_t)s->checkpoint.len;
          const uint32_t full_live =
-@@ -50369,6 +50758,14 @@ int ds4_session_stage_payload(ds4_session *s, ds4_session_payload_file *out,
+@@ -50369,6 +50768,14 @@ int ds4_session_stage_payload(ds4_session *s, ds4_session_payload_file *out,
          payload_set_err(err, errlen, "session has no valid checkpoint to stage");
          return 1;
      }
@@ -806,7 +816,7 @@ index f0527d5..85e5159 100644
  
      char tmpl[] = "/tmp/ds4-session-payload.XXXXXX";
      int fd = mkstemp(tmpl);
-@@ -50417,6 +50814,14 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
+@@ -50417,6 +50824,14 @@ int ds4_session_save_payload(ds4_session *s, FILE *fp, char *err, size_t errlen)
          payload_set_err(err, errlen, "session has no valid checkpoint to save");
          return 1;
      }
@@ -821,7 +831,7 @@ index f0527d5..85e5159 100644
      if (s->distributed) {
          return ds4_dist_session_save_payload(s->distributed, s, fp, err, errlen);
      }
-@@ -50772,6 +51177,14 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+@@ -50772,6 +51187,14 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
          payload_set_err(err, errlen, "invalid session payload load");
          return 1;
      }
@@ -836,7 +846,7 @@ index f0527d5..85e5159 100644
      if (s->distributed) {
          return ds4_dist_session_load_payload(s->distributed, s, fp, payload_bytes, err, errlen);
      }
-@@ -58829,6 +59242,28 @@ int ds4_session_sync(ds4_session *s, const ds4_tokens *prompt, char *err, size_t
+@@ -58829,6 +59252,28 @@ int ds4_session_sync(ds4_session *s, const ds4_tokens *prompt, char *err, size_t
              return rc != 0 ? rc : 1;
          }
      }
@@ -865,7 +875,7 @@ index f0527d5..85e5159 100644
      return rc;
  }
  
-@@ -59009,6 +59444,12 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+@@ -59009,6 +59454,12 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
              }
          }
          if (!resumed_checkpoint) {
@@ -880,10 +890,10 @@ index f0527d5..85e5159 100644
              s->mtp_draft_valid = false;
 diff --git a/ds4_ckvstore.c b/ds4_ckvstore.c
 new file mode 100644
-index 0000000..8605d77
+index 0000000..953f0f9
 --- /dev/null
 +++ b/ds4_ckvstore.c
-@@ -0,0 +1,913 @@
+@@ -0,0 +1,924 @@
 +#include "ds4_ckvstore.h"
 +
 +#include <errno.h>
@@ -1674,10 +1684,16 @@ index 0000000..8605d77
 +        return DS4_CKVSTORE_ERR_INVALID;
 +    }
 +    ckv_selection_item *items=malloc(count*sizeof(*items));
-+    uint8_t *tmp=malloc((size_t)needed);
++    uint8_t *tmp=calloc(1u,(size_t)needed);
 +    if (!items || !tmp) { free(items); free(tmp); return DS4_CKVSTORE_ERR_IO; }
 +    ckv_epoch_index *epoch_index = find_epoch(s, epoch);
++    uint32_t selected_rows = 0;
 +    for (uint32_t i=0;i<count;i++) {
++        if (rows[i] == UINT32_MAX) {
++            items[i]=(ckv_selection_item){.record_index=SIZE_MAX - 1u,
++                                         .output_index=i,.row=rows[i]};
++            continue;
++        }
 +        ssize_t record_id=find_record(s,epoch,rows[i]);
 +        bool in_tail = record_id < 0 && epoch_index && layer == 0u &&
 +            rows[i] >= epoch_index->tail_first_row &&
@@ -1691,12 +1707,17 @@ index 0000000..8605d77
 +        items[i]=(ckv_selection_item){.record_index=in_tail ? SIZE_MAX :
 +                                                        (size_t)record_id,
 +                                     .output_index=i,.row=rows[i]};
++        selected_rows++;
 +    }
 +    qsort(items,count,sizeof(*items),compare_selection_items);
 +    for (uint32_t first=0;first<count;) {
 +        uint32_t end=first+1;
 +        while (end<count && items[end].record_index==items[first].record_index)
 +            end++;
++        if (items[first].record_index == SIZE_MAX - 1u) {
++            first=end;
++            continue;
++        }
 +        if (items[first].record_index == SIZE_MAX) {
 +            for (uint32_t i=first;i<end;i++) {
 +                uint64_t local =
@@ -1722,7 +1743,7 @@ index 0000000..8605d77
 +        first=end;
 +    }
 +    memcpy(output,tmp,(size_t)needed);
-+    s->selected_rows += count;
++    s->selected_rows += selected_rows;
 +    free(items); free(tmp);
 +    return DS4_CKVSTORE_OK;
 +}
@@ -1892,7 +1913,7 @@ index 0000000..23019bd
 +
 +#endif
 diff --git a/ds4_cuda.cu b/ds4_cuda.cu
-index ba5d339..0de28ff 100644
+index ba5d339..b385bc0 100644
 --- a/ds4_cuda.cu
 +++ b/ds4_cuda.cu
 @@ -2402,6 +2402,17 @@ extern "C" void ds4_gpu_tensor_free_in_place(ds4_gpu_tensor *t) {
@@ -2062,7 +2083,7 @@ index ba5d339..0de28ff 100644
  template <bool TOK2 = false>
  __global__ static void glm_attention_decode_value_staged_kernel(
          float *heads,
-@@ -27156,6 +27309,140 @@ extern "C" int ds4_gpu_glm_attention_indexed_decode_typed_tensor(
+@@ -27156,6 +27309,141 @@ extern "C" int ds4_gpu_glm_attention_indexed_decode_typed_tensor(
      return cuda_ok(cudaGetLastError(), "glm indexed decode attention");
  }
  
@@ -2123,7 +2144,8 @@ index ba5d339..0de28ff 100644
 +        return 0;
 +    }
 +    for (uint32_t i = 0; i < n_selected; i++) {
-+        if (logical_selected_host[i] >= logical_cap) {
++        if (logical_selected_host[i] != UINT32_MAX &&
++            logical_selected_host[i] >= logical_cap) {
 +            fprintf(stderr,
 +                    "ds4: GLM exact direct-slot row %u exceeds cap %u\n",
 +                    logical_selected_host[i], logical_cap);
@@ -2255,12 +2277,303 @@ index af04e27..419e61b 100644
  int ds4_gpu_glm_attention_indexed_decode_split_group8_tensor(
          ds4_gpu_tensor       *heads,
          ds4_gpu_tensor       *partial_lora,
+diff --git a/tests/red/glm_ckv_decode_tail_buffer.txt b/tests/red/glm_ckv_decode_tail_buffer.txt
+new file mode 100644
+index 0000000..218f2e5
+--- /dev/null
++++ b/tests/red/glm_ckv_decode_tail_buffer.txt
+@@ -0,0 +1,17 @@
++Gate: W8 long-decode record amplification
++Candidate before implementation: 17be066bf206cb2f859958fce994f85962e65675
++Commands:
++  cc -O2 -g -Wall -Wextra -std=c99 -D_GNU_SOURCE -I. tests/test_glm_ckvstore.c ds4_ckvstore.c -o tests/test_glm_ckvstore && tests/test_glm_ckvstore
++  python3 tests/test_glm_ckv_nvme_source.py
++Acceptance:
++  sequential partial/decode rows remain byte-exact and immediately selectable
++  pending rows cause zero physical reads
++  each layer uses at most one rows_per_record tail and its bytes are measured
++  a full tail publishes exactly one immutable checksummed disk record
++  production memory admission charges all per-layer tails
++Observed unchanged-code result (2026-07-31): FAIL
++  FAIL: partial tail is bounded in memory without a short disk record
++  FAIL: pending tail memory is measured exactly
++  FAIL: pending tail selection performs no physical read
++  FAIL: full tail publishes one immutable checksummed record
++  AssertionError: production buffer_tail_rows is absent
+diff --git a/tests/red/glm_ckv_duplicate_selected_readback.txt b/tests/red/glm_ckv_duplicate_selected_readback.txt
+new file mode 100644
+index 0000000..6c9a058
+--- /dev/null
++++ b/tests/red/glm_ckv_duplicate_selected_readback.txt
+@@ -0,0 +1,16 @@
++Finding: ADV-W8-233-M52-REDUNDANT-PAGEABLE-D2H-SYNCHRONIZATION
++
++RED checks:
++
++  python3 tests/test_glm_ckv_exact_source.py
++    exit_code=1
++    AssertionError: exact direct-slot validation does not consume the staged host IDs
++
++  make -j2 tests/test_glm_ckv_exact_direct_cuda
++    exit_code=2
++    error: too many arguments to function
++    ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor
++
++The corrected contract passes the host IDs already read for exact row staging
++into the CUDA entry, forbids a second cudaMemcpy in that entry, and retains the
++invalid-logical-row rejection and byte-identical resident/direct comparison.
+diff --git a/tests/red/glm_ckv_exact_1m_capacity.txt b/tests/red/glm_ckv_exact_1m_capacity.txt
+new file mode 100644
+index 0000000..4a4a3d4
+--- /dev/null
++++ b/tests/red/glm_ckv_exact_1m_capacity.txt
+@@ -0,0 +1,11 @@
++Command:
++  python3 tests/test_glm_ckv_exact_source.py
++
++Unchanged exact-W8 result:
++  exit_code=1
++  AssertionError: missing production behavior: one-million exact store default
++
++The inherited 128 GiB request-store limit cannot contain 75 layers of
++1,048,576 exact F32 cKV rows.  The required payload plus per-record headers is
++169.043 GiB, so the production default must fail neither before nor during the
++direct one-million-token qualification run.
+diff --git a/tests/red/glm_ckv_exact_before_implementation.txt b/tests/red/glm_ckv_exact_before_implementation.txt
+new file mode 100644
+index 0000000..8892532
+--- /dev/null
++++ b/tests/red/glm_ckv_exact_before_implementation.txt
+@@ -0,0 +1,12 @@
++Command: python3 tests/test_glm_ckv_exact_source.py
++Exit status: 1
++
++Traceback (most recent call last):
++  File "tests/test_glm_ckv_exact_source.py", line 25, in <module>
++    require("exact default-off environment gate", 'getenv("DS4_GLM_CKV_NVME_EXACT")')
++  File "tests/test_glm_ckv_exact_source.py", line 22, in require
++    assert needle in haystack, f"missing production behavior: {label}"
++AssertionError: missing production behavior: exact default-off environment gate
++
++This is the intended RED: the unchanged W7 production graph has no exact cKV
++offload behavior.  The failure is not a missing source or test dependency.
+diff --git a/tests/red/glm_ckv_group_commit.txt b/tests/red/glm_ckv_group_commit.txt
+new file mode 100644
+index 0000000..6f6e1cd
+--- /dev/null
++++ b/tests/red/glm_ckv_group_commit.txt
+@@ -0,0 +1,13 @@
++Gate: W8 prefill durability barrier and dirty-memory bound
++Candidate before implementation: 716e671
++Commands:
++  cc -O2 -g -Wall -Wextra -std=c99 -D_GNU_SOURCE -I. tests/test_glm_ckvstore.c ds4_ckvstore.c -o tests/test_glm_ckvstore && tests/test_glm_ckvstore
++  python3 tests/test_glm_ckv_nvme_source.py
++Acceptance:
++  fdatasync is not called per immutable record
++  0 < sync_calls < records for a multi-record fixture
++  pending_write_bytes < configured sync_interval_bytes
++  production sync interval is fixed at 256 MiB and included in memory safety
++Observed unchanged-code result (2026-07-31): FAIL
++  FAIL: bounded group commit replaces per-record durability barriers
++  AssertionError: missing DS4_GLM_CKV_SYNC_INTERVAL_BYTES
+diff --git a/tests/red/glm_ckv_indexed_dedup_reads.txt b/tests/red/glm_ckv_indexed_dedup_reads.txt
+new file mode 100644
+index 0000000..1db1ee1
+--- /dev/null
++++ b/tests/red/glm_ckv_indexed_dedup_reads.txt
+@@ -0,0 +1,9 @@
++Gate: W8 selected-row read amplification
++Candidate before implementation: 4c5add8
++Command: cc -O2 -g -Wall -Wextra -std=c99 -D_GNU_SOURCE -I. tests/test_glm_ckvstore.c ds4_ckvstore.c -o tests/test_glm_ckvstore && tests/test_glm_ckvstore
++Acceptance formula:
++  physical_read_bytes == unique_required_records * (header_bytes + payload_bytes)
++  0 < lookup_comparisons <= selected_count * ceil(log2(epoch_record_count + 1))
++Observed unchanged-code result (2026-07-31): FAIL
++  FAIL: one selection reads each required record exactly once
++  FAIL: lookup comparison accounting is production-derived
+diff --git a/tests/red/glm_ckv_layer_partitioned_cache.txt b/tests/red/glm_ckv_layer_partitioned_cache.txt
+new file mode 100644
+index 0000000..16cee30
+--- /dev/null
++++ b/tests/red/glm_ckv_layer_partitioned_cache.txt
+@@ -0,0 +1,13 @@
++Gate: W8 selected-block cache effectiveness and memory bound
++Candidate before implementation: 1e58e47
++Commands:
++  cc -O2 -g -Wall -Wextra -std=c99 -D_GNU_SOURCE -I. tests/test_glm_ckvstore.c ds4_ckvstore.c -o tests/test_glm_ckvstore && tests/test_glm_ckvstore
++  python3 tests/test_glm_ckv_nvme_source.py
++Acceptance:
++  another layer cannot evict a layer's bounded cache partition
++  revisiting a cached layer block increments hits without physical I/O
++  total cache allocation is per-layer bound * indexed layers * record bytes
++Observed unchanged-code result (2026-07-31): FAIL
++  FAIL: another layer cannot evict this layer's cache partition
++  FAIL: partitioned cache avoids a repeated physical read
++  AssertionError: per-layer cache allocation is absent from memory estimator
+diff --git a/tests/red/glm_ckv_memory_admission.txt b/tests/red/glm_ckv_memory_admission.txt
+new file mode 100644
+index 0000000..c9000ea
+--- /dev/null
++++ b/tests/red/glm_ckv_memory_admission.txt
+@@ -0,0 +1,12 @@
++Finding: GAP-W8-233-M3-MEMORY-ADMISSION-OMITS-ROWSTORE-INDEX
++
++Command:
++  python3 tests/test_glm_ckv_exact_source.py
++
++RED result:
++  exit_code=1
++  AssertionError: missing production behavior: row-store index memory admission
++
++At production geometry the store creates 1,228,800 record descriptors and
++per-epoch record IDs, plus one partial-record tail per layer.  Exact-W8 memory
++admission must conservatively price those CPU allocations before a model load.
+diff --git a/tests/red/glm_ckv_production_width_prefill.txt b/tests/red/glm_ckv_production_width_prefill.txt
+new file mode 100644
+index 0000000..8027d74
+--- /dev/null
++++ b/tests/red/glm_ckv_production_width_prefill.txt
+@@ -0,0 +1,18 @@
++Candidate: 0925ed3ad217ee9b9c7f6ba60d800e2a24f90cd7
++Review round: 233
++Blocking findings:
++  GAP-W8-233-C1-PREFILL-APPEND-EXCEEDS-ROWSTORE-LIMIT
++  ADV-W8-233-H50-BUFFERED-PUT-REJECTS-PRODUCTION-PREFILL-WIDTH
++
++Command:
++  make -j2 tests/test_glm_ckvstore && ./tests/test_glm_ckvstore
++
++Unchanged candidate result:
++  exit_code=1
++  FAIL: split one 4096-row production prefill call into records
++  test_glm_ckvstore: 1 failure(s)
++
++The fixed acceptance test submits the same width as the production exact
++bridge, then requires ordered 64-row records, byte-exact boundary and duplicate
++reads, and a bounded partial decode tail.  Pre-splitting the test input is not
++accepted because production passes the complete indexed-prefill chunk.
+diff --git a/tests/red/glm_ckv_request_lifecycle.txt b/tests/red/glm_ckv_request_lifecycle.txt
+new file mode 100644
+index 0000000..4bc0a3d
+--- /dev/null
++++ b/tests/red/glm_ckv_request_lifecycle.txt
+@@ -0,0 +1,13 @@
++Gate: W8 per-request ownership and reset lineage
++Candidate before implementation: c808c54
++Commands:
++  cc -O2 -g -Wall -Wextra -std=c99 -D_GNU_SOURCE -I. tests/test_glm_ckvstore.c ds4_ckvstore.c -o tests/test_glm_ckvstore
++  python3 tests/test_glm_ckv_nvme_source.py
++Acceptance:
++  two live request stores have unique owner-only files
++  close removes exactly the owned file on every ordinary lifecycle path
++  unsafe shared directories fail closed
++  every cold/reset GLM lineage rotates to a fresh store before row zero
++Observed unchanged-code result (2026-07-31): FAIL
++  undefined reference to ds4_ckvstore_create_request
++  AssertionError: missing request directory: getenv("DS4_GLM_CKV_DIR")
+diff --git a/tests/red/glm_ckv_success_telemetry.txt b/tests/red/glm_ckv_success_telemetry.txt
+new file mode 100644
+index 0000000..372294c
+--- /dev/null
++++ b/tests/red/glm_ckv_success_telemetry.txt
+@@ -0,0 +1,14 @@
++W8 exact-I/O telemetry RED on f0fab6d:
++
++  ./tests/test_glm_ckvstore
++  rc=1
++  FAIL: telemetry counts selected rows
++  FAIL: telemetry counts successful checksum validation
++
++  python3 tests/test_glm_ckv_exact_source.py
++  rc=1
++  AssertionError: missing production behavior: request success telemetry
++
++Acceptance: a successful exact selected-row read reports the exact selected
++row count and successful checksum validations, and the production bridge emits
++positive appended-row/read/direct-slot counters only after a successful sync.
+diff --git a/tests/red/glm_ckvstore_before_implementation.txt b/tests/red/glm_ckvstore_before_implementation.txt
+new file mode 100644
+index 0000000..7c95940
+--- /dev/null
++++ b/tests/red/glm_ckvstore_before_implementation.txt
+@@ -0,0 +1,17 @@
++Command:
++  make tests/test_glm_ckvstore
++
++Unchanged candidate:
++  01cf7ca test(glm): preserve scripted stride mutation rejection
++
++Expected RED reproduced 2026-07-31:
++  make: *** No rule to make target 'ds4_ckvstore.h', needed by
++  'tests/test_glm_ckvstore.o'.  Stop.
++
++Acceptance formula:
++  PASS only if the production C module preserves selected row order and
++  duplicates byte-for-byte, reconstructs its index after reopen, grows only
++  with records written for the active request, never exceeds its configured
++  resident-record bound, binds model/format/session/generation, rejects missing
++  rows, rejects symlink paths and unsafe shapes, and fails closed on a one-byte
++  payload mutation or a short record.
+diff --git a/tests/red/glm_ckvstore_header_and_limit_mutations.txt b/tests/red/glm_ckvstore_header_and_limit_mutations.txt
+new file mode 100644
+index 0000000..21a5d7d
+--- /dev/null
++++ b/tests/red/glm_ckvstore_header_and_limit_mutations.txt
+@@ -0,0 +1,11 @@
++Candidate under mutation:
++  25f4747 feat(glm): add bounded checksummed cKV row store
++
++Acceptance additions:
++  - A metadata-byte mutation must be rejected during index reconstruction.
++  - A record one byte larger than max_file_bytes must return ERR_LIMIT and
++    leave the backing file empty; unsigned subtraction may not bypass the cap.
++
++These tests are committed before their fixes. The unchanged candidate accepts
++the mutated epoch as index metadata and permits the oversized append because
++max_file_bytes - record_bytes wraps modulo uint64_t.
+diff --git a/tests/red/glm_ckvstore_unaligned_decode_append.txt b/tests/red/glm_ckvstore_unaligned_decode_append.txt
+new file mode 100644
+index 0000000..c0999c5
+--- /dev/null
++++ b/tests/red/glm_ckvstore_unaligned_decode_append.txt
+@@ -0,0 +1,8 @@
++Candidate under test: 64dbc8c
++
++Acceptance addition: after a multi-row prefill record, consecutive single-row
++decode appends may start at arbitrary logical rows. They remain immutable,
++non-overlapping records and may not require a rewrite of the prior block.
++
++Expected RED: the initial codec requires first_row modulo rows_per_record to be
++zero, so the second decode row at logical row 9 is rejected.
+diff --git a/tests/red/glm_w8_nvcc_debug_nondeterminism.txt b/tests/red/glm_w8_nvcc_debug_nondeterminism.txt
+new file mode 100644
+index 0000000..e557376
+--- /dev/null
++++ b/tests/red/glm_w8_nvcc_debug_nondeterminism.txt
+@@ -0,0 +1,17 @@
++Observed during the pre-freeze clean double build:
++
++  ordinary build 1: 1d075edf987738945cdbac14978e8687687eefad13efe665e4420c5fd4ea9fa7
++  ordinary build 2: e09acba801073f7459718219485210761a64a8fa9757714ed85992e6ece7d05e
++
++The executable sections were unchanged, but NVCC `-g` embedded process-specific
++`tmpxft_*` filenames and GNU build IDs.  NVCC's fixed random seed and fixed
++intermediate directory did not remove the device-link filename.  The bounded
++release procedure therefore strips debug sections and `.note.gnu.build-id`
++from each independently clean-built candidate.  Applying that procedure to
++two builds produced the byte-identical digest:
++
++  dc520d6bbfa82365d298a0583e4c78ad5ee7494d98740b0f4d4cb0a272370ee8
++
++The unstripped executables remain debugging artifacts only; the stripped,
++double-build-identical executable is the serving candidate whose hash is
++bound into runtime evidence.
 diff --git a/tests/test_glm_ckv_exact_direct_cuda.c b/tests/test_glm_ckv_exact_direct_cuda.c
 new file mode 100644
-index 0000000..585271d
+index 0000000..4f82016
 --- /dev/null
 +++ b/tests/test_glm_ckv_exact_direct_cuda.c
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,145 @@
 +#include "ds4_gpu.h"
 +
 +#include <math.h>
@@ -2304,6 +2617,7 @@ index 0000000..585271d
 +    float *q = calloc(q_dim, sizeof(float));
 +    float *low = calloc(latent, sizeof(float));
 +    uint32_t *ids = calloc(nsel, sizeof(uint32_t));
++    uint32_t *host_ids = calloc(nsel, sizeof(uint32_t));
 +    uint8_t *model = calloc((size_t)model_bytes, 1);
 +    float baseline[4] = {0}, direct[4] = {0};
 +    int rc = 1;
@@ -2312,7 +2626,8 @@ index 0000000..585271d
 +    ds4_gpu_tensor *low_t = NULL, *ids_t = NULL, *base_t = NULL;
 +    ds4_gpu_tensor *direct_t = NULL;
 +
-+    CHECK(resident && ropes && stage && stage_ropes && q && low && ids && model,
++    CHECK(resident && ropes && stage && stage_ropes && q && low && ids &&
++          host_ids && model,
 +          "host allocations");
 +    for (uint32_t row = 0; row < cap; row++) {
 +        for (uint32_t i = 0; i < latent; i++) {
@@ -2336,6 +2651,11 @@ index 0000000..585271d
 +               ropes + (uint64_t)ids[slot] * rope,
 +               rope * sizeof(float));
 +    }
++    ids[17] = cap;
++    memset(stage + (uint64_t)17u * latent, 0, latent * sizeof(float));
++    memset(stage_ropes + (uint64_t)17u * rope, 0, rope * sizeof(float));
++    memcpy(host_ids, ids, nsel * sizeof(uint32_t));
++    host_ids[17] = UINT32_MAX;
 +    make_q8(model, value_dim, latent);
 +
 +    CHECK(ds4_gpu_init(), "CUDA init");
@@ -2366,7 +2686,7 @@ index 0000000..585271d
 +          0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f), "resident reference");
 +    CHECK(ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
 +          direct_t, q_t, low_t, stage_t, stage_rope_t, model, model_bytes,
-+          0, 8, ids_t, ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
++          0, 8, ids_t, host_ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
 +          value_dim, 0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f),
 +          "exact direct slots");
 +    CHECK(ds4_gpu_synchronize() &&
@@ -2380,13 +2700,12 @@ index 0000000..585271d
 +          0, 8, ids_t, ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
 +          value_dim, 0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f),
 +          "undersized stage rejected");
-+    ids[17] = cap;
-+    CHECK(ds4_gpu_tensor_write(ids_t, 0, ids, nsel * sizeof(uint32_t)), "invalid ID upload");
++    host_ids[18] = cap;
 +    CHECK(!ds4_gpu_glm_attention_indexed_decode_direct_typed_tensor(
 +          direct_t, q_t, low_t, stage_t, stage_rope_t, model, model_bytes,
-+          0, 8, ids_t, ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
++          0, 8, ids_t, host_ids, nsel, nsel, cap, false, nhead, latent, q_nope, rope,
 +          value_dim, 0, 8000000.f, 1.f, 0.f, 1.f, 32.f, 1.f),
-+          "invalid logical ID rejected");
++          "non-sentinel invalid host ID rejected");
 +    rc = 0;
 +cleanup:
 +    ds4_gpu_tensor_free(resident_t); ds4_gpu_tensor_free(rope_t);
@@ -2396,7 +2715,7 @@ index 0000000..585271d
 +    ds4_gpu_tensor_free(base_t); ds4_gpu_tensor_free(direct_t);
 +    ds4_gpu_cleanup();
 +    free(resident); free(ropes); free(stage); free(stage_ropes);
-+    free(q); free(low); free(ids); free(model);
++    free(q); free(low); free(ids); free(host_ids); free(model);
 +    if (!rc) fprintf(stderr, "test_glm_ckv_exact_direct_cuda: PASS\n");
 +    return rc;
 +}
@@ -2503,10 +2822,10 @@ index 0000000..24dd5fd
 +print("test_glm_ckv_exact_source: PASS")
 diff --git a/tests/test_glm_ckvstore.c b/tests/test_glm_ckvstore.c
 new file mode 100644
-index 0000000..eb40db7
+index 0000000..549a79c
 --- /dev/null
 +++ b/tests/test_glm_ckvstore.c
-@@ -0,0 +1,690 @@
+@@ -0,0 +1,735 @@
 +#include "ds4_ckvstore.h"
 +
 +#include <fcntl.h>
@@ -3178,6 +3497,50 @@ index 0000000..eb40db7
 +    unlink(path);
 +}
 +
++static void test_selected_padding_sentinel_is_zero_filled(void) {
++    char path[] = "/tmp/ds4-ckvstore-padding.XXXXXX";
++    int seed_fd = mkstemp(path);
++    CHECK(seed_fd >= 0, "mkstemp padding sentinel");
++    if (seed_fd < 0) return;
++    close(seed_fd);
++    unlink(path);
++
++    ds4_ckvstore_config cfg = test_config();
++    ds4_ckvstore *store = NULL;
++    char err[256] = {0};
++    uint8_t payload[4 * 8];
++    uint8_t output[4 * 8];
++    const uint32_t rows[] = {0, UINT32_MAX, 2, UINT32_MAX};
++    fill_payload(payload, 0, 4, 1, 8);
++    memset(output, 0xa5, sizeof(output));
++    CHECK(ds4_ckvstore_open(&store, path, &cfg, true, err, sizeof(err)) == 0,
++          "create padding-sentinel fixture");
++    CHECK(ds4_ckvstore_put(store, 0, 0, 4, 1, payload, sizeof(payload),
++                           err, sizeof(err)) == 0,
++          "publish padding-sentinel fixture");
++    CHECK(ds4_ckvstore_read_selected(store, 0, 0, rows, 4, output,
++                                     sizeof(output), err, sizeof(err)) == 0,
++          "reserved selected-row padding sentinel succeeds");
++    uint8_t expected[4 * 8];
++    expected_row(expected, 0, 0, 8);
++    memset(expected + 8, 0, 8);
++    expected_row(expected + 16, 0, 2, 8);
++    memset(expected + 24, 0, 8);
++    CHECK(memcmp(output, expected, sizeof(output)) == 0,
++          "padding sentinels preserve order and produce zero rows");
++    ds4_ckvstore_stats stats;
++    ds4_ckvstore_get_stats(store, &stats);
++    CHECK(stats.selected_rows == 2,
++          "padding sentinels are excluded from selected-row telemetry");
++    const uint32_t invalid[] = {UINT32_MAX - 1u};
++    CHECK(ds4_ckvstore_read_selected(store, 0, 0, invalid, 1, output,
++                                     sizeof(output), err, sizeof(err)) ==
++              DS4_CKVSTORE_ERR_NOT_FOUND,
++          "non-sentinel absent rows still fail closed");
++    ds4_ckvstore_close(store);
++    unlink(path);
++}
++
 +int main(void) {
 +    test_dynamic_exact_selected_rows();
 +    test_cache_is_partitioned_by_epoch();
@@ -3190,6 +3553,7 @@ index 0000000..eb40db7
 +    test_rejects_unsafe_shapes_and_symlinks();
 +    test_request_file_lifecycle();
 +    test_success_telemetry_proves_exact_io();
++    test_selected_padding_sentinel_is_zero_filled();
 +    if (failed) {
 +        fprintf(stderr, "test_glm_ckvstore: %d failure(s)\n", failed);
 +        return 1;

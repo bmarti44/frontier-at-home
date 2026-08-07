@@ -11,11 +11,11 @@ readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly SCORER=$REPO/scripts/90_score_w8_exact_smoke.py
 readonly ENGINE_PATCH=$REPO/results/glm52-gates/harness/ds4-w8-exact-ckv.patch
-readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W8-exact-smoke-review-r241.json
+readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W8-exact-smoke-review-r242.json
 readonly DRAND_VERIFY=$REPO/scripts/89_verify_drand_receipt.mjs
 readonly NODE=/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node
-readonly RUNTIME_DIR=/home/bmarti44/.cache/glm52-w8-119996d-runtime
-readonly BIN=/home/bmarti44/.cache/glm52-w8-119996d-runtime/ds4-server
+readonly RUNTIME_DIR=/home/bmarti44/.cache/glm52-w8-364eea1-runtime
+readonly BIN=/home/bmarti44/.cache/glm52-w8-364eea1-runtime/ds4-server
 readonly SRC=/home/bmarti44/.cache/glm52-w8-exact-current
 readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 readonly REQUEST=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json
@@ -24,12 +24,12 @@ readonly CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
 readonly LOCK=/run/user/1000/ds4-engine.lock
 readonly PORT=8098
 
-readonly SOURCE_COMMIT=119996d9fa0ea3ffb046ce52c0765c78615de4be
-readonly BINARY_SHA256=0c80fda2d7b135dc1d6f763ca0a1b40cecdc9facdf5bc493238860a1aa660091
+readonly SOURCE_COMMIT=364eea1d66eda0cabb12ed5f1cd328e8e248f03c
+readonly BINARY_SHA256=6181aaafd25711cc40dcf32963b9a75f894fb4cb29766d51e20accc475f86d70
 readonly MODEL_SHA256=a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0
 readonly MODEL_BYTES=211075856448
 readonly REQUEST_SHA256=a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3
-readonly ENGINE_PATCH_SHA256=f6468a476411f1d7cc161737f8de404b20a60e22789b34830cdcc3df70fde9a2
+readonly ENGINE_PATCH_SHA256=4ca75c4055d3e8b5519b14eff84f43791f0e699c20df1be290817eb447a4477a
 
 sha() { sha256sum -- "$1" | awk '{print $1}'; }
 
@@ -168,7 +168,7 @@ print(commit,floor)
 PY
 )
 git -C "$REPO" merge-base --is-ancestor "$reviewed_commit" HEAD
-[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W8-exact-smoke-review-r241.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
+[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W8-exact-smoke-review-r242.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
 verify_reviewed_components "$reviewed_commit"
 [[ -x $BIN && $(sha "$BIN") == "$BINARY_SHA256" ]]
 [[ $(realpath -e -- "$RUNTIME_DIR/ds4-server") == $(realpath -e -- "$BIN") ]]
