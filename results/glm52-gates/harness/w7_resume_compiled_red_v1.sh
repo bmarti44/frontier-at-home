@@ -337,7 +337,7 @@ checks = {
     "live_miss_geometry": "live kv cache miss live=5055 prompt=5066 common=5045" in log,
     "selected_checkpoint_5044": re.search(r"kv cache hit text tokens=5044\b", log) is not None,
     "strict_guard_cold_restart": "GLM resume guard: prompt (5066) extends/diverges past evaluated frontier 5055 (checkpoint 5044)" in log,
-    "cold_sync_after_guard": re.search(r"GLM sync start=0 prompt=5066 suffix=5066\\b", log) is not None,
+    "cold_sync_after_guard": re.search(r"GLM sync start=0 prompt=5066 suffix=5066\b", log) is not None,
     "legacy_guard_bypass_absent": "DS4_GLM_RESUME_GUARD_OFF" not in log,
     "executed_harness_bound": observed_dependencies["harness"] == expected["harness"],
     "runtime_dependencies_unchanged": observed_dependencies == expected and executed_scorer_sha256 == expected["trace_scorer"],
