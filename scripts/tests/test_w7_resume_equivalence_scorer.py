@@ -233,6 +233,14 @@ class W7ScorerTest(unittest.TestCase):
         result = self._score()
         self.assertFalse(result["checks"]["selected_kv_cross_arm_exact"])
 
+    def test_rejects_forged_selected_kv_full_digest(self) -> None:
+        rows = (self.candidate / "kv-after.sha256").read_text().split()
+        (self.candidate / "kv-after.sha256").write_text(
+            f"{'f' * 64}  {rows[1]}  {rows[2]}\n"
+        )
+        result = self._score()
+        self.assertFalse(result["checks"]["selected_kv_unchanged"])
+
     def test_rejects_missing_safety_evidence(self) -> None:
         (self.candidate / "safety" / "samples.log").unlink()
         result = self._score()
