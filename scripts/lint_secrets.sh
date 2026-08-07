@@ -267,6 +267,8 @@ allowlist = {
     "metadata_sha256",
     "count_sha256",
     "selected_count_sha256",
+    "selected_sha256",
+    "capture_summary_sha256",
     "drand_randomness",
     "drand_signature",
     "pin_sha256",

@@ -1,0 +1,39 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-plan-v1",
+  "gate": "W9",
+  "scope": "Offline-only real-tensor falsifier. It cannot modify serving output or authorize a lossy production path.",
+  "source_capture": {
+    "attempt": "attempt-73838408ccb1d126ade7b67c8d86fa00",
+    "capture_summary_sha256": "f06e021e893203d39c3c9eb65ebdcf8ca97b8cdfa4f4fb64779199e6bea0203c",
+    "kv_sha256": "805b30d0c4ac89bd5cd361c455c3c6eb49d69d32b49d8afb935b5a75a7de33ed",
+    "query_sha256": "a9346a4d3a8fc8fd6915905cc8c7f2a595816b957713a1fbfa8a1cfe182d0a9b",
+    "selected_sha256": "fe9edd824633783800ff16f428c1b42bcebb15276a386b951fb0727897b0eba0",
+    "selected_count_sha256": "99b56dbff1dd5899c41016ba76257216a809143ccf13fa0bb119343b07c42cdc"
+  },
+  "randomness": "Obtain one three-relay-agreed, BLS-verified drand round only after the scorer, tests, plan, and source hashes freeze. Derive independent per-layer key/query permutations and 512 random Hadamard signs with domain-separated SHA-256 seeds.",
+  "split": {
+    "keys_per_layer": 8192,
+    "queries_per_layer": 128,
+    "calibration_fraction": 0.5,
+    "heldout_fraction": 0.5,
+    "rule": "Exact seeded permutations split keys 4096/4096 and query positions 64/64 per layer. Correction parameters use calibration keys only. Metrics use held-out queries and only selected held-out key IDs."
+  },
+  "quantizer": {
+    "value_format": "signed E2M1 codebook {0,0.5,1,1.5,2,3,4,6}",
+    "block_width": 32,
+    "scale": "continuous F32 amax/6 independently for every 32-value key-row block",
+    "interpretation": "This optimistic scale is a lower-error bound for deployable quantized scales. Failure stops the branch; passing only justifies a later exact packed-format and NLL gate."
+  },
+  "candidates": [
+    "plain_e2m1_f32_scale",
+    "hadamard_e2m1_f32_scale",
+    "hadamard_e2m1_f32_scale_channel_correction"
+  ],
+  "rotation": "One seeded orthonormal 512-wide Walsh-Hadamard transform with seeded sign flips per layer, applied identically to keys and queries.",
+  "correction": "Per-layer, per-channel alpha=sum(reference*quantized)/sum(quantized^2), fitted on calibration keys only and applied after rotated E2M1 quantization.",
+  "metric": "sqrt(sum((q dot (candidate_k-reference_k))^2) / sum((q dot reference_k)^2)) over every held-out query head and every valid selected held-out key; accumulate numerator and denominator in F64.",
+  "maximum_query_weighted_relative_rmse": 0.05,
+  "acceptance_formula": "PASS iff all source hashes/shapes/dtypes/counts/finiteness/split checks pass, every layer contributes held-out pairs and positive denominator, and at least one preregistered candidate has aggregate query-weighted relative RMSE <= 0.05. Otherwise FAIL and stop W9 before kernel work.",
+  "post_pass_rule": "A PASS does not authorize adoption. It only authorizes an exact packed-format implementation followed by the fixed 100-case paired NLL/top-1 gate and owner review of any nonzero fidelity loss.",
+  "resource_bound": "CPU/Numpy only; memory-map the 276.8 MB capture, process one layer and one candidate at a time, and never start the GLM engine."
+}
