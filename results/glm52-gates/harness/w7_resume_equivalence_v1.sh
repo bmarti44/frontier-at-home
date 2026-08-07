@@ -10,6 +10,7 @@ readonly INVOKED_SCRIPT=$0
 readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
+readonly ENGINE_FREEZE=$REPO/results/glm52-gates/W7-resume-restored-frontier-freeze-v2.json
 readonly TRACE_SCORER=$REPO/scripts/83_score_w7_deployed_trace.py
 readonly SCORER=$REPO/scripts/85_score_w7_resume_equivalence.py
 readonly BIN=/home/bmarti44/.cache/glm52-w7-7822efd-build-v3/build1-ds4-server
@@ -26,7 +27,6 @@ readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock
 readonly CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
 readonly PORT=8097
 readonly CACHE_GIB=40
-readonly RANDOM_SEED_SHA256=ddc037a1c685854d872a266a00fd5268f518ea5649a38eb79a3c57e45534b415
 
 readonly BINARY_SHA256=2c586aef10c9d9d63827e1141ad2f00ad0d20b259a62e5b53405061eb11c036c
 readonly MODEL_BYTES=211075856448
@@ -38,14 +38,34 @@ readonly TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4
 readonly TOKENIZER_INIT_SHA256=eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4
 readonly TOKENIZER_NATIVE_SHA256=fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910
 readonly TRACE_SCORER_SHA256=6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985
-readonly SCORER_SHA256=f4d2f6458da63d0f77fddbf8275ae983b85fd512a9628ef62c764774080a7532
+readonly SCORER_SHA256=9b4e1168eb38e57e7601bfcd6bccdf9561e77f53c3f64ec197aeed79d1ad7b3a
 readonly CGROUP_SHA256=e5a37b35d3ff1e8a7ee08d0f2c1396441b0dbc4abd64220389362ae6c6994c32
 readonly SAFE_SHA256=6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801
 readonly MEMORY_GUARD_SHA256=3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58
+readonly ENGINE_FREEZE_SHA256=c7a014bd1008522f6aea9541e6fc556d8c67ce27000ada0a68907d388f98d37f
+readonly CONFIGURATION_SHA256=5e01b5d673a031ba1fbeb79bdaeba426a3a5912557c2aa648b6458d6a115151f
+readonly ENGINE_SOURCE_COMMIT=7822efd945f1c5366844d253b22e953b6721b650
 
 verify_file() {
   [[ $# == 2 && -f $1 && ! -L $1 ]] || return 2
   [[ $(sha256sum -- "$1" | awk '{print $1}') == "$2" ]]
+}
+
+verify_sealed_fd() {
+  [[ $# == 2 && $1 =~ ^[0-9]+$ && $2 =~ ^[0-9a-f]{64}$ ]] || return 2
+  /usr/bin/python3 -I -B - "$1" "$2" <<'PY'
+import fcntl, hashlib, os, sys
+fd = int(sys.argv[1])
+expected = sys.argv[2]
+required = fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
+if fcntl.fcntl(fd, fcntl.F_GET_SEALS) != required:
+    raise SystemExit("input descriptor is not completely sealed")
+os.lseek(fd, 0, os.SEEK_SET)
+with os.fdopen(os.dup(fd), "rb") as handle:
+    digest = hashlib.file_digest(handle, "sha256").hexdigest()
+if digest != expected:
+    raise SystemExit("sealed input digest mismatch")
+PY
 }
 
 validate_execution_authority() {
@@ -82,6 +102,7 @@ verify_dependencies() {
   verify_file "$CGROUP" "$CGROUP_SHA256"
   verify_file "$SAFE" "$SAFE_SHA256"
   verify_file "$MEMORY_GUARD" "$MEMORY_GUARD_SHA256"
+  verify_file "$ENGINE_FREEZE" "$ENGINE_FREEZE_SHA256"
   [[ -f $MODEL && ! -L $MODEL && $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]]
 }
 
@@ -99,15 +120,34 @@ stop_server() {
 }
 
 inventory_kv() {
-  local dir=$1 output=$2 file name digest
-  : >"$output"
-  while IFS= read -r -d '' file; do
-    name=${file##*/}
-    [[ $name =~ ^[0-9a-f]{40}\.kv$ ]] || return 2
-    digest=$(sha256sum -- "$file" | awk '{print $1}')
-    printf '%s  %s\n' "$digest" "$name" >>"$output"
-  done < <(find "$dir" -maxdepth 1 -type f -name '*.kv' -print0 | sort -z)
-  [[ -s $output ]]
+  local dir=$1 output=$2
+  /usr/bin/python3 -I -B - "$dir" "$output" <<'PY'
+import hashlib, pathlib, re, sys
+root, output = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+rows = []
+for path in sorted(root.glob("*.kv")):
+    if path.is_symlink() or re.fullmatch(r"[0-9a-f]{40}\.kv", path.name) is None:
+        raise SystemExit("unsafe KV inventory path")
+    full_hash, normalized_hash = hashlib.sha256(), hashlib.sha256()
+    with path.open("rb") as handle:
+        header = handle.read(64)
+        if len(header) != 64:
+            raise SystemExit("short KV file")
+        full_hash.update(header)
+        normalized = bytearray(header)
+        normalized[12:16] = b"\0" * 4
+        normalized[24:40] = b"\0" * 16
+        normalized_hash.update(normalized)
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            full_hash.update(chunk)
+            normalized_hash.update(chunk)
+    rows.append(
+        f"{full_hash.hexdigest()}  {normalized_hash.hexdigest()}  {path.name}\n"
+    )
+if not rows:
+    raise SystemExit("empty KV inventory")
+output.write_text("".join(rows), encoding="utf-8")
+PY
 }
 
 driver() {
@@ -255,6 +295,14 @@ fi
 validate_execution_authority
 verify_dependencies
 verify_file "$MODEL" "$MODEL_SHA256"
+[[ ${W7_RANDOM_SEED_SHA256:-} =~ ^[0-9a-f]{64}$ ]] || exit 2
+readonly runtime_seed_sha256=$W7_RANDOM_SEED_SHA256
+readonly harness_fd=${W7_SEALED_HARNESS_FD:-}
+readonly scorer_fd=${W7_SEALED_SCORER_FD:-}
+readonly trace_scorer_fd=${W7_SEALED_TRACE_SCORER_FD:-}
+verify_sealed_fd "$harness_fd" "$W7_EXECUTED_HARNESS_SHA256"
+verify_sealed_fd "$scorer_fd" "$SCORER_SHA256"
+verify_sealed_fd "$trace_scorer_fd" "$TRACE_SCORER_SHA256"
 [[ -z $(git -C "$REPO" status --porcelain) ]] || exit 2
 ! pgrep -x ds4-server >/dev/null && ! pgrep -x fio >/dev/null || exit 75
 [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
@@ -268,13 +316,7 @@ mkdir -p "$OUT_PARENT" "$CRASH_ROOT"
 nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 readonly attempt_out=$OUT_PARENT/attempt-$nonce
 mkdir "$attempt_out"
-exec {harness_fd}<"$INVOKED_SCRIPT"
-exec {scorer_fd}<"$SCORER"
-exec {trace_scorer_fd}<"$TRACE_SCORER"
-[[ $(sha256sum -- "/proc/$$/fd/$harness_fd" | awk '{print $1}') == "$W7_EXECUTED_HARNESS_SHA256" ]]
-[[ $(sha256sum -- "/proc/$$/fd/$scorer_fd" | awk '{print $1}') == "$SCORER_SHA256" ]]
-[[ $(sha256sum -- "/proc/$$/fd/$trace_scorer_fd" | awk '{print $1}') == "$TRACE_SCORER_SHA256" ]]
-/usr/bin/python3 -I -B - "$RANDOM_SEED_SHA256" "$attempt_out/arm-order" <<'PY'
+/usr/bin/python3 -I -B - "$runtime_seed_sha256" "$attempt_out/arm-order" <<'PY'
 import hashlib, pathlib, sys
 seed = bytes.fromhex(sys.argv[1])
 arms = sorted(("strict", "candidate", "cold"), key=lambda arm: hashlib.sha256(seed + arm.encode()).digest())
@@ -289,7 +331,17 @@ verify_dependencies
   --tokenizer "$TOKENIZER" --tokenizer-runtime "$TOKENIZER_RUNTIME" \
   --harness-sha256 "$W7_EXECUTED_HARNESS_SHA256" \
   --binary-sha256 "$BINARY_SHA256" --model-sha256 "$MODEL_SHA256" \
-  --scorer-sha256 "$SCORER_SHA256" --seed-sha256 "$RANDOM_SEED_SHA256" \
+  --scorer-sha256 "$SCORER_SHA256" --seed-sha256 "$runtime_seed_sha256" \
+  --trace-scorer-sha256 "$TRACE_SCORER_SHA256" --fixture-sha256 "$POOL_SHA256" \
+  --tokenizer-sha256 "$TOKENIZER_SHA256" \
+  --tokenizer-init-sha256 "$TOKENIZER_INIT_SHA256" \
+  --tokenizer-native-sha256 "$TOKENIZER_NATIVE_SHA256" \
+  --cgroup-sha256 "$CGROUP_SHA256" --safe-sha256 "$SAFE_SHA256" \
+  --memory-guard-sha256 "$MEMORY_GUARD_SHA256" \
+  --engine-freeze-sha256 "$ENGINE_FREEZE_SHA256" \
+  --configuration-sha256 "$CONFIGURATION_SHA256" \
+  --engine-source-commit "$ENGINE_SOURCE_COMMIT" \
+  --binary-path "$BIN" --binary-device-inode "$(stat -Lc '%d:%i' -- "$BIN")" \
   --arm-order "$attempt_out/arm-order" \
   >"$attempt_out/scorer.stdout" 2>"$attempt_out/scorer.stderr"
 [[ -s $attempt_out/manifest.json && -s $attempt_out/raw.jsonl && -s $attempt_out/summary.json ]]

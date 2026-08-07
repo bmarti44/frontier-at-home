@@ -73,6 +73,13 @@ class W7HarnessTest(unittest.TestCase):
             )
             self.assertNotEqual(failed.returncode, 0)
 
+    def test_runtime_inputs_require_kernel_sealed_descriptors(self) -> None:
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("F_GET_SEALS", source)
+        self.assertIn("F_SEAL_WRITE", source)
+        self.assertIn("W7_SEALED_HARNESS_FD", source)
+        self.assertNotIn('exec {harness_fd}<"$INVOKED_SCRIPT"', source)
+
     def test_required_evidence_contract_is_emitted(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")
         self.assertIn("manifest.json", source)
