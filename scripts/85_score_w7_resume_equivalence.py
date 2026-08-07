@@ -190,6 +190,15 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _matched_final_branch(log: str) -> bool:
+    marker = "ds4: GLM sync start=5044 prompt=5066 suffix=22"
+    parts = log.split(marker)
+    if len(parts) != 2:
+        return False
+    branches = re.findall(r"^ds4: GLM sync branch=([^\n]+)$", parts[1], re.M)
+    return branches == ["indexed_resume pos=5044 chunk=22 logits=1"]
+
+
 def _safety_pass(
     arm: Path, expected_binary_sha256: str, expected_binary_path: str,
     expected_binary_device_inode: str,
@@ -481,6 +490,10 @@ def score(
         and "GLM sync start=5044 prompt=5066 suffix=22" in logs["cold"]
         and "GLM resume guard:" not in logs["cold"]
         and "restored-frontier diagnostic:" not in logs["cold"]
+    )
+    checks["matched_final_branch_exact"] = (
+        _matched_final_branch(logs["candidate"])
+        and _matched_final_branch(logs["cold"])
     )
     strict_kv = _selected_kv_identity(strict, logs["strict"])
     candidate_kv = _selected_kv_identity(candidate, logs["candidate"])
