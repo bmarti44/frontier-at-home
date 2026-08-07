@@ -1,0 +1,44 @@
+{
+  "schema": "glm52-w9-real-capture-freeze-v1",
+  "gate": "W9-real-capture",
+  "candidate": 5,
+  "main_commit": "9c9b83945bf39fcfca6447727317cb83a2b2ec36",
+  "engine_commit": "9ebc0f2879c126db095ecd25be0567166868d52c",
+  "binary_sha256": "1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476",
+  "harness": {
+    "path": "results/glm52-gates/harness/w9_real_capture_v1.sh",
+    "sha256": "e08033f0e631fd02ad6c9ffa8414061588da1c6adf0db487e2bcf97d76f3299f"
+  },
+  "scorer": {
+    "path": "scripts/91_score_w9_real_capture.py",
+    "sha256": "085964509b5539eb97bc208ccb5cde8b721022e451bcbffc9b2450d8dba62b82"
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w9_real_capture_scorer.py": "0764e70983d3f71defb536f25f27210a47020f90ab4a326419f40dbcbde0b3a6"
+  },
+  "candidate4_review": {
+    "round": 249,
+    "Nash_score": 97,
+    "Singer_score": 94,
+    "critical": [],
+    "high": [],
+    "verdict": "PASS_RUNTIME_ALLOWED"
+  },
+  "candidate5_scope": "Only the two launcher references to its future passing review receipt plus the focused stale-receipt regression assertion.",
+  "frozen_components_unchanged": [
+    "engine source and canonical binary",
+    "scorer and prompt builder",
+    "containment wrappers",
+    "model and tokenizer bindings",
+    "candidate-4 review and attempt evidence"
+  ],
+  "focused_checks": {
+    "genuine_RED": "expected two round-250 references, observed zero on unchanged launcher",
+    "W9_and_cgroup_tests": "PASS; 11 run, 1 environment-dependent test skipped",
+    "shell_syntax": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS"
+  },
+  "runtime_allowed": false
+}
