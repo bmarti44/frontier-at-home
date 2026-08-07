@@ -65,7 +65,39 @@ class W7ProductionScorerTest(unittest.TestCase):
         self.cold = self._arm("cold")
         self.bindings = {key: "9" * 64 for key in MODULE.REQUIRED_BINDINGS}
         self.bindings["binary_sha256"] = "7" * 64
+        self.bindings["strict_binary_sha256"] = "8" * 64
         self.source_commit = "0" * 40
+        configuration = {
+            "schema_version": 1,
+            "arms": {
+                "strict": "|".join((
+                    "/sealed/ds4-strict", self.bindings["strict_binary_sha256"],
+                    "/sealed", "1" * 40,
+                )),
+                "candidate": "|".join((
+                    "/sealed/ds4", self.bindings["binary_sha256"],
+                    "/sealed", self.source_commit,
+                )),
+                "cold": "|".join((
+                    "/sealed/ds4", self.bindings["binary_sha256"],
+                    "/sealed", self.source_commit,
+                )),
+            },
+            "common": {
+                "context": 8192, "cache_gib": 40, "cache_pin": 1,
+                "cache_slru": 1, "fetch_threads": 6,
+                "moe_no_atomic_down": 1, "sync_trace": 1,
+                "logit_dump_all": 1, "boundary_align_tokens": 4,
+                "boundary_trim_tokens": {
+                    "strict": 8, "candidate": 8, "cold": 20,
+                },
+            },
+        }
+        config_bytes = (json.dumps(
+            configuration, sort_keys=True, separators=(",", ":")
+        ) + "\n").encode()
+        (self.root / "configuration.json").write_bytes(config_bytes)
+        self.bindings["configuration_sha256"] = hashlib.sha256(config_bytes).hexdigest()
         MODULE.write_evidence_contract(
             self.root, self.bindings,
             MODULE._expected_arm_order(self.bindings["seed_sha256"]),
@@ -81,6 +113,7 @@ class W7ProductionScorerTest(unittest.TestCase):
         return MODULE.score(
             self.strict, self.candidate, self.cold, self.bindings,
             self.source_commit, "/sealed/ds4", "1:2",
+            "1" * 40, "/sealed/ds4-strict", "1:3",
         )
 
     def _arm(self, name: str) -> Path:
@@ -91,6 +124,7 @@ class W7ProductionScorerTest(unittest.TestCase):
             "arm": name,
             "containment_rc": 0,
             "request_sha256": {"primary": MODULE.PRIMARY_SHA256},
+            "binary_sha256": "8" * 64 if name == "strict" else "7" * 64,
         }
         if name != "cold":
             meta["request_sha256"]["live"] = MODULE.LIVE_SHA256
@@ -131,7 +165,7 @@ class W7ProductionScorerTest(unittest.TestCase):
         )
         (kv / selected).write_bytes(current)
         full = hashlib.sha256(current).hexdigest()
-        normalized = MODULE._normalized_kv_sha256(kv / selected)
+        normalized = MODULE._kvc_semantic_sha256(kv / selected)
         before_full = "1" * 64
         (arm / "kv-before.sha256").write_text(
             f"{before_full}  {normalized}  {selected}\n"
@@ -179,10 +213,13 @@ class W7ProductionScorerTest(unittest.TestCase):
         )
         safety = arm / "safety"
         safety.mkdir()
+        binary_sha = "8" * 64 if name == "strict" else "7" * 64
+        binary_path = "/sealed/ds4-strict" if name == "strict" else "/sealed/ds4"
+        binary_inode = "1:3" if name == "strict" else "1:2"
         (safety / "main.log").write_text(
             "2026-01-01T00:00:00+00:00 executed_candidate_verified pid=123 "
-            "start_ticks=456 path=/sealed/ds4 executed_binary_sha256="
-            + "7" * 64 + " device_inode=1:2\n"
+            f"start_ticks=456 path={binary_path} executed_binary_sha256="
+            + binary_sha + f" device_inode={binary_inode}\n"
             "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
             "events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n"
             "wrapper and descendant checks clean\n"
@@ -228,14 +265,14 @@ class W7ProductionScorerTest(unittest.TestCase):
         first.write_bytes(_kvc_v2_record(created_at=100, last_used=101, hits=1))
         second.write_bytes(_kvc_v2_record(created_at=200, last_used=202, hits=9))
         self.assertEqual(
-            MODULE._kvc_v2_semantic_sha256(first),
-            MODULE._kvc_v2_semantic_sha256(second),
+            MODULE._kvc_semantic_sha256(first),
+            MODULE._kvc_semantic_sha256(second),
         )
         corrupted = bytearray(second.read_bytes())
         corrupted[-1] ^= 1
         second.write_bytes(corrupted)
         with self.assertRaises(ValueError):
-            MODULE._kvc_v2_semantic_sha256(second)
+            MODULE._kvc_semantic_sha256(second)
 
     def test_rejects_any_diagnostic_marker_in_every_arm(self) -> None:
         for arm in (self.strict, self.candidate, self.cold):
@@ -316,8 +353,10 @@ class W7ProductionScorerTest(unittest.TestCase):
         old = self.candidate / "kv" / f"{'a' * 40}.kv"
         old.unlink()
         replacement = self.candidate / "kv" / selected
-        replacement.write_bytes(bytes(64) + b"different-payload")
-        normalized = MODULE._normalized_kv_sha256(replacement)
+        replacement.write_bytes(
+            _kvc_v2_record(created_at=500, payload=b"different-payload")
+        )
+        normalized = MODULE._kvc_semantic_sha256(replacement)
         (self.candidate / "kv-before.sha256").write_text(
             f"{digest}  {normalized}  {selected}\n"
         )

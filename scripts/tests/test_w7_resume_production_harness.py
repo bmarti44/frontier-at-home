@@ -103,14 +103,16 @@ class W7ProductionHarnessTest(unittest.TestCase):
 
     def test_safe_wrapper_and_driver_bind_same_binary_inode(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")
-        binary = re.search(r"^readonly BIN=(\S+)$", source, re.M)
-        candidate_source = re.search(
-            r"^\s+GLM_CANDIDATE_SRC=(\S+) \\$", source, re.M
-        )
-        self.assertIsNotNone(binary)
-        self.assertIsNotNone(candidate_source)
-        expected = Path(candidate_source.group(1)) / "ds4-server"
-        self.assertTrue(expected.samefile(Path(binary.group(1))))
+        self.assertIn("GLM_SAFE_EXPECTED_BINARY_SHA256=$arm_sha", source)
+        self.assertIn("GLM_CANDIDATE_SRC=$arm_src", source)
+        for arm in ("strict", "candidate", "cold"):
+            result = subprocess.run(
+                ["/usr/bin/bash", str(HARNESS), "--resolved-arm-config", arm],
+                cwd=ROOT, text=True, capture_output=True, timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            binary, _digest, candidate_source, _commit = result.stdout.strip().split("|")
+            self.assertTrue((Path(candidate_source) / "ds4-server").samefile(binary))
 
     def test_run_arm_does_not_expand_unassigned_locals(self) -> None:
         source = HARNESS.read_text(encoding="utf-8")

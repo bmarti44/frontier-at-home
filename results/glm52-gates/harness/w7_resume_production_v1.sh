@@ -14,6 +14,7 @@ readonly ENGINE_FREEZE=$REPO/results/glm52-gates/W7-resume-production-freeze-v1.
 readonly TRACE_SCORER=$REPO/scripts/83_score_w7_deployed_trace.py
 readonly SCORER=$REPO/scripts/87_score_w7_resume_production.py
 readonly BIN=/home/bmarti44/.cache/glm52-w7-3ba062e-runtime/ds4-server
+readonly STRICT_BIN=/home/bmarti44/.cache/glm52-w7-7822efd-runtime/ds4-server
 readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 readonly LIVE_SOURCE=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/live-request.json
 readonly PRIMARY_SOURCE=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json
@@ -29,6 +30,7 @@ readonly PORT=8097
 readonly CACHE_GIB=40
 
 readonly BINARY_SHA256=c8b08e4ebd59f35f5dba7bcc0943b5d6f377cd15cecb46fc5bdb22dccfd6a51a
+readonly STRICT_BINARY_SHA256=2c586aef10c9d9d63827e1141ad2f00ad0d20b259a62e5b53405061eb11c036c
 readonly MODEL_BYTES=211075856448
 readonly MODEL_SHA256=a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0
 readonly LIVE_SHA256=d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a
@@ -38,13 +40,13 @@ readonly TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4
 readonly TOKENIZER_INIT_SHA256=eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4
 readonly TOKENIZER_NATIVE_SHA256=fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910
 readonly TRACE_SCORER_SHA256=6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985
-readonly SCORER_SHA256=a44e5a80265ccab46db44dab2ab7fe1174f8282a41bda7588b18f39ff6337d67
+readonly SCORER_SHA256=6eb84ea2e5eaf06aedae36fa6c1d6d6fbb2e822aca8ef0c0b288eaf65c04e94b
 readonly CGROUP_SHA256=e5a37b35d3ff1e8a7ee08d0f2c1396441b0dbc4abd64220389362ae6c6994c32
 readonly SAFE_SHA256=6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801
 readonly MEMORY_GUARD_SHA256=3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58
 readonly ENGINE_FREEZE_SHA256=2a97c273e713cd18045d1c38ec671f5941cdb71287ecbbbcffc136c01ffd68d6
-readonly CONFIGURATION_SHA256=7f78db9b848fe13d11a02059ae3a53d0abc6e84c4b1e551b3d84c1b8e8b752b8
 readonly ENGINE_SOURCE_COMMIT=3ba062e5433e56df7c6da70b58cc9757e7777d54
+readonly STRICT_ENGINE_SOURCE_COMMIT=7822efd945f1c5366844d253b22e953b6721b650
 
 verify_file() {
   [[ $# == 2 && -f $1 && ! -L $1 ]] || return 2
@@ -89,8 +91,36 @@ arm_tag() {
   esac
 }
 
+arm_binary() {
+  [[ $# == 1 ]] || return 2
+  if [[ $1 == strict ]]; then printf '%s\n' "$STRICT_BIN"; else printf '%s\n' "$BIN"; fi
+}
+
+arm_binary_sha256() {
+  [[ $# == 1 ]] || return 2
+  if [[ $1 == strict ]]; then printf '%s\n' "$STRICT_BINARY_SHA256"; else printf '%s\n' "$BINARY_SHA256"; fi
+}
+
+arm_candidate_src() {
+  [[ $# == 1 ]] || return 2
+  if [[ $1 == strict ]]; then
+    printf '%s\n' /home/bmarti44/.cache/glm52-w7-7822efd-runtime
+  else
+    printf '%s\n' /home/bmarti44/.cache/glm52-w7-3ba062e-runtime
+  fi
+}
+
+resolved_arm_config() {
+  [[ $# == 1 && ( $1 == strict || $1 == candidate || $1 == cold ) ]] || return 2
+  local commit=$ENGINE_SOURCE_COMMIT
+  [[ $1 == strict ]] && commit=$STRICT_ENGINE_SOURCE_COMMIT
+  printf '%s|%s|%s|%s\n' "$(arm_binary "$1")" \
+    "$(arm_binary_sha256 "$1")" "$(arm_candidate_src "$1")" "$commit"
+}
+
 verify_dependencies() {
   verify_file "$BIN" "$BINARY_SHA256"
+  verify_file "$STRICT_BIN" "$STRICT_BINARY_SHA256"
   verify_file "$LIVE_SOURCE" "$LIVE_SHA256"
   verify_file "$PRIMARY_SOURCE" "$PRIMARY_SHA256"
   verify_file "$POOL" "$POOL_SHA256"
@@ -128,21 +158,51 @@ rows = []
 for path in sorted(root.glob("*.kv")):
     if path.is_symlink() or re.fullmatch(r"[0-9a-f]{40}\.kv", path.name) is None:
         raise SystemExit("unsafe KV inventory path")
-    full_hash, normalized_hash = hashlib.sha256(), hashlib.sha256()
+    full_hash = hashlib.sha256()
     with path.open("rb") as handle:
-        header = handle.read(64)
-        if len(header) != 64:
-            raise SystemExit("short KV file")
+        prefix = handle.read(4)
+        if prefix == b"KVC\x01":
+            header_bytes, payload_abi = 48, 2
+        elif prefix == b"KVC\x02":
+            header_bytes, payload_abi = 80, 3
+        else:
+            raise SystemExit("invalid KVC envelope version")
+        header = bytearray(prefix + handle.read(header_bytes - 4))
+        text_len = handle.read(4)
+        if (len(header) != header_bytes or len(text_len) != 4 or
+                header[20] != payload_abi or header[4] not in (2, 4)):
+            raise SystemExit("invalid KVC header")
+        text_bytes = int.from_bytes(text_len, "little")
+        payload_bytes = int.from_bytes(header[40:48], "little")
+        if path.stat().st_size != header_bytes + 4 + text_bytes + payload_bytes:
+            raise SystemExit("KVC length mismatch")
         full_hash.update(header)
-        normalized = bytearray(header)
-        normalized[12:16] = b"\0" * 4
-        normalized[24:40] = b"\0" * 16
-        normalized_hash.update(normalized)
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+        full_hash.update(text_len)
+        record_hash = stored = None
+        if header_bytes == 80:
+            stored = bytes(header[48:80])
+            record_header = bytearray(header)
+            record_header[12:16] = b"\0" * 4
+            record_header[32:40] = b"\0" * 8
+            record_header[48:80] = b"\0" * 32
+            record_hash = hashlib.sha256(bytes(record_header) + text_len)
+        semantic_prefix = (b"W7-KVC-SEMANTIC-V1\0" + bytes(header[4:12]) +
+                           bytes(header[16:20]) + bytes(header[40:48]) + text_len)
+        semantic_hash = hashlib.sha256(semantic_prefix)
+        remaining = text_bytes + payload_bytes
+        while remaining:
+            chunk = handle.read(min(1024 * 1024, remaining))
+            if not chunk:
+                raise SystemExit("short KVC v2 body")
             full_hash.update(chunk)
-            normalized_hash.update(chunk)
+            if record_hash is not None:
+                record_hash.update(chunk)
+            semantic_hash.update(chunk)
+            remaining -= len(chunk)
+        if handle.read(1) or (record_hash is not None and record_hash.digest() != stored):
+            raise SystemExit("KVC record digest mismatch")
     rows.append(
-        f"{full_hash.hexdigest()}  {normalized_hash.hexdigest()}  {path.name}\n"
+        f"{full_hash.hexdigest()}  {semantic_hash.hexdigest()}  {path.name}\n"
     )
 if not rows:
     raise SystemExit("empty KV inventory")
@@ -152,12 +212,13 @@ PY
 
 driver() {
   [[ $# == 2 ]] || return 2
-  local arm=$1 arm_out=$2 code
+  local arm=$1 arm_out=$2 code arm_bin
   local boundary_trim=8
   [[ $arm == strict || $arm == candidate || $arm == cold ]] || return 2
   [[ $arm == cold ]] && boundary_trim=20
+  arm_bin=$(arm_binary "$arm")
   mkdir "$arm_out/kv"
-  "$BIN" --cuda -m "$MODEL" -c 8192 --host 127.0.0.1 --port "$PORT" \
+  "$arm_bin" --cuda -m "$MODEL" -c 8192 --host 127.0.0.1 --port "$PORT" \
     --trace "$arm_out/request.trace" \
     --ssd-streaming --ssd-streaming-cache-experts 40GB \
     --kv-disk-dir "$arm_out/kv" --kv-disk-space-mb 4096 \
@@ -190,16 +251,17 @@ driver() {
 }
 
 write_arm_metadata() {
-  local arm=$1 arm_out=$2 rc=$3
-  /usr/bin/python3 -I -B - "$arm" "$arm_out" "$rc" "$LIVE_SHA256" "$PRIMARY_SHA256" <<'PY'
+  local arm=$1 arm_out=$2 rc=$3 binary_sha=$4
+  /usr/bin/python3 -I -B - "$arm" "$arm_out" "$rc" "$LIVE_SHA256" "$PRIMARY_SHA256" "$binary_sha" <<'PY'
 import hashlib, json, pathlib, sys
-arm, out_raw, rc_raw, live_sha, primary_sha = sys.argv[1:]
+arm, out_raw, rc_raw, live_sha, primary_sha, binary_sha = sys.argv[1:]
 out = pathlib.Path(out_raw)
 requests = {"primary": hashlib.sha256((out / "primary-request.json").read_bytes()).hexdigest()}
 if arm != "cold": requests["live"] = hashlib.sha256((out / "live-request.json").read_bytes()).hexdigest()
 if requests["primary"] != primary_sha or (arm != "cold" and requests["live"] != live_sha):
     raise SystemExit("actual arm request digest mismatch")
-doc = {"schema_version": 1, "arm": arm, "containment_rc": int(rc_raw), "request_sha256": requests}
+doc = {"schema_version": 1, "arm": arm, "containment_rc": int(rc_raw),
+       "request_sha256": requests, "binary_sha256": binary_sha}
 (out / "arm.json").write_text(json.dumps(doc, sort_keys=True) + "\n")
 PY
 }
@@ -230,11 +292,13 @@ score_trace() {
 run_arm() {
   local arm=$1 root=$2
   local arm_out=$root/$arm
-  local tag rc
+  local tag rc arm_sha arm_src
   tag=$(arm_tag "$arm" "${root##*-}")
   mkdir "$arm_out"
   install -m 0600 "$PRIMARY_SOURCE" "$arm_out/primary-request.json"
   if [[ $arm != cold ]]; then install -m 0600 "$LIVE_SOURCE" "$arm_out/live-request.json"; fi
+  arm_sha=$(arm_binary_sha256 "$arm")
+  arm_src=$(arm_candidate_src "$arm")
   set +e
   /usr/bin/env -i \
     HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
@@ -243,8 +307,8 @@ run_arm() {
     DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
     GLM_SAFE_RUN_AS_CURRENT_USER=1 GLM_SAFE_MEMORY_HIGH_GIB=78 \
     GLM_SAFE_KILL_FLOOR_GIB=24 GLM_SAFE_MIN_START_GIB=110 GLM_SAFE_TIMEOUT_S=2400 \
-    GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 GLM_SAFE_EXPECTED_BINARY_SHA256=$BINARY_SHA256 \
-    GLM_CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-3ba062e-runtime \
+    GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 GLM_SAFE_EXPECTED_BINARY_SHA256=$arm_sha \
+    GLM_CANDIDATE_SRC=$arm_src \
     DS4_CUDA_EXPERT_CACHE_GB=$CACHE_GIB DS4_CUDA_EXPERT_CACHE_PIN=1 \
     DS4_CUDA_EXPERT_CACHE_SLRU=1 DS4_CUDA_FETCH_THREADS=6 \
     DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 DS4_GLM_SYNC_TRACE=1 \
@@ -259,7 +323,7 @@ run_arm() {
   set -e
   printf '%s\n' "$rc" >"$arm_out/containment.rc"
   if (( rc == 0 )); then bind_safety_evidence "$arm_out"; fi
-  write_arm_metadata "$arm" "$arm_out" "$rc"
+  write_arm_metadata "$arm" "$arm_out" "$rc" "$arm_sha"
   (( rc == 0 )) || return 2
   if [[ $arm != cold ]]; then score_trace "$arm_out"; fi
 }
@@ -278,6 +342,10 @@ elif [[ ${1:-} == --self-test ]]; then
   python3 -m unittest scripts.tests.test_w7_resume_production_scorer >/dev/null
   echo W7_PRODUCTION_EQUIVALENCE_SELFTEST_OK
   exit 0
+elif [[ ${1:-} == --resolved-arm-config ]]; then
+  [[ $# == 2 ]]
+  resolved_arm_config "$2"
+  exit $?
 elif [[ ${1:-} == --validate-tag ]]; then
   [[ $# == 3 ]]
   tag=$(arm_tag "$2" "$3")
@@ -325,6 +393,30 @@ mkdir -p "$OUT_PARENT" "$CRASH_ROOT"
 nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
 readonly attempt_out=$OUT_PARENT/attempt-$nonce
 mkdir "$attempt_out"
+/usr/bin/python3 -I -B - "$attempt_out/configuration.json" \
+  "$(resolved_arm_config strict)" "$(resolved_arm_config candidate)" \
+  "$(resolved_arm_config cold)" <<'PY'
+import json, os, sys
+output, strict, candidate, cold = sys.argv[1:]
+doc = {
+    "schema_version": 1,
+    "arms": {"strict": strict, "candidate": candidate, "cold": cold},
+    "common": {
+        "context": 8192, "cache_gib": 40, "cache_pin": 1, "cache_slru": 1,
+        "fetch_threads": 6, "moe_no_atomic_down": 1, "sync_trace": 1,
+        "logit_dump_all": 1, "boundary_align_tokens": 4,
+        "boundary_trim_tokens": {"strict": 8, "candidate": 8, "cold": 20},
+    },
+}
+encoded = (json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n").encode()
+fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+try:
+    os.write(fd, encoded)
+    os.fsync(fd)
+finally:
+    os.close(fd)
+PY
+readonly configuration_sha256=$(sha256sum -- "$attempt_out/configuration.json" | awk '{print $1}')
 /usr/bin/python3 -I -B - "$runtime_seed_sha256" \
   "$W7_FROZEN_CANDIDATE_COMMIT" "$W7_RANDOMNESS_RECEIPT_JSON" \
   "$attempt_out/randomness.json" <<'PY'
@@ -383,7 +475,8 @@ verify_dependencies
   --trace-scorer "/proc/$$/fd/$trace_scorer_fd" --pool "$POOL" \
   --tokenizer "$TOKENIZER" --tokenizer-runtime "$TOKENIZER_RUNTIME" \
   --harness-sha256 "$W7_EXECUTED_HARNESS_SHA256" \
-  --binary-sha256 "$BINARY_SHA256" --model-sha256 "$MODEL_SHA256" \
+  --binary-sha256 "$BINARY_SHA256" --strict-binary-sha256 "$STRICT_BINARY_SHA256" \
+  --model-sha256 "$MODEL_SHA256" \
   --scorer-sha256 "$SCORER_SHA256" --seed-sha256 "$runtime_seed_sha256" \
   --trace-scorer-sha256 "$TRACE_SCORER_SHA256" --fixture-sha256 "$POOL_SHA256" \
   --tokenizer-sha256 "$TOKENIZER_SHA256" \
@@ -392,10 +485,13 @@ verify_dependencies
   --cgroup-sha256 "$CGROUP_SHA256" --safe-sha256 "$SAFE_SHA256" \
   --memory-guard-sha256 "$MEMORY_GUARD_SHA256" \
   --engine-freeze-sha256 "$ENGINE_FREEZE_SHA256" \
-  --configuration-sha256 "$CONFIGURATION_SHA256" \
+  --configuration-sha256 "$configuration_sha256" \
   --engine-source-commit "$ENGINE_SOURCE_COMMIT" \
+  --strict-engine-source-commit "$STRICT_ENGINE_SOURCE_COMMIT" \
   --randomness-receipt-sha256 "$randomness_receipt_sha256" \
   --binary-path "$BIN" --binary-device-inode "$(stat -Lc '%d:%i' -- "$BIN")" \
+  --strict-binary-path "$STRICT_BIN" \
+  --strict-binary-device-inode "$(stat -Lc '%d:%i' -- "$STRICT_BIN")" \
   --arm-order "$attempt_out/arm-order" \
   >"$attempt_out/scorer.stdout" 2>"$attempt_out/scorer.stderr"
 [[ -s $attempt_out/manifest.json && -s $attempt_out/raw.jsonl && -s $attempt_out/summary.json ]]

@@ -36,7 +36,8 @@ EXPECTED_DUMPS = {
     },
 }
 REQUIRED_BINDINGS = {
-    "harness_sha256", "binary_sha256", "model_sha256", "scorer_sha256",
+    "harness_sha256", "binary_sha256", "strict_binary_sha256",
+    "model_sha256", "scorer_sha256",
     "trace_scorer_sha256", "fixture_sha256", "tokenizer_sha256",
     "tokenizer_init_sha256", "tokenizer_native_sha256", "cgroup_sha256",
     "safe_sha256", "memory_guard_sha256", "engine_freeze_sha256",
@@ -92,20 +93,55 @@ def _inventory(path: Path) -> dict[str, tuple[str, str]]:
     return result
 
 
-def _normalized_kv_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
+def _kvc_semantic_sha256(path: Path) -> str:
     with path.open("rb") as handle:
-        header = bytearray(handle.read(64))
-        if len(header) != 64:
-            raise ValueError("short KV header")
-        # hits and access timestamps are mutable bookkeeping; all other header
-        # bytes plus the complete payload define the checkpoint identity.
-        header[12:16] = b"\0" * 4
-        header[24:40] = b"\0" * 16
-        digest.update(header)
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+        prefix = handle.read(4)
+        if prefix == b"KVC\x01":
+            header_bytes, payload_abi = 48, 2
+        elif prefix == b"KVC\x02":
+            header_bytes, payload_abi = 80, 3
+        else:
+            raise ValueError("invalid KVC envelope version")
+        header = bytearray(prefix + handle.read(header_bytes - 4))
+        text_len_raw = handle.read(4)
+        if (
+            len(header) != header_bytes or len(text_len_raw) != 4
+            or header[20] != payload_abi
+            or header[4] not in (2, 4)
+        ):
+            raise ValueError("invalid KVC header")
+        text_bytes = int.from_bytes(text_len_raw, "little")
+        payload_bytes = int.from_bytes(header[40:48], "little")
+        if path.stat().st_size != header_bytes + 4 + text_bytes + payload_bytes:
+            raise ValueError("KVC length mismatch")
+        record_digest = None
+        stored_digest = None
+        if header_bytes == 80:
+            stored_digest = bytes(header[48:80])
+            record_header = bytearray(header)
+            record_header[12:16] = b"\0" * 4
+            record_header[32:40] = b"\0" * 8
+            record_header[48:80] = b"\0" * 32
+            record_digest = hashlib.sha256(bytes(record_header) + text_len_raw)
+        semantic_prefix = (
+            b"W7-KVC-SEMANTIC-V1\0" + bytes(header[4:12])
+            + bytes(header[16:20]) + bytes(header[40:48]) + text_len_raw
+        )
+        semantic_digest = hashlib.sha256(semantic_prefix)
+        remaining = text_bytes + payload_bytes
+        while remaining:
+            chunk = handle.read(min(1024 * 1024, remaining))
+            if not chunk:
+                raise ValueError("short KVC v2 body")
+            if record_digest is not None:
+                record_digest.update(chunk)
+            semantic_digest.update(chunk)
+            remaining -= len(chunk)
+        if handle.read(1) or (
+            record_digest is not None and record_digest.digest() != stored_digest
+        ):
+            raise ValueError("KVC record digest mismatch")
+        return semantic_digest.hexdigest()
 
 
 def _trace_pass(path: Path) -> bool:
@@ -171,7 +207,7 @@ def _selected_kv_identity(
             and selected.name in after
             and before[selected.name][1] == after[selected.name][1]
             and _sha256(selected) == after[selected.name][0]
-            and _normalized_kv_sha256(selected) == after[selected.name][1]
+            and _kvc_semantic_sha256(selected) == after[selected.name][1]
         ):
             return None
         normalized_pre = tuple(
@@ -334,6 +370,9 @@ def write_evidence_contract(
     engine_source_commit: str = "0" * 40,
     binary_path: str = "/sealed/ds4",
     binary_device_inode: str = "1:2",
+    strict_engine_source_commit: str = "1" * 40,
+    strict_binary_path: str = "/sealed/ds4-strict",
+    strict_binary_device_inode: str = "1:3",
 ) -> None:
     if arm_order != _expected_arm_order(bindings.get("seed_sha256", "")):
         raise ValueError("invalid arm order")
@@ -341,11 +380,16 @@ def write_evidence_contract(
         re.fullmatch(r"[0-9a-f]{64}", value) is None for value in bindings.values()
     ):
         raise ValueError("invalid evidence binding")
-    if re.fullmatch(r"[0-9a-f]{40}", engine_source_commit) is None:
+    if (
+        re.fullmatch(r"[0-9a-f]{40}", engine_source_commit) is None
+        or re.fullmatch(r"[0-9a-f]{40}", strict_engine_source_commit) is None
+    ):
         raise ValueError("invalid engine source commit")
-    if not binary_path.startswith("/") or re.fullmatch(
-        r"[0-9]+:[0-9]+", binary_device_inode
-    ) is None:
+    if (
+        not binary_path.startswith("/") or not strict_binary_path.startswith("/")
+        or re.fullmatch(r"[0-9]+:[0-9]+", binary_device_inode) is None
+        or re.fullmatch(r"[0-9]+:[0-9]+", strict_binary_device_inode) is None
+    ):
         raise ValueError("invalid binary identity")
     rows = _artifact_rows(root)
     raw_bytes = b"".join(
@@ -358,8 +402,14 @@ def write_evidence_contract(
         "gate": "W7-resume-bpe-lineage-v1",
         "bindings": bindings,
         "engine_source_commit": engine_source_commit,
+        "strict_engine_source_commit": strict_engine_source_commit,
         "binary_identity": {
-            "path": binary_path, "device_inode": binary_device_inode,
+            "strict": {
+                "path": strict_binary_path,
+                "device_inode": strict_binary_device_inode,
+            },
+            "candidate": {"path": binary_path, "device_inode": binary_device_inode},
+            "cold": {"path": binary_path, "device_inode": binary_device_inode},
         },
         "arm_order": arm_order,
         "raw_sha256": hashlib.sha256(raw_bytes).hexdigest(),
@@ -372,9 +422,12 @@ def write_evidence_contract(
 def _evidence_contract_pass(
     root: Path, expected_bindings: dict[str, str], expected_source_commit: str,
     expected_binary_path: str, expected_binary_device_inode: str,
+    expected_strict_source_commit: str, expected_strict_binary_path: str,
+    expected_strict_binary_device_inode: str,
 ) -> bool:
     try:
         manifest = _json(root / "manifest.json")
+        configuration = _json(root / "configuration.json")
         raw_bytes = (root / "raw.jsonl").read_bytes()
         rows = [
             json.loads(line, object_pairs_hook=_pairs, parse_constant=_constant)
@@ -382,7 +435,7 @@ def _evidence_contract_pass(
         ]
         bindings = manifest.get("bindings")
         return (
-            set(manifest) == {"schema_version", "gate", "bindings", "engine_source_commit", "binary_identity", "arm_order", "raw_sha256"}
+            set(manifest) == {"schema_version", "gate", "bindings", "engine_source_commit", "strict_engine_source_commit", "binary_identity", "arm_order", "raw_sha256"}
             and manifest["schema_version"] == 1
             and manifest["gate"] == "W7-resume-bpe-lineage-v1"
             and isinstance(bindings, dict)
@@ -394,9 +447,50 @@ def _evidence_contract_pass(
                 for value in bindings.values()
             )
             and manifest["engine_source_commit"] == expected_source_commit
+            and manifest["strict_engine_source_commit"] == expected_strict_source_commit
             and manifest["binary_identity"] == {
-                "path": expected_binary_path,
-                "device_inode": expected_binary_device_inode,
+                "strict": {
+                    "path": expected_strict_binary_path,
+                    "device_inode": expected_strict_binary_device_inode,
+                },
+                "candidate": {
+                    "path": expected_binary_path,
+                    "device_inode": expected_binary_device_inode,
+                },
+                "cold": {
+                    "path": expected_binary_path,
+                    "device_inode": expected_binary_device_inode,
+                },
+            }
+            and _sha256(root / "configuration.json")
+                == bindings["configuration_sha256"]
+            and configuration == {
+                "schema_version": 1,
+                "arms": {
+                    "strict": "|".join((
+                        expected_strict_binary_path,
+                        bindings["strict_binary_sha256"],
+                        str(Path(expected_strict_binary_path).parent),
+                        expected_strict_source_commit,
+                    )),
+                    "candidate": "|".join((
+                        expected_binary_path, bindings["binary_sha256"],
+                        str(Path(expected_binary_path).parent), expected_source_commit,
+                    )),
+                    "cold": "|".join((
+                        expected_binary_path, bindings["binary_sha256"],
+                        str(Path(expected_binary_path).parent), expected_source_commit,
+                    )),
+                },
+                "common": {
+                    "context": 8192, "cache_gib": 40, "cache_pin": 1,
+                    "cache_slru": 1, "fetch_threads": 6,
+                    "moe_no_atomic_down": 1, "sync_trace": 1,
+                    "logit_dump_all": 1, "boundary_align_tokens": 4,
+                    "boundary_trim_tokens": {
+                        "strict": 8, "candidate": 8, "cold": 20,
+                    },
+                },
             }
             and manifest["arm_order"] == _expected_arm_order(bindings["seed_sha256"])
             and manifest["raw_sha256"] == hashlib.sha256(raw_bytes).hexdigest()
@@ -412,6 +506,9 @@ def score(
     expected_source_commit: str | None = None,
     expected_binary_path: str | None = None,
     expected_binary_device_inode: str | None = None,
+    expected_strict_source_commit: str | None = None,
+    expected_strict_binary_path: str | None = None,
+    expected_strict_binary_device_inode: str | None = None,
 ) -> dict:
     arms = {"strict": strict, "candidate": candidate, "cold": cold}
     checks: dict[str, bool] = {}
@@ -431,6 +528,9 @@ def score(
         metadata[name].get("schema_version") == 1
         and metadata[name].get("arm") == name
         and metadata[name].get("containment_rc") == 0
+        and metadata[name].get("binary_sha256") == expected_bindings.get(
+            "strict_binary_sha256" if name == "strict" else "binary_sha256"
+        )
         for name in arms
     )
     expected_requests = {
@@ -486,7 +586,7 @@ def score(
         "GLM resume guard: prompt (5066) extends/diverges past evaluated frontier 5055 (checkpoint 5044)"
         in logs["strict"]
         and "GLM sync start=0 prompt=5066 suffix=5066" in logs["strict"]
-        and "restored-frontier diagnostic: authoritative" not in logs["strict"]
+        and "restored-frontier diagnostic:" not in logs["strict"]
     )
     checks["candidate_frontier_observed"] = _candidate_frontier_observed(
         logs["candidate"]
@@ -496,6 +596,9 @@ def score(
         and "GLM sync start=5044 prompt=5066 suffix=22" in logs["cold"]
         and "GLM resume guard:" not in logs["cold"]
         and "restored-frontier diagnostic:" not in logs["cold"]
+    )
+    checks["diagnostic_marker_absent_all_arms"] = all(
+        "restored-frontier diagnostic:" not in log for log in logs.values()
     )
     checks["matched_final_branch_exact"] = (
         _matched_final_branch(logs["candidate"])
@@ -509,22 +612,36 @@ def score(
     )
     expected_bindings = expected_bindings or {}
     expected_binary = expected_bindings.get("binary_sha256", "")
+    expected_strict_binary = expected_bindings.get("strict_binary_sha256", "")
     checks["safety_evidence_pass"] = (
         re.fullmatch(r"[0-9a-f]{64}", expected_binary) is not None
+        and re.fullmatch(r"[0-9a-f]{64}", expected_strict_binary) is not None
         and isinstance(expected_binary_path, str)
         and isinstance(expected_binary_device_inode, str)
-        and all(_safety_pass(
-            arm, expected_binary, expected_binary_path,
-            expected_binary_device_inode,
-        ) for arm in arms.values())
+        and isinstance(expected_strict_binary_path, str)
+        and isinstance(expected_strict_binary_device_inode, str)
+        and _safety_pass(
+            strict, expected_strict_binary, expected_strict_binary_path,
+            expected_strict_binary_device_inode,
+        )
+        and all(
+            _safety_pass(arm, expected_binary, expected_binary_path,
+                         expected_binary_device_inode)
+            for arm in (candidate, cold)
+        )
     )
     checks["evidence_contract_pass"] = (
         expected_source_commit is not None
         and expected_binary_path is not None
         and expected_binary_device_inode is not None
+        and expected_strict_source_commit is not None
+        and expected_strict_binary_path is not None
+        and expected_strict_binary_device_inode is not None
         and _evidence_contract_pass(
             strict.parent, expected_bindings, expected_source_commit,
             expected_binary_path, expected_binary_device_inode,
+            expected_strict_source_commit, expected_strict_binary_path,
+            expected_strict_binary_device_inode,
         )
     )
 
@@ -571,16 +688,16 @@ def score(
             observed["candidate_argmax"] is not None
             and observed["candidate_argmax"] == observed["cold_argmax"]
         )
-        checks["candidate_max_abs_delta_lt_1e_2"] = (
-            observed["max_abs_logit_delta"] is not None
-            and observed["max_abs_logit_delta"] < 0.01
+        checks["candidate_logits_byte_exact"] = (
+            candidate.joinpath("logits.sync3.start5044.prompt5066.suffix22").read_bytes()
+            == cold.joinpath("logits.sync2.start5044.prompt5066.suffix22").read_bytes()
         )
     except (OSError, ValueError):
         checks["candidate_logits_finite"] = False
         checks["cold_logits_finite"] = False
         checks["strict_logits_finite"] = False
         checks["candidate_argmax_matches_cold"] = False
-        checks["candidate_max_abs_delta_lt_1e_2"] = False
+        checks["candidate_logits_byte_exact"] = False
 
     verdict = "PASS" if checks and all(checks.values()) else "FAIL"
     return {
@@ -588,7 +705,7 @@ def score(
         "gate": "W7-resume-bpe-lineage-v1",
         "formula": {
             "max_abs_logit_delta": "max_i(abs(candidate_i-cold_i))",
-            "threshold": "strictly less than 0.01",
+            "threshold": "byte-identical candidate and cold f32 dumps; max delta equals zero",
             "argmax": "first maximum index must be identical",
         },
         "checks": checks,
@@ -615,6 +732,7 @@ def main() -> int:
     parser.add_argument("--tokenizer-runtime", type=Path, required=True)
     parser.add_argument("--harness-sha256", required=True)
     parser.add_argument("--binary-sha256", required=True)
+    parser.add_argument("--strict-binary-sha256", required=True)
     parser.add_argument("--model-sha256", required=True)
     parser.add_argument("--scorer-sha256", required=True)
     parser.add_argument("--seed-sha256", required=True)
@@ -629,9 +747,12 @@ def main() -> int:
     parser.add_argument("--engine-freeze-sha256", required=True)
     parser.add_argument("--configuration-sha256", required=True)
     parser.add_argument("--engine-source-commit", required=True)
+    parser.add_argument("--strict-engine-source-commit", required=True)
     parser.add_argument("--randomness-receipt-sha256", required=True)
     parser.add_argument("--binary-path", required=True)
     parser.add_argument("--binary-device-inode", required=True)
+    parser.add_argument("--strict-binary-path", required=True)
+    parser.add_argument("--strict-binary-device-inode", required=True)
     parser.add_argument("--arm-order", type=Path, required=True)
     args = parser.parse_args()
     for arm in (args.strict, args.candidate):
@@ -641,6 +762,7 @@ def main() -> int:
     bindings = {
             "harness_sha256": args.harness_sha256,
             "binary_sha256": args.binary_sha256,
+            "strict_binary_sha256": args.strict_binary_sha256,
             "model_sha256": args.model_sha256,
             "scorer_sha256": args.scorer_sha256,
             "seed_sha256": args.seed_sha256,
@@ -664,10 +786,15 @@ def main() -> int:
         args.engine_source_commit,
         args.binary_path,
         args.binary_device_inode,
+        args.strict_engine_source_commit,
+        args.strict_binary_path,
+        args.strict_binary_device_inode,
     )
     result = score(
         args.strict, args.candidate, args.cold, bindings,
         args.engine_source_commit, args.binary_path, args.binary_device_inode,
+        args.strict_engine_source_commit, args.strict_binary_path,
+        args.strict_binary_device_inode,
     )
     args.output.write_text(
         json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n",
