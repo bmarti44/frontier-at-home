@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "gate": "W7-production-runtime-equivalence",
+  "candidate_hash": "a79a115cefbb6475aec6c2053bb461122277a544",
+  "review_round": 231,
+  "runtime_executed": false,
+  "commitment": {
+    "launcher_sha256": "bf0c00b3ddc00273e16f26e5d93a3561866b88d4e82f27d416ef3fd0f0f98e36",
+    "committed_at": "2026-08-07T18:14:58Z",
+    "drand_round": 6356615,
+    "drand_round_public_at": "2026-08-07T19:04:30Z",
+    "prepublication_margin_seconds": 2972,
+    "frozen_gate_commit": "6b6ca50b3a9ee0f93c981a572508383691707ca6"
+  },
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 97,
+      "verdict": "PASS_RUNTIME_ALLOWED_WITH_MEDIUM_FOLLOWUP",
+      "critical": [],
+      "high": [],
+      "medium": ["GAP-W7-231-M6-CONFIGURATION-NOT-FULL-INVOCATION"],
+      "low": []
+    },
+    "Singer": {
+      "score_0_to_100": 92,
+      "verdict": "AUTHORIZE_RUNTIME_EXECUTION_WITH_FOCUSED_MEDIUM_FOLLOWUPS",
+      "critical": [],
+      "high": [],
+      "medium": [
+        "ADV-W7-231-M48-SCORER-DOES-NOT-PIN-REVIEWED-LAUNCHER",
+        "ADV-W7-229-M47-CONFIGURATION-BINDING-IS-OPAQUE"
+      ],
+      "low": ["ADV-W7-231-L49-SEALED-DRAND-VERIFIER-FD-UNUSED"]
+    }
+  },
+  "prior_issue_status": {
+    "GAP-W7-230-H5-RANDOMNESS-RECEIPT-NOT-VERIFIED-BY-SCORER": "FIXED",
+    "ADV-W7-229-H46-PUBLIC-RANDOMNESS-IS-SELF-ASSERTED": "FIXED",
+    "ADV-W7-229-M47-CONFIGURATION-BINDING-IS-OPAQUE": "PARTIALLY_FIXED"
+  },
+  "verdict": "PASS_RUNTIME_ALLOWED"
+}
