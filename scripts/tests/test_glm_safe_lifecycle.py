@@ -28,6 +28,7 @@ class CandidateLifecycleSourceTests(unittest.TestCase):
             "DS4_GLM_RESTORED_FRONTIER_DIAGNOSTIC",
             "DS4_GLM_LOGIT_DUMP",
             "DS4_GLM_LOGIT_DUMP_ALL",
+            "DS4_GLM_W9_CAPTURE_DIR",
         ):
             self.assertIn(name, launcher)
 
