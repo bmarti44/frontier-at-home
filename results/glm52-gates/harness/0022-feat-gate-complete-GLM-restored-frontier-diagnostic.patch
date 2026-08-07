@@ -1,0 +1,62 @@
+From 91e2e1eb2484b5d760c55bcbbda05e021b9c3216 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:25:07 -0400
+Subject: [PATCH 22/24] feat: gate complete GLM restored frontier diagnostic
+
+---
+ ds4.c | 33 +++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/ds4.c b/ds4.c
+index abb0253..c6558a6 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -49162,6 +49162,14 @@ static bool ds4_session_is_glm(const ds4_session *s) {
+     return s && s->engine && DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA;
+ }
+
++bool ds4_glm_restored_frontier_authoritative(bool diagnostic_enabled,
++                                             bool payload_complete,
++                                             uint32_t saved_tokens,
++                                             uint32_t compact_rows) {
++    return diagnostic_enabled && payload_complete && saved_tokens != 0 &&
++           compact_rows == saved_tokens;
++}
++
+ #ifndef DS4_NO_GPU
+ static void ds4_session_glm_reset_dense_cache(ds4_session *s) {
+     if (s) s->glm_dense_cache_len = 0;
+@@ -50887,6 +50895,31 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+         s->checkpoint_valid = true;
+         s->mtp_draft_valid = false;
+         s->glm_dense_cache_len = g->full_kv_cache ? saved_full_live : 0;
++        {
++            const char *restore_flag =
++                getenv("DS4_GLM_RESTORED_FRONTIER_DIAGNOSTIC");
++            const bool restore_enabled =
++                restore_flag && !strcmp(restore_flag, "1");
++            const bool authoritative =
++                ds4_glm_restored_frontier_authoritative(
++                    restore_enabled, remaining == 0,
++                    saved_tokens, expected_compact_live);
++            if (restore_enabled) {
++                fprintf(stderr,
++                        "ds4: GLM restored-frontier diagnostic: %s "
++                        "checkpoint=%u compact_rows=%u prior_frontier=%d\n",
++                        authoritative ? "authoritative" : "rejected",
++                        saved_tokens, expected_compact_live,
++                        s->glm_evaluated.len);
++            }
++            if (authoritative) {
++                /* The complete payload has replaced every compact/indexer row
++                 * reachable by this checkpoint.  Record that exact lineage so
++                 * the unchanged global resume guard can permit the suffix. */
++                ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
++                                (const ds4_tokens *)&s->checkpoint);
++            }
++        }
+         return 0;
+ #endif
+     }
+--
+2.43.0

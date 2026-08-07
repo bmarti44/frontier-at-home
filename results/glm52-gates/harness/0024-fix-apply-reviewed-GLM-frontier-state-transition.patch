@@ -1,0 +1,62 @@
+From ee6abc565cc20385eae1a22b9d8d129d6eae9c68 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:29:56 -0400
+Subject: [PATCH 24/24] fix: apply reviewed GLM frontier state transition
+
+---
+ ds4.c | 26 ++++++++++++++++++--------
+ 1 file changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/ds4.c b/ds4.c
+index c6558a6..dbc8c95 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -49170,6 +49170,21 @@ bool ds4_glm_restored_frontier_authoritative(bool diagnostic_enabled,
+            compact_rows == saved_tokens;
+ }
+
++bool ds4_glm_apply_restored_frontier(ds4_tokens *evaluated,
++                                     const ds4_tokens *checkpoint,
++                                     bool diagnostic_enabled,
++                                     bool payload_complete,
++                                     uint32_t saved_tokens,
++                                     uint32_t compact_rows) {
++    if (!evaluated || !checkpoint ||
++        checkpoint->len != (int)saved_tokens ||
++        !ds4_glm_restored_frontier_authoritative(
++            diagnostic_enabled, payload_complete, saved_tokens, compact_rows))
++        return false;
++    ds4_tokens_copy(evaluated, checkpoint);
++    return true;
++}
++
+ #ifndef DS4_NO_GPU
+ static void ds4_session_glm_reset_dense_cache(ds4_session *s) {
+     if (s) s->glm_dense_cache_len = 0;
+@@ -50901,7 +50916,9 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+             const bool restore_enabled =
+                 restore_flag && !strcmp(restore_flag, "1");
+             const bool authoritative =
+-                ds4_glm_restored_frontier_authoritative(
++                ds4_glm_apply_restored_frontier(
++                    (ds4_tokens *)&s->glm_evaluated,
++                    (const ds4_tokens *)&s->checkpoint,
+                     restore_enabled, remaining == 0,
+                     saved_tokens, expected_compact_live);
+             if (restore_enabled) {
+@@ -50912,13 +50929,6 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+                         saved_tokens, expected_compact_live,
+                         s->glm_evaluated.len);
+             }
+-            if (authoritative) {
+-                /* The complete payload has replaced every compact/indexer row
+-                 * reachable by this checkpoint.  Record that exact lineage so
+-                 * the unchanged global resume guard can permit the suffix. */
+-                ds4_tokens_copy((ds4_tokens *)&s->glm_evaluated,
+-                                (const ds4_tokens *)&s->checkpoint);
+-            }
+         }
+         return 0;
+ #endif
+--
+2.43.0

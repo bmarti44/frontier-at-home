@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "FROZEN_NOT_EXECUTED",
+  "classification": "default-off restored-frontier diagnostic",
+  "repository_parent_commit": "ea31d00",
+  "review_authority": "results/glm52-gates/W7-resume-review-r210.json",
+  "engine": {
+    "source_commit": "ee6abc565cc20385eae1a22b9d8d129d6eae9c68",
+    "base_commit": "d652a9b5ec48c0e8cbb0f42c5d55bc411f51cc25",
+    "readable_source": "/tmp/glm52-w7-build1.ob4Q0O/src",
+    "source_files": [
+      {"path": "ds4.c", "source_sha256": "5389da05efea8821160a7081c5b03bd5b7edd3dab8cdbcf28efd890de0b8c194"},
+      {"path": "ds4.h", "source_sha256": "2e1601c85c84c4e500fb9289ce71402993fd96bd80a9a9d54aa307e54e73c960"},
+      {"path": "ds4_server.c", "source_sha256": "2a5ffcc9a134dc02373ae9c517d5bf26958265674ec5046d077438ada23c2dbf"},
+      {"path": "ds4_kvstore.c", "source_sha256": "929df5271da4075cf5977f7ff601c300a6f7620f557dd985ff76ae5390d2d44a"},
+      {"path": "ds4_cuda.cu", "source_sha256": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f"}
+    ],
+    "patches": [
+      {"path": "results/glm52-gates/harness/0021-test-require-complete-opt-in-GLM-frontier-restore.patch", "patch_sha256": "b63f57ecc5d5c17d4d4be495e29f3c0a449e1c4a5f10a9af0af339bcd070a238"},
+      {"path": "results/glm52-gates/harness/0022-feat-gate-complete-GLM-restored-frontier-diagnostic.patch", "patch_sha256": "97950c7198dd00cacdc9b917be294b14d1f85213de1ef11399dbaea0ebf97851"},
+      {"path": "results/glm52-gates/harness/0023-test-bind-GLM-frontier-acceptance-to-state-copy.patch", "patch_sha256": "37680be3dce4732cb2f57b572a40c95ffabda2bcefcf2598589a1a5403b6ec69"},
+      {"path": "results/glm52-gates/harness/0024-fix-apply-reviewed-GLM-frontier-state-transition.patch", "patch_sha256": "c44327acc85b4acae60dd79d8a165ebfb93d86fae0947666e45952e4cda4c0e4"}
+    ]
+  },
+  "build": {
+    "binary": "/home/bmarti44/.cache/glm52-w7-ee6abc5-build-v2/build1-ds4-server",
+    "binary_sha256": "1805e0a3b25d0b40bef82b9764af685b5ec92a74d1262e1094802d5864fff9b4",
+    "binary_bytes": 14621288,
+    "builds": 2,
+    "byte_identical": true,
+    "parallel_jobs": 2,
+    "nvcc_random_seed": "ee6abc56",
+    "stable_nvcc_keep_dir": "/tmp/glm52-w7-ee6abc5-nvcc-keep",
+    "artifacts": [
+      {"path": "build1.log", "sha256": "1101108e6eb291e3e4462f670b2ea9e113527dc1e0f14db5274bd7729f9dcfba"},
+      {"path": "build2.log", "sha256": "1101108e6eb291e3e4462f670b2ea9e113527dc1e0f14db5274bd7729f9dcfba"},
+      {"path": "build1.time", "sha256": "0a6bbac2268e72f5395454d5209325f1af3da885f5af09f9f7d238f1c2419591"},
+      {"path": "build2.time", "sha256": "38dbd70c22cac3f5ba70c7f5380b4e742baa132dbc613131b44618cb0eb56c2f"}
+    ]
+  },
+  "model": {
+    "path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "bytes": 211075856448,
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
+  },
+  "acceptance": {
+    "candidate_vs_cold_max_abs_logit_delta_strictly_less_than": 0.01,
+    "candidate_vs_cold_argmax_identical": true,
+    "candidate_sync": {"start": 5044, "prompt": 5066, "suffix": 22},
+    "strict_default_still_cold_restarts": true,
+    "payload_claim": "Structurally complete and exact-file hash-bound; content checksums remain W8 scope."
+  }
+}
