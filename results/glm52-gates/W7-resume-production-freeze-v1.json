@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-production-graduation",
+  "engine_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "runtime_binary": "/home/bmarti44/.cache/glm52-w7-3ba062e-runtime/ds4-server",
+  "binary_sha256": "c8b08e4ebd59f35f5dba7bcc0943b5d6f377cd15cecb46fc5bdb22dccfd6a51a",
+  "binary_bytes": 5583976,
+  "sources": [
+    {"name": "ds4.c", "sha256": "012dbe7b1e37ebdce297bbdf9442eb747cdcceaed6ae00fa369a4ae1d6aec47d"},
+    {"name": "ds4.h", "sha256": "2a32052cefc2c0b162b86b64c650db763c374e27d144757c2ca0e9c91378d272"},
+    {"name": "ds4_agent.c", "sha256": "3af7d5388aeb817b827cb29c702a37999d0abf8e20ce09b36880f5c85d7f9db8"},
+    {"name": "ds4_kvstore.c", "sha256": "1b253fe3d41d995e11e83ddc5cec422f1787630cb73d616a56c17b74898fa1f4"},
+    {"name": "ds4_kvstore.h", "sha256": "93af27714ea64735819097ff294c04454a54dcda683fd93584a6bcf0afa3f084"},
+    {"name": "ds4_server.c", "sha256": "313b26c7809fc16c6239950426cbaddb24c8df50c43a7d0990751586552e8e96"}
+  ],
+  "reproducible_build": {
+    "jobs": 2,
+    "clean_builds": 2,
+    "runtime_normalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "build_1_binary_sha256": "c8b08e4ebd59f35f5dba7bcc0943b5d6f377cd15cecb46fc5bdb22dccfd6a51a",
+    "build_2_binary_sha256": "c8b08e4ebd59f35f5dba7bcc0943b5d6f377cd15cecb46fc5bdb22dccfd6a51a",
+    "byte_identical": true,
+    "raw_binary_note": "Unstripped CUDA binaries differed only in generated debug/build-id material, including nvcc tmpxft names. The exact production artifacts were normalized identically and compared byte-for-byte."
+  },
+  "patch_series": {
+    "first": "0032-test-require-automatic-complete-GLM-frontier-restore.patch",
+    "last": "0040-fix-propagate-KVC-trailer-rewrite-failures.patch",
+    "commits": 9
+  },
+  "checks": {
+    "ds4_server_tests_pass": true,
+    "kvstore_callsite_tests_pass": true,
+    "server_build_pass": true,
+    "agent_build_pass": true,
+    "review_critical_open": 0,
+    "review_high_open": 0
+  },
+  "next": "Freeze a no-opt-in production equivalence scorer and harness, obtain new public randomness, and rerun candidate/cold/strict containment."
+}

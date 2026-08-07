@@ -1,0 +1,34 @@
+From e5a604b134d685f2abe2c83969039cbf2048aa6a Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:31:52 -0400
+Subject: [PATCH 39/40] test: propagate KVC trailer rewrite failures
+
+---
+ tests/test_kvstore_integrity_callsite.py | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/tests/test_kvstore_integrity_callsite.py b/tests/test_kvstore_integrity_callsite.py
+index 62dbec7..d5cba6c 100644
+--- a/tests/test_kvstore_integrity_callsite.py
++++ b/tests/test_kvstore_integrity_callsite.py
+@@ -38,6 +38,17 @@ class KvstoreIntegrityCallsiteTests(unittest.TestCase):
+         self.assertLess(verify, tokenize)
+         self.assertLess(verify, create)
+ 
++    def test_trailer_rewrite_failure_propagates_to_store(self) -> None:
++        source = (ROOT / "ds4_kvstore.c").read_text()
++        self.assertIn("static bool kv_cache_rewrite_trailer", source)
++        store = function_body(source, "bool ds4_kvstore_store_live_prefix_text")
++        compatible = store.index("kv_cache_existing_compatible")
++        rewrite = store.index("const bool rewrite_ok = kv_cache_rewrite_trailer", compatible)
++        cleanup = store.index("free(text)", rewrite)
++        result = store.index("return rewrite_ok", cleanup)
++        self.assertLess(rewrite, cleanup)
++        self.assertLess(cleanup, result)
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
+-- 
+2.43.0
+

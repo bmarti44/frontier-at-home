@@ -1,0 +1,57 @@
+From 2adc19890069cd5728b95ef6e06c65fde6435d64 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:07:58 -0400
+Subject: [PATCH 32/40] test: require automatic complete GLM frontier restore
+
+---
+ ds4_server.c | 19 +++++++++++--------
+ 1 file changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/ds4_server.c b/ds4_server.c
+index c2cfc7b..35bf4cf 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -16740,11 +16740,12 @@ static void test_canonical_rewrite_rebuilds_when_live_tail_changes(void) {
+     TEST_ASSERT(!ds4_session_rewrite_requires_rebuild(1024, 1100, 1024));
+ }
+ 
+-static void test_glm_restored_frontier_requires_complete_opt_in_snapshot(void) {
+-    /* W7 must not weaken the global resume guard.  Only a successful,
+-     * explicitly-enabled diagnostic restore whose compact cache covers every
+-     * checkpoint token may supersede the prior live lineage. */
+-    TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(false, true, 5044, 5044));
++static void test_glm_restored_frontier_requires_complete_snapshot(void) {
++    /* W7 must not weaken the global resume guard.  A successfully loaded
++     * production snapshot whose compact cache covers every checkpoint token
++     * is authoritative without a diagnostic opt-in.  Incomplete snapshots
++     * remain rejected. */
++    TEST_ASSERT(ds4_glm_restored_frontier_authoritative(false, true, 5044, 5044));
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(true, false, 5044, 5044));
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(true, true, 5044, 4096));
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(true, true, 0, 0));
+@@ -16758,9 +16759,11 @@ static void test_glm_restored_frontier_requires_complete_opt_in_snapshot(void) {
+     ds4_tokens_push(&checkpoint, 11);
+     ds4_tokens_push(&checkpoint, 12);
+ 
+-    TEST_ASSERT(!ds4_glm_apply_restored_frontier(
++    TEST_ASSERT(ds4_glm_apply_restored_frontier(
+         &prior, &checkpoint, false, true, 2, 2));
+-    TEST_ASSERT(prior.len == 3 && prior.v[2] == 13);
++    TEST_ASSERT(prior.len == 2 && prior.v[0] == 11 && prior.v[1] == 12);
++    prior.len = 2;
++    ds4_tokens_push(&prior, 13);
+     TEST_ASSERT(!ds4_glm_apply_restored_frontier(
+         &prior, &checkpoint, true, false, 2, 2));
+     TEST_ASSERT(prior.len == 3 && prior.v[2] == 13);
+@@ -17939,7 +17942,7 @@ static void ds4_server_unit_tests_run(void) {
+     test_thinking_checkpoint_remember_gate();
+     test_tool_marker_state_ignores_orphan_end();
+     test_canonical_rewrite_rebuilds_when_live_tail_changes();
+-    test_glm_restored_frontier_requires_complete_opt_in_snapshot();
++    test_glm_restored_frontier_requires_complete_snapshot();
+     test_glm_logit_dump_all_names_each_sync_without_changing_default();
+     test_kv_cache_store_len_uses_configured_boundary();
+     test_kv_cache_chat_anchor_uses_last_user_before_assistant();
+-- 
+2.43.0
+

@@ -1,0 +1,128 @@
+From 36871c5e8d58111c8e60f5e4742091fa31fb0ca4 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:26:34 -0400
+Subject: [PATCH 36/40] test: reject unverified KVC transformations
+
+---
+ ds4_kvstore.c                            |  5 +++
+ ds4_kvstore.h                            |  2 ++
+ ds4_server.c                             | 19 +++++++++++
+ tests/test_kvstore_integrity_callsite.py | 40 ++++++++++++++++++++++++
+ 4 files changed, 66 insertions(+)
+ create mode 100644 tests/test_kvstore_integrity_callsite.py
+
+diff --git a/ds4_kvstore.c b/ds4_kvstore.c
+index e7ec4de..73ca031 100644
+--- a/ds4_kvstore.c
++++ b/ds4_kvstore.c
+@@ -550,6 +550,11 @@ bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
+            memcmp(actual, e->record_sha256, sizeof(actual)) == 0;
+ }
+ 
++bool ds4_kvstore_reseal_record(FILE *fp, const ds4_kvstore_entry *e,
++                               uint32_t text_bytes) {
++    return e && ds4_kvstore_seal_record(fp, text_bytes, e->payload_bytes);
++}
++
+ bool ds4_kvstore_read_entry_file(const char *path, const char sha[41],
+                                  ds4_kvstore_entry *out) {
+     struct stat st;
+diff --git a/ds4_kvstore.h b/ds4_kvstore.h
+index e1eedde..b7ba217 100644
+--- a/ds4_kvstore.h
++++ b/ds4_kvstore.h
+@@ -206,6 +206,8 @@ bool ds4_kvstore_seal_record(FILE *fp, uint32_t text_bytes,
+                              uint64_t payload_bytes);
+ bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
+                                uint32_t text_bytes);
++bool ds4_kvstore_reseal_record(FILE *fp, const ds4_kvstore_entry *e,
++                               uint32_t text_bytes);
+ void ds4_kvstore_fill_header(uint8_t h[DS4_KVSTORE_FIXED_HEADER],
+                              uint8_t model_id, uint8_t quant_bits,
+                              uint8_t reason, uint8_t ext_flags,
+diff --git a/ds4_server.c b/ds4_server.c
+index 48afa6c..3e7a4ec 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -17210,6 +17210,24 @@ static void test_kv_cache_integrity_allows_mutable_bookkeeping(void) {
+     TEST_ASSERT(fclose(fp) == 0);
+ }
+ 
++static void test_kv_cache_reseal_rejects_corrupt_source(void) {
++    const uint8_t payload[16] = {0};
++    ds4_kvstore_entry entry = {0};
++    uint32_t text_bytes = 0;
++    FILE *fp = test_kv_integrity_record(payload, &entry, &text_bytes);
++    if (!fp) return;
++    const off_t payload_offset =
++        (off_t)KV_CACHE_FIXED_HEADER + 4 + (off_t)text_bytes;
++    TEST_ASSERT(fseeko(fp, payload_offset + 8, SEEK_SET) == 0);
++    TEST_ASSERT(fputc(17, fp) != EOF);
++    TEST_ASSERT(fflush(fp) == 0);
++    TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
++    TEST_ASSERT(!ds4_kvstore_reseal_record(fp, &entry, text_bytes));
++    TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
++    TEST_ASSERT(!ds4_kvstore_verify_record(fp, &entry, text_bytes));
++    TEST_ASSERT(fclose(fp) == 0);
++}
++
+ static void test_kv_tool_map_filters_by_dsml_text(void) {
+     const char *dsml_keep =
+         "\n\n<｜DSML｜tool_calls>\n"
+@@ -18039,6 +18057,7 @@ static void ds4_server_unit_tests_run(void) {
+     test_kv_cache_lookup_rejects_stale_payload_abi();
+     test_kv_cache_integrity_rejects_payload_mutations();
+     test_kv_cache_integrity_allows_mutable_bookkeeping();
++    test_kv_cache_reseal_rejects_corrupt_source();
+     test_kv_cache_eviction_values_fresh_snapshots();
+     test_kv_cache_eviction_prefers_anchor_reason();
+     test_kv_cache_eviction_makes_room_before_store();
+diff --git a/tests/test_kvstore_integrity_callsite.py b/tests/test_kvstore_integrity_callsite.py
+new file mode 100644
+index 0000000..a2ec15e
+--- /dev/null
++++ b/tests/test_kvstore_integrity_callsite.py
+@@ -0,0 +1,40 @@
++import pathlib
++import unittest
++
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++
++
++def function_body(source: str, signature: str) -> str:
++    start = source.index(signature)
++    brace = source.index("{", start)
++    depth = 0
++    for pos in range(brace, len(source)):
++        if source[pos] == "{":
++            depth += 1
++        elif source[pos] == "}":
++            depth -= 1
++            if depth == 0:
++                return source[brace : pos + 1]
++    raise AssertionError(f"unterminated function: {signature}")
++
++
++class KvstoreIntegrityCallsiteTests(unittest.TestCase):
++    def test_trailer_rewrite_uses_verified_reseal(self) -> None:
++        source = (ROOT / "ds4_kvstore.c").read_text()
++        body = function_body(source, "static void kv_cache_rewrite_trailer")
++        self.assertIn("ds4_kvstore_reseal_record", body)
++        self.assertNotIn("ds4_kvstore_seal_record", body)
++
++    def test_strip_verifies_before_transforming_source(self) -> None:
++        source = (ROOT / "ds4_agent.c").read_text()
++        body = function_body(source, "static bool agent_worker_strip_session")
++        verify = body.index("ds4_kvstore_verify_record")
++        tokenize = body.index("ds4_tokenize_rendered_chat")
++        create = body.index("mkstemp")
++        self.assertLess(verify, tokenize)
++        self.assertLess(verify, create)
++
++
++if __name__ == "__main__":
++    unittest.main()
+-- 
+2.43.0
+
