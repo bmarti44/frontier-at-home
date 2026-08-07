@@ -18,6 +18,22 @@ REQUEST_MARKER = b"\n===== request "
 RAW_MARKER = b"\n--- raw request json ---\n"
 RENDERED_MARKER = b"\n--- rendered prompt ---\n"
 GENERATED_MARKER = b"\n--- generated text ---\n"
+TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+TOKENIZER_INIT_SHA256 = "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4"
+TOKENIZER_NATIVE_SHA256 = "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910"
+
+
+def _sha256(path: pathlib.Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _require_dependency(path: pathlib.Path, expected: str) -> None:
+    if not path.is_file() or path.is_symlink() or _sha256(path) != expected:
+        raise ValueError(f"frozen dependency mismatch: {path}")
 
 
 def _unframe(section: bytes, expected: bytes) -> bytes:
@@ -29,7 +45,7 @@ def _unframe(section: bytes, expected: bytes) -> bytes:
 
 def _request_blocks(trace: bytes) -> list[bytes]:
     pieces = trace.split(REQUEST_MARKER)
-    if pieces[0].strip(b"\x00\t\r\n "):
+    if pieces[0] != b"":
         raise ValueError("unexpected bytes before first trace request")
     blocks = [REQUEST_MARKER + piece for piece in pieces[1:]]
     if len(blocks) != 2:
@@ -37,7 +53,7 @@ def _request_blocks(trace: bytes) -> list[bytes]:
     return blocks
 
 
-def _sections(block: bytes) -> tuple[bytes, bytes]:
+def _sections(block: bytes) -> tuple[int, bytes, bytes]:
     header = re.match(rb"\n===== request ([0-9]+) [^\n]* =====\n", block)
     if header is None:
         raise ValueError("malformed trace request header")
@@ -50,7 +66,7 @@ def _sections(block: bytes) -> tuple[bytes, bytes]:
     rendered_marker_at = block.index(RENDERED_MARKER, raw_at)
     rendered_at = rendered_marker_at + len(RENDERED_MARKER)
     generated_at = block.index(GENERATED_MARKER, rendered_at)
-    return block[raw_at:rendered_marker_at], block[rendered_at:generated_at]
+    return int(header.group(1)), block[raw_at:rendered_marker_at], block[rendered_at:generated_at]
 
 
 def score_trace(
@@ -63,6 +79,7 @@ def score_trace(
 ) -> dict:
     checks = {
         "trace_exactly_two_requests": False,
+        "trace_request_ids_exact": False,
         "trace_request_bytes_exact": False,
         "trace_rendered_bytes_exact": False,
         "trace_token_vectors_exact": False,
@@ -70,6 +87,9 @@ def score_trace(
     observed: list[dict] = []
     error = None
     try:
+        _require_dependency(tokenizer_path, TOKENIZER_SHA256)
+        _require_dependency(tokenizer_runtime / "tokenizers/__init__.py", TOKENIZER_INIT_SHA256)
+        _require_dependency(tokenizer_runtime / "tokenizers/tokenizers.abi3.so", TOKENIZER_NATIVE_SHA256)
         sys.path.insert(0, str(tokenizer_runtime))
         from tokenizers import Tokenizer
 
@@ -96,8 +116,10 @@ def score_trace(
         checks["trace_exactly_two_requests"] = True
         tokenizer = Tokenizer.from_file(str(tokenizer_path))
         requests_ok = rendered_ok = tokens_ok = True
+        request_ids = []
         for block, (want_request, want_rendered, want_tokens) in zip(blocks, expected, strict=True):
-            raw_section, rendered_section = _sections(block)
+            request_id, raw_section, rendered_section = _sections(block)
+            request_ids.append(request_id)
             actual_request = _unframe(raw_section, want_request)
             actual_rendered = _unframe(rendered_section, want_rendered)
             requests_ok &= actual_request == want_request
@@ -113,6 +135,7 @@ def score_trace(
         checks["trace_request_bytes_exact"] = requests_ok
         checks["trace_rendered_bytes_exact"] = rendered_ok
         checks["trace_token_vectors_exact"] = tokens_ok
+        checks["trace_request_ids_exact"] = request_ids == [1, 2]
     except Exception as exc:  # fail closed while retaining a useful diagnostic
         error = f"{type(exc).__name__}: {exc}"
     return {

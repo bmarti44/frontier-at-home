@@ -1,0 +1,27 @@
+{
+  "schema_version": 10,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "CANDIDATE_10_IMPLEMENTED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v9.json",
+  "review_authority": "results/glm52-gates/W7-resume-review-r204.json",
+  "behavioral_red": "results/glm52-gates/W7-resume-candidate10-red.json",
+  "owner_authorization": "Owner explicitly authorized candidate 10 and removed further owner-approval checkpoints on 2026-08-07.",
+  "scope": "Close only ADV-W7-204-H15 and the named round-204 trace-framing findings; engine, model, pool, oracle and production binary remain unchanged.",
+  "runtime_authority": {
+    "dependencies": ["trace scorer", "tokenizer JSON", "tokenizers Python initializer", "tokenizers native library"],
+    "requirement": "Each is a regular non-symlink file whose SHA-256 equals the frozen constant before the scorer or tokenizer is loaded.",
+    "scorer_contract": "Exit zero; exact schema and exact check keys; schema_version=1; verdict PASS; error null; two typed observations; every check boolean true.",
+    "trace_contract": "No leading byte is allowed, exactly two complete request blocks exist, and request IDs are exactly [1,2]."
+  },
+  "mutations": [
+    "scorer path/content substitution",
+    "tokenizer JSON path/content substitution",
+    "tokenizer initializer path/content substitution",
+    "tokenizer native library path/content substitution",
+    "true checks with nonzero scorer exit",
+    "inconsistent verdict, error, version, key set, or false check",
+    "leading whitespace or NUL",
+    "duplicate or reversed request IDs"
+  ],
+  "next": "Freeze candidate 10, run the two persistent reviewers on only the bounded diff, obtain fresh post-freeze randomness after no high/critical findings remain, then run the contained geometry smoke."
+}

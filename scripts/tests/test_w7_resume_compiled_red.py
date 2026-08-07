@@ -2,6 +2,7 @@ import json
 import base64
 import importlib.util
 import pathlib
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -111,8 +112,100 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
             "TOKENIZER_NATIVE_SHA256",
         ):
             self.assertIn(f"readonly {name}=", source)
-            self.assertIn(f'== "${name}"', source)
+        for path, digest in (
+            ("TRACE_SCORER", "TRACE_SCORER_SHA256"),
+            ("TOKENIZER", "TOKENIZER_SHA256"),
+            ("TOKENIZER_INIT", "TOKENIZER_INIT_SHA256"),
+            ("TOKENIZER_NATIVE", "TOKENIZER_NATIVE_SHA256"),
+        ):
+            self.assertIn(f'"${path}" "${digest}"', source)
         self.assertIn("--validate-trace-result", source)
+
+    def test_trace_result_contract_rejects_exit_schema_and_verdict_mutations(self):
+        checks = {
+            "trace_exactly_two_requests": True,
+            "trace_request_ids_exact": True,
+            "trace_request_bytes_exact": True,
+            "trace_rendered_bytes_exact": True,
+            "trace_token_vectors_exact": True,
+        }
+        observation = {
+            "request_sha256": "1" * 64,
+            "rendered_sha256": "2" * 64,
+            "token_count": 1,
+            "token_ids_sha256": "3" * 64,
+        }
+        valid = {
+            "schema_version": 1,
+            "checks": checks,
+            "observed": [observation, observation],
+            "error": None,
+            "verdict": "PASS",
+        }
+
+        def validate(document, returncode=0):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as handle:
+                json.dump(document, handle)
+                handle.flush()
+                return subprocess.run(
+                    [str(HARNESS), "--validate-trace-result", str(returncode), handle.name],
+                    cwd=ROOT,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+
+        self.assertEqual(validate(valid).returncode, 0)
+        mutations = []
+        mutations.append((valid, 2))
+        for key, value in (("verdict", "FAIL"), ("error", "forged"), ("schema_version", 2)):
+            changed = json.loads(json.dumps(valid))
+            changed[key] = value
+            mutations.append((changed, 0))
+        extra = json.loads(json.dumps(valid))
+        extra["unexpected"] = True
+        mutations.append((extra, 0))
+        false_check = json.loads(json.dumps(valid))
+        false_check["checks"]["trace_request_bytes_exact"] = False
+        mutations.append((false_check, 0))
+        missing_check = json.loads(json.dumps(valid))
+        del missing_check["checks"]["trace_request_ids_exact"]
+        mutations.append((missing_check, 0))
+        for document, returncode in mutations:
+            with self.subTest(returncode=returncode, document=document):
+                self.assertNotEqual(validate(document, returncode).returncode, 0)
+
+    def test_self_test_rejects_runtime_dependency_path_substitution(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        substitutions = {
+            "TRACE_SCORER": "$REPO/scripts/83_score_w7_deployed_trace.py",
+            "TOKENIZER": "/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json",
+            "TOKENIZER_INIT": "$TOKENIZER_RUNTIME/tokenizers/__init__.py",
+            "TOKENIZER_NATIVE": "$TOKENIZER_RUNTIME/tokenizers/tokenizers.abi3.so",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            replacement = root / "substituted"
+            replacement.write_bytes(b"not the frozen dependency")
+            replacement.chmod(0o700)
+            for name, original in substitutions.items():
+                mutated = source.replace(
+                    f"readonly {name}={original}",
+                    f"readonly {name}={replacement}",
+                    1,
+                )
+                self.assertNotEqual(mutated, source, name)
+                script = root / f"harness-{name}"
+                script.write_text(mutated, encoding="utf-8")
+                script.chmod(0o700)
+                completed = subprocess.run(
+                    [str(script), "--self-test"],
+                    cwd=ROOT,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertNotEqual(completed.returncode, 0, name)
 
     def test_trace_scorer_rejects_equal_length_render_mutation(self):
         scorer = _load_trace_scorer()
@@ -150,6 +243,22 @@ class W7CompiledRedHarnessTests(unittest.TestCase):
             pathlib.Path("/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2"),
         )
         self.assertEqual(scorer.score_trace(good_trace, *args)["verdict"], "PASS")
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            fake_tokenizer = root / "tokenizer.json"
+            fake_tokenizer.write_text("{}", encoding="utf-8")
+            self.assertEqual(
+                scorer.score_trace(good_trace, pool, requests[0], requests[1], fake_tokenizer, args[4])["verdict"],
+                "FAIL",
+            )
+            fake_runtime = root / "runtime"
+            (fake_runtime / "tokenizers").mkdir(parents=True)
+            shutil.copyfile(args[4] / "tokenizers/__init__.py", fake_runtime / "tokenizers/__init__.py")
+            (fake_runtime / "tokenizers/tokenizers.abi3.so").write_bytes(b"mutated native runtime")
+            self.assertEqual(
+                scorer.score_trace(good_trace, pool, requests[0], requests[1], args[3], fake_runtime)["verdict"],
+                "FAIL",
+            )
         mutated = bytes([rendered[1][0] ^ 1]) + rendered[1][1:]
         bad_trace = block(1, requests[0], rendered[0]) + block(2, requests[1], mutated)
         result = scorer.score_trace(bad_trace, *args)

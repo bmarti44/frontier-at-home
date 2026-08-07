@@ -11,11 +11,17 @@ readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
 readonly TRACE_SCORER=$REPO/scripts/83_score_w7_deployed_trace.py
+readonly TRACE_SCORER_SHA256=6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985
 readonly STEM=$REPO/results/glm52-gates/harness/fixture-glm-long8.json
 readonly POOL=$REPO/results/glm52-gates/harness/w7-production-fixture-pool-v1.json
 readonly POOL_SHA256=c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9
 readonly TOKENIZER=/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json
+readonly TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d
 readonly TOKENIZER_RUNTIME=/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2
+readonly TOKENIZER_INIT=$TOKENIZER_RUNTIME/tokenizers/__init__.py
+readonly TOKENIZER_INIT_SHA256=eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4
+readonly TOKENIZER_NATIVE=$TOKENIZER_RUNTIME/tokenizers/tokenizers.abi3.so
+readonly TOKENIZER_NATIVE_SHA256=fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910
 readonly RENDER_ORACLE=/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle
 readonly RENDER_ORACLE_SHA256=6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66
 readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-d652a9b5
@@ -29,6 +35,77 @@ readonly CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
 readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock
 readonly PORT=8097
 readonly CACHE_GIB=40
+
+verify_dependencies() {
+  local path expected
+  while (( $# )); do
+    path=$1 expected=$2
+    shift 2
+    [[ -f $path && ! -L $path && $(sha256sum -- "$path" | awk '{print $1}') == "$expected" ]] || return 2
+  done
+}
+
+verify_runtime_dependencies() {
+  verify_dependencies \
+    "$TRACE_SCORER" "$TRACE_SCORER_SHA256" \
+    "$TOKENIZER" "$TOKENIZER_SHA256" \
+    "$TOKENIZER_INIT" "$TOKENIZER_INIT_SHA256" \
+    "$TOKENIZER_NATIVE" "$TOKENIZER_NATIVE_SHA256"
+}
+
+trace_result_contract() {
+  [[ $# == 2 && $1 =~ ^[0-9]+$ && -f $2 ]] || return 2
+  /usr/bin/python3 -I -B - "$1" "$2" <<'PY'
+import json
+import re
+import sys
+
+def pairs(items):
+    result = {}
+    for key, value in items:
+        if key in result:
+            raise ValueError(f"duplicate key: {key}")
+        result[key] = value
+    return result
+
+def reject_constant(value):
+    raise ValueError(f"non-finite value: {value}")
+
+returncode = int(sys.argv[1])
+document = json.loads(open(sys.argv[2], encoding="utf-8").read(), object_pairs_hook=pairs, parse_constant=reject_constant)
+if returncode != 0:
+    raise SystemExit("trace scorer exited nonzero")
+if set(document) != {"schema_version", "checks", "observed", "error", "verdict"}:
+    raise SystemExit("trace scorer top-level schema mismatch")
+expected_checks = {
+    "trace_exactly_two_requests",
+    "trace_request_ids_exact",
+    "trace_request_bytes_exact",
+    "trace_rendered_bytes_exact",
+    "trace_token_vectors_exact",
+}
+if document["schema_version"] != 1 or isinstance(document["schema_version"], bool):
+    raise SystemExit("trace scorer schema version mismatch")
+if not isinstance(document["checks"], dict) or set(document["checks"]) != expected_checks:
+    raise SystemExit("trace scorer check schema mismatch")
+if any(value is not True for value in document["checks"].values()):
+    raise SystemExit("trace scorer check failed")
+if document["verdict"] != "PASS" or document["error"] is not None:
+    raise SystemExit("trace scorer verdict contract mismatch")
+if not isinstance(document["observed"], list) or len(document["observed"]) != 2:
+    raise SystemExit("trace scorer observation count mismatch")
+observation_keys = {"request_sha256", "rendered_sha256", "token_count", "token_ids_sha256"}
+for item in document["observed"]:
+    if not isinstance(item, dict) or set(item) != observation_keys:
+        raise SystemExit("trace scorer observation schema mismatch")
+    if not isinstance(item["token_count"], int) or isinstance(item["token_count"], bool) or item["token_count"] <= 0:
+        raise SystemExit("trace scorer token count invalid")
+    for key in ("request_sha256", "rendered_sha256", "token_ids_sha256"):
+        if not isinstance(item[key], str) or re.fullmatch(r"[0-9a-f]{64}", item[key]) is None:
+            raise SystemExit("trace scorer digest invalid")
+print(json.dumps(document, sort_keys=True, separators=(",", ":")))
+PY
+}
 
 fixture_check() {
   [[ $# == 1 ]] || return 2
@@ -157,37 +234,46 @@ driver() {
 }
 
 score_red() {
-  local out=$1
-  /usr/bin/python3 -I -B - "$out" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$TRACE_SCORER" <<'PY'
+  local out=$1 trace_scorer_rc trace_contract_rc
+  set +e
+  /usr/bin/python3 -I -B "$TRACE_SCORER" \
+    --trace "$out/request.trace" \
+    --pool "$POOL" \
+    --live-request "$out/live-request.json" \
+    --primary-request "$out/primary-request.json" \
+    --tokenizer "$TOKENIZER" \
+    --tokenizer-runtime "$TOKENIZER_RUNTIME" \
+    >"$out/trace-scorer.stdout" 2>"$out/trace-scorer.stderr"
+  trace_scorer_rc=$?
+  trace_result_contract "$trace_scorer_rc" "$out/trace-scorer.stdout" \
+    >"$out/trace-result.validated.json" 2>"$out/trace-contract.stderr"
+  trace_contract_rc=$?
+  set -e
+  printf '%s\n' "$trace_scorer_rc" >"$out/trace-scorer.rc"
+  printf '%s\n' "$trace_contract_rc" >"$out/trace-contract.rc"
+  /usr/bin/python3 -I -B - "$out" "$POOL" "$TOKENIZER" "$TOKENIZER_RUNTIME" "$TRACE_SCORER" "$trace_contract_rc" "$trace_scorer_rc" "$TOKENIZER_INIT" "$TOKENIZER_NATIVE" <<'PY'
 import hashlib
 import json
 import pathlib
 import re
-import subprocess
 import sys
 
 out = pathlib.Path(sys.argv[1])
 log = (out / "server.log").read_text(encoding="utf-8", errors="replace")
 live = json.loads((out / "live-response.json").read_text(encoding="utf-8"))
 primary = json.loads((out / "primary-response.json").read_text(encoding="utf-8"))
-trace_run = subprocess.run([
-    sys.executable, "-I", "-B", sys.argv[5],
-    "--trace", str(out / "request.trace"),
-    "--pool", sys.argv[2],
-    "--live-request", str(out / "live-request.json"),
-    "--primary-request", str(out / "primary-request.json"),
-    "--tokenizer", sys.argv[3],
-    "--tokenizer-runtime", sys.argv[4],
-], text=True, capture_output=True, check=False)
-try:
-    trace_result = json.loads(trace_run.stdout)
-except Exception:
+trace_contract_rc = int(sys.argv[6])
+trace_scorer_rc = int(sys.argv[7])
+if trace_contract_rc == 0:
+    trace_result = json.loads((out / "trace-result.validated.json").read_text(encoding="utf-8"))
+else:
     trace_result = {"checks": {
         "trace_exactly_two_requests": False,
+        "trace_request_ids_exact": False,
         "trace_request_bytes_exact": False,
         "trace_rendered_bytes_exact": False,
         "trace_token_vectors_exact": False,
-    }, "error": "trace scorer produced malformed output"}
+    }, "error": "trace scorer result contract failed", "observed": [], "schema_version": 1, "verdict": "FAIL"}
 checks = {
     "live_http_200": (out / "live-http-status").read_text().strip() == "200",
     "primary_http_200": (out / "primary-http-status").read_text().strip() == "200",
@@ -201,7 +287,7 @@ checks = {
     **trace_result["checks"],
 }
 desired_resume_pass = (
-    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5055", "primary_prompt_tokens_5066", "live_miss_geometry", "selected_checkpoint_5044", "legacy_guard_bypass_absent", "trace_exactly_two_requests", "trace_request_bytes_exact", "trace_rendered_bytes_exact", "trace_token_vectors_exact"))
+    all(checks[name] for name in ("live_http_200", "primary_http_200", "live_prompt_tokens_5055", "primary_prompt_tokens_5066", "live_miss_geometry", "selected_checkpoint_5044", "legacy_guard_bypass_absent", "trace_exactly_two_requests", "trace_request_ids_exact", "trace_request_bytes_exact", "trace_rendered_bytes_exact", "trace_token_vectors_exact"))
     and not checks["strict_guard_cold_restart"]
     and re.search(r"GLM sync start=5044 prompt=5066 suffix=22\\b", log) is not None
 )
@@ -218,6 +304,14 @@ summary = {
     "server_log_sha256": hashlib.sha256((out / "server.log").read_bytes()).hexdigest(),
     "request_trace_sha256": hashlib.sha256((out / "request.trace").read_bytes()).hexdigest() if (out / "request.trace").is_file() else None,
     "trace_scorer": trace_result,
+    "trace_scorer_exit_code": trace_scorer_rc,
+    "trace_contract_exit_code": trace_contract_rc,
+    "runtime_dependency_sha256": {
+        "trace_scorer": hashlib.sha256(pathlib.Path(sys.argv[5]).read_bytes()).hexdigest(),
+        "tokenizer": hashlib.sha256(pathlib.Path(sys.argv[3]).read_bytes()).hexdigest(),
+        "tokenizer_init": hashlib.sha256(pathlib.Path(sys.argv[8]).read_bytes()).hexdigest(),
+        "tokenizer_native": hashlib.sha256(pathlib.Path(sys.argv[9]).read_bytes()).hexdigest(),
+    },
     "verdict": "RED_CONFIRMED" if red_confirmed else ("PASS" if desired_resume_pass else "NO_RESULT"),
 }
 (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -226,7 +320,12 @@ raise SystemExit(1 if red_confirmed else (0 if desired_resume_pass else 2))
 PY
 }
 
-if [[ ${1:-} == --self-test ]]; then
+if [[ ${1:-} == --validate-trace-result ]]; then
+  [[ $# == 3 ]] || exit 2
+  trace_result_contract "$2" "$3"
+  exit $?
+elif [[ ${1:-} == --self-test ]]; then
+  verify_runtime_dependencies
   [[ $(sha256sum -- "$POOL" | awk '{print $1}') == "$POOL_SHA256" ]]
   [[ $(sha256sum -- "$RENDER_ORACLE" | awk '{print $1}') == "$RENDER_ORACLE_SHA256" ]]
   [[ $(sha256sum -- "$BIN" | awk '{print $1}') == "$BINARY_SHA256" ]]
@@ -248,6 +347,7 @@ fi
   exit 2
 }
 [[ -x $BIN && -r $MODEL && -r $STEM && -r $POOL && -r $SAFE && -x $CGROUP && -r $TRACE_SCORER ]] || exit 2
+verify_runtime_dependencies
 [[ $(sha256sum -- "$BIN" | awk '{print $1}') == "$BINARY_SHA256" ]] || exit 2
 [[ $(sha256sum -- "$POOL" | awk '{print $1}') == "$POOL_SHA256" ]] || exit 2
 [[ $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]] || exit 2
