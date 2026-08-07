@@ -1,0 +1,64 @@
+{
+  "schema": "glm52-w9-real-capture-freeze-v1",
+  "gate": "W9-real-capture",
+  "candidate": 2,
+  "main_commit": "e0fda22b1fa93520a1f942893d990cd9c04b9635",
+  "engine_commit": "9ebc0f2879c126db095ecd25be0567166868d52c",
+  "engine_base_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "engine_source_sha256": {
+    "ds4.c": "d3fdf595a2f350891e60a3852657ff2d8daaf528dd74a21131bd58f069ba5d33",
+    "ds4_cuda.cu": "61c476be7740149e9c1ea2d838b7b3afb2ef5ed2b1bf6839ffe27fbd92f9fd14",
+    "ds4_cli.c": "a118bec72613c70c8bcc2c6d52156067fa205954b71c9a734fbd3e69ae2df6e8",
+    "ds4.h": "1d1772d33116e634aabeaf8663588372a6da0530e07a29468ca305e5d4b8d1e8"
+  },
+  "tests_sha256_by_path": {
+    "tests/test_glm_w9_real_capture_source.py": "60e1c1945c543499ecd2bba41d23f4779dd7bc4b71a130c63ea4fc36c8d51e09",
+    "tests/test_glm_w9_capture_behavior.c": "be45d7176324cc085f2c8c9e5a47e7873e20f6b756e812636085a788101824af",
+    "scripts/tests/test_w9_real_capture_scorer.py": "f6ec5a531743e32301690cc15da42dbe0a6ac5228efd0b54d23911286e24ab19"
+  },
+  "clean_builds": {
+    "raw_cli_sha256": [
+      "a87efaa005f1b6daa30290a54927c634d9b030dfa37d03d1b29a529b0d9f0914",
+      "4743e7c67b0f4d14f5945ada1b7d8f4b28d27c6b10b1038858e5f0bf511046d8"
+    ],
+    "raw_server_sha256": [
+      "aa097b5fbd1fb212f101ad5f767c471f1bd788646ffaa4afb074e3aa59f7a38b",
+      "8acf65c8280eeae4b96099209a924bec493c9261c80c41285d99cce68d42363d"
+    ],
+    "canonical_cli_sha256": [
+      "1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476",
+      "1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476"
+    ],
+    "canonical_server_sha256": [
+      "99908eef30b61abdecf914801427acf5f641f424c153e3b0409aff57d1bfc1ea",
+      "99908eef30b61abdecf914801427acf5f641f424c153e3b0409aff57d1bfc1ea"
+    ],
+    "canonicalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "canonical_builds_byte_identical": true
+  },
+  "binary_sha256": "1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+  "harness": {
+    "path": "results/glm52-gates/harness/w9_real_capture_v1.sh",
+    "sha256": "e6e3aad14b086e6f0e6fc2dd6a8655605b4457780b4487a47c8c97e6b1507ad8"
+  },
+  "scorer": {
+    "path": "scripts/91_score_w9_real_capture.py",
+    "sha256": "25ad09396673631819f87ec405c95dd16c90e28505b9deb1a39d768e9fb87c44"
+  },
+  "prompt_builder": {
+    "path": "scripts/92_build_w9_prompt.py",
+    "sha256": "5318db1e115ba415fa23ec90fc43174c51094421c4eab72d1e20950ac1b86b67"
+  },
+  "focused_checks": {
+    "compiled_behavioral_test": "PASS",
+    "source_contract_tests": "6/6 PASS",
+    "scorer_and_harness_tests": "7/7 PASS",
+    "cuda_cli_and_server_link": "PASS",
+    "secret_scanner_self_test": "PASS"
+  },
+  "review_sources": "/tmp/glm52-w9-review-9ebc0f2",
+  "runtime_allowed": false,
+  "note": "Raw binaries differ only in nondeterministic debug/build-id data; canonical release binaries are byte-identical. No model-backed arm has run for this candidate."
+}
