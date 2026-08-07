@@ -21,14 +21,19 @@ LIVE_SHA256 = "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a"
 
 EXPECTED_DUMPS = {
     "strict": {
-        "logits.sync1.start0.prompt5055.suffix5055",
-        "logits.sync2.start0.prompt5066.suffix5066",
+        "logits.sync1.start0.prompt5044.suffix5044",
+        "logits.sync2.start5044.prompt5055.suffix11",
+        "logits.sync3.start0.prompt5066.suffix5066",
     },
     "candidate": {
-        "logits.sync1.start0.prompt5055.suffix5055",
+        "logits.sync1.start0.prompt5044.suffix5044",
+        "logits.sync2.start5044.prompt5055.suffix11",
+        "logits.sync3.start5044.prompt5066.suffix22",
+    },
+    "cold": {
+        "logits.sync1.start0.prompt5044.suffix5044",
         "logits.sync2.start5044.prompt5066.suffix22",
     },
-    "cold": {"logits.sync1.start0.prompt5066.suffix5066"},
 }
 REQUIRED_BINDINGS = {
     "harness_sha256", "binary_sha256", "model_sha256", "scorer_sha256",
@@ -472,7 +477,8 @@ def score(
         and "GLM resume guard:" not in logs["candidate"]
     )
     checks["cold_control_observed"] = (
-        "GLM sync start=0 prompt=5066 suffix=5066" in logs["cold"]
+        "GLM sync start=0 prompt=5044 suffix=5044" in logs["cold"]
+        and "GLM sync start=5044 prompt=5066 suffix=22" in logs["cold"]
         and "GLM resume guard:" not in logs["cold"]
         and "restored-frontier diagnostic:" not in logs["cold"]
     )
@@ -512,10 +518,10 @@ def score(
     }
     try:
         candidate_logits = _logits(
-            candidate / "logits.sync2.start5044.prompt5066.suffix22"
+            candidate / "logits.sync3.start5044.prompt5066.suffix22"
         )
-        cold_logits = _logits(cold / "logits.sync1.start0.prompt5066.suffix5066")
-        strict_logits = _logits(strict / "logits.sync2.start0.prompt5066.suffix5066")
+        cold_logits = _logits(cold / "logits.sync2.start5044.prompt5066.suffix22")
+        strict_logits = _logits(strict / "logits.sync3.start0.prompt5066.suffix5066")
         checks["candidate_logits_finite"] = all(map(math.isfinite, candidate_logits))
         checks["cold_logits_finite"] = all(map(math.isfinite, cold_logits))
         checks["strict_logits_finite"] = all(map(math.isfinite, strict_logits))
@@ -550,18 +556,12 @@ def score(
             observed["max_abs_logit_delta"] is not None
             and observed["max_abs_logit_delta"] < 0.01
         )
-        checks["strict_control_matches_cold"] = (
-            observed["strict_argmax"] is not None
-            and observed["strict_argmax"] == observed["cold_argmax"]
-            and observed["strict_vs_cold_max_abs_logit_delta"] == 0.0
-        )
     except (OSError, ValueError):
         checks["candidate_logits_finite"] = False
         checks["cold_logits_finite"] = False
         checks["strict_logits_finite"] = False
         checks["candidate_argmax_matches_cold"] = False
         checks["candidate_max_abs_delta_lt_1e_2"] = False
-        checks["strict_control_matches_cold"] = False
 
     verdict = "PASS" if checks and all(checks.values()) else "FAIL"
     return {

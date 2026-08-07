@@ -38,12 +38,12 @@ readonly TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4
 readonly TOKENIZER_INIT_SHA256=eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4
 readonly TOKENIZER_NATIVE_SHA256=fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910
 readonly TRACE_SCORER_SHA256=6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985
-readonly SCORER_SHA256=69055136ce93545c410bed1fb8590e0c45376bddbb77c9ac01954317e9c0b6bf
+readonly SCORER_SHA256=8e5fec7b2eb82b32c2c96cf8d4f0941642c5d961bc06c958a105fe657c284b2e
 readonly CGROUP_SHA256=e5a37b35d3ff1e8a7ee08d0f2c1396441b0dbc4abd64220389362ae6c6994c32
 readonly SAFE_SHA256=6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801
 readonly MEMORY_GUARD_SHA256=3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58
 readonly ENGINE_FREEZE_SHA256=c7a014bd1008522f6aea9541e6fc556d8c67ce27000ada0a68907d388f98d37f
-readonly CONFIGURATION_SHA256=5e01b5d673a031ba1fbeb79bdaeba426a3a5912557c2aa648b6458d6a115151f
+readonly CONFIGURATION_SHA256=331fd923c1b473947806cb914e5a98674f66a862b704cb130cdb75bd9ce3ecd6
 readonly ENGINE_SOURCE_COMMIT=7822efd945f1c5366844d253b22e953b6721b650
 
 verify_file() {
@@ -153,13 +153,15 @@ PY
 driver() {
   [[ $# == 2 ]] || return 2
   local arm=$1 arm_out=$2 code
+  local boundary_trim=8
   [[ $arm == strict || $arm == candidate || $arm == cold ]] || return 2
+  [[ $arm == cold ]] && boundary_trim=20
   mkdir "$arm_out/kv"
   "$BIN" --cuda -m "$MODEL" -c 8192 --host 127.0.0.1 --port "$PORT" \
     --trace "$arm_out/request.trace" \
     --ssd-streaming --ssd-streaming-cache-experts 40GB \
     --kv-disk-dir "$arm_out/kv" --kv-disk-space-mb 4096 \
-    --kv-cache-boundary-align-tokens 4 --kv-cache-boundary-trim-tokens 8 \
+    --kv-cache-boundary-align-tokens 4 --kv-cache-boundary-trim-tokens "$boundary_trim" \
     >"$arm_out/server.log" 2>&1 &
   server_pid=$!
   trap stop_server EXIT INT TERM HUP
