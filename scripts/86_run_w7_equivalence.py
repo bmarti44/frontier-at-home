@@ -7,24 +7,27 @@ import hashlib
 import json
 import os
 import pwd
-import re
 import subprocess
 
 
 REPO = "/home/bmarti44/spark-deepseek-v4-flash"
-CANDIDATE_COMMIT = "713c93dbc5bd7657e419241b98d532495a5a398d"
+DRAND_FLOOR_ROUND = 6356215
+CANDIDATE_COMMIT = "d11a8751f6e4de82c23b20d161efa855bd5ef6ba"
+HARNESS_SHA256 = "939701c2ce014d24d6ef9012315e9d3e84974ddf621dde4fc8b35bfe4464fcc4"
+SCORER_SHA256 = "69055136ce93545c410bed1fb8590e0c45376bddbb77c9ac01954317e9c0b6bf"
+TRACE_SCORER_SHA256 = "6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985"
 FROZEN = {
     "harness": (
         "results/glm52-gates/harness/w7_resume_equivalence_v1.sh",
-        "532d711bf6370153aa60bfc6ec24e0501b17f98f70b5128f30c808f6e10653ce",
+        HARNESS_SHA256,
     ),
     "scorer": (
         "scripts/85_score_w7_resume_equivalence.py",
-        "197131308e73bb83a783f3d697157f78b0802c04ec2e14f280c609a934ff20ce",
+        SCORER_SHA256,
     ),
     "trace_scorer": (
         "scripts/83_score_w7_deployed_trace.py",
-        "6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985",
+        TRACE_SCORER_SHA256,
     ),
 }
 SEALS = (
@@ -103,12 +106,83 @@ def _mutation_test(fds: dict[str, int]) -> None:
     print("W7_EQUIVALENCE_SEALS_OK", json.dumps(results, sort_keys=True))
 
 
-def _environment(fds: dict[str, int], seed_sha256: str) -> dict[str, str]:
+def _strict_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate drand key: {key}")
+        result[key] = value
+    return result
+
+
+def _public_randomness() -> tuple[str, str]:
+    records = []
+    for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
+        response = subprocess.run(
+            [
+                "/usr/bin/curl", "--disable", "--silent", "--show-error",
+                "--fail", "--max-time", "15", "--proto", "=https",
+                f"https://{host}/public/latest",
+            ],
+            env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin"},
+            capture_output=True,
+            check=True,
+        )
+        record = json.loads(
+            response.stdout, object_pairs_hook=_strict_object,
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite drand value: {value}")
+            ),
+        )
+        records.append(record)
+    if not records[0] == records[1] == records[2]:
+        raise SystemExit("drand latest relays disagree")
+    record = records[0]
+    if set(record) != {"round", "randomness", "signature", "previous_signature"}:
+        raise SystemExit("unexpected drand record schema")
+    round_number = record["round"]
+    randomness = record["randomness"]
+    signature = record["signature"]
+    previous = record["previous_signature"]
+    if (
+        type(round_number) is not int or round_number <= DRAND_FLOOR_ROUND
+        or not isinstance(randomness, str) or len(randomness) != 64
+        or not isinstance(signature, str) or len(signature) != 192
+        or not isinstance(previous, str) or len(previous) != 192
+    ):
+        raise SystemExit("invalid or stale drand record")
+    try:
+        signature_bytes = bytes.fromhex(signature)
+        bytes.fromhex(previous)
+        bytes.fromhex(randomness)
+    except ValueError as error:
+        raise SystemExit("non-hex drand record") from error
+    if hashlib.sha256(bytes.fromhex(signature)).hexdigest() != randomness:
+        raise SystemExit("drand randomness does not derive from signature")
+    receipt = {
+        "schema_version": 1,
+        "source": "drand-default-latest-three-relay",
+        "freeze_floor_round": DRAND_FLOOR_ROUND,
+        **record,
+        "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
+    }
+    receipt_json = json.dumps(receipt, sort_keys=True, separators=(",", ":"))
+    seed_material = (
+        b"GLM52-W7-ARM-ORDER-V1\0" + CANDIDATE_COMMIT.encode() + b"\0"
+        + str(round_number).encode() + b"\0" + randomness.encode()
+    )
+    return hashlib.sha256(seed_material).hexdigest(), receipt_json
+
+
+def _environment(
+    fds: dict[str, int], seed_sha256: str, receipt_json: str,
+) -> dict[str, str]:
     environment = dict(BASE_ENV)
     environment.update(
         W7_EXECUTED_HARNESS_SHA256=FROZEN["harness"][1],
         W7_FROZEN_CANDIDATE_COMMIT=CANDIDATE_COMMIT,
         W7_RANDOM_SEED_SHA256=seed_sha256,
+        W7_RANDOMNESS_RECEIPT_JSON=receipt_json,
         W7_SEALED_HARNESS_FD=str(fds["harness"]),
         W7_SEALED_SCORER_FD=str(fds["scorer"]),
         W7_SEALED_TRACE_SCORER_FD=str(fds["trace_scorer"]),
@@ -118,7 +192,6 @@ def _environment(fds: dict[str, int], seed_sha256: str) -> dict[str, str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--seed-sha256")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     os.environ.clear()
@@ -126,12 +199,21 @@ def main() -> None:
     fds = _sealed_inputs()
     _mutation_test(fds)
     if args.self_test:
-        if args.seed_sha256 is not None:
-            raise SystemExit(2)
+        environment = _environment(fds, "0" * 64, "{}")
+        result = subprocess.run(
+            [
+                "/usr/bin/bash", "--noprofile", "--norc",
+                f"/proc/self/fd/{fds['harness']}", "--validate-sealed-runtime",
+            ],
+            env=environment, pass_fds=tuple(fds.values()), text=True,
+            capture_output=True, check=False,
+        )
+        if result.returncode != 0:
+            raise SystemExit(result.stderr or result.returncode)
+        print(result.stdout, end="")
         return
-    if args.seed_sha256 is None or re.fullmatch(r"[0-9a-f]{64}", args.seed_sha256) is None:
-        raise SystemExit("--seed-sha256 must be one lowercase SHA-256 digest")
-    environment = _environment(fds, args.seed_sha256)
+    seed_sha256, receipt_json = _public_randomness()
+    environment = _environment(fds, seed_sha256, receipt_json)
     os.execve(
         "/usr/bin/bash",
         [
