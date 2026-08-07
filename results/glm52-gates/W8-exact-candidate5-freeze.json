@@ -1,0 +1,31 @@
+{
+  "schema": "glm52-w8-exact-engine-freeze-v1",
+  "gate_candidate_count": 9,
+  "engine_base": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "engine_commit": "3054a9fadfe79156046fcb23e1a36c3aa5162762",
+  "binary_sha256": "bbecf2395a66516352aec7fbe37a671be705458ab2c3c5dacadb39c075261a4a",
+  "binary_bytes": 6702368,
+  "patch_sha256": "ce972810db71d89c0d50d0d5248b4e10d4eec6141dc586060981665768a70dc1",
+  "build": {
+    "jobs": 2,
+    "clean_builds": 2,
+    "cuda_arch": "sm_121",
+    "normalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "build_1_binary_sha256": "bbecf2395a66516352aec7fbe37a671be705458ab2c3c5dacadb39c075261a4a",
+    "build_2_binary_sha256": "bbecf2395a66516352aec7fbe37a671be705458ab2c3c5dacadb39c075261a4a",
+    "byte_identical": true
+  },
+  "red_commit": "a18a8be04943222bc1198fdf861f09e55980f0d6",
+  "implementation_commit": "3054a9fadfe79156046fcb23e1a36c3aa5162762",
+  "tests": {
+    "authoritative_non_padding_telemetry": "PASS",
+    "padding_only_scorer_mutation": "PASS",
+    "selected_padding_store": "PASS",
+    "direct_slot_byte_identity_with_padding": "PASS",
+    "non_sentinel_out_of_range_rejection": "PASS",
+    "one_million_shape": "PASS",
+    "production_source_contract": "PASS"
+  },
+  "acceptance_formula": "terminal selected_rows equals checksummed store non-padding rows; padding-only telemetry cannot satisfy positive exact-I/O evidence",
+  "scope": "Owner-resumed candidate 9 closes only ADV-W8-242-H59 after the recorded convergence pause."
+}

@@ -24,7 +24,7 @@ class W8ExactSmokeContractTests(unittest.TestCase):
     def test_harness_pins_reviewed_runtime_and_preserves_failures(self):
         source = HARNESS.read_text(encoding="utf-8")
         for needle in (
-            "W8-exact-smoke-review-r242.json",
+            "W8-exact-smoke-review-r243.json",
             "drand_min_round",
             "verify_reviewed_components",
             "finalize_attempt",
@@ -62,7 +62,7 @@ class W8ExactSmokeContractTests(unittest.TestCase):
     def test_safe_wrapper_candidate_source_contains_frozen_binary(self):
         source = HARNESS.read_text(encoding="utf-8")
         runtime = pathlib.Path(
-            "/home/bmarti44/.cache/glm52-w8-364eea1-runtime"
+            "/home/bmarti44/.cache/glm52-w8-3054a9f-runtime"
         )
         binary = runtime / "ds4-server"
         self.assertIn(f"readonly RUNTIME_DIR={runtime}", source)
