@@ -18,6 +18,10 @@ N_VOCAB = 154880
 LOGIT_BYTES = N_VOCAB * 4
 PRIMARY_SHA256 = "a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3"
 LIVE_SHA256 = "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a"
+REPO = Path("/home/bmarti44/spark-deepseek-v4-flash")
+DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
+DRAND_RUNTIME = Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2")
+DRAND_VERIFIER = REPO / "scripts/89_verify_drand_receipt.mjs"
 
 EXPECTED_DUMPS = {
     "strict": {
@@ -41,9 +45,126 @@ REQUIRED_BINDINGS = {
     "trace_scorer_sha256", "fixture_sha256", "tokenizer_sha256",
     "tokenizer_init_sha256", "tokenizer_native_sha256", "cgroup_sha256",
     "safe_sha256", "memory_guard_sha256", "engine_freeze_sha256",
+    "drand_verifier_sha256", "drand_node_sha256", "drand_runtime_tree_sha256",
     "configuration_sha256", "seed_sha256", "live_request_sha256",
     "primary_request_sha256", "randomness_receipt_sha256",
 }
+
+
+def _tree_sha256(root: Path) -> str:
+    digest = hashlib.sha256()
+    paths = sorted(path for path in root.rglob("*") if path.is_file())
+    if not paths or any(path.is_symlink() for path in paths):
+        raise ValueError("invalid drand runtime tree")
+    for path in paths:
+        relative = path.relative_to(root).as_posix().encode()
+        data = path.read_bytes()
+        digest.update(len(relative).to_bytes(4, "big"))
+        digest.update(relative)
+        digest.update(len(data).to_bytes(8, "big"))
+        digest.update(data)
+    return digest.hexdigest()
+
+
+def _randomness_receipt_pass(
+    root: Path, bindings: dict[str, str], expected_harness_sha256: str,
+    expected_scorer_sha256: str,
+) -> bool:
+    try:
+        receipt_path = root / "randomness.json"
+        receipt = _json(receipt_path)
+        required = {
+            "schema_version", "source", "freeze_floor_round", "round",
+            "randomness", "signature", "previous_signature", "relay_agreement",
+            "launcher_commit", "launcher_sha256", "frozen_gate_commit",
+        }
+        if (
+            set(receipt) != required or receipt["schema_version"] != 1
+            or receipt["source"] != "drand-default-preregistered-three-relay"
+            or type(receipt["round"]) is not int
+            or type(receipt["freeze_floor_round"]) is not int
+            or receipt["round"] <= receipt["freeze_floor_round"]
+            or receipt["relay_agreement"]
+                != ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"]
+        ):
+            return False
+        for key, length in (
+            ("randomness", 64), ("signature", 192),
+            ("previous_signature", 192), ("launcher_commit", 40),
+            ("launcher_sha256", 64), ("frozen_gate_commit", 40),
+        ):
+            value = receipt[key]
+            if not isinstance(value, str) or re.fullmatch(
+                rf"[0-9a-f]{{{length}}}", value
+            ) is None:
+                return False
+        if _sha256(receipt_path) != bindings["randomness_receipt_sha256"]:
+            return False
+        launcher = subprocess.run(
+            ["/usr/bin/git", "-C", str(REPO), "show",
+             f"{receipt['launcher_commit']}:scripts/88_run_w7_resume_production.py"],
+            capture_output=True, check=True,
+            env={"HOME": "/home/bmarti44", "PATH": "/usr/bin:/bin"},
+        ).stdout
+        if hashlib.sha256(launcher).hexdigest() != receipt["launcher_sha256"]:
+            return False
+        launcher_text = launcher.decode("utf-8", errors="strict")
+        constants = {
+            key: re.search(pattern, launcher_text, re.M)
+            for key, pattern in {
+                "round": r"^DRAND_TARGET_ROUND = ([0-9]+)$",
+                "candidate": r'^CANDIDATE_COMMIT = "([0-9a-f]{40})"$',
+                "harness": r'^HARNESS_SHA256 = "([0-9a-f]{64})"$',
+                "scorer": r'^SCORER_SHA256 = "([0-9a-f]{64})"$',
+            }.items()
+        }
+        if any(match is None for match in constants.values()):
+            return False
+        if (
+            int(constants["round"].group(1)) != receipt["round"]
+            or constants["candidate"].group(1) != receipt["frozen_gate_commit"]
+            or constants["harness"].group(1) != expected_harness_sha256
+            or constants["scorer"].group(1) != expected_scorer_sha256
+        ):
+            return False
+        for path, expected in (
+            ("results/glm52-gates/harness/w7_resume_production_v1.sh",
+             expected_harness_sha256),
+            ("scripts/87_score_w7_resume_production.py", expected_scorer_sha256),
+        ):
+            blob = subprocess.run(
+                ["/usr/bin/git", "-C", str(REPO), "show",
+                 f"{receipt['frozen_gate_commit']}:{path}"],
+                capture_output=True, check=True,
+                env={"HOME": "/home/bmarti44", "PATH": "/usr/bin:/bin"},
+            ).stdout
+            if hashlib.sha256(blob).hexdigest() != expected:
+                return False
+        seed_material = (
+            b"GLM52-W7-ARM-ORDER-V1\0"
+            + receipt["frozen_gate_commit"].encode() + b"\0"
+            + receipt["launcher_sha256"].encode() + b"\0"
+            + str(receipt["round"]).encode() + b"\0"
+            + receipt["randomness"].encode()
+        )
+        if hashlib.sha256(seed_material).hexdigest() != bindings["seed_sha256"]:
+            return False
+        if (
+            _sha256(DRAND_VERIFIER) != bindings["drand_verifier_sha256"]
+            or _sha256(DRAND_NODE) != bindings["drand_node_sha256"]
+            or _tree_sha256(DRAND_RUNTIME) != bindings["drand_runtime_tree_sha256"]
+        ):
+            return False
+        verification = subprocess.run(
+            [str(DRAND_NODE), str(DRAND_VERIFIER), str(receipt["round"]),
+             receipt["randomness"], receipt["signature"],
+             receipt["previous_signature"]],
+            capture_output=True, check=False, timeout=30,
+            env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin"},
+        )
+        return verification.returncode == 0 and verification.stdout == b"DRAND_BLS_RECEIPT_OK\n"
+    except (OSError, ValueError, KeyError, UnicodeError, subprocess.SubprocessError):
+        return False
 
 
 def _pairs(items: list[tuple[str, object]]) -> dict:
@@ -483,15 +604,46 @@ def _evidence_contract_pass(
                     )),
                 },
                 "common": {
-                    "context": 8192, "cache_gib": 40, "cache_pin": 1,
-                    "cache_slru": 1, "fetch_threads": 6,
-                    "moe_no_atomic_down": 1, "sync_trace": 1,
-                    "logit_dump_all": 1, "boundary_align_tokens": 4,
-                    "boundary_trim_tokens": {
-                        "strict": 8, "candidate": 8, "cold": 20,
+                    "server": {
+                        "host": "127.0.0.1", "port": 8097, "context": 8192,
+                        "model_path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+                        "model_sha256": bindings["model_sha256"],
+                        "ssd_streaming": True,
+                        "ssd_streaming_cache_experts": "40GB",
+                        "kv_disk_space_mb": 4096, "boundary_align_tokens": 4,
+                        "boundary_trim_tokens": {
+                            "strict": 8, "candidate": 8, "cold": 20,
+                        },
+                    },
+                    "environment": {
+                        "DS4_CUDA_EXPERT_CACHE_GB": 40,
+                        "DS4_CUDA_EXPERT_CACHE_PIN": 1,
+                        "DS4_CUDA_EXPERT_CACHE_SLRU": 1,
+                        "DS4_CUDA_FETCH_THREADS": 6,
+                        "DS4_CUDA_MOE_NO_ATOMIC_DOWN": 1,
+                        "DS4_GLM_SYNC_TRACE": 1,
+                        "DS4_GLM_LOGIT_DUMP_ALL": 1,
+                    },
+                    "containment": {
+                        "memory_high_gib": 78, "kill_floor_gib": 24,
+                        "min_start_gib": 110, "timeout_s": 2400,
+                        "lock_path": "/run/user/1000/ds4-engine.lock",
+                        "cgroup_sha256": bindings["cgroup_sha256"],
+                        "safe_sha256": bindings["safe_sha256"],
+                        "memory_guard_sha256": bindings["memory_guard_sha256"],
+                    },
+                    "requests": {
+                        "live_path": "/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/live-request.json",
+                        "live_sha256": LIVE_SHA256,
+                        "primary_path": "/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json",
+                        "primary_sha256": PRIMARY_SHA256,
                     },
                 },
             }
+            and _randomness_receipt_pass(
+                root, bindings, bindings["harness_sha256"],
+                bindings["scorer_sha256"],
+            )
             and manifest["arm_order"] == _expected_arm_order(bindings["seed_sha256"])
             and manifest["raw_sha256"] == hashlib.sha256(raw_bytes).hexdigest()
             and rows == _artifact_rows(root)
@@ -745,6 +897,9 @@ def main() -> int:
     parser.add_argument("--safe-sha256", required=True)
     parser.add_argument("--memory-guard-sha256", required=True)
     parser.add_argument("--engine-freeze-sha256", required=True)
+    parser.add_argument("--drand-verifier-sha256", required=True)
+    parser.add_argument("--drand-node-sha256", required=True)
+    parser.add_argument("--drand-runtime-tree-sha256", required=True)
     parser.add_argument("--configuration-sha256", required=True)
     parser.add_argument("--engine-source-commit", required=True)
     parser.add_argument("--strict-engine-source-commit", required=True)
@@ -775,6 +930,9 @@ def main() -> int:
             "safe_sha256": args.safe_sha256,
             "memory_guard_sha256": args.memory_guard_sha256,
             "engine_freeze_sha256": args.engine_freeze_sha256,
+            "drand_verifier_sha256": args.drand_verifier_sha256,
+            "drand_node_sha256": args.drand_node_sha256,
+            "drand_runtime_tree_sha256": args.drand_runtime_tree_sha256,
             "configuration_sha256": args.configuration_sha256,
             "live_request_sha256": LIVE_SHA256,
             "primary_request_sha256": PRIMARY_SHA256,

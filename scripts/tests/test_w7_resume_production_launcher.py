@@ -26,7 +26,7 @@ class W7ProductionLauncherTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("W7_PRODUCTION_EQUIVALENCE_SEALS_OK", result.stdout)
         self.assertIn("W7_SEALED_RUNTIME_OK", result.stdout)
-        for name in ("harness", "scorer", "trace_scorer"):
+        for name in ("harness", "scorer", "trace_scorer", "drand_verifier"):
             self.assertIn(f'"{name}":', result.stdout)
 
     def test_seed_is_derived_from_latest_public_randomness(self) -> None:
@@ -53,7 +53,13 @@ class W7ProductionLauncherTest(unittest.TestCase):
                 for value in values
             ]
 
-        with mock.patch.object(MODULE.subprocess, "run", side_effect=responses([record] * 3)):
+        verified = subprocess.CompletedProcess(
+            [], 0, b"DRAND_BLS_RECEIPT_OK\n", b""
+        )
+        with mock.patch.object(
+            MODULE.subprocess, "run",
+            side_effect=responses([record] * 3) + [verified],
+        ):
             seed, receipt = MODULE._public_randomness()
         self.assertEqual(len(seed), 64)
         self.assertEqual(json.loads(receipt)["round"], record["round"])

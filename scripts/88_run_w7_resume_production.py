@@ -14,11 +14,17 @@ import sys
 
 
 REPO = "/home/bmarti44/spark-deepseek-v4-flash"
-DRAND_TARGET_ROUND = 6356486
+DRAND_TARGET_ROUND = 6356615
 CANDIDATE_COMMIT = "79332541785007fad3440ff026b09966d560f145"
 HARNESS_SHA256 = "e6a8479ebf804380dc902144026dc50ab69460f6251c520545f5f36a44336aec"
 SCORER_SHA256 = "6eb84ea2e5eaf06aedae36fa6c1d6d6fbb2e822aca8ef0c0b288eaf65c04e94b"
 TRACE_SCORER_SHA256 = "6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985"
+DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
+DRAND_RUNTIME_TREE_SHA256 = "38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4"
+DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
+DRAND_RUNTIME = Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2")
+DRAND_VERIFIER = Path(REPO) / "scripts/89_verify_drand_receipt.mjs"
 FROZEN = {
     "harness": (
         "results/glm52-gates/harness/w7_resume_production_v1.sh",
@@ -31,6 +37,10 @@ FROZEN = {
     "trace_scorer": (
         "scripts/83_score_w7_deployed_trace.py",
         TRACE_SCORER_SHA256,
+    ),
+    "drand_verifier": (
+        "scripts/89_verify_drand_receipt.mjs",
+        DRAND_VERIFIER_SHA256,
     ),
 }
 SEALS = (
@@ -198,7 +208,26 @@ def _strict_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return result
 
 
+def _tree_sha256(root: Path) -> str:
+    digest = hashlib.sha256()
+    paths = sorted(path for path in root.rglob("*") if path.is_file())
+    if not paths or any(path.is_symlink() for path in paths):
+        raise SystemExit("invalid drand runtime tree")
+    for path in paths:
+        relative, data = path.relative_to(root).as_posix().encode(), path.read_bytes()
+        digest.update(len(relative).to_bytes(4, "big")); digest.update(relative)
+        digest.update(len(data).to_bytes(8, "big")); digest.update(data)
+    return digest.hexdigest()
+
+
 def _public_randomness() -> tuple[str, str]:
+    if (
+        hashlib.sha256(DRAND_NODE.read_bytes()).hexdigest() != DRAND_NODE_SHA256
+        or _tree_sha256(DRAND_RUNTIME) != DRAND_RUNTIME_TREE_SHA256
+        or hashlib.sha256(DRAND_VERIFIER.read_bytes()).hexdigest()
+            != DRAND_VERIFIER_SHA256
+    ):
+        raise SystemExit("drand verifier dependency mismatch")
     records = []
     for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
         response = subprocess.run(
@@ -242,6 +271,14 @@ def _public_randomness() -> tuple[str, str]:
         raise SystemExit("non-hex drand record") from error
     if hashlib.sha256(bytes.fromhex(signature)).hexdigest() != randomness:
         raise SystemExit("drand randomness does not derive from signature")
+    verification = subprocess.run(
+        [str(DRAND_NODE), str(DRAND_VERIFIER), str(round_number), randomness,
+         signature, previous],
+        env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin"},
+        capture_output=True, check=False, timeout=30,
+    )
+    if verification.returncode != 0 or verification.stdout != b"DRAND_BLS_RECEIPT_OK\n":
+        raise SystemExit("drand BLS verification failed")
     receipt = {
         "schema_version": 1,
         "source": "drand-default-preregistered-three-relay",
@@ -250,10 +287,12 @@ def _public_randomness() -> tuple[str, str]:
         "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
         "launcher_commit": EXECUTED_LAUNCHER_COMMIT,
         "launcher_sha256": EXECUTED_LAUNCHER_SHA256,
+        "frozen_gate_commit": CANDIDATE_COMMIT,
     }
     receipt_json = json.dumps(receipt, sort_keys=True, separators=(",", ":"))
     seed_material = (
         b"GLM52-W7-ARM-ORDER-V1\0" + CANDIDATE_COMMIT.encode() + b"\0"
+        + EXECUTED_LAUNCHER_SHA256.encode() + b"\0"
         + str(round_number).encode() + b"\0" + randomness.encode()
     )
     return hashlib.sha256(seed_material).hexdigest(), receipt_json

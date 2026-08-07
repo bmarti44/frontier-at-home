@@ -10,6 +10,9 @@ readonly INVOKED_SCRIPT=$0
 readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
+readonly DRAND_VERIFIER=$REPO/scripts/89_verify_drand_receipt.mjs
+readonly DRAND_NODE=/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node
+readonly DRAND_RUNTIME=/home/bmarti44/.cache/glm52-drand-client-1.4.2
 readonly ENGINE_FREEZE=$REPO/results/glm52-gates/W7-resume-production-freeze-v1.json
 readonly TRACE_SCORER=$REPO/scripts/83_score_w7_deployed_trace.py
 readonly SCORER=$REPO/scripts/87_score_w7_resume_production.py
@@ -40,10 +43,13 @@ readonly TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4
 readonly TOKENIZER_INIT_SHA256=eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4
 readonly TOKENIZER_NATIVE_SHA256=fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910
 readonly TRACE_SCORER_SHA256=6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985
-readonly SCORER_SHA256=6eb84ea2e5eaf06aedae36fa6c1d6d6fbb2e822aca8ef0c0b288eaf65c04e94b
+readonly SCORER_SHA256=3ac564627df70cbc0fd103679d7126c6f6815f7f879f56d2cf928e0475fdebea
 readonly CGROUP_SHA256=e5a37b35d3ff1e8a7ee08d0f2c1396441b0dbc4abd64220389362ae6c6994c32
 readonly SAFE_SHA256=6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801
 readonly MEMORY_GUARD_SHA256=3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58
+readonly DRAND_VERIFIER_SHA256=c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131
+readonly DRAND_NODE_SHA256=3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90
+readonly DRAND_RUNTIME_TREE_SHA256=38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4
 readonly ENGINE_FREEZE_SHA256=2a97c273e713cd18045d1c38ec671f5941cdb71287ecbbbcffc136c01ffd68d6
 readonly ENGINE_SOURCE_COMMIT=3ba062e5433e56df7c6da70b58cc9757e7777d54
 readonly STRICT_ENGINE_SOURCE_COMMIT=7822efd945f1c5366844d253b22e953b6721b650
@@ -67,6 +73,22 @@ with os.fdopen(os.dup(fd), "rb") as handle:
     digest = hashlib.file_digest(handle, "sha256").hexdigest()
 if digest != expected:
     raise SystemExit("sealed input digest mismatch")
+PY
+}
+
+verify_tree() {
+  [[ $# == 2 && -d $1 && ! -L $1 && $2 =~ ^[0-9a-f]{64}$ ]] || return 2
+  /usr/bin/python3 -I -B - "$1" "$2" <<'PY'
+import hashlib, pathlib, sys
+root, expected = pathlib.Path(sys.argv[1]), sys.argv[2]
+digest = hashlib.sha256()
+paths = sorted(path for path in root.rglob("*") if path.is_file())
+if not paths or any(path.is_symlink() for path in paths): raise SystemExit(2)
+for path in paths:
+    relative, data = path.relative_to(root).as_posix().encode(), path.read_bytes()
+    digest.update(len(relative).to_bytes(4, "big")); digest.update(relative)
+    digest.update(len(data).to_bytes(8, "big")); digest.update(data)
+if digest.hexdigest() != expected: raise SystemExit(2)
 PY
 }
 
@@ -132,6 +154,9 @@ verify_dependencies() {
   verify_file "$CGROUP" "$CGROUP_SHA256"
   verify_file "$SAFE" "$SAFE_SHA256"
   verify_file "$MEMORY_GUARD" "$MEMORY_GUARD_SHA256"
+  verify_file "$DRAND_VERIFIER" "$DRAND_VERIFIER_SHA256"
+  verify_file "$DRAND_NODE" "$DRAND_NODE_SHA256"
+  verify_tree "$DRAND_RUNTIME" "$DRAND_RUNTIME_TREE_SHA256"
   verify_file "$ENGINE_FREEZE" "$ENGINE_FREEZE_SHA256"
   [[ -f $MODEL && ! -L $MODEL && $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]]
 }
@@ -402,10 +427,34 @@ doc = {
     "schema_version": 1,
     "arms": {"strict": strict, "candidate": candidate, "cold": cold},
     "common": {
-        "context": 8192, "cache_gib": 40, "cache_pin": 1, "cache_slru": 1,
-        "fetch_threads": 6, "moe_no_atomic_down": 1, "sync_trace": 1,
-        "logit_dump_all": 1, "boundary_align_tokens": 4,
-        "boundary_trim_tokens": {"strict": 8, "candidate": 8, "cold": 20},
+        "server": {
+            "host": "127.0.0.1", "port": 8097, "context": 8192,
+            "model_path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+            "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+            "ssd_streaming": True, "ssd_streaming_cache_experts": "40GB",
+            "kv_disk_space_mb": 4096, "boundary_align_tokens": 4,
+            "boundary_trim_tokens": {"strict": 8, "candidate": 8, "cold": 20},
+        },
+        "environment": {
+            "DS4_CUDA_EXPERT_CACHE_GB": 40, "DS4_CUDA_EXPERT_CACHE_PIN": 1,
+            "DS4_CUDA_EXPERT_CACHE_SLRU": 1, "DS4_CUDA_FETCH_THREADS": 6,
+            "DS4_CUDA_MOE_NO_ATOMIC_DOWN": 1, "DS4_GLM_SYNC_TRACE": 1,
+            "DS4_GLM_LOGIT_DUMP_ALL": 1,
+        },
+        "containment": {
+            "memory_high_gib": 78, "kill_floor_gib": 24,
+            "min_start_gib": 110, "timeout_s": 2400,
+            "lock_path": "/run/user/1000/ds4-engine.lock",
+            "cgroup_sha256": "e5a37b35d3ff1e8a7ee08d0f2c1396441b0dbc4abd64220389362ae6c6994c32",
+            "safe_sha256": "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
+            "memory_guard_sha256": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
+        },
+        "requests": {
+            "live_path": "/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/live-request.json",
+            "live_sha256": "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a",
+            "primary_path": "/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json",
+            "primary_sha256": "a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3",
+        },
     },
 }
 encoded = (json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n").encode()
@@ -432,7 +481,7 @@ doc = json.loads(raw, object_pairs_hook=strict)
 required = {
     "schema_version", "source", "freeze_floor_round", "round", "randomness",
     "signature", "previous_signature", "relay_agreement",
-    "launcher_commit", "launcher_sha256",
+    "launcher_commit", "launcher_sha256", "frozen_gate_commit",
 }
 if (set(doc) != required or type(doc["schema_version"]) is not int
         or doc["schema_version"] != 1
@@ -446,6 +495,7 @@ if (set(doc) != required or type(doc["schema_version"]) is not int
         or not isinstance(doc["launcher_sha256"], str)
         or len(doc["launcher_sha256"]) != 64
         or any(c not in "0123456789abcdef" for c in doc["launcher_sha256"])
+        or doc["frozen_gate_commit"] != candidate
         or doc["relay_agreement"] != ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"]):
     raise SystemExit("invalid randomness receipt")
 for key, length in (("randomness", 64), ("signature", 192), ("previous_signature", 192)):
@@ -465,6 +515,7 @@ launcher = subprocess.run(
 if hashlib.sha256(launcher).hexdigest() != doc["launcher_sha256"]:
     raise SystemExit("launcher receipt binding mismatch")
 material = (b"GLM52-W7-ARM-ORDER-V1\0" + candidate.encode() + b"\0"
+            + doc["launcher_sha256"].encode() + b"\0"
             + str(doc["round"]).encode() + b"\0" + doc["randomness"].encode())
 if hashlib.sha256(material).hexdigest() != seed:
     raise SystemExit("randomness seed derivation mismatch")
@@ -500,6 +551,9 @@ verify_dependencies
   --tokenizer-native-sha256 "$TOKENIZER_NATIVE_SHA256" \
   --cgroup-sha256 "$CGROUP_SHA256" --safe-sha256 "$SAFE_SHA256" \
   --memory-guard-sha256 "$MEMORY_GUARD_SHA256" \
+  --drand-verifier-sha256 "$DRAND_VERIFIER_SHA256" \
+  --drand-node-sha256 "$DRAND_NODE_SHA256" \
+  --drand-runtime-tree-sha256 "$DRAND_RUNTIME_TREE_SHA256" \
   --engine-freeze-sha256 "$ENGINE_FREEZE_SHA256" \
   --configuration-sha256 "$configuration_sha256" \
   --engine-source-commit "$ENGINE_SOURCE_COMMIT" \

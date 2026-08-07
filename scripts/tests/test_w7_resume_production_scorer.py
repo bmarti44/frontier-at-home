@@ -8,6 +8,7 @@ import json
 import math
 from pathlib import Path
 import struct
+import subprocess
 import tempfile
 import unittest
 
@@ -84,6 +85,44 @@ class W7ProductionScorerTest(unittest.TestCase):
         self.bindings = {key: "9" * 64 for key in MODULE.REQUIRED_BINDINGS}
         self.bindings["binary_sha256"] = "7" * 64
         self.bindings["strict_binary_sha256"] = "8" * 64
+        self.bindings["harness_sha256"] = "e6a8479ebf804380dc902144026dc50ab69460f6251c520545f5f36a44336aec"
+        self.bindings["scorer_sha256"] = "6eb84ea2e5eaf06aedae36fa6c1d6d6fbb2e822aca8ef0c0b288eaf65c04e94b"
+        self.bindings["drand_verifier_sha256"] = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+        self.bindings["drand_node_sha256"] = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
+        self.bindings["drand_runtime_tree_sha256"] = "38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4"
+        beacon = json.loads((
+            ROOT / "results/glm52-gates/W7-resume-production-drand-verifier-fixture.json"
+        ).read_text())
+        launcher_commit = "60a6344e34327bcd30166e3e1ef4d8ccab5b026f"
+        frozen_gate_commit = "79332541785007fad3440ff026b09966d560f145"
+        launcher = subprocess.run(
+            ["/usr/bin/git", "-C", str(ROOT), "show",
+             f"{launcher_commit}:scripts/88_run_w7_resume_production.py"],
+            capture_output=True, check=True,
+        ).stdout
+        launcher_sha = hashlib.sha256(launcher).hexdigest()
+        receipt = {
+            "schema_version": 1,
+            "source": "drand-default-preregistered-three-relay",
+            "freeze_floor_round": beacon["round"] - 1,
+            **beacon,
+            "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
+            "launcher_commit": launcher_commit,
+            "launcher_sha256": launcher_sha,
+            "frozen_gate_commit": frozen_gate_commit,
+        }
+        receipt_bytes = (json.dumps(
+            receipt, sort_keys=True, separators=(",", ":")
+        ) + "\n").encode()
+        (self.root / "randomness.json").write_bytes(receipt_bytes)
+        self.bindings["randomness_receipt_sha256"] = hashlib.sha256(
+            receipt_bytes
+        ).hexdigest()
+        self.bindings["seed_sha256"] = hashlib.sha256(
+            b"GLM52-W7-ARM-ORDER-V1\0" + frozen_gate_commit.encode() + b"\0"
+            + launcher_sha.encode() + b"\0" + str(beacon["round"]).encode()
+            + b"\0" + beacon["randomness"].encode()
+        ).hexdigest()
         self.source_commit = "0" * 40
         configuration = {
             "schema_version": 1,
@@ -102,12 +141,39 @@ class W7ProductionScorerTest(unittest.TestCase):
                 )),
             },
             "common": {
-                "context": 8192, "cache_gib": 40, "cache_pin": 1,
-                "cache_slru": 1, "fetch_threads": 6,
-                "moe_no_atomic_down": 1, "sync_trace": 1,
-                "logit_dump_all": 1, "boundary_align_tokens": 4,
-                "boundary_trim_tokens": {
-                    "strict": 8, "candidate": 8, "cold": 20,
+                "server": {
+                    "host": "127.0.0.1", "port": 8097, "context": 8192,
+                    "model_path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+                    "model_sha256": self.bindings["model_sha256"],
+                    "ssd_streaming": True,
+                    "ssd_streaming_cache_experts": "40GB",
+                    "kv_disk_space_mb": 4096, "boundary_align_tokens": 4,
+                    "boundary_trim_tokens": {
+                        "strict": 8, "candidate": 8, "cold": 20,
+                    },
+                },
+                "environment": {
+                    "DS4_CUDA_EXPERT_CACHE_GB": 40,
+                    "DS4_CUDA_EXPERT_CACHE_PIN": 1,
+                    "DS4_CUDA_EXPERT_CACHE_SLRU": 1,
+                    "DS4_CUDA_FETCH_THREADS": 6,
+                    "DS4_CUDA_MOE_NO_ATOMIC_DOWN": 1,
+                    "DS4_GLM_SYNC_TRACE": 1,
+                    "DS4_GLM_LOGIT_DUMP_ALL": 1,
+                },
+                "containment": {
+                    "memory_high_gib": 78, "kill_floor_gib": 24,
+                    "min_start_gib": 110, "timeout_s": 2400,
+                    "lock_path": "/run/user/1000/ds4-engine.lock",
+                    "cgroup_sha256": self.bindings["cgroup_sha256"],
+                    "safe_sha256": self.bindings["safe_sha256"],
+                    "memory_guard_sha256": self.bindings["memory_guard_sha256"],
+                },
+                "requests": {
+                    "live_path": "/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/live-request.json",
+                    "live_sha256": MODULE.LIVE_SHA256,
+                    "primary_path": "/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json",
+                    "primary_sha256": MODULE.PRIMARY_SHA256,
                 },
             },
         }
@@ -430,6 +496,45 @@ class W7ProductionScorerTest(unittest.TestCase):
         receipt = self.root / "randomness.json"
         receipt.write_text("{}\n")
         receipt.unlink()
+        result = self._score()
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertFalse(result["checks"]["evidence_contract_pass"])
+
+    def test_rejects_mutated_duplicate_stale_launcher_and_seed_receipts(self) -> None:
+        path = self.root / "randomness.json"
+        original = path.read_bytes()
+        mutations = (
+            original.replace(b'"randomness":"', b'"randomness":"0', 1),
+            original.replace(b'{', b'{"round":1,', 1),
+            original.replace(
+                b'"launcher_commit":"60a6344e34327bcd30166e3e1ef4d8ccab5b026f"',
+                b'"launcher_commit":"0000000000000000000000000000000000000000"',
+            ),
+        )
+        for mutated in mutations:
+            with self.subTest(mutated=mutated[:80]):
+                path.write_bytes(mutated)
+                self.bindings["randomness_receipt_sha256"] = hashlib.sha256(
+                    mutated
+                ).hexdigest()
+                MODULE.write_evidence_contract(
+                    self.root, self.bindings,
+                    MODULE._expected_arm_order(self.bindings["seed_sha256"]),
+                    self.source_commit,
+                )
+                result = self._score()
+                self.assertEqual(result["verdict"], "FAIL")
+                self.assertFalse(result["checks"]["evidence_contract_pass"])
+        path.write_bytes(original)
+        self.bindings["randomness_receipt_sha256"] = hashlib.sha256(
+            original
+        ).hexdigest()
+        self.bindings["seed_sha256"] = "0" * 64
+        MODULE.write_evidence_contract(
+            self.root, self.bindings,
+            MODULE._expected_arm_order(self.bindings["seed_sha256"]),
+            self.source_commit,
+        )
         result = self._score()
         self.assertEqual(result["verdict"], "FAIL")
         self.assertFalse(result["checks"]["evidence_contract_pass"])
