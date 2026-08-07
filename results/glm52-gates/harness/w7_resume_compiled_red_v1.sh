@@ -438,8 +438,7 @@ printf '%s\n' "$BINARY_SHA256" >"$out/binary.sha256"
 printf '%s\n' "$MODEL_SHA256" >"$out/model-known.sha256"
 printf '%s\n' "$POOL_SHA256" >"$out/fixture-pool.sha256"
 exec {harness_fd}<"$INVOKED_SCRIPT"
-[[ $(sha256sum -- "/proc/$$/fd/$harness_fd" | awk '{print $1}') ==
-   "$W7_EXECUTED_HARNESS_SHA256" ]] || exit 2
+[[ $(sha256sum -- "/proc/$$/fd/$harness_fd" | awk '{print $1}') == "$W7_EXECUTED_HARNESS_SHA256" ]] || exit 2
 
 set +e
 /usr/bin/env -i \
