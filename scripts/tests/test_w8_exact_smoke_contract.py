@@ -24,7 +24,7 @@ class W8ExactSmokeContractTests(unittest.TestCase):
     def test_harness_pins_reviewed_runtime_and_preserves_failures(self):
         source = HARNESS.read_text(encoding="utf-8")
         for needle in (
-            "W8-exact-smoke-review-r239.json",
+            "W8-exact-smoke-review-r240.json",
             "drand_min_round",
             "verify_reviewed_components",
             "finalize_attempt",
