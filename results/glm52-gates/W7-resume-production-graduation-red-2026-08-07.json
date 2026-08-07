@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-production-graduation",
+  "attempt": "RED",
+  "engine_test_commit": "2adc19890069cd5728b95ef6e06c65fde6435d64",
+  "unchanged_implementation_commit": "7822efd945f1c5366844d253b22e953b6721b650",
+  "acceptance_formula": {
+    "authoritative": "payload_complete && saved_tokens > 0 && compact_rows == saved_tokens && checkpoint_token_count == saved_tokens",
+    "diagnostic_flag_required": false,
+    "global_resume_guard_may_change": false
+  },
+  "command": "make -j2 ds4_server_test && ./ds4_server_test",
+  "observed_exit_code": 1,
+  "observed_failures": [
+    "complete production snapshot was not authoritative without the diagnostic flag",
+    "complete production snapshot did not copy the checkpoint tokens into the evaluated frontier"
+  ],
+  "logs": [
+    {
+      "name": "build",
+      "sha256": "1a6e30290aaadbf5fe88a654005078ba3cf5414c0cc8a5499bb22223c2a09727"
+    },
+    {
+      "name": "run",
+      "sha256": "389698edc09f7368c743ae0713068a1235901d1f1ad5fbe99bd57f1521cfbe72"
+    }
+  ],
+  "result": "RED_CONFIRMED",
+  "scope": "This is a production-path graduation test for the already-qualified restored-frontier behavior. It is not a performance or context-capability result."
+}
