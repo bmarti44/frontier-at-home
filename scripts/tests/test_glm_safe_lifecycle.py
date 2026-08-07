@@ -22,6 +22,15 @@ FIXTURE = ROOT / "scripts/tests/fixtures/candidate_lifecycle.c"
 
 
 class CandidateLifecycleSourceTests(unittest.TestCase):
+    def test_w7_restored_frontier_diagnostic_survives_containment_allowlist(self):
+        launcher = CGROUP.read_text(encoding="utf-8")
+        for name in (
+            "DS4_GLM_RESTORED_FRONTIER_DIAGNOSTIC",
+            "DS4_GLM_LOGIT_DUMP",
+            "DS4_GLM_LOGIT_DUMP_ALL",
+        ):
+            self.assertIn(name, launcher)
+
     def test_w3_probe_closes_reviewed_false_pass_routes(self):
         probe = W3_PROBE_V3.read_text(encoding="utf-8")
         self.assertIn('-x $CGROUP && -r $SAFE', probe)
