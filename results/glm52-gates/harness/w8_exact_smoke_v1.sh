@@ -11,7 +11,7 @@ readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 readonly GUARD=$REPO/scripts/03_memory_guard.py
 readonly SCORER=$REPO/scripts/90_score_w8_exact_smoke.py
 readonly ENGINE_PATCH=$REPO/results/glm52-gates/harness/ds4-w8-exact-ckv.patch
-readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W8-exact-smoke-review-r236.json
+readonly REVIEW_RECEIPT=$REPO/results/glm52-gates/W8-exact-smoke-review-r238.json
 readonly DRAND_VERIFY=$REPO/scripts/89_verify_drand_receipt.mjs
 readonly NODE=/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node
 readonly BIN=/home/bmarti44/.cache/glm52-w8-119996d-runtime/ds4-server
@@ -166,14 +166,14 @@ print(commit,floor)
 PY
 )
 git -C "$REPO" merge-base --is-ancestor "$reviewed_commit" HEAD
-[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W8-exact-smoke-review-r236.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
+[[ $(git -C "$REPO" show "HEAD:results/glm52-gates/W8-exact-smoke-review-r238.json" | sha256sum | awk '{print $1}') == $(sha "$REVIEW_RECEIPT") ]]
 verify_reviewed_components "$reviewed_commit"
 [[ -x $BIN && $(sha "$BIN") == "$BINARY_SHA256" ]]
 [[ $(git -C "$SRC" rev-parse HEAD) == "$SOURCE_COMMIT" && -z $(git -C "$SRC" status --porcelain) ]]
 [[ -f $MODEL && ! -L $MODEL && $(stat -Lc '%s' "$MODEL") == "$MODEL_BYTES" ]]
 [[ -f $REQUEST && ! -L $REQUEST && $(sha "$REQUEST") == "$REQUEST_SHA256" ]]
 [[ -f $ENGINE_PATCH && ! -L $ENGINE_PATCH && $(sha "$ENGINE_PATCH") == "$ENGINE_PATCH_SHA256" ]]
-[[ -x $SAFE && -x $CGROUP && -x $SCORER && -x $NODE ]]
+[[ -r $SAFE && ! -L $SAFE && -x $CGROUP && -x $SCORER && -x $NODE ]]
 ! pgrep -x ds4-server >/dev/null && ! pgrep -x fio >/dev/null
 [[ -f $LOCK && ! -L $LOCK && $(stat -Lc '%U:%G:%a:%h' "$LOCK") == bmarti44:bmarti44:600:1 ]]
 /usr/bin/flock -n -E 75 -- "$LOCK" /usr/bin/true
