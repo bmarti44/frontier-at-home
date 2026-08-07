@@ -33,6 +33,11 @@ class W8ExactSmokeContractTests(unittest.TestCase):
         ):
             self.assertIn(needle, source)
 
+    def test_safe_wrapper_is_required_readable_not_executable(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("[[ -r $SAFE", source)
+        self.assertNotIn("[[ -x $SAFE", source)
+
     def test_scorer_requires_io_counters_and_cgroup_events(self):
         source = SCORER.read_text(encoding="utf-8")
         for needle in (
