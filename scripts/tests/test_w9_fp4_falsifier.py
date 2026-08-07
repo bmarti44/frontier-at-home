@@ -94,6 +94,7 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             '"hadamard_e2m1_f32_scale"',
             '"hadamard_e2m1_f32_scale_channel_correction"',
             "manifest.json", "raw.jsonl", "summary.json",
+            '("ds4-server", "ds4", "fio")',
         ):
             self.assertIn(token, source)
 
