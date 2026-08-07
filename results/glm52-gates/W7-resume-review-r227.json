@@ -1,0 +1,31 @@
+{
+  "candidate_hash": "0e56c36ce3357bdd6b0123a45362f738ed1589a2",
+  "review_round": 227,
+  "reviewers": {
+    "Nash": {
+      "score": 75,
+      "critical": [
+        "GAP-W7-227-C1-UNVERIFIED-RESEAL-LAUNDERS-CORRUPTION"
+      ],
+      "high": [],
+      "verdict": "BLOCK"
+    },
+    "Singer": {
+      "score": 90,
+      "critical": [],
+      "high": [
+        "ADV-W7-227-H42-STRIP-LAUNDERS-CORRUPTION"
+      ],
+      "verdict": "BLOCK_PRODUCTION_GRADUATION"
+    }
+  },
+  "prior_issue_status": {
+    "ADV-W7-226-C41-UNCHECKSUMMED-PAYLOAD-CAN-BYPASS-GUARD": "FIXED_FOR_DIRECT_LOAD_PATHS"
+  },
+  "root_reproduction": {
+    "status": "VERIFIED",
+    "automatic_path": "kv_cache_rewrite_trailer reseals an existing payload without first verifying its stored digest",
+    "agent_path": "agent_worker_strip_session transforms and reseals existing transcript bytes without first verifying the source record"
+  },
+  "next_scope": "Require successful source-record verification before every reseal or transformation. Corrupt automatic records must not be resealed; corrupt explicit records must fail strip without replacement."
+}
