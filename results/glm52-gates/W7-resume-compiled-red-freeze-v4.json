@@ -1,0 +1,47 @@
+{
+  "schema_version": 4,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate": 10,
+  "status": "FROZEN_PENDING_REVIEW_AND_FRESH_RANDOMNESS",
+  "candidate_commit": "8900ca76f75cdddd0fed7ce2100f73cd5654514e",
+  "review_request_round": 205,
+  "owner_authorization": "Candidate 10 and subsequent autonomous bounded work authorized 2026-08-07.",
+  "production_binary_sha256": "56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "artifacts": {
+    "scripts/glm52_goal.py": "3d6cb59fe375ecb0a5c7f42919947d19e1b2dce4e69a1e97517b7de58b9b95a9",
+    "scripts/82_build_w7_fixture_pool.py": "ede94489812cb8a430f878448803cc9518ff81a2e2ae0f12d0a7dc8f556195f2",
+    "scripts/82_build_w7_render_oracle.sh": "93b778f5c08fcbce66fe356b136b6b187a4c67ec331af0f90be122839fdb3b18",
+    "scripts/83_score_w7_deployed_trace.py": "6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985",
+    "scripts/tests/test_glm52_goal.py": "0eedff5a563567cfe2a2e16174632a1de1214e4f4aa2ea391cbb88600bf7c5f6",
+    "scripts/tests/test_w7_resume_compiled_red.py": "cd2f55eb92510ec5cb20227458b60a1549fdeabf36b24a19befd5901cc0b98d4",
+    "results/glm52-gates/harness/w7_resume_compiled_red_v1.sh": "ed6ff4d874dd6e1af8740a88f569913a9dcd982fe64779630fe742610598c9b5",
+    "results/glm52-gates/harness/w7_completion_render_oracle.c": "9590b8eaa238e311ca0468e6983280b798cbb94c3d727920f5e839ac8ee20539",
+    "results/glm52-gates/harness/w7-production-fixture-pool-v1.json": "c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9",
+    "/tmp/glm52-w7-build1.ob4Q0O/src/ds4_server.c": "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07",
+    "/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66"
+  },
+  "runtime_dependencies": {
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "runtime_init_sha256": "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4",
+    "runtime_native_sha256": "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910"
+  },
+  "scorer_contract": {
+    "exit_code": 0,
+    "schema_version": 1,
+    "verdict": "PASS",
+    "error": null,
+    "exact_check_keys": true,
+    "all_checks_true": true,
+    "request_ids": [1, 2]
+  },
+  "tests": {
+    "command": "python3 -m unittest scripts.tests.test_w7_resume_compiled_red scripts.tests.test_glm52_goal",
+    "tests_run": 86,
+    "passed": 86,
+    "failed": 0,
+    "secret_lint": "PASS",
+    "diff_check": "PASS"
+  },
+  "next": "Persistent reviewers inspect only candidate-10 diff. With no critical/high findings, obtain fresh public randomness and run the contained deployed trace geometry smoke before the full unchanged-engine RED."
+}
