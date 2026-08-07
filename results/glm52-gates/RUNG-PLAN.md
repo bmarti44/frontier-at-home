@@ -874,6 +874,22 @@ negative controls with `max_tokens >= 64`, complete generation, and retain at
 least 10 GiB available memory. Switching/rollback is re-run only after a
 candidate earns adoption; DSV4 and GLM engine forks remain separate.
 
+Current status (2026-08-07): **W8 exact F32 NVMe cKV candidate 9 is closed
+FAIL.** In the reviewed 5,066-token model-backed smoke, the exact arm completed
+only the first 2,048-token checkpoint (254.004 seconds) and then exceeded the
+fixed 1,800-second request timeout before returning a response. The resident
+arm was correctly not run after that failure. The attempt was host-safe
+(minimum `MemAvailable` 51,590,940 KiB, zero cgroup swap/OOM events, no Xid,
+no survivor), but it produced neither byte-identity evidence nor terminal
+exact-I/O telemetry. Round 245 closed the result with both persistent reviewers
+at 100 and no critical/high issues. A review-time accidental overwrite and
+restoration of `exact/http-status` is disclosed; the local attempt is explicitly
+non-pristine, and the committed pre-mutation digest record plus the independent
+timeout/missing-arm rules support FAIL only. Do not extend the timeout or use
+this candidate for direct 1M. The next bounded context route is the W9 real
+512-wide capture and offline falsifier; a materially different exact-storage
+design would require a new candidate rather than rehabilitating this one.
+
 ## Final decision table
 
 Every rung appends one same-fixture row containing context, prefill tokens/s,
