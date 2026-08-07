@@ -118,6 +118,7 @@ class W7ScorerTest(unittest.TestCase):
                 "kv cache hit text tokens=5044 file=" + str(arm / "kv" / selected) + "\n"
                 "ds4: GLM restored-frontier diagnostic: authoritative checkpoint=5044 compact_rows=5044 prior_frontier=5044\n"
                 "ds4: GLM sync start=5044 prompt=5066 suffix=22\n"
+                "ds4: GLM sync branch=indexed_resume pos=5044 chunk=22 logits=1\n"
             )
             names = [
                 "logits.sync1.start0.prompt5044.suffix5044",
@@ -129,6 +130,7 @@ class W7ScorerTest(unittest.TestCase):
                 "kv cache hit text tokens=5044 file=" + str(arm / "kv" / selected) + "\n"
                 "ds4: GLM resume guard: prompt (5066) extends/diverges past evaluated frontier 5055 (checkpoint 5044)\n"
                 "ds4: GLM sync start=0 prompt=5066 suffix=5066\n"
+                "ds4: GLM sync branch=full_indexed pos=0 chunk=2048 logits=0\n"
             )
             names = [
                 "logits.sync1.start0.prompt5044.suffix5044",
@@ -139,6 +141,7 @@ class W7ScorerTest(unittest.TestCase):
             log = (
                 "ds4: GLM sync start=0 prompt=5044 suffix=5044\n"
                 "ds4: GLM sync start=5044 prompt=5066 suffix=22\n"
+                "ds4: GLM sync branch=indexed_resume pos=5044 chunk=22 logits=1\n"
             )
             names = [
                 "logits.sync1.start0.prompt5044.suffix5044",
@@ -186,6 +189,30 @@ class W7ScorerTest(unittest.TestCase):
         values[1], values[2], values[3] = 0.25, 0.98, -0.5
         target.write_bytes(struct.pack(f"<{N_VOCAB}f", *values))
         self.assertEqual(self._score()["verdict"], "FAIL")
+
+    def test_rejects_unmatched_final_branch(self) -> None:
+        marker = "ds4: GLM sync branch=indexed_resume pos=5044 chunk=22 logits=1\n"
+        variants = (
+            "",
+            "ds4: GLM sync branch=decode_resume pos=5044 token_index=5044 updates_dense=0\n",
+            "ds4: GLM sync branch=indexed_resume pos=5045 chunk=22 logits=1\n",
+            "ds4: GLM sync branch=indexed_resume pos=5044 chunk=11 logits=1\n"
+            "ds4: GLM sync branch=indexed_resume pos=5055 chunk=11 logits=1\n",
+            "ds4: GLM sync branch=indexed_resume pos=5044 chunk=22 logits=0\n",
+        )
+        original = (self.candidate / "server.log").read_text()
+        for replacement in variants:
+            with self.subTest(replacement=replacement):
+                (self.candidate / "server.log").write_text(
+                    original.replace(marker, replacement)
+                )
+                MODULE.write_evidence_contract(
+                    self.root, self.bindings,
+                    MODULE._expected_arm_order(self.bindings["seed_sha256"]),
+                    self.source_commit,
+                )
+                self.assertEqual(self._score()["verdict"], "FAIL")
+        (self.candidate / "server.log").write_text(original)
 
     def test_rejects_nonfinite_and_stale_selected_kv(self) -> None:
         target = self.candidate / "logits.sync3.start5044.prompt5066.suffix22"
