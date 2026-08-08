@@ -29,8 +29,17 @@ DRAND_PERIOD_SECONDS = 30
 
 
 def verify_digest_bindings(expected: dict[str, str], actual: dict[str, str]) -> None:
-    """Candidate-3 RED placeholder: enforce frozen executable closure."""
-    del expected, actual
+    """Require an exact, well-formed digest map for the executable closure."""
+    if not isinstance(expected, dict) or set(expected) != set(actual):
+        raise ValueError("frozen artifact set differs")
+    for name in sorted(expected):
+        digest = expected[name]
+        observed = actual[name]
+        if not isinstance(digest, str) or len(digest) != 64 or any(
+                c not in "0123456789abcdef" for c in digest):
+            raise ValueError(f"invalid frozen digest: {name}")
+        if observed != digest:
+            raise ValueError(f"post-freeze artifact replacement: {name}")
 
 
 def fail(message: str) -> None:
@@ -108,6 +117,23 @@ def main() -> int:
             subprocess.run(["/usr/bin/git", "diff", "--cached", "--quiet"],
                            cwd=args.source_dir, check=False).returncode != 0:
         fail("source tree has tracked changes")
+    frozen_artifacts = freeze.get("source", {}).get("artifact_sha256")
+    actual_artifacts = {
+        "ds4.c": sha256(args.source_dir / "ds4.c"),
+        "ds4_cuda.cu": sha256(args.source_dir / "ds4_cuda.cu"),
+        "tests/cuda_topk_w4.cu": sha256(
+            args.source_dir / "tests/cuda_topk_w4.cu"),
+        "Makefile": sha256(args.source_dir / "Makefile"),
+        "scripts/98_score_w4_topk.py": sha256(SCORER),
+        "scripts/99_run_w4_topk_confirmation.py": sha256(Path(__file__)),
+        "scripts/tests/test_w4_topk_scorer.py": sha256(
+            ROOT / "scripts/tests/test_w4_topk_scorer.py"),
+        "scripts/89_verify_drand_receipt.mjs": sha256(VERIFIER),
+    }
+    try:
+        verify_digest_bindings(frozen_artifacts, actual_artifacts)
+    except ValueError as exc:
+        fail(str(exc))
     expected_binary = freeze.get("build", {}).get("test", {}).get("binary_sha256")
     if not isinstance(expected_binary, str) or sha256(args.binary) != expected_binary:
         fail("test binary differs from freeze")
@@ -209,9 +235,24 @@ def main() -> int:
             check=False, env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin"})
         if scored.returncode != 0:
             fail(f"fixed scorer failed: {scored.stderr}{scored.stdout}")
-        summary = json.loads(scored.stdout)
-        if summary.get("verdict") != "PASS":
-            fail("fixed scorer did not pass")
+        try:
+            summary = json.loads(
+                scored.stdout,
+                parse_constant=lambda value: (_ for _ in ()).throw(
+                    ValueError(f"non-finite scorer output: {value}")),
+            )
+        except (json.JSONDecodeError, ValueError) as exc:
+            fail(f"fixed scorer emitted malformed output: {exc}")
+        required_summary = {
+            "schema", "formula", "t_0.95_df4", "block_a_ms", "block_b_ms",
+            "log_ratios", "speedup_lower_95", "required_speedup_lower_95",
+            "selected_ids_sha256", "raw_sha256", "manifest_sha256", "checks",
+            "verdict",
+        }
+        if not isinstance(summary, dict) or set(summary) != required_summary or \
+                summary.get("schema") != "glm52-w4-topk-summary-v1" or \
+                summary.get("verdict") != "PASS":
+            fail("fixed scorer result shape or verdict differs")
         (staging / "summary.json").write_text(
             json.dumps(summary, sort_keys=True, allow_nan=False) + "\n")
         (staging / "microgate.stderr").write_text(completed.stderr)
