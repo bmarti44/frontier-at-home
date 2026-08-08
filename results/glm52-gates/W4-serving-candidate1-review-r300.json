@@ -1,0 +1,62 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 1,
+  "candidate_hash": "ed0f50d190cf73d55fed12ce2680de77317a7535",
+  "review_round": 300,
+  "runtime_authorized": false,
+  "root_findings": [
+    {
+      "id": "ROOT-W4S-C1-BINARY-CONTAINMENT",
+      "severity": "high",
+      "status": "FIXED_IN_CANDIDATE_2",
+      "red_commit": "d33bedc"
+    },
+    {
+      "id": "ROOT-W4S-C1-W7-FAILURE-LINEAGE",
+      "severity": "high",
+      "status": "FIXED_IN_CANDIDATE_2",
+      "red_commit": "3fc0df2"
+    }
+  ],
+  "gap_reviewer": {
+    "score": 22,
+    "critical": ["W4S-R300-C1-SIGNAL-CLEANUP"],
+    "high": [
+      "W4S-R300-H1-BINARY-PROVENANCE-PATH",
+      "W4S-R300-H2-RAW-SCORER-NONREPLAY",
+      "W4S-R300-H3-TOKEN-ACCOUNTING-SELF-REPORT",
+      "W4S-R300-H4-FAILURE-TRIPLET-LINEAGE",
+      "W4S-R300-H5-RANDOMNESS-FLOOR-PREDATES-FREEZE"
+    ],
+    "verdict": "REJECT_PRE_RUNTIME"
+  },
+  "adversarial_reviewer": {
+    "score": 77,
+    "critical": [],
+    "high": [
+      "ADV-W4S-300-H1-BINARY-CONTAINMENT-MISMATCH",
+      "ADV-W4S-300-H2-UNBOUND-STANDALONE-SCORER"
+    ],
+    "medium": ["ADV-W4S-300-M1-FREEZE-CANDIDATE-AMBIGUITY"],
+    "verdict": "REJECT_NO_ENGINE_LAUNCH"
+  },
+  "candidate_2_scope": [
+    "stage the identical frozen binary under the safe-run candidate root",
+    "install and restore the inherited signal-safe campaign lifecycle",
+    "preserve W4-specific preflight and escaped failure triplets",
+    "store one replayable row schema including the witnessed environment digest",
+    "replay every row from hash-closed arm artifacts in the fixed scorer",
+    "independently render and tokenize the request and reconcile one novel full sync trace",
+    "authenticate and derive schedules from a beacon published after the executing candidate commit"
+  ],
+  "pre_submission": {
+    "w4_tests": "16 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "secret_scan_self_test": "PASS",
+    "inherited_signal_cleanup_unit_tests": "3 passed; one cgroup-path integration test awaits restoration of user@1000.service",
+    "engine_or_fio_started": false
+  },
+  "verdict": "REJECTED_PRESERVED"
+}

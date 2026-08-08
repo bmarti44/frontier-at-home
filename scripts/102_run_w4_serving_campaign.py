@@ -49,7 +49,7 @@ BASE_SHA256 = "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
 CGROUP_SHA256 = "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
-SCORER_SHA256 = "016f83cdf7e1abe6de39ec16490ab9686cffb96bc161794e3ed3d272ec763695"
+SCORER_SHA256 = "f5739f175ae213e244db92bcf901f63d89918ea73e80d06388b62444fd3e251c"
 MICROGATE_SHA256 = "9aaf51b0722ec2573876d6a35ce733e6e574bb1349daf6f72f61100995c39bde"
 FIXTURE_SHA256 = "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031"
 DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
@@ -64,6 +64,11 @@ DONE_RE = re.compile(
 TOPK_MARKER = "ds4: CUDA exact top-2048 CUB enabled chunk=8192 merge=2"
 LISTENER = "ds4-server: listening on "
 SHUTDOWN = "ds4-server: shutdown requested"
+SYNC_RE = re.compile(
+    r"^ds4: GLM sync start=(\d+) prompt=(\d+) suffix=(\d+) checkpoint=(\d+) "
+    r"dense_len=\d+ ctx_cap=\d+ dense_fit=\d+ resume_min=\d+ dense_gap=\d+ "
+    r"indexed_keep=\d+ indexed_batch=\d+ batch_ffn=\d+$"
+)
 
 
 def _load_base() -> Any:
@@ -145,6 +150,12 @@ def derive_schedules(seed_sha256: str) -> list[str]:
     ]
 
 
+def drand_publication_time(round_number: int) -> int:
+    if type(round_number) is not int or round_number < 1:
+        raise ValueError("invalid drand round")
+    return 1595431050 + (round_number - 1) * 30
+
+
 def verify_randomness(path: Path, candidate: str) -> tuple[str, str, bytes]:
     raw, _ = BASE.read_stable(path)
     try:
@@ -170,6 +181,13 @@ def verify_randomness(path: Path, candidate: str) -> tuple[str, str, bytes]:
     )
     if checked.returncode != 0 or checked.stdout != "DRAND_BLS_RECEIPT_OK\n":
         raise CampaignError("randomness BLS verification failed")
+    committed_at = int(subprocess.run(
+        ["/usr/bin/git", "--no-replace-objects", "-C", str(ROOT), "show", "-s",
+         "--format=%ct", candidate], check=True, capture_output=True, text=True,
+    ).stdout.strip())
+    published_at = drand_publication_time(doc["round"])
+    if published_at <= committed_at:
+        raise CampaignError("randomness predates the immutable candidate")
     return doc["randomness"], hashlib.sha256(raw).hexdigest(), raw
 
 
@@ -211,6 +229,14 @@ def semantic_response(raw: bytes) -> tuple[dict[str, Any], str]:
     digest = hashlib.sha256(json.dumps(
         semantic, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return semantic, digest
+
+
+def validate_novel_sync_trace(server_log: str, expected_prompt_tokens: int) -> None:
+    matches = [SYNC_RE.fullmatch(line) for line in server_log.splitlines()]
+    matches = [match for match in matches if match is not None]
+    if len(matches) != 1 or tuple(map(int, matches[0].groups()[:4])) != (
+            0, expected_prompt_tokens, expected_prompt_tokens, 0):
+        raise CampaignError("sync trace does not prove a novel complete prefill")
 
 
 def environment_for_arm(arm: str, out: Path, lock_path: str, lock_identity: str,
@@ -326,7 +352,9 @@ def driver(arm: str, out: Path, request_path: Path, request_sha256: str, candida
 
 
 def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: int,
-              stdout: str, request_sha256: str, config_sha256: str) -> dict[str, Any]:
+              stdout: str, request_sha256: str, config_sha256: str,
+              expected_prompt_tokens: int, expected_environment_sha256: str | None = None,
+              ) -> dict[str, Any]:
     if containment_rc != 0:
         raise CampaignError(f"containment failed rc={containment_rc}")
     done = DONE_RE.fullmatch(stdout)
@@ -351,6 +379,12 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
     observation = json.loads(artifacts["observation.json"][0])
     response = artifacts["response.json"][0]
     _, semantic_sha = semantic_response(response)
+    environment_lines = re.findall(
+        r"executed_environment_allowlist=[A-Z0-9_,]+ "
+        r"executed_environment_sha256=([0-9a-f]{64})", main)
+    if len(environment_lines) != 1 or (expected_environment_sha256 is not None
+            and environment_lines[0] != expected_environment_sha256):
+        raise CampaignError("executed environment binding mismatch")
     for name, (payload, metadata) in artifacts.items():
         marker = (f"final_artifact_verified path={out / name} "
                   f"sha256={hashlib.sha256(payload).hexdigest()} "
@@ -378,6 +412,9 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
     if oom_group != 0:
         raise CampaignError("cgroup OOM group kill")
     usage = observation["semantic"]["usage"]
+    validate_novel_sync_trace(server, expected_prompt_tokens)
+    if usage["prompt_tokens"] != expected_prompt_tokens:
+        raise CampaignError("API and independent token accounting differ")
     return {
         "block": block, "position": position, "arm": arm, "run_id": out.name,
         "binary_sha256": BINARY_SHA256, "model_sha256": MODEL_SHA256,
@@ -389,6 +426,7 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
         "cache_write_tokens": usage["prompt_tokens"],
         "response_semantic_sha256": semantic_sha, "final_logits_sha256": logit_sha,
         "logit_sequence_sha256": sequence_sha,
+        "executed_environment_sha256": environment_lines[0],
         "topk_marker_count": server.count(TOPK_MARKER),
         "server_fresh": server.count(LISTENER) == 1 and server.count(SHUTDOWN) == 1,
         "safety": {"containment_rc": 0, "minimum_mem_available_kib": min(memory),
@@ -445,7 +483,11 @@ def finalize_failure(error: BaseException) -> None:
     })
 
 
-def campaign(candidate: str, receipt: Path) -> int:
+def _campaign(candidate: str, receipt: Path) -> int:
+    if COMMIT_RE.fullmatch(candidate) is None:
+        raise CampaignError("invalid candidate commit")
+    OUT_ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
+    attempt = BASE.create_and_activate_attempt(OUT_ROOT, candidate, uuid.uuid4().hex)
     if not user_systemd_available():
         raise CampaignError("user-systemd containment is unavailable")
     verify_dependencies()
@@ -475,8 +517,6 @@ def campaign(candidate: str, receipt: Path) -> int:
         raise CampaignError("model changed during scan")
     seed, receipt_sha, receipt_bytes = verify_randomness(receipt, candidate)
     schedules = derive_schedules(seed)
-    OUT_ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
-    attempt = BASE.create_and_activate_attempt(OUT_ROOT, candidate, uuid.uuid4().hex)
     engine_fd = os.open(attempt / "engine.lock", os.O_RDWR | os.O_CREAT | os.O_EXCL |
                         os.O_NOFOLLOW, 0o600)
     os.unlink(attempt / "engine.lock")
@@ -493,12 +533,9 @@ def campaign(candidate: str, receipt: Path) -> int:
         "required_speedup_lower_95", "verdict")}
     BASE.write_json_new(attempt / "microgate-summary.json", selected_micro)
     BASE.write_json_new(attempt / "schedules.json", schedules)
-    config = {"context": 32768, "fixture_fraction": 0.46, "cache_gib": 40,
-              "fetch_threads": 6, "stable_model_remap": 1, "max_tokens": 0,
-              "temperature": 0, "boundary_align": 4, "boundary_trim": 8,
-              "on_flag": "DS4_CUDA_TOPK2048_CUB=1", "off_flag": "unset",
-              "containment": {"kill_floor_gib": 24, "minimum_start_gib": 110,
-                              "timeout_s": 3600, "memory_swap_max": 0}}
+    tokenization = load_scorer(scorer_bytes).independent_tokenization(request_path)
+    BASE.write_json_new(attempt / "request-tokenization.json", tokenization)
+    config = load_scorer(scorer_bytes).EXPECTED_CONFIGURATION
     config_sha = hashlib.sha256(json.dumps(
         config, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     rows: list[dict[str, Any]] = []
@@ -523,18 +560,13 @@ def campaign(candidate: str, receipt: Path) -> int:
                 BASE.write_new(out / "containment.stderr", completed.stderr.encode())
                 BASE.write_new(out / "containment.rc", f"{completed.returncode}\n".encode())
                 row = parse_arm(arm, block, position, out, completed.returncode,
-                                completed.stdout, request_sha, config_sha)
-                row["executed_environment_sha256"] = env_sha
+                                completed.stdout, request_sha, config_sha,
+                                tokenization["prompt_tokens"], env_sha)
                 rows.append(row)
     except Exception as error:
         failure = f"{type(error).__name__}: {error}"
-    scorer_rows = []
-    for row in rows:
-        copy = dict(row)
-        copy.pop("executed_environment_sha256")
-        scorer_rows.append(copy)
     summary = load_scorer(scorer_bytes).score_campaign_rows(
-        scorer_rows, schedules, selected_micro)
+        rows, schedules, selected_micro)
     if failure:
         summary = {**summary, "runtime_failure": failure, "verdict": "FAIL"}
     raw = b"".join((json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
@@ -551,7 +583,8 @@ def campaign(candidate: str, receipt: Path) -> int:
         "model_sha256": MODEL_SHA256, "model_bytes": MODEL_BYTES,
         "fixture_sha256": FIXTURE_SHA256, "executed_request_sha256": request_sha,
         "microgate_sha256": MICROGATE_SHA256, "configuration": config,
-        "configuration_sha256": config_sha, "public_randomness_sha256": seed,
+        "configuration_sha256": config_sha, "tokenization": tokenization,
+        "public_randomness_sha256": seed,
         "public_randomness_receipt_sha256": receipt_sha, "schedules": schedules,
         "completed_rows": len(rows), "artifacts": artifacts,
     }
@@ -560,12 +593,32 @@ def campaign(candidate: str, receipt: Path) -> int:
     BASE.write_new(attempt / "raw.jsonl", raw)
     BASE.write_new(attempt / "summary.json", summary_bytes)
     BASE.write_json_new(attempt / "manifest.json", manifest)
+    if summary["verdict"] == "PASS":
+        replay = subprocess.run(
+            ["/usr/bin/python3", str(SCORER), str(attempt)], capture_output=True,
+            text=True, check=False, timeout=300,
+            env={"HOME": "/home/bmarti44", "PATH": "/usr/bin:/bin",
+                 "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"})
+        try:
+            replay_result = json.loads(replay.stdout)
+        except (UnicodeError, json.JSONDecodeError) as error:
+            raise CampaignError("authoritative scorer replay emitted invalid JSON") from error
+        if replay.returncode != 0 or replay.stderr or replay_result != summary:
+            raise CampaignError("authoritative scorer did not reproduce PASS")
     print(f"W4_SERVING_CAMPAIGN_ATTEMPT={attempt}")
     for descriptor in (engine_fd, model_fd, guard_fd):
         os.close(descriptor)
     fcntl.flock(lock_fd, fcntl.LOCK_UN)
     os.close(lock_fd)
     return 0 if summary["verdict"] == "PASS" else 1
+
+
+def campaign(candidate: str, receipt: Path) -> int:
+    handlers = BASE.install_campaign_signal_handlers()
+    try:
+        return _campaign(candidate, receipt)
+    finally:
+        BASE.restore_campaign_signal_handlers(handlers)
 
 
 def main() -> int:

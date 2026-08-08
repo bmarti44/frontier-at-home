@@ -53,24 +53,64 @@ class W4ServingContainmentTest(unittest.TestCase):
             first_bytes = first.read_bytes()
             second_bytes = second.read_bytes()
             doc = json.loads(first_bytes)
+            tokenization = RUNNER.load_scorer(RUNNER.SCORER.read_bytes()).independent_tokenization(first)
         self.assertEqual(first_sha, second_sha)
         self.assertEqual(first_bytes, second_bytes)
         self.assertEqual(doc["max_tokens"], 0)
         self.assertFalse(doc["stream"])
         self.assertGreater(len(doc["prompt"]), 90_000)
+        self.assertEqual(tokenization["prompt_tokens"], 19_783)
 
     def test_schedule_is_deterministic_and_domain_separated(self) -> None:
         seed = hashlib.sha256(b"post-freeze randomness").hexdigest()
         self.assertEqual(RUNNER.derive_schedules(seed), RUNNER.derive_schedules(seed))
         self.assertEqual(len(RUNNER.derive_schedules(seed)), 5)
+        self.assertLess(RUNNER.drand_publication_time(6_359_296), 1_786_210_399)
+
+    def test_sync_trace_requires_full_novel_prefill(self) -> None:
+        valid = ("ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
+                 "dense_len=0 ctx_cap=32768 dense_fit=0 resume_min=4 dense_gap=0 "
+                 "indexed_keep=0 indexed_batch=1 batch_ffn=1")
+        RUNNER.validate_novel_sync_trace(valid, 19_783)
+        for mutation in (
+            valid.replace("start=0", "start=1"),
+            valid.replace("suffix=19783", "suffix=19782"),
+            valid.replace("checkpoint=0", "checkpoint=1"),
+            valid + "\n" + valid,
+        ):
+            with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
+                RUNNER.validate_novel_sync_trace(mutation, 19_783)
+
+    def test_signal_handlers_are_restored_after_preflight_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(RUNNER, "OUT_ROOT", Path(directory)), \
+             mock.patch.object(RUNNER, "user_systemd_available", return_value=False), \
+             mock.patch.object(RUNNER.BASE, "install_campaign_signal_handlers",
+                               return_value={}) as installed, \
+             mock.patch.object(RUNNER.BASE, "restore_campaign_signal_handlers") as restored:
+            with self.assertRaises(RUNNER.CampaignError):
+                RUNNER.campaign("0" * 40, Path("unused"))
+            installed.assert_called_once_with()
+            restored.assert_called_once_with({})
+            RUNNER.BASE._ACTIVE_ATTEMPT = None
+            RUNNER.BASE._ACTIVE_CANDIDATE = None
 
     def test_campaign_rejects_dead_user_manager_before_large_hashes(self) -> None:
-        with mock.patch.object(RUNNER, "user_systemd_available", return_value=False), \
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(RUNNER, "OUT_ROOT", Path(directory)), \
+             mock.patch.object(RUNNER, "user_systemd_available", return_value=False), \
              mock.patch.object(RUNNER, "verify_dependencies",
                                side_effect=AssertionError("must not hash dependencies")):
+            error = RUNNER.CampaignError("user-systemd containment is unavailable")
             with self.assertRaisesRegex(RUNNER.CampaignError,
                                         "user-systemd containment is unavailable"):
                 RUNNER.campaign("0" * 40, Path("unused-receipt.json"))
+            RUNNER.finalize_failure(error)
+            attempts = list(Path(directory).glob("attempt-*"))
+            self.assertEqual(len(attempts), 1)
+            self.assertTrue((attempts[0] / "manifest.json").is_file())
+            RUNNER.BASE._ACTIVE_ATTEMPT = None
+            RUNNER.BASE._ACTIVE_CANDIDATE = None
 
     def test_failure_finalizer_emits_w4_bound_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

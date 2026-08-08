@@ -5,8 +5,10 @@ from __future__ import annotations
 import copy
 import hashlib
 import importlib.util
+import json
 import math
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -38,6 +40,7 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
                     "cache_write_tokens": 18_000,
                     "response_semantic_sha256": SHA,
                     "final_logits_sha256": SHA, "logit_sequence_sha256": SHA,
+                    "executed_environment_sha256": SHA,
                     "topk_marker_count": int(arm == "on"),
                     "server_fresh": True,
                     "safety": {
@@ -123,6 +126,17 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
                 self.assertEqual(
                     SCORER.score_campaign_rows(self.rows, self.schedules,
                                                micro)["verdict"], "FAIL")
+
+    def test_authoritative_replay_rejects_synthetic_rows_without_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "schedules.json").write_text(json.dumps(self.schedules))
+            (root / "microgate-summary.json").write_text(json.dumps(self.microgate))
+            (root / "raw.jsonl").write_text("".join(
+                json.dumps(row) + "\n" for row in self.rows))
+            result = SCORER.score_run_dir(root)
+        self.assertEqual(result["verdict"], "FAIL")
+        self.assertIn("manifest", result["failure"])
 
 
 if __name__ == "__main__":
