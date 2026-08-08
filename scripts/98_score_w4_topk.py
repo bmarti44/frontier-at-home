@@ -126,7 +126,7 @@ def score_run(run_dir: Path) -> dict:
     if not isinstance(manifest, dict) or set(manifest) != MANIFEST_KEYS:
         raise ScoreError("manifest schema keys differ")
     if manifest["schema"] != "glm52-w4-topk-manifest-v1" or \
-            manifest["gate"] != "W4" or manifest["candidate"] != 2:
+            manifest["gate"] != "W4" or manifest["candidate"] != 3:
         raise ScoreError("wrong manifest identity")
     _require_hex(manifest["candidate_hash"], 40, "candidate hash")
     _require_hex(manifest["binary_sha256"], 64, "binary SHA-256")

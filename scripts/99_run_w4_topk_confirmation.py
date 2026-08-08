@@ -105,7 +105,7 @@ def main() -> int:
     freeze = strict_json(args.freeze)
     receipt = strict_json(args.receipt)
     if freeze.get("schema") != "glm52-w4-topk-freeze-v2" or \
-            freeze.get("candidate") != 2 or freeze.get("verdict") != "FROZEN":
+            freeze.get("candidate") != 3 or freeze.get("verdict") != "FROZEN":
         fail("freeze record differs")
     candidate_hash = subprocess.run(
         ["/usr/bin/git", "rev-parse", "HEAD"], cwd=args.source_dir,
@@ -208,7 +208,7 @@ def main() -> int:
             fail("GPU identity query failed")
         manifest = {
             "schema": "glm52-w4-topk-manifest-v1", "gate": "W4",
-            "candidate": 2, "candidate_hash": candidate_hash,
+            "candidate": 3, "candidate_hash": candidate_hash,
             "freeze_time_unix": freeze_time,
             "binary_sha256": expected_binary,
             "scorer_sha256": sha256(SCORER), "raw_sha256": sha256(raw_path),
