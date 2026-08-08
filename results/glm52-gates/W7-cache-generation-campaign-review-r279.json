@@ -1,0 +1,50 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 3,
+  "candidate_hash": "16e6c47e820009228459deeb199261049e02d2ce",
+  "review_round": 279,
+  "runtime_authorized": false,
+  "gap_reviewer": {
+    "score": 92,
+    "verdict": "APPROVE_FOR_BOUNDED_RUNTIME",
+    "critical": [],
+    "high": [],
+    "medium": [
+      "GAP-W7.1-279-M1-FAILURE-ATTEMPT-ACTIVATION-WINDOW",
+      "GAP-W7.1-279-M2-PARENT-LOCK-NEGATIVE-MATRIX-INCOMPLETE"
+    ],
+    "low": ["GAP-W7.1-279-L1-DYNAMIC-CGROUP-LIMITS-NOT-STRUCTURED-IN-ROWS"]
+  },
+  "adversarial_reviewer": {
+    "score": 78,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": ["ADV-W7.1-279-H1-PROC-LOCKS-PID-DOES-NOT-BIND-PARENT-FD-OFD"],
+    "medium": [
+      "ADV-W7.1-279-M1-LOCK-MUTATION-LEAKS-INHERITED-HOLDER",
+      "ADV-W7.1-279-M2-PRESERVED-SUMMARY-NOT-TESTED"
+    ],
+    "low": []
+  },
+  "independently_reproduced": {
+    "fd_ofd_gap": "a parent-bound unlocked FD passes when a child inherits a different locked OFD whose lock record retains the parent PID",
+    "test_holder_leak": "terminating flock did not guarantee its sleep descendant released the inherited OFD",
+    "preserved_summary": "production preserves and hash-binds prior bytes, but the test did not assert that property"
+  },
+  "candidate4_bounded_plan": [
+    "require the exact bound fdinfo record to carry the matching FLOCK WRITE lock",
+    "replace the mutation holder with a fully reaped fork/pipe holder and assert lock release",
+    "assert displaced summary bytes and manifest digest",
+    "close the attempt-activation signal window with a focused test"
+  ],
+  "convergence": {
+    "candidate_count_for_gate": 3,
+    "prior_blocking_count": 3,
+    "current_blocking_count": 1,
+    "strictly_shrank": true,
+    "consecutive_non_shrinking_candidates": 0,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": false
+  }
+}
