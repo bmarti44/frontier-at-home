@@ -336,7 +336,10 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             MODULE.restore_campaign_signal_handlers(previous)
 
     def test_interrupted_containment_is_terminated_and_reaped(self) -> None:
+        events: list[str] = []
+
         class FakeProcess:
+            pid = 4242
             returncode = None
             terminated = False
             waited = False
@@ -347,9 +350,11 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
                 raise AssertionError("signal handler did not interrupt communicate")
 
             def terminate(self) -> None:
+                events.append("terminate")
                 self.terminated = True
 
             def wait(self, timeout: int | None = None) -> int:
+                events.append("wait")
                 self.waited = True
                 self.returncode = -15
                 return self.returncode
@@ -360,15 +365,29 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         process = FakeProcess()
         previous = MODULE.install_campaign_signal_handlers()
         try:
-            with mock.patch.object(MODULE.subprocess, "Popen", return_value=process):
+            with mock.patch.object(MODULE.subprocess, "Popen", return_value=process), mock.patch.object(
+                MODULE, "stop_exact_containment_unit",
+                side_effect=lambda unit: events.append(f"stop:{unit}"),
+            ) as stop_unit:
                 with self.assertRaises(MODULE.CampaignInterrupted):
-                    MODULE.run_contained_command(["/usr/bin/true"], {})
+                    MODULE.run_contained_command(["/usr/bin/true"], {}, "w7-test")
         finally:
             MODULE.restore_campaign_signal_handlers(previous)
+        stop_unit.assert_called_once_with("glm52-w7-test-4242.service")
+        self.assertEqual(events[:3], ["stop:glm52-w7-test-4242.service", "terminate", "wait"])
         self.assertTrue(process.terminated)
         self.assertTrue(process.waited)
         self.assertFalse(process.killed)
         self.assertIsNone(MODULE._ACTIVE_CONTAINMENT)
+
+    def test_containment_unit_name_rejects_untrusted_tag(self) -> None:
+        for value in ("", "../escape", "has space", "a" * 41):
+            with self.assertRaises(MODULE.CampaignError):
+                MODULE.containment_unit_name(value, 123)
+        self.assertEqual(
+            MODULE.containment_unit_name("w7p-b0p0-a.b", 123),
+            "glm52-w7p-b0p0-a-b-123.service",
+        )
 
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
