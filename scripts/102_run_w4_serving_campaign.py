@@ -408,6 +408,43 @@ def load_scorer(payload: bytes) -> Any:
     return module
 
 
+def finalize_failure(error: BaseException) -> None:
+    """Preserve an escaping W4 failure without borrowing W7's manifest identity."""
+    attempt = BASE._ACTIVE_ATTEMPT
+    candidate = BASE._ACTIVE_CANDIDATE
+    if attempt is None or candidate is None or (attempt / "manifest.json").exists():
+        return
+    failure = f"{type(error).__name__}: {error}"
+    raw_path = attempt / "raw.jsonl"
+    raw = raw_path.read_bytes() if raw_path.is_file() else b""
+    if not raw_path.exists():
+        BASE.write_new(raw_path, raw)
+    summary_path = attempt / "summary.json"
+    displaced: tuple[str, str] | None = None
+    if summary_path.exists():
+        prior, _ = BASE.read_stable(summary_path)
+        prior_path = attempt / "summary.pre-finalization.json"
+        os.rename(summary_path, prior_path)
+        displaced = (prior_path.name, hashlib.sha256(prior).hexdigest())
+    summary = (json.dumps({"failure": failure, "verdict": "FAIL"},
+                          sort_keys=True, separators=(",", ":")) + "\n").encode()
+    BASE.write_new(summary_path, summary)
+    artifacts = {
+        "raw.jsonl": hashlib.sha256(raw).hexdigest(),
+        "summary.json": hashlib.sha256(summary).hexdigest(),
+    }
+    if displaced is not None:
+        artifacts[displaced[0]] = displaced[1]
+    BASE.write_json_new(attempt / "manifest.json", {
+        "schema": "glm52-w4-serving-campaign-failure-v1",
+        "candidate_hash": candidate, "failure": failure,
+        "runner_sha256": sha256_file(Path(__file__)),
+        "scorer_sha256": SCORER_SHA256, "binary_sha256": BINARY_SHA256,
+        "model_sha256": MODEL_SHA256, "fixture_sha256": FIXTURE_SHA256,
+        "artifacts": artifacts, "verdict": "FAIL",
+    })
+
+
 def campaign(candidate: str, receipt: Path) -> int:
     if not user_systemd_available():
         raise CampaignError("user-systemd containment is unavailable")
@@ -552,6 +589,6 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as error:
-        BASE.finalize_failure_triplet(error)
+        finalize_failure(error)
         print(f"W4_SERVING_CAMPAIGN_FAIL: {type(error).__name__}: {error}", file=sys.stderr)
         raise SystemExit(1)
