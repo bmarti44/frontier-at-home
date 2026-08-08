@@ -4604,13 +4604,14 @@ def validate_profile_artifact_bindings(
             "tokenizer_sha256",
             "context_cap",
             "build_manifest_sha256",
+            "promotion",
             "runtime",
             "artifact_sha256",
         },
         "approved GLM profile",
     )
     if (
-        profile["schema_version"] != 2
+        profile["schema_version"] != 3
         or profile["profile"] != "glm52"
         or profile["context_cap"] != 1_048_576
     ):
@@ -4623,6 +4624,33 @@ def validate_profile_artifact_bindings(
     ):
         if not _is_sha256(profile[field]):
             raise ValueError(f"approved GLM profile {field} is invalid")
+    promotion = profile["promotion"]
+    _require_exact_keys(
+        promotion,
+        {
+            "gate",
+            "engine_commit",
+            "binary_freeze_sha256",
+            "owner_decision_sha256",
+            "review_sha256",
+        },
+        "approved GLM promotion",
+    )
+    if (
+        promotion["gate"]
+        != "W7.1a-stable-model-cache-generation-owner-adoption"
+        or not isinstance(promotion["engine_commit"], str)
+        or re.fullmatch(r"[0-9a-f]{40}", promotion["engine_commit"]) is None
+        or any(
+            not _is_sha256(promotion[field])
+            for field in (
+                "binary_freeze_sha256",
+                "owner_decision_sha256",
+                "review_sha256",
+            )
+        )
+    ):
+        raise ValueError("approved GLM promotion binding is invalid")
     for field in ("binary_sha256", "model_sha256"):
         if not _is_sha256(profile[field]) or manifest.get(field) != profile[field]:
             raise ValueError(
@@ -4641,6 +4669,7 @@ def validate_profile_artifact_bindings(
         "DS4_CUDA_FETCH_THREADS": "6",
         "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
         "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+        "DS4_CUDA_STABLE_MODEL_REMAP": "1",
         "DS4_TOKEN_TIMING_LOG": "1",
     }
     expected_arguments = [
@@ -4698,6 +4727,15 @@ def validate_profile_artifact_bindings(
         **artifact_hashes,
         "configs/build-manifests/glm52-ds4-repro.json": profile[
             "build_manifest_sha256"
+        ],
+        "results/glm52-gates/W7-cache-generation-freeze-v9.json": promotion[
+            "binary_freeze_sha256"
+        ],
+        "results/glm52-gates/W7-cache-generation-W7.1a-owner-adoption.json": promotion[
+            "owner_decision_sha256"
+        ],
+        "results/glm52-gates/W7-cache-generation-W7.1a-review-r295.json": promotion[
+            "review_sha256"
         ],
     }
     for relative_path, expected_digest in candidate_artifacts.items():

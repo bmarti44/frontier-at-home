@@ -1,11 +1,18 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "profile": "glm52",
-  "binary_sha256": "5bc2c255f33fb8a282c4c67037579f26be573ded680e4d5cdd1c0adbd0bad3f0",
+  "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
   "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
   "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
   "context_cap": 1048576,
   "build_manifest_sha256": "2eeb3062073eda8bfaa078d30cb40cfd65b41e5e271b3380d0d1847f4deb3ed4",
+  "promotion": {
+    "gate": "W7.1a-stable-model-cache-generation-owner-adoption",
+    "engine_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "binary_freeze_sha256": "075b481fa71187835a77574a46f6ecfe8200ae40f01fa74573e9e4c472b9f3d9",
+    "owner_decision_sha256": "45feffa9e62fa21a2c060c278fb9a702c44df1bc5316a11aa1dd8ef3ef25e996",
+    "review_sha256": "cab3d0898008dd4e26c8f53a90a029ede43f683d64140e6e016e4f7d7448f0a0"
+  },
   "runtime": {
     "engine_environment": {
       "DS4_CUDA_EXPERT_CACHE_GB": "0",
@@ -14,6 +21,7 @@
       "DS4_CUDA_FETCH_THREADS": "6",
       "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
       "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+      "DS4_CUDA_STABLE_MODEL_REMAP": "1",
       "DS4_TOKEN_TIMING_LOG": "1"
     },
     "launch_arguments": [
@@ -49,9 +57,9 @@
     "scripts/11_build_glm52_repro.sh": "6b4e376fb939b6829ca3eb0a4e89051283222fb6d702ad09f737a2f3f0de3e7d",
     "results/glm52-goal/harness/decisive_matched.sh": "40506fe13d57bed69a71bc3fc5ae07ae2715b412fd15e3f7e72fe0085c1e1a73",
     "results/glm52-goal/harness/glm_decisive_arm.sh": "951d6af04b22a0e7715e51b05f5b3ff7059b6bff4a0840fa275939f6abc38547",
-    "results/glm52-gates/harness/glm_safe_run.sh": "29d1a41275527b517ed036f2aaa1babb1ea59c960de4fea1b9584177566510e1",
-    "results/glm52-gates/harness/glm_cgroup_run.sh": "658d25a9d80f785127deaf91820934054ec943cb141baee9086536ce252fff57",
+    "results/glm52-gates/harness/glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "a0cdae4fbd78e770ef971c65eaf95a38917de0150c8c3452a3876d9e894793fb",
     "results/glm52-gates/harness/glm_evidence_export.py": "8f4cd672643a3863b149565ce2462b7fe48f94bb7a270bde3680562835f36b92",
-    "scripts/30_bench_speed.py": "bbde3cc6cc5f83192dd21c05285e7e916976c86de38efe8970ce1a048235b085"
+    "scripts/30_bench_speed.py": "ede222c835c07b03e7fbde1dde1daf6c13807133250abeeede3cfff5464524eb"
   }
 }

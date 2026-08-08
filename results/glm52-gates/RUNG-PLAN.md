@@ -797,11 +797,22 @@ non-regression requirement. The fixed scorer therefore returned `FAIL`.
 
 The run stayed safe (minimum 49,813,584 kB MemAvailable; zero cgroup swap,
 OOM, Xid, or surviving descendants), and both persistent reviewers independently
-approved the terminal FAIL at 100 with no findings in round 287. Do not promote
-the stable-remap flag or rerun this campaign to chase statistical noise. Preserve
-its correctness result, leave it default-off, and continue W7 with the remaining
-byte-identical restore/store and suffix-processing levers. These are
-control-configuration numbers, not the adopted GLM serving-profile metrics.
+approved the terminal FAIL at 100 with no findings in round 287. That original
+verdict and its preregistered `>=1.00` decode bound remain permanent.
+
+The owner subsequently created the separately named **W7.1a owner-adoption
+gate**. Its owner-set primary criterion is warm-TTFT ratio upper-95 `<=0.95`;
+its secondary decode non-regression criterion is lower-95 `>=0.995`. The same
+round-287 evidence passes both at `0.5977543267655646` and
+`0.999854233137691`, respectively. The binding-only adoption record is
+`W7-cache-generation-W7.1a-owner-adoption.json`; Nash and Singer approved its
+evidence binding at 100 with no findings in round 295. The exact binary is
+  `eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2`.
+That binary and `DS4_CUDA_STABLE_MODEL_REMAP=1` are therefore the GLM default.
+W7.2 remains unauthorized. No NLL rerun was required because the full logit
+sequence was byte-identical with maximum absolute delta zero. The campaign
+timings remain control-configuration numbers, not a new serving-profile
+measurement.
 
 ### Fidelity-free prefill work after decode/TTFT (W4/W5/W6)
 

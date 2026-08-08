@@ -2633,13 +2633,20 @@ class FormulaTests(unittest.TestCase):
         }
         artifact_digest = hashlib.sha256(b"frozen artifact").hexdigest()
         profile = {
-            "schema_version": 2,
+            "schema_version": 3,
             "profile": "glm52",
             "binary_sha256": hashlib.sha256(b"binary").hexdigest(),
             "model_sha256": hashlib.sha256(b"model").hexdigest(),
             "tokenizer_sha256": "a" * 64,
             "context_cap": 1_048_576,
             "build_manifest_sha256": artifact_digest,
+            "promotion": {
+                "gate": "W7.1a-stable-model-cache-generation-owner-adoption",
+                "engine_commit": "b" * 40,
+                "binary_freeze_sha256": artifact_digest,
+                "owner_decision_sha256": artifact_digest,
+                "review_sha256": artifact_digest,
+            },
             "runtime": {
                 "engine_environment": {
                     "DS4_CUDA_EXPERT_CACHE_GB": "0",
@@ -2648,6 +2655,7 @@ class FormulaTests(unittest.TestCase):
                     "DS4_CUDA_FETCH_THREADS": "6",
                     "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
                     "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+                    "DS4_CUDA_STABLE_MODEL_REMAP": "1",
                     "DS4_TOKEN_TIMING_LOG": "1",
                 },
                 "launch_arguments": [
