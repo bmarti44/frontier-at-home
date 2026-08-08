@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "status": "PREREGISTERED",
+  "hypothesis": "On a live branch miss that will load an existing disk checkpoint, serializing the displaced live checkpoint is cache-admission work rather than target-model computation. A diagnostic bypass should remove its measured 0.69-0.73 second, approximately 919 MiB write without changing the selected 5,044-token checkpoint, synchronized logits, output tokens, or subsequent decode.",
+  "measured_anchor": {
+    "source_attempt": "/home/bmarti44/.local/state/glm52-w7-cache-generation-campaign/attempt-9b00276326b740ed9551ce6b78cb85df",
+    "off_example": "b0-p0-off-cf9908a0f5eb/server.log",
+    "on_example": "b0-p1-on-bf4492e3f4b2/server.log",
+    "evict_store_mib": 918.82,
+    "evict_store_ms_range": [692.3, 731.0],
+    "loaded_checkpoint_tokens": 5044,
+    "append_tokens": 22
+  },
+  "implementation_contract": {
+    "flag": "DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC",
+    "default": "off",
+    "accepted_value": "1",
+    "invalid_nonempty_values": "startup failure",
+    "scope": "diagnostic only; bypass only the pre-load reason=evict store when live state missed and disk lookup follows",
+    "required_log": "one explicit diagnostic activation marker at startup and one skipped-store marker per bypass",
+    "not_authorized_for_promotion": true,
+    "production_followup_if_probe_passes": "replace the destructive diagnostic bypass with a fail-safe design that verifies a load candidate before deciding displaced-state admission, then requalify"
+  },
+  "red_test": {
+    "production_path": "ds4_server request cache-decision path immediately before kv_cache_try_load",
+    "requirements": [
+      "unset flag preserves the existing kv_cache_store_current call",
+      "exact value 1 selects the diagnostic bypass and logs it",
+      "0, empty, and arbitrary values cannot enable the bypass; nonempty invalid values fail startup",
+      "the bypass cannot affect cold requests, live cache hits, or runs without disk KV enabled"
+    ],
+    "genuine_red": "compile and execute ds4_server_test against unchanged engine source; failure must be the missing selector behavior, not a missing file or build error"
+  },
+  "bounded_probe": {
+    "arms": ["OFF", "ON"],
+    "fresh_server_each_arm": true,
+    "fixture": "the frozen 5,055-token warm request followed by the 5,066-token branch-matched append and 160-token exact replay",
+    "required_checks": [
+      "OFF performs exactly one reason=evict store and ON performs zero",
+      "ON emits exactly one diagnostic skipped-store marker",
+      "both select the same authenticated 5,044-token checkpoint",
+      "all three synchronized logit tensors are byte-identical across arms",
+      "output token IDs and generated UTF-8 bytes are identical",
+      "ON warm append wall time is at least 0.5 seconds lower than OFF",
+      "subsequent decode throughput ON/OFF ratio is at least 0.99 in the bounded falsifier",
+      "no OOM, Xid, swap growth, timeout, identity drift, or surviving descendant; minimum MemAvailable at least 10 GiB"
+    ],
+    "interpretation": "PASS only justifies production-safe implementation work; it does not promote the diagnostic flag or change the serving profile"
+  },
+  "lossy": false,
+  "nll_gate": "not applicable because target computation and outputs must remain byte-identical",
+  "review": "same persistent Nash and Singer reviewers; no engine run until the frozen implementation has no critical or high findings"
+}
