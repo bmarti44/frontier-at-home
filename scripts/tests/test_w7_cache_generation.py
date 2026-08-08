@@ -85,6 +85,31 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
 
 
 class W7CacheGenerationGateTest(unittest.TestCase):
+    def test_driver_requires_safe_wrapper_ancestor_lineage(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        driver_entry = source.split('if [[ ${1:-} == --driver ]]', 1)[1].split("fi", 1)[0]
+        self.assertIn("verify_driver_safe_lineage", driver_entry)
+        self.assertLess(
+            driver_entry.index("verify_driver_safe_lineage"),
+            driver_entry.index("run_driver"),
+        )
+        self.assertIn("GLM_SAFE_W7_DRIVER_LINEAGE", source)
+
+    def test_candidate_resolution_disables_git_replacements(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("--no-replace-objects", source)
+        for function in ("verify_reviewed_sources", "verify_sealed_candidate_scripts"):
+            body = source.split(f"{function}() {{", 1)[1].split("\n}", 1)[0]
+            self.assertIn("--no-replace-objects", body)
+
+    def test_final_head_change_is_fail_closed_and_observed(self) -> None:
+        scorer = SCORER.read_text(encoding="utf-8")
+        harness = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("final_head_matches_candidate", scorer)
+        self.assertIn("observed_final_head", harness)
+        publisher = harness.split("publish_failure_triplet() {", 1)[1].split("finalize_outer() {", 1)[0]
+        self.assertNotIn('"execution_head":candidate', publisher)
+
     def test_exact_byte_unsealed_harness_is_rejected(self) -> None:
         descriptor = os.memfd_create("w7-unsealed-harness", os.MFD_ALLOW_SEALING)
         try:
