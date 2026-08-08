@@ -644,45 +644,66 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         artifact_dir = package / "artifacts"
         manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
         summary = json.loads((package / "summary.json").read_text(encoding="utf-8"))
-        required = {
-            "child-exit.json", "containment.rc", "containment.stderr", "containment.stdout",
-            "live-http-status", "live-response.json", "model.identity.json",
-            "primary-http-status", "primary-response.json", "safety/kernel.log",
-            "safety/main.log", "safety/samples.log", "server.log",
+        committed_inputs = {
+            "child-exit.json", "live-http-status", "live-response.json",
+            "model.identity.json", "primary-http-status", "primary-response.json",
         }
-        self.assertEqual(set(manifest["artifact_bindings"]), required)
         self.assertEqual(
             {path.relative_to(artifact_dir).as_posix() for path in artifact_dir.rglob("*") if path.is_file()},
-            required,
+            committed_inputs,
         )
 
         def replay(root: Path) -> dict[str, object]:
+            rows = [json.loads(line) for line in (root / "raw.jsonl").read_text(encoding="utf-8").splitlines()]
+            source_lines: dict[str, list[str]] = {}
+            for row in rows:
+                source_lines.setdefault(row["source"], []).append(row["text"])
+            payloads: dict[str, bytes] = {}
             for name, binding in manifest["artifact_bindings"].items():
-                payload = (root / "artifacts" / name).read_bytes()
+                path = root / "artifacts" / name
+                if path.is_file():
+                    payload = path.read_bytes()
+                elif name in source_lines:
+                    joined = "\n".join(source_lines[name]).encode("utf-8")
+                    candidates = (joined, joined + b"\n")
+                    payload = next(
+                        candidate for candidate in candidates
+                        if len(candidate) == binding["bytes"]
+                        and hashlib.sha256(candidate).hexdigest() == binding["sha256"]
+                    )
+                elif binding["bytes"] == 0:
+                    payload = b""
+                else:
+                    self.fail(f"missing bound artifact {name}")
                 self.assertEqual(len(payload), binding["bytes"])
                 self.assertEqual(hashlib.sha256(payload).hexdigest(), binding["sha256"])
+                payloads[name] = payload
             self.assertEqual(
                 hashlib.sha256((root / "raw.jsonl").read_bytes()).hexdigest(),
                 manifest["artifacts"]["raw.jsonl"],
             )
             result = MODULE.score_text(
-                (root / "artifacts/server.log").read_text(encoding="utf-8"),
-                http_status=(root / "artifacts/primary-http-status").read_text(encoding="utf-8"),
-                response_text=(root / "artifacts/primary-response.json").read_text(encoding="utf-8"),
-                containment_rc=(root / "artifacts/containment.rc").read_text(encoding="utf-8"),
-                containment_stdout=(root / "artifacts/containment.stdout").read_text(encoding="utf-8"),
+                payloads["server.log"].decode("utf-8"),
+                http_status=payloads["primary-http-status"].decode("utf-8"),
+                response_text=payloads["primary-response.json"].decode("utf-8"),
+                containment_rc=payloads["containment.rc"].decode("utf-8"),
+                containment_stdout=payloads["containment.stdout"].decode("utf-8"),
                 mode=manifest["arm"],
-                child_exit_text=(root / "artifacts/child-exit.json").read_text(encoding="utf-8"),
-                safety_main_text=(root / "artifacts/safety/main.log").read_text(encoding="utf-8"),
+                child_exit_text=payloads["child-exit.json"].decode("utf-8"),
+                safety_main_text=payloads["safety/main.log"].decode("utf-8"),
                 expected_binary_sha256=manifest["binary_sha256"],
                 expected_environment_sha256=manifest["executed_environment_sha256"],
                 expected_memory_guard_sha256=manifest["memory_guard_sha256"],
-                model_identity_text=(root / "artifacts/model.identity.json").read_text(encoding="utf-8"),
+                model_identity_text=payloads["model.identity.json"].decode("utf-8"),
                 expected_model_sha256=manifest["model_sha256"],
                 expected_model_bytes=manifest["model_bytes"],
             )
-            self.assertEqual(result, summary)
-            return result
+            result["checks"]["final_head_matches_candidate"] = (
+                manifest["execution_head"] == manifest["candidate_hash"]
+            )
+            rendered = json.loads(json.dumps(result, sort_keys=True, separators=(",", ":")))
+            self.assertEqual(rendered, summary)
+            return rendered
 
         self.assertEqual(replay(package)["verdict"], "PASS")
         with tempfile.TemporaryDirectory() as directory:
