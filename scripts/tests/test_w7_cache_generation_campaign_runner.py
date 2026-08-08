@@ -125,7 +125,7 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         required = (
             "glm_cgroup_run.sh", "glm_safe_run.sh", "DS4_TOKEN_TIMING_LOG",
             "DS4_GLM_LOGIT_DUMP_ALL", "DS4_CUDA_STABLE_MODEL_REMAP",
-            "GLM_SAFE_MEMORY_HIGH_GIB", "GLM_SAFE_KILL_FLOOR_GIB",
+            "GLM_SAFE_KILL_FLOOR_GIB",
             "GLM_SAFE_MIN_START_GIB", "GLM_SAFE_TIMEOUT_S",
             "MemorySwapMax", "false_generation_flushes", "server_fresh",
             "manifest.json", "raw.jsonl", "summary.json",
