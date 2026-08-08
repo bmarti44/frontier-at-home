@@ -1,0 +1,43 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 2,
+  "source_candidate_hash": "15a90195c2de3f44a817b1ed89b5c3073363341f",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w4-topk-c5-serving/ds4-server",
+    "bytes": 14666376,
+    "sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f"
+  },
+  "artifacts": {
+    "scripts/101_score_w4_serving_campaign.py": "f5739f175ae213e244db92bcf901f63d89918ea73e80d06388b62444fd3e251c",
+    "scripts/102_run_w4_serving_campaign.py": "22d0f8405e895e6c34a94448d72c20a1938cced80eb91924f8117bdaf113e226",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "8db7e20b527e5c69af68c49f25bf3c95c37bdf4a7134cedf94abb55ad504852a",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "3bfc95edca1e77900193d171449b576aadb31e4615a7028c877ab3e2e15af67b",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14",
+    "preaudit.stdout": "318124a8a218d154a557d98f5ef1cea0a6034de36ea270461f0634183fbed9c5"
+  },
+  "round_300_disposition": {
+    "W4S-R300-C1-SIGNAL-CLEANUP": "FIXED: inherited signal handlers wrap the campaign and inherited contained-command cleanup remains authoritative",
+    "W4S-R300-H1-BINARY-PROVENANCE-PATH": "FIXED: exact binary staged as candidate-root/ds4-server; RED test d33bedc",
+    "W4S-R300-H2-RAW-SCORER-NONREPLAY": "FIXED: stored and scored schemas are identical and environment digest is replayed",
+    "W4S-R300-H3-TOKEN-ACCOUNTING-SELF-REPORT": "FIXED: frozen renderer plus tokenizer independently count 19,783 tokens; sync start=0/suffix=prompt/checkpoint=0 and API usage must agree",
+    "W4S-R300-H4-FAILURE-TRIPLET-LINEAGE": "FIXED: W4-specific finalizer plus preflight attempt activation; RED test 3fc0df2",
+    "W4S-R300-H5-RANDOMNESS-FLOOR-PREDATES-FREEZE": "FIXED: signed round publication timestamp must be strictly later than executing candidate commit",
+    "ADV-W4S-300-H1-BINARY-CONTAINMENT-MISMATCH": "FIXED with W4S-R300-H1",
+    "ADV-W4S-300-H2-UNBOUND-STANDALONE-SCORER": "FIXED: CLI requires git-bound runner/scorer, exact fixed hashes/config, complete hash closure, BLS receipt replay, independent tokenization, arm reconstruction, and byte-exact summary replay",
+    "ADV-W4S-300-M1-FREEZE-CANDIDATE-AMBIGUITY": "FIXED: review/receipt/manifest bind the clean executing descendant commit; drand publication is checked against that commit's timestamp"
+  },
+  "pre_submission_audit": {
+    "w4_tests": "16 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "secret_scan_self_test": "PASS",
+    "dependency_hash_preflight": "PASS",
+    "repository_tree": "clean before this freeze record",
+    "engine_or_fio_active": false,
+    "user_systemd_available": false,
+    "deferred_host_test": "inherited signal/cgroup injection requires user@1000.service restored before launch"
+  },
+  "launch_status": "NOT_RUN_PENDING_DELTA_REVIEW_AND_USER_SYSTEMD_RESTART"
+}
