@@ -73,7 +73,7 @@ class W4TopkScorerTest(unittest.TestCase):
         self.manifest = {
             "schema": "glm52-w4-topk-manifest-v1",
             "gate": "W4",
-            "candidate": 2,
+            "candidate": 3,
             "candidate_hash": "a" * 40,
             "freeze_time_unix": 1,
             "binary_sha256": sha256(self.run_dir / "binary"),

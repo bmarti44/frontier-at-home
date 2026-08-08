@@ -1,0 +1,19 @@
+{
+  "schema": "glm52-w4-topk-scorer-red-v1",
+  "gate": "W4",
+  "candidate": 3,
+  "command": "python3 -m unittest scripts.tests.test_w4_topk_scorer",
+  "observed": {
+    "tests_run": 6,
+    "errors": 1,
+    "exit_code": 1,
+    "failing_assertion": "test_valid_evidence_passes_fixed_formula",
+    "diagnostic": "ScoreError: wrong manifest identity"
+  },
+  "artifacts": {
+    "tests": "dba37d093edff2a44663c7171c4f81c3473ae17a7fafcf38397e4340bec13a02",
+    "unchanged_scorer": "35b7773bcfb02b1981f4a6dab1db1def5fdf281e2474b150576fd36e165dff02"
+  },
+  "verdict": "RED_CONFIRMED",
+  "interpretation": "The candidate-3 fixture is rejected by the unchanged candidate-2 scorer, proving the new confirmation cannot be mislabeled as the already-frozen candidate."
+}
