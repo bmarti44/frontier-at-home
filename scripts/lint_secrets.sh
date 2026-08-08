@@ -168,6 +168,7 @@ allowlist = {
     "nll_sha256",
     "summary_sha256",
     "runtime_final_sha256",
+    "runtime_bundle_sha256",
     "runtime_init_sha256",
     "runtime_native_sha256",
     "checkpoint_chain_tail_sha256",
