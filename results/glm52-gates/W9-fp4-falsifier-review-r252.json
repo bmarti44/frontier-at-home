@@ -1,0 +1,36 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-review-v1",
+  "candidate_hash": "8e9aff5eea0cdb6cee3bb434dd741fddcc983550",
+  "review_round": 252,
+  "candidate": 2,
+  "verdict": "REJECT_RUNTIME_BLOCKED",
+  "runtime_allowed": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 78,
+      "critical": [],
+      "high": [
+        "ADV-W9-FP4-251-H3-RUNTIME-FREEZE-NOT-ENFORCED"
+      ],
+      "medium": [
+        "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT"
+      ]
+    },
+    "Singer": {
+      "score_0_to_100": 80,
+      "critical": [],
+      "high": [
+        "ADV-W9-FP4-252-H1-RUNTIME-FREEZE-EXCLUDES-STARTUP-AND-TRANSITIVE-CODE",
+        "ADV-W9-FP4-252-H2-SEQUENTIAL-TERMINAL-INVENTORY-TOCTOU"
+      ],
+      "medium": []
+    }
+  },
+  "blocking_findings": {
+    "runtime_closure": "The metric runtime omits OpenBLAS, Python startup hooks, transitive NumPy code, and deterministic BLAS settings; mutable components are not held or reverified through completion.",
+    "terminal_generation": "Terminal artifacts are opened and closed sequentially, allowing an earlier artifact generation to change after its verification while the verifier still returns PASS."
+  },
+  "candidate3_scope": "Only the named round-252 findings: isolated no-site Python startup; a frozen and finally reverified NumPy/OpenBLAS and verifier runtime closure with deterministic thread settings; simultaneous terminal artifact descriptors through final verification; recomputed raw-row aggregation and verdict; focused runtime and cross-artifact mutation coverage. The round-252 medium may receive failure-stage diagnostics without another review round.",
+  "drand_min_round": 6357227,
+  "measurement_observed": false
+}
