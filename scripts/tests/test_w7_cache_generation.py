@@ -91,6 +91,10 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("verify_w7_lock_parent", safe)
         self.assertIn("DS4_W7_LOCK_PARENT_PID", safe)
         self.assertIn("/run/lock/frontier-at-home/inference.lock", safe)
+        self.assertIn(
+            'verify_w7_lock_parent || config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"',
+            safe,
+        )
         self.assertLess(safe.index("verify_w7_lock_parent"), safe.index("setsid timeout"))
 
     def test_driver_lineage_has_no_engine_behavioral_mutations(self) -> None:

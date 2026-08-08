@@ -341,7 +341,7 @@ if not held:
     raise SystemExit("inference-lock parent does not own the expected lock")
 PY
   }
-  verify_w7_lock_parent
+  verify_w7_lock_parent || config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"
   export DS4_W7_SAFE_PID=$$
   export DS4_W7_SAFE_START_TICKS
   DS4_W7_SAFE_START_TICKS=$(awk '{print $22}' "/proc/$$/stat")
