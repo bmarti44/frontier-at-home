@@ -90,13 +90,28 @@ def capture_runtime_closure(
 ) -> tuple[str, int]:
     """Hash the executable and every executable file observed in proc maps."""
     process_root = proc_root / str(pid)
-    mapped: set[Path] = {Path(os.readlink(process_root / "exe")).resolve(strict=True)}
+    executable_link = process_root / "exe"
+    executable = Path(os.readlink(executable_link)).resolve(strict=True)
+    executable_stat = os.stat(executable_link)
+    mapped: dict[Path, tuple[int, int]] = {
+        executable: (executable_stat.st_dev, executable_stat.st_ino),
+    }
     for line in (process_root / "maps").read_text(encoding="utf-8").splitlines():
         fields = line.split(maxsplit=5)
         if len(fields) != 6 or "x" not in fields[1] or not fields[5].startswith("/"):
             continue
+        device_fields = fields[3].split(":", 1)
+        if len(device_fields) != 2 or not fields[4].isdigit():
+            raise CampaignError("malformed mapped runtime identity")
+        mapped_identity = (
+            os.makedev(int(device_fields[0], 16), int(device_fields[1], 16)),
+            int(fields[4]),
+        )
         name = fields[5].removesuffix(" (deleted)")
-        mapped.add(Path(name).resolve(strict=True))
+        path = Path(name).resolve(strict=True)
+        if path in mapped and mapped[path] != mapped_identity:
+            raise CampaignError("conflicting mapped runtime identity")
+        mapped[path] = mapped_identity
     inventory: list[dict[str, object]] = []
     for path in sorted(mapped, key=str):
         descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
@@ -104,6 +119,8 @@ def capture_runtime_closure(
             before = os.fstat(descriptor)
             if not stat.S_ISREG(before.st_mode):
                 raise CampaignError("mapped runtime artifact is not regular")
+            if (before.st_dev, before.st_ino) != mapped[path]:
+                raise CampaignError("mapped runtime identity differs from opened file")
             digest = _sha256_descriptor(descriptor)
             after = os.fstat(descriptor)
             if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
