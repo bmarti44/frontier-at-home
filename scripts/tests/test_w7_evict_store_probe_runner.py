@@ -327,6 +327,39 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             (attempt / "manifest.json").write_text(json.dumps(manifest))
             self.assertFalse(MODULE.terminal_manifest_valid(attempt, "d" * 40))
 
+    def test_terminal_pass_requires_authoritative_inputs_and_arm_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-terminal-authority-") as temporary:
+            attempt = Path(temporary)
+            manifest, rows, summary = self.make_normal_terminal(attempt)
+            # The synthetic package has no primary-request artifact, no arm
+            # directories, and a receipt that the frozen verifier must reject.
+            with mock.patch.object(
+                MODULE.BASE, "verify_public_randomness_receipt",
+                side_effect=RuntimeError("fake receipt"),
+            ) as verifier:
+                self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+                verifier.assert_called_once()
+
+            invented = dict(manifest)
+            invented["configuration"] = {"context": 1, "diagnostic_flag": "forged"}
+            invented_sha = hashlib.sha256(
+                json.dumps(invented["configuration"], sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            invented["configuration_sha256"] = invented_sha
+            invented_rows = copy.deepcopy(rows)
+            for row in invented_rows:
+                row["common_config_sha256"] = invented_sha
+            scorer_rows = []
+            for row in invented_rows:
+                scorer_row = dict(row)
+                scorer_row.pop("executed_environment_sha256")
+                scorer_rows.append(scorer_row)
+            invented_summary = MODULE.load_scorer(MODULE.SCORER.read_bytes()).score_probe_rows(
+                scorer_rows, invented["arm_order"]
+            )
+            self.rewrite_terminal(attempt, invented, invented_rows, invented_summary)
+            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+
     def test_normal_publication_preserves_pass_and_fail_verdicts(self) -> None:
         for expected_verdict in ("PASS", "FAIL"):
             with tempfile.TemporaryDirectory(prefix="w7-publish-") as temporary:
