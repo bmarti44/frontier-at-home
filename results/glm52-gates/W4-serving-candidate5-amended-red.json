@@ -1,0 +1,30 @@
+{
+  "schema": "glm52-w4-serving-candidate-red-v1",
+  "candidate": 5,
+  "amends": "results/glm52-gates/W4-serving-candidate5-red.json",
+  "unchanged_parent": "1f5eceaee2f70b112dff318ba37d19d1b99340e1",
+  "review_round_source": 303,
+  "engine_started": false,
+  "reproduction_root": "/tmp/w4-c5-amended-red",
+  "test_command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner scripts.tests.test_w4_serving_campaign_scorer",
+  "observed": {
+    "tests_run": 28,
+    "passed": 21,
+    "failures": 1,
+    "errors": 6,
+    "blocking_reds": [
+      "failure finalization cannot record an artifact whose identity changes during hashing",
+      "publication TLS setup does not consume retained CA bytes",
+      "randomness verification has no sealed verifier entrypoint",
+      "randomness verification has no frozen single-file BLS bundle",
+      "authoritative scorer replay does not load retained runner and base bytes",
+      "authoritative scorer replay rejects the amended scorer because the runner digest is stale",
+      "randomness verification still invokes an unsealed subprocess path"
+    ]
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w4_serving_campaign_runner.py": "d41866a17595ae5ecaeec2632f9ea16ebaa2267ba8e4f6feafcbb870686ea38f",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581"
+  },
+  "acceptance": "All seven RED behaviors must turn GREEN without changing the frozen engine, request, microgate or metric formula. The executed runner/base, Node runtime, renderer, tokenizer native module and BLS verifier must derive only from retained hash-verified bytes; concurrent artifact replacement must fail closed and remain recorded."
+}

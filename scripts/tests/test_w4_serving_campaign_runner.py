@@ -110,9 +110,8 @@ class W4ServingContainmentTest(unittest.TestCase):
             "frozen_gate_commit": candidate,
             "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
         }
-        verified = mock.Mock(returncode=0, stdout="DRAND_BLS_RECEIPT_OK\n")
         with tempfile.TemporaryDirectory() as directory, \
-             mock.patch.object(RUNNER.subprocess, "run", return_value=verified):
+             mock.patch.object(RUNNER, "_sealed_bls_verify", return_value=True):
             receipt = Path(directory) / "receipt.json"
             receipt.write_text(json.dumps({**base, "round": first}))
             self.assertEqual(RUNNER.verify_randomness(
@@ -123,7 +122,7 @@ class W4ServingContainmentTest(unittest.TestCase):
                         RUNNER.CampaignError, "first eligible"):
                     RUNNER.verify_randomness(receipt, candidate, publication)
 
-    def test_randomness_verification_binds_imported_runtime_tree(self) -> None:
+    def test_randomness_verification_rejects_mutated_bundle(self) -> None:
         candidate = "3" * 40
         publication = {"candidate_hash": candidate, "created_at_unix": 1_786_212_006}
         doc = {
@@ -135,18 +134,14 @@ class W4ServingContainmentTest(unittest.TestCase):
             "frozen_gate_commit": candidate,
             "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
         }
-        verified = mock.Mock(returncode=0, stdout="DRAND_BLS_RECEIPT_OK\n")
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "runtime"
-            root.mkdir()
-            (root / "imported.js").write_text("forged verifier dependency")
+            bundle = Path(directory) / "verifier.mjs"
+            bundle.write_text("forged verifier")
             receipt = Path(directory) / "receipt.json"
             receipt.write_text(json.dumps(doc))
-            with mock.patch.object(RUNNER, "DRAND_RUNTIME", root, create=True), \
-                 mock.patch.object(RUNNER.subprocess, "run", return_value=verified) as run, \
-                 self.assertRaisesRegex(RUNNER.CampaignError, "runtime tree"):
+            with mock.patch.object(RUNNER, "DRAND_BUNDLE", bundle), \
+                 self.assertRaisesRegex(RUNNER.CampaignError, "verifier dependency"):
                 RUNNER.verify_randomness(receipt, candidate, publication)
-            run.assert_not_called()
 
     def test_randomness_executes_only_retained_sealed_verifier_bytes(self) -> None:
         candidate = "3" * 40
@@ -160,9 +155,7 @@ class W4ServingContainmentTest(unittest.TestCase):
             "frozen_gate_commit": candidate,
             "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
         }
-        with mock.patch.object(RUNNER, "tree_sha256",
-                               side_effect=AssertionError("mutable tree reopened")), \
-             mock.patch.object(RUNNER.subprocess, "run",
+        with mock.patch.object(RUNNER.subprocess, "run",
                                side_effect=AssertionError("unsealed subprocess used")), \
              mock.patch.object(RUNNER, "_sealed_bls_verify", return_value=True,
                                create=True) as sealed:
@@ -182,20 +175,23 @@ class W4ServingContainmentTest(unittest.TestCase):
         response.__enter__.return_value = response
         opener = mock.MagicMock()
         opener.open.return_value = response
-        tls_context = object()
+        tls_context = mock.MagicMock()
         hostile = {"HTTPS_PROXY": "https://127.0.0.1:1",
                    "SSL_CERT_FILE": "/tmp/attacker-ca.pem",
                    "SSL_CERT_DIR": "/tmp/attacker-ca"}
         with mock.patch.dict(os.environ, hostile), \
              mock.patch.object(RUNNER.urllib.request, "urlopen",
                                side_effect=AssertionError("ambient opener used")), \
-             mock.patch.object(RUNNER.ssl, "create_default_context",
+             mock.patch.object(RUNNER.ssl, "SSLContext",
                                return_value=tls_context) as create_context, \
              mock.patch.object(RUNNER.urllib.request, "build_opener", return_value=opener) as build:
             receipt = RUNNER.fetch_publication_receipt(candidate)
         self.assertEqual(receipt["candidate_hash"], candidate)
         opener.open.assert_called_once()
-        create_context.assert_called_once_with(cafile=str(RUNNER.SYSTEM_CA_BUNDLE))
+        create_context.assert_called_once_with(RUNNER.ssl.PROTOCOL_TLS_CLIENT)
+        tls_context.load_verify_locations.assert_called_once()
+        self.assertIn("BEGIN CERTIFICATE",
+                      tls_context.load_verify_locations.call_args.kwargs["cadata"])
         handlers = build.call_args.args
         self.assertTrue(any(isinstance(handler, RUNNER.urllib.request.ProxyHandler)
                             and handler.proxies == {} for handler in handlers))
@@ -363,6 +359,28 @@ class W4ServingContainmentTest(unittest.TestCase):
         self.assertEqual(manifest["verdict"], "FAIL")
         self.assertEqual(manifest["rejected_symlinks"], ["hostile-link"])
         self.assertNotIn("hostile-link", manifest["artifacts"])
+
+    def test_failure_finalizer_records_concurrent_unstable_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attempt = Path(directory)
+            unstable = attempt / "unstable.log"
+            unstable.write_text("racing evidence")
+            original = RUNNER.BASE.read_stable
+            def injected(path):
+                if path == unstable:
+                    raise OSError("regular-to-symlink race")
+                return original(path)
+            RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+            RUNNER.BASE._ACTIVE_CANDIDATE = "2" * 40
+            try:
+                with mock.patch.object(RUNNER.BASE, "read_stable", side_effect=injected):
+                    RUNNER.finalize_failure(RuntimeError("race mutation"))
+                manifest = json.loads((attempt / "manifest.json").read_bytes())
+            finally:
+                RUNNER.BASE._ACTIVE_ATTEMPT = None
+                RUNNER.BASE._ACTIVE_CANDIDATE = None
+        self.assertEqual(manifest["verdict"], "FAIL")
+        self.assertEqual(manifest["rejected_unstable_paths"], ["unstable.log"])
 
 
 if __name__ == "__main__":
