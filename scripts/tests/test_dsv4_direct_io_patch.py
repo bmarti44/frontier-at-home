@@ -50,14 +50,24 @@ class DirectIoPatchTests(unittest.TestCase):
 
     def test_patch_adds_distinct_required_mode_and_fatal_fallbacks(self) -> None:
         self.assertIn("--direct-io-required", self.patch_text)
+        self.assertIn("require_direct_io", self.patch_text)
         self.assertIn("required direct I/O open failed", self.patch_text)
         self.assertIn("required direct I/O read failed", self.patch_text)
+        self.assertIn("required direct I/O uploader unavailable", self.patch_text)
+        self.assertIn("Falling back to buffered I/O", self.patch_text)
         self.assertIn("throw std::runtime_error", self.patch_text)
 
     def test_patch_bounds_alignment_headroom(self) -> None:
         self.assertIn("upload_chunk_size", self.patch_text)
         self.assertIn("host_buffer_size", self.patch_text)
         self.assertIn("alignment - 1", self.patch_text)
+        self.assertIn("direct_io_staging_limit", self.patch_text)
+
+    def test_exact_source_test_has_no_vendor_fallback(self) -> None:
+        source = Path(__file__).read_text(encoding="utf-8")
+        self.assertIn("DSV4_FUSION_CLEAN_SOURCE_ROOT", source)
+        self.assertIn("DSV4_FUSION_PATCHED_SOURCE_ROOT", source)
+        self.assertNotIn('return ROOT / "vendor" / "llama.cpp"', source)
 
     def test_fault_injector_covers_open_read_and_partial_read(self) -> None:
         source = FAULT_SOURCE.read_text(encoding="utf-8")
