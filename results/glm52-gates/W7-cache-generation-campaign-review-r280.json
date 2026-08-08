@@ -1,0 +1,47 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 4,
+  "candidate_hash": "a9221bc8d27f0db71d3f87156568c2f0e56ef9e6",
+  "review_round": 280,
+  "runtime_authorized": false,
+  "gap_reviewer": {
+    "score": 95,
+    "verdict": "APPROVE_FOR_BOUNDED_RUNTIME",
+    "critical": [],
+    "high": [],
+    "medium": ["GAP-W7.1-280-M1-SIGTERM-SIGHUP-DO-NOT-FINALIZE-ACTIVE-ATTEMPT"],
+    "low": ["GAP-W7.1-280-L1-LOCK-VALIDATION-EDGE-MATRIX-REMAINS-PARTIAL"]
+  },
+  "adversarial_reviewer": {
+    "score": 82,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": ["ADV-W7.1-280-H1-DEFAULT-TERMINATION-BYPASSES-ACTIVATION-FINALIZER"],
+    "medium": [],
+    "low": []
+  },
+  "verified_fixed": [
+    "ADV-W7.1-279-H1-PROC-LOCKS-PID-DOES-NOT-BIND-PARENT-FD-OFD",
+    "ADV-W7.1-279-M1-LOCK-MUTATION-LEAKS-INHERITED-HOLDER",
+    "ADV-W7.1-279-M2-PRESERVED-SUMMARY-NOT-TESTED",
+    "GAP-W7.1-279-M1-FAILURE-ATTEMPT-ACTIVATION-WINDOW",
+    "GAP-W7.1-279-M2-PARENT-LOCK-NEGATIVE-MATRIX-INCOMPLETE"
+  ],
+  "candidate5_bounded_plan": [
+    "install controlled SIGINT SIGTERM and SIGHUP handlers before attempt activation",
+    "run each cgroup launcher through a child helper that terminates and reaps it on interruption",
+    "retain the campaign lock until child cleanup and failure finalization complete",
+    "exercise activation and active-child interruption without launching an engine"
+  ],
+  "convergence": {
+    "candidate_count_for_gate": 4,
+    "prior_blocking_count": 1,
+    "current_blocking_count": 1,
+    "strictly_shrank": false,
+    "consecutive_non_shrinking_candidates": 1,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": false,
+    "note": "Candidate 5 remains autonomous; another non-shrinking blocking result would trigger the literal two-consecutive-candidate pause."
+  }
+}
