@@ -178,7 +178,7 @@ def containment_command(unit: str, server_command: list[str], log_path: Path) ->
         "--property=Type=exec", "--property=MemoryHigh=100G", "--property=MemoryMax=104G",
         "--property=MemorySwapMax=0", "--property=OOMPolicy=kill",
         "--property=KillMode=control-group", "--property=TimeoutStopSec=45s",
-        "--property=RuntimeMaxSec=300s",
+        "--property=RuntimeMaxSec=300s", "--property=WorkingDirectory=/",
         f"--property=StandardOutput=append:{log_path}",
         f"--property=StandardError=append:{log_path}", "--", *server_command,
     ]
