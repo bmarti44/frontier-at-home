@@ -1,0 +1,61 @@
+{
+  "candidate_hash": "279203b593d6c6e690178f0561b39d7a75497908",
+  "review_round": 277,
+  "runtime_authorized": false,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 32,
+      "verdict": "REJECT",
+      "critical": ["GAP-W7.1-277-C1-REOPENED-SCORER-TOCTOU"],
+      "high": [
+        "GAP-W7.1-277-H1-TOKEN-TIMING-FLAG-NONEXISTENT",
+        "GAP-W7.1-277-H2-SAFETY-LOGS-UNBOUND-UNPRESERVED",
+        "GAP-W7.1-277-H3-MODEL-HASH-ASSERTED-NOT-VERIFIED",
+        "GAP-W7.1-277-H4-UNSAFE-ENGINE-LOCK-LEAF"
+      ],
+      "medium": ["GAP-W7.1-277-M1-HTTP-OUTPUT-BYTES-NOT-SCORED"],
+      "low": []
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 18,
+      "verdict": "REJECT — RUNTIME_NOT_AUTHORIZED",
+      "critical": ["ADV-W7.1-277-C1-SCORER-POSTCHECK-PATH-REOPEN"],
+      "high": [
+        "ADV-W7.1-277-H1-SAFE-RECEIPT-AND-OUTPUTS-UNBOUND",
+        "ADV-W7.1-277-H2-AMBIENT-CONFIG-ESCAPES-DIGEST",
+        "ADV-W7.1-277-H3-MODEL-PATH-SELF-ATTESTED",
+        "ADV-W7.1-277-H4-UNSAFE-ENGINE-LOCK-REOPEN",
+        "ADV-W7.1-277-H5-SELF-ASSERTED-DRAND-FLOOR",
+        "ADV-W7.1-277-H6-NO-CAMPAIGN-WIDE-LOCK"
+      ],
+      "medium": ["ADV-W7.1-277-M1-ORPHANED-PREPARATION-FAILURES"],
+      "low": []
+    }
+  },
+  "root_reproduction": {
+    "scorer_path_reopen": "VERIFIED: load_scorer reopens the canonical scorer after the final arm while the manifest records the frozen constant.",
+    "safety_receipt_binding": "VERIFIED: the positive parse test uses unrelated 1/2/3 repeated receipt digests and still passes.",
+    "ambient_configuration": "VERIFIED: environment_for_arm starts from os.environ while glm_cgroup_run forwards additional DS4 variables outside the measured digest.",
+    "model_identity": "VERIFIED: only type/size are checked before the engine reopens MODEL by pathname.",
+    "engine_lock": "VERIFIED: the frozen engine reopens and truncates the checked pathname; DS4_LOCK_EXPECTED_DEV_INO is not consumed there.",
+    "drand_floor": "VERIFIED: both compared rounds are supplied by the receipt.",
+    "campaign_lock": "VERIFIED: the global lock is acquired separately inside each arm only.",
+    "http_output_binding": "VERIFIED: generated_text is collected but omitted from the scored row.",
+    "preparation_failure_triplet": "VERIFIED: failures after attempt mkdir but before the runtime try can orphan an incomplete attempt.",
+    "token_timing_flag": "FALSIFIED: /tmp/glm52-w7-ttft-c3/ds4_server.c consumes DS4_TOKEN_TIMING_LOG and emits the exact parsed DS4_TOKEN_TIMING format."
+  },
+  "candidate_convergence": {
+    "gate_candidate": 1,
+    "blocking_classes": [
+      "frozen scorer authority",
+      "bound and retained runtime artifacts",
+      "explicit environment",
+      "executed model identity",
+      "safe retained engine lock",
+      "trusted post-freeze randomness floor",
+      "campaign-wide serialization"
+    ],
+    "convergence_trigger_fired": false,
+    "next_candidate_scope": "Close only the named round-277 findings and add their mutation tests; do not run the engine before both reviewers clear critical/high issues."
+  }
+}
