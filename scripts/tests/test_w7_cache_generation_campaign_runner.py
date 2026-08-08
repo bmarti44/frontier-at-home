@@ -178,6 +178,21 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         for copied in (out / "safety").iterdir():
             copied.unlink()
         (out / "safety").rmdir()
+        (out / "logits.sync3.start5044.prompt5066.suffix22").write_bytes(
+            (3).to_bytes(4, "little")
+        )
+        (out / "logits.sync4.start5066.prompt5067.suffix1").write_bytes(
+            (4).to_bytes(4, "little")
+        )
+        with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            MODULE, "LOGIT_BYTES", 4
+        ):
+            with self.assertRaises(MODULE.CampaignError):
+                MODULE.parse_arm("off", 0, 0, out, 0, receipt, "4" * 64, "3" * 64)
+
+        for copied in (out / "safety").iterdir():
+            copied.unlink()
+        (out / "safety").rmdir()
         client["usage"]["prompt_tokens_details"]["cached_tokens"] = 5044
         client_path.write_text(json.dumps(client), encoding="utf-8")
         next(out.glob("logits.sync3.*")).unlink()

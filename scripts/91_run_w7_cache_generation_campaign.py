@@ -979,14 +979,19 @@ def parse_arm(
         out.glob("logits.sync*.start*.prompt*.suffix*"),
         key=lambda path: int(re.search(r"\.sync([0-9]+)\.", path.name).group(1)),
     )
-    if len(logit_paths) != len(timings) + 1:
-        raise CampaignError("incomplete full-logit sequence")
+    expected_logit_names = [
+        "logits.sync1.start0.prompt5044.suffix5044",
+        "logits.sync2.start5044.prompt5055.suffix11",
+        "logits.sync3.start5044.prompt5066.suffix22",
+    ]
+    if [path.name for path in logit_paths] != expected_logit_names:
+        raise CampaignError("incomplete synchronized-logit sequence")
     logit_records = []
     for path in logit_paths:
         payload, metadata = read_stable(path)
         logit_records.append((path.name, hashlib.sha256(payload).hexdigest(), metadata.st_size))
     logit_indices = [int(re.search(r"\.sync([0-9]+)\.", name).group(1)) for name, _, _ in logit_records]
-    if logit_indices != list(range(1, len(logit_records) + 1)) or any(
+    if logit_indices != [1, 2, 3] or any(
         size != LOGIT_BYTES for _, _, size in logit_records
     ):
         raise CampaignError("logit sequence is non-contiguous or has the wrong tensor size")
