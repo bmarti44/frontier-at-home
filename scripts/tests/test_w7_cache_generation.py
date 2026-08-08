@@ -8,6 +8,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -95,6 +96,8 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             'verify_w7_lock_parent || config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"',
             safe,
         )
+        self.assertIn("DS4_W7_LOCK_FD", safe)
+        self.assertIn("DS4_W7_LOCK_FD", SMOKE.read_text(encoding="utf-8"))
         self.assertLess(safe.index("verify_w7_lock_parent"), safe.index("setsid timeout"))
 
     def test_driver_lineage_has_no_engine_behavioral_mutations(self) -> None:
@@ -111,6 +114,55 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             "bad-lock-start",
         ):
             self.assertIn(mutation, source)
+
+    def test_canonical_lineage_self_test_executes_all_mutations_without_engine(self) -> None:
+        candidate = subprocess.run(
+            ["/usr/bin/git", "--no-replace-objects", "-C", str(ROOT), "rev-parse", "HEAD"],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+        ).stdout.strip()
+        attempt_root = Path("/home/bmarti44/.local/state/glm52-w7-cache-generation")
+        before_attempts = set(attempt_root.glob("attempt-*"))
+        before_engines = subprocess.run(
+            ["/usr/bin/pgrep", "-x", "ds4-server"],
+            text=True,
+            stdout=subprocess.PIPE,
+            check=False,
+        ).stdout
+        completed = subprocess.run(
+            [str(SMOKE), "--lineage-self-test", candidate],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=180,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("W7_LINEAGE_CONTAINMENT_SELFTEST_OK", completed.stdout)
+        match = re.search(r"dir=(/home/bmarti44/\.local/state/glm52-crashlog/\S+)", completed.stdout)
+        self.assertIsNotNone(match)
+        command_log = (Path(match.group(1)) / "cmd.log").read_text(encoding="utf-8")
+        self.assertIn("W7_DRIVER_LINEAGE_SELFTEST_OK", command_log)
+        for mutation in (
+            "bad-safe-pid", "bad-safe-start", "wrong-safe-script",
+            "wrong-cgroup-unit", "bad-lock-pid", "bad-lock-start",
+        ):
+            self.assertIn(f"W7_LINEAGE_MUTATION_REJECTED name={mutation}", command_log)
+        self.assertEqual(set(attempt_root.glob("attempt-*")), before_attempts)
+        after_engines = subprocess.run(
+            ["/usr/bin/pgrep", "-x", "ds4-server"],
+            text=True,
+            stdout=subprocess.PIPE,
+            check=False,
+        ).stdout
+        self.assertEqual(after_engines, before_engines)
+
+    def test_memory_guard_identity_is_scored_and_manifested(self) -> None:
+        scorer = SCORER.read_text(encoding="utf-8")
+        harness = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("memory_guard_sha256", scorer)
+        self.assertIn('"memory_guard_sha256":memory_guard_sha', harness)
 
     def test_driver_requires_safe_wrapper_ancestor_lineage(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
