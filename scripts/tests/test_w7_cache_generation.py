@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import hashlib
+import inspect
 import json
 import os
 from pathlib import Path
@@ -84,6 +85,40 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
 
 
 class W7CacheGenerationGateTest(unittest.TestCase):
+    def test_sealed_runtime_snapshots_reject_in_place_mutation(self) -> None:
+        completed = subprocess.run(
+            [str(SMOKE), "--sealed-self-test"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("W7_SEALED_SNAPSHOTS_SELFTEST_OK", completed.stdout)
+
+    def test_requests_are_submitted_from_sealed_snapshots(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn('live_fd_path="/proc/$seal_holder_pid/fd/', source)
+        self.assertIn('primary_fd_path="/proc/$seal_holder_pid/fd/', source)
+        self.assertIn('-d @"$live_fd_path"', source)
+        self.assertIn('-d @"$primary_fd_path"', source)
+        driver = source.split("run_driver() {", 1)[1].split("publish_outer_evidence() {", 1)[0]
+        self.assertNotIn('-d @"$LIVE"', driver)
+        self.assertNotIn('-d @"$PRIMARY"', driver)
+
+    def test_completion_record_is_passed_from_private_capture(self) -> None:
+        parameters = inspect.signature(MODULE.score_and_publish_bound_attempt).parameters
+        self.assertIn("containment_stdout", parameters)
+        self.assertIn("containment_rc", parameters)
+        scorer = inspect.getsource(MODULE.score_and_publish_bound_attempt)
+        self.assertNotIn('attempt / "containment.stdout"', scorer)
+        self.assertNotIn('attempt / "containment.rc"', scorer)
+        harness = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("containment_stdout=$(", harness)
+        self.assertIn('containment_stdout="$containment_stdout"', harness)
+        self.assertIn('containment_rc="$containment_rc"', harness)
+
     def test_rejects_copied_launcher_before_self_test(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             copied = Path(directory) / "copied-smoke.sh"
