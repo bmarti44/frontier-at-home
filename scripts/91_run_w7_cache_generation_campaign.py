@@ -66,10 +66,81 @@ LISTENER = "ds4-server: listening on "
 SHUTDOWN = "ds4-server: shutdown requested"
 _ACTIVE_ATTEMPT: Path | None = None
 _ACTIVE_CANDIDATE: str | None = None
+_ACTIVE_CONTAINMENT: subprocess.Popen[str] | None = None
 
 
 class CampaignError(RuntimeError):
     pass
+
+
+class CampaignInterrupted(CampaignError):
+    def __init__(self, signum: int):
+        self.signum = signum
+        super().__init__(f"campaign interrupted by signal {signum}")
+
+
+def _raise_campaign_interrupt(signum: int, _frame: object) -> None:
+    raise CampaignInterrupted(signum)
+
+
+def install_campaign_signal_handlers() -> dict[int, Any]:
+    previous: dict[int, Any] = {}
+    for selected in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        previous[selected] = signal.getsignal(selected)
+        signal.signal(selected, _raise_campaign_interrupt)
+    return previous
+
+
+def restore_campaign_signal_handlers(previous: dict[int, Any]) -> None:
+    for selected, handler in previous.items():
+        signal.signal(selected, handler)
+
+
+def _terminate_and_reap(process: subprocess.Popen[str]) -> None:
+    blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+    try:
+        if process.returncode is None:
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                pass
+        try:
+            process.wait(timeout=45)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=15)
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+
+
+def run_contained_command(command: list[str], environment: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    """Run one launcher and synchronously reap it before propagating interruption."""
+    global _ACTIVE_CONTAINMENT
+    blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+    process: subprocess.Popen[str] | None = None
+    try:
+        process = subprocess.Popen(
+            command, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        _ACTIVE_CONTAINMENT = process
+    finally:
+        try:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+        except BaseException:
+            if process is not None:
+                _terminate_and_reap(process)
+            _ACTIVE_CONTAINMENT = None
+            raise
+    try:
+        stdout, stderr = process.communicate()
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+    except BaseException:
+        _terminate_and_reap(process)
+        raise
+    finally:
+        _ACTIVE_CONTAINMENT = None
 
 
 def finalize_failure_triplet(error: BaseException) -> None:
@@ -726,6 +797,7 @@ def load_scorer(frozen_scorer_bytes: bytes, expected_sha256: str) -> Any:
 
 def campaign(candidate: str, randomness_receipt: Path) -> int:
     global _ACTIVE_ATTEMPT, _ACTIVE_CANDIDATE
+    previous_signal_handlers = install_campaign_signal_handlers()
     verify_dependencies()
     verify_candidate(candidate)
     if server_pids() or subprocess.run(["/usr/bin/pgrep", "-x", "fio"], capture_output=True).returncode == 0:
@@ -810,7 +882,7 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
                     "--driver", arm, str(out), str(request_path), request_sha256, candidate,
                     model_devino, model_descriptor_path, engine_lock_path,
                 ]
-                completed = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
+                completed = run_contained_command(command, env)
                 write_new(out / "containment.stdout", completed.stdout.encode())
                 write_new(out / "containment.stderr", completed.stderr.encode())
                 write_new(out / "containment.rc", f"{completed.returncode}\n".encode())
@@ -886,6 +958,7 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
     os.close(campaign_lock_fd)
     _ACTIVE_ATTEMPT = None
     _ACTIVE_CANDIDATE = None
+    restore_campaign_signal_handlers(previous_signal_handlers)
     return result
 
 
