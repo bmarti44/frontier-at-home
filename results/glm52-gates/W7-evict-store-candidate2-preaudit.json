@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 2,
+  "audited_repo_commit": "b9cf6d14fa1baa35cdfd9ee5853ec4da904e70fd",
+  "status": "READY_FOR_DELTA_REVIEW",
+  "scope": "Only round-288 named evidence findings: receipt-bound parsing, generic event cardinality, checkpoint identity, and interruption-safe complete archival. Engine source, binary, fixtures, frozen W7.1 lifecycle, and containment wrappers are byte-identical to candidate 1.",
+  "component_sha256": {
+    "scripts/92_score_w7_evict_store_probe.py": "1ccb1cf2d501cc5ec0132080fe7f60fed21a707bc741c28e03520a89d325fcbb",
+    "scripts/93_run_w7_evict_store_probe.py": "5b9da4135a7492cd91f01b662bd0f56733d1ef1b20007e6a3e567d55b38f7588",
+    "results/glm52-gates/harness/glm_cgroup_run_w7_evict_store_v1.sh": "13fe1f8faa77020918faadc5214f4f5cdc955d6dfc6c158cc0f2d080a0e8985d",
+    "scripts/91_run_w7_cache_generation_campaign.py": "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
+  },
+  "binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+  "engine_source_commit": "fdd0fe05df6368de428cd5405929f49d590c9f52",
+  "review_finding_disposition": [
+    {
+      "ids": [
+        "GAP-W7.2-288-H1-POST-VALIDATION-EVIDENCE-REOPEN",
+        "ADV-W7.2-288-H2-SECOND-PATH-READS-ARE-NOT-BOUND-TO-AUTHENTICATED-ARM"
+      ],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "W7.2 now rereads safety/main through O_NOFOLLOW, revalidates its digest against SAFE_RUN_DONE, binds the server descriptor digest/dev/inode/size to the wrapper's final_artifact_verified line, and verifies the three descriptor-read logits against the frozen parser's sequence/final digests. The same expected digests are rechecked during artifact collection and the published manifest is independently validated.",
+      "acceptance_tests": [
+        "test_parse_rejects_server_replacement_after_base_validation",
+        "test_parse_rejects_logit_replacement_after_base_validation"
+      ]
+    },
+    {
+      "ids": ["GAP-W7.2-288-H2-PAYLOAD-SPECIFIC-EVENT-COUNTS-HIDE-EXTRAS"],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "The runner counts every generic reason=evict, skip, activation, and text-hit event before validating the sole event's exact payload. Malformed, substituted, and extra events fail.",
+      "acceptance_tests": [
+        "test_parse_accepts_only_exact_off_and_on_event_sets",
+        "test_parse_rejects_extra_or_substituted_event_payloads"
+      ]
+    },
+    {
+      "ids": [
+        "GAP-W7.2-288-H3-INTERRUPTION-FINALIZER-LEAVES-ARM-EVIDENCE-UNBOUND",
+        "ADV-W7.2-288-H1-INTERRUPTION-WINDOWS-CAN-LOSE-FAILURE-TRIPLET"
+      ],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "Termination signals are blocked across attempt activation plus both global assignments and across terminal publication. Finalization falls back to BASE activation state, serializes every completed row, hashes every existing regular attempt artifact, displaces invalid partial terminal files, and validates a complete published manifest rather than trusting existence.",
+      "acceptance_tests": [
+        "test_post_attempt_failure_is_preserved_as_triplet",
+        "test_finalizer_recovers_base_activation_window_and_partial_manifest"
+      ]
+    },
+    {
+      "ids": ["ADV-W7.2-288-H3-SAME-CHECKPOINT-CLAIM-HAS-NO-IDENTITY-FIELD"],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "The parser captures the validated hit's token-text checkpoint filename identity and the scorer requires a canonical token-text:<40hex> field equal across arms.",
+      "acceptance_tests": ["test_rejects_distinct_valid_checkpoint_identity"]
+    },
+    {
+      "ids": ["ADV-W7.2-288-M1-PREAUDIT-DIFF-CHECK-PASS-IS-FALSE"],
+      "status": "FIXED_BY_SCOPED_ATTESTATION",
+      "resolution": "Candidate 1's unqualified diff_check claim is retracted. Candidate 2 records the exact relevant command and result rather than claiming the broad historical branch is whitespace-clean.",
+      "command": "git diff --check 0a5cc2c0f2a2470d473c7d291b25bce776d1653f..b9cf6d14fa1baa35cdfd9ee5853ec4da904e70fd",
+      "exit_code": 0
+    }
+  ],
+  "pre_submission_audit": {
+    "command": "python3 -m unittest scripts.tests.test_w7_cache_generation scripts.tests.test_w7_cache_generation_campaign scripts.tests.test_glm_safe_lifecycle scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_evict_store scripts.tests.test_w7_evict_store_probe scripts.tests.test_w7_evict_store_probe_runner",
+    "tests_run": 126,
+    "failures": 0,
+    "errors": 0,
+    "expected_skips": 1,
+    "runner_self_test": "PASS",
+    "secret_lint": "PASS",
+    "scoped_diff_check": "PASS",
+    "worktree_clean_at_audit": true,
+    "engine_or_fio_active": false,
+    "observed_mem_available_kb": 120837456,
+    "swap_used_kb": 206504
+  },
+  "convergence": {
+    "prior_blocking_class_count": 4,
+    "claimed_open_blocking_class_count": 0,
+    "no_frozen_scope_change": true,
+    "candidate_count": 2,
+    "escalation_triggered": false
+  },
+  "runtime_authorization": "Do not start the engine until both persistent reviewers verify no critical/high findings on this candidate.",
+  "verdict": "NO_RESULT"
+}
