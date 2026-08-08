@@ -940,8 +940,8 @@ do_start() {
         || die 'DSV4_DIRECT_IO must be 0 or 1'
     if (( direct_io )); then
         (( no_mmap )) || die 'DSV4_DIRECT_IO=1 requires DSV4_NO_MMAP=1'
-        grep -F -- '--direct-io' <<<"$help_output" >/dev/null \
-            || die 'llama-server lacks required --direct-io support'
+        grep -F -- '--direct-io-required' <<<"$help_output" >/dev/null \
+            || die 'llama-server lacks required --direct-io-required support'
         printf 'DSV4 cold-load mode: direct-io (default-off diagnostic).\n' >&2
     fi
     # DSV4_LOG_VERBOSITY raises llama-server's -lv (default 3 = production).
@@ -993,7 +993,8 @@ do_start() {
         --host 127.0.0.1 --port "$PORT" -c "$CTX" -np "$parallel" -ngl 999
         -b "$batch" -ub "$ubatch" --no-warmup --cache-ram 0)
     (( no_mmap == 0 )) || server_command+=(--no-mmap)
-    (( direct_io == 0 )) || server_command+=(--direct-io)
+    (( direct_io == 0 )) || server_command+=(--direct-io-required)
+    (( direct_io != 0 )) || server_command+=(--no-direct-io)
     (( log_verbosity == 3 )) || server_command+=(-lv "$log_verbosity")
     [[ -z $slot_save_path ]] || server_command+=(--slot-save-path "$slot_save_path")
     # DSV4_SPEC_TYPE enables speculative decoding. The ngram-* types are

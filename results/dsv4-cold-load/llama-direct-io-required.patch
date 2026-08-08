@@ -1,1 +1,52 @@
-# RED placeholder: candidate 1 has no mandatory-direct engine patch.
+diff --git a/common/arg.cpp b/common/arg.cpp
+index 7bc770ab4..2979bdf9a 100644
+--- a/common/arg.cpp
++++ b/common/arg.cpp
+@@ -2422 +2422 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+-        {"-dio", "--direct-io"},
++        {"-dio", "--direct-io", "--direct-io-required"},
+@@ -2424 +2424 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+-        string_format("use DirectIO if available. (default: %s)", params.use_direct_io ? "enabled" : "disabled"),
++        string_format("require DirectIO for model reads. (default: %s)", params.use_direct_io ? "enabled" : "disabled"),
+diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
+index ed572da7f..416898a1c 100644
+--- a/src/llama-mmap.cpp
++++ b/src/llama-mmap.cpp
+@@ -190,2 +190,2 @@ struct llama_file::impl {
+-            LLAMA_LOG_WARN("Failed to open file '%s' with error: %s. Falling back to buffered I/O",
+-                           fname, strerror(errno));
++            throw std::runtime_error(format(
++                "required direct I/O open failed for '%s': %s", fname, strerror(errno)));
+@@ -290 +289,0 @@ struct llama_file::impl {
+-                    // Fallback to std::fread in case the DMA controller cannot access the buffer
+@@ -292,9 +291,2 @@ struct llama_file::impl {
+-                        LLAMA_LOG_WARN("%s: Falling back to buffered IO due to %s\n", __func__, strerror(errno));
+-                        auto curr_off = tell();
+-                        close(fd);
+-                        fd = -1;
+-                        alignment = 1;
+-                        init_fp("rb");
+-                        seek(curr_off, SEEK_SET);
+-                        read_raw_unsafe(ptr, len);
+-                        return;
++                        throw std::runtime_error(format(
++                            "required direct I/O read failed for '%s': %s", fname.c_str(), strerror(errno)));
+diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
+index 28f8bb793..5866d301a 100644
+--- a/src/llama-model-loader.cpp
++++ b/src/llama-model-loader.cpp
+@@ -1441,3 +1441,5 @@ bool llama_model_loader::load_all_data(
+-    // Buffer size: balance between memory usage and I/O efficiency
+-    // 64MB works well for NVMe drives
+-    const size_t buffer_size = alignment != 1 ? 64 * 1024 * 1024 + 2 * alignment : 1 * 1024 * 1024;
++    // Payload size: balance between memory usage and I/O efficiency. Allocate
++    // separate alignment headroom because host-buffer bases are not required
++    // to satisfy the model file's block alignment.
++    const size_t upload_chunk_size = alignment != 1 ? 64 * 1024 * 1024 : 1 * 1024 * 1024;
++    const size_t host_buffer_size = upload_chunk_size + alignment - 1;
+@@ -1492 +1494 @@ bool llama_model_loader::load_all_data(
+-            auto * buf = ggml_backend_buft_alloc_buffer(host_buft, buffer_size);
++            auto * buf = ggml_backend_buft_alloc_buffer(host_buft, host_buffer_size);
+@@ -1601 +1603 @@ bool llama_model_loader::load_all_data(
+-                        size_t read_size = std::min<size_t>(buffer_size, read_end - read_start - bytes_read);
++                        size_t read_size = std::min<size_t>(upload_chunk_size, read_end - read_start - bytes_read);

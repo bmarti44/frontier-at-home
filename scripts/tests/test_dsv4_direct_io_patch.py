@@ -39,7 +39,7 @@ class DirectIoPatchTests(unittest.TestCase):
             checkout = Path(raw) / "source"
             shutil.copytree(self.source, checkout, ignore=shutil.ignore_patterns("build*", ".git"))
             result = subprocess.run(
-                ["git", "apply", "--check", str(PATCH)],
+                ["git", "apply", "--check", "--unidiff-zero", str(PATCH)],
                 cwd=checkout,
                 text=True,
                 capture_output=True,
