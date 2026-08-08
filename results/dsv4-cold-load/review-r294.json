@@ -1,0 +1,120 @@
+{
+  "candidate_hash": "5ee71f526797d99c7a9c6e1cc3ccdf529400b7ce",
+  "convergence": {
+    "blocking_classes": [
+      "mandatory direct mode can fall back to tensor-sized synchronous upload staging",
+      "exact-source GREEN and fault-probe runtime dependencies are not replay-complete",
+      "no authoritative five-block matched A/B runner and fixed scorer"
+    ],
+    "candidate_count": 2,
+    "consecutive_candidates_without_strict_blocker_shrinkage": 1,
+    "decision": "candidate 3 authorized; runtime blocked"
+  },
+  "review_round": 294,
+  "reviewers": {
+    "adversarial_reviewer": {
+      "critical": [],
+      "high": [
+        {
+          "affected_gate": "UMA safety and bounded mandatory-direct staging",
+          "evidence": "Async uploader setup failures still select a synchronous tensor-sized read_buf path; read_aligned_chunk can add another tensor-sized aligned allocation. Real tensors reach 1140850688 bytes, exceeding the 269000000-byte staging bound.",
+          "id": "ADV-DSV4-COLD-294-H1-MANDATORY-DIRECT-STILL-HAS-UNBOUNDED-UPLOAD-FALLBACK",
+          "proposed_acceptance_test": "Inject every uploader setup failure and require mandatory-direct mode to fail before tensor loading, with allocation accounting below the frozen bound.",
+          "reproduction_instructions": "Force missing uploader capability, buffer/event allocation, or backend initialization and observe upload_backend become null and tensor-sized staging become reachable."
+        },
+        {
+          "affected_gate": "authoritative contained cold-load A/B",
+          "evidence": "Five blocks are declared but no randomized matched runner, fixed relative scorer, complete bundle binding, external timing/read authority, or mutation-tested evidence validator exists.",
+          "id": "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS",
+          "proposed_acceptance_test": "RED-test and implement the previously named five-block runner/scorer contract before a model run.",
+          "reproduction_instructions": "Attempt to score slower-than-stock or malformed candidate rows; candidate 2 has no executable rejection path."
+        }
+      ],
+      "low": [],
+      "medium": [
+        {
+          "affected_gate": "default-off scope compatibility",
+          "evidence": "The required option is an alias of legacy use_direct_io, so legacy --direct-io and LLAMA_ARG_DIO also become mandatory rather than opportunistic.",
+          "id": "ADV-DSV4-COLD-294-M1-REQUIRED-OPTION-IS-AN-ALIAS-THAT-BROADENS-LEGACY-DIRECT-IO",
+          "proposed_acceptance_test": "Represent optional and required modes separately and verify only the required flag fails closed.",
+          "reproduction_instructions": "Inject O_DIRECT open failure under each legacy and required option and compare with the pinned baseline."
+        },
+        {
+          "affected_gate": "RED/GREEN and mutation replay authority",
+          "evidence": "The recorded review source is already patched, while the patch test expects a clean source. The fault probe also depends on mutable, unrecorded shared libraries and LD_LIBRARY_PATH.",
+          "id": "ADV-DSV4-COLD-294-M2-GREEN-AND-FAULT-EVIDENCE-DO-NOT-REPLAY-AGAINST-THE-RECORDED-RUNTIME-DEPS",
+          "proposed_acceptance_test": "Bind clean exact source to patched reviewed source byte-for-byte and package/hash every loaded probe dependency and invocation environment.",
+          "reproduction_instructions": "Run the test against the recorded patched path, then run the probe without the unrecorded library path."
+        }
+      ],
+      "prior_issue_status": [
+        {"id": "ADV-DSV4-COLD-293-H1-DIRECT-IO-IS-NOT-DEFAULT-OFF-UNDER-AMBIENT-LLAMA-ENV", "status": "VERIFIED_FIXED"},
+        {"id": "ADV-DSV4-COLD-293-H2-DIRECT-IO-SILENTLY-FALLS-BACK-AND-CANNOT-PROVE-SINGLE-WEIGHT-FOOTPRINT", "status": "PARTIALLY_FIXED"},
+        {"id": "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS", "status": "OPEN"},
+        {"id": "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN", "status": "VERIFIED_FIXED"},
+        {"id": "GAP-DSV4-COLD-293-H1-DIRECT-IO-DEFAULT-BYPASS", "status": "VERIFIED_FIXED"},
+        {"id": "GAP-DSV4-COLD-293-H2-DIRECT-ARM-SILENTLY-FALLS-BACK", "status": "PARTIALLY_FIXED"},
+        {"id": "GAP-DSV4-COLD-293-H3-NO-AUTHORITATIVE-CONTAINED-AB-HARNESS", "status": "OPEN"},
+        {"id": "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED", "status": "OPEN_NONBLOCKING"}
+      ],
+      "score_0_to_100": 64,
+      "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+    },
+    "gap_reviewer": {
+      "critical": [],
+      "high": [
+        {
+          "affected_gate": "exact-source RED/GREEN and preaudit authority",
+          "evidence": "The eight-test GREEN fails when pointed at the recorded already-patched review source and passes only against a separate clean source or the prohibited vendor fallback.",
+          "id": "GAP-DSV4-COLD-294-H1-EXACT-SOURCE-GREEN-NOT-REPRODUCIBLE",
+          "proposed_acceptance_test": "Materialize exact clean commit 0dc74e3, apply the patch, and compare all resulting reviewed source files byte-for-byte; prohibit vendor fallback.",
+          "reproduction_instructions": "Set DSV4_FUSION_SOURCE_ROOT to the recorded patched tree and run the patch tests."
+        },
+        {
+          "affected_gate": "authoritative contained cold-load A/B",
+          "evidence": "The executable matched runner/scorer and evidence validator remain intentionally absent.",
+          "id": "GAP-DSV4-COLD-293-H3-NO-AUTHORITATIVE-CONTAINED-AB-HARNESS",
+          "proposed_acceptance_test": "Implement the fixed five-block matched runner/scorer and malformed-evidence mutations before runtime.",
+          "reproduction_instructions": "Attempt to execute or score the campaign using candidate-2 files."
+        }
+      ],
+      "low": [],
+      "medium": [
+        {
+          "affected_gate": "bounded pinned staging",
+          "evidence": "The current 4096-byte alignment fits the limit, but the limit is not calculated or enforced from runtime alignment.",
+          "id": "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN",
+          "proposed_acceptance_test": "Calculate and bind the exact four-buffer allocation and fail above the declared maximum.",
+          "reproduction_instructions": "Evaluate four times payload-plus-alignment-minus-one over larger supported alignments."
+        },
+        {
+          "affected_gate": "legacy option compatibility",
+          "evidence": "The new required option aliases and changes the behavior of legacy opportunistic direct I/O.",
+          "id": "GAP-DSV4-COLD-294-M2-REQUIRED-MODE-CHANGES-LEGACY-DIRECT-IO-SEMANTICS",
+          "proposed_acceptance_test": "Separate optional and required modes and preserve legacy behavior.",
+          "reproduction_instructions": "Fault O_DIRECT open under the legacy option and compare baseline with candidate."
+        },
+        {
+          "affected_gate": "matched cold-cache authority",
+          "evidence": "No physical-read counters or post-eviction cache observation exists yet.",
+          "id": "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED",
+          "proposed_acceptance_test": "Bind physical-read counters and cache-state observations in candidate 3.",
+          "reproduction_instructions": "Prepopulate pages and observe that advisory fadvise alone proves no reread."
+        }
+      ],
+      "prior_issue_status": [
+        {"id": "ADV-DSV4-COLD-293-H1-DIRECT-IO-IS-NOT-DEFAULT-OFF-UNDER-AMBIENT-LLAMA-ENV", "status": "VERIFIED_FIXED"},
+        {"id": "GAP-DSV4-COLD-293-H1-DIRECT-IO-DEFAULT-BYPASS", "status": "VERIFIED_FIXED"},
+        {"id": "ADV-DSV4-COLD-293-H2-DIRECT-IO-SILENTLY-FALLS-BACK-AND-CANNOT-PROVE-SINGLE-WEIGHT-FOOTPRINT", "status": "VERIFIED_FIXED_FOR_REQUIRED_ARM"},
+        {"id": "GAP-DSV4-COLD-293-H2-DIRECT-ARM-SILENTLY-FALLS-BACK", "status": "VERIFIED_FIXED_FOR_REQUIRED_ARM"},
+        {"id": "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS", "status": "OPEN_BLOCKING"},
+        {"id": "GAP-DSV4-COLD-293-H3-NO-AUTHORITATIVE-CONTAINED-AB-HARNESS", "status": "OPEN_BLOCKING"},
+        {"id": "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN", "status": "PARTIALLY_FIXED"},
+        {"id": "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED", "status": "OPEN_NONBLOCKING"}
+      ],
+      "score_0_to_100": 68,
+      "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+    }
+  },
+  "schema_version": 1
+}
