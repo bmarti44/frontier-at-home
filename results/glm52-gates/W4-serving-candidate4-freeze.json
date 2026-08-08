@@ -1,0 +1,40 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 4,
+  "source_candidate_hash": "6b5460665f21cab4fbd935af602af5e3d1bcb250",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "launch_status": "NOT_RUN_PENDING_ROUND_303",
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate4-preaudit.txt": "10a8e19d1db7f09ba700ca08c3bb632127c724e49fa6468f0c2f6c3e2e5cfef7",
+    "scripts/101_score_w4_serving_campaign.py": "98689cf510874c1d5dc7de4ba3acb9ca6a3aa797fc402b51cf7d36b5982251f7",
+    "scripts/102_run_w4_serving_campaign.py": "6a291ab98393974bcbeb41df95b9d59d410fc139eb76691dcda1111ac63009a5",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "8a6f6ab52305e886b3fa311630c755454a7a1d1d4cb582edfd860b296fc108af",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "f2b6c8261f943fd0e32c6ef27afdbc782260a86c3177b5e5ebe966824f2c5dce",
+    ".gitleaks.toml": "bc7514624203fcccfce2499e250224137e49fd191c7f2200f59a03ccd11ef36d",
+    "scripts/lint_secrets.sh": "64e8ee4136e4c8ed80340dfc8555fb4037b7de7c970296dcf04cba6a494721f7"
+  },
+  "round_302_disposition": {
+    "ADV-W4S-302-H1-SELECTABLE-POSTFREEZE-DRAND-ROUND": "FIXED: exact first drand round strictly after the GitHub publication timestamp is required; earlier and later authentic rounds reject",
+    "ADV-W4S-302-H2-CLOSURE-PARSE-TOCTOU": "FIXED: one retained byte-and-identity snapshot drives all parsing and row replay, followed by complete membership and identity reconciliation",
+    "W4S-R302-H1-DRAND-RUNTIME-TREE-UNBOUND": "FIXED: the established 585-file runtime-tree digest is checked immediately before each BLS invocation and during dependency preflight/replay",
+    "W4S-R302-H2-GITHUB-FLOOR-TRUSTS-AMBIENT-TLS": "FIXED: proxy-disabled opener and exact hash-bound system CA bundle ignore HTTPS_PROXY and SSL_CERT overrides",
+    "W4S-R302-H3-SYMLINK-FAILURE-LOSES-TERMINAL-AUTHORITY": "FIXED: symlinks are recorded but never followed; reserved symlinks are unlinked and a terminal FAIL manifest is always emitted",
+    "W4S-R302-M1-PUSHEVENT-LOOKUP-NOT-DURABLE": "DEFERRED with explicit recent-events replay-lifetime limitation; not a launch-validity blocker",
+    "W4S-R302-M2-FAILURE-MANIFEST-LINEAGE-IS-INDIRECT": "FIXED: terminal failure manifest names all available frozen dependency lineage",
+    "ADV-W4S-302-M1-EPHEMERAL-PUBLICATION-ORACLE": "DEFERRED with explicit recent-events replay-lifetime limitation; not a launch-validity blocker",
+    "ADV-W4S-302-M2-MODEL-CONTENT-NOT-INDEPENDENTLY-REPLAYED": "FIXED: a hash-closed held-descriptor model identity artifact is required and replayed",
+    "ADV-W4S-302-L1-UNLOCATED-PREAUDIT-DIGEST": "FIXED: preaudit output is preserved at the named artifact path"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "25/25 PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS",
+    "dependency_hash_preflight": "PASS",
+    "clean_exact_head": "PASS before freeze record",
+    "user_systemd_available": true,
+    "engine_or_fio_started": false,
+    "frozen_engine_microgate_fixture_unchanged": true
+  }
+}
