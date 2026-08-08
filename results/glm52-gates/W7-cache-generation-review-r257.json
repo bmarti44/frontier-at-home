@@ -1,0 +1,71 @@
+{
+  "candidate_hash": "dea40f5d490047afd28280b26601b075dad60360",
+  "review_round": 257,
+  "gate_candidate": 3,
+  "verdict": "REJECT_RUNTIME_BLOCKED_CONVERGENCE_PAUSE",
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 100,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "ACCEPT_RUNTIME_AUTHORIZED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 72,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-257-H1-ZERO-COMPLETION-NONEMPTY-OUTPUT-ACCEPTED",
+        "evidence": "A response with completion_tokens=0 and non-empty text passes the frozen scorer.",
+        "affected_gate": "external response schema and false-success resistance",
+        "reproduction": "Change only choices[0].text in the otherwise-valid response from an empty string to unexpected-output; score_text returns PASS.",
+        "proposed_acceptance_test": "Require exact empty text for this zero-output fixture and reject non-empty and whitespace-only mutations."
+      },
+      {
+        "id": "ADV-W7.1-257-H2-CANONICAL-FATAL-MARKERS-MISSED",
+        "evidence": "CUDA_ERROR_OUT_OF_MEMORY, uppercase FATAL ERROR, and oom-kill inside the request window each pass the case-sensitive fatal scan.",
+        "affected_gate": "fatal and OOM safety evidence",
+        "reproduction": "Insert each canonical marker before shutdown while holding response, HTTP, and containment valid; score_text returns PASS.",
+        "proposed_acceptance_test": "Use the repository's case-insensitive CUDA/OOM/Xid patterns and require failure for each canonical class and any containment/scorer disagreement."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W7.1-257-M1-BINARY-VERIFY-PATH-TOCTOU",
+        "evidence": "The verifier lstat/is_symlink checks and later hash open can observe different inodes.",
+        "affected_gate": "exact binary freeze",
+        "reproduction": "Replace the checked path between metadata collection and the hash open.",
+        "proposed_acceptance_test": "Open once with O_NOFOLLOW, fstat and hash the same descriptor, then bind launch identity."
+      }
+    ],
+    "low": [
+      {
+        "id": "ADV-W7.1-257-L1-PROMPT-CANDIDATE-HASH-TRANSCRIPTION",
+        "evidence": "The initial review prompt manually expanded short dea40f5 to a nonexistent long hash; the correction arrived before review and no frozen artifact contains it.",
+        "affected_gate": "review control-plane metadata",
+        "reproduction": "Compare the initial prompt string with git rev-parse HEAD.",
+        "proposed_acceptance_test": "Populate reviewer hashes only from git rev-parse HEAD and verify resolvability before dispatch."
+      }
+    ],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "prior_issue_status": {
+    "ADV-W7.1-255-H1-UNBOUND-RESUME-COMPLETION": "VERIFIED",
+    "ADV-W7.1-255-H2-FROZEN-COVERAGE-NOT-EXECUTED": "VERIFIED",
+    "ADV-W7.1-255-H3-SUPPORT-MODEL-IDENTITY-DEAD-END": "VERIFIED",
+    "ADV-W7.1-256-H1-NO-PREIMPLEMENTATION-CUDA-RED": "VERIFIED",
+    "ADV-W7.1-256-H2-RESPONSE-SCHEMA-ACCEPTS-ERROR-SHAPES": "VERIFIED",
+    "ADV-W7.1-256-H3-FROZEN-BINARY-SIZE-MISMATCH": "VERIFIED",
+    "GAP-W7.1-C1-H1-ROCM-DEFAULT-OFF-BUILD-REGRESSION": "VERIFIED"
+  },
+  "convergence": {
+    "candidate_2_introduced_new_blocking_classes": true,
+    "candidate_3_closed_all_candidate_2_blockers": true,
+    "candidate_3_introduced_new_blocking_classes": true,
+    "consecutive_candidates_without_rule_convergence": 2,
+    "trigger": "blocking findings failed the no-new-finding-class condition across two consecutive candidates",
+    "required_action": "Pause W7.1; do not publish candidate 4 or start runtime without owner direction."
+  }
+}
