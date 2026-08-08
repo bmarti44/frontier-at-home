@@ -1,0 +1,32 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "status": "PREREGISTERED_RED_PENDING",
+  "candidate_scope": "Byte-identical, default-off separation of per-layer CUDA view remapping from authoritative model-load generation changes.",
+  "source_baseline": {
+    "engine_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+    "engine_worktree": "/tmp/glm52-w7-ttft"
+  },
+  "observed_hypothesis": {
+    "authoritative_attempt": "/home/bmarti44/.local/state/glm52-w7-production-equivalence/attempt-e021e9e2f2a4b9097fbd3836f9df32e4",
+    "symptom": "Every routed layer emits a model-generation-change cache flush while the process and model are unchanged.",
+    "mechanism_to_test": "metal_graph_install_model_spans calls ds4_gpu_set_model_map_spans for per-layer view changes; that API increments g_model_load_generation through ds4_gpu_set_model_map."
+  },
+  "fixed_acceptance": {
+    "structural_red": "The unchanged authoritative log must FAIL scripts/89_score_w7_cache_generation.py with false_generation_flush_count > 0.",
+    "production_coverage": [
+      "listener ready",
+      "persistent expert cache enabled exactly once",
+      "indexed_resume observed and completed",
+      "zero model-generation-change flushes after listener readiness and before shutdown"
+    ],
+    "correctness": "Candidate and unchanged-control logit dumps must be byte-identical; max_abs_delta=0 and argmax equal. Candidate output must be deterministic across repeats.",
+    "performance": "Five fresh-server matched ABBA/BAAB blocks; candidate/control warm suffix TTFT upper-95% ratio <=0.95 and decode lower-95% ratio >=1.00. Any timeout, unequal fixture, short output, OOM, Xid, swap growth, identity failure, or MemAvailable below 10 GiB is FAIL.",
+    "fidelity": "No NLL spend is allowed; this gate must be byte-identical.",
+    "flag": "DS4_CUDA_STABLE_MODEL_REMAP=1, logged and default off"
+  },
+  "mutation_requirements": [
+    "one injected generation-change flush is rejected",
+    "missing cache-enabled coverage is rejected",
+    "missing completed indexed_resume is rejected"
+  ]
+}

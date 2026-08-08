@@ -1,0 +1,28 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "attempt": "unchanged-authoritative-W7-production-log",
+  "attempt_time_utc": "2026-08-08",
+  "engine_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "source_log": "/home/bmarti44/.local/state/glm52-w7-production-equivalence/attempt-e021e9e2f2a4b9097fbd3836f9df32e4/strict/server.log",
+  "hashes": {
+    "server_log_sha256": "c580f10f7a532d21a168b6d34939a6ecc2e1fed724addd4ea05745094837f7e4",
+    "scorer_sha256": "ff14dba09ef5be3b5bb972104d45afde21a5631accb39515156a2d3bfcd1d074",
+    "test_sha256": "3593373d6b1fdb7fd7c2288d9f2c05b5c9565be63800bfc73cd9ab3f44ff0c2a",
+    "plan_sha256": "7411462aaf169a00066adb585acfb94a497daf374e462cab7e0bc898272e0a90"
+  },
+  "scorer_exit_code": 1,
+  "observed": {
+    "cache_enabled_count": 1,
+    "false_generation_flush_count": 374,
+    "indexed_resume_count": 1
+  },
+  "checks": {
+    "listener_observed": true,
+    "persistent_cache_enabled_once": true,
+    "indexed_resume_observed": true,
+    "indexed_resume_completed": true,
+    "stable_model_generation_flushes_zero": false
+  },
+  "verdict": "RED_CONFIRMED",
+  "interpretation": "The unchanged production path completed an indexed resume but falsely announced 374 model-generation changes inside one fixed-model server lifetime. The gate rejects before implementation."
+}
