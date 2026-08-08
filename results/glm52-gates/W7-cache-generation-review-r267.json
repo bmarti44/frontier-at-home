@@ -1,0 +1,61 @@
+{
+  "candidate_hash": "bd73870dc5e6da1b0a41c86a89a439d08e60bdf3",
+  "review_round": 267,
+  "gate_candidate": 14,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 97,
+    "critical": [],
+    "high": [],
+    "medium": [
+      {
+        "id": "GAP-W7.1-267-M1-MEMORY-GUARD-NOT-EXPLICITLY-MANIFESTED",
+        "evidence": "The memory guard is sealed and candidate-bound but absent from the authoritative runtime manifest identities.",
+        "affected_gate": "W7.1 safety dependency traceability",
+        "acceptance_test": "Bind its hash in PASS/fallback manifests and verify the safety-log record."
+      }
+    ],
+    "low": [],
+    "verdict": "ACCEPT_WITH_MEDIUM"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 78,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-267-H1-LOCK-OWNER-EXECUTABLE-UNBOUND",
+        "evidence": "PID/start, argv, and momentary lock ownership do not bind the lock-owner executable or continuously held lock authority.",
+        "affected_gate": "continuous inference-lock ownership and repository-launcher lineage",
+        "acceptance_test": "Bind the exact executable and clean environment, or verify an inherited descriptor for the exact lock remains held through driver dispatch."
+      },
+      {
+        "id": "ADV-W7.1-267-H2-BEHAVIORAL-LINEAGE-TEST-NOT-EXECUTED",
+        "evidence": "The committed test asserts mode/mutation strings but does not invoke --lineage-self-test; only the one-off preflight does.",
+        "affected_gate": "meaningful no-engine regression coverage",
+        "acceptance_test": "A committed test must execute the canonical path, require both success markers and six rejection markers, and prove no engine/runtime scratch appears."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "prior_issue_status": {
+    "ADV-W7.1-266-H1-SAFE-WRAPPER-DIRECT-ENTRY-BYPASSES-LOCK": "PARTIALLY_FIXED",
+    "GAP-W7.1-266-H1-DRIVER-ANCESTRY-NOT-BEHAVIORALLY-TESTED": "PARTIALLY_FIXED",
+    "ADV-W7.1-265-H2-GIT-REPLACEMENT-LINEAGE": "FIXED",
+    "GAP-W7.1-265-H1-CANDIDATE-HEAD-NOT-REVALIDATED": "FIXED"
+  },
+  "convergence": {
+    "gate_candidate_count": 14,
+    "campaign_global_review_round": 267,
+    "blocking_classes_previous": 2,
+    "blocking_classes_current": 2,
+    "consecutive_non_shrinking_candidates": 1,
+    "status": "CANDIDATE_15_AUTHORIZED",
+    "next_scope": [
+      "inherited continuously-held inference-lock descriptor",
+      "committed execution of the no-engine lineage mutation suite"
+    ]
+  },
+  "root_disposition": "Runtime remains blocked. Candidate 15 is bounded to the two adversarial highs; the medium receives a targeted manifest test without a separate review round."
+}
