@@ -1,0 +1,35 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 9,
+  "candidate_hash": "896cd4f32fe0c301a63ce63dc966495fcc1db26b",
+  "review_round": 285,
+  "runtime_authorized": true,
+  "gap_reviewer": {
+    "score": 100,
+    "verdict": "APPROVE_FOR_BOUNDED_RUNTIME",
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": []
+  },
+  "adversarial_reviewer": {
+    "score": 96,
+    "verdict": "APPROVE_FOR_BOUNDED_RUNTIME",
+    "critical": [],
+    "high": [],
+    "medium": ["ADV-W7.1-285-M1-SECONDARY-INTEGRATION-READINESS-NOT-PGROUP-BOUND"],
+    "low": []
+  },
+  "medium_disposition": {
+    "id": "ADV-W7.1-285-M1-SECONDARY-INTEGRATION-READINESS-NOT-PGROUP-BOUND",
+    "status": "ACCEPTED_WITH_EVIDENCE",
+    "rationale": "The authoritative committed secondary-case observation contains the expected marker plus two session members, and the independent production unit test creates a real fork+setpgid child and verifies session-wide discovery. Singer reproduced the cleanup as correct and scored 96; changing the reviewed harness would invalidate the candidate without changing production behavior."
+  },
+  "verified_fixed": [
+    "session-wide enumeration across secondary process groups",
+    "pidfd-bound session revalidation and SIGKILL",
+    "stable session emptiness",
+    "stable unit window ending on an observation",
+    "all earlier interruption-cleanup blockers"
+  ]
+}
