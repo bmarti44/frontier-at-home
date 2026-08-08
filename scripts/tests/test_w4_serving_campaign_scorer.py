@@ -148,6 +148,18 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
             with self.assertRaises(OSError):
                 SCORER._read_stable(link)
 
+    def test_snapshot_parsing_cannot_reopen_replaced_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "summary.json"
+            artifact.write_bytes(b'{"verdict":"PASS"}\n')
+            snapshot = SCORER._snapshot_files(root, {"summary.json"})
+            artifact.rename(root / "summary.original")
+            artifact.write_bytes(b'{"verdict":"FAIL"}\n')
+            self.assertEqual(snapshot["summary.json"][0], b'{"verdict":"PASS"}\n')
+            with self.assertRaises(SCORER.InvalidCampaign):
+                SCORER._verify_snapshot_unchanged(root, snapshot, {"summary.json"})
+
 
 if __name__ == "__main__":
     unittest.main()

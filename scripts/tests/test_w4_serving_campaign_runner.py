@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -94,6 +95,72 @@ class W4ServingContainmentTest(unittest.TestCase):
             receipt = RUNNER.fetch_publication_receipt(candidate)
         self.assertEqual(receipt["candidate_hash"], candidate)
         self.assertEqual(receipt["created_at_unix"], 1_786_211_125)
+
+    def test_randomness_requires_first_round_strictly_after_publication(self) -> None:
+        candidate = "3" * 40
+        publication = {"candidate_hash": candidate, "created_at_unix": 1_786_212_006}
+        first = 6_359_367
+        base = {
+            "freeze_floor_round": RUNNER.DRAND_FREEZE_FLOOR_ROUND,
+            "randomness": "4" * 64,
+            "signature": "5" * 192,
+            "previous_signature": "6" * 192,
+            "frozen_gate_commit": candidate,
+            "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
+        }
+        verified = mock.Mock(returncode=0, stdout="DRAND_BLS_RECEIPT_OK\n")
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(RUNNER.subprocess, "run", return_value=verified):
+            receipt = Path(directory) / "receipt.json"
+            receipt.write_text(json.dumps({**base, "round": first + 1}))
+            with self.assertRaisesRegex(RUNNER.CampaignError, "first eligible"):
+                RUNNER.verify_randomness(receipt, candidate, publication)
+
+    def test_randomness_verification_binds_imported_runtime_tree(self) -> None:
+        candidate = "3" * 40
+        publication = {"candidate_hash": candidate, "created_at_unix": 1_786_212_006}
+        doc = {
+            "round": 6_359_367,
+            "freeze_floor_round": RUNNER.DRAND_FREEZE_FLOOR_ROUND,
+            "randomness": "4" * 64,
+            "signature": "5" * 192,
+            "previous_signature": "6" * 192,
+            "frozen_gate_commit": candidate,
+            "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
+        }
+        verified = mock.Mock(returncode=0, stdout="DRAND_BLS_RECEIPT_OK\n")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "runtime"
+            root.mkdir()
+            (root / "imported.js").write_text("forged verifier dependency")
+            receipt = Path(directory) / "receipt.json"
+            receipt.write_text(json.dumps(doc))
+            with mock.patch.object(RUNNER, "DRAND_RUNTIME", root, create=True), \
+                 mock.patch.object(RUNNER.subprocess, "run", return_value=verified), \
+                 self.assertRaisesRegex(RUNNER.CampaignError, "runtime tree"):
+                RUNNER.verify_randomness(receipt, candidate, publication)
+
+    def test_publication_fetch_ignores_ambient_proxy_and_ca_overrides(self) -> None:
+        candidate = "3" * 40
+        response = mock.MagicMock()
+        response.read.return_value = json.dumps([{
+            "id": "event-1", "type": "PushEvent", "created_at": "2026-08-08T17:45:25Z",
+            "payload": {"head": candidate,
+                        "ref": "refs/heads/glm52-rung0-io-submission"},
+        }]).encode()
+        response.__enter__.return_value = response
+        opener = mock.MagicMock()
+        opener.open.return_value = response
+        hostile = {"HTTPS_PROXY": "https://127.0.0.1:1",
+                   "SSL_CERT_FILE": "/tmp/attacker-ca.pem",
+                   "SSL_CERT_DIR": "/tmp/attacker-ca"}
+        with mock.patch.dict(os.environ, hostile), \
+             mock.patch.object(RUNNER.urllib.request, "urlopen",
+                               side_effect=AssertionError("ambient opener used")), \
+             mock.patch.object(RUNNER.urllib.request, "build_opener", return_value=opener):
+            receipt = RUNNER.fetch_publication_receipt(candidate)
+        self.assertEqual(receipt["candidate_hash"], candidate)
+        opener.open.assert_called_once()
 
     def test_sync_trace_requires_full_novel_prefill(self) -> None:
         valid = ("ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
@@ -236,6 +303,26 @@ class W4ServingContainmentTest(unittest.TestCase):
         self.assertIn("manifest.pre-failure.json", manifest["artifacts"])
         self.assertIn("summary.pre-finalization.json", manifest["artifacts"])
         self.assertIn("retained.log", manifest["artifacts"])
+
+    def test_symlink_failure_preserves_terminal_authority_without_following(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attempt = Path(directory)
+            (attempt / "raw.jsonl").write_bytes(b"{}\n")
+            (attempt / "summary.json").write_text('{"verdict":"PASS"}\n')
+            (attempt / "manifest.json").write_text('{"verdict":"PASS"}\n')
+            (attempt / "target").write_text("must not be read")
+            (attempt / "hostile-link").symlink_to(attempt / "target")
+            RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+            RUNNER.BASE._ACTIVE_CANDIDATE = "2" * 40
+            try:
+                RUNNER.finalize_failure(RuntimeError("symlink mutation"))
+                manifest = json.loads((attempt / "manifest.json").read_bytes())
+            finally:
+                RUNNER.BASE._ACTIVE_ATTEMPT = None
+                RUNNER.BASE._ACTIVE_CANDIDATE = None
+        self.assertEqual(manifest["verdict"], "FAIL")
+        self.assertEqual(manifest["rejected_symlinks"], ["hostile-link"])
+        self.assertNotIn("hostile-link", manifest["artifacts"])
 
 
 if __name__ == "__main__":

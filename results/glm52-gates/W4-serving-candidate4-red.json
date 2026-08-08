@@ -1,0 +1,26 @@
+{
+  "schema": "glm52-w4-serving-candidate-red-v1",
+  "candidate": 4,
+  "unchanged_parent": "0a5ec46e0ff0ce0c07f9edbba1ad7276911119f6",
+  "review_round_source": 302,
+  "engine_started": false,
+  "test_command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner scripts.tests.test_w4_serving_campaign_scorer",
+  "observed": {
+    "tests_run": 25,
+    "passed": 20,
+    "failures": 3,
+    "errors": 2,
+    "blocking_reds": [
+      "later authentic drand round accepted instead of exact first eligible round",
+      "mutated imported drand runtime tree accepted",
+      "ambient urllib opener used under hostile proxy and CA environment",
+      "authoritative scorer has no retained evidence snapshot",
+      "symlink makes failure finalizer raise after removing terminal authority"
+    ]
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w4_serving_campaign_runner.py": "f2c74f902f217b02cfbae745b2eeaf305de2b1592ce795ac2b08e85956e2c40e",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "f2b6c8261f943fd0e32c6ef27afdbc782260a86c3177b5e5ebe966824f2c5dce"
+  },
+  "acceptance": "All five named REDs must turn GREEN while the existing 20 focused tests remain GREEN; frozen W4 engine, microgate, request, and metric formula remain unchanged."
+}
