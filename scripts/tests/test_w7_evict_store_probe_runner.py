@@ -114,7 +114,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             "evict_store_count", "selected_checkpoint_tokens", "logit_sha256s",
             "manifest.json", "raw.jsonl", "summary.json", "public_randomness",
             "install_campaign_signal_handlers", "finalize_failure_triplet",
-            '"verdict": summary["verdict"]',
+            'manifest["verdict"] = verdict',
         ):
             self.assertIn(required, source)
         self.assertNotIn("shell=True", source)
@@ -178,6 +178,24 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
                 "candidate_hash": "c" * 40,
                 "verdict": "PASS",
                 "completed_rows": 1,
+                "runner_sha256": "e" * 64,
+                "base_lifecycle_sha256": "e" * 64,
+                "scorer_sha256": "e" * 64,
+                "cgroup_sha256": "e" * 64,
+                "safe_run_sha256": "e" * 64,
+                "memory_guard_sha256": "e" * 64,
+                "binary_sha256": "e" * 64,
+                "engine_source_commit": "e" * 40,
+                "model_sha256": "e" * 64,
+                "model_bytes": 1,
+                "live_request_sha256": "e" * 64,
+                "primary_source_sha256": "e" * 64,
+                "executed_request_sha256": "e" * 64,
+                "configuration": {},
+                "configuration_sha256": "e" * 64,
+                "public_randomness_sha256": "e" * 64,
+                "public_randomness_receipt_sha256": "e" * 64,
+                "arm_order": ["off", "on"],
                 "artifacts": {
                     "raw.jsonl": hashlib.sha256(raw).hexdigest(),
                     "summary.json": hashlib.sha256(summary).hexdigest(),
@@ -197,6 +215,45 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             manifest["completed_rows"] = 2
             (attempt / "manifest.json").write_text(json.dumps(manifest))
             self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+
+    def test_normal_publication_preserves_pass_and_fail_verdicts(self) -> None:
+        for verdict in ("PASS", "FAIL"):
+            with tempfile.TemporaryDirectory(prefix="w7-publish-") as temporary:
+                attempt = Path(temporary)
+                arm = attempt / "p0-off"
+                arm.mkdir()
+                (arm / "server.log").write_text("arm\n")
+                raw = b'{"arm":"off"}\n'
+                summary = (json.dumps({"verdict": verdict}, separators=(",", ":")) + "\n").encode()
+                manifest = {
+                    "schema": "glm52-w7-evict-store-probe-v1",
+                    "candidate_hash": "f" * 40,
+                    "runner_sha256": "e" * 64,
+                    "base_lifecycle_sha256": "e" * 64,
+                    "scorer_sha256": "e" * 64,
+                    "cgroup_sha256": "e" * 64,
+                    "safe_run_sha256": "e" * 64,
+                    "memory_guard_sha256": "e" * 64,
+                    "binary_sha256": "e" * 64,
+                    "engine_source_commit": "e" * 40,
+                    "model_sha256": "e" * 64,
+                    "model_bytes": 1,
+                    "live_request_sha256": "e" * 64,
+                    "primary_source_sha256": "e" * 64,
+                    "executed_request_sha256": "e" * 64,
+                    "configuration": {},
+                    "configuration_sha256": "e" * 64,
+                    "public_randomness_sha256": "e" * 64,
+                    "public_randomness_receipt_sha256": "e" * 64,
+                    "arm_order": ["off", "on"],
+                    "completed_rows": 1,
+                    "artifacts": {},
+                }
+                observed = MODULE.publish_terminal_triplet(attempt, manifest, raw, summary, {})
+                self.assertEqual(observed, verdict)
+                self.assertTrue(MODULE.terminal_manifest_valid(attempt, "f" * 40))
+                published = json.loads((attempt / "manifest.json").read_text())
+                self.assertEqual(published["verdict"], verdict)
 
     def test_failure_publication_records_authoritative_replacement(self) -> None:
         with tempfile.TemporaryDirectory(prefix="w7-binding-finalize-") as temporary:
@@ -238,6 +295,21 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         with mock.patch.object(MODULE.BASE, "parse_arm", side_effect=replace_after_validation):
             with self.assertRaises(Exception):
                 MODULE.parse_arm("on", 0, out, 0, receipt, "4" * 64, "3" * 64)
+
+    def test_parse_and_record_blocks_termination_until_row_and_bindings_publish(self) -> None:
+        rows: list[dict[str, object]] = []
+        bindings: dict[str, str] = {}
+        def observe_mask(*_args, **_kwargs):
+            current = MODULE.signal.pthread_sigmask(MODULE.signal.SIG_BLOCK, set())
+            self.assertIn(MODULE.signal.SIGTERM, current)
+            return {"arm": "off"}, {"/attempt/server.log": "a" * 64}
+        with mock.patch.object(MODULE, "parse_arm", side_effect=observe_mask):
+            MODULE.parse_and_record_arm(
+                rows, bindings, "off", 0, Path("/attempt"), 0, "receipt",
+                "b" * 64, "c" * 64, "d" * 64,
+            )
+        self.assertEqual(rows, [{"arm": "off", "executed_environment_sha256": "d" * 64}])
+        self.assertEqual(bindings, {"/attempt/server.log": "a" * 64})
 
     def test_parse_accepts_only_exact_off_and_on_event_sets(self) -> None:
         temporary, out, base_row, off_receipt = self.make_parse_arm()

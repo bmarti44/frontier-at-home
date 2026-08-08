@@ -57,17 +57,21 @@ ACTIVATION = "ds4-server: diagnostic preload evict-store bypass enabled"
 SKIPPED = "ds4-server: diagnostic skipped preload evict store live=5055 prompt=5066 common=5045"
 EXPECTED_STORE_RE = re.compile(
     r"ds4-server: kv cache stored tokens=5055 trimmed=0 reason=evict "
-    r"key=token-text size=[0-9]+(?:\.[0-9]+)? MiB save=[0-9]+(?:\.[0-9]+)? ms$"
+    r"key=token-text size=[0-9]+(?:\.[0-9]+)? MiB save=[0-9]+(?:\.[0-9]+)? ms"
 )
 EXPECTED_HIT_RE = re.compile(
     r"ds4-server: kv cache hit text tokens=5044 text=15571 quant=2 key=token-text "
-    r"load=[0-9]+(?:\.[0-9]+)? ms file=.*/([0-9a-f]{40})\.kv$"
+    r"load=[0-9]+(?:\.[0-9]+)? ms file=.*/([0-9a-f]{40})\.kv"
+)
+LOGGER_LINE_RE = re.compile(
+    r"(?:[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} )?(ds4-server: .*)\Z"
 )
 SHA_RE = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
 _ACTIVE_ATTEMPT: Path | None = None
 _ACTIVE_CANDIDATE: str | None = None
 _ACTIVE_ROWS: list[dict[str, object]] = []
+_ACTIVE_BINDINGS: dict[str, str] = {}
 
 
 class ProbeError(RuntimeError):
@@ -230,31 +234,37 @@ def parse_arm(
         or logit_records[-1][1] != parsed["final_logits_sha256"]
     ):
         raise ProbeError("W7.2 logit snapshot differs from frozen-parser evidence")
-    generic_store = [
+    raw_store = [
         line for line in server.splitlines()
         if "ds4-server: kv cache stored" in line and "reason=evict" in line
     ]
-    generic_skip = [
+    raw_skip = [
         line for line in server.splitlines()
         if "ds4-server: diagnostic skipped preload evict store" in line
     ]
-    generic_activation = [
+    raw_activation = [
         line for line in server.splitlines()
         if "ds4-server: diagnostic preload evict-store bypass" in line
     ]
-    hit_lines = [line for line in server.splitlines() if "ds4-server: kv cache hit text " in line]
-    hit_matches = [EXPECTED_HIT_RE.search(line) for line in hit_lines]
+    raw_hits = [line for line in server.splitlines() if "ds4-server: kv cache hit text" in line]
+    def normalized(lines: list[str]) -> list[str | None]:
+        return [match.group(1) if (match := LOGGER_LINE_RE.fullmatch(line)) else None for line in lines]
+    store_events = normalized(raw_store)
+    skip_events = normalized(raw_skip)
+    activation_events = normalized(raw_activation)
+    hit_events = normalized(raw_hits)
+    hit_matches = [EXPECTED_HIT_RE.fullmatch(line) if line is not None else None for line in hit_events]
     if len(hit_matches) != 1 or hit_matches[0] is None:
         raise ProbeError("checkpoint hit cardinality or payload mismatch")
     if arm == "off":
         if (
-            len(generic_store) != 1 or EXPECTED_STORE_RE.search(generic_store[0]) is None
-            or generic_skip or generic_activation
+            len(store_events) != 1 or store_events[0] is None
+            or EXPECTED_STORE_RE.fullmatch(store_events[0]) is None
+            or skip_events or activation_events
         ):
             raise ProbeError("OFF evict-store event cardinality or payload mismatch")
     elif (
-        generic_store or len(generic_skip) != 1 or generic_skip[0].endswith(SKIPPED) is False
-        or len(generic_activation) != 1 or generic_activation[0].endswith(ACTIVATION) is False
+        store_events or skip_events != [SKIPPED] or activation_events != [ACTIVATION]
     ):
         raise ProbeError("ON skip event cardinality or payload mismatch")
     safety = dict(parsed["safety"])
@@ -268,12 +278,32 @@ def parse_arm(
         "logit_sha256s": [record[1] for record in logit_records],
         "selected_checkpoint_tokens": 5044,
         "checkpoint_id": f"token-text:{hit_matches[0].group(1)}",
-        "evict_store_count": len(generic_store),
-        "skip_marker_count": len(generic_skip),
-        "activation_marker_count": len(generic_activation),
+        "evict_store_count": len(store_events),
+        "skip_marker_count": len(skip_events),
+        "activation_marker_count": len(activation_events),
         "safety": safety,
     })
     return parsed, bound_artifacts
+
+
+def parse_and_record_arm(
+    rows: list[dict[str, object]], bindings: dict[str, str], arm: str,
+    position: int, out: Path, containment_rc: int, containment_stdout: str,
+    request_sha256: str, config_sha256: str, environment_sha256: str,
+) -> None:
+    """Atomically publish one parsed arm to interruption-finalization state."""
+    blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+    try:
+        row, arm_bindings = parse_arm(
+            arm, position, out, containment_rc, containment_stdout,
+            request_sha256, config_sha256,
+        )
+        row["executed_environment_sha256"] = environment_sha256
+        rows.append(row)
+        bindings.update(arm_bindings)
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous)
 
 
 def load_scorer(frozen: bytes) -> Any:
@@ -307,16 +337,107 @@ def collect_artifacts(
     return artifacts
 
 
+def inventory_artifacts(attempt: Path) -> dict[str, str]:
+    artifacts: dict[str, str] = {}
+    for path in sorted(attempt.rglob("*")):
+        if path.is_symlink():
+            raise ProbeError(f"symlink in terminal inventory: {path}")
+        if path.is_dir() or path == attempt / "manifest.json":
+            continue
+        payload, _ = BASE.read_stable(path)
+        artifacts[str(path.relative_to(attempt))] = hashlib.sha256(payload).hexdigest()
+    return artifacts
+
+
+NORMAL_MANIFEST_KEYS = {
+    "schema", "candidate_hash", "runner_sha256", "base_lifecycle_sha256",
+    "scorer_sha256", "cgroup_sha256", "safe_run_sha256", "memory_guard_sha256",
+    "binary_sha256", "engine_source_commit", "model_sha256", "model_bytes",
+    "live_request_sha256", "primary_source_sha256", "executed_request_sha256",
+    "configuration", "configuration_sha256", "public_randomness_sha256",
+    "public_randomness_receipt_sha256", "arm_order", "completed_rows",
+    "artifacts", "verdict",
+}
+FAILURE_MANIFEST_KEYS = {
+    "schema", "candidate_hash", "failure", "runner_sha256", "scorer_sha256",
+    "binary_sha256", "model_sha256", "completed_rows", "artifacts",
+    "binding_failures", "verdict",
+}
+
+
 def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
     try:
         payload, _ = BASE.read_stable(attempt / "manifest.json")
         manifest = json.loads(payload)
+        if not isinstance(manifest, dict):
+            return False
+        schema = manifest.get("schema")
+        required = (
+            NORMAL_MANIFEST_KEYS if schema == "glm52-w7-evict-store-probe-v1"
+            else FAILURE_MANIFEST_KEYS if schema == "glm52-w7-evict-store-probe-failure-v1"
+            else None
+        )
         if (
-            not isinstance(manifest, dict) or manifest.get("candidate_hash") != candidate
+            required is None or set(manifest) != required
+            or manifest.get("candidate_hash") != candidate
             or manifest.get("verdict") not in {"PASS", "FAIL"}
             or not isinstance(manifest.get("artifacts"), dict)
             or not {"raw.jsonl", "summary.json"}.issubset(manifest["artifacts"])
+            or type(manifest.get("completed_rows")) is not int
+            or manifest["completed_rows"] < 0
         ):
+            return False
+        if schema == "glm52-w7-evict-store-probe-v1":
+            digest_fields = (
+                "runner_sha256", "base_lifecycle_sha256", "scorer_sha256",
+                "cgroup_sha256", "safe_run_sha256", "memory_guard_sha256",
+                "binary_sha256", "model_sha256", "live_request_sha256",
+                "primary_source_sha256", "executed_request_sha256",
+                "configuration_sha256", "public_randomness_sha256",
+                "public_randomness_receipt_sha256",
+            )
+            if (
+                any(not isinstance(manifest[name], str) or SHA_RE.fullmatch(manifest[name]) is None for name in digest_fields)
+                or not isinstance(manifest["engine_source_commit"], str)
+                or COMMIT_RE.fullmatch(manifest["engine_source_commit"]) is None
+                or type(manifest["model_bytes"]) is not int or manifest["model_bytes"] <= 0
+                or not isinstance(manifest["configuration"], dict)
+                or not isinstance(manifest["arm_order"], list)
+                or len(manifest["arm_order"]) != 2 or set(manifest["arm_order"]) != {"off", "on"}
+            ):
+                return False
+        elif (
+            not isinstance(manifest["failure"], str) or not manifest["failure"]
+            or not isinstance(manifest["binding_failures"], dict)
+        ):
+            return False
+        if schema == "glm52-w7-evict-store-probe-failure-v1":
+            for relative, record in manifest["binding_failures"].items():
+                if (
+                    not isinstance(relative, str) or Path(relative).is_absolute()
+                    or ".." in Path(relative).parts or not isinstance(record, dict)
+                    or set(record) != {"expected_sha256", "observed_sha256"}
+                    or not isinstance(record["expected_sha256"], str)
+                    or SHA_RE.fullmatch(record["expected_sha256"]) is None
+                    or (
+                        record["observed_sha256"] is not None
+                        and (
+                            not isinstance(record["observed_sha256"], str)
+                            or SHA_RE.fullmatch(record["observed_sha256"]) is None
+                        )
+                    )
+                    or manifest["artifacts"].get(relative) != record["observed_sha256"]
+                ):
+                    return False
+        raw_bytes, _ = BASE.read_stable(attempt / "raw.jsonl")
+        summary_bytes, _ = BASE.read_stable(attempt / "summary.json")
+        summary = json.loads(summary_bytes)
+        if not isinstance(summary, dict) or summary.get("verdict") != manifest["verdict"]:
+            return False
+        raw_lines = raw_bytes.splitlines()
+        if any(not line.strip() or not isinstance(json.loads(line), dict) for line in raw_lines):
+            return False
+        if len(raw_lines) != manifest["completed_rows"]:
             return False
         for relative, digest in manifest["artifacts"].items():
             if (
@@ -325,10 +446,7 @@ def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
                 or SHA_RE.fullmatch(digest) is None
             ):
                 return False
-            artifact, _ = BASE.read_stable(attempt / relative)
-            if hashlib.sha256(artifact).hexdigest() != digest:
-                return False
-        return True
+        return inventory_artifacts(attempt) == manifest["artifacts"]
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return False
 
@@ -343,6 +461,20 @@ def displace_existing(path: Path) -> tuple[str, str] | None:
             os.rename(path, target)
             return target.name, hashlib.sha256(payload).hexdigest()
     raise ProbeError(f"too many displaced finalization artifacts: {path.name}")
+
+
+def binding_failures(attempt: Path, expected: dict[str, str]) -> dict[str, dict[str, str | None]]:
+    observed = inventory_artifacts(attempt)
+    failures: dict[str, dict[str, str | None]] = {}
+    for absolute, expected_digest in expected.items():
+        try:
+            relative = str(Path(absolute).relative_to(attempt))
+        except ValueError as error:
+            raise ProbeError("authoritative binding escapes attempt") from error
+        observed_digest = observed.get(relative)
+        if observed_digest != expected_digest:
+            failures[relative] = {"expected_sha256": expected_digest, "observed_sha256": observed_digest}
+    return failures
 
 
 def finalize_failure_triplet(error: BaseException) -> None:
@@ -364,7 +496,10 @@ def finalize_failure_triplet(error: BaseException) -> None:
             (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
             for row in _ACTIVE_ROWS
         )
+        failures = binding_failures(attempt, _ACTIVE_BINDINGS)
         failure = f"{type(error).__name__}: {error}"
+        if failures:
+            failure += f"; authoritative_binding_failures={len(failures)}"
         summary_bytes = (json.dumps({"failure": failure, "verdict": "FAIL"}, sort_keys=True, separators=(",", ":")) + "\n").encode()
         artifacts = collect_artifacts(attempt)
         BASE.write_new(attempt / "raw.jsonl", raw_bytes)
@@ -384,6 +519,7 @@ def finalize_failure_triplet(error: BaseException) -> None:
             "model_sha256": MODEL_SHA256,
             "completed_rows": len(_ACTIVE_ROWS),
             "artifacts": artifacts,
+            "binding_failures": failures,
             "verdict": "FAIL",
         })
         if not terminal_manifest_valid(attempt, candidate):
@@ -392,8 +528,43 @@ def finalize_failure_triplet(error: BaseException) -> None:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous)
 
 
+def publish_terminal_triplet(
+    attempt: Path, manifest: dict[str, object], raw_bytes: bytes,
+    summary_bytes: bytes, expected_bindings: dict[str, str],
+) -> str:
+    try:
+        summary = json.loads(summary_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ProbeError("invalid summary before terminal publication") from error
+    verdict = summary.get("verdict") if isinstance(summary, dict) else None
+    if verdict not in {"PASS", "FAIL"}:
+        raise ProbeError("summary lacks terminal verdict")
+    manifest = dict(manifest)
+    manifest["verdict"] = verdict
+    blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+    try:
+        artifacts = collect_artifacts(attempt, expected_bindings)
+        artifacts["raw.jsonl"] = hashlib.sha256(raw_bytes).hexdigest()
+        artifacts["summary.json"] = hashlib.sha256(summary_bytes).hexdigest()
+        manifest["artifacts"] = artifacts
+        BASE.write_new(attempt / "raw.jsonl", raw_bytes)
+        BASE.write_new(attempt / "summary.json", summary_bytes)
+        BASE.write_json_new(attempt / "manifest.json", manifest)
+        directory_fd = os.open(attempt, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        if not terminal_manifest_valid(attempt, str(manifest["candidate_hash"])):
+            raise ProbeError("published terminal triplet did not validate")
+        return verdict
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+
+
 def run_probe(candidate: str, randomness_receipt: Path) -> int:
-    global _ACTIVE_ATTEMPT, _ACTIVE_CANDIDATE, _ACTIVE_ROWS
+    global _ACTIVE_ATTEMPT, _ACTIVE_CANDIDATE, _ACTIVE_ROWS, _ACTIVE_BINDINGS
     verify_dependencies()
     verify_candidate(candidate)
     if BASE.server_pids() or subprocess.run(["/usr/bin/pgrep", "-x", "fio"], capture_output=True).returncode == 0:
@@ -440,6 +611,7 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
             _ACTIVE_ATTEMPT = attempt
             _ACTIVE_CANDIDATE = candidate
             _ACTIVE_ROWS = []
+            _ACTIVE_BINDINGS = {}
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous)
         engine_lock_fd = os.open(attempt / "engine.lock", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
@@ -463,6 +635,7 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
         rows: list[dict[str, object]] = []
         _ACTIVE_ROWS = rows
         authoritative_bindings: dict[str, str] = {}
+        _ACTIVE_BINDINGS = authoritative_bindings
         failure: str | None = None
         try:
             for position, arm in enumerate(order):
@@ -483,13 +656,11 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
                 BASE.write_new(out / "containment.stdout", completed.stdout.encode())
                 BASE.write_new(out / "containment.stderr", completed.stderr.encode())
                 BASE.write_new(out / "containment.rc", f"{completed.returncode}\n".encode())
-                row, arm_bindings = parse_arm(
-                    arm, position, out, completed.returncode, completed.stdout,
-                    request_sha, config_sha,
+                parse_and_record_arm(
+                    rows, authoritative_bindings, arm, position, out,
+                    completed.returncode, completed.stdout, request_sha,
+                    config_sha, env_sha,
                 )
-                row["executed_environment_sha256"] = env_sha
-                rows.append(row)
-                authoritative_bindings.update(arm_bindings)
         except Exception as error:
             failure = f"{type(error).__name__}: {error}"
         scorer_rows = []
@@ -529,31 +700,17 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
             "completed_rows": len(rows),
             "artifacts": {},
         }
-        previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
-        try:
-            artifacts = collect_artifacts(attempt, authoritative_bindings)
-            artifacts["raw.jsonl"] = hashlib.sha256(raw_bytes).hexdigest()
-            artifacts["summary.json"] = hashlib.sha256(summary_bytes).hexdigest()
-            manifest["artifacts"] = artifacts
-            BASE.write_new(attempt / "raw.jsonl", raw_bytes)
-            BASE.write_new(attempt / "summary.json", summary_bytes)
-            BASE.write_json_new(attempt / "manifest.json", manifest)
-            directory_fd = os.open(attempt, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
-            if not terminal_manifest_valid(attempt, candidate):
-                raise ProbeError("published terminal triplet did not validate")
-        finally:
-            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+        published_verdict = publish_terminal_triplet(
+            attempt, manifest, raw_bytes, summary_bytes, authoritative_bindings,
+        )
         print(f"W7_EVICT_STORE_PROBE_ATTEMPT={attempt}")
         _ACTIVE_ATTEMPT = None
         _ACTIVE_CANDIDATE = None
         _ACTIVE_ROWS = []
+        _ACTIVE_BINDINGS = {}
         BASE._ACTIVE_ATTEMPT = None
         BASE._ACTIVE_CANDIDATE = None
-        return 0 if summary["verdict"] == "PASS" else 1
+        return 0 if published_verdict == "PASS" else 1
     finally:
         for descriptor in (engine_lock_fd, model_fd, memory_guard_fd):
             if descriptor >= 0:
