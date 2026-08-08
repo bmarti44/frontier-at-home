@@ -1,0 +1,24 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 7,
+  "review_round_source": 282,
+  "unchanged_runner_commit": "9f012437c35f85f62068818f846637eb75860b60",
+  "runner_sha256": "f441d6207c3efe841c25b8dce45c061b36e4cd6816a245499c063f29d2787aa4",
+  "test_sha256": "cc45666ab00c360556c74bce2b014c2182ba417b269e5a163b84d08e18f62f53",
+  "test_diff_sha256": "e9dff73b25ace19cc4ff23683e9be0366b71f9108f7bdcf17454e58d98d3e2b7",
+  "command": "python3 -m unittest scripts.tests.test_w7_cache_generation_campaign_runner.W7CacheGenerationCampaignRunnerTest.test_interrupted_containment_is_terminated_and_reaped scripts.tests.test_w7_cache_generation_campaign_runner.W7CacheGenerationCampaignRunnerTest.test_unit_state_requires_complete_unique_fail_closed_schema scripts.tests.test_w7_cache_generation_campaign_runner.W7CacheGenerationCampaignRunnerTest.test_cleanup_reaps_before_stop_and_rechecks_unit_last scripts.tests.test_w7_cache_generation_campaign_runner.W7CacheGenerationCampaignRunnerTest.test_cleanup_control_failure_still_proves_no_survivors_and_fails",
+  "observed": {
+    "tests_run": 4,
+    "failures": 8,
+    "errors": 0,
+    "expected_failures": [
+      "launcher was stopped after the unit rather than before it",
+      "masked-active, incomplete, duplicate, malformed, and unknown state schemas were accepted",
+      "no final exact-unit check occurred after launcher reap",
+      "a control-plane failure skipped independent cgroup and survivor proof"
+    ]
+  },
+  "verdict": "RED_CONFIRMED",
+  "engine_started": false,
+  "gpu_used": false
+}

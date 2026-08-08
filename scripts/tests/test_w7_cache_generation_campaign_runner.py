@@ -376,7 +376,7 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         finally:
             MODULE.restore_campaign_signal_handlers(previous)
         stop_unit.assert_called_once_with("glm52-w7-test-4242.service")
-        self.assertEqual(events[:3], ["stop:glm52-w7-test-4242.service", "terminate", "wait"])
+        self.assertEqual(events[:3], ["terminate", "wait", "stop:glm52-w7-test-4242.service"])
         self.assertTrue(process.terminated)
         self.assertTrue(process.waited)
         self.assertFalse(process.killed)
@@ -403,6 +403,68 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         )
         with mock.patch.object(MODULE.subprocess, "run", return_value=missing):
             self.assertTrue(MODULE._unit_is_stopped("glm52-w7-test-123.service"))
+
+    def test_unit_state_requires_complete_unique_fail_closed_schema(self) -> None:
+        unit = "glm52-w7-test-123.service"
+        cases = (
+            "LoadState=masked\nActiveState=active\nSubState=running\nMainPID=9\nControlPID=0\n",
+            "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=0\n",
+            "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlPID=0\nControlPID=0\n",
+            "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=zero\nControlPID=0\n",
+            "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlPID=0\nUnexpected=value\n",
+        )
+        for stdout in cases:
+            completed = subprocess.CompletedProcess(["systemctl"], 0, stdout, "")
+            with self.subTest(stdout=stdout), mock.patch.object(
+                MODULE.subprocess, "run", return_value=completed,
+            ):
+                with self.assertRaises(MODULE.CampaignError):
+                    MODULE._unit_is_stopped(unit)
+        masked_stopped = subprocess.CompletedProcess(
+            ["systemctl"], 0,
+            "LoadState=masked\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlPID=0\n", "",
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=masked_stopped):
+            self.assertTrue(MODULE._unit_is_stopped(unit))
+
+    def test_cleanup_reaps_before_stop_and_rechecks_unit_last(self) -> None:
+        events: list[str] = []
+        process = mock.Mock(pid=4242, returncode=None)
+        with mock.patch.object(
+            MODULE, "_terminate_and_reap", side_effect=lambda _: events.append("reap")
+        ), mock.patch.object(
+            MODULE, "stop_exact_containment_unit", side_effect=lambda _: events.append("stop")
+        ), mock.patch.object(
+            MODULE, "_unit_is_stopped", side_effect=lambda _: events.append("final-unit") or True
+        ), mock.patch.object(
+            MODULE, "server_pids", side_effect=lambda: events.append("servers") or []
+        ), mock.patch.object(
+            MODULE, "_listener_is_active", side_effect=lambda: events.append("listener") or False
+        ):
+            MODULE._cleanup_interrupted_containment(process, "glm52-w7-test-4242.service")
+        self.assertEqual(events, ["reap", "stop", "final-unit", "servers", "listener"])
+
+    def test_cleanup_control_failure_still_proves_no_survivors_and_fails(self) -> None:
+        events: list[str] = []
+        process = mock.Mock(pid=4242, returncode=None)
+        control_error = MODULE.CampaignError("bus unavailable")
+        with mock.patch.object(
+            MODULE, "_terminate_and_reap", side_effect=lambda _: events.append("reap")
+        ), mock.patch.object(
+            MODULE, "stop_exact_containment_unit", side_effect=control_error
+        ), mock.patch.object(
+            MODULE, "_kill_and_verify_containment_cgroup",
+            side_effect=lambda _: events.append("cgroup-empty"), create=True,
+        ), mock.patch.object(
+            MODULE, "server_pids", side_effect=lambda: events.append("servers") or []
+        ), mock.patch.object(
+            MODULE, "_listener_is_active", side_effect=lambda: events.append("listener") or False
+        ):
+            with self.assertRaisesRegex(MODULE.CampaignError, "bus unavailable"):
+                MODULE._cleanup_interrupted_containment(
+                    process, "glm52-w7-test-4242.service"
+                )
+        self.assertEqual(events, ["reap", "cgroup-empty", "servers", "listener"])
 
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
