@@ -22,6 +22,116 @@ SPEC.loader.exec_module(MODULE)
 
 
 class W7EvictStoreProbeRunnerTests(unittest.TestCase):
+    def terminal_row(self, arm: str, position: int, config_sha: str, request_sha: str) -> dict[str, object]:
+        tokens = list(range(128))
+        first = 2_000_000_000 if arm == "off" else 1_000_000_000
+        timestamps = [first + index * 100_000_000 for index in range(128)]
+        return {
+            "arm": arm,
+            "position": position,
+            "run_id": f"run-{position}-{arm}",
+            "binary_sha256": MODULE.BINARY_SHA256,
+            "model_sha256": MODULE.MODEL_SHA256,
+            "common_config_sha256": config_sha,
+            "request_sha256": request_sha,
+            "diagnostic_skip": 1 if arm == "on" else 0,
+            "request_start_ns": 0,
+            "token_timestamps_ns": timestamps,
+            "output_token_ids": tokens,
+            "output_sha256": hashlib.sha256(json.dumps(tokens, separators=(",", ":")).encode()).hexdigest(),
+            "generated_text_sha256": hashlib.sha256(b"same output").hexdigest(),
+            "generated_text_bytes": len(b"same output"),
+            "logit_sha256s": [hashlib.sha256(f"logit-{index}".encode()).hexdigest() for index in range(3)],
+            "selected_checkpoint_tokens": 5044,
+            "checkpoint_id": "token-text:" + "9" * 40,
+            "evict_store_count": 0 if arm == "on" else 1,
+            "skip_marker_count": 1 if arm == "on" else 0,
+            "activation_marker_count": 1 if arm == "on" else 0,
+            "server_fresh": True,
+            "safety": {
+                "containment_rc": 0,
+                "minimum_mem_available_kb": 48_000_000,
+                "swap_growth_bytes": 0,
+                "cgroup_max_delta": 0,
+                "cgroup_oom_delta": 0,
+                "cgroup_oom_kill_delta": 0,
+                "xid_count": 0,
+                "surviving_descendants": 0,
+            },
+            "executed_environment_sha256": hashlib.sha256(f"env-{arm}".encode()).hexdigest(),
+        }
+
+    def make_normal_terminal(self, attempt: Path) -> tuple[dict[str, object], list[dict[str, object]], dict[str, object]]:
+        seed = "a" * 64
+        order = MODULE.derive_order(seed)
+        config = {
+            "binary_sha256": MODULE.BINARY_SHA256,
+            "model_sha256": MODULE.MODEL_SHA256,
+            "context": 8192,
+        }
+        config_sha = hashlib.sha256(json.dumps(config, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        request_sha = "4" * 64
+        rows = [self.terminal_row(arm, position, config_sha, request_sha) for position, arm in enumerate(order)]
+        scorer_rows = []
+        for row in rows:
+            scorer_row = dict(row)
+            scorer_row.pop("executed_environment_sha256")
+            scorer_rows.append(scorer_row)
+        summary = MODULE.load_scorer(MODULE.SCORER.read_bytes()).score_probe_rows(scorer_rows, order)
+        raw = b"".join(
+            (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
+            for row in rows
+        )
+        summary_bytes = (json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        (attempt / "raw.jsonl").write_bytes(raw)
+        (attempt / "summary.json").write_bytes(summary_bytes)
+        manifest = {
+            "schema": "glm52-w7-evict-store-probe-v1",
+            "candidate_hash": "c" * 40,
+            "verdict": summary["verdict"],
+            "completed_rows": len(rows),
+            "runner_sha256": hashlib.sha256(MODULE.Path(MODULE.__file__).read_bytes()).hexdigest(),
+            "base_lifecycle_sha256": MODULE.BASE_SHA256,
+            "scorer_sha256": MODULE.SCORER_SHA256,
+            "cgroup_sha256": MODULE.CGROUP_SHA256,
+            "safe_run_sha256": MODULE.SAFE_SHA256,
+            "memory_guard_sha256": MODULE.MEMORY_GUARD_SHA256,
+            "binary_sha256": MODULE.BINARY_SHA256,
+            "engine_source_commit": MODULE.ENGINE_SOURCE_COMMIT,
+            "model_sha256": MODULE.MODEL_SHA256,
+            "model_bytes": MODULE.MODEL_BYTES,
+            "live_request_sha256": MODULE.LIVE_SHA256,
+            "primary_source_sha256": MODULE.PRIMARY_SHA256,
+            "executed_request_sha256": request_sha,
+            "configuration": config,
+            "configuration_sha256": config_sha,
+            "public_randomness_sha256": seed,
+            "public_randomness_receipt_sha256": "7" * 64,
+            "arm_order": order,
+            "artifacts": {
+                "raw.jsonl": hashlib.sha256(raw).hexdigest(),
+                "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
+            },
+        }
+        (attempt / "manifest.json").write_text(json.dumps(manifest))
+        return manifest, rows, summary
+
+    def rewrite_terminal(self, attempt: Path, manifest: dict[str, object], rows: list[dict[str, object]], summary: dict[str, object]) -> None:
+        raw = b"".join(
+            (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
+            for row in rows
+        )
+        summary_bytes = (json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        (attempt / "raw.jsonl").write_bytes(raw)
+        (attempt / "summary.json").write_bytes(summary_bytes)
+        manifest["completed_rows"] = len(rows)
+        manifest["verdict"] = summary["verdict"]
+        manifest["artifacts"] = {
+            "raw.jsonl": hashlib.sha256(raw).hexdigest(),
+            "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
+        }
+        (attempt / "manifest.json").write_text(json.dumps(manifest))
+
     def bind_server(self, out: Path) -> str:
         server = out / "server.log"
         metadata = server.stat()
@@ -163,103 +273,90 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             self.assertEqual(manifest["candidate_hash"], "b" * 40)
             self.assertEqual(manifest["verdict"], "FAIL")
 
-    def test_terminal_manifest_requires_verdict_rows_summary_and_full_inventory(self) -> None:
+    def test_terminal_pass_replays_frozen_scorer_and_binds_campaign(self) -> None:
         with tempfile.TemporaryDirectory(prefix="w7-terminal-valid-") as temporary:
             attempt = Path(temporary)
-            raw = b'{"arm":"off"}\n'
+            manifest, rows, summary = self.make_normal_terminal(attempt)
+            self.assertTrue(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+
+            mutations = []
+            mutations.append((dict(manifest), rows[:1], summary))
+            mutations.append((dict(manifest), list(reversed(rows)), summary))
+            forged = dict(summary)
+            forged["observed"] = dict(forged["observed"], warm_append_seconds_saved=999.0)
+            mutations.append((dict(manifest), rows, forged))
+            for field, value in (
+                ("binary_sha256", "e" * 64),
+                ("engine_source_commit", "e" * 40),
+                ("configuration_sha256", "e" * 64),
+            ):
+                changed = dict(manifest)
+                changed[field] = value
+                mutations.append((changed, rows, summary))
+            for changed_manifest, changed_rows, changed_summary in mutations:
+                self.rewrite_terminal(attempt, changed_manifest, changed_rows, changed_summary)
+                self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+
+    def test_failure_schema_can_never_claim_pass(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-terminal-failure-pass-") as temporary:
+            attempt = Path(temporary)
+            raw = b""
             summary = b'{"verdict":"PASS"}\n'
             (attempt / "raw.jsonl").write_bytes(raw)
             (attempt / "summary.json").write_bytes(summary)
-            arm = attempt / "p0-off"
-            arm.mkdir()
-            (arm / "server.log").write_text("arm\n")
             manifest = {
-                "schema": "glm52-w7-evict-store-probe-v1",
-                "candidate_hash": "c" * 40,
-                "verdict": "PASS",
-                "completed_rows": 1,
-                "runner_sha256": "e" * 64,
-                "base_lifecycle_sha256": "e" * 64,
-                "scorer_sha256": "e" * 64,
-                "cgroup_sha256": "e" * 64,
-                "safe_run_sha256": "e" * 64,
-                "memory_guard_sha256": "e" * 64,
-                "binary_sha256": "e" * 64,
-                "engine_source_commit": "e" * 40,
-                "model_sha256": "e" * 64,
-                "model_bytes": 1,
-                "live_request_sha256": "e" * 64,
-                "primary_source_sha256": "e" * 64,
-                "executed_request_sha256": "e" * 64,
-                "configuration": {},
-                "configuration_sha256": "e" * 64,
-                "public_randomness_sha256": "e" * 64,
-                "public_randomness_receipt_sha256": "e" * 64,
-                "arm_order": ["off", "on"],
+                "schema": "glm52-w7-evict-store-probe-failure-v1",
+                "candidate_hash": "d" * 40,
+                "failure": "injected",
+                "runner_sha256": hashlib.sha256(MODULE.Path(MODULE.__file__).read_bytes()).hexdigest(),
+                "scorer_sha256": MODULE.SCORER_SHA256,
+                "binary_sha256": MODULE.BINARY_SHA256,
+                "model_sha256": MODULE.MODEL_SHA256,
+                "completed_rows": 0,
                 "artifacts": {
                     "raw.jsonl": hashlib.sha256(raw).hexdigest(),
                     "summary.json": hashlib.sha256(summary).hexdigest(),
                 },
+                "binding_failures": {},
+                "verdict": "PASS",
             }
             (attempt / "manifest.json").write_text(json.dumps(manifest))
-            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
-            manifest["artifacts"]["p0-off/server.log"] = hashlib.sha256(b"arm\n").hexdigest()
-            (attempt / "manifest.json").write_text(json.dumps(manifest))
-            self.assertTrue(MODULE.terminal_manifest_valid(attempt, "c" * 40))
-            (attempt / "summary.json").write_text('{"verdict":"FAIL"}\n')
-            manifest["artifacts"]["summary.json"] = hashlib.sha256(b'{"verdict":"FAIL"}\n').hexdigest()
-            (attempt / "manifest.json").write_text(json.dumps(manifest))
-            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
-            (attempt / "summary.json").write_bytes(summary)
-            manifest["artifacts"]["summary.json"] = hashlib.sha256(summary).hexdigest()
-            manifest["completed_rows"] = 2
-            (attempt / "manifest.json").write_text(json.dumps(manifest))
-            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
-            manifest["completed_rows"] = 1
-            duplicate = b'{"verdict":"PASS","verdict":"PASS"}\n'
-            (attempt / "summary.json").write_bytes(duplicate)
-            manifest["artifacts"]["summary.json"] = hashlib.sha256(duplicate).hexdigest()
-            (attempt / "manifest.json").write_text(json.dumps(manifest))
-            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "d" * 40))
 
     def test_normal_publication_preserves_pass_and_fail_verdicts(self) -> None:
-        for verdict in ("PASS", "FAIL"):
+        for expected_verdict in ("PASS", "FAIL"):
             with tempfile.TemporaryDirectory(prefix="w7-publish-") as temporary:
                 attempt = Path(temporary)
-                arm = attempt / "p0-off"
-                arm.mkdir()
-                (arm / "server.log").write_text("arm\n")
-                raw = b'{"arm":"off"}\n'
-                summary = (json.dumps({"verdict": verdict}, separators=(",", ":")) + "\n").encode()
-                manifest = {
-                    "schema": "glm52-w7-evict-store-probe-v1",
-                    "candidate_hash": "f" * 40,
-                    "runner_sha256": "e" * 64,
-                    "base_lifecycle_sha256": "e" * 64,
-                    "scorer_sha256": "e" * 64,
-                    "cgroup_sha256": "e" * 64,
-                    "safe_run_sha256": "e" * 64,
-                    "memory_guard_sha256": "e" * 64,
-                    "binary_sha256": "e" * 64,
-                    "engine_source_commit": "e" * 40,
-                    "model_sha256": "e" * 64,
-                    "model_bytes": 1,
-                    "live_request_sha256": "e" * 64,
-                    "primary_source_sha256": "e" * 64,
-                    "executed_request_sha256": "e" * 64,
-                    "configuration": {},
-                    "configuration_sha256": "e" * 64,
-                    "public_randomness_sha256": "e" * 64,
-                    "public_randomness_receipt_sha256": "e" * 64,
-                    "arm_order": ["off", "on"],
-                    "completed_rows": 1,
-                    "artifacts": {},
-                }
+                manifest, rows, _ = self.make_normal_terminal(attempt)
+                if expected_verdict == "FAIL":
+                    on_row = next(row for row in rows if row["arm"] == "on")
+                    on_row["token_timestamps_ns"] = [
+                        on_row["token_timestamps_ns"][0] + index * 200_000_000
+                        for index in range(128)
+                    ]
+                scorer_rows = []
+                for row in rows:
+                    scorer_row = dict(row)
+                    scorer_row.pop("executed_environment_sha256")
+                    scorer_rows.append(scorer_row)
+                scored = MODULE.load_scorer(MODULE.SCORER.read_bytes()).score_probe_rows(
+                    scorer_rows, manifest["arm_order"]
+                )
+                self.assertEqual(scored["verdict"], expected_verdict)
+                raw = b"".join(
+                    (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
+                    for row in rows
+                )
+                summary = (json.dumps(scored, sort_keys=True, separators=(",", ":")) + "\n").encode()
+                for name in ("manifest.json", "raw.jsonl", "summary.json"):
+                    (attempt / name).unlink()
+                manifest["candidate_hash"] = "f" * 40
+                manifest["artifacts"] = {}
                 observed = MODULE.publish_terminal_triplet(attempt, manifest, raw, summary, {})
-                self.assertEqual(observed, verdict)
+                self.assertEqual(observed, expected_verdict)
                 self.assertTrue(MODULE.terminal_manifest_valid(attempt, "f" * 40))
                 published = json.loads((attempt / "manifest.json").read_text())
-                self.assertEqual(published["verdict"], verdict)
+                self.assertEqual(published["verdict"], expected_verdict)
 
     def test_failure_publication_records_authoritative_replacement(self) -> None:
         with tempfile.TemporaryDirectory(prefix="w7-binding-finalize-") as temporary:
