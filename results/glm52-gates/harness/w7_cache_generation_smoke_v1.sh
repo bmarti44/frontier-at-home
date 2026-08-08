@@ -285,14 +285,14 @@ verify_driver_safe_lineage() {
   local safe_path=${DS4_W7_SAFE_SCRIPT_PATH:-} safe_unit=${DS4_W7_SAFE_CGROUP_UNIT:-}
   local lock_pid=${DS4_W7_LOCK_PARENT_PID:-} lock_start=${DS4_W7_LOCK_PARENT_START_TICKS:-}
   local lock_fd=${DS4_W7_LOCK_FD:-}
-  [[ ${GLM_SAFE_W7_DRIVER_LINEAGE:-} == 1 ]]
-  [[ $safe_pid =~ ^[1-9][0-9]*$ && $safe_start =~ ^[1-9][0-9]*$ ]]
-  [[ $safe_path == "$safe_fd_path" && $safe_unit == "${GLM_SAFE_CGROUP_UNIT:-}" ]]
-  [[ $lock_pid =~ ^[1-9][0-9]*$ && $lock_start =~ ^[1-9][0-9]*$ ]]
-  [[ $lock_fd =~ ^[3-9][0-9]*$|^[3-9]$ ]]
-  has_full_seal "$safe_path"
+  [[ ${GLM_SAFE_W7_DRIVER_LINEAGE:-} == 1 ]] || return 1
+  [[ $safe_pid =~ ^[1-9][0-9]*$ && $safe_start =~ ^[1-9][0-9]*$ ]] || return 1
+  [[ $safe_path == "$safe_fd_path" && $safe_unit == "${GLM_SAFE_CGROUP_UNIT:-}" ]] || return 1
+  [[ $lock_pid =~ ^[1-9][0-9]*$ && $lock_start =~ ^[1-9][0-9]*$ ]] || return 1
+  [[ $lock_fd =~ ^[3-9][0-9]*$ ]] || return 1
+  has_full_seal "$safe_path" || return 1
   /usr/bin/git --no-replace-objects -C "$ROOT" show \
-    "$candidate:results/glm52-gates/harness/glm_safe_run.sh" | /usr/bin/cmp -s - "$safe_path"
+    "$candidate:results/glm52-gates/harness/glm_safe_run.sh" | /usr/bin/cmp -s - "$safe_path" || return 1
   /usr/bin/python3 - "$safe_pid" "$safe_start" "$safe_path" "$$" "$lock_pid" "$lock_start" "$lock_fd" <<'PY'
 import errno, fcntl, os, pathlib, sys
 
