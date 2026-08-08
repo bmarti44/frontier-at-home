@@ -1,0 +1,56 @@
+{
+  "candidate_hash": "d5eabb1d420037d4439df584424c0e08ca6aa513",
+  "checks": {
+    "cgroup_max_oom_kill_events_zero": true,
+    "engine_started": true,
+    "false_model_generation_flushes_zero": true,
+    "http_requests_succeeded": true,
+    "no_surviving_ds4_server": true,
+    "response_matching_indexed_resume_unique": true,
+    "scorer_verdict_pass": false,
+    "soft_memory_high_policy_passed": true,
+    "swap_growth_zero": true
+  },
+  "failure": {
+    "containment_exit_status": 0,
+    "fixed_scorer_check": "exactly_one_bound_indexed_resume_completed",
+    "reason": "The scorer counted every completed request containing one indexed-resume branch. The 5,055-token primary request legitimately used an indexed resume for its final 11-token internal chunk, while the response-bound 22-token append used another. Exactly one request window matched the append response tuple, but the scorer rejected because two total request windows used indexed resume."
+  },
+  "observed": {
+    "attempt": "/home/bmarti44/.local/state/glm52-w7-cache-generation/attempt-5f1ef1a6bea10d0dc9726154a74142a1",
+    "bound_indexed_resume_count_reported": 2,
+    "cgroup_memory_high_events": 5531,
+    "crashlog": "/home/bmarti44/.local/state/glm52-crashlog/20260808-015333-w7-c14-5f1ef1a6bea1",
+    "false_model_generation_flushes": 0,
+    "matching_response_window_count": 1,
+    "minimum_mem_available_kb": 49416872,
+    "primary_internal_resume": {
+      "context_start": 0,
+      "prompt_tokens": 5055,
+      "resume_chunk_tokens": 11
+    },
+    "response_bound_resume": {
+      "cached_tokens": 5044,
+      "prompt_tokens": 5066,
+      "suffix_tokens": 22
+    },
+    "warm_append_ttft_seconds": 1.676
+  },
+  "artifact_sha256": {
+    "containment.rc": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "containment.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "containment.stdout": "f447e4e2d54c279b98162ad0e03e330c35b8e71d766845dd591c09c6457f74d8",
+    "evidence/manifest.json": "afb642f24fb7ba34e450c7a3854dcb46834a4e37a386a9eb52995a7aa1eb2926",
+    "evidence/raw.jsonl": "b514bb277816a7c1c1a1be5b427ca147217ed9b5537e9c3860ee2a956a28f7",
+    "evidence/summary.json": "a887464eb9a5215f88fc50ef199857401847a7988d606373e93d46050ba9ec4a",
+    "live-response.json": "4d7ead84700fabad1b55c17f7fee29420e572793a9bc50b6bcc40f9ba3edfc47",
+    "primary-response.json": "21480f008b5a874b4460c20c106fb4af1f81aafc17fa1fc99779cef6e807a8e2",
+    "safety/kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "safety/main.log": "6844f3c8c706206abe2b53dc030a3bda7cb6d2877f3eeb1cc08602fee7aef6c9",
+    "safety/samples.log": "702c8135968de6a230807ad5ce8ac8dd2619f25a74fb4879068329e01d8189b6",
+    "server.log": "ac59f668f101d5c345ae531f580265c83da53c067f56828b4e10c66b7c4e46c0"
+  },
+  "proposed_acceptance_test": "Require exactly one completed request window matching the response tuple, and require that exact window to contain exactly one indexed-resume branch and one matching prompt-done marker. Do not reject unrelated completed request windows merely because they also use indexed resume internally. Preserve ambiguity rejection when two windows match the response tuple.",
+  "schema": "glm52-w7-runtime-attempt-v1",
+  "verdict": "FAIL"
+}
