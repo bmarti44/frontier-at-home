@@ -1,0 +1,53 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 7,
+  "candidate_hash": "01c24de9c3379dfd746db63123aec8a43332d86a",
+  "review_round": 283,
+  "runtime_authorized": false,
+  "gap_reviewer": {
+    "score": 79,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": ["GAP-W7.1-283-H1-POST-REAP-UNIT-ABSENCE-NOT-STABLE"],
+    "medium": [
+      "GAP-W7.1-283-M1-CGROUP-FALLBACK-PATH-OPEN-NOT-INODE-BOUND",
+      "GAP-W7.1-283-M2-UNIT-SUBSTATE-SEMANTICS-UNVALIDATED"
+    ],
+    "low": []
+  },
+  "adversarial_reviewer": {
+    "score": 80,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": ["ADV-W7.1-283-H1-DIRECT-WAIT-DOES-NOT-PROVE-PROCESS-GROUP-QUIESCENCE"],
+    "medium": ["ADV-W7.1-283-M1-INTEGRATION-EVIDENCE-LACKS-EXECUTION-MANIFEST"],
+    "low": []
+  },
+  "open_blocking_findings": [
+    {
+      "id": "GAP-W7.1-283-H1-POST-REAP-UNIT-ABSENCE-NOT-STABLE",
+      "acceptance": "After launcher-session quiescence, require multiple stable exact-unit observations plus cgroup absence/empty proof, and detect a unit appearing after two initial not-found samples."
+    },
+    {
+      "id": "ADV-W7.1-283-H1-DIRECT-WAIT-DOES-NOT-PROVE-PROCESS-GROUP-QUIESCENCE",
+      "acceptance": "Enumerate the isolated launcher session after direct-parent reap, SIGKILL remaining non-zombies, and prove zero session members before unit cleanup and lock release."
+    }
+  ],
+  "bounded_medium_disposition": {
+    "GAP-W7.1-283-M1-CGROUP-FALLBACK-PATH-OPEN-NOT-INODE-BOUND": "Bind lstat and fstat device/inode on an O_NOFOLLOW child opened relative to a retained parent descriptor.",
+    "GAP-W7.1-283-M2-UNIT-SUBSTATE-SEMANTICS-UNVALIDATED": "Accept only explicit terminal ActiveState/SubState pairs.",
+    "ADV-W7.1-283-M1-INTEGRATION-EVIDENCE-LACKS-EXECUTION-MANIFEST": "Commit the exact harmless integration harness and preserve raw action/result records derived by that harness."
+  },
+  "convergence": {
+    "candidate_count_for_gate": 7,
+    "resumed_audit_candidate": 2,
+    "prior_blocking_count": 3,
+    "current_blocking_count": 2,
+    "strictly_shrank": true,
+    "consecutive_non_shrinking_candidates_in_resumed_audit": 0,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": false,
+    "gate_state": "FIX_IN_PROGRESS_NO_RUNTIME"
+  }
+}
