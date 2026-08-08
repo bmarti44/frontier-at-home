@@ -67,7 +67,9 @@ def score_text(
         ]
         request_windows.append(
             {
+                "context_start": int(start_match.group(1)),
                 "prompt_tokens": int(start_match.group(2)),
+                "suffix_tokens": int(start_match.group(3)),
                 "indexed_resume_count": sum(INDEXED_RESUME in line for line in lines_for_request),
                 "matching_prompt_done_count": sum(
                     match.groups() == start_match.groups() for match in done_matches
@@ -81,25 +83,59 @@ def score_text(
         and item["matching_prompt_done_count"] == 1
     ]
     response_ok = False
-    response_prompt_tokens = None
+    response_tuple = None
     try:
         response = json.loads(response_text)
         usage = response["usage"]
         choices = response["choices"]
-        response_prompt_tokens = usage["prompt_tokens"]
+        prompt_details = usage["prompt_tokens_details"]
+        response_tuple = (
+            prompt_details["cached_tokens"],
+            usage["prompt_tokens"],
+            prompt_details["cache_write_tokens"],
+        )
         response_ok = (
-            type(response_prompt_tokens) is int
+            isinstance(response, dict)
+            and "error" not in response
+            and isinstance(usage, dict)
+            and isinstance(prompt_details, dict)
             and isinstance(choices, list)
             and len(choices) == 1
             and isinstance(choices[0], dict)
-            and choices[0].get("finish_reason") is not None
+            and type(choices[0].get("text")) is str
+            and choices[0].get("finish_reason") == "length"
+            and all(
+                type(value) is int
+                for value in (
+                    usage.get("prompt_tokens"),
+                    usage.get("completion_tokens"),
+                    usage.get("total_tokens"),
+                    prompt_details.get("cached_tokens"),
+                    prompt_details.get("cache_write_tokens"),
+                )
+            )
+            and usage["completion_tokens"] == 0
+            and usage["total_tokens"] == usage["prompt_tokens"]
+            and prompt_details["cached_tokens"] + prompt_details["cache_write_tokens"]
+            == usage["prompt_tokens"]
         )
     except (json.JSONDecodeError, KeyError, TypeError):
         response_ok = False
+    matching_response_windows = [
+        item
+        for item in request_windows
+        if response_ok
+        and (
+            item["context_start"],
+            item["prompt_tokens"],
+            item["suffix_tokens"],
+        )
+        == response_tuple
+    ]
     request_bound = (
         len(indexed_completed) == 1
-        and response_ok
-        and indexed_completed[0]["prompt_tokens"] == response_prompt_tokens
+        and len(matching_response_windows) == 1
+        and matching_response_windows[0] is indexed_completed[0]
     )
     false_flush_count = sum(FALSE_FLUSH in line for line in window)
     fatal_markers = [marker for marker in FATAL_MARKERS if any(marker in line for line in window)]
@@ -127,7 +163,8 @@ def score_text(
             "cache_enabled_count": cache_enabled_count,
             "request_window_count": len(request_windows),
             "bound_indexed_resume_count": len(indexed_completed),
-            "response_prompt_tokens": response_prompt_tokens,
+            "response_request_tuple": response_tuple,
+            "matching_response_window_count": len(matching_response_windows),
             "fatal_markers": fatal_markers,
             "false_generation_flush_count": false_flush_count,
         },
