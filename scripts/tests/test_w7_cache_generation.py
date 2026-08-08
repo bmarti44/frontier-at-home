@@ -498,7 +498,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW", source)
         self.assertIn('engine_lock_fd_path="/proc/$engine_lock_holder_pid/fd/$engine_lock_fd"', source)
         self.assertIn('DS4_LOCK_FILE="$engine_lock_fd_path"', source)
-        self.assertIn('rm -f -- "$leaf"', source)
+        self.assertIn('os.unlink(".ds4-engine-lock", dir_fd=directory_fd)', source)
         self.assertIn(
             "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE",
             source,

@@ -47,6 +47,11 @@ scorer_sha256=${DS4_W7_SEALED_SCORER_SHA256:-}
 memory_guard_sha256=${DS4_W7_SEALED_MEMORY_GUARD_SHA256:-}
 engine_lock_fd=
 engine_lock_fd_path=
+engine_lock_holder_pid=
+engine_lock_holder_start_ticks=
+engine_lock_holder_parent_pid=
+engine_lock_identity=
+engine_lock_metadata_fd=
 environment_sha256=
 
 has_full_seal() {
@@ -115,23 +120,87 @@ verify_dependencies_fast() {
 
 prepare_engine_lock() {
   local directory=$1 leaf=$1/.ds4-engine-lock
-  [[ -d $directory && ! -L $directory && $(stat -Lc '%a:%u' -- "$directory") == 700:$(id -u) ]]
-  ( set -o noclobber; : >"$leaf" )
-  [[ -f $leaf && ! -L $leaf && $(stat -Lc '%a:%u:%h' -- "$leaf") == 600:$(id -u):1 ]]
-  exec {engine_lock_fd}<>"$leaf"
-  rm -f -- "$leaf"
-  [[ ! -e $leaf && ! -L $leaf ]]
-  engine_lock_fd_path="/proc/$$/fd/$engine_lock_fd"
-  /usr/bin/python3 - "$engine_lock_fd_path" <<'PY'
-import os, stat, sys
-metadata = os.stat(sys.argv[1])
-if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 0:
-    raise SystemExit("engine lock descriptor is not an unlinked regular file")
-if metadata.st_uid != os.getuid() or stat.S_IMODE(metadata.st_mode) != 0o600:
-    raise SystemExit("engine lock descriptor ownership or mode mismatch")
+  [[ -d $directory && ! -L $directory && $(stat -Lc '%a:%u' -- "$directory") == 700:$(id -u) ]] || return 1
+  exec {engine_lock_metadata_fd}< <(
+    /usr/bin/python3 - "$directory" "$$" <<'PY'
+import ctypes, os, pathlib, signal, stat, sys
+
+directory, expected_parent = sys.argv[1:]
+libc = ctypes.CDLL(None, use_errno=True)
+libc.prctl(1, signal.SIGTERM)
+if str(os.getppid()) != expected_parent:
+    raise SystemExit("engine lock holder parent mismatch")
+directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+try:
+    try:
+        descriptor = os.open(
+            ".ds4-engine-lock",
+            os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=directory_fd,
+        )
+    except FileExistsError:
+        raise SystemExit(17)
+    metadata = os.fstat(descriptor)
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+        raise SystemExit("new engine lock is not a one-link regular file")
+    if metadata.st_uid != os.getuid() or stat.S_IMODE(metadata.st_mode) != 0o600:
+        raise SystemExit("new engine lock ownership or mode mismatch")
+    os.unlink(".ds4-engine-lock", dir_fd=directory_fd)
+finally:
+    os.close(directory_fd)
+metadata = os.fstat(descriptor)
+if metadata.st_nlink != 0:
+    raise SystemExit("engine lock descriptor remains pathname-linked")
+start_ticks = pathlib.Path("/proc/self/stat").read_text().split()[21]
+print(
+    f"{os.getpid()}\t{start_ticks}\t{os.getppid()}\t{descriptor}\t{metadata.st_dev}:{metadata.st_ino}",
+    flush=True,
+)
+while True:
+    signal.pause()
 PY
+  )
+  IFS=$'\t' read -r engine_lock_holder_pid engine_lock_holder_start_ticks \
+    engine_lock_holder_parent_pid engine_lock_fd engine_lock_identity <&"$engine_lock_metadata_fd" || return 1
+  [[ $engine_lock_holder_pid =~ ^[1-9][0-9]*$ &&
+     $engine_lock_holder_start_ticks =~ ^[1-9][0-9]*$ &&
+     $engine_lock_holder_parent_pid == "$$" && $engine_lock_fd =~ ^[0-9]+$ &&
+     $engine_lock_identity =~ ^[0-9]+:[0-9]+$ ]] || return 1
+  verify_engine_lock_holder_identity || return 1
+  engine_lock_fd_path="/proc/$engine_lock_holder_pid/fd/$engine_lock_fd"
   environment_sha256=$(printf 'DS4_CUDA_STABLE_MODEL_REMAP=1\nDS4_LOCK_FILE=%s\n' "$engine_lock_fd_path" | sha256sum | awk '{print $1}')
-  [[ $environment_sha256 =~ ^[0-9a-f]{64}$ ]]
+  [[ $environment_sha256 =~ ^[0-9a-f]{64}$ ]] || return 1
+}
+
+verify_engine_lock_holder_identity() {
+  /usr/bin/python3 - "$engine_lock_holder_pid" "$engine_lock_holder_start_ticks" \
+    "$engine_lock_holder_parent_pid" "$engine_lock_fd" "$engine_lock_identity" <<'PY'
+import os, pathlib, stat, sys
+pid, expected_start, expected_parent, descriptor, expected_identity = sys.argv[1:]
+process_stat = pathlib.Path(f"/proc/{pid}/stat").read_text().split()
+status = pathlib.Path(f"/proc/{pid}/status").read_text().splitlines()
+parent = next(line.split()[1] for line in status if line.startswith("PPid:"))
+metadata = os.stat(f"/proc/{pid}/fd/{descriptor}")
+identity = f"{metadata.st_dev}:{metadata.st_ino}"
+if process_stat[21] != expected_start or parent != expected_parent:
+    raise SystemExit("engine lock holder identity changed")
+if identity != expected_identity or not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 0:
+    raise SystemExit("engine lock descriptor identity changed")
+PY
+}
+
+stop_engine_lock_holder() {
+  if [[ ${engine_lock_holder_pid:-} =~ ^[1-9][0-9]*$ ]]; then
+    verify_engine_lock_holder_identity || return 1
+    kill -TERM "$engine_lock_holder_pid" 2>/dev/null || true
+    wait "$engine_lock_holder_pid" 2>/dev/null || true
+    engine_lock_holder_pid=
+  fi
+  if [[ ${engine_lock_metadata_fd:-} =~ ^[0-9]+$ ]]; then
+    exec {engine_lock_metadata_fd}<&-
+    engine_lock_metadata_fd=
+  fi
 }
 
 verify_reviewed_sources() {
@@ -605,6 +674,7 @@ finalize_outer() {
     set -e
     [[ $final_rc == 0 ]] || original_rc=125
   fi
+  stop_engine_lock_holder || true
   stop_seal_holder || true
   exit "$original_rc"
 }
@@ -621,6 +691,14 @@ if [[ ${1:-} == --engine-lock-self-test ]]; then
   test_directory=$(mktemp -d /home/bmarti44/.local/state/.w7-engine-lock-test.XXXXXX)
   trap 'rm -f -- "$test_directory/.ds4-engine-lock"; rmdir -- "$test_directory"' EXIT
   chmod 0700 "$test_directory"
+  ln -s /tmp/ds4.lock "$test_directory/.ds4-engine-lock"
+  if prepare_engine_lock "$test_directory"; then
+    echo "precreated engine-lock symlink was accepted" >&2
+    exit 1
+  fi
+  stop_engine_lock_holder || true
+  rm -f -- "$test_directory/.ds4-engine-lock"
+  echo W7_ENGINE_LOCK_PRECREATE_REJECTED
   prepare_engine_lock "$test_directory"
   expected_identity=$(stat -Lc '%d:%i' -- "$engine_lock_fd_path")
   ln -s /tmp/ds4.lock "$test_directory/.ds4-engine-lock"
@@ -636,7 +714,7 @@ try:
 finally:
     os.close(descriptor)
 PY
-  exec {engine_lock_fd}>&-
+  stop_engine_lock_holder
   echo W7_ENGINE_LOCK_DESCRIPTOR_SELFTEST_OK
   exit 0
 fi
@@ -844,6 +922,7 @@ crash_dir=$(printf '%s\n' "$containment_stdout" | sed -nE 's#^SAFE_RUN_DONE rc=[
 [[ $(printf '%s\n' "$crash_dir" | sed '/^$/d' | wc -l) == 1 && -d $crash_dir && ! -L $crash_dir ]]
 failure_reason=evidence-binding-and-scoring
 publish_outer_evidence "$attempt" "$out" "$containment_rc" "$containment_stdout" "$crash_dir" "$candidate"
+stop_engine_lock_holder
 stop_seal_holder
 trap - EXIT
 printf 'W7_CACHE_GENERATION_ATTEMPT=%s\n' "$attempt"
