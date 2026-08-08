@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import re
 import statistics
@@ -63,7 +65,7 @@ def _validated_row(row: object) -> dict[str, Any]:
         "block", "position", "arm", "run_id", "binary_sha256", "model_sha256",
         "common_config_sha256", "request_sha256", "stable_remap", "request_start_ns",
         "token_timestamps_ns", "output_token_ids", "output_sha256",
-        "final_logits_sha256", "server_fresh", "safety",
+        "final_logits_sha256", "logit_sequence_sha256", "server_fresh", "safety",
     }
     _require(set(row) == required, "row keys do not match the frozen schema")
     _require(_exact_int(row["block"]) and 0 <= row["block"] < 5, "invalid block")
@@ -72,7 +74,7 @@ def _validated_row(row: object) -> dict[str, Any]:
     _require(isinstance(row["run_id"], str) and bool(row["run_id"]), "invalid run id")
     for name in (
         "binary_sha256", "model_sha256", "common_config_sha256", "request_sha256",
-        "output_sha256", "final_logits_sha256",
+        "output_sha256", "final_logits_sha256", "logit_sequence_sha256",
     ):
         _require(_sha256(row[name]), f"invalid {name}")
     _require(_exact_int(row["stable_remap"]) and row["stable_remap"] in {0, 1}, "invalid flag")
@@ -85,6 +87,11 @@ def _validated_row(row: object) -> dict[str, Any]:
     _require(isinstance(token_ids, list) and len(token_ids) == len(timestamps), "token/timing mismatch")
     _require(all(_exact_int(value) and value >= 0 for value in timestamps), "invalid timestamp")
     _require(all(_exact_int(value) and value >= 0 for value in token_ids), "invalid token id")
+    token_bytes = json.dumps(token_ids, separators=(",", ":")).encode("ascii")
+    _require(
+        hashlib.sha256(token_bytes).hexdigest() == row["output_sha256"],
+        "output digest does not bind token IDs",
+    )
     _require(timestamps[0] > row["request_start_ns"], "nonpositive TTFT")
     _require(all(right > left for left, right in zip(timestamps, timestamps[1:])), "timestamps not strict")
     _require(row["server_fresh"] is True, "server was not fresh")
@@ -133,7 +140,10 @@ def score_campaign_rows(rows: object, schedules: object) -> dict[str, object]:
         _require(len({row["run_id"] for row in validated}) == 20, "duplicate run id")
         for field in ("binary_sha256", "model_sha256", "common_config_sha256", "request_sha256"):
             _require(len({row[field] for row in validated}) == 1, f"unequal {field}")
-        for field in ("output_token_ids", "output_sha256", "final_logits_sha256"):
+        for field in (
+            "output_token_ids", "output_sha256", "final_logits_sha256",
+            "logit_sequence_sha256",
+        ):
             first = validated[0][field]
             _require(all(row[field] == first for row in validated[1:]), f"unequal {field}")
 
@@ -170,6 +180,7 @@ def score_campaign_rows(rows: object, schedules: object) -> dict[str, object]:
             "equal_fixtures_and_frozen_identity": True,
             "byte_identical_output_tokens": True,
             "byte_identical_output_and_final_logits": True,
+            "byte_identical_full_logit_sequence": True,
             "at_least_128_output_timestamps": True,
             "safety_and_memory_floor": True,
             "off_control_reproduced_false_flushes": True,
