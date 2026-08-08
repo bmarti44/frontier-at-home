@@ -121,6 +121,26 @@ class W7CacheFreezeTest(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
 
+    def test_rejects_fifo_without_waiting_for_a_writer(self) -> None:
+        fifo = self.root / "artifact.fifo"
+        fifo.touch()
+        fifo.unlink()
+        import os
+
+        os.mkfifo(fifo, 0o600)
+        record = json.loads(json.dumps(self.record))
+        record["binary"].update({"path": str(fifo), "bytes": 1})
+        self.freeze.write_text(json.dumps(record), encoding="utf-8")
+        completed = subprocess.run(
+            ["python3", str(MODULE_PATH), str(self.freeze)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=1,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

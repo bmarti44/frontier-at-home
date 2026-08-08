@@ -1,0 +1,10 @@
+{
+  "candidate": 6,
+  "gate": "W7.1 stable-model cache generation",
+  "review_source": "results/glm52-gates/W7-cache-generation-review-r259.json",
+  "finding": "ADV-W7.1-258-M2-VERIFIER-HASHES-BEFORE-REGULAR-FILE-REJECTION",
+  "test": "test_rejects_fifo_without_waiting_for_a_writer",
+  "observed": "verifier subprocess blocked in read-only os.open on a FIFO with no writer and exceeded the one-second bound",
+  "runtime_started": false,
+  "verdict": "RED_CONFIRMED"
+}

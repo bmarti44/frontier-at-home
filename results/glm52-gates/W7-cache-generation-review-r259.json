@@ -1,0 +1,25 @@
+{
+  "candidate_hash": "4ae8ab7c5b57aebb155d516d3693c945a04693ce",
+  "review_round": 259,
+  "gate_candidate": 5,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 100,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "ACCEPT_RUNTIME_AUTHORIZED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 96,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "ADV-W7.1-258-M2-VERIFIER-HASHES-BEFORE-REGULAR-FILE-REJECTION: FIFO open without O_NONBLOCK"
+    ],
+    "low": [],
+    "verdict": "ACCEPT_RUNTIME_AUTHORIZED_WITH_TARGETED_MEDIUM"
+  },
+  "root_disposition": "Runtime authorized by both reviewers. Close the sole medium with a focused FIFO regression and attestation without a new full review round, as required by the medium/low policy."
+}
