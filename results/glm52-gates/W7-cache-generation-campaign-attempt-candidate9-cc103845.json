@@ -1,0 +1,52 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate_hash": "896cd4f32fe0c301a63ce63dc966495fcc1db26b",
+  "attempt_id": "cc10384522474f3ba1acdac786787e58",
+  "randomness_round": 6358252,
+  "schedule": ["BAAB", "ABBA", "BAAB", "ABBA", "ABBA"],
+  "completed_arm": {
+    "block": 0,
+    "position": 0,
+    "arm": "on",
+    "containment_rc": 0,
+    "wrapper_rc": 0,
+    "output_tokens": 160,
+    "decode_tps_first_128": 1.8195342892462056,
+    "ttft_seconds": 1.213482256,
+    "false_generation_flushes": 0,
+    "minimum_mem_available_kb": 50248880,
+    "cgroup_peak_bytes": 45305188352,
+    "cgroup_swap_current_bytes": 0,
+    "cgroup_oom": 0,
+    "cgroup_oom_kill": 0,
+    "logit_artifacts": [
+      "logits.sync1.start0.prompt5044.suffix5044",
+      "logits.sync2.start5044.prompt5055.suffix11",
+      "logits.sync3.start5044.prompt5066.suffix22"
+    ]
+  },
+  "failure": {
+    "assertion": "CampaignError: incomplete full-logit sequence",
+    "cause": "The fixed parser required one logit dump per decode token, but the production diagnostic is deliberately invoked only at synchronized prefill boundaries. The arm correctly produced the three exact warm/full, warm/append, and measured/append tensors.",
+    "summary_verdict": "FAIL",
+    "completed_rows": 0
+  },
+  "external_evidence": {
+    "path": "/home/bmarti44/.local/state/glm52-w7-cache-generation-campaign/attempt-cc10384522474f3ba1acdac786787e58",
+    "manifest_sha256": "5ad8b35b2474da220e51f7819b5146bcc55156e0f3ae24db2cb91a976ea60ca5",
+    "summary_sha256": "eca238fd8a275c40c1dc92ab63b56572ef8f0e4712cee63174745c473bbd1663",
+    "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649c063f29d2787aa4b855",
+    "server_log_sha256": "89d776364215951ae968da8cb44dfee9aa5cc74cd361ce56e0bc1b7540e4f39f",
+    "main_log_sha256": "05a34e4d64f3bf1a5430f56dee815d700a96910f893fec77c7f5918fa43b0d43",
+    "safety_samples_sha256": "a291e007bca08a76038e722f87061aa2958585fa2fbdae22f075128d19a0758d",
+    "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "response_sha256": "675388c1b004b11e8a50a2ff4093e7515c5442745ff9c71c057ad7436e1fc753"
+  },
+  "engine_started": true,
+  "engine_exit_clean": true,
+  "surviving_server_pids": 0,
+  "surviving_units": 0,
+  "oom": false,
+  "xid": false,
+  "verdict": "FAIL_PRESERVED"
+}
