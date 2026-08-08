@@ -639,6 +639,59 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertEqual(result["observed"]["matching_response_window_count"], 1)
         self.assertEqual(result["observed"]["bound_indexed_resume_count"], 1)
 
+    def test_committed_pass_package_replays_without_mutable_attempt_tree(self) -> None:
+        package = ROOT / "results/glm52-gates/W7-cache-generation-candidate21-pass"
+        artifact_dir = package / "artifacts"
+        manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+        summary = json.loads((package / "summary.json").read_text(encoding="utf-8"))
+        required = {
+            "child-exit.json", "containment.rc", "containment.stderr", "containment.stdout",
+            "live-http-status", "live-response.json", "model.identity.json",
+            "primary-http-status", "primary-response.json", "safety/kernel.log",
+            "safety/main.log", "safety/samples.log", "server.log",
+        }
+        self.assertEqual(set(manifest["artifact_bindings"]), required)
+        self.assertEqual(
+            {path.relative_to(artifact_dir).as_posix() for path in artifact_dir.rglob("*") if path.is_file()},
+            required,
+        )
+
+        def replay(root: Path) -> dict[str, object]:
+            for name, binding in manifest["artifact_bindings"].items():
+                payload = (root / "artifacts" / name).read_bytes()
+                self.assertEqual(len(payload), binding["bytes"])
+                self.assertEqual(hashlib.sha256(payload).hexdigest(), binding["sha256"])
+            self.assertEqual(
+                hashlib.sha256((root / "raw.jsonl").read_bytes()).hexdigest(),
+                manifest["artifacts"]["raw.jsonl"],
+            )
+            result = MODULE.score_text(
+                (root / "artifacts/server.log").read_text(encoding="utf-8"),
+                http_status=(root / "artifacts/primary-http-status").read_text(encoding="utf-8"),
+                response_text=(root / "artifacts/primary-response.json").read_text(encoding="utf-8"),
+                containment_rc=(root / "artifacts/containment.rc").read_text(encoding="utf-8"),
+                containment_stdout=(root / "artifacts/containment.stdout").read_text(encoding="utf-8"),
+                mode=manifest["arm"],
+                child_exit_text=(root / "artifacts/child-exit.json").read_text(encoding="utf-8"),
+                safety_main_text=(root / "artifacts/safety/main.log").read_text(encoding="utf-8"),
+                expected_binary_sha256=manifest["binary_sha256"],
+                expected_environment_sha256=manifest["executed_environment_sha256"],
+                expected_memory_guard_sha256=manifest["memory_guard_sha256"],
+                model_identity_text=(root / "artifacts/model.identity.json").read_text(encoding="utf-8"),
+                expected_model_sha256=manifest["model_sha256"],
+                expected_model_bytes=manifest["model_bytes"],
+            )
+            self.assertEqual(result, summary)
+            return result
+
+        self.assertEqual(replay(package)["verdict"], "PASS")
+        with tempfile.TemporaryDirectory() as directory:
+            mutated = Path(directory) / "package"
+            shutil.copytree(package, mutated)
+            (mutated / "artifacts/primary-response.json").write_text("{}\n", encoding="utf-8")
+            with self.assertRaises(AssertionError):
+                replay(mutated)
+
     def test_rejects_one_false_generation_flush(self) -> None:
         mutated = GOOD.replace(
             "ds4: GLM sync branch=indexed_resume",

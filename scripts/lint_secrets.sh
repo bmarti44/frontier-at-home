@@ -748,6 +748,16 @@ self_test() {
     printf '%s\n' 'self-test failed: W7 cache raw digest allowlist was too broad' >&2
     return 1
   fi
+  if printf '{"source":"server.log","text":"notsha256=%s"}\n' "$fake_secret" \
+      | scan_digest_json "$w7_cache_raw_path" >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: W7 cache raw digest label suffix bypassed scanning' >&2
+    return 1
+  fi
+  if printf '{"source":"server.log","text":"secretstream_sha256=%s"}\n' "$fake_secret" \
+      | scan_digest_json "$w7_cache_raw_path" >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: W7 cache raw stream label suffix bypassed scanning' >&2
+    return 1
+  fi
   if ! is_checksum_file "$w7_cache_manifest_path" ||
       ! printf '{"executed_environment_sha256":"%s"}\n' "$fake_secret" \
         | scan_digest_json "$w7_cache_manifest_path" >/dev/null 2>&1; then
