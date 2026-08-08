@@ -105,7 +105,7 @@ def score_text(
                 ),
             }
         )
-    indexed_completed = [
+    all_indexed_completed = [
         item
         for item in request_windows
         if item["indexed_resume_count"] == 1
@@ -162,10 +162,16 @@ def score_text(
         )
         == response_tuple
     ]
+    bound_indexed_completed = [
+        item
+        for item in matching_response_windows
+        if item["indexed_resume_count"] == 1
+        and item["matching_prompt_done_count"] == 1
+    ]
     request_bound = (
-        len(indexed_completed) == 1
-        and len(matching_response_windows) == 1
-        and matching_response_windows[0] is indexed_completed[0]
+        len(matching_response_windows) == 1
+        and len(bound_indexed_completed) == 1
+        and matching_response_windows[0] is bound_indexed_completed[0]
     )
     false_flush_count = sum(FALSE_FLUSH in line for line in window)
     activation_generations = [
@@ -294,7 +300,8 @@ def score_text(
         "observed": {
             "cache_enabled_count": cache_enabled_count,
             "request_window_count": len(request_windows),
-            "bound_indexed_resume_count": len(indexed_completed),
+            "all_indexed_resume_completed_count": len(all_indexed_completed),
+            "bound_indexed_resume_count": len(bound_indexed_completed),
             "response_request_tuple": response_tuple,
             "matching_response_window_count": len(matching_response_windows),
             "fatal_markers": fatal_markers,
