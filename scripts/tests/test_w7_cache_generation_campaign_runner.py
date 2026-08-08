@@ -325,6 +325,51 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
                 MODULE._ACTIVE_ATTEMPT = None
                 MODULE._ACTIVE_CANDIDATE = None
 
+    def test_termination_signals_raise_for_failure_finalization(self) -> None:
+        previous = MODULE.install_campaign_signal_handlers()
+        try:
+            for selected in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+                with self.assertRaises(MODULE.CampaignInterrupted) as raised:
+                    os.kill(os.getpid(), selected)
+                self.assertEqual(raised.exception.signum, selected)
+        finally:
+            MODULE.restore_campaign_signal_handlers(previous)
+
+    def test_interrupted_containment_is_terminated_and_reaped(self) -> None:
+        class FakeProcess:
+            returncode = None
+            terminated = False
+            waited = False
+            killed = False
+
+            def communicate(self) -> tuple[str, str]:
+                os.kill(os.getpid(), signal.SIGTERM)
+                raise AssertionError("signal handler did not interrupt communicate")
+
+            def terminate(self) -> None:
+                self.terminated = True
+
+            def wait(self, timeout: int | None = None) -> int:
+                self.waited = True
+                self.returncode = -15
+                return self.returncode
+
+            def kill(self) -> None:
+                self.killed = True
+
+        process = FakeProcess()
+        previous = MODULE.install_campaign_signal_handlers()
+        try:
+            with mock.patch.object(MODULE.subprocess, "Popen", return_value=process):
+                with self.assertRaises(MODULE.CampaignInterrupted):
+                    MODULE.run_contained_command(["/usr/bin/true"], {})
+        finally:
+            MODULE.restore_campaign_signal_handlers(previous)
+        self.assertTrue(process.terminated)
+        self.assertTrue(process.waited)
+        self.assertFalse(process.killed)
+        self.assertIsNone(MODULE._ACTIVE_CONTAINMENT)
+
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
         self.addCleanup(temporary.cleanup)
