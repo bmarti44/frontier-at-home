@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import importlib.util
+import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -186,6 +188,76 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             with mock.patch.dict(os.environ, {"DS4_GLM_PREFETCH": "1"}, clear=True):
                 environment, _ = MODULE.environment_for_arm("off", out, "4" * 64)
         self.assertNotIn("DS4_GLM_PREFETCH", environment)
+        self.assertNotIn("GLM_SAFE_ALLOW_CGROUP_HIGH", environment)
+        self.assertNotIn("GLM_SAFE_MEMORY_HIGH_GIB", environment)
+
+    def test_memory_guard_uses_retained_descriptor(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-env-test-") as raw:
+            environment, _ = MODULE.environment_for_arm(
+                "off", Path(raw), "4" * 64,
+                memory_guard_path="/proc/123/fd/4",
+            )
+        self.assertEqual(environment["GLM_SAFE_MEMORY_GUARD_PATH"], "/proc/123/fd/4")
+
+    def test_parent_lock_validation_distinguishes_owner_from_third_party(self) -> None:
+        lock = MODULE.CAMPAIGN_LOCK
+        descriptor = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        metadata = os.fstat(descriptor)
+        base = {
+            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
+            "GLM_SAFE_KILL_FLOOR_GIB": "invalid-after-lock-check",
+            "GLM_SAFE_PARENT_LOCK_PID": str(os.getpid()),
+            "GLM_SAFE_PARENT_LOCK_START_TICKS": str(MODULE.process_start_ticks(os.getpid())),
+            "GLM_SAFE_PARENT_LOCK_FD": str(descriptor),
+            "GLM_SAFE_PARENT_LOCK_DEV_INO": f"{metadata.st_dev}:{metadata.st_ino}",
+            "GLM_SAFE_PARENT_LOCK_KERNEL_KEY": MODULE.lock_kernel_key(metadata),
+        }
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            accepted = subprocess.run(
+                [str(MODULE.CGROUP), "--tag", "w7-lock-owner", "--", "/usr/bin/true"],
+                env=base, capture_output=True, text=True, check=False,
+            )
+            self.assertIn("invalid cgroup resource configuration", accepted.stderr)
+            self.assertNotIn("parent inference-lock ownership mismatch", accepted.stderr)
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+
+            holder = subprocess.Popen(
+                ["/usr/bin/flock", "-x", str(lock), "/usr/bin/sleep", "10"]
+            )
+            try:
+                for _ in range(100):
+                    probe = subprocess.run(
+                        ["/usr/bin/flock", "-n", str(lock), "/usr/bin/true"], check=False
+                    )
+                    if probe.returncode != 0:
+                        break
+                    time.sleep(0.01)
+                rejected = subprocess.run(
+                    [str(MODULE.CGROUP), "--tag", "w7-lock-foreign", "--", "/usr/bin/true"],
+                    env=base, capture_output=True, text=True, check=False,
+                )
+                self.assertIn("parent inference-lock ownership mismatch", rejected.stderr)
+            finally:
+                holder.terminate()
+                holder.wait(timeout=5)
+        finally:
+            os.close(descriptor)
+
+    def test_failure_triplet_cannot_preserve_pass_summary(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-failure-test-") as raw:
+            attempt = Path(raw)
+            (attempt / "raw.jsonl").write_bytes(b"")
+            (attempt / "summary.json").write_text('{"verdict":"PASS"}\n', encoding="utf-8")
+            with mock.patch.object(MODULE, "_ACTIVE_ATTEMPT", attempt), mock.patch.object(
+                MODULE, "_ACTIVE_CANDIDATE", "a" * 40
+            ):
+                MODULE.finalize_failure_triplet(RuntimeError("injected"))
+            summary = json.loads((attempt / "summary.json").read_text(encoding="utf-8"))
+            manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["verdict"], "FAIL")
+        self.assertEqual(manifest["verdict"], "FAIL")
 
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
