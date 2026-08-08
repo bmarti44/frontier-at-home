@@ -725,6 +725,16 @@ self_test() {
     printf '%s\n' 'self-test failed: allowed JSON sha256 was rejected' >&2
     return 1
   fi
+  if ! printf '{"runtime_bundle_sha256":"%s"}\n' "$fake_secret" \
+      | scan_digest_json 'results/dsv4-cold-load/self-test.json' >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: runtime bundle digest was rejected' >&2
+    return 1
+  fi
+  if printf '{"runtime_bundle_secret":"%s"}\n' "$fake_secret" \
+      | scan_digest_json 'results/dsv4-cold-load/self-test.json' >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: runtime bundle allowlist was too broad' >&2
+    return 1
+  fi
   local w3_campaign_raw_path
   w3_campaign_raw_path='results/glm52-gates/W3-performance-campaign-self-test/raw.jsonl'
   if ! is_checksum_file "$w3_campaign_raw_path" ||
