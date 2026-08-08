@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 1,
+  "candidate_hash": "0a5cc2c0f2a2470d473c7d291b25bce776d1653f",
+  "review_round": 288,
+  "runtime_probe_may_proceed": false,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 70,
+      "critical": [],
+      "high": [
+        {
+          "id": "GAP-W7.2-288-H1-POST-VALIDATION-EVIDENCE-REOPEN",
+          "evidence": "After frozen BASE.parse_arm validates safety-bound artifacts, W7.2 reopens server.log and the three logit paths. Fields derived from those second reads need not describe the receipt-bound bytes.",
+          "reproduction": "Replace server.log or a logit path immediately after mocked BASE.parse_arm returns; the W7.2 parser consumes the replacement.",
+          "acceptance_test": "Derive from one immutable receipt-bound snapshot or compare every second read to the already authenticated identity and digest; path-replacement mutations must fail."
+        },
+        {
+          "id": "GAP-W7.2-288-H2-PAYLOAD-SPECIFIC-EVENT-COUNTS-HIDE-EXTRAS",
+          "evidence": "Numeric-specific regexes can accept the expected event while hiding extra or substituted reason=evict and diagnostic-skipped events.",
+          "reproduction": "Add a different-token evict or skip event; the old expected-payload count remains unchanged.",
+          "acceptance_test": "Count all generic event classes, require exact arm cardinality, and separately validate the sole event payload; mutations with extra/substituted events fail."
+        },
+        {
+          "id": "GAP-W7.2-288-H3-INTERRUPTION-FINALIZER-LEAVES-ARM-EVIDENCE-UNBOUND",
+          "evidence": "The failure finalizer binds only raw/summary and omits existing arm artifacts and any completed row held in memory.",
+          "reproduction": "Create p0-off/server.log, invoke failure finalization, and observe that the manifest omits it while raw.jsonl is empty.",
+          "acceptance_test": "Interrupted attempts preserve completed rows and hash every existing regular artifact after cleanup; an arm-one interruption mutation verifies all bindings."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 52,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W7.2-288-H1-INTERRUPTION-WINDOWS-CAN-LOSE-FAILURE-TRIPLET",
+          "evidence": "Attempt activation first updates BASE globals and later W7.2 globals without signal blocking; manifest publication is also unblocked and existence alone is treated as completion.",
+          "reproduction": "Leave only BASE active state populated and finalize, or inject termination during manifest creation; the failure triplet can be absent or partial.",
+          "acceptance_test": "Block termination signals across activation/state assignment and atomic publication, validate existing manifests, and inject each boundary while requiring a complete hash-consistent triplet and zero survivors."
+        },
+        {
+          "id": "ADV-W7.2-288-H2-SECOND-PATH-READS-ARE-NOT-BOUND-TO-AUTHENTICATED-ARM",
+          "evidence": "The same mutable second-read defect as GAP H1 permits forged marker, checkpoint, and logit evidence after BASE validation.",
+          "reproduction": "Replace server.log after BASE.parse_arm and supply PASS-shaped messages; repeat for logits.",
+          "acceptance_test": "Use O_NOFOLLOW descriptor snapshots with identity/digest continuity through parsing and publication; every replacement mutation fails."
+        },
+        {
+          "id": "ADV-W7.2-288-H3-SAME-CHECKPOINT-CLAIM-HAS-NO-IDENTITY-FIELD",
+          "evidence": "The row records only selected_checkpoint_tokens=5044, so two distinct valid 5,044-token checkpoints are indistinguishable while the scorer claims same authenticated checkpoint.",
+          "reproduction": "Provide two otherwise-valid rows; the old schema has no checkpoint identity that can differ.",
+          "acceptance_test": "Capture the fully anchored successful-hit checkpoint key/content identity and require exact cross-arm equality; different valid checkpoint IDs fail."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W7.2-288-M1-PREAUDIT-DIFF-CHECK-PASS-IS-FALSE",
+          "evidence": "The preaudit says diff_check PASS, but the reviewer command across the broad historical delta reports existing trailing whitespace in patch artifacts and the versioned wrapper.",
+          "reproduction": "Run git diff --check be6a17a..0a5cc2c.",
+          "acceptance_test": "Record the exact scoped diff-check command and zero status; do not claim a broader historical check that was not run."
+        }
+      ],
+      "low": [],
+      "verdict": "BLOCK_RUNTIME"
+    }
+  },
+  "blocking_classes": [
+    "receipt-bound immutable arm parsing",
+    "generic event cardinality plus exact payload",
+    "complete interruption evidence and signal-safe publication",
+    "cross-arm checkpoint identity"
+  ],
+  "convergence": {
+    "prior_candidate": null,
+    "blocking_class_count": 4,
+    "consecutive_non_shrinking_candidates": 0,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "autonomous_candidate_2_authorized": true
+  },
+  "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+}
