@@ -1,0 +1,74 @@
+{
+  "candidate_hash": "cd0c2e3c33664ce1630c1abc852656467bb6be09",
+  "review_round": 264,
+  "gate_candidate": 11,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 65,
+    "critical": [
+      {
+        "id": "GAP-W7.1-264-C1-SEALED-OUTER-LINEAGE-UNBOUND",
+        "evidence": "The alternate sealed entry validates caller-provided descriptor paths and hashes but does not independently bind all four script descriptors to candidate Git objects or require their full seal masks. A bounded no-engine check reached attempt creation with a non-candidate cgroup descriptor.",
+        "affected_gate": "W7.1 production-path integrity and measurement validity",
+        "acceptance_test": "Every alternate-entry script descriptor must be fully sealed and byte-equal to candidate:path under an independently resolved candidate before attempt creation; unsealed, differently sealed, or byte-different descriptors must fail."
+      }
+    ],
+    "high": [
+      {
+        "id": "GAP-W7.1-264-H1-SEAL-HOLDER-LOSS-DROPS-EVIDENCE",
+        "evidence": "Terminating the seal holder after attempt creation made the finalizer unable to load the sealed scorer. The run exited 125 with containment files but without the required evidence triplet.",
+        "affected_gate": "W7.1 failure preservation and evidence contract",
+        "acceptance_test": "Terminate the holder at multiple post-attempt lifecycle points; each case must publish a complete FAIL triplet, leave no engine/holder process, and never publish PASS."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 74,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-264-H1-UNSEALED-SCRIPT-DESCRIPTOR-SUBSTITUTION",
+        "evidence": "An exact-byte but unsealed writable memfd was accepted by the alternate harness entry because that path checked its shape and digest but not F_GET_SEALS.",
+        "affected_gate": "W7.1 runtime-input immutability, scorer authority, and false-PASS resistance",
+        "acceptance_test": "Require the exact full seal mask for all four script descriptors at every alternate entry and add separate exact-byte/unsealed negative tests."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W7.1-264-M1-HOLDER-PID-IDENTITY",
+        "evidence": "The holder is bound only by numeric PID and descriptor paths; start time and parent identity are not checked before dispatch or cleanup.",
+        "affected_gate": "runtime lineage and safe holder ownership",
+        "acceptance_test": "Bind and revalidate holder PID/start ticks/parent identity before dispatch and cleanup; holder loss or PID change must fail without signalling an unrelated process."
+      },
+      {
+        "id": "ADV-W7.1-264-M2-FAILURE-RECORD-PATH-REOPEN",
+        "evidence": "Failure finalization separately hashes and reads persisted containment paths, allowing an internally inconsistent FAIL record even though PASS cannot result.",
+        "affected_gate": "failed-attempt evidence consistency",
+        "acceptance_test": "Build failure digests and raw rows from one retained snapshot and mutation-test each failure pathname."
+      }
+    ],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "prior_issue_status": {
+    "GAP-W7.1-263-H1-PINNED-DESCRIPTORS-DO-NOT-FREEZE-SCRIPT-BYTES": "PARTIALLY_FIXED",
+    "GAP-W7.1-263-H2-CONTAINMENT-DIGEST-ROOT-REMAINS-REPLACEABLE": "FIXED",
+    "ADV-W7.1-263-H1-PINNED-DESCRIPTORS-NOT-IMMUTABLE": "PARTIALLY_FIXED",
+    "ADV-W7.1-263-H2-FROZEN-REQUESTS-REOPENED-BY-PATH": "FIXED",
+    "ADV-W7.1-257-L1-PROMPT-CANDIDATE-HASH-TRANSCRIPTION": "FIXED"
+  },
+  "convergence": {
+    "gate_candidate_count": 11,
+    "campaign_global_review_round": 264,
+    "trigger": "new critical finding in frozen candidate scope",
+    "status": "PAUSED_FOR_OWNER",
+    "open_blocking_classes": [
+      "alternate entry does not independently bind sealed scripts to candidate objects",
+      "holder loss after attempt creation can drop failure evidence"
+    ]
+  },
+  "root_disposition": "Candidate 11 closes private completion capture and request-path reopening, but runtime remains prohibited. Preserve r264 and pause before candidate 12 under the explicit new-critical convergence trigger."
+}
