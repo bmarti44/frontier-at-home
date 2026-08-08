@@ -1,0 +1,41 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "status": "FROZEN_PRE_REVIEW_NO_ENGINE_RUN",
+  "frozen_at_utc": "2026-08-08T06:56:11Z",
+  "candidate_parent_commit": "cf74da5a4abb1858cd1c0fc48631da044c031451",
+  "engine": {
+    "source_commit": "bccf0b66e196e88213add7e0f81571bb7e558670",
+    "binary_path": "/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6/ds4-server",
+    "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "binary_bytes": 5584864
+  },
+  "artifacts": {
+    "runner_sha256": "e00028faef5154c2cd0a52302766d3620d07287e354188adc2dc2ebf83bb2049",
+    "scorer_sha256": "b02654462877ebf47a0449dc681d8f1172b5c26df3694e3619b1c7c94b2342d4",
+    "runner_test_sha256": "7fca3016ba51ab91c69939fabe0b6f9870c70226348449311c0996c24e8d00c1",
+    "scorer_test_sha256": "e59c8c5d753b4aa0997c6a1338ce093e4fd41dd1c6e5bef90ec4906cdfd17ebf",
+    "cgroup_sha256": "fe298d8fb24db1155d0b2f996879ec4ae32e6f4b6e5183d9e26240d10d42d0ea",
+    "safe_run_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "memory_guard_sha256": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
+  },
+  "fixed_acceptance": {
+    "blocks": 5,
+    "schedule": "post-freeze drand-derived ABBA/BAAB",
+    "fresh_server_runs": 20,
+    "decode_formula": "(N-1)/(tN-t1) over at least 128 raw output-token timestamps",
+    "ttft_ratio_upper_one_sided_95_max": 0.95,
+    "decode_ratio_lower_one_sided_95_min": 1.0,
+    "correctness": "identical output token IDs, identical final logits, identical complete ordered logit-dump sequences; max_abs_delta=0 and argmax equal",
+    "safety": "no timeout/OOM/Xid/swap/cgroup max/identity/survivor; MemAvailable >=10 GiB",
+    "fidelity": "byte-identical only; no NLL spend"
+  },
+  "offline_pre_submission": {
+    "tests_run": 8,
+    "failures": 0,
+    "errors": 0,
+    "self_test": "W7_CACHE_GENERATION_CAMPAIGN_SELFTEST_OK",
+    "secrets_lint": "PASS",
+    "diff_check": "PASS",
+    "engine_started": false
+  }
+}
