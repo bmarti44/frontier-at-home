@@ -1,0 +1,244 @@
+diff --git a/ds4.c b/ds4.c
+index 5521fc6..04f53cc 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -17539,23 +17539,15 @@ static bool metal_graph_install_model_spans(
+         sizes[i] = spans->v[i].end - spans->v[i].off;
+     }
+
+-    bool stable_cuda_remap = false;
+ #if !defined(__APPLE__) && !defined(DS4_ROCM_BUILD)
+-    stable_cuda_remap = getenv("DS4_CUDA_STABLE_MODEL_REMAP") != NULL;
++    const bool ok = ds4_gpu_runtime_model_map_spans(
++        model->map, model->size, offsets, sizes, spans->len,
++        spans->max_tensor_bytes) != 0;
++#else
++    const bool ok = ds4_gpu_set_model_map_spans(
++        model->map, model->size, offsets, sizes, spans->len,
++        spans->max_tensor_bytes) != 0;
+ #endif
+-    const bool ok = (stable_cuda_remap ?
+-        ds4_gpu_remap_model_spans(model->map,
+-                                  model->size,
+-                                  offsets,
+-                                  sizes,
+-                                  spans->len,
+-                                  spans->max_tensor_bytes) :
+-        ds4_gpu_set_model_map_spans(model->map,
+-                                    model->size,
+-                                    offsets,
+-                                    sizes,
+-                                    spans->len,
+-                                    spans->max_tensor_bytes)) != 0;
+     if (!ok) {
+         fprintf(stderr,
+                 "ds4: Metal SSD streaming failed to map %s model spans\n",
+@@ -57081,6 +57073,16 @@ static int ds4_engine_open_internal(ds4_engine **out,
+             }
+             (void)ds4_gpu_set_model_fd_for_map(e->model.fd, e->model.map);
+         }
++#if !defined(__APPLE__) && !defined(DS4_ROCM_BUILD)
++        if (!ds4_gpu_stable_model_remap_preflight(e->model.map,
++                                                   e->model.size)) {
++            fprintf(stderr,
++                    "ds4: CUDA stable model remap preflight failed; aborting startup\n");
++            ds4_engine_close(e);
++            *out = NULL;
++            return 1;
++        }
++#endif
+         fprintf(stderr, "ds4: %s backend initialized for graph diagnostics\n",
+                 ds4_backend_name(e->backend));
+     }
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index 44c0974..fa6e481 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -103,6 +103,8 @@ static uint64_t g_model_direct_align = 1;
+  * The persistent expert cache flushes when it observes a new generation —
+  * immune to mmap address reuse (sol G4a round-3). */
+ static uint64_t g_model_load_generation = 0;
++static uint64_t g_stable_model_remap_generation = 0;
++static int g_stable_model_remap_mode = 0;
+ static uint64_t g_model_file_size;
+ static int g_model_cache_full;
+ static cudaStream_t g_model_prefetch_stream;
+@@ -29725,9 +29727,11 @@ extern "C" int ds4_gpu_remap_model_spans(
+     if (!model_map || model_size == 0 || !offsets || !sizes || count == 0) {
+         return 0;
+     }
+-    if (g_model_host_base != model_map || g_model_registered_size != model_size) {
++    if (g_stable_model_remap_mode != 1 ||
++        g_stable_model_remap_generation != g_model_load_generation ||
++        g_model_host_base != model_map || g_model_registered_size != model_size) {
+         fprintf(stderr,
+-                "ds4: CUDA stable model remap rejected: model identity changed\n");
++                "ds4: CUDA stable model remap rejected: model identity or generation changed\n");
+         return 0;
+     }
+     for (uint32_t i = 0; i < count; i++) {
+@@ -29736,12 +29740,6 @@ extern "C" int ds4_gpu_remap_model_spans(
+             return 0;
+         }
+     }
+-    static int logged = 0;
+-    if (!logged) {
+-        logged = 1;
+-        fprintf(stderr,
+-                "ds4: CUDA stable model remap enabled (model generation preserved)\n");
+-    }
+     if (getenv("DS4_CUDA_COPY_MODEL_CHUNKED") != NULL) {
+         for (uint32_t i = 0; i < count; i++) {
+             (void)cuda_model_prefetch_range(model_map, model_size,
+@@ -29751,6 +29749,52 @@ extern "C" int ds4_gpu_remap_model_spans(
+     return 1;
+ }
+
++extern "C" int ds4_gpu_stable_model_remap_preflight(
++        const void *model_map, uint64_t model_size) {
++    const char *value = getenv("DS4_CUDA_STABLE_MODEL_REMAP");
++    g_stable_model_remap_generation = 0;
++    if (!value) {
++        g_stable_model_remap_mode = 0;
++        return 1;
++    }
++    if (strcmp(value, "1") != 0) {
++        g_stable_model_remap_mode = -1;
++        fprintf(stderr,
++                "ds4: CUDA stable model remap rejected: expected exact value 1\n");
++        return 0;
++    }
++    if (!model_map || model_size == 0 || g_model_host_base != model_map ||
++        g_model_registered_size != model_size) {
++        g_stable_model_remap_mode = -1;
++        fprintf(stderr,
++                "ds4: CUDA stable model remap rejected: main model is not the active identity\n");
++        return 0;
++    }
++    g_stable_model_remap_mode = 1;
++    g_stable_model_remap_generation = g_model_load_generation;
++    fprintf(stderr,
++            "ds4: CUDA stable model remap enabled generation=%llu\n",
++            (unsigned long long)g_stable_model_remap_generation);
++    return 1;
++}
++
++extern "C" int ds4_gpu_runtime_model_map_spans(
++        const void *model_map, uint64_t model_size,
++        const uint64_t *offsets, const uint64_t *sizes, uint32_t count,
++        uint64_t max_tensor_bytes) {
++    if (g_stable_model_remap_mode == 0) {
++        return ds4_gpu_set_model_map_spans(model_map, model_size, offsets,
++                                           sizes, count, max_tensor_bytes);
++    }
++    if (g_stable_model_remap_mode != 1) return 0;
++    return ds4_gpu_remap_model_spans(model_map, model_size, offsets, sizes,
++                                     count, max_tensor_bytes);
++}
++
++extern "C" uint64_t ds4_gpu_model_load_generation(void) {
++    return g_model_load_generation;
++}
++
+ extern "C" int ds4_gpu_shared_gate_up_swiglu_q8_0_rows_tensor(
+         ds4_gpu_tensor *gate, ds4_gpu_tensor *up, ds4_gpu_tensor *mid,
+         const void *model_map, uint64_t model_size,
+diff --git a/ds4_gpu.h b/ds4_gpu.h
+index b91f646..afa6710 100644
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -101,6 +101,11 @@ int ds4_gpu_set_model_map_spans(const void *model_map, uint64_t model_size, cons
+ /* Change the active view spans for an already-registered CUDA model without
+  * announcing a new model identity.  Fails closed if base or size differs. */
+ int ds4_gpu_remap_model_spans(const void *model_map, uint64_t model_size, const uint64_t *offsets, const uint64_t *sizes, uint32_t count, uint64_t max_tensor_bytes);
++/* Production selector seam.  The baseline implementation retains the legacy
++ * environment-presence behavior; the W7 candidate changes only this seam. */
++int ds4_gpu_runtime_model_map_spans(const void *model_map, uint64_t model_size, const uint64_t *offsets, const uint64_t *sizes, uint32_t count, uint64_t max_tensor_bytes);
++int ds4_gpu_stable_model_remap_preflight(const void *model_map, uint64_t model_size);
++uint64_t ds4_gpu_model_load_generation(void);
+ #endif
+ int ds4_gpu_cache_model_range(const void *model_map, uint64_t model_size, uint64_t offset, uint64_t bytes, const char *label);
+ int ds4_gpu_cache_q8_f16_range(const void *model_map, uint64_t model_size, uint64_t offset, uint64_t bytes, uint64_t in_dim, uint64_t out_dim, const char *label);
+diff --git a/tests/test_gpu_model_cache.c b/tests/test_gpu_model_cache.c
+index ba7df4a..f27933a 100644
+--- a/tests/test_gpu_model_cache.c
++++ b/tests/test_gpu_model_cache.c
+@@ -49,13 +49,71 @@ int main(void) {
+      * a new model load and must use the identity-preserving remap API. */
+     const uint64_t remap_offsets[2] = {0, 512 * 1024};
+     const uint64_t remap_sizes[2] = {128 * 1024, 128 * 1024};
+-    CHECK(ds4_gpu_remap_model_spans(host, total, remap_offsets, remap_sizes,
+-                                    2, 128 * 1024),
+-          "same-model span remap");
+-    CHECK(!ds4_gpu_remap_model_spans(bytes + 1, total - 1,
+-                                     remap_offsets, remap_sizes,
+-                                     2, 128 * 1024),
+-          "different model identity rejected by remap");
++    uint64_t generation = ds4_gpu_model_load_generation();
++    unsetenv("DS4_CUDA_STABLE_MODEL_REMAP");
++    CHECK(ds4_gpu_stable_model_remap_preflight(host, total),
++          "default-off remap preflight");
++    CHECK(ds4_gpu_runtime_model_map_spans(host, total, remap_offsets,
++                                          remap_sizes, 2, 128 * 1024),
++          "default-off runtime uses legacy remap");
++    CHECK(ds4_gpu_model_load_generation() == generation + 1,
++          "default-off legacy remap advances generation");
++    generation = ds4_gpu_model_load_generation();
++
++    const char *invalid_values[] = {"", "0", "false", "2"};
++    for (size_t i = 0; i < sizeof(invalid_values) / sizeof(invalid_values[0]); i++) {
++        CHECK(setenv("DS4_CUDA_STABLE_MODEL_REMAP", invalid_values[i], 1) == 0,
++              "set invalid stable-remap value");
++        CHECK(!ds4_gpu_stable_model_remap_preflight(host, total),
++              "invalid stable-remap value rejected");
++        CHECK(ds4_gpu_model_load_generation() == generation,
++              "invalid flag does not advance generation");
++    }
++
++    CHECK(setenv("DS4_CUDA_STABLE_MODEL_REMAP", "1", 1) == 0,
++          "enable stable remap");
++    CHECK(ds4_gpu_stable_model_remap_preflight(host, total),
++          "exact-one stable-remap preflight");
++    CHECK(ds4_gpu_runtime_model_map_spans(host, total, remap_offsets,
++                                          remap_sizes, 2, 128 * 1024),
++          "same-model stable remap");
++    CHECK(ds4_gpu_model_load_generation() == generation,
++          "stable remap preserves generation");
++    CHECK(!ds4_gpu_runtime_model_map_spans(bytes + 1, total,
++                                           remap_offsets, remap_sizes,
++                                           2, 128 * 1024),
++          "different base same size rejected");
++    CHECK(!ds4_gpu_runtime_model_map_spans(host, total - 1,
++                                           remap_offsets, remap_sizes,
++                                           2, 128 * 1024),
++          "same base different size rejected");
++    CHECK(ds4_gpu_model_load_generation() == generation,
++          "rejected remaps preserve generation");
++
++    CHECK(ds4_gpu_set_model_map(host, total), "same-address new registration");
++    CHECK(ds4_gpu_model_load_generation() == generation + 1,
++          "authoritative same-address registration advances generation");
++    CHECK(!ds4_gpu_runtime_model_map_spans(host, total, remap_offsets,
++                                           remap_sizes, 2, 128 * 1024),
++          "stale generation remap rejected");
++    CHECK(ds4_gpu_stable_model_remap_preflight(host, total),
++          "refresh stable-remap generation");
++    generation = ds4_gpu_model_load_generation();
++
++    void *support = NULL;
++    CHECK(cudaMallocHost(&support, total) == cudaSuccess,
++          "allocate support model map");
++    CHECK(ds4_gpu_set_model_map(support, total), "register support model");
++    CHECK(!ds4_gpu_stable_model_remap_preflight(host, total),
++          "main remap rejected while support identity is active");
++    CHECK(ds4_gpu_set_model_map(host, total), "restore main model identity");
++    CHECK(ds4_gpu_stable_model_remap_preflight(host, total),
++          "main remap accepted after authoritative restore");
++    CHECK(ds4_gpu_runtime_model_map_spans(host, total, remap_offsets,
++                                          remap_sizes, 2, 128 * 1024),
++          "stable main remap after support lifecycle");
++    (void)cudaFreeHost(support);
++    unsetenv("DS4_CUDA_STABLE_MODEL_REMAP");
+
+     /* Three disjoint ranges on device 0. */
+     ds4_tensor_range ranges[3];

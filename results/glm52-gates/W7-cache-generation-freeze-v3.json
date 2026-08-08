@@ -1,0 +1,62 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 3,
+  "status": "FROZEN_REVIEW_PENDING",
+  "repository_parent_commit": "94be956fcb9810ce43bfc1f8010d3930bc2cb8d2",
+  "engine": {
+    "baseline_commit": "12a5010a20514c06f718fe53e2083a4031114317",
+    "behavioral_red_commit": "41887397aa799f1c80b81f14e0ea00f477a045a6",
+    "implementation_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "readable_source": "/tmp/glm52-w7-ttft-c3",
+    "patch": "results/glm52-gates/harness/0043-fix-w7-stable-remap-lineage.patch",
+    "patch_sha256": "d7243a5a9c9375b7c32e3ff2e6c7e0f3798a9b193a281a56c3f497bc743e8104"
+  },
+  "engine_source_sha256": {
+    "ds4.c": "a6855b9ab10e8868295b16705864cf841b975006c4930c9abca75bfe11d62dc9",
+    "ds4_cuda.cu": "ffc59609cdd81fdd78e4c60f558f3315888406ddcce50cac5257adee33e9ea3c",
+    "ds4_gpu.h": "330abe0d58caa72fe281bd17a4cf358326f726656f1bed9e7a5d9f707bc07208",
+    "tests/test_gpu_model_cache.c": "f5402dd66e110ec72d74d123a8977b53969c51e05ac7de680cdc30fadc51e679"
+  },
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6/ds4-server",
+    "sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "bytes": 5584864,
+    "mode": 493,
+    "independent_builds": {
+      "raw": [
+        {"sha256": "e88b6d1b8f63667b860f58cef930b7df9ded2f3fc50f1c946a58865c6824a8ad", "bytes": 14908024},
+        {"sha256": "fc0f57a430fcf968faca3bd2de81ef428e148028d5b38f8dfda6f2e4407b6d6c", "bytes": 14908024}
+      ],
+      "normalized": [
+        {"sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2", "bytes": 5584864},
+        {"sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2", "bytes": 5584864}
+      ]
+    },
+    "normalized_byte_identical": true
+  },
+  "acceptance": {
+    "plan_sha256": "0ebe1bcc248e64295e9620bf20f01090c5d134edf0fcd3344257ade41b2899fb",
+    "scorer_sha256": "0c1de3edfa1fccd4b7942211bfe8bf4afebf9425fb334e9b69c69aaf45cf7aa3",
+    "scorer_tests_sha256": "57a89b310243b8f0bede3b084aad29442b105b626278547d1744cfc71a79295d",
+    "freeze_verifier_sha256": "2993a82c04902e337d8cfcf2eeaa3d17bc0ceb4c8851849b2eaf59225bbcbe1a",
+    "freeze_verifier_test_sha256": "2a8e1570baf06b2c0b5efa11327a5b748aff48a41175a25f1afb9486131bc5dc"
+  },
+  "focused_verification": {
+    "cuda_command": "make -j2 tests/test_gpu_model_cache && ./tests/test_gpu_model_cache",
+    "cuda_result": "PASS",
+    "engine_test_sha256": "9cfeca27faae9fcf8f1c6740f701d979e204cce468e7de35e22a414e0f36e7d1",
+    "stderr_artifact": "results/glm52-gates/W7-cache-generation-engine-pass-c3.stderr",
+    "stderr_sha256": "f9bce957ee3e3dc40d8043db110614148cd6ed12e7b364374735cfeb21a44163",
+    "rocm_preprocess_command": "cc -E -DDS4_ROCM_BUILD -I. ds4.c | rg ds4_gpu_\\(runtime_model_map_spans|remap_model_spans|stable_model_remap_preflight\\)",
+    "rocm_preprocess_result": "NO_MATCH",
+    "scorer_tests": "10/10 PASS",
+    "prior_authoritative_arm_replay": "FAIL solely on 374 false generation flushes; response bound uniquely to tuple (0,5055,5055)",
+    "large_model_runtime_started": false
+  },
+  "round_256_disposition": {
+    "ADV-W7.1-255-H1-UNBOUND-RESUME-COMPLETION": "FIXED_BY_FULL_TUPLE_UNIQUE_BINDING",
+    "ADV-W7.1-256-H1-NO-PREIMPLEMENTATION-CUDA-RED": "FIXED_BY_4188739_ASSERTION_RED_BEFORE_BCCF0B6",
+    "ADV-W7.1-256-H2-RESPONSE-SCHEMA-ACCEPTS-ERROR-SHAPES": "FIXED_BY_STRICT_COMPLETION_SCHEMA",
+    "ADV-W7.1-256-H3-FROZEN-BINARY-SIZE-MISMATCH": "FIXED_AND_CHECKED_BY_EXECUTABLE_FREEZE_VERIFIER"
+  }
+}

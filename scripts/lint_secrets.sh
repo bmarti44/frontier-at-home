@@ -274,6 +274,8 @@ allowlist = {
     "plan_sha256",
     "red_log_sha256",
     "drand_verifier_sha256",
+    "freeze_verifier_sha256",
+    "freeze_verifier_test_sha256",
     "python_sha256",
     "numpy_init_sha256",
     "numpy_multiarray_sha256",
