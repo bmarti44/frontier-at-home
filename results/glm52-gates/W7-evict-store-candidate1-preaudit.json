@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 1,
+  "audited_repo_commit": "237b2508ef1c3b4da441129fe3940055663b7358",
+  "status": "READY_FOR_DELTA_REVIEW",
+  "scope": "Default-off diagnostic bypass of only the preload reason=evict store, plus a bounded two-arm scorer and contained runner. PASS cannot promote the diagnostic path.",
+  "engine": {
+    "worktree": "/tmp/glm52-w7-ttft-c3",
+    "base_commit": "bccf0b66e196e88213add7e0f81571bb7e558670",
+    "red_commit": "6f4300a4179247a06dd94250f3e8aeb8b289b5b6",
+    "implementation_commit": "fdd0fe05df6368de428cd5405929f49d590c9f52",
+    "source_sha256": "a498baa6524564cb1fd65e52511b4a9cfac70dd56bd8d1c1f9fb95d3b1140181",
+    "red_test_sha256": "60f57d696807dca44c3949c306d715c877f1065de3df1e3d779949b0e94dfcab",
+    "patch_sha256": "d5c0e8cf0ac877943938a3330ec0111af43a56ca76fc3495453bddfc1ae3a87c",
+    "red_receipt": "results/glm52-gates/W7-evict-store-engine-red-c1.json",
+    "worktree_clean": true
+  },
+  "build": {
+    "clean_build_jobs": 2,
+    "build_1_binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+    "build_2_binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+    "canonical_bytes": 5584336,
+    "frozen_binary": "/home/bmarti44/.cache/glm52-w7-evict-store-fdd0fe0/ds4-server",
+    "binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+    "double_build_byte_identical": true
+  },
+  "harness": {
+    "component_sha256": {
+      "scripts/91_run_w7_cache_generation_campaign.py": "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924",
+      "results/glm52-gates/harness/glm_cgroup_run.sh": "a0cdae4fbd78e770ef971c65eaf95a38917de0150c8c3452a3876d9e894793fb",
+      "results/glm52-gates/harness/glm_cgroup_run_w7_evict_store_v1.sh": "13fe1f8faa77020918faadc5214f4f5cdc955d6dfc6c158cc0f2d080a0e8985d"
+    },
+    "scorer_sha256": "3dbe84dcc3a21e102802a821790cc3d0dfb867899cec57098d47d43745165681",
+    "runner_sha256": "a66e31c3ac51242ab3d23faf035948d8f54c5bb8a1b02988ce65262eb3b76894",
+    "drand_freeze_floor_round": 6358539,
+    "randomness_observation": "All three configured relays returned round 6358539 and the same randomness before candidate freeze. The execution receipt must use a later round and is not yet generated.",
+    "diagnostic_flag_default_off": true,
+    "diagnostic_flag_not_authorized_for_promotion": true
+  },
+  "pre_submission_audit": {
+    "command": "python3 -m unittest scripts.tests.test_w7_cache_generation scripts.tests.test_w7_cache_generation_campaign scripts.tests.test_glm_safe_lifecycle scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_evict_store scripts.tests.test_w7_evict_store_probe scripts.tests.test_w7_evict_store_probe_runner",
+    "tests_run": 120,
+    "failures": 0,
+    "errors": 0,
+    "expected_skips": 1,
+    "secret_lint_self_test": "PASS",
+    "diff_check": "PASS",
+    "engine_or_fio_active": false,
+    "minimum_start_memory_requirement_gib": 110,
+    "observed_mem_available_kb": 120860496,
+    "swap_used_kb": 207036
+  },
+  "preserved_execution_defect": {
+    "receipt": "results/glm52-gates/W7-evict-store-containment-attempt-c1.json",
+    "resolution": "The W7.1 shared cgroup wrapper was restored byte-for-byte and W7.2 received a separately named wrapper. The formerly failing W7.1 self-test is GREEN in the 120-test audit."
+  },
+  "anti_cheating_review": {
+    "fixture_or_hash_detection_in_engine": false,
+    "canned_results": false,
+    "benchmark_only_production_branch": false,
+    "disabled_assertions": false,
+    "timing_manipulation": false,
+    "note": "The production branch is controlled only by an exact, logged, default-off environment flag. Fixture-specific values exist only in the external scorer/runner."
+  },
+  "runtime_authorization": "Do not start the engine until both persistent reviewers report no critical or high findings on the frozen candidate.",
+  "verdict": "NO_RESULT"
+}
