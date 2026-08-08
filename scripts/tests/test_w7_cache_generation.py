@@ -187,7 +187,9 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             )
             (attempt / "containment.stderr").write_text("")
             (attempt / "containment.rc").write_text("0\n")
-            (out / "server.log").write_text("replacement\n")
+            replacement = out / "server.log.replacement"
+            replacement.write_bytes((out / "server.log").read_bytes())
+            os.replace(replacement, out / "server.log")
             with self.assertRaises(ValueError):
                 MODULE.bind_runtime_artifacts(attempt, out, crash)
 
