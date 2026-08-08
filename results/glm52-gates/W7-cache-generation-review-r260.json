@@ -1,0 +1,23 @@
+{
+  "candidate_hash": "c2564ad92cf098b223ae45a1902d04d08768d800",
+  "review_round": 260,
+  "gate_candidate": 7,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 52,
+    "critical": [],
+    "high": ["GAP-W7.1-260-H1-CONTAINMENT-ENVELOPE-NOT-EXECUTABLY-BOUND", "GAP-W7.1-260-H2-EXECUTED-ARTIFACT-IDENTITY-UNBOUND", "GAP-W7.1-260-H3-FORCED-OR-FAILED-SHUTDOWN-RETURNS-SUCCESS"],
+    "medium": ["GAP-W7.1-260-M1-ON-ACTIVATION-NOT-INDEPENDENTLY-SCORED"],
+    "low": [],
+    "verdict": "REJECT_SMOKE_BLOCKED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 47,
+    "critical": [],
+    "high": ["ADV-W7.1-260-H1-CONTAINMENT-UNBOUND", "ADV-W7.1-260-H2-CHILD-EXIT-HIDDEN", "ADV-W7.1-260-H3-MODEL-IDENTITY-UNBOUND", "ADV-W7.1-260-H4-ON-ARM-UNBOUND", "ADV-W7.1-260-H5-EVIDENCE-CONTRACT-MISSING"],
+    "medium": ["ADV-W7.1-260-M1-SUMMARY-CLOBBER"],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "root_disposition": "Candidate 8 is limited to an executable exact containment launcher, model/binary/environment binding, strict graceful child exit, ON activation scoring, and exclusive manifest/raw/summary publication. Runtime remains blocked."
+}

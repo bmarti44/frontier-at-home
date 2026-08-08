@@ -54,15 +54,36 @@ class W7CacheGenerationGateTest(unittest.TestCase):
 
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
-        self.assertIn("glm_cgroup_run.sh", source)
+        self.assertIn('"$CGROUP" --tag', source)
+        for setting in (
+            "GLM_SAFE_MEMORY_HIGH_GIB=78",
+            "GLM_SAFE_KILL_FLOOR_GIB=24",
+            "GLM_SAFE_MIN_START_GIB=110",
+            "GLM_SAFE_TIMEOUT_S=2400",
+            "GLM_SAFE_RUN_AS_CURRENT_USER=1",
+            "GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1",
+            "GLM_SAFE_EXPECTED_BINARY_SHA256",
+        ):
+            self.assertIn(setting, source)
         self.assertIn("w7-stable-remap-bccf0b6/ds4-server", source)
         self.assertIn("readonly BINARY_SHA256=", source)
+        self.assertIn("readonly MODEL_SHA256=", source)
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
         self.assertIn("--ssd-streaming-cache-experts 40GB", source)
         self.assertIn("--kv-cache-boundary-align-tokens 4", source)
         self.assertIn("--kv-cache-boundary-trim-tokens 8", source)
         self.assertIn('trap stop_server EXIT INT TERM HUP', source)
+        self.assertNotIn("kill -KILL", source)
+        self.assertIn("child-exit.json", source)
+        for evidence in ("manifest.json", "raw.jsonl", "summary.json"):
+            self.assertIn(evidence, source)
         self.assertIn('sync -f "$out"', source)
+
+    def test_scorer_binds_on_activation_and_child_exit(self) -> None:
+        source = SCORER.read_text(encoding="utf-8")
+        self.assertIn("CUDA stable model remap enabled generation=", source)
+        self.assertIn("child_exit", source)
+        self.assertIn("shutdown_observed_once", source)
 
     def test_accepts_completed_resume_without_false_reload(self) -> None:
         result = score()
@@ -86,6 +107,12 @@ class W7CacheGenerationGateTest(unittest.TestCase):
     def test_rejects_unfinished_resume(self) -> None:
         self.assertEqual(
             score(GOOD.replace("0807 15:10:06 ds4-server: completion ctx=5044..5066:22 prompt done 3.500s\n", ""))["verdict"],
+            "FAIL",
+        )
+
+    def test_rejects_missing_shutdown_marker(self) -> None:
+        self.assertEqual(
+            score(GOOD.replace("0807 15:10:07 ds4-server: shutdown requested, draining requests\n", ""))["verdict"],
             "FAIL",
         )
 
