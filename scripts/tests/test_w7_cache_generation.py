@@ -116,6 +116,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             "wrong-cgroup-unit",
             "bad-lock-pid",
             "bad-lock-start",
+            "same-inode-unowned-lock-fd",
         ):
             self.assertIn(mutation, source)
 
@@ -152,6 +153,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             "bad-safe-pid", "bad-safe-start", "wrong-safe-script",
             "wrong-cgroup-unit", "bad-lock-pid", "bad-lock-start",
             "bad-lock-fd",
+            "same-inode-unowned-lock-fd",
         ):
             self.assertIn(f"W7_LINEAGE_MUTATION_REJECTED name={mutation}", command_log)
         self.assertEqual(set(attempt_root.glob("attempt-*")), before_attempts)
