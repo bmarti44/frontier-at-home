@@ -1,0 +1,117 @@
+{
+  "all_rejected": true,
+  "artifacts": {
+    "driver": "84b2878dee76874bba2efee54ce8217095209a24d532c8f2b34e2ed14d219a13"
+  },
+  "candidate": 5,
+  "mutations": [
+    {
+      "diagnostic_tail": "ScoreError: raw evidence must contain exactly 20 nonempty rows",
+      "exit_code": 1,
+      "mutation": "missing_row",
+      "rejected": true,
+      "stderr_sha256": "a6479bab2bc9ed03c12ecc0350af4112a5d7633725317e80040fd39cccb404bd",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: raw evidence must contain exactly 20 nonempty rows",
+      "exit_code": 1,
+      "mutation": "duplicate_row",
+      "rejected": true,
+      "stderr_sha256": "a6479bab2bc9ed03c12ecc0350af4112a5d7633725317e80040fd39cccb404bd",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: raw row 0 differs from execution transcript",
+      "exit_code": 1,
+      "mutation": "reordered_rows",
+      "rejected": true,
+      "stderr_sha256": "65a8373d64a1ece8375da2c6c0150c314984d007e427f56909237f16b829ab41",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: non-finite JSON constant: NaN",
+      "exit_code": 1,
+      "mutation": "nonfinite_timing",
+      "rejected": true,
+      "stderr_sha256": "4c4d11c9454a362b397242eaf84d5885225f5806daed92218bcfa8ec6baab36a",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: raw row 0 differs from execution transcript",
+      "exit_code": 1,
+      "mutation": "zero_timing",
+      "rejected": true,
+      "stderr_sha256": "65a8373d64a1ece8375da2c6c0150c314984d007e427f56909237f16b829ab41",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: raw row 0 differs from execution transcript",
+      "exit_code": 1,
+      "mutation": "positive_finite_timings",
+      "rejected": true,
+      "stderr_sha256": "65a8373d64a1ece8375da2c6c0150c314984d007e427f56909237f16b829ab41",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: raw row 0 differs from execution transcript",
+      "exit_code": 1,
+      "mutation": "consistent_wrong_ids",
+      "rejected": true,
+      "stderr_sha256": "65a8373d64a1ece8375da2c6c0150c314984d007e427f56909237f16b829ab41",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: raw row 1 execution truth differs",
+      "exit_code": 1,
+      "mutation": "missing_marker",
+      "rejected": true,
+      "stderr_sha256": "87c965844aae2b0cf2152c033659860cce5117969b480a7dca444972e90dac40",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: configuration differs from fixed gate",
+      "exit_code": 1,
+      "mutation": "disabled_flag",
+      "rejected": true,
+      "stderr_sha256": "b2d9a9678463cc2a424ac8f726589e9a3b18f29c44fc5c322cd86bbdfdbfbaab",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: artifact binding mismatch: binary",
+      "exit_code": 1,
+      "mutation": "stale_binary",
+      "rejected": true,
+      "stderr_sha256": "bcf87c836fb1d09bac67d1aae6b37a0ea64681d8728f8fb2326bd35ccb9ded8d",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: raw row 0 differs from execution transcript",
+      "exit_code": 1,
+      "mutation": "transcript_timing_mismatch",
+      "rejected": true,
+      "stderr_sha256": "65a8373d64a1ece8375da2c6c0150c314984d007e427f56909237f16b829ab41",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "ScoreError: candidate differs from fixed scorer",
+      "exit_code": 1,
+      "mutation": "coherent_alternate_closure",
+      "rejected": true,
+      "stderr_sha256": "5b46c43b5c53179bae3ae378299c1bc0f48d2f526cdd199506b8b344a039966a",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "diagnostic_tail": "",
+      "exit_code": 3,
+      "mutation": "scorer_error",
+      "rejected": true,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "schema": "glm52-w4-topk-mutations-v3",
+  "source_run": "results/glm52-gates/W4-topk-candidate5-pass",
+  "stderr_normalization": "exact mutation-run path replaced by <MUTATED_RUN>",
+  "verdict": "PASS"
+}
