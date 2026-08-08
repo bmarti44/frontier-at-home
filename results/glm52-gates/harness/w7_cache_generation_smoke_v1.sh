@@ -59,7 +59,7 @@ PY
 if [[ $0 == "$HARNESS" && ! -L $0 && $(readlink -f -- "$0") == "$HARNESS" ]]; then
   :
 elif [[ $0 =~ ^/proc/[1-9][0-9]*/fd/[0-9]+$ &&
-        ${1:-} =~ ^(--sealed-outer|--sealed-holder-loss-test|--driver)$ &&
+        ${1:-} =~ ^(--sealed-outer|--sealed-holder-loss-test|--sealed-lineage-self-test|--driver|--driver-lineage-self-test)$ &&
         ${DS4_W7_PINNED_HARNESS_SHA256:-} =~ ^[0-9a-f]{64}$ &&
         $(/usr/bin/sha256sum -- "$0" | /usr/bin/awk '{print $1}') == "$DS4_W7_PINNED_HARNESS_SHA256" ]] &&
         has_full_seal "$0"; then
@@ -259,7 +259,7 @@ stop_seal_holder() {
 verify_driver_containment() {
   local unit=${GLM_SAFE_CGROUP_UNIT:-} path dir high max swap oom_group
   [[ ${GLM_SAFE_REQUIRE_CGROUP:-} == 1 ]]
-  [[ $unit =~ ^glm52-w7-c13-[0-9a-f]{12}-[0-9]+$ ]]
+  [[ $unit =~ ^glm52-w7-c14-[0-9a-f]{12}-[0-9]+$ ]]
   path=$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup)
   [[ $path == */"$unit.service" ]]
   dir=/sys/fs/cgroup$path
@@ -274,16 +274,18 @@ verify_driver_containment() {
 verify_driver_safe_lineage() {
   local safe_pid=${DS4_W7_SAFE_PID:-} safe_start=${DS4_W7_SAFE_START_TICKS:-}
   local safe_path=${DS4_W7_SAFE_SCRIPT_PATH:-} safe_unit=${DS4_W7_SAFE_CGROUP_UNIT:-}
+  local lock_pid=${DS4_W7_LOCK_PARENT_PID:-} lock_start=${DS4_W7_LOCK_PARENT_START_TICKS:-}
   [[ ${GLM_SAFE_W7_DRIVER_LINEAGE:-} == 1 ]]
   [[ $safe_pid =~ ^[1-9][0-9]*$ && $safe_start =~ ^[1-9][0-9]*$ ]]
   [[ $safe_path == "$safe_fd_path" && $safe_unit == "${GLM_SAFE_CGROUP_UNIT:-}" ]]
+  [[ $lock_pid =~ ^[1-9][0-9]*$ && $lock_start =~ ^[1-9][0-9]*$ ]]
   has_full_seal "$safe_path"
   /usr/bin/git --no-replace-objects -C "$ROOT" show \
     "$candidate:results/glm52-gates/harness/glm_safe_run.sh" | /usr/bin/cmp -s - "$safe_path"
-  /usr/bin/python3 - "$safe_pid" "$safe_start" "$safe_path" "$$" <<'PY'
-import pathlib, sys
+  /usr/bin/python3 - "$safe_pid" "$safe_start" "$safe_path" "$$" "$lock_pid" "$lock_start" <<'PY'
+import os, pathlib, sys
 
-safe_pid, expected_start, expected_path, child_pid = sys.argv[1:]
+safe_pid, expected_start, expected_path, child_pid, lock_pid, lock_start = sys.argv[1:]
 stat = pathlib.Path(f"/proc/{safe_pid}/stat").read_text().split()
 if stat[21] != expected_start:
     raise SystemExit("safe wrapper start identity changed")
@@ -300,6 +302,26 @@ while current not in seen and current != "1":
     current = next(line.split()[1] for line in status if line.startswith("PPid:"))
 else:
     raise SystemExit("safe wrapper is not a driver ancestor")
+safe_status = pathlib.Path(f"/proc/{safe_pid}/status").read_text().splitlines()
+safe_parent = next(line.split()[1] for line in safe_status if line.startswith("PPid:"))
+lock_stat = pathlib.Path(f"/proc/{lock_pid}/stat").read_text().split()
+if safe_parent != lock_pid or lock_stat[21] != lock_start:
+    raise SystemExit("inference-lock parent identity mismatch")
+safe_argv = pathlib.Path(f"/proc/{safe_pid}/cmdline").read_bytes().split(b"\0")[:-1]
+lock_argv = pathlib.Path(f"/proc/{lock_pid}/cmdline").read_bytes().split(b"\0")[:-1]
+lock_path = "/run/lock/frontier-at-home/inference.lock"
+if lock_argv != [b"/usr/bin/flock", b"-n", b"-E", b"75", lock_path.encode()] + safe_argv:
+    raise SystemExit("inference-lock parent command mismatch")
+lock = os.stat(lock_path)
+identity = f"{os.major(lock.st_dev):02x}:{os.minor(lock.st_dev):02x}:{lock.st_ino}"
+if not any(
+    len(fields := line.split()) >= 8
+    and fields[1:4] == ["FLOCK", "ADVISORY", "WRITE"]
+    and fields[4] == lock_pid
+    and fields[5].lower() == identity.lower()
+    for line in pathlib.Path("/proc/locks").read_text().splitlines()
+):
+    raise SystemExit("inference-lock ownership is absent")
 PY
 }
 
@@ -567,6 +589,28 @@ PY
   exit 0
 fi
 
+if [[ ${1:-} == --driver-lineage-self-test ]]; then
+  [[ $# == 1 ]]
+  [[ $candidate =~ ^[0-9a-f]{40}$ && $(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
+  /usr/bin/git --no-replace-objects -C "$ROOT" show "$candidate:results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh" | /usr/bin/cmp -s - "$0"
+  verify_driver_safe_lineage
+  original_safe_pid=$DS4_W7_SAFE_PID
+  original_safe_start=$DS4_W7_SAFE_START_TICKS
+  original_safe_path=$DS4_W7_SAFE_SCRIPT_PATH
+  original_safe_unit=$DS4_W7_SAFE_CGROUP_UNIT
+  original_lock_pid=$DS4_W7_LOCK_PARENT_PID
+  original_lock_start=$DS4_W7_LOCK_PARENT_START_TICKS
+  DS4_W7_SAFE_PID=1; ! verify_driver_safe_lineage # bad-safe-pid
+  DS4_W7_SAFE_PID=$original_safe_pid; DS4_W7_SAFE_START_TICKS=1; ! verify_driver_safe_lineage # bad-safe-start
+  DS4_W7_SAFE_START_TICKS=$original_safe_start; DS4_W7_SAFE_SCRIPT_PATH=$harness_fd_path; ! verify_driver_safe_lineage # wrong-safe-script
+  DS4_W7_SAFE_SCRIPT_PATH=$original_safe_path; DS4_W7_SAFE_CGROUP_UNIT=wrong; ! verify_driver_safe_lineage # wrong-cgroup-unit
+  DS4_W7_SAFE_CGROUP_UNIT=$original_safe_unit; DS4_W7_LOCK_PARENT_PID=1; ! verify_driver_safe_lineage # bad-lock-pid
+  DS4_W7_LOCK_PARENT_PID=$original_lock_pid; DS4_W7_LOCK_PARENT_START_TICKS=1; ! verify_driver_safe_lineage # bad-lock-start
+  DS4_W7_LOCK_PARENT_START_TICKS=$original_lock_start
+  echo W7_DRIVER_LINEAGE_SELFTEST_OK
+  exit 0
+fi
+
 if [[ ${1:-} == --driver ]]; then
   [[ $# == 3 && $2 == on ]]
   [[ $candidate =~ ^[0-9a-f]{40}$ && $(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
@@ -576,7 +620,7 @@ if [[ ${1:-} == --driver ]]; then
   exit
 fi
 
-if [[ ${1:-} == --candidate || ${1:-} == --holder-loss-self-test ]]; then
+if [[ ${1:-} == --candidate || ${1:-} == --holder-loss-self-test || ${1:-} == --lineage-self-test ]]; then
   [[ $# == 2 && $2 =~ ^[0-9a-f]{40}$ ]]
   initial_mode=$1
   candidate=$2
@@ -599,11 +643,11 @@ if [[ ${1:-} == --candidate || ${1:-} == --holder-loss-self-test ]]; then
     DS4_W7_SEALED_SAFE_SHA256="$safe_sha256" \
     DS4_W7_SEALED_SCORER_SHA256="$scorer_sha256" \
     /usr/bin/bash "$harness_fd_path" \
-      "$([[ $initial_mode == --candidate ]] && printf %s --sealed-outer || printf %s --sealed-holder-loss-test)" \
+      "$([[ $initial_mode == --candidate ]] && printf %s --sealed-outer || { [[ $initial_mode == --holder-loss-self-test ]] && printf %s --sealed-holder-loss-test || printf %s --sealed-lineage-self-test; })" \
       "$candidate"
 fi
 
-[[ $# == 2 && $1 =~ ^(--sealed-outer|--sealed-holder-loss-test)$ && $2 =~ ^[0-9a-f]{40}$ ]] || exit 2
+[[ $# == 2 && $1 =~ ^(--sealed-outer|--sealed-holder-loss-test|--sealed-lineage-self-test)$ && $2 =~ ^[0-9a-f]{40}$ ]] || exit 2
 sealed_mode=$1
 candidate=$2
 [[ $0 == "$harness_fd_path" && $seal_holder_pid =~ ^[1-9][0-9]*$ ]]
@@ -614,6 +658,25 @@ verify_seal_holder_identity
 verify_sealed_candidate_scripts "$candidate"
 verify_dependencies_fast
 [[ $(id -u) != 0 && $(id -un) == bmarti44 ]]
+if [[ $sealed_mode == --sealed-lineage-self-test ]]; then
+  nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+  tag="w7-c14-${nonce:0:12}"
+  GLM_SAFE_KILL_FLOOR_GIB=24 \
+  GLM_SAFE_MIN_START_GIB=110 \
+  GLM_SAFE_TIMEOUT_S=120 \
+  GLM_SAFE_RUN_AS_CURRENT_USER=1 \
+  GLM_SAFE_PINNED_SAFE_PATH="$safe_fd_path" \
+  GLM_SAFE_PINNED_SAFE_SHA256="$safe_sha256" \
+  GLM_SAFE_W7_DRIVER_LINEAGE=1 \
+  DS4_W7_PINNED_HARNESS_SHA256="$harness_sha256" \
+  DS4_W7_CANDIDATE_HASH="$candidate" \
+  DS4_W7_SEALED_SAFE_PATH="$safe_fd_path" \
+  DS4_W7_SEALED_SAFE_SHA256="$safe_sha256" \
+  /usr/bin/bash "$cgroup_fd_path" --tag "$tag" -- /usr/bin/bash "$harness_fd_path" --driver-lineage-self-test
+  stop_seal_holder
+  echo W7_LINEAGE_CONTAINMENT_SELFTEST_OK
+  exit 0
+fi
 base=/home/bmarti44/.local/state/glm52-w7-cache-generation
 mkdir -p "$base"
 nonce=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
@@ -623,7 +686,7 @@ mkdir -m 0700 "$attempt"
 trap finalize_outer EXIT
 mkdir -m 0700 "$out"
 failure_reason=containment-launch
-tag="w7-c13-${nonce:0:12}"
+tag="w7-c14-${nonce:0:12}"
 final_artifacts="$out/server.log,$out/live-response.json,$out/live-http-status,$out/primary-response.json,$out/primary-http-status,$out/child-exit.json,$out/model.identity.json"
 
 if [[ $sealed_mode == --sealed-holder-loss-test ]]; then

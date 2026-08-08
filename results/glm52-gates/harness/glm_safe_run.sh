@@ -43,6 +43,7 @@ EXPECTED_MEMORY_GUARD_SHA256=${GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256:-}
 W7_DRIVER_LINEAGE=${GLM_SAFE_W7_DRIVER_LINEAGE:-0}
 KERNEL_GPU_FAULT_RE='NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process'
 USERSPACE_GPU_OOM_RE='CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|CUDA.{0,160}(allocation failed|out of memory)'
+W7_INFERENCE_LOCK=/run/lock/frontier-at-home/inference.lock
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -315,13 +316,40 @@ python3 "$MEMORY_GUARD" \
 ulimit -v "$VLIMIT_KB" || { plog "FATAL cannot set ulimit -v"; exit 9; }
 
 if [[ $W7_DRIVER_LINEAGE == 1 ]]; then
-  [[ $EXPECTED_CGROUP_UNIT =~ ^glm52-w7-c13-[0-9a-f]{12}-[0-9]+$ ]] ||
+  [[ $EXPECTED_CGROUP_UNIT =~ ^glm52-w7-c14-[0-9a-f]{12}-[0-9]+$ ]] ||
     config_error "GLM_SAFE_W7_DRIVER_LINEAGE cgroup"
+  verify_w7_lock_parent() {
+    /usr/bin/python3 - "$$" "$PPID" "$0" "$W7_INFERENCE_LOCK" <<'PY'
+import os, pathlib, sys
+
+self_pid, parent_pid, safe_path, lock_path = sys.argv[1:]
+self_argv = pathlib.Path(f"/proc/{self_pid}/cmdline").read_bytes().split(b"\0")[:-1]
+parent_argv = pathlib.Path(f"/proc/{parent_pid}/cmdline").read_bytes().split(b"\0")[:-1]
+expected = [b"/usr/bin/flock", b"-n", b"-E", b"75", lock_path.encode()] + self_argv
+if self_argv[:2] != [b"/usr/bin/bash", safe_path.encode()] or parent_argv != expected:
+    raise SystemExit("inference-lock parent command identity mismatch")
+lock = os.stat(lock_path)
+lock_identity = f"{os.major(lock.st_dev):02x}:{os.minor(lock.st_dev):02x}:{lock.st_ino}"
+held = False
+for line in pathlib.Path("/proc/locks").read_text().splitlines():
+    fields = line.split()
+    if len(fields) >= 8 and fields[1:4] == ["FLOCK", "ADVISORY", "WRITE"]:
+        if fields[4] == parent_pid and fields[5].lower() == lock_identity.lower():
+            held = True
+            break
+if not held:
+    raise SystemExit("inference-lock parent does not own the expected lock")
+PY
+  }
+  verify_w7_lock_parent
   export DS4_W7_SAFE_PID=$$
   export DS4_W7_SAFE_START_TICKS
   DS4_W7_SAFE_START_TICKS=$(awk '{print $22}' "/proc/$$/stat")
   export DS4_W7_SAFE_SCRIPT_PATH=$0
   export DS4_W7_SAFE_CGROUP_UNIT=$EXPECTED_CGROUP_UNIT
+  export DS4_W7_LOCK_PARENT_PID=$PPID
+  export DS4_W7_LOCK_PARENT_START_TICKS
+  DS4_W7_LOCK_PARENT_START_TICKS=$(awk '{print $22}' "/proc/$PPID/stat")
 fi
 
 setsid timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" "$@" > "$DIR/cmd.log" 2>&1 &
