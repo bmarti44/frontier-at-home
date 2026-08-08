@@ -80,6 +80,7 @@ def _validate_manifest(value: object) -> dict[str, Any]:
     required = {
         "schema_version", "candidate_hash", "runner_sha256", "scorer_sha256",
         "model_sha256", "configuration_sha256", "binary_sha256",
+        "runtime_bundle_sha256",
         "drand_verifier_sha256", "drand_node_sha256", "model_bytes",
         "randomness", "schedules",
     }
@@ -88,7 +89,7 @@ def _validate_manifest(value: object) -> dict[str, Any]:
     for name in (
         "candidate_hash", "runner_sha256", "scorer_sha256", "model_sha256",
         "configuration_sha256", "binary_sha256", "drand_verifier_sha256",
-        "drand_node_sha256",
+        "drand_node_sha256", "runtime_bundle_sha256",
     ):
         _require(_sha(value[name]), f"invalid manifest {name}")
     _require(_exact_int(value["model_bytes"]) and value["model_bytes"] > 0, "invalid model bytes")

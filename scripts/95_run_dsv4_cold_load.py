@@ -85,6 +85,51 @@ def _sha256_descriptor(descriptor: int) -> str:
     return digest.hexdigest()
 
 
+def runtime_bundle_sha256(path: Path) -> str:
+    """Hash the executable/library bundle without following links outside it."""
+    if path.is_symlink():
+        raise CampaignError("runtime bundle directory must not be a symlink")
+    root = path.resolve(strict=True)
+    if not root.is_dir():
+        raise CampaignError("runtime bundle is not a directory")
+    inventory: list[dict[str, object]] = []
+    for entry in sorted(os.scandir(root), key=lambda item: item.name):
+        entry_path = root / entry.name
+        if entry.is_symlink():
+            target = os.readlink(entry_path)
+            if Path(target).is_absolute():
+                raise CampaignError("runtime bundle symlink escapes bundle")
+            resolved = (root / target).resolve(strict=True)
+            if resolved.parent != root or not resolved.is_file():
+                raise CampaignError("runtime bundle symlink escapes bundle")
+            inventory.append({"kind": "symlink", "name": entry.name, "target": target})
+            continue
+        descriptor = os.open(entry_path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+        try:
+            before = os.fstat(descriptor)
+            if not stat.S_ISREG(before.st_mode):
+                raise CampaignError("runtime bundle has a non-file entry")
+            digest = _sha256_descriptor(descriptor)
+            after = os.fstat(descriptor)
+            if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns,
+            ):
+                raise CampaignError("runtime bundle changed while hashing")
+            inventory.append({
+                "bytes": before.st_size,
+                "kind": "file",
+                "mode": stat.S_IMODE(before.st_mode),
+                "name": entry.name,
+                "sha256": digest,
+            })
+        finally:
+            os.close(descriptor)
+    if not inventory:
+        raise CampaignError("runtime bundle is empty")
+    payload = json.dumps(inventory, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
 def capture_runtime_closure(
     pid: int, output: Path, *, proc_root: Path = Path("/proc")
 ) -> tuple[str, int]:
@@ -625,6 +670,10 @@ def campaign(args: argparse.Namespace) -> int:
     preflight_host()
     binary = args.binary.resolve(strict=True)
     library_dir = args.library_dir.resolve(strict=True)
+    if binary.parent != library_dir:
+        raise CampaignError("candidate binary is outside the runtime bundle")
+    if runtime_bundle_sha256(library_dir) != args.runtime_bundle_sha256:
+        raise CampaignError("frozen runtime bundle digest mismatch")
     output = args.output.resolve()
     output.mkdir(mode=0o700, parents=True, exist_ok=False)
     _ACTIVE_OUTPUT = output
@@ -651,6 +700,7 @@ def campaign(args: argparse.Namespace) -> int:
         "candidate_hash": args.candidate_hash, "model_sha256": args.model_sha256,
         "configuration_sha256": args.configuration_sha256,
         "binary_sha256": args.binary_sha256,
+        "runtime_bundle_sha256": args.runtime_bundle_sha256,
     }
     manifest = {
         "schema_version": 1, **bindings, "runner_sha256": runner_sha, "scorer_sha256": scorer_sha,
@@ -669,6 +719,8 @@ def campaign(args: argparse.Namespace) -> int:
         rows = []
         for plan in campaign_plan(randomness):
             preflight_host()
+            if runtime_bundle_sha256(library_dir) != args.runtime_bundle_sha256:
+                raise CampaignError("runtime bundle changed between arms")
             rows.append(_run_arm(plan, output, binary, library_dir, shards, bindings))
         raw_path = output / "raw.jsonl"
         descriptor = os.open(raw_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, 0o600)
@@ -720,6 +772,7 @@ def main() -> int:
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--library-dir", type=Path, required=True)
     parser.add_argument("--binary-sha256", required=True)
+    parser.add_argument("--runtime-bundle-sha256", required=True)
     parser.add_argument("--runner-sha256", required=True)
     parser.add_argument("--scorer-sha256", required=True)
     parser.add_argument("--model-sha256", required=True)
@@ -728,7 +781,10 @@ def main() -> int:
     parser.add_argument("--randomness-receipt", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    for name in ("candidate_hash", "binary_sha256", "runner_sha256", "scorer_sha256", "model_sha256", "configuration_sha256"):
+    for name in (
+        "candidate_hash", "binary_sha256", "runtime_bundle_sha256", "runner_sha256",
+        "scorer_sha256", "model_sha256", "configuration_sha256",
+    ):
         if SHA256_RE.fullmatch(getattr(args, name)) is None:
             parser.error(f"{name} must be one lowercase SHA-256 value")
     try:
