@@ -77,13 +77,14 @@ class W7CacheFreezeTest(unittest.TestCase):
         record["binary"]["sha256"] = hashlib.sha256(
             replacement.read_bytes()
         ).hexdigest()
-        original_sha256 = MODULE.sha256
+        original_open = Path.open
 
-        def replace_then_hash(path: Path) -> str:
-            replacement.replace(path)
-            return original_sha256(path)
+        def replace_before_artifact_open(path: Path, *args, **kwargs):
+            if path == self.binary:
+                replacement.replace(path)
+            return original_open(path, *args, **kwargs)
 
-        with mock.patch.object(MODULE, "sha256", side_effect=replace_then_hash):
+        with mock.patch.object(Path, "open", new=replace_before_artifact_open):
             self.assertEqual(self.score(record), "FAIL")
 
 
