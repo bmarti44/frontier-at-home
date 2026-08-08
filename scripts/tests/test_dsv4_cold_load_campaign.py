@@ -172,6 +172,7 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
         self.assertIn("OOMPolicy=kill", joined)
         self.assertIn("KillMode=control-group", joined)
         self.assertIn("RuntimeMaxSec=300s", joined)
+        self.assertIn("WorkingDirectory=/", joined)
         with tempfile.TemporaryDirectory() as temporary:
             destination = Path(temporary) / "attempt"
             destination.mkdir()
