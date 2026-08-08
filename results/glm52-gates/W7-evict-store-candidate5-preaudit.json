@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 5,
+  "audited_repo_commit": "29c08217a0da77ad5037ea3a3b7930a2d6f11055",
+  "status": "READY_FOR_DELTA_REVIEW",
+  "scope": "Only the round-291 authoritative-input remainder of the terminal-PASS class. Engine, binary, fixtures, W7.1 lifecycle, scorer, and containment wrappers are unchanged from candidates 3 and 4.",
+  "component_sha256": {
+    "scripts/91_run_w7_cache_generation_campaign.py": "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924",
+    "scripts/92_score_w7_evict_store_probe.py": "1ccb1cf2d501cc5ec0132080fe7f60fed21a707bc741c28e03520a89d325fcbb",
+    "scripts/93_run_w7_evict_store_probe.py": "56dcd6035be21464dfef5e7047ae8853a4543849a56b7920ba2e5b537fad2f3a",
+    "scripts/tests/test_w7_evict_store_probe_runner.py": "a5172e957285db0ee0a388be3758fdcb1f0ebd5fe7098e4d3b92be38540f3f1d",
+    "results/glm52-gates/harness/glm_cgroup_run_w7_evict_store_v1.sh": "13fe1f8faa77020918faadc5214f4f5cdc955d6dfc6c158cc0f2d080a0e8985d"
+  },
+  "binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+  "engine_source_commit": "fdd0fe05df6368de428cd5405929f49d590c9f52",
+  "review_finding_disposition": [
+    {
+      "ids": [
+        "GAP-W7.2-291-H1-PASS-REPLAY-NOT-BOUND-TO-PREREGISTERED-EVIDENCE",
+        "ADV-W7.2-291-H1-TERMINAL-PASS-ACCEPTS-SELF-CONSISTENT-INVENTED-FIXTURE-AND-RANDOMNESS"
+      ],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "PASS now requires the exact preregistered configuration, byte-exact generated primary request, frozen receipt verification for the candidate, receipt-derived seed/order, and exactly two correctly named arm directories. Each arm must have the exact server/client/live/child-exit/containment/safety/three-logit artifact set. The validator reconstructs timing tokens, text identity, checkpoint/event cardinality, environment, safety counters, and logit hashes from those files and compares them with each strict scorer row before frozen scorer replay.",
+      "acceptance_tests": [
+        "test_terminal_pass_requires_authoritative_inputs_and_arm_evidence",
+        "test_terminal_pass_replays_frozen_scorer_and_binds_campaign",
+        "test_normal_publication_preserves_pass_and_fail_verdicts"
+      ],
+      "mutations_rejected": [
+        "fake receipt verifier failure",
+        "coherently rehashed invented configuration",
+        "different primary-request bytes",
+        "both arm directories and their inventory entries removed",
+        "all seven candidate-4 row/component mutations"
+      ]
+    }
+  ],
+  "pre_submission_audit": {
+    "command": "python3 -m unittest scripts.tests.test_w7_cache_generation scripts.tests.test_w7_cache_generation_campaign scripts.tests.test_glm_safe_lifecycle scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_evict_store scripts.tests.test_w7_evict_store_probe scripts.tests.test_w7_evict_store_probe_runner",
+    "tests_run": 133,
+    "failures": 0,
+    "errors": 0,
+    "expected_skips": 1,
+    "runner_self_test": "PASS",
+    "secret_lint_self_test": "PASS",
+    "prior_real_w7_off_arm_terminal_reconstruction": "PASS",
+    "prior_real_w7_off_arm_path": "/home/bmarti44/.local/state/glm52-w7-cache-generation-campaign/attempt-9b00276326b740ed9551ce6b78cb85df/b0-p0-off-cf9908a0f5eb",
+    "scoped_diff_command": "git diff --check ca38c38c41d81294b7c28cc56bdd6f51398abb2d..29c08217a0da77ad5037ea3a3b7930a2d6f11055",
+    "scoped_diff_exit_code": 0,
+    "worktree_clean_at_audit": true,
+    "engine_or_fio_active": false,
+    "observed_mem_available_kb": 120804964,
+    "swap_used_kb": 204624
+  },
+  "convergence": {
+    "prior_blocking_class_count": 1,
+    "claimed_open_blocking_class_count": 0,
+    "candidate_count": 5,
+    "prior_consecutive_non_shrinking_candidates": 1,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": false
+  },
+  "runtime_authorization": "Do not start the engine until both persistent reviewers verify no critical/high findings on this candidate.",
+  "verdict": "NO_RESULT"
+}
