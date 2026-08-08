@@ -379,6 +379,74 @@ def strict_json(payload: bytes) -> object:
     )
 
 
+def canonical_json(value: object) -> bytes:
+    return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
+
+
+def _normal_terminal_semantics(
+    attempt: Path, manifest: dict[str, object], raw_bytes: bytes,
+    summary_bytes: bytes, summary: dict[str, object],
+) -> bool:
+    frozen_scorer, _ = BASE.read_stable(SCORER)
+    frozen_bindings = {
+        "base_lifecycle_sha256": BASE_SHA256,
+        "scorer_sha256": SCORER_SHA256,
+        "cgroup_sha256": CGROUP_SHA256,
+        "safe_run_sha256": SAFE_SHA256,
+        "memory_guard_sha256": MEMORY_GUARD_SHA256,
+        "binary_sha256": BINARY_SHA256,
+        "engine_source_commit": ENGINE_SOURCE_COMMIT,
+        "model_sha256": MODEL_SHA256,
+        "model_bytes": MODEL_BYTES,
+        "live_request_sha256": LIVE_SHA256,
+        "primary_source_sha256": PRIMARY_SHA256,
+    }
+    if (
+        manifest.get("runner_sha256") != hashlib.sha256(BASE.read_stable(Path(__file__))[0]).hexdigest()
+        or manifest.get("scorer_sha256") != hashlib.sha256(frozen_scorer).hexdigest()
+        or any(manifest.get(name) != value for name, value in frozen_bindings.items())
+        or manifest.get("configuration_sha256")
+        != hashlib.sha256(json.dumps(manifest["configuration"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        or manifest.get("arm_order") != derive_order(str(manifest.get("public_randomness_sha256")))
+        or manifest["artifacts"].get("randomness-receipt.json")
+        != manifest.get("public_randomness_receipt_sha256")
+    ):
+        return False
+    raw_lines = raw_bytes.splitlines()
+    rows = [strict_json(line) for line in raw_lines]
+    if any(not isinstance(row, dict) or line + b"\n" != canonical_json(row) for row, line in zip(rows, raw_lines)):
+        return False
+    scorer_rows: list[dict[str, object]] = []
+    for row in rows:
+        if (
+            set(row) != {
+                "arm", "position", "run_id", "binary_sha256", "model_sha256",
+                "common_config_sha256", "request_sha256", "diagnostic_skip",
+                "request_start_ns", "token_timestamps_ns", "output_token_ids",
+                "output_sha256", "generated_text_sha256", "generated_text_bytes",
+                "logit_sha256s", "selected_checkpoint_tokens", "evict_store_count",
+                "checkpoint_id", "skip_marker_count", "activation_marker_count",
+                "server_fresh", "safety", "executed_environment_sha256",
+            }
+            or not isinstance(row["executed_environment_sha256"], str)
+            or SHA_RE.fullmatch(row["executed_environment_sha256"]) is None
+            or row["binary_sha256"] != BINARY_SHA256
+            or row["model_sha256"] != MODEL_SHA256
+            or row["common_config_sha256"] != manifest["configuration_sha256"]
+            or row["request_sha256"] != manifest["executed_request_sha256"]
+        ):
+            return False
+        scorer_row = dict(row)
+        scorer_row.pop("executed_environment_sha256")
+        scorer_rows.append(scorer_row)
+    replayed = load_scorer(frozen_scorer).score_probe_rows(scorer_rows, manifest["arm_order"])
+    if "runtime_failure" in summary:
+        if not isinstance(summary["runtime_failure"], str) or not summary["runtime_failure"]:
+            return False
+        replayed = dict(replayed, runtime_failure=summary["runtime_failure"], verdict="FAIL")
+    return summary == replayed and summary_bytes == canonical_json(replayed)
+
+
 def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
     try:
         payload, _ = BASE.read_stable(attempt / "manifest.json")
@@ -423,6 +491,11 @@ def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
         elif (
             not isinstance(manifest["failure"], str) or not manifest["failure"]
             or not isinstance(manifest["binding_failures"], dict)
+            or manifest["verdict"] != "FAIL"
+            or manifest["runner_sha256"] != hashlib.sha256(BASE.read_stable(Path(__file__))[0]).hexdigest()
+            or manifest["scorer_sha256"] != SCORER_SHA256
+            or manifest["binary_sha256"] != BINARY_SHA256
+            or manifest["model_sha256"] != MODEL_SHA256
         ):
             return False
         if schema == "glm52-w7-evict-store-probe-failure-v1":
@@ -452,6 +525,15 @@ def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
         if any(not line.strip() or not isinstance(strict_json(line), dict) for line in raw_lines):
             return False
         if len(raw_lines) != manifest["completed_rows"]:
+            return False
+        if schema == "glm52-w7-evict-store-probe-v1" and not _normal_terminal_semantics(
+            attempt, manifest, raw_bytes, summary_bytes, summary,
+        ):
+            return False
+        if schema == "glm52-w7-evict-store-probe-failure-v1" and (
+            summary != {"failure": manifest["failure"], "verdict": "FAIL"}
+            or summary_bytes != canonical_json(summary)
+        ):
             return False
         for relative, digest in manifest["artifacts"].items():
             if (

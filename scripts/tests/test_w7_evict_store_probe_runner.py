@@ -85,6 +85,8 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         summary_bytes = (json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n").encode()
         (attempt / "raw.jsonl").write_bytes(raw)
         (attempt / "summary.json").write_bytes(summary_bytes)
+        receipt = b'{"unit_test":true}\n'
+        (attempt / "randomness-receipt.json").write_bytes(receipt)
         manifest = {
             "schema": "glm52-w7-evict-store-probe-v1",
             "candidate_hash": "c" * 40,
@@ -106,11 +108,12 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             "configuration": config,
             "configuration_sha256": config_sha,
             "public_randomness_sha256": seed,
-            "public_randomness_receipt_sha256": "7" * 64,
+            "public_randomness_receipt_sha256": hashlib.sha256(receipt).hexdigest(),
             "arm_order": order,
             "artifacts": {
                 "raw.jsonl": hashlib.sha256(raw).hexdigest(),
                 "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
+                "randomness-receipt.json": hashlib.sha256(receipt).hexdigest(),
             },
         }
         (attempt / "manifest.json").write_text(json.dumps(manifest))
@@ -129,6 +132,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         manifest["artifacts"] = {
             "raw.jsonl": hashlib.sha256(raw).hexdigest(),
             "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
+            "randomness-receipt.json": manifest["public_randomness_receipt_sha256"],
         }
         (attempt / "manifest.json").write_text(json.dumps(manifest))
 
