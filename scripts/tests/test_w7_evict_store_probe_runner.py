@@ -197,6 +197,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         with (out / "server.log").open("a") as stream:
             stream.write("ds4-server: kv cache stored tokens=4096 trimmed=0 reason=evict key=token-text size=1 MiB save=1 ms\n")
+            stream.write("ds4-server: kv cache stored malformed reason=evict\n")
         receipt = self.bind_server(out)
         with mock.patch.object(MODULE.BASE, "parse_arm", return_value=base_row):
             with self.assertRaises(Exception):
@@ -207,6 +208,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         self.convert_server_to_on(out_on)
         with (out_on / "server.log").open("a") as stream:
             stream.write("ds4-server: diagnostic skipped preload evict store live=4096 prompt=4100 common=4000\n")
+            stream.write("ds4-server: diagnostic skipped preload evict store\n")
         on_receipt = self.bind_server(out_on)
         with mock.patch.object(MODULE.BASE, "parse_arm", return_value=base_on):
             with self.assertRaises(Exception):

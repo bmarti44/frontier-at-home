@@ -232,11 +232,11 @@ def parse_arm(
         raise ProbeError("W7.2 logit snapshot differs from frozen-parser evidence")
     generic_store = [
         line for line in server.splitlines()
-        if "ds4-server: kv cache stored " in line and " reason=evict " in line
+        if "ds4-server: kv cache stored" in line and "reason=evict" in line
     ]
     generic_skip = [
         line for line in server.splitlines()
-        if "ds4-server: diagnostic skipped preload evict store " in line
+        if "ds4-server: diagnostic skipped preload evict store" in line
     ]
     generic_activation = [
         line for line in server.splitlines()
