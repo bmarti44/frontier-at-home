@@ -1,0 +1,47 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 1,
+  "status": "FROZEN_REVIEW_PENDING",
+  "repository_parent_commit": "271e1ed",
+  "engine": {
+    "parent_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+    "candidate_commit": "12a5010a20514c06f718fe53e2083a4031114317",
+    "readable_source": "/tmp/glm52-w7-ttft",
+    "patch": "results/glm52-gates/harness/0041-fix-preserve-model-generation-across-CUDA-span-remaps.patch",
+    "patch_sha256": "29c3747df67c9052e6baef34245e378be576468ea7d1ca635f4f30a1612c2635"
+  },
+  "engine_source_sha256": {
+    "ds4.c": "138704e1b89818c2b1f32d05d9f2dc59f53c7efef2b8ba7a8e3a61cb13df9ef1",
+    "ds4_cuda.cu": "1fb9b83d553c19422288d1523e57618a9ee04e9bf3418ec45870fcbff6520ed6",
+    "ds4_gpu.h": "dc34b32bd9e103738f1010549e467eb80d23004ed36b5ceee7e25730a01bb16e",
+    "tests/test_gpu_model_cache.c": "4f6884fd5152a73261f132208ea5e87058c2e0ed1fcbcb78d8531e6c67845076"
+  },
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w7-stable-remap-12a5010/ds4-server",
+    "sha256": "7cfb9fe33b1fd2761fe6ac1dfecdeb2a9d373d2fca908b89465d34adc5f185c9",
+    "bytes": 5584040,
+    "mode": "0755",
+    "derivation": "Two independent make-clean builds normalized with GNU objcopy 2.42 --remove-section=.note.gnu.build-id --strip-debug; normalized outputs are byte-identical."
+  },
+  "acceptance": {
+    "plan_sha256": "7411462aaf169a00066adb585acfb94a497daf374e462cab7e0bc898272e0a90",
+    "scorer_sha256": "ff14dba09ef5be3b5bb972104d45afde21a5631accb39515156a2d3bfcd1d074",
+    "test_sha256": "3593373d6b1fdb7fd7c2288d9f2c05b5c9565be63800bfc73cd9ab3f44ff0c2a",
+    "red_evidence": "results/glm52-gates/W7-cache-generation-red-2026-08-08.json"
+  },
+  "focused_verification": {
+    "command": "make -j2 tests/test_gpu_model_cache && ./tests/test_gpu_model_cache",
+    "result": "PASS",
+    "coverage": [
+      "same-model remap accepted",
+      "different base/size identity rejected",
+      "default-off production selection",
+      "diagnostic flag logged"
+    ]
+  },
+  "known_noncandidate_diagnostic": {
+    "command": "make -j2 ds4_cpu",
+    "result": "NO_RESULT",
+    "reason": "The inherited W7 baseline does not compile its GLM GPU-only members under DS4_NO_GPU; failures predate and do not touch this CUDA-only diff."
+  }
+}
