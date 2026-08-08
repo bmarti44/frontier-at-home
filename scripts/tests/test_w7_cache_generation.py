@@ -10,6 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 SCORER = ROOT / "scripts/89_score_w7_cache_generation.py"
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+SMOKE = ROOT / "results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh"
 SPEC = importlib.util.spec_from_file_location("w7_cache_generation_scorer", SCORER)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -50,6 +51,18 @@ class W7CacheGenerationGateTest(unittest.TestCase):
     def test_containment_forwards_exact_stable_remap_flag(self) -> None:
         source = CGROUP.read_text(encoding="utf-8")
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
+
+    def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("glm_cgroup_run.sh", source)
+        self.assertIn("w7-stable-remap-bccf0b6/ds4-server", source)
+        self.assertIn("readonly BINARY_SHA256=", source)
+        self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
+        self.assertIn("--ssd-streaming-cache-experts 40GB", source)
+        self.assertIn("--kv-cache-boundary-align-tokens 4", source)
+        self.assertIn("--kv-cache-boundary-trim-tokens 8", source)
+        self.assertIn('trap stop_server EXIT INT TERM HUP', source)
+        self.assertIn('sync -f "$out"', source)
 
     def test_accepts_completed_resume_without_false_reload(self) -> None:
         result = score()
