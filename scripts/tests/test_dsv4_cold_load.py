@@ -33,13 +33,17 @@ class Dsv4ColdLoadContractTests(unittest.TestCase):
             self.launcher,
         )
         self.assertIn(
-            "llama-server lacks required --direct-io support",
+            "llama-server lacks required --direct-io-required support",
             self.launcher,
         )
 
     def test_direct_io_reaches_only_the_model_load_command(self) -> None:
         self.assertIn(
-            "(( direct_io == 0 )) || server_command+=(--direct-io)",
+            "(( direct_io == 0 )) || server_command+=(--direct-io-required)",
+            self.launcher,
+        )
+        self.assertIn(
+            "(( direct_io != 0 )) || server_command+=(--no-direct-io)",
             self.launcher,
         )
         self.assertNotIn("DSV4_DIRECT_IO", PROFILE.read_text(encoding="utf-8"))
@@ -48,7 +52,8 @@ class Dsv4ColdLoadContractTests(unittest.TestCase):
     def test_acceptance_formula_is_frozen(self) -> None:
         plan = json.loads(PLAN.read_text(encoding="utf-8"))
         acceptance = plan["acceptance"]
-        self.assertEqual(acceptance["minimum_trials_per_arm"], 3)
+        self.assertIn("fresh_server_blocks", acceptance)
+        self.assertEqual(acceptance["fresh_server_blocks"], 5)
         self.assertEqual(acceptance["maximum_candidate_ready_seconds"], 30.0)
         self.assertEqual(acceptance["minimum_fio_fraction"], 0.5)
         expected = (
