@@ -770,6 +770,27 @@ issues. The resumed request took 3.58 seconds, so it does **not** meet the
 sub-two-second target. Continue only with byte-identical removal of remaining
 restore/store and suffix-processing overhead; do not weaken the global guard.
 
+#### W7.1 - stable-model CUDA cache generation
+
+Status: **production-coverage diagnostic PASS; matched promotion campaign
+pending.** Candidate 21 separates per-layer stable model-map remaps from the
+authoritative model-load generation behind the logged, default-off
+`DS4_CUDA_STABLE_MODEL_REMAP=1` flag. The fresh contained run at
+`W7-cache-generation-candidate21-pass.json` reduced the unchanged-path RED of
+374 false generation-change flushes to zero, completed exactly one
+response-bound indexed resume, and measured a 1.615-second warm 22-token append
+TTFT. Its low point was 49,603,476 kB MemAvailable; cgroup max/OOM/kill and swap
+were zero. The complete committed package independently replays the exact fixed
+scorer PASS, and Nash/Singer both verified it at 100 with no findings in round
+276.
+
+This result is not the complete W7.1 gate. The preregistered plan still requires
+byte-identical candidate/control logit dumps (`max_abs_delta=0`, matching
+argmax, deterministic candidate repeats) and five fresh-server matched
+ABBA/BAAB blocks with candidate/control warm-suffix TTFT upper-95% ratio
+`<=0.95` and decode lower-95% ratio `>=1.00`. Run that campaign next; do not
+quote the one-arm control-config prefill as a serving metric.
+
 ### Fidelity-free prefill work after decode/TTFT (W4/W5/W6)
 
 Exact top-k, bit-safe F16 indexer storage, and wider K-tile reuse remain valid
