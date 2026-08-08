@@ -337,6 +337,15 @@ lock_fd = int(lock_fd_text)
 inherited = os.fstat(lock_fd)
 if (inherited.st_dev, inherited.st_ino) != (lock.st_dev, lock.st_ino):
     raise SystemExit("inherited inference-lock descriptor identity mismatch")
+fdinfo_lines = pathlib.Path(f"/proc/self/fdinfo/{lock_fd}").read_text().splitlines()
+if not any(
+    len(fields := line.split()) >= 9
+    and fields[0] == "lock:"
+    and fields[2:5] == ["FLOCK", "ADVISORY", "WRITE"]
+    and fields[6].lower() == identity.lower()
+    for line in fdinfo_lines
+):
+    raise SystemExit("inherited inference-lock descriptor does not own the expected lock")
 probe = os.open(lock_path, os.O_RDONLY | os.O_CLOEXEC)
 try:
     try:
@@ -643,6 +652,9 @@ if [[ ${1:-} == --driver-lineage-self-test ]]; then
   DS4_W7_LOCK_PARENT_PID=$original_lock_pid; DS4_W7_LOCK_PARENT_START_TICKS=1; expect_lineage_rejection bad-lock-start
   DS4_W7_LOCK_PARENT_START_TICKS=$original_lock_start
   DS4_W7_LOCK_FD=9999; expect_lineage_rejection bad-lock-fd
+  exec {unowned_lock_fd}<>/run/lock/frontier-at-home/inference.lock
+  DS4_W7_LOCK_FD=$unowned_lock_fd; expect_lineage_rejection same-inode-unowned-lock-fd
+  exec {unowned_lock_fd}>&-
   DS4_W7_LOCK_FD=$original_lock_fd
   echo W7_DRIVER_LINEAGE_SELFTEST_OK
   sleep 1

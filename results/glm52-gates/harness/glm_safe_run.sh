@@ -352,6 +352,16 @@ for entry in pathlib.Path(f"/proc/{self_pid}/fd").iterdir():
         matching.append(descriptor)
 if len(matching) != 1:
     raise SystemExit("expected exactly one inherited inference-lock descriptor")
+descriptor = matching[0]
+fdinfo_lines = pathlib.Path(f"/proc/{self_pid}/fdinfo/{descriptor}").read_text().splitlines()
+if not any(
+    len(fields := line.split()) >= 9
+    and fields[0] == "lock:"
+    and fields[2:5] == ["FLOCK", "ADVISORY", "WRITE"]
+    and fields[6].lower() == lock_identity.lower()
+    for line in fdinfo_lines
+):
+    raise SystemExit("inherited inference-lock descriptor does not own the expected lock")
 probe = os.open(lock_path, os.O_RDONLY | os.O_CLOEXEC)
 try:
     try:
@@ -363,7 +373,7 @@ try:
         raise SystemExit("inherited inference-lock descriptor is not held")
 finally:
     os.close(probe)
-print(matching[0])
+print(descriptor)
 PY
   }
   W7_LOCK_FD=$(verify_w7_lock_parent) ||
