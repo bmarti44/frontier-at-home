@@ -9,6 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCORER = ROOT / "scripts/89_score_w7_cache_generation.py"
+CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 SPEC = importlib.util.spec_from_file_location("w7_cache_generation_scorer", SCORER)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -46,6 +47,10 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
 
 
 class W7CacheGenerationGateTest(unittest.TestCase):
+    def test_containment_forwards_exact_stable_remap_flag(self) -> None:
+        source = CGROUP.read_text(encoding="utf-8")
+        self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
+
     def test_accepts_completed_resume_without_false_reload(self) -> None:
         result = score()
         self.assertEqual(result["verdict"], "PASS")
