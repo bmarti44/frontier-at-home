@@ -1,0 +1,57 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 8,
+  "implementation_commit": "93616c1e4ffe7b2c54f76f51cfe0b245e631fd66",
+  "review_delta_from": "01c24de9c3379dfd746db63123aec8a43332d86a",
+  "review_round_from": 283,
+  "scope": [
+    "enumerate and stably empty the isolated launcher session after direct-parent reap",
+    "SIGKILL any TERM-resistant non-zombie session members before unit cleanup",
+    "require two bounded stable exact-unit observation windows around cgroup absence proof",
+    "bind cgroup lstat and opened descriptor device/inode before any kill write",
+    "accept only explicit terminal ActiveState/SubState pairs",
+    "commit and execute the exact harmless integration harness with raw action records"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 99, "result": "PASS", "skipped": 1},
+    "runner_self_test": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "fixed_raw_verifier": {"rows": 21, "result": "PASS"},
+    "delayed_publication_real_integration": "PASS",
+    "active_unit_real_integration": "PASS",
+    "term_resistant_descendant_real_integration": "PASS",
+    "control_failure_cgroup_fallback_real_integration": "PASS_FAIL_CLOSED",
+    "active_units_after": 0,
+    "launcher_session_members_after": 0,
+    "marked_descendants_after": 0,
+    "server_pids_after": 0,
+    "listener_after": false,
+    "engine_started": false,
+    "gpu_used": false
+  },
+  "artifacts": {
+    "harness_sha256": "e6baa8a9d6ab026deb49a8348e515d2bb453d8a54ea4cced08792c92da98508c",
+    "raw": "W7-cache-generation-campaign-candidate8-unit-raw.jsonl",
+    "raw_sha256": "c6ea572f654a37542b6d0531ab3cf1f447d65c59fc9b4edea1fcdd0beea657e3",
+    "summary": "W7-cache-generation-campaign-candidate8-unit-summary.json",
+    "summary_sha256": "9635cb2374b16236e2a48667e50e42b1daac97e1caae17f9767e2216ed234ede"
+  },
+  "blocking_findings_targeted": [
+    "GAP-W7.1-283-H1-POST-REAP-UNIT-ABSENCE-NOT-STABLE",
+    "ADV-W7.1-283-H1-DIRECT-WAIT-DOES-NOT-PROVE-PROCESS-GROUP-QUIESCENCE"
+  ],
+  "medium_findings_targeted": [
+    "GAP-W7.1-283-M1-CGROUP-FALLBACK-PATH-OPEN-NOT-INODE-BOUND",
+    "GAP-W7.1-283-M2-UNIT-SUBSTATE-SEMANTICS-UNVALIDATED",
+    "ADV-W7.1-283-M1-INTEGRATION-EVIDENCE-LACKS-EXECUTION-MANIFEST"
+  ],
+  "convergence": {
+    "candidate_count_for_gate": 8,
+    "resumed_audit_candidate": 3,
+    "prior_blocking_count": 2,
+    "expected_blocking_count": 0,
+    "candidate_limit_exceeded": false
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}
