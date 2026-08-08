@@ -201,7 +201,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
         self.assertIn('"$CGROUP" --tag', source)
-        self.assertIn('"$HARNESS" --driver', source)
+        self.assertIn('"$harness_fd_path" --driver', source)
         self.assertIn("verify_driver_containment", source)
         self.assertIn("GLM_SAFE_FINAL_ARTIFACTS", source)
         self.assertIn("trap finalize_outer EXIT", source)
@@ -229,6 +229,31 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         for evidence in ("manifest.json", "raw.jsonl", "summary.json"):
             self.assertIn(evidence, evidence_source)
         self.assertIn('sync -f "$out"', source)
+
+    def test_runtime_scripts_execute_through_pinned_descriptors(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn('harness_fd_path="/proc/$$/fd/$harness_fd"', source)
+        self.assertIn('cgroup_fd_path="/proc/$$/fd/$cgroup_fd"', source)
+        self.assertIn('safe_fd_path="/proc/$$/fd/$safe_fd"', source)
+        self.assertIn('scorer_fd_path="/proc/$$/fd/$scorer_fd"', source)
+        self.assertIn('"$harness_fd_path" --driver', source)
+
+    def test_scoring_and_publication_share_one_immutable_snapshot(self) -> None:
+        harness = SMOKE.read_text(encoding="utf-8")
+        scorer = SCORER.read_text(encoding="utf-8")
+        self.assertIn("score_and_publish_bound_attempt", scorer)
+        self.assertIn("score_and_publish_bound_attempt", harness)
+        self.assertNotIn('$out/bound/server.log', harness)
+
+    def test_failure_finalizer_uses_full_frozen_manifest_schema(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        finalizer = source.split("finalize_outer() {", 1)[1].split("if [[ ${1:-} == --self-test", 1)[0]
+        for field in (
+            "binary_sha256", "model_sha256", "scorer_sha256", "harness_sha256",
+            "cgroup_sha256", "safe_run_sha256", "live_request_sha256",
+            "primary_request_sha256", "executed_environment_sha256", "containment",
+        ):
+            self.assertIn(field, finalizer)
 
     def test_scorer_binds_on_activation_and_child_exit(self) -> None:
         source = SCORER.read_text(encoding="utf-8")
