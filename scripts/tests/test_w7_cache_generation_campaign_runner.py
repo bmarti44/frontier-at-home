@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +20,57 @@ SPEC.loader.exec_module(MODULE)
 
 
 class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
+    def make_arm(self, arm: str = "off") -> tuple[tempfile.TemporaryDirectory, Path, str]:
+        temporary = tempfile.TemporaryDirectory(prefix="w7-runner-test-")
+        out = Path(temporary.name)
+        response_id = "cmpl-test"
+        lines = ["ds4-server: listening on http://127.0.0.1:8097"]
+        if arm == "off":
+            lines.append(MODULE.FALSE_FLUSH)
+        for index in range(1, 129):
+            lines.append(
+                f"DS4_TOKEN_TIMING request={response_id} index={index} "
+                f"monotonic_ns={2_000_000_000 + index * 500_000_000} token={index}"
+            )
+        lines.append("ds4-server: shutdown requested")
+        (out / "server.log").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        client = {
+            "request_start_ns": 1_000_000_000,
+            "response_id": response_id,
+            "generated_text": "test",
+            "finish_reason": "length",
+            "usage": {
+                "prompt_tokens": 5066,
+                "completion_tokens": 128,
+                "total_tokens": 5194,
+                "prompt_tokens_details": {"cached_tokens": 5044, "cache_write_tokens": 22},
+            },
+            "done": True,
+        }
+        (out / "primary-client.json").write_text(json.dumps(client), encoding="utf-8")
+        for index in range(1, 130):
+            (out / f"logits.sync{index}.start5044.prompt5066.suffix22").write_bytes(
+                index.to_bytes(4, "little")
+            )
+        crash_root = Path("/home/bmarti44/.local/state/glm52-crashlog")
+        crash = crash_root / f"w7-runner-test-{Path(temporary.name).name}"
+        crash.mkdir(mode=0o700)
+        self.addCleanup(lambda: [path.unlink() for path in crash.iterdir()] and crash.rmdir())
+        (crash / "main.log").write_text(
+            "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
+            "events=low 0,high 1,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n",
+            encoding="utf-8",
+        )
+        (crash / "samples.log").write_text(
+            "x mem_avail_kb=49000000 cgroup_swap_current_bytes=0\n", encoding="utf-8"
+        )
+        (crash / "kernel.log").write_text("-- No entries --\n", encoding="utf-8")
+        receipt = (
+            f"SAFE_RUN_DONE rc=0 killed=no dir={crash} "
+            f"main_sha256={'1' * 64} samples_sha256={'2' * 64} kernel_sha256={'3' * 64}\n"
+        )
+        return temporary, out, receipt
+
     def test_self_test_validates_dependencies_without_starting_engine(self) -> None:
         before = subprocess.run(
             ["/usr/bin/pgrep", "-x", "ds4-server"], capture_output=True, text=True,
@@ -61,6 +115,38 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         self.assertNotIn("shell=True", source)
         self.assertNotIn("sudo", source)
         self.assertNotIn("reboot", source)
+
+    def test_raw_arm_aggregation_accepts_bound_evidence_and_rejects_mutations(self) -> None:
+        temporary, out, receipt = self.make_arm()
+        self.addCleanup(temporary.cleanup)
+        with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            MODULE, "LOGIT_BYTES", 4
+        ):
+            row = MODULE.parse_arm(
+                "off", 0, 0, out, 0, receipt, "4" * 64, "3" * 64
+            )
+        self.assertEqual(len(row["token_timestamps_ns"]), 128)
+        self.assertEqual(row["safety"]["false_generation_flushes"], 1)
+        self.assertEqual(row["safety"]["minimum_mem_available_kb"], 49_000_000)
+
+        client_path = out / "primary-client.json"
+        client = json.loads(client_path.read_text(encoding="utf-8"))
+        client["usage"]["prompt_tokens_details"]["cached_tokens"] = 0
+        client_path.write_text(json.dumps(client), encoding="utf-8")
+        with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            MODULE, "LOGIT_BYTES", 4
+        ):
+            with self.assertRaises(MODULE.CampaignError):
+                MODULE.parse_arm("off", 0, 0, out, 0, receipt, "4" * 64, "3" * 64)
+
+        client["usage"]["prompt_tokens_details"]["cached_tokens"] = 5044
+        client_path.write_text(json.dumps(client), encoding="utf-8")
+        next(out.glob("logits.sync129.*")).unlink()
+        with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            MODULE, "LOGIT_BYTES", 4
+        ):
+            with self.assertRaises(MODULE.CampaignError):
+                MODULE.parse_arm("off", 0, 0, out, 0, receipt, "4" * 64, "3" * 64)
 
 
 if __name__ == "__main__":

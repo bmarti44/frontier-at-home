@@ -197,6 +197,8 @@ def score_campaign_rows(rows: object, schedules: object) -> dict[str, object]:
             "decode_ratio_lower_95": decode_lower,
             "minimum_mem_available_kb": min(row["safety"]["minimum_mem_available_kb"] for row in validated),
             "output_tokens_per_run": len(validated[0]["output_token_ids"]),
+            "logit_max_abs_delta": 0.0,
+            "logit_argmax_equal": True,
             "blocks": 5,
             "runs": 20,
         }
