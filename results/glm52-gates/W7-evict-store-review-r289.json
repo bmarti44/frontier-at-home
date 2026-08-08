@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 2,
+  "candidate_hash": "c447072903cd338dec7057a5e2afe85608769772",
+  "review_round": 289,
+  "runtime_probe_may_proceed": false,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 78,
+      "critical": [],
+      "high": [
+        {
+          "id": "GAP-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-OMITS-VERDICT",
+          "evidence": "Normal publication omits top-level verdict while terminal_manifest_valid requires it, so every completed probe converts to failure recovery.",
+          "acceptance_test": "Bind manifest verdict to summary verdict and test complete PASS and FAIL publication with intended exit codes."
+        },
+        {
+          "id": "GAP-W7.2-288-H3-INTERRUPTION-FINALIZER-LEAVES-ARM-EVIDENCE-UNBOUND",
+          "evidence": "A valid manifest containing only raw/summary is trusted despite omitted arm artifacts, and signals are unblocked between parse return and row/binding publication.",
+          "acceptance_test": "Require exact complete regular-file inventory, schema/component fields, summary verdict, completed_rows/raw count, and block termination across parse plus row/binding publication."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_CONVERGENCE_CONTINUES_RUNTIME_NOT_AUTHORIZED"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 68,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-CANNOT-VALIDATE",
+          "evidence": "Same missing-verdict defect; validation must also parse summary, match verdict and completed_rows to raw rows, and enforce schema requirements.",
+          "acceptance_test": "Factor/test normal PASS and FAIL publication; missing/mismatched verdict and row count fail."
+        },
+        {
+          "id": "ADV-W7.2-289-H2-EXPECTED-EVENT-REGEX-ACCEPTS-ARBITRARY-PREFIX",
+          "evidence": "Store/hit use suffix-anchored search and ON uses endswith, so malformed arbitrary prefixes on the sole expected event pass.",
+          "acceptance_test": "Normalize only the exact logger timestamp prefix and fullmatch the entire event payload; prefix, suffix, concatenation, number, and extra mutations fail."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W7.2-289-M1-FAILURE-PUBLICATION-DROPS-AUTHORITATIVE-BINDINGS",
+          "evidence": "Failure finalization calls artifact collection without the completed arms' expected bindings, so replacement plus interruption can silently bless replacement bytes in a FAIL archive.",
+          "acceptance_test": "Keep active authoritative bindings and make replacement-plus-interruption fail identity validation while preserving expected and observed evidence."
+        }
+      ],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+    }
+  },
+  "prior_issue_status": {
+    "GAP-W7.2-288-H1-POST-VALIDATION-EVIDENCE-REOPEN": "FIXED",
+    "GAP-W7.2-288-H2-PAYLOAD-SPECIFIC-EVENT-COUNTS-HIDE-EXTRAS": "FIXED_EXCEPT_ADVERSARIAL_PREFIX_VARIANT",
+    "GAP-W7.2-288-H3-INTERRUPTION-FINALIZER-LEAVES-ARM-EVIDENCE-UNBOUND": "OPEN",
+    "ADV-W7.2-288-H1-INTERRUPTION-WINDOWS-CAN-LOSE-FAILURE-TRIPLET": "PARTIALLY_FIXED",
+    "ADV-W7.2-288-H2-SECOND-PATH-READS-ARE-NOT-BOUND-TO-AUTHENTICATED-ARM": "FIXED_NORMAL_PATH",
+    "ADV-W7.2-288-H3-SAME-CHECKPOINT-CLAIM-HAS-NO-IDENTITY-FIELD": "FIXED",
+    "ADV-W7.2-288-M1-PREAUDIT-DIFF-CHECK-PASS-IS-FALSE": "FIXED"
+  },
+  "convergence": {
+    "prior_blocking_class_count": 4,
+    "remaining_blocking_class_count": 2,
+    "strictly_shrank": true,
+    "consecutive_non_shrinking_candidates": 0,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "autonomous_candidate_3_authorized": true
+  },
+  "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+}
