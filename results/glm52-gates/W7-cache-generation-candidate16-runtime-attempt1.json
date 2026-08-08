@@ -1,0 +1,34 @@
+{
+  "candidate_hash": "05a7c5b3196591635316190e43b16ea548444eb1",
+  "checks": {
+    "cgroup_oom_events_zero": true,
+    "engine_started": false,
+    "no_surviving_ds4_server": true,
+    "swap_growth_zero": true
+  },
+  "failure": {
+    "containment_exit_status": 11,
+    "message": "ds4: failed to open lock file /tmp/ds4.lock: Permission denied",
+    "reason": "The current-user diagnostic inherited the engine default /tmp/ds4.lock, which is mode 0600 and owned by the dsv4 account."
+  },
+  "observed": {
+    "attempt": "/home/bmarti44/.local/state/glm52-w7-cache-generation/attempt-acbefcbe07f9cb672a70aee2b1310a67",
+    "crashlog": "/home/bmarti44/.local/state/glm52-crashlog/20260808-010140-w7-c14-acbefcbe07f9",
+    "minimum_mem_available_kb": 120951764,
+    "server_log_sha256": "793b3b6b18763037fb1d3cbb5ba77e72afea6402dbcea7a462c8d23e3d659b20"
+  },
+  "artifact_sha256": {
+    "containment.rc": "25d4f2a86deb5e2574bb3210b67bb24fcc4afb19f93a7b65a057daa874a9d18e",
+    "containment.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "containment.stdout": "33d884efd67e50832fb6fd8adf0c387a4a43ad3bf51328280747b9fdf5f6d481",
+    "evidence/manifest.json": "8d6741e7e6e45bd19da9d8dec69af20c3d121b636fa0c065513f6a5101596b28",
+    "evidence/raw.jsonl": "56dbcd4f4dffd982b407d9ec9725a46cacedc5e2b1ac6d26d808d70c236c0e74",
+    "evidence/summary.json": "265274b35fc262d884ad7c5ab890b7de30100dc8c17af8b05c7bff318b138e43",
+    "safety/kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "safety/main.log": "771547e6105e3d6aaf3d16cf8756189762a0502f7124b562e071052ec18d81d9",
+    "safety/samples.log": "c8275c743159856404a6eb0d8df3cf1ee42afcb4588081ecf762e1c2cfcdbcd2"
+  },
+  "proposed_acceptance_test": "Bind DS4_LOCK_FILE to a fixed current-user runtime path, include it in the executed-environment hash, and require the contained candidate to pass process identity far enough to listen; an inaccessible stale /tmp/ds4.lock must no longer affect the run.",
+  "schema": "glm52-w7-runtime-attempt-v1",
+  "verdict": "FAIL"
+}
