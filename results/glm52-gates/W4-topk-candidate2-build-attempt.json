@@ -1,0 +1,47 @@
+{
+  "schema": "glm52-w4-topk-build-attempt-v1",
+  "gate": "W4",
+  "candidate": 2,
+  "recorded_at": "2026-08-08T12:14:05-04:00",
+  "source_commit": "f180321cff18bf7a9d0a43adb5622a2251ce680f",
+  "attempts": [
+    {
+      "name": "ordinary-clean-builds",
+      "artifacts": {
+        "build1": "5a0350608918cf673add415209993e2753f25a4a1c4d2d2ba55d47e9c810fe1c",
+        "build2": "e4b4782982d76d45a62b3500ff3611e353a211947dad90b0144ce3a6f32740d0"
+      },
+      "byte_identical": false,
+      "diagnosis": "ELF build ID plus NVCC debug-temporary names differed. Both compile logs were byte-identical."
+    },
+    {
+      "name": "fixed-seed-prefix-mapped-clean-builds",
+      "artifacts": {
+        "build1": "491e29eb78c8cb63f1eb10e6378f63fcf8d314d7c6f16f9d4c05cd3bd2c96a7f",
+        "build2": "11603a720b1c83db2c8c109cf85a56e50e117917607a3767a91e022d06009d07"
+      },
+      "byte_identical": false,
+      "differing_bytes": 46,
+      "diagnosis": "The remaining differences were confined to the ELF build ID and debug data."
+    },
+    {
+      "name": "strip-debug-and-build-id-normalization",
+      "normalization": "/usr/bin/objcopy --remove-section .note.gnu.build-id, followed by /usr/bin/objcopy --strip-debug",
+      "artifacts": {
+        "build1": "bec0e84279b84f639d78b06494493f9d21e7f74c3ccb6c3f9538871fbd5f0e21",
+        "build2": "bec0e84279b84f639d78b06494493f9d21e7f74c3ccb6c3f9538871fbd5f0e21"
+      },
+      "bytes": 5131360,
+      "byte_identical": true
+    }
+  ],
+  "server_build": {
+    "binary_sha256": "fb99343a1b70631b62b9bc329fb750a4b00f708b361e88b171e3d588895b867d",
+    "bytes": 14666312,
+    "independent_builds": 2,
+    "raw_byte_identical": true,
+    "manifest_sha256": "7278e84f043df7f4340b063ae301850ec12743872cb2b26c26609b916d872ead"
+  },
+  "verdict": "PASS_AFTER_DECLARED_NORMALIZATION",
+  "scope": "Normalization applies only to the CUDA confirmation-test executable. The serving binary was byte-identical without normalization."
+}

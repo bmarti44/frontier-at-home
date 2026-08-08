@@ -1,0 +1,61 @@
+{
+  "schema": "glm52-w4-topk-freeze-v2",
+  "gate": "W4",
+  "candidate": 2,
+  "frozen_at": "2026-08-08T12:14:05-04:00",
+  "freeze_time_unix": 1786205645,
+  "scope": "Default-off exact CUB radix/tree selection for GLM top-2048 CUDA indexer calls, with production-comparator signed-zero behavior, NaN fallback, per-device setup, and explicit tensor/device validation.",
+  "source": {
+    "repository": "/tmp/glm52-w4-topk",
+    "adopted_parent_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "candidate2_test_commit": "2b0d35a9278d4aa5e21febec1a9e337d0689a99e",
+    "implementation_commit": "f180321cff18bf7a9d0a43adb5622a2251ce680f",
+    "implementation_code_commit": "a0242e530631df5adcd441effe79f02c8b9cff9a",
+    "evidence_harness_parent_commit": "49dd4fb942ede16ebe7e49fbee7ca0dad017ed5d",
+    "diff_sha256": "9ae56b3186217accdc9d08b760b602f032a9db9f6ebac33f439aa43792080f46",
+    "tracked_tree_clean": true,
+    "artifact_sha256": {
+      "ds4.c": "a6855b9ab10e8868295b16705864cf841b975006c4930c9abca75bfe11d62dc9",
+      "ds4_cuda.cu": "35375030ae4d0a290d34d66c0afd632c3d70ff9bc8a9c8cb0c32b5173354c797",
+      "tests/cuda_topk_w4.cu": "8c8ffbb74bdb03b8998cd4b6d91bb77901f1a10919e92dd81134b549936745d3",
+      "Makefile": "6e67c8185358dedfe12c26a9dcdfba18edbb68665917eceebd3c748a4c6d777e",
+      "scripts/98_score_w4_topk.py": "35b7773bcfb02b1981f4a6dab1db1def5fdf281e2474b150576fd36e165dff02",
+      "scripts/99_run_w4_topk_confirmation.py": "9fb447cd1404029781dd8215b461e014cb7ec33239314f7a3b9b4b27cdf7e433",
+      "scripts/tests/test_w4_topk_scorer.py": "f854b8b2e2ec9b30622e4c7d4344d552c04e932ad8a32edc0c51df0736bc9582",
+      "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+    }
+  },
+  "build": {
+    "jobs": 2,
+    "server": {
+      "independent_builds": 2,
+      "byte_identical": true,
+      "binary_sha256": "fb99343a1b70631b62b9bc329fb750a4b00f708b361e88b171e3d588895b867d",
+      "binary_bytes": 14666312
+    },
+    "test": {
+      "independent_builds": 2,
+      "normalization": "strip ELF build ID and debug data only",
+      "byte_identical_after_declared_normalization": true,
+      "binary_sha256": "bec0e84279b84f639d78b06494493f9d21e7f74c3ccb6c3f9538871fbd5f0e21",
+      "binary_bytes": 5131360
+    }
+  },
+  "pre_freeze_checks": {
+    "scorer_mutation_tests": "PASS (5 tests)",
+    "boundary_matrix": "PASS",
+    "signed_zero": "PASS",
+    "infinities": "PASS",
+    "nan_fallback": "PASS",
+    "candidate_speedup_lower_95": 2.989758235,
+    "required_speedup_lower_95": 2.0,
+    "large_model_started": false
+  },
+  "flag": {
+    "name": "DS4_CUDA_TOPK2048_CUB",
+    "default": "off",
+    "logged_effective_marker": "ds4: CUDA exact top-2048 CUB enabled chunk=8192 merge=2"
+  },
+  "next": "Obtain and verify a drand round published strictly after freeze, execute the frozen confirmation and mutations, then submit only candidate-2 deltas to the persistent reviewers.",
+  "verdict": "FROZEN"
+}

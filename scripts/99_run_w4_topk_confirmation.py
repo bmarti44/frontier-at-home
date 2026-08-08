@@ -103,7 +103,7 @@ def main() -> int:
             subprocess.run(["/usr/bin/git", "diff", "--cached", "--quiet"],
                            cwd=args.source_dir, check=False).returncode != 0:
         fail("source tree has tracked changes")
-    expected_binary = freeze.get("build", {}).get("test_binary_sha256")
+    expected_binary = freeze.get("build", {}).get("test", {}).get("binary_sha256")
     if not isinstance(expected_binary, str) or sha256(args.binary) != expected_binary:
         fail("test binary differs from freeze")
     verified = subprocess.run(
