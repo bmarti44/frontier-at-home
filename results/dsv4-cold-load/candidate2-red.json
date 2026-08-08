@@ -1,0 +1,36 @@
+{
+  "artifact": "DSV4 cold-load candidate 2 mandatory-direct RED",
+  "failed_assertions": [
+    "five fresh-server blocks are frozen",
+    "OFF emits --no-direct-io and ON emits --direct-io-required",
+    "launcher requires patched-binary support",
+    "fault injector covers open, read, and partial-read failures",
+    "patch adds mandatory mode and fatal fallbacks",
+    "patch applies to exact pinned fusion source",
+    "pinned staging includes alignment headroom"
+  ],
+  "parent_candidate": "2d0faee567575430a317081e0a142d21e2ee7b7a",
+  "placeholders": {
+    "test_source_sha256": "e66d404b777325ed61b8220f5bd5d8f7257f72af3c09cc58b5bc10f215bff4c7",
+    "patch_sha256": "fd3d51071f4b49ac46537c299e3a9decf2b2c2a505ff2505b8759cac19791826"
+  },
+  "result": {
+    "errors": 0,
+    "exit_code": 1,
+    "failures": 7,
+    "ran": 8,
+    "stderr_sha256": "5c82b40c0f5f9be802db76663f1859ca55dafce45df2fce37bfd8f38dc687609",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "schema_version": 1,
+  "source_root": {
+    "commit": "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a",
+    "path": "/tmp/llama-fusion-read.DMP7Bs"
+  },
+  "test_commit": "cc85519d82dcd4688a7087dcd17d0994043e3ba6",
+  "tests_sha256_by_path": {
+    "scripts/tests/test_dsv4_cold_load.py": "eb0cb9a83ab01f45c511683c56118041b5278cae12e27ec9035a84015da31449",
+    "scripts/tests/test_dsv4_direct_io_patch.py": "3cf2bcb16241fa13dbcdb910ef2d3c273b4eda41ee416da236931a4cee9dbcae"
+  },
+  "verdict": "RED_CONFIRMED"
+}
