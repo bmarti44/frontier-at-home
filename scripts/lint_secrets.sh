@@ -905,6 +905,22 @@ self_test() {
       'self-test failed: e637 campaign evidence digests were rejected' >&2
     return 1
   fi
+  local dsv4_cold_load_path
+  dsv4_cold_load_path='results/dsv4-cold-load/red.json'
+  if ! is_checksum_file "$dsv4_cold_load_path" ||
+      ! printf '{"launcher_sha256":"%s","plan_sha256":"%s"}\n' \
+        "$fake_secret" "$fake_secret" \
+        | scan_digest_json "$dsv4_cold_load_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: DSV4 cold-load evidence digests were rejected' >&2
+    return 1
+  fi
+  if printf '{"note":"%s"}\n' "$fake_secret" \
+      | scan_digest_json "$dsv4_cold_load_path" >/dev/null 2>&1; then
+    printf '%s\n' \
+      'self-test failed: undeclared DSV4 cold-load digest was accepted' >&2
+    return 1
+  fi
   printf '%s\n' 'self-test passed'
 }
 
