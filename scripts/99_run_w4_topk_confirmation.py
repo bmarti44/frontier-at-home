@@ -22,6 +22,7 @@ VERIFIER = ROOT / "scripts/89_verify_drand_receipt.mjs"
 NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
 OBSERVATION_RE = re.compile(
     r"^W4_OBSERVATION block=([0-4]) sequence=([0-3]) arm=([AB]) "
+    r"mode=([01]) exact=([01]) ids_sha256=([0-9a-f]{64}) "
     r"elapsed_ms=([0-9]+(?:\.[0-9]+)?)$")
 MARKER = "ds4: CUDA exact top-2048 CUB enabled chunk=8192 merge=2"
 DRAND_GENESIS_UNIX = 1595431050
@@ -85,6 +86,23 @@ def artifact(path: Path, copied_name: str, staging: Path) -> dict:
             "bytes": destination.stat().st_size}
 
 
+def artifact_record(path: Path) -> dict:
+    return {"path": path.name, "sha256": sha256(path),
+            "bytes": path.stat().st_size}
+
+
+def memory_snapshot() -> dict[str, int]:
+    values = {}
+    for line in Path("/proc/meminfo").read_text().splitlines():
+        key, value, *_ = line.replace(":", "").split()
+        if key in {"MemAvailable", "SwapTotal", "SwapFree"}:
+            values[key] = int(value)
+    if set(values) != {"MemAvailable", "SwapTotal", "SwapFree"}:
+        fail("could not read memory safety state")
+    return {"mem_available_kib": values["MemAvailable"],
+            "swap_used_kib": values["SwapTotal"] - values["SwapFree"]}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-dir", required=True, type=Path)
@@ -105,7 +123,7 @@ def main() -> int:
     freeze = strict_json(args.freeze)
     receipt = strict_json(args.receipt)
     if freeze.get("schema") != "glm52-w4-topk-freeze-v2" or \
-            freeze.get("candidate") != 3 or freeze.get("verdict") != "FROZEN":
+            freeze.get("candidate") != 4 or freeze.get("verdict") != "FROZEN":
         fail("freeze record differs")
     candidate_hash = subprocess.run(
         ["/usr/bin/git", "rev-parse", "HEAD"], cwd=args.source_dir,
@@ -160,9 +178,27 @@ def main() -> int:
         "LD_LIBRARY_PATH": "/usr/local/cuda/targets/sbsa-linux/lib:/usr/local/cuda/lib64",
         "W4_FIRST_SCHEDULE": first_schedule,
     }
-    completed = subprocess.run(
+    before_memory = memory_snapshot()
+    started_at = datetime.now(timezone.utc).isoformat()
+    process = subprocess.Popen(
         [str(args.binary)], cwd=args.source_dir, env=environment,
-        text=True, capture_output=True, timeout=120, check=False)
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process_stat = Path(f"/proc/{process.pid}/stat").read_text().split()
+    if len(process_stat) < 22:
+        process.kill()
+        fail("could not bind CUDA process start ticks")
+    process_start_ticks = int(process_stat[21])
+    process_exe = Path(os.readlink(f"/proc/{process.pid}/exe")).resolve()
+    try:
+        stdout, stderr = process.communicate(timeout=120)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.communicate()
+        fail("CUDA microgate timed out")
+    completed_at = datetime.now(timezone.utc).isoformat()
+    after_memory = memory_snapshot()
+    completed = subprocess.CompletedProcess(
+        [str(args.binary)], process.returncode, stdout, stderr)
     if completed.returncode != 0:
         fail(f"CUDA microgate failed: {completed.stderr[-1000:]}")
     lines = completed.stderr.splitlines()
@@ -170,31 +206,42 @@ def main() -> int:
     for line in lines:
         match = OBSERVATION_RE.fullmatch(line)
         if match:
-            parsed.append((int(match[1]), int(match[2]), match[3], float(match[4])))
+            parsed.append((int(match[1]), int(match[2]), match[3],
+                           int(match[4]), int(match[5]), match[6],
+                           float(match[7])))
     if len(parsed) != 20 or lines.count(MARKER) != 1:
         fail("missing observations or effective-mode marker")
     id_hash = expected_ids_sha256()
     rows = [{
         "schema": "glm52-w4-topk-observation-v1",
         "block": block, "sequence": sequence, "arm": arm,
-        "elapsed_ms": elapsed, "ids_sha256": id_hash,
-        "ids_identical_to_expected": True,
-        "effective_marker_present": arm == "B",
+        "elapsed_ms": elapsed, "ids_sha256": observed_id_hash,
+        "ids_identical_to_expected": exact == 1 and observed_id_hash == id_hash,
+        "effective_marker_present": mode == 1,
         "n_components": 1048576, "n_tokens": 8, "top_k": 2048,
-    } for block, sequence, arm, elapsed in parsed]
+    } for block, sequence, arm, mode, exact, observed_id_hash, elapsed in parsed]
 
     args.run_dir.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=f".{args.run_dir.name}.",
                                      dir=args.run_dir.parent) as tmp_name:
         staging = Path(tmp_name)
+        stderr_path = staging / "microgate.stderr"
+        stdout_path = staging / "microgate.stdout"
+        stderr_path.write_text(completed.stderr)
+        stdout_path.write_text(completed.stdout)
         artifacts = {
             "binary": artifact(args.binary, "binary", staging),
+            "ds4.c": artifact(args.source_dir / "ds4.c", "ds4.c", staging),
             "engine.cu": artifact(args.source_dir / "ds4_cuda.cu", "engine.cu", staging),
             "test.cu": artifact(args.source_dir / "tests/cuda_topk_w4.cu", "test.cu", staging),
+            "Makefile": artifact(args.source_dir / "Makefile", "Makefile", staging),
             "runner.py": artifact(Path(__file__), "runner.py", staging),
             "scorer.py": artifact(SCORER, "scorer.py", staging),
             "drand-verifier.mjs": artifact(VERIFIER, "drand-verifier.mjs", staging),
             "randomness-receipt.json": artifact(args.receipt, "randomness-receipt.json", staging),
+            "freeze.json": artifact(args.freeze, "freeze.json", staging),
+            "microgate.stderr": artifact_record(stderr_path),
+            "microgate.stdout": artifact_record(stdout_path),
         }
         raw_path = staging / "raw.jsonl"
         raw_path.write_text("".join(json.dumps(row, sort_keys=True,
@@ -208,7 +255,7 @@ def main() -> int:
             fail("GPU identity query failed")
         manifest = {
             "schema": "glm52-w4-topk-manifest-v1", "gate": "W4",
-            "candidate": 3, "candidate_hash": candidate_hash,
+            "candidate": 4, "candidate_hash": candidate_hash,
             "freeze_time_unix": freeze_time,
             "binary_sha256": expected_binary,
             "scorer_sha256": sha256(SCORER), "raw_sha256": sha256(raw_path),
@@ -224,6 +271,20 @@ def main() -> int:
                            "environment": {"DS4_CUDA_TOPK2048_CUB": "scheduled-per-arm"},
                            "exit_code": completed.returncode},
             "device": {"name": gpu[0], "uuid": gpu[1], "driver": gpu[2]},
+            "safety": {
+                "started_at": started_at, "completed_at": completed_at,
+                "process_pid": process.pid,
+                "process_start_ticks": process_start_ticks,
+                "process_exe": str(process_exe),
+                "process_exe_sha256": sha256(args.binary),
+                "mem_available_before_kib": before_memory["mem_available_kib"],
+                "mem_available_after_kib": after_memory["mem_available_kib"],
+                "swap_used_before_kib": before_memory["swap_used_kib"],
+                "swap_used_after_kib": after_memory["swap_used_kib"],
+                "engine_processes_present": False,
+                "fio_present": False,
+                "failures": [],
+            },
             "artifacts": artifacts,
         }
         manifest_path = staging / "manifest.json"
@@ -255,8 +316,6 @@ def main() -> int:
             fail("fixed scorer result shape or verdict differs")
         (staging / "summary.json").write_text(
             json.dumps(summary, sort_keys=True, allow_nan=False) + "\n")
-        (staging / "microgate.stderr").write_text(completed.stderr)
-        (staging / "microgate.stdout").write_text(completed.stdout)
         for path in staging.iterdir():
             with path.open("rb") as handle:
                 os.fsync(handle.fileno())
