@@ -114,8 +114,53 @@ def _terminate_and_reap(process: subprocess.Popen[str]) -> None:
             except ProcessLookupError:
                 pass
             process.wait(timeout=15)
+        empty_samples = 0
+        for _ in range(60):
+            members = _live_launcher_session_members(process.pid)
+            if members:
+                empty_samples = 0
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                empty_samples += 1
+                if empty_samples >= 4:
+                    return
+            time.sleep(0.25)
+        raise CampaignError(
+            f"launcher session did not quiesce: {process.pid}: "
+            f"{_live_launcher_session_members(process.pid)}"
+        )
     finally:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+
+
+def _live_launcher_session_members(session_id: int) -> list[int]:
+    """Return live members bound to the isolated launcher session and process group."""
+    if type(session_id) is not int or session_id <= 1:
+        raise CampaignError("invalid launcher session identity")
+    members: list[int] = []
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            raw = (entry / "stat").read_text(encoding="ascii")
+        except FileNotFoundError:
+            continue
+        except OSError as error:
+            raise CampaignError(f"cannot inspect launcher session: {error}") from error
+        close = raw.rfind(")")
+        fields = raw[close + 2:].split() if close >= 0 else []
+        if len(fields) < 4:
+            raise CampaignError("malformed process stat during launcher cleanup")
+        try:
+            state, process_group, process_session = fields[0], int(fields[2]), int(fields[3])
+        except ValueError as error:
+            raise CampaignError("malformed process identity during launcher cleanup") from error
+        if process_group == session_id and process_session == session_id and state not in {"Z", "X"}:
+            members.append(int(entry.name))
+    return sorted(members)
 
 
 def containment_unit_name(tag: str, launcher_pid: int) -> str:
@@ -164,11 +209,12 @@ def _unit_state(unit: str) -> dict[str, str]:
 def _unit_is_stopped(unit: str) -> bool:
     state = _unit_state(unit)
     zero_pids = state["MainPID"] == "0" and state["ControlPID"] == "0"
+    terminal_state = (state["ActiveState"], state["SubState"])
     if state["LoadState"] == "not-found":
-        return state["ActiveState"] == "inactive" and zero_pids
+        return terminal_state == ("inactive", "dead") and zero_pids
     return (
         state["LoadState"] in {"loaded", "masked"}
-        and state["ActiveState"] in {"inactive", "failed"}
+        and terminal_state in {("inactive", "dead"), ("failed", "failed")}
         and zero_pids
     )
 
@@ -181,43 +227,65 @@ def _kill_and_verify_containment_cgroup(unit: str) -> None:
     parent = Path(
         f"/sys/fs/cgroup/user.slice/user-{uid}.slice/user@{uid}.service/app.slice"
     )
-    path = parent / unit
+    parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     empty_samples = 0
-    for _ in range(40):
-        try:
-            metadata = path.lstat()
-        except FileNotFoundError:
-            empty_samples += 1
-        else:
-            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
-                raise CampaignError("invalid containment cgroup path")
-            if metadata.st_uid != uid:
-                raise CampaignError("containment cgroup owner mismatch")
-            directory_fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for _ in range(40):
             try:
-                events_fd = os.open("cgroup.events", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
+                metadata = os.stat(unit, dir_fd=parent_fd, follow_symlinks=False)
+                directory_fd = os.open(
+                    unit, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd
+                )
+            except FileNotFoundError:
+                empty_samples += 1
+            else:
                 try:
-                    events = os.read(events_fd, 4096).decode("ascii", errors="strict")
-                finally:
-                    os.close(events_fd)
-                populated = [line for line in events.splitlines() if line.startswith("populated ")]
-                if populated not in (["populated 0"], ["populated 1"]):
-                    raise CampaignError("malformed containment cgroup events")
-                if populated == ["populated 1"]:
-                    kill_fd = os.open("cgroup.kill", os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
+                    bound = os.fstat(directory_fd)
+                    if (
+                        (metadata.st_dev, metadata.st_ino) != (bound.st_dev, bound.st_ino)
+                        or stat.S_ISLNK(metadata.st_mode)
+                        or not stat.S_ISDIR(metadata.st_mode)
+                        or metadata.st_uid != uid
+                    ):
+                        raise CampaignError("containment cgroup identity mismatch")
+                    events_fd = os.open(
+                        "cgroup.events", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd
+                    )
                     try:
-                        os.write(kill_fd, b"1\n")
+                        events = os.read(events_fd, 4096).decode("ascii", errors="strict")
                     finally:
-                        os.close(kill_fd)
-                    empty_samples = 0
-                else:
-                    empty_samples += 1
-            finally:
-                os.close(directory_fd)
-        if empty_samples >= 4:
-            return
-        time.sleep(0.25)
+                        os.close(events_fd)
+                    populated = [
+                        line for line in events.splitlines() if line.startswith("populated ")
+                    ]
+                    if populated not in (["populated 0"], ["populated 1"]):
+                        raise CampaignError("malformed containment cgroup events")
+                    if populated == ["populated 1"]:
+                        kill_fd = os.open(
+                            "cgroup.kill", os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory_fd
+                        )
+                        try:
+                            os.write(kill_fd, b"1\n")
+                        finally:
+                            os.close(kill_fd)
+                        empty_samples = 0
+                    else:
+                        empty_samples += 1
+                finally:
+                    os.close(directory_fd)
+            if empty_samples >= 4:
+                return
+            time.sleep(0.25)
+    finally:
+        os.close(parent_fd)
     raise CampaignError(f"containment cgroup did not remain empty: {unit}")
+
+
+def _stably_stop_containment_unit(unit: str) -> None:
+    for _ in range(4):
+        if not _unit_is_stopped(unit):
+            stop_exact_containment_unit(unit)
+        time.sleep(0.25)
 
 
 def stop_exact_containment_unit(unit: str) -> None:
@@ -266,8 +334,9 @@ def _cleanup_interrupted_containment(process: subprocess.Popen[str], unit: str) 
             cleanup_error = error
         try:
             stop_exact_containment_unit(unit)
-            if not _unit_is_stopped(unit):
-                raise CampaignError(f"containment unit restarted after stop: {unit}")
+            _stably_stop_containment_unit(unit)
+            _kill_and_verify_containment_cgroup(unit)
+            _stably_stop_containment_unit(unit)
         except BaseException as error:
             if cleanup_error is None:
                 cleanup_error = error

@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -452,12 +453,19 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         ), mock.patch.object(
             MODULE, "_unit_is_stopped", side_effect=lambda _: events.append("final-unit") or True
         ), mock.patch.object(
+            MODULE, "_kill_and_verify_containment_cgroup",
+        ), mock.patch.object(
+            MODULE.time, "sleep",
+        ), mock.patch.object(
             MODULE, "server_pids", side_effect=lambda: events.append("servers") or []
         ), mock.patch.object(
             MODULE, "_listener_is_active", side_effect=lambda: events.append("listener") or False
         ):
             MODULE._cleanup_interrupted_containment(process, "glm52-w7-test-4242.service")
-        self.assertEqual(events, ["reap", "stop", "final-unit", "servers", "listener"])
+        self.assertEqual(
+            events,
+            ["reap", "stop"] + ["final-unit"] * 8 + ["servers", "listener"],
+        )
 
     def test_cleanup_control_failure_still_proves_no_survivors_and_fails(self) -> None:
         events: list[str] = []
@@ -488,9 +496,9 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         with mock.patch.object(
             MODULE.os, "killpg", side_effect=lambda pid, sig: signals.append((pid, sig))
         ), mock.patch.object(
-            MODULE, "_live_launcher_session_members", side_effect=[[4243], [4243], []],
+            MODULE, "_live_launcher_session_members", side_effect=[[4243], [], [], [], []],
             create=True,
-        ):
+        ), mock.patch.object(MODULE.time, "sleep"):
             MODULE._terminate_and_reap(process)
         self.assertEqual(
             signals,
@@ -499,7 +507,7 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
 
     def test_cleanup_rejects_late_unit_after_two_not_found_observations(self) -> None:
         process = mock.Mock(pid=4242, returncode=None)
-        observations = iter([True, True, False, True, True, True, True])
+        observations = iter([True, True, False, True, True, True, True, True])
         with mock.patch.object(MODULE, "_terminate_and_reap"), mock.patch.object(
             MODULE, "stop_exact_containment_unit"
         ) as stop_unit, mock.patch.object(
@@ -513,6 +521,20 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
                 process, "glm52-w7-test-4242.service"
             )
         self.assertGreaterEqual(stop_unit.call_count, 2)
+
+    def test_cgroup_fallback_rejects_path_replacement_before_write(self) -> None:
+        metadata = mock.Mock(st_dev=1, st_ino=2, st_mode=stat.S_IFDIR | 0o700, st_uid=os.getuid())
+        replacement = mock.Mock(st_dev=1, st_ino=3, st_mode=stat.S_IFDIR | 0o700, st_uid=os.getuid())
+        with mock.patch.object(MODULE.os, "open", side_effect=[10, 11]), mock.patch.object(
+            MODULE.os, "stat", return_value=metadata,
+        ), mock.patch.object(MODULE.os, "fstat", return_value=replacement), mock.patch.object(
+            MODULE.os, "close",
+        ), mock.patch.object(MODULE.os, "write") as write:
+            with self.assertRaisesRegex(MODULE.CampaignError, "identity mismatch"):
+                MODULE._kill_and_verify_containment_cgroup(
+                    "glm52-w7-test-4242.service"
+                )
+        write.assert_not_called()
 
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
