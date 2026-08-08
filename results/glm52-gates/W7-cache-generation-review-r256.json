@@ -1,0 +1,35 @@
+{
+  "candidate_hash": "db3feb5ae194bbece23f0885f3a0698aebd18c84",
+  "review_round": 256,
+  "gate_candidate": 2,
+  "verdict": "REJECT_RUNTIME_BLOCKED",
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 84,
+    "critical": [],
+    "high": ["ADV-W7.1-255-H1-UNBOUND-RESUME-COMPLETION"],
+    "finding": "Response prompt-token equality does not uniquely bind the response when two request windows share the same context tuple."
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 61,
+    "critical": [],
+    "high": [
+      "ADV-W7.1-256-H1-NO-PREIMPLEMENTATION-CUDA-RED",
+      "ADV-W7.1-256-H2-RESPONSE-SCHEMA-ACCEPTS-ERROR-SHAPES",
+      "ADV-W7.1-256-H3-FROZEN-BINARY-SIZE-MISMATCH"
+    ]
+  },
+  "verified_fixed_from_round_255": [
+    "GAP-W7.1-C1-H1-ROCM-DEFAULT-OFF-BUILD-REGRESSION",
+    "ADV-W7.1-255-H2-FROZEN-COVERAGE-NOT-EXECUTED",
+    "ADV-W7.1-255-H3-SUPPORT-MODEL-IDENTITY-DEAD-END",
+    "all five round-255 medium findings"
+  ],
+  "convergence": {
+    "candidate_2_strictly_shrank_round_255_original_blockers": true,
+    "new_blocking_classes_appeared": true,
+    "consecutive_candidates_without_strict_shrink": 1,
+    "autonomous_candidate_3_allowed": true,
+    "reason": "The owner escalation trigger requires two consecutive candidates without shrinkage, a new critical in frozen scope, or more than eight candidates; none has yet fired."
+  }
+}

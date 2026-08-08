@@ -25,7 +25,11 @@ ds4: GLM sync branch=indexed_resume pos=5044 chunk=22 logits=1
 0807 15:10:07 ds4-server: shutdown requested, draining requests
 """
 HTTP = "200\n"
-RESPONSE = '{"choices":[{"finish_reason":"length","text":""}],"usage":{"prompt_tokens":5066}}\n'
+RESPONSE = (
+    '{"choices":[{"finish_reason":"length","text":""}],'
+    '"usage":{"prompt_tokens":5066,"completion_tokens":0,"total_tokens":5066,'
+    '"prompt_tokens_details":{"cached_tokens":5044,"cache_write_tokens":22}}}\n'
+)
 RC = "0\n"
 CONTAINMENT = "SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/.local/state/glm52-crashlog/w7-test\n"
 
@@ -82,6 +86,17 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         )
         self.assertEqual(score(bad)["verdict"], "FAIL")
 
+    def test_rejects_equal_context_tuple_response_collision(self) -> None:
+        second = (
+            "0807 15:10:06 ds4-server: completion ctx=5044..5066:22 prompt start\n"
+            "0807 15:10:07 ds4-server: completion ctx=5044..5066:22 prompt done 1.000s\n"
+        )
+        bad = GOOD.replace(
+            "0807 15:10:07 ds4-server: shutdown requested",
+            second + "0807 15:10:08 ds4-server: shutdown requested",
+        )
+        self.assertEqual(score(bad)["verdict"], "FAIL")
+
     def test_rejects_fatal_after_completion(self) -> None:
         bad = GOOD.replace(
             "0807 15:10:07 ds4-server: shutdown requested",
@@ -94,6 +109,17 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertEqual(score(response="{}\n")["verdict"], "FAIL")
         self.assertEqual(score(rc="1\n")["verdict"], "FAIL")
         self.assertEqual(score(containment="SAFE_RUN_DONE rc=0 killed=yes dir=/tmp/x\n")["verdict"], "FAIL")
+
+    def test_rejects_malformed_or_error_response_shapes(self) -> None:
+        malformed = [
+            '{"choices":[{"finish_reason":{},"text":null}],"usage":{"prompt_tokens":5066}}',
+            '{"error":{"message":"failed"},"choices":[{"finish_reason":"error","text":""}],"usage":{"prompt_tokens":5066}}',
+            '{"choices":[{"finish_reason":"length"}],"usage":{"prompt_tokens":5066}}',
+            '{"choices":[{"finish_reason":"unsupported","text":""}],"usage":{"prompt_tokens":5066}}',
+        ]
+        for response in malformed:
+            with self.subTest(response=response):
+                self.assertEqual(score(response=response)["verdict"], "FAIL")
 
 
 if __name__ == "__main__":
