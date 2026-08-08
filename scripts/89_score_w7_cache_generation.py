@@ -450,13 +450,14 @@ def bind_runtime_artifacts(attempt: Path, out: Path, crash_dir: Path) -> dict[st
     final_re = re.compile(
         r" final_artifact_verified path=([^ ]+) sha256=([0-9a-f]{64}) device_inode=([0-9]+:[0-9]+:[0-9]+)$"
     )
-    recorded: dict[str, str] = {}
+    recorded: dict[str, tuple[str, int, int, int]] = {}
     for line in main_text.splitlines():
         match = final_re.search(line)
         if match:
             if match.group(1) in recorded:
                 raise ValueError("duplicate final artifact binding")
-            recorded[match.group(1)] = match.group(2)
+            device, inode, size = (int(value) for value in match.group(3).split(":"))
+            recorded[match.group(1)] = (match.group(2), device, inode, size)
     runtime_names = (
         "server.log",
         "live-response.json",
@@ -470,7 +471,13 @@ def bind_runtime_artifacts(attempt: Path, out: Path, crash_dir: Path) -> dict[st
     if set(recorded) != expected_paths:
         raise ValueError("safe-run final artifact set mismatch")
     for name in runtime_names:
-        bindings[name] = copy_bound_artifact(out / name, bound / name, recorded[str(out / name)])
+        expected_digest, expected_device, expected_inode, expected_bytes = recorded[str(out / name)]
+        binding = copy_bound_artifact(out / name, bound / name, expected_digest)
+        if (
+            binding["device"], binding["inode"], binding["bytes"]
+        ) != (expected_device, expected_inode, expected_bytes):
+            raise ValueError("safe-run final artifact identity mismatch")
+        bindings[name] = binding
     safety_re = re.compile(
         r" safety_artifact_verified name=(samples|kernel)\.log sha256=([0-9a-f]{64}) size=([0-9]+)$"
     )
