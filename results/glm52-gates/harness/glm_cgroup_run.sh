@@ -37,11 +37,15 @@ PARENT_LOCK_PID=${GLM_SAFE_PARENT_LOCK_PID:-}
 PARENT_LOCK_START_TICKS=${GLM_SAFE_PARENT_LOCK_START_TICKS:-}
 PARENT_LOCK_FD=${GLM_SAFE_PARENT_LOCK_FD:-}
 PARENT_LOCK_DEV_INO=${GLM_SAFE_PARENT_LOCK_DEV_INO:-}
+PARENT_LOCK_KERNEL_KEY=${GLM_SAFE_PARENT_LOCK_KERNEL_KEY:-}
 PARENT_LOCK_VERIFIED=0
-if [[ -n $PARENT_LOCK_PID || -n $PARENT_LOCK_START_TICKS || -n $PARENT_LOCK_FD || -n $PARENT_LOCK_DEV_INO ]]; then
+if [[ -n $PARENT_LOCK_PID || -n $PARENT_LOCK_START_TICKS || -n $PARENT_LOCK_FD ||
+      -n $PARENT_LOCK_DEV_INO || -n $PARENT_LOCK_KERNEL_KEY ]]; then
   [[ $ROOT_AUTHORITY == 0 && $PARENT_LOCK_PID =~ ^[1-9][0-9]*$ &&
      $PARENT_LOCK_START_TICKS =~ ^[1-9][0-9]*$ && $PARENT_LOCK_FD =~ ^[0-9]+$ &&
-     $PARENT_LOCK_DEV_INO =~ ^[0-9]+:[0-9]+$ && $PARENT_LOCK_PID == "$PPID" ]] || {
+     $PARENT_LOCK_DEV_INO =~ ^[0-9]+:[0-9]+$ &&
+     $PARENT_LOCK_KERNEL_KEY =~ ^[0-9a-f]+:[0-9a-f]+:[0-9]+$ &&
+     $PARENT_LOCK_PID == "$PPID" ]] || {
     echo "invalid parent inference-lock binding" >&2
     exit 2
   }
@@ -54,8 +58,11 @@ if [[ -n $PARENT_LOCK_PID || -n $PARENT_LOCK_START_TICKS || -n $PARENT_LOCK_FD |
     echo "parent inference-lock identity mismatch" >&2
     exit 2
   }
-  if /usr/bin/flock -n /run/lock/frontier-at-home/inference.lock /usr/bin/true 2>/dev/null; then
-    echo "parent inference lock is not held" >&2
+  if ! awk -v pid="$PARENT_LOCK_PID" -v key="$PARENT_LOCK_KERNEL_KEY" '
+      $2 == "FLOCK" && $4 == "WRITE" && $5 == pid && $6 == key { count++ }
+      END { exit(count == 1 ? 0 : 1) }
+    ' /proc/locks; then
+    echo "parent inference-lock ownership mismatch" >&2
     exit 2
   fi
   PARENT_LOCK_VERIFIED=1
