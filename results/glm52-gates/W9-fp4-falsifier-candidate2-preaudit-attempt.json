@@ -1,0 +1,12 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-preaudit-attempt-v1",
+  "gate": "W9",
+  "candidate": 2,
+  "recorded_at_utc": "2026-08-08T00:08:25Z",
+  "status": "FAIL_TEST_HARNESS",
+  "measurement_started": false,
+  "failure": "The first candidate-2 implementation audit ran 11 tests with one error and one failure: the replacement mutation explicitly called verify_final inside a context whose clean exit verified again, and the terminal mutation was rejected with a correct size-mismatch exception whose message did not contain the test's terminal label.",
+  "bounded_fix": "Express both generation mutations as context-exit assertions and wrap terminal artifact binding failures with an explicit terminal-verification diagnostic. No numerical formula, capture input, split, candidate, or threshold changed.",
+  "acceptance_test": "The focused suite must reject pathname replacement, same-inode rewrite, and post-publication summary mutation while all non-mutation tests pass.",
+  "final_pre_submission_result": "15/15 PASS after the bounded fix, including compact all-candidate evaluation and runtime/relay/launcher checks."
+}
