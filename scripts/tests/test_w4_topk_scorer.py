@@ -115,10 +115,30 @@ class W4TopkScorerTest(unittest.TestCase):
     def _score(self) -> dict:
         return SCORER.score_run(self.run_dir)
 
-    def test_valid_evidence_passes_fixed_formula(self) -> None:
-        result = self._score()
-        self.assertEqual(result["verdict"], "PASS")
-        self.assertGreater(result["speedup_lower_95"], 2.0)
+    def test_coherent_nonfrozen_closure_fails(self) -> None:
+        with self.assertRaises(SCORER.ScoreError):
+            self._score()
+
+    def test_consistent_wrong_ids_and_positive_timings_fail(self) -> None:
+        for row in self.rows:
+            row["ids_sha256"] = "2" * 64
+            row["elapsed_ms"] = 10.0 if row["arm"] == "A" else 1.0
+        self._write_raw()
+        self._write_manifest()
+        with self.assertRaises(SCORER.ScoreError):
+            self._score()
+
+    def test_transcript_mismatch_fails(self) -> None:
+        row = self.rows[0]
+        matching = (
+            "W4_OBSERVATION block=0 sequence=0 arm=" + row["arm"] +
+            " mode=" + ("1" if row["arm"] == "B" else "0") +
+            " exact=1 ids_sha256=" + SCORER.EXPECTED_IDS_SHA256 +
+            " elapsed_ms=" + str(row["elapsed_ms"]) + "\n"
+        )
+        SCORER.validate_transcript([row], matching)
+        with self.assertRaises(SCORER.ScoreError):
+            SCORER.validate_transcript([row], matching.replace("4.9", "4.8"))
 
     def test_missing_duplicate_or_reordered_observation_fails(self) -> None:
         mutations = (

@@ -20,6 +20,7 @@ class ScoreError(ValueError):
 ROOT = Path(__file__).resolve().parents[1]
 NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
 T95_DF4 = 2.131846786
+EXPECTED_IDS_SHA256 = "e289e6b335e319ee58b92fd2fcb28a9ce83d22f69f2405746329343742d65bb6"
 DRAND_GENESIS_UNIX = 1595431050
 DRAND_PERIOD_SECONDS = 30
 MANIFEST_KEYS = {
@@ -42,6 +43,11 @@ ROW_KEYS = {
     "ids_identical_to_expected", "effective_marker_present",
     "n_components", "n_tokens", "top_k",
 }
+
+
+def validate_transcript(rows: list[dict], transcript: str) -> None:
+    """Candidate-4 RED placeholder for raw-to-execution reconciliation."""
+    del rows, transcript
 
 
 def _reject_constant(value: str) -> None:
