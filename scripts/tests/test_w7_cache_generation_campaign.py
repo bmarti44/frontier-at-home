@@ -55,6 +55,8 @@ def good_rows() -> list[dict[str, object]]:
                 "token_timestamps_ns": timestamps,
                 "output_token_ids": TOKEN_IDS.copy(),
                 "output_sha256": SHA["output"],
+                "generated_text_sha256": "9" * 64,
+                "generated_text_bytes": 128,
                 "final_logits_sha256": SHA["logits"],
                 "logit_sequence_sha256": SHA["logit_sequence"],
                 "server_fresh": True,
@@ -94,6 +96,7 @@ class W7CacheGenerationCampaignTest(unittest.TestCase):
         bad = good_rows(); bad[1]["output_sha256"] = "7" * 64; mutations.append(bad)
         bad = good_rows(); bad[1]["final_logits_sha256"] = "7" * 64; mutations.append(bad)
         bad = good_rows(); bad[1]["logit_sequence_sha256"] = "8" * 64; mutations.append(bad)
+        bad = good_rows(); bad[1]["generated_text_sha256"] = "8" * 64; mutations.append(bad)
         bad = good_rows(); bad[1]["output_token_ids"][0] = 999; mutations.append(bad)
         bad = good_rows(); bad[1]["token_timestamps_ns"] = bad[1]["token_timestamps_ns"][:127]; mutations.append(bad)
         bad = good_rows(); bad[1]["safety"]["cgroup_oom_kill_delta"] = 1; mutations.append(bad)

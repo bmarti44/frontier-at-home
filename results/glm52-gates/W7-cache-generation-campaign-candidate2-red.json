@@ -1,0 +1,27 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 2,
+  "phase": "pre-implementation-red",
+  "parent_commit": "fdb4e72cf2d23f11945280da8486e5b6076f9c7b",
+  "observed_at": "2026-08-08T03:10:15-04:00",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_cache_generation_campaign",
+  "returncode": 1,
+  "tests_run": 11,
+  "failures": 5,
+  "errors": 1,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "31c145943ad811db9ff5b3c46b12c20cf7f8f65eb44704ff450495ff152d16bc",
+  "artifacts": {
+    "runner_test": {"sha256": "1d558b409d2413ec496e48f6a47d2924f501f6e1b087d272b8558a465af0d0bb"},
+    "scorer_test": {"sha256": "92c0233f13bf03bad2633999eb7c54ed053ced8d957a182fe5bc655248367807"}
+  },
+  "observed_failures": [
+    "ambient DS4 configuration was forwarded",
+    "safety logs were not copied into arm evidence",
+    "receipt digest mutation was accepted",
+    "scorer could not execute retained verified bytes",
+    "HTTP generated-text identity was absent from the scorer schema",
+    "campaign authority and failure-finalization surfaces were absent"
+  ],
+  "acceptance": "The unchanged candidate-1 runner must fail these tests; the bounded candidate-2 implementation must make all tests pass without changing frozen engine, scorer formulas, fixtures, or containment defaults beyond the named authority defects."
+}

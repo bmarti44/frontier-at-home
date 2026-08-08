@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -67,7 +69,9 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         (crash / "kernel.log").write_text("-- No entries --\n", encoding="utf-8")
         receipt = (
             f"SAFE_RUN_DONE rc=0 killed=no dir={crash} "
-            f"main_sha256={'1' * 64} samples_sha256={'2' * 64} kernel_sha256={'3' * 64}\n"
+            f"main_sha256={hashlib.sha256((crash / 'main.log').read_bytes()).hexdigest()} "
+            f"samples_sha256={hashlib.sha256((crash / 'samples.log').read_bytes()).hexdigest()} "
+            f"kernel_sha256={hashlib.sha256((crash / 'kernel.log').read_bytes()).hexdigest()}\n"
         )
         return temporary, out, receipt
 
@@ -115,6 +119,12 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         self.assertNotIn("shell=True", source)
         self.assertNotIn("sudo", source)
         self.assertNotIn("reboot", source)
+        for value in (
+            "os.O_NOFOLLOW", "pass_fds", "/proc/self/fd/", "fcntl.flock",
+            "CAMPAIGN_LOCK", "DRAND_FREEZE_FLOOR_ROUND", "frozen_scorer_bytes",
+            "finalize_failure_triplet",
+        ):
+            self.assertIn(value, source)
 
     def test_raw_arm_aggregation_accepts_bound_evidence_and_rejects_mutations(self) -> None:
         temporary, out, receipt = self.make_arm()
@@ -128,6 +138,7 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         self.assertEqual(len(row["token_timestamps_ns"]), 128)
         self.assertEqual(row["safety"]["false_generation_flushes"], 1)
         self.assertEqual(row["safety"]["minimum_mem_available_kb"], 49_000_000)
+        self.assertTrue((out / "safety/main.log").is_file())
 
         client_path = out / "primary-client.json"
         client = json.loads(client_path.read_text(encoding="utf-8"))
@@ -138,6 +149,33 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         ):
             with self.assertRaises(MODULE.CampaignError):
                 MODULE.parse_arm("off", 0, 0, out, 0, receipt, "4" * 64, "3" * 64)
+
+    def test_ambient_ds4_configuration_is_not_forwarded(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-env-test-") as raw:
+            out = Path(raw)
+            with mock.patch.dict(os.environ, {"DS4_GLM_PREFETCH": "1"}, clear=True):
+                environment, _ = MODULE.environment_for_arm("off", out, "4" * 64)
+        self.assertNotIn("DS4_GLM_PREFETCH", environment)
+
+    def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
+        temporary, out, receipt = self.make_arm()
+        self.addCleanup(temporary.cleanup)
+        marker = "main_sha256="
+        start = receipt.index(marker) + len(marker)
+        bad_receipt = receipt[:start] + "0" * 64 + receipt[start + 64:]
+        with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            MODULE, "LOGIT_BYTES", 4
+        ):
+            with self.assertRaises(MODULE.CampaignError):
+                MODULE.parse_arm("off", 0, 0, out, 0, bad_receipt, "4" * 64, "3" * 64)
+
+    def test_scorer_executes_retained_verified_bytes(self) -> None:
+        scorer_bytes = (ROOT / "scripts/90_score_w7_cache_generation_campaign.py").read_bytes()
+        digest = hashlib.sha256(scorer_bytes).hexdigest()
+        module = MODULE.load_scorer(scorer_bytes, digest)
+        self.assertTrue(callable(module.score_campaign_rows))
+        with self.assertRaises(MODULE.CampaignError):
+            MODULE.load_scorer(scorer_bytes + b"\n# mutation\n", digest)
 
         client["usage"]["prompt_tokens_details"]["cached_tokens"] = 5044
         client_path.write_text(json.dumps(client), encoding="utf-8")
