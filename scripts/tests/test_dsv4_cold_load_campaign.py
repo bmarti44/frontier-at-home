@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
+import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -109,6 +112,70 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
         self.assertEqual(schedules, expected_schedules(SHA["randomness"]))
         self.assertEqual(RUNNER.arm_schedule(SHA["randomness"]), schedules)
         self.assertNotEqual(RUNNER.arm_schedule("b" * 64), schedules)
+
+    def test_runner_materializes_twenty_unique_fresh_arm_plans(self) -> None:
+        plans = RUNNER.campaign_plan(SHA["randomness"])
+        self.assertEqual(len(plans), 20)
+        self.assertEqual(len({plan.run_id for plan in plans}), 20)
+        for plan in plans:
+            expected = expected_schedules(SHA["randomness"])[plan.block][plan.position]
+            self.assertEqual(plan.arm, "off" if expected == "A" else "on")
+            self.assertEqual(
+                RUNNER.direct_io_arguments(plan.arm),
+                ["--direct-io-required"] if plan.arm == "on" else ["--no-direct-io"],
+            )
+
+    def test_runner_requires_working_containment_and_idle_host(self) -> None:
+        with mock.patch.object(RUNNER.subprocess, "run") as completed:
+            completed.side_effect = [
+                mock.Mock(returncode=1, stdout="", stderr="manager dead"),
+            ]
+            with self.assertRaisesRegex(RUNNER.CampaignError, "user-systemd containment"):
+                RUNNER.preflight_host()
+
+        def fake_run(command, **_kwargs):
+            if command[-2:] == ["-x", "ds4-server"]:
+                return mock.Mock(returncode=0, stdout="123\n", stderr="")
+            return mock.Mock(returncode=0, stdout="running\n", stderr="")
+
+        with mock.patch.object(RUNNER.subprocess, "run", side_effect=fake_run):
+            with self.assertRaisesRegex(RUNNER.CampaignError, "engine or fio"):
+                RUNNER.preflight_host()
+
+    def test_runner_observes_exact_shard_descriptors_and_direct_flags(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            proc = Path(temporary) / "proc"
+            fd = proc / "321" / "fd"
+            fdinfo = proc / "321" / "fdinfo"
+            fd.mkdir(parents=True)
+            fdinfo.mkdir()
+            shards = [Path(temporary) / f"model-0000{i}-of-00003.gguf" for i in range(1, 4)]
+            for index, shard in enumerate(shards, start=7):
+                shard.touch()
+                os.symlink(shard, fd / str(index))
+                (fdinfo / str(index)).write_text(
+                    f"pos:\t0\nflags:\t{os.O_RDONLY | os.O_DIRECT:o}\n", encoding="ascii"
+                )
+            self.assertEqual(RUNNER.direct_shard_count(321, shards, proc_root=proc), 3)
+            (fdinfo / "8").write_text(f"pos:\t0\nflags:\t{os.O_RDONLY:o}\n", encoding="ascii")
+            self.assertEqual(RUNNER.direct_shard_count(321, shards, proc_root=proc), 2)
+
+    def test_runner_bounds_each_arm_and_never_reuses_output(self) -> None:
+        command = RUNNER.containment_command(
+            "cold-b0-p0-abcdef", ["/frozen/llama-server", "--help"], Path("/tmp/run.log")
+        )
+        joined = " ".join(command)
+        self.assertIn("MemoryHigh=104G", joined)
+        self.assertIn("MemoryMax=109G", joined)
+        self.assertIn("MemorySwapMax=0", joined)
+        self.assertIn("OOMPolicy=kill", joined)
+        self.assertIn("KillMode=control-group", joined)
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "attempt"
+            destination.mkdir()
+            (destination / "old").write_text("occupied", encoding="ascii")
+            with self.assertRaisesRegex(RUNNER.CampaignError, "fresh empty"):
+                RUNNER.require_fresh_output(destination)
 
     def test_accepts_matched_safe_fast_campaign(self) -> None:
         result = SCORER.score_campaign(manifest(), rows())
