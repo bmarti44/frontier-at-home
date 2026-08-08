@@ -18,7 +18,7 @@ readonly W9_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/harness/w9_real_captur
 is_checksum_file() {
   case "$1" in
     verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/dsv4-profile.json|configs/pins/*|configs/build-manifests/*|evalsets/pins.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/speed-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-gates/G6-rung0-io-sidecar-build.json|results/glm52-gates/G6-rung0-io-slab-calibration-no-results.json|results/glm52-gates/G6-rung0-io-accelerated-sha-falsifier.json|results/glm52-gates/R0-slab-canary-attempts-2026-08-02.json|results/glm52-gates/R0-e637-campaign-attempt-2026-08-02.json|results/glm52-gates/R0-e637-quality-timeout-attempt-2026-08-03.json|results/glm52-gates/R0-e637-slab-final-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-freeze-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-*.json|results/glm52-gates/R0.2-prefetch-freeze-*.json|results/glm52-gates/R0.2-prefetch-randomness-*.json|results/glm52-gates/R0.2-prefetch-probe-*-attempt-*.json|results/glm52-gates/R0.2-prefetch-probe-6885a45-final-2026-08-04.json|results/glm52-gates/R0[abc]-*.json|results/glm52-gates/W3-slot-gemv-*.json|results/glm52-gates/W3-slot-lifetime-*.json|results/glm52-gates/W3-performance-*.json|results/glm52-gates/NVME-characterization-attempt-*.json|results/glm52-gates/NVME-characterization-final-*.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/dsv4-decode-*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/evidence/w1-affine-*/manifest.json|results/glm52-goal/evidence/w1-affine-*/raw.jsonl|results/glm52-goal/evidence/w1-affine-*/raw-inputs/randomness.json|results/glm52-goal/evidence/w1-telemetry-probe-*/manifest.json|results/glm52-goal/evidence/w1-telemetry-probe-*/raw.jsonl|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|weights/*/manifest.json|*.sha256) return 0 ;;
-    results/glm52-gates/W3-performance-campaign-*/raw.jsonl|results/glm52-gates/R0.5-*.json|results/glm52-gates/W7-cache-generation-*.json|results/glm52-gates/W7-resume-correctness-plan-v*.json|results/glm52-gates/W7-resume-candidate*-red.json|results/glm52-gates/W7-resume-review-r*.json|results/glm52-gates/W7-resume-build-attempt-v*.json|results/glm52-gates/W7-resume-compiled-red-freeze-v*.json|results/glm52-gates/W7-resume-restored-frontier-freeze-v*.json|results/glm52-gates/W7-resume-compiled-red-attempt*.json|results/glm52-gates/W7-resume-equivalence-*.json|results/glm52-gates/W7-resume-production-*.json|results/glm52-gates/W7-resume-smoke-randomness-v*.json|results/glm52-gates/W8-exact-*.json|results/glm52-gates/W9-*.json|results/glm52-gates/W9-real-capture-pass-a14e364/*.json|results/glm52-gates/W9-real-capture-pass-a14e364/raw.jsonl|results/glm52-gates/W9-real-capture-pass-a14e364/on/capture/metadata.json|results/glm52-gates/harness/w7-production-fixture-pool-v1.json) return 0 ;;
+    results/glm52-gates/W3-performance-campaign-*/raw.jsonl|results/glm52-gates/R0.5-*.json|results/glm52-gates/W7-cache-generation-*.json|results/glm52-gates/W7-cache-generation-*-pass/manifest.json|results/glm52-gates/W7-cache-generation-*-pass/raw.jsonl|results/glm52-gates/W7-cache-generation-*-pass/summary.json|results/glm52-gates/W7-resume-correctness-plan-v*.json|results/glm52-gates/W7-resume-candidate*-red.json|results/glm52-gates/W7-resume-review-r*.json|results/glm52-gates/W7-resume-build-attempt-v*.json|results/glm52-gates/W7-resume-compiled-red-freeze-v*.json|results/glm52-gates/W7-resume-restored-frontier-freeze-v*.json|results/glm52-gates/W7-resume-compiled-red-attempt*.json|results/glm52-gates/W7-resume-equivalence-*.json|results/glm52-gates/W7-resume-production-*.json|results/glm52-gates/W7-resume-smoke-randomness-v*.json|results/glm52-gates/W8-exact-*.json|results/glm52-gates/W9-*.json|results/glm52-gates/W9-real-capture-pass-a14e364/*.json|results/glm52-gates/W9-real-capture-pass-a14e364/raw.jsonl|results/glm52-gates/W9-real-capture-pass-a14e364/on/capture/metadata.json|results/glm52-gates/harness/w7-production-fixture-pool-v1.json) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -354,6 +354,14 @@ w7_resume_plan = re.fullmatch(
 w7_fixture_pool = display_path == (
     "results/glm52-gates/harness/w7-production-fixture-pool-v1.json"
 )
+w7_cache_pass_raw = re.fullmatch(
+    r"results/glm52-gates/W7-cache-generation-candidate[0-9]+-pass/raw\.jsonl",
+    display_path,
+) is not None
+w7_cache_pass_manifest = re.fullmatch(
+    r"results/glm52-gates/W7-cache-generation-candidate[0-9]+-pass/manifest\.json",
+    display_path,
+) is not None
 w3_campaign_allowlist = set()
 if w3_campaign_manifest:
     w3_campaign_allowlist.update({"input_manifest_sha256", "input_summary_sha256"})
@@ -420,6 +428,12 @@ w7_fixture_pool_allowlist = {
     "oracle_source_sha256",
     "oracle_binary_sha256",
 } if w7_fixture_pool else set()
+w7_cache_pass_allowlist = {
+    "executed_environment_sha256",
+    "live_request_sha256",
+    "memory_guard_sha256",
+    "primary_request_sha256",
+} if w7_cache_pass_manifest else set()
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -452,6 +466,18 @@ def walk(value, path, allowed_string=False):
     if isinstance(value, dict):
         for key, item in value.items():
             item_path = child_path(path, key)
+            if w7_cache_pass_raw and key == "text" and isinstance(item, str):
+                stripped = re.sub(
+                    r"(?:stream_sha256|candidate_binary_sha256|memory_guard_sha256|"
+                    r"executed_environment_sha256|executed_binary_sha256|sha256|"
+                    r"main_sha256|samples_sha256|kernel_sha256)=[0-9a-f]{64}",
+                    "",
+                    item,
+                )
+                if hex64.search(stripped) is None:
+                    continue
+                findings.append((item_path, hex64.search(stripped).group(0)))
+                continue
             if (
                 w3_campaign_raw and key == "executed_identity" and
                 isinstance(item, list) and len(item) == 4 and
@@ -478,6 +504,7 @@ def walk(value, path, allowed_string=False):
                 key in r05_proxy_review_r195_allowlist or
                 key in w7_resume_plan_allowlist
                 or key in w7_fixture_pool_allowlist
+                or key in w7_cache_pass_allowlist
             )
             if isinstance(item, list):
                 for index, element in enumerate(item):
@@ -705,6 +732,31 @@ self_test() {
       | scan_digest_json 'results/decision.json' >/dev/null 2>&1; then
     printf '%s\n' \
       'self-test failed: W3 campaign fields were allowed outside their path' >&2
+    return 1
+  fi
+  local w7_cache_raw_path w7_cache_manifest_path
+  w7_cache_raw_path='results/glm52-gates/W7-cache-generation-candidate99-pass/raw.jsonl'
+  w7_cache_manifest_path='results/glm52-gates/W7-cache-generation-candidate99-pass/manifest.json'
+  if ! is_checksum_file "$w7_cache_raw_path" ||
+      ! printf '{"source":"server.log","text":"stream_sha256=%s"}\n' "$fake_secret" \
+        | scan_digest_json "$w7_cache_raw_path" >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: W7 cache raw public digest was rejected' >&2
+    return 1
+  fi
+  if printf '{"source":"server.log","text":"unlabeled %s"}\n' "$fake_secret" \
+      | scan_digest_json "$w7_cache_raw_path" >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: W7 cache raw digest allowlist was too broad' >&2
+    return 1
+  fi
+  if ! is_checksum_file "$w7_cache_manifest_path" ||
+      ! printf '{"executed_environment_sha256":"%s"}\n' "$fake_secret" \
+        | scan_digest_json "$w7_cache_manifest_path" >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: W7 cache manifest digest was rejected' >&2
+    return 1
+  fi
+  if printf '{"executed_environment_sha256":"%s"}\n' "$fake_secret" \
+      | scan_digest_json 'results/decision.json' >/dev/null 2>&1; then
+    printf '%s\n' 'self-test failed: W7 cache manifest allowlist escaped its path' >&2
     return 1
   fi
   local r05_proxy_plan_path
