@@ -29,6 +29,37 @@ else
     exit 2
   }
 fi
+
+# A multi-arm user campaign may retain the global inference lock in its direct
+# parent. Validate that exact live descriptor before omitting the per-arm flock;
+# absent all four bindings, the established per-arm lock remains unchanged.
+PARENT_LOCK_PID=${GLM_SAFE_PARENT_LOCK_PID:-}
+PARENT_LOCK_START_TICKS=${GLM_SAFE_PARENT_LOCK_START_TICKS:-}
+PARENT_LOCK_FD=${GLM_SAFE_PARENT_LOCK_FD:-}
+PARENT_LOCK_DEV_INO=${GLM_SAFE_PARENT_LOCK_DEV_INO:-}
+PARENT_LOCK_VERIFIED=0
+if [[ -n $PARENT_LOCK_PID || -n $PARENT_LOCK_START_TICKS || -n $PARENT_LOCK_FD || -n $PARENT_LOCK_DEV_INO ]]; then
+  [[ $ROOT_AUTHORITY == 0 && $PARENT_LOCK_PID =~ ^[1-9][0-9]*$ &&
+     $PARENT_LOCK_START_TICKS =~ ^[1-9][0-9]*$ && $PARENT_LOCK_FD =~ ^[0-9]+$ &&
+     $PARENT_LOCK_DEV_INO =~ ^[0-9]+:[0-9]+$ && $PARENT_LOCK_PID == "$PPID" ]] || {
+    echo "invalid parent inference-lock binding" >&2
+    exit 2
+  }
+  parent_ticks=$(awk '{print $22}' "/proc/$PARENT_LOCK_PID/stat" 2>/dev/null || true)
+  parent_fd_path="/proc/$PARENT_LOCK_PID/fd/$PARENT_LOCK_FD"
+  global_devino=$(stat -Lc '%d:%i' /run/lock/frontier-at-home/inference.lock 2>/dev/null || true)
+  parent_devino=$(stat -Lc '%d:%i' "$parent_fd_path" 2>/dev/null || true)
+  [[ $parent_ticks == "$PARENT_LOCK_START_TICKS" &&
+     $parent_devino == "$PARENT_LOCK_DEV_INO" && $global_devino == "$PARENT_LOCK_DEV_INO" ]] || {
+    echo "parent inference-lock identity mismatch" >&2
+    exit 2
+  }
+  if /usr/bin/flock -n "$parent_fd_path" /usr/bin/true 2>/dev/null; then
+    echo "parent inference lock is not held" >&2
+    exit 2
+  fi
+  PARENT_LOCK_VERIFIED=1
+fi
 RUN_CWD=$(pwd -P)
 [[ $RUN_CWD == /* && $RUN_CWD != *$'\n'* && -x $RUN_CWD ]] || {
   echo "invalid launch working directory" >&2
@@ -234,6 +265,11 @@ done
 if [[ $ROOT_AUTHORITY == 1 ]]; then
   # The immutable root submitter owns the global inference lock for the whole
   # campaign. Re-locking it in this separate process would fail every attempt.
+  contained_command=(
+    /usr/bin/env -i "${env_args[@]}"
+    /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
+  )
+elif [[ $RUN_AS_CURRENT_USER == 1 && $PARENT_LOCK_VERIFIED == 1 ]]; then
   contained_command=(
     /usr/bin/env -i "${env_args[@]}"
     /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
