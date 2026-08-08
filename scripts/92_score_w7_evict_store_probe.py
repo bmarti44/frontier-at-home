@@ -39,7 +39,7 @@ def _validated_row(value: object) -> dict[str, Any]:
         "request_start_ns", "token_timestamps_ns", "output_token_ids",
         "output_sha256", "generated_text_sha256", "generated_text_bytes",
         "logit_sha256s", "selected_checkpoint_tokens", "evict_store_count",
-        "skip_marker_count", "activation_marker_count", "server_fresh", "safety",
+        "checkpoint_id", "skip_marker_count", "activation_marker_count", "server_fresh", "safety",
     }
     _require(set(row) == required, "row keys do not match frozen schema")
     _require(row["arm"] in {"off", "on"}, "invalid arm")
@@ -70,6 +70,11 @@ def _validated_row(value: object) -> dict[str, Any]:
     _require(token_digest == row["output_sha256"], "output digest does not bind token IDs")
     _require(type(row["generated_text_bytes"]) is int and row["generated_text_bytes"] >= 0, "invalid text size")
     _require(row["selected_checkpoint_tokens"] == 5044, "wrong checkpoint selected")
+    _require(
+        isinstance(row["checkpoint_id"], str)
+        and re.fullmatch(r"token-text:[0-9a-f]{40}", row["checkpoint_id"]) is not None,
+        "invalid checkpoint identity",
+    )
     _require(type(row["evict_store_count"]) is int, "invalid evict-store count")
     _require(type(row["skip_marker_count"]) is int, "invalid skip-marker count")
     _require(type(row["activation_marker_count"]) is int, "invalid activation-marker count")
@@ -120,7 +125,7 @@ def score_probe_rows(rows: object, order: object) -> dict[str, object]:
         on = next(row for row in validated if row["arm"] == "on")
         for field in (
             "output_token_ids", "output_sha256", "generated_text_sha256",
-            "generated_text_bytes", "logit_sha256s",
+            "generated_text_bytes", "logit_sha256s", "checkpoint_id",
         ):
             _require(off[field] == on[field], f"unequal {field}")
         def metrics(row: dict[str, Any]) -> tuple[float, float]:

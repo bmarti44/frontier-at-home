@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import importlib.util
 import hashlib
 import json
@@ -21,7 +22,25 @@ SPEC.loader.exec_module(MODULE)
 
 
 class W7EvictStoreProbeRunnerTests(unittest.TestCase):
-    def make_parse_arm(self) -> tuple[tempfile.TemporaryDirectory, Path, dict[str, object]]:
+    def bind_server(self, out: Path) -> str:
+        server = out / "server.log"
+        metadata = server.stat()
+        digest = hashlib.sha256(server.read_bytes()).hexdigest()
+        safety = out / "safety"
+        safety.mkdir(exist_ok=True)
+        main = (
+            f"final_artifact_verified path={server} sha256={digest} "
+            f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}\n"
+        ).encode()
+        (safety / "main.log").write_bytes(main)
+        return (
+            "SAFE_RUN_DONE rc=0 killed=no "
+            "dir=/home/bmarti44/.local/state/glm52-crashlog/unit-test "
+            f"main_sha256={hashlib.sha256(main).hexdigest()} "
+            f"samples_sha256={'a' * 64} kernel_sha256={'b' * 64}\n"
+        )
+
+    def make_parse_arm(self) -> tuple[tempfile.TemporaryDirectory, Path, dict[str, object], str]:
         temporary = tempfile.TemporaryDirectory(prefix="w7-evict-parse-")
         out = Path(temporary.name)
         server = (
@@ -56,7 +75,15 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
                 "false_generation_flushes": 300,
             },
         }
-        return temporary, out, base_row
+        return temporary, out, base_row, self.bind_server(out)
+
+    def convert_server_to_on(self, out: Path) -> str:
+        path = out / "server.log"
+        source = path.read_text()
+        store = "ds4-server: kv cache stored tokens=5055 trimmed=0 reason=evict key=token-text size=918.82 MiB save=700.0 ms\n"
+        source = source.replace(store, MODULE.ACTIVATION + "\n" + MODULE.SKIPPED + "\n")
+        path.write_text(source)
+        return self.bind_server(out)
 
     def test_self_test_checks_dependencies_without_engine(self) -> None:
         before = subprocess.run(["/usr/bin/pgrep", "-x", "ds4-server"], capture_output=True, text=True).stdout
@@ -136,7 +163,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             self.assertEqual(manifest["verdict"], "FAIL")
 
     def test_parse_rejects_server_replacement_after_base_validation(self) -> None:
-        temporary, out, base_row = self.make_parse_arm()
+        temporary, out, base_row, receipt = self.make_parse_arm()
         self.addCleanup(temporary.cleanup)
         original = (out / "server.log").read_text()
         forged = original.replace("kv cache stored tokens=5055 trimmed=0 reason=evict key=token-text size=918.82 MiB save=700.0 ms\n", "")
@@ -150,16 +177,51 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             return base_row
         with mock.patch.object(MODULE.BASE, "parse_arm", side_effect=replace_after_validation):
             with self.assertRaises(Exception):
-                MODULE.parse_arm("on", 0, out, 0, "receipt", "4" * 64, "3" * 64)
+                MODULE.parse_arm("on", 0, out, 0, receipt, "4" * 64, "3" * 64)
+
+    def test_parse_accepts_only_exact_off_and_on_event_sets(self) -> None:
+        temporary, out, base_row, off_receipt = self.make_parse_arm()
+        self.addCleanup(temporary.cleanup)
+        with mock.patch.object(MODULE.BASE, "parse_arm", return_value=copy.deepcopy(base_row)):
+            off, _ = MODULE.parse_arm("off", 0, out, 0, off_receipt, "4" * 64, "3" * 64)
+        self.assertEqual(off["evict_store_count"], 1)
+        self.assertEqual(off["checkpoint_id"], "token-text:9e5ba8aa0b75e6c618f68d9834ef541c44cd4b42")
+        on_receipt = self.convert_server_to_on(out)
+        with mock.patch.object(MODULE.BASE, "parse_arm", return_value=copy.deepcopy(base_row)):
+            on, _ = MODULE.parse_arm("on", 0, out, 0, on_receipt, "4" * 64, "3" * 64)
+        self.assertEqual(on["evict_store_count"], 0)
+        self.assertEqual(on["skip_marker_count"], 1)
 
     def test_parse_rejects_extra_or_substituted_event_payloads(self) -> None:
-        temporary, out, base_row = self.make_parse_arm()
+        temporary, out, base_row, _receipt = self.make_parse_arm()
         self.addCleanup(temporary.cleanup)
         with (out / "server.log").open("a") as stream:
             stream.write("ds4-server: kv cache stored tokens=4096 trimmed=0 reason=evict key=token-text size=1 MiB save=1 ms\n")
+        receipt = self.bind_server(out)
         with mock.patch.object(MODULE.BASE, "parse_arm", return_value=base_row):
             with self.assertRaises(Exception):
-                MODULE.parse_arm("off", 0, out, 0, "receipt", "4" * 64, "3" * 64)
+                MODULE.parse_arm("off", 0, out, 0, receipt, "4" * 64, "3" * 64)
+
+        temporary_on, out_on, base_on, _ = self.make_parse_arm()
+        self.addCleanup(temporary_on.cleanup)
+        self.convert_server_to_on(out_on)
+        with (out_on / "server.log").open("a") as stream:
+            stream.write("ds4-server: diagnostic skipped preload evict store live=4096 prompt=4100 common=4000\n")
+        on_receipt = self.bind_server(out_on)
+        with mock.patch.object(MODULE.BASE, "parse_arm", return_value=base_on):
+            with self.assertRaises(Exception):
+                MODULE.parse_arm("on", 0, out_on, 0, on_receipt, "4" * 64, "3" * 64)
+
+    def test_parse_rejects_logit_replacement_after_base_validation(self) -> None:
+        temporary, out, base_row, receipt = self.make_parse_arm()
+        self.addCleanup(temporary.cleanup)
+        target = out / "logits.sync2.start5044.prompt5055.suffix11"
+        def replace_after_validation(*_args, **_kwargs):
+            target.write_bytes(b"replacement")
+            return base_row
+        with mock.patch.object(MODULE.BASE, "parse_arm", side_effect=replace_after_validation):
+            with self.assertRaises(Exception):
+                MODULE.parse_arm("off", 0, out, 0, receipt, "4" * 64, "3" * 64)
 
 
 if __name__ == "__main__":

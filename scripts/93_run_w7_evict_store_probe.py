@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -47,19 +48,26 @@ BASE_SHA256 = "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
 CGROUP_SHA256 = "13fe1f8faa77020918faadc5214f4f5cdc955d6dfc6c158cc0f2d080a0e8985d"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
-SCORER_SHA256 = "3dbe84dcc3a21e102802a821790cc3d0dfb867899cec57098d47d43745165681"
+SCORER_SHA256 = "1ccb1cf2d501cc5ec0132080fe7f60fed21a707bc741c28e03520a89d325fcbb"
 DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
 DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
 DRAND_FREEZE_FLOOR_ROUND = 6_358_539
 FLAG = "DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC"
 ACTIVATION = "ds4-server: diagnostic preload evict-store bypass enabled"
 SKIPPED = "ds4-server: diagnostic skipped preload evict store live=5055 prompt=5066 common=5045"
-STORE_RE = re.compile(r"ds4-server: kv cache stored tokens=5055 .* reason=evict ")
-HIT_RE = re.compile(r"ds4-server: kv cache hit text tokens=5044 ")
+EXPECTED_STORE_RE = re.compile(
+    r"ds4-server: kv cache stored tokens=5055 trimmed=0 reason=evict "
+    r"key=token-text size=[0-9]+(?:\.[0-9]+)? MiB save=[0-9]+(?:\.[0-9]+)? ms$"
+)
+EXPECTED_HIT_RE = re.compile(
+    r"ds4-server: kv cache hit text tokens=5044 text=15571 quant=2 key=token-text "
+    r"load=[0-9]+(?:\.[0-9]+)? ms file=.*/([0-9a-f]{40})\.kv$"
+)
 SHA_RE = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
 _ACTIVE_ATTEMPT: Path | None = None
 _ACTIVE_CANDIDATE: str | None = None
+_ACTIVE_ROWS: list[dict[str, object]] = []
 
 
 class ProbeError(RuntimeError):
@@ -180,18 +188,75 @@ def driver(
 def parse_arm(
     arm: str, position: int, out: Path, containment_rc: int,
     containment_stdout: str, request_sha256: str, config_sha256: str,
-) -> dict[str, object]:
+) -> tuple[dict[str, object], dict[str, str]]:
     BASE.BINARY_SHA256 = BINARY_SHA256
     BASE.MODEL_SHA256 = MODEL_SHA256
     parsed = BASE.parse_arm(
         "off", 0, position, out, containment_rc, containment_stdout,
         request_sha256, config_sha256,
     )
-    server = (out / "server.log").read_text(encoding="utf-8", errors="strict")
+    done = BASE.DONE_RE.fullmatch(containment_stdout)
+    if done is None:
+        raise ProbeError("safe-run receipt missing during W7.2 binding")
+    safety_main, _ = BASE.read_stable(out / "safety/main.log")
+    if hashlib.sha256(safety_main).hexdigest() != done.group(2):
+        raise ProbeError("W7.2 safety-main receipt mismatch")
+    server_bytes, server_metadata = BASE.read_stable(out / "server.log")
+    server_digest = hashlib.sha256(server_bytes).hexdigest()
+    expected_server_binding = (
+        f"final_artifact_verified path={out / 'server.log'} "
+        f"sha256={server_digest} "
+        f"device_inode={server_metadata.st_dev}:{server_metadata.st_ino}:{server_metadata.st_size}"
+    ).encode()
+    if safety_main.count(expected_server_binding) != 1:
+        raise ProbeError("W7.2 server snapshot differs from receipt-bound artifact")
+    server = server_bytes.decode("utf-8", errors="strict")
     logit_paths = sorted(
         out.glob("logits.sync*.start*.prompt*.suffix*"),
         key=lambda path: int(re.search(r"\.sync([0-9]+)\.", path.name).group(1)),
     )
+    logit_records = []
+    bound_artifacts = {str(out / "server.log"): server_digest}
+    for path in logit_paths:
+        payload, metadata = BASE.read_stable(path)
+        digest = hashlib.sha256(payload).hexdigest()
+        logit_records.append((path.name, digest, metadata.st_size))
+        bound_artifacts[str(path)] = digest
+    sequence_digest = hashlib.sha256(
+        json.dumps(logit_records, separators=(",", ":")).encode("ascii")
+    ).hexdigest()
+    if (
+        sequence_digest != parsed["logit_sequence_sha256"]
+        or logit_records[-1][1] != parsed["final_logits_sha256"]
+    ):
+        raise ProbeError("W7.2 logit snapshot differs from frozen-parser evidence")
+    generic_store = [
+        line for line in server.splitlines()
+        if "ds4-server: kv cache stored " in line and " reason=evict " in line
+    ]
+    generic_skip = [
+        line for line in server.splitlines()
+        if "ds4-server: diagnostic skipped preload evict store " in line
+    ]
+    generic_activation = [
+        line for line in server.splitlines()
+        if "ds4-server: diagnostic preload evict-store bypass" in line
+    ]
+    hit_lines = [line for line in server.splitlines() if "ds4-server: kv cache hit text " in line]
+    hit_matches = [EXPECTED_HIT_RE.search(line) for line in hit_lines]
+    if len(hit_matches) != 1 or hit_matches[0] is None:
+        raise ProbeError("checkpoint hit cardinality or payload mismatch")
+    if arm == "off":
+        if (
+            len(generic_store) != 1 or EXPECTED_STORE_RE.search(generic_store[0]) is None
+            or generic_skip or generic_activation
+        ):
+            raise ProbeError("OFF evict-store event cardinality or payload mismatch")
+    elif (
+        generic_store or len(generic_skip) != 1 or generic_skip[0].endswith(SKIPPED) is False
+        or len(generic_activation) != 1 or generic_activation[0].endswith(ACTIVATION) is False
+    ):
+        raise ProbeError("ON skip event cardinality or payload mismatch")
     safety = dict(parsed["safety"])
     safety.pop("false_generation_flushes")
     for name in ("block", "stable_remap", "final_logits_sha256", "logit_sequence_sha256"):
@@ -200,14 +265,15 @@ def parse_arm(
         "arm": arm,
         "position": position,
         "diagnostic_skip": 1 if arm == "on" else 0,
-        "logit_sha256s": [BASE.sha256_file(path) for path in logit_paths],
-        "selected_checkpoint_tokens": 5044 if len(HIT_RE.findall(server)) == 1 else -1,
-        "evict_store_count": len(STORE_RE.findall(server)),
-        "skip_marker_count": server.count(SKIPPED),
-        "activation_marker_count": server.count(ACTIVATION),
+        "logit_sha256s": [record[1] for record in logit_records],
+        "selected_checkpoint_tokens": 5044,
+        "checkpoint_id": f"token-text:{hit_matches[0].group(1)}",
+        "evict_store_count": len(generic_store),
+        "skip_marker_count": len(generic_skip),
+        "activation_marker_count": len(generic_activation),
         "safety": safety,
     })
-    return parsed
+    return parsed, bound_artifacts
 
 
 def load_scorer(frozen: bytes) -> Any:
@@ -218,48 +284,116 @@ def load_scorer(frozen: bytes) -> Any:
     return module
 
 
+def collect_artifacts(
+    attempt: Path, expected: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Hash regular attempt artifacts once and enforce authoritative snapshots."""
+    expected = expected or {}
+    artifacts: dict[str, str] = {}
+    for path in sorted(attempt.rglob("*")):
+        if path.is_symlink():
+            raise ProbeError(f"symlink in attempt evidence: {path}")
+        if path.is_dir():
+            continue
+        if path.name in {"manifest.json", "raw.jsonl", "summary.json"}:
+            continue
+        payload, _ = BASE.read_stable(path)
+        digest = hashlib.sha256(payload).hexdigest()
+        if str(path) in expected and digest != expected[str(path)]:
+            raise ProbeError(f"authoritative artifact changed before publication: {path}")
+        artifacts[str(path.relative_to(attempt))] = digest
+    if set(expected) - {str(attempt / name) for name in artifacts}:
+        raise ProbeError("authoritative artifact disappeared before publication")
+    return artifacts
+
+
+def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
+    try:
+        payload, _ = BASE.read_stable(attempt / "manifest.json")
+        manifest = json.loads(payload)
+        if (
+            not isinstance(manifest, dict) or manifest.get("candidate_hash") != candidate
+            or manifest.get("verdict") not in {"PASS", "FAIL"}
+            or not isinstance(manifest.get("artifacts"), dict)
+            or not {"raw.jsonl", "summary.json"}.issubset(manifest["artifacts"])
+        ):
+            return False
+        for relative, digest in manifest["artifacts"].items():
+            if (
+                not isinstance(relative, str) or not relative or Path(relative).is_absolute()
+                or ".." in Path(relative).parts or not isinstance(digest, str)
+                or SHA_RE.fullmatch(digest) is None
+            ):
+                return False
+            artifact, _ = BASE.read_stable(attempt / relative)
+            if hashlib.sha256(artifact).hexdigest() != digest:
+                return False
+        return True
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return False
+
+
+def displace_existing(path: Path) -> tuple[str, str] | None:
+    if not path.exists():
+        return None
+    payload, _ = BASE.read_stable(path)
+    for index in range(1, 100):
+        target = path.with_name(f"{path.name}.pre-finalization-{index}")
+        if not target.exists():
+            os.rename(path, target)
+            return target.name, hashlib.sha256(payload).hexdigest()
+    raise ProbeError(f"too many displaced finalization artifacts: {path.name}")
+
+
 def finalize_failure_triplet(error: BaseException) -> None:
     """Preserve a fail-closed triplet if execution escapes after attempt creation."""
-    if _ACTIVE_ATTEMPT is None or _ACTIVE_CANDIDATE is None:
+    attempt = _ACTIVE_ATTEMPT or BASE._ACTIVE_ATTEMPT
+    candidate = _ACTIVE_CANDIDATE or BASE._ACTIVE_CANDIDATE
+    if attempt is None or candidate is None:
         return
-    manifest_path = _ACTIVE_ATTEMPT / "manifest.json"
-    if manifest_path.exists():
-        return
-    raw_path = _ACTIVE_ATTEMPT / "raw.jsonl"
-    summary_path = _ACTIVE_ATTEMPT / "summary.json"
-    raw_bytes = raw_path.read_bytes() if raw_path.is_file() else b""
-    if not raw_path.exists():
-        BASE.write_new(raw_path, raw_bytes)
-    displaced: tuple[str, str] | None = None
-    if summary_path.exists():
-        prior, _ = BASE.read_stable(summary_path)
-        prior_path = _ACTIVE_ATTEMPT / "summary.pre-finalization.json"
-        os.rename(summary_path, prior_path)
-        displaced = (prior_path.name, hashlib.sha256(prior).hexdigest())
-    failure = f"{type(error).__name__}: {error}"
-    summary_bytes = (json.dumps({"failure": failure, "verdict": "FAIL"}, sort_keys=True, separators=(",", ":")) + "\n").encode()
-    BASE.write_new(summary_path, summary_bytes)
-    artifacts = {
-        "raw.jsonl": hashlib.sha256(raw_bytes).hexdigest(),
-        "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
-    }
-    if displaced is not None:
-        artifacts[displaced[0]] = displaced[1]
-    BASE.write_json_new(manifest_path, {
-        "schema": "glm52-w7-evict-store-probe-failure-v1",
-        "candidate_hash": _ACTIVE_CANDIDATE,
-        "failure": failure,
-        "runner_sha256": BASE.sha256_file(Path(__file__)),
-        "scorer_sha256": SCORER_SHA256,
-        "binary_sha256": BINARY_SHA256,
-        "model_sha256": MODEL_SHA256,
-        "artifacts": artifacts,
-        "verdict": "FAIL",
-    })
+    blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+    manifest_path = attempt / "manifest.json"
+    try:
+        if manifest_path.exists() and terminal_manifest_valid(attempt, candidate):
+            return
+        displaced_manifest = displace_existing(manifest_path)
+        displaced_raw = displace_existing(attempt / "raw.jsonl")
+        displaced_summary = displace_existing(attempt / "summary.json")
+        raw_bytes = b"".join(
+            (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
+            for row in _ACTIVE_ROWS
+        )
+        failure = f"{type(error).__name__}: {error}"
+        summary_bytes = (json.dumps({"failure": failure, "verdict": "FAIL"}, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        artifacts = collect_artifacts(attempt)
+        BASE.write_new(attempt / "raw.jsonl", raw_bytes)
+        BASE.write_new(attempt / "summary.json", summary_bytes)
+        artifacts["raw.jsonl"] = hashlib.sha256(raw_bytes).hexdigest()
+        artifacts["summary.json"] = hashlib.sha256(summary_bytes).hexdigest()
+        for displaced in (displaced_manifest, displaced_raw, displaced_summary):
+            if displaced is not None:
+                artifacts[displaced[0]] = displaced[1]
+        BASE.write_json_new(manifest_path, {
+            "schema": "glm52-w7-evict-store-probe-failure-v1",
+            "candidate_hash": candidate,
+            "failure": failure,
+            "runner_sha256": BASE.sha256_file(Path(__file__)),
+            "scorer_sha256": SCORER_SHA256,
+            "binary_sha256": BINARY_SHA256,
+            "model_sha256": MODEL_SHA256,
+            "completed_rows": len(_ACTIVE_ROWS),
+            "artifacts": artifacts,
+            "verdict": "FAIL",
+        })
+        if not terminal_manifest_valid(attempt, candidate):
+            raise ProbeError("published failure triplet did not validate")
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous)
 
 
 def run_probe(candidate: str, randomness_receipt: Path) -> int:
-    global _ACTIVE_ATTEMPT, _ACTIVE_CANDIDATE
+    global _ACTIVE_ATTEMPT, _ACTIVE_CANDIDATE, _ACTIVE_ROWS
     verify_dependencies()
     verify_candidate(candidate)
     if BASE.server_pids() or subprocess.run(["/usr/bin/pgrep", "-x", "fio"], capture_output=True).returncode == 0:
@@ -299,9 +433,15 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
         seed, receipt_sha, receipt_bytes = BASE.verify_public_randomness_receipt(randomness_receipt, candidate)
         order = derive_order(seed)
         OUT_ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
-        attempt = BASE.create_and_activate_attempt(OUT_ROOT, candidate, uuid.uuid4().hex)
-        _ACTIVE_ATTEMPT = attempt
-        _ACTIVE_CANDIDATE = candidate
+        blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+        try:
+            attempt = BASE.create_and_activate_attempt(OUT_ROOT, candidate, uuid.uuid4().hex)
+            _ACTIVE_ATTEMPT = attempt
+            _ACTIVE_CANDIDATE = candidate
+            _ACTIVE_ROWS = []
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
         engine_lock_fd = os.open(attempt / "engine.lock", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         os.unlink(attempt / "engine.lock")
         lock_stat = os.fstat(engine_lock_fd)
@@ -321,6 +461,8 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
         }
         config_sha = hashlib.sha256(json.dumps(config, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         rows: list[dict[str, object]] = []
+        _ACTIVE_ROWS = rows
+        authoritative_bindings: dict[str, str] = {}
         failure: str | None = None
         try:
             for position, arm in enumerate(order):
@@ -341,12 +483,13 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
                 BASE.write_new(out / "containment.stdout", completed.stdout.encode())
                 BASE.write_new(out / "containment.stderr", completed.stderr.encode())
                 BASE.write_new(out / "containment.rc", f"{completed.returncode}\n".encode())
-                row = parse_arm(
+                row, arm_bindings = parse_arm(
                     arm, position, out, completed.returncode, completed.stdout,
                     request_sha, config_sha,
                 )
                 row["executed_environment_sha256"] = env_sha
                 rows.append(row)
+                authoritative_bindings.update(arm_bindings)
         except Exception as error:
             failure = f"{type(error).__name__}: {error}"
         scorer_rows = []
@@ -362,13 +505,6 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
             for row in rows
         )
         summary_bytes = (json.dumps(summary, sort_keys=True, separators=(",", ":")) + "\n").encode()
-        artifacts = {
-            str(path.relative_to(attempt)): BASE.sha256_file(path)
-            for path in sorted(attempt.rglob("*"))
-            if path.is_file() and path.name not in {"manifest.json", "raw.jsonl", "summary.json"}
-        }
-        artifacts["raw.jsonl"] = hashlib.sha256(raw_bytes).hexdigest()
-        artifacts["summary.json"] = hashlib.sha256(summary_bytes).hexdigest()
         manifest = {
             "schema": "glm52-w7-evict-store-probe-v1",
             "candidate_hash": candidate,
@@ -391,19 +527,32 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
             "public_randomness_receipt_sha256": receipt_sha,
             "arm_order": order,
             "completed_rows": len(rows),
-            "artifacts": artifacts,
+            "artifacts": {},
         }
-        BASE.write_new(attempt / "raw.jsonl", raw_bytes)
-        BASE.write_new(attempt / "summary.json", summary_bytes)
-        BASE.write_json_new(attempt / "manifest.json", manifest)
-        directory_fd = os.open(attempt, os.O_RDONLY | os.O_DIRECTORY)
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
         try:
-            os.fsync(directory_fd)
+            artifacts = collect_artifacts(attempt, authoritative_bindings)
+            artifacts["raw.jsonl"] = hashlib.sha256(raw_bytes).hexdigest()
+            artifacts["summary.json"] = hashlib.sha256(summary_bytes).hexdigest()
+            manifest["artifacts"] = artifacts
+            BASE.write_new(attempt / "raw.jsonl", raw_bytes)
+            BASE.write_new(attempt / "summary.json", summary_bytes)
+            BASE.write_json_new(attempt / "manifest.json", manifest)
+            directory_fd = os.open(attempt, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+            if not terminal_manifest_valid(attempt, candidate):
+                raise ProbeError("published terminal triplet did not validate")
         finally:
-            os.close(directory_fd)
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
         print(f"W7_EVICT_STORE_PROBE_ATTEMPT={attempt}")
         _ACTIVE_ATTEMPT = None
         _ACTIVE_CANDIDATE = None
+        _ACTIVE_ROWS = []
+        BASE._ACTIVE_ATTEMPT = None
+        BASE._ACTIVE_CANDIDATE = None
         return 0 if summary["verdict"] == "PASS" else 1
     finally:
         for descriptor in (engine_lock_fd, model_fd, memory_guard_fd):
