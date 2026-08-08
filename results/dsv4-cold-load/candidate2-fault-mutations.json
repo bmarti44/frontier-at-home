@@ -1,0 +1,64 @@
+{
+  "artifact": "DSV4 cold-load candidate 2 direct-I/O fault mutations",
+  "authoritative_unit_probe": {
+    "baseline_exit_code": 0,
+    "cases": [
+      {
+        "expected_message": "required direct I/O read failed",
+        "fault": "EINVAL on first selected O_DIRECT read",
+        "result": "PASS_NONZERO_EXIT"
+      },
+      {
+        "expected_message": "required direct I/O read failed",
+        "fault": "EFAULT on first selected O_DIRECT read",
+        "result": "PASS_NONZERO_EXIT"
+      },
+      {
+        "expected_message": "required direct I/O read failed",
+        "fault": "positive 4096-byte short read followed by EINVAL",
+        "result": "PASS_NONZERO_EXIT"
+      },
+      {
+        "expected_message": "required direct I/O open failed",
+        "fault": "EINVAL opening the selected shard with O_DIRECT",
+        "result": "PASS_NONZERO_EXIT"
+      }
+    ],
+    "scope": "The probe links the candidate libllama and calls llama_file in mandatory direct mode against the real first shard; it does not allocate or start the model."
+  },
+  "development_attempts_preserved": [
+    {
+      "fault": "O_DIRECT open failure on first shard",
+      "result": "PASS_NONZERO_EXIT"
+    },
+    {
+      "fault": "O_DIRECT open failure on second shard",
+      "result": "PASS_NONZERO_EXIT"
+    },
+    {
+      "fault": "read EINVAL through full llama-server startup",
+      "result": "NO_RESULT_TIMEOUT_124"
+    },
+    {
+      "fault": "read EFAULT through full llama-server startup",
+      "result": "NO_RESULT_TIMEOUT_124"
+    },
+    {
+      "fault": "short read followed by EINVAL through full llama-server startup",
+      "result": "NO_RESULT_TIMEOUT_137"
+    }
+  ],
+  "notes": [
+    "The timed-out development attempts were not accepted as fallback evidence and did not reach a ready server.",
+    "The bounded unit probe replaced those ambiguous whole-process read mutations and exercised the exact candidate llama_file implementation directly.",
+    "No successful model load or serving measurement was performed."
+  ],
+  "schema_version": 1,
+  "external_artifacts": {
+    "/tmp/dsv4-direct-io-fault-probe": "01b4011b8bde63ed9d2c7983dbcf372c08ba92599fef870c596d9870db249eb2",
+    "/tmp/libdsv4-fault-io.so": "3aa00f3bded494d61b02d349f8876a3ac46a8b3ff8a9650657b921fbdf9386fb",
+    "results/dsv4-cold-load/direct_io_fault_probe.cpp": "fd912a3c1f45e0aafd5029863c7b0207c1aa4cf07e5aab8e49c521b07b52e344",
+    "results/dsv4-cold-load/fault_io.c": "64dedef870eb472e8e870966274a2fb4c4f83c2e7bc8c20a26a907273ee93f29"
+  },
+  "verdict": "PASS"
+}

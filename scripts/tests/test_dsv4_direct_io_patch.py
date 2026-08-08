@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PATCH = ROOT / "results" / "dsv4-cold-load" / "llama-direct-io-required.patch"
 FAULT_SOURCE = ROOT / "results" / "dsv4-cold-load" / "fault_io.c"
+FAULT_PROBE = ROOT / "results" / "dsv4-cold-load" / "direct_io_fault_probe.cpp"
 PINNED_COMMIT = "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a"
 
 
@@ -67,6 +68,9 @@ class DirectIoPatchTests(unittest.TestCase):
             "O_DIRECT",
         ):
             self.assertIn(marker, source)
+        probe = FAULT_PROBE.read_text(encoding="utf-8")
+        self.assertIn('llama_file file(argv[1], "rb", true)', probe)
+        self.assertIn("file.read_raw", probe)
 
 
 if __name__ == "__main__":
