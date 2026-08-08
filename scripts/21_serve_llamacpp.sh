@@ -43,6 +43,7 @@ Environment:
   API_KEY_FILE   Optional API key path (unset/empty disables engine auth)
   CTX            Context length (default: 32768)
   DSV4_VERIFY_WEIGHTS  Verification mode: size or full (default: size)
+  DSV4_DIRECT_IO  Use the frozen binary's bounded direct-I/O loader (default: 0)
 
 Every shard is size-checked against the MANIFEST-frozen repository manifest.
 Full mode additionally hashes every shard; the selected mode is logged. The
@@ -929,6 +930,20 @@ do_start() {
     # Default 0 = production behavior exactly.
     no_mmap=${DSV4_NO_MMAP:-0}
     [[ $no_mmap == 0 || $no_mmap == 1 ]] || die 'DSV4_NO_MMAP must be 0 or 1'
+    # The pinned fusion binary already provides a load-only O_DIRECT path with
+    # four persistent pinned 64 MiB staging buffers and asynchronous device
+    # uploads. Keep it diagnostic and default-off until the cold-load A/B and
+    # unchanged serving regression gates pass. Requiring --no-mmap makes the
+    # selected path explicit instead of relying on upstream fallback behavior.
+    direct_io=${DSV4_DIRECT_IO:-0}
+    [[ $direct_io == 0 || $direct_io == 1 ]] \
+        || die 'DSV4_DIRECT_IO must be 0 or 1'
+    if (( direct_io )); then
+        (( no_mmap )) || die 'DSV4_DIRECT_IO=1 requires DSV4_NO_MMAP=1'
+        grep -F -- '--direct-io' <<<"$help_output" >/dev/null \
+            || die 'llama-server lacks required --direct-io support'
+        printf 'DSV4 cold-load mode: direct-io (default-off diagnostic).\n' >&2
+    fi
     # DSV4_LOG_VERBOSITY raises llama-server's -lv (default 3 = production).
     # Level 4+ logs request bodies to the 700-mode server log; debugging only —
     # revert after use because prompts land in the log.
@@ -978,6 +993,7 @@ do_start() {
         --host 127.0.0.1 --port "$PORT" -c "$CTX" -np "$parallel" -ngl 999
         -b "$batch" -ub "$ubatch" --no-warmup --cache-ram 0)
     (( no_mmap == 0 )) || server_command+=(--no-mmap)
+    (( direct_io == 0 )) || server_command+=(--direct-io)
     (( log_verbosity == 3 )) || server_command+=(-lv "$log_verbosity")
     [[ -z $slot_save_path ]] || server_command+=(--slot-save-path "$slot_save_path")
     # DSV4_SPEC_TYPE enables speculative decoding. The ngram-* types are
