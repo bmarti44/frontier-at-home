@@ -54,11 +54,39 @@ verify_file() {
   [[ -f $1 && ! -L $1 && $(sha256sum -- "$1" | awk '{print $1}') == "$2" ]]
 }
 
+verify_sealed_file() {
+  [[ $1 =~ ^/proc/[1-9][0-9]*/fd/[0-9]+$ && $2 =~ ^[0-9a-f]{64}$ ]]
+  python3 - "$1" "$2" <<'PY'
+import fcntl, hashlib, os, sys
+path, expected = sys.argv[1:]
+fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
+try:
+    required = fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
+    if fcntl.fcntl(fd, fcntl.F_GET_SEALS) != required:
+        raise SystemExit(1)
+    digest = hashlib.sha256()
+    while True:
+        chunk = os.read(fd, 1024 * 1024)
+        if not chunk:
+            break
+        digest.update(chunk)
+    if digest.hexdigest() != expected:
+        raise SystemExit(1)
+finally:
+    os.close(fd)
+PY
+}
+
 verify_dependencies_fast() {
   verify_file "$BIN" "$BINARY_SHA256"
   [[ -f $MODEL && ! -L $MODEL && $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]]
-  verify_file "$live_fd_path" "$LIVE_SHA256"
-  verify_file "$primary_fd_path" "$PRIMARY_SHA256"
+  if [[ $live_fd_path == /proc/*/fd/* ]]; then
+    verify_sealed_file "$live_fd_path" "$LIVE_SHA256"
+    verify_sealed_file "$primary_fd_path" "$PRIMARY_SHA256"
+  else
+    verify_file "$live_fd_path" "$LIVE_SHA256"
+    verify_file "$primary_fd_path" "$PRIMARY_SHA256"
+  fi
   [[ -f $CGROUP && ! -L $CGROUP && -f $SAFE && ! -L $SAFE && -f $SCORER && ! -L $SCORER ]]
 }
 
