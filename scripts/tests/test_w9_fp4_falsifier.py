@@ -123,13 +123,15 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             '"hadamard_e2m1_multistart_f32_scale_channel_correction"',
             "manifest.json", "raw.jsonl", "summary.json",
             '("ds4-server", "ds4", "fio")',
-            "W9-fp4-falsifier-review-r253.json",
-            "W9-fp4-falsifier-candidate3-freeze.json",
+            "W9-fp4-falsifier-review-r254.json",
+            "W9-fp4-falsifier-candidate4-freeze.json",
             '"NO_RESULT"',
         ):
             self.assertIn(token, source)
         self.assertNotIn('add_argument("--candidate-commit"', source)
         self.assertNotIn('add_argument("--minimum-drand-round"', source)
+        self.assertIn('/usr/local/libexec/glm52-w1/python', source)
+        self.assertIn('/usr/local/libexec/glm52-w9/node', source)
 
     def test_review_receipt_rejects_caller_floor_and_blockers(self) -> None:
         valid = {
