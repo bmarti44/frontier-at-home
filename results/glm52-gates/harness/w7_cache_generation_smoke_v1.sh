@@ -10,6 +10,7 @@ readonly HARNESS="$ROOT/results/glm52-gates/harness/w7_cache_generation_smoke_v1
 readonly CGROUP="$ROOT/results/glm52-gates/harness/glm_cgroup_run.sh"
 readonly SAFE="$ROOT/results/glm52-gates/harness/glm_safe_run.sh"
 readonly SCORER="$ROOT/scripts/89_score_w7_cache_generation.py"
+readonly MEMORY_GUARD="$ROOT/scripts/03_memory_guard.py"
 readonly BIN=/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6/ds4-server
 readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6
 readonly BINARY_SHA256=eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2
@@ -37,12 +38,14 @@ harness_fd_path=${DS4_W7_SEALED_HARNESS_PATH:-}
 cgroup_fd_path=${DS4_W7_SEALED_CGROUP_PATH:-}
 safe_fd_path=${DS4_W7_SEALED_SAFE_PATH:-}
 scorer_fd_path=${DS4_W7_SEALED_SCORER_PATH:-}
+memory_guard_fd_path=${DS4_W7_SEALED_MEMORY_GUARD_PATH:-}
 live_fd_path=${DS4_W7_SEALED_LIVE_PATH:-$LIVE}
 primary_fd_path=${DS4_W7_SEALED_PRIMARY_PATH:-$PRIMARY}
 harness_sha256=${DS4_W7_PINNED_HARNESS_SHA256:-}
 cgroup_sha256=${DS4_W7_SEALED_CGROUP_SHA256:-}
 safe_sha256=${DS4_W7_SEALED_SAFE_SHA256:-}
 scorer_sha256=${DS4_W7_SEALED_SCORER_SHA256:-}
+memory_guard_sha256=${DS4_W7_SEALED_MEMORY_GUARD_SHA256:-}
 
 has_full_seal() {
   /usr/bin/python3 - "$1" <<'PY'
@@ -117,7 +120,8 @@ verify_reviewed_sources() {
     results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh \
     results/glm52-gates/harness/glm_cgroup_run.sh \
     results/glm52-gates/harness/glm_safe_run.sh \
-    scripts/89_score_w7_cache_generation.py
+    scripts/89_score_w7_cache_generation.py \
+    scripts/03_memory_guard.py
   do
     [[ -f $ROOT/$path && ! -L $ROOT/$path ]]
     /usr/bin/git --no-replace-objects -C "$ROOT" show "$candidate:$path" | /usr/bin/cmp -s - "$ROOT/$path"
@@ -132,7 +136,8 @@ verify_sealed_candidate_scripts() {
     "results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh:$harness_fd_path:harness_sha256" \
     "results/glm52-gates/harness/glm_cgroup_run.sh:$cgroup_fd_path:cgroup_sha256" \
     "results/glm52-gates/harness/glm_safe_run.sh:$safe_fd_path:safe_sha256" \
-    "scripts/89_score_w7_cache_generation.py:$scorer_fd_path:scorer_sha256"
+    "scripts/89_score_w7_cache_generation.py:$scorer_fd_path:scorer_sha256" \
+    "scripts/03_memory_guard.py:$memory_guard_fd_path:memory_guard_sha256"
   do
     IFS=: read -r tracked descriptor variable <<<"$item"
     has_full_seal "$descriptor"
@@ -156,7 +161,7 @@ PY
 }
 
 seal_runtime_snapshots() {
-  local candidate=$1 metadata harness_fd cgroup_fd safe_fd scorer_fd live_fd primary_fd
+  local candidate=$1 metadata harness_fd cgroup_fd safe_fd scorer_fd memory_guard_fd live_fd primary_fd
   exec {seal_metadata_fd}< <(
     python3 - "$ROOT" "$candidate" "$LIVE" "$LIVE_SHA256" "$PRIMARY" "$PRIMARY_SHA256" <<'PY'
 import ctypes, fcntl, hashlib, os, pathlib, signal, subprocess, sys
@@ -216,6 +221,7 @@ tracked = (
     ("cgroup", "results/glm52-gates/harness/glm_cgroup_run.sh"),
     ("safe", "results/glm52-gates/harness/glm_safe_run.sh"),
     ("scorer", "scripts/89_score_w7_cache_generation.py"),
+    ("memory-guard", "scripts/03_memory_guard.py"),
 )
 snapshots = [seal(name, git_payload(path)) for name, path in tracked]
 snapshots.append(seal("live-request", file_payload(live_path, live_sha)))
@@ -231,17 +237,20 @@ PY
   )
   IFS=$'\t' read -r seal_holder_pid seal_holder_start_ticks seal_holder_parent_pid \
     harness_fd harness_sha256 cgroup_fd cgroup_sha256 safe_fd safe_sha256 \
-    scorer_fd scorer_sha256 live_fd live_digest primary_fd primary_digest <&"$seal_metadata_fd"
+    scorer_fd scorer_sha256 memory_guard_fd memory_guard_sha256 \
+    live_fd live_digest primary_fd primary_digest <&"$seal_metadata_fd"
   [[ $seal_holder_pid =~ ^[1-9][0-9]*$ && $harness_fd =~ ^[0-9]+$ && $cgroup_fd =~ ^[0-9]+$ &&
-     $safe_fd =~ ^[0-9]+$ && $scorer_fd =~ ^[0-9]+$ && $live_fd =~ ^[0-9]+$ && $primary_fd =~ ^[0-9]+$ ]]
+     $safe_fd =~ ^[0-9]+$ && $scorer_fd =~ ^[0-9]+$ && $memory_guard_fd =~ ^[0-9]+$ &&
+     $live_fd =~ ^[0-9]+$ && $primary_fd =~ ^[0-9]+$ ]]
   [[ $live_digest == "$LIVE_SHA256" && $primary_digest == "$PRIMARY_SHA256" ]]
   harness_fd_path="/proc/$seal_holder_pid/fd/$harness_fd"
   cgroup_fd_path="/proc/$seal_holder_pid/fd/$cgroup_fd"
   safe_fd_path="/proc/$seal_holder_pid/fd/$safe_fd"
   scorer_fd_path="/proc/$seal_holder_pid/fd/$scorer_fd"
+  memory_guard_fd_path="/proc/$seal_holder_pid/fd/$memory_guard_fd"
   live_fd_path="/proc/$seal_holder_pid/fd/$live_fd"
   primary_fd_path="/proc/$seal_holder_pid/fd/$primary_fd"
-  for descriptor in "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$live_fd_path" "$primary_fd_path"; do
+  for descriptor in "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$memory_guard_fd_path" "$live_fd_path" "$primary_fd_path"; do
     [[ -r $descriptor ]]
   done
   verify_seal_holder_identity
@@ -562,7 +571,7 @@ if [[ ${1:-} == --sealed-self-test ]]; then
   [[ $# == 1 ]]
   candidate=$(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD)
   seal_runtime_snapshots "$candidate"
-  python3 - "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$live_fd_path" "$primary_fd_path" <<'PY'
+  python3 - "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$memory_guard_fd_path" "$live_fd_path" "$primary_fd_path" <<'PY'
 import errno, fcntl, os, sys
 required = fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
 for path in sys.argv[1:]:
@@ -642,6 +651,8 @@ if [[ ${1:-} == --candidate || ${1:-} == --holder-loss-self-test || ${1:-} == --
     DS4_W7_SEALED_CGROUP_SHA256="$cgroup_sha256" \
     DS4_W7_SEALED_SAFE_SHA256="$safe_sha256" \
     DS4_W7_SEALED_SCORER_SHA256="$scorer_sha256" \
+    DS4_W7_SEALED_MEMORY_GUARD_PATH="$memory_guard_fd_path" \
+    DS4_W7_SEALED_MEMORY_GUARD_SHA256="$memory_guard_sha256" \
     /usr/bin/bash "$harness_fd_path" \
       "$([[ $initial_mode == --candidate ]] && printf %s --sealed-outer || { [[ $initial_mode == --holder-loss-self-test ]] && printf %s --sealed-holder-loss-test || printf %s --sealed-lineage-self-test; })" \
       "$candidate"
@@ -651,7 +662,7 @@ fi
 sealed_mode=$1
 candidate=$2
 [[ $0 == "$harness_fd_path" && $seal_holder_pid =~ ^[1-9][0-9]*$ ]]
-for descriptor in "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$live_fd_path" "$primary_fd_path"; do
+for descriptor in "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$memory_guard_fd_path" "$live_fd_path" "$primary_fd_path"; do
   [[ $descriptor =~ ^/proc/$seal_holder_pid/fd/[0-9]+$ && -r $descriptor ]]
 done
 verify_seal_holder_identity
@@ -668,6 +679,8 @@ if [[ $sealed_mode == --sealed-lineage-self-test ]]; then
   GLM_SAFE_PINNED_SAFE_PATH="$safe_fd_path" \
   GLM_SAFE_PINNED_SAFE_SHA256="$safe_sha256" \
   GLM_SAFE_W7_DRIVER_LINEAGE=1 \
+  GLM_SAFE_MEMORY_GUARD_PATH="$memory_guard_fd_path" \
+  GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256="$memory_guard_sha256" \
   DS4_W7_PINNED_HARNESS_SHA256="$harness_sha256" \
   DS4_W7_CANDIDATE_HASH="$candidate" \
   DS4_W7_SEALED_SAFE_PATH="$safe_fd_path" \
@@ -711,6 +724,8 @@ GLM_SAFE_DONE_DIGESTS=1 \
 GLM_SAFE_PINNED_SAFE_PATH="$safe_fd_path" \
 GLM_SAFE_PINNED_SAFE_SHA256="$safe_sha256" \
 GLM_SAFE_W7_DRIVER_LINEAGE=1 \
+GLM_SAFE_MEMORY_GUARD_PATH="$memory_guard_fd_path" \
+GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256="$memory_guard_sha256" \
 GLM_CANDIDATE_SRC="$CANDIDATE_SRC" \
 DS4_W7_PINNED_HARNESS_SHA256="$harness_sha256" \
 DS4_W7_CANDIDATE_HASH="$candidate" \
