@@ -154,6 +154,26 @@ def derive_order(seed_sha256: str) -> list[str]:
     return ["off", "on"] if bit == 0 else ["on", "off"]
 
 
+def probe_configuration() -> dict[str, object]:
+    return {
+        "binary_sha256": BINARY_SHA256,
+        "model_sha256": MODEL_SHA256,
+        "context": 8192,
+        "cache_gib": 40,
+        "fetch_threads": 6,
+        "boundary_align": 4,
+        "boundary_trim": 8,
+        "max_tokens": 160,
+        "diagnostic_flag": FLAG,
+        "containment": {
+            "MemorySwapMax": 0,
+            "kill_floor_GiB": 24,
+            "minimum_start_GiB": 110,
+            "timeout_s": 2400,
+        },
+    }
+
+
 def environment_for_arm(
     arm: str, out: Path, request_sha256: str, engine_lock_path: str,
     lock_identity: str, campaign_lock_fd: int, memory_guard_path: str,
@@ -383,6 +403,165 @@ def canonical_json(value: object) -> bytes:
     return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
+def expected_primary_request() -> bytes:
+    source_bytes, _ = BASE.read_stable(PRIMARY)
+    if hashlib.sha256(source_bytes).hexdigest() != PRIMARY_SHA256:
+        raise ProbeError("primary source identity mismatch during terminal validation")
+    source = strict_json(source_bytes)
+    if not isinstance(source, dict) or source.get("max_tokens") != 0:
+        raise ProbeError("unexpected primary fixture during terminal validation")
+    source["max_tokens"] = 160
+    source["stream"] = True
+    source["stream_options"] = {"include_usage": True}
+    source["ignore_eos"] = True
+    return canonical_json(source)
+
+
+def _terminal_arm_evidence_valid(
+    out: Path, row: dict[str, object], arm: str, position: int,
+) -> bool:
+    expected_names = {
+        "child-exit.json", "containment.rc", "containment.stderr",
+        "containment.stdout", "live-response.json", "primary-client.json",
+        "server.log", "safety/kernel.log", "safety/main.log", "safety/samples.log",
+        "logits.sync1.start0.prompt5044.suffix5044",
+        "logits.sync2.start5044.prompt5055.suffix11",
+        "logits.sync3.start5044.prompt5066.suffix22",
+    }
+    observed_names = {
+        str(path.relative_to(out)) for path in out.rglob("*") if path.is_file() and not path.is_symlink()
+    }
+    if observed_names != expected_names or any(path.is_symlink() for path in out.rglob("*")):
+        return False
+    artifacts = {name: BASE.read_stable(out / name) for name in expected_names}
+    if artifacts["containment.rc"][0] != b"0\n":
+        return False
+    containment_stdout = artifacts["containment.stdout"][0].decode("utf-8", errors="strict")
+    done = BASE.DONE_RE.fullmatch(containment_stdout)
+    if done is None:
+        return False
+    for offset, name in enumerate(("safety/main.log", "safety/samples.log", "safety/kernel.log"), start=2):
+        if hashlib.sha256(artifacts[name][0]).hexdigest() != done.group(offset):
+            return False
+    main = artifacts["safety/main.log"][0].decode("utf-8", errors="strict")
+    samples = artifacts["safety/samples.log"][0].decode("utf-8", errors="strict")
+    kernel = artifacts["safety/kernel.log"][0].decode("utf-8", errors="strict")
+    for name in ("server.log", "live-response.json", "primary-client.json", "child-exit.json"):
+        payload, metadata = artifacts[name]
+        binding = (
+            f"final_artifact_verified path={out / name} "
+            f"sha256={hashlib.sha256(payload).hexdigest()} "
+            f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}"
+        )
+        if main.count(binding) != 1:
+            return False
+    environment_matches = re.findall(r"\bexecuted_environment_sha256=([0-9a-f]{64})\b", main)
+    if environment_matches != [row["executed_environment_sha256"]]:
+        return False
+    server = artifacts["server.log"][0].decode("utf-8", errors="strict")
+    client = strict_json(artifacts["primary-client.json"][0])
+    live = strict_json(artifacts["live-response.json"][0])
+    child = strict_json(artifacts["child-exit.json"][0])
+    if not all(isinstance(value, dict) for value in (client, live, child)):
+        return False
+    if child != {"exit_status": 0, "forced_kill": False, "shutdown_requested": True}:
+        return False
+    live_usage = live.get("usage")
+    live_choices = live.get("choices")
+    if (
+        not isinstance(live_usage, dict)
+        or live_usage.get("prompt_tokens") != 5055
+        or live_usage.get("completion_tokens") != 0
+        or live_usage.get("total_tokens") != 5055
+        or not isinstance(live_choices, list) or len(live_choices) != 1
+        or not isinstance(live_choices[0], dict)
+        or live_choices[0].get("finish_reason") != "length"
+    ):
+        return False
+    timings = [
+        (int(match.group(2)), int(match.group(3)), int(match.group(4)))
+        for line in server.splitlines()
+        if (match := BASE.TIMING_RE.fullmatch(line)) and match.group(1) == client.get("response_id")
+    ]
+    if (
+        len(timings) < 128
+        or [item[0] for item in timings] != list(range(1, len(timings) + 1))
+        or row["token_timestamps_ns"] != [item[1] for item in timings]
+        or row["output_token_ids"] != [item[2] for item in timings]
+        or row["request_start_ns"] != client.get("request_start_ns")
+    ):
+        return False
+    usage = client.get("usage")
+    details = usage.get("prompt_tokens_details") if isinstance(usage, dict) else None
+    generated = client.get("generated_text")
+    if (
+        client.get("done") is not True or client.get("finish_reason") != "length"
+        or not isinstance(generated, str) or not isinstance(usage, dict)
+        or usage.get("completion_tokens") != len(timings)
+        or usage.get("prompt_tokens") != 5066 or usage.get("total_tokens") != 5066 + len(timings)
+        or not isinstance(details, dict) or details.get("cached_tokens") != 5044
+        or details.get("cache_write_tokens") != 22
+        or row["generated_text_sha256"] != hashlib.sha256(generated.encode("utf-8")).hexdigest()
+        or row["generated_text_bytes"] != len(generated.encode("utf-8"))
+    ):
+        return False
+    logit_names = sorted(name for name in expected_names if name.startswith("logits.sync"))
+    logit_digests = []
+    for name in logit_names:
+        payload, metadata = artifacts[name]
+        if metadata.st_size != BASE.LOGIT_BYTES:
+            return False
+        logit_digests.append(hashlib.sha256(payload).hexdigest())
+    if row["logit_sha256s"] != logit_digests:
+        return False
+    normalized = [
+        match.group(1) if (match := LOGGER_LINE_RE.fullmatch(line)) else None
+        for line in server.splitlines()
+    ]
+    store_events = [line for line in normalized if line is not None and "kv cache stored" in line and "reason=evict" in line]
+    skip_events = [line for line in normalized if line is not None and "diagnostic skipped preload evict store" in line]
+    activation_events = [line for line in normalized if line is not None and "diagnostic preload evict-store bypass" in line]
+    hit_events = [line for line in normalized if line is not None and "kv cache hit text" in line]
+    hit_matches = [EXPECTED_HIT_RE.fullmatch(line) for line in hit_events]
+    if len(hit_matches) != 1 or hit_matches[0] is None:
+        return False
+    if arm == "off":
+        events_valid = (
+            len(store_events) == 1 and EXPECTED_STORE_RE.fullmatch(store_events[0]) is not None
+            and not skip_events and not activation_events
+        )
+    else:
+        events_valid = not store_events and skip_events == [SKIPPED] and activation_events == [ACTIVATION]
+    if (
+        not events_valid
+        or row["checkpoint_id"] != f"token-text:{hit_matches[0].group(1)}"
+        or row["run_id"] != out.name or row["arm"] != arm or row["position"] != position
+        or row["server_fresh"] is not (server.count(BASE.LISTENER) == 1)
+        or server.find(BASE.LISTENER) < 0 or server.rfind(BASE.SHUTDOWN) <= server.find(BASE.LISTENER)
+    ):
+        return False
+    memory_values = [int(value) for value in re.findall(r"\bmem_avail_kb=([0-9]+)\b", samples)]
+    swap_values = [int(value) for value in re.findall(r"\bcgroup_swap_current_bytes=([0-9]+)\b", samples)]
+    final = re.findall(
+        r"cgroup_final .* swap_current_bytes=([0-9]+) events=low [0-9]+,high [0-9]+,"
+        r"max ([0-9]+),oom ([0-9]+),oom_kill ([0-9]+),oom_group_kill ([0-9]+),",
+        main,
+    )
+    if not memory_values or not swap_values or len(final) != 1 or int(final[0][4]) != 0:
+        return False
+    reconstructed_safety = {
+        "containment_rc": 0,
+        "minimum_mem_available_kb": min(memory_values),
+        "swap_growth_bytes": max(swap_values + [int(final[0][0])]),
+        "cgroup_max_delta": int(final[0][1]),
+        "cgroup_oom_delta": int(final[0][2]),
+        "cgroup_oom_kill_delta": int(final[0][3]),
+        "xid_count": len(re.findall(r"\bXid\b", kernel, flags=re.IGNORECASE)),
+        "surviving_descendants": len(BASE.server_pids()),
+    }
+    return row["safety"] == reconstructed_safety
+
+
 def _normal_terminal_semantics(
     attempt: Path, manifest: dict[str, object], raw_bytes: bytes,
     summary_bytes: bytes, summary: dict[str, object],
@@ -401,13 +580,25 @@ def _normal_terminal_semantics(
         "live_request_sha256": LIVE_SHA256,
         "primary_source_sha256": PRIMARY_SHA256,
     }
+    expected_request = expected_primary_request()
+    request_bytes, _ = BASE.read_stable(attempt / "primary-request.json")
+    verified_seed, verified_receipt_sha, verified_receipt_bytes = BASE.verify_public_randomness_receipt(
+        attempt / "randomness-receipt.json", str(manifest["candidate_hash"])
+    )
     if (
         manifest.get("runner_sha256") != hashlib.sha256(BASE.read_stable(Path(__file__))[0]).hexdigest()
         or manifest.get("scorer_sha256") != hashlib.sha256(frozen_scorer).hexdigest()
         or any(manifest.get(name) != value for name, value in frozen_bindings.items())
+        or manifest.get("configuration") != probe_configuration()
         or manifest.get("configuration_sha256")
         != hashlib.sha256(json.dumps(manifest["configuration"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        or manifest.get("arm_order") != derive_order(str(manifest.get("public_randomness_sha256")))
+        or request_bytes != expected_request
+        or manifest.get("executed_request_sha256") != hashlib.sha256(request_bytes).hexdigest()
+        or manifest["artifacts"].get("primary-request.json") != manifest.get("executed_request_sha256")
+        or verified_seed != manifest.get("public_randomness_sha256")
+        or verified_receipt_sha != manifest.get("public_randomness_receipt_sha256")
+        or hashlib.sha256(verified_receipt_bytes).hexdigest() != verified_receipt_sha
+        or manifest.get("arm_order") != derive_order(verified_seed)
         or manifest["artifacts"].get("randomness-receipt.json")
         != manifest.get("public_randomness_receipt_sha256")
     ):
@@ -439,6 +630,13 @@ def _normal_terminal_semantics(
         scorer_row = dict(row)
         scorer_row.pop("executed_environment_sha256")
         scorer_rows.append(scorer_row)
+    arm_directories = sorted(path for path in attempt.iterdir() if path.is_dir() and path.name.startswith("p"))
+    if len(arm_directories) != 2:
+        return False
+    for position, (arm, row) in enumerate(zip(manifest["arm_order"], rows)):
+        matches = [path for path in arm_directories if path.name.startswith(f"p{position}-{arm}-")]
+        if len(matches) != 1 or not _terminal_arm_evidence_valid(matches[0], row, arm, position):
+            return False
     replayed = load_scorer(frozen_scorer).score_probe_rows(scorer_rows, manifest["arm_order"])
     if "runtime_failure" in summary:
         if not isinstance(summary["runtime_failure"], str) or not summary["runtime_failure"]:
@@ -543,7 +741,7 @@ def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
             ):
                 return False
         return inventory_artifacts(attempt) == manifest["artifacts"]
-    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+    except (OSError, RuntimeError, subprocess.SubprocessError, ValueError, TypeError, json.JSONDecodeError):
         return False
 
 
@@ -720,13 +918,7 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
         BASE.write_new(attempt / "randomness-receipt.json", receipt_bytes)
         request_path = attempt / "primary-request.json"
         request_sha = BASE.make_primary_request(request_path)
-        config = {
-            "binary_sha256": BINARY_SHA256, "model_sha256": MODEL_SHA256,
-            "context": 8192, "cache_gib": 40, "fetch_threads": 6,
-            "boundary_align": 4, "boundary_trim": 8, "max_tokens": 160,
-            "diagnostic_flag": FLAG,
-            "containment": {"MemorySwapMax": 0, "kill_floor_GiB": 24, "minimum_start_GiB": 110, "timeout_s": 2400},
-        }
+        config = probe_configuration()
         config_sha = hashlib.sha256(json.dumps(config, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         rows: list[dict[str, object]] = []
         _ACTIVE_ROWS = rows

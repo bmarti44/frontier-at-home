@@ -6,6 +6,7 @@ import copy
 import importlib.util
 import hashlib
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -64,14 +65,92 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
     def make_normal_terminal(self, attempt: Path) -> tuple[dict[str, object], list[dict[str, object]], dict[str, object]]:
         seed = "a" * 64
         order = MODULE.derive_order(seed)
-        config = {
-            "binary_sha256": MODULE.BINARY_SHA256,
-            "model_sha256": MODULE.MODEL_SHA256,
-            "context": 8192,
-        }
+        config = MODULE.probe_configuration()
         config_sha = hashlib.sha256(json.dumps(config, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        request_sha = "4" * 64
+        request = MODULE.expected_primary_request()
+        (attempt / "primary-request.json").write_bytes(request)
+        request_sha = hashlib.sha256(request).hexdigest()
         rows = [self.terminal_row(arm, position, config_sha, request_sha) for position, arm in enumerate(order)]
+        for row in rows:
+            out = attempt / f"p{row['position']}-{row['arm']}-unit"
+            out.mkdir()
+            row["run_id"] = out.name
+            logits = []
+            for index, start, prompt, suffix in (
+                (1, 0, 5044, 5044), (2, 5044, 5055, 11), (3, 5044, 5066, 22),
+            ):
+                payload = bytes([index]) * MODULE.BASE.LOGIT_BYTES
+                (out / f"logits.sync{index}.start{start}.prompt{prompt}.suffix{suffix}").write_bytes(payload)
+                logits.append(hashlib.sha256(payload).hexdigest())
+            row["logit_sha256s"] = logits
+            response_id = f"response-{row['position']}"
+            server_lines = [f"{MODULE.BASE.LISTENER}http://127.0.0.1:8097"]
+            if row["arm"] == "off":
+                server_lines.append(
+                    "ds4-server: kv cache stored tokens=5055 trimmed=0 reason=evict "
+                    "key=token-text size=918.82 MiB save=700.0 ms"
+                )
+            else:
+                server_lines.extend((MODULE.ACTIVATION, MODULE.SKIPPED))
+            server_lines.append(
+                "ds4-server: kv cache hit text tokens=5044 text=15571 quant=2 key=token-text "
+                f"load=500.0 ms file={out}/kv/{'9' * 40}.kv"
+            )
+            server_lines.extend(
+                f"DS4_TOKEN_TIMING request={response_id} index={index} monotonic_ns={timestamp} token={token}"
+                for index, (timestamp, token) in enumerate(
+                    zip(row["token_timestamps_ns"], row["output_token_ids"]), start=1
+                )
+            )
+            server_lines.append(MODULE.BASE.SHUTDOWN)
+            (out / "server.log").write_text("\n".join(server_lines) + "\n")
+            generated = "same output"
+            client = {
+                "done": True, "finish_reason": "length", "generated_text": generated,
+                "request_start_ns": row["request_start_ns"], "response_id": response_id,
+                "usage": {
+                    "completion_tokens": 128, "prompt_tokens": 5066, "total_tokens": 5194,
+                    "prompt_tokens_details": {"cached_tokens": 5044, "cache_write_tokens": 22},
+                },
+            }
+            (out / "primary-client.json").write_bytes(MODULE.canonical_json(client))
+            live = {
+                "choices": [{"finish_reason": "length", "index": 0, "text": ""}],
+                "usage": {"prompt_tokens": 5055, "completion_tokens": 0, "total_tokens": 5055},
+            }
+            (out / "live-response.json").write_bytes(MODULE.canonical_json(live))
+            (out / "child-exit.json").write_bytes(MODULE.canonical_json({
+                "exit_status": 0, "forced_kill": False, "shutdown_requested": True,
+            }))
+            (out / "containment.stderr").write_bytes(b"")
+            (out / "containment.rc").write_bytes(b"0\n")
+            safety = out / "safety"
+            safety.mkdir()
+            samples = b"mem_avail_kb=48000000 cgroup_swap_current_bytes=0\n"
+            kernel = b"kernel clean\n"
+            (safety / "samples.log").write_bytes(samples)
+            (safety / "kernel.log").write_bytes(kernel)
+            main_lines = [
+                f"executed_environment_sha256={row['executed_environment_sha256']}",
+                "cgroup_final current_bytes=0 peak_bytes=1 swap_current_bytes=0 "
+                "events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,",
+            ]
+            for name in ("server.log", "live-response.json", "primary-client.json", "child-exit.json"):
+                path = out / name
+                metadata = path.stat()
+                main_lines.append(
+                    f"final_artifact_verified path={path} sha256={hashlib.sha256(path.read_bytes()).hexdigest()} "
+                    f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}"
+                )
+            main = ("\n".join(main_lines) + "\n").encode()
+            (safety / "main.log").write_bytes(main)
+            receipt = (
+                "SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/.local/state/glm52-crashlog/unit-test "
+                f"main_sha256={hashlib.sha256(main).hexdigest()} "
+                f"samples_sha256={hashlib.sha256(samples).hexdigest()} "
+                f"kernel_sha256={hashlib.sha256(kernel).hexdigest()}\n"
+            )
+            (out / "containment.stdout").write_text(receipt)
         scorer_rows = []
         for row in rows:
             scorer_row = dict(row)
@@ -110,12 +189,9 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             "public_randomness_sha256": seed,
             "public_randomness_receipt_sha256": hashlib.sha256(receipt).hexdigest(),
             "arm_order": order,
-            "artifacts": {
-                "raw.jsonl": hashlib.sha256(raw).hexdigest(),
-                "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
-                "randomness-receipt.json": hashlib.sha256(receipt).hexdigest(),
-            },
+            "artifacts": {},
         }
+        manifest["artifacts"] = MODULE.inventory_artifacts(attempt)
         (attempt / "manifest.json").write_text(json.dumps(manifest))
         return manifest, rows, summary
 
@@ -129,12 +205,20 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         (attempt / "summary.json").write_bytes(summary_bytes)
         manifest["completed_rows"] = len(rows)
         manifest["verdict"] = summary["verdict"]
-        manifest["artifacts"] = {
-            "raw.jsonl": hashlib.sha256(raw).hexdigest(),
-            "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
-            "randomness-receipt.json": manifest["public_randomness_receipt_sha256"],
-        }
+        manifest["artifacts"] = MODULE.inventory_artifacts(attempt)
         (attempt / "manifest.json").write_text(json.dumps(manifest))
+
+    def terminal_valid(self, attempt: Path, candidate: str) -> bool:
+        receipt = (attempt / "randomness-receipt.json").read_bytes()
+        manifest = json.loads((attempt / "manifest.json").read_text())
+        with mock.patch.object(
+            MODULE.BASE, "verify_public_randomness_receipt",
+            return_value=(
+                manifest["public_randomness_sha256"],
+                hashlib.sha256(receipt).hexdigest(), receipt,
+            ),
+        ):
+            return MODULE.terminal_manifest_valid(attempt, candidate)
 
     def bind_server(self, out: Path) -> str:
         server = out / "server.log"
@@ -281,7 +365,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="w7-terminal-valid-") as temporary:
             attempt = Path(temporary)
             manifest, rows, summary = self.make_normal_terminal(attempt)
-            self.assertTrue(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+            self.assertTrue(self.terminal_valid(attempt, "c" * 40))
 
             mutations = []
             mutations.append((dict(manifest), rows[:1], summary))
@@ -299,7 +383,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
                 mutations.append((changed, rows, summary))
             for changed_manifest, changed_rows, changed_summary in mutations:
                 self.rewrite_terminal(attempt, changed_manifest, changed_rows, changed_summary)
-                self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+                self.assertFalse(self.terminal_valid(attempt, "c" * 40))
 
     def test_failure_schema_can_never_claim_pass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="w7-terminal-failure-pass-") as temporary:
@@ -358,19 +442,25 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
                 scorer_rows, invented["arm_order"]
             )
             self.rewrite_terminal(attempt, invented, invented_rows, invented_summary)
-            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+            self.assertFalse(self.terminal_valid(attempt, "c" * 40))
+
+            self.rewrite_terminal(attempt, manifest, rows, summary)
+            (attempt / "primary-request.json").write_bytes(b"{}\n")
+            self.rewrite_terminal(attempt, manifest, rows, summary)
+            self.assertFalse(self.terminal_valid(attempt, "c" * 40))
+
+            (attempt / "primary-request.json").write_bytes(MODULE.expected_primary_request())
+            for path in list(attempt.iterdir()):
+                if path.is_dir() and path.name.startswith("p"):
+                    shutil.rmtree(path)
+            self.rewrite_terminal(attempt, manifest, rows, summary)
+            self.assertFalse(self.terminal_valid(attempt, "c" * 40))
 
     def test_normal_publication_preserves_pass_and_fail_verdicts(self) -> None:
         for expected_verdict in ("PASS", "FAIL"):
             with tempfile.TemporaryDirectory(prefix="w7-publish-") as temporary:
                 attempt = Path(temporary)
                 manifest, rows, _ = self.make_normal_terminal(attempt)
-                if expected_verdict == "FAIL":
-                    on_row = next(row for row in rows if row["arm"] == "on")
-                    on_row["token_timestamps_ns"] = [
-                        on_row["token_timestamps_ns"][0] + index * 200_000_000
-                        for index in range(128)
-                    ]
                 scorer_rows = []
                 for row in rows:
                     scorer_row = dict(row)
@@ -379,6 +469,8 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
                 scored = MODULE.load_scorer(MODULE.SCORER.read_bytes()).score_probe_rows(
                     scorer_rows, manifest["arm_order"]
                 )
+                if expected_verdict == "FAIL":
+                    scored = dict(scored, runtime_failure="injected after arms", verdict="FAIL")
                 self.assertEqual(scored["verdict"], expected_verdict)
                 raw = b"".join(
                     (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
@@ -389,9 +481,17 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
                     (attempt / name).unlink()
                 manifest["candidate_hash"] = "f" * 40
                 manifest["artifacts"] = {}
-                observed = MODULE.publish_terminal_triplet(attempt, manifest, raw, summary, {})
+                receipt = (attempt / "randomness-receipt.json").read_bytes()
+                with mock.patch.object(
+                    MODULE.BASE, "verify_public_randomness_receipt",
+                    return_value=(
+                        manifest["public_randomness_sha256"],
+                        hashlib.sha256(receipt).hexdigest(), receipt,
+                    ),
+                ):
+                    observed = MODULE.publish_terminal_triplet(attempt, manifest, raw, summary, {})
                 self.assertEqual(observed, expected_verdict)
-                self.assertTrue(MODULE.terminal_manifest_valid(attempt, "f" * 40))
+                self.assertTrue(self.terminal_valid(attempt, "f" * 40))
                 published = json.loads((attempt / "manifest.json").read_text())
                 self.assertEqual(published["verdict"], expected_verdict)
 
