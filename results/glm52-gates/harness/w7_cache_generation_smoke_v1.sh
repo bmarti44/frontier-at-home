@@ -111,8 +111,8 @@ verify_dependencies_fast() {
 verify_reviewed_sources() {
   local candidate=$1 path
   [[ $candidate =~ ^[0-9a-f]{40}$ ]]
-  git -C "$ROOT" cat-file -e "$candidate^{commit}"
-  git -C "$ROOT" merge-base --is-ancestor "$candidate" HEAD
+  /usr/bin/git --no-replace-objects -C "$ROOT" cat-file -e "$candidate^{commit}"
+  /usr/bin/git --no-replace-objects -C "$ROOT" merge-base --is-ancestor "$candidate" HEAD
   for path in \
     results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh \
     results/glm52-gates/harness/glm_cgroup_run.sh \
@@ -120,14 +120,14 @@ verify_reviewed_sources() {
     scripts/89_score_w7_cache_generation.py
   do
     [[ -f $ROOT/$path && ! -L $ROOT/$path ]]
-    git -C "$ROOT" show "$candidate:$path" | cmp -s - "$ROOT/$path"
+    /usr/bin/git --no-replace-objects -C "$ROOT" show "$candidate:$path" | /usr/bin/cmp -s - "$ROOT/$path"
   done
 }
 
 verify_sealed_candidate_scripts() {
   local candidate=$1 item tracked descriptor variable digest
   [[ $candidate =~ ^[0-9a-f]{40}$ ]]
-  [[ $(/usr/bin/git -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
+  [[ $(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
   for item in \
     "results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh:$harness_fd_path:harness_sha256" \
     "results/glm52-gates/harness/glm_cgroup_run.sh:$cgroup_fd_path:cgroup_sha256" \
@@ -136,7 +136,7 @@ verify_sealed_candidate_scripts() {
   do
     IFS=: read -r tracked descriptor variable <<<"$item"
     has_full_seal "$descriptor"
-    /usr/bin/git -C "$ROOT" show "$candidate:$tracked" | /usr/bin/cmp -s - "$descriptor"
+    /usr/bin/git --no-replace-objects -C "$ROOT" show "$candidate:$tracked" | /usr/bin/cmp -s - "$descriptor"
     digest=$(/usr/bin/sha256sum -- "$descriptor" | /usr/bin/awk '{print $1}')
     printf -v "$variable" '%s' "$digest"
   done
@@ -184,7 +184,7 @@ def seal(name, payload):
 
 def git_payload(path):
     return subprocess.run(
-        ["git", "-C", root, "show", f"{candidate}:{path}"],
+        ["/usr/bin/git", "--no-replace-objects", "-C", root, "show", f"{candidate}:{path}"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
     ).stdout
 
@@ -259,7 +259,7 @@ stop_seal_holder() {
 verify_driver_containment() {
   local unit=${GLM_SAFE_CGROUP_UNIT:-} path dir high max swap oom_group
   [[ ${GLM_SAFE_REQUIRE_CGROUP:-} == 1 ]]
-  [[ $unit =~ ^glm52-w7-c12-[0-9a-f]{12}-[0-9]+$ ]]
+  [[ $unit =~ ^glm52-w7-c13-[0-9a-f]{12}-[0-9]+$ ]]
   path=$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup)
   [[ $path == */"$unit.service" ]]
   dir=/sys/fs/cgroup$path
@@ -269,6 +269,38 @@ verify_driver_containment() {
   read -r swap <"$dir/memory.swap.max"
   read -r oom_group <"$dir/memory.oom.group"
   [[ $high == 83751862272 && $max == 85899345920 && $swap == 0 && $oom_group == 1 ]]
+}
+
+verify_driver_safe_lineage() {
+  local safe_pid=${DS4_W7_SAFE_PID:-} safe_start=${DS4_W7_SAFE_START_TICKS:-}
+  local safe_path=${DS4_W7_SAFE_SCRIPT_PATH:-} safe_unit=${DS4_W7_SAFE_CGROUP_UNIT:-}
+  [[ ${GLM_SAFE_W7_DRIVER_LINEAGE:-} == 1 ]]
+  [[ $safe_pid =~ ^[1-9][0-9]*$ && $safe_start =~ ^[1-9][0-9]*$ ]]
+  [[ $safe_path == "$safe_fd_path" && $safe_unit == "${GLM_SAFE_CGROUP_UNIT:-}" ]]
+  has_full_seal "$safe_path"
+  /usr/bin/git --no-replace-objects -C "$ROOT" show \
+    "$candidate:results/glm52-gates/harness/glm_safe_run.sh" | /usr/bin/cmp -s - "$safe_path"
+  /usr/bin/python3 - "$safe_pid" "$safe_start" "$safe_path" "$$" <<'PY'
+import pathlib, sys
+
+safe_pid, expected_start, expected_path, child_pid = sys.argv[1:]
+stat = pathlib.Path(f"/proc/{safe_pid}/stat").read_text().split()
+if stat[21] != expected_start:
+    raise SystemExit("safe wrapper start identity changed")
+cmdline = pathlib.Path(f"/proc/{safe_pid}/cmdline").read_bytes().split(b"\0")
+if cmdline[:2] != [b"/usr/bin/bash", expected_path.encode()]:
+    raise SystemExit("safe wrapper command identity mismatch")
+current = child_pid
+seen = set()
+while current not in seen and current != "1":
+    seen.add(current)
+    if current == safe_pid:
+        break
+    status = pathlib.Path(f"/proc/{current}/status").read_text().splitlines()
+    current = next(line.split()[1] for line in status if line.startswith("PPid:"))
+else:
+    raise SystemExit("safe wrapper is not a driver ancestor")
+PY
 }
 
 sync_parent() {
@@ -381,7 +413,7 @@ PY
 
 publish_outer_evidence() {
   local attempt=$1 out=$2 containment_rc=$3 containment_stdout=$4 crash_dir=$5 candidate=$6 score_rc execution_head
-  execution_head=$(git -C "$ROOT" rev-parse HEAD)
+  execution_head=$(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD)
   set +e
   python3 - "$scorer_fd_path" "$attempt" "$out" "$crash_dir" "$candidate" "$execution_head" \
     "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
@@ -408,14 +440,15 @@ PY
 }
 
 publish_failure_triplet() {
-  /usr/bin/python3 - "$attempt" "$out" "${candidate:-unknown}" "$failure_reason" "$1" \
+  observed_final_head=$(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD 2>/dev/null || printf unknown)
+  /usr/bin/python3 - "$attempt" "$out" "${candidate:-unknown}" "$observed_final_head" "$failure_reason" "$1" \
     "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
     "$scorer_sha256" "$harness_sha256" "$cgroup_sha256" "$safe_sha256" \
     "$containment_rc" "$containment_stdout" <<'PY'
 import ctypes, errno, hashlib, json, os, pathlib, sys, tempfile
-attempt, out = map(pathlib.Path, sys.argv[1:3]); candidate, reason=sys.argv[3:5]; rc=int(sys.argv[5])
-binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha=sys.argv[6:16]
-containment_rc, containment_stdout = sys.argv[16:18]
+attempt, out = map(pathlib.Path, sys.argv[1:3]); candidate, execution_head, reason=sys.argv[3:6]; rc=int(sys.argv[6])
+binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha=sys.argv[7:17]
+containment_rc, containment_stdout = sys.argv[17:19]
 
 def read_once(path):
     try:
@@ -446,7 +479,7 @@ raw_bytes=b"".join((json.dumps(row,sort_keys=True,separators=(",",":"))+"\n").en
 summary_bytes=(json.dumps(summary,sort_keys=True,separators=(",",":"))+"\n").encode()
 artifacts={name:hashlib.sha256(payload).hexdigest() for name,payload in payloads.items()}
 artifacts.update({"raw.jsonl":hashlib.sha256(raw_bytes).hexdigest(),"summary.json":hashlib.sha256(summary_bytes).hexdigest()})
-manifest={"schema":"glm52-w7-runtime-v3","candidate_hash":candidate,"execution_head":candidate,
+manifest={"schema":"glm52-w7-runtime-v3","candidate_hash":candidate,"execution_head":execution_head,
  "binary_sha256":binary,"model_sha256":model,"model_bytes":int(model_bytes),
  "live_request_sha256":live,"primary_request_sha256":primary,"executed_environment_sha256":environment,
  "scorer_sha256":scorer_sha,"harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,"safe_run_sha256":safe_sha,
@@ -505,7 +538,7 @@ fi
 
 if [[ ${1:-} == --sealed-self-test ]]; then
   [[ $# == 1 ]]
-  candidate=$(git -C "$ROOT" rev-parse HEAD)
+  candidate=$(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD)
   seal_runtime_snapshots "$candidate"
   python3 - "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$live_fd_path" "$primary_fd_path" <<'PY'
 import errno, fcntl, os, sys
@@ -536,8 +569,9 @@ fi
 
 if [[ ${1:-} == --driver ]]; then
   [[ $# == 3 && $2 == on ]]
-  [[ $candidate =~ ^[0-9a-f]{40}$ && $(/usr/bin/git -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
-  /usr/bin/git -C "$ROOT" show "$candidate:results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh" | /usr/bin/cmp -s - "$0"
+  [[ $candidate =~ ^[0-9a-f]{40}$ && $(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
+  /usr/bin/git --no-replace-objects -C "$ROOT" show "$candidate:results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh" | /usr/bin/cmp -s - "$0"
+  verify_driver_safe_lineage
   run_driver "$3"
   exit
 fi
@@ -589,7 +623,7 @@ mkdir -m 0700 "$attempt"
 trap finalize_outer EXIT
 mkdir -m 0700 "$out"
 failure_reason=containment-launch
-tag="w7-c12-${nonce:0:12}"
+tag="w7-c13-${nonce:0:12}"
 final_artifacts="$out/server.log,$out/live-response.json,$out/live-http-status,$out/primary-response.json,$out/primary-http-status,$out/child-exit.json,$out/model.identity.json"
 
 if [[ $sealed_mode == --sealed-holder-loss-test ]]; then
@@ -613,9 +647,12 @@ GLM_SAFE_FINAL_ARTIFACTS="$final_artifacts" \
 GLM_SAFE_DONE_DIGESTS=1 \
 GLM_SAFE_PINNED_SAFE_PATH="$safe_fd_path" \
 GLM_SAFE_PINNED_SAFE_SHA256="$safe_sha256" \
+GLM_SAFE_W7_DRIVER_LINEAGE=1 \
 GLM_CANDIDATE_SRC="$CANDIDATE_SRC" \
 DS4_W7_PINNED_HARNESS_SHA256="$harness_sha256" \
 DS4_W7_CANDIDATE_HASH="$candidate" \
+DS4_W7_SEALED_SAFE_PATH="$safe_fd_path" \
+DS4_W7_SEALED_SAFE_SHA256="$safe_sha256" \
 DS4_W7_SEALED_LIVE_PATH="$live_fd_path" \
 DS4_W7_SEALED_PRIMARY_PATH="$primary_fd_path" \
 DS4_CUDA_STABLE_MODEL_REMAP=1 \

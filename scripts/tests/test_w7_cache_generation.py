@@ -138,8 +138,8 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("verify_sealed_candidate_scripts", source)
         self.assertIn("F_GET_SEALS", source)
         self.assertIn('"$candidate:$tracked"', source)
-        self.assertIn('/usr/bin/git -C "$ROOT" rev-parse HEAD', source)
-        self.assertIn('/usr/bin/git -C "$ROOT" show', source)
+        self.assertIn('/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD', source)
+        self.assertIn('/usr/bin/git --no-replace-objects -C "$ROOT" show', source)
         self.assertIn("--sealed-outer", source)
         self.assertIn("--driver", source)
 
@@ -274,6 +274,18 @@ class W7CacheGenerationGateTest(unittest.TestCase):
                 manifest["artifacts"]["containment.stdout"],
                 hashlib.sha256((attempt / "containment.stdout").read_bytes()).hexdigest(),
             )
+            identities["execution_head"] = "b" * 40
+            mismatch = MODULE.score_and_publish_bound_attempt(
+                attempt=attempt,
+                out=out,
+                crash_dir=crash,
+                evidence_dir=out / "evidence-head-mismatch",
+                identities=identities,
+                containment_stdout=private_completion,
+                containment_rc=0,
+            )
+            self.assertEqual(mismatch["verdict"], "FAIL")
+            self.assertFalse(mismatch["checks"]["final_head_matches_candidate"])
 
     def test_rejects_copied_launcher_before_self_test(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -637,6 +637,12 @@ def score_and_publish_bound_attempt(
         expected_model_sha256=expected_model,
         expected_model_bytes=expected_model_bytes,
     )
+    final_head_matches_candidate = (
+        identities.get("execution_head") == identities.get("candidate_hash")
+    )
+    result["checks"]["final_head_matches_candidate"] = final_head_matches_candidate
+    if not final_head_matches_candidate:
+        result["verdict"] = "FAIL"
     manifest = {
         "schema": "glm52-w7-runtime-v3",
         **identities,

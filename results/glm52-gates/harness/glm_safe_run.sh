@@ -40,6 +40,7 @@ ROOT_AUTHORITY=${GLM_W1_ROOT_AUTHORITY:-0}
 AUTHORITY_CRASH_ROOT=${GLM_SAFE_CRASH_ROOT:-}
 MEMORY_GUARD_OVERRIDE=${GLM_SAFE_MEMORY_GUARD_PATH:-}
 EXPECTED_MEMORY_GUARD_SHA256=${GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256:-}
+W7_DRIVER_LINEAGE=${GLM_SAFE_W7_DRIVER_LINEAGE:-0}
 KERNEL_GPU_FAULT_RE='NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process'
 USERSPACE_GPU_OOM_RE='CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|CUDA.{0,160}(allocation failed|out of memory)'
 TAG=run
@@ -86,6 +87,8 @@ fi
   config_error "GLM_SAFE_RUN_AS_CURRENT_USER"
 [[ $ROOT_AUTHORITY =~ ^[01]$ ]] ||
   config_error "GLM_W1_ROOT_AUTHORITY"
+[[ $W7_DRIVER_LINEAGE =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_W7_DRIVER_LINEAGE"
 if [[ $ROOT_AUTHORITY == 1 ]]; then
   [[ $RUN_AS_CURRENT_USER == 0 && $(id -un) == dsv4 ]] ||
     config_error "root authority identity"
@@ -310,6 +313,16 @@ python3 "$MEMORY_GUARD" \
   >>"$MAIN" || { plog "FATAL insufficient stable memory before launch"; exit 8; }
 
 ulimit -v "$VLIMIT_KB" || { plog "FATAL cannot set ulimit -v"; exit 9; }
+
+if [[ $W7_DRIVER_LINEAGE == 1 ]]; then
+  [[ $EXPECTED_CGROUP_UNIT =~ ^glm52-w7-c13-[0-9a-f]{12}-[0-9]+$ ]] ||
+    config_error "GLM_SAFE_W7_DRIVER_LINEAGE cgroup"
+  export DS4_W7_SAFE_PID=$$
+  export DS4_W7_SAFE_START_TICKS
+  DS4_W7_SAFE_START_TICKS=$(awk '{print $22}' "/proc/$$/stat")
+  export DS4_W7_SAFE_SCRIPT_PATH=$0
+  export DS4_W7_SAFE_CGROUP_UNIT=$EXPECTED_CGROUP_UNIT
+fi
 
 setsid timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" "$@" > "$DIR/cmd.log" 2>&1 &
 WRAP=$!
