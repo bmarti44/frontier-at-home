@@ -10,6 +10,7 @@ import json
 import math
 import os
 import pathlib
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -160,6 +161,28 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             (root / "native.so").write_bytes(b"changed-numerical-library")
             with self.assertRaisesRegex(ValueError, "runtime tree"):
                 MODULE.verify_runtime_tree(root, snapshot)
+            (root / "native.so").write_bytes(b"linked-numerical-library")
+            snapshot = MODULE.snapshot_runtime_tree(root)
+            (root / "package" / "module.py").write_text("VALUE = 2\n")
+            with self.assertRaisesRegex(ValueError, "runtime tree"):
+                MODULE.verify_runtime_tree(root, snapshot)
+
+    def test_isolated_no_site_ignores_sitecustomize_and_pth_hooks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            marker = root / "executed"
+            (root / "sitecustomize.py").write_text(
+                f"open({str(marker)!r}, 'w').write('sitecustomize')\n")
+            (root / "hook.pth").write_text(
+                f"import pathlib; pathlib.Path({str(marker)!r}).write_text('pth')\n")
+            result = subprocess.run(
+                ["/usr/bin/python3", "-I", "-S", "-B", "-c",
+                 "import sys; print(sys.flags.isolated, sys.flags.no_site, sys.flags.safe_path, 'sitecustomize' in sys.modules)"],
+                env={"HOME": str(root), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(root)},
+                check=True, capture_output=True, text=True,
+            )
+            self.assertEqual(result.stdout.strip(), "1 1 True False")
+            self.assertFalse(marker.exists())
 
     def test_runtime_contract_isolated_and_deterministic(self) -> None:
         expected = {
@@ -209,20 +232,24 @@ class W9Fp4FalsifierTests(unittest.TestCase):
     def test_terminal_verifier_rejects_post_publication_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
+            work = root / "work"
+            evidence = root / "evidence"
+            work.mkdir()
+            evidence.mkdir()
+            manifest, rows, summary = self._compact_evidence(work)
             MODULE.publish_evidence(
-                root,
-                {"schema": "manifest"},
-                [{"record_type": "row", "value": 1}],
-                {"schema": "summary", "verdict": "PASS"},
+                evidence, manifest, rows, summary,
             )
-            terminal = MODULE.verify_terminal(root)
-            self.assertEqual(terminal["verdict"], "PASS")
-            (root / "summary.json").write_text(
+            with mock.patch.object(MODULE, "LAYERS", (0,)):
+                terminal = MODULE.verify_terminal(evidence)
+            self.assertEqual(terminal["verdict"], summary["verdict"])
+            (evidence / "summary.json").write_text(
                 json.dumps({"schema": "summary", "verdict": "NO_RESULT"}) + "\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "terminal"):
-                MODULE.verify_terminal(root)
+                with mock.patch.object(MODULE, "LAYERS", (0,)):
+                    MODULE.verify_terminal(evidence)
 
     def test_terminal_verifier_holds_all_artifacts_through_cross_checks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -243,7 +270,8 @@ class W9Fp4FalsifierTests(unittest.TestCase):
 
             with mock.patch.object(MODULE, "strict_json_bytes", side_effect=mutate_during_summary):
                 with self.assertRaisesRegex(ValueError, "terminal"):
-                    MODULE.verify_terminal(evidence)
+                    with mock.patch.object(MODULE, "LAYERS", (0,)):
+                        MODULE.verify_terminal(evidence)
 
     def test_terminal_verifier_recomputes_aggregate_and_verdict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -256,7 +284,8 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             summary["query_weighted_error"] = 0.0
             MODULE.publish_evidence(evidence, manifest, rows, summary)
             with self.assertRaisesRegex(ValueError, "aggregate|metric|summary"):
-                MODULE.verify_terminal(evidence)
+                with mock.patch.object(MODULE, "LAYERS", (0,)):
+                    MODULE.verify_terminal(evidence)
 
     def test_three_relay_randomness_requires_exact_agreement(self) -> None:
         record = {

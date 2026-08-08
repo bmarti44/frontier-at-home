@@ -17,20 +17,168 @@ import subprocess
 import sys
 from typing import Any
 
+REPO = pathlib.Path(__file__).resolve().parents[1]
+NUMPY_SITE = pathlib.Path("/home/bmarti44/.local/lib/python3.12/site-packages")
+RUNTIME_TREE_EXPECTATIONS = {
+    NUMPY_SITE / "numpy": {
+        "tree_sha256": "90b35528326f32865a17a2aed26815a90e9617a80d6c81e98e73069e1e098a87",
+        "files": 1280,
+        "bytes": 33391591,
+    },
+    NUMPY_SITE / "numpy.libs": {
+        "tree_sha256": "6150280342f07114e7249491f084b603c1456bdbd94b66bf276857df75314169",
+        "files": 2,
+        "bytes": 26402458,
+    },
+    pathlib.Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2/node_modules/@noble"): {
+        "tree_sha256": "ca92f24bab4644eb0d162b4b07c8f432519caa802a5150ada536e82b8a911895",
+        "files": 486,
+        "bytes": 3205403,
+    },
+}
+THREAD_ENVIRONMENT = {
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+}
+
+
+def sha256_file(path: pathlib.Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(8 << 20):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def snapshot_runtime_tree(root: pathlib.Path) -> dict[str, Any]:
+    """Bind every executable/data byte in one user-writable runtime tree."""
+    root = pathlib.Path(root)
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError(f"runtime tree root is not a real directory: {root}")
+    rows: list[tuple[str, int, str]] = []
+    identities: dict[str, tuple[int, int, int, int, int]] = {}
+    total = 0
+    for path in sorted(root.rglob("*")):
+        pathname = path.lstat()
+        if stat.S_ISDIR(pathname.st_mode):
+            continue
+        if not stat.S_ISREG(pathname.st_mode) or pathname.st_nlink != 1:
+            raise ValueError(f"runtime tree has unsafe entry: {path}")
+        relative = path.relative_to(root).as_posix()
+        flags = os.O_RDONLY | os.O_CLOEXEC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        fd = os.open(path, flags)
+        try:
+            info = os.fstat(fd)
+            identity = (info.st_dev, info.st_ino, info.st_size,
+                        info.st_mtime_ns, info.st_ctime_ns)
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise ValueError(f"runtime tree has unsafe descriptor: {path}")
+            digest_state = hashlib.sha256()
+            offset = 0
+            while chunk := os.pread(fd, 8 << 20, offset):
+                digest_state.update(chunk)
+                offset += len(chunk)
+            after = os.fstat(fd)
+            final_path = path.lstat()
+            if (identity != (after.st_dev, after.st_ino, after.st_size,
+                             after.st_mtime_ns, after.st_ctime_ns) or
+                    identity != (final_path.st_dev, final_path.st_ino, final_path.st_size,
+                                 final_path.st_mtime_ns, final_path.st_ctime_ns)):
+                raise ValueError(f"runtime tree changed during scan: {path}")
+            digest = digest_state.hexdigest()
+        finally:
+            os.close(fd)
+        rows.append((relative, info.st_size, digest))
+        identities[relative] = (
+            info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+        total += info.st_size
+    canonical = hashlib.sha256()
+    for relative, size, digest in rows:
+        canonical.update(relative.encode("utf-8"))
+        canonical.update(b"\0")
+        canonical.update(str(size).encode("ascii"))
+        canonical.update(b"\0")
+        canonical.update(digest.encode("ascii"))
+        canonical.update(b"\n")
+    return {
+        "path": str(root),
+        "tree_sha256": canonical.hexdigest(),
+        "files": len(rows),
+        "bytes": total,
+        "identities": identities,
+    }
+
+
+def runtime_tree_public(snapshot: dict[str, Any]) -> dict[str, Any]:
+    return {key: snapshot[key] for key in ("path", "tree_sha256", "files", "bytes")}
+
+
+def verify_runtime_tree(root: pathlib.Path, expected: dict[str, Any]) -> dict[str, Any]:
+    observed = snapshot_runtime_tree(root)
+    expected_public = {key: expected.get(key) for key in ("tree_sha256", "files", "bytes")}
+    if runtime_tree_public(observed) != {
+            "path": str(pathlib.Path(root)), **expected_public}:
+        raise ValueError(f"runtime tree binding mismatch: {root}")
+    if "identities" in expected and observed["identities"] != expected["identities"]:
+        raise ValueError(f"runtime tree generation changed: {root}")
+    return observed
+
+
+def verify_execution_environment(*, isolated: bool | None = None,
+                                 no_site: bool | None = None,
+                                 safe_path: bool | None = None) -> None:
+    isolated = bool(sys.flags.isolated) if isolated is None else isolated
+    no_site = bool(sys.flags.no_site) if no_site is None else no_site
+    safe_path = bool(sys.flags.safe_path) if safe_path is None else safe_path
+    if not isolated or not no_site or not safe_path:
+        raise ValueError("runtime must use isolated no-site safe-path Python")
+    if any(os.environ.get(key) != value for key, value in THREAD_ENVIRONMENT.items()):
+        raise ValueError("numerical thread environment is not deterministic")
+
+
+# This check runs before any user-writable Python package is imported. An
+# altered NumPy/OpenBLAS/verifier closure therefore cannot execute and then
+# attest to itself.
+INITIAL_RUNTIME_TREES = {
+    str(root): verify_runtime_tree(root, expected)
+    for root, expected in RUNTIME_TREE_EXPECTATIONS.items()
+}
+sys.path.insert(0, str(NUMPY_SITE))
 import numpy as np
 
 
-REPO = pathlib.Path(__file__).resolve().parents[1]
+def loaded_numerical_libraries() -> dict[str, str]:
+    allowed_roots = tuple(path.resolve() for path in (
+        NUMPY_SITE / "numpy", NUMPY_SITE / "numpy.libs"))
+    observed: dict[str, str] = {}
+    for line in pathlib.Path("/proc/self/maps").read_text(encoding="utf-8").splitlines():
+        fields = line.split()
+        if len(fields) < 6 or not fields[-1].startswith("/home/bmarti44/"):
+            continue
+        path = pathlib.Path(fields[-1]).resolve()
+        if not any(path.is_relative_to(root) for root in allowed_roots):
+            raise ValueError(f"unfrozen user-writable mapped library: {path}")
+        observed[str(path)] = sha256_file(path)
+    if not any("libscipy_openblas" in path for path in observed):
+        raise ValueError("frozen OpenBLAS library is not mapped")
+    return dict(sorted(observed.items()))
+
+
 SCRIPT_RELATIVE = "scripts/93_score_w9_fp4_falsifier.py"
 TEST_RELATIVE = "scripts/tests/test_w9_fp4_falsifier.py"
 PLAN_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-plan-v1.json"
 LAUNCHER_RELATIVE = "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh"
-REVIEW_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-review-r252.json"
-FREEZE_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-candidate2-freeze.json"
+REVIEW_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-review-r253.json"
+FREEZE_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-candidate3-freeze.json"
 DRAND_VERIFIER = REPO / "scripts/89_verify_drand_receipt.mjs"
 NODE = pathlib.Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
 GIT = pathlib.Path("/usr/bin/git")
-MINIMUM_REVIEW_FLOOR = 6357189
+MINIMUM_REVIEW_FLOOR = 6357227
 RELAY_URLS = (
     "https://api.drand.sh",
     "https://api2.drand.sh",
@@ -74,14 +222,6 @@ E2M1_MIDPOINTS = (E2M1_LEVELS[:-1] + E2M1_LEVELS[1:]) / 2.0
 E2M1_POSITIVE_LEVELS = np.array(
     [0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0], dtype=np.float32,
 )
-
-
-def sha256_file(path: pathlib.Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(8 << 20):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -439,12 +579,12 @@ def validate_review_receipt(receipt: dict[str, Any]) -> tuple[str, int]:
     candidate = receipt.get("candidate_hash")
     floor = receipt.get("drand_min_round")
     if (receipt.get("schema") != "glm52-w9-fp4-falsifier-review-v1" or
-            receipt.get("review_round") != 252 or receipt.get("critical") != [] or
+            receipt.get("review_round") != 253 or receipt.get("critical") != [] or
             receipt.get("high") != [] or
             receipt.get("verdict") != "PASS_RUNTIME_ALLOWED" or
             not isinstance(candidate, str) or not re.fullmatch(r"[0-9a-f]{40}", candidate) or
             type(floor) is not int or floor < MINIMUM_REVIEW_FLOOR):
-        raise ValueError("review receipt does not authorize candidate 2")
+        raise ValueError("review receipt does not authorize candidate 3")
     return candidate, floor
 
 
@@ -455,7 +595,7 @@ def _git_show(revision: str, relative: str) -> bytes:
     ).stdout
 
 
-def _verify_runtime(runtime: dict[str, Any]) -> dict[str, str]:
+def _verify_runtime(runtime: dict[str, Any], stack: contextlib.ExitStack) -> dict[str, Any]:
     expected_paths = {
         "python_sha256": pathlib.Path(sys.executable),
         "numpy_init_sha256": pathlib.Path(np.__file__),
@@ -467,18 +607,36 @@ def _verify_runtime(runtime: dict[str, Any]) -> dict[str, str]:
         raise ValueError("frozen Python runtime path mismatch")
     if runtime.get("numpy_version") != np.__version__:
         raise ValueError("frozen NumPy version mismatch")
-    observed: dict[str, str] = {}
+    observed: dict[str, Any] = {}
     for key, path in expected_paths.items():
         expected = runtime.get(key)
         if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
             raise ValueError(f"missing runtime digest: {key}")
-        observed[key] = sha256_file(path)
+        bound = stack.enter_context(BoundInput(path, None, expected))
+        observed[key] = bound.sha256
         if observed[key] != expected:
             raise ValueError(f"frozen runtime digest mismatch: {key}")
+    expected_trees = runtime.get("trees")
+    if not isinstance(expected_trees, dict) or set(expected_trees) != {
+            str(path) for path in RUNTIME_TREE_EXPECTATIONS}:
+        raise ValueError("frozen runtime tree inventory mismatch")
+    observed["trees"] = {}
+    for path_text, initial in INITIAL_RUNTIME_TREES.items():
+        if expected_trees.get(path_text) != runtime_tree_public(initial):
+            raise ValueError(f"frozen runtime tree mismatch: {path_text}")
+        observed["trees"][path_text] = runtime_tree_public(initial)
+    expected_threads = runtime.get("thread_environment")
+    if expected_threads != THREAD_ENVIRONMENT:
+        raise ValueError("frozen numerical thread environment mismatch")
+    observed["thread_environment"] = dict(THREAD_ENVIRONMENT)
+    observed["loaded_numerical_libraries"] = loaded_numerical_libraries()
+    if runtime.get("loaded_numerical_libraries") != observed["loaded_numerical_libraries"]:
+        raise ValueError("frozen loaded numerical library inventory mismatch")
     return observed
 
 
-def _load_authorization(review_input: BoundInput) -> tuple[str, int, dict[str, str], dict[str, str]]:
+def _load_authorization(review_input: BoundInput, stack: contextlib.ExitStack
+                        ) -> tuple[str, int, dict[str, str], dict[str, Any]]:
     status = subprocess.run(
         [str(GIT), "status", "--porcelain"], cwd=REPO, check=True,
         capture_output=True, text=True,
@@ -499,7 +657,7 @@ def _load_authorization(review_input: BoundInput) -> tuple[str, int, dict[str, s
     if freeze_path.read_bytes() != frozen_bytes:
         raise ValueError("candidate freeze differs from reviewed commit")
     freeze = strict_json_bytes(frozen_bytes, "candidate freeze")
-    if freeze.get("schema") != "glm52-w9-fp4-falsifier-freeze-v2":
+    if freeze.get("schema") != "glm52-w9-fp4-falsifier-freeze-v3":
         raise ValueError("candidate freeze schema mismatch")
     expected_components = freeze.get("component_sha256")
     if not isinstance(expected_components, dict):
@@ -510,16 +668,20 @@ def _load_authorization(review_input: BoundInput) -> tuple[str, int, dict[str, s
     )
     observed: dict[str, str] = {}
     for relative in relatives:
-        current = (REPO / relative).read_bytes()
-        if current != _git_show(candidate, relative):
+        candidate_bytes = _git_show(candidate, relative)
+        expected = expected_components.get(relative)
+        if expected != sha256_bytes(candidate_bytes):
+            raise ValueError(f"candidate component freeze mismatch: {relative}")
+        bound = stack.enter_context(BoundInput(
+            REPO / relative, len(candidate_bytes), expected))
+        current = bound.read_bytes()
+        if current != candidate_bytes:
             raise ValueError(f"component differs from reviewed candidate: {relative}")
-        observed[relative] = sha256_bytes(current)
-        if expected_components.get(relative) != observed[relative]:
-            raise ValueError(f"component freeze mismatch: {relative}")
+        observed[relative] = bound.sha256
     runtime = freeze.get("runtime")
     if not isinstance(runtime, dict):
         raise ValueError("runtime freeze is missing")
-    runtime_observed = _verify_runtime(runtime)
+    runtime_observed = _verify_runtime(runtime, stack)
     return candidate, floor, observed, runtime_observed
 
 
@@ -578,6 +740,64 @@ def _validate_selected(selection: np.ndarray, sentinel: int) -> None:
             raise ValueError("selected key ID violates causal boundary")
 
 
+def aggregate_raw_rows(raw_rows: list[dict[str, Any]],
+                       layers: tuple[int, ...] = LAYERS
+                       ) -> tuple[dict[str, dict[str, float | int]], str, float, str]:
+    expected_pairs = {(layer, candidate) for layer in layers for candidate in CANDIDATES}
+    observed_pairs: set[tuple[int, str]] = set()
+    totals = {
+        candidate: {"numerator": 0.0, "denominator": 0.0, "pairs": 0,
+                    "query_rows": 0, "key_references": 0}
+        for candidate in CANDIDATES
+    }
+    for row in raw_rows:
+        if not isinstance(row, dict) or row.get("record_type") != "w9_fp4_layer":
+            raise ValueError("raw metric row schema mismatch")
+        layer = row.get("layer")
+        candidate = row.get("candidate")
+        pair = (layer, candidate)
+        if pair not in expected_pairs or pair in observed_pairs:
+            raise ValueError("raw metric row coverage mismatch")
+        observed_pairs.add(pair)
+        required = {"record_type", "layer", "candidate", "numerator", "denominator",
+                    "relative_rmse", "pairs", "query_rows", "key_references"}
+        allowed = required | ({"alpha_min", "alpha_max"} if candidate == CANDIDATES[2] else set())
+        if set(row) != allowed:
+            raise ValueError("raw metric row fields mismatch")
+        for key in ("numerator", "denominator", "relative_rmse"):
+            if (not isinstance(row[key], (int, float)) or isinstance(row[key], bool)
+                    or not math.isfinite(float(row[key]))):
+                raise ValueError("raw metric row has non-finite value")
+        if float(row["numerator"]) < 0 or float(row["denominator"]) <= 0:
+            raise ValueError("raw metric row has invalid sums")
+        expected_error = math.sqrt(float(row["numerator"]) / float(row["denominator"]))
+        if float(row["relative_rmse"]) != expected_error:
+            raise ValueError("raw metric row relative RMSE mismatch")
+        for key in ("pairs", "query_rows", "key_references"):
+            if type(row[key]) is not int or row[key] <= 0:
+                raise ValueError("raw metric row has invalid coverage")
+        if candidate == CANDIDATES[2]:
+            if any(not isinstance(row[key], (int, float)) or not math.isfinite(float(row[key]))
+                   for key in ("alpha_min", "alpha_max")):
+                raise ValueError("raw correction bounds are invalid")
+        for key in totals[candidate]:
+            totals[candidate][key] += row[key]
+    if observed_pairs != expected_pairs:
+        raise ValueError("raw metric rows are incomplete")
+    aggregate: dict[str, dict[str, float | int]] = {}
+    for candidate, values in totals.items():
+        numerator = float(values["numerator"])
+        denominator = float(values["denominator"])
+        aggregate[candidate] = {
+            **values,
+            "relative_rmse": math.sqrt(numerator / denominator),
+        }
+    winner = min(CANDIDATES, key=lambda name: aggregate[name]["relative_rmse"])
+    best_error = float(aggregate[winner]["relative_rmse"])
+    verdict = "PASS" if best_error <= MAXIMUM_RELATIVE_RMSE else "NO_RESULT"
+    return aggregate, winner, best_error, verdict
+
+
 def _evaluate(
     capture: pathlib.Path,
     inputs: dict[str, BoundInput],
@@ -610,11 +830,6 @@ def _evaluate(
         shape=(len(LAYERS), QUERY_ROWS, SELECTED_CAPACITY),
     )
     raw_rows: list[dict[str, Any]] = []
-    totals = {
-        candidate: {"numerator": 0.0, "denominator": 0.0, "pairs": 0,
-                    "query_rows": 0, "key_references": 0}
-        for candidate in CANDIDATES
-    }
     split_hashes: dict[str, dict[str, str]] = {}
 
     for layer_index, layer in enumerate(LAYERS):
@@ -650,8 +865,6 @@ def _evaluate(
         )
         raw_rows.append({"record_type": "w9_fp4_layer", "layer": layer,
                          "candidate": CANDIDATES[0], **metrics})
-        for key in totals[CANDIDATES[0]]:
-            totals[CANDIDATES[0]][key] += metrics[key]
         del plain
 
         signs = layer_signs(master_seed, layer, WIDTH)
@@ -664,8 +877,6 @@ def _evaluate(
         )
         raw_rows.append({"record_type": "w9_fp4_layer", "layer": layer,
                          "candidate": CANDIDATES[1], **metrics})
-        for key in totals[CANDIDATES[1]]:
-            totals[CANDIDATES[1]][key] += metrics[key]
 
         alpha = fit_channel_correction(
             rotated_reference[list(calibration_keys)],
@@ -680,22 +891,8 @@ def _evaluate(
                          "candidate": CANDIDATES[2],
                          "alpha_min": float(alpha.min()),
                          "alpha_max": float(alpha.max()), **metrics})
-        for key in totals[CANDIDATES[2]]:
-            totals[CANDIDATES[2]][key] += metrics[key]
 
-    aggregate: dict[str, dict[str, float | int]] = {}
-    for candidate, values in totals.items():
-        numerator = float(values["numerator"])
-        denominator = float(values["denominator"])
-        if denominator <= 0:
-            raise ValueError(f"candidate has nonpositive denominator: {candidate}")
-        aggregate[candidate] = {
-            **values,
-            "relative_rmse": math.sqrt(numerator / denominator),
-        }
-    winner = min(CANDIDATES, key=lambda name: aggregate[name]["relative_rmse"])
-    best_error = float(aggregate[winner]["relative_rmse"])
-    verdict = "PASS" if best_error <= MAXIMUM_RELATIVE_RMSE else "NO_RESULT"
+    aggregate, winner, best_error, verdict = aggregate_raw_rows(raw_rows, LAYERS)
     manifest = {
         "schema": "glm52-w9-fp4-falsifier-manifest-v2",
         "candidate_commit": candidate_commit,
@@ -748,28 +945,37 @@ def _evaluate(
 
 
 def run(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    verify_execution_environment()
     capture = pathlib.Path(args.capture_root).resolve()
     receipt_path = pathlib.Path(args.randomness_receipt).resolve()
     if not capture.is_dir() or capture.is_symlink():
         raise ValueError("capture root must be a real directory")
     _require_idle_host()
-    with contextlib.ExitStack() as stack:
-        review_input = stack.enter_context(BoundInput(
-            REPO / REVIEW_RELATIVE, None, None))
-        candidate, floor, source_bindings, runtime_bindings = _load_authorization(
-            review_input)
-        receipt_input = stack.enter_context(BoundInput(receipt_path, None, None))
-        inputs: dict[str, BoundInput] = {}
-        for name in CAPTURE_HASHES:
-            inputs[name] = stack.enter_context(BoundInput(
-                capture / name, CAPTURE_SIZES[name], CAPTURE_HASHES[name]))
-        metadata = _verify_capture(inputs)
-        receipt = _verify_randomness(receipt_input, floor)
-        return _evaluate(
-            capture, inputs, metadata, receipt, receipt_input.sha256,
-            candidate, floor, source_bindings, runtime_bindings,
-            review_input.sha256,
-        )
+    try:
+        with contextlib.ExitStack() as stack:
+            review_input = stack.enter_context(BoundInput(
+                REPO / REVIEW_RELATIVE, None, None))
+            candidate, floor, source_bindings, runtime_bindings = _load_authorization(
+                review_input, stack)
+            receipt_input = stack.enter_context(BoundInput(receipt_path, None, None))
+            inputs: dict[str, BoundInput] = {}
+            for name in CAPTURE_HASHES:
+                inputs[name] = stack.enter_context(BoundInput(
+                    capture / name, CAPTURE_SIZES[name], CAPTURE_HASHES[name]))
+            metadata = _verify_capture(inputs)
+            receipt = _verify_randomness(receipt_input, floor)
+            result = _evaluate(
+                capture, inputs, metadata, receipt, receipt_input.sha256,
+                candidate, floor, source_bindings, runtime_bindings,
+                review_input.sha256,
+            )
+        return result
+    finally:
+        # Re-hash the complete user-writable closure after scoring. Identity,
+        # timestamps, file set, and every byte must still match the pre-import
+        # snapshot.
+        for path_text, initial in INITIAL_RUNTIME_TREES.items():
+            verify_runtime_tree(pathlib.Path(path_text), initial)
 
 
 def publish_evidence(
@@ -811,7 +1017,10 @@ def verify_terminal(root: pathlib.Path) -> dict[str, Any]:
     if (not root.is_dir() or root.is_symlink() or
             {path.name for path in root.iterdir()} != expected_names):
         raise ValueError("terminal artifact path set mismatch")
-    with BoundInput(root / "terminal-receipt.json", None, None) as terminal_input:
+    try:
+      with contextlib.ExitStack() as stack:
+        terminal_input = stack.enter_context(BoundInput(
+            root / "terminal-receipt.json", None, None))
         terminal = strict_json_bytes(terminal_input.read_bytes(), "terminal receipt")
         if (set(terminal) != {"schema", "artifacts", "verdict"} or
                 terminal.get("schema") != "glm52-w9-fp4-falsifier-terminal-v2" or
@@ -821,21 +1030,54 @@ def verify_terminal(root: pathlib.Path) -> dict[str, Any]:
         if not isinstance(artifacts, list) or [row.get("path") for row in artifacts] != [
                 "manifest.json", "raw.jsonl", "summary.json"]:
             raise ValueError("terminal artifact inventory mismatch")
+        bound_artifacts: dict[str, BoundInput] = {}
         for row in artifacts:
             if (not isinstance(row, dict) or set(row) != {"path", "bytes", "sha256"} or
                     type(row.get("bytes")) is not int or row["bytes"] < 0 or
                     not isinstance(row.get("sha256"), str) or
                     not re.fullmatch(r"[0-9a-f]{64}", row["sha256"])):
                 raise ValueError("terminal artifact binding is malformed")
-            try:
-                with BoundInput(root / row["path"], row["bytes"], row["sha256"]) as bound:
-                    if row["path"] == "summary.json":
-                        summary = strict_json_bytes(bound.read_bytes(), "terminal summary")
-                        if summary.get("verdict") != terminal["verdict"]:
-                            raise ValueError("terminal verdict mismatch")
-            except ValueError as error:
-                raise ValueError(f"terminal artifact verification failed: {row['path']}") from error
+            bound_artifacts[row["path"]] = stack.enter_context(BoundInput(
+                root / row["path"], row["bytes"], row["sha256"]))
+        manifest = strict_json_bytes(
+            bound_artifacts["manifest.json"].read_bytes(), "terminal manifest")
+        raw_bytes = bound_artifacts["raw.jsonl"].read_bytes()
+        try:
+            raw_rows = [strict_json_bytes(line, f"terminal raw row {index}")
+                        for index, line in enumerate(raw_bytes.splitlines(), 1)]
+        except ValueError as error:
+            raise ValueError("terminal raw evidence is malformed") from error
+        summary = strict_json_bytes(
+            bound_artifacts["summary.json"].read_bytes(), "terminal summary")
+        if summary.get("verdict") != terminal["verdict"]:
+            raise ValueError("terminal verdict mismatch")
+        if terminal["verdict"] == "FAIL":
+            if (manifest.get("schema") != "glm52-w9-fp4-falsifier-failure-manifest-v2" or
+                    summary.get("schema") != "glm52-w9-fp4-falsifier-failure-summary-v2" or
+                    len(raw_rows) != 1 or raw_rows[0].get("record_type") != "w9_fp4_failure"):
+                raise ValueError("terminal failure evidence schema mismatch")
+        else:
+            if (manifest.get("schema") != "glm52-w9-fp4-falsifier-manifest-v2" or
+                    manifest.get("layers") != list(LAYERS) or
+                    manifest.get("candidates") != list(CANDIDATES) or
+                    summary.get("schema") != "glm52-w9-fp4-falsifier-summary-v1" or
+                    summary.get("maximum_allowed_error") != MAXIMUM_RELATIVE_RMSE or
+                    not isinstance(summary.get("checks"), dict) or
+                    not summary["checks"] or not all(value is True for value in summary["checks"].values())):
+                raise ValueError("terminal metric evidence schema mismatch")
+            aggregate, winner, best_error, verdict = aggregate_raw_rows(raw_rows, LAYERS)
+            if (summary.get("candidates") != aggregate or summary.get("winner") != winner or
+                    summary.get("query_weighted_error") != best_error or
+                    summary.get("verdict") != verdict or terminal["verdict"] != verdict):
+                raise ValueError("terminal metric aggregate or summary mismatch")
+        for bound in bound_artifacts.values():
+            bound.verify_final()
+        terminal_input.verify_final()
+        if {path.name for path in root.iterdir()} != expected_names:
+            raise ValueError("terminal artifact path set changed")
         return terminal
+    except ValueError as error:
+        raise ValueError(f"terminal verification failed: {error}") from error
 
 
 def main() -> int:

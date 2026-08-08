@@ -11,6 +11,7 @@ readonly CAPTURE=/home/bmarti44/.local/state/glm52-w9-real-capture/attempt-73838
 exec /usr/bin/env -i \
   HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
   PATH=/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 \
-  PYTHONPATH=/home/bmarti44/.local/lib/python3.12/site-packages \
-  /usr/bin/python3 -B "$SCRIPT" \
+  OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  BLIS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 \
+  /usr/bin/python3 -I -S -B "$SCRIPT" \
     --capture-root "$CAPTURE" --randomness-receipt "$1" --output "$2"
