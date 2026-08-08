@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
+import json
 import unittest
 from pathlib import Path
 
@@ -31,7 +33,9 @@ def row(arm: str) -> dict[str, object]:
         "request_start_ns": start,
         "token_timestamps_ns": [first + index * 500_000_000 for index in range(128)],
         "output_token_ids": list(range(128)),
-        "output_sha256": "5" * 64,
+        "output_sha256": hashlib.sha256(
+            json.dumps(list(range(128)), separators=(",", ":")).encode("ascii")
+        ).hexdigest(),
         "generated_text_sha256": "6" * 64,
         "generated_text_bytes": 80,
         "logit_sha256s": ["7" * 64, "8" * 64, "9" * 64],
