@@ -1,0 +1,74 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-freeze-v3",
+  "gate": "W9",
+  "candidate": 3,
+  "implementation_commit": "efcb1e08abb0a3bfe62f1fe9443de02da4f3462a",
+  "component_sha256": {
+    "scripts/93_score_w9_fp4_falsifier.py": "0638b01700e14de577cecdb3f17260b16bafa8549622675e13cdb879199d22a2",
+    "scripts/tests/test_w9_fp4_falsifier.py": "cf4f1dd7c077ec3b8e442f9385bb9587538fa3297adc49e1c69e6ec6e1edef6c",
+    "results/glm52-gates/W9-fp4-falsifier-plan-v1.json": "2f2045a3d7ce4b3240231e5120c15a97694ad748110c10d7efb504c4c54e6b97",
+    "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh": "6858dd3c5b381e15cc915eedb303335e0e723cfa9ff022eb414d94644b4dce77",
+    "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+  },
+  "runtime": {
+    "python_path": "/usr/bin/python3",
+    "python_sha256": "a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1",
+    "numpy_version": "2.2.6",
+    "numpy_init_sha256": "6ae17b070c0f70a8e3cad89a510a256942e5a1f37ea5feb120cec167ed2a6236",
+    "numpy_multiarray_sha256": "e6da9a03a2d786c3faa3f5c5bc35e1e6c04bb4746c8fed42f6a9fa61cb1e572e",
+    "node_sha256": "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90",
+    "git_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942",
+    "trees": {
+      "/home/bmarti44/.local/lib/python3.12/site-packages/numpy": {
+        "path": "/home/bmarti44/.local/lib/python3.12/site-packages/numpy",
+        "tree_sha256": "90b35528326f32865a17a2aed26815a90e9617a80d6c81e98e73069e1e098a87",
+        "files": 1280,
+        "bytes": 33391591
+      },
+      "/home/bmarti44/.local/lib/python3.12/site-packages/numpy.libs": {
+        "path": "/home/bmarti44/.local/lib/python3.12/site-packages/numpy.libs",
+        "tree_sha256": "6150280342f07114e7249491f084b603c1456bdbd94b66bf276857df75314169",
+        "files": 2,
+        "bytes": 26402458
+      },
+      "/home/bmarti44/.cache/glm52-drand-client-1.4.2/node_modules/@noble": {
+        "path": "/home/bmarti44/.cache/glm52-drand-client-1.4.2/node_modules/@noble",
+        "tree_sha256": "ca92f24bab4644eb0d162b4b07c8f432519caa802a5150ada536e82b8a911895",
+        "files": 486,
+        "bytes": 3205403
+      }
+    },
+    "thread_environment": {
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "BLIS_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "loaded_numerical_libraries": {
+      "/home/bmarti44/.local/lib/python3.12/site-packages/numpy.libs/libgfortran-daac5196-038a5e3c.so.5.0.0": "8c13f44b44e4dd0005632ea4173f5f5014d2829d50aa12b2054034297c07f233",
+      "/home/bmarti44/.local/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-128b20d9.so": "63afbdca6499641c9c0f10fe84c395ac2bcb89f3121b6c97c662418dd2d39785",
+      "/home/bmarti44/.local/lib/python3.12/site-packages/numpy/_core/_multiarray_umath.cpython-312-aarch64-linux-gnu.so": "e6da9a03a2d786c3faa3f5c5bc35e1e6c04bb4746c8fed42f6a9fa61cb1e572e",
+      "/home/bmarti44/.local/lib/python3.12/site-packages/numpy/linalg/_umath_linalg.cpython-312-aarch64-linux-gnu.so": "50863b997ec74d67c650f1313a5c7649a1386afc26c5e1b0598a2c219f75c12d"
+    }
+  },
+  "round_252_disposition": {
+    "ADV-W9-FP4-251-H3-RUNTIME-FREEZE-NOT-ENFORCED": "Fixed by isolated no-site startup, pre-import full-tree binding, pinned numerical threads, explicit mapped-library inventory, held component descriptors, and final full-tree verification.",
+    "ADV-W9-FP4-252-H1-RUNTIME-FREEZE-EXCLUDES-STARTUP-AND-TRANSITIVE-CODE": "Fixed by -I -S startup, no PYTHONPATH, pre-import hashes of every NumPy, numpy.libs/OpenBLAS, and @noble file, plus final generation verification and sitecustomize/.pth/transitive/native mutation tests.",
+    "ADV-W9-FP4-252-H2-SEQUENTIAL-TERMINAL-INVENTORY-TOCTOU": "Fixed by one ExitStack retaining the receipt and all three artifact descriptors through schema and aggregate recomputation, followed by explicit final generation and path-set verification; cross-artifact mutation is rejected.",
+    "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT": "DEFERRED medium: existing failure evidence remains terminal and fail-closed; richer partial-stage diagnostics do not affect the metric verdict and are outside the blocking candidate scope."
+  },
+  "focused_checks": {
+    "behavioral_RED": "18 tests: 4 failures and 3 errors against candidate 2",
+    "focused_tests": "19/19 PASS",
+    "isolated_no_site_startup": "PASS",
+    "full_size_synthetic_quantizer": "8192x512 finite output; 4.87 seconds; 227076 KiB max RSS",
+    "python_compile": "PASS",
+    "shell_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "measurement_observed": false
+  },
+  "drand_min_round": 6357227,
+  "runtime_authorized": false
+}
