@@ -114,6 +114,7 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             "evict_store_count", "selected_checkpoint_tokens", "logit_sha256s",
             "manifest.json", "raw.jsonl", "summary.json", "public_randomness",
             "install_campaign_signal_handlers", "finalize_failure_triplet",
+            '"verdict": summary["verdict"]',
         ):
             self.assertIn(required, source)
         self.assertNotIn("shell=True", source)
@@ -161,6 +162,65 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             manifest = json.loads((attempt / "manifest.json").read_text())
             self.assertEqual(manifest["candidate_hash"], "b" * 40)
             self.assertEqual(manifest["verdict"], "FAIL")
+
+    def test_terminal_manifest_requires_verdict_rows_summary_and_full_inventory(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-terminal-valid-") as temporary:
+            attempt = Path(temporary)
+            raw = b'{"arm":"off"}\n'
+            summary = b'{"verdict":"PASS"}\n'
+            (attempt / "raw.jsonl").write_bytes(raw)
+            (attempt / "summary.json").write_bytes(summary)
+            arm = attempt / "p0-off"
+            arm.mkdir()
+            (arm / "server.log").write_text("arm\n")
+            manifest = {
+                "schema": "glm52-w7-evict-store-probe-v1",
+                "candidate_hash": "c" * 40,
+                "verdict": "PASS",
+                "completed_rows": 1,
+                "artifacts": {
+                    "raw.jsonl": hashlib.sha256(raw).hexdigest(),
+                    "summary.json": hashlib.sha256(summary).hexdigest(),
+                },
+            }
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+            manifest["artifacts"]["p0-off/server.log"] = hashlib.sha256(b"arm\n").hexdigest()
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            self.assertTrue(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+            (attempt / "summary.json").write_text('{"verdict":"FAIL"}\n')
+            manifest["artifacts"]["summary.json"] = hashlib.sha256(b'{"verdict":"FAIL"}\n').hexdigest()
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+            (attempt / "summary.json").write_bytes(summary)
+            manifest["artifacts"]["summary.json"] = hashlib.sha256(summary).hexdigest()
+            manifest["completed_rows"] = 2
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+
+    def test_failure_publication_records_authoritative_replacement(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-binding-finalize-") as temporary:
+            attempt = Path(temporary)
+            arm = attempt / "p0-off"
+            arm.mkdir()
+            server = arm / "server.log"
+            server.write_text("receipt-bound\n")
+            expected = hashlib.sha256(server.read_bytes()).hexdigest()
+            server.write_text("replacement\n")
+            MODULE._ACTIVE_ATTEMPT = attempt
+            MODULE._ACTIVE_CANDIDATE = "d" * 40
+            MODULE._ACTIVE_ROWS = [{"arm": "off"}]
+            MODULE._ACTIVE_BINDINGS = {str(server): expected}
+            try:
+                MODULE.finalize_failure_triplet(RuntimeError("interrupted"))
+            finally:
+                MODULE._ACTIVE_ATTEMPT = None
+                MODULE._ACTIVE_CANDIDATE = None
+                MODULE._ACTIVE_ROWS = []
+                MODULE._ACTIVE_BINDINGS = {}
+            manifest = json.loads((attempt / "manifest.json").read_text())
+            self.assertEqual(manifest["verdict"], "FAIL")
+            self.assertIn("p0-off/server.log", manifest["binding_failures"])
 
     def test_parse_rejects_server_replacement_after_base_validation(self) -> None:
         temporary, out, base_row, receipt = self.make_parse_arm()
@@ -213,6 +273,32 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
         with mock.patch.object(MODULE.BASE, "parse_arm", return_value=base_on):
             with self.assertRaises(Exception):
                 MODULE.parse_arm("on", 0, out_on, 0, on_receipt, "4" * 64, "3" * 64)
+
+    def test_parse_rejects_arbitrary_prefix_on_each_expected_event(self) -> None:
+        for target in ("store", "hit"):
+            temporary, out, base_row, _ = self.make_parse_arm()
+            self.addCleanup(temporary.cleanup)
+            path = out / "server.log"
+            source = path.read_text()
+            needle = (
+                "ds4-server: kv cache stored tokens=5055" if target == "store"
+                else "ds4-server: kv cache hit text tokens=5044"
+            )
+            path.write_text(source.replace(needle, "MALFORMED_PREFIX " + needle))
+            receipt = self.bind_server(out)
+            with mock.patch.object(MODULE.BASE, "parse_arm", return_value=copy.deepcopy(base_row)):
+                with self.assertRaises(Exception):
+                    MODULE.parse_arm("off", 0, out, 0, receipt, "4" * 64, "3" * 64)
+        for target in (MODULE.ACTIVATION, MODULE.SKIPPED):
+            temporary, out, base_row, _ = self.make_parse_arm()
+            self.addCleanup(temporary.cleanup)
+            self.convert_server_to_on(out)
+            path = out / "server.log"
+            path.write_text(path.read_text().replace(target, "MALFORMED_PREFIX " + target))
+            receipt = self.bind_server(out)
+            with mock.patch.object(MODULE.BASE, "parse_arm", return_value=copy.deepcopy(base_row)):
+                with self.assertRaises(Exception):
+                    MODULE.parse_arm("on", 0, out, 0, receipt, "4" * 64, "3" * 64)
 
     def test_parse_rejects_logit_replacement_after_base_validation(self) -> None:
         temporary, out, base_row, receipt = self.make_parse_arm()
