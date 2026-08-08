@@ -220,6 +220,7 @@ allowlist = {
     "scorer_sha256",
     "unchanged_scorer_sha256",
     "red_test_sha256",
+    "test_output_sha256",
     "runner_sha256",
     "test_diff_sha256",
     "compactor_sha256",

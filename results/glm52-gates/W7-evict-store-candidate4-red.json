@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 4,
+  "review_round_source": 290,
+  "parent_candidate_hash": "e8ba33024726abd6e86aa38943dc84d240ad19e3",
+  "test_commit": "07353434383f9ab30c0207f008dacb8510688caa",
+  "test_command": "python3 -m unittest scripts.tests.test_w7_evict_store_probe_runner",
+  "unchanged_implementation_test_exit_code": 1,
+  "test_output_sha256": "8000506336cab1dcf010e684ae86e14f51e367cb38603fbebc0cd11b589b78bd",
+  "failed_acceptance_tests": [
+    "test_failure_schema_can_never_claim_pass",
+    "test_terminal_pass_replays_frozen_scorer_and_binds_campaign"
+  ],
+  "observed_failures": [
+    "failure-schema evidence with verdict PASS was accepted",
+    "normal PASS evidence remained accepted after an incomplete one-row mutation"
+  ],
+  "frozen_component_intent": {
+    "engine_source_commit": "fdd0fe05df6368de428cd5405929f49d590c9f52",
+    "binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+    "scorer_sha256": "1ccb1cf2d501cc5ec0132080fe7f60fed21a707bc741c28e03520a89d325fcbb"
+  },
+  "runtime_started": false,
+  "verdict": "RED_CONFIRMED"
+}
