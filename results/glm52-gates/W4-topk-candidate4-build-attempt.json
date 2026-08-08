@@ -1,0 +1,12 @@
+{
+  "schema": "glm52-w4-topk-build-attempt-v1",
+  "gate": "W4",
+  "candidate": 4,
+  "attempt": 1,
+  "command": "make -j2 tests/cuda_topk_w4 CUDA_ARCH=sm_121",
+  "exit_code": 2,
+  "failure": "tests/cuda_topk_w4.cu:10:10: fatal error: openssl/sha.h: No such file or directory",
+  "root_diagnosis": "The runtime libcrypto.so.3 is installed but OpenSSL development headers and the unversioned linker symlink are not. Adding a package or host dependency is unnecessary for a test-only digest.",
+  "bounded_fix": "Use a small self-contained SHA-256 implementation in the CUDA test and remove the libcrypto link. No production engine source changes.",
+  "verdict": "NO_RESULT"
+}
