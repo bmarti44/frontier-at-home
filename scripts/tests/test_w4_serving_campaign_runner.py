@@ -18,6 +18,11 @@ SPEC.loader.exec_module(RUNNER)
 
 
 class W4ServingContainmentTest(unittest.TestCase):
+    def test_safe_run_candidate_directory_contains_named_binary(self) -> None:
+        self.assertEqual(RUNNER.BIN.name, "ds4-server")
+        self.assertEqual(RUNNER.CANDIDATE_SRC, RUNNER.BIN.parent)
+        self.assertTrue((RUNNER.CANDIDATE_SRC / "ds4-server").is_file())
+
     def test_containment_forwards_exact_topk_flag(self) -> None:
         source = (ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh").read_text()
         self.assertIn("  DS4_CUDA_TOPK2048_CUB \\\n", source)
