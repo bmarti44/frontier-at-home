@@ -320,7 +320,7 @@ if [[ $W7_DRIVER_LINEAGE == 1 ]]; then
     config_error "GLM_SAFE_W7_DRIVER_LINEAGE cgroup"
   verify_w7_lock_parent() {
     /usr/bin/python3 - "$$" "$PPID" "$0" "$W7_INFERENCE_LOCK" <<'PY'
-import os, pathlib, sys
+import errno, fcntl, os, pathlib, stat, sys
 
 self_pid, parent_pid, safe_path, lock_path = sys.argv[1:]
 self_argv = pathlib.Path(f"/proc/{self_pid}/cmdline").read_bytes().split(b"\0")[:-1]
@@ -339,9 +339,35 @@ for line in pathlib.Path("/proc/locks").read_text().splitlines():
             break
 if not held:
     raise SystemExit("inference-lock parent does not own the expected lock")
+matching = []
+for entry in pathlib.Path(f"/proc/{self_pid}/fd").iterdir():
+    try:
+        descriptor = int(entry.name)
+        metadata = os.fstat(descriptor)
+    except (OSError, ValueError):
+        continue
+    if stat.S_ISREG(metadata.st_mode) and (metadata.st_dev, metadata.st_ino) == (lock.st_dev, lock.st_ino):
+        if fcntl.fcntl(descriptor, fcntl.F_GETFD) & fcntl.FD_CLOEXEC:
+            raise SystemExit("inference-lock descriptor is close-on-exec")
+        matching.append(descriptor)
+if len(matching) != 1:
+    raise SystemExit("expected exactly one inherited inference-lock descriptor")
+probe = os.open(lock_path, os.O_RDONLY | os.O_CLOEXEC)
+try:
+    try:
+        fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as error:
+        if error.errno not in (errno.EACCES, errno.EAGAIN):
+            raise
+    else:
+        raise SystemExit("inherited inference-lock descriptor is not held")
+finally:
+    os.close(probe)
+print(matching[0])
 PY
   }
-  verify_w7_lock_parent || config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"
+  W7_LOCK_FD=$(verify_w7_lock_parent) ||
+    config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"
   export DS4_W7_SAFE_PID=$$
   export DS4_W7_SAFE_START_TICKS
   DS4_W7_SAFE_START_TICKS=$(awk '{print $22}' "/proc/$$/stat")
@@ -350,6 +376,7 @@ PY
   export DS4_W7_LOCK_PARENT_PID=$PPID
   export DS4_W7_LOCK_PARENT_START_TICKS
   DS4_W7_LOCK_PARENT_START_TICKS=$(awk '{print $22}' "/proc/$PPID/stat")
+  export DS4_W7_LOCK_FD=$W7_LOCK_FD
 fi
 
 setsid timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" "$@" > "$DIR/cmd.log" 2>&1 &

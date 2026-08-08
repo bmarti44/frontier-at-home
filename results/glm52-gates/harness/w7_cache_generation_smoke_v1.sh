@@ -284,17 +284,19 @@ verify_driver_safe_lineage() {
   local safe_pid=${DS4_W7_SAFE_PID:-} safe_start=${DS4_W7_SAFE_START_TICKS:-}
   local safe_path=${DS4_W7_SAFE_SCRIPT_PATH:-} safe_unit=${DS4_W7_SAFE_CGROUP_UNIT:-}
   local lock_pid=${DS4_W7_LOCK_PARENT_PID:-} lock_start=${DS4_W7_LOCK_PARENT_START_TICKS:-}
+  local lock_fd=${DS4_W7_LOCK_FD:-}
   [[ ${GLM_SAFE_W7_DRIVER_LINEAGE:-} == 1 ]]
   [[ $safe_pid =~ ^[1-9][0-9]*$ && $safe_start =~ ^[1-9][0-9]*$ ]]
   [[ $safe_path == "$safe_fd_path" && $safe_unit == "${GLM_SAFE_CGROUP_UNIT:-}" ]]
   [[ $lock_pid =~ ^[1-9][0-9]*$ && $lock_start =~ ^[1-9][0-9]*$ ]]
+  [[ $lock_fd =~ ^[3-9][0-9]*$|^[3-9]$ ]]
   has_full_seal "$safe_path"
   /usr/bin/git --no-replace-objects -C "$ROOT" show \
     "$candidate:results/glm52-gates/harness/glm_safe_run.sh" | /usr/bin/cmp -s - "$safe_path"
-  /usr/bin/python3 - "$safe_pid" "$safe_start" "$safe_path" "$$" "$lock_pid" "$lock_start" <<'PY'
-import os, pathlib, sys
+  /usr/bin/python3 - "$safe_pid" "$safe_start" "$safe_path" "$$" "$lock_pid" "$lock_start" "$lock_fd" <<'PY'
+import errno, fcntl, os, pathlib, sys
 
-safe_pid, expected_start, expected_path, child_pid, lock_pid, lock_start = sys.argv[1:]
+safe_pid, expected_start, expected_path, child_pid, lock_pid, lock_start, lock_fd_text = sys.argv[1:]
 stat = pathlib.Path(f"/proc/{safe_pid}/stat").read_text().split()
 if stat[21] != expected_start:
     raise SystemExit("safe wrapper start identity changed")
@@ -331,6 +333,21 @@ if not any(
     for line in pathlib.Path("/proc/locks").read_text().splitlines()
 ):
     raise SystemExit("inference-lock ownership is absent")
+lock_fd = int(lock_fd_text)
+inherited = os.fstat(lock_fd)
+if (inherited.st_dev, inherited.st_ino) != (lock.st_dev, lock.st_ino):
+    raise SystemExit("inherited inference-lock descriptor identity mismatch")
+probe = os.open(lock_path, os.O_RDONLY | os.O_CLOEXEC)
+try:
+    try:
+        fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as error:
+        if error.errno not in (errno.EACCES, errno.EAGAIN):
+            raise
+    else:
+        raise SystemExit("inherited inference-lock descriptor is no longer held")
+finally:
+    os.close(probe)
 PY
 }
 
@@ -449,16 +466,16 @@ publish_outer_evidence() {
   python3 - "$scorer_fd_path" "$attempt" "$out" "$crash_dir" "$candidate" "$execution_head" \
     "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
     "$scorer_sha256" "$harness_sha256" "$cgroup_sha256" "$safe_sha256" \
-    "$containment_rc" "$containment_stdout" <<'PY'
+    "$memory_guard_sha256" "$containment_rc" "$containment_stdout" <<'PY'
 import importlib.machinery, importlib.util, pathlib, sys
 scorer_path=pathlib.Path(sys.argv[1]); attempt=pathlib.Path(sys.argv[2]); out=pathlib.Path(sys.argv[3]); crash=pathlib.Path(sys.argv[4])
-candidate, execution_head, binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha, containment_rc_text, containment_stdout=sys.argv[5:]
+candidate, execution_head, binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha, memory_guard_sha, containment_rc_text, containment_stdout=sys.argv[5:]
 loader=importlib.machinery.SourceFileLoader("w7_scorer",str(scorer_path)); spec=importlib.util.spec_from_loader(loader.name,loader); module=importlib.util.module_from_spec(spec); loader.exec_module(module)
 identities={"candidate_hash":candidate,"execution_head":execution_head,"binary_sha256":binary,
  "model_sha256":model,"model_bytes":int(model_bytes),"live_request_sha256":live,
  "primary_request_sha256":primary,"executed_environment_sha256":environment,
  "scorer_sha256":scorer_sha,"harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,
- "safe_run_sha256":safe_sha,"containment":{"memory_high_gib":78,"memory_max_gib":80,
+ "safe_run_sha256":safe_sha,"memory_guard_sha256":memory_guard_sha,"containment":{"memory_high_gib":78,"memory_max_gib":80,
  "kill_floor_gib":24,"minimum_start_gib":110,"timeout_seconds":2400,"swap_max":0}}
 containment_rc=int(containment_rc_text)
 result=module.score_and_publish_bound_attempt(attempt=attempt,out=out,crash_dir=crash,evidence_dir=out/"evidence",identities=identities,containment_stdout=containment_stdout,containment_rc=containment_rc)
@@ -475,11 +492,11 @@ publish_failure_triplet() {
   /usr/bin/python3 - "$attempt" "$out" "${candidate:-unknown}" "$observed_final_head" "$failure_reason" "$1" \
     "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
     "$scorer_sha256" "$harness_sha256" "$cgroup_sha256" "$safe_sha256" \
-    "$containment_rc" "$containment_stdout" <<'PY'
+    "$memory_guard_sha256" "$containment_rc" "$containment_stdout" <<'PY'
 import ctypes, errno, hashlib, json, os, pathlib, sys, tempfile
 attempt, out = map(pathlib.Path, sys.argv[1:3]); candidate, execution_head, reason=sys.argv[3:6]; rc=int(sys.argv[6])
-binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha=sys.argv[7:17]
-containment_rc, containment_stdout = sys.argv[17:19]
+binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha, memory_guard_sha=sys.argv[7:18]
+containment_rc, containment_stdout = sys.argv[18:20]
 
 def read_once(path):
     try:
@@ -513,7 +530,7 @@ artifacts.update({"raw.jsonl":hashlib.sha256(raw_bytes).hexdigest(),"summary.jso
 manifest={"schema":"glm52-w7-runtime-v3","candidate_hash":candidate,"execution_head":execution_head,
  "binary_sha256":binary,"model_sha256":model,"model_bytes":int(model_bytes),
  "live_request_sha256":live,"primary_request_sha256":primary,"executed_environment_sha256":environment,
- "scorer_sha256":scorer_sha,"harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,"safe_run_sha256":safe_sha,
+ "scorer_sha256":scorer_sha,"harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,"safe_run_sha256":safe_sha,"memory_guard_sha256":memory_guard_sha,
  "containment":{"memory_high_gib":78,"memory_max_gib":80,"kill_floor_gib":24,"minimum_start_gib":110,"timeout_seconds":2400,"swap_max":0},
  "purpose":"failed W7 production-path diagnostic","artifacts":artifacts}
 manifest_bytes=(json.dumps(manifest,sort_keys=True,separators=(",",":"))+"\n").encode()
@@ -609,13 +626,24 @@ if [[ ${1:-} == --driver-lineage-self-test ]]; then
   original_safe_unit=$DS4_W7_SAFE_CGROUP_UNIT
   original_lock_pid=$DS4_W7_LOCK_PARENT_PID
   original_lock_start=$DS4_W7_LOCK_PARENT_START_TICKS
-  DS4_W7_SAFE_PID=1; ! verify_driver_safe_lineage # bad-safe-pid
-  DS4_W7_SAFE_PID=$original_safe_pid; DS4_W7_SAFE_START_TICKS=1; ! verify_driver_safe_lineage # bad-safe-start
-  DS4_W7_SAFE_START_TICKS=$original_safe_start; DS4_W7_SAFE_SCRIPT_PATH=$harness_fd_path; ! verify_driver_safe_lineage # wrong-safe-script
-  DS4_W7_SAFE_SCRIPT_PATH=$original_safe_path; DS4_W7_SAFE_CGROUP_UNIT=wrong; ! verify_driver_safe_lineage # wrong-cgroup-unit
-  DS4_W7_SAFE_CGROUP_UNIT=$original_safe_unit; DS4_W7_LOCK_PARENT_PID=1; ! verify_driver_safe_lineage # bad-lock-pid
-  DS4_W7_LOCK_PARENT_PID=$original_lock_pid; DS4_W7_LOCK_PARENT_START_TICKS=1; ! verify_driver_safe_lineage # bad-lock-start
+  original_lock_fd=$DS4_W7_LOCK_FD
+  expect_lineage_rejection() {
+    local name=$1
+    if verify_driver_safe_lineage; then
+      echo "lineage mutation was accepted name=$name" >&2
+      return 1
+    fi
+    echo "W7_LINEAGE_MUTATION_REJECTED name=$name"
+  }
+  DS4_W7_SAFE_PID=1; expect_lineage_rejection bad-safe-pid
+  DS4_W7_SAFE_PID=$original_safe_pid; DS4_W7_SAFE_START_TICKS=1; expect_lineage_rejection bad-safe-start
+  DS4_W7_SAFE_START_TICKS=$original_safe_start; DS4_W7_SAFE_SCRIPT_PATH=$harness_fd_path; expect_lineage_rejection wrong-safe-script
+  DS4_W7_SAFE_SCRIPT_PATH=$original_safe_path; DS4_W7_SAFE_CGROUP_UNIT=wrong; expect_lineage_rejection wrong-cgroup-unit
+  DS4_W7_SAFE_CGROUP_UNIT=$original_safe_unit; DS4_W7_LOCK_PARENT_PID=1; expect_lineage_rejection bad-lock-pid
+  DS4_W7_LOCK_PARENT_PID=$original_lock_pid; DS4_W7_LOCK_PARENT_START_TICKS=1; expect_lineage_rejection bad-lock-start
   DS4_W7_LOCK_PARENT_START_TICKS=$original_lock_start
+  DS4_W7_LOCK_FD=9999; expect_lineage_rejection bad-lock-fd
+  DS4_W7_LOCK_FD=$original_lock_fd
   echo W7_DRIVER_LINEAGE_SELFTEST_OK
   sleep 1
   exit 0

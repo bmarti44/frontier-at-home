@@ -50,6 +50,7 @@ CONTAINMENT = (
 )
 BINARY_SHA256 = "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
 ENV_SHA256 = "ea8cc542bf2138646cb5bb3d38c9f7e7d88eef3e5a8fe7faf13074463f5a5e64"
+MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
 SAFETY = (
     "SAFE_RUN start tag=w7-test vlimit_kb=419430400 kill_floor_gib=24 "
     "min_start_gib=110 timeout_s=2400\n"
@@ -57,6 +58,7 @@ SAFETY = (
     "memory_swap_max=0 memory_oom_group=1\n"
     f"executed_environment_allowlist=DS4_CUDA_STABLE_MODEL_REMAP executed_environment_sha256={ENV_SHA256}\n"
     f"executed_candidate_verified executed_binary_sha256={BINARY_SHA256}\n"
+    f"memory_guard_descriptor_path=/proc/123/fd/7 memory_guard_sha256={MEMORY_GUARD_SHA256}\n"
     "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler\n"
     "SAFE_RUN end rc=0 killed=no\n"
 )
@@ -68,7 +70,8 @@ MODEL_IDENTITY = (
 
 
 def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
-          rc: str = RC, containment: str = CONTAINMENT) -> dict[str, object]:
+          rc: str = RC, containment: str = CONTAINMENT,
+          safety: str = SAFETY) -> dict[str, object]:
     return MODULE.score_text(
         text,
         http_status=http,
@@ -77,9 +80,10 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
         containment_stdout=containment,
         mode="on",
         child_exit_text='{"shutdown_requested":true,"forced_kill":false,"exit_status":0}',
-        safety_main_text=SAFETY,
+        safety_main_text=safety,
         expected_binary_sha256=BINARY_SHA256,
         expected_environment_sha256=ENV_SHA256,
+        expected_memory_guard_sha256=MEMORY_GUARD_SHA256,
         model_identity_text=MODEL_IDENTITY,
         expected_model_sha256=MODEL_SHA256,
         expected_model_bytes=211075856448,
@@ -92,9 +96,9 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("verify_w7_lock_parent", safe)
         self.assertIn("DS4_W7_LOCK_PARENT_PID", safe)
         self.assertIn("/run/lock/frontier-at-home/inference.lock", safe)
+        self.assertIn("W7_LOCK_FD=$(verify_w7_lock_parent)", safe)
         self.assertIn(
-            'verify_w7_lock_parent || config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"',
-            safe,
+            'config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"', safe
         )
         self.assertIn("DS4_W7_LOCK_FD", safe)
         self.assertIn("DS4_W7_LOCK_FD", SMOKE.read_text(encoding="utf-8"))
@@ -147,6 +151,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         for mutation in (
             "bad-safe-pid", "bad-safe-start", "wrong-safe-script",
             "wrong-cgroup-unit", "bad-lock-pid", "bad-lock-start",
+            "bad-lock-fd",
         ):
             self.assertIn(f"W7_LINEAGE_MUTATION_REJECTED name={mutation}", command_log)
         self.assertEqual(set(attempt_root.glob("attempt-*")), before_attempts)
@@ -163,6 +168,9 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         harness = SMOKE.read_text(encoding="utf-8")
         self.assertIn("memory_guard_sha256", scorer)
         self.assertIn('"memory_guard_sha256":memory_guard_sha', harness)
+        mismatch = score(safety=SAFETY.replace(MEMORY_GUARD_SHA256, "0" * 64))
+        self.assertEqual(mismatch["verdict"], "FAIL")
+        self.assertFalse(mismatch["checks"]["memory_guard_identity_bound"])
 
     def test_driver_requires_safe_wrapper_ancestor_lineage(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
@@ -328,6 +336,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
                 "live_request_sha256": "1" * 64,
                 "primary_request_sha256": "2" * 64,
                 "executed_environment_sha256": ENV_SHA256,
+                "memory_guard_sha256": MEMORY_GUARD_SHA256,
                 "scorer_sha256": "3" * 64,
                 "harness_sha256": "4" * 64,
                 "cgroup_sha256": "5" * 64,

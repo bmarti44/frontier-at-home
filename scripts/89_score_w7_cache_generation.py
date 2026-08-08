@@ -69,6 +69,7 @@ def score_text(
     safety_main_text: str = "",
     expected_binary_sha256: str = "",
     expected_environment_sha256: str = "",
+    expected_memory_guard_sha256: str = "",
     model_identity_text: str = "",
     expected_model_sha256: str = "",
     expected_model_bytes: int = 0,
@@ -224,6 +225,7 @@ def score_text(
     cgroup_lines = [line for line in safety_lines if "cgroup_verified " in line]
     binary_lines = [line for line in safety_lines if "executed_candidate_verified " in line]
     environment_lines = [line for line in safety_lines if "executed_environment_allowlist=" in line]
+    memory_guard_lines = [line for line in safety_lines if "memory_guard_descriptor_path=" in line]
     clean_exit_lines = [line for line in safety_lines if "executed candidate was verified alive at least once;" in line]
     safe_end_lines = [line for line in safety_lines if "SAFE_RUN end " in line]
     safety_checks = {
@@ -248,6 +250,12 @@ def score_text(
         and "SAFE_RUN end rc=0 killed=no" in safe_end_lines[0]
         and not any("FATAL" in line or "KILL_FLOOR breached" in line for line in safety_lines),
     }
+    if expected_memory_guard_sha256:
+        safety_checks["memory_guard_identity_bound"] = (
+            SHA256_RE.fullmatch(expected_memory_guard_sha256) is not None
+            and len(memory_guard_lines) == 1
+            and f"memory_guard_sha256={expected_memory_guard_sha256}" in memory_guard_lines[0]
+        )
     checks = {
         "listener_observed": listen is not None,
         "shutdown_observed_once": len(shutdown_indexes) == 1,
@@ -618,6 +626,7 @@ def score_and_publish_bound_attempt(
 
     expected_binary = str(identities["binary_sha256"])
     expected_environment = str(identities["executed_environment_sha256"])
+    expected_memory_guard = str(identities["memory_guard_sha256"])
     expected_model = str(identities["model_sha256"])
     expected_model_bytes = identities["model_bytes"]
     if type(expected_model_bytes) is not int:
@@ -633,6 +642,7 @@ def score_and_publish_bound_attempt(
         safety_main_text=main_text,
         expected_binary_sha256=expected_binary,
         expected_environment_sha256=expected_environment,
+        expected_memory_guard_sha256=expected_memory_guard,
         model_identity_text=payloads["model.identity.json"].decode("utf-8", errors="strict"),
         expected_model_sha256=expected_model,
         expected_model_bytes=expected_model_bytes,
