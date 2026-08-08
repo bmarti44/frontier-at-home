@@ -91,7 +91,9 @@ class W4ServingContainmentTest(unittest.TestCase):
                         "ref": "refs/heads/glm52-rung0-io-submission"},
         }]).encode()
         response.__enter__.return_value = response
-        with mock.patch.object(RUNNER.urllib.request, "urlopen", return_value=response):
+        opener = mock.MagicMock()
+        opener.open.return_value = response
+        with mock.patch.object(RUNNER.urllib.request, "build_opener", return_value=opener):
             receipt = RUNNER.fetch_publication_receipt(candidate)
         self.assertEqual(receipt["candidate_hash"], candidate)
         self.assertEqual(receipt["created_at_unix"], 1_786_211_125)
@@ -112,9 +114,14 @@ class W4ServingContainmentTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, \
              mock.patch.object(RUNNER.subprocess, "run", return_value=verified):
             receipt = Path(directory) / "receipt.json"
-            receipt.write_text(json.dumps({**base, "round": first + 1}))
-            with self.assertRaisesRegex(RUNNER.CampaignError, "first eligible"):
-                RUNNER.verify_randomness(receipt, candidate, publication)
+            receipt.write_text(json.dumps({**base, "round": first}))
+            self.assertEqual(RUNNER.verify_randomness(
+                receipt, candidate, publication)[0], "4" * 64)
+            for wrong_round in (first - 1, first + 1, first + 100):
+                receipt.write_text(json.dumps({**base, "round": wrong_round}))
+                with self.subTest(round=wrong_round), self.assertRaisesRegex(
+                        RUNNER.CampaignError, "first eligible"):
+                    RUNNER.verify_randomness(receipt, candidate, publication)
 
     def test_randomness_verification_binds_imported_runtime_tree(self) -> None:
         candidate = "3" * 40
@@ -136,9 +143,10 @@ class W4ServingContainmentTest(unittest.TestCase):
             receipt = Path(directory) / "receipt.json"
             receipt.write_text(json.dumps(doc))
             with mock.patch.object(RUNNER, "DRAND_RUNTIME", root, create=True), \
-                 mock.patch.object(RUNNER.subprocess, "run", return_value=verified), \
+                 mock.patch.object(RUNNER.subprocess, "run", return_value=verified) as run, \
                  self.assertRaisesRegex(RUNNER.CampaignError, "runtime tree"):
                 RUNNER.verify_randomness(receipt, candidate, publication)
+            run.assert_not_called()
 
     def test_publication_fetch_ignores_ambient_proxy_and_ca_overrides(self) -> None:
         candidate = "3" * 40
@@ -151,16 +159,25 @@ class W4ServingContainmentTest(unittest.TestCase):
         response.__enter__.return_value = response
         opener = mock.MagicMock()
         opener.open.return_value = response
+        tls_context = object()
         hostile = {"HTTPS_PROXY": "https://127.0.0.1:1",
                    "SSL_CERT_FILE": "/tmp/attacker-ca.pem",
                    "SSL_CERT_DIR": "/tmp/attacker-ca"}
         with mock.patch.dict(os.environ, hostile), \
              mock.patch.object(RUNNER.urllib.request, "urlopen",
                                side_effect=AssertionError("ambient opener used")), \
-             mock.patch.object(RUNNER.urllib.request, "build_opener", return_value=opener):
+             mock.patch.object(RUNNER.ssl, "create_default_context",
+                               return_value=tls_context) as create_context, \
+             mock.patch.object(RUNNER.urllib.request, "build_opener", return_value=opener) as build:
             receipt = RUNNER.fetch_publication_receipt(candidate)
         self.assertEqual(receipt["candidate_hash"], candidate)
         opener.open.assert_called_once()
+        create_context.assert_called_once_with(cafile=str(RUNNER.SYSTEM_CA_BUNDLE))
+        handlers = build.call_args.args
+        self.assertTrue(any(isinstance(handler, RUNNER.urllib.request.ProxyHandler)
+                            and handler.proxies == {} for handler in handlers))
+        self.assertTrue(any(isinstance(handler, RUNNER.urllib.request.HTTPSHandler)
+                            for handler in handlers))
 
     def test_sync_trace_requires_full_novel_prefill(self) -> None:
         valid = ("ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "

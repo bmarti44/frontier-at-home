@@ -24,6 +24,8 @@ TOKENIZER = Path("/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.jso
 TOKENIZER_RUNTIME = Path("/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2")
 RENDER_ORACLE = Path("/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle")
 DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
+DRAND_RUNTIME = Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2")
+SYSTEM_CA_BUNDLE = Path("/etc/ssl/certs/ca-certificates.crt")
 STAGED_BINARY = Path("/home/bmarti44/.cache/glm52-w4-topk-c5-serving/ds4-server")
 TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
 TOKENIZER_INIT_SHA256 = "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4"
@@ -39,6 +41,8 @@ SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
 DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
 DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
+DRAND_RUNTIME_TREE_SHA256 = "38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4"
+SYSTEM_CA_BUNDLE_SHA256 = "6602a85a36afc2e51c66a0df5ae3d383c5b7c2fed93339ccef7d37e01faf09e8"
 ENGINE_SOURCE_COMMIT = "0424a6b406e4f6e125be3269104f3d16ad39c951"
 REQUEST_SHA256 = "e5aa55b32992e3033a90b0c5be77c7346d88202ca3f209d2036d05f5f64cfd46"
 COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
@@ -97,11 +101,77 @@ def _read_stable(path: Path) -> bytes:
         os.close(descriptor)
 
 
+def _read_stable_identity(path: Path) -> tuple[bytes, tuple[int, int, int, int]]:
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        before = os.fstat(descriptor)
+        _require(stat.S_ISREG(before.st_mode), f"artifact is not regular: {path}")
+        chunks = []
+        while chunk := os.read(descriptor, 1024 * 1024):
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+        identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+        _require(identity == (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns),
+                 f"artifact changed while snapshotted: {path}")
+        payload = b"".join(chunks)
+        _require(len(payload) == before.st_size, f"short artifact read: {path}")
+        return payload, identity
+    finally:
+        os.close(descriptor)
+
+
+def _snapshot_files(root: Path, names: set[str]) -> dict[str, tuple[bytes, tuple[int, int, int, int]]]:
+    snapshot = {}
+    for relative in sorted(names):
+        path = root / relative
+        _require(not Path(relative).is_absolute() and ".." not in Path(relative).parts,
+                 "invalid artifact path")
+        snapshot[relative] = _read_stable_identity(path)
+    return snapshot
+
+
+def _verify_snapshot_unchanged(
+    root: Path,
+    snapshot: dict[str, tuple[bytes, tuple[int, int, int, int]]],
+    names: set[str],
+) -> None:
+    discovered = {
+        str(path.relative_to(root)) for path in root.rglob("*")
+        if path.name != "manifest.json" and (path.is_file() or path.is_symlink())
+    }
+    _require(discovered == names, "artifact membership changed during scoring")
+    for relative, (payload, identity) in snapshot.items():
+        current, current_identity = _read_stable_identity(root / relative)
+        _require(current_identity == identity and current == payload,
+                 f"artifact changed after snapshot: {relative}")
+
+
 def _sha256_file(path: Path) -> str:
     return hashlib.sha256(_read_stable(path)).hexdigest()
 
 
-def independent_tokenization(request_path: Path) -> dict[str, object]:
+def _tree_sha256(root: Path) -> str:
+    digest = hashlib.sha256()
+    _require(root.is_dir() and not root.is_symlink(), "invalid drand runtime tree")
+    paths = sorted(root.rglob("*"))
+    files = []
+    for path in paths:
+        _require(not path.is_symlink(), "invalid drand runtime tree")
+        if path.is_file():
+            files.append(path)
+        else:
+            _require(path.is_dir(), "invalid drand runtime tree")
+    _require(bool(files), "invalid drand runtime tree")
+    for path in files:
+        relative = path.relative_to(root).as_posix().encode()
+        data = _read_stable(path)
+        digest.update(len(relative).to_bytes(4, "big")); digest.update(relative)
+        digest.update(len(data).to_bytes(8, "big")); digest.update(data)
+    return digest.hexdigest()
+
+
+def independent_tokenization(request_path: Path,
+                             request_payload: bytes | None = None) -> dict[str, object]:
     dependencies = (
         (TOKENIZER, TOKENIZER_SHA256),
         (TOKENIZER_RUNTIME / "tokenizers/__init__.py", TOKENIZER_INIT_SHA256),
@@ -111,7 +181,7 @@ def independent_tokenization(request_path: Path) -> dict[str, object]:
     for path, digest in dependencies:
         _require(path.is_file() and not path.is_symlink() and _sha256_file(path) == digest,
                  f"tokenization dependency mismatch: {path}")
-    request = _read_stable(request_path)
+    request = _read_stable(request_path) if request_payload is None else request_payload
     first = subprocess.run([str(RENDER_ORACLE)], input=request, capture_output=True,
                            check=False, timeout=30)
     second = subprocess.run([str(RENDER_ORACLE)], input=request, capture_output=True,
@@ -346,7 +416,11 @@ def _git_bytes(root: Path, candidate: str, relative: str) -> bytes:
 
 def score_run_dir(run_dir: Path) -> dict[str, object]:
     try:
-        manifest = _strict_json(run_dir / "manifest.json")
+        manifest_payload, manifest_identity = _read_stable_identity(run_dir / "manifest.json")
+        manifest = json.loads(
+            manifest_payload,
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite JSON constant: {value}")))
         _require(isinstance(manifest, dict), "manifest is not an object")
         required_manifest = {
             "schema", "candidate_hash", "runner_sha256", "scorer_sha256",
@@ -356,6 +430,7 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
             "executed_request_sha256", "microgate_sha256", "configuration",
             "configuration_sha256", "tokenization", "public_randomness_sha256",
             "public_randomness_receipt_sha256", "publication_receipt", "schedules", "completed_rows",
+            "drand_runtime_tree_sha256", "system_ca_bundle_sha256",
             "artifacts", "verdict",
         }
         _require(set(manifest) == required_manifest and
@@ -391,6 +466,10 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
                      f"fixed dependency differs: {dependency}")
         _require(_sha256_file(DRAND_NODE) == DRAND_NODE_SHA256,
                  "drand runtime differs")
+        _require(_tree_sha256(DRAND_RUNTIME) == DRAND_RUNTIME_TREE_SHA256,
+                 "drand imported runtime tree differs")
+        _require(_sha256_file(SYSTEM_CA_BUNDLE) == SYSTEM_CA_BUNDLE_SHA256,
+                 "system CA bundle differs")
         _require(_sha256_file(STAGED_BINARY) == BINARY_SHA256,
                  "executed binary artifact differs")
         fixture_path = root / "fixtures/ctx-32k.txt"
@@ -411,6 +490,8 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
             "binary_sha256": BINARY_SHA256, "engine_source_commit": ENGINE_SOURCE_COMMIT,
             "model_sha256": MODEL_SHA256, "fixture_sha256": FIXTURE_SHA256,
             "executed_request_sha256": REQUEST_SHA256, "microgate_sha256": MICROGATE_SHA256,
+            "drand_runtime_tree_sha256": DRAND_RUNTIME_TREE_SHA256,
+            "system_ca_bundle_sha256": SYSTEM_CA_BUNDLE_SHA256,
         }
         _require(all(manifest.get(name) == value for name, value in expected_bindings.items()),
                  "fixed manifest binding differs")
@@ -419,8 +500,6 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
         _require(manifest["configuration"] == EXPECTED_CONFIGURATION and
                  manifest["configuration_sha256"] == expected_config_sha,
                  "fixed configuration differs")
-        _require(_strict_json(run_dir / "configuration.json") == EXPECTED_CONFIGURATION,
-                 "configuration artifact differs")
         _require(manifest["model_bytes"] == 211075856448,
                  "model size binding differs")
         artifacts = manifest["artifacts"]
@@ -431,15 +510,36 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
                  "artifact closure contains a symlink")
         actual_files = {str(path.relative_to(run_dir)) for path in discovered if path.is_file()}
         _require(set(artifacts) == actual_files, "artifact closure differs")
+        snapshot = _snapshot_files(run_dir, actual_files)
         for relative, digest in artifacts.items():
-            _require(_sha256(digest) and _sha256_file(run_dir / relative) == digest,
+            _require(_sha256(digest) and
+                     hashlib.sha256(snapshot[relative][0]).hexdigest() == digest,
                      f"artifact digest differs: {relative}")
-        schedules = _strict_json(run_dir / "schedules.json")
-        microgate = _strict_json(run_dir / "microgate-summary.json")
-        tokenization = _strict_json(run_dir / "request-tokenization.json")
-        _require(_sha256_file(run_dir / "request.json") == REQUEST_SHA256,
+        def snapshot_json(relative: str) -> object:
+            return json.loads(
+                snapshot[relative][0],
+                parse_constant=lambda value: (_ for _ in ()).throw(
+                    ValueError(f"non-finite JSON constant: {value}")))
+        schedules = snapshot_json("schedules.json")
+        microgate = snapshot_json("microgate-summary.json")
+        tokenization = snapshot_json("request-tokenization.json")
+        _require(snapshot_json("configuration.json") == EXPECTED_CONFIGURATION,
+                 "configuration artifact differs")
+        model_identity = snapshot_json("model-identity.json")
+        _require(isinstance(model_identity, dict) and
+                 set(model_identity) == {"sha256", "bytes", "device", "inode",
+                                         "mtime_ns", "descriptor_held_for_all_arms"} and
+                 model_identity["sha256"] == MODEL_SHA256 and
+                 model_identity["bytes"] == manifest["model_bytes"] and
+                 model_identity["descriptor_held_for_all_arms"] is True and
+                 all(_integer(model_identity[name]) and model_identity[name] >= 0
+                     for name in ("device", "inode", "mtime_ns")),
+                 "captured model descriptor identity differs")
+        request_payload = snapshot["request.json"][0]
+        _require(hashlib.sha256(request_payload).hexdigest() == REQUEST_SHA256,
                  "request artifact differs from the fixed request")
-        recomputed_tokenization = independent_tokenization(run_dir / "request.json")
+        recomputed_tokenization = independent_tokenization(
+            run_dir / "request.json", request_payload)
         _require(tokenization == recomputed_tokenization == manifest["tokenization"],
                  "independent tokenization differs")
         _require(schedules == manifest["schedules"], "schedule binding differs")
@@ -456,7 +556,7 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
         _require(microgate == {name: frozen_microgate[name] for name in selected_names},
                  "microgate selection differs from frozen evidence")
         raw_rows = [_strict_json_line(line) for line in
-                    _read_stable(run_dir / "raw.jsonl").decode("utf-8").splitlines() if line]
+                    snapshot["raw.jsonl"][0].decode("utf-8").splitlines() if line]
         _require(manifest["completed_rows"] == len(raw_rows) == 20,
                  "completed-row count differs")
 
@@ -464,12 +564,12 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
         _require(spec is not None and spec.loader is not None, "cannot load frozen runner")
         runner = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(runner)
-        publication = _strict_json(run_dir / "publication-receipt.json")
+        publication = snapshot_json("publication-receipt.json")
         _require(publication == manifest["publication_receipt"] ==
                  runner.fetch_publication_receipt(candidate),
                  "GitHub publication receipt differs")
-        seed, receipt_sha, _ = runner.verify_randomness(
-            run_dir / "randomness-receipt.json", candidate, publication)
+        seed, receipt_sha, _ = runner.verify_randomness_bytes(
+            snapshot["randomness-receipt.json"][0], candidate, publication)
         _require(manifest["public_randomness_sha256"] == seed and
                  manifest["public_randomness_receipt_sha256"] == receipt_sha and
                  schedules == runner.derive_schedules(seed),
@@ -482,18 +582,28 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
                 r"b[0-4]-p[0-3]-(off|on)-[0-9a-f]{12}", run_id) is not None,
                 "run id is malformed")
             out = run_dir / run_id
-            containment_rc = int(_read_stable(out / "containment.rc").decode("utf-8").strip())
-            containment_stdout = _read_stable(out / "containment.stdout").decode("utf-8")
+            prefix = run_id + "/"
+            arm_snapshot = {
+                relative[len(prefix):]: value for relative, value in snapshot.items()
+                if relative.startswith(prefix)
+            }
+            containment_rc = int(arm_snapshot["containment.rc"][0].decode("utf-8").strip())
+            containment_stdout = arm_snapshot["containment.stdout"][0].decode("utf-8")
             row = runner.parse_arm(
                 raw["arm"], raw["block"], raw["position"], out, containment_rc,
                 containment_stdout, REQUEST_SHA256, manifest["configuration_sha256"],
-                recomputed_tokenization["prompt_tokens"], None, True)
+                recomputed_tokenization["prompt_tokens"], None, True, arm_snapshot)
             replayed.append(row)
         _require(replayed == raw_rows, "raw rows do not replay from bound arm artifacts")
         result = score_campaign_rows(replayed, schedules, microgate)
-        recorded_summary = _read_stable(run_dir / "summary.json")
+        recorded_summary = snapshot["summary.json"][0]
         expected_summary = (json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n").encode()
         _require(recorded_summary == expected_summary, "recorded summary does not replay")
+        _verify_snapshot_unchanged(run_dir, snapshot, actual_files)
+        final_manifest, final_manifest_identity = _read_stable_identity(run_dir / "manifest.json")
+        _require(final_manifest_identity == manifest_identity and
+                 final_manifest == manifest_payload,
+                 "manifest changed during scoring")
         return result
     except (InvalidCampaign, OSError, UnicodeError, json.JSONDecodeError,
             subprocess.SubprocessError, KeyError, TypeError, ValueError, OverflowError,
