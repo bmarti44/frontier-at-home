@@ -546,13 +546,30 @@ def score_and_publish_bound_attempt(
     crash_dir: Path,
     evidence_dir: Path,
     identities: dict[str, object],
+    containment_stdout: str,
+    containment_rc: int,
 ) -> dict[str, object]:
     """Bind, score, and publish from one immutable in-memory snapshot."""
+    if type(containment_rc) is not int:
+        raise ValueError("invalid private containment status")
     payloads: dict[str, bytes] = {}
     bindings: dict[str, dict[str, object]] = {}
-    for name in ("containment.stdout", "containment.stderr", "containment.rc"):
-        payloads[name], bindings[name] = _read_snapshot(attempt / name)
-    containment_text = payloads["containment.stdout"].decode("utf-8", errors="strict")
+    payloads["containment.stdout"] = containment_stdout.encode("utf-8", errors="strict")
+    payloads["containment.rc"] = f"{containment_rc}\n".encode("ascii")
+    bindings["containment.stdout"] = {
+        "channel": "private-command-pipe",
+        "sha256": hashlib.sha256(payloads["containment.stdout"]).hexdigest(),
+        "bytes": len(payloads["containment.stdout"]),
+    }
+    bindings["containment.rc"] = {
+        "channel": "parent-shell-exit-status",
+        "sha256": hashlib.sha256(payloads["containment.rc"]).hexdigest(),
+        "bytes": len(payloads["containment.rc"]),
+    }
+    payloads["containment.stderr"], bindings["containment.stderr"] = _read_snapshot(
+        attempt / "containment.stderr"
+    )
+    containment_text = containment_stdout
     done_match = DONE_RE.fullmatch(containment_text)
     if done_match is None or Path(done_match.group(1)) != crash_dir:
         raise ValueError("containment completion digest record mismatch")
@@ -609,7 +626,7 @@ def score_and_publish_bound_attempt(
         payloads["server.log"].decode("utf-8", errors="strict"),
         http_status=payloads["primary-http-status"].decode("utf-8", errors="strict"),
         response_text=payloads["primary-response.json"].decode("utf-8", errors="strict"),
-        containment_rc=payloads["containment.rc"].decode("utf-8", errors="strict"),
+        containment_rc=str(containment_rc),
         containment_stdout=containment_text,
         mode="on",
         child_exit_text=payloads["child-exit.json"].decode("utf-8", errors="strict"),

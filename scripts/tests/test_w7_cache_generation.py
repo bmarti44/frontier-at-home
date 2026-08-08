@@ -116,8 +116,9 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertNotIn('attempt / "containment.rc"', scorer)
         harness = SMOKE.read_text(encoding="utf-8")
         self.assertIn("containment_stdout=$(", harness)
-        self.assertIn('containment_stdout="$containment_stdout"', harness)
-        self.assertIn('containment_rc="$containment_rc"', harness)
+        self.assertIn('"$containment_rc" "$containment_stdout"', harness)
+        self.assertIn("containment_stdout=containment_stdout", harness)
+        self.assertIn("containment_rc=containment_rc", harness)
 
     def test_rejects_copied_launcher_before_self_test(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -267,10 +268,12 @@ class W7CacheGenerationGateTest(unittest.TestCase):
 
     def test_runtime_scripts_execute_through_pinned_descriptors(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
-        self.assertIn('harness_fd_path="/proc/$$/fd/$harness_fd"', source)
-        self.assertIn('cgroup_fd_path="/proc/$$/fd/$cgroup_fd"', source)
-        self.assertIn('safe_fd_path="/proc/$$/fd/$safe_fd"', source)
-        self.assertIn('scorer_fd_path="/proc/$$/fd/$scorer_fd"', source)
+        self.assertIn('harness_fd_path="/proc/$seal_holder_pid/fd/$harness_fd"', source)
+        self.assertIn('cgroup_fd_path="/proc/$seal_holder_pid/fd/$cgroup_fd"', source)
+        self.assertIn('safe_fd_path="/proc/$seal_holder_pid/fd/$safe_fd"', source)
+        self.assertIn('scorer_fd_path="/proc/$seal_holder_pid/fd/$scorer_fd"', source)
+        self.assertIn("F_ADD_SEALS", source)
+        self.assertIn("F_SEAL_WRITE", source)
         self.assertIn('"$harness_fd_path" --driver', source)
 
     def test_scoring_and_publication_share_one_immutable_snapshot(self) -> None:
