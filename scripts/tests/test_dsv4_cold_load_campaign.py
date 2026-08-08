@@ -228,8 +228,10 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
             executable.chmod(0o755)
             library.chmod(0o755)
             os.symlink(executable, proc / "exe")
+            library_stat = library.stat()
             (proc / "maps").write_text(
-                f"1000-2000 r-xp 00000000 00:00 1 {library}\n"
+                f"1000-2000 r-xp 00000000 {os.major(library_stat.st_dev):x}:"
+                f"{os.minor(library_stat.st_dev):x} {library_stat.st_ino} {library}\n"
                 f"2000-3000 rw-p 00000000 00:00 2 {unrelated}\n",
                 encoding="utf-8",
             )
@@ -246,6 +248,15 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
             )
             self.assertEqual((first_digest, first_count), (second_digest, second_count))
             self.assertEqual(first_count, 2)
+            (proc / "maps").write_text(
+                f"1000-2000 r-xp 00000000 {os.major(library_stat.st_dev):x}:"
+                f"{os.minor(library_stat.st_dev):x} {library_stat.st_ino + 1} {library}\n",
+                encoding="utf-8",
+            )
+            third = root / "third"
+            third.mkdir()
+            with self.assertRaisesRegex(RUNNER.CampaignError, "mapped runtime identity"):
+                RUNNER.capture_runtime_closure(321, third, proc_root=root / "proc")
         for field in (
             "ExecMainCode", "ExecMainStatus", "Result", "MemoryPeak", "MemorySwapPeak",
         ):
