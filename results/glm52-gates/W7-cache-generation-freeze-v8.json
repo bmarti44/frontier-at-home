@@ -1,0 +1,55 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 8,
+  "status": "FROZEN_RUNTIME_REVIEW_PENDING",
+  "repository_candidate_commit": "d9578e7b7ef8970da8958910153b6968be71ca2a",
+  "engine_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+  "engine_candidate": 6,
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6/ds4-server",
+    "bytes": 5584864,
+    "mode": 493,
+    "sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
+  },
+  "model": {
+    "path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "bytes": 211075856448,
+    "sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
+  },
+  "runtime_integration": {
+    "harness_sha256": "2f70cb66f16badfe88f4f3fa4170cd0c9baf28dcb24d966822f6f155be63ad33",
+    "cgroup_sha256": "a5315d860c48eb4cc558a3dd5d965c6f560251b96acb80bda06216c111e469f2",
+    "safe_sha256": "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
+    "scorer_sha256": "189bfcf52af9d3d1b82ed8686891ff60cc50afadd3cb7ef955eab23b0e6f91b9",
+    "tests_sha256": "b4aa5893fb623d81496f12f8d21778a77e4d85b9a358aeceb81f2195bd45e088"
+  },
+  "planned_smoke": {
+    "arm": "on",
+    "stable_remap": 1,
+    "cache_gib": 40,
+    "memory_high_gib": 78,
+    "memory_max_gib": 80,
+    "whole_system_kill_floor_gib": 24,
+    "minimum_start_gib": 110,
+    "timeout_seconds": 2400,
+    "requests": "frozen live request followed by frozen primary indexed-resume request",
+    "purpose": "production-path correctness diagnostic; not a performance or context-capability claim"
+  },
+  "review_260_findings_closed": [
+    "executable cgroup and safe-run envelope",
+    "executed binary and environment identity",
+    "full model digest and descriptor-backed executed model identity",
+    "strict graceful child exit",
+    "independently scored ON activation",
+    "exclusive manifest, raw, and summary publication"
+  ],
+  "pre_submission_audit": {
+    "focused_tests": "20 PASS",
+    "containment_lifecycle_profile_tests": "44 PASS, 1 privilege-only skip",
+    "smoke_self_test": "PASS",
+    "reviewed_source_binding_probe": "PASS",
+    "secret_linter_self_test": "PASS",
+    "repository_clean_before_freeze_record": true,
+    "engine_process_started": false
+  }
+}
