@@ -1,0 +1,58 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 5,
+  "implementation_commit": "ea30c7f2914980f644dafd83a809c90f0fd58197",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "launch_status": "NOT_RUN_PENDING_ROUND_304",
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate5-red.json": "6acb6d7dc1d8eea195519d7422c87e417c92f63210a86b2e497e0ebb978bd8d3",
+    "results/glm52-gates/W4-serving-candidate5-amended-red.json": "aba486fe3f8ff0e5cc7717f071aeba03751aad74a841c20ec06a9d50bd38ff09",
+    "results/glm52-gates/W4-serving-candidate5-preaudit.txt": "89389e939fb8b5f2090cf96ee82cade251359b85f29f21ec9cc324af02a34e99",
+    "scripts/101_score_w4_serving_campaign.py": "077e89d287e06b09a37b68d0188982d3fd825051a502c7881f85cb0cdb7606a8",
+    "scripts/102_run_w4_serving_campaign.py": "9d0db79b49238b717b464e53c8845e7e3b2f5987adf258a00c3ce72b1e74fd19",
+    "scripts/103_verify_drand_receipt_bundle.mjs": "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "d41866a17595ae5ecaeec2632f9ea16ebaa2267ba8e4f6feafcbb870686ea38f",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581",
+    ".gitleaks.toml": "a9745035004bbc95e72f204c8dd0e74fb00baaf149c519f675367c65ef59e974",
+    "scripts/lint_secrets.sh": "d16ab4f94a06d4959c0142cf56d7a604f92859714691e113a30cf40fa51f6990"
+  },
+  "bundle_build": {
+    "tool": "esbuild",
+    "version": "0.25.0",
+    "platform": "node",
+    "format": "esm",
+    "target": "node22",
+    "legal_comments": "none",
+    "independent_build_c_sha256": "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc",
+    "independent_build_d_sha256": "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc",
+    "byte_identical": true
+  },
+  "round_303_disposition": {
+    "ADV-W4S-303-H1-EXECUTABLE-DEPENDENCY-TOCTOU": "FIXED: scorer executes retained runner/base bytes; BLS verification executes retained bundle bytes under a sealed retained Node binary; renderer and tokenizer native code likewise execute from sealed retained bytes",
+    "ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE": "FIXED_WITH_FOCUSED_TEST: unstable artifacts are rejected through the stable O_NOFOLLOW reader and named in the terminal FAIL manifest",
+    "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW": "DEFERRED: the recent-events replay-lifetime limitation is explicit and does not alter launch measurement validity",
+    "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT": "FIXED_WITH_FOCUSED_TEST: terminal failure lineage directly binds the sealed bundle and records unstable paths",
+    "W4S-R303-L1-RED-TESTS-CHANGED-DURING-IMPLEMENTATION": "FIXED: the exact amended tests and their candidate-4 failure counts were separately committed before the implementation commit"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "28/28 PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS",
+    "dependency_hash_preflight": "PASS",
+    "independent_tokenization": "19783 tokens PASS",
+    "sealed_bls_real_receipt": "PASS",
+    "clean_exact_head": "PASS before freeze record",
+    "user_systemd_available": true,
+    "engine_or_fio_started": false,
+    "frozen_engine_microgate_fixture_unchanged": true
+  },
+  "convergence": {
+    "candidate_count": 5,
+    "previous_open_high_count": 1,
+    "named_highs_targeted": 1,
+    "new_scope": false,
+    "engine_campaign_started": false
+  }
+}
