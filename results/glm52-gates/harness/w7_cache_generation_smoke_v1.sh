@@ -21,7 +21,8 @@ readonly LIVE=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa86
 readonly LIVE_SHA256=d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a
 readonly PRIMARY=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json
 readonly PRIMARY_SHA256=a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3
-readonly ENV_SHA256=ea8cc542bf2138646cb5bb3d38c9f7e7d88eef3e5a8fe7faf13074463f5a5e64
+readonly ENGINE_LOCK=/run/user/1000/ds4-w7.lock
+readonly ENV_SHA256=e40e6f76739cfc2030e7e31ee6e02a4b1b7353c2ecb673497405a339f8bd9c0c
 readonly PORT=8097
 server_pid=
 attempt=
@@ -109,6 +110,7 @@ verify_dependencies_fast() {
     verify_file "$primary_fd_path" "$PRIMARY_SHA256"
   fi
   [[ -f $CGROUP && ! -L $CGROUP && -f $SAFE && ! -L $SAFE && -f $SCORER && ! -L $SCORER ]]
+  [[ -d ${ENGINE_LOCK%/*} && ! -L ${ENGINE_LOCK%/*} && -w ${ENGINE_LOCK%/*} ]]
 }
 
 verify_reviewed_sources() {
@@ -758,7 +760,7 @@ GLM_SAFE_TIMEOUT_S=2400 \
 GLM_SAFE_RUN_AS_CURRENT_USER=1 \
 GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
 GLM_SAFE_EXPECTED_BINARY_SHA256="$BINARY_SHA256" \
-GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=DS4_CUDA_STABLE_MODEL_REMAP \
+GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE \
 GLM_SAFE_EXPECTED_ENV_SHA256="$ENV_SHA256" \
 GLM_SAFE_FINAL_ARTIFACTS="$final_artifacts" \
 GLM_SAFE_DONE_DIGESTS=1 \
@@ -775,6 +777,7 @@ DS4_W7_SEALED_SAFE_SHA256="$safe_sha256" \
 DS4_W7_SEALED_LIVE_PATH="$live_fd_path" \
 DS4_W7_SEALED_PRIMARY_PATH="$primary_fd_path" \
 DS4_CUDA_STABLE_MODEL_REMAP=1 \
+DS4_LOCK_FILE="$ENGINE_LOCK" \
 DS4_CUDA_EXPERT_CACHE_GB=40 \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
 DS4_CUDA_EXPERT_CACHE_SLRU=1 \
