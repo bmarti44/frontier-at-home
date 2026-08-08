@@ -199,6 +199,8 @@ allowlist = {
     "freeze_json_sha256",
     "freeze_sha256",
     "harness_sha256",
+    "cgroup_sha256",
+    "safe_sha256",
     "harness_tests_sha256",
     "fio_result_sha256",
     "model_sha256",

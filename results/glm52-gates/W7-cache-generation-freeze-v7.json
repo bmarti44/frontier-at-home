@@ -1,0 +1,35 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 7,
+  "status": "FROZEN_RUNTIME_INTEGRATION_REVIEW_PENDING",
+  "repository_parent_commit": "faedbd385dc40c64d60c084758d97b2a06898f78",
+  "engine_candidate": 6,
+  "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+  "runtime_integration": {
+    "harness_sha256": "965250330a977af4f659d900146e51d95320ab486eee54c2191953c85bd4b41e",
+    "cgroup_sha256": "a5315d860c48eb4cc558a3dd5d965c6f560251b96acb80bda06216c111e469f2",
+    "safe_sha256": "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
+    "scorer_sha256": "055fbba14472bfd9218d085ad296ca6652e0d542548206348938e041bbe6d157",
+    "tests_sha256": "1d10614939a534baa10ac4cfd9567d02373da583c8d4712b3d347143b8a8b0e9"
+  },
+  "planned_smoke": {
+    "mode": "on",
+    "cache_gib": 40,
+    "memory_high_gib": 78,
+    "memory_max_gib": 80,
+    "whole_system_kill_floor_gib": 24,
+    "minimum_start_gib": 110,
+    "timeout_seconds": 2400,
+    "stable_remap": 1,
+    "requests": "frozen live then frozen primary indexed-resume request",
+    "scorer": "scripts/89_score_w7_cache_generation.py using primary HTTP/response and glm_safe_run containment result",
+    "capability_claim": false
+  },
+  "pre_submission_audit": {
+    "tests": "26 PASS, 1 skipped privilege-only test",
+    "smoke_self_test": "PASS",
+    "secret_scan": "PASS",
+    "repository_clean": true,
+    "engine_process_started": false
+  }
+}
