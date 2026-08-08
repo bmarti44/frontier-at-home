@@ -536,6 +536,44 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
                 )
         write.assert_not_called()
 
+    def test_session_enumerator_includes_descendant_in_secondary_process_group(self) -> None:
+        code = (
+            "import os,signal,sys,time\n"
+            "child=os.fork()\n"
+            "if child==0:\n"
+            " os.setpgid(0,0); print(os.getpid(),flush=True); time.sleep(60)\n"
+            "else: time.sleep(60)\n"
+        )
+        process = subprocess.Popen(
+            ["/usr/bin/python3", "-c", code],
+            start_new_session=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        assert process.stdout is not None
+        child_pid = int(process.stdout.readline().strip())
+        try:
+            self.assertIn(child_pid, MODULE._live_launcher_session_members(process.pid))
+        finally:
+            for pid in (child_pid, process.pid):
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            process.wait(timeout=5)
+            process.stdout.close()
+            assert process.stderr is not None
+            process.stderr.close()
+
+    def test_stable_unit_window_ends_with_observation_not_sleep(self) -> None:
+        with mock.patch.object(
+            MODULE, "_unit_is_stopped", return_value=True,
+        ) as observed, mock.patch.object(MODULE.time, "sleep") as slept:
+            MODULE._stably_stop_containment_unit("glm52-w7-test-4242.service")
+        self.assertEqual(observed.call_count, 4)
+        self.assertEqual(slept.call_count, 3)
+
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
         self.addCleanup(temporary.cleanup)
