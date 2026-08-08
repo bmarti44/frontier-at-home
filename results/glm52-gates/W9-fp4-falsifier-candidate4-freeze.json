@@ -1,0 +1,78 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-freeze-v4",
+  "gate": "W9",
+  "candidate": 4,
+  "implementation_commit": "61f040e3a70a51942d3b62e6b01298a5fc2510dd",
+  "component_sha256": {
+    "scripts/93_score_w9_fp4_falsifier.py": "dda7c4b24db6b577813bdd9710ac353d871978abd46cc94a87b425ff27275f7c",
+    "scripts/tests/test_w9_fp4_falsifier.py": "e6c6965ead740c77ef9b3c93aaea64d69b43ab37f8ac693e18cef4ca0e6a2beb",
+    "results/glm52-gates/W9-fp4-falsifier-plan-v1.json": "db243d6982d414e346aa289f3bafaf73fd0079cd27c094e44760b2cc0b5e7931",
+    "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh": "0b467d9843152cbeb52c2078489c7b7d4a3ecfbb6e738c0cfba7b6bec2655353",
+    "scripts/96_verify_drand_receipt_w9.mjs": "935e3deee11b0f3f3b3df5fab82409db09fe1888a5ac4062806d44eb4d3e0782",
+    "scripts/94_glm52_w9_submit.py": "309b6116562d960d3d571546dea4aa46067a2f1395295d173fd93c8e9bba0230",
+    "scripts/tests/test_w9_root_runner.py": "a9973273eefa2f9b148fc0c81bcdbbfddfbcabce3740273938fc751ac297b077",
+    "scripts/95_install_glm52_w9_runner.sh": "2e3c738e73a2a3d1fe94156727aec96005d49cf2e0153035f7d849f3c2e16bf7",
+    "scripts/lint_secrets.sh": "65e14fd449449230285bbd81064bddc38eb6218cf4846df360f19ffef856dd65"
+  },
+  "runtime": {
+    "python_path": "/usr/bin/python3",
+    "python_sha256": "a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1",
+    "numpy_version": "2.2.6",
+    "numpy_init_sha256": "6ae17b070c0f70a8e3cad89a510a256942e5a1f37ea5feb120cec167ed2a6236",
+    "numpy_multiarray_sha256": "e6da9a03a2d786c3faa3f5c5bc35e1e6c04bb4746c8fed42f6a9fa61cb1e572e",
+    "node_sha256": "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90",
+    "git_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942",
+    "trees": {
+      "/usr/local/libexec/glm52-w1/python/numpy": {
+        "path": "/usr/local/libexec/glm52-w1/python/numpy",
+        "tree_sha256": "90b35528326f32865a17a2aed26815a90e9617a80d6c81e98e73069e1e098a87",
+        "files": 1280,
+        "bytes": 33391591
+      },
+      "/usr/local/libexec/glm52-w1/python/numpy.libs": {
+        "path": "/usr/local/libexec/glm52-w1/python/numpy.libs",
+        "tree_sha256": "6150280342f07114e7249491f084b603c1456bdbd94b66bf276857df75314169",
+        "files": 2,
+        "bytes": 26402458
+      },
+      "/usr/local/libexec/glm52-w9/noble": {
+        "path": "/usr/local/libexec/glm52-w9/noble",
+        "tree_sha256": "ca92f24bab4644eb0d162b4b07c8f432519caa802a5150ada536e82b8a911895",
+        "files": 486,
+        "bytes": 3205403
+      }
+    },
+    "thread_environment": {
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "BLIS_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "loaded_numerical_libraries": {
+      "/usr/local/libexec/glm52-w1/python/numpy.libs/libgfortran-daac5196-038a5e3c.so.5.0.0": "8c13f44b44e4dd0005632ea4173f5f5014d2829d50aa12b2054034297c07f233",
+      "/usr/local/libexec/glm52-w1/python/numpy.libs/libscipy_openblas64_-128b20d9.so": "63afbdca6499641c9c0f10fe84c395ac2bcb89f3121b6c97c662418dd2d39785",
+      "/usr/local/libexec/glm52-w1/python/numpy/_core/_multiarray_umath.cpython-312-aarch64-linux-gnu.so": "e6da9a03a2d786c3faa3f5c5bc35e1e6c04bb4746c8fed42f6a9fa61cb1e572e",
+      "/usr/local/libexec/glm52-w1/python/numpy/linalg/_umath_linalg.cpython-312-aarch64-linux-gnu.so": "50863b997ec74d67c650f1313a5c7649a1386afc26c5e1b0598a2c219f75c12d"
+    }
+  },
+  "round_253_disposition": {
+    "GAP-W9-C3-SCORER-TOCTOU": "Fixed by executing only a root-owned reviewed scorer and complete root-owned runtime closure installed after review.",
+    "ADV-W9-C3-FABRICATED-EVIDENCE": "Fixed by two fresh scorer processes, byte-identical replay enforcement, and a root attestation over both exits, artifact hashes, capture hashes, runtime, and randomness.",
+    "ADV-W9-C3-TERMINAL-TEARDOWN-TOCTOU": "Fixed by root-owned immutable inputs and atomic root-owned publication after replay comparison and final closure verification. The invoking user cannot mutate the installed scorer or publication tree.",
+    "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT": "DEFERRED medium: root failure workspaces are preserved; richer public partial-stage diagnostics do not affect the metric verdict."
+  },
+  "focused_checks": {
+    "behavioral_RED": "26 tests: 2 failures and 6 errors against the candidate-4 stubs",
+    "focused_tests": "26/26 PASS",
+    "root_install_mode_simulation": "PASS; tracked executable modes preserved with a clean checkout",
+    "full_size_synthetic_quantizer": "8192x512 finite output; 4.84 seconds; 227028 KiB max RSS",
+    "python_compile": "PASS",
+    "shell_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "measurement_observed": false
+  },
+  "drand_min_round": 6357228,
+  "runtime_authorized": false
+}
