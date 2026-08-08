@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -19,6 +20,7 @@ SPEC.loader.exec_module(MODULE)
 
 GOOD = """\
 ds4: CUDA backend initialized
+ds4: CUDA stable model remap enabled generation=1
 0807 15:10:02 ds4-server: listening on http://127.0.0.1:8097
 0807 15:10:03 ds4-server: completion ctx=5044..5066:22 prompt start
 ds4: CUDA persistent expert cache enabled: 4110 slots x 9.28 MiB
@@ -34,6 +36,23 @@ RESPONSE = (
 )
 RC = "0\n"
 CONTAINMENT = "SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/.local/state/glm52-crashlog/w7-test\n"
+BINARY_SHA256 = "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
+ENV_SHA256 = "ea8cc542bf2138646cb5bb3d38c9f7e7d88eef3e5a8fe7faf13074463f5a5e64"
+SAFETY = (
+    "SAFE_RUN start tag=w7-test vlimit_kb=419430400 kill_floor_gib=24 "
+    "min_start_gib=110 timeout_s=2400\n"
+    "cgroup_verified path=/x memory_high=83751862272 memory_max=85899345920 "
+    "memory_swap_max=0 memory_oom_group=1\n"
+    f"executed_environment_allowlist=DS4_CUDA_STABLE_MODEL_REMAP executed_environment_sha256={ENV_SHA256}\n"
+    f"executed_candidate_verified executed_binary_sha256={BINARY_SHA256}\n"
+    "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler\n"
+    "SAFE_RUN end rc=0 killed=no\n"
+)
+MODEL_SHA256 = "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
+MODEL_IDENTITY = (
+    '{"bytes":211075856448,"device":1,"inode":2,'
+    f'"sha256":"{MODEL_SHA256}","executed_path":"/proc/123/fd/10"}}'
+)
 
 
 def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
@@ -44,6 +63,14 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
         response_text=response,
         containment_rc=rc,
         containment_stdout=containment,
+        mode="on",
+        child_exit_text='{"shutdown_requested":true,"forced_kill":false,"exit_status":0}',
+        safety_main_text=SAFETY,
+        expected_binary_sha256=BINARY_SHA256,
+        expected_environment_sha256=ENV_SHA256,
+        model_identity_text=MODEL_IDENTITY,
+        expected_model_sha256=MODEL_SHA256,
+        expected_model_bytes=211075856448,
     )
 
 
@@ -72,7 +99,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("--ssd-streaming-cache-experts 40GB", source)
         self.assertIn("--kv-cache-boundary-align-tokens 4", source)
         self.assertIn("--kv-cache-boundary-trim-tokens 8", source)
-        self.assertIn('trap stop_server EXIT INT TERM HUP', source)
+        self.assertIn('trap cleanup_driver EXIT INT TERM HUP', source)
         self.assertNotIn("kill -KILL", source)
         self.assertIn("child-exit.json", source)
         for evidence in ("manifest.json", "raw.jsonl", "summary.json"):
@@ -115,6 +142,57 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             score(GOOD.replace("0807 15:10:07 ds4-server: shutdown requested, draining requests\n", ""))["verdict"],
             "FAIL",
         )
+
+    def test_rejects_missing_or_duplicate_activation(self) -> None:
+        self.assertEqual(score(GOOD.replace("ds4: CUDA stable model remap enabled generation=1\n", ""))["verdict"], "FAIL")
+        duplicate = GOOD.replace(
+            "ds4: CUDA stable model remap enabled generation=1\n",
+            "ds4: CUDA stable model remap enabled generation=1\n" * 2,
+        )
+        self.assertEqual(score(duplicate)["verdict"], "FAIL")
+
+    def test_rejects_unclean_child_exit(self) -> None:
+        result = MODULE.score_text(
+            GOOD,
+            http_status=HTTP,
+            response_text=RESPONSE,
+            containment_rc=RC,
+            containment_stdout=CONTAINMENT,
+            mode="on",
+            child_exit_text='{"shutdown_requested":true,"forced_kill":true,"exit_status":137}',
+            safety_main_text=SAFETY,
+            expected_binary_sha256=BINARY_SHA256,
+            expected_environment_sha256=ENV_SHA256,
+            model_identity_text=MODEL_IDENTITY,
+            expected_model_sha256=MODEL_SHA256,
+            expected_model_bytes=211075856448,
+        )
+        self.assertEqual(result["verdict"], "FAIL")
+
+    def test_rejects_wrong_model_identity(self) -> None:
+        result = MODULE.score_text(
+            GOOD,
+            http_status=HTTP,
+            response_text=RESPONSE,
+            containment_rc=RC,
+            containment_stdout=CONTAINMENT,
+            mode="on",
+            child_exit_text='{"shutdown_requested":true,"forced_kill":false,"exit_status":0}',
+            safety_main_text=SAFETY,
+            expected_binary_sha256=BINARY_SHA256,
+            expected_environment_sha256=ENV_SHA256,
+            model_identity_text=MODEL_IDENTITY.replace(MODEL_SHA256, "0" * 64),
+            expected_model_sha256=MODEL_SHA256,
+            expected_model_bytes=211075856448,
+        )
+        self.assertEqual(result["verdict"], "FAIL")
+
+    def test_summary_publication_is_exclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "summary.json"
+            MODULE.write_exclusive(path, "{}\n")
+            with self.assertRaises(FileExistsError):
+                MODULE.write_exclusive(path, "{}\n")
 
     def test_ignores_startup_and_post_shutdown_noise(self) -> None:
         noise = "ds4: CUDA persistent expert cache flushed (model load generation changed)\n"
