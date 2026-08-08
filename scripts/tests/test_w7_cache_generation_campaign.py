@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -15,13 +17,17 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 SCHEDULES = ["ABBA", "BAAB", "ABBA", "BAAB", "ABBA"]
+TOKEN_IDS = list(range(128))
 SHA = {
     "binary": "1" * 64,
     "model": "2" * 64,
     "config": "3" * 64,
     "request": "4" * 64,
-    "output": "5" * 64,
+    "output": hashlib.sha256(
+        json.dumps(TOKEN_IDS, separators=(",", ":")).encode("ascii")
+    ).hexdigest(),
     "logits": "6" * 64,
+    "logit_sequence": "7" * 64,
 }
 
 
@@ -47,9 +53,10 @@ def good_rows() -> list[dict[str, object]]:
                 "stable_remap": 1 if arm == "on" else 0,
                 "request_start_ns": request_start,
                 "token_timestamps_ns": timestamps,
-                "output_token_ids": list(range(128)),
+                "output_token_ids": TOKEN_IDS.copy(),
                 "output_sha256": SHA["output"],
                 "final_logits_sha256": SHA["logits"],
+                "logit_sequence_sha256": SHA["logit_sequence"],
                 "server_fresh": True,
                 "safety": {
                     "containment_rc": 0,
@@ -86,6 +93,8 @@ class W7CacheGenerationCampaignTest(unittest.TestCase):
         mutations = []
         bad = good_rows(); bad[1]["output_sha256"] = "7" * 64; mutations.append(bad)
         bad = good_rows(); bad[1]["final_logits_sha256"] = "7" * 64; mutations.append(bad)
+        bad = good_rows(); bad[1]["logit_sequence_sha256"] = "8" * 64; mutations.append(bad)
+        bad = good_rows(); bad[1]["output_token_ids"][0] = 999; mutations.append(bad)
         bad = good_rows(); bad[1]["token_timestamps_ns"] = bad[1]["token_timestamps_ns"][:127]; mutations.append(bad)
         bad = good_rows(); bad[1]["safety"]["cgroup_oom_kill_delta"] = 1; mutations.append(bad)
         bad = good_rows(); bad[1]["server_fresh"] = False; mutations.append(bad)

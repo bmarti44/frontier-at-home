@@ -1,0 +1,22 @@
+{
+  "candidate": "W7-cache-generation-campaign-output-binding-red",
+  "parent_commit": "affbc45f79df544aa7c109d819b044406c723ac3",
+  "captured_at_utc": "2026-08-08T06:45:17Z",
+  "purpose": "Require the scorer to recompute the output-token digest and compare the complete ordered logit-dump sequence, rather than accepting unbound digest labels.",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign",
+  "artifacts": {
+    "unchanged_scorer_sha256": "26f0f833fc4a22da686829212fb9b9dc12500206e7edbd70ccf2e37b6015a3fc",
+    "test_sha256": "e59c8c5d753b4aa0997c6a1338ce093e4fd41dd1c6e5bef90ec4906cdfd17ebf",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "3942d1e38aff3e7f296ffcb8e52d98ad49ff592aced569487da0464b288a749a"
+  },
+  "observed": {
+    "tests_run": 4,
+    "failures": 1,
+    "errors": 0,
+    "failing_test": "test_fixed_formula_accepts_passing_five_block_campaign",
+    "reason": "The unchanged scorer rejects the stronger row schema and does not bind output_token_ids to output_sha256 or compare logit_sequence_sha256."
+  },
+  "red_is_behavioral": true,
+  "verdict": "RED_CONFIRMED"
+}
