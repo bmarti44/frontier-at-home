@@ -53,12 +53,15 @@ ENV_SHA256 = "e40e6f76739cfc2030e7e31ee6e02a4b1b7353c2ecb673497405a339f8bd9c0c"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
 SAFETY = (
     "SAFE_RUN start tag=w7-test vlimit_kb=419430400 kill_floor_gib=24 "
-    "min_start_gib=110 timeout_s=2400\n"
+    "min_start_gib=110 timeout_s=2400 allow_cgroup_high=1\n"
     "cgroup_verified path=/x memory_high=83751862272 memory_max=85899345920 "
     "memory_swap_max=0 memory_oom_group=1\n"
     f"executed_environment_allowlist=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE executed_environment_sha256={ENV_SHA256}\n"
     f"executed_candidate_verified executed_binary_sha256={BINARY_SHA256}\n"
     f"memory_guard_descriptor_path=/proc/123/fd/7 memory_guard_sha256={MEMORY_GUARD_SHA256}\n"
+    "cgroup_soft_high_allowed delta=5329\n"
+    "cgroup_final current_bytes=1 peak_bytes=83752636416 swap_current_bytes=0 "
+    "events=low 0,high 5329,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n"
     "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler\n"
     "SAFE_RUN end rc=0 killed=no\n"
 )
@@ -490,6 +493,23 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         source = CGROUP.read_text(encoding="utf-8")
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
         self.assertIn("GLM_SAFE_DONE_DIGESTS", source)
+
+    def test_soft_memory_high_allowance_is_narrow_default_off_and_scored(self) -> None:
+        safe = SAFE.read_text(encoding="utf-8")
+        harness = SMOKE.read_text(encoding="utf-8")
+        scorer = SCORER.read_text(encoding="utf-8")
+        self.assertIn("GLM_SAFE_ALLOW_CGROUP_HIGH", safe)
+        self.assertIn("ALLOW_CGROUP_HIGH=${GLM_SAFE_ALLOW_CGROUP_HIGH:-0}", safe)
+        self.assertIn("GLM_SAFE_ALLOW_CGROUP_HIGH=1", harness)
+        self.assertIn("cgroup_soft_high_safely_bounded", scorer)
+        self.assertEqual(score()["verdict"], "PASS")
+        missing = SAFETY.replace("cgroup_soft_high_allowed delta=5329\n", "")
+        self.assertEqual(score(safety=missing)["verdict"], "FAIL")
+        max_event = SAFETY.replace(
+            "max 0,oom 0,oom_kill 0,oom_group_kill 0,",
+            "max 1,oom 0,oom_kill 0,oom_group_kill 0,",
+        )
+        self.assertEqual(score(safety=max_event)["verdict"], "FAIL")
 
     def test_current_user_engine_lock_is_descriptor_bound_and_environment_bound(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
