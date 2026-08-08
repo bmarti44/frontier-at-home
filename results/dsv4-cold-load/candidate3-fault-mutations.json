@@ -1,0 +1,44 @@
+{
+  "artifact": "DSV4 cold-load candidate 3 direct-I/O fault mutations",
+  "authoritative_bounded_probe": {
+    "baseline_exit_code": 0,
+    "cases": [
+      {
+        "exit_code": 1,
+        "fault": "EINVAL opening the selected shard with O_DIRECT",
+        "required_message": "required direct I/O open failed",
+        "stderr_sha256": "2d5bbe9c8e03ea2973bd1217e5ecf66b51eb1dfcb025d8eda9a0b9b009315ce7"
+      },
+      {
+        "exit_code": 1,
+        "fault": "EINVAL on the first selected O_DIRECT read",
+        "required_message": "required direct I/O read failed",
+        "stderr_sha256": "1c36a4dd12f191d90091847b9acf7fafd7cf7b456b1575296402546cbdfb21f5"
+      },
+      {
+        "exit_code": 1,
+        "fault": "EFAULT on the first selected O_DIRECT read",
+        "required_message": "required direct I/O read failed",
+        "stderr_sha256": "446e4841dabb2b524d1b1ae71c20664be850b00b50f953b0386831c26eb93917"
+      },
+      {
+        "exit_code": 1,
+        "fault": "positive 4096-byte short read followed by EINVAL",
+        "required_message": "required direct I/O read failed",
+        "stderr_sha256": "1c36a4dd12f191d90091847b9acf7fafd7cf7b456b1575296402546cbdfb21f5"
+      }
+    ],
+    "scope": "The probe links the final candidate libllama and invokes llama_file mandatory direct mode against the real 5 MiB first shard; it never allocates or starts the model."
+  },
+  "bindings": {
+    "artifacts": {
+      "/tmp/dsv4-direct-io-fault-probe-c3": "a6b5c25981fa5bd6d12a14342af68c298a4c571ff706dc8068e89f09cf842224",
+      "/tmp/libdsv4-fault-io-c3.so": "3aa00f3bded494d61b02d349f8876a3ac46a8b3ff8a9650657b921fbdf9386fb",
+      "/tmp/llama-fusion-c3-build2-source/build-cold-load/bin/libllama.so.0.0.10053": "f35ed418891f164038109a4cb909aaabe387dfd37e61492db3ab42420e226e04",
+      "results/dsv4-cold-load/direct_io_fault_probe.cpp": "655f81cd130da40509adbb043879919a6141625e77a42b3f557a569187d35f20",
+      "results/dsv4-cold-load/fault_io.c": "64dedef870eb472e8e870966274a2fb4c4f83c2e7bc8c20a26a907273ee93f29"
+    }
+  },
+  "prior_attempt": "results/dsv4-cold-load/candidate3-fault-mutation-attempt1.json",
+  "verdict": "PASS"
+}
