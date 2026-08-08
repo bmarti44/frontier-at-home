@@ -1,0 +1,17 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 3,
+  "status": "RED_CONFIRMED",
+  "engine_commit": "41887397aa799f1c80b81f14e0ea00f477a045a6",
+  "baseline_parent": "12a5010a20514c06f718fe53e2083a4031114317",
+  "command": "make -j2 tests/test_gpu_model_cache && ./tests/test_gpu_model_cache",
+  "build_exit_code": 0,
+  "test_exit_code": 1,
+  "failure": "FAIL: invalid stable-remap value rejected (line 67)",
+  "failure_class": "behavioral assertion",
+  "binary_sha256": "87c90b4c3a9a6dcf58b6a9424e33a05fe953084df468df75f6d47663fc662bca",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "f71a28bbec09599b3ab3c620b00613e41b2501569ac0389e1bc2ac5483beabe5",
+  "stderr_artifact": "results/glm52-gates/W7-cache-generation-engine-red-c3.stderr",
+  "acceptance": "The committed production-selector test must compile and then reject non-exact flag values, preserve generation only for exact value 1, reject stale same-address generations, and reject a support-model identity conflict."
+}
