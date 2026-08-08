@@ -28,6 +28,11 @@ DRAND_GENESIS_UNIX = 1595431050
 DRAND_PERIOD_SECONDS = 30
 
 
+def verify_digest_bindings(expected: dict[str, str], actual: dict[str, str]) -> None:
+    """Candidate-3 RED placeholder: enforce frozen executable closure."""
+    del expected, actual
+
+
 def fail(message: str) -> None:
     raise SystemExit(f"w4 confirmation: {message}")
 

@@ -18,6 +18,11 @@ SPEC = importlib.util.spec_from_file_location("w4_scorer", SCORER_PATH)
 assert SPEC and SPEC.loader
 SCORER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SCORER)
+RUNNER_SPEC = importlib.util.spec_from_file_location(
+    "w4_runner", ROOT / "scripts/99_run_w4_topk_confirmation.py")
+assert RUNNER_SPEC and RUNNER_SPEC.loader
+RUNNER = importlib.util.module_from_spec(RUNNER_SPEC)
+RUNNER_SPEC.loader.exec_module(RUNNER)
 RECEIPT = json.loads((
     ROOT / "results/glm52-gates/W7-resume-production-drand-verifier-fixture.json"
 ).read_text())
@@ -165,6 +170,16 @@ class W4TopkScorerTest(unittest.TestCase):
         self._write_manifest()
         with self.assertRaises(SCORER.ScoreError):
             self._score()
+
+    def test_runner_rejects_post_freeze_scorer_replacement(self) -> None:
+        reviewed = hashlib.sha256(b"reviewed scorer").hexdigest()
+        RUNNER.verify_digest_bindings(
+            {"scorer": reviewed}, {"scorer": reviewed})
+        with self.assertRaises(ValueError):
+            RUNNER.verify_digest_bindings(
+                {"scorer": reviewed},
+                {"scorer": hashlib.sha256(b"replaced scorer").hexdigest()},
+            )
         self.manifest["artifacts"]["binary"]["sha256"] = sha256(
             self.run_dir / "binary")
         (self.run_dir / "raw.jsonl").write_text("{bad json\n")
