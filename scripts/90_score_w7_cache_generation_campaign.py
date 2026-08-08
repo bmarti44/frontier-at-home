@@ -65,6 +65,7 @@ def _validated_row(row: object) -> dict[str, Any]:
         "block", "position", "arm", "run_id", "binary_sha256", "model_sha256",
         "common_config_sha256", "request_sha256", "stable_remap", "request_start_ns",
         "token_timestamps_ns", "output_token_ids", "output_sha256",
+        "generated_text_sha256", "generated_text_bytes",
         "final_logits_sha256", "logit_sequence_sha256", "server_fresh", "safety",
     }
     _require(set(row) == required, "row keys do not match the frozen schema")
@@ -75,6 +76,7 @@ def _validated_row(row: object) -> dict[str, Any]:
     for name in (
         "binary_sha256", "model_sha256", "common_config_sha256", "request_sha256",
         "output_sha256", "final_logits_sha256", "logit_sequence_sha256",
+        "generated_text_sha256",
     ):
         _require(_sha256(row[name]), f"invalid {name}")
     _require(_exact_int(row["stable_remap"]) and row["stable_remap"] in {0, 1}, "invalid flag")
@@ -95,6 +97,10 @@ def _validated_row(row: object) -> dict[str, Any]:
     _require(timestamps[0] > row["request_start_ns"], "nonpositive TTFT")
     _require(all(right > left for left, right in zip(timestamps, timestamps[1:])), "timestamps not strict")
     _require(row["server_fresh"] is True, "server was not fresh")
+    _require(
+        _exact_int(row["generated_text_bytes"]) and row["generated_text_bytes"] >= 0,
+        "invalid generated text size",
+    )
 
     safety = row["safety"]
     safety_keys = {
@@ -142,7 +148,7 @@ def score_campaign_rows(rows: object, schedules: object) -> dict[str, object]:
             _require(len({row[field] for row in validated}) == 1, f"unequal {field}")
         for field in (
             "output_token_ids", "output_sha256", "final_logits_sha256",
-            "logit_sequence_sha256",
+            "logit_sequence_sha256", "generated_text_sha256", "generated_text_bytes",
         ):
             first = validated[0][field]
             _require(all(row[field] == first for row in validated[1:]), f"unequal {field}")
