@@ -494,7 +494,9 @@ class W7CacheGenerationGateTest(unittest.TestCase):
     def test_current_user_engine_lock_is_descriptor_bound_and_environment_bound(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
         self.assertNotIn("readonly ENGINE_LOCK=/run/user/1000/ds4-w7.lock", source)
-        self.assertIn('engine_lock_fd_path="/proc/$$/fd/$engine_lock_fd"', source)
+        self.assertNotIn('exec {engine_lock_fd}<>"$leaf"', source)
+        self.assertIn("os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW", source)
+        self.assertIn('engine_lock_fd_path="/proc/$engine_lock_holder_pid/fd/$engine_lock_fd"', source)
         self.assertIn('DS4_LOCK_FILE="$engine_lock_fd_path"', source)
         self.assertIn('rm -f -- "$leaf"', source)
         self.assertIn(
@@ -512,6 +514,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             check=False,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("W7_ENGINE_LOCK_PRECREATE_REJECTED", completed.stdout)
         self.assertIn("W7_ENGINE_LOCK_DESCRIPTOR_SELFTEST_OK", completed.stdout)
 
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
