@@ -34,8 +34,8 @@ SCORER = ROOT / "scripts/101_score_w4_serving_campaign.py"
 MICROGATE = ROOT / "results/glm52-gates/W4-topk-candidate5-pass/summary.json"
 FIXTURE = ROOT / "fixtures/ctx-32k.txt"
 DRAND_VERIFIER = ROOT / "scripts/89_verify_drand_receipt.mjs"
+DRAND_BUNDLE = ROOT / "scripts/103_verify_drand_receipt_bundle.mjs"
 DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
-DRAND_RUNTIME = Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2")
 SYSTEM_CA_BUNDLE = Path("/etc/ssl/certs/ca-certificates.crt")
 BIN = Path("/home/bmarti44/.cache/glm52-w4-topk-c5-serving/ds4-server")
 CANDIDATE_SRC = BIN.parent
@@ -53,12 +53,12 @@ BASE_SHA256 = "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
 CGROUP_SHA256 = "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
-SCORER_SHA256 = "98689cf510874c1d5dc7de4ba3acb9ca6a3aa797fc402b51cf7d36b5982251f7"
+SCORER_SHA256 = "077e89d287e06b09a37b68d0188982d3fd825051a502c7881f85cb0cdb7606a8"
 MICROGATE_SHA256 = "9aaf51b0722ec2573876d6a35ce733e6e574bb1349daf6f72f61100995c39bde"
 FIXTURE_SHA256 = "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031"
 DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+DRAND_BUNDLE_SHA256 = "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc"
 DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
-DRAND_RUNTIME_TREE_SHA256 = "38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4"
 SYSTEM_CA_BUNDLE_SHA256 = "6602a85a36afc2e51c66a0df5ae3d383c5b7c2fed93339ccef7d37e01faf09e8"
 DRAND_FREEZE_FLOOR_ROUND = 6359295
 SHA_RE = re.compile(r"[0-9a-f]{64}\Z")
@@ -78,6 +78,15 @@ SYNC_RE = re.compile(
 
 
 def _load_base() -> Any:
+    injected = globals().get("_W4_INJECTED_BASE_BYTES")
+    if injected is not None:
+        if not isinstance(injected, bytes) or hashlib.sha256(injected).hexdigest() != BASE_SHA256:
+            raise RuntimeError("injected W7 campaign base differs")
+        module = types.ModuleType("w7_campaign_base")
+        module.__file__ = str(BASE_PATH)
+        exec(compile(injected, str(BASE_PATH), "exec"), module.__dict__)
+        module.PORT = PORT
+        return module
     spec = importlib.util.spec_from_file_location("w7_campaign_base", BASE_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load W7 campaign base")
@@ -100,34 +109,47 @@ def verify_file(path: Path, expected: str) -> None:
         raise CampaignError(f"dependency mismatch: {path}")
 
 
-def tree_sha256(root: Path) -> str:
-    digest = hashlib.sha256()
-    if root.is_symlink() or not root.is_dir():
-        raise CampaignError("invalid drand runtime tree")
-    paths = sorted(root.rglob("*"))
-    files = []
-    for path in paths:
-        if path.is_symlink():
-            raise CampaignError("invalid drand runtime tree")
-        if path.is_file():
-            files.append(path)
-        elif not path.is_dir():
-            raise CampaignError("invalid drand runtime tree")
-    if not files:
-        raise CampaignError("invalid drand runtime tree")
-    for path in files:
-        relative = path.relative_to(root).as_posix().encode()
-        data, _ = BASE.read_stable(path)
-        digest.update(len(relative).to_bytes(4, "big"))
-        digest.update(relative)
-        digest.update(len(data).to_bytes(8, "big"))
-        digest.update(data)
-    return digest.hexdigest()
+SEALS = (fcntl.F_SEAL_WRITE | fcntl.F_SEAL_GROW | fcntl.F_SEAL_SHRINK |
+         fcntl.F_SEAL_SEAL)
 
 
-def verify_drand_runtime() -> None:
-    if tree_sha256(DRAND_RUNTIME) != DRAND_RUNTIME_TREE_SHA256:
-        raise CampaignError("drand runtime tree mismatch")
+def _sealed_memfd(name: str, payload: bytes, mode: int) -> int:
+    descriptor = os.memfd_create(name, os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
+    try:
+        view = memoryview(payload)
+        offset = 0
+        while offset < len(view):
+            offset += os.write(descriptor, view[offset:])
+        os.fchmod(descriptor, mode)
+        fcntl.fcntl(descriptor, fcntl.F_ADD_SEALS, SEALS)
+        if fcntl.fcntl(descriptor, fcntl.F_GET_SEALS) != SEALS:
+            raise CampaignError("sealed verifier descriptor differs")
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def _sealed_bls_verify(arguments: list[str]) -> bool:
+    bundle_bytes, _ = BASE.read_stable(DRAND_BUNDLE)
+    if hashlib.sha256(bundle_bytes).hexdigest() != DRAND_BUNDLE_SHA256:
+        raise CampaignError("sealed drand verifier dependency mismatch")
+    node_bytes, _ = BASE.read_stable(DRAND_NODE)
+    if hashlib.sha256(node_bytes).hexdigest() != DRAND_NODE_SHA256:
+        raise CampaignError("sealed drand verifier dependency mismatch")
+    node_fd = _sealed_memfd("w4-node", node_bytes, 0o500)
+    try:
+        checked = subprocess.run(
+            [f"/proc/self/fd/{node_fd}", "-", *arguments],
+            input=bundle_bytes, capture_output=True, check=False, timeout=30,
+            pass_fds=(node_fd,),
+            env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin",
+                 "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"},
+        )
+        return (checked.returncode == 0 and checked.stdout == b"DRAND_BLS_RECEIPT_OK\n"
+                and not checked.stderr)
+    finally:
+        os.close(node_fd)
 
 
 def user_systemd_available() -> bool:
@@ -144,10 +166,10 @@ def verify_dependencies() -> None:
         (SAFE, SAFE_SHA256), (MEMORY_GUARD, MEMORY_GUARD_SHA256),
         (SCORER, SCORER_SHA256), (MICROGATE, MICROGATE_SHA256),
         (FIXTURE, FIXTURE_SHA256), (DRAND_VERIFIER, DRAND_VERIFIER_SHA256),
+        (DRAND_BUNDLE, DRAND_BUNDLE_SHA256),
         (DRAND_NODE, DRAND_NODE_SHA256), (SYSTEM_CA_BUNDLE, SYSTEM_CA_BUNDLE_SHA256),
     ):
         verify_file(path, digest)
-    verify_drand_runtime()
     metadata = MODEL.stat()
     if MODEL.is_symlink() or not stat.S_ISREG(metadata.st_mode) or metadata.st_size != MODEL_BYTES:
         raise CampaignError("model identity mismatch")
@@ -206,8 +228,13 @@ def fetch_publication_receipt(candidate: str) -> dict[str, object]:
         "https://api.github.com/repos/bmarti44/frontier-at-home/events?per_page=100",
         headers={"Accept": "application/vnd.github+json",
                  "User-Agent": "frontier-at-home-w4-gate"})
-    verify_file(SYSTEM_CA_BUNDLE, SYSTEM_CA_BUNDLE_SHA256)
-    context = ssl.create_default_context(cafile=str(SYSTEM_CA_BUNDLE))
+    ca_bytes, _ = BASE.read_stable(SYSTEM_CA_BUNDLE)
+    if hashlib.sha256(ca_bytes).hexdigest() != SYSTEM_CA_BUNDLE_SHA256:
+        raise CampaignError("system CA bundle mismatch")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = True
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.load_verify_locations(cadata=ca_bytes.decode("ascii"))
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}), urllib.request.HTTPSHandler(context=context))
     with opener.open(request, timeout=30) as response:
@@ -254,13 +281,9 @@ def verify_randomness_bytes(raw: bytes, candidate: str,
             or re.fullmatch(r"[0-9a-f]{192}", doc["signature"] or "") is None
             or re.fullmatch(r"[0-9a-f]{192}", doc["previous_signature"] or "") is None):
         raise CampaignError("randomness is not post-freeze and three-relay bound")
-    verify_drand_runtime()
-    checked = subprocess.run(
-        [str(DRAND_NODE), str(DRAND_VERIFIER), str(doc["round"]), doc["randomness"],
-         doc["signature"], doc["previous_signature"]], capture_output=True,
-        text=True, check=False, timeout=30,
-    )
-    if checked.returncode != 0 or checked.stdout != "DRAND_BLS_RECEIPT_OK\n":
+    if not _sealed_bls_verify([
+            str(doc["round"]), doc["randomness"], doc["signature"],
+            doc["previous_signature"]]):
         raise CampaignError("randomness BLS verification failed")
     if (publication.get("candidate_hash") != candidate
             or type(publication.get("created_at_unix")) is not int):
@@ -626,11 +649,18 @@ def finalize_failure(error: BaseException) -> None:
                           sort_keys=True, separators=(",", ":")) + "\n").encode()
     BASE.write_new(summary_path, summary)
     artifacts = {}
+    rejected_unstable = []
     for path in sorted(attempt.rglob("*")):
         if path.is_symlink():
             continue
         if path.is_file():
-            artifacts[str(path.relative_to(attempt))] = sha256_file(path)
+            relative = str(path.relative_to(attempt))
+            try:
+                payload, _ = BASE.read_stable(path)
+            except (OSError, CampaignError):
+                rejected_unstable.append(relative)
+                continue
+            artifacts[relative] = hashlib.sha256(payload).hexdigest()
     BASE.write_json_new(manifest_path, {
         "schema": "glm52-w4-serving-campaign-failure-v1",
         "candidate_hash": candidate, "failure": failure,
@@ -643,9 +673,10 @@ def finalize_failure(error: BaseException) -> None:
         "microgate_sha256": MICROGATE_SHA256,
         "drand_verifier_sha256": DRAND_VERIFIER_SHA256,
         "drand_node_sha256": DRAND_NODE_SHA256,
-        "drand_runtime_tree_sha256": DRAND_RUNTIME_TREE_SHA256,
+        "drand_bundle_sha256": DRAND_BUNDLE_SHA256,
         "system_ca_bundle_sha256": SYSTEM_CA_BUNDLE_SHA256,
         "rejected_symlinks": rejected_symlinks,
+        "rejected_unstable_paths": rejected_unstable,
         "artifacts": artifacts, "verdict": "FAIL",
     })
 
@@ -762,7 +793,7 @@ def _campaign(candidate: str, receipt: Path) -> int:
         "public_randomness_sha256": seed,
         "public_randomness_receipt_sha256": receipt_sha, "schedules": schedules,
         "publication_receipt": publication,
-        "drand_runtime_tree_sha256": DRAND_RUNTIME_TREE_SHA256,
+        "drand_bundle_sha256": DRAND_BUNDLE_SHA256,
         "system_ca_bundle_sha256": SYSTEM_CA_BUNDLE_SHA256,
         "completed_rows": len(rows), "artifacts": artifacts,
         "verdict": summary["verdict"],
@@ -773,9 +804,13 @@ def _campaign(candidate: str, receipt: Path) -> int:
     BASE.write_new(attempt / "summary.json", summary_bytes)
     BASE.write_json_new(attempt / "manifest.json", manifest)
     if summary["verdict"] == "PASS":
+        scorer_bootstrap = (
+            "import sys;__file__=" + repr(str(SCORER)) +
+            ";exec(compile(sys.stdin.buffer.read(),__file__,'exec'))"
+        )
         replay = subprocess.run(
-            ["/usr/bin/python3", str(SCORER), str(attempt)], capture_output=True,
-            text=True, check=False, timeout=300,
+            ["/usr/bin/python3", "-I", "-B", "-c", scorer_bootstrap, str(attempt)],
+            input=scorer_bytes, capture_output=True, check=False, timeout=300,
             env={"HOME": "/home/bmarti44", "PATH": "/usr/bin:/bin",
                  "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"})
         try:

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
+import importlib.machinery
 import importlib.util
 import json
 import math
@@ -13,7 +15,9 @@ from pathlib import Path
 import re
 import stat
 import statistics
+import struct
 import subprocess
+import types
 from typing import Any
 
 
@@ -24,7 +28,7 @@ TOKENIZER = Path("/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.jso
 TOKENIZER_RUNTIME = Path("/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2")
 RENDER_ORACLE = Path("/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle")
 DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
-DRAND_RUNTIME = Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2")
+DRAND_BUNDLE = Path("/home/bmarti44/spark-deepseek-v4-flash/scripts/103_verify_drand_receipt_bundle.mjs")
 SYSTEM_CA_BUNDLE = Path("/etc/ssl/certs/ca-certificates.crt")
 STAGED_BINARY = Path("/home/bmarti44/.cache/glm52-w4-topk-c5-serving/ds4-server")
 TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
@@ -41,7 +45,7 @@ SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
 DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
 DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
-DRAND_RUNTIME_TREE_SHA256 = "38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4"
+DRAND_BUNDLE_SHA256 = "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc"
 SYSTEM_CA_BUNDLE_SHA256 = "6602a85a36afc2e51c66a0df5ae3d383c5b7c2fed93339ccef7d37e01faf09e8"
 ENGINE_SOURCE_COMMIT = "0424a6b406e4f6e125be3269104f3d16ad39c951"
 REQUEST_SHA256 = "e5aa55b32992e3033a90b0c5be77c7346d88202ca3f209d2036d05f5f64cfd46"
@@ -55,6 +59,8 @@ EXPECTED_CONFIGURATION = {
                     "timeout_s": 3600, "memory_swap_max": 0},
 }
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
+SEALS = (fcntl.F_SEAL_WRITE | fcntl.F_SEAL_GROW | fcntl.F_SEAL_SHRINK |
+         fcntl.F_SEAL_SEAL)
 FORMULA = (
     "five fresh-server ABBA/BAAB blocks; same novel >=16000-token request; "
     "external prefill time=response_complete_ns-request_start_ns with max_tokens=0 "
@@ -150,24 +156,52 @@ def _sha256_file(path: Path) -> str:
     return hashlib.sha256(_read_stable(path)).hexdigest()
 
 
-def _tree_sha256(root: Path) -> str:
-    digest = hashlib.sha256()
-    _require(root.is_dir() and not root.is_symlink(), "invalid drand runtime tree")
-    paths = sorted(root.rglob("*"))
-    files = []
-    for path in paths:
-        _require(not path.is_symlink(), "invalid drand runtime tree")
-        if path.is_file():
-            files.append(path)
-        else:
-            _require(path.is_dir(), "invalid drand runtime tree")
-    _require(bool(files), "invalid drand runtime tree")
-    for path in files:
-        relative = path.relative_to(root).as_posix().encode()
-        data = _read_stable(path)
-        digest.update(len(relative).to_bytes(4, "big")); digest.update(relative)
-        digest.update(len(data).to_bytes(8, "big")); digest.update(data)
-    return digest.hexdigest()
+def _sealed_memfd(name: str, payload: bytes, mode: int) -> int:
+    descriptor = os.memfd_create(name, os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
+    try:
+        view = memoryview(payload)
+        offset = 0
+        while offset < len(view):
+            offset += os.write(descriptor, view[offset:])
+        os.fchmod(descriptor, mode)
+        fcntl.fcntl(descriptor, fcntl.F_ADD_SEALS, SEALS)
+        _require(fcntl.fcntl(descriptor, fcntl.F_GET_SEALS) == SEALS,
+                 "sealed dependency descriptor differs")
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def _sealed_render(executable: bytes, request: bytes) -> bytes:
+    descriptor = _sealed_memfd("w4-render-oracle", executable, 0o500)
+    try:
+        completed = subprocess.run(
+            [f"/proc/self/fd/{descriptor}"], input=request, capture_output=True,
+            check=False, timeout=30, pass_fds=(descriptor,),
+            env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin",
+                 "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"})
+        _require(completed.returncode == 0 and not completed.stderr,
+                 "render oracle failed")
+        return completed.stdout
+    finally:
+        os.close(descriptor)
+
+
+def _tokenize_from_sealed_native(native: bytes, tokenizer_json: bytes,
+                                 prompt: bytes) -> list[int]:
+    descriptor = _sealed_memfd("w4-tokenizers-native", native, 0o400)
+    try:
+        loader = importlib.machinery.ExtensionFileLoader(
+            "w4_tokenizers.tokenizers", f"/proc/self/fd/{descriptor}")
+        spec = importlib.util.spec_from_loader("w4_tokenizers.tokenizers", loader)
+        _require(spec is not None, "cannot load sealed tokenizer native module")
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        tokenizer = module.Tokenizer.from_str(tokenizer_json.decode("utf-8"))
+        return tokenizer.encode(prompt.decode("utf-8"), add_special_tokens=False).ids
+    finally:
+        os.close(descriptor)
 
 
 def independent_tokenization(request_path: Path,
@@ -178,39 +212,34 @@ def independent_tokenization(request_path: Path,
         (TOKENIZER_RUNTIME / "tokenizers/tokenizers.abi3.so", TOKENIZER_NATIVE_SHA256),
         (RENDER_ORACLE, RENDER_ORACLE_SHA256),
     )
+    retained = {}
     for path, digest in dependencies:
-        _require(path.is_file() and not path.is_symlink() and _sha256_file(path) == digest,
+        payload = _read_stable(path)
+        _require(path.is_file() and not path.is_symlink() and
+                 hashlib.sha256(payload).hexdigest() == digest,
                  f"tokenization dependency mismatch: {path}")
+        retained[path] = payload
     request = _read_stable(request_path) if request_payload is None else request_payload
-    first = subprocess.run([str(RENDER_ORACLE)], input=request, capture_output=True,
-                           check=False, timeout=30)
-    second = subprocess.run([str(RENDER_ORACLE)], input=request, capture_output=True,
-                            check=False, timeout=30)
-    _require(first.returncode == second.returncode == 0 and not first.stderr
-             and not second.stderr and first.stdout == second.stdout,
-             "render oracle failed or was nondeterministic")
-    code = (
-        "import hashlib,json,struct,sys;from tokenizers import Tokenizer;"
-        "p=sys.stdin.buffer.read().decode('utf-8');"
-        f"t=Tokenizer.from_file({str(TOKENIZER)!r}).encode(p,add_special_tokens=False).ids;"
-        "print(json.dumps({'prompt_tokens':len(t),'token_ids_sha256':"
-        "hashlib.sha256(struct.pack(f'<{len(t)}i',*t)).hexdigest()},sort_keys=True))"
-    )
-    env = {"HOME": "/nonexistent", "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8",
-           "LC_ALL": "C.UTF-8", "PYTHONPATH": str(TOKENIZER_RUNTIME)}
-    tokenized = subprocess.run(["/usr/bin/python3", "-c", code], input=first.stdout,
-                               capture_output=True, check=False, timeout=60, env=env)
-    _require(tokenized.returncode == 0 and not tokenized.stderr,
-             "independent tokenizer failed")
-    try:
-        result = json.loads(tokenized.stdout)
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise InvalidCampaign("independent tokenizer emitted invalid JSON") from error
+    first = _sealed_render(retained[RENDER_ORACLE], request)
+    second = _sealed_render(retained[RENDER_ORACLE], request)
+    _require(first == second, "render oracle was nondeterministic")
+    first_ids = _tokenize_from_sealed_native(
+        retained[TOKENIZER_RUNTIME / "tokenizers/tokenizers.abi3.so"],
+        retained[TOKENIZER], first)
+    second_ids = _tokenize_from_sealed_native(
+        retained[TOKENIZER_RUNTIME / "tokenizers/tokenizers.abi3.so"],
+        retained[TOKENIZER], second)
+    _require(first_ids == second_ids, "independent tokenizer was nondeterministic")
+    result = {
+        "prompt_tokens": len(first_ids),
+        "token_ids_sha256": hashlib.sha256(
+            struct.pack(f"<{len(first_ids)}i", *first_ids)).hexdigest(),
+    }
     _require(isinstance(result, dict) and set(result) == {"prompt_tokens", "token_ids_sha256"}
              and _integer(result["prompt_tokens"]) and result["prompt_tokens"] >= MIN_PROMPT_TOKENS
              and _sha256(result["token_ids_sha256"]), "invalid independent tokenization")
-    return {**result, "rendered_prompt_sha256": hashlib.sha256(first.stdout).hexdigest(),
-            "rendered_prompt_bytes": len(first.stdout)}
+    return {**result, "rendered_prompt_sha256": hashlib.sha256(first).hexdigest(),
+            "rendered_prompt_bytes": len(first)}
 
 
 def _ratio_lower95(ratios: list[float]) -> float:
@@ -414,6 +443,17 @@ def _git_bytes(root: Path, candidate: str, relative: str) -> bytes:
     ).stdout
 
 
+def _load_runner_from_bytes(runner_bytes: bytes, base_bytes: bytes,
+                            runner_path: Path) -> Any:
+    _require(hashlib.sha256(base_bytes).hexdigest() == BASE_SHA256,
+             "retained campaign base differs")
+    module = types.ModuleType("w4_frozen_runner")
+    module.__file__ = str(runner_path)
+    module._W4_INJECTED_BASE_BYTES = base_bytes
+    exec(compile(runner_bytes, str(runner_path), "exec"), module.__dict__)
+    return module
+
+
 def score_run_dir(run_dir: Path) -> dict[str, object]:
     try:
         manifest_payload, manifest_identity = _read_stable_identity(run_dir / "manifest.json")
@@ -430,7 +470,7 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
             "executed_request_sha256", "microgate_sha256", "configuration",
             "configuration_sha256", "tokenization", "public_randomness_sha256",
             "public_randomness_receipt_sha256", "publication_receipt", "schedules", "completed_rows",
-            "drand_runtime_tree_sha256", "system_ca_bundle_sha256",
+            "drand_bundle_sha256", "system_ca_bundle_sha256",
             "artifacts", "verdict",
         }
         _require(set(manifest) == required_manifest and
@@ -458,16 +498,21 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
             "scripts/03_memory_guard.py": MEMORY_GUARD_SHA256,
             "scripts/89_verify_drand_receipt.mjs": DRAND_VERIFIER_SHA256,
         }
+        dependency_payloads = {}
         for relative, digest in repo_dependencies.items():
             dependency = root / relative
             payload = _read_stable(dependency)
             _require(hashlib.sha256(payload).hexdigest() == digest and
                      _git_bytes(root, candidate, relative) == payload,
                      f"fixed dependency differs: {dependency}")
+            dependency_payloads[relative] = payload
         _require(_sha256_file(DRAND_NODE) == DRAND_NODE_SHA256,
                  "drand runtime differs")
-        _require(_tree_sha256(DRAND_RUNTIME) == DRAND_RUNTIME_TREE_SHA256,
-                 "drand imported runtime tree differs")
+        _require(_sha256_file(DRAND_BUNDLE) == DRAND_BUNDLE_SHA256 and
+                 _git_bytes(root, candidate,
+                            "scripts/103_verify_drand_receipt_bundle.mjs") ==
+                 _read_stable(DRAND_BUNDLE),
+                 "drand verifier bundle differs")
         _require(_sha256_file(SYSTEM_CA_BUNDLE) == SYSTEM_CA_BUNDLE_SHA256,
                  "system CA bundle differs")
         _require(_sha256_file(STAGED_BINARY) == BINARY_SHA256,
@@ -490,7 +535,7 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
             "binary_sha256": BINARY_SHA256, "engine_source_commit": ENGINE_SOURCE_COMMIT,
             "model_sha256": MODEL_SHA256, "fixture_sha256": FIXTURE_SHA256,
             "executed_request_sha256": REQUEST_SHA256, "microgate_sha256": MICROGATE_SHA256,
-            "drand_runtime_tree_sha256": DRAND_RUNTIME_TREE_SHA256,
+            "drand_bundle_sha256": DRAND_BUNDLE_SHA256,
             "system_ca_bundle_sha256": SYSTEM_CA_BUNDLE_SHA256,
         }
         _require(all(manifest.get(name) == value for name, value in expected_bindings.items()),
@@ -560,10 +605,10 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
         _require(manifest["completed_rows"] == len(raw_rows) == 20,
                  "completed-row count differs")
 
-        spec = importlib.util.spec_from_file_location("w4_frozen_runner", runner_path)
-        _require(spec is not None and spec.loader is not None, "cannot load frozen runner")
-        runner = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(runner)
+        runner = _load_runner_from_bytes(
+            runner_bytes,
+            dependency_payloads["scripts/91_run_w7_cache_generation_campaign.py"],
+            runner_path)
         publication = snapshot_json("publication-receipt.json")
         _require(publication == manifest["publication_receipt"] ==
                  runner.fetch_publication_receipt(candidate),

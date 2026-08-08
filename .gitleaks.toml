@@ -7,6 +7,9 @@ useDefault = true
 [allowlist]
 description = "public integrity digests recorded in exact evidence fields"
 regexTarget = "line"
+paths = [
+  '''^scripts/103_verify_drand_receipt_bundle\.mjs$''',
+]
 regexes = [
   '''"(access_stream|binary|build_manifest|builder|configuration|diff|fixture|generated_content|generated_reasoning|inventory|launcher|model|output_tokenizer|pack|preserved_archive|profile|randomness_receipt|raw_artifact|receipt|request|response|runner|runtime_bundle|scorer|seed|server|source|staged_binary|terminal_receipt|test|test_diff|tokenizer|weights_manifest)_sha256": "[0-9a-f]{64}"''',
   '''"tokenizers_(init|so)_sha256": "[0-9a-f]{64}"''',
@@ -32,7 +35,7 @@ regexes = [
   '''^readonly HARNESS_SHA256=[0-9a-f]{64}$''',
   '''^HARNESS_SHA256 = "[0-9a-f]{64}"$''',
   '''^(SCORER|TRACE_SCORER|DRAND_VERIFIER|DRAND_NODE|DRAND_RUNTIME_TREE)_SHA256 = "[0-9a-f]{64}"$''',
-  '''^(BASE|BINARY|CGROUP|DRAND_NODE|DRAND_RUNTIME_TREE|DRAND_VERIFIER|LIVE|MEMORY_GUARD|MODEL|PRIMARY|SAFE|SCORER|SYSTEM_CA_BUNDLE)_SHA256 = "[0-9a-f]{64}"$''',
+  '''^(BASE|BINARY|CGROUP|DRAND_BUNDLE|DRAND_NODE|DRAND_RUNTIME_TREE|DRAND_VERIFIER|LIVE|MEMORY_GUARD|MODEL|PRIMARY|SAFE|SCORER|SYSTEM_CA_BUNDLE)_SHA256 = "[0-9a-f]{64}"$''',
   '''^readonly SUBMITTER_SHA256=[0-9a-f]{64}$''',
   '''^readonly PYTHON_DEPENDENCY_SHA256=[0-9a-f]{64}$''',
   '''^readonly (TRACE_SCORER|TOKENIZER|TOKENIZER_INIT|TOKENIZER_NATIVE)_SHA256=[0-9a-f]{64}$''',
