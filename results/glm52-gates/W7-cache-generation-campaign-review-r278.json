@@ -1,0 +1,51 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 2,
+  "candidate_hash": "b515eaa4c579e9da9a26d60ab93588671f1365bb",
+  "review_round": 278,
+  "runtime_authorized": false,
+  "gap_reviewer": {
+    "score": 68,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": [
+      "GAP-W7.1-278-H1-CONTAINMENT-LINEAGE-CONFIG-UNSATISFIABLE",
+      "GAP-W7.1-278-H2-MEMORY-GUARD-DESCRIPTOR-CONTRACT-VIOLATED"
+    ],
+    "medium": [
+      "GAP-W7.1-278-M1-FAILURE-TRIPLET-MANIFEST-INCOMPLETE",
+      "GAP-W7.1-278-M2-PARENT-LOCK-BYPASS-LACKS-EXECUTABLE-TESTS"
+    ],
+    "low": []
+  },
+  "adversarial_reviewer": {
+    "score": 87,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": ["ADV-W7.1-278-H1-PARENT-LOCK-OWNERSHIP-NOT-PROVEN"],
+    "medium": ["ADV-W7.1-278-M1-FAILURE-TRIPLET-PRESERVES-PASS-SUMMARY"],
+    "low": []
+  },
+  "independently_reproduced": {
+    "safe_run_high_requires_lineage": "GLM_SAFE_ALLOW_CGROUP_HIGH=1 without GLM_SAFE_W7_DRIVER_LINEAGE=1 is rejected before launch",
+    "memory_guard_path_contract": "safe-run requires a retained /proc/PID/fd/N guard path",
+    "lock_owner_gap": "contention proves some holder, not that the bound parent owns the FLOCK",
+    "failure_summary_gap": "an existing PASS summary can remain beside a FAIL manifest"
+  },
+  "candidate3_bounded_plan": [
+    "remove the unnecessary explicit MemoryHigh override and high-limit exception so the established kill-floor-derived cgroup envelope applies",
+    "retain and hash the memory guard through a campaign-owned descriptor",
+    "bind parent FLOCK ownership through /proc/locks PID and inode evidence with behavioral mutations",
+    "make escaped failure triplets internally FAIL-consistent and complete known identity fields"
+  ],
+  "convergence": {
+    "candidate_count_for_gate": 2,
+    "prior_blocking_count": 8,
+    "current_blocking_count": 3,
+    "strictly_shrank": true,
+    "consecutive_non_shrinking_candidates": 0,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": false
+  }
+}
