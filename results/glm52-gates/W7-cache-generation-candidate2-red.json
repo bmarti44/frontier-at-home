@@ -1,0 +1,37 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 2,
+  "red_against": "candidate-1 engine and authoritative W7 production attempt",
+  "scorer_exit_code": 1,
+  "artifact_sha256": {
+    "server.log": "c580f10f7a532d21a168b6d34939a6ecc2e1fed724addd4ea05745094837f7e4",
+    "live-http-status": "c11e3f4837efde2441e23a7b9da02131f53bf59fddeb7147c4ab81afe400460f",
+    "live-response.json": "50aa5f2c9fc667b6f0e285b85f8b9f229d268e7d6571a7ed52a8aa13a8510756",
+    "containment.rc": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "containment.stdout": "b8d4a9678337732cd2aaf05f239a33b84b8ed61cd807dfe6097afffb6e01d244"
+  },
+  "scorer_sha256": "97e97642698a67097796c4d1228838ce189891b3aca7fd42589f7d6e1e796956",
+  "test_sha256": "c74a89248bdc1118c4ad24000cbce31b9a484d2ee2bf6dafec9bda409252e4b3",
+  "observed": {
+    "request_window_count": 2,
+    "bound_indexed_resume_count": 1,
+    "response_prompt_tokens": 5055,
+    "false_generation_flush_count": 374
+  },
+  "checks": {
+    "exactly_one_bound_indexed_resume_completed": true,
+    "http_status_200": true,
+    "response_schema_valid": true,
+    "clean_containment": true,
+    "fatal_markers_absent": true,
+    "stable_model_generation_flushes_zero": false
+  },
+  "mutation_tests": {
+    "unrelated_later_completion_rejected": true,
+    "fatal_after_completion_rejected": true,
+    "bad_http_rejected": true,
+    "bad_response_rejected": true,
+    "unclean_containment_rejected": true
+  },
+  "verdict": "RED_CONFIRMED"
+}

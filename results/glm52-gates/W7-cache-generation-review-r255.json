@@ -1,0 +1,40 @@
+{
+  "candidate_hash": "e7de01eb2b2aca3b927908a32b26f2947de31b24",
+  "review_round": 255,
+  "gate_candidate": 1,
+  "verdict": "REJECT_RUNTIME_BLOCKED",
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 78,
+    "critical": [],
+    "high": [
+      "GAP-W7.1-C1-H1-ROCM-DEFAULT-OFF-BUILD-REGRESSION"
+    ],
+    "medium": [
+      "GAP-W7.1-C1-M1-GENERATION-SEMANTICS-NOT-UNIT-ASSERTED",
+      "GAP-W7.1-C1-M2-FLAG-PRESENCE-ENABLES-ZERO",
+      "GAP-W7.1-C1-M3-SUPPORT-MODEL-IDENTITY-ASSUMPTION"
+    ]
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 64,
+    "critical": [],
+    "high": [
+      "ADV-W7.1-255-H1-UNBOUND-RESUME-COMPLETION",
+      "ADV-W7.1-255-H2-FROZEN-COVERAGE-NOT-EXECUTED",
+      "ADV-W7.1-255-H3-SUPPORT-MODEL-IDENTITY-DEAD-END"
+    ],
+    "medium": [
+      "ADV-W7.1-255-M1-PRESENCE-BASED-FLAG",
+      "ADV-W7.1-255-M2-ADDRESS-AND-SIZE-ARE-NOT-A-GENERATION-TOKEN"
+    ]
+  },
+  "root_reproduction": {
+    "rocm_reference_outside_guard": true,
+    "scorer_cross_request_false_success": true,
+    "focused_test_does_not_observe_generation": true,
+    "support_model_overwrites_single_cuda_identity": true,
+    "presence_based_flag_accepts_non_1_values": true
+  },
+  "disposition": "All high findings and their overlapping medium findings are assigned to bounded candidate 2. No frozen W7 correctness component is reopened."
+}

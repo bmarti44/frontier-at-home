@@ -1,6 +1,6 @@
 {
   "gate": "W7.1-stable-model-cache-generation",
-  "status": "PREREGISTERED_RED_PENDING",
+  "status": "CANDIDATE_1_REJECTED_CANDIDATE_2_RED_CONFIRMED",
   "candidate_scope": "Byte-identical, default-off separation of per-layer CUDA view remapping from authoritative model-load generation changes.",
   "source_baseline": {
     "engine_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
@@ -27,6 +27,17 @@
   "mutation_requirements": [
     "one injected generation-change flush is rejected",
     "missing cache-enabled coverage is rejected",
-    "missing completed indexed_resume is rejected"
+    "missing completed indexed_resume is rejected",
+    "unrelated later request completion is rejected",
+    "bad HTTP response or non-clean containment is rejected",
+    "fatal runtime marker after completion is rejected"
+  ],
+  "candidate_2_bounded_scope": [
+    "Guard the entire CUDA stable-remap call from ROCm and Apple builds.",
+    "Accept only exact DS4_CUDA_STABLE_MODEL_REMAP=1 and validate before serving.",
+    "Bind stable remap authorization to the current authoritative model generation.",
+    "Reject support-model identity conflicts at startup before listening.",
+    "Directly assert production selector and model-generation behavior.",
+    "Bind scorer completion to one prompt window, HTTP response, fatal scan, and clean containment."
   ]
 }
