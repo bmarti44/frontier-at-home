@@ -28,10 +28,16 @@ PROMPT_DONE_RE = re.compile(
     r"ds4-server: completion ctx=(\d+)\.\.(\d+):(\d+) prompt done [0-9]+(?:\.[0-9]+)?s$"
 )
 FATAL_PATTERNS = (
-    re.compile(r"CUDA(?: GLM prefill failed|_ERROR_OUT_OF_MEMORY)", re.IGNORECASE),
+    re.compile(r"CUDA GLM prefill failed", re.IGNORECASE),
+    re.compile(
+        r"(?:CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|"
+        r"CUDA.{0,160}(?:allocation failed|out of memory))",
+        re.IGNORECASE,
+    ),
+    re.compile(r"NV_ERR_NO_MEMORY", re.IGNORECASE),
     re.compile(r"forward_token failed", re.IGNORECASE),
     re.compile(r"(?:out of memory|oom-kill|killed process)", re.IGNORECASE),
-    re.compile(r"fatal error", re.IGNORECASE),
+    re.compile(r"\bFATAL\b", re.IGNORECASE),
     re.compile(r"(?:NVRM.*)?\bXid\b", re.IGNORECASE),
     re.compile(r"request timeout", re.IGNORECASE),
 )
