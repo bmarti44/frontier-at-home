@@ -1,0 +1,61 @@
+{
+  "artifact": "DSV4 cold-load candidate 2 pre-submission audit",
+  "candidate": {
+    "implementation_commits": [
+      "84857e587ef372c16d516ebdb35e83b0d1256484",
+      "41d2ea5a4e645cbb1c784e2d96cf42a940465760"
+    ],
+    "repository_head": "41d2ea5a4e645cbb1c784e2d96cf42a940465760",
+    "repository_tree": "a54b00d253da4bed472a83743b96d07a96c00b12"
+  },
+  "checks": {
+    "bash_syntax": "PASS",
+    "cold_load_contract_and_direct_patch": {
+      "errors": 0,
+      "failures": 0,
+      "ran": 8,
+      "verdict": "PASS"
+    },
+    "direct_io_fault_mutations": "PASS",
+    "diff_check": "PASS",
+    "engine_or_fio_process_during_preaudit": false,
+    "profile_conformance": {
+      "errors": 0,
+      "failures": 0,
+      "ran": 5,
+      "verdict": "PASS"
+    },
+    "secret_lint_pre_push": "PASS",
+    "secret_lint_self_test": "PASS"
+  },
+  "engine": {
+    "base_commit": "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a",
+    "build_configuration": "Release, GGML_CUDA=ON, CUDA architecture 121, LLAMA_CURL=OFF, CMAKE_SKIP_BUILD_RPATH=ON, two jobs",
+    "patch_sha256": "364b6475afd9cb0db884e097598dbe005eb8b7fad46bcd3e5c3a08f5f3878150",
+    "review_source": "/tmp/llama-fusion-read.DMP7Bs"
+  },
+  "reproducible_changed_runtime_artifacts": {
+    "canonicalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id after two independent builds with no build-tree RUNPATH",
+    "component_sha256": {
+      "libllama-common.so.0.0.10053": "7947ed3b1dc5069d97020a7481d992d3d6b0182284941e53fb1e3a8f7f1e5b31",
+      "libllama.so.0.0.10053": "18a9c672afa9a00e390fcfbf58eac2855aaee1dbb9bf5f2fc299592003b9cc7f",
+      "llama-server": "802c6a9ee2d8e727d66be93a9f1938c686ca478abdf7e4bc4f517d39d374e5c2"
+    },
+    "verdict": "BYTE_IDENTICAL"
+  },
+  "review_disposition": {
+    "ADV-DSV4-COLD-293-H1-DIRECT-IO-IS-NOT-DEFAULT-OFF-UNDER-AMBIENT-LLAMA-ENV": "FIXED: OFF always emits --no-direct-io and ON emits --direct-io-required; parser output confirms explicit CLI overwrites ambient LLAMA_ARG_DIO.",
+    "ADV-DSV4-COLD-293-H2-DIRECT-IO-SILENTLY-FALLS-BACK-AND-CANNOT-PROVE-SINGLE-WEIGHT-FOOTPRINT": "FIXED: mandatory open/read failures throw; real llama_file fault mutations cover main-shard open, EINVAL, EFAULT, and positive-short-read then EINVAL.",
+    "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS": "OPEN: candidate 3 will add the fixed five-block matched runner and scorer before any model run.",
+    "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN": "FIXED: allocation is payload plus alignment minus one while each read is capped at payload.",
+    "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED": "OPEN_NONBLOCKING: candidate 3 will bind physical read counters and cache-state observations."
+  },
+  "unchanged_build_nondeterminism": {
+    "libggml_cuda": "The two canonical builds differ only in an nvcc-generated tmpxft symbol name; this component is outside the source patch.",
+    "libllama_server_impl": "The two canonical builds differ in generated web-UI asset names and bytes; this component is outside the source patch.",
+    "policy": "Neither artifact is used to claim source reproducibility. The complete selected runtime bundle will be hash-frozen before the later campaign."
+  },
+  "runtime_authorization": "BLOCKED_PENDING_CANDIDATE_3_SCORER_REVIEW",
+  "schema_version": 1,
+  "verdict": "PASS"
+}
