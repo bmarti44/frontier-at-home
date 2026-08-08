@@ -1,0 +1,44 @@
+{
+  "candidate_hash": "290a5e0f07fdd3a6508e522b022bdf43a580d187",
+  "checks": {
+    "canonical_self_test": "PASS",
+    "descriptor_paths_crossed_user_systemd": true,
+    "engine_started": false,
+    "failure_evidence_triplet_complete": true,
+    "failure_manifest_has_frozen_identity": true,
+    "failure_verdict": "FAIL",
+    "no_surviving_ds4_server": true,
+    "raw_digest_matches_manifest": true,
+    "summary_digest_matches_manifest": true
+  },
+  "failure_probe": {
+    "attempt": "/home/bmarti44/.local/state/glm52-w7-cache-generation/attempt-f5613233dcb5a5bfc53383f728bcbf2c",
+    "containment_exit_status": 75,
+    "failure_reason": "containment-result-validation",
+    "outer_exit_status": 1,
+    "purpose": "Hold the global inference lock so the pinned cgroup/safe-run chain fails before engine execution; verify the outer finalizer still publishes a complete fail-closed evidence triplet."
+  },
+  "frozen_artifacts": {
+    "binary_bytes": 5584864,
+    "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "cgroup_sha256": "3c6fba0af34da8d50532a7e9e08dcd0e3ff50799a60f8ccac70d60944d5214b3",
+    "harness_sha256": "dcf1ba061c75693da93916dd9afe821c27ea0b92fcc184fc3e19d4be02ca1fb5",
+    "model_bytes": 211075856448,
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "safe_run_sha256": "75f20c136c27ae8c902526960345bc6f4054e0467991d073d553a8639b14e13c",
+    "scorer_sha256": "894e67622affe043b310f8f69f91c8151e687548858efe33fcffec845bfeabeb"
+  },
+  "mutation_test": {
+    "behavior": "After a server-log snapshot is opened and read, atomically replace its pathname with passing bytes. Scoring the retained snapshot must remain FAIL while reopening the replaced path would PASS.",
+    "result": "PASS"
+  },
+  "pre_submission_audit": {
+    "broader_tests": "54 tests passed, 1 privilege-dependent test skipped",
+    "diff_check": "PASS",
+    "focused_tests": "29 tests passed",
+    "python_compile": "PASS",
+    "shell_syntax": "PASS"
+  },
+  "schema": "glm52-w7-candidate-preflight-v1",
+  "verdict": "PASS"
+}
