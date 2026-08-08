@@ -54,7 +54,7 @@ if [[ -n $PARENT_LOCK_PID || -n $PARENT_LOCK_START_TICKS || -n $PARENT_LOCK_FD |
     echo "parent inference-lock identity mismatch" >&2
     exit 2
   }
-  if /usr/bin/flock -n "$parent_fd_path" /usr/bin/true 2>/dev/null; then
+  if /usr/bin/flock -n /run/lock/frontier-at-home/inference.lock /usr/bin/true 2>/dev/null; then
     echo "parent inference lock is not held" >&2
     exit 2
   fi
