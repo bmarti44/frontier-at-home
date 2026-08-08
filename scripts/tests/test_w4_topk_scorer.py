@@ -36,6 +36,9 @@ class W4TopkScorerTest(unittest.TestCase):
             (self.run_dir / name).write_bytes(data)
         (self.run_dir / "randomness-receipt.json").write_text(
             json.dumps(RECEIPT, sort_keys=True) + "\n")
+        (self.run_dir / "drand-verifier.mjs").write_bytes(
+            (ROOT / "scripts/89_verify_drand_receipt.mjs").read_bytes())
+        (self.run_dir / "scorer.py").write_bytes(SCORER_PATH.read_bytes())
         first_baab = int(RECEIPT["randomness"][:2], 16) & 1
         self.rows = []
         for block in range(5):
@@ -57,7 +60,8 @@ class W4TopkScorerTest(unittest.TestCase):
         self._write_raw()
         artifacts = {}
         for name in ("binary", "engine.cu", "test.cu", "runner.py",
-                     "randomness-receipt.json"):
+                     "scorer.py", "randomness-receipt.json",
+                     "drand-verifier.mjs"):
             path = self.run_dir / name
             artifacts[name] = {"path": name, "sha256": sha256(path),
                                "bytes": path.stat().st_size}
