@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import signal
 import shutil
+import socket
 import stat
 import subprocess
 import sys
@@ -114,7 +115,98 @@ def _terminate_and_reap(process: subprocess.Popen[str]) -> None:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous)
 
 
-def run_contained_command(command: list[str], environment: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def containment_unit_name(tag: str, launcher_pid: int) -> str:
+    if (
+        re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,39}", tag) is None
+        or type(launcher_pid) is not int or launcher_pid <= 1
+    ):
+        raise CampaignError("invalid containment unit identity")
+    return f"glm52-{tag.replace('.', '-')}-{launcher_pid}.service"
+
+
+def _unit_state(unit: str) -> dict[str, str]:
+    completed = subprocess.run(
+        [
+            "/usr/bin/systemctl", "--user", "show", unit, "--no-pager",
+            "--property=LoadState", "--property=ActiveState", "--property=SubState",
+            "--property=MainPID", "--property=ControlPID",
+        ],
+        capture_output=True, text=True, check=False, timeout=15,
+    )
+    if completed.returncode != 0:
+        return {"LoadState": "not-found", "ActiveState": "inactive", "MainPID": "0", "ControlPID": "0"}
+    state: dict[str, str] = {}
+    for line in completed.stdout.splitlines():
+        if "=" in line:
+            name, value = line.split("=", 1)
+            state[name] = value
+    return state
+
+
+def _unit_is_stopped(unit: str) -> bool:
+    state = _unit_state(unit)
+    return (
+        state.get("LoadState") in {"not-found", "masked"}
+        or (
+            state.get("ActiveState") in {"inactive", "failed"}
+            and state.get("MainPID", "0") == "0"
+            and state.get("ControlPID", "0") == "0"
+        )
+    )
+
+
+def stop_exact_containment_unit(unit: str) -> None:
+    if re.fullmatch(r"glm52-[A-Za-z0-9][A-Za-z0-9._-]{0,80}-[1-9][0-9]*\.service", unit) is None:
+        raise CampaignError("refusing untrusted containment unit")
+    subprocess.run(
+        ["/usr/bin/systemctl", "--user", "stop", unit],
+        capture_output=True, text=True, check=False, timeout=60,
+    )
+    for _ in range(120):
+        if _unit_is_stopped(unit):
+            return
+        time.sleep(0.25)
+    subprocess.run(
+        [
+            "/usr/bin/systemctl", "--user", "kill", "--kill-whom=all",
+            "--signal=SIGKILL", unit,
+        ],
+        capture_output=True, text=True, check=False, timeout=30,
+    )
+    subprocess.run(
+        ["/usr/bin/systemctl", "--user", "stop", unit],
+        capture_output=True, text=True, check=False, timeout=30,
+    )
+    for _ in range(40):
+        if _unit_is_stopped(unit):
+            return
+        time.sleep(0.25)
+    raise CampaignError(f"containment unit did not stop: {unit}")
+
+
+def _listener_is_active() -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(0.2)
+        return probe.connect_ex(("127.0.0.1", PORT)) == 0
+
+
+def _cleanup_interrupted_containment(process: subprocess.Popen[str], unit: str) -> None:
+    blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+    try:
+        try:
+            stop_exact_containment_unit(unit)
+        finally:
+            _terminate_and_reap(process)
+        if server_pids() or _listener_is_active():
+            raise CampaignError("containment cleanup left a server or listener")
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+
+
+def run_contained_command(
+    command: list[str], environment: dict[str, str], tag: str,
+) -> subprocess.CompletedProcess[str]:
     """Run one launcher and synchronously reap it before propagating interruption."""
     global _ACTIVE_CONTAINMENT
     blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
@@ -125,19 +217,20 @@ def run_contained_command(command: list[str], environment: dict[str, str]) -> su
             command, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
         _ACTIVE_CONTAINMENT = process
+        unit = containment_unit_name(tag, process.pid)
     finally:
         try:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous)
         except BaseException:
             if process is not None:
-                _terminate_and_reap(process)
+                _cleanup_interrupted_containment(process, containment_unit_name(tag, process.pid))
             _ACTIVE_CONTAINMENT = None
             raise
     try:
         stdout, stderr = process.communicate()
         return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
     except BaseException:
-        _terminate_and_reap(process)
+        _cleanup_interrupted_containment(process, unit)
         raise
     finally:
         _ACTIVE_CONTAINMENT = None
@@ -882,7 +975,7 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
                     "--driver", arm, str(out), str(request_path), request_sha256, candidate,
                     model_devino, model_descriptor_path, engine_lock_path,
                 ]
-                completed = run_contained_command(command, env)
+                completed = run_contained_command(command, env, tag)
                 write_new(out / "containment.stdout", completed.stdout.encode())
                 write_new(out / "containment.stderr", completed.stderr.encode())
                 write_new(out / "containment.rc", f"{completed.returncode}\n".encode())
