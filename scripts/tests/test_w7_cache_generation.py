@@ -18,6 +18,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[2]
 SCORER = ROOT / "scripts/89_score_w7_cache_generation.py"
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+SAFE = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
 SMOKE = ROOT / "results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh"
 SPEC = importlib.util.spec_from_file_location("w7_cache_generation_scorer", SCORER)
 assert SPEC and SPEC.loader
@@ -85,6 +86,28 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
 
 
 class W7CacheGenerationGateTest(unittest.TestCase):
+    def test_safe_wrapper_binds_exact_inference_lock_parent(self) -> None:
+        safe = SAFE.read_text(encoding="utf-8")
+        self.assertIn("verify_w7_lock_parent", safe)
+        self.assertIn("DS4_W7_LOCK_PARENT_PID", safe)
+        self.assertIn("/run/lock/frontier-at-home/inference.lock", safe)
+        self.assertLess(safe.index("verify_w7_lock_parent"), safe.index("setsid timeout"))
+
+    def test_driver_lineage_has_no_engine_behavioral_mutations(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("--lineage-self-test", source)
+        self.assertIn("--driver-lineage-self-test", source)
+        self.assertIn("DS4_W7_LOCK_PARENT_PID", source)
+        for mutation in (
+            "bad-safe-pid",
+            "bad-safe-start",
+            "wrong-safe-script",
+            "wrong-cgroup-unit",
+            "bad-lock-pid",
+            "bad-lock-start",
+        ):
+            self.assertIn(mutation, source)
+
     def test_driver_requires_safe_wrapper_ancestor_lineage(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
         driver_entry = source.split('if [[ ${1:-} == --driver ]]', 1)[1].split("fi", 1)[0]
