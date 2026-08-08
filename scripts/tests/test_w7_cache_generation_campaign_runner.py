@@ -8,9 +8,9 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import tempfile
-import time
 import unittest
 from unittest import mock
 
@@ -223,41 +223,107 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             self.assertNotIn("parent inference-lock ownership mismatch", accepted.stderr)
             fcntl.flock(descriptor, fcntl.LOCK_UN)
 
-            holder = subprocess.Popen(
-                ["/usr/bin/flock", "-x", str(lock), "/usr/bin/sleep", "10"]
-            )
+            ready_read, ready_write = os.pipe()
+            stop_read, stop_write = os.pipe()
+            holder_pid = os.fork()
+            if holder_pid == 0:
+                try:
+                    os.close(ready_read); os.close(stop_write)
+                    holder_fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+                    fcntl.flock(holder_fd, fcntl.LOCK_EX)
+                    os.write(ready_write, b"1")
+                    os.read(stop_read, 1)
+                    os.close(holder_fd)
+                finally:
+                    os._exit(0)
+            os.close(ready_write); os.close(stop_read)
             try:
-                for _ in range(100):
-                    probe = subprocess.run(
-                        ["/usr/bin/flock", "-n", str(lock), "/usr/bin/true"], check=False
-                    )
-                    if probe.returncode != 0:
-                        break
-                    time.sleep(0.01)
+                self.assertEqual(os.read(ready_read, 1), b"1")
                 rejected = subprocess.run(
                     [str(MODULE.CGROUP), "--tag", "w7-lock-foreign", "--", "/usr/bin/true"],
                     env=base, capture_output=True, text=True, check=False,
                 )
                 self.assertIn("parent inference-lock ownership mismatch", rejected.stderr)
             finally:
-                holder.terminate()
-                holder.wait(timeout=5)
+                os.write(stop_write, b"1")
+                os.close(stop_write); os.close(ready_read)
+                os.waitpid(holder_pid, 0)
+
+            locked_fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            fcntl.flock(locked_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            stop_read, stop_write = os.pipe()
+            inheritor_pid = os.fork()
+            if inheritor_pid == 0:
+                try:
+                    os.close(stop_write)
+                    os.read(stop_read, 1)
+                finally:
+                    os._exit(0)
+            os.close(stop_read)
+            os.close(locked_fd)
+            try:
+                inherited_bypass = subprocess.run(
+                    [str(MODULE.CGROUP), "--tag", "w7-lock-inherited", "--", "/usr/bin/true"],
+                    env=base, capture_output=True, text=True, check=False,
+                )
+                self.assertIn("parent inference-lock ownership mismatch", inherited_bypass.stderr)
+            finally:
+                os.write(stop_write, b"1"); os.close(stop_write)
+                os.waitpid(inheritor_pid, 0)
+
+            post = subprocess.run(
+                ["/usr/bin/flock", "-n", str(lock), "/usr/bin/true"], check=False
+            )
+            self.assertEqual(post.returncode, 0, "mutation leaked the global inference lock")
         finally:
             os.close(descriptor)
 
     def test_failure_triplet_cannot_preserve_pass_summary(self) -> None:
+        prior = b'{"verdict":"PASS"}\n'
         with tempfile.TemporaryDirectory(prefix="w7-failure-test-") as raw:
             attempt = Path(raw)
             (attempt / "raw.jsonl").write_bytes(b"")
-            (attempt / "summary.json").write_text('{"verdict":"PASS"}\n', encoding="utf-8")
+            (attempt / "summary.json").write_bytes(prior)
             with mock.patch.object(MODULE, "_ACTIVE_ATTEMPT", attempt), mock.patch.object(
                 MODULE, "_ACTIVE_CANDIDATE", "a" * 40
             ):
                 MODULE.finalize_failure_triplet(RuntimeError("injected"))
             summary = json.loads((attempt / "summary.json").read_text(encoding="utf-8"))
             manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
+            displaced = (attempt / "summary.pre-finalization.json").read_bytes()
         self.assertEqual(summary["verdict"], "FAIL")
         self.assertEqual(manifest["verdict"], "FAIL")
+        self.assertEqual(displaced, prior)
+        self.assertEqual(
+            manifest["artifacts"]["summary.pre-finalization.json"],
+            hashlib.sha256(prior).hexdigest(),
+        )
+
+    def test_attempt_is_active_before_pending_interrupt_is_delivered(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-activation-test-") as raw:
+            parent = Path(raw)
+            original = Path.mkdir
+            previous = signal.getsignal(signal.SIGINT)
+
+            def interrupt_after_mkdir(path: Path, *args: object, **kwargs: object) -> None:
+                original(path, *args, **kwargs)
+                os.kill(os.getpid(), signal.SIGINT)
+
+            def raise_interrupt(_signal: int, _frame: object) -> None:
+                raise KeyboardInterrupt
+
+            signal.signal(signal.SIGINT, raise_interrupt)
+            try:
+                with mock.patch.object(Path, "mkdir", interrupt_after_mkdir):
+                    with self.assertRaises(KeyboardInterrupt):
+                        MODULE.create_and_activate_attempt(parent, "a" * 40, "fixed")
+                self.assertEqual(MODULE._ACTIVE_ATTEMPT, parent / "attempt-fixed")
+                MODULE.finalize_failure_triplet(KeyboardInterrupt())
+                self.assertTrue((parent / "attempt-fixed/manifest.json").is_file())
+            finally:
+                signal.signal(signal.SIGINT, previous)
+                MODULE._ACTIVE_ATTEMPT = None
+                MODULE._ACTIVE_CANDIDATE = None
 
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
