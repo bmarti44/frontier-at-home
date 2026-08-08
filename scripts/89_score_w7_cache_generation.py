@@ -228,10 +228,25 @@ def score_text(
     memory_guard_lines = [line for line in safety_lines if "memory_guard_descriptor_path=" in line]
     clean_exit_lines = [line for line in safety_lines if "executed candidate was verified alive at least once;" in line]
     safe_end_lines = [line for line in safety_lines if "SAFE_RUN end " in line]
+    soft_high_lines = [line for line in safety_lines if "cgroup_soft_high_allowed " in line]
+    cgroup_final_lines = [line for line in safety_lines if "cgroup_final " in line]
+    soft_high_match = (
+        re.fullmatch(r".*cgroup_soft_high_allowed delta=([0-9]+)", soft_high_lines[0])
+        if len(soft_high_lines) == 1 else None
+    )
+    cgroup_final_match = (
+        re.fullmatch(
+            r".*cgroup_final current_bytes=[0-9]+ peak_bytes=[0-9]+ swap_current_bytes=0 "
+            r"events=low [0-9]+,high ([0-9]+),max 0,oom 0,oom_kill 0,oom_group_kill 0,",
+            cgroup_final_lines[0],
+        )
+        if len(cgroup_final_lines) == 1 else None
+    )
     safety_checks = {
         "safe_start_settings_bound": len(safe_start_lines) == 1
         and all(marker in safe_start_lines[0] for marker in (
-            "vlimit_kb=419430400", "kill_floor_gib=24", "min_start_gib=110", "timeout_s=2400"
+            "vlimit_kb=419430400", "kill_floor_gib=24", "min_start_gib=110", "timeout_s=2400",
+            "allow_cgroup_high=1",
         )),
         "cgroup_settings_bound": len(cgroup_lines) == 1
         and all(marker in cgroup_lines[0] for marker in (
@@ -249,6 +264,9 @@ def score_text(
         and len(safe_end_lines) == 1
         and "SAFE_RUN end rc=0 killed=no" in safe_end_lines[0]
         and not any("FATAL" in line or "KILL_FLOOR breached" in line for line in safety_lines),
+        "cgroup_soft_high_safely_bounded": soft_high_match is not None
+        and cgroup_final_match is not None
+        and int(soft_high_match.group(1)) == int(cgroup_final_match.group(1)),
     }
     if expected_memory_guard_sha256:
         safety_checks["memory_guard_identity_bound"] = (

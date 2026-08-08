@@ -41,6 +41,7 @@ AUTHORITY_CRASH_ROOT=${GLM_SAFE_CRASH_ROOT:-}
 MEMORY_GUARD_OVERRIDE=${GLM_SAFE_MEMORY_GUARD_PATH:-}
 EXPECTED_MEMORY_GUARD_SHA256=${GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256:-}
 W7_DRIVER_LINEAGE=${GLM_SAFE_W7_DRIVER_LINEAGE:-0}
+ALLOW_CGROUP_HIGH=${GLM_SAFE_ALLOW_CGROUP_HIGH:-0}
 KERNEL_GPU_FAULT_RE='NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process'
 USERSPACE_GPU_OOM_RE='CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|CUDA.{0,160}(allocation failed|out of memory)'
 W7_INFERENCE_LOCK=/run/lock/frontier-at-home/inference.lock
@@ -90,6 +91,13 @@ fi
   config_error "GLM_W1_ROOT_AUTHORITY"
 [[ $W7_DRIVER_LINEAGE =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_W7_DRIVER_LINEAGE"
+[[ $ALLOW_CGROUP_HIGH =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_ALLOW_CGROUP_HIGH"
+if [[ $ALLOW_CGROUP_HIGH == 1 ]]; then
+  [[ $W7_DRIVER_LINEAGE == 1 && $REQUIRE_CGROUP == 1 &&
+     $RUN_AS_CURRENT_USER == 1 && $KILL_FLOOR_GIB -ge 24 ]] ||
+    config_error "GLM_SAFE_ALLOW_CGROUP_HIGH scope"
+fi
 if [[ $ROOT_AUTHORITY == 1 ]]; then
   [[ $RUN_AS_CURRENT_USER == 0 && $(id -un) == dsv4 ]] ||
     config_error "root authority identity"
@@ -221,7 +229,7 @@ forward_signal() {
   exit "$exit_code"
 }
 
-plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB min_start_gib=$MIN_START_GIB timeout_s=$TIMEOUT_S"
+plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB min_start_gib=$MIN_START_GIB timeout_s=$TIMEOUT_S allow_cgroup_high=$ALLOW_CGROUP_HIGH"
 plog "cmd: $*"
 plog "host: $(hostname) kernel: $(uname -r)"
 plog "candidate_provenance_enabled=$CANDIDATE_PROVENANCE"
@@ -688,9 +696,15 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
     fi
   fi
   CGROUP_EVENT_FAILURES=""
+  CGROUP_HIGH_DELTA=0
   while read -r key value; do
     before=${CGROUP_EVENTS_BEFORE[$key]:-0}
-    if [[ $key =~ ^(high|max|oom|oom_kill)$ ]] && (( value > before )); then
+    if [[ $key == high ]] && (( value > before )); then
+      CGROUP_HIGH_DELTA=$((value - before))
+      if [[ $ALLOW_CGROUP_HIGH == 0 ]]; then
+        CGROUP_EVENT_FAILURES+="${CGROUP_EVENT_FAILURES:+ }$key:$before->$value"
+      fi
+    elif [[ $key =~ ^(max|oom|oom_kill|oom_group_kill)$ ]] && (( value > before )); then
       CGROUP_EVENT_FAILURES+="${CGROUP_EVENT_FAILURES:+ }$key:$before->$value"
     fi
   done < "$CGROUP_DIR/memory.events.local"
@@ -701,6 +715,13 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
   CGROUP_CURRENT_END=$(<"$CGROUP_DIR/memory.current")
   CGROUP_PEAK_END=$(<"$CGROUP_DIR/memory.peak")
   CGROUP_SWAP_CURRENT_END=$(<"$CGROUP_DIR/memory.swap.current")
+  if (( CGROUP_SWAP_CURRENT_END != 0 )); then
+    plog "FATAL cgroup swap use current_bytes=$CGROUP_SWAP_CURRENT_END"
+    RC=14
+  fi
+  if [[ $ALLOW_CGROUP_HIGH == 1 ]]; then
+    plog "cgroup_soft_high_allowed delta=$CGROUP_HIGH_DELTA"
+  fi
   plog "cgroup_final current_bytes=$CGROUP_CURRENT_END peak_bytes=$CGROUP_PEAK_END swap_current_bytes=$CGROUP_SWAP_CURRENT_END events=$(tr '\n' ',' <"$CGROUP_DIR/memory.events.local")"
 fi
 if [[ $RC == 0 && ${#FINAL_ARTIFACT_PATHS[@]} -gt 0 ]]; then

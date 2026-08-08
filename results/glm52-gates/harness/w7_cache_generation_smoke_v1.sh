@@ -576,7 +576,7 @@ identities={"candidate_hash":candidate,"execution_head":execution_head,"binary_s
  "model_sha256":model,"model_bytes":int(model_bytes),"live_request_sha256":live,
  "primary_request_sha256":primary,"executed_environment_sha256":environment,
  "scorer_sha256":scorer_sha,"harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,
- "safe_run_sha256":safe_sha,"memory_guard_sha256":memory_guard_sha,"containment":{"memory_high_gib":78,"memory_max_gib":80,
+ "safe_run_sha256":safe_sha,"memory_guard_sha256":memory_guard_sha,"containment":{"memory_high_gib":78,"memory_max_gib":80,"allow_cgroup_high":1,
  "kill_floor_gib":24,"minimum_start_gib":110,"timeout_seconds":2400,"swap_max":0}}
 containment_rc=int(containment_rc_text)
 result=module.score_and_publish_bound_attempt(attempt=attempt,out=out,crash_dir=crash,evidence_dir=out/"evidence",identities=identities,containment_stdout=containment_stdout,containment_rc=containment_rc)
@@ -632,7 +632,7 @@ manifest={"schema":"glm52-w7-runtime-v3","candidate_hash":candidate,"execution_h
  "binary_sha256":binary,"model_sha256":model,"model_bytes":int(model_bytes),
  "live_request_sha256":live,"primary_request_sha256":primary,"executed_environment_sha256":environment,
  "scorer_sha256":scorer_sha,"harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,"safe_run_sha256":safe_sha,"memory_guard_sha256":memory_guard_sha,
- "containment":{"memory_high_gib":78,"memory_max_gib":80,"kill_floor_gib":24,"minimum_start_gib":110,"timeout_seconds":2400,"swap_max":0},
+ "containment":{"memory_high_gib":78,"memory_max_gib":80,"allow_cgroup_high":1,"kill_floor_gib":24,"minimum_start_gib":110,"timeout_seconds":2400,"swap_max":0},
  "purpose":"failed W7 production-path diagnostic","artifacts":artifacts}
 manifest_bytes=(json.dumps(manifest,sort_keys=True,separators=(",",":"))+"\n").encode()
 destination=out/"evidence"
@@ -883,6 +883,7 @@ GLM_SAFE_KILL_FLOOR_GIB=24 \
 GLM_SAFE_MIN_START_GIB=110 \
 GLM_SAFE_TIMEOUT_S=2400 \
 GLM_SAFE_RUN_AS_CURRENT_USER=1 \
+GLM_SAFE_ALLOW_CGROUP_HIGH=1 \
 GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
 GLM_SAFE_EXPECTED_BINARY_SHA256="$BINARY_SHA256" \
 GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE \
