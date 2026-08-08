@@ -496,10 +496,12 @@ class W7CacheGenerationGateTest(unittest.TestCase):
 
     def test_soft_memory_high_allowance_is_narrow_default_off_and_scored(self) -> None:
         safe = SAFE.read_text(encoding="utf-8")
+        cgroup = CGROUP.read_text(encoding="utf-8")
         harness = SMOKE.read_text(encoding="utf-8")
         scorer = SCORER.read_text(encoding="utf-8")
         self.assertIn("GLM_SAFE_ALLOW_CGROUP_HIGH", safe)
         self.assertIn("ALLOW_CGROUP_HIGH=${GLM_SAFE_ALLOW_CGROUP_HIGH:-0}", safe)
+        self.assertIn("GLM_SAFE_ALLOW_CGROUP_HIGH", cgroup)
         self.assertIn("GLM_SAFE_ALLOW_CGROUP_HIGH=1", harness)
         self.assertIn("cgroup_soft_high_safely_bounded", scorer)
         self.assertEqual(score()["verdict"], "PASS")
