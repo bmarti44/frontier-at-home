@@ -1,0 +1,46 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 5,
+  "candidate_hash": "6a76753a87e4521c06be3f3696073e46516a9c43",
+  "review_round": 281,
+  "runtime_authorized": false,
+  "gap_reviewer": {
+    "score": 98,
+    "verdict": "APPROVE_FOR_BOUNDED_RUNTIME",
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": ["GAP-W7.1-281-L1-ACTIVE-LAUNCHER-TEST-USES-MOCK-PROCESS"]
+  },
+  "adversarial_reviewer": {
+    "score": 80,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": ["ADV-W7.1-281-H1-DIRECT-LAUNCHER-REAP-DOES-NOT-PROVE-CONTAINMENT-STOPPED"],
+    "medium": [],
+    "low": []
+  },
+  "open_blocking_finding": {
+    "id": "ADV-W7.1-281-H1-DIRECT-LAUNCHER-REAP-DOES-NOT-PROVE-CONTAINMENT-STOPPED",
+    "evidence": "The controller terminates and reaps its direct glm_cgroup_run.sh child, but that alone does not establish that systemd-run, the exact transient unit, and every unit descendant are stopped before the global inference lock is released.",
+    "affected_gate": "W7.1 interruption cleanup and whole-host inference serialization",
+    "required_acceptance_test": "Interrupt a harmless real transient containment with a descendant; stop the exact identity-bound unit, wait until inactive or absent, reap launcher and descendants, and prove no server PID or listener survives before releasing the global lock."
+  },
+  "verified_fixed": [
+    "controlled INT TERM HUP entry into failure handling",
+    "exact bound-OFD lock ownership",
+    "mutation-holder cleanup",
+    "displaced summary preservation"
+  ],
+  "convergence": {
+    "candidate_count_for_gate": 5,
+    "prior_blocking_count": 1,
+    "current_blocking_count": 1,
+    "strictly_shrank": false,
+    "consecutive_non_shrinking_candidates": 2,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": true,
+    "gate_state": "PAUSED_NO_RUNTIME"
+  }
+}
