@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,6 +63,28 @@ class W7CacheFreezeTest(unittest.TestCase):
         record = json.loads(json.dumps(self.record))
         record["binary"]["path"] = str(link)
         self.assertEqual(self.score(record), "FAIL")
+
+    def test_rejects_metadata_digest_from_different_path_instances(self) -> None:
+        replacement = self.root / "replacement"
+        replacement.write_bytes(b"replacement-data")
+        replacement.chmod(0o755)
+        # Keep the metadata fields compatible while binding the record digest to
+        # the replacement.  The old verifier lstat()s the first inode, then
+        # reopens the path for hashing and can therefore accept this mixture.
+        replacement.write_bytes(b"different-binary")
+        self.assertEqual(replacement.stat().st_size, self.binary.stat().st_size)
+        record = json.loads(json.dumps(self.record))
+        record["binary"]["sha256"] = hashlib.sha256(
+            replacement.read_bytes()
+        ).hexdigest()
+        original_sha256 = MODULE.sha256
+
+        def replace_then_hash(path: Path) -> str:
+            replacement.replace(path)
+            return original_sha256(path)
+
+        with mock.patch.object(MODULE, "sha256", side_effect=replace_then_hash):
+            self.assertEqual(self.score(record), "FAIL")
 
 
 if __name__ == "__main__":

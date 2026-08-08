@@ -121,6 +121,31 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             with self.subTest(response=response):
                 self.assertEqual(score(response=response)["verdict"], "FAIL")
 
+    def test_rejects_output_when_completion_token_count_is_zero(self) -> None:
+        import json
+
+        for unexpected in ("unexpected-output", " ", "\n"):
+            with self.subTest(unexpected=repr(unexpected)):
+                payload = json.loads(RESPONSE)
+                payload["choices"][0]["text"] = unexpected
+                self.assertEqual(
+                    score(response=json.dumps(payload))["verdict"], "FAIL"
+                )
+
+    def test_rejects_canonical_fatal_markers_case_insensitively(self) -> None:
+        for marker in (
+            "CUDA_ERROR_OUT_OF_MEMORY",
+            "FATAL ERROR",
+            "oom-kill",
+            "NVRM: Xid (PCI:0000:01:00): 31",
+        ):
+            with self.subTest(marker=marker):
+                mutated = GOOD.replace(
+                    "0807 15:10:07 ds4-server: shutdown requested",
+                    f"{marker}\n0807 15:10:07 ds4-server: shutdown requested",
+                )
+                self.assertEqual(score(mutated)["verdict"], "FAIL")
+
 
 if __name__ == "__main__":
     unittest.main()
