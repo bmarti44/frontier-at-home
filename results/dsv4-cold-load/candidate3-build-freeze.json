@@ -1,0 +1,69 @@
+{
+  "artifact": "DSV4 cold-load candidate 3 reproducible build and runtime freeze",
+  "repository_head_at_freeze": "9ea9c9f",
+  "engine_source": {
+    "base_commit": "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a",
+    "build_1_root": "/tmp/llama-fusion-c3-build2-source",
+    "build_2_root": "/tmp/llama-fusion-read.DMP7Bs",
+    "diff_sha256": "2e277d290ca020b0499818b94d04c055ff65e632c1b35f8629c8a831988f3a6e",
+    "patch_sha256": "a94f3a70ee232c2bbd2d7b2293d49b75f9b9642007f09345120c8776fd06b6fb"
+  },
+  "build_configuration": {
+    "build_type": "Release",
+    "cuda_architecture": 121,
+    "ggml_cuda": true,
+    "jobs": 2,
+    "llama_curl": false,
+    "skip_build_rpath": true,
+    "source_prefix": "/src/llama.cpp-fusion",
+    "source_prefix_flags": "-ffile-prefix-map=<SOURCE>=/src/llama.cpp-fusion -fmacro-prefix-map=<SOURCE>=/src/llama.cpp-fusion"
+  },
+  "raw_source_changing_artifacts": {
+    "build_1": {
+      "component_sha256": {
+        "libllama-common.so.0.0.10053": "0782b08804cd4e6a8452db0635be4a4e78c52f7a5daac5620373549dde74dd4d",
+        "libllama.so.0.0.10053": "f35ed418891f164038109a4cb909aaabe387dfd37e61492db3ab42420e226e04",
+        "llama-server": "0d0ec89ff34152405c095bccc8af70110ed723458aaa57e2e221de181c015a62"
+      }
+    },
+    "build_2": {
+      "component_sha256": {
+        "libllama-common.so.0.0.10053": "0782b08804cd4e6a8452db0635be4a4e78c52f7a5daac5620373549dde74dd4d",
+        "libllama.so.0.0.10053": "f35ed418891f164038109a4cb909aaabe387dfd37e61492db3ab42420e226e04",
+        "llama-server": "0d0ec89ff34152405c095bccc8af70110ed723458aaa57e2e221de181c015a62"
+      }
+    },
+    "verdict": "BYTE_IDENTICAL"
+  },
+  "canonicalized_source_changing_artifacts": {
+    "canonicalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "component_sha256": {
+      "libllama-common.so.0.0.10053": "2a9f920e833a10507350b633944b428881c651c4c70af94aaa98793486972d93",
+      "libllama.so.0.0.10053": "29a0717d1b9872b7129615f72fc6c79dcfb100369611696da534e1203d0603a1",
+      "llama-server": "38748ff1f37b06b6ddac6a0f061160d7eb5033d8e8287010199f2ccfb250d90b"
+    },
+    "temporary_source_paths_present": false,
+    "verdict": "BYTE_IDENTICAL"
+  },
+  "selected_runtime_bundle": {
+    "path": "/home/bmarti44/.cache/dsv4-cold-load-c3-prefixmap-0d0ec89/bin",
+    "sha256": "3e81a637aa089fd4458d548cb18c2ea93541faac1887659ea54fd5dcf3948bdc",
+    "component_sha256": {
+      "libggml-base.so.0.16.0": "e98e7aad82cae12c538cd281edb5aef7d1cd433f28cb97035a59e52b46b26f5d",
+      "libggml-cpu.so.0.16.0": "9e7f67c16cc4c7867de83f213edd7428ce714c3c28f426649bda77883668b2d6",
+      "libggml-cuda.so.0.16.0": "575f71dc4e2bc3db78578c717db2a83bf4e377904dfaa105d10cb08afcbdf219",
+      "libggml.so.0.16.0": "511fb23317a48cdd8a2aec9b66b92563bd3d5dbb9b6518b97feff51054e7fb96",
+      "libllama-common.so.0.0.10053": "0782b08804cd4e6a8452db0635be4a4e78c52f7a5daac5620373549dde74dd4d",
+      "libllama-server-impl.so": "46fd9503d3fa0038373d187f434017baf76f4c41f090795468c160f8aa16130c",
+      "libllama.so.0.0.10053": "f35ed418891f164038109a4cb909aaabe387dfd37e61492db3ab42420e226e04",
+      "libmtmd.so.0.0.10053": "6953aef90efa66434679f38ab6d796f3162f33333a796a0d3a11b85cb7b0dc1d",
+      "llama-server": "0d0ec89ff34152405c095bccc8af70110ed723458aaa57e2e221de181c015a62"
+    }
+  },
+  "safety": {
+    "engine_or_fio_started": false,
+    "model_loaded": false,
+    "runpath_present_in_source_changing_artifacts": false
+  },
+  "verdict": "PASS"
+}
