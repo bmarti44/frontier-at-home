@@ -1,0 +1,144 @@
+{
+  "candidate_hash": "dbdfc51adca591f77b1c3d76359017fb71e7892c",
+  "review_round": 296,
+  "campaign_authorized": false,
+  "convergence": {
+    "candidate_number_for_gate": 3,
+    "decision": "PAUSE_DSV4_COLD_LOAD_GATE",
+    "reason": "The blocking set did not strictly shrink for a second consecutive candidate and both reviewers found new blocking classes. This is a literal convergence-rule trigger.",
+    "runtime_run_performed": false
+  },
+  "gap_reviewer": {
+    "score_0_to_100": 32,
+    "critical": [],
+    "high": [
+      {
+        "id": "GAP-DSV4-COLD-296-H1-CANDIDATE-IDENTITY-WIDTH-MISMATCH",
+        "evidence": "The reviewed candidate is a 40-hex Git object, but the runner applies its 64-hex artifact validator to candidate_hash; the real candidate is rejected before preflight while synthetic tests use 64 hex characters.",
+        "affected_gate": "Reviewed-candidate binding and campaign executability",
+        "reproduction_instructions": "Invoke the runner with the exact reviewed Git commit and otherwise syntactically valid arguments; argparse rejects candidate_hash.",
+        "proposed_acceptance_test": "Use a distinct Git-object validator, bind the exact executing clean HEAD, and test the real reviewed commit."
+      },
+      {
+        "id": "GAP-DSV4-COLD-296-H2-PASS-NOT-BOUND-TO-AUTHORITATIVE-ARM-ARTIFACTS",
+        "evidence": "The scorer accepts synthetic manifest/row objects with no receipt, runtime maps, server logs, completion bodies, systemd records, descriptor snapshots, or timestamped memory evidence. It does not reconstruct rows from a terminal artifact inventory.",
+        "affected_gate": "Terminal evidence authority and anti-cheating validity",
+        "reproduction_instructions": "Run the positive synthetic scorer fixture without any per-arm artifacts; it returns PASS. Trigger early failure and observe an incomplete evidence triplet.",
+        "proposed_acceptance_test": "Validate a complete attempt directory, independently rebuild every row from hash-bound artifacts, rerun BLS/scoring, and reject every mutation or omission."
+      },
+      {
+        "id": "GAP-DSV4-COLD-296-H3-UNAUTHENTICATED-CHECK-USES-PUBLIC-HEALTH-ENDPOINT",
+        "evidence": "The runner expects unauthenticated /health to return 401 or 403, but the exact server declares /health public, so every honest arm would fail.",
+        "affected_gate": "Authentication semantics and campaign liveness",
+        "reproduction_instructions": "Inspect the exact server public-route set or request /health without Authorization.",
+        "proposed_acceptance_test": "Use public health only for readiness and probe unauthenticated rejection on protected /completion."
+      },
+      {
+        "id": "GAP-DSV4-COLD-296-H4-CLEANUP-FAILS-OPEN-AND-SIGNALS-ARE-UNHANDLED",
+        "evidence": "The runner has no SIGTERM/SIGINT cleanup handler; _unit_stop ignores stop errors and treats an unqueryable unit as stopped. A failed-path arm can leave a contained process alive without a survivor verdict.",
+        "affected_gate": "Host stability and containment cleanup",
+        "reproduction_instructions": "Make stop and subsequent show fail; _unit_stop returns without proving PID, cgroup, or listener absence.",
+        "proposed_acceptance_test": "Retain active identity in signal handlers, fail closed on control errors, and prove cgroup/PID/listener emptiness on every exit."
+      },
+      {
+        "id": "GAP-DSV4-COLD-296-H5-RANDOMNESS-NOT-PROVABLY-POST-FINAL-FREEZE",
+        "evidence": "BLS is verified, but any authentic round above a stale hardcoded floor is accepted. Unsigned local fields can relabel a pre-final-freeze round with the final candidate.",
+        "affected_gate": "Post-final-freeze blinded arm order",
+        "reproduction_instructions": "Attach the candidate field to an authentic round above the floor but older than the final commit; no final-freeze timestamp check rejects it.",
+        "proposed_acceptance_test": "After final freeze, bind a fresh three-relay receipt and verify authenticated publication time after the exact commit/freeze time."
+      }
+    ],
+    "medium": [
+      {
+        "id": "GAP-DSV4-COLD-296-M1-MANDATORY-UPLOADER-FAILURES-NOT-MUTATION-TESTED",
+        "evidence": "Source markers exist, but no test injects uploader device, capability, allocation, event, or initialization failures.",
+        "affected_gate": "Bounded mandatory uploader",
+        "reproduction_instructions": "Inspect committed mutations; they cover only direct open/read failures.",
+        "proposed_acceptance_test": "Inject every uploader setup failure and prove cleanup and the aggregate staging cap."
+      },
+      {
+        "id": "GAP-DSV4-COLD-296-M2-WHOLE-SYSTEM-MEMORY-EVIDENCE-HAS-GAPS",
+        "evidence": "Continuous memory sampling stops after load, leaving completion, closure hashing, status capture, and teardown gaps; only a scalar minimum is preserved.",
+        "affected_gate": "Whole-system memory and swap safety",
+        "reproduction_instructions": "Inject a transient post-load floor violation; no timestamped series records it.",
+        "proposed_acceptance_test": "Run and bind an external timestamped sampler until the cgroup is empty and reject coverage gaps."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-DSV4-COLD-294-H1-MANDATORY-DIRECT-STILL-HAS-UNBOUNDED-UPLOAD-FALLBACK", "status": "FIXED_WITH_MEDIUM_TEST_GAP"},
+      {"id": "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS", "status": "OPEN_BLOCKING"},
+      {"id": "ADV-DSV4-COLD-294-M1-REQUIRED-OPTION-IS-AN-ALIAS-THAT-BROADENS-LEGACY-DIRECT-IO", "status": "VERIFIED_FIXED"},
+      {"id": "ADV-DSV4-COLD-294-M2-GREEN-AND-FAULT-EVIDENCE-DO-NOT-REPLAY-AGAINST-THE-RECORDED-RUNTIME-DEPS", "status": "VERIFIED_FIXED"},
+      {"id": "GAP-DSV4-COLD-294-H1-EXACT-SOURCE-GREEN-NOT-REPRODUCIBLE", "status": "VERIFIED_FIXED"},
+      {"id": "GAP-DSV4-COLD-293-H3-NO-AUTHORITATIVE-CONTAINED-AB-HARNESS", "status": "OPEN_BLOCKING"},
+      {"id": "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN", "status": "VERIFIED_FIXED"},
+      {"id": "GAP-DSV4-COLD-294-M2-REQUIRED-MODE-CHANGES-LEGACY-DIRECT-IO-SEMANTICS", "status": "VERIFIED_FIXED"},
+      {"id": "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED", "status": "PARTIALLY_FIXED"}
+    ],
+    "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED_CONVERGENCE_BROKEN"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 48,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-DSV4-COLD-296-H1-FROZEN-IDENTITY-IS-CALLER-SELECTED",
+        "evidence": "Runner and scorer accept caller-selected self-consistent identities; consistently replacing candidate, binary, and runtime-bundle identities still scores PASS.",
+        "affected_gate": "Frozen source/build/runtime identity",
+        "reproduction_instructions": "Replace all matching manifest and row identities in the positive fixture and rescore.",
+        "proposed_acceptance_test": "Bind both runner and scorer to a separately frozen exact authority and reject every consistent substitution."
+      },
+      {
+        "id": "ADV-DSV4-COLD-294-H1-MANDATORY-DIRECT-STILL-HAS-UNBOUNDED-UPLOAD-FALLBACK",
+        "evidence": "Uploader failures remain untested, and the host-buffer tensor branch can reach a tensor-sized aligned temporary outside the 269000000-byte bound.",
+        "affected_gate": "UMA safety and staging bound",
+        "reproduction_instructions": "Follow the host-buffer file read into read_aligned_chunk and inspect absent uploader fault hooks.",
+        "proposed_acceptance_test": "Fault every uploader setup exit and exercise a larger-than-cap host tensor under allocation accounting."
+      },
+      {
+        "id": "ADV-DSV4-COLD-296-H2-FAILED-ARM-CLEANUP-DOES-NOT-PROVE-CONTAINMENT-EMPTY",
+        "evidence": "Stop/query failures can return as clean and survivor checks occur only on success.",
+        "affected_gate": "Containment and cleanup",
+        "reproduction_instructions": "Raise after start, fail stop/show, and retain a member or listener.",
+        "proposed_acceptance_test": "Require identity-bound kill/reap plus cgroup, PID, process, and listener absence on every path."
+      },
+      {
+        "id": "ADV-DSV4-COLD-296-H3-SAFETY-SAMPLING-AND-TERMINAL-STATUS-HAVE-BLIND-WINDOWS",
+        "evidence": "Post-load blocking requests and teardown are outside continuous sampling, and terminal status is not recaptured.",
+        "affected_gate": "Memory/OOM/swap/Xid and terminal status",
+        "reproduction_instructions": "Place transient memory or terminal safety events in current blind windows.",
+        "proposed_acceptance_test": "Sample continuously through teardown and preserve/recompute timestamped safety evidence."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-DSV4-COLD-296-M1-PREFLIGHT-FAILURES-AND-ATTEMPT-BUNDLE-ARE-NOT-HASH-CLOSED",
+        "evidence": "Preflight failures precede attempt creation, and created attempts lack a terminal artifact inventory.",
+        "affected_gate": "Failure preservation and immutable evidence",
+        "reproduction_instructions": "Fail initial preflight or inspect the manifest schema.",
+        "proposed_acceptance_test": "Create the attempt before preflight and finalize a hash-closed receipt on every exit."
+      },
+      {
+        "id": "ADV-DSV4-COLD-294-M2-GREEN-AND-FAULT-EVIDENCE-DO-NOT-REPLAY-AGAINST-THE-RECORDED-RUNTIME-DEPS",
+        "evidence": "Fault confirmation omits exact environment and mapped dependency closure; the probe still has a temporary-build RUNPATH.",
+        "affected_gate": "Fault-mutation replay authority",
+        "reproduction_instructions": "Compare readelf and ldd resolution to the recorded confirmation.",
+        "proposed_acceptance_test": "Re-run from an empty allowlisted environment against the frozen bundle and bind argv, environment, mapped closure, and outputs."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-DSV4-COLD-294-H1-MANDATORY-DIRECT-STILL-HAS-UNBOUNDED-UPLOAD-FALLBACK", "status": "OPEN_CLAIMED_FIX_NOT_VERIFIED"},
+      {"id": "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS", "status": "OPEN_HARNESS_EXISTS_BUT_FROZEN_IDENTITY_AND_SAFETY_AUTHORITY_FAIL"},
+      {"id": "ADV-DSV4-COLD-294-M1-REQUIRED-OPTION-IS-AN-ALIAS-THAT-BROADENS-LEGACY-DIRECT-IO", "status": "VERIFIED_FIXED"},
+      {"id": "ADV-DSV4-COLD-294-M2-GREEN-AND-FAULT-EVIDENCE-DO-NOT-REPLAY-AGAINST-THE-RECORDED-RUNTIME-DEPS", "status": "PARTIALLY_FIXED"},
+      {"id": "GAP-DSV4-COLD-294-H1-EXACT-SOURCE-GREEN-NOT-REPRODUCIBLE", "status": "VERIFIED_FIXED"},
+      {"id": "GAP-DSV4-COLD-293-H3-NO-AUTHORITATIVE-CONTAINED-AB-HARNESS", "status": "OPEN_HARNESS_NOT_YET_AUTHORITATIVE"},
+      {"id": "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN", "status": "VERIFIED_FIXED_FOR_FOUR_ASYNC_BUFFERS_ONLY"},
+      {"id": "GAP-DSV4-COLD-294-M2-REQUIRED-MODE-CHANGES-LEGACY-DIRECT-IO-SEMANTICS", "status": "VERIFIED_FIXED"},
+      {"id": "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED", "status": "VERIFIED_FIXED_IN_IMPLEMENTATION_PENDING_RUNTIME_EVIDENCE"}
+    ],
+    "verdict": "CHANGES_REQUIRED_CAMPAIGN_NOT_AUTHORIZED_CONVERGENCE_BROKEN"
+  }
+}
