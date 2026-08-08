@@ -9,6 +9,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import statistics
 import subprocess
 
@@ -21,12 +22,22 @@ ROOT = Path(__file__).resolve().parents[1]
 NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
 T95_DF4 = 2.131846786
 EXPECTED_IDS_SHA256 = "e289e6b335e319ee58b92fd2fcb28a9ce83d22f69f2405746329343742d65bb6"
+EXPECTED_CANDIDATE_HASH = "0424a6b406e4f6e125be3269104f3d16ad39c951"
+EXPECTED_ARTIFACT_SHA256 = {
+    "binary": "d8d2235c20891bde4f5998f9200c809a87a2b0d820d630615832a0c8da184910",
+    "ds4.c": "a6855b9ab10e8868295b16705864cf841b975006c4930c9abca75bfe11d62dc9",
+    "engine.cu": "35375030ae4d0a290d34d66c0afd632c3d70ff9bc8a9c8cb0c32b5173354c797",
+    "test.cu": "83cea1005236ca75c25e466396cd1934e63ba402c3ce3356eeffa35d98a2ba5e",
+    "Makefile": "6e67c8185358dedfe12c26a9dcdfba18edbb68665917eceebd3c748a4c6d777e",
+    "runner.py": "43b65255f9323f94bacd83243869d5fbd6091551c350502dbe7e1696a194e5b1",
+    "drand-verifier.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131",
+}
 DRAND_GENESIS_UNIX = 1595431050
 DRAND_PERIOD_SECONDS = 30
 MANIFEST_KEYS = {
     "schema", "gate", "candidate", "candidate_hash", "freeze_time_unix",
     "binary_sha256", "scorer_sha256", "raw_sha256", "configuration",
-    "randomness", "invocation", "device", "artifacts",
+    "randomness", "invocation", "device", "safety", "artifacts",
 }
 CONFIGURATION = {
     "n_components": 1048576,
@@ -46,8 +57,31 @@ ROW_KEYS = {
 
 
 def validate_transcript(rows: list[dict], transcript: str) -> None:
-    """Candidate-4 RED placeholder for raw-to-execution reconciliation."""
-    del rows, transcript
+    pattern = re.compile(
+        r"^W4_OBSERVATION block=([0-4]) sequence=([0-3]) arm=([AB]) "
+        r"mode=([01]) exact=([01]) ids_sha256=([0-9a-f]{64}) "
+        r"elapsed_ms=([0-9]+(?:\.[0-9]+)?)$")
+    observed = [pattern.fullmatch(line) for line in transcript.splitlines()
+                if line.startswith("W4_OBSERVATION ")]
+    if len(observed) != len(rows) or any(match is None for match in observed):
+        raise ScoreError("execution transcript observation count or syntax differs")
+    for index, (row, match) in enumerate(zip(rows, observed)):
+        assert match is not None
+        actual = {
+            "block": int(match[1]), "sequence": int(match[2]),
+            "arm": match[3], "mode": int(match[4]), "exact": int(match[5]),
+            "ids_sha256": match[6], "elapsed_ms": float(match[7]),
+        }
+        if (actual["block"], actual["sequence"], actual["arm"],
+                actual["elapsed_ms"], actual["ids_sha256"]) != (
+                row["block"], row["sequence"], row["arm"],
+                float(row["elapsed_ms"]), row["ids_sha256"]):
+            raise ScoreError(f"raw row {index} differs from execution transcript")
+        if actual["mode"] != (1 if row["arm"] == "B" else 0) or \
+                actual["exact"] != 1 or \
+                row["ids_identical_to_expected"] is not True or \
+                row["effective_marker_present"] is not (actual["mode"] == 1):
+            raise ScoreError(f"raw row {index} execution truth differs")
 
 
 def _reject_constant(value: str) -> None:
@@ -132,9 +166,11 @@ def score_run(run_dir: Path) -> dict:
     if not isinstance(manifest, dict) or set(manifest) != MANIFEST_KEYS:
         raise ScoreError("manifest schema keys differ")
     if manifest["schema"] != "glm52-w4-topk-manifest-v1" or \
-            manifest["gate"] != "W4" or manifest["candidate"] != 3:
+            manifest["gate"] != "W4" or manifest["candidate"] != 4:
         raise ScoreError("wrong manifest identity")
-    _require_hex(manifest["candidate_hash"], 40, "candidate hash")
+    if _require_hex(manifest["candidate_hash"], 40, "candidate hash") != \
+            EXPECTED_CANDIDATE_HASH:
+        raise ScoreError("candidate differs from fixed scorer")
     _require_hex(manifest["binary_sha256"], 64, "binary SHA-256")
     if manifest["scorer_sha256"] != _digest(Path(__file__).read_bytes()):
         raise ScoreError("stale or modified scorer")
@@ -152,8 +188,10 @@ def score_run(run_dir: Path) -> dict:
 
     artifacts = manifest["artifacts"]
     required_artifacts = {
-        "binary", "engine.cu", "test.cu", "runner.py",
-        "scorer.py", "randomness-receipt.json", "drand-verifier.mjs",
+        "binary", "ds4.c", "engine.cu", "test.cu", "Makefile",
+        "runner.py", "scorer.py", "randomness-receipt.json",
+        "drand-verifier.mjs", "freeze.json", "microgate.stderr",
+        "microgate.stdout",
     }
     if not isinstance(artifacts, dict) or set(artifacts) != required_artifacts:
         raise ScoreError("artifact set differs")
@@ -161,6 +199,39 @@ def score_run(run_dir: Path) -> dict:
              for name in sorted(artifacts)}
     if _digest(bound["binary"]) != manifest["binary_sha256"]:
         raise ScoreError("binary identity mismatch")
+    for name, expected_digest in EXPECTED_ARTIFACT_SHA256.items():
+        if _digest(bound[name]) != expected_digest:
+            raise ScoreError(f"artifact differs from fixed candidate: {name}")
+    freeze = _json_bytes(bound["freeze.json"], "freeze record")
+    if not isinstance(freeze, dict) or freeze.get("schema") != \
+            "glm52-w4-topk-freeze-v2" or freeze.get("gate") != "W4" or \
+            freeze.get("candidate") != 4 or freeze.get("verdict") != "FROZEN" or \
+            freeze.get("freeze_time_unix") != manifest["freeze_time_unix"]:
+        raise ScoreError("freeze identity differs")
+    frozen_source = freeze.get("source")
+    if not isinstance(frozen_source, dict) or \
+            frozen_source.get("implementation_commit") != EXPECTED_CANDIDATE_HASH:
+        raise ScoreError("freeze candidate differs")
+    frozen_map = frozen_source.get("artifact_sha256")
+    freeze_to_archive = {
+        "ds4.c": "ds4.c", "ds4_cuda.cu": "engine.cu",
+        "tests/cuda_topk_w4.cu": "test.cu", "Makefile": "Makefile",
+        "scripts/99_run_w4_topk_confirmation.py": "runner.py",
+        "scripts/89_verify_drand_receipt.mjs": "drand-verifier.mjs",
+    }
+    if not isinstance(frozen_map, dict) or any(
+            frozen_map.get(source_name) != EXPECTED_ARTIFACT_SHA256[archive_name]
+            for source_name, archive_name in freeze_to_archive.items()):
+        raise ScoreError("freeze artifact map differs from fixed candidate")
+    if frozen_map.get("scripts/98_score_w4_topk.py") != \
+            manifest["scorer_sha256"] or _digest(bound["scorer.py"]) != \
+            manifest["scorer_sha256"]:
+        raise ScoreError("freeze scorer binding differs")
+    frozen_test_binary = freeze.get("build", {}).get("test", {})
+    if frozen_test_binary.get("binary_sha256") != \
+            EXPECTED_ARTIFACT_SHA256["binary"] or \
+            frozen_test_binary.get("binary_bytes") != len(bound["binary"]):
+        raise ScoreError("freeze test binary differs")
 
     receipt = _json_bytes(bound["randomness-receipt.json"], "randomness receipt")
     randomness = manifest["randomness"]
@@ -207,6 +278,9 @@ def score_run(run_dir: Path) -> dict:
         raise ScoreError("raw evidence must contain exactly 20 nonempty rows")
     rows = [_json_bytes(line.encode(), f"raw row {i}")
             for i, line in enumerate(raw_lines)]
+    validate_transcript(rows, bound["microgate.stderr"].decode("utf-8"))
+    if bound["microgate.stdout"] != b"":
+        raise ScoreError("unexpected microgate stdout")
     schedules = _schedule(receipt["randomness"])
     expected_hash = None
     block_a = []
@@ -229,7 +303,8 @@ def score_run(run_dir: Path) -> dict:
         digest = _require_hex(row["ids_sha256"], 64, "selected IDs SHA-256")
         if expected_hash is None:
             expected_hash = digest
-        if digest != expected_hash or row["ids_identical_to_expected"] is not True:
+        if digest != EXPECTED_IDS_SHA256 or digest != expected_hash or \
+                row["ids_identical_to_expected"] is not True:
             raise ScoreError(f"raw row {index} selected IDs differ")
         if row["effective_marker_present"] is not (row["arm"] == "B"):
             raise ScoreError(f"raw row {index} effective marker differs")
@@ -245,6 +320,25 @@ def score_run(run_dir: Path) -> dict:
     mean_log = statistics.fmean(log_ratios)
     sample_sd = statistics.stdev(log_ratios)
     lower95 = math.exp(mean_log - T95_DF4 * sample_sd / math.sqrt(5))
+    safety = manifest["safety"]
+    required_safety = {
+        "started_at", "completed_at", "process_pid", "process_start_ticks",
+        "process_exe", "executed_binary_sha256", "mem_available_before_kib",
+        "mem_available_after_kib", "swap_used_before_kib",
+        "swap_used_after_kib", "engine_processes_present", "fio_present",
+        "failures",
+    }
+    if not isinstance(safety, dict) or set(safety) != required_safety or \
+            safety["executed_binary_sha256"] != EXPECTED_ARTIFACT_SHA256["binary"] or \
+            not isinstance(safety["process_pid"], int) or safety["process_pid"] <= 0 or \
+            not isinstance(safety["process_start_ticks"], int) or \
+            safety["process_start_ticks"] <= 0 or \
+            any(not isinstance(safety[key], int) or safety[key] < 0 for key in (
+                "mem_available_before_kib", "mem_available_after_kib",
+                "swap_used_before_kib", "swap_used_after_kib")) or \
+            safety["engine_processes_present"] is not False or \
+            safety["fio_present"] is not False or safety["failures"] != []:
+        raise ScoreError("safety or process identity evidence differs")
     verdict = "PASS" if lower95 >= 2.0 else "FAIL"
     return {
         "schema": "glm52-w4-topk-summary-v1",

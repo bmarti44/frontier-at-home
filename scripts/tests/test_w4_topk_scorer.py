@@ -129,7 +129,8 @@ class W4TopkScorerTest(unittest.TestCase):
             self._score()
 
     def test_transcript_mismatch_fails(self) -> None:
-        row = self.rows[0]
+        row = copy.deepcopy(self.rows[0])
+        row["ids_sha256"] = SCORER.EXPECTED_IDS_SHA256
         matching = (
             "W4_OBSERVATION block=0 sequence=0 arm=" + row["arm"] +
             " mode=" + ("1" if row["arm"] == "B" else "0") +
@@ -138,7 +139,8 @@ class W4TopkScorerTest(unittest.TestCase):
         )
         SCORER.validate_transcript([row], matching)
         with self.assertRaises(SCORER.ScoreError):
-            SCORER.validate_transcript([row], matching.replace("4.9", "4.8"))
+            SCORER.validate_transcript(
+                [row], matching.replace(str(row["elapsed_ms"]), "123.0"))
 
     def test_missing_duplicate_or_reordered_observation_fails(self) -> None:
         mutations = (

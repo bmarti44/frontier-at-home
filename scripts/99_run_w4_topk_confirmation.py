@@ -276,7 +276,7 @@ def main() -> int:
                 "process_pid": process.pid,
                 "process_start_ticks": process_start_ticks,
                 "process_exe": str(process_exe),
-                "process_exe_sha256": sha256(args.binary),
+                "executed_binary_sha256": sha256(args.binary),
                 "mem_available_before_kib": before_memory["mem_available_kib"],
                 "mem_available_after_kib": after_memory["mem_available_kib"],
                 "swap_used_before_kib": before_memory["swap_used_kib"],
