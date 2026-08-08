@@ -1,0 +1,35 @@
+{
+  "repo": "unsloth/DeepSeek-V4-Flash-0731-GGUF",
+  "revision": "fbbb5b93fb787c21338159b0af3318bb3f4d9768",
+  "captured_from": "HF API by sol-0731 (?blobs=true), 2026-08-08",
+  "upstream_model": {
+    "repo": "deepseek-ai/DeepSeek-V4-Flash-0731",
+    "revision": "7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+    "captured_from": "HF API by sol-0731, 2026-08-08",
+    "note": "base_model_relation=quantized in the GGUF repo's cardData; this is the upstream weights revision unsloth quantized from, pinned for provenance only (not fetched)."
+  },
+  "files": [
+    {
+      "path": "UD-Q2_K_XL/DeepSeek-V4-Flash-0731-UD-Q2_K_XL-00001-of-00003.gguf",
+      "bytes": 5257664,
+      "sha256": "de65c5bb660817b95cc281bf54935f9d1bcc3b22535f2eae63b35a14c7c5724b"
+    },
+    {
+      "path": "UD-Q2_K_XL/DeepSeek-V4-Flash-0731-UD-Q2_K_XL-00002-of-00003.gguf",
+      "bytes": 49437013568,
+      "sha256": "c8728a298862cd8736782e2e4056e5e3e03c415ba552a38173264494e41ef327"
+    },
+    {
+      "path": "UD-Q2_K_XL/DeepSeek-V4-Flash-0731-UD-Q2_K_XL-00003-of-00003.gguf",
+      "bytes": 47390237120,
+      "sha256": "a4bae0788c025c1b2388754592c98fefa1372981748ac9875039bf6a30e6eeb4"
+    }
+  ],
+  "dspark_drafter_note": {
+    "observation": "The 0731 GGUF repo ships its own DSpark drafter files at the repo root and under dspark/: 'dspark-DeepSeek-V4-Flash-0731-Q8_0.gguf' (10896057440 bytes) and 'dspark/dspark-DeepSeek-V4-Flash-0731-BF16.gguf' (11314832480 bytes). This differs from the v0.4.2 production drafter pin (configs/pins/ds4-weights.json role=dspark_drafter), which came from the separate third-party repo bleysg/DeepSeek-V4-Flash-DSpark-drafter-GGUF at Q2K-Q8 quantization. The bleysg drafter file does NOT apply to 0731 (different base model weights it must stay token-distribution-compatible with); the 0731 built-in Q8_0 drafter is the closest analog but has never been staged, hashed, or speed-tested against this deployment's DSpark profile. This is flagged as an open item in the requalification plan (scripts/96_requalify_dsv4_0731.md) and is NOT staged or downloaded by this task (out of scope: base UD-Q2_K_XL only, per task instructions).",
+    "staged": false
+  },
+  "not_present_in_repo": [
+    "No sidecar tokenizer.json/config.json files are shipped by this GGUF repo (only .gitattributes and README.md alongside the quant directories) — tokenizer metadata is embedded in the GGUF files themselves, consistent with the v0.4.2 unsloth-ud-q2_k_xl pin."
+  ]
+}
