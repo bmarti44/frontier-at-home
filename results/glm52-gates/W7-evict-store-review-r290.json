@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 3,
+  "candidate_hash": "e8ba33024726abd6e86aa38943dc84d240ad19e3",
+  "review_round": 290,
+  "runtime_probe_may_proceed": false,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 84,
+      "critical": [],
+      "high": [
+        {
+          "id": "GAP-W7.2-290-H1-TERMINAL-VALIDATOR-DOES-NOT-REPLAY-PASS",
+          "evidence": "The normal terminal validator checks JSON shape, inventory, verdict agreement, and raw-row count, but does not replay the frozen scorer. A one-row PASS package is accepted. The failure schema also permits PASS, and component digests are only syntax-checked.",
+          "acceptance_test": "A normal PASS must contain exactly two strict rows, replay to the byte-exact summary with the frozen scorer, and bind frozen components and canonical configuration. Failure-schema verdicts must be FAIL. One-row, malformed-row, forged-summary, failure-schema-PASS, and component-binding mutations must fail."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_CONVERGENCE_CONTINUES_RUNTIME_NOT_AUTHORIZED"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 82,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W7.2-290-H1-NORMAL-PASS-VALIDATOR-ACCEPTS-INCOMPLETE-UNBOUND-CAMPAIGN",
+          "evidence": "The validator accepts one OFF row with completed_rows=1 and PASS, and accepts arbitrary well-shaped component hashes and engine commit. It therefore does not authorize a genuine matched OFF/ON scorer result.",
+          "acceptance_test": "PASS requires positions [0,1], unique OFF/ON rows matching arm_order, exact frozen scorer replay, frozen dependency identities, canonical configuration binding, request/randomness/order consistency, and mutations for incomplete, duplicate, misordered, stale, or forged inputs."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+    }
+  },
+  "prior_issue_status": {
+    "GAP-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-OMITS-VERDICT": "FIXED",
+    "ADV-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-CANNOT-VALIDATE": "PARTIALLY_FIXED_BY_SHAPE_AND_INVENTORY_REMAINDER_SUPERSEDED_BY_ROUND_290_PASS_AUTHORITY",
+    "GAP-W7.2-288-H3-INTERRUPTION-FINALIZER-LEAVES-ARM-EVIDENCE-UNBOUND": "FIXED",
+    "ADV-W7.2-288-H1-INTERRUPTION-WINDOWS-CAN-LOSE-FAILURE-TRIPLET": "FIXED",
+    "ADV-W7.2-289-M1-FAILURE-PUBLICATION-DROPS-AUTHORITATIVE-BINDINGS": "FIXED",
+    "ADV-W7.2-289-H2-EXPECTED-EVENT-REGEX-ACCEPTS-ARBITRARY-PREFIX": "FIXED",
+    "GAP-W7.2-288-H2-PAYLOAD-SPECIFIC-EVENT-COUNTS-HIDE-EXTRAS": "FIXED",
+    "GAP-W7.2-288-H1-POST-VALIDATION-EVIDENCE-REOPEN": "FIXED",
+    "ADV-W7.2-288-H2-SECOND-PATH-READS-ARE-NOT-BOUND-TO-AUTHENTICATED-ARM": "FIXED",
+    "ADV-W7.2-288-H3-SAME-CHECKPOINT-CLAIM-HAS-NO-IDENTITY-FIELD": "FIXED",
+    "ADV-W7.2-288-M1-PREAUDIT-DIFF-CHECK-PASS-IS-FALSE": "FIXED"
+  },
+  "convergence": {
+    "prior_blocking_class_count": 2,
+    "remaining_blocking_class_count": 1,
+    "strictly_shrank": true,
+    "consecutive_non_shrinking_candidates": 0,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "autonomous_candidate_4_authorized": true
+  },
+  "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+}
