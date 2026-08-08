@@ -368,7 +368,11 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             with mock.patch.object(MODULE.subprocess, "Popen", return_value=process), mock.patch.object(
                 MODULE, "stop_exact_containment_unit",
                 side_effect=lambda unit: events.append(f"stop:{unit}"),
-            ) as stop_unit, mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            ) as stop_unit, mock.patch.object(
+                MODULE, "_unit_is_stopped", return_value=True,
+            ), mock.patch.object(
+                MODULE.os, "killpg", side_effect=lambda _pid, _sig: events.append("terminate"),
+            ), mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
                 MODULE, "_listener_is_active", return_value=False,
             ):
                 with self.assertRaises(MODULE.CampaignInterrupted):
@@ -377,7 +381,6 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             MODULE.restore_campaign_signal_handlers(previous)
         stop_unit.assert_called_once_with("glm52-w7-test-4242.service")
         self.assertEqual(events[:3], ["terminate", "wait", "stop:glm52-w7-test-4242.service"])
-        self.assertTrue(process.terminated)
         self.assertTrue(process.waited)
         self.assertFalse(process.killed)
         self.assertIsNone(MODULE._ACTIVE_CONTAINMENT)
@@ -406,14 +409,19 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
 
     def test_unit_state_requires_complete_unique_fail_closed_schema(self) -> None:
         unit = "glm52-w7-test-123.service"
-        cases = (
-            "LoadState=masked\nActiveState=active\nSubState=running\nMainPID=9\nControlPID=0\n",
+        masked_active = subprocess.CompletedProcess(
+            ["systemctl"], 0,
+            "LoadState=masked\nActiveState=active\nSubState=running\nMainPID=9\nControlPID=0\n", "",
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=masked_active):
+            self.assertFalse(MODULE._unit_is_stopped(unit))
+        malformed_cases = (
             "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=0\n",
             "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlPID=0\nControlPID=0\n",
             "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=zero\nControlPID=0\n",
             "LoadState=loaded\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlPID=0\nUnexpected=value\n",
         )
-        for stdout in cases:
+        for stdout in malformed_cases:
             completed = subprocess.CompletedProcess(["systemctl"], 0, stdout, "")
             with self.subTest(stdout=stdout), mock.patch.object(
                 MODULE.subprocess, "run", return_value=completed,

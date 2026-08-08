@@ -103,13 +103,16 @@ def _terminate_and_reap(process: subprocess.Popen[str]) -> None:
     try:
         if process.returncode is None:
             try:
-                process.terminate()
+                os.killpg(process.pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
         try:
             process.wait(timeout=45)
         except subprocess.TimeoutExpired:
-            process.kill()
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             process.wait(timeout=15)
     finally:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous)
@@ -125,6 +128,7 @@ def containment_unit_name(tag: str, launcher_pid: int) -> str:
 
 
 def _unit_state(unit: str) -> dict[str, str]:
+    required = {"LoadState", "ActiveState", "SubState", "MainPID", "ControlPID"}
     completed = subprocess.run(
         [
             "/usr/bin/systemctl", "--user", "show", unit, "--no-pager",
@@ -138,27 +142,82 @@ def _unit_state(unit: str) -> dict[str, str]:
         if "could not be found" in lowered or "not loaded" in lowered:
             return {
                 "LoadState": "not-found", "ActiveState": "inactive",
-                "MainPID": "0", "ControlPID": "0",
+                "SubState": "dead", "MainPID": "0", "ControlPID": "0",
             }
         raise CampaignError(f"cannot verify containment unit state: {completed.stderr.strip()}")
     state: dict[str, str] = {}
     for line in completed.stdout.splitlines():
-        if "=" in line:
-            name, value = line.split("=", 1)
-            state[name] = value
+        if "=" not in line:
+            raise CampaignError("malformed containment unit state")
+        name, value = line.split("=", 1)
+        if name not in required or name in state or not value:
+            raise CampaignError("ambiguous containment unit state")
+        state[name] = value
+    if set(state) != required:
+        raise CampaignError("incomplete containment unit state")
+    for name in ("MainPID", "ControlPID"):
+        if re.fullmatch(r"0|[1-9][0-9]*", state[name]) is None:
+            raise CampaignError("malformed containment unit PID")
     return state
 
 
 def _unit_is_stopped(unit: str) -> bool:
     state = _unit_state(unit)
+    zero_pids = state["MainPID"] == "0" and state["ControlPID"] == "0"
+    if state["LoadState"] == "not-found":
+        return state["ActiveState"] == "inactive" and zero_pids
     return (
-        state.get("LoadState") in {"not-found", "masked"}
-        or (
-            state.get("ActiveState") in {"inactive", "failed"}
-            and state.get("MainPID", "0") == "0"
-            and state.get("ControlPID", "0") == "0"
-        )
+        state["LoadState"] in {"loaded", "masked"}
+        and state["ActiveState"] in {"inactive", "failed"}
+        and zero_pids
     )
+
+
+def _kill_and_verify_containment_cgroup(unit: str) -> None:
+    """Independently empty the exact user-unit cgroup when its bus is unavailable."""
+    if re.fullmatch(r"glm52-[A-Za-z0-9][A-Za-z0-9._-]{0,80}-[1-9][0-9]*\.service", unit) is None:
+        raise CampaignError("refusing untrusted containment cgroup")
+    uid = os.getuid()
+    parent = Path(
+        f"/sys/fs/cgroup/user.slice/user-{uid}.slice/user@{uid}.service/app.slice"
+    )
+    path = parent / unit
+    empty_samples = 0
+    for _ in range(40):
+        try:
+            metadata = path.lstat()
+        except FileNotFoundError:
+            empty_samples += 1
+        else:
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+                raise CampaignError("invalid containment cgroup path")
+            if metadata.st_uid != uid:
+                raise CampaignError("containment cgroup owner mismatch")
+            directory_fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                events_fd = os.open("cgroup.events", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
+                try:
+                    events = os.read(events_fd, 4096).decode("ascii", errors="strict")
+                finally:
+                    os.close(events_fd)
+                populated = [line for line in events.splitlines() if line.startswith("populated ")]
+                if populated not in (["populated 0"], ["populated 1"]):
+                    raise CampaignError("malformed containment cgroup events")
+                if populated == ["populated 1"]:
+                    kill_fd = os.open("cgroup.kill", os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory_fd)
+                    try:
+                        os.write(kill_fd, b"1\n")
+                    finally:
+                        os.close(kill_fd)
+                    empty_samples = 0
+                else:
+                    empty_samples += 1
+            finally:
+                os.close(directory_fd)
+        if empty_samples >= 4:
+            return
+        time.sleep(0.25)
+    raise CampaignError(f"containment cgroup did not remain empty: {unit}")
 
 
 def stop_exact_containment_unit(unit: str) -> None:
@@ -200,12 +259,33 @@ def _cleanup_interrupted_containment(process: subprocess.Popen[str], unit: str) 
     blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
     previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
     try:
+        cleanup_error: BaseException | None = None
+        try:
+            _terminate_and_reap(process)
+        except BaseException as error:
+            cleanup_error = error
         try:
             stop_exact_containment_unit(unit)
-        finally:
-            _terminate_and_reap(process)
-        if server_pids() or _listener_is_active():
-            raise CampaignError("containment cleanup left a server or listener")
+            if not _unit_is_stopped(unit):
+                raise CampaignError(f"containment unit restarted after stop: {unit}")
+        except BaseException as error:
+            if cleanup_error is None:
+                cleanup_error = error
+            try:
+                _kill_and_verify_containment_cgroup(unit)
+            except BaseException as fallback_error:
+                cleanup_error = CampaignError(
+                    f"containment control and cgroup cleanup failed: {error}; {fallback_error}"
+                )
+        remaining_servers = server_pids()
+        listener_active = _listener_is_active()
+        if remaining_servers or listener_active:
+            raise CampaignError(
+                "containment cleanup left a server or listener; "
+                f"prior cleanup error: {cleanup_error}"
+            ) from cleanup_error
+        if cleanup_error is not None:
+            raise cleanup_error
     finally:
         signal.pthread_sigmask(signal.SIG_SETMASK, previous)
 
@@ -220,7 +300,8 @@ def run_contained_command(
     process: subprocess.Popen[str] | None = None
     try:
         process = subprocess.Popen(
-            command, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            command, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            start_new_session=True,
         )
         _ACTIVE_CONTAINMENT = process
         unit = containment_unit_name(tag, process.pid)
