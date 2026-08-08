@@ -45,7 +45,7 @@ MODEL_BYTES = 211075856448
 LOGIT_BYTES = 154880 * 4
 LIVE_SHA256 = "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a"
 PRIMARY_SHA256 = "a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3"
-CGROUP_SHA256 = "e48994ca3176cf6ad9846a5bf425ad5d95d5c2476984db2a7c90b0aa2f814ee2"
+CGROUP_SHA256 = "a0cdae4fbd78e770ef971c65eaf95a38917de0150c8c3452a3876d9e894793fb"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
 SCORER_SHA256 = "721108911ce3bdc7bcae722605603e517ed4b07cfb9aa8142152860caf16ce5e"
@@ -148,6 +148,23 @@ def process_start_ticks(pid: int) -> int:
 
 def lock_kernel_key(metadata: os.stat_result) -> str:
     return f"{os.major(metadata.st_dev):02x}:{os.minor(metadata.st_dev):02x}:{metadata.st_ino}"
+
+
+def create_and_activate_attempt(parent: Path, candidate: str, nonce: str) -> Path:
+    """Create an attempt while deferring termination signals until it is tracked."""
+    global _ACTIVE_ATTEMPT, _ACTIVE_CANDIDATE
+    if COMMIT_RE.fullmatch(candidate) is None or re.fullmatch(r"[A-Za-z0-9._-]+", nonce) is None:
+        raise CampaignError("invalid attempt activation binding")
+    attempt = parent / f"attempt-{nonce}"
+    blocked = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+    previous = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+    try:
+        attempt.mkdir(mode=0o700)
+        _ACTIVE_ATTEMPT = attempt
+        _ACTIVE_CANDIDATE = candidate
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+    return attempt
 
 
 def read_stable(path: Path) -> tuple[bytes, os.stat_result]:
@@ -748,10 +765,7 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
     )
     schedules = derive_schedules(seed_sha256)
     OUT_ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
-    attempt = OUT_ROOT / f"attempt-{uuid.uuid4().hex}"
-    attempt.mkdir(mode=0o700)
-    _ACTIVE_ATTEMPT = attempt
-    _ACTIVE_CANDIDATE = candidate
+    attempt = create_and_activate_attempt(OUT_ROOT, candidate, uuid.uuid4().hex)
     engine_lock_fd = os.open(
         attempt / "engine.lock", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
     )
