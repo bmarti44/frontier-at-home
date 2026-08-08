@@ -25,10 +25,14 @@ readonly PORT=8097
 server_pid=
 attempt=
 out=
-candidate=
+candidate=${DS4_W7_CANDIDATE_HASH:-}
 outer_finalized=0
 failure_reason=before-attempt
+containment_stdout=
+containment_rc=
 seal_holder_pid=${DS4_W7_SEAL_HOLDER_PID:-}
+seal_holder_start_ticks=${DS4_W7_SEAL_HOLDER_START_TICKS:-}
+seal_holder_parent_pid=${DS4_W7_SEAL_HOLDER_PARENT_PID:-}
 harness_fd_path=${DS4_W7_SEALED_HARNESS_PATH:-}
 cgroup_fd_path=${DS4_W7_SEALED_CGROUP_PATH:-}
 safe_fd_path=${DS4_W7_SEALED_SAFE_PATH:-}
@@ -40,11 +44,25 @@ cgroup_sha256=${DS4_W7_SEALED_CGROUP_SHA256:-}
 safe_sha256=${DS4_W7_SEALED_SAFE_SHA256:-}
 scorer_sha256=${DS4_W7_SEALED_SCORER_SHA256:-}
 
+has_full_seal() {
+  /usr/bin/python3 - "$1" <<'PY'
+import fcntl, os, sys
+fd = os.open(sys.argv[1], os.O_RDONLY | os.O_CLOEXEC)
+try:
+    required = fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
+    raise SystemExit(0 if fcntl.fcntl(fd, fcntl.F_GET_SEALS) == required else 1)
+finally:
+    os.close(fd)
+PY
+}
+
 if [[ $0 == "$HARNESS" && ! -L $0 && $(readlink -f -- "$0") == "$HARNESS" ]]; then
   :
 elif [[ $0 =~ ^/proc/[1-9][0-9]*/fd/[0-9]+$ &&
+        ${1:-} =~ ^(--sealed-outer|--sealed-holder-loss-test|--driver)$ &&
         ${DS4_W7_PINNED_HARNESS_SHA256:-} =~ ^[0-9a-f]{64}$ &&
-        $(sha256sum -- "$0" | awk '{print $1}') == "$DS4_W7_PINNED_HARNESS_SHA256" ]]; then
+        $(/usr/bin/sha256sum -- "$0" | /usr/bin/awk '{print $1}') == "$DS4_W7_PINNED_HARNESS_SHA256" ]] &&
+        has_full_seal "$0"; then
   :
 else
   exit 2
@@ -104,6 +122,37 @@ verify_reviewed_sources() {
     [[ -f $ROOT/$path && ! -L $ROOT/$path ]]
     git -C "$ROOT" show "$candidate:$path" | cmp -s - "$ROOT/$path"
   done
+}
+
+verify_sealed_candidate_scripts() {
+  local candidate=$1 item tracked descriptor variable digest
+  [[ $candidate =~ ^[0-9a-f]{40}$ ]]
+  [[ $(/usr/bin/git -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
+  for item in \
+    "results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh:$harness_fd_path:harness_sha256" \
+    "results/glm52-gates/harness/glm_cgroup_run.sh:$cgroup_fd_path:cgroup_sha256" \
+    "results/glm52-gates/harness/glm_safe_run.sh:$safe_fd_path:safe_sha256" \
+    "scripts/89_score_w7_cache_generation.py:$scorer_fd_path:scorer_sha256"
+  do
+    IFS=: read -r tracked descriptor variable <<<"$item"
+    has_full_seal "$descriptor"
+    /usr/bin/git -C "$ROOT" show "$candidate:$tracked" | /usr/bin/cmp -s - "$descriptor"
+    digest=$(/usr/bin/sha256sum -- "$descriptor" | /usr/bin/awk '{print $1}')
+    printf -v "$variable" '%s' "$digest"
+  done
+}
+
+verify_seal_holder_identity() {
+  [[ $seal_holder_pid =~ ^[1-9][0-9]*$ && $seal_holder_start_ticks =~ ^[1-9][0-9]*$ &&
+     $seal_holder_parent_pid == "$$" ]]
+  /usr/bin/python3 - "$seal_holder_pid" "$seal_holder_start_ticks" "$seal_holder_parent_pid" <<'PY'
+import pathlib, sys
+pid, expected_start, expected_parent = sys.argv[1:]
+stat = pathlib.Path(f"/proc/{pid}/stat").read_text().split()
+status = pathlib.Path(f"/proc/{pid}/status").read_text().splitlines()
+parent = next(line.split()[1] for line in status if line.startswith("PPid:"))
+raise SystemExit(0 if stat[21] == expected_start and parent == expected_parent else 1)
+PY
 }
 
 seal_runtime_snapshots() {
@@ -171,7 +220,8 @@ tracked = (
 snapshots = [seal(name, git_payload(path)) for name, path in tracked]
 snapshots.append(seal("live-request", file_payload(live_path, live_sha)))
 snapshots.append(seal("primary-request", file_payload(primary_path, primary_sha)))
-fields = [str(os.getpid())]
+start_ticks = pathlib.Path("/proc/self/stat").read_text().split()[21]
+fields = [str(os.getpid()), start_ticks, str(os.getppid())]
 for fd, digest in snapshots:
     fields.extend((str(fd), digest))
 print("\t".join(fields), flush=True)
@@ -179,7 +229,7 @@ while True:
     signal.pause()
 PY
   )
-  IFS=$'\t' read -r seal_holder_pid \
+  IFS=$'\t' read -r seal_holder_pid seal_holder_start_ticks seal_holder_parent_pid \
     harness_fd harness_sha256 cgroup_fd cgroup_sha256 safe_fd safe_sha256 \
     scorer_fd scorer_sha256 live_fd live_digest primary_fd primary_digest <&"$seal_metadata_fd"
   [[ $seal_holder_pid =~ ^[1-9][0-9]*$ && $harness_fd =~ ^[0-9]+$ && $cgroup_fd =~ ^[0-9]+$ &&
@@ -194,10 +244,12 @@ PY
   for descriptor in "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$live_fd_path" "$primary_fd_path"; do
     [[ -r $descriptor ]]
   done
+  verify_seal_holder_identity
 }
 
 stop_seal_holder() {
   if [[ ${seal_holder_pid:-} =~ ^[1-9][0-9]*$ ]]; then
+    verify_seal_holder_identity || return 1
     kill -TERM "$seal_holder_pid" 2>/dev/null || true
     wait "$seal_holder_pid" 2>/dev/null || true
     seal_holder_pid=
@@ -207,7 +259,7 @@ stop_seal_holder() {
 verify_driver_containment() {
   local unit=${GLM_SAFE_CGROUP_UNIT:-} path dir high max swap oom_group
   [[ ${GLM_SAFE_REQUIRE_CGROUP:-} == 1 ]]
-  [[ $unit =~ ^glm52-w7-c11-[0-9a-f]{12}-[0-9]+$ ]]
+  [[ $unit =~ ^glm52-w7-c12-[0-9a-f]{12}-[0-9]+$ ]]
   path=$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup)
   [[ $path == */"$unit.service" ]]
   dir=/sys/fs/cgroup$path
@@ -355,51 +407,92 @@ PY
   [[ $containment_rc == 0 && $score_rc == 0 ]]
 }
 
+publish_failure_triplet() {
+  /usr/bin/python3 - "$attempt" "$out" "${candidate:-unknown}" "$failure_reason" "$1" \
+    "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
+    "$scorer_sha256" "$harness_sha256" "$cgroup_sha256" "$safe_sha256" \
+    "$containment_rc" "$containment_stdout" <<'PY'
+import ctypes, errno, hashlib, json, os, pathlib, sys, tempfile
+attempt, out = map(pathlib.Path, sys.argv[1:3]); candidate, reason=sys.argv[3:5]; rc=int(sys.argv[5])
+binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha=sys.argv[6:16]
+containment_rc, containment_stdout = sys.argv[16:18]
+
+def read_once(path):
+    try:
+        fd=os.open(path,os.O_RDONLY|os.O_CLOEXEC|getattr(os,"O_NOFOLLOW",0))
+    except FileNotFoundError:
+        return b""
+    try:
+        before=os.fstat(fd); chunks=[]
+        while True:
+            chunk=os.read(fd,1024*1024)
+            if not chunk: break
+            chunks.append(chunk)
+        after=os.fstat(fd)
+    finally:
+        os.close(fd)
+    if (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns,before.st_ctime_ns)!=(after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns):
+        raise SystemExit("failure artifact changed while reading")
+    return b"".join(chunks)
+
+payloads={
+ "containment.stdout":containment_stdout.encode(),
+ "containment.stderr":read_once(attempt/"containment.stderr"),
+ "containment.rc":(containment_rc+"\n").encode(),
+}
+rows=[{"source":name,"text":payload.decode("utf-8",errors="strict")} for name,payload in payloads.items()]
+summary={"checks":{"runtime_completed":False,"evidence_finalizer_completed":True},"observed":{"failure_reason":reason,"outer_exit_status":rc},"verdict":"FAIL"}
+raw_bytes=b"".join((json.dumps(row,sort_keys=True,separators=(",",":"))+"\n").encode() for row in rows)
+summary_bytes=(json.dumps(summary,sort_keys=True,separators=(",",":"))+"\n").encode()
+artifacts={name:hashlib.sha256(payload).hexdigest() for name,payload in payloads.items()}
+artifacts.update({"raw.jsonl":hashlib.sha256(raw_bytes).hexdigest(),"summary.json":hashlib.sha256(summary_bytes).hexdigest()})
+manifest={"schema":"glm52-w7-runtime-v3","candidate_hash":candidate,"execution_head":candidate,
+ "binary_sha256":binary,"model_sha256":model,"model_bytes":int(model_bytes),
+ "live_request_sha256":live,"primary_request_sha256":primary,"executed_environment_sha256":environment,
+ "scorer_sha256":scorer_sha,"harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,"safe_run_sha256":safe_sha,
+ "containment":{"memory_high_gib":78,"memory_max_gib":80,"kill_floor_gib":24,"minimum_start_gib":110,"timeout_seconds":2400,"swap_max":0},
+ "purpose":"failed W7 production-path diagnostic","artifacts":artifacts}
+manifest_bytes=(json.dumps(manifest,sort_keys=True,separators=(",",":"))+"\n").encode()
+destination=out/"evidence"
+if destination.exists(): raise FileExistsError(destination)
+temporary=pathlib.Path(tempfile.mkdtemp(prefix=".w7-failure-",dir=out))
+try:
+    for name,payload in (("raw.jsonl",raw_bytes),("summary.json",summary_bytes),("manifest.json",manifest_bytes)):
+        fd=os.open(temporary/name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,"O_NOFOLLOW",0),0o600)
+        with os.fdopen(fd,"wb") as stream:
+            stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+    directory_fd=os.open(temporary,os.O_RDONLY|os.O_DIRECTORY); os.fsync(directory_fd); os.close(directory_fd)
+    libc=ctypes.CDLL(None,use_errno=True); renameat2=getattr(libc,"renameat2",None)
+    if renameat2 is None: raise OSError(errno.ENOSYS,"renameat2 is required")
+    renameat2.argtypes=[ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint]
+    renameat2.restype=ctypes.c_int
+    if renameat2(-100,os.fsencode(temporary),-100,os.fsencode(destination),1)!=0:
+        error=ctypes.get_errno(); raise OSError(error,os.strerror(error),destination)
+    parent_fd=os.open(out,os.O_RDONLY|os.O_DIRECTORY); os.fsync(parent_fd); os.close(parent_fd)
+except BaseException:
+    if temporary.exists():
+        for child in temporary.glob("*"): child.unlink(missing_ok=True)
+        temporary.rmdir()
+    raise
+PY
+}
+
 finalize_outer() {
   local original_rc=$? final_rc
   trap - EXIT
   [[ $original_rc != 0 ]] || original_rc=1
   if [[ ${outer_finalized:-0} == 0 && -n ${attempt:-} && -n ${out:-} && -d $attempt && ! -L $attempt ]]; then
     set +e
-    if [[ ! -e $out ]]; then
-      mkdir -m 0700 "$out"
-    fi
+    [[ -e $out ]] || mkdir -m 0700 "$out"
     if [[ ! -d $out || -L $out ]]; then
       exit 125
     fi
-    python3 - "$scorer_fd_path" "$attempt" "$out" "${candidate:-unknown}" "$failure_reason" "$original_rc" \
-      "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
-      "$scorer_sha256" "$harness_sha256" "$cgroup_sha256" "$safe_sha256" <<'PY'
-import hashlib, importlib.machinery, importlib.util, json, pathlib, subprocess, sys
-scorer_path, attempt, out = map(pathlib.Path, sys.argv[1:4]); candidate, reason=sys.argv[4:6]; rc=int(sys.argv[6])
-binary, model, model_bytes, live, primary, environment, scorer_sha, harness_sha, cgroup_sha, safe_sha=sys.argv[7:]
-loader=importlib.machinery.SourceFileLoader("w7_scorer",str(scorer_path)); spec=importlib.util.spec_from_loader(loader.name,loader); module=importlib.util.module_from_spec(spec); loader.exec_module(module)
-def sha(path):
-    h=hashlib.sha256(); h.update(path.read_bytes()); return h.hexdigest()
-artifacts={}
-rows=[]
-for name in ("containment.stdout","containment.stderr","containment.rc"):
-    path=attempt/name
-    if path.is_file() and not path.is_symlink():
-        artifacts[name]=sha(path)
-        rows.append({"source":name,"text":path.read_text(encoding="utf-8",errors="strict")})
-manifest={"schema":"glm52-w7-runtime-v3","candidate_hash":candidate,
- "execution_head":subprocess.check_output(["git","-C","/home/bmarti44/spark-deepseek-v4-flash","rev-parse","HEAD"],text=True).strip(),
- "binary_sha256":binary,"model_sha256":model,"model_bytes":int(model_bytes),
- "live_request_sha256":live,"primary_request_sha256":primary,
- "executed_environment_sha256":environment,"scorer_sha256":scorer_sha,
- "harness_sha256":harness_sha,"cgroup_sha256":cgroup_sha,"safe_run_sha256":safe_sha,
- "containment":{"memory_high_gib":78,"memory_max_gib":80,"kill_floor_gib":24,
- "minimum_start_gib":110,"timeout_seconds":2400,"swap_max":0},
- "purpose":"failed W7 production-path diagnostic","artifacts":artifacts}
-summary={"checks":{"runtime_completed":False,"evidence_finalizer_completed":True},"observed":{"failure_reason":reason,"outer_exit_status":rc},"verdict":"FAIL"}
-module.publish_triplet_atomic(out/"evidence",manifest,rows,summary)
-PY
+    containment_stdout="$containment_stdout" containment_rc="$containment_rc" publish_failure_triplet "$original_rc"
     final_rc=$?
     set -e
     [[ $final_rc == 0 ]] || original_rc=125
   fi
-  stop_seal_holder
+  stop_seal_holder || true
   exit "$original_rc"
 }
 
@@ -443,18 +536,24 @@ fi
 
 if [[ ${1:-} == --driver ]]; then
   [[ $# == 3 && $2 == on ]]
+  [[ $candidate =~ ^[0-9a-f]{40}$ && $(/usr/bin/git -C "$ROOT" rev-parse HEAD) == "$candidate" ]]
+  /usr/bin/git -C "$ROOT" show "$candidate:results/glm52-gates/harness/w7_cache_generation_smoke_v1.sh" | /usr/bin/cmp -s - "$0"
   run_driver "$3"
   exit
 fi
 
-if [[ ${1:-} == --candidate ]]; then
+if [[ ${1:-} == --candidate || ${1:-} == --holder-loss-self-test ]]; then
   [[ $# == 2 && $2 =~ ^[0-9a-f]{40}$ ]]
+  initial_mode=$1
   candidate=$2
   verify_dependencies_fast
   verify_reviewed_sources "$candidate"
   seal_runtime_snapshots "$candidate"
   exec /usr/bin/env \
     DS4_W7_SEAL_HOLDER_PID="$seal_holder_pid" \
+    DS4_W7_SEAL_HOLDER_START_TICKS="$seal_holder_start_ticks" \
+    DS4_W7_SEAL_HOLDER_PARENT_PID="$seal_holder_parent_pid" \
+    DS4_W7_CANDIDATE_HASH="$candidate" \
     DS4_W7_SEALED_HARNESS_PATH="$harness_fd_path" \
     DS4_W7_SEALED_CGROUP_PATH="$cgroup_fd_path" \
     DS4_W7_SEALED_SAFE_PATH="$safe_fd_path" \
@@ -465,19 +564,20 @@ if [[ ${1:-} == --candidate ]]; then
     DS4_W7_SEALED_CGROUP_SHA256="$cgroup_sha256" \
     DS4_W7_SEALED_SAFE_SHA256="$safe_sha256" \
     DS4_W7_SEALED_SCORER_SHA256="$scorer_sha256" \
-    /usr/bin/bash "$harness_fd_path" --sealed-outer "$candidate"
+    /usr/bin/bash "$harness_fd_path" \
+      "$([[ $initial_mode == --candidate ]] && printf %s --sealed-outer || printf %s --sealed-holder-loss-test)" \
+      "$candidate"
 fi
 
-[[ $# == 2 && $1 == --sealed-outer && $2 =~ ^[0-9a-f]{40}$ ]] || exit 2
+[[ $# == 2 && $1 =~ ^(--sealed-outer|--sealed-holder-loss-test)$ && $2 =~ ^[0-9a-f]{40}$ ]] || exit 2
+sealed_mode=$1
 candidate=$2
 [[ $0 == "$harness_fd_path" && $seal_holder_pid =~ ^[1-9][0-9]*$ ]]
 for descriptor in "$harness_fd_path" "$cgroup_fd_path" "$safe_fd_path" "$scorer_fd_path" "$live_fd_path" "$primary_fd_path"; do
   [[ $descriptor =~ ^/proc/$seal_holder_pid/fd/[0-9]+$ && -r $descriptor ]]
 done
-[[ $(sha256sum -- "$harness_fd_path" | awk '{print $1}') == "$harness_sha256" ]]
-[[ $(sha256sum -- "$cgroup_fd_path" | awk '{print $1}') == "$cgroup_sha256" ]]
-[[ $(sha256sum -- "$safe_fd_path" | awk '{print $1}') == "$safe_sha256" ]]
-[[ $(sha256sum -- "$scorer_fd_path" | awk '{print $1}') == "$scorer_sha256" ]]
+verify_seal_holder_identity
+verify_sealed_candidate_scripts "$candidate"
 verify_dependencies_fast
 [[ $(id -u) != 0 && $(id -un) == bmarti44 ]]
 base=/home/bmarti44/.local/state/glm52-w7-cache-generation
@@ -489,8 +589,14 @@ mkdir -m 0700 "$attempt"
 trap finalize_outer EXIT
 mkdir -m 0700 "$out"
 failure_reason=containment-launch
-tag="w7-c11-${nonce:0:12}"
+tag="w7-c12-${nonce:0:12}"
 final_artifacts="$out/server.log,$out/live-response.json,$out/live-http-status,$out/primary-response.json,$out/primary-http-status,$out/child-exit.json,$out/model.identity.json"
+
+if [[ $sealed_mode == --sealed-holder-loss-test ]]; then
+  failure_reason=seal-holder-loss-self-test
+  stop_seal_holder
+  false
+fi
 
 set +e
 containment_stdout=$(
@@ -509,6 +615,7 @@ GLM_SAFE_PINNED_SAFE_PATH="$safe_fd_path" \
 GLM_SAFE_PINNED_SAFE_SHA256="$safe_sha256" \
 GLM_CANDIDATE_SRC="$CANDIDATE_SRC" \
 DS4_W7_PINNED_HARNESS_SHA256="$harness_sha256" \
+DS4_W7_CANDIDATE_HASH="$candidate" \
 DS4_W7_SEALED_LIVE_PATH="$live_fd_path" \
 DS4_W7_SEALED_PRIMARY_PATH="$primary_fd_path" \
 DS4_CUDA_STABLE_MODEL_REMAP=1 \

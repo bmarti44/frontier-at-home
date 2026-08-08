@@ -115,7 +115,8 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn('"$candidate:$tracked"', source)
         self.assertIn('/usr/bin/git -C "$ROOT" rev-parse HEAD', source)
         self.assertIn('/usr/bin/git -C "$ROOT" show', source)
-        self.assertIn("--sealed-outer|--driver", source)
+        self.assertIn("--sealed-outer", source)
+        self.assertIn("--driver", source)
 
     def test_failure_finalizer_is_independent_of_seal_holder(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
@@ -430,7 +431,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
 
     def test_failure_finalizer_uses_full_frozen_manifest_schema(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
-        finalizer = source.split("finalize_outer() {", 1)[1].split("if [[ ${1:-} == --self-test", 1)[0]
+        finalizer = source.split("publish_failure_triplet() {", 1)[1].split("if [[ ${1:-} == --self-test", 1)[0]
         for field in (
             "binary_sha256", "model_sha256", "scorer_sha256", "harness_sha256",
             "cgroup_sha256", "safe_run_sha256", "live_request_sha256",
