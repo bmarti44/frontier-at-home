@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-evict-store-diagnostic",
+  "candidate": 1,
+  "attempt_kind": "pre_submission_audit",
+  "repo_commit": "574130983b11e9b523f1314b60f4148d9b3826f0",
+  "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "scripts.tests.test_w7_cache_generation",
+    "scripts.tests.test_w7_cache_generation_campaign",
+    "scripts.tests.test_glm_safe_lifecycle",
+    "scripts.tests.test_w7_cache_generation_campaign_runner",
+    "scripts.tests.test_w7_evict_store"
+  ],
+  "observed": {
+    "tests_run": 110,
+    "failures": 1,
+    "skipped": 1,
+    "exit_code": 1,
+    "failing_test": "scripts.tests.test_w7_cache_generation_campaign_runner.W7CacheGenerationCampaignRunnerTest.test_self_test_validates_dependencies_without_starting_engine",
+    "stderr": "W7_CAMPAIGN_FAIL: dependency mismatch: /home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_cgroup_run.sh"
+  },
+  "diagnosis": "The W7.2 flag was added to the shared cgroup wrapper after the terminal W7.1 runner froze that dependency hash. The W7.1 self-test correctly rejected the changed wrapper. This is a frozen-dependency isolation failure, not an engine or safety failure.",
+  "bounded_fix": "Restore the frozen shared wrapper byte-for-byte, add a versioned W7.2 wrapper containing only the new allowlisted flag, and bind the new W7.2 probe to that versioned wrapper.",
+  "acceptance_test": "The same 110-test audit passes (one expected privilege-only skip), the W7.1 runner self-test remains GREEN, and the W7.2 test proves its versioned wrapper forwards exactly one diagnostic flag while the frozen shared wrapper does not change.",
+  "engine_started": false,
+  "gpu_measurement_started": false,
+  "verdict": "FAIL"
+}
