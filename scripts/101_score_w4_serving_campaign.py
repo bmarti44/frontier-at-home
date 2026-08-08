@@ -8,8 +8,10 @@ import hashlib
 import importlib.util
 import json
 import math
+import os
 from pathlib import Path
 import re
+import stat
 import statistics
 import subprocess
 from typing import Any
@@ -21,6 +23,8 @@ MIN_MEMORY_KIB = 10 * 1024 * 1024
 TOKENIZER = Path("/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json")
 TOKENIZER_RUNTIME = Path("/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2")
 RENDER_ORACLE = Path("/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle")
+DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
+STAGED_BINARY = Path("/home/bmarti44/.cache/glm52-w4-topk-c5-serving/ds4-server")
 TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
 TOKENIZER_INIT_SHA256 = "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4"
 TOKENIZER_NATIVE_SHA256 = "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910"
@@ -33,6 +37,8 @@ BASE_SHA256 = "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
 CGROUP_SHA256 = "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
+DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
 ENGINE_SOURCE_COMMIT = "0424a6b406e4f6e125be3269104f3d16ad39c951"
 REQUEST_SHA256 = "e5aa55b32992e3033a90b0c5be77c7346d88202ca3f209d2036d05f5f64cfd46"
 COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
@@ -72,12 +78,27 @@ def _sha256(value: object) -> bool:
     return isinstance(value, str) and SHA256_RE.fullmatch(value) is not None
 
 
+def _read_stable(path: Path) -> bytes:
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        before = os.fstat(descriptor)
+        _require(stat.S_ISREG(before.st_mode), f"artifact is not regular: {path}")
+        chunks = []
+        while chunk := os.read(descriptor, 1024 * 1024):
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+        _require((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) ==
+                 (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns),
+                 f"artifact changed while read: {path}")
+        payload = b"".join(chunks)
+        _require(len(payload) == before.st_size, f"short artifact read: {path}")
+        return payload
+    finally:
+        os.close(descriptor)
+
+
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return hashlib.sha256(_read_stable(path)).hexdigest()
 
 
 def independent_tokenization(request_path: Path) -> dict[str, object]:
@@ -90,7 +111,7 @@ def independent_tokenization(request_path: Path) -> dict[str, object]:
     for path, digest in dependencies:
         _require(path.is_file() and not path.is_symlink() and _sha256_file(path) == digest,
                  f"tokenization dependency mismatch: {path}")
-    request = request_path.read_bytes()
+    request = _read_stable(request_path)
     first = subprocess.run([str(RENDER_ORACLE)], input=request, capture_output=True,
                            check=False, timeout=30)
     second = subprocess.run([str(RENDER_ORACLE)], input=request, capture_output=True,
@@ -312,7 +333,7 @@ def score_campaign_rows(rows: object, schedules: object,
 
 
 def _strict_json(path: Path) -> object:
-    return json.loads(path.read_bytes(), parse_constant=lambda value: (_ for _ in ()).throw(
+    return json.loads(_read_stable(path), parse_constant=lambda value: (_ for _ in ()).throw(
         ValueError(f"non-finite JSON constant: {value}")))
 
 
@@ -334,20 +355,50 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
             "model_sha256", "model_bytes", "fixture_sha256",
             "executed_request_sha256", "microgate_sha256", "configuration",
             "configuration_sha256", "tokenization", "public_randomness_sha256",
-            "public_randomness_receipt_sha256", "schedules", "completed_rows",
-            "artifacts",
+            "public_randomness_receipt_sha256", "publication_receipt", "schedules", "completed_rows",
+            "artifacts", "verdict",
         }
         _require(set(manifest) == required_manifest and
                  manifest["schema"] == "glm52-w4-serving-campaign-v1",
                  "manifest schema differs")
+        _require(manifest["verdict"] == "PASS", "manifest is not a PASS candidate")
         candidate = manifest["candidate_hash"]
         _require(isinstance(candidate, str) and COMMIT_RE.fullmatch(candidate) is not None,
                  "invalid candidate hash")
         root = Path(__file__).resolve().parents[1]
+        executing_head = subprocess.run(
+            ["/usr/bin/git", "--no-replace-objects", "-C", str(root), "rev-parse", "HEAD"],
+            check=True, capture_output=True, text=True).stdout.strip()
+        executing_dirty = subprocess.run(
+            ["/usr/bin/git", "--no-replace-objects", "-C", str(root), "status", "--porcelain"],
+            check=True, capture_output=True, text=True).stdout
+        _require(executing_head == candidate and not executing_dirty,
+                 "scorer is not executing from the clean reviewed candidate")
         runner_path = root / "scripts/102_run_w4_serving_campaign.py"
         scorer_path = root / "scripts/101_score_w4_serving_campaign.py"
-        runner_bytes = runner_path.read_bytes()
-        scorer_bytes = scorer_path.read_bytes()
+        repo_dependencies = {
+            "scripts/91_run_w7_cache_generation_campaign.py": BASE_SHA256,
+            "results/glm52-gates/harness/glm_cgroup_run.sh": CGROUP_SHA256,
+            "results/glm52-gates/harness/glm_safe_run.sh": SAFE_SHA256,
+            "scripts/03_memory_guard.py": MEMORY_GUARD_SHA256,
+            "scripts/89_verify_drand_receipt.mjs": DRAND_VERIFIER_SHA256,
+        }
+        for relative, digest in repo_dependencies.items():
+            dependency = root / relative
+            payload = _read_stable(dependency)
+            _require(hashlib.sha256(payload).hexdigest() == digest and
+                     _git_bytes(root, candidate, relative) == payload,
+                     f"fixed dependency differs: {dependency}")
+        _require(_sha256_file(DRAND_NODE) == DRAND_NODE_SHA256,
+                 "drand runtime differs")
+        _require(_sha256_file(STAGED_BINARY) == BINARY_SHA256,
+                 "executed binary artifact differs")
+        fixture_path = root / "fixtures/ctx-32k.txt"
+        _require(_sha256_file(fixture_path) == FIXTURE_SHA256 and
+                 _git_bytes(root, candidate, "fixtures/ctx-32k.txt") == _read_stable(fixture_path),
+                 "fixed fixture differs")
+        runner_bytes = _read_stable(runner_path)
+        scorer_bytes = _read_stable(scorer_path)
         _require(_git_bytes(root, candidate, "scripts/102_run_w4_serving_campaign.py") == runner_bytes,
                  "runner is not the candidate's tracked version")
         _require(_git_bytes(root, candidate, "scripts/101_score_w4_serving_campaign.py") == scorer_bytes,
@@ -368,12 +419,17 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
         _require(manifest["configuration"] == EXPECTED_CONFIGURATION and
                  manifest["configuration_sha256"] == expected_config_sha,
                  "fixed configuration differs")
+        _require(_strict_json(run_dir / "configuration.json") == EXPECTED_CONFIGURATION,
+                 "configuration artifact differs")
         _require(manifest["model_bytes"] == 211075856448,
                  "model size binding differs")
         artifacts = manifest["artifacts"]
         _require(isinstance(artifacts, dict) and artifacts, "artifact map missing")
-        actual_files = {str(path.relative_to(run_dir)) for path in run_dir.rglob("*")
-                        if path.is_file() and path.name != "manifest.json"}
+        discovered = [path for path in run_dir.rglob("*") if path.name != "manifest.json"
+                      and (path.is_file() or path.is_symlink())]
+        _require(all(not path.is_symlink() for path in discovered),
+                 "artifact closure contains a symlink")
+        actual_files = {str(path.relative_to(run_dir)) for path in discovered if path.is_file()}
         _require(set(artifacts) == actual_files, "artifact closure differs")
         for relative, digest in artifacts.items():
             _require(_sha256(digest) and _sha256_file(run_dir / relative) == digest,
@@ -381,12 +437,26 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
         schedules = _strict_json(run_dir / "schedules.json")
         microgate = _strict_json(run_dir / "microgate-summary.json")
         tokenization = _strict_json(run_dir / "request-tokenization.json")
+        _require(_sha256_file(run_dir / "request.json") == REQUEST_SHA256,
+                 "request artifact differs from the fixed request")
         recomputed_tokenization = independent_tokenization(run_dir / "request.json")
         _require(tokenization == recomputed_tokenization == manifest["tokenization"],
                  "independent tokenization differs")
         _require(schedules == manifest["schedules"], "schedule binding differs")
+        frozen_microgate_path = root / "results/glm52-gates/W4-topk-candidate5-pass/summary.json"
+        frozen_microgate_relative = "results/glm52-gates/W4-topk-candidate5-pass/summary.json"
+        _require(_sha256_file(frozen_microgate_path) == MICROGATE_SHA256 and
+                 _git_bytes(root, candidate, frozen_microgate_relative) ==
+                 _read_stable(frozen_microgate_path),
+                 "frozen microgate artifact differs")
+        frozen_microgate = _strict_json(frozen_microgate_path)
+        selected_names = (
+            "block_a_ms", "block_b_ms", "selected_ids_sha256", "speedup_lower_95",
+            "required_speedup_lower_95", "verdict")
+        _require(microgate == {name: frozen_microgate[name] for name in selected_names},
+                 "microgate selection differs from frozen evidence")
         raw_rows = [_strict_json_line(line) for line in
-                    (run_dir / "raw.jsonl").read_text().splitlines() if line]
+                    _read_stable(run_dir / "raw.jsonl").decode("utf-8").splitlines() if line]
         _require(manifest["completed_rows"] == len(raw_rows) == 20,
                  "completed-row count differs")
 
@@ -394,8 +464,12 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
         _require(spec is not None and spec.loader is not None, "cannot load frozen runner")
         runner = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(runner)
+        publication = _strict_json(run_dir / "publication-receipt.json")
+        _require(publication == manifest["publication_receipt"] ==
+                 runner.fetch_publication_receipt(candidate),
+                 "GitHub publication receipt differs")
         seed, receipt_sha, _ = runner.verify_randomness(
-            run_dir / "randomness-receipt.json", candidate)
+            run_dir / "randomness-receipt.json", candidate, publication)
         _require(manifest["public_randomness_sha256"] == seed and
                  manifest["public_randomness_receipt_sha256"] == receipt_sha and
                  schedules == runner.derive_schedules(seed),
@@ -408,21 +482,22 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
                 r"b[0-4]-p[0-3]-(off|on)-[0-9a-f]{12}", run_id) is not None,
                 "run id is malformed")
             out = run_dir / run_id
-            containment_rc = int((out / "containment.rc").read_text().strip())
-            containment_stdout = (out / "containment.stdout").read_text()
+            containment_rc = int(_read_stable(out / "containment.rc").decode("utf-8").strip())
+            containment_stdout = _read_stable(out / "containment.stdout").decode("utf-8")
             row = runner.parse_arm(
                 raw["arm"], raw["block"], raw["position"], out, containment_rc,
                 containment_stdout, REQUEST_SHA256, manifest["configuration_sha256"],
-                recomputed_tokenization["prompt_tokens"], None)
+                recomputed_tokenization["prompt_tokens"], None, True)
             replayed.append(row)
         _require(replayed == raw_rows, "raw rows do not replay from bound arm artifacts")
         result = score_campaign_rows(replayed, schedules, microgate)
-        recorded_summary = (run_dir / "summary.json").read_bytes()
+        recorded_summary = _read_stable(run_dir / "summary.json")
         expected_summary = (json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n").encode()
         _require(recorded_summary == expected_summary, "recorded summary does not replay")
         return result
     except (InvalidCampaign, OSError, UnicodeError, json.JSONDecodeError,
-            subprocess.SubprocessError, KeyError, TypeError, ValueError, OverflowError) as error:
+            subprocess.SubprocessError, KeyError, TypeError, ValueError, OverflowError,
+            RuntimeError) as error:
         return _fail(str(error))
 
 

@@ -30,8 +30,8 @@ class W4ServingContainmentTest(unittest.TestCase):
     def test_arm_environments_differ_only_by_topk_flag_and_logit_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             parent = Path(directory)
-            off, _ = RUNNER.environment_for_arm("off", parent / "off", "/proc/self/fd/9", "1:2")
-            on, _ = RUNNER.environment_for_arm("on", parent / "on", "/proc/self/fd/9", "1:2")
+            off, _ = RUNNER.environment_for_arm("off", parent / "off", "/proc/123/fd/9", "1:2")
+            on, _ = RUNNER.environment_for_arm("on", parent / "on", "/proc/123/fd/9", "1:2")
         ignored = {
             "DS4_CUDA_TOPK2048_CUB", "DS4_GLM_LOGIT_DUMP",
             "GLM_SAFE_EXPECTED_ENV_SHA256", "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST",
@@ -43,6 +43,20 @@ class W4ServingContainmentTest(unittest.TestCase):
         self.assertEqual(on["DS4_CUDA_TOPK2048_CUB"], "1")
         self.assertEqual(off["DS4_CUDA_STABLE_MODEL_REMAP"], "1")
         self.assertEqual(on["DS4_CUDA_STABLE_MODEL_REMAP"], "1")
+        off_measured = {name: off[name] for name in
+                        off["GLM_SAFE_PROVENANCE_ENV_ALLOWLIST"].split(",")}
+        on_measured = {name: on[name] for name in
+                       on["GLM_SAFE_PROVENANCE_ENV_ALLOWLIST"].split(",")}
+        self.assertEqual(RUNNER.validate_environment_artifact(
+            "off", Path(directory) / "off", off_measured),
+            off["GLM_SAFE_EXPECTED_ENV_SHA256"])
+        self.assertEqual(RUNNER.validate_environment_artifact(
+            "on", Path(directory) / "on", on_measured),
+            on["GLM_SAFE_EXPECTED_ENV_SHA256"])
+        mutated = dict(on_measured)
+        mutated["DS4_CUDA_FETCH_THREADS"] = "7"
+        with self.assertRaises(RUNNER.CampaignError):
+            RUNNER.validate_environment_artifact("on", Path(directory) / "on", mutated)
 
     def test_request_is_deterministic_and_non_generating(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -67,6 +81,20 @@ class W4ServingContainmentTest(unittest.TestCase):
         self.assertEqual(len(RUNNER.derive_schedules(seed)), 5)
         self.assertLess(RUNNER.drand_publication_time(6_359_296), 1_786_210_399)
 
+    def test_github_push_time_is_external_randomness_floor(self) -> None:
+        candidate = "3" * 40
+        response = mock.MagicMock()
+        response.read.return_value = json.dumps([{
+            "id": "event-1", "type": "PushEvent", "created_at": "2026-08-08T17:45:25Z",
+            "payload": {"head": candidate,
+                        "ref": "refs/heads/glm52-rung0-io-submission"},
+        }]).encode()
+        response.__enter__.return_value = response
+        with mock.patch.object(RUNNER.urllib.request, "urlopen", return_value=response):
+            receipt = RUNNER.fetch_publication_receipt(candidate)
+        self.assertEqual(receipt["candidate_hash"], candidate)
+        self.assertEqual(receipt["created_at_unix"], 1_786_211_125)
+
     def test_sync_trace_requires_full_novel_prefill(self) -> None:
         valid = ("ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
                  "dense_len=0 ctx_cap=32768 dense_fit=0 resume_min=4 dense_gap=0 "
@@ -80,6 +108,68 @@ class W4ServingContainmentTest(unittest.TestCase):
         ):
             with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
                 RUNNER.validate_novel_sync_trace(mutation, 19_783)
+
+    def test_arm_replay_is_pure_self_contained_and_repeatable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / "b0-p0-off-0123456789ab"
+            safety = out / "safety"
+            safety.mkdir(parents=True)
+            environment = RUNNER.measured_environment(
+                "off", out, "/proc/123/fd/9", "1:2")
+            response = {"choices": [{"text": "", "finish_reason": "length"}],
+                        "usage": {"prompt_tokens": 19_783, "completion_tokens": 0,
+                                  "total_tokens": 19_783,
+                                  "prompt_tokens_details": {
+                                      "cached_tokens": 0,
+                                      "cache_write_tokens": 19_783}}}
+            observation = {"request_start_ns": 1, "response_complete_ns": 2,
+                           "semantic": response,
+                           "response_semantic_sha256": "0" * 64}
+            files = {
+                "server.log": ("ds4-server: listening on 127.0.0.1\n"
+                               "ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
+                               "dense_len=0 ctx_cap=32768 dense_fit=0 resume_min=4 dense_gap=0 "
+                               "indexed_keep=0 indexed_batch=1 batch_ffn=1\n"
+                               "ds4-server: shutdown requested\n").encode(),
+                "response.json": json.dumps(response).encode(),
+                "observation.json": json.dumps(observation).encode(),
+                "environment.json": json.dumps(environment).encode(),
+                "child-exit.json": b'{"exit_status":0}',
+            }
+            for name, payload in files.items():
+                (out / name).write_bytes(payload)
+            logit = out / "logits.sync1.start0.prompt19783.suffix19783"
+            logit.write_bytes(b"\0" * RUNNER.LOGIT_BYTES)
+            env_sha = RUNNER.validate_environment_artifact("off", out, environment)
+            markers = []
+            for name, payload in files.items():
+                metadata = (out / name).stat()
+                markers.append(
+                    f"final_artifact_verified path={out / name} "
+                    f"sha256={hashlib.sha256(payload).hexdigest()} "
+                    f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}")
+            main = (f"executed_environment_allowlist={','.join(sorted(environment))} "
+                    f"executed_environment_sha256={env_sha}\n" + "\n".join(markers) +
+                    "\ncgroup_final memory_current_bytes=1 swap_current_bytes=0 "
+                    "events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n"
+                    "wrapper and descendant checks clean\n").encode()
+            samples = b"mem_avail_kb=20971520 cgroup_swap_current_bytes=0\n"
+            kernel = b"no driver faults\n"
+            for name, payload in (("main.log", main), ("samples.log", samples),
+                                  ("kernel.log", kernel)):
+                (safety / name).write_bytes(payload)
+            done = ("SAFE_RUN_DONE rc=0 killed=no "
+                    "dir=/home/bmarti44/.local/state/glm52-crashlog/nonexistent "
+                    f"main_sha256={hashlib.sha256(main).hexdigest()} "
+                    f"samples_sha256={hashlib.sha256(samples).hexdigest()} "
+                    f"kernel_sha256={hashlib.sha256(kernel).hexdigest()}\n")
+            with mock.patch.object(RUNNER.BASE, "server_pids", return_value=[999]):
+                first = RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
+                                         "5" * 64, 19_783, None, True)
+                second = RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
+                                          "5" * 64, 19_783, None, True)
+        self.assertEqual(first, second)
+        self.assertEqual(first["safety"]["surviving_descendants"], 0)
 
     def test_signal_handlers_are_restored_after_preflight_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory, \
@@ -126,6 +216,26 @@ class W4ServingContainmentTest(unittest.TestCase):
         self.assertEqual(manifest["schema"], "glm52-w4-serving-campaign-failure-v1")
         self.assertEqual(manifest["scorer_sha256"], RUNNER.SCORER_SHA256)
         self.assertEqual(manifest["binary_sha256"], RUNNER.BINARY_SHA256)
+
+    def test_failure_after_provisional_pass_displaces_and_closes_every_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attempt = Path(directory)
+            (attempt / "raw.jsonl").write_bytes(b"{}\n")
+            (attempt / "summary.json").write_text('{"verdict":"PASS"}\n')
+            (attempt / "manifest.json").write_text('{"verdict":"PASS"}\n')
+            (attempt / "retained.log").write_text("host observation\n")
+            RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+            RUNNER.BASE._ACTIVE_CANDIDATE = "2" * 40
+            try:
+                RUNNER.finalize_failure(RuntimeError("replay failed"))
+                manifest = json.loads((attempt / "manifest.json").read_bytes())
+            finally:
+                RUNNER.BASE._ACTIVE_ATTEMPT = None
+                RUNNER.BASE._ACTIVE_CANDIDATE = None
+        self.assertEqual(manifest["verdict"], "FAIL")
+        self.assertIn("manifest.pre-failure.json", manifest["artifacts"])
+        self.assertIn("summary.pre-finalization.json", manifest["artifacts"])
+        self.assertIn("retained.log", manifest["artifacts"])
 
 
 if __name__ == "__main__":

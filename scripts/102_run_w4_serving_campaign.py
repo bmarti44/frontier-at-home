@@ -20,6 +20,7 @@ import time
 import types
 import urllib.request
 import uuid
+from datetime import datetime
 from typing import Any
 
 
@@ -49,7 +50,7 @@ BASE_SHA256 = "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
 CGROUP_SHA256 = "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
-SCORER_SHA256 = "f5739f175ae213e244db92bcf901f63d89918ea73e80d06388b62444fd3e251c"
+SCORER_SHA256 = "88a245d530cb4dc019143f3345fc4abdb70870d56c4f7629f9fe080370a4a09b"
 MICROGATE_SHA256 = "9aaf51b0722ec2573876d6a35ce733e6e574bb1349daf6f72f61100995c39bde"
 FIXTURE_SHA256 = "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031"
 DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
@@ -156,7 +157,41 @@ def drand_publication_time(round_number: int) -> int:
     return 1595431050 + (round_number - 1) * 30
 
 
-def verify_randomness(path: Path, candidate: str) -> tuple[str, str, bytes]:
+def fetch_publication_receipt(candidate: str) -> dict[str, object]:
+    if COMMIT_RE.fullmatch(candidate) is None:
+        raise CampaignError("invalid publication candidate")
+    request = urllib.request.Request(
+        "https://api.github.com/repos/bmarti44/frontier-at-home/events?per_page=100",
+        headers={"Accept": "application/vnd.github+json",
+                 "User-Agent": "frontier-at-home-w4-gate"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        events = json.loads(response.read())
+    if not isinstance(events, list):
+        raise CampaignError("GitHub publication response is malformed")
+    matches = []
+    for event in events:
+        payload = event.get("payload", {}) if isinstance(event, dict) else {}
+        if (event.get("type") == "PushEvent" and payload.get("head") == candidate
+                and payload.get("ref") == "refs/heads/glm52-rung0-io-submission"):
+            matches.append(event)
+    if len(matches) != 1:
+        raise CampaignError("candidate lacks one recent GitHub publication event")
+    event = matches[0]
+    created = event.get("created_at")
+    if not isinstance(created, str):
+        raise CampaignError("GitHub publication timestamp is missing")
+    try:
+        timestamp = int(datetime.fromisoformat(created.replace("Z", "+00:00")).timestamp())
+    except ValueError as error:
+        raise CampaignError("GitHub publication timestamp is invalid") from error
+    return {"event_id": event.get("id"), "created_at": created,
+            "created_at_unix": timestamp, "candidate_hash": candidate,
+            "ref": "refs/heads/glm52-rung0-io-submission",
+            "repository": "bmarti44/frontier-at-home"}
+
+
+def verify_randomness(path: Path, candidate: str,
+                      publication: dict[str, object]) -> tuple[str, str, bytes]:
     raw, _ = BASE.read_stable(path)
     try:
         doc = json.loads(raw)
@@ -181,13 +216,12 @@ def verify_randomness(path: Path, candidate: str) -> tuple[str, str, bytes]:
     )
     if checked.returncode != 0 or checked.stdout != "DRAND_BLS_RECEIPT_OK\n":
         raise CampaignError("randomness BLS verification failed")
-    committed_at = int(subprocess.run(
-        ["/usr/bin/git", "--no-replace-objects", "-C", str(ROOT), "show", "-s",
-         "--format=%ct", candidate], check=True, capture_output=True, text=True,
-    ).stdout.strip())
+    if (publication.get("candidate_hash") != candidate
+            or type(publication.get("created_at_unix")) is not int):
+        raise CampaignError("candidate publication receipt is invalid")
     published_at = drand_publication_time(doc["round"])
-    if published_at <= committed_at:
-        raise CampaignError("randomness predates the immutable candidate")
+    if published_at <= publication["created_at_unix"]:
+        raise CampaignError("randomness predates the externally published candidate")
     return doc["randomness"], hashlib.sha256(raw).hexdigest(), raw
 
 
@@ -239,11 +273,8 @@ def validate_novel_sync_trace(server_log: str, expected_prompt_tokens: int) -> N
         raise CampaignError("sync trace does not prove a novel complete prefill")
 
 
-def environment_for_arm(arm: str, out: Path, lock_path: str, lock_identity: str,
-                        campaign_lock_fd: int | None = None,
-                        memory_guard_path: str = str(MEMORY_GUARD)) -> tuple[dict[str, str], str]:
-    if arm not in {"off", "on"}:
-        raise CampaignError("invalid arm")
+def measured_environment(arm: str, out: Path, lock_path: str,
+                         lock_identity: str) -> dict[str, str]:
     measured = {
         "DS4_CUDA_EXPERT_CACHE_GB": "40", "DS4_CUDA_EXPERT_CACHE_PIN": "1",
         "DS4_CUDA_EXPERT_CACHE_SLRU": "1", "DS4_CUDA_FETCH_THREADS": "6",
@@ -254,6 +285,30 @@ def environment_for_arm(arm: str, out: Path, lock_path: str, lock_identity: str,
     }
     if arm == "on":
         measured["DS4_CUDA_TOPK2048_CUB"] = "1"
+    return measured
+
+
+def validate_environment_artifact(arm: str, out: Path, observed: object) -> str:
+    if not isinstance(observed, dict) or not all(
+            isinstance(name, str) and isinstance(value, str)
+            for name, value in observed.items()):
+        raise CampaignError("environment artifact is malformed")
+    lock_path = observed.get("DS4_LOCK_FILE", "")
+    lock_identity = observed.get("DS4_LOCK_EXPECTED_DEV_INO", "")
+    if (re.fullmatch(r"/proc/[1-9][0-9]*/fd/[0-9]+", lock_path) is None
+            or re.fullmatch(r"[0-9]+:[0-9]+", lock_identity) is None
+            or observed != measured_environment(arm, out, lock_path, lock_identity)):
+        raise CampaignError("environment artifact differs from the fixed arm")
+    return hashlib.sha256("".join(
+        f"{name}={observed[name]}\n" for name in sorted(observed)).encode()).hexdigest()
+
+
+def environment_for_arm(arm: str, out: Path, lock_path: str, lock_identity: str,
+                        campaign_lock_fd: int | None = None,
+                        memory_guard_path: str = str(MEMORY_GUARD)) -> tuple[dict[str, str], str]:
+    if arm not in {"off", "on"}:
+        raise CampaignError("invalid arm")
+    measured = measured_environment(arm, out, lock_path, lock_identity)
     digest = hashlib.sha256("".join(
         f"{name}={measured[name]}\n" for name in sorted(measured)).encode()).hexdigest()
     env = {
@@ -272,7 +327,8 @@ def environment_for_arm(arm: str, out: Path, lock_path: str, lock_identity: str,
         "GLM_SAFE_MEMORY_GUARD_PATH": memory_guard_path,
         "GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256": MEMORY_GUARD_SHA256,
         "GLM_SAFE_FINAL_ARTIFACTS": ",".join(str(out / name) for name in (
-            "server.log", "response.json", "observation.json", "child-exit.json")),
+            "server.log", "response.json", "observation.json", "environment.json",
+            "child-exit.json")),
         "GLM_SAFE_DONE_DIGESTS": "1",
     }
     if campaign_lock_fd is not None:
@@ -297,6 +353,12 @@ def driver(arm: str, out: Path, request_path: Path, request_sha256: str, candida
         raise CampaignError("request digest mismatch")
     if os.environ.get("DS4_CUDA_TOPK2048_CUB") != ("1" if arm == "on" else None):
         raise CampaignError("top-k flag/arm mismatch")
+    observed_environment = measured_environment(
+        arm, out, os.environ.get("DS4_LOCK_FILE", ""),
+        os.environ.get("DS4_LOCK_EXPECTED_DEV_INO", ""))
+    if any(os.environ.get(name) != value for name, value in observed_environment.items()):
+        raise CampaignError("executed environment differs from fixed arm")
+    BASE.write_json_new(out / "environment.json", observed_environment)
     model_fd = os.open(model_descriptor_path, os.O_RDONLY | os.O_CLOEXEC)
     metadata = os.fstat(model_fd)
     if f"{metadata.st_dev}:{metadata.st_ino}" != expected_model_devino or metadata.st_size != MODEL_BYTES:
@@ -354,6 +416,7 @@ def driver(arm: str, out: Path, request_path: Path, request_sha256: str, candida
 def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: int,
               stdout: str, request_sha256: str, config_sha256: str,
               expected_prompt_tokens: int, expected_environment_sha256: str | None = None,
+              replay: bool = False,
               ) -> dict[str, Any]:
     if containment_rc != 0:
         raise CampaignError(f"containment failed rc={containment_rc}")
@@ -362,27 +425,37 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
         raise CampaignError("safe-run receipt missing")
     crash = Path(done.group(1))
     safety_dir = out / "safety"
-    safety_dir.mkdir(mode=0o700)
     safety: dict[str, bytes] = {}
+    if replay:
+        if not safety_dir.is_dir() or safety_dir.is_symlink():
+            raise CampaignError("copied safety evidence is unavailable")
+    else:
+        safety_dir.mkdir(mode=0o700)
     for offset, name in enumerate(("main.log", "samples.log", "kernel.log"), start=2):
-        payload, _ = BASE.read_stable(crash / name)
+        source = safety_dir / name if replay else crash / name
+        payload, _ = BASE.read_stable(source)
         if hashlib.sha256(payload).hexdigest() != done.group(offset):
             raise CampaignError(f"safe-run digest mismatch: {name}")
-        BASE.write_new(safety_dir / name, payload)
+        if not replay:
+            BASE.write_new(safety_dir / name, payload)
         safety[name] = payload
     artifacts = {name: BASE.read_stable(out / name) for name in
-                 ("server.log", "response.json", "observation.json", "child-exit.json")}
+                 ("server.log", "response.json", "observation.json", "environment.json",
+                  "child-exit.json")}
     main = safety["main.log"].decode("utf-8", errors="strict")
     samples = safety["samples.log"].decode("utf-8", errors="strict")
     kernel = safety["kernel.log"].decode("utf-8", errors="strict")
     server = artifacts["server.log"][0].decode("utf-8", errors="strict")
     observation = json.loads(artifacts["observation.json"][0])
+    environment_artifact = json.loads(artifacts["environment.json"][0])
     response = artifacts["response.json"][0]
     _, semantic_sha = semantic_response(response)
     environment_lines = re.findall(
         r"executed_environment_allowlist=[A-Z0-9_,]+ "
         r"executed_environment_sha256=([0-9a-f]{64})", main)
-    if len(environment_lines) != 1 or (expected_environment_sha256 is not None
+    artifact_environment_sha = validate_environment_artifact(arm, out, environment_artifact)
+    if len(environment_lines) != 1 or environment_lines[0] != artifact_environment_sha or (
+            expected_environment_sha256 is not None
             and environment_lines[0] != expected_environment_sha256):
         raise CampaignError("executed environment binding mismatch")
     for name, (payload, metadata) in artifacts.items():
@@ -408,6 +481,12 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
         r"max ([0-9]+),oom ([0-9]+),oom_kill ([0-9]+),oom_group_kill ([0-9]+),", main)
     if not memory or not swaps or len(final) != 1:
         raise CampaignError("incomplete safety counters")
+    clean_descendant_marker = (
+        "wrapper and descendant checks clean" in main
+        and main.count("wrapper and descendant checks clean") == 1
+    )
+    if not clean_descendant_marker:
+        raise CampaignError("safe-run descendant-clean attestation missing")
     max_delta, oom_delta, oom_kill_delta, oom_group = map(int, final[0][1:])
     if oom_group != 0:
         raise CampaignError("cgroup OOM group kill")
@@ -434,7 +513,7 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
                    "cgroup_max_delta": max_delta, "cgroup_oom_delta": oom_delta,
                    "cgroup_oom_kill_delta": oom_kill_delta,
                    "xid_count": len(re.findall(r"\bXid\b", kernel, re.IGNORECASE)),
-                   "surviving_descendants": len(BASE.server_pids())},
+                   "surviving_descendants": 0 if replay else len(BASE.server_pids())},
     }
 
 
@@ -450,9 +529,12 @@ def finalize_failure(error: BaseException) -> None:
     """Preserve an escaping W4 failure without borrowing W7's manifest identity."""
     attempt = BASE._ACTIVE_ATTEMPT
     candidate = BASE._ACTIVE_CANDIDATE
-    if attempt is None or candidate is None or (attempt / "manifest.json").exists():
+    if attempt is None or candidate is None:
         return
     failure = f"{type(error).__name__}: {error}"
+    manifest_path = attempt / "manifest.json"
+    if manifest_path.exists():
+        os.rename(manifest_path, attempt / "manifest.pre-failure.json")
     raw_path = attempt / "raw.jsonl"
     raw = raw_path.read_bytes() if raw_path.is_file() else b""
     if not raw_path.exists():
@@ -467,17 +549,20 @@ def finalize_failure(error: BaseException) -> None:
     summary = (json.dumps({"failure": failure, "verdict": "FAIL"},
                           sort_keys=True, separators=(",", ":")) + "\n").encode()
     BASE.write_new(summary_path, summary)
-    artifacts = {
-        "raw.jsonl": hashlib.sha256(raw).hexdigest(),
-        "summary.json": hashlib.sha256(summary).hexdigest(),
-    }
-    if displaced is not None:
-        artifacts[displaced[0]] = displaced[1]
-    BASE.write_json_new(attempt / "manifest.json", {
+    artifacts = {}
+    for path in sorted(attempt.rglob("*")):
+        if path.is_symlink():
+            raise CampaignError("failure evidence contains a symlink")
+        if path.is_file():
+            artifacts[str(path.relative_to(attempt))] = sha256_file(path)
+    BASE.write_json_new(manifest_path, {
         "schema": "glm52-w4-serving-campaign-failure-v1",
         "candidate_hash": candidate, "failure": failure,
         "runner_sha256": sha256_file(Path(__file__)),
-        "scorer_sha256": SCORER_SHA256, "binary_sha256": BINARY_SHA256,
+        "scorer_sha256": SCORER_SHA256, "base_runner_sha256": BASE_SHA256,
+        "cgroup_sha256": CGROUP_SHA256, "safe_run_sha256": SAFE_SHA256,
+        "memory_guard_sha256": MEMORY_GUARD_SHA256,
+        "binary_sha256": BINARY_SHA256,
         "model_sha256": MODEL_SHA256, "fixture_sha256": FIXTURE_SHA256,
         "artifacts": artifacts, "verdict": "FAIL",
     })
@@ -515,7 +600,8 @@ def _campaign(candidate: str, receipt: Path) -> int:
     if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != \
             (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
         raise CampaignError("model changed during scan")
-    seed, receipt_sha, receipt_bytes = verify_randomness(receipt, candidate)
+    publication = fetch_publication_receipt(candidate)
+    seed, receipt_sha, receipt_bytes = verify_randomness(receipt, candidate, publication)
     schedules = derive_schedules(seed)
     engine_fd = os.open(attempt / "engine.lock", os.O_RDWR | os.O_CREAT | os.O_EXCL |
                         os.O_NOFOLLOW, 0o600)
@@ -524,6 +610,7 @@ def _campaign(candidate: str, receipt: Path) -> int:
     engine_path = f"/proc/{os.getpid()}/fd/{engine_fd}"
     engine_identity = f"{engine_stat.st_dev}:{engine_stat.st_ino}"
     BASE.write_new(attempt / "randomness-receipt.json", receipt_bytes)
+    BASE.write_json_new(attempt / "publication-receipt.json", publication)
     request_path = attempt / "request.json"
     request_sha = make_request(request_path)
     microgate_bytes, _ = BASE.read_stable(MICROGATE)
@@ -538,6 +625,7 @@ def _campaign(candidate: str, receipt: Path) -> int:
     config = load_scorer(scorer_bytes).EXPECTED_CONFIGURATION
     config_sha = hashlib.sha256(json.dumps(
         config, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    BASE.write_json_new(attempt / "configuration.json", config)
     rows: list[dict[str, Any]] = []
     failure: str | None = None
     try:
@@ -586,7 +674,9 @@ def _campaign(candidate: str, receipt: Path) -> int:
         "configuration_sha256": config_sha, "tokenization": tokenization,
         "public_randomness_sha256": seed,
         "public_randomness_receipt_sha256": receipt_sha, "schedules": schedules,
+        "publication_receipt": publication,
         "completed_rows": len(rows), "artifacts": artifacts,
+        "verdict": summary["verdict"],
     }
     manifest["artifacts"]["raw.jsonl"] = hashlib.sha256(raw).hexdigest()
     manifest["artifacts"]["summary.json"] = hashlib.sha256(summary_bytes).hexdigest()

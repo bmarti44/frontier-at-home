@@ -138,6 +138,16 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
         self.assertEqual(result["verdict"], "FAIL")
         self.assertIn("manifest", result["failure"])
 
+    def test_stable_reader_rejects_symlink_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            target.write_bytes(b"public evidence")
+            link = root / "link"
+            link.symlink_to(target)
+            with self.assertRaises(OSError):
+                SCORER._read_stable(link)
+
 
 if __name__ == "__main__":
     unittest.main()
