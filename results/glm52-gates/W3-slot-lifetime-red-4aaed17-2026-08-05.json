@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "gate": "W3-production-direct-slot-lifetime",
+  "candidate_hash": "4aaed17388e0e8d095e7dd490ed54290f7218b17",
+  "status": "RED_CONFIRMED",
+  "test_sha256": "edfd1dc150b37be35a35dc2310935186e9b1d19b8d710f14ffd8f9ca2d450273",
+  "engine_source_sha256": "4e61700aece83797cf7b8ad1c95fa0813e6a7d3f835754e0b8712d18b24d6c9a",
+  "binary_sha256": "c97225bc6a9474b93a123bc5b6a5ff2853c444a17b75c9a812624e2c3a647dcd",
+  "exit_code": 1,
+  "stdout": {
+    "schema_version": 1,
+    "status": "UNAVAILABLE",
+    "reason": "production direct-slot lifetime is not implemented"
+  },
+  "acceptance": [
+    "The default-off production path maps the actual cache allocation shape and fails closed if mapping is unavailable.",
+    "A consumer records ownership before cache reuse; fill and eviction cannot reuse owned slots until synchronized completion.",
+    "Forced eviction and delayed-consumer mutations are rejected with byte-identical reference outputs retained.",
+    "The flag-off path remains the existing compact-copy path and the off-class slab layout falls back unchanged."
+  ],
+  "verdict": "GENUINE_BEHAVIORAL_RED_ON_UNIMPLEMENTED_PRODUCTION_PATH"
+}

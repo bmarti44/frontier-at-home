@@ -1,0 +1,25 @@
+{
+  "schema_version": 7,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "COMPILED_RED_AUTHORIZED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v6.json",
+  "review_authority": "results/glm52-gates/W7-resume-review-r201.json",
+  "inherits_unchanged_acceptance": "All v4-v6 fixture, payload, evaluator, numerical, complete-state, confirmation, and safety requirements remain unchanged.",
+  "attempt_identity": {
+    "execution_nonce": "The safe wrapper creates and freezes a unique execution nonce before engine launch.",
+    "formula": "sha256(binary || configuration || confirmation_seed || fixture_pool || execution_nonce)",
+    "invocation_id": "invoke:<full_attempt_id>:<regime_id>:<case_id>",
+    "acceptance": "Two otherwise identical reruns with different execution nonces have disjoint attempt and invocation identities; coherent caller renaming without changing the frozen nonce rejects."
+  },
+  "compiled_red_classification": {
+    "label": "fresh production-path reproduction",
+    "geometry": {
+      "selected": 5028,
+      "common": 5029,
+      "live": 5037,
+      "prompt": 5048
+    },
+    "historical_exact_counts": "The preserved 5044/5045/5063/5066 failure remains historical evidence and is not claimed as exactly rerun by this fresh fixture."
+  },
+  "next": "Commit compiled observer tests before instrumentation, build from the actual readable engine tree, then execute only through glm_safe_run.sh with the established memory floor and no legacy guard bypass."
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "a964bd67ad0f623e2a5940a0e9443f1b8b22f047",
+  "review_round": 158,
+  "attempt_status": "FAILED",
+  "scientific_status": "NO_RESULT_PENDING_TERMINAL_DISPOSITION",
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 67,
+    "critical": [],
+    "high": [
+      "P1-BASE-C18-H1-V1-ONE-SHOT-CONSUMED",
+      "P1-BASE-V2-H1-REPLACEMENT-CORPUS-LEAKAGE",
+      "P1-BASE-V2-H2-SEPARATE-ROOT-AUTHORITY-ABSENT"
+    ],
+    "medium": [
+      "P1-BASE-C18-M2-KERNEL-EMPTY-LOG-FALSE-NEGATIVE"
+    ],
+    "low": [],
+    "verdict": "V1_TERMINAL_NO_RESULT; CONDITIONAL_V2_RECOVERY"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 84,
+    "critical": [],
+    "high": [
+      "ADV-R158-H1-POST-OPEN-NAMESPACE-RETRY"
+    ],
+    "medium": [
+      "ADV-R157-M1-CLEANUP-ROLLBACK-TEST-GAP",
+      "ADV-R155-M1-REGRESSION-SCOPE"
+    ],
+    "low": [],
+    "verdict": "P1_V1_TERMINAL_NO_RESULT_WITH_FAILED_ATTEMPT"
+  },
+  "root_reproduction": {
+    "runtime_failure_reproduced_from_preserved_artifacts": true,
+    "engine_clean_exit_markers_present": true,
+    "unrelated_apparmor_records_trigger_literal_empty_kernel_assertion": true,
+    "retry_command_exit": 17,
+    "retry_status": "ALREADY_RESERVED",
+    "root_marker_identity_unchanged": true,
+    "target_sha256_before": "1aeb8b334abcd678a6096038d5d4f5cc68fa135246657228713c44d3753e8e4a",
+    "target_sha256_after": "1aeb8b334abcd678a6096038d5d4f5cc68fa135246657228713c44d3753e8e4a",
+    "partial_scientific_values_inspected": false
+  },
+  "required_disposition": {
+    "heldout_v1_attempt": "FAILED_IMMUTABLE_EVIDENCE",
+    "heldout_v1_scientific_result": "NO_RESULT",
+    "same_split_rerun": "PROHIBITED",
+    "partial_scoring_or_completion": "PROHIBITED",
+    "combining_partial_v1_with_other_cases": "PROHIBITED",
+    "replacement_namespace_for_same_p1_question": "PROHIBITED",
+    "p2_conformal_calibration": "SKIPPED_BECAUSE_P1_HAS_NO_COMPLETE_ACCEPTED_RESULT",
+    "future_kernel_validator_fix": "PROSPECTIVE_ONLY_FOR_A_SEPARATELY_PREREGISTERED_GATE"
+  },
+  "next_action": "Commit the terminal NO_RESULT disposition, obtain scoped reviewer verification that every round-158 high is closed by abandoning rather than retrying P1-v1, then return to the lossless high-QD engine submission and admission work."
+}

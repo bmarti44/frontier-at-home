@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 12,
+  "campaign_review_round_next": 150,
+  "candidate_hash": "b238ab73e542bd7d270060465ec030fbdfa9aeec",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "scope": "Close only the two round-149 installation findings and the four previously named P1 scientific-validity findings. The controller now requires exact equality between the executing clean HEAD and root-approved commit; the installer refuses direct invocation and accepts only a root:root mode-0500 staged copy matching the published digest; every isolated diagnostic is bracketed by two fresh decode-consistency controls; the fixed scorer requires five matched cold/warm blocks, resource dimensions, confidence intervals and the preregistered MTP Pareto rule; and completed results are independently replayed before and after publication, reopened, and sealed. Frozen probe/CV/precision code, corpus, split, model, engine and binary are unchanged.",
+  "artifacts": {
+    ".gitleaks.toml": "9ebcb0932ca6181784fb34bd81edd51c4d5bac689c94058caa8c143d5dd7632b",
+    "scripts/lint_secrets.sh": "5b7781f586755be465aab3cd92dbb8cb65cbdcd3279e95919eef9a6951c1ab8c",
+    "scripts/65_glm52_w1_submit.py": "1594b10566877b67d67007fcbdf72b3582ee829087b55989a9370fd7c813c602",
+    "scripts/66_install_glm52_w1_attestor.sh": "82ff73257550b11066c93cb2d08cf4bd2c5a2841239594b17081b9ab052c1dbc",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6",
+    "scripts/81_glm_union_baseline.py": "0a6f2f593043cb1c2f37ebd63cb79ebe5aecc9f1c5a3daf926c645d2daf50d6f",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "b98084af2b93760dd6388750accf961e9331b89df93787c5ccba64a936870d76",
+    "scripts/tests/test_glm_union_baseline.py": "21fcd2970900604cf0c4ec5cb504909476a28f7dffb11d2dfc4db626b32033f4"
+  },
+  "unchanged_frozen_runtime": {
+    "engine_commit": "b8a152f29bb68197796b89ba755afb4aefe45dee",
+    "binary_sha256": "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_sha256": "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0a"
+  },
+  "pre_submission_audit": {
+    "controller_and_harness_tests": "125 passed, 4 warnings",
+    "previously_frozen_engine_source_tests": "6 passed; engine artifacts byte-identical to candidate 11",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "diff_check": "PASS",
+    "staged_copy_race": "32 iterations; every staged copy was exact reviewed bytes or rejected by SHA-256",
+    "changed_executing_commit_mutation_rejected": true,
+    "changed_executing_controller_mutation_rejected": true,
+    "two_control_state_or_continuation_mutations_rejected": true,
+    "missing_nan_unsynchronized_or_unequal_cost_mutations_rejected": true,
+    "summary_verdict_mutation_rejected": true,
+    "post_publish_validation_failure_reopened_as_failed_and_sealed": true,
+    "frozen_probe_cv_precision_hashes_unchanged": true,
+    "production_marker_absent": true,
+    "approval_smoke_marker_absent": true,
+    "engine_processes_active": 0,
+    "mem_available_kib": 120854912
+  },
+  "staged_install_contract": {
+    "installer_sha256": "82ff73257550b11066c93cb2d08cf4bd2c5a2841239594b17081b9ab052c1dbc",
+    "operator_shape": "sudo /usr/bin/bash -c '<root mktemp; /usr/bin/install source to root:root 0500 staged path; exact SHA-256 check; env -i with GLM52_REVIEWED_INSTALLER_SHA256; exec staged copy with reviewed freeze commit>'",
+    "invariant": "Root never interprets the user-writable installer. A concurrent source mutation yields exact reviewed staged bytes or failure before execution.",
+    "installation_timing": "Only after both persistent reviewers report no critical/high issues on this freeze; exactly one final staged root invocation before the non-held-out approval smoke and held-out run."
+  },
+  "finding_disposition": [
+    {"id": "P1-BASE-R149-C1-USER-WRITABLE-ROOT-INSTALLER", "status": "FIXED", "evidence": "Root-owned mode-0500 staged-copy precondition, exact digest check, and concurrent rewrite mutation test."},
+    {"id": "P1-BASE-R149-H1-APPROVED-COMMIT-NOT-ENFORCED-BY-CONTROLLER", "status": "FIXED", "evidence": "Exact preflight harness_commit equality is required before reserve-p1; mismatch test stops before reserve."},
+    {"id": "BASE-R142-H3", "status": "FIXED", "evidence": "Every diagnostic is a fresh process with no resident arena, distinct cache namespace, bracketed by two fresh --decode-consistency 8 controls with exact token/logit fingerprints; source sessions are fresh and failure paths converge on process disposal."},
+    {"id": "BASE-R142-H4", "status": "FIXED", "evidence": "Exactly five four-request blocks, separate cold/warm source events, synchronized completed MTP/source/probe timings, intervals and resource dimensions feed the fixed Pareto decision."},
+    {"id": "P1-BASE-IMPL-H3-COST-OMITTED", "status": "FIXED", "evidence": "Canonical cost.json rows are strictly validated and independently rescored; incomplete, NaN, unsynchronized or unequal arms fail."},
+    {"id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY", "status": "FIXED", "evidence": "Canonical requests/targets/rankings, cost rows and raw two-control records are independently replayed and exact-compared before and after rename; failures reopen terminal state; successful or failed published trees are sealed."}
+  ],
+  "known_conservative_cost_semantics": {
+    "gate_and_shared_time": "Each is charged the full synchronized prefix-through-source source_ready_ms upper bound because both are captured in the same source evaluation; no subtraction is used.",
+    "mtp_time": "K=4 uses recorded cumulative_ms[3], which includes isolated prefix construction, three MTP calls and four target evaluations.",
+    "mtp_expert_bytes": "Logical target-expert read upper bound from the exact K=4 per-layer selected union times 9,732,096 bytes; this can only make equal-cost harder to claim.",
+    "probe_time": "Includes feature construction, device inference, host score movement and stable ranking; predict_probe_head synchronizes through CPU materialization.",
+    "decision_safety": "MTP folds only if it is equal-cost on time, persistent bytes, peak temporary bytes and expert bytes and strictly beats probe/gate/shared recall in all nine cells; otherwise methods remain separate on the Pareto table."
+  },
+  "claim_limit": "Preinstall implementation review only. No root installation, approval smoke, held-out values, baseline ranking, fidelity, NLL, serving-performance or adoption claim."
+}

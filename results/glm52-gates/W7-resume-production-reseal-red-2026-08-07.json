@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-production-graduation",
+  "attempt": "transform-reseal-RED",
+  "review_findings": [
+    "GAP-W7-227-C1-UNVERIFIED-RESEAL-LAUNDERS-CORRUPTION",
+    "ADV-W7-227-H42-STRIP-LAUNDERS-CORRUPTION"
+  ],
+  "engine_test_commit": "36871c5e8d58111c8e60f5e4742091fa31fb0ca4",
+  "blocked_candidate_commit": "0e56c36ce3357bdd6b0123a45362f738ed1589a2",
+  "acceptance_formula": "Every transformation or reseal must verify the source record before reading, truncating, tokenizing, or publishing derived content. Verification failure must not replace the stored digest or destination record.",
+  "observed": {
+    "corrupt_payload_reseal_false_accepts": 1,
+    "automatic_trailer_rewrite_missing_verified_reseal": true,
+    "agent_strip_missing_pretransform_verification": true
+  },
+  "logs": [
+    {
+      "name": "c-build",
+      "sha256": "12e5e6d131ef3661b9919d28f6de71b4ebc31e2097c5833a924fc2ae87d16657"
+    },
+    {
+      "name": "c-run",
+      "sha256": "b3524ff290b47def53cfe897a39953aba36ca67689d51891c5ee13a4618333c7"
+    },
+    {
+      "name": "callsite-run",
+      "sha256": "bd9931d522d023718e14a24088aa413f4423ee94a0555a9d443150d4c9825c93"
+    }
+  ],
+  "result": "RED_CONFIRMED"
+}

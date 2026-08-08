@@ -1,0 +1,29 @@
+From c5aedbaa26e0f98f008d359027c41ba1cd656e7b Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:53:48 -0400
+Subject: [PATCH 29/31] test: require GLM witness on early sync branches
+
+---
+ tests/test_glm_logit_dump_callsite.py | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/tests/test_glm_logit_dump_callsite.py b/tests/test_glm_logit_dump_callsite.py
+index 13f4f80..773efa8 100644
+--- a/tests/test_glm_logit_dump_callsite.py
++++ b/tests/test_glm_logit_dump_callsite.py
+@@ -22,6 +22,13 @@ class GlmLogitDumpCallsiteTest(unittest.TestCase):
+         wrapper = source[wrapper_start:internal_start]
+         self.assertEqual(wrapper.count("glm_debug_dump_prefill_logits("), 1)
+
++    def test_metadata_is_armed_before_every_success_branch(self) -> None:
++        source = SOURCE.read_text(encoding="utf-8")
++        glm_sync = source[source.index("if (ds4_session_is_glm(s)) {") :]
++        armed = glm_sync.index("s->glm_logit_sync_valid = true;")
++        early_branch = glm_sync.index("if (s->engine->glm_tp_token_prefill ||")
++        self.assertLess(armed, early_branch)
++
+
+ if __name__ == "__main__":
+     unittest.main()
+--
+2.43.0

@@ -1,0 +1,45 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-review-v1",
+  "candidate_hash": "67470528e5abc0d20590a1c04cb077dac0285989",
+  "review_round": 251,
+  "candidate": 1,
+  "verdict": "REJECT_RUNTIME_BLOCKED",
+  "runtime_allowed": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 34,
+      "critical": ["GAP-W9-251-C1-AMAX-SCALE-NOT-OPTIMISTIC-BOUND"],
+      "high": [
+        "GAP-W9-251-H1-CAPTURE-AND-RANDOMNESS-TOCTOU",
+        "GAP-W9-251-H2-CALLER-CONTROLS-FREEZE-AND-DRAND-FLOOR"
+      ],
+      "medium": [
+        "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT",
+        "GAP-W9-251-M2-NO-END-TO-END-GATE-MUTATIONS"
+      ]
+    },
+    "Singer": {
+      "score_0_to_100": 30,
+      "critical": ["ADV-W9-FP4-251-C1-SELF-AUTHORIZED-CANDIDATE-SEED-GRINDING"],
+      "high": [
+        "ADV-W9-FP4-251-H1-CALLER-CONTROLLED-DRAND-FLOOR",
+        "ADV-W9-FP4-251-H2-CROSS-PHASE-INPUT-GENERATION-TOCTOU",
+        "ADV-W9-FP4-251-H3-RUNTIME-FREEZE-NOT-ENFORCED",
+        "ADV-W9-FP4-251-H4-TERMINAL-EVIDENCE-MUTATION-NOT-REJECTED"
+      ],
+      "medium": [
+        "ADV-W9-FP4-251-M1-THREE-RELAY-AGREEMENT-UNATTESTED",
+        "ADV-W9-FP4-251-M2-NO-END-TO-END-GATE-OR-MUTATION-TEST"
+      ]
+    }
+  },
+  "blocking_findings": {
+    "numerical_claim": "amax/6 is neither the minimum-error continuous E2M1 scale nor a lower bound; a non-passing result cannot be called decisive",
+    "authority": "caller-selected ancestor commit and drand floor permit seed grinding and stale randomness",
+    "input_generation": "capture and receipt paths are reopened after hash/verification",
+    "runtime": "recorded Python/NumPy/verifier hashes are not enforced",
+    "terminal": "no terminal verification or mutation rejection"
+  },
+  "candidate2_scope": "Only named round-251 findings: honest NO_RESULT semantics for a non-passing optimistic study; multi-start continuous-scale L2 search that includes amax/6 and representative mappings; exact reviewed receipt/floor; stable single-descriptor capture/randomness consumption; frozen runtime enforcement; terminal verification; and focused end-to-end/mutation coverage.",
+  "drand_min_round": 6357189
+}

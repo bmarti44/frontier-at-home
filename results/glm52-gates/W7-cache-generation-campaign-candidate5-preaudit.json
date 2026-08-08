@@ -1,0 +1,34 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 5,
+  "implementation_commit": "3c10edbf51b2b584f0ee047906952c01b031ce93",
+  "review_delta_from": "a9221bc8d27f0db71d3f87156568c2f0e56ef9e6",
+  "review_round_from": 280,
+  "scope": [
+    "install controlled INT TERM and HUP handlers before campaign work",
+    "raise a typed campaign interruption into normal failure handling",
+    "block termination signals across launcher creation and active-child publication",
+    "terminate and reap an interrupted launcher before propagating the interruption"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 48, "result": "PASS", "skipped": 1},
+    "INT_handler": "PASS",
+    "TERM_handler": "PASS",
+    "HUP_handler": "PASS",
+    "mocked_active_child_terminated_and_reaped": "PASS",
+    "active_containment_cleared": "PASS",
+    "runner_self_test": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count_for_gate": 5,
+    "blocking_findings_targeted": 1,
+    "previous_non_shrinking_streak": 1,
+    "expected_blocking_count": 0,
+    "escalation_triggered": false
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}

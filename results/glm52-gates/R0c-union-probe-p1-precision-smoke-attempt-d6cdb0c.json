@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "classification": "NO_RESULT",
+  "scope": "one-layer production-path precision smoke",
+  "candidate_hash": "d6cdb0c",
+  "evidence_directory": "/home/bmarti44/.local/state/glm52-p1-precision-smoke-d6cdb0c",
+  "manifest_sha256": "b7f359ebbabdaf3f51ce02bd7261dd946a9a5bdd21f12a705f6a2dc8bef1e3f4",
+  "observed": "Final rank-32 layer-3 fitting and state publication passed. Diagnostic prediction then failed closed because layer 3 has zero retained FP16 holdout rows and the predictor rejects an empty feature batch.",
+  "diagnosis": "The preregistered diagnostic is defined over every retained paired row, not every layer. The deterministic sparse holdout grid contains zero rows for layer 3. Empty layer/K cells must be recorded as zero coverage and excluded from aggregation rather than sent to the predictor.",
+  "fix": "Skip only zero-paired-row layer/K cells, log their zero coverage, and retain all nonempty paired rows unchanged. No threshold, feature, target, model, split, or metric changes.",
+  "claim_limit": "This failed smoke produced no precision metric and has no acceptance authority."
+}

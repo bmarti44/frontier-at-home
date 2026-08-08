@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "candidate": 7,
+  "classification": "FINAL_CONVERGENCE_EXTERNAL_COMMITMENT_AND_BASELINE_AMENDMENT",
+  "base_contracts": [
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v2.json", "sha256": "d1e3ec4597aca237e9861d6d82a33b1b3639c0e300f1bab5ef005ed0a5f1896b"},
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v3.json", "sha256": "562bd0aa270b3f620cf69979b778f56eaf324c51553eb8c7228775117666a90a"},
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v4.json", "sha256": "01616e9c00e8a3c3133ad2443fe8fcadae44d6622e1cc4d6104b7130882bb4a6"},
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v5.json", "sha256": "6e456cd88b0dfbc2d5241a739eb187fba2ab3aa32349221488385a78e3a89717"}
+  ],
+  "scope": {
+    "claim": "Greedy-argmax causal accuracy only; no cost/cache/serving/heldout claim.",
+    "implementation_authorized": false,
+    "convergence": "If round 191 does not strictly shrink the blocking set, pause this proxy branch."
+  },
+  "external_pre_round_commitment_replacement": {
+    "why": "This replaces v5's locally asserted drand floor. It uses the already-authorized GitHub origin as an independent public timestamp and a cryptographically verified drand round; it adds no new repository-specific commitment service.",
+    "manifest_commit": "After every v5 freeze item is final, write the exact canonical freeze manifest, commit it as the only content change in a dedicated git commit on glm52-rung0-io-submission, and push that exact commit to git@github.com:bmarti44/frontier-at-home.git. No force push, amend or alternate branch/ref is accepted.",
+    "github_event": "Poll the public GitHub REST endpoint /repos/bmarti44/frontier-at-home/events until exactly one PushEvent has repo bmarti44/frontier-at-home, ref refs/heads/glm52-rung0-io-submission, payload.head equal to the manifest commit, and a GitHub-issued RFC3339 created_at. Preserve the exact HTTPS response bytes, response Date header, event id, created_at and SHA-256. Require a successful unauthenticated second fetch with the same id/head/ref/created_at before beacon fetch. A commit date, local mtime, branch head alone or operator-supplied timestamp is invalid.",
+    "exact_round": "With default-chain genesis G=1595431050 and period P=30 seconds, parse GitHub created_at as integer Unix seconds T and set R=floor((T-G)/P)+2, the unique first scheduled round strictly after the external event time. Only R is eligible; floor fields and any other past/future round are invalid. The frozen manifest commit hash and GitHub event identity enter the v5 seed domain.",
+    "drand_chain": {
+      "beacon_id": "default",
+      "chain": {"sha256": "8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce"},
+      "group": {"sha256": "176f93498eac9ca337150b46d21dd58673ea4e3581185f869672e59fa4cb390a"},
+      "public_key": "868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31",
+      "scheme": "pedersen-bls-chained",
+      "genesis_time": 1595431050,
+      "period_seconds": 30
+    },
+    "cryptographic_verification": "A pinned, reproducibly built official drand Go client verifier must check the exact chain hash/public key/scheme, BLS signature for R, chaining to the independently fetched and verified R-1 signature, round number and randomness derivation. The three exact relay records must also be byte-equal. HTTPS relay agreement alone cannot pass.",
+    "ordering": "The GitHub event's created_at must be strictly before R's scheduled time. Fetch/verify only exact R. If R is unavailable, invalid, missed, or any GitHub/relay record disagrees, this candidate is terminal NO_RESULT; do not select R+1, repush, rebuild, reseed or retry.",
+    "mutations": [
+      "valid historical R with manifest committed/pushed afterward fails because event-derived exact R differs",
+      "forged/backdated git commit timestamp fails because only GitHub event created_at is used",
+      "branch force-push/ref/head mismatch or missing/duplicate GitHub event fails",
+      "R-1, R+1, relay-only equality, wrong chain/key/scheme, broken previous-signature chain or invalid BLS fails",
+      "second manifest commit/event after seeing R is a new failed attempt, never a retry"
+    ]
+  },
+  "frequency_baseline_dataflow_replacement": {
+    "replacement": "Delete v3/v4 requirements that recurrence replay derives both baselines or that the frequency table is frozen before beacon. Recurrence replay derives only anonymous proxy and gate-replay ranks. It never reads fixture IDs, drand, train-fit rows or frequency output.",
+    "helper": "A distinct clean-reproducible baseline-only helper is frozen in the pre-round manifest. After exact R selects five IDs and before any source/candidate/Phase-B run, it reads only the authenticated selection receipt plus the bound train-fit manifest/records, proves exactly those five IDs are excluded, and counts selected_ids over all rows of the remaining exactly 50 distinct cases.",
+    "canonical_output": "Publish one canonical exact-schema file containing selection-receipt hash, train-fit manifest/records hashes, included 50 IDs, excluded five IDs, and for each exact layer 3..77 all 256 uint64 counts plus expert ranking sorted count descending/expert ID ascending. Unknown/missing/duplicate fields, overflow, wrong layer/expert cardinality, extra rows or trailing bytes FAIL.",
+    "isolation": "The baseline helper exits and its output freezes before candidate source execution. Candidate and recurrence-replay Landlock policies do not admit the helper, selection receipt, train-fit records, canonical frequency output or their parent paths. Only the independent Python scorer reads the frequency output after candidate/Phase-B artifacts freeze.",
+    "scorer_recompute": "The frozen scorer ignores stored ranks for authority, rereads the exact selection and hash-bound train-fit records, independently recomputes the 50-case counts/ranks with uint64 arithmetic and exact ties, requires byte-equality to helper output, then applies the v2 +3pp paired comparison. Gate replay remains independently derived from anonymous z0 by recurrence replay.",
+    "mutations": [
+      "include one selected or non-train-fit row, omit one retained row, duplicate a case, alter count/rank/tie or overflow and fail",
+      "make any identity/frequency artifact readable to candidate or recurrence replay and fail sandbox preflight",
+      "run helper after source/candidate/Phase-B or let stored ranks bypass scorer recomputation and fail"
+    ]
+  },
+  "review_resolution": {
+    "R05-R190-H1-BLINDED-FREQUENCY-BASELINE-CONTRADICTION": "A separate post-selection baseline helper/scorer path owns the 50-case prior; anonymous recurrence processes never receive identities or prior data.",
+    "ADV-R05-R190-M1-FREQUENCY-BASELINE-AUTHORITY-IS-CONTRADICTORY": "The inherited both-baselines clause is explicitly deleted and canonical helper output is independently recomputed by the scorer.",
+    "ADV-R05-R190-H1-BEACON-FLOOR-HAS-NO-PRE-ROUND-COMMITMENT": "The exact manifest commit must have a matching externally timestamped public GitHub PushEvent; that immutable event time deterministically selects one round, whose BLS signature and chain are verified against frozen default-chain authority. Historical-round grinding cannot change the event-derived R."
+  },
+  "convergence": {
+    "gate_candidate": 7,
+    "campaign_review_next": 191,
+    "previous_consecutive_non_shrink": 1,
+    "total_candidates": 7,
+    "pause_if_not_strictly_shrunk": true
+  }
+}

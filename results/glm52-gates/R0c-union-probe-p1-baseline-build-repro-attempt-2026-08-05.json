@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RUNTIME_ATTEMPT",
+  "gate": "R0c/P1 clean binary reproducibility",
+  "engine_commit": "b8a152f29bb68197796b89ba755afb4aefe45dee",
+  "held_out_values_opened": false,
+  "observed_failure": {
+    "build_1_binary_sha256": "3b173ce92ab9d5c34aebf914f87cc23ad79e530b9b7e20da1d63a97bd46777f3",
+    "build_2_binary_sha256": "db64b646d18f49fd1846f763dbdeaea4454279dbee275dd92c8984bcef161e77",
+    "byte_identical": false,
+    "difference": "GNU build ID and debug information contain nondeterministic compiler-generated identities; loadable runtime content was not implicated."
+  },
+  "bounded_diagnosis": {
+    "canonicalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "binary_sha256": "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b",
+    "canonical_byte_identical": true
+  },
+  "acceptance": "Produce the evidence binary by the fixed canonicalization command after each clean build; require byte identity, retain the unmodified build hashes, and run the non-held-out capture on the canonical binary before freezing.",
+  "verdict": "NO_RESULT_REQUIRES_CANONICAL_BUILD_ARTIFACT"
+}

@@ -1,0 +1,910 @@
+#!/bin/bash
+# Contained production-path probe for the default-off W3 direct expert-slot
+# path. Its optional 129-token mode emits one balanced campaign pair, but only
+# the frozen campaign scorer may combine five ABBA/BAAB blocks and grant W3
+# completed-time performance credit.
+set -Eeuo pipefail
+umask 077
+
+readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
+readonly CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
+readonly SAFE=$REPO/results/glm52-gates/harness/glm_safe_run.sh
+readonly MEMORY_GUARD=$REPO/scripts/03_memory_guard.py
+readonly TOKEN_SCORER=$REPO/scripts/84_count_glm_output_tokens.py
+readonly CAMPAIGN_SCORER=$REPO/scripts/85_score_w3_performance_campaign.py
+readonly CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w3-cbc22b0
+readonly BIN=$CANDIDATE_SRC/ds4-server
+readonly BINARY_SHA256=1a60e0887bd26e95d286041dc38d1e7ac7ca81d51d910227e37b26cc516f0b58
+readonly ENGINE_COMMIT=cbc22b06063d2f5cf346b3d5b0c2f7064fa51090
+readonly ENGINE_SOURCE=/tmp/glm52-slot-prod-v1
+readonly MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
+readonly MODEL_SHA256=a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0
+readonly MODEL_BYTES=211075856448
+readonly TOKENIZER=/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json
+readonly TOKENIZER_RUNTIME=/home/bmarti44/.cache/glm52-w3-tokenizer-runtime-0.22.2
+readonly TOKENIZERS_INIT=$TOKENIZER_RUNTIME/tokenizers/__init__.py
+readonly TOKENIZERS_SO=$TOKENIZER_RUNTIME/tokenizers/tokenizers.abi3.so
+readonly CACHE_GIB=68
+readonly CTX=8192
+readonly TOKENS=${3:-64}
+readonly ARM_ORDER=${4:-off-on}
+readonly STATE_PARENT=/home/bmarti44/.local/state
+readonly CRASH_ROOT=$STATE_PARENT/glm52-crashlog
+readonly ENGINE_LOCK=/run/user/1000/ds4-engine.lock
+readonly OUTER_LOCK=/run/lock/frontier-at-home/inference.lock
+readonly ENV_NAMES=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_GLM_TP_DEBUG,DS4_LOCK_EXPECTED_DEV_INO,DS4_LOCK_FILE,DS4_TOKEN_TIMING_LOG
+
+(( $# >= 2 && $# <= 4 )) || {
+  echo "usage: $0 FREEZE_JSON DRAND_JSON [64|129] [off-on|on-off]" >&2
+  exit 2
+}
+[[ $TOKENS == 64 || $TOKENS == 129 ]] || exit 2
+[[ $ARM_ORDER == off-on || $ARM_ORDER == on-off ]] || exit 2
+readonly FREEZE=$1
+readonly DRAND=$2
+
+isolated_python() {
+  /usr/bin/env -i HOME=/nonexistent PATH=/usr/bin:/bin \
+    LANG=C.UTF-8 LC_ALL=C.UTF-8 /usr/bin/python3 -I -B "$@"
+}
+
+[[ $(id -un) == bmarti44 ]] || {
+  echo "W3 probe must run as bmarti44" >&2
+  exit 2
+}
+[[ -x $BIN && -x $CGROUP && -r $SAFE && -x $TOKEN_SCORER &&
+   -r $MODEL && -r $TOKENIZER &&
+   -r $TOKENIZERS_INIT && -r $TOKENIZERS_SO && -r $FREEZE && -r $DRAND ]] || {
+  echo "W3 probe inputs are unavailable" >&2
+  exit 2
+}
+engine_lock_identity=
+[[ ! -L $OUTER_LOCK && -f $OUTER_LOCK ]] || {
+  echo "outer inference lock is unsafe" >&2
+  exit 2
+}
+OUTER_LOCK_IDENTITY=$(stat -Lc '%d:%i' -- "$OUTER_LOCK")
+readonly OUTER_LOCK_IDENTITY
+revalidate_engine_lock() {
+  local observed_identity
+  [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
+     $(stat -Lc '%U:%G:%a:%h' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600:1 ]] || {
+    echo "W3 engine lock is unsafe" >&2
+    return 1
+  }
+  observed_identity=$(stat -Lc '%d:%i' -- "$ENGINE_LOCK")
+  [[ $observed_identity != "$OUTER_LOCK_IDENTITY" &&
+     ( -z ${engine_lock_identity:-} || $observed_identity == "$engine_lock_identity" ) ]] || {
+    echo "W3 engine lock identity changed or aliases the outer lock" >&2
+    return 1
+  }
+  engine_lock_identity=$observed_identity
+}
+validate_engine_lock() {
+  local parent=/run/user/1000
+  [[ $ENGINE_LOCK != "$OUTER_LOCK" ]] || {
+    echo "W3 engine lock aliases the outer inference lock" >&2
+    return 1
+  }
+  [[ ! -L $parent && $(readlink -f -- "$parent") == "$parent" && -d $parent &&
+     $(stat -Lc '%U:%G:%a' -- "$parent") == bmarti44:bmarti44:700 ]] || {
+    echo "W3 engine-lock parent is unsafe" >&2
+    return 1
+  }
+  if [[ -e $ENGINE_LOCK || -L $ENGINE_LOCK ]]; then
+    [[ ! -L $ENGINE_LOCK && -f $ENGINE_LOCK &&
+       $(stat -Lc '%U:%G:%a:%h' -- "$ENGINE_LOCK") == bmarti44:bmarti44:600:1 ]] || {
+      echo "W3 engine lock is unsafe" >&2
+      return 1
+    }
+  fi
+  /usr/bin/flock -n -E 75 -- "$ENGINE_LOCK" /usr/bin/true || {
+    echo "W3 engine lock is held" >&2
+    return 1
+  }
+  revalidate_engine_lock
+}
+validate_engine_lock
+if pgrep -x ds4-server >/dev/null || pgrep -x fio >/dev/null; then
+  echo "exclusive W3 probe preflight found an active engine or fio" >&2
+  exit 75
+fi
+swap_used_kib=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t-f}' /proc/meminfo)
+(( swap_used_kib < 1048576 )) || {
+  echo "W3 probe refuses to start with >=1 GiB swap in use" >&2
+  exit 8
+}
+isolated_python "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 0
+
+# Git is the authority root for this bounded evidence harness. The committed
+# freeze manifest binds the harness, transitive safety helpers, compiled engine
+# source and binary. No self-reported digest can substitute for these checks.
+isolated_python - "$REPO" "$FREEZE" "$0" "$CGROUP" "$SAFE" "$MEMORY_GUARD" \
+    "$TOKEN_SCORER" "$CAMPAIGN_SCORER" "$BIN" "$TOKENIZER" "$TOKENIZERS_INIT" "$TOKENIZERS_SO" \
+    "$ENGINE_SOURCE" "$ENGINE_COMMIT" "$BINARY_SHA256" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+(repo_raw, freeze_raw, harness_raw, cgroup_raw, safe_raw, guard_raw,
+ scorer_raw, campaign_scorer_raw, binary_raw, tokenizer_raw, tokenizers_init_raw, tokenizers_so_raw,
+ source_raw, engine_commit, binary_sha) = sys.argv[1:]
+repo = Path(repo_raw).resolve()
+freeze = Path(freeze_raw).resolve()
+paths = {
+    "harness": Path(harness_raw).resolve(),
+    "cgroup": Path(cgroup_raw).resolve(),
+    "safe": Path(safe_raw).resolve(),
+    "memory_guard": Path(guard_raw).resolve(),
+    "token_scorer_sha256": Path(scorer_raw).resolve(),
+    "campaign_scorer": Path(campaign_scorer_raw).resolve(),
+    "binary": Path(binary_raw).resolve(),
+    "tokenizer_sha256": Path(tokenizer_raw).resolve(),
+    "tokenizers_init_sha256": Path(tokenizers_init_raw).resolve(),
+    "tokenizers_so_sha256": Path(tokenizers_so_raw).resolve(),
+}
+source = Path(source_raw).resolve()
+
+def digest(path: Path) -> str:
+    value = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+if subprocess.run(["git", "status", "--porcelain"], cwd=repo, text=True,
+                  capture_output=True, check=True).stdout:
+    raise SystemExit("repository is not clean at probe execution")
+relative = freeze.relative_to(repo)
+committed = subprocess.run(["git", "show", f"HEAD:{relative}"], cwd=repo,
+                           capture_output=True, check=True).stdout
+if committed != freeze.read_bytes():
+    raise SystemExit("freeze manifest differs from HEAD")
+record = json.loads(committed)
+required = {"schema_version", "repository_parent_commit", "engine_commit",
+            "binary_sha256", "model_sha256", "drand_floor_round", "artifacts",
+            "campaign_contract", "engine_source_sha256"}
+if set(record) != required or record["schema_version"] != 1:
+    raise SystemExit("freeze manifest schema is invalid")
+head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, text=True,
+                      capture_output=True, check=True).stdout.strip()
+parent = subprocess.run(["git", "rev-parse", "HEAD^"], cwd=repo, text=True,
+                        capture_output=True, check=True).stdout.strip()
+if parent != record["repository_parent_commit"]:
+    raise SystemExit("HEAD is not the exact reviewed freeze commit")
+changed = subprocess.run(["git", "diff", "--name-only", "HEAD^", "HEAD"],
+                         cwd=repo, text=True, capture_output=True,
+                         check=True).stdout.splitlines()
+if changed != [str(relative)]:
+    raise SystemExit("freeze commit changed files other than its receipt")
+if record["engine_commit"] != engine_commit or record["binary_sha256"] != binary_sha:
+    raise SystemExit("freeze candidate identity is inconsistent")
+expected_contract = {
+    "completion_tokens": 129,
+    "decode_formula": "128/(t129-t1)",
+    "block_schedule": ["ABBA", "BAAB", "ABBA", "BAAB", "ABBA"],
+    "block_value": "arithmetic mean of the two same-arm completed seconds",
+    "acceptance": "one-sided 95% upper bound of the geometric paired candidate/baseline completed-time ratio <= 0.95",
+}
+if record["campaign_contract"] != expected_contract:
+    raise SystemExit("freeze campaign contract is inconsistent")
+if set(record["artifacts"]) != set(paths):
+    raise SystemExit("freeze artifact inventory is incomplete")
+for name, path in paths.items():
+    if digest(path) != record["artifacts"][name]:
+        raise SystemExit(f"frozen artifact changed: {name}")
+observed_engine = subprocess.run(["git", "rev-parse", "HEAD"], cwd=source,
+                                 text=True, capture_output=True,
+                                 check=True).stdout.strip()
+tracked_dirty = subprocess.run(
+    ["git", "status", "--porcelain", "--untracked-files=no"], cwd=source,
+    text=True, capture_output=True, check=True).stdout
+if observed_engine != engine_commit or tracked_dirty:
+    raise SystemExit("compiled engine source lineage changed")
+for relative_path, expected in record["engine_source_sha256"].items():
+    if digest(source / relative_path) != expected:
+        raise SystemExit(f"compiled engine source changed: {relative_path}")
+PY
+
+readonly OBSERVED_REPOSITORY_HEAD=$(git -C "$REPO" rev-parse HEAD)
+readonly OBSERVED_FREEZE_SHA256=$(sha256sum -- "$FREEZE" | awk '{print $1}')
+readonly OBSERVED_TOKENIZER_SHA256=$(sha256sum -- "$TOKENIZER" | awk '{print $1}')
+readonly OBSERVED_TOKENIZERS_INIT_SHA256=$(sha256sum -- "$TOKENIZERS_INIT" | awk '{print $1}')
+readonly OBSERVED_TOKENIZERS_SO_SHA256=$(sha256sum -- "$TOKENIZERS_SO" | awk '{print $1}')
+
+readonly MODEL_IDENTITY_BEFORE=$(stat -Lc '%d:%i:%s:%Y:%Z' -- "$MODEL")
+[[ $(stat -Lc '%s' -- "$MODEL") == "$MODEL_BYTES" ]] || {
+  echo "GLM model size mismatch" >&2
+  exit 2
+}
+readonly OBSERVED_MODEL_SHA256=$(sha256sum -- "$MODEL" | awk '{print $1}')
+[[ $OBSERVED_MODEL_SHA256 == "$MODEL_SHA256" ]] || {
+  echo "GLM model digest mismatch" >&2
+  exit 2
+}
+[[ $OBSERVED_MODEL_SHA256 == $(isolated_python - "$FREEZE" <<'PY'
+import json
+import sys
+print(json.load(open(sys.argv[1], encoding="utf-8"))["model_sha256"])
+PY
+) ]] || {
+  echo "GLM model digest differs from campaign freeze" >&2
+  exit 2
+}
+
+# Authenticate a beacon obtained after the committed freeze against three
+# registered public relays. The request nonce and seed are derived from it.
+read -r DRAND_ROUND DRAND_RANDOMNESS DRAND_SIGNATURE DRAND_FLOOR < <(
+  isolated_python - "$FREEZE" "$DRAND" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+freeze = json.loads(Path(sys.argv[1]).read_text())
+beacon = json.loads(Path(sys.argv[2]).read_text())
+if set(beacon) != {"round", "randomness", "signature"}:
+    raise SystemExit("drand receipt schema is invalid")
+round_number = beacon["round"]
+randomness = beacon["randomness"]
+signature = beacon["signature"]
+if (not isinstance(round_number, int) or round_number <= freeze["drand_floor_round"] or
+        not isinstance(randomness, str) or not re.fullmatch(r"[0-9a-f]{64}", randomness) or
+        not isinstance(signature, str) or not re.fullmatch(r"[0-9a-f]{192}", signature) or
+        hashlib.sha256(bytes.fromhex(signature)).hexdigest() != randomness):
+    raise SystemExit("drand receipt is invalid or predates the freeze")
+expected = {"round": round_number, "randomness": randomness, "signature": signature}
+for host in ("api.drand.sh", "api2.drand.sh", "api3.drand.sh"):
+    response = subprocess.run([
+        "/usr/bin/curl", "--disable", "--silent", "--show-error", "--fail",
+        "--max-time", "15", "--proto", "=https",
+        f"https://{host}/public/{round_number}",
+    ], capture_output=True, check=True,
+       env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"})
+    published = json.loads(response.stdout)
+    if any(published.get(key) != value for key, value in expected.items()):
+        raise SystemExit(f"drand relay disagreement: {host}")
+print(round_number, randomness, signature, freeze["drand_floor_round"])
+PY
+)
+readonly DRAND_ROUND DRAND_RANDOMNESS DRAND_SIGNATURE DRAND_FLOOR
+
+OUT=$(mktemp -d "$STATE_PARENT/glm52-w3-direct-slot-probe-v3.XXXXXX")
+readonly OUT
+printf '%s\n' "$OUT" >"$OUT/output-directory.txt"
+isolated_python - "$OUT/request.json" "$DRAND_RANDOMNESS" "$TOKENS" <<'PY'
+import json
+import sys
+
+randomness = sys.argv[2]
+required_tokens = int(sys.argv[3])
+request = {
+    "model": "glm-5.2",
+    "messages": [{
+        "role": "user",
+        "content": (
+            "Generate a deterministic sequence of exactly 200 lowercase letters "
+            "by repeating the alphabet in order. Do not stop early. "
+            f"Confirmation nonce: {randomness[:24]}."
+        ),
+    }],
+    "max_tokens": required_tokens,
+    "temperature": 0,
+    "seed": int(randomness[:16], 16) % 2147483647,
+    "thinking_enabled": False,
+}
+with open(sys.argv[1], "x", encoding="utf-8") as stream:
+    json.dump(request, stream, sort_keys=True, separators=(",", ":"))
+    stream.write("\n")
+PY
+readonly REQUEST_SHA256=$(sha256sum -- "$OUT/request.json" | awk '{print $1}')
+
+active_pid=
+runner_pid=
+runner_start_ticks=
+runner_is_exact() {
+  local runner_state observed_start_ticks
+  [[ -n ${runner_pid:-} && -n ${runner_start_ticks:-} &&
+     -r /proc/$runner_pid/stat ]] || return 1
+  read -r runner_state observed_start_ticks < <(
+    awk '{print $3, $22}' "/proc/$runner_pid/stat" 2>/dev/null
+  ) || return 1
+  [[ $runner_state != Z && $runner_state != X ]] || return 1
+  [[ $observed_start_ticks == "$runner_start_ticks" ]]
+}
+cleanup() {
+  if [[ -n ${active_pid:-} && -r /proc/$active_pid/exe &&
+        $(readlink -f -- "/proc/$active_pid/exe" 2>/dev/null || true) == "$BIN" ]]; then
+    kill -TERM "$active_pid" 2>/dev/null || true
+  fi
+  if runner_is_exact; then
+    kill -TERM "$runner_pid" 2>/dev/null || true
+    for _ in $(seq 1 180); do
+      kill -0 "$runner_pid" 2>/dev/null || break
+      sleep 0.25
+    done
+    kill -0 "$runner_pid" 2>/dev/null && kill -KILL "$runner_pid" 2>/dev/null || true
+    wait "$runner_pid" 2>/dev/null || true
+  fi
+  active_pid=
+  runner_pid=
+  runner_start_ticks=
+}
+on_exit() {
+  local rc=$?
+  trap - EXIT INT TERM HUP
+  cleanup
+  exit "$rc"
+}
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+environment_sha256() {
+  isolated_python - "$ENV_NAMES" "$@" <<'PY'
+import hashlib
+import sys
+
+names = sys.argv[1].split(",")
+entries = {}
+for assignment in sys.argv[2:]:
+    if "=" not in assignment:
+        raise SystemExit("malformed explicit engine environment assignment")
+    name, value = assignment.split("=", 1)
+    if name not in names or name in entries or not value.isascii():
+        raise SystemExit("invalid explicit engine environment assignment")
+    entries[name] = value
+direct = "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS"
+if set(entries) not in (set(names), set(names) - {direct}):
+    raise SystemExit("explicit engine environment inventory is incomplete")
+canonical = b"".join(
+    name.encode("ascii") + b"=" +
+    entries.get(name, "<UNSET>").encode("ascii") + b"\n"
+    for name in names
+)
+print(hashlib.sha256(canonical).hexdigest())
+PY
+}
+
+wait_for_exact_engine() {
+  local deadline=$((SECONDS + 900))
+  while (( SECONDS < deadline )); do
+    runner_is_exact || {
+      echo "runner exited before the frozen W3 engine appeared" >&2
+      return 1
+    }
+    mapfile -t candidates < <(pgrep -x ds4-server || true)
+    if (( ${#candidates[@]} == 1 )); then
+      local candidate=${candidates[0]}
+      if [[ $(readlink -f -- "/proc/$candidate/exe" 2>/dev/null || true) == "$BIN" ]]; then
+        active_pid=$candidate
+        return 0
+      fi
+    elif (( ${#candidates[@]} > 1 )); then
+      echo "multiple ds4-server processes appeared" >&2
+      return 1
+    fi
+    sleep 1
+  done
+  echo "frozen W3 engine did not appear" >&2
+  return 1
+}
+
+wait_for_ready() {
+  local port=$1 deadline=$((SECONDS + 900)) code=
+  while (( SECONDS < deadline )); do
+    runner_is_exact || return 1
+    kill -0 "$active_pid" 2>/dev/null || return 1
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 \
+      "http://127.0.0.1:$port/v1/models" || true)
+    [[ $code == 200 ]] && return 0
+    sleep 2
+  done
+  return 1
+}
+
+run_arm() {
+  local arm=$1 port=$2 direct=$3
+  local tag="w3s${DRAND_ROUND}-${arm}" arm_dir="$OUT/$arm"
+  mkdir "$arm_dir"
+  validate_engine_lock
+  isolated_python "$MEMORY_GUARD" --required-gib 110 --stable-samples 3 --timeout-seconds 900 \
+    >"$arm_dir/memory-preflight.json"
+  if curl -sS -o /dev/null --max-time 2 "http://127.0.0.1:$port/v1/models"; then
+    echo "probe port $port is already occupied" >&2
+    return 1
+  fi
+  if find "$CRASH_ROOT" -mindepth 1 -maxdepth 1 -type d -name "*-$tag" \
+      -print -quit | grep -q .; then
+    echo "unique W3 evidence tag was already consumed: $tag" >&2
+    return 1
+  fi
+
+  local -a engine_environment=(
+    "DS4_CUDA_EXPERT_CACHE_GB=$CACHE_GIB"
+    DS4_CUDA_EXPERT_CACHE_PIN=1
+    DS4_CUDA_EXPERT_CACHE_SLRU=1
+    DS4_CUDA_FETCH_THREADS=6
+    DS4_CUDA_MOE_NO_ATOMIC_DOWN=1
+    DS4_GLM_TP_DEBUG=1
+    "DS4_LOCK_EXPECTED_DEV_INO=$engine_lock_identity"
+    "DS4_LOCK_FILE=$ENGINE_LOCK"
+    DS4_TOKEN_TIMING_LOG=1
+  )
+  [[ $direct == 1 ]] && engine_environment+=(DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS=1)
+  local env_sha
+  env_sha=$(environment_sha256 "${engine_environment[@]}")
+
+  set +e
+  /usr/bin/env -i \
+  HOME=/home/bmarti44 USER=bmarti44 LOGNAME=bmarti44 \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+  XDG_RUNTIME_DIR=/run/user/1000 \
+  DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+  GLM_SAFE_RUN_AS_CURRENT_USER=1 \
+  GLM_SAFE_MEMORY_HIGH_GIB=94 \
+  GLM_SAFE_KILL_FLOOR_GIB=18 \
+  GLM_SAFE_MIN_START_GIB=110 \
+  GLM_SAFE_TIMEOUT_S=1800 \
+  GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
+  GLM_SAFE_EXPECTED_BINARY_SHA256=$BINARY_SHA256 \
+  GLM_CANDIDATE_SRC=$CANDIDATE_SRC \
+  GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=$ENV_NAMES \
+  GLM_SAFE_EXPECTED_ENV_SHA256=$env_sha \
+  "${engine_environment[@]}" \
+    "$CGROUP" --tag "$tag" -- \
+      "$BIN" --cuda -m "$MODEL" -c "$CTX" \
+      --host 127.0.0.1 --port "$port" \
+      --ssd-streaming --ssd-streaming-cache-experts 40GB \
+      >"$arm_dir/containment.stdout" 2>"$arm_dir/containment.stderr" &
+  runner_pid=$!
+  runner_start_ticks=$(awk '{print $22}' "/proc/$runner_pid/stat" 2>/dev/null || true)
+  set -e
+
+  [[ $runner_start_ticks =~ ^[0-9]+$ ]] || {
+    set +e
+    wait "$runner_pid"
+    local early_runner_rc=$?
+    set -e
+    runner_pid=
+    runner_start_ticks=
+    echo "W3 $arm runner exited before identity capture rc=$early_runner_rc" >&2
+    return 1
+  }
+
+  if ! wait_for_exact_engine || ! revalidate_engine_lock || ! wait_for_ready "$port"; then
+    local failed_runner_pid=$runner_pid
+    cleanup
+    set +e
+    wait "$failed_runner_pid"
+    local failed_runner_rc=$?
+    set -e
+    echo "W3 $arm arm did not become ready runner_rc=$failed_runner_rc" >&2
+    return 1
+  fi
+
+  local crash_dir crash_identity
+  mapfile -t crash_matches < <(find "$CRASH_ROOT" -mindepth 1 -maxdepth 1 \
+    -type d -name "*-$tag" -print)
+  (( ${#crash_matches[@]} == 1 )) || {
+    echo "W3 $arm arm did not create exactly one evidence directory" >&2
+    return 1
+  }
+  crash_dir=${crash_matches[0]}
+  crash_identity=$(stat -Lc '%d:%i' -- "$crash_dir")
+  [[ -f $crash_dir/cmd.log && -f $crash_dir/main.log ]] || {
+    echo "W3 $arm arm evidence logs are absent after readiness" >&2
+    return 1
+  }
+
+  local warm_meta measured_meta warm_dispatch_before warm_dispatch_after
+  local measured_dispatch_before measured_dispatch_after
+  warm_dispatch_before=$(grep -c 'direct expert-slot dispatch layer=' \
+    "$crash_dir/cmd.log" || true)
+  warm_meta=$(curl -sS -o "$arm_dir/warm.json" \
+    -w '%{http_code} %{time_total}' --max-time 900 \
+    -H 'Content-Type: application/json' -d @"$OUT/request.json" \
+    "http://127.0.0.1:$port/v1/chat/completions")
+  warm_dispatch_after=$(grep -c 'direct expert-slot dispatch layer=' \
+    "$crash_dir/cmd.log" || true)
+  measured_dispatch_before=$warm_dispatch_after
+  measured_meta=$(curl -sS -o "$arm_dir/measured.json" \
+    -w '%{http_code} %{time_total}' --max-time 900 \
+    -H 'Content-Type: application/json' -d @"$OUT/request.json" \
+    "http://127.0.0.1:$port/v1/chat/completions")
+  isolated_python "$TOKEN_SCORER" \
+      "$arm_dir/warm.json" "$TOKENIZER" "$TOKENIZER_RUNTIME" \
+      "$OBSERVED_TOKENIZER_SHA256" "$OBSERVED_TOKENIZERS_INIT_SHA256" \
+      "$OBSERVED_TOKENIZERS_SO_SHA256" "$arm-warm" \
+      >"$arm_dir/warm.tokens.json"
+  isolated_python "$TOKEN_SCORER" \
+      "$arm_dir/measured.json" "$TOKENIZER" "$TOKENIZER_RUNTIME" \
+      "$OBSERVED_TOKENIZER_SHA256" "$OBSERVED_TOKENIZERS_INIT_SHA256" \
+      "$OBSERVED_TOKENIZERS_SO_SHA256" "$arm-measured" \
+      >"$arm_dir/measured.tokens.json"
+  measured_dispatch_after=$(grep -c 'direct expert-slot dispatch layer=' \
+    "$crash_dir/cmd.log" || true)
+  printf '%s\n' "$warm_meta" >"$arm_dir/warm.http"
+  printf '%s\n' "$measured_meta" >"$arm_dir/measured.http"
+  printf '%s %s\n' "$warm_dispatch_before" "$warm_dispatch_after" \
+    >"$arm_dir/warm.dispatch-counts"
+  printf '%s %s\n' "$measured_dispatch_before" "$measured_dispatch_after" \
+    >"$arm_dir/measured.dispatch-counts"
+
+  kill -TERM "$active_pid"
+  active_pid=
+  set +e
+  wait "$runner_pid"
+  local safe_rc=$?
+  set -e
+  runner_pid=
+  runner_start_ticks=
+
+  [[ $(stat -Lc '%d:%i' -- "$crash_dir") == "$crash_identity" &&
+      -f $crash_dir/main.log && -f $crash_dir/cmd.log ]] || {
+    echo "W3 $arm arm has no complete safe-run evidence" >&2
+    return 1
+  }
+  local receipt_dir
+  receipt_dir=$(sed -n 's/^SAFE_RUN_DONE rc=[^ ]* killed=[^ ]* dir=//p' \
+    "$arm_dir/containment.stdout")
+  [[ $receipt_dir == "$crash_dir" ]] || {
+    echo "W3 $arm arm receipt does not bind its evidence directory" >&2
+    return 1
+  }
+
+  isolated_python - "$arm_dir/arm.json" "$arm" "$direct" "$safe_rc" \
+      "$env_sha" "$crash_dir" "$REQUEST_SHA256" "$BINARY_SHA256" \
+      "$OBSERVED_MODEL_SHA256" "$ENGINE_COMMIT" "$arm_dir" \
+      "$crash_identity" "$OBSERVED_TOKENIZER_SHA256" \
+      "$OBSERVED_TOKENIZERS_INIT_SHA256" "$OBSERVED_TOKENIZERS_SO_SHA256" \
+      "$TOKENIZERS_INIT" "$TOKENIZERS_SO" "$engine_lock_identity" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import re
+import sys
+
+(out_path, arm, direct, safe_rc, env_sha, crash_dir, request_sha,
+ binary_sha, model_sha, engine_commit, arm_dir, crash_identity,
+ tokenizer_sha, init_sha, native_sha, init_path, native_path,
+ engine_lock_identity) = sys.argv[1:]
+arm_path = Path(arm_dir)
+crash = Path(crash_dir)
+
+def strict_json(path):
+    raw = path.read_bytes()
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise SystemExit(f"duplicate JSON key in {path}: {key}")
+            result[key] = value
+        return result
+    value = json.loads(raw, object_pairs_hook=pairs,
+                       parse_constant=lambda value: (_ for _ in ()).throw(
+                           SystemExit(f"non-finite JSON value in {path}: {value}")))
+    if not isinstance(value, dict):
+        raise SystemExit(f"JSON artifact is not an object: {path}")
+    return raw, value
+
+cmd = (crash / "cmd.log").read_text(encoding="utf-8", errors="replace")
+main = (crash / "main.log").read_text(encoding="utf-8", errors="replace")
+kernel = (crash / "kernel.log").read_text(encoding="utf-8", errors="replace")
+warm_http = (arm_path / "warm.http").read_text().split()
+measured_http = (arm_path / "measured.http").read_text().split()
+warm_counts = [int(value) for value in
+               (arm_path / "warm.dispatch-counts").read_text().split()]
+measured_counts = [int(value) for value in
+                   (arm_path / "measured.dispatch-counts").read_text().split()]
+warm_raw, warm_payload = strict_json(arm_path / "warm.json")
+measured_raw, payload = strict_json(arm_path / "measured.json")
+_, warm_token_record = strict_json(arm_path / "warm.tokens.json")
+_, measured_token_record = strict_json(arm_path / "measured.tokens.json")
+token_record_keys = {
+    "schema_version", "label", "reference_token_count", "content_bytes",
+    "reasoning_bytes", "response_sha256", "response_identity",
+    "tokenizer_sha256", "tokenizer_identity", "runtime_init_sha256",
+    "runtime_init_identity", "runtime_native_sha256",
+    "runtime_native_identity", "runtime_init_path", "runtime_native_path",
+    "runtime_native_loaded_path",
+}
+for phase, token_record, response_raw in (
+    ("warm", warm_token_record, warm_raw),
+    ("measured", measured_token_record, measured_raw),
+):
+    if (set(token_record) != token_record_keys or
+            token_record["schema_version"] != 1 or
+            token_record["label"] != f"{arm}-{phase}" or
+            token_record["response_sha256"] != hashlib.sha256(response_raw).hexdigest() or
+            token_record["tokenizer_sha256"] != tokenizer_sha or
+            token_record["runtime_init_sha256"] != init_sha or
+            token_record["runtime_native_sha256"] != native_sha or
+            token_record["runtime_init_path"] != init_path or
+            token_record["runtime_native_path"] != native_path or
+            re.fullmatch(r"/proc/self/fd/[0-9]+",
+                         token_record["runtime_native_loaded_path"]) is None):
+        raise SystemExit(f"{arm} {phase} token record is not bound to its response")
+choice = payload["choices"][0]
+message = choice["message"]
+warm_message = warm_payload["choices"][0]["message"]
+generated = {
+    "content": message.get("content", ""),
+    "reasoning_content": message.get("reasoning_content", ""),
+}
+canonical = json.dumps(generated, sort_keys=True, separators=(",", ":"),
+                       ensure_ascii=False).encode("utf-8")
+fault_re = re.compile(r"FATAL|CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|"
+                      r"Out of memory|NVRM.*Xid", re.I)
+timing_re = re.compile(
+    r"DS4_TOKEN_TIMING request=(\S+) index=(\d+) "
+    r"monotonic_ns=(\d+) token=(-?\d+)"
+)
+timing_groups = []
+for line in cmd.splitlines():
+    match = timing_re.fullmatch(line)
+    if match is None:
+        if "DS4_TOKEN_TIMING" in line:
+            raise SystemExit(f"{arm} has a malformed token timing marker")
+        continue
+    request_id = match.group(1)
+    if not timing_groups or timing_groups[-1]["request_id"] != request_id:
+        if any(group["request_id"] == request_id for group in timing_groups):
+            raise SystemExit(f"{arm} has interleaved token timing groups")
+        timing_groups.append({"request_id": request_id, "rows": []})
+    timing_groups[-1]["rows"].append([int(match.group(i)) for i in (2, 3, 4)])
+if len(timing_groups) != 2:
+    raise SystemExit(f"{arm} does not have exact warm/measured timing groups")
+timing_receipt = {}
+for phase, group, response_raw, token_record in zip(
+    ("warm", "measured"), timing_groups, (warm_raw, measured_raw),
+    (warm_token_record, measured_token_record), strict=True,
+):
+    timing_receipt[phase] = {
+        "request_id": group["request_id"],
+        "token_indices": [row[0] for row in group["rows"]],
+        "token_timestamps_ns": [row[1] for row in group["rows"]],
+        "token_ids": [row[2] for row in group["rows"]],
+        "response_sha256": hashlib.sha256(response_raw).hexdigest(),
+        "response_identity": token_record["response_identity"],
+    }
+cmd_stat = (crash / "cmd.log").stat()
+timing_receipt["cmd_log_identity"] = (
+    f"{cmd_stat.st_dev}:{cmd_stat.st_ino}:{cmd_stat.st_size}:"
+    f"{cmd_stat.st_mtime_ns}:{cmd_stat.st_ctime_ns}"
+)
+timing_receipt["cmd_log_sha256"] = hashlib.sha256(
+    (crash / "cmd.log").read_bytes()
+).hexdigest()
+environment_names = [
+    "DS4_CUDA_EXPERT_CACHE_GB", "DS4_CUDA_EXPERT_CACHE_PIN",
+    "DS4_CUDA_EXPERT_CACHE_SLRU", "DS4_CUDA_FETCH_THREADS",
+    "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS", "DS4_CUDA_MOE_NO_ATOMIC_DOWN",
+    "DS4_GLM_TP_DEBUG", "DS4_LOCK_EXPECTED_DEV_INO", "DS4_LOCK_FILE",
+    "DS4_TOKEN_TIMING_LOG",
+]
+environment_values = {
+    "DS4_CUDA_EXPERT_CACHE_GB": "68",
+    "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+    "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+    "DS4_CUDA_FETCH_THREADS": "6",
+    "DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS": "1" if direct == "1" else "<UNSET>",
+    "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+    "DS4_GLM_TP_DEBUG": "1",
+    "DS4_LOCK_EXPECTED_DEV_INO": engine_lock_identity,
+    "DS4_LOCK_FILE": "/run/user/1000/ds4-engine.lock",
+    "DS4_TOKEN_TIMING_LOG": "1",
+}
+environment_canonical = b"".join(
+    name.encode("ascii") + b"=" + environment_values[name].encode("ascii") + b"\n"
+    for name in environment_names
+)
+if hashlib.sha256(environment_canonical).hexdigest() != env_sha:
+    raise SystemExit(f"{arm} canonical environment differs from launch digest")
+record = {
+    "schema_version": 1,
+    "arm": arm,
+    "direct_requested": direct == "1",
+    "safe_returncode": int(safe_rc),
+    "warm_http_code": int(warm_http[0]),
+    "warm_wall_seconds": float(warm_http[1]),
+    "measured_http_code": int(measured_http[0]),
+    "measured_wall_seconds": float(measured_http[1]),
+    "completion_tokens": payload["usage"]["completion_tokens"],
+    "warm_completion_tokens": warm_payload["usage"]["completion_tokens"],
+    "independent_completion_tokens": measured_token_record["reference_token_count"],
+    "independent_warm_completion_tokens": warm_token_record["reference_token_count"],
+    "measured_reasoning_bytes": measured_token_record["reasoning_bytes"],
+    "warm_reasoning_bytes": warm_token_record["reasoning_bytes"],
+    "measured_token_scorer": measured_token_record,
+    "warm_token_scorer": warm_token_record,
+    "generated_sha256": hashlib.sha256(canonical).hexdigest(),
+    "generated_bytes": len(canonical),
+    "mapping_markers": cmd.count("direct expert-slot arena mapping enabled"),
+    "admission_markers": cmd.count("direct expert-slot hit layer="),
+    "dispatch_markers": cmd.count("direct expert-slot dispatch layer="),
+    "warm_dispatch_delta": warm_counts[1] - warm_counts[0],
+    "measured_dispatch_delta": measured_counts[1] - measured_counts[0],
+    "clean_exit_attestation": (
+        "verified alive at least once; no identity contradiction observed" in main
+    ),
+    "fault_markers": len(fault_re.findall(cmd + "\n" + main + "\n" + kernel)),
+    "environment_sha256": env_sha,
+    "environment_receipt": {
+        "allowlist": environment_names,
+        "values": environment_values,
+        "canonical_sha256": env_sha,
+    },
+    "request_sha256": request_sha,
+    "binary_sha256": binary_sha,
+    "model_sha256": model_sha,
+    "tokenizer_sha256": tokenizer_sha,
+    "engine_commit": engine_commit,
+    "timing_receipt": timing_receipt,
+    "crash_evidence": str(crash),
+    "crash_evidence_identity": crash_identity,
+    "crash_artifact_sha256": {
+        name: hashlib.sha256((crash / name).read_bytes()).hexdigest()
+        for name in ("main.log", "cmd.log", "samples.log", "kernel.log")
+    },
+}
+Path(out_path).write_text(json.dumps(record, indent=2, sort_keys=True) + "\n",
+                          encoding="utf-8")
+PY
+}
+
+run_checked_arm() {
+  local arm=$1 port=$2 direct=$3
+  run_arm "$arm" "$port" "$direct"
+  [[ $(stat -Lc '%d:%i:%s:%Y:%Z' -- "$MODEL") == "$MODEL_IDENTITY_BEFORE" ]] || {
+    echo "GLM model identity changed after $arm arm" >&2
+    exit 2
+  }
+}
+if [[ $ARM_ORDER == off-on ]]; then
+  run_checked_arm off 18163 0
+  run_checked_arm on 18164 1
+else
+  run_checked_arm on 18164 1
+  run_checked_arm off 18163 0
+fi
+
+isolated_python - "$OUT" "$REQUEST_SHA256" "$BINARY_SHA256" "$OBSERVED_MODEL_SHA256" \
+    "$ENGINE_COMMIT" "$0" "$DRAND_ROUND" "$DRAND_RANDOMNESS" \
+    "$DRAND_SIGNATURE" "$DRAND_FLOOR" "$FREEZE" \
+    "$OBSERVED_REPOSITORY_HEAD" "$OBSERVED_FREEZE_SHA256" \
+    "$OBSERVED_TOKENIZER_SHA256" "$TOKENS" "$ARM_ORDER" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+out = Path(sys.argv[1])
+(request_sha, binary_sha, model_sha, engine_commit, harness_path, drand_round,
+ drand_randomness, drand_signature, drand_floor, freeze_path, repository_head,
+ freeze_sha, tokenizer_sha, required_tokens_raw, arm_order) = sys.argv[2:]
+required_tokens = int(required_tokens_raw)
+freeze = json.loads(Path(freeze_path).read_text())
+arms = {name: json.loads((out / name / "arm.json").read_text())
+        for name in ("off", "on")}
+responses = {name: json.loads((out / name / "measured.json").read_text())
+             for name in ("off", "on")}
+warm_responses = {name: json.loads((out / name / "warm.json").read_text())
+                  for name in ("off", "on")}
+
+def generated(payload):
+    message = payload["choices"][0]["message"]
+    return {
+        "content": message.get("content", ""),
+        "reasoning_content": message.get("reasoning_content", ""),
+    }
+
+off_generated = generated(responses["off"])
+on_generated = generated(responses["on"])
+off_warm_generated = generated(warm_responses["off"])
+on_warm_generated = generated(warm_responses["on"])
+checks = {
+    "same_frozen_binary": all(a["binary_sha256"] == binary_sha for a in arms.values()),
+    "same_model": all(a["model_sha256"] == model_sha for a in arms.values()),
+    "same_request": all(a["request_sha256"] == request_sha for a in arms.values()),
+    "safe_returncodes_zero": all(a["safe_returncode"] == 0 for a in arms.values()),
+    "http_200": all(a["warm_http_code"] == 200 and a["measured_http_code"] == 200
+                    for a in arms.values()),
+    "independent_exact_output_tokens": all(
+        a["independent_completion_tokens"] == required_tokens and
+        a["independent_warm_completion_tokens"] == required_tokens
+        for a in arms.values()
+    ),
+    "thinking_disabled_no_reasoning_channel": all(
+        a["measured_reasoning_bytes"] == 0 and a["warm_reasoning_bytes"] == 0
+        for a in arms.values()
+    ),
+    "all_generated_outputs_nonempty": all(
+        generated(responses[name])["content"] and
+        generated(warm_responses[name])["content"]
+        for name in ("off", "on")
+    ),
+    "generated_output_byte_identical": off_generated == on_generated,
+    "warm_generated_output_byte_identical": off_warm_generated == on_warm_generated,
+    "off_path_not_mapped": arms["off"]["mapping_markers"] == 0,
+    "off_path_has_no_direct_dispatches": arms["off"]["dispatch_markers"] == 0,
+    "on_path_mapped": arms["on"]["mapping_markers"] >= 1,
+    "on_path_dispatched_for_compared_warm_response":
+        arms["on"]["warm_dispatch_delta"] >= 1,
+    "on_path_dispatched_for_compared_measured_response":
+        arms["on"]["measured_dispatch_delta"] >= 1,
+    "clean_exit_attested": all(a["clean_exit_attestation"] for a in arms.values()),
+    "no_fault_markers": all(a["fault_markers"] == 0 for a in arms.values()),
+}
+passed = all(checks.values())
+summary = {
+    "schema_version": 1,
+    "gate": "W3-production-direct-slot-contained-probe-v3",
+    "status": "PASS" if passed else "FAIL",
+    "scope": "runtime eligibility only; no W3 completed-time performance credit",
+    "acceptance_formula": "PASS iff every named boolean check is true",
+    "checks": checks,
+    "engine_commit": engine_commit,
+    "binary_sha256": binary_sha,
+    "model_sha256": model_sha,
+    "tokenizer_sha256": tokenizer_sha,
+    "repository_head": repository_head,
+    "freeze_sha256": freeze_sha,
+    "freeze_bindings": freeze,
+    "environment_sha256": {
+        name: arms[name]["environment_sha256"] for name in ("off", "on")
+    },
+    "request_sha256": request_sha,
+    "arm_order": arm_order,
+    "required_completion_tokens": required_tokens,
+    "public_randomness": {
+        "round": int(drand_round),
+        "randomness": drand_randomness,
+        "signature": drand_signature,
+        "freeze_floor_round": int(drand_floor),
+    },
+    "arms": arms,
+}
+(out / "summary.json").write_text(
+    json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+manifest = {
+    "schema_version": 1,
+    "engine_commit": engine_commit,
+    "binary_sha256": binary_sha,
+    "model_sha256": model_sha,
+    "tokenizer_sha256": tokenizer_sha,
+    "repository_head": repository_head,
+    "freeze_sha256": freeze_sha,
+    "freeze_bindings": freeze,
+    "environment_sha256": {
+        name: arms[name]["environment_sha256"] for name in ("off", "on")
+    },
+    "request_sha256": request_sha,
+    "arm_order": arm_order,
+    "required_completion_tokens": required_tokens,
+    "public_randomness_round": int(drand_round),
+    "public_randomness": drand_randomness,
+    "public_randomness_signature": drand_signature,
+    "harness_sha256": hashlib.sha256(Path(harness_path).read_bytes()).hexdigest(),
+    "artifact_sha256": {
+        str(path.relative_to(out)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(out.rglob("*")) if path.is_file() and path.name != "manifest.json"
+    },
+}
+(out / "manifest.json").write_text(
+    json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+print(json.dumps({"output": str(out), "status": summary["status"],
+                  "checks": checks}, sort_keys=True))
+raise SystemExit(0 if passed else 1)
+PY
+
+trap - EXIT INT TERM HUP
+echo "W3_DIRECT_SLOT_PROBE_DONE output=$OUT"

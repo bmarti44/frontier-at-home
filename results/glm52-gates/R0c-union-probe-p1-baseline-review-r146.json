@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_RESULT",
+  "candidate_hash": "d03e34466c83e8b89db57e142107eae2a944f2fb",
+  "freeze_commit": "2f2744fd19c9be6eca840021c6cf64dfa3787b75",
+  "review_round": 146,
+  "per_gate_candidate": 8,
+  "held_out_values_opened": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 84,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+        "evidence": "The fixed ledger blocks ordinary alternate-output, concurrent, and abrupt-exit retries, but it lives in /home/bmarti44/.local/state, which is owned and writable by the same bmarti44 identity that runs the gate. Nash completed one mocked lifecycle, unlinked the ledger, then completed a second lifecycle; the opener ran twice and the first reservation need not remain.",
+        "affected_gate": "global durable one-shot held-out authority and attempt preservation",
+        "reproduction_instructions": "Run _run_atomic_lifecycle with a fixed ledger and one output, unlink the ledger as bmarti44, then run with another output and observe two opener calls.",
+        "proposed_acceptance_test": "Reserve the authority where the benchmark principal cannot unlink, rename, truncate, or replace it. Unlink, rename, replacement, truncation, alternate-output, concurrency, SIGKILL, and restart mutations must preserve the first reservation and reject another opener."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "BASE-R142-H2", "status": "FIXED"},
+      {"id": "BASE-R142-H3", "status": "OPEN"},
+      {"id": "BASE-R142-H4", "status": "OPEN"},
+      {"id": "BASE-R142-H5", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY", "status": "FIXED"},
+      {"id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H3-COST-OMITTED", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H4-MODULE-TOCTOU", "status": "FIXED"},
+      {"id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY", "status": "OPEN"}
+    ],
+    "verdict": "REJECT_ESCALATION_REQUIRED_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 65,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-R146-H1-DELETABLE-GLOBAL-LEDGER",
+        "evidence": "The ledger is stored in a directory owned and writable by the controller identity. Singer deleted it between runs and obtained two opener calls.",
+        "affected_gate": "global one-shot authority; P1-H2; BASE-R142-H5",
+        "reproduction_instructions": "Complete a lifecycle, unlink its ledger as bmarti44, then run with another output name.",
+        "proposed_acceptance_test": "Store the reservation under an authority the controller cannot delete or replace. Delete, rename, truncate, replacement, concurrency, and crash mutations must never permit another open."
+      },
+      {
+        "id": "P1-BASE-R146-H2-PRIVATE-RUNTIME-STILL-PATH-MUTABLE",
+        "evidence": "The authenticated wrapper and memory guard are copied beneath a controller-writable directory, their descriptors are closed, and they are later reopened by pathname. Singer successfully unlinked and replaced both after publication.",
+        "affected_gate": "authenticated runtime consumption; P1-H1",
+        "reproduction_instructions": "Publish the runtime into temporary staging, replace both files, then execute the returned wrapper pathname.",
+        "proposed_acceptance_test": "Execute retained authenticated descriptors or use an authority-protected immutable publication directory. Same-user unlink, rename, write, symlink, and swap-restore mutations must fail or be detected before capture."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "P1-BASE-R145-H1-GLOBAL-ONE-SHOT-AUTHORITY", "status": "OPEN"},
+      {"id": "P1-BASE-R145-H2-AMBIENT-ENV-AUTHORITY", "status": "FIXED"},
+      {"id": "P1-BASE-R145-H3-AUTHENTICATED-RUNTIME-PATH-TOCTOU", "status": "OPEN"},
+      {"id": "BASE-R142-H2", "status": "OPEN"},
+      {"id": "BASE-R142-H5", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO", "status": "OPEN"},
+      {"id": "BASE-R142-H3", "status": "OPEN"},
+      {"id": "BASE-R142-H4", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H3-COST-OMITTED", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H4-MODULE-TOCTOU", "status": "FIXED"}
+    ],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES_AND_ESCALATE_IF_ANOTHER_CANDIDATE_IS_REQUIRED"
+  },
+  "root_reproduction_status": {
+    "deletable_global_ledger": "REVIEWERS_INDEPENDENTLY_REPRODUCED; root accepts the direct ownership/path evidence and will preserve a committed RED mutation before any repair",
+    "mutable_private_runtime_paths": "SINGER_REPRODUCED; root accepts that owner write prohibition on file mode does not prevent unlink/replacement through its writable parent and will preserve a committed RED mutation before any repair"
+  },
+  "convergence": {
+    "blocking_set_strictly_shrank": true,
+    "new_finding_class": false,
+    "per_gate_candidate_count": 8,
+    "candidate_9_required": true,
+    "literal_escalation_trigger": "A repair would make this gate exceed eight total candidates.",
+    "gate_status": "PAUSED_FOR_OWNER_DIRECTION"
+  },
+  "claim_limit": "Candidate 8 review only. Held-out values remain sealed and no baseline, cost, NLL, fidelity, performance, or serving claim is made."
+}

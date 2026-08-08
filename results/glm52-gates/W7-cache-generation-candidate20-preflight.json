@@ -1,0 +1,49 @@
+{
+  "candidate_hash": "7008f0582b021d78daf3668963b489192539622a",
+  "checks": {
+    "allowance_default_off": true,
+    "allowance_scoped_to_current_user_w7_cgroup_with_24_gib_floor": true,
+    "canonical_lineage_self_test_passes": true,
+    "engine_started": false,
+    "hard_limit_oom_kill_and_swap_remain_fatal": true,
+    "soft_high_marker_and_final_events_are_scorer_bound": true
+  },
+  "canonical_lineage_probe": {
+    "command_log_sha256": "36213c0a539a6da95beb46e93bddbb5b14f91f4930f846dd71c722be462e49ab",
+    "crashlog": "/home/bmarti44/.local/state/glm52-crashlog/20260808-014908-w7-c14-2d7505c77bf5",
+    "exit_status": 0,
+    "main_log_sha256": "1b14dae75e32ab2b48c74bdb69a75af77b10aaffcc800393f6a0e381653dd29a",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_sha256": "87d262f05b4b950361a963367dfa69905883026059b86efd9591d47372616099"
+  },
+  "frozen_artifacts": {
+    "binary_bytes": 5584864,
+    "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "cgroup_sha256": "fe298d8fb24db1155d0b2f996879ec4ae32e6f4b6e5183d9e26240d10d42d0ea",
+    "harness_sha256": "5ea0cd45989abc351a69bd80a456054c9829924936719d07f9aacda068481f81",
+    "component_sha256": {
+      "scripts/03_memory_guard.py": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
+    },
+    "safe_run_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "scorer_sha256": "c7282f0e8b3a0ef92449d244c1ada9aeb56d4169cbf07bf170d93cad1d666faf",
+    "test_sha256": "71623c0b25ceb9116bb38021421fb27aa5535eca2cc2fdaeb0e88344c2a352d4"
+  },
+  "preserved_attempts": [
+    "W7-cache-generation-candidate19-runtime-attempt1.json",
+    "W7-cache-generation-candidate20-red.json",
+    "W7-cache-generation-candidate20-forwarding-red.json"
+  ],
+  "pre_submission_audit": {
+    "focused_tests": "46 passed",
+    "relevant_broader_tests": "84 passed, 5 privilege-dependent tests skipped",
+    "diff_check": "PASS",
+    "python_compile": "PASS",
+    "secret_lint_self_test": "PASS",
+    "secret_lint_pre_push": "PASS",
+    "shell_syntax": "PASS"
+  },
+  "runtime_authorized": false,
+  "runtime_blocker": "candidate 20 requires delta-only review of the bounded soft memory.high policy",
+  "schema": "glm52-w7-candidate-preflight-v1",
+  "verdict": "PASS"
+}

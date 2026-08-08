@@ -1,0 +1,35 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 4,
+  "implementation_commit": "893e19019fa25269eef4790ace602510d54642c3",
+  "review_delta_from": "16e6c47e820009228459deeb199261049e02d2ce",
+  "review_round_from": 279,
+  "scope": [
+    "require the exact parent fdinfo record to bind the FLOCK open-file description",
+    "reap fork/pipe lock holders and prove the global lock is released",
+    "assert exact displaced summary bytes and manifest digest",
+    "defer termination signals until a created attempt is active"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 46, "result": "PASS", "skipped": 1},
+    "locked_fd_owner": "PASS",
+    "third_party_holder_rejected": "PASS",
+    "inherited_locked_A_unlocked_bound_B_rejected": "PASS",
+    "global_lock_released_after_mutations": "PASS",
+    "pending_interrupt_after_activation": "PASS",
+    "displaced_summary_exact_bytes_and_digest": "PASS",
+    "runner_self_test": "PASS",
+    "shell_syntax": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count_for_gate": 4,
+    "blocking_findings_targeted": 1,
+    "previous_blocking_finding_reopened": false,
+    "escalation_triggered": false
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}

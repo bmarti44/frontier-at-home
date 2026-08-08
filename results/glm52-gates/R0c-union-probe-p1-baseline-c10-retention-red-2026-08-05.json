@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "classification": "PREIMPLEMENTATION_RED_ATTEMPT",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 10,
+  "base_commit": "4a820ac2c91b5e7e8cf68f841d526d72c95a4144",
+  "observed_at": "2026-08-05T14:13:10-04:00",
+  "held_out_values_opened": false,
+  "tests_sha256": "ba79147d00a3c46dce1bbab537aba952f39b17782c152bb4625538f9ce0e4244",
+  "raw_sha256": "e45bb4b591bd1a4125df9cf206ee834b9aa0d9dafe102a8860311c49a39d6bad",
+  "command": "python3 -m pytest -q scripts/tests/test_glm_union_baseline.py -k journal_eviction",
+  "exit_code": 1,
+  "observed_failure": {
+    "id": "P1-BASE-R147-H1-JOURNAL-RETENTION-REOPENS-ONE-SHOT",
+    "test": "AtomicLifecycleTests.test_journal_eviction_cannot_reopen_permanent_authority",
+    "result": "RED: first reservation succeeded; the retained journal list was cleared to model rotation/vacuum; a second distinct reservation also succeeded, so assertRaises(FileExistsError) failed."
+  },
+  "preregistered_fix_scope": "Add one non-rotating authority that the bmarti44 gate principal cannot delete, rename, truncate, or replace. Journald may remain only as an audit mirror. Do not modify frozen corpus, scorer, probe, CV, precision, model, or engine.",
+  "acceptance": [
+    "An empty journal after an earlier permanent reservation still rejects before the held-out opener.",
+    "The permanent marker survives reboot and is inaccessible for mutation by bmarti44.",
+    "Local receipt deletion, journal rotation/vacuum/flooding, alternate output, concurrency, and abrupt exit cannot reopen.",
+    "No held-out value is opened during implementation or testing."
+  ],
+  "verdict": "RED_CONFIRMED"
+}

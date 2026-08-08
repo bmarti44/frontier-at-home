@@ -1,0 +1,63 @@
+{
+  "candidate_hash": "c3014d594eaab40c1f1e2fb34e2fb98f115da260",
+  "freeze_commit": "4edb2627a0c6b4124bbc2c9769ea9a0d69859d07",
+  "review_round": 262,
+  "gate_candidate": 9,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 68,
+    "critical": [],
+    "high": [
+      {
+        "id": "GAP-W7.1-262-H1-BOUND-COPIES-REOPENED-BY-PATH",
+        "evidence": "Binding validates sources but closes descriptors; separate scorer and publisher processes reopen bound paths, so a same-UID replacement can be scored and then consistently hashed.",
+        "affected_gate": "runtime evidence provenance and false-PASS resistance",
+        "reproduction": "Replace bound/server.log after bind_runtime_artifacts returns and before scoring.",
+        "acceptance_test": "Bind, score, construct raw evidence, and publish from continuously held descriptors or immutable in-memory bytes; mutate every post-bind path."
+      }
+    ],
+    "medium": [
+      {
+        "id": "GAP-W7.1-262-M1-FAILURE-MANIFEST-INCOMPLETE",
+        "evidence": "The lock-failure manifest omits frozen binary, model, scorer, requests, environment, wrapper, and containment configuration identities.",
+        "affected_gate": "failed-attempt lineage",
+        "reproduction": "Inspect attempt-ec23f1982818a66c5448298ac23f8562 manifest.json.",
+        "acceptance_test": "PASS and FAIL manifests use the same frozen identity/configuration schema with nullable runtime observations."
+      }
+    ],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 68,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-262-H1-POST-BIND-DESTINATION-REPLACEMENT",
+        "evidence": "Singer bound a server log missing shutdown, replaced bound/server.log with a passing new-inode log, and obtained PASS while bindings.json disagreed with the scored digest and inode.",
+        "affected_gate": "false-PASS resistance and immutable runtime evidence",
+        "reproduction": "Replace each bound destination after binding with byte-identical and semantically passing new-inode files.",
+        "acceptance_test": "The scorer and publisher consume continuously held descriptors or revalidate digest/device/inode/size through the same descriptor used for parsing and hashing."
+      },
+      {
+        "id": "ADV-W7.1-262-H2-CANONICAL-PATH-STILL-REOPENED",
+        "evidence": "After verify_reviewed_sources, HARNESS, CGROUP, SAFE, and SCORER are reopened by pathname; replacing a canonical file between verification and use changes executed bytes.",
+        "affected_gate": "reviewed driver identity and path-replacement resistance",
+        "reproduction": "Pause after source verification, atomically replace a canonical file, then resume.",
+        "acceptance_test": "Execute through pinned descriptors or independently verify exact candidate digest and inode inside containment immediately before dispatch."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "prior_issue_status": {
+    "GAP-W7.1-261-H1-UNREVIEWED-SELF-DRIVER-EXECUTION": "PARTIALLY_FIXED",
+    "GAP-W7.1-261-H2-PREFLIGHT-FAILURES-LOSE-REQUIRED-EVIDENCE": "FIXED",
+    "GAP-W7.1-261-M1-RAW-EVIDENCE-NOT-MANIFEST-BOUND": "FIXED",
+    "ADV-W7.1-261-H1-UNBOUND-DRIVER-AND-CONTAINMENT-BYPASS": "PARTIALLY_FIXED",
+    "ADV-W7.1-261-H2-RUNTIME-EVIDENCE-REMAINS-MUTABLE": "OPEN",
+    "ADV-W7.1-261-H3-FAILED-ATTEMPTS-LACK-EVIDENCE-TRIPLET": "FIXED"
+  },
+  "root_disposition": "Candidate 10 is bounded to pinned reviewed-script execution, one-process immutable-byte scoring/publication, and the targeted medium FAIL-manifest schema correction. Runtime remains blocked."
+}

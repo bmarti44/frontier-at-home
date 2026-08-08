@@ -1,0 +1,24 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 3,
+  "phase": "pre-implementation-red",
+  "parent_commit": "2400b61350a703c869b91f4f0370603bee804fc3",
+  "observed_at": "2026-08-08T03:29:33-04:00",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_cache_generation_campaign",
+  "returncode": 1,
+  "tests_run": 14,
+  "failures": 2,
+  "errors": 2,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "3574e417b4e0c63ea1af751c353f9b4362a3b4b4a0ffce4306452a2eae8bd3cb",
+  "artifacts": {
+    "runner_test": {"sha256": "9cbb2b2afee71666332620bcb8c44c36edd1eca95a604fc6170185aa595e7d7e"}
+  },
+  "observed_failures": [
+    "explicit high-cgroup exception still required an unsatisfied legacy lineage",
+    "memory guard had no retained-descriptor interface",
+    "parent lock verifier could not distinguish the owner from a third-party holder",
+    "escaped finalization preserved a contradictory PASS summary"
+  ],
+  "acceptance": "Candidate 3 must close only round-278 findings; the owner-held lock case reaches the next configuration check, the foreign-holder case fails ownership, the guard is descriptor-bound, and every escaped terminal triplet is consistently FAIL."
+}

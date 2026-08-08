@@ -1,0 +1,95 @@
+{
+  "schema": "glm52-w9-real-capture-review-v1",
+  "gate": "W9",
+  "candidate_hash": "e4bf781ed244ba17e7bf41fb608ac0e30161b443",
+  "review_round": 246,
+  "runtime_authorized": false,
+  "engine_run_performed": false,
+  "frozen_source": "/tmp/glm52-w9-review-e4bf781",
+  "build": {
+    "raw_clean_builds_byte_identical": false,
+    "raw_difference": "NVCC-generated temporary filenames in debug sections and the derived ELF build ID",
+    "normalized_binary_recipe": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "normalized_clean_builds_byte_identical": true,
+    "normalized_cli_sha256": "7ea6d0ab554f7f8533af9f2380087abc9c32b70e701f169c545f1483a6a4a7b4",
+    "normalized_server_sha256": "bf7f317da46be48df83d005c573a15ce4e4d1349e6cf9b76244c7e0989ab6831"
+  },
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 45,
+      "critical": [],
+      "high": [
+        {
+          "id": "GAP-W9-246-H1-PINNED-STAGING-TOO-SMALL",
+          "evidence": "The production 8192-token schedule includes a 4096-row chunk requiring 8388608 bytes for 512-wide F32 KV rows, but the candidate allocates 4194304 bytes."
+        },
+        {
+          "id": "GAP-W9-246-H2-CAUSAL-PADDING-SENTINEL-REJECTED",
+          "evidence": "Early causal selection rows contain compact_cache_cap padding, which the candidate rejects as outside pos0+n_tokens."
+        },
+        {
+          "id": "GAP-W9-246-H3-RED-MISCLASSIFIED-AS-BEHAVIORAL",
+          "evidence": "The six RED tests inspect source strings only and do not execute geometry, sentinel, readback, failure, publication, or identity behavior."
+        },
+        {
+          "id": "GAP-W9-246-H4-NO-BYTE-IDENTITY-OR-ARTIFACT-BINDING-PATH",
+          "evidence": "No paired harness/scorer binds equal inputs, runtime identities, capture artifacts, final logits, and output bytes."
+        }
+      ],
+      "medium": [
+        {
+          "id": "GAP-W9-246-M1-INCOMPLETE-CAPTURE-METADATA",
+          "evidence": "Engine metadata omits filenames, sampled positions, sentinel semantics, sizes, digests, and runtime identities."
+        }
+      ],
+      "low": [],
+      "verdict": "BLOCK_W9_CAPTURE_RUNTIME"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 57,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W9-246-H1-CAUSAL-PADDING-REJECTED",
+          "evidence": "The exact production causal fill writes compact_cache_cap after each visible prefix; the candidate rejects the second slot at sampled position zero."
+        },
+        {
+          "id": "ADV-W9-246-H2-DIRECTORY-SWAP-TOCTOU",
+          "evidence": "Data files are validated through descriptors in the original directory, while pathname-based metadata and marker publication can target a replacement directory after rename."
+        },
+        {
+          "id": "ADV-W9-246-H3-RED-IS-STATIC-NOT-BEHAVIORAL",
+          "evidence": "Constant-false capture calls or a canned completion can retain all tested strings while disabling real capture behavior."
+        },
+        {
+          "id": "ADV-W9-246-H4-NO-BYTE-IDENTITY-OBSERVABLE",
+          "evidence": "The diagnostic CLI returns after sync and exposes neither canonical final logits nor generated output comparable with the ordinary arm."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W9-246-M1-UNBOUND-COMPLETION-MARKER",
+          "evidence": "Constant metadata and marker text do not bind the four blobs or source, binary, model, tokenizer, prompt, and configuration identities."
+        }
+      ],
+      "low": [],
+      "verdict": "REJECT_CANDIDATE_NEW_TEST_AND_IMPLEMENTATION_REQUIRED_BEFORE_ENGINE_RUN"
+    }
+  },
+  "root_reproduction": {
+    "staging_required_bytes": 8388608,
+    "staging_candidate_bytes": 4194304,
+    "causal_kernel_padding_value": "compact_cache_cap",
+    "source_contract_tests": "6/6 PASS despite both runtime contradictions",
+    "directory_swap_finding": "verified from pathname-based begin/finish call graph"
+  },
+  "candidate_disposition": "REJECTED_BEFORE_RUNTIME",
+  "next_candidate_scope": [
+    "Use the preregistered 8 MiB maximum persistent pinned staging allocation.",
+    "Preserve and validate the exact production causal padding sentinel.",
+    "Retain a fresh directory descriptor and publish every file relative to it with directory identity checks.",
+    "Add compiled behavioral coverage and mutation checks for geometry, sentinel, completeness, finite data, publication failure, and marker ordering.",
+    "Add a fixed equal-fixture arm harness/scorer binding final logits/output and every capture/runtime artifact."
+  ],
+  "verdict": "FAIL"
+}

@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "952f1ed7aa8499a862d0bb378fcf18248c19e911",
+  "review_round": 176,
+  "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION",
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 25,
+      "critical": [
+        {
+          "id": "W3-R176-C1-SYNTHETIC-CAMPAIGN-PASS",
+          "status": "OPEN",
+          "evidence": "The scorer accepts internally consistent caller-supplied bindings and its passing unit test fabricates all ten pair directories without a model, server, GPU, genuine freeze, or authenticated drand.",
+          "affected_gate": "W3 completed-time performance campaign",
+          "reproduction": "Run the nominal passing unit test; its make_pair helper supplies synthetic bindings, signatures, logs and manifests and receives PASS.",
+          "proposed_acceptance_test": "Require the exact committed freeze authority, scorer/harness/candidate hashes, full pair schema and artifacts; reject an internally consistent synthetic alternate candidate."
+        }
+      ],
+      "high": [
+        {
+          "id": "W3-R176-H1-STALE-TIMING-REUSE",
+          "status": "OPEN",
+          "evidence": "Fresh-looking request and randomness fields can point all arms to the same favorable timing logs because crash/log identities and request derivation are not bound or required unique.",
+          "affected_gate": "Five fresh-server ABBA/BAAB W3 campaign",
+          "reproduction": "Reuse one OFF and one ON cmd.log across ten unique-looking pairs and refresh summary hashes; the scorer accepts.",
+          "proposed_acceptance_test": "Require unique pair/crash/log identities, bind request.json nonce and seed to authenticated drand, and reject stale-log mutations."
+        },
+        {
+          "id": "W3-R176-H2-AMBIENT-SCORER-AUTHORITY",
+          "status": "OPEN",
+          "evidence": "The scorer does not require isolated Python or an exact environment.",
+          "affected_gate": "Fixed metric-script acceptance authority",
+          "reproduction": "Invoke through ambient Python with sitecustomize on PYTHONPATH.",
+          "proposed_acceptance_test": "Require python -I -B under an exact env allowlist and reject an ambient sitecustomize mutation."
+        }
+      ],
+      "medium": [
+        {
+          "id": "W3-R176-M1-MALFORMED-TIMING-LINES-IGNORED",
+          "status": "OPEN",
+          "evidence": "Lines containing a malformed DS4_TOKEN_TIMING marker are silently ignored.",
+          "affected_gate": "Exact timing evidence",
+          "reproduction": "Add a malformed marker line beside otherwise complete groups.",
+          "proposed_acceptance_test": "Reject every marker-bearing line that does not match the exact grammar."
+        },
+        {
+          "id": "W3-R176-M2-INCOMPLETE-INTERVAL-DERIVATION",
+          "status": "OPEN",
+          "evidence": "Summary omits the log ratios, standard deviation, standard error, degrees of freedom and t critical.",
+          "affected_gate": "W3 summary completeness",
+          "reproduction": "Inspect the candidate summary writer.",
+          "proposed_acceptance_test": "Emit and independently reconstruct every unrounded confidence-bound component."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "W3-R174-H1-LOCK-HARDLINK-TRUNCATION", "status": "VERIFIED"},
+        {"id": "W3-R174-M1-ZOMBIE-RUNNER-LIVENESS", "status": "VERIFIED"},
+        {"id": "W3-R173-H1-DEFAULT-ENGINE-LOCK", "status": "VERIFIED"},
+        {"id": "W3-R170-H1-ENV-HASH-LAUNCH-DIVERGENCE", "status": "VERIFIED"}
+      ],
+      "verdict": "REJECT"
+    },
+    "Singer": {
+      "score_0_to_100": 49,
+      "critical": [
+        {
+          "id": "ADV-W3-R176-C1-UNANCHORED-CAMPAIGN-AUTHORITY",
+          "status": "OPEN",
+          "evidence": "No freeze input or comparison anchors candidate, scorer, artifacts or drand authority; the nominal test proves a fabricated campaign passes.",
+          "affected_gate": "W3 frozen-candidate acceptance",
+          "reproduction": "Replace every binding consistently in the synthetic passing test and rescore.",
+          "proposed_acceptance_test": "Authenticate an exact committed freeze and reject alternate bindings, floor, signature, scorer, HEAD and freeze mutations."
+        },
+        {
+          "id": "ADV-W3-R176-C2-REUSED-SELF-REPORTED-EVIDENCE",
+          "status": "OPEN",
+          "evidence": "Exact schemas/inventories and independent safety/byte checks are absent; two favorable logs can be reused under ten fresh-looking pairs.",
+          "affected_gate": "W3 freshness, safety and byte identity",
+          "reproduction": "Singer reused pair-0 OFF/ON logs across all ten pairs and observed rc=0, PASS, ratio 0.8.",
+          "proposed_acceptance_test": "Recompute request/output/token/safety evidence, require 20 distinct server/crash/log identities, and reject reused logs or omitted artifacts."
+        }
+      ],
+      "high": [],
+      "medium": [],
+      "low": [
+        {
+          "id": "ADV-W3-R173-L1",
+          "status": "DEFERRED",
+          "evidence": "Optional extracted-shell run_arm prologue test remains outside this delta.",
+          "affected_gate": "W3 regression-test depth",
+          "reproduction": "See round 173 ledger.",
+          "proposed_acceptance_test": "See round 173 ledger."
+        }
+      ],
+      "prior_issue_status": [
+        {"id": "ADV-W3-R174-H1", "status": "FIXED"},
+        {"id": "ADV-W3-R173-L1", "status": "DEFERRED"},
+        {"id": "round175 critical/high set", "status": "VERIFIED_CLEAR_UNCHANGED_SCOPE"}
+      ],
+      "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION"
+    }
+  }
+}

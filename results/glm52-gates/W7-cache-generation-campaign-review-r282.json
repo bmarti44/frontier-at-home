@@ -1,0 +1,59 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 6,
+  "candidate_hash": "9f012437c35f85f62068818f846637eb75860b60",
+  "review_round": 282,
+  "runtime_authorized": false,
+  "gap_reviewer": {
+    "score": 72,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": [
+      "GAP-W7.1-282-H1-CONTROL-PLANE-ERROR-SKIPS-SURVIVOR-PROOF",
+      "GAP-W7.1-282-H2-MASKED-ACTIVE-UNIT-ACCEPTED-AS-STOPPED"
+    ],
+    "medium": [],
+    "low": []
+  },
+  "adversarial_reviewer": {
+    "score": 76,
+    "verdict": "REJECT_RUNTIME_NOT_AUTHORIZED",
+    "critical": [],
+    "high": ["ADV-W7.1-282-H1-NO-POST-REAP-UNIT-ABSENCE-PROOF"],
+    "medium": [
+      "ADV-W7.1-282-M1-UNIT-STATE-SCHEMA-FAILS-OPEN",
+      "ADV-W7.1-282-M2-REAL-UNIT-EVIDENCE-NOT-REPLAYABLE"
+    ],
+    "low": []
+  },
+  "open_blocking_findings": [
+    {
+      "id": "GAP-W7.1-282-H1-CONTROL-PLANE-ERROR-SKIPS-SURVIVOR-PROOF",
+      "acceptance": "Cleanup always runs server/listener survivor proof even when exact-unit control fails, and cannot return success or release serialization with a live identity-bound containment."
+    },
+    {
+      "id": "GAP-W7.1-282-H2-MASKED-ACTIVE-UNIT-ACCEPTED-AS-STOPPED",
+      "acceptance": "A unit is stopped only from a complete, unique, well-formed state schema; masked but active or nonzero-PID units fail."
+    },
+    {
+      "id": "ADV-W7.1-282-H1-NO-POST-REAP-UNIT-ABSENCE-PROOF",
+      "acceptance": "After launcher quiescence, stop and finally verify the exact unit before lock release; a harmless delayed-publication unit leaves no unit, descendant, server, or listener."
+    }
+  ],
+  "bounded_medium_disposition": {
+    "ADV-W7.1-282-M1-UNIT-STATE-SCHEMA-FAILS-OPEN": "Closed in the same schema fix required by GAP-W7.1-282-H2.",
+    "ADV-W7.1-282-M2-REAL-UNIT-EVIDENCE-NOT-REPLAYABLE": "Preserve timestamped raw systemctl, process, listener, and descendant observations plus a derived summary for the candidate-7 harmless integration."
+  },
+  "convergence": {
+    "candidate_count_for_gate": 6,
+    "resumed_audit_candidate": 1,
+    "prior_blocking_count": 1,
+    "current_blocking_count": 3,
+    "strictly_shrank": false,
+    "consecutive_non_shrinking_candidates_in_resumed_audit": 1,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": false,
+    "gate_state": "FIX_IN_PROGRESS_NO_RUNTIME"
+  }
+}

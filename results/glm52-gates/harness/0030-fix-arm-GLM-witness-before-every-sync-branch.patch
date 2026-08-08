@@ -1,0 +1,51 @@
+From 3bd95adb0d5b45bc7c2bfb2c38e3f422a578d6d3 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:54:24 -0400
+Subject: [PATCH 30/31] fix: arm GLM witness before every sync branch
+
+---
+ ds4.c | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/ds4.c b/ds4.c
+index dd66092..89b0c43 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -34762,8 +34762,10 @@ bool ds4_glm_logit_dump_path(char *out, size_t out_len,
+     return n >= 0 && (size_t)n < out_len;
+ }
+
+-/* Publish a diagnostic artifact only after every byte is durable.  link(2)
+- * supplies the no-replace commit, so an existing final path is never changed. */
++/* Publish a diagnostic artifact only after every byte is written and the file
++ * itself is synced. link(2) supplies the no-replace commit, so an existing
++ * final path is never changed. The evidence harness syncs its attempt directory
++ * before accepting a completed run. */
+ bool ds4_glm_publish_exact(const char *path, const void *data, size_t bytes) {
+     if (!path || !path[0] || !data || bytes == 0) return false;
+     char tmp[1200];
+@@ -59005,6 +59007,11 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+             ds4_session_glm_reset_dense_cache(s);
+         }
+
++        s->glm_logit_sync_start = (uint32_t)start;
++        s->glm_logit_sync_prompt = (uint32_t)prompt->len;
++        s->glm_logit_sync_suffix = (uint32_t)(prompt->len - start);
++        s->glm_logit_sync_valid = true;
++
+         uint32_t glm_exact_prefill_max = 64;
+         {
+             const char *em = getenv("DS4_GLM_TP_EXACT_PREFILL_MAX");
+@@ -59065,10 +59072,6 @@ static int ds4_session_sync_internal(ds4_session *s, const ds4_tokens *prompt, c
+             s->glm_graph.full_kv_cache &&
+             (uint32_t)prompt->len <= s->glm_graph.ctx_cap;
+         const bool sync_trace = getenv("DS4_GLM_SYNC_TRACE") != NULL;
+-        s->glm_logit_sync_start = (uint32_t)start;
+-        s->glm_logit_sync_prompt = (uint32_t)prompt->len;
+-        s->glm_logit_sync_suffix = (uint32_t)(prompt->len - start);
+-        s->glm_logit_sync_valid = true;
+         const bool indexed_batch_available =
+             glm_graph_indexed_prefill_batch_available(&s->glm_graph);
+         const bool indexed_resume_keeps_sparse_state =
+--
+2.43.0

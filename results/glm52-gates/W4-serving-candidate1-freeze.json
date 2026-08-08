@@ -1,0 +1,49 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 1,
+  "candidate_hash": "42d2c6f1a13197ee7b50962274922a2a1c92d6ac",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w4-topk-c5-repro-builds/build1-ds4-server",
+    "bytes": 14666376,
+    "sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f"
+  },
+  "artifacts": {
+    "scripts/101_score_w4_serving_campaign.py": "016f83cdf7e1abe6de39ec16490ab9686cffb96bc161794e3ed3d272ec763695",
+    "scripts/102_run_w4_serving_campaign.py": "72c3789fc90d015261fd29c1baac4b9927eaa8a1a68a1699d5b2a19ad6de0d34",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "c464bac566ee625b358a863a1b2c3759e50eb2b6a0f269ab233a8e86c2f599e9",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "1d1668f6a17f23468ccb9aac863c9a401e8729d2f4ecd1b96a1853890dd9c522",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14"
+  },
+  "acceptance": {
+    "blocks": 5,
+    "schedule": "post-freeze drand-selected ABBA/BAAB",
+    "fresh_server_arms": 20,
+    "minimum_prompt_tokens": 16000,
+    "max_tokens": 0,
+    "prefill_time": "response_complete_ns-request_start_ns",
+    "prefill_speedup_lower_95_minimum": 1.05,
+    "microgate_speedup_lower_95_minimum": 2.0,
+    "outputs": "exact semantic response, final logits, and logit sequence",
+    "minimum_mem_available_gib": 10,
+    "swap_oom_xid_survivors": 0
+  },
+  "arm_isolation": {
+    "common": "W7 stable-model generation fix, 40 GiB pinned SLRU arena, six fetch threads, deterministic CUDA dispatch",
+    "off": "DS4_CUDA_TOPK2048_CUB unset",
+    "on": "DS4_CUDA_TOPK2048_CUB=1"
+  },
+  "pre_submission_audit": {
+    "tests": "11 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "secret_scan_self_test": "PASS",
+    "secret_scan_full_history": "PASS",
+    "repository_tree": "clean before this freeze record",
+    "engine_tracked_tree": "clean",
+    "engine_or_fio_active": false,
+    "user_systemd_available": false
+  },
+  "launch_status": "NOT_RUN_PENDING_REVIEW_AND_USER_SYSTEMD_RESTART"
+}

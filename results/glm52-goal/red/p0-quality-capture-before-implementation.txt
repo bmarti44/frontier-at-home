@@ -1,0 +1,13 @@
+Command:
+python3 -m unittest scripts.tests.test_glm_union_trace_score scripts.tests.test_glm_union_trace_smoke
+
+Observed on unchanged capture/scorer code at candidate d6a7eb466ae8526862f60ee5305cc5ef7801dd27:
+
+- `GLM_UNION_TRACE_DROPPED` was incorrectly accepted (`PASS` instead of `FAIL`).
+- `render_quality_prompt` did not exist.
+- `quality_capture_verdict` did not exist.
+- `quality_window_indices` did not exist.
+
+Result: 40 tests ran; one failure and three errors. This is the required genuine
+RED result for the P0 100-case capture behavior. No engine or GPU process was
+started.

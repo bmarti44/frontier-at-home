@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "classification": "DIAGNOSTIC_PASS",
+  "source_candidate_hash": "2c7dae99156dd9b413a1f60bcbc480e97eb8ccaa",
+  "source_rows": 4157,
+  "source_chunks": [[0, 2048], [2048, 2109]],
+  "attempts": [
+    {
+      "classification": "FAIL",
+      "format": "recomputed-router-probabilities",
+      "cause": "One row in the second chunk changed the order of experts 61 and 189 after sigmoid was recomputed from f32 logits. The validated captured probability tensor preserves the engine's exact f32 tie order and is now mandatory. No output was published."
+    },
+    {
+      "classification": "REJECTED_DIAGNOSTIC",
+      "format": "per-row-int4-hidden-scale",
+      "manifest_sha256": "6f082cb98d497f7b2f32279d9f88dab270e160344982e715bebacf23b07969d0",
+      "output_sha256": "43625577e581704b114790de9ab006310fa5bdcefe2189ecb05951a73666059f",
+      "output_bytes": 13245986,
+      "hidden_nrmse_max_by_chunk": 0.3142815651164351,
+      "reason": "A single scale for 6144 values is too sensitive to outliers for a useful probe feature."
+    },
+    {
+      "classification": "DIAGNOSTIC_ONLY_REJECTED_FOR_CORPUS",
+      "format": "group32-int4-hidden-scale-fp16",
+      "manifest_sha256": "6ade4d271269ce4a2b40c98e5aacce6dd05be7b31ae44400ea87d8cfd95f2572",
+      "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
+      "output_bytes": 14825646,
+      "hidden_rmse": 0.0016348367466464508,
+      "hidden_nrmse_max_by_chunk": 0.11384608063671296,
+      "hidden_max_abs_error": 0.04323720186948776,
+      "top_logit_max_abs_error": 0.0009753704071044922,
+      "router_probability_max_abs_error": 1.1920928955078125e-07,
+      "selected_ids_exact": true,
+      "top_ids_follow_captured_effective_scores": true,
+      "review_round": 76,
+      "review_scores": [78, 67],
+      "reason": "Arithmetic is valid, but the generic CLI accepted ambiguous input, lacked qualified-source lineage, and did not publish the NPZ and manifest as one exclusive bundle."
+    },
+    {
+      "classification": "REJECTED_FOR_CORPUS",
+      "format": "qualified-source-group32-int4-bundle",
+      "manifest_sha256": "f94b6c4198f3ccd5ef9aa5d502c72a4497be84cfca79c4503011aa5ae7298196",
+      "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
+      "output_bytes": 14825646,
+      "compactor_sha256": "e04d746aecd180dbd98849a8765cf40191c4ba2db8ab343deb6434d602d89aad",
+      "source_receipt_sha256": "b5b5d074f6d24a554a2d98020aa3a363dd3b2578fbdce9be22fea2b4f1459b9b",
+      "source_summary_sha256": "46d3b2132adc0bbeabbbfe535405f8482188fff5a3aa67b5a87d9ce47cff13d2",
+      "selected_ids_exact": true,
+      "top_ids_follow_captured_effective_scores": true,
+      "publication": "atomic directory rename without no-replace",
+      "review_round": 77,
+      "review_scores": [84, 67],
+      "reason": "The source PASS was self-asserted rather than fixed-scorer and tracked-receipt authoritative; source consumption had a pathname TOCTOU; directory rename could replace a racing empty destination."
+    },
+    {
+      "classification": "REJECTED_FOR_CORPUS",
+      "format": "tracked-qualified-same-descriptor-group32-int4-bundle",
+      "manifest_sha256": "6887f3cb2b34c209f7c82d1ede2b12e8fb38d39fbc23ea707004695cefba064e",
+      "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
+      "output_bytes": 14825646,
+      "compactor_sha256": "c69a70a1ccf3daf85bedd867004b8349bc0bd5c9c8572338f508df55d47f65e1",
+      "source_receipt_sha256": "b5b5d074f6d24a554a2d98020aa3a363dd3b2578fbdce9be22fea2b4f1459b9b",
+      "source_summary_sha256": "46d3b2132adc0bbeabbbfe535405f8482188fff5a3aa67b5a87d9ce47cff13d2",
+      "fixed_scorer_reproduced": true,
+      "top_level_off_on_checks_reproduced": true,
+      "source_bytes_hash_and_parse_same_descriptor": true,
+      "publication": "renameat2-RENAME_NOREPLACE after fsync",
+      "review_round": 78,
+      "review_scores": [87],
+      "reason": "The tracked receipt, control JSON, logs, and scorer were still reopened through separate paths; the scorer identity was not recorded. Fable independently confirmed both findings."
+    },
+    {
+      "classification": "PASS",
+      "candidate_hash": "f412a5a5823c3df1c935cb628dc07dce4a94037e",
+      "format": "immutable-control-snapshot-group32-int4-bundle",
+      "manifest_sha256": "0eca950c7014912f1b8f3b602feea12e93a73e829b6ea7078840c6c091174693",
+      "output_sha256": "a245d4040755e6622f276433ad7ae9f17202a69c42016fc64d6c5b4b07c50ac5",
+      "output_bytes": 14825646,
+      "compactor_sha256": "04ccc23043d857f74d6794133f6dd3b4ed8b716dc07d18a8f27068399abe2643",
+      "scorer_sha256": "0a0cf0ba48944803c2fc5886c5ab95cca77e5eade09e4d3a21701f22e4644d9b",
+      "source_receipt_sha256": "b5b5d074f6d24a554a2d98020aa3a363dd3b2578fbdce9be22fea2b4f1459b9b",
+      "source_summary_sha256": "46d3b2132adc0bbeabbbfe535405f8482188fff5a3aa67b5a87d9ce47cff13d2",
+      "fixed_scorer_reproduced_from_tracked_snapshot": true,
+      "control_files_hash_and_parse_same_snapshot": true,
+      "trace_scored_from_verified_snapshot": true,
+      "deterministic_repeat": true,
+      "publication": "renameat2-RENAME_NOREPLACE after fsync",
+      "review_round": 79,
+      "review_scores": [97, 97],
+      "critical": [],
+      "high": [],
+      "deferred_medium": [
+        "Concurrent mutation of Git HEAD between receipt/scorer checks can mix repository lineage. The reviewed real artifact is independently bound to f412a5a and both reviewers accepted this as outside the current artifact's validity risk."
+      ]
+    }
+  ],
+  "conclusion": "Candidate f412a5a closes the two independently confirmed round-78 gaps by consuming each control artifact from one no-follow snapshot and binding the loaded scorer to tracked HEAD bytes. The deterministic output is unchanged. Nash and Singer each scored it 97 with no critical or high issues, so the compact format is authorized for P0 corpus use. This is not a probe-accuracy or corpus-completeness result."
+}

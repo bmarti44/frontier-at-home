@@ -1,0 +1,21 @@
+{
+  "candidate": 10,
+  "classification": "round-204 review-finding RED before bounded harness correction",
+  "parent_candidate_hash": "41a483dfd4f8e89ad4aed5f4838f3570897d86ac",
+  "review_round": 204,
+  "blocking_finding": "ADV-W7-204-H15",
+  "named_medium_findings": ["ADV-W7-204-M16", "ADV-W7-204-M17", "W7-R204-M2-TRACE-REQUEST-IDS-NOT-UNIQUE-SEQUENTIAL"],
+  "acceptance": "runtime hashes bind the fixed scorer and all tokenizer dependencies; scorer exit/schema/verdict/error/check contract is exact; trace prefix is empty and IDs are exactly [1,2]",
+  "expected_red_tests": [
+    "test_runtime_scorer_and_tokenizer_dependencies_are_hash_pinned",
+    "test_trace_scorer_rejects_equal_length_render_mutation leading-whitespace subtest",
+    "test_trace_scorer_rejects_equal_length_render_mutation duplicate-request-id subtest"
+  ],
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_compiled_red",
+  "exit_code": 1,
+  "tests_run": 8,
+  "failures": 5,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "97e56bd357f62feb4aad460e096749b7f8ed9cc3f7a5156d68d96385293b1ccf",
+  "runtime_status": "NOT_STARTED"
+}

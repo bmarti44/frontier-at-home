@@ -1,0 +1,43 @@
+{
+  "schema": "glm52-w9-real-capture-freeze-v1",
+  "gate": "W9-real-capture",
+  "candidate": 3,
+  "main_commit": "722dfacf0fc9a9e461ddaa43c13ce13e8214ba90",
+  "engine_commit": "9ebc0f2879c126db095ecd25be0567166868d52c",
+  "engine_binary_freeze": "results/glm52-gates/W9-real-capture-candidate2-freeze.json",
+  "binary_sha256": "1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+  "harness": {
+    "path": "results/glm52-gates/harness/w9_real_capture_v1.sh",
+    "sha256": "d60779c723015919a0894c031bd694815adf1c80808bd7a52b15788592f2ee62"
+  },
+  "scorer": {
+    "path": "scripts/91_score_w9_real_capture.py",
+    "sha256": "5324be27e957c8f98776156a5a35103e208fbdf6b9563b45e2e93eb6426b0418"
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w9_real_capture_scorer.py": "c58fb332ec0e32b0ff5f7151ee848056082e4ebb050920783a47d9bee4921af9"
+  },
+  "artifacts": {
+    "scripts/92_build_w9_prompt.py": "5318db1e115ba415fa23ec90fc43174c51094421c4eab72d1e20950ac1b86b67",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "d5cba51f4c14b3d42b5f3b6a29990406c014f5eadd405f1db3c20f241915f68a"
+  },
+  "round_247_disposition": {
+    "GAP-W9-247-H1-UNBOUND-ARM-ROOT": "fixed by separately assigned locals, factored arm_output_path, and executable set-u coverage",
+    "GAP-W9-247-H2-ZERO-TOKEN-CLI-ARG-REJECTED": "fixed without new engine semantics by using the existing --dump-logits no-generation mode; exact arguments parse against a missing model in the test",
+    "ADV-W9-247-C1-LOGIT-PREPOSITION-FALSE-PASS": "fixed by driver and scorer requirements for one exact successful publication and zero failure diagnostics",
+    "ADV-W9-247-H1-RUNTIME-MODEL-DIGEST-UNVERIFIED": "fixed by complete prelaunch SHA-256 plus non-writable owner/mode/link and nanosecond inode identity checks after each arm",
+    "ADV-W9-247-H2-PARTIAL-SELECTED-ROWS-ACCEPTED": "fixed by exact count 2048 and mutation coverage for 0, 1, 2047, and 2049",
+    "GAP/ADV-W9-247-H3-SCORER-TOCTOU": "fixed by single-descriptor hash+semantic scans with ctime/mtime identity, semantic-to-inventory digest binding, exact terminal path sets, and rewrite/addition mutations"
+  },
+  "focused_checks": {
+    "scorer_launcher_mutations": "10/10 PASS",
+    "containment_allowlist": "PASS",
+    "shell_syntax": "PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS"
+  },
+  "runtime_allowed": false,
+  "note": "Candidate 3 changes only main-repository launcher/scorer/tests named by round 247. Engine source and canonical binary remain byte-identical to candidate 2."
+}

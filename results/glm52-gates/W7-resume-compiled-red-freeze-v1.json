@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "FROZEN_NOT_EXECUTED",
+  "classification": "fresh production-path reproduction",
+  "repository_parent_commit": "36668f2e144414b4eecbb0e384bd1b717d0d2974",
+  "engine": {
+    "source_commit": "d652a9b5ec48c0e8cbb0f42c5d55bc411f51cc25",
+    "readable_source": "/tmp/glm52-utf8-engine",
+    "engine_source_sha256": {
+      "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+      "ds4_server.c": "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07",
+      "ds4_kvstore.c": "929df5271da4075cf5977f7ff601c300a6f7620f557dd985ff76ae5390d2d44a",
+      "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f"
+    }
+  },
+  "build": {
+    "parallel_jobs": 2,
+    "source_date_epoch": 0,
+    "nvcc_random_seed": "d652a9b5",
+    "path_mapping": "/tmp/glm52-w7-build1.ob4Q0O/src=/usr/src/ds4",
+    "build_1_binary_sha256": "56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4",
+    "build_2_binary_sha256": "56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4",
+    "byte_identical": true,
+    "binary_bytes": 14618456,
+    "frozen_binary": "/home/bmarti44/.cache/glm52-w7-d652a9b5/ds4-server"
+  },
+  "model": {
+    "path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "bytes": 211075856448,
+    "sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
+  },
+  "fixture_pool": {
+    "path": "results/glm52-gates/harness/w7-production-fixture-pool-v1.json",
+    "sha256": "74829fc094143b4a494e104c186e4146f2e669eaceedbb354a7ab35251083d90",
+    "geometry": {
+      "selected": 5028,
+      "common": 5029,
+      "live": 5037,
+      "prompt": 5048
+    }
+  },
+  "red_acceptance": {
+    "desired_behavior": "The 5,048-token primary prompt resumes the selected exact checkpoint at token 5,028 and evaluates only the 20-token suffix without the legacy guard bypass.",
+    "unchanged_engine_expected_failure": "The strict guard observes graph state at 5,037 beyond the restored 5,028-token checkpoint and forces start=0.",
+    "formula": "HTTP/prompt/selection geometry exact AND no strict cold restart AND sync(start=5028,prompt=5048,suffix=20)",
+    "safety": "glm_cgroup_run.sh plus glm_safe_run.sh; 40 GiB bounded cache; MemoryHigh=78 GiB; MemoryMax=80 GiB; MemorySwapMax=0; 24 GiB whole-system kill floor; minimum start=110 GiB"
+  }
+}

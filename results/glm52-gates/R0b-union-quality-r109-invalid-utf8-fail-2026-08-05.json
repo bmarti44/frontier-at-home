@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "classification": "FAIL",
+  "candidate_hash": "baf17ee98ee06de7294348b11122c653b769ae4f",
+  "tag": "p0q100-r109-baf17ee",
+  "arm": "off",
+  "observed": {
+    "requests_completed_before_failure": 4,
+    "failing_case_id": "case_021",
+    "failing_request_id": 5,
+    "failing_seed": 805105121,
+    "failing_split": "calibration",
+    "failing_prompt_tokens": 32,
+    "raw_token_ids_before_disconnect": [
+      8507,
+      228,
+      35457,
+      11,
+      323,
+      279,
+      1008
+    ],
+    "client_error": "UnicodeDecodeError: invalid UTF-8 continuation byte in SSE data",
+    "server_finish": "error: client stream write failed",
+    "wrapper_return_code": 1,
+    "wrapper_killed": false,
+    "cgroup_peak_bytes": 49152303104,
+    "minimum_mem_available_gib": 42.47332763671875,
+    "cgroup_swap_current_bytes": 0,
+    "cgroup_high_events": 0,
+    "cgroup_max_events": 0,
+    "cgroup_oom_events": 0,
+    "cgroup_oom_kill_events": 0,
+    "kernel_log_clean": true,
+    "surviving_ds4_server": false
+  },
+  "diagnosis": "The frozen server serialized an invalid UTF-8 tokenizer byte sequence directly into an SSE JSON string. The strict client correctly rejected the malformed stream. This is a production output-correctness failure, not a harness ambiguity, and the attempt is FAIL under the preregistered malformed-data rule.",
+  "artifacts": {
+    "server_sha256": "28d9549016328e851c11d9d794021911add91860c53a4adecdf85c4cc924fa86",
+    "fixture_sha256": "e56044fb7c576b273ba21aed7dfad145bbe3487dc5042f4a3dcb16ec67fd00e7",
+    "off_containment_stdout_sha256": "413bb57fb50ddcb0a3d8f9dfd5d100e5609e7111e0929fd82a1daec10104e06d",
+    "main_log_sha256": "af3e4e30e333af34eecff25764e3c2d73998a8bbfa67582596f517e8b1b88a8e",
+    "samples_log_sha256": "b9cc260d611ef956e8e622751d5c8158687581e1f229c117da414b819796dc88",
+    "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "command_log_sha256": "7fd8bbb310160f8064c8de3f13d1a492be015ed571e383359ee702b155e6e4c2"
+  }
+}

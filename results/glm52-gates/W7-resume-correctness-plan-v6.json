@@ -1,0 +1,33 @@
+{
+  "schema_version": 6,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "PREREGISTERED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v5.json",
+  "inherits_unchanged_acceptance": "All production payload, evaluator, numerical, complete-state, confirmation-divergence, and safety requirements from v4-v5 remain unchanged.",
+  "review_findings_addressed": "results/glm52-gates/W7-resume-review-r200.json",
+  "behavioral_red": "results/glm52-gates/W7-resume-candidate6-red.json",
+  "fixture_pool": {
+    "path": "results/glm52-gates/harness/w7-production-fixture-pool-v1.json",
+    "sha256": "74829fc094143b4a494e104c186e4146f2e669eaceedbb354a7ab35251083d90",
+    "generator": "scripts/82_build_w7_fixture_pool.py",
+    "variants": 17,
+    "content": "Primary-fixed plus all 16 confirmation variants contain exact production-tokenizer canonical I32 vectors, exact UTF-8 byte-end maps, frozen live lineage, and derived selected/common/live/prompt frontiers.",
+    "inventory": "The pool freezes align=4, older=-4, wrong-lineage=+1, malformed=+2; the scorer regenerates each case's exact record IDs, token lengths, validity and match flags while retaining runtime-observed path/inode/payload identities."
+  },
+  "tokenizer": {
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "runtime_init_sha256": "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4",
+    "runtime_native_sha256": "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910",
+    "add_special_tokens": false
+  },
+  "attempt_identity": {
+    "formula": "sha256(binary_sha256_bytes || configuration_sha256_bytes || confirmation_seed_sha256_bytes || fixture_pool_sha256_bytes)",
+    "invocation_id": "invoke:<full_attempt_id>:<regime_id>:<case_id>",
+    "renaming": "Coherent caller renaming of attempt and every receipt rejects because the scorer recomputes the attempt identity."
+  },
+  "next_sequence": [
+    "Nash and Singer review candidate 6 only.",
+    "Proceed to compiled unchanged-engine RED only if both report no critical/high findings.",
+    "No engine implementation is authorized before the compiled RED is committed and reproduced."
+  ]
+}

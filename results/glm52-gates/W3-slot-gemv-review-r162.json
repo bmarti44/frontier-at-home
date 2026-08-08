@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "gate": "W3-direct-slot-gemv-headroom-microgate",
+  "candidate_hash": "42330b3545c8deb932b7dd7938bae259411499b3",
+  "review_round": 162,
+  "candidate_number": 3,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 97,
+    "critical": [],
+    "high": [],
+    "medium": ["W3-R162-M1-RAW-COLLECTOR-LINEAGE-UNFROZEN"],
+    "verdict": "ACCEPT_HEADROOM_ONLY"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 94,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "ADV-R162-M1-SCORER-SCHEMA-TYPES-NONEXACT",
+      "ADV-R162-M2-RUNTIME-IDENTITY-BINDING-INDIRECT"
+    ],
+    "verdict": "ACCEPT_HEADROOM_ONLY"
+  },
+  "prior_blocking_findings": {
+    "ADV-R161-H1-CANDIDATE-OWNED-SCORER-NONRAW-TIMING": "FIXED",
+    "W3-R160-C1-STALE-BUFFER-NOOP-DIRECT-PASSES": "VERIFIED",
+    "ADV-R160-H1-DEGENERATE-IDENTITY-ROUTING": "VERIFIED"
+  },
+  "deferred_production_blockers": [
+    "production direct-slot dispatch",
+    "68 GB mapped-arena lifetime and eviction safety",
+    "off-class fallback",
+    "fresh-server completed-time confidence bound"
+  ],
+  "verdict": "ACCEPTED_HEADROOM_ONLY; NO W3 OR PRODUCTION CREDIT"
+}

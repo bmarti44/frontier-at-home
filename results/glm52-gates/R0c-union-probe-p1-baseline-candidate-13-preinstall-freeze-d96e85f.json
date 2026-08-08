@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 13,
+  "campaign_review_round_next": 151,
+  "implementation_head": "d96e85f68b31f28021d4754db3c10909407bc8f8",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "scope": "Close only the three aligned round-150 high findings and the bounded runtime aggregation mismatch discovered while executing their non-held-out acceptance smoke. Frozen corpus, split, probe, CV and precision components remain byte-identical. No serving, quality, fidelity, context or adoption claim is made.",
+  "artifacts": {
+    ".gitleaks.toml": "316450b71044c940e759d9a656199384403e790f7734af9c0aa1449da8812c3f",
+    "scripts/lint_secrets.sh": "a451662e4ec4ea24ee00e03c3c82f8d6cde91eae53c1c19700fafabfedf00d09",
+    "scripts/65_glm52_w1_submit.py": "7c44a54746a85069403d396e6d6fd4310a8fbf480faf632ae595f5ff207a7538",
+    "scripts/66_install_glm52_w1_attestor.sh": "70e9b8c98bed8d3ff397d440670b0f196aa0bb7457f5cd5b445121ddba906a38",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6",
+    "scripts/81_glm_union_baseline.py": "ff6dd255a276c5ffc8a43a859fe814bf319ed9405f8f07d62018729b59d0dd59",
+    "scripts/tests/test_glm_union_baseline.py": "d3ba3460c66ef97c41985b75cc7f1a2ffded9fd5caedd9b37aafeb19f3ad0181",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "8fcc478d1ae148f1a57b9a373a2118f07c1cfeab1f5ec4a5083a015d5f3d0ef8",
+    "results/glm52-gates/harness/0008-test-glm-require-real-baseline-fault-injection.patch": "abe28585d2811bf15b1a93afffb014146b11682ab4809c750768f1507066ee21",
+    "results/glm52-gates/harness/0009-test-glm-inject-baseline-failures-at-real-stages.patch": "0371969827dabd103e4a0e8f7167fbea391a99c9b92ea04870699854d56b7a2b"
+  },
+  "engine_candidate": {
+    "readable_review_tree": "/tmp/glm52-utf8-engine",
+    "commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+    "tree_clean": true,
+    "artifact_sha256": {
+      "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+      "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f",
+      "tests/test_glm_baseline_capture_source.py": "491555af0d0f08c2c3d58410c4a942c8c651d513b6436af1ff49bb9b44c0b380"
+    },
+    "binary_sha256": "be8b0ed00864d3fba6e1f7dabed4adc0646efaf7968f1bcb6da6c3a6ce172121",
+    "normalized_double_build_byte_identical": true,
+    "fault_flag": "DS4_GLM_BASELINE_FAIL_STAGE",
+    "fault_flag_default_off": true
+  },
+  "unchanged_frozen_inputs": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_sha256": "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0",
+    "probe_cv_precision_hashes_equal_candidate_12": true,
+    "heldout_reservation_absent": true,
+    "approval_smoke_reservation_absent": true,
+    "root_approval_absent": true
+  },
+  "pre_submission_audit": {
+    "p1_controller_probe_tests": "132 passed, 1 duplicate-archive warning",
+    "engine_source_tests": "7 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan_self_test": "PASS",
+    "secret_scan": "PASS",
+    "real_fault_stages_executed": 4,
+    "fresh_post_fault_controls": 4,
+    "real_fault_smoke_replay": "PASS",
+    "engine_processes_active": 0,
+    "mem_available_kib": 120815708,
+    "swap_used_kib": 788276
+  },
+  "repository_wide_diagnostic": {
+    "tests_run": 597,
+    "passed": 591,
+    "failed": 4,
+    "skipped": 2,
+    "new_failures_from_candidate_12_to_13": 0,
+    "scope_disposition": "The four failures are stale assertions in test_engine_switch, test_matched_memory_safety (two), and test_model_claim_catalog. Candidate 12 to 13 changes none of their tested or test files. They are recorded but intentionally not repaired inside this frozen P1 gate scope."
+  },
+  "finding_disposition": [
+    {
+      "id": "BASE-R142-H3",
+      "status": "FIXED",
+      "evidence": "Four real default-off engine hooks execute in distinct contained processes at mtp_call, target_eval, route_capture and disposal; every rc=86 process is gone, its cache namespace is absent, and a fresh post-fault decode-consistency control exactly matches the reference tokens and logits. The first two failed smoke attempts and corrected replay are committed."
+    },
+    {
+      "id": "BASE-R142-H4",
+      "status": "FIXED_BY_RETRACTION",
+      "evidence": "Production emits fixed schema-v2 cost verdict NO_RESULT with reason MATCHED_DIRECT_ARMS_NOT_MEASURED and fold_authority=false. Unmatched/self-asserted controller timings cannot support a cost or Pareto claim."
+    },
+    {
+      "id": "P1-BASE-IMPL-H3-COST-OMITTED",
+      "status": "FIXED_BY_RETRACTION",
+      "evidence": "The completed-result validator requires the same fixed NO_RESULT cost record and rejects any MTP fold. Cost qualification remains a separate future direct matched measurement rather than a fabricated P1 result."
+    },
+    {
+      "id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY",
+      "status": "FIXED",
+      "evidence": "Every preserved arm/fault runtime artifact is rebound and reopened; the exact result tree is atomically moved out of user authority into a root-owned non-writable result directory; root independently recomputes and compares its manifest and writes the authoritative receipt. Digest races fail closed while retaining a quarantined root-owned attempt."
+    },
+    {
+      "id": "P1-BASE-R149-C1-USER-WRITABLE-ROOT-INSTALLER",
+      "status": "PRESERVED_FIXED",
+      "evidence": "Final installation contract still requires a root-owned mode-0500 staged installer with exact reviewed SHA-256. Root never executes the user-writable path."
+    },
+    {
+      "id": "P1-BASE-R149-H1-APPROVED-COMMIT-NOT-ENFORCED-BY-CONTROLLER",
+      "status": "PRESERVED_FIXED",
+      "evidence": "Controller still requires executing clean HEAD to equal the exact root-approved commit before reservation."
+    }
+  ],
+  "convergence": {
+    "owner_override": "The owner explicitly approved continuing the Candidate 12-to-final sequence after the prior candidate-count escalation and approved this continuation after Fable's verification.",
+    "blocking_set_before": [
+      "BASE-R142-H3",
+      "BASE-R142-H4",
+      "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY"
+    ],
+    "blocking_set_claimed_after": [],
+    "new_scope": false
+  },
+  "staged_install_contract": {
+    "installer_sha256": "70e9b8c98bed8d3ff397d440670b0f196aa0bb7457f5cd5b445121ddba906a38",
+    "timing": "Only after both persistent reviewers report no critical/high issues on the commit that adds this freeze artifact.",
+    "operator_involvement": "One final hash-verified root-staged install command, then no sudo for the held-out run."
+  },
+  "next_action": "Nash and Singer review only Candidate 12 to this Candidate 13 plus the readable compiled engine sources. If both report no critical/high issues, provide the owner one exact staged-install command; do not open held-out values before that install is attested."
+}

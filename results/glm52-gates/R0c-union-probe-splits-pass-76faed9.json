@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "classification": "PASS",
+  "scope": "glm52_p1_isolated_quality_split_boundary",
+  "candidate_hash": "76faed9f5458fad0ab30efbc3f9b35aba37a436d",
+  "splitter_sha256": "2861c1d60da79d48d009fb21320b29130b64b9c0d4e28e470344acc612c500c2",
+  "source_manifest_sha256": "796f993804b0918d7f5e4ce52385e7459dfd2768b37eedf06da9e102f0035b96",
+  "source_output_sha256": "ca5da3b2a907d4874af9ebcfa77c7678f841ed0aa242fffa7241e583fa1e5c2c",
+  "split_plan_sha256": "95abff08caabc930b842e40883acc59f4184002521cf58d24d726fc5f8511ba5",
+  "retained_directory": "/home/bmarti44/.local/state/glm52-p1-splits-r127-76faed9",
+  "top_manifest_sha256": "bea34ff2a5de66e0e36061d875db96f38e32e0533484efd67826f96d7ebaf244",
+  "observed": {
+    "total_requests": 100,
+    "total_rows": 244650,
+    "complete_disjoint_request_partition": true,
+    "child_request_rows_exact_source_projection": true,
+    "held_out_feature_metrics_computed": false,
+    "splits": {
+      "train-fit": {
+        "requests": 55,
+        "rows": 132300,
+        "fp16_holdout_rows": 2219,
+        "manifest_sha256": "7c1d5d2259daa804d024ee2a195f5c6eac49e7e04a82e6c8696b7f16766a5874",
+        "output_sha256": "e3e20959de4a132babb30b2701920c54ab4e23abfc433a9a60e4ba35143718b5",
+        "output_bytes": 499324938
+      },
+      "train-precision-diagnostic": {
+        "requests": 5,
+        "rows": 12225,
+        "fp16_holdout_rows": 203,
+        "manifest_sha256": "d60dd6ba9fa3200971de2a942e863ca8a0d389c84f7d0cceecc460d3891cebe0",
+        "output_sha256": "948bc302e29013e2f176762bf3793d773f8f66ae5c9dad5d77229a2788042ba7",
+        "output_bytes": 46116666
+      },
+      "calibration": {
+        "requests": 20,
+        "rows": 48900,
+        "fp16_holdout_rows": 817,
+        "manifest_sha256": "dde9bcde86dfb40d790e676d05f350c8b8f7e3685cefcc2f4482f0a90e8be433",
+        "output_sha256": "cdeadd0258ede24491a9a469061a1947ec218f872775062882af7fed89d5062e",
+        "output_bytes": 184520354
+      },
+      "test": {
+        "requests": 20,
+        "rows": 51225,
+        "fp16_holdout_rows": 857,
+        "manifest_sha256": "6a946988689f84c9744e34604c1639564d471f4a921f6942d7c49b0d83bd569d",
+        "output_sha256": "13eddb3c567bec720820f059c40ad18ffb16deb9fab854d3ad681837fff3ef09",
+        "output_bytes": 193307634
+      }
+    }
+  },
+  "pre_runtime_review": {
+    "round": 127,
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 100,
+    "critical": [],
+    "high": []
+  },
+  "post_runtime_review": {
+    "round": 128,
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 100,
+    "critical": [],
+    "high": []
+  },
+  "claim_limit": "This PASS qualifies only the isolated, hash-bound P1 data boundary. It does not qualify probe training, model selection, held-out metrics, fidelity, serving performance, context length, or parity.",
+  "next_action": "Train and select the direct union probe using only train-fit plus the two grouped long-train shards; keep the five-case diagnostic out of fitting and calibration/test unopened for feature or model metrics."
+}

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "e52790a6b5df811bd0761f10af318ca4ea206414",
+  "review_round": 174,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 86,
+      "critical": [],
+      "high": [
+        {
+          "id": "W3-R174-H1-LOCK-HARDLINK-TRUNCATION",
+          "status": "OPEN",
+          "evidence": "The shell validator accepts a hard-link leaf to another bmarti44-owned mode-0600 regular file. The frozen engine then opens and truncates that inode.",
+          "affected_gate": "W3 contained direct-slot runtime eligibility and host safety",
+          "acceptance_test": "Require nlink one, bind device/inode, revalidate at each arm and after engine appearance, and prove a hard-link mutation leaves target bytes unchanged."
+        }
+      ],
+      "medium": [
+        {
+          "id": "W3-R174-M1-ZOMBIE-RUNNER-LIVENESS",
+          "status": "OPEN",
+          "evidence": "PID and start ticks alone treat a zombie as live.",
+          "affected_gate": "W3 startup fail-fast",
+          "acceptance_test": "Reject process states Z and X while retaining the start-tick check."
+        }
+      ],
+      "low": [],
+      "verdict": "REJECT"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 89,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W3-R174-H1",
+          "status": "OPEN",
+          "evidence": "The production open boundary uses O_RDWR|O_CREAT and ftruncate without O_NOFOLLOW, fstat, nlink or bound device/inode checks, leaving hard-link and validate-to-open swap paths.",
+          "affected_gate": "W3 contained production-path eligibility and safe lock isolation",
+          "acceptance_test": "At the production open boundary use O_NOFOLLOW|O_CLOEXEC, validate the opened descriptor before truncation, reject link count other than one and inode aliases, and add executable mutation tests that preserve victim bytes."
+        }
+      ],
+      "medium": [],
+      "low": [
+        {
+          "id": "ADV-W3-R173-L1",
+          "status": "DEFERRED",
+          "evidence": "Optional stronger extracted-shell prologue unit remains outside this bounded scope."
+        }
+      ],
+      "verdict": "FAIL_BLOCKED_HIGH"
+    }
+  },
+  "root_disposition": {
+    "status": "REJECTED_BEFORE_RUNTIME",
+    "blocking_set": [
+      "W3-R174-H1-LOCK-HARDLINK-TRUNCATION",
+      "ADV-W3-R174-H1"
+    ],
+    "next_candidate_scope": "Harden the production lock open boundary and shell binding, add destructive-mutation regression tests, and reject zombie runner state."
+  }
+}

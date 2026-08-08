@@ -1,0 +1,22 @@
+{
+  "schema": "glm52-w4-topk-scorer-red-v1",
+  "gate": "W4",
+  "candidate": 4,
+  "command": "python3 -W error::ResourceWarning -m unittest scripts.tests.test_w4_topk_scorer",
+  "observed": {
+    "tests_run": 8,
+    "failures": 3,
+    "exit_code": 1,
+    "failing_assertions": [
+      "coherent non-frozen closure was accepted",
+      "consistent wrong IDs and positive replacement timings were accepted",
+      "execution-transcript timing mismatch was accepted"
+    ]
+  },
+  "artifacts": {
+    "scorer": "79f3cc0c7c9c5a55bbbdd6bd6872004d1d0f9e9676287a2b5686c68cc79030c8",
+    "tests": "7ed2a4374faa928632aab5ed855d39ff35fc15f0eec0f583b8397f97f645fd06"
+  },
+  "verdict": "RED_CONFIRMED",
+  "interpretation": "The unchanged candidate-3 scorer executes and passes its prior checks, but does not enforce the three candidate-4 behaviors named by both round-298 reviewers."
+}

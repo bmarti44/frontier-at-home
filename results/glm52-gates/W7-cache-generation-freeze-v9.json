@@ -1,0 +1,51 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 9,
+  "status": "FROZEN_RUNTIME_REVIEW_PENDING",
+  "repository_candidate_commit": "c3014d5",
+  "repository_evidence_head": "7827b18",
+  "engine_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6/ds4-server",
+    "bytes": 5584864,
+    "mode": 493,
+    "sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
+  },
+  "model": {
+    "path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "bytes": 211075856448,
+    "sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
+  },
+  "runtime_integration": {
+    "harness_sha256": "cb21d5a77b673c4036217cbae4722a5a143667b0bbcf3993f45f583579d172b0",
+    "cgroup_sha256": "edcbc66474484156cf4bc5662c86810ec08b029d808ef0236f8959f682cda0a8",
+    "safe_sha256": "75f20c136c27ae8c902526960345bc6f4054e0467991d073d553a8639b14e13c",
+    "scorer_sha256": "8aba1157baf716afa5fc3ad56ec3b82999d891fca88efada252746e7b2f8f784",
+    "tests_sha256": "d12c6a0f99777f2479f42e339d618a1aebb329e8af25331d4530ad0afe4f350e"
+  },
+  "review_261_closure": {
+    "canonical_driver": "Only the absolute reviewed harness path is accepted and delegated.",
+    "actual_containment": "The driver verifies real cgroup membership plus exact high/max/swap/oom controls before creating runtime scratch.",
+    "runtime_artifacts": "safe_run emits digest-bound completion, verifies seven final artifacts, and the publisher compares digest plus device/inode/size through stable descriptors.",
+    "failed_attempts": "An outer EXIT finalizer atomically publishes a FAIL triplet after every post-attempt-creation failure.",
+    "triplet": "One RENAME_NOREPLACE directory publication binds raw.jsonl and summary.json digests in manifest.json."
+  },
+  "mutation_evidence": [
+    "copied launcher rejection",
+    "spoofed direct-driver rejection before runtime scratch",
+    "byte-different artifact replacement rejection",
+    "byte-identical new-inode artifact replacement rejection",
+    "destination symlink and wrong-digest rejection",
+    "atomic triplet no-replace rejection",
+    "real inference-lock preflight failure produces complete FAIL triplet"
+  ],
+  "pre_submission_audit": {
+    "focused_tests": "25 PASS",
+    "containment_lifecycle_profile_tests": "24 PASS, 1 privilege-only skip",
+    "smoke_self_test": "PASS",
+    "reviewed_source_binding": "PASS",
+    "secret_linter_self_test": "PASS",
+    "engine_process_started": false,
+    "repository_clean_before_freeze_record": true
+  }
+}

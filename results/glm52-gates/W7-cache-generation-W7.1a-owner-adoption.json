@@ -1,0 +1,75 @@
+{
+  "schema": "glm52-w7.1a-owner-adoption-v1",
+  "gate": "W7.1a-stable-model-cache-generation-owner-adoption",
+  "decision_date": "2026-08-08",
+  "decision_authority": "repository_owner",
+  "decision": "ADOPT_AFTER_CLEAN_BINDING_REVIEW",
+  "owner_criteria": {
+    "primary": {
+      "metric": "warm_ttft_on_over_off_ratio_upper_95",
+      "operator": "<=",
+      "threshold": 0.95,
+      "observed": 0.5977543267655646,
+      "passed": true
+    },
+    "secondary": {
+      "metric": "decode_on_over_off_ratio_lower_95",
+      "operator": ">=",
+      "threshold": 0.995,
+      "observed": 0.999854233137691,
+      "passed": true
+    }
+  },
+  "owner_rationale": "The measured 42% warm-TTFT improvement with decode statistically indistinguishable from unchanged is a favorable trade under the owner's stated decode-and-TTFT balance goal. The 0.00015 shortfall against the original 1.00000 decode bound is not treated as a regression signal by this separately named owner decision.",
+  "source_campaign": {
+    "candidate_hash": "258af48694096ae2631314d08d7020f5dff93327",
+    "campaign_candidate": 10,
+    "terminal_receipt": {
+      "path": "results/glm52-gates/W7-cache-generation-campaign-candidate10-fail.json",
+      "sha256": "71948170407e240c58e739cc88149ce9e121f5ecebb96f428b0b1455a1acf558"
+    },
+    "manifest": {
+      "path": "results/glm52-gates/W7-cache-generation-candidate10-fail/manifest.json",
+      "sha256": "0c696e03adce19679e26a8615c3ff76362f2b1d5f28e29fbf8afc46530fade87"
+    },
+    "raw": {
+      "path": "results/glm52-gates/W7-cache-generation-candidate10-fail/raw.jsonl",
+      "sha256": "6c4424e37dd0e9665b1f8219543c9e321b1b3b9028ef3251e9bfeef306a6753c"
+    },
+    "summary": {
+      "path": "results/glm52-gates/W7-cache-generation-candidate10-fail/summary.json",
+      "sha256": "c1bacbf19d058118e2b875ee2d99014b273429224aa6d1f1bc45369aadcee4f8"
+    },
+    "terminal_review": {
+      "path": "results/glm52-gates/W7-cache-generation-campaign-review-r287.json",
+      "sha256": "2f315795dd82a6327ba4bbaf44a73ef68d8bde205101ed9a461d2bceae09d552"
+    },
+    "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "runs": 20,
+    "byte_identical_full_logit_sequence": true,
+    "logit_max_abs_delta": 0.0,
+    "minimum_mem_available_kb": 49813584,
+    "safety_failures": 0
+  },
+  "original_gate_preservation": {
+    "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+    "verdict": "FAIL",
+    "reason": "The original preregistered decode lower-95 bound was 1.0 and the observed value was 0.999854233137691.",
+    "must_not_amend_reinterpret_or_reopen": true
+  },
+  "promotion_contract": {
+    "review_scope": "Review only this decision record's binding to the immutable r287-approved campaign evidence. The owner-set W7.1a criteria are not reviewer-adjustable.",
+    "required_review": "Both persistent reviewers report no critical or high binding defect.",
+    "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "required_serving_flag": {
+      "DS4_CUDA_STABLE_MODEL_REMAP": "1"
+    },
+    "forbidden_unqualified_flag": "DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC",
+    "scope": "Only the exact W7.1 stable-model cache-generation fix and its campaigned binary may be promoted. W7.2 and every other pending candidate remain unauthorized.",
+    "fidelity": "No separate fidelity gate is required because the campaign verified a byte-identical full logit sequence with max absolute delta 0.0.",
+    "new_runtime_campaign_required": false,
+    "status": "PENDING_CLEAN_BINDING_REVIEW"
+  },
+  "future_gate_rule": "Continue preregistering decode bounds. When a candidate primarily targets another metric, preregister that primary metric rather than forcing decode to serve as the sole adoption criterion. This decision does not alter any other gate.",
+  "verdict": "PASS"
+}

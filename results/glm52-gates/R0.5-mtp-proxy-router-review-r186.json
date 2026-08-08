@@ -1,0 +1,100 @@
+{
+  "candidate_hash": "b74d863a1e98291d52b06e92c7d8d4d5047ee6db",
+  "gate": "R0.5-mtp-proxy-router-trace",
+  "review_round": 186,
+  "reviewers": [
+    {
+      "name": "Nash",
+      "score_0_to_100": 70,
+      "critical": [],
+      "high": [
+        {
+          "id": "R05-R186-H1-PROXY-RECURRENCE-UNDERSPECIFIED",
+          "evidence": "The plan does not bind the exact NextN tensor boundary, recurrence copy, position/min-position updates, or q1 indexing. Post-residual, normalized, and scratch states could produce different router rankings.",
+          "affected_gate": "Proxy target alignment",
+          "reproduction": "Implement recursion using g->next post-residual, then using output-normalized state or a one-position shift; compare resulting route rankings.",
+          "proposed_acceptance_test": "Freeze an explicit recurrence equation, tensor/stage, token indices, positions, and cache updates; reject wrong-tensor and shifted-position mutations."
+        },
+        {
+          "id": "R05-R186-H2-OPEN-EVIDENCE-AUTHORITY-UNBOUND",
+          "evidence": "Case names and lineage narration are not bound to paths or hashes. Exact target routes, cache residency, baseline-fitting rows, model, tokenizer, and scorer authority are unspecified.",
+          "affected_gate": "Open-fixture integrity and train/evaluation separation",
+          "reproduction": "Substitute another artifact named case_053, or include evaluation rows in the frequency prior; the plan contains no deterministic rejection rule.",
+          "proposed_acceptance_test": "Freeze a complete hashed artifact inventory, exact evaluation and baseline-fit splits, route/residency records, model/tokenizer identities, and scorer."
+        },
+        {
+          "id": "R05-R186-H3-LATENCY-BYTE-PHYSICS-INCOMPLETE",
+          "evidence": "Macro aggregation, confidence formulas, p95 convention, byte aggregation, and miss-conditioned cache denominator are underspecified. A 50 ms proxy and 2x byte amplification do not prove feasibility against a 106 ms miss-fill floor; NextN expert bytes are report-only despite competing for the same cache and NVMe bandwidth.",
+          "affected_gate": "Proxy usefulness and physical feasibility",
+          "reproduction": "Construct a candidate taking 49 ms and predicting 2x miss bytes. It passes the stated gates although proxy plus transfer time exceeds the cited miss-fill budget.",
+          "proposed_acceptance_test": "Freeze cache/coldness and quantile protocols, exact CI formulas, and require an upper bound on proxy time plus NextN and predicted-miss transfer time against measured address-to-use lead."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-R05-R185-H1-PROXY-ROUTER-ORACLE-NOT-FALSIFIED", "status": "OPEN"},
+        {"id": "ADV-R05-R185-H2-FIRST-ROUTED-LAYER-OMITTED", "status": "FIXED"},
+        {"id": "ADV-R05-R185-M1-CANDIDATE-QUALITY-UNDEFINED", "status": "OPEN"}
+      ],
+      "verdict": "REJECT_BEFORE_IMPLEMENTATION"
+    },
+    {
+      "name": "Singer",
+      "score_0_to_100": 44,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-R05-R186-H1-UNSEALED-TOKEN-BRANCH-ALIGNMENT",
+          "evidence": "The retained capture restores the same h[t] after each MTP step, so its q2..q8 branch can differ from the proposed recursive proxy branch; the candidate was not required to freeze before target routes were exposed.",
+          "affected_gate": "R0.5 causal validity and proxy/target alignment",
+          "reproduction": "Record the recursive q1..q8 vector and compare it with the retained baseline vector; mutate one future target token or route row.",
+          "proposed_acceptance_test": "Use causally separated candidate and target processes; freeze and hash candidate tokens, positions, layers, ranks, and timestamps before evaluating exactly that emitted token sequence; reject token/position shifts and premature target access."
+        },
+        {
+          "id": "ADV-R05-R186-H2-ZERO-DELTA-BASELINE-CLONE-PASSES",
+          "evidence": "A zero lower-bound improvement lets a candidate that copies a passing baseline qualify despite adding MTP work.",
+          "affected_gate": "R0.5 proxy usefulness",
+          "reproduction": "Set every proxy list equal to the stronger baseline; paired differences are zero and satisfy the old threshold.",
+          "proposed_acceptance_test": "Require a strictly positive practical lower-bound improvement, such as 3 percentage points, and a baseline-clone mutation that fails."
+        },
+        {
+          "id": "ADV-R05-R186-H3-INCOMPLETE-CAUSAL-BYTE-AND-MISS-ACCOUNTING",
+          "evidence": "The plan did not charge MTP expert/router bytes, bind tensor ranges or cache states, or define deterministic miss sets, so it could claim physical usefulness without net-I/O evidence.",
+          "affected_gate": "R0.5 roofline, target-expert prohibition, and miss-conditioned recall",
+          "reproduction": "Add arbitrary MTP/router bytes or relabel a target interval while retaining the old candidate/true byte ratio.",
+          "proposed_acceptance_test": "Bind tensor-offset inventories and cache state, reconcile logical and physical bytes, and gate total incremental bytes/time in a separately authoritative cost test."
+        },
+        {
+          "id": "ADV-R05-R186-H4-SELECTABLE-FIVE-CASE-SCORER",
+          "evidence": "The statistic, variance, critical value, zero-variance behavior, undefined cases, clipping, p95 rule, artifact hashes, scorer authority, and tie ordering were not frozen.",
+          "affected_gate": "Deterministic preregistration and confidence validity",
+          "reproduction": "Compute t, z, bootstrap, clipped, and alternate p95 variants on the same values and obtain selectable verdicts.",
+          "proposed_acceptance_test": "Freeze exact artifacts and a fixed scorer specification with n=5 sample-SD t bounds, exact critical value, no clipping, strict missing/NaN rejection, stable ties, and mutations."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-R05-R186-M1-AGGREGATE-QUALITY-CAN-HIDE-DEAD-LAYERS",
+          "evidence": "Record coverage alone permits some routed layers to have zero useful predictions while aggregate recall passes.",
+          "affected_gate": "All-layer predictor qualification",
+          "reproduction": "Concentrate hits in other layers and emit wrong lists for a subset.",
+          "proposed_acceptance_test": "Require a per-layer floor or explicitly qualify only passing layers."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-R05-R185-H1-PROXY-ROUTER-ORACLE-NOT-FALSIFIED", "status": "OPEN"},
+        {"id": "ADV-R05-R185-H2-FIRST-ROUTED-LAYER-OMITTED", "status": "ADDRESSED_PENDING_IMPLEMENTATION"},
+        {"id": "ADV-R05-R185-M1-CANDIDATE-QUALITY-UNDEFINED", "status": "OPEN"}
+      ],
+      "verdict": "REJECT_BEFORE_IMPLEMENTATION"
+    }
+  ],
+  "terminal_disposition": "REJECTED_BEFORE_IMPLEMENTATION",
+  "convergence": {
+    "candidate": 2,
+    "consecutive_non_shrink": 1,
+    "note": "Candidate 3 is permitted. A second consecutive failure to shrink the blocking set triggers the owner escalation rule."
+  }
+}

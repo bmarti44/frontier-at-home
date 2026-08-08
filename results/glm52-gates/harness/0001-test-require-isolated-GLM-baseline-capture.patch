@@ -1,0 +1,74 @@
+From 9b722619c1f9e15a92a4ae036f050e03b348acb2 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Wed, 5 Aug 2026 10:41:31 -0400
+Subject: [PATCH 1/5] test: require isolated GLM baseline capture
+
+---
+ tests/test_glm_baseline_capture_source.py | 55 +++++++++++++++++++++++
+ 1 file changed, 55 insertions(+)
+ create mode 100644 tests/test_glm_baseline_capture_source.py
+
+diff --git a/tests/test_glm_baseline_capture_source.py b/tests/test_glm_baseline_capture_source.py
+new file mode 100644
+index 0000000..24a6699
+--- /dev/null
++++ b/tests/test_glm_baseline_capture_source.py
+@@ -0,0 +1,55 @@
++#!/usr/bin/env python3
++"""Source-level contract for the default-off GLM P1 baseline capture."""
++
++from pathlib import Path
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++SOURCE = (ROOT / "ds4.c").read_text(encoding="utf-8")
++CLI = (ROOT / "ds4_cli.c").read_text(encoding="utf-8")
++
++
++class GlmBaselineCaptureSourceTests(unittest.TestCase):
++    def test_capture_is_default_off_and_cli_only(self) -> None:
++        self.assertIn('getenv("DS4_GLM_BASELINE_CAPTURE_DIR")', CLI)
++        self.assertIn("ds4_session_glm_baseline_capture", CLI)
++        self.assertNotIn("DS4_GLM_BASELINE_CAPTURE_DIR", SOURCE)
++
++    def test_hybrid_rollout_is_future_blind_and_position_aligned(self) -> None:
++        body = SOURCE[SOURCE.index("int ds4_session_glm_baseline_capture("):]
++        self.assertIn("glm_session_logits_argmax", body)
++        self.assertIn("glm_graph_mtp_step", body)
++        self.assertIn("source_pos + step", body)
++        self.assertIn("DS4_GLM_BASELINE_MAX_K", body)
++        self.assertNotIn("tokens[source_pos + step]", body)
++
++    def test_capture_records_full_scores_and_production_top8(self) -> None:
++        for marker in (
++            "DS4_GLM_BASELINE_N_EXPERT",
++            "baseline_capture_scores",
++            "baseline_capture_selected",
++            "baseline_capture_shared_scores",
++            "baseline_capture_mtp_scores",
++        ):
++            self.assertIn(marker, SOURCE)
++        self.assertIn("DS4_N_EXPERT * sizeof(float)", SOURCE)
++        self.assertIn("DS4_N_EXPERT_USED * sizeof(int32_t)", SOURCE)
++
++    def test_capture_uses_fresh_session_per_structural_source(self) -> None:
++        body = SOURCE[SOURCE.index("int ds4_session_glm_baseline_capture("):]
++        self.assertIn("ds4_session_create", body)
++        self.assertIn("ds4_session_free", body)
++        self.assertIn("source_count != 8u", body)
++        self.assertIn("token_count < 16u", body)
++
++    def test_any_capture_or_publication_failure_fails_closed(self) -> None:
++        body = SOURCE[SOURCE.index("int ds4_session_glm_baseline_capture("):]
++        self.assertIn("baseline_capture_failed", body)
++        self.assertIn("O_EXCL", body)
++        self.assertIn("fsync", body)
++        self.assertIn("return 1", body)
++
++
++if __name__ == "__main__":
++    unittest.main()
+-- 
+2.43.0
+

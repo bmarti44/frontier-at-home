@@ -1,0 +1,32 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 6,
+  "phase": "harmless-real-user-unit-integration",
+  "engine_started": false,
+  "gpu_used": false,
+  "attempts": [
+    {
+      "attempt": 1,
+      "result": "FAIL",
+      "failure": "The diagnostic omitted XDG_RUNTIME_DIR and DBUS_SESSION_BUS_ADDRESS, so systemd-run exited before the scheduled interruption.",
+      "active_units_after": 0,
+      "sleep_descendants_after": 0,
+      "preserved": true
+    },
+    {
+      "attempt": 2,
+      "result": "PASS",
+      "signal": 15,
+      "launcher": "real bash exec of systemd-run --user --wait",
+      "contained_payload": "bash with a 60-second sleep descendant",
+      "exact_unit_identity": "derived from trusted tag plus launcher PID",
+      "unit_before_interrupt": "active",
+      "unit_after_cleanup": "not-found/inactive with MainPID=0 and ControlPID=0",
+      "active_units_after": 0,
+      "sleep_descendants_after": 0,
+      "server_pids_after": 0,
+      "listener_after": false
+    }
+  ],
+  "acceptance": "PASS only when the real transient user unit and its descendant are gone before the interrupted helper returns."
+}

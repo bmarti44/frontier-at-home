@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_FAILED_ATTEMPT",
+  "candidate_hash": "468e14f357ffbd63ebb198586914807dc5da236c",
+  "binary_sha256": "2d70aeb1485021b22b132d80acbff1ce3d2a3b7639e569838186f835d78faf36",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "seed": 1181118369,
+  "verdict": "FAIL",
+  "failing_check": "exact_indexed_chunk_coverage",
+  "preregistered_expected_layers": [4, 78],
+  "observed_main_inference_layers": [3, 77],
+  "observed_unique_layers_per_request": 75,
+  "observed_requests": 2,
+  "observed_events": 150,
+  "observed_token_layer_events": 85950,
+  "observed_trace_files": 750,
+  "observed_trace_bytes": 2291236800,
+  "all_other_scorer_checks_passed": true,
+  "off_on_byte_and_token_identity": true,
+  "off_containment_clean": true,
+  "on_containment_clean": true,
+  "minimum_available_memory_gib": {
+    "off": 21.734,
+    "on": 21.771
+  },
+  "cgroup_peak_gib": {
+    "off": 64.836,
+    "on": 66.773
+  },
+  "diagnosis": {
+    "gguf_block_range": [0, 78],
+    "gguf_routed_expert_tensor_layers": [3, 78],
+    "gguf_routed_expert_tensor_layer_count": 76,
+    "main_inference_routed_layers": [3, 77],
+    "main_inference_routed_layer_count": 75,
+    "mtp_layer": 78,
+    "conclusion": "The rejected expectation shifted the real zero-based main routed range by one and incorrectly included the MTP block. The corrected exact main-inference range is 3 through 77 inclusive."
+  },
+  "raw_evidence": {
+    "retained_directory": "/home/bmarti44/.local/state/glm52-p0-corpus-r85-468e14f",
+    "summary_sha256": "f14483d9e6f9e7042bd65a1ff24902c44c73a199090aaa9bb295d3ed80efad16",
+    "off_arm_sha256": "beec286395f6d138a4ac8101955d22f0e03583ac135d589d93f0af499b7ddb85",
+    "on_arm_sha256": "71b84afed6b6da3f055a50486075f8ba6b4ac59123a6adf0ef8da02282e8794b",
+    "on_server_log_sha256": "e75af19897875fdb27ff52026173b2438823e4d29ee6bd8ecdca6a4609983fbc",
+    "off_containment_sha256": "5487fd9ae98b5600f44c7f25906df59ffc8cc5e15693059d59d1a9d80a09e95d",
+    "on_containment_sha256": "b0f08eefd1df37824eaf2da12946959d0e1ff086f6b5b53aeb0cd6f8449167f2"
+  },
+  "note": "This attempt remains a FAIL. The observed trace is diagnostic evidence only and cannot be rescored into PASS; the acceptance correction requires a new candidate, freeze, seed, and full rerun."
+}

@@ -1,0 +1,98 @@
+From bed0754b31e1547c91d6a5b6d9aaf66577f8857c Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Wed, 5 Aug 2026 11:18:10 -0400
+Subject: [PATCH 5/5] fix: capture full biased GLM router scores
+
+---
+ ds4.c                                     | 20 ++++++++++++++++----
+ tests/test_glm_baseline_capture_source.py |  4 ++++
+ 2 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/ds4.c b/ds4.c
+index 90de20c..3fcbefb 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -40220,10 +40220,15 @@ static bool glm_graph_baseline_capture_router(
+         ds4_glm_gpu_graph *g,
+         ds4_gpu_tensor    *scores,
+         ds4_gpu_tensor    *selected,
++        const ds4_model   *model,
++        uint64_t           bias_offset,
+         uint32_t           il,
+         bool               shared) {
+     if (!g || !g->baseline_capture_active) return true;
+-    if (!scores || !selected || il >= DS4_MAX_LAYER || il >= DS4_N_LAYER) {
++    const uint64_t bias_bytes = (uint64_t)DS4_N_EXPERT * sizeof(float);
++    if (!scores || !selected || !model || !model->map ||
++        bias_offset > model->size || bias_bytes > model->size - bias_offset ||
++        il >= DS4_MAX_LAYER || il >= DS4_N_LAYER) {
+         if (g) g->baseline_capture_failed = true;
+         return false;
+     }
+@@ -40274,7 +40279,9 @@ static bool glm_graph_baseline_capture_router(
+         (uint64_t)DS4_N_EXPERT_USED * sizeof(int32_t)) != 0;
+     const bool restarted = ds4_gpu_begin_commands() != 0;
+     bool ok = ended && read_scores && read_selected && restarted;
++    const float *bias = (const float *)((const char *)model->map + bias_offset);
+     for (uint32_t i = 0; ok && i < DS4_N_EXPERT; i++) {
++        score_dst[i] = score_dst[i] + bias[i];
+         if (!isfinite(score_dst[i])) ok = false;
+     }
+     for (uint32_t i = 0; ok && i < DS4_N_EXPERT_USED; i++) {
+@@ -40348,7 +40355,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+                                                   DS4_N_EXPERT_USED,
+                                                   DS4_EXPERT_WEIGHT_SCALE) != 0;
+     if (ok) ok = glm_graph_baseline_capture_router(
+-        g, g->router_probs, g->router_selected, il, false);
++        g, g->router_probs, g->router_selected, model,
++        l->ffn_exp_probs_b->abs_offset, il, false);
+     if (ok && getenv("DS4_GLM_PREFETCH") != NULL &&
+         !pf_shared_correction && il + 1u < normal_layers) {
+         /* Cross-layer expert prefetch: predict layer il+1's experts from the
+@@ -40771,7 +40779,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+         corrected_ok = corrected_ok && corrected_ended && corrected_restarted;
+         if (corrected_ok && pf_baseline_capture) {
+             corrected_ok = glm_graph_baseline_capture_router(
+-                g, g->batch_router_probs, g->batch_router_selected,
++                g, g->batch_router_probs, g->batch_router_selected, model,
++                lnext->ffn_exp_probs_b->abs_offset,
+                 il + 1u, true);
+         }
+         if (!corrected_ok) {
+@@ -60718,6 +60727,7 @@ static bool glm_baseline_capture_publish(
+         metadata, sizeof(metadata),
+         "{\"format\":\"glm52-p1-baseline-source-v1\","
+         "\"source_position\":%u,\"mtp_min_position\":%u,\"prompt_tokens\":%u,"
++        "\"layers_total\":%u,\"vocab\":%u,"
+         "\"layers_first\":4,\"layers_last\":77,"
+         "\"experts\":%u,\"selected\":%u,\"K\":8,"
+         "\"source_ready_ms\":%.17g,"
+@@ -60726,7 +60736,9 @@ static bool glm_baseline_capture_publish(
+         "\"cumulative_ms\":[%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g],"
+         "\"elapsed_ms\":%.17g,"
+         "\"predicted_tokens\":[%d,%d,%d,%d,%d,%d,%d,%d]}\n",
+-        source_pos, source_pos, token_count, (unsigned)DS4_N_EXPERT,
++        source_pos, source_pos, token_count,
++        (unsigned)DS4_N_LAYER, (unsigned)DS4_N_VOCAB,
++        (unsigned)DS4_N_EXPERT,
+         (unsigned)DS4_N_EXPERT_USED, source_ready_ms,
+         mtp_ms[0], mtp_ms[1], mtp_ms[2], mtp_ms[3],
+         mtp_ms[4], mtp_ms[5], mtp_ms[6],
+diff --git a/tests/test_glm_baseline_capture_source.py b/tests/test_glm_baseline_capture_source.py
+index b96fea9..720313d 100644
+--- a/tests/test_glm_baseline_capture_source.py
++++ b/tests/test_glm_baseline_capture_source.py
+@@ -37,6 +37,10 @@ class GlmBaselineCaptureSourceTests(unittest.TestCase):
+             self.assertIn(marker, SOURCE)
+         self.assertIn("DS4_N_EXPERT * sizeof(float)", SOURCE)
+         self.assertIn("DS4_N_EXPERT_USED * sizeof(int32_t)", SOURCE)
++        self.assertIn("score_dst[i] = score_dst[i] + bias[i]", SOURCE)
++        self.assertIn("l->ffn_exp_probs_b->abs_offset, il, false", SOURCE)
++        self.assertIn("lnext->ffn_exp_probs_b->abs_offset", SOURCE)
++        self.assertIn('\\"layers_total\\":%u,\\"vocab\\":%u', SOURCE)
+ 
+     def test_capture_uses_fresh_session_per_structural_source(self) -> None:
+         body = SOURCE[SOURCE.index("int ds4_session_glm_baseline_capture("):]
+-- 
+2.43.0
+

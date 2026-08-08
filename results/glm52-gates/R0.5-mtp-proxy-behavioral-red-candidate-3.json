@@ -1,0 +1,56 @@
+{
+  "schema": "glm52-mtp-proxy-behavioral-red-v2",
+  "status": "RED_CONFIRMED",
+  "candidate_number_for_red_gate": 3,
+  "campaign_review_round_completed": 193,
+  "engine_commit": "4fc42c82d20a7306589d2588eddc9182f16c1ed0",
+  "unchanged_production_source_commit": "4a35746c774f48930020724c9db23db3de3d6f40",
+  "scope": "Tests only: close the named round-193 gaps before any default-off MTP proxy implementation.",
+  "frozen_inputs": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "inventory_sha256": "b37b9ef2906596b5acd29d8f1538a47c527f74338c5e9386b2370388e8b75b12",
+    "pack_sha256": "aacc0fe9a79833ff118888e33924d77a737ca247841a6bd501cc393e97aa1809",
+    "pack_bytes": 5979721728,
+    "allowed_record_count": 255,
+    "forbidden_target_expert_record_count": 225
+  },
+  "artifacts": {
+    "tests/test_glm_mtp_proxy_contract.c": "9885015fca21c089effb5fc5c1587d38755bf2751c4bd7837d20f4fb083e6134",
+    "tests/test_glm_mtp_proxy_cli.py": "491b49ca42650d70e0f47ca687ddc8dabe6fcd0e2b990ed1bd1d63924442b3eb",
+    "tests/test_glm_mtp_proxy_callgraph.py": "2dbcc5f6d9f384e51b085b53cc55f944c77e475f19649801e4a6d49a183718a7",
+    "Makefile": "1bbb6b142c83728be1ee20d3ec9aadf89b76eacc82ef612420d3b5bbc8bec1aa",
+    "unchanged_ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+    "unchanged_ds4_cli.c": "c92e19198cee8c901c65ff61cbb53c0d72aee00cb20fffef6a89ab6e04e12dfc",
+    "unchanged_ds4.o": "f6f82c74ce7b102658ae16ce8e4e3153180aa62a739328eecf9a4c3573c7b20f",
+    "unchanged_ds4_cli.o": "565073df190a1506beafee7e7d67058ecc65f2231b0240845eded94b2a34a289",
+    "unchanged_ds4_binary": "e557c78c9470d2a5128285bbf6082a98c64a949a43992e549cd157849b8c568f"
+  },
+  "command": "DS4_GLM_MTP_PROXY_TEST_PACK=/tmp/glm52-mtp-proxy-pack-v1.bin make -j2 test-glm-mtp-proxy-contract",
+  "exit_code": 2,
+  "independent_red_results": {
+    "linked_contract_failures": 6,
+    "compiled_callgraph_failures": 4,
+    "production_cli_failures": 10,
+    "ordinary_default_off_cli_checks_passed": 1,
+    "missing_file_failure": false,
+    "source_marker_failure": false,
+    "engine_or_gpu_started": false
+  },
+  "named_finding_disposition": {
+    "R05-R193-C1-CONTRACT-ADAPTERS-ARE-NOT-BOUND-TO-PRODUCTION-CANDIDATE-PATH": "TESTED: compiled ds4.o/ds4_cli.o callgraph must bind main -> candidate executor -> exact pack/source, recurrence, K-rank, canonical publisher and actual step/router callbacks; actual callbacks must reference the existing MTP and target-router GPU primitives.",
+    "R05-R193-H-CAPTURE-BOUNDARY-ABSTRACT": "TESTED: poisoned pre-add3 destination and distinct three-input residual require add3 -> exact capture -> head order and bytes.",
+    "R05-R193-H-EXACT-PACK-AND-SANDBOX-INCOMPLETE": "TESTED: real 5.57-GiB pack with exactly 255 allowed records and frozen hashes is required; wrong digest and mutated header fail; the separate builder suite rejects forbidden overlap, payload/receipt mutation, symlink source and clobber.",
+    "R05-R193-H-K4-K8-MISSING": "TESTED: K=2, K=4 and K=8 exact F32 maxima/ranks, prefix-specific maxima, ascending expert-ID ties, signed zero, NaN, both infinities and invalid K/expert count.",
+    "R05-R193-H-PUBLICATION-NOT-CANONICAL-DURABLE": "TESTED: publisher owns nine exact artifact names/sizes and exact completion schema/hashes; caller completion is rejected; O_EXCL and nine write/fsync/rename/directory-fsync/disposal fault boundaries cannot leave an admissible completion marker.",
+    "ADV-R05-R193-H1-CONTRACT-SYMBOLS-ARE-UNCALLED-DECOY-SEAMS": "TESTED by compiled production callgraph plus real CLI pack/source subprocess behavior; full GPU transcript remains a mandatory safe-run acceptance test after implementation.",
+    "ADV-R05-R193-H2-THREE-ROW-PSEUDOPACK": "FIXED: three-row pseudo-pack removed and replaced by the exact frozen 255-record file.",
+    "ADV-R05-R193-H3-PUBLICATION-NOT-CRASH-SAFE": "TESTED by publisher-owned canonical receipt and operation-boundary failures."
+  },
+  "safety": {
+    "mem_available_gib": 115.0,
+    "swap_growth": false,
+    "active_ds4_server": false,
+    "active_fio": false,
+    "active_gpu_process": false
+  }
+}

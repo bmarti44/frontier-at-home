@@ -1,0 +1,53 @@
+{
+  "schema": "glm52-mtp-proxy-behavioral-red-v1",
+  "recorded_at_utc": "2026-08-06T19:34:00Z",
+  "classification": "GENUINE_EXECUTABLE_RED",
+  "engine_parent": "2b7522d70bca614578f4c730deb99905ac3e200a",
+  "engine_red_candidate": "4a35746c774f48930020724c9db23db3de3d6f40",
+  "production_source_unchanged_from": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+  "clean_build_command": "make -B -j2 tests/test_glm_mtp_proxy_contract",
+  "red_command": "./tests/test_glm_mtp_proxy_contract",
+  "build_exit_code": 0,
+  "red_exit_code": 1,
+  "independent_behavior_groups": 9,
+  "reached_assertion_failures": 13,
+  "errors": 0,
+  "failures": [
+    "production recurrence entry point is absent",
+    "production compact-pack validator entry point is absent",
+    "production router-rank entry point is absent",
+    "production CLI selection entry point is absent",
+    "production publication entry point is absent"
+  ],
+  "production_cli_red": {
+    "unittest_methods": 4,
+    "ordinary_environment_method_passed": 1,
+    "candidate_dispatch_methods_red": 3,
+    "assertion_failures": 8,
+    "partial_environment_masks_tested": 6,
+    "observed_unchanged_behavior": "Every partial, complete, and invalid-fault candidate environment continued to the ordinary missing-model path instead of failing or dispatching at the candidate boundary."
+  },
+  "binary_link_evidence": "nm reports all five entry points as unresolved weak symbols in the executable linked with freshly rebuilt production CORE_OBJS. Strong production definitions are therefore required to turn the suite green.",
+  "artifacts": {
+    "test_binary": "af4148a24bffb0c5aa70c82ba98805d1faa6feeb3db4513a0ff6b5c6144d780d",
+    "binary": "ae9e1328f588dc3376fc9e51833104bf8f5c0c4f85bff16e91a2e100a086dc8d",
+    "Makefile": "65ab5dd67a97399a1ec7421b2a85a376d87c5440fcbd7fde158b64535b74f044",
+    "tests/test_glm_mtp_proxy_contract.c": "22f323c7ff3c21d12bea3cc8fe64ce8462e921d12aeea8d4bbda3b83d34d56cd",
+    "tests/test_glm_mtp_proxy_cli.py": "387d70f63666268f737db6b830d7a3936e31c8f3987eb62e6e6d44c0cfc27c66",
+    "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+    "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f",
+    "ds4_cli.c": "c92e19198cee8c901c65ff61cbb53c0d72aee00cb20fffef6a89ab6e04e12dfc"
+  },
+  "pre_submission_audit": {
+    "compiler_warnings_with_Werror": 0,
+    "source_marker_authority": false,
+    "production_cli_executed": true,
+    "missing_file_failure": false,
+    "production_objects_forced_rebuilt": true,
+    "engine_started": false,
+    "cuda_initialized_by_test": false,
+    "model_opened": false,
+    "gpu_process_after_run": false
+  },
+  "acceptance_authority": "RED only. No implementation or gate PASS is authorized until Nash and Singer review this replacement contract with no critical/high findings."
+}

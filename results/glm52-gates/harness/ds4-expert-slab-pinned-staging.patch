@@ -1,0 +1,126 @@
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index ec67793..8eac098 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -23733,6 +23733,18 @@ static struct {
+ } g_expert_slab;
+ static std::mutex g_expert_slab_init_mu;
+ 
++/* O_DIRECT buffers must also be CUDA page-locked.  Pageable per-layer
++ * buffers make cudaMemcpy perform an implicit registration/staging cycle on
++ * every expert miss; the live RED arm measured 2--9 ms reads inside 50--70 ms
++ * fetch windows.  Retain a small, bounded pool across layer visits instead. */
++static struct {
++    std::mutex mu;
++    std::vector<void *> allocations;
++    std::vector<uint8_t *> buffers;
++    uint64_t buffer_bytes;
++    uint64_t alignment;
++} g_expert_slab_staging;
++
+ typedef struct {
+     std::atomic<uint64_t> reads;
+     std::atomic<uint64_t> logical_bytes;
+@@ -23748,6 +23760,55 @@ static uint64_t cuda_expert_slab_align_up(uint64_t value, uint64_t alignment) {
+     return (value + alignment - 1) / alignment * alignment;
+ }
+ 
++static void cuda_expert_slab_staging_release(void) {
++    for (void *allocation : g_expert_slab_staging.allocations) {
++        if (allocation) (void)cudaFreeHost(allocation);
++    }
++    g_expert_slab_staging.allocations.clear();
++    g_expert_slab_staging.buffers.clear();
++    g_expert_slab_staging.buffer_bytes = 0;
++    g_expert_slab_staging.alignment = 0;
++}
++
++static int cuda_expert_slab_staging_ensure(uint32_t count,
++                                           uint64_t buffer_bytes,
++                                           uint64_t alignment) {
++    if (count == 0 || count > 32 || buffer_bytes == 0 || alignment < 512 ||
++        (alignment & (alignment - 1u)) != 0 ||
++        buffer_bytes > UINT64_MAX - alignment) {
++        return 0;
++    }
++    if (g_expert_slab_staging.buffers.size() >= count &&
++        g_expert_slab_staging.buffer_bytes >= buffer_bytes &&
++        g_expert_slab_staging.alignment == alignment) {
++        return 1;
++    }
++    cuda_expert_slab_staging_release();
++    try {
++        g_expert_slab_staging.allocations.reserve(count);
++        g_expert_slab_staging.buffers.reserve(count);
++    } catch (...) {
++        cuda_expert_slab_staging_release();
++        return 0;
++    }
++    for (uint32_t i = 0; i < count; i++) {
++        void *allocation = NULL;
++        if (cudaHostAlloc(&allocation, (size_t)(buffer_bytes + alignment),
++                          cudaHostAllocPortable) != cudaSuccess || !allocation) {
++            (void)cudaGetLastError();
++            cuda_expert_slab_staging_release();
++            return 0;
++        }
++        const uintptr_t raw = (uintptr_t)allocation;
++        const uintptr_t aligned = (raw + alignment - 1u) & ~(alignment - 1u);
++        g_expert_slab_staging.allocations.push_back(allocation);
++        g_expert_slab_staging.buffers.push_back((uint8_t *)aligned);
++    }
++    g_expert_slab_staging.buffer_bytes = buffer_bytes;
++    g_expert_slab_staging.alignment = alignment;
++    return 1;
++}
++
+ static uint64_t cuda_expert_slab_now_ns(void) {
+     struct timespec ts;
+     if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts) != 0) return 0;
+@@ -24188,6 +24249,10 @@ static void cuda_expert_slab_cleanup(void) {
+     g_expert_slab.by_key.clear();
+     g_expert_slab.file_size = 0;
+     g_expert_slab.model_generation = 0;
++    {
++        std::lock_guard<std::mutex> staging_lock(g_expert_slab_staging.mu);
++        cuda_expert_slab_staging_release();
++    }
+     g_expert_slab.state.store(0);
+ }
+ 
+@@ -25115,16 +25180,23 @@ static int cuda_stream_selected_cache_begin_load(
+             cuda_expert_slab_align_up(read_capacity + 2u * align, align);
+         const int nthr = (int)(miss_jobs.size() < (size_t)fetch_threads ?
+                                miss_jobs.size() : (size_t)fetch_threads);
++        /* The pool is shared because selected-expert staging is process-global
++         * too.  Holding ownership through join prevents a second request from
++         * reusing a page-locked O_DIRECT buffer while its CUDA copy is live. */
++        std::unique_lock<std::mutex> staging_lock(g_expert_slab_staging.mu);
++        if (!cuda_expert_slab_staging_ensure((uint32_t)nthr, buf_bytes, align)) {
++            cuda_expert_cache_flush_all("expert slab pinned staging allocation");
++            cuda_stream_selected_cache_invalidate();
++            return cuda_stream_selected_reject(table, slot_count,
++                                               "expert slab pinned staging");
++        }
+         auto worker = [&](int worker_id) {
+             if (cudaSetDevice(g_gpu[logical_tier].device_id) != cudaSuccess) {
+                 failed.store(1);
+                 (void)cudaGetLastError();
+                 return;
+             }
+-            void *buf = NULL;
+-            if (posix_memalign(&buf, (size_t)align, (size_t)buf_bytes) != 0 || !buf) {
+-                failed.store(1); return;
+-            }
++            void *buf = g_expert_slab_staging.buffers[(size_t)worker_id];
+             for (;;) {
+                 const size_t i = next.fetch_add(1);
+                 if (i >= miss_jobs.size() || failed.load()) break;
+@@ -25173,7 +25245,6 @@ static int cuda_stream_selected_cache_begin_load(
+                     }
+                 }
+             }
+-            free(buf);
+         };
+         std::vector<std::thread> pool;
+         try {

@@ -1,0 +1,25 @@
+{
+  "candidate": "W7-cache-generation-campaign-runner-red",
+  "parent_commit": "2f08aaaa8184705032032e5a8c1c5fe8f2f55430",
+  "captured_at_utc": "2026-08-08T06:46:22Z",
+  "purpose": "Preserve behavioral RED coverage for deterministic post-freeze arm scheduling, dependency-only self-test, and the fixed contained measurement surface before implementing the runner.",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign_runner",
+  "artifacts": {
+    "runner_scaffold_sha256": "7a485f6ddead7079943b51b9f0f772049b90cc3c8e8bd4d6de56ff1d24d5ca86",
+    "test_sha256": "a4d6afb1d0ba483eb8d3be4093decc53c0186213610cbc4df5893fbab55fe40b",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "dcb51acbbf1d490b7fd5868803e0edf0db2a66073f89516242e132c70fb2bdce"
+  },
+  "observed": {
+    "tests_run": 3,
+    "failures": 3,
+    "errors": 0,
+    "failed_behaviors": [
+      "dependency-only self-test",
+      "five deterministic ABBA/BAAB schedules",
+      "declared containment and raw-evidence surface"
+    ]
+  },
+  "red_is_behavioral": true,
+  "verdict": "RED_CONFIRMED"
+}

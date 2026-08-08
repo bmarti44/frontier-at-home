@@ -66,6 +66,35 @@ Use this sequence for production-path changes:
     high or critical issues. Reviewers choose their own scores; do not prescribe
     a scoring formula.
 
+Candidate iteration is governed by convergence, not a hard retry count. Continue
+publishing candidates for a gate autonomously only while all three conditions
+hold:
+
+1. The candidate changes only what is needed to close findings named in the
+   latest review; do not add scope.
+2. The complete pre-submission audit passes before publication.
+3. Open critical/high findings strictly decrease with every candidate: no
+   finding reopens and no new finding class appears.
+
+Pause the gate and report the exact open findings to the owner only when
+convergence breaks: blocking findings fail to strictly decrease across two
+consecutive candidates, a new critical finding lands in previously frozen
+scope, or one gate exceeds eight total candidates. Report both the per-gate
+candidate count and the campaign-global review round. Medium and low findings
+do not trigger a full review cycle; close them with a focused regression test
+and attestation unless they reveal a critical/high measurement-validity defect.
+Never re-review a component whose evidence and sign-off are already frozen.
+
+Defects discovered by executing a gate—runtime failures, aggregation errors,
+and harness mismatches—are eligible for autonomous fix candidates under the
+same convergence rule as reviewer findings. The fix must target only the
+observed failure, the failed attempt and proposed acceptance test must already
+be preserved in a committed record, frozen components must remain
+byte-identical, and the full pre-submission audit must pass. These execution
+defects do not create an additional escalation condition. Escalate only when
+one of the three conditions above literally occurs; resolve ambiguity against
+those enumerated conditions, not an inferred broader intent.
+
 Do not add a permanent semantic variant merely because a diagnostic flag passes.
 First use the flag to prove the representation or algorithm. Then implement and
 requalify the single intended production path.
@@ -82,13 +111,23 @@ not merely fail one process.
 - Use the inference lock and the hardened wrapper:
   `results/glm52-gates/harness/glm_safe_run.sh`.
 - For current GLM qualification runs, use a fresh systemd cgroup with
-  `MemoryHigh=68G`, `MemoryMax=71G`, `MemorySwapMax=0`,
-  `OOMPolicy=kill`, and `KillMode=control-group`.
-- Keep the whole-system kill floor at 40 GiB for experimental GLM runs unless
-  new measured evidence justifies another value. The production profile has its
-  own validated floor.
+  `MemorySwapMax=0`, `OOMPolicy=kill`, and `KillMode=control-group`. Size
+  `MemoryHigh` and `MemoryMax` from a measured preflight that includes both
+  the pinned expert arena and engine RSS. Do not reuse the old 68/71 GiB
+  limits: a 68 GiB arena plus roughly 30 GiB engine RSS will fight those
+  limits and can destabilize the host.
+- Use a 40 GiB whole-system kill floor for the cache-off measurement probe. A
+  full 68 GB-arena campaign may use the preregistered 18 GiB kill floor only
+  when its cgroup ceiling is derived from that probe, the arithmetic preserves
+  the floor against physical memory, and external sampling still rejects any
+  arm below 10 GiB available. The production profile has its own validated
+  floor.
 - Require stable start memory, a wall-clock timeout, continuous process/binary
   identity checks, and timestamped memory sampling.
+- Every newly introduced host-to-device copy path must use persistent pinned
+  staging or include a measured justification for pageable memory. Check this
+  before the first large serving run; a fast disk read can otherwise be hidden
+  inside tens of milliseconds of implicit CUDA registration and staging.
 - Treat OOM, cgroup kill, swap use, Xid, short output, timeout, missing process
   identity, or a surviving descendant as a failed attempt.
 
@@ -120,6 +159,10 @@ Lossy cache or weight changes require the fixed 100-case paired suite:
 - top-1 loss and its one-sided 95% upper bound `<= 0.5` percentage points.
 
 An improved average does not override a failed confidence bound.
+Passing these statistical limits also does not authorize a fidelity spend.
+Report every nonzero delta together with the measured performance it bought;
+only the repository owner decides whether to adopt it. Exhaust byte-identical
+levers first, and never spend fidelity merely to improve prefill.
 
 ## Evidence contract
 

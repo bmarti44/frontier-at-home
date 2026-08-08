@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "a964bd67ad0f623e2a5940a0e9443f1b8b22f047",
+  "candidate_tree": "59f54ed05d316715a1eb17e4035e717deec0a138",
+  "review_round": 157,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 97,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "P1-BASE-C18-M1-CLEANUP-NOT-BEHAVIORALLY-TESTED"
+    ],
+    "low": [],
+    "verdict": "ACCEPT_WITH_MEDIUM"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 94,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "ADV-R157-M1-CLEANUP-ROLLBACK-TEST-GAP",
+      "ADV-R155-M1-REGRESSION-SCOPE"
+    ],
+    "low": [],
+    "verdict": "ACCEPT"
+  },
+  "prior_issue_status": {
+    "P1-BASE-C17-RUNTIME-NOEXEC-PYTHON-STAGING": "FIXED; staging moved from noexec /run to executable root-controlled /usr/local/libexec",
+    "P1-BASE-C17-H1-CANDIDATE-ID-MISMATCH": "FIXED; exact candidate and tree resolve and match",
+    "P1-BASE-C16-RUNTIME-ROOT-CLONE-DUBIOUS-OWNERSHIP": "FIXED; exact-scoped upload-pack remains unchanged",
+    "P1-BASE-C18-M1-CLEANUP-NOT-BEHAVIORALLY-TESTED": "NONBLOCKING_MEDIUM; code inspection confirms the unchanged EXIT-trap transaction, the real failed install left no approved runtime, and the executable-mount dress rehearsal removed its temporary runtime",
+    "ADV-R157-M1-CLEANUP-ROLLBACK-TEST-GAP": "NONBLOCKING_MEDIUM; same bounded dynamic-test gap as P1-BASE-C18-M1; installed-boundary smoke must inspect temporary and rollback residues",
+    "ADV-R155-M1-REGRESSION-SCOPE": "NONBLOCKING_MEDIUM; production exact-candidate checks remain unchanged and the installed-boundary smoke will exercise the actual reviewed candidate"
+  },
+  "release_conditions": {
+    "exact_candidate_resolves": true,
+    "reviewed_tree_matches_freeze": true,
+    "both_scores_at_least_90": true,
+    "verified_critical_or_high": 0,
+    "root_staged_install_authorized": true,
+    "installed_boundary_nonheldout_cuda_smoke_required": true,
+    "heldout_may_open_before_smoke": false
+  },
+  "next_action": "Commit this review record, pin the working repository to the exact reviewed candidate, update the external launcher to Candidate 18, perform the owner-sudo install, and run the passwordless non-held-out installed-boundary CUDA smoke before opening held-out values."
+}

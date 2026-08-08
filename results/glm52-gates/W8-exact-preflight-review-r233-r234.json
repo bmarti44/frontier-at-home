@@ -1,0 +1,40 @@
+{
+  "gate": "W8-exact-cKV-preflight",
+  "engine_base": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "candidate_1": "0925ed3",
+  "candidate_2": "f0fab6d6a121d95ef38f1d8b10a60e085486e64d",
+  "binary_sha256": "ed0dd638dca7fdc3aec8c5688cf8671a52d6c6008c6263e205cdd0abdd13c9fe",
+  "patch_sha256": "af2459da346279aa30bed242eb6dfe8973c296d276c8f927c2968eded5828fd0",
+  "round_233": {
+    "nash": {
+      "blocking": "production-width buffered prefill rejected row counts above 64"
+    },
+    "singer": {
+      "blocking": "the same production-width path was not covered by the unit gate"
+    },
+    "disposition": "RED reproduced at 4,096 rows; candidate 1 rejected"
+  },
+  "round_234": {
+    "nash": {
+      "score": 97,
+      "critical": [],
+      "high": [],
+      "verdict": "PASS_RUNTIME_ALLOWED"
+    },
+    "singer": {
+      "score": 97,
+      "critical": [],
+      "high": [],
+      "verdict": "PASS_W8_RUNTIME_ALLOWED_WITH_MEDIUM_FOLLOWUP"
+    }
+  },
+  "local_gates": [
+    "ASAN/UBSAN exact row-store unit suite",
+    "4,096-row production-width append and indexed read",
+    "1,048,576-row geometry with 16,384 records and 2,048 selected rows",
+    "direct CUDA F32 resident-versus-stage byte identity",
+    "invalid logical ID and undersized stage rejection",
+    "two clean builds with byte-identical stripped binaries"
+  ],
+  "runtime_followup": "Run the frozen matched model-backed resident/exact smoke; do not claim direct-1M, disk resume, or performance from that smoke."
+}

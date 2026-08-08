@@ -1,0 +1,64 @@
+{
+  "artifact": "GLM-5.2 R0-UPGRADE-a shared-expert router-correction falsifier",
+  "schema_version": 1,
+  "status": "PASS",
+  "decision": "The byte-identical shared-expert correction exceeds the preregistered 0.02 absolute recall-gain threshold. Proceed to a separate small serving-performance probe before adoption.",
+  "candidate": {
+    "repo_commit": "f9812ecf530757fce963432314c41829244dee4c",
+    "engine_commit": "3332c25b310ff1bca58ee3bc028f1a545db7e95b",
+    "binary_sha256": "33800c87e8c2171b62befd01fe79413e8a108be52455521eddea18026964c572",
+    "freeze_commit": "2d80ed777c686720b226cd3346ec859cf5690806",
+    "randomness_round": 6348262,
+    "randomness": "dbbc9a7bcc9614ec35c448830e93b56607d0abf08120090f541b0ba24c23d637",
+    "seed": 68110823
+  },
+  "acceptance": {
+    "formula": "recall=sum(|predicted_top8 intersect actual_top8|)/(8*samples)",
+    "minimum_absolute_recall_gain": 0.02,
+    "minimum_samples": 1036,
+    "minimum_unique_positions": 14,
+    "required_layers_per_position": "L4 through L77 inclusive, exactly once and in order",
+    "observed_absolute_recall_gain": 0.02986341956930194,
+    "verdict": "PASS"
+  },
+  "measurements": {
+    "samples": 13838,
+    "unique_positions": 187,
+    "baseline_recall": 0.7596744471744472,
+    "shared_corrected_recall": 0.7895378667437492,
+    "malformed_rows": 0,
+    "off_completion_tokens": 128,
+    "on_completion_tokens": 128,
+    "request_sha256": "216b1006819361b6f8ffff8ccfd15ddb61eb5168508c7ddec61cad172ea8a6b1",
+    "matched_outputs_byte_and_token_identical": true,
+    "off_control_decode_tokens_per_second": 2.228975410371684,
+    "on_instrumented_decode_tokens_per_second": 2.1762989627206415,
+    "on_over_off_instrumented_decode_ratio": 0.976367416434505
+  },
+  "safety": {
+    "cgroup_high_events": 0,
+    "cgroup_max_events": 0,
+    "cgroup_oom_events": 0,
+    "cgroup_oom_kill_events": 0,
+    "cgroup_swap_bytes": 0,
+    "xid": false,
+    "surviving_ds4_server_processes": 0,
+    "host_minimum_available_gib": 24.522499084472656
+  },
+  "evidence": {
+    "path": "/home/bmarti44/.local/state/glm52-glm52-r0a-f9812ec",
+    "artifact_sha256": {
+      "summary.json": "702bfdf88f66fe505f9003fb809a6aa765117717254a5717288c803e76884b12",
+      "score.json": "761951c1b17115a3e81e291f51f4fe95ca126fd5a54adcfcc31dffa56d36d244",
+      "off/arm.json": "46b4e46b1eb773754ba7a740c56b6828b58ae0833c47eea51ce9d1e0204b7f81",
+      "on/arm.json": "6c7a33e6c44157ba1167d1d9aabc7367e70c7e516faa08d302a8f06b893c0bb8",
+      "off/result.json": "b1b7e187ad83a065b250ff910414bbe2cbfc1630aea82c49dbb0d1871dc36571",
+      "on/result.json": "2be073c09e3fb964fa4997a0497ed75e61d58ff64f70a7c05e44b1309ea7215e",
+      "off/server.log": "5667d39acabc4cd8bdd6cd2ad1258d7fb9a2c7ae97b33db8ecc7313de19b7448",
+      "on/server.log": "3f1e08bad71e65632a27c91c091e34bc201f56f04753b7870478cd8961be29ea",
+      "../glm52-crashlog/20260804-173057-glm52-r0a-f9812ec-off/samples.log": "7dae46a6809c24ebbae88fdef2960c637cfd14d581c936bb773d4d5275be5c3c",
+      "../glm52-crashlog/20260804-173248-glm52-r0a-f9812ec-on/samples.log": "17f03f013d6b3ebbdcded999808f6368432f818f86d1c3c4074068075677c052"
+    }
+  },
+  "reporting_caveat": "This is a predictor-recall falsifier, not a serving-performance qualification. The ON arm synchronously reads and logs every predicted and actual expert set, so its timing is instrumentation-dominated. The TTFT and prefill values use the stripped control configuration and must not be reported as the adopted GLM serving profile. Byte identity makes an NLL rerun unnecessary for this diagnostic; the eventual production prefetch integration must again prove byte identity and non-regressing matched throughput."
+}

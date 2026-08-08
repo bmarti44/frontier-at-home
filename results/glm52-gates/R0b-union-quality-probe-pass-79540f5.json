@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "classification": "PASS",
+  "scope": "quality_one_case_safety_probe_only",
+  "candidate_hash": "79540f5ff2d5c03dd5f0c93063eea306580b95d1",
+  "tag": "p0qprobe-r106-79540f5",
+  "seed": 2142443943,
+  "checks": {
+    "off_and_on_containment_clean": true,
+    "byte_and_raw_token_identity": true,
+    "off_trace_absent": true,
+    "on_exact_75_layer_trace": true,
+    "trace_scorer_pass": true,
+    "kernel_logs_clean": true,
+    "cgroup_events_zero": true,
+    "cgroup_swap_zero": true,
+    "no_survivor": true
+  },
+  "observed": {
+    "case_id": "case_099",
+    "prompt_tokens": 36,
+    "completion_tokens": 8,
+    "raw_token_ids": [8507, 228, 8507, 228, 8507, 228, 8507, 228],
+    "generated_reasoning_bytes": 12,
+    "generated_content_bytes": 0,
+    "off_sse_content_events": 2,
+    "on_sse_content_events": 2,
+    "trace_events": 75,
+    "token_layer_events": 2700,
+    "trace_artifacts": 375,
+    "trace_bytes": 72048000,
+    "off_cgroup_peak_bytes": 49159409664,
+    "on_cgroup_peak_bytes": 49171480576,
+    "off_minimum_mem_available_kib": 44600964,
+    "on_minimum_mem_available_kib": 44632028,
+    "resolved_cuda_arena_gib": 44.70
+  },
+  "artifacts": {
+    "summary_path": "/home/bmarti44/.local/state/glm52-p0qprobe-r106-79540f5/summary.json",
+    "summary_sha256": "39fec83d7e800b2ffa0dc4bbf376e23bbf12c05d2ae2fb975d8efca9337d6bc8",
+    "off_arm_sha256": "84041c8662d66fcc206aecc93692b8782f42e77becaac2bcc72c977b07102fc0",
+    "on_arm_sha256": "0dd606059ecc928980f67c931af1584893437a11679de5eefaade971f3c12bf6",
+    "off_containment_sha256": "a9d1d68a08629d7f0d463678927aa6ca8f3372190fb36bbe33e5cf1625ff4598",
+    "on_containment_sha256": "d948660854b6460592947b8d20a3a0a17c608b909b69bb0546c3b516761dd16b",
+    "off_main_log_sha256": "d73013b25ec397693331b00a213398a5436108450b117e94f4f81e2560eaf388",
+    "on_main_log_sha256": "5750bc03c0532fddd879afbbaeffde3126e269532e6ba2cf28c6b71bdee1d0fd",
+    "off_samples_log_sha256": "ea8690c0cb90e94673cf481ba901e295ce9760e19fc8c8c627a021bf2b46a613",
+    "on_samples_log_sha256": "02ee8403da51a42e30ffa3dbd10facb60956b9802d6516568e3a432652fe122a",
+    "raw_artifact_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  },
+  "limitation": "This probe authorizes the full 100-case capture at the same frozen configuration. It is not canonical corpus evidence and contributes no training rows."
+}

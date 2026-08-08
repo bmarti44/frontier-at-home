@@ -1,0 +1,85 @@
+{
+  "acceptance": {
+    "all_layer_coverage": "Exactly routed layers 3 through 77 for every event; missing, duplicate, reordered, or extra layers FAIL.",
+    "byte_amplification_upper_95_max": 2.0,
+    "continue_to_online_design": "All mandatory checks pass. This qualifies only the proxy predictor; online admission and idle-slot prefetch remain separately default-off and require byte-identical serving A/B.",
+    "k2_budget16_macro_recall_lower_95_min": 0.8,
+    "k2_budget16_miss_conditioned_recall_lower_95_min": 0.75,
+    "k2_budget16_proxy_minus_each_baseline_lower_95_min": 0.0,
+    "normal_target_expert_bytes_read": 0,
+    "proxy_completed_ms_p95_max": 50.0,
+    "stop": "Any mandatory threshold fails; preserve the negative curve and stop MTP proxy work before online integration."
+  },
+  "baselines": [
+    "per-layer frequency prior fitted only on already-open training rows",
+    "current-state gate replay projected through each target router head"
+  ],
+  "candidate": 2,
+  "classification": "PREREGISTERED_OPEN_FIXTURE_PROXY_TRACE",
+  "engine": {
+    "base_commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+    "readable_source_root": "/tmp/glm52-utf8-engine"
+  },
+  "events": {
+    "fixtures": [
+      "case_053",
+      "case_056",
+      "case_058",
+      "case_027",
+      "case_065"
+    ],
+    "lineage": "The five already-open train precision-diagnostic cases. They were excluded from probe fitting and have retained exact target routes.",
+    "source_positions": "The final eight positions per request with a complete same-request K=8 future window."
+  },
+  "gate": "R0.5-mtp-proxy-router-trace",
+  "implementation": {
+    "default_off": true,
+    "method": "Recursively advance the single GLM NextN block using its own proxy hidden state and drafted token, without target evaluation. For each future proxy state, apply every normal routed layer's router matrix and bias, stable-rank all 256 experts, and record top-16. Never dispatch a target routed expert while producing candidates.",
+    "red_test": "The unchanged capture lacks proxy-router records for layer 3 and cannot emit a complete expert-free K>=2 proxy rollout.",
+    "state_isolation": "Diagnostic-only graph/session; target control state and output remain untouched. Every proxy tensor and record is discarded after capture.",
+    "target_alignment": "The NextN state produced from h[t] and token q1 is the proxy for target token q1; recursively produced states align to q2..q8. Score each proxy only against the exact target routes at that same future token position."
+  },
+  "metrics": {
+    "budgets": [
+      8,
+      16
+    ],
+    "confidence": "Unweighted macro-case means and paired one-sided 95% bounds over the exact five cases; also report event-weighted values as secondary.",
+    "k": [
+      2,
+      4,
+      8
+    ],
+    "primary": "K=2, budget=16 macro-case union recall and miss-conditioned recall",
+    "report": [
+      "recall",
+      "precision",
+      "miss-conditioned recall",
+      "full-union coverage",
+      "predicted bytes divided by true bytes",
+      "proxy completed milliseconds",
+      "normal target expert bytes read while producing candidates",
+      "NextN/MTP expert bytes read while producing candidates",
+      "per-layer coverage"
+    ]
+  },
+  "physics": {
+    "cache_hit_rate_reference": 0.77,
+    "cached_miss_bytes_per_token": 1334000000,
+    "expert_record_fio_gb_s": 12.56426434920906,
+    "miss_fill_seconds": 0.10617414302366038,
+    "note": "The earlier 0.4616-second all-miss floor is reported but is not the proxy latency threshold; the online consumer filters resident experts, so the matched cache-miss component is the relevant I/O lead. A 50 ms proxy leaves roughly 56 ms before that component's drive-only floor and is only an offline continuation bar, not a serving claim."
+  },
+  "prohibited": [
+    "No candidate-18 held-out capture, mapping, prediction, or partial result may be read or reused.",
+    "No target routed expert may be read or dispatched while producing proxy candidates.",
+    "No accuracy threshold may be changed after trace values are observed.",
+    "No online prefetch or admission implementation begins unless every offline mandatory check passes."
+  ],
+  "review_resolution": {
+    "ADV-R05-R185-H1-PROXY-ROUTER-ORACLE-NOT-FALSIFIED": "Addressed by the expert-free proxy trace and fixed usefulness thresholds.",
+    "ADV-R05-R185-H2-FIRST-ROUTED-LAYER-OMITTED": "Addressed by exact 3..77 coverage and deletion mutation.",
+    "ADV-R05-R185-M1-CANDIDATE-QUALITY-UNDEFINED": "Addressed by fixed recall, miss-conditioned recall, baseline-delta, byte-amplification, latency, and confidence formulas."
+  },
+  "schema_version": 1
+}

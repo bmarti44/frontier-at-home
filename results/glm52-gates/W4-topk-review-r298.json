@@ -1,0 +1,103 @@
+{
+  "schema": "glm52-w4-review-v1",
+  "candidate_hash": "f180321cff18bf7a9d0a43adb5622a2251ce680f",
+  "evidence_commit": "ea13c452e",
+  "review_round": 298,
+  "campaign_authorized": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 82,
+    "critical": [],
+    "high": [
+      {
+        "id": "W4-R297-H2-NONAUTHORITATIVE-EVIDENCE",
+        "status": "OPEN",
+        "evidence": "The terminal scorer accepts any self-consistent 40-hex candidate and artifact closure; its committed valid fixture uses arbitrary binary/source bytes and still passes.",
+        "affected_gate": "W4 artifact authority and stale-binary rejection",
+        "reproduction_instructions": "Run test_valid_evidence_passes_fixed_formula and inspect that the scorer does not consume the candidate-3 freeze.",
+        "proposed_acceptance_test": "Bind the freeze record and exact candidate/artifact digest map in the terminal scorer; reject a coherent alternate closure."
+      }
+    ],
+    "medium": [
+      {
+        "id": "W4-R298-M1-DERIVED-CORRECTNESS-ROWS",
+        "status": "OPEN",
+        "evidence": "The runner derives ID digest, exactness, and per-arm marker fields rather than parsing them from each executable observation.",
+        "affected_gate": "W4 raw-evidence provenance",
+        "reproduction_instructions": "Compare W4_OBSERVATION lines with raw.jsonl; the former contain only schedule and timing.",
+        "proposed_acceptance_test": "Emit actual mode, exactness, and selected-ID digest per observation and verify the fixed expected digest."
+      },
+      {
+        "id": "W4-R298-M2-MUTATION-PROVENANCE",
+        "status": "OPEN",
+        "evidence": "The mutation result has no committed deterministic producer or hash-bound stdout/stderr.",
+        "affected_gate": "Executed mutation reproducibility",
+        "reproduction_instructions": "Search for a producer of W4-topk-candidate3-mutations-pass.json; none is committed.",
+        "proposed_acceptance_test": "Commit a bounded mutation driver and include the coherent alternate-closure mutation."
+      }
+    ],
+    "low": [
+      {
+        "id": "W4-R298-L1-MULTIDEVICE-RUNTIME-COVERAGE",
+        "status": "DEFERRED",
+        "evidence": "The per-device logic is source-verified but this single-GPU Spark cannot exercise multi-GPU behavior.",
+        "affected_gate": "Out-of-scope multi-GPU portability",
+        "reproduction_instructions": "Exercise independent setup and tier mismatch on a multi-GPU host.",
+        "proposed_acceptance_test": "Retain explicit checks and test when multi-GPU hardware enters scope."
+      }
+    ],
+    "prior_issue_status": [
+      {"id": "W4-R297-H1-SIGNED-ZERO-TIE-MISMATCH", "status": "FIXED"},
+      {"id": "W4-R297-H2-NONAUTHORITATIVE-EVIDENCE", "status": "OPEN"},
+      {"id": "W4-R297-H3-RANDOMNESS-NOT-EXECUTION-BOUND", "status": "FIXED"},
+      {"id": "W4-R297-M1-PER-DEVICE-PREPARE-CACHE", "status": "FIXED"},
+      {"id": "W4-R297-M2-MERGE-SHAPE-COVERAGE", "status": "FIXED"}
+    ],
+    "verdict": "CHANGES_REQUIRED_SERVING_CAMPAIGN_NOT_AUTHORIZED"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 82,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W4-297-H2-CONFIRMATION-HAS-NO-HASH-CLOSED-RAW-EVIDENCE",
+        "status": "OPEN",
+        "evidence": "The scorer accepts arbitrary consistent ID digests and positive timings, and never reconciles raw.jsonl with microgate.stderr. The unit fixture passes with an all-ones digest.",
+        "affected_gate": "W4 exactness, speed measurement validity, and anti-cheating",
+        "reproduction_instructions": "Replace all IDs and timings, refresh raw_sha256, and rerun the scorer.",
+        "proposed_acceptance_test": "Require the fixed expected ID digest, bind and parse the execution transcript, and reject coherent ID/timing replacement."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-W4-297-H1-PACKED-FLOAT-ORDER-DIFFERS-FROM-PRODUCTION-COMPARATOR", "status": "FIXED"},
+      {"id": "ADV-W4-297-H2-CONFIRMATION-HAS-NO-HASH-CLOSED-RAW-EVIDENCE", "status": "OPEN"},
+      {"id": "ADV-W4-297-M1-PARTIAL-AND-ODD-MERGE-SHAPES-UNTESTED", "status": "FIXED"},
+      {"id": "EXEC-W4-C2-SILENT-SCORER-SUCCESS", "status": "FIXED"}
+    ],
+    "verdict": "CHANGES_REQUIRED_SERVING_CAMPAIGN_NOT_AUTHORIZED"
+  },
+  "root_reproduction": {
+    "coherent_alternate_closure": "VERIFIED by the committed synthetic valid-fixture test",
+    "coherent_ids_and_timings_replacement": {
+      "status": "VERIFIED",
+      "mutation": "All 20 timings replaced with A=10.0/B=1.0 and all ID digests with 64 twos; raw hash refreshed.",
+      "unchanged_scorer_exit_code": 0,
+      "unchanged_scorer_verdict": "PASS",
+      "reported_speedup_lower_95": 10.000000000000002
+    },
+    "derived_raw_fields": "VERIFIED",
+    "missing_mutation_driver": "VERIFIED"
+  },
+  "convergence": {
+    "gate_candidate_count": 3,
+    "global_review_round": 298,
+    "status": "CONVERGING",
+    "blocking_classes_shrank_from_round_297": true,
+    "next_candidate_authorized": true,
+    "candidate_4_scope": "Only freeze authority in the terminal scorer, actual per-observation transcript fields, transcript reconciliation, and a deterministic mutation driver for the named coherent mutations."
+  },
+  "verdict": "CHANGES_REQUIRED_SERVING_CAMPAIGN_NOT_AUTHORIZED"
+}

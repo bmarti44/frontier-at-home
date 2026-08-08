@@ -1,0 +1,93 @@
+{
+  "schema_version": 4,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "PREREGISTERED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v3.json",
+  "review_findings_addressed": "results/glm52-gates/W7-resume-review-r198.json",
+  "behavioral_red": "results/glm52-gates/W7-resume-candidate4-red.json",
+  "scorer": {
+    "id": "w7.resume.v1",
+    "implementation": "scripts/glm52_goal.py:_score_w7_resume",
+    "tests": "scripts/tests/test_glm52_goal.py",
+    "authority": "Every execution has a globally unique regime/case invocation ID. Checkpoint choice, completed payload restoration, reset/invalidation behavior, and normalized evaluator coverage are derived from raw inventory and ordered primitive receipts."
+  },
+  "lineage": {
+    "wire": "Full UTF-8 bytes plus the production-tokenizer token-end byte map; zero-width control tokens may produce equal adjacent offsets, but offsets never decrease and the final offset covers all wire bytes.",
+    "canonical": "The scorer decodes the complete canonical I32 token vector and validates the GLM vocabulary domain.",
+    "live": "The scorer decodes the complete pre-load live I32 token vector and derives live length and common-prefix length; no caller common/live summary field exists.",
+    "restored": "The decoded restored checkpoint vector must equal both canonical[:selected] and live[:selected].",
+    "checkpoint": "A stored record's token and lineage hashes are both checkpoint-local hashes of canonical[:record.token_length], never hashes of a future prompt."
+  },
+  "checkpoint_selection": {
+    "inventory_records": [
+      "older valid matching checkpoint",
+      "unique longest valid matching checkpoint",
+      "newer wrong-lineage decoy",
+      "newer malformed decoy"
+    ],
+    "formula": "Select exactly one longest structurally valid record whose rendered wire prefix and checkpoint-local token lineage match and whose token length is at or before the scorer-derived common frontier. Equal-length eligible records reject as ambiguous.",
+    "payload_formula": "13*4 + tokens*4 + 154880*4 + 78*4*2 + tokens*(78*(512+64)*4 + 21*128*4)",
+    "read_completion": "Exactly one payload-read receipt must bind the selected record, token length, payload hash, and the formula-derived payload byte count. Zero, short, over, trailing, or multiple reads reject."
+  },
+  "evaluation": {
+    "receipt_shape": "One or more ordered evaluator receipts are normalized only when their ranges are contiguous, nonempty, nonoverlapping, gap-free, and share the unique case invocation ID.",
+    "cold_and_strict": "Normalized coverage is exactly [0,prompt).",
+    "candidate": "Normalized coverage is exactly [selected,prompt).",
+    "rejections": "Any hidden pre-checkpoint evaluation, gap, overlap, duplicate range, reset, or invalidation in the candidate rejects."
+  },
+  "complete_state": {
+    "format": "ds4-glm-session-canonical-v2",
+    "production_shape": {
+      "normal_layers": 78,
+      "routed_layers": 75,
+      "vocab": 154880,
+      "kv_lora": 512,
+      "rope": 64,
+      "indexer_dim": 128,
+      "indexer_layers": 21,
+      "expanded_full_kv_live_rows": 0,
+      "compact_live_rows": "prompt_tokens"
+    },
+    "members": [
+      "13-u32 header",
+      "complete checkpoint token vector",
+      "154880 F32 logits",
+      "78-u32 compact-row table",
+      "78-u32 index-row table",
+      "78 complete F32 [prompt,512] kv_lora tensors",
+      "78 complete F32 [prompt,64] k_rope tensors",
+      "21 complete F32 [prompt,128] indexer-key tensors"
+    ],
+    "acceptance": "Names, dtypes, dimensions, ordering, offsets, byte counts, total formula, per-member hashes, manifest root, token lineage, and all 78 logical frontiers are scorer-derived and exact. Cold, strict, candidate, exact-off, and exact-on manifests must match exactly."
+  },
+  "exact_replay": {
+    "operations": "Both flag-off and flag-on exact replay perform no load, reset, invalidation, or evaluation and retain the full canonical live lineage.",
+    "artifacts": "Both carry the same complete state manifest, 154880 finite logits, argmax, and 64 generated tokens as cold/strict/candidate."
+  },
+  "confirmation": {
+    "regimes": [
+      "primary-fixed",
+      "confirmation-1",
+      "confirmation-2"
+    ],
+    "selection": "The post-freeze public-random digest and regime ID select disjoint variants 0-7 and 8-15. The frozen fixture builder appends the exact ASCII W7 confirmation-variant marker before production tokenization.",
+    "binding": "The scorer verifies the marker, seed-selected variant, canonical content hash over all fixture inputs, aggregate top-level hash, and pairwise-different decoded fixture content."
+  },
+  "numerical_and_safety": {
+    "max_abs_logit_delta_strictly_less_than": 0.01,
+    "argmax_identical": true,
+    "generated_tokens_identical": 64,
+    "complete_state_exact": true,
+    "minimum_start_available_gib": 110,
+    "minimum_observed_available_gib": 10,
+    "safe_wrapper_lock_cgroup_terminal_receipts_required": true,
+    "no_oom_xid_swap_growth_or_survivor": true,
+    "bare_engine_and_reboot_forbidden": true
+  },
+  "next_sequence": [
+    "Nash and Singer review candidate 4 only.",
+    "If no critical/high findings remain, author the smallest compiled production-path RED with observers beneath ds4_kvstore.c, ds4_server.c, and ds4.c primitives.",
+    "Reproduce the unchanged-code historical failure only through glm_safe_run.sh.",
+    "Implement the fix behind default-off DS4_GLM_LIVE_REWIND_V1=1 only after the contained RED is committed."
+  ]
+}

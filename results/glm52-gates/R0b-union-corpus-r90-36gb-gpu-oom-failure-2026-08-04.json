@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_FAILED_ATTEMPT",
+  "candidate_hash": "cdec8d08758b5f79ea03f38294b978acdd8fd783",
+  "freeze_parent_commit": "3f5ee2806d832a3c44c4ef5f873189f9ced635bf",
+  "engine_commit": "970b4218b2238fc973b96992e0e600f28b09c8c7",
+  "binary_sha256": "2d70aeb1485021b22b132d80acbff1ce3d2a3b7639e569838186f835d78faf36",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "drand_round": 6348930,
+  "seed": 635554577,
+  "expert_cache_budget": "36GB",
+  "fixed_scorer_verdict": "NO_RESULT",
+  "safety_verdict": "FAIL",
+  "overall_verdict": "FAIL",
+  "failing_assertion": "No CUDA, driver, cgroup, host, or kernel OOM evidence may occur during either arm.",
+  "failure": {
+    "arm": "off",
+    "on_arm_started": false,
+    "source": "kernel journal",
+    "marker": "NVIDIA driver NV_ERR_NO_MEMORY during internal memory-descriptor allocation",
+    "wrapper_exit_code": 16,
+    "wrapper_false_clean": false
+  },
+  "valid_diagnostic_measurements": {
+    "completed_off_requests": 2,
+    "distinct_request_fixtures": 2,
+    "prompt_tokens_per_request": 573,
+    "off_trace_files": 0,
+    "minimum_available_memory_gib": 21.362896,
+    "maximum_cgroup_memory_bytes": 69617958912,
+    "maximum_cgroup_swap_bytes": 0
+  },
+  "raw_evidence": {
+    "retained_directory": "/home/bmarti44/.local/state/glm52-p0-corpus-r90-635554577",
+    "crash_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260804-230259-p0-corpus-r90-635554577-off",
+    "off_containment_stdout_sha256": "4cbded3bee0393a08d42e444c2d56fedd563a99b06edf4b30ece278615be7fdc",
+    "off_containment_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "off_arm_sha256": "8660d9353fe1c1f251a25aab1c93375218845f223d35d91c117ae979f02adbae",
+    "off_server_log_sha256": "b45a4d5b96b0f70afd0b4e33332ee939ad557a31b2f9c8f716e5c2d8da8fe380",
+    "off_result_1_sha256": "48a2bfb108124ec551e0802e91d77d92d80f70586eceea94e2133916cad89be4",
+    "off_result_2_sha256": "351aa27c49225c829cc8de5516f98ff7ffc547b34e9dbb1223c59c4912269549",
+    "off_safety": {
+      "main_log_sha256": "c70d7c1e6af2a4d3b1a87aae45297dfb5eb57c264bd0b093f6eee4db863d59a6",
+      "command_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "samples_log_sha256": "705c4fa49e6b4934be2036ca8a3898eae97db89ce0eb15d9d689daca9d040223",
+      "kernel_log_sha256": "9fe26add56d6a2efce0a84d7e3499bfb75ac1c00eb3b90ba21825d42fe725eb8"
+    }
+  },
+  "rerun_rule": "This attempt cannot be promoted. Reduce the trace-only expert cache budget again, create a new candidate and freeze, obtain a new post-freeze public-randomness seed, and rerun both arms."
+}

@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 16,
+  "campaign_review_round_next": 154,
+  "implementation_head": "0479153b93f44d9f37aa3b9590de9dba494d4a85",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "scope": "Close only the single round-153 authoritative CPU-backend downgrade. Frozen corpus, split, probe, CV, precision, engine, dependency runtime and failure-hook components remain byte-identical. No serving, quality, fidelity, context or adoption claim is made.",
+  "artifacts": {
+    ".gitleaks.toml": "0764a5a1d144d3d7561c32609832a02d7900f276f37b75a107178b9e90f208c0",
+    "scripts/lint_secrets.sh": "e6c4fd2e822fef59ae2ae81e1f5f69cbcb33f52e1b6d2ba318433407974df847",
+    "scripts/65_glm52_w1_submit.py": "31d2ea2d72db874767ca647d124c829bed755a8d10529a924796a9332c54309f",
+    "scripts/66_install_glm52_w1_attestor.sh": "b65729dced9970d7dd8ae216053e4d24d7fab29930ee5ea7476601dc20fd7162",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6",
+    "scripts/81_glm_union_baseline.py": "c40d22c3ce08518049808520f72b468d6ccc7f22dea65038184b92f71ce4677c",
+    "scripts/tests/test_glm_union_baseline.py": "1ca4bd87d0d7e2f7f465321d3f818c8d39cfb690fbcf7c3d2aeab7f18fcce6c2",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "0af5a796b58afc529f669d2d3551b6a6a1c9023c5aeecbddd002c8f63346205f",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-review-r153.json": "21823b204fb12c439131d14a1c63ef62b670ba3a1778a8d5239c814ec0a90093"
+  },
+  "authoritative_scoring_backend": {
+    "device": "cuda",
+    "probe_compute": "torch-float32-weights-fp16-autocast",
+    "pre_exposure_binding": "Authoritative CLI accepts only CUDA; preflight embeds this exact object before the permanent one-shot reservation and journal record.",
+    "root_binding": "The root helper independently supplies the same constant in its authority response and permanent root-owned reservation. The reservation payload and journal fields include its canonical digest.",
+    "completed_replay": "The root-installed fixed controller rejects a non-CUDA recorded result before loading the scorer, replays on CUDA, and returns the exact backend to the root helper.",
+    "publication": "Root compares reservation, replay and compiled constant, then includes the exact backend in the root-owned final receipt; the unprivileged controller exact-checks that receipt."
+  },
+  "engine_candidate": {
+    "readable_review_tree": "/tmp/glm52-utf8-engine",
+    "commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+    "tree_clean": true,
+    "artifact_sha256": {
+      "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+      "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f",
+      "tests/test_glm_baseline_capture_source.py": "491555af0d0f08c2c3d58410c4a942c8c651d513b6436af1ff49bb9b44c0b380"
+    },
+    "binary_sha256": "be8b0ed00864d3fba6e1f7dabed4adc0646efaf7968f1bcb6da6c3a6ce172121",
+    "normalized_double_build_byte_identical": true
+  },
+  "unchanged_frozen_inputs": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_sha256": "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0",
+    "canonical_tree_sha256": "39eccffb7a0a2c627bad322ab42a2f07a3b9c55f4952d2867819766c3870bddf",
+    "probe_cv_precision_hashes_equal_candidate_15": true,
+    "engine_hashes_equal_candidate_15": true,
+    "heldout_reservation_absent": true,
+    "root_approval_absent": true
+  },
+  "pre_submission_audit": {
+    "p1_controller_probe_tests": "145 passed, 4 warnings",
+    "engine_source_tests": "7 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan_self_test": "PASS",
+    "secret_scan": "PASS",
+    "authoritative_cli_cpu_mutation_rejected": true,
+    "preflight_cpu_mutation_rejected_before_reservation": true,
+    "cpu_completed_result_rejected_before_scorer_load": true,
+    "root_reservation_backend_absence_or_difference_rejected": true,
+    "root_replay_backend_absence_or_difference_rejected": true,
+    "root_receipt_backend_absence_or_difference_rejected": true,
+    "engine_processes_active": 0,
+    "fio_processes_active": 0,
+    "mem_available_kib": 120773560,
+    "swap_used_kib": 777392
+  },
+  "repository_wide_diagnostic": {
+    "scope": "python3 -m pytest -q scripts/tests",
+    "tests_run": 619,
+    "passed": 606,
+    "failed": 4,
+    "skipped": 9,
+    "warnings": 3,
+    "new_failures_from_candidate_15_to_16": 0,
+    "scope_disposition": "The four failures are the same stale assertions recorded for Candidates 14 and 15: test_engine_switch, test_matched_memory_safety (two), and test_model_claim_catalog. Candidate 16 changes none of those frozen contracts."
+  },
+  "finding_disposition": [
+    {
+      "id": "P1-BASE-C15-H1-AUTHORIZED-CPU-BACKEND-DOWNGRADE",
+      "aliases": [
+        "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY"
+      ],
+      "status": "FIXED",
+      "evidence": "CUDA is now fixed before held-out reservation, independently represented by the root helper, stored in the immutable root marker, enforced before completed scoring, compared after fixed replay, and included in the root receipt. A CPU CLI invocation, CPU preflight, and internally consistent CPU-rewritten completed result all fail closed."
+    }
+  ],
+  "convergence": {
+    "blocking_set_before": [
+      "P1-BASE-C15-H1-AUTHORIZED-CPU-BACKEND-DOWNGRADE"
+    ],
+    "blocking_set_claimed_after": [],
+    "previous_consecutive_non_shrinking_candidates": 0,
+    "candidate_16_strictly_shrinks_claimed_blocking_set": true,
+    "new_scope": false
+  },
+  "staged_install_contract": {
+    "installer_sha256": "b65729dced9970d7dd8ae216053e4d24d7fab29930ee5ea7476601dc20fd7162",
+    "timing": "Only after both persistent reviewers report no critical/high issues on the commit that adds this freeze artifact.",
+    "operator_involvement": "One final hash-verified root-staged install command, then an installed-boundary non-held-out CUDA smoke before any held-out access."
+  },
+  "next_action": "Nash and Singer review only Candidate 15 through Candidate 16. If both report no critical/high issues, provide the owner one exact staged-install command; do not open held-out values before the installed-boundary CUDA smoke passes."
+}

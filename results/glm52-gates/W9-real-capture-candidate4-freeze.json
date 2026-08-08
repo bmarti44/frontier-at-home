@@ -1,0 +1,38 @@
+{
+  "schema": "glm52-w9-real-capture-freeze-v1",
+  "gate": "W9-real-capture",
+  "candidate": 4,
+  "main_commit": "4ed21e7d0047101bcce87eae566d0b05d7ba4e0f",
+  "engine_commit": "9ebc0f2879c126db095ecd25be0567166868d52c",
+  "binary_sha256": "1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476",
+  "harness": {
+    "path": "results/glm52-gates/harness/w9_real_capture_v1.sh",
+    "sha256": "d60779c723015919a0894c031bd694815adf1c80808bd7a52b15788592f2ee62"
+  },
+  "scorer": {
+    "path": "scripts/91_score_w9_real_capture.py",
+    "sha256": "085964509b5539eb97bc208ccb5cde8b721022e451bcbffc9b2450d8dba62b82"
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w9_real_capture_scorer.py": "b6baa06d7014f5489c31ee04e1f14f81b6c7f0cd6700389232cba997daceea4e"
+  },
+  "round_248_disposition": {
+    "ADV-W9-248-H1-CROSS-PHASE-INVENTORY-TOCTOU": "fixed by exact projection/equality of every per-arm inventory against the final root generation before PASS",
+    "GAP-W9-248-M1-NO-COMPLETE-PAIRED-SCORE-FIXTURE": "fixed with a compact complete OFF/ON score-to-PASS fixture and a timed same-size rewrite between arm and root inventory"
+  },
+  "focused_checks": {
+    "scorer_launcher_and_full_pair_tests": "11/11 PASS",
+    "combined_W9_and_containment_tests": "12/12 PASS",
+    "shell_syntax": "PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS"
+  },
+  "unchanged": [
+    "engine source and canonical binary",
+    "W9 production launcher",
+    "prompt builder",
+    "containment wrappers",
+    "model and tokenizer bindings"
+  ],
+  "runtime_allowed": false
+}

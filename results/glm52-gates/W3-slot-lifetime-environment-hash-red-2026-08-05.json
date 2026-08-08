@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "gate": "W3 engine environment provenance",
+  "status": "RED_CONFIRMED",
+  "repository_head_before_fix": "65f82c1cf0761e85775907c3dc9155ed1d9ca8d6",
+  "harness_sha256": "d418faa0e68124c8b1129e3f8ee198c0ef04d0609b243ea4a887e5ca7b857135",
+  "test_sha256": "92903c938595933d48afb36a052cbe3379172010535a10df965a5956382d6a6c",
+  "command": "python3 -m unittest scripts.tests.test_glm_safe_lifecycle.CandidateLifecycleSourceTests.test_w3_engine_environment_hash_uses_launch_assignments",
+  "returncode": 1,
+  "observed": {
+    "tests_run": 1,
+    "failures": 1,
+    "expected_hash_input": "all allowlisted DS4 names unset",
+    "effective_arm_input": "six explicit values for OFF and seven for ON"
+  },
+  "acceptance_formula": "PASS only when one explicit assignment array supplies both canonical expected hashing and the effective engine launch; OFF and ON hashes differ and omission or mutation changes the digest.",
+  "model_or_gpu_started": false
+}

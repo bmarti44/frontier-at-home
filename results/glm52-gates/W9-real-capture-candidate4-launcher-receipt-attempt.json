@@ -1,0 +1,13 @@
+{
+  "schema": "glm52-w9-execution-defect-v1",
+  "gate": "W9-real-capture",
+  "candidate": 4,
+  "observed_at_utc": "2026-08-07T23:24:53Z",
+  "candidate_hash": "main:358379add8b69212d8d50aceb154fc92398b95af+engine:9ebc0f2879c126db095ecd25be0567166868d52c",
+  "status": "FAIL_PREFLIGHT_NOT_EXECUTED",
+  "gpu_or_model_started": false,
+  "failure": "The frozen launcher names W9-real-capture-review-r248.json, whose committed verdict is REJECT for candidate 3. Candidate 4's passing round-249 review therefore cannot authorize the launcher, and execution would fail closed before the model starts.",
+  "reproduction": "Compare REVIEW_RECEIPT and the git-show receipt path in results/glm52-gates/harness/w9_real_capture_v1.sh with results/glm52-gates/W9-real-capture-review-r248.json and W9-real-capture-review-r249.json.",
+  "bounded_fix": "Candidate 5 changes only the launcher's two receipt references to the future round-250 candidate-5 review receipt and adds a focused regression assertion. Frozen engine, scorer, prompt builder, containment, model, tokenizer, and candidate-4 evidence remain byte-identical.",
+  "acceptance_test": "The launcher must reference W9-real-capture-review-r250.json consistently for both local parsing and HEAD-byte verification, and the referenced receipt must identify the exact reviewed candidate and PASS_RUNTIME_ALLOWED before execution."
+}

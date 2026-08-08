@@ -1,0 +1,44 @@
+{
+  "candidate_hash": "be6a17aaaa73b597c7c4f90c3eb178f06ee87cd5",
+  "review_round": 287,
+  "review_scope": "terminal W7.1 matched-campaign evidence delta from runtime-approved candidate 258af48694096ae2631314d08d7020f5dff93327",
+  "reviewers": {
+    "gap_reviewer": {
+      "critical": [],
+      "high": [],
+      "low": [],
+      "medium": [],
+      "score_0_to_100": 100,
+      "verdict": "APPROVE_TERMINAL_FAIL_MOVE_ON"
+    },
+    "adversarial_reviewer": {
+      "critical": [],
+      "high": [],
+      "low": [],
+      "medium": [],
+      "score_0_to_100": 100,
+      "verdict": "APPROVE_TERMINAL_FAIL"
+    }
+  },
+  "independent_review_checks": {
+    "all_264_external_artifact_hashes_match": true,
+    "all_20_unique_schedule_slots_match_drand_order": true,
+    "committed_and_external_manifest_raw_summary_byte_identical": true,
+    "decode_and_ttft_bounds_independently_recomputed": true,
+    "fixed_scorer_exact_replay_matches": true,
+    "no_safety_or_identity_contradiction": true,
+    "scanner_routing_path_bounded_and_self_tested": true
+  },
+  "prior_issue_status": {
+    "ADV-W7.1-284-H1-SESSION-ENUMERATION-EXCLUDES-SECONDARY-PROCESS-GROUPS": "VERIFIED_FIXED",
+    "ADV-W7.1-285-M1-SECONDARY-INTEGRATION-READINESS-NOT-PGROUP-BOUND": "DEFERRED_NONBLOCKING_FROZEN_SCOPE",
+    "ADV-W7.1-286-L1-WRONG-SIZE-MUTATION-NOT-EXPLICIT": "DEFERRED_NONBLOCKING_FROZEN_SCOPE",
+    "EXEC-W7.1-C9-INCOMPLETE-FULL-LOGIT-SEQUENCE": "FIXED",
+    "GAP-W7.1-284-M1-STABLE-UNIT-WINDOW-ENDS-WITH-UNCHECKED-SLEEP": "VERIFIED_FIXED"
+  },
+  "terminal_disposition": {
+    "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+    "reason": "decode lower 95% ratio 0.999854233137691 is below the preregistered 1.0 non-regression bound",
+    "verdict": "FAIL"
+  }
+}

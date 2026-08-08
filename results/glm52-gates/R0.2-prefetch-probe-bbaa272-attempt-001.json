@@ -1,0 +1,55 @@
+{
+  "candidate_commit": "bbaa272ce4ddc10d4145b3e18bd24dc40e0b0880",
+  "diagnostic_only": true,
+  "failure": "prefetch arm external candidate slab QD peaked at 16; fixed gate requires QD4-QD8",
+  "local_evidence": {
+    "B": {
+      "containment_stdout_sha256": "d56cadc76e41c61b377bbd2da35c03e5618931b5e64b524ec9cdc6aa860484b1",
+      "kernel_log_sha256": "8cc7902cc913b95f2822ae1f484f96f363aa55aa2a1acaf11ea66e0ea9aac1f5",
+      "main_log_sha256": "5da32a5f550cc2df2d2623893734af0243a54e875360c5c514f9e5309e09ee9f",
+      "nvme_inflight_sha256": "182e5f7ae41e15c89d9028cfe2d5423a1a2157ec7a198cd88ce1faf287591559",
+      "path": "/home/bmarti44/.local/state/glm52-rung0-bbaa-sha-probe-a/arms/sha-b0s0b",
+      "result_sha256": "af204ef5bf2ab1556ccf934df802dad7ec328a1b51f5359cec9b881be492c8bd",
+      "safety_samples_sha256": "96ce62a548412126ea94fd6360409a17f4a90a7be76814da1ffa3a986370f53e",
+      "server_log_sha256": "9dd2102815a048245f197d3ea91686023fab1cd4ada20ae036a0a87564ccd519"
+    },
+    "C": {
+      "containment_stdout_sha256": "aab3265931fd0362f69bd66801f69d4cd7c3a4a1133c1130b1277ef638b87a79",
+      "kernel_log_sha256": "8ef924b555e30b7ee2efd02d8807fda909e13fdc4a45dfd0d56c12eefd352587",
+      "main_log_sha256": "6a1601e0b2c3859eb4d793f3e0157831d681a0b2051852a72d5147e357879f99",
+      "nvme_inflight_sha256": "2ddf6c898737fde2092bf46646a64d2198d24d6fed416b0b0d0d4a1d10a2decf",
+      "path": "/home/bmarti44/.local/state/glm52-rung0-bbaa-sha-probe-a/arms/sha-b0s1c",
+      "result_sha256": "e2080b760a2a936cdb20cd50e31cc763e3fe2a0f1501ed5e7f69dc8c3321289e",
+      "safety_samples_sha256": "ab752c5f98f5f4add3d5469a4b12fa5cdefc4bf591a7101118a45bd15fe068b9",
+      "server_log_sha256": "4af12437a9f83e2477caae24c2729036c8e5cf2f1846b5e014ebd6cb5f04fdb9"
+    }
+  },
+  "measurements": {
+    "B": {
+      "external_candidate_peak_qd": 8,
+      "external_device_peak_qd": 572,
+      "median_completed_fetch_ms": 6.465888,
+      "median_decode_tokens_per_second": 1.5005725134435162,
+      "warm_control_ttft_seconds": 47.514486989
+    },
+    "C": {
+      "copied_bytes": 4457299968,
+      "external_candidate_peak_qd": 16,
+      "external_device_peak_qd": 1172,
+      "fallback": 58123,
+      "late": 58153,
+      "median_completed_fetch_ms": 7.9378,
+      "median_decode_tokens_per_second": 1.3235866010442088,
+      "prefetch_sha_successes": 61986,
+      "published_copies": 458,
+      "stale": 61527,
+      "warm_control_ttft_seconds": 54.988927329
+    },
+    "completed_fetch_ratio_C_over_B": 1.2276426687254713,
+    "decode_ratio_C_over_B": 0.8820544086915468,
+    "outputs_byte_identical": true
+  },
+  "note": "The engine's prefetch pool was internally capped at eight, but it ran concurrently with up to eight demand reads, producing exact candidate QD16. The implementation violates the intended single bounded QD4-QD8 pipeline and regresses both fetch time and decode. Preserve as a rejected engineering attempt; do not rescore or reuse.",
+  "status": "NO_RESULT",
+  "tag": "bbaa-sha-probe-a"
+}

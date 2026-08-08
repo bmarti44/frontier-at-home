@@ -1,0 +1,55 @@
+{
+  "schema": "glm52-w4-topk-freeze-v1",
+  "gate": "W4",
+  "candidate": 1,
+  "frozen_at": "2026-08-08T11:43:22-04:00",
+  "scope": "Default-off exact CUB radix/tree selection for GLM top-2048 CUDA indexer calls with n_components greater than 4096.",
+  "source": {
+    "repository": "/tmp/glm52-w4-topk",
+    "adopted_parent_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "test_commits": [
+      "f32a5f1d5f1bb0a21bcada57aee8d34e2093aa8d",
+      "f472f60ae4c54e52d751146421aebb912e802784"
+    ],
+    "implementation_commit": "b5226f732460ccec016344766a0931afc4baa35d",
+    "diff_sha256": "b56ce70f9e755c79088eb0aafc972ac6c7e8b5c6d63e72365a579dd023f4f382",
+    "tracked_tree_clean": true,
+    "artifact_sha256": {
+      "ds4.c": "a6855b9ab10e8868295b16705864cf841b975006c4930c9abca75bfe11d62dc9",
+      "ds4_cuda.cu": "d80e9fc10c46bfaf2388a15ea7c3c76397ec702d266048caef46b3428bd5a709",
+      "tests/cuda_topk_w4.cu": "5cf43f796eeacce7fb97bd8431a9fdca6efdd12b82d02e02b7cd6ce9dd946578",
+      "Makefile": "6e67c8185358dedfe12c26a9dcdfba18edbb68665917eceebd3c748a4c6d777e"
+    }
+  },
+  "build": {
+    "builder": "scripts/11_build_glm52_repro.sh",
+    "jobs": 2,
+    "builds": 2,
+    "byte_identical": true,
+    "binary_bytes": 14662992,
+    "binary_sha256": "570798bae9ed5a5ac708e58d3050eedc4db7be62731e0522c6c2ba1e56d626c1",
+    "artifact_sha256": {
+      "build1.log": "474da43e89ba5a01b706caa3db1d3a83c54cf59e289d43bbb3a8dc23da8d85ef",
+      "build2.log": "474da43e89ba5a01b706caa3db1d3a83c54cf59e289d43bbb3a8dc23da8d85ef",
+      "build1.time": "aa2bb3149c72417e5a1b3665b9b36b6a9f46f9a7f85f3bd442137ccaa50f1bcd",
+      "build2.time": "50a2d1e12692af4d5812ce13b8daf0bb23ce5e6421132be170c9830899cc4819",
+      "manifest.json": "f6c6ff3d62149e7402ec705a0df1070d67efdc154b3f10a3ad9f092eb6a49b78"
+    }
+  },
+  "pre_freeze_checks": {
+    "existing_cuda_long_context_regression": "PASS",
+    "exact_unique_ids": "PASS",
+    "exact_tie_ids_and_order": "PASS",
+    "candidate_output_byte_identical_to_baseline": "PASS",
+    "candidate_speedup_lower_95": 3.404684398,
+    "required_speedup_lower_95": 2.0,
+    "large_model_started": false
+  },
+  "flag": {
+    "name": "DS4_CUDA_TOPK2048_CUB",
+    "default": "off",
+    "logged_effective_marker": "ds4: CUDA exact top-2048 CUB enabled chunk=8192 merge=2"
+  },
+  "next": "Obtain public randomness after this freeze, rerun the fixed microgate, then submit the exact readable source and frozen evidence to the persistent reviewers before any serving run.",
+  "verdict": "FROZEN"
+}

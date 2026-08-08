@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "classification": "MANUALLY_ABORTED_FAILED_ATTEMPT",
+  "candidate_hash": "a4b2112f28a8f422313b83e5b52ce9c395bdc468",
+  "freeze_parent_commit": "000af1ffc162d704ccf169e72b7fc4d79ad9ffdb",
+  "engine_commit": "970b4218b2238fc973b96992e0e600f28b09c8c7",
+  "binary_sha256": "2d70aeb1485021b22b132d80acbff1ce3d2a3b7639e569838186f835d78faf36",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "drand_round": 6348952,
+  "seed": 1530585738,
+  "requested_streaming_cache_budget": "32GB",
+  "executed_cuda_cache_environment_gb": 68,
+  "fixed_scorer_verdict": "NO_RESULT",
+  "safety_verdict": "FAIL",
+  "overall_verdict": "FAIL",
+  "failure": {
+    "arm": "off",
+    "on_arm_started": false,
+    "manual_stop_reason": "The runtime reported the same 6,987-slot, 63.33 GiB pinned CUDA arena as the failed 36GB attempt. The 32GB CLI control bounds the streaming-cache plan but does not override DS4_CUDA_EXPERT_CACHE_GB=68.",
+    "signal": "SIGTERM",
+    "wrapper_exit_code": 1,
+    "kernel_oom_observed_before_stop": false
+  },
+  "valid_diagnostic_measurements": {
+    "runtime_streaming_plan_gib": 32.0,
+    "runtime_cuda_cache_slots": 6987,
+    "runtime_cuda_arena_gib": 63.33,
+    "minimum_available_memory_gib": 21.373848,
+    "maximum_cgroup_memory_bytes": 69402857472,
+    "maximum_cgroup_swap_bytes": 0
+  },
+  "raw_evidence": {
+    "retained_directory": "/home/bmarti44/.local/state/glm52-p0-corpus-r91-1530585738",
+    "crash_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260804-231337-p0-corpus-r91-1530585738-off",
+    "off_containment_stdout_sha256": "c03d957c87bb8b5f3b31d6499713f55af2ca94002e8570486b9d7870af2ba400",
+    "off_containment_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "off_server_log_sha256": "73ca8f74d33854f7242afd83b048d0236c30ab79b3b8488c0cb23c39ce49eea7",
+    "off_result_1_sha256": "15310df45d171fb96b4422827a1b93ad4ebd2a63366ef27100b192292609b24f",
+    "off_safety": {
+      "main_log_sha256": "ecf3bc9143e69ea9acd87d12f3d677e9328eeaae351582d82724e87606498496",
+      "command_log_sha256": "4a0dbc3bb06a9b73abd5253d481543b0e5f71ae7fe6bcc78836e62e8e078fc50",
+      "samples_log_sha256": "ed58135f47bca7d926b23ea367a6e4e87cd821fdc1bf1fd2e4baa72add5c244c",
+      "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+    }
+  },
+  "rerun_rule": "This attempt cannot be promoted. The corpus-only runtime must lower and bind DS4_CUDA_EXPERT_CACHE_GB, parse the resolved CUDA arena record, then create a new freeze and seed before rerunning."
+}

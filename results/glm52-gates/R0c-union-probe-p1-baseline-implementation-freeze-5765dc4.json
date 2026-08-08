@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "classification": "IMPLEMENTATION_FROZEN_BEFORE_HELD_OUT_OPEN",
+  "gate": "R0c/P1 held-out address-baseline capture and scorer",
+  "per_gate_candidate": 2,
+  "campaign_review_round_next": 142,
+  "repository_commit": "5765dc4d4060318027a9783d737a7653061d94ca",
+  "engine_base_commit": "183b236bbda50dc0e92d2a641a0ef1c8bdf4d620",
+  "engine_commit": "8ab3fd9adc16f8706bbf878f59a69cb5688b4f25",
+  "artifacts": {
+    "scripts/81_glm_union_baseline.py": "be09f4a88d184601d7ad8702b1e55fd4dad8c3ecda10846e7db473f5a3df415b",
+    "scripts/tests/test_glm_union_baseline.py": "3763d5525bdc5b97a15e3386ecd3633c35da519d1d27eb9f6f75bdf992d9825d",
+    "scripts/tests/test_glm_union_probe.py": "432bd17ab8b469e23edddb0d0d5299682df7a8797bdf29a9c0cfccd2b127c7d4",
+    "results/glm52-gates/harness/0001-test-require-isolated-GLM-baseline-capture.patch": "ba9503b5dae888008b4baa4805c9c894fcab227dcbb5709d8377b8841404249e",
+    "results/glm52-gates/harness/0002-feat-capture-isolated-GLM-address-baselines.patch": "7b9884f696b91bea8d7a7925e5adc29d15e4aa83823dc52769fd34174e370e20",
+    "results/glm52-gates/harness/0003-fix-record-inclusive-GLM-baseline-step-costs.patch": "13aa626fdf63d49acbceed4c41e07f77e2f7c70625bbb87245bc4f0bab0f2082",
+    "results/glm52-gates/harness/0004-fix-bind-GLM-baseline-MTP-cache-origin.patch": "036d4ca86983a4f8df98efb1e1aef27f5ce4a11bf9ee846ebc9d2ce4037ea8da",
+    "/tmp/glm52-utf8-engine/ds4.c": "afff4c7acd0ffbd979e63d3231775127c5fdfe5eca3369e695a868c687b85e93",
+    "/tmp/glm52-utf8-engine/ds4.h": "e8d49b3efea5cce5aa801024313d30155280c47db42a762ae9aa4f9b3b1289e8",
+    "/tmp/glm52-utf8-engine/ds4_cli.c": "b7798de126a8bf74534aba20da05a4df1a29ddacc0c0d7b0db859047c0ed6b86",
+    "/tmp/glm52-utf8-engine/tests/test_glm_baseline_capture_source.py": "c3f72f0ea07c6297d633fe9929e7007695655a9d38c585b4853836cb11be1470"
+  },
+  "binary_sha256": "1850686ab7dc10afb478c0039c0d83b20bf739b20a8aedd0aeba38b4a70ed5cc",
+  "binary_claim": "Compile check only; a clean reproducible campaign build remains required after implementation review.",
+  "pre_submission_audit": {
+    "frozen_module_hashes_unchanged": true,
+    "main_python_tests": "42 passed",
+    "engine_source_tests": "5 passed",
+    "engine_compile": "PASS",
+    "patch_replay": "Four committed format-patches replayed at the engine base and exactly matched the frozen engine tree.",
+    "secret_scan": "PASS",
+    "diff_check": "PASS; mail-format patch trailers are excluded because format-patch intentionally emits them."
+  },
+  "held_out_boundary": {
+    "values_opened_by_this_candidate": false,
+    "test_records_invoked": false,
+    "test_corresponding_capture_invoked": false,
+    "next_authorized_action": "Both persistent reviewers inspect this frozen implementation. The reviewed scorer may open the bound test data only after no critical/high implementation issue remains."
+  },
+  "claim_limit": "Source, tests, and compile-only binary freeze. No held-out baseline metric, serving throughput, NLL, or quality claim is made."
+}

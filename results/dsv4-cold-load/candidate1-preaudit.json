@@ -1,0 +1,56 @@
+{
+  "artifact": "DSV4 cold-load candidate 1 pre-submission audit",
+  "candidate": {
+    "implementation_commit": "d76fd9c7dacf1f85b8086cc6a86190fc9a90da27",
+    "repository_head": "a5659baeb9944204fb0540f8fb1a08d31acccc7c",
+    "repository_tree": "2e30f82a7625f493bda452eacb701f9f2a4be1d6"
+  },
+  "checks": {
+    "bash_syntax": "PASS",
+    "cold_load_contract_and_profile_conformance": {
+      "errors": 0,
+      "failures": 0,
+      "ran": 9,
+      "verdict": "PASS"
+    },
+    "diff_check": "PASS",
+    "engine_or_fio_process_during_preaudit": false,
+    "profile_switch_and_unit_diff_empty": true,
+    "secret_lint_pre_push": "PASS",
+    "secret_lint_self_test": "PASS"
+  },
+  "frozen_production_binary": {
+    "build_manifest": "configs/build-manifests/llamacpp-fusion.json",
+    "build_manifest_sha256": "c20202d204b18e0771f41ae5b8a754523f107eb6d3f0135cde2c0954f6baeedc",
+    "commit": "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a",
+    "server_binary_sha256": "757274c8a23cb297e0a79349bd47fb14c13985a35d37391065a886eeecfd74f4",
+    "review_source": {
+      "arg_cpp": {
+        "path": "/tmp/llama-fusion-read.DMP7Bs/common/arg.cpp",
+        "sha256": "258ee4cb64f7d03af166a7d6b24391f79095e3e0a2e8e66181ab1974bad21863"
+      },
+      "loader_cpp": {
+        "path": "/tmp/llama-fusion-read.DMP7Bs/src/llama-model-loader.cpp",
+        "sha256": "c647b037af76291989082ad739d881a70a48ab2caf4cdc35bdc8e96223335cb5"
+      },
+      "mmap_cpp": {
+        "path": "/tmp/llama-fusion-read.DMP7Bs/src/llama-mmap.cpp",
+        "sha256": "0673e5273594690a1a7b81010b18f158f5b153f502fed161a595c941e8e5808a"
+      }
+    }
+  },
+  "known_unrelated_baseline": {
+    "note": "The broad mixed GLM suite has three pre-existing W7 freeze/assertion failures. No frozen GLM file was changed for this candidate.",
+    "scope": "excluded from this DSV4 cold-load delta"
+  },
+  "mutation_coverage": [
+    "missing exact default-off flag fails",
+    "missing no-mmap prerequisite fails",
+    "missing binary --direct-io support check fails",
+    "enabling the flag in the profile or switcher fails",
+    "undeclared 64-hex evidence fields fail secret lint"
+  ],
+  "red": "results/dsv4-cold-load/red.json",
+  "schema_version": 1,
+  "verdict": "PASS"
+}

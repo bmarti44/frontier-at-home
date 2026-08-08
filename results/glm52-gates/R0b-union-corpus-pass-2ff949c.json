@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "2ff949cbded44cda543d58d9325a409f8566ee3e",
+  "engine_commit": "4d878c2de77725f23302bddeeba22b7c5358c971",
+  "classification": "PASS",
+  "scope": "multi_request_all_routed_layer_corpus_smoke",
+  "high_row_2048_status": "OPEN",
+  "summary_sha256": "3f882a2b3d45b073b468524645b4726395971477e210461a0221b3a2b53eca12",
+  "off_arm_sha256": "ac404d9518085a9360111798c3d39b485c30887683224068bc20bf76e7b4bc91",
+  "on_arm_sha256": "5a4231afd50a8d76e2fa5cf7fe338c99a6c1a74bf7261d9ee724fcbfd7bb0146",
+  "off_result_1_sha256": "c284041dc9b4f5b613965de0865918144f52765033f84a14c0d458fdaaf7b487",
+  "off_result_2_sha256": "1a4582f91dfd256fe91ebbde0eaa60a7b62d83dcb35ab35f4e9f2996d6b75488",
+  "on_result_1_sha256": "63e65952ab91f1dbec4367e273598062aa07b53649257e11d695819478b1f1f2",
+  "on_result_2_sha256": "e654fb2cce50fce2b4c956b4034a252aea90e44307c19974ed90ef4bf58fffd6",
+  "off_server_log_sha256": "4e7ceb60aa272b9a296803ba464541bec4466b311aeec6281306db42566d3699",
+  "on_server_log_sha256": "5ba491e4b6c41d4442fa56a5ac256fd0c6413460d9c0dd1c330e0cf8002ab706",
+  "off_containment_sha256": "4393fb131f0163ca3dd1a8189c01ba1b70cfbdec8a4630b8d08cb3ecc30efc45",
+  "on_containment_sha256": "894351e258eab63270bfd3d156cf68a4a833e93139b1b76b264887ec866d62ce",
+  "observed": {
+    "context_level": 8000,
+    "requests": 2,
+    "prompt_tokens_per_request": [8061, 8061],
+    "completion_tokens_per_request": [128, 128],
+    "full_indexed_chunks_per_request": [
+      [[0, 2048], [2048, 4096], [6144, 1917]],
+      [[0, 2048], [2048, 4096], [6144, 1917]]
+    ],
+    "distinct_request_fixtures": 2,
+    "byte_and_token_identity": true,
+    "containment_clean": true,
+    "streaming_cache_budget": "32GB",
+    "cuda_cache_environment_gb": 56,
+    "cuda_cache_slots": 5754,
+    "cuda_cache_arena_gib": 52.15,
+    "off_trace_files": 0,
+    "on_trace_files": 2250,
+    "on_trace_bytes": 32231563200,
+    "trace_events": 450,
+    "token_layer_events": 1209150,
+    "routed_layer_first": 3,
+    "routed_layer_last": 77,
+    "minimum_available_memory_gib": {
+      "off": 32.344505310058594,
+      "on": 31.934009552001953
+    },
+    "maximum_cgroup_memory_bytes": {
+      "off": 57788346368,
+      "on": 57577259008
+    },
+    "maximum_cgroup_swap_bytes": 0,
+    "kernel_oom_or_xid": false,
+    "trace_score_verdict": "PASS"
+  },
+  "pre_runtime_authorization_review": {
+    "round": 97,
+    "gap_reviewer_score": 99,
+    "adversarial_reviewer_score": 99,
+    "critical": [],
+    "high": []
+  },
+  "post_runtime_review": {
+    "round": 98,
+    "gap_reviewer_score": 97,
+    "adversarial_reviewer_score": 99,
+    "critical": [],
+    "high": []
+  },
+  "retained_directory": "/home/bmarti44/.local/state/glm52-p0-corpus-long8000-r99-pcache",
+  "conclusion": "This is the canonical reviewed raw source for at least one million GLM P0 token-layer events. It contains two distinct requests from one long-fixture lineage and therefore does not complete the planned fixture-diverse 100-case-plus-transcript corpus or frozen train/calibration/test splits. After both arms completed, a redundant read-only scorer ran concurrently with the canonical scorer for about 78 seconds and was stopped; it wrote no corpus or summary, both reviewers found no effect on immutable evidence or accepted timing, and Nash independently reproduced the full scorer result over all 2250 files. This does not qualify high-row status, serving performance, 1M context, fidelity, or parity."
+}

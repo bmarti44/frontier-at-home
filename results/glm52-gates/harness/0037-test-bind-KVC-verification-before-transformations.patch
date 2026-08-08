@@ -1,0 +1,105 @@
+From 242fd59b6bb9554dbb305d16bce678a38f8e9ace Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:27:48 -0400
+Subject: [PATCH 37/40] test: bind KVC verification before transformations
+
+---
+ ds4_kvstore.c                            | 10 +++++++---
+ ds4_kvstore.h                            |  5 +++--
+ ds4_server.c                             |  6 +++---
+ tests/test_kvstore_integrity_callsite.py |  9 ++++++---
+ 4 files changed, 19 insertions(+), 11 deletions(-)
+
+diff --git a/ds4_kvstore.c b/ds4_kvstore.c
+index 73ca031..339dc75 100644
+--- a/ds4_kvstore.c
++++ b/ds4_kvstore.c
+@@ -550,9 +550,13 @@ bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
+            memcmp(actual, e->record_sha256, sizeof(actual)) == 0;
+ }
+ 
+-bool ds4_kvstore_reseal_record(FILE *fp, const ds4_kvstore_entry *e,
+-                               uint32_t text_bytes) {
+-    return e && ds4_kvstore_seal_record(fp, text_bytes, e->payload_bytes);
++bool ds4_kvstore_transform_source_verified(FILE *fp,
++                                           const ds4_kvstore_entry *e,
++                                           uint32_t text_bytes) {
++    (void)fp;
++    (void)e;
++    (void)text_bytes;
++    return true;
+ }
+ 
+ bool ds4_kvstore_read_entry_file(const char *path, const char sha[41],
+diff --git a/ds4_kvstore.h b/ds4_kvstore.h
+index b7ba217..9b27c87 100644
+--- a/ds4_kvstore.h
++++ b/ds4_kvstore.h
+@@ -206,8 +206,9 @@ bool ds4_kvstore_seal_record(FILE *fp, uint32_t text_bytes,
+                              uint64_t payload_bytes);
+ bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
+                                uint32_t text_bytes);
+-bool ds4_kvstore_reseal_record(FILE *fp, const ds4_kvstore_entry *e,
+-                               uint32_t text_bytes);
++bool ds4_kvstore_transform_source_verified(FILE *fp,
++                                           const ds4_kvstore_entry *e,
++                                           uint32_t text_bytes);
+ void ds4_kvstore_fill_header(uint8_t h[DS4_KVSTORE_FIXED_HEADER],
+                              uint8_t model_id, uint8_t quant_bits,
+                              uint8_t reason, uint8_t ext_flags,
+diff --git a/ds4_server.c b/ds4_server.c
+index 3e7a4ec..2c3bd52 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -17210,7 +17210,7 @@ static void test_kv_cache_integrity_allows_mutable_bookkeeping(void) {
+     TEST_ASSERT(fclose(fp) == 0);
+ }
+ 
+-static void test_kv_cache_reseal_rejects_corrupt_source(void) {
++static void test_kv_cache_transform_rejects_corrupt_source(void) {
+     const uint8_t payload[16] = {0};
+     ds4_kvstore_entry entry = {0};
+     uint32_t text_bytes = 0;
+@@ -17222,7 +17222,7 @@ static void test_kv_cache_reseal_rejects_corrupt_source(void) {
+     TEST_ASSERT(fputc(17, fp) != EOF);
+     TEST_ASSERT(fflush(fp) == 0);
+     TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
+-    TEST_ASSERT(!ds4_kvstore_reseal_record(fp, &entry, text_bytes));
++    TEST_ASSERT(!ds4_kvstore_transform_source_verified(fp, &entry, text_bytes));
+     TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
+     TEST_ASSERT(!ds4_kvstore_verify_record(fp, &entry, text_bytes));
+     TEST_ASSERT(fclose(fp) == 0);
+@@ -18057,7 +18057,7 @@ static void ds4_server_unit_tests_run(void) {
+     test_kv_cache_lookup_rejects_stale_payload_abi();
+     test_kv_cache_integrity_rejects_payload_mutations();
+     test_kv_cache_integrity_allows_mutable_bookkeeping();
+-    test_kv_cache_reseal_rejects_corrupt_source();
++    test_kv_cache_transform_rejects_corrupt_source();
+     test_kv_cache_eviction_values_fresh_snapshots();
+     test_kv_cache_eviction_prefers_anchor_reason();
+     test_kv_cache_eviction_makes_room_before_store();
+diff --git a/tests/test_kvstore_integrity_callsite.py b/tests/test_kvstore_integrity_callsite.py
+index a2ec15e..62dbec7 100644
+--- a/tests/test_kvstore_integrity_callsite.py
++++ b/tests/test_kvstore_integrity_callsite.py
+@@ -20,11 +20,14 @@ def function_body(source: str, signature: str) -> str:
+ 
+ 
+ class KvstoreIntegrityCallsiteTests(unittest.TestCase):
+-    def test_trailer_rewrite_uses_verified_reseal(self) -> None:
++    def test_trailer_rewrite_verifies_before_mutation(self) -> None:
+         source = (ROOT / "ds4_kvstore.c").read_text()
+         body = function_body(source, "static void kv_cache_rewrite_trailer")
+-        self.assertIn("ds4_kvstore_reseal_record", body)
+-        self.assertNotIn("ds4_kvstore_seal_record", body)
++        verify = body.index("ds4_kvstore_transform_source_verified")
++        truncate = body.index("ftruncate")
++        seal = body.index("ds4_kvstore_seal_record")
++        self.assertLess(verify, truncate)
++        self.assertLess(truncate, seal)
+ 
+     def test_strip_verifies_before_transforming_source(self) -> None:
+         source = (ROOT / "ds4_agent.c").read_text()
+-- 
+2.43.0
+

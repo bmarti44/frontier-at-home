@@ -1,0 +1,69 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 2,
+  "status": "FROZEN_REVIEW_PENDING",
+  "repository_parent_commit": "8b696b177b677b0c479a842e08a2f8b962954a62",
+  "engine": {
+    "baseline_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+    "candidate_1_commit": "12a5010a20514c06f718fe53e2083a4031114317",
+    "candidate_2_commit": "0e1c1374b37ae7ac0cc2d7e203acc1943e43a298",
+    "readable_source": "/tmp/glm52-w7-ttft",
+    "candidate_2_patch": "results/glm52-gates/harness/0042-fix-bind-stable-remaps-to-model-generation.patch",
+    "patch_sha256": "f9a7c123e744634acab2d2408cec5dd50527d08662b54ec9e13c7b6b00cc8b0f"
+  },
+  "engine_source_sha256": {
+    "ds4.c": "a9e93598e24e3dbe2604ed57d80a11970b83e7371061aec2ef38a9bf2981354c",
+    "ds4_cuda.cu": "ffc59609cdd81fdd78e4c60f558f3315888406ddcce50cac5257adee33e9ea3c",
+    "ds4_gpu.h": "7b1229ff1775f5bd32bb08d7cffa2c9739713ccd64d5043214f37ec6d21388fc",
+    "tests/test_gpu_model_cache.c": "a2b81f7f80117e9b4207c6b60d944a15a3cf6e7428e367fc372879888f3dd21b"
+  },
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w7-stable-remap-0e1c137/ds4-server",
+    "sha256": "85bc0082743f0e15b888ac1a927561ce9ff7219ddbe9bb9cb13a99b34ddc1c20",
+    "bytes": 5588136,
+    "independent_builds": {
+      "raw": [
+        {"sha256": "8aa841de56eab6a4837a862af324e27cea17671b8abfb6c866e6d30d60c7c986"},
+        {"sha256": "a02df261b861ee49fcb75f46a93cf2bb714ca4cfae4392a04125cd254a62b509"}
+      ],
+      "normalized": [
+        {"sha256": "85bc0082743f0e15b888ac1a927561ce9ff7219ddbe9bb9cb13a99b34ddc1c20"},
+        {"sha256": "85bc0082743f0e15b888ac1a927561ce9ff7219ddbe9bb9cb13a99b34ddc1c20"}
+      ]
+    },
+    "normalized_byte_identical": true
+  },
+  "acceptance": {
+    "plan_sha256": "0ebe1bcc248e64295e9620bf20f01090c5d134edf0fcd3344257ade41b2899fb",
+    "scorer_sha256": "97e97642698a67097796c4d1228838ce189891b3aca7fd42589f7d6e1e796956",
+    "test_sha256": "c74a89248bdc1118c4ad24000cbce31b9a484d2ee2bf6dafec9bda409252e4b3",
+    "candidate_2_red": "results/glm52-gates/W7-cache-generation-candidate2-red.json"
+  },
+  "focused_verification": {
+    "cuda_command": "make -j2 tests/test_gpu_model_cache && ./tests/test_gpu_model_cache",
+    "cuda_result": "PASS",
+    "production_selector_coverage": [
+      "flag absent selects legacy API and advances generation",
+      "empty, 0, false, and 2 fail preflight",
+      "exact 1 selects stable API and preserves generation",
+      "different-base/same-size and same-base/different-size reject",
+      "same-address/same-size authoritative registration invalidates the old generation token",
+      "support identity makes main-model preflight fail before serving",
+      "authoritative main restore and refreshed preflight succeed"
+    ],
+    "rocm_preprocess_command": "cc -E -DDS4_ROCM_BUILD -I. ds4.c | rg ds4_gpu_\\(runtime_model_map_spans|remap_model_spans|stable_model_remap_preflight\\)",
+    "rocm_preprocess_result": "NO_MATCH",
+    "large_model_runtime_started": false
+  },
+  "review_issue_disposition": {
+    "GAP-W7.1-C1-H1-ROCM-DEFAULT-OFF-BUILD-REGRESSION": "FIXED_PENDING_REVIEW",
+    "ADV-W7.1-255-H1-UNBOUND-RESUME-COMPLETION": "FIXED_PENDING_REVIEW",
+    "ADV-W7.1-255-H2-FROZEN-COVERAGE-NOT-EXECUTED": "FIXED_PENDING_REVIEW",
+    "ADV-W7.1-255-H3-SUPPORT-MODEL-IDENTITY-DEAD-END": "FIXED_PENDING_REVIEW",
+    "GAP-W7.1-C1-M1-GENERATION-SEMANTICS-NOT-UNIT-ASSERTED": "FIXED_BY_FOCUSED_TEST",
+    "GAP-W7.1-C1-M2-FLAG-PRESENCE-ENABLES-ZERO": "FIXED_BY_EXACT_VALUE_TEST",
+    "GAP-W7.1-C1-M3-SUPPORT-MODEL-IDENTITY-ASSUMPTION": "FIXED_BY_STARTUP_PREFLIGHT",
+    "ADV-W7.1-255-M1-PRESENCE-BASED-FLAG": "FIXED_BY_EXACT_VALUE_TEST",
+    "ADV-W7.1-255-M2-ADDRESS-AND-SIZE-ARE-NOT-A-GENERATION-TOKEN": "FIXED_BY_GENERATION_TOKEN"
+  }
+}

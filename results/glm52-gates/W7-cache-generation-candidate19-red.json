@@ -1,0 +1,19 @@
+{
+  "candidate_parent": "daef79b1762df72f87ca7d696454425990626280",
+  "checks": {
+    "engine_started": false,
+    "one_open_creates_and_retains_lock": false,
+    "pre_acquisition_replacement_rejected": false
+  },
+  "expected_failure": "The unchanged harness closes its exclusive-creation descriptor and reopens the pathname, and its self-test does not cover a replacement before retained acquisition.",
+  "observed": {
+    "failures": 1,
+    "stderr_sha256": "d45bc11c5c651018bb35c267b8e7205032dea0705dfaab68b31efa36026a3286",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests_run": 45
+  },
+  "review_finding": "ADV-W7.1-271-H1-ENGINE-LOCK-CREATE-REOPEN-RACE",
+  "schema": "glm52-w7-red-v1",
+  "test_sha256": "afa8a9c45d1fec0eb7e512cf758869ff7459ca000ab17fd9dc77963a5ab20a8f",
+  "verdict": "RED_CONFIRMED"
+}

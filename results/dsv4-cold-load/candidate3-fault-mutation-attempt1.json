@@ -1,0 +1,15 @@
+{
+  "artifact": "DSV4 cold-load candidate 3 fault-mutation attempt 1",
+  "failure": "The freshly linked bounded probe exited 127 before reaching candidate code because its transitive libggml dependency was not discoverable without LD_LIBRARY_PATH.",
+  "observed": {
+    "all_five_exit_codes": 127,
+    "artifact_sha256": {
+      "/tmp/dsv4-direct-io-fault-probe-c3": "a6b5c25981fa5bd6d12a14342af68c298a4c571ff706dc8068e89f09cf842224"
+    },
+    "stderr_sha256": "94e015650167fe85e75e528ab4b36985b70e5899b774cb8d08d55a05969d1e86",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "bounded_rerun": "Set LD_LIBRARY_PATH to the exact fresh build bin directory for baseline and every mutation; do not rebuild or change the candidate artifacts.",
+  "scope": "No model allocation or server process was started.",
+  "verdict": "NO_RESULT"
+}

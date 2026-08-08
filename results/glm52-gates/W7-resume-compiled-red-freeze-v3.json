@@ -1,0 +1,48 @@
+{
+  "schema_version": 3,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate": 9,
+  "status": "FROZEN_PENDING_REVIEW_AND_FRESH_RANDOMNESS",
+  "candidate_commit": "41a483dfd4f8e89ad4aed5f4838f3570897d86ac",
+  "review_request_round": 204,
+  "production_binary_sha256": "56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "artifacts": {
+    "scripts/glm52_goal.py": "3d6cb59fe375ecb0a5c7f42919947d19e1b2dce4e69a1e97517b7de58b9b95a9",
+    "scripts/82_build_w7_fixture_pool.py": "ede94489812cb8a430f878448803cc9518ff81a2e2ae0f12d0a7dc8f556195f2",
+    "scripts/82_build_w7_render_oracle.sh": "93b778f5c08fcbce66fe356b136b6b187a4c67ec331af0f90be122839fdb3b18",
+    "scripts/83_score_w7_deployed_trace.py": "b96ec2ab7dd002d914facb67bcb9c3b462b88858dc277ffd83ba93fe48933be9",
+    "scripts/tests/test_glm52_goal.py": "0eedff5a563567cfe2a2e16174632a1de1214e4f4aa2ea391cbb88600bf7c5f6",
+    "scripts/tests/test_w7_resume_compiled_red.py": "18d0cfebff01ab0216090365001f0f8f02df949e64701181fc0b8f8ddb6779ed",
+    "results/glm52-gates/harness/w7_resume_compiled_red_v1.sh": "a6390754a8c9de1c4f08141f5956cc8a68405c7f23b6cb702f128ebc1cfb7587",
+    "results/glm52-gates/harness/w7_completion_render_oracle.c": "9590b8eaa238e311ca0468e6983280b798cbb94c3d727920f5e839ac8ee20539",
+    "results/glm52-gates/harness/w7-production-fixture-pool-v1.json": "c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9",
+    "/tmp/glm52-w7-build1.ob4Q0O/src/ds4_server.c": "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07",
+    "/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66"
+  },
+  "oracle_build": {
+    "compiler": {
+      "path": "/usr/bin/cc",
+      "sha256": "a20520ee21543f243d40636a9181a142c45ecd989de31ab86b99a8ea5ada870d"
+    },
+    "build_1_binary_sha256": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66",
+    "build_2_binary_sha256": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66",
+    "byte_identical": true
+  },
+  "fixture": {
+    "schema": "glm52-w7-production-fixture-pool-v2",
+    "pool_regenerated_byte_identical": true,
+    "deployed_trace_requires_exact_raw_rendered_and_token_vectors": true,
+    "geometry": {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066}
+  },
+  "mutation_tests": ["equal-length-render-change", "missing-request", "duplicate-request", "truncated-request", "reordered-request", "ambiguous-section-marker"],
+  "tests": {
+    "command": "python3 -m unittest scripts.tests.test_w7_resume_compiled_red scripts.tests.test_glm52_goal",
+    "tests_run": 83,
+    "passed": 83,
+    "failed": 0,
+    "secret_lint": "PASS",
+    "diff_check": "PASS"
+  },
+  "next": "Persistent reviewers inspect only candidate-9 diff. With no critical/high issues, obtain fresh public randomness and run the contained deployed trace geometry smoke before the full unchanged-engine RED."
+}

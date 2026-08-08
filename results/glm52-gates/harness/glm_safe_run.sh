@@ -9,7 +9,8 @@
 # Protections (layered, all mandatory):
 #   1. ulimit -v hard cap (default 400 GiB): runaway mmap/managed allocations
 #      fail with ENOMEM inside the process instead of freezing the kernel.
-#   2. 4 Hz sidecar sampler: MemAvailable + engine VmRSS + read_bytes,
+#   2. Periodic sidecar sampler: MemAvailable + engine VmRSS + read_bytes;
+#      actual cadence is recorded in samples.log.
 #      appended to a PERSISTENT log and fdatasync'd every sample, so the
 #      final seconds survive a hard freeze/power cycle.
 #   3. Kill floor (default 18 GiB MemAvailable): sampler SIGKILLs the whole
@@ -27,6 +28,8 @@ CANDIDATE_PROVENANCE=${GLM_SAFE_LOG_CANDIDATE_PROVENANCE:-0}
 EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
 PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
 EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
+FINAL_ARTIFACTS=${GLM_SAFE_FINAL_ARTIFACTS:-}
+DONE_DIGESTS=${GLM_SAFE_DONE_DIGESTS:-0}
 CKV_RUN_NONCE=${DS4_GLM_CKV_RUN_NONCE:-}
 WITNESS_NONCE=${GLM_SAFE_WITNESS_NONCE:-}
 WITNESS_ARTIFACT=${GLM_SAFE_WITNESS_ARTIFACT:-}
@@ -35,6 +38,13 @@ EXPECTED_CGROUP_UNIT=${GLM_SAFE_CGROUP_UNIT:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
 ROOT_AUTHORITY=${GLM_W1_ROOT_AUTHORITY:-0}
 AUTHORITY_CRASH_ROOT=${GLM_SAFE_CRASH_ROOT:-}
+MEMORY_GUARD_OVERRIDE=${GLM_SAFE_MEMORY_GUARD_PATH:-}
+EXPECTED_MEMORY_GUARD_SHA256=${GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256:-}
+W7_DRIVER_LINEAGE=${GLM_SAFE_W7_DRIVER_LINEAGE:-0}
+ALLOW_CGROUP_HIGH=${GLM_SAFE_ALLOW_CGROUP_HIGH:-0}
+KERNEL_GPU_FAULT_RE='NVRM.*Xid|NVRM.*NV_ERR_NO_MEMORY|NVRM.*Out of memory|oom-kill|Out of memory: Killed process'
+USERSPACE_GPU_OOM_RE='CUDA_ERROR_OUT_OF_MEMORY|cudaErrorMemoryAllocation|CUDA.{0,160}(allocation failed|out of memory)'
+W7_INFERENCE_LOCK=/run/lock/frontier-at-home/inference.lock
 TAG=run
 config_error() {
   printf 'FATAL invalid %s\n' "$*" >&2
@@ -63,7 +73,7 @@ fi
 if (( MIN_START_GIB < 110 || MIN_START_GIB > 119 )); then
   config_error "GLM_SAFE_MIN_START_GIB"
 fi
-if (( TIMEOUT_S < 1 || TIMEOUT_S > 3600 )); then
+if (( TIMEOUT_S < 1 || TIMEOUT_S > 9000 )); then
   config_error "GLM_SAFE_TIMEOUT_S"
 fi
 if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then
@@ -71,12 +81,23 @@ if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then
 fi
 [[ $CANDIDATE_PROVENANCE =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_LOG_CANDIDATE_PROVENANCE"
+[[ $DONE_DIGESTS =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_DONE_DIGESTS"
 [[ $REQUIRE_CGROUP =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_REQUIRE_CGROUP"
 [[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_RUN_AS_CURRENT_USER"
 [[ $ROOT_AUTHORITY =~ ^[01]$ ]] ||
   config_error "GLM_W1_ROOT_AUTHORITY"
+[[ $W7_DRIVER_LINEAGE =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_W7_DRIVER_LINEAGE"
+[[ $ALLOW_CGROUP_HIGH =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_ALLOW_CGROUP_HIGH"
+if [[ $ALLOW_CGROUP_HIGH == 1 ]]; then
+  [[ $W7_DRIVER_LINEAGE == 1 && $REQUIRE_CGROUP == 1 &&
+     $RUN_AS_CURRENT_USER == 1 && $KILL_FLOOR_GIB -ge 24 ]] ||
+    config_error "GLM_SAFE_ALLOW_CGROUP_HIGH scope"
+fi
 if [[ $ROOT_AUTHORITY == 1 ]]; then
   [[ $RUN_AS_CURRENT_USER == 0 && $(id -un) == dsv4 ]] ||
     config_error "root authority identity"
@@ -128,6 +149,27 @@ if [[ -n $PROVENANCE_ENV_ALLOWLIST || -n $EXPECTED_ENV_SHA256 ]]; then
     config_error "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST duplicates"
   PROVENANCE_ENV_ALLOWLIST=$(paste -sd, <<<"$PROVENANCE_ENV_NAMES")
   ENV_PROVENANCE=1
+fi
+FINAL_ARTIFACT_PATHS=()
+if [[ -n $FINAL_ARTIFACTS ]]; then
+  [[ $CANDIDATE_PROVENANCE == 1 ]] ||
+    config_error "final artifacts require candidate provenance"
+  IFS=, read -r -a FINAL_ARTIFACT_PATHS <<<"$FINAL_ARTIFACTS"
+  (( ${#FINAL_ARTIFACT_PATHS[@]} >= 1 && ${#FINAL_ARTIFACT_PATHS[@]} <= 8 )) ||
+    config_error "GLM_SAFE_FINAL_ARTIFACTS count"
+  declare -A FINAL_ARTIFACT_SEEN=()
+  for artifact in "${FINAL_ARTIFACT_PATHS[@]}"; do
+    [[ $artifact =~ ^/home/bmarti44/\.local/state/glm52-[A-Za-z0-9._/-]+$ ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS path"
+    parent=$(realpath -m -- "$(dirname -- "$artifact")" 2>/dev/null || true)
+    [[ $parent == /home/bmarti44/.local/state/glm52-* ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS parent"
+    [[ $artifact == "$parent"/"$(basename -- "$artifact")" ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS normalization"
+    [[ -z ${FINAL_ARTIFACT_SEEN[$artifact]+x} ]] ||
+      config_error "GLM_SAFE_FINAL_ARTIFACTS duplicate"
+    FINAL_ARTIFACT_SEEN[$artifact]=1
+  done
 fi
 if [[ "${1:-}" == --tag ]]; then
   [[ -n ${2:-} ]] || config_error "tag"
@@ -187,7 +229,7 @@ forward_signal() {
   exit "$exit_code"
 }
 
-plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB min_start_gib=$MIN_START_GIB timeout_s=$TIMEOUT_S"
+plog "SAFE_RUN start tag=$TAG vlimit_kb=$VLIMIT_KB kill_floor_gib=$KILL_FLOOR_GIB min_start_gib=$MIN_START_GIB timeout_s=$TIMEOUT_S allow_cgroup_high=$ALLOW_CGROUP_HIGH"
 plog "cmd: $*"
 plog "host: $(hostname) kernel: $(uname -r)"
 plog "candidate_provenance_enabled=$CANDIDATE_PROVENANCE"
@@ -262,12 +304,98 @@ fi
 grep -E 'MemAvailable|MemTotal' /proc/meminfo >> "$MAIN"; sync -d "$MAIN" 2>/dev/null || true
 
 HARNESS_ROOT=$(dirname -- "$(dirname -- "$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")")")
-MEMORY_GUARD=$HARNESS_ROOT/scripts/03_memory_guard.py
+if [[ -n $MEMORY_GUARD_OVERRIDE ]]; then
+  [[ $MEMORY_GUARD_OVERRIDE =~ ^/proc/[0-9]+/fd/[0-9]+$ ]] ||
+    config_error "GLM_SAFE_MEMORY_GUARD_PATH"
+  [[ $EXPECTED_MEMORY_GUARD_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
+    config_error "GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256"
+  MEMORY_GUARD=$MEMORY_GUARD_OVERRIDE
+  MEMORY_GUARD_SHA256=$(sha256sum -- "$MEMORY_GUARD" 2>/dev/null | awk '{print $1}')
+  [[ $MEMORY_GUARD_SHA256 == "$EXPECTED_MEMORY_GUARD_SHA256" ]] ||
+    config_error "GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256 mismatch"
+  plog "memory_guard_descriptor_path=$MEMORY_GUARD memory_guard_sha256=$MEMORY_GUARD_SHA256"
+else
+  MEMORY_GUARD=$HARNESS_ROOT/scripts/03_memory_guard.py
+fi
 python3 "$MEMORY_GUARD" \
   --required-gib "$MIN_START_GIB" --stable-samples 3 --timeout-seconds 0 \
   >>"$MAIN" || { plog "FATAL insufficient stable memory before launch"; exit 8; }
 
 ulimit -v "$VLIMIT_KB" || { plog "FATAL cannot set ulimit -v"; exit 9; }
+
+if [[ $W7_DRIVER_LINEAGE == 1 ]]; then
+  [[ $EXPECTED_CGROUP_UNIT =~ ^glm52-w7-c14-[0-9a-f]{12}-[0-9]+$ ]] ||
+    config_error "GLM_SAFE_W7_DRIVER_LINEAGE cgroup"
+  verify_w7_lock_parent() {
+    /usr/bin/python3 - "$$" "$PPID" "$0" "$W7_INFERENCE_LOCK" <<'PY'
+import errno, fcntl, os, pathlib, stat, sys
+
+self_pid, parent_pid, safe_path, lock_path = sys.argv[1:]
+self_argv = pathlib.Path(f"/proc/{self_pid}/cmdline").read_bytes().split(b"\0")[:-1]
+parent_argv = pathlib.Path(f"/proc/{parent_pid}/cmdline").read_bytes().split(b"\0")[:-1]
+expected = [b"/usr/bin/flock", b"-n", b"-E", b"75", lock_path.encode()] + self_argv
+if self_argv[:2] != [b"/usr/bin/bash", safe_path.encode()] or parent_argv != expected:
+    raise SystemExit("inference-lock parent command identity mismatch")
+lock = os.stat(lock_path)
+lock_identity = f"{os.major(lock.st_dev):02x}:{os.minor(lock.st_dev):02x}:{lock.st_ino}"
+held = False
+for line in pathlib.Path("/proc/locks").read_text().splitlines():
+    fields = line.split()
+    if len(fields) >= 8 and fields[1:4] == ["FLOCK", "ADVISORY", "WRITE"]:
+        if fields[4] == parent_pid and fields[5].lower() == lock_identity.lower():
+            held = True
+            break
+if not held:
+    raise SystemExit("inference-lock parent does not own the expected lock")
+matching = []
+for entry in pathlib.Path(f"/proc/{self_pid}/fd").iterdir():
+    try:
+        descriptor = int(entry.name)
+        metadata = os.fstat(descriptor)
+    except (OSError, ValueError):
+        continue
+    if stat.S_ISREG(metadata.st_mode) and (metadata.st_dev, metadata.st_ino) == (lock.st_dev, lock.st_ino):
+        if fcntl.fcntl(descriptor, fcntl.F_GETFD) & fcntl.FD_CLOEXEC:
+            raise SystemExit("inference-lock descriptor is close-on-exec")
+        matching.append(descriptor)
+if len(matching) != 1:
+    raise SystemExit("expected exactly one inherited inference-lock descriptor")
+descriptor = matching[0]
+fdinfo_lines = pathlib.Path(f"/proc/{self_pid}/fdinfo/{descriptor}").read_text().splitlines()
+if not any(
+    len(fields := line.split()) >= 9
+    and fields[0] == "lock:"
+    and fields[2:5] == ["FLOCK", "ADVISORY", "WRITE"]
+    and fields[6].lower() == lock_identity.lower()
+    for line in fdinfo_lines
+):
+    raise SystemExit("inherited inference-lock descriptor does not own the expected lock")
+probe = os.open(lock_path, os.O_RDONLY | os.O_CLOEXEC)
+try:
+    try:
+        fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as error:
+        if error.errno not in (errno.EACCES, errno.EAGAIN):
+            raise
+    else:
+        raise SystemExit("inherited inference-lock descriptor is not held")
+finally:
+    os.close(probe)
+print(descriptor)
+PY
+  }
+  W7_LOCK_FD=$(verify_w7_lock_parent) ||
+    config_error "GLM_SAFE_W7_DRIVER_LINEAGE inference lock parent"
+  export DS4_W7_SAFE_PID=$$
+  export DS4_W7_SAFE_START_TICKS
+  DS4_W7_SAFE_START_TICKS=$(awk '{print $22}' "/proc/$$/stat")
+  export DS4_W7_SAFE_SCRIPT_PATH=$0
+  export DS4_W7_SAFE_CGROUP_UNIT=$EXPECTED_CGROUP_UNIT
+  export DS4_W7_LOCK_PARENT_PID=$PPID
+  export DS4_W7_LOCK_PARENT_START_TICKS
+  DS4_W7_LOCK_PARENT_START_TICKS=$(awk '{print $22}' "/proc/$PPID/stat")
+  export DS4_W7_LOCK_FD=$W7_LOCK_FD
+fi
 
 setsid timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" "$@" > "$DIR/cmd.log" 2>&1 &
 WRAP=$!
@@ -286,7 +414,7 @@ if [[ $actual_pg != "$PG" ]]; then
   wait "$WRAP" 2>/dev/null || true
   exit 10
 fi
-plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (sampler at 4 Hz)"
+plog "wrapper_pid=$WRAP engine_pid=$ENG pgid=$PG (periodic sampler; actual cadence in samples.log)"
 : > "$SAMP"
 
 KILLED=""
@@ -295,7 +423,6 @@ EXECUTED_PID=""
 EXECUTED_START_TICKS=""
 EXECUTED_CANDIDATE_CLEAN_EXIT=0
 EXECUTED_CANDIDATE_EXIT_PENDING=0
-CANDIDATE_EXIT_GRACE_TICKS=8
 PROVENANCE_FAILURE=""
 while kill -0 "$WRAP" 2>/dev/null; do
   MA=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
@@ -364,83 +491,107 @@ PY
     plog "executed_candidate_verified pid=$EXECUTED_PID start_ticks=$EXECUTED_START_TICKS path=$EXECUTED_PATH executed_binary_sha256=$EXECUTED_HASH device_inode=$EXECUTED_DEVICE_INODE"
   fi
   if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 1 ]]; then
-    CURRENT_STATE=""
-    CURRENT_START_TICKS=""
-    CURRENT_STAT=""
-    IFS= read -r CURRENT_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
-    if [[ -n $CURRENT_STAT ]]; then
-      CURRENT_STAT_REST=${CURRENT_STAT##*) }
-      read -r -a CURRENT_STAT_FIELDS <<<"$CURRENT_STAT_REST"
-      CURRENT_STATE=${CURRENT_STAT_FIELDS[0]:-}
-      CURRENT_START_TICKS=${CURRENT_STAT_FIELDS[19]:-}
-    fi
-    CURRENT_GROUP=$(ps -o pgid= -p "$EXECUTED_PID" 2>/dev/null | tr -d ' ')
-    CURRENT_PATH=$(readlink -f -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
-    CURRENT_HASH=$(sha256sum -- "/proc/$EXECUTED_PID/exe" 2>/dev/null | awk '{print $1}')
-    CURRENT_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
-    if [[ -n $CURRENT_START_TICKS &&
-          $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
-      plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=start-ticks"
-      kill -KILL -- -"$PG" 2>/dev/null || true
-      KILLED=provenance
-      PROVENANCE_FAILURE=continuous-identity
-      break
-    fi
-    if [[ -z $CURRENT_STATE || $CURRENT_STATE == Z || $CURRENT_STATE == X ||
-          -z $CURRENT_HASH || -z $CURRENT_DEVICE_INODE ]]; then
+    if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 ]]; then
       REPLACEMENT_PID=""
-      for _ in $(seq 1 "$CANDIDATE_EXIT_GRACE_TICKS"); do
-        REUSED_STAT=""
-        IFS= read -r REUSED_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
-        if [[ -n $REUSED_STAT ]]; then
-          REUSED_STAT_REST=${REUSED_STAT##*) }
-          read -r -a REUSED_STAT_FIELDS <<<"$REUSED_STAT_REST"
-          REUSED_STATE=${REUSED_STAT_FIELDS[0]:-}
-          REUSED_START_TICKS=${REUSED_STAT_FIELDS[19]:-}
-          if [[ $REUSED_START_TICKS != "$EXECUTED_START_TICKS" ||
-                ($REUSED_STATE != Z && $REUSED_STATE != X) ]]; then
-            REPLACEMENT_PID=$EXECUTED_PID
-            break
+      REPLACEMENT_PID=$(pgrep -x 'ds4-server|ds4|ds4-bench|ds4-eval' 2>/dev/null |
+        while read -r candidate_pid; do
+          if [[ $candidate_pid == "$EXECUTED_PID" ]]; then
+            REUSED_STAT=""
+            IFS= read -r REUSED_STAT <"/proc/$candidate_pid/stat" 2>/dev/null || true
+            [[ -n $REUSED_STAT ]] || continue
+            REUSED_STAT_REST=${REUSED_STAT##*) }
+            read -r -a REUSED_STAT_FIELDS <<<"$REUSED_STAT_REST"
+            REUSED_STATE=${REUSED_STAT_FIELDS[0]:-}
+            REUSED_START_TICKS=${REUSED_STAT_FIELDS[19]:-}
+            if [[ $REUSED_START_TICKS == "$EXECUTED_START_TICKS" &&
+                  ($REUSED_STATE == Z || $REUSED_STATE == X) ]]; then
+              continue
+            fi
           fi
-        fi
-        REPLACEMENT_PID=$(pgrep -x 'ds4-server|ds4|ds4-bench|ds4-eval' 2>/dev/null |
-          while read -r candidate_pid; do
-            [[ $candidate_pid != "$EXECUTED_PID" ]] || continue
-            candidate_group=$(ps -o pgid= -p "$candidate_pid" 2>/dev/null | tr -d ' ')
-            [[ $candidate_group == "$PG" ]] && { echo "$candidate_pid"; break; }
-          done)
-        [[ -z $REPLACEMENT_PID ]] || break
-        WRAP_STATE=$(ps -o stat= -p "$WRAP" 2>/dev/null | tr -d ' ')
-        if [[ -z $WRAP_STATE || $WRAP_STATE == Z* ]]; then
-          EXECUTED_CANDIDATE_EXIT_PENDING=1
-          plog "executed candidate exited during wrapper shutdown pid=$EXECUTED_PID"
-          break
-        fi
-        sleep 0.25
-      done
+          candidate_group=$(ps -o pgid= -p "$candidate_pid" 2>/dev/null | tr -d ' ')
+          [[ $candidate_group == "$PG" ]] && { echo "$candidate_pid"; break; }
+        done)
       if [[ -n $REPLACEMENT_PID ]]; then
-        plog "FATAL replacement candidate appeared during shutdown pid=$REPLACEMENT_PID"
+        plog "FATAL replacement candidate appeared after verified exit pid=$REPLACEMENT_PID"
         kill -KILL -- -"$PG" 2>/dev/null || true
         KILLED=provenance
         PROVENANCE_FAILURE=replacement
-      elif [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 0 ]]; then
-        plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=disappeared-before-wrapper-exit"
+        break
+      fi
+    else
+      CURRENT_STATE=""
+      CURRENT_START_TICKS=""
+      CURRENT_STAT=""
+      IFS= read -r CURRENT_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
+      if [[ -n $CURRENT_STAT ]]; then
+        CURRENT_STAT_REST=${CURRENT_STAT##*) }
+        read -r -a CURRENT_STAT_FIELDS <<<"$CURRENT_STAT_REST"
+        CURRENT_STATE=${CURRENT_STAT_FIELDS[0]:-}
+        CURRENT_START_TICKS=${CURRENT_STAT_FIELDS[19]:-}
+      fi
+      CURRENT_GROUP=$(ps -o pgid= -p "$EXECUTED_PID" 2>/dev/null | tr -d ' ')
+      CURRENT_PATH=$(readlink -f -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+      CURRENT_HASH=$(sha256sum -- "/proc/$EXECUTED_PID/exe" 2>/dev/null | awk '{print $1}')
+      CURRENT_DEVICE_INODE=$(stat -Lc '%d:%i' -- "/proc/$EXECUTED_PID/exe" 2>/dev/null || true)
+      IDENTITY_INCOMPLETE=0
+      if [[ -z $CURRENT_START_TICKS || -z $CURRENT_GROUP ||
+            -z $CURRENT_PATH ||
+            $CURRENT_PATH == "/proc/$EXECUTED_PID/exe" ||
+            -z $CURRENT_HASH || -z $CURRENT_DEVICE_INODE ]]; then
+        IDENTITY_INCOMPLETE=1
+      fi
+      if [[ -n $CURRENT_START_TICKS &&
+            $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
+        plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=start-ticks"
         kill -KILL -- -"$PG" 2>/dev/null || true
         KILLED=provenance
         PROVENANCE_FAILURE=continuous-identity
+        break
+      elif [[ -z $CURRENT_STATE || $CURRENT_STATE == Z || $CURRENT_STATE == X ]]; then
+        EXECUTED_CANDIDATE_EXIT_PENDING=1
+        plog "executed candidate exited; monitoring controller and process group pid=$EXECUTED_PID"
+      elif [[ (-n $CURRENT_GROUP && $CURRENT_GROUP != "$PG") ||
+              (-n $CURRENT_PATH &&
+               $CURRENT_PATH != "/proc/$EXECUTED_PID/exe" &&
+               $CURRENT_PATH != "$CANDIDATE_BINARY") ||
+              (-n $CURRENT_HASH && $CURRENT_HASH != "$EXPECTED_BINARY_SHA256") ||
+              (-n $CURRENT_DEVICE_INODE &&
+               $CURRENT_DEVICE_INODE != "$CANDIDATE_DEVICE_INODE") ]]; then
+        plog "FATAL executed candidate identity changed pid=$EXECUTED_PID start_ticks=$CURRENT_START_TICKS pgid=${CURRENT_GROUP:-missing} path=${CURRENT_PATH:-missing} executed_binary_sha256=${CURRENT_HASH:-missing} device_inode=${CURRENT_DEVICE_INODE:-missing}"
+        kill -KILL -- -"$PG" 2>/dev/null || true
+        KILLED=provenance
+        PROVENANCE_FAILURE=continuous-identity
+        break
+      elif [[ $IDENTITY_INCOMPLETE == 1 ]]; then
+        CONFIRM_STATE=""
+        CONFIRM_START_TICKS=""
+        CONFIRM_STAT=""
+        IFS= read -r CONFIRM_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
+        if [[ -n $CONFIRM_STAT ]]; then
+          CONFIRM_STAT_REST=${CONFIRM_STAT##*) }
+          read -r -a CONFIRM_STAT_FIELDS <<<"$CONFIRM_STAT_REST"
+          CONFIRM_STATE=${CONFIRM_STAT_FIELDS[0]:-}
+          CONFIRM_START_TICKS=${CONFIRM_STAT_FIELDS[19]:-}
+        fi
+        if [[ -n $CONFIRM_START_TICKS &&
+              $CONFIRM_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
+          plog "FATAL executed candidate identity changed pid=$EXECUTED_PID reason=confirmed-start-ticks"
+          kill -KILL -- -"$PG" 2>/dev/null || true
+          KILLED=provenance
+          PROVENANCE_FAILURE=continuous-identity
+          break
+        elif [[ -z $CONFIRM_STATE ||
+                $CONFIRM_STATE == Z || $CONFIRM_STATE == X ]]; then
+          EXECUTED_CANDIDATE_EXIT_PENDING=1
+          plog "executed candidate exited during identity sample; monitoring controller and process group pid=$EXECUTED_PID"
+        else
+          plog "FATAL executed candidate identity unavailable while process remained live pid=$EXECUTED_PID start_ticks=$CONFIRM_START_TICKS state=$CONFIRM_STATE"
+          kill -KILL -- -"$PG" 2>/dev/null || true
+          KILLED=provenance
+          PROVENANCE_FAILURE=continuous-identity
+          break
+        fi
       fi
-      break
-    fi
-    if [[ $CURRENT_GROUP != "$PG" ||
-          $CURRENT_START_TICKS != "$EXECUTED_START_TICKS" ||
-          $CURRENT_PATH != "$CANDIDATE_BINARY" ||
-          $CURRENT_HASH != "$EXPECTED_BINARY_SHA256" ||
-          $CURRENT_DEVICE_INODE != "$CANDIDATE_DEVICE_INODE" ]]; then
-      plog "FATAL executed candidate identity changed pid=$EXECUTED_PID start_ticks=$CURRENT_START_TICKS pgid=${CURRENT_GROUP:-missing} path=${CURRENT_PATH:-missing} executed_binary_sha256=${CURRENT_HASH:-missing} device_inode=${CURRENT_DEVICE_INODE:-missing}"
-      kill -KILL -- -"$PG" 2>/dev/null || true
-      KILLED=provenance
-      PROVENANCE_FAILURE=continuous-identity
-      break
     fi
   fi
   RSS=$(awk '/VmRSS/{print $2}' "/proc/$SPID2/status" 2>/dev/null || echo 0)
@@ -545,9 +696,15 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
     fi
   fi
   CGROUP_EVENT_FAILURES=""
+  CGROUP_HIGH_DELTA=0
   while read -r key value; do
     before=${CGROUP_EVENTS_BEFORE[$key]:-0}
-    if [[ $key =~ ^(high|max|oom|oom_kill)$ ]] && (( value > before )); then
+    if [[ $key == high ]] && (( value > before )); then
+      CGROUP_HIGH_DELTA=$((value - before))
+      if [[ $ALLOW_CGROUP_HIGH == 0 ]]; then
+        CGROUP_EVENT_FAILURES+="${CGROUP_EVENT_FAILURES:+ }$key:$before->$value"
+      fi
+    elif [[ $key =~ ^(max|oom|oom_kill|oom_group_kill)$ ]] && (( value > before )); then
       CGROUP_EVENT_FAILURES+="${CGROUP_EVENT_FAILURES:+ }$key:$before->$value"
     fi
   done < "$CGROUP_DIR/memory.events.local"
@@ -558,24 +715,61 @@ if [[ $REQUIRE_CGROUP == 1 ]]; then
   CGROUP_CURRENT_END=$(<"$CGROUP_DIR/memory.current")
   CGROUP_PEAK_END=$(<"$CGROUP_DIR/memory.peak")
   CGROUP_SWAP_CURRENT_END=$(<"$CGROUP_DIR/memory.swap.current")
+  if (( CGROUP_SWAP_CURRENT_END != 0 )); then
+    plog "FATAL cgroup swap use current_bytes=$CGROUP_SWAP_CURRENT_END"
+    RC=14
+  fi
+  if [[ $ALLOW_CGROUP_HIGH == 1 ]]; then
+    plog "cgroup_soft_high_allowed delta=$CGROUP_HIGH_DELTA"
+  fi
   plog "cgroup_final current_bytes=$CGROUP_CURRENT_END peak_bytes=$CGROUP_PEAK_END swap_current_bytes=$CGROUP_SWAP_CURRENT_END events=$(tr '\n' ',' <"$CGROUP_DIR/memory.events.local")"
 fi
-if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 && $RC == 0 ]]; then
-  EXECUTED_CANDIDATE_CLEAN_EXIT=1
-  plog "executed candidate clean exit verified after wrapper and descendant checks"
+if [[ $RC == 0 && ${#FINAL_ARTIFACT_PATHS[@]} -gt 0 ]]; then
+  for artifact in "${FINAL_ARTIFACT_PATHS[@]}"; do
+    parent=$(realpath -e -- "$(dirname -- "$artifact")" 2>/dev/null || true)
+    if [[ ! -f $artifact || -L $artifact ||
+          $artifact != "$parent"/"$(basename -- "$artifact")" ]]; then
+      plog "FATAL final artifact is absent or unsafe path=$artifact"
+      RC=17
+      break
+    fi
+    artifact_sha256=$(sha256sum -- "$artifact" | awk '{print $1}')
+    artifact_identity=$(stat -Lc '%d:%i:%s' -- "$artifact")
+    plog "final_artifact_verified path=$artifact sha256=$artifact_sha256 device_inode=$artifact_identity"
+  done
 fi
 tail -25 "$DIR/cmd.log" >> "$MAIN" 2>/dev/null
+if grep -Eiq "$USERSPACE_GPU_OOM_RE" "$MAIN" "$DIR/cmd.log"; then
+  plog "FATAL CUDA userspace GPU/OOM evidence appeared during run"
+  RC=16
+fi
 RUN_ENDED_EPOCH=$(date -u +%s)
 if ! journalctl -k --since "@$RUN_STARTED_EPOCH" \
       --until "@$((RUN_ENDED_EPOCH + 1))" \
       --no-pager -o short-iso-precise >"$KERNEL_LOG" 2>&1; then
   plog "FATAL kernel journal could not be captured for Xid verification"
   RC=16
-elif grep -Eiq 'NVRM.*Xid' "$KERNEL_LOG"; then
-  plog "FATAL kernel Xid evidence appeared during run"
+elif grep -Eiq "$KERNEL_GPU_FAULT_RE" "$KERNEL_LOG"; then
+  plog "FATAL kernel GPU/OOM evidence appeared during run"
   RC=16
 fi
 sync -d "$KERNEL_LOG" 2>/dev/null || true
+if [[ $CANDIDATE_PROVENANCE == 1 &&
+      $EXECUTED_CANDIDATE_OBSERVED == 1 &&
+      -z $PROVENANCE_FAILURE && $RC == 0 ]]; then
+  EXECUTED_CANDIDATE_CLEAN_EXIT=1
+  plog "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler; actual cadence is recorded in samples.log; wrapper and descendant checks clean"
+fi
+for safety_artifact in "$SAMP" "$KERNEL_LOG"; do
+  if [[ ! -f $safety_artifact || -L $safety_artifact ]]; then
+    plog "FATAL wrapper safety artifact is absent or unsafe path=$safety_artifact"
+    RC=17
+    continue
+  fi
+  safety_sha256=$(sha256sum -- "$safety_artifact" | awk '{print $1}')
+  safety_size=$(stat -Lc '%s' -- "$safety_artifact")
+  plog "safety_artifact_verified name=$(basename -- "$safety_artifact") sha256=$safety_sha256 size=$safety_size"
+done
 plog "SAFE_RUN end rc=$RC killed=${KILLED:-no} (124=timeout, 137=SIGKILL/ENOMEM-adjacent)"
 if [[ -n $WITNESS_NONCE ]]; then
   if [[ ! -f $WITNESS_ARTIFACT || -L $WITNESS_ARTIFACT ]]; then
@@ -595,5 +789,12 @@ if [[ -n $WITNESS_NONCE ]]; then
   printf '%s\n' "$WITNESS_MESSAGE"
 fi
 grep MemAvailable /proc/meminfo >> "$MAIN"; sync
-echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR"
+if [[ $DONE_DIGESTS == 1 ]]; then
+  MAIN_DONE_SHA256=$(sha256sum -- "$MAIN" | awk '{print $1}')
+  SAMPLES_DONE_SHA256=$(sha256sum -- "$SAMP" | awk '{print $1}')
+  KERNEL_DONE_SHA256=$(sha256sum -- "$KERNEL_LOG" | awk '{print $1}')
+  echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR main_sha256=$MAIN_DONE_SHA256 samples_sha256=$SAMPLES_DONE_SHA256 kernel_sha256=$KERNEL_DONE_SHA256"
+else
+  echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR"
+fi
 exit "$RC"

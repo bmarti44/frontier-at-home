@@ -1,0 +1,41 @@
+{
+  "adversarial_reviewer": {
+    "critical": [],
+    "high": [],
+    "low": [],
+    "medium": [],
+    "score_0_to_100": 98,
+    "verdict": "AUTHORIZE_RUNTIME"
+  },
+  "candidate_hash": "642692282e3dc3fadfe890f58898dfce2ff3c0e0",
+  "convergence": {
+    "blocking_classes_current": 1,
+    "blocking_classes_previous": 0,
+    "campaign_global_review_round": 270,
+    "gate_candidate_count": 17,
+    "status": "CANDIDATE_18_AUTHORIZED"
+  },
+  "gap_reviewer": {
+    "critical": [],
+    "high": [
+      {
+        "acceptance_test": "Use an attempt-owned retained descriptor, reject unsafe leaves, and prove a pathname replacement cannot redirect the file the engine opens.",
+        "affected_gate": "W7.1 host safety and process serialization",
+        "evidence": "The harness checked only the parent directory. The frozen engine follows a symlink leaf before ftruncate, so a stale or replaced fixed leaf could redirect truncation.",
+        "id": "GAP-W7.1-270-H1-ENGINE-LOCK-LEAF-UNBOUND"
+      }
+    ],
+    "low": [],
+    "medium": [],
+    "score_0_to_100": 85,
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "prior_issue_status": {
+    "ADV-W7.1-268-H1-INHERITED-LOCK-FD-OWNERSHIP-NOT-PROVEN": "VERIFIED",
+    "W7-C17-LOCK-PATH-ENVIRONMENT-IDENTITY": "VERIFIED",
+    "W7-C17-RUNTIME-DEFAULT-LOCK-PERMISSION": "FIXED"
+  },
+  "review_round": 270,
+  "root_disposition": "Runtime remains blocked. Candidate 18 is limited to making the DS4 engine lock leaf non-replaceable through a retained attempt-owned descriptor.",
+  "runtime_started": false
+}

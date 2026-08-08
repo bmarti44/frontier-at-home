@@ -1,0 +1,34 @@
+{
+  "candidate_hash": "d2520d9a580f3a0bd8d7861091e2ae197998bf6c",
+  "review_round": 226,
+  "reviewers": {
+    "Nash": {
+      "score": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "verdict": "PASS"
+    },
+    "Singer": {
+      "score": 75,
+      "critical": [
+        "ADV-W7-226-C41-UNCHECKSUMMED-PAYLOAD-CAN-BYPASS-GUARD"
+      ],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "verdict": "BLOCK_PRODUCTION_GRADUATION"
+    }
+  },
+  "root_reproduction": {
+    "status": "VERIFIED",
+    "evidence": "The KVC envelope binds cached text and payload length but has no digest over payload bytes. ds4_session_load_payload structurally consumes same-size mutations and the candidate then marks a complete restored frontier authoritative.",
+    "required_red_mutations": [
+      "saved token byte",
+      "tensor payload byte",
+      "equal-size payload substitution"
+    ]
+  },
+  "next_scope": "Add whole-record immutable-content integrity and token-range validation; verify before session restoration; discard corrupt records and preserve cold fallback. Frozen W7 diagnostic evidence remains valid and out of scope."
+}

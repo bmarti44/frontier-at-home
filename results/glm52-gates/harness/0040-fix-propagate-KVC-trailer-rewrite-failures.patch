@@ -1,0 +1,85 @@
+From 3ba062e5433e56df7c6da70b58cc9757e7777d54 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:32:22 -0400
+Subject: [PATCH 40/40] fix: propagate KVC trailer rewrite failures
+
+---
+ ds4_kvstore.c                            | 15 +++++++--------
+ tests/test_kvstore_integrity_callsite.py |  2 +-
+ 2 files changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/ds4_kvstore.c b/ds4_kvstore.c
+index 5cba069..f418669 100644
+--- a/ds4_kvstore.c
++++ b/ds4_kvstore.c
+@@ -1010,7 +1010,7 @@ static bool kv_trailer_write(const ds4_kvstore_trailer_hooks *hooks,
+     return hooks->write(hooks->ud, fp, text, written_bytes);
+ }
+ 
+-static void kv_cache_rewrite_trailer(ds4_kvstore *kc, const char *path,
++static bool kv_cache_rewrite_trailer(ds4_kvstore *kc, const char *path,
+                                      const char *text,
+                                      const ds4_kvstore_trailer_hooks *hooks) {
+     uint64_t trailer_est = 0;
+@@ -1018,10 +1018,10 @@ static void kv_cache_rewrite_trailer(ds4_kvstore *kc, const char *path,
+         !kv_trailer_serialized_size(hooks, text, &trailer_est) ||
+         trailer_est == 0)
+     {
+-        return;
++        return true;
+     }
+     FILE *fp = fopen(path, "r+b");
+-    if (!fp) return;
++    if (!fp) return false;
+     ds4_kvstore_entry hdr = {0};
+     uint32_t text_bytes = 0;
+     bool ok = ds4_kvstore_read_header(fp, &hdr, &text_bytes) &&
+@@ -1032,7 +1032,7 @@ static void kv_cache_rewrite_trailer(ds4_kvstore *kc, const char *path,
+         kv_logf(kc, DS4_KVSTORE_LOG_KVCACHE,
+                 "%s: kv cache discarded corrupt transform source %s",
+                 kv_log_name(kc), path);
+-        return;
++        return false;
+     }
+     uint64_t end = DS4_KVSTORE_FIXED_HEADER + 4ull +
+                    (uint64_t)text_bytes + hdr.payload_bytes;
+@@ -1057,8 +1057,7 @@ static void kv_cache_rewrite_trailer(ds4_kvstore *kc, const char *path,
+         }
+     }
+     fclose(fp);
+-    (void)kc;
+-    (void)ok;
++    return ok;
+ }
+ 
+ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
+@@ -1138,11 +1137,11 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
+     if (kv_cache_existing_compatible(kc, path, sha, text, text_len,
+                                      model_id,
+                                      quant_bits, ds4_session_ctx(session))) {
+-        kv_cache_rewrite_trailer(kc, path, text, hooks);
++        const bool rewrite_ok = kv_cache_rewrite_trailer(kc, path, text, hooks);
+         free(text);
+         free(path);
+         ds4_tokens_free(&store_tokens);
+-        return true;
++        return rewrite_ok;
+     }
+ 
+     ds4_session_payload_file staged = {0};
+diff --git a/tests/test_kvstore_integrity_callsite.py b/tests/test_kvstore_integrity_callsite.py
+index d5cba6c..45b8c8f 100644
+--- a/tests/test_kvstore_integrity_callsite.py
++++ b/tests/test_kvstore_integrity_callsite.py
+@@ -22,7 +22,7 @@ def function_body(source: str, signature: str) -> str:
+ class KvstoreIntegrityCallsiteTests(unittest.TestCase):
+     def test_trailer_rewrite_verifies_before_mutation(self) -> None:
+         source = (ROOT / "ds4_kvstore.c").read_text()
+-        body = function_body(source, "static void kv_cache_rewrite_trailer")
++        body = function_body(source, "static bool kv_cache_rewrite_trailer")
+         verify = body.index("ds4_kvstore_transform_source_verified")
+         truncate = body.index("ftruncate")
+         seal = body.index("ds4_kvstore_seal_record")
+-- 
+2.43.0
+

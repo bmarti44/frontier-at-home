@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 static pid_t start_candidate(const char *path) {
@@ -13,15 +14,38 @@ static pid_t start_candidate(const char *path) {
     return pid;
 }
 
+static pid_t start_unrelated_helper(void) {
+    pid_t pid = fork();
+    if (pid == 0) {
+        execl("/usr/bin/sleep", "postprocess-helper", "30", (char *)NULL);
+        _exit(127);
+    }
+    return pid;
+}
+
 int main(int argc, char **argv) {
     if (argc != 3 ||
-        (strcmp(argv[1], "clean") && strcmp(argv[1], "replace") &&
-         strcmp(argv[1], "fail") && strcmp(argv[1], "linger")))
+        (strcmp(argv[1], "clean") && strcmp(argv[1], "reaped") &&
+         strcmp(argv[1], "identity-race") &&
+         strcmp(argv[1], "postprocess") &&
+         strcmp(argv[1], "replace") &&
+         strcmp(argv[1], "fail") && strcmp(argv[1], "linger") &&
+         strcmp(argv[1], "survivor")))
         return 2;
     pid_t first = start_candidate(argv[2]);
     if (first <= 0) return 3;
     sleep(1);
+    if (!strcmp(argv[1], "identity-race")) {
+        if (waitpid(first, NULL, 0) != first) return 6;
+        sleep(2);
+        return 0;
+    }
     if (kill(first, SIGTERM)) return 4;
+    if (!strcmp(argv[1], "reaped") || !strcmp(argv[1], "postprocess")) {
+        if (waitpid(first, NULL, 0) != first) return 6;
+        if (!strcmp(argv[1], "postprocess")) sleep(4);
+        return 0;
+    }
     /* Deliberately leave the first child as a zombie, matching the production
        arm's short stop_server-to-shell-exit window. */
     usleep(300000);
@@ -33,6 +57,10 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (!strcmp(argv[1], "fail")) return 1;
+    if (!strcmp(argv[1], "survivor")) {
+        if (start_unrelated_helper() <= 0) return 7;
+        return 0;
+    }
     if (!strcmp(argv[1], "linger")) {
         sleep(3);
         return 0;

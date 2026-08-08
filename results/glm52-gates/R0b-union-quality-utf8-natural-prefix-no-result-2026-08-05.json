@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "gate": "fixed-binary natural malformed-UTF-8 inference-path confirmation",
+  "status": "NO_RESULT",
+  "candidate_binary_sha256": "3c932e9228e9a8a21c9b6f9efb369b1e0725c74371203b04ca222a084297c8b2",
+  "engine_commit": "183b236bbda50dc0e92d2a641a0ef1c8bdf4d620",
+  "source_and_cross_api_tests": "PASS",
+  "runtime_branch_execution": "NO_RESULT",
+  "attempts": [
+    {
+      "artifact": "results/glm52-gates/R0b-union-quality-r115-fresh-case021-fail-2026-08-05.json",
+      "verdict": "FAIL",
+      "result": "The exact request, seed, and case run first emitted a valid unrelated eight-token sequence."
+    },
+    {
+      "artifact": "results/glm52-gates/R0b-union-quality-r117-history-replay-fail-2026-08-05.json",
+      "verdict": "FAIL",
+      "result": "All four historical predecessors diverged; request 5 repeated the valid fresh-server sequence."
+    }
+  ],
+  "conclusion": "The historical malformed prefix is not reproducible on the fixed binary from either the exact isolated request or the exact preserved request history. Request-order replay on this binary is falsified. The failed attempts remain FAIL; only this subclaim is terminal NO_RESULT.",
+  "scope_limit": "This record does not authorize claiming that a normal full-100 capture exercised malformed-byte normalization. A natural runtime proof requires preserved raw token IDs that independently reconstruct ill-formed UTF-8 bytes and visible output matching the frozen tokenizer's maximal-replacement projection.",
+  "next_action": "Resume the independently meaningful fresh 100-case corpus with strict UTF-8/JSON, lifecycle, raw-token/output identity, trace, and containment gates. Do not build a legacy-binary archaeology harness.",
+  "review": {
+    "round": 118,
+    "candidate_hash": "eabf8ba99d7b78b7536e15ffe4f56190ff4722e2",
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 97,
+    "critical": [],
+    "high": [],
+    "verdict": "AUTHORIZE_FRESH_FULL100_WITH_NORMALIZATION_ENABLED"
+  }
+}

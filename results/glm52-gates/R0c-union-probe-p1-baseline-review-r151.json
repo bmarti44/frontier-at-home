@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "af851eb51141eb4948aee5ff3c276df032a1f3d6",
+  "review_round": 151,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 75,
+    "critical": [
+      "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY"
+    ],
+    "high": [],
+    "verdict": "REJECT_DO_NOT_INSTALL_OR_OPEN_HELD_OUT_VALUES"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 70,
+    "critical": [],
+    "high": [
+      "BASE-R142-H3",
+      "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY",
+      "P1-BASE-C13-H1-ROOT-RESULT-REOPEN-IMPOSSIBLE"
+    ],
+    "verdict": "REJECT"
+  },
+  "verified_closed": [
+    "BASE-R142-H4",
+    "P1-BASE-IMPL-H3-COST-OMITTED",
+    "P1-BASE-R149-C1-USER-WRITABLE-ROOT-INSTALLER",
+    "P1-BASE-R149-H1-APPROVED-COMMIT-NOT-ENFORCED-BY-CONTROLLER",
+    "P1-C13-FAULT-LOG-PREFIX-MISMATCH"
+  ],
+  "open_blockers": [
+    {
+      "id": "BASE-R142-H3",
+      "severity": "high",
+      "finding": "Completed replay accepts marker-only synthetic fault logs, does not rerun exact wrapper/safety validation, and does not preserve or bind the four post-fault recovery controls."
+    },
+    {
+      "id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY",
+      "severity": "critical",
+      "finding": "The delegated wildcard publication can bless an arbitrary caller tree without root fixed-scorer replay or reservation/output binding. Rename/chown/chmod does not revoke a caller's pre-open writable file descriptor, and completed replay does not reconstruct the canonical result from capture evidence."
+    },
+    {
+      "id": "P1-BASE-C13-H1-ROOT-RESULT-REOPEN-IMPOSSIBLE",
+      "severity": "high",
+      "finding": "After publication, the unprivileged controller attempts to reopen the result under a root-only mode-0700 parent and must fail after the irreversible transition."
+    }
+  ],
+  "independent_root_reproduction": {
+    "result": "CONFIRMED",
+    "evidence": [
+      "publish_p1_result validates only caller-manifest equality and approval candidate before issuing a root receipt.",
+      "The passing root publication fixture contains only arbitrary attempt.json and summary.json.",
+      "The installer creates p1-results root:root mode 0700, while the controller reopens the returned child path.",
+      "Linux retains write authority on a pre-open O_RDWR file description across rename, chown and chmod."
+    ]
+  },
+  "candidate_14_scope": [
+    "Root independently copies every source artifact into newly created root-owned files, semantically runs the fixed completed-result validator on that copy, and only then issues a receipt.",
+    "Publication is bound to the permanent reservation, exact output identity, approved commit and installed controller hash; direct/repeated/forged publication fails.",
+    "Completed evidence preserves and revalidates full fault and post-fault control logs, exact wrapper/safety markers, token/logit fingerprints, and capture-to-canonical lineage.",
+    "The unprivileged controller exact-compares the root receipt and does not traverse root-only storage."
+  ],
+  "next_action": "Write and commit RED tests for the three round-151 blocker classes before Candidate 14 implementation."
+}

@@ -1,0 +1,55 @@
+{
+  "candidate_hash": "3e1ece589e419b8efb11ab6eda7fbc7f5ea932fb",
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "review_round": 189,
+  "reviewers": [
+    {
+      "name": "Nash",
+      "score_0_to_100": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "R05-R188-H1-SOURCE-Z0-AUTHORITY-UNVERIFIED", "status": "FIXED"},
+        {"id": "ADV-R05-R188-H1-SOURCE-Z0-AUTHORITY-IS-SELF-REPORTED", "status": "FIXED"},
+        {"id": "ADV-R05-R188-H2-ALLOWED-CHANNEL-PACK-AND-BINARY-SMUGGLING", "status": "FIXED"},
+        {"id": "ADV-R05-R188-H3-REPLAY-IS-PROCESS-SEPARATE-NOT-IMPLEMENTATION-INDEPENDENT", "status": "FIXED"},
+        {"id": "ADV-R05-R188-M1-BIT-IDENTITY-MAY-CONFLATE-CORRECTNESS-WITH-DETERMINISM", "status": "FIXED"}
+      ],
+      "verdict": "APPROVE_RED_TEST_AUTHORING_ONLY"
+    },
+    {
+      "name": "Singer",
+      "score_0_to_100": 90,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-R05-R189-H1-POSTFREEZE-SYNTHETICS-DO-NOT-BLIND-SCORING-FIXTURES",
+          "evidence": "Synthetic tuples compare candidate with replay but have no Phase-B targets and cannot grant accuracy PASS. An honest fallback can pass synthetics while a hidden predicate cans the five known scoring states.",
+          "affected_gate": "Target-data isolation, anti-canned-result integrity, and trustworthy post-freeze confirmation",
+          "reproduction": "Before freeze encode a predicate/table for the five known z0 states and use the honest path for every unfamiliar synthetic tuple.",
+          "proposed_acceptance_test": "Freeze all code first, then use authenticated public randomness to select previously unavailable real scoring prompts, capture source/target only after freeze, prohibit rebuild/reseed/retry, and reject known-fixture-canning plus honest-fallback mutations."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "R05-R188-H1-SOURCE-Z0-AUTHORITY-UNVERIFIED", "status": "FIXED"},
+        {"id": "ADV-R05-R188-H1-SOURCE-Z0-AUTHORITY-IS-SELF-REPORTED", "status": "FIXED"},
+        {"id": "ADV-R05-R188-H2-ALLOWED-CHANNEL-PACK-AND-BINARY-SMUGGLING", "status": "PARTIALLY_FIXED"},
+        {"id": "ADV-R05-R188-H3-REPLAY-IS-PROCESS-SEPARATE-NOT-IMPLEMENTATION-INDEPENDENT", "status": "FIXED"},
+        {"id": "ADV-R05-R188-M1-BIT-IDENTITY-MAY-CONFLATE-CORRECTNESS-WITH-DETERMINISM", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_RED_TEST_IMPLEMENTATION"
+    }
+  ],
+  "terminal_disposition": "REJECTED_BEFORE_IMPLEMENTATION",
+  "convergence": {
+    "candidate": 5,
+    "blocking_set_strictly_shrank": true,
+    "consecutive_non_shrink": 0,
+    "next_candidate_permitted": true,
+    "remaining_blocker": "ADV-R05-R189-H1-POSTFREEZE-SYNTHETICS-DO-NOT-BLIND-SCORING-FIXTURES"
+  }
+}

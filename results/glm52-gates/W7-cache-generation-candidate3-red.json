@@ -1,0 +1,32 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 3,
+  "status": "RED_CONFIRMED",
+  "python_scorer_red": {
+    "command": "python3 -m unittest scripts.tests.test_w7_cache_generation",
+    "exit_code": 1,
+    "tests_run": 10,
+    "failures": 5,
+    "failed_behaviors": [
+      "equal-context request collision accepted",
+      "object finish_reason and null text accepted",
+      "top-level error plus fabricated choice accepted",
+      "missing text accepted",
+      "unsupported finish_reason accepted"
+    ],
+    "test_sha256": "57a89b310243b8f0bede3b084aad29442b105b626278547d1744cfc71a79295d",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "a697a2e0a902ae82a35b2d24137c49ef9b967b9d1edd36c205084e358b341982"
+  },
+  "binary_freeze_red": {
+    "freeze": "results/glm52-gates/W7-cache-generation-freeze-v2.json",
+    "declared_bytes": 5588136,
+    "observed_bytes": 5584864,
+    "sha256_matches": true,
+    "verdict": "FAIL"
+  },
+  "engine_lineage_red_required": {
+    "baseline": "12a5010a20514c06f718fe53e2083a4031114317",
+    "requirement": "Rebuild candidate 3 from candidate 1 with a behavior-preserving production selector seam and committed test, capture assertion RED, then implement in a later engine commit."
+  }
+}

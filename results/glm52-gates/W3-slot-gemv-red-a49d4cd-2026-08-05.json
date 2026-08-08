@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "gate": "W3-zero-copy-expert-slot-gemv-microgate",
+  "status": "RED_CONFIRMED",
+  "engine_parent_commit": "e637b6f1eaaf9fbc5f08874d5f2a28e5ac618004",
+  "engine_test_commit": "a49d4cd3da61cfb9c8cff53959856bff9b9ce164",
+  "engine_worktree": "/tmp/glm52-slot-gemv-v1",
+  "test": "tests/test_gpu_expert_slot_gemv.c",
+  "test_sha256": "fb45b947a70d97d850fe4e5dddfea66755cf1ce58a4b5b375099c95c81e8faf0",
+  "production_cuda_source_sha256": "760c64de20eb89e7114e2a696d302dd4ff56d865fba5b9cc15cc7c1af19672be",
+  "command": "make -j2 tests/test_gpu_expert_slot_gemv && ./tests/test_gpu_expert_slot_gemv",
+  "exit_code": 1,
+  "stdout_sha256": "3032e63211213e175b9a1ad4a89265df34a493895bd808158344163df88ecf06",
+  "stderr_sha256": "3d2f270a53b85060a1b2657de7a04171784d450d69c434eb9ca502fd60901544",
+  "observed": {
+    "status": "UNAVAILABLE",
+    "reason": "direct expert-slot GEMV is not implemented"
+  },
+  "acceptance_formula": {
+    "fixture": "The same deterministic IQ2_XXS expert bytes, selected IDs, weights, and input vector are used by both arms.",
+    "workload": "At least 600 expert evaluations per arm after warmup.",
+    "timing": "CUDA events bracket each complete arm and the terminal event is synchronized before elapsed time is read.",
+    "correctness": "Every output float is bit-identical between compact-copy and direct-slot arms; all CUDA operations succeed.",
+    "performance": "median(direct-slot completed milliseconds) / median(compact-copy plus GEMV completed milliseconds) <= 0.95 over at least five counterbalanced paired samples.",
+    "scope": "This microgate only authorizes a serving candidate. It is not a serving-performance result and cannot adopt W3 by itself."
+  },
+  "safety": {
+    "engine_started": false,
+    "large_model_loaded": false,
+    "available_memory_gib_before": 115,
+    "concurrent_engine_or_fio": false
+  },
+  "next_action": "Implement the smallest default-off direct-slot decode kernel path using the same kernels exercised by this test. Stop W3 before a model run if this fixed microgate misses any acceptance condition."
+}

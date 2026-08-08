@@ -1,0 +1,17 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 9,
+  "status": "RED_CONFIRMED",
+  "parent_commit": "32278b2",
+  "finding": "ADV-W7.1-261-H2-RUNTIME-EVIDENCE-REMAINS-MUTABLE",
+  "mutation": "Replace server.log after safe-wrapper verification with a new inode containing byte-identical content.",
+  "command": "python3 -m unittest scripts.tests.test_w7_cache_generation.W7CacheGenerationGateTest.test_runtime_binding_rejects_post_wrapper_replacement",
+  "exit_status": 1,
+  "observed": "ValueError not raised",
+  "engine_started": false,
+  "artifacts": {
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "219b2fc804686bad51c49ffb31a95bfaa8b2f2016f2a91b851ee51275eed7509",
+    "tests_sha256": "d12c6a0f99777f2479f42e339d618a1aebb329e8af25331d4530ad0afe4f350e"
+  }
+}

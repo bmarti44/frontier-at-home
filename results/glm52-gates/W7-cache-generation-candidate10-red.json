@@ -1,0 +1,23 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 10,
+  "status": "RED_CONFIRMED",
+  "parent_commit": "f1ed449",
+  "review_source": "results/glm52-gates/W7-cache-generation-review-r262.json",
+  "command": "python3 -m unittest scripts.tests.test_w7_cache_generation",
+  "exit_status": 1,
+  "tests_run": 28,
+  "failures": 4,
+  "failed_behaviors": [
+    "contained driver is not executed through a pinned harness descriptor",
+    "cgroup, safe-run, and scorer scripts are not pinned across verification and use",
+    "binding, scoring, and publication do not share one immutable snapshot",
+    "failed-attempt manifest omits frozen identity and configuration fields"
+  ],
+  "engine_started": false,
+  "artifacts": {
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "9272b91c4c17ec1bf36fa629e200efbd5e104ccabf8cd5d3cfa28f57532b7e4a",
+    "tests_sha256": "16a142a9fd108f8647b6fc36e05ec2294c5867796d82944a701aff3a71733fcf"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "glm52-w4-topk-build-attempt-v1",
+  "gate": "W4",
+  "candidate": 5,
+  "attempt": "uncontrolled-local-build",
+  "observed": {
+    "builds_completed": 2,
+    "test_binaries_identical_after_normalization": true,
+    "server_binaries_identical": false,
+    "failure": "The first command omitted the frozen compiler path maps, CUDA architecture, and deterministic nvcc seed. Its outputs are rejected and are not candidate artifacts."
+  },
+  "bounded_correction": "Repeat both clean builds in the canonical reproducible source tree with the exact candidate-4 compiler flags, mapping, architecture, and nvcc seed.",
+  "corrected_result": {
+    "independent_builds": 2,
+    "server_binaries_identical": true,
+    "test_binaries_identical_after_declared_normalization": true,
+    "artifacts": {
+      "server": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+      "test": "d8d2235c20891bde4f5998f9200c809a87a2b0d820d630615832a0c8da184910"
+    }
+  },
+  "verdict": "FAIL_PRESERVED_CORRECTED"
+}

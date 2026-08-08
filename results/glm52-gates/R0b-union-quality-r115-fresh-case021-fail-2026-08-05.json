@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "051bb5ebeb2f6ee7d94ce5aaa0ae3ffaf1d1ff5c",
+  "binary_sha256": "3c932e9228e9a8a21c9b6f9efb369b1e0725c74371203b04ca222a084297c8b2",
+  "engine_commit": "183b236bbda50dc0e92d2a641a0ef1c8bdf4d620",
+  "case_id": "case_021",
+  "request_id": 1,
+  "seed": 805105121,
+  "request_sha256": "721e4b61bd24995d71cbb07d23debe940156f1dff2078fcd5290a3d8a51dc0be",
+  "expected_raw_token_prefix": [8507, 228, 35457, 11, 323, 279, 1008],
+  "observed_raw_token_ids": [785, 1196, 6801, 264, 356, 729, 429, 1185],
+  "expected_visible_prefix": "宆\ufffd, and the other",
+  "failed_assertion": "known invalid-UTF-8 regression was not reproduced",
+  "arm_status": {
+    "off": "FAIL",
+    "on": "NOT_RUN"
+  },
+  "verdict": "FAIL",
+  "interpretation": "The byte-identical request and preserved seed did not reproduce the historical request-5 token sequence when run as request 1 on a fresh server. The harness rejected the attempt before the ON arm. No claim about the normalization fix is made by this attempt.",
+  "next_bounded_test": "Replay the exact first five requests from the preserved r109 ledger on a fresh server and require request 5 to reproduce the frozen malformed prefix before evaluating OFF/ON normalization.",
+  "safety": {
+    "wrapper_killed": false,
+    "cgroup_oom": 0,
+    "cgroup_oom_kill": 0,
+    "cgroup_swap_max_bytes": 0,
+    "minimum_mem_available_kib": 44428428,
+    "minimum_mem_available_gib": 42.3702507019043,
+    "gpu_fault": false
+  },
+  "artifacts": {
+    "/home/bmarti44/.local/state/glm52-utf8-case021-r115/off/ledger.json": "c235c553fe92d891ba0c9103c4410cf274b24ce3bc2927b210c349f54aaf4716",
+    "/home/bmarti44/.local/state/glm52-utf8-case021-r115/off/server.log": "b087029bbf32b5da896a41c24865ca4dccfeaf4455ea9f6c73f31e0cf809b56f",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-044551-utf8-case021-r115-off/main.log": "f7b2700b6fd0f98a38937f1028b1185eebdb34180a8f1bfa83be8150b9beb787",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-044551-utf8-case021-r115-off/cmd.log": "e11451b3e697401130095fe65b9d1483296ca44fb4185f843e8e31a4ed8b4cc9",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-044551-utf8-case021-r115-off/samples.log": "24f0863291dbc9e6c993e9ec803c424f4b6c446c61e9144a72a11aa8d31632ec",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-044551-utf8-case021-r115-off/kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "/home/bmarti44/.local/state/glm52-utf8-case021-r115/off.containment.stdout.log": "e45cc67ac0ac04b35766911d0638a719dfdf7bbd86c1f444b7d4e4e3d9a71735"
+  }
+}

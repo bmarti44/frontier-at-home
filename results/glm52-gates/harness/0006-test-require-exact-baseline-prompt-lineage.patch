@@ -1,0 +1,31 @@
+From 73ff6eafc6bef94805a73d7b6132ba98bd96117b Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Wed, 5 Aug 2026 12:01:07 -0400
+Subject: [PATCH 6/7] test: require exact baseline prompt lineage
+
+---
+ tests/test_glm_baseline_capture_source.py | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/tests/test_glm_baseline_capture_source.py b/tests/test_glm_baseline_capture_source.py
+index 720313d..7a9c503 100644
+--- a/tests/test_glm_baseline_capture_source.py
++++ b/tests/test_glm_baseline_capture_source.py
+@@ -42,6 +42,14 @@ class GlmBaselineCaptureSourceTests(unittest.TestCase):
+         self.assertIn("lnext->ffn_exp_probs_b->abs_offset", SOURCE)
+         self.assertIn('\\"layers_total\\":%u,\\"vocab\\":%u', SOURCE)
+ 
++    def test_capture_binds_exact_prompt_token_lineage(self) -> None:
++        publish = SOURCE[SOURCE.index("static bool glm_baseline_capture_publish("):]
++        self.assertIn('"-prompt-tokens.i32"', publish)
++        self.assertIn("tokens->v", publish)
++        self.assertIn("token_count * sizeof(int32_t)", publish)
++        call = publish[publish.index("glm_baseline_capture_publish(", 10):]
++        self.assertIn("tokens, predicted", call)
++
+     def test_capture_uses_fresh_session_per_structural_source(self) -> None:
+         body = SOURCE[SOURCE.index("int ds4_session_glm_baseline_capture("):]
+         self.assertIn("ds4_session_create", body)
+-- 
+2.43.0
+

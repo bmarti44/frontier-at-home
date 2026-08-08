@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_COMPLETE",
+  "candidate_hash": "1e2da611f85d0da4236790e37c9d7a850cadb986",
+  "review_round": 142,
+  "per_gate_candidate": 2,
+  "held_out_values_opened": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 28,
+    "critical": [
+      {
+        "id": "BASE-R142-C1",
+        "evidence": "Engine publication uses DS4_N_LAYER=79 but scorer CAPTURE_LAYERS=78, so every real capture has one more row than the scorer permits; synthetic tests reproduced the wrong 78-row schema.",
+        "affected_gate": "all baseline capture ingestion",
+        "reproduction": "Compare engine 79*256*4 gate-score bytes with scorer 78*256*4 expected bytes.",
+        "proposed_acceptance_test": "Use one frozen 79-layer contract and pass a real non-held-out engine-to-scorer capture; reject truncated and extra-layer mutations."
+      }
+    ],
+    "high": [
+      {
+        "id": "BASE-R142-H1",
+        "evidence": "Capture records router_probs, while production selection ranks sigmoid(logit)+exp_probs_b bias; full rankings can therefore be wrong even when top eight coincide.",
+        "affected_gate": "gate-replay, shared-correction, and MTP ranking validity",
+        "reproduction": "Compare layer_glm_router_selected_experts with glm_graph_baseline_capture_router call sites.",
+        "proposed_acceptance_test": "Capture exact effective biased F32 scores and require full score/top-eight agreement on a bias-altered fixture."
+      },
+      {
+        "id": "BASE-R142-H2",
+        "evidence": "Capture provenance fields are syntax-checked rather than compared with frozen identities, and sources lack exact token/prefix/event bindings; coordinated manifest rewrites or equal-length prompt swaps can pass.",
+        "affected_gate": "source/target alignment and provenance",
+        "reproduction": "Use arbitrary well-formed hashes or swap equal-position request directories and update the self-declared manifest.",
+        "proposed_acceptance_test": "Bind reviewed engine/binary/model/tokenizer plus request, exact token lineage, prefix, source token and exact trace event; reject swaps and coordinated rehashing."
+      },
+      {
+        "id": "BASE-R142-H3",
+        "evidence": "The approved two-control isolation, cache-namespace proof, state/continuation comparison, and staged failure injections are absent.",
+        "affected_gate": "rollback-safe hybrid MTP observation",
+        "reproduction": "No scoped implementation hashes control state or compares a clean continuation.",
+        "proposed_acceptance_test": "Run a bounded non-held-out isolated diagnostic and two-control equivalence suite with failure injection after every rollout stage."
+      },
+      {
+        "id": "BASE-R142-H4",
+        "evidence": "The scorer discards timing fields and implements no five-block cold/warm cost, memory, expert-byte, confidence-bound, or Pareto qualification; elapsed excludes teardown and K-prefix timing includes an extra draft.",
+        "affected_gate": "cost evidence and fold-into-MTP decision",
+        "reproduction": "score_heldout emits no cost table or Pareto verdict.",
+        "proposed_acceptance_test": "Implement five matched blocks and exact K target/MTP counts including isolation, synchronization, memory, expert bytes and disposal; reject incomplete evidence."
+      },
+      {
+        "id": "BASE-R142-H5",
+        "evidence": "No authorized atomic capture-and-score opener exists; score requires a prebuilt capture set that itself requires opening sealed request/token mappings.",
+        "affected_gate": "held-out value isolation",
+        "reproduction": "Only validate-capture and score commands exist; neither creates exact token-bound captures.",
+        "proposed_acceptance_test": "One reviewed command must preflight immutable inputs, atomically open once, capture, score, and preserve every failure."
+      },
+      {
+        "id": "BASE-R142-H6",
+        "evidence": "The review request typo named nonexistent 1e2da618...; actual reviewed HEAD is 1e2da611f85d0da4236790e37c9d7a850cadb986.",
+        "affected_gate": "candidate provenance",
+        "reproduction": "git cat-file fails on the typo and succeeds on the recorded exact hash.",
+        "proposed_acceptance_test": "Bind and resubmit the exact repository object."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "BASE-R140-H1", "status": "FIXED"},
+      {"id": "BASE-R140-H2", "status": "OPEN"},
+      {"id": "BASE-R140-H3", "status": "FIXED"},
+      {"id": "BASE-R140-M1", "status": "OPEN"},
+      {"id": "BASE-R140-M2", "status": "OPEN"},
+      {"id": "P1-BASE-H2-MTP-POSITION-ROLLBACK", "status": "OPEN"},
+      {"id": "P1-BASE-M1-COST-COMPARABILITY", "status": "OPEN"}
+    ],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 40,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-IMPL-H0-CANDIDATE-ID",
+        "evidence": "The prompt typo named a nonexistent candidate; actual clean HEAD and reviewed object are 1e2da611f85d0da4236790e37c9d7a850cadb986.",
+        "affected_gate": "candidate provenance",
+        "reproduction": "git rev-parse HEAD and git cat-file.",
+        "proposed_acceptance_test": "Use the exact immutable object in the ledger and next review request."
+      },
+      {
+        "id": "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY",
+        "evidence": "Capture identities and artifact hashes are self-declared, exact prompt/prefix lineage is absent, and predicted-token lineage is not independently bound, permitting fabricated or equal-length wrong-prompt captures.",
+        "affected_gate": "common-event pairing and capture authority",
+        "reproduction": "Publish finite self-consistent rankings with arbitrary predicted tokens and well-formed identity strings.",
+        "proposed_acceptance_test": "Controller-owned receipt must bind reviewed source/binary/model/tokenizer/environment/process plus exact token/prefix lineage and append-only q1/MTP derivation; reject substitutions."
+      },
+      {
+        "id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+        "evidence": "Score opens test values before capture validation and no command constructs the capture set in the same authorized invocation; malformed preexisting input consumes the opening without a sealed attempt.",
+        "affected_gate": "one-shot held-out isolation",
+        "reproduction": "Invoke score with a missing capture root; test arrays materialize before capture loading fails.",
+        "proposed_acceptance_test": "One controller preflights non-held-out inputs, records an immutable attempt, opens once, captures, scores, seals success/failure, and forbids split reuse."
+      },
+      {
+        "id": "P1-BASE-IMPL-H3-COST-OMITTED",
+        "evidence": "No five-block matched cold/warm cost, memory, expert-byte, confidence, or equal-cost result is implemented.",
+        "affected_gate": "method cost and fold decision",
+        "reproduction": "The scorer contains no cost aggregation or equal-cost rule.",
+        "proposed_acceptance_test": "Implement the frozen cost harness/scorer and mutations for every missing arm, block, synchronization, resource, prefix, target and teardown field."
+      },
+      {
+        "id": "P1-BASE-IMPL-H4-MODULE-TOCTOU",
+        "evidence": "_load_module authenticates a snapshot and then importlib reopens the pathname, allowing different bytes to execute.",
+        "affected_gate": "frozen scorer/model authority",
+        "reproduction": "Replace or mutate the module between snapshot and exec_module.",
+        "proposed_acceptance_test": "Compile/execute only the authenticated bytes and reject or ignore pathname replacement and in-place mutation."
+      },
+      {
+        "id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY",
+        "evidence": "Output is not strict-reopened or independently reconstructed, and lacks bound raw event/ranking/target/cost/runtime evidence, so a mutated summary has no production validator.",
+        "affected_gate": "fixed-scorer acceptance authority",
+        "reproduction": "Mutate verdict or metrics after output; no validator rejects it.",
+        "proposed_acceptance_test": "Persist canonical raw/manifests/summary and independently reconstruct, exact-compare, strict-reopen and seal the result."
+      }
+    ],
+    "medium": [
+      {
+        "id": "P1-BASE-IMPL-M1-MALFORMED-METADATA",
+        "evidence": "Source metadata uses plain json.loads and accepts duplicate or extra keys.",
+        "affected_gate": "malformed evidence rejection",
+        "reproduction": "Insert duplicate source_position keys with the accepted value last.",
+        "proposed_acceptance_test": "Use strict duplicate rejection and exact schemas for source/set/request/artifact records."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "P1-BASE-H1-TEST-OPEN-CONTRADICTION", "status": "REOPENED_BY_IMPLEMENTATION"},
+      {"id": "P1-BASE-H2-MTP-POSITION-ROLLBACK", "status": "VERIFIED"},
+      {"id": "P1-BASE-M1-COST-COMPARABILITY", "status": "REOPENED_BY_IMPLEMENTATION"},
+      {"id": "BASE-R140-M2", "status": "VERIFIED"}
+    ],
+    "verdict": "REJECT_BEFORE_HELD_OUT_OPEN"
+  },
+  "convergence": {
+    "blocking_ids_open": [
+      "BASE-R142-C1",
+      "BASE-R142-H1",
+      "BASE-R142-H2",
+      "BASE-R142-H3",
+      "BASE-R142-H4",
+      "BASE-R142-H5",
+      "BASE-R142-H6",
+      "P1-BASE-IMPL-H0-CANDIDATE-ID",
+      "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY",
+      "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+      "P1-BASE-IMPL-H3-COST-OMITTED",
+      "P1-BASE-IMPL-H4-MODULE-TOCTOU",
+      "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY"
+    ],
+    "escalation_triggered": false,
+    "next_candidate_scope": "Only named findings; first close layer schema, effective biased scores, exact candidate identity, authenticated-module execution, and strict source metadata while held-out values remain sealed."
+  }
+}

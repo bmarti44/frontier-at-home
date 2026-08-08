@@ -1,0 +1,66 @@
+{
+  "schema": "glm52-review-ledger-v1",
+  "review_round": 192,
+  "reviewed_main_candidate": "97b8e11aa96ca0ef2baa24293980f43752aa5f17",
+  "reviewed_engine_red": "2b7522d70bca614578f4c730deb99905ac3e200a",
+  "gate_candidate": 1,
+  "verdict": "REJECT_IMPLEMENTATION",
+  "scores": {
+    "Nash": 70,
+    "Singer": 18
+  },
+  "critical": [
+    {
+      "id": "ADV-R05-R192-C1-ENTIRE-SUITE-IS-SOURCE-MARKER-SATISFIABLE",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "Delete the source-marker suite. Link an executable contract against a freshly rebuilt production CORE_OBJS set and require five strong production entry points; unchanged code runs and reports five independent missing-behavior failures."
+    }
+  ],
+  "high": [
+    {
+      "id": "R05-R192-H1-UNBOUNDED-CANDIDATE-SOURCE-SECTION",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "No source-section extraction remains. Runtime linkage and callback observations are the authority."
+    },
+    {
+      "id": "R05-R192-H2-CAPTURE-BOUNDARY-IS-STAGE-LABEL-NOT-RESIDUAL-COMPLETION",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "The executable recurrence contract requires exactly one boundary=post-residual capture callback and exact hidden-state flow. Final implementation tests must poison the pre-add3 state and compare the captured completed output."
+    },
+    {
+      "id": "R05-R192-H3-MARKERS-DO-NOT-PREREGISTER-CLAIMED-BEHAVIOR",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "Executable callbacks require eight ordered steps at positions t..t+7, exact q/hidden feedback, slots, 600 routes over layers 3..77, deterministic ranks, mutation-rejecting pack validation, CLI selection, and fault-safe publication."
+    },
+    {
+      "id": "ADV-R05-R192-H1-CAUSAL-RECURRENCE-AND-ROUTER-SEMANTICS-ARE-UNASSERTED",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "The recurrence fixture validates every input/output transition and endpoint. A separate exact F32 max/rank contract independently checks two-step aggregation and expert-ID-ascending ties, rejecting NaN and zero-step input."
+    },
+    {
+      "id": "ADV-R05-R192-H2-COMPACT-PACK-AUTHORITY-CAN-BE-ALWAYS-TRUE",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "The executable pack contract has a valid payload case and independently requires rejection of duplicate/unexpected names, noncanonical order, wrong dtype/shape, overlapping blobs, forbidden source ranges, integer overflow, trailing payload, wrong model/inventory identity, and wrong per-blob SHA-256."
+    },
+    {
+      "id": "ADV-R05-R192-H3-DEFAULT-OFF-AND-PUBLICATION-FAIL-CLOSED-BEHAVIOR-UNTESTED",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "The executable selector tests empty, partial, complete, known-fault, and unknown-fault environments. A separate subprocess suite invokes the real production CLI for ordinary, all six partial, complete, and unknown-fault cases and requires candidate dispatch before any full-model open. Publication tests exact bytes, O_EXCL collision, all five injected stages, and absence of a completion marker on failure."
+    }
+  ],
+  "medium": [
+    {
+      "id": "ADV-R05-R192-M1-RED-RECORD-OVERSTATES-INDEPENDENT-COVERAGE",
+      "status": "FIXED_IN_ENGINE_RED_4A35746",
+      "resolution": "The replacement RED reaches and reports five distinct absent weak production entry points after a successful compile and link."
+    }
+  ],
+  "convergence": {
+    "red_gate_candidate": 2,
+    "blocking_set_before": 7,
+    "claimed_blocking_set_after": 0,
+    "scope_added": false,
+    "frozen_components_modified": false,
+    "pre_submission_review_required": true
+  }
+}

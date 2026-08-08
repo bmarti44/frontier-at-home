@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "gate": "W3-direct-slot-gemv-headroom-microgate",
+  "candidate_hash": "c08c2523c0365fc72b20dd65c92cefc7ce5563a6",
+  "formula": "PASS iff every confirmation has bit-identical outputs, at least 600 expert evaluations per arm, synchronized CUDA timing, finite nonzero reference output, and direct_median_ms / compact_median_ms <= 0.95; every named mutation must exit nonzero",
+  "confirmation_runs": 3,
+  "ratio_min": 0.83684272888899325,
+  "ratio_max": 0.83821164930495751,
+  "point_improvement_min": 0.16178835069504249,
+  "output_mismatches": 0,
+  "mutations_rejected": 6,
+  "mutations_total": 6,
+  "microgate_verdict": "PASS",
+  "w3_production_verdict": "PENDING",
+  "limitations": [
+    "This is a synchronized single-process CUDA headroom falsifier, not a fresh-server serving result.",
+    "It does not yet exercise the 68 GB cache arena, event-safe eviction ownership, misses, the off-class fallback, or end-to-end completed time.",
+    "No W3 adoption or serving claim is authorized by this artifact."
+  ]
+}

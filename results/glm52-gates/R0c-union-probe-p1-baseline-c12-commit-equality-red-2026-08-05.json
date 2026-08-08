@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RED_ATTEMPT",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 12,
+  "review_finding": "P1-BASE-R149-H1-APPROVED-COMMIT-NOT-ENFORCED-BY-CONTROLLER",
+  "held_out_values_opened": false,
+  "test": "scripts/tests/test_glm_union_baseline.py::AtomicLifecycleTests::test_root_authority_rejects_unapproved_executing_commit",
+  "unchanged_implementation_commit": "38711adf3bd2c893e22b50ea69dbc591041dd9e6",
+  "expected_before_fix": "FAIL because _reserve_root_tombstone ignores preflight harness_commit and proceeds to reserve the root-approved candidate",
+  "acceptance": "A root approval for commit A and an executing preflight for any commit B must fail before the reserve-p1 call, even when script-81 bytes are identical."
+}

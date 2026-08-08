@@ -1,0 +1,38 @@
+{
+  "schema": "glm52-mtp-proxy-pack-evidence-v2",
+  "status": "PASS",
+  "purpose": "Re-freeze the exact compact input after strict receipt recomputation was added; not a serving/performance result.",
+  "builder_commit": "ecf73ae",
+  "builder": "scripts/86_build_glm_mtp_proxy_pack.py",
+  "builder_sha256": "171837840e556a6c8ccd9b3bc154e36ccdcad4d63b6a9240881ed9a5e0324b43",
+  "test": "scripts/tests/test_glm_mtp_proxy_pack.py",
+  "test_sha256": "7413f0747364654e5e0e715dae3a784d71f4cd805fc96c1367f9da49540a093d",
+  "inventory_sha256": "b37b9ef2906596b5acd29d8f1538a47c527f74338c5e9386b2370388e8b75b12",
+  "model_bytes": 211075856448,
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "pack": "/tmp/glm52-mtp-proxy-pack-v2.bin",
+  "pack_bytes": 5979721728,
+  "pack_sha256": "aacc0fe9a79833ff118888e33924d77a737ca247841a6bd501cc393e97aa1809",
+  "receipt": "/tmp/glm52-mtp-proxy-pack-v2.receipt.json",
+  "receipt_sha256": "e4fd51f56af11655ef9cc662f9782eb0eb06153427655a3b884bfe239701e52b",
+  "record_count": 255,
+  "forbidden_record_count": 225,
+  "checks": {
+    "full_model_same_fd_hash_and_copy": true,
+    "exact_allowed_inventory": true,
+    "forbidden_ranges_disjoint": true,
+    "per_record_hashes": true,
+    "zero_padding": true,
+    "whole_pack_hash": true,
+    "receipt_schema_and_every_field_recomputed": true,
+    "unknown_missing_or_changed_receipt_fields_rejected": true,
+    "independent_verify_only_pass": true,
+    "pack_bytes_identical_to_v1": true
+  },
+  "safety": {
+    "engine_started": false,
+    "gpu_used": false,
+    "minimum_mem_available_gib": 115.0,
+    "swap_growth": false
+  }
+}

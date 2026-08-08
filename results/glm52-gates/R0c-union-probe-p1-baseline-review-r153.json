@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "80e9f84137d9624051cb1b56fdcf28c42c91f118",
+  "review_round": 153,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 85,
+    "critical": [],
+    "high": [
+      "P1-BASE-C15-H1-AUTHORIZED-CPU-BACKEND-DOWNGRADE"
+    ],
+    "verdict": "REJECT; ROOT-STAGED INSTALL MAY_NOT_PROCEED"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 84,
+    "critical": [],
+    "high": [
+      "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY"
+    ],
+    "verdict": "REJECT; ROOT-STAGED INSTALL MAY_NOT_PROCEED"
+  },
+  "verified_closed": [
+    "P1-BASE-C14-H1-ROOT-VALIDATOR-RUNTIME-ABSENT",
+    "P1-BASE-C14-H1-ROOT-VALIDATOR-PYTHON-ENV",
+    "BASE-R142-H3"
+  ],
+  "open_blockers": [
+    {
+      "id": "P1-BASE-C15-H1-AUTHORIZED-CPU-BACKEND-DOWNGRADE",
+      "aliases": [
+        "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY"
+      ],
+      "severity": "high",
+      "finding": "Honest completed replay now follows the recorded backend, but authoritative preflight accepts CPU and omits the backend from the permanent root reservation. The post-exposure result can therefore be consistently regenerated as CPU and accepted by root even though CPU and CUDA rankings differ."
+    }
+  ],
+  "independent_reproduction": {
+    "authorized_cpu_parser": "CONFIRMED: the production run parser accepts --device cpu and _scoring_backend returns the valid CPU schema",
+    "preflight_binding": "CONFIRMED: configuration.device is checked but absent from the preflight binding hashed into the root reservation",
+    "root_replay": "CONFIRMED: the validator selects the backend only from mutable post-exposure summary/raw evidence",
+    "root_receipt": "CONFIRMED: the authoritative receipt has no explicit scoring-backend field"
+  },
+  "convergence": {
+    "candidate_15_blocking_count_before": 3,
+    "candidate_15_blocking_count_after": 1,
+    "strictly_shrunk": true,
+    "consecutive_non_shrinking_candidates": 0,
+    "autonomous_candidate_16_allowed": true
+  },
+  "candidate_16_scope": [
+    "Require CUDA in authoritative held-out preflight before reservation or data opening.",
+    "Bind the exact CUDA scoring-backend object into the permanent root reservation and returned root receipt.",
+    "Require the immutable reserved backend during completed root replay and reject CPU substitution, missing backend, or a receipt without the exact binding."
+  ],
+  "next_action": "Commit a production-path RED mutation for the single backend-authority blocker, implement only the pre-held-out CUDA reservation and receipt binding, run the full pre-submission audit, and return Candidate 16 to the same reviewers. Do not install or open held-out values."
+}

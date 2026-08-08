@@ -1,0 +1,18 @@
+2026-08-07T23:32:35,641136117+00:00 SAFE_RUN start tag=w9-on-73838408ccb1 vlimit_kb=419430400 kill_floor_gib=24 min_start_gib=110 timeout_s=3600
+2026-08-07T23:32:35,649144803+00:00 cmd: /usr/bin/bash results/glm52-gates/harness/w9_real_capture_v1.sh --driver on /home/bmarti44/.local/state/glm52-w9-real-capture/attempt-73838408ccb1d126ade7b67c8d86fa00/on
+2026-08-07T23:32:35,655607944+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-08-07T23:32:35,659357992+00:00 candidate_provenance_enabled=1
+2026-08-07T23:32:35,666105835+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-w9-on-73838408ccb1-3852919.service memory_high=83751862272 memory_max=85899345920 memory_swap_max=0 memory_oom_group=1
+2026-08-07T23:32:35,679048021+00:00 candidate_src=/home/bmarti44/.cache/glm52-w9-9ebc0f2-runtime candidate_binary_sha256=1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476 candidate_device_inode=66306:6474189
+MemTotal:       125483612 kB
+MemAvailable:   121065612 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.464,"stable_samples_observed":3}
+2026-08-07T23:32:38,264516478+00:00 wrapper_pid=3852964 engine_pid=3852967 pgid=3852964 (periodic sampler; actual cadence in samples.log)
+2026-08-07T23:32:38,310905677+00:00 executed_candidate_verified pid=3852967 start_ticks=94446693 path=/home/bmarti44/.cache/glm52-w9-9ebc0f2-runtime/ds4-server executed_binary_sha256=1e233b07cbeb13f0802bb94d598328a77e6fbe7b65f8ddd650bb516539913476 device_inode=66306:6474189
+2026-08-07T23:36:00,230874983+00:00 executed candidate exited; monitoring controller and process group pid=3852967
+2026-08-07T23:36:01,790986227+00:00 cgroup_final current_bytes=497782784 peak_bytes=41542549504 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+2026-08-07T23:36:01,824293180+00:00 executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler; actual cadence is recorded in samples.log; wrapper and descendant checks clean
+2026-08-07T23:36:01,837084208+00:00 safety_artifact_verified name=samples.log sha256=165310d8adb794f197e68a8ebd88d0712dbcd0859fd8f8001a0b007b40661a4e size=124654
+2026-08-07T23:36:01,847301338+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-08-07T23:36:01,852862542+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121208988 kB

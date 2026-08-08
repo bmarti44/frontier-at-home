@@ -1,0 +1,113 @@
+{
+  "schema_version": 2,
+  "classification": "PREREGISTERED",
+  "scope": "glm52_union_probe_case_grouped_splits",
+  "suite": "glm52-openrouter-100",
+  "fixture_sha256": "c11db60f50445b9bdbab6ab0f253504f323a4f762be52d077854293b6e680edf",
+  "split_source": {
+    "description": "Reuse the already committed five-block public-randomness permutation; do not reshuffle after observing traces.",
+    "randomness_path": "results/glm52-goal/evidence/w1-affine-6c15949-r6329090/raw-inputs/randomness.json",
+    "drand_round": 6329090,
+    "drand_randomness": "4f1eb989c459c27bc25b5503792d990be5b57bba611d25de522c22942f25b626"
+  },
+  "splits": {
+    "train": {
+      "block_manifests": [
+        {
+          "path": "results/glm52-goal/evidence/w1-affine-6c15949-r6329090/raw-inputs/manifest-00.tsv",
+          "sha256": "6747bdc64e23b98d1514d961c326d630c0138fef37997df6d8dd3c00f99b836a"
+        },
+        {
+          "path": "results/glm52-goal/evidence/w1-affine-6c15949-r6329090/raw-inputs/manifest-01.tsv",
+          "sha256": "82029bf01cc2fec90cf08af26e304e19d8a844b25fea624d86364ddea8c123cc"
+        },
+        {
+          "path": "results/glm52-goal/evidence/w1-affine-6c15949-r6329090/raw-inputs/manifest-02.tsv",
+          "sha256": "41e845c411319138f77deaa2e43f1c7b3533b449ce55492055f7815a95358d47"
+        }
+      ],
+      "quality_cases": 60,
+      "probe_fit_cases": 55,
+      "additional_grouped_sources": [
+        {
+          "source_receipt": "results/glm52-gates/R0b-union-corpus-pass-2ff949c.json",
+          "source_receipt_sha256": "d3b549cb8c5ea67eed7f0e52b0661d58ce21bb7cba4562d3edbd8be84a7fc508",
+          "request_indices": [1, 2],
+          "grouping_rule": "Both requests remain together in train because they share the same long-fixture lineage."
+        }
+      ]
+    },
+    "calibration": {
+      "block_manifests": [
+        {
+          "path": "results/glm52-goal/evidence/w1-affine-6c15949-r6329090/raw-inputs/manifest-03.tsv",
+          "sha256": "c28ee3245a9b9bf9edd151b4d710bebb3e0a6b483ba0609548d118febb571cc9"
+        }
+      ],
+      "quality_cases": 20
+    },
+    "test": {
+      "block_manifests": [
+        {
+          "path": "results/glm52-goal/evidence/w1-affine-6c15949-r6329090/raw-inputs/manifest-04.tsv",
+          "sha256": "1db21e16a72ea739923d4877af09663a412aa471142e8b46fe25952968823a3f"
+        }
+      ],
+      "quality_cases": 20
+    }
+  },
+  "full_precision_hidden_holdout": {
+    "split": "train_precision_diagnostic",
+    "case_ids": [
+      "case_053",
+      "case_056",
+      "case_058",
+      "case_027",
+      "case_065"
+    ],
+    "selection": "The first five cases of frozen train block 02; selected before capture and excluded from every probe fit.",
+    "required_storage": "Retain float32 hidden tensors and derive FP16 and int4 views on identical events until P1 is terminal.",
+    "decision_rule": "After freezing probe weights, feature transforms, K values {2,4,8}, budgets {16,32,64}, and scorer, report paired recall deltas for all five cases. For each of the nine K/budget combinations separately, mean loss is the unweighted arithmetic mean of the five case-level recall losses; event-weighted means and averaging across combinations are forbidden. Reject int4 if any combination's mean loss versus FP16 exceeds 1 percentage point or any case/combination loses more than 5 points; reject FP16 if any combination's mean loss versus FP32 exceeds 0.25 points or any case/combination loses more than 2 points. Passing is diagnostic support only, not corpus-wide equivalence or causal attribution."
+  },
+  "grouping_scope": {
+    "authoritative_group_id": "The suite manifest defines one atomic fixture per case ID and exposes no broader family or transformation lineage.",
+    "normalization_check": "Unicode NFKC, case-fold, and collapse whitespace before hashing prompts and continuations; normalized hashes must be unique across splits.",
+    "claim_limit": "This is a held-out case split within glm52-openrouter-100, not evidence of independence from unknown semantic paraphrases or generalization beyond the suite. If authoritative family lineage is later supplied, related cases must be regrouped under a new preregistered candidate."
+  },
+  "pre_registered_checks": {
+    "exactly_100_quality_cases": true,
+    "quality_case_ids_unique_across_splits": true,
+    "prompt_content_hashes_unique_across_splits": true,
+    "continuation_content_hashes_unique_across_splits": true,
+    "response_content_hashes_unique_across_splits": true,
+    "normalized_prompt_hashes_unique_across_splits": true,
+    "normalized_continuation_hashes_unique_across_splits": true,
+    "authoritative_case_group_ids_disjoint_across_splits": true,
+    "long_fixture_lineage_kept_in_one_split": true,
+    "five_precision_cases_excluded_from_probe_fit": true,
+    "calibration_untouched_by_training_and_p1_selection": true,
+    "test_untouched_until_final_comparison": true,
+    "raw_float32_holdout_retained_until_p1_terminal": true
+  },
+  "capture_acceptance": {
+    "freeze": "Before capture, commit and hash the clean engine source/diff, binary, model, tokenizer, runner, fixed scorer and mutation tests, configuration allowlist, this split plan, all five block manifests, and a content-complete digest over every manifest path and referenced prompt/continuation/response byte. Obtain new public randomness after that freeze.",
+    "case_ledger": "Before launch, derive exactly 100 canonical request bodies from the frozen case manifests. The ledger binds case ID, authoritative group ID, split, ordinal request ID, canonical request SHA-256, prompt/continuation/response content hashes, seed, and independently calculated expected_prompt_tokens. Every case occurs exactly once.",
+    "prompt_token_formula": "Render each frozen prompt exactly as `[gMASK]<sop><|system|>Reasoning Effort: High<|system|>You are a helpful assistant<|user|>{prompt}<|assistant|><think>` and encode it with the frozen tokenizer.json using add_special_tokens=false and no truncation. Bind the resulting token ID list and count as expected_prompt_tokens before launch; each count must be in [1,512]. This formula matches the frozen GLM completion request path and any runtime mismatch is FAIL, not permission to revise the ledger.",
+    "required_layers": "3 through 77 inclusive",
+    "raw_field_schema": {
+      "ffn_norm": "finite float32 [rows,6144]",
+      "router_logits": "finite float32 [rows,256]",
+      "router_probs": "finite float32 [rows,256] in [0,1] and matching sigmoid(router_logits) within 1e-4",
+      "router_selected": "int32 [rows,8], unique IDs in [0,255]",
+      "router_bias": "finite float32 [256], constant for a layer across requests/chunks"
+    },
+    "derived_top32": "Stable descending order of router_probs + router_bias, with equal scores retaining ascending expert ID; selected IDs must equal the first eight. Store derived top-32 IDs as uint8 and corresponding logits as finite FP16.",
+    "exact_coverage_formula": "For every case, OFF prompt_tokens and ON prompt_tokens must both equal the ledger's independently frozen expected_prompt_tokens, and both arms must report identical contiguous full-indexed chunks covering exactly [0,expected_prompt_tokens). ON must contain exactly one raw field record for every (case_id, request_id, layer, chunk), with rows equal to the chunk length. The scorer requires token_layer_events = 75 * sum(ledger.expected_prompt_tokens), no missing/duplicate/out-of-range key, no unrecognized file/event, and zero trace error or dropped-event marker.",
+    "output_identity": "Every one of the 100 canonical request hashes, prompt-token counts, completion-token counts, generated reasoning bytes, generated content bytes, and token IDs must match between trace-disabled OFF and trace-enabled ON.",
+    "window_confinement": "All K=2/4/8 targets are formed within one case, one split, one layer, and contiguous token positions; crossing a request, case, or split boundary is a scorer failure.",
+    "split_isolation": "Publish separate hash-bound train-fit, train-precision-diagnostic, calibration, and test shards. Training accepts only the train-fit shard plus the two grouped long-train shards; adding any diagnostic/calibration/test shard is a mutation-test failure. P1 selection uses train-only cross-validation; calibration remains reserved for P2 and test is opened once for the frozen P1 comparison.",
+    "disk": "Before launch, require free space for 100 * 512 * 75 token-layer rows at the raw schema byte width, per-chunk bias records, plus a 20 GiB preservation reserve. PASS also requires exclusive-create, complete write, fsync, post-fsync fadvise success, exact scorer-derived bytes, and no ENOSPC or short-write marker.",
+    "safety": "glm_safe_run.sh containment; zero OOM, swap, Xid, cgroup pressure events, timeout, or survivor; at least 10 GiB MemAvailable.",
+    "mandatory_mutations": "Drop one case/token/layer/field, duplicate or relabel a row, make both arms consistently truncate or under-report one request versus expected_prompt_tokens, alter a request or fixture byte, inject NaN/Inf/bad ID/bad top-32 tie order/dropped-event marker, cross a K window boundary, use event weighting or average across K/budget combinations in the precision diagnostic, include a non-train shard in fitting, force short write/ENOSPC, and mismatch OFF/ON output; every mutation must FAIL."
+  }
+}

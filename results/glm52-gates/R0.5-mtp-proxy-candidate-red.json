@@ -1,0 +1,35 @@
+{
+  "schema": "glm52-mtp-proxy-candidate-red-v1",
+  "recorded_at_utc": "2026-08-06T19:21:00Z",
+  "classification": "GENUINE_RED",
+  "scope": "production-source contract for the default-off causal MTP proxy candidate capture",
+  "engine_tree": "/tmp/glm52-utf8-engine",
+  "engine_base_commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+  "red_test_commit": "2b7522d70bca614578f4c730deb99905ac3e200a",
+  "command": "python3 -m unittest tests/test_glm_mtp_proxy_candidate_source.py -v",
+  "exit_code": 1,
+  "tests_run": 6,
+  "failures": 6,
+  "errors": 0,
+  "missing_file_failures": 0,
+  "expected_absent_behaviors": [
+    "default-off candidate CLI mode",
+    "post-residual pre-head-normalization hidden-state capture",
+    "exact eight-step proxy recurrence",
+    "layers 3 through 77 router-head scoring",
+    "validated compact-pack-only execution",
+    "exclusive fsync-backed output publication and fault injection"
+  ],
+  "engine_source_sha256": {
+    "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+    "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f",
+    "ds4_cli.c": "c92e19198cee8c901c65ff61cbb53c0d72aee00cb20fffef6a89ab6e04e12dfc",
+    "tests/test_glm_mtp_proxy_candidate_source.py": "6196000aef50d62a3f898c9665c7ed043d6483ec8334448389eba311ddcb9505"
+  },
+  "safety": {
+    "engine_started": false,
+    "gpu_used": false,
+    "model_opened": false
+  },
+  "acceptance_authority": "The test is RED evidence only. It cannot produce a gate PASS. Implementation requires scoped Nash and Singer review before production code is written."
+}

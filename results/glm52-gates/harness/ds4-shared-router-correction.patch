@@ -1,0 +1,365 @@
+diff --git a/ds4.c b/ds4.c
+index 34d26f7..247d186 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -16171,6 +16171,137 @@ static void metal_graph_debug_dump_i32_tensor(
+     }
+ }
+ 
++/* Default-off, fail-closed capture for the R0b union-probe corpus.  A trace
++ * attempt owns a fresh prefix; exclusive atomic publication prevents a later
++ * request from silently replacing an earlier event with the same layer/pos. */
++static bool glm_union_trace_write_exclusive(
++        const char *path, const void *data, size_t nbytes) {
++    char tmp[1100];
++    if (snprintf(tmp, sizeof(tmp), "%s.tmp.%ld", path, (long)getpid()) >=
++        (int)sizeof(tmp)) {
++        return false;
++    }
++    const int fd = open(tmp, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
++    if (fd < 0) return false;
++
++    const uint8_t *src = data;
++    size_t off = 0;
++    bool ok = true;
++    while (off < nbytes) {
++        const ssize_t nw = write(fd, src + off, nbytes - off);
++        if (nw < 0 && errno == EINTR) continue;
++        if (nw <= 0) {
++            ok = false;
++            break;
++        }
++        off += (size_t)nw;
++    }
++    if (ok && fsync(fd) != 0) ok = false;
++    if (close(fd) != 0) ok = false;
++    if (ok && link(tmp, path) != 0) ok = false;
++    if (unlink(tmp) != 0 && errno != ENOENT) ok = false;
++    return ok;
++}
++
++static bool glm_union_probe_dump_triplet(
++        const ds4_model   *model,
++        const ds4_layer_weights *l,
++        ds4_gpu_tensor *norm,
++        ds4_gpu_tensor *logits,
++        ds4_gpu_tensor *probs,
++        ds4_gpu_tensor *selected,
++        uint32_t        n_tokens,
++        uint32_t        il,
++        uint32_t        pos) {
++    const char *norm_name = "glm_indexed_ffn_norm";
++    const char *logits_name = "glm_indexed_router_logits";
++    const char *selected_name = "glm_indexed_router_selected";
++    const char *probs_name = "glm_indexed_router_probs";
++    const char *bias_name = "glm_indexed_router_bias";
++    const bool want_norm = metal_graph_debug_wants(norm_name, il, pos);
++    const bool want_logits = metal_graph_debug_wants(logits_name, il, pos);
++    const bool want_selected = metal_graph_debug_wants(selected_name, il, pos);
++    const bool want_probs = metal_graph_debug_wants(probs_name, il, pos);
++    const bool want_bias = metal_graph_debug_wants(bias_name, il, pos);
++    if (!want_norm && !want_logits && !want_probs && !want_selected && !want_bias) return true;
++    const size_t bias_bytes = (size_t)DS4_N_EXPERT * sizeof(float);
++    if (!want_norm || !want_logits || !want_probs || !want_selected || !want_bias ||
++        !model || !l || il < DS4_N_LEADING_DENSE || !l->ffn_exp_probs_b ||
++        l->ffn_exp_probs_b->abs_offset > model->size ||
++        bias_bytes > model->size - l->ffn_exp_probs_b->abs_offset ||
++        !norm || !logits || !probs || !selected || n_tokens == 0 ||
++        (uint64_t)n_tokens * DS4_N_EMBD > SIZE_MAX / sizeof(float) ||
++        (uint64_t)n_tokens * DS4_N_EXPERT > SIZE_MAX / sizeof(float) ||
++        (uint64_t)n_tokens * DS4_N_EXPERT_USED > SIZE_MAX / sizeof(int32_t)) {
++        fprintf(stderr, "GLM_UNION_TRACE_ERROR stage=validate layer=%u pos=%u\n",
++                il, pos);
++        return false;
++    }
++    const float *bias = (const float *)((const uint8_t *)model->map +
++                                        l->ffn_exp_probs_b->abs_offset);
++
++    const size_t norm_bytes =
++        (size_t)n_tokens * DS4_N_EMBD * sizeof(float);
++    const size_t logits_bytes =
++        (size_t)n_tokens * DS4_N_EXPERT * sizeof(float);
++    const size_t selected_bytes =
++        (size_t)n_tokens * DS4_N_EXPERT_USED * sizeof(int32_t);
++    float *norm_buf = xmalloc(norm_bytes);
++    float *logits_buf = xmalloc(logits_bytes);
++    float *probs_buf = xmalloc(logits_bytes);
++    int32_t *selected_buf = xmalloc(selected_bytes);
++
++    const bool ended = ds4_gpu_end_commands() != 0;
++    const bool read_norm = ended &&
++        ds4_gpu_tensor_read(norm, 0, norm_buf, norm_bytes) != 0;
++    const bool read_logits = read_norm &&
++        ds4_gpu_tensor_read(logits, 0, logits_buf, logits_bytes) != 0;
++    const bool read_probs = read_logits &&
++        ds4_gpu_tensor_read(probs, 0, probs_buf, logits_bytes) != 0;
++    const bool read_selected = read_probs &&
++        ds4_gpu_tensor_read(selected, 0, selected_buf, selected_bytes) != 0;
++    const bool restarted = ds4_gpu_begin_commands() != 0;
++    bool ok = ended && read_norm && read_logits && read_probs && read_selected && restarted;
++
++    char norm_path[1024], logits_path[1024], probs_path[1024];
++    char selected_path[1024], bias_path[1024];
++    const char *prefix = metal_graph_debug_prefix_for(norm_name, il, pos);
++    if (ok) {
++        ok = prefix &&
++            snprintf(norm_path, sizeof(norm_path), "%s_%s-%u_pos%u.f32",
++                     prefix, norm_name, il, pos) < (int)sizeof(norm_path) &&
++            snprintf(logits_path, sizeof(logits_path), "%s_%s-%u_pos%u.f32",
++                     prefix, logits_name, il, pos) < (int)sizeof(logits_path) &&
++            snprintf(probs_path, sizeof(probs_path), "%s_%s-%u_pos%u.f32",
++                     prefix, probs_name, il, pos) < (int)sizeof(probs_path) &&
++            snprintf(selected_path, sizeof(selected_path), "%s_%s-%u_pos%u.i32",
++                     prefix, selected_name, il, pos) < (int)sizeof(selected_path) &&
++            snprintf(bias_path, sizeof(bias_path), "%s_%s-%u_pos%u.f32",
++                     prefix, bias_name, il, pos) < (int)sizeof(bias_path);
++    }
++    if (ok) ok = glm_union_trace_write_exclusive(norm_path, norm_buf, norm_bytes);
++    if (ok) ok = glm_union_trace_write_exclusive(logits_path, logits_buf, logits_bytes);
++    if (ok) ok = glm_union_trace_write_exclusive(probs_path, probs_buf, logits_bytes);
++    if (ok) ok = glm_union_trace_write_exclusive(selected_path, selected_buf, selected_bytes);
++    if (ok) ok = glm_union_trace_write_exclusive(
++        bias_path, bias, (size_t)DS4_N_EXPERT * sizeof(float));
++    free(selected_buf);
++    free(probs_buf);
++    free(logits_buf);
++    free(norm_buf);
++
++    if (!ok) {
++        fprintf(stderr,
++                "GLM_UNION_TRACE_ERROR stage=capture layer=%u pos=%u rows=%u\n",
++                il, pos, n_tokens);
++        return false;
++    }
++    fprintf(stderr,
++            "GLM_UNION_TRACE_OK path=full_indexed_batch_ffn layer=%u pos=%u rows=%u\n",
++            il, pos, n_tokens);
++    return true;
++}
++
+ static bool metal_graph_needs_ffn_out(const ds4_gpu_graph *g, uint32_t il, uint32_t pos) {
+     return metal_graph_directional_steering_ffn_enabled(g) ||
+            g->materialize_ffn_out ||
+@@ -37223,6 +37354,12 @@ typedef struct {
+     ds4_gpu_tensor *prefill_seed_router_selected;
+     uint32_t prefill_seed_tokens;
+     bool prefill_seed_layer_captured[DS4_MAX_LAYER];
++    uint64_t predacc_pair_event;
++    uint32_t predacc_pair_position;
++    uint32_t predacc_pair_layer;
++    int32_t predacc_pair_base[DS4_MAX_EXPERT_USED];
++    int32_t predacc_pair_shared[DS4_MAX_EXPERT_USED];
++    bool predacc_pair_valid;
+ 
+     ds4_gpu_tensor *prefill_tokens;
+     ds4_gpu_tensor *batch_cur;
+@@ -40007,7 +40144,14 @@ static bool glm_graph_encode_sparse_ffn_one(
+     uint64_t up_in = 0, up_out = 0, up_row_bytes = 0;
+     uint64_t down_in = 0, down_out = 0, down_row_bytes = 0;
+     bool pf_hint_pending = false;
++    const bool pf_shared_correction =
++        getenv("DS4_GLM_PREFETCH") != NULL &&
++        getenv("DS4_GLM_PREFETCH_SHARED_CORRECTION") != NULL;
++    const bool pf_pair_probe = getenv("DS4_GLM_PREDACC_SHARED") != NULL;
++    const uint32_t normal_layers = glm_graph_normal_layer_count();
+     int32_t pf_ids[DS4_MAX_EXPERT_USED] = {0};
++    int32_t pf_base_ids[DS4_MAX_EXPERT_USED] = {0};
++    bool pf_base_valid = false;
+     ds4_gpu_stream_expert_table pf_table = {};
+     (void)tensor_expert_bytes(model, l->ffn_gate_exps, 0, &gate_in, &gate_out, &gate_row_bytes);
+     (void)tensor_expert_bytes(model, l->ffn_up_exps, 0, &up_in, &up_out, &up_row_bytes);
+@@ -40034,7 +40178,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+                                                   DS4_N_EXPERT,
+                                                   DS4_N_EXPERT_USED,
+                                                   DS4_EXPERT_WEIGHT_SCALE) != 0;
+-    if (ok && getenv("DS4_GLM_PREFETCH") != NULL && il + 1u < DS4_N_LAYER) {
++    if (ok && getenv("DS4_GLM_PREFETCH") != NULL &&
++        !pf_shared_correction && il + 1u < normal_layers) {
+         /* Cross-layer expert prefetch: predict layer il+1's experts from the
+          * CURRENT hidden state and hand them to the background reader so the
+          * bytes land while layer il's kernels run. Measured on this model:
+@@ -40076,7 +40221,70 @@ static bool glm_graph_encode_sparse_ffn_one(
+             if (ds4_gpu_begin_commands() == 0) ok = false;
+         }
+     }
+-    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < DS4_N_LAYER) {
++    if (ok && pf_pair_probe) {
++        /* The trace probe compares both predictors against the same real
++         * router selection. Pending state is graph-scoped and matched by
++         * token position and expected next layer. */
++        int32_t actual[DS4_MAX_EXPERT_USED] = {0};
++        bool ended = ds4_gpu_end_commands() != 0;
++        bool read_actual = ended && ds4_gpu_tensor_read(
++                g->router_selected, 0, actual,
++                (uint64_t)DS4_N_EXPERT_USED * sizeof(actual[0])) != 0;
++        bool restarted = ds4_gpu_begin_commands() != 0;
++        if (!ended || !read_actual || !restarted) {
++            ok = false;
++        } else {
++            if (g->predacc_pair_valid &&
++                (g->predacc_pair_layer != il ||
++                 g->predacc_pair_position != pos)) {
++                ok = false;
++            } else if (g->predacc_pair_valid) {
++                const unsigned long long event =
++                    (unsigned long long)++g->predacc_pair_event;
++                fprintf(stderr, "PREDPAIR E%llu P%u L%u actual:",
++                        event, pos, il);
++                for (uint32_t i = 0; i < DS4_N_EXPERT_USED; i++)
++                    fprintf(stderr, " %d", actual[i]);
++                fputs(" base:", stderr);
++                for (uint32_t i = 0; i < DS4_N_EXPERT_USED; i++)
++                    fprintf(stderr, " %d", g->predacc_pair_base[i]);
++                fputs(" shared:", stderr);
++                for (uint32_t i = 0; i < DS4_N_EXPERT_USED; i++)
++                    fprintf(stderr, " %d", g->predacc_pair_shared[i]);
++                fputc('\n', stderr);
++            }
++        }
++        g->predacc_pair_valid = false;
++        if (ok && il + 1u < normal_layers) {
++            const ds4_layer_weights *lnext = l + 1;
++            bool baseline_ok = lnext->ffn_gate_inp &&
++                lnext->ffn_exp_probs_b && g->batch_router_logits &&
++                g->batch_router_selected && g->batch_router_weights &&
++                g->batch_router_probs;
++            if (baseline_ok) {
++                baseline_ok = ds4_gpu_matmul_f32_tensor(
++                    g->batch_router_logits, model->map, model->size,
++                    lnext->ffn_gate_inp->abs_offset, DS4_N_EMBD,
++                    DS4_N_EXPERT, ffn_norm, 1) != 0;
++            }
++            if (baseline_ok) {
++                baseline_ok = ds4_gpu_glm_router_select_tensor(
++                    g->batch_router_selected, g->batch_router_weights,
++                    g->batch_router_probs, model->map, model->size,
++                    lnext->ffn_exp_probs_b->abs_offset,
++                    g->batch_router_logits, DS4_N_EXPERT,
++                    DS4_N_EXPERT_USED, DS4_EXPERT_WEIGHT_SCALE) != 0;
++            }
++            ended = ds4_gpu_end_commands() != 0;
++            bool read_baseline = ended && baseline_ok && ds4_gpu_tensor_read(
++                g->batch_router_selected, 0, pf_base_ids,
++                (uint64_t)DS4_N_EXPERT_USED * sizeof(pf_base_ids[0])) != 0;
++            restarted = ds4_gpu_begin_commands() != 0;
++            pf_base_valid = baseline_ok && ended && read_baseline && restarted;
++            if (!pf_base_valid) ok = false;
++        }
++    }
++    if (ok && getenv("DS4_GLM_PREDACC") != NULL && il + 1u < normal_layers) {
+         /* Cross-layer prediction-accuracy probe (prefetch lever gate):
+          * run layer il+1's router on the CURRENT hidden state, then compare
+          * its top-k against the ids layer il+1 actually selects next step.
+@@ -40345,6 +40553,87 @@ static bool glm_graph_encode_sparse_ffn_one(
+                                              1,
+                                              stage_t0);
+     }
++    if (ok && shared_first && (pf_shared_correction || pf_pair_probe) &&
++        il + 1u < normal_layers) {
++        const ds4_layer_weights *lnext = l + 1;
++        ds4_gpu_tensor *pf_corrected_state = g->batch_cur;
++        ds4_gpu_tensor *pf_corrected_norm = g->batch_ffn_norm;
++        int32_t corrected_ids[DS4_MAX_EXPERT_USED] = {0};
++        bool corrected_ok = lnext->ffn_norm && lnext->ffn_gate_inp &&
++            lnext->ffn_exp_probs_b && pf_corrected_state &&
++            pf_corrected_norm && g->batch_router_logits &&
++            g->batch_router_selected && g->batch_router_weights &&
++            g->batch_router_probs;
++        if (corrected_ok) {
++            corrected_ok = ds4_gpu_add_tensor(
++                pf_corrected_state, after_attn, ffn_sum,
++                DS4_N_EMBD) != 0;
++        }
++        if (corrected_ok) {
++            corrected_ok = ds4_gpu_rms_norm_weight_tensor(
++                pf_corrected_norm, pf_corrected_state, model->map,
++                model->size, lnext->ffn_norm->abs_offset, DS4_N_EMBD,
++                DS4_RMS_EPS) != 0;
++        }
++        if (corrected_ok) {
++            corrected_ok = ds4_gpu_matmul_f32_tensor(
++                g->batch_router_logits, model->map, model->size,
++                lnext->ffn_gate_inp->abs_offset, DS4_N_EMBD,
++                DS4_N_EXPERT, pf_corrected_norm, 1) != 0;
++        }
++        if (corrected_ok) {
++            corrected_ok = ds4_gpu_glm_router_select_tensor(
++                g->batch_router_selected, g->batch_router_weights,
++                g->batch_router_probs, model->map, model->size,
++                lnext->ffn_exp_probs_b->abs_offset,
++                g->batch_router_logits, DS4_N_EXPERT,
++                DS4_N_EXPERT_USED, DS4_EXPERT_WEIGHT_SCALE) != 0;
++        }
++        bool corrected_ended = ds4_gpu_end_commands() != 0;
++        if (corrected_ok && corrected_ended) {
++            corrected_ok = ds4_gpu_tensor_read(
++                g->batch_router_selected, 0, corrected_ids,
++                (uint64_t)DS4_N_EXPERT_USED * sizeof(corrected_ids[0])) != 0;
++        }
++        bool corrected_restarted = ds4_gpu_begin_commands() != 0;
++        corrected_ok = corrected_ok && corrected_ended && corrected_restarted;
++        if (!corrected_ok) {
++            ok = false;
++        } else {
++            if (pf_shared_correction && getenv("DS4_GLM_PREFETCH") != NULL) {
++                uint64_t nb_gate = 0, nb_down = 0;
++                if (streaming_layer_gate_down_expert_bytes(
++                        lnext, &nb_gate, &nb_down)) {
++                    memcpy(pf_ids, corrected_ids,
++                           (size_t)DS4_N_EXPERT_USED * sizeof(pf_ids[0]));
++                    pf_table = graph_stream_expert_table_make(
++                        model, lnext, il + 1u, nb_gate, nb_down);
++                    pf_hint_pending = true;
++                    static bool logged = false;
++                    if (!logged) {
++                        fprintf(stderr,
++                                "ds4: shared-expert router correction enabled\n");
++                        logged = true;
++                    }
++                }
++            }
++            if (pf_pair_probe) {
++                if (pf_base_valid) {
++                    memcpy(g->predacc_pair_base, pf_base_ids,
++                           (size_t)DS4_N_EXPERT_USED *
++                               sizeof(g->predacc_pair_base[0]));
++                    memcpy(g->predacc_pair_shared, corrected_ids,
++                           (size_t)DS4_N_EXPERT_USED *
++                               sizeof(g->predacc_pair_shared[0]));
++                    g->predacc_pair_position = pos;
++                    g->predacc_pair_layer = il + 1u;
++                    g->predacc_pair_valid = true;
++                } else {
++                    g->predacc_pair_valid = false;
++                }
++            }
++        }
++    }
+     if (async_profile) {
+         const double now_ms = glm_graph_streaming_async_profile_ms();
+         if (async_path_profiled) {
+@@ -40375,6 +40664,8 @@ static bool glm_graph_encode_sparse_ffn_one(
+         }
+     }
+     if (ok && pf_hint_pending) {
++        /* shared correction waits for current selected load before publishing
++         * the next-layer hint; the arena map remains single-owner. */
+         ds4_gpu_expert_prefetch_hint(&pf_table, pf_ids, DS4_N_EXPERT_USED);
+         pf_hint_pending = false;
+     }
+@@ -44906,6 +45197,15 @@ static bool glm_graph_forward_indexed_tokens(
+                                             layer_stage_profile,
+                                             stage_sync,
+                                             layer_stage_profile ? &layer_stage_t0 : NULL);
++            if (ok) ok = glm_union_probe_dump_triplet(model,
++                                                       l,
++                                                       g->batch_ffn_norm,
++                                                       g->batch_router_logits,
++                                                       g->batch_router_probs,
++                                                       g->batch_router_selected,
++                                                       n_tokens,
++                                                       il,
++                                                       pos0);
+         } else if (ok) {
+             const bool use_batch_ffn_norm =
+                 n_tokens > 1 && glm_graph_indexed_prefill_batch_ffn_norm();

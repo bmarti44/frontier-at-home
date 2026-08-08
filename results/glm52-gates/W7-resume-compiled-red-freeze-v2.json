@@ -1,0 +1,41 @@
+{
+  "schema_version": 2,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate": 8,
+  "status": "FROZEN_PENDING_REVIEW_AND_GEOMETRY_SMOKE",
+  "candidate_commit": "efd0dd6219022a5a358e47687ff31e0d5e111ce9",
+  "review_request_round": 203,
+  "production_binary_sha256": "56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "artifacts": {
+    "scripts/glm52_goal.py": "3d6cb59fe375ecb0a5c7f42919947d19e1b2dce4e69a1e97517b7de58b9b95a9",
+    "scripts/82_build_w7_fixture_pool.py": "60953e64ac117ade5606071a5173d14c98b1977aebe915f8649a3deef3dcd94a",
+    "scripts/tests/test_glm52_goal.py": "0eedff5a563567cfe2a2e16174632a1de1214e4f4aa2ea391cbb88600bf7c5f6",
+    "scripts/tests/test_w7_resume_compiled_red.py": "831c78c02b29aed2c553fc183e68230e8679ddb604576790d17927666a734189",
+    "results/glm52-gates/harness/w7_resume_compiled_red_v1.sh": "7563e9049a8607081a722a1e8fa720ecb382d2f9b57d7b3364afcebe690deabd",
+    "results/glm52-gates/harness/w7_completion_render_oracle.c": "9590b8eaa238e311ca0468e6983280b798cbb94c3d727920f5e839ac8ee20539",
+    "results/glm52-gates/harness/w7-production-fixture-pool-v1.json": "c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9",
+    "/tmp/glm52-w7-build1.ob4Q0O/src/ds4_server.c": "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07",
+    "/home/bmarti44/.cache/glm52-w7-render-oracle-c8/oracle": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66"
+  },
+  "oracle_build": {
+    "compiler": "/usr/bin/cc",
+    "flags": "-O2 -std=c99 -D_GNU_SOURCE -ffunction-sections -fdata-sections -ffile-prefix-map=<engine>=/usr/src/ds4 -ffile-prefix-map=<repo>=/usr/src/frontier-at-home -Wl,--gc-sections -pthread -lm",
+    "build_1_binary_sha256": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66",
+    "build_2_binary_sha256": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66",
+    "byte_identical": true
+  },
+  "fixture": {
+    "schema": "glm52-w7-production-fixture-pool-v2",
+    "geometry": {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066},
+    "generated_live_tokens": 0,
+    "regenerated_byte_identical": true
+  },
+  "tests": {
+    "command": "python3 -m unittest scripts.tests.test_w7_resume_compiled_red scripts.tests.test_glm52_goal",
+    "tests_run": 80,
+    "passed": 80,
+    "failed": 0
+  },
+  "next": "Obtain round-203 review, then new public randomness and a contained deployed-binary geometry smoke. Any scorer, pool, oracle or harness change creates a new candidate."
+}

@@ -29,16 +29,65 @@ else
     exit 2
   }
 fi
+
+# A multi-arm user campaign may retain the global inference lock in its direct
+# parent. Validate that exact live descriptor before omitting the per-arm flock;
+# absent all four bindings, the established per-arm lock remains unchanged.
+PARENT_LOCK_PID=${GLM_SAFE_PARENT_LOCK_PID:-}
+PARENT_LOCK_START_TICKS=${GLM_SAFE_PARENT_LOCK_START_TICKS:-}
+PARENT_LOCK_FD=${GLM_SAFE_PARENT_LOCK_FD:-}
+PARENT_LOCK_DEV_INO=${GLM_SAFE_PARENT_LOCK_DEV_INO:-}
+PARENT_LOCK_KERNEL_KEY=${GLM_SAFE_PARENT_LOCK_KERNEL_KEY:-}
+PARENT_LOCK_VERIFIED=0
+if [[ -n $PARENT_LOCK_PID || -n $PARENT_LOCK_START_TICKS || -n $PARENT_LOCK_FD ||
+      -n $PARENT_LOCK_DEV_INO || -n $PARENT_LOCK_KERNEL_KEY ]]; then
+  [[ $ROOT_AUTHORITY == 0 && $PARENT_LOCK_PID =~ ^[1-9][0-9]*$ &&
+     $PARENT_LOCK_START_TICKS =~ ^[1-9][0-9]*$ && $PARENT_LOCK_FD =~ ^[0-9]+$ &&
+     $PARENT_LOCK_DEV_INO =~ ^[0-9]+:[0-9]+$ &&
+     $PARENT_LOCK_KERNEL_KEY =~ ^[0-9a-f]+:[0-9a-f]+:[0-9]+$ &&
+     $PARENT_LOCK_PID == "$PPID" ]] || {
+    echo "invalid parent inference-lock binding" >&2
+    exit 2
+  }
+  parent_ticks=$(awk '{print $22}' "/proc/$PARENT_LOCK_PID/stat" 2>/dev/null || true)
+  parent_fd_path="/proc/$PARENT_LOCK_PID/fd/$PARENT_LOCK_FD"
+  global_devino=$(stat -Lc '%d:%i' /run/lock/frontier-at-home/inference.lock 2>/dev/null || true)
+  parent_devino=$(stat -Lc '%d:%i' "$parent_fd_path" 2>/dev/null || true)
+  [[ $parent_ticks == "$PARENT_LOCK_START_TICKS" &&
+     $parent_devino == "$PARENT_LOCK_DEV_INO" && $global_devino == "$PARENT_LOCK_DEV_INO" ]] || {
+    echo "parent inference-lock identity mismatch" >&2
+    exit 2
+  }
+  if ! awk -v pid="$PARENT_LOCK_PID" -v key="$PARENT_LOCK_KERNEL_KEY" '
+      $1 == "lock:" && $3 == "FLOCK" && $5 == "WRITE" && $6 == pid && $7 == key { count++ }
+      END { exit(count == 1 ? 0 : 1) }
+    ' "/proc/$PARENT_LOCK_PID/fdinfo/$PARENT_LOCK_FD"; then
+    echo "parent inference-lock ownership mismatch" >&2
+    exit 2
+  fi
+  PARENT_LOCK_VERIFIED=1
+fi
 RUN_CWD=$(pwd -P)
 [[ $RUN_CWD == /* && $RUN_CWD != *$'\n'* && -x $RUN_CWD ]] || {
   echo "invalid launch working directory" >&2
   exit 2
 }
+PINNED_SAFE_PATH=${GLM_SAFE_PINNED_SAFE_PATH:-}
+PINNED_SAFE_SHA256=${GLM_SAFE_PINNED_SAFE_SHA256:-}
+if [[ -n $PINNED_SAFE_PATH || -n $PINNED_SAFE_SHA256 ]]; then
+  [[ $PINNED_SAFE_PATH =~ ^/proc/[1-9][0-9]*/fd/[0-9]+$ &&
+     $PINNED_SAFE_SHA256 =~ ^[0-9a-f]{64}$ && -f $PINNED_SAFE_PATH &&
+     $(sha256sum -- "$PINNED_SAFE_PATH" | awk '{print $1}') == "$PINNED_SAFE_SHA256" ]] || {
+    echo "invalid pinned safe-run script" >&2
+    exit 2
+  }
+fi
 
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
 EVIDENCE_DIR=${GLM_SAFE_EVIDENCE_DIR:-}
 RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
+MEMORY_HIGH_GIB=${GLM_SAFE_MEMORY_HIGH_GIB:-}
 [[ $KILL_FLOOR_GIB =~ ^[0-9]{1,2}$ && $TIMEOUT_S =~ ^[0-9]{1,4}$ ]] || {
   echo "invalid cgroup resource configuration" >&2
   exit 2
@@ -46,11 +95,25 @@ RUN_AS_CURRENT_USER=${GLM_SAFE_RUN_AS_CURRENT_USER:-0}
 KILL_FLOOR_GIB=$((10#$KILL_FLOOR_GIB))
 TIMEOUT_S=$((10#$TIMEOUT_S))
 (( KILL_FLOOR_GIB >= 18 && KILL_FLOOR_GIB <= 64 )) || exit 2
-(( TIMEOUT_S >= 1 && TIMEOUT_S <= 3600 )) || exit 2
+if (( TIMEOUT_S < 1 || TIMEOUT_S > 9000 )); then
+  echo "invalid GLM_SAFE_TIMEOUT_S" >&2
+  exit 2
+fi
 [[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] || {
   echo "invalid GLM_SAFE_RUN_AS_CURRENT_USER" >&2
   exit 2
 }
+if [[ -n $MEMORY_HIGH_GIB ]]; then
+  [[ $MEMORY_HIGH_GIB =~ ^[0-9]{2,3}$ ]] || {
+    echo "invalid GLM_SAFE_MEMORY_HIGH_GIB" >&2
+    exit 2
+  }
+  MEMORY_HIGH_GIB=$((10#$MEMORY_HIGH_GIB))
+  (( MEMORY_HIGH_GIB >= 32 && MEMORY_HIGH_GIB <= 101 )) || {
+    echo "invalid GLM_SAFE_MEMORY_HIGH_GIB" >&2
+    exit 2
+  }
+fi
 if [[ $RUN_AS_CURRENT_USER == 1 ]]; then
   [[ $(id -un) == bmarti44 ]] || {
     echo "current-user GLM mode requires bmarti44" >&2
@@ -70,15 +133,29 @@ if [[ -n $EVIDENCE_DIR ]]; then
 fi
 
 available_mib=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
-max_mib=$((available_mib - KILL_FLOOR_GIB * 1024 - 4096))
-high_mib=$((max_mib - 4096))
+if [[ -n $MEMORY_HIGH_GIB ]]; then
+  # The caller derives MemoryHigh from a guarded cache-off RSS measurement,
+  # the exact arena allocation, and explicit overhead. MemoryMax adds only a
+  # bounded 2 GiB excursion and may never consume the whole-system kill floor.
+  high_mib=$((MEMORY_HIGH_GIB * 1024))
+  max_mib=$((high_mib + 2048))
+  (( max_mib + KILL_FLOOR_GIB * 1024 <= available_mib )) || {
+    echo "profile memory envelope exceeds safe host budget" >&2
+    exit 8
+  }
+else
+  max_mib=$((available_mib - KILL_FLOOR_GIB * 1024 - 4096))
+  high_mib=$((max_mib - 4096))
+fi
 (( high_mib >= 32768 && max_mib > high_mib )) || {
   echo "insufficient memory for bounded cgroup" >&2
   exit 8
 }
 
 UNIT="glm52-${TAG//./-}-$$"
-if [[ $ROOT_AUTHORITY == 1 ]]; then
+if [[ -n $PINNED_SAFE_PATH ]]; then
+  SAFE=$PINNED_SAFE_PATH
+elif [[ $ROOT_AUTHORITY == 1 ]]; then
   SAFE=$(dirname -- "$(readlink -f -- "$0")")/glm_safe_run.sh
 else
   SAFE=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_safe_run.sh
@@ -142,19 +219,46 @@ for name in \
   GLM_CANDIDATE_SRC GLM_PORT GLM_EXPERT_CACHE_GB \
   GLM_REQUIRE_TOKEN_TIMING_LOG DS4_CUDA_IQ2_DOWN_REFERENCE \
   DS4_CUDA_MOE_NO_EXPERT_TILES DS4_CUDA_MOE_NO_ATOMIC_DOWN \
-  DS4_LOCK_FILE \
+  DS4_CUDA_MOE_DIRECT_EXPERT_SLOTS \
+  DS4_LOCK_EXPECTED_DEV_INO DS4_LOCK_FILE \
   DS4_CUDA_EXPERT_CACHE_GB DS4_CUDA_EXPERT_CACHE_PIN \
   DS4_CUDA_EXPERT_CACHE_SLRU DS4_CUDA_FETCH_THREADS \
+  DS4_CUDA_EXPERT_SLAB_PATH DS4_CUDA_EXPERT_SLAB_SHA256 \
+  DS4_CUDA_EXPERT_SLAB_MODEL_SHA256 DS4_CUDA_EXPERT_SLAB_TRACE \
+  DS4_CUDA_EXPERT_SLAB_AUTH_TRACE DS4_CUDA_EXPERT_SLAB_PREFETCH_SHA \
+  DS4_CUDA_LOAD_PROFILE DS4_TOKEN_TIMING_LOG DS4_GLM_TP_DEBUG \
+  DS4_GLM_PREFETCH DS4_GLM_PREFETCH_SHARED_CORRECTION \
+  DS4_GLM_PREFETCH_THREADS \
+  DS4_GLM_PREDACC_SHARED \
+  DS4_W7_PINNED_HARNESS_SHA256 \
+  DS4_W7_CANDIDATE_HASH \
+  DS4_W7_SEALED_SAFE_PATH DS4_W7_SEALED_SAFE_SHA256 \
+  DS4_W7_SEALED_LIVE_PATH DS4_W7_SEALED_PRIMARY_PATH \
+  DS4_CUDA_STABLE_MODEL_REMAP \
+  DS4_CUDA_TOPK2048_CUB \
+  DS4_GLM_SYNC_TRACE DS4_GLM_LOGIT_DUMP DS4_GLM_LOGIT_DUMP_ALL \
+  DS4_GLM_W9_CAPTURE_DIR \
+  DS4_GLM_RESTORED_FRONTIER_DIAGNOSTIC \
+  DS4_GLM_UNION_TRACE_CORPUS \
+  DS4_GLM_STREAMING_TOKEN_PREFILL_MAX \
+  DS4_JSON_REPLACE_INVALID_UTF8 \
+  DS4_METAL_GRAPH_DUMP_PREFIX DS4_METAL_GRAPH_DUMP_NAME \
+  DS4_METAL_GRAPH_DUMP_LAYER \
   DS4_GLM_COMPACT_CACHE_F16 DS4_GLM_COMPACT_CACHE_E4M3_FAKE \
   DS4_GLM_COMPACT_CACHE_INT8_FAKE \
   DS4_GLM_COMPACT_CACHE_AFFINE_INT8 \
   DS4_GLM_COMPACT_CACHE_AFFINE_INT8_FAKE \
-  DS4_GLM_CKV_NVME DS4_GLM_CKV_DIR DS4_GLM_CKV_MODEL_SHA256 \
+  DS4_GLM_CKV_NVME DS4_GLM_CKV_NVME_EXACT \
+  DS4_GLM_CKV_DIR DS4_GLM_CKV_MODEL_SHA256 \
   DS4_GLM_CKV_RUN_NONCE \
   DS4_GLM_CKV_MAX_GIB DS4_GLM_CKV_TRACE_PATH \
   DS4_GLM_CKV_TRACE_SAMPLE_POSITIONS DS4_GLM_CKV_TRACE_MAX_RECORDS \
   GLM_SAFE_LOG_CANDIDATE_PROVENANCE GLM_SAFE_EXPECTED_BINARY_SHA256 \
   GLM_SAFE_PROVENANCE_ENV_ALLOWLIST GLM_SAFE_EXPECTED_ENV_SHA256 \
+  GLM_SAFE_FINAL_ARTIFACTS GLM_SAFE_DONE_DIGESTS \
+  GLM_SAFE_W7_DRIVER_LINEAGE \
+  GLM_SAFE_ALLOW_CGROUP_HIGH \
+  GLM_SAFE_MEMORY_GUARD_PATH GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256 \
   GLM_SAFE_WITNESS_NONCE \
   GLM_SAFE_WITNESS_ARTIFACT \
   GLM_W1_ROOT_AUTHORITY GLM_SAFE_CRASH_ROOT \
@@ -173,10 +277,15 @@ if [[ $ROOT_AUTHORITY == 1 ]]; then
     /usr/bin/env -i "${env_args[@]}"
     /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
   )
+elif [[ $RUN_AS_CURRENT_USER == 1 && $PARENT_LOCK_VERIFIED == 1 ]]; then
+  contained_command=(
+    /usr/bin/env -i "${env_args[@]}"
+    /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
+  )
 elif [[ $RUN_AS_CURRENT_USER == 1 ]]; then
   contained_command=(
     /usr/bin/env -i "${env_args[@]}"
-    /usr/bin/flock -n -E 75 "/run/user/$UID/glm52-inference.lock"
+    /usr/bin/flock -n -E 75 /run/lock/frontier-at-home/inference.lock
     /usr/bin/bash "$SAFE" --tag "$TAG" -- "$@"
   )
 else

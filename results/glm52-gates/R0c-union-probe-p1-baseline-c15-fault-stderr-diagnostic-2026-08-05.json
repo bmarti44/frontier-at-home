@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_IMPLEMENTATION_DIAGNOSTIC",
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate": 15,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "source": "/home/bmarti44/.local/state/glm52-c13-fault-smoke2.a00d73kj/runtime-logs",
+  "observed": "Two of four previously accepted real fault arms contain one bash sampler race diagnostic on wrapper.stderr: /proc/<controller>/fd/<fd>: line 436: /proc/<reaped>/stat: No such file or directory.",
+  "initial_validator_result": "2 PASS, 2 FAIL",
+  "diagnosis": "The diagnostic is emitted when the expected-failure process exits between the sampler's PID discovery and stat read. It is not a candidate, kernel, CUDA, memory, cgroup or cleanup failure. A blanket empty-stderr rule rejects genuine preserved evidence.",
+  "bounded_fix": "Permit zero or one exact process-stat disappearance diagnostic; reject every other stderr byte. Preserve all existing kernel, fatal-count, stdout, sample and digest checks.",
+  "acceptance_test": "Both empty stderr and the exact sampler-race line pass; arbitrary stderr still fails; all four real candidate-13 fault directories pass the complete artifact validator."
+}

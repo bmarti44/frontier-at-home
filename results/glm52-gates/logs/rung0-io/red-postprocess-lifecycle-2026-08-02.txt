@@ -1,0 +1,12 @@
+Command:
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_glm_safe_lifecycle.CurrentUserTimestampTests.test_clean_reaped_candidate_with_postprocessing_is_attested
+
+Expected RED:
+The wrapper must not reject an already observed and hash-bound candidate merely
+because its trusted controller spends more than two seconds writing and syncing
+the completed measurement after reaping the engine. Replacement processes,
+nonzero controller exit, survivors, and safety events remain failures.
+
+Observed RED (exit 1):
+The safe wrapper returned rc=11 with killed=provenance after the candidate was
+reaped and the controller performed four seconds of post-processing.

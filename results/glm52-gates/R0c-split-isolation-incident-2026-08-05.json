@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "classification": "PROCESS_INCIDENT",
+  "date": "2026-08-05",
+  "scope": "P1 calibration/test split isolation",
+  "candidate_before_incident": "be796f4",
+  "observed_action": "A local diagnostic command opened records.npz for train-precision-diagnostic, calibration, and test and printed only each member name, shape, and dtype. Numpy materialized members while obtaining those properties even though no values were displayed.",
+  "information_observed": {
+    "calibration": "Archive member names, row counts, shapes, and dtypes only.",
+    "test": "Archive member names, row counts, shapes, and dtypes only. These dimensions were already constrained by the committed split manifests and corpus schema.",
+    "not_observed": "No selected expert IDs, hidden values, logits, targets, predictions, losses, per-case results, aggregate metrics, baseline comparisons, or semantic outputs were displayed, computed, or used."
+  },
+  "impact": "The data did not influence rank selection, the already-preregistered precision thresholds, model architecture, optimizer, features, or stopping. However, the literal claim that calibration and test archives were never opened is false and must not appear in a final qualification claim.",
+  "containment": "Do not access calibration or test again until the preregistered baseline and one-time-test gate. Preserve this incident and ask both persistent reviewers whether schema-only materialization requires a fresh split before a held-out claim.",
+  "current_gate": "The authorized five-case train-precision-diagnostic may proceed because it was the next explicitly preregistered split; calibration/test qualification remains reviewer-gated."
+}

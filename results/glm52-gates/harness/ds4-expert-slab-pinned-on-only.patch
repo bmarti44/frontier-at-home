@@ -1,0 +1,52 @@
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index 8eac098..c666b50 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -25183,12 +25183,17 @@ static int cuda_stream_selected_cache_begin_load(
+         /* The pool is shared because selected-expert staging is process-global
+          * too.  Holding ownership through join prevents a second request from
+          * reusing a page-locked O_DIRECT buffer while its CUDA copy is live. */
+-        std::unique_lock<std::mutex> staging_lock(g_expert_slab_staging.mu);
+-        if (!cuda_expert_slab_staging_ensure((uint32_t)nthr, buf_bytes, align)) {
+-            cuda_expert_cache_flush_all("expert slab pinned staging allocation");
+-            cuda_stream_selected_cache_invalidate();
+-            return cuda_stream_selected_reject(table, slot_count,
+-                                               "expert slab pinned staging");
++        std::unique_lock<std::mutex> staging_lock;
++        if (slab_mode) {
++            staging_lock = std::unique_lock<std::mutex>(g_expert_slab_staging.mu);
++            if (!cuda_expert_slab_staging_ensure(
++                    (uint32_t)nthr, buf_bytes, align)) {
++                cuda_expert_cache_flush_all(
++                    "expert slab pinned staging allocation");
++                cuda_stream_selected_cache_invalidate();
++                return cuda_stream_selected_reject(table, slot_count,
++                                                   "expert slab pinned staging");
++            }
+         }
+         auto worker = [&](int worker_id) {
+             if (cudaSetDevice(g_gpu[logical_tier].device_id) != cudaSuccess) {
+@@ -25196,7 +25201,14 @@ static int cuda_stream_selected_cache_begin_load(
+                 (void)cudaGetLastError();
+                 return;
+             }
+-            void *buf = g_expert_slab_staging.buffers[(size_t)worker_id];
++            void *buf = slab_mode ?
++                g_expert_slab_staging.buffers[(size_t)worker_id] : NULL;
++            if (!slab_mode &&
++                (posix_memalign(&buf, (size_t)align, (size_t)buf_bytes) != 0 ||
++                 !buf)) {
++                failed.store(1);
++                return;
++            }
+             for (;;) {
+                 const size_t i = next.fetch_add(1);
+                 if (i >= miss_jobs.size() || failed.load()) break;
+@@ -25245,6 +25257,7 @@ static int cuda_stream_selected_cache_begin_load(
+                     }
+                 }
+             }
++            if (!slab_mode) free(buf);
+         };
+         std::vector<std::thread> pool;
+         try {

@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "classification": "NO_RESULT",
+  "candidate_hash": "fed492070183741f5a2b8c19950d7647fd05a568",
+  "tag": "p0q100-r107-fed4920",
+  "arm": "off",
+  "observed": {
+    "requests_completed_before_rejection": 4,
+    "raw_response_matched_token_records": 32,
+    "failing_raw_token_ids": [
+      8507,
+      81272,
+      13,
+      154842,
+      154842,
+      154842,
+      154842,
+      154842
+    ],
+    "failing_raw_decoded_text": "守权.</think></think></think></think></think>",
+    "first_boundary_reasoning_text": "守权.",
+    "post_boundary_content_text": "</think></think></think></think>",
+    "wrapper_return_code": 1,
+    "wrapper_killed": false,
+    "cgroup_peak_bytes": 49152872448,
+    "cgroup_swap_current_bytes": 0,
+    "cgroup_high_events": 0,
+    "cgroup_max_events": 0,
+    "cgroup_oom_events": 0,
+    "cgroup_oom_kill_events": 0,
+    "kernel_log_clean": true,
+    "surviving_ds4_server": false
+  },
+  "diagnosis": "The output verifier rejected a generated sequence containing more than one </think> token. The frozen server parser deterministically uses the first delimiter as the reasoning/content boundary and emits later delimiters as content, so multiple delimiters are not ambiguous when exact client bytes are still checked. The arm failed closed before artifacts were finalized and supplies no qualification result.",
+  "artifacts": {
+    "server_sha256": "91e48a27ed747353c52b7f05a07495a9f83a4d2c2bce03e51361d513aa2e1c23",
+    "fixture_sha256": "311648dada3773506cb7dcb60ae5f57eba9161c1794b1731f983afe30863e012",
+    "off_containment_stdout_sha256": "28af6aaa63f935fd79305d355d23ffe65dc703612f87bb64dc2ee1fbdf5994c5",
+    "main_log_sha256": "96925f1bd9c7dbfb727455ce36042752c2feb8c0423226dbe764f33b2a41e64b",
+    "samples_log_sha256": "33eb78f1e91a718c48e38889a5e7243b10cd099dd1a080559b90fbb2d133fe23",
+    "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "command_log_sha256": "2e48aa69ba90f09fd69a28a3abb521d4d981b360f588b76d77560b15fdae3be1"
+  }
+}

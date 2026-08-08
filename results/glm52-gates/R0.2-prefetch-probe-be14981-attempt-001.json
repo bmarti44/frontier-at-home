@@ -1,0 +1,50 @@
+{
+  "arm": "B",
+  "candidate_commit": "be149811e8900b372274d7d68bfdda7fcda24379",
+  "diagnostic_only": true,
+  "failure": "candidate slab queue depth exceeds device queue depth",
+  "local_evidence": {
+    "containment_stdout": {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-be14-sha-probe-a/arms/sha-b0s0b/containment.stdout.log",
+      "sha256": "f6e5a9dd5c18bd92c6a67f8414d95840e02cd38a80effd480ec01c79cd9ae40a"
+    },
+    "kernel_log": {
+      "path": "/home/bmarti44/.local/state/glm52-crashlog/20260803-100546-sha-b0s0b/kernel.log",
+      "sha256": "c5c04fb71473557e4daf56bd88e759dcc28768cd113456c55ee9bd6a3b41948c"
+    },
+    "main_log": {
+      "path": "/home/bmarti44/.local/state/glm52-crashlog/20260803-100546-sha-b0s0b/main.log",
+      "sha256": "aa30f99ecc95eb957c03484d1421500b105ce910e2c2c952193ddbf8324580aa"
+    },
+    "nvme_inflight": {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-be14-sha-probe-a/arms/sha-b0s0b/nvme-inflight.log",
+      "sha256": "2c9e6cac6ed6a1fde8db5ae2162ff2b394d9256b9b9fcac785ceb24c3c59bf63"
+    },
+    "result": {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-be14-sha-probe-a/arms/sha-b0s0b/result.json",
+      "sha256": "5b81806fdc78b42a87b072cc5eab33fb324381b1bc70983893594e3cbf31377e"
+    },
+    "safety_samples": {
+      "path": "/home/bmarti44/.local/state/glm52-crashlog/20260803-100546-sha-b0s0b/samples.log",
+      "sha256": "4e970232d644c7837b11078919e537d5a717382ce39a6a69d05e6d292743e1ec"
+    },
+    "server_log": {
+      "path": "/home/bmarti44/.local/state/glm52-rung0-be14-sha-probe-a/arms/sha-b0s0b/server.log",
+      "sha256": "3ec4984639283ad0c2285fd01a0c2a76817213538067c553423f9a2aa427ede9"
+    }
+  },
+  "measurements": {
+    "completion_tokens_per_rep": [160, 160],
+    "decode_tokens_per_second": [1.5192740585620834, 1.4898420509055017],
+    "external_candidate_peak_qd": 8,
+    "external_device_peak_qd": 580,
+    "external_qd_samples": 223398,
+    "external_sparse_zero_one_samples": 23,
+    "median_decode_tokens_per_second": 1.5045580547337924,
+    "median_ttft_seconds": 159.6351957805,
+    "ttft_seconds": [272.525758007, 46.744633554]
+  },
+  "note": "Both control-config requests completed and the engine exited safely. The arm failed closed on a non-atomic cross-layer per-sample QD invariant. It is preserved for diagnosis only and must not be rescored or reused in a later candidate.",
+  "status": "NO_RESULT",
+  "tag": "be14-sha-probe-a"
+}

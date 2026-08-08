@@ -1,0 +1,31 @@
+{
+  "schema": "dsv4-cold-load-candidate3-review-red-v1",
+  "gate": "DSV4-cold-load-candidate-3",
+  "test_commit": "3b771b1310eb5257050132c4030b6ca0750d83c8",
+  "test_command": "python3 -m unittest scripts.tests.test_dsv4_cold_load_campaign",
+  "observed": {
+    "tests_run": 11,
+    "failures": 3,
+    "errors": 0,
+    "exit_status": 1,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "7b2f3895277a33c747b808000006f90be8f9a1a529ef9207d33fa67c5050f24e"
+  },
+  "failed_acceptance": [
+    {
+      "test": "test_accepts_matched_safe_fast_campaign",
+      "reason": "The fixed scorer does not accept the preregistered binary, observed runtime-closure, and systemd-result schema."
+    },
+    {
+      "test": "test_runner_bounds_each_arm_and_never_reuses_output",
+      "reason": "The transient unit still uses --collect, which can erase terminal systemd properties before evidence capture."
+    },
+    {
+      "test": "test_runner_rejects_unsigned_randomness_and_observes_loaded_runtime",
+      "reason": "The runner accepts an unsigned one-field randomness document and does not derive runtime identity from /proc/PID/maps."
+    }
+  ],
+  "bounded_fix": "Reuse the frozen repository drand verifier, preserve its full receipt, derive runtime closure from observed mapped files, remove --collect, capture Result/ExecMainCode/ExecMainStatus/MemoryPeak/MemorySwapPeak, and make the scorer reject every mismatch or unsafe value.",
+  "engine_started": false,
+  "verdict": "RED_CONFIRMED"
+}

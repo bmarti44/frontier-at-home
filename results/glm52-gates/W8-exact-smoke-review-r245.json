@@ -1,0 +1,42 @@
+{
+  "schema": "glm52-w8-exact-smoke-terminal-review-v1",
+  "candidate_hash": "8df6804bce38f32d4fea2f22833fefaecd3544a5",
+  "engine_candidate_hash": "3054a9fadfe79156046fcb23e1a36c3aa5162762",
+  "review_round": 245,
+  "candidate_count": 9,
+  "critical": [],
+  "high": [],
+  "reviewers": {
+    "nash": {
+      "score": 100,
+      "critical": [],
+      "high": [],
+      "verdict": "APPROVE_DISCLOSURE_AND_TERMINAL_FAIL_PUBLICATION"
+    },
+    "singer": {
+      "score": 100,
+      "critical": [],
+      "high": [],
+      "verdict": "APPROVE_TERMINAL_FAIL_PUBLICATION_AND_CLOSE_W8"
+    }
+  },
+  "prior_issue_status": {
+    "W8-R244-T1-EXACT-SMOKE-TIMEOUT": "VERIFIED_TERMINAL_FAIL",
+    "W8-R244-I1-POST-TERMINAL-ARTIFACT-MUTATION": "VERIFIED_DISCLOSED_TERMINAL_ADDITIONAL_FAIL",
+    "ADV-W8-242-H59-AND-EARLIER": "FROZEN_VERIFIED_NOT_REVIEWED"
+  },
+  "authoritative_basis": {
+    "pre_mutation_record_commit": "e7456d4a18f256bfa18a42147f82114a2ae2dd95",
+    "attempt_record": "results/glm52-gates/W8-exact-smoke-attempt-4-timeout.json",
+    "independent_terminal_failures": [
+      "the exact request timed out after 1800 seconds",
+      "only 2048 of 5066 prompt tokens reached a completed progress checkpoint",
+      "the response is absent",
+      "the terminal exact-I/O marker is absent",
+      "the resident arm was not run after the exact-arm failure"
+    ],
+    "local_attempt_pristine": false
+  },
+  "verdict": "CLOSE_W8_AS_TERMINAL_FAIL",
+  "scope": "Closes candidate 9 and the current exact F32 NVMe cKV implementation as W8 FAIL. It does not authorize a longer-timeout rerun, direct-1M use, serving promotion, or any PASS claim from restored local bytes."
+}

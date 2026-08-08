@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "classification": "NO_RESULT",
+  "candidate_engine_commit": "ee6abc565cc20385eae1a22b9d8d129d6eae9c68",
+  "failure": "Independent CUDA builds were not byte-identical because the invocation omitted the established deterministic --keep/--keep-dir NVCC path binding.",
+  "build_1_binary_sha256": "48f55333b272f97b7e7c60664faefae6a94ba0a0fad4395cf6680463c9fae998",
+  "build_2_binary_sha256": "95f510ecdc7d1c875a95746e703a43536a6292eddc05e72b6f9c1b7b499e50c9",
+  "build_1_gnu_build_id": "92ef080ed7367f574b5ef24ec69546e916e56001",
+  "build_2_gnu_build_id": "08d86c1a042bcaddb88e77d378e42047c7a857ad",
+  "first_differing_byte": 669,
+  "engine_or_model_started": false,
+  "oom_or_xid": false,
+  "minimum_observed_mem_available_kib": 120638072,
+  "bounded_fix": "Repeat both clean builds with the repository-established --frandom-seed plus a stable, emptied --keep-dir; no source change is permitted."
+}

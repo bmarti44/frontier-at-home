@@ -1,0 +1,160 @@
+From a9f16ad4e1aa76697c4ee3779f7b51470c2c8098 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 15:37:05 -0400
+Subject: [PATCH] test(glm): reject compact-pack identity mutations
+
+---
+ tests/test_glm_mtp_proxy_contract.c | 92 +++++++++++++++++++++++------
+ 1 file changed, 73 insertions(+), 19 deletions(-)
+
+diff --git a/tests/test_glm_mtp_proxy_contract.c b/tests/test_glm_mtp_proxy_contract.c
+index cb6a99c..77c8392 100644
+--- a/tests/test_glm_mtp_proxy_contract.c
++++ b/tests/test_glm_mtp_proxy_contract.c
+@@ -105,7 +105,9 @@ extern int ds4_glm_mtp_proxy_contract_run(const proxy_request *,
+                                            proxy_receipt *)
+     __attribute__((weak));
+ extern int ds4_glm_mtp_proxy_pack_contract_validate(
+-    const proxy_pack_record *, uint32_t, uint64_t, uint64_t,
++    const proxy_pack_record *, uint32_t, uint64_t,
++    const uint8_t *, uint64_t,
++    const uint8_t[32], const uint8_t[32],
+     const uint8_t[32], const uint8_t[32],
+     const proxy_range *, uint32_t)
+     __attribute__((weak));
+@@ -262,7 +264,7 @@ static void test_exact_causal_recurrence_and_router_coverage(void) {
+ 
+ static void fill_record(proxy_pack_record *r, const char *name,
+                         uint64_t original_offset, uint64_t blob_offset,
+-                        uint64_t length, uint8_t digest_byte) {
++                        uint64_t length, const char *digest_hex) {
+     memset(r, 0, sizeof(*r));
+     r->name = name;
+     r->dtype = 1u;
+@@ -273,54 +275,106 @@ static void fill_record(proxy_pack_record *r, const char *name,
+     r->original_length = length;
+     r->blob_offset = blob_offset;
+     r->blob_length = length;
+-    memset(r->blob_sha256, digest_byte, sizeof(r->blob_sha256));
++    for (uint32_t i = 0; i < 32u; i++) {
++        unsigned byte = 0;
++        if (sscanf(digest_hex + 2u * i, "%2x", &byte) != 1) abort();
++        r->blob_sha256[i] = (uint8_t)byte;
++    }
+ }
+ 
+ static int validate_pack(proxy_pack_record *records, uint32_t count,
+-                         uint64_t model_size, uint64_t payload_size,
++                         uint64_t model_size, const uint8_t *payload,
++                         uint64_t payload_size,
+                          proxy_range *forbidden, uint32_t forbidden_count,
+-                         int corrupt_inventory) {
+-    uint8_t model_sha[32];
+-    uint8_t inventory_sha[32];
+-    memset(model_sha, 0x31, sizeof(model_sha));
++                         int corrupt_model, int corrupt_inventory) {
++    uint8_t model_sha[32], expected_model_sha[32];
++    uint8_t inventory_sha[32], expected_inventory_sha[32];
++    memset(model_sha, corrupt_model ? 0x32 : 0x31, sizeof(model_sha));
++    memset(expected_model_sha, 0x31, sizeof(expected_model_sha));
+     memset(inventory_sha, corrupt_inventory ? 0x42 : 0x41, sizeof(inventory_sha));
++    memset(expected_inventory_sha, 0x41, sizeof(expected_inventory_sha));
+     return ds4_glm_mtp_proxy_pack_contract_validate(
+-        records, count, model_size, payload_size, model_sha, inventory_sha,
++        records, count, model_size, payload, payload_size,
++        model_sha, expected_model_sha, inventory_sha, expected_inventory_sha,
+         forbidden, forbidden_count);
+ }
+ 
+ static void test_compact_pack_semantic_mutations(void) {
+     CHECK(ds4_glm_mtp_proxy_pack_contract_validate != NULL,
+           "production compact-pack validator entry point is absent");
++    uint8_t payload[12288];
++    memset(payload, 1, 4096u);
++    memset(payload + 4096u, 2, 4096u);
++    memset(payload + 8192u, 3, 4096u);
+     proxy_pack_record valid[3];
+-    fill_record(&valid[0], "token_embd.weight", 4096u, 0u, 4096u, 1u);
+-    fill_record(&valid[1], "blk.3.ffn_norm.weight", 16384u, 4096u, 4096u, 2u);
+-    fill_record(&valid[2], "blk.3.ffn_gate_inp.weight", 24576u, 8192u, 4096u, 3u);
++    fill_record(&valid[0], "token_embd.weight", 4096u, 0u, 4096u,
++                "3431383721510cf1c211de027cf958c183e16db5fabb6b230eb284c85e196aa9");
++    fill_record(&valid[1], "blk.3.ffn_norm.weight", 16384u, 4096u, 4096u,
++                "30d6bc164ea54188aa9df0c14f20c4fbc8a155c5644bcc9ef9eb05901cb07d70");
++    fill_record(&valid[2], "blk.3.ffn_gate_inp.weight", 24576u, 8192u, 4096u,
++                "4539cc1fbc3c22bb131672c62f20ff87f3f587ba2d3d4c5b161c271c98c07b38");
+     proxy_range forbidden[1] = {{32768u, 4096u}};
+-    CHECK(validate_pack(valid, 3u, 65536u, 12288u, forbidden, 1u, 0) == 0,
++    CHECK(validate_pack(valid, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) == 0,
+           "valid compact inventory rejected");
+ 
+     proxy_pack_record m[3];
+     memcpy(m, valid, sizeof(m));
+     m[1].name = m[0].name;
+-    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
+           "duplicate name accepted");
+     memcpy(m, valid, sizeof(m));
+     m[1].blob_offset = 2048u;
+-    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
+           "overlapping blob accepted");
+     memcpy(m, valid, sizeof(m));
+     m[2].original_offset = forbidden[0].offset;
+-    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
+           "forbidden expert range accepted");
+     memcpy(m, valid, sizeof(m));
+     m[2].original_offset = UINT64_MAX - 1024u;
+-    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
+           "overflowing source range accepted");
+-    CHECK(validate_pack(valid, 3u, 65536u, 12289u, forbidden, 1u, 0) != 0,
++    CHECK(validate_pack(valid, 3u, 65536u, payload, sizeof(payload) + 1u,
++                        forbidden, 1u, 0, 0) != 0,
+           "trailing payload byte accepted");
+-    CHECK(validate_pack(valid, 3u, 65536u, 12288u, forbidden, 1u, 1) != 0,
++    CHECK(validate_pack(valid, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 1) != 0,
+           "wrong frozen inventory digest accepted");
++    CHECK(validate_pack(valid, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 1, 0) != 0,
++          "wrong frozen model digest accepted");
++    memcpy(m, valid, sizeof(m));
++    m[0].name = "blk.3.ffn_gate_exps.weight";
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
++          "unexpected tensor name accepted");
++    memcpy(m, valid, sizeof(m));
++    m[1].dtype++;
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
++          "wrong tensor dtype accepted");
++    memcpy(m, valid, sizeof(m));
++    m[1].dims[0]++;
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
++          "wrong tensor shape accepted");
++    memcpy(m, valid, sizeof(m));
++    m[1].blob_sha256[0] ^= 1u;
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
++          "wrong per-blob digest accepted");
++    memcpy(m, valid, sizeof(m));
++    proxy_pack_record swap = m[0];
++    m[0] = m[1];
++    m[1] = swap;
++    CHECK(validate_pack(m, 3u, 65536u, payload, sizeof(payload),
++                        forbidden, 1u, 0, 0) != 0,
++          "noncanonical record order accepted");
+ }
+ 
+ static void independent_rank(const float *scores, uint32_t experts,
+--
+2.43.0
+

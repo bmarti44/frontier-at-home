@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 17,
+  "campaign_review_round_next": 155,
+  "implementation_head": "37c77f973d0e88265b537b9c65ea9f2dd03e4779",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "scope": "Close only the observed Candidate-16 root clone dubious-ownership runtime failure. Candidate-16 controller, submitter, corpus, split, probe, CV, precision, engine, dependency runtime, scoring backend and failure hooks remain byte-identical.",
+  "artifacts": {
+    "scripts/65_glm52_w1_submit.py": "31d2ea2d72db874767ca647d124c829bed755a8d10529a924796a9332c54309f",
+    "scripts/66_install_glm52_w1_attestor.sh": "d2b8ebbd21115d688e5ed01c18f72d8c0c19a1844116eb126b30a6d1548d9cea",
+    "scripts/81_glm_union_baseline.py": "c40d22c3ce08518049808520f72b468d6ccc7f22dea65038184b92f71ce4677c",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "9b95e9624e2bbe15fc466fa446cf07d09332fa5ead2c10652951024c9b61f4a1",
+    "scripts/tests/test_glm_union_baseline.py": "1ca4bd87d0d7e2f7f465321d3f818c8d39cfb690fbcf7c3d2aeab7f18fcce6c2",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c16-root-install-git-safe-directory-failure-2026-08-05.json": "8b10e01b16c3111e43e0eb1ecd415b72aa0fcdac2d7be9fbe8722fa202910d00"
+  },
+  "bounded_change": {
+    "source_gitdir": "/home/bmarti44/spark-deepseek-v4-flash/.git",
+    "mechanism": "The root clone keeps --no-local, --no-checkout and disabled hooks, but selects an explicit upload-pack command carrying one invocation-scoped safe.directory entry for only the exact source Git directory.",
+    "global_git_configuration_changed": false,
+    "wildcard_safe_directory_used": false,
+    "candidate_checkout_or_hash_rules_changed": false,
+    "post_clone_cleanliness_rules_changed": false
+  },
+  "runtime_reproduction": {
+    "mechanism": "GIT_TEST_ASSUME_DIFFERENT_OWNER=1 reproduces Git's root-versus-user ownership rejection without sudo.",
+    "without_safe_directory": "FAIL with the same dubious ownership assertion against the exact source .git directory",
+    "wrong_or_absent_scope": "FAIL",
+    "exact_upload_pack_scope": "PASS; --no-local clone completed and cloned HEAD exactly matched source HEAD",
+    "temporary_probe_root": "/tmp/glm52-safe-dir-probe.xrDIuV",
+    "temporary_probe_removed_after_measurement": true
+  },
+  "unchanged_frozen_inputs": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_sha256": "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0",
+    "canonical_tree_sha256": "39eccffb7a0a2c627bad322ab42a2f07a3b9c55f4952d2867819766c3870bddf",
+    "candidate_16_controller_submitter_and_engine_hashes_unchanged": true,
+    "heldout_reservation_absent": true,
+    "root_approval_absent": true
+  },
+  "pre_submission_audit": {
+    "p1_controller_probe_tests": "146 passed, 4 warnings",
+    "engine_source_tests": "7 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan_self_test": "PASS",
+    "root_equivalent_no_safe_clone_rejected": true,
+    "root_equivalent_exact_safe_clone_passed": true,
+    "repository_wide_tests_run": 620,
+    "repository_wide_passed": 607,
+    "repository_wide_failed": 4,
+    "repository_wide_skipped": 9,
+    "repository_wide_new_failures": 0,
+    "engine_processes_active": 0,
+    "fio_processes_active": 0,
+    "mem_available_kib": 120774148,
+    "swap_used_kib": 775096
+  },
+  "repository_wide_failure_disposition": "The four failures are the same unrelated stale test_engine_switch, test_matched_memory_safety (two), and test_model_claim_catalog assertions recorded for Candidates 14-16.",
+  "finding_disposition": [
+    {
+      "id": "P1-BASE-C16-RUNTIME-ROOT-CLONE-DUBIOUS-OWNERSHIP",
+      "status": "FIXED",
+      "evidence": "The exact failure was preserved before the fix. Git's different-owner test mode reproduces it, and the identical --no-local clone succeeds only through the explicit exact-source upload-pack safe-directory binding."
+    }
+  ],
+  "convergence": {
+    "runtime_blocking_set_before": [
+      "P1-BASE-C16-RUNTIME-ROOT-CLONE-DUBIOUS-OWNERSHIP"
+    ],
+    "blocking_set_claimed_after": [],
+    "strictly_shrunk": true,
+    "new_scope": false,
+    "owner_authorization": "The owner reported the exact failure and requested a runnable corrected installer path."
+  },
+  "staged_install_contract": {
+    "installer_sha256": "d2b8ebbd21115d688e5ed01c18f72d8c0c19a1844116eb126b30a6d1548d9cea",
+    "timing": "Only after both persistent reviewers report no critical/high issues on this bounded runtime fix.",
+    "operator_involvement": "Run the corrected executable-mount launcher once, then perform the passwordless installed-boundary non-held-out CUDA smoke."
+  },
+  "next_action": "Nash and Singer review only the preserved runtime failure, RED test, and two-line installer fix. If both clear critical/high, pin the repository to the reviewed freeze commit, update the external launcher digest/candidate, and ask the owner to retry once."
+}

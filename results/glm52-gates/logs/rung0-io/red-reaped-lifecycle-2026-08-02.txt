@@ -1,0 +1,11 @@
+Command:
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.tests.test_glm_safe_lifecycle.CurrentUserTimestampTests.test_clean_reaped_candidate_between_sampler_ticks_is_attested
+
+Result: RED (exit 1)
+
+The wrapper returned rc=0 with zero surviving descendants, but omitted the
+required clean-exit marker when the production child was reaped between its
+250 ms sampler ticks.
+
+Observed assertion:
+AssertionError: 'executed candidate clean exit verified after wrapper and descendant checks' not found in main.log

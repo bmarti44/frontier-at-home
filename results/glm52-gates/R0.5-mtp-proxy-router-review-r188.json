@@ -1,0 +1,84 @@
+{
+  "candidate_hash": "2bcfae849e3540b578e04402a38c724440acc292",
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "review_round": 188,
+  "reviewers": [
+    {
+      "name": "Nash",
+      "score_0_to_100": 90,
+      "critical": [],
+      "high": [
+        {
+          "id": "R05-R188-H1-SOURCE-Z0-AUTHORITY-UNVERIFIED",
+          "evidence": "Candidate and replay both trust source-owned z0; q1/logit consistency does not prove it is the authentic prompt-end hidden state.",
+          "affected_gate": "Causal proxy-state authority",
+          "reproduction": "Alter z0 while preserving q1 argmax or let the source compute future target information before emitting a crafted state.",
+          "proposed_acceptance_test": "After candidate freeze independently recompute prompt h_t and source logits and require bit identity; crafted-z0 and future-eval mutations fail."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "R05-R187-H1-ROUTER-SCORE-TRANSFORM-UNFROZEN", "status": "FIXED"},
+        {"id": "R05-R187-H2-TARGET-EXPERT-READ-PROHIBITION-UNENFORCED", "status": "FIXED"},
+        {"id": "ADV-R05-R187-H1-CANDIDATE-PROCESS-CAN-READ-TARGET-EXPERTS", "status": "FIXED"},
+        {"id": "ADV-R05-R187-H2-PROXY-SCORES-ARE-SELF-REPORTED", "status": "FIXED"},
+        {"id": "ADV-R05-R187-M1-GREEDY-BRANCH-SCOPE-MUST-PERSIST", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_SCORER_OR_TRACE_IMPLEMENTATION"
+    },
+    {
+      "name": "Singer",
+      "score_0_to_100": 68,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-R05-R188-H1-SOURCE-Z0-AUTHORITY-IS-SELF-REPORTED",
+          "evidence": "The full-model source writes z0/q1 but no independent phase recomputes prompt-end h_t or proves the source stopped at t.",
+          "affected_gate": "R0.5 causal source-state authority",
+          "reproduction": "Perform future target evaluations and emit a crafted z0 with matching logits/q1.",
+          "proposed_acceptance_test": "Use a reviewed source replay and Phase B to reproduce z0/logits/q1, checkpoint/token vector/eval count; sandbox source inputs and reject post-t evaluation."
+        },
+        {
+          "id": "ADV-R05-R188-H2-ALLOWED-CHANNEL-PACK-AND-BINARY-SMUGGLING",
+          "evidence": "Allowed binary/library/source payloads could contain canned routes, source artifacts permit unspecified trailing payload, and blk.78 wildcard is not a finite frozen inventory.",
+          "affected_gate": "R0.5 target-data isolation and anti-canned-result integrity",
+          "reproduction": "Embed known target IDs in rodata or trailing source bytes, or add a new blk.78-named blob.",
+          "proposed_acceptance_test": "Reproducibly build and scan admitted code/binaries, enforce canonical exact-size artifacts, freeze exact tensor inventory, mutate every smuggling channel, and add post-freeze public-random cases."
+        },
+        {
+          "id": "ADV-R05-R188-H3-REPLAY-IS-PROCESS-SEPARATE-NOT-IMPLEMENTATION-INDEPENDENT",
+          "evidence": "Two process modes may share one wrong or canned orchestration implementation and agree bit-identically.",
+          "affected_gate": "Independent recomputation of proxy states and rankings",
+          "reproduction": "Use one helper in candidate/replay modes that emits the same wrong recurrence in separate processes.",
+          "proposed_acceptance_test": "Freeze distinct source inventories/binaries and independently implemented orchestration, mutate each independently, and use post-freeze random synthetic recurrence cases."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-R05-R188-M1-BIT-IDENTITY-MAY-CONFLATE-CORRECTNESS-WITH-DETERMINISM",
+          "evidence": "The contract did not explicitly forbid relaxing bit identity after observing nondeterminism.",
+          "affected_gate": "Deterministic replay disposition",
+          "reproduction": "Induce a nondeterministic reduction and replace equality with tolerance post hoc.",
+          "proposed_acceptance_test": "Any non-bit-identical operation is FAIL/NO_RESULT and any tolerance requires a new preregistered candidate."
+        }
+      ],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "ADV-R05-R187-H1-CANDIDATE-PROCESS-CAN-READ-TARGET-EXPERTS", "status": "PARTIALLY_FIXED"},
+        {"id": "ADV-R05-R187-H2-PROXY-SCORES-ARE-SELF-REPORTED", "status": "PARTIALLY_FIXED"},
+        {"id": "ADV-R05-R187-M1-GREEDY-BRANCH-SCOPE-MUST-PERSIST", "status": "FIXED"},
+        {"id": "R05-R187-H1-ROUTER-SCORE-TRANSFORM-UNFROZEN", "status": "FIXED"},
+        {"id": "R05-R187-H2-TARGET-EXPERT-READ-PROHIBITION-UNENFORCED", "status": "PARTIALLY_FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_PACKER_SCORER_REPLAY_OR_TRACE_IMPLEMENTATION"
+    }
+  ],
+  "terminal_disposition": "REJECTED_BEFORE_IMPLEMENTATION",
+  "convergence": {
+    "candidate": 4,
+    "round_blocking_set_strictly_shrank": false,
+    "consecutive_non_shrink": 1,
+    "next_candidate_permitted": true
+  }
+}

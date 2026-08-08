@@ -1,0 +1,52 @@
+{
+  "acceptance": {
+    "agent_gate_required": true,
+    "exact_replay_first_token_match": true,
+    "maximum_candidate_ready_seconds": 30.0,
+    "maximum_tensor_load_seconds_at_minimum_fio_fraction": 20.393206603359758,
+    "minimum_fio_fraction": 0.5,
+    "fresh_server_blocks": 5,
+    "reference_seconds_at_full_fio": 10.196603301679879,
+    "serving_non_regression": {
+      "novel_19k_prefill_tokens_per_second_minimum": 350.0,
+      "prefix_cache": "PASS",
+      "slot_thrash": "PASS",
+      "turn_continuation": "PASS"
+    }
+  },
+  "candidate": {
+    "bounded_pinned_staging_bytes_maximum": 269000000,
+    "flag": "DSV4_DIRECT_IO=1",
+    "implementation": "Pinned llama.cpp direct-I/O loader with a reviewed mandatory mode, fatal fallback handling, and bounded alignment headroom",
+    "scope": "cold model weight load only"
+  },
+  "evidence": {
+    "attempts_are_preserved": true,
+    "cold_cache_method": "DSV4_VERIFY_WEIGHTS=full plus DSV4_EVICT_VERIFIED_WEIGHT_CACHE=1 before each timed process launch",
+    "formulas": {
+      "end_to_end_ready_seconds": "health_ready_monotonic_ns - process_launch_monotonic_ns",
+      "tensor_load_gb_s": "model_bytes / 1e9 / tensor_load_seconds"
+    },
+    "required_safety": [
+      "no OOM or cgroup kill",
+      "no Xid",
+      "no swap increase",
+      "no surviving process-group descendant",
+      "all shards and the frozen binary remain hash-bound"
+    ]
+  },
+  "fio_reference": {
+    "access": "randread",
+    "block_size_bytes": 16777216,
+    "conservative_sustained_gb_s": 9.496545534535697,
+    "iodepth": 1,
+    "numjobs": 1,
+    "source": "results/glm52-gates/NVME-characterization-final-2026-08-03.json",
+    "status": "POSTHOC_DIAGNOSTIC_ONLY"
+  },
+  "model_bytes": 96832507552,
+  "model_manifest": "weights/unsloth-ud-q2_k_xl/manifest.json",
+  "schema_version": 1,
+  "steady_state_scope": "No profile, context, admission, inference, cache, or request-path change is permitted.",
+  "verdict": "PENDING"
+}

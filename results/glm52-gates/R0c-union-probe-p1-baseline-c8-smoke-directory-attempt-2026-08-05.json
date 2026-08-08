@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_NON_HELDOUT_RUNTIME_ATTEMPT",
+  "gate": "R0c/P1 candidate-8 authenticated-runtime smoke",
+  "held_out_values_opened": false,
+  "runtime_directory": "/home/bmarti44/.local/state/glm52-c8-runtime-smoke.21110a1q",
+  "containment_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260805-125806-p1-c8-runtime-nonheldout-pass",
+  "observed": {
+    "wrapper_exit_code": 11,
+    "engine_capture_files": 0,
+    "surviving_engine_process": false,
+    "held_out_ledger_created": false,
+    "failure": "GLM baseline capture requires a fresh cache-disabled directory",
+    "secondary_fail_closed_result": "executed candidate binary was not observed because the engine exited before the first sampler interval"
+  },
+  "artifacts": {
+    "main_log_sha256": "f07eb1878f6b1f8c8b9dd7c600d2304e2e761555f0504cac7f0ab22882494d20",
+    "command_log_sha256": "696a01b3ade6673e82188cb6ea400fb4b62138b4cadafead984f1fa9051f089b",
+    "samples_log_sha256": "13042886b27bdf558c54b6c0ffaca3339df52c9ca79b9fa9d0290e8cdb133562",
+    "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  },
+  "diagnosis": "The standalone non-held-out smoke pre-created its capture path. The production controller correctly creates only the parent capture set and passes a nonexistent per-request directory.",
+  "bounded_fix": "Change only the standalone smoke input so its capture path is absent; do not change candidate-8 controller code.",
+  "verdict": "NO_RESULT_REQUIRES_FRESH_SMOKE_DIRECTORY"
+}

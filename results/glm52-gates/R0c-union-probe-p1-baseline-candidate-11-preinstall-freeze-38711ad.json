@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 11,
+  "campaign_review_round_next": 149,
+  "candidate_hash": "38711adf3bd2c893e22b50ea69dbc591041dd9e6",
+  "candidate_tree": "002408bbb93face727a3f836b372bbc26783eaf3",
+  "red_commit": "b8af431e21a04b3b5f5cb2d4e3b2ea2a3e44323d",
+  "held_out_values_opened": false,
+  "scope": "Close only P1-BASE-R148-H1-ROOT-HELPER-ACCEPTS-UNREVIEWED-HEAD. A root-installed canonical approval binds the owner-installed commit and exact script-81 controller/scorer bytes; the passwordless helper selects that candidate, and the controller exact-compares its executing bytes before reservation. A distinct fixed non-held-out approval-smoke namespace supports runtime verification. No corpus, scorer algorithm, probe, CV, precision, model, engine, two-control, cost, or completed-result behavior changes.",
+  "artifacts": {
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c11-root-approval-red-2026-08-05.json": "fc6360ff9b5715148078ec2bb5973bb4acc43ce24a27831c2ec78641516f1759",
+    "scripts/65_glm52_w1_submit.py": "1594b10566877b67d67007fcbdf72b3582ee829087b55989a9370fd7c813c602",
+    "scripts/66_install_glm52_w1_attestor.sh": "2a8655c766a5e7c8ac5afa23e1a4c62583fa8f4643cdb95fe73c441176e0ef8c",
+    "scripts/81_glm_union_baseline.py": "004b58ac2fcafbfdd593b7292fc9307efc83ec80a348b5f40e0485fbb212d277",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "61e0afb293000c97e48dbf59c72cdf23687b16e51e05a9a82ef5a88732f209a3",
+    "scripts/tests/test_glm_union_baseline.py": "7ba3a85c9303a4318cb3db8004a82ba7da59eca587ab0ad59c82972589648fc0",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6"
+  },
+  "pre_submission_audit": {
+    "controller_and_harness_tests": "115 passed, 1 warning",
+    "engine_source_tests": "6 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "secret_scan": "PASS",
+    "diff_check": "PASS",
+    "unreviewed_clean_candidate_mutation_rejected": true,
+    "changed_executing_controller_mutation_rejected": true,
+    "malformed_or_mutable_root_approval_rejected": true,
+    "frozen_probe_cv_precision_hashes_unchanged": true,
+    "production_marker_absent": true,
+    "approval_smoke_marker_absent": true
+  },
+  "approval_protocol": {
+    "phase_1": "Both persistent reviewers inspect this exact implementation and its freeze commit before installation.",
+    "phase_2": "Only after no critical/high finding remains in this scope, the owner installs the exact reviewed freeze commit. The installer writes root-owned 0444 p1-approved.json from that root-cloned commit and hashes its script-81 bytes.",
+    "phase_3": "Without production access, query the root approval, reject an unrelated candidate in the new approval-smoke namespace, reserve once with the root-selected candidate, verify retry code 17 and unprivileged mutation rejection, then return the runtime receipt to both reviewers.",
+    "phase_4": "The production marker remains absent and held-out values remain sealed until the independent two-control, cost/Pareto, and completed-result blockers are fixed and reviewed."
+  },
+  "acceptance": {
+    "caller_selected_candidate_is_not_authority": true,
+    "root_installed_candidate_is_authority": true,
+    "executing_controller_must_match_root_approved_sha256": true,
+    "unapproved_descendant_or_alternate_tree_rejected": true,
+    "repository_path_replacement_cannot_change_root_approval": true,
+    "same_uid_cannot_modify_approval_or_installed_helper": true,
+    "existing_permanent_marker_remains_fail_closed": true
+  },
+  "convergence": {
+    "previous_candidate_closed_latest_retention_class": true,
+    "new_round_148_blocking_classes": 1,
+    "candidate_targets_only_new_named_finding": true,
+    "consecutive_nonshrinking_candidates_before_review": 1,
+    "owner_escalation_triggered": false
+  },
+  "remaining_independent_blocking_classes": [
+    "BASE-R142-H3 two-control rollback-safe hybrid observation",
+    "BASE-R142-H4 / P1-BASE-IMPL-H3 matched cost and Pareto authority",
+    "P1-BASE-IMPL-H5 completed-result authority"
+  ],
+  "claim_limit": "Preinstall root-approved-candidate binding only; no runtime approval smoke yet and no held-out baseline, predictor ranking, cost, NLL, fidelity, performance, or serving claim."
+}

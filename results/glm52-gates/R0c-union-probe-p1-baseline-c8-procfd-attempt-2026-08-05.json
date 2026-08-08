@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_NON_HELDOUT_RUNTIME_ATTEMPT",
+  "gate": "R0c/P1 candidate-8 authenticated-runtime smoke",
+  "held_out_values_opened": false,
+  "runtime_directory": "/home/bmarti44/.local/state/glm52-c8-runtime-smoke.p1jb174h",
+  "containment_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260805-130408-p1-c8-runtime-nonheldout-final",
+  "observed": {
+    "wrapper_exit_code": 11,
+    "engine_capture_files": 72,
+    "surviving_engine_process": false,
+    "held_out_ledger_created": false,
+    "exact_capture_completed": true,
+    "failure": "executed candidate binary was not observed",
+    "mechanism": "Launching /proc/controller/fd/N set the process comm name to N, so the frozen wrapper's ds4-server identity selector intentionally ignored it."
+  },
+  "artifacts": {
+    "main_log_sha256": "13e56352f22f8496a346140cbb8e5c312b5dbd58466d068ef1a8cde3907dd875",
+    "command_log_sha256": "b3b8e43b584f7d7c7a6950a1a2cd24df12dc8fa5ed2c0191e6c11645b3b1118c",
+    "samples_log_sha256": "0947a1bfdc9a0cf9cc2b108ea06672af824affe5ee2e2c5d1137e26676778023",
+    "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  },
+  "diagnosis": "The authenticated bytes and retained model descriptor executed correctly, but a procfd binary pathname weakens both wrapper identity sampling and repository-wide pgrep -x ds4-server safety checks.",
+  "bounded_fix": "Materialize the already-authenticated 5.13 MiB binary bytes into a private mode-0700 cache directory as an executable named ds4-server, verify its hash, and launch that named file. Keep the model on its retained descriptor and keep the frozen wrapper byte-identical.",
+  "verdict": "NO_RESULT_REQUIRES_NAMED_AUTHENTICATED_BINARY"
+}

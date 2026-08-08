@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "gate": "R0.5-mtp-proxy-router-accuracy",
+  "candidate": 6,
+  "classification": "PREREGISTERED_POST_FREEZE_BLINDED_REAL_FIXTURE_AMENDMENT",
+  "base_contracts": [
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v2.json", "sha256": "d1e3ec4597aca237e9861d6d82a33b1b3639c0e300f1bab5ef005ed0a5f1896b"},
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v3.json", "sha256": "562bd0aa270b3f620cf69979b778f56eaf324c51553eb8c7228775117666a90a"},
+    {"path": "results/glm52-gates/R0.5-mtp-proxy-router-accuracy-plan-v4.json", "sha256": "01616e9c00e8a3c3133ad2443fe8fcadae44d6622e1cc4d6104b7130882bb4a6"}
+  ],
+  "scope": {
+    "claim": "Greedy-argmax causal proxy accuracy only; no cost, cache, serving, or heldout claim.",
+    "implementation_authorized": false,
+    "replacement": "The five fixed train-precision evaluation cases in v2 are no longer scoring fixtures. They may be used only in RED/mutation tests that cannot grant PASS. The authoritative n=5 scoring fixtures are blinded real prompts derived below after the full candidate freezes."
+  },
+  "pre_randomness_freeze": {
+    "must_include": [
+      "tracked-clean source commit and diff",
+      "two byte-identical clean builds of every source/candidate/replay/Phase-B/packer/validator/scorer binary",
+      "every admitted root-owned runtime-library dev:inode:size:SHA-256",
+      "exact tensor pack, tensor inventory and model/tokenizer hashes",
+      "all base/amendment contracts, schemas, scorers, tests and mutation tests",
+      "the fixture index SHA-256 41e845c411319138f77deaa2e43f1c7b3533b449ce55492055f7815a95358d47 and a canonical sorted manifest of all 55 pool prompt paths, byte sizes and content SHA-256 values",
+      "prompt renderer, public-random selection implementation and authenticated-beacon verifier",
+      "Landlock/seccomp rules and environment/FD/map allowlists"
+    ],
+    "manifest": "Publish one canonical O_EXCL/fsync'd manifest containing all hashes and an integer drand_floor_round. The floor is the latest authenticated drand-default round observed before final manifest fsync. Any later code/data/config/library/pack/scorer/test change creates a new candidate and invalidates every beacon and result.",
+    "beacon_verifier": {
+      "path": "scripts/85_score_w3_performance_campaign.py",
+      "sha256": "93a9119b30d0ef3bb028af0855a4f3257f0ad06a2079bc0c4fe7e70ffa072307",
+      "rule": "Reuse its authenticate_drand semantics: exact round/randomness/signature/freeze_floor_round schema, round strictly greater than frozen floor, randomness=SHA256(signature bytes), and byte-equal agreement from api.drand.sh, api2.drand.sh and api3.drand.sh. Bind the default drand chain already used by the repository."
+    },
+    "one_shot": "Fetch exactly the first eligible signed round after the frozen floor. No alternate round, reseed, retry, skip, rebuild, fixture substitution or partial rerun is allowed. Fetch/capture/runtime failure is preserved as terminal NO_RESULT for this candidate."
+  },
+  "blinded_fixture_derivation": {
+    "base_pool": "Exactly the 55 case IDs in the hash-bound train-fit manifest already named in v2: /home/bmarti44/.local/state/glm52-p1-splits-r127-76faed9/train-fit/manifest.json SHA-256 7c1d5d2259daa804d024ee2a195f5c6eac49e7e04a82e6c8696b7f16766a5874. Resolve paths only through fixture index SHA-256 41e845c411319138f77deaa2e43f1c7b3533b449ce55492055f7815a95358d47 and require every prompt to match the pre-randomness 55-row content manifest frozen above. Sort IDs by ASCII bytes. Any duplicate/missing prompt or changed prompt hash FAILS.",
+    "seed": "seed32 = SHA256(ASCII('R05-BLINDED-REAL-V1') || NUL || bytes.fromhex(frozen_manifest_sha256) || bytes.fromhex(drand_randomness)).",
+    "stream": "Block i is SHA256(seed32 || little-endian unsigned-64 i), starting i=0. Concatenate blocks. For bounded integer m, consume an unsigned little-endian 64-bit word; reject and consume the next word when value >= floor(2^64/m)*m; otherwise value mod m. No byte reuse.",
+    "selection": "Run Fisher-Yates over the sorted 55 IDs from index 54 down to 1 using the bounded stream; take the first five resulting IDs in their shuffled order. Exactly five distinct IDs are mandatory.",
+    "rendering": "For selected fixture ordinal r=0..4, suffix_digest = SHA256(seed32 || ASCII('prompt-suffix') || little-endian unsigned-32 r || UTF-8 case_id). Render exact original prompt bytes followed by UTF-8 bytes '\n\nIndependent routing nonce: ' + lowercase hex(suffix_digest) + '.'. No other template, whitespace or normalization is allowed. Hash and freeze the five rendered byte strings before source capture.",
+    "unavailability": "The exact selected IDs, suffixes, rendered token vectors, z0 states and Phase-B routes do not exist until after every candidate-controlled executable/input freezes. The random suffix changes the real prompt-end hidden state even if all 55 original prompts were known.",
+    "candidate_input_stripping": "The source launcher converts each rendered prompt into the canonical source authority from v4, then publishes a separate candidate-input directory containing only z0.f32le, q1.i32le, source_position.i32le and min_position.i32le plus exact hashes/sizes. It contains no case/request/prompt hash, prompt token, ordinal, drand value, suffix, filename identity or route data. Candidate and replay sandboxes can read only this anonymized directory and the tensor pack. Randomize processing order from a separate seed-stream domain."
+  },
+  "blinded_scoring": {
+    "phase_b": "Only after candidate/replay outputs freeze, the separately frozen Phase-B helper receives the five rendered prompts, independently reproduces source z0/logits/q1 as v4 requires, then evaluates the frozen q branch and captures exact target routes. No pre-freeze or retained route is accepted.",
+    "formulas": "Use the unchanged v2 exact n=5 t bounds, +3pp baseline comparisons, 0.80 absolute lower bound and every-layer 0.50 floor over these five blinded cases.",
+    "frequency_baseline": "Fit on all and only original train-fit rows whose case IDs are not among the five selected IDs; exactly 50 distinct cases remain. The rendered selected prompts and every train-precision/calibration/test row are excluded. Gate replay remains source-local as previously specified.",
+    "reporting": "Public reports may reveal selected IDs/suffixes only after all raw candidate/replay/Phase-B artifacts have frozen. Every result remains labeled open-pool, post-freeze blinded, random-suffix, greedy-argmax accuracy."
+  },
+  "mandatory_mutations": [
+    "known-five z0/prompt canning plus honest fallback fails because fixed train-precision cases cannot score",
+    "all-55-original-prompt canning plus honest fallback fails because random suffix changes z0 and candidate receives no identity",
+    "candidate input containing case/request/prompt/drand/suffix identity fails exact schema",
+    "beacon round at/below floor, second eligible round, relay disagreement, invalid signature/randomness or changed frozen manifest fails",
+    "modulo-biased selection, alternate endian/counter/domain/template/whitespace or duplicate fixture fails",
+    "rebuild, reseed, retry, partial replacement or retained/pre-freeze target route fails",
+    "frequency prior containing any selected or non-train-fit row fails"
+  ],
+  "review_resolution": {
+    "ADV-R05-R189-H1-POSTFREEZE-SYNTHETICS-DO-NOT-BLIND-SCORING-FIXTURES": "All candidate-controlled code/input freezes before authenticated randomness selects and randomizes five real prompts; candidate sees only anonymous unpredictable z0/q1/positions; Phase-B routes are captured later; fixed-fixture and all-original-pool canning mutations fail."
+  },
+  "convergence": {
+    "gate_candidate": 6,
+    "campaign_review_next": 190,
+    "previous_blocking_count": 1,
+    "consecutive_non_shrink": 0,
+    "total_candidates": 6
+  }
+}

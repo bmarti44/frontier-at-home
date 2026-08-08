@@ -1,0 +1,29 @@
+{
+  "candidate": "W7-cache-generation-campaign-scorer-red",
+  "parent_commit": "e21652830885ce93cdd581968bf6b2af5ec9b3b7",
+  "captured_at_utc": "2026-08-08T06:38:05Z",
+  "purpose": "Preserve a genuine behavioral RED before implementing the fixed W7.1 matched-campaign acceptance scorer.",
+  "formula": "Five fresh-server ABBA/BAAB blocks; byte-identical output tokens and final logits; one-sided 95% upper confidence bound for ON/OFF TTFT ratio <= 0.95; one-sided 95% lower confidence bound for ON/OFF decode ratio >= 1.00; decode uses (N-1)/(tN-t1) over at least 128 timestamps.",
+  "artifacts": {
+    "scorer_scaffold": {
+      "path": "scripts/90_score_w7_cache_generation_campaign.py",
+      "sha256": "f5a5724fffc9ad4b0b05e97db62ea9cd78a1123eea1cb83b9728b0475b5ccd53"
+    },
+    "production_path_test": {
+      "path": "scripts/tests/test_w7_cache_generation_campaign.py",
+      "sha256": "31bc8696652ffbae27134842f6f4858e53a8f6c9e3efd5dcdf77a1dfdab58fe0"
+    }
+  },
+  "command": "python3 -m unittest scripts.tests.test_w7_cache_generation_campaign",
+  "observed": {
+    "tests_run": 4,
+    "failures": 1,
+    "errors": 0,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "5344c3413f2661e21ed99a2eca7306c557e2051ff1d1c5a8fc87a88cae9f3a89",
+    "failing_test": "test_fixed_formula_accepts_passing_five_block_campaign",
+    "failure": "Expected PASS but the unchanged fail-closed scaffold returned FAIL."
+  },
+  "red_is_behavioral": true,
+  "verdict": "RED_CONFIRMED"
+}

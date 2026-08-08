@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1-production-graduation",
+  "candidate_hash": "969280bd1b24bedcb1a1c2ff690d9eef5176a21c",
+  "review_round": 232,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 97,
+      "critical": [],
+      "high": [],
+      "medium": ["GAP-W7-231-M6-CONFIGURATION-NOT-FULL-INVOCATION"],
+      "low": [],
+      "verdict": "PASS_W7_TERMINAL_RUNTIME"
+    },
+    "Singer": {
+      "score_0_to_100": 93,
+      "critical": [],
+      "high": [],
+      "medium": [
+        "ADV-W7-231-M48-SCORER-DOES-NOT-PIN-REVIEWED-LAUNCHER",
+        "ADV-W7-229-M47-CONFIGURATION-BINDING-IS-OPAQUE"
+      ],
+      "low": ["ADV-W7-231-L49-SEALED-DRAND-VERIFIER-FD-UNUSED"],
+      "verdict": "PASS_W7_RUNTIME_EVIDENCE"
+    }
+  },
+  "prior_issue_status": {
+    "GAP-W7-230-H5-RANDOMNESS-RECEIPT-NOT-VERIFIED-BY-SCORER": "VERIFIED_FIXED",
+    "ADV-W7-229-H46-PUBLIC-RANDOMNESS-IS-SELF-ASSERTED": "VERIFIED_FIXED",
+    "GAP-W7-231-M6-CONFIGURATION-NOT-FULL-INVOCATION": "DEFERRED_NONBLOCKING",
+    "ADV-W7-229-M47-CONFIGURATION-BINDING-IS-OPAQUE": "DEFERRED_NONBLOCKING",
+    "ADV-W7-231-M48-SCORER-DOES-NOT-PIN-REVIEWED-LAUNCHER": "DEFERRED_NONBLOCKING",
+    "ADV-W7-231-L49-SEALED-DRAND-VERIFIER-FD-UNUSED": "DEFERRED_NONBLOCKING"
+  },
+  "independent_checks": {
+    "published_receipt_hashes_match": true,
+    "all_62_raw_artifact_hashes_match": true,
+    "fixed_scorer_reproduced_pass": true,
+    "fixed_scorer_checks_true": 18,
+    "compared_f32_logits": 154880,
+    "candidate_cold_byte_identical": true,
+    "candidate_argmax": 14109,
+    "cold_argmax": 14109,
+    "max_abs_logit_delta": 0.0,
+    "strict_guard_restarted_from_zero": true,
+    "selected_kvc_v2_checksum_verified": true,
+    "selected_checkpoint_semantic_sha256": "2dc47afc0382302cb59553ec8090af0cba06d5f381b1ae83806bd2572dfd3743",
+    "minimum_available_memory_gib": 48.226753,
+    "cgroup_swap_bytes": 0,
+    "cgroup_pressure_or_oom_events": 0,
+    "oom_or_xid": false,
+    "surviving_engine": false,
+    "mutation_tests_passed": 29
+  },
+  "scope": "Terminal W7 production-resume correctness at 5066 tokens only. The 3.58-second resumed request misses the sub-two-second target and this is not 1M-context or parity evidence.",
+  "verdict": "PASS_W7_TERMINAL"
+}

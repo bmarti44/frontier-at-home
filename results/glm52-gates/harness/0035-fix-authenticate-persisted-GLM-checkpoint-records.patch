@@ -1,0 +1,438 @@
+From 0e56c36ce3357bdd6b0123a45362f738ed1589a2 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:22:52 -0400
+Subject: [PATCH 35/40] fix: authenticate persisted GLM checkpoint records
+
+---
+ ds4.c         |   9 ++++
+ ds4.h         |   1 +
+ ds4_agent.c   |  14 ++++--
+ ds4_kvstore.c | 131 +++++++++++++++++++++++++++++++++++++++++++++-----
+ ds4_kvstore.h |   2 +-
+ ds4_server.c  |  33 +++++++++++--
+ 6 files changed, 170 insertions(+), 20 deletions(-)
+
+diff --git a/ds4.c b/ds4.c
+index 36a4b69..f0527d5 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -49248,6 +49248,10 @@ bool ds4_glm_apply_restored_frontier(ds4_tokens *evaluated,
+     return true;
+ }
+ 
++bool ds4_glm_checkpoint_token_valid(uint32_t token) {
++    return token < DS4_N_VOCAB;
++}
++
+ #ifndef DS4_NO_GPU
+ static void ds4_session_glm_reset_dense_cache(ds4_session *s) {
+     if (s) s->glm_dense_cache_len = 0;
+@@ -50851,6 +50855,11 @@ int ds4_session_load_payload(ds4_session *s, FILE *fp, uint64_t payload_bytes, c
+                 token_vec_free(&new_checkpoint);
+                 return 1;
+             }
++            if (!ds4_glm_checkpoint_token_valid(tok)) {
++                token_vec_free(&new_checkpoint);
++                payload_set_err(err, errlen, "KV checkpoint token is outside vocabulary");
++                return 1;
++            }
+             token_vec_push(&new_checkpoint, (int)tok);
+         }
+         if (payload_read_bytes(fp, s->logits, (uint64_t)DS4_N_VOCAB * sizeof(float),
+diff --git a/ds4.h b/ds4.h
+index 8a5cefe..5f50e69 100644
+--- a/ds4.h
++++ b/ds4.h
+@@ -367,6 +367,7 @@ bool ds4_glm_apply_restored_frontier(ds4_tokens *evaluated,
+                                      bool payload_complete,
+                                      uint32_t saved_tokens,
+                                      uint32_t compact_rows);
++bool ds4_glm_checkpoint_token_valid(uint32_t token);
+ bool ds4_glm_logit_dump_path(char *out, size_t out_len,
+                              const char *base, const char *dump_all,
+                              uint32_t call_index, uint32_t start,
+diff --git a/ds4_agent.c b/ds4_agent.c
+index d35c125..898eebd 100644
+--- a/ds4_agent.c
++++ b/ds4_agent.c
+@@ -4210,6 +4210,10 @@ static bool agent_kv_load_path(agent_worker *w, const char *path,
+     }
+ 
+     char load_err[160] = {0};
++    if (ok && !ds4_kvstore_verify_record(fp, &hdr, text_bytes)) {
++        snprintf(err, err_len, "cached session integrity mismatch");
++        ok = false;
++    }
+     if (ok && hdr.payload_bytes == 0) {
+         ds4_tokens rebuilt = {0};
+         ds4_tokenize_rendered_chat(w->engine, text, &rebuilt);
+@@ -4322,7 +4326,7 @@ static bool agent_kv_save_path(agent_worker *w, const char *path,
+         return false;
+     }
+ 
+-    FILE *fp = fdopen(fd, "wb");
++    FILE *fp = fdopen(fd, "w+b");
+     if (!fp) {
+         snprintf(err, err_len, "%s", strerror(errno));
+         close(fd);
+@@ -4352,7 +4356,8 @@ static bool agent_kv_save_path(agent_worker *w, const char *path,
+               (!session_identity ||
+                agent_kv_write_title_trailer(fp, session_title,
+                                             save_err, sizeof(save_err))) &&
+-              fflush(fp) == 0;
++              fflush(fp) == 0 &&
++              ds4_kvstore_seal_record(fp, (uint32_t)text_len, payload_bytes);
+     int saved_errno = errno;
+     if (fclose(fp) != 0) {
+         if (!saved_errno) saved_errno = errno;
+@@ -5711,7 +5716,7 @@ static bool agent_worker_strip_session(agent_worker *w, const char *prefix,
+         return false;
+     }
+ 
+-    fp = fdopen(fd, "wb");
++    fp = fdopen(fd, "w+b");
+     if (!fp) {
+         snprintf(err, err_len, "%s", strerror(errno));
+         close(fd);
+@@ -5736,7 +5741,8 @@ static bool agent_worker_strip_session(agent_worker *w, const char *prefix,
+          fwrite(text, 1, text_bytes, fp) == text_bytes &&
+          (!(hdr.ext_flags & DS4_KVSTORE_EXT_SESSION_TITLE) ||
+           agent_kv_write_title_trailer(fp, title, err, err_len)) &&
+-         fflush(fp) == 0;
++         fflush(fp) == 0 &&
++         ds4_kvstore_seal_record(fp, text_bytes, 0);
+     int saved_errno = errno;
+     if (fclose(fp) != 0) {
+         if (!saved_errno) saved_errno = errno;
+diff --git a/ds4_kvstore.c b/ds4_kvstore.c
+index 7325d40..e7ec4de 100644
+--- a/ds4_kvstore.c
++++ b/ds4_kvstore.c
+@@ -11,8 +11,10 @@
+ 
+ #include <ctype.h>
+ #include <dirent.h>
++#include <dlfcn.h>
+ #include <errno.h>
+ #include <math.h>
++#include <pthread.h>
+ #include <stdarg.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -25,11 +27,11 @@
+ #define KV_CACHE_MAGIC0 'K'
+ #define KV_CACHE_MAGIC1 'V'
+ #define KV_CACHE_MAGIC2 'C'
+-#define KV_CACHE_VERSION 1u
++#define KV_CACHE_VERSION 2u
+ /* Header byte 20 carries the graph-payload ABI.  It is separate from the outer
+  * file version because the KVC envelope can remain stable while the serialized
+  * ds4_session internals become unsafe to restore across runtime changes. */
+-#define KV_CACHE_PAYLOAD_ABI 2u
++#define KV_CACHE_PAYLOAD_ABI 3u
+ #define KV_CACHE_DEFAULT_MIN_TOKENS 512
+ #define KV_CACHE_DEFAULT_COLD_MAX_TOKENS 30000
+ /* Tokenizers may merge text across the prompt boundary. Trimming a small tail
+@@ -61,6 +63,54 @@ typedef struct {
+     size_t cap;
+ } kv_buf;
+ 
++typedef void *(*kv_md_ctx_new_fn)(void);
++typedef void (*kv_md_ctx_free_fn)(void *);
++typedef const void *(*kv_evp_sha256_fn)(void);
++typedef int (*kv_digest_init_fn)(void *, const void *, void *);
++typedef int (*kv_digest_update_fn)(void *, const void *, size_t);
++typedef int (*kv_digest_final_fn)(void *, unsigned char *, unsigned int *);
++
++static struct {
++    void *handle;
++    kv_md_ctx_new_fn ctx_new;
++    kv_md_ctx_free_fn ctx_free;
++    kv_evp_sha256_fn sha256;
++    kv_digest_init_fn init;
++    kv_digest_update_fn update;
++    kv_digest_final_fn final;
++    bool available;
++} kv_crypto;
++static pthread_once_t kv_crypto_once = PTHREAD_ONCE_INIT;
++
++static void kv_crypto_init_once(void) {
++    static const char *const libraries[] = {
++        "libcrypto.so.3", "libcrypto.so", "libcrypto.3.dylib", "libcrypto.dylib",
++    };
++    for (size_t i = 0; i < sizeof(libraries) / sizeof(libraries[0]); i++) {
++        void *handle = dlopen(libraries[i], RTLD_NOW | RTLD_LOCAL);
++        if (!handle) continue;
++#define KV_CRYPTO_SYMBOL(field, name) do { \
++            void *sym = dlsym(handle, name); \
++            memcpy(&kv_crypto.field, &sym, sizeof(kv_crypto.field)); \
++        } while (0)
++        KV_CRYPTO_SYMBOL(ctx_new, "EVP_MD_CTX_new");
++        KV_CRYPTO_SYMBOL(ctx_free, "EVP_MD_CTX_free");
++        KV_CRYPTO_SYMBOL(sha256, "EVP_sha256");
++        KV_CRYPTO_SYMBOL(init, "EVP_DigestInit_ex");
++        KV_CRYPTO_SYMBOL(update, "EVP_DigestUpdate");
++        KV_CRYPTO_SYMBOL(final, "EVP_DigestFinal_ex");
++#undef KV_CRYPTO_SYMBOL
++        if (kv_crypto.ctx_new && kv_crypto.ctx_free && kv_crypto.sha256 &&
++            kv_crypto.init && kv_crypto.update && kv_crypto.final) {
++            kv_crypto.handle = handle;
++            kv_crypto.available = true;
++            return;
++        }
++        memset(&kv_crypto, 0, sizeof(kv_crypto));
++        dlclose(handle);
++    }
++}
++
+ static void kv_die(const char *msg) {
+     fprintf(stderr, "ds4-kvstore: %s\n", msg);
+     exit(1);
+@@ -212,6 +262,47 @@ static uint64_t kv_le_get64(const uint8_t *p) {
+     return v;
+ }
+ 
++static bool kv_record_digest(FILE *fp, uint32_t text_bytes,
++                             uint64_t payload_bytes, uint8_t out[32]) {
++    if (!fp || payload_bytes > UINT64_MAX - (uint64_t)text_bytes - 4u) return false;
++    if (pthread_once(&kv_crypto_once, kv_crypto_init_once) != 0 ||
++        !kv_crypto.available) return false;
++    const off_t saved = ftello(fp);
++    if (saved < 0 || fseeko(fp, 0, SEEK_SET) != 0) return false;
++
++    uint8_t header[DS4_KVSTORE_FIXED_HEADER];
++    uint8_t text_len[4];
++    bool ok = fread(header, 1, sizeof(header), fp) == sizeof(header) &&
++              fread(text_len, 1, sizeof(text_len), fp) == sizeof(text_len) &&
++              ds4_kvstore_le_get32(text_len) == text_bytes &&
++              kv_le_get64(header + 40) == payload_bytes;
++    void *ctx = ok ? kv_crypto.ctx_new() : NULL;
++    const void *algorithm = ctx ? kv_crypto.sha256() : NULL;
++    ok = ok && ctx && algorithm && kv_crypto.init(ctx, algorithm, NULL) == 1;
++    if (ok) {
++        /* These fields are mutable bookkeeping. Everything else, plus the
++         * text length, exact text, and exact payload, is immutable and bound. */
++        memset(header + 12, 0, 4); /* hit count */
++        memset(header + 32, 0, 8); /* last used */
++        memset(header + 48, 0, 32); /* stored digest */
++        ok = kv_crypto.update(ctx, header, sizeof(header)) == 1 &&
++             kv_crypto.update(ctx, text_len, sizeof(text_len)) == 1;
++    }
++    uint64_t remaining = (uint64_t)text_bytes + payload_bytes;
++    uint8_t buffer[64 * 1024];
++    while (ok && remaining != 0) {
++        size_t chunk = remaining < sizeof(buffer) ? (size_t)remaining : sizeof(buffer);
++        ok = fread(buffer, 1, chunk, fp) == chunk &&
++             kv_crypto.update(ctx, buffer, chunk) == 1;
++        remaining -= chunk;
++    }
++    unsigned int digest_bytes = 0;
++    ok = ok && kv_crypto.final(ctx, out, &digest_bytes) == 1 && digest_bytes == 32;
++    if (ctx) kv_crypto.ctx_free(ctx);
++    if (fseeko(fp, saved, SEEK_SET) != 0) ok = false;
++    return ok;
++}
++
+ typedef struct {
+     uint32_t h[5];
+     uint64_t bytes;
+@@ -432,6 +523,7 @@ bool ds4_kvstore_read_header(FILE *fp, ds4_kvstore_entry *e,
+     e->created_at = kv_le_get64(h + 24);
+     e->last_used = kv_le_get64(h + 32);
+     e->payload_bytes = kv_le_get64(h + 40);
++    memcpy(e->record_sha256, h + 48, sizeof(e->record_sha256));
+     uint8_t tb[4];
+     if (fread(tb, 1, sizeof(tb), fp) != sizeof(tb)) return false;
+     *text_bytes = ds4_kvstore_le_get32(tb);
+@@ -441,18 +533,21 @@ bool ds4_kvstore_read_header(FILE *fp, ds4_kvstore_entry *e,
+ 
+ bool ds4_kvstore_seal_record(FILE *fp, uint32_t text_bytes,
+                              uint64_t payload_bytes) {
+-    (void)fp;
+-    (void)text_bytes;
+-    (void)payload_bytes;
++    uint8_t digest[32];
++    const off_t saved = fp ? ftello(fp) : -1;
++    if (saved < 0 || !kv_record_digest(fp, text_bytes, payload_bytes, digest) ||
++        fseeko(fp, 48, SEEK_SET) != 0 ||
++        fwrite(digest, 1, sizeof(digest), fp) != sizeof(digest) ||
++        fflush(fp) != 0 || fseeko(fp, saved, SEEK_SET) != 0)
++        return false;
+     return true;
+ }
+ 
+ bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
+                                uint32_t text_bytes) {
+-    (void)fp;
+-    (void)e;
+-    (void)text_bytes;
+-    return true;
++    uint8_t actual[32];
++    return e && kv_record_digest(fp, text_bytes, e->payload_bytes, actual) &&
++           memcmp(actual, e->record_sha256, sizeof(actual)) == 0;
+ }
+ 
+ bool ds4_kvstore_read_entry_file(const char *path, const char sha[41],
+@@ -510,6 +605,7 @@ bool ds4_kvstore_touch_file(const char *path, uint32_t hits) {
+         ds4_kvstore_fill_header(h, e.model_id, e.quant_bits, e.reason, e.ext_flags,
+                                 e.tokens, hits, e.ctx_size,
+                                 e.created_at, now, e.payload_bytes);
++        memcpy(h + 48, e.record_sha256, sizeof(e.record_sha256));
+         ok = fseek(fp, 0, SEEK_SET) == 0 &&
+              fwrite(h, 1, sizeof(h), fp) == sizeof(h);
+     }
+@@ -926,9 +1022,11 @@ static void kv_cache_rewrite_trailer(ds4_kvstore *kc, const char *path,
+                                     (uint8_t)(hdr.ext_flags | hooks->ext_flag),
+                                     hdr.tokens, hdr.hits, hdr.ctx_size,
+                                     hdr.created_at, now, hdr.payload_bytes);
++            memcpy(h + 48, hdr.record_sha256, sizeof(hdr.record_sha256));
+             ok = fseeko(fp, 0, SEEK_SET) == 0 &&
+                  fwrite(h, 1, sizeof(h), fp) == sizeof(h) &&
+-                 fflush(fp) == 0;
++                 fflush(fp) == 0 &&
++                 ds4_kvstore_seal_record(fp, text_bytes, hdr.payload_bytes);
+         }
+     }
+     fclose(fp);
+@@ -1071,7 +1169,7 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
+     kv_buf_printf(&tmpb, "%s.tmp.%ld", path, (long)getpid());
+     char *tmp = kv_buf_take(&tmpb);
+     const double save_t0 = kv_now_sec();
+-    FILE *fp = fopen(tmp, "wb");
++    FILE *fp = fopen(tmp, "w+b");
+     if (!fp) {
+         kv_logf(kc, DS4_KVSTORE_LOG_KVCACHE,
+                 "%s: kv cache failed to create %s: %s save=%.1f ms",
+@@ -1104,7 +1202,8 @@ bool ds4_kvstore_store_live_prefix_text(ds4_kvstore *kc,
+               ds4_session_write_staged_payload(&staged, fp,
+                                                save_err, sizeof(save_err)) == 0 &&
+               kv_trailer_write(hooks, fp, text, &trailer_bytes) &&
+-              fflush(fp) == 0;
++              fflush(fp) == 0 &&
++              ds4_kvstore_seal_record(fp, (uint32_t)text_len, payload_bytes);
+     int saved_errno = errno;
+     if (fclose(fp) != 0) {
+         if (!saved_errno) saved_errno = errno;
+@@ -1287,9 +1386,11 @@ int ds4_kvstore_try_load_text(ds4_kvstore *kc,
+             }
+         }
+     }
++    bool discard_corrupt = false;
+     if (header_ok && !ds4_kvstore_verify_record(fp, &hdr, text_bytes)) {
+         header_ok = false;
+         fail_reason = "cached checkpoint integrity mismatch";
++        discard_corrupt = true;
+     }
+     char err[160] = {0};
+     int loaded = 0;
+@@ -1333,6 +1434,12 @@ int ds4_kvstore_try_load_text(ds4_kvstore *kc,
+                 (kv_now_sec() - load_t0) * 1000.0);
+     }
+     fclose(fp);
++    if (discard_corrupt) {
++        unlink(path);
++        kv_logf(kc, DS4_KVSTORE_LOG_KVCACHE,
++                "%s: kv cache discarded corrupt record %s",
++                kv_log_name(kc), path);
++    }
+ 
+     if (loaded > 0) {
+         const double load_ms = (kv_now_sec() - load_t0) * 1000.0;
+diff --git a/ds4_kvstore.h b/ds4_kvstore.h
+index b59dd95..e1eedde 100644
+--- a/ds4_kvstore.h
++++ b/ds4_kvstore.h
+@@ -8,7 +8,7 @@
+ #include <stdint.h>
+ #include <stdio.h>
+ 
+-#define DS4_KVSTORE_FIXED_HEADER 48u
++#define DS4_KVSTORE_FIXED_HEADER 80u
+ #define DS4_KVSTORE_DEFAULT_MB 4096
+ #define DS4_KVSTORE_HIT_HALF_LIFE_SECONDS (6ull * 60ull * 60ull)
+ 
+diff --git a/ds4_server.c b/ds4_server.c
+index a03394d..48afa6c 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -16749,6 +16749,8 @@ static void test_glm_restored_frontier_requires_complete_snapshot(void) {
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(false, 5044, 5044));
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(true, 5044, 4096));
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(true, 0, 0));
++    TEST_ASSERT(ds4_glm_checkpoint_token_valid(0));
++    TEST_ASSERT(!ds4_glm_checkpoint_token_valid(UINT32_MAX));
+ 
+     ds4_tokens prior = {0};
+     ds4_tokens checkpoint = {0};
+@@ -16933,7 +16935,7 @@ static void test_kv_cache_cold_store_suppresses_duplicate_continued_boundary(voi
+ 
+ static void test_kv_cache_file_size_must_fit_budget(void) {
+     kv_disk_cache kc = {0};
+-    kc.budget_bytes = 1100;
++    kc.budget_bytes = 1132;
+ 
+     TEST_ASSERT(kv_cache_file_size_fits(&kc, 100, 930, 0, NULL, NULL));
+     TEST_ASSERT(!kv_cache_file_size_fits(&kc, 100, 938, 0, NULL, NULL));
+@@ -17161,7 +17163,7 @@ static void test_kv_cache_integrity_rejects_payload_mutations(void) {
+     const off_t payload_offset =
+         (off_t)KV_CACHE_FIXED_HEADER + 4 + (off_t)strlen("bound prompt");
+ 
+-    for (int mutation = 0; mutation < 3; mutation++) {
++    for (int mutation = 0; mutation < 4; mutation++) {
+         ds4_kvstore_entry entry = {0};
+         uint32_t text_bytes = 0;
+         FILE *fp = test_kv_integrity_record(original, &entry, &text_bytes);
+@@ -17172,10 +17174,13 @@ static void test_kv_cache_integrity_rejects_payload_mutations(void) {
+         } else if (mutation == 1) {
+             TEST_ASSERT(fseeko(fp, payload_offset + 12, SEEK_SET) == 0);
+             TEST_ASSERT(fputc(11, fp) != EOF); /* tensor/state byte */
+-        } else {
++        } else if (mutation == 2) {
+             TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
+             TEST_ASSERT(fwrite(replacement, 1, sizeof(replacement), fp) ==
+                         sizeof(replacement)); /* equal-size payload swap */
++        } else {
++            TEST_ASSERT(fseeko(fp, 7, SEEK_SET) == 0);
++            TEST_ASSERT(fputc(2, fp) != EOF); /* immutable model identity */
+         }
+         TEST_ASSERT(fflush(fp) == 0);
+         TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
+@@ -17184,6 +17189,27 @@ static void test_kv_cache_integrity_rejects_payload_mutations(void) {
+     }
+ }
+ 
++static void test_kv_cache_integrity_allows_mutable_bookkeeping(void) {
++    const uint8_t payload[16] = {0};
++    ds4_kvstore_entry entry = {0};
++    uint32_t text_bytes = 0;
++    FILE *fp = test_kv_integrity_record(payload, &entry, &text_bytes);
++    if (!fp) return;
++    uint8_t changed_hits[4] = {7, 0, 0, 0};
++    uint8_t changed_last_used[8] = {9, 0, 0, 0, 0, 0, 0, 0};
++    TEST_ASSERT(fseeko(fp, 12, SEEK_SET) == 0);
++    TEST_ASSERT(fwrite(changed_hits, 1, sizeof(changed_hits), fp) ==
++                sizeof(changed_hits));
++    TEST_ASSERT(fseeko(fp, 32, SEEK_SET) == 0);
++    TEST_ASSERT(fwrite(changed_last_used, 1, sizeof(changed_last_used), fp) ==
++                sizeof(changed_last_used));
++    TEST_ASSERT(fflush(fp) == 0);
++    TEST_ASSERT(fseeko(fp, (off_t)KV_CACHE_FIXED_HEADER + 4 + text_bytes,
++                       SEEK_SET) == 0);
++    TEST_ASSERT(ds4_kvstore_verify_record(fp, &entry, text_bytes));
++    TEST_ASSERT(fclose(fp) == 0);
++}
++
+ static void test_kv_tool_map_filters_by_dsml_text(void) {
+     const char *dsml_keep =
+         "\n\n<｜DSML｜tool_calls>\n"
+@@ -18012,6 +18038,7 @@ static void ds4_server_unit_tests_run(void) {
+     test_kv_cache_lookup_rejects_wrong_model();
+     test_kv_cache_lookup_rejects_stale_payload_abi();
+     test_kv_cache_integrity_rejects_payload_mutations();
++    test_kv_cache_integrity_allows_mutable_bookkeeping();
+     test_kv_cache_eviction_values_fresh_snapshots();
+     test_kv_cache_eviction_prefers_anchor_reason();
+     test_kv_cache_eviction_makes_room_before_store();
+-- 
+2.43.0
+

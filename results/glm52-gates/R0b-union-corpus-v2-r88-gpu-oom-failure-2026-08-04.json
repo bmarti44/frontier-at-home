@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_FAILED_ATTEMPT",
+  "candidate_hash": "6b685fca0c6f8d18bccde66730e061a491af0873",
+  "binary_sha256": "2d70aeb1485021b22b132d80acbff1ce3d2a3b7639e569838186f835d78faf36",
+  "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+  "seed": 1710680235,
+  "fixed_scorer_verdict": "PASS",
+  "safety_verdict": "FAIL",
+  "overall_verdict": "FAIL",
+  "failing_assertion": "No CUDA, driver, cgroup, host, or kernel OOM evidence may occur during either arm.",
+  "failure": {
+    "arm": "off",
+    "source": "kernel journal",
+    "marker": "NVIDIA driver NV_ERR_NO_MEMORY during internal memory-descriptor allocation",
+    "wrapper_false_clean": true
+  },
+  "valid_diagnostic_measurements": {
+    "requests": 2,
+    "exact_main_routed_layers": [3, 77],
+    "events": 150,
+    "token_layer_events": 85950,
+    "trace_files": 750,
+    "trace_bytes": 2291236800,
+    "off_on_byte_and_token_identity": true,
+    "all_fixed_scorer_checks": true,
+    "minimum_available_memory_gib": {
+      "off": 21.498547,
+      "on": 21.458755
+    },
+    "maximum_cgroup_swap_bytes": 0
+  },
+  "raw_evidence": {
+    "retained_directory": "/home/bmarti44/.local/state/glm52-p0-corpus-v2-r88-6b685fc",
+    "summary_sha256": "e61d67fb35fc1ca14dfa7274e10185a9e14193d8729b15d476e349f95520ae50",
+    "off_arm_sha256": "5da221c64b5866d209d774ac54bdc97c7dbf8ecefb1250124268f18ef040b00f",
+    "on_arm_sha256": "5f7365380463bd586b06a833260475b734624acdd55e68850d689a646b2cd9a7",
+    "on_server_log_sha256": "3b8e6e6d65848856097a0f91d2df59fd0b6ed3d13fc76e166186f7a6d07515c1",
+    "off_containment_sha256": "689cadce352275b59620b5f0634d7746c876a148d5ae41a2b60e0d54df2465cf",
+    "on_containment_sha256": "5910b2864dac5f55c225ed32829794b6c4ad94d9dee6f64e76cff72c6782cc16",
+    "off_safety": {
+      "main_log_sha256": "0dcd0a298cc1ff463273ccae4ab90c695d279d5b73741f44f5313df772a702f6",
+      "samples_log_sha256": "a010194f917912a399a89d3ee81ce50b40f4769b8638c6109bb3021df2d3adf0",
+      "kernel_log_sha256": "f9d925af97085dd06425af44b49bc8810aa61b2f54c799e857fe0302f58d0ef9"
+    },
+    "on_safety": {
+      "main_log_sha256": "513d33e523dba2b320344f854a62542d8fc78d4b14791b6e04c16371323ee65d",
+      "samples_log_sha256": "b733c48eaac19802732764b6c30f031bcc8426d8c638a00a22248982bdd07e03",
+      "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+    }
+  },
+  "rerun_rule": "This attempt cannot be promoted. The wrapper must reject the reproduced driver OOM marker, the trace-only memory envelope must be reduced, and a new candidate, freeze, public-randomness seed, and full OFF/ON rerun are required."
+}

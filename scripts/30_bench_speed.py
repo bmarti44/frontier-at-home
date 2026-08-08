@@ -90,6 +90,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=SEED, help="fixture and sampling seed")
     parser.add_argument(
+        "--request-timeout",
+        type=int,
+        default=REQUEST_TIMEOUT_S,
+        help=f"HTTP request timeout in seconds (default: {REQUEST_TIMEOUT_S})",
+    )
+    parser.add_argument(
         "--model-id",
         help="exact model id to select when /v1/models exposes multiple aliases",
     )
@@ -139,6 +145,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--max-tokens must be at least 128 for decode timing")
     if not 128 <= args.min_completion_tokens <= args.max_tokens:
         parser.error("--min-completion-tokens must be between 128 and --max-tokens")
+    if not 1 <= args.request_timeout <= 2700:
+        parser.error("--request-timeout must be between 1 and 2700 seconds")
     args.base_url = args.base_url.rstrip("/")
     if not args.base_url:
         parser.error("--base-url must not be empty")
@@ -234,11 +242,13 @@ class Client:
         base_url: str,
         api_key: str | None,
         extra_body: dict[str, Any] | None = None,
+        request_timeout_s: int = REQUEST_TIMEOUT_S,
     ) -> None:
         self.base_url = base_url
         self.api_key = api_key
         # Merged before harness-critical keys; cannot override them.
         self.extra_body = dict(extra_body or {})
+        self.request_timeout_s = request_timeout_s
 
     def headers(self) -> dict[str, str]:
         headers = {"Accept": "application/json"}
@@ -251,7 +261,9 @@ class Client:
             self.base_url + "/v1/models", headers=self.headers(), method="GET"
         )
         try:
-            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S) as response:
+            with urllib.request.urlopen(
+                request, timeout=self.request_timeout_s
+            ) as response:
                 status = response.status
                 raw = response.read()
         except urllib.error.HTTPError as error:
@@ -305,7 +317,9 @@ class Client:
         )
         request_started_ns = time.perf_counter_ns()
         try:
-            response = urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S)
+            response = urllib.request.urlopen(
+                request, timeout=self.request_timeout_s
+            )
         except urllib.error.HTTPError as error:
             raw = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"stream returned HTTP {error.code}: {raw[:500]!r}") from error
@@ -320,6 +334,7 @@ class Client:
         done = False
         data_chunks = 0
         response_ids: set[str] = set()
+        finish_reasons: list[str] = []
         try:
             with response:
                 if response.status != 200:
@@ -334,6 +349,10 @@ class Client:
                         raise RuntimeError(f"unexpected SSE line: {line[:200]!r}")
                     data = line[5:].strip()
                     if data == "[DONE]":
+                        if len(finish_reasons) != 1 or usage is None:
+                            raise RuntimeError(
+                                "SSE [DONE] arrived before terminal reason and usage"
+                            )
                         done = True
                         continue
                     data_chunks += 1
@@ -344,14 +363,29 @@ class Client:
                             raise RuntimeError("SSE response id is invalid")
                         response_ids.add(response_id)
                     event_usage = event.get("usage")
-                    if event_usage is not None:
-                        if not isinstance(event_usage, dict):
-                            raise RuntimeError("SSE usage is not an object")
-                        usage = event_usage
                     choices = event.get("choices", [])
                     if not isinstance(choices, list):
                         raise RuntimeError("SSE choices is not a list")
+                    if usage is not None:
+                        raise RuntimeError("received SSE event after usage")
+                    if event_usage is not None:
+                        if not isinstance(event_usage, dict):
+                            raise RuntimeError("SSE usage is not an object")
+                        if len(finish_reasons) != 1 or choices:
+                            raise RuntimeError(
+                                "SSE usage precedes finish_reason or has nonempty choices"
+                            )
+                        usage = event_usage
+                        continue
+                    if finish_reasons:
+                        raise RuntimeError("received SSE event after finish_reason")
                     for choice in choices:
+                        if not isinstance(choice, dict):
+                            raise RuntimeError("SSE choice is not an object")
+                        finish_reason = choice.get("finish_reason")
+                        if finish_reason is not None:
+                            if not isinstance(finish_reason, str) or not finish_reason:
+                                raise RuntimeError("SSE finish_reason is invalid")
                         delta = choice.get("delta", {})
                         if not isinstance(delta, dict):
                             raise RuntimeError("SSE delta is not an object")
@@ -366,7 +400,13 @@ class Client:
                                     reasoning_parts.append(fragment)
                                 else:
                                     content_parts.append(fragment)
-                        if fragments:
+                        if finish_reason is not None:
+                            if len(choices) != 1 or fragments:
+                                raise RuntimeError(
+                                    "terminal finish_reason event carries content or choices"
+                                )
+                            finish_reasons.append(finish_reason)
+                        elif fragments:
                             now_ns = time.perf_counter_ns()
                             generated_parts.extend(fragments)
                             token_timestamps_ns.append(now_ns)
@@ -378,6 +418,10 @@ class Client:
         if len(response_ids) != 1:
             raise RuntimeError(
                 f"SSE stream has ambiguous response ids: {sorted(response_ids)!r}"
+            )
+        if len(finish_reasons) != 1:
+            raise RuntimeError(
+                f"SSE stream has {len(finish_reasons)} terminal finish reasons"
             )
 
         return {
@@ -392,6 +436,7 @@ class Client:
             "generated_content": "".join(content_parts),
             "usage": usage,
             "done": done,
+            "finish_reason": finish_reasons[0],
             "data_chunks": data_chunks,
             "token_timestamps_ns": token_timestamps_ns,
         }
@@ -793,6 +838,7 @@ def run_rep(
             "client_first_content_ns": first_content_at_ns,
             "client_last_content_ns": last_content_at_ns,
             "sse_token_timestamps_ns": sse_token_timestamps_ns,
+            "client_prompt_tokens": token_count(tokenizer, prompt),
             "raw_client_timing_ratio": raw_client_timing_ratio,
         }
         if reasons:
@@ -914,7 +960,12 @@ def main() -> int:
             level: prefix_with_exact_tokens(tokenizer, fixture, level)
             for level in args.context_levels
         }
-        client = Client(args.base_url, api_key, args.extra_body)
+        client = Client(
+            args.base_url,
+            api_key,
+            args.extra_body,
+            request_timeout_s=args.request_timeout,
+        )
         model = client.get_model(args.model_id)
         result["metadata"]["model"] = model
         result["metadata"]["tokenizer_path"] = str(args.tokenizer_path)

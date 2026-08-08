@@ -19,6 +19,10 @@ DSV4_PROFILE = ROOT / "configs" / "dsv4-profile.json"
 DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
 GLM_BUILD = ROOT / "configs/build-manifests/glm52-ds4-repro.json"
+W7_ADOPTION = ROOT / "results/glm52-gates/W7-cache-generation-W7.1a-owner-adoption.json"
+W7_ADOPTION_REVIEW = ROOT / "results/glm52-gates/W7-cache-generation-W7.1a-review-r295.json"
+W7_BINARY_FREEZE = ROOT / "results/glm52-gates/W7-cache-generation-freeze-v9.json"
+W7_BINARY_SHA256 = "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
 GLM_BUILD_SCRIPT = ROOT / "scripts/11_build_glm52_repro.sh"
 INSTALLER = ROOT / "scripts/41_install_service.sh"
 RESTORE_SERVICE = ROOT / "configs/systemd/dsv4-engine-restore.service"
@@ -194,9 +198,12 @@ class EngineSwitchTests(unittest.TestCase):
         weights = json.loads(
             (ROOT / "configs/build-manifests/ds4-weights.json").read_text()
         )
-        self.assertEqual(glm["schema_version"], 2)
+        self.assertEqual(glm["schema_version"], 3)
         self.assertEqual(glm["profile"], "glm52")
-        self.assertEqual(glm["binary_sha256"], glm_build["binary_sha256"])
+        self.assertEqual(
+            glm["binary_sha256"],
+            W7_BINARY_SHA256,
+        )
         self.assertEqual(glm["model_sha256"], glm_build["model_sha256"])
         self.assertEqual(glm["context_cap"], 1_048_576)
         self.assertNotIn("evidence", glm_build)
@@ -218,6 +225,22 @@ class EngineSwitchTests(unittest.TestCase):
             hashlib.sha256(GLM_BUILD.read_bytes()).hexdigest(),
         )
         self.assertEqual(
+            glm["promotion"],
+            {
+                "gate": "W7.1a-stable-model-cache-generation-owner-adoption",
+                "engine_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+                "binary_freeze_sha256": hashlib.sha256(
+                    W7_BINARY_FREEZE.read_bytes()
+                ).hexdigest(),
+                "owner_decision_sha256": hashlib.sha256(
+                    W7_ADOPTION.read_bytes()
+                ).hexdigest(),
+                "review_sha256": hashlib.sha256(
+                    W7_ADOPTION_REVIEW.read_bytes()
+                ).hexdigest(),
+            },
+        )
+        self.assertEqual(
             glm["tokenizer_sha256"],
             "19e773648cb4e65de8660ea6365e10ac"
             "ca112d42a854923df93db4a6f333a82d",
@@ -231,8 +254,13 @@ class EngineSwitchTests(unittest.TestCase):
                 "DS4_CUDA_FETCH_THREADS": "6",
                 "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
                 "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+                "DS4_CUDA_STABLE_MODEL_REMAP": "1",
                 "DS4_TOKEN_TIMING_LOG": "1",
             },
+        )
+        self.assertNotIn(
+            "DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC",
+            glm["runtime"]["engine_environment"],
         )
         self.assertEqual(
             glm["runtime"]["launch_arguments"],

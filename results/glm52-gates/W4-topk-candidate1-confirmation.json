@@ -1,0 +1,52 @@
+{
+  "schema": "glm52-w4-topk-confirmation-v1",
+  "gate": "W4",
+  "candidate": 1,
+  "recorded_at": "2026-08-08T11:44:59-04:00",
+  "freeze_commit": "5d28f30a52411a3709ba2173dbca9eac97cb2e76",
+  "randomness": {
+    "round": 6359093,
+    "drand_randomness": "081bc2119d6b6f0bb85d704c8f2a7f575e6ca69ff8331bbf4661fe7fbec9403e",
+    "verification": "DRAND_BLS_RECEIPT_OK",
+    "schedule_rule": "Low bit of the first randomness byte chooses the first block: 0 means ABBA, 1 means BAAB; subsequent blocks alternate.",
+    "selected_schedule": ["ABBA", "BAAB", "ABBA", "BAAB", "ABBA"]
+  },
+  "frozen_identity": {
+    "source_commit": "b5226f732460ccec016344766a0931afc4baa35d",
+    "diff_sha256": "b56ce70f9e755c79088eb0aafc972ac6c7e8b5c6d63e72365a579dd023f4f382",
+    "server_binary_sha256": "570798bae9ed5a5ac708e58d3050eedc4db7be62731e0522c6c2ba1e56d626c1",
+    "artifact_sha256": {
+      "tests/cuda_topk_w4": "ae2daad99004ba9ea3f580baabc6180c7dec40aa79301dfbd05d2ba969e67b50",
+      "ds4_cuda.o": "6ff8a39d99c98a7cf3381ed3bb8ebdcf8ce18f1bfa5fed8d61fc9625e05f6f45"
+    }
+  },
+  "observed": {
+    "n_components": 1048576,
+    "n_tokens": 8,
+    "top_k": 2048,
+    "baseline_ms": [4.865552, 4.968880, 4.897376, 5.008768, 4.895456],
+    "candidate_ms": [1.424096, 1.418848, 1.424192, 1.425520, 1.453312],
+    "speedup_lower_95": 3.390245770,
+    "required_speedup_lower_95": 2.0,
+    "unique_score_ids_identical": true,
+    "tie_ids_and_order_identical": true,
+    "arm_outputs_byte_identical": true,
+    "effective_mode_marker_present": true,
+    "exit_code": 0
+  },
+  "safety": {
+    "engine_processes_present": false,
+    "fio_present": false,
+    "large_model_started": false,
+    "mem_available_after_kib": 120850356,
+    "swap_used_after_kib": 813092
+  },
+  "mutation_coverage": {
+    "ignored_or_disabled_candidate_flag": "Rejected by both preserved RED runs because the lower-95 speedup remains approximately one.",
+    "wrong_unique_id": "Rejected by full expected-ID comparison.",
+    "wrong_tie_order": "Rejected by the four-way tie fixture.",
+    "short_output": "Rejected by fixed-size tensor read and full selected-array comparison."
+  },
+  "verdict": "PASS",
+  "scope_limit": "This is the preregistered kernel gate only. W4 adoption still requires reviewer clearance and a five-block matched serving prefill lower-95 speedup of at least 1.05 with identical logits/output."
+}

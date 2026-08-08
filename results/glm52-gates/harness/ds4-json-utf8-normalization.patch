@@ -1,0 +1,423 @@
+diff --git a/Makefile b/Makefile
+index 902a65d..6bda0d1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -68,6 +68,12 @@ ds4: ds4_cli.o ds4_help.o linenoise.o ds4_gpu_args.o $(CORE_OBJS)
+ ds4-server: ds4_server.o ds4_help.o ds4_kvstore.o rax.o ds4_gpu_args.o $(CORE_OBJS)
+ 	$(CC) $(CFLAGS) -o $@ ds4_server.o ds4_help.o ds4_kvstore.o rax.o ds4_gpu_args.o $(CORE_OBJS) $(METAL_LDLIBS)
+ 
++ds4_server_test.o: ds4_server.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
++	$(CC) $(CFLAGS) -DDS4_SERVER_TEST -c -o $@ ds4_server.c
++
++ds4_server_test: ds4_server_test.o ds4_help.o ds4_kvstore.o rax.o ds4_gpu_args.o $(CORE_OBJS)
++	$(CC) $(CFLAGS) -o $@ $^ $(METAL_LDLIBS)
++
+ ds4-bench: ds4_bench.o ds4_help.o ds4_gpu_args.o $(CORE_OBJS)
+ 	$(CC) $(CFLAGS) -o $@ ds4_bench.o ds4_help.o ds4_gpu_args.o $(CORE_OBJS) $(METAL_LDLIBS)
+ 
+@@ -143,6 +149,12 @@ ds4: ds4_cli.o ds4_help.o linenoise.o ds4_gpu_args.o $(CORE_OBJS)
+ ds4-server: ds4_server.o ds4_help.o ds4_kvstore.o rax.o ds4_gpu_args.o $(CORE_OBJS)
+ 	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
+ 
++ds4_server_test.o: ds4_server.c ds4.h ds4_ssd.h ds4_distributed.h ds4_help.h ds4_kvstore.h rax.h
++	$(CC) $(CFLAGS) -DDS4_SERVER_TEST -c -o $@ ds4_server.c
++
++ds4_server_test: ds4_server_test.o ds4_help.o ds4_kvstore.o rax.o ds4_gpu_args.o $(CORE_OBJS)
++	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
++
+ ds4-bench: ds4_bench.o ds4_help.o ds4_gpu_args.o $(CORE_OBJS)
+ 	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
+ 
+diff --git a/ds4_server.c b/ds4_server.c
+index a1f2fc0..1c317c6 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -4497,7 +4497,93 @@ static bool send_all(int fd, const void *p, size_t n) {
+     return true;
+ }
+ 
+-static void json_escape(buf *b, const char *s) {
++static bool json_replace_invalid_utf8_enabled(void) {
++    const char *value = getenv("DS4_JSON_REPLACE_INVALID_UTF8");
++    return value && !strcmp(value, "1");
++}
++
++static size_t json_utf8_sequence_len(const unsigned char *s, size_t n) {
++    if (!n || s[0] < 0x80) return n ? 1 : 0;
++    size_t need = 0;
++    if (s[0] >= 0xc2 && s[0] <= 0xdf) need = 2;
++    else if (s[0] >= 0xe0 && s[0] <= 0xef) need = 3;
++    else if (s[0] >= 0xf0 && s[0] <= 0xf4) need = 4;
++    else return 0;
++    if (n < need) return 0;
++    if ((s[1] & 0xc0) != 0x80 ||
++        (s[0] == 0xe0 && s[1] < 0xa0) ||
++        (s[0] == 0xed && s[1] >= 0xa0) ||
++        (s[0] == 0xf0 && s[1] < 0x90) ||
++        (s[0] == 0xf4 && s[1] >= 0x90)) return 0;
++    for (size_t i = 2; i < need; i++) {
++        if ((s[i] & 0xc0) != 0x80) return 0;
++    }
++    return need;
++}
++
++/* Match Unicode's maximal-subpart replacement rule for tokenizer byte pieces:
++ * retain valid UTF-8 exactly, and replace each irrecoverably malformed subpart
++ * with one U+FFFD. Raw token IDs remain authoritative and are logged separately. */
++static size_t json_utf8_invalid_subpart_len(const unsigned char *s, size_t n) {
++    if (!n) return 0;
++    size_t need = 1;
++    if (s[0] >= 0xc2 && s[0] <= 0xdf) need = 2;
++    else if (s[0] >= 0xe0 && s[0] <= 0xef) need = 3;
++    else if (s[0] >= 0xf0 && s[0] <= 0xf4) need = 4;
++    if (need == 1) return 1;
++    if (n > 1 &&
++        ((s[0] == 0xe0 && s[1] < 0xa0) ||
++         (s[0] == 0xed && s[1] >= 0xa0) ||
++         (s[0] == 0xf0 && s[1] < 0x90) ||
++         (s[0] == 0xf4 && s[1] >= 0x90))) return 1;
++    size_t consumed = 1;
++    while (consumed < need && consumed < n &&
++           (s[consumed] & 0xc0) == 0x80) consumed++;
++    if (n >= need && consumed == need) {
++        /* A complete sequence rejected for overlong, surrogate, or range
++         * constraints consumes only its lead; continuation bytes are then
++         * independently invalid, matching the frozen reference decoder. */
++        return 1;
++    }
++    return consumed;
++}
++
++static void json_escape_bytes(buf *b, const char *s, size_t n,
++                              bool normalize_utf8, bool quotes) {
++    if (quotes) buf_putc(b, '"');
++    for (size_t i = 0; i < n;) {
++        unsigned char c = (unsigned char)s[i];
++        if (normalize_utf8 && c >= 0x80) {
++            size_t valid = json_utf8_sequence_len((const unsigned char *)s + i, n - i);
++            if (valid) {
++                buf_append(b, s + i, valid);
++                i += valid;
++                continue;
++            }
++            buf_append(b, "\xef\xbf\xbd", 3);
++            i += json_utf8_invalid_subpart_len((const unsigned char *)s + i, n - i);
++            continue;
++        }
++        i++;
++        if (c == '"' || c == '\\') {
++            buf_putc(b, '\\');
++            buf_putc(b, (char)c);
++        } else if (c == '\n') {
++            buf_puts(b, "\\n");
++        } else if (c == '\r') {
++            buf_puts(b, "\\r");
++        } else if (c == '\t') {
++            buf_puts(b, "\\t");
++        } else if (c < 0x20) {
++            buf_printf(b, "\\u%04x", (unsigned)c);
++        } else {
++            buf_putc(b, (char)c);
++        }
++    }
++    if (quotes) buf_putc(b, '"');
++}
++
++static void json_escape_legacy(buf *b, const char *s) {
+     buf_putc(b, '"');
+     for (; *s; s++) {
+         unsigned char c = (unsigned char)*s;
+@@ -4519,13 +4605,29 @@ static void json_escape(buf *b, const char *s) {
+     buf_putc(b, '"');
+ }
+ 
++static void json_escape(buf *b, const char *s) {
++    if (json_replace_invalid_utf8_enabled()) {
++        json_escape_bytes(b, s ? s : "", s ? strlen(s) : 0, true, true);
++    } else {
++        json_escape_legacy(b, s ? s : "");
++    }
++}
++
+ static void json_escape_n(buf *b, const char *s, size_t n) {
+-    char *tmp = xstrndup(s ? s : "", n);
+-    json_escape(b, tmp);
+-    free(tmp);
++    if (json_replace_invalid_utf8_enabled()) {
++        json_escape_bytes(b, s ? s : "", s ? n : 0, true, true);
++    } else {
++        char *tmp = xstrndup(s ? s : "", n);
++        json_escape_legacy(b, tmp);
++        free(tmp);
++    }
+ }
+ 
+ static void json_escape_fragment_n(buf *b, const char *s, size_t n) {
++    if (json_replace_invalid_utf8_enabled()) {
++        json_escape_bytes(b, s ? s : "", s ? n : 0, true, false);
++        return;
++    }
+     for (size_t i = 0; i < n; i++) {
+         unsigned char c = (unsigned char)s[i];
+         if (c == '"' || c == '\\') {
+@@ -12909,6 +13011,10 @@ int main(int argc, char **argv) {
+     sigaction(SIGTERM, &sa, NULL);
+ 
+     server_config cfg = parse_options(argc, argv);
++    if (json_replace_invalid_utf8_enabled()) {
++        server_log(DS4_LOG_DEFAULT,
++                   "ds4-server: invalid UTF-8 model bytes normalized to U+FFFD");
++    }
+     if (cfg.chdir_path && chdir(cfg.chdir_path) != 0) {
+         server_log(DS4_LOG_DEFAULT, "ds4-server: failed to chdir to %s: %s",
+                    cfg.chdir_path, strerror(errno));
+@@ -14423,6 +14529,239 @@ static void test_streaming_holds_partial_utf8(void) {
+     close(sv[1]);
+ }
+ 
++static void test_generated_json_replaces_invalid_utf8(void) {
++    const char raw[] = {
++        (char)0xe5, (char)0xae, (char)0x86,
++        (char)0xe8, (char)0x81, ',', ' ', 'a', 'n', 'd', 0,
++    };
++    const char expected[] = {
++        '"', (char)0xe5, (char)0xae, (char)0x86,
++        (char)0xef, (char)0xbf, (char)0xbd,
++        ',', ' ', 'a', 'n', 'd', '"', 0,
++    };
++    const char valid[] = {
++        'A', (char)0xf0, (char)0x9f, (char)0x9a, (char)0xa9, 'Z', 0,
++    };
++    const char valid_expected[] = {
++        '"', 'A', (char)0xf0, (char)0x9f, (char)0x9a, (char)0xa9, 'Z', '"', 0,
++    };
++    const char embedded_nul[] = {'A', 0, 'B'};
++    const char truncated[] = {(char)0xf0, (char)0x9f};
++    const char bad_continuation[] = {(char)0xe8, 'A'};
++    const char stray_continuation[] = {(char)0x80};
++    const char overlong[] = {(char)0xc0, (char)0xaf};
++    const char surrogate[] = {(char)0xed, (char)0xa0, (char)0x80};
++    const char above_unicode[] = {(char)0xf4, (char)0x90, (char)0x80, (char)0x80};
++    const char e0_bad_short[] = {(char)0xe0, (char)0x80, 'A'};
++    const char ed_bad_short[] = {(char)0xed, (char)0xa0, 'A'};
++    const char f0_bad_short[] = {(char)0xf0, (char)0x80, (char)0x80, 'A'};
++    const char f4_bad_short[] = {(char)0xf4, (char)0x90, (char)0x80, 'A'};
++    const char replacement[] = {(char)0xef, (char)0xbf, (char)0xbd, 0};
++    struct {
++        const char *bytes;
++        size_t len;
++        int replacements;
++        const char *ascii_tail;
++    } invalid_cases[] = {
++        {truncated, sizeof(truncated), 1, NULL},
++        {bad_continuation, sizeof(bad_continuation), 1, "A\""},
++        {stray_continuation, sizeof(stray_continuation), 1, NULL},
++        {overlong, sizeof(overlong), 2, NULL},
++        {surrogate, sizeof(surrogate), 3, NULL},
++        {above_unicode, sizeof(above_unicode), 4, NULL},
++        {e0_bad_short, sizeof(e0_bad_short), 2, "A\""},
++        {ed_bad_short, sizeof(ed_bad_short), 2, "A\""},
++        {f0_bad_short, sizeof(f0_bad_short), 3, "A\""},
++        {f4_bad_short, sizeof(f4_bad_short), 3, "A\""},
++    };
++
++    TEST_ASSERT(unsetenv("DS4_JSON_REPLACE_INVALID_UTF8") == 0);
++    buf legacy = {0};
++    json_escape_n(&legacy, raw, sizeof(raw) - 1);
++    TEST_ASSERT(legacy.len == sizeof(raw) + 1);
++    TEST_ASSERT(legacy.ptr[0] == '"' && legacy.ptr[legacy.len - 1] == '"');
++    TEST_ASSERT(!memcmp(legacy.ptr + 1, raw, sizeof(raw) - 1));
++    buf_free(&legacy);
++
++    TEST_ASSERT(setenv("DS4_JSON_REPLACE_INVALID_UTF8", "1", 1) == 0);
++    buf normalized = {0};
++    json_escape_n(&normalized, raw, sizeof(raw) - 1);
++    TEST_ASSERT(normalized.ptr && !strcmp(normalized.ptr, expected));
++    buf_free(&normalized);
++
++    buf preserved = {0};
++    json_escape_n(&preserved, valid, sizeof(valid) - 1);
++    TEST_ASSERT(preserved.ptr && !strcmp(preserved.ptr, valid_expected));
++    buf_free(&preserved);
++
++    buf binary = {0};
++    json_escape_n(&binary, embedded_nul, sizeof(embedded_nul));
++    TEST_ASSERT(binary.ptr && !strcmp(binary.ptr, "\"A\\u0000B\""));
++    buf_free(&binary);
++
++    for (size_t ci = 0; ci < sizeof(invalid_cases) / sizeof(invalid_cases[0]); ci++) {
++        buf encoded = {0};
++        json_escape_n(&encoded, invalid_cases[ci].bytes, invalid_cases[ci].len);
++        int seen = 0;
++        for (const char *p = encoded.ptr; p && (p = strstr(p, replacement)); p += 3) seen++;
++        TEST_ASSERT(seen == invalid_cases[ci].replacements);
++        TEST_ASSERT(!invalid_cases[ci].ascii_tail ||
++                    strstr(encoded.ptr, invalid_cases[ci].ascii_tail) != NULL);
++        buf_free(&encoded);
++    }
++    TEST_ASSERT(unsetenv("DS4_JSON_REPLACE_INVALID_UTF8") == 0);
++}
++
++static void test_assert_strict_json_wire(const char *wire, bool sse) {
++    size_t n = strlen(wire);
++    for (size_t i = 0; i < n;) {
++        unsigned char c = (unsigned char)wire[i];
++        size_t valid = c < 0x80 ? 1 :
++            json_utf8_sequence_len((const unsigned char *)wire + i, n - i);
++        TEST_ASSERT(valid > 0);
++        if (!valid) return;
++        i += valid;
++    }
++    if (!sse) {
++        const char *body = strstr(wire, "\r\n\r\n");
++        TEST_ASSERT(body != NULL);
++        if (!body) return;
++        body += 4;
++        const char *p = body;
++        TEST_ASSERT(json_skip_value(&p));
++        json_ws(&p);
++        TEST_ASSERT(*p == '\0');
++        return;
++    }
++    for (const char *line = wire; (line = strstr(line, "data: ")) != NULL;) {
++        line += 6;
++        const char *end = strchr(line, '\n');
++        TEST_ASSERT(end != NULL);
++        if (!end) return;
++        if ((size_t)(end - line) != strlen("[DONE]") ||
++            memcmp(line, "[DONE]", strlen("[DONE]"))) {
++            char *payload = xstrndup(line, (size_t)(end - line));
++            const char *p = payload;
++            TEST_ASSERT(json_skip_value(&p));
++            json_ws(&p);
++            TEST_ASSERT(*p == '\0');
++            free(payload);
++        }
++        line = end;
++    }
++}
++
++static void test_openai_stream_replaces_invalid_utf8(void) {
++    int sv[2];
++    TEST_ASSERT(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
++    if (sv[0] < 0 || sv[1] < 0) return;
++    TEST_ASSERT(setenv("DS4_JSON_REPLACE_INVALID_UTF8", "1", 1) == 0);
++
++    request r;
++    request_init(&r, REQ_CHAT, 128);
++    r.api = API_OPENAI;
++    r.stream = true;
++    r.think_mode = DS4_THINK_NONE;
++    openai_stream st;
++    openai_stream_start(&r, &st);
++    const char raw[] = {
++        (char)0xe5, (char)0xae, (char)0x86,
++        (char)0xe8, (char)0x81, ',', ' ', 'a', 'n', 'd', 0,
++    };
++    TEST_ASSERT(openai_sse_stream_update(sv[0], NULL, &r, "chatcmpl_invalid_utf8",
++                                         &st, raw, sizeof(raw) - 1, false));
++    shutdown(sv[0], SHUT_WR);
++    char *out = read_socket_text(sv[1]);
++    const char visible[] = {
++        (char)0xe5, (char)0xae, (char)0x86,
++        (char)0xef, (char)0xbf, (char)0xbd,
++        ',', ' ', 'a', 'n', 'd', 0,
++    };
++    TEST_ASSERT(strstr(out, visible) != NULL);
++    test_assert_strict_json_wire(out, true);
++
++    free(out);
++    openai_stream_free(&st);
++    request_free(&r);
++    close(sv[0]);
++    close(sv[1]);
++    TEST_ASSERT(unsetenv("DS4_JSON_REPLACE_INVALID_UTF8") == 0);
++}
++
++static void test_other_api_paths_replace_invalid_utf8(void) {
++    const char raw[] = {
++        (char)0xe5, (char)0xae, (char)0x86,
++        (char)0xe8, (char)0x81, ',', ' ', 'a', 'n', 'd', 0,
++    };
++    const char visible[] = {
++        (char)0xe5, (char)0xae, (char)0x86,
++        (char)0xef, (char)0xbf, (char)0xbd,
++        ',', ' ', 'a', 'n', 'd', 0,
++    };
++    TEST_ASSERT(setenv("DS4_JSON_REPLACE_INVALID_UTF8", "1", 1) == 0);
++    int sv[2];
++
++    request openai;
++    request_init(&openai, REQ_CHAT, 128);
++    openai.api = API_OPENAI;
++    TEST_ASSERT(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
++    TEST_ASSERT(final_response(sv[0], false, &openai, "chatcmpl_invalid",
++                               raw, NULL, NULL, "stop", 4, 8));
++    shutdown(sv[0], SHUT_WR);
++    char *out = read_socket_text(sv[1]);
++    TEST_ASSERT(strstr(out, visible) != NULL);
++    test_assert_strict_json_wire(out, false);
++    free(out);
++    close(sv[0]); close(sv[1]);
++    request_free(&openai);
++
++    request anthropic;
++    request_init(&anthropic, REQ_CHAT, 128);
++    anthropic.api = API_ANTHROPIC;
++    anthropic.stream = true;
++    anthropic.think_mode = DS4_THINK_NONE;
++    TEST_ASSERT(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
++    anthropic_stream ast;
++    TEST_ASSERT(anthropic_sse_start_live(sv[0], &anthropic, "msg_invalid", 4, &ast));
++    TEST_ASSERT(anthropic_sse_finish_live(sv[0], NULL, &anthropic, "msg_invalid",
++                                          &ast, raw, sizeof(raw) - 1,
++                                          NULL, "stop", 8));
++    shutdown(sv[0], SHUT_WR);
++    out = read_socket_text(sv[1]);
++    TEST_ASSERT(strstr(out, visible) != NULL);
++    TEST_ASSERT(strstr(out, "event: message_stop") != NULL);
++    test_assert_strict_json_wire(out, true);
++    free(out);
++    anthropic_stream_free(&ast);
++    close(sv[0]); close(sv[1]);
++    request_free(&anthropic);
++
++    request responses;
++    request_init(&responses, REQ_CHAT, 128);
++    responses.api = API_RESPONSES;
++    responses.stream = true;
++    responses.think_mode = DS4_THINK_NONE;
++    TEST_ASSERT(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
++    responses_stream rst;
++    responses_stream_init(&responses, &rst);
++    rst.active = true;
++    TEST_ASSERT(responses_sse_created(sv[0], &responses, &rst, 1234));
++    TEST_ASSERT(responses_sse_finish_live(sv[0], &responses, &rst,
++                                          raw, sizeof(raw) - 1, NULL, NULL,
++                                          "stop", 4, 8, 1234));
++    shutdown(sv[0], SHUT_WR);
++    out = read_socket_text(sv[1]);
++    TEST_ASSERT(strstr(out, visible) != NULL);
++    TEST_ASSERT(strstr(out, "\"type\":\"response.completed\"") != NULL);
++    test_assert_strict_json_wire(out, true);
++    free(out);
++    responses_stream_free(&rst);
++    close(sv[0]); close(sv[1]);
++    request_free(&responses);
++
++    TEST_ASSERT(unsetenv("DS4_JSON_REPLACE_INVALID_UTF8") == 0);
++}
++
+ static void test_request_defaults_use_min_p_filtering(void) {
+     request r;
+     request_init(&r, REQ_CHAT, 128);
+@@ -17474,6 +17813,9 @@ static void ds4_server_unit_tests_run(void) {
+     test_openai_tool_stream_holds_partial_utf8_arguments();
+     test_openai_tool_stream_handles_multiple_calls();
+     test_streaming_holds_partial_utf8();
++    test_generated_json_replaces_invalid_utf8();
++    test_openai_stream_replaces_invalid_utf8();
++    test_other_api_paths_replace_invalid_utf8();
+     test_parse_short_dsml_and_canonical_suffix();
+     test_parse_glm_tool_call_message();
+     test_dsml_parser_recovers_loose_nested_parameters();

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "gate": "W3 contained direct-slot runtime eligibility",
+  "status": "FAIL",
+  "candidate_hash": "f93fcb9e3e178e2cb63fdd6edb0942ed11bbc3ed",
+  "public_randomness_round": 6351935,
+  "wrapper_returncode": 130,
+  "phase": "OFF arm startup after full model digest and before model load",
+  "failure": "ds4: failed to open lock file /tmp/ds4.lock: Permission denied",
+  "root_reproduction": {
+    "default_lock_mode": "0600",
+    "default_lock_owner": "dsv4:dsv4",
+    "background_runner_exited": true,
+    "wait_for_exact_engine_detected_runner_exit": false,
+    "manual_interrupt_reason": "avoid the remaining blind 900-second poll after proving no engine or unit remained",
+    "engine_started": true,
+    "model_loaded": false,
+    "gpu_work_started": false,
+    "oom_or_xid": false
+  },
+  "artifacts": {
+    "request_sha256": "53808c9144705a2837abf4738663c1b738817b73c2a413dfb3d60c5f6578560f",
+    "memory_preflight_sha256": "0a71509130fa04011909ada049ed02099886b168bd103fa29350e5d97fdff9a2",
+    "containment_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "containment_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "main_log_sha256": "76ccc4529bedb15c76a2237717f9f658362099bfb84d04683fbe2c9c11a9fa14",
+    "command_log_sha256": "793b3b6b18763037fb1d3cbb5ba77e72afea6402dbcea7a462c8d23e3d659b20"
+  },
+  "bounded_fix_scope": [
+    "supply a distinct fixed current-user engine lock path through the same explicit environment/provenance array",
+    "fail wait_for_exact_engine immediately when runner_pid exits"
+  ]
+}

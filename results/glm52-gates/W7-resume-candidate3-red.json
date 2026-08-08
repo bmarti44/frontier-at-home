@@ -1,0 +1,16 @@
+{
+  "schema": "glm52-red-attempt-v1",
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate_number_for_gate": 3,
+  "parent_candidate": "41e693d66b4c65466177d2afdb8480a848ddcae6",
+  "observed_at_utc": "2026-08-06T21:03:00Z",
+  "command": "python3 -m unittest scripts.tests.test_glm52_goal.FormulaTests.test_w7_resume_scorer_derives_resume_and_numerical_checks scripts.tests.test_glm52_goal.FormulaTests.test_w7_resume_scorer_rejects_operation_receipt_false_pass scripts.tests.test_glm52_goal.FormulaTests.test_w7_resume_scorer_rejects_guard_contract_and_inventory_mutations -v",
+  "result": "RED_CONFIRMED",
+  "exit_code": 1,
+  "passed": 1,
+  "errors": 2,
+  "failing_behavior": "The frozen scorer rejects the receipt-derived three-regime observation because it still requires caller-summarized case fields and has no regimes or confirmation-seed schema.",
+  "missing_file_failure": false,
+  "implementation_changed": false,
+  "review_authority": "results/glm52-gates/W7-resume-review-r197.json"
+}

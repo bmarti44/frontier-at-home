@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "dfc490674e4ce303d9ccd4c7cace10c7f4d6028e",
+  "review_round": 172,
+  "status": "CLEARED_FOR_CONTAINED_EXECUTION",
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "verdict": "PASS"
+    },
+    "Singer": {
+      "score_0_to_100": 99,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [
+        {
+          "id": "ADV-W3-R172-L1",
+          "disposition": "DEFERRED",
+          "rationale": "The source-level permission regression was sufficient for this unambiguous bash invocation; a broader permission matrix may be added outside this bounded gate."
+        }
+      ],
+      "verdict": "CLEARED_FOR_CONTAINED_EXECUTION"
+    }
+  },
+  "critical_or_high_open": false
+}

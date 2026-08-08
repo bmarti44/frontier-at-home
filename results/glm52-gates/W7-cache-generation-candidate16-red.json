@@ -1,0 +1,19 @@
+{
+  "candidate_parent": "2cb9e89aadf2535c3ffe6b4b39af86803190881c",
+  "checks": {
+    "engine_started": false,
+    "same_inode_unowned_descriptor_mutation_rejected": false,
+    "source_contains_same_inode_unowned_descriptor_mutation": false
+  },
+  "expected_failure": "The unchanged candidate accepts no behavioral test that substitutes a valid same-inode but independently opened, unlocked lock descriptor while the parent still owns the lock.",
+  "observed": {
+    "failures": 2,
+    "stderr_sha256": "a1dff1566efba4ddfdfe36edbd884d74bf84d318c10e7e1bf99e21d46b5819d7",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests_run": 44
+  },
+  "review_finding": "ADV-W7.1-268-H1-INHERITED-LOCK-FD-OWNERSHIP-NOT-PROVEN",
+  "schema": "glm52-w7-red-v1",
+  "test_sha256": "6a68ec527361b656f42a7f42b6d8153f1ff0d1d4761101cce17e2d3631ead614",
+  "verdict": "RED_CONFIRMED"
+}

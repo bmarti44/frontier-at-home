@@ -1,0 +1,46 @@
+{
+  "candidate_hash": "1e06f65786d008d86e5233a456773762691cf5af",
+  "gate": "W3",
+  "review_round": 184,
+  "reviewers": [
+    {
+      "critical": [],
+      "high": [],
+      "low": [],
+      "medium": [],
+      "name": "Nash",
+      "prior_issue_status": [
+        {
+          "id": "W3-R183-H1-GLOBAL-LINT-FIELD-ALLOWLIST",
+          "status": "FIXED"
+        }
+      ],
+      "score_0_to_100": 100,
+      "verdict": "APPROVE_TERMINAL_W3_FAIL_RECORD"
+    },
+    {
+      "critical": [],
+      "high": [],
+      "low": [
+        {
+          "affected_gate": "repository secret-scanner strictness",
+          "evidence": "The exact path-scoped executed_identity tuple accepts uppercase hexadecimal in its binary-digest slot, while the frozen W3 scorer requires and emitted lowercase.",
+          "id": "ADV-W3-R184-L1-UPPERCASE-DIGEST-SYNTAX",
+          "proposed_acceptance_test": "Optionally reject uppercase in the W3 executed_identity binary-digest slot.",
+          "reproduction": "Scan an otherwise valid W3 raw executed_identity tuple whose third element is 64 uppercase hexadecimal characters."
+        }
+      ],
+      "medium": [],
+      "name": "Singer",
+      "prior_issue_status": [
+        {
+          "id": "ADV-W3-R183-H1-GLOBAL-EXECUTED-IDENTITY-SECRET-EXEMPTION",
+          "status": "FIXED"
+        }
+      ],
+      "score_0_to_100": 99,
+      "verdict": "APPROVE_TERMINAL_W3_COMMIT; ENGINEERING_FAIL_REMAINS_VALID_AND_DEFAULT_OFF"
+    }
+  ],
+  "terminal_disposition": "FAIL_DEFAULT_OFF"
+}

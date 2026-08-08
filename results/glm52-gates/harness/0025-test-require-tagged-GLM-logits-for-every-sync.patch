@@ -1,0 +1,59 @@
+From 18b47ee614ac0ff1ec70f6cbd7a288f6439fe9a8 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:43:06 -0400
+Subject: [PATCH 25/31] test: require tagged GLM logits for every sync
+
+---
+ ds4.h        |  3 +++
+ ds4_server.c | 15 +++++++++++++++
+ 2 files changed, 18 insertions(+)
+
+diff --git a/ds4.h b/ds4.h
+index aa2199d..febcf31 100644
+--- a/ds4.h
++++ b/ds4.h
+@@ -369,6 +369,9 @@ bool ds4_glm_apply_restored_frontier(ds4_tokens *evaluated,
+                                      bool payload_complete,
+                                      uint32_t saved_tokens,
+                                      uint32_t compact_rows);
++bool ds4_glm_logit_dump_path(char *out, size_t out_len,
++                             const char *base, const char *dump_all,
++                             uint32_t call_index);
+ ds4_session_rewrite_result ds4_session_rewrite_from_common(
+         ds4_session *s, const ds4_tokens *prompt, int common,
+         char *err, size_t errlen);
+diff --git a/ds4_server.c b/ds4_server.c
+index 7a1d253..f3c9aa2 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -16777,6 +16777,20 @@ static void test_glm_restored_frontier_requires_complete_opt_in_snapshot(void) {
+     ds4_tokens_free(&checkpoint);
+ }
+
++static void test_glm_logit_dump_all_names_each_sync_without_changing_default(void) {
++    char path[64];
++    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", NULL, 0));
++    TEST_ASSERT(!strcmp(path, "/tmp/logits"));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", NULL, 1));
++    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "1", 0));
++    TEST_ASSERT(!strcmp(path, "/tmp/logits.1"));
++    TEST_ASSERT(ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "1", 2));
++    TEST_ASSERT(!strcmp(path, "/tmp/logits.3"));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, 8, "/tmp/logits", "1", 0));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "", "1", 0));
++    TEST_ASSERT(!ds4_glm_logit_dump_path(path, sizeof(path), "/tmp/logits", "yes", 1));
++}
++
+ static void test_kv_cache_store_len_uses_configured_boundary(void) {
+     kv_disk_cache kc = {0};
+     kc.opt = kv_cache_default_options();
+@@ -17900,6 +17914,7 @@ static void ds4_server_unit_tests_run(void) {
+     test_tool_marker_state_ignores_orphan_end();
+     test_canonical_rewrite_rebuilds_when_live_tail_changes();
+     test_glm_restored_frontier_requires_complete_opt_in_snapshot();
++    test_glm_logit_dump_all_names_each_sync_without_changing_default();
+     test_kv_cache_store_len_uses_configured_boundary();
+     test_kv_cache_chat_anchor_uses_last_user_before_assistant();
+     test_kv_cache_chat_anchor_ignores_multiturn_tail();
+--
+2.43.0

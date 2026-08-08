@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "gate": "W7-production-runtime-equivalence",
+  "review_round": 229,
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_production_contract scripts.tests.test_w7_resume_production_scorer scripts.tests.test_w7_resume_production_harness",
+  "observed": {
+    "returncode": 1,
+    "tests_run": 29,
+    "failures": 5,
+    "errors": 1,
+    "failed_requirements": [
+      "reviewed launcher binds production inputs",
+      "KVC v2 records authenticate and normalize permitted bookkeeping",
+      "sub-0.01 logit drift is rejected",
+      "strict and candidate resolve to distinct reviewed binaries",
+      "configuration digest is derived from a canonical emitted artifact"
+    ]
+  },
+  "diagnostic_marker_mutation": "included in the fixed scorer suite; unchanged scorer still lacks an all-arm prohibition",
+  "frozen_engine_unchanged": {
+    "commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+    "binary_sha256": "c8b08e4ebd59f35f5dba7bcc0943b5d6f377cd15cecb46fc5bdb22dccfd6a51a"
+  },
+  "verdict": "RED_CONFIRMED"
+}

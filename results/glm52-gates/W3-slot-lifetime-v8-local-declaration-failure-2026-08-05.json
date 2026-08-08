@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "gate": "W3 contained direct-slot runtime eligibility",
+  "status": "FAIL",
+  "candidate_hash": "dfc490674e4ce303d9ccd4c7cace10c7f4d6028e",
+  "public_randomness_round": 6351922,
+  "returncode": 1,
+  "stderr": "results/glm52-gates/harness/w3_direct_slot_probe_v3.sh: line 321: arm: unbound variable",
+  "phase": "after full read-only model digest and before either engine arm",
+  "root_reproduction": {
+    "failing_assertion": "run_arm local declaration expands tag and arm_dir before arm is assigned under set -u",
+    "source_line": "local arm=$1 port=$2 direct=$3 tag=...${arm}... arm_dir=...$arm",
+    "bounded_fix": "split positional locals from derived tag and arm_dir locals",
+    "engine_or_gpu_started": false,
+    "model_loaded": false,
+    "oom_or_xid": false
+  },
+  "machine_after_failure": {
+    "ds4_server_count": 0,
+    "fio_count": 0,
+    "mem_available_gib": 115.2,
+    "swap_used_gib": 0.72
+  },
+  "convergence": {
+    "gate_candidate_count": 8,
+    "next_candidate_would_exceed_limit": true,
+    "action": "PAUSE_AND_ESCALATE_BEFORE_CANDIDATE_9"
+  }
+}

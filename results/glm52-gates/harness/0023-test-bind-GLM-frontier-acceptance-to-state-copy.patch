@@ -1,0 +1,66 @@
+From 0ffc05b8647d6227e14cc8da1ac619875ccada51 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 10:29:04 -0400
+Subject: [PATCH 23/24] test: bind GLM frontier acceptance to state copy
+
+---
+ ds4.h        |  6 ++++++
+ ds4_server.c | 26 ++++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/ds4.h b/ds4.h
+index 68a526e..aa2199d 100644
+--- a/ds4.h
++++ b/ds4.h
+@@ -363,6 +363,12 @@ bool ds4_glm_restored_frontier_authoritative(bool diagnostic_enabled,
+                                              bool payload_complete,
+                                              uint32_t saved_tokens,
+                                              uint32_t compact_rows);
++bool ds4_glm_apply_restored_frontier(ds4_tokens *evaluated,
++                                     const ds4_tokens *checkpoint,
++                                     bool diagnostic_enabled,
++                                     bool payload_complete,
++                                     uint32_t saved_tokens,
++                                     uint32_t compact_rows);
+ ds4_session_rewrite_result ds4_session_rewrite_from_common(
+         ds4_session *s, const ds4_tokens *prompt, int common,
+         char *err, size_t errlen);
+diff --git a/ds4_server.c b/ds4_server.c
+index 078199a..7a1d253 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -16749,6 +16749,32 @@ static void test_glm_restored_frontier_requires_complete_opt_in_snapshot(void) {
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(true, true, 5044, 4096));
+     TEST_ASSERT(!ds4_glm_restored_frontier_authoritative(true, true, 0, 0));
+     TEST_ASSERT(ds4_glm_restored_frontier_authoritative(true, true, 5044, 5044));
++
++    ds4_tokens prior = {0};
++    ds4_tokens checkpoint = {0};
++    ds4_tokens_push(&prior, 11);
++    ds4_tokens_push(&prior, 12);
++    ds4_tokens_push(&prior, 13);
++    ds4_tokens_push(&checkpoint, 11);
++    ds4_tokens_push(&checkpoint, 12);
++
++    TEST_ASSERT(!ds4_glm_apply_restored_frontier(
++        &prior, &checkpoint, false, true, 2, 2));
++    TEST_ASSERT(prior.len == 3 && prior.v[2] == 13);
++    TEST_ASSERT(!ds4_glm_apply_restored_frontier(
++        &prior, &checkpoint, true, false, 2, 2));
++    TEST_ASSERT(prior.len == 3 && prior.v[2] == 13);
++    TEST_ASSERT(!ds4_glm_apply_restored_frontier(
++        &prior, &checkpoint, true, true, 2, 1));
++    TEST_ASSERT(prior.len == 3 && prior.v[2] == 13);
++    TEST_ASSERT(ds4_glm_apply_restored_frontier(
++        &prior, &checkpoint, true, true, 2, 2));
++    TEST_ASSERT(prior.len == 2 && prior.v[0] == 11 && prior.v[1] == 12);
++    checkpoint.v[1] = 99;
++    TEST_ASSERT(prior.v[1] == 12);
++
++    ds4_tokens_free(&prior);
++    ds4_tokens_free(&checkpoint);
+ }
+
+ static void test_kv_cache_store_len_uses_configured_boundary(void) {
+--
+2.43.0

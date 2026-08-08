@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "01d3753fe97e7a17a085883872ca695836bf2da8",
+  "review_round": 179,
+  "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION",
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 97,
+      "critical": [], "high": [],
+      "medium": [{
+        "id": "W3-R179-M1-EPHEMERAL-LOCK-INODE", "status": "OPEN",
+        "evidence": "Historical lock identity is compared with the current ephemeral /run lock inode, so reboot or legitimate recreation breaks replay.",
+        "affected_gate": "W3 evidence reproducibility",
+        "reproduction": "Recreate the lock after collection and rerun the scorer.",
+        "proposed_acceptance_test": "Verify historical receipt consistency without requiring the current inode."
+      }],
+      "low": [],
+      "prior_issue_status": [
+        {"id": "W3-R176-C1-SYNTHETIC-CAMPAIGN-PASS", "status": "VERIFIED"},
+        {"id": "W3-R176-H1-STALE-TIMING-REUSE", "status": "DEFERRED"},
+        {"id": "W3-R178-H1-CGROUP-OOM-EVENT-IGNORED", "status": "VERIFIED"}
+      ],
+      "verdict": "APPROVE_CAMPAIGN_EXECUTION_WITH_MEDIUM_REPRODUCIBILITY_DEBT"
+    },
+    "Singer": {
+      "score_0_to_100": 89,
+      "critical": [],
+      "high": [{
+        "id": "ADV-W3-R179-H1-MUTABLE-IDENTITY-REPLAY", "status": "OPEN",
+        "evidence": "Scoring requires historical lock and response-file identities to equal current live inodes/ctime, so reboot or byte-identical archival copy rejects preserved evidence.",
+        "affected_gate": "Reproducible W3 terminal result",
+        "reproduction": "Copy a valid pair or recreate the runtime lock and rescore unchanged bytes.",
+        "proposed_acceptance_test": "Treat execution identities as historical sha-bound receipts; require syntax/internal agreement and bytes/digests, not current inode equality."
+      }],
+      "medium": [],
+      "low": [{"id": "ADV-W3-R173-L1", "status": "DEFERRED", "evidence": "Optional older test remains deferred.", "affected_gate": "W3 regression depth", "reproduction": "See round 173.", "proposed_acceptance_test": "See round 173."}],
+      "prior_issue_status": [
+        {"id": "ADV-W3-R176-C2-REUSED-SELF-REPORTED-EVIDENCE", "status": "FIXED"},
+        {"id": "ADV-W3-R178-H1-MEMORY-SAMPLE-COVERAGE", "status": "FIXED"},
+        {"id": "ADV-W3-R177-C1-IMPORT-BYPASSES-COMMITTED-AUTHORITY", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION"
+    }
+  }
+}

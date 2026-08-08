@@ -1,0 +1,52 @@
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index d7c71ed..feedd11 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -23835,6 +23835,18 @@ static int cuda_expert_slab_staging_ensure(uint32_t count,
+         cuda_expert_slab_staging_release();
+         return 0;
+     }
++    size_t cuda_free_before = 0;
++    size_t cuda_total_before = 0;
++    const cudaError_t memory_before_err =
++        cudaMemGetInfo(&cuda_free_before, &cuda_total_before);
++    if (memory_before_err != cudaSuccess) {
++        fprintf(stderr,
++                "ds4: expert slab pinned staging memory query failed phase=before cuda_error=%s cuda_detail=%s\n",
++                cudaGetErrorName(memory_before_err),
++                cudaGetErrorString(memory_before_err));
++        (void)cudaGetLastError();
++        return 0;
++    }
+     const uint64_t allocation_bytes = buffer_bytes + alignment;
+     for (uint32_t i = 0; i < count; i++) {
+         void *allocation = NULL;
+@@ -23858,10 +23870,26 @@ static int cuda_expert_slab_staging_ensure(uint32_t count,
+     }
+     g_expert_slab_staging.buffer_bytes = buffer_bytes;
+     g_expert_slab_staging.alignment = alignment;
++    size_t cuda_free_after = 0;
++    size_t cuda_total_after = 0;
++    const cudaError_t memory_after_err =
++        cudaMemGetInfo(&cuda_free_after, &cuda_total_after);
++    if (memory_after_err != cudaSuccess) {
++        fprintf(stderr,
++                "ds4: expert slab pinned staging memory query failed phase=after cuda_error=%s cuda_detail=%s\n",
++                cudaGetErrorName(memory_after_err),
++                cudaGetErrorString(memory_after_err));
++        (void)cudaGetLastError();
++        cuda_expert_slab_staging_release();
++        return 0;
++    }
+     fprintf(stderr,
+-            "ds4: expert slab pinned staging ready count=%u buffer_bytes=%llu total_bytes=%llu\n",
++            "ds4: expert slab pinned staging ready count=%u buffer_bytes=%llu total_bytes=%llu cuda_free_before=%llu cuda_free_after=%llu cuda_total=%llu\n",
+             count, (unsigned long long)allocation_bytes,
+-            (unsigned long long)(allocation_bytes * count));
++            (unsigned long long)(allocation_bytes * count),
++            (unsigned long long)cuda_free_before,
++            (unsigned long long)cuda_free_after,
++            (unsigned long long)cuda_total_after);
+     return 1;
+ }
+

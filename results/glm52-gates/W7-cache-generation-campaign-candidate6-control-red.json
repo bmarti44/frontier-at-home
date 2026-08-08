@@ -1,0 +1,19 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 6,
+  "phase": "execution-discovered-control-plane-red",
+  "parent_commit": "572e81f81bd906270659aecf6934b5dada12eafd",
+  "observed_at": "2026-08-08T04:03:56-04:00",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign_runner.W7CacheGenerationCampaignRunnerTest.test_unit_state_does_not_treat_control_failure_as_not_found",
+  "returncode": 1,
+  "tests_run": 1,
+  "failures": 1,
+  "errors": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "4b3b10407887a5a3320da7610658a35cf742d5de574f36e23e589d71bd6f9300",
+  "artifacts": {
+    "runner_test": {"sha256": "95e3c2126721d75ee2fb3d6c69c17cbc71e38c214ce12c5d71a10de41a4fbb20"}
+  },
+  "observed_failure": "A systemd user-bus failure was incorrectly normalized to unit-not-found, allowing cleanup to claim success without authoritative unit state.",
+  "acceptance": "Only an explicit missing-unit result may map to not-found; control-plane and parse failures must fail closed."
+}

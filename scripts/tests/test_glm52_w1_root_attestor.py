@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import inspect
 import fcntl
 import json
 import os
 import re
 import subprocess
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,6 +47,310 @@ def load_controller():
 
 
 class RootAttestorContractTests(unittest.TestCase):
+    def test_python_runtime_staging_is_not_below_noexec_run(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn(
+            "python_temporary=$(/usr/bin/mktemp -d "
+            "/usr/local/libexec/.glm52-w1-python.XXXXXX)",
+            source,
+        )
+        self.assertIn('/usr/bin/rm -rf -- "$python_temporary"', source)
+        self.assertNotIn(
+            "python_temporary=$harness_temporary/python-runtime", source,
+        )
+
+    def test_root_clone_scopes_safe_directory_to_exact_source_gitdir(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        upload_pack = (
+            "/usr/bin/git -c safe.directory="
+            "/home/bmarti44/spark-deepseek-v4-flash/.git upload-pack"
+        )
+        self.assertIn('readonly SOURCE_UPLOAD_PACK="/usr/bin/git -c safe.directory=$REPO/.git upload-pack"', source)
+        self.assertIn('--upload-pack="$SOURCE_UPLOAD_PACK"', source)
+        self.assertNotIn("git config --global", source)
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            environment = {**os.environ, "GIT_TEST_ASSUME_DIFFERENT_OWNER": "1"}
+            rejected = subprocess.run([
+                "/usr/bin/git", "clone", "--no-local", "--no-checkout",
+                str(ROOT), str(root / "without-safe-directory"),
+            ], capture_output=True, text=True, check=False, env=environment)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("dubious ownership", rejected.stderr)
+            accepted = subprocess.run([
+                "/usr/bin/git", "-c", "core.hooksPath=/dev/null", "clone",
+                "--no-local", "--no-checkout", f"--upload-pack={upload_pack}",
+                str(ROOT), str(root / "exact-safe-directory"),
+            ], capture_output=True, text=True, check=False, env=environment)
+            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            cloned = subprocess.run([
+                "/usr/bin/git", "-C", str(root / "exact-safe-directory"),
+                "rev-parse", "HEAD",
+            ], capture_output=True, text=True, check=False)
+            self.assertEqual(cloned.returncode, 0, cloned.stderr)
+            self.assertEqual(cloned.stdout.strip(), subprocess.run([
+                "/usr/bin/git", "-C", str(ROOT), "rev-parse", "HEAD",
+            ], capture_output=True, text=True, check=True).stdout.strip())
+
+    def test_p1_reservation_and_receipt_bind_exact_cuda_backend(self):
+        submitter = load_submitter()
+        self.assertEqual(submitter.P1_SCORING_BACKEND, {
+            "device": "cuda",
+            "probe_compute": "torch-float32-weights-fp16-autocast",
+        })
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-cpu-substitution"
+            source.mkdir()
+            summary_payload = b'{"decision":{"verdict":"STOP_PROBE"}}\n'
+            (source / "summary.json").write_bytes(summary_payload)
+            with (
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                mock.patch.object(submitter.os, "chown"),
+                mock.patch.object(submitter.os, "fchown"),
+                self.assertRaisesRegex(ValueError, "scoring backend"),
+            ):
+                submitter.publish_p1_result(
+                    candidate, source.name,
+                    source_parent=source_parent, state_root=state_root,
+                    approval_reader=lambda: ({
+                        "candidate_hash": candidate,
+                        "controller_sha256": "2" * 64,
+                    }, {
+                        "approval_sha256": "3" * 64,
+                        "approval_device": 1,
+                        "approval_inode": 2,
+                    }),
+                    reservation_reader=lambda: {
+                        "candidate_hash": candidate,
+                        "output_sha256": hashlib.sha256(
+                            os.fsencode(source),
+                        ).hexdigest(),
+                        "reservation_sha256": "4" * 64,
+                        "created_epoch_ns": 5,
+                        "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
+                    },
+                    completed_validator=lambda _root, _approval: {
+                        "summary_sha256": hashlib.sha256(summary_payload).hexdigest(),
+                        "decision_verdict": "STOP_PROBE",
+                        "scoring_backend": {
+                            "device": "cpu", "probe_compute": "torch-float32",
+                        },
+                    },
+                )
+
+    def test_p1_result_publication_moves_into_root_authority_and_binds_manifest(self):
+        submitter = load_submitter()
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-p1-result"
+            source.mkdir()
+            (source / "attempt.json").write_text(
+                '{"status":"COMPLETE"}\n', encoding="utf-8",
+            )
+            (source / "summary.json").write_text(
+                '{"decision":{"verdict":"STOP_PROBE"}}\n', encoding="utf-8",
+            )
+            manifest = submitter._tree_manifest(source)
+            digest = submitter._manifest_sha256(manifest)
+            with (
+                mock.patch.object(submitter.os, "chown"),
+                mock.patch.object(submitter.os, "fchown"),
+                self.assertRaisesRegex(ValueError, "reservation|completed"),
+            ):
+                submitter.publish_p1_result(
+                    candidate, source.name,
+                    source_parent=source_parent, state_root=state_root,
+                    approval_reader=lambda: ({
+                        "candidate_hash": candidate,
+                        "controller_sha256": "2" * 64,
+                    }, {
+                        "approval_sha256": "3" * 64,
+                        "approval_device": 1,
+                        "approval_inode": 2,
+                    }),
+                    reservation_reader=lambda: {
+                        "candidate_hash": candidate,
+                        "output_sha256": hashlib.sha256(
+                            os.fsencode(source),
+                        ).hexdigest(),
+                        "reservation_sha256": "4" * 64,
+                        "created_epoch_ns": 5,
+                        "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
+                    },
+                    completed_validator=lambda _root, _approval: (_ for _ in ()).throw(
+                        ValueError("completed fixed replay failed"),
+                    ),
+                )
+
+    def test_p1_publication_cannot_treat_rename_as_fd_revocation(self):
+        submitter = load_submitter()
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-valid-result"
+            source.mkdir()
+            summary = source / "summary.json"
+            summary_payload = b'{"decision":{"verdict":"KEEP_PARETO_SEPARATE"}}\n'
+            summary.write_bytes(summary_payload)
+            retained = os.open(summary, os.O_RDWR)
+            try:
+                with (
+                    mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                    mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                ):
+                    receipt = submitter.publish_p1_result(
+                        candidate, source.name,
+                        source_parent=source_parent, state_root=state_root,
+                        approval_reader=lambda: ({
+                            "candidate_hash": candidate,
+                            "controller_sha256": "2" * 64,
+                        }, {
+                            "approval_sha256": "3" * 64,
+                            "approval_device": 1,
+                            "approval_inode": 2,
+                        }),
+                        reservation_reader=lambda: {
+                            "candidate_hash": candidate,
+                            "output_sha256": hashlib.sha256(
+                                os.fsencode(source),
+                            ).hexdigest(),
+                            "reservation_sha256": "4" * 64,
+                            "created_epoch_ns": 5,
+                            "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
+                        },
+                        completed_validator=lambda _root, _approval: {
+                            "summary_sha256": hashlib.sha256(summary_payload).hexdigest(),
+                            "decision_verdict": "KEEP_PARETO_SEPARATE",
+                            "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
+                        },
+                    )
+                os.lseek(retained, 0, os.SEEK_SET)
+                os.write(retained, b"FAKE")
+                authoritative = Path(receipt["authoritative_root"])
+                self.assertEqual(
+                    (authoritative / "summary.json").read_bytes(), summary_payload,
+                )
+            finally:
+                os.close(retained)
+
+    def test_controller_never_reopens_root_only_authoritative_result(self):
+        module_path = ROOT / "scripts" / "81_glm_union_baseline.py"
+        spec = importlib.util.spec_from_file_location("p1_controller", module_path)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        source = inspect.getsource(module._publish_root_result)
+        self.assertNotIn("_result_tree_manifest(authoritative)", source)
+
+    def test_completed_validator_uses_only_root_owned_offline_python_runtime(self):
+        submitter = load_submitter()
+        self.assertEqual(
+            submitter.P1_PYTHON_RUNTIME.parent,
+            Path("/usr/local/libexec/glm52-w1"),
+        )
+        self.assertNotEqual(submitter.P1_PYTHON_RUNTIME.parent, submitter.INSTALLED_HARNESS)
+        source = inspect.getsource(submitter._run_p1_completed_validator)
+        self.assertIn("P1_PYTHON_RUNTIME", source)
+        self.assertIn('"PYTHONNOUSERSITE": "1"', source)
+        self.assertIn('"PYTHONPATH": str(P1_PYTHON_RUNTIME)', source)
+        self.assertIn('"-S"', source)
+        self.assertNotIn('"--device", "cpu"', source)
+        self.assertIn("_python_dependency_tree_sha256", source)
+
+    def test_python_runtime_tree_hash_rejects_package_mutation(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as raw:
+            runtime = Path(raw)
+            package = runtime / "numpy"
+            package.mkdir()
+            module = package / "__init__.py"
+            module.write_bytes(b"version = 1\n")
+            runtime.chmod(0o555)
+            package.chmod(0o555)
+            module.chmod(0o444)
+            with (
+                mock.patch.object(submitter, "P1_PYTHON_DEPENDENCIES", ("numpy",)),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+            ):
+                expected = submitter._python_dependency_tree_sha256(runtime)
+                self.assertRegex(expected, r"^[0-9a-f]{64}$")
+                module.chmod(0o644)
+                module.write_bytes(b"version = 2\n")
+                module.chmod(0o444)
+                self.assertNotEqual(
+                    submitter._python_dependency_tree_sha256(runtime), expected,
+                )
+                package.chmod(0o755)
+                (package / "redirect").symlink_to(runtime, target_is_directory=True)
+                package.chmod(0o555)
+                with self.assertRaisesRegex(ValueError, "directory identity"):
+                    submitter._python_dependency_tree_sha256(runtime)
+
+    def test_p1_result_publication_rejects_digest_race_but_preserves_attempt(self):
+        submitter = load_submitter()
+        candidate = "1" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_parent = root / "owner-state"
+            state_root = root / "root-state"
+            source_parent.mkdir()
+            state_root.mkdir()
+            source = source_parent / "glm52-p1-result"
+            source.mkdir()
+            (source / "attempt.json").write_text(
+                '{"status":"FAILED"}\n', encoding="utf-8",
+            )
+            with (
+                mock.patch.object(submitter.os, "chown"),
+                mock.patch.object(submitter.os, "fchown"),
+                self.assertRaisesRegex(ValueError, "completed"),
+            ):
+                submitter.publish_p1_result(
+                        candidate, source.name,
+                        source_parent=source_parent, state_root=state_root,
+                        approval_reader=lambda: ({
+                            "candidate_hash": candidate,
+                            "controller_sha256": "2" * 64,
+                        }, {
+                            "approval_sha256": "3" * 64,
+                            "approval_device": 1,
+                            "approval_inode": 2,
+                        }),
+                        reservation_reader=lambda: {
+                            "candidate_hash": candidate,
+                            "output_sha256": hashlib.sha256(
+                                os.fsencode(source),
+                            ).hexdigest(),
+                            "reservation_sha256": "4" * 64,
+                            "created_epoch_ns": 5,
+                            "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
+                        },
+                        completed_validator=lambda _root, _approval: (_ for _ in ()).throw(
+                            ValueError("completed fixed replay failed"),
+                        ),
+                    )
+            self.assertTrue(source.exists())
+            quarantined = list((state_root / "p1-results").glob("glm52-p1-result*"))
+            self.assertEqual(len(quarantined), 1)
+            self.assertEqual(quarantined[0].stat().st_mode & 0o777, 0o500)
+
     def test_submitter_accepts_hashes_only(self):
         submitter = load_submitter()
         sha1 = "1" * 40
@@ -61,6 +367,22 @@ class RootAttestorContractTests(unittest.TestCase):
             submitter.parse_request(["diagnose", sha256]),
             ("diagnose", sha256),
         )
+        self.assertEqual(
+            submitter.parse_request(["reserve-p1", sha1, sha256, sha256]),
+            ("reserve-p1", sha1, sha256, sha256),
+        )
+        self.assertEqual(
+            submitter.parse_request(["reserve-p1-smoke", sha1, sha256, sha256]),
+            ("reserve-p1-smoke", sha1, sha256, sha256),
+        )
+        self.assertEqual(
+            submitter.parse_request(["reserve-p1-approval-smoke", sha1, sha256, sha256]),
+            ("reserve-p1-approval-smoke", sha1, sha256, sha256),
+        )
+        self.assertEqual(
+            submitter.parse_request(["p1-authority"]),
+            ("p1-authority",),
+        )
         for malformed in (
             [],
             ["run", sha1, sha1],
@@ -69,11 +391,177 @@ class RootAttestorContractTests(unittest.TestCase):
             ["status", sha256, "extra"],
             ["diagnose", "../attempt"],
             ["diagnose", sha256, "extra"],
+            ["reserve-p1", sha1],
+            ["reserve-p1", "../candidate", sha256],
+            ["reserve-p1", sha1, sha256],
+            ["reserve-p1-smoke", sha1, sha256],
+            ["reserve-p1-approval-smoke", sha1, sha256],
+            ["p1-authority", "extra"],
             ["shell", sha256],
         ):
             with self.subTest(malformed=malformed):
                 with self.assertRaises(ValueError):
                     submitter.parse_request(malformed)
+
+    def test_p1_reservation_is_exclusive_root_owned_and_persistent(self):
+        submitter = load_submitter()
+        candidate = "1" * 40
+        reservation = "2" * 64
+        output = "3" * 64
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            marker_root = state / "p1-baseline-heldout-v1"
+            marker = marker_root / "reservation.json"
+            with (
+                mock.patch.object(submitter, "STATE_ROOT", state),
+                mock.patch.object(submitter, "P1_RESERVATION_ROOT", marker_root),
+                mock.patch.object(submitter, "P1_RESERVATION", marker),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                mock.patch.object(
+                    submitter, "_read_p1_approval",
+                    return_value=({
+                        "candidate_hash": candidate,
+                        "controller_sha256": "5" * 64,
+                    }, {
+                        "approval_sha256": "6" * 64,
+                        "approval_device": 7,
+                        "approval_inode": 8,
+                    }),
+                ) as approval_reader,
+                mock.patch("builtins.print") as printer,
+            ):
+                self.assertEqual(submitter.reserve_p1(
+                    candidate, reservation, output,
+                    marker_root=marker_root, marker=marker,
+                ), 0)
+                approval_reader.assert_called_once()
+                first = json.loads(marker.read_text(encoding="utf-8"))
+                self.assertEqual(first["candidate_hash"], candidate)
+                self.assertEqual(first["reservation_sha256"], reservation)
+                self.assertEqual(first["output_sha256"], output)
+                self.assertEqual(
+                    first["scoring_backend"], submitter.P1_SCORING_BACKEND,
+                )
+                self.assertEqual(marker.stat().st_mode & 0o777, 0o444)
+                self.assertEqual(marker_root.stat().st_mode & 0o777, 0o555)
+                first_inode = marker.stat().st_ino
+                self.assertEqual(
+                    submitter.reserve_p1(
+                        "3" * 40, "4" * 64, "5" * 64,
+                        marker_root=marker_root, marker=marker,
+                    ), 17,
+                )
+                self.assertEqual(marker.stat().st_ino, first_inode)
+                self.assertEqual(
+                    json.loads(marker.read_text(encoding="utf-8")), first,
+                )
+                self.assertEqual(printer.call_count, 2)
+                marker_root.chmod(0o700)
+                marker.chmod(0o600)
+
+    def test_p1_reservation_rejects_caller_selected_clean_head(self):
+        """The root helper, not the caller's repository, selects the candidate."""
+        submitter = load_submitter()
+        approved = "1" * 40
+        attacker_selected = "3" * 40
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            marker_root = state / "p1-baseline-heldout-v1"
+            marker = marker_root / "reservation.json"
+            approval = state / "p1-approved.json"
+            approval.write_text(json.dumps({
+                "schema_version": 1,
+                "classification": "GLM52_P1_ROOT_APPROVED_CANDIDATE",
+                "candidate_hash": approved,
+                "controller_sha256": "2" * 64,
+            }) + "\n", encoding="utf-8")
+            approval.chmod(0o444)
+            try:
+                with (
+                    mock.patch.object(submitter, "STATE_ROOT", state),
+                    mock.patch.object(submitter, "P1_RESERVATION_ROOT", marker_root),
+                    mock.patch.object(submitter, "P1_RESERVATION", marker),
+                    mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                    mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+                    mock.patch.object(
+                        submitter, "_read_p1_approval",
+                        return_value=({
+                            "candidate_hash": approved,
+                            "controller_sha256": "2" * 64,
+                        }, {
+                            "approval_sha256": "5" * 64,
+                            "approval_device": 6,
+                            "approval_inode": 7,
+                        }),
+                    ),
+                    self.assertRaisesRegex(ValueError, "root-approved"),
+                ):
+                    submitter.reserve_p1(
+                        attacker_selected, "4" * 64, "5" * 64,
+                        marker_root=marker_root, marker=marker,
+                    )
+            finally:
+                if marker_root.exists():
+                    marker_root.chmod(0o700)
+                if marker.exists():
+                    marker.chmod(0o600)
+                approval.chmod(0o600)
+
+    def test_p1_root_approval_is_exact_root_owned_and_canonical(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            approval = root / "p1-approved.json"
+            value = {
+                "schema_version": 1,
+                "classification": "GLM52_P1_ROOT_APPROVED_CANDIDATE",
+                "candidate_hash": "1" * 40,
+                "controller_sha256": "2" * 64,
+            }
+            approval.write_text(
+                json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n",
+                encoding="utf-8",
+            )
+            approval.chmod(0o444)
+            with (
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+            ):
+                observed, identity = submitter._read_p1_approval(approval)
+                self.assertEqual(observed, value)
+                self.assertRegex(identity["approval_sha256"], r"^[0-9a-f]{64}$")
+                approval.chmod(0o644)
+                with self.assertRaisesRegex(ValueError, "identity"):
+                    submitter._read_p1_approval(approval)
+
+    def test_p1_reservation_reader_rejects_mutable_or_linked_marker(self):
+        submitter = load_submitter()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            marker = root / "reservation.json"
+            marker.write_text(json.dumps({
+                "schema_version": 1,
+                "classification": "GLM52_P1_PERMANENT_RESERVATION",
+                "candidate_hash": "1" * 40,
+                "reservation_sha256": "2" * 64,
+                "output_sha256": "3" * 64,
+                "created_epoch_ns": 123,
+                "scoring_backend": dict(submitter.P1_SCORING_BACKEND),
+            }) + "\n", encoding="utf-8")
+            with (
+                mock.patch.object(submitter, "P1_RESERVATION", marker),
+                mock.patch.object(submitter, "ROOT_UID", os.getuid()),
+                mock.patch.object(submitter, "ROOT_GID", os.getgid()),
+            ):
+                marker.chmod(0o600)
+                with self.assertRaisesRegex(ValueError, "identity"):
+                    submitter._read_p1_reservation(marker)
+                marker.chmod(0o444)
+                linked = root / "linked.json"
+                os.link(marker, linked)
+                with self.assertRaisesRegex(ValueError, "identity"):
+                    submitter._read_p1_reservation(marker)
 
     def test_first_drand_round_is_strictly_after_freeze(self):
         submitter = load_submitter()
@@ -527,14 +1015,53 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn("/usr/sbin/visudo -cf", source)
         self.assertIn("NOPASSWD: /usr/local/sbin/glm52-w1-submit *", source)
         self.assertNotRegex(source, r"NOPASSWD:\\s*ALL")
+        self.assertIn(
+            'readonly APPROVAL=/usr/local/libexec/glm52-w1/p1-approved.json',
+            source,
+        )
+        self.assertIn(
+            'readonly CONTROLLER_SOURCE=scripts/81_glm_union_baseline.py',
+            source,
+        )
+        self.assertIn(
+            '/usr/bin/install -o root -g root -m 0444 "$approval_temporary" "$APPROVAL"',
+            source,
+        )
+        self.assertIn('"controller_sha256": controller', source)
         expected = hashlib.sha256(SUBMITTER.read_bytes()).hexdigest()
         match = re.search(
-            r"^readonly SUBMITTER_SHA256='([0-9a-f]{32})''([0-9a-f]{32})'$",
+            r"^readonly SUBMITTER_SHA256=([0-9a-f]{64})$",
             source,
             re.MULTILINE,
         )
         self.assertIsNotNone(match)
-        self.assertEqual("".join(match.groups()), expected)
+        self.assertEqual(match.group(1), expected)
+
+    def test_installer_copies_and_hash_verifies_offline_scorer_dependencies(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        self.assertRegex(
+            source,
+            r"(?m)^readonly PYTHON_DEPENDENCY_SHA256=[0-9a-f]{64}$",
+        )
+        self.assertIn("dependency_tree_sha", source)
+        self.assertIn('"$PYTHON_DEPENDENCY_SOURCE/$dependency"', source)
+        self.assertIn('dependency_tree_sha "$PYTHON_RUNTIME"', source)
+        self.assertIn("PYTHONNOUSERSITE=1", source)
+        self.assertIn("PYTHONDONTWRITEBYTECODE=1", source)
+        self.assertIn("import numpy, tokenizers, torch", source)
+
+    def test_controller_pins_the_same_root_submitter_bytes_as_installer(self):
+        controller = (ROOT / "scripts/81_glm_union_baseline.py").read_text(
+            encoding="utf-8",
+        )
+        expected = hashlib.sha256(SUBMITTER.read_bytes()).hexdigest()
+        match = re.search(
+            r'^FROZEN_ROOT_SUBMITTER_SHA256 = "([0-9a-f]{64})"$',
+            controller,
+            re.MULTILINE,
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), expected)
 
     def test_installer_publishes_only_the_contained_runtime_read_surface(self):
         source = INSTALLER.read_text(encoding="utf-8")
@@ -587,6 +1114,59 @@ class RootAttestorContractTests(unittest.TestCase):
         ):
             with self.subTest(required=required):
                 self.assertIn(required, source)
+
+    def test_installer_requires_reviewed_root_owned_staged_copy(self):
+        source = INSTALLER.read_text(encoding="utf-8")
+        for required in (
+            "GLM52_REVIEWED_INSTALLER_SHA256",
+            "installer must be executed from a reviewed root-owned staged copy",
+            "/usr/bin/sha256sum -- \"$0\"",
+            "/usr/bin/stat -c '%u:%g:%a:%F' -- \"$0\"",
+            "0:0:500:regular file",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, source)
+
+    def test_staging_copy_race_yields_reviewed_bytes_or_hash_failure(self):
+        reviewed = b"#!/bin/bash\nprintf 'reviewed\\n'\n" + b"#" * 65536
+        replacement = b"#!/bin/bash\nprintf 'unreviewed\\n'\n" + b"!" * 65534
+        expected = hashlib.sha256(reviewed).hexdigest()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "user-installer"
+            source.write_bytes(reviewed)
+            stop = threading.Event()
+
+            def mutate():
+                while not stop.is_set():
+                    source.write_bytes(replacement)
+                    source.write_bytes(reviewed)
+
+            writer = threading.Thread(target=mutate)
+            writer.start()
+            try:
+                for index in range(32):
+                    staged = root / f"staged-{index}"
+                    subprocess.run(
+                        ["/usr/bin/install", "-m", "0500", source, staged],
+                        check=True,
+                    )
+                    check = subprocess.run(
+                        ["/usr/bin/sha256sum", "-c"],
+                        input=f"{expected}  {staged}\n",
+                        text=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    if check.returncode == 0:
+                        self.assertEqual(staged.read_bytes(), reviewed)
+                    else:
+                        self.assertNotEqual(
+                            hashlib.sha256(staged.read_bytes()).hexdigest(), expected,
+                        )
+            finally:
+                stop.set()
+                writer.join()
 
     def test_untrusted_engine_builds_as_dsv4_in_a_root_cgroup(self):
         campaign = (
@@ -674,13 +1254,21 @@ class RootAttestorContractTests(unittest.TestCase):
         self.assertIn("validate_w1_root_receipt", controller)
         self.assertIn("/var/lib/glm52-w1/by-composite", controller)
 
-    def test_submitter_does_not_ingest_user_campaign_trees(self):
+    def test_submitter_only_ingests_the_exact_p1_publication_tree(self):
         source = SUBMITTER.read_text(encoding="utf-8")
         launcher = (
             ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
         ).read_text(encoding="utf-8")
         self.assertNotIn("shutil.copytree", source)
-        self.assertNotIn("/home/bmarti44/.local/state", source)
+        campaign = source.split("def run_campaign(", 1)[1].split(
+            "\ndef show_status", 1,
+        )[0]
+        self.assertNotIn("/home/bmarti44/.local/state", campaign)
+        publication = source.split("def publish_p1_result(", 1)[1].split(
+            "\ndef _open_noatime", 1,
+        )[0]
+        self.assertIn("_copy_tree_root_owned(source, destination)", publication)
+        self.assertIn("completed_validator(destination, approval)", publication)
         self.assertNotIn("--uid=bmarti44", source + launcher)
         self.assertIn("--uid=dsv4", launcher)
         self.assertIn("MemorySwapMax=0", launcher)

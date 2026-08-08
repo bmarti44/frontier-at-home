@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RUNTIME_ATTEMPT",
+  "gate": "R0c/P1 non-held-out engine-to-scorer schema smoke",
+  "candidate_engine_commit": "bed0754b31e1547c91d6a5b6d9aaf66577f8857c",
+  "binary_sha256": "df19bf4bef85d5582859af6a328853247959c616fbe82160132deca87b7240b1",
+  "held_out_values_opened": false,
+  "attempts": [
+    {
+      "attempt": 1,
+      "tag": "baseline-schema-c3-bed0754",
+      "configuration": {
+        "context_tokens": 512,
+        "streaming_cache_budget": "1GB",
+        "safe_min_start_gib": 110,
+        "safe_kill_floor_gib": 18,
+        "safe_timeout_seconds": 2400
+      },
+      "observed_failure": "Engine rejected the launch before model load because the 1.00 GiB cache budget is below the measured 5.91 GiB minimum for two routed prefill layers.",
+      "exit_code": 1,
+      "killed": false,
+      "gpu_or_kernel_fault": false,
+      "artifacts": {
+        "main.log": "8f8403fda14ac8ee823ef6acad449d161950bc1633234066883eb328e54249a9",
+        "samples.log": "5a18be7bcd72c9970f5f372d6622ef62d065b3f871bf5c4ee5b2399c5ccb67f5",
+        "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+      },
+      "artifact_bytes": {
+        "main.log": 1726,
+        "samples.log": 159,
+        "kernel.log": 17
+      }
+    },
+    {
+      "attempt": 2,
+      "tag": "baseline-schema-c3-bed0754-a2",
+      "configuration": {
+        "context_tokens": 512,
+        "streaming_cache_budget": "6GB",
+        "mtp_flag": false,
+        "safe_min_start_gib": 110,
+        "safe_kill_floor_gib": 18,
+        "safe_timeout_seconds": 2400
+      },
+      "observed_failure": "Engine loaded safely, then rejected baseline capture because the CLI invocation had not enabled the model's bound MTP head.",
+      "exit_code": 1,
+      "killed": false,
+      "gpu_or_kernel_fault": false,
+      "artifacts": {
+        "main.log": "2adc43ff9213c7f5b3c9e13675e403093075be60220bb7f3e228f3bbe3ba1b38",
+        "samples.log": "9c26263e05b8339deb2f5a7f48fed3544b6848f335464d2f7299a900153c2b0b",
+        "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+      },
+      "artifact_bytes": {
+        "main.log": 2998,
+        "samples.log": 172,
+        "kernel.log": 17
+      }
+    },
+    {
+      "attempt": 3,
+      "tag": "baseline-schema-c3-bed0754-a3",
+      "configuration": {
+        "context_tokens": 512,
+        "streaming_cache_budget": "6GB",
+        "cli_argument": "--mtp without its required support-file operand",
+        "safe_min_start_gib": 110,
+        "safe_kill_floor_gib": 18,
+        "safe_timeout_seconds": 2400
+      },
+      "observed_failure": "CLI exited during argument parsing because --mtp requires a support-file operand; the wrapper then failed closed on the sub-sampler process-group race before safety sampling began.",
+      "exit_code": 1,
+      "killed": false,
+      "gpu_or_kernel_fault": false,
+      "artifacts": {
+        "main.log": "b1beac8f9af811043d562ba650755fbf74ba504dc7e1cd170965dcdd917a42f8",
+        "cmd.log": "88ea36086569de113c42630345ffd2ac73c6dba47a9fa6948e5c86204f49b37f"
+      },
+      "artifact_bytes": {
+        "main.log": 1033,
+        "cmd.log": 5039
+      }
+    },
+    {
+      "attempt": 4,
+      "tag": "baseline-schema-c3-bed0754-a4",
+      "configuration": {
+        "context_tokens": 512,
+        "streaming_cache_budget": "6GB",
+        "integrated_glm_mtp": true,
+        "safe_min_start_gib": 110,
+        "safe_kill_floor_gib": 18,
+        "safe_timeout_seconds": 2400
+      },
+      "observed": {
+        "wrapper_exit_code": 0,
+        "killed": false,
+        "gpu_or_kernel_fault": false,
+        "prompt_tokens": 59,
+        "source_positions": [43, 44, 45, 46, 47, 48, 49, 50],
+        "source_bundles": 8,
+        "capture_files": 64,
+        "capture_bytes": 6680596,
+        "layers_total": 79,
+        "vocab": 154880,
+        "all_eight_fixed_scorer_validations": "PASS",
+        "post_run_mem_available_kib": 120741600,
+        "post_run_swap_free_kib": 15925040
+      },
+      "artifacts": {
+        "capture/source-00000043.json": "83dbfd738a1e611b699dcf49d9840c2d53701d105e9ca5d66039e42d9f195118",
+        "capture/source-00000044.json": "a836aa491e894da4b8c7869adb5f871444578ea8808bf688e28e6fe23fe21830",
+        "capture/source-00000045.json": "f8b490baa0157aaeb43e5fce7e7862abfcc3286aad87e4e80032634e038ee43a",
+        "capture/source-00000046.json": "324494549b9225dba89bd7d12555ae0a1818c6138df923c6eadc7dbee3d9e27d",
+        "capture/source-00000047.json": "87edd7e6d559cfa66287fd1378fdf76d343abe5ce603333b44202aacdfc9194a",
+        "capture/source-00000048.json": "d46177e6880bcec8e2019fbdda2d1d5c81aa4280f679762b9b88496b584e01da",
+        "capture/source-00000049.json": "4da89a9411f8e269ad509fec3da16d664124d5102d94021c91140f087b1e7778",
+        "capture/source-00000050.json": "68caa0575c3a983f5e1ee321b6f79e36e59ee1f5ded673dea72889797750057d",
+        "main.log": "77e95fffdd206753c234c9704dce70a418c3e0a83dd41c7003bf6237862b3e48",
+        "samples.log": "831a8a0a2b032d9182f6d3f67d34769ce4d38a2f6067935ce714af5480393325",
+        "kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+      },
+      "artifact_bytes": {
+        "main.log": 3772,
+        "samples.log": 214495,
+        "kernel.log": 17
+      },
+      "verdict": "PASS"
+    }
+  ],
+  "bounded_fix": "Keep the corrected 6GB cache budget and replace the mistaken --mtp option with --glm-mtp, the integrated GLM nextn-head flag required by the capture precondition. No source, scorer, test, prompt, or held-out input changes.",
+  "acceptance_test": "The contained non-held-out engine must publish eight complete 79-layer capture bundles; the fixed scorer must accept every bundle and reject truncated and extra-layer mutations; wrapper and fault logs must be clean.",
+  "verdict": "PASS"
+}

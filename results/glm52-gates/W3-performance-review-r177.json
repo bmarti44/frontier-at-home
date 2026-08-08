@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "8c5716b6824b2c745b001cc7f81cd64a1a6ad643",
+  "review_round": 177,
+  "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION",
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 65,
+      "critical": [],
+      "high": [
+        {
+          "id": "W3-R176-C1-SYNTHETIC-CAMPAIGN-PASS",
+          "status": "OPEN",
+          "evidence": "Freeze authority is fixed, but core runtime checks are still trusted from the stored all-true map rather than recomputed from HTTP, dispatch, fault, reasoning, environment and memory artifacts.",
+          "affected_gate": "W3 runtime eligibility and completed-time campaign",
+          "reproduction": "Contradict ON arm fields and raw artifacts while leaving stored checks true, then refresh bound hashes.",
+          "proposed_acceptance_test": "Recompute every fixed check from bound raw artifacts and require exact equality."
+        },
+        {
+          "id": "W3-R176-H1-STALE-TIMING-REUSE",
+          "status": "OPEN",
+          "evidence": "Unique paths and hashes do not bind the timing vector itself to an immutable per-response record; a favorable trace can be copied, request IDs rewritten and timestamps affine-shifted.",
+          "affected_gate": "Ten fresh-server campaign pairs",
+          "reproduction": "Copy one timing vector into distinct logs, shift all timestamps, and refresh hashes.",
+          "proposed_acceptance_test": "Emit and independently validate a response-bound timing record with response hash/identity, request ID, token IDs, timestamps and cmd identity."
+        }
+      ],
+      "medium": [], "low": [],
+      "prior_issue_status": [
+        {"id": "W3-R176-H2-AMBIENT-SCORER-AUTHORITY", "status": "FIXED"},
+        {"id": "W3-R176-M1-MALFORMED-TIMING-LINES-IGNORED", "status": "FIXED"},
+        {"id": "W3-R176-M2-INCOMPLETE-INTERVAL-DERIVATION", "status": "FIXED"}
+      ],
+      "verdict": "REJECT"
+    },
+    "Singer": {
+      "score_0_to_100": 49,
+      "critical": [
+        {
+          "id": "ADV-W3-R176-C2-REUSED-SELF-REPORTED-EVIDENCE",
+          "status": "OPEN",
+          "evidence": "Arm/direct-path/safety claims remain self-reported; OFF-style runs, faults, reasoning, HTTP failures or missing dispatch can be relabeled while checks stay true.",
+          "affected_gate": "W3 arm identity, safety and byte eligibility",
+          "reproduction": "Mutate arm/raw direct and fault fields, refresh hashes, and retain the timing groups.",
+          "proposed_acceptance_test": "Recompute every check, environment, marker, dispatch, fault, HTTP, token and output predicate from raw artifacts."
+        },
+        {
+          "id": "ADV-W3-R177-C1-IMPORT-BYPASSES-COMMITTED-AUTHORITY",
+          "status": "OPEN",
+          "evidence": "Importing write_result permits constructed rows to emit an apparently authoritative PASS without main's environment/freeze/pair validation.",
+          "affected_gate": "Fixed-scorer acceptance authority",
+          "reproduction": "Import the scorer and call write_result with ten unique constructed rows.",
+          "proposed_acceptance_test": "Require validated authority and pair receipts in output and make direct-import output fail or be deterministically rejected."
+        }
+      ],
+      "high": [], "medium": [],
+      "low": [{"id": "ADV-W3-R173-L1", "status": "DEFERRED", "evidence": "Optional extracted-shell prologue test remains deferred.", "affected_gate": "W3 regression depth", "reproduction": "See round 173.", "proposed_acceptance_test": "See round 173."}],
+      "prior_issue_status": [
+        {"id": "ADV-W3-R176-C1-UNANCHORED-CAMPAIGN-AUTHORITY", "status": "FIXED"},
+        {"id": "ADV-W3-R176-C2-REUSED-SELF-REPORTED-EVIDENCE", "status": "OPEN"},
+        {"id": "ADV-W3-R174-H1", "status": "FIXED"}
+      ],
+      "verdict": "REJECT_BEFORE_CAMPAIGN_EXECUTION"
+    }
+  }
+}

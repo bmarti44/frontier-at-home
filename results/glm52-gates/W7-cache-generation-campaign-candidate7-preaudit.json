@@ -1,0 +1,49 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 7,
+  "implementation_commit": "8411c9e47be74cffe173ecde130b2a02ba5f2f43",
+  "review_delta_from": "9f012437c35f85f62068818f846637eb75860b60",
+  "review_round_from": 282,
+  "scope": [
+    "terminate and reap the launcher's isolated process group before stopping the exact unit",
+    "require a complete unique and well-formed systemd state schema",
+    "perform a final exact-unit state proof after launcher quiescence",
+    "use an exact owner-bound cgroup kill and stable-empty proof if user-systemd control fails",
+    "always check server PID and listener survivors before returning or releasing serialization",
+    "preserve replayable raw observations for delayed, active, and control-failure cases"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"result": "PASS", "result_stream_symbols": 96, "skipped": 1},
+    "runner_self_test": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "delayed_publication_real_integration": "PASS",
+    "active_unit_real_integration": "PASS",
+    "control_failure_cgroup_fallback_real_integration": "PASS_FAIL_CLOSED",
+    "active_units_after": 0,
+    "marked_descendants_after": 0,
+    "server_pids_after": 0,
+    "listener_after": false,
+    "engine_started": false,
+    "gpu_used": false
+  },
+  "artifacts": {
+    "raw": "W7-cache-generation-campaign-candidate7-unit-raw.jsonl",
+    "raw_sha256": "68d59ab3b8781ca96139ed1acbe35ccef0f210154c391a4b085fb13bcd8749b2",
+    "summary": "W7-cache-generation-campaign-candidate7-unit-summary.json",
+    "summary_sha256": "a98ba68902816dd850ce28452df2930bcc994b327c2037d445bb31ebb7b5e263"
+  },
+  "blocking_findings_targeted": [
+    "GAP-W7.1-282-H1-CONTROL-PLANE-ERROR-SKIPS-SURVIVOR-PROOF",
+    "GAP-W7.1-282-H2-MASKED-ACTIVE-UNIT-ACCEPTED-AS-STOPPED",
+    "ADV-W7.1-282-H1-NO-POST-REAP-UNIT-ABSENCE-PROOF"
+  ],
+  "convergence": {
+    "candidate_count_for_gate": 7,
+    "resumed_audit_candidate": 2,
+    "prior_blocking_count": 3,
+    "expected_blocking_count": 0,
+    "candidate_limit_exceeded": false
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}

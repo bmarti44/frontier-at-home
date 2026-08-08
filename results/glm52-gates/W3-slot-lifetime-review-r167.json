@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "3b0169777e067d581e180ac975b9d796adaf0a42",
+  "review_round": 167,
+  "decision": "REJECT_BEFORE_RUN",
+  "execution_performed": false,
+  "reviewers": [
+    {
+      "reviewer": "gap_reviewer",
+      "score_0_to_100": 80,
+      "critical": [],
+      "high": [
+        "W3-R167-H1-TOKENIZER-AUTHORITY-AMBIENT-AND-INCOMPLETE"
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "REJECT_BEFORE_EXECUTION"
+    },
+    {
+      "reviewer": "adversarial_reviewer",
+      "score_0_to_100": 86,
+      "critical": [],
+      "high": [
+        "ADV-W3-R166-H1"
+      ],
+      "medium": [
+        "ADV-W3-R167-M1",
+        "ADV-W3-R167-M2"
+      ],
+      "low": [],
+      "verdict": "REJECT_EXECUTION_AS_AUTHORITATIVE_PROBE"
+    }
+  ],
+  "verified_fixed": [
+    "exact freeze commit authority",
+    "complete runtime manifest bindings",
+    "API usage removed from acceptance authority",
+    "independent four-response token-count formula",
+    "all round-165 model, environment, dispatch, randomness and lifecycle blockers"
+  ],
+  "remaining_bounded_fix": "Run a minimal fully pinned tokenizer package through env -i and /usr/bin/python3 -I, assert loaded wrapper/native paths and digests at each use, and mutation-test cwd, PYTHONPATH, sitecustomize and package-file substitution.",
+  "scope": "No model was loaded and no GPU evidence was consumed."
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "gate": "R0c_UNION_PROBE_P1_TRAIN_ONLY_CV",
+  "verdict": "PASS",
+  "candidate_hash": "6ade34dcb5376bc3c63a360888f7104545892ea6",
+  "claim_limit": "Train-only grouped cross-validation selected probe rank. No precision-diagnostic, calibration, or test split was opened.",
+  "evidence": {
+    "directory": "/home/bmarti44/.local/state/glm52-p1-cv-r134-6ade34d",
+    "summary_sha256": "cbc3eb1a250024fbfaac9e87d2f39ffaa788845fc44cbc3e342e3528721dc9b9",
+    "manifest_sha256": "9da8b548acd31edf355956c9ede3687534365ac4ac55c75b61dc46f65e111e5e",
+    "runtime_final_sha256": "52bf5d90a520223c26daff52b18f04968e5530f54b2d60827c20a94f25cd4545",
+    "checkpoint_chain_tail_sha256": "10586a13356c3cf07e064e8588edd8883b791c9c726c2e6251f0b641e28c29a0",
+    "console_log": "/home/bmarti44/.local/state/glm52-p1-cv-r134-6ade34d.console.log",
+    "console_log_sha256": "26166b25ad36724e5540af02d10f406bc8c3775bbdf7375ad4a75627af45e781",
+    "files": 154,
+    "bytes_on_disk_approx": 109051904
+  },
+  "runtime": {
+    "elapsed_seconds": 1410,
+    "completed_layers": 75,
+    "kernel_faults": [],
+    "post_mem_available_kib": 115183156,
+    "post_gpu_temperature_c": 54,
+    "deterministic_algorithms": true
+  },
+  "selection": {
+    "K": 4,
+    "budget": 32,
+    "formula": "maximum macro-request recall; exact tie chooses smaller rank",
+    "selected_rank": 32,
+    "requests": 57,
+    "events": 1324350,
+    "frequency_macro_request_recall": 0.25958406531878847,
+    "rank_8_macro_request_recall": 0.5142144598032742,
+    "rank_16_macro_request_recall": 0.5811625282140511,
+    "rank_32_macro_request_recall": 0.6378373304852244,
+    "rank_32_absolute_gain_pp_over_frequency": 37.82532651664359,
+    "frequency_event_weighted_recall": 0.14210256066290725,
+    "rank_32_event_weighted_recall": 0.1791058779289709,
+    "rank_32_event_weighted_absolute_gain_pp": 3.700331726606365
+  },
+  "review": {
+    "round": 134,
+    "gap_reviewer_score": 98,
+    "adversarial_reviewer_score": 100,
+    "critical": [],
+    "high": [],
+    "deferred": [
+      {
+        "id": "GAP-R132-M1",
+        "severity": "medium",
+        "rationale": "The tracked-clean candidate and outer evidence binding cover the training-freeze digest; direct completed-validator comparison is defense in depth and further harness work is frozen."
+      }
+    ]
+  }
+}

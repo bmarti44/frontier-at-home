@@ -1,0 +1,53 @@
+{
+  "candidate_hash": "2cfad5d8e8b84189ec0701fa18eb72e836433b9f",
+  "classification": "PASS",
+  "compactor_sha256": "6ddfca0d194d09370e0e22fb6521aaa03a1f2c3288153974d3ebc4d92561ee78",
+  "conclusion": "The reviewed request-scoped compactor is qualified as a bounded accumulation unit. This receipt does not claim that the one-million token-layer-event P0 corpus is complete.",
+  "current_token_layer_events": 85950,
+  "fixed_acceptance": {
+    "minimum_token_layer_events_per_source_bundle": 76800,
+    "routed_layers": [
+      3,
+      77
+    ],
+    "scorer_replay": "complete two-request source bundle",
+    "target_accumulated_token_layer_events": 1000000,
+    "unique_shard_catalog_required_for_target_claim": true
+  },
+  "review_round": 96,
+  "reviewers": {
+    "adversarial_reviewer": {
+      "critical": [],
+      "high": [],
+      "score": 99,
+      "verdict": "AUTHORIZE_BOUNDED_P0_FREEZE"
+    },
+    "gap_reviewer": {
+      "critical": [],
+      "high": [],
+      "score": 95,
+      "verdict": "PASS_SAFE_TO_FREEZE_WITH_RECORDED_MEDIUM_HARDENING"
+    }
+  },
+  "schema_version": 1,
+  "shards": [
+    {
+      "manifest_sha256": "1a35c4b86d29646c2a1b2a5dd089b3f75f5dfa431fe58ec14161a36931b92dae",
+      "output_bytes": 153250634,
+      "output_sha256": "75c8dd5511e9360b37081fdedce27c67fbd7bb36a0500027021a468d6083bc98",
+      "request_sha256": "0720aceb32d0ecb7cc2dd6cd8bd7f212c016130755bdfd4af033ba3a5895512f",
+      "request_index": 1,
+      "rows": 42975
+    },
+    {
+      "manifest_sha256": "0f47841fc1f20d7b0fc0d55782707fe01738c6f715c01d10a6af7a4634c4a200",
+      "output_bytes": 153250634,
+      "output_sha256": "352b7426fc9e1eb6ec2db295ebc510cf4ffd64700d0eb391d2fd67a6832d151e",
+      "request_sha256": "0ea501975d1d92a3202d579b05debd2e7b99d04ea7d74f6fad030f1e48420e53",
+      "request_index": 2,
+      "rows": 42975
+    }
+  ],
+  "source_receipt_sha256": "1d0226a7ded38ccf4178ea42563b5b08d04dde79c1c1fb92555e4c46d9d08a27",
+  "status": "BOUNDED_P0_COMPACTION_PASS"
+}

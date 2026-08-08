@@ -1,0 +1,41 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 3,
+  "source_candidate_hash": "188b33fa5d1544a17073b5a8617ef5606d442215",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "artifacts": {
+    "scripts/101_score_w4_serving_campaign.py": "88a245d530cb4dc019143f3345fc4abdb70870d56c4f7629f9fe080370a4a09b",
+    "scripts/102_run_w4_serving_campaign.py": "354961f3ae99b9d586ab32e9e890ac4e06b008eadf967b263b389d0652fe0240",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "e35f81eab5e1befa1baabd98cdbb2a2207792ff4792567768507dc16907f8acf",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "4c49f106f94811d3e2814fbbb87aabb991ecf41abaae1567abf6be56064645c7",
+    "preaudit.stdout": "8af621a83e5fd4fe6d6fc49b972cb249407e3ba788c6222764e5aed458d15716"
+  },
+  "round_301_disposition": {
+    "W4S-R301-H1-ARM-REPLAY-NOT-SELF-CONTAINED": "FIXED: replay reads copied safety, performs no writes, ignores live process state, and passes twice after external crashlog removal",
+    "W4S-R301-H2-EXPECTED-ARM-ENVIRONMENT-UNBOUND": "FIXED: safe-run-bound environment.json is reconstructed against exact arm variables and its digest",
+    "W4S-R301-H3-FAILURE-TRIPLET-CLOSURE-INCOMPLETE": "FIXED: every retained regular artifact and all fixed lineage are closed into terminal FAIL",
+    "W4S-R301-H4-ARTIFACT-CLOSURE-FOLLOWS-SYMLINKS": "FIXED: all symlinks reject; parsing and hashing use one O_NOFOLLOW stable descriptor",
+    "W4S-R301-M1-DRAND-FREEZE-TIME-SELF-AUTHORED": "FIXED: GitHub PushEvent server timestamp for exact branch/head is the external lower bound",
+    "W4S-R301-M2-MALFORMED-ARM-CAN-CRASH-SCORER": "FIXED: replay RuntimeError becomes structured FAIL",
+    "ADV-W4S-301-H1-NONIDEMPOTENT-AUTHORITATIVE-REPLAY": "FIXED with W4S-R301-H1",
+    "ADV-W4S-301-H2-POSTMANIFEST-REPLAY-FAILURE-LOSS": "FIXED: provisional PASS is displaced and hash-closed by terminal FAIL",
+    "ADV-W4S-301-H3-FIXED-CLAIMS-NOT-JOINED-TO-ARTIFACTS": "FIXED: request bytes and exact selected fields from frozen microgate are independently joined",
+    "ADV-W4S-301-H4-UNBOUND-CANDIDATE-DEPENDENCY-CLOSURE": "FIXED: clean exact candidate plus tracked/on-disk dependencies, drand runtime, binary, fixture, tokenizer and renderer are hashed",
+    "ADV-W4S-301-H5-BACKDATABLE-FREEZE-TIMESTAMP": "FIXED: schedule randomness must postdate GitHub's server-recorded PushEvent, not git metadata",
+    "ADV-W4S-301-M1-FAILURE-ARTIFACT-CLOSURE-INCOMPLETE": "FIXED with W4S-R301-H3"
+  },
+  "pre_submission_audit": {
+    "w4_tests": "20 passed",
+    "pure_replay_runs": 2,
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "secret_scan_self_test": "PASS",
+    "dependency_hash_preflight": "PASS",
+    "engine_or_fio_started": false,
+    "user_systemd_available": false,
+    "deferred_host_test": "live inherited signal/cgroup injection requires user@1000.service restoration"
+  },
+  "launch_status": "NOT_RUN_PENDING_ROUND_302_AND_USER_SYSTEMD_RESTART"
+}

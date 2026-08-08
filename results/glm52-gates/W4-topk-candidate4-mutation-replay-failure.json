@@ -1,0 +1,21 @@
+{
+  "schema": "glm52-w4-topk-attempt-v1",
+  "gate": "W4",
+  "candidate": 4,
+  "attempt": "mutation-replay-before-path-normalization",
+  "observed": {
+    "command": "python3 scripts/100_mutate_w4_topk_evidence.py results/glm52-gates/W4-topk-candidate4-pass",
+    "exit_code": 0,
+    "all_mutations_rejected": true,
+    "byte_replay_equal": false
+  },
+  "artifacts": {
+    "committed_result": "bdcb8adc6ade4628ce67ab457c4a0174ed69bf7d51152ab2b2ba0fe7603c5d0d",
+    "replayed_result": "820b62c326a1fa93a74f6089a7af9b3d61204d54fff826216940e6ac4d3a1daa",
+    "harness": "af8922b5ba4bd9fb2f9485df3d4c45b146177b83f70e271f48dd3c673a07340b"
+  },
+  "diagnosis": "The scorer tracebacks embed each randomly named TemporaryDirectory path. Rejections and diagnostic tails are stable, but hashing the complete unnormalized stderr makes the mutation receipt nondeterministic.",
+  "bounded_fix": "Replace the temporary path in captured stderr with one fixed token before hashing it; preserve the unnormalized diagnostic tail and rejection result.",
+  "acceptance_test": "Two independent mutation-driver executions must be byte-identical and all 13 named corruptions must still be rejected.",
+  "verdict": "FAIL"
+}

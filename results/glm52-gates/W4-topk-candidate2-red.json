@@ -1,0 +1,54 @@
+{
+  "schema": "glm52-w4-topk-red-v1",
+  "gate": "W4",
+  "candidate": 2,
+  "recorded_at": "2026-08-08T11:57:47-04:00",
+  "purpose": "Genuine CUDA RED exposing candidate-1 disagreement with the production comparator before the bounded candidate-2 fix.",
+  "source": {
+    "adopted_parent_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "candidate1_implementation_commit": "b5226f732460ccec016344766a0931afc4baa35d",
+    "candidate2_test_commit": "2b0d35a9278d4aa5e21febec1a9e337d0689a99e",
+    "artifacts": {
+      "tests/cuda_topk_w4.cu": "e54281dd59bd4ad5f3ff17e947e4925ed55ccc8ca8769682702398a738be3c86",
+      "ds4_cuda.cu": "d80e9fc10c46bfaf2388a15ea7c3c76397ec702d266048caef46b3428bd5a709"
+    }
+  },
+  "build": {
+    "command": "make -j2 tests/cuda_topk_w4 CUDA_ARCH=sm_121",
+    "executable_bytes": 8666216,
+    "cuda_object_bytes": 12965840,
+    "artifacts": {
+      "tests/cuda_topk_w4": "6b5c4041b19ae6005420ea53f40eb381bd287e522daea861f61d0adf49cae52e",
+      "ds4_cuda.o": "57ce91a4803942037b9ad10aa3744cfae1edd02a48510e7e52432bbbd306986f"
+    }
+  },
+  "fixture": {
+    "n_components": 1048576,
+    "n_tokens": 8,
+    "top_k": 2048,
+    "new_cases": [
+      "partial and odd merge trees at 4097, 8191, 8192, 8193, 16383, 16385, 24575, 24576, 24577, and 1000003 components",
+      "signed-zero cutoff ordering",
+      "positive and negative infinity across chunks",
+      "NaN fallback behavior"
+    ],
+    "expected_order": "Exactly the production comparator: score descending, then lower component ID; signed zeros compare equal and NaN-containing inputs must take the unchanged baseline path."
+  },
+  "observed": {
+    "exit_code": 1,
+    "stderr": [
+      "ds4: CUDA backend initialized on NVIDIA GB10 (sm_121) dev=0",
+      "ds4: CUDA exact top-2048 CUB enabled chunk=8192 merge=2",
+      "w4-topk: signed-zero-cutoff arm mismatch rank=0 baseline=0 candidate=1"
+    ],
+    "failing_assertion": "The candidate ranks +0.0 ahead of -0.0 by raw radix bits, while the production comparator treats them equal and therefore chooses the lower component ID."
+  },
+  "safety": {
+    "engine_processes_present": false,
+    "fio_present": false,
+    "mem_available_before_kib": 121303120,
+    "large_model_started": false
+  },
+  "verdict": "RED_CONFIRMED",
+  "interpretation": "The unchanged candidate-1 implementation fails the newly committed production-comparator fixture. This is a behavioral RED, not a missing-file or build failure."
+}

@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1-production-graduation",
+  "attempt_id": "attempt-e021e9e2f2a4b9097fbd3836f9df32e4",
+  "attempt_path": "/home/bmarti44/.local/state/glm52-w7-production-equivalence/attempt-e021e9e2f2a4b9097fbd3836f9df32e4",
+  "verdict": "PASS",
+  "authority": {
+    "launcher_commit": "a79a115cefbb6475aec6c2053bb461122277a544",
+    "launcher_sha256": "bf0c00b3ddc00273e16f26e5d93a3561866b88d4e82f27d416ef3fd0f0f98e36",
+    "frozen_gate_commit": "6b6ca50b3a9ee0f93c981a572508383691707ca6",
+    "engine_source_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+    "strict_engine_source_commit": "7822efd945f1c5366844d253b22e953b6721b650",
+    "manifest_sha256": "19dea5707b83363803a79004f027603acd169b782c6c5f5b89f623b382e86f6f",
+    "raw_sha256": "5a3361da82bef92079401477bba132ed081fb32f3ba0bbe412178ba38e000e1f",
+    "summary_sha256": "1231ee25dfba7b680afbe7ec76b8734b1f09cf6a33efd26fda4b5924e8508562",
+    "randomness_sha256": "3133693835707d108dd5aed5fe2ade7030f69dd3adcb4e7ae50c1d7687b48ea5",
+    "configuration_sha256": "f9fab01e3108ee45f870884e8c3fafe92373a4775f9309e434dce5ff20e49250",
+    "arm_order_sha256": "827dca14ca1769ec1b79bad9df4dc311431636e132f85094b015db9f940df842",
+    "binary_sha256": "c8b08e4ebd59f35f5dba7bcc0943b5d6f377cd15cecb46fc5bdb22dccfd6a51a",
+    "strict_binary_sha256": "2c586aef10c9d9d63827e1141ad2f00ad0d20b259a62e5b53405061eb11c036c",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "harness_sha256": "ddc2c790a2db57cb8f53358d3077ce6d25d850952f296a7361e9029ed11a2b19",
+    "scorer_sha256": "3ac564627df70cbc0fd103679d7126c6f6815f7f879f56d2cf928e0475fdebea",
+    "seed_sha256": "4858cb7d986c723a4f424fa682f7c9d133b5aaf218e11e8fc43be3891630947b"
+  },
+  "public_randomness": {
+    "drand_round": 6356615,
+    "randomness": "e120a40254afdf0cb9ab8d0afc0f42b31967a0f7a0e40448d726ad422fe20f37",
+    "committed_before_publication_seconds": 2972,
+    "bls_receipt_verified": true,
+    "three_relays_byte_equal": true
+  },
+  "arm_order": ["candidate", "strict", "cold"],
+  "matched_comparison": {
+    "candidate_branch": "indexed_resume pos=5044 chunk=22 logits=1",
+    "cold_branch": "indexed_resume pos=5044 chunk=22 logits=1",
+    "candidate_dump": "candidate/logits.sync3.start5044.prompt5066.suffix22",
+    "cold_dump": "cold/logits.sync2.start5044.prompt5066.suffix22",
+    "output_sha256": "f1e6a17d083003095c4c8d3bfd03ee04e3c2ba63b3688b1bf8ec78441c59e833",
+    "compared_f32_logits": 154880,
+    "candidate_argmax": 14109,
+    "cold_argmax": 14109,
+    "max_abs_logit_delta": 0.0,
+    "byte_identical": true,
+    "candidate_resume_seconds": 3.58,
+    "cold_reference_seconds": 139.861
+  },
+  "strict_control": {
+    "guard_observed": true,
+    "full_restart_start": 0,
+    "prompt_tokens": 5066,
+    "full_restart_seconds": 135.75,
+    "argmax": 785,
+    "strict_vs_cold_max_abs_logit_delta": 23.987205386161804,
+    "comparison_authority": false
+  },
+  "checkpoint_identity": {
+    "selected_filename": "9e5ba8aa0b75e6c618f68d9834ef541c44cd4b42.kv",
+    "candidate_semantic_sha256": "2dc47afc0382302cb59553ec8090af0cba06d5f381b1ae83806bd2572dfd3743",
+    "strict_semantic_sha256": "2dc47afc0382302cb59553ec8090af0cba06d5f381b1ae83806bd2572dfd3743",
+    "unchanged_within_each_arm": true,
+    "record_checksum_verified": true
+  },
+  "checks": {
+    "all_fixed_scorer_checks": true,
+    "candidate_logits_byte_exact": true,
+    "diagnostic_marker_absent_all_arms": true,
+    "selected_kv_cross_arm_exact": true,
+    "selected_kv_unchanged": true,
+    "strict_guard_observed": true,
+    "traces_pass": true,
+    "safety_evidence_pass": true
+  },
+  "safety": {
+    "minimum_mem_available_gib": {
+      "candidate": 48.226753,
+      "strict": 48.281654,
+      "cold": 48.282276
+    },
+    "maximum_engine_rss_gib": {
+      "candidate": 38.240437,
+      "strict": 38.142773,
+      "cold": 38.133934
+    },
+    "cgroup_swap_current_bytes": 0,
+    "cgroup_pressure_or_oom_events": 0,
+    "oom_or_xid": false,
+    "containment_clean": true,
+    "surviving_engine": false
+  },
+  "scope": "This closes W7 production graduation for the frozen 5066-token branch-matched fixture. It is a correctness and warm-resume result, not a 1M-context capability or parity result. The measured 3.58-second resumed request remains above the owner's sub-2-second warm-TTFT target."
+}

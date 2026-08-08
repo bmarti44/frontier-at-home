@@ -9,6 +9,8 @@ raw.jsonl and summary.json under the immutable attempt directory.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import csv
 import fcntl
 import hashlib
@@ -20,9 +22,11 @@ import os
 import re
 import stat
 import statistics
+import struct
 import subprocess
 import sys
 import tempfile
+import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -1180,8 +1184,12 @@ def validate_raw_record(record: dict[str, Any]) -> None:
         raise ValueError("measurement record contains failures")
 
 
-def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
+def validate_ab_blocks(
+    records: Iterable[dict[str, Any]], *, flip: bool = False
+) -> None:
     """Require five fresh-server ABBA/BAAB blocks with equal fixtures."""
+    if not isinstance(flip, bool):
+        raise ValueError("AB block orientation must be boolean")
     rows = list(records)
     if len(rows) != 20:
         raise ValueError("exactly five four-arm blocks are required")
@@ -1196,7 +1204,7 @@ def validate_ab_blocks(records: Iterable[dict[str, Any]]) -> None:
         )
         if len(group) != 4 or [row.get("sequence") for row in group] != list(range(4)):
             raise ValueError(f"block {block} is incomplete or mis-sequenced")
-        expected = "ABBA" if block % 2 == 0 else "BAAB"
+        expected = "ABBA" if (block + int(flip)) % 2 == 0 else "BAAB"
         if "".join(str(row.get("arm", "")) for row in group) != expected:
             raise ValueError(f"block {block} does not follow {expected}")
         group_boots = [row.get("server_boot_id") for row in group]
@@ -3007,6 +3015,1029 @@ def _score_workstream(
     }
 
 
+def _w7_f32_vector(encoded: Any, label: str, expected_count: int) -> tuple[float, ...]:
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError(f"{label} must be non-empty base64")
+    try:
+        compressed = base64.b64decode(encoded, validate=True)
+        expected_bytes = expected_count * 4
+        if len(compressed) > expected_bytes + 1024:
+            raise ValueError(f"{label} compressed input is oversized")
+        inflater = zlib.decompressobj()
+        raw = inflater.decompress(compressed, expected_bytes + 1)
+    except (binascii.Error, zlib.error, ValueError) as exc:
+        raise ValueError(f"{label} is not canonical compressed F32") from exc
+    if (
+        not inflater.eof or inflater.unused_data or inflater.unconsumed_tail or
+        len(raw) != expected_bytes
+    ):
+        raise ValueError(f"{label} has the wrong F32 length")
+    values = struct.unpack(f"<{expected_count}f", raw)
+    if any(not math.isfinite(value) for value in values):
+        raise ValueError(f"{label} contains non-finite values")
+    return values
+
+
+def _w7_i32_vector(encoded: Any, label: str, expected_count: int) -> tuple[int, ...]:
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError(f"{label} must be non-empty base64")
+    expected_bytes = expected_count * 4
+    try:
+        compressed = base64.b64decode(encoded, validate=True)
+        if len(compressed) > expected_bytes + 1024:
+            raise ValueError(f"{label} compressed input is oversized")
+        inflater = zlib.decompressobj()
+        raw = inflater.decompress(compressed, expected_bytes + 1)
+    except (binascii.Error, zlib.error, ValueError) as exc:
+        raise ValueError(f"{label} is not canonical compressed I32") from exc
+    if (
+        not inflater.eof or inflater.unused_data or inflater.unconsumed_tail or
+        len(raw) != expected_bytes
+    ):
+        raise ValueError(f"{label} has the wrong I32 length")
+    return struct.unpack(f"<{expected_count}i", raw)
+
+
+def _w7_utf8_bytes(encoded: Any, label: str) -> bytes:
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError(f"{label} must be non-empty base64")
+    try:
+        value = base64.b64decode(encoded, validate=True)
+        if not value or len(value) > 16 * 1024 * 1024:
+            raise ValueError(f"{label} has invalid length")
+        value.decode("utf-8", errors="strict")
+    except (binascii.Error, UnicodeDecodeError, ValueError) as exc:
+        raise ValueError(f"{label} is not canonical UTF-8 base64") from exc
+    return value
+
+
+_W7_SAFE_WRAPPER_SHA256 = "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801"
+_W7_STEM_PATH = ROOT / "results/glm52-gates/harness/fixture-glm-long8.json"
+_W7_STEM_FILE_SHA256 = "4b46547667dd4d84b8da83c0ccca358e725e33e8de8bbfe25701ab0d878ae469"
+_W7_STEM_TEXT_SHA256 = "a2ff948826dd9a1b4c74fe599ba4b668ae4285e44b275006afc9d3c7541655cf"
+_W7_POOL_PATH = ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json"
+_W7_POOL_SHA256 = "c71f1c9c90164baae00492befed68765fd9bee40fef3de8c3b291cc06794ecb9"
+_W7_TOKENIZER_SHA256 = "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+_W7_TOKENIZER_INIT_SHA256 = "eff4eff4386074cbbd5e34e009bdfccf5879a7e5c5f0da6f4b6babc0597c09e4"
+_W7_TOKENIZER_NATIVE_SHA256 = "fa049ce975669d8a90fb48960f412e626fa54cf596c2f75d6820949f4888e910"
+_W7_SERVER_SOURCE_SHA256 = "d48d748edb56220727875d705f8487406c0f4f5b64b4d28ec0b829eb5ce87f07"
+_W7_RENDER_ORACLE_SOURCE_SHA256 = "9590b8eaa238e311ca0468e6983280b798cbb94c3d727920f5e839ac8ee20539"
+_W7_RENDER_ORACLE_BINARY_SHA256 = "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66"
+_W7_RENDER_PREFIX = b"[gMASK]<sop><|system|>Reasoning Effort: High<|system|>You are a helpful assistant<|user|>"
+_W7_RENDER_SUFFIX = b"<|assistant|><think>"
+_W7_PRIMARY_SUFFIX = "\n\n[W7 primary fixed] Explain why a restored prefix must be rewound before this appended request."
+_W7_CONFIRMATION_SUFFIXES = tuple(
+    f"\n\n[W7 confirmation {index:02d}] " + instruction
+    for index, instruction in enumerate((
+        "Name the cache frontier invariant and give one counterexample.",
+        "Describe the UTF-8/BPE boundary risk in exactly three sentences.",
+        "Return a concise checklist for validating a resumed append.",
+        "Explain why exact replay alone cannot qualify suffix divergence.",
+        "State which rows must be invalidated before evaluating the suffix.",
+        "Contrast a cold restart with a live rewind without using a table.",
+        "Give a deterministic test for a checkpoint selected at a byte boundary.",
+        "Identify the first observable symptom of stale frontier contamination.",
+        "Explain why a longer stored record with wrong lineage must be ignored.",
+        "State the required relationship among selected, common, live, and prompt.",
+        "Describe a mutation that proves a short payload read is rejected.",
+        "Explain why generated-token equality does not replace logit comparison.",
+        "List the state members that make a GLM checkpoint complete.",
+        "Describe how to prove evaluator ranges contain no hidden prefix work.",
+        "Explain why the default-off flag must not affect non-GLM models.",
+        "Summarize the fail-closed behavior for a malformed checkpoint.",
+    ))
+)
+_W7_CASE_CONTRACT = {
+    "cold-primary": ("glm", "unset", "primary-cold", "cold"),
+    "strict-primary": ("glm", "unset", "primary-extension", "cold"),
+    "candidate-primary": ("glm", "1", "primary-extension", "resume"),
+    "exact-off": ("glm", "unset", "exact-replay", "replay"),
+    "exact-on": ("glm", "1", "exact-replay", "replay"),
+    "divergence-off": ("glm", "unset", "divergence", "reject"),
+    "divergence-on": ("glm", "1", "divergence", "reject"),
+    "shorten-off": ("glm", "unset", "shorten", "reject"),
+    "shorten-on": ("glm", "1", "shorten", "reject"),
+    "malformed-off": ("glm", "unset", "malformed-checkpoint", "reject"),
+    "malformed-on": ("glm", "1", "malformed-checkpoint", "reject"),
+    "wrong-lineage-off": ("glm", "unset", "wrong-lineage", "reject"),
+    "wrong-lineage-on": ("glm", "1", "wrong-lineage", "reject"),
+    "non-glm-off": ("non-glm", "unset", "primary-extension", "reject"),
+    "non-glm-on": ("non-glm", "1", "primary-extension", "reject"),
+    "flag-zero": ("glm", "0", "primary-extension", "cold"),
+    "flag-empty": ("glm", "", "primary-extension", "cold"),
+    "flag-garbage": ("glm", "garbage", "primary-extension", "cold"),
+}
+
+
+def _w7_caller_wire(variant: str | int) -> bytes:
+    if _sha256(_W7_STEM_PATH) != _W7_STEM_FILE_SHA256:
+        raise ValueError("W7 frozen stem file hash is invalid")
+    document = _read_strict_json(_W7_STEM_PATH)
+    if not isinstance(document, dict) or not isinstance(document.get("prompt"), str):
+        raise ValueError("W7 frozen stem document is invalid")
+    stem = document["prompt"].encode("utf-8")
+    if hashlib.sha256(stem).hexdigest() != _W7_STEM_TEXT_SHA256:
+        raise ValueError("W7 frozen stem text hash is invalid")
+    if variant == "primary-fixed":
+        suffix = _W7_PRIMARY_SUFFIX
+    elif isinstance(variant, int) and not isinstance(variant, bool) and 0 <= variant < 16:
+        suffix = _W7_CONFIRMATION_SUFFIXES[variant]
+    else:
+        raise ValueError("W7 frozen fixture variant is invalid")
+    return stem + suffix.encode("utf-8")
+
+
+def _w7_fixture_pool() -> tuple[dict[str | int, dict[str, Any]], tuple[int, ...], dict[str, int]]:
+    if _sha256(_W7_POOL_PATH) != _W7_POOL_SHA256:
+        raise ValueError("W7 production fixture pool hash is invalid")
+    document = _read_strict_json(_W7_POOL_PATH)
+    _require_exact_keys(
+        document,
+        {"schema", "tokenizer", "render_contract", "oracle", "live", "inventory_recipe", "variants"},
+        "W7 production fixture pool",
+    )
+    if document["schema"] != "glm52-w7-production-fixture-pool-v2":
+        raise ValueError("W7 production fixture pool schema is invalid")
+    expected_tokenizer = {
+        "tokenizer_sha256": _W7_TOKENIZER_SHA256,
+        "runtime_init_sha256": _W7_TOKENIZER_INIT_SHA256,
+        "runtime_native_sha256": _W7_TOKENIZER_NATIVE_SHA256,
+        "add_special_tokens": False,
+    }
+    if document["tokenizer"] != expected_tokenizer:
+        raise ValueError("W7 production tokenizer identity is invalid")
+    if document["render_contract"] != {
+        "api": "/v1/completions", "context_tokens": 8192, "model": "default",
+        "reasoning_effort": "high", "thinking": True,
+        "system": "You are a helpful assistant", "oracle": "frozen-ds4-server-c-parser",
+    }:
+        raise ValueError("W7 production render contract is invalid")
+    if document["oracle"] != {
+        "ds4_server_source_sha256": _W7_SERVER_SOURCE_SHA256,
+        "oracle_source_sha256": _W7_RENDER_ORACLE_SOURCE_SHA256,
+        "oracle_binary_sha256": _W7_RENDER_ORACLE_BINARY_SHA256,
+    }:
+        raise ValueError("W7 C render oracle identity is invalid")
+    recipe = document["inventory_recipe"]
+    if recipe != {
+        "alignment_tokens": 4, "older_delta_tokens": -4,
+        "wrong_lineage_delta_tokens": 1, "malformed_delta_tokens": 2,
+    }:
+        raise ValueError("W7 checkpoint inventory recipe is invalid")
+    live = document["live"]
+    _require_exact_keys(
+        live,
+        {
+            "suffix_utf8", "caller_wire_sha256", "rendered_wire_utf8_b64",
+            "rendered_wire_sha256", "token_ids_zlib_b64", "token_count",
+        },
+        "W7 live fixture",
+    )
+    if live["suffix_utf8"] != "\n\nOne two three four five six seven.":
+        raise ValueError("W7 live fixture suffix is invalid")
+    stem = _w7_caller_wire("primary-fixed")[:-len(_W7_PRIMARY_SUFFIX.encode("utf-8"))]
+    live_caller = stem + live["suffix_utf8"].encode("utf-8")
+    if live["caller_wire_sha256"] != hashlib.sha256(live_caller).hexdigest():
+        raise ValueError("W7 live caller wire is invalid")
+    live_wire = _w7_utf8_bytes(live["rendered_wire_utf8_b64"], "W7 live rendered wire")
+    if (
+        live["rendered_wire_sha256"] != hashlib.sha256(live_wire).hexdigest() or
+        live_wire != _W7_RENDER_PREFIX + live_caller + _W7_RENDER_SUFFIX
+    ):
+        raise ValueError("W7 live C-rendered wire is invalid")
+    live_tokens = _w7_i32_vector(
+        live["token_ids_zlib_b64"], "W7 live fixture tokens", live["token_count"],
+    )
+    variants = document["variants"]
+    if not isinstance(variants, list) or len(variants) != 17:
+        raise ValueError("W7 production fixture variants are incomplete")
+    by_variant: dict[str | int, dict[str, Any]] = {}
+    for index, item in enumerate(variants):
+        _require_exact_keys(
+            item,
+            {
+                "variant", "caller_wire_sha256", "rendered_wire_utf8_b64",
+                "rendered_wire_sha256", "canonical_token_ids_zlib_b64",
+                "wire_token_end_offsets_zlib_b64", "prompt_tokens", "common_tokens",
+                "live_tokens", "selected_tokens",
+            },
+            f"W7 production fixture variant {index}",
+        )
+        variant = item["variant"]
+        expected_variant: str | int = "primary-fixed" if index == 0 else index - 1
+        if variant != expected_variant or variant in by_variant:
+            raise ValueError("W7 production fixture variant identity is invalid")
+        caller_wire = _w7_caller_wire(variant)
+        if item["caller_wire_sha256"] != hashlib.sha256(caller_wire).hexdigest():
+            raise ValueError("W7 production caller wire hash is invalid")
+        wire = _w7_utf8_bytes(
+            item["rendered_wire_utf8_b64"], f"W7 production fixture {variant} wire",
+        )
+        if (
+            item["rendered_wire_sha256"] != hashlib.sha256(wire).hexdigest() or
+            wire != _W7_RENDER_PREFIX + caller_wire + _W7_RENDER_SUFFIX
+        ):
+            raise ValueError("W7 production C-rendered wire is invalid")
+        canonical = _w7_i32_vector(
+            item["canonical_token_ids_zlib_b64"],
+            f"W7 production fixture {variant} tokens", item["prompt_tokens"],
+        )
+        offsets = _w7_i32_vector(
+            item["wire_token_end_offsets_zlib_b64"],
+            f"W7 production fixture {variant} offsets", item["prompt_tokens"],
+        )
+        common = 0
+        while (
+            common < len(canonical) and common < len(live_tokens) and
+            canonical[common] == live_tokens[common]
+        ):
+            common += 1
+        if (
+            offsets[-1] != len(wire) or
+            any(now < before for before, now in zip((0,) + offsets, offsets)) or
+            item["common_tokens"] != common or item["live_tokens"] != len(live_tokens) or
+            item["selected_tokens"] != common - (common % recipe["alignment_tokens"])
+        ):
+            raise ValueError("W7 production fixture geometry is invalid")
+        by_variant[variant] = {
+            **item, "wire": wire, "canonical": canonical, "offsets": offsets,
+        }
+    return by_variant, live_tokens, recipe
+
+
+def _w7_expected_payload_bytes(token_count: int) -> int:
+    if not isinstance(token_count, int) or isinstance(token_count, bool) or token_count < 0:
+        raise ValueError("W7 payload token count is invalid")
+    return (
+        13 * 4 + token_count * 4 + 154880 * 4 + 78 * 4 * 2 +
+        token_count * (78 * (512 + 64) * 4 + 21 * 128 * 4)
+    )
+
+
+def _w7_token_sha256(values: tuple[int, ...]) -> str:
+    return hashlib.sha256(struct.pack(f"<{len(values)}i", *values)).hexdigest()
+
+
+def _w7_state_manifest(value: Any, label: str, lineage: str, prompt: int) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+    _require_exact_keys(
+        value,
+        {
+            "format", "config", "total_bytes", "content_sha256",
+            "token_lineage_sha256", "logical_frontiers", "sections",
+        },
+        label,
+    )
+    if value["format"] != "ds4-glm-session-canonical-v2":
+        raise ValueError(f"{label} format is invalid")
+    indexer_layers = [0, 1, 2] + list(range(6, 78, 4))
+    expected_config = {
+        "normal_layers": 78, "vocab": 154880, "kv_lora": 512,
+        "rope": 64, "indexer_dim": 128, "full_live": 0,
+        "compact_live": prompt, "indexer_layers": indexer_layers,
+    }
+    if value["config"] != expected_config:
+        raise ValueError(f"{label} production GLM state configuration is invalid")
+    if value["token_lineage_sha256"] != lineage:
+        raise ValueError(f"{label} token lineage is invalid")
+    frontiers = value["logical_frontiers"]
+    if (
+        not isinstance(frontiers, list) or len(frontiers) != 78 or
+        any(item != prompt for item in frontiers)
+    ):
+        raise ValueError(f"{label} logical frontiers are incomplete")
+    sections = value["sections"]
+    expected_members: list[tuple[str, str, list[int]]] = [
+        ("header", "u32", [13]),
+        ("checkpoint_tokens", "u32", [prompt]),
+        ("logits", "f32", [154880]),
+        ("compact_live_rows", "u32", [78]),
+        ("index_live_rows", "u32", [78]),
+    ]
+    for layer in range(78):
+        expected_members.extend([
+            (f"layer.{layer:02d}.kv_lora", "f32", [prompt, 512]),
+            (f"layer.{layer:02d}.k_rope", "f32", [prompt, 64]),
+        ])
+        if layer in indexer_layers:
+            expected_members.append(
+                (f"layer.{layer:02d}.indexer_key", "f32", [prompt, 128])
+            )
+    if not isinstance(sections, list) or len(sections) != len(expected_members):
+        raise ValueError(f"{label} state section coverage is incomplete")
+    offset = 0
+    content_hashes: list[str] = []
+    for index, (section, expected_member) in enumerate(zip(sections, expected_members)):
+        if not isinstance(section, dict):
+            raise ValueError(f"{label} section {index} must be an object")
+        _require_exact_keys(
+            section,
+            {"name", "dtype", "shape", "offset", "byte_count", "content_sha256"},
+            f"{label} section {index}",
+        )
+        expected_name, expected_dtype, expected_shape = expected_member
+        expected_bytes = math.prod(expected_shape) * 4
+        if (
+            section["name"] != expected_name or section["dtype"] != expected_dtype or
+            section["shape"] != expected_shape or section["offset"] != offset or
+            section["byte_count"] != expected_bytes
+        ):
+            raise ValueError(f"{label} section coverage is not canonical")
+        byte_count = section["byte_count"]
+        if not isinstance(byte_count, int) or isinstance(byte_count, bool) or byte_count <= 0:
+            raise ValueError(f"{label} section byte count is invalid")
+        if not _is_sha256(section["content_sha256"]):
+            raise ValueError(f"{label} section hash is invalid")
+        offset += byte_count
+        content_hashes.append(section["content_sha256"])
+    if value["total_bytes"] != offset or offset <= 0:
+        raise ValueError(f"{label} total byte coverage is invalid")
+    if offset != _w7_expected_payload_bytes(prompt):
+        raise ValueError(f"{label} total bytes do not match production payload formula")
+    manifest_root = hashlib.sha256("".join(content_hashes).encode("ascii")).hexdigest()
+    if value["content_sha256"] != manifest_root:
+        raise ValueError(f"{label} content root is invalid")
+    return value
+
+
+def _w7_fixture_material(regime: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+            {
+                key: row[key] for key in (
+                    "case_id", "model_family", "flag_value", "fixture_mutation",
+                    "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+                    "canonical_token_ids_zlib_b64", "live_token_count",
+                    "live_token_ids_zlib_b64", "prompt_tokens",
+                    "checkpoint_inventory",
+                )
+            }
+            for row in regime["cases"]
+        ]
+
+
+def _w7_fixture_digest(regime: dict[str, Any]) -> str:
+    material = {
+        "fixture_variant": regime["fixture_variant"],
+        "cases": _w7_fixture_material(regime),
+    }
+    return hashlib.sha256(
+        json.dumps(material, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def _score_w7_resume(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive W7 exclusively from inventories, ordered primitive events and dumps."""
+    if len(records) != 1:
+        raise ValueError("W7 resume requires exactly one raw observation")
+    record = records[0]
+    _require_exact_keys(
+        record,
+        {
+            "record_type", "gate", "attempt_id", "execution_nonce_sha256",
+            "binary_sha256", "configuration_sha256",
+            "fixture_sha256", "guard_off_present", "confirmation_seed_sha256",
+            "regimes", "failures",
+        },
+        "W7 resume observation",
+    )
+    if record["record_type"] != "w7_resume_observation" or record["gate"] != "W7":
+        raise ValueError("W7 resume observation identity is invalid")
+    for field in (
+        "attempt_id", "execution_nonce_sha256", "binary_sha256",
+        "configuration_sha256", "fixture_sha256",
+        "confirmation_seed_sha256",
+    ):
+        if not _is_sha256(record[field]):
+            raise ValueError(f"W7 {field} is invalid")
+    if record["guard_off_present"] is not False:
+        raise ValueError("W7 legacy guard bypass must be absent")
+    if not isinstance(record["failures"], list):
+        raise ValueError("W7 failures must be a list")
+    regimes = record["regimes"]
+    if not isinstance(regimes, list) or len(regimes) != 3:
+        raise ValueError("W7 requires one primary and two confirmation regimes")
+    regime_ids = [item.get("regime_id") if isinstance(item, dict) else None for item in regimes]
+    if regime_ids != ["primary", "confirmation-1", "confirmation-2"]:
+        raise ValueError("W7 regime identities are invalid")
+    fixture_pool, frozen_live_tokens, inventory_recipe = _w7_fixture_pool()
+    expected_attempt_id = hashlib.sha256(
+        bytes.fromhex(record["binary_sha256"]) +
+        bytes.fromhex(record["configuration_sha256"]) +
+        bytes.fromhex(record["confirmation_seed_sha256"]) +
+        bytes.fromhex(_W7_POOL_SHA256) +
+        bytes.fromhex(record["execution_nonce_sha256"])
+    ).hexdigest()
+    if record["attempt_id"] != expected_attempt_id:
+        raise ValueError("W7 attempt identity is not derived from immutable inputs")
+
+    case_keys = {
+        "case_id", "invocation_id", "model_family", "flag_value",
+        "fixture_mutation", "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+        "canonical_token_ids_zlib_b64",
+        "live_token_count", "live_token_ids_zlib_b64",
+        "restored_checkpoint_token_ids_zlib_b64", "sync_tokens_sha256",
+        "final_lineage_sha256", "prompt_tokens",
+        "checkpoint_inventory", "events", "output_token_ids",
+        "logits_f32_zlib_b64", "state_manifest", "safety",
+    }
+    inventory_keys = {
+        "record_id", "path_sha256", "device", "inode", "size", "mtime_ns",
+        "payload_bytes", "token_length", "rendered_prefix_bytes",
+        "rendered_prefix_sha256", "token_sha256",
+        "lineage_sha256", "payload_sha256", "structurally_valid",
+        "matches_wire_prefix", "matches_lineage",
+    }
+    event_keys = {
+        "seq", "invocation_id", "kind", "record_id", "checkpoint_tokens",
+        "payload_sha256", "start", "end", "byte_count", "status",
+    }
+    safety_keys = {
+        "wrapper_path", "wrapper_sha256", "lock_path", "lock_owner_uid",
+        "lock_mode_octal", "lock_acquired", "cgroup_path",
+        "cgroup_identity_sha256", "start_available_gib", "minimum_available_gib",
+        "bare_engine_detected", "terminal_rc", "oom_events_before",
+        "oom_events_after", "xid_count", "swap_used_before_bytes",
+        "swap_used_after_bytes", "survivor_pids",
+    }
+    all_fixture_hashes: set[str] = set()
+    all_selection_seeds: set[str] = set()
+    all_fixture_content_hashes: set[str] = set()
+    all_invocation_ids: set[str] = set()
+    maximum_logit_delta = 0.0
+    selected_checkpoints: list[int] = []
+    all_checks: list[bool] = []
+
+    for regime_index, regime in enumerate(regimes):
+        _require_exact_keys(
+            regime,
+            {
+                "regime_id", "fixture_variant", "fixture_sha256",
+                "selection_seed_sha256", "cases",
+            },
+            f"W7 regime {regime_index}",
+        )
+        for field in ("fixture_sha256", "selection_seed_sha256"):
+            if not _is_sha256(regime[field]):
+                raise ValueError(f"W7 {regime['regime_id']} {field} is invalid")
+        expected_selection_seed = hashlib.sha256(
+            bytes.fromhex(record["confirmation_seed_sha256"]) +
+            regime["regime_id"].encode("ascii")
+        ).hexdigest()
+        if regime["selection_seed_sha256"] != expected_selection_seed:
+            raise ValueError(f"W7 {regime['regime_id']} selection seed is not bound")
+        if regime["regime_id"] == "primary":
+            expected_variant: str | int = "primary-fixed"
+        else:
+            base_variant = int(expected_selection_seed[:4], 16) % 8
+            expected_variant = (
+                base_variant if regime["regime_id"] == "confirmation-1"
+                else 8 + base_variant
+            )
+        if regime["fixture_variant"] != expected_variant:
+            raise ValueError(f"W7 {regime['regime_id']} fixture variant is not seed-selected")
+        expected_fixture = fixture_pool[expected_variant]
+        expected_wire = expected_fixture["wire"]
+        all_fixture_hashes.add(regime["fixture_sha256"])
+        all_selection_seeds.add(regime["selection_seed_sha256"])
+        cases = regime["cases"]
+        if not isinstance(cases, list) or len(cases) != len(_W7_CASE_CONTRACT):
+            raise ValueError(f"W7 {regime['regime_id']} case matrix is incomplete")
+        by_id: dict[str, dict[str, Any]] = {}
+        derived: dict[str, dict[str, Any]] = {}
+        for case_index, case in enumerate(cases):
+            if not isinstance(case, dict):
+                raise ValueError("W7 case must be an object")
+            _require_exact_keys(case, case_keys, f"W7 case {regime_index}:{case_index}")
+            case_id = case["case_id"]
+            if case_id not in _W7_CASE_CONTRACT or case_id in by_id:
+                raise ValueError("W7 case IDs are missing, duplicated, or unknown")
+            family, flag, mutation, expected_mode = _W7_CASE_CONTRACT[case_id]
+            if (
+                case["model_family"] != family or case["flag_value"] != flag or
+                case["fixture_mutation"] != mutation
+            ):
+                raise ValueError(f"W7 {case_id} does not match its frozen contract")
+            expected_invocation = (
+                f"invoke:{record['attempt_id']}:{regime['regime_id']}:{case_id}"
+            )
+            if case["invocation_id"] != expected_invocation or expected_invocation in all_invocation_ids:
+                raise ValueError(f"W7 {case_id} invocation identity is invalid")
+            all_invocation_ids.add(expected_invocation)
+            wire_bytes = _w7_utf8_bytes(case["wire_text_utf8_b64"], f"W7 {case_id} wire text")
+            if wire_bytes != expected_wire:
+                raise ValueError(f"W7 {case_id} fixture is not frozen and seed-selected")
+            for field in ("live_token_count", "prompt_tokens"):
+                value = case[field]
+                if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                    raise ValueError(f"W7 {case_id} {field} is invalid")
+            if case["prompt_tokens"] <= 0:
+                raise ValueError(f"W7 {case_id} token frontiers are invalid")
+            canonical = _w7_i32_vector(
+                case["canonical_token_ids_zlib_b64"],
+                f"W7 {case_id} canonical tokens", case["prompt_tokens"],
+            )
+            if (
+                canonical != expected_fixture["canonical"] or
+                case["prompt_tokens"] != expected_fixture["prompt_tokens"]
+            ):
+                raise ValueError(f"W7 {case_id} does not use frozen production tokens")
+            if any(token < 0 or token >= 154880 for token in canonical):
+                raise ValueError(f"W7 {case_id} canonical token is outside vocabulary")
+            wire_offsets = _w7_i32_vector(
+                case["wire_token_end_offsets_zlib_b64"],
+                f"W7 {case_id} wire token offsets", case["prompt_tokens"],
+            )
+            if (
+                not wire_offsets or wire_offsets[-1] != len(wire_bytes) or
+                any(current < previous for previous, current in zip((0,) + wire_offsets, wire_offsets))
+            ):
+                raise ValueError(f"W7 {case_id} wire/token boundary map is invalid")
+            if wire_offsets != expected_fixture["offsets"]:
+                raise ValueError(f"W7 {case_id} does not use frozen production offsets")
+            if case["live_token_count"] == 0:
+                if case["live_token_ids_zlib_b64"] is not None:
+                    raise ValueError(f"W7 {case_id} zero live lineage has encoded tokens")
+                live_tokens: tuple[int, ...] = ()
+            else:
+                live_tokens = _w7_i32_vector(
+                    case["live_token_ids_zlib_b64"], f"W7 {case_id} live tokens",
+                    case["live_token_count"],
+                )
+                if any(token < 0 or token >= 154880 for token in live_tokens):
+                    raise ValueError(f"W7 {case_id} live token is outside vocabulary")
+            if case_id == "cold-primary":
+                expected_live: tuple[int, ...] = ()
+            elif case_id in {"exact-off", "exact-on"}:
+                expected_live = expected_fixture["canonical"]
+            else:
+                expected_live = frozen_live_tokens
+            if live_tokens != expected_live:
+                raise ValueError(f"W7 {case_id} does not use frozen production live lineage")
+            common_tokens = 0
+            while (
+                common_tokens < len(live_tokens) and
+                common_tokens < len(canonical) and
+                live_tokens[common_tokens] == canonical[common_tokens]
+            ):
+                common_tokens += 1
+            expected_common = (
+                0 if case_id == "cold-primary" else
+                case["prompt_tokens"] if case_id in {"exact-off", "exact-on"} else
+                expected_fixture["common_tokens"]
+            )
+            if common_tokens != expected_common:
+                raise ValueError(f"W7 {case_id} common frontier is not frozen")
+            lineage = _w7_token_sha256(canonical)
+            if case["sync_tokens_sha256"] != lineage or case["final_lineage_sha256"] != lineage:
+                raise ValueError(f"W7 {case_id} synchronized lineage is invalid")
+
+            inventory = case["checkpoint_inventory"]
+            if not isinstance(inventory, list):
+                raise ValueError(f"W7 {case_id} inventory is invalid")
+            inventory_by_id: dict[str, dict[str, Any]] = {}
+            for item_index, item in enumerate(inventory):
+                if not isinstance(item, dict):
+                    raise ValueError(f"W7 {case_id} inventory item is invalid")
+                _require_exact_keys(item, inventory_keys, f"W7 {case_id} inventory {item_index}")
+                record_id = item["record_id"]
+                if not isinstance(record_id, str) or not record_id or record_id in inventory_by_id:
+                    raise ValueError(f"W7 {case_id} inventory identity is invalid")
+                for field in (
+                    "path_sha256", "rendered_prefix_sha256", "token_sha256",
+                    "lineage_sha256", "payload_sha256",
+                ):
+                    if not _is_sha256(item[field]):
+                        raise ValueError(f"W7 {case_id} inventory hash is invalid")
+                for field in (
+                    "device", "inode", "size", "mtime_ns", "payload_bytes", "token_length",
+                    "rendered_prefix_bytes",
+                ):
+                    value = item[field]
+                    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                        raise ValueError(f"W7 {case_id} inventory number is invalid")
+                for field in ("structurally_valid", "matches_wire_prefix", "matches_lineage"):
+                    if not isinstance(item[field], bool):
+                        raise ValueError(f"W7 {case_id} inventory flag is invalid")
+                token_length = item["token_length"]
+                computed_prefix = (
+                    _w7_token_sha256(canonical[:token_length])
+                    if token_length <= len(canonical) else None
+                )
+                if item["size"] < item["payload_bytes"]:
+                    raise ValueError(f"W7 {case_id} payload extent exceeds record size")
+                if (
+                    item["structurally_valid"] and
+                    item["payload_bytes"] != _w7_expected_payload_bytes(token_length)
+                ):
+                    raise ValueError(f"W7 {case_id} payload extent contradicts GLM format")
+                if item["matches_lineage"] != (item["lineage_sha256"] == computed_prefix):
+                    raise ValueError(f"W7 {case_id} lineage receipt contradicts inventory")
+                prefix_bytes = item["rendered_prefix_bytes"]
+                expected_prefix_bytes = (
+                    wire_offsets[token_length - 1]
+                    if 0 < token_length <= len(wire_offsets) else None
+                )
+                computed_rendered_prefix = (
+                    hashlib.sha256(wire_bytes[:prefix_bytes]).hexdigest()
+                    if prefix_bytes <= len(wire_bytes) else None
+                )
+                if prefix_bytes != expected_prefix_bytes:
+                    raise ValueError(f"W7 {case_id} rendered prefix length contradicts token boundary map")
+                if item["matches_wire_prefix"] != (item["rendered_prefix_sha256"] == computed_rendered_prefix):
+                    raise ValueError(f"W7 {case_id} wire receipt contradicts inventory")
+                if item["structurally_valid"] and item["token_sha256"] != computed_prefix:
+                    raise ValueError(f"W7 {case_id} checkpoint tokens contradict canonical prefix")
+                inventory_by_id[record_id] = item
+            selected_fixture = expected_fixture["selected_tokens"]
+            full_recipe = [
+                ("older", selected_fixture + inventory_recipe["older_delta_tokens"], True, True, True),
+                ("selected", selected_fixture, True, True, True),
+                ("wrong-lineage", selected_fixture + inventory_recipe["wrong_lineage_delta_tokens"], True, True, False),
+                ("malformed", selected_fixture + inventory_recipe["malformed_delta_tokens"], False, True, True),
+            ]
+            if case_id in {
+                "strict-primary", "candidate-primary", "flag-zero",
+                "flag-empty", "flag-garbage",
+            }:
+                expected_inventory_recipe = full_recipe
+            elif case_id.startswith("malformed-"):
+                expected_inventory_recipe = [full_recipe[3]]
+            elif case_id.startswith("wrong-lineage-"):
+                expected_inventory_recipe = [full_recipe[2]]
+            elif case_id.startswith("divergence-"):
+                expected_inventory_recipe = [
+                    ("selected", selected_fixture, True, False, True),
+                ]
+            elif case_id.startswith("shorten-"):
+                expected_inventory_recipe = [
+                    ("selected", expected_fixture["common_tokens"] + 1, True, True, True),
+                ]
+            else:
+                expected_inventory_recipe = []
+            observed_recipe = [
+                (
+                    item["record_id"], item["token_length"], item["structurally_valid"],
+                    item["matches_wire_prefix"], item["matches_lineage"],
+                )
+                for item in inventory
+            ]
+            if observed_recipe != expected_inventory_recipe:
+                raise ValueError(f"W7 {case_id} checkpoint inventory recipe is not frozen")
+            eligible = [
+                item for item in inventory
+                if item["structurally_valid"] and item["matches_wire_prefix"] and
+                item["matches_lineage"] and item["token_length"] <= common_tokens
+            ]
+            expected_record = None
+            if eligible:
+                longest = max(item["token_length"] for item in eligible)
+                winners = [item for item in eligible if item["token_length"] == longest]
+                if len(winners) != 1:
+                    raise ValueError(f"W7 {case_id} longest checkpoint is ambiguous")
+                expected_record = winners[0]
+            selection_cases = {
+                "strict-primary", "candidate-primary", "flag-zero",
+                "flag-empty", "flag-garbage",
+            }
+            if case_id in selection_cases:
+                if [item["record_id"] for item in inventory] != [
+                    "older", "selected", "wrong-lineage", "malformed",
+                ]:
+                    raise ValueError(f"W7 {case_id} required decoy inventory is incomplete")
+                older, selected, wrong, malformed = inventory
+                if not (
+                    older["structurally_valid"] and older["matches_wire_prefix"] and older["matches_lineage"] and
+                    selected["structurally_valid"] and selected["matches_wire_prefix"] and selected["matches_lineage"] and
+                    selected["token_length"] > older["token_length"] and
+                    wrong["structurally_valid"] and wrong["matches_wire_prefix"] and not wrong["matches_lineage"] and
+                    not malformed["structurally_valid"] and malformed["matches_wire_prefix"] and malformed["matches_lineage"] and
+                    expected_record is selected
+                ):
+                    raise ValueError(f"W7 {case_id} decoy semantics are invalid")
+
+            events = case["events"]
+            if not isinstance(events, list):
+                raise ValueError(f"W7 {case_id} events are invalid")
+            kinds: dict[str, list[dict[str, Any]]] = {}
+            for event_index, event in enumerate(events):
+                if not isinstance(event, dict):
+                    raise ValueError(f"W7 {case_id} event must be an object")
+                _require_exact_keys(event, event_keys, f"W7 {case_id} event {event_index}")
+                if event["seq"] != event_index or event["invocation_id"] != case["invocation_id"]:
+                    raise ValueError(f"W7 {case_id} event ordering/identity is invalid")
+                if event["kind"] not in {
+                    "matcher_candidate", "matcher_selected", "payload_read",
+                    "reset", "invalidate", "evaluate",
+                } or event["status"] not in {"observed", "ok"}:
+                    raise ValueError(f"W7 {case_id} event type/status is invalid")
+                for field in ("checkpoint_tokens", "start", "end", "byte_count"):
+                    value = event[field]
+                    if value is not None and (
+                        not isinstance(value, int) or isinstance(value, bool) or value < 0
+                    ):
+                        raise ValueError(f"W7 {case_id} event number is invalid")
+                if event["record_id"] is not None and event["record_id"] not in inventory_by_id:
+                    raise ValueError(f"W7 {case_id} event references an unknown record")
+                if event["payload_sha256"] is not None and not _is_sha256(event["payload_sha256"]):
+                    raise ValueError(f"W7 {case_id} event payload hash is invalid")
+                kinds.setdefault(event["kind"], []).append(event)
+            candidate_events = kinds.get("matcher_candidate", [])
+            if [event["record_id"] for event in candidate_events] != [item["record_id"] for item in inventory]:
+                raise ValueError(f"W7 {case_id} matcher candidates do not bind inventory")
+            for event, item in zip(candidate_events, inventory):
+                if (
+                    event["checkpoint_tokens"] != item["token_length"] or
+                    event["payload_sha256"] != item["payload_sha256"] or
+                    event["status"] != "observed" or event["byte_count"] != 0 or
+                    event["start"] is not None or event["end"] is not None
+                ):
+                    raise ValueError(f"W7 {case_id} matcher candidate receipt is invalid")
+            selected_events = kinds.get("matcher_selected", [])
+            read_events = kinds.get("payload_read", [])
+            resets = kinds.get("reset", [])
+            invalidates = kinds.get("invalidate", [])
+            evaluations = kinds.get("evaluate", [])
+            selected_event = selected_events[0] if len(selected_events) == 1 else None
+            read_event = read_events[0] if len(read_events) == 1 else None
+            if len(selected_events) > 1 or len(read_events) > 1:
+                raise ValueError(f"W7 {case_id} has duplicate selection/read events")
+            if selected_event is not None:
+                if expected_record is None or any(
+                    (
+                        selected_event["record_id"] != expected_record["record_id"],
+                        selected_event["checkpoint_tokens"] != expected_record["token_length"],
+                        selected_event["payload_sha256"] != expected_record["payload_sha256"],
+                        selected_event["status"] != "ok",
+                        selected_event["start"] is not None,
+                        selected_event["end"] is not None,
+                        selected_event["byte_count"] != 0,
+                    )
+                ):
+                    raise ValueError(f"W7 {case_id} selected the wrong checkpoint")
+            if read_event is not None:
+                if selected_event is None or any(
+                    (
+                        read_event["record_id"] != selected_event["record_id"],
+                        read_event["checkpoint_tokens"] != selected_event["checkpoint_tokens"],
+                        read_event["payload_sha256"] != selected_event["payload_sha256"],
+                        read_event["status"] != "ok",
+                        read_event["byte_count"] != expected_record["payload_bytes"],
+                        read_event["start"] is not None, read_event["end"] is not None,
+                    )
+                ):
+                    raise ValueError(f"W7 {case_id} payload read is not selected-record-bound")
+            eval_ranges = []
+            for event in evaluations:
+                if (
+                    event["status"] != "ok" or event["start"] is None or event["end"] is None or
+                    event["end"] <= event["start"] or event["byte_count"] != 0
+                ):
+                    raise ValueError(f"W7 {case_id} evaluation receipt is invalid")
+                eval_ranges.append([event["start"], event["end"]])
+            for event in resets + invalidates:
+                if any(
+                    event[field] is not None
+                    for field in ("record_id", "checkpoint_tokens", "payload_sha256", "start", "end")
+                ) or event["byte_count"] != 0 or event["status"] != "ok":
+                    raise ValueError(f"W7 {case_id} reset/invalidate receipt is malformed")
+            def evaluation_covers(start: int, end: int) -> bool:
+                return bool(eval_ranges) and (
+                    eval_ranges[0][0] == start and eval_ranges[-1][1] == end and
+                    all(left[1] == right[0] for left, right in zip(eval_ranges, eval_ranges[1:]))
+                )
+            if resets:
+                mode = "cold"
+            elif read_event is not None:
+                mode = "resume"
+            elif not events and expected_mode == "replay":
+                mode = "replay"
+            elif not events or (
+                set(kinds) == {"matcher_candidate"} and
+                selected_event is None and read_event is None
+            ):
+                mode = "reject"
+            else:
+                mode = "invalid"
+            if mode != expected_mode:
+                raise ValueError(f"W7 {case_id} operation-derived mode is {mode}, expected {expected_mode}")
+
+            restored_encoded = case["restored_checkpoint_token_ids_zlib_b64"]
+            if read_event is not None:
+                selected_tokens = int(read_event["checkpoint_tokens"])
+                restored = _w7_i32_vector(
+                    restored_encoded, f"W7 {case_id} restored tokens", selected_tokens,
+                )
+                if (
+                    restored != canonical[:selected_tokens] or
+                    restored != live_tokens[:selected_tokens]
+                ):
+                    raise ValueError(f"W7 {case_id} restored tokens differ from canonical prefix")
+            elif restored_encoded is not None:
+                raise ValueError(f"W7 {case_id} has restored tokens without a payload read")
+
+            if regime["regime_id"] != "primary" and case_id in {
+                "strict-primary", "candidate-primary",
+            }:
+                if not (
+                    selected_tokens <= common_tokens < len(live_tokens) < case["prompt_tokens"] and
+                    len(live_tokens) - common_tokens >= 8 and
+                    case["prompt_tokens"] - len(live_tokens) >= 4
+                ):
+                    raise ValueError(
+                        f"W7 {case_id} confirmation lacks the preregistered divergent append"
+                    )
+
+            if case_id == "cold-primary":
+                behavior = (
+                    not inventory and len(resets) == 1 and not invalidates and
+                    read_event is None and evaluation_covers(0, case["prompt_tokens"]) and
+                    len(live_tokens) == 0 and common_tokens == 0 and
+                    [event["kind"] for event in events[:1]] == ["reset"] and
+                    all(event["kind"] == "evaluate" for event in events[1:])
+                )
+            elif case_id in {"strict-primary", "flag-zero", "flag-empty", "flag-garbage"}:
+                behavior = (
+                    len(inventory) == 4 and read_event is not None and len(resets) == 1 and
+                    not invalidates and evaluation_covers(0, case["prompt_tokens"]) and
+                    [event["kind"] for event in events[:7]] ==
+                    ["matcher_candidate"] * 4 + ["matcher_selected", "payload_read", "reset"] and
+                    all(event["kind"] == "evaluate" for event in events[7:])
+                )
+            elif case_id == "candidate-primary":
+                behavior = (
+                    len(inventory) == 4 and expected_record is not None and
+                    read_event is not None and not resets and not invalidates and
+                    evaluation_covers(expected_record["token_length"], case["prompt_tokens"]) and
+                    [event["kind"] for event in events[:6]] ==
+                    ["matcher_candidate"] * 4 + ["matcher_selected", "payload_read"] and
+                    all(event["kind"] == "evaluate" for event in events[6:])
+                )
+                if behavior:
+                    selected_checkpoints.append(expected_record["token_length"])
+            elif expected_mode == "replay":
+                behavior = (
+                    not inventory and not events and live_tokens == canonical and
+                    common_tokens == case["prompt_tokens"]
+                )
+            else:
+                behavior = (
+                    selected_event is None and read_event is None and not resets and
+                    not invalidates and not evaluations
+                )
+                if case_id.startswith("malformed-"):
+                    behavior = behavior and len(inventory) == 1 and not inventory[0]["structurally_valid"] and [event["kind"] for event in events] == ["matcher_candidate"]
+                elif case_id.startswith("wrong-lineage-"):
+                    behavior = behavior and len(inventory) == 1 and not inventory[0]["matches_lineage"] and [event["kind"] for event in events] == ["matcher_candidate"]
+                elif case_id.startswith("divergence-"):
+                    behavior = behavior and len(inventory) == 1 and not inventory[0]["matches_wire_prefix"] and [event["kind"] for event in events] == ["matcher_candidate"]
+                elif case_id.startswith("shorten-"):
+                    behavior = behavior and len(inventory) == 1 and inventory[0]["token_length"] > common_tokens and [event["kind"] for event in events] == ["matcher_candidate"]
+                else:
+                    behavior = behavior and not inventory and not events
+
+            safety = case["safety"]
+            if not isinstance(safety, dict):
+                raise ValueError(f"W7 {case_id} safety receipt is invalid")
+            _require_exact_keys(safety, safety_keys, f"W7 {case_id} safety")
+            if (
+                not isinstance(safety["lock_owner_uid"], int) or
+                isinstance(safety["lock_owner_uid"], bool)
+            ):
+                raise ValueError(f"W7 {case_id} lock owner is invalid")
+            if (
+                safety["wrapper_path"] != "results/glm52-gates/harness/glm_safe_run.sh" or
+                safety["wrapper_sha256"] != _W7_SAFE_WRAPPER_SHA256 or
+                safety["lock_path"] != "/run/dsv4/inference.lock" or
+                safety["lock_owner_uid"] != 0 or safety["lock_mode_octal"] != "0660" or
+                safety["lock_acquired"] is not True or
+                not isinstance(safety["cgroup_path"], str) or
+                not safety["cgroup_path"].startswith("/sys/fs/cgroup/system.slice/") or
+                not _is_sha256(safety["cgroup_identity_sha256"]) or
+                safety["bare_engine_detected"] is not False or safety["terminal_rc"] != 0 or
+                safety["oom_events_after"] != safety["oom_events_before"] or
+                safety["xid_count"] != 0 or
+                safety["swap_used_after_bytes"] > safety["swap_used_before_bytes"] or
+                safety["survivor_pids"] != []
+            ):
+                raise ValueError(f"W7 {case_id} containment receipt is unsafe")
+            for field in ("start_available_gib", "minimum_available_gib"):
+                _finite_number(safety[field], f"W7 {case_id} {field}", minimum=0.0)
+            if safety["start_available_gib"] < 110.0 or safety["minimum_available_gib"] < 10.0:
+                behavior = False
+            for field in (
+                "terminal_rc", "oom_events_before", "oom_events_after", "xid_count",
+                "swap_used_before_bytes", "swap_used_after_bytes",
+            ):
+                if not isinstance(safety[field], int) or isinstance(safety[field], bool) or safety[field] < 0:
+                    raise ValueError(f"W7 {case_id} safety counter is invalid")
+            by_id[case_id] = case
+            derived[case_id] = {
+                "canonical": canonical, "lineage": lineage, "wire": wire_bytes,
+                "live": live_tokens, "common": common_tokens, "behavior": behavior,
+            }
+        if set(by_id) != set(_W7_CASE_CONTRACT):
+            raise ValueError(f"W7 {regime['regime_id']} case matrix is incomplete")
+        if regime["fixture_sha256"] != _w7_fixture_digest(regime):
+            raise ValueError(f"W7 {regime['regime_id']} fixture hash is not content-derived")
+        fixture_content_hash = hashlib.sha256(
+            json.dumps(
+                _w7_fixture_material(regime), sort_keys=True, separators=(",", ":")
+            ).encode()
+        ).hexdigest()
+        all_fixture_content_hashes.add(fixture_content_hash)
+
+        cold = by_id["cold-primary"]
+        strict = by_id["strict-primary"]
+        candidate = by_id["candidate-primary"]
+        identity_ids = (
+            "cold-primary", "strict-primary", "candidate-primary",
+            "exact-off", "exact-on",
+        )
+        primary_identity = (
+            len({derived[case_id]["wire"] for case_id in identity_ids}) == 1 and
+            len({derived[case_id]["canonical"] for case_id in identity_ids}) == 1 and
+            len({by_id[case_id]["prompt_tokens"] for case_id in identity_ids}) == 1
+        )
+        if regime["regime_id"] == "primary":
+            primary_identity = primary_identity and (
+                len(derived["strict-primary"]["live"]) ==
+                len(derived["candidate-primary"]["live"]) == expected_fixture["live_tokens"] and
+                derived["strict-primary"]["common"] ==
+                derived["candidate-primary"]["common"] == expected_fixture["common_tokens"] and
+                candidate["prompt_tokens"] == expected_fixture["prompt_tokens"] and
+                selected_checkpoints[-1:] == [expected_fixture["selected_tokens"]]
+            )
+        comparison_cases = (
+            cold, strict, candidate, by_id["exact-off"], by_id["exact-on"],
+        )
+        outputs = [case["output_token_ids"] for case in comparison_cases]
+        if any(
+            not isinstance(output, list) or len(output) != 64 or
+            any(not isinstance(token, int) or isinstance(token, bool) or token < 0 or token >= 154880 for token in output)
+            for output in outputs
+        ):
+            raise ValueError(f"W7 {regime['regime_id']} completed output is invalid")
+        output_equal = all(output == outputs[0] for output in outputs[1:])
+        logits = [
+            _w7_f32_vector(case["logits_f32_zlib_b64"], f"W7 {case['case_id']} logits", 154880)
+            for case in comparison_cases
+        ]
+        deltas = [
+            max(abs(left - right) for left, right in zip(logits[0], comparison))
+            for comparison in logits[1:]
+        ]
+        if any(not math.isfinite(delta) for delta in deltas):
+            raise ValueError("W7 derived logit delta is non-finite")
+        maximum_logit_delta = max(maximum_logit_delta, *deltas)
+        argmaxes = [max(range(len(vector)), key=vector.__getitem__) for vector in logits]
+        state_manifests = [
+            _w7_state_manifest(
+                case["state_manifest"], f"W7 {case['case_id']} state",
+                derived[case["case_id"]]["lineage"], case["prompt_tokens"],
+            )
+            for case in comparison_cases
+        ]
+        state_equal = all(manifest == state_manifests[0] for manifest in state_manifests[1:])
+        all_checks.extend([
+            primary_identity,
+            all(item["behavior"] for item in derived.values()),
+            output_equal,
+            max(deltas) < 1e-2 and len(set(argmaxes)) == 1,
+            state_equal,
+        ])
+
+    if (
+        len(all_fixture_hashes) != 3 or len(all_selection_seeds) != 3 or
+        len(all_fixture_content_hashes) != 3
+    ):
+        raise ValueError("W7 confirmation fixtures/seeds are not independent")
+    expected_top_fixture = hashlib.sha256(
+        "".join(regime["fixture_sha256"] for regime in regimes).encode("ascii")
+    ).hexdigest()
+    if record["fixture_sha256"] != expected_top_fixture:
+        raise ValueError("W7 top-level fixture hash is not regime-content-bound")
+    checks = {
+        "three_independent_regimes": len(all_fixture_hashes) == len(all_selection_seeds) == 3,
+        "receipt_derived_case_matrix": all(all_checks),
+        "full_logits": maximum_logit_delta < 1e-2,
+        "complete_state_manifests": all(all_checks),
+        "no_failures": not record["failures"],
+    }
+    return {
+        "scorer_id": "w7.resume.v1",
+        "formula_version": 1,
+        "gate": "W7",
+        "derived_metrics": {
+            "max_abs_logit_delta": maximum_logit_delta,
+            "qualified_regimes": 3,
+            "selected_checkpoint_tokens": selected_checkpoints,
+        },
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 _FROZEN_SCORER_IDENTITIES = frozenset(
     {
         (
@@ -3099,6 +4130,22 @@ def registered_scorer_digest(scorer_id: str) -> str:
             _finite_number,
             _is_sha256,
         ),
+        "w7.resume.v1": (
+            _score_w7_resume,
+            _w7_f32_vector,
+            _w7_i32_vector,
+            _w7_utf8_bytes,
+            _w7_caller_wire,
+            _w7_fixture_pool,
+            _w7_token_sha256,
+            _w7_expected_payload_bytes,
+            _w7_state_manifest,
+            _w7_fixture_material,
+            _w7_fixture_digest,
+            _require_exact_keys,
+            _finite_number,
+            _is_sha256,
+        ),
         "w1.affine-quality.v2": (
             _score_w1_affine_raw,
             _w1_single_match,
@@ -3152,6 +4199,25 @@ def registered_scorer_digest(scorer_id: str) -> str:
         digest.update(
             json.dumps(_T95, sort_keys=True, separators=(",", ":")).encode()
         )
+    if scorer_id == "w7.resume.v1":
+        digest.update(
+            json.dumps(
+                {
+                    "case_contract": _W7_CASE_CONTRACT,
+                    "safe_wrapper_sha256": _W7_SAFE_WRAPPER_SHA256,
+                    "stem_file_sha256": _W7_STEM_FILE_SHA256,
+                    "stem_text_sha256": _W7_STEM_TEXT_SHA256,
+                    "primary_suffix": _W7_PRIMARY_SUFFIX,
+                    "confirmation_suffixes": _W7_CONFIRMATION_SUFFIXES,
+                    "fixture_pool_sha256": _W7_POOL_SHA256,
+                    "tokenizer_sha256": _W7_TOKENIZER_SHA256,
+                    "tokenizer_init_sha256": _W7_TOKENIZER_INIT_SHA256,
+                    "tokenizer_native_sha256": _W7_TOKENIZER_NATIVE_SHA256,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        )
     return digest.hexdigest()
 
 
@@ -3167,6 +4233,7 @@ def score_registered_gate(
         ("parity", "parity.performance.v1"): _score_parity,
         ("parity", "parity.reviewed-no-go.v1"): _score_reviewed_no_go,
         ("review", "review.final.v1"): _score_review,
+        ("W7", "w7.resume.v1"): _score_w7_resume,
     }
     if scorer_id == "workstream.terminal.v1" and gate in {
         *(f"W{index}" for index in range(1, 11)),
@@ -3537,13 +4604,14 @@ def validate_profile_artifact_bindings(
             "tokenizer_sha256",
             "context_cap",
             "build_manifest_sha256",
+            "promotion",
             "runtime",
             "artifact_sha256",
         },
         "approved GLM profile",
     )
     if (
-        profile["schema_version"] != 2
+        profile["schema_version"] != 3
         or profile["profile"] != "glm52"
         or profile["context_cap"] != 1_048_576
     ):
@@ -3556,6 +4624,33 @@ def validate_profile_artifact_bindings(
     ):
         if not _is_sha256(profile[field]):
             raise ValueError(f"approved GLM profile {field} is invalid")
+    promotion = profile["promotion"]
+    _require_exact_keys(
+        promotion,
+        {
+            "gate",
+            "engine_commit",
+            "binary_freeze_sha256",
+            "owner_decision_sha256",
+            "review_sha256",
+        },
+        "approved GLM promotion",
+    )
+    if (
+        promotion["gate"]
+        != "W7.1a-stable-model-cache-generation-owner-adoption"
+        or not isinstance(promotion["engine_commit"], str)
+        or re.fullmatch(r"[0-9a-f]{40}", promotion["engine_commit"]) is None
+        or any(
+            not _is_sha256(promotion[field])
+            for field in (
+                "binary_freeze_sha256",
+                "owner_decision_sha256",
+                "review_sha256",
+            )
+        )
+    ):
+        raise ValueError("approved GLM promotion binding is invalid")
     for field in ("binary_sha256", "model_sha256"):
         if not _is_sha256(profile[field]) or manifest.get(field) != profile[field]:
             raise ValueError(
@@ -3574,6 +4669,7 @@ def validate_profile_artifact_bindings(
         "DS4_CUDA_FETCH_THREADS": "6",
         "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
         "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+        "DS4_CUDA_STABLE_MODEL_REMAP": "1",
         "DS4_TOKEN_TIMING_LOG": "1",
     }
     expected_arguments = [
@@ -3631,6 +4727,15 @@ def validate_profile_artifact_bindings(
         **artifact_hashes,
         "configs/build-manifests/glm52-ds4-repro.json": profile[
             "build_manifest_sha256"
+        ],
+        "results/glm52-gates/W7-cache-generation-freeze-v9.json": promotion[
+            "binary_freeze_sha256"
+        ],
+        "results/glm52-gates/W7-cache-generation-W7.1a-owner-adoption.json": promotion[
+            "owner_decision_sha256"
+        ],
+        "results/glm52-gates/W7-cache-generation-W7.1a-review-r295.json": promotion[
+            "review_sha256"
         ],
     }
     for relative_path, expected_digest in candidate_artifacts.items():

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "classification": "NON_HELDOUT_RUNTIME_SMOKE_PASS",
+  "gate": "R0c/P1 canonical-binary exact engine prompt-token lineage",
+  "engine_commit": "b8a152f29bb68197796b89ba755afb4aefe45dee",
+  "binary_sha256": "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b",
+  "held_out_values_opened": false,
+  "capture_directory": "/home/bmarti44/.local/state/glm52-baseline-lineage-canonical-b8a152f",
+  "containment_directory": "/home/bmarti44/.local/state/glm52-crashlog/20260805-121858-baseline-lineage-canonical-b8a152f",
+  "observed": {
+    "wrapper_exit_code": 0,
+    "killed": false,
+    "gpu_or_kernel_fault": false,
+    "prompt_tokens": 59,
+    "source_positions": [43, 44, 45, 46, 47, 48, 49, 50],
+    "source_bundles": 8,
+    "capture_files": 72,
+    "exact_prompt_tokens_match_all_sources": true,
+    "post_run_mem_available_kib": 120500908,
+    "post_run_swap_free_kib": 15948376
+  },
+  "artifacts": {
+    "main_log_sha256": "22616f6b6683cf5e487956386e7ad5968c10403b269202eb568cbd7f3a7ca272",
+    "samples_log_sha256": "74fc9ed1f7263f3a184341b3afd4838a6e6c35329487a91aff8b343f8bbd8825",
+    "kernel_log_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "command_log_sha256": "fb1480043b07d516d2c95fea5187695b77e9dd77fa5b06c17f8f931f26c7433a"
+  },
+  "acceptance": "The canonical binary ran inside glm_safe_run.sh; every one of the eight source bundles was accepted by the fixed scorer and its prompt-tokens.i32 artifact exactly matched independent tokenization of the rendered non-held-out prompt.",
+  "verdict": "PASS",
+  "claim_limit": "Non-held-out engine-to-scorer lineage smoke only; no held-out accuracy, cost, fidelity, or serving-performance claim."
+}

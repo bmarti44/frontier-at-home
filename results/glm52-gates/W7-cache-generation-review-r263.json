@@ -1,0 +1,78 @@
+{
+  "candidate_hash": "33897f58c811c77e8083c17743a4b1503e13005b",
+  "review_round": 263,
+  "gate_candidate": 10,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 45,
+    "critical": [],
+    "high": [
+      {
+        "id": "GAP-W7.1-263-H1-PINNED-DESCRIPTORS-DO-NOT-FREEZE-SCRIPT-BYTES",
+        "evidence": "Opening HARNESS, CGROUP, SAFE, and SCORER pins their inodes but not their contents. An in-place write after descriptor hashing changes bytes later read through the descriptor.",
+        "affected_gate": "reviewed runtime code identity and anti-cheating",
+        "reproduction": "Open a reviewed script, verify its descriptor digest, modify the same inode in place, then execute or import the existing descriptor path.",
+        "acceptance_test": "Execute each reviewed script from a fully sealed immutable snapshot and mutation-test same-inode writes for all four scripts."
+      },
+      {
+        "id": "GAP-W7.1-263-H2-CONTAINMENT-DIGEST-ROOT-REMAINS-REPLACEABLE",
+        "evidence": "containment.stdout and containment.rc have no retained creation-time descriptor. Replacement before their first snapshot can substitute a coherent completion record and crash-log chain.",
+        "affected_gate": "safe-run provenance and false-PASS resistance",
+        "reproduction": "Replace containment.stdout before score_and_publish_bound_attempt opens it with a coherent completion record pointing to fabricated same-user logs.",
+        "acceptance_test": "Capture completion output and status through retained creation-time descriptors or a private channel and mutation-test replacement before snapshot acquisition."
+      }
+    ],
+    "medium": [],
+    "low": [
+      {
+        "id": "ADV-W7.1-257-L1-PROMPT-CANDIDATE-HASH-TRANSCRIPTION",
+        "evidence": "The initial review dispatch supplied a nonexistent manually transcribed full hash; local and remote independently resolved the authoritative candidate.",
+        "affected_gate": "review control-plane identity",
+        "reproduction": "Compare the supplied hash with git rev-parse HEAD and the remote branch.",
+        "acceptance_test": "Populate review identity directly from verified command output without manual expansion."
+      }
+    ],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 67,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-263-H1-PINNED-DESCRIPTORS-NOT-IMMUTABLE",
+        "evidence": "A harmless reproduction rewrote an already-open owner-writable file in place. Its device and inode stayed fixed while its descriptor supplied the new non-reviewed bytes.",
+        "affected_gate": "reviewed script identity, containment integrity, and scorer authority",
+        "reproduction": "Open a reviewed-script copy read-only, hash it, truncate and rewrite the same inode, then reread the open descriptor.",
+        "acceptance_test": "Hash and execute only fully sealed immutable script snapshots; original-path and same-inode mutation must not change executed bytes."
+      },
+      {
+        "id": "ADV-W7.1-263-H2-FROZEN-REQUESTS-REOPENED-BY-PATH",
+        "evidence": "LIVE and PRIMARY are hashed during preflight, but curl reopens their pathnames after model hashing and startup. The manifest does not bind the bytes curl actually consumed.",
+        "affected_gate": "fixture identity and false-PASS resistance",
+        "reproduction": "Replace either request after verify_dependencies_fast and before curl opens it.",
+        "acceptance_test": "Use immutable request snapshots for curl and record executed digest/device/inode/size; post-verification path or in-place mutation must not alter submitted bytes."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "prior_issue_status": {
+    "GAP-W7.1-262-H1-BOUND-COPIES-REOPENED-BY-PATH": "FIXED",
+    "GAP-W7.1-262-M1-FAILURE-MANIFEST-INCOMPLETE": "FIXED",
+    "ADV-W7.1-262-H1-POST-BIND-DESTINATION-REPLACEMENT": "FIXED",
+    "ADV-W7.1-262-H2-CANONICAL-PATH-STILL-REOPENED": "FIXED_FOR_RENAME_REPLACEMENT"
+  },
+  "convergence": {
+    "gate_candidate_count": 10,
+    "campaign_global_review_round": 263,
+    "trigger": "one gate exceeds eight total candidates",
+    "status": "PAUSED_FOR_OWNER",
+    "open_blocking_classes": [
+      "ordinary descriptors do not freeze same-inode script bytes",
+      "containment completion records lack creation-time binding",
+      "request fixtures are reopened after preflight"
+    ]
+  },
+  "root_disposition": "Candidate 10 closes the prior pathname-replacement and destination-reopen defects but introduces no immutable execution snapshot. No engine ran. W7.1 is paused under the explicit convergence trigger before any candidate 11 work."
+}

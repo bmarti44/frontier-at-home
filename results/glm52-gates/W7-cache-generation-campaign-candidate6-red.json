@@ -1,0 +1,22 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 6,
+  "phase": "owner-resumed-pre-implementation-red",
+  "parent_commit": "5d45b3674cab21000b48365cf42d06c80a7cc815",
+  "observed_at": "2026-08-08T04:01:13-04:00",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_cache_generation_campaign",
+  "returncode": 1,
+  "tests_run": 18,
+  "failures": 0,
+  "errors": 2,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "933a51c98166c196456f68dad0abc6a21fc0a54be91f9fffc9c9e7a8680a81cc",
+  "artifacts": {
+    "runner_test": {"sha256": "e3ecf876be4d24a79ba844c15b0cbdb0af826b64335846c276bf81b913d07c7e"}
+  },
+  "observed_failures": [
+    "the controller did not derive the exact transient unit from trusted tag and launcher PID",
+    "interruption cleanup did not stop and verify that unit before launcher reap"
+  ],
+  "acceptance": "The exact user unit must be stopped and verified inactive or absent before launcher termination/reap and before the campaign lock can be released; untrusted unit tags must fail closed."
+}

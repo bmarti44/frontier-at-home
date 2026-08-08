@@ -1,0 +1,17 @@
+{
+  "schema": "glm52-w8-exact-smoke-review-v1",
+  "candidate_hash": "9784b72f4503d307f7bfde363bc7d5234a59619e",
+  "review_round": 239,
+  "critical": [],
+  "high": [
+    "GAP-W8-239-H1-UNBOUND-ARM-ROOT-INITIALIZER",
+    "ADV-W8-239-H58-ARM-ROOT-USED-BEFORE-LOCAL-INITIALIZATION"
+  ],
+  "reviewers": {
+    "nash": {"score": 90, "verdict": "BLOCK_W8_SMOKE_RUNTIME"},
+    "singer": {"score": 90, "verdict": "BLOCK_W8_SMOKE_RUNTIME"}
+  },
+  "finding": "Bash expands arm_out=$arm_root/$arm before assigning arm_root in the same local builtin under set -u",
+  "acceptance_test": "execute the actual declaration slice with readonly outer root under set -u and require /tmp/attempt/resident",
+  "verdict": "FAIL"
+}

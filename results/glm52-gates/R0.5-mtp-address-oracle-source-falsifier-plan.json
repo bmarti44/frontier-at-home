@@ -1,0 +1,37 @@
+{
+  "acceptance": {
+    "continue_to_trace": "The existing GLM NextN/MTP path can produce ordered expert-address candidates for every routed target layer over K >= 2 future tokens before reading or computing those target tokens' routed experts.",
+    "minimum_lead_seconds": 0.4616267087985234,
+    "minimum_lookahead_tokens": 2,
+    "stop_before_engine_work": "Future target-layer expert IDs become available only while executing those target layers, or obtaining them requires target routed-expert reads/verification whose union grows with K."
+  },
+  "classification": "PREREGISTERED_SOURCE_FALSIFIER",
+  "engine": {
+    "commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+    "readable_source_root": "/tmp/glm52-utf8-engine",
+    "engine_source_sha256": {
+      "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+      "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f"
+    }
+  },
+  "forbidden_evidence": [
+    "Do not inspect or score the prohibited partial candidate-18 held-out captures.",
+    "Do not rerun, replace, or complete the terminal held-out P1 experiment.",
+    "Do not claim address-oracle value from acceptance-speculation speed or token acceptance alone."
+  ],
+  "gate": "R0.5-mtp-address-oracle",
+  "inspection_targets": [
+    "glm_graph_mtp_step",
+    "ds4_session_glm_spec_cycle",
+    "ds4_session_eval_speculative_argmax",
+    "ds4_session_glm_baseline_capture"
+  ],
+  "measurement_fallback": "Only if source inspection is genuinely ambiguous, run one contained glm_safe_run.sh trace on already-open training/precision fixtures. It must count target expert bytes, MTP bytes, route-availability time, and lead time. No held-out value may be opened.",
+  "physics": {
+    "all_miss_expert_bytes_per_token": 5800000000,
+    "expert_record_fio_gb_s": 12.56426434920906,
+    "rationale": "An address oracle must reveal target-layer expert IDs before the corresponding target routed-expert bytes are consumed; otherwise it cannot create NVMe overlap and merely moves or duplicates the same I/O."
+  },
+  "review_requirement": "Both persistent reviewers independently trace data/control flow in the readable compiled source. Any critical/high correctness objection blocks disposition; agreement that the stop condition is structurally met ends Rung 0.5 without a GPU run.",
+  "schema_version": 1
+}

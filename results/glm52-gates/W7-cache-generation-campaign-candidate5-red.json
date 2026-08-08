@@ -1,0 +1,22 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 5,
+  "phase": "pre-implementation-red",
+  "parent_commit": "cfbf58cfd5b8834086156f83e519505dd8b9f67e",
+  "observed_at": "2026-08-08T03:51:51-04:00",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_cache_generation_campaign",
+  "returncode": 1,
+  "tests_run": 17,
+  "failures": 0,
+  "errors": 2,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "3c1827a9b383a5009be0a363d7e7d7692a3d6f04ba6668923cdb0ea49dcfdde6",
+  "artifacts": {
+    "runner_test": {"sha256": "ed4da803151334a86568107aec93e72c62f6b02748e53b469fb92455e41a2a00"}
+  },
+  "observed_failures": [
+    "the campaign did not install controlled handlers for INT TERM and HUP",
+    "the contained launcher had no interruption cleanup and reap helper"
+  ],
+  "acceptance": "All three termination signals must enter the failure-finalization path, and an interrupted contained launcher must be terminated and reaped before campaign serialization is released."
+}

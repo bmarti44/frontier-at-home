@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 14,
+  "campaign_review_round_next": 152,
+  "implementation_head": "1380b0fa0d3f41cbdedd165f92086e3ca31349bd",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "scope": "Close only the three round-151 completed-result authority and replay findings. Frozen corpus, split, probe, CV, precision, engine and failure-hook components remain byte-identical. No serving, quality, fidelity, context or adoption claim is made.",
+  "artifacts": {
+    "scripts/65_glm52_w1_submit.py": "11775b2f51b28acdb2678556384d32e0ca8e3136528b7833a9caeecaf73f9d01",
+    "scripts/66_install_glm52_w1_attestor.sh": "9cc286aa38eba052280a59c9d8b6be1c15acfbae3f57d19a4a24813ae5271296",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6",
+    "scripts/81_glm_union_baseline.py": "f09ccd1a1fab7d7894803a240c0c5a78be1fa0b51d65539873dc5fcd0d64c440",
+    "scripts/tests/test_glm_union_baseline.py": "d4d14fcf5eeb9b74f5d531374b3a8f9592629cf1ed61e31ab2af8ce624c25821",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "f45fa03d013c0f4da9455bb7a5079e0a0d2a5c4f3bbc571fc742d52fc97ad78c",
+    "results/glm52-gates/harness/0008-test-glm-require-real-baseline-fault-injection.patch": "abe28585d2811bf15b1a93afffb014146b11682ab4809c750768f1507066ee21",
+    "results/glm52-gates/harness/0009-test-glm-inject-baseline-failures-at-real-stages.patch": "0371969827dabd103e4a0e8f7167fbea391a99c9b92ea04870699854d56b7a2b"
+  },
+  "engine_candidate": {
+    "readable_review_tree": "/tmp/glm52-utf8-engine",
+    "commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+    "tree_clean": true,
+    "artifact_sha256": {
+      "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+      "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f",
+      "tests/test_glm_baseline_capture_source.py": "491555af0d0f08c2c3d58410c4a942c8c651d513b6436af1ff49bb9b44c0b380"
+    },
+    "binary_sha256": "be8b0ed00864d3fba6e1f7dabed4adc0646efaf7968f1bcb6da6c3a6ce172121",
+    "normalized_double_build_byte_identical": true
+  },
+  "unchanged_frozen_inputs": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_sha256": "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0",
+    "probe_cv_precision_hashes_equal_candidate_13": true,
+    "engine_hashes_equal_candidate_13": true,
+    "heldout_reservation_absent": true,
+    "root_approval_absent": true
+  },
+  "pre_submission_audit": {
+    "p1_controller_probe_tests": "135 passed, 4 warnings",
+    "engine_source_tests": "7 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan_self_test": "PASS",
+    "secret_scan": "PASS",
+    "retained_source_fd_mutation_cannot_change_authoritative_copy": true,
+    "publication_without_exact_reservation_rejected": true,
+    "publication_without_fixed_completed_replay_rejected": true,
+    "controller_and_installer_pin_same_submitter_sha256": true,
+    "engine_processes_active": 0,
+    "fio_processes_active": 0,
+    "mem_available_kib": 120846180,
+    "swap_used_kib": 786028
+  },
+  "repository_wide_diagnostic": {
+    "scope": "python3 -m pytest -q scripts/tests",
+    "tests_run": 609,
+    "passed": 596,
+    "failed": 4,
+    "skipped": 9,
+    "new_failures_from_candidate_13_to_14": 0,
+    "scope_disposition": "The four failures are the same stale assertions already recorded for candidate 13: test_engine_switch, test_matched_memory_safety (two), and test_model_claim_catalog. Candidate 14 changes none of their tested contracts or files. A repository-root pytest additionally stops during collection on optional vendored appium and wget dependencies; that is not a candidate regression."
+  },
+  "finding_disposition": [
+    {
+      "id": "P1-BASE-IMPL-H5",
+      "status": "FIXED",
+      "evidence": "The root submitter now requires the permanent reservation to bind the exact candidate and normalized output path, copies every source file through stable O_NOFOLLOW descriptors into new root-owned inodes, then runs the installed root-owned fixed controller over that snapshot. It accepts only a complete capture-to-canonical reconstruction whose summary digest matches the snapshot before sealing and receipt publication."
+    },
+    {
+      "id": "BASE-R142-H3",
+      "status": "FIXED",
+      "evidence": "Completed replay now reopens every full wrapper artifact directory for all 60 normal arms, all four injected-failure processes and all four fresh post-fault controls. It independently validates candidate/environment/safety/end markers, process identity, failure stage and rc, exact continuation/token fingerprints, and the absence of unreferenced runtime directories."
+    },
+    {
+      "id": "P1-BASE-C13-H1",
+      "status": "FIXED",
+      "evidence": "The unprivileged controller no longer traverses the root-only authoritative directory. Root performs the fixed replay before publication and returns a digest-bound receipt; the controller verifies that receipt against its unchanged local completed snapshot."
+    }
+  ],
+  "convergence": {
+    "owner_override": "The owner explicitly authorized Candidate 12 through the final sequence and approved continuing after Fable verified round 149. Candidate 14 is bounded to the three round-151 blockers.",
+    "blocking_set_before": [
+      "P1-BASE-IMPL-H5",
+      "BASE-R142-H3",
+      "P1-BASE-C13-H1"
+    ],
+    "blocking_set_claimed_after": [],
+    "new_scope": false
+  },
+  "staged_install_contract": {
+    "installer_sha256": "9cc286aa38eba052280a59c9d8b6be1c15acfbae3f57d19a4a24813ae5271296",
+    "timing": "Only after both persistent reviewers report no critical/high issues on the commit that adds this freeze artifact.",
+    "operator_involvement": "One final hash-verified root-staged install command, then no sudo for the held-out run."
+  },
+  "next_action": "Nash and Singer review only Candidate 13 to Candidate 14 plus the unchanged readable engine sources. If both report no critical/high issues, provide the owner one exact staged-install command; do not open held-out values before that install is attested."
+}

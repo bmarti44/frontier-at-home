@@ -1,0 +1,66 @@
+{
+  "schema": "glm52-w4-topk-red-v1",
+  "gate": "W4",
+  "candidate": 1,
+  "recorded_at": "2026-08-08T11:32:43-04:00",
+  "purpose": "Genuine production-shape RED for a default-off exact top-2048 CUDA selection path.",
+  "source": {
+    "adopted_parent_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "test_commit": "f32a5f1d5f1bb0a21bcada57aee8d34e2093aa8d",
+    "artifacts": {
+      "tests/cuda_topk_w4.cu": "dff9a27f2dc06b672dcc70b3d278e9bda01d633c6a36347ae345210e00a8e540",
+      "Makefile": "6e67c8185358dedfe12c26a9dcdfba18edbb68665917eceebd3c748a4c6d777e"
+    }
+  },
+  "build": {
+    "command": "make -j2 tests/cuda_topk_w4 CUDA_ARCH=sm_121",
+    "executable_bytes": 8573760,
+    "cuda_object_bytes": 12894808,
+    "artifacts": {
+      "tests/cuda_topk_w4": "d7ff1bda16125b917cdaa6dc781005da9af148bb71643b3751f14d67bf4854a1",
+      "ds4_cuda.o": "4a479b43a5f89147e651d05186ad75bbfb3ff691a71ebd67f8f966160903a296"
+    }
+  },
+  "fixture": {
+    "n_components": 1048576,
+    "n_tokens": 8,
+    "top_k": 2048,
+    "score_recipe": "For token t, score[i] = float(i XOR ((0x9e3779b9 * (t + 1)) AND (n_components - 1))).",
+    "expected_order": "Strict descending score; the test checks every selected ID in both arms and then requires byte-identical arm outputs."
+  },
+  "acceptance": {
+    "timing": "CUDA events around completed ds4_gpu_indexer_topk_tensor calls after one warmup per arm.",
+    "schedule": "Five alternating ABBA/BAAB blocks; each block averages its two observations per arm.",
+    "formula": "exp(mean(log(baseline_ms / candidate_ms)) - t_0.95_df4 * sample_sd(log ratios) / sqrt(5))",
+    "required_speedup_lower_95": 2.0,
+    "ids_must_be_identical": true
+  },
+  "observed": {
+    "baseline_ms": [
+      4.878592,
+      4.906352,
+      5.008928,
+      4.912480,
+      4.961936
+    ],
+    "candidate_ms": [
+      4.871584,
+      5.021328,
+      4.903088,
+      4.970576,
+      4.911040
+    ],
+    "speedup_lower_95": 0.983006145,
+    "ids_identical": true,
+    "exit_code": 1,
+    "stderr_tail": "w4-topk RED: default-off exact-select candidate did not reach 2x"
+  },
+  "safety": {
+    "engine_processes_present": false,
+    "fio_present": false,
+    "mem_available_before_kib": 121310716,
+    "large_model_started": false
+  },
+  "verdict": "RED_CONFIRMED",
+  "interpretation": "The candidate flag is ignored by unchanged adopted code, so both arms execute the same exact top-2048 bitonic/tree path. Correct IDs pass while the fixed 2x speed criterion fails."
+}

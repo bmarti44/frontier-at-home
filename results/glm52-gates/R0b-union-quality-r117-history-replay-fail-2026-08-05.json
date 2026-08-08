@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "8160dacd659dd566849e4d5b88d78239b4116c61",
+  "binary_sha256": "3c932e9228e9a8a21c9b6f9efb369b1e0725c74371203b04ca222a084297c8b2",
+  "engine_commit": "183b236bbda50dc0e92d2a641a0ef1c8bdf4d620",
+  "campaign_seed": 805105100,
+  "ordered_cases": ["case_095", "case_005", "case_004", "case_017", "case_021"],
+  "expected_token_ids": [
+    [8507, 81272, 13, 154842, 154842, 154842, 154842, 154842],
+    [8507, 101, 16, 8507, 101, 16, 271, 2146],
+    [8507, 222, 20, 271, 565, 220, 21, 271],
+    [8507, 228, 198, 220, 17, 13, 576, 198],
+    [8507, 228, 35457, 11, 323, 279, 1008]
+  ],
+  "observed_token_ids": [
+    [16, 13, 220, 3070, 28203, 1437, 279, 1196],
+    [16, 13, 220, 3070, 16236, 2685, 279, 39730],
+    [16, 13, 220, 3070, 16236, 2685, 279, 75169],
+    [16, 13, 220, 3070, 2082, 55481, 279, 6145],
+    [785, 1196, 6801, 264, 356, 729, 429, 1185]
+  ],
+  "failed_assertion": "historical predecessor trajectory was not reproduced",
+  "arm_status": {"off": "FAIL", "on": "NOT_RUN"},
+  "verdict": "FAIL",
+  "interpretation": "The fixed binary did not reproduce any of the four preserved predecessor token sequences. Request 5 matched the fixed binary's prior fresh-server output rather than the historical malformed sequence. Request-order replay on this binary is falsified; no serializer runtime claim is made.",
+  "safety": {
+    "wrapper_killed": false,
+    "cgroup_oom": 0,
+    "cgroup_oom_kill": 0,
+    "cgroup_swap_max_bytes": 0,
+    "minimum_mem_available_kib": 44192876,
+    "minimum_mem_available_gib": 42.14561080932617,
+    "gpu_fault": false
+  },
+  "artifacts": {
+    "/home/bmarti44/.local/state/glm52-utf8-history-r117/off/ledger.json": "343cd66200f19b78cb7b74c8f69515e307312c145175a0df5f105de38b703918",
+    "/home/bmarti44/.local/state/glm52-utf8-history-r117/off/responses.json": "9c77d27ef33117842c0c54a9194dccb49605478feac5b35ad1bfb8ca34878cf4",
+    "/home/bmarti44/.local/state/glm52-utf8-history-r117/off/server.log": "96d419d548d652ed398e805ce12f561800b5ec8bd5e5de361517a995731d4481",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-045955-utf8-history-r117-off/main.log": "00527a5ffa46661a1080da5ba3320c0c8f155cd34bb4595df84349ebb3928167",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-045955-utf8-history-r117-off/cmd.log": "e238f9a120cffa7f171b2a77f89daaa777b55e142431969892916af7e11e81da",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-045955-utf8-history-r117-off/samples.log": "eb4f2b2a9232c80dec4e38af67861a7a08c92d08f9bc7bb8988251a0fab73586",
+    "/home/bmarti44/.local/state/glm52-crashlog/20260805-045955-utf8-history-r117-off/kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "/home/bmarti44/.local/state/glm52-utf8-history-r117/off.containment.stdout.log": "7d6295d70b87c3e727e7d910a7f99ef09cfd5e873cc7b79179981ab2ba81f096"
+  }
+}

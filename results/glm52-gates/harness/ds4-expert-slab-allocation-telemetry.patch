@@ -1,0 +1,46 @@
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index 7142780..04d13f0 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -23817,7 +23817,9 @@ static int cuda_expert_slab_staging_ensure(uint32_t count,
+                                            uint64_t alignment) {
+     if (count == 0 || count > 32 || buffer_bytes == 0 || alignment < 512 ||
+         (alignment & (alignment - 1u)) != 0 ||
+-        buffer_bytes > UINT64_MAX - alignment) {
++        buffer_bytes > UINT64_MAX - alignment ||
++        buffer_bytes + alignment > SIZE_MAX ||
++        buffer_bytes + alignment > UINT64_MAX / count) {
+         return 0;
+     }
+     if (g_expert_slab_staging.buffers.size() >= count &&
+@@ -23833,10 +23835,18 @@ static int cuda_expert_slab_staging_ensure(uint32_t count,
+         cuda_expert_slab_staging_release();
+         return 0;
+     }
++    const uint64_t allocation_bytes = buffer_bytes + alignment;
+     for (uint32_t i = 0; i < count; i++) {
+         void *allocation = NULL;
+-        if (cudaHostAlloc(&allocation, (size_t)(buffer_bytes + alignment),
+-                          cudaHostAllocPortable) != cudaSuccess || !allocation) {
++        const cudaError_t err = cudaHostAlloc(
++            &allocation, (size_t)allocation_bytes, cudaHostAllocPortable);
++        if (err != cudaSuccess || !allocation) {
++            fprintf(stderr,
++                    "ds4: expert slab pinned staging allocation failed index=%u count=%u buffer_bytes=%llu total_bytes=%llu "
++                    "cuda_error=%s cuda_detail=%s\n",
++                    i, count, (unsigned long long)allocation_bytes,
++                    (unsigned long long)(allocation_bytes * count),
++                    cudaGetErrorName(err), cudaGetErrorString(err));
+             (void)cudaGetLastError();
+             cuda_expert_slab_staging_release();
+             return 0;
+@@ -23848,5 +23858,9 @@ static int cuda_expert_slab_staging_ensure(uint32_t count,
+     }
+     g_expert_slab_staging.buffer_bytes = buffer_bytes;
+     g_expert_slab_staging.alignment = alignment;
++    fprintf(stderr,
++            "ds4: expert slab pinned staging ready count=%u buffer_bytes=%llu total_bytes=%llu\n",
++            count, (unsigned long long)allocation_bytes,
++            (unsigned long long)(allocation_bytes * count));
+     return 1;
+ }

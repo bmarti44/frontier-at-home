@@ -1,0 +1,32 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 3,
+  "implementation_commit": "e20afadefa58464cf1990ebeb7672a76ab1a2573",
+  "review_delta_from": "b515eaa4c579e9da9a26d60ab93588671f1365bb",
+  "review_round_from": 278,
+  "scope": [
+    "use the established kill-floor-derived cgroup envelope without the legacy high-limit exception",
+    "retain and hash the memory guard through a campaign-owned descriptor",
+    "require an exact FLOCK WRITE record owned by the bound parent PID and global-lock inode",
+    "replace an interrupted preterminal summary with a FAIL summary while preserving its original bytes"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 45, "result": "PASS", "skipped": 1},
+    "owner_vs_foreign_lock_mutation": "PASS",
+    "retained_guard_descriptor_mutation": "PASS",
+    "contradictory_summary_mutation": "PASS",
+    "runner_self_test": "PASS",
+    "shell_syntax": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count_for_gate": 3,
+    "blocking_findings_targeted": 3,
+    "previous_blocking_finding_reopened": false,
+    "escalation_triggered": false
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}

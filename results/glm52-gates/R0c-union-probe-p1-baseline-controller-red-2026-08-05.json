@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "classification": "Genuine_RED",
+  "gate": "R0c/P1 atomic held-out capture and scoring lifecycle",
+  "parent_commit": "982ccd77eb853b7c7ac9ea8b0d856a8afa9e14f6",
+  "per_gate_candidate_next": 5,
+  "held_out_values_opened": false,
+  "command": "python3 -m pytest -q scripts/tests/test_glm_union_baseline.py",
+  "observed": {
+    "passed": 11,
+    "failed": 3,
+    "failures": [
+      "Missing capture root invokes _load_test_archive before failing.",
+      "Atomic lifecycle entry point is absent for the success path.",
+      "Atomic lifecycle entry point is absent for failure sealing."
+    ]
+  },
+  "named_findings": [
+    "BASE-R142-H5",
+    "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO"
+  ],
+  "acceptance": [
+    "All non-held-out path and immutable-input preflight completes before held-out access.",
+    "A durable STARTED attempt exists before exactly one held-out opener call.",
+    "Capture precedes scoring and both receive the same in-memory opened object.",
+    "Success publishes COMPLETE plus summary atomically without replacement.",
+    "Any post-open failure publishes FAILED without summary and is never retried."
+  ],
+  "verdict": "RED_CONFIRMED"
+}

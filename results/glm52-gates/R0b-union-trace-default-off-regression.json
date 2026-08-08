@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "classification": "RED_FIXED_DIAGNOSTIC",
+  "request_sha256": "7335f240dfe916d816506a39fb6e078e7828e68df471d0c0f66f6311ac779b91",
+  "prompt_tokens": 573,
+  "minimum_completion_tokens": 128,
+  "regression": {
+    "engine_commit": "dbb6701",
+    "binary_sha256": "04cee3385d2227f552a86dd4b4c042147f21c21503d4496efc18e626044c4943",
+    "verdict": "FAIL",
+    "result_sha256": "ab492271da416d5581ea88fcb8c25a148b2c45e79b5635def8fe6f13b257b186",
+    "server_log_sha256": "9b4a377ece5deff5da29a78a9b4c183241f9155f990a84e0b3c16ab3f419136d",
+    "main_log_sha256": "c400770fba4c560b91898369bcfb0b5fa9b50e315d60acffc4a7283fe79efdbe",
+    "failure": "SSE error after full_indexed pos=0 chunk=573 logits=1",
+    "oom_or_xid": false
+  },
+  "pre_regression": {
+    "engine_commit": "9b1d36f",
+    "binary_sha256": "9916567a0d3ca69c50099a5dbbae498e21c27741ed9f9eec322c3c46970f4e6f",
+    "verdict": "PASS",
+    "arm_sha256": "207ad3ab30a841a059cf877afedbda5d3c8341e14a31ba546e95af9813732769",
+    "server_log_sha256": "2acaca77e8af53464f84b602482857b84a53bcab71348b098a82289eb8fee8b1",
+    "main_log_sha256": "9c09aac733dba52db6b755b60b4715e835e57d06c01b7d1f7f12080ed245aa9d",
+    "completion_tokens": 128,
+    "trace_files": 0,
+    "cgroup_peak_bytes": 69669363712
+  },
+  "fixed": {
+    "engine_commit": "681b90f92e0399b9d4f1c8b396ba8cb0504e3fa0",
+    "binary_sha256": "4dad1916689a71965ac064a58e6059326fd0b4783b47c2b72aac7b1fc8177df2",
+    "normalized_rebuilds_identical": true,
+    "verdict": "PASS",
+    "arm_sha256": "3af8e66cc2ec757e5b9df57af9096dbe1045b13689710c96d19a48c4f8bb6481",
+    "server_log_sha256": "4de5480bccb075dde7ad12a8faee5b0f7c9c396317afb1a383dcc66bf483f79c",
+    "main_log_sha256": "68ac3e5934cb92e3cb1bea5d03d59b6253c6f23e61587a75bdba95114f66c131",
+    "completion_tokens": 128,
+    "trace_files": 0,
+    "cgroup_peak_bytes": 69619294208
+  },
+  "checks": {
+    "regression_split_at_dbb6701": true,
+    "fixed_response_matches_9b1d36f_byte_and_token_exact": true,
+    "fixed_off_emitted_no_trace": true,
+    "fixed_containment_clean": true,
+    "fixed_no_oom_xid_or_swap": true
+  },
+  "conclusion": "dbb6701 eagerly evaluated routed-only ffn_exp_probs_b metadata on leading dense layers before the trace helper could no-op. The fix moves bias resolution behind the trace-request and sparse-layer validation inside the helper. This is diagnostic confirmation; the refrozen OFF/ON smoke remains required for gate passage."
+}

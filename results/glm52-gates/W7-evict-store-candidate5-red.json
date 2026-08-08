@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 5,
+  "review_round_source": 291,
+  "parent_candidate_hash": "ca38c38c41d81294b7c28cc56bdd6f51398abb2d",
+  "test_commit": "1a64e36fb5fb675a286b0d7e2e9101c5b50df155",
+  "test_command": "python3 -m unittest scripts.tests.test_w7_evict_store_probe_runner",
+  "unchanged_implementation_test_exit_code": 1,
+  "test_output_sha256": "672316cfa14eaa6e495a61b48e4d4da841eba5e3a57c4a8d465d355e3ffbd5b4",
+  "failed_acceptance_tests": [
+    "test_terminal_pass_requires_authoritative_inputs_and_arm_evidence"
+  ],
+  "observed_failure": "The terminal validator accepted a PASS package without invoking the frozen randomness verifier and without a primary request or either arm's runtime evidence.",
+  "frozen_component_intent": {
+    "engine_source_commit": "fdd0fe05df6368de428cd5405929f49d590c9f52",
+    "binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+    "scorer_sha256": "1ccb1cf2d501cc5ec0132080fe7f60fed21a707bc741c28e03520a89d325fcbb"
+  },
+  "runtime_started": false,
+  "verdict": "RED_CONFIRMED"
+}

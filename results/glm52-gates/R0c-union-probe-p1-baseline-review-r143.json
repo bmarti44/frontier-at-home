@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_COMPLETE",
+  "candidate_hash": "05e8f729e263ba337f555269beadb0f4fe207b1a",
+  "review_round": 143,
+  "per_gate_candidate": 3,
+  "held_out_values_opened": false,
+  "verified_closures": [
+    "BASE-R142-C1",
+    "BASE-R142-H1",
+    "BASE-R142-H6",
+    "P1-BASE-IMPL-H0-CANDIDATE-ID",
+    "P1-BASE-IMPL-M1-MALFORMED-METADATA"
+  ],
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 10,
+    "critical": [],
+    "high": [
+      "BASE-R142-H2",
+      "BASE-R142-H3",
+      "BASE-R142-H4",
+      "BASE-R142-H5",
+      "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY",
+      "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+      "P1-BASE-IMPL-H3-COST-OMITTED",
+      "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY",
+      "P1-BASE-IMPL-H4-MODULE-TOCTOU"
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 60,
+    "critical": [],
+    "high": [
+      "P1-BASE-IMPL-H4-MODULE-TOCTOU",
+      "BASE-R142-H2",
+      "BASE-R142-H3",
+      "BASE-R142-H4",
+      "BASE-R142-H5",
+      "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY",
+      "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO",
+      "P1-BASE-IMPL-H3-COST-OMITTED",
+      "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY"
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "newly_reproduced_detail": {
+    "id": "P1-BASE-IMPL-H4-MODULE-TOCTOU",
+    "status": "OPEN_PARTIAL",
+    "evidence": "The top-level loader executes authenticated bytes, but authenticated script 79 reloads script 78 by pathname and authenticated script 80 reloads script 79 by pathname. Nash replaced a temp script-78 path after preserving the original script-79 bytes and observed the mutated sentinel through cv.PROBE.",
+    "affected_gate": "frozen dependency authority",
+    "reproduction": "Execute authenticated parent bytes after replacing a nested dependency pathname; the parent imports the replacement.",
+    "proposed_acceptance_test": "Build the probe/CV/precision dependency graph only from separately authenticated snapshots and require nested modules to be object-identical; pathname replacement at each edge must not execute."
+  },
+  "unchanged_blocker_contract": {
+    "BASE-R142-H2": "Capture provenance and exact prompt/token/event lineage remain self-declared.",
+    "BASE-R142-H3": "Two-control state/cache/continuation isolation and failure injection remain absent.",
+    "BASE-R142-H4": "Matched cold/warm cost, resource, confidence, and Pareto evidence remain absent.",
+    "BASE-R142-H5": "Atomic preflight/open/capture/score controller remains absent.",
+    "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY": "Controller-owned process/environment/prompt/lineage receipt remains absent.",
+    "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO": "Scoring still opens test values before capture validation and separate capture construction remains required.",
+    "P1-BASE-IMPL-H3-COST-OMITTED": "Fixed raw cost harness and scorer remain absent.",
+    "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY": "Independent completed-output replay and sealing remain absent."
+  },
+  "convergence": {
+    "prior_blocking_count": 13,
+    "blocking_count_after_review": 9,
+    "strictly_shrinks": true,
+    "new_finding_class": false,
+    "escalation_triggered": false,
+    "next_candidate_scope": "Close only the residual authenticated dependency-DAG pathname reload."
+  }
+}

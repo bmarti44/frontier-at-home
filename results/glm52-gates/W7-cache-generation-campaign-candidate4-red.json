@@ -1,0 +1,26 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 4,
+  "phase": "pre-implementation-red",
+  "parent_commit": "35ea2155a497c822a708dd43101187c3a83732ab",
+  "observed_at": "2026-08-08T03:43:17-04:00",
+  "command": "python3 -m unittest -v scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_cache_generation_campaign",
+  "returncode": 1,
+  "tests_run": 15,
+  "failures": 1,
+  "errors": 1,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "859c417dca0fc6f0b1dd9db28d13502cadf529cbad33761b428d2fd0716516ab",
+  "artifacts": {
+    "runner_test": {"sha256": "05c69d9051ed654e81d127ed6f26b63bb60ab7259f934a9f01d52b7e80b4ec01"}
+  },
+  "observed_failures": [
+    "an unlocked bound FD passed while a child inherited a different locked OFD",
+    "attempt creation had no signal-safe activation helper"
+  ],
+  "cleanup_checks": {
+    "orphan_sleep_process": false,
+    "global_inference_lock_released": true
+  },
+  "acceptance": "The exact bound fdinfo must contain the matching lock record, all holder descendants must be reaped, preserved summary bytes/digest must be asserted, and pending interruption must arrive only after attempt activation."
+}

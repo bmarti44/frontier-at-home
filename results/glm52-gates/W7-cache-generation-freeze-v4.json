@@ -1,0 +1,53 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 4,
+  "status": "FROZEN_REVIEW_PENDING",
+  "repository_parent_commit": "b4601725ad90ec7eb19277bd6de10618d9c2cc67",
+  "candidate_3_commit": "dea40f5d490047afd28280b26601b075dad60360",
+  "candidate_4_red_commits": [
+    "5c2be12",
+    "f2e8e9b"
+  ],
+  "engine": {
+    "baseline_commit": "12a5010a20514c06f718fe53e2083a4031114317",
+    "behavioral_red_commit": "41887397aa799f1c80b81f14e0ea00f477a045a6",
+    "implementation_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "readable_source": "/tmp/glm52-w7-ttft-c3",
+    "patch": "results/glm52-gates/harness/0043-fix-w7-stable-remap-lineage.patch",
+    "patch_sha256": "d7243a5a9c9375b7c32e3ff2e6c7e0f3798a9b193a281a56c3f497bc743e8104"
+  },
+  "binary": {
+    "path": "/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6/ds4-server",
+    "sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "bytes": 5584864,
+    "mode": 493,
+    "normalized_byte_identical_across_two_clean_builds": true
+  },
+  "acceptance": {
+    "plan_sha256": "0ebe1bcc248e64295e9620bf20f01090c5d134edf0fcd3344257ade41b2899fb",
+    "scorer_sha256": "e231523e07980da977561eb8c8b494a31b7ecd6591ecdaea8e23877a169d9a40",
+    "scorer_tests_sha256": "4c7341ecfe22fee6467a5bd4b8644b9a90481c6b78d5bbb6951f6dcb88a7bd3a",
+    "freeze_verifier_sha256": "dd2b5b2e54896fa7a0043ac5a6461a4bc478a46b8157924a316cce6ec8d1684c",
+    "freeze_verifier_test_sha256": "ad21c54e279da44d7073249f156da924e90a8cfebe3ac4e34e8d6247c47b801f"
+  },
+  "round_257_disposition": {
+    "ADV-W7.1-257-H1-ZERO-COMPLETION-NONEMPTY-OUTPUT-ACCEPTED": "FIXED_EXACT_EMPTY_TEXT_AND_3_MUTATIONS",
+    "ADV-W7.1-257-H2-CANONICAL-FATAL-MARKERS-MISSED": "FIXED_CASE_INSENSITIVE_CANONICAL_PATTERNS_AND_4_MUTATIONS",
+    "ADV-W7.1-257-M1-BINARY-VERIFY-PATH-TOCTOU": "FIXED_OPEN_ONCE_O_NOFOLLOW_FSTAT_HASH_SAME_FD",
+    "ADV-W7.1-257-L1-PROMPT-CANDIDATE-HASH-TRANSCRIPTION": "PROCESS_FIXED_USE_GIT_REV_PARSE_HEAD"
+  },
+  "pre_submission_audit": {
+    "candidate_specific_tests": "16/16 PASS",
+    "profile_conformance_tests": "5/5 PASS",
+    "cuda_behavioral_test": "PASS on NVIDIA GB10",
+    "secret_scan": "PASS",
+    "binary_freeze_verifier": "PASS",
+    "engine_tree_clean": true,
+    "repository_tree_clean_before_freeze_artifact": true,
+    "runtime_started": false,
+    "out_of_scope_frozen_test_observations": [
+      "two older resume harness self-tests reject the subsequently changed frozen glm_cgroup_run.sh digest",
+      "one older oracle recipe points at a stale temporary candidate-1 source tree"
+    ]
+  }
+}

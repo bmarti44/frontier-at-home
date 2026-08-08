@@ -1,0 +1,118 @@
+From 5d5c431cf476a18d937e2ca103fb9824ab7a454b Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 16:05:28 -0400
+Subject: [PATCH 17/19] test: pin MTP capture after completed residual
+
+---
+ tests/test_glm_mtp_proxy_contract.c | 74 +++++++++++++++++++++++++++++
+ 1 file changed, 74 insertions(+)
+
+diff --git a/tests/test_glm_mtp_proxy_contract.c b/tests/test_glm_mtp_proxy_contract.c
+index 5c841a2..266b217 100644
+--- a/tests/test_glm_mtp_proxy_contract.c
++++ b/tests/test_glm_mtp_proxy_contract.c
+@@ -94,6 +94,12 @@ typedef struct {
+     uint64_t size;
+ } proxy_artifact;
+ 
++typedef struct {
++    int (*add3)(void *, float *, const float *, const float *, const float *, uint32_t);
++    int (*capture)(void *, const float *, float *, uint32_t);
++    int (*head_norm)(void *, const float *, uint32_t);
++} proxy_residual_ops;
++
+ extern int ds4_glm_mtp_proxy_contract_run(const proxy_request *,
+                                            const proxy_ops *,
+                                            void *,
+@@ -112,6 +118,10 @@ extern int ds4_glm_mtp_proxy_cli_contract_select(
+ extern int ds4_glm_mtp_proxy_publish_contract(
+     const char *, const proxy_artifact *, uint32_t, const char *)
+     __attribute__((weak));
++extern int ds4_glm_mtp_proxy_residual_capture(
++    const proxy_residual_ops *, void *, float *, const float *, const float *,
++    const float *, float *, uint32_t)
++    __attribute__((weak));
+ 
+ static int failures;
+ 
+@@ -254,6 +264,69 @@ static void test_exact_causal_recurrence_and_router_coverage(void) {
+           "receipt does not bind exact recurrence/layer endpoints");
+ }
+ 
++typedef struct {
++    uint32_t sequence;
++    int failed;
++} residual_ctx;
++
++static int fake_add3(void *opaque, float *dst, const float *a, const float *b,
++                     const float *c, uint32_t count) {
++    residual_ctx *ctx = opaque;
++    if (ctx->sequence++ != 0u) ctx->failed = 1;
++    for (uint32_t i = 0; i < count; i++) dst[i] = a[i] + b[i] + c[i];
++    return 1;
++}
++
++static int fake_residual_capture(void *opaque, const float *src, float *dst,
++                                 uint32_t count) {
++    residual_ctx *ctx = opaque;
++    if (ctx->sequence++ != 1u) ctx->failed = 1;
++    memcpy(dst, src, (size_t)count * sizeof(float));
++    return 1;
++}
++
++static int fake_head_norm(void *opaque, const float *src, uint32_t count) {
++    residual_ctx *ctx = opaque;
++    if (ctx->sequence++ != 2u) ctx->failed = 1;
++    for (uint32_t i = 0; i < count; i++) {
++        const float expected = (float)i + (float)(2u * i + 1u) - (float)(3u * i + 2u);
++        if (src[i] != expected) ctx->failed = 1;
++    }
++    return 1;
++}
++
++static void test_capture_is_exactly_after_completed_residual(void) {
++    CHECK(ds4_glm_mtp_proxy_residual_capture != NULL,
++          "production post-residual capture primitive is absent");
++    enum { N = 97 };
++    float destination[N], captured[N], a[N], b[N], c[N];
++    for (uint32_t i = 0; i < N; i++) {
++        destination[i] = 10000.0f + (float)i; /* poison pre-add3 state */
++        captured[i] = -10000.0f - (float)i;
++        a[i] = (float)i;
++        b[i] = (float)(2u * i + 1u);
++        c[i] = -(float)(3u * i + 2u);
++    }
++    const proxy_residual_ops ops = {
++        .add3 = fake_add3,
++        .capture = fake_residual_capture,
++        .head_norm = fake_head_norm,
++    };
++    residual_ctx ctx = {0};
++    CHECK(ds4_glm_mtp_proxy_residual_capture(
++              &ops, &ctx, destination, a, b, c, captured, N) == 0,
++          "valid residual/capture boundary rejected");
++    CHECK(ctx.sequence == 3u && !ctx.failed,
++          "add3/capture/head ordering or inputs differ");
++    for (uint32_t i = 0; i < N; i++) {
++        const float expected = a[i] + b[i] + c[i];
++        CHECK(captured[i] == expected,
++              "capture retained poison or wrong residual at element %u", i);
++        CHECK(destination[i] == expected,
++              "production residual destination differs at element %u", i);
++    }
++}
++
+ static void parse_digest(uint8_t out[32], const char *digest_hex) {
+     for (uint32_t i = 0; i < 32u; i++) {
+         unsigned byte = 0;
+@@ -575,6 +648,7 @@ static void test_fail_closed_publication(void) {
+ 
+ int main(void) {
+     test_exact_causal_recurrence_and_router_coverage();
++    test_capture_is_exactly_after_completed_residual();
+     test_exact_compact_pack_and_mutations();
+     test_router_max_aggregation_and_tie_order();
+     test_default_off_cli_dispatch();
+-- 
+2.43.0
+

@@ -1,0 +1,119 @@
+From fdd0fe05df6368de428cd5405929f49d590c9f52 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Sat, 8 Aug 2026 06:47:35 -0400
+Subject: [PATCH] feat: diagnose preload evict-store cost
+
+---
+ ds4_server.c | 57 +++++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 54 insertions(+), 3 deletions(-)
+
+diff --git a/ds4_server.c b/ds4_server.c
+index 34ea456..b72e052 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -8374,6 +8374,7 @@ struct server {
+     kv_disk_cache kv;
+     tool_memory tool_mem;
+     bool disable_exact_dsml_tool_replay;
++    bool skip_preload_evict_store_diagnostic;
+     bool enable_cors;
+     pthread_mutex_t tool_mu;
+     pthread_mutex_t kv_mu;
+@@ -9455,8 +9456,20 @@ static bool kv_cache_should_store_before_disk_lookup(bool kv_enabled,
+                                                      int old_pos,
+                                                      int min_tokens,
+                                                      bool diagnostic_skip) {
+-    (void)diagnostic_skip;
+-    return kv_enabled && cached == 0 && old_pos >= min_tokens;
++    return kv_enabled && cached == 0 && old_pos >= min_tokens &&
++           !diagnostic_skip;
++}
++
++static int kv_cache_preload_evict_store_diagnostic_from_env(bool *enabled) {
++    if (!enabled) return -1;
++    *enabled = false;
++    const char *value = getenv("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC");
++    if (!value || !value[0]) return 0;
++    if (!strcmp(value, "1")) {
++        *enabled = true;
++        return 0;
++    }
++    return -1;
+ }
+ 
+ #ifdef DS4_SERVER_TEST
+@@ -11183,11 +11196,18 @@ static void generate_job(server *s, server_slot *slot, job *j) {
+     }
+     if (cached == 0) slot->continued_last_store_tokens = 0;
+     if (kv_cache_should_store_before_disk_lookup(
+-            s->kv.enabled, cached, old_pos, s->kv.opt.min_tokens, false)) {
++            s->kv.enabled, cached, old_pos, s->kv.opt.min_tokens,
++            s->skip_preload_evict_store_diagnostic)) {
+         /* Loading a disk snapshot replaces the live Metal session.  Persist the
+          * current checkpoint first, otherwise a cache hit for an older prefix
+          * would silently discard the newer conversation state. */
+         kv_cache_store_current(s, slot, "evict");
++    } else if (s->kv.enabled && cached == 0 &&
++               old_pos >= s->kv.opt.min_tokens &&
++               s->skip_preload_evict_store_diagnostic) {
++        server_log(DS4_LOG_KVCACHE,
++                   "ds4-server: diagnostic skipped preload evict store live=%d prompt=%d common=%d",
++                   old_pos, j->req.prompt.len, common);
+     }
+     if (cached == 0) {
+         disk_cached = kv_cache_try_load(s, slot, &j->req, &effective_prompt,
+@@ -13021,6 +13041,17 @@ int main(int argc, char **argv) {
+     sigaction(SIGTERM, &sa, NULL);
+ 
+     server_config cfg = parse_options(argc, argv);
++    bool skip_preload_evict_store_diagnostic = false;
++    if (kv_cache_preload_evict_store_diagnostic_from_env(
++            &skip_preload_evict_store_diagnostic) != 0) {
++        server_log(DS4_LOG_DEFAULT,
++                   "ds4-server: DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC must be unset, empty, or exactly 1");
++        return 2;
++    }
++    if (skip_preload_evict_store_diagnostic) {
++        server_log(DS4_LOG_WARNING,
++                   "ds4-server: diagnostic preload evict-store bypass enabled");
++    }
+     if (json_replace_invalid_utf8_enabled()) {
+         server_log(DS4_LOG_DEFAULT,
+                    "ds4-server: invalid UTF-8 model bytes normalized to U+FFFD");
+@@ -13089,6 +13120,8 @@ int main(int argc, char **argv) {
+     s.last_prefill_slot = slot_count - 1;
+     s.default_tokens = cfg.default_tokens;
+     s.disable_exact_dsml_tool_replay = cfg.disable_exact_dsml_tool_replay;
++    s.skip_preload_evict_store_diagnostic =
++        skip_preload_evict_store_diagnostic;
+     s.tool_mem.max_entries = cfg.tool_memory_max_ids;
+     s.enable_cors = cfg.enable_cors;
+     s.slots = xmalloc((size_t)slot_count * sizeof(*s.slots));
+@@ -16842,6 +16875,24 @@ static void test_kv_cache_preload_evict_store_diagnostic_selector(void) {
+                                                           false));
+     TEST_ASSERT(!kv_cache_should_store_before_disk_lookup(true, 0, 511, 512,
+                                                           false));
++
++    bool enabled = true;
++    unsetenv("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC");
++    TEST_ASSERT(kv_cache_preload_evict_store_diagnostic_from_env(&enabled) == 0);
++    TEST_ASSERT(!enabled);
++    setenv("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC", "", 1);
++    TEST_ASSERT(kv_cache_preload_evict_store_diagnostic_from_env(&enabled) == 0);
++    TEST_ASSERT(!enabled);
++    setenv("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC", "1", 1);
++    TEST_ASSERT(kv_cache_preload_evict_store_diagnostic_from_env(&enabled) == 0);
++    TEST_ASSERT(enabled);
++    setenv("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC", "0", 1);
++    TEST_ASSERT(kv_cache_preload_evict_store_diagnostic_from_env(&enabled) != 0);
++    TEST_ASSERT(!enabled);
++    setenv("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC", "invalid", 1);
++    TEST_ASSERT(kv_cache_preload_evict_store_diagnostic_from_env(&enabled) != 0);
++    TEST_ASSERT(!enabled);
++    unsetenv("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC");
+ }
+ 
+ static void test_kv_cache_store_len_uses_configured_boundary(void) {
+-- 
+2.43.0
+

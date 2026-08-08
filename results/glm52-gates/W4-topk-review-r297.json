@@ -1,0 +1,103 @@
+{
+  "schema": "glm52-w4-review-v1",
+  "candidate_hash": "7c63c6075617551a43f53c737b0b236d922f59ce",
+  "engine_commit": "b5226f732460ccec016344766a0931afc4baa35d",
+  "review_round": 297,
+  "campaign_authorized": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 68,
+    "critical": [],
+    "high": [
+      {
+        "id": "W4-R297-H1-SIGNED-ZERO-TIE-MISMATCH",
+        "evidence": "The unchanged comparator treats +0.0 and -0.0 as equal and resolves by smaller ID, while the candidate's raw IEEE-754 radix key ranks +0.0 above -0.0. The positive-integer tie fixture does not detect this.",
+        "affected_gate": "W4 exact IDs and full-order/tie equivalence",
+        "reproduction_instructions": "Place interleaved -0.0 on smaller IDs and +0.0 on larger IDs around rank 2048 and compare both arms.",
+        "proposed_acceptance_test": "Cover signed zero, infinities, and cross-chunk cutoff ties; normalize zero or otherwise encode the exact comparator."
+      },
+      {
+        "id": "W4-R297-H2-NONAUTHORITATIVE-EVIDENCE",
+        "evidence": "The confirmation is a hand-authored aggregate without manifest.json/raw.jsonl/summary.json, preserved per-arm CUDA-event observations, or a fixed scorer and executed mutation corpus.",
+        "affected_gate": "W4 measurement validity and anti-cheating contract",
+        "reproduction_instructions": "Try to reconstruct or mutate all 20 arm observations from the archive; only five block averages and narrative booleans exist.",
+        "proposed_acceptance_test": "Use a fixed scorer over hash-closed manifest/raw/summary artifacts and reject missing, duplicate, reordered, malformed, nonfinite, short, wrong-ID, disabled-flag, and altered-schedule evidence."
+      },
+      {
+        "id": "W4-R297-H3-RANDOMNESS-NOT-EXECUTION-BOUND",
+        "evidence": "The test hardcodes ABBA first and fixed salts. It does not consume the drand receipt, and the selected round was not provably published strictly after the freeze commit.",
+        "affected_gate": "Post-freeze public-randomness confirmation",
+        "reproduction_instructions": "Substitute a valid receipt selecting BAAB; the unchanged binary still begins ABBA.",
+        "proposed_acceptance_test": "Verify a strictly post-freeze receipt and derive schedule and fixture permutation executably from it."
+      }
+    ],
+    "medium": [
+      {
+        "id": "W4-R297-M1-PER-DEVICE-PREPARE-CACHE",
+        "evidence": "One process-global readiness value skips per-device shared-memory setup, while scratch tier selection can prefer ambient current device.",
+        "affected_gate": "W4 device selection and multi-tier safety",
+        "reproduction_instructions": "Invoke first on device 0 and then device 1 and observe setup runs once.",
+        "proposed_acceptance_test": "Cache readiness per physical device and verify tensor execution tier."
+      },
+      {
+        "id": "W4-R297-M2-MERGE-SHAPE-COVERAGE",
+        "evidence": "Fixtures cover two and 128 complete chunks, not partial final chunks or odd set counts through multiple merge levels.",
+        "affected_gate": "W4 scratch bounds and merge-tree correctness",
+        "reproduction_instructions": "Compare at 8193, 24577, 32769, and 1000003 components with cross-boundary ties.",
+        "proposed_acceptance_test": "Add partial, three/five-chunk, and odd-tree exact fixtures."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [],
+    "verdict": "CHANGES_REQUIRED_SERVING_CAMPAIGN_NOT_AUTHORIZED"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 77,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W4-297-H1-PACKED-FLOAT-ORDER-DIFFERS-FROM-PRODUCTION-COMPARATOR",
+        "evidence": "The radix key distinguishes signed zeros and orders NaNs by payload/sign, while the production comparator treats signed zeros equal and comparisons involving NaN as false. Existing fixtures cover only finite unique scores and positive ties.",
+        "affected_gate": "W4 exact IDs/full order/tie behavior and nonfinite safety",
+        "reproduction_instructions": "Place signed zeros and NaNs around the 2048 cutoff and across chunks, then compare both arms.",
+        "proposed_acceptance_test": "Cover exact special-value bit patterns; canonicalize signed zero and define or reject NaNs before radix sorting."
+      },
+      {
+        "id": "ADV-W4-297-H2-CONFIRMATION-HAS-NO-HASH-CLOSED-RAW-EVIDENCE",
+        "evidence": "No hash-closed raw per-arm observations, output hashes, invocation identity, marker capture, fixed scorer, or executed mutation results are committed; the cited confirmation executable was removed by clean build hygiene.",
+        "affected_gate": "W4 measurement validity, anti-cheating, and freeze-to-run lineage",
+        "reproduction_instructions": "Alter aggregate timings, order, IDs, marker claims, or binary identity; no committed terminal validator rejects the edit.",
+        "proposed_acceptance_test": "Preserve manifest/raw/summary and execute mutations for arm/order/timing/ID/marker/binary/nonfinite/short/scorer failures."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W4-297-M1-PARTIAL-AND-ODD-MERGE-SHAPES-UNTESTED",
+        "evidence": "The enabled domain includes partial and odd merge trees, but tests cover only complete two- and 128-chunk shapes.",
+        "affected_gate": "W4 exactness across the enabled production domain",
+        "reproduction_instructions": "Compare at 4097, 8191, 8192, 8193, 16383, 16385, and three-chunk boundaries.",
+        "proposed_acceptance_test": "Add the boundary matrix with unique and tied values."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [],
+    "verdict": "CHANGES_REQUIRED_SERVING_CAMPAIGN_NOT_AUTHORIZED"
+  },
+  "root_reproduction": {
+    "signed_zero_mismatch": "VERIFIED_BY_SOURCE_SEMANTICS",
+    "nonfinite_order_gap": "VERIFIED_BY_SOURCE_SEMANTICS",
+    "raw_evidence_gap": "VERIFIED",
+    "randomness_execution_binding_gap": "VERIFIED",
+    "partial_and_odd_shape_gap": "VERIFIED",
+    "per_device_gap": "VERIFIED_STATICALLY_NOT_CAMPAIGN_BLOCKING_ON_SINGLE_GPU"
+  },
+  "convergence": {
+    "gate_candidate_count": 1,
+    "global_review_round": 297,
+    "status": "CONVERGING",
+    "next_candidate_authorized": true,
+    "candidate_2_scope": "Only exact comparator semantics, partial/odd fixture coverage, executable post-freeze randomness, and reconstructable hash-closed raw/scorer/mutation evidence."
+  },
+  "verdict": "CHANGES_REQUIRED_SERVING_CAMPAIGN_NOT_AUTHORIZED"
+}

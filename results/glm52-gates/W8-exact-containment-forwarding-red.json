@@ -1,0 +1,9 @@
+{
+  "gate": "W8-exact-containment-forwarding",
+  "candidate_parent": "f184897dacf6d3ff94a4ec6be9b903c4e29c92c4",
+  "command": "python3 -m unittest scripts.tests.test_glm_safe_lifecycle.CandidateLifecycleSourceTests.test_default_off_current_user_mode_retains_containment_and_provenance",
+  "expected_failure": "DS4_GLM_CKV_NVME_EXACT absent from glm_cgroup_run.sh allowlist",
+  "observed": "FAIL: assertion DS4_GLM_CKV_NVME_EXACT not found",
+  "result": "RED_CONFIRMED",
+  "scope": "The exact cKV flag would be stripped before contained engine launch; no engine was started."
+}

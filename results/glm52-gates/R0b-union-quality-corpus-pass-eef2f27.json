@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "eef2f27d495a18b4066b1ed4486a43d86ad02403",
+  "engine_commit": "183b236bbda50dc0e92d2a641a0ef1c8bdf4d620",
+  "classification": "PASS",
+  "scope": "quality_100_case_all_routed_layer_corpus",
+  "summary_sha256": "1ff5ee76c8e1672ba4a067e35d72d079ed7e371a0403e9004fd26df28e4f7a76",
+  "off_arm_sha256": "ae1227c3993e1ade6d612f6d3b4be5d33af8dcabaab90025abb83fc29ebde024",
+  "on_arm_sha256": "e55c1c910044c3dc056a9bb3eb5a7f7f14997ef52ec9d37487d2fcf184d64f98",
+  "off_ledger_sha256": "5b7d41f3b0609539b8cb0126bcedf2f398b2092d4b7372e441625cb1377e747f",
+  "on_ledger_sha256": "5b7d41f3b0609539b8cb0126bcedf2f398b2092d4b7372e441625cb1377e747f",
+  "off_responses_sha256": "a7b63f22c2984074bf780463d0fad49054276a26c0174cd8e82de689d0268565",
+  "on_responses_sha256": "a7b63f22c2984074bf780463d0fad49054276a26c0174cd8e82de689d0268565",
+  "off_server_log_sha256": "1d69d2eaf54e4a54675cbc2b6370499ff844d42bba74c1dee30c5ebeb1492807",
+  "on_server_log_sha256": "3cef561bb1a88e1a152f33cde28ecae540a18a61bf16c118930af74d7d0385fb",
+  "off_containment_sha256": "c5f0ddf5187d91d535e78526d2511784e49c394bac0798f3a74265063f159485",
+  "on_containment_sha256": "bc442aae27b0edead38f08a90ca123754a886aa733e589eb255bbcfbb7a01b8f",
+  "crashlog_bindings": {
+    "off": {
+      "cmd_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kernel_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+      "main_sha256": "5bc79358eb7e002f733cd35896c6e650bc216cf71958288930d59126f9cc201b",
+      "samples_sha256": "2296cd1d6840c24953d5f386d6d7f8ed70686336106f8e84d34064aaf204e198"
+    },
+    "on": {
+      "cmd_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kernel_sha256": "31fb33d32c81b95c016a2d006b46f4a603d891b21035f9e6fd4dd992b0be890c",
+      "main_sha256": "d070f9c13a4a02946341c90d30084e2453a169fbe01276709dec721bf53e5758",
+      "samples_sha256": "b6d75635103dc0827cda22d9f1b4803e64f94a6c78f5d4d0f2f115675ce2fbd3"
+    }
+  },
+  "observed": {
+    "quality_cases_per_arm": 100,
+    "prompt_tokens": 3262,
+    "completion_tokens_per_request": 8,
+    "byte_and_token_identity": true,
+    "containment_clean": true,
+    "off_trace_files": 0,
+    "on_trace_files": 37500,
+    "on_trace_bytes": 6529070400,
+    "trace_events": 7500,
+    "token_layer_events": 244650,
+    "routed_layer_first": 3,
+    "routed_layer_last": 77,
+    "minimum_available_memory_gib": {
+      "off": 42.118556976,
+      "on": 42.090496063
+    },
+    "maximum_cgroup_memory_bytes": {
+      "off": 49159131136,
+      "on": 49248944128
+    },
+    "maximum_cgroup_swap_bytes": 0,
+    "kernel_oom_or_xid": false,
+    "trace_score_verdict": "PASS",
+    "natural_malformed_utf8_requests": 0
+  },
+  "pre_runtime_authorization_review": {
+    "round": 118,
+    "gap_reviewer_score": 100,
+    "adversarial_reviewer_score": 97,
+    "critical": [],
+    "high": []
+  },
+  "post_runtime_review": {
+    "round": 119,
+    "gap_reviewer_score": 97,
+    "adversarial_reviewer_score": 97,
+    "critical": [],
+    "high": []
+  },
+  "retained_directory": "/home/bmarti44/.local/state/glm52-p0q100-r118-utf8",
+  "conclusion": "Authoritative frozen 100-case, all-routed-layer P0 source. Root and both persistent reviewers independently reproduced the fixed scorer PASS over all 37,500 hash-bound raw trace files (6,529,070,400 bytes, 7,500 events, 244,650 token-layer rows). OFF and ON ledgers, outputs, and request lifecycles are byte-identical; containment was clean with zero cgroup swap or OOM/Xid. The source directory and crash safety logs remain retained and must not be deleted after derived training compaction. This PASS does not qualify NLL, serving performance, 1M context, or natural malformed-byte runtime behavior. No request naturally produced malformed UTF-8, so that separate subclaim remains NO_RESULT and the vacuous exact_utf8_regression_reproduced summary field has no acceptance authority."
+}

@@ -22,6 +22,84 @@ def load_module():
 
 
 class BenchOptionTests(unittest.TestCase):
+    class _StreamResponse:
+        status = 200
+
+        def __init__(self, lines):
+            self.lines = [line.encode("utf-8") for line in lines]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def __iter__(self):
+            return iter(self.lines)
+
+    def test_stream_requires_one_terminal_length_finish_reason(self):
+        bench = load_module()
+
+        def event(choice):
+            return (
+                'data: {"id":"chatcmpl-regression","choices":['
+                + choice + ']}\n'
+            )
+
+        valid_content = event(
+            '{"delta":{"reasoning_content":"x"},"finish_reason":null}'
+        )
+        usage = 'data: {"id":"chatcmpl-regression","choices":[],"usage":{"prompt_tokens":32,"completion_tokens":8}}\n'
+        mutations = {
+            "missing": [valid_content, usage, "data: [DONE]\n"],
+            "duplicate": [valid_content, event('{"delta":{},"finish_reason":"length"}'),
+                          event('{"delta":{},"finish_reason":"length"}'), usage,
+                          "data: [DONE]\n"],
+            "non_string": [valid_content, event('{"delta":{},"finish_reason":7}'),
+                           usage, "data: [DONE]\n"],
+            "conflicting": [valid_content, event('{"delta":{},"finish_reason":"stop"}'),
+                            event('{"delta":{},"finish_reason":"length"}'), usage,
+                            "data: [DONE]\n"],
+            "after_usage": [valid_content, usage,
+                            event('{"delta":{},"finish_reason":"length"}'),
+                            "data: [DONE]\n"],
+            "content_after_finish": [valid_content,
+                                     event('{"delta":{},"finish_reason":"length"}'),
+                                     event('{"delta":{"content":"AFTER"},"finish_reason":null}'),
+                                     usage, "data: [DONE]\n"],
+            "missing_usage": [valid_content,
+                              event('{"delta":{},"finish_reason":"length"}'),
+                              "data: [DONE]\n"],
+            "duplicate_usage": [valid_content,
+                                event('{"delta":{},"finish_reason":"length"}'),
+                                usage, usage, "data: [DONE]\n"],
+            "nonempty_usage_choices": [valid_content,
+                                       event('{"delta":{},"finish_reason":"length"}'),
+                                       'data: {"id":"chatcmpl-regression","choices":[{"delta":{},"finish_reason":null}],"usage":{"prompt_tokens":32,"completion_tokens":8}}\n',
+                                       "data: [DONE]\n"],
+            "content_after_usage": [valid_content,
+                                    event('{"delta":{},"finish_reason":"length"}'),
+                                    usage,
+                                    event('{"delta":{"content":"AFTER"},"finish_reason":null}'),
+                                    "data: [DONE]\n"],
+        }
+        client = bench.Client("http://127.0.0.1:1", None)
+        for name, lines in mutations.items():
+            with self.subTest(name=name), mock.patch.object(
+                bench.urllib.request, "urlopen",
+                return_value=self._StreamResponse(lines),
+            ), self.assertRaises(RuntimeError):
+                client.stream_chat({"max_tokens": 8, "ignore_eos": True})
+
+        valid = [valid_content, event('{"delta":{},"finish_reason":"length"}'),
+                 usage, "data: [DONE]\n"]
+        with mock.patch.object(
+            bench.urllib.request, "urlopen", return_value=self._StreamResponse(valid),
+        ):
+            result = client.stream_chat({"max_tokens": 8, "ignore_eos": True})
+        self.assertTrue(result["done"])
+        self.assertEqual(result["finish_reason"], "length")
+
     def test_decisive_subset_options(self):
         bench = load_module()
         argv = [
@@ -42,6 +120,8 @@ class BenchOptionTests(unittest.TestCase):
             "123",
             "--model-id",
             "glm-5.2",
+            "--request-timeout",
+            "2700",
         ]
         with mock.patch.object(sys, "argv", argv):
             args = bench.parse_args()
@@ -50,6 +130,7 @@ class BenchOptionTests(unittest.TestCase):
         self.assertEqual(args.min_completion_tokens, 128)
         self.assertEqual(args.seed, 123)
         self.assertEqual(args.model_id, "glm-5.2")
+        self.assertEqual(args.request_timeout, 2700)
         self.assertEqual(args.tokenizer_path, bench.TOKENIZER_PATH)
         self.assertEqual(
             args.tokenizer_sha256,
@@ -316,6 +397,10 @@ class BenchOptionTests(unittest.TestCase):
         )
         self.assertEqual(rep["generated_content_bytes"], 0)
         self.assertIsNone(rep["raw_client_timing_ratio"])
+        self.assertEqual(
+            rep["client_prompt_tokens"],
+            len("p\n\n\n\nContinue this text naturally, writing at least 600 more words without stopping."),
+        )
 
     def test_fabricated_raw_timing_cannot_make_short_output_valid(self):
         bench = load_module()

@@ -1,0 +1,124 @@
+From 4fc42c82d20a7306589d2588eddc9182f16c1ed0 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 16:07:59 -0400
+Subject: [PATCH 19/19] test: bind proxy executor to real production callgraph
+
+---
+ Makefile                              |  1 +
+ tests/test_glm_mtp_proxy_callgraph.py | 92 +++++++++++++++++++++++++++
+ 2 files changed, 93 insertions(+)
+ create mode 100644 tests/test_glm_mtp_proxy_callgraph.py
+
+diff --git a/Makefile b/Makefile
+index 52bad09..9473152 100644
+--- a/Makefile
++++ b/Makefile
+@@ -373,6 +373,7 @@ endif
+ test-glm-mtp-proxy-contract: tests/test_glm_mtp_proxy_contract ds4
+ 	@rc=0; \
+ 	./tests/test_glm_mtp_proxy_contract || rc=1; \
++	python3 tests/test_glm_mtp_proxy_callgraph.py ds4.o ds4_cli.o || rc=1; \
+ 	DS4_GLM_MTP_PROXY_TEST_PACK="$${DS4_GLM_MTP_PROXY_TEST_PACK:?exact proxy pack required}" \
+ 		python3 tests/test_glm_mtp_proxy_cli.py ./ds4 || rc=1; \
+ 	exit $$rc
+diff --git a/tests/test_glm_mtp_proxy_callgraph.py b/tests/test_glm_mtp_proxy_callgraph.py
+new file mode 100644
+index 0000000..28ac47f
+--- /dev/null
++++ b/tests/test_glm_mtp_proxy_callgraph.py
+@@ -0,0 +1,92 @@
++#!/usr/bin/env python3
++"""Require the production candidate CLI to own the real MTP proxy call chain."""
++
++from __future__ import annotations
++
++from pathlib import Path
++import re
++import subprocess
++import sys
++import unittest
++
++
++OBJECT_ARGS = []
++while len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
++    OBJECT_ARGS.append(sys.argv.pop(1))
++if not OBJECT_ARGS:
++    OBJECT_ARGS = ["ds4.o", "ds4_cli.o"]
++
++
++def disassemble(path: Path) -> str:
++    return subprocess.run(
++        ["objdump", "-dr", str(path)],
++        check=True,
++        text=True,
++        stdout=subprocess.PIPE,
++        stderr=subprocess.PIPE,
++    ).stdout
++
++
++def function_body(disassembly: str, name: str) -> str:
++    match = re.search(
++        rf"^[0-9a-f]+ <{re.escape(name)}>:\n(?P<body>.*?)(?=^[0-9a-f]+ <|\Z)",
++        disassembly,
++        re.MULTILINE | re.DOTALL,
++    )
++    if not match:
++        raise AssertionError(f"production function is absent: {name}")
++    return match.group("body")
++
++
++def require_reference(body: str, owner: str, callee: str) -> None:
++    if re.search(rf"(?:<|\b){re.escape(callee)}(?:>|\b)", body) is None:
++        raise AssertionError(f"{owner} has no compiled relocation/reference to {callee}")
++
++
++class GlmMtpProxyProductionCallgraphTests(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls) -> None:
++        cls.disassembly = "\n".join(
++            disassemble(Path(path).resolve()) for path in OBJECT_ARGS
++        )
++
++    def test_main_dispatches_to_candidate_executor(self) -> None:
++        require_reference(
++            function_body(self.disassembly, "main"),
++            "main",
++            "ds4_glm_mtp_proxy_cli_execute",
++        )
++
++    def test_executor_owns_all_candidate_stages_and_actual_callbacks(self) -> None:
++        body = function_body(self.disassembly, "ds4_glm_mtp_proxy_cli_execute")
++        for callee in (
++            "ds4_glm_mtp_proxy_pack_open",
++            "ds4_glm_mtp_proxy_source_open",
++            "ds4_glm_mtp_proxy_contract_run",
++            "ds4_glm_mtp_proxy_rank_contract",
++            "ds4_glm_mtp_proxy_publish_contract",
++            "ds4_glm_mtp_proxy_step_actual",
++            "ds4_glm_mtp_proxy_route_actual",
++        ):
++            with self.subTest(callee=callee):
++                require_reference(body, "ds4_glm_mtp_proxy_cli_execute", callee)
++
++    def test_actual_step_calls_existing_primitive_and_capture_boundary(self) -> None:
++        body = function_body(self.disassembly, "ds4_glm_mtp_proxy_step_actual")
++        require_reference(body, "ds4_glm_mtp_proxy_step_actual", "glm_graph_mtp_step")
++        mtp = function_body(self.disassembly, "glm_graph_mtp_step")
++        require_reference(mtp, "glm_graph_mtp_step", "ds4_glm_mtp_proxy_residual_capture")
++
++    def test_actual_router_uses_target_router_primitives(self) -> None:
++        body = function_body(self.disassembly, "ds4_glm_mtp_proxy_route_actual")
++        for callee in (
++            "ds4_gpu_rms_norm_weight_tensor",
++            "ds4_gpu_matmul_f32_tensor",
++            "ds4_gpu_glm_router_select_tensor",
++        ):
++            with self.subTest(callee=callee):
++                require_reference(body, "ds4_glm_mtp_proxy_route_actual", callee)
++
++
++if __name__ == "__main__":
++    unittest.main(verbosity=2)
+-- 
+2.43.0
+

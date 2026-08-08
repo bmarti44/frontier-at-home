@@ -1,0 +1,41 @@
+{
+  "adversarial_reviewer": {
+    "critical": [],
+    "high": [
+      {
+        "acceptance_test": "Prove ownership on the inherited open-file description and reject a valid same-inode independently opened unlocked descriptor while another descriptor owns the lock.",
+        "affected_gate": "continuous inference-lock ownership through engine dispatch",
+        "evidence": "The driver checked the inherited descriptor inode but tested contention through a different descriptor, so the two predicates did not prove that the inherited descriptor owned the lock.",
+        "id": "ADV-W7.1-268-H1-INHERITED-LOCK-FD-OWNERSHIP-NOT-PROVEN"
+      }
+    ],
+    "low": [],
+    "medium": [],
+    "score_0_to_100": 88,
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "candidate_hash": "2cb9e89aadf2535c3ffe6b4b39af86803190881c",
+  "convergence": {
+    "blocking_classes_current": 1,
+    "blocking_classes_previous": 2,
+    "campaign_global_review_round": 268,
+    "gate_candidate_count": 15,
+    "status": "CANDIDATE_16_AUTHORIZED"
+  },
+  "gap_reviewer": {
+    "critical": [],
+    "high": [],
+    "low": [],
+    "medium": [],
+    "score_0_to_100": 100,
+    "verdict": "ACCEPT"
+  },
+  "prior_issue_status": {
+    "ADV-W7.1-267-H1-LOCK-OWNER-EXECUTABLE-UNBOUND": "PARTIALLY_FIXED",
+    "ADV-W7.1-267-H2-BEHAVIORAL-LINEAGE-TEST-NOT-EXECUTED": "FIXED",
+    "GAP-W7.1-267-M1-MEMORY-GUARD-NOT-EXPLICITLY-MANIFESTED": "VERIFIED"
+  },
+  "review_round": 268,
+  "root_disposition": "Runtime remained blocked. Candidate 16 was bounded to the sole remaining exact inherited-descriptor ownership finding.",
+  "runtime_started": false
+}

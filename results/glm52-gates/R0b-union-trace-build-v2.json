@@ -1,0 +1,30 @@
+{
+  "binary_bytes": 5254888,
+  "binary_sha256": "b87c0b8da47706112fd0ca19506af550f6bea99d8ef53da03f6526d2c9444d54",
+  "builds": 2,
+  "candidate_directory": "/home/bmarti44/.cache/glm52-r0b-a409466-server",
+  "candidate_status": "FROZEN_PENDING_REVIEW",
+  "default_off": true,
+  "deterministic_postprocess": [
+    "strip --strip-debug",
+    "objcopy --remove-section=.note.gnu.build-id"
+  ],
+  "engine_source_commit": "a4094660624aca146f3f98c3eb1f0782bcdb41ac",
+  "hooks_in_stripped_binary": [
+    "glm_indexed_ffn_norm",
+    "glm_indexed_router_logits",
+    "glm_indexed_router_selected"
+  ],
+  "jobs": 2,
+  "notes": "Both clean postprocessed binaries were byte-identical. The enabled path captures one matched triplet after successful router selection in glm_graph_encode_ffn_batch, fails the request on capture error, and publishes with exclusive creation. No serving run has occurred.",
+  "patch_sha256": "9ca81a475d6027d12310c82f3dd23e70baa00055c28cd4c50aa18d09d7106eea",
+  "prior_candidate": {
+    "binary_sha256": "4e15c00aa2caef523f7d9ba9c0a232fcaa4803b81bd3e6a1e549d5e3e34c4b74",
+    "engine_source_commit": "42852fa3767089ec72ca1123304d42fdd02ce8c1",
+    "status": "REJECTED_BEFORE_RUNTIME_UNREACHABLE_HOOKS"
+  },
+  "schema_version": 1,
+  "scorer_sha256": "f0d04498f02936e80914c9835c06b6e76afaccf591cb974828d70a95e9ab0600",
+  "scorer_tests_sha256": "b7733d7a36fc014fb2e29dafa15963b675db67d27291c24a481fa2a555daebbb",
+  "source_contract_tests_sha256": "cccac4e6ffd4ff805ce9c30f4707a0a4a656057303883762f0932eeeab852e60"
+}

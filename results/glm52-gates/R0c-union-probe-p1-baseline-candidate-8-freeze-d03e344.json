@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 8,
+  "campaign_review_round_next": 146,
+  "candidate_hash": "d03e34466c83e8b89db57e142107eae2a944f2fb",
+  "engine_commit": "b8a152f29bb68197796b89ba755afb4aefe45dee",
+  "scope": "Close only the three high-severity finding classes named in review round 145: global durable one-shot authority, complete launch-environment authority, and authenticated runtime/model consumption. Also close only the bounded lock-path, process-name, precreated-directory, and raw-prompt lineage failures discovered while executing this candidate; every failed attempt was committed before its corresponding fix.",
+  "held_out_values_opened": false,
+  "artifacts": {
+    "scripts/81_glm_union_baseline.py": "7a7c12630730faf2b689a4d1f0c2f0cf26bbf1678fa6e00a1c31dcfdd0264625",
+    "scripts/tests/test_glm_union_baseline.py": "ad6bb0c370b2893b35135c940f5aafb5d17089e1778b5449de0031cd9479e570",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c8-authority-smoke-pass-2026-08-05.json": "13109795999c3004b16664dc7b9d4ccc3b3d83e963661298c24758fed96cacd8",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c8-lock-path-attempt-2026-08-05.json": "bb7a24bcfb0d530a09829190a0df690e3341492f9d396649b22a3878d645370a",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c8-procfd-attempt-2026-08-05.json": "30c140a1f1294ce505094d95bdae70c8086026c06b07ec22e10845d23e26c453",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c8-raw-prompt-attempt-2026-08-05.json": "82b68ea3d637afacda93e562a14938c0b1238dbc941e3bc69e30d0cb9b20cfa8",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c8-smoke-directory-attempt-2026-08-05.json": "a0fbedd418ff06938bce42ac88706b2f286e238fe8d2ff2f054d72029920ce23",
+    ".gitleaks.toml": "1c3ab5da758e60d4892aba970a70d804b587b76cf85e2c46cf3f02a4be3285cf",
+    "scripts/lint_secrets.sh": "fa3fcccc81ef31f15f6480bc69fa1218d2117aed6aa518ad77a83819703e549b",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6"
+  },
+  "runtime_binary": {
+    "path": "/home/bmarti44/.cache/glm52-baseline-b8a152f-canonical/ds4-server",
+    "sha256": "49e728056d18c9eacd6986c6ca70290a2eb6ec46374ae94436555adc0fcc522b",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "non_heldout_combined_runtime_smoke": "PASS",
+    "exact_prompt_token_lineage": "59 tokens; positions 43 through 50; all eight sources exact",
+    "post_run_mem_available_kib": 120598856,
+    "post_run_swap_free_kib": 15969284
+  },
+  "pre_submission_audit": {
+    "targeted_and_parent_tests": "61 passed",
+    "engine_source_tests": "6 passed",
+    "python_compile": "PASS",
+    "secret_scan": "PASS",
+    "diff_check": "PASS",
+    "frozen_probe_cv_precision_hashes_unchanged": true,
+    "real_held_out_global_ledger_absent": true,
+    "machine_idle_after_smoke": true,
+    "scope_frozen": true
+  },
+  "acceptance": {
+    "global_fixed_started_ledger_precedes_held_out_open": true,
+    "alternate_output_concurrent_and_abrupt_exit_retries_rejected": true,
+    "launch_environment_is_exact_and_complete": true,
+    "ambient_ld_cuda_python_path_and_unlisted_ds4_values_cleared": true,
+    "wrapper_and_memory_guard_consumed_from_authenticated_snapshots": true,
+    "binary_consumed_from_private_rehashed_named_artifact": true,
+    "model_consumed_through_retained_authenticated_descriptor": true,
+    "post_capture_model_descriptor_rehash_and_identity_check": true,
+    "installed_global_lock_path_is_acl_authorized": true,
+    "normal_glm_template_tokenization_matches_frozen_tokenizer": true,
+    "failed_runtime_attempts_preserved_before_fixes": true
+  },
+  "convergence": {
+    "prior_aligned_blocking_classes": 3,
+    "expected_aligned_blocking_classes_after_review": 0,
+    "expected_remaining_outside_candidate_8_scope": [
+      "P1-BASE-R142-H3 two-control isolation",
+      "P1-BASE-R142-H4 and P1-H3 cost bound",
+      "P1-H5 completed-result authority"
+    ],
+    "new_scope": false,
+    "finding_reopened": false,
+    "per_gate_candidate_limit_reached": true,
+    "escalation_triggered": false
+  },
+  "held_out_boundary": {
+    "values_opened_by_this_candidate": false,
+    "test_records_invoked": false,
+    "authorized_next_action": "The same persistent Nash and Singer reviewers inspect only the candidate-8 diff since candidate 7. No held-out run occurs while any critical/high finding remains in the controller, capture, scorer, cost, two-control, or completed-result validator."
+  },
+  "claim_limit": "Runtime authority and exact-token-lineage candidate only; no held-out baseline metric, serving throughput, NLL, fidelity, or quality claim."
+}

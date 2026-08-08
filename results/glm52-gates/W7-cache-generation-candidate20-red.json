@@ -1,0 +1,20 @@
+{
+  "candidate_parent": "3ab96269c460ec27752f9032239f0730d069ab60",
+  "checks": {
+    "default_off_soft_high_allowance": false,
+    "hard_cgroup_events_remain_fatal": false,
+    "soft_high_marker_scored": false
+  },
+  "expected_failure": "The unchanged safety wrapper treats every memory.high event as fatal and has no narrow, default-off W7 allowance or scorer binding for safely bounded soft throttling.",
+  "observed": {
+    "failures": 1,
+    "stderr_sha256": "7bdd13551ab2b1bc7214d4190ec9b07f66e07140027f6604903ab68ac7209746",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests_run": 46
+  },
+  "runtime_attempt": "results/glm52-gates/W7-cache-generation-candidate19-runtime-attempt1.json",
+  "runtime_failure": "The candidate-19 engine completed without OOM, swap growth, hard-limit events, Xid, floor breach, or surviving process, but the wrapper rejected 5,329 memory.high throttle events.",
+  "schema": "glm52-w7-red-v1",
+  "test_sha256": "be1628b32bf8466de88ee9bb0b6073fd7dd9f08a114e865f6ca02bb3898a091c",
+  "verdict": "RED_CONFIRMED"
+}

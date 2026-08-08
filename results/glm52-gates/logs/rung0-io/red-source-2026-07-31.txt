@@ -1,0 +1,13 @@
+Rung 0.1 source-contract RED
+candidate_before_implementation=8516e988cb2c
+command=python3 -m unittest scripts.tests.test_glm_expert_slab_source
+result=FAILED (failures=3)
+
+missing source marker: cuda_expert_slab_read
+missing source marker: slab_mode=%s
+missing source marker: getenv("DS4_CUDA_EXPERT_SLAB_PATH")
+
+This is a behavioral RED against the existing production patch. The patch and
+test files both exist; the failure is not FileNotFoundError or missing test
+plumbing. The unchanged loader still performs separate gate/up/down model
+reads and has no explicit contiguous-slab mode.

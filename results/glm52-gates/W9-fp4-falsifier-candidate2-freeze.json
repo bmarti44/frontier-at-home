@@ -1,0 +1,42 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-freeze-v2",
+  "gate": "W9",
+  "candidate": 2,
+  "implementation_commit": "8806f5fa3f2cb753102a6094f9aa57def9dd65de",
+  "component_sha256": {
+    "scripts/93_score_w9_fp4_falsifier.py": "7d808e9bf72a62d47e0f38441f099d400b30b08d3d125d43dc40cc14fe34d7e1",
+    "scripts/tests/test_w9_fp4_falsifier.py": "b29656a8638b6e89532accb6adf8eac5fc40417eabd646daa85a9eaa52f8f3d9",
+    "results/glm52-gates/W9-fp4-falsifier-plan-v1.json": "6f44bc42c75faea07cce9da42cd54e762c4dfb006afce0c12d7a77b0d1094969",
+    "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh": "afaa0cbe9f0bc6dcebacde52d92b903d50ad1a9639c4af0df78b612564d1bd68",
+    "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+  },
+  "runtime": {
+    "python_path": "/usr/bin/python3",
+    "python_sha256": "a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1",
+    "numpy_version": "2.2.6",
+    "numpy_init_sha256": "6ae17b070c0f70a8e3cad89a510a256942e5a1f37ea5feb120cec167ed2a6236",
+    "numpy_multiarray_sha256": "e6da9a03a2d786c3faa3f5c5bc35e1e6c04bb4746c8fed42f6a9fa61cb1e572e",
+    "node_sha256": "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90",
+    "git_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
+  },
+  "round_251_disposition": {
+    "GAP-W9-251-C1-AMAX-SCALE-NOT-OPTIMISTIC-BOUND": "Fixed by multi-start continuous-scale refinement that includes amax/6 and scale 1.0; a non-passing metric is now NO_RESULT rather than a universal or decisive FAIL.",
+    "ADV-W9-FP4-251-C1-SELF-AUTHORIZED-CANDIDATE-SEED-GRINDING": "Fixed by the non-caller-selectable round-252 receipt path; its exact reviewed commit controls both source verification and seed derivation.",
+    "GAP-W9-251-H1-CAPTURE-AND-RANDOMNESS-TOCTOU": "Fixed with O_NOFOLLOW single-generation BoundInput descriptors, procfd-backed memmaps, final identity/digest verification, and replacement/rewrite tests.",
+    "GAP-W9-251-H2-CALLER-CONTROLS-FREEZE-AND-DRAND-FLOOR": "Fixed by removing both CLI controls and requiring the tracked round-252 review receipt with floor >=6357189.",
+    "ADV-W9-FP4-251-H3-RUNTIME-FREEZE-NOT-ENFORCED": "Fixed by exact runtime and component hashes loaded from this reviewed freeze and an environment-cleared absolute-path launcher.",
+    "ADV-W9-FP4-251-H4-TERMINAL-EVIDENCE-MUTATION-NOT-REJECTED": "Fixed by exclusive fsync publication, exact inventory, immediate terminal verification, and a post-publication mutation test."
+  },
+  "focused_checks": {
+    "behavioral_RED": "11 tests: 3 errors and 2 failures against candidate 1",
+    "focused_tests": "15/15 PASS",
+    "full_size_synthetic_quantizer": "8192x512 finite output; 4.59 seconds; 224252 KiB max RSS",
+    "python_compile": "PASS",
+    "shell_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "measurement_observed": false
+  },
+  "drand_min_round": 6357189,
+  "runtime_authorized": false
+}

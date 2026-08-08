@@ -1,0 +1,35 @@
+{
+  "schema": "glm52-w4-topk-scorer-red-v1",
+  "gate": "W4",
+  "candidate": 2,
+  "recorded_at": "2026-08-08T12:08:00-04:00",
+  "purpose": "Behavioral RED for the authoritative candidate-2 scorer and its fixed acceptance formula.",
+  "command": "python3 -W error::ResourceWarning -m unittest scripts.tests.test_w4_topk_scorer",
+  "observed": {
+    "exit_code": 1,
+    "tests_run": 5,
+    "failed_assertions": 12,
+    "valid_fixture_verdict": "NO_RESULT",
+    "expected_valid_fixture_verdict": "PASS",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "8bac11282ff4400a2a1181aa4ed107d8e679159878805605ece13d8e402d1464",
+    "stderr_bytes": 7063
+  },
+  "artifacts": {
+    "scripts/98_score_w4_topk.py": {
+      "sha256": "4d22df17ddabcaa840604f90db90ce0016c74fc7dbb84b610532d13df29a22ef"
+    },
+    "scripts/tests/test_w4_topk_scorer.py": {
+      "sha256": "f27a0342c596478d7c2f9c80380e83b67451221e16e24ffcbb800ede0cb6f678"
+    }
+  },
+  "acceptance": {
+    "formula": "For each of five blocks, average the two A and two B CUDA-event durations; compute log(A_ms/B_ms), then exp(mean - t_0.95,df4 * sample_sd/sqrt(5)).",
+    "required_speedup_lower_95": 2.0,
+    "required_observations": 20,
+    "outputs_and_order_must_be_exact": true,
+    "malformed_missing_duplicate_reordered_nonfinite_stale_or_disabled_evidence_must_fail": true
+  },
+  "verdict": "RED_CONFIRMED",
+  "interpretation": "The scorer module exists and executes, but its placeholder refuses the valid fixture and fails to reject every mutation. The RED is the intended scoring behavior, not a missing file."
+}

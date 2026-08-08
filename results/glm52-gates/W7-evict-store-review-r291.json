@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 4,
+  "candidate_hash": "ca38c38c41d81294b7c28cc56bdd6f51398abb2d",
+  "review_round": 291,
+  "runtime_probe_may_proceed": false,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 86,
+      "critical": [],
+      "high": [
+        {
+          "id": "GAP-W7.2-291-H1-PASS-REPLAY-NOT-BOUND-TO-PREREGISTERED-EVIDENCE",
+          "evidence": "Frozen scorer replay rejects the named row and component mutations, but a PASS package with no arm evidence remains valid. A coherently rewritten configuration, request digest, or randomness value is accepted because only mutually consistent manifest/row fields are checked.",
+          "acceptance_test": "Require the exact preregistered configuration, canonical primary-request artifact, verified public-randomness receipt, both complete arm artifact sets, and reconstruction or cryptographic cross-checking of every scorer row against those artifacts."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_NO_CONVERGENCE_THIS_CANDIDATE_RUNTIME_NOT_AUTHORIZED"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 90,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W7.2-291-H1-TERMINAL-PASS-ACCEPTS-SELF-CONSISTENT-INVENTED-FIXTURE-AND-RANDOMNESS",
+          "evidence": "Independent mutations replacing the configuration, executed request digest, or fake randomness receipt and seed with self-consistent values remain valid. The baseline synthetic PASS has no primary-request or arm artifacts.",
+          "acceptance_test": "Bind the exact preregistered configuration, require and validate primary-request.json, verify the public-randomness receipt for the candidate, derive its seed/order, require both complete arms, and reject coherent rewrites or missing evidence."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "FAIL_REVIEW_RUNTIME_NOT_AUTHORIZED"
+    }
+  },
+  "prior_issue_status": {
+    "GAP-W7.2-290-H1-TERMINAL-VALIDATOR-DOES-NOT-REPLAY-PASS": "PARTIALLY_FIXED_REPLAY_AND_COMPONENTS_FIXED_AUTHORITATIVE_INPUTS_OPEN",
+    "ADV-W7.2-290-H1-NORMAL-PASS-VALIDATOR-ACCEPTS-INCOMPLETE-UNBOUND-CAMPAIGN": "PARTIALLY_FIXED_MATCHED_ROWS_FIXED_ARM_AND_INPUT_EVIDENCE_OPEN",
+    "GAP-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-OMITS-VERDICT": "FIXED",
+    "ADV-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-CANNOT-VALIDATE": "PARTIALLY_FIXED",
+    "GAP-W7.2-288-H3-INTERRUPTION-FINALIZER-LEAVES-ARM-EVIDENCE-UNBOUND": "FIXED",
+    "ADV-W7.2-289-H2-EXPECTED-EVENT-REGEX-ACCEPTS-ARBITRARY-PREFIX": "FIXED"
+  },
+  "convergence": {
+    "prior_blocking_class_count": 1,
+    "remaining_blocking_class_count": 1,
+    "strictly_shrank": false,
+    "consecutive_non_shrinking_candidates": 1,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "autonomous_candidate_5_authorized": true
+  },
+  "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+}

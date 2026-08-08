@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "cceed67173bed30baf6cb5723cc43b6013144d65",
+  "review_round": 166,
+  "decision": "REJECT_BEFORE_RUN",
+  "execution_performed": false,
+  "reviewers": [
+    {
+      "reviewer": "gap_reviewer",
+      "score_0_to_100": 97,
+      "critical": [],
+      "high": [],
+      "medium": [
+        "W3-R165-M2-OUTPUT-LENGTH-TRUSTS-CANDIDATE-SELF-REPORT"
+      ],
+      "low": [],
+      "verdict": "ACCEPT_FOR_EXECUTION"
+    },
+    {
+      "reviewer": "adversarial_reviewer",
+      "score_0_to_100": 78,
+      "critical": [],
+      "high": [
+        "ADV-W3-R165-H5",
+        "ADV-W3-R166-H1"
+      ],
+      "medium": [
+        "ADV-W3-R166-M1"
+      ],
+      "low": [],
+      "verdict": "REJECT_EXECUTION_AS_AUTHORITATIVE_PROBE"
+    }
+  ],
+  "prior_high_issue_disposition": {
+    "full_model_hash": "FIXED",
+    "closed_engine_environment": "FIXED",
+    "request_scoped_dispatch_coverage": "FIXED",
+    "unique_evidence_directory_receipt": "FIXED",
+    "post_freeze_public_randomness": "FIXED",
+    "runner_cleanup": "FIXED"
+  },
+  "remaining_bounded_fixes": [
+    "make the reviewed freeze commit the exact accepted HEAD, with a one-file freeze-only diff from its parent",
+    "independently tokenize all four generated responses and require exactly 64 tokens",
+    "record observed HEAD and freeze/helper/source bindings in runtime evidence"
+  ],
+  "scope": "No model was loaded and no GPU evidence was consumed."
+}

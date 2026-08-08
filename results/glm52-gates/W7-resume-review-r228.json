@@ -1,0 +1,46 @@
+{
+  "candidate_hash": "4c831e9f612988b1042a569df236cba6a7a93caf",
+  "review_round": 228,
+  "reviewers": {
+    "Nash": {
+      "score": 97,
+      "critical": [],
+      "high": [],
+      "medium": [
+        "GAP-W7-228-M1-REWRITE-FAILURE-REPORTED-AS-SUCCESS"
+      ],
+      "verdict": "PASS_WITH_MEDIUM_FOLLOWUP"
+    },
+    "Singer": {
+      "score": 97,
+      "critical": [],
+      "high": [],
+      "medium": [
+        "ADV-W7-228-M43-TRAILER-REWRITE-FAILURE-REPORTED-SUCCESS"
+      ],
+      "verdict": "PASS_REVIEW_GATE_WITH_MEDIUM_FOLLOWUP"
+    }
+  },
+  "prior_issue_status": {
+    "ADV-W7-226-C41-UNCHECKSUMMED-PAYLOAD-CAN-BYPASS-GUARD": "FIXED",
+    "GAP-W7-227-C1-UNVERIFIED-RESEAL-LAUNDERS-CORRUPTION": "FIXED",
+    "ADV-W7-227-H42-STRIP-LAUNDERS-CORRUPTION": "FIXED"
+  },
+  "targeted_medium_attestation": {
+    "engine_red_test_commit": "e5a604b134d685f2abe2c83969039cbf2048aa6a",
+    "engine_fix_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+    "red_log": {
+      "sha256": "6994813348db3d9234fb0d51ac83a0f6cdc76aa05498c477e8e13e409fbf1135"
+    },
+    "checks": {
+      "rewrite_returns_status": true,
+      "caller_returns_rewrite_status": true,
+      "failed_rewrite_cannot_advance_store_bookkeeping": true,
+      "ds4_server_tests_pass": true,
+      "callsite_ordering_tests_pass": true,
+      "server_and_agent_builds_pass": true
+    },
+    "disposition": "FIXED_WITH_TARGETED_REGRESSION_NO_FULL_REVIEW_REQUIRED"
+  },
+  "scope": "No critical or high findings remain in the W7 production-graduation source candidate. Runtime requalification on a clean build remains required."
+}

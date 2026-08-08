@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RED_ATTEMPT",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 12,
+  "held_out_values_opened": false,
+  "findings": [
+    "BASE-R142-H3",
+    "BASE-R142-H4",
+    "P1-BASE-IMPL-H3-COST-OMITTED",
+    "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY"
+  ],
+  "tests": [
+    "BaselineTableTests::test_two_control_contract_rejects_state_or_continuation_drift",
+    "BaselineTableTests::test_cost_table_requires_five_matched_cold_warm_blocks_and_fails_closed",
+    "BaselineTableTests::test_completed_result_is_independently_reconstructed_and_strict_reopened"
+  ],
+  "unchanged_implementation_commit": "38711adf3bd2c893e22b50ea69dbc591041dd9e6",
+  "expected_before_fix": "FAIL with AttributeError because the frozen controller has no two-control validator, cost authority, canonical scorer input, or completed-result reconstructor.",
+  "acceptance": "Reject control state/continuation drift and incomplete failure injection; require exactly five matched cold/warm cost blocks with synchronized completed timing and resource dimensions; reconstruct the fixed score independently from canonical raw arrays, exact-compare it, and reject a mutated completed summary."
+}

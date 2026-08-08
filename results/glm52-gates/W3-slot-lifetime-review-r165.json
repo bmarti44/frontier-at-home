@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "candidate_hash": "1f5bee22e46fc666812c699d4fe29c4aca7dddc3",
+  "review_round": 165,
+  "decision": "REJECT_BEFORE_RUN",
+  "execution_performed": false,
+  "reviewers": [
+    {
+      "reviewer": "gap_reviewer",
+      "score_0_to_100": 40,
+      "critical": [],
+      "high": [
+        "W3-R165-H1-MODEL-DIGEST-IS-UNVERIFIED-CONSTANT",
+        "W3-R165-H2-ADMISSION-MARKER-MISLABELED-AS-DISPATCH",
+        "W3-R165-H3-WARM-COVERAGE-DECOUPLED-FROM-SCORED-OUTPUT",
+        "W3-R165-H4-CONFIRMATION-FIXTURE-LACKS-PUBLIC-RANDOMNESS"
+      ],
+      "medium": [
+        "W3-R165-M1-EXIT-CLEANUP-DOES-NOT-WAIT-RUNNER",
+        "W3-R165-M2-OUTPUT-LENGTH-TRUSTS-CANDIDATE-SELF-REPORT"
+      ],
+      "low": [
+        "W3-R165-L1-GITLEAKS-DIGEST-ALLOW-RULE-IS-GLOBAL"
+      ],
+      "verdict": "REJECT_BEFORE_RUN"
+    },
+    {
+      "reviewer": "adversarial_reviewer",
+      "score_0_to_100": 55,
+      "critical": [],
+      "high": [
+        "ADV-W3-R165-H1",
+        "ADV-W3-R165-H2",
+        "ADV-W3-R165-H3",
+        "ADV-W3-R165-H4",
+        "ADV-W3-R165-H5"
+      ],
+      "medium": [
+        "ADV-W3-R165-M1"
+      ],
+      "low": [],
+      "verdict": "REJECT_EXECUTION_AS_AUTHORITATIVE_PROBE"
+    }
+  ],
+  "root_reproduction": {
+    "model_digest_is_copied_not_measured": true,
+    "ambient_forwarded_flags_are_not_closed": true,
+    "admission_marker_precedes_actual_dispatch": true,
+    "marker_is_not_request_scoped": true,
+    "fixed_tag_can_select_stale_evidence": true,
+    "harness_and_helpers_are_not_freeze_manifest_bound": true,
+    "fixture_is_committed_before_public_randomness": true,
+    "cleanup_wait_gap_is_bounded_by_cgroup": true
+  },
+  "required_bounded_fixes": [
+    "measure the full model digest and bind stable identity",
+    "launch the cgroup controller from a closed explicit environment",
+    "add an actual dispatch/completion marker and require a measured-request delta",
+    "derive the request from verified post-freeze public randomness",
+    "use a unique run tag and bind the exact emitted crash directory",
+    "verify a git-bound freeze manifest for the harness, helpers, binary and engine source",
+    "wait for the exact background runner in every cleanup path"
+  ],
+  "scope": "No model was loaded and no GPU evidence was consumed."
+}

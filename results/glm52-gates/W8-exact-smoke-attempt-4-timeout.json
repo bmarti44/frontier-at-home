@@ -1,0 +1,79 @@
+{
+  "schema": "glm52-w8-exact-smoke-execution-attempt-v1",
+  "candidate_hash": "248346d0819203ac5b93b84755a9ab9dbd5a1a90",
+  "engine_source_commit": "3054a9fadfe79156046fcb23e1a36c3aa5162762",
+  "reviewed_candidate_commit": "f58be18331fdbb9a09054686feffe7bcafdbccfb",
+  "randomness_round": 6356899,
+  "attempt_id": "97f875e06cea807663f5c7e0967faa2b",
+  "attempt_path": "/home/bmarti44/.local/state/glm52-w8-exact-smoke/attempt-97f875e06cea807663f5c7e0967faa2b",
+  "arm_order": [
+    "exact",
+    "resident"
+  ],
+  "exact_observation": {
+    "requested_prompt_tokens": 5066,
+    "completed_prompt_tokens": 2048,
+    "first_chunk_seconds": 254.004,
+    "first_chunk_prompt_tokens_per_second": 8.062865151729894,
+    "next_chunk_tokens": 3018,
+    "request_timeout_seconds": 1800,
+    "http_status": 0,
+    "curl_rc": 28,
+    "containment_rc": 28,
+    "response_bytes": 0,
+    "terminal_marker_present": false
+  },
+  "resident_observation": null,
+  "resident_arm_disposition": "NOT_RUN_AFTER_EXACT_FAILURE",
+  "failure": {
+    "reason": "the exact F32 NVMe cKV arm did not complete the matched 5,066-token request before the preregistered 1,800-second request timeout",
+    "scorer_failure_reason": "harness_exit_rc=2 stage=arm-exact",
+    "classification": "FAIL",
+    "scope": "W8 model-backed correctness/performance smoke; not a direct-1M capability result"
+  },
+  "artifacts": {
+    "manifest.json": "c85ef91f96245110695adcfe58c6d16feb7c9536e7de5a49cfe9ca24cae87ba0",
+    "raw.jsonl": "4d5d3835d99b976df0ba5ad1d3de6485765649a9223ff1ee238001ddb5f26684",
+    "summary.json": "c9ab2c657f16225835b302f68f361e2415a64cccf6bf1927087c0e572a145ffd",
+    "terminal-receipt.json": "b5dd8a676c1427392c257db0a4fdca2b76b59b8acf3ef811278c00ed4a9197e0",
+    "exact/server.log": "d0cbca48dbc9b285681b12c58505ce815e81380ac67487bb73978dc567675f48",
+    "exact/safety/main.log": "1ee4d77d911f9de6c4541db96b5c1bc582fa68ee4d4c4b453cd1da6b8c035d46",
+    "exact/safety/samples.log": "022453790dd3d382549193be26a436b928a11a8660c21a4dee5b2251b597b837",
+    "exact/safety/kernel.log": "3d35eaab71c632c8a6f9c59714f1e4d5e7b75f525bddf2450f767d910153b466",
+    "exact/containment.rc": "9961d158a7e0e2f990765971a9e490af826c0743b7d603020f34cc8944319fcb",
+    "exact/http-status": "945e4893567554e68f6f28d5652917269341a5f3d295a16b7c708c9bfd95dc5d"
+  },
+  "post_terminal_integrity_incident": {
+    "discovered_during_review_round": 244,
+    "local_attempt_pristine": false,
+    "affected_artifact": "exact/http-status",
+    "incident_time": "2026-08-07T18:02:55.830973316-04:00",
+    "incident": "The gap reviewer accidentally passed exact/http-status as xxd's output pathname while inspecting exact/containment.rc. This replaced the four-byte terminal artifact with an xxd text dump. The reviewer then restored the bytes to 000\\n from the hash-bound expected value.",
+    "observed_by": "the adversarial reviewer observed both the mismatching intermediate hash and the later restored hash",
+    "original_and_restored": {
+      "sha256": "945e4893567554e68f6f28d5652917269341a5f3d295a16b7c708c9bfd95dc5d"
+    },
+    "intermediate_mutated": {
+      "sha256": "600bccc6f38ed9202d2d2258d42074804c996267ff402eedd880c12bc4d1cf9b"
+    },
+    "other_terminal_artifacts": "Their mtimes and ctimes remained at terminalization; no other post-terminal write was observed.",
+    "disposition": "The local attempt is not represented as pristine or rehabilitated. Under the fixed formula, post-terminal artifact mutation is independently a failure. It cannot change the already-committed FAIL into a pass or authorize a rerun with relaxed limits. Reviewers must use private copies for all future mutation and formatting checks."
+  },
+  "host_safety": {
+    "samples": 6237,
+    "minimum_mem_available_kib": 51590940,
+    "peak_engine_rss_kib": 40499844,
+    "peak_cgroup_bytes": 41895878656,
+    "peak_cgroup_swap_bytes": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "xid_detected": false,
+    "ds4_server_processes_after": 0,
+    "mem_available_kib_after": 121167028,
+    "host_swap_free_kib_before": 16620684,
+    "host_swap_free_kib_after": 16620684
+  },
+  "interpretation": "The representation remained fail-closed and host-safe, but it failed the bounded model-backed smoke before byte identity or selected-row telemetry could be scored. The later review-time artifact mutation is an additional failure and makes the local attempt non-pristine. This candidate must not be used for the direct-1M run or promoted into a serving profile.",
+  "verdict": "FAIL"
+}

@@ -1,0 +1,56 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 2,
+  "candidate_hash": "d8d894dbad582e831c86916d128dd9e94048df09",
+  "review_round": 301,
+  "runtime_authorized": false,
+  "gap_reviewer": {
+    "score": 54,
+    "critical": [],
+    "high": [
+      "W4S-R301-H1-ARM-REPLAY-NOT-SELF-CONTAINED",
+      "W4S-R301-H2-EXPECTED-ARM-ENVIRONMENT-UNBOUND",
+      "W4S-R301-H3-FAILURE-TRIPLET-CLOSURE-INCOMPLETE",
+      "W4S-R301-H4-ARTIFACT-CLOSURE-FOLLOWS-SYMLINKS"
+    ],
+    "medium": [
+      "W4S-R301-M1-DRAND-FREEZE-TIME-SELF-AUTHORED",
+      "W4S-R301-M2-MALFORMED-ARM-CAN-CRASH-SCORER"
+    ],
+    "verdict": "REJECT_PRE_RUNTIME"
+  },
+  "adversarial_reviewer": {
+    "score": 42,
+    "critical": [],
+    "high": [
+      "ADV-W4S-301-H1-NONIDEMPOTENT-AUTHORITATIVE-REPLAY",
+      "ADV-W4S-301-H2-POSTMANIFEST-REPLAY-FAILURE-LOSS",
+      "ADV-W4S-301-H3-FIXED-CLAIMS-NOT-JOINED-TO-ARTIFACTS",
+      "ADV-W4S-301-H4-UNBOUND-CANDIDATE-DEPENDENCY-CLOSURE",
+      "ADV-W4S-301-H5-BACKDATABLE-FREEZE-TIMESTAMP"
+    ],
+    "medium": ["ADV-W4S-301-M1-FAILURE-ARTIFACT-CLOSURE-INCOMPLETE"],
+    "verdict": "REJECT_PRE_LAUNCH"
+  },
+  "candidate_3_scope": [
+    "pure self-contained replay from copied safety artifacts without live process sampling",
+    "safe-run-bound environment.json with exact OFF/ON reconstruction",
+    "symlink-rejecting same-descriptor artifact closure",
+    "terminal FAIL displacement and full retained-artifact closure after provisional PASS errors",
+    "fixed request and frozen microgate joined to actual bytes",
+    "candidate-tracked and on-disk dependency hashes including drand runtime and staged binary",
+    "clean executing candidate requirement and GitHub PushEvent server timestamp before schedule randomness",
+    "structured FAIL conversion for malformed replay"
+  ],
+  "preflight_failure_check": {
+    "reason": "user-systemd containment is unavailable",
+    "engine_started": false,
+    "manifest_sha256": "7c36208c9b75ae43b4c80f0f586ea5d2cd7c1b637ac196a0304b5c7c690ca468",
+    "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "summary_sha256": "98bd49efed92d9d49d94a80154ded3c4a39200c9e0df64f18d9e246a2ce99e26",
+    "schema": "glm52-w4-serving-campaign-failure-v1",
+    "verdict": "FAIL"
+  },
+  "verdict": "REJECTED_PRESERVED"
+}

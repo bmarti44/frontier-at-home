@@ -1,0 +1,64 @@
+{
+  "candidate_hash": "41a483dfd4f8e89ad4aed5f4838f3570897d86ac",
+  "freeze_receipt_commit": "8cf1dabf9c5b530ec6a2d8600cc246536e9b0244",
+  "review_round": 204,
+  "candidate_number": 9,
+  "reviewers": {
+    "Nash": {
+      "score": 94,
+      "critical": [],
+      "high": [],
+      "medium": [
+        "W7-R204-M1-TRACE-TOKENIZER-DEPENDENCIES-NOT-RUNTIME-PINNED",
+        "W7-R204-M2-TRACE-REQUEST-IDS-NOT-UNIQUE-SEQUENTIAL"
+      ],
+      "verdict": "AUTHORIZE_CONTAINED_SMOKE"
+    },
+    "Singer": {
+      "score": 84,
+      "critical": [],
+      "high": ["ADV-W7-204-H15"],
+      "medium": ["ADV-W7-204-M16", "ADV-W7-204-M17"],
+      "verdict": "CHANGES_REQUIRED_BEFORE_RUNTIME_SMOKE"
+    }
+  },
+  "prior_findings": {
+    "ADV-W7-202-H11": "FIXED",
+    "ADV-W7-203-M13": "FIXED",
+    "ADV-W7-203-L14": "FIXED",
+    "W7-R203-M1-ORACLE-BINARY-BUILD-RECIPE-NOT-PRESERVED": "FIXED",
+    "ADV-W7-202-M12": "OPEN_RUNTIME_PENDING",
+    "ADV-W7-201-M09": "FIXED_OFFLINE_RUNTIME_PENDING"
+  },
+  "root_reproduction": {
+    "ADV-W7-204-H15": "VERIFIED_BY_SOURCE_INSPECTION: harness checks scorer readability but not its frozen digest; subprocess return code, exact result schema, verdict and error are not acceptance predicates",
+    "ADV-W7-204-M16": "VERIFIED_BY_SOURCE_INSPECTION: trace prefix is stripped rather than required empty",
+    "ADV-W7-204-M17": "VERIFIED_BY_SOURCE_INSPECTION: header/end IDs are internally matched but sequence [1,2] is not required"
+  },
+  "bounded_candidate_10_acceptance": {
+    "scope": "Only close the named round-204 findings; engine, pool, production binary and prior frozen behavior remain byte-identical.",
+    "required_runtime_hashes": [
+      "trace scorer source",
+      "tokenizer JSON",
+      "tokenizers Python package initializer",
+      "tokenizers native library"
+    ],
+    "scorer_contract": "Require exit code zero, exact top-level and check-key schemas, schema_version=1, verdict=PASS, error=null, all checks true, and no unexpected fields.",
+    "trace_framing": "Require an empty prefix and request IDs exactly [1,2].",
+    "mutations": [
+      "clean committed scorer substitution",
+      "each external tokenizer dependency substitution",
+      "true checks with nonzero exit",
+      "inconsistent verdict or error",
+      "NUL or whitespace prefix",
+      "duplicate, reversed, zero, or nonconsecutive request IDs"
+    ]
+  },
+  "convergence": {
+    "blocking_set_candidate_9": ["ADV-W7-204-H15"],
+    "new_finding_class": "fixed-scorer execution authority",
+    "trigger": "candidate count exceeds eight",
+    "status": "PAUSED_FOR_OWNER_AUTHORIZATION_BEFORE_CANDIDATE_10"
+  },
+  "runtime_status": "NOT_STARTED; no GLM engine or GPU evidence run was launched"
+}

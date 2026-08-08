@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest import mock
+
+
+ROOT = Path(__file__).resolve().parents[2]
+SPEC = importlib.util.spec_from_file_location(
+    "w4_serving_runner", ROOT / "scripts/102_run_w4_serving_campaign.py")
+assert SPEC and SPEC.loader
+RUNNER = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(RUNNER)
+
+
+class W4ServingContainmentTest(unittest.TestCase):
+    def test_safe_run_candidate_directory_contains_named_binary(self) -> None:
+        self.assertEqual(RUNNER.BIN.name, "ds4-server")
+        self.assertEqual(RUNNER.CANDIDATE_SRC, RUNNER.BIN.parent)
+        self.assertTrue((RUNNER.CANDIDATE_SRC / "ds4-server").is_file())
+
+    def test_containment_forwards_exact_topk_flag(self) -> None:
+        source = (ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh").read_text()
+        self.assertIn("  DS4_CUDA_TOPK2048_CUB \\\n", source)
+
+    def test_arm_environments_differ_only_by_topk_flag_and_logit_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            off, _ = RUNNER.environment_for_arm("off", parent / "off", "/proc/123/fd/9", "1:2")
+            on, _ = RUNNER.environment_for_arm("on", parent / "on", "/proc/123/fd/9", "1:2")
+        ignored = {
+            "DS4_CUDA_TOPK2048_CUB", "DS4_GLM_LOGIT_DUMP",
+            "GLM_SAFE_EXPECTED_ENV_SHA256", "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST",
+            "GLM_SAFE_FINAL_ARTIFACTS",
+        }
+        self.assertEqual({k: v for k, v in off.items() if k not in ignored},
+                         {k: v for k, v in on.items() if k not in ignored})
+        self.assertNotIn("DS4_CUDA_TOPK2048_CUB", off)
+        self.assertEqual(on["DS4_CUDA_TOPK2048_CUB"], "1")
+        self.assertEqual(off["DS4_CUDA_STABLE_MODEL_REMAP"], "1")
+        self.assertEqual(on["DS4_CUDA_STABLE_MODEL_REMAP"], "1")
+        off_measured = {name: off[name] for name in
+                        off["GLM_SAFE_PROVENANCE_ENV_ALLOWLIST"].split(",")}
+        on_measured = {name: on[name] for name in
+                       on["GLM_SAFE_PROVENANCE_ENV_ALLOWLIST"].split(",")}
+        self.assertEqual(RUNNER.validate_environment_artifact(
+            "off", Path(directory) / "off", off_measured),
+            off["GLM_SAFE_EXPECTED_ENV_SHA256"])
+        self.assertEqual(RUNNER.validate_environment_artifact(
+            "on", Path(directory) / "on", on_measured),
+            on["GLM_SAFE_EXPECTED_ENV_SHA256"])
+        mutated = dict(on_measured)
+        mutated["DS4_CUDA_FETCH_THREADS"] = "7"
+        with self.assertRaises(RUNNER.CampaignError):
+            RUNNER.validate_environment_artifact("on", Path(directory) / "on", mutated)
+
+    def test_request_is_deterministic_and_non_generating(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / "first.json"
+            second = Path(directory) / "second.json"
+            first_sha = RUNNER.make_request(first)
+            second_sha = RUNNER.make_request(second)
+            first_bytes = first.read_bytes()
+            second_bytes = second.read_bytes()
+            doc = json.loads(first_bytes)
+            tokenization = RUNNER.load_scorer(RUNNER.SCORER.read_bytes()).independent_tokenization(first)
+        self.assertEqual(first_sha, second_sha)
+        self.assertEqual(first_bytes, second_bytes)
+        self.assertEqual(doc["max_tokens"], 0)
+        self.assertFalse(doc["stream"])
+        self.assertGreater(len(doc["prompt"]), 90_000)
+        self.assertEqual(tokenization["prompt_tokens"], 19_783)
+
+    def test_schedule_is_deterministic_and_domain_separated(self) -> None:
+        seed = hashlib.sha256(b"post-freeze randomness").hexdigest()
+        self.assertEqual(RUNNER.derive_schedules(seed), RUNNER.derive_schedules(seed))
+        self.assertEqual(len(RUNNER.derive_schedules(seed)), 5)
+        self.assertLess(RUNNER.drand_publication_time(6_359_296), 1_786_210_399)
+
+    def test_github_push_time_is_external_randomness_floor(self) -> None:
+        candidate = "3" * 40
+        response = mock.MagicMock()
+        response.read.return_value = json.dumps([{
+            "id": "event-1", "type": "PushEvent", "created_at": "2026-08-08T17:45:25Z",
+            "payload": {"head": candidate,
+                        "ref": "refs/heads/glm52-rung0-io-submission"},
+        }]).encode()
+        response.__enter__.return_value = response
+        with mock.patch.object(RUNNER.urllib.request, "urlopen", return_value=response):
+            receipt = RUNNER.fetch_publication_receipt(candidate)
+        self.assertEqual(receipt["candidate_hash"], candidate)
+        self.assertEqual(receipt["created_at_unix"], 1_786_211_125)
+
+    def test_sync_trace_requires_full_novel_prefill(self) -> None:
+        valid = ("ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
+                 "dense_len=0 ctx_cap=32768 dense_fit=0 resume_min=4 dense_gap=0 "
+                 "indexed_keep=0 indexed_batch=1 batch_ffn=1")
+        RUNNER.validate_novel_sync_trace(valid, 19_783)
+        for mutation in (
+            valid.replace("start=0", "start=1"),
+            valid.replace("suffix=19783", "suffix=19782"),
+            valid.replace("checkpoint=0", "checkpoint=1"),
+            valid + "\n" + valid,
+        ):
+            with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
+                RUNNER.validate_novel_sync_trace(mutation, 19_783)
+
+    def test_arm_replay_is_pure_self_contained_and_repeatable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / "b0-p0-off-0123456789ab"
+            safety = out / "safety"
+            safety.mkdir(parents=True)
+            environment = RUNNER.measured_environment(
+                "off", out, "/proc/123/fd/9", "1:2")
+            response = {"choices": [{"text": "", "finish_reason": "length"}],
+                        "usage": {"prompt_tokens": 19_783, "completion_tokens": 0,
+                                  "total_tokens": 19_783,
+                                  "prompt_tokens_details": {
+                                      "cached_tokens": 0,
+                                      "cache_write_tokens": 19_783}}}
+            observation = {"request_start_ns": 1, "response_complete_ns": 2,
+                           "semantic": response,
+                           "response_semantic_sha256": "0" * 64}
+            files = {
+                "server.log": ("ds4-server: listening on 127.0.0.1\n"
+                               "ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
+                               "dense_len=0 ctx_cap=32768 dense_fit=0 resume_min=4 dense_gap=0 "
+                               "indexed_keep=0 indexed_batch=1 batch_ffn=1\n"
+                               "ds4-server: shutdown requested\n").encode(),
+                "response.json": json.dumps(response).encode(),
+                "observation.json": json.dumps(observation).encode(),
+                "environment.json": json.dumps(environment).encode(),
+                "child-exit.json": b'{"exit_status":0}',
+            }
+            for name, payload in files.items():
+                (out / name).write_bytes(payload)
+            logit = out / "logits.sync1.start0.prompt19783.suffix19783"
+            logit.write_bytes(b"\0" * RUNNER.LOGIT_BYTES)
+            env_sha = RUNNER.validate_environment_artifact("off", out, environment)
+            markers = []
+            for name, payload in files.items():
+                metadata = (out / name).stat()
+                markers.append(
+                    f"final_artifact_verified path={out / name} "
+                    f"sha256={hashlib.sha256(payload).hexdigest()} "
+                    f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}")
+            main = (f"executed_environment_allowlist={','.join(sorted(environment))} "
+                    f"executed_environment_sha256={env_sha}\n" + "\n".join(markers) +
+                    "\ncgroup_final memory_current_bytes=1 swap_current_bytes=0 "
+                    "events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n"
+                    "wrapper and descendant checks clean\n").encode()
+            samples = b"mem_avail_kb=20971520 cgroup_swap_current_bytes=0\n"
+            kernel = b"no driver faults\n"
+            for name, payload in (("main.log", main), ("samples.log", samples),
+                                  ("kernel.log", kernel)):
+                (safety / name).write_bytes(payload)
+            done = ("SAFE_RUN_DONE rc=0 killed=no "
+                    "dir=/home/bmarti44/.local/state/glm52-crashlog/nonexistent "
+                    f"main_sha256={hashlib.sha256(main).hexdigest()} "
+                    f"samples_sha256={hashlib.sha256(samples).hexdigest()} "
+                    f"kernel_sha256={hashlib.sha256(kernel).hexdigest()}\n")
+            with mock.patch.object(RUNNER.BASE, "server_pids", return_value=[999]):
+                first = RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
+                                         "5" * 64, 19_783, None, True)
+                second = RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
+                                          "5" * 64, 19_783, None, True)
+        self.assertEqual(first, second)
+        self.assertEqual(first["safety"]["surviving_descendants"], 0)
+
+    def test_signal_handlers_are_restored_after_preflight_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(RUNNER, "OUT_ROOT", Path(directory)), \
+             mock.patch.object(RUNNER, "user_systemd_available", return_value=False), \
+             mock.patch.object(RUNNER.BASE, "install_campaign_signal_handlers",
+                               return_value={}) as installed, \
+             mock.patch.object(RUNNER.BASE, "restore_campaign_signal_handlers") as restored:
+            with self.assertRaises(RUNNER.CampaignError):
+                RUNNER.campaign("0" * 40, Path("unused"))
+            installed.assert_called_once_with()
+            restored.assert_called_once_with({})
+            RUNNER.BASE._ACTIVE_ATTEMPT = None
+            RUNNER.BASE._ACTIVE_CANDIDATE = None
+
+    def test_campaign_rejects_dead_user_manager_before_large_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(RUNNER, "OUT_ROOT", Path(directory)), \
+             mock.patch.object(RUNNER, "user_systemd_available", return_value=False), \
+             mock.patch.object(RUNNER, "verify_dependencies",
+                               side_effect=AssertionError("must not hash dependencies")):
+            error = RUNNER.CampaignError("user-systemd containment is unavailable")
+            with self.assertRaisesRegex(RUNNER.CampaignError,
+                                        "user-systemd containment is unavailable"):
+                RUNNER.campaign("0" * 40, Path("unused-receipt.json"))
+            RUNNER.finalize_failure(error)
+            attempts = list(Path(directory).glob("attempt-*"))
+            self.assertEqual(len(attempts), 1)
+            self.assertTrue((attempts[0] / "manifest.json").is_file())
+            RUNNER.BASE._ACTIVE_ATTEMPT = None
+            RUNNER.BASE._ACTIVE_CANDIDATE = None
+
+    def test_failure_finalizer_emits_w4_bound_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attempt = Path(directory)
+            RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+            RUNNER.BASE._ACTIVE_CANDIDATE = "1" * 40
+            try:
+                RUNNER.finalize_failure(RuntimeError("synthetic failure"))
+                manifest = json.loads((attempt / "manifest.json").read_bytes())
+            finally:
+                RUNNER.BASE._ACTIVE_ATTEMPT = None
+                RUNNER.BASE._ACTIVE_CANDIDATE = None
+        self.assertEqual(manifest["schema"], "glm52-w4-serving-campaign-failure-v1")
+        self.assertEqual(manifest["scorer_sha256"], RUNNER.SCORER_SHA256)
+        self.assertEqual(manifest["binary_sha256"], RUNNER.BINARY_SHA256)
+
+    def test_failure_after_provisional_pass_displaces_and_closes_every_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attempt = Path(directory)
+            (attempt / "raw.jsonl").write_bytes(b"{}\n")
+            (attempt / "summary.json").write_text('{"verdict":"PASS"}\n')
+            (attempt / "manifest.json").write_text('{"verdict":"PASS"}\n')
+            (attempt / "retained.log").write_text("host observation\n")
+            RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+            RUNNER.BASE._ACTIVE_CANDIDATE = "2" * 40
+            try:
+                RUNNER.finalize_failure(RuntimeError("replay failed"))
+                manifest = json.loads((attempt / "manifest.json").read_bytes())
+            finally:
+                RUNNER.BASE._ACTIVE_ATTEMPT = None
+                RUNNER.BASE._ACTIVE_CANDIDATE = None
+        self.assertEqual(manifest["verdict"], "FAIL")
+        self.assertIn("manifest.pre-failure.json", manifest["artifacts"])
+        self.assertIn("summary.pre-finalization.json", manifest["artifacts"])
+        self.assertIn("retained.log", manifest["artifacts"])
+
+
+if __name__ == "__main__":
+    unittest.main()

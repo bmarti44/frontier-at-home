@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "classification": "PERSISTENT_REVIEW_RESULT",
+  "candidate_hash": "86f7a628865e6b4d0a7061699122dd9cdf2dbc06",
+  "freeze_commit": "416c38b",
+  "review_round": 147,
+  "per_gate_candidate": 9,
+  "held_out_values_opened": false,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 84,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-R147-H1-ROTATING-JOURNAL-NOT-PERMANENT",
+        "evidence": "CRIT provides immediate synchronization but not permanent retention. Installed journald defaults enforce bounded size, file count, and rotation. After the reservation file is evicted, an empty query permits another reservation.",
+        "affected_gate": "durable global one-shot held-out authority",
+        "reproduction_instructions": "Use an isolated bounded journal, emit the reservation, rotate and evict it, then query and reserve again; do not destructively test the production journal.",
+        "proposed_acceptance_test": "Use a root-owned non-rotating marker or external append-only witness. Rotation, vacuum, flooding, reboot, local-receipt deletion, concurrency, and abrupt exit must not permit another opener."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "P1-BASE-R146-H1-DELETABLE-GLOBAL-LEDGER", "status": "OPEN"},
+      {"id": "P1-BASE-R146-H2-PRIVATE-RUNTIME-STILL-PATH-MUTABLE", "status": "FIXED"},
+      {"id": "BASE-R142-H2", "status": "FIXED"},
+      {"id": "BASE-R142-H3", "status": "OPEN"},
+      {"id": "BASE-R142-H4", "status": "OPEN"},
+      {"id": "BASE-R142-H5", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY", "status": "FIXED"},
+      {"id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H3-COST-OMITTED", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H4-MODULE-TOCTOU", "status": "FIXED"},
+      {"id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY", "status": "OPEN"}
+    ],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 80,
+    "critical": [],
+    "high": [
+      {
+        "id": "P1-BASE-R147-H1-JOURNAL-RETENTION-REOPENS-ONE-SHOT",
+        "evidence": "Singer ran the production reservation under the real root-owned flock while mocking only journal retention: first reservation succeeded, simulated rotation cleared the record, and a second reservation succeeded.",
+        "affected_gate": "global durable one-shot authority; P1-H2; BASE-R142-H5",
+        "reproduction_instructions": "Back journal queries by a mutable list, reserve, clear the list to simulate eviction, and reserve with another output; both calls succeed.",
+        "proposed_acceptance_test": "Make a root-owned fsync'd non-rotating tombstone authoritative and journal only an audit mirror. Empty journal, reboot, local deletion, concurrency, and abrupt death must still reject."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "P1-BASE-R146-H1-DELETABLE-GLOBAL-LEDGER", "status": "OPEN"},
+      {"id": "P1-BASE-R146-H2-PRIVATE-RUNTIME-STILL-PATH-MUTABLE", "status": "FIXED"},
+      {"id": "P1-BASE-R145-H1-GLOBAL-ONE-SHOT-AUTHORITY", "status": "OPEN"},
+      {"id": "P1-BASE-R145-H3-AUTHENTICATED-RUNTIME-PATH-TOCTOU", "status": "FIXED"},
+      {"id": "P1-BASE-R145-H2-AMBIENT-ENV-AUTHORITY", "status": "FIXED"},
+      {"id": "P1-BASE-IMPL-H1-CAPTURE-AUTHORITY", "status": "FIXED"},
+      {"id": "BASE-R142-H2", "status": "FIXED"},
+      {"id": "P1-BASE-IMPL-H2-ONE-SHOT-EMBARGO", "status": "OPEN"},
+      {"id": "BASE-R142-H5", "status": "OPEN"},
+      {"id": "BASE-R142-H3", "status": "OPEN"},
+      {"id": "BASE-R142-H4", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H3-COST-OMITTED", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H5-COMPLETED-RESULT-AUTHORITY", "status": "OPEN"},
+      {"id": "P1-BASE-IMPL-H4-MODULE-TOCTOU", "status": "FIXED"}
+    ],
+    "verdict": "REJECT_DO_NOT_OPEN_HELD_OUT_VALUES"
+  },
+  "convergence": {
+    "prior_aligned_blocking_classes": 2,
+    "current_aligned_blocking_classes": 1,
+    "blocking_set_strictly_shrank": true,
+    "new_finding_class": false,
+    "owner_authorized_continuation_beyond_eight": true,
+    "next_action": "Candidate 10 closes only permanent retention of the one-shot authority; held-out values remain sealed."
+  },
+  "claim_limit": "Candidate 9 authority review only; no held-out baseline, cost, NLL, fidelity, performance, or serving claim."
+}

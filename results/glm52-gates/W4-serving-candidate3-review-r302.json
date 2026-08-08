@@ -1,0 +1,121 @@
+{
+  "candidate_hash": "aca8344d02da4df91c756cec87b4fc6d2189b715",
+  "gate": "W4-serving-prefill",
+  "review_round": 302,
+  "runtime_started": false,
+  "convergence": {
+    "candidate_count": 3,
+    "decision": "PAUSE",
+    "reason": "Candidate 2 and candidate 3 each introduced new blocking finding classes; this is the second consecutive non-convergent candidate under the owner-approved rule.",
+    "open_high_ids": [
+      "ADV-W4S-302-H1-SELECTABLE-POSTFREEZE-DRAND-ROUND",
+      "ADV-W4S-302-H2-CLOSURE-PARSE-TOCTOU",
+      "W4S-R302-H1-DRAND-RUNTIME-TREE-UNBOUND",
+      "W4S-R302-H2-GITHUB-FLOOR-TRUSTS-AMBIENT-TLS",
+      "W4S-R302-H3-SYMLINK-FAILURE-LOSES-TERMINAL-AUTHORITY"
+    ]
+  },
+  "gap_reviewer": {
+    "score_0_to_100": 55,
+    "critical": [],
+    "high": [
+      {
+        "id": "W4S-R302-H1-DRAND-RUNTIME-TREE-UNBOUND",
+        "affected_gate": "randomness validity and dependency closure",
+        "evidence": "The verifier imports a mutable 585-file JavaScript runtime tree that candidate 3 does not hash. The established current tree digest is 38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4.",
+        "reproduction": "Mutate an imported BLS or SHA module without changing Node or the verifier script; candidate-3 dependency checks do not detect it.",
+        "acceptance_test": "Bind the established symlink-rejecting runtime-tree hash before every BLS invocation; any imported-file mutation must FAIL."
+      },
+      {
+        "id": "W4S-R302-H2-GITHUB-FLOOR-TRUSTS-AMBIENT-TLS",
+        "affected_gate": "external publication-time anchor",
+        "evidence": "urllib.request.urlopen honors ambient HTTPS_PROXY and SSL_CERT_FILE/SSL_CERT_DIR before the arm environment is sanitized.",
+        "reproduction": "Point HTTPS_PROXY at a local TLS proxy and SSL_CERT_FILE at its CA, returning a fabricated PushEvent for the candidate.",
+        "acceptance_test": "Use a proxy-disabled client and explicit trusted CA bundle; hostile proxy/CA variables must not alter the result."
+      },
+      {
+        "id": "W4S-R302-H3-SYMLINK-FAILURE-LOSES-TERMINAL-AUTHORITY",
+        "affected_gate": "failed-attempt preservation",
+        "evidence": "finalize_failure renames the manifest and summary before detecting a symlink, then raises and leaves no terminal manifest.",
+        "reproduction": "Activate a provisional PASS attempt containing one symlink and call finalize_failure; manifest.json is absent afterward.",
+        "acceptance_test": "A symlink mutation must preserve prior authority, record the rejection without following the link, and leave a terminal FAIL triplet."
+      }
+    ],
+    "medium": [
+      {
+        "id": "W4S-R302-M1-PUSHEVENT-LOOKUP-NOT-DURABLE",
+        "evidence": "The scorer depends on the candidate remaining in GitHub's latest 100 repository events.",
+        "disposition": "DEFERRED; nonblocking for the immediate gate but must be recorded as a replay-lifetime limitation."
+      },
+      {
+        "id": "W4S-R302-M2-FAILURE-MANIFEST-LINEAGE-IS-INDIRECT",
+        "evidence": "Some available failure lineage is only inferable through nested artifacts rather than named terminal-manifest fields.",
+        "disposition": "OPEN targeted follow-up; medium severity does not independently trigger another review."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": {
+      "W4S-R301-H1-ARM-REPLAY-NOT-SELF-CONTAINED": "FIXED",
+      "W4S-R301-H2-EXPECTED-ARM-ENVIRONMENT-UNBOUND": "FIXED",
+      "W4S-R301-H3-FAILURE-TRIPLET-CLOSURE-INCOMPLETE": "OPEN via W4S-R302-H3",
+      "W4S-R301-H4-ARTIFACT-CLOSURE-FOLLOWS-SYMLINKS": "OPEN via W4S-R302-H3",
+      "ADV-W4S-301-H1-NONIDEMPOTENT-AUTHORITATIVE-REPLAY": "FIXED",
+      "ADV-W4S-301-H2-POSTMANIFEST-REPLAY-FAILURE-LOSS": "OPEN via W4S-R302-H3",
+      "ADV-W4S-301-H3-FIXED-CLAIMS-NOT-JOINED-TO-ARTIFACTS": "FIXED",
+      "ADV-W4S-301-H4-UNBOUND-CANDIDATE-DEPENDENCY-CLOSURE": "OPEN via W4S-R302-H1",
+      "ADV-W4S-301-H5-BACKDATABLE-FREEZE-TIMESTAMP": "OPEN via W4S-R302-H2"
+    },
+    "verdict": "REJECT_PRE_RUNTIME"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 78,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W4S-302-H1-SELECTABLE-POSTFREEZE-DRAND-ROUND",
+        "affected_gate": "blinded arm schedule",
+        "evidence": "The candidate accepts any authentic drand round after publication, allowing selection among at most 32 observed schedules. The first eligible round after the 2026-08-08T18:00:06Z PushEvent is deterministically 6359367.",
+        "reproduction": "Enumerate later authentic rounds, derive each schedule, and submit a preferred one; every later receipt currently passes.",
+        "acceptance_test": "Require exactly round 6359367 for this candidate (or a prepublished fixed offset); reject all earlier and later authentic rounds."
+      },
+      {
+        "id": "ADV-W4S-302-H2-CLOSURE-PARSE-TOCTOU",
+        "affected_gate": "artifact substitution, timing integrity, output and safety replay",
+        "evidence": "The scorer hashes and closes each artifact, then reopens files for parsing. An atomic replacement between those operations can make metrics derive from bytes different from the manifest-hashed bytes.",
+        "reproduction": "Atomically replace a regular artifact after its closure hash read but before its later parse read.",
+        "acceptance_test": "Parse the exact retained bytes/descriptors used for closure, or validate a locked immutable snapshot and reconcile membership and identity before verdict."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W4S-302-M1-EPHEMERAL-PUBLICATION-ORACLE",
+        "evidence": "Replays fail once the PushEvent leaves the rolling recent-events API or the API is unavailable.",
+        "disposition": "DEFERRED with explicit durability limitation."
+      },
+      {
+        "id": "ADV-W4S-302-M2-MODEL-CONTENT-NOT-INDEPENDENTLY-REPLAYED",
+        "evidence": "The runner hashes the held model descriptor, but post-hoc scoring does not independently rehash or bind a captured descriptor-identity record.",
+        "disposition": "OPEN targeted attestation; nonblocking medium."
+      }
+    ],
+    "low": [
+      {
+        "id": "ADV-W4S-302-L1-UNLOCATED-PREAUDIT-DIGEST",
+        "evidence": "The freeze names a preaudit.stdout digest without a preserved path.",
+        "disposition": "OPEN hygiene correction."
+      }
+    ],
+    "prior_issue_status": {
+      "W4S-R301-H1-ARM-REPLAY-NOT-SELF-CONTAINED": "VERIFIED",
+      "W4S-R301-H2-EXPECTED-ARM-ENVIRONMENT-UNBOUND": "VERIFIED",
+      "W4S-R301-H3-FAILURE-TRIPLET-CLOSURE-INCOMPLETE": "VERIFIED for regular artifacts; Nash found a distinct symlink finalization defect",
+      "W4S-R301-H4-ARTIFACT-CLOSURE-FOLLOWS-SYMLINKS": "VERIFIED for PASS scoring; Nash found a distinct failure-finalizer defect",
+      "ADV-W4S-301-H1-NONIDEMPOTENT-AUTHORITATIVE-REPLAY": "VERIFIED",
+      "ADV-W4S-301-H2-POSTMANIFEST-REPLAY-FAILURE-LOSS": "VERIFIED for ordinary replay errors; Nash found a distinct symlink finalization defect",
+      "ADV-W4S-301-H3-FIXED-CLAIMS-NOT-JOINED-TO-ARTIFACTS": "VERIFIED",
+      "ADV-W4S-301-H4-UNBOUND-CANDIDATE-DEPENDENCY-CLOSURE": "VERIFIED by Singer; Nash found the imported drand runtime still unbound",
+      "ADV-W4S-301-H5-BACKDATABLE-FREEZE-TIMESTAMP": "VERIFIED by Singer; Nash found the ambient TLS trust path still replaceable"
+    },
+    "verdict": "REJECT_PRE_LAUNCH"
+  }
+}

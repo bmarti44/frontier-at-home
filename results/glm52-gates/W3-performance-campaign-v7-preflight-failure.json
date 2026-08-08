@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "gate": "W3-completed-time-campaign",
+  "candidate_hash": "a5745ece1884459fa929ff8b2d675c20f7bb08f0",
+  "status": "FAIL",
+  "scope": "candidate-7 local freeze preflight; no engine or scorer execution",
+  "failure": "repository_parent_commit in the freeze manifest does not equal the actual parent of the freeze-only commit",
+  "recorded_parent": "9d551518fe130286476dc409726a91e754d94b2d",
+  "actual_parent": "9d55151f1369ba7e8e8137a9efdea85202b88910",
+  "gpu_work_started": false,
+  "evidence_reused": false,
+  "bounded_next_action": "Create a new freeze-only candidate whose repository_parent_commit is copied from git rev-parse HEAD immediately before the freeze commit, and verify HEAD^ equality before publication."
+}

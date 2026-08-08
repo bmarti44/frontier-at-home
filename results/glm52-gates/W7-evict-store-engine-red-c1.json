@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate": 1,
+  "engine_commit": "6f4300a4179247a06dd94250f3e8aeb8b289b5b6",
+  "parent_engine_commit": "bccf0b66e196e88213add7e0f81571bb7e558670",
+  "source_path": "/tmp/glm52-w7-ttft-c3/ds4_server.c",
+  "source_sha256": "e2e2ffcbd7640dd24344fbe51180e75864ce6b9ab6c62ddd9fb20bd7dc39d69a",
+  "test_binary_path": "/tmp/glm52-w7-ttft-c3/ds4_server_test",
+  "engine_test_sha256": "1c768f4cf06dbefd61485cb64622f846b7f5c5be2f3f0e90db96158935cd38c0",
+  "build": {
+    "command": "make -j2 ds4_server_test",
+    "exit_status": 0
+  },
+  "execution": {
+    "command": "./ds4_server_test",
+    "exit_status": 1,
+    "failing_assertion": "!kv_cache_should_store_before_disk_lookup(true, 0, 5055, 512, true)",
+    "failures": 1
+  },
+  "interpretation": "The production decision helper compiled and preserved the unchanged store behavior, but ignored the diagnostic selector. RED is behavioral and is not caused by a missing source file, symbol, binary, or fixture.",
+  "verdict": "RED_CONFIRMED"
+}

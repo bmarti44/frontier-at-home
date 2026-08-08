@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import base64
 import copy
 import json
 import math
@@ -13,6 +14,8 @@ import sys
 import tempfile
 import unittest
 import hashlib
+import struct
+import zlib
 from pathlib import Path
 from unittest import mock
 
@@ -54,6 +57,356 @@ def replacement_dsv4_profile(_candidate_hash):
         "binary_sha256": "a" * 64,
         "configuration_sha256": "b" * 64,
     }
+
+
+def _compressed_f32(count, peak_index=3, peak_value=1.0):
+    raw = bytearray(count * 4)
+    struct.pack_into("<f", raw, peak_index * 4, peak_value)
+    return base64.b64encode(zlib.compress(bytes(raw), 9)).decode("ascii")
+
+
+def _compressed_i32(values):
+    raw = struct.pack(f"<{len(values)}i", *values)
+    return base64.b64encode(zlib.compress(raw, 9)).decode("ascii")
+
+
+def _i32_sha256(values):
+    return hashlib.sha256(struct.pack(f"<{len(values)}i", *values)).hexdigest()
+
+
+def _w7_payload_bytes(token_count):
+    return (
+        13 * 4 + token_count * 4 + 154880 * 4 + 78 * 4 * 2 +
+        token_count * (78 * (512 + 64) * 4 + 21 * 128 * 4)
+    )
+
+
+def w7_resume_record(execution_nonce_sha256="c" * 64):
+    logits = _compressed_f32(154880, 13, 2.0)
+    confirmation_seed = "d" * 64
+    binary_sha256 = "a" * 64
+    configuration_sha256 = "b" * 64
+    pool_path = ROOT / "results/glm52-gates/harness/w7-production-fixture-pool-v1.json"
+    pool_raw = pool_path.read_bytes()
+    pool = json.loads(pool_raw)
+    pool_sha256 = hashlib.sha256(pool_raw).hexdigest()
+    pool_by_variant = {item["variant"]: item for item in pool["variants"]}
+    live_raw = zlib.decompress(base64.b64decode(pool["live"]["token_ids_zlib_b64"]))
+    frozen_live = list(struct.unpack(f"<{pool['live']['token_count']}i", live_raw))
+    attempt_id = hashlib.sha256(
+        bytes.fromhex(binary_sha256) + bytes.fromhex(configuration_sha256) +
+        bytes.fromhex(confirmation_seed) + bytes.fromhex(pool_sha256) +
+        bytes.fromhex(execution_nonce_sha256)
+    ).hexdigest()
+    contracts = {
+        "cold-primary": ("glm", "unset", "primary-cold"),
+        "strict-primary": ("glm", "unset", "primary-extension"),
+        "candidate-primary": ("glm", "1", "primary-extension"),
+        "exact-off": ("glm", "unset", "exact-replay"),
+        "exact-on": ("glm", "1", "exact-replay"),
+        "divergence-off": ("glm", "unset", "divergence"),
+        "divergence-on": ("glm", "1", "divergence"),
+        "shorten-off": ("glm", "unset", "shorten"),
+        "shorten-on": ("glm", "1", "shorten"),
+        "malformed-off": ("glm", "unset", "malformed-checkpoint"),
+        "malformed-on": ("glm", "1", "malformed-checkpoint"),
+        "wrong-lineage-off": ("glm", "unset", "wrong-lineage"),
+        "wrong-lineage-on": ("glm", "1", "wrong-lineage"),
+        "non-glm-off": ("non-glm", "unset", "primary-extension"),
+        "non-glm-on": ("non-glm", "1", "primary-extension"),
+        "flag-zero": ("glm", "0", "primary-extension"),
+        "flag-empty": ("glm", "", "primary-extension"),
+        "flag-garbage": ("glm", "garbage", "primary-extension"),
+    }
+
+    def regime(regime_id, live, common, selected, prompt):
+        selection_seed = hashlib.sha256(
+            bytes.fromhex(confirmation_seed) + regime_id.encode("ascii")
+        ).hexdigest()
+        if regime_id == "primary":
+            variant = "primary-fixed"
+        else:
+            base = int(selection_seed[:4], 16) % 8
+            variant = base if regime_id == "confirmation-1" else 8 + base
+        specification = pool_by_variant[variant]
+        prompt = specification["prompt_tokens"]
+        common = specification["common_tokens"]
+        live = specification["live_tokens"]
+        selected = specification["selected_tokens"]
+        token_raw = zlib.decompress(
+            base64.b64decode(specification["canonical_token_ids_zlib_b64"])
+        )
+        tokens = list(struct.unpack(f"<{prompt}i", token_raw))
+        wire_bytes = base64.b64decode(specification["rendered_wire_utf8_b64"])
+        offset_raw = zlib.decompress(
+            base64.b64decode(specification["wire_token_end_offsets_zlib_b64"])
+        )
+        wire_prefix_bytes = [0, *struct.unpack(f"<{prompt}i", offset_raw)]
+        payload = hashlib.sha256(f"payload:{regime_id}:{selected}".encode()).hexdigest()
+
+        def inventory_item(record_id, token_length, inode, *, valid=True,
+                           wire_match=True, lineage_match=True, payload_bytes=None):
+            if payload_bytes is None:
+                payload_bytes = _w7_payload_bytes(token_length)
+            prefix_hash = _i32_sha256(tokens[:token_length])
+            return {
+                "record_id": record_id,
+                "path_sha256": hashlib.sha256(f"{regime_id}:{record_id}".encode()).hexdigest(),
+                "device": 259, "inode": inode, "size": payload_bytes + 256,
+                "mtime_ns": inode * 10, "payload_bytes": payload_bytes,
+                "token_length": token_length,
+                "rendered_prefix_bytes": wire_prefix_bytes[token_length],
+                "rendered_prefix_sha256": (
+                    hashlib.sha256(wire_bytes[:wire_prefix_bytes[token_length]]).hexdigest()
+                    if wire_match else "7" * 64
+                ),
+                "token_sha256": prefix_hash,
+                "lineage_sha256": prefix_hash if lineage_match else "9" * 64,
+                "payload_sha256": (
+                    payload if record_id == "selected" else
+                    hashlib.sha256(f"{regime_id}:{record_id}:payload".encode()).hexdigest()
+                ),
+                "structurally_valid": valid,
+                "matches_wire_prefix": wire_match,
+                "matches_lineage": lineage_match,
+            }
+
+        inventory = [
+            inventory_item("older", selected - 4, 1001),
+            inventory_item("selected", selected, 1002),
+            inventory_item("wrong-lineage", selected + 1, 1003, lineage_match=False),
+            inventory_item("malformed", selected + 2, 1004, valid=False, payload_bytes=0),
+        ]
+
+        def event(invocation_id, seq, kind, *, record_id=None,
+                  checkpoint_tokens=None, payload_sha256=None, start=None,
+                  end=None, byte_count=0, status="ok"):
+            return {
+                "seq": seq, "invocation_id": invocation_id, "kind": kind,
+                "record_id": record_id, "checkpoint_tokens": checkpoint_tokens,
+                "payload_sha256": payload_sha256, "start": start, "end": end,
+                "byte_count": byte_count, "status": status,
+            }
+
+        indexer_layers = [0, 1, 2] + list(range(6, 78, 4))
+
+        def state_manifest():
+            config = {
+                "normal_layers": 78, "vocab": 154880, "kv_lora": 512,
+                "rope": 64, "indexer_dim": 128, "full_live": 0,
+                "compact_live": prompt, "indexer_layers": indexer_layers,
+            }
+            members = [
+                ("header", "u32", [13]),
+                ("checkpoint_tokens", "u32", [prompt]),
+                ("logits", "f32", [154880]),
+                ("compact_live_rows", "u32", [78]),
+                ("index_live_rows", "u32", [78]),
+            ]
+            for layer in range(78):
+                members.extend([
+                    (f"layer.{layer:02d}.kv_lora", "f32", [prompt, 512]),
+                    (f"layer.{layer:02d}.k_rope", "f32", [prompt, 64]),
+                ])
+                if layer in indexer_layers:
+                    members.append(
+                        (f"layer.{layer:02d}.indexer_key", "f32", [prompt, 128])
+                    )
+            sections = []
+            offset = 0
+            for name, dtype, shape in members:
+                count = math.prod(shape)
+                size = count * 4
+                sections.append({
+                    "name": name, "dtype": dtype, "shape": shape,
+                    "offset": offset, "byte_count": size,
+                    "content_sha256": hashlib.sha256(
+                        f"{regime_id}:state:{name}".encode()
+                    ).hexdigest(),
+                })
+                offset += size
+            root = hashlib.sha256(
+                "".join(item["content_sha256"] for item in sections).encode()
+            ).hexdigest()
+            return {
+                "format": "ds4-glm-session-canonical-v2", "config": config,
+                "total_bytes": offset, "content_sha256": root,
+                "token_lineage_sha256": _i32_sha256(tokens),
+                "logical_frontiers": [prompt] * 78, "sections": sections,
+            }
+
+        def safety(case_id):
+            return {
+                "wrapper_path": "results/glm52-gates/harness/glm_safe_run.sh",
+                "wrapper_sha256": "6e4d382bc5e5818787af8c17aae7a0750ca3ab7b36471f21355789d194b2e801",
+                "lock_path": "/run/dsv4/inference.lock", "lock_owner_uid": 0,
+                "lock_mode_octal": "0660", "lock_acquired": True,
+                "cgroup_path": f"/sys/fs/cgroup/system.slice/glm52-w7-{regime_id}-{case_id}.scope",
+                "cgroup_identity_sha256": "8" * 64,
+                "start_available_gib": 112.0, "minimum_available_gib": 12.0,
+                "bare_engine_detected": False, "terminal_rc": 0,
+                "oom_events_before": 0, "oom_events_after": 0, "xid_count": 0,
+                "swap_used_before_bytes": 0, "swap_used_after_bytes": 0,
+                "survivor_pids": [],
+            }
+
+        live_base = frozen_live
+
+        def case(case_id):
+            family, flag, mutation = contracts[case_id]
+            invocation_id = f"invoke:{attempt_id}:{regime_id}:{case_id}"
+            live_ids = [] if case_id == "cold-primary" else (
+                tokens if case_id in {"exact-off", "exact-on"} else live_base
+            )
+            row = {
+                "case_id": case_id, "invocation_id": invocation_id,
+                "model_family": family, "flag_value": flag,
+                "fixture_mutation": mutation,
+                "wire_text_utf8_b64": base64.b64encode(wire_bytes).decode("ascii"),
+                "wire_token_end_offsets_zlib_b64": _compressed_i32(wire_prefix_bytes[1:]),
+                "canonical_token_ids_zlib_b64": _compressed_i32(tokens),
+                "live_token_count": len(live_ids),
+                "live_token_ids_zlib_b64": _compressed_i32(live_ids) if live_ids else None,
+                "restored_checkpoint_token_ids_zlib_b64": None,
+                "sync_tokens_sha256": _i32_sha256(tokens),
+                "final_lineage_sha256": _i32_sha256(tokens),
+                "prompt_tokens": prompt, "checkpoint_inventory": [], "events": [],
+                "output_token_ids": None, "logits_f32_zlib_b64": None,
+                "state_manifest": None, "safety": safety(case_id),
+            }
+            if case_id in {
+                "cold-primary", "strict-primary", "candidate-primary",
+                "exact-off", "exact-on",
+            }:
+                row["output_token_ids"] = list(range(64))
+                row["logits_f32_zlib_b64"] = logits
+                row["state_manifest"] = state_manifest()
+            if case_id == "cold-primary":
+                row["events"] = [
+                    event(invocation_id, 0, "reset"),
+                    event(invocation_id, 1, "evaluate", start=0, end=prompt - 2),
+                    event(invocation_id, 2, "evaluate", start=prompt - 2, end=prompt),
+                ]
+            elif case_id in {
+                "strict-primary", "candidate-primary", "flag-zero",
+                "flag-empty", "flag-garbage",
+            }:
+                row["checkpoint_inventory"] = copy.deepcopy(inventory)
+                row["restored_checkpoint_token_ids_zlib_b64"] = _compressed_i32(tokens[:selected])
+                events = [
+                    event(invocation_id, index, "matcher_candidate",
+                          record_id=item["record_id"],
+                          checkpoint_tokens=item["token_length"],
+                          payload_sha256=item["payload_sha256"], status="observed")
+                    for index, item in enumerate(inventory)
+                ]
+                events.extend([
+                    event(invocation_id, 4, "matcher_selected", record_id="selected",
+                          checkpoint_tokens=selected, payload_sha256=payload),
+                    event(invocation_id, 5, "payload_read", record_id="selected",
+                          checkpoint_tokens=selected, payload_sha256=payload,
+                          byte_count=inventory[1]["payload_bytes"]),
+                ])
+                if case_id != "candidate-primary":
+                    events.extend([
+                        event(invocation_id, 6, "reset"),
+                        event(invocation_id, 7, "evaluate", start=0, end=prompt - 2),
+                        event(invocation_id, 8, "evaluate", start=prompt - 2, end=prompt),
+                    ])
+                else:
+                    events.extend([
+                        event(invocation_id, 6, "evaluate", start=selected, end=prompt - 1),
+                        event(invocation_id, 7, "evaluate", start=prompt - 1, end=prompt),
+                    ])
+                row["events"] = events
+            elif case_id.startswith("malformed-"):
+                row["checkpoint_inventory"] = [copy.deepcopy(inventory[3])]
+            elif case_id.startswith("wrong-lineage-"):
+                row["checkpoint_inventory"] = [copy.deepcopy(inventory[2])]
+            elif case_id.startswith("divergence-"):
+                item = inventory_item("selected", selected, 1002, wire_match=False)
+                row["checkpoint_inventory"] = [item]
+            elif case_id.startswith("shorten-"):
+                row["checkpoint_inventory"] = [
+                    inventory_item("selected", common + 1, 1002)
+                ]
+            if row["checkpoint_inventory"] and not row["events"]:
+                item = row["checkpoint_inventory"][0]
+                row["events"] = [
+                    event(invocation_id, 0, "matcher_candidate",
+                          record_id=item["record_id"],
+                          checkpoint_tokens=item["token_length"],
+                          payload_sha256=item["payload_sha256"], status="observed")
+                ]
+            return row
+
+        cases = [case(case_id) for case_id in contracts]
+        fixture_material = {
+            "fixture_variant": variant,
+            "cases": [
+                {
+                    key: row[key] for key in (
+                        "case_id", "model_family", "flag_value", "fixture_mutation",
+                        "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+                        "canonical_token_ids_zlib_b64", "live_token_count",
+                        "live_token_ids_zlib_b64", "prompt_tokens",
+                        "checkpoint_inventory",
+                    )
+                }
+                for row in cases
+            ],
+        }
+        fixture_sha = hashlib.sha256(
+            json.dumps(fixture_material, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        return {
+            "regime_id": regime_id, "fixture_variant": variant,
+            "fixture_sha256": fixture_sha,
+            "selection_seed_sha256": selection_seed, "cases": cases,
+        }
+
+    regimes = [
+        regime("primary", 5063, 5045, 5044, 5066),
+        regime("confirmation-1", 137, 111, 109, 143),
+        regime("confirmation-2", 271, 240, 238, 284),
+    ]
+    return {
+        "record_type": "w7_resume_observation",
+        "gate": "W7", "attempt_id": attempt_id,
+        "execution_nonce_sha256": execution_nonce_sha256,
+        "binary_sha256": binary_sha256,
+        "configuration_sha256": configuration_sha256,
+        "fixture_sha256": hashlib.sha256(
+            "".join(item["fixture_sha256"] for item in regimes).encode()
+        ).hexdigest(),
+        "guard_off_present": False,
+        "confirmation_seed_sha256": confirmation_seed,
+        "regimes": regimes,
+        "failures": [],
+    }
+
+
+def _rebind_w7_fixture_hashes(record):
+    fixture_keys = (
+        "case_id", "model_family", "flag_value", "fixture_mutation",
+        "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+        "canonical_token_ids_zlib_b64", "live_token_count",
+        "live_token_ids_zlib_b64", "prompt_tokens", "checkpoint_inventory",
+    )
+    for regime in record["regimes"]:
+        material = {
+            "fixture_variant": regime["fixture_variant"],
+            "cases": [
+                {key: row[key] for key in fixture_keys}
+                for row in regime["cases"]
+            ],
+        }
+        regime["fixture_sha256"] = hashlib.sha256(
+            json.dumps(material, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    record["fixture_sha256"] = hashlib.sha256(
+        "".join(item["fixture_sha256"] for item in record["regimes"]).encode()
+    ).hexdigest()
 
 
 def w11_record(hashes=None):
@@ -557,6 +910,18 @@ class FormulaTests(unittest.TestCase):
                     }
                 )
         self.goal.validate_ab_blocks(records)
+        flipped = [dict(item) for item in records]
+        for item in flipped:
+            item["arm"] = "B" if item["arm"] == "A" else "A"
+            item["binary_sha256"] = (
+                "b" if item["arm"] == "A" else "c"
+            ) * 64
+            item["configuration_sha256"] = (
+                "d" if item["arm"] == "A" else "e"
+            ) * 64
+        self.goal.validate_ab_blocks(flipped, flip=True)
+        with self.assertRaises(ValueError):
+            self.goal.validate_ab_blocks(flipped, flip=False)
         rotating = [dict(item) for item in records]
         for item in rotating:
             item["binary_sha256"] = (
@@ -745,6 +1110,389 @@ class FormulaTests(unittest.TestCase):
             )["verdict"],
             "FAIL",
         )
+
+    def test_w7_resume_scorer_derives_resume_and_numerical_checks(self):
+        record = w7_resume_record()
+        result = self.goal.score_registered_gate(
+            "W7", "w7.resume.v1", [record]
+        )
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(result["derived_metrics"]["max_abs_logit_delta"], 0.0)
+        self.assertEqual(result["derived_metrics"]["qualified_regimes"], 3)
+
+    def test_w7_resume_scorer_rejects_operation_receipt_false_pass(self):
+        record = w7_resume_record()
+        candidate = next(
+            case for case in record["regimes"][0]["cases"]
+            if case["case_id"] == "candidate-primary"
+        )
+        # A summary-only scorer cannot see this real cold reset/evaluation.
+        invocation_id = candidate["invocation_id"]
+        sequence = len(candidate["events"])
+        candidate["events"].extend([
+            {
+                "seq": sequence, "invocation_id": invocation_id, "kind": "reset",
+                "record_id": None, "checkpoint_tokens": None,
+                "payload_sha256": None, "start": None, "end": None,
+                "byte_count": 0, "status": "ok",
+            },
+            {
+                "seq": sequence + 1, "invocation_id": invocation_id, "kind": "evaluate",
+                "record_id": None, "checkpoint_tokens": None,
+                "payload_sha256": None, "start": 0, "end": 5066,
+                "byte_count": 0, "status": "ok",
+            },
+        ])
+        with self.assertRaisesRegex(ValueError, "operation-derived mode"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [record])
+
+    def test_w7_resume_scorer_rejects_guard_contract_and_inventory_mutations(self):
+        for name, mutate in (
+            (
+                "swapped-flags",
+                lambda row: (
+                    next(case for case in row["regimes"][0]["cases"]
+                         if case["case_id"] == "divergence-off").update(flag_value="1"),
+                    next(case for case in row["regimes"][0]["cases"]
+                         if case["case_id"] == "divergence-on").update(flag_value="unset"),
+                ),
+            ),
+            (
+                "missing-decoy",
+                lambda row: next(
+                    case for case in row["regimes"][0]["cases"]
+                    if case["case_id"] == "candidate-primary"
+                )["checkpoint_inventory"].pop(),
+            ),
+            (
+                "wrong-selected-record",
+                lambda row: next(
+                    event for case in row["regimes"][0]["cases"]
+                    if case["case_id"] == "candidate-primary"
+                    for event in case["events"] if event["kind"] == "matcher_selected"
+                ).update(record_id="older"),
+            ),
+            (
+                "legacy-guard-off",
+                lambda row: row.update(guard_off_present=True),
+            ),
+        ):
+            with self.subTest(name=name):
+                record = w7_resume_record()
+                mutate(record)
+                _rebind_w7_fixture_hashes(record)
+                try:
+                    result = self.goal.score_registered_gate(
+                        "W7", "w7.resume.v1", [record]
+                    )
+                except ValueError:
+                    continue
+                self.assertEqual(result["verdict"], "FAIL")
+
+    def test_w7_resume_scorer_rejects_lineage_output_state_and_safety_mutations(self):
+        mutations = []
+        lineage = w7_resume_record()
+        next(case for case in lineage["regimes"][0]["cases"]
+             if case["case_id"] == "cold-primary")["sync_tokens_sha256"] = "9" * 64
+        mutations.append(lineage)
+        output = w7_resume_record()
+        next(case for case in output["regimes"][0]["cases"]
+             if case["case_id"] == "candidate-primary")["output_token_ids"][-1] = 154880
+        mutations.append(output)
+        state = w7_resume_record()
+        next(case for case in state["regimes"][0]["cases"]
+             if case["case_id"] == "candidate-primary")["state_manifest"]["sections"].pop()
+        mutations.append(state)
+        unsafe = w7_resume_record()
+        next(case for case in unsafe["regimes"][0]["cases"]
+             if case["case_id"] == "candidate-primary")["safety"]["start_available_gib"] = 109.9
+        mutations.append(unsafe)
+        for mutation in mutations:
+            try:
+                result = self.goal.score_registered_gate(
+                    "W7", "w7.resume.v1", [mutation]
+                )
+            except ValueError:
+                continue
+            self.assertEqual(result["verdict"], "FAIL")
+
+    def test_w7_resume_scorer_rejects_receipt_order_complete_state_and_confirmation_mutations(self):
+        mutations = []
+        reordered = w7_resume_record()
+        candidate = next(case for case in reordered["regimes"][0]["cases"]
+                         if case["case_id"] == "candidate-primary")
+        candidate["events"][4], candidate["events"][5] = candidate["events"][5], candidate["events"][4]
+        for index, event in enumerate(candidate["events"]):
+            event["seq"] = index
+        mutations.append(reordered)
+
+        unprobed_state = w7_resume_record()
+        manifest = next(case for case in unprobed_state["regimes"][0]["cases"]
+                        if case["case_id"] == "candidate-primary")["state_manifest"]
+        manifest["sections"][40]["content_sha256"] = "6" * 64
+        manifest["content_sha256"] = hashlib.sha256(
+            "".join(item["content_sha256"] for item in manifest["sections"]).encode()
+        ).hexdigest()
+        mutations.append(unprobed_state)
+
+        truncated_member = w7_resume_record()
+        manifest = next(case for case in truncated_member["regimes"][0]["cases"]
+                        if case["case_id"] == "candidate-primary")["state_manifest"]
+        section_index = next(
+            index for index, section in enumerate(manifest["sections"])
+            if section["name"] == "layer.00.kv_lora"
+        )
+        section = manifest["sections"][section_index]
+        removed = section["byte_count"] - 4
+        section["shape"] = [1]
+        section["byte_count"] = 4
+        for later in manifest["sections"][section_index + 1:]:
+            later["offset"] -= removed
+        manifest["total_bytes"] -= removed
+        mutations.append(truncated_member)
+
+        duplicate_confirmation = w7_resume_record()
+        duplicate_confirmation["regimes"][2]["fixture_sha256"] = duplicate_confirmation["regimes"][1]["fixture_sha256"]
+        mutations.append(duplicate_confirmation)
+
+        bad_wrapper = w7_resume_record()
+        next(case for case in bad_wrapper["regimes"][0]["cases"]
+             if case["case_id"] == "candidate-primary")["safety"]["wrapper_sha256"] = "5" * 64
+        mutations.append(bad_wrapper)
+
+        flag_empty = w7_resume_record()
+        next(case for case in flag_empty["regimes"][0]["cases"]
+             if case["case_id"] == "flag-empty")["flag_value"] = "unset"
+        mutations.append(flag_empty)
+
+        for mutation in mutations:
+            try:
+                result = self.goal.score_registered_gate("W7", "w7.resume.v1", [mutation])
+            except ValueError:
+                continue
+            self.assertEqual(result["verdict"], "FAIL")
+
+    def test_w7_resume_scorer_rejects_partial_reads_ambiguous_selection_and_live_lineage(self):
+        mutations = []
+        expected_payload = _w7_payload_bytes(5044)
+        for byte_count in (1, expected_payload - 1, expected_payload + 1):
+            record = w7_resume_record()
+            candidate = next(case for case in record["regimes"][0]["cases"]
+                             if case["case_id"] == "candidate-primary")
+            next(event for event in candidate["events"]
+                 if event["kind"] == "payload_read")["byte_count"] = byte_count
+            mutations.append(record)
+
+        ambiguous = w7_resume_record()
+        candidate = next(case for case in ambiguous["regimes"][0]["cases"]
+                         if case["case_id"] == "candidate-primary")
+        older, selected = candidate["checkpoint_inventory"][:2]
+        for field in (
+            "token_length", "rendered_prefix_bytes", "rendered_prefix_sha256",
+            "token_sha256", "lineage_sha256", "matches_wire_prefix",
+            "matches_lineage",
+        ):
+            older[field] = selected[field]
+        candidate["events"][0]["checkpoint_tokens"] = selected["token_length"]
+        _rebind_w7_fixture_hashes(ambiguous)
+        mutations.append(ambiguous)
+
+        wrong_live = w7_resume_record()
+        candidate = next(case for case in wrong_live["regimes"][0]["cases"]
+                         if case["case_id"] == "candidate-primary")
+        count = candidate["live_token_count"]
+        raw = zlib.decompress(base64.b64decode(candidate["live_token_ids_zlib_b64"]))
+        values = list(struct.unpack(f"<{count}i", raw))
+        values[100] = (values[100] + 1) % 154880
+        candidate["live_token_ids_zlib_b64"] = _compressed_i32(values)
+        _rebind_w7_fixture_hashes(wrong_live)
+        mutations.append(wrong_live)
+
+        multiple_reads = w7_resume_record()
+        candidate = next(case for case in multiple_reads["regimes"][0]["cases"]
+                         if case["case_id"] == "candidate-primary")
+        duplicate = copy.deepcopy(next(event for event in candidate["events"]
+                                       if event["kind"] == "payload_read"))
+        candidate["events"].insert(6, duplicate)
+        for index, event in enumerate(candidate["events"]):
+            event["seq"] = index
+        mutations.append(multiple_reads)
+
+        for index, mutation in enumerate(mutations):
+            with self.subTest(index=index):
+                with self.assertRaises(ValueError):
+                    self.goal.score_registered_gate("W7", "w7.resume.v1", [mutation])
+
+    def test_w7_resume_scorer_rejects_eval_gaps_cross_case_reuse_and_replay_drift(self):
+        mutations = []
+        for edit in ("gap", "overlap", "hidden-prefix"):
+            record = w7_resume_record()
+            candidate = next(case for case in record["regimes"][0]["cases"]
+                             if case["case_id"] == "candidate-primary")
+            evaluations = [event for event in candidate["events"]
+                           if event["kind"] == "evaluate"]
+            if edit == "gap":
+                evaluations[1]["start"] += 1
+            elif edit == "overlap":
+                evaluations[1]["start"] -= 1
+            else:
+                evaluations[0]["start"] = 0
+            mutations.append(record)
+
+        reused = w7_resume_record()
+        exact_off = next(case for case in reused["regimes"][0]["cases"]
+                         if case["case_id"] == "exact-off")
+        exact_on = next(case for case in reused["regimes"][0]["cases"]
+                        if case["case_id"] == "exact-on")
+        exact_on["invocation_id"] = exact_off["invocation_id"]
+        mutations.append(reused)
+
+        replay_drift = w7_resume_record()
+        exact_on = next(case for case in replay_drift["regimes"][0]["cases"]
+                        if case["case_id"] == "exact-on")
+        exact_on["output_token_ids"][-1] += 1
+        mutations.append(replay_drift)
+
+        cloned_confirmation = w7_resume_record()
+        source = cloned_confirmation["regimes"][1]
+        target = cloned_confirmation["regimes"][2]
+        fixture_keys = (
+            "wire_text_utf8_b64", "wire_token_end_offsets_zlib_b64",
+            "canonical_token_ids_zlib_b64", "live_token_count",
+            "live_token_ids_zlib_b64", "prompt_tokens", "checkpoint_inventory",
+        )
+        for source_case, target_case in zip(source["cases"], target["cases"]):
+            for key in fixture_keys:
+                target_case[key] = copy.deepcopy(source_case[key])
+        _rebind_w7_fixture_hashes(cloned_confirmation)
+        mutations.append(cloned_confirmation)
+
+        for mutation in mutations:
+            try:
+                result = self.goal.score_registered_gate("W7", "w7.resume.v1", [mutation])
+            except ValueError:
+                continue
+            self.assertEqual(result["verdict"], "FAIL")
+
+    def test_w7_resume_scorer_rejects_confirmation_that_removes_divergent_append(self):
+        record = w7_resume_record()
+        for regime in record["regimes"][1:]:
+            for case_id in ("strict-primary", "candidate-primary"):
+                case = next(
+                    item for item in regime["cases"] if item["case_id"] == case_id
+                )
+                raw = zlib.decompress(
+                    base64.b64decode(case["canonical_token_ids_zlib_b64"])
+                )
+                canonical = list(
+                    struct.unpack(f"<{case['prompt_tokens']}i", raw)
+                )
+                case["live_token_count"] = len(canonical)
+                case["live_token_ids_zlib_b64"] = _compressed_i32(canonical)
+        _rebind_w7_fixture_hashes(record)
+        with self.assertRaisesRegex(ValueError, "frozen production live lineage"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [record])
+
+    def test_w7_resume_scorer_rejects_post_seed_fixture_and_cross_attempt_receipts(self):
+        post_seed = w7_resume_record()
+        case = post_seed["regimes"][1]["cases"][0]
+        wire = base64.b64decode(case["wire_text_utf8_b64"]) + b" post-seed"
+        case["wire_text_utf8_b64"] = base64.b64encode(wire).decode("ascii")
+        offsets_raw = zlib.decompress(
+            base64.b64decode(case["wire_token_end_offsets_zlib_b64"])
+        )
+        offsets = list(struct.unpack(f"<{case['prompt_tokens']}i", offsets_raw))
+        offsets[-1] = len(wire)
+        case["wire_token_end_offsets_zlib_b64"] = _compressed_i32(offsets)
+        _rebind_w7_fixture_hashes(post_seed)
+        with self.assertRaisesRegex(ValueError, "not frozen and seed-selected"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [post_seed])
+
+        stale_attempt = w7_resume_record()
+        stale_attempt["attempt_id"] = "f" * 64
+        with self.assertRaisesRegex(ValueError, "attempt identity"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [stale_attempt])
+
+    def test_w7_resume_scorer_requires_production_tokens_and_derived_attempt_identity(self):
+        record = w7_resume_record()
+        rerun = w7_resume_record("d" * 64)
+        self.assertNotEqual(record["attempt_id"], rerun["attempt_id"])
+        first_invocations = {
+            case["invocation_id"] for regime in record["regimes"] for case in regime["cases"]
+        }
+        rerun_invocations = {
+            case["invocation_id"] for regime in rerun["regimes"] for case in regime["cases"]
+        }
+        self.assertTrue(first_invocations.isdisjoint(rerun_invocations))
+        self.assertEqual(
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [rerun])["verdict"],
+            "PASS",
+        )
+        expected = {
+            "confirmation-1": (
+                5064,
+                "ffadfb3cdb935fac755a5dfd1d24f20712ca9ede93639e4d054e54c55f35f440",
+                "b0d3d893e1a4a0fb52f55233bffa158065b456bded386e855f1d66dd2a396585",
+            ),
+            "confirmation-2": (
+                5066,
+                "a5a8a6f5f171fbbf503eac01fda2e60e8eeccfade88218bcaab823db237f60d4",
+                "b9a235f59d267fb6d85528a093df642f9352bd3de5594bcf7cdf1e79d285b4b8",
+            ),
+        }
+        for regime in record["regimes"][1:]:
+            case = regime["cases"][0]
+            count, token_sha, offset_sha = expected[regime["regime_id"]]
+            self.assertEqual(case["prompt_tokens"], count)
+            token_raw = zlib.decompress(
+                base64.b64decode(case["canonical_token_ids_zlib_b64"])
+            )
+            offset_raw = zlib.decompress(
+                base64.b64decode(case["wire_token_end_offsets_zlib_b64"])
+            )
+            self.assertEqual(hashlib.sha256(token_raw).hexdigest(), token_sha)
+            self.assertEqual(hashlib.sha256(offset_raw).hexdigest(), offset_sha)
+
+        renamed = w7_resume_record()
+        old_attempt = renamed["attempt_id"]
+        renamed["attempt_id"] = "f" * 64
+        for regime in renamed["regimes"]:
+            for case in regime["cases"]:
+                case["invocation_id"] = case["invocation_id"].replace(
+                    old_attempt, renamed["attempt_id"], 1
+                )
+                for event in case["events"]:
+                    event["invocation_id"] = case["invocation_id"]
+        with self.assertRaisesRegex(ValueError, "attempt identity"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [renamed])
+
+    def test_w7_resume_scorer_rejects_malformed_or_nonfinite_artifacts(self):
+        malformed = w7_resume_record()
+        next(case for case in malformed["regimes"][0]["cases"]
+             if case["case_id"] == "candidate-primary")["logits_f32_zlib_b64"] = "not-base64"
+        with self.assertRaisesRegex(ValueError, "compressed F32"):
+            self.goal.score_registered_gate(
+                "W7", "w7.resume.v1", [malformed]
+            )
+        nonfinite = w7_resume_record()
+        raw = bytearray(154880 * 4)
+        struct.pack_into("<f", raw, 0, float("nan"))
+        next(case for case in nonfinite["regimes"][0]["cases"]
+             if case["case_id"] == "candidate-primary")["logits_f32_zlib_b64"] = base64.b64encode(
+            zlib.compress(bytes(raw), 9)
+        ).decode("ascii")
+        with self.assertRaisesRegex(ValueError, "non-finite"):
+            self.goal.score_registered_gate(
+                "W7", "w7.resume.v1", [nonfinite]
+            )
+
+        bomb = w7_resume_record()
+        next(case for case in bomb["regimes"][0]["cases"]
+             if case["case_id"] == "candidate-primary")["logits_f32_zlib_b64"] = base64.b64encode(
+            zlib.compress(b"x" * (154880 * 16), 9)
+        ).decode("ascii")
+        with self.assertRaisesRegex(ValueError, "compressed F32|wrong F32 length"):
+            self.goal.score_registered_gate("W7", "w7.resume.v1", [bomb])
 
     def test_w11_requires_timestamped_memory_coverage(self):
         record = w11_record()
@@ -1885,13 +2633,20 @@ class FormulaTests(unittest.TestCase):
         }
         artifact_digest = hashlib.sha256(b"frozen artifact").hexdigest()
         profile = {
-            "schema_version": 2,
+            "schema_version": 3,
             "profile": "glm52",
             "binary_sha256": hashlib.sha256(b"binary").hexdigest(),
             "model_sha256": hashlib.sha256(b"model").hexdigest(),
             "tokenizer_sha256": "a" * 64,
             "context_cap": 1_048_576,
             "build_manifest_sha256": artifact_digest,
+            "promotion": {
+                "gate": "W7.1a-stable-model-cache-generation-owner-adoption",
+                "engine_commit": "b" * 40,
+                "binary_freeze_sha256": artifact_digest,
+                "owner_decision_sha256": artifact_digest,
+                "review_sha256": artifact_digest,
+            },
             "runtime": {
                 "engine_environment": {
                     "DS4_CUDA_EXPERT_CACHE_GB": "0",
@@ -1900,6 +2655,7 @@ class FormulaTests(unittest.TestCase):
                     "DS4_CUDA_FETCH_THREADS": "6",
                     "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
                     "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+                    "DS4_CUDA_STABLE_MODEL_REMAP": "1",
                     "DS4_TOKEN_TIMING_LOG": "1",
                 },
                 "launch_arguments": [

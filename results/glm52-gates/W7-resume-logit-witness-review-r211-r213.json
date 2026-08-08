@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "scope": "default-off single-Spark per-sync logit witness",
+  "global_review_rounds": [211, 212, 213],
+  "candidates": [
+    "449563fe7bb46bac2228bb32dc8ad5be69f54bd3",
+    "a5e847e0e92b1de520d4b518961265295a283ba2",
+    "3bd95adb0d5b45bc7c2bfb2c38e3f422a578d6d3"
+  ],
+  "final_reviewed_engine_commit": "3bd95adb0d5b45bc7c2bfb2c38e3f422a578d6d3",
+  "final_engine_commit": "7822efd945f1c5366844d253b22e953b6721b650",
+  "post_review_change": {
+    "classification": "medium test-scope correction only; no engine source or behavior change",
+    "review_issue": "ADV-W7-213-M26",
+    "acceptance": "python3 tests/test_glm_logit_dump_callsite.py: 2/2 PASS"
+  },
+  "reviewers": {
+    "gap_reviewer": {
+      "canonical_name": "/root/gap_reviewer",
+      "round_213_score": 100,
+      "critical": [],
+      "high": [],
+      "verdict": "AUTHORIZE_CONTAINED_RUNTIME_MEASUREMENT"
+    },
+    "adversarial_reviewer": {
+      "canonical_name": "/root/adversarial_reviewer",
+      "round_213_score": 96,
+      "critical": [],
+      "high": [],
+      "verdict": "PASS_FOR_CURRENT_SINGLE_SPARK_W7_RUNTIME"
+    }
+  },
+  "blocking_issue_disposition": [
+    {
+      "id": "W7-R211-H1-DUPLICATE-LOGIT-DUMP-PER-SYNC",
+      "status": "FIXED_VERIFIED"
+    },
+    {
+      "id": "ADV-W7-211-H21",
+      "status": "FIXED_VERIFIED"
+    },
+    {
+      "id": "ADV-W7-211-H22",
+      "status": "FIXED_VERIFIED"
+    },
+    {
+      "id": "W7-R212-H1-EARLY-GLM-SYNC-WITNESS-MISSING",
+      "status": "FIXED_VERIFIED"
+    }
+  ],
+  "remaining_nonblocking": [
+    {
+      "id": "ADV-W7-212-M24",
+      "status": "DEFERRED",
+      "rationale": "Vocabulary-split tensor-parallel ordering is outside the current non-distributed single-Spark arm."
+    }
+  ],
+  "tests": {
+    "ds4_server_test": "PASS",
+    "logit_dump_callsite": "2/2 PASS",
+    "patch_diff_check": "PASS"
+  },
+  "verdict": "PASS_FOR_CONTAINED_RUNTIME_MEASUREMENT"
+}

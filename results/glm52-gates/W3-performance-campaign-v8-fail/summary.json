@@ -1,0 +1,97 @@
+{
+  "acceptance_formula": "five ABBA/BAAB block means; one-sided 95% upper bound of the geometric paired candidate/baseline completed-time ratio <= 0.95",
+  "baseline_seconds": [
+    58.675717792,
+    59.370507608,
+    59.554256632,
+    58.295084416,
+    59.311990264
+  ],
+  "blocks": [
+    {
+      "baseline_seconds": 58.675717792,
+      "block": 1,
+      "candidate_seconds": 56.447081232,
+      "pair_request_sha256": [
+        "896489e60a1d5d0feb29224c429cbae82c8e07a96ec7064476772a637af63115",
+        "dc0cf02839f42fd45b56bc7dd229cf31cfde17bfd396b473c0da11fd8bbded28"
+      ],
+      "schedule": "ABBA"
+    },
+    {
+      "baseline_seconds": 59.370507608,
+      "block": 2,
+      "candidate_seconds": 57.592565375999996,
+      "pair_request_sha256": [
+        "838a2990eca961a3594a051d413a6b59bee15bedb09cd953bbcbb0a781523069",
+        "767c378ecb153ef1f020f31b9a7391e80f7e9786e434fa3cc7fe47822f1cdbd1"
+      ],
+      "schedule": "BAAB"
+    },
+    {
+      "baseline_seconds": 59.554256632,
+      "block": 3,
+      "candidate_seconds": 57.572232376,
+      "pair_request_sha256": [
+        "71402d1fa70be4eebf22820e9b17a56f3621729fdb76b0564f2547c3c5d39655",
+        "630e75bbee41183f93e72e0268a882297411e9f45d54dcd595e82f229c70c1b1"
+      ],
+      "schedule": "ABBA"
+    },
+    {
+      "baseline_seconds": 58.295084416,
+      "block": 4,
+      "candidate_seconds": 56.057985224,
+      "pair_request_sha256": [
+        "484f2fb081c03992e9871278e5e6d814ca06eeda573134526462e3c2100b355c",
+        "f58cc0f6b852fba0ac96060df9a4cd110c7b3a5bb780e9f9216ef9a3970a86ca"
+      ],
+      "schedule": "BAAB"
+    },
+    {
+      "baseline_seconds": 59.311990264,
+      "block": 5,
+      "candidate_seconds": 57.37938956,
+      "pair_request_sha256": [
+        "3f9ab579d067e5929bf5266a8952f695d4694a8b81d94a198237d6089e4e63b2",
+        "013f7ebb404aa66bb583c19894ab0d95999a2be17fa2c08939df16f0378d8bd5"
+      ],
+      "schedule": "ABBA"
+    }
+  ],
+  "candidate_seconds": [
+    56.447081232,
+    57.592565375999996,
+    57.572232376,
+    56.057985224,
+    57.37938956
+  ],
+  "completed_time_ratio_upper_95": 0.9690380685669832,
+  "confidence_derivation": {
+    "degrees_of_freedom": 4,
+    "mean_log_ratio": -0.03504627622366899,
+    "one_sided_t_critical_95": 2.1318,
+    "paired_log_ratios": [
+      -0.0387223911241567,
+      -0.030404112115561748,
+      -0.0338473985532441,
+      -0.039131169012538415,
+      -0.033126310312843965
+    ],
+    "sample_standard_deviation": 0.0037707238771924776,
+    "standard_error": 0.0016863189827567896,
+    "upper_log_bound": -0.031451381416228066,
+    "upper_ratio_bound": 0.9690380685669832
+  },
+  "frozen_bindings": {
+    "binary_sha256": "1a60e0887bd26e95d286041dc38d1e7ac7ca81d51d910227e37b26cc516f0b58",
+    "freeze_sha256": "4b8a291351878568b9b0eba4831750867910205f2bc192f4c4afc04a69447f2c",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "repository_head": "6e352902fa6dd1660c69b10d341d91364e075e46",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+  },
+  "gate": "W3-completed-time-campaign",
+  "schema_version": 1,
+  "status": "FAIL",
+  "timing_formula": "seconds=(t129-t1)/1e9; decode_tps=128/seconds"
+}

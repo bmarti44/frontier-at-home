@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "actual_candidate_hash": "1b3a94afd19bd14ad4ce62b04362747743c42695",
+  "mistyped_requested_hash": "1b3a94a3266bb73893f411dbd90062df79cc06ca",
+  "review_round": 155,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 90,
+    "critical": [],
+    "high": [
+      "P1-BASE-C17-H1-CANDIDATE-ID-MISMATCH"
+    ],
+    "verdict": "REJECT_PROVENANCE_MISMATCH; RESUBMIT ACTUAL FROZEN HASH"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 97,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "ADV-R155-M1-REGRESSION-SCOPE"
+    ],
+    "low": [],
+    "verdict": "ACCEPT ACTUAL FROZEN CANDIDATE"
+  },
+  "technical_finding_status": {
+    "P1-BASE-C16-RUNTIME-ROOT-CLONE-DUBIOUS-OWNERSHIP": "VERIFIED_FIXED_BY_BOTH_REVIEWERS",
+    "ADV-R155-ROOT-GIT-CONFIG-RCE-CHECK": "FALSIFIED_BY_SINGER",
+    "ADV-R155-M1-REGRESSION-SCOPE": "NONBLOCKING_MEDIUM; production installer retains exact requested candidate resolution, source HEAD equality, clean source, detached checkout, cloned HEAD equality and clean clone checks"
+  },
+  "independent_reproduction": {
+    "mistyped_hash_does_not_resolve": true,
+    "actual_hash_resolves_to_clean_frozen_commit": true,
+    "different_owner_failure_reproduced": true,
+    "exact_gitdir_scope_clone_passes": true,
+    "absent_or_wrong_scope_clone_fails": true,
+    "local_pack_objects_hook_not_executed": true
+  },
+  "disposition": "The production change has no verified critical/high technical defect, but installation remains blocked because the root review request carried a mistyped expanded hash. No code or test change is required. Resubmit the same actual frozen Candidate 17 commit to both reviewers with its exact resolvable 40-character hash.",
+  "next_action": "Review round 156 over exact commit 1b3a94afd19bd14ad4ce62b04362747743c42695; no candidate changes."
+}

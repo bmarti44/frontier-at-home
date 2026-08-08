@@ -1,0 +1,130 @@
+{
+  "schema_version": 2,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "PREREGISTERED_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v1.json",
+  "review_findings_addressed": "results/glm52-gates/W7-resume-review-r196.json",
+  "scorer": {
+    "id": "w7.resume.v1",
+    "implementation": "scripts/glm52_goal.py:_score_w7_resume",
+    "tests": "scripts/tests/test_glm52_goal.py",
+    "authority": "The scorer consumes one strict raw W7 observation, decodes the candidate and cold F32 logits/state probes, and derives every check. Caller-supplied pass booleans are absent from the schema.",
+    "registered_gate": "W7"
+  },
+  "primary_regime": {
+    "wire_fixture": "The exact prompt/prime/append builder must be committed before the unchanged-code runtime RED. Its wire bytes, canonical request tokens, actual sync tokens, restored checkpoint tokens, and final evaluated lineage receive separate hashes.",
+    "required_observation": {
+      "live_tokens": 5063,
+      "common_tokens": 5045,
+      "selected_checkpoint_tokens": 5044,
+      "prompt_tokens": 5066,
+      "eval_ranges": [[5044, 5066]],
+      "compared_f32_logits": 154880,
+      "generated_tokens": 64
+    },
+    "checkpoint_inventory": [
+      "The harness independently records every private-KV candidate before launch, including token length, lineage hash, payload hash, structural validity, and modification identity.",
+      "The fixture includes one valid shorter matching decoy, one newer wrong-lineage decoy, and one malformed newer record.",
+      "The scorer accepts the candidate arm only when the selected payload hash equals the independently expected 5044 payload and positive payload bytes were read."
+    ]
+  },
+  "raw_case_schema": {
+    "identity": [
+      "case_id", "model_family", "flag_value", "eligible", "mode"
+    ],
+    "lineage": [
+      "wire_text_sha256", "canonical_tokens_sha256", "sync_tokens_sha256",
+      "final_lineage_sha256", "live_tokens", "common_tokens", "prompt_tokens"
+    ],
+    "restore": [
+      "selected_checkpoint_tokens", "selected_payload_sha256",
+      "expected_payload_sha256", "payload_bytes_read", "reset_count",
+      "invalidate_count", "eval_ranges"
+    ],
+    "numerics": [
+      "output_token_ids", "logits_f32_zlib_b64",
+      "state.checkpoint_sha256", "state.lineage_sha256",
+      "state.logical_frontiers", "state.tensor_inventory_sha256",
+      "state.probe_f32_zlib_b64"
+    ],
+    "safety": [
+      "wrapper_ok", "oom", "xid", "swap_growth", "survivor",
+      "minimum_available_gib"
+    ]
+  },
+  "required_case_matrix": [
+    "cold-primary",
+    "strict-primary",
+    "candidate-primary",
+    "exact-off",
+    "exact-on",
+    "divergence-off",
+    "divergence-on",
+    "shorten-off",
+    "shorten-on",
+    "malformed-off",
+    "malformed-on",
+    "wrong-lineage-off",
+    "wrong-lineage-on",
+    "non-glm-off",
+    "non-glm-on",
+    "flag-zero",
+    "flag-garbage"
+  ],
+  "cold_fallback_rejection": {
+    "candidate_requirements": [
+      "mode is resume and flag value is exactly 1",
+      "selected payload equals the expected 5044 payload",
+      "payload_bytes_read is positive",
+      "reset_count and invalidate_count are zero",
+      "the only evaluated prompt range is [5044,5066)",
+      "actual sync and final-lineage hashes equal the canonical complete-token hash"
+    ],
+    "mutation": "Replacing the candidate with a full cold evaluation, even while preserving claimed hashes or matching logits, produces FAIL."
+  },
+  "guard_contract": {
+    "legacy_bypass": "DS4_GLM_RESUME_GUARD_OFF must be absent in the complete environment for every arm.",
+    "candidate_flag": "Only the exact value 1 enables the experiment. Unset, 0, empty, and malformed values preserve strict behavior.",
+    "flag_on_controls": "Divergence, shortening, malformed checkpoint, wrong lineage, and non-GLM cases run with the candidate flag both disabled and enabled. None may select or read a resume payload.",
+    "exact_replay": "Flag-off and flag-on exact replay must use replay mode without reset, invalidation, or new prompt evaluation."
+  },
+  "canonical_comparison": {
+    "exact_fields": [
+      "wire and canonical prompt identity",
+      "checkpoint and final-lineage hashes",
+      "75 logical frontier lengths",
+      "self-describing tensor-inventory hash",
+      "64 generated token IDs"
+    ],
+    "numeric_fields": [
+      "exactly 154880 finite F32 final-position logits",
+      "a fixed 256-value finite F32 state probe drawn from preregistered tensor ranges"
+    ],
+    "thresholds": {
+      "max_abs_logit_delta_strictly_less_than": 0.01,
+      "max_abs_state_probe_delta_strictly_less_than": 0.01,
+      "argmax_identical": true
+    }
+  },
+  "artifact_writer_requirements": [
+    "Artifacts are request-ID, arm, sync-invocation, prompt-hash, and final-position qualified.",
+    "Each artifact has a self-describing header, exact dimensions, byte count, tensor inventory, and content hash.",
+    "GPU reads are synchronized and any omitted or failed read/write makes the arm fail.",
+    "The production-path RED uses actual matcher/loader/session-sync primitives; test hooks may observe or inject beneath those primitives but may not replace their decision logic."
+  ],
+  "safety": {
+    "safe_wrapper": "results/glm52-gates/harness/glm_safe_run.sh",
+    "exclusive_lock": true,
+    "system_cgroup": true,
+    "minimum_start_available_gib": 110,
+    "minimum_observed_available_gib": 10,
+    "bare_engine_forbidden": true,
+    "reboot_forbidden": true
+  },
+  "next_sequence": [
+    "Review this scorer/schema candidate; engine implementation remains unauthorized until critical/high findings are gone.",
+    "Write the smallest compiled production-path RED and exact fixture builder against this schema.",
+    "Reproduce the historical large-delta RED under containment on unchanged code.",
+    "Only then implement behind DS4_GLM_LIVE_REWIND_V1=1, leaving the strict default unchanged."
+  ]
+}

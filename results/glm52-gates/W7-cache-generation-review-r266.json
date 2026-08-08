@@ -1,0 +1,56 @@
+{
+  "candidate_hash": "52849c02a00e4363c068791e04460e22a7f217a0",
+  "review_round": 266,
+  "gate_candidate": 13,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 90,
+    "critical": [],
+    "high": [
+      {
+        "id": "GAP-W7.1-266-H1-DRIVER-ANCESTRY-NOT-BEHAVIORALLY-TESTED",
+        "evidence": "The driver verifier is structurally plausible, but no candidate-13 behavioral test proves invalid PID/start-time, sealed script, cgroup unit, or non-ancestor fixtures fail before runtime scratch.",
+        "affected_gate": "W7.1 direct-driver containment and host safety",
+        "acceptance_test": "A bounded no-engine production-verifier test must accept the valid lineage and reject each mutated lineage before runtime scratch; a no-op verifier mutation must fail."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 88,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-266-H1-SAFE-WRAPPER-DIRECT-ENTRY-BYPASSES-LOCK",
+        "evidence": "An exact sealed safe wrapper launched directly in a compliant look-alike cgroup satisfied the ancestry verifier without traversing the inference-lock owner.",
+        "affected_gate": "complete runtime containment and single-engine inference-lock lineage",
+        "acceptance_test": "Bind an exact inference-lock-owning wrapper ancestor or inherited held descriptor; direct safe-wrapper entry must fail before runtime scratch while the canonical cgroup-to-lock-to-safe-run-to-driver chain passes."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "prior_issue_status": {
+    "GAP-W7.1-265-H1-CANDIDATE-HEAD-NOT-REVALIDATED": "FIXED",
+    "ADV-W7.1-265-H1-DIRECT-DRIVER-LINEAGE": "PARTIALLY_FIXED",
+    "ADV-W7.1-265-H2-GIT-REPLACEMENT-LINEAGE": "FIXED",
+    "GAP-W7.1-264-C1-SEALED-OUTER-LINEAGE-UNBOUND": "FIXED",
+    "GAP-W7.1-264-H1-SEAL-HOLDER-LOSS-DROPS-EVIDENCE": "FIXED"
+  },
+  "convergence": {
+    "gate_candidate_count": 13,
+    "campaign_global_review_round": 266,
+    "blocking_classes_previous": 3,
+    "blocking_classes_current": 2,
+    "consecutive_non_shrinking_candidates": 0,
+    "status": "CANDIDATE_14_AUTHORIZED",
+    "next_scope": [
+      "behavioral mutation coverage for production driver lineage",
+      "exact inference-lock-owner ancestry"
+    ]
+  },
+  "root_disposition": "Git replacement and final-HEAD findings are closed. Candidate 14 is bounded to the two remaining lineage findings; no runtime is authorized."
+}

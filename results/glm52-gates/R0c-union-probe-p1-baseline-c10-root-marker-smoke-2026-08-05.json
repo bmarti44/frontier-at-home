@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "classification": "NON_HELDOUT_PERMANENT_ROOT_MARKER_SMOKE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 10,
+  "candidate_hash": "c17101a489fa77bca09e017e4a4091305339a3c8",
+  "observed_at": "2026-08-05T15:27:37-04:00",
+  "held_out_values_opened": false,
+  "owner_install_attestation": "The repository owner authorized the exact commit-bound sudo installation command and subsequently reported it completed. The autonomous bmarti44 agent did not possess or use the owner's sudo password.",
+  "production_marker_present_before": false,
+  "production_marker_present_after": false,
+  "installed_helper": {
+    "path": "/usr/local/sbin/glm52-w1-submit",
+    "sha256": "35d03c97cb6a9a433cf980468e2d0d5477465d06846decc5b1ecec7c9fa65e11",
+    "source_sha256": "35d03c97cb6a9a433cf980468e2d0d5477465d06846decc5b1ecec7c9fa65e11",
+    "owner": "root",
+    "group": "root",
+    "mode": "0755",
+    "nlink": 1,
+    "device": 66306,
+    "inode": 1336554
+  },
+  "smoke_request": {
+    "classification": "GLM52_P1_NONHELDOUT_SMOKE_RESERVATION",
+    "request_sha256": "6bb4096a6549a0b19dcf70e59203d25296e83544e418173ed2a26ccdea766ac1",
+    "first_exit_code": 0,
+    "first_status": "RESERVED",
+    "second_exit_code": 17,
+    "second_status": "ALREADY_RESERVED"
+  },
+  "marker": {
+    "path": "/var/lib/glm52-w1/p1-baseline-smoke-v1/reservation.json",
+    "target_sha256_before": "93848ba8614ab5a6c566685f08f4666e27064626694cadc16d076d4c905acd05",
+    "target_sha256_after": "93848ba8614ab5a6c566685f08f4666e27064626694cadc16d076d4c905acd05",
+    "owner": "root",
+    "group": "root",
+    "mode": "0444",
+    "nlink": 1,
+    "device": 66306,
+    "inode": 2018245,
+    "size": 265,
+    "directory_owner": "root",
+    "directory_group": "root",
+    "directory_mode": "0555",
+    "directory_device": 66306,
+    "directory_inode": 2018244
+  },
+  "unprivileged_mutation_checks": [
+    {"operation": "append", "exit_code": 2, "rejected": true},
+    {"operation": "truncate", "exit_code": 1, "rejected": true},
+    {"operation": "unlink", "exit_code": 1, "rejected": true},
+    {"operation": "rename", "exit_code": 1, "rejected": true},
+    {"operation": "symlink_replacement", "exit_code": 1, "rejected": true}
+  ],
+  "artifacts": {
+    "scripts/65_glm52_w1_submit.py": "35d03c97cb6a9a433cf980468e2d0d5477465d06846decc5b1ecec7c9fa65e11",
+    "scripts/66_install_glm52_w1_attestor.sh": "b5e6a46ef793a9631e6acee43d00acb75f7b25c2caecfa34455b6458e914916c",
+    "scripts/81_glm_union_baseline.py": "345cbd22fbf7a303f1a249d79f9849413cdeb6f258f8b4eefaa232872031e95e",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "5cf574b9258b53956b6bc22b30f8cf0761d646c78b0697ef2698003781218dae",
+    "scripts/tests/test_glm_union_baseline.py": "b102d7bdf68205d55b3be31871d3f292798e787b7584517d1dadb16d0c621ed4"
+  },
+  "verification": {
+    "controller_and_harness_tests": "112 passed, 1 warning",
+    "engine_source_tests": "6 passed",
+    "frozen_probe_cv_precision_hashes_unchanged": true,
+    "repository_clean_before_smoke": true,
+    "engine_processes": 0,
+    "fio_processes": 0,
+    "mem_available_gib": 115.2
+  },
+  "verdict": "PASS",
+  "claim_limit": "Candidate-10 non-held-out permanent-marker smoke only; no held-out baseline, cost, NLL, fidelity, performance, or serving claim. The smoke marker is intentionally permanent and distinct from the absent production marker."
+}

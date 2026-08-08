@@ -1,0 +1,41 @@
+{
+  "schema": "glm52-w4-topk-mutations-v1",
+  "gate": "W4",
+  "candidate": 2,
+  "source_run": "results/glm52-gates/W4-topk-candidate2-pass",
+  "setup_attempts": [
+    {
+      "attempt": 1,
+      "result": "NO_RESULT",
+      "failure": "The copied frozen binary retained mode 0500; direct corruption received PermissionError before scoring. The mutation copy was then deliberately made owner-writable."
+    }
+  ],
+  "mutations": [
+    {"mutation": "missing_row", "exit_code": 1, "rejected": true, "diagnostic": "raw evidence must contain exactly 20 nonempty rows"},
+    {"mutation": "duplicate_row", "exit_code": 1, "rejected": true, "diagnostic": "raw evidence must contain exactly 20 nonempty rows"},
+    {"mutation": "reordered_rows", "exit_code": 1, "rejected": true, "diagnostic": "raw row 0 order or arm differs"},
+    {"mutation": "nonfinite_timing", "exit_code": 1, "rejected": true, "diagnostic": "non-finite JSON constant: NaN"},
+    {"mutation": "zero_timing", "exit_code": 1, "rejected": true, "diagnostic": "raw row 0 timing invalid"},
+    {"mutation": "wrong_ids", "exit_code": 1, "rejected": true, "diagnostic": "raw row 0 selected IDs differ"},
+    {"mutation": "missing_marker", "exit_code": 1, "rejected": true, "diagnostic": "raw row 0 effective marker differs"},
+    {"mutation": "disabled_flag", "exit_code": 1, "rejected": true, "diagnostic": "configuration differs from fixed gate"},
+    {"mutation": "stale_binary", "exit_code": 1, "rejected": true, "diagnostic": "artifact binding mismatch: binary"},
+    {"mutation": "scorer_replaced_with_empty_success", "exit_code": 0, "rejected": false, "diagnostic": ""},
+    {"mutation": "invalid_drand_receipt", "exit_code": 1, "rejected": true, "diagnostic": "drand BLS verification failed"}
+  ],
+  "all_rejected": false,
+  "verdict": "FAIL",
+  "candidate3_red": {
+    "command": "python3 -W error::ResourceWarning -m unittest scripts.tests.test_w4_topk_scorer",
+    "tests_run": 6,
+    "failures": 1,
+    "exit_code": 1,
+    "failing_assertion": "test_runner_rejects_post_freeze_scorer_replacement: ValueError not raised",
+    "artifacts": {
+      "runner": "87980942c78ac346f3ce605675dfb243edd0f5c25ebad3cde28782f4ce1fc401",
+      "tests": "99e354923b54223e1a1d38654f72da1d9da4b17a8758cadef52cf9ceb514941e"
+    },
+    "verdict": "RED_CONFIRMED"
+  },
+  "bounded_fix": "Before executing the CUDA test, candidate 3 must compare every runner, scorer, verifier, engine-source, test-source, and binary digest to the candidate freeze. A silent-success scorer must also be rejected by result-shape validation."
+}

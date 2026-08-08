@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "1b3a94afd19bd14ad4ce62b04362747743c42695",
+  "candidate_tree": "0a801a3a5f8c043df25ecaaf604736d5ca83af04",
+  "review_round": 156,
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 100,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "ACCEPT; PROVENANCE CORRECTED"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 97,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "ADV-R155-M1-REGRESSION-SCOPE"
+    ],
+    "low": [],
+    "verdict": "ACCEPT; EXACT CANDIDATE CONFIRMED"
+  },
+  "prior_issue_status": {
+    "P1-BASE-C17-H1-CANDIDATE-ID-MISMATCH": "FIXED",
+    "P1-BASE-C16-RUNTIME-ROOT-CLONE-DUBIOUS-OWNERSHIP": "FIXED",
+    "ADV-R155-ROOT-GIT-CONFIG-RCE-CHECK": "FALSIFIED",
+    "ADV-R155-M1-REGRESSION-SCOPE": "NONBLOCKING_MEDIUM; production exact-candidate checks remain unchanged and the runtime smoke will exercise the actual reviewed candidate"
+  },
+  "release_conditions": {
+    "exact_candidate_resolves": true,
+    "reviewed_tree_matches_freeze": true,
+    "both_scores_at_least_90": true,
+    "verified_critical_or_high": 0,
+    "root_staged_install_authorized": true,
+    "installed_boundary_nonheldout_cuda_smoke_required": true,
+    "heldout_may_open_before_smoke": false
+  },
+  "next_action": "Pin the working repository to this exact reviewed candidate, update the external executable-mount launcher to its installer digest and commit, perform the single owner-sudo install, then run the passwordless non-held-out installed-boundary CUDA smoke."
+}

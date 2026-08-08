@@ -1,0 +1,708 @@
+From 361b71b417b0092b451aafe7d98914aa7e4895e4 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 15:33:10 -0400
+Subject: [PATCH] test(glm): require executable MTP proxy contracts
+
+---
+ Makefile                                     |  15 +-
+ tests/test_glm_mtp_proxy_candidate_source.py | 147 ------
+ tests/test_glm_mtp_proxy_contract.c          | 500 +++++++++++++++++++
+ 3 files changed, 514 insertions(+), 148 deletions(-)
+ delete mode 100644 tests/test_glm_mtp_proxy_candidate_source.py
+ create mode 100644 tests/test_glm_mtp_proxy_contract.c
+
+diff --git a/Makefile b/Makefile
+index 6bda0d1..10db147 100644
+--- a/Makefile
++++ b/Makefile
+@@ -48,7 +48,7 @@ DS4_LINK_LIBS ?= $(CUDA_LDLIBS)
+ METAL_LDLIBS := $(LDLIBS)
+ endif
+ 
+-.PHONY: all help clean test test-metal-session-batch test-cuda-session-batch test-cuda-mixed-batch dspark-acceptance dspark-verify-depth mtp-verify-depth cpu cuda cuda-spark cuda-generic cuda-regression strix-halo rocm
++.PHONY: all help clean test test-metal-session-batch test-cuda-session-batch test-cuda-mixed-batch test-glm-mtp-proxy-contract dspark-acceptance dspark-verify-depth mtp-verify-depth cpu cuda cuda-spark cuda-generic cuda-regression strix-halo rocm
+ 
+ ifeq ($(UNAME_S),Darwin)
+ all: ds4 ds4-server ds4-bench ds4-eval ds4-agent
+@@ -360,6 +360,19 @@ test-cuda-mixed-batch: tests/test_cuda_mixed_batch
+ 	DS4_TEST_MODEL="$(DS4_TEST_MODEL)" ./tests/test_cuda_mixed_batch
+ endif
+ 
++tests/test_glm_mtp_proxy_contract.o: tests/test_glm_mtp_proxy_contract.c
++	$(CC) $(CFLAGS) -I. -c -o $@ $<
++
++tests/test_glm_mtp_proxy_contract: tests/test_glm_mtp_proxy_contract.o $(CORE_OBJS)
++ifeq ($(UNAME_S),Darwin)
++	$(CC) $(CFLAGS) -o $@ $^ $(METAL_LDLIBS)
++else
++	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
++endif
++
++test-glm-mtp-proxy-contract: tests/test_glm_mtp_proxy_contract
++	./tests/test_glm_mtp_proxy_contract
++
+ ds4_test: ds4_test.o ds4_help.o ds4_kvstore.o rax.o $(CORE_OBJS)
+ ifeq ($(UNAME_S),Darwin)
+ 	$(CC) $(CFLAGS) -o $@ ds4_test.o ds4_help.o ds4_kvstore.o rax.o $(CORE_OBJS) $(METAL_LDLIBS)
+diff --git a/tests/test_glm_mtp_proxy_candidate_source.py b/tests/test_glm_mtp_proxy_candidate_source.py
+deleted file mode 100644
+index a55c42c..0000000
+--- a/tests/test_glm_mtp_proxy_candidate_source.py
++++ /dev/null
+@@ -1,147 +0,0 @@
+-#!/usr/bin/env python3
+-"""Production-source RED contract for the default-off GLM MTP proxy capture."""
+-
+-from pathlib import Path
+-import unittest
+-
+-
+-ROOT = Path(__file__).resolve().parents[1]
+-SOURCE = (ROOT / "ds4.c").read_text(encoding="utf-8")
+-CLI = (ROOT / "ds4_cli.c").read_text(encoding="utf-8")
+-
+-
+-def require_marker(
+-    testcase: unittest.TestCase, text: str, marker: str, label: str = "source"
+-) -> None:
+-    testcase.assertTrue(
+-        marker in text,
+-        f"production {label} lacks required marker: {marker}",
+-    )
+-
+-
+-def source_section(
+-    testcase: unittest.TestCase,
+-    text: str,
+-    start_marker: str,
+-    end_marker: str | None = None,
+-) -> str:
+-    """Fail as an assertion when the production behavior is absent."""
+-    require_marker(testcase, text, start_marker)
+-    start = text.find(start_marker)
+-    if end_marker is None:
+-        return text[start:]
+-    require_marker(testcase, text[start:], end_marker, "source section")
+-    end = text.find(end_marker, start)
+-    return text[start:end]
+-
+-
+-class GlmMtpProxyCandidateSourceTests(unittest.TestCase):
+-    def test_candidate_is_explicit_default_off_cli_mode(self) -> None:
+-        require_marker(self, CLI, 'getenv("DS4_GLM_MTP_PROXY_CANDIDATE_DIR")', "CLI")
+-        require_marker(self, CLI, 'getenv("DS4_GLM_MTP_PROXY_PACK")', "CLI")
+-        require_marker(self, CLI, 'getenv("DS4_GLM_MTP_PROXY_SOURCE_STATE")', "CLI")
+-        require_marker(self, CLI, "ds4_session_glm_mtp_proxy_candidate", "CLI")
+-        for variable in (
+-            "DS4_GLM_MTP_PROXY_CANDIDATE_DIR",
+-            "DS4_GLM_MTP_PROXY_PACK",
+-            "DS4_GLM_MTP_PROXY_SOURCE_STATE",
+-        ):
+-            self.assertNotIn(variable, SOURCE)
+-
+-    def test_post_residual_capture_is_before_head_normalization(self) -> None:
+-        body = source_section(
+-            self,
+-            SOURCE,
+-            "static bool glm_graph_mtp_step(",
+-            "static bool glm_graph_forward_token(",
+-        )
+-        for marker in (
+-            'DS4_GLM_MTP_STAGE("residual")',
+-            "glm_graph_mtp_proxy_capture_post_residual",
+-            'DS4_GLM_MTP_STAGE("head_norm")',
+-        ):
+-            require_marker(self, body, marker, "MTP step")
+-        residual = body.find('DS4_GLM_MTP_STAGE("residual")')
+-        capture = body.find("glm_graph_mtp_proxy_capture_post_residual")
+-        head_norm = body.find('DS4_GLM_MTP_STAGE("head_norm")')
+-        self.assertLess(residual, capture)
+-        self.assertLess(capture, head_norm)
+-        self.assertIn("g->next", body[capture:head_norm])
+-
+-    def test_candidate_recurs_exactly_eight_steps_on_proxy_hidden(self) -> None:
+-        body = source_section(
+-            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
+-        )
+-        for marker in (
+-            "DS4_GLM_PROXY_K",
+-            "step < DS4_GLM_PROXY_K",
+-            "glm_graph_mtp_step",
+-            "source_pos + step",
+-            "source_pos, &next",
+-            "proxy_hidden",
+-            "ds4_gpu_tensor_write(g->cur",
+-        ):
+-            require_marker(self, body, marker, "candidate function")
+-        require_marker(self, SOURCE, "DS4_GLM_PROXY_K 8u")
+-        self.assertNotIn("ds4_session_eval(", body)
+-        self.assertNotIn("glm_graph_forward_token(", body)
+-
+-    def test_all_and_only_normal_routed_router_heads_are_scored(self) -> None:
+-        body = source_section(
+-            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
+-        )
+-        for marker in (
+-            "DS4_N_LEADING_DENSE",
+-            "glm_graph_normal_layer_count()",
+-            "glm_graph_mtp_proxy_route_all_layers",
+-            "DS4_N_EXPERT",
+-            "DS4_N_EXPERT_USED",
+-        ):
+-            require_marker(self, body, marker, "candidate function")
+-        for marker in (
+-            "ds4_gpu_rms_norm_weight_tensor",
+-            "ds4_gpu_matmul_f32_tensor",
+-            "ds4_gpu_glm_router_select_tensor",
+-        ):
+-            require_marker(self, SOURCE, marker)
+-
+-    def test_candidate_requires_validated_compact_pack_not_full_model(self) -> None:
+-        body = source_section(
+-            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
+-        )
+-        for marker in (
+-            "glm_proxy_tensor_pack_validate",
+-            "glm_proxy_tensor_pack_forbidden_ranges_absent",
+-            "glm_proxy_candidate_process_preflight",
+-            "full_model_mapping_count == 0",
+-            "unexpected_fd_count == 0",
+-            "unexpected_map_count == 0",
+-        ):
+-            require_marker(self, body, marker, "candidate function")
+-
+-    def test_candidate_publication_is_exact_and_fail_closed(self) -> None:
+-        body = source_section(
+-            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
+-        )
+-        for marker in (
+-            "O_EXCL",
+-            "fsync",
+-            "z-0.f32le",
+-            "z-8.f32le",
+-            "head-logits.f32le",
+-            "tokens.i32le",
+-            "positions.i32le",
+-            "mtp-slots.i32le",
+-            "router-scores.f32le",
+-            "router-ranked.u8",
+-        ):
+-            require_marker(self, body, marker, "candidate function")
+-        require_marker(self, CLI, "DS4_GLM_PROXY_FAIL_STAGE", "CLI")
+-        for stage in ("pack", "recurrence", "router", "publish", "dispose"):
+-            require_marker(self, CLI, f'"{stage}"', "CLI")
+-        require_marker(self, body, "injected GLM MTP proxy failure", "candidate function")
+-        require_marker(self, body, "return 1", "candidate function")
+-
+-
+-if __name__ == "__main__":
+-    unittest.main()
+diff --git a/tests/test_glm_mtp_proxy_contract.c b/tests/test_glm_mtp_proxy_contract.c
+new file mode 100644
+index 0000000..cb6a99c
+--- /dev/null
++++ b/tests/test_glm_mtp_proxy_contract.c
+@@ -0,0 +1,500 @@
++/* Executable RED contract for the default-off GLM MTP proxy candidate.
++ *
++ * The weak declarations let the unchanged production object link and run. Each
++ * missing entry point is then an independent behavioral RED, rather than a
++ * source-text or missing-file failure. The implementation must provide strong
++ * definitions in the production object; comments, dead code, and decoy names
++ * cannot satisfy this binary.
++ */
++
++#include <dirent.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <math.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#define PROXY_ABI 1u
++#define PROXY_STEPS 8u
++#define PROXY_FIRST_LAYER 3u
++#define PROXY_LAYER_COUNT 75u
++#define PROXY_EMBD 6144u
++#define PROXY_VOCAB 154880u
++#define PROXY_EXPERTS 256u
++
++typedef struct {
++    uint32_t abi_version;
++    uint32_t steps;
++    uint32_t first_layer;
++    uint32_t layer_count;
++    uint32_t n_embd;
++    uint32_t n_vocab;
++    uint32_t n_expert;
++    uint32_t source_position;
++    uint32_t min_position;
++    int32_t q1;
++} proxy_request;
++
++typedef struct {
++    uint32_t steps_completed;
++    uint32_t routes_completed;
++    uint32_t first_position;
++    uint32_t last_position;
++    uint32_t first_layer;
++    uint32_t last_layer;
++    int32_t q9;
++} proxy_receipt;
++
++typedef struct {
++    int (*capture_z0)(void *ctx, uint32_t boundary, float *z0, uint32_t n_embd);
++    int (*mtp_step)(void *ctx,
++                    uint32_t step,
++                    uint32_t position,
++                    uint32_t min_position,
++                    uint32_t kv_slot,
++                    int32_t input_token,
++                    const float *input_hidden,
++                    float *output_hidden,
++                    float *head_logits,
++                    int32_t *output_token);
++    int (*route_layer)(void *ctx,
++                       uint32_t step,
++                       uint32_t layer,
++                       const float *hidden,
++                       float *selection_scores,
++                       uint8_t *ranked_experts);
++    int (*stage_receipt)(void *ctx,
++                         uint32_t step,
++                         uint32_t position,
++                         uint32_t kv_slot,
++                         int32_t input_token,
++                         int32_t output_token);
++} proxy_ops;
++
++typedef struct {
++    const char *name;
++    uint32_t dtype;
++    uint32_t ndim;
++    uint64_t dims[4];
++    uint64_t original_offset;
++    uint64_t original_length;
++    uint64_t blob_offset;
++    uint64_t blob_length;
++    uint8_t blob_sha256[32];
++} proxy_pack_record;
++
++typedef struct {
++    uint64_t offset;
++    uint64_t length;
++} proxy_range;
++
++typedef struct {
++    const char *name;
++    const void *data;
++    uint64_t size;
++} proxy_artifact;
++
++extern int ds4_glm_mtp_proxy_contract_run(const proxy_request *,
++                                           const proxy_ops *,
++                                           void *,
++                                           proxy_receipt *)
++    __attribute__((weak));
++extern int ds4_glm_mtp_proxy_pack_contract_validate(
++    const proxy_pack_record *, uint32_t, uint64_t, uint64_t,
++    const uint8_t[32], const uint8_t[32],
++    const proxy_range *, uint32_t)
++    __attribute__((weak));
++extern int ds4_glm_mtp_proxy_rank_contract(
++    const float *, uint32_t, uint32_t, uint8_t *, float *, uint8_t *)
++    __attribute__((weak));
++extern int ds4_glm_mtp_proxy_cli_contract_select(
++    const char *, const char *, const char *, const char *, int *)
++    __attribute__((weak));
++extern int ds4_glm_mtp_proxy_publish_contract(
++    const char *, const proxy_artifact *, uint32_t, const char *)
++    __attribute__((weak));
++
++static int failures;
++
++#define CHECK(cond, ...) do {                                                \
++    if (!(cond)) {                                                           \
++        fprintf(stderr, "FAIL %s:%d: ", __func__, __LINE__);                \
++        fprintf(stderr, __VA_ARGS__);                                        \
++        fputc('\n', stderr);                                                  \
++        failures++;                                                          \
++        return;                                                              \
++    }                                                                        \
++} while (0)
++
++typedef struct {
++    uint32_t capture_calls;
++    uint32_t step_calls;
++    uint32_t route_calls;
++    uint32_t receipt_calls;
++    uint32_t next_layer;
++    int callback_error;
++} fake_ctx;
++
++static float hidden_value(uint32_t step, uint32_t i) {
++    return (float)(step * 17u) + (float)(i % 97u) * 0.001f;
++}
++
++static int fake_capture(void *opaque, uint32_t boundary, float *z0,
++                        uint32_t n_embd) {
++    fake_ctx *ctx = opaque;
++    if (ctx->capture_calls++ != 0u || boundary != 1u || n_embd != PROXY_EMBD) {
++        ctx->callback_error = 1;
++        return 0;
++    }
++    for (uint32_t i = 0; i < n_embd; i++) z0[i] = hidden_value(0u, i);
++    return 1;
++}
++
++static int fake_step(void *opaque, uint32_t step, uint32_t position,
++                     uint32_t min_position, uint32_t kv_slot,
++                     int32_t input_token, const float *input_hidden,
++                     float *output_hidden, float *head_logits,
++                     int32_t *output_token) {
++    fake_ctx *ctx = opaque;
++    const uint32_t expected = ctx->step_calls + 1u;
++    if (step != expected || step < 1u || step > PROXY_STEPS ||
++        position != 4096u + step - 1u || min_position != 4080u ||
++        kv_slot != position || input_token != (int32_t)(1000u + step)) {
++        ctx->callback_error = 1;
++        return 0;
++    }
++    for (uint32_t i = 0; i < PROXY_EMBD; i++) {
++        if (input_hidden[i] != hidden_value(step - 1u, i)) {
++            ctx->callback_error = 1;
++            return 0;
++        }
++        output_hidden[i] = hidden_value(step, i);
++    }
++    for (uint32_t i = 0; i < PROXY_VOCAB; i++) head_logits[i] = -1.0f;
++    *output_token = (int32_t)(1001u + step);
++    head_logits[(uint32_t)*output_token] = 1.0f;
++    ctx->step_calls++;
++    ctx->next_layer = PROXY_FIRST_LAYER;
++    return 1;
++}
++
++static int fake_route(void *opaque, uint32_t step, uint32_t layer,
++                      const float *hidden, float *scores, uint8_t *ranks) {
++    fake_ctx *ctx = opaque;
++    if (step != ctx->step_calls || layer != ctx->next_layer ||
++        layer < PROXY_FIRST_LAYER || layer >= PROXY_FIRST_LAYER + PROXY_LAYER_COUNT) {
++        ctx->callback_error = 1;
++        return 0;
++    }
++    for (uint32_t i = 0; i < PROXY_EMBD; i++) {
++        if (hidden[i] != hidden_value(step, i)) {
++            ctx->callback_error = 1;
++            return 0;
++        }
++    }
++    for (uint32_t e = 0; e < PROXY_EXPERTS; e++) {
++        scores[e] = (float)step + (float)layer * 0.01f - (float)e * 0.0001f;
++        ranks[e] = (uint8_t)e;
++    }
++    ctx->route_calls++;
++    ctx->next_layer++;
++    return 1;
++}
++
++static int fake_receipt(void *opaque, uint32_t step, uint32_t position,
++                        uint32_t kv_slot, int32_t input_token,
++                        int32_t output_token) {
++    fake_ctx *ctx = opaque;
++    if (step != ctx->receipt_calls + 1u || position != 4096u + step - 1u ||
++        kv_slot != position || input_token != (int32_t)(1000u + step) ||
++        output_token != (int32_t)(1001u + step) ||
++        ctx->next_layer != PROXY_FIRST_LAYER + PROXY_LAYER_COUNT) {
++        ctx->callback_error = 1;
++        return 0;
++    }
++    ctx->receipt_calls++;
++    return 1;
++}
++
++static void test_exact_causal_recurrence_and_router_coverage(void) {
++    CHECK(ds4_glm_mtp_proxy_contract_run != NULL,
++          "production recurrence entry point is absent");
++    const proxy_request req = {
++        .abi_version = PROXY_ABI,
++        .steps = PROXY_STEPS,
++        .first_layer = PROXY_FIRST_LAYER,
++        .layer_count = PROXY_LAYER_COUNT,
++        .n_embd = PROXY_EMBD,
++        .n_vocab = PROXY_VOCAB,
++        .n_expert = PROXY_EXPERTS,
++        .source_position = 4096u,
++        .min_position = 4080u,
++        .q1 = 1001,
++    };
++    const proxy_ops ops = {
++        .capture_z0 = fake_capture,
++        .mtp_step = fake_step,
++        .route_layer = fake_route,
++        .stage_receipt = fake_receipt,
++    };
++    fake_ctx ctx = {0};
++    proxy_receipt receipt = {0};
++    const int rc = ds4_glm_mtp_proxy_contract_run(&req, &ops, &ctx, &receipt);
++    CHECK(rc == 0, "valid causal fixture rejected: rc=%d", rc);
++    CHECK(ctx.callback_error == 0, "production called a callback out of contract");
++    CHECK(ctx.capture_calls == 1u, "capture count=%u", ctx.capture_calls);
++    CHECK(ctx.step_calls == PROXY_STEPS, "step count=%u", ctx.step_calls);
++    CHECK(ctx.route_calls == PROXY_STEPS * PROXY_LAYER_COUNT,
++          "route count=%u", ctx.route_calls);
++    CHECK(ctx.receipt_calls == PROXY_STEPS, "receipt count=%u", ctx.receipt_calls);
++    CHECK(receipt.steps_completed == PROXY_STEPS &&
++          receipt.routes_completed == PROXY_STEPS * PROXY_LAYER_COUNT &&
++          receipt.first_position == 4096u && receipt.last_position == 4103u &&
++          receipt.first_layer == 3u && receipt.last_layer == 77u &&
++          receipt.q9 == 1009,
++          "receipt does not bind exact recurrence/layer endpoints");
++}
++
++static void fill_record(proxy_pack_record *r, const char *name,
++                        uint64_t original_offset, uint64_t blob_offset,
++                        uint64_t length, uint8_t digest_byte) {
++    memset(r, 0, sizeof(*r));
++    r->name = name;
++    r->dtype = 1u;
++    r->ndim = 2u;
++    r->dims[0] = 16u;
++    r->dims[1] = 16u;
++    r->original_offset = original_offset;
++    r->original_length = length;
++    r->blob_offset = blob_offset;
++    r->blob_length = length;
++    memset(r->blob_sha256, digest_byte, sizeof(r->blob_sha256));
++}
++
++static int validate_pack(proxy_pack_record *records, uint32_t count,
++                         uint64_t model_size, uint64_t payload_size,
++                         proxy_range *forbidden, uint32_t forbidden_count,
++                         int corrupt_inventory) {
++    uint8_t model_sha[32];
++    uint8_t inventory_sha[32];
++    memset(model_sha, 0x31, sizeof(model_sha));
++    memset(inventory_sha, corrupt_inventory ? 0x42 : 0x41, sizeof(inventory_sha));
++    return ds4_glm_mtp_proxy_pack_contract_validate(
++        records, count, model_size, payload_size, model_sha, inventory_sha,
++        forbidden, forbidden_count);
++}
++
++static void test_compact_pack_semantic_mutations(void) {
++    CHECK(ds4_glm_mtp_proxy_pack_contract_validate != NULL,
++          "production compact-pack validator entry point is absent");
++    proxy_pack_record valid[3];
++    fill_record(&valid[0], "token_embd.weight", 4096u, 0u, 4096u, 1u);
++    fill_record(&valid[1], "blk.3.ffn_norm.weight", 16384u, 4096u, 4096u, 2u);
++    fill_record(&valid[2], "blk.3.ffn_gate_inp.weight", 24576u, 8192u, 4096u, 3u);
++    proxy_range forbidden[1] = {{32768u, 4096u}};
++    CHECK(validate_pack(valid, 3u, 65536u, 12288u, forbidden, 1u, 0) == 0,
++          "valid compact inventory rejected");
++
++    proxy_pack_record m[3];
++    memcpy(m, valid, sizeof(m));
++    m[1].name = m[0].name;
++    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++          "duplicate name accepted");
++    memcpy(m, valid, sizeof(m));
++    m[1].blob_offset = 2048u;
++    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++          "overlapping blob accepted");
++    memcpy(m, valid, sizeof(m));
++    m[2].original_offset = forbidden[0].offset;
++    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++          "forbidden expert range accepted");
++    memcpy(m, valid, sizeof(m));
++    m[2].original_offset = UINT64_MAX - 1024u;
++    CHECK(validate_pack(m, 3u, 65536u, 12288u, forbidden, 1u, 0) != 0,
++          "overflowing source range accepted");
++    CHECK(validate_pack(valid, 3u, 65536u, 12289u, forbidden, 1u, 0) != 0,
++          "trailing payload byte accepted");
++    CHECK(validate_pack(valid, 3u, 65536u, 12288u, forbidden, 1u, 1) != 0,
++          "wrong frozen inventory digest accepted");
++}
++
++static void independent_rank(const float *scores, uint32_t experts,
++                             uint8_t *ranked) {
++    for (uint32_t i = 0; i < experts; i++) ranked[i] = (uint8_t)i;
++    for (uint32_t i = 1; i < experts; i++) {
++        uint8_t key = ranked[i];
++        uint32_t j = i;
++        while (j > 0u) {
++            const uint8_t prior = ranked[j - 1u];
++            if (scores[prior] > scores[key] ||
++                (scores[prior] == scores[key] && prior < key)) break;
++            ranked[j] = prior;
++            j--;
++        }
++        ranked[j] = key;
++    }
++}
++
++static void test_router_max_aggregation_and_tie_order(void) {
++    CHECK(ds4_glm_mtp_proxy_rank_contract != NULL,
++          "production router-rank entry point is absent");
++    float step_scores[2u * PROXY_EXPERTS];
++    uint8_t expected_step_rank[2u * PROXY_EXPERTS];
++    float expected_max[PROXY_EXPERTS];
++    uint8_t expected_max_rank[PROXY_EXPERTS];
++    for (uint32_t e = 0; e < PROXY_EXPERTS; e++) {
++        step_scores[e] = (float)(e % 13u) * 0.01f;
++        step_scores[PROXY_EXPERTS + e] = (float)((255u - e) % 17u) * 0.01f;
++        expected_max[e] = fmaxf(step_scores[e], step_scores[PROXY_EXPERTS + e]);
++    }
++    /* Exact ties must rank by lower expert ID. */
++    step_scores[4] = step_scores[7] = 0.75f;
++    step_scores[PROXY_EXPERTS + 4] = step_scores[PROXY_EXPERTS + 7] = 0.75f;
++    expected_max[4] = expected_max[7] = 0.75f;
++    independent_rank(step_scores, PROXY_EXPERTS, expected_step_rank);
++    independent_rank(step_scores + PROXY_EXPERTS, PROXY_EXPERTS,
++                     expected_step_rank + PROXY_EXPERTS);
++    independent_rank(expected_max, PROXY_EXPERTS, expected_max_rank);
++
++    uint8_t actual_step_rank[2u * PROXY_EXPERTS];
++    float actual_max[PROXY_EXPERTS];
++    uint8_t actual_max_rank[PROXY_EXPERTS];
++    memset(actual_step_rank, 0xff, sizeof(actual_step_rank));
++    memset(actual_max, 0, sizeof(actual_max));
++    memset(actual_max_rank, 0xff, sizeof(actual_max_rank));
++    int rc = ds4_glm_mtp_proxy_rank_contract(
++        step_scores, 2u, PROXY_EXPERTS, actual_step_rank,
++        actual_max, actual_max_rank);
++    CHECK(rc == 0, "valid rank fixture rejected: rc=%d", rc);
++    CHECK(memcmp(actual_step_rank, expected_step_rank,
++                 sizeof(actual_step_rank)) == 0,
++          "per-step descending/expert-ascending ranks differ");
++    CHECK(memcmp(actual_max, expected_max, sizeof(actual_max)) == 0,
++          "cross-step aggregation is not exact F32 max");
++    CHECK(memcmp(actual_max_rank, expected_max_rank,
++                 sizeof(actual_max_rank)) == 0,
++          "max ranks differ or reverse exact ties");
++
++    step_scores[9] = NAN;
++    CHECK(ds4_glm_mtp_proxy_rank_contract(
++              step_scores, 2u, PROXY_EXPERTS, actual_step_rank,
++              actual_max, actual_max_rank) != 0,
++          "NaN router score accepted");
++    CHECK(ds4_glm_mtp_proxy_rank_contract(
++              step_scores, 0u, PROXY_EXPERTS, actual_step_rank,
++              actual_max, actual_max_rank) != 0,
++          "zero-step aggregation accepted");
++}
++
++static void test_default_off_cli_dispatch(void) {
++    CHECK(ds4_glm_mtp_proxy_cli_contract_select != NULL,
++          "production CLI selection entry point is absent");
++    int mode = -1;
++    CHECK(ds4_glm_mtp_proxy_cli_contract_select(NULL, NULL, NULL, NULL, &mode) == 0 &&
++          mode == 0, "empty environment did not select ordinary mode");
++    CHECK(ds4_glm_mtp_proxy_cli_contract_select("out", NULL, NULL, NULL, &mode) != 0,
++          "partial candidate environment accepted");
++    CHECK(ds4_glm_mtp_proxy_cli_contract_select("out", "pack", "state", NULL, &mode) == 0 &&
++          mode == 1, "complete candidate environment rejected");
++    CHECK(ds4_glm_mtp_proxy_cli_contract_select("out", "pack", "state", "router", &mode) == 0 &&
++          mode == 1, "known fault stage rejected");
++    CHECK(ds4_glm_mtp_proxy_cli_contract_select("out", "pack", "state", "unknown", &mode) != 0,
++          "unknown fault stage accepted");
++}
++
++static int path_exists(const char *dir, const char *name) {
++    char path[512];
++    if (snprintf(path, sizeof(path), "%s/%s", dir, name) >= (int)sizeof(path)) return 0;
++    return access(path, F_OK) == 0;
++}
++
++static int file_equals(const char *dir, const char *name,
++                       const void *expected, size_t expected_size) {
++    char path[512];
++    if (snprintf(path, sizeof(path), "%s/%s", dir, name) >= (int)sizeof(path)) return 0;
++    int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
++    if (fd < 0) return 0;
++    struct stat st;
++    int ok = fstat(fd, &st) == 0 && (uint64_t)st.st_size == expected_size;
++    uint8_t *buf = malloc(expected_size ? expected_size : 1u);
++    if (!buf) ok = 0;
++    size_t off = 0;
++    while (ok && off < expected_size) {
++        ssize_t got = read(fd, buf + off, expected_size - off);
++        if (got <= 0) ok = 0;
++        else off += (size_t)got;
++    }
++    if (ok) ok = memcmp(buf, expected, expected_size) == 0;
++    free(buf);
++    close(fd);
++    return ok;
++}
++
++static void remove_temp_dir(const char *dir) {
++    DIR *dp = opendir(dir);
++    if (dp) {
++        struct dirent *de;
++        while ((de = readdir(dp)) != NULL) {
++            if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) continue;
++            char path[512];
++            if (snprintf(path, sizeof(path), "%s/%s", dir, de->d_name) < (int)sizeof(path))
++                unlink(path);
++        }
++        closedir(dp);
++    }
++    rmdir(dir);
++}
++
++static void test_fail_closed_publication(void) {
++    CHECK(ds4_glm_mtp_proxy_publish_contract != NULL,
++          "production publication entry point is absent");
++    static const uint8_t z[] = {0, 1, 2, 3, 4, 5, 6, 7};
++    static const uint8_t q[] = {9, 0, 0, 0};
++    static const char complete[] = "{\"schema_version\":1}\n";
++    const proxy_artifact artifacts[] = {
++        {"z-0.f32le", z, sizeof(z)},
++        {"tokens.i32le", q, sizeof(q)},
++        {"complete.json", complete, sizeof(complete) - 1u},
++    };
++    char dir[] = "/tmp/ds4-glm-proxy-publish.XXXXXX";
++    CHECK(mkdtemp(dir) != NULL, "mkdtemp failed: %s", strerror(errno));
++    int rc = ds4_glm_mtp_proxy_publish_contract(dir, artifacts, 3u, NULL);
++    CHECK(rc == 0, "valid publication rejected: rc=%d", rc);
++    CHECK(file_equals(dir, "z-0.f32le", z, sizeof(z)), "z artifact mismatch");
++    CHECK(file_equals(dir, "tokens.i32le", q, sizeof(q)), "token artifact mismatch");
++    CHECK(file_equals(dir, "complete.json", complete, sizeof(complete) - 1u),
++          "completion marker mismatch");
++    CHECK(ds4_glm_mtp_proxy_publish_contract(dir, artifacts, 3u, NULL) != 0,
++          "O_EXCL collision was accepted");
++    remove_temp_dir(dir);
++
++    static const char *stages[] = {"pack", "recurrence", "router", "publish", "dispose"};
++    for (size_t i = 0; i < sizeof(stages) / sizeof(stages[0]); i++) {
++        char failed_dir[] = "/tmp/ds4-glm-proxy-fault.XXXXXX";
++        CHECK(mkdtemp(failed_dir) != NULL, "fault mkdtemp failed");
++        rc = ds4_glm_mtp_proxy_publish_contract(failed_dir, artifacts, 3u, stages[i]);
++        CHECK(rc != 0, "fault stage %s returned success", stages[i]);
++        CHECK(!path_exists(failed_dir, "complete.json"),
++              "fault stage %s left an admissible completion marker", stages[i]);
++        remove_temp_dir(failed_dir);
++    }
++}
++
++int main(void) {
++    test_exact_causal_recurrence_and_router_coverage();
++    test_compact_pack_semantic_mutations();
++    test_router_max_aggregation_and_tie_order();
++    test_default_off_cli_dispatch();
++    test_fail_closed_publication();
++    if (failures) {
++        fprintf(stderr, "GLM MTP proxy contract: %d independent failure(s)\n", failures);
++        return 1;
++    }
++    puts("GLM MTP proxy contract: PASS");
++    return 0;
++}
+--
+2.43.0
+

@@ -1,0 +1,73 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "90db7eea43a2c504e01c211784fa7e28817629c1",
+  "review_round": 196,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "candidate_number_for_gate": 1,
+  "implementation_authorized": false,
+  "red_test_authoring_authorized": true,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 60,
+      "critical": [],
+      "high": [
+        "W7-R196-H1-CANDIDATE-CAN-PASS-BY-TAKING-COLD-PATH",
+        "W7-R196-H2-PRIMARY-RED-FIXTURE-AND-CHECKPOINT-SELECTION-ARE-UNDERBOUND",
+        "W7-R196-H3-GLOBAL-GUARD-PRESERVATION-MATRIX-INCOMPLETE",
+        "W7-R196-H4-COMPLETE-DUMP-EQUALITY-HAS-NO-CANONICAL-SCHEMA"
+      ],
+      "medium": [
+        "W7-R196-M1-CONFIRMATION-REGIME-PREDICATES-ARE-TOO-WEAK"
+      ],
+      "low": [],
+      "verdict": "REJECT_IMPLEMENTATION; AUTHORIZE_ONLY_RED_TEST_AUTHORING"
+    },
+    "Singer": {
+      "score_0_to_100": 29,
+      "critical": [
+        "ADV-W7-196-C01-CANDIDATE-CAN-COLD-RESET-AND-SELF-REPORT-RESUME"
+      ],
+      "high": [
+        "ADV-W7-196-H01-NAMED-SCORER-DOES-NOT-EXIST",
+        "ADV-W7-196-H02-CANONICAL-TOKENS-DO-NOT-BIND-ACTUAL-SYNC-TOKENS",
+        "ADV-W7-196-H03-FLAG-ON-GUARD-MATRIX-MISSING",
+        "ADV-W7-196-H04-CURRENT-DUMP-HOOKS-ARE-UNQUALIFIED-AND-INCOMPLETE"
+      ],
+      "medium": [
+        "ADV-W7-196-M01-GENERATION-STREAM-NOT-AN-ACCEPTANCE-METRIC",
+        "ADV-W7-196-M02-CHECKPOINT-CORRECT-IS-SELF-REPORTED"
+      ],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED"
+    }
+  },
+  "blocking_classes": [
+    {
+      "class": "cold-fallback-false-pass",
+      "required_closure": "Externally derive the loaded payload identity and exact suffix dispatch positions; reject any reset, invalidation, or pre-checkpoint evaluation even when telemetry claims resume."
+    },
+    {
+      "class": "missing-evidence-derived-scorer",
+      "required_closure": "Freeze a W7-specific scorer that reads raw artifacts and cannot accept caller booleans."
+    },
+    {
+      "class": "fixture-and-lineage-binding",
+      "required_closure": "Bind wire bytes, canonical tokens, actual sync tokens, restored checkpoint tokens, final lineage, mismatch position, and exact decoy/checkpoint inventory."
+    },
+    {
+      "class": "flag-on-guard-matrix",
+      "required_closure": "Exercise every ineligible control with the candidate flag both off and on, while forbidding DS4_GLM_RESUME_GUARD_OFF."
+    },
+    {
+      "class": "request-qualified-complete-artifacts",
+      "required_closure": "Define self-describing request/position-qualified logits and state inventory; fail closed on omitted reads/writes and compare 64 generated tokens."
+    }
+  ],
+  "convergence": {
+    "blocking_set_strictly_shrank": null,
+    "consecutive_nonshrinking_candidates": 0,
+    "candidate_limit_exceeded": false,
+    "new_critical_in_frozen_scope": false,
+    "next_candidate_allowed": true
+  }
+}

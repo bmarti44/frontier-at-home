@@ -1,0 +1,44 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 2,
+  "implementation_commit": "50b7c230a1e18ccd171c89f96c209fbfa34957e6",
+  "review_delta_from": "279203b593d6c6e690178f0561b39d7a75497908",
+  "review_round_from": 277,
+  "scope": [
+    "bind scorer execution to retained verified candidate bytes",
+    "bind and preserve safe-run and final arm artifacts",
+    "allowlist the child environment",
+    "hash and retain the model descriptor used by every arm",
+    "retain the global inference lock across all twenty arms",
+    "bind public randomness to committed floor round 6358059",
+    "bind generated HTTP text in the fixed scorer",
+    "emit a failure triplet for exceptions after attempt creation"
+  ],
+  "frozen_unchanged": {
+    "engine_source_commit": "bccf0b66e196e88213add7e0f81571bb7e558670",
+    "engine_binary": {"sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"},
+    "model": {"sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"},
+    "safe_run": {"sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"},
+    "memory_guard": {"sha256": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"}
+  },
+  "candidate_artifacts": {
+    "scorer": {"sha256": "721108911ce3bdc7bcae722605603e517ed4b07cfb9aa8142152860caf16ce5e"},
+    "cgroup_launcher": {"sha256": "d55eb3d1bd667fffe6bd3a7cbc9421b23a1bdd7fcd00cbec5f41bb149ef4eb54"}
+  },
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 86, "result": "PASS"},
+    "runner_self_test": "PASS",
+    "shell_syntax": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count_for_gate": 2,
+    "blocking_findings_targeted": 8,
+    "previous_blocking_finding_reopened": false,
+    "escalation_triggered": false
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}

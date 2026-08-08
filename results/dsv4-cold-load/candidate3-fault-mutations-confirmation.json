@@ -1,0 +1,28 @@
+{
+  "artifact": "DSV4 cold-load candidate 3 post-record mutation confirmation",
+  "ordering": "Executed only after attempt 1 and the expected mutation results were committed at 02d0775.",
+  "bindings": {
+    "binary_sha256": "0d0ec89ff34152405c095bccc8af70110ed723458aaa57e2e221de181c015a62",
+    "runtime_bundle_sha256": "3e81a637aa089fd4458d548cb18c2ea93541faac1887659ea54fd5dcf3948bdc",
+    "artifacts": {
+      "/tmp/dsv4-direct-io-fault-probe-c3": "a6b5c25981fa5bd6d12a14342af68c298a4c571ff706dc8068e89f09cf842224",
+      "/tmp/libdsv4-fault-io-c3.so": "3aa00f3bded494d61b02d349f8876a3ac46a8b3ff8a9650657b921fbdf9386fb"
+    }
+  },
+  "observed": {
+    "baseline_exit_code": 0,
+    "open_failure_exit_code": 1,
+    "read_efault_exit_code": 1,
+    "read_einval_exit_code": 1,
+    "short_read_then_failure_exit_code": 1,
+    "artifact_sha256": {
+      "/tmp/dsv4-c3-confirm-baseline.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "/tmp/dsv4-c3-confirm-efault.stderr": "446e4841dabb2b524d1b1ae71c20664be850b00b50f953b0386831c26eb93917",
+      "/tmp/dsv4-c3-confirm-einval.stderr": "1c36a4dd12f191d90091847b9acf7fafd7cf7b456b1575296402546cbdfb21f5",
+      "/tmp/dsv4-c3-confirm-open.stderr": "2d5bbe9c8e03ea2973bd1217e5ecf66b51eb1dfcb025d8eda9a0b9b009315ce7",
+      "/tmp/dsv4-c3-confirm-partial.stderr": "1c36a4dd12f191d90091847b9acf7fafd7cf7b456b1575296402546cbdfb21f5"
+    }
+  },
+  "scope": "No model allocation or server process was started.",
+  "verdict": "PASS"
+}

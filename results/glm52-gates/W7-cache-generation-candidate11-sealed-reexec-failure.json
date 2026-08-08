@@ -1,0 +1,16 @@
+{
+  "candidate_hash": "7f6ec1f65c68275dfa7a188a5775380a4cfd08cc",
+  "engine_started": false,
+  "evidence_attempt_created": false,
+  "failure": {
+    "assertion": "verify_file rejected the sealed request descriptor because /proc/<holder>/fd/<n> is represented as a symlink",
+    "phase": "sealed outer preflight after successful immutable self re-exec",
+    "root_cause": "The legacy canonical-file helper requires ! -L and was incorrectly reused for a fully sealed memfd descriptor."
+  },
+  "proposed_acceptance_test": "The committed production candidate must re-exec its sealed outer launcher, recognize only a fully F_SEAL_WRITE/F_SEAL_GROW/F_SEAL_SHRINK/F_SEAL_SEAL descriptor as a sealed request, then reach the deliberately occupied inference lock and publish a FAIL triplet without starting ds4-server.",
+  "stderr_bytes": 21686,
+  "stderr_sha256": "138f9d3b96f7bd2531aa822bd87593b5a1a5a04069bd77fb5ff7fa11fa8cf431",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "verdict": "FAIL"
+}

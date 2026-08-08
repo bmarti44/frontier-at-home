@@ -1,0 +1,28 @@
+{
+  "artifact": "GLM-5.2 read-only NVMe characterization exiting-fio identity attempt",
+  "schema_version": 1,
+  "verdict": "NO_RESULT",
+  "completed_cells": 41,
+  "path": "/home/bmarti44/.local/state/glm52-nvme-qd-sweep-20260803c",
+  "summary_sha256": "b4c93bacd599dc0d146887e5e3bcd8770bb0abf470f01653c5c8e3da064f6708",
+  "raw_sha256": "02292f94a4d7991b1f3c6ede0997ef4fb53389129e14dfe2c4c54c7be9d61235",
+  "fio": {
+    "version": "fio-3.41",
+    "binary_sha256": "0d8c5613b2414147faa1e7ef3c8bb6493c4547bbba353625770c342d6d1471ad"
+  },
+  "diagnostic_measurements": {
+    "matched_qd1_one_job_gb_s": 9.374447432,
+    "matched_best_sustained_tail_gb_s": 12.539473987671906,
+    "matched_best_cell": "primary-bs9732096-qd8-j1",
+    "maximum_temperature_c": 60.85
+  },
+  "failure": "During normal fio worker exit, /proc briefly retained comm=fio after clearing cmdline. The fail-closed exclusivity monitor treated that non-runnable process as an unrelated workload during tail-bs12386304-qd16-j1.",
+  "safety": {
+    "writes_issued": false,
+    "engine_or_gpu_process_active": false,
+    "fio_stderr_bytes": 0,
+    "survivors": 0
+  },
+  "red_test_commit": "3916890",
+  "resolution": "Ignore only /proc entries positively identified in zombie state; empty-command non-zombie processes remain conflicts. Run a full-duration exit probe before restarting the complete schedule."
+}

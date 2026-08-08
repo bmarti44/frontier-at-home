@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_ROOT_INSTALL_RUNTIME_FAILURE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "candidate_hash": "1b3a94afd19bd14ad4ce62b04362747743c42695",
+  "installer_sha256": "d2b8ebbd21115d688e5ed01c18f72d8c0c19a1844116eb126b30a6d1548d9cea",
+  "held_out_values_opened": false,
+  "production_reservation_created": false,
+  "confirmed_prior_fix": "The exact-scoped --no-local root clone completed and checked out Candidate 17 exactly.",
+  "failure": {
+    "phase": "isolated root Python runtime import smoke",
+    "module": "numpy._core._multiarray_umath",
+    "assertion": "failed to map segment from shared object",
+    "root_cause": "The copied NumPy/Torch runtime was temporarily stored below /run/glm52-w1-harness.*, but /run is mounted noexec. Linux therefore rejects executable mappings from extension-module shared objects even though the files and hashes are correct."
+  },
+  "post_failure_state": {
+    "temporary_root_clone_absent": true,
+    "temporary_staged_installer_absent": true,
+    "new_root_approval_absent": true,
+    "new_root_python_runtime_absent": true,
+    "engine_processes_active": 0,
+    "fio_processes_active": 0,
+    "mem_available_kib": 120807076,
+    "swap_used_kib": 774008
+  },
+  "bounded_fix": "Keep the Git clone and all other installer staging unchanged. Create only the temporary Python dependency runtime below executable /usr/local/libexec, add it to fail-safe cleanup, then run the existing hash/seal/import checks there before transactional installation.",
+  "acceptance": "Under an exact dependency-tree copy on /usr/local/libexec, /usr/bin/python3 -S with the sanitized production environment must import NumPy, tokenizers and Torch, report CUDA available, and execute a small CUDA tensor operation. The same copied runtime under /run must reproduce the shared-object mapping rejection. Cleanup must remove both temporary paths on success or failure.",
+  "verdict": "FAIL_PRESERVED_NO_INSTALL"
+}

@@ -1,0 +1,165 @@
+From 2b7522d70bca614578f4c730deb99905ac3e200a Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 15:20:57 -0400
+Subject: [PATCH] test(glm): require causal MTP proxy candidate capture
+
+---
+ tests/test_glm_mtp_proxy_candidate_source.py | 147 +++++++++++++++++++
+ 1 file changed, 147 insertions(+)
+ create mode 100644 tests/test_glm_mtp_proxy_candidate_source.py
+
+diff --git a/tests/test_glm_mtp_proxy_candidate_source.py b/tests/test_glm_mtp_proxy_candidate_source.py
+new file mode 100644
+index 0000000..a55c42c
+--- /dev/null
++++ b/tests/test_glm_mtp_proxy_candidate_source.py
+@@ -0,0 +1,147 @@
++#!/usr/bin/env python3
++"""Production-source RED contract for the default-off GLM MTP proxy capture."""
++
++from pathlib import Path
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++SOURCE = (ROOT / "ds4.c").read_text(encoding="utf-8")
++CLI = (ROOT / "ds4_cli.c").read_text(encoding="utf-8")
++
++
++def require_marker(
++    testcase: unittest.TestCase, text: str, marker: str, label: str = "source"
++) -> None:
++    testcase.assertTrue(
++        marker in text,
++        f"production {label} lacks required marker: {marker}",
++    )
++
++
++def source_section(
++    testcase: unittest.TestCase,
++    text: str,
++    start_marker: str,
++    end_marker: str | None = None,
++) -> str:
++    """Fail as an assertion when the production behavior is absent."""
++    require_marker(testcase, text, start_marker)
++    start = text.find(start_marker)
++    if end_marker is None:
++        return text[start:]
++    require_marker(testcase, text[start:], end_marker, "source section")
++    end = text.find(end_marker, start)
++    return text[start:end]
++
++
++class GlmMtpProxyCandidateSourceTests(unittest.TestCase):
++    def test_candidate_is_explicit_default_off_cli_mode(self) -> None:
++        require_marker(self, CLI, 'getenv("DS4_GLM_MTP_PROXY_CANDIDATE_DIR")', "CLI")
++        require_marker(self, CLI, 'getenv("DS4_GLM_MTP_PROXY_PACK")', "CLI")
++        require_marker(self, CLI, 'getenv("DS4_GLM_MTP_PROXY_SOURCE_STATE")', "CLI")
++        require_marker(self, CLI, "ds4_session_glm_mtp_proxy_candidate", "CLI")
++        for variable in (
++            "DS4_GLM_MTP_PROXY_CANDIDATE_DIR",
++            "DS4_GLM_MTP_PROXY_PACK",
++            "DS4_GLM_MTP_PROXY_SOURCE_STATE",
++        ):
++            self.assertNotIn(variable, SOURCE)
++
++    def test_post_residual_capture_is_before_head_normalization(self) -> None:
++        body = source_section(
++            self,
++            SOURCE,
++            "static bool glm_graph_mtp_step(",
++            "static bool glm_graph_forward_token(",
++        )
++        for marker in (
++            'DS4_GLM_MTP_STAGE("residual")',
++            "glm_graph_mtp_proxy_capture_post_residual",
++            'DS4_GLM_MTP_STAGE("head_norm")',
++        ):
++            require_marker(self, body, marker, "MTP step")
++        residual = body.find('DS4_GLM_MTP_STAGE("residual")')
++        capture = body.find("glm_graph_mtp_proxy_capture_post_residual")
++        head_norm = body.find('DS4_GLM_MTP_STAGE("head_norm")')
++        self.assertLess(residual, capture)
++        self.assertLess(capture, head_norm)
++        self.assertIn("g->next", body[capture:head_norm])
++
++    def test_candidate_recurs_exactly_eight_steps_on_proxy_hidden(self) -> None:
++        body = source_section(
++            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
++        )
++        for marker in (
++            "DS4_GLM_PROXY_K",
++            "step < DS4_GLM_PROXY_K",
++            "glm_graph_mtp_step",
++            "source_pos + step",
++            "source_pos, &next",
++            "proxy_hidden",
++            "ds4_gpu_tensor_write(g->cur",
++        ):
++            require_marker(self, body, marker, "candidate function")
++        require_marker(self, SOURCE, "DS4_GLM_PROXY_K 8u")
++        self.assertNotIn("ds4_session_eval(", body)
++        self.assertNotIn("glm_graph_forward_token(", body)
++
++    def test_all_and_only_normal_routed_router_heads_are_scored(self) -> None:
++        body = source_section(
++            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
++        )
++        for marker in (
++            "DS4_N_LEADING_DENSE",
++            "glm_graph_normal_layer_count()",
++            "glm_graph_mtp_proxy_route_all_layers",
++            "DS4_N_EXPERT",
++            "DS4_N_EXPERT_USED",
++        ):
++            require_marker(self, body, marker, "candidate function")
++        for marker in (
++            "ds4_gpu_rms_norm_weight_tensor",
++            "ds4_gpu_matmul_f32_tensor",
++            "ds4_gpu_glm_router_select_tensor",
++        ):
++            require_marker(self, SOURCE, marker)
++
++    def test_candidate_requires_validated_compact_pack_not_full_model(self) -> None:
++        body = source_section(
++            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
++        )
++        for marker in (
++            "glm_proxy_tensor_pack_validate",
++            "glm_proxy_tensor_pack_forbidden_ranges_absent",
++            "glm_proxy_candidate_process_preflight",
++            "full_model_mapping_count == 0",
++            "unexpected_fd_count == 0",
++            "unexpected_map_count == 0",
++        ):
++            require_marker(self, body, marker, "candidate function")
++
++    def test_candidate_publication_is_exact_and_fail_closed(self) -> None:
++        body = source_section(
++            self, SOURCE, "int ds4_session_glm_mtp_proxy_candidate("
++        )
++        for marker in (
++            "O_EXCL",
++            "fsync",
++            "z-0.f32le",
++            "z-8.f32le",
++            "head-logits.f32le",
++            "tokens.i32le",
++            "positions.i32le",
++            "mtp-slots.i32le",
++            "router-scores.f32le",
++            "router-ranked.u8",
++        ):
++            require_marker(self, body, marker, "candidate function")
++        require_marker(self, CLI, "DS4_GLM_PROXY_FAIL_STAGE", "CLI")
++        for stage in ("pack", "recurrence", "router", "publish", "dispose"):
++            require_marker(self, CLI, f'"{stage}"', "CLI")
++        require_marker(self, body, "injected GLM MTP proxy failure", "candidate function")
++        require_marker(self, body, "return 1", "candidate function")
++
++
++if __name__ == "__main__":
++    unittest.main()
+--
+2.43.0

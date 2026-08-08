@@ -1,0 +1,31 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 10,
+  "source_failure_attempt": "cc10384522474f3ba1acdac786787e58",
+  "implementation_commit": "42d08f2be3471f1c16b67b87a833b2ca5b10f502",
+  "scope": [
+    "replace the impossible per-decode-token logit-dump count with the exact three synchronized production boundaries",
+    "require exact ordered names for warm full prefill, warm 11-token append, and measured 22-token append",
+    "retain exact tensor-size and cross-arm name/digest/size sequence identity checks",
+    "reject missing and extra synchronized-logit artifacts"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 101, "result": "PASS", "skipped": 1},
+    "runner_self_test": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "failed_attempt_committed_before_fix": true,
+    "failed_arm_engine_exit_clean": true,
+    "failed_arm_minimum_mem_available_kb": 50248880,
+    "failed_arm_cgroup_swap_bytes": 0,
+    "failed_arm_oom": false,
+    "failed_arm_xid": false,
+    "engine_started_during_fix_validation": false,
+    "gpu_used_during_fix_validation": false
+  },
+  "hashes": {
+    "runner_sha256": "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924",
+    "test_sha256": "8dbfcb208899599e45578df2c8292895e22ba7170d9b31864a302e2a7f8704fb"
+  },
+  "runtime_authority": "NOT_RUN_PENDING_DELTA_REVIEW"
+}

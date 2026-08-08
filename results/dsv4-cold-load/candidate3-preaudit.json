@@ -1,0 +1,72 @@
+{
+  "artifact": "DSV4 cold-load candidate 3 pre-submission audit",
+  "candidate": {
+    "candidate_number_for_gate": 3,
+    "engine_base_commit": "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a",
+    "repository_parent_head": "d02a0f0a3c63806c8b76ff6e5adf7df1e5b7b794",
+    "repository_parent_tree": "0d63b37356a2e9d56e19c2477f00cf607c2f41ad",
+    "review_round_requested": 296
+  },
+  "frozen_bindings": {
+    "binary_sha256": "0d0ec89ff34152405c095bccc8af70110ed723458aaa57e2e221de181c015a62",
+    "configuration_sha256": "530f1e47494629150e6021df2c7517575eb40f8caccc38830276558b9d756e3f",
+    "model_manifest_sha256": "ac61a7094827661a8e227653be0ec2fdad8de5f5c960e02ea3436282da6a9827",
+    "runtime_bundle_sha256": "3e81a637aa089fd4458d548cb18c2ea93541faac1887659ea54fd5dcf3948bdc",
+    "runner_sha256": "8838f93bc5a412bb9277611bbba28dc75003363fbd589ff3b28ae9ca2c8489aa",
+    "scorer_sha256": "22c9af81b1978c057d95d187c089de250d65f0575b8574184bcde9afe8341a7e"
+  },
+  "evidence_bindings": {
+    "artifact_sha256": {
+      "results/dsv4-cold-load/candidate3-build-freeze.json": "2aeee2dcb7de66a8ab492ca69d4ee0866eb1fa6a9444468a6491da39014e3739",
+      "results/dsv4-cold-load/candidate3-fable-review-red.json": "f9891ac445cc8f817c744716b531f50b49552348fdc7d1cd431b7f0e691f3e5e",
+      "results/dsv4-cold-load/candidate3-fault-mutations-confirmation.json": "a058599f1ca310df0178f5879574025fe51eef44b4ce66c019f594aadbe3ddf9",
+      "results/dsv4-cold-load/candidate3-red.json": "a5ce31ad34095a9d2559f79d6da73d4d125f07d42c979a71a03f56ddb34feda0",
+      "results/dsv4-cold-load/candidate3-runner-red.json": "21e9d0d881c474b0c24a42bb5db5dd82f90341ca42fad7f67eac957afaa90d4a",
+      "results/dsv4-cold-load/candidate3-runtime-bundle-lint-red.json": "c9399262c514b013d9a354b0e1a345e7865b4c3da51a0e15b6dfe60085e4a23b",
+      "results/dsv4-cold-load/candidate3-runtime-bundle-red.json": "b9a5d574fb759869c24fb73946a42e578d162ab877fe5f0038270995675d7e24",
+      "results/dsv4-cold-load/candidate3-runtime-identity-red.json": "2fdfbbf4cd938a56f0666787d0e705a6e961cfc8e96cb242ef6bd58f9def3144",
+      "results/dsv4-cold-load/plan-v2.json": "087e043022ea9b3ecb99b78f2a9be5aa7fc42435d97fcd7676185af9571e0e0b",
+      "results/dsv4-cold-load/review-r294.json": "b510b08a0b2819c9c1bf3db855e9ef6a326dc873fe7b14ec681bce63e28291c6"
+    }
+  },
+  "checks": {
+    "bash_syntax": "PASS",
+    "build_source_diffs_identical": true,
+    "changed_raw_artifacts_byte_identical": true,
+    "changed_normalized_artifacts_byte_identical": true,
+    "diff_check": "PASS",
+    "direct_io_fault_mutations": "PASS",
+    "engine_or_fio_process_during_audit": false,
+    "exact_source_tests": {
+      "errors": 0,
+      "failures": 0,
+      "ran": 27,
+      "stderr_sha256": "6970b0c10be1c0e1f14dc2e24d5558191401eccc49f13d8afd05663ded19b276",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime_bundle_hash_matches_frozen_copy": true,
+    "secret_lint_self_test": {
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "d557c5b8a87676e45bca4cbaecde8ab1c77d74f125850c78d9f1a25ceb5dfcc4",
+      "verdict": "PASS"
+    },
+    "temporary_source_paths_absent_from_changed_canonical_artifacts": true
+  },
+  "review_disposition": {
+    "ADV-DSV4-COLD-294-H1-MANDATORY-DIRECT-STILL-HAS-UNBOUNDED-UPLOAD-FALLBACK": "FIXED: mandatory mode rejects an unavailable uploader before tensor loading and bounds total persistent staging to 269000000 bytes.",
+    "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS": "FIXED: the fixed five-block scorer and contained runner reject incomplete, stale, unmatched, unsafe, warm-cache, wrong-arm, or unauthentic-randomness campaigns.",
+    "ADV-DSV4-COLD-294-M1-REQUIRED-OPTION-IS-AN-ALIAS-THAT-BROADENS-LEGACY-DIRECT-IO": "FIXED: optional and required modes are distinct; legacy direct I/O retains buffered fallback while only --direct-io-required fails closed.",
+    "ADV-DSV4-COLD-294-M2-GREEN-AND-FAULT-EVIDENCE-DO-NOT-REPLAY-AGAINST-THE-RECORDED-RUNTIME-DEPS": "FIXED: clean and patched source are exact-bound, the runtime bundle is frozen, and the post-record fault confirmation binds its probe, injector, candidate libllama, and invocation environment.",
+    "GAP-DSV4-COLD-294-H1-EXACT-SOURCE-GREEN-NOT-REPRODUCIBLE": "FIXED: two independent exact-source clean builds use canonical source-prefix mapping and produce byte-identical raw and normalized source-changing artifacts.",
+    "GAP-DSV4-COLD-293-H3-NO-AUTHORITATIVE-CONTAINED-AB-HARNESS": "FIXED: five randomness-derived ABBA/BAAB blocks use twenty fresh user-systemd units and a fixed fail-closed scorer.",
+    "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN": "FIXED: the allocation includes alignment headroom while payload size remains within the total staging limit.",
+    "GAP-DSV4-COLD-294-M2-REQUIRED-MODE-CHANGES-LEGACY-DIRECT-IO-SEMANTICS": "FIXED: parser and source tests prove the separate optional and mandatory booleans.",
+    "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED": "FIXED: every arm evicts each shard, measures mincore residency at no more than 1 GiB, and requires physical reads covering at least 90 percent of model bytes."
+  },
+  "operational_state": {
+    "campaign_authorized": false,
+    "reason": "Awaiting delta-only Nash and Singer review round 296. The failed user systemd manager must also be restarted before any arm can launch.",
+    "user_systemd_manager": "FAILED"
+  },
+  "verdict": "PASS"
+}

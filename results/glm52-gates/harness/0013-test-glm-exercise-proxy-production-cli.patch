@@ -1,0 +1,137 @@
+From 4a35746c774f48930020724c9db23db3de3d6f40 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Thu, 6 Aug 2026 15:40:47 -0400
+Subject: [PATCH] test(glm): exercise proxy dispatch through production CLI
+
+---
+ Makefile                        |  7 ++-
+ tests/test_glm_mtp_proxy_cli.py | 99 +++++++++++++++++++++++++++++++++
+ 2 files changed, 104 insertions(+), 2 deletions(-)
+ create mode 100644 tests/test_glm_mtp_proxy_cli.py
+
+diff --git a/Makefile b/Makefile
+index 10db147..31bf723 100644
+--- a/Makefile
++++ b/Makefile
+@@ -370,8 +370,11 @@ else
+ 	$(DS4_LINK) -o $@ $^ $(DS4_LINK_LIBS)
+ endif
+ 
+-test-glm-mtp-proxy-contract: tests/test_glm_mtp_proxy_contract
+-	./tests/test_glm_mtp_proxy_contract
++test-glm-mtp-proxy-contract: tests/test_glm_mtp_proxy_contract ds4
++	@rc=0; \
++	./tests/test_glm_mtp_proxy_contract || rc=1; \
++	python3 tests/test_glm_mtp_proxy_cli.py ./ds4 || rc=1; \
++	exit $$rc
+ 
+ ds4_test: ds4_test.o ds4_help.o ds4_kvstore.o rax.o $(CORE_OBJS)
+ ifeq ($(UNAME_S),Darwin)
+diff --git a/tests/test_glm_mtp_proxy_cli.py b/tests/test_glm_mtp_proxy_cli.py
+new file mode 100644
+index 0000000..86e7002
+--- /dev/null
++++ b/tests/test_glm_mtp_proxy_cli.py
+@@ -0,0 +1,99 @@
++#!/usr/bin/env python3
++"""Behavioral CLI dispatch contract for default-off GLM MTP proxy mode."""
++
++import os
++from pathlib import Path
++import subprocess
++import sys
++import tempfile
++import unittest
++
++BINARY_ARG = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "./ds4"
++if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
++    del sys.argv[1]
++
++
++class GlmMtpProxyCliTests(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls) -> None:
++        cls.binary = Path(BINARY_ARG).resolve()
++        cls.base_env = {
++            "HOME": os.environ.get("HOME", "/tmp"),
++            "LANG": "C.UTF-8",
++            "LC_ALL": "C.UTF-8",
++            "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
++        }
++
++    def invoke(self, extra: dict[str, str]) -> subprocess.CompletedProcess[str]:
++        with tempfile.TemporaryDirectory(prefix="ds4-glm-proxy-cli-") as td:
++            env = dict(self.base_env)
++            env["DS4_LOCK_FILE"] = str(Path(td) / "engine.lock")
++            env.update(extra)
++            return subprocess.run(
++                [
++                    str(self.binary),
++                    "--model",
++                    str(Path(td) / "missing-model.gguf"),
++                    "--prompt",
++                    "contract probe",
++                ],
++                env=env,
++                text=True,
++                stdout=subprocess.PIPE,
++                stderr=subprocess.PIPE,
++                timeout=10,
++                check=False,
++            )
++
++    def test_empty_environment_stays_on_ordinary_model_path(self) -> None:
++        result = self.invoke({})
++        self.assertNotEqual(result.returncode, 0)
++        self.assertIn("cannot open model", result.stderr)
++        self.assertNotIn("GLM MTP proxy candidate", result.stderr)
++
++    def test_each_partial_environment_fails_before_model_open(self) -> None:
++        values = {
++            "DS4_GLM_MTP_PROXY_CANDIDATE_DIR": "/missing/out",
++            "DS4_GLM_MTP_PROXY_PACK": "/missing/pack",
++            "DS4_GLM_MTP_PROXY_SOURCE_STATE": "/missing/state",
++        }
++        keys = tuple(values)
++        for mask in range(1, 1 << len(keys)):
++            if mask == (1 << len(keys)) - 1:
++                continue
++            env = {keys[i]: values[keys[i]] for i in range(len(keys)) if mask & (1 << i)}
++            with self.subTest(mask=mask):
++                result = self.invoke(env)
++                self.assertNotEqual(result.returncode, 0)
++                self.assertIn("incomplete GLM MTP proxy candidate environment", result.stderr)
++                self.assertNotIn("cannot open model", result.stderr)
++
++    def test_complete_environment_dispatches_before_full_model_open(self) -> None:
++        result = self.invoke(
++            {
++                "DS4_GLM_MTP_PROXY_CANDIDATE_DIR": "/missing/out",
++                "DS4_GLM_MTP_PROXY_PACK": "/missing/pack",
++                "DS4_GLM_MTP_PROXY_SOURCE_STATE": "/missing/state",
++            }
++        )
++        self.assertNotEqual(result.returncode, 0)
++        self.assertIn("cannot open GLM MTP proxy pack", result.stderr)
++        self.assertNotIn("cannot open model", result.stderr)
++
++    def test_unknown_fault_stage_fails_before_any_artifact_open(self) -> None:
++        result = self.invoke(
++            {
++                "DS4_GLM_MTP_PROXY_CANDIDATE_DIR": "/missing/out",
++                "DS4_GLM_MTP_PROXY_PACK": "/missing/pack",
++                "DS4_GLM_MTP_PROXY_SOURCE_STATE": "/missing/state",
++                "DS4_GLM_PROXY_FAIL_STAGE": "unknown",
++            }
++        )
++        self.assertNotEqual(result.returncode, 0)
++        self.assertIn("invalid DS4_GLM_PROXY_FAIL_STAGE", result.stderr)
++        self.assertNotIn("cannot open model", result.stderr)
++        self.assertNotIn("cannot open GLM MTP proxy pack", result.stderr)
++
++
++if __name__ == "__main__":
++    unittest.main(verbosity=2)
+--
+2.43.0
+

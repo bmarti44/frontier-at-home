@@ -1,0 +1,26 @@
+{
+  "schema_version": 9,
+  "gate": "W7-resume-bpe-lineage-v1",
+  "status": "DEPLOYED_TRACE_EQUIVALENCE_CORRECTION_NOT_EXECUTED",
+  "supersedes": "results/glm52-gates/W7-resume-correctness-plan-v8.json",
+  "review_authority": "results/glm52-gates/W7-resume-review-r203.json",
+  "behavioral_red": "results/glm52-gates/W7-resume-candidate9-red.json",
+  "scope": "Close only ADV-W7-202-H11, ADV-W7-203-M13 and the nonblocking oracle-recipe findings; production engine behavior is unchanged.",
+  "inherits_unchanged_acceptance": "All v4-v8 payload, evaluator, complete-state, numerical, execution-identity, confirmation and safety requirements remain unchanged.",
+  "deployed_trace_acceptance": {
+    "request_count": 2,
+    "request_order": ["live", "primary"],
+    "raw_request_json": "byte-identical to the exact files sent by curl, including explicit thinking=true and reasoning_effort=high",
+    "rendered_prompts": "byte-identical to the frozen C-parser pool",
+    "token_vectors": "independently retokenized from traced prompt bytes and exactly equal to frozen vectors",
+    "geometry": {"selected": 5044, "common": 5045, "live": 5055, "prompt": 5066},
+    "malformed_evidence": "missing, duplicate, reordered, truncated, ambiguous-marker, equal-length-mutated, or scorer-malformed traces fail closed"
+  },
+  "oracle_reproduction": {
+    "script": "scripts/82_build_w7_render_oracle.sh",
+    "builder_sha256": "a20520ee21543f243d40636a9181a142c45ecd989de31ab86b99a8ea5ada870d",
+    "binary_sha256": "6bd6896581db71bdb76a9afdb59a9254b151ade22017e17f111fd3345fb5ad66",
+    "requirement": "two clean reproductions must be byte-identical to the already-frozen oracle"
+  },
+  "runtime_sequence": "After candidate-9 freeze, both persistent reviewers must clear critical/high issues, then obtain fresh public randomness, run the contained deployed geometry smoke, and only then run the unchanged-engine RED."
+}

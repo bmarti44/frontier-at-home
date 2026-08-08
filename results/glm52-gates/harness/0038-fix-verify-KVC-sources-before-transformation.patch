@@ -1,0 +1,90 @@
+From 4c831e9f612988b1042a569df236cba6a7a93caf Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:29:06 -0400
+Subject: [PATCH 38/40] fix: verify KVC sources before transformation
+
+---
+ ds4_agent.c   |  4 ++++
+ ds4_kvstore.c | 30 ++++++++++++++++++++++++------
+ 2 files changed, 28 insertions(+), 6 deletions(-)
+
+diff --git a/ds4_agent.c b/ds4_agent.c
+index 898eebd..d5ce295 100644
+--- a/ds4_agent.c
++++ b/ds4_agent.c
+@@ -5679,6 +5679,10 @@ static bool agent_worker_strip_session(agent_worker *w, const char *prefix,
+               agent_kv_read_text(fp, text_bytes, &text, err, err_len);
+     if (ok && (hdr.ext_flags & DS4_KVSTORE_EXT_SESSION_TITLE))
+         ok = agent_kv_read_title_trailer(fp, &hdr, &title, err, err_len);
++    if (ok && !ds4_kvstore_verify_record(fp, &hdr, text_bytes)) {
++        snprintf(err, err_len, "cached session integrity mismatch");
++        ok = false;
++    }
+     fclose(fp);
+     if (!ok) {
+         if (!err[0]) snprintf(err, err_len, "failed to read session");
+diff --git a/ds4_kvstore.c b/ds4_kvstore.c
+index 339dc75..5cba069 100644
+--- a/ds4_kvstore.c
++++ b/ds4_kvstore.c
+@@ -553,10 +553,7 @@ bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
+ bool ds4_kvstore_transform_source_verified(FILE *fp,
+                                            const ds4_kvstore_entry *e,
+                                            uint32_t text_bytes) {
+-    (void)fp;
+-    (void)e;
+-    (void)text_bytes;
+-    return true;
++    return ds4_kvstore_verify_record(fp, e, text_bytes);
+ }
+ 
+ bool ds4_kvstore_read_entry_file(const char *path, const char sha[41],
+@@ -961,6 +958,17 @@ static bool kv_cache_file_text_matches(const char *path, const char sha[41],
+     return ok;
+ }
+ 
++static bool kv_cache_file_record_verified(const char *path) {
++    FILE *fp = fopen(path, "rb");
++    if (!fp) return false;
++    ds4_kvstore_entry hdr = {0};
++    uint32_t text_bytes = 0;
++    bool ok = ds4_kvstore_read_header(fp, &hdr, &text_bytes) &&
++              ds4_kvstore_verify_record(fp, &hdr, text_bytes);
++    fclose(fp);
++    return ok;
++}
++
+ static bool kv_cache_existing_compatible(ds4_kvstore *kc, const char *path,
+                                          const char sha[41],
+                                          const char *text, size_t text_len,
+@@ -972,7 +980,8 @@ static bool kv_cache_existing_compatible(ds4_kvstore *kc, const char *path,
+                       (!kc->reject_different_quant ||
+                        e.quant_bits == (uint8_t)quant_bits) &&
+                       e.ctx_size <= (uint32_t)ctx_size &&
+-                      kv_cache_file_text_matches(path, sha, text, text_len);
++                      kv_cache_file_text_matches(path, sha, text, text_len) &&
++                      kv_cache_file_record_verified(path);
+     ds4_kvstore_entry_free(&e);
+     if (!compatible) {
+         if (unlink(path) == 0) {
+@@ -1015,7 +1024,16 @@ static void kv_cache_rewrite_trailer(ds4_kvstore *kc, const char *path,
+     if (!fp) return;
+     ds4_kvstore_entry hdr = {0};
+     uint32_t text_bytes = 0;
+-    bool ok = ds4_kvstore_read_header(fp, &hdr, &text_bytes);
++    bool ok = ds4_kvstore_read_header(fp, &hdr, &text_bytes) &&
++              ds4_kvstore_transform_source_verified(fp, &hdr, text_bytes);
++    if (!ok) {
++        fclose(fp);
++        unlink(path);
++        kv_logf(kc, DS4_KVSTORE_LOG_KVCACHE,
++                "%s: kv cache discarded corrupt transform source %s",
++                kv_log_name(kc), path);
++        return;
++    }
+     uint64_t end = DS4_KVSTORE_FIXED_HEADER + 4ull +
+                    (uint64_t)text_bytes + hdr.payload_bytes;
+     if (ok && end <= (uint64_t)INT64_MAX &&
+-- 
+2.43.0
+

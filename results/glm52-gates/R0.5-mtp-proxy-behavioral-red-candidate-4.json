@@ -1,0 +1,45 @@
+{
+  "schema": "glm52-mtp-proxy-behavioral-red-v3",
+  "status": "RED_CONFIRMED",
+  "candidate_number_for_red_gate": 4,
+  "prior_review_round": 194,
+  "engine_commit": "d652a9b5ec48c0e8cbb0f42c5d55bc411f51cc25",
+  "unchanged_production_parent": "4fc42c82d20a7306589d2588eddc9182f16c1ed0",
+  "scope": "Tests only, limited to the four blocking classes named by Nash/Singer round 194.",
+  "pack_sha256": "aacc0fe9a79833ff118888e33924d77a737ca247841a6bd501cc393e97aa1809",
+  "command": "DS4_GLM_MTP_PROXY_TEST_PACK=/tmp/glm52-mtp-proxy-pack-v2.bin DS4_GLM_MTP_PROXY_TEST_FULL_MODEL=<frozen-model> make -j2 test-glm-mtp-proxy-contract",
+  "exit_code": 2,
+  "red_results": {
+    "linked_live_contract_failures": 7,
+    "compiled_callgraph_failures": 4,
+    "external_publication_syscall_failures": 2,
+    "production_cli_failures": 10,
+    "external_sandbox_failures": 1,
+    "ordinary_default_off_cli_checks_passed": 1,
+    "missing_file_failure": false,
+    "source_marker_failure": false,
+    "engine_or_gpu_started": false
+  },
+  "test_sha256": {
+    "tests/test_glm_mtp_proxy_contract.c": "4fa3628d625a5ca9e017a07310a8b8ef6d97ed17f1c9e1859e62fc8e5e089a5b",
+    "tests/test_glm_mtp_proxy_cli.py": "29242b54401bbce1195974ff7bdff6a59dfb50d7f16807576cdc49e2c1a7c597",
+    "tests/test_glm_mtp_proxy_callgraph.py": "bc8575003e0f75505af1347d9cd8d7929f2d655fcd6aa35e166473b4644ab066",
+    "tests/test_glm_mtp_proxy_sandbox.py": "2ff0659f898a9a4d367bdd6c1753f63788f9108a7342d5c10af769e0d9660eaf",
+    "tests/test_glm_mtp_proxy_publication_syscalls.py": "7e787b5f6728268fc52faf6a96f1eb9c70da27d110177e4fb721e98bee024086",
+    "tests/glm_mtp_proxy_publish_worker.c": "215b15e775de46ceffa45ac25935f1ae23788761fafc15e855cc19cf3b1dce50",
+    "Makefile": "62c9483f04357e8b7b4530ed450eeac37317941575664a69607ffe498e232500"
+  },
+  "blocking_disposition": {
+    "live_runtime_dataflow": "The same production executor required by main is invoked with injected non-GPU operations and must execute exact pack validation, capture, eight recurrence steps, 600 routes, K2/K4/K8 ranking, monotonic stage receipts and canonical publication. Compiled references are supplementary.",
+    "same_size_pack_and_receipt_authority": "A differently named full-size pack is mutated at header, record digest, padding and allowed payload offsets; production pack-open must reject every mutation. The real CLI separately rejects a full-size payload mutation. The builder recomputes every receipt field.",
+    "candidate_sandbox": "An external parent intentionally passes a full-model descriptor, waits at a post-policy barrier, inspects child fds/maps, and requires the descriptor/map absent plus denied model reopen/socket/ptrace/process_vm/unexpected-device probes.",
+    "crash_safe_publication": "An external strace process observes O_EXCL/O_NOFOLLOW staging, actual writes/fsyncs/renameat2, completion-last and directory fsync. It injects ENOSPC/EINTR/short-write/EIO and SIGKILL at every observed write/fsync/rename occurrence; any surviving completion must validate atomically."
+  },
+  "deferred_confirmation": "After implementation/source/binary freeze, fixed rank fixtures are supplemented with public-random finite vectors. These tests cannot grant the held-out accuracy PASS.",
+  "convergence": {
+    "candidate_4_is_last_autonomous_attempt_if_blockers_do_not_shrink": true,
+    "new_scope": false,
+    "frozen_components_modified": false,
+    "pre_submission_audit_required_before_review": true
+  }
+}

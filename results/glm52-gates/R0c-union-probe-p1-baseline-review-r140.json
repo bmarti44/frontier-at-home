@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "classification": "REVIEW_FINDINGS",
+  "candidate_hash": "a6ae3bdf1f3543ccc1d502e369482a380ca81a5f",
+  "review_round": 140,
+  "per_gate_candidate": 1,
+  "test_values_opened": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 68,
+      "verdict": "CHANGES_REQUIRED_DO_NOT_OPEN_TEST",
+      "critical": [],
+      "high": [
+        {
+          "id": "BASE-R140-H1",
+          "finding": "The one-step GLM nextn head does not define an eight-token MTP-only rollout; freeze the exact hybrid main-head/MTP/target-evaluation recurrence and require nested K prefixes."
+        },
+        {
+          "id": "BASE-R140-H2",
+          "finding": "Rollback and cost were not bound across GLM checkpoint, logits, dense/compact/indexer/MTP caches, target expert reads, isolation, and cache effects."
+        },
+        {
+          "id": "BASE-R140-H3",
+          "finding": "The held-out embargo must cover test-corresponding raw traces and derived captures, not only records.npz."
+        }
+      ],
+      "medium": [
+        {
+          "id": "BASE-R140-M1",
+          "finding": "Equal-cost domination needs a numeric Pareto rule."
+        },
+        {
+          "id": "BASE-R140-M2",
+          "finding": "CPU F32 router recomputation needs exact captured-score conformance against production selections."
+        }
+      ],
+      "low": []
+    },
+    "Singer": {
+      "score_0_to_100": 77,
+      "verdict": "REJECT_BEFORE_TEST_OPEN",
+      "critical": [],
+      "high": [
+        {
+          "id": "P1-BASE-H1-TEST-OPEN-CONTRADICTION",
+          "finding": "The literal never-opened rule contradicts the preserved schema-only materialization incident; replace it with the audited value-isolation boundary or repartition."
+        },
+        {
+          "id": "P1-BASE-H2-MTP-POSITION-ROLLBACK",
+          "finding": "The MTP recurrence is off-by-one/ambiguous and lacks an exhaustive isolated-state and continuation-equivalence contract."
+        }
+      ],
+      "medium": [
+        {
+          "id": "P1-BASE-M1-COST-COMPARABILITY",
+          "finding": "Cost comparison lacks matched timing blocks, synchronization boundaries, K-specific accounting, memory definitions, and an equal-cost tolerance."
+        }
+      ],
+      "low": []
+    }
+  },
+  "blocking_set": [
+    "BASE-R140-H1",
+    "BASE-R140-H2",
+    "BASE-R140-H3",
+    "P1-BASE-H1-TEST-OPEN-CONTRADICTION",
+    "P1-BASE-H2-MTP-POSITION-ROLLBACK"
+  ],
+  "next_action": "Publish a bounded specification-only candidate that closes these named findings before implementing capture code or opening any held-out values."
+}

@@ -1,0 +1,75 @@
+{
+  "schema": "glm52-w9-real-capture-plan-v1",
+  "gate": "W9",
+  "scope": "Default-off diagnostic capture of real GLM-5.2 512-wide post-normalization compact-KV latents, matching low-rank queries, and attention selections. This is an offline falsifier input, not a fidelity or context-capability result.",
+  "engine_base_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "engine_test_commit": "d38ae2c7f73aea8b37f23a5c8325a2ea08458123",
+  "engine_worktree": "/home/bmarti44/.cache/glm52-w9-real-capture",
+  "production_test": {
+    "path": "tests/test_glm_w9_real_capture_source.py",
+    "sha256": "275e4ec5cfa3162110dc864f2e612c9a73b4bb6e1323af89d8e4f7371aa023a0",
+    "command": "python3 tests/test_glm_w9_real_capture_source.py",
+    "red_exit_code": 1,
+    "red_result": "6 tests ran: 2 failures and 4 errors because the unchanged W7-qualified engine has no W9 CLI mode, no real KV/query capture boundaries, and no persistent pinned readback staging.",
+    "red_is_behavioral": true,
+    "red_missing_file": false
+  },
+  "unchanged_source": {
+    "ds4.c": {
+      "sha256": "012dbe7b1e37ebdce297bbdf9442eb747cdcceaed6ae00fa369a4ae1d6aec47d"
+    },
+    "ds4_cuda.cu": {
+      "sha256": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f"
+    },
+    "ds4_cli.c": {
+      "sha256": "c92e19198cee8c901c65ff61cbb53c0d72aee00cb20fffef6a89ab6e04e12dfc"
+    },
+    "ds4.h": {
+      "sha256": "2a32052cefc2c0b162b86b64c650db763c374e27d144757c2ca0e9c91378d272"
+    }
+  },
+  "capture_contract": {
+    "layers": [0, 2, 10, 26, 42, 58, 74, 77],
+    "kv_rows_per_layer": 8192,
+    "kv_width": 512,
+    "kv_dtype": "f32",
+    "kv_boundary": "batch_kv_norm after RMS normalization and successful production compact-KV store",
+    "query_positions_per_layer": 128,
+    "query_heads": 64,
+    "query_width": 512,
+    "query_dtype": "f32",
+    "query_boundary": "batch_qk_low after production low-rank query projection and before indexed attention",
+    "selected_capacity": 2048,
+    "selected_dtype": "u32",
+    "selected_boundary": "the exact last_indexer_selected tensor consumed by the same attention call",
+    "expected_kv_bytes": 134217728,
+    "expected_query_bytes": 134217728,
+    "expected_selected_bytes": 8388608,
+    "persistent_pinned_staging_max_bytes": 8388608
+  },
+  "implementation_constraints": [
+    "The mode is absent by default and requires the explicit DS4_GLM_W9_CAPTURE_DIR CLI diagnostic environment variable.",
+    "No prompt text, fixture name, token ID, request hash, or model digest may select a production branch.",
+    "All device-to-host copies use staging allocated once with pinned-host allocation and freed only at capture finalization.",
+    "The destination directory must be new; every artifact is created with exclusive no-follow semantics and fsynced before the completion marker.",
+    "Any short readback, duplicate row, missing layer/position, short file, non-finite value, publication error, or survivor fails the diagnostic without producing W9_CAPTURE_COMPLETE.",
+    "The capture-disabled and capture-enabled arms use the same source, binary, model, tokenizer, prompt tokens, and deterministic dispatch. Final logits and output must be byte-identical."
+  ],
+  "offline_falsifier": {
+    "metric": "sqrt(sum((q dot (quantized_k - k))^2) / sum((q dot k)^2)) over held-out captured layer/query/key pairs",
+    "maximum_query_weighted_relative_rmse": 0.05,
+    "candidates": [
+      "plain block-scaled E2M1 FP4",
+      "Walsh-Hadamard rotated block-scaled E2M1 FP4",
+      "rotation plus a frozen per-channel linear correction fitted only on the calibration split"
+    ],
+    "split": "Freeze disjoint calibration and held-out row/query indices from post-capture public randomness before fitting any rotation/correction parameter.",
+    "decision": "Stop W9 before kernel work if no candidate has held-out query-weighted relative RMSE <= 0.05. Passing only authorizes the 100-case paired NLL/top-1 gate; it does not authorize adoption."
+  },
+  "acceptance_formula": {
+    "capture_pass": "all exact shape/count/dtype/boundary, fresh-publication, finite-data, pinned-staging, byte-identity, containment, and artifact-binding checks are true",
+    "offline_pass": "real_capture == true and capture_width == 512 and query_weighted_error <= 0.05 on the frozen held-out split",
+    "terminal_rule": "Missing or malformed artifacts, duplicate rows, unequal fixtures, non-finite values, scorer failure, timeout, OOM, Xid, swap growth, or a surviving process is FAIL. If capture passes but the offline metric fails, W9 closes as a supported negative result with no kernel implementation."
+  },
+  "fidelity": "The capture mechanism is byte-identical and needs no NLL gate. Any packed FP4 serving candidate is lossy and must pass the fixed 100-case paired NLL/top-1 gate before performance measurement or adoption."
+}

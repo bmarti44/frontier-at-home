@@ -1,0 +1,75 @@
+{
+  "artifact": "GLM-5.2 Rung 0.2 bounded shared-QD prefetch rejection",
+  "schema_version": 1,
+  "status": "FAIL",
+  "decision": "Do not adopt prefetch-SHA and do not run the full campaign. The preregistered completed-fetch ratio was 1.0590704081074496; PASS required at most 0.90. Prefetch also reduced median decode throughput and increased both cold and warm control-config TTFT.",
+  "candidate": {
+    "repo_commit": "6885a458496822405995c60dbcb2cfad96b0818a",
+    "engine_commit": "3187250cae7c16cf62c6a401df6c7b5cb210e06a",
+    "binary_sha256": "753ac03cc6e8d4b643727d366b2b5233033ab8d85702c9a9aa4cb4da9ae978c7",
+    "freeze_json_sha256": "20bae137dd74375fa5c5310326bc667cf1e74cd5f365dffb79a3e5267bf53a22",
+    "randomness_round": 6348063,
+    "randomness": "70924a1e9cdab00cb9521ded8e93a90e6a5781f73e41647a881a338b26987972"
+  },
+  "acceptance": {
+    "formula": "median(C completed_fetch_ms) / median(B completed_fetch_ms) <= 0.90, with identical matched request/output/token signatures, at least three fetch observations per arm, complete terminal telemetry, QD4-QD8, and no safety failure",
+    "observed_completed_fetch_ratio_C_over_B": 1.0590704081074496,
+    "verdict": "FAIL"
+  },
+  "measurements": {
+    "B_demand_sha": {
+      "median_completed_fetch_ms": 6.435168,
+      "completed_fetch_count": 59139,
+      "median_decode_tokens_per_second": 1.4809392882696675,
+      "cold_control_ttft_seconds": 271.034867123,
+      "warm_control_ttft_seconds": 45.986219305,
+      "slab_reads": 59139,
+      "validated_bytes": 575546425344,
+      "peak_candidate_qd": 8,
+      "minimum_available_gib": 25.091156005859375
+    },
+    "C_prefetch_sha": {
+      "median_completed_fetch_ms": 6.815296,
+      "completed_fetch_count": 62245,
+      "median_decode_tokens_per_second": 0.9869088852045461,
+      "cold_control_ttft_seconds": 308.816774306,
+      "warm_control_ttft_seconds": 73.422772407,
+      "slab_reads": 19705,
+      "prefetch_attempts": 62245,
+      "prefetch_copies": 39435,
+      "prefetch_stale": 22809,
+      "prefetch_fallback": 19705,
+      "issue_dropped": 1,
+      "validated_bytes": 605774315520,
+      "peak_candidate_qd": 8,
+      "minimum_available_gib": 24.774864196777344
+    },
+    "decode_ratio_C_over_B": 0.666407389568044,
+    "cold_ttft_ratio_C_over_B": 1.1393986965000114,
+    "warm_ttft_ratio_C_over_B": 1.5966255438401928,
+    "external_read_bytes_ratio_C_over_B": 1.2229899861487672,
+    "matched_outputs_byte_identical": true,
+    "completion_tokens_per_rep": 160
+  },
+  "safety": {
+    "cgroup_high_events": 0,
+    "cgroup_max_events": 0,
+    "cgroup_oom_events": 0,
+    "cgroup_swap_bytes": 0,
+    "xid": false,
+    "survivors": 0,
+    "host_minimum_available_gib": 24.774864196777344
+  },
+  "evidence": {
+    "path": "/home/bmarti44/.local/state/glm52-rung0-glm52-r0-shared-6885-sha-probe-b",
+    "stage_receipt_sha256": "b4be88eb737f3b734c396dbc387c19ee83ef4b4385a89a463eb654e1b5a5ffe9",
+    "raw_jsonl_sha256": "cc70bb835b3fad30291bf3db86345e2a0e48250a0fc4923a599fb065281a4de8",
+    "artifact_sha256": {
+      "B_record.json": "d2e12b93574b87bbbbc0eb79e83c8b4942e9075ecdb12676205951c4849f2df0",
+      "B_server.log": "54a76a780deca2bfd3399fe541a3be55a0a6af998593d30566203d2e72276062",
+      "C_record.json": "403f87effe87cc00256c286a24b281fcd9b68157b65ec3079965c986c76b3600",
+      "C_server.log": "ed085dec387dabce1a710041631611cd05d7f148e7d4708b42c47a23fdcb9e0a"
+    }
+  },
+  "reporting_caveat": "These TTFT values come from the stripped evidence control configuration and include full evidence-mode identity verification. They are not the adopted serving-profile TTFT. Byte identity establishes that this default-off lever did not alter the two measured outputs; no fidelity improvement is claimed and the full NLL suite was not run because the bounded performance gate failed first."
+}

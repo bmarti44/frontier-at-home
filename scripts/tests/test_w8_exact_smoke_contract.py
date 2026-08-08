@@ -1,0 +1,117 @@
+import pathlib
+import json
+import subprocess
+import tempfile
+import unittest
+
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+HARNESS = ROOT / "results/glm52-gates/harness/w8_exact_smoke_v1.sh"
+SCORER = ROOT / "scripts/90_score_w8_exact_smoke.py"
+
+
+class W8ExactSmokeContractTests(unittest.TestCase):
+    def test_scorer_mutations(self):
+        result = subprocess.run(
+            ["python3", str(SCORER), "--self-test"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_harness_pins_reviewed_runtime_and_preserves_failures(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        for needle in (
+            "W8-exact-smoke-review-r243.json",
+            "drand_min_round",
+            "verify_reviewed_components",
+            "finalize_attempt",
+            "--failure-reason",
+            "randomness-receipt.json",
+        ):
+            self.assertIn(needle, source)
+
+    def test_safe_wrapper_is_required_readable_not_executable(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        self.assertIn("[[ -r $SAFE", source)
+        self.assertNotIn("[[ -x $SAFE", source)
+
+    def test_arm_runner_does_not_shadow_readonly_attempt_root(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        start = source.index("run_arm() {")
+        end = source.index("  mkdir \"$arm_out\"", start)
+        declarations = source[start:end].splitlines()[1:]
+        script = "\n".join((
+            "set -u",
+            "readonly root=/tmp/attempt",
+            "run_arm() {",
+            *declarations,
+            "  printf '%s\\n' \"$arm_out\"",
+            "}",
+            "for arm in resident; do run_arm \"$arm\" \"$root\"; done",
+        ))
+        result = subprocess.run(
+            ["bash", "-c", script], capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "/tmp/attempt/resident\n")
+        self.assertNotIn("local arm=$1 root=$2", source)
+
+    def test_safe_wrapper_candidate_source_contains_frozen_binary(self):
+        source = HARNESS.read_text(encoding="utf-8")
+        runtime = pathlib.Path(
+            "/home/bmarti44/.cache/glm52-w8-3054a9f-runtime"
+        )
+        binary = runtime / "ds4-server"
+        self.assertIn(f"readonly RUNTIME_DIR={runtime}", source)
+        self.assertIn("GLM_CANDIDATE_SRC=$RUNTIME_DIR", source)
+        self.assertTrue(binary.is_file())
+        self.assertEqual(binary.resolve().parent, runtime.resolve())
+
+    def test_scorer_requires_io_counters_and_cgroup_events(self):
+        source = SCORER.read_text(encoding="utf-8")
+        for needle in (
+            "W8 exact request complete",
+            "checksum_validations",
+            "direct_slot_calls",
+            "oom_group_kill",
+            "executed_candidate_verified",
+            "artifact_inventory",
+            "terminal-receipt.json",
+            "padding-only selected-row telemetry",
+        ):
+            self.assertIn(needle, source)
+
+    def test_failure_mode_always_writes_terminal_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            manifest = root / "manifest.json"
+            raw = root / "raw.jsonl"
+            summary = root / "summary.json"
+            manifest.write_text('{"schema":"failed-smoke"}\n')
+            captured = root / "captured-main.log"
+            captured.write_text("original failure evidence\n")
+            result = subprocess.run(
+                ["python3", str(SCORER), "--root", str(root),
+                 "--manifest", str(manifest), "--raw", str(raw),
+                 "--summary", str(summary), "--failure-reason", "startup-death"],
+                cwd=ROOT, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(json.loads(summary.read_text())["verdict"], "FAIL")
+            self.assertTrue(raw.read_text().strip())
+            self.assertTrue((root / "terminal-receipt.json").is_file())
+            captured.write_text("mutated failure evidence\n")
+            verified = subprocess.run(
+                ["python3", str(SCORER), "--root", str(root),
+                 "--manifest", str(manifest), "--raw", str(raw),
+                 "--summary", str(summary), "--verify-terminal"],
+                cwd=ROOT, capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(verified.returncode, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

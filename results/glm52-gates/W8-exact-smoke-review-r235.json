@@ -1,0 +1,31 @@
+{
+  "candidate_hash": "10697d483d7bf4bce4546610d0d2cc4a13fc1335",
+  "review_round": 235,
+  "gate": "W8-model-backed-smoke",
+  "runtime_authorized": false,
+  "nash": {
+    "score": 68,
+    "critical": [],
+    "high": [
+      "GAP-W8-235-H1-STARTUP-MARKERS-NOT-EXACT-IO-PROOF",
+      "GAP-W8-235-H2-REVIEWED-RUNTIME-COMPONENTS-NOT-PINNED",
+      "GAP-W8-235-H3-CGROUP-OOM-COUNTERS-CAN-PASS"
+    ]
+  },
+  "singer": {
+    "score": 63,
+    "critical": [],
+    "high": [
+      "ADV-W8-235-H54-FROZEN-MEASUREMENT-IDENTITY-NOT-ENFORCED",
+      "ADV-W8-235-H55-SCORER-TRUSTS-DECLARED-INPUTS-AND-LEAVES-EVIDENCE-UNBOUND",
+      "ADV-W8-235-H56-FAILED-ATTEMPTS-DO-NOT-EMIT-TERMINAL-EVIDENCE"
+    ]
+  },
+  "bounded_fix_scope": [
+    "positive W8 append/read/checksum/direct-slot counters",
+    "reviewed component and post-freeze randomness binding",
+    "actual request, HTTP, safety-event and artifact inventory validation",
+    "terminal FAIL evidence for arm or scorer failures"
+  ],
+  "verdict": "BLOCK_W8_SMOKE_RUNTIME"
+}

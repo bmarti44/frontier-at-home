@@ -204,7 +204,13 @@ salient-passphrase task. Capacity-edge behaviour is untested.
 - Model-generation flush fix — round 1 BROKEN (pointer+size identity),
   round 2 BROKEN (same-process close/reopen). Now: identity is
   (pointer, size, GGUF header fingerprint, fd) plus `cuda_model_gen_invalidate()`
-  on teardown and fd-clear. **Round 3 verdict pending.**
+  on teardown and fd-clear. **Round 3 production-coverage diagnostic PASS:**
+  the fresh candidate-21 run observed zero false generation flushes, one unique
+  response-bound indexed resume, 1.615 s warm append TTFT, and clean safety
+  containment; both persistent reviewers verified the independently replayable
+  evidence at 100 in round 276. The byte-identical logit comparison and
+  five-block candidate/control performance campaign remain pending, so this is
+  not yet a complete W7.1 promotion.
 
 ---
 

@@ -1,0 +1,56 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 9,
+  "authorization": "owner goal continuation after candidate-8 convergence pause",
+  "implementation_commit": "698357f9f9d5f8af5ac6838743622ea646e59094",
+  "review_delta_from": "ab7ca1bcb46a5d80f85a9f76fdff36e1b3cc04d3",
+  "review_round_from": 284,
+  "scope": [
+    "enumerate every non-zombie member of the isolated launcher session regardless of process group",
+    "SIGKILL each surviving member through a pidfd after revalidating its session identity",
+    "require stable session-wide emptiness before unit and cgroup cleanup",
+    "make the stable unit window end with an observation rather than an unchecked sleep",
+    "extend the committed real-systemd harness with a TERM-resistant secondary-process-group descendant"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 101, "result": "PASS", "skipped": 1},
+    "runner_self_test": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "fixed_raw_verifier": {"rows": 26, "result": "PASS"},
+    "delayed_publication_real_integration": "PASS",
+    "active_unit_real_integration": "PASS",
+    "same_group_term_resistant_real_integration": "PASS",
+    "secondary_group_term_resistant_real_integration": "PASS",
+    "control_failure_cgroup_fallback_real_integration": "PASS_FAIL_CLOSED",
+    "pidfd_and_session_identity_mutation": "PASS",
+    "active_units_after": 0,
+    "launcher_session_members_after": 0,
+    "marked_descendants_after": 0,
+    "server_pids_after": 0,
+    "listener_after": false,
+    "engine_started": false,
+    "gpu_used": false
+  },
+  "artifacts": {
+    "harness_sha256": "d9c39f5440cfb026f88e42431aed68858d78fcc77adbb039b1acfca2086b9320",
+    "raw": "W7-cache-generation-campaign-candidate9-unit-raw.jsonl",
+    "raw_sha256": "019eb3efec28cae4c43d5a2fa477f685923b4f278601375f59b7f8bee16c7fac",
+    "summary": "W7-cache-generation-campaign-candidate9-unit-summary.json",
+    "summary_sha256": "c0d13f0b1bde8526f795836466d4f9488b182e05cb5e1918d2ae8789e4e7218b"
+  },
+  "blocking_findings_targeted": [
+    "GAP-W7.1-284-H1-LAUNCHER-SESSION-ENUMERATOR-MISSES-NEW-PROCESS-GROUPS",
+    "ADV-W7.1-284-H1-SESSION-ENUMERATION-EXCLUDES-SECONDARY-PROCESS-GROUPS"
+  ],
+  "medium_findings_targeted": [
+    "GAP-W7.1-284-M1-STABLE-UNIT-WINDOW-ENDS-WITH-UNCHECKED-SLEEP"
+  ],
+  "convergence": {
+    "candidate_count_for_gate": 9,
+    "resumed_after_limit_pause": true,
+    "prior_blocking_count": 1,
+    "expected_blocking_count": 0
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}

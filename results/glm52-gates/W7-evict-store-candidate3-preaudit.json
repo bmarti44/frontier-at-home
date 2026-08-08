@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 3,
+  "audited_repo_commit": "88321aec30da22eca7fe56dc27587e0406ea777d",
+  "status": "READY_FOR_DELTA_REVIEW",
+  "scope": "Only round-289 named terminal-publication, complete-interruption-archive, exact-event-prefix, and failure-binding findings. Engine, binary, fixtures, W7.1 lifecycle, scorer, and containment wrappers are unchanged from candidate 2.",
+  "component_sha256": {
+    "scripts/92_score_w7_evict_store_probe.py": "1ccb1cf2d501cc5ec0132080fe7f60fed21a707bc741c28e03520a89d325fcbb",
+    "scripts/93_run_w7_evict_store_probe.py": "69935cac90fff729a51de54af88d424f4ccb3fe90ebb918d045d0e92127bde38",
+    "results/glm52-gates/harness/glm_cgroup_run_w7_evict_store_v1.sh": "13fe1f8faa77020918faadc5214f4f5cdc955d6dfc6c158cc0f2d080a0e8985d",
+    "scripts/91_run_w7_cache_generation_campaign.py": "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
+  },
+  "binary_sha256": "fbd889832abc5a04b44f16462ac7959bf77d73cc41283faa7ad6b5a02945130a",
+  "engine_source_commit": "fdd0fe05df6368de428cd5405929f49d590c9f52",
+  "review_finding_disposition": [
+    {
+      "ids": [
+        "GAP-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-OMITS-VERDICT",
+        "ADV-W7.2-289-H1-NORMAL-TERMINAL-MANIFEST-CANNOT-VALIDATE"
+      ],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "A factored terminal publisher reads the strict summary verdict, writes it into the normal manifest, blocks termination through publication/fsync, and validates the completed triplet. Validation requires the exact schema, all bound component fields, manifest/summary verdict equality, exact raw-row count, and an artifact map equal to the full regular-file inventory.",
+      "acceptance_tests": [
+        "test_normal_publication_preserves_pass_and_fail_verdicts",
+        "test_terminal_manifest_requires_verdict_rows_summary_and_full_inventory"
+      ]
+    },
+    {
+      "ids": [
+        "GAP-W7.2-288-H3-INTERRUPTION-FINALIZER-LEAVES-ARM-EVIDENCE-UNBOUND",
+        "ADV-W7.2-289-M1-FAILURE-PUBLICATION-DROPS-AUTHORITATIVE-BINDINGS"
+      ],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "Active expected bindings persist beside active rows. The failure manifest records each expected/observed mismatch explicitly while binding the observed full artifact inventory. Termination remains blocked from before parse through row and binding publication, verified from inside the parser callback.",
+      "acceptance_tests": [
+        "test_failure_publication_records_authoritative_replacement",
+        "test_parse_and_record_blocks_termination_until_row_and_bindings_publish",
+        "test_post_attempt_failure_is_preserved_as_triplet",
+        "test_finalizer_recovers_base_activation_window_and_partial_manifest"
+      ]
+    },
+    {
+      "ids": ["ADV-W7.2-289-H2-EXPECTED-EVENT-REGEX-ACCEPTS-ARBITRARY-PREFIX"],
+      "status": "FIXED_PENDING_REVIEW",
+      "resolution": "Each candidate event first must fullmatch either no prefix or the exact MMDD HH:MM:SS logger prefix, then the normalized payload must fullmatch the exact store/hit form or equal the exact activation/skip marker. Arbitrary prefixes, suffixes, concatenations, substituted values, and extras fail.",
+      "acceptance_tests": [
+        "test_parse_rejects_arbitrary_prefix_on_each_expected_event",
+        "test_parse_rejects_extra_or_substituted_event_payloads",
+        "test_parse_accepts_only_exact_off_and_on_event_sets"
+      ]
+    }
+  ],
+  "pre_submission_audit": {
+    "command": "python3 -m unittest scripts.tests.test_w7_cache_generation scripts.tests.test_w7_cache_generation_campaign scripts.tests.test_glm_safe_lifecycle scripts.tests.test_w7_cache_generation_campaign_runner scripts.tests.test_w7_evict_store scripts.tests.test_w7_evict_store_probe scripts.tests.test_w7_evict_store_probe_runner",
+    "tests_run": 131,
+    "failures": 0,
+    "errors": 0,
+    "expected_skips": 1,
+    "runner_self_test": "PASS",
+    "secret_lint_self_test": "PASS",
+    "strict_json_duplicate_and_nonfinite_rejection": "PASS",
+    "scoped_diff_command": "git diff --check c447072903cd338dec7057a5e2afe85608769772..88321aec30da22eca7fe56dc27587e0406ea777d",
+    "scoped_diff_exit_code": 0,
+    "worktree_clean_at_audit": true,
+    "engine_or_fio_active": false,
+    "observed_mem_available_kb": 120776192,
+    "swap_used_kb": 205676
+  },
+  "convergence": {
+    "prior_blocking_class_count": 2,
+    "claimed_open_blocking_class_count": 0,
+    "candidate_count": 3,
+    "consecutive_non_shrinking_candidates": 0,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "escalation_triggered": false
+  },
+  "runtime_authorization": "Do not start the engine until both persistent reviewers verify no critical/high findings on this candidate.",
+  "verdict": "NO_RESULT"
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "gate": "W7-production-runtime-equivalence",
+  "candidate_engine_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "test": "scripts/tests/test_w7_resume_production_contract.py",
+  "command": "python3 -m unittest scripts.tests.test_w7_resume_production_contract",
+  "unchanged_runtime_contract": {
+    "scorer": "scripts/85_score_w7_resume_equivalence.py",
+    "harness": "results/glm52-gates/harness/w7_resume_equivalence_v1.sh"
+  },
+  "observed": {
+    "returncode": 1,
+    "tests_run": 2,
+    "errors": 1,
+    "failures": 1,
+    "missing_behavior": [
+      "the scorer has no automatic-restored-frontier predicate",
+      "the harness injects DS4_GLM_RESTORED_FRONTIER_DIAGNOSTIC and names the prior binary"
+    ]
+  },
+  "expected_after_fix": {
+    "diagnostic_opt_in_absent": true,
+    "automatic_candidate_evidence": [
+      "selected KVC reports 5044 text tokens",
+      "sync starts at 5044 for the 5066-token request",
+      "one exact indexed_resume branch evaluates the 22-token suffix with logits",
+      "no global resume guard fires"
+    ],
+    "diagnostic_marker_rejected": true
+  },
+  "verdict": "RED_CONFIRMED"
+}

@@ -1,0 +1,113 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-review-v1",
+  "candidate_hash": "4f4a9afae16a4e95a94d6af7ec46ebc5f3d5427e",
+  "implementation_commit": "61f040e3a70a51942d3b62e6b01298a5fc2510dd",
+  "review_round": 254,
+  "candidate_number": 4,
+  "critical": [],
+  "high": [
+    "GAP-W9-C4-H1-UNBOUNDED-PRIVILEGED-ATTEMPTS",
+    "ADV-W9-FP4-254-H1-STAGING-ATTEMPT-NAME-MISMATCH",
+    "ADV-W9-FP4-254-H2-UNSERIALIZED-UNBOUNDED-ROOT-RUNS"
+  ],
+  "verdict": "REJECT_RUNTIME_BLOCKED",
+  "runtime_authorized": false,
+  "drand_min_round": 6357228,
+  "checks": {
+    "focused_tests": "26/26 PASS",
+    "python_compile": "PASS",
+    "shell_syntax": "PASS",
+    "frozen_hashes": "PASS",
+    "readable_archive": "/tmp/glm52-w9-review-r254.zPgCzt",
+    "install_executed": false,
+    "metric_executed": false,
+    "randomness_obtained": false
+  },
+  "gap_reviewer": {
+    "score_0_to_100": 82,
+    "critical": [],
+    "high": [
+      {
+        "id": "GAP-W9-C4-H1-UNBOUNDED-PRIVILEGED-ATTEMPTS",
+        "evidence": [
+          "The delegated runner has no global lock, admission ledger, attempt quota, or free-space guard.",
+          "run_attempt creates its root workspace before opening or validating the receipt.",
+          "Every exception preserves that workspace, including a nonexistent or malformed receipt.",
+          "The same unpublished attempt name may be submitted repeatedly, and distinct names may execute expensive scorers concurrently.",
+          "A bounded simulation submitted the same missing receipt three times and produced three preserved failure directories."
+        ],
+        "affected_gate": "W9 delegated-runner host safety and authoritative attempt preservation",
+        "reproduction_instructions": "Redirect state constants to temporary directories, call run_attempt with one missing receipt and the same valid attempt name three times, and observe three distinct preserved failure directories. Inspect the candidate for lock, quota, or free-space admission; none exists.",
+        "proposed_acceptance_test": "Acquire one root-owned global lock before workspace creation. Fully validate and BLS-check the bounded receipt before authoritative state. Enforce a preregistered one-shot admission rule, disk-free floor, and bounded retention. Prove concurrent and malformed calls do not enter scoring or create failure artifacts."
+      }
+    ],
+    "medium": [
+      {
+        "id": "GAP-W9-C4-M1-LEXICAL-RECEIPT-CONFINEMENT",
+        "evidence": "Path.is_relative_to accepts dot-dot receipt paths that lexically start beneath OWNER_STATE.",
+        "affected_gate": "Narrow root-runner input authority",
+        "reproduction_instructions": "Call parse_request with /home/bmarti44/.local/state/../../.ssh/id_ed25519 and a valid attempt name; candidate 4 accepts it.",
+        "proposed_acceptance_test": "Reject dot components and require a canonical path beneath the approved root, or use dirfd-relative openat2 confinement; add traversal and symlinked-ancestor tests."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-W9-FP4-252-H1-RUNTIME-FREEZE-EXCLUDES-STARTUP-AND-TRANSITIVE-CODE", "status": "VERIFIED"},
+      {"id": "ADV-W9-FP4-253-C1-TERMINAL-RAW-NOT-CAPTURE-DERIVED", "status": "VERIFIED"},
+      {"id": "ADV-W9-FP4-253-H1-CROSS-ARTIFACT-TEARDOWN-TOCTOU", "status": "VERIFIED"},
+      {"id": "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT", "status": "DEFERRED"}
+    ],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 77,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W9-FP4-254-H1-STAGING-ATTEMPT-NAME-MISMATCH",
+        "evidence": "run_attempt stages results at workspace/first, then validate_published_attempt requires the staging basename to equal attempt_name. Every otherwise-successful execution therefore fails before rename. The unit fixtures already use the expected basename and miss this path.",
+        "affected_gate": "W9 sealed atomic publication",
+        "reproduction_instructions": "Execute run_attempt end to end with mocked matching scorer outputs; observe published-attempt identity mismatch at prepublication validation.",
+        "proposed_acceptance_test": "Stage the final result tree with the exact attempt basename and add an end-to-end mocked success test proving publication reaches the exact destination while a mismatched basename fails before rename."
+      },
+      {
+        "id": "ADV-W9-FP4-254-H2-UNSERIALIZED-UNBOUNDED-ROOT-RUNS",
+        "evidence": "The delegated runner has no root-owned lock, one-shot admission, scorer-process containment, disk floor, or retention bound. Distinct calls can overlap two 7200-second scorer processes each and preserve unbounded failures; the staging-name defect makes every otherwise-valid run add another failure.",
+        "affected_gate": "W9 root delegation and host safety",
+        "reproduction_instructions": "Use temporary roots and mocked long-running scorers, start two distinct attempts, and observe both reach scorer startup. Re-submit or inject post-score failures and observe unbounded preserved workspaces.",
+        "proposed_acceptance_test": "Acquire a root-owned global lock before workspace/scoring; bind one candidate and randomness round to a one-shot attempt; contain and clean scorer descendants; enforce a disk-free floor and bounded retention; test concurrency, replay, timeout descendants, and failure volume."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W9-FP4-254-M1-INSTALL-SUDOERS-NONATOMIC-OVERWRITE",
+        "evidence": "The installer writes the sudoers destination with ordinary install and cleanup can remove a pre-existing file after a later failure.",
+        "affected_gate": "W9 root installation transaction",
+        "reproduction_instructions": "In an isolated prefix, seed the sudoers destination and inject a failure after replacement; the original bytes are not restored.",
+        "proposed_acceptance_test": "Require destinations absent or exactly approved, publish sudoers with no-replace semantics, fsync parent directories, and failure-inject each stage to prove complete install or byte-exact restoration."
+      },
+      {
+        "id": "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT",
+        "evidence": "Root failure workspaces improve preservation but malformed attempts still lack a complete authoritative evidence triple.",
+        "affected_gate": "Evidence completeness for rejected attempts",
+        "reproduction_instructions": "Submit a structurally invalid bounded request in a test prefix and inspect the preserved outputs.",
+        "proposed_acceptance_test": "Emit a minimal immutable failure manifest, raw row, and summary with reason and identities for each admitted authoritative attempt."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "GAP-W9-C3-SCORER-TOCTOU", "status": "FIXED_VERIFIED"},
+      {"id": "ADV-W9-FP4-253-C1-TERMINAL-RAW-NOT-CAPTURE-DERIVED", "status": "FIXED_VERIFIED"},
+      {"id": "ADV-W9-FP4-253-H1-CROSS-ARTIFACT-TEARDOWN-TOCTOU", "status": "FIXED_VERIFIED"},
+      {"id": "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT", "status": "DEFERRED_MEDIUM"}
+    ],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "convergence": {
+    "candidate_3": "First consecutive candidate without strict blocker-class shrinkage.",
+    "candidate_4": "Second consecutive candidate without strict blocker-class shrinkage: all round-253 blockers closed, but new host-safety and publication blocker classes appeared.",
+    "triggered": true,
+    "required_action": "Pause W9 FP4 falsifier gate and report exact open findings to the owner before candidate 5."
+  },
+  "note": "The initial reviewer prompt contained a nonexistent long hash after the correct 4f4a9af prefix. Both reviewers were immediately corrected and reviewed the exact resolvable hash recorded here and the archive generated from it."
+}

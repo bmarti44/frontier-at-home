@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "classification": "PRESERVED_RED_ATTEMPT",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 12,
+  "held_out_values_opened": false,
+  "observed_during": "Candidate 12 pre-submission audit",
+  "failure": "A strict-reopen exception after atomic rename leaves attempt.json claiming COMPLETE and does not seal the published failure.",
+  "test": "AtomicLifecycleTests::test_post_publish_validation_failure_reopens_terminal_state_as_failed",
+  "acceptance": "Any post-publication validation exception must rewrite terminal state to FAILED with phase and exact error, update the ledger when present, seal the preserved output, fsync its parent, and re-raise."
+}

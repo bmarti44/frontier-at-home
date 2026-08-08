@@ -1,0 +1,152 @@
+From 0499aee913803b96d22f137a311307d8418167fd Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Fri, 7 Aug 2026 13:16:08 -0400
+Subject: [PATCH 34/40] test: reject corrupted GLM checkpoint records
+
+---
+ ds4_kvstore.c | 20 +++++++++++++++++
+ ds4_kvstore.h |  5 +++++
+ ds4_server.c  | 59 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 84 insertions(+)
+
+diff --git a/ds4_kvstore.c b/ds4_kvstore.c
+index 6b663b5..7325d40 100644
+--- a/ds4_kvstore.c
++++ b/ds4_kvstore.c
+@@ -439,6 +439,22 @@ bool ds4_kvstore_read_header(FILE *fp, ds4_kvstore_entry *e,
+     return e->tokens != 0 && (e->quant_bits == 2 || e->quant_bits == 4);
+ }
+ 
++bool ds4_kvstore_seal_record(FILE *fp, uint32_t text_bytes,
++                             uint64_t payload_bytes) {
++    (void)fp;
++    (void)text_bytes;
++    (void)payload_bytes;
++    return true;
++}
++
++bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
++                               uint32_t text_bytes) {
++    (void)fp;
++    (void)e;
++    (void)text_bytes;
++    return true;
++}
++
+ bool ds4_kvstore_read_entry_file(const char *path, const char sha[41],
+                                  ds4_kvstore_entry *out) {
+     struct stat st;
+@@ -1271,6 +1287,10 @@ int ds4_kvstore_try_load_text(ds4_kvstore *kc,
+             }
+         }
+     }
++    if (header_ok && !ds4_kvstore_verify_record(fp, &hdr, text_bytes)) {
++        header_ok = false;
++        fail_reason = "cached checkpoint integrity mismatch";
++    }
+     char err[160] = {0};
+     int loaded = 0;
+     if (header_ok &&
+diff --git a/ds4_kvstore.h b/ds4_kvstore.h
+index 3a01f58..b59dd95 100644
+--- a/ds4_kvstore.h
++++ b/ds4_kvstore.h
+@@ -52,6 +52,7 @@ typedef struct {
+     uint64_t created_at;
+     uint64_t last_used;
+     uint64_t payload_bytes;
++    uint8_t record_sha256[32];
+     uint64_t text_bytes;
+     uint64_t file_size;
+ } ds4_kvstore_entry;
+@@ -201,6 +202,10 @@ bool ds4_kvstore_read_header(FILE *fp, ds4_kvstore_entry *e,
+                              uint32_t *text_bytes);
+ bool ds4_kvstore_read_entry_file(const char *path, const char sha[41],
+                                  ds4_kvstore_entry *out);
++bool ds4_kvstore_seal_record(FILE *fp, uint32_t text_bytes,
++                             uint64_t payload_bytes);
++bool ds4_kvstore_verify_record(FILE *fp, const ds4_kvstore_entry *e,
++                               uint32_t text_bytes);
+ void ds4_kvstore_fill_header(uint8_t h[DS4_KVSTORE_FIXED_HEADER],
+                              uint8_t model_id, uint8_t quant_bits,
+                              uint8_t reason, uint8_t ext_flags,
+diff --git a/ds4_server.c b/ds4_server.c
+index ef48b6d..a03394d 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -17126,6 +17126,64 @@ static void test_kv_cache_lookup_rejects_stale_payload_abi(void) {
+     rmdir(dir);
+ }
+ 
++static FILE *test_kv_integrity_record(const uint8_t payload[16],
++                                      ds4_kvstore_entry *entry,
++                                      uint32_t *text_bytes) {
++    static const char text[] = "bound prompt";
++    FILE *fp = tmpfile();
++    TEST_ASSERT(fp != NULL);
++    if (!fp) return NULL;
++    uint8_t h[KV_CACHE_FIXED_HEADER];
++    ds4_kvstore_fill_header(h, 1, 2, KV_REASON_COLD, 0, 4, 0,
++                            32768, 100, 100, 16);
++    uint8_t tb[4];
++    le_put32(tb, (uint32_t)(sizeof(text) - 1));
++    TEST_ASSERT(fwrite(h, 1, sizeof(h), fp) == sizeof(h));
++    TEST_ASSERT(fwrite(tb, 1, sizeof(tb), fp) == sizeof(tb));
++    TEST_ASSERT(fwrite(text, 1, sizeof(text) - 1, fp) == sizeof(text) - 1);
++    TEST_ASSERT(fwrite(payload, 1, 16, fp) == 16);
++    TEST_ASSERT(fflush(fp) == 0);
++    TEST_ASSERT(ds4_kvstore_seal_record(fp, (uint32_t)(sizeof(text) - 1), 16));
++    TEST_ASSERT(fseeko(fp, 0, SEEK_SET) == 0);
++    TEST_ASSERT(ds4_kvstore_read_header(fp, entry, text_bytes));
++    TEST_ASSERT(fseeko(fp, (off_t)*text_bytes, SEEK_CUR) == 0);
++    TEST_ASSERT(ds4_kvstore_verify_record(fp, entry, *text_bytes));
++    return fp;
++}
++
++static void test_kv_cache_integrity_rejects_payload_mutations(void) {
++    const uint8_t original[16] = {
++        1, 0, 0, 0, 2, 0, 0, 0, 3, 4, 5, 6, 7, 8, 9, 10,
++    };
++    const uint8_t replacement[16] = {
++        9, 0, 0, 0, 8, 0, 0, 0, 7, 6, 5, 4, 3, 2, 1, 0,
++    };
++    const off_t payload_offset =
++        (off_t)KV_CACHE_FIXED_HEADER + 4 + (off_t)strlen("bound prompt");
++
++    for (int mutation = 0; mutation < 3; mutation++) {
++        ds4_kvstore_entry entry = {0};
++        uint32_t text_bytes = 0;
++        FILE *fp = test_kv_integrity_record(original, &entry, &text_bytes);
++        if (!fp) continue;
++        if (mutation == 0) {
++            TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
++            TEST_ASSERT(fputc(11, fp) != EOF); /* saved-token byte */
++        } else if (mutation == 1) {
++            TEST_ASSERT(fseeko(fp, payload_offset + 12, SEEK_SET) == 0);
++            TEST_ASSERT(fputc(11, fp) != EOF); /* tensor/state byte */
++        } else {
++            TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
++            TEST_ASSERT(fwrite(replacement, 1, sizeof(replacement), fp) ==
++                        sizeof(replacement)); /* equal-size payload swap */
++        }
++        TEST_ASSERT(fflush(fp) == 0);
++        TEST_ASSERT(fseeko(fp, payload_offset, SEEK_SET) == 0);
++        TEST_ASSERT(!ds4_kvstore_verify_record(fp, &entry, text_bytes));
++        TEST_ASSERT(fclose(fp) == 0);
++    }
++}
++
+ static void test_kv_tool_map_filters_by_dsml_text(void) {
+     const char *dsml_keep =
+         "\n\n<｜DSML｜tool_calls>\n"
+@@ -17953,6 +18011,7 @@ static void ds4_server_unit_tests_run(void) {
+     test_kv_cache_lookup_uses_longest_text_prefix();
+     test_kv_cache_lookup_rejects_wrong_model();
+     test_kv_cache_lookup_rejects_stale_payload_abi();
++    test_kv_cache_integrity_rejects_payload_mutations();
+     test_kv_cache_eviction_values_fresh_snapshots();
+     test_kv_cache_eviction_prefers_anchor_reason();
+     test_kv_cache_eviction_makes_room_before_store();
+-- 
+2.43.0
+

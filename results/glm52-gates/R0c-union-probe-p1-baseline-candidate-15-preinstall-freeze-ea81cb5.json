@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "classification": "FROZEN_PREINSTALL_REVIEW_CANDIDATE",
+  "gate": "R0c-union-probe-p1-baseline",
+  "per_gate_candidate": 15,
+  "campaign_review_round_next": 153,
+  "implementation_head": "ea81cb5fc7b05e63138fddc118c915ae928fa807",
+  "held_out_values_opened": false,
+  "root_install_performed": false,
+  "scope": "Close only the three round-152 root-runtime, same-backend replay, and expected-failure semantic-validation findings. Frozen corpus, split, probe, CV, precision, engine and failure-hook components remain byte-identical. No serving, quality, fidelity, context or adoption claim is made.",
+  "artifacts": {
+    ".gitleaks.toml": "0764a5a1d144d3d7561c32609832a02d7900f276f37b75a107178b9e90f208c0",
+    "scripts/lint_secrets.sh": "e6c4fd2e822fef59ae2ae81e1f5f69cbcb33f52e1b6d2ba318433407974df847",
+    "scripts/65_glm52_w1_submit.py": "dd9922eb92c1bfefe116c1c07e48bcb474c487af2d4b7b96250978456f5edce2",
+    "scripts/66_install_glm52_w1_attestor.sh": "1cbc7ffea9719a085c6b51a8241568ba9be2a800540c8b37b563941bb5c4d3e9",
+    "scripts/78_glm_union_probe.py": "4d17c536de2edf4b91f662a6e44b99bb7fc4f663c6ea5de8a6fa0517d4519373",
+    "scripts/79_glm_union_probe_cv.py": "0637c558fcde244a84e360191b43759c438e7fa08b4dde3271ff5f6824b82329",
+    "scripts/80_glm_union_probe_precision.py": "df59dad48db200fb191d5033c82db8b44a9307f673c2bf6ce54d22c556d5dad6",
+    "scripts/81_glm_union_baseline.py": "0a0188fd7fcbc386d3db2ddd272eddeb82d0a9a53910cc28adce20de25b6d0dc",
+    "scripts/tests/test_glm_union_baseline.py": "212a71805b14f50ce2a4482c5665adcaa0cdadba7d0d57642c30cbea4e3c871a",
+    "scripts/tests/test_glm52_w1_root_attestor.py": "66d5492e310d82725acd0f1b6e3a07acd97ed084db82233f61e22ffbb458fa65",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c14-root-python-runtime-failure-2026-08-05.json": "b36d7abe574f0e29900348c1897005e63c45f36cf9ee2668f744440354164079",
+    "results/glm52-gates/R0c-union-probe-p1-baseline-c15-fault-stderr-diagnostic-2026-08-05.json": "eca0485393c8507ab9cc5ef806fd9a2a0881ae3124e71cebb769951897af640b"
+  },
+  "root_python_runtime": {
+    "install_path": "/usr/local/libexec/glm52-w1/python",
+    "top_level_entries": [
+      "numpy",
+      "numpy.libs",
+      "nvidia",
+      "tokenizers",
+      "torch",
+      "torchgen",
+      "typing_extensions.py"
+    ],
+    "canonical_tree_sha256": "39eccffb7a0a2c627bad322ab42a2f07a3b9c55f4952d2867819766c3870bddf",
+    "isolation": "/usr/bin/python3 -S with a sanitized environment and the exact root-owned runtime as PYTHONPATH",
+    "copied_runtime_dress_rehearsal": {
+      "tree_sha256_matches": true,
+      "cuda_available": true,
+      "replay_shape": [2, 3, 256],
+      "torch_version": "2.11.0+cu128",
+      "numpy_version": "2.2.6",
+      "tokenizers_version": "0.22.2",
+      "temporary_copy_removed": true
+    },
+    "install_properties": "The installer creates new inodes, rejects symlinks and unexpected top-level entries, verifies the canonical tree hash before and after root ownership/read-only sealing, and transactionally restores the previous runtime on any partial failure."
+  },
+  "engine_candidate": {
+    "readable_review_tree": "/tmp/glm52-utf8-engine",
+    "commit": "fa788b63042a7f647924f56a4db6d8ce2be2f63c",
+    "tree_clean": true,
+    "artifact_sha256": {
+      "ds4.c": "e12efaeb3ff432959af57ed7d67f5bbac433df70025ead534add27764ee75b61",
+      "ds4_cuda.cu": "1180948d339d8a5b7656e7ec0d2707357d4c94c820ccc1e8844777379ce6b45f",
+      "tests/test_glm_baseline_capture_source.py": "491555af0d0f08c2c3d58410c4a942c8c651d513b6436af1ff49bb9b44c0b380"
+    },
+    "binary_sha256": "be8b0ed00864d3fba6e1f7dabed4adc0646efaf7968f1bcb6da6c3a6ce172121",
+    "normalized_double_build_byte_identical": true
+  },
+  "unchanged_frozen_inputs": {
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "fixture_sha256": "49483fb172f700357d14167cfd9a69c686caa4e3b7889a41754bb4ba00584b0",
+    "probe_cv_precision_hashes_equal_candidate_14": true,
+    "engine_hashes_equal_candidate_14": true,
+    "heldout_reservation_absent": true,
+    "root_approval_absent": true
+  },
+  "pre_submission_audit": {
+    "p1_controller_probe_tests": "141 passed, 4 warnings",
+    "engine_source_tests": "7 passed",
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_scan_self_test": "PASS",
+    "secret_scan": "PASS",
+    "root_runtime_exact_top_level_set_and_tree_hash_bound": true,
+    "nested_symlink_hardlink_and_writable_inode_rejection_tested": true,
+    "same_backend_completed_replay_bound_to_recorded_cuda_backend": true,
+    "all_four_real_expected_failure_directories_pass_strict_semantic_replay": true,
+    "unexpected_fatal_xid_oom_stdout_stderr_and_safety_mutations_rejected": true,
+    "engine_processes_active": 0,
+    "fio_processes_active": 0,
+    "mem_available_kib": 120813632,
+    "swap_used_kib": 779404
+  },
+  "repository_wide_diagnostic": {
+    "scope": "python3 -m pytest -q scripts/tests",
+    "tests_run": 615,
+    "passed": 602,
+    "failed": 4,
+    "skipped": 9,
+    "warnings": 3,
+    "new_failures_from_candidate_14_to_15": 0,
+    "scope_disposition": "The four failures are the same stale assertions recorded for Candidate 14: test_engine_switch, test_matched_memory_safety (two), and test_model_claim_catalog. Candidate 15 changes none of those frozen contracts."
+  },
+  "finding_disposition": [
+    {
+      "id": "P1-BASE-C14-H1-ROOT-VALIDATOR-RUNTIME-ABSENT",
+      "aliases": ["P1-BASE-C14-H1-ROOT-VALIDATOR-PYTHON-ENV"],
+      "status": "FIXED",
+      "evidence": "The root validator uses a transactionally installed, root-owned, read-only, exact-dependency Python runtime outside the frozen Git clone. Its canonical tree hash is pinned by both controller and installer, and the isolated copied-runtime CUDA replay passed without user site-packages."
+    },
+    {
+      "id": "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY",
+      "status": "FIXED",
+      "evidence": "The original scoring backend is recorded in raw and summary artifacts. Completed replay reads that binding and uses the identical CUDA FP16 path; the root caller cannot substitute CPU or choose a replay device."
+    },
+    {
+      "id": "BASE-R142-H3",
+      "status": "FIXED",
+      "evidence": "Completed replay now semantically validates every kernel, wrapper stdout/stderr, command, sample and safety artifact for all four expected-failure stages. It permits only the exact known /proc sampler-reap race line and rejects extra fatal, Xid, OOM, wrong rc, low-memory, identity and cleanup mutations. All four preserved real fault runs pass this stricter validator."
+    }
+  ],
+  "convergence": {
+    "blocking_set_before": [
+      "P1-BASE-C14-H1-ROOT-VALIDATOR-RUNTIME-ABSENT",
+      "P1-BASE-C14-H2-CROSS-DEVICE-EXACT-REPLAY",
+      "BASE-R142-H3"
+    ],
+    "blocking_set_claimed_after": [],
+    "previous_consecutive_non_shrinking_candidates": 1,
+    "candidate_15_strictly_shrinks_claimed_blocking_set": true,
+    "new_scope": false
+  },
+  "staged_install_contract": {
+    "installer_sha256": "1cbc7ffea9719a085c6b51a8241568ba9be2a800540c8b37b563941bb5c4d3e9",
+    "timing": "Only after both persistent reviewers report no critical/high issues on the commit that adds this freeze artifact.",
+    "operator_involvement": "One final hash-verified root-staged install command, then an installed-boundary non-held-out smoke before any held-out access."
+  },
+  "next_action": "Nash and Singer review only Candidate 14 through Candidate 15 plus the unchanged readable engine sources. If both report no critical/high issues, provide the owner one exact staged-install command; do not open held-out values before the installed-boundary smoke passes."
+}

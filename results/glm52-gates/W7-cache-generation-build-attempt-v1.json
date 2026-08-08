@@ -1,0 +1,40 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "attempt": "clean-double-build-raw",
+  "engine_commit": "12a5010a20514c06f718fe53e2083a4031114317",
+  "parent_engine_commit": "3ba062e5433e56df7c6da70b58cc9757e7777d54",
+  "commands": [
+    "make clean",
+    "make -j2 ds4-server"
+  ],
+  "raw_builds": [
+    {
+      "sha256": "a0ce1c39c7440511fb11800ee6f42e5295bc1e6a614f2be3ad4d85c9b2bd7107",
+      "bytes": 14905248,
+      "gnu_build_id": "49c4ee183fc2a92c03408fdda16871090fdaa16c"
+    },
+    {
+      "sha256": "402f6e53e7f35238b66d8c08f8b9757190183800210bfa1fa80cea2035437d71",
+      "bytes": 14905248,
+      "gnu_build_id": "e2d8122ba891a64ce427690cb8c18edafdb45b91"
+    }
+  ],
+  "raw_byte_identical": false,
+  "diagnosis": "Differences are confined to the GNU build-id note and debug sections. Removing .note.gnu.build-id and debug information from each independently built artifact yields byte-identical executable artifacts.",
+  "normalization": {
+    "tool": "GNU objcopy (GNU Binutils for Ubuntu) 2.42",
+    "command": "objcopy --remove-section=.note.gnu.build-id --strip-debug INPUT OUTPUT",
+    "normalized_builds": [
+      {
+        "sha256": "7cfb9fe33b1fd2761fe6ac1dfecdeb2a9d373d2fca908b89465d34adc5f185c9",
+        "bytes": 5584040
+      },
+      {
+        "sha256": "7cfb9fe33b1fd2761fe6ac1dfecdeb2a9d373d2fca908b89465d34adc5f185c9",
+        "bytes": 5584040
+      }
+    ],
+    "byte_identical": true
+  },
+  "verdict": "NO_RESULT_RAW_BUILD_METADATA_NONDETERMINISM_NORMALIZED_ARTIFACT_PASS"
+}

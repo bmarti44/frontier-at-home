@@ -1,0 +1,29 @@
+{
+  "candidate_commit": "d327d63bee1a93319a05f8f9b467edbae0cf49d8",
+  "candidate_number": 14,
+  "campaign_review_round_next": 209,
+  "engine_scope": "unchanged",
+  "frozen_artifacts": {
+    "binary_sha256": "56263e7cda1879e0322526f34ef2c3aeacf30aa4724d22bb13562324a0e077a4",
+    "harness_sha256": "e9521f2b096bee1803f5d65fad81da6d473ce582fdc79c82433fcff1cecc3b45",
+    "launcher_commit": "24fab4ea046430ec5fe1b90ca44a8903805a4e6e",
+    "source_sha256": "f6909c6deb178222af9de01e7ea664828e0fd460db2f535999c7e219f964d279",
+    "scorer_sha256": "6cec5063906a52c577617b4173a1deed14d0ae2fffebff19bbef6e96442dc985"
+  },
+  "pre_submission_audit": {
+    "diff_check": "PASS",
+    "frozen_launcher_self_test": "PASS",
+    "harness_self_test": "PASS",
+    "sealed_mutation_test": "PASS",
+    "secret_lint": "PASS",
+    "tests": {"count": 92, "result": "PASS"}
+  },
+  "scope": [
+    "copy exact Git candidate bytes into an MFD_ALLOW_SEALING memfd",
+    "apply and verify WRITE, GROW, SHRINK and SEAL seals",
+    "re-read and hash the sealed bytes before execution",
+    "pass the sealed descriptor to parent and contained driver",
+    "prove same-UID write and truncate attempts fail and bytes remain exact"
+  ],
+  "schema_version": 1
+}
