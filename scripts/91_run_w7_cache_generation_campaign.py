@@ -134,7 +134,13 @@ def _unit_state(unit: str) -> dict[str, str]:
         capture_output=True, text=True, check=False, timeout=15,
     )
     if completed.returncode != 0:
-        return {"LoadState": "not-found", "ActiveState": "inactive", "MainPID": "0", "ControlPID": "0"}
+        lowered = completed.stderr.lower()
+        if "could not be found" in lowered or "not loaded" in lowered:
+            return {
+                "LoadState": "not-found", "ActiveState": "inactive",
+                "MainPID": "0", "ControlPID": "0",
+            }
+        raise CampaignError(f"cannot verify containment unit state: {completed.stderr.strip()}")
     state: dict[str, str] = {}
     for line in completed.stdout.splitlines():
         if "=" in line:
