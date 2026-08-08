@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import re
 import socket
+import stat
 import subprocess
 import time
 import urllib.error
@@ -27,6 +28,11 @@ from typing import NamedTuple
 
 ROOT = Path("/home/bmarti44/spark-deepseek-v4-flash")
 SCORER = ROOT / "scripts/94_score_dsv4_cold_load.py"
+DRAND_VERIFIER = ROOT / "scripts/89_verify_drand_receipt.mjs"
+DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
+DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
+DRAND_FREEZE_FLOOR_ROUND = 6_358_970
 MODEL_DIR = ROOT / "weights/unsloth-ud-q2_k_xl"
 MODEL_MANIFEST = MODEL_DIR / "manifest.json"
 CAMPAIGN_LOCK = Path("/run/lock/frontier-at-home/inference.lock")
@@ -71,17 +77,50 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _runtime_bundle_sha256(directory: Path) -> str:
+def _sha256_descriptor(descriptor: int) -> str:
     digest = hashlib.sha256()
-    files = sorted(path for path in directory.iterdir() if path.is_file() and not path.is_symlink())
-    if not files:
-        raise CampaignError("empty runtime bundle")
-    for path in files:
-        name = path.name.encode("utf-8")
-        digest.update(len(name).to_bytes(4, "big"))
-        digest.update(name)
-        digest.update(bytes.fromhex(_sha256(path)))
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    while chunk := os.read(descriptor, 16 * 1024 * 1024):
+        digest.update(chunk)
     return digest.hexdigest()
+
+
+def capture_runtime_closure(
+    pid: int, output: Path, *, proc_root: Path = Path("/proc")
+) -> tuple[str, int]:
+    """Hash the executable and every executable file observed in proc maps."""
+    process_root = proc_root / str(pid)
+    mapped: set[Path] = {Path(os.readlink(process_root / "exe")).resolve(strict=True)}
+    for line in (process_root / "maps").read_text(encoding="utf-8").splitlines():
+        fields = line.split(maxsplit=5)
+        if len(fields) != 6 or "x" not in fields[1] or not fields[5].startswith("/"):
+            continue
+        name = fields[5].removesuffix(" (deleted)")
+        mapped.add(Path(name).resolve(strict=True))
+    inventory: list[dict[str, object]] = []
+    for path in sorted(mapped, key=str):
+        descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+        try:
+            before = os.fstat(descriptor)
+            if not stat.S_ISREG(before.st_mode):
+                raise CampaignError("mapped runtime artifact is not regular")
+            digest = _sha256_descriptor(descriptor)
+            after = os.fstat(descriptor)
+            if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns,
+            ):
+                raise CampaignError("mapped runtime artifact changed during hashing")
+            inventory.append({
+                "path": str(path), "device": before.st_dev, "inode": before.st_ino,
+                "bytes": before.st_size, "sha256": digest,
+            })
+        finally:
+            os.close(descriptor)
+    if not inventory:
+        raise CampaignError("empty observed runtime closure")
+    payload = (json.dumps(inventory, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    _write_bytes_new(output / "runtime-maps.json", payload)
+    return hashlib.sha256(payload).hexdigest(), len(inventory)
 
 
 def _write_json_new(path: Path, value: object) -> None:
@@ -174,7 +213,7 @@ def containment_command(unit: str, server_command: list[str], log_path: Path) ->
     if UNIT_RE.fullmatch(unit) is None or not server_command or not log_path.is_absolute():
         raise CampaignError("invalid containment input")
     return [
-        "/usr/bin/systemd-run", "--user", "--quiet", "--collect", f"--unit={unit}",
+        "/usr/bin/systemd-run", "--user", "--quiet", f"--unit={unit}",
         "--property=Type=exec", "--property=MemoryHigh=100G", "--property=MemoryMax=104G",
         "--property=MemorySwapMax=0", "--property=OOMPolicy=kill",
         "--property=KillMode=control-group", "--property=TimeoutStopSec=45s",
@@ -268,6 +307,34 @@ def _unit_pid(unit: str) -> int:
     if result.returncode != 0 or not result.stdout.strip().isdigit():
         raise CampaignError("cannot bind contained server PID")
     return int(result.stdout.strip())
+
+
+def _unit_properties(unit: str) -> dict[str, int | str]:
+    names = ("ExecMainCode", "ExecMainStatus", "Result", "MemoryPeak", "MemorySwapPeak")
+    result = _run([
+        "/usr/bin/systemctl", "--user", "show", f"{unit}.service",
+        *[item for name in names for item in ("--property", name)],
+    ])
+    if result.returncode != 0:
+        raise CampaignError("cannot read contained unit result")
+    values: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        if "=" not in line:
+            raise CampaignError("malformed contained unit result")
+        name, value = line.split("=", 1)
+        if name in values:
+            raise CampaignError("duplicate contained unit property")
+        values[name] = value
+    if set(values) != set(names) or values["Result"] != "success":
+        raise CampaignError("contained unit reports failure")
+    parsed: dict[str, int | str] = {"Result": values["Result"]}
+    for name in ("ExecMainCode", "ExecMainStatus", "MemoryPeak", "MemorySwapPeak"):
+        if not values[name].isdigit():
+            raise CampaignError("contained unit property is not numeric")
+        parsed[name] = int(values[name])
+    if parsed["ExecMainCode"] != 0 or parsed["ExecMainStatus"] != 0:
+        raise CampaignError("contained process is not clean before shutdown")
+    return parsed
 
 
 def _unit_stop(unit: str) -> None:
@@ -398,6 +465,11 @@ def _configuration_sha256() -> str:
         "alias": "deepseek-v4-flash", "host": "127.0.0.1", "port": PORT,
         "context": 8192, "parallel": 1, "gpu_layers": 999, "batch": 2048,
         "ubatch": 512, "warmup": False, "cache_ram_mib": 0, "mmap": False,
+        "reproducible_build": {
+            "source_prefix": "/src/llama.cpp-fusion",
+            "c_flags": "-ffile-prefix-map=<SOURCE>=/src/llama.cpp-fusion -fmacro-prefix-map=<SOURCE>=/src/llama.cpp-fusion",
+            "cxx_flags": "-ffile-prefix-map=<SOURCE>=/src/llama.cpp-fusion -fmacro-prefix-map=<SOURCE>=/src/llama.cpp-fusion",
+        },
         "completion": {"prompt": "Reply with exactly OK.", "n_predict": 1, "temperature": 0, "seed": 1, "n_probs": 10},
     }
     return hashlib.sha256(json.dumps(configuration, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -457,6 +529,8 @@ def _run_arm(plan: ArmPlan, attempt: Path, binary: Path, library_dir: Path, shar
         logit = json.dumps(probabilities, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
         if not probabilities:
             raise CampaignError("completion omitted first-token probabilities")
+        runtime_closure_sha, runtime_closure_count = capture_runtime_closure(pid, arm_dir)
+        unit_properties = _unit_properties(unit)
         _, events_after, cgroup_swap_after = _cgroup_counters(pid)
         oom_delta = events_after.get("oom", 0) - events_before.get("oom", 0)
         oom_kill_delta = events_after.get("oom_kill", 0) - events_before.get("oom_kill", 0)
@@ -470,7 +544,10 @@ def _run_arm(plan: ArmPlan, attempt: Path, binary: Path, library_dir: Path, shar
             "schema_version": 1, "block": plan.block, "position": plan.position, "arm": plan.arm,
             "run_id": plan.run_id, "candidate_hash": bindings["candidate_hash"],
             "model_sha256": bindings["model_sha256"], "configuration_sha256": bindings["configuration_sha256"],
-            "runtime_bundle_sha256": bindings["runtime_bundle_sha256"], "process_launch_monotonic_ns": launch,
+            "binary_sha256": bindings["binary_sha256"],
+            "runtime_closure_sha256": runtime_closure_sha,
+            "runtime_closure_count": runtime_closure_count,
+            "process_launch_monotonic_ns": launch,
             "health_ready_monotonic_ns": health_ready, "tensor_load_start_monotonic_ns": tensor_start,
             "tensor_load_end_monotonic_ns": tensor_end, "server_pid": pid, "server_start_ticks": start_ticks,
             "server_fresh": True, "physical_read_bytes": physical_read, "cache_resident_bytes_before": cache_before,
@@ -480,7 +557,12 @@ def _run_arm(plan: ArmPlan, attempt: Path, binary: Path, library_dir: Path, shar
             "unauthenticated_rejected": unauth_status in {401, 403}, "minimum_mem_available_kb": minimum_mem,
             "swap_growth_bytes": max(0, swap_growth), "cgroup_oom_delta": oom_delta,
             "cgroup_oom_kill_delta": oom_kill_delta, "cgroup_max_delta": max_delta, "xid_count": xid_count,
-            "surviving_descendants": survivors, "containment_rc": 0,
+            "surviving_descendants": survivors,
+            "systemd_result": unit_properties["Result"],
+            "systemd_exec_main_code": unit_properties["ExecMainCode"],
+            "systemd_exec_main_status": unit_properties["ExecMainStatus"],
+            "systemd_memory_peak_bytes": unit_properties["MemoryPeak"],
+            "systemd_memory_swap_peak_bytes": unit_properties["MemorySwapPeak"],
         }
         _write_json_new(arm_dir / "row.json", row)
         return row
@@ -488,12 +570,37 @@ def _run_arm(plan: ArmPlan, attempt: Path, binary: Path, library_dir: Path, shar
         _unit_stop(unit)
 
 
-def _load_randomness(path: Path) -> tuple[str, str]:
+def _load_randomness(path: Path, candidate: str = "") -> tuple[str, str, bytes]:
     raw = path.read_bytes()
     value = json.loads(raw)
-    if not isinstance(value, dict) or SHA256_RE.fullmatch(value.get("randomness", "")) is None:
+    required = {
+        "round", "freeze_floor_round", "randomness", "signature",
+        "previous_signature", "frozen_gate_commit", "relay_agreement",
+    }
+    if not isinstance(value, dict) or not required.issubset(value):
         raise CampaignError("invalid public-randomness receipt")
-    return value["randomness"], hashlib.sha256(raw).hexdigest()
+    if (
+        type(value["round"]) is not int
+        or type(value["freeze_floor_round"]) is not int
+        or value["freeze_floor_round"] != DRAND_FREEZE_FLOOR_ROUND
+        or value["round"] <= DRAND_FREEZE_FLOOR_ROUND
+        or value["frozen_gate_commit"] != candidate
+        or value["relay_agreement"]
+        != ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"]
+        or SHA256_RE.fullmatch(value["randomness"]) is None
+        or re.fullmatch(r"[0-9a-f]{192}", value["signature"] or "") is None
+        or re.fullmatch(r"[0-9a-f]{192}", value["previous_signature"] or "") is None
+    ):
+        raise CampaignError("public randomness is not post-freeze and candidate-bound")
+    if _sha256(DRAND_VERIFIER) != DRAND_VERIFIER_SHA256 or _sha256(DRAND_NODE) != DRAND_NODE_SHA256:
+        raise CampaignError("public-randomness verifier dependency mismatch")
+    verified = _run([
+        str(DRAND_NODE), str(DRAND_VERIFIER), str(value["round"]), value["randomness"],
+        value["signature"], value["previous_signature"],
+    ])
+    if verified.returncode != 0 or verified.stdout != "DRAND_BLS_RECEIPT_OK\n":
+        raise CampaignError("public randomness BLS verification failed")
+    return value["randomness"], hashlib.sha256(raw).hexdigest(), raw
 
 
 def campaign(args: argparse.Namespace) -> int:
@@ -504,14 +611,14 @@ def campaign(args: argparse.Namespace) -> int:
     output = args.output.resolve()
     output.mkdir(mode=0o700, parents=True, exist_ok=False)
     _ACTIVE_OUTPUT = output
-    randomness, receipt_sha = _load_randomness(args.randomness_receipt.resolve(strict=True))
+    randomness, receipt_sha, receipt_bytes = _load_randomness(
+        args.randomness_receipt.resolve(strict=True), args.candidate_hash
+    )
     runner_sha = _sha256(Path(__file__))
     scorer_bytes = SCORER.read_bytes()
     scorer_sha = hashlib.sha256(scorer_bytes).hexdigest()
     if runner_sha != args.runner_sha256 or scorer_sha != args.scorer_sha256 or _sha256(binary) != args.binary_sha256:
         raise CampaignError("frozen runtime or harness digest mismatch")
-    if _runtime_bundle_sha256(library_dir) != args.runtime_bundle_sha256:
-        raise CampaignError("runtime bundle digest mismatch")
     if _configuration_sha256() != args.configuration_sha256:
         raise CampaignError("configuration digest mismatch")
     model_doc = json.loads(MODEL_MANIFEST.read_text(encoding="utf-8"))
@@ -525,15 +632,19 @@ def campaign(args: argparse.Namespace) -> int:
             raise CampaignError("model shard identity mismatch")
     bindings = {
         "candidate_hash": args.candidate_hash, "model_sha256": args.model_sha256,
-        "configuration_sha256": args.configuration_sha256, "runtime_bundle_sha256": args.runtime_bundle_sha256,
+        "configuration_sha256": args.configuration_sha256,
+        "binary_sha256": args.binary_sha256,
     }
     manifest = {
         "schema_version": 1, **bindings, "runner_sha256": runner_sha, "scorer_sha256": scorer_sha,
+        "drand_verifier_sha256": DRAND_VERIFIER_SHA256,
+        "drand_node_sha256": DRAND_NODE_SHA256,
         "model_bytes": args.model_bytes, "randomness": {"value": randomness, "receipt_sha256": receipt_sha},
         "schedules": arm_schedule(randomness),
     }
     frozen_scorer = output / "frozen-scorer.py"
     _write_bytes_new(frozen_scorer, scorer_bytes)
+    _write_bytes_new(output / "randomness-receipt.json", receipt_bytes)
     _write_json_new(output / "manifest.json", manifest)
     lock_fd = os.open(CAMPAIGN_LOCK, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
     try:
@@ -597,11 +708,10 @@ def main() -> int:
     parser.add_argument("--model-sha256", required=True)
     parser.add_argument("--model-bytes", type=int, required=True)
     parser.add_argument("--configuration-sha256", required=True)
-    parser.add_argument("--runtime-bundle-sha256", required=True)
     parser.add_argument("--randomness-receipt", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    for name in ("candidate_hash", "binary_sha256", "runner_sha256", "scorer_sha256", "model_sha256", "configuration_sha256", "runtime_bundle_sha256"):
+    for name in ("candidate_hash", "binary_sha256", "runner_sha256", "scorer_sha256", "model_sha256", "configuration_sha256"):
         if SHA256_RE.fullmatch(getattr(args, name)) is None:
             parser.error(f"{name} must be one lowercase SHA-256 value")
     try:

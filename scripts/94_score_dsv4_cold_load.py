@@ -79,14 +79,16 @@ def _validate_manifest(value: object) -> dict[str, Any]:
     _require(isinstance(value, dict), "manifest is not an object")
     required = {
         "schema_version", "candidate_hash", "runner_sha256", "scorer_sha256",
-        "model_sha256", "configuration_sha256", "runtime_bundle_sha256",
-        "model_bytes", "randomness", "schedules",
+        "model_sha256", "configuration_sha256", "binary_sha256",
+        "drand_verifier_sha256", "drand_node_sha256", "model_bytes",
+        "randomness", "schedules",
     }
     _require(set(value) == required, "manifest keys do not match frozen schema")
     _require(value["schema_version"] == 1, "invalid manifest schema")
     for name in (
         "candidate_hash", "runner_sha256", "scorer_sha256", "model_sha256",
-        "configuration_sha256", "runtime_bundle_sha256",
+        "configuration_sha256", "binary_sha256", "drand_verifier_sha256",
+        "drand_node_sha256",
     ):
         _require(_sha(value[name]), f"invalid manifest {name}")
     _require(_exact_int(value["model_bytes"]) and value["model_bytes"] > 0, "invalid model bytes")
@@ -102,7 +104,8 @@ def _validate_row(value: object, manifest: dict[str, Any]) -> dict[str, Any]:
     _require(isinstance(value, dict), "row is not an object")
     required = {
         "schema_version", "block", "position", "arm", "run_id", "candidate_hash",
-        "model_sha256", "configuration_sha256", "runtime_bundle_sha256",
+        "model_sha256", "configuration_sha256", "binary_sha256",
+        "runtime_closure_sha256", "runtime_closure_count",
         "process_launch_monotonic_ns", "health_ready_monotonic_ns",
         "tensor_load_start_monotonic_ns", "tensor_load_end_monotonic_ns",
         "server_pid", "server_start_ticks", "server_fresh", "physical_read_bytes",
@@ -110,7 +113,9 @@ def _validate_row(value: object, manifest: dict[str, Any]) -> dict[str, Any]:
         "semantic_sha256", "first_token_logit_sha256", "authenticated_health",
         "authenticated_completion", "unauthenticated_rejected",
         "minimum_mem_available_kb", "swap_growth_bytes", "cgroup_oom_delta",
-        "cgroup_oom_kill_delta", "cgroup_max_delta", "xid_count", "surviving_descendants", "containment_rc",
+        "cgroup_oom_kill_delta", "cgroup_max_delta", "xid_count", "surviving_descendants",
+        "systemd_result", "systemd_exec_main_code", "systemd_exec_main_status",
+        "systemd_memory_peak_bytes", "systemd_memory_swap_peak_bytes",
     }
     _require(set(value) == required, "row keys do not match frozen schema")
     _require(value["schema_version"] == 1, "invalid row schema")
@@ -122,18 +127,21 @@ def _validate_row(value: object, manifest: dict[str, Any]) -> dict[str, Any]:
         ("candidate_hash", "candidate_hash"),
         ("model_sha256", "model_sha256"),
         ("configuration_sha256", "configuration_sha256"),
-        ("runtime_bundle_sha256", "runtime_bundle_sha256"),
+        ("binary_sha256", "binary_sha256"),
     ):
         _require(value[row_name] == manifest[manifest_name], f"stale {row_name}")
-    for name in ("semantic_sha256", "first_token_logit_sha256"):
+    for name in ("semantic_sha256", "first_token_logit_sha256", "runtime_closure_sha256"):
         _require(_sha(value[name]), f"invalid {name}")
     integer_fields = (
         "process_launch_monotonic_ns", "health_ready_monotonic_ns",
         "tensor_load_start_monotonic_ns", "tensor_load_end_monotonic_ns",
         "server_pid", "server_start_ticks", "physical_read_bytes",
-        "cache_resident_bytes_before", "direct_shard_count", "minimum_mem_available_kb",
+        "cache_resident_bytes_before", "direct_shard_count", "runtime_closure_count",
+        "minimum_mem_available_kb",
         "swap_growth_bytes", "cgroup_oom_delta", "cgroup_oom_kill_delta", "xid_count",
-        "cgroup_max_delta", "surviving_descendants", "containment_rc",
+        "cgroup_max_delta", "surviving_descendants", "systemd_exec_main_code",
+        "systemd_exec_main_status", "systemd_memory_peak_bytes",
+        "systemd_memory_swap_peak_bytes",
     )
     _require(all(_exact_int(value[name]) for name in integer_fields), "non-integer row value")
     start = value["process_launch_monotonic_ns"]
@@ -142,6 +150,7 @@ def _validate_row(value: object, manifest: dict[str, Any]) -> dict[str, Any]:
     ready = value["health_ready_monotonic_ns"]
     _require(0 <= start < tensor_start < tensor_end <= ready, "invalid timing order")
     _require(value["server_pid"] > 0 and value["server_start_ticks"] > 0, "invalid process identity")
+    _require(value["runtime_closure_count"] > 0, "empty runtime closure")
     _require(value["server_fresh"] is True, "server is not fresh")
     _require(
         value["physical_read_bytes"] >= math.ceil(manifest["model_bytes"] * MIN_PHYSICAL_READ_FRACTION),
@@ -156,9 +165,12 @@ def _validate_row(value: object, manifest: dict[str, Any]) -> dict[str, Any]:
     _require(value["minimum_mem_available_kb"] >= MIN_MEMORY_KB, "memory floor violated")
     for name in (
         "swap_growth_bytes", "cgroup_oom_delta", "cgroup_oom_kill_delta", "cgroup_max_delta", "xid_count",
-        "surviving_descendants", "containment_rc",
+        "surviving_descendants", "systemd_exec_main_code", "systemd_exec_main_status",
+        "systemd_memory_swap_peak_bytes",
     ):
         _require(value[name] == 0, f"unsafe {name}")
+    _require(value["systemd_result"] == "success", "unsafe systemd result")
+    _require(0 < value["systemd_memory_peak_bytes"] <= 104 * 1024**3, "invalid systemd memory peak")
     return value
 
 
@@ -182,6 +194,10 @@ def score_campaign(manifest: object, rows: object) -> dict[str, object]:
         _require(len({(row["server_pid"], row["server_start_ticks"]) for row in valid}) == 20, "reused server")
         for name in ("semantic_sha256", "first_token_logit_sha256"):
             _require(len({row[name] for row in valid}) == 1, f"unequal {name}")
+        _require(
+            len({(row["runtime_closure_sha256"], row["runtime_closure_count"]) for row in valid}) == 1,
+            "unequal observed runtime closure",
+        )
 
         ready_ratios: list[float] = []
         on_ready_means: list[float] = []

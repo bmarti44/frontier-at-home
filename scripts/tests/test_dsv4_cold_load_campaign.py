@@ -215,13 +215,93 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(RUNNER.CampaignError, "randomness"):
                 RUNNER._load_randomness(receipt)
-        source = (ROOT / "scripts/95_run_dsv4_cold_load.py").read_text(encoding="utf-8")
-        self.assertIn('Path(f"/proc/{pid}/maps")', source)
-        self.assertNotIn("directory.iterdir() if path.is_file()", source)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            proc = root / "proc" / "321"
+            proc.mkdir(parents=True)
+            executable = root / "llama-server"
+            library = root / "libllama.so"
+            unrelated = root / "CMakeCache.txt"
+            executable.write_bytes(b"server")
+            library.write_bytes(b"library")
+            unrelated.write_bytes(b"first")
+            executable.chmod(0o755)
+            library.chmod(0o755)
+            os.symlink(executable, proc / "exe")
+            (proc / "maps").write_text(
+                f"1000-2000 r-xp 00000000 00:00 1 {library}\n"
+                f"2000-3000 rw-p 00000000 00:00 2 {unrelated}\n",
+                encoding="utf-8",
+            )
+            first = root / "first"
+            second = root / "second"
+            first.mkdir()
+            second.mkdir()
+            first_digest, first_count = RUNNER.capture_runtime_closure(
+                321, first, proc_root=root / "proc"
+            )
+            unrelated.write_bytes(b"changed but never mapped")
+            second_digest, second_count = RUNNER.capture_runtime_closure(
+                321, second, proc_root=root / "proc"
+            )
+            self.assertEqual((first_digest, first_count), (second_digest, second_count))
+            self.assertEqual(first_count, 2)
         for field in (
             "ExecMainCode", "ExecMainStatus", "Result", "MemoryPeak", "MemorySwapPeak",
         ):
-            self.assertIn(field, source)
+            self.assertIn(
+                field,
+                (ROOT / "scripts/95_run_dsv4_cold_load.py").read_text(encoding="utf-8"),
+            )
+
+    def test_randomness_bls_and_systemd_properties_fail_closed(self) -> None:
+        receipt = {
+            "round": RUNNER.DRAND_FREEZE_FLOOR_ROUND + 1,
+            "freeze_floor_round": RUNNER.DRAND_FREEZE_FLOOR_ROUND,
+            "randomness": SHA["randomness"],
+            "signature": "1" * 192,
+            "previous_signature": "2" * 192,
+            "frozen_gate_commit": SHA["candidate"],
+            "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "receipt.json"
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            digest = lambda path: (
+                RUNNER.DRAND_VERIFIER_SHA256
+                if path == RUNNER.DRAND_VERIFIER
+                else RUNNER.DRAND_NODE_SHA256
+            )
+            with mock.patch.object(RUNNER, "_sha256", side_effect=digest), mock.patch.object(
+                RUNNER, "_run", return_value=mock.Mock(
+                    returncode=0, stdout="DRAND_BLS_RECEIPT_OK\n", stderr=""
+                )
+            ):
+                randomness, _, raw = RUNNER._load_randomness(path, SHA["candidate"])
+                self.assertEqual(randomness, SHA["randomness"])
+                self.assertEqual(raw, path.read_bytes())
+            receipt["frozen_gate_commit"] = "f" * 64
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            with self.assertRaisesRegex(RUNNER.CampaignError, "candidate-bound"):
+                RUNNER._load_randomness(path, SHA["candidate"])
+
+        good_properties = "\n".join([
+            "ExecMainCode=0", "ExecMainStatus=0", "Result=success",
+            "MemoryPeak=1234", "MemorySwapPeak=0", "",
+        ])
+        with mock.patch.object(
+            RUNNER, "_run", return_value=mock.Mock(
+                returncode=0, stdout=good_properties, stderr=""
+            )
+        ):
+            self.assertEqual(RUNNER._unit_properties("cold-b0-p0-abcdefabcdef")["Result"], "success")
+        with mock.patch.object(
+            RUNNER, "_run", return_value=mock.Mock(
+                returncode=0, stdout=good_properties.replace("Result=success", "Result=oom-kill"), stderr=""
+            )
+        ):
+            with self.assertRaisesRegex(RUNNER.CampaignError, "failure"):
+                RUNNER._unit_properties("cold-b0-p0-abcdefabcdef")
 
     def test_rejects_warm_fallback_unsafe_or_unobserved_arms(self) -> None:
         fields = {
