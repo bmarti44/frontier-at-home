@@ -72,6 +72,21 @@ class W4ServingContainmentTest(unittest.TestCase):
                                         "user-systemd containment is unavailable"):
                 RUNNER.campaign("0" * 40, Path("unused-receipt.json"))
 
+    def test_failure_finalizer_emits_w4_bound_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attempt = Path(directory)
+            RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+            RUNNER.BASE._ACTIVE_CANDIDATE = "1" * 40
+            try:
+                RUNNER.finalize_failure(RuntimeError("synthetic failure"))
+                manifest = json.loads((attempt / "manifest.json").read_bytes())
+            finally:
+                RUNNER.BASE._ACTIVE_ATTEMPT = None
+                RUNNER.BASE._ACTIVE_CANDIDATE = None
+        self.assertEqual(manifest["schema"], "glm52-w4-serving-campaign-failure-v1")
+        self.assertEqual(manifest["scorer_sha256"], RUNNER.SCORER_SHA256)
+        self.assertEqual(manifest["binary_sha256"], RUNNER.BINARY_SHA256)
+
 
 if __name__ == "__main__":
     unittest.main()
