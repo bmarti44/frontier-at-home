@@ -773,7 +773,7 @@ restore/store and suffix-processing overhead; do not weaken the global guard.
 #### W7.1 - stable-model CUDA cache generation
 
 Status: **production-coverage diagnostic PASS; matched promotion campaign
-pending.** Candidate 21 separates per-layer stable model-map remaps from the
+terminal FAIL.** Candidate 21 separates per-layer stable model-map remaps from the
 authoritative model-load generation behind the logged, default-off
 `DS4_CUDA_STABLE_MODEL_REMAP=1` flag. The fresh contained run at
 `W7-cache-generation-candidate21-pass.json` reduced the unchanged-path RED of
@@ -784,12 +784,24 @@ were zero. The complete committed package independently replays the exact fixed
 scorer PASS, and Nash/Singer both verified it at 100 with no findings in round
 276.
 
-This result is not the complete W7.1 gate. The preregistered plan still requires
-byte-identical candidate/control logit dumps (`max_abs_delta=0`, matching
-argmax, deterministic candidate repeats) and five fresh-server matched
-ABBA/BAAB blocks with candidate/control warm-suffix TTFT upper-95% ratio
-`<=0.95` and decode lower-95% ratio `>=1.00`. Run that campaign next; do not
-quote the one-arm control-config prefill as a serving metric.
+The complete matched campaign is preserved at
+`W7-cache-generation-campaign-candidate10-fail.json`. Across five fresh-server
+ABBA/BAAB blocks (20 runs), ON was byte- and logit-identical to OFF, reduced
+false generation flushes from 300 per OFF run to zero, and reduced mean
+control-config warm TTFT from 2.0318397955 seconds to 1.180619677 seconds. The
+TTFT geometric ratio was 0.5809940066093183 with upper 95% bound
+0.5977543267655646, passing the `<=0.95` requirement. Mean decode was
+1.8143087702970946 tok/s OFF and 1.817778154931558 tok/s ON, but the decode
+ratio lower 95% bound was 0.999854233137691, below the preregistered `>=1.00`
+non-regression requirement. The fixed scorer therefore returned `FAIL`.
+
+The run stayed safe (minimum 49,813,584 kB MemAvailable; zero cgroup swap,
+OOM, Xid, or surviving descendants), and both persistent reviewers independently
+approved the terminal FAIL at 100 with no findings in round 287. Do not promote
+the stable-remap flag or rerun this campaign to chase statistical noise. Preserve
+its correctness result, leave it default-off, and continue W7 with the remaining
+byte-identical restore/store and suffix-processing levers. These are
+control-configuration numbers, not the adopted GLM serving-profile metrics.
 
 ### Fidelity-free prefill work after decode/TTFT (W4/W5/W6)
 
