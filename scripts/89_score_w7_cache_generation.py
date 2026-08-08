@@ -499,6 +499,144 @@ def bind_runtime_artifacts(attempt: Path, out: Path, crash_dir: Path) -> dict[st
     return bindings
 
 
+def _read_snapshot(
+    path: Path,
+    expected_sha256: str | None = None,
+    expected_identity: tuple[int, int, int] | None = None,
+) -> tuple[bytes, dict[str, object]]:
+    """Read and validate bytes through the one descriptor later used by scoring."""
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    descriptor = os.open(path, flags)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("snapshot source is not a regular file")
+        chunks: list[bytes] = []
+        digest = hashlib.sha256()
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            digest.update(chunk)
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    identity_before = (before.st_dev, before.st_ino, before.st_size)
+    identity_after = (after.st_dev, after.st_ino, after.st_size)
+    if identity_before != identity_after or before.st_mtime_ns != after.st_mtime_ns or before.st_ctime_ns != after.st_ctime_ns:
+        raise ValueError("snapshot identity changed while reading")
+    actual = digest.hexdigest()
+    if expected_sha256 is not None and actual != expected_sha256:
+        raise ValueError("snapshot digest mismatch")
+    if expected_identity is not None and identity_before != expected_identity:
+        raise ValueError("snapshot device/inode/size mismatch")
+    return b"".join(chunks), {
+        "sha256": actual,
+        "device": before.st_dev,
+        "inode": before.st_ino,
+        "bytes": before.st_size,
+    }
+
+
+def score_and_publish_bound_attempt(
+    *,
+    attempt: Path,
+    out: Path,
+    crash_dir: Path,
+    evidence_dir: Path,
+    identities: dict[str, object],
+) -> dict[str, object]:
+    """Bind, score, and publish from one immutable in-memory snapshot."""
+    payloads: dict[str, bytes] = {}
+    bindings: dict[str, dict[str, object]] = {}
+    for name in ("containment.stdout", "containment.stderr", "containment.rc"):
+        payloads[name], bindings[name] = _read_snapshot(attempt / name)
+    containment_text = payloads["containment.stdout"].decode("utf-8", errors="strict")
+    done_match = DONE_RE.fullmatch(containment_text)
+    if done_match is None or Path(done_match.group(1)) != crash_dir:
+        raise ValueError("containment completion digest record mismatch")
+    main_sha256, samples_sha256, kernel_sha256 = done_match.groups()[1:]
+    payloads["safety/main.log"], bindings["safety/main.log"] = _read_snapshot(
+        crash_dir / "main.log", main_sha256
+    )
+    main_text = payloads["safety/main.log"].decode("utf-8", errors="strict")
+    final_re = re.compile(
+        r" final_artifact_verified path=([^ ]+) sha256=([0-9a-f]{64}) device_inode=([0-9]+:[0-9]+:[0-9]+)$"
+    )
+    recorded: dict[str, tuple[str, tuple[int, int, int]]] = {}
+    for line in main_text.splitlines():
+        match = final_re.search(line)
+        if match:
+            if match.group(1) in recorded:
+                raise ValueError("duplicate final artifact binding")
+            recorded[match.group(1)] = (
+                match.group(2), tuple(int(value) for value in match.group(3).split(":"))
+            )
+    runtime_names = (
+        "server.log", "live-response.json", "live-http-status", "primary-response.json",
+        "primary-http-status", "child-exit.json", "model.identity.json",
+    )
+    if set(recorded) != {str(out / name) for name in runtime_names}:
+        raise ValueError("safe-run final artifact set mismatch")
+    for name in runtime_names:
+        digest, identity = recorded[str(out / name)]
+        payloads[name], bindings[name] = _read_snapshot(out / name, digest, identity)
+    safety_re = re.compile(
+        r" safety_artifact_verified name=(samples|kernel)\.log sha256=([0-9a-f]{64}) size=([0-9]+)$"
+    )
+    safety_hashes: dict[str, str] = {}
+    for line in main_text.splitlines():
+        match = safety_re.search(line)
+        if match:
+            name = f"{match.group(1)}.log"
+            if name in safety_hashes:
+                raise ValueError("duplicate safety artifact binding")
+            safety_hashes[name] = match.group(2)
+    if safety_hashes != {"samples.log": samples_sha256, "kernel.log": kernel_sha256}:
+        raise ValueError("safe-run safety artifact digest mismatch")
+    for name, digest in safety_hashes.items():
+        key = f"safety/{name}"
+        payloads[key], bindings[key] = _read_snapshot(crash_dir / name, digest)
+
+    expected_binary = str(identities["binary_sha256"])
+    expected_environment = str(identities["executed_environment_sha256"])
+    expected_model = str(identities["model_sha256"])
+    expected_model_bytes = identities["model_bytes"]
+    if type(expected_model_bytes) is not int:
+        raise ValueError("invalid expected model bytes")
+    result = score_text(
+        payloads["server.log"].decode("utf-8", errors="strict"),
+        http_status=payloads["primary-http-status"].decode("utf-8", errors="strict"),
+        response_text=payloads["primary-response.json"].decode("utf-8", errors="strict"),
+        containment_rc=payloads["containment.rc"].decode("utf-8", errors="strict"),
+        containment_stdout=containment_text,
+        mode="on",
+        child_exit_text=payloads["child-exit.json"].decode("utf-8", errors="strict"),
+        safety_main_text=main_text,
+        expected_binary_sha256=expected_binary,
+        expected_environment_sha256=expected_environment,
+        model_identity_text=payloads["model.identity.json"].decode("utf-8", errors="strict"),
+        expected_model_sha256=expected_model,
+        expected_model_bytes=expected_model_bytes,
+    )
+    manifest = {
+        "schema": "glm52-w7-runtime-v3",
+        **identities,
+        "arm": "on",
+        "purpose": "single-arm production-path diagnostic, not performance or context capability",
+        "public_randomness": None,
+        "artifact_bindings": bindings,
+        "artifacts": {name: hashlib.sha256(payload).hexdigest() for name, payload in payloads.items()},
+    }
+    rows: list[dict[str, object]] = []
+    for name in ("server.log", "safety/main.log", "safety/samples.log", "safety/kernel.log", "containment.stdout", "containment.stderr", "containment.rc"):
+        for number, line in enumerate(payloads[name].decode("utf-8", errors="strict").splitlines(), 1):
+            rows.append({"source": name, "line_number": number, "text": line})
+    publish_triplet_atomic(evidence_dir, manifest, rows, result)
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("server_log", type=Path)

@@ -200,7 +200,7 @@ class W7CacheGenerationGateTest(unittest.TestCase):
 
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
-        self.assertIn('"$CGROUP" --tag', source)
+        self.assertIn('/usr/bin/bash "$cgroup_fd_path" --tag', source)
         self.assertIn('"$harness_fd_path" --driver', source)
         self.assertIn("verify_driver_containment", source)
         self.assertIn("GLM_SAFE_FINAL_ARTIFACTS", source)
@@ -244,6 +244,22 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("score_and_publish_bound_attempt", scorer)
         self.assertIn("score_and_publish_bound_attempt", harness)
         self.assertNotIn('$out/bound/server.log', harness)
+
+    def test_snapshot_bytes_cannot_be_reopened_after_path_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "server.log"
+            source.write_text(GOOD.replace("shutdown requested, draining requests\n", ""))
+            expected = source.stat()
+            payload, _ = MODULE._read_snapshot(
+                source,
+                expected_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+                expected_identity=(expected.st_dev, expected.st_ino, expected.st_size),
+            )
+            replacement = source.with_suffix(".replacement")
+            replacement.write_text(GOOD)
+            os.replace(replacement, source)
+            self.assertEqual(score(payload.decode())["verdict"], "FAIL")
+            self.assertEqual(score(source.read_text())["verdict"], "PASS")
 
     def test_failure_finalizer_uses_full_frozen_manifest_schema(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")

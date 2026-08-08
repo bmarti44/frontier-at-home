@@ -34,6 +34,16 @@ RUN_CWD=$(pwd -P)
   echo "invalid launch working directory" >&2
   exit 2
 }
+PINNED_SAFE_PATH=${GLM_SAFE_PINNED_SAFE_PATH:-}
+PINNED_SAFE_SHA256=${GLM_SAFE_PINNED_SAFE_SHA256:-}
+if [[ -n $PINNED_SAFE_PATH || -n $PINNED_SAFE_SHA256 ]]; then
+  [[ $PINNED_SAFE_PATH =~ ^/proc/[1-9][0-9]*/fd/[0-9]+$ &&
+     $PINNED_SAFE_SHA256 =~ ^[0-9a-f]{64}$ && -f $PINNED_SAFE_PATH &&
+     $(sha256sum -- "$PINNED_SAFE_PATH" | awk '{print $1}') == "$PINNED_SAFE_SHA256" ]] || {
+    echo "invalid pinned safe-run script" >&2
+    exit 2
+  }
+fi
 
 KILL_FLOOR_GIB=${GLM_SAFE_KILL_FLOOR_GIB:-18}
 TIMEOUT_S=${GLM_SAFE_TIMEOUT_S:-2400}
@@ -105,7 +115,9 @@ fi
 }
 
 UNIT="glm52-${TAG//./-}-$$"
-if [[ $ROOT_AUTHORITY == 1 ]]; then
+if [[ -n $PINNED_SAFE_PATH ]]; then
+  SAFE=$PINNED_SAFE_PATH
+elif [[ $ROOT_AUTHORITY == 1 ]]; then
   SAFE=$(dirname -- "$(readlink -f -- "$0")")/glm_safe_run.sh
 else
   SAFE=/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_safe_run.sh
@@ -180,6 +192,7 @@ for name in \
   DS4_GLM_PREFETCH DS4_GLM_PREFETCH_SHARED_CORRECTION \
   DS4_GLM_PREFETCH_THREADS \
   DS4_GLM_PREDACC_SHARED \
+  DS4_W7_PINNED_HARNESS_SHA256 \
   DS4_CUDA_STABLE_MODEL_REMAP \
   DS4_GLM_SYNC_TRACE DS4_GLM_LOGIT_DUMP DS4_GLM_LOGIT_DUMP_ALL \
   DS4_GLM_W9_CAPTURE_DIR \
