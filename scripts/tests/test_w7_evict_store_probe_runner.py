@@ -215,6 +215,12 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             manifest["completed_rows"] = 2
             (attempt / "manifest.json").write_text(json.dumps(manifest))
             self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
+            manifest["completed_rows"] = 1
+            duplicate = b'{"verdict":"PASS","verdict":"PASS"}\n'
+            (attempt / "summary.json").write_bytes(duplicate)
+            manifest["artifacts"]["summary.json"] = hashlib.sha256(duplicate).hexdigest()
+            (attempt / "manifest.json").write_text(json.dumps(manifest))
+            self.assertFalse(MODULE.terminal_manifest_valid(attempt, "c" * 40))
 
     def test_normal_publication_preserves_pass_and_fail_verdicts(self) -> None:
         for verdict in ("PASS", "FAIL"):

@@ -365,10 +365,24 @@ FAILURE_MANIFEST_KEYS = {
 }
 
 
+def strict_json(payload: bytes) -> object:
+    def object_hook(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate JSON key: {key}")
+            result[key] = value
+        return result
+    return json.loads(
+        payload, object_pairs_hook=object_hook,
+        parse_constant=lambda value: (_ for _ in ()).throw(ValueError(f"non-finite JSON value: {value}")),
+    )
+
+
 def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
     try:
         payload, _ = BASE.read_stable(attempt / "manifest.json")
-        manifest = json.loads(payload)
+        manifest = strict_json(payload)
         if not isinstance(manifest, dict):
             return False
         schema = manifest.get("schema")
@@ -431,11 +445,11 @@ def terminal_manifest_valid(attempt: Path, candidate: str) -> bool:
                     return False
         raw_bytes, _ = BASE.read_stable(attempt / "raw.jsonl")
         summary_bytes, _ = BASE.read_stable(attempt / "summary.json")
-        summary = json.loads(summary_bytes)
+        summary = strict_json(summary_bytes)
         if not isinstance(summary, dict) or summary.get("verdict") != manifest["verdict"]:
             return False
         raw_lines = raw_bytes.splitlines()
-        if any(not line.strip() or not isinstance(json.loads(line), dict) for line in raw_lines):
+        if any(not line.strip() or not isinstance(strict_json(line), dict) for line in raw_lines):
             return False
         if len(raw_lines) != manifest["completed_rows"]:
             return False
@@ -533,7 +547,7 @@ def publish_terminal_triplet(
     summary_bytes: bytes, expected_bindings: dict[str, str],
 ) -> str:
     try:
-        summary = json.loads(summary_bytes)
+        summary = strict_json(summary_bytes)
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ProbeError("invalid summary before terminal publication") from error
     verdict = summary.get("verdict") if isinstance(summary, dict) else None
