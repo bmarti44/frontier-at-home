@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -27,8 +28,9 @@ RUNNER = load_module("dsv4_cold_runner", ROOT / "scripts/95_run_dsv4_cold_load.p
 MODEL_BYTES = 96_832_507_552
 SHA = {name: char * 64 for name, char in {
     "candidate": "1", "runner": "2", "scorer": "3", "model": "4",
-    "config": "5", "bundle": "6", "semantic": "7", "logit": "8",
-    "randomness": "9", "receipt": "a",
+    "config": "5", "binary": "6", "semantic": "7", "logit": "8",
+    "randomness": "9", "receipt": "a", "closure": "b",
+    "drand_verifier": "c", "drand_node": "d",
 }.items()}
 
 
@@ -50,7 +52,9 @@ def manifest() -> dict[str, object]:
         "scorer_sha256": SHA["scorer"],
         "model_sha256": SHA["model"],
         "configuration_sha256": SHA["config"],
-        "runtime_bundle_sha256": SHA["bundle"],
+        "binary_sha256": SHA["binary"],
+        "drand_verifier_sha256": SHA["drand_verifier"],
+        "drand_node_sha256": SHA["drand_node"],
         "model_bytes": MODEL_BYTES,
         "randomness": {
             "value": randomness,
@@ -78,7 +82,9 @@ def rows() -> list[dict[str, object]]:
                 "candidate_hash": SHA["candidate"],
                 "model_sha256": SHA["model"],
                 "configuration_sha256": SHA["config"],
-                "runtime_bundle_sha256": SHA["bundle"],
+                "binary_sha256": SHA["binary"],
+                "runtime_closure_sha256": SHA["closure"],
+                "runtime_closure_count": 12,
                 "process_launch_monotonic_ns": launch,
                 "health_ready_monotonic_ns": launch + int(ready_seconds * 1e9),
                 "tensor_load_start_monotonic_ns": launch + 1_000_000_000,
@@ -102,7 +108,11 @@ def rows() -> list[dict[str, object]]:
                 "cgroup_max_delta": 0,
                 "xid_count": 0,
                 "surviving_descendants": 0,
-                "containment_rc": 0,
+                "systemd_result": "success",
+                "systemd_exec_main_code": 0,
+                "systemd_exec_main_status": 0,
+                "systemd_memory_peak_bytes": 80 * 1024**3,
+                "systemd_memory_swap_peak_bytes": 0,
             })
     return result
 
@@ -173,6 +183,7 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
         self.assertIn("KillMode=control-group", joined)
         self.assertIn("RuntimeMaxSec=300s", joined)
         self.assertIn("WorkingDirectory=/", joined)
+        self.assertNotIn("--collect", command)
         with tempfile.TemporaryDirectory() as temporary:
             destination = Path(temporary) / "attempt"
             destination.mkdir()
@@ -191,10 +202,26 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
         bad = rows()[:-1]; mutations.append(bad)
         bad = rows(); bad[1]["run_id"] = bad[0]["run_id"]; mutations.append(bad)
         bad = rows(); bad[2]["model_sha256"] = "f" * 64; mutations.append(bad)
-        bad = rows(); bad[3]["runtime_bundle_sha256"] = "e" * 64; mutations.append(bad)
+        bad = rows(); bad[3]["binary_sha256"] = "e" * 64; mutations.append(bad)
         bad = rows(); bad[4]["arm"] = "on" if bad[4]["arm"] == "off" else "off"; mutations.append(bad)
         for raw in mutations:
             self.assertEqual(SCORER.score_campaign(manifest(), raw)["verdict"], "FAIL")
+
+    def test_runner_rejects_unsigned_randomness_and_observes_loaded_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            receipt = Path(temporary) / "randomness.json"
+            receipt.write_text(
+                json.dumps({"randomness": SHA["randomness"]}), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(RUNNER.CampaignError, "randomness"):
+                RUNNER._load_randomness(receipt)
+        source = (ROOT / "scripts/95_run_dsv4_cold_load.py").read_text(encoding="utf-8")
+        self.assertIn('Path(f"/proc/{pid}/maps")', source)
+        self.assertNotIn("directory.iterdir() if path.is_file()", source)
+        for field in (
+            "ExecMainCode", "ExecMainStatus", "Result", "MemoryPeak", "MemorySwapPeak",
+        ):
+            self.assertIn(field, source)
 
     def test_rejects_warm_fallback_unsafe_or_unobserved_arms(self) -> None:
         fields = {
@@ -207,7 +234,8 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
             "cgroup_max_delta": 1,
             "xid_count": 1,
             "surviving_descendants": 1,
-            "containment_rc": 1,
+            "systemd_result": "oom-kill",
+            "systemd_memory_swap_peak_bytes": 4096,
         }
         for key, value in fields.items():
             bad = rows(); bad[1][key] = value
@@ -224,6 +252,8 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
         bad = rows(); bad[1]["semantic_sha256"] = "c" * 64
         self.assertEqual(SCORER.score_campaign(manifest(), bad)["verdict"], "FAIL")
         bad = rows(); bad[1]["first_token_logit_sha256"] = "d" * 64
+        self.assertEqual(SCORER.score_campaign(manifest(), bad)["verdict"], "FAIL")
+        bad = rows(); bad[1]["runtime_closure_sha256"] = "e" * 64
         self.assertEqual(SCORER.score_campaign(manifest(), bad)["verdict"], "FAIL")
         bad = rows(); bad[1]["health_ready_monotonic_ns"] = bad[1]["process_launch_monotonic_ns"]
         self.assertEqual(SCORER.score_campaign(manifest(), bad)["verdict"], "FAIL")
