@@ -368,7 +368,9 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             with mock.patch.object(MODULE.subprocess, "Popen", return_value=process), mock.patch.object(
                 MODULE, "stop_exact_containment_unit",
                 side_effect=lambda unit: events.append(f"stop:{unit}"),
-            ) as stop_unit:
+            ) as stop_unit, mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+                MODULE, "_listener_is_active", return_value=False,
+            ):
                 with self.assertRaises(MODULE.CampaignInterrupted):
                     MODULE.run_contained_command(["/usr/bin/true"], {}, "w7-test")
         finally:
