@@ -85,6 +85,55 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
 
 
 class W7CacheGenerationGateTest(unittest.TestCase):
+    def test_exact_byte_unsealed_harness_is_rejected(self) -> None:
+        descriptor = os.memfd_create("w7-unsealed-harness", os.MFD_ALLOW_SEALING)
+        try:
+            payload = SMOKE.read_bytes()
+            os.write(descriptor, payload)
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            path = f"/proc/{os.getpid()}/fd/{descriptor}"
+            env = dict(os.environ)
+            env["DS4_W7_PINNED_HARNESS_SHA256"] = hashlib.sha256(payload).hexdigest()
+            completed = subprocess.run(
+                ["/usr/bin/bash", path, "--self-test"],
+                pass_fds=(descriptor,),
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+        finally:
+            os.close(descriptor)
+
+    def test_alternate_entry_binds_seals_and_candidate_objects(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("verify_sealed_candidate_scripts", source)
+        self.assertIn("F_GET_SEALS", source)
+        self.assertIn('"$candidate:$tracked"', source)
+        self.assertIn('/usr/bin/git -C "$ROOT" rev-parse HEAD', source)
+        self.assertIn('/usr/bin/git -C "$ROOT" show', source)
+        self.assertIn("--sealed-outer|--driver", source)
+
+    def test_failure_finalizer_is_independent_of_seal_holder(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        finalizer = source.split("finalize_outer() {", 1)[1].split("if [[ ${1:-} == --self-test", 1)[0]
+        self.assertNotIn("scorer_fd_path", finalizer)
+        self.assertNotIn("SourceFileLoader", finalizer)
+        self.assertIn("publish_failure_triplet", finalizer)
+        self.assertIn('containment_stdout="$containment_stdout"', source)
+        self.assertIn('containment_rc="$containment_rc"', source)
+
+    def test_holder_birth_identity_is_bound_before_cleanup(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("seal_holder_start_ticks", source)
+        self.assertIn("seal_holder_parent_pid", source)
+        self.assertIn("verify_seal_holder_identity", source)
+        cleanup = source.split("stop_seal_holder() {", 1)[1].split("verify_driver_containment() {", 1)[0]
+        self.assertIn("verify_seal_holder_identity", cleanup)
+
     def test_sealed_runtime_snapshots_reject_in_place_mutation(self) -> None:
         completed = subprocess.run(
             [str(SMOKE), "--sealed-self-test"],
