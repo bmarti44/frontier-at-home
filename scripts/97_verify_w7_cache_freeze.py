@@ -18,6 +18,8 @@ def open_and_measure(path: Path, expected_bytes: int) -> tuple[os.stat_result, s
     flags = os.O_RDONLY | os.O_CLOEXEC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
     descriptor = os.open(path, flags)
     digest = hashlib.sha256()
     try:
