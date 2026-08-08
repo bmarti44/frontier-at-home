@@ -1,0 +1,66 @@
+{
+  "candidate_hash": "4c874eb490c8a959a81ac1342a02113c8a7193c0",
+  "review_round": 265,
+  "gate_candidate": 12,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 90,
+    "critical": [],
+    "high": [
+      {
+        "id": "GAP-W7.1-265-H1-CANDIDATE-HEAD-NOT-REVALIDATED",
+        "evidence": "The sealed outer validates HEAD before attempt creation, but PASS scoring does not require an independently observed final HEAD equal to the candidate, while fallback evidence copies candidate into execution_head.",
+        "affected_gate": "W7.1 candidate lineage and measurement validity",
+        "acceptance_test": "A HEAD change after attempt creation must force FAIL and record both candidate and independently observed final HEAD."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 80,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-265-H1-DIRECT-DRIVER-LINEAGE",
+        "evidence": "The sealed driver validates cgroup properties but does not independently require the inference-lock and safe-wrapper lineage before dispatch.",
+        "affected_gate": "complete runtime containment lineage",
+        "acceptance_test": "A direct driver invocation in a look-alike cgroup must fail before runtime scratch or engine launch; only the lock-owning safe-wrapper chain may authorize dispatch."
+      },
+      {
+        "id": "ADV-W7.1-265-H2-GIT-REPLACEMENT-LINEAGE",
+        "evidence": "Ordinary Git object resolution can honor replacement refs, so candidate:path validation does not necessarily resolve the advertised commit object directly.",
+        "affected_gate": "candidate-object lineage",
+        "acceptance_test": "Candidate tree/blob resolution must bypass replacement refs and reject any mismatch with the advertised commit."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "prior_issue_status": {
+    "GAP-W7.1-264-C1-SEALED-OUTER-LINEAGE-UNBOUND": "FIXED",
+    "GAP-W7.1-264-H1-SEAL-HOLDER-LOSS-DROPS-EVIDENCE": "FIXED",
+    "ADV-W7.1-264-H1-UNSEALED-SCRIPT-DESCRIPTOR-SUBSTITUTION": "FIXED",
+    "ADV-W7.1-264-M1-HOLDER-PID-IDENTITY": "FIXED",
+    "ADV-W7.1-264-M2-FAILURE-RECORD-PATH-REOPEN": "FIXED",
+    "GAP-W7.1-263-H1-PINNED-DESCRIPTORS-DO-NOT-FREEZE-SCRIPT-BYTES": "FIXED",
+    "GAP-W7.1-263-H2-CONTAINMENT-DIGEST-ROOT-REMAINS-REPLACEABLE": "FIXED",
+    "ADV-W7.1-263-H2-FROZEN-REQUESTS-REOPENED-BY-PATH": "FIXED"
+  },
+  "convergence": {
+    "gate_candidate_count": 12,
+    "campaign_global_review_round": 265,
+    "blocking_classes_previous": 2,
+    "blocking_classes_current": 3,
+    "consecutive_non_shrinking_candidates": 1,
+    "status": "CANDIDATE_13_AUTHORIZED",
+    "next_scope": [
+      "safe-wrapper and inference-lock driver lineage",
+      "replacement-free candidate object resolution",
+      "final observed HEAD equality"
+    ]
+  },
+  "root_disposition": "All r264 blockers are fixed. Candidate 13 is bounded to the three new r265 lineage findings; no runtime is authorized."
+}
