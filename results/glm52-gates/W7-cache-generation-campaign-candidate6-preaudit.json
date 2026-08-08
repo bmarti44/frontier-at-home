@@ -1,0 +1,40 @@
+{
+  "gate": "W7.1-stable-model-cache-generation-matched-campaign",
+  "candidate": 6,
+  "owner_resumed_after_pause": true,
+  "implementation_commits": [
+    "572e81f81bd906270659aecf6934b5dada12eafd",
+    "cc40737ba9d6365fc3652a751ceb555eb5d58844"
+  ],
+  "review_delta_from": "6a76753a87e4521c06be3f3696073e46516a9c43",
+  "review_round_from": 281,
+  "scope": [
+    "derive the exact transient unit from trusted tag and launcher PID",
+    "stop and verify the user unit inactive or absent before launcher reap",
+    "use a bounded exact-unit SIGKILL fallback only if ordinary stop does not converge",
+    "fail closed on user-systemd control-plane ambiguity",
+    "verify no server PID or listener survives cleanup"
+  ],
+  "audit": {
+    "focused_and_lifecycle_tests": {"tests": 50, "result": "PASS", "skipped": 1},
+    "real_harmless_transient_unit_interruption": "PASS",
+    "real_contained_descendant_reaped": "PASS",
+    "active_units_after": 0,
+    "server_pids_after": 0,
+    "listener_after": false,
+    "control_plane_failure_mutation": "PASS",
+    "runner_self_test": "PASS",
+    "python_compile": "PASS",
+    "diff_check": "PASS",
+    "secret_scan": "PASS",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count_for_gate": 6,
+    "resumed_candidate_count": 1,
+    "blocking_findings_targeted": 1,
+    "expected_blocking_count": 0,
+    "candidate_limit_exceeded": false
+  },
+  "runtime_authority": "NOT_RUN_PENDING_REVIEW"
+}
