@@ -58,8 +58,12 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             '{"exit_status":0,"forced_kill":false,"shutdown_requested":true}\n',
             encoding="utf-8",
         )
-        for index in range(1, 130):
-            (out / f"logits.sync{index}.start5044.prompt5066.suffix22").write_bytes(
+        for index, start, prompt, suffix in (
+            (1, 0, 5044, 5044),
+            (2, 5044, 5055, 11),
+            (3, 5044, 5066, 22),
+        ):
+            (out / f"logits.sync{index}.start{start}.prompt{prompt}.suffix{suffix}").write_bytes(
                 index.to_bytes(4, "little")
             )
         crash_root = Path("/home/bmarti44/.local/state/glm52-crashlog")
@@ -176,7 +180,7 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         (out / "safety").rmdir()
         client["usage"]["prompt_tokens_details"]["cached_tokens"] = 5044
         client_path.write_text(json.dumps(client), encoding="utf-8")
-        next(out.glob("logits.sync129.*")).unlink()
+        next(out.glob("logits.sync3.*")).unlink()
         with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
             MODULE, "LOGIT_BYTES", 4
         ):
