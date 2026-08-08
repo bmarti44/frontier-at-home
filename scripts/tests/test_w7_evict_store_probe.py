@@ -40,6 +40,7 @@ def row(arm: str) -> dict[str, object]:
         "generated_text_bytes": 80,
         "logit_sha256s": ["7" * 64, "8" * 64, "9" * 64],
         "selected_checkpoint_tokens": 5044,
+        "checkpoint_id": "token-text:9e5ba8aa0b75e6c618f68d9834ef541c44cd4b42",
         "evict_store_count": 1 if arm == "off" else 0,
         "skip_marker_count": 0 if arm == "off" else 1,
         "activation_marker_count": 0 if arm == "off" else 1,
@@ -93,6 +94,11 @@ class W7EvictStoreProbeScorerTests(unittest.TestCase):
             mutated = copy.deepcopy(self.rows)
             mutated[1][field] = value
             self.assert_fails(mutated)
+
+    def test_rejects_distinct_valid_checkpoint_identity(self) -> None:
+        mutated = copy.deepcopy(self.rows)
+        mutated[1]["checkpoint_id"] = "token-text:" + "a" * 40
+        self.assert_fails(mutated)
 
     def test_rejects_short_or_unsafe_rows(self) -> None:
         mutated = copy.deepcopy(self.rows)
