@@ -21,8 +21,6 @@ readonly LIVE=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa86
 readonly LIVE_SHA256=d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a
 readonly PRIMARY=/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json
 readonly PRIMARY_SHA256=a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3
-readonly ENGINE_LOCK=/run/user/1000/ds4-w7.lock
-readonly ENV_SHA256=e40e6f76739cfc2030e7e31ee6e02a4b1b7353c2ecb673497405a339f8bd9c0c
 readonly PORT=8097
 server_pid=
 attempt=
@@ -47,6 +45,9 @@ cgroup_sha256=${DS4_W7_SEALED_CGROUP_SHA256:-}
 safe_sha256=${DS4_W7_SEALED_SAFE_SHA256:-}
 scorer_sha256=${DS4_W7_SEALED_SCORER_SHA256:-}
 memory_guard_sha256=${DS4_W7_SEALED_MEMORY_GUARD_SHA256:-}
+engine_lock_fd=
+engine_lock_fd_path=
+environment_sha256=
 
 has_full_seal() {
   /usr/bin/python3 - "$1" <<'PY'
@@ -110,7 +111,27 @@ verify_dependencies_fast() {
     verify_file "$primary_fd_path" "$PRIMARY_SHA256"
   fi
   [[ -f $CGROUP && ! -L $CGROUP && -f $SAFE && ! -L $SAFE && -f $SCORER && ! -L $SCORER ]]
-  [[ -d ${ENGINE_LOCK%/*} && ! -L ${ENGINE_LOCK%/*} && -w ${ENGINE_LOCK%/*} ]]
+}
+
+prepare_engine_lock() {
+  local directory=$1 leaf=$1/.ds4-engine-lock
+  [[ -d $directory && ! -L $directory && $(stat -Lc '%a:%u' -- "$directory") == 700:$(id -u) ]]
+  ( set -o noclobber; : >"$leaf" )
+  [[ -f $leaf && ! -L $leaf && $(stat -Lc '%a:%u:%h' -- "$leaf") == 600:$(id -u):1 ]]
+  exec {engine_lock_fd}<>"$leaf"
+  rm -f -- "$leaf"
+  [[ ! -e $leaf && ! -L $leaf ]]
+  engine_lock_fd_path="/proc/$$/fd/$engine_lock_fd"
+  /usr/bin/python3 - "$engine_lock_fd_path" <<'PY'
+import os, stat, sys
+metadata = os.stat(sys.argv[1])
+if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 0:
+    raise SystemExit("engine lock descriptor is not an unlinked regular file")
+if metadata.st_uid != os.getuid() or stat.S_IMODE(metadata.st_mode) != 0o600:
+    raise SystemExit("engine lock descriptor ownership or mode mismatch")
+PY
+  environment_sha256=$(printf 'DS4_CUDA_STABLE_MODEL_REMAP=1\nDS4_LOCK_FILE=%s\n' "$engine_lock_fd_path" | sha256sum | awk '{print $1}')
+  [[ $environment_sha256 =~ ^[0-9a-f]{64}$ ]]
 }
 
 verify_reviewed_sources() {
@@ -475,7 +496,7 @@ publish_outer_evidence() {
   execution_head=$(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD)
   set +e
   python3 - "$scorer_fd_path" "$attempt" "$out" "$crash_dir" "$candidate" "$execution_head" \
-    "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
+    "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "${environment_sha256:-unknown}" \
     "$scorer_sha256" "$harness_sha256" "$cgroup_sha256" "$safe_sha256" \
     "$memory_guard_sha256" "$containment_rc" "$containment_stdout" <<'PY'
 import importlib.machinery, importlib.util, pathlib, sys
@@ -501,7 +522,7 @@ PY
 publish_failure_triplet() {
   observed_final_head=$(/usr/bin/git --no-replace-objects -C "$ROOT" rev-parse HEAD 2>/dev/null || printf unknown)
   /usr/bin/python3 - "$attempt" "$out" "${candidate:-unknown}" "$observed_final_head" "$failure_reason" "$1" \
-    "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$ENV_SHA256" \
+    "$BINARY_SHA256" "$MODEL_SHA256" "$MODEL_BYTES" "$LIVE_SHA256" "$PRIMARY_SHA256" "$environment_sha256" \
     "$scorer_sha256" "$harness_sha256" "$cgroup_sha256" "$safe_sha256" \
     "$memory_guard_sha256" "$containment_rc" "$containment_stdout" <<'PY'
 import ctypes, errno, hashlib, json, os, pathlib, sys, tempfile
@@ -592,6 +613,31 @@ if [[ ${1:-} == --self-test ]]; then
   [[ $# == 1 ]]
   verify_dependencies_fast
   echo W7_CACHE_GENERATION_SMOKE_SELFTEST_OK
+  exit 0
+fi
+
+if [[ ${1:-} == --engine-lock-self-test ]]; then
+  [[ $# == 1 ]]
+  test_directory=$(mktemp -d /home/bmarti44/.local/state/.w7-engine-lock-test.XXXXXX)
+  trap 'rm -f -- "$test_directory/.ds4-engine-lock"; rmdir -- "$test_directory"' EXIT
+  chmod 0700 "$test_directory"
+  prepare_engine_lock "$test_directory"
+  expected_identity=$(stat -Lc '%d:%i' -- "$engine_lock_fd_path")
+  ln -s /tmp/ds4.lock "$test_directory/.ds4-engine-lock"
+  /usr/bin/python3 - "$engine_lock_fd_path" "$expected_identity" <<'PY'
+import os, sys
+path, expected = sys.argv[1:]
+descriptor = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+try:
+    metadata = os.fstat(descriptor)
+    actual = f"{metadata.st_dev}:{metadata.st_ino}"
+    if actual != expected:
+        raise SystemExit("descriptor path was redirected by leaf replacement")
+finally:
+    os.close(descriptor)
+PY
+  exec {engine_lock_fd}>&-
+  echo W7_ENGINE_LOCK_DESCRIPTOR_SELFTEST_OK
   exit 0
 fi
 
@@ -741,6 +787,7 @@ out="$attempt/on"
 mkdir -m 0700 "$attempt"
 trap finalize_outer EXIT
 mkdir -m 0700 "$out"
+prepare_engine_lock "$out"
 failure_reason=containment-launch
 tag="w7-c14-${nonce:0:12}"
 final_artifacts="$out/server.log,$out/live-response.json,$out/live-http-status,$out/primary-response.json,$out/primary-http-status,$out/child-exit.json,$out/model.identity.json"
@@ -761,7 +808,7 @@ GLM_SAFE_RUN_AS_CURRENT_USER=1 \
 GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
 GLM_SAFE_EXPECTED_BINARY_SHA256="$BINARY_SHA256" \
 GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE \
-GLM_SAFE_EXPECTED_ENV_SHA256="$ENV_SHA256" \
+GLM_SAFE_EXPECTED_ENV_SHA256="$environment_sha256" \
 GLM_SAFE_FINAL_ARTIFACTS="$final_artifacts" \
 GLM_SAFE_DONE_DIGESTS=1 \
 GLM_SAFE_PINNED_SAFE_PATH="$safe_fd_path" \
@@ -777,7 +824,7 @@ DS4_W7_SEALED_SAFE_SHA256="$safe_sha256" \
 DS4_W7_SEALED_LIVE_PATH="$live_fd_path" \
 DS4_W7_SEALED_PRIMARY_PATH="$primary_fd_path" \
 DS4_CUDA_STABLE_MODEL_REMAP=1 \
-DS4_LOCK_FILE="$ENGINE_LOCK" \
+DS4_LOCK_FILE="$engine_lock_fd_path" \
 DS4_CUDA_EXPERT_CACHE_GB=40 \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
 DS4_CUDA_EXPERT_CACHE_SLRU=1 \
