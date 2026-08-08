@@ -49,14 +49,14 @@ CONTAINMENT = (
     f"main_sha256={'1' * 64} samples_sha256={'2' * 64} kernel_sha256={'3' * 64}\n"
 )
 BINARY_SHA256 = "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
-ENV_SHA256 = "ea8cc542bf2138646cb5bb3d38c9f7e7d88eef3e5a8fe7faf13074463f5a5e64"
+ENV_SHA256 = "e40e6f76739cfc2030e7e31ee6e02a4b1b7353c2ecb673497405a339f8bd9c0c"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
 SAFETY = (
     "SAFE_RUN start tag=w7-test vlimit_kb=419430400 kill_floor_gib=24 "
     "min_start_gib=110 timeout_s=2400\n"
     "cgroup_verified path=/x memory_high=83751862272 memory_max=85899345920 "
     "memory_swap_max=0 memory_oom_group=1\n"
-    f"executed_environment_allowlist=DS4_CUDA_STABLE_MODEL_REMAP executed_environment_sha256={ENV_SHA256}\n"
+    f"executed_environment_allowlist=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE executed_environment_sha256={ENV_SHA256}\n"
     f"executed_candidate_verified executed_binary_sha256={BINARY_SHA256}\n"
     f"memory_guard_descriptor_path=/proc/123/fd/7 memory_guard_sha256={MEMORY_GUARD_SHA256}\n"
     "executed candidate was verified alive at least once; no identity contradiction observed by the periodic sampler\n"
@@ -490,6 +490,17 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         source = CGROUP.read_text(encoding="utf-8")
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
         self.assertIn("GLM_SAFE_DONE_DIGESTS", source)
+
+    def test_current_user_engine_lock_is_fixed_and_environment_bound(self) -> None:
+        source = SMOKE.read_text(encoding="utf-8")
+        self.assertIn("readonly ENGINE_LOCK=/run/user/1000/ds4-w7.lock", source)
+        self.assertIn("DS4_LOCK_FILE=\"$ENGINE_LOCK\"", source)
+        self.assertIn(
+            "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE",
+            source,
+        )
+        self.assertIn(f"readonly ENV_SHA256={ENV_SHA256}", source)
+        self.assertIn("DS4_LOCK_FILE", CGROUP.read_text(encoding="utf-8"))
 
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
