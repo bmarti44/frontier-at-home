@@ -45,7 +45,7 @@ MODEL_BYTES = 211075856448
 LOGIT_BYTES = 154880 * 4
 LIVE_SHA256 = "d1def599a8bbfcd3a49e97d3c467fe30264caa241e9fa7cf717e5550c2bb601a"
 PRIMARY_SHA256 = "a453691312004c144474d0fc8f27c17e38aec055a353a20bb2e9946f265667f3"
-CGROUP_SHA256 = "d55eb3d1bd667fffe6bd3a7cbc9421b23a1bdd7fcd00cbec5f41bb149ef4eb54"
+CGROUP_SHA256 = "e48994ca3176cf6ad9846a5bf425ad5d95d5c2476984db2a7c90b0aa2f814ee2"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
 SCORER_SHA256 = "721108911ce3bdc7bcae722605603e517ed4b07cfb9aa8142152860caf16ce5e"
@@ -89,20 +89,36 @@ def finalize_failure_triplet(error: BaseException) -> None:
     ).encode()
     if not raw_path.exists():
         write_new(raw_path, raw_bytes)
-    if not summary_path.exists():
-        write_new(summary_path, summary_bytes)
-    else:
-        summary_bytes = summary_path.read_bytes()
+    displaced_summary: tuple[str, str] | None = None
+    if summary_path.exists():
+        prior_bytes, _ = read_stable(summary_path)
+        prior_path = _ACTIVE_ATTEMPT / "summary.pre-finalization.json"
+        os.rename(summary_path, prior_path)
+        displaced_summary = (prior_path.name, hashlib.sha256(prior_bytes).hexdigest())
+    write_new(summary_path, summary_bytes)
     manifest = {
         "schema": "glm52-w7-cache-generation-campaign-failure-v1",
         "candidate_hash": _ACTIVE_CANDIDATE,
         "failure": failure,
+        "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "scorer_sha256": SCORER_SHA256,
+        "binary_sha256": BINARY_SHA256,
+        "model_sha256": MODEL_SHA256,
+        "live_request_sha256": LIVE_SHA256,
+        "primary_source_sha256": PRIMARY_SHA256,
+        "configuration": "unavailable_or_incomplete",
+        "public_randomness_receipt_sha256": (
+            sha256_file(_ACTIVE_ATTEMPT / "randomness-receipt.json")
+            if (_ACTIVE_ATTEMPT / "randomness-receipt.json").is_file() else None
+        ),
         "artifacts": {
             "raw.jsonl": hashlib.sha256(raw_bytes).hexdigest(),
             "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
         },
         "verdict": "FAIL",
     }
+    if displaced_summary is not None:
+        manifest["artifacts"][displaced_summary[0]] = displaced_summary[1]
     write_json_new(manifest_path, manifest)
 
 
@@ -128,6 +144,10 @@ def process_start_ticks(pid: int) -> int:
     if len(fields) < 22:
         raise CampaignError("cannot bind campaign process identity")
     return int(fields[21])
+
+
+def lock_kernel_key(metadata: os.stat_result) -> str:
+    return f"{os.major(metadata.st_dev):02x}:{os.minor(metadata.st_dev):02x}:{metadata.st_ino}"
 
 
 def read_stable(path: Path) -> tuple[bytes, os.stat_result]:
@@ -484,6 +504,7 @@ def environment_for_arm(
     arm: str, out: Path, request_sha256: str,
     engine_lock_path: str = "/proc/self/fd/999", lock_identity: str = "0:0",
     campaign_lock_fd: int | None = None,
+    memory_guard_path: str = str(MEMORY_GUARD),
 ) -> tuple[dict[str, str], str]:
     measured = {
         "DS4_CUDA_EXPERT_CACHE_GB": "40",
@@ -517,16 +538,14 @@ def environment_for_arm(
     env.update({
         "GLM_CANDIDATE_SRC": str(CANDIDATE_SRC),
         "GLM_SAFE_RUN_AS_CURRENT_USER": "1",
-        "GLM_SAFE_MEMORY_HIGH_GIB": "78",
         "GLM_SAFE_KILL_FLOOR_GIB": "24",
         "GLM_SAFE_MIN_START_GIB": "110",
         "GLM_SAFE_TIMEOUT_S": "2400",
-        "GLM_SAFE_ALLOW_CGROUP_HIGH": "1",
         "GLM_SAFE_LOG_CANDIDATE_PROVENANCE": "1",
         "GLM_SAFE_EXPECTED_BINARY_SHA256": BINARY_SHA256,
         "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST": ",".join(sorted(measured)),
         "GLM_SAFE_EXPECTED_ENV_SHA256": digest,
-        "GLM_SAFE_MEMORY_GUARD_PATH": str(MEMORY_GUARD),
+        "GLM_SAFE_MEMORY_GUARD_PATH": memory_guard_path,
         "GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256": MEMORY_GUARD_SHA256,
         "GLM_SAFE_FINAL_ARTIFACTS": ",".join(str(out / name) for name in (
             "server.log", "live-response.json", "primary-client.json", "child-exit.json"
@@ -540,6 +559,7 @@ def environment_for_arm(
             "GLM_SAFE_PARENT_LOCK_START_TICKS": str(process_start_ticks(os.getpid())),
             "GLM_SAFE_PARENT_LOCK_FD": str(campaign_lock_fd),
             "GLM_SAFE_PARENT_LOCK_DEV_INO": f"{campaign_lock_stat.st_dev}:{campaign_lock_stat.st_ino}",
+            "GLM_SAFE_PARENT_LOCK_KERNEL_KEY": lock_kernel_key(campaign_lock_stat),
         })
     return env, digest
 
@@ -708,6 +728,10 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
         or frozen_scorer_bytes != read_stable(SCORER)[0]
     ):
         raise CampaignError("frozen scorer identity mismatch")
+    memory_guard_fd = os.open(MEMORY_GUARD, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    if sha256_descriptor(memory_guard_fd) != MEMORY_GUARD_SHA256:
+        raise CampaignError("retained memory guard identity mismatch")
+    memory_guard_path = f"/proc/{os.getpid()}/fd/{memory_guard_fd}"
     model_fd = os.open(MODEL, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
     model_before = os.fstat(model_fd)
     if model_before.st_size != MODEL_BYTES or sha256_descriptor(model_fd) != MODEL_SHA256:
@@ -745,7 +769,9 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
         "context": 8192, "cache_gib": 40, "fetch_threads": 6,
         "boundary_align": 4, "boundary_trim": 8, "max_tokens": 160,
         "temperature": 0, "containment": {
-            "MemoryHigh_GiB": 78, "MemoryMax_GiB": 80, "MemorySwapMax": 0,
+            "MemoryHigh": "derived_from_start_available_minus_kill_floor_minus_8_GiB",
+            "MemoryMax": "derived_from_start_available_minus_kill_floor_minus_4_GiB",
+            "MemorySwapMax": 0,
             "kill_floor_GiB": 24, "minimum_start_GiB": 110, "timeout_s": 2400,
         },
     }
@@ -762,7 +788,7 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
                 out.mkdir(mode=0o700)
                 env, environment_sha = environment_for_arm(
                     arm, out, request_sha256, engine_lock_path, engine_lock_identity,
-                    campaign_lock_fd,
+                    campaign_lock_fd, memory_guard_path,
                 )
                 tag = f"w7p-b{block}p{position}-{uuid.uuid4().hex[:10]}"
                 command = [
@@ -841,6 +867,7 @@ def campaign(candidate: str, randomness_receipt: Path) -> int:
     result = 0 if summary["verdict"] == "PASS" else 1
     os.close(engine_lock_fd)
     os.close(model_fd)
+    os.close(memory_guard_fd)
     fcntl.flock(campaign_lock_fd, fcntl.LOCK_UN)
     os.close(campaign_lock_fd)
     _ACTIVE_ATTEMPT = None
