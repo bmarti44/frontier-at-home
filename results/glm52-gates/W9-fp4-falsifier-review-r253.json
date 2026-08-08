@@ -1,0 +1,50 @@
+{
+  "schema": "glm52-w9-fp4-falsifier-review-v1",
+  "candidate_hash": "2dfdd71e771ea9e72a4828b0b990b640440f4a41",
+  "review_round": 253,
+  "candidate": 3,
+  "verdict": "REJECT_RUNTIME_BLOCKED",
+  "runtime_allowed": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 55,
+      "critical": [
+        "ADV-W9-FP4-252-H1-RUNTIME-FREEZE-EXCLUDES-STARTUP-AND-TRANSITIVE-CODE"
+      ],
+      "high": [],
+      "medium": [],
+      "low": []
+    },
+    "Singer": {
+      "score_0_to_100": 61,
+      "critical": [
+        "ADV-W9-FP4-253-C1-TERMINAL-RAW-NOT-CAPTURE-DERIVED"
+      ],
+      "high": [
+        "ADV-W9-FP4-253-H1-CROSS-ARTIFACT-TEARDOWN-TOCTOU"
+      ],
+      "medium": [
+        "GAP-W9-251-M1-MALFORMED-ATTEMPTS-LACK-EVIDENCE-CONTRACT"
+      ],
+      "low": [
+        "ADV-W9-FP4-253-L1-STALE-CANDIDATE-LABEL-IN-PLAN"
+      ]
+    }
+  },
+  "blocking_findings": {
+    "execution_generation": "Candidate-controlled scorer bytes execute before self-verification, and whole mutable runtime directories can be swapped, used, and restored between scans.",
+    "metric_provenance": "A self-authored zero-error raw dataset and matching receipt pass arithmetic recomputation without rerunning the frozen capture evaluation.",
+    "terminal_teardown": "An artifact can be rewritten after its reverse-order ExitStack teardown check while the verifier still returns success."
+  },
+  "candidate4_scope": "Only round-253 blockers: execute the reviewed scorer and dependency closure from a root-owned immutable installed tree through a narrow delegated runner; independently rerun the frozen evaluation for terminal PASS/NO_RESULT comparison; publish the final evidence tree through a root-owned atomic boundary so teardown-time user mutation cannot alter it; add the exact scorer/runtime swap, fabricated-zero-row, and teardown mutations. Also correct the stale candidate label and add failure-stage diagnostics without another review cycle.",
+  "convergence": {
+    "candidate_count": 3,
+    "global_review_round": 253,
+    "blocking_classes_previous": 2,
+    "blocking_classes_current": 2,
+    "consecutive_non_shrinking_candidates": 1,
+    "autonomous_candidate4_allowed": true,
+    "escalation_triggered": false
+  },
+  "measurement_observed": false
+}
