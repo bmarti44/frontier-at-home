@@ -30,7 +30,7 @@ SHA = {name: char * 64 for name, char in {
     "candidate": "1", "runner": "2", "scorer": "3", "model": "4",
     "config": "5", "binary": "6", "semantic": "7", "logit": "8",
     "randomness": "9", "receipt": "a", "closure": "b",
-    "drand_verifier": "c", "drand_node": "d",
+    "drand_verifier": "c", "drand_node": "d", "runtime_bundle": "e",
 }.items()}
 
 
@@ -53,6 +53,7 @@ def manifest() -> dict[str, object]:
         "model_sha256": SHA["model"],
         "configuration_sha256": SHA["config"],
         "binary_sha256": SHA["binary"],
+        "runtime_bundle_sha256": SHA["runtime_bundle"],
         "drand_verifier_sha256": SHA["drand_verifier"],
         "drand_node_sha256": SHA["drand_node"],
         "model_bytes": MODEL_BYTES,
@@ -118,6 +119,21 @@ def rows() -> list[dict[str, object]]:
 
 
 class Dsv4ColdLoadCampaignTests(unittest.TestCase):
+    def test_runtime_bundle_digest_binds_files_and_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle = Path(temporary)
+            artifact = bundle / "llama-server"
+            artifact.write_bytes(b"first")
+            artifact.chmod(0o755)
+            os.symlink("llama-server", bundle / "server-link")
+            first = RUNNER.runtime_bundle_sha256(bundle)
+            artifact.write_bytes(b"second")
+            self.assertNotEqual(RUNNER.runtime_bundle_sha256(bundle), first)
+            os.unlink(bundle / "server-link")
+            os.symlink("/etc/passwd", bundle / "server-link")
+            with self.assertRaisesRegex(RUNNER.CampaignError, "runtime bundle"):
+                RUNNER.runtime_bundle_sha256(bundle)
+
     def test_randomness_derives_five_balanced_blocks(self) -> None:
         schedules = RUNNER.arm_schedule(SHA["randomness"])
         self.assertEqual(schedules, expected_schedules(SHA["randomness"]))
