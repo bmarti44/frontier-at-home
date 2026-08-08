@@ -1,0 +1,41 @@
+{
+  "candidate_hash": "d10aabc10a21697062d02255cd4eb370092908cd",
+  "checks": {
+    "cgroup_max_oom_kill_events_zero": true,
+    "engine_started": true,
+    "false_model_generation_flushes_zero": true,
+    "http_requests_succeeded": true,
+    "no_surviving_ds4_server": true,
+    "swap_growth_zero": true
+  },
+  "failure": {
+    "cgroup_memory_high_events": 5329,
+    "containment_exit_status": 14,
+    "reason": "The fixed wrapper treats any soft memory.high throttle event as fatal even when max/OOM/kill/swap remain zero and external available memory stays well above the kill floor."
+  },
+  "observed": {
+    "attempt": "/home/bmarti44/.local/state/glm52-w7-cache-generation/attempt-7de98ee066e0889a1b73cea07f964be8",
+    "crashlog": "/home/bmarti44/.local/state/glm52-crashlog/20260808-012955-w7-c14-7de98ee066e0",
+    "false_model_generation_flushes": 0,
+    "indexed_resume_count": 2,
+    "minimum_mem_available_kb": 49488148,
+    "warm_append_ttft_seconds": 1.611
+  },
+  "artifact_sha256": {
+    "containment.rc": "9a92adbc0cee38ef658c71ce1b1bf8c65668f166bfb213644c895ccb1ad07a25",
+    "containment.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "containment.stdout": "93d47913088e3cf7ac5a451f7bdddb3878631909fd6020033dd7609c2ba943c6",
+    "evidence/manifest.json": "c2e6942c4d5ae4a9d31eb39bf56adc184be8cbd443cd60dc5c368bcdcc79f189",
+    "evidence/raw.jsonl": "e8983af8acda32ebeb78aa580e6667cacdddc7b81c52bfb2cbba06e015bb6b43",
+    "evidence/summary.json": "265274b35fc262d884ad7c5ab890b7de30100dc8c17af8b05c7bff318b138e43",
+    "live-response.json": "92ecb49b49127b6af8742131773bbbb390e889214c0d9ec2495850bee49c7d49",
+    "primary-response.json": "3b8583885ecc70e3f53476392fdcec9846e4302116c844e6964b419f3e3d2a35",
+    "safety/kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "safety/main.log": "d81b2138e0b9bd557648f7e11d5ae8c1194f0a6d9fad0817de84164f5f8f1eb9",
+    "safety/samples.log": "fa2b05c3c226f9619948199df9c74f5f5dad6a7af1ed56b50a0eefb5ea1e24be",
+    "server.log": "bcd2b20d27ba2b7a1741051afc8156cef4f5b7a9480fff58bbafbe0262887e55"
+  },
+  "proposed_acceptance_test": "Behind an exact default-off flag, allow nonzero memory.high only when memory.max, oom, oom_kill and oom_group_kill deltas are zero, swap stays zero, the process exits cleanly, and every external sample remains above the configured kill floor. Preserve the high count in evidence and rerun the arm.",
+  "schema": "glm52-w7-runtime-attempt-v1",
+  "verdict": "FAIL"
+}
