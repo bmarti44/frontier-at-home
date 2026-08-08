@@ -1,0 +1,94 @@
+{
+  "candidate_hash": "2d0faee567575430a317081e0a142d21e2ee7b7a",
+  "convergence": {
+    "blocking_classes": [
+      "ambient llama.cpp environment bypasses the default-off arm",
+      "direct I/O can silently fall back to buffered reads and violate the single-weight-footprint bound",
+      "no authoritative five-block matched A/B runner and fixed scorer"
+    ],
+    "candidate_count": 1,
+    "decision": "candidate 2 authorized; runtime blocked"
+  },
+  "review_round": 293,
+  "reviewers": {
+    "adversarial_reviewer": {
+      "critical": [],
+      "high": [
+        {
+          "affected_gate": "default-off isolation and steady-state non-regression",
+          "evidence": "The launcher omits --no-direct-io in the OFF arm while the pinned parser accepts LLAMA_ARG_DIO before CLI parsing, so ambient LLAMA_ARG_DIO=1 can enable the diagnostic without its flag or log.",
+          "id": "ADV-DSV4-COLD-293-H1-DIRECT-IO-IS-NOT-DEFAULT-OFF-UNDER-AMBIENT-LLAMA-ENV",
+          "proposed_acceptance_test": "Execute command construction/parser tests across ambient DIO variables; OFF must pass the exact negative argument and ON must be the only enabling path.",
+          "reproduction_instructions": "Set DSV4_DIRECT_IO=0 and LLAMA_ARG_DIO=1 against an argv/effective-option recorder; observe use_direct_io=true without an explicit negative CLI option."
+        },
+        {
+          "affected_gate": "host stability, direct-arm identity, exact replay, and evidence validity",
+          "evidence": "The pinned source falls back on O_DIRECT open failure and EFAULT/EINVAL reads. Under --no-mmap the requested flag can remain true after fallback, allowing page-cache growth beside resident weights. A partial-read-then-fallback path can also restart at the wrong destination and corrupt data.",
+          "id": "ADV-DSV4-COLD-293-H2-DIRECT-IO-SILENTLY-FALLS-BACK-AND-CANNOT-PROVE-SINGLE-WEIGHT-FOOTPRINT",
+          "proposed_acceptance_test": "Add a mandatory-direct mode with per-shard effective attestation and fault-injection tests for every open/read/partial-read fallback; all injected failures must stop cleanly before continued upload.",
+          "reproduction_instructions": "Inject O_DIRECT open failure per shard and EFAULT/EINVAL before and after a positive short read; observe buffered continuation and requested/effective mode ambiguity."
+        },
+        {
+          "affected_gate": "matched cold-load measurement and anti-cheating evidence authority",
+          "evidence": "The plan has three trials rather than five ABBA/BAAB blocks and no public-randomness schedule, fixed scorer, confidence-bound relative metric, or manifest/raw/summary validator. Absolute thresholds can pass a regression.",
+          "id": "ADV-DSV4-COLD-293-H3-AB-PLAN-CANNOT-AUTHORIZE-A-PERFORMANCE-PASS",
+          "proposed_acceptance_test": "RED-test a five-block randomized runner/scorer that binds all inputs, externally times launch-to-health, attests actual direct descriptors, emits manifest/raw/summary, computes a relative confidence bound, and rejects malformed evidence.",
+          "reproduction_instructions": "Construct slower-than-stock candidate rows below the absolute limits or omit/duplicate/stale an arm; candidate 1 has no fixed scorer capable of rejecting them."
+        }
+      ],
+      "low": [],
+      "medium": [
+        {
+          "affected_gate": "pinned staging memory safety",
+          "evidence": "Each host buffer is allocated at buffer_size, its base is rounded upward, and a full buffer_size read may then exceed the allocation if the backend base lacks filesystem-block alignment.",
+          "id": "ADV-DSV4-COLD-293-M1-PINNED-STAGING-ALIGNMENT-HEADROOM-IS-NOT-PROVEN",
+          "proposed_acceptance_test": "Allocate alignment headroom or assert alignment, then guard-test the maximally misaligned base and update the aggregate bound.",
+          "reproduction_instructions": "Return a host-buffer base misaligned by one byte under a guarded backend and perform a full-size aligned read; inspect the guard boundary."
+        }
+      ],
+      "prior_issue_status": [],
+      "score_0_to_100": 42,
+      "verdict": "CHANGES_REQUIRED_RUNTIME_NOT_AUTHORIZED"
+    },
+    "gap_reviewer": {
+      "critical": [],
+      "high": [
+        {
+          "affected_gate": "exact logged default-off diagnostic",
+          "evidence": "The OFF arm emits no negative CLI argument, so the pinned parser's LLAMA_ARG_DIO environment path can enable direct I/O while DSV4_DIRECT_IO is zero.",
+          "id": "GAP-DSV4-COLD-293-H1-DIRECT-IO-DEFAULT-BYPASS",
+          "proposed_acceptance_test": "Test actual argv/effective parsing with ambient positive and negative DIO variables; OFF must remain explicitly disabled.",
+          "reproduction_instructions": "Launch an argv-recording mock with DSV4_DIRECT_IO=0 and LLAMA_ARG_DIO=1 and inspect the effective option."
+        },
+        {
+          "affected_gate": "direct-arm identity, performance validity, and UMA safety",
+          "evidence": "O_DIRECT open/read failures silently become buffered reads, so the arm can be mislabeled and can repopulate a second weight-sized page-cache footprint before the watchdog reacts.",
+          "id": "GAP-DSV4-COLD-293-H2-DIRECT-ARM-SILENTLY-FALLS-BACK",
+          "proposed_acceptance_test": "A required-direct arm must fail immediately on every open/read fallback, attest each shard's descriptor mode, and pass injected-failure cleanup/safety tests.",
+          "reproduction_instructions": "Inject open failure and EINVAL/EFAULT in separate shards and observe successful buffered continuation without a disqualifying receipt."
+        },
+        {
+          "affected_gate": "authoritative stock/direct cold-load A/B",
+          "evidence": "No runner or scorer implements five fresh-server ABBA/BAAB blocks, public randomness, confidence intervals, hash binding, containment, or mutation-tested terminal validation.",
+          "id": "GAP-DSV4-COLD-293-H3-NO-AUTHORITATIVE-CONTAINED-AB-HARNESS",
+          "proposed_acceptance_test": "Commit a RED-tested five-block runner and fixed scorer with fresh cgroups, stable-memory preflight, swap/Xid/identity sampling, exact artifacts, and malformed-evidence mutations before any model load.",
+          "reproduction_instructions": "Try to produce an authoritative verdict using only candidate-1 files; the executable measurement and validation path is absent."
+        }
+      ],
+      "low": [],
+      "medium": [
+        {
+          "affected_gate": "matched cold-start comparability",
+          "evidence": "POSIX_FADV_DONTNEED is advisory and the plan records neither post-eviction residency nor physical read bytes.",
+          "id": "GAP-DSV4-COLD-293-M1-COLD-CACHE-STATE-UNVERIFIED",
+          "proposed_acceptance_test": "Record external physical-read counters and a post-eviction cache observation; reject insufficient or unequal cold-read coverage.",
+          "reproduction_instructions": "Prepopulate shard pages, execute fadvise, and compare page residency and physical reads during the stock load."
+        }
+      ],
+      "prior_issue_status": [],
+      "score_0_to_100": 62,
+      "verdict": "RUNTIME_NOT_AUTHORIZED"
+    }
+  },
+  "schema_version": 1
+}
