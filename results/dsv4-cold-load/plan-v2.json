@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "gate": "DSV4-cold-load-candidate-3",
+  "parent_plan": {
+    "path": "results/dsv4-cold-load/plan.json",
+    "sha256": "5dc7695ec71224b0fad79b05b6ed52da6aec71fa4cd00e6cebd80aa0e295faa7"
+  },
+  "acceptance_unchanged": {
+    "fresh_server_blocks": 5,
+    "arm_order": "randomness-derived ABBA/BAAB",
+    "maximum_ready_ratio_upper_95": 0.5,
+    "maximum_candidate_ready_seconds_upper_95": 30.0,
+    "maximum_tensor_load_seconds_upper_95": 20.393206603359758,
+    "minimum_fio_fraction": 0.5,
+    "exact_replay_first_token_match": true,
+    "agent_gate_required": true
+  },
+  "candidate": {
+    "on_flag": "--direct-io-required",
+    "off_flag": "--no-direct-io",
+    "model_shard_count": 3,
+    "bounded_pinned_staging_bytes_maximum": 269000000,
+    "scope": "cold model weight load only"
+  },
+  "build_reproducibility": {
+    "source_prefix": "/src/llama.cpp-fusion",
+    "c_flags": "-ffile-prefix-map=<SOURCE>=/src/llama.cpp-fusion -fmacro-prefix-map=<SOURCE>=/src/llama.cpp-fusion",
+    "cxx_flags": "-ffile-prefix-map=<SOURCE>=/src/llama.cpp-fusion -fmacro-prefix-map=<SOURCE>=/src/llama.cpp-fusion",
+    "acceptance": "Normalized source-changing executable and library artifacts are byte-identical across two clean builds."
+  },
+  "evidence_additions_before_runtime": {
+    "public_randomness": "The full post-freeze, three-relay-agreed receipt is preserved and verified with the hash-bound repository BLS verifier before schedule derivation.",
+    "runtime_closure": "Each arm hashes the executed binary and every executable file observed through /proc/PID/maps. Unmapped build intermediates are excluded and all 20 observed closures must match.",
+    "systemd": "The runner records Result, ExecMainCode, ExecMainStatus, MemoryPeak, and MemorySwapPeak before deliberate shutdown. The scorer requires success, clean live status, bounded peak memory, and zero swap peak.",
+    "direct_descriptor_observation": "The frozen three-shard model requires exactly three O_DIRECT model descriptors in ON and zero in OFF."
+  },
+  "scope_limit": "This revision changes only pre-runtime evidence validity and reproducible-build binding. It does not change the performance thresholds, model, serving semantics, profile, context, admission, or inference path.",
+  "verdict": "PENDING"
+}
