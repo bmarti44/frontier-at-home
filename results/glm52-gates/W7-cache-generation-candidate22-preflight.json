@@ -1,0 +1,35 @@
+{
+  "candidate_hash": "d8000776037b4590725ee7129f367d02ad052260",
+  "checks": {
+    "all_manifest_artifact_bindings_reconstruct_offline": true,
+    "engine_started": false,
+    "exact_fixed_summary_reproduced_offline": true,
+    "missing_or_changed_scorer_input_rejected": true,
+    "prefixed_digest_labels_rejected": true,
+    "runtime_evidence_and_scorer_unchanged": true
+  },
+  "component_sha256": {
+    "scripts/lint_secrets.sh": "524f8aed515443446f2f1f8774c74fa2e4431be65133ef0675ce1ae6bc7f7d85",
+    "scripts/tests/test_w7_cache_generation.py": "bd2b6d0d8932d69434ac0e7f8a1d89243873495b074b8608c646c56a179b2f6b"
+  },
+  "closed_findings": [
+    "GAP-W7.1-275-H1-COMMITTED-RAW-NOT-SELF-CONTAINED",
+    "ADV-W7.1-275-H1-LINT-DIGEST-LABEL-SUFFIX-BYPASS"
+  ],
+  "offline_package": {
+    "committed_non_log_scorer_inputs": 6,
+    "log_and_containment_inputs_reconstructed_from_raw": true,
+    "manifest_binding_count": 13,
+    "replayed_verdict": "PASS"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "48 passed",
+    "relevant_broader_tests": "86 passed, 5 privilege-dependent tests skipped",
+    "diff_check": "PASS",
+    "secret_lint_self_test": "PASS",
+    "secret_lint_staged": "PASS"
+  },
+  "runtime_rerun_required": false,
+  "schema": "glm52-w7-candidate-preflight-v1",
+  "verdict": "PASS"
+}
