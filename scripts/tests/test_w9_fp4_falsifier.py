@@ -4,8 +4,12 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
 import math
+import os
 import pathlib
+import tempfile
 import unittest
 
 import numpy as np
@@ -29,6 +33,16 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             MODULE.e2m1_quantize(np.array([[np.nan]], dtype=np.float32), 1)
         with self.assertRaisesRegex(ValueError, "divisible"):
             MODULE.e2m1_quantize(rows, block_width=3)
+
+    def test_scale_search_closes_amax_counterexample(self) -> None:
+        row = np.zeros((1, 32), dtype=np.float32)
+        row[0, :2] = [4.1, 3.0]
+        quantized = MODULE.e2m1_quantize(row)
+        observed_sse = float(np.sum((quantized - row) ** 2))
+        scale_one = row.copy()
+        scale_one[0, :2] = [4.0, 3.0]
+        representative_sse = float(np.sum((scale_one - row) ** 2))
+        self.assertLessEqual(observed_sse, representative_sse + 1e-7)
 
     def test_hadamard_rotation_preserves_dot_products(self) -> None:
         rng = np.random.default_rng(8)
@@ -90,13 +104,74 @@ class W9Fp4FalsifierTests(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         for token in (
             "MAXIMUM_RELATIVE_RMSE = 0.05",
-            '"plain_e2m1_f32_scale"',
-            '"hadamard_e2m1_f32_scale"',
-            '"hadamard_e2m1_f32_scale_channel_correction"',
+            '"plain_e2m1_multistart_f32_scale"',
+            '"hadamard_e2m1_multistart_f32_scale"',
+            '"hadamard_e2m1_multistart_f32_scale_channel_correction"',
             "manifest.json", "raw.jsonl", "summary.json",
             '("ds4-server", "ds4", "fio")',
+            "W9-fp4-falsifier-review-r252.json",
+            "W9-fp4-falsifier-candidate2-freeze.json",
+            '"NO_RESULT"',
         ):
             self.assertIn(token, source)
+        self.assertNotIn('add_argument("--candidate-commit"', source)
+        self.assertNotIn('add_argument("--minimum-drand-round"', source)
+
+    def test_review_receipt_rejects_caller_floor_and_blockers(self) -> None:
+        valid = {
+            "schema": "glm52-w9-fp4-falsifier-review-v1",
+            "candidate_hash": "a" * 40,
+            "review_round": 252,
+            "critical": [],
+            "high": [],
+            "verdict": "PASS_RUNTIME_ALLOWED",
+            "drand_min_round": 6357189,
+        }
+        self.assertEqual(MODULE.validate_review_receipt(valid), ("a" * 40, 6357189))
+        for mutation in (
+            {**valid, "drand_min_round": 1},
+            {**valid, "critical": ["x"]},
+            {**valid, "candidate_hash": "main:" + "a" * 40},
+        ):
+            with self.assertRaises(ValueError):
+                MODULE.validate_review_receipt(mutation)
+
+    def test_bound_input_rejects_path_replacement_and_in_place_rewrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            path = root / "input.bin"
+            original = b"authoritative-generation"
+            path.write_bytes(original)
+            digest = hashlib.sha256(original).hexdigest()
+            with MODULE.BoundInput(path, len(original), digest) as bound:
+                replacement = root / "replacement.bin"
+                replacement.write_bytes(b"replacement-generation!"[:len(original)])
+                os.replace(replacement, path)
+                with self.assertRaisesRegex(ValueError, "generation"):
+                    bound.verify_final()
+            path.write_bytes(original)
+            with MODULE.BoundInput(path, len(original), digest) as bound:
+                path.write_bytes(b"x" * len(original))
+                with self.assertRaisesRegex(ValueError, "generation"):
+                    bound.verify_final()
+
+    def test_terminal_verifier_rejects_post_publication_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            MODULE.publish_evidence(
+                root,
+                {"schema": "manifest"},
+                [{"record_type": "row", "value": 1}],
+                {"schema": "summary", "verdict": "PASS"},
+            )
+            terminal = MODULE.verify_terminal(root)
+            self.assertEqual(terminal["verdict"], "PASS")
+            (root / "summary.json").write_text(
+                json.dumps({"schema": "summary", "verdict": "NO_RESULT"}) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "terminal"):
+                MODULE.verify_terminal(root)
 
 
 if __name__ == "__main__":
