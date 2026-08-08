@@ -435,6 +435,13 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         with mock.patch.object(MODULE.subprocess, "run", return_value=masked_stopped):
             self.assertTrue(MODULE._unit_is_stopped(unit))
 
+        contradictory = subprocess.CompletedProcess(
+            ["systemctl"], 0,
+            "LoadState=loaded\nActiveState=inactive\nSubState=running\nMainPID=0\nControlPID=0\n", "",
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=contradictory):
+            self.assertFalse(MODULE._unit_is_stopped(unit))
+
     def test_cleanup_reaps_before_stop_and_rechecks_unit_last(self) -> None:
         events: list[str] = []
         process = mock.Mock(pid=4242, returncode=None)
@@ -473,6 +480,39 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
                     process, "glm52-w7-test-4242.service"
                 )
         self.assertEqual(events, ["reap", "cgroup-empty", "servers", "listener"])
+
+    def test_direct_reap_escalates_term_resistant_launcher_session_member(self) -> None:
+        process = mock.Mock(pid=4242, returncode=None)
+        process.wait.return_value = -15
+        signals: list[tuple[int, signal.Signals]] = []
+        with mock.patch.object(
+            MODULE.os, "killpg", side_effect=lambda pid, sig: signals.append((pid, sig))
+        ), mock.patch.object(
+            MODULE, "_live_launcher_session_members", side_effect=[[4243], [4243], []],
+            create=True,
+        ):
+            MODULE._terminate_and_reap(process)
+        self.assertEqual(
+            signals,
+            [(4242, signal.SIGTERM), (4242, signal.SIGKILL)],
+        )
+
+    def test_cleanup_rejects_late_unit_after_two_not_found_observations(self) -> None:
+        process = mock.Mock(pid=4242, returncode=None)
+        observations = iter([True, True, False, True, True, True, True])
+        with mock.patch.object(MODULE, "_terminate_and_reap"), mock.patch.object(
+            MODULE, "stop_exact_containment_unit"
+        ) as stop_unit, mock.patch.object(
+            MODULE, "_unit_is_stopped", side_effect=lambda _: next(observations)
+        ), mock.patch.object(
+            MODULE, "_kill_and_verify_containment_cgroup"
+        ), mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            MODULE, "_listener_is_active", return_value=False
+        ), mock.patch.object(MODULE.time, "sleep"):
+            MODULE._cleanup_interrupted_containment(
+                process, "glm52-w7-test-4242.service"
+            )
+        self.assertGreaterEqual(stop_unit.call_count, 2)
 
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
