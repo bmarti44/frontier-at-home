@@ -148,6 +148,29 @@ class W4ServingContainmentTest(unittest.TestCase):
                 RUNNER.verify_randomness(receipt, candidate, publication)
             run.assert_not_called()
 
+    def test_randomness_executes_only_retained_sealed_verifier_bytes(self) -> None:
+        candidate = "3" * 40
+        publication = {"candidate_hash": candidate, "created_at_unix": 1_786_212_006}
+        doc = {
+            "round": 6_359_367,
+            "freeze_floor_round": RUNNER.DRAND_FREEZE_FLOOR_ROUND,
+            "randomness": "4" * 64,
+            "signature": "5" * 192,
+            "previous_signature": "6" * 192,
+            "frozen_gate_commit": candidate,
+            "relay_agreement": ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"],
+        }
+        with mock.patch.object(RUNNER, "tree_sha256",
+                               side_effect=AssertionError("mutable tree reopened")), \
+             mock.patch.object(RUNNER.subprocess, "run",
+                               side_effect=AssertionError("unsealed subprocess used")), \
+             mock.patch.object(RUNNER, "_sealed_bls_verify", return_value=True,
+                               create=True) as sealed:
+            seed, _, _ = RUNNER.verify_randomness_bytes(
+                json.dumps(doc).encode(), candidate, publication)
+        self.assertEqual(seed, "4" * 64)
+        sealed.assert_called_once()
+
     def test_publication_fetch_ignores_ambient_proxy_and_ca_overrides(self) -> None:
         candidate = "3" * 40
         response = mock.MagicMock()

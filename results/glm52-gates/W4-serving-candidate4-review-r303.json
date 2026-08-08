@@ -1,0 +1,47 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "candidate_hash": "1f5eceaee2f70b112dff318ba37d19d1b99340e1",
+  "review_round": 303,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 92,
+    "critical": [],
+    "high": [],
+    "medium": [
+      "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW",
+      "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT"
+    ],
+    "low": ["W4S-R303-L1-RED-TESTS-CHANGED-DURING-IMPLEMENTATION"],
+    "verdict": "PASS_FOR_CONTAINED_RUNTIME_GATE"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 82,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W4S-303-H1-EXECUTABLE-DEPENDENCY-TOCTOU",
+        "affected_gate": "candidate dependency closure, BLS validity and arm replay",
+        "evidence": "The scorer hashes and closes runner/base dependencies before reopening them for import. The runner hashes and closes the drand runtime tree before Node imports it. A same-UID replacement can therefore execute bytes different from those checked.",
+        "reproduction": "Replace runner/base or an imported drand module after its hash check but before import/Node execution, then restore it before exit.",
+        "acceptance_test": "Execute retained candidate runner/base bytes and a sealed verified BLS implementation; a deterministic swap between verification and execution must not affect executed bytes or must FAIL."
+      }
+    ],
+    "medium": ["ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE"],
+    "low": [],
+    "verdict": "REJECT_PRE_LAUNCH"
+  },
+  "prior_round_302_highs": {
+    "ADV-W4S-302-H1-SELECTABLE-POSTFREEZE-DRAND-ROUND": "VERIFIED_FIXED",
+    "ADV-W4S-302-H2-CLOSURE-PARSE-TOCTOU": "VERIFIED_FIXED",
+    "W4S-R302-H1-DRAND-RUNTIME-TREE-UNBOUND": "NASH_FIXED; SINGER_OPEN_VIA_ADV-W4S-303-H1",
+    "W4S-R302-H2-GITHUB-FLOOR-TRUSTS-AMBIENT-TLS": "VERIFIED_FIXED",
+    "W4S-R302-H3-SYMLINK-FAILURE-LOSES-TERMINAL-AUTHORITY": "VERIFIED_FIXED"
+  },
+  "convergence": {
+    "candidate_count": 4,
+    "open_high_count_previous": 5,
+    "open_high_count_current": 1,
+    "strictly_shrunk": true,
+    "candidate_5_authorized_autonomously": true
+  }
+}

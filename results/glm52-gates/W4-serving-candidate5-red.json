@@ -1,0 +1,23 @@
+{
+  "schema": "glm52-w4-serving-candidate-red-v1",
+  "candidate": 5,
+  "unchanged_parent": "1f5eceaee2f70b112dff318ba37d19d1b99340e1",
+  "review_round_source": 303,
+  "engine_started": false,
+  "test_command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner scripts.tests.test_w4_serving_campaign_scorer",
+  "observed": {
+    "tests_run": 27,
+    "passed": 25,
+    "failures": 1,
+    "errors": 1,
+    "blocking_reds": [
+      "randomness verification reopens the mutable drand runtime tree before Node imports it",
+      "authoritative scoring reopens runner/base paths instead of executing retained candidate bytes"
+    ]
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w4_serving_campaign_runner.py": "1bf46acb3fc6d78dcfb5ab3c622b44ee8bc757de8d1b6cfb6ad1a96babaacb44",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581"
+  },
+  "acceptance": "Both REDs must turn GREEN without changing the frozen engine, request, microgate or metric formula. The executed runner/base and BLS verifier must derive only from retained hash-verified bytes."
+}

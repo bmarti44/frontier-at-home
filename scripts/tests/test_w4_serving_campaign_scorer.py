@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -159,6 +160,18 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
             self.assertEqual(snapshot["summary.json"][0], b'{"verdict":"PASS"}\n')
             with self.assertRaises(SCORER.InvalidCampaign):
                 SCORER._verify_snapshot_unchanged(root, snapshot, {"summary.json"})
+
+    def test_runner_and_base_execute_from_retained_candidate_bytes(self) -> None:
+        runner_path = ROOT / "scripts/102_run_w4_serving_campaign.py"
+        base_path = ROOT / "scripts/91_run_w7_cache_generation_campaign.py"
+        runner_bytes = runner_path.read_bytes()
+        base_bytes = base_path.read_bytes()
+        with mock.patch.object(SCORER.importlib.util, "spec_from_file_location",
+                               side_effect=AssertionError("filesystem import reopened")):
+            module = SCORER._load_runner_from_bytes(
+                runner_bytes, base_bytes, runner_path)
+        self.assertTrue(callable(module.parse_arm))
+        self.assertEqual(module.BASE.__name__, "w7_campaign_base")
 
 
 if __name__ == "__main__":
