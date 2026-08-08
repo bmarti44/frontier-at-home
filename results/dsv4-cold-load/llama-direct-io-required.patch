@@ -1,41 +1,93 @@
 diff --git a/common/arg.cpp b/common/arg.cpp
-index 7bc770ab4..2979bdf9a 100644
+index 7bc770ab4..81d0e6903 100644
 --- a/common/arg.cpp
 +++ b/common/arg.cpp
-@@ -2422 +2422 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
--        {"-dio", "--direct-io"},
-+        {"-dio", "--direct-io", "--direct-io-required"},
-@@ -2424 +2424 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
--        string_format("use DirectIO if available. (default: %s)", params.use_direct_io ? "enabled" : "disabled"),
-+        string_format("require DirectIO for model reads. (default: %s)", params.use_direct_io ? "enabled" : "disabled"),
+@@ -2426,0 +2427,3 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
++            if (!value) {
++                params.require_direct_io = false;
++            }
+@@ -2428,0 +2432,8 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
++    add_opt(common_arg(
++        {"--direct-io-required"},
++        "require DirectIO for model weight reads and bounded GPU upload staging",
++        [](common_params & params) {
++            params.use_direct_io = true;
++            params.require_direct_io = true;
++        }
++    ));
+diff --git a/common/common.cpp b/common/common.cpp
+index 8f13217ab..cb120c910 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -1563,0 +1564 @@ struct llama_model_params common_model_params_to_llama(common_params & params) {
++    mparams.require_direct_io = params.require_direct_io;
+diff --git a/common/common.h b/common/common.h
+index bffc1767a..d7e967d92 100644
+--- a/common/common.h
++++ b/common/common.h
+@@ -576,0 +577 @@ struct common_params {
++    bool require_direct_io = false; // fail rather than falling back from direct I/O
+diff --git a/include/llama.h b/include/llama.h
+index a311ac202..6f5814f5e 100644
+--- a/include/llama.h
++++ b/include/llama.h
+@@ -325,0 +326 @@ extern "C" {
++        bool require_direct_io; // fail if direct I/O or bounded upload staging is unavailable
 diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
-index ed572da7f..416898a1c 100644
+index ed572da7f..48f6ced2c 100644
 --- a/src/llama-mmap.cpp
 +++ b/src/llama-mmap.cpp
-@@ -190,2 +190,2 @@ struct llama_file::impl {
--            LLAMA_LOG_WARN("Failed to open file '%s' with error: %s. Falling back to buffered I/O",
--                           fname, strerror(errno));
-+            throw std::runtime_error(format(
-+                "required direct I/O open failed for '%s': %s", fname, strerror(errno)));
-@@ -290 +289,0 @@ struct llama_file::impl {
+@@ -86 +86,2 @@ struct llama_file::impl {
+-    impl(const char * fname, const char * mode, [[maybe_unused]] const bool use_direct_io = false) {
++    impl(const char * fname, const char * mode, [[maybe_unused]] const bool use_direct_io = false,
++            [[maybe_unused]] const bool require_direct_io = false) {
+@@ -183 +184,2 @@ struct llama_file::impl {
+-    impl(const char * fname, const char * mode, [[maybe_unused]] const bool use_direct_io = false) : fname(fname) {
++    impl(const char * fname, const char * mode, [[maybe_unused]] const bool use_direct_io = false,
++            [[maybe_unused]] const bool require_direct_io = false) : fname(fname), require_direct_io(require_direct_io) {
+@@ -189,0 +192,4 @@ struct llama_file::impl {
++            if (require_direct_io) {
++                throw std::runtime_error(format(
++                    "required direct I/O open failed for '%s': %s", fname, strerror(errno)));
++            }
+@@ -290 +295,0 @@ struct llama_file::impl {
 -                    // Fallback to std::fread in case the DMA controller cannot access the buffer
-@@ -292,9 +291,2 @@ struct llama_file::impl {
--                        LLAMA_LOG_WARN("%s: Falling back to buffered IO due to %s\n", __func__, strerror(errno));
--                        auto curr_off = tell();
--                        close(fd);
--                        fd = -1;
--                        alignment = 1;
--                        init_fp("rb");
--                        seek(curr_off, SEEK_SET);
--                        read_raw_unsafe(ptr, len);
--                        return;
-+                        throw std::runtime_error(format(
-+                            "required direct I/O read failed for '%s': %s", fname.c_str(), strerror(errno)));
+@@ -291,0 +297,4 @@ struct llama_file::impl {
++                        if (require_direct_io) {
++                            throw std::runtime_error(format(
++                                "required direct I/O read failed for '%s': %s", fname.c_str(), strerror(errno)));
++                        }
+@@ -395,0 +405 @@ struct llama_file::impl {
++    bool require_direct_io = false;
+@@ -398,2 +408,2 @@ struct llama_file::impl {
+-llama_file::llama_file(const char * fname, const char * mode, const bool use_direct_io) :
+-    pimpl(std::make_unique<impl>(fname, mode, use_direct_io)) {}
++llama_file::llama_file(const char * fname, const char * mode, const bool use_direct_io, const bool require_direct_io) :
++    pimpl(std::make_unique<impl>(fname, mode, use_direct_io, require_direct_io)) {}
+diff --git a/src/llama-mmap.h b/src/llama-mmap.h
+index b7d5c61e9..103956542 100644
+--- a/src/llama-mmap.h
++++ b/src/llama-mmap.h
+@@ -17 +17 @@ struct llama_file {
+-    llama_file(const char * fname, const char * mode, bool use_direct_io = false);
++    llama_file(const char * fname, const char * mode, bool use_direct_io = false, bool require_direct_io = false);
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 28f8bb793..5866d301a 100644
+index 28f8bb793..177a0cda0 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
-@@ -1441,3 +1441,5 @@ bool llama_model_loader::load_all_data(
+@@ -526,0 +527 @@ llama_model_loader::llama_model_loader(
++        bool require_direct_io,
+@@ -562 +563 @@ llama_model_loader::llama_model_loader(
+-        files.emplace_back(new llama_file(fname.c_str(), "rb", use_direct_io));
++        files.emplace_back(new llama_file(fname.c_str(), "rb", use_direct_io, require_direct_io));
+@@ -644 +645 @@ llama_model_loader::llama_model_loader(
+-                files.emplace_back(new llama_file(fname_split, "rb", use_direct_io));
++                files.emplace_back(new llama_file(fname_split, "rb", use_direct_io, require_direct_io));
+@@ -825,0 +827 @@ llama_model_loader::llama_model_loader(
++    this->require_direct_io = require_direct_io;
+@@ -1434,0 +1437 @@ bool llama_model_loader::load_all_data(
++    constexpr size_t direct_io_staging_limit = 269000000;
+@@ -1441,3 +1444,10 @@ bool llama_model_loader::load_all_data(
 -    // Buffer size: balance between memory usage and I/O efficiency
 -    // 64MB works well for NVMe drives
 -    const size_t buffer_size = alignment != 1 ? 64 * 1024 * 1024 + 2 * alignment : 1 * 1024 * 1024;
@@ -44,9 +96,81 @@ index 28f8bb793..5866d301a 100644
 +    // to satisfy the model file's block alignment.
 +    const size_t upload_chunk_size = alignment != 1 ? 64 * 1024 * 1024 : 1 * 1024 * 1024;
 +    const size_t host_buffer_size = upload_chunk_size + alignment - 1;
-@@ -1492 +1494 @@ bool llama_model_loader::load_all_data(
++    if (require_direct_io && host_buffer_size > direct_io_staging_limit / n_buffers) {
++        throw std::runtime_error(format(
++            "required direct I/O staging exceeds limit: %zu > %zu",
++            host_buffer_size * n_buffers, direct_io_staging_limit));
++    }
+@@ -1448,0 +1459,14 @@ bool llama_model_loader::load_all_data(
++    auto release_upload_resources = [&](bool synchronize) {
++        for (auto * event : events) {
++            if (synchronize) {
++                ggml_backend_event_synchronize(event);
++            }
++            ggml_backend_event_free(event);
++        }
++        events.clear();
++        for (auto * buf : host_buffers) {
++            ggml_backend_buffer_free(buf);
++        }
++        host_buffers.clear();
++        host_ptrs.clear();
++    };
+@@ -1492 +1516 @@ bool llama_model_loader::load_all_data(
 -            auto * buf = ggml_backend_buft_alloc_buffer(host_buft, buffer_size);
 +            auto * buf = ggml_backend_buft_alloc_buffer(host_buft, host_buffer_size);
-@@ -1601 +1603 @@ bool llama_model_loader::load_all_data(
+@@ -1496,0 +1521 @@ bool llama_model_loader::load_all_data(
++                release_upload_resources(false);
+@@ -1506,0 +1532 @@ bool llama_model_loader::load_all_data(
++                release_upload_resources(false);
+@@ -1516,0 +1543 @@ bool llama_model_loader::load_all_data(
++            release_upload_resources(false);
+@@ -1522,0 +1550,4 @@ bool llama_model_loader::load_all_data(
++    if (require_direct_io && !upload_backend) {
++        throw std::runtime_error("required direct I/O uploader unavailable");
++    }
++
+@@ -1601 +1632 @@ bool llama_model_loader::load_all_data(
 -                        size_t read_size = std::min<size_t>(buffer_size, read_end - read_start - bytes_read);
 +                        size_t read_size = std::min<size_t>(upload_chunk_size, read_end - read_start - bytes_read);
+@@ -1638,0 +1670,3 @@ bool llama_model_loader::load_all_data(
++                    if (require_direct_io) {
++                        throw std::runtime_error("required direct I/O uploader unavailable");
++                    }
+@@ -1654,7 +1688 @@ bool llama_model_loader::load_all_data(
+-    for (auto * event : events) {
+-        ggml_backend_event_synchronize(event);
+-        ggml_backend_event_free(event);
+-    }
+-    for (auto * buf : host_buffers) {
+-        ggml_backend_buffer_free(buf);
+-    }
++    release_upload_resources(true);
+diff --git a/src/llama-model-loader.h b/src/llama-model-loader.h
+index c476026d3..243c0dca5 100644
+--- a/src/llama-model-loader.h
++++ b/src/llama-model-loader.h
+@@ -79,0 +80 @@ struct llama_model_loader {
++    bool require_direct_io = false;
+@@ -130,0 +132 @@ struct llama_model_loader {
++        bool require_direct_io,
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 4c10e4126..a28cce742 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -2326,0 +2327 @@ llama_model_params llama_model_default_params() {
++        /*.require_direct_io           =*/ false,
+diff --git a/src/llama-quant.cpp b/src/llama-quant.cpp
+index b66759b27..bbb9f5479 100644
+--- a/src/llama-quant.cpp
++++ b/src/llama-quant.cpp
+@@ -884 +884 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
+-        fname_inp, splits, /*file*/ nullptr, use_mmap, /*use_direct_io*/ false, /*check_tensors*/ true, /*no_alloc*/ false, kv_overrides, nullptr);
++        fname_inp, splits, /*file*/ nullptr, use_mmap, /*use_direct_io*/ false, /*require_direct_io*/ false, /*check_tensors*/ true, /*no_alloc*/ false, kv_overrides, nullptr);
+diff --git a/src/llama.cpp b/src/llama.cpp
+index 0de6048f2..9fab2103a 100644
+--- a/src/llama.cpp
++++ b/src/llama.cpp
+@@ -282 +282 @@ static std::pair<int, llama_model *> llama_model_load(struct gguf_context * meta
+-        llama_model_loader ml(metadata, set_tensor_data, set_tensor_data_ud, fname, splits, file, params.use_mmap, params.use_direct_io,
++        llama_model_loader ml(metadata, set_tensor_data, set_tensor_data_ud, fname, splits, file, params.use_mmap, params.use_direct_io, params.require_direct_io,

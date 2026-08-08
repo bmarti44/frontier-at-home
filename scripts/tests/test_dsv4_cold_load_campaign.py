@@ -99,6 +99,7 @@ def rows() -> list[dict[str, object]]:
                 "swap_growth_bytes": 0,
                 "cgroup_oom_delta": 0,
                 "cgroup_oom_kill_delta": 0,
+                "cgroup_max_delta": 0,
                 "xid_count": 0,
                 "surviving_descendants": 0,
                 "containment_rc": 0,
@@ -162,14 +163,15 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
 
     def test_runner_bounds_each_arm_and_never_reuses_output(self) -> None:
         command = RUNNER.containment_command(
-            "cold-b0-p0-abcdef", ["/frozen/llama-server", "--help"], Path("/tmp/run.log")
+            "cold-b0-p0-abcdefabcdef", ["/frozen/llama-server", "--help"], Path("/tmp/run.log")
         )
         joined = " ".join(command)
-        self.assertIn("MemoryHigh=104G", joined)
-        self.assertIn("MemoryMax=109G", joined)
+        self.assertIn("MemoryHigh=100G", joined)
+        self.assertIn("MemoryMax=104G", joined)
         self.assertIn("MemorySwapMax=0", joined)
         self.assertIn("OOMPolicy=kill", joined)
         self.assertIn("KillMode=control-group", joined)
+        self.assertIn("RuntimeMaxSec=300s", joined)
         with tempfile.TemporaryDirectory() as temporary:
             destination = Path(temporary) / "attempt"
             destination.mkdir()
@@ -201,6 +203,7 @@ class Dsv4ColdLoadCampaignTests(unittest.TestCase):
             "minimum_mem_available_kb": 9 * 1024 * 1024,
             "swap_growth_bytes": 4096,
             "cgroup_oom_kill_delta": 1,
+            "cgroup_max_delta": 1,
             "xid_count": 1,
             "surviving_descendants": 1,
             "containment_rc": 1,
