@@ -3,7 +3,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run_w7_evict_store_v1.sh"
+FROZEN_CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 RED_PATCH = ROOT / "results/glm52-gates/harness/0044-test-expose-preload-evict-store-selector-RED.patch"
 IMPLEMENTATION_PATCH = ROOT / "results/glm52-gates/harness/0045-feat-diagnose-preload-evict-store-cost.patch"
 FLAG = "DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC"
@@ -14,6 +15,7 @@ class W7EvictStoreContractTests(unittest.TestCase):
         source = CGROUP.read_text(encoding="utf-8")
         self.assertEqual(source.count(FLAG), 1)
         self.assertRegex(source, rf"(?m)^  {FLAG} \\\s*$")
+        self.assertNotIn(FLAG, FROZEN_CGROUP.read_text(encoding="utf-8"))
 
     def test_red_patch_is_behavioral_not_missing_symbol(self) -> None:
         source = RED_PATCH.read_text(encoding="utf-8")
