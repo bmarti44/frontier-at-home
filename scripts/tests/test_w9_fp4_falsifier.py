@@ -122,8 +122,8 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             '"hadamard_e2m1_multistart_f32_scale_channel_correction"',
             "manifest.json", "raw.jsonl", "summary.json",
             '("ds4-server", "ds4", "fio")',
-            "W9-fp4-falsifier-review-r252.json",
-            "W9-fp4-falsifier-candidate2-freeze.json",
+            "W9-fp4-falsifier-review-r253.json",
+            "W9-fp4-falsifier-candidate3-freeze.json",
             '"NO_RESULT"',
         ):
             self.assertIn(token, source)
@@ -134,13 +134,13 @@ class W9Fp4FalsifierTests(unittest.TestCase):
         valid = {
             "schema": "glm52-w9-fp4-falsifier-review-v1",
             "candidate_hash": "a" * 40,
-            "review_round": 252,
+            "review_round": 253,
             "critical": [],
             "high": [],
             "verdict": "PASS_RUNTIME_ALLOWED",
-            "drand_min_round": 6357189,
+            "drand_min_round": 6357227,
         }
-        self.assertEqual(MODULE.validate_review_receipt(valid), ("a" * 40, 6357189))
+        self.assertEqual(MODULE.validate_review_receipt(valid), ("a" * 40, 6357227))
         for mutation in (
             {**valid, "drand_min_round": 1},
             {**valid, "critical": ["x"]},
@@ -149,30 +149,43 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 MODULE.validate_review_receipt(mutation)
 
-    def test_runtime_freeze_rejects_mutated_dependency(self) -> None:
-        runtime = {
-            "python_path": "/usr/bin/python3",
-            "numpy_version": np.__version__,
-            "python_sha256": MODULE.sha256_file(pathlib.Path("/usr/bin/python3")),
-            "numpy_init_sha256": MODULE.sha256_file(pathlib.Path(np.__file__)),
-            "numpy_multiarray_sha256": MODULE.sha256_file(
-                pathlib.Path(np._core._multiarray_umath.__file__)),
-            "node_sha256": MODULE.sha256_file(MODULE.NODE),
-            "git_sha256": MODULE.sha256_file(MODULE.GIT),
+    def test_runtime_tree_snapshot_rejects_transitive_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            (root / "package").mkdir()
+            (root / "package" / "module.py").write_text("VALUE = 1\n")
+            (root / "native.so").write_bytes(b"linked-numerical-library")
+            snapshot = MODULE.snapshot_runtime_tree(root)
+            MODULE.verify_runtime_tree(root, snapshot)
+            (root / "native.so").write_bytes(b"changed-numerical-library")
+            with self.assertRaisesRegex(ValueError, "runtime tree"):
+                MODULE.verify_runtime_tree(root, snapshot)
+
+    def test_runtime_contract_isolated_and_deterministic(self) -> None:
+        expected = {
+            "OPENBLAS_NUM_THREADS": "1",
+            "OMP_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1",
+            "NUMEXPR_NUM_THREADS": "1",
         }
-        self.assertEqual(set(MODULE._verify_runtime(runtime)), {
-            "python_sha256", "numpy_init_sha256", "numpy_multiarray_sha256",
-            "node_sha256", "git_sha256",
-        })
-        runtime["numpy_multiarray_sha256"] = "0" * 64
-        with self.assertRaisesRegex(ValueError, "runtime"):
-            MODULE._verify_runtime(runtime)
+        with mock.patch.dict(os.environ, expected, clear=False):
+            MODULE.verify_execution_environment(
+                isolated=True, no_site=True, safe_path=True)
+        with mock.patch.dict(os.environ, {**expected, "OPENBLAS_NUM_THREADS": "4"}, clear=False):
+            with self.assertRaisesRegex(ValueError, "thread"):
+                MODULE.verify_execution_environment(
+                    isolated=True, no_site=True, safe_path=True)
 
     def test_launcher_clears_environment_and_fixes_capture(self) -> None:
         launcher = (ROOT / "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh").read_text()
-        for token in ("/usr/bin/env -i", "/usr/bin/python3 -B", "PYTHONPATH=",
+        for token in ("/usr/bin/env -i", "/usr/bin/python3 -I -S -B",
+                      "OPENBLAS_NUM_THREADS=1", "OMP_NUM_THREADS=1",
+                      "MKL_NUM_THREADS=1", "BLIS_NUM_THREADS=1",
+                      "NUMEXPR_NUM_THREADS=1",
                       "attempt-73838408ccb1d126ade7b67c8d86fa00/on/capture"):
             self.assertIn(token, launcher)
+        self.assertNotIn("PYTHONPATH=", launcher)
         self.assertNotIn("candidate-commit", launcher)
         self.assertNotIn("minimum-drand-round", launcher)
 
@@ -211,6 +224,40 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "terminal"):
                 MODULE.verify_terminal(root)
 
+    def test_terminal_verifier_holds_all_artifacts_through_cross_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            work = root / "work"
+            evidence = root / "evidence"
+            work.mkdir()
+            evidence.mkdir()
+            manifest, rows, summary = self._compact_evidence(work)
+            MODULE.publish_evidence(evidence, manifest, rows, summary)
+            original = MODULE.strict_json_bytes
+
+            def mutate_during_summary(value: bytes, label: str):
+                parsed = original(value, label)
+                if label == "terminal summary":
+                    (evidence / "manifest.json").write_bytes(b"{}\n" + b" " * 4094)
+                return parsed
+
+            with mock.patch.object(MODULE, "strict_json_bytes", side_effect=mutate_during_summary):
+                with self.assertRaisesRegex(ValueError, "terminal"):
+                    MODULE.verify_terminal(evidence)
+
+    def test_terminal_verifier_recomputes_aggregate_and_verdict(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            work = root / "work"
+            evidence = root / "evidence"
+            work.mkdir()
+            evidence.mkdir()
+            manifest, rows, summary = self._compact_evidence(work)
+            summary["query_weighted_error"] = 0.0
+            MODULE.publish_evidence(evidence, manifest, rows, summary)
+            with self.assertRaisesRegex(ValueError, "aggregate|metric|summary"):
+                MODULE.verify_terminal(evidence)
+
     def test_three_relay_randomness_requires_exact_agreement(self) -> None:
         record = {
             "round": 6357190,
@@ -236,9 +283,7 @@ class W9Fp4FalsifierTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "agree"):
                     MODULE._verify_randomness(bound, 6357189)
 
-    def test_compact_evaluate_exercises_all_candidates_and_aggregation(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = pathlib.Path(temporary)
+    def _compact_evidence(self, root: pathlib.Path):
             rng = np.random.default_rng(19)
             keys = rng.normal(size=(8, 32)).astype("<f4")
             queries = rng.normal(size=(2, 1, 32)).astype("<f4")
@@ -282,10 +327,16 @@ class W9Fp4FalsifierTests(unittest.TestCase):
                         candidate_commit, 6357189, {"source": "c" * 64},
                         {"runtime": "d" * 64}, "e" * 64,
                     )
-            self.assertEqual(len(rows), 3)
-            self.assertEqual(set(summary["candidates"]), set(MODULE.CANDIDATES))
-            self.assertIn(summary["verdict"], {"PASS", "NO_RESULT"})
-            self.assertEqual(manifest["drand_round"], 6357190)
+            return manifest, rows, summary
+
+    def test_compact_evaluate_exercises_all_candidates_and_aggregation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            manifest, rows, summary = self._compact_evidence(root)
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(set(summary["candidates"]), set(MODULE.CANDIDATES))
+        self.assertIn(summary["verdict"], {"PASS", "NO_RESULT"})
+        self.assertEqual(manifest["drand_round"], 6357190)
 
 
 if __name__ == "__main__":

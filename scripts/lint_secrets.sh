@@ -227,6 +227,7 @@ allowlist = {
     "partial_tsv_sha256",
     "main_log_sha256",
     "command_log_sha256",
+    "full_log_sha256",
     "engine_log_sha256",
     "access_stream_sha256",
     "raw_artifact_sha256",
