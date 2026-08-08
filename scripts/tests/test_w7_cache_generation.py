@@ -491,16 +491,28 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
         self.assertIn("GLM_SAFE_DONE_DIGESTS", source)
 
-    def test_current_user_engine_lock_is_fixed_and_environment_bound(self) -> None:
+    def test_current_user_engine_lock_is_descriptor_bound_and_environment_bound(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
-        self.assertIn("readonly ENGINE_LOCK=/run/user/1000/ds4-w7.lock", source)
-        self.assertIn("DS4_LOCK_FILE=\"$ENGINE_LOCK\"", source)
+        self.assertNotIn("readonly ENGINE_LOCK=/run/user/1000/ds4-w7.lock", source)
+        self.assertIn('engine_lock_fd_path="/proc/$$/fd/$engine_lock_fd"', source)
+        self.assertIn('DS4_LOCK_FILE="$engine_lock_fd_path"', source)
+        self.assertIn('rm -f -- "$leaf"', source)
         self.assertIn(
             "GLM_SAFE_PROVENANCE_ENV_ALLOWLIST=DS4_CUDA_STABLE_MODEL_REMAP,DS4_LOCK_FILE",
             source,
         )
-        self.assertIn(f"readonly ENV_SHA256={ENV_SHA256}", source)
+        self.assertIn("environment_sha256=$(printf", source)
         self.assertIn("DS4_LOCK_FILE", CGROUP.read_text(encoding="utf-8"))
+        completed = subprocess.run(
+            [str(SMOKE), "--engine-lock-self-test"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("W7_ENGINE_LOCK_DESCRIPTOR_SELFTEST_OK", completed.stdout)
 
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
