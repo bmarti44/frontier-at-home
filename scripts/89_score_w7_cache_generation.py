@@ -27,13 +27,13 @@ PROMPT_START_RE = re.compile(
 PROMPT_DONE_RE = re.compile(
     r"ds4-server: completion ctx=(\d+)\.\.(\d+):(\d+) prompt done [0-9]+(?:\.[0-9]+)?s$"
 )
-FATAL_MARKERS = (
-    "CUDA GLM prefill failed",
-    "forward_token failed",
-    "out of memory",
-    "fatal error",
-    " Xid ",
-    "request timeout",
+FATAL_PATTERNS = (
+    re.compile(r"CUDA(?: GLM prefill failed|_ERROR_OUT_OF_MEMORY)", re.IGNORECASE),
+    re.compile(r"forward_token failed", re.IGNORECASE),
+    re.compile(r"(?:out of memory|oom-kill|killed process)", re.IGNORECASE),
+    re.compile(r"fatal error", re.IGNORECASE),
+    re.compile(r"(?:NVRM.*)?\bXid\b", re.IGNORECASE),
+    re.compile(r"request timeout", re.IGNORECASE),
 )
 
 
@@ -103,6 +103,7 @@ def score_text(
             and len(choices) == 1
             and isinstance(choices[0], dict)
             and type(choices[0].get("text")) is str
+            and choices[0]["text"] == ""
             and choices[0].get("finish_reason") == "length"
             and all(
                 type(value) is int
@@ -138,7 +139,14 @@ def score_text(
         and matching_response_windows[0] is indexed_completed[0]
     )
     false_flush_count = sum(FALSE_FLUSH in line for line in window)
-    fatal_markers = [marker for marker in FATAL_MARKERS if any(marker in line for line in window)]
+    fatal_markers = sorted(
+        {
+            match.group(0)
+            for pattern in FATAL_PATTERNS
+            for line in window
+            if (match := pattern.search(line)) is not None
+        }
+    )
     clean_containment = (
         containment_rc.strip() == "0"
         and re.fullmatch(

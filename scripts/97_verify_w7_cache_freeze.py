@@ -6,31 +6,50 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import stat
 
 
-def sha256(path: Path) -> str:
+def open_and_measure(path: Path) -> tuple[os.stat_result, str]:
+    flags = os.O_RDONLY | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path, flags)
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+    try:
+        metadata = os.fstat(descriptor)
+        while chunk := os.read(descriptor, 1024 * 1024):
             digest.update(chunk)
-    return digest.hexdigest()
+    finally:
+        os.close(descriptor)
+    return metadata, digest.hexdigest()
 
 
 def verify(path: Path) -> dict[str, object]:
     freeze = json.loads(path.read_text(encoding="utf-8"))
     binary = freeze["binary"]
     artifact = Path(binary["path"])
-    metadata = artifact.lstat()
+    try:
+        metadata, artifact_sha256 = open_and_measure(artifact)
+    except OSError:
+        return {
+            "checks": {
+                "regular_non_symlink": False,
+                "bytes_match": False,
+                "mode_match": False,
+                "sha256_match": False,
+            },
+            "verdict": "FAIL",
+        }
     checks = {
-        "regular_non_symlink": stat.S_ISREG(metadata.st_mode) and not artifact.is_symlink(),
+        "regular_non_symlink": stat.S_ISREG(metadata.st_mode),
         "bytes_match": type(binary.get("bytes")) is int
         and binary["bytes"] == metadata.st_size,
         "mode_match": type(binary.get("mode")) is int
         and binary["mode"] == stat.S_IMODE(metadata.st_mode),
         "sha256_match": isinstance(binary.get("sha256"), str)
-        and binary["sha256"] == sha256(artifact),
+        and binary["sha256"] == artifact_sha256,
     }
     return {"checks": checks, "verdict": "PASS" if all(checks.values()) else "FAIL"}
 
