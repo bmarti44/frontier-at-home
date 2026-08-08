@@ -1,0 +1,81 @@
+{
+  "schema": "glm52-w4-review-v1",
+  "candidate_hash": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "evidence_commit": "a4ffa0f99436c26685f44469964bebcfe9243c78",
+  "review_round": 299,
+  "campaign_authorized": true,
+  "gap_reviewer": {
+    "reviewer": "Nash",
+    "score_0_to_100": 96,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [
+      {
+        "id": "W4-R299-L1-FREEZE-ORDER-ATTESTATION",
+        "status": "DEFERRED",
+        "evidence": "The material closure and corrected binary hashes were committed before drand publication, but the consolidated freeze receipt commit landed afterward. The recorded freeze timestamp itself still predates the beacon.",
+        "affected_gate": "Future public-randomness auditability",
+        "reproduction_instructions": "Compare commit times for 31031cc and 391a718 with the derived publication time for drand round 6359248.",
+        "proposed_acceptance_test": "For future candidates, publish the consolidated freeze commit before selecting the beacon round."
+      },
+      {
+        "id": "W4-R298-L1-MULTIDEVICE-RUNTIME-COVERAGE",
+        "status": "DEFERRED",
+        "evidence": "The current target and runtime evidence are single-device DGX Spark.",
+        "affected_gate": "Out-of-scope multi-GPU portability",
+        "reproduction_instructions": "Exercise independent setup and tier mismatch on a multi-GPU host.",
+        "proposed_acceptance_test": "Add runtime coverage if multi-GPU deployment enters scope."
+      }
+    ],
+    "prior_issue_status": [
+      {"id": "W4-R297-H2-NONAUTHORITATIVE-EVIDENCE", "status": "FIXED"},
+      {"id": "W4-R298-M1-DERIVED-CORRECTNESS-ROWS", "status": "FIXED"},
+      {"id": "W4-R298-M2-MUTATION-PROVENANCE", "status": "FIXED"},
+      {"id": "W4-R298-L1-MULTIDEVICE-RUNTIME-COVERAGE", "status": "DEFERRED"},
+      {"id": "W4-R297-H3-RANDOMNESS-NOT-EXECUTION-BOUND", "status": "FIXED"}
+    ],
+    "verdict": "PASS_SERVING_CAMPAIGN_AUTHORIZED"
+  },
+  "adversarial_reviewer": {
+    "reviewer": "Singer",
+    "score_0_to_100": 94,
+    "critical": [],
+    "high": [],
+    "medium": [
+      {
+        "id": "ADV-W4-299-M1-UNIT-NEGATIVE-TESTS-ARE-NONISOLATING",
+        "status": "DEFERRED",
+        "evidence": "Several synthetic unit negatives inherit an invalid legacy manifest and can reject before reaching the named mutation. The authoritative candidate-5 mutation driver starts from the valid frozen closure, independently rejected all 13 mutations twice, and is unaffected.",
+        "affected_gate": "Harness regression maintainability, not current measurement validity",
+        "reproduction_instructions": "Inspect the exception from the synthetic missing-row test and compare it with the real-evidence missing-row mutation.",
+        "proposed_acceptance_test": "When this unit fixture is next revised before a future freeze, base it on a valid closure or assert exact diagnostics."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-W4-297-H2-CONFIRMATION-HAS-NO-HASH-CLOSED-RAW-EVIDENCE", "status": "VERIFIED"},
+      {"id": "ADV-W4-297-H1-PACKED-FLOAT-ORDER-DIFFERS-FROM-PRODUCTION-COMPARATOR", "status": "FIXED"},
+      {"id": "ADV-W4-297-M1-PARTIAL-AND-ODD-MERGE-SHAPES-UNTESTED", "status": "FIXED"},
+      {"id": "EXEC-W4-C2-SILENT-SCORER-SUCCESS", "status": "FIXED"},
+      {"id": "EXEC-W4-C4-MUTATION-REPLAY-NONDETERMINISM", "status": "FIXED"}
+    ],
+    "verdict": "PASS_SERVING_CAMPAIGN_AUTHORIZED"
+  },
+  "root_reproduction": {
+    "archived_scorer_replay": "PASS; byte-identical to summary.json",
+    "speedup_lower_95": 2.982571005715445,
+    "required_speedup_lower_95": 2.0,
+    "selected_ids_exact": true,
+    "mutation_replays": "Two independent outputs byte-identical to the committed record; all 13 corruptions rejected.",
+    "host_safety": "No GLM model load, ds4-server, fio, swap increase, or memory-floor event."
+  },
+  "convergence": {
+    "gate_candidate_count": 5,
+    "global_review_round": 299,
+    "status": "CONVERGED",
+    "critical_or_high_open": false,
+    "deferred_rationale": "Both reviewers score at least 90 and the sole medium affects synthetic-test localization, while authoritative real-evidence mutations independently close the measurement-validity path. Per owner policy it does not trigger another review cycle."
+  },
+  "verdict": "PASS_SERVING_CAMPAIGN_AUTHORIZED_MICROGATE_ONLY"
+}
