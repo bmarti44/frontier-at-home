@@ -1,0 +1,70 @@
+From 6f4300a4179247a06dd94250f3e8aeb8b289b5b6 Mon Sep 17 00:00:00 2001
+From: Brian Martin <brian@brianmartin.com>
+Date: Sat, 8 Aug 2026 06:44:59 -0400
+Subject: [PATCH] test: expose preload evict-store selector RED
+
+---
+ ds4_server.c | 26 +++++++++++++++++++++++++-
+ 1 file changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/ds4_server.c b/ds4_server.c
+index 2c3bd52..34ea456 100644
+--- a/ds4_server.c
++++ b/ds4_server.c
+@@ -9450,6 +9450,15 @@ static void kv_cache_store_current(server *s, server_slot *slot,
+     }
+ }
+ 
++static bool kv_cache_should_store_before_disk_lookup(bool kv_enabled,
++                                                     int cached,
++                                                     int old_pos,
++                                                     int min_tokens,
++                                                     bool diagnostic_skip) {
++    (void)diagnostic_skip;
++    return kv_enabled && cached == 0 && old_pos >= min_tokens;
++}
++
+ #ifdef DS4_SERVER_TEST
+ static int kv_cache_suppress_continued_store(kv_disk_cache *kc, int tokens) {
+     return ds4_kvstore_suppress_continued_store(kc, tokens);
+@@ -11173,7 +11182,8 @@ static void generate_job(server *s, server_slot *slot, job *j) {
+                    trace_cache_miss_reason(&cache_diag));
+     }
+     if (cached == 0) slot->continued_last_store_tokens = 0;
+-    if (s->kv.enabled && cached == 0 && old_pos >= s->kv.opt.min_tokens) {
++    if (kv_cache_should_store_before_disk_lookup(
++            s->kv.enabled, cached, old_pos, s->kv.opt.min_tokens, false)) {
+         /* Loading a disk snapshot replaces the live Metal session.  Persist the
+          * current checkpoint first, otherwise a cache hit for an older prefix
+          * would silently discard the newer conversation state. */
+@@ -16821,6 +16831,19 @@ static void test_glm_logit_dump_all_names_each_sync_without_changing_default(voi
+     TEST_ASSERT(rmdir(dir) == 0);
+ }
+ 
++static void test_kv_cache_preload_evict_store_diagnostic_selector(void) {
++    TEST_ASSERT(kv_cache_should_store_before_disk_lookup(true, 0, 5055, 512,
++                                                         false));
++    TEST_ASSERT(!kv_cache_should_store_before_disk_lookup(true, 0, 5055, 512,
++                                                          true));
++    TEST_ASSERT(!kv_cache_should_store_before_disk_lookup(false, 0, 5055, 512,
++                                                          false));
++    TEST_ASSERT(!kv_cache_should_store_before_disk_lookup(true, 1, 5055, 512,
++                                                          false));
++    TEST_ASSERT(!kv_cache_should_store_before_disk_lookup(true, 0, 511, 512,
++                                                          false));
++}
++
+ static void test_kv_cache_store_len_uses_configured_boundary(void) {
+     kv_disk_cache kc = {0};
+     kc.opt = kv_cache_default_options();
+@@ -18045,6 +18068,7 @@ static void ds4_server_unit_tests_run(void) {
+     test_canonical_rewrite_rebuilds_when_live_tail_changes();
+     test_glm_restored_frontier_requires_complete_snapshot();
+     test_glm_logit_dump_all_names_each_sync_without_changing_default();
++    test_kv_cache_preload_evict_store_diagnostic_selector();
+     test_kv_cache_store_len_uses_configured_boundary();
+     test_kv_cache_chat_anchor_uses_last_user_before_assistant();
+     test_kv_cache_chat_anchor_ignores_multiturn_tail();
+-- 
+2.43.0
+
