@@ -617,6 +617,7 @@ if [[ ${1:-} == --driver-lineage-self-test ]]; then
   DS4_W7_LOCK_PARENT_PID=$original_lock_pid; DS4_W7_LOCK_PARENT_START_TICKS=1; ! verify_driver_safe_lineage # bad-lock-start
   DS4_W7_LOCK_PARENT_START_TICKS=$original_lock_start
   echo W7_DRIVER_LINEAGE_SELFTEST_OK
+  sleep 1
   exit 0
 fi
 
