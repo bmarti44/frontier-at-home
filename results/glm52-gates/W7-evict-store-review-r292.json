@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "gate": "W7.2-preload-evict-store-diagnostic",
+  "candidate_number": 5,
+  "candidate_hash": "619b4c004ebf7d5c786a12126a7820f229360590",
+  "review_round": 292,
+  "runtime_probe_may_proceed": false,
+  "reviewers": {
+    "gap_reviewer": {
+      "score_0_to_100": 90,
+      "critical": [],
+      "high": [
+        {
+          "id": "GAP-W7.2-291-H1-PASS-REPLAY-NOT-BOUND-TO-PREREGISTERED-EVIDENCE",
+          "evidence": "Most archived arm fields are now reconstructed, but the warm response omits the frozen lifecycle's empty-text, cached_tokens=0, and cache_write_tokens=5055 checks. Safety reconstruction also uses live server_pids, making unchanged archived evidence depend on ambient host state.",
+          "acceptance_test": "Apply byte-equivalent frozen warm-response checks and reconstruct descendant cleanup solely from archived evidence. Coherently rebound warm-response mutations must fail and ambient server_pids changes must not alter validation."
+        }
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_CONVERGENCE_PAUSE"
+    },
+    "adversarial_reviewer": {
+      "score_0_to_100": 84,
+      "critical": [],
+      "high": [
+        {
+          "id": "ADV-W7.2-292-H1-TERMINAL-PASS-IGNORES-CONTRADICTORY-RUNTIME-SAFETY-AND-PROVENANCE",
+          "evidence": "PASS accepts OOM text in containment.stderr, a coherently invented environment digest, and FATAL wrong-binary/provenance text in safety/main.log because terminal reconstruction does not require the frozen wrapper's identity, clean-exit, no-contradiction, and retained-environment assertions.",
+          "acceptance_test": "Reject fatal/OOM/CUDA contradictions in retained streams; require the canonical clean wrapper end, executed-binary verification, clean-exit/no-descendant evidence, and a retained canonical launch-environment artifact bound to each wrapper-sampled digest."
+        }
+      ],
+      "medium": [
+        {
+          "id": "ADV-W7.2-292-M1-SHADOW-ARM-DIRECTORY-ACCEPTED",
+          "evidence": "An additional top-level directory not starting with p is included in inventory but ignored by the exact-two-arm check.",
+          "acceptance_test": "Require the complete top-level directory set to equal the two strictly named arm directories."
+        },
+        {
+          "id": "ADV-W7.2-292-M2-LIVE-ZERO-COMPLETION-SEMANTIC-CONTRADICTION-ACCEPTED",
+          "evidence": "A live response can contain nonempty choice text while claiming completion_tokens=0 and still validate.",
+          "acceptance_test": "Require the exact zero-completion response shape, empty text, choice index zero, and no error payload."
+        }
+      ],
+      "low": [],
+      "verdict": "CHANGES_REQUIRED_CONVERGENCE_BREAK_GATE_PAUSED_RUNTIME_NOT_AUTHORIZED"
+    }
+  },
+  "verified_fixed": [
+    "exact preregistered configuration",
+    "byte-exact primary request",
+    "candidate-bound public-randomness receipt and derived order",
+    "two named arm sets and required artifacts",
+    "row timing/token/text/logit/event/checkpoint reconstruction",
+    "frozen scorer replay and component identities",
+    "all candidate-4 row/component mutations"
+  ],
+  "convergence": {
+    "prior_blocking_class_count": 1,
+    "remaining_blocking_class_count": 1,
+    "strictly_shrank": false,
+    "consecutive_non_shrinking_candidates": 2,
+    "candidate_count": 5,
+    "campaign_global_review_round": 292,
+    "new_critical_in_frozen_scope": false,
+    "candidate_limit_exceeded": false,
+    "convergence_broken": true,
+    "autonomous_next_candidate_authorized": false,
+    "required_action": "Pause W7.2 and report the exact open terminal-authority findings to the owner."
+  },
+  "verdict": "CHANGES_REQUIRED_GATE_PAUSED_RUNTIME_NOT_AUTHORIZED"
+}
