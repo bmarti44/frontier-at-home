@@ -50,6 +50,11 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             "done": True,
         }
         (out / "primary-client.json").write_text(json.dumps(client), encoding="utf-8")
+        (out / "live-response.json").write_text("{}\n", encoding="utf-8")
+        (out / "child-exit.json").write_text(
+            '{"exit_status":0,"forced_kill":false,"shutdown_requested":true}\n',
+            encoding="utf-8",
+        )
         for index in range(1, 130):
             (out / f"logits.sync{index}.start5044.prompt5066.suffix22").write_bytes(
                 index.to_bytes(4, "little")
@@ -58,9 +63,19 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         crash = crash_root / f"w7-runner-test-{Path(temporary.name).name}"
         crash.mkdir(mode=0o700)
         self.addCleanup(lambda: [path.unlink() for path in crash.iterdir()] and crash.rmdir())
+        final_lines = []
+        for name in ("server.log", "live-response.json", "primary-client.json", "child-exit.json"):
+            path = out / name
+            metadata = path.stat()
+            final_lines.append(
+                f"final_artifact_verified path={path} "
+                f"sha256={hashlib.sha256(path.read_bytes()).hexdigest()} "
+                f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}"
+            )
         (crash / "main.log").write_text(
             "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
-            "events=low 0,high 1,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n",
+            "events=low 0,high 1,max 0,oom 0,oom_kill 0,oom_group_kill 0,\n"
+            + "\n".join(final_lines) + "\n",
             encoding="utf-8",
         )
         (crash / "samples.log").write_text(
@@ -139,11 +154,26 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         self.assertEqual(row["safety"]["false_generation_flushes"], 1)
         self.assertEqual(row["safety"]["minimum_mem_available_kb"], 49_000_000)
         self.assertTrue((out / "safety/main.log").is_file())
+        for copied in (out / "safety").iterdir():
+            copied.unlink()
+        (out / "safety").rmdir()
 
         client_path = out / "primary-client.json"
         client = json.loads(client_path.read_text(encoding="utf-8"))
         client["usage"]["prompt_tokens_details"]["cached_tokens"] = 0
         client_path.write_text(json.dumps(client), encoding="utf-8")
+        with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
+            MODULE, "LOGIT_BYTES", 4
+        ):
+            with self.assertRaises(MODULE.CampaignError):
+                MODULE.parse_arm("off", 0, 0, out, 0, receipt, "4" * 64, "3" * 64)
+
+        for copied in (out / "safety").iterdir():
+            copied.unlink()
+        (out / "safety").rmdir()
+        client["usage"]["prompt_tokens_details"]["cached_tokens"] = 5044
+        client_path.write_text(json.dumps(client), encoding="utf-8")
+        next(out.glob("logits.sync129.*")).unlink()
         with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
             MODULE, "LOGIT_BYTES", 4
         ):
@@ -176,16 +206,6 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         self.assertTrue(callable(module.score_campaign_rows))
         with self.assertRaises(MODULE.CampaignError):
             MODULE.load_scorer(scorer_bytes + b"\n# mutation\n", digest)
-
-        client["usage"]["prompt_tokens_details"]["cached_tokens"] = 5044
-        client_path.write_text(json.dumps(client), encoding="utf-8")
-        next(out.glob("logits.sync129.*")).unlink()
-        with mock.patch.object(MODULE, "server_pids", return_value=[]), mock.patch.object(
-            MODULE, "LOGIT_BYTES", 4
-        ):
-            with self.assertRaises(MODULE.CampaignError):
-                MODULE.parse_arm("off", 0, 0, out, 0, receipt, "4" * 64, "3" * 64)
-
 
 if __name__ == "__main__":
     unittest.main()
