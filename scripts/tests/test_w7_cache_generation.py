@@ -120,6 +120,86 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn("containment_stdout=containment_stdout", harness)
         self.assertIn("containment_rc=containment_rc", harness)
 
+    def test_private_completion_capture_ignores_replaced_persisted_file(self) -> None:
+        crash_parent = Path("/home/bmarti44/.local/state/glm52-crashlog")
+        crash_parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="w7-private-") as directory, \
+             tempfile.TemporaryDirectory(prefix="w7-private-", dir=crash_parent) as crash_directory:
+            attempt = Path(directory) / "attempt"
+            out = attempt / "on"
+            crash = Path(crash_directory)
+            out.mkdir(parents=True)
+            runtime = {
+                "server.log": GOOD,
+                "live-response.json": RESPONSE,
+                "live-http-status": HTTP,
+                "primary-response.json": RESPONSE,
+                "primary-http-status": HTTP,
+                "child-exit.json": '{"shutdown_requested":true,"forced_kill":false,"exit_status":0}',
+                "model.identity.json": MODEL_IDENTITY,
+            }
+            for name, payload in runtime.items():
+                (out / name).write_text(payload)
+            (attempt / "containment.stderr").write_text("")
+            (attempt / "containment.stdout").write_text("fabricated persisted completion\n")
+            (crash / "samples.log").write_text("samples\n")
+            (crash / "kernel.log").write_text("kernel\n")
+            final_lines = []
+            for name in runtime:
+                path = out / name
+                metadata = path.stat()
+                final_lines.append(
+                    f"2026-08-07 final_artifact_verified path={path} "
+                    f"sha256={hashlib.sha256(path.read_bytes()).hexdigest()} "
+                    f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}"
+                )
+            samples_hash = hashlib.sha256((crash / "samples.log").read_bytes()).hexdigest()
+            kernel_hash = hashlib.sha256((crash / "kernel.log").read_bytes()).hexdigest()
+            main = SAFETY + "\n".join(final_lines) + "\n" + (
+                f"2026-08-07 safety_artifact_verified name=samples.log sha256={samples_hash} size=8\n"
+                f"2026-08-07 safety_artifact_verified name=kernel.log sha256={kernel_hash} size=7\n"
+            )
+            (crash / "main.log").write_text(main)
+            main_hash = hashlib.sha256((crash / "main.log").read_bytes()).hexdigest()
+            private_completion = (
+                f"SAFE_RUN_DONE rc=0 killed=no dir={crash} main_sha256={main_hash} "
+                f"samples_sha256={samples_hash} kernel_sha256={kernel_hash}"
+            )
+            identities = {
+                "candidate_hash": "a" * 40,
+                "execution_head": "a" * 40,
+                "binary_sha256": BINARY_SHA256,
+                "model_sha256": MODEL_SHA256,
+                "model_bytes": 211075856448,
+                "live_request_sha256": "1" * 64,
+                "primary_request_sha256": "2" * 64,
+                "executed_environment_sha256": ENV_SHA256,
+                "scorer_sha256": "3" * 64,
+                "harness_sha256": "4" * 64,
+                "cgroup_sha256": "5" * 64,
+                "safe_run_sha256": "6" * 64,
+                "containment": {},
+            }
+            result = MODULE.score_and_publish_bound_attempt(
+                attempt=attempt,
+                out=out,
+                crash_dir=crash,
+                evidence_dir=out / "evidence",
+                identities=identities,
+                containment_stdout=private_completion,
+                containment_rc=0,
+            )
+            self.assertEqual(result["verdict"], "PASS")
+            manifest = json.loads((out / "evidence/manifest.json").read_text())
+            self.assertEqual(
+                manifest["artifacts"]["containment.stdout"],
+                hashlib.sha256(private_completion.encode()).hexdigest(),
+            )
+            self.assertNotEqual(
+                manifest["artifacts"]["containment.stdout"],
+                hashlib.sha256((attempt / "containment.stdout").read_bytes()).hexdigest(),
+            )
+
     def test_rejects_copied_launcher_before_self_test(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             copied = Path(directory) / "copied-smoke.sh"
