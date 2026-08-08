@@ -56,6 +56,11 @@ def invoke(run: Path) -> subprocess.CompletedProcess[str]:
         env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin"})
 
 
+def normalize_stderr(stderr: str, run: Path) -> str:
+    """Remove only the per-execution mutation directory from tracebacks."""
+    return stderr.replace(str(run), "<MUTATED_RUN>")
+
+
 def mutate_missing(run: Path) -> None:
     rewrite_raw(run, rows(run)[:-1])
 
@@ -156,13 +161,15 @@ def main() -> int:
                 "mutation": name, "exit_code": completed.returncode,
                 "rejected": completed.returncode != 0,
                 "stdout_sha256": digest_bytes(completed.stdout.encode()),
-                "stderr_sha256": digest_bytes(completed.stderr.encode()),
+                "stderr_sha256": digest_bytes(
+                    normalize_stderr(completed.stderr, run).encode()),
                 "diagnostic_tail": (completed.stderr.strip().splitlines()[-1]
                                     if completed.stderr.strip() else ""),
             })
     all_rejected = all(result["rejected"] for result in results)
     print(json.dumps({
-        "schema": "glm52-w4-topk-mutations-v2", "candidate": 4,
+        "schema": "glm52-w4-topk-mutations-v3", "candidate": 5,
+        "stderr_normalization": "exact mutation-run path replaced by <MUTATED_RUN>",
         "source_run": str(args.run_dir),
         "artifacts": {"driver": digest(Path(__file__))},
         "mutations": results, "all_rejected": all_rejected,

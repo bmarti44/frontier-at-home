@@ -29,7 +29,7 @@ EXPECTED_ARTIFACT_SHA256 = {
     "engine.cu": "35375030ae4d0a290d34d66c0afd632c3d70ff9bc8a9c8cb0c32b5173354c797",
     "test.cu": "83cea1005236ca75c25e466396cd1934e63ba402c3ce3356eeffa35d98a2ba5e",
     "Makefile": "6e67c8185358dedfe12c26a9dcdfba18edbb68665917eceebd3c748a4c6d777e",
-    "runner.py": "43b65255f9323f94bacd83243869d5fbd6091551c350502dbe7e1696a194e5b1",
+    "runner.py": "83ed0f2bf8be41b16b12a667a68ec93d79ae59194263f696df2f99381e1d97e8",
     "drand-verifier.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131",
 }
 DRAND_GENESIS_UNIX = 1595431050
@@ -166,7 +166,7 @@ def score_run(run_dir: Path) -> dict:
     if not isinstance(manifest, dict) or set(manifest) != MANIFEST_KEYS:
         raise ScoreError("manifest schema keys differ")
     if manifest["schema"] != "glm52-w4-topk-manifest-v1" or \
-            manifest["gate"] != "W4" or manifest["candidate"] != 4:
+            manifest["gate"] != "W4" or manifest["candidate"] != 5:
         raise ScoreError("wrong manifest identity")
     if _require_hex(manifest["candidate_hash"], 40, "candidate hash") != \
             EXPECTED_CANDIDATE_HASH:
@@ -205,7 +205,7 @@ def score_run(run_dir: Path) -> dict:
     freeze = _json_bytes(bound["freeze.json"], "freeze record")
     if not isinstance(freeze, dict) or freeze.get("schema") != \
             "glm52-w4-topk-freeze-v2" or freeze.get("gate") != "W4" or \
-            freeze.get("candidate") != 4 or freeze.get("verdict") != "FROZEN" or \
+            freeze.get("candidate") != 5 or freeze.get("verdict") != "FROZEN" or \
             freeze.get("freeze_time_unix") != manifest["freeze_time_unix"]:
         raise ScoreError("freeze identity differs")
     frozen_source = freeze.get("source")

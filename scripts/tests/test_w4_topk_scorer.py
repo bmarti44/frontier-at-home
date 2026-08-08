@@ -23,6 +23,11 @@ RUNNER_SPEC = importlib.util.spec_from_file_location(
 assert RUNNER_SPEC and RUNNER_SPEC.loader
 RUNNER = importlib.util.module_from_spec(RUNNER_SPEC)
 RUNNER_SPEC.loader.exec_module(RUNNER)
+MUTATOR_SPEC = importlib.util.spec_from_file_location(
+    "w4_mutator", ROOT / "scripts/100_mutate_w4_topk_evidence.py")
+assert MUTATOR_SPEC and MUTATOR_SPEC.loader
+MUTATOR = importlib.util.module_from_spec(MUTATOR_SPEC)
+MUTATOR_SPEC.loader.exec_module(MUTATOR)
 RECEIPT = json.loads((
     ROOT / "results/glm52-gates/W7-resume-production-drand-verifier-fixture.json"
 ).read_text())
@@ -141,6 +146,14 @@ class W4TopkScorerTest(unittest.TestCase):
         with self.assertRaises(SCORER.ScoreError):
             SCORER.validate_transcript(
                 [row], matching.replace(str(row["elapsed_ms"]), "123.0"))
+
+    def test_mutation_stderr_normalization_is_path_independent(self) -> None:
+        first = MUTATOR.normalize_stderr(
+            "File /tmp/first/run/scorer.py", Path("/tmp/first/run"))
+        second = MUTATOR.normalize_stderr(
+            "File /tmp/second/run/scorer.py", Path("/tmp/second/run"))
+        self.assertEqual(first, second)
+        self.assertEqual(first, "File <MUTATED_RUN>/scorer.py")
 
     def test_missing_duplicate_or_reordered_observation_fails(self) -> None:
         mutations = (
