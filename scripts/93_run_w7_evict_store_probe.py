@@ -58,6 +58,8 @@ STORE_RE = re.compile(r"ds4-server: kv cache stored tokens=5055 .* reason=evict 
 HIT_RE = re.compile(r"ds4-server: kv cache hit text tokens=5044 ")
 SHA_RE = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
+_ACTIVE_ATTEMPT: Path | None = None
+_ACTIVE_CANDIDATE: str | None = None
 
 
 class ProbeError(RuntimeError):
@@ -216,7 +218,48 @@ def load_scorer(frozen: bytes) -> Any:
     return module
 
 
+def finalize_failure_triplet(error: BaseException) -> None:
+    """Preserve a fail-closed triplet if execution escapes after attempt creation."""
+    if _ACTIVE_ATTEMPT is None or _ACTIVE_CANDIDATE is None:
+        return
+    manifest_path = _ACTIVE_ATTEMPT / "manifest.json"
+    if manifest_path.exists():
+        return
+    raw_path = _ACTIVE_ATTEMPT / "raw.jsonl"
+    summary_path = _ACTIVE_ATTEMPT / "summary.json"
+    raw_bytes = raw_path.read_bytes() if raw_path.is_file() else b""
+    if not raw_path.exists():
+        BASE.write_new(raw_path, raw_bytes)
+    displaced: tuple[str, str] | None = None
+    if summary_path.exists():
+        prior, _ = BASE.read_stable(summary_path)
+        prior_path = _ACTIVE_ATTEMPT / "summary.pre-finalization.json"
+        os.rename(summary_path, prior_path)
+        displaced = (prior_path.name, hashlib.sha256(prior).hexdigest())
+    failure = f"{type(error).__name__}: {error}"
+    summary_bytes = (json.dumps({"failure": failure, "verdict": "FAIL"}, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    BASE.write_new(summary_path, summary_bytes)
+    artifacts = {
+        "raw.jsonl": hashlib.sha256(raw_bytes).hexdigest(),
+        "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
+    }
+    if displaced is not None:
+        artifacts[displaced[0]] = displaced[1]
+    BASE.write_json_new(manifest_path, {
+        "schema": "glm52-w7-evict-store-probe-failure-v1",
+        "candidate_hash": _ACTIVE_CANDIDATE,
+        "failure": failure,
+        "runner_sha256": BASE.sha256_file(Path(__file__)),
+        "scorer_sha256": SCORER_SHA256,
+        "binary_sha256": BINARY_SHA256,
+        "model_sha256": MODEL_SHA256,
+        "artifacts": artifacts,
+        "verdict": "FAIL",
+    })
+
+
 def run_probe(candidate: str, randomness_receipt: Path) -> int:
+    global _ACTIVE_ATTEMPT, _ACTIVE_CANDIDATE
     verify_dependencies()
     verify_candidate(candidate)
     if BASE.server_pids() or subprocess.run(["/usr/bin/pgrep", "-x", "fio"], capture_output=True).returncode == 0:
@@ -257,6 +300,8 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
         order = derive_order(seed)
         OUT_ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
         attempt = BASE.create_and_activate_attempt(OUT_ROOT, candidate, uuid.uuid4().hex)
+        _ACTIVE_ATTEMPT = attempt
+        _ACTIVE_CANDIDATE = candidate
         engine_lock_fd = os.open(attempt / "engine.lock", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         os.unlink(attempt / "engine.lock")
         lock_stat = os.fstat(engine_lock_fd)
@@ -357,6 +402,8 @@ def run_probe(candidate: str, randomness_receipt: Path) -> int:
         finally:
             os.close(directory_fd)
         print(f"W7_EVICT_STORE_PROBE_ATTEMPT={attempt}")
+        _ACTIVE_ATTEMPT = None
+        _ACTIVE_CANDIDATE = None
         return 0 if summary["verdict"] == "PASS" else 1
     finally:
         for descriptor in (engine_lock_fd, model_fd, memory_guard_fd):
@@ -389,8 +436,19 @@ def main() -> int:
             return driver(arm, Path(out), Path(request), request_sha, candidate, devino, descriptor, lock)
         if not args.candidate or args.randomness_receipt is None:
             parser.error("--candidate and --randomness-receipt are required")
-        return run_probe(args.candidate, args.randomness_receipt)
+        previous_handlers = BASE.install_campaign_signal_handlers()
+        try:
+            return run_probe(args.candidate, args.randomness_receipt)
+        finally:
+            BASE.restore_campaign_signal_handlers(previous_handlers)
     except Exception as error:
+        try:
+            finalize_failure_triplet(error)
+        except Exception as finalization_error:
+            print(
+                f"W7_EVICT_STORE_PROBE_FINALIZATION_FAIL: {finalization_error}",
+                file=sys.stderr,
+            )
         print(f"W7_EVICT_STORE_PROBE_FAIL: {type(error).__name__}: {error}", file=sys.stderr)
         return 2
 

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -45,11 +47,31 @@ class W7EvictStoreProbeRunnerTests(unittest.TestCase):
             "MemorySwapMax", "minimum_start_GiB", "model content identity mismatch",
             "evict_store_count", "selected_checkpoint_tokens", "logit_sha256s",
             "manifest.json", "raw.jsonl", "summary.json", "public_randomness",
+            "install_campaign_signal_handlers", "finalize_failure_triplet",
         ):
             self.assertIn(required, source)
         self.assertNotIn("shell=True", source)
         self.assertNotIn("sudo", source)
         self.assertNotIn("reboot", source)
+
+    def test_post_attempt_failure_is_preserved_as_triplet(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="w7-evict-finalize-") as temporary:
+            attempt = Path(temporary)
+            MODULE._ACTIVE_ATTEMPT = attempt
+            MODULE._ACTIVE_CANDIDATE = "a" * 40
+            try:
+                MODULE.finalize_failure_triplet(RuntimeError("injected"))
+            finally:
+                MODULE._ACTIVE_ATTEMPT = None
+                MODULE._ACTIVE_CANDIDATE = None
+            self.assertEqual((attempt / "raw.jsonl").read_bytes(), b"")
+            summary = json.loads((attempt / "summary.json").read_text())
+            manifest = json.loads((attempt / "manifest.json").read_text())
+            self.assertEqual(summary["verdict"], "FAIL")
+            self.assertIn("RuntimeError: injected", summary["failure"])
+            self.assertEqual(manifest["schema"], "glm52-w7-evict-store-probe-failure-v1")
+            self.assertEqual(manifest["candidate_hash"], "a" * 40)
+            self.assertEqual(manifest["verdict"], "FAIL")
 
 
 if __name__ == "__main__":
