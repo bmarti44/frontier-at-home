@@ -10,10 +10,16 @@ still owns byte identity and performance acceptance.
 from __future__ import annotations
 
 import argparse
+import ctypes
+import errno
+import hashlib
 import os
 import json
 from pathlib import Path
 import re
+import shutil
+import stat
+import tempfile
 
 
 LISTEN = "ds4-server: listening on "
@@ -24,6 +30,11 @@ PROMPT_DONE = " prompt done "
 FALSE_FLUSH = "CUDA persistent expert cache flushed (model load generation changed)"
 STABLE_REMAP = "CUDA stable model remap enabled generation="
 STABLE_REMAP_RE = re.compile(r"CUDA stable model remap enabled generation=([1-9][0-9]*)$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+DONE_RE = re.compile(
+    r"SAFE_RUN_DONE rc=0 killed=no dir=(/home/bmarti44/\.local/state/glm52-crashlog/[A-Za-z0-9._-]+) "
+    r"main_sha256=([0-9a-f]{64}) samples_sha256=([0-9a-f]{64}) kernel_sha256=([0-9a-f]{64})\n?"
+)
 PROMPT_START_RE = re.compile(
     r"ds4-server: completion ctx=(\d+)\.\.(\d+):(\d+) prompt start$"
 )
@@ -206,11 +217,7 @@ def score_text(
     )
     clean_containment = (
         containment_rc.strip() == "0"
-        and re.fullmatch(
-            r"SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/\.local/state/glm52-crashlog/[A-Za-z0-9._-]+\n?",
-            containment_stdout,
-        )
-        is not None
+        and DONE_RE.fullmatch(containment_stdout) is not None
     )
     safety_lines = safety_main_text.splitlines()
     safe_start_lines = [line for line in safety_lines if "SAFE_RUN start " in line]
@@ -293,6 +300,196 @@ def write_exclusive(path: Path, rendered: str) -> None:
         os.fsync(parent_fd)
     finally:
         os.close(parent_fd)
+
+
+def _json_bytes(value: object) -> bytes:
+    return (json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+
+
+def _write_exclusive_bytes(path: Path, payload: bytes) -> None:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags, 0o600)
+    try:
+        with os.fdopen(fd, "wb", closefd=False) as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+    finally:
+        os.close(fd)
+
+
+def _rename_noreplace(source: Path, destination: Path) -> None:
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = getattr(libc, "renameat2", None)
+    if renameat2 is None:
+        raise OSError(errno.ENOSYS, "renameat2 is required")
+    renameat2.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    renameat2.restype = ctypes.c_int
+    if renameat2(-100, os.fsencode(source), -100, os.fsencode(destination), 1) != 0:
+        error = ctypes.get_errno()
+        if error in (errno.EEXIST, errno.ENOTEMPTY):
+            raise FileExistsError(error, os.strerror(error), destination)
+        raise OSError(error, os.strerror(error), destination)
+
+
+def publish_triplet_atomic(
+    destination: Path,
+    manifest: dict[str, object],
+    raw_rows: list[dict[str, object]],
+    summary: dict[str, object],
+) -> None:
+    """Publish the complete evidence triplet with one no-replace directory rename."""
+    parent = destination.parent
+    parent_stat = os.lstat(parent)
+    if not stat.S_ISDIR(parent_stat.st_mode) or stat.S_ISLNK(parent_stat.st_mode):
+        raise ValueError("evidence parent must be a real directory")
+    raw_bytes = b"".join(_json_bytes(row) for row in raw_rows)
+    summary_bytes = _json_bytes(summary)
+    bound_manifest = json.loads(json.dumps(manifest, allow_nan=False))
+    artifacts = bound_manifest.setdefault("artifacts", {})
+    if not isinstance(artifacts, dict):
+        raise ValueError("manifest artifacts must be an object")
+    artifacts["raw.jsonl"] = hashlib.sha256(raw_bytes).hexdigest()
+    artifacts["summary.json"] = hashlib.sha256(summary_bytes).hexdigest()
+    manifest_bytes = _json_bytes(bound_manifest)
+    temporary = Path(tempfile.mkdtemp(prefix=f".{destination.name}.", dir=parent))
+    published = False
+    try:
+        _write_exclusive_bytes(temporary / "raw.jsonl", raw_bytes)
+        _write_exclusive_bytes(temporary / "summary.json", summary_bytes)
+        _write_exclusive_bytes(temporary / "manifest.json", manifest_bytes)
+        directory_fd = os.open(temporary, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        _rename_noreplace(temporary, destination)
+        published = True
+        parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
+    finally:
+        if not published:
+            shutil.rmtree(temporary, ignore_errors=True)
+
+
+def copy_bound_artifact(source: Path, destination: Path, expected_sha256: str | None) -> dict[str, object]:
+    """Copy one regular file through stable descriptors and bind its reviewed digest."""
+    if expected_sha256 is not None and SHA256_RE.fullmatch(expected_sha256) is None:
+        raise ValueError("invalid expected SHA-256")
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    source_fd = os.open(source, flags)
+    reserved_fd, reserved_path = tempfile.mkstemp(prefix=f".{destination.name}.", dir=destination.parent)
+    os.close(reserved_fd)
+    temporary = Path(reserved_path)
+    os.unlink(temporary)
+    destination_fd = -1
+    published = False
+    try:
+        before = os.fstat(source_fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("source is not a regular file")
+        destination_fd = os.open(
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        digest = hashlib.sha256()
+        while True:
+            chunk = os.read(source_fd, 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+            view = memoryview(chunk)
+            while view:
+                written = os.write(destination_fd, view)
+                view = view[written:]
+        os.fsync(destination_fd)
+        after = os.fstat(source_fd)
+        identity_before = (before.st_dev, before.st_ino, before.st_mode, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+        identity_after = (after.st_dev, after.st_ino, after.st_mode, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+        actual = digest.hexdigest()
+        if identity_before != identity_after or (expected_sha256 is not None and actual != expected_sha256):
+            raise ValueError("source identity or digest changed")
+        os.close(destination_fd)
+        destination_fd = -1
+        _rename_noreplace(temporary, destination)
+        published = True
+        return {"sha256": actual, "device": before.st_dev, "inode": before.st_ino, "bytes": before.st_size}
+    finally:
+        os.close(source_fd)
+        if destination_fd >= 0:
+            os.close(destination_fd)
+        if not published:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
+
+
+def bind_runtime_artifacts(attempt: Path, out: Path, crash_dir: Path) -> dict[str, object]:
+    """Snapshot runtime files and require every engine file's safe-run digest."""
+    bound = out / "bound"
+    safety = bound / "safety"
+    bound.mkdir(mode=0o700)
+    safety.mkdir(mode=0o700)
+    bindings: dict[str, object] = {}
+    for name in ("containment.stdout", "containment.stderr", "containment.rc"):
+        bindings[name] = copy_bound_artifact(attempt / name, bound / name, None)
+    containment_text = (bound / "containment.stdout").read_text(encoding="utf-8", errors="strict")
+    done_match = DONE_RE.fullmatch(containment_text)
+    if done_match is None or Path(done_match.group(1)) != crash_dir:
+        raise ValueError("containment completion digest record mismatch")
+    main_sha256, samples_sha256, kernel_sha256 = done_match.groups()[1:]
+    bindings["safety/main.log"] = copy_bound_artifact(
+        crash_dir / "main.log", safety / "main.log", main_sha256
+    )
+    main_text = (safety / "main.log").read_text(encoding="utf-8", errors="strict")
+    final_re = re.compile(
+        r" final_artifact_verified path=([^ ]+) sha256=([0-9a-f]{64}) device_inode=([0-9]+:[0-9]+:[0-9]+)$"
+    )
+    recorded: dict[str, str] = {}
+    for line in main_text.splitlines():
+        match = final_re.search(line)
+        if match:
+            if match.group(1) in recorded:
+                raise ValueError("duplicate final artifact binding")
+            recorded[match.group(1)] = match.group(2)
+    runtime_names = (
+        "server.log",
+        "live-response.json",
+        "live-http-status",
+        "primary-response.json",
+        "primary-http-status",
+        "child-exit.json",
+        "model.identity.json",
+    )
+    expected_paths = {str(out / name) for name in runtime_names}
+    if set(recorded) != expected_paths:
+        raise ValueError("safe-run final artifact set mismatch")
+    for name in runtime_names:
+        bindings[name] = copy_bound_artifact(out / name, bound / name, recorded[str(out / name)])
+    safety_re = re.compile(
+        r" safety_artifact_verified name=(samples|kernel)\.log sha256=([0-9a-f]{64}) size=([0-9]+)$"
+    )
+    safety_hashes: dict[str, str] = {}
+    for line in main_text.splitlines():
+        match = safety_re.search(line)
+        if match:
+            name = f"{match.group(1)}.log"
+            if name in safety_hashes:
+                raise ValueError("duplicate safety artifact binding")
+            safety_hashes[name] = match.group(2)
+    if set(safety_hashes) != {"samples.log", "kernel.log"}:
+        raise ValueError("safe-run safety artifact set mismatch")
+    if safety_hashes != {"samples.log": samples_sha256, "kernel.log": kernel_sha256}:
+        raise ValueError("stdout and main safety digests disagree")
+    for name, digest in safety_hashes.items():
+        bindings[f"safety/{name}"] = copy_bound_artifact(crash_dir / name, safety / name, digest)
+    _write_exclusive_bytes(bound / "bindings.json", _json_bytes(bindings))
+    return bindings
 
 
 def main() -> int:

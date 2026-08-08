@@ -29,6 +29,7 @@ EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:-}
 PROVENANCE_ENV_ALLOWLIST=${GLM_SAFE_PROVENANCE_ENV_ALLOWLIST:-}
 EXPECTED_ENV_SHA256=${GLM_SAFE_EXPECTED_ENV_SHA256:-}
 FINAL_ARTIFACTS=${GLM_SAFE_FINAL_ARTIFACTS:-}
+DONE_DIGESTS=${GLM_SAFE_DONE_DIGESTS:-0}
 CKV_RUN_NONCE=${DS4_GLM_CKV_RUN_NONCE:-}
 WITNESS_NONCE=${GLM_SAFE_WITNESS_NONCE:-}
 WITNESS_ARTIFACT=${GLM_SAFE_WITNESS_ARTIFACT:-}
@@ -77,6 +78,8 @@ if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then
 fi
 [[ $CANDIDATE_PROVENANCE =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_LOG_CANDIDATE_PROVENANCE"
+[[ $DONE_DIGESTS =~ ^[01]$ ]] ||
+  config_error "GLM_SAFE_DONE_DIGESTS"
 [[ $REQUIRE_CGROUP =~ ^[01]$ ]] ||
   config_error "GLM_SAFE_REQUIRE_CGROUP"
 [[ $RUN_AS_CURRENT_USER =~ ^[01]$ ]] ||
@@ -687,5 +690,12 @@ if [[ -n $WITNESS_NONCE ]]; then
   printf '%s\n' "$WITNESS_MESSAGE"
 fi
 grep MemAvailable /proc/meminfo >> "$MAIN"; sync
-echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR"
+if [[ $DONE_DIGESTS == 1 ]]; then
+  MAIN_DONE_SHA256=$(sha256sum -- "$MAIN" | awk '{print $1}')
+  SAMPLES_DONE_SHA256=$(sha256sum -- "$SAMP" | awk '{print $1}')
+  KERNEL_DONE_SHA256=$(sha256sum -- "$KERNEL_LOG" | awk '{print $1}')
+  echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR main_sha256=$MAIN_DONE_SHA256 samples_sha256=$SAMPLES_DONE_SHA256 kernel_sha256=$KERNEL_DONE_SHA256"
+else
+  echo "SAFE_RUN_DONE rc=$RC killed=${KILLED:-no} dir=$DIR"
+fi
 exit "$RC"

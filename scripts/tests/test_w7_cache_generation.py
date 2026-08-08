@@ -41,7 +41,10 @@ RESPONSE = (
     '"prompt_tokens_details":{"cached_tokens":5044,"cache_write_tokens":22}}}\n'
 )
 RC = "0\n"
-CONTAINMENT = "SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/.local/state/glm52-crashlog/w7-test\n"
+CONTAINMENT = (
+    "SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/.local/state/glm52-crashlog/w7-test "
+    f"main_sha256={'1' * 64} samples_sha256={'2' * 64} kernel_sha256={'3' * 64}\n"
+)
 BINARY_SHA256 = "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
 ENV_SHA256 = "ea8cc542bf2138646cb5bb3d38c9f7e7d88eef3e5a8fe7faf13074463f5a5e64"
 SAFETY = (
@@ -146,9 +149,52 @@ class W7CacheGenerationGateTest(unittest.TestCase):
             with self.assertRaises(OSError):
                 MODULE.copy_bound_artifact(link, root / "linked-copy", digest)
 
+    def test_runtime_binding_rejects_post_wrapper_replacement(self) -> None:
+        crash_parent = Path("/home/bmarti44/.local/state/glm52-crashlog")
+        crash_parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="w7-bind-", dir=crash_parent) as directory:
+            root = Path(directory)
+            attempt, out, crash = root / "attempt", root / "attempt/on", root
+            out.mkdir(parents=True)
+            names = (
+                "server.log", "live-response.json", "live-http-status",
+                "primary-response.json", "primary-http-status", "child-exit.json",
+                "model.identity.json",
+            )
+            lines = []
+            for index, name in enumerate(names):
+                path = out / name
+                path.write_bytes(f"artifact-{index}\n".encode())
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                metadata = path.stat()
+                lines.append(
+                    f"2026-08-07 final_artifact_verified path={path} sha256={digest} "
+                    f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}"
+                )
+            (crash / "samples.log").write_text("samples\n")
+            (crash / "kernel.log").write_text("kernel\n")
+            sample_hash = hashlib.sha256((crash / "samples.log").read_bytes()).hexdigest()
+            kernel_hash = hashlib.sha256((crash / "kernel.log").read_bytes()).hexdigest()
+            lines.extend((
+                f"2026-08-07 safety_artifact_verified name=samples.log sha256={sample_hash} size=8",
+                f"2026-08-07 safety_artifact_verified name=kernel.log sha256={kernel_hash} size=7",
+            ))
+            (crash / "main.log").write_text("\n".join(lines) + "\n")
+            main_hash = hashlib.sha256((crash / "main.log").read_bytes()).hexdigest()
+            (attempt / "containment.stdout").write_text(
+                f"SAFE_RUN_DONE rc=0 killed=no dir={crash} main_sha256={main_hash} "
+                f"samples_sha256={sample_hash} kernel_sha256={kernel_hash}\n"
+            )
+            (attempt / "containment.stderr").write_text("")
+            (attempt / "containment.rc").write_text("0\n")
+            (out / "server.log").write_text("replacement\n")
+            with self.assertRaises(ValueError):
+                MODULE.bind_runtime_artifacts(attempt, out, crash)
+
     def test_containment_forwards_exact_stable_remap_flag(self) -> None:
         source = CGROUP.read_text(encoding="utf-8")
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
+        self.assertIn("GLM_SAFE_DONE_DIGESTS", source)
 
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
@@ -177,8 +223,9 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertIn('trap cleanup_driver EXIT INT TERM HUP', source)
         self.assertNotIn("kill -KILL", source)
         self.assertIn("child-exit.json", source)
+        evidence_source = source + SCORER.read_text(encoding="utf-8")
         for evidence in ("manifest.json", "raw.jsonl", "summary.json"):
-            self.assertIn(evidence, source)
+            self.assertIn(evidence, evidence_source)
         self.assertIn('sync -f "$out"', source)
 
     def test_scorer_binds_on_activation_and_child_exit(self) -> None:
