@@ -18,7 +18,11 @@ import sys
 from typing import Any
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-NUMPY_SITE = pathlib.Path("/home/bmarti44/.local/lib/python3.12/site-packages")
+ROOT_RUNNER = os.environ.get("GLM52_W9_ROOT_RUNNER") == "1"
+NUMPY_SITE = pathlib.Path("/usr/local/libexec/glm52-w1/python")
+NOBLE_ROOT = pathlib.Path(
+    "/usr/local/libexec/glm52-w9/noble" if ROOT_RUNNER else
+    "/home/bmarti44/.cache/glm52-drand-client-1.4.2/node_modules/@noble")
 RUNTIME_TREE_EXPECTATIONS = {
     NUMPY_SITE / "numpy": {
         "tree_sha256": "90b35528326f32865a17a2aed26815a90e9617a80d6c81e98e73069e1e098a87",
@@ -30,7 +34,7 @@ RUNTIME_TREE_EXPECTATIONS = {
         "files": 2,
         "bytes": 26402458,
     },
-    pathlib.Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2/node_modules/@noble"): {
+    NOBLE_ROOT: {
         "tree_sha256": "ca92f24bab4644eb0d162b4b07c8f432519caa802a5150ada536e82b8a911895",
         "files": 486,
         "bytes": 3205403,
@@ -158,12 +162,13 @@ def loaded_numerical_libraries() -> dict[str, str]:
     observed: dict[str, str] = {}
     for line in pathlib.Path("/proc/self/maps").read_text(encoding="utf-8").splitlines():
         fields = line.split()
-        if len(fields) < 6 or not fields[-1].startswith("/home/bmarti44/"):
+        if len(fields) < 6:
             continue
         path = pathlib.Path(fields[-1]).resolve()
-        if not any(path.is_relative_to(root) for root in allowed_roots):
+        if any(path.is_relative_to(root) for root in allowed_roots):
+            observed[str(path)] = sha256_file(path)
+        elif fields[-1].startswith("/home/bmarti44/"):
             raise ValueError(f"unfrozen user-writable mapped library: {path}")
-        observed[str(path)] = sha256_file(path)
     if not any("libscipy_openblas" in path for path in observed):
         raise ValueError("frozen OpenBLAS library is not mapped")
     return dict(sorted(observed.items()))
@@ -173,12 +178,14 @@ SCRIPT_RELATIVE = "scripts/93_score_w9_fp4_falsifier.py"
 TEST_RELATIVE = "scripts/tests/test_w9_fp4_falsifier.py"
 PLAN_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-plan-v1.json"
 LAUNCHER_RELATIVE = "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh"
-REVIEW_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-review-r253.json"
-FREEZE_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-candidate3-freeze.json"
-DRAND_VERIFIER = REPO / "scripts/89_verify_drand_receipt.mjs"
-NODE = pathlib.Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
+REVIEW_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-review-r254.json"
+FREEZE_RELATIVE = "results/glm52-gates/W9-fp4-falsifier-candidate4-freeze.json"
+DRAND_VERIFIER = REPO / "scripts/96_verify_drand_receipt_w9.mjs"
+NODE = pathlib.Path(
+    "/usr/local/libexec/glm52-w9/node" if ROOT_RUNNER else
+    "/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
 GIT = pathlib.Path("/usr/bin/git")
-MINIMUM_REVIEW_FLOOR = 6357227
+MINIMUM_REVIEW_FLOOR = 6357228
 RELAY_URLS = (
     "https://api.drand.sh",
     "https://api2.drand.sh",
@@ -579,12 +586,12 @@ def validate_review_receipt(receipt: dict[str, Any]) -> tuple[str, int]:
     candidate = receipt.get("candidate_hash")
     floor = receipt.get("drand_min_round")
     if (receipt.get("schema") != "glm52-w9-fp4-falsifier-review-v1" or
-            receipt.get("review_round") != 253 or receipt.get("critical") != [] or
+            receipt.get("review_round") != 254 or receipt.get("critical") != [] or
             receipt.get("high") != [] or
             receipt.get("verdict") != "PASS_RUNTIME_ALLOWED" or
             not isinstance(candidate, str) or not re.fullmatch(r"[0-9a-f]{40}", candidate) or
             type(floor) is not int or floor < MINIMUM_REVIEW_FLOOR):
-        raise ValueError("review receipt does not authorize candidate 3")
+        raise ValueError("review receipt does not authorize candidate 4")
     return candidate, floor
 
 
@@ -664,7 +671,7 @@ def _load_authorization(review_input: BoundInput, stack: contextlib.ExitStack
         raise ValueError("candidate component bindings missing")
     relatives = (
         SCRIPT_RELATIVE, TEST_RELATIVE, PLAN_RELATIVE, LAUNCHER_RELATIVE,
-        "scripts/89_verify_drand_receipt.mjs",
+        "scripts/96_verify_drand_receipt_w9.mjs",
     )
     observed: dict[str, str] = {}
     for relative in relatives:

@@ -46,6 +46,12 @@ class W9RootRunnerTests(unittest.TestCase):
             receipt.write_text('{}\n', encoding="utf-8")
             with RUNNER.BoundOwnerInput(receipt, os.getuid(), 32768) as bound:
                 self.assertEqual(bound.read_bytes(), b'{}\n')
+            receipt.write_text('{}\n', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "changed"):
+                with RUNNER.BoundOwnerInput(receipt, os.getuid(), 32768):
+                    replacement = root / "replacement.json"
+                    replacement.write_text('{ }\n', encoding="utf-8")
+                    os.replace(replacement, receipt)
             link = root / "link.json"
             link.symlink_to(receipt)
             with self.assertRaises(ValueError):
@@ -84,9 +90,10 @@ class W9RootRunnerTests(unittest.TestCase):
     def test_fabricated_tree_without_root_attestation_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             attempt = pathlib.Path(temporary) / "attempt-fake"
-            attempt.mkdir(mode=0o500)
+            attempt.mkdir(mode=0o700)
             for name in RUNNER.REPLAY_ARTIFACTS:
                 (attempt / name).write_text('{}\n', encoding="utf-8")
+            RUNNER.seal_tree(attempt, uid=os.getuid(), gid=os.getgid())
             with self.assertRaisesRegex(ValueError, "attestation"):
                 RUNNER.validate_published_attempt(
                     attempt, "attempt-fake", required_uid=os.getuid())
@@ -95,10 +102,13 @@ class W9RootRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             attempt = pathlib.Path(temporary) / "attempt-bound"
             attempt.mkdir()
+            replay = attempt / RUNNER.REPLAY_DIR
+            replay.mkdir()
             artifacts = {}
             for name in RUNNER.REPLAY_ARTIFACTS:
                 value = (name + "\n").encode()
                 (attempt / name).write_bytes(value)
+                (replay / name).write_bytes(value)
                 artifacts[name] = RUNNER.sha256_bytes(value)
             attestation = RUNNER.build_attestation(
                 attempt_name="attempt-bound", candidate_hash="a" * 40,
@@ -108,12 +118,38 @@ class W9RootRunnerTests(unittest.TestCase):
             )
             (attempt / RUNNER.ATTESTATION_NAME).write_text(
                 json.dumps(attestation, sort_keys=True) + "\n", encoding="utf-8")
+            (attempt / "randomness.json").write_bytes(b"randomness\n")
+            attestation["randomness_receipt_sha256"] = RUNNER.sha256_file(
+                attempt / "randomness.json")
+            attestation["randomness_artifact_sha256"] = attestation[
+                "randomness_receipt_sha256"]
+            (attempt / RUNNER.ATTESTATION_NAME).write_text(
+                json.dumps(attestation, sort_keys=True) + "\n", encoding="utf-8")
+            (attempt / "first.log").write_text("first\n", encoding="utf-8")
+            (attempt / "second.log").write_text("second\n", encoding="utf-8")
+            attestation["execution_logs_sha256"] = {
+                name: RUNNER.sha256_file(attempt / name)
+                for name in ("first.log", "second.log")
+            }
+            (attempt / RUNNER.ATTESTATION_NAME).write_text(
+                json.dumps(attestation, sort_keys=True) + "\n", encoding="utf-8")
             RUNNER.seal_tree(attempt, uid=os.getuid(), gid=os.getgid())
             RUNNER.validate_published_attempt(
                 attempt, "attempt-bound", required_uid=os.getuid())
             with self.assertRaisesRegex(ValueError, "attempt"):
                 RUNNER.validate_published_attempt(
                     attempt, "attempt-other", required_uid=os.getuid())
+            (attempt / "summary.json").chmod(0o644)
+            with self.assertRaisesRegex(ValueError, "ownership|mode"):
+                RUNNER.validate_published_attempt(
+                    attempt, "attempt-bound", required_uid=os.getuid())
+            (attempt / "summary.json").chmod(0o444)
+            attempt.chmod(0o755)
+            (attempt / "extra.json").write_text('{}\n', encoding="utf-8")
+            attempt.chmod(0o555)
+            with self.assertRaisesRegex(ValueError, "inventory"):
+                RUNNER.validate_published_attempt(
+                    attempt, "attempt-bound", required_uid=os.getuid())
 
     def test_installer_and_runner_are_narrow_root_boundaries(self) -> None:
         installer = INSTALLER_PATH.read_text(encoding="utf-8")

@@ -137,13 +137,13 @@ class W9Fp4FalsifierTests(unittest.TestCase):
         valid = {
             "schema": "glm52-w9-fp4-falsifier-review-v1",
             "candidate_hash": "a" * 40,
-            "review_round": 253,
+            "review_round": 254,
             "critical": [],
             "high": [],
             "verdict": "PASS_RUNTIME_ALLOWED",
-            "drand_min_round": 6357227,
+            "drand_min_round": 6357228,
         }
-        self.assertEqual(MODULE.validate_review_receipt(valid), ("a" * 40, 6357227))
+        self.assertEqual(MODULE.validate_review_receipt(valid), ("a" * 40, 6357228))
         for mutation in (
             {**valid, "drand_min_round": 1},
             {**valid, "critical": ["x"]},
@@ -204,13 +204,10 @@ class W9Fp4FalsifierTests(unittest.TestCase):
 
     def test_launcher_clears_environment_and_fixes_capture(self) -> None:
         launcher = (ROOT / "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh").read_text()
-        for token in ("/usr/bin/env -i", "/usr/bin/python3 -I -S -B",
-                      "OPENBLAS_NUM_THREADS=1", "OMP_NUM_THREADS=1",
-                      "MKL_NUM_THREADS=1", "BLIS_NUM_THREADS=1",
-                      "NUMEXPR_NUM_THREADS=1",
-                      "attempt-73838408ccb1d126ade7b67c8d86fa00/on/capture"):
+        for token in ("/usr/bin/sudo -n", "/usr/local/sbin/glm52-w9-submit",
+                      "attempt-[a-z0-9]"):
             self.assertIn(token, launcher)
-        self.assertNotIn("PYTHONPATH=", launcher)
+        self.assertNotIn("python3", launcher)
         self.assertNotIn("candidate-commit", launcher)
         self.assertNotIn("minimum-drand-round", launcher)
 
