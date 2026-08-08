@@ -1,0 +1,90 @@
+{
+  "candidate_hash": "d9578e7b7ef8970da8958910153b6968be71ca2a",
+  "freeze_commit": "722411123cd2174b5360ba0a5bbb822dc554b0ee",
+  "review_round": 261,
+  "gate_candidate": 8,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 58,
+    "critical": [],
+    "high": [
+      {
+        "id": "GAP-W7.1-261-H1-UNREVIEWED-SELF-DRIVER-EXECUTION",
+        "evidence": "The launcher validates the harness at $ROOT but executes caller-controlled $0 --driver, so a copied or replaced outer launcher can execute different driver bytes while the manifest hashes the clean repository copy.",
+        "affected_gate": "reviewed runtime source identity and executed-command provenance",
+        "reproduction": "Invoke a modified copy with --candidate d9578e7b7ef8970da8958910153b6968be71ca2a; repository checks inspect $ROOT while cgroup argv retains the copied path.",
+        "acceptance_test": "Reject copied, symlinked, mutated, or replaced launchers and execute only a canonical digest-bound reviewed driver."
+      },
+      {
+        "id": "GAP-W7.1-261-H2-PREFLIGHT-FAILURES-LOSE-REQUIRED-EVIDENCE",
+        "evidence": "A cgroup rejection before glm_safe_run creates a crash directory exits at the crash-dir assertion and leaves no manifest.json, raw.jsonl, or summary.json.",
+        "affected_gate": "preservation of failed and null runtime attempts",
+        "reproduction": "Force a bounded cgroup preflight rejection after attempt creation and observe only containment streams and status.",
+        "acceptance_test": "Always exclusively publish a FAIL evidence triplet after attempt creation, including preflight, startup, missing-log, and scorer failures."
+      }
+    ],
+    "medium": [
+      {
+        "id": "GAP-W7.1-261-M1-RAW-EVIDENCE-NOT-MANIFEST-BOUND",
+        "evidence": "manifest.json is published before raw.jsonl and therefore cannot bind raw.jsonl's digest.",
+        "affected_gate": "manifest/raw integrity",
+        "reproduction": "Modify raw.jsonl after publication; no manifest check changes.",
+        "acceptance_test": "Create raw.jsonl first, hash it into the exclusive manifest, and reject a mutated raw row."
+      }
+    ],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_BLOCKED_FINAL_CANDIDATE"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 58,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W7.1-261-H1-UNBOUND-DRIVER-AND-CONTAINMENT-BYPASS",
+        "evidence": "The cgroup child executes caller-controlled $0, and direct --driver accepts spoofable GLM_SAFE_REQUIRE_CGROUP and stable-remap environment variables without checking actual cgroup membership.",
+        "affected_gate": "executable containment and reviewed-source identity",
+        "reproduction": "Invoke through a copied launcher or invoke --driver directly with the two environment variables; both reach the driver without canonical launcher or cgroup proof.",
+        "acceptance_test": "Bind and execute the canonical reviewed driver, reject path replacement, and prove a direct spoofed --driver call fails before binary execution."
+      },
+      {
+        "id": "ADV-W7.1-261-H2-RUNTIME-EVIDENCE-REMAINS-MUTABLE",
+        "evidence": "After containment exits, ordinary pathname reads and cp consume user-writable server outputs and crash logs; GLM_SAFE_FINAL_ARTIFACTS does not bind them and destination copies are not O_EXCL/O_NOFOLLOW.",
+        "affected_gate": "false-PASS resistance and evidence provenance",
+        "reproduction": "Replace a server, child-exit, model-identity, or crash-log path between containment completion and scoring, or precreate a destination symlink.",
+        "acceptance_test": "Bind final raw artifacts inside safe_run, publish with O_EXCL/O_NOFOLLOW, compare source and copy identity/digests, and reject replacement/symlink mutations."
+      },
+      {
+        "id": "ADV-W7.1-261-H3-FAILED-ATTEMPTS-LACK-EVIDENCE-TRIPLET",
+        "evidence": "Lock, cgroup, systemd, SAFE_RUN_DONE, or crash-artifact failures exit before the required manifest/raw/summary publication.",
+        "affected_gate": "preservation of failed and null authoritative attempts",
+        "reproduction": "Use a harmless nonzero cgroup stub without SAFE_RUN_DONE or omit a crash artifact.",
+        "acceptance_test": "An outer finalizer must exclusively publish a FAIL triplet for every outcome after attempt creation."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "prior_issue_status": {
+    "GAP-W7.1-260-H1-CONTAINMENT-ENVELOPE-NOT-EXECUTABLY-BOUND": "OPEN",
+    "GAP-W7.1-260-H2-EXECUTED-ARTIFACT-IDENTITY-UNBOUND": "PARTIALLY_FIXED",
+    "GAP-W7.1-260-H3-FORCED-OR-FAILED-SHUTDOWN-RETURNS-SUCCESS": "FIXED",
+    "GAP-W7.1-260-M1-ON-ACTIVATION-NOT-INDEPENDENTLY-SCORED": "FIXED",
+    "ADV-W7.1-260-H1-CONTAINMENT-UNBOUND": "OPEN",
+    "ADV-W7.1-260-H2-CHILD-EXIT-HIDDEN": "FIXED",
+    "ADV-W7.1-260-H3-MODEL-IDENTITY-UNBOUND": "FIXED",
+    "ADV-W7.1-260-H4-ON-ARM-UNBOUND": "FIXED",
+    "ADV-W7.1-260-H5-EVIDENCE-CONTRACT-MISSING": "PARTIALLY_FIXED",
+    "ADV-W7.1-260-M1-SUMMARY-CLOBBER": "FIXED"
+  },
+  "convergence": {
+    "status": "PAUSED",
+    "reason": "Candidate 8 is the gate limit and blocking high findings remain. The convergence rule forbids autonomous candidate 9.",
+    "next_bounded_work": [
+      "canonical and actual-cgroup-bound driver execution",
+      "safe-wrapper binding of final runtime artifacts with race-safe publication",
+      "unconditional fail-closed evidence finalizer",
+      "raw.jsonl digest inclusion in manifest"
+    ]
+  }
+}
