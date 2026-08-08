@@ -391,6 +391,19 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             "glm52-w7p-b0p0-a-b-123.service",
         )
 
+    def test_unit_state_does_not_treat_control_failure_as_not_found(self) -> None:
+        bus_failure = subprocess.CompletedProcess(
+            ["systemctl"], 1, "", "Failed to connect to bus: No medium found\n"
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=bus_failure):
+            with self.assertRaises(MODULE.CampaignError):
+                MODULE._unit_state("glm52-w7-test-123.service")
+        missing = subprocess.CompletedProcess(
+            ["systemctl"], 1, "", "Unit glm52-w7-test-123.service could not be found.\n"
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=missing):
+            self.assertTrue(MODULE._unit_is_stopped("glm52-w7-test-123.service"))
+
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()
         self.addCleanup(temporary.cleanup)
