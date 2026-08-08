@@ -1,0 +1,52 @@
+{
+  "schema": "glm52-w4-topk-red-v1",
+  "gate": "W4",
+  "candidate": 1,
+  "recorded_at": "2026-08-08T11:36:26-04:00",
+  "purpose": "Confirmation RED after extending the preregistered production-shape test to cover exact tie ordering.",
+  "source": {
+    "adopted_parent_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
+    "test_commit": "f472f60ae4c54e52d751146421aebb912e802784",
+    "artifacts": {
+      "tests/cuda_topk_w4.cu": "5cf43f796eeacce7fb97bd8431a9fdca6efdd12b82d02e02b7cd6ce9dd946578",
+      "tests/cuda_topk_w4": "46293d1a4a949e9ddee4d098ed54a2c5dd871d742e3f9512fdd53cd3b47b197e"
+    }
+  },
+  "fixture": {
+    "performance_shape": {
+      "n_components": 1048576,
+      "n_tokens": 8,
+      "top_k": 2048
+    },
+    "tie_shape": {
+      "n_components": 16384,
+      "n_tokens": 1,
+      "top_k": 2048,
+      "tie_group": 4,
+      "tie_rule": "Higher score first; smaller component ID first within equal-score groups."
+    }
+  },
+  "acceptance": {
+    "timing": "CUDA events around completed calls after warmup.",
+    "schedule": "Five alternating ABBA/BAAB blocks, two observations per arm per block.",
+    "formula": "exp(mean(log(baseline_ms / candidate_ms)) - t_0.95_df4 * sample_sd(log ratios) / sqrt(5))",
+    "required_speedup_lower_95": 2.0,
+    "all_ids_and_tie_order_must_match": true
+  },
+  "observed": {
+    "baseline_ms": [4.957808, 4.900288, 4.979696, 4.902928, 4.980880],
+    "candidate_ms": [4.888320, 4.998384, 4.901072, 4.997648, 4.899008],
+    "speedup_lower_95": 0.983364743,
+    "unique_score_ids_identical": true,
+    "tie_ids_and_order_identical": true,
+    "exit_code": 1,
+    "stderr_tail": "w4-topk RED: default-off exact-select candidate did not reach 2x"
+  },
+  "safety": {
+    "engine_processes_present": false,
+    "fio_present": false,
+    "large_model_started": false
+  },
+  "verdict": "RED_CONFIRMED",
+  "interpretation": "Unchanged adopted code ignores DS4_CUDA_TOPK2048_CUB. Both arms preserve the exact production tie rule, while the fixed 2x speed criterion fails as intended."
+}
