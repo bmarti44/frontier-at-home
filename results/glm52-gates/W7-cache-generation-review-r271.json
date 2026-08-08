@@ -1,0 +1,40 @@
+{
+  "adversarial_reviewer": {
+    "critical": [],
+    "high": [
+      {
+        "acceptance_test": "Create and retain the file with one O_CREAT|O_EXCL|O_NOFOLLOW open, unlink the exact directory entry, and test pre-acquisition replacement rejection.",
+        "affected_gate": "engine-lock inode authority and path-replacement resistance",
+        "evidence": "The candidate created and closed the file, then reopened its pathname. Replacement between verification and reopen could select a different otherwise-valid inode.",
+        "id": "ADV-W7.1-271-H1-ENGINE-LOCK-CREATE-REOPEN-RACE"
+      }
+    ],
+    "low": [],
+    "medium": [],
+    "score_0_to_100": 88,
+    "verdict": "REJECT_RUNTIME_AUTHORIZATION"
+  },
+  "candidate_hash": "e604996d9a44baa384714b4b5dfd161301d94138",
+  "convergence": {
+    "blocking_classes_current": 1,
+    "blocking_classes_previous": 1,
+    "campaign_global_review_round": 271,
+    "gate_candidate_count": 18,
+    "status": "CANDIDATE_19_AUTHORIZED"
+  },
+  "gap_reviewer": {
+    "critical": [],
+    "high": [],
+    "low": [],
+    "medium": [],
+    "score_0_to_100": 100,
+    "verdict": "ACCEPT"
+  },
+  "prior_issue_status": {
+    "ADV-W7.1-271-H1-ENGINE-LOCK-CREATE-REOPEN-RACE": "OPEN",
+    "GAP-W7.1-270-H1-ENGINE-LOCK-LEAF-UNBOUND": "PARTIALLY_FIXED"
+  },
+  "review_round": 271,
+  "root_disposition": "Runtime remains blocked. Candidate 19 is restricted to removing the create/reopen race with a single retained exclusive no-follow open.",
+  "runtime_started": false
+}
