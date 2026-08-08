@@ -625,6 +625,20 @@ class W7CacheGenerationGateTest(unittest.TestCase):
         self.assertEqual(result["verdict"], "PASS")
         self.assertEqual(result["observed"]["false_generation_flush_count"], 0)
 
+    def test_accepts_unique_response_bound_resume_after_primary_internal_resume(self) -> None:
+        primary = (
+            "0807 15:09:00 ds4-server: completion ctx=0..5055:5055 prompt start\n"
+            "ds4: GLM sync branch=indexed_resume pos=5044 chunk=11 logits=1\n"
+            "0807 15:10:02 ds4-server: completion ctx=0..5055:5055 prompt done 62.000s\n"
+        )
+        result = score(GOOD.replace(
+            "0807 15:10:03 ds4-server: completion ctx=5044..5066:22 prompt start\n",
+            primary + "0807 15:10:03 ds4-server: completion ctx=5044..5066:22 prompt start\n",
+        ))
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(result["observed"]["matching_response_window_count"], 1)
+        self.assertEqual(result["observed"]["bound_indexed_resume_count"], 1)
+
     def test_rejects_one_false_generation_flush(self) -> None:
         mutated = GOOD.replace(
             "ds4: GLM sync branch=indexed_resume",
