@@ -493,17 +493,19 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
         process = mock.Mock(pid=4242, returncode=None)
         process.wait.return_value = -15
         signals: list[tuple[int, signal.Signals]] = []
+        killed: list[tuple[int, list[int]]] = []
         with mock.patch.object(
             MODULE.os, "killpg", side_effect=lambda pid, sig: signals.append((pid, sig))
         ), mock.patch.object(
             MODULE, "_live_launcher_session_members", side_effect=[[4243], [], [], [], []],
             create=True,
+        ), mock.patch.object(
+            MODULE, "_kill_launcher_session_members",
+            side_effect=lambda session, members: killed.append((session, members)),
         ), mock.patch.object(MODULE.time, "sleep"):
             MODULE._terminate_and_reap(process)
-        self.assertEqual(
-            signals,
-            [(4242, signal.SIGTERM), (4242, signal.SIGKILL)],
-        )
+        self.assertEqual(signals, [(4242, signal.SIGTERM)])
+        self.assertEqual(killed, [(4242, [4243])])
 
     def test_cleanup_rejects_late_unit_after_two_not_found_observations(self) -> None:
         process = mock.Mock(pid=4242, returncode=None)
@@ -573,6 +575,26 @@ class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
             MODULE._stably_stop_containment_unit("glm52-w7-test-4242.service")
         self.assertEqual(observed.call_count, 4)
         self.assertEqual(slept.call_count, 3)
+
+    def test_session_member_kill_is_pidfd_and_session_bound(self) -> None:
+        matching = "4243 (child) S 1 4243 4242 0 0 0 0"
+        with mock.patch.object(MODULE.os, "pidfd_open", return_value=19), mock.patch.object(
+            MODULE.Path, "read_text", return_value=matching,
+        ), mock.patch.object(MODULE.signal, "pidfd_send_signal") as sent, mock.patch.object(
+            MODULE.os, "close",
+        ) as closed:
+            MODULE._kill_launcher_session_members(4242, [4243])
+        sent.assert_called_once_with(19, signal.SIGKILL)
+        closed.assert_called_once_with(19)
+
+        wrong_session = "4243 (child) S 1 4243 9999 0 0 0 0"
+        with mock.patch.object(MODULE.os, "pidfd_open", return_value=20), mock.patch.object(
+            MODULE.Path, "read_text", return_value=wrong_session,
+        ), mock.patch.object(MODULE.signal, "pidfd_send_signal") as sent, mock.patch.object(
+            MODULE.os, "close",
+        ):
+            MODULE._kill_launcher_session_members(4242, [4243])
+        sent.assert_not_called()
 
     def test_safety_receipt_digest_mutation_is_rejected(self) -> None:
         temporary, out, receipt = self.make_arm()

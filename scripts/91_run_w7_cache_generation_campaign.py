@@ -119,10 +119,7 @@ def _terminate_and_reap(process: subprocess.Popen[str]) -> None:
             members = _live_launcher_session_members(process.pid)
             if members:
                 empty_samples = 0
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
+                _kill_launcher_session_members(process.pid, members)
             else:
                 empty_samples += 1
                 if empty_samples >= 4:
@@ -137,7 +134,7 @@ def _terminate_and_reap(process: subprocess.Popen[str]) -> None:
 
 
 def _live_launcher_session_members(session_id: int) -> list[int]:
-    """Return live members bound to the isolated launcher session and process group."""
+    """Return every live member bound to the isolated launcher session."""
     if type(session_id) is not int or session_id <= 1:
         raise CampaignError("invalid launcher session identity")
     members: list[int] = []
@@ -150,17 +147,44 @@ def _live_launcher_session_members(session_id: int) -> list[int]:
             continue
         except OSError as error:
             raise CampaignError(f"cannot inspect launcher session: {error}") from error
-        close = raw.rfind(")")
-        fields = raw[close + 2:].split() if close >= 0 else []
-        if len(fields) < 4:
-            raise CampaignError("malformed process stat during launcher cleanup")
-        try:
-            state, process_group, process_session = fields[0], int(fields[2]), int(fields[3])
-        except ValueError as error:
-            raise CampaignError("malformed process identity during launcher cleanup") from error
-        if process_group == session_id and process_session == session_id and state not in {"Z", "X"}:
+        state, _process_group, process_session = _parse_process_stat(raw)
+        if process_session == session_id and state not in {"Z", "X"}:
             members.append(int(entry.name))
     return sorted(members)
+
+
+def _parse_process_stat(raw: str) -> tuple[str, int, int]:
+    close = raw.rfind(")")
+    fields = raw[close + 2:].split() if close >= 0 else []
+    if len(fields) < 4:
+        raise CampaignError("malformed process stat during launcher cleanup")
+    try:
+        return fields[0], int(fields[2]), int(fields[3])
+    except ValueError as error:
+        raise CampaignError("malformed process identity during launcher cleanup") from error
+
+
+def _kill_launcher_session_members(session_id: int, members: list[int]) -> None:
+    """SIGKILL exact pidfd-bound processes that still belong to the launcher session."""
+    for pid in sorted(set(members)):
+        try:
+            descriptor = os.pidfd_open(pid, 0)
+        except ProcessLookupError:
+            continue
+        try:
+            try:
+                raw = Path(f"/proc/{pid}/stat").read_text(encoding="ascii")
+            except FileNotFoundError:
+                continue
+            state, _process_group, process_session = _parse_process_stat(raw)
+            if process_session != session_id or state in {"Z", "X"}:
+                continue
+            try:
+                signal.pidfd_send_signal(descriptor, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        finally:
+            os.close(descriptor)
 
 
 def containment_unit_name(tag: str, launcher_pid: int) -> str:
@@ -282,10 +306,11 @@ def _kill_and_verify_containment_cgroup(unit: str) -> None:
 
 
 def _stably_stop_containment_unit(unit: str) -> None:
-    for _ in range(4):
+    for index in range(4):
         if not _unit_is_stopped(unit):
             stop_exact_containment_unit(unit)
-        time.sleep(0.25)
+        if index < 3:
+            time.sleep(0.25)
 
 
 def stop_exact_containment_unit(unit: str) -> None:
