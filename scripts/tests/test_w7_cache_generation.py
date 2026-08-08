@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
+import uuid
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -75,6 +81,71 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
 
 
 class W7CacheGenerationGateTest(unittest.TestCase):
+    def test_rejects_copied_launcher_before_self_test(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            copied = Path(directory) / "copied-smoke.sh"
+            shutil.copy2(SMOKE, copied)
+            completed = subprocess.run(
+                [str(copied), "--self-test"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=10,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+
+    def test_spoofed_direct_driver_fails_before_runtime_scratch(self) -> None:
+        base = Path("/home/bmarti44/.local/state/glm52-w7-cache-generation")
+        out = base / f"attempt-{uuid.uuid4().hex}" / "on"
+        out.mkdir(parents=True, mode=0o700)
+        env = dict(os.environ)
+        env.update(GLM_SAFE_REQUIRE_CGROUP="1", DS4_CUDA_STABLE_MODEL_REMAP="1")
+        try:
+            subprocess.run(
+                ["timeout", "--kill-after=1", "0.2", str(SMOKE), "--driver", "on", str(out)],
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=3,
+                check=False,
+            )
+            self.assertFalse((out / "kv").exists())
+        finally:
+            shutil.rmtree(out.parent, ignore_errors=True)
+
+    def test_atomic_triplet_binds_raw_and_survives_no_runtime_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "evidence"
+            summary = {"checks": {"runtime_completed": False}, "verdict": "FAIL"}
+            raw = [{"source": "outer", "containment_rc": 8}]
+            manifest = {"schema": "test", "artifacts": {}}
+            MODULE.publish_triplet_atomic(destination, manifest, raw, summary)
+            raw_bytes = (destination / "raw.jsonl").read_bytes()
+            published = json.loads((destination / "manifest.json").read_text())
+            self.assertEqual(
+                published["artifacts"]["raw.jsonl"],
+                hashlib.sha256(raw_bytes).hexdigest(),
+            )
+            self.assertEqual(json.loads((destination / "summary.json").read_text())["verdict"], "FAIL")
+            with self.assertRaises(FileExistsError):
+                MODULE.publish_triplet_atomic(destination, manifest, raw, summary)
+
+    def test_bound_copy_rejects_symlink_and_wrong_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.write_bytes(b"authoritative\n")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            MODULE.copy_bound_artifact(source, root / "copy", digest)
+            self.assertEqual((root / "copy").read_bytes(), source.read_bytes())
+            with self.assertRaises(ValueError):
+                MODULE.copy_bound_artifact(source, root / "wrong", "0" * 64)
+            link = root / "link"
+            link.symlink_to(source)
+            with self.assertRaises(OSError):
+                MODULE.copy_bound_artifact(link, root / "linked-copy", digest)
+
     def test_containment_forwards_exact_stable_remap_flag(self) -> None:
         source = CGROUP.read_text(encoding="utf-8")
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP", source)
@@ -82,6 +153,10 @@ class W7CacheGenerationGateTest(unittest.TestCase):
     def test_smoke_uses_reviewed_binary_and_hardened_production_path(self) -> None:
         source = SMOKE.read_text(encoding="utf-8")
         self.assertIn('"$CGROUP" --tag', source)
+        self.assertIn('"$HARNESS" --driver', source)
+        self.assertIn("verify_driver_containment", source)
+        self.assertIn("GLM_SAFE_FINAL_ARTIFACTS", source)
+        self.assertIn("trap finalize_outer EXIT", source)
         for setting in (
             "GLM_SAFE_MEMORY_HIGH_GIB=78",
             "GLM_SAFE_KILL_FLOOR_GIB=24",

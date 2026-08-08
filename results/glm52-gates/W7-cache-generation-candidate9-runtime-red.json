@@ -1,0 +1,30 @@
+{
+  "gate": "W7.1-stable-model-cache-generation",
+  "candidate": 9,
+  "status": "RED_CONFIRMED",
+  "parent_commit": "f53c98d3aad5ca33f6aac0e269cf39582c753c23",
+  "review_source": "results/glm52-gates/W7-cache-generation-review-r261.json",
+  "command": "python3 -m unittest scripts.tests.test_w7_cache_generation",
+  "exit_status": 1,
+  "tests_run": 24,
+  "failures": 3,
+  "errors": 2,
+  "failed_behaviors": [
+    "copied launcher is accepted",
+    "spoofed direct driver creates runtime scratch before proving containment",
+    "canonical reviewed driver path is not used",
+    "atomic evidence triplet publisher is absent",
+    "race-safe digest-bound artifact copier is absent"
+  ],
+  "safety": {
+    "engine_started": false,
+    "direct_driver_timeout_seconds": 0.2,
+    "runtime_scratch_removed": true,
+    "orphan_sha256_process": false
+  },
+  "artifacts": {
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "397e32b907b2e922aed4de3051b0fa452e3992beae76f53954707944d87492e7",
+    "tests_sha256": "f6fc0d677a4fa695adf44ed93047e6e9feef1d61ae854445291a9a60ef58bd9b"
+  }
+}
