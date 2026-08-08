@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import hashlib
 import json
@@ -11,6 +12,7 @@ import os
 import pathlib
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -43,6 +45,17 @@ class W9Fp4FalsifierTests(unittest.TestCase):
         scale_one[0, :2] = [4.0, 3.0]
         representative_sse = float(np.sum((scale_one - row) ** 2))
         self.assertLessEqual(observed_sse, representative_sse + 1e-7)
+        rng = np.random.default_rng(12)
+        rows = rng.normal(size=(16, 32)).astype(np.float32)
+        candidate = MODULE.e2m1_quantize(rows)
+        amax = np.max(np.abs(rows), axis=1, keepdims=True)
+        scale = np.where(amax > 0, amax / 6.0, 1.0)
+        normalized = rows / scale
+        codes = MODULE.E2M1_LEVELS[
+            np.searchsorted(MODULE.E2M1_MIDPOINTS, normalized, side="left")]
+        baseline = codes * scale
+        self.assertLessEqual(float(np.sum((candidate - rows) ** 2)),
+                             float(np.sum((baseline - rows) ** 2)) + 1e-5)
 
     def test_hadamard_rotation_preserves_dot_products(self) -> None:
         rng = np.random.default_rng(8)
@@ -136,6 +149,33 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 MODULE.validate_review_receipt(mutation)
 
+    def test_runtime_freeze_rejects_mutated_dependency(self) -> None:
+        runtime = {
+            "python_path": "/usr/bin/python3",
+            "numpy_version": np.__version__,
+            "python_sha256": MODULE.sha256_file(pathlib.Path("/usr/bin/python3")),
+            "numpy_init_sha256": MODULE.sha256_file(pathlib.Path(np.__file__)),
+            "numpy_multiarray_sha256": MODULE.sha256_file(
+                pathlib.Path(np._core._multiarray_umath.__file__)),
+            "node_sha256": MODULE.sha256_file(MODULE.NODE),
+            "git_sha256": MODULE.sha256_file(MODULE.GIT),
+        }
+        self.assertEqual(set(MODULE._verify_runtime(runtime)), {
+            "python_sha256", "numpy_init_sha256", "numpy_multiarray_sha256",
+            "node_sha256", "git_sha256",
+        })
+        runtime["numpy_multiarray_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "runtime"):
+            MODULE._verify_runtime(runtime)
+
+    def test_launcher_clears_environment_and_fixes_capture(self) -> None:
+        launcher = (ROOT / "results/glm52-gates/harness/w9_fp4_falsifier_v1.sh").read_text()
+        for token in ("/usr/bin/env -i", "/usr/bin/python3 -B", "PYTHONPATH=",
+                      "attempt-73838408ccb1d126ade7b67c8d86fa00/on/capture"):
+            self.assertIn(token, launcher)
+        self.assertNotIn("candidate-commit", launcher)
+        self.assertNotIn("minimum-drand-round", launcher)
+
     def test_bound_input_rejects_path_replacement_and_in_place_rewrite(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
@@ -143,17 +183,15 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             original = b"authoritative-generation"
             path.write_bytes(original)
             digest = hashlib.sha256(original).hexdigest()
-            with MODULE.BoundInput(path, len(original), digest) as bound:
-                replacement = root / "replacement.bin"
-                replacement.write_bytes(b"replacement-generation!"[:len(original)])
-                os.replace(replacement, path)
-                with self.assertRaisesRegex(ValueError, "generation"):
-                    bound.verify_final()
+            with self.assertRaisesRegex(ValueError, "generation"):
+                with MODULE.BoundInput(path, len(original), digest):
+                    replacement = root / "replacement.bin"
+                    replacement.write_bytes(b"replacement-generation!"[:len(original)])
+                    os.replace(replacement, path)
             path.write_bytes(original)
-            with MODULE.BoundInput(path, len(original), digest) as bound:
-                path.write_bytes(b"x" * len(original))
-                with self.assertRaisesRegex(ValueError, "generation"):
-                    bound.verify_final()
+            with self.assertRaisesRegex(ValueError, "generation"):
+                with MODULE.BoundInput(path, len(original), digest):
+                    path.write_bytes(b"x" * len(original))
 
     def test_terminal_verifier_rejects_post_publication_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -172,6 +210,82 @@ class W9Fp4FalsifierTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "terminal"):
                 MODULE.verify_terminal(root)
+
+    def test_three_relay_randomness_requires_exact_agreement(self) -> None:
+        record = {
+            "round": 6357190,
+            "randomness": "11" * 32,
+            "signature": "22" * 96,
+            "previous_signature": "33" * 96,
+        }
+        receipt = {
+            "schema": "glm52-drand-three-relay-v1",
+            "relay_urls": list(MODULE.RELAY_URLS),
+            "relay_records": [record, record, record],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = pathlib.Path(temporary) / "receipt.json"
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            with MODULE.BoundInput(path, None, None) as bound:
+                with mock.patch.object(MODULE.subprocess, "run") as run:
+                    self.assertEqual(MODULE._verify_randomness(bound, 6357189), record)
+                    run.assert_called_once()
+            receipt["relay_records"][2] = {**record, "round": 6357191}
+            path.write_text(json.dumps(receipt), encoding="utf-8")
+            with MODULE.BoundInput(path, None, None) as bound:
+                with self.assertRaisesRegex(ValueError, "agree"):
+                    MODULE._verify_randomness(bound, 6357189)
+
+    def test_compact_evaluate_exercises_all_candidates_and_aggregation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            rng = np.random.default_rng(19)
+            keys = rng.normal(size=(8, 32)).astype("<f4")
+            queries = rng.normal(size=(2, 1, 32)).astype("<f4")
+            candidate_commit = "a" * 40
+            randomness = None
+            for value in range(256):
+                proposed = f"{value:064x}"
+                master = hashlib.sha256(
+                    b"GLM52-W9-FP4-SPLIT-V1\0" + bytes.fromhex(proposed)
+                    + bytes.fromhex(MODULE.CAPTURE_HASHES["kv.f32"])
+                    + bytes.fromhex(MODULE.CAPTURE_HASHES["query.f32"])
+                    + bytes.fromhex(candidate_commit)
+                ).digest()
+                if MODULE.split_indices(2, master, b"queries/0")[1] == (1,):
+                    randomness = proposed
+                    break
+            self.assertIsNotNone(randomness)
+            selected = np.array([[0, 9, 9, 9, 9, 9, 9, 9], list(range(8))], dtype="<u4")
+            paths = {
+                "kv.f32": keys.tobytes(),
+                "query.f32": queries.tobytes(),
+                "selected.u32": selected.tobytes(),
+            }
+            with contextlib.ExitStack() as stack:
+                bound = {}
+                for name, value in paths.items():
+                    path = root / name
+                    path.write_bytes(value)
+                    bound[name] = stack.enter_context(MODULE.BoundInput(
+                        path, len(value), hashlib.sha256(value).hexdigest()))
+                metadata = {"selected_padding_sentinel": 9}
+                with (mock.patch.object(MODULE, "LAYERS", (0,)),
+                      mock.patch.object(MODULE, "KV_ROWS", 8),
+                      mock.patch.object(MODULE, "QUERY_ROWS", 2),
+                      mock.patch.object(MODULE, "QUERY_HEADS", 1),
+                      mock.patch.object(MODULE, "WIDTH", 32),
+                      mock.patch.object(MODULE, "SELECTED_CAPACITY", 8)):
+                    manifest, rows, summary = MODULE._evaluate(
+                        root, bound, metadata,
+                        {"round": 6357190, "randomness": randomness}, "b" * 64,
+                        candidate_commit, 6357189, {"source": "c" * 64},
+                        {"runtime": "d" * 64}, "e" * 64,
+                    )
+            self.assertEqual(len(rows), 3)
+            self.assertEqual(set(summary["candidates"]), set(MODULE.CANDIDATES))
+            self.assertIn(summary["verdict"], {"PASS", "NO_RESULT"})
+            self.assertEqual(manifest["drand_round"], 6357190)
 
 
 if __name__ == "__main__":
