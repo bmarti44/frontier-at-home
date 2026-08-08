@@ -135,8 +135,14 @@ class W7CacheGenerationGateTest(unittest.TestCase):
     def test_rejects_canonical_fatal_markers_case_insensitively(self) -> None:
         for marker in (
             "CUDA_ERROR_OUT_OF_MEMORY",
+            "cudaErrorMemoryAllocation",
+            "CUDA runtime allocation failed",
+            "CUDA runtime out of memory",
+            "NV_ERR_NO_MEMORY",
             "FATAL ERROR",
+            "FATAL CUDA userspace GPU/OOM evidence appeared",
             "oom-kill",
+            "Out of memory: Killed process 123",
             "NVRM: Xid (PCI:0000:01:00): 31",
         ):
             with self.subTest(marker=marker):

@@ -1,0 +1,32 @@
+{
+  "candidate_hash": "6c0c0888af6b4c1cab1ef48f31d1295a33f6c69c",
+  "review_round": 258,
+  "gate_candidate": 4,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 98,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [
+      "ADV-W7.1-257-L1-PROMPT-CANDIDATE-HASH-TRANSCRIPTION",
+      "GAP-W7.1-258-L1-RED-PASSING-COUNT-MISLABELED"
+    ],
+    "verdict": "ACCEPT_RUNTIME_AUTHORIZED_WITH_LOW_FINDINGS"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 83,
+    "critical": [],
+    "high": [
+      "ADV-W7.1-257-H2-CANONICAL-FATAL-MARKERS-MISSED"
+    ],
+    "medium": [
+      "ADV-W7.1-258-M1-TOCTOU-REGRESSION-TEST-NO-LONGER-INJECTS-RACE",
+      "ADV-W7.1-258-M2-VERIFIER-HASHES-BEFORE-REGULAR-FILE-REJECTION",
+      "ADV-W7.1-257-L1-PROMPT-CANDIDATE-HASH-TRANSCRIPTION"
+    ],
+    "low": [],
+    "verdict": "REJECT_RUNTIME_BLOCKED"
+  },
+  "root_disposition": "Candidate 5 is bounded to the remaining fatal-vocabulary finding and focused regression tests for the two verifier medium findings. Runtime remains blocked. The repeated prompt-hash defect is a process finding; the next dispatch will use the exact command-produced local/remote value without manual short-hash expansion."
+}

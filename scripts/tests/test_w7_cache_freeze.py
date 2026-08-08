@@ -6,6 +6,7 @@ import importlib.util
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -86,6 +87,39 @@ class W7CacheFreezeTest(unittest.TestCase):
 
         with mock.patch.object(Path, "open", new=replace_before_artifact_open):
             self.assertEqual(self.score(record), "FAIL")
+
+    def test_open_descriptor_remains_authoritative_after_path_replacement(self) -> None:
+        replacement = self.root / "replacement"
+        replacement.write_bytes(b"different-binary")
+        replacement.chmod(0o755)
+        original_open = MODULE.os.open
+        hook_calls = 0
+
+        def open_then_replace(path, flags):
+            nonlocal hook_calls
+            descriptor = original_open(path, flags)
+            if Path(path) == self.binary:
+                hook_calls += 1
+                replacement.replace(path)
+            return descriptor
+
+        with mock.patch.object(MODULE.os, "open", side_effect=open_then_replace):
+            self.assertEqual(self.score(), "PASS")
+        self.assertEqual(hook_calls, 1)
+
+    def test_rejects_endless_nonregular_source_without_reading_it(self) -> None:
+        record = json.loads(json.dumps(self.record))
+        record["binary"].update({"path": "/dev/zero", "bytes": 1})
+        self.freeze.write_text(json.dumps(record), encoding="utf-8")
+        completed = subprocess.run(
+            ["python3", str(MODULE_PATH), str(self.freeze)],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=1,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
 
 
 if __name__ == "__main__":

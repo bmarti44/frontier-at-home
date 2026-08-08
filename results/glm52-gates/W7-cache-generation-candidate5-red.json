@@ -1,0 +1,23 @@
+{
+  "candidate": 5,
+  "gate": "W7.1 stable-model cache generation",
+  "review_source": "results/glm52-gates/W7-cache-generation-review-r258.json",
+  "runtime_started": false,
+  "test_command": "python3 -m unittest scripts.tests.test_w7_cache_generation scripts.tests.test_w7_cache_freeze",
+  "test_methods_run": 18,
+  "failure_records": 4,
+  "error_records": 1,
+  "reproduced": {
+    "ADV-W7.1-257-H2-CANONICAL-FATAL-MARKERS-MISSED": [
+      "cudaErrorMemoryAllocation passed",
+      "CUDA allocation-failed form passed",
+      "NV_ERR_NO_MEMORY passed",
+      "generic FATAL wrapper record passed"
+    ],
+    "ADV-W7.1-258-M2-VERIFIER-HASHES-BEFORE-REGULAR-FILE-REJECTION": "/dev/zero verifier subprocess exceeded the one-second bound"
+  },
+  "focused_non_red_regression": {
+    "ADV-W7.1-258-M1-TOCTOU-REGRESSION-TEST-NO-LONGER-INJECTS-RACE": "new os.open hook executes exactly once and the already-open original descriptor remains authoritative"
+  },
+  "verdict": "RED_CONFIRMED"
+}
