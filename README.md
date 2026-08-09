@@ -125,15 +125,41 @@ was fetched for both arms — the production ds4 lineage
 lineage ([pin](configs/pins/unsloth-ud-q2_k_xl-0731.json)) — every file verified
 against its published SHA-256, and the ds4 lineage
 [serves and generates](results/dsv4-0731-staging/bringup-2026-08-09.json) on the
-`mtp` profile. Preliminary decode measured 21.34 tok/s median at a 52-token
-prompt against the 19.15 tok/s v0.4.2 `dspark` baseline, but that comparison
-changes both the weights and the serving profile at once, and the speed suite
-reported `suite_valid=false` because 0731 interleaves reasoning tokens the
-pre-0731 harness does not count. No accuracy, golden, token-parity, soak, or
-agent-gate evidence exists for 0731 yet, and the installed default is unchanged.
-Two upgrade findings are recorded in that bring-up file: the MTP weights are
-byte-identical across the release, and no 0731 DSpark drafter exists in any
-published repository, so the `dspark` profile cannot currently start.
+`mtp` profile. A partial qualification run
+([comparison](results/dsv4-0731-staging/comparison-2026-08-09.json)) measured it
+against the v0.4.2 `dspark` baseline under each baseline's own recorded
+generation contract:
+
+| Check | 0731 | v0.4.2 baseline |
+| --- | ---: | ---: |
+| Golden correctness | 10 / 10 | 10 / 10 |
+| Decode @ 52-token prompt | **21.630 tok/s** | 19.153 tok/s |
+| Decode @ 4K | **19.742 tok/s** | 18.739 tok/s |
+| Decode @ 16K | **19.172 tok/s** | 16.175 tok/s |
+| GSM8K dev | 97 / 100 | 98 / 100 |
+| MMLU-Pro dev | 178 / 253 | 192 / 253 |
+| HumanEval | not run | 147 / 164 |
+
+The speed suite is `suite_valid=true` across all fifteen reps and is faster at
+every context. Accuracy was measured with `enable_thinking: false`, matching the
+baselines' recorded `extra_body`; an earlier run that left it unset scored GSM8K
+94/100 purely from that mismatch, so the contract is now asserted before any
+delta is reported. GSM8K is parity (overlapping Wilson intervals). **MMLU-Pro is
+a genuine 5.5-point regression**: a failure-mode breakdown attributes ten of the
+fourteen lost items to incorrect answers rather than parse failures, and output
+lengths are nearly identical (median 56 vs 60 tokens), so it is not a formatting
+or truncation artifact. Forcing non-thinking on a release whose stated
+improvements are in reasoning may itself be the wrong contract for 0731; 0731
+with thinking enabled has not been measured against anything.
+
+**0731 is therefore not qualified and is not the installed default.** HumanEval
+has not run (its harness pins a Docker-image runtime digest and the account
+lacks docker group membership), and no holdout, token-parity, soak, or
+agent-gate evidence exists. Three further findings are recorded: the MTP weights
+are byte-identical across the release; no 0731 DSpark drafter exists in any
+published repository, so the `dspark` profile cannot start; and one GSM8K item
+returned `completion_tokens=0` with `finish_reason=stop` on a 69-token prompt,
+reproduced by the harness fallback retry.
 
 DeepSeek task accuracy is the audited llama.cpp result in
 [results/DECISION.md](results/DECISION.md). GLM fidelity is the teacher-forced
