@@ -1,0 +1,81 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "candidate_hash": "31bf431c36fc1e6e762b72249c02c8f5c123eb22",
+  "review_round": 307,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 93,
+    "critical": [],
+    "high": [],
+    "medium": [
+      {"id": "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE", "status": "OPEN_NONBLOCKING", "evidence": "Carried forward unchanged; candidate 8 does not modify failure finalization."},
+      {"id": "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW", "status": "DEFERRED_NONBLOCKING", "evidence": "Current publication and drand receipt verify; long-term recent-event retention remains limited."}
+    ],
+    "low": [
+      {
+        "id": "W4S-R307-L1-NONCANONICAL-LOGIT-NUMERALS",
+        "evidence": "A replay logit filename with leading-zero numeric fields is numerically accepted although it is not the engine canonical spelling.",
+        "affected_gate": "Filename canonicality; numeric segment coverage and values remain bound.",
+        "reproduction": "Rename a replay logit key with leading-zero numeric components and invoke parse_arm.",
+        "acceptance": "Generate canonical names from segment tuples and require exact equality."
+      }
+    ],
+    "prior_issue_status": [
+      {"id": "W4S-R307-H1-SEGMENTED-SYNC-PARSER-MISMATCH", "status": "VERIFIED_FIXED"},
+      {"id": "ADV-W4S-305-H1-RETAINED-DRIVER-BROKEN-SELF-PATH", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH", "status": "REMAINS_VERIFIED_FIXED"}
+    ],
+    "verdict": "PASS_FOR_ENGINE_LAUNCH"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 70,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE",
+        "affected_gate": "Exact segmented-prefill coverage, tensor completeness, and false-PASS resistance.",
+        "evidence": "validate_novel_sync_trace filters sync-prefixed lines that do not fully match SYNC_RE. An overlapping extra sync line with a trailing field was ignored. Logit enumeration also ignores a full-sized logits.shadow tensor. Both mutations replayed with unchanged accepted hashes.",
+        "reproduction": "Insert an overlapping sync-prefixed line ending hidden=1 into the immutable candidate7 snapshot and update its bound server/main digests; separately add a LOGIT_BYTES-sized logits.shadow snapshot artifact. Both pass parse_arm.",
+        "acceptance": "Reject every sync-prefixed server line unless it exactly matches the canonical grammar. Enumerate every artifact beginning with the configured logit dump basename and require exact equality with generated canonical segment filenames. Add end-to-end scorer mutations for malformed extra traces and any extra logit-prefixed tensor."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W4S-307-M1-NONCANONICAL-SEGMENT-FILENAME",
+        "affected_gate": "Exact numbered filename requirement.",
+        "evidence": "Leading-zero numeric filename components are accepted.",
+        "reproduction": "Rename the first immutable snapshot logit key with leading-zero components and replay.",
+        "acceptance": "Reconstruct every expected filename and require byte-for-byte equality."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "CANDIDATE7-RUNTIME-MULTISEGMENT-PREFILL", "status": "VERIFIED_FIXED_FOR_OBSERVED_ARM"},
+      {"id": "ADV-W4S-305-H1-RETAINED-DRIVER-BROKEN-SELF-PATH", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH", "status": "REMAINS_VERIFIED_FIXED"}
+    ],
+    "verdict": "REJECT_PRE_LAUNCH"
+  },
+  "external_receipt": {
+    "github_event_id": "17157463798",
+    "github_created_at_unix": 1786236778,
+    "drand_round": 6360192,
+    "randomness_receipt_sha256": "e81f95cd2343bdeaee90a48e4b212b8e0af631d06e87832b9de9d3296b6a3443",
+    "schedules": ["ABBA", "ABBA", "BAAB", "BAAB", "BAAB"],
+    "independently_verified": true
+  },
+  "convergence": {
+    "candidate_count": 8,
+    "open_blocking_count_previous": 0,
+    "open_blocking_count_current": 1,
+    "new_blocking_class": true,
+    "maximum_candidate_count_reached": true,
+    "gate_paused": true,
+    "required_owner_action": "Explicitly authorize candidate 9 limited to ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE, or leave W4 serving gate paused."
+  },
+  "launch_authorization": {
+    "no_verified_critical_or_high": false,
+    "engine_launch_authorized": false
+  }
+}
