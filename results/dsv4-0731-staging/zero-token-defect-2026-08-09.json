@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "DSV4-0731-D1-ZERO-TOKEN-ON-NONTHINKING",
+  "date_utc": "2026-08-09",
+  "status": "REPRODUCED",
+  "severity": "serving defect: a well-formed request is answered with an empty completion and a normal stop reason",
+  "summary": "With extra_body {\"enable_thinking\": false}, DeepSeek-V4-Flash-0731 on the ds4 engine returns completion_tokens=0 and finish_reason=stop for a specific 69-token prompt. The same prompt with thinking enabled generates a correct 88-token answer. One GSM8K dev item in 100 is affected.",
+  "discovery": {
+    "suite": "gsm8k",
+    "split": "dev",
+    "dataset_index": 599,
+    "transcript": "results/dsv4-0731-staging/transcripts/gsm8k-dev/00599-599.json",
+    "scored_reason": "unparseable: no numeric answer found",
+    "harness_fallback_retried": true,
+    "cost": "1 of 100 items; GSM8K dev would otherwise be 98/100, matching the baseline exactly"
+  },
+  "prompt": {
+    "question": "A pet store currently has 5 dogs, 2 cats, and 10 birds. How many legs in total do the pets in the store have?",
+    "rendered_prompt_sha256": "cf609130f5a13bbf...(truncated per repo digest policy; reproducible by rendering dataset index 599 in chat mode)",
+    "rendering": "official-encoder-chat-nonthinking",
+    "prompt_tokens": 69,
+    "note": "The prompt was independently re-rendered from the pinned dataset and encoder; its sha256 matches the transcript exactly, so the replay below exercises the identical bytes."
+  },
+  "probe_matrix": {
+    "method": "direct POST /v1/completions against the same running engine, one variable changed at a time",
+    "results": [
+      {"config": "enable_thinking=false, seed=42, temp=0, max_tokens=512", "completion_tokens": 0, "finish_reason": "stop"},
+      {"config": "enable_thinking=false, seed=7, temp=0, max_tokens=512", "completion_tokens": 0, "finish_reason": "stop"},
+      {"config": "enable_thinking=false, seed=42, temp=0.7, max_tokens=512", "completion_tokens": 0, "finish_reason": "stop"},
+      {"config": "enable_thinking=false, seed=42, temp=0, max_tokens=64", "completion_tokens": 0, "finish_reason": "stop"},
+      {"config": "thinking enabled (extra_body omitted), seed=42, temp=0, max_tokens=512", "completion_tokens": 88, "finish_reason": "stop", "text_head": "We need to compute total legs. Dogs have 4 legs each, cats h"}
+    ],
+    "conclusion": "Deterministic and specific to the non-thinking path. Sampling temperature, seed, and token budget have no effect; disabling thinking is the only variable that produces the empty completion."
+  },
+  "determinism_check": {
+    "method": "full GSM8K dev re-run under identical settings",
+    "first_run": {"correct": 97, "n": 100, "invalid_count": 1},
+    "second_run": {"correct": 97, "n": 100, "invalid_count": 1},
+    "item_599_reproduced": true,
+    "note": "Serving is bit-stable at temperature 0; the defect is not a transient."
+  },
+  "refuted_hypothesis": {
+    "claim": "The pinned encoder predates 0731, so the non-thinking chat template may be wrong for this release.",
+    "why_it_was_plausible": "configs/pins/official-encoding.json pins deepseek-ai/DeepSeek-V4-Flash at revision 60d8d70770c6776ff598c94bb586a859a38244f1 -- the pre-0731 repository -- and the 0731 repository ships a larger encoder (29001 bytes vs 27908).",
+    "test": "Downloaded the 0731 encoder at revision 7872f01b1d1fe23eabc4c98b48bffcef5a386062 and rendered the identical message list through both implementations in chat mode.",
+    "result": "Byte-identical output from both encoders. tokenizer.json is also byte-identical between the two revisions. The encoder diff is confined to REASONING_EFFORT_PROMPTS handling inside thinking_mode == 'thinking'; the chat path is untouched.",
+    "verdict": "REFUTED. The pinned encoder renders 0731 non-thinking prompts correctly, and the defect is genuine engine or model behavior on the enable_thinking=false path."
+  },
+  "open_question": {
+    "question": "Does the same non-thinking path also explain the MMLU-Pro regression?",
+    "rationale": "Every accuracy measurement in this campaign used enable_thinking=false, because that is the contract the published baselines were measured under. If 0731 behaves anomalously on that path -- and one confirmed empty completion in 100 shows it can -- then the 5.5-point MMLU-Pro gap may measure the non-thinking path rather than the model's capability.",
+    "test_in_progress": "MMLU-Pro dev re-run with thinking enabled, compared against both the 0731 non-thinking run (178/253) and the baseline (192/253).",
+    "caveat": "A thinking-enabled run is NOT contract-matched to the baseline and cannot be reported as a like-for-like comparison. It answers a different question: whether 0731 is stronger when used as designed."
+  }
+}
