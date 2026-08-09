@@ -21,11 +21,14 @@ import time
 import types
 import urllib.request
 import uuid
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 
 
 ROOT = Path("/home/bmarti44/spark-deepseek-v4-flash")
+RUNNER_PATH = Path(__file__).resolve()
+RUNNER_LOGICAL_PATH = "/w4/frozen/scripts/102_run_w4_serving_campaign.py"
 BASE_PATH = ROOT / "scripts/91_run_w7_cache_generation_campaign.py"
 CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 SAFE = ROOT / "results/glm52-gates/harness/glm_safe_run.sh"
@@ -53,7 +56,7 @@ BASE_SHA256 = "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924"
 CGROUP_SHA256 = "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14"
 SAFE_SHA256 = "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
 MEMORY_GUARD_SHA256 = "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
-SCORER_SHA256 = "077e89d287e06b09a37b68d0188982d3fd825051a502c7881f85cb0cdb7606a8"
+SCORER_SHA256 = "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7"
 MICROGATE_SHA256 = "9aaf51b0722ec2573876d6a35ce733e6e574bb1349daf6f72f61100995c39bde"
 FIXTURE_SHA256 = "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031"
 DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
@@ -128,6 +131,64 @@ def _sealed_memfd(name: str, payload: bytes, mode: int) -> int:
     except Exception:
         os.close(descriptor)
         raise
+
+
+@contextmanager
+def retained_arm_dependencies(runner_bytes: bytes | None = None):
+    """Keep every executable arm dependency in immutable sealed descriptors."""
+    specifications = {
+        "runner": (RUNNER_PATH, None),
+        "base": (BASE_PATH, BASE_SHA256),
+        "cgroup": (CGROUP, CGROUP_SHA256),
+        "safe": (SAFE, SAFE_SHA256),
+    }
+    descriptors: list[int] = []
+    retained: dict[str, str] = {}
+    try:
+        for name, (path, expected) in specifications.items():
+            payload = runner_bytes if name == "runner" and runner_bytes is not None \
+                else BASE.read_stable(path)[0]
+            digest = hashlib.sha256(payload).hexdigest()
+            if expected is not None and digest != expected:
+                raise CampaignError(f"retained arm dependency mismatch: {name}")
+            descriptor = _sealed_memfd(f"w4-{name}", payload, 0o400)
+            descriptors.append(descriptor)
+            retained[name + "_path"] = f"/proc/{os.getpid()}/fd/{descriptor}"
+            retained[name + "_sha256"] = digest
+        yield retained
+    finally:
+        for descriptor in descriptors:
+            os.close(descriptor)
+
+
+DRIVER_BOOTSTRAP = (
+    "import hashlib,sys;"
+    "rp,bp,rh,bh,ch,sh,logical=sys.argv[1:8];args=sys.argv[8:];"
+    "rb=open(rp,'rb').read();bb=open(bp,'rb').read();"
+    "assert hashlib.sha256(rb).hexdigest()==rh;"
+    "assert hashlib.sha256(bb).hexdigest()==bh;"
+    "sys.argv=[logical,*args];"
+    "g={'__file__':logical,'__name__':'__main__','_W4_INJECTED_BASE_BYTES':bb,"
+    "'_W4_EXECUTED_RUNNER_SHA256':rh,'_W4_EXECUTED_BASE_SHA256':bh,"
+    "'_W4_EXECUTED_CGROUP_SHA256':ch,'_W4_EXECUTED_SAFE_SHA256':sh};"
+    "exec(compile(rb,logical,'exec'),g)"
+)
+
+
+def contained_arm_command(retained: dict[str, str], tag: str,
+                          driver_arguments: list[str]) -> list[str]:
+    required = {name + suffix for name in ("runner", "base", "cgroup", "safe")
+                for suffix in ("_path", "_sha256")}
+    if set(retained) != required:
+        raise CampaignError("retained arm dependency closure differs")
+    return [
+        "/usr/bin/bash", retained["cgroup_path"], "--tag", tag, "--",
+        "/usr/bin/python3", "-I", "-B", "-c", DRIVER_BOOTSTRAP,
+        retained["runner_path"], retained["base_path"],
+        retained["runner_sha256"], retained["base_sha256"],
+        retained["cgroup_sha256"], retained["safe_sha256"], RUNNER_LOGICAL_PATH,
+        *driver_arguments,
+    ]
 
 
 def _sealed_bls_verify(arguments: list[str]) -> bool:
@@ -403,7 +464,7 @@ def environment_for_arm(arm: str, out: Path, lock_path: str, lock_identity: str,
         "GLM_SAFE_EXPECTED_MEMORY_GUARD_SHA256": MEMORY_GUARD_SHA256,
         "GLM_SAFE_FINAL_ARTIFACTS": ",".join(str(out / name) for name in (
             "server.log", "response.json", "observation.json", "environment.json",
-            "child-exit.json")),
+            "child-exit.json", "driver-lineage.json")),
         "GLM_SAFE_DONE_DIGESTS": "1",
     }
     if campaign_lock_fd is not None:
@@ -420,6 +481,18 @@ def environment_for_arm(arm: str, out: Path, lock_path: str, lock_identity: str,
 
 def driver(arm: str, out: Path, request_path: Path, request_sha256: str, candidate: str,
            expected_model_devino: str, model_descriptor_path: str, lock_path: str) -> int:
+    lineage = {
+        "runner_sha256": globals().get("_W4_EXECUTED_RUNNER_SHA256"),
+        "base_runner_sha256": globals().get("_W4_EXECUTED_BASE_SHA256"),
+        "cgroup_sha256": globals().get("_W4_EXECUTED_CGROUP_SHA256"),
+        "safe_run_sha256": globals().get("_W4_EXECUTED_SAFE_SHA256"),
+    }
+    if (not all(isinstance(value, str) and SHA_RE.fullmatch(value)
+                for value in lineage.values())
+            or lineage["base_runner_sha256"] != BASE_SHA256
+            or lineage["cgroup_sha256"] != CGROUP_SHA256
+            or lineage["safe_run_sha256"] != SAFE_SHA256):
+        raise CampaignError("executed arm dependency lineage differs")
     verify_dependencies()
     verify_candidate(candidate)
     if BASE.server_pids() or any(out.iterdir()):
@@ -434,6 +507,7 @@ def driver(arm: str, out: Path, request_path: Path, request_sha256: str, candida
     if any(os.environ.get(name) != value for name, value in observed_environment.items()):
         raise CampaignError("executed environment differs from fixed arm")
     BASE.write_json_new(out / "environment.json", observed_environment)
+    BASE.write_json_new(out / "driver-lineage.json", lineage)
     model_fd = os.open(model_descriptor_path, os.O_RDONLY | os.O_CLOEXEC)
     metadata = os.fstat(model_fd)
     if f"{metadata.st_dev}:{metadata.st_ino}" != expected_model_devino or metadata.st_size != MODEL_BYTES:
@@ -493,6 +567,7 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
               expected_prompt_tokens: int, expected_environment_sha256: str | None = None,
               replay: bool = False,
               snapshot: dict[str, tuple[bytes, tuple[int, int, int, int]]] | None = None,
+              expected_runner_sha256: str | None = None,
               ) -> dict[str, Any]:
     if containment_rc != 0:
         raise CampaignError(f"containment failed rc={containment_rc}")
@@ -526,13 +601,14 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
         safety[name] = payload
     artifacts = {name: evidence(name) for name in
                  ("server.log", "response.json", "observation.json", "environment.json",
-                  "child-exit.json")}
+                  "child-exit.json", "driver-lineage.json")}
     main = safety["main.log"].decode("utf-8", errors="strict")
     samples = safety["samples.log"].decode("utf-8", errors="strict")
     kernel = safety["kernel.log"].decode("utf-8", errors="strict")
     server = artifacts["server.log"][0].decode("utf-8", errors="strict")
     observation = json.loads(artifacts["observation.json"][0])
     environment_artifact = json.loads(artifacts["environment.json"][0])
+    driver_lineage = json.loads(artifacts["driver-lineage.json"][0])
     response = artifacts["response.json"][0]
     _, semantic_sha = semantic_response(response)
     environment_lines = re.findall(
@@ -543,6 +619,21 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
             expected_environment_sha256 is not None
             and environment_lines[0] != expected_environment_sha256):
         raise CampaignError("executed environment binding mismatch")
+    if expected_runner_sha256 is None:
+        expected_runner_sha256 = globals().get("_W4_EXECUTED_RUNNER_SHA256")
+    if expected_runner_sha256 is None:
+        expected_runner_sha256 = hashlib.sha256(BASE.read_stable(RUNNER_PATH)[0]).hexdigest()
+    if not isinstance(expected_runner_sha256, str) or SHA_RE.fullmatch(
+            expected_runner_sha256) is None:
+        raise CampaignError("expected driver lineage is unavailable")
+    expected_lineage = {
+        "runner_sha256": expected_runner_sha256,
+        "base_runner_sha256": BASE_SHA256,
+        "cgroup_sha256": CGROUP_SHA256,
+        "safe_run_sha256": SAFE_SHA256,
+    }
+    if driver_lineage != expected_lineage:
+        raise CampaignError("executed driver lineage mismatch")
     for name, (payload, metadata) in artifacts.items():
         marker = (f"final_artifact_verified path={out / name} "
                   f"sha256={hashlib.sha256(payload).hexdigest()} "
@@ -620,6 +711,7 @@ def finalize_failure(error: BaseException) -> None:
     if attempt is None or candidate is None:
         return
     failure = f"{type(error).__name__}: {error}"
+    rejected_unstable: set[str] = set()
     rejected_symlinks = sorted(
         str(path.relative_to(attempt)) for path in attempt.rglob("*") if path.is_symlink()
     )
@@ -633,7 +725,12 @@ def finalize_failure(error: BaseException) -> None:
         raw_path.unlink()
         raw = b""
     else:
-        raw = BASE.read_stable(raw_path)[0] if raw_path.is_file() else b""
+        raw = b""
+        if raw_path.is_file():
+            try:
+                raw = BASE.read_stable(raw_path)[0]
+            except (OSError, CampaignError):
+                rejected_unstable.add(raw_path.name)
     if not raw_path.exists():
         BASE.write_new(raw_path, raw)
     summary_path = attempt / "summary.json"
@@ -641,30 +738,58 @@ def finalize_failure(error: BaseException) -> None:
     if summary_path.is_symlink():
         summary_path.unlink()
     elif summary_path.exists():
-        prior, _ = BASE.read_stable(summary_path)
-        prior_path = attempt / "summary.pre-finalization.json"
+        try:
+            prior, _ = BASE.read_stable(summary_path)
+        except (OSError, CampaignError):
+            prior = None
+            rejected_unstable.add(summary_path.name)
+        prior_path = attempt / (
+            "summary.pre-finalization.json" if prior is not None
+            else "summary.unstable-pre-finalization.json")
         os.rename(summary_path, prior_path)
-        displaced = (prior_path.name, hashlib.sha256(prior).hexdigest())
+        if prior is not None:
+            displaced = (prior_path.name, hashlib.sha256(prior).hexdigest())
     summary = (json.dumps({"failure": failure, "verdict": "FAIL"},
                           sort_keys=True, separators=(",", ":")) + "\n").encode()
     BASE.write_new(summary_path, summary)
-    artifacts = {}
-    rejected_unstable = []
+    artifacts: dict[str, str] = {}
+    artifact_identities: dict[str, tuple[int, int, int, int]] = {}
     for path in sorted(attempt.rglob("*")):
         if path.is_symlink():
             continue
         if path.is_file():
             relative = str(path.relative_to(attempt))
             try:
-                payload, _ = BASE.read_stable(path)
+                payload, metadata = BASE.read_stable(path)
             except (OSError, CampaignError):
-                rejected_unstable.append(relative)
+                rejected_unstable.add(relative)
                 continue
             artifacts[relative] = hashlib.sha256(payload).hexdigest()
+            artifact_identities[relative] = (
+                metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns)
+    for relative in list(artifacts):
+        path = attempt / relative
+        try:
+            payload, metadata = BASE.read_stable(path)
+            identity = (metadata.st_dev, metadata.st_ino,
+                        metadata.st_size, metadata.st_mtime_ns)
+        except (OSError, CampaignError):
+            identity = None
+            payload = b""
+        if (identity != artifact_identities[relative]
+                or hashlib.sha256(payload).hexdigest() != artifacts[relative]):
+            artifacts.pop(relative)
+            rejected_unstable.add(relative)
+    runner_sha = globals().get("_W4_EXECUTED_RUNNER_SHA256")
+    if not isinstance(runner_sha, str) or SHA_RE.fullmatch(runner_sha) is None:
+        try:
+            runner_sha = hashlib.sha256(BASE.read_stable(RUNNER_PATH)[0]).hexdigest()
+        except (OSError, CampaignError):
+            runner_sha = None
     BASE.write_json_new(manifest_path, {
         "schema": "glm52-w4-serving-campaign-failure-v1",
         "candidate_hash": candidate, "failure": failure,
-        "runner_sha256": sha256_file(Path(__file__)),
+        "runner_sha256": runner_sha,
         "scorer_sha256": SCORER_SHA256, "base_runner_sha256": BASE_SHA256,
         "cgroup_sha256": CGROUP_SHA256, "safe_run_sha256": SAFE_SHA256,
         "memory_guard_sha256": MEMORY_GUARD_SHA256,
@@ -676,7 +801,7 @@ def finalize_failure(error: BaseException) -> None:
         "drand_bundle_sha256": DRAND_BUNDLE_SHA256,
         "system_ca_bundle_sha256": SYSTEM_CA_BUNDLE_SHA256,
         "rejected_symlinks": rejected_symlinks,
-        "rejected_unstable_paths": rejected_unstable,
+        "rejected_unstable_paths": sorted(rejected_unstable),
         "artifacts": artifacts, "verdict": "FAIL",
     })
 
@@ -702,6 +827,9 @@ def _campaign(candidate: str, receipt: Path) -> int:
     scorer_bytes = git_bytes(candidate, "scripts/101_score_w4_serving_campaign.py")
     if scorer_bytes != BASE.read_stable(SCORER)[0] or hashlib.sha256(scorer_bytes).hexdigest() != SCORER_SHA256:
         raise CampaignError("frozen scorer mismatch")
+    runner_bytes = git_bytes(candidate, "scripts/102_run_w4_serving_campaign.py")
+    if runner_bytes != BASE.read_stable(RUNNER_PATH)[0]:
+        raise CampaignError("frozen runner mismatch")
     guard_fd = os.open(MEMORY_GUARD, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
     if BASE.sha256_descriptor(guard_fd) != MEMORY_GUARD_SHA256:
         raise CampaignError("memory guard mismatch")
@@ -746,31 +874,37 @@ def _campaign(candidate: str, receipt: Path) -> int:
     BASE.write_json_new(attempt / "configuration.json", config)
     rows: list[dict[str, Any]] = []
     failure: str | None = None
-    try:
-        for block, schedule in enumerate(schedules):
-            for position, letter in enumerate(schedule):
-                verify_candidate(candidate)
-                arm = "off" if letter == "A" else "on"
-                out = attempt / f"b{block}-p{position}-{arm}-{uuid.uuid4().hex[:12]}"
-                out.mkdir(mode=0o700)
-                env, env_sha = environment_for_arm(
-                    arm, out, engine_path, engine_identity, lock_fd,
-                    f"/proc/{os.getpid()}/fd/{guard_fd}")
-                tag = f"w4s-b{block}p{position}-{uuid.uuid4().hex[:10]}"
-                command = [str(CGROUP), "--tag", tag, "--", "/usr/bin/python3",
-                           str(Path(__file__)), "--driver", arm, str(out), str(request_path),
-                           request_sha, candidate, f"{after.st_dev}:{after.st_ino}",
-                           f"/proc/{os.getpid()}/fd/{model_fd}", engine_path]
-                completed = BASE.run_contained_command(command, env, tag)
-                BASE.write_new(out / "containment.stdout", completed.stdout.encode())
-                BASE.write_new(out / "containment.stderr", completed.stderr.encode())
-                BASE.write_new(out / "containment.rc", f"{completed.returncode}\n".encode())
-                row = parse_arm(arm, block, position, out, completed.returncode,
-                                completed.stdout, request_sha, config_sha,
-                                tokenization["prompt_tokens"], env_sha)
-                rows.append(row)
-    except Exception as error:
-        failure = f"{type(error).__name__}: {error}"
+    with retained_arm_dependencies(runner_bytes) as retained:
+        try:
+            for block, schedule in enumerate(schedules):
+                for position, letter in enumerate(schedule):
+                    verify_candidate(candidate)
+                    arm = "off" if letter == "A" else "on"
+                    out = attempt / f"b{block}-p{position}-{arm}-{uuid.uuid4().hex[:12]}"
+                    out.mkdir(mode=0o700)
+                    env, env_sha = environment_for_arm(
+                        arm, out, engine_path, engine_identity, lock_fd,
+                        f"/proc/{os.getpid()}/fd/{guard_fd}")
+                    env["GLM_SAFE_PINNED_SAFE_PATH"] = retained["safe_path"]
+                    env["GLM_SAFE_PINNED_SAFE_SHA256"] = retained["safe_sha256"]
+                    tag = f"w4s-b{block}p{position}-{uuid.uuid4().hex[:10]}"
+                    command = contained_arm_command(retained, tag, [
+                        "--driver", arm, str(out), str(request_path), request_sha,
+                        candidate, f"{after.st_dev}:{after.st_ino}",
+                        f"/proc/{os.getpid()}/fd/{model_fd}", engine_path,
+                    ])
+                    completed = BASE.run_contained_command(command, env, tag)
+                    BASE.write_new(out / "containment.stdout", completed.stdout.encode())
+                    BASE.write_new(out / "containment.stderr", completed.stderr.encode())
+                    BASE.write_new(out / "containment.rc", f"{completed.returncode}\n".encode())
+                    row = parse_arm(
+                        arm, block, position, out, completed.returncode,
+                        completed.stdout, request_sha, config_sha,
+                        tokenization["prompt_tokens"], env_sha,
+                        expected_runner_sha256=retained["runner_sha256"])
+                    rows.append(row)
+        except Exception as error:
+            failure = f"{type(error).__name__}: {error}"
     summary = load_scorer(scorer_bytes).score_campaign_rows(
         rows, schedules, selected_micro)
     if failure:
@@ -782,7 +916,7 @@ def _campaign(candidate: str, receipt: Path) -> int:
                  for path in sorted(attempt.rglob("*")) if path.is_file()}
     manifest = {
         "schema": "glm52-w4-serving-campaign-v1", "candidate_hash": candidate,
-        "runner_sha256": sha256_file(Path(__file__)), "scorer_sha256": SCORER_SHA256,
+        "runner_sha256": retained["runner_sha256"], "scorer_sha256": SCORER_SHA256,
         "base_runner_sha256": BASE_SHA256, "cgroup_sha256": CGROUP_SHA256,
         "safe_run_sha256": SAFE_SHA256, "memory_guard_sha256": MEMORY_GUARD_SHA256,
         "binary_sha256": BINARY_SHA256, "engine_source_commit": ENGINE_SOURCE_COMMIT,

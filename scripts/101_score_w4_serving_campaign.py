@@ -637,7 +637,8 @@ def score_run_dir(run_dir: Path) -> dict[str, object]:
             row = runner.parse_arm(
                 raw["arm"], raw["block"], raw["position"], out, containment_rc,
                 containment_stdout, REQUEST_SHA256, manifest["configuration_sha256"],
-                recomputed_tokenization["prompt_tokens"], None, True, arm_snapshot)
+                recomputed_tokenization["prompt_tokens"], None, True, arm_snapshot,
+                hashlib.sha256(runner_bytes).hexdigest())
             replayed.append(row)
         _require(replayed == raw_rows, "raw rows do not replay from bound arm artifacts")
         result = score_campaign_rows(replayed, schedules, microgate)
