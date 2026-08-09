@@ -78,6 +78,9 @@ SYNC_RE = re.compile(
     r"dense_len=\d+ ctx_cap=\d+ dense_fit=\d+ resume_min=\d+ dense_gap=\d+ "
     r"indexed_keep=\d+ indexed_batch=\d+ batch_ffn=\d+$"
 )
+LOGIT_RE = re.compile(
+    r"logits\.sync(\d+)\.start(\d+)\.prompt(\d+)\.suffix(\d+)\Z"
+)
 
 
 def _load_base() -> Any:
@@ -406,12 +409,21 @@ def semantic_response(raw: bytes) -> tuple[dict[str, Any], str]:
     return semantic, digest
 
 
-def validate_novel_sync_trace(server_log: str, expected_prompt_tokens: int) -> None:
+def validate_novel_sync_trace(server_log: str, expected_prompt_tokens: int) -> list[tuple[int, int, int, int]]:
     matches = [SYNC_RE.fullmatch(line) for line in server_log.splitlines()]
     matches = [match for match in matches if match is not None]
-    if len(matches) != 1 or tuple(map(int, matches[0].groups()[:4])) != (
-            0, expected_prompt_tokens, expected_prompt_tokens, 0):
+    segments = [tuple(map(int, match.groups()[:4])) for match in matches]
+    if not segments:
         raise CampaignError("sync trace does not prove a novel complete prefill")
+    previous_prompt = 0
+    for start, prompt, suffix, checkpoint in segments:
+        if (start != previous_prompt or checkpoint != start or prompt <= start
+                or prompt > expected_prompt_tokens or suffix != prompt - start):
+            raise CampaignError("sync trace does not prove a novel complete prefill")
+        previous_prompt = prompt
+    if previous_prompt != expected_prompt_tokens:
+        raise CampaignError("sync trace does not prove a novel complete prefill")
+    return segments
 
 
 def measured_environment(arm: str, out: Path, lock_path: str,
@@ -645,19 +657,32 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
                   f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}")
         if main.count(marker) != 1:
             raise CampaignError(f"final artifact binding mismatch: {name}")
-    logit_names = (sorted(name for name in snapshot if name.startswith("logits.sync"))
+    logit_names = ([name for name in snapshot if name.startswith("logits.sync")]
                    if snapshot is not None else
-                   [path.name for path in sorted(out.glob("logits.sync*.start*.prompt*.suffix*"))])
-    if len(logit_names) != 1 or ".sync1." not in logit_names[0]:
-        raise CampaignError("expected exactly one synchronized logit tensor")
-    logit_name = logit_names[0]
-    logits, metadata = evidence(logit_name)
-    if metadata.st_size != LOGIT_BYTES:
-        raise CampaignError("wrong logit tensor size")
-    logit_sha = hashlib.sha256(logits).hexdigest()
+                   [path.name for path in out.glob("logits.sync*.start*.prompt*.suffix*")])
+    segments = validate_novel_sync_trace(server, expected_prompt_tokens)
+    parsed_logits: list[tuple[int, str, tuple[int, int, int]]] = []
+    for name in logit_names:
+        match = LOGIT_RE.fullmatch(name)
+        if match is None:
+            raise CampaignError("malformed synchronized logit tensor name")
+        sync, start, prompt, suffix = map(int, match.groups())
+        parsed_logits.append((sync, name, (start, prompt, suffix)))
+    parsed_logits.sort(key=lambda item: item[0])
+    if (len(parsed_logits) != len(segments)
+            or [item[0] for item in parsed_logits] != list(range(1, len(segments) + 1))
+            or [item[2] for item in parsed_logits]
+            != [(start, prompt, suffix) for start, prompt, suffix, _ in segments]):
+        raise CampaignError("synchronized logit sequence does not match sync trace")
+    sequence: list[tuple[str, str, int]] = []
+    for _, name, _ in parsed_logits:
+        logits, metadata = evidence(name)
+        if metadata.st_size != LOGIT_BYTES:
+            raise CampaignError("wrong logit tensor size")
+        sequence.append((name, hashlib.sha256(logits).hexdigest(), metadata.st_size))
+    logit_sha = sequence[-1][1]
     sequence_sha = hashlib.sha256(json.dumps(
-        [(logit_name, logit_sha, metadata.st_size)],
-        separators=(",", ":")).encode()).hexdigest()
+        sequence, separators=(",", ":")).encode()).hexdigest()
     memory = [int(value) for value in re.findall(r"\bmem_avail_kb=([0-9]+)\b", samples)]
     swaps = [int(value) for value in re.findall(r"\bcgroup_swap_current_bytes=([0-9]+)\b", samples)]
     final = re.findall(
@@ -675,7 +700,6 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
     if oom_group != 0:
         raise CampaignError("cgroup OOM group kill")
     usage = observation["semantic"]["usage"]
-    validate_novel_sync_trace(server, expected_prompt_tokens)
     if usage["prompt_tokens"] != expected_prompt_tokens:
         raise CampaignError("API and independent token accounting differ")
     return {
