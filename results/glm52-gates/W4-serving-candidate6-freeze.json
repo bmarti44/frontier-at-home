@@ -1,0 +1,53 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 6,
+  "implementation_commit": "0dcd6b62a47bbb73c3433f5ee0f6bff7b7d869e2",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "launch_status": "NOT_RUN_PENDING_ROUND_305",
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate6-red.json": "6f138f1029bb78b896ed9eaf2449d556744ab85a6a3fe5b9d7df06b361650f76",
+    "results/glm52-gates/W4-serving-candidate6-amended-red.json": "4f536b81b5babb052d30fb76a0c10df45f844cc71adcf189fe99053477020924",
+    "results/glm52-gates/W4-serving-candidate6-preaudit.txt": "98e434ea1e91ce7efd440d81cfa7ca28763388cb5b41e6cd230c72ad92e1a070",
+    "scripts/101_score_w4_serving_campaign.py": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7",
+    "scripts/102_run_w4_serving_campaign.py": "11ccd92216a59ed95724f0b2e079c92cde30a8d8f6b8bffbd401eec9ed9472ca",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "bac41e6c4a6791f213e774cca34bbb1884404b4149329b2d16eb870c5aa589db",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581",
+    "scripts/lint_secrets.sh": "603f66db9a7095f306e00ae99a4a42dc08e7761aa06f009322d0a7a27cc04c17"
+  },
+  "unchanged_frozen_dependencies": {
+    "cgroup_sha256": "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14",
+    "safe_run_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "base_runner_sha256": "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924",
+    "memory_guard_sha256": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
+  },
+  "round_304_disposition": {
+    "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU": "FIXED: each arm executes sealed retained runner and base bytes through a fixed bootstrap and records their hashes in a safe-run-verified driver-lineage artifact",
+    "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH": "FIXED: the unchanged cgroup wrapper executes from a sealed descriptor and its existing pinned-safe interface executes the unchanged safe wrapper from a sealed descriptor; a full four-path post-verification swap passed under real user-systemd containment without an engine",
+    "ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE": "FIXED_WITH_FOCUSED_TEST: reserved raw and summary instability still publishes a terminal FAIL manifest",
+    "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE": "FIXED_WITH_FOCUSED_TEST: a second identity-and-byte reconciliation removes changed artifacts and records them unstable before terminal publication",
+    "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW": "DEFERRED: explicit recent-events replay-lifetime limitation remains nonblocking for immediate measurement validity",
+    "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT": "DEFERRED: dynamic artifacts remain hash-bound in the terminal closure; expanding duplicate manifest fields is not required for measurement validity"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "32/32 PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS",
+    "dependency_candidate_hash_preflight": "PASS",
+    "independent_tokenization": "19783 tokens PASS",
+    "retained_cgroup_safe_systemd_smoke": "PASS",
+    "postverification_four_path_swap_systemd_smoke": "PASS",
+    "clean_exact_head": "PASS before freeze record",
+    "user_systemd_available": true,
+    "engine_or_fio_started": false,
+    "frozen_engine_wrapper_microgate_fixture_unchanged": true
+  },
+  "convergence": {
+    "candidate_count": 6,
+    "previous_open_blocking_count": 1,
+    "named_blocking_classes_targeted": 1,
+    "frozen_scope_modified": false,
+    "engine_campaign_started": false
+  }
+}
