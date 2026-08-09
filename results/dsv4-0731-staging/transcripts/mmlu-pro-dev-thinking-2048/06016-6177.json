@@ -1,0 +1,53 @@
+{
+  "index": 6016,
+  "task_id": 6177,
+  "rendered_prompt_sha256": "8263070842ca0f18fc57424b0ae368d722873d203c436e2b43ba27a2ca22a47b",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The patient is a 20-year-old man with chronic respiratory symptoms: frequent upper respiratory infections over 4 years, daily purulent sputum, decreased exercise tolerance, infertility due to low sperm count, wheezing and rhonchi, hyperinflation on chest x-ray, and decreased FEV1/FVC ratio. These symptoms and history strongly suggest cystic fibrosis (CF). Infertility in men with CF is often due to congenital bilateral absence of the vas deferens, and chronic respiratory symptoms with bronchiectasis and sinusitis are classic. The decreased FEV1/FVC ratio indicates obstructive lung disease. The confirmatory test for CF is the sweat chloride test (option E). Chest CT would show bronchiectasis but is not diagnostic; sweat chloride is the gold standard. Therefore, the correct answer is E. Sweat chloride test.\n\nAnswer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.33889861102216
+  },
+  "response": {
+    "id": "cmpl-901",
+    "object": "text_completion",
+    "created": 1786307165,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The patient is a 20-year-old man with chronic respiratory symptoms: frequent upper respiratory infections over 4 years, daily purulent sputum, decreased exercise tolerance, infertility due to low sperm count, wheezing and rhonchi, hyperinflation on chest x-ray, and decreased FEV1/FVC ratio. These symptoms and history strongly suggest cystic fibrosis (CF). Infertility in men with CF is often due to congenital bilateral absence of the vas deferens, and chronic respiratory symptoms with bronchiectasis and sinusitis are classic. The decreased FEV1/FVC ratio indicates obstructive lung disease. The confirmatory test for CF is the sweat chloride test (option E). Chest CT would show bronchiectasis but is not diagnostic; sweat chloride is the gold standard. Therefore, the correct answer is E. Sweat chloride test.\n\nAnswer: E",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 216,
+      "completion_tokens": 174,
+      "total_tokens": 390,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 557.3,
+      "prefill_tokens": 216,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 388.0,
+      "decode_tok_s": 22.4,
+      "spec_accept_rate": 0.648,
+      "tok_per_step": 1.67
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "index": 9986,
+  "task_id": 10186,
+  "rendered_prompt_sha256": "62d07010f4049ed3f6f6302be215f5aa92d2f14e2cf49ca2e1e4a205316f6d38",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The efficiency of a steam engine (Carnot efficiency) is given by:\n\nη = 1 - (T_cold / T_hot)\n\nwhere temperatures must be in Kelvin.\n\nT_hot = 175°C + 273.15 = 448.15 K  \nT_cold = 75°C + 273.15 = 348.15 K  \n\nη = 1 - (348.15 / 448.15) ≈ 1 - 0.7769 ≈ 0.2231 ≈ 22.3%\n\nThat matches option G.\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.304315077839419
+  },
+  "response": {
+    "id": "cmpl-1027",
+    "object": "text_completion",
+    "created": 1786310095,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The efficiency of a steam engine (Carnot efficiency) is given by:\n\nη = 1 - (T_cold / T_hot)\n\nwhere temperatures must be in Kelvin.\n\nT_hot = 175°C + 273.15 = 448.15 K  \nT_cold = 75°C + 273.15 = 348.15 K  \n\nη = 1 - (348.15 / 448.15) ≈ 1 - 0.7769 ≈ 0.2231 ≈ 22.3%\n\nThat matches option G.\n\nAnswer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 122,
+      "completion_tokens": 121,
+      "total_tokens": 243,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 893.2,
+      "prefill_tokens": 122,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 138.9,
+      "decode_tok_s": 18.9,
+      "spec_accept_rate": 0.818,
+      "tok_per_step": 1.85
+    }
+  }
+}

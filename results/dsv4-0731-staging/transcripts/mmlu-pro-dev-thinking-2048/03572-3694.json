@@ -1,0 +1,53 @@
+{
+  "index": 3572,
+  "task_id": 3694,
+  "rendered_prompt_sha256": "f03b350cae7e7c36d31f04b278264d524894f777de5b475738931317b545c32d",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to solve using ideal gas law: PV = nRT. \nGiven: T = 27°C = 300 K (since 0°C = 273 K, so 27+273=300). \nPressure: 380 torr. Need to convert to atm: 1 atm = 760 torr, so P = 380/760 = 0.5 atm. \nVolume: 492 cm^3 = 0.492 L (since 1 L = 1000 cm^3). \nR = 0.082 L atm mol^-1 K^-1.\nn = PV/(RT) = (0.5 atm * 0.492 L) / (0.082 * 300) = (0.246) / (24.6) = 0.01 mol. \nSo n = 0.0100 moles. That corresponds to option G. \nAnswer: G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.811125295003876
+  },
+  "response": {
+    "id": "cmpl-832",
+    "object": "text_completion",
+    "created": 1786305127,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to solve using ideal gas law: PV = nRT. \nGiven: T = 27°C = 300 K (since 0°C = 273 K, so 27+273=300). \nPressure: 380 torr. Need to convert to atm: 1 atm = 760 torr, so P = 380/760 = 0.5 atm. \nVolume: 492 cm^3 = 0.492 L (since 1 L = 1000 cm^3). \nR = 0.082 L atm mol^-1 K^-1.\nn = PV/(RT) = (0.5 atm * 0.492 L) / (0.082 * 300) = (0.246) / (24.6) = 0.01 mol. \nSo n = 0.0100 moles. That corresponds to option G. \nAnswer: G.</think>Answer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 158,
+      "completion_tokens": 199,
+      "total_tokens": 357,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 857.3,
+      "prefill_tokens": 158,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 184.4,
+      "decode_tok_s": 25.0,
+      "spec_accept_rate": 0.841,
+      "tok_per_step": 1.85
+    }
+  }
+}

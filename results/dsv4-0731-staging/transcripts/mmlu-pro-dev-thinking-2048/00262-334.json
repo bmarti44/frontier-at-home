@@ -1,0 +1,53 @@
+{
+  "index": 262,
+  "task_id": 334,
+  "rendered_prompt_sha256": "fba1056a72f58f4f196a36b32f94cc53ce2da5d35e301c58b04c254942d366fe",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to compute simple interest for a 90-day loan of $150 at 6% annual interest. Usually, simple interest = principal * rate * time. Time in years = 90/360 = 0.25 (assuming banker's year 360 days). Interest = 150 * 0.06 * 0.25 = 150 * 0.015 = 2.25. Total due = 152.25. Option F. Answer: F.</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.115167716983706
+  },
+  "response": {
+    "id": "cmpl-814",
+    "object": "text_completion",
+    "created": 1786304815,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to compute simple interest for a 90-day loan of $150 at 6% annual interest. Usually, simple interest = principal * rate * time. Time in years = 90/360 = 0.25 (assuming banker's year 360 days). Interest = 150 * 0.06 * 0.25 = 150 * 0.015 = 2.25. Total due = 152.25. Option F. Answer: F.</think>Answer: F",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 137,
+      "completion_tokens": 102,
+      "total_tokens": 239,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 819.6,
+      "prefill_tokens": 137,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 167.3,
+      "decode_tok_s": 23.8,
+      "spec_accept_rate": 0.754,
+      "tok_per_step": 1.78
+    }
+  }
+}

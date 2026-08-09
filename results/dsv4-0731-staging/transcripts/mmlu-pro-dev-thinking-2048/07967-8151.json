@@ -1,0 +1,53 @@
+{
+  "index": 7967,
+  "task_id": 8151,
+  "rendered_prompt_sha256": "c1910ac131abb53999f3b6f0522f65ae5260131b8f51281ed81447d94054a052",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need answer simple arithmetic. 28*42 = 1176. Options: F. 1,176. Answer: F.</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.2176531918812543
+  },
+  "response": {
+    "id": "cmpl-952",
+    "object": "text_completion",
+    "created": 1786308453,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. 28*42 = 1176. Options: F. 1,176. Answer: F.</think>Answer: F",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 110,
+      "completion_tokens": 32,
+      "total_tokens": 142,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 758.6,
+      "prefill_tokens": 110,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 145.1,
+      "decode_tok_s": 22.0,
+      "spec_accept_rate": 0.667,
+      "tok_per_step": 1.74
+    }
+  }
+}

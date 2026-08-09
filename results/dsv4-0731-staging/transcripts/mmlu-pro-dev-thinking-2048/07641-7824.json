@@ -1,0 +1,53 @@
+{
+  "index": 7641,
+  "task_id": 7824,
+  "rendered_prompt_sha256": "b02e8b125394863c5837643746c45b16fb757acab2c831ecbf944e3831439644",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to compute number of floors: 185.9 / 14.3 = ? 14.3*13 = 185.9? 14.3*13 = 14.3*10 +14.3*3 = 143 +42.9 = 185.9. Yes exactly 13. So answer H.\n\nAnswer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.9957526978105307
+  },
+  "response": {
+    "id": "cmpl-950",
+    "object": "text_completion",
+    "created": 1786308448,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to compute number of floors: 185.9 / 14.3 = ? 14.3*13 = 185.9? 14.3*13 = 14.3*10 +14.3*3 = 143 +42.9 = 185.9. Yes exactly 13. So answer H.\n\nAnswer: H",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 115,
+      "completion_tokens": 75,
+      "total_tokens": 190,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 854.3,
+      "prefill_tokens": 115,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 134.7,
+      "decode_tok_s": 23.9,
+      "spec_accept_rate": 0.78,
+      "tok_per_step": 1.81
+    }
+  }
+}

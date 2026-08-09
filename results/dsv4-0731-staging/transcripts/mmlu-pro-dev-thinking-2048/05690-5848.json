@@ -1,0 +1,53 @@
+{
+  "index": 5690,
+  "task_id": 5848,
+  "rendered_prompt_sha256": "4721a8108f6d6e4fdc3446372eac73eca51b319a67bd41724bce16f6f7e81eb8",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The question asks for distributable net income (DNI) for a simple trust. DNI is typically calculated as: taxable income of the trust (after deductions) minus capital gains allocated to corpus (if they are not distributed). \n\nGiven:\n- Dividend income: $2,500\n- Taxable interest income: $2,000\n- Capital gains (allocable to corpus): $5,000\n- Accounting fees (allocable to income): ($500)\n- Trustee fees (allocable to income): ($750)\n\nDNI calculation for a simple trust: \nIncome from dividends and interest: $2,500 + $2,000 = $4,500\nLess expenses allocable to income: $500 + $750 = $1,250\nNet income from ordinary sources: $4,500 - $1,250 = $3,250\nAdd capital gains? For DNI, capital gains allocable to corpus are generally excluded if not distributed. However, in a simple trust, all income is distributed, but capital gains allocated to corpus are not considered DNI unless distributed or used to pay expenses. The problem says capital gains are allocable to corpus, so they are not part of DNI. So DNI = $3,250? But let's check: The trust's taxable income might include capital gains, but for DNI, we typically exclude net capital gains allocated to corpus. So DNI = $3,250.\n\nCheck options: J is $3,250. So answer J.\n\nBut let's double-check: Some sources say DNI = taxable income minus capital gains allocated to corpus minus other adjustments. The trust's taxable income: \nGross income: 2500+2000+5000 = 9500\nDeductions: 500+750 = 1250\nTaxable income = 9500 - 1250 = 8250\nCapital gains allocated to corpus = 5000 (excluded from DNI) \nSo DNI = 8250 - 5000 = 3250. Yes.\n\nAnswer: J.\n\nBut the options include G: 8250 which is taxable income, but DNI is 3250. So J.\n\nThus answer: J.\n\nFormat: Answer: J</think>Answer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 21.121976926922798
+  },
+  "response": {
+    "id": "cmpl-989",
+    "object": "text_completion",
+    "created": 1786309056,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The question asks for distributable net income (DNI) for a simple trust. DNI is typically calculated as: taxable income of the trust (after deductions) minus capital gains allocated to corpus (if they are not distributed). \n\nGiven:\n- Dividend income: $2,500\n- Taxable interest income: $2,000\n- Capital gains (allocable to corpus): $5,000\n- Accounting fees (allocable to income): ($500)\n- Trustee fees (allocable to income): ($750)\n\nDNI calculation for a simple trust: \nIncome from dividends and interest: $2,500 + $2,000 = $4,500\nLess expenses allocable to income: $500 + $750 = $1,250\nNet income from ordinary sources: $4,500 - $1,250 = $3,250\nAdd capital gains? For DNI, capital gains allocable to corpus are generally excluded if not distributed. However, in a simple trust, all income is distributed, but capital gains allocated to corpus are not considered DNI unless distributed or used to pay expenses. The problem says capital gains are allocable to corpus, so they are not part of DNI. So DNI = $3,250? But let's check: The trust's taxable income might include capital gains, but for DNI, we typically exclude net capital gains allocated to corpus. So DNI = $3,250.\n\nCheck options: J is $3,250. So answer J.\n\nBut let's double-check: Some sources say DNI = taxable income minus capital gains allocated to corpus minus other adjustments. The trust's taxable income: \nGross income: 2500+2000+5000 = 9500\nDeductions: 500+750 = 1250\nTaxable income = 9500 - 1250 = 8250\nCapital gains allocated to corpus = 5000 (excluded from DNI) \nSo DNI = 8250 - 5000 = 3250. Yes.\n\nAnswer: J.\n\nBut the options include G: 8250 which is taxable income, but DNI is 3250. So J.\n\nThus answer: J.\n\nFormat: Answer: J</think>Answer: J",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 171,
+      "completion_tokens": 465,
+      "total_tokens": 636,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 482.3,
+      "prefill_tokens": 171,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 355.0,
+      "decode_tok_s": 22.5,
+      "spec_accept_rate": 0.671,
+      "tok_per_step": 1.68
+    }
+  }
+}

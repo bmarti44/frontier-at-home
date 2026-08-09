@@ -1,0 +1,53 @@
+{
+  "index": 474,
+  "task_id": 549,
+  "rendered_prompt_sha256": "136efa3ec221cd83075605eb6c07295b66b97ad425dd923571d6d49ee65c79bb",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need answer only. Need solve. Let's parse.\n\nCompany wants 20% return on investment before taxes at sales volume equal to 80% capacity. Fixed annual costs $200,000. Annual capacity 200,00 units? likely 200,000 units (typo). Variable cost per unit $9. Investment $1,400,000. Production and sales are 80% of capacity. Need selling price per unit.\n\nLet's compute.\n\nCapacity 200,000 units. 80% = 160,000 units.\n\nInvestment $1,400,000. Required return before taxes = 20% * 1,400,000 = $280,000.\n\nFixed costs = $200,000. Total required contribution = fixed + return = $480,000.\n\nVariable cost total = 160,000 * 9 = $1,440,000.\n\nTotal revenue needed = variable + fixed + return = 1,440,000 + 480,000 = $1,920,000.\n\nSelling price per unit = 1,920,000 / 160,000 = $12.\n\nAnswer: G.\n\nNeed final with Answer: G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.658167852088809
+  },
+  "response": {
+    "id": "cmpl-820",
+    "object": "text_completion",
+    "created": 1786304864,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need answer only. Need solve. Let's parse.\n\nCompany wants 20% return on investment before taxes at sales volume equal to 80% capacity. Fixed annual costs $200,000. Annual capacity 200,00 units? likely 200,000 units (typo). Variable cost per unit $9. Investment $1,400,000. Production and sales are 80% of capacity. Need selling price per unit.\n\nLet's compute.\n\nCapacity 200,000 units. 80% = 160,000 units.\n\nInvestment $1,400,000. Required return before taxes = 20% * 1,400,000 = $280,000.\n\nFixed costs = $200,000. Total required contribution = fixed + return = $480,000.\n\nVariable cost total = 160,000 * 9 = $1,440,000.\n\nTotal revenue needed = variable + fixed + return = 1,440,000 + 480,000 = $1,920,000.\n\nSelling price per unit = 1,920,000 / 160,000 = $12.\n\nAnswer: G.\n\nNeed final with Answer: G.</think>Answer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 165,
+      "completion_tokens": 244,
+      "total_tokens": 409,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 898.0,
+      "prefill_tokens": 165,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 183.9,
+      "decode_tok_s": 22.7,
+      "spec_accept_rate": 0.669,
+      "tok_per_step": 1.68
+    }
+  }
+}

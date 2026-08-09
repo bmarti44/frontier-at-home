@@ -1,0 +1,53 @@
+{
+  "index": 3565,
+  "task_id": 3686,
+  "rendered_prompt_sha256": "0bbd4d62d5dc5ba70558777f71fae80785b4206041f836ac3f059e801e694895",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to solve stoichiometry. Reaction: 2 NaNO3 -> 2 NaNO2 + O2? Let's check: Thermal decomposition of sodium nitrate typically: 2 NaNO3 → 2 NaNO2 + O2 (actually 2 NaNO3 → 2 NaNO2 + O2). Molar mass NaNO3: Na 22.99 + N 14.01 + O3 3*16 = 85.0 g/mol. O2 molar mass 32.0 g/mol. From equation, 2 moles NaNO3 produce 1 mole O2. So moles O2 = 1.50 g / 32.0 g/mol = 0.046875 mol. Moles NaNO3 needed = 2 * 0.046875 = 0.09375 mol. Mass = 0.09375 mol * 85.0 g/mol = 7.96875 g ≈ 7.97 g. That's option J. Answer: J.</think>Answer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.075914732879028
+  },
+  "response": {
+    "id": "cmpl-831",
+    "object": "text_completion",
+    "created": 1786305118,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to solve stoichiometry. Reaction: 2 NaNO3 -> 2 NaNO2 + O2? Let's check: Thermal decomposition of sodium nitrate typically: 2 NaNO3 → 2 NaNO2 + O2 (actually 2 NaNO3 → 2 NaNO2 + O2). Molar mass NaNO3: Na 22.99 + N 14.01 + O3 3*16 = 85.0 g/mol. O2 molar mass 32.0 g/mol. From equation, 2 moles NaNO3 produce 1 mole O2. So moles O2 = 1.50 g / 32.0 g/mol = 0.046875 mol. Moles NaNO3 needed = 2 * 0.046875 = 0.09375 mol. Mass = 0.09375 mol * 85.0 g/mol = 7.96875 g ≈ 7.97 g. That's option J. Answer: J.</think>Answer: J",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 153,
+      "completion_tokens": 216,
+      "total_tokens": 369,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 851.9,
+      "prefill_tokens": 153,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 179.8,
+      "decode_tok_s": 23.4,
+      "spec_accept_rate": 0.726,
+      "tok_per_step": 1.74
+    }
+  }
+}

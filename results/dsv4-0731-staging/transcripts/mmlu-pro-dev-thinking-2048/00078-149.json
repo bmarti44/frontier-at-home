@@ -1,0 +1,53 @@
+{
+  "index": 78,
+  "task_id": 149,
+  "rendered_prompt_sha256": "7da2b8d476ad46716841557007a1cbe82582ec43f6b6b8bf027b001616d6d359",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need answer only letter. Compute compound interest quarterly: P=500, annual rate 8%, compounded quarterly, n=4, t=5. A = P(1+r/n)^(nt)=500(1+0.08/4)^(20)=500(1.02)^20. 1.02^20 ≈ 1.485947? Let's calculate: 1.02^10=1.218994, squared=1.485947. times 500 = 742.97. Option I. Answer: I.</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.4231416010297835
+  },
+  "response": {
+    "id": "cmpl-810",
+    "object": "text_completion",
+    "created": 1786304740,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need answer only letter. Compute compound interest quarterly: P=500, annual rate 8%, compounded quarterly, n=4, t=5. A = P(1+r/n)^(nt)=500(1+0.08/4)^(20)=500(1.02)^20. 1.02^20 ≈ 1.485947? Let's calculate: 1.02^10=1.218994, squared=1.485947. times 500 = 742.97. Option I. Answer: I.</think>Answer: I",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 137,
+      "completion_tokens": 119,
+      "total_tokens": 256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 815.9,
+      "prefill_tokens": 137,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 168.0,
+      "decode_tok_s": 21.2,
+      "spec_accept_rate": 0.56,
+      "tok_per_step": 1.58
+    }
+  }
+}
