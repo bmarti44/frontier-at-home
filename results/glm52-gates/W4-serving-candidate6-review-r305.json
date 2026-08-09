@@ -1,0 +1,75 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "candidate_hash": "1f0c1d2e75fddaac97672242645769209170ad42",
+  "review_round": 305,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 94,
+    "critical": [],
+    "high": [],
+    "medium": [
+      {
+        "id": "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE",
+        "evidence": "A replacement immediately before final manifest publication can still invalidate a twice-reconciled failure-artifact digest.",
+        "affected_gate": "failure-attempt evidence only; PASS scoring and live measurement unaffected",
+        "acceptance_test": "Verify terminal closure after finalizer return or exclude any final-transition mutation as unstable."
+      },
+      {
+        "id": "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW",
+        "evidence": "Publication lookup remains limited to GitHub's latest-100 event window.",
+        "affected_gate": "long-term replay durability, not immediate validity",
+        "acceptance_test": "Use an independently verifiable durable publication record."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": {
+      "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU": "VERIFIED_FIXED",
+      "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH": "VERIFIED_FIXED",
+      "ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE": "VERIFIED_FIXED",
+      "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE": "OPEN_NONBLOCKING",
+      "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW": "DEFERRED",
+      "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT": "VERIFIED_FIXED"
+    },
+    "verdict": "PASS_FOR_ENGINE_LAUNCH"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 90,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W4S-305-H1-RETAINED-DRIVER-BROKEN-SELF-PATH",
+        "affected_gate": "actual contained arm execution and pre-launch authorization",
+        "evidence": "The exact retained bootstrap assigns synthetic __file__=/w4/frozen/scripts/102_run_w4_serving_campaign.py, but production verify_candidate reads Path(__file__). The path is absent, so the production driver exits with FileNotFoundError before any engine starts. The systemd swap smoke used a synthetic runner and did not exercise this production check.",
+        "reproduction": "Execute the exact retained production bootstrap and --driver path with dummy post-preflight arguments; it exits at the nonexistent synthetic self-path.",
+        "acceptance_test": "Execute the retained production bootstrap through containment with a deliberate pre-engine stop. verify_dependencies, verify_candidate and lineage setup must complete from retained bytes; path swaps remain inert; no synthetic runner may satisfy the test."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": {
+      "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH": "VERIFIED_FIXED for dependency-swap mechanism; candidate remains non-runnable",
+      "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU": "VERIFIED_FIXED structurally",
+      "ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE": "VERIFIED_FIXED_BY_FOCUSED_TEST",
+      "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE": "VERIFIED_FIXED_BY_FOCUSED_TEST",
+      "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW": "DEFERRED",
+      "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT": "VERIFIED"
+    },
+    "verdict": "REJECT_PRE_LAUNCH"
+  },
+  "external_receipt": {
+    "github_event_id": "17156335668",
+    "github_created_at_unix": 1786234610,
+    "drand_round": 6360120,
+    "randomness_receipt_sha256": "810698edf1d23232e898bd9c352686941cf18fef6da5fc0085ee2e40e3897f74",
+    "schedules": ["BAAB", "BAAB", "BAAB", "ABBA", "BAAB"],
+    "independently_verified": true
+  },
+  "convergence": {
+    "candidate_count": 6,
+    "open_blocking_count_previous": 1,
+    "open_blocking_count_current": 1,
+    "nonshrinking_consecutive_candidates": 2,
+    "alarm_triggered": true,
+    "owner_pre_authorization": "The owner explicitly authorized continued work without further approval before round 305; candidate 7 is limited to this named pre-engine failure."
+  }
+}
