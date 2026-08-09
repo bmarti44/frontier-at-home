@@ -1,0 +1,97 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "candidate_hash": "27ab3347d57288bf77b0aa100f053c02f24fc05a",
+  "review_round": 304,
+  "runtime_started": false,
+  "external_receipt": {
+    "github_event_id": "17155752666",
+    "github_created_at_unix": 1786233540,
+    "drand_round": 6360085,
+    "randomness_receipt_sha256": "ec5cc49571a813b612a89a6fbfbfbb559e5a62d3ca67a2ea7bd23c2b835882f0",
+    "schedules": ["BAAB", "BAAB", "BAAB", "BAAB", "ABBA"],
+    "independently_verified": true
+  },
+  "gap_reviewer": {
+    "score_0_to_100": 77,
+    "critical": [],
+    "high": [
+      {
+        "id": "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU",
+        "affected_gate": "ADV-W4S-303-H1 executable dependency closure and serving-timing authority",
+        "evidence": "Every live arm still runs Python plus scripts/102_run_w4_serving_campaign.py by pathname after the parent candidate check. A same-UID atomic swap can execute different driver code and restore the reviewed file before the next check; safe-run binds the engine, not the Python driver producing request timing and observation artifacts.",
+        "reproduction": "Swap the runner after verify_candidate and before cgroup execution, execute a driver that launches the correct engine but fabricates timestamps, then restore the reviewed path.",
+        "acceptance_test": "Launch each contained driver from retained hash-verified runner and base bytes and bind the executed hashes; a deterministic post-verification pathname swap must be inert or FAIL."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE",
+        "evidence": "Instability in reserved raw.jsonl or summary.json occurs before the guarded artifact loop and can prevent terminal manifest publication.",
+        "acceptance_test": "Reserved-path regular-to-symlink and replacement mutations must still leave a terminal FAIL manifest."
+      },
+      {
+        "id": "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW",
+        "evidence": "Publication authentication depends on the exact PushEvent remaining in GitHub's rolling latest-100 event listing.",
+        "acceptance_test": "Use a durable authenticated publication record; explicitly deferred as nonblocking for immediate validity."
+      },
+      {
+        "id": "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT",
+        "evidence": "Dynamic configuration, tokenization, publication and randomness lineage can remain only in retained artifacts after an early failure.",
+        "acceptance_test": "Copy available dynamic lineage into terminal failure metadata and mark only unavailable facts explicitly."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": {
+      "ADV-W4S-303-H1-EXECUTABLE-DEPENDENCY-TOCTOU": "OPEN",
+      "ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE": "OPEN",
+      "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW": "DEFERRED",
+      "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT": "OPEN",
+      "W4S-R303-L1-RED-TESTS-CHANGED-DURING-IMPLEMENTATION": "FIXED"
+    },
+    "verdict": "REJECT_PRE_RUNTIME"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 55,
+    "critical": [
+      {
+        "id": "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH",
+        "affected_gate": "host containment, executed candidate identity, arm evidence authenticity and false-PASS resistance",
+        "evidence": "Actual arms reopen mutable runner and cgroup paths; the cgroup wrapper in turn selects the mutable repository safe-run path unless its existing pinned-safe interface is supplied. A swapped cgroup can bypass containment and a swapped driver can fabricate evidence.",
+        "reproduction": "Swap runner, cgroup or safe after parent verification and before child exec, then restore it before later checks.",
+        "acceptance_test": "Invoke retained runner/base, retained cgroup, and pinned retained safe descriptors; bind executed identities/hashes and prove deterministic after-verification swaps are inert or fail before an engine starts."
+      }
+    ],
+    "high": [],
+    "medium": [
+      {
+        "id": "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE",
+        "affected_gate": "durable terminal negative-result closure",
+        "evidence": "A regular artifact can be replaced after a successful stable read but before manifest publication, leaving the old digest beside new on-disk bytes.",
+        "acceptance_test": "Retain identities and reconcile membership and bytes before terminal publication; a synchronized post-read replacement must be recorded unstable or fail closed."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": {
+      "ADV-W4S-303-H1-EXECUTABLE-DEPENDENCY-TOCTOU": "OPEN on live arm launch; sealed post-hoc/BLS/render/tokenizer portions verified",
+      "ADV-W4S-303-M1-FAILURE-FINALIZER-SYMLINK-RACE": "OPEN on post-read replacement",
+      "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW": "DEFERRED",
+      "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT": "VERIFIED",
+      "W4S-R303-L1-RED-TESTS-CHANGED-DURING-IMPLEMENTATION": "VERIFIED"
+    },
+    "verdict": "REJECT_PRE_LAUNCH"
+  },
+  "root_reproduction": {
+    "live_arm_command_reopens_runner_path": true,
+    "cgroup_wrapper_reopens_safe_path_without_pin": true,
+    "candidate5_campaign_started": false,
+    "classification": "same ADV-W4S-303-H1 dependency-TOCTOU class; runner-only fix can retain unchanged frozen wrapper bytes"
+  },
+  "convergence": {
+    "candidate_count": 5,
+    "open_blocking_count_previous": 1,
+    "open_blocking_count_current": 1,
+    "nonshrinking_consecutive_candidates": 1,
+    "candidate_6_bounded_fix_authorized": true,
+    "escalation_triggered": false
+  }
+}
