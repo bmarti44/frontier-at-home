@@ -68,12 +68,18 @@ run_stage speed python3 scripts/30_bench_speed.py \
     --reps 5 --warmup 1 --max-tokens 256 --seed 42 \
     --context-levels 0,4096,16384 --tokenizer-path "$TOKENIZER"
 
+# HumanEval has no dev/holdout partition; the harness accepts only --split all
+# for it, and the published baseline (results/acc-humaneval-ds4.json) is
+# likewise split=all over all 164 items. gsm8k and mmlu-pro use dev so the
+# holdout sets stay unspent -- results/holdout-ledger.json governs those, and
+# they should not be consumed by a candidate that has not yet cleared dev.
 for suite in gsm8k mmlu-pro humaneval; do
-    run_stage "accuracy-$suite-dev" python3 scripts/31_bench_accuracy.py \
-        --base-url "$BASE_URL" --out "$OUT/acc-$suite-dev-0731.json" \
-        --stack-label "$LABEL" --suite "$suite" --split dev \
+    if [[ $suite == humaneval ]]; then split=all; else split=dev; fi
+    run_stage "accuracy-$suite-$split" python3 scripts/31_bench_accuracy.py \
+        --base-url "$BASE_URL" --out "$OUT/acc-$suite-$split-0731.json" \
+        --stack-label "$LABEL" --suite "$suite" --split "$split" \
         --extra-body "$EXTRA_BODY" \
-        --transcripts-dir "$OUT/transcripts/$suite-dev"
+        --transcripts-dir "$OUT/transcripts/$suite-$split"
 done
 
 printf '\n=== qualification summary ===\n' >&2

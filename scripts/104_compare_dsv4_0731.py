@@ -19,7 +19,27 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SUITES = ("gsm8k", "mmlu-pro", "humaneval")
+
+# Candidate and baseline filenames do not follow one rule, so they are stated
+# rather than derived: the MMLU-Pro baseline is filed under "mmlu", and
+# HumanEval has no dev/holdout partition at all (split=all, 164 items).
+SUITES = (
+    {
+        "suite": "gsm8k",
+        "candidate": "acc-gsm8k-dev-0731.json",
+        "baseline": "acc-gsm8k-dev-ds4.json",
+    },
+    {
+        "suite": "mmlu-pro",
+        "candidate": "acc-mmlu-pro-dev-0731.json",
+        "baseline": "acc-mmlu-dev-ds4.json",
+    },
+    {
+        "suite": "humaneval",
+        "candidate": "acc-humaneval-all-0731.json",
+        "baseline": "acc-humaneval-ds4.json",
+    },
+)
 
 
 def load(path: Path) -> dict[str, Any] | None:
@@ -59,14 +79,17 @@ def generation_contract(document: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def compare_accuracy(suite: str, candidate_dir: Path) -> dict[str, Any]:
-    candidate = load(candidate_dir / f"acc-{suite}-dev-0731.json")
-    baseline = load(REPO_ROOT / "results" / f"acc-{suite}-dev-ds4.json")
+def compare_accuracy(spec: dict[str, str], candidate_dir: Path) -> dict[str, Any]:
+    suite = spec["suite"]
+    candidate = load(candidate_dir / spec["candidate"])
+    baseline = load(REPO_ROOT / "results" / spec["baseline"])
     if candidate is None or baseline is None:
         return {
             "suite": suite,
             "status": "MISSING",
             "detail": "candidate or baseline artifact absent",
+            "candidate_path": spec["candidate"],
+            "baseline_path": spec["baseline"],
         }
 
     candidate_contract = generation_contract(candidate)
@@ -174,7 +197,7 @@ def main() -> int:
             else [c["name"] for c in golden.get("checks", []) if not c.get("pass")],
         },
         "speed": compare_speed(args.candidate_dir),
-        "accuracy": [compare_accuracy(suite, args.candidate_dir) for suite in SUITES],
+        "accuracy": [compare_accuracy(spec, args.candidate_dir) for spec in SUITES],
     }
 
     print(f"golden: pass={report['golden']['pass']} "
