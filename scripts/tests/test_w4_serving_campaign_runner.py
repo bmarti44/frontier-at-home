@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib.util
+import inspect
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,51 @@ SPEC.loader.exec_module(RUNNER)
 
 
 class W4ServingContainmentTest(unittest.TestCase):
+    def test_live_arm_launch_uses_retained_runner_cgroup_safe_and_base(self) -> None:
+        campaign_source = inspect.getsource(RUNNER._campaign)
+        self.assertIn("retained_arm_dependencies", campaign_source)
+        self.assertIn("contained_arm_command", campaign_source)
+        self.assertNotIn('str(Path(__file__))', campaign_source)
+        self.assertNotIn('command = [str(CGROUP)', campaign_source)
+
+    def test_retained_arm_dependencies_ignore_path_swaps(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = {
+                "runner": root / "runner.py",
+                "base": root / "base.py",
+                "cgroup": root / "cgroup.sh",
+                "safe": root / "safe.sh",
+            }
+            originals = {name: f"reviewed-{name}\n".encode() for name in paths}
+            for name, path in paths.items():
+                path.write_bytes(originals[name])
+            hashes = {name: hashlib.sha256(payload).hexdigest()
+                      for name, payload in originals.items()}
+            with mock.patch.object(RUNNER, "RUNNER_PATH", paths["runner"], create=True), \
+                 mock.patch.object(RUNNER, "BASE_PATH", paths["base"]), \
+                 mock.patch.object(RUNNER, "CGROUP", paths["cgroup"]), \
+                 mock.patch.object(RUNNER, "SAFE", paths["safe"]), \
+                 mock.patch.object(RUNNER, "BASE_SHA256", hashes["base"]), \
+                 mock.patch.object(RUNNER, "CGROUP_SHA256", hashes["cgroup"]), \
+                 mock.patch.object(RUNNER, "SAFE_SHA256", hashes["safe"]), \
+                 RUNNER.retained_arm_dependencies() as retained:
+                for name, path in paths.items():
+                    path.unlink()
+                    path.write_bytes(f"forged-{name}\n".encode())
+                self.assertEqual(
+                    {name: Path(retained[name + "_path"]).read_bytes()
+                     for name in paths}, originals)
+                command = RUNNER.contained_arm_command(
+                    retained, "w4-test", ["--driver", "off"])
+                rendered = "\0".join(command)
+                self.assertNotIn(str(paths["runner"]), rendered)
+                self.assertNotIn(str(paths["cgroup"]), rendered)
+                self.assertNotIn(str(paths["safe"]), rendered)
+                self.assertIn(retained["runner_path"], rendered)
+                self.assertIn(retained["base_path"], rendered)
+                self.assertIn(retained["cgroup_path"], rendered)
+
     def test_safe_run_candidate_directory_contains_named_binary(self) -> None:
         self.assertEqual(RUNNER.BIN.name, "ds4-server")
         self.assertEqual(RUNNER.CANDIDATE_SRC, RUNNER.BIN.parent)
@@ -381,6 +427,64 @@ class W4ServingContainmentTest(unittest.TestCase):
                 RUNNER.BASE._ACTIVE_CANDIDATE = None
         self.assertEqual(manifest["verdict"], "FAIL")
         self.assertEqual(manifest["rejected_unstable_paths"], ["unstable.log"])
+
+    def test_failure_finalizer_survives_reserved_path_instability(self) -> None:
+        for reserved in ("raw.jsonl", "summary.json"):
+            with self.subTest(reserved=reserved), tempfile.TemporaryDirectory() as directory:
+                attempt = Path(directory)
+                (attempt / reserved).write_text("reserved evidence\n")
+                original = RUNNER.BASE.read_stable
+                def injected(path):
+                    if path == attempt / reserved:
+                        raise OSError("reserved path race")
+                    return original(path)
+                RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+                RUNNER.BASE._ACTIVE_CANDIDATE = "2" * 40
+                caught = None
+                manifest = None
+                try:
+                    with mock.patch.object(RUNNER.BASE, "read_stable", side_effect=injected):
+                        try:
+                            RUNNER.finalize_failure(RuntimeError("reserved mutation"))
+                        except Exception as error:
+                            caught = error
+                    if (attempt / "manifest.json").is_file():
+                        manifest = json.loads((attempt / "manifest.json").read_bytes())
+                finally:
+                    RUNNER.BASE._ACTIVE_ATTEMPT = None
+                    RUNNER.BASE._ACTIVE_CANDIDATE = None
+                self.assertIsNone(caught)
+                self.assertIsNotNone(manifest)
+                self.assertEqual(manifest["verdict"], "FAIL")
+                self.assertIn(reserved, manifest["rejected_unstable_paths"])
+
+    def test_failure_finalizer_reconciles_postread_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            attempt = Path(directory)
+            raced = attempt / "raced.log"
+            raced.write_text("reviewed evidence\n")
+            original = RUNNER.BASE.read_stable
+            replaced = False
+            def injected(path):
+                nonlocal replaced
+                result = original(path)
+                if path == raced and not replaced:
+                    replaced = True
+                    path.unlink()
+                    path.write_text("replacement evidence\n")
+                return result
+            RUNNER.BASE._ACTIVE_ATTEMPT = attempt
+            RUNNER.BASE._ACTIVE_CANDIDATE = "2" * 40
+            try:
+                with mock.patch.object(RUNNER.BASE, "read_stable", side_effect=injected):
+                    RUNNER.finalize_failure(RuntimeError("post-read mutation"))
+                manifest = json.loads((attempt / "manifest.json").read_bytes())
+            finally:
+                RUNNER.BASE._ACTIVE_ATTEMPT = None
+                RUNNER.BASE._ACTIVE_CANDIDATE = None
+        self.assertEqual(manifest["verdict"], "FAIL")
+        self.assertNotIn("raced.log", manifest["artifacts"])
+        self.assertIn("raced.log", manifest["rejected_unstable_paths"])
 
 
 if __name__ == "__main__":

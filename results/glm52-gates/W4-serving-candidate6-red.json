@@ -1,0 +1,26 @@
+{
+  "schema": "glm52-w4-serving-candidate-red-v1",
+  "candidate": 6,
+  "unchanged_parent": "27ab3347d57288bf77b0aa100f053c02f24fc05a",
+  "review_round_source": 304,
+  "engine_started": false,
+  "test_command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner scripts.tests.test_w4_serving_campaign_scorer",
+  "observed": {
+    "tests_run": 32,
+    "passed": 27,
+    "failures": 4,
+    "errors": 1,
+    "blocking_reds": [
+      "live _campaign names mutable runner and cgroup paths instead of retained dependencies",
+      "no retained-arm dependency context exists, so post-verification swaps change executable bytes",
+      "reserved raw.jsonl instability prevents terminal FAIL publication",
+      "reserved summary.json instability prevents terminal FAIL publication",
+      "post-read artifact replacement leaves a stale digest beside replacement bytes"
+    ]
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w4_serving_campaign_runner.py": "f07c23e9f81c0ff73137807cc88ebb94b055c76be46373e6e805c01a27e2aff4",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581"
+  },
+  "acceptance": "Without starting an engine, every arm must execute retained hash-verified runner/base/cgroup/safe bytes and bind their hashes into safe evidence; deterministic pathname swaps must be inert or fail. Reserved and post-read evidence races must still produce a self-consistent terminal FAIL manifest. Frozen engine, microgate, request, scorer formula and wrapper bytes remain unchanged."
+}
