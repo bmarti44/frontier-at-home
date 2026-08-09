@@ -1,0 +1,47 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 8,
+  "implementation_commit": "1281b659b927e5a13711b4fcdeae05937836c127",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "launch_status": "NOT_RUN_PENDING_ROUND_307",
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate7-runtime-fail.json": "93cba7aac090c63a3a06c2a3157364cc1a9217de1a63c88e2bafa96b0f0361af",
+    "results/glm52-gates/W4-serving-candidate7-review-r306.json": "cb39e8a7c88f14c55c84977f9c88f8a0d98785fb85d8db04eea5affe9b99b168",
+    "results/glm52-gates/W4-serving-candidate8-red.json": "82b851e33fad9b3c32884c64520d526c7101a9df5c88e45dc38a183efd584d54",
+    "results/glm52-gates/W4-serving-candidate8-preaudit.txt": "1538438b4e2988bb3be65e6922f5e3636edb5e5e3a7c157ee0241f5b957925cc",
+    "scripts/101_score_w4_serving_campaign.py": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7",
+    "scripts/102_run_w4_serving_campaign.py": "6c3fa421f0a0a09a7307e1f4733bdfec74b3e84fdb72436c742f873d3490668f",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "94ac431624e273fdf6239e205e347929c8a3d14413f331cfd673c857bc010a49",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581",
+    "scripts/lint_secrets.sh": "700a614f834bff9cb96be9e7ddfc1546b9f53286a1c8f474ffd9e2b66f8ba7e1"
+  },
+  "runtime_failure_disposition": {
+    "observed_failure": "Candidate 7 rejected a safe completed request because the production request used two contiguous internal sync/logit segments instead of exactly one.",
+    "bounded_fix": "Candidate 8 accepts one or more segments only when sync traces and logit filenames prove exact ordered contiguous coverage from zero through prompt_tokens; it binds every segment into logit_sequence_sha256 and uses only the final segment for final_logits_sha256.",
+    "immutable_replay": "PASS against the hash-bound candidate 7 arm; no new engine run.",
+    "malformed_sequence_mutations": "PASS_REJECTED"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "33/33 PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS",
+    "dependency_candidate_hash_preflight": "PASS",
+    "independent_tokenization": "19783 tokens unchanged",
+    "immutable_failed_arm_replay": "PASS",
+    "clean_exact_head": "PASS before freeze record",
+    "user_systemd_available": true,
+    "engine_or_fio_active": false,
+    "engine_started_for_candidate8": false,
+    "frozen_engine_scorer_wrapper_microgate_fixture_unchanged": true
+  },
+  "convergence": {
+    "candidate_count": 8,
+    "source": "bounded execution defect discovered by candidate 7 campaign",
+    "named_blocking_classes_targeted": 1,
+    "new_scope_added": false,
+    "frozen_scope_modified": false,
+    "owner_authorization": "The owner explicitly authorized continued work without further approval. Candidate 8 is the maximum candidate permitted by the standing convergence rule and is limited to this observed runtime parser mismatch."
+  }
+}
