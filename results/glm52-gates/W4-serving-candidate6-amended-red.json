@@ -1,0 +1,30 @@
+{
+  "schema": "glm52-w4-serving-candidate-red-v1",
+  "candidate": 6,
+  "amends": "results/glm52-gates/W4-serving-candidate6-red.json",
+  "unchanged_parent": "27ab3347d57288bf77b0aa100f053c02f24fc05a",
+  "review_round_source": 304,
+  "engine_started": false,
+  "reproduction_root": "/tmp/w4-c6-amended-red.DcI9sU",
+  "test_command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner scripts.tests.test_w4_serving_campaign_scorer",
+  "observed": {
+    "tests_run": 32,
+    "passed": 25,
+    "failures": 4,
+    "errors": 3,
+    "reason_for_amendment": "The existing replay fixture now declares the driver-lineage artifact required by the named round-304 acceptance test; the unchanged candidate still lacks RUNNER_PATH and retained dependencies, and its scorer digest becomes stale against the amended replay path.",
+    "blocking_reds": [
+      "live arm command still names mutable runner and cgroup paths",
+      "retained arm dependency context is absent",
+      "existing replay cannot construct the required executed-runner lineage on unchanged code",
+      "reserved raw and summary races prevent terminal FAIL publication",
+      "post-read replacement leaves stale artifact authority",
+      "unchanged runner/scorer binding rejects the amended authoritative replay"
+    ]
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w4_serving_campaign_runner.py": "bac41e6c4a6791f213e774cca34bbb1884404b4149329b2d16eb870c5aa589db",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581"
+  },
+  "acceptance": "The exact amended test bytes must pass while frozen engine, wrappers, microgate, request and formula remain unchanged. Every authoritative arm and replay must bind the retained runner/base/cgroup/safe hashes."
+}

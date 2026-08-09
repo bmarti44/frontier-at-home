@@ -284,6 +284,12 @@ class W4ServingContainmentTest(unittest.TestCase):
                 "observation.json": json.dumps(observation).encode(),
                 "environment.json": json.dumps(environment).encode(),
                 "child-exit.json": b'{"exit_status":0}',
+                "driver-lineage.json": json.dumps({
+                    "runner_sha256": hashlib.sha256(RUNNER.RUNNER_PATH.read_bytes()).hexdigest(),
+                    "base_runner_sha256": RUNNER.BASE_SHA256,
+                    "cgroup_sha256": RUNNER.CGROUP_SHA256,
+                    "safe_run_sha256": RUNNER.SAFE_SHA256,
+                }, sort_keys=True, separators=(",", ":")).encode() + b"\n",
             }
             for name, payload in files.items():
                 (out / name).write_bytes(payload)
