@@ -1,0 +1,75 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "candidate_hash": "26abdc4ce3e82c05f6cb8dd46ddcaf49e493be91",
+  "review_round": 306,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 94,
+    "critical": [],
+    "high": [],
+    "medium": [
+      {
+        "id": "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE",
+        "evidence": "Carried forward unchanged from round 305; candidate 7 does not modify failure finalization.",
+        "affected_gate": "Failure-attempt archival evidence only.",
+        "reproduction_instructions": "Replace an artifact immediately before terminal manifest publication and compare its bytes with the recorded digest.",
+        "proposed_acceptance_test": "Require final closure verification after publication or exclude transition-mutated artifacts as unstable."
+      },
+      {
+        "id": "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW",
+        "evidence": "Carried forward unchanged. Candidate 7 current publication and drand receipt verify successfully.",
+        "affected_gate": "Long-term replay durability.",
+        "reproduction_instructions": "Attempt reconstruction after the PushEvent leaves the GitHub latest-100 event window.",
+        "proposed_acceptance_test": "Verify an aged publication using an independently durable source."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {
+        "id": "ADV-W4S-305-H1-RETAINED-DRIVER-BROKEN-SELF-PATH",
+        "status": "VERIFIED_FIXED",
+        "evidence": "The exact retained runner bytes were executed with synthetic __file__ and a deliberate nonempty output directory. Candidate verification completed and execution stopped with the expected CampaignError, without FileNotFoundError or ds4-server startup."
+      },
+      {"id": "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE", "status": "OPEN_NONBLOCKING"},
+      {"id": "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW", "status": "DEFERRED_NONBLOCKING"},
+      {"id": "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT", "status": "REMAINS_VERIFIED_FIXED"}
+    ],
+    "verdict": "PASS_FOR_ENGINE_LAUNCH"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 100,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {
+        "id": "ADV-W4S-305-H1-RETAINED-DRIVER-BROKEN-SELF-PATH",
+        "status": "VERIFIED_FIXED",
+        "evidence": "The exact retained production bootstrap ran through real user-systemd containment to the deliberate pre-engine CampaignError. Synthetic __file__ caused no FileNotFoundError, mutable runner-path reads were unused, and forged retained bytes failed candidate verification.",
+        "affected_gate": "Actual contained arm execution and candidate authorization.",
+        "reproduction": "Execute contained_arm_command using sealed candidate runner/base/cgroup/safe descriptors and a non-fresh output directory, then repeat with altered retained runner bytes.",
+        "acceptance": "Reviewed candidate reaches the deliberate pre-engine stop; altered executing bytes fail candidate verification; mutable runner pathname and synthetic __file__ are not read."
+      },
+      {"id": "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH", "status": "REMAINS_VERIFIED_FIXED"}
+    ],
+    "verdict": "PASS_FOR_ENGINE_LAUNCH"
+  },
+  "external_receipt": {
+    "github_event_id": "17156662495",
+    "github_created_at_unix": 1786235252,
+    "drand_round": 6360142,
+    "randomness_receipt_sha256": "d054959dc9418f630a3a48e0a827930c7b85d5cf3a33877282e443567a9103e0",
+    "schedules": ["ABBA", "ABBA", "ABBA", "BAAB", "BAAB"],
+    "independently_verified": true
+  },
+  "launch_authorization": {
+    "no_verified_critical_or_high": true,
+    "engine_launch_authorized": true,
+    "review_scope": "candidate6-to-candidate7 delta only",
+    "frozen_engine_scorer_wrapper_microgate_fixture_unchanged": true
+  }
+}
