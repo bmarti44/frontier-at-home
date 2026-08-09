@@ -169,6 +169,7 @@ DRIVER_BOOTSTRAP = (
     "assert hashlib.sha256(bb).hexdigest()==bh;"
     "sys.argv=[logical,*args];"
     "g={'__file__':logical,'__name__':'__main__','_W4_INJECTED_BASE_BYTES':bb,"
+    "'_W4_EXECUTED_RUNNER_BYTES':rb,"
     "'_W4_EXECUTED_RUNNER_SHA256':rh,'_W4_EXECUTED_BASE_SHA256':bh,"
     "'_W4_EXECUTED_CGROUP_SHA256':ch,'_W4_EXECUTED_SAFE_SHA256':sh};"
     "exec(compile(rb,logical,'exec'),g)"
@@ -255,7 +256,11 @@ def verify_candidate(candidate: str) -> None:
         check=True, capture_output=True, text=True,
     ).stdout
     relative = "scripts/102_run_w4_serving_campaign.py"
-    if head != candidate or dirty or git_bytes(candidate, relative) != Path(__file__).read_bytes():
+    executing = globals().get("_W4_EXECUTED_RUNNER_BYTES")
+    if executing is None:
+        executing = BASE.read_stable(RUNNER_PATH)[0]
+    if (not isinstance(executing, bytes) or head != candidate or dirty
+            or git_bytes(candidate, relative) != executing):
         raise CampaignError("candidate is not the clean executing HEAD")
 
 
