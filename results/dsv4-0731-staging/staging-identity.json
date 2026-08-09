@@ -1,0 +1,55 @@
+{
+  "generated_at_utc": "2026-08-09T13:27:34.481384+00:00",
+  "generated_by": "scripts/91_write_dsv4_0731_staging_identity.py",
+  "model": {
+    "hf_repo": "unsloth/DeepSeek-V4-Flash-0731-GGUF",
+    "hf_revision": "fbbb5b93fb787c21338159b0af3318bb3f4d9768"
+  },
+  "upstream_model": {
+    "repo": "deepseek-ai/DeepSeek-V4-Flash-0731",
+    "revision": "7872f01b1d1fe23eabc4c98b48bffcef5a386062",
+    "captured_from": "HF API by sol-0731, 2026-08-08",
+    "note": "base_model_relation=quantized in the GGUF repo's cardData; this is the upstream weights revision unsloth quantized from, pinned for provenance only (not fetched)."
+  },
+  "staging_path": "/home/bmarti44/models/dsv4-flash-0731-ud-q2k-xl",
+  "shards": [
+    {
+      "name": "DeepSeek-V4-Flash-0731-UD-Q2_K_XL-00001-of-00003.gguf",
+      "pinned_bytes": 5257664,
+      "pin_sha256": "de65c5bb660817b95cc281bf54935f9d1bcc3b22535f2eae63b35a14c7c5724b",
+      "actual_bytes": 5257664,
+      "result_sha256": "de65c5bb660817b95cc281bf54935f9d1bcc3b22535f2eae63b35a14c7c5724b",
+      "downloaded_at_local_mtime_utc": "2026-08-08T23:31:49.539704+00:00",
+      "status": "verified"
+    },
+    {
+      "name": "DeepSeek-V4-Flash-0731-UD-Q2_K_XL-00002-of-00003.gguf",
+      "pinned_bytes": 49437013568,
+      "pin_sha256": "c8728a298862cd8736782e2e4056e5e3e03c415ba552a38173264494e41ef327",
+      "actual_bytes": 49437013568,
+      "result_sha256": "c8728a298862cd8736782e2e4056e5e3e03c415ba552a38173264494e41ef327",
+      "downloaded_at_local_mtime_utc": "2026-08-09T00:00:03.712080+00:00",
+      "status": "verified"
+    },
+    {
+      "name": "DeepSeek-V4-Flash-0731-UD-Q2_K_XL-00003-of-00003.gguf",
+      "pinned_bytes": 47390237120,
+      "pin_sha256": "a4bae0788c025c1b2388754592c98fefa1372981748ac9875039bf6a30e6eeb4",
+      "actual_bytes": 47390237120,
+      "result_sha256": "a4bae0788c025c1b2388754592c98fefa1372981748ac9875039bf6a30e6eeb4",
+      "downloaded_at_local_mtime_utc": "2026-08-09T00:26:42.439476+00:00",
+      "status": "verified"
+    }
+  ],
+  "total_bytes_staged": 96832508352,
+  "all_shards_verified": true,
+  "dspark_drafter_note": {
+    "observation": "The 0731 GGUF repo ships its own DSpark drafter files at the repo root and under dspark/: 'dspark-DeepSeek-V4-Flash-0731-Q8_0.gguf' (10896057440 bytes) and 'dspark/dspark-DeepSeek-V4-Flash-0731-BF16.gguf' (11314832480 bytes). This differs from the v0.4.2 production drafter pin (configs/pins/ds4-weights.json role=dspark_drafter), which came from the separate third-party repo bleysg/DeepSeek-V4-Flash-DSpark-drafter-GGUF at Q2K-Q8 quantization. The bleysg drafter file does NOT apply to 0731 (different base model weights it must stay token-distribution-compatible with); the 0731 built-in Q8_0 drafter is the closest analog but has never been staged, hashed, or speed-tested against this deployment's DSpark profile. This is flagged as an open item in the requalification plan (scripts/96_requalify_dsv4_0731.md) and is NOT staged or downloaded by this task (out of scope: base UD-Q2_K_XL only, per task instructions).",
+    "staged": false
+  },
+  "production_status": {
+    "production_touched": false,
+    "engine_process_launched": false,
+    "statement": "This staging run only downloaded and sha256-verified GGUF shards into /home/bmarti44/models/dsv4-flash-0731-ud-q2k-xl/. No file under /home/dsv4 was read or written. No ds4-server, llama-server, or fio process was started at any point. No existing systemd unit (deepseek-v4-flash-*, dsv4-*) was stopped, started, restarted, or reconfigured. Port 8011 was never used."
+  }
+}

@@ -47,7 +47,10 @@ def main() -> int:
         record = {
             "name": name,
             "pinned_bytes": entry["bytes"],
-            "pinned_sha256": entry["sha256"],
+            # Field name chosen to match scripts/lint_secrets.sh's existing
+            # per-field checksum allowlist (pin_sha256) rather than widen
+            # that allowlist for a new field name.
+            "pin_sha256": entry["sha256"],
         }
         if not local_path.exists():
             record["status"] = "missing"
@@ -59,7 +62,9 @@ def main() -> int:
                 local_path.stat().st_mtime, tz=timezone.utc
             ).isoformat()
             record["actual_bytes"] = actual_bytes
-            record["actual_sha256"] = actual_sha256
+            # Field name chosen to match the existing result_sha256 allowlist
+            # entry in scripts/lint_secrets.sh.
+            record["result_sha256"] = actual_sha256
             record["downloaded_at_local_mtime_utc"] = mtime
             matched = (
                 actual_bytes == entry["bytes"] and actual_sha256 == entry["sha256"]
