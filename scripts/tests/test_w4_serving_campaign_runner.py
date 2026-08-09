@@ -20,6 +20,26 @@ SPEC.loader.exec_module(RUNNER)
 
 
 class W4ServingContainmentTest(unittest.TestCase):
+    def test_candidate_check_uses_retained_bytes_with_synthetic_self_path(self) -> None:
+        candidate = "3" * 40
+        retained = b"reviewed retained runner bytes"
+        head = mock.Mock(stdout=candidate + "\n")
+        clean = mock.Mock(stdout="")
+        prior_file = RUNNER.__file__
+        prior_retained = getattr(RUNNER, "_W4_EXECUTED_RUNNER_BYTES", None)
+        RUNNER.__file__ = "/w4/frozen/scripts/102_run_w4_serving_campaign.py"
+        RUNNER._W4_EXECUTED_RUNNER_BYTES = retained
+        try:
+            with mock.patch.object(RUNNER.subprocess, "run", side_effect=(head, clean)), \
+                 mock.patch.object(RUNNER, "git_bytes", return_value=retained):
+                RUNNER.verify_candidate(candidate)
+        finally:
+            RUNNER.__file__ = prior_file
+            if prior_retained is None:
+                del RUNNER._W4_EXECUTED_RUNNER_BYTES
+            else:
+                RUNNER._W4_EXECUTED_RUNNER_BYTES = prior_retained
+
     def test_live_arm_launch_uses_retained_runner_cgroup_safe_and_base(self) -> None:
         campaign_source = inspect.getsource(RUNNER._campaign)
         self.assertIn("retained_arm_dependencies", campaign_source)

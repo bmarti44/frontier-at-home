@@ -1,0 +1,22 @@
+{
+  "schema": "glm52-w4-serving-candidate-red-v1",
+  "candidate": 7,
+  "unchanged_parent": "1f0c1d2e75fddaac97672242645769209170ad42",
+  "review_round_source": 305,
+  "engine_started": false,
+  "test_command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner scripts.tests.test_w4_serving_campaign_scorer",
+  "observed": {
+    "tests_run": 33,
+    "passed": 32,
+    "failures": 0,
+    "errors": 1,
+    "blocking_reds": [
+      "verify_candidate ignores the already-retained runner bytes and opens synthetic __file__, raising FileNotFoundError before engine launch"
+    ]
+  },
+  "tests_sha256_by_path": {
+    "scripts/tests/test_w4_serving_campaign_runner.py": "dde6984fc5bc3d1b5948eb1bb872ae319beb439f84cabf4642aa690973b46032",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581"
+  },
+  "acceptance": "verify_candidate must compare the candidate's tracked runner against the already-retained executing bytes when invoked through the sealed bootstrap. The exact production bootstrap must reach a deliberate pre-engine stop without FileNotFoundError; no engine may start."
+}
