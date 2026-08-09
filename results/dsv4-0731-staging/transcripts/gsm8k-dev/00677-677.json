@@ -1,0 +1,55 @@
+{
+  "index": 677,
+  "task_id": 677,
+  "rendered_prompt_sha256": "faeaa0476a8c55ea519dfedde01d8c33c05679d4a8b0676cba3aefcd277356d3",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to find how many more signatures they need to reach a combined total of 100.  \nCurrently, Carol has 20 and Jennifer has 44, so together they have 20 + 44 = 64 signatures.  \nThey want 100 total, so they need 100 - 64 = 36 more signatures.  \n\nAnswer: 36",
+  "finish_reason": "stop",
+  "expected": "36",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7963530540000647
+  },
+  "response": {
+    "id": "cmpl-213",
+    "object": "text_completion",
+    "created": 1786299048,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to find how many more signatures they need to reach a combined total of 100.  \nCurrently, Carol has 20 and Jennifer has 44, so together they have 20 + 44 = 64 signatures.  \nThey want 100 total, so they need 100 - 64 = 36 more signatures.  \n\nAnswer: 36",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 150,
+      "completion_tokens": 72,
+      "total_tokens": 222,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 897.8,
+      "prefill_tokens": 150,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 167.2,
+      "decode_tok_s": 24.9,
+      "spec_accept_rate": 0.821,
+      "tok_per_step": 1.87
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,54 @@
+{
+  "index": 301,
+  "task_id": 374,
+  "rendered_prompt_sha256": "dd94045eabb5d27e6a16bef1d1124d6e5616c2991655c22f90c74bcb712e54bd",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "To find the net amount after successive discounts, apply each discount sequentially:\n\n1. First discount: 20% of $4,500 = $900  \n   Amount after first discount: $4,500 - $900 = $3,600\n\n2. Second discount: 15% of $3,600 = $540  \n   Amount after second discount: $3,600 - $540 = $3,060\n\n3. Third discount: 2.5% of $3,060 = $76.50  \n   Amount after third discount: $3,060 - $76.50 = $2,983.50\n\nThe net amount is **$2,983.50**, which corresponds to option **G**.\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.988285077968612
+  },
+  "response": {
+    "id": "cmpl-289",
+    "object": "text_completion",
+    "created": 1786299418,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "To find the net amount after successive discounts, apply each discount sequentially:\n\n1. First discount: 20% of $4,500 = $900  \n   Amount after first discount: $4,500 - $900 = $3,600\n\n2. Second discount: 15% of $3,600 = $540  \n   Amount after second discount: $3,600 - $540 = $3,060\n\n3. Third discount: 2.5% of $3,060 = $76.50  \n   Amount after third discount: $3,060 - $76.50 = $2,983.50\n\nThe net amount is **$2,983.50**, which corresponds to option **G**.\n\nAnswer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 144,
+      "completion_tokens": 152,
+      "total_tokens": 296,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 806.9,
+      "prefill_tokens": 144,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 178.6,
+      "decode_tok_s": 24.6,
+      "spec_accept_rate": 0.807,
+      "tok_per_step": 1.82
+    }
+  }
+}

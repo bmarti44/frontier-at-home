@@ -1,0 +1,54 @@
+{
+  "index": 7585,
+  "task_id": 7768,
+  "rendered_prompt_sha256": "f6f37b3e1f17faf481b1a87a8e4832dfb0d6959750bbadaf1e400d6205f090ba",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need the number of lattice paths from (0,0) to (10,10) with steps right/up, not crossing the diagonal y = x.  \n\nThis is the Catalan number C_n for n=10, since the condition \"does not cross the diagonal\" means staying at or below the diagonal (or above, symmetric).  \nCatalan number C_10 = 16796.  \n\nAnswer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.732011012965813
+  },
+  "response": {
+    "id": "cmpl-420",
+    "object": "text_completion",
+    "created": 1786300386,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need the number of lattice paths from (0,0) to (10,10) with steps right/up, not crossing the diagonal y = x.  \n\nThis is the Catalan number C_n for n=10, since the condition \"does not cross the diagonal\" means staying at or below the diagonal (or above, symmetric).  \nCatalan number C_10 = 16796.  \n\nAnswer: E",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 135,
+      "completion_tokens": 84,
+      "total_tokens": 219,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 809.5,
+      "prefill_tokens": 135,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 166.9,
+      "decode_tok_s": 21.4,
+      "spec_accept_rate": 0.577,
+      "tok_per_step": 1.6
+    }
+  }
+}

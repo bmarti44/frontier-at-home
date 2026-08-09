@@ -1,0 +1,54 @@
+{
+  "index": 3701,
+  "task_id": 3824,
+  "rendered_prompt_sha256": "a17453facd2027ba4939c3731c110868ffa32a2f4e83ac104994282d773a45fc",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We are told the gas undergoes isothermal compression, so temperature is constant. For an ideal gas, \\( P_1 V_1 = P_2 V_2 \\).  \nThe volume is reduced by \\( 2.20 \\, \\mathrm{dm^3} \\), so  \n\\( V_1 = V_2 + 2.20 = 4.65 + 2.20 = 6.85 \\, \\mathrm{dm^3} \\).  \nFinal pressure \\( P_2 = 5.04 \\, \\mathrm{bar} \\).  \nConvert to atm: \\( 1 \\, \\mathrm{bar} = 0.986923 \\, \\mathrm{atm} \\), so  \n\\( P_2 = 5.04 \\times 0.986923 = 4.974 \\, \\mathrm{atm} \\).  \nNow \\( P_1 = P_2 \\frac{V_2}{V_1} = 4.974 \\times \\frac{4.65}{6.85} \\approx 4.974 \\times 0.6788 \\approx 3.38 \\, \\mathrm{atm} \\).  \nThat matches option B.\n\nAnswer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.864061865955591
+  },
+  "response": {
+    "id": "cmpl-306",
+    "object": "text_completion",
+    "created": 1786299573,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We are told the gas undergoes isothermal compression, so temperature is constant. For an ideal gas, \\( P_1 V_1 = P_2 V_2 \\).  \nThe volume is reduced by \\( 2.20 \\, \\mathrm{dm^3} \\), so  \n\\( V_1 = V_2 + 2.20 = 4.65 + 2.20 = 6.85 \\, \\mathrm{dm^3} \\).  \nFinal pressure \\( P_2 = 5.04 \\, \\mathrm{bar} \\).  \nConvert to atm: \\( 1 \\, \\mathrm{bar} = 0.986923 \\, \\mathrm{atm} \\), so  \n\\( P_2 = 5.04 \\times 0.986923 = 4.974 \\, \\mathrm{atm} \\).  \nNow \\( P_1 = P_2 \\frac{V_2}{V_1} = 4.974 \\times \\frac{4.65}{6.85} \\approx 4.974 \\times 0.6788 \\approx 3.38 \\, \\mathrm{atm} \\).  \nThat matches option B.\n\nAnswer: B",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 190,
+      "completion_tokens": 250,
+      "total_tokens": 440,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 497.1,
+      "prefill_tokens": 190,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 383.5,
+      "decode_tok_s": 24.1,
+      "spec_accept_rate": 0.771,
+      "tok_per_step": 1.78
+    }
+  }
+}

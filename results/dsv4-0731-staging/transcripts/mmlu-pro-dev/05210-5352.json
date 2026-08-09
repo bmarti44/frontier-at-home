@@ -1,0 +1,54 @@
+{
+  "index": 5210,
+  "task_id": 5352,
+  "rendered_prompt_sha256": "a4e82c63cfd752f7131a3e5d8149a74faabaedbef525d3cf81c7b6820baf38cb",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The dividend growth rate can be found using the Gordon Growth Model:  \nPrice = Dividend / (Required Return - Growth Rate).  \nHere, Price = $75, Dividend = $3, Required Return = 12% (0.12).  \n75 = 3 / (0.12 - g)  \n0.12 - g = 3/75 = 0.04  \ng = 0.12 - 0.04 = 0.08 = 8%.  \n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.049376582959667
+  },
+  "response": {
+    "id": "cmpl-451",
+    "object": "text_completion",
+    "created": 1786300599,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The dividend growth rate can be found using the Gordon Growth Model:  \nPrice = Dividend / (Required Return - Growth Rate).  \nHere, Price = $75, Dividend = $3, Required Return = 12% (0.12).  \n75 = 3 / (0.12 - g)  \n0.12 - g = 3/75 = 0.04  \ng = 0.12 - 0.04 = 0.08 = 8%.  \n\nAnswer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 141,
+      "completion_tokens": 103,
+      "total_tokens": 244,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 844.9,
+      "prefill_tokens": 141,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 167.3,
+      "decode_tok_s": 24.5,
+      "spec_accept_rate": 0.804,
+      "tok_per_step": 1.82
+    }
+  }
+}

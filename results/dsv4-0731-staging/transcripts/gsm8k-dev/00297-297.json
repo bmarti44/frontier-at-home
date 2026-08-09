@@ -1,0 +1,55 @@
+{
+  "index": 297,
+  "task_id": 297,
+  "rendered_prompt_sha256": "3069e1eaef85633d58af8b3acaafa8e35419204844c8074d6f063365dbc52886",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's calculate Sam's total sales for the week.\n\n- Closed on Monday and Friday, so no sales those days.\n- Weekend (Saturday and Sunday): 20 crates.\n- Tuesday: 15 crates.\n- Wednesday: 12 crates.\n- Thursday: 18 crates.\n\nTotal = 20 + 15 + 12 + 18 = 65 crates.\n\nTarget = 120 crates.\n\nDifference = 120 - 65 = 55 crates.\n\nAnswer: 55",
+  "finish_reason": "stop",
+  "expected": "55",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.266076939878985
+  },
+  "response": {
+    "id": "cmpl-263",
+    "object": "text_completion",
+    "created": 1786299299,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's calculate Sam's total sales for the week.\n\n- Closed on Monday and Friday, so no sales those days.\n- Weekend (Saturday and Sunday): 20 crates.\n- Tuesday: 15 crates.\n- Wednesday: 12 crates.\n- Thursday: 18 crates.\n\nTotal = 20 + 15 + 12 + 18 = 65 crates.\n\nTarget = 120 crates.\n\nDifference = 120 - 65 = 55 crates.\n\nAnswer: 55",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 116,
+      "completion_tokens": 103,
+      "total_tokens": 219,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 892.5,
+      "prefill_tokens": 116,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 130.1,
+      "decode_tok_s": 23.6,
+      "spec_accept_rate": 0.741,
+      "tok_per_step": 1.76
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,55 @@
+{
+  "index": 1261,
+  "task_id": 1261,
+  "rendered_prompt_sha256": "ba117dd09186e45666b5183458f149b8e5cb818f1cff1c96cc48f39e13da9ceb",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, calculate the cost for one week:  \n5 blouses × $5 = $25  \n2 pants × $8 = $16  \n1 skirt × $6 = $6  \nTotal per week = $25 + $16 + $6 = $47  \n\nFor 5 weeks: $47 × 5 = $235  \n\nAnswer: 235",
+  "finish_reason": "stop",
+  "expected": "235",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7331511080265045
+  },
+  "response": {
+    "id": "cmpl-234",
+    "object": "text_completion",
+    "created": 1786299152,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, calculate the cost for one week:  \n5 blouses × $5 = $25  \n2 pants × $8 = $16  \n1 skirt × $6 = $6  \nTotal per week = $25 + $16 + $6 = $47  \n\nFor 5 weeks: $47 × 5 = $235  \n\nAnswer: 235",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 115,
+      "completion_tokens": 72,
+      "total_tokens": 187,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 900.3,
+      "prefill_tokens": 115,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 127.8,
+      "decode_tok_s": 25.4,
+      "spec_accept_rate": 0.868,
+      "tok_per_step": 1.92
+    }
+  },
+  "used_fallback": false
+}

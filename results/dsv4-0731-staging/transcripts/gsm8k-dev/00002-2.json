@@ -1,0 +1,55 @@
+{
+  "index": 2,
+  "task_id": 2,
+  "rendered_prompt_sha256": "d6d1c7afedea967ccfc6b1bfac15c6d5ea441048e388ca914da3e3d756b9a6c6",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to calculate the profit Josh made.\n\n1. He bought the house for $80,000.\n2. He spent $50,000 on repairs.\n3. The repairs increased the value of the house by 150%.\n\nFirst, find the new value after the increase:\n- Original value = $80,000\n- Increase = 150% of $80,000 = 1.5 * 80,000 = $120,000\n- New value = $80,000 + $120,000 = $200,000\n\nTotal cost = purchase price + repairs = $80,000 + $50,000 = $130,000\n\nProfit = new value - total cost = $200,000 - $130,000 = $70,000\n\nAnswer: 70000",
+  "finish_reason": "stop",
+  "expected": "70000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.288023787084967
+  },
+  "response": {
+    "id": "cmpl-259",
+    "object": "text_completion",
+    "created": 1786299280,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to calculate the profit Josh made.\n\n1. He bought the house for $80,000.\n2. He spent $50,000 on repairs.\n3. The repairs increased the value of the house by 150%.\n\nFirst, find the new value after the increase:\n- Original value = $80,000\n- Increase = 150% of $80,000 = 1.5 * 80,000 = $120,000\n- New value = $80,000 + $120,000 = $200,000\n\nTotal cost = purchase price + repairs = $80,000 + $50,000 = $130,000\n\nProfit = new value - total cost = $200,000 - $130,000 = $70,000\n\nAnswer: 70000",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 87,
+      "completion_tokens": 162,
+      "total_tokens": 249,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 732.9,
+      "prefill_tokens": 87,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 118.8,
+      "decode_tok_s": 24.7,
+      "spec_accept_rate": 0.809,
+      "tok_per_step": 1.83
+    }
+  },
+  "used_fallback": false
+}

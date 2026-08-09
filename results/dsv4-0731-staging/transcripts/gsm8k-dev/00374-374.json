@@ -1,0 +1,55 @@
+{
+  "index": 374,
+  "task_id": 374,
+  "rendered_prompt_sha256": "e6360dd93fa0919b8da73e6cd259083a1b607e976e8e01618e217f87da38109c",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Mary has 30 sheep. Half of them is 15 sheep. Each of those 15 gives 1 kg of milk, so that's 15 kg. The other half is also 15 sheep, each giving 2 kg, so that's 30 kg. Total per day is 15 + 30 = 45 kg.\n\nAnswer: 45",
+  "finish_reason": "stop",
+  "expected": "45",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.819029070902616
+  },
+  "response": {
+    "id": "cmpl-250",
+    "object": "text_completion",
+    "created": 1786299225,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Mary has 30 sheep. Half of them is 15 sheep. Each of those 15 gives 1 kg of milk, so that's 15 kg. The other half is also 15 sheep, each giving 2 kg, so that's 30 kg. Total per day is 15 + 30 = 45 kg.\n\nAnswer: 45",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 77,
+      "completion_tokens": 73,
+      "total_tokens": 150,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 717.8,
+      "prefill_tokens": 77,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 107.4,
+      "decode_tok_s": 23.6,
+      "spec_accept_rate": 0.714,
+      "tok_per_step": 1.76
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,55 @@
+{
+  "index": 314,
+  "task_id": 314,
+  "rendered_prompt_sha256": "edf91ba9b48c77545822a510ded0908a57bedca356f644b7a1bc1ed63f03c32c",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let \\( D \\) = number of defense players.  \nOffense = \\( 2D \\).  \nSpecial teams = \\( \\frac{D}{2} \\).  \nTotal: \\( D + 2D + \\frac{D}{2} = 105 \\).  \nThat is \\( 3.5D = 105 \\).  \nSo \\( D = 30 \\).  \n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.909853039076552
+  },
+  "response": {
+    "id": "cmpl-258",
+    "object": "text_completion",
+    "created": 1786299273,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let \\( D \\) = number of defense players.  \nOffense = \\( 2D \\).  \nSpecial teams = \\( \\frac{D}{2} \\).  \nTotal: \\( D + 2D + \\frac{D}{2} = 105 \\).  \nThat is \\( 3.5D = 105 \\).  \nSo \\( D = 30 \\).  \n\nAnswer: 30",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 90,
+      "completion_tokens": 82,
+      "total_tokens": 172,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 726.5,
+      "prefill_tokens": 90,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 124.0,
+      "decode_tok_s": 25.8,
+      "spec_accept_rate": 0.884,
+      "tok_per_step": 1.93
+    }
+  },
+  "used_fallback": false
+}

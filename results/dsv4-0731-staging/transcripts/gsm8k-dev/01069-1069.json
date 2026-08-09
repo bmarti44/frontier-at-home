@@ -1,0 +1,55 @@
+{
+  "index": 1069,
+  "task_id": 1069,
+  "rendered_prompt_sha256": "2bea535162249c2c779d5f3c1ed642b92f9f802167118a44e315d8704b1d1cfe",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Initial: 20 trucks × 20 tons = 400 tons total.\n\nA quarter of the trucks failed: 20 × 1/4 = 5 trucks failed.\n\nSo 15 trucks delivered: 15 × 20 = 300 tons.\n\nAnswer: 300",
+  "finish_reason": "stop",
+  "expected": "300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.3262446869630367
+  },
+  "response": {
+    "id": "cmpl-238",
+    "object": "text_completion",
+    "created": 1786299170,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Initial: 20 trucks × 20 tons = 400 tons total.\n\nA quarter of the trucks failed: 20 × 1/4 = 5 trucks failed.\n\nSo 15 trucks delivered: 15 × 20 = 300 tons.\n\nAnswer: 300",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 142,
+      "completion_tokens": 55,
+      "total_tokens": 197,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 863.4,
+      "prefill_tokens": 142,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 164.6,
+      "decode_tok_s": 22.3,
+      "spec_accept_rate": 0.656,
+      "tok_per_step": 1.7
+    }
+  },
+  "used_fallback": false
+}

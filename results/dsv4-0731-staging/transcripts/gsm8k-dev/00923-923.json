@@ -1,0 +1,55 @@
+{
+  "index": 923,
+  "task_id": 923,
+  "rendered_prompt_sha256": "5e20166285ffefbe7cab6527ef2b21567a86204ed46893457b96137b420a972f",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down:\n\n- Lana has 27 cups total.\n- She divides these into 3 rows.\n- In each row, she creates equal amounts of chamomile and mint tea cups.\n- She then uses the remaining cups to brew 15 cups of cinnamon tea.\n\nFirst, find how many cups are used for chamomile and mint tea:\n27 total cups - 15 cinnamon cups = 12 cups for chamomile and mint.\n\nThese 12 cups are divided into 3 rows, so each row has 12 ÷ 3 = 4 cups of chamomile and mint combined.\n\nIn each row, chamomile and mint are equal amounts, so each row has 4 ÷ 2 = 2 cups of mint tea.\n\nAnswer: 2",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.140558090060949
+  },
+  "response": {
+    "id": "cmpl-212",
+    "object": "text_completion",
+    "created": 1786299044,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down:\n\n- Lana has 27 cups total.\n- She divides these into 3 rows.\n- In each row, she creates equal amounts of chamomile and mint tea cups.\n- She then uses the remaining cups to brew 15 cups of cinnamon tea.\n\nFirst, find how many cups are used for chamomile and mint tea:\n27 total cups - 15 cinnamon cups = 12 cups for chamomile and mint.\n\nThese 12 cups are divided into 3 rows, so each row has 12 ÷ 3 = 4 cups of chamomile and mint combined.\n\nIn each row, chamomile and mint are equal amounts, so each row has 4 ÷ 2 = 2 cups of mint tea.\n\nAnswer: 2",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 110,
+      "completion_tokens": 159,
+      "total_tokens": 269,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 820.9,
+      "prefill_tokens": 110,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 134.1,
+      "decode_tok_s": 25.2,
+      "spec_accept_rate": 0.837,
+      "tok_per_step": 1.86
+    }
+  },
+  "used_fallback": false
+}

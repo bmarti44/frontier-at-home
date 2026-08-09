@@ -1,0 +1,55 @@
+{
+  "index": 1273,
+  "task_id": 1273,
+  "rendered_prompt_sha256": "1ff203b63a6a5cab493768e3185d039778f041504833743c707e9d190b57e69c",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down:\n\n- Mazie has 52 marbles total.\n- She gives them to Dallas and Darla.\n- After Dallas drops 4 marbles, he has 21 marbles.\n- So before dropping, Dallas had 21 + 4 = 25 marbles.\n- That means Darla received 52 - 25 = 27 marbles.\n\nAnswer: 27",
+  "finish_reason": "stop",
+  "expected": "27",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.854012300958857
+  },
+  "response": {
+    "id": "cmpl-222",
+    "object": "text_completion",
+    "created": 1786299099,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down:\n\n- Mazie has 52 marbles total.\n- She gives them to Dallas and Darla.\n- After Dallas drops 4 marbles, he has 21 marbles.\n- So before dropping, Dallas had 21 + 4 = 25 marbles.\n- That means Darla received 52 - 25 = 27 marbles.\n\nAnswer: 27",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 86,
+      "completion_tokens": 76,
+      "total_tokens": 162,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 739.9,
+      "prefill_tokens": 86,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 116.3,
+      "decode_tok_s": 24.4,
+      "spec_accept_rate": 0.805,
+      "tok_per_step": 1.83
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,55 @@
+{
+  "index": 1241,
+  "task_id": 1241,
+  "rendered_prompt_sha256": "c2d4b084b659f81ea5e3ceaf2cfba9ffa08219cb2e5da8043573f4f8dee90c84",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, calculate the total cost:  \n5 dozen eggs × $2.40 per dozen = $12.00  \n\nTotal number of eggs: 5 × 12 = 60 eggs  \n\nSelling price: $1 for 3 eggs, so per egg = $1 / 3 ≈ $0.3333  \n\nTotal revenue: 60 × ($1/3) = 60/3 = $20  \n\nProfit = Revenue − Cost = $20 − $12 = $8  \n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.201100681908429
+  },
+  "response": {
+    "id": "cmpl-242",
+    "object": "text_completion",
+    "created": 1786299188,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, calculate the total cost:  \n5 dozen eggs × $2.40 per dozen = $12.00  \n\nTotal number of eggs: 5 × 12 = 60 eggs  \n\nSelling price: $1 for 3 eggs, so per egg = $1 / 3 ≈ $0.3333  \n\nTotal revenue: 60 × ($1/3) = 60/3 = $20  \n\nProfit = Revenue − Cost = $20 − $12 = $8  \n\nAnswer: 8",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 72,
+      "completion_tokens": 105,
+      "total_tokens": 177,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 645.1,
+      "prefill_tokens": 72,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 111.7,
+      "decode_tok_s": 23.1,
+      "spec_accept_rate": 0.689,
+      "tok_per_step": 1.71
+    }
+  },
+  "used_fallback": false
+}

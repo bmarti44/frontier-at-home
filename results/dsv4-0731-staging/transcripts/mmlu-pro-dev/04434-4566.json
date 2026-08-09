@@ -1,0 +1,54 @@
+{
+  "index": 4434,
+  "task_id": 4566,
+  "rendered_prompt_sha256": "b5afda8074eb9d8be8fdc1ac2f0775db4293e2f6675dab659a656af9f78d3696",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We can use the Henderson-Hasselbalch equation for this equilibrium:\n\n\\[\n\\text{pH} = \\text{p}K_a + \\log \\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]}\n\\]\n\nGiven:\n- \\(K_a = 4.3 \\times 10^{-7}\\) → \\(\\text{p}K_a = -\\log(4.3 \\times 10^{-7}) \\approx 6.37\\)\n- pH = 7.40\n\nSo:\n\n\\[\n7.40 = 6.37 + \\log \\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]}\n\\]\n\n\\[\n\\log \\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]} = 7.40 - 6.37 = 1.03\n\\]\n\n\\[\n\\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]} = 10^{1.03} \\approx 10.72\n\\]\n\nClosest option is **B. 10.75**.\n\nAnswer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.562124917982146
+  },
+  "response": {
+    "id": "cmpl-321",
+    "object": "text_completion",
+    "created": 1786299764,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We can use the Henderson-Hasselbalch equation for this equilibrium:\n\n\\[\n\\text{pH} = \\text{p}K_a + \\log \\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]}\n\\]\n\nGiven:\n- \\(K_a = 4.3 \\times 10^{-7}\\) → \\(\\text{p}K_a = -\\log(4.3 \\times 10^{-7}) \\approx 6.37\\)\n- pH = 7.40\n\nSo:\n\n\\[\n7.40 = 6.37 + \\log \\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]}\n\\]\n\n\\[\n\\log \\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]} = 7.40 - 6.37 = 1.03\n\\]\n\n\\[\n\\frac{[\\text{HCO}_3^-]}{[\\text{CO}_2]} = 10^{1.03} \\approx 10.72\n\\]\n\nClosest option is **B. 10.75**.\n\nAnswer: B",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 175,
+      "completion_tokens": 231,
+      "total_tokens": 406,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 477.8,
+      "prefill_tokens": 175,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 366.9,
+      "decode_tok_s": 25.4,
+      "spec_accept_rate": 0.862,
+      "tok_per_step": 1.87
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 9874,
+  "task_id": 10069,
+  "rendered_prompt_sha256": "97596ebf45c96abc77580d37ec8c0ced1e27c9e2121ecd64790c7b3d74a3e166",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": " Let \\( N_A(t) \\) and \\( N_B(t) \\) be the number of atoms of A and B at time \\( t \\).  \nInitially: \\( N_A(0) = 2N_B(0) \\).  \nDecay:  \n\\( N_A(t) = 2N_B(0) \\cdot (1/2)^{t/3} \\)  \n\\( N_B(t) = N_B(0) \\cdot (1/2)^{t/6} \\)  \n\nWe want the ratio reversed:  \n\\[\n\\frac{N_A(t)}{N_B(t)} = \\frac{1}{2}\n\\]\nSo:\n\\[\n\\frac{2 (1/2)^{t/3}}{(1/2)^{t/6}} = \\frac{1}{2}\n\\]\nSimplify:\n\\[\n2 \\cdot (1/2)^{t/3 - t/6} = \\frac{1}{2}\n\\]\n\\[\n2 \\cdot (1/2)^{t/6} = \\frac{1}{2}\n\\]\n\\[\n(1/2)^{t/6} = \\frac{1}{4}\n\\]\n\\[\n(1/2)^{t/6} = (1/2)^2\n\\]\nThus:\n\\[\nt/6 = 2 \\implies t = 12\n\\]\n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.884120607981458
+  },
+  "response": {
+    "id": "cmpl-497",
+    "object": "text_completion",
+    "created": 1786300931,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": " Let \\( N_A(t) \\) and \\( N_B(t) \\) be the number of atoms of A and B at time \\( t \\).  \nInitially: \\( N_A(0) = 2N_B(0) \\).  \nDecay:  \n\\( N_A(t) = 2N_B(0) \\cdot (1/2)^{t/3} \\)  \n\\( N_B(t) = N_B(0) \\cdot (1/2)^{t/6} \\)  \n\nWe want the ratio reversed:  \n\\[\n\\frac{N_A(t)}{N_B(t)} = \\frac{1}{2}\n\\]\nSo:\n\\[\n\\frac{2 (1/2)^{t/3}}{(1/2)^{t/6}} = \\frac{1}{2}\n\\]\nSimplify:\n\\[\n2 \\cdot (1/2)^{t/3 - t/6} = \\frac{1}{2}\n\\]\n\\[\n2 \\cdot (1/2)^{t/6} = \\frac{1}{2}\n\\]\n\\[\n(1/2)^{t/6} = \\frac{1}{4}\n\\]\n\\[\n(1/2)^{t/6} = (1/2)^2\n\\]\nThus:\n\\[\nt/6 = 2 \\implies t = 12\n\\]\n\nAnswer: C",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 169,
+      "completion_tokens": 283,
+      "total_tokens": 452,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 887.6,
+      "prefill_tokens": 169,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 190.6,
+      "decode_tok_s": 25.7,
+      "spec_accept_rate": 0.88,
+      "tok_per_step": 1.89
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 9986,
+  "task_id": 10186,
+  "rendered_prompt_sha256": "62d07010f4049ed3f6f6302be215f5aa92d2f14e2cf49ca2e1e4a205316f6d38",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The maximum efficiency of a steam engine is given by the Carnot efficiency formula:\n\n\\[\n\\eta = 1 - \\frac{T_c}{T_h}\n\\]\n\nwhere temperatures must be in Kelvin.\n\n- \\( T_h = 175 + 273.15 = 448.15 \\, \\text{K} \\)\n- \\( T_c = 75 + 273.15 = 348.15 \\, \\text{K} \\)\n\n\\[\n\\eta = 1 - \\frac{348.15}{448.15} \\approx 1 - 0.777 = 0.223\n\\]\n\nSo efficiency ≈ 22.3%.\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.312343911034986
+  },
+  "response": {
+    "id": "cmpl-499",
+    "object": "text_completion",
+    "created": 1786300950,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The maximum efficiency of a steam engine is given by the Carnot efficiency formula:\n\n\\[\n\\eta = 1 - \\frac{T_c}{T_h}\n\\]\n\nwhere temperatures must be in Kelvin.\n\n- \\( T_h = 175 + 273.15 = 448.15 \\, \\text{K} \\)\n- \\( T_c = 75 + 273.15 = 348.15 \\, \\text{K} \\)\n\n\\[\n\\eta = 1 - \\frac{348.15}{448.15} \\approx 1 - 0.777 = 0.223\n\\]\n\nSo efficiency ≈ 22.3%.\n\nAnswer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 122,
+      "completion_tokens": 132,
+      "total_tokens": 254,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 870.7,
+      "prefill_tokens": 122,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 140.2,
+      "decode_tok_s": 24.3,
+      "spec_accept_rate": 0.781,
+      "tok_per_step": 1.8
+    }
+  }
+}

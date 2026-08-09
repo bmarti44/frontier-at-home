@@ -1,0 +1,55 @@
+{
+  "index": 187,
+  "task_id": 187,
+  "rendered_prompt_sha256": "452260d2ba0850b9517a67cb81b9c950c9e5ddd58192228d5ae2ecff5d5706c7",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, calculate the interest for 3 months at 2% monthly on $100.  \nInterest per month = 100 * 0.02 = $2.  \nTotal interest for 3 months = 2 * 3 = $6.  \nTotal amount = principal + interest = 100 + 6 = $106.  \n\nAnswer: 106",
+  "finish_reason": "stop",
+  "expected": "106",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.528829517774284
+  },
+  "response": {
+    "id": "cmpl-196",
+    "object": "text_completion",
+    "created": 1786298969,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, calculate the interest for 3 months at 2% monthly on $100.  \nInterest per month = 100 * 0.02 = $2.  \nTotal interest for 3 months = 2 * 3 = $6.  \nTotal amount = principal + interest = 100 + 6 = $106.  \n\nAnswer: 106",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 76,
+      "completion_tokens": 73,
+      "total_tokens": 149,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 720.2,
+      "prefill_tokens": 76,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 105.6,
+      "decode_tok_s": 26.0,
+      "spec_accept_rate": 0.895,
+      "tok_per_step": 1.95
+    }
+  },
+  "used_fallback": false
+}

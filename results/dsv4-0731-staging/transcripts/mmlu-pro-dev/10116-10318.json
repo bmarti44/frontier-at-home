@@ -1,0 +1,54 @@
+{
+  "index": 10116,
+  "task_id": 10318,
+  "rendered_prompt_sha256": "d5a0ebc35fa3c5e0845d6a3f2e6d4c743de45a6f9bb2e2f9b9ba83c2d50e0848",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We are told the electron has angular momentum \\( L = 6 \\times 10^{-35} \\) N·s and total energy \\( H_0 = -4 \\times 10^{-18} \\) J, orbiting a proton.\n\nWe can use the classical orbit formulas for a Coulomb potential:\n\nFor a Kepler/Coulomb orbit:\n\\[\nr_{\\text{min}} = \\frac{L^2}{2m |E|} \\left(1 - \\sqrt{1 - \\frac{2|E|L^2}{m k^2}}\\right)^{-1}\n\\]\nActually, better to use the standard formulas:\n\nGiven:\n\\[\nL = m v r\n\\]\n\\[\nE = \\frac{1}{2} m v^2 - \\frac{k e^2}{r}\n\\]\nwhere \\( k = 1/(4\\pi\\epsilon_0) \\approx 8.99 \\times 10^9 \\) N·m²/C², \\( e = 1.6 \\times 10^{-19} \\) C, \\( m = 9.11 \\times 10^{-31} \\) kg.\n\nFor elliptical orbit:\n\\[\nr_{\\text{min}} = \\frac{L^2}{m k e^2} \\frac{1}{1 + \\sqrt{1 + \\frac{2 E L^2}{m (k e^2)^2}}}\n\\]\nWait, sign conventions: For bound orbit, \\( E < 0 \\). The standard formula:\n\n\\[\nr_{\\text{min}} = \\frac{L^2}{m k e^2} \\frac{1}{1 + \\sqrt{1 + \\frac{2 E L^2}{m (k e^2)^2}}}\n\\]\n\\[\nr_{\\text{max}} = \\frac{L^2}{m k e^2} \\frac{1}{1 - \\sqrt{1 + \\frac{2 E L^2}{m (k e^2)^2}}}\n\\]\nwhere \\( k e^2 = 8.99 \\times 10^9 \\times (1.6 \\times 10^{-19})^2 \\approx 2.30 \\times 10^{-28} \\) N·m².\n\nCompute \\( m k e^2 = 9.11 \\times 10^{-31} \\times 2.30 \\times 10^{-28} = 2.095 \\times 10^{-58} \\) kg·N·m².\n\nCompute \\( L^2 = (6 \\times 10^{-35})^2 = 3.6 \\times 10^{-69} \\) (N·s)².\n\nCompute \\( \\frac{L^2}{m k e^2} = \\frac{3.6 \\times 10^{-69}}{2.095 \\times 10^{-58}} = 1.718 \\times 10^{-11} \\) m.\n\nNow compute \\( \\frac{2 E L^2}{m (k e^2)^2} \\).  \n\\( E = -4 \\times 10^{-18} \\) J.  \n\\( 2 E L^2 = 2 \\times (-4 \\times 10^{-18}) \\times 3.6 \\times 10^{-69} = -2.88 \\times 10^{-86} \\).  \nDenominator: \\( m (k e^2)^2 = 9.11 \\times 10^{-31} \\times (2.30 \\times 10^{-28})^2 = 9.11 \\times 10^{-31} \\times 5.29 \\times 10^{-56} =",
+  "finish_reason": "length",
+  "expected": "G",
+  "scored_correct": false,
+  "reason": "truncated without answer",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 31.750928410794586
+  },
+  "response": {
+    "id": "cmpl-502",
+    "object": "text_completion",
+    "created": 1786301026,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We are told the electron has angular momentum \\( L = 6 \\times 10^{-35} \\) N·s and total energy \\( H_0 = -4 \\times 10^{-18} \\) J, orbiting a proton.\n\nWe can use the classical orbit formulas for a Coulomb potential:\n\nFor a Kepler/Coulomb orbit:\n\\[\nr_{\\text{min}} = \\frac{L^2}{2m |E|} \\left(1 - \\sqrt{1 - \\frac{2|E|L^2}{m k^2}}\\right)^{-1}\n\\]\nActually, better to use the standard formulas:\n\nGiven:\n\\[\nL = m v r\n\\]\n\\[\nE = \\frac{1}{2} m v^2 - \\frac{k e^2}{r}\n\\]\nwhere \\( k = 1/(4\\pi\\epsilon_0) \\approx 8.99 \\times 10^9 \\) N·m²/C², \\( e = 1.6 \\times 10^{-19} \\) C, \\( m = 9.11 \\times 10^{-31} \\) kg.\n\nFor elliptical orbit:\n\\[\nr_{\\text{min}} = \\frac{L^2}{m k e^2} \\frac{1}{1 + \\sqrt{1 + \\frac{2 E L^2}{m (k e^2)^2}}}\n\\]\nWait, sign conventions: For bound orbit, \\( E < 0 \\). The standard formula:\n\n\\[\nr_{\\text{min}} = \\frac{L^2}{m k e^2} \\frac{1}{1 + \\sqrt{1 + \\frac{2 E L^2}{m (k e^2)^2}}}\n\\]\n\\[\nr_{\\text{max}} = \\frac{L^2}{m k e^2} \\frac{1}{1 - \\sqrt{1 + \\frac{2 E L^2}{m (k e^2)^2}}}\n\\]\nwhere \\( k e^2 = 8.99 \\times 10^9 \\times (1.6 \\times 10^{-19})^2 \\approx 2.30 \\times 10^{-28} \\) N·m².\n\nCompute \\( m k e^2 = 9.11 \\times 10^{-31} \\times 2.30 \\times 10^{-28} = 2.095 \\times 10^{-58} \\) kg·N·m².\n\nCompute \\( L^2 = (6 \\times 10^{-35})^2 = 3.6 \\times 10^{-69} \\) (N·s)².\n\nCompute \\( \\frac{L^2}{m k e^2} = \\frac{3.6 \\times 10^{-69}}{2.095 \\times 10^{-58}} = 1.718 \\times 10^{-11} \\) m.\n\nNow compute \\( \\frac{2 E L^2}{m (k e^2)^2} \\).  \n\\( E = -4 \\times 10^{-18} \\) J.  \n\\( 2 E L^2 = 2 \\times (-4 \\times 10^{-18}) \\times 3.6 \\times 10^{-69} = -2.88 \\times 10^{-86} \\).  \nDenominator: \\( m (k e^2)^2 = 9.11 \\times 10^{-31} \\times (2.30 \\times 10^{-28})^2 = 9.11 \\times 10^{-31} \\times 5.29 \\times 10^{-56} =",
+        "index": 0,
+        "finish_reason": "length"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 321,
+      "completion_tokens": 768,
+      "total_tokens": 1089,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 619.4,
+      "prefill_tokens": 321,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 518.8,
+      "decode_tok_s": 24.6,
+      "spec_accept_rate": 0.835,
+      "tok_per_step": 1.84
+    }
+  }
+}

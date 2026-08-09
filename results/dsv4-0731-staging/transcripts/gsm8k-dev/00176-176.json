@@ -1,0 +1,55 @@
+{
+  "index": 176,
+  "task_id": 176,
+  "rendered_prompt_sha256": "ba6ec7a88e8fbf86cdd7bceff396f9877596f6d3a3dfdc50d39c8c514b4ae933",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, total Asians = 240.  \nJapanese = 80, so Chinese = 240 - 80 = 160.  \nBoys on Chinese team = 60, so girls on Chinese team = 160 - 60 = 100.  \n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.034713054075837
+  },
+  "response": {
+    "id": "cmpl-188",
+    "object": "text_completion",
+    "created": 1786298931,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, total Asians = 240.  \nJapanese = 80, so Chinese = 240 - 80 = 160.  \nBoys on Chinese team = 60, so girls on Chinese team = 160 - 60 = 100.  \n\nAnswer: 100",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 79,
+      "completion_tokens": 56,
+      "total_tokens": 135,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 716.8,
+      "prefill_tokens": 79,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 110.3,
+      "decode_tok_s": 24.2,
+      "spec_accept_rate": 0.8,
+      "tok_per_step": 1.84
+    }
+  },
+  "used_fallback": false
+}

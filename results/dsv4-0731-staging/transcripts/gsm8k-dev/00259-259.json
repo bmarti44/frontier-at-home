@@ -1,0 +1,55 @@
+{
+  "index": 259,
+  "task_id": 259,
+  "rendered_prompt_sha256": "34c6c6d1e95f749d173c59d0821d90ed3ab227c56baad475f6231c16a24e420e",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's define variables:  \n- Let Jamal's apples = J_a  \n- Jamal's bananas = J_b  \n- Andrea's apples = A_a = 52  \n- Andrea's bananas = A_b  \n\nGiven:  \n1. Andrea has 8 more apples than Jamal → A_a = J_a + 8 → 52 = J_a + 8 → J_a = 44  \n2. Andrea has half as many bananas as Jamal → A_b = J_b / 2  \n3. Jamal has 4 more bananas than apples → J_b = J_a + 4 = 44 + 4 = 48  \n\nThen A_b = 48 / 2 = 24  \n\nTotal fruits = (J_a + J_b) + (A_a + A_b) = (44 + 48) + (52 + 24) = 92 + 76 = 168  \n\nAnswer: 168",
+  "finish_reason": "stop",
+  "expected": "168",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.409684933023527
+  },
+  "response": {
+    "id": "cmpl-227",
+    "object": "text_completion",
+    "created": 1786299124,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's define variables:  \n- Let Jamal's apples = J_a  \n- Jamal's bananas = J_b  \n- Andrea's apples = A_a = 52  \n- Andrea's bananas = A_b  \n\nGiven:  \n1. Andrea has 8 more apples than Jamal → A_a = J_a + 8 → 52 = J_a + 8 → J_a = 44  \n2. Andrea has half as many bananas as Jamal → A_b = J_b / 2  \n3. Jamal has 4 more bananas than apples → J_b = J_a + 4 = 44 + 4 = 48  \n\nThen A_b = 48 / 2 = 24  \n\nTotal fruits = (J_a + J_b) + (A_a + A_b) = (44 + 48) + (52 + 24) = 92 + 76 = 168  \n\nAnswer: 168",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 78,
+      "completion_tokens": 193,
+      "total_tokens": 271,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 715.0,
+      "prefill_tokens": 78,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 109.2,
+      "decode_tok_s": 25.1,
+      "spec_accept_rate": 0.837,
+      "tok_per_step": 1.85
+    }
+  },
+  "used_fallback": false
+}

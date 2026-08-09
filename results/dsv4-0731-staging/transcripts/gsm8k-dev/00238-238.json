@@ -1,0 +1,56 @@
+{
+  "index": 238,
+  "task_id": 238,
+  "rendered_prompt_sha256": "c0cef30eca515df2f0ce39f424da6844bc3ba5ba5ac0e089963f86d2d34a1789",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down:\n\n- Jessa is 20 years old.  \n- Joan is 5 years older than Jessa → Joan = 20 + 5 = 25.  \n- Mary is 2 years younger than Joan → Mary = 25 - 2 = 23.  \n\nSum of ages = 20 + 25 + 23 = 68.\n\nAnswer: 68",
+  "finish_reason": "stop",
+  "expected": "68",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.96659441315569
+  },
+  "response": {
+    "id": "cmpl-184",
+    "object": "text_completion",
+    "created": 1786298917,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down:\n\n- Jessa is 20 years old.  \n- Joan is 5 years older than Jessa → Joan = 20 + 5 = 25.  \n- Mary is 2 years younger than Joan → Mary = 25 - 2 = 23.  \n\nSum of ages = 20 + 25 + 23 = 68.\n\nAnswer: 68",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 76,
+      "completion_tokens": 81,
+      "total_tokens": 157,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 701.4,
+      "prefill_tokens": 76,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 108.4,
+      "decode_tok_s": 24.8,
+      "spec_accept_rate": 0.818,
+      "tok_per_step": 1.86
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Mary is two years younger than Joan, who is five years older than Jessa. If Jessa is 20 years old, what is the sum of the ages of the three girls?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜></think>"
+}

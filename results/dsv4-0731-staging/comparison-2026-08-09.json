@@ -1,0 +1,102 @@
+{
+  "accuracy": [
+    {
+      "baseline": {
+        "accuracy": 0.98,
+        "correct": 98,
+        "n": 100,
+        "stack_label": "ds4-dspark",
+        "wilson95": [
+          0.929988209271456,
+          0.9944980324498376
+        ]
+      },
+      "candidate": {
+        "accuracy": 0.97,
+        "correct": 97,
+        "invalid_count": 1,
+        "n": 100,
+        "wilson95": [
+          0.9154806357094724,
+          0.9897454759759611
+        ]
+      },
+      "configuration_mismatch": {},
+      "delta_accuracy": -0.01,
+      "intervals_overlap": true,
+      "status": "INVALID_ITEMS",
+      "suite": "gsm8k"
+    },
+    {
+      "baseline": {
+        "accuracy": 0.758893280632411,
+        "correct": 192,
+        "n": 253,
+        "stack_label": "ds4-dspark",
+        "wilson95": [
+          0.7025649140340127,
+          0.8074773532911139
+        ]
+      },
+      "candidate": {
+        "accuracy": 0.7035573122529645,
+        "correct": 178,
+        "invalid_count": 23,
+        "n": 253,
+        "wilson95": [
+          0.6445782794442874,
+          0.7564473200556214
+        ]
+      },
+      "configuration_mismatch": {},
+      "delta_accuracy": -0.0553,
+      "intervals_overlap": true,
+      "status": "INVALID_ITEMS",
+      "suite": "mmlu-pro"
+    },
+    {
+      "baseline_path": "acc-humaneval-ds4.json",
+      "candidate_path": "acc-humaneval-all-0731.json",
+      "detail": "candidate or baseline artifact absent",
+      "status": "MISSING",
+      "suite": "humaneval"
+    }
+  ],
+  "candidate_dir": "/home/bmarti44/spark-deepseek-v4-flash/.claude/worktrees/agent-acf13f863a69d9100/results/dsv4-0731-staging",
+  "golden": {
+    "failed_checks": [],
+    "pass": true
+  },
+  "speed": {
+    "baseline_extra_body": null,
+    "candidate_extra_body": null,
+    "cells": [
+      {
+        "baseline_median_decode": 19.15307155184069,
+        "candidate_median_decode": 21.63011303857777,
+        "candidate_median_ttft": 0.57464799,
+        "cell_valid": true,
+        "ctx_tokens": 0,
+        "invalid_reps": 0
+      },
+      {
+        "baseline_median_decode": 18.739125039839152,
+        "candidate_median_decode": 19.74244274092354,
+        "candidate_median_ttft": 5.149929983,
+        "cell_valid": true,
+        "ctx_tokens": 4096,
+        "invalid_reps": 0
+      },
+      {
+        "baseline_median_decode": 16.175413955157453,
+        "candidate_median_decode": 19.171851415326724,
+        "candidate_median_ttft": 19.864550647,
+        "cell_valid": true,
+        "ctx_tokens": 16384,
+        "invalid_reps": 0
+      }
+    ],
+    "status": "COMPARABLE",
+    "suite_valid": true
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 279,
+  "task_id": 351,
+  "rendered_prompt_sha256": "5defcddd57181e327a77f0b762a41ee588fa4a3676e0defdba7b37b4522e5a3a",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, calculate the commission: sales above $2,500 = $5,070.20 - $2,500 = $2,570.20.  \n10% commission = 0.10 × $2,570.20 = $257.02.  \nAdd base salary of $300: $257.02 + $300 = $557.02.  \n\nAnswer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.999610467813909
+  },
+  "response": {
+    "id": "cmpl-288",
+    "object": "text_completion",
+    "created": 1786299411,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, calculate the commission: sales above $2,500 = $5,070.20 - $2,500 = $2,570.20.  \n10% commission = 0.10 × $2,570.20 = $257.02.  \nAdd base salary of $300: $257.02 + $300 = $557.02.  \n\nAnswer: H",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 158,
+      "completion_tokens": 79,
+      "total_tokens": 237,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 886.9,
+      "prefill_tokens": 158,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 178.3,
+      "decode_tok_s": 25.4,
+      "spec_accept_rate": 0.878,
+      "tok_per_step": 1.9
+    }
+  }
+}

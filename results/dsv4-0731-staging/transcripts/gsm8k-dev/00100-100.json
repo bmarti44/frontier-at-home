@@ -1,0 +1,55 @@
+{
+  "index": 100,
+  "task_id": 100,
+  "rendered_prompt_sha256": "718fa9f0ee6a657fd2ce27c69962bbcf6ccc6734315fbd69489cee6c715f3087",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down step by step.\n\n- First friend: 20 rings.\n- Second friend: 1/4 times more than the first friend.  \n  \"1/4 times more\" means 1/4 of 20 = 5 more, so 20 + 5 = 25 rings.\n- Fourth friend: 60 rings.\n- Third friend: 10 more than the fourth friend, so 60 + 10 = 70 rings.\n\nTotal rings = 20 + 25 + 70 + 60 = 175.\n\nAnswer: 175",
+  "finish_reason": "stop",
+  "expected": "175",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.359567388892174
+  },
+  "response": {
+    "id": "cmpl-218",
+    "object": "text_completion",
+    "created": 1786299081,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down step by step.\n\n- First friend: 20 rings.\n- Second friend: 1/4 times more than the first friend.  \n  \"1/4 times more\" means 1/4 of 20 = 5 more, so 20 + 5 = 25 rings.\n- Fourth friend: 60 rings.\n- Third friend: 10 more than the fourth friend, so 60 + 10 = 70 rings.\n\nTotal rings = 20 + 25 + 70 + 60 = 175.\n\nAnswer: 175",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 130,
+      "completion_tokens": 118,
+      "total_tokens": 248,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 785.8,
+      "prefill_tokens": 130,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 165.6,
+      "decode_tok_s": 25.8,
+      "spec_accept_rate": 0.902,
+      "tok_per_step": 1.92
+    }
+  },
+  "used_fallback": false
+}

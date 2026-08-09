@@ -1,0 +1,54 @@
+{
+  "index": 11580,
+  "task_id": 11804,
+  "rendered_prompt_sha256": "9df19b80010bd29625158e14b823a0c58299a2ff216ff957a97f912824325d2d",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "\\[\nA_e = \\frac{\\lambda^2}{4\\pi} D\n\\]\n\nGiven:\n- \\(D = 50\\)\n- \\(\\lambda = 4 \\, \\text{m}\\)\n\n\\[\nA_e = \\frac{4^2}{4\\pi} \\times 50 = \\frac{16}{4\\pi} \\times 50 = \\frac{4}{\\pi} \\times 50 = \\frac{200}{\\pi} \\approx 63.66 \\, \\text{m}^2\n\\]\n\nClosest option: **63.6 meter²** → H.\n\nAnswer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.468884858069941
+  },
+  "response": {
+    "id": "cmpl-360",
+    "object": "text_completion",
+    "created": 1786300067,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "\\[\nA_e = \\frac{\\lambda^2}{4\\pi} D\n\\]\n\nGiven:\n- \\(D = 50\\)\n- \\(\\lambda = 4 \\, \\text{m}\\)\n\n\\[\nA_e = \\frac{4^2}{4\\pi} \\times 50 = \\frac{16}{4\\pi} \\times 50 = \\frac{4}{\\pi} \\times 50 = \\frac{200}{\\pi} \\approx 63.66 \\, \\text{m}^2\n\\]\n\nClosest option: **63.6 meter²** → H.\n\nAnswer: H",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 146,
+      "completion_tokens": 122,
+      "total_tokens": 268,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 826.5,
+      "prefill_tokens": 146,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 176.8,
+      "decode_tok_s": 26.3,
+      "spec_accept_rate": 0.921,
+      "tok_per_step": 1.95
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "index": 132,
+  "task_id": 132,
+  "rendered_prompt_sha256": "dcb6538e5b4ae2265197ee4a969e9a1d336aa271d0b3af2b8678da2db7751d98",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down:  \n- Pam rode the roller coaster 2 times, Fred rode it 4 times → total roller coaster rides = 2 + 4 = 6 rides.  \n- Each ride costs 6 tickets → tickets for roller coaster = 6 × 6 = 36 tickets.  \n- Then each rode the luge 2 times → total luge rides = 2 + 2 = 4 rides.  \n- Tickets for luge = 4 × 6 = 24 tickets.  \n- Total tickets used = 36 + 24 = 60 tickets.  \n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.896128084976226
+  },
+  "response": {
+    "id": "cmpl-219",
+    "object": "text_completion",
+    "created": 1786299087,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down:  \n- Pam rode the roller coaster 2 times, Fred rode it 4 times → total roller coaster rides = 2 + 4 = 6 rides.  \n- Each ride costs 6 tickets → tickets for roller coaster = 6 × 6 = 36 tickets.  \n- Then each rode the luge 2 times → total luge rides = 2 + 2 = 4 rides.  \n- Tickets for luge = 4 × 6 = 24 tickets.  \n- Total tickets used = 36 + 24 = 60 tickets.  \n\nAnswer: 60",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 96,
+      "completion_tokens": 128,
+      "total_tokens": 224,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 807.4,
+      "prefill_tokens": 96,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 119.0,
+      "decode_tok_s": 25.2,
+      "spec_accept_rate": 0.853,
+      "tok_per_step": 1.87
+    }
+  },
+  "used_fallback": false
+}

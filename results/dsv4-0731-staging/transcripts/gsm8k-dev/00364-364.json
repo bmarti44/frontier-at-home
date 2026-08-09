@@ -1,0 +1,55 @@
+{
+  "index": 364,
+  "task_id": 364,
+  "rendered_prompt_sha256": "0c2e47d6ca9a5b4c049cc11f847ee2cf7986e740b3bcc25ceef374518fe59031",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, find the total number of boys in fourth grade:  \n96 total students - 43 girls = 53 boys.  \n\nOn Friday, 4 boys were absent, so the number of boys present is:  \n53 - 4 = 49.  \n\nAnswer: 49",
+  "finish_reason": "stop",
+  "expected": "49",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.1196691079530865
+  },
+  "response": {
+    "id": "cmpl-220",
+    "object": "text_completion",
+    "created": 1786299090,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, find the total number of boys in fourth grade:  \n96 total students - 43 girls = 53 boys.  \n\nOn Friday, 4 boys were absent, so the number of boys present is:  \n53 - 4 = 49.  \n\nAnswer: 49",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 90,
+      "completion_tokens": 57,
+      "total_tokens": 147,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 738.1,
+      "prefill_tokens": 90,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 122.0,
+      "decode_tok_s": 23.9,
+      "spec_accept_rate": 0.75,
+      "tok_per_step": 1.81
+    }
+  },
+  "used_fallback": false
+}

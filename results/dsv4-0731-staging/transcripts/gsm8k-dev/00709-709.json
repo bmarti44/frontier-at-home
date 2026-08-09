@@ -1,0 +1,55 @@
+{
+  "index": 709,
+  "task_id": 709,
+  "rendered_prompt_sha256": "73692b06d72b7d0bbe0ca2a6dae5d3a381f8006ec917f2d497a50b0991162373",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, find the rate for chocolate: 100 quarts in 2 hours = 50 quarts per hour.  \nVanilla: 50 quarts in 4 hours = 12.5 quarts per hour.  \nTotal rate = 50 + 12.5 = 62.5 quarts per hour.  \nIn 48 hours: 62.5 × 48 = 3000 quarts.  \n\nAnswer: 3000",
+  "finish_reason": "stop",
+  "expected": "3000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.156035701977089
+  },
+  "response": {
+    "id": "cmpl-237",
+    "object": "text_completion",
+    "created": 1786299167,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, find the rate for chocolate: 100 quarts in 2 hours = 50 quarts per hour.  \nVanilla: 50 quarts in 4 hours = 12.5 quarts per hour.  \nTotal rate = 50 + 12.5 = 62.5 quarts per hour.  \nIn 48 hours: 62.5 × 48 = 3000 quarts.  \n\nAnswer: 3000",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 85,
+      "completion_tokens": 87,
+      "total_tokens": 172,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 754.4,
+      "prefill_tokens": 85,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 112.8,
+      "decode_tok_s": 25.6,
+      "spec_accept_rate": 0.889,
+      "tok_per_step": 1.91
+    }
+  },
+  "used_fallback": false
+}

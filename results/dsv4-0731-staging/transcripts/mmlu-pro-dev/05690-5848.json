@@ -1,0 +1,54 @@
+{
+  "index": 5690,
+  "task_id": 5848,
+  "rendered_prompt_sha256": "4721a8108f6d6e4fdc3446372eac73eca51b319a67bd41724bce16f6f7e81eb8",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Answer: G\n\nExplanation:  \nDNI = Dividend income ($2,500) + Taxable interest income ($2,000) + Capital gains allocable to corpus ($5,000) – Accounting fees ($500) – Trustee fees ($750) = $8,250.  \nCapital gains allocable to corpus are included in DNI for a simple trust.  \nSo, Lake's distributable net income is $8,250.  \n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='G' expected='J'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.254370755050331
+  },
+  "response": {
+    "id": "cmpl-461",
+    "object": "text_completion",
+    "created": 1786300617,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Answer: G\n\nExplanation:  \nDNI = Dividend income ($2,500) + Taxable interest income ($2,000) + Capital gains allocable to corpus ($5,000) – Accounting fees ($500) – Trustee fees ($750) = $8,250.  \nCapital gains allocable to corpus are included in DNI for a simple trust.  \nSo, Lake's distributable net income is $8,250.  \n\nAnswer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 171,
+      "completion_tokens": 93,
+      "total_tokens": 264,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 478.7,
+      "prefill_tokens": 171,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 357.7,
+      "decode_tok_s": 24.6,
+      "spec_accept_rate": 0.804,
+      "tok_per_step": 1.84
+    }
+  }
+}

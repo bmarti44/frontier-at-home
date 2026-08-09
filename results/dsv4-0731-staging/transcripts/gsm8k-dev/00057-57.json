@@ -1,0 +1,55 @@
+{
+  "index": 57,
+  "task_id": 57,
+  "rendered_prompt_sha256": "1a4f782252f1178fc39ee149a6b0c1d790624fe72ebcf9ac3c6941e6e6aa6c4f",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let the number of boxes be \\( x \\).  \nTotal weight = 3755 + 15x.  \nThis must be ≤ 5000.  \n\n3755 + 15x ≤ 5000  \n15x ≤ 1245  \nx ≤ 83  \n\nSo maximum boxes = 83.  \n\nAnswer: 83",
+  "finish_reason": "stop",
+  "expected": "83",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.521848150063306
+  },
+  "response": {
+    "id": "cmpl-169",
+    "object": "text_completion",
+    "created": 1786298845,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let the number of boxes be \\( x \\).  \nTotal weight = 3755 + 15x.  \nThis must be ≤ 5000.  \n\n3755 + 15x ≤ 5000  \n15x ≤ 1245  \nx ≤ 83  \n\nSo maximum boxes = 83.  \n\nAnswer: 83",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 110,
+      "completion_tokens": 67,
+      "total_tokens": 177,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 831.8,
+      "prefill_tokens": 110,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 132.3,
+      "decode_tok_s": 24.9,
+      "spec_accept_rate": 0.857,
+      "tok_per_step": 1.89
+    }
+  },
+  "used_fallback": false
+}

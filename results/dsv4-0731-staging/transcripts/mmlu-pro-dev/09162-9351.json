@@ -1,0 +1,54 @@
+{
+  "index": 9162,
+  "task_id": 9351,
+  "rendered_prompt_sha256": "66945915fa093365a155b9276fa10cd524b76b9864e98592151d445752b56ad2",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We can use Gauss' law for gravity. Inside a spherical shell, the net gravitational force is zero, so only the mass inside the radius below the point matters.\n\nLet Earth's radius be \\( R \\), density \\(\\rho\\) constant.  \nMass inside radius \\( r \\) is  \n\\[\nM(r) = \\frac{4}{3}\\pi r^3 \\rho\n\\]  \nGravitational acceleration at radius \\( r \\):  \n\\[\ng(r) = \\frac{G M(r)}{r^2} = \\frac{4}{3}\\pi G \\rho r\n\\]  \nAt surface \\( r=R \\), \\( g = 9.81 \\). So  \n\\[\n\\frac{4}{3}\\pi G \\rho R = 9.81\n\\]  \nThus  \n\\[\ng(r) = 9.81 \\frac{r}{R}\n\\]  \n\nFor depth \\( d \\), \\( r = R - d \\).  \n- Depth \\( R/4 \\) → \\( r = 3R/4 \\) → \\( g = 9.81 \\times 0.75 = 7.3575 \\) N  \n- Depth \\( R/2 \\) → \\( r = R/2 \\) → \\( g = 9.81 \\times 0.5 = 4.905 \\) N  \n\nThese match option D: 7.35 N, 4.9 N.\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 13.41171224298887
+  },
+  "response": {
+    "id": "cmpl-480",
+    "object": "text_completion",
+    "created": 1786300665,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We can use Gauss' law for gravity. Inside a spherical shell, the net gravitational force is zero, so only the mass inside the radius below the point matters.\n\nLet Earth's radius be \\( R \\), density \\(\\rho\\) constant.  \nMass inside radius \\( r \\) is  \n\\[\nM(r) = \\frac{4}{3}\\pi r^3 \\rho\n\\]  \nGravitational acceleration at radius \\( r \\):  \n\\[\ng(r) = \\frac{G M(r)}{r^2} = \\frac{4}{3}\\pi G \\rho r\n\\]  \nAt surface \\( r=R \\), \\( g = 9.81 \\). So  \n\\[\n\\frac{4}{3}\\pi G \\rho R = 9.81\n\\]  \nThus  \n\\[\ng(r) = 9.81 \\frac{r}{R}\n\\]  \n\nFor depth \\( d \\), \\( r = R - d \\).  \n- Depth \\( R/4 \\) → \\( r = 3R/4 \\) → \\( g = 9.81 \\times 0.75 = 7.3575 \\) N  \n- Depth \\( R/2 \\) → \\( r = R/2 \\) → \\( g = 9.81 \\times 0.5 = 4.905 \\) N  \n\nThese match option D: 7.35 N, 4.9 N.\n\nAnswer: D",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 262,
+      "completion_tokens": 293,
+      "total_tokens": 555,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 572.7,
+      "prefill_tokens": 262,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 458.1,
+      "decode_tok_s": 22.8,
+      "spec_accept_rate": 0.682,
+      "tok_per_step": 1.69
+    }
+  }
+}

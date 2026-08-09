@@ -1,0 +1,55 @@
+{
+  "index": 383,
+  "task_id": 383,
+  "rendered_prompt_sha256": "c8ac734757c5abc76c0be4757980dcbbd26d66507b2ab47af474956ee859617f",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, find the total number of cups: 3 pitchers × 12 cups = 36 cups.  \nTotal revenue if all sold: 36 × $1 = $36.  \nTotal cost: $18.  \nTotal profit: $36 - $18 = $18.  \n\nShe sells 4 cups per hour, so time to sell all 36 cups: 36 ÷ 4 = 9 hours.  \nProfit per hour: $18 ÷ 9 = $2.  \n\nAnswer: 2",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.796563637908548
+  },
+  "response": {
+    "id": "cmpl-236",
+    "object": "text_completion",
+    "created": 1786299163,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, find the total number of cups: 3 pitchers × 12 cups = 36 cups.  \nTotal revenue if all sold: 36 × $1 = $36.  \nTotal cost: $18.  \nTotal profit: $36 - $18 = $18.  \n\nShe sells 4 cups per hour, so time to sell all 36 cups: 36 ÷ 4 = 9 hours.  \nProfit per hour: $18 ÷ 9 = $2.  \n\nAnswer: 2",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 131,
+      "completion_tokens": 104,
+      "total_tokens": 235,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 809.4,
+      "prefill_tokens": 131,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 162.0,
+      "decode_tok_s": 26.1,
+      "spec_accept_rate": 0.925,
+      "tok_per_step": 1.94
+    }
+  },
+  "used_fallback": false
+}
