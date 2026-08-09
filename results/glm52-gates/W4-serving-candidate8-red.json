@@ -1,0 +1,22 @@
+{
+  "schema": "glm52-w4-serving-candidate-red-v1",
+  "candidate": 8,
+  "unchanged_parent": "e7c85594491a9c4130951104930580c342839096",
+  "engine_started_for_red": false,
+  "test_command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner scripts.tests.test_w4_serving_campaign_scorer",
+  "observed": {
+    "tests_run": 33,
+    "passed": 31,
+    "failures": 0,
+    "errors": 2,
+    "error_1": "CampaignError: sync trace does not prove a novel complete prefill",
+    "error_2": "CampaignError: expected exactly one synchronized logit tensor"
+  },
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate7-runtime-fail.json": "93cba7aac090c63a3a06c2a3157364cc1a9217de1a63c88e2bafa96b0f0361af",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "74d19cb44a17acb19c2a8112c2bcca7281d60b8b1cb01b5195373a2f90c5815c",
+    "scripts/102_run_w4_serving_campaign.py": "9311f55d1775b0859faae999bebfa49e17dbbb96b8f4a1c660df73dcbc6d3072",
+    "scripts/101_score_w4_serving_campaign.py": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7"
+  },
+  "acceptance": "Accept one or more ordered sync/logit segments only when they form exact contiguous coverage from start zero through expected prompt_tokens, every checkpoint equals segment start, every suffix equals prompt minus start, sync numbers and filenames match, and no gaps, overlaps, duplicates, extra tensors, or non-final terminal coverage exist. Bind final_logits_sha256 to the last segment and logit_sequence_sha256 to every segment in order."
+}

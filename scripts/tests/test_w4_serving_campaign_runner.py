@@ -265,15 +265,20 @@ class W4ServingContainmentTest(unittest.TestCase):
                             for handler in handlers))
 
     def test_sync_trace_requires_full_novel_prefill(self) -> None:
-        valid = ("ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
-                 "dense_len=0 ctx_cap=32768 dense_fit=0 resume_min=4 dense_gap=0 "
+        first = ("ds4: GLM sync start=0 prompt=19772 suffix=19772 checkpoint=0 "
+                 "dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 "
                  "indexed_keep=0 indexed_batch=1 batch_ffn=1")
+        second = ("ds4: GLM sync start=19772 prompt=19783 suffix=11 checkpoint=19772 "
+                  "dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 "
+                  "indexed_keep=1 indexed_batch=1 batch_ffn=1")
+        valid = first + "\n" + second
         RUNNER.validate_novel_sync_trace(valid, 19_783)
         for mutation in (
             valid.replace("start=0", "start=1"),
-            valid.replace("suffix=19783", "suffix=19782"),
-            valid.replace("checkpoint=0", "checkpoint=1"),
-            valid + "\n" + valid,
+            valid.replace("start=19772 prompt=19783", "start=19773 prompt=19783"),
+            valid.replace("suffix=11", "suffix=10"),
+            valid.replace("checkpoint=19772", "checkpoint=19771"),
+            valid + "\n" + second,
         ):
             with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
                 RUNNER.validate_novel_sync_trace(mutation, 19_783)
@@ -296,9 +301,13 @@ class W4ServingContainmentTest(unittest.TestCase):
                            "response_semantic_sha256": "0" * 64}
             files = {
                 "server.log": ("ds4-server: listening on 127.0.0.1\n"
-                               "ds4: GLM sync start=0 prompt=19783 suffix=19783 checkpoint=0 "
-                               "dense_len=0 ctx_cap=32768 dense_fit=0 resume_min=4 dense_gap=0 "
+                               "ds4: GLM sync start=0 prompt=19772 suffix=19772 checkpoint=0 "
+                               "dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 "
                                "indexed_keep=0 indexed_batch=1 batch_ffn=1\n"
+                               "ds4: GLM sync start=19772 prompt=19783 suffix=11 "
+                               "checkpoint=19772 dense_len=0 ctx_cap=8192 dense_fit=0 "
+                               "resume_min=4 dense_gap=1 indexed_keep=1 indexed_batch=1 "
+                               "batch_ffn=1\n"
                                "ds4-server: shutdown requested\n").encode(),
                 "response.json": json.dumps(response).encode(),
                 "observation.json": json.dumps(observation).encode(),
@@ -313,8 +322,10 @@ class W4ServingContainmentTest(unittest.TestCase):
             }
             for name, payload in files.items():
                 (out / name).write_bytes(payload)
-            logit = out / "logits.sync1.start0.prompt19783.suffix19783"
-            logit.write_bytes(b"\0" * RUNNER.LOGIT_BYTES)
+            logit1 = out / "logits.sync1.start0.prompt19772.suffix19772"
+            logit2 = out / "logits.sync2.start19772.prompt19783.suffix11"
+            logit1.write_bytes(b"\0" * RUNNER.LOGIT_BYTES)
+            logit2.write_bytes(b"\1" * RUNNER.LOGIT_BYTES)
             env_sha = RUNNER.validate_environment_artifact("off", out, environment)
             markers = []
             for name, payload in files.items():
@@ -345,6 +356,15 @@ class W4ServingContainmentTest(unittest.TestCase):
                                           "5" * 64, 19_783, None, True)
         self.assertEqual(first, second)
         self.assertEqual(first["safety"]["surviving_descendants"], 0)
+        expected_final = hashlib.sha256(b"\1" * RUNNER.LOGIT_BYTES).hexdigest()
+        expected_sequence = hashlib.sha256(json.dumps([
+            ("logits.sync1.start0.prompt19772.suffix19772",
+             hashlib.sha256(b"\0" * RUNNER.LOGIT_BYTES).hexdigest(), RUNNER.LOGIT_BYTES),
+            ("logits.sync2.start19772.prompt19783.suffix11",
+             expected_final, RUNNER.LOGIT_BYTES),
+        ], separators=(",", ":")).encode()).hexdigest()
+        self.assertEqual(first["final_logits_sha256"], expected_final)
+        self.assertEqual(first["logit_sequence_sha256"], expected_sequence)
 
     def test_signal_handlers_are_restored_after_preflight_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory, \
