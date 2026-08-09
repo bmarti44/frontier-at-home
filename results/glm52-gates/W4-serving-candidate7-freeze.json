@@ -1,0 +1,56 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 7,
+  "implementation_commit": "f30894de30ca65490a029bb361578d79b4e185a2",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "launch_status": "NOT_RUN_PENDING_ROUND_306",
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate7-red.json": "b83eabd48d02a70c15e827cb2655d59cecd55073893fef2a905ca6edeec63943",
+    "results/glm52-gates/W4-serving-candidate7-preaudit.txt": "3f0f3131ff1c6287fbaf4cea2d9c257b1faf595b83e97a6474809595d513da34",
+    "scripts/101_score_w4_serving_campaign.py": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7",
+    "scripts/102_run_w4_serving_campaign.py": "9311f55d1775b0859faae999bebfa49e17dbbb96b8f4a1c660df73dcbc6d3072",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "dde6984fc5bc3d1b5948eb1bb872ae319beb439f84cabf4642aa690973b46032",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "3ab10ca6260f89401dd3b836e02e58fa13f011730e3488c35b9a97f664ed3581",
+    "scripts/lint_secrets.sh": "2299506065cdff1bb1b5628b773c153fb4f7cc8498a485930159323c267da85d"
+  },
+  "unchanged_frozen_dependencies": {
+    "cgroup_sha256": "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14",
+    "safe_run_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "base_runner_sha256": "e2f6235cd5f94b67773e75cff0f4fbceaa264f5b88e3d12b45ae3bb1e31e6924",
+    "memory_guard_sha256": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
+    "microgate_sha256": "9aaf51b0722ec2573876d6a35ce733e6e574bb1349daf6f72f61100995c39bde"
+  },
+  "round_305_disposition": {
+    "ADV-W4S-305-H1-RETAINED-DRIVER-BROKEN-SELF-PATH": "FIXED: the retained bootstrap injects the immutable executing runner bytes and verify_candidate compares the git candidate to those bytes without opening the synthetic __file__ path; the exact production bootstrap reached the intentional pre-engine stop with no FileNotFoundError",
+    "W4S-R304-H1-CONTAINED-DRIVER-PATH-TOCTOU": "REMAINS_VERIFIED_FIXED: retained runner, base, cgroup, and safe-wrapper bytes are unchanged",
+    "ADV-W4S-304-C1-UNSEALED-AUTHORITATIVE-ARM-LAUNCH": "REMAINS_VERIFIED_FIXED: retained dependency execution is unchanged",
+    "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE": "OPEN_NONBLOCKING: a final-transition replacement remains possible in failure-attempt evidence only; it cannot produce PASS evidence or alter live measurements",
+    "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW": "DEFERRED_NONBLOCKING: immediate publication verification remains authoritative; long-term GitHub recent-event retention is limited",
+    "W4S-R303-M2-FAILURE-DYNAMIC-LINEAGE-INDIRECT": "REMAINS_VERIFIED_FIXED"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "33/33 PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS",
+    "dependency_candidate_hash_preflight": "PASS",
+    "independent_tokenization": "19783 tokens PASS",
+    "exact_production_retained_bootstrap_pre_engine_stop": "PASS: expected CampaignError with no synthetic-self FileNotFoundError",
+    "real_systemd_production_bootstrap_pre_engine_stop": "EXPECTED_FAIL rc10 only after memory guard and exact sealed command launch; short-lived deliberate stop outran identity sampling",
+    "clean_exact_head": "PASS before freeze record",
+    "user_systemd_available": true,
+    "engine_or_fio_started": false,
+    "frozen_engine_wrapper_microgate_fixture_unchanged": true
+  },
+  "convergence": {
+    "candidate_count": 7,
+    "previous_open_blocking_count": 1,
+    "named_blocking_classes_targeted": 1,
+    "new_scope_added": false,
+    "frozen_scope_modified": false,
+    "engine_campaign_started": false,
+    "prior_alarm": "Round 305 was the second consecutive nonshrinking result.",
+    "owner_authorization": "The owner explicitly authorized continued work without further approval; candidate 7 is the single bounded correction for the named pre-engine retained-self-path defect."
+  }
+}
