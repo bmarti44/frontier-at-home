@@ -1,0 +1,41 @@
+{
+  "schema": "glm52-w4-serving-runtime-attempt-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 7,
+  "candidate_hash": "26abdc4ce3e82c05f6cb8dd46ddcaf49e493be91",
+  "attempt_root": "/home/bmarti44/.local/state/glm52-w4-serving-campaign/attempt-d70d5c2ecc0c438bbd54f2d64eccc4f2",
+  "started_engine": true,
+  "completed_arms": 0,
+  "partially_measured_arms": 1,
+  "verdict": "FAIL",
+  "failure": "CampaignError: expected exactly one synchronized logit tensor",
+  "disposition": "The first production request completed safely, but the fixed parser rejected its two contiguous internal sync segments before emitting a raw row. No performance result is accepted. The attempt remains immutable and hash-bound at attempt_root.",
+  "observed_production_shape": {
+    "request_prompt_tokens": 19783,
+    "sync_segments": [
+      {"sync": 1, "start": 0, "prompt": 19772, "suffix": 19772, "checkpoint": 0},
+      {"sync": 2, "start": 19772, "prompt": 19783, "suffix": 11, "checkpoint": 19772}
+    ],
+    "contiguous_complete_coverage": true,
+    "minimum_mem_available_kib": 42504344,
+    "max_engine_rss_kib": 39991040,
+    "max_cgroup_swap_bytes": 0,
+    "safety_samples": 1651,
+    "engine_survived_after_wrapper": false,
+    "oom_or_xid_observed": false
+  },
+  "artifacts": {
+    "manifest.json": "f52543157a191151b0ba92026e2ae367b748b98e6bc0ad2c88e5cc07cceb67f1",
+    "summary.json": "ad14b577574f00dd34471c65d55a709a59e0d9a3fa2451a07bd14084ccfee4e4",
+    "raw.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "b0-p0-off-d8454de16b1e/server.log": "9b461291e861d1d9c60c02aa85dcba868b8d701ac6f7bc73abd7e16929185123",
+    "b0-p0-off-d8454de16b1e/observation.json": "2550d0dd692ab95fde00e3db8f02cab5e639073055e2c4f17bd49ea347d51eff",
+    "b0-p0-off-d8454de16b1e/response.json": "47af5fbd2e0b4fefcf84afbbc6b6a273e9c001955d389a427137be1acc57934a",
+    "b0-p0-off-d8454de16b1e/safety/main.log": "d13572a82f1b37b9776aedf0fc8f5e82b9dac38904a8a5652969f993396a0f36",
+    "b0-p0-off-d8454de16b1e/safety/samples.log": "83529c7fb5626cf348ef7c815ce6343397fa99e1774f023caa970a30bda21440",
+    "b0-p0-off-d8454de16b1e/safety/kernel.log": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "b0-p0-off-d8454de16b1e/logits.sync1.start0.prompt19772.suffix19772": "8100b9ab7fb48a49350351d2ae907a9fee89f174efaf1ee31f993d92a6dae9db",
+    "b0-p0-off-d8454de16b1e/logits.sync2.start19772.prompt19783.suffix11": "66d43c56f105a5b2e23e1fa6a809167ffd423ecf1ec331295b56b992e901e64b"
+  },
+  "bounded_next_acceptance_test": "Replay the immutable failed arm and require an exact, ordered, contiguous sync/logit sequence from start 0 through prompt_tokens, with each segment checkpoint equal to its start and suffix equal to prompt-start. Reject gaps, overlaps, duplicate sync numbers, non-final terminal coverage, or any mutation. final_logits_sha256 is the last segment; logit_sequence_sha256 binds every ordered segment."
+}
