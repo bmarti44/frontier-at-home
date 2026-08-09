@@ -90,6 +90,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=SEED, help="fixture and sampling seed")
     parser.add_argument(
+        "--request-timeout",
+        type=int,
+        default=REQUEST_TIMEOUT_S,
+        help=f"HTTP request timeout in seconds (default: {REQUEST_TIMEOUT_S})",
+    )
+    parser.add_argument(
         "--model-id",
         help="exact model id to select when /v1/models exposes multiple aliases",
     )
@@ -139,6 +145,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--max-tokens must be at least 128 for decode timing")
     if not 128 <= args.min_completion_tokens <= args.max_tokens:
         parser.error("--min-completion-tokens must be between 128 and --max-tokens")
+    if not 1 <= args.request_timeout <= 2700:
+        parser.error("--request-timeout must be between 1 and 2700 seconds")
     args.base_url = args.base_url.rstrip("/")
     if not args.base_url:
         parser.error("--base-url must not be empty")
@@ -234,11 +242,13 @@ class Client:
         base_url: str,
         api_key: str | None,
         extra_body: dict[str, Any] | None = None,
+        request_timeout_s: int = REQUEST_TIMEOUT_S,
     ) -> None:
         self.base_url = base_url
         self.api_key = api_key
         # Merged before harness-critical keys; cannot override them.
         self.extra_body = dict(extra_body or {})
+        self.request_timeout_s = request_timeout_s
 
     def headers(self) -> dict[str, str]:
         headers = {"Accept": "application/json"}
@@ -251,7 +261,9 @@ class Client:
             self.base_url + "/v1/models", headers=self.headers(), method="GET"
         )
         try:
-            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S) as response:
+            with urllib.request.urlopen(
+                request, timeout=self.request_timeout_s
+            ) as response:
                 status = response.status
                 raw = response.read()
         except urllib.error.HTTPError as error:
@@ -305,7 +317,9 @@ class Client:
         )
         request_started_ns = time.perf_counter_ns()
         try:
-            response = urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S)
+            response = urllib.request.urlopen(
+                request, timeout=self.request_timeout_s
+            )
         except urllib.error.HTTPError as error:
             raw = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"stream returned HTTP {error.code}: {raw[:500]!r}") from error
@@ -314,12 +328,17 @@ class Client:
         last_content_at_ns: int | None = None
         generated_parts: list[str] = []
         reasoning_parts: list[str] = []
+        # Boxed so the nested SSE loop can mutate them: which delta field is
+        # currently streaming, and how many times it has changed.
+        active_field: list[str | None] = [None]
+        field_transitions: list[int] = [0]
         content_parts: list[str] = []
         token_timestamps_ns: list[int] = []
         usage: dict[str, Any] | None = None
         done = False
         data_chunks = 0
         response_ids: set[str] = set()
+        finish_reasons: list[str] = []
         try:
             with response:
                 if response.status != 200:
@@ -334,6 +353,10 @@ class Client:
                         raise RuntimeError(f"unexpected SSE line: {line[:200]!r}")
                     data = line[5:].strip()
                     if data == "[DONE]":
+                        if len(finish_reasons) != 1 or usage is None:
+                            raise RuntimeError(
+                                "SSE [DONE] arrived before terminal reason and usage"
+                            )
                         done = True
                         continue
                     data_chunks += 1
@@ -344,14 +367,29 @@ class Client:
                             raise RuntimeError("SSE response id is invalid")
                         response_ids.add(response_id)
                     event_usage = event.get("usage")
-                    if event_usage is not None:
-                        if not isinstance(event_usage, dict):
-                            raise RuntimeError("SSE usage is not an object")
-                        usage = event_usage
                     choices = event.get("choices", [])
                     if not isinstance(choices, list):
                         raise RuntimeError("SSE choices is not a list")
+                    if usage is not None:
+                        raise RuntimeError("received SSE event after usage")
+                    if event_usage is not None:
+                        if not isinstance(event_usage, dict):
+                            raise RuntimeError("SSE usage is not an object")
+                        if len(finish_reasons) != 1 or choices:
+                            raise RuntimeError(
+                                "SSE usage precedes finish_reason or has nonempty choices"
+                            )
+                        usage = event_usage
+                        continue
+                    if finish_reasons:
+                        raise RuntimeError("received SSE event after finish_reason")
                     for choice in choices:
+                        if not isinstance(choice, dict):
+                            raise RuntimeError("SSE choice is not an object")
+                        finish_reason = choice.get("finish_reason")
+                        if finish_reason is not None:
+                            if not isinstance(finish_reason, str) or not finish_reason:
+                                raise RuntimeError("SSE finish_reason is invalid")
                         delta = choice.get("delta", {})
                         if not isinstance(delta, dict):
                             raise RuntimeError("SSE delta is not an object")
@@ -362,11 +400,21 @@ class Client:
                                 raise RuntimeError(f"{field} delta is not a string")
                             if fragment:
                                 fragments.append(fragment)
+                                if field != active_field[0]:
+                                    if active_field[0] is not None:
+                                        field_transitions[0] += 1
+                                    active_field[0] = field
                                 if field == "reasoning_content":
                                     reasoning_parts.append(fragment)
                                 else:
                                     content_parts.append(fragment)
-                        if fragments:
+                        if finish_reason is not None:
+                            if len(choices) != 1 or fragments:
+                                raise RuntimeError(
+                                    "terminal finish_reason event carries content or choices"
+                                )
+                            finish_reasons.append(finish_reason)
+                        elif fragments:
                             now_ns = time.perf_counter_ns()
                             generated_parts.extend(fragments)
                             token_timestamps_ns.append(now_ns)
@@ -379,6 +427,10 @@ class Client:
             raise RuntimeError(
                 f"SSE stream has ambiguous response ids: {sorted(response_ids)!r}"
             )
+        if len(finish_reasons) != 1:
+            raise RuntimeError(
+                f"SSE stream has {len(finish_reasons)} terminal finish reasons"
+            )
 
         return {
             "response_id": next(iter(response_ids)),
@@ -390,8 +442,10 @@ class Client:
             "generated_text": "".join(generated_parts),
             "generated_reasoning": "".join(reasoning_parts),
             "generated_content": "".join(content_parts),
+            "field_transitions": field_transitions[0],
             "usage": usage,
             "done": done,
+            "finish_reason": finish_reasons[0],
             "data_chunks": data_chunks,
             "token_timestamps_ns": token_timestamps_ns,
         }
@@ -452,18 +506,35 @@ def observable_output_errors(
     client_completion_tokens: int,
     event_completion_tokens: int,
     minimum_tokens: int,
+    field_transitions: int = 0,
 ) -> list[str]:
-    """Validate counts measured by the client, without trusting server usage."""
+    """Validate counts measured by the client, without trusting server usage.
+
+    A reasoning model streams `reasoning_content` and `content` as separate
+    delta fields. Two effects make an exact identity wrong there, and neither
+    indicates a bad measurement:
+
+      * re-tokenizing across a field boundary can merge or split exactly one
+        token relative to what was streamed, and
+      * one SSE event may carry both fields, contributing two text fragments
+        under a single timestamp.
+
+    Each costs at most one token per boundary, so the tolerance is the number
+    of observed field transitions. With no transitions -- every pre-reasoning
+    response -- this is the original exact-equality check, unchanged.
+    """
     reasons: list[str] = []
     if event_completion_tokens < minimum_tokens:
         reasons.append(
             f"early stop: {event_completion_tokens} timestamped tokens, "
             f"minimum is {minimum_tokens}"
         )
-    if client_completion_tokens != event_completion_tokens:
+    drift = abs(client_completion_tokens - event_completion_tokens)
+    if drift > field_transitions:
         reasons.append(
             "timestamp/client token mismatch: "
-            f"events={event_completion_tokens}, client={client_completion_tokens}"
+            f"events={event_completion_tokens}, client={client_completion_tokens}, "
+            f"drift={drift} exceeds field_transitions={field_transitions}"
         )
     return reasons
 
@@ -679,8 +750,14 @@ def run_rep(
             return invalid_rep(f"invalid usage.completion_tokens: {completion_tokens!r}")
         if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
             return invalid_rep(f"invalid usage.prompt_tokens: {prompt_tokens!r}")
-        client_completion_tokens = token_count(
-            output_tokenizer, stream["generated_text"]
+        # Tokenize the reasoning and content streams separately rather than
+        # tokenizing their concatenation: the model emits them as distinct
+        # delta fields, and re-encoding across that seam invents or destroys a
+        # token that was never streamed.
+        client_completion_tokens = sum(
+            token_count(output_tokenizer, part)
+            for part in (stream["generated_reasoning"], stream["generated_content"])
+            if part
         )
         sse_token_timestamps_ns = stream["token_timestamps_ns"]
         event_completion_tokens = len(sse_token_timestamps_ns)
@@ -725,6 +802,7 @@ def run_rep(
                 client_completion_tokens,
                 len(token_timestamps),
                 min_completion_tokens,
+                stream.get("field_transitions", 0),
             )
             timing_source = "sse_content_events"
         if any(
@@ -793,6 +871,7 @@ def run_rep(
             "client_first_content_ns": first_content_at_ns,
             "client_last_content_ns": last_content_at_ns,
             "sse_token_timestamps_ns": sse_token_timestamps_ns,
+            "client_prompt_tokens": token_count(tokenizer, prompt),
             "raw_client_timing_ratio": raw_client_timing_ratio,
         }
         if reasons:
@@ -807,6 +886,7 @@ def run_rep(
                     "prompt_tokens": prompt_tokens,
                     "client_completion_tokens": client_completion_tokens,
                     "event_completion_tokens": event_completion_tokens,
+                    "field_transitions": stream.get("field_transitions", 0),
                     "timing_source": timing_source,
                     "token_timestamps_ns": (
                         raw_timing["monotonic_ns"]
@@ -830,6 +910,7 @@ def run_rep(
             "prompt_tokens": prompt_tokens,
             "client_completion_tokens": client_completion_tokens,
             "event_completion_tokens": event_completion_tokens,
+            "field_transitions": stream.get("field_transitions", 0),
             "timing_source": timing_source,
             "token_timestamps_ns": (
                 raw_timing["monotonic_ns"]
@@ -914,7 +995,12 @@ def main() -> int:
             level: prefix_with_exact_tokens(tokenizer, fixture, level)
             for level in args.context_levels
         }
-        client = Client(args.base_url, api_key, args.extra_body)
+        client = Client(
+            args.base_url,
+            api_key,
+            args.extra_body,
+            request_timeout_s=args.request_timeout,
+        )
         model = client.get_model(args.model_id)
         result["metadata"]["model"] = model
         result["metadata"]["tokenizer_path"] = str(args.tokenizer_path)
