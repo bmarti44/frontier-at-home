@@ -118,6 +118,23 @@ and has not yet been re-run. The 1M capability result and the ≤28K performance
 suite answer different questions and must not be combined into an implied 1M
 throughput figure.
 
+**DeepSeek V4 Flash 0731 is staged but not qualified, and the table above does
+not include it.** The [0731 release](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
+was fetched for both arms — the production ds4 lineage
+([pin](configs/pins/antirez-imatrix-0731.json)) and the llama.cpp comparison
+lineage ([pin](configs/pins/unsloth-ud-q2_k_xl-0731.json)) — every file verified
+against its published SHA-256, and the ds4 lineage
+[serves and generates](results/dsv4-0731-staging/bringup-2026-08-09.json) on the
+`mtp` profile. Preliminary decode measured 21.34 tok/s median at a 52-token
+prompt against the 19.15 tok/s v0.4.2 `dspark` baseline, but that comparison
+changes both the weights and the serving profile at once, and the speed suite
+reported `suite_valid=false` because 0731 interleaves reasoning tokens the
+pre-0731 harness does not count. No accuracy, golden, token-parity, soak, or
+agent-gate evidence exists for 0731 yet, and the installed default is unchanged.
+Two upgrade findings are recorded in that bring-up file: the MTP weights are
+byte-identical across the release, and no 0731 DSpark drafter exists in any
+published repository, so the `dspark` profile cannot currently start.
+
 DeepSeek task accuracy is the audited llama.cpp result in
 [results/DECISION.md](results/DECISION.md). GLM fidelity is the teacher-forced
 comparison with a hosted FP8 reference in
