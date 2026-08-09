@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "gate": "dsv4-0731-production-lineage-bringup",
+  "date_utc": "2026-08-09",
+  "status": "SERVES_AND_GENERATES",
+  "scope": "First working bring-up of DeepSeek-V4-Flash-0731 on the ds4 production-lineage weights. This is NOT a requalification pass: golden, token-parity, accuracy, soak, and the agent gate have not been run, and the speed suite reported suite_valid=false for the reason recorded under harness_gap below.",
+  "weights": {
+    "pin": "configs/pins/antirez-imatrix-0731.json",
+    "staging_dir": "/home/bmarti44/models/dsv4-flash-0731-production",
+    "sha256_verified": true,
+    "verification_note": "All three files independently re-hashed on 2026-08-09 and matched the HF-published sha256 in the pin. The base and dspark_support downloads were verified once by the fetch and once again before launch."
+  },
+  "engine": {
+    "pinned_commit": "baa889025b16a7060f5f854226cb0d14e260eb52",
+    "build_path": "/tmp/ds4-prod-baa8890",
+    "build_command": "make -j6 cuda-spark",
+    "byte_identical_to_production_binary": false,
+    "byte_identity_note": "Rebuild differs from the committed production binary hash because -g -lineinfo embeds absolute source paths and this build lives at a different path. Source provenance is exact. Fixable with -ffile-prefix-map; same defect class as the llama-server reproducibility failure in results/dsv4-cold-load."
+  },
+  "profiles": {
+    "dspark": {
+      "result": "FAILED_TO_START",
+      "error": "ds4: required tensor is missing: dspark.main_proj.weight",
+      "analysis": "DeepSeek-V4-Flash-DSpark-support-0731.gguf is not a DSpark drafter. gguf-tools/README.md documents --dspark-support as producing 'the support GGUF used by ds4 --mtp', holding packed mtp.* tensors plus dspark.* metadata keys. DS4_DSPARK_MODEL instead requires a drafter carrying dspark.main_proj.weight. The in-tree converter (gguf-tools/deepseek4-quantize.c) exposes --dspark-manifest and --dspark-support only; it has no mode that emits a dspark.main_proj.weight drafter. The pre-0731 production drafter came from the third-party bleysg repo, which publishes no 0731 successor, and a drafter must remain token-distribution-compatible with its base. There is therefore no available 0731 DSpark drafter."
+    },
+    "mtp": {
+      "result": "PASS",
+      "listening": "http://127.0.0.1:8021",
+      "ctx": 32768,
+      "note": "max_seq reduced from 32 to 15 by the engine's batch-fit logic to fit memory; free=15.86 GiB headroom=8.00 GiB at fit time.",
+      "smoke": {
+        "prompt": "Explain in one sentence why the sky is blue.",
+        "coherent_output": true,
+        "finish_reason": "length",
+        "ttft_ms": 4296.1,
+        "decode_tok_s": 19.8,
+        "spec_accept_rate": 0.848,
+        "tok_per_step": 1.88,
+        "note": "Speculative decoding is active and effective through MTP alone, without any DSpark drafter."
+      }
+    }
+  },
+  "speed": {
+    "artifact": "results/dsv4-0731-staging/speed-ds4-0731-mtp.json",
+    "harness": "scripts/30_bench_speed.py --reps 5 --warmup 1 --max-tokens 256 --seed 42 --context-levels 0,4096",
+    "comparison_baseline": "results/speed-ds4-dspark.json (v0.4.2, dspark profile, 2026-07-16)",
+    "measured": {
+      "ctx_0": {
+        "decode_tok_s_all_reps": [22.64, 21.09, 21.36, 21.33, 21.23],
+        "median_decode_tok_s": 21.34,
+        "median_ttft_s": 0.571,
+        "median_prefill_tok_s": 91.5,
+        "baseline_median_decode_tok_s": 19.15,
+        "baseline_median_ttft_s": 0.576,
+        "baseline_median_prefill_tok_s": 90.3
+      },
+      "ctx_4096": {
+        "decode_tok_s_all_reps": [19.61, 19.32, 20.12, 20.36, 18.54],
+        "median_decode_tok_s": null,
+        "baseline_median_decode_tok_s": 20.47,
+        "median_note": "Harness returned null because every rep in this cell was marked invalid; the raw per-rep decode rates above are still recorded."
+      }
+    },
+    "interpretation": "At ctx=0 the 0731 mtp profile measures faster than the v0.4.2 dspark profile on every rep (all five above the 19.15 baseline median), with TTFT and prefill unchanged. At ctx=4096 it is at or slightly below the 20.47 baseline. Because the comparison crosses BOTH a weights change and a profile change (dspark -> mtp), it does not isolate the effect of 0731 itself and must not be quoted as a qualification result."
+  },
+  "harness_gap": {
+    "id": "DSV4-0731-H1-BENCH-REJECTS-REASONING-OUTPUT",
+    "observed": "suite_valid=false. ctx=0 had 1 of 5 reps invalid ('timestamp/client token mismatch: events=255, client=254'); ctx=4096 had 5 of 5 invalid ('events=255, client=256').",
+    "analysis": "Every rep produced sane timings and 255-256 tokens, so this is a counting disagreement inside the harness, not an engine or model failure. Rep records carry non-empty generated_reasoning_sha256/generated_reasoning_bytes alongside generated_content_*, and the smoke completion emitted explicit numbered reasoning steps. The 0731 release adds selectable reasoning effort levels, so the model interleaves reasoning tokens that scripts/30_bench_speed.py, written for the pre-0731 model, does not reconcile against its client-side content-token count.",
+    "consequence": "scripts/30_bench_speed.py must be taught to account for reasoning tokens before any 0731 speed result can be declared valid. The same question applies to 31_bench_accuracy.py, 32_golden_tests.py, and 33_token_parity.py, none of which have been run against 0731.",
+    "status": "OPEN"
+  },
+  "safety": {
+    "production_port_8011_used": false,
+    "speed_suite_port_8012_used": false,
+    "home_dsv4_read_or_written": false,
+    "production_weight_manifest_modified": false,
+    "engine_stopped_after_run": true,
+    "mem_available_kb_after_stop": 119774256,
+    "lock_file": "/home/bmarti44/.local/state/dsv4-0731/ds4-0731.lock",
+    "lock_note": "The engine defaults to /tmp/ds4.lock, which is owned by the production dsv4 user (mode 0600); the first launch attempt failed closed there. DS4_LOCK_FILE now points at a caller-owned path so a pre-cutover run can never contend with production."
+  },
+  "remaining_before_cutover": [
+    "Fix DSV4-0731-H1 and re-run the speed suite to a valid result.",
+    "Run golden, token-parity, accuracy (gsm8k/mmlu/humaneval dev+holdout), soak, and the agent gate against 0731.",
+    "Decide the drafter question: accept the mtp profile as the 0731 production profile, or produce a first-party DSpark drafter from the HF DeepSeek-V4-Flash-DSpark checkpoint. The latter would also retire audit finding HIGH-2 in docs/ds4-security-review.md, which flagged the third-party bleysg drafter for having no provenance chain.",
+    "Re-run the matched llama.cpp comparison arm on the staged unsloth UD-Q2_K_XL 0731 set.",
+    "Owner cutover per scripts/97_dsv4_0731_cutover.md, including API-key re-keying."
+  ]
+}

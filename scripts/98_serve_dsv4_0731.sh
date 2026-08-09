@@ -44,26 +44,37 @@ fi
 avail_gib=$(( $(awk '/^MemAvailable:/ {print $2}' /proc/meminfo) / 1024 / 1024 ))
 (( avail_gib >= MIN_START_GIB )) || die "only ${avail_gib} GiB available, need ${MIN_START_GIB}"
 
-resolve() {  # role -> "path sha256"
+resolve() {  # role -> "path sha256 bytes"
     python3 - "$PIN" "$1" <<'PY'
 import json, sys
 pin = json.load(open(sys.argv[1]))
 for f in pin["files"]:
     if f["role"] == sys.argv[2]:
-        print(f["path"], f["sha256"])
+        print(f["path"], f["sha256"], f["bytes"])
         break
 else:
     raise SystemExit(f"role not in pin: {sys.argv[2]}")
 PY
 }
 
+# Size is always checked. SHA-256 costs ~4 minutes across the ~90 GB set, so
+# repeated bring-ups within one verified session may set
+# DSV4_0731_SKIP_SHA=1 to check size only. Any run that produces committed
+# evidence must leave it unset — the requalification receipts are meaningless
+# if the bytes behind them were never authenticated.
 verify() {  # role -> echoes verified absolute path
-    local role=$1 path sha actual
-    read -r path sha < <(resolve "$role")
+    local role=$1 path sha bytes actual actual_bytes
+    read -r path sha bytes < <(resolve "$role")
     local abs="$STAGING/$path"
     [[ -r $abs ]] || die "staged weight missing: $abs"
-    actual=$(sha256sum "$abs" | cut -d' ' -f1)
-    [[ $actual == "$sha" ]] || die "sha256 mismatch for $role: expected $sha got $actual"
+    actual_bytes=$(stat -c '%s' "$abs")
+    [[ $actual_bytes == "$bytes" ]] || die "size mismatch for $role: expected $bytes got $actual_bytes"
+    if [[ ${DSV4_0731_SKIP_SHA:-0} == 1 ]]; then
+        printf 'WARNING: sha256 verification SKIPPED for %s (size-only)\n' "$role" >&2
+    else
+        actual=$(sha256sum "$abs" | cut -d' ' -f1)
+        [[ $actual == "$sha" ]] || die "sha256 mismatch for $role: expected $sha got $actual"
+    fi
     printf '%s\n' "$abs"
 }
 
@@ -88,8 +99,14 @@ LOG=$LOG_DIR/ds4-0731-$PROFILE-$PORT.log
 # Mirrors scripts/20_serve_ds4.sh's server_command for the selected profile.
 # Security baseline preserved: no --cors, --trace, --kv-disk-dir, --role,
 # --listen, --coordinator. Loopback bind only.
+# DS4_LOCK_FILE is mandatory: the engine otherwise defaults to /tmp/ds4.lock,
+# which is owned by the production dsv4 user (mode 0600) and fails closed with
+# "Permission denied". Production points this at /run/dsv4/ds4-engine.lock; a
+# pre-cutover run must use its own lock so it can never contend with, or be
+# mistaken for, the production engine.
 cmd=(env -u DS4_CUDA_WEIGHT_IPC_MANIFEST -u DS4_CONT_DSPARK -u DS4_DSPARK_MODEL
-     DS4_CUDA_BUILD_ARTIFACTS=1 "DS4_CONT_MTP_MODE=$MTP_MODE")
+     DS4_CUDA_BUILD_ARTIFACTS=1 "DS4_CONT_MTP_MODE=$MTP_MODE"
+     "DS4_LOCK_FILE=$LOG_DIR/ds4-0731.lock")
 if [[ $PROFILE == dspark ]]; then
     cmd+=(DS4_CONT_DSPARK=1 "DS4_DSPARK_MODEL=$DRAFTER")
 fi
