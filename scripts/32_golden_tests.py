@@ -538,14 +538,22 @@ def main() -> int:
             raise RuntimeError(f"received only {stream['chunks']} SSE data chunks")
         if not stream["done"]:
             raise RuntimeError("SSE stream did not terminate with [DONE]")
-        if not stream["content"]:
-            raise RuntimeError("concatenated content deltas are empty")
+        # This check validates SSE mechanics, not answer shape. A reasoning
+        # model may spend a short max_tokens budget entirely inside
+        # reasoning_content and emit no content delta at all; that is a
+        # streaming success, not a failure. Require text on the wire from
+        # either field, and record which field carried it so a silently
+        # content-free model is still visible in the evidence.
+        if not stream["generated_text"]:
+            raise RuntimeError("SSE stream produced no reasoning or content deltas")
         if not isinstance(stream["usage"], dict):
             raise RuntimeError("SSE stream did not include a usage object")
         return {
             "data_chunks": stream["chunks"],
             "done": stream["done"],
             "content": stream["content"],
+            "content_bytes": len(stream["content"].encode("utf-8")),
+            "generated_bytes": len(stream["generated_text"].encode("utf-8")),
             "usage": stream["usage"],
         }
 
@@ -652,8 +660,14 @@ def main() -> int:
             raise RuntimeError("sustained stream did not terminate with [DONE]")
         if stream["ttft_s"] is None:
             raise RuntimeError("sustained stream produced no content chunks")
-        if not stream["content"]:
-            raise RuntimeError("sustained stream final content is empty")
+        # As in streaming_sse: a reasoning model can spend a 64-token budget
+        # entirely inside reasoning_content. What this check needs to prove is
+        # that a long-context prompt still streams tokens back, which either
+        # field demonstrates.
+        if not stream["generated_text"]:
+            raise RuntimeError(
+                "sustained stream produced no reasoning or content deltas"
+            )
         return {
             "fixture_context_tokens": target,
             "prompt_tokens_client": token_count(tokenizer(), prompt),

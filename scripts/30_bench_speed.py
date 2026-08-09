@@ -519,9 +519,20 @@ def observable_output_errors(
       * one SSE event may carry both fields, contributing two text fragments
         under a single timestamp.
 
-    Each costs at most one token per boundary, so the tolerance is the number
-    of observed field transitions. With no transitions -- every pre-reasoning
-    response -- this is the original exact-equality check, unchanged.
+    Each costs at most one token per boundary, so a boundary may shrink the
+    re-encoded count by up to one token per transition.
+
+    A speculative-decoding engine additionally emits more than one token per
+    step -- this deployment runs MTP at 1.5-1.9 tokens/step -- and two tokens
+    can share a single SSE delta. So the number of timestamped events is a
+    LOWER bound on generated tokens, not an identity: 255 events for 256 tokens
+    is normal, not a fault.
+
+    What this check must still catch is the opposite direction. More timestamps
+    than tokens cannot happen honestly; it would mean duplicated or fabricated
+    timing rows inflating a short generation into an apparently complete one.
+    So the bound is one-sided, and deliberately does not consult server-reported
+    usage -- the whole point is to validate the stream without trusting it.
     """
     reasons: list[str] = []
     if event_completion_tokens < minimum_tokens:
@@ -529,12 +540,12 @@ def observable_output_errors(
             f"early stop: {event_completion_tokens} timestamped tokens, "
             f"minimum is {minimum_tokens}"
         )
-    drift = abs(client_completion_tokens - event_completion_tokens)
-    if drift > field_transitions:
+    ceiling = client_completion_tokens + field_transitions
+    if event_completion_tokens > ceiling:
         reasons.append(
             "timestamp/client token mismatch: "
-            f"events={event_completion_tokens}, client={client_completion_tokens}, "
-            f"drift={drift} exceeds field_transitions={field_transitions}"
+            f"events={event_completion_tokens} exceeds client={client_completion_tokens} "
+            f"+ field_transitions={field_transitions}; timestamps cannot outnumber tokens"
         )
     return reasons
 
