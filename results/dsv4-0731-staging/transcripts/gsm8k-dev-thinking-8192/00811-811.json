@@ -1,0 +1,57 @@
+{
+  "index": 811,
+  "task_id": 811,
+  "rendered_prompt_sha256": "139673f1aba8dfa1464efc4bc1c8c04530bcd57eec8a60a77e9fcb10b01a7af8",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Problem: Felix charges $.25 per branch climbed. Made $105 during week. On average how many branches per day? Week likely 7 days? Need compute total branches = 105 / 0.25 = 420 branches. Average per day over week = 420 / 7 = 60. Need final numeric answer. But check wording: \"During the week he made $105. On average, how many branches did he climb per day?\" Week could be 5 days? Usually week = 7 days. If \"during the week\" maybe Monday-Friday? But no, week includes 7 days. Need answer 60. But let's think: charges $.25 per branch, made $105, total branches = 420. Average per day = 60 if 7 days. If \"week\" maybe 7 days. Final Answer: 60.</think>Answer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.358965938001347
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Problem: Felix charges $.25 per branch climbed. Made $105 during week. On average how many branches per day? Week likely 7 days? Need compute total branches = 105 / 0.25 = 420 branches. Average per day over week = 420 / 7 = 60. Need final numeric answer. But check wording: \"During the week he made $105. On average, how many branches did he climb per day?\" Week could be 5 days? Usually week = 7 days. If \"during the week\" maybe Monday-Friday? But no, week includes 7 days. Need answer 60. But let's think: charges $.25 per branch, made $105, total branches = 420. Average per day = 60 if 7 days. If \"week\" maybe 7 days. Final Answer: 60.</think>Answer: 60",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786340754,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 191,
+      "prompt_tokens": 108,
+      "total_tokens": 299,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-3fmwwWTOxzjYZSccFVzBYuw8RmZDEJ09",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 107,
+      "prompt_ms": 707.664,
+      "prompt_per_token_ms": 6.613682242990654,
+      "prompt_per_second": 151.20170024192274,
+      "predicted_n": 191,
+      "predicted_ms": 9648.892,
+      "predicted_per_token_ms": 50.51775916230366,
+      "predicted_per_second": 19.795018951398774
+    }
+  },
+  "used_fallback": false
+}

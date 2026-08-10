@@ -1,0 +1,56 @@
+{
+  "index": 3572,
+  "task_id": 3694,
+  "rendered_prompt_sha256": "402f72eed64c7fe3989be6e24643a6a8ac4d4d6ceb6e95b9a20750c29436028e",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse problem. \"A sample of an ideal gas at 27°C and 380torr occupied a volume of 492 cm^3. What was the number of moles? (R = 0.082 liter atm mole^-1 deg^-1).\" Options.\n\nNeed compute n = PV/RT. Need units. P=380 torr = 380/760 atm = 0.5 atm. V=492 cm^3 = 0.492 L (since 1 L=1000 cm^3). T=27°C = 300 K (deg? R uses deg^-1, assume K). n = 0.5 * 0.492 / (0.082 * 300) = 0.246 / 24.6 = 0.01 mol. So answer G. Need final Answer: G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.131160277000163
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse problem. \"A sample of an ideal gas at 27°C and 380torr occupied a volume of 492 cm^3. What was the number of moles? (R = 0.082 liter atm mole^-1 deg^-1).\" Options.\n\nNeed compute n = PV/RT. Need units. P=380 torr = 380/760 atm = 0.5 atm. V=492 cm^3 = 0.492 L (since 1 L=1000 cm^3). T=27°C = 300 K (deg? R uses deg^-1, assume K). n = 0.5 * 0.492 / (0.082 * 300) = 0.246 / 24.6 = 0.01 mol. So answer G. Need final Answer: G.</think>Answer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786342555,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 187,
+      "prompt_tokens": 149,
+      "total_tokens": 336,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-8hWcwGg1Kl9GwTO3zD73ogHMb39qY9Ki",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 148,
+      "prompt_ms": 698.761,
+      "prompt_per_token_ms": 4.721358108108108,
+      "prompt_per_second": 211.803463559071,
+      "predicted_n": 187,
+      "predicted_ms": 9428.989,
+      "predicted_per_token_ms": 50.42240106951871,
+      "predicted_per_second": 19.83245499597041
+    }
+  }
+}

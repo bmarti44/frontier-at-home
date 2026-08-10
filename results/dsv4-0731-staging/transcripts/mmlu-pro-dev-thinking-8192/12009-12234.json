@@ -1,0 +1,56 @@
+{
+  "index": 12009,
+  "task_id": 12234,
+  "rendered_prompt_sha256": "0b9eab49d5406651251adbac5df842426b75279c3caa0e6ceb9d0c9d6d98d5a1",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Need determine bandwidth of TV video signal. Problem: 300,000 picture elements, each can attain 10 different brightness levels equally likely. 30 frames per second. Signal-to-noise ratio 1000 (30 dB) required. Need bandwidth? This is information theory / Shannon-Hartley? Need compute.\n\nWe have number of picture elements = 300,000. Each has 10 levels equally likely. So information per picture element = log2 10 bits. Per frame = 300,000 * log2 10 bits. Frames per second = 30. Total information rate R = 30 * 300,000 * log2 10 bits/s = 9,000,000 * log2 10 ≈ 9,000,000 * 3.321928 = 29,897,352 bits/s ≈ 29.9 Mbit/s.\n\nNeed bandwidth given SNR = 1000 (power ratio? 30 dB). Shannon capacity C = W log2(1 + S/N). Need C >= R. So W >= R / log2(1+1000) = R / log2(1001). log2(1001) ≈ 9.967? Actually 2^10=1024, so log2(1001)=9.967? Compute: ln 1001/ln2 = 6.908255/0.693147=9.966. So W ≈ 29.9e6 / 9.966 ≈ 3.0 MHz. Options include 3MHz. Answer G.\n\nNeed ensure no nuance: \"television picture composed of approximately 300,000 individual picture elements, each can attain ten different brightness levels ... probability equal, 30 frames per second, determine bandwidth. Assume SNR 1000 (30 db) required.\" This is classic: bandwidth = (n * log2 m * frames) / (log2(1+S/N))? Let's compute exactly maybe 3MHz. Option G.\n\nNeed final with Answer: G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 22.591671280999435
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Need determine bandwidth of TV video signal. Problem: 300,000 picture elements, each can attain 10 different brightness levels equally likely. 30 frames per second. Signal-to-noise ratio 1000 (30 dB) required. Need bandwidth? This is information theory / Shannon-Hartley? Need compute.\n\nWe have number of picture elements = 300,000. Each has 10 levels equally likely. So information per picture element = log2 10 bits. Per frame = 300,000 * log2 10 bits. Frames per second = 30. Total information rate R = 30 * 300,000 * log2 10 bits/s = 9,000,000 * log2 10 ≈ 9,000,000 * 3.321928 = 29,897,352 bits/s ≈ 29.9 Mbit/s.\n\nNeed bandwidth given SNR = 1000 (power ratio? 30 dB). Shannon capacity C = W log2(1 + S/N). Need C >= R. So W >= R / log2(1+1000) = R / log2(1001). log2(1001) ≈ 9.967? Actually 2^10=1024, so log2(1001)=9.967? Compute: ln 1001/ln2 = 6.908255/0.693147=9.966. So W ≈ 29.9e6 / 9.966 ≈ 3.0 MHz. Options include 3MHz. Answer G.\n\nNeed ensure no nuance: \"television picture composed of approximately 300,000 individual picture elements, each can attain ten different brightness levels ... probability equal, 30 frames per second, determine bandwidth. Assume SNR 1000 (30 db) required.\" This is classic: bandwidth = (n * log2 m * frames) / (log2(1+S/N))? Let's compute exactly maybe 3MHz. Option G.\n\nNeed final with Answer: G.</think>Answer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786345770,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 429,
+      "prompt_tokens": 190,
+      "total_tokens": 619,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-X6BI8owo81JfYstWULokcIHBBrpXS5IA",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 189,
+      "prompt_ms": 843.734,
+      "prompt_per_token_ms": 4.464201058201058,
+      "prompt_per_second": 224.00424778425426,
+      "predicted_n": 429,
+      "predicted_ms": 21744.194,
+      "predicted_per_token_ms": 50.6857668997669,
+      "predicted_per_second": 19.729404548175022
+    }
+  }
+}

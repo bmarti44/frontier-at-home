@@ -1,0 +1,57 @@
+{
+  "index": 1191,
+  "task_id": 1191,
+  "rendered_prompt_sha256": "0006c1713064b4ec2b14c42a88bb4e3c3f1e0e23ef79441ef915665d806ea7f7",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need parse: color $40 + $30 per inch of haircut. Hair started 10 inches ended 8, so cut 2 inches. Cost = 40 + 30*2 = 100. Need final numeric answer on own line.</think>Answer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.6505579139993642
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need parse: color $40 + $30 per inch of haircut. Hair started 10 inches ended 8, so cut 2 inches. Cost = 40 + 30*2 = 100. Need final numeric answer on own line.</think>Answer: 100",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786339108,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 62,
+      "prompt_tokens": 77,
+      "total_tokens": 139,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-KtMj8OoV1Ilo53yKrWlovK2afYH5ADLR",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 76,
+      "prompt_ms": 537.72,
+      "prompt_per_token_ms": 7.075263157894737,
+      "prompt_per_second": 141.33749907014803,
+      "predicted_n": 62,
+      "predicted_ms": 3109.936,
+      "predicted_per_token_ms": 50.16025806451613,
+      "predicted_per_second": 19.936101578939244
+    }
+  },
+  "used_fallback": false
+}

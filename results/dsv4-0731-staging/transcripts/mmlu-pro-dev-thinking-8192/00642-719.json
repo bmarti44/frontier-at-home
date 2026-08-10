@@ -1,0 +1,56 @@
+{
+  "index": 642,
+  "task_id": 719,
+  "rendered_prompt_sha256": "3c732dc6bd5fcc3234e4eb0215777667a909ea9c4fbaaef872d591d13791fb63",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Declining-balance method with rate 40% on book value? Initial cost $4000, estimated life 5 years, salvage $800. Declining-balance usually depreciation = rate * book value at beginning of year, not below salvage? Need compute annual depreciation. Rate 40%. Year1: 4000*0.4=1600. Book value 2400. Year2: 2400*0.4=960. Book value 1440. Year3: 1440*0.4=576. Book value 864. Year4: 864*0.4=345.6. Book value 518.4. Year5: 518.4*0.4=207.36. Book value 311.04, below salvage? Actually salvage value $800, but declining balance may ignore salvage? If must not depreciate below salvage, after year3 book value 864 > salvage 800, year4 depreciation limited to 64 to reach salvage, then year5 0. Option D: 1600,960,576,64,0. But question says declining-balance method with 40% rate. Usually declining balance method: depreciation = book value at beginning * rate; book value may go below salvage? But if estimated salvage value is $800, asset should not be depreciated below salvage. Need determine correct option among choices. Options include A: 1600,960,576,345.6,207.36 (continues below salvage to 311.04) and H: 1600,960,576,345.6,0 (stops after year4? book value after year4 = 518.4, not salvage; then year5 0? That would leave 518.4 not salvage, weird). D: 1600,960,576,64,0 exactly adjusts year4 to salvage and year5 zero. Need know declining-balance method with salvage: The depreciation rate may be applied to book value, but depreciation should not reduce book value below residual value. So in year4, book value at beginning 864, salvage 800, maximum depreciation 64, not 345.6. Then year5 0. Option D. But let's verify if \"declining-balance method\" sometimes uses rate as percentage of book value and ignores salvage until end? If salvage value is $800, at end of 5 years book value should be $800. Option A ends at 311.04, not salvage. Option D ends at 800. So D correct. Need answer: Answer: D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 29.174115032001282
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Declining-balance method with rate 40% on book value? Initial cost $4000, estimated life 5 years, salvage $800. Declining-balance usually depreciation = rate * book value at beginning of year, not below salvage? Need compute annual depreciation. Rate 40%. Year1: 4000*0.4=1600. Book value 2400. Year2: 2400*0.4=960. Book value 1440. Year3: 1440*0.4=576. Book value 864. Year4: 864*0.4=345.6. Book value 518.4. Year5: 518.4*0.4=207.36. Book value 311.04, below salvage? Actually salvage value $800, but declining balance may ignore salvage? If must not depreciate below salvage, after year3 book value 864 > salvage 800, year4 depreciation limited to 64 to reach salvage, then year5 0. Option D: 1600,960,576,64,0. But question says declining-balance method with 40% rate. Usually declining balance method: depreciation = book value at beginning * rate; book value may go below salvage? But if estimated salvage value is $800, asset should not be depreciated below salvage. Need determine correct option among choices. Options include A: 1600,960,576,345.6,207.36 (continues below salvage to 311.04) and H: 1600,960,576,345.6,0 (stops after year4? book value after year4 = 518.4, not salvage; then year5 0? That would leave 518.4 not salvage, weird). D: 1600,960,576,64,0 exactly adjusts year4 to salvage and year5 zero. Need know declining-balance method with salvage: The depreciation rate may be applied to book value, but depreciation should not reduce book value below residual value. So in year4, book value at beginning 864, salvage 800, maximum depreciation 64, not 345.6. Then year5 0. Option D. But let's verify if \"declining-balance method\" sometimes uses rate as percentage of book value and ignores salvage until end? If salvage value is $800, at end of 5 years book value should be $800. Option A ends at 311.04, not salvage. Option D ends at 800. So D correct. Need answer: Answer: D.</think>Answer: D",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786342098,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 550,
+      "prompt_tokens": 319,
+      "total_tokens": 869,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-wrRMARpuc2OQTWGhQbHD4nvSYKG7awo7",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 318,
+      "prompt_ms": 1118.588,
+      "prompt_per_token_ms": 3.517572327044025,
+      "prompt_per_second": 284.2869760805587,
+      "predicted_n": 550,
+      "predicted_ms": 28052.57,
+      "predicted_per_token_ms": 51.00467272727273,
+      "predicted_per_second": 19.6060467900089
+    }
+  }
+}

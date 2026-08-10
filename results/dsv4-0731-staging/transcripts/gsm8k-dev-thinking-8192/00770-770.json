@@ -1,0 +1,57 @@
+{
+  "index": 770,
+  "task_id": 770,
+  "rendered_prompt_sha256": "2175d4e676664f266e240c96a8dcf77e614f287ffae16527261a314117f2ce95",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse problem. \"They already have 4 vanilla scents and 8 fruity scents available ... sell 5 of each of the vanilla scents and 2 of each of the fruity scents available. How many more vanilla scents sold compared with the fruity scents?\" Need compute total vanilla sold = 4 scents * 5 each = 20. Fruity = 8 scents * 2 each = 16. More vanilla sold = 20 - 16 = 4. Need final numeric answer on own line.</think>Answer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.021447471997817
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse problem. \"They already have 4 vanilla scents and 8 fruity scents available ... sell 5 of each of the vanilla scents and 2 of each of the fruity scents available. How many more vanilla scents sold compared with the fruity scents?\" Need compute total vanilla sold = 4 scents * 5 each = 20. Fruity = 8 scents * 2 each = 16. More vanilla sold = 20 - 16 = 4. Need final numeric answer on own line.</think>Answer: 4",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786339104,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 125,
+      "prompt_tokens": 137,
+      "total_tokens": 262,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ypLT1PSosV9RSMttyCMqPjXKt1kum4Ib",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 136,
+      "prompt_ms": 710.085,
+      "prompt_per_token_ms": 5.221213235294118,
+      "prompt_per_second": 191.52636656174963,
+      "predicted_n": 125,
+      "predicted_ms": 6308.099,
+      "predicted_per_token_ms": 50.464792,
+      "predicted_per_second": 19.815795535231768
+    }
+  },
+  "used_fallback": false
+}

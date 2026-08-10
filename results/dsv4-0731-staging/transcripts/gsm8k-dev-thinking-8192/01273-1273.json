@@ -1,0 +1,57 @@
+{
+  "index": 1273,
+  "task_id": 1273,
+  "rendered_prompt_sha256": "2247576c9cc905c6a7252776a2833db9320c5272f87d25ac6838cbd285846ac8",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse problem. \"Mazie has 52 marbles and gives them to twins, Dallas and Darla. If Dallas has a total of 21 marbles after dropping 4 of them in the playground, how many did Mazie give to Darla?\"\n\nNeed think. Mazie has 52 marbles and gives them to twins Dallas and Darla. Dallas has total 21 marbles after dropping 4 of them in playground. How many did Mazie give to Darla? Need infer: Mazie gave some to Dallas and some to Darla, total 52. Dallas dropped 4, so currently has 21. Thus originally Dallas received 21 + 4 = 25. Then Darla received 52 - 25 = 27. Need answer 27. But check wording: \"If Dallas has a total of 21 marbles after dropping 4 of them in the playground\" means after dropping, Dallas has 21, so originally had 25. Yes.\n\nNeed final numeric answer on own line: Answer: 27.</think>Answer: 27",
+  "finish_reason": "stop",
+  "expected": "27",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.688490512002318
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse problem. \"Mazie has 52 marbles and gives them to twins, Dallas and Darla. If Dallas has a total of 21 marbles after dropping 4 of them in the playground, how many did Mazie give to Darla?\"\n\nNeed think. Mazie has 52 marbles and gives them to twins Dallas and Darla. Dallas has total 21 marbles after dropping 4 of them in playground. How many did Mazie give to Darla? Need infer: Mazie gave some to Dallas and some to Darla, total 52. Dallas dropped 4, so currently has 21. Thus originally Dallas received 21 + 4 = 25. Then Darla received 52 - 25 = 27. Need answer 27. But check wording: \"If Dallas has a total of 21 marbles after dropping 4 of them in the playground\" means after dropping, Dallas has 21, so originally had 25. Yes.\n\nNeed final numeric answer on own line: Answer: 27.</think>Answer: 27",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786340005,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 221,
+      "prompt_tokens": 77,
+      "total_tokens": 298,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-22VezHvM1L9t2ppBZBU7YavvrzyMMfMB",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 76,
+      "prompt_ms": 545.422,
+      "prompt_per_token_ms": 7.176605263157895,
+      "prompt_per_second": 139.34164738496062,
+      "predicted_n": 221,
+      "predicted_ms": 11140.473,
+      "predicted_per_token_ms": 50.409380090497734,
+      "predicted_per_second": 19.83757781200134
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,56 @@
+{
+  "index": 9010,
+  "task_id": 9199,
+  "rendered_prompt_sha256": "e25c1fd4d9763bdce84bc6cce292c30bf32801da26e0605ab0a9281592e2cd66",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics. Need solve. Car from 30 mi/hr to 60 mi/hr in 10 sec uniform acceleration. Distance = average speed * time. Convert speeds to ft/s. 1 mi/hr = 5280/3600 = 22/15 ft/s ≈1.4667. 30 mph = 44 ft/s? 30*22/15=44. 60 mph=88 ft/s. Average = (44+88)/2=66 ft/s. Time 10s => 660 ft. Option E. Need answer: Answer: E.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.038707652995072
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics. Need solve. Car from 30 mi/hr to 60 mi/hr in 10 sec uniform acceleration. Distance = average speed * time. Convert speeds to ft/s. 1 mi/hr = 5280/3600 = 22/15 ft/s ≈1.4667. 30 mph = 44 ft/s? 30*22/15=44. 60 mph=88 ft/s. Average = (44+88)/2=66 ft/s. Time 10s => 660 ft. Option E. Need answer: Answer: E.</think>Answer: E",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786351110,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 126,
+      "prompt_tokens": 126,
+      "total_tokens": 252,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-rkauy2L63gSRdx2jUImABqdsueOxxxJA",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 125,
+      "prompt_ms": 738.229,
+      "prompt_per_token_ms": 5.905832,
+      "prompt_per_second": 169.32415280353385,
+      "predicted_n": 126,
+      "predicted_ms": 6297.049,
+      "predicted_per_token_ms": 49.97657936507937,
+      "predicted_per_second": 20.00937264423383
+    }
+  }
+}

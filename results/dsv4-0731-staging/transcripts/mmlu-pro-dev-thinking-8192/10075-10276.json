@@ -1,0 +1,56 @@
+{
+  "index": 10075,
+  "task_id": 10276,
+  "rendered_prompt_sha256": "d480fbd0d8bf54593c62e82470b4d6e9393a01f8e5c8ec0bdd91fac45725ac06",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics diffraction beam divergence. Ruby laser wavelength 694.3 nm, initial diameter 14 mm, distance 10,000 km = 10^7 m. Need beam diameter at target due to diffraction. For Gaussian beam? Usually diffraction limited divergence angle θ ≈ 1.22 λ / D? Or 2.44 λ / D for Airy disk full angle? Beam diameter at distance L: D + 2 L tan θ? Need options around 1000-2000 m. Let's compute.\n\nGiven initial diameter 14 mm = 0.014 m. λ=694.3e-9 m. Distance L=10,000 km = 10,000,000 m = 1e7 m.\n\nIf divergence half-angle θ = 1.22 λ / D (Airy radius to first null? Actually angular radius of Airy disk = 1.22 λ / D, so full angular diameter = 2.44 λ / D. Beam diameter at target = D + 2 L θ? If θ half-angle = 1.22 λ / D, then diameter = D + 2 L θ = D + 2.44 L λ / D. Compute: 2.44 * 1e7 * 694.3e-9 / 0.014 = 2.44 * 6.943e? Let's calculate: λ L / D = (694.3e-9 * 1e7)/0.014 = 6.943 /0.014? 694.3e-9*1e7 = 6.943 m. /0.014 = 495.9286 m. times 2.44 = 1210.07 m. Plus initial 0.014 negligible. So ~1210 m. Option B.\n\nIf use Gaussian beam divergence θ = λ/(π w0) maybe diameter? But options include 1210. So answer B.\n\nNeed final Answer: B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 21.964052834999165
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics diffraction beam divergence. Ruby laser wavelength 694.3 nm, initial diameter 14 mm, distance 10,000 km = 10^7 m. Need beam diameter at target due to diffraction. For Gaussian beam? Usually diffraction limited divergence angle θ ≈ 1.22 λ / D? Or 2.44 λ / D for Airy disk full angle? Beam diameter at distance L: D + 2 L tan θ? Need options around 1000-2000 m. Let's compute.\n\nGiven initial diameter 14 mm = 0.014 m. λ=694.3e-9 m. Distance L=10,000 km = 10,000,000 m = 1e7 m.\n\nIf divergence half-angle θ = 1.22 λ / D (Airy radius to first null? Actually angular radius of Airy disk = 1.22 λ / D, so full angular diameter = 2.44 λ / D. Beam diameter at target = D + 2 L θ? If θ half-angle = 1.22 λ / D, then diameter = D + 2 L θ = D + 2.44 L λ / D. Compute: 2.44 * 1e7 * 694.3e-9 / 0.014 = 2.44 * 6.943e? Let's calculate: λ L / D = (694.3e-9 * 1e7)/0.014 = 6.943 /0.014? 694.3e-9*1e7 = 6.943 m. /0.014 = 495.9286 m. times 2.44 = 1210.07 m. Plus initial 0.014 negligible. So ~1210 m. Option B.\n\nIf use Gaussian beam divergence θ = λ/(π w0) maybe diameter? But options include 1210. So answer B.\n\nNeed final Answer: B.</think>Answer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786352378,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 418,
+      "prompt_tokens": 145,
+      "total_tokens": 563,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-9dPsvCqOkVTBQXwOI4US7ygmZDJrXbrD",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 144,
+      "prompt_ms": 775.557,
+      "prompt_per_token_ms": 5.3858125,
+      "prompt_per_second": 185.67300662620545,
+      "predicted_n": 418,
+      "predicted_ms": 21160.857,
+      "predicted_per_token_ms": 50.624059808612444,
+      "predicted_per_second": 19.75345327460036
+    }
+  }
+}

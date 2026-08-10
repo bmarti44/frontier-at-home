@@ -143,6 +143,22 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--request-timeout",
+        type=int,
+        default=REQUEST_TIMEOUT_S,
+        help=(
+            f"per-request client timeout in seconds (default: {REQUEST_TIMEOUT_S}). "
+            "This must scale with --max-tokens or it becomes the binding limit "
+            "instead of the token budget: measured on MMLU-Pro, the thinking "
+            "contract at max_tokens=8192 truncated 0 items but lost 20 of 253 to "
+            "the 300 s default, because at ~19 tok/s an 8192-token generation "
+            "needs roughly 430 s. A timed-out item is scored incorrect, so the "
+            "default silently depresses whichever arm reasons longest. The value "
+            "is recorded in the config digest so two arms run under different "
+            "clocks cannot be compared without the difference being visible."
+        ),
+    )
+    parser.add_argument(
         "--config-hash",
         help="optional serving-config identifier recorded as context (not a ledger key)",
     )
@@ -173,6 +189,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--config-evidence requires at least one FILE for holdout runs")
     if args.config_hash is not None and not args.config_hash.strip():
         parser.error("--config-hash must not be empty")
+    if not 1 <= args.request_timeout <= 7200:
+        parser.error("--request-timeout must be between 1 and 7200 seconds")
     # Resolve the generation budget once, here, so the request and both evidence
     # records (config_digest_payload and generation) can only ever report the
     # value actually used.
@@ -356,6 +374,10 @@ def derive_config_digest(
         # will therefore not reproduce a pre-2026-08-09 digest, which is correct
         # -- the old payload could not express the rendering it ran under.
         "thinking_mode": args.thinking_mode,
+        # In the digest for the same reason as thinking_mode and max_tokens: a
+        # timed-out item is scored incorrect, so an arm run under a shorter clock
+        # is a different measurement, not a noisier one.
+        "request_timeout_s": args.request_timeout,
         "harness_manifest_line": load_harness_manifest_line(),
     }
     digest = hashlib.sha256(canonical_json(digest_payload)).hexdigest()
@@ -582,11 +604,17 @@ class Client:
         api_key: str | None,
         endpoint: str,
         extra_body: dict[str, Any] | None,
+        request_timeout_s: int = REQUEST_TIMEOUT_S,
     ) -> None:
         self.base_url = base_url
         self.api_key = api_key
         self.endpoint = endpoint
         self.extra_body = dict(extra_body or {})
+        # Bound to the run, not to a module constant: the clock has to be able to
+        # outlast the generation budget, or the longest-reasoning items are killed
+        # by the timeout and scored incorrect. See scripts/tests/
+        # test_bench_accuracy_request_timeout.py.
+        self.request_timeout_s = request_timeout_s
 
     def headers(self) -> dict[str, str]:
         headers = {"Accept": "application/json"}
@@ -599,7 +627,7 @@ class Client:
             self.base_url + "/v1/models", headers=self.headers(), method="GET"
         )
         try:
-            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S) as response:
+            with urllib.request.urlopen(request, timeout=self.request_timeout_s) as response:
                 status = response.status
                 raw = response.read()
         except urllib.error.HTTPError as error:
@@ -647,7 +675,7 @@ class Client:
         )
         started = time.perf_counter()
         try:
-            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_S) as response:
+            with urllib.request.urlopen(request, timeout=self.request_timeout_s) as response:
                 status = response.status
                 raw = response.read()
         except urllib.error.HTTPError as error:
@@ -1058,6 +1086,7 @@ def main() -> int:
         load_api_key(args.api_key_file),
         args.completions_endpoint,
         args.extra_body,
+        args.request_timeout,
     )
     if args.split == "holdout":
         if config_digest is None:
