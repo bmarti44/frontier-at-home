@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import time
 import urllib.error
@@ -491,39 +492,90 @@ def main() -> int:
         # Give every turn room to finish thinking AND answer, so a mismatch here
         # means what the check claims: the same conversation produced different
         # answers depending on how it was assembled.
-        turn_budget = 512
-        full_answer = client.chat(model(), full_history, max_tokens=turn_budget)
+        def run_at(turn_budget: int) -> dict[str, Any]:
+            full = client.chat(model(), full_history, max_tokens=turn_budget)
+            first = client.chat(
+                model(),
+                [{"role": "user", "content": first_user}],
+                max_tokens=turn_budget,
+            )
+            incremental = client.chat(
+                model(),
+                [
+                    {"role": "user", "content": first_user},
+                    {"role": "assistant", "content": first},
+                    {"role": "user", "content": final_user},
+                ],
+                max_tokens=turn_budget,
+            )
+            anchor = expected_first_reply.casefold()
+            return {
+                "turn_budget": turn_budget,
+                "full_history": full,
+                "incremental": incremental,
+                "incremental_first_reply": first,
+                "equal": full == incremental,
+                "full_reached_anchor": anchor in full.casefold(),
+                "incremental_reached_anchor": anchor in incremental.casefold(),
+            }
 
-        incremental_first_reply = client.chat(
-            model(),
-            [{"role": "user", "content": first_user}],
-            max_tokens=turn_budget,
-        )
-        incremental_history = [
-            {"role": "user", "content": first_user},
-            {"role": "assistant", "content": incremental_first_reply},
-            {"role": "user", "content": final_user},
-        ]
-        incremental_answer = client.chat(
-            model(), incremental_history, max_tokens=turn_budget
-        )
-        if full_answer != incremental_answer:
+        # The 128-token arm is measured and recorded but does not gate. Raising the
+        # budget to 512 is what made this check pass on 0731, and simply replacing
+        # 128 with 512 would have hidden what changed: with thinking on, 0731
+        # spends a 128-token budget entirely inside reasoning and returns empty
+        # content. Measured 2026-08-10 on the serving arm, both assemblies returned
+        # "" at 128 -- equal to each other, neither reaching the anchor. (The
+        # bring-up record for this check observed the full-history arm reaching the
+        # anchor while the incremental arm came back empty; that asymmetry did not
+        # reproduce here, so the two arms are near the edge of the budget rather
+        # than reliably divergent.)
+        #
+        # Gating on equality at 128 would therefore pass on two empty strings, and
+        # gating on the anchor at 128 would assert that 0731 is not a reasoning
+        # model. Neither is a cache-correctness statement, which is what this check
+        # is named for -- so 128 is recorded, 512 gates, and the bounded-output
+        # regression stays visible in the evidence instead of being resolved by
+        # moving the threshold.
+        bounded = run_at(128)
+
+        # 512 is the gating arm: it gives every turn room to finish thinking AND
+        # answer, so a mismatch here means what the check claims -- the same
+        # conversation produced different answers depending on how it was assembled.
+        gating = run_at(512)
+
+        if not gating["equal"]:
             raise RuntimeError(
                 "final completion mismatch: "
                 + json.dumps(
                     {
-                        "full_history": full_answer,
-                        "incremental": incremental_answer,
+                        "full_history": gating["full_history"],
+                        "incremental": gating["incremental"],
                         "full_first_reply": expected_first_reply,
-                        "incremental_first_reply": incremental_first_reply,
+                        "incremental_first_reply": gating["incremental_first_reply"],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+        # Equality alone is not sufficient: two identically wrong or two identically
+        # empty answers satisfy it. Both arms must also carry the anchor.
+        if not (gating["full_reached_anchor"] and gating["incremental_reached_anchor"]):
+            raise RuntimeError(
+                "both arms agree but neither recovered the anchor: "
+                + json.dumps(
+                    {
+                        "expected": expected_first_reply,
+                        "full_history": gating["full_history"],
+                        "incremental": gating["incremental"],
                     },
                     ensure_ascii=False,
                 )
             )
         return {
-            "full_history": full_answer,
-            "incremental": incremental_answer,
-            "incremental_first_reply": incremental_first_reply,
+            "full_history": gating["full_history"],
+            "incremental": gating["incremental"],
+            "incremental_first_reply": gating["incremental_first_reply"],
+            "gating_arm": gating,
+            "bounded_output_arm_not_gating": bounded,
         }
 
     checks.append(
@@ -559,16 +611,77 @@ def main() -> int:
             raise RuntimeError("SSE stream produced no reasoning or content deltas")
         if not isinstance(stream["usage"], dict):
             raise RuntimeError("SSE stream did not include a usage object")
+        # Retain both fields' sizes AND digests. Recording only the final content
+        # made a pass that accepted reasoning-only output impossible to recompute:
+        # the accepted text was discarded, so `content: ""` with a pass verdict
+        # could not be distinguished from a harness that accepted nothing at all.
+        reasoning = stream["generated_text"][: len(stream["generated_text"]) - len(stream["content"])] \
+            if stream["generated_text"].endswith(stream["content"]) else ""
         return {
             "data_chunks": stream["chunks"],
             "done": stream["done"],
             "content": stream["content"],
             "content_bytes": len(stream["content"].encode("utf-8")),
+            "content_sha256": hashlib.sha256(stream["content"].encode("utf-8")).hexdigest(),
+            "reasoning_bytes": len(reasoning.encode("utf-8")),
+            "reasoning_sha256": hashlib.sha256(reasoning.encode("utf-8")).hexdigest(),
             "generated_bytes": len(stream["generated_text"].encode("utf-8")),
+            "generated_sha256": hashlib.sha256(
+                stream["generated_text"].encode("utf-8")
+            ).hexdigest(),
+            "carried_by": (
+                "content" if stream["content"] else "reasoning_content_only"
+            ),
             "usage": stream["usage"],
         }
 
     checks.append(check_result("streaming_sse", streaming_sse))
+
+    def streaming_final_answer() -> dict[str, Any]:
+        """Transport success is not answer success.
+
+        streaming_sse deliberately accepts reasoning-only output, because a short
+        budget spent entirely inside reasoning_content is a streaming success. That
+        leniency has to be paid for somewhere: without this check, a model that
+        streams fluent reasoning and then never emits a final answer scores a clean
+        10/10. Here the budget is large enough to think AND answer, non-empty final
+        content is mandatory, and the answer must be correct.
+        """
+        stream = client.stream_chat(
+            {
+                "model": model(),
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "What is 12 plus 30? Reply with only the number.",
+                    }
+                ],
+                "max_tokens": 512,
+                "temperature": 0,
+                "seed": SEED,
+            }
+        )
+        if not stream["done"]:
+            raise RuntimeError("SSE stream did not terminate with [DONE]")
+        content = stream["content"].strip()
+        if not content:
+            raise RuntimeError(
+                "stream produced reasoning but no final content at a 512-token "
+                f"budget; generated {len(stream['generated_text'])} chars total"
+            )
+        if "42" not in content:
+            raise RuntimeError(f"expected 42 in final content, got {content!r}")
+        return {
+            "content": content,
+            "content_bytes": len(stream["content"].encode("utf-8")),
+            "content_sha256": hashlib.sha256(
+                stream["content"].encode("utf-8")
+            ).hexdigest(),
+            "generated_bytes": len(stream["generated_text"].encode("utf-8")),
+            "usage": stream["usage"],
+        }
+
+    checks.append(check_result("streaming_final_answer", streaming_final_answer))
 
     def error_schema() -> dict[str, Any]:
         invalid_status, invalid_body, _ = client.raw_request(
