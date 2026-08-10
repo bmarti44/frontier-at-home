@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "gate": "dsv4-0731-thinking-arm-truncation-validity",
+  "date_utc": "2026-08-10",
+  "status": "MEASUREMENT_INVALID_AT_2048_RERUN_AT_8192",
+  "scope": "Validity of the thinking-contract accuracy arms on the llama.cpp serving path. This record exists because the first thinking arm produced the best MMLU-Pro score of any arm and would have been reported as a win; it is truncation-limited and the comparison is not valid.",
+
+  "finding": {
+    "id": "DSV4-0731-H3-THINKING-ARMS-TRUNCATION-LIMITED-AT-2048",
+    "severity": "high",
+    "class": "measurement validity, not model capability",
+    "summary": "Both thinking-contract arms were run at max_tokens=2048. 13.0% of MMLU-Pro items and 6.0% of GSM8K items hit finish_reason=length. The chat arms truncated at 5.5% and 1.0% under their own budgets, so the arms are not comparable on truncation exposure and the thinking scores are floors, not estimates.",
+    "why_it_was_not_obvious": "The token distribution is bimodal. Median completion length is 191 tokens on MMLU-Pro thinking -- lower than the 768-token chat budget -- so a median-based budget check passes cleanly. The p90 sits exactly ON the 2048 ceiling, which is the signature of a censored distribution: the true tail length is not observable from this run at all. Only that at least 13% of items exceed 2048."
+  },
+
+  "measured": {
+    "note": "completion_tokens from each transcript's response.usage; percentiles over all items in the arm",
+    "arms": [
+      {
+        "arm": "mmlu-pro dev, thinking, max_tokens=2048",
+        "n": 253,
+        "correct": 203,
+        "accuracy": 0.8024,
+        "invalid_count": 31,
+        "median_completion_tokens": 191,
+        "p90_completion_tokens": 2048,
+        "p95_completion_tokens": 2048,
+        "truncated": 33,
+        "truncated_fraction": 0.130,
+        "truncated_but_scored_correct": 1,
+        "items_lost_to_truncation": 32
+      },
+      {
+        "arm": "mmlu-pro dev, chat, max_tokens=768",
+        "n": 253,
+        "correct": 188,
+        "accuracy": 0.7431,
+        "invalid_count": 15,
+        "median_completion_tokens": 4,
+        "p90_completion_tokens": 420,
+        "p95_completion_tokens": 768,
+        "truncated": 14,
+        "truncated_fraction": 0.055,
+        "truncated_but_scored_correct": 0
+      },
+      {
+        "arm": "gsm8k dev, thinking, max_tokens=2048",
+        "n": 100,
+        "correct": 94,
+        "accuracy": 0.94,
+        "invalid_count": 0,
+        "median_completion_tokens": 120,
+        "p90_completion_tokens": 861,
+        "p95_completion_tokens": 2048,
+        "truncated": 6,
+        "truncated_fraction": 0.060,
+        "truncated_but_scored_correct": 2,
+        "items_lost_to_truncation": 4
+      },
+      {
+        "arm": "gsm8k dev, chat, max_tokens=512",
+        "n": 100,
+        "correct": 97,
+        "accuracy": 0.97,
+        "invalid_count": 0,
+        "median_completion_tokens": 86,
+        "p90_completion_tokens": 157,
+        "p95_completion_tokens": 185,
+        "truncated": 1,
+        "truncated_fraction": 0.010,
+        "truncated_but_scored_correct": 1
+      }
+    ]
+  },
+
+  "interpretation": {
+    "mmlu_pro": "203/253 at 2048 already beats the pre-0731 baseline of 197/253, and it does so while losing 32 items to the ceiling. The direction of the effect is therefore not in doubt -- clearing truncation can only raise it -- but the magnitude is unmeasured and 203 must not be quoted as the thinking-contract score.",
+    "gsm8k": "94/100 at 2048 is BELOW both the 97/100 chat arm and the 97/100 baseline, and 4 items were lost to the ceiling. The apparent 3-point regression from enabling thinking is fully accounted for by truncation and is not evidence that thinking hurts GSM8K.",
+    "what_would_have_been_wrong": "Reporting 'thinking wins MMLU-Pro 203/253 and loses GSM8K 94/100' would have been two false conclusions from one budget artifact."
+  },
+
+  "action": {
+    "taken": "Both thinking arms are being re-run at max_tokens=8192. A partial re-run of only the truncated items was rejected: mixing budgets inside one arm makes the arm uncomparable to anything, including itself.",
+    "acceptance": "The re-run is valid only if its truncated_fraction is at or below the corresponding chat arm's (0.055 for MMLU-Pro, 0.010 for GSM8K). If 8192 does not clear it, the budget is raised again rather than the result being reported.",
+    "preregistered_before_seeing_results": true
+  },
+
+  "relation_to_review": "This is the concrete instance of the xhigh reviewer's finding 9 requirement -- preregistered ceilings on invalid/truncated items, applied to both arms so a broken baseline cannot lower the bar -- and of Track B2 in the plan. The ceiling is set here from the chat arms' measured rates rather than chosen after seeing the thinking results."
+}

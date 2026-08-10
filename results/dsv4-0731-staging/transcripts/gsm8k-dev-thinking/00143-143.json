@@ -1,0 +1,57 @@
+{
+  "index": 143,
+  "task_id": 143,
+  "rendered_prompt_sha256": "5c78638ddc9ca94b9ab463eff7059f30bd5852a44e9d295fb26bd49bbe1c1a2c",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse. John buys milk (food? likely nonfood? tax on all nonfood items). Eggs food? Light bulbs nonfood, cups nonfood, roach traps nonfood. Milk and eggs are food, no tax. Need total cost with 10% tax on nonfood items. Items: milk 2, eggs 3, light bulbs 3, cups 3, roach traps 4. Nonfood: light bulbs 3, cups 3, roach traps 4 = 10 dollars. Tax 10% = 1 dollar. Food: milk 2 + eggs 3 = 5. Total = 5 + 10 + 1 = 16. Need final numeric answer.</think>Answer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.533362166999723
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse. John buys milk (food? likely nonfood? tax on all nonfood items). Eggs food? Light bulbs nonfood, cups nonfood, roach traps nonfood. Milk and eggs are food, no tax. Need total cost with 10% tax on nonfood items. Items: milk 2, eggs 3, light bulbs 3, cups 3, roach traps 4. Nonfood: light bulbs 3, cups 3, roach traps 4 = 10 dollars. Tax 10% = 1 dollar. Food: milk 2 + eggs 3 = 5. Total = 5 + 10 + 1 = 16. Need final numeric answer.</think>Answer: 16",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786330403,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 85,
+      "total_tokens": 243,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-daCebQtNqsF5G3MPWjFMCDQ1zLR6pHCB",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 84,
+      "prompt_ms": 558.471,
+      "prompt_per_token_ms": 6.648464285714286,
+      "prompt_per_second": 150.41067486046725,
+      "predicted_n": 158,
+      "predicted_ms": 7971.25,
+      "predicted_per_token_ms": 50.450949367088604,
+      "predicted_per_second": 19.821232554492706
+    }
+  },
+  "used_fallback": false
+}

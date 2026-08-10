@@ -1,0 +1,56 @@
+{
+  "index": 301,
+  "task_id": 374,
+  "rendered_prompt_sha256": "b4351f3fc8a79cc7dafdb381acaa9f8173ab57fa580ea24e039e70f1cbf3d3ea",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need compute net amount after successive discounts 20%, 15%, and 2(1/2)%? Need parse: $4,500 successively discounted at 20%, 15% and 2(1/2)%? Means apply discounts sequentially: multiply by (1-0.20)=0.80, then (1-0.15)=0.85, then (1 - 0.025)=0.975? 2(1/2)% = 2.5% = 0.025. Net = 4500 * 0.80 * 0.85 * 0.975. Compute: 4500*0.8=3600. *0.85=3060. *0.975=2983.5. Option G. Need answer: Answer: G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.734957738000958
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need compute net amount after successive discounts 20%, 15%, and 2(1/2)%? Need parse: $4,500 successively discounted at 20%, 15% and 2(1/2)%? Means apply discounts sequentially: multiply by (1-0.20)=0.80, then (1-0.15)=0.85, then (1 - 0.025)=0.975? 2(1/2)% = 2.5% = 0.025. Net = 4500 * 0.80 * 0.85 * 0.975. Compute: 4500*0.8=3600. *0.85=3060. *0.975=2983.5. Option G. Need answer: Answer: G.</think>Answer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786331584,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 180,
+      "prompt_tokens": 135,
+      "total_tokens": 315,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-MYeD5qXg5jTmfreI8qNKNeOfSR6xJKNR",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 134,
+      "prompt_ms": 659.82,
+      "prompt_per_token_ms": 4.924029850746269,
+      "prompt_per_second": 203.08569003667665,
+      "predicted_n": 180,
+      "predicted_ms": 9072.333,
+      "predicted_per_token_ms": 50.40185,
+      "predicted_per_second": 19.840541567422623
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "index": 314,
+  "task_id": 314,
+  "rendered_prompt_sha256": "79f1d9de0ea7cdf4d9ba135c10553dd81b6559354695b23631fa1da6c525d5c0",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Problem: football team has 105 members. Offense = twice defense. Special teams = half defense. Let defense = d. Offense = 2d. Special = d/2. Total = d + 2d + d/2 = 3.5d = 105 => d = 30. Need final numeric answer line. But check wording: \"There are twice as many players on the offense as there is on the defense. There is half the number of players on the special teams as there is on the defense.\" Could imply categories partition all members? Yes. Answer 30. Need final with Answer: 30.</think>Answer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.7415563729991845
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Problem: football team has 105 members. Offense = twice defense. Special teams = half defense. Let defense = d. Offense = 2d. Special = d/2. Total = d + 2d + d/2 = 3.5d = 105 => d = 30. Need final numeric answer line. But check wording: \"There are twice as many players on the offense as there is on the defense. There is half the number of players on the special teams as there is on the defense.\" Could imply categories partition all members? Yes. Answer 30. Need final with Answer: 30.</think>Answer: 30",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786330907,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 144,
+      "prompt_tokens": 81,
+      "total_tokens": 225,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-45t1CHYPMiEHq8TP6CGerDTv6DfOUm3F",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 80,
+      "prompt_ms": 532.184,
+      "prompt_per_token_ms": 6.652299999999999,
+      "prompt_per_second": 150.3239481081731,
+      "predicted_n": 144,
+      "predicted_ms": 7206.312,
+      "predicted_per_token_ms": 50.04383333333333,
+      "predicted_per_second": 19.982482024092214
+    }
+  },
+  "used_fallback": false
+}
