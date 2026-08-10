@@ -18,7 +18,10 @@ Gates (ALL must hold for pass=true):
   5. windows disjoint              — elapsed time spans two frozen 300-second windows
   6. windows populated             — at least five requests start in each window
   7. decode degradation <= 0.25    — last-window median vs first-window median
-  8. memory available >= 12 GiB    — never near the UMA watchdog SIGKILL line
+  8. memory available >= floor     — never near the UMA watchdog SIGKILL line;
+                                     12 GiB default, DSV4_SOAK_MEM_FLOOR_GIB
+                                     overrides, and the scored floor is recorded
+                                     in the artifact as mem_floor_gib
   9. health probes all healthy     — /v1/models stayed 200 for the whole run
  10. duration met                  — elapsed time is at least 95% of 1800 seconds
 
@@ -31,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import statistics
 import sys
 import threading
@@ -46,7 +50,16 @@ DURATION = 1800
 MAX_TOKENS = 256
 DEG_THRESHOLD = 0.25
 MIN_REQUESTS = 30
-MEM_FLOOR_GIB = 12.0
+# The 12 GiB default predates the 1M-fast profile. At CTX=1048576 with ub/b=2048
+# the context-scaled compute buffers leave a measured steady state of ~9.8 GiB
+# free (configs/profiles/dsv4-1m-fast.env), so a 12 GiB soak floor cannot be met
+# by the profile this box actually serves — the gate would fail by construction
+# rather than by fault. DSV4_SOAK_MEM_FLOOR_GIB lets a run declare the floor it
+# is being held to; the value is recorded in the soak artifact so a run can never
+# claim a stricter floor than it was scored against. Owner-set to 8.0 for the
+# 1M-fast profile on 2026-08-09, matching the accepted watchdog floor
+# (DSV4_WATCHDOG_FLOOR_GIB=8 in scripts/52_engine_switch.sh).
+MEM_FLOOR_GIB = float(os.environ.get("DSV4_SOAK_MEM_FLOOR_GIB", "12.0"))
 WINDOW_SECONDS = 300
 REQUEST_TIMEOUT = 600
 HEALTH_PROBE_INTERVAL = 30.0

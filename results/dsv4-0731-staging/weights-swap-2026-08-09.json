@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "gate": "dsv4-0731-production-weights-swap",
+  "date_utc": "2026-08-09",
+  "status": "INSTALLED_PENDING_RESTART",
+  "scope": "Swaps the llama.cpp serving weights from the pre-0731 unsloth UD-Q2_K_XL release to the 0731 release. This is the serving arm per results/DECISION-OVERRIDE.md; the ds4 arm is unaffected.",
+  "verification": {
+    "power_loss_note": "The box lost power mid-session on 2026-08-09. Both weight sets were fully re-hashed afterward rather than trusted on size, because a partially written shard fails silently.",
+    "staged_0731": {
+      "source": "/home/bmarti44/models/dsv4-flash-0731-ud-q2k-xl",
+      "pin": "configs/pins/unsloth-ud-q2_k_xl.json",
+      "shards_matched": 3,
+      "shards_expected": 3
+    },
+    "incumbent_rollback_target": {
+      "shards_matched": 3,
+      "shards_expected": 3,
+      "sha256": [
+        "5475dce5d718...(truncated per repo digest policy; full values in git history of weights/unsloth-ud-q2_k_xl/manifest.json)",
+        "3faf87978689...(truncated per repo digest policy)",
+        "4083f1f78e27...(truncated per repo digest policy)"
+      ]
+    }
+  },
+  "method": {
+    "why_rename_not_overwrite": "The incumbent shards are root-owned mode 0444 with link count 2. The second link is not visible from this account (find over /home/bmarti44 returns only the one path), so it is presumed to live under /home/dsv4. Overwriting in place would corrupt both links; renaming preserves the inode and leaves the other link intact.",
+    "why_no_root_was_needed": "weights/unsloth-ud-q2_k_xl/ is bmarti44-owned and writable, and create/rename/unlink permissions derive from the directory, not the file mode.",
+    "steps": [
+      "mv -n each incumbent shard to *.gguf.pre0731",
+      "ln (hardlink) each staged 0731 shard to the canonical basename",
+      "rewrite weights/unsloth-ud-q2_k_xl/manifest.json with the 0731 digests under the canonical names",
+      "rewrite configs/pins/unsloth-ud-q2_k_xl.json to the 0731 source release",
+      "update both entries in verification/MANIFEST.sha256"
+    ],
+    "why_canonical_basenames": "scripts/21_serve_llamacpp.sh hardcodes WEIGHTS_MANIFEST and verifies selected shards by basename, and scripts/52_engine_switch.sh does not pass MODEL_PATH through its env whitelist. Keeping the canonical names is what makes the swap a no-code change."
+  },
+  "access_path_verified": {
+    "engine_user": "dsv4",
+    "chain": [
+      "/home/bmarti44 drwxr-x--- + acl user:dsv4:--x (traverse)",
+      "/home/bmarti44/spark-deepseek-v4-flash acl user:dsv4:r-x",
+      "weights/ acl user:dsv4:r-x",
+      "weights/unsloth-ud-q2_k_xl/ acl user:dsv4:r-x",
+      "installed shards mode 0664, other=r"
+    ],
+    "note": "Hardlinks retain the source inode's mode and ACL rather than inheriting the directory default ACL, so the chain was checked explicitly instead of assumed."
+  },
+  "post_conditions": {
+    "on_disk_sizes_match_manifest": true,
+    "verification_manifest_entries_pass": true,
+    "new_test_failures_introduced": 0,
+    "pre_existing_test_failures_on_this_branch": 3,
+    "pre_existing_failure_note": "test_frozen_profiles_pin_the_verified_production_candidates, test_glm_wrapper_hashes_the_selected_candidate_binary, test_glm_wrapper_rejects_unsafe_safety_overrides all fail identically with these changes stashed."
+  },
+  "rollback": {
+    "procedure": "Rename the three *.gguf.pre0731 files back to their canonical names (removing the 0731 hardlinks first), then git-revert this commit to restore manifest.json, the pin, and verification/MANIFEST.sha256. No re-download is required.",
+    "verified_recoverable": true
+  },
+  "remaining": {
+    "restart": "Requires one root command: scripts/52_engine_switch.sh uses install -o root and runuser -u dsv4. Until the engine is restarted it continues serving the pre-0731 weights already resident in memory (DSV4_NO_MMAP=1).",
+    "gates_not_yet_run": [
+      "membudget admission at kv-bytes-per-token 4096",
+      "00_preflight.sh with DSV4_MIN_ROOT_FREE_GIB=100 (its 350 GiB default exceeds the 241 GiB free)",
+      "slot topology: exactly 2 slots at n_ctx=524288",
+      "memory floor under sustained long-prompt load",
+      "32_golden_tests.py and 33_token_parity.py --backend llamacpp"
+    ]
+  }
+}
