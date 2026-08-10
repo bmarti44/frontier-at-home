@@ -110,6 +110,22 @@ def parse_args() -> argparse.Namespace:
         help="plain completions path (default: /v1/completions)",
     )
     parser.add_argument(
+        "--thinking-mode",
+        default="chat",
+        choices=("chat", "thinking"),
+        help=(
+            "how the official encoder renders each prompt. 'chat' (default) is "
+            "the non-thinking rendering every published baseline was measured "
+            "under; 'thinking' selects the reasoning rendering. This must be an "
+            "encoder argument rather than a request field: prompts are "
+            "pre-rendered and posted to /v1/completions, which applies no chat "
+            "template, so extra_body chat_template_kwargs is inert on this path. "
+            "The value is recorded in the config digest and in every transcript's "
+            "rendering field, so runs under different contracts cannot be "
+            "silently compared."
+        ),
+    )
+    parser.add_argument(
         "--max-tokens",
         type=int,
         help=(
@@ -478,7 +494,10 @@ def select_indices(suite: str, split: str, rows: list[dict[str, Any]]) -> list[i
 
 
 def render_item(
-    suite: str, row: dict[str, Any], encoder: ModuleType | None
+    suite: str,
+    row: dict[str, Any],
+    encoder: ModuleType | None,
+    thinking_mode: str = "chat",
 ) -> tuple[str, str]:
     if suite == "humaneval":
         prompt = row.get("prompt")
@@ -510,10 +529,22 @@ def render_item(
             "\n\nReply with the single letter of the correct option in the form: "
             "Answer: <letter>"
         )
-    rendered = encoder.encode_messages([{"role": "user", "content": content}], thinking_mode="chat")
+    # The prompt is rendered here and posted to /v1/completions, which applies no
+    # chat template server-side. extra_body {"chat_template_kwargs": {...}} is
+    # therefore INERT on this path -- the thinking contract is decided entirely by
+    # what the encoder emits, which is why this must be an explicit argument
+    # rather than a request field.
+    rendered = encoder.encode_messages(
+        [{"role": "user", "content": content}], thinking_mode=thinking_mode
+    )
     if not isinstance(rendered, str) or not rendered:
         raise RuntimeError("official encoder returned an invalid prompt")
-    return rendered, "official-encoder-chat-nonthinking"
+    label = (
+        "official-encoder-chat-nonthinking"
+        if thinking_mode == "chat"
+        else f"official-encoder-{thinking_mode}"
+    )
+    return rendered, label
 
 
 def response_preview_without_prompt(raw: bytes, prompt: str) -> str:
@@ -1046,7 +1077,9 @@ def main() -> int:
             cases_root = Path(temporary_cases)
             for run_position, dataset_index in enumerate(indices):
                 row = rows[dataset_index]
-                rendered, rendering = render_item(args.suite, row, encoder)
+                rendered, rendering = render_item(
+                    args.suite, row, encoder, args.thinking_mode
+                )
                 prompt_sha = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
                 item_id = row.get("task_id", row.get("question_id", dataset_index))
                 completion = ""
