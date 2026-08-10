@@ -223,7 +223,23 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="validate every input without writing or computing a verdict",
     )
+    parser.add_argument(
+        "--decision-id",
+        default=None,
+        help=(
+            "identifier for a decision other than the frozen one. Without it this "
+            "writes results/decision.json and results/DECISION.md, which are the "
+            "2026-07-16 frozen ds4-vs-llamacpp decision. A new candidate (for "
+            "example the 0731 release) must not overwrite or relabel that record, "
+            "so passing --decision-id 0731 writes results/decision-0731.json and "
+            "results/DECISION-0731.md instead. Must match [a-z0-9][a-z0-9-]*."
+        ),
+    )
     args = parser.parse_args()
+    if args.decision_id is not None and not re.fullmatch(
+        r"[a-z0-9][a-z0-9-]{0,31}", args.decision_id
+    ):
+        parser.error("--decision-id must match [a-z0-9][a-z0-9-]{0,31}")
     if args.validate_evidence_only:
         args.soak_evidence = args.soak_evidence or {
             stack: RESULTS_DIR / f"soak-{stack}.json" for stack in STACKS
@@ -1593,12 +1609,19 @@ def main() -> int:
             "candidates": candidates,
             "decision": decision,
         }
+        # The frozen decision is a terminal record, not a file to be refreshed.
+        # Writing a new candidate's verdict over results/decision.json would
+        # silently relabel the 2026-07-16 ds4-vs-llamacpp result as being about
+        # whatever ran last.
+        suffix = f"-{args.decision_id}" if args.decision_id else ""
+        machine_report["decision_id"] = args.decision_id
         atomic_write_text(
-            RESULTS_DIR / "decision.json",
+            RESULTS_DIR / f"decision{suffix}.json",
             json.dumps(machine_report, ensure_ascii=False, indent=2) + "\n",
         )
         atomic_write_text(
-            RESULTS_DIR / "DECISION.md", render_markdown(candidates, decision)
+            RESULTS_DIR / f"DECISION{suffix.upper()}.md",
+            render_markdown(candidates, decision),
         )
     except DecisionInputError as error:
         print(f"FAIL CLOSED: {error}", file=os.sys.stderr)

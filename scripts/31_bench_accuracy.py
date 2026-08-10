@@ -1032,6 +1032,34 @@ def acquire_holdout_ledger() -> BinaryIO:
     return stream
 
 
+def holdout_rowset_digest(
+    suite: str, split: str, rows: list[dict[str, Any]], indices: list[int]
+) -> str:
+    """Digest the examples a run actually consumed.
+
+    Keyed on stable row identity rather than position, so the digest still means
+    "these examples" if the dataset file is ever re-ordered. GSM8K rows carry no
+    id, so the question text is its identity.
+    """
+    identities: list[str] = []
+    for index in indices:
+        row = rows[index]
+        if suite == "mmlu-pro":
+            identities.append(f"question_id:{row['question_id']}")
+        elif suite == "humaneval":
+            identities.append(f"task_id:{row['task_id']}")
+        else:
+            identities.append(
+                "question_sha256:"
+                + hashlib.sha256(row["question"].encode("utf-8")).hexdigest()
+            )
+    return hashlib.sha256(
+        canonical_json(
+            {"suite": suite, "split": split, "row_identities": identities}
+        )
+    ).hexdigest()
+
+
 def append_holdout_ledger(
     entry: dict[str, Any], *, refuse_existing: bool
 ) -> None:
@@ -1044,6 +1072,7 @@ def append_holdout_ledger(
             entry["suite"],
             entry["config_digest"],
         )
+        rowset = entry.get("holdout_rowset_sha256")
         if refuse_existing:
             for existing in entries:
                 existing_key = (
@@ -1056,6 +1085,36 @@ def append_holdout_ledger(
                     raise HoldoutAlreadyRun(
                         f"holdout already recorded for namespace={key[0]!r}, "
                         f"stack={key[1]!r}, suite={key[2]!r}, config_digest={key[3]!r}"
+                    )
+                # The config digest alone is not the budget. select_indices draws
+                # holdout rows from a fixed seed, so the draw is identical on every
+                # run; any change that moves the digest -- and the 0731 work alone
+                # added three (thinking_mode, max_tokens, request_timeout_s) --
+                # mints a ledger-valid entry over examples already seen. Measuring
+                # one stack repeatedly on the same rows under tweaked configs and
+                # keeping the best is the overfitting this ledger exists to
+                # prevent, so the rows themselves are what gets spent.
+                #
+                # Comparing DIFFERENT stacks on the same holdout stays legal: that
+                # is the intended use, and the guard is scoped to one stack.
+                #
+                # Entries written before this field existed carry no row-set
+                # digest and therefore cannot be checked. The guard binds from now
+                # on; it does not retroactively account for past draws.
+                if (
+                    rowset is not None
+                    and existing.get("holdout_rowset_sha256") == rowset
+                    and existing.get("ledger_namespace", "") == key[0]
+                    and existing.get("stack_label") == key[1]
+                    and existing.get("suite") == key[2]
+                    and existing.get("phase") in ("started", "completed")
+                ):
+                    raise HoldoutAlreadyRun(
+                        "these holdout rows were already spent for "
+                        f"namespace={key[0]!r}, stack={key[1]!r}, suite={key[2]!r} "
+                        f"under config_digest={existing.get('config_digest')!r}; "
+                        f"this run's config_digest={key[3]!r} differs but the "
+                        f"rows are identical (rowset={rowset})"
                     )
         entries.append(entry)
         write_json(LEDGER_PATH, entries)
@@ -1088,6 +1147,9 @@ def main() -> int:
         args.extra_body,
         args.request_timeout,
     )
+    # Computed for every split, not just holdout: a dev artifact that names the
+    # rows it used is what makes an accidental dev/holdout overlap detectable.
+    rowset_digest = holdout_rowset_digest(args.suite, args.split, rows, indices)
     if args.split == "holdout":
         if config_digest is None:
             raise RuntimeError("internal error: holdout config digest was not derived")
@@ -1099,6 +1161,7 @@ def main() -> int:
                     "suite": args.suite,
                     "config_digest": config_digest,
                     "config_hash": args.config_hash,
+                    "holdout_rowset_sha256": rowset_digest,
                     "phase": "started",
                     "started_at": started_at,
                 },
@@ -1226,11 +1289,14 @@ def main() -> int:
             "transcript_files": transcript_files,
             "models_response": models_response,
             "provenance": {"humaneval_runtime": humaneval_runtime},
+            "rowset_sha256": rowset_digest,
             "generation": {
                 "endpoint": args.completions_endpoint,
                 "temperature": 0,
                 "seed": SEED,
                 "max_tokens": args.max_tokens,
+                "request_timeout_s": args.request_timeout,
+                "thinking_mode": args.thinking_mode,
                 "stop": HUMANEVAL_STOPS if args.suite == "humaneval" else None,
                 "extra_body": args.extra_body,
             },
@@ -1246,6 +1312,7 @@ def main() -> int:
                     "suite": args.suite,
                     "config_digest": config_digest,
                     "config_hash": args.config_hash,
+                    "holdout_rowset_sha256": rowset_digest,
                     "phase": "completed",
                     "started_at": started_at,
                     "completed_at": finished_at,

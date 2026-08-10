@@ -190,6 +190,45 @@ def audit_holdout_ledger(path: Path, document: dict[str, Any]) -> list[str]:
         )
         if started_at is not None and completed_at is not None and started_at > completed_at:
             problems.append(f"{path.name}: ledger started_at is after completed_at")
+
+    # Receipts prove a run was declared before inference. They do not prove the
+    # run looked at fresh examples. select_indices draws holdout rows from a fixed
+    # seed, so every run of a suite draws the SAME rows, while the ledger key
+    # includes config_digest -- any config change therefore mints a distinct,
+    # receipt-valid entry over examples already seen. Auditing the receipts alone
+    # certifies that pattern as clean.
+    #
+    # Entries predating holdout_rowset_sha256 carry no digest and are skipped:
+    # the guard binds forward, and claiming otherwise would be a false assurance.
+    rowset = document.get("rowset_sha256")
+    if isinstance(rowset, str) and re.fullmatch(r"[0-9a-f]{64}", rowset):
+        conflicting = [
+            entry
+            for entry in entries
+            if entry.get("holdout_rowset_sha256") == rowset
+            and entry.get("phase") == "completed"
+            and entry.get("ledger_namespace", "") == namespace
+            and entry.get("stack_label") == stack_label
+            and entry.get("suite") == suite
+            and entry.get("config_digest") != config_digest
+        ]
+        if conflicting:
+            spent_under = sorted(
+                {str(entry.get("config_digest")) for entry in conflicting}
+            )
+            problems.append(
+                f"{path.name}: these holdout rows (rowset={rowset}) were already "
+                f"spent for this namespace/stack/suite under config_digest(s) "
+                f"{spent_under}; a different config digest over identical rows is "
+                f"a repeat look at the holdout, not a fresh draw"
+            )
+        for entry in (*started_entries, *completed_entries):
+            entry_rowset = entry.get("holdout_rowset_sha256")
+            if entry_rowset is not None and entry_rowset != rowset:
+                problems.append(
+                    f"{path.name}: ledger entry records rowset {entry_rowset} but "
+                    f"the result reports {rowset}"
+                )
     return problems
 
 
