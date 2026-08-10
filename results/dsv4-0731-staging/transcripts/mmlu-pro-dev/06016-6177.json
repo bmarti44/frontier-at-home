@@ -1,0 +1,54 @@
+{
+  "index": 6016,
+  "task_id": 6177,
+  "rendered_prompt_sha256": "8263070842ca0f18fc57424b0ae368d722873d203c436e2b43ba27a2ca22a47b",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Answer: E\n\nThe clinical picture is consistent with cystic fibrosis (chronic respiratory infections, purulent sputum, decreased exercise tolerance, infertility due to low sperm count, hyperinflation, obstructive pattern on spirometry). The sweat chloride test is the definitive diagnostic test for cystic fibrosis.",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.097524127922952
+  },
+  "response": {
+    "id": "cmpl-373",
+    "object": "text_completion",
+    "created": 1786300227,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Answer: E\n\nThe clinical picture is consistent with cystic fibrosis (chronic respiratory infections, purulent sputum, decreased exercise tolerance, infertility due to low sperm count, hyperinflation, obstructive pattern on spirometry). The sweat chloride test is the definitive diagnostic test for cystic fibrosis.",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 216,
+      "completion_tokens": 56,
+      "total_tokens": 272,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 560.7,
+      "prefill_tokens": 216,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 386.9,
+      "decode_tok_s": 22.2,
+      "spec_accept_rate": 0.636,
+      "tok_per_step": 1.68
+    }
+  }
+}

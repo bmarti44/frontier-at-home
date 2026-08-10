@@ -1,0 +1,55 @@
+{
+  "index": 731,
+  "task_id": 731,
+  "rendered_prompt_sha256": "dae9713bf17de8fdd4a7eb811837787fb639deb64b4e426c5a52cb5655545e73",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to figure out how many smores are needed total, then how many sleeves are needed, then how many boxes.\n\nTotal smores needed:  \n- 9 kids × 2 smores = 18 smores  \n- 6 adults × 1 smore = 6 smores  \nTotal = 24 smores  \n\nEach sleeve makes 8 smores, so sleeves needed:  \n24 ÷ 8 = 3 sleeves  \n\nEach box has 3 sleeves, so boxes needed:  \n3 ÷ 3 = 1 box  \n\nAnswer: 1",
+  "finish_reason": "stop",
+  "expected": "1",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.7484465970192105
+  },
+  "response": {
+    "id": "cmpl-241",
+    "object": "text_completion",
+    "created": 1786299183,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to figure out how many smores are needed total, then how many sleeves are needed, then how many boxes.\n\nTotal smores needed:  \n- 9 kids × 2 smores = 18 smores  \n- 6 adults × 1 smore = 6 smores  \nTotal = 24 smores  \n\nEach sleeve makes 8 smores, so sleeves needed:  \n24 ÷ 8 = 3 sleeves  \n\nEach box has 3 sleeves, so boxes needed:  \n3 ÷ 3 = 1 box  \n\nAnswer: 1",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 100,
+      "completion_tokens": 115,
+      "total_tokens": 215,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 814.3,
+      "prefill_tokens": 100,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 122.9,
+      "decode_tok_s": 23.3,
+      "spec_accept_rate": 0.701,
+      "tok_per_step": 1.73
+    }
+  },
+  "used_fallback": false
+}

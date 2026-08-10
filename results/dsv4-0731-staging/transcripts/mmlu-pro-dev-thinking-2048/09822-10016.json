@@ -1,0 +1,53 @@
+{
+  "index": 9822,
+  "task_id": 10016,
+  "rendered_prompt_sha256": "0f5df4126874d9b5f10b1772b0970267220785faca59360822c67ed1a51727b2",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The resistor follows Ohm's law: V = I * R. \nFirst case: V1 = 120 V, I1 = 8.0 A => R = V1 / I1 = 120 / 8 = 15 Ω.\nSecond case: V2 = 180 V, I2 = V2 / R = 180 / 15 = 12.0 A.\n\nThe correct answer is C.\n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.827831133035943
+  },
+  "response": {
+    "id": "cmpl-1024",
+    "object": "text_completion",
+    "created": 1786310061,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The resistor follows Ohm's law: V = I * R. \nFirst case: V1 = 120 V, I1 = 8.0 A => R = V1 / I1 = 120 / 8 = 15 Ω.\nSecond case: V2 = 180 V, I2 = V2 / R = 180 / 15 = 12.0 A.\n\nThe correct answer is C.\n\nAnswer: C",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 168,
+      "completion_tokens": 90,
+      "total_tokens": 258,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 950.5,
+      "prefill_tokens": 168,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 185.6,
+      "decode_tok_s": 23.2,
+      "spec_accept_rate": 0.816,
+      "tok_per_step": 1.86
+    }
+  }
+}

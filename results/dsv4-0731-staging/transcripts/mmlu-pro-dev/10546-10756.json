@@ -1,0 +1,54 @@
+{
+  "index": 10546,
+  "task_id": 10756,
+  "rendered_prompt_sha256": "157717331e8ed2938eac4ae16c033f912adbc38fe5ae5018d288a55d79759d8f",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's evaluate each pair for overflow in 8-bit two's-complement addition. Overflow occurs when the sum of two same-sign numbers produces a result with the opposite sign, or when adding numbers of opposite signs produces a result with the sign of the opposite of the larger magnitude (but in two's complement, overflow only occurs when both operands have the same sign and the result has a different sign).\n\nWe'll check each:\n\nA. 11110000 (-16) + 00001111 (15) = -1 → no overflow (different signs, result correct).  \nB. 01111111 (127) + 10000000 (-128) = -1 → no overflow (different signs).  \nC. 00000001 (1) + 10000000 (-128) = -127 → no overflow (different signs).  \nD. 10000001 (-127) + 10101010 (-86) = -213 → overflow (both negative, sum exceeds -128).  \nE. 11111111 (-1) + 00000001 (1) = 0 → no overflow (different signs).  \nF. 11111111 (-1) + 10000001 (-127) = -128 → no overflow (both negative, sum exactly -128, no overflow).  \nG. 00000000 (0) + 10000000 (-128) = -128 → no overflow (different signs).  \nH. 10000001 (-127) + 00000001 (1) = -126 → no overflow (different signs).  \nI. 10101010 (-86) + 11111111 (-1) = -87 → no overflow (both negative, sum within range).\n\nOnly D overflows.\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 16.38824440096505
+  },
+  "response": {
+    "id": "cmpl-331",
+    "object": "text_completion",
+    "created": 1786299842,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's evaluate each pair for overflow in 8-bit two's-complement addition. Overflow occurs when the sum of two same-sign numbers produces a result with the opposite sign, or when adding numbers of opposite signs produces a result with the sign of the opposite of the larger magnitude (but in two's complement, overflow only occurs when both operands have the same sign and the result has a different sign).\n\nWe'll check each:\n\nA. 11110000 (-16) + 00001111 (15) = -1 → no overflow (different signs, result correct).  \nB. 01111111 (127) + 10000000 (-128) = -1 → no overflow (different signs).  \nC. 00000001 (1) + 10000000 (-128) = -127 → no overflow (different signs).  \nD. 10000001 (-127) + 10101010 (-86) = -213 → overflow (both negative, sum exceeds -128).  \nE. 11111111 (-1) + 00000001 (1) = 0 → no overflow (different signs).  \nF. 11111111 (-1) + 10000001 (-127) = -128 → no overflow (both negative, sum exactly -128, no overflow).  \nG. 00000000 (0) + 10000000 (-128) = -128 → no overflow (different signs).  \nH. 10000001 (-127) + 00000001 (1) = -126 → no overflow (different signs).  \nI. 10101010 (-86) + 11111111 (-1) = -87 → no overflow (both negative, sum within range).\n\nOnly D overflows.\n\nAnswer: D",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 167,
+      "completion_tokens": 364,
+      "total_tokens": 531,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 855.6,
+      "prefill_tokens": 167,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 195.3,
+      "decode_tok_s": 23.4,
+      "spec_accept_rate": 0.724,
+      "tok_per_step": 1.73
+    }
+  }
+}

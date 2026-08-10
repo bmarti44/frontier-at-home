@@ -1,0 +1,54 @@
+{
+  "index": 9414,
+  "task_id": 9603,
+  "rendered_prompt_sha256": "68195a9a24ebed885438579890d5a2935061065aecf736f6a8ed4d75a7f087e3",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "\\[\nI = \\frac{1}{2} m R^2\n\\]\n\nGiven:\n- Diameter = 4.0 ft → radius \\( R = 2.0 \\) ft\n- Weight = 600 lb → mass \\( m = \\frac{600}{32.2} \\approx 18.63 \\) slugs (using \\( g = 32.2 \\, \\text{ft/s}^2 \\))\n- Net torque \\( \\tau = 225 \\) lb-ft\n\n\\[\nI = \\frac{1}{2} (18.63)(2.0)^2 = \\frac{1}{2} (18.63)(4) = 37.26 \\, \\text{slug·ft}^2\n\\]\n\nAngular acceleration:\n\\[\n\\alpha = \\frac{\\tau}{I} = \\frac{225}{37.26} \\approx 6.04 \\, \\text{rad/s}^2\n\\]\n\nClosest option: **6.3 rad/sec²** → A.\n\nAnswer: A",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='A' expected='D'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.01747874985449
+  },
+  "response": {
+    "id": "cmpl-487",
+    "object": "text_completion",
+    "created": 1786300790,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "\\[\nI = \\frac{1}{2} m R^2\n\\]\n\nGiven:\n- Diameter = 4.0 ft → radius \\( R = 2.0 \\) ft\n- Weight = 600 lb → mass \\( m = \\frac{600}{32.2} \\approx 18.63 \\) slugs (using \\( g = 32.2 \\, \\text{ft/s}^2 \\))\n- Net torque \\( \\tau = 225 \\) lb-ft\n\n\\[\nI = \\frac{1}{2} (18.63)(2.0)^2 = \\frac{1}{2} (18.63)(4) = 37.26 \\, \\text{slug·ft}^2\n\\]\n\nAngular acceleration:\n\\[\n\\alpha = \\frac{\\tau}{I} = \\frac{225}{37.26} \\approx 6.04 \\, \\text{rad/s}^2\n\\]\n\nClosest option: **6.3 rad/sec²** → A.\n\nAnswer: A",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 238,
+      "completion_tokens": 212,
+      "total_tokens": 450,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 563.7,
+      "prefill_tokens": 238,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 423.2,
+      "decode_tok_s": 25.1,
+      "spec_accept_rate": 0.842,
+      "tok_per_step": 1.85
+    }
+  }
+}

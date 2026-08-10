@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "DSV4-0731-F1-THINKING-IS-THE-RIGHT-CONTRACT",
+  "date_utc": "2026-08-09",
+  "question": "Is DeepSeek-V4-Flash-0731 weaker than the pre-0731 baseline, or was it measured under the wrong generation contract?",
+  "answer": "Wrong contract. Under the baselines' own contract (thinking disabled) 0731 loses 5.5 points on MMLU-Pro; with thinking enabled and an adequate token budget it gains 3.6 points over the same baseline.",
+  "measurements": [
+    {
+      "label": "baseline (pre-0731 weights)",
+      "extra_body": {"enable_thinking": false},
+      "max_tokens": 768,
+      "correct": 192,
+      "n": 253,
+      "accuracy": 0.7589,
+      "artifact": "results/acc-mmlu-dev-ds4.json",
+      "outcome_breakdown": {"correct": 192, "incorrect": 42, "no anchored answer": 6, "truncated without answer": 13}
+    },
+    {
+      "label": "0731, thinking disabled",
+      "extra_body": {"enable_thinking": false},
+      "max_tokens": 768,
+      "correct": 178,
+      "n": 253,
+      "accuracy": 0.7036,
+      "artifact": "results/dsv4-0731-staging/acc-mmlu-pro-dev-0731.json",
+      "outcome_breakdown": {"correct": 178, "incorrect": 52, "no anchored answer": 8, "truncated without answer": 15},
+      "note": "Contract-matched to the baseline. The deficit is dominated by genuinely incorrect answers (+10 vs baseline), not parse failures (+2 unanchored, +2 truncated), and output lengths are nearly identical (median 56 vs 60 tokens), so it is not a formatting or truncation artifact."
+    },
+    {
+      "label": "0731, thinking enabled, baseline token budget",
+      "extra_body": null,
+      "max_tokens": 768,
+      "n_partial": 91,
+      "accuracy_partial": 0.79,
+      "artifact": "partial run, not committed; superseded by the 2048 run below",
+      "outcome_breakdown_partial": {"correct": 72, "truncated without answer": 14, "incorrect": 5},
+      "note": "Wrong answers collapsed from 16.6% (baseline) to 5%, but truncation tripled to 15% with 16 of 91 items stopping at exactly 768 tokens. The token budget, not reasoning, became the binding constraint, so this run was stopped and replaced."
+    },
+    {
+      "label": "0731, thinking enabled, raised budget",
+      "extra_body": null,
+      "max_tokens": 2048,
+      "correct": 201,
+      "n": 253,
+      "accuracy": 0.7945,
+      "wilson95": [0.7404, 0.8397],
+      "artifact": "results/dsv4-0731-staging/acc-mmlu-pro-dev-0731-thinking-2048.json",
+      "outcome_breakdown": {"correct": 201, "incorrect": 30, "truncated without answer": 22},
+      "tokens": {"median": 216, "mean": 491, "hit_2048_cap": 24},
+      "note": "Still budget-limited: 24 items reached the 2048 cap and 22 truncated without producing an answer, so this understates the model. Token use is heavily skewed -- a minority of hard items consume very large budgets."
+    }
+  ],
+  "comparability": {
+    "matched_to_baseline": ["0731 thinking disabled"],
+    "not_matched_to_baseline": ["0731 thinking enabled at 768", "0731 thinking enabled at 2048"],
+    "why": "The thinking-enabled runs change extra_body and, at 2048, max_tokens. scripts/104_compare_dsv4_0731.py reports these as NOT_COMPARABLE by design. They answer a different question -- what 0731 achieves when used as designed -- rather than reproducing the baseline's contract.",
+    "unclosed_gap": "The pre-0731 weights were never measured with thinking enabled, so it is unknown how much of the +3.6 points is 0731 specifically versus thinking generally. The old encoder does support thinking mode, so the experiment is possible, but the pre-0731 base is not on local disk (the production copy lives under /home/dsv4, which is not readable by this account) and answering it means re-fetching an 86.7 GB file."
+  },
+  "cost_of_the_contract": {
+    "tokens_per_answer": "median 216 vs 56 with thinking disabled, roughly 3.9x; mean 491 vs 146",
+    "wall_clock": "At the measured ~20 tok/s decode, a median answer moves from about 2.8 s to about 10.8 s. 0731's decode advantage over the baseline (+12.9% to +18.5%) does not offset this; time-to-answer gets materially worse even though tokens per second improved.",
+    "memory": "MemAvailable fell from about 14 GiB to about 8 GiB under thinking-mode load. Accepted by the owner on 2026-08-09.",
+    "side_benefit": "The DSV4-0731-D1 zero-token defect only manifests with enable_thinking=false, so making thinking the default removes it from the serving path."
+  },
+  "owner_decision": {
+    "date_utc": "2026-08-09",
+    "decision": "Thinking enabled is to be the mandatory default for 0731, and a raised generation budget is accepted as part of that contract.",
+    "recorded_by": "assistant, from the owner's instruction in session",
+    "consequence": "Accuracy evidence measured under enable_thinking=false is no longer the target contract. Future 0731 qualification should measure the thinking-enabled contract, and any claim comparing 0731 to the published pre-0731 baselines must state that the contracts differ."
+  }
+}

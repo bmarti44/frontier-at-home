@@ -1,0 +1,53 @@
+{
+  "index": 5753,
+  "task_id": 5911,
+  "rendered_prompt_sha256": "ff4969254733fd17fa0927b82e18c7c70302748f6739dad8bc161e409679272b",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The question asks about research and development (R&D) costs expensed. Under US GAAP, R&D costs include costs incurred for research and development, but certain costs like legal fees for patents are capitalized as intangible assets if successful, not expensed as R&D. Labor and materials for a prototype and testing are R&D costs, so they are expensed. The legal costs to file a patent are not R&D; they are capitalized (if successful). So R&D expenses = $100,000 + $40,000 = $140,000. The legal cost $5,000 is excluded. Thus the amount expensed as R&D is $140,000.\n\nAnswer: D</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.5698744910769165
+  },
+  "response": {
+    "id": "cmpl-990",
+    "object": "text_completion",
+    "created": 1786309063,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The question asks about research and development (R&D) costs expensed. Under US GAAP, R&D costs include costs incurred for research and development, but certain costs like legal fees for patents are capitalized as intangible assets if successful, not expensed as R&D. Labor and materials for a prototype and testing are R&D costs, so they are expensed. The legal costs to file a patent are not R&D; they are capitalized (if successful). So R&D expenses = $100,000 + $40,000 = $140,000. The legal cost $5,000 is excluded. Thus the amount expensed as R&D is $140,000.\n\nAnswer: D</think>Answer: D",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 169,
+      "completion_tokens": 143,
+      "total_tokens": 312,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 919.0,
+      "prefill_tokens": 169,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 184.0,
+      "decode_tok_s": 21.5,
+      "spec_accept_rate": 0.584,
+      "tok_per_step": 1.6
+    }
+  }
+}

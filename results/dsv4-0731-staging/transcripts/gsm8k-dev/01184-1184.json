@@ -1,0 +1,55 @@
+{
+  "index": 1184,
+  "task_id": 1184,
+  "rendered_prompt_sha256": "ce759974009b4a2066dd6332e3d09c7105be49a6a8fa2e3f482ab11c3d2468c9",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "850 kilos of coal divided by 50 kg per bag gives 17 bags. Each bag costs $18, so 17 × 18 = 306.  \n\nAnswer: 306",
+  "finish_reason": "stop",
+  "expected": "306",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.3135269819758832
+  },
+  "response": {
+    "id": "cmpl-262",
+    "object": "text_completion",
+    "created": 1786299294,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "850 kilos of coal divided by 50 kg per bag gives 17 bags. Each bag costs $18, so 17 × 18 = 306.  \n\nAnswer: 306",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 76,
+      "completion_tokens": 38,
+      "total_tokens": 114,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 742.6,
+      "prefill_tokens": 76,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 102.4,
+      "decode_tok_s": 24.2,
+      "spec_accept_rate": 0.762,
+      "tok_per_step": 1.86
+    }
+  },
+  "used_fallback": false
+}

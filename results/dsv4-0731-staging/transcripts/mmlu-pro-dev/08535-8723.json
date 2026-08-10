@@ -1,0 +1,54 @@
+{
+  "index": 8535,
+  "task_id": 8723,
+  "rendered_prompt_sha256": "b22da8d43e675d5cd5e6c4616f1d1e469d2bbbccbb67122f557384500974a054",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s solve step by step.\n\nWe have a half-life \\( t_{1/2} = 8 \\) years.  \nWe want the time \\( t \\) when two thirds of the substance has decayed, meaning one third remains.\n\nThe decay formula:  \n\\[\nN(t) = N_0 \\left( \\frac{1}{2} \\right)^{t / t_{1/2}}\n\\]\n\nWe want \\( N(t)/N_0 = 1/3 \\):  \n\\[\n\\frac{1}{3} = \\left( \\frac{1}{2} \\right)^{t / 8}\n\\]\n\nTake natural logs:  \n\\[\n\\ln(1/3) = \\frac{t}{8} \\ln(1/2)\n\\]\n\\[\n-\\ln 3 = \\frac{t}{8} (-\\ln 2)\n\\]\n\\[\nt = 8 \\frac{\\ln 3}{\\ln 2}\n\\]\n\nCompute:  \n\\[\n\\ln 3 \\approx 1.098612288\n\\]\n\\[\n\\ln 2 \\approx 0.693147181\n\\]\n\\[\n\\frac{\\ln 3}{\\ln 2} \\approx 1.5849625\n\\]\n\\[\nt \\approx 8 \\times 1.5849625 = 12.6797\n\\]\n\nThat matches option C: 12.68.\n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 12.449120674049482
+  },
+  "response": {
+    "id": "cmpl-437",
+    "object": "text_completion",
+    "created": 1786300491,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let’s solve step by step.\n\nWe have a half-life \\( t_{1/2} = 8 \\) years.  \nWe want the time \\( t \\) when two thirds of the substance has decayed, meaning one third remains.\n\nThe decay formula:  \n\\[\nN(t) = N_0 \\left( \\frac{1}{2} \\right)^{t / t_{1/2}}\n\\]\n\nWe want \\( N(t)/N_0 = 1/3 \\):  \n\\[\n\\frac{1}{3} = \\left( \\frac{1}{2} \\right)^{t / 8}\n\\]\n\nTake natural logs:  \n\\[\n\\ln(1/3) = \\frac{t}{8} \\ln(1/2)\n\\]\n\\[\n-\\ln 3 = \\frac{t}{8} (-\\ln 2)\n\\]\n\\[\nt = 8 \\frac{\\ln 3}{\\ln 2}\n\\]\n\nCompute:  \n\\[\n\\ln 3 \\approx 1.098612288\n\\]\n\\[\n\\ln 2 \\approx 0.693147181\n\\]\n\\[\n\\frac{\\ln 3}{\\ln 2} \\approx 1.5849625\n\\]\n\\[\nt \\approx 8 \\times 1.5849625 = 12.6797\n\\]\n\nThat matches option C: 12.68.\n\nAnswer: C",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 132,
+      "completion_tokens": 295,
+      "total_tokens": 427,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 790.0,
+      "prefill_tokens": 132,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 167.2,
+      "decode_tok_s": 25.3,
+      "spec_accept_rate": 0.849,
+      "tok_per_step": 1.86
+    }
+  }
+}

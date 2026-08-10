@@ -1,0 +1,53 @@
+{
+  "index": 10075,
+  "task_id": 10276,
+  "rendered_prompt_sha256": "51e011209278a709b44e5b7d955b2522b3b77b90f9b0542b553d5742a2e7b1e2",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to compute beam divergence for a laser beam (Gaussian) in free space. Ruby laser wavelength λ = 694.3 nm = 694.3e-9 m. Initial beam diameter D0 = 14 mm = 0.014 m. Distance L = 10,000 km = 10^7 m.\n\nWe need beam diameter at target. For a Gaussian beam, far-field divergence angle θ ≈ λ / (π w0) where w0 is beam waist radius (1/e^2). But often for laser beam diameter, the divergence angle is θ = (2λ)/(π D0) for full-angle? Need to check options.\n\nGiven options around 1000-2000 m. Let's compute.\n\nIf we use formula D ≈ D0 + 2L tan(θ) ≈ 2L θ for small angle, where θ is full divergence half-angle? Actually full angle divergence for Gaussian beam: θ = 2λ/(π w0) = 2λ/(π (D0/2)) = 4λ/(π D0). Then diameter at distance L: D ≈ D0 + 2L * (θ/2)? Let's be precise.\n\nFor Gaussian beam, beam spot size w(z) = w0 sqrt(1+(z/zR)^2). At large z, w ≈ w0 z / zR. zR = π w0^2 / λ. So w ≈ λ z / (π w0). The full beam diameter (2w) ≈ 2λ z / (π w0). Since w0 = D0/2, 2w ≈ 2λ z / (π D0/2) = 4λ z / (π D0). So D ≈ 4λ z / (π D0) for z >> zR.\n\nCheck zR: w0 = 7 mm = 0.007 m, zR = π (0.007)^2 / (694.3e-9) ≈ π*49e-6 / 694.3e-9 = 153.9 / 694.3e-9? Actually 49e-6 / 694.3e-9 = 49e-6 / 6.943e-7 = 49/6.943 *10? Wait compute: 49e-6 / (694.3e-9) = 49e-6 / 6.943e-7 = (49/6.943)*10? 6.943e-7 = 0.6943e-6? Let's do: 694.3e-9 = 6.943e-7. 49e-6 / 6.943e-7 = (49/6.943) * 10^(-6+7) = 7.056 *10 = 70.56. Then π*70.56 ≈ 221.7 m. z = 10^7 m >> zR, so far-field formula valid.\n\nCompute D = 4 * 694.3e-9 * 10^7 / (π * 0.014) = (4*694.3e-9*1e7)/(π*0.014) = (4*694.3*1e-2)/(π*0.014)? Let's calculate: 694.3e-9 * 1e7 = 694.3e-2 = 6.943. Then 4*6.943 = 27.772. Divide by π*0.014 = 0.04398. 27.772 / 0.04398 ≈ 631.5 m. Wait that gives ~631 m, not in options. Options are 1000-2000. So maybe formula different.\n\nMaybe use λ = 694.3 nm, D0=14mm, distance 10,000 km. Let's compute using simple diffraction limit: θ ≈ 1.22 λ/D (for Airy disk) but laser is Gaussian. For Gaussian, θ = (2λ)/(π w0)? Let's check.\n\nIf we use full angle divergence θ = (2λ)/(π w0) where w0 is radius? Actually for Gaussian, the half-angle divergence θ = λ/(π w0). So full angle = 2θ = 2λ/(π w0) = 2λ/(π (D0/2)) = 4λ/(π D0). That gave ~631 m. Not matching options. Maybe they use D0 as beam waist diameter, and divergence θ = λ/D0? Then D ≈ 2L * (λ/D0) = 2*1e7*694.3e-9/0.014 = 2*1e7*4.959e-5? 694.3e-9/0.014 = 4.959e-5. times 2e7 = 991.8 m ≈ 1000 m. Option H. But that's not standard.\n\nMaybe they use formula D = D0 + (λ/D0)*L? Then D ≈ λ L / D0 = 694.3e-9 * 1e7 / 0.014 = 6.943/0.014 = 495.9 m. Not options.\n\nMaybe they use θ = 1.22 λ/D0 (Airy disk) and full angle: D ≈ 2L * 1.22λ/D0 = 2*1e7*1.22*694.3e-9/0.014 = 2*1e7*6.047e-5? 1.22*694.3e-9/0.014 = 1.22*4.959e-5 = 6.05e-5. times 2e7 = 1210 m. Option B! That matches B 1210 m.\n\nSo likely they use Rayleigh criterion: θ = 1.22 λ/D, and beam diameter at target = 2L tan θ ≈ 2L θ = 2 * 10^7 * 1.22 * 694.3e-9 / 0.014 = 1210 m. Yes option B.\n\nBut question says \"laser beam\" not diffraction limited? But options include 1210. We should pick B.\n\nLet's double-check: D0=14mm=0.014m, λ=694.3nm=6.943e-7 m? Actually 694.3 nm = 694.3e-9 m = 6.943e-7 m. L=10,000 km = 10^7 m. θ = 1.22 λ / D0 = 1.22 * 6.943e-7 / 0.014 = 1.22 * 4.959e-5 = 6.05e-5 rad. D = 2L θ = 2*10^7*6.05e-5 = 1210 m. Yes.\n\nThus answer B.\n\nAnswer: B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 69.6473002389539
+  },
+  "response": {
+    "id": "cmpl-1029",
+    "object": "text_completion",
+    "created": 1786310261,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to compute beam divergence for a laser beam (Gaussian) in free space. Ruby laser wavelength λ = 694.3 nm = 694.3e-9 m. Initial beam diameter D0 = 14 mm = 0.014 m. Distance L = 10,000 km = 10^7 m.\n\nWe need beam diameter at target. For a Gaussian beam, far-field divergence angle θ ≈ λ / (π w0) where w0 is beam waist radius (1/e^2). But often for laser beam diameter, the divergence angle is θ = (2λ)/(π D0) for full-angle? Need to check options.\n\nGiven options around 1000-2000 m. Let's compute.\n\nIf we use formula D ≈ D0 + 2L tan(θ) ≈ 2L θ for small angle, where θ is full divergence half-angle? Actually full angle divergence for Gaussian beam: θ = 2λ/(π w0) = 2λ/(π (D0/2)) = 4λ/(π D0). Then diameter at distance L: D ≈ D0 + 2L * (θ/2)? Let's be precise.\n\nFor Gaussian beam, beam spot size w(z) = w0 sqrt(1+(z/zR)^2). At large z, w ≈ w0 z / zR. zR = π w0^2 / λ. So w ≈ λ z / (π w0). The full beam diameter (2w) ≈ 2λ z / (π w0). Since w0 = D0/2, 2w ≈ 2λ z / (π D0/2) = 4λ z / (π D0). So D ≈ 4λ z / (π D0) for z >> zR.\n\nCheck zR: w0 = 7 mm = 0.007 m, zR = π (0.007)^2 / (694.3e-9) ≈ π*49e-6 / 694.3e-9 = 153.9 / 694.3e-9? Actually 49e-6 / 694.3e-9 = 49e-6 / 6.943e-7 = 49/6.943 *10? Wait compute: 49e-6 / (694.3e-9) = 49e-6 / 6.943e-7 = (49/6.943)*10? 6.943e-7 = 0.6943e-6? Let's do: 694.3e-9 = 6.943e-7. 49e-6 / 6.943e-7 = (49/6.943) * 10^(-6+7) = 7.056 *10 = 70.56. Then π*70.56 ≈ 221.7 m. z = 10^7 m >> zR, so far-field formula valid.\n\nCompute D = 4 * 694.3e-9 * 10^7 / (π * 0.014) = (4*694.3e-9*1e7)/(π*0.014) = (4*694.3*1e-2)/(π*0.014)? Let's calculate: 694.3e-9 * 1e7 = 694.3e-2 = 6.943. Then 4*6.943 = 27.772. Divide by π*0.014 = 0.04398. 27.772 / 0.04398 ≈ 631.5 m. Wait that gives ~631 m, not in options. Options are 1000-2000. So maybe formula different.\n\nMaybe use λ = 694.3 nm, D0=14mm, distance 10,000 km. Let's compute using simple diffraction limit: θ ≈ 1.22 λ/D (for Airy disk) but laser is Gaussian. For Gaussian, θ = (2λ)/(π w0)? Let's check.\n\nIf we use full angle divergence θ = (2λ)/(π w0) where w0 is radius? Actually for Gaussian, the half-angle divergence θ = λ/(π w0). So full angle = 2θ = 2λ/(π w0) = 2λ/(π (D0/2)) = 4λ/(π D0). That gave ~631 m. Not matching options. Maybe they use D0 as beam waist diameter, and divergence θ = λ/D0? Then D ≈ 2L * (λ/D0) = 2*1e7*694.3e-9/0.014 = 2*1e7*4.959e-5? 694.3e-9/0.014 = 4.959e-5. times 2e7 = 991.8 m ≈ 1000 m. Option H. But that's not standard.\n\nMaybe they use formula D = D0 + (λ/D0)*L? Then D ≈ λ L / D0 = 694.3e-9 * 1e7 / 0.014 = 6.943/0.014 = 495.9 m. Not options.\n\nMaybe they use θ = 1.22 λ/D0 (Airy disk) and full angle: D ≈ 2L * 1.22λ/D0 = 2*1e7*1.22*694.3e-9/0.014 = 2*1e7*6.047e-5? 1.22*694.3e-9/0.014 = 1.22*4.959e-5 = 6.05e-5. times 2e7 = 1210 m. Option B! That matches B 1210 m.\n\nSo likely they use Rayleigh criterion: θ = 1.22 λ/D, and beam diameter at target = 2L tan θ ≈ 2L θ = 2 * 10^7 * 1.22 * 694.3e-9 / 0.014 = 1210 m. Yes option B.\n\nBut question says \"laser beam\" not diffraction limited? But options include 1210. We should pick B.\n\nLet's double-check: D0=14mm=0.014m, λ=694.3nm=6.943e-7 m? Actually 694.3 nm = 694.3e-9 m = 6.943e-7 m. L=10,000 km = 10^7 m. θ = 1.22 λ / D0 = 1.22 * 6.943e-7 / 0.014 = 1.22 * 4.959e-5 = 6.05e-5 rad. D = 2L θ = 2*10^7*6.05e-5 = 1210 m. Yes.\n\nThus answer B.\n\nAnswer: B.</think>Answer: B",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 154,
+      "completion_tokens": 1503,
+      "total_tokens": 1657,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 979.1,
+      "prefill_tokens": 154,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 165.0,
+      "decode_tok_s": 21.9,
+      "spec_accept_rate": 0.673,
+      "tok_per_step": 1.67
+    }
+  }
+}

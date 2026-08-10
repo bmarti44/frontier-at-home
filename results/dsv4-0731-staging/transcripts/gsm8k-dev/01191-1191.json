@@ -1,0 +1,55 @@
+{
+  "index": 1191,
+  "task_id": 1191,
+  "rendered_prompt_sha256": "15f83fe6174404ab78532b23a905af3bc295d017fb7e8eb0af97a991562bb782",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Reasoning: The haircut cost is based on the number of inches cut. Her hair went from 10 inches to 8 inches, so 2 inches were cut. At $30 per inch, that's 2 × $30 = $60. The color costs $40. Total = $60 + $40 = $100.\n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7697919521015137
+  },
+  "response": {
+    "id": "cmpl-204",
+    "object": "text_completion",
+    "created": 1786299010,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Reasoning: The haircut cost is based on the number of inches cut. Her hair went from 10 inches to 8 inches, so 2 inches were cut. At $30 per inch, that's 2 × $30 = $60. The color costs $40. Total = $60 + $40 = $100.\n\nAnswer: 100",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 86,
+      "completion_tokens": 73,
+      "total_tokens": 159,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 730.0,
+      "prefill_tokens": 86,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 117.9,
+      "decode_tok_s": 24.0,
+      "spec_accept_rate": 0.775,
+      "tok_per_step": 1.8
+    }
+  },
+  "used_fallback": false
+}

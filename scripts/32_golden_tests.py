@@ -563,6 +563,8 @@ def main() -> int:
             "data_chunks": stream["chunks"],
             "done": stream["done"],
             "content": stream["content"],
+            "content_bytes": len(stream["content"].encode("utf-8")),
+            "generated_bytes": len(stream["generated_text"].encode("utf-8")),
             "usage": stream["usage"],
         }
 

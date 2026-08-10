@@ -1,0 +1,55 @@
+{
+  "index": 932,
+  "task_id": 932,
+  "rendered_prompt_sha256": "4ce5b2b673f0a57fc3744f0c9f8774e4abc7a58e08516ea0dc19dffb95963868",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Reasoning: Maria invited 4 friends, so there are 5 girls total (Maria + 4 friends).  \nInitially, Maria gave each friend 2 balloons: 4 × 2 = 8 balloons for friends.  \nMaria had 1 balloon for herself: 1 balloon.  \nSo before mom came: 8 + 1 = 9 balloons.  \nThen mom gave each person 3 more balloons: 5 girls × 3 = 15 balloons.  \nTotal = 9 + 15 = 24 balloons.  \n\nAnswer: 24",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.636350798886269
+  },
+  "response": {
+    "id": "cmpl-266",
+    "object": "text_completion",
+    "created": 1786299316,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Reasoning: Maria invited 4 friends, so there are 5 girls total (Maria + 4 friends).  \nInitially, Maria gave each friend 2 balloons: 4 × 2 = 8 balloons for friends.  \nMaria had 1 balloon for herself: 1 balloon.  \nSo before mom came: 8 + 1 = 9 balloons.  \nThen mom gave each person 3 more balloons: 5 girls × 3 = 15 balloons.  \nTotal = 9 + 15 = 24 balloons.  \n\nAnswer: 24",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 106,
+      "completion_tokens": 115,
+      "total_tokens": 221,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 833.3,
+      "prefill_tokens": 106,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 127.3,
+      "decode_tok_s": 24.0,
+      "spec_accept_rate": 0.754,
+      "tok_per_step": 1.78
+    }
+  },
+  "used_fallback": false
+}

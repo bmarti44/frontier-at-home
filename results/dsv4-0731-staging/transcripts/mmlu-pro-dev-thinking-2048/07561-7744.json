@@ -1,0 +1,53 @@
+{
+  "index": 7561,
+  "task_id": 7744,
+  "rendered_prompt_sha256": "b2fad7efb16002e689c3fa193b76e36187040c62fa91a4435989ccced6f2d273",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need answer probability divisible by 2 and not divisible by 3 in 1..100. Count numbers divisible by 2: 50. Divisible by 2 and divisible by 3 = divisible by 6: floor(100/6)=16. Divisible by 2 and not 3 = 50-16=34. Probability = 34/100 = 17/50. Option D. Need reply single letter. Answer: D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.10512984986417
+  },
+  "response": {
+    "id": "cmpl-947",
+    "object": "text_completion",
+    "created": 1786308383,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need answer probability divisible by 2 and not divisible by 3 in 1..100. Count numbers divisible by 2: 50. Divisible by 2 and divisible by 3 = divisible by 6: floor(100/6)=16. Divisible by 2 and not 3 = 50-16=34. Probability = 34/100 = 17/50. Option D. Need reply single letter. Answer: D.</think>Answer: D",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 166,
+      "completion_tokens": 99,
+      "total_tokens": 265,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 868.2,
+      "prefill_tokens": 166,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 191.3,
+      "decode_tok_s": 23.4,
+      "spec_accept_rate": 0.732,
+      "tok_per_step": 1.75
+    }
+  }
+}

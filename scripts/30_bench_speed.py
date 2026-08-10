@@ -328,6 +328,10 @@ class Client:
         last_content_at_ns: int | None = None
         generated_parts: list[str] = []
         reasoning_parts: list[str] = []
+        # Boxed so the nested SSE loop can mutate them: which delta field is
+        # currently streaming, and how many times it has changed.
+        active_field: list[str | None] = [None]
+        field_transitions: list[int] = [0]
         content_parts: list[str] = []
         token_timestamps_ns: list[int] = []
         usage: dict[str, Any] | None = None
@@ -396,6 +400,10 @@ class Client:
                                 raise RuntimeError(f"{field} delta is not a string")
                             if fragment:
                                 fragments.append(fragment)
+                                if field != active_field[0]:
+                                    if active_field[0] is not None:
+                                        field_transitions[0] += 1
+                                    active_field[0] = field
                                 if field == "reasoning_content":
                                     reasoning_parts.append(fragment)
                                 else:
@@ -434,6 +442,7 @@ class Client:
             "generated_text": "".join(generated_parts),
             "generated_reasoning": "".join(reasoning_parts),
             "generated_content": "".join(content_parts),
+            "field_transitions": field_transitions[0],
             "usage": usage,
             "done": done,
             "finish_reason": finish_reasons[0],
@@ -497,18 +506,46 @@ def observable_output_errors(
     client_completion_tokens: int,
     event_completion_tokens: int,
     minimum_tokens: int,
+    field_transitions: int = 0,
 ) -> list[str]:
-    """Validate counts measured by the client, without trusting server usage."""
+    """Validate counts measured by the client, without trusting server usage.
+
+    A reasoning model streams `reasoning_content` and `content` as separate
+    delta fields. Two effects make an exact identity wrong there, and neither
+    indicates a bad measurement:
+
+      * re-tokenizing across a field boundary can merge or split exactly one
+        token relative to what was streamed, and
+      * one SSE event may carry both fields, contributing two text fragments
+        under a single timestamp.
+
+    Each costs at most one token per boundary, so a boundary may shrink the
+    re-encoded count by up to one token per transition.
+
+    A speculative-decoding engine additionally emits more than one token per
+    step -- this deployment runs MTP at 1.5-1.9 tokens/step -- and two tokens
+    can share a single SSE delta. So the number of timestamped events is a
+    LOWER bound on generated tokens, not an identity: 255 events for 256 tokens
+    is normal, not a fault.
+
+    What this check must still catch is the opposite direction. More timestamps
+    than tokens cannot happen honestly; it would mean duplicated or fabricated
+    timing rows inflating a short generation into an apparently complete one.
+    So the bound is one-sided, and deliberately does not consult server-reported
+    usage -- the whole point is to validate the stream without trusting it.
+    """
     reasons: list[str] = []
     if event_completion_tokens < minimum_tokens:
         reasons.append(
             f"early stop: {event_completion_tokens} timestamped tokens, "
             f"minimum is {minimum_tokens}"
         )
-    if client_completion_tokens != event_completion_tokens:
+    ceiling = client_completion_tokens + field_transitions
+    if event_completion_tokens > ceiling:
         reasons.append(
             "timestamp/client token mismatch: "
-            f"events={event_completion_tokens}, client={client_completion_tokens}"
+            f"events={event_completion_tokens} exceeds client={client_completion_tokens} "
+            f"+ field_transitions={field_transitions}; timestamps cannot outnumber tokens"
         )
     return reasons
 
@@ -724,8 +761,14 @@ def run_rep(
             return invalid_rep(f"invalid usage.completion_tokens: {completion_tokens!r}")
         if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
             return invalid_rep(f"invalid usage.prompt_tokens: {prompt_tokens!r}")
-        client_completion_tokens = token_count(
-            output_tokenizer, stream["generated_text"]
+        # Tokenize the reasoning and content streams separately rather than
+        # tokenizing their concatenation: the model emits them as distinct
+        # delta fields, and re-encoding across that seam invents or destroys a
+        # token that was never streamed.
+        client_completion_tokens = sum(
+            token_count(output_tokenizer, part)
+            for part in (stream["generated_reasoning"], stream["generated_content"])
+            if part
         )
         sse_token_timestamps_ns = stream["token_timestamps_ns"]
         event_completion_tokens = len(sse_token_timestamps_ns)
@@ -770,6 +813,7 @@ def run_rep(
                 client_completion_tokens,
                 len(token_timestamps),
                 min_completion_tokens,
+                stream.get("field_transitions", 0),
             )
             timing_source = "sse_content_events"
         if any(
@@ -853,6 +897,7 @@ def run_rep(
                     "prompt_tokens": prompt_tokens,
                     "client_completion_tokens": client_completion_tokens,
                     "event_completion_tokens": event_completion_tokens,
+                    "field_transitions": stream.get("field_transitions", 0),
                     "timing_source": timing_source,
                     "token_timestamps_ns": (
                         raw_timing["monotonic_ns"]
@@ -876,6 +921,7 @@ def run_rep(
             "prompt_tokens": prompt_tokens,
             "client_completion_tokens": client_completion_tokens,
             "event_completion_tokens": event_completion_tokens,
+            "field_transitions": stream.get("field_transitions", 0),
             "timing_source": timing_source,
             "token_timestamps_ns": (
                 raw_timing["monotonic_ns"]

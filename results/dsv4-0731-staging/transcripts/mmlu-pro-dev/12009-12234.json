@@ -1,0 +1,54 @@
+{
+  "index": 12009,
+  "task_id": 12234,
+  "rendered_prompt_sha256": "730bb8374463217b9377dc4144e31de86c2af4c04f54659317ac64a7fb68ec0c",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to determine the bandwidth of the TV video signal.\n\nGiven:\n- Number of picture elements (pixels) per frame: 300,000\n- Each pixel can have 10 equally likely brightness levels\n- 30 frames per second\n- Required signal-to-noise ratio (SNR) = 1000 (30 dB)\n\nFirst, compute the information rate.\n\nEntropy per pixel:  \nSince 10 equally likely levels, entropy = log2(10) bits per pixel.\n\nTotal bits per frame = 300,000 × log2(10)  \nlog2(10) ≈ 3.3219 bits\n\nSo bits per frame ≈ 300,000 × 3.3219 = 996,570 bits ≈ 10^6 bits.\n\nFrames per second = 30, so total bit rate = 30 × 996,570 ≈ 29.9 × 10^6 bits/s ≈ 30 Mbps.\n\nNow, using Shannon–Hartley theorem for channel capacity:\n\nC = B log2(1 + S/N)\n\nWe have C = 30 × 10^6 bits/s, S/N = 1000.\n\nSo B = C / log2(1 + S/N) = 30×10^6 / log2(1001).\n\nlog2(1001) ≈ log2(1024) ≈ 10 (since 2^10 = 1024). More precisely, log2(1001) ≈ 9.97.\n\nSo B ≈ 30×10^6 / 10 = 3×10^6 Hz = 3 MHz.\n\nThus the bandwidth is approximately 3 MHz.\n\nAnswer: G\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 15.139751171926036
+  },
+  "response": {
+    "id": "cmpl-369",
+    "object": "text_completion",
+    "created": 1786300221,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to determine the bandwidth of the TV video signal.\n\nGiven:\n- Number of picture elements (pixels) per frame: 300,000\n- Each pixel can have 10 equally likely brightness levels\n- 30 frames per second\n- Required signal-to-noise ratio (SNR) = 1000 (30 dB)\n\nFirst, compute the information rate.\n\nEntropy per pixel:  \nSince 10 equally likely levels, entropy = log2(10) bits per pixel.\n\nTotal bits per frame = 300,000 × log2(10)  \nlog2(10) ≈ 3.3219 bits\n\nSo bits per frame ≈ 300,000 × 3.3219 = 996,570 bits ≈ 10^6 bits.\n\nFrames per second = 30, so total bit rate = 30 × 996,570 ≈ 29.9 × 10^6 bits/s ≈ 30 Mbps.\n\nNow, using Shannon–Hartley theorem for channel capacity:\n\nC = B log2(1 + S/N)\n\nWe have C = 30 × 10^6 bits/s, S/N = 1000.\n\nSo B = C / log2(1 + S/N) = 30×10^6 / log2(1001).\n\nlog2(1001) ≈ log2(1024) ≈ 10 (since 2^10 = 1024). More precisely, log2(1001) ≈ 9.97.\n\nSo B ≈ 30×10^6 / 10 = 3×10^6 Hz = 3 MHz.\n\nThus the bandwidth is approximately 3 MHz.\n\nAnswer: G\n\nAnswer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 199,
+      "completion_tokens": 347,
+      "total_tokens": 546,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 520.1,
+      "prefill_tokens": 199,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 384.0,
+      "decode_tok_s": 23.8,
+      "spec_accept_rate": 0.742,
+      "tok_per_step": 1.75
+    }
+  }
+}

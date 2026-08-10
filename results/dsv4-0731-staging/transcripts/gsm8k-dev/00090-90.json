@@ -1,0 +1,55 @@
+{
+  "index": 90,
+  "task_id": 90,
+  "rendered_prompt_sha256": "9101940f75249a624b8806a335864c789010531f245c246cf8b14d466c238ef5",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down:  \n- An adult eats 10 lbs.  \n- A child eats half of that, so 5 lbs.  \n- There are 20 adults → 20 × 10 = 200 lbs.  \n- There are 5 children → 5 × 5 = 25 lbs.  \n- Total = 200 + 25 = 225 lbs.  \n\nAnswer: 225",
+  "finish_reason": "stop",
+  "expected": "225",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.096254843054339
+  },
+  "response": {
+    "id": "cmpl-228",
+    "object": "text_completion",
+    "created": 1786299128,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down:  \n- An adult eats 10 lbs.  \n- A child eats half of that, so 5 lbs.  \n- There are 20 adults → 20 × 10 = 200 lbs.  \n- There are 5 children → 5 × 5 = 25 lbs.  \n- Total = 200 + 25 = 225 lbs.  \n\nAnswer: 225",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 122,
+      "completion_tokens": 84,
+      "total_tokens": 206,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 911.8,
+      "prefill_tokens": 122,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 133.9,
+      "decode_tok_s": 26.4,
+      "spec_accept_rate": 0.93,
+      "tok_per_step": 1.98
+    }
+  },
+  "used_fallback": false
+}

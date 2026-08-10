@@ -1,0 +1,53 @@
+{
+  "index": 8068,
+  "task_id": 8253,
+  "rendered_prompt_sha256": "45fb26586496d16b5cdd7d1887a0e20fc2774692e028e8eaa6a45f23d7a3fffa",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to solve 1.2 = 0.4y. Divide both sides by 0.4: y = 1.2 / 0.4 = 3. So answer is A.\n\nAnswer: A.",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7347821060102433
+  },
+  "response": {
+    "id": "cmpl-954",
+    "object": "text_completion",
+    "created": 1786308463,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to solve 1.2 = 0.4y. Divide both sides by 0.4: y = 1.2 / 0.4 = 3. So answer is A.\n\nAnswer: A.",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 104,
+      "completion_tokens": 48,
+      "total_tokens": 152,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 772.7,
+      "prefill_tokens": 104,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 134.7,
+      "decode_tok_s": 24.5,
+      "spec_accept_rate": 0.84,
+      "tok_per_step": 1.88
+    }
+  }
+}

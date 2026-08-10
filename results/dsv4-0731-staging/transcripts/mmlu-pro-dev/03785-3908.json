@@ -1,0 +1,54 @@
+{
+  "index": 3785,
+  "task_id": 3908,
+  "rendered_prompt_sha256": "177650301579a4bfaecacd56d7976cae9a5104585fff2dc289cd41744255c427",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "\\[\nP = \\frac{T}{T_{tp}} P_{tp}\n\\]\n\nAt \\( T_{tp} = 273.16 \\, \\text{K} \\), \\( P_{tp} = 6.69 \\, \\text{kPa} \\).\n\nFor a change of \\( \\Delta T = 1.00 \\, \\text{K} \\):\n\n\\[\n\\Delta P = \\frac{\\Delta T}{T_{tp}} P_{tp} = \\frac{1.00}{273.16} \\times 6.69 \\approx 0.0245 \\, \\text{kPa}\n\\]\n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.801808301126584
+  },
+  "response": {
+    "id": "cmpl-309",
+    "object": "text_completion",
+    "created": 1786299606,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "\\[\nP = \\frac{T}{T_{tp}} P_{tp}\n\\]\n\nAt \\( T_{tp} = 273.16 \\, \\text{K} \\), \\( P_{tp} = 6.69 \\, \\text{kPa} \\).\n\nFor a change of \\( \\Delta T = 1.00 \\, \\text{K} \\):\n\n\\[\n\\Delta P = \\frac{\\Delta T}{T_{tp}} P_{tp} = \\frac{1.00}{273.16} \\times 6.69 \\approx 0.0245 \\, \\text{kPa}\n\\]\n\nAnswer: C",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 133,
+      "completion_tokens": 127,
+      "total_tokens": 260,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 808.2,
+      "prefill_tokens": 133,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 164.8,
+      "decode_tok_s": 25.5,
+      "spec_accept_rate": 0.853,
+      "tok_per_step": 1.88
+    }
+  }
+}

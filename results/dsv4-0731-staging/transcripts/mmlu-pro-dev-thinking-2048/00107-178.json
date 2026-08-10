@@ -1,0 +1,53 @@
+{
+  "index": 107,
+  "task_id": 178,
+  "rendered_prompt_sha256": "6069f80af200eb205aa189e21fcd63ec92bf0e59bcac3cb9cc67a229dfbcf2a4",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need answer only letter. Need compute. House worth 16500 assessed at rate 22% => assessed value = 16500 * 0.22 = 3630. Tax rates per $100:\nlocal college fund: .41 per 100 => (3630/100)*0.41 = 36.3*0.41 = 14.883\nspecial ed: .02 per 100 => 36.3*0.02 = 0.726\nhealth welfare: .001 per 100 => 36.3*0.001 = 0.0363\ncommunity construction: .089 per 100 => 36.3*0.089 = 3.2307? compute 36.3*0.089 = 3.2307. Sum = 14.883+0.726+0.0363+3.2307 = 18.876. Options: C. $18.88. Also individual amounts maybe A $3.23 for community construction, etc. Question asks \"How much tax does Mr. Howard pay for each of these needs? What was the total tax?\" Options are list single values? It says Reply with single letter of correct option. Likely total tax option C. Need answer: C.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 12.347685089800507
+  },
+  "response": {
+    "id": "cmpl-811",
+    "object": "text_completion",
+    "created": 1786304753,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need answer only letter. Need compute. House worth 16500 assessed at rate 22% => assessed value = 16500 * 0.22 = 3630. Tax rates per $100:\nlocal college fund: .41 per 100 => (3630/100)*0.41 = 36.3*0.41 = 14.883\nspecial ed: .02 per 100 => 36.3*0.02 = 0.726\nhealth welfare: .001 per 100 => 36.3*0.001 = 0.0363\ncommunity construction: .089 per 100 => 36.3*0.089 = 3.2307? compute 36.3*0.089 = 3.2307. Sum = 14.883+0.726+0.0363+3.2307 = 18.876. Options: C. $18.88. Also individual amounts maybe A $3.23 for community construction, etc. Question asks \"How much tax does Mr. Howard pay for each of these needs? What was the total tax?\" Options are list single values? It says Reply with single letter of correct option. Likely total tax option C. Need answer: C.</think>Answer: C",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 184,
+      "completion_tokens": 269,
+      "total_tokens": 453,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 491.8,
+      "prefill_tokens": 184,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 374.6,
+      "decode_tok_s": 22.7,
+      "spec_accept_rate": 0.679,
+      "tok_per_step": 1.69
+    }
+  }
+}

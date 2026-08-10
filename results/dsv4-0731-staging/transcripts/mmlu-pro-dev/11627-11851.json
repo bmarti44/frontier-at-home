@@ -1,0 +1,54 @@
+{
+  "index": 11627,
+  "task_id": 11851,
+  "rendered_prompt_sha256": "1052bb321d61b66329879c63e9f6187f7753e663a9f880e578f1ad24a83ea83b",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The problem asks for the net radiant heat loss per square foot from a gray infinite cylinder (the spaceship) at 40°F with emissivity 0.1, surrounded by space at 0°R (absolute zero).  \n\nWe use the Stefan-Boltzmann law for net radiation exchange between a gray body and a black body:  \n\\[\nq = \\epsilon \\sigma (T_1^4 - T_2^4)\n\\]  \nwhere:  \n- \\(\\epsilon = 0.1\\)  \n- \\(\\sigma = 0.1714 \\times 10^{-8} \\, \\text{Btu/hr-ft}^2\\text{-°R}^4\\)  \n- \\(T_1 = 40°F = 40 + 459.67 = 499.67°R\\)  \n- \\(T_2 = 0°R\\)  \n\nSo:  \n\\[\nq = 0.1 \\times 0.1714 \\times 10^{-8} \\times (499.67^4 - 0^4)\n\\]  \nFirst compute \\(499.67^4\\):  \n\\(499.67^2 \\approx 249670.4\\)  \nSquare again: \\(249670.4^2 \\approx 6.2335 \\times 10^{10}\\)  \n\nThen:  \n\\[\nq = 0.1 \\times 0.1714 \\times 10^{-8} \\times 6.2335 \\times 10^{10}\n\\]  \n\\[\n= 0.1 \\times 0.1714 \\times 6.2335 \\times 10^{2}\n\\]  \n\\[\n= 0.01714 \\times 623.35\n\\]  \n\\[\n\\approx 10.68 \\, \\text{Btu/hr-ft}^2\n\\]  \n\nClosest option is **G. 10.71 Btu/hr-ft²**.  \n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 16.94461982906796
+  },
+  "response": {
+    "id": "cmpl-362",
+    "object": "text_completion",
+    "created": 1786300120,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The problem asks for the net radiant heat loss per square foot from a gray infinite cylinder (the spaceship) at 40°F with emissivity 0.1, surrounded by space at 0°R (absolute zero).  \n\nWe use the Stefan-Boltzmann law for net radiation exchange between a gray body and a black body:  \n\\[\nq = \\epsilon \\sigma (T_1^4 - T_2^4)\n\\]  \nwhere:  \n- \\(\\epsilon = 0.1\\)  \n- \\(\\sigma = 0.1714 \\times 10^{-8} \\, \\text{Btu/hr-ft}^2\\text{-°R}^4\\)  \n- \\(T_1 = 40°F = 40 + 459.67 = 499.67°R\\)  \n- \\(T_2 = 0°R\\)  \n\nSo:  \n\\[\nq = 0.1 \\times 0.1714 \\times 10^{-8} \\times (499.67^4 - 0^4)\n\\]  \nFirst compute \\(499.67^4\\):  \n\\(499.67^2 \\approx 249670.4\\)  \nSquare again: \\(249670.4^2 \\approx 6.2335 \\times 10^{10}\\)  \n\nThen:  \n\\[\nq = 0.1 \\times 0.1714 \\times 10^{-8} \\times 6.2335 \\times 10^{10}\n\\]  \n\\[\n= 0.1 \\times 0.1714 \\times 6.2335 \\times 10^{2}\n\\]  \n\\[\n= 0.01714 \\times 623.35\n\\]  \n\\[\n\\approx 10.68 \\, \\text{Btu/hr-ft}^2\n\\]  \n\nClosest option is **G. 10.71 Btu/hr-ft²**.  \n\nAnswer: G",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 220,
+      "completion_tokens": 401,
+      "total_tokens": 621,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 540.6,
+      "prefill_tokens": 220,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 407.6,
+      "decode_tok_s": 24.4,
+      "spec_accept_rate": 0.797,
+      "tok_per_step": 1.8
+    }
+  }
+}

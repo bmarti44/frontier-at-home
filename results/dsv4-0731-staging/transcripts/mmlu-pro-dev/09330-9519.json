@@ -1,0 +1,54 @@
+{
+  "index": 9330,
+  "task_id": 9519,
+  "rendered_prompt_sha256": "fab50803403dc39e2d052731166365a56530110199af9738410ab3e86c1526a5",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": " The energy of a photon emitted when an electron transitions from n=3 to n=2 in a hydrogen atom is given by:\n\nE = -13.6 eV × (1/n_f² - 1/n_i²)  \nHere, n_i = 3, n_f = 2, so:\n\nE = -13.6 eV × (1/2² - 1/3²) = -13.6 eV × (1/4 - 1/9) = -13.6 eV × (5/36) ≈ -1.89 eV\n\nConvert to joules: 1 eV = 1.602 × 10⁻¹⁹ J, so:\n\nE ≈ 1.89 × 1.602 × 10⁻¹⁹ ≈ 3.03 × 10⁻¹⁹ J\n\nThis matches option E.\n\nAnswer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.217891172040254
+  },
+  "response": {
+    "id": "cmpl-484",
+    "object": "text_completion",
+    "created": 1786300755,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": " The energy of a photon emitted when an electron transitions from n=3 to n=2 in a hydrogen atom is given by:\n\nE = -13.6 eV × (1/n_f² - 1/n_i²)  \nHere, n_i = 3, n_f = 2, so:\n\nE = -13.6 eV × (1/2² - 1/3²) = -13.6 eV × (1/4 - 1/9) = -13.6 eV × (5/36) ≈ -1.89 eV\n\nConvert to joules: 1 eV = 1.602 × 10⁻¹⁹ J, so:\n\nE ≈ 1.89 × 1.602 × 10⁻¹⁹ ≈ 3.03 × 10⁻¹⁹ J\n\nThis matches option E.\n\nAnswer: E",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 274,
+      "completion_tokens": 182,
+      "total_tokens": 456,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 572.6,
+      "prefill_tokens": 274,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 479.7,
+      "decode_tok_s": 23.8,
+      "spec_accept_rate": 0.748,
+      "tok_per_step": 1.76
+    }
+  }
+}

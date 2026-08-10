@@ -1,0 +1,55 @@
+{
+  "index": 989,
+  "task_id": 989,
+  "rendered_prompt_sha256": "c96e9636c194d3ec7246cab665ab8da7deda6c9d4a6bd0bd995e983fb1fe2b14",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First, find Emily's rates:  \n- Peeling: 6 shrimp per minute.  \n- Sautéing: 30 shrimp in 10 minutes → 3 shrimp per minute.  \n\nFor 90 shrimp:  \n- Peeling time = 90 ÷ 6 = 15 minutes.  \n- Cooking time = 90 ÷ 3 = 30 minutes.  \nTotal time = 15 + 30 = 45 minutes.  \n\nAnswer: 45",
+  "finish_reason": "stop",
+  "expected": "45",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.26649539382197
+  },
+  "response": {
+    "id": "cmpl-230",
+    "object": "text_completion",
+    "created": 1786299136,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "First, find Emily's rates:  \n- Peeling: 6 shrimp per minute.  \n- Sautéing: 30 shrimp in 10 minutes → 3 shrimp per minute.  \n\nFor 90 shrimp:  \n- Peeling time = 90 ÷ 6 = 15 minutes.  \n- Cooking time = 90 ÷ 3 = 30 minutes.  \nTotal time = 15 + 30 = 45 minutes.  \n\nAnswer: 45",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 71,
+      "completion_tokens": 94,
+      "total_tokens": 165,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 653.1,
+      "prefill_tokens": 71,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 108.8,
+      "decode_tok_s": 26.0,
+      "spec_accept_rate": 0.917,
+      "tok_per_step": 1.94
+    }
+  },
+  "used_fallback": false
+}

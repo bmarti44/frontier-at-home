@@ -1,0 +1,55 @@
+{
+  "index": 479,
+  "task_id": 479,
+  "rendered_prompt_sha256": "38c7e831d0ab8e33eacd00e71ea0f3911a8d458a813fb958022796a848fa4b54",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to calculate the total cost of the trip.  \nPlane tickets: $5000 each, for two people → 2 × 5000 = $10,000.  \nHotel: normal price $1500 per day, 20% more expensive → 1500 × 1.20 = $1800 per day.  \nThey stay 3 days → 3 × 1800 = $5400.  \nTotal trip cost = 10000 + 5400 = $15,400.  \n\nAnswer: 15400",
+  "finish_reason": "stop",
+  "expected": "15400",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.18830610695295
+  },
+  "response": {
+    "id": "cmpl-191",
+    "object": "text_completion",
+    "created": 1786298945,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "We need to calculate the total cost of the trip.  \nPlane tickets: $5000 each, for two people → 2 × 5000 = $10,000.  \nHotel: normal price $1500 per day, 20% more expensive → 1500 × 1.20 = $1800 per day.  \nThey stay 3 days → 3 × 1800 = $5400.  \nTotal trip cost = 10000 + 5400 = $15,400.  \n\nAnswer: 15400",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 103,
+      "completion_tokens": 111,
+      "total_tokens": 214,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 841.4,
+      "prefill_tokens": 103,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 122.5,
+      "decode_tok_s": 25.5,
+      "spec_accept_rate": 0.864,
+      "tok_per_step": 1.9
+    }
+  },
+  "used_fallback": false
+}

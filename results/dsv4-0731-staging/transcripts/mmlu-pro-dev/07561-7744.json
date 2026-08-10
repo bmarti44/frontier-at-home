@@ -1,0 +1,54 @@
+{
+  "index": 7561,
+  "task_id": 7744,
+  "rendered_prompt_sha256": "b2fad7efb16002e689c3fa193b76e36187040c62fa91a4435989ccced6f2d273",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": " The integers from 1 to 100 that are divisible by 2 and not divisible by 3 are multiples of 2 that are not multiples of 6.  \nMultiples of 2 up to 100: 50 numbers.  \nMultiples of 6 up to 100: 16 numbers (6, 12, ..., 96).  \nSo count = 50 - 16 = 34.  \nProbability = 34/100 = 17/50.  \n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.936706471024081
+  },
+  "response": {
+    "id": "cmpl-419",
+    "object": "text_completion",
+    "created": 1786300381,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": " The integers from 1 to 100 that are divisible by 2 and not divisible by 3 are multiples of 2 that are not multiples of 6.  \nMultiples of 2 up to 100: 50 numbers.  \nMultiples of 6 up to 100: 16 numbers (6, 12, ..., 96).  \nSo count = 50 - 16 = 34.  \nProbability = 34/100 = 17/50.  \n\nAnswer: D",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 166,
+      "completion_tokens": 102,
+      "total_tokens": 268,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 865.8,
+      "prefill_tokens": 166,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 192.0,
+      "decode_tok_s": 25.1,
+      "spec_accept_rate": 0.852,
+      "tok_per_step": 1.87
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "index": 1115,
+  "task_id": 1115,
+  "rendered_prompt_sha256": "7cebb46d7bcb2e91b39248739803b2ef7d01b8755ee34abfa7f362a17169cf24",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down:\n\n- Anna started with $16.\n- She already spent $4, so remaining before today's purchase: $16 - $4 = $12.\n- After buying 2 books today, she has $2 left.\n- So the 2 books cost: $12 - $2 = $10.\n- Each book cost the same: $10 ÷ 2 = $5.\n\nAnswer: 5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.507616561139002
+  },
+  "response": {
+    "id": "cmpl-245",
+    "object": "text_completion",
+    "created": 1786299204,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down:\n\n- Anna started with $16.\n- She already spent $4, so remaining before today's purchase: $16 - $4 = $12.\n- After buying 2 books today, she has $2 left.\n- So the 2 books cost: $12 - $2 = $10.\n- Each book cost the same: $10 ÷ 2 = $5.\n\nAnswer: 5",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 103,
+      "completion_tokens": 87,
+      "total_tokens": 190,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 818.2,
+      "prefill_tokens": 103,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 126.0,
+      "decode_tok_s": 23.6,
+      "spec_accept_rate": 0.735,
+      "tok_per_step": 1.76
+    }
+  },
+  "used_fallback": false
+}

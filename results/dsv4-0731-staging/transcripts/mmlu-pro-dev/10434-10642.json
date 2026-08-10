@@ -1,0 +1,55 @@
+{
+  "index": 10434,
+  "task_id": 10642,
+  "rendered_prompt_sha256": "4caf90191fbc28fba362692483bfa7b8e0a0e76448575203826cc6cc9c9dc2b5",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": " Euler's formula for convex polyhedra: V - E + F = 2.  \nGiven V = 15, E = 39:  \n15 - 39 + F = 2  \nF = 2 + 39 - 15 = 26.  \n\nAnswer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.109137177001685
+  },
+  "response": {
+    "id": "cmpl-329",
+    "object": "text_completion",
+    "created": 1786299825,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": " Euler's formula for convex polyhedra: V - E + F = 2.  \nGiven V = 15, E = 39:  \n15 - 39 + F = 2  \nF = 2 + 39 - 15 = 26.  \n\nAnswer: B",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 104,
+      "completion_tokens": 59,
+      "total_tokens": 163,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 798.4,
+      "prefill_tokens": 104,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 130.3,
+      "decode_tok_s": 25.5,
+      "spec_accept_rate": 0.9,
+      "tok_per_step": 1.94
+    }
+  },
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Suppose a convex 3d-object has 15 vertices and 39 edges. How many faces does it have?\n\nA. 25\nB. 26\nC. 20\nD. 31\nE. 22\nF. 28\nG. 32\nH. 30\nI. 24\nJ. 27\n\nReply with the single letter of the correct option in the form: Answer: <letter><｜Assistant｜></think>"
+}

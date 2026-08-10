@@ -1,0 +1,54 @@
+{
+  "index": 3885,
+  "task_id": 4009,
+  "rendered_prompt_sha256": "9a63868cc752be45b186a1d2140c23fa9dd72d0f5d043ea432fb7651d2e8164a",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The time for light to travel 1 cm is:\n\n1 cm = 0.01 m  \nTime = distance / speed = 0.01 m / (3.0 × 10^8 m/s) = 3.33 × 10^-11 s.\n\nThat matches option J.\n\nAnswer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.3454529740847647
+  },
+  "response": {
+    "id": "cmpl-312",
+    "object": "text_completion",
+    "created": 1786299661,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The time for light to travel 1 cm is:\n\n1 cm = 0.01 m  \nTime = distance / speed = 0.01 m / (3.0 × 10^8 m/s) = 3.33 × 10^-11 s.\n\nThat matches option J.\n\nAnswer: J",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 278,
+      "completion_tokens": 64,
+      "total_tokens": 342,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 583.3,
+      "prefill_tokens": 278,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 477.3,
+      "decode_tok_s": 23.2,
+      "spec_accept_rate": 0.722,
+      "tok_per_step": 1.76
+    }
+  }
+}

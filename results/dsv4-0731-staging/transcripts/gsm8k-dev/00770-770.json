@@ -1,0 +1,55 @@
+{
+  "index": 770,
+  "task_id": 770,
+  "rendered_prompt_sha256": "d43e9115cdedfdbeb8abc14e02c00b3761bd8c6e009e672d9b650ca1ab453209",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let's break it down:\n\n- They have 4 vanilla scents, and each sold 5 units → total vanilla sales = 4 × 5 = 20.\n- They have 8 fruity scents, and each sold 2 units → total fruity sales = 8 × 2 = 16.\n- Difference = 20 - 16 = 4.\n\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.1172064419370145
+  },
+  "response": {
+    "id": "cmpl-203",
+    "object": "text_completion",
+    "created": 1786299007,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Let's break it down:\n\n- They have 4 vanilla scents, and each sold 5 units → total vanilla sales = 4 × 5 = 20.\n- They have 8 fruity scents, and each sold 2 units → total fruity sales = 8 × 2 = 16.\n- Difference = 20 - 16 = 4.\n\nAnswer: 4",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 146,
+      "completion_tokens": 82,
+      "total_tokens": 228,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 863.8,
+      "prefill_tokens": 146,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 169.2,
+      "decode_tok_s": 25.2,
+      "spec_accept_rate": 0.841,
+      "tok_per_step": 1.89
+    }
+  },
+  "used_fallback": false
+}

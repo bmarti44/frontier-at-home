@@ -1,0 +1,55 @@
+{
+  "index": 442,
+  "task_id": 442,
+  "rendered_prompt_sha256": "8e9fa3609d9874d46ea83219d770c902777db2532b84289e70e7264d822a6f17",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Starting temperature: 40 degrees.  \nBaking for 3 hours: 3 × 5 = 15 degrees increase → 40 + 15 = 55 degrees.  \nWindow open for 30 minutes: 30 / 10 = 3 intervals, each cools by 2 degrees → 3 × 2 = 6 degrees decrease → 55 - 6 = 49 degrees.  \n\nAnswer: 49",
+  "finish_reason": "stop",
+  "expected": "49",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.14765469590202
+  },
+  "response": {
+    "id": "cmpl-224",
+    "object": "text_completion",
+    "created": 1786299108,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "Starting temperature: 40 degrees.  \nBaking for 3 hours: 3 × 5 = 15 degrees increase → 40 + 15 = 55 degrees.  \nWindow open for 30 minutes: 30 / 10 = 3 intervals, each cools by 2 degrees → 3 × 2 = 6 degrees decrease → 55 - 6 = 49 degrees.  \n\nAnswer: 49",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 111,
+      "completion_tokens": 87,
+      "total_tokens": 198,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 817.0,
+      "prefill_tokens": 111,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 136.0,
+      "decode_tok_s": 26.1,
+      "spec_accept_rate": 0.911,
+      "tok_per_step": 1.96
+    }
+  },
+  "used_fallback": false
+}

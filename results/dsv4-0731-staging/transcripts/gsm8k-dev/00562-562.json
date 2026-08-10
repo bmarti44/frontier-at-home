@@ -1,0 +1,55 @@
+{
+  "index": 562,
+  "task_id": 562,
+  "rendered_prompt_sha256": "f3dec4d863bfcf4a4f14791af132fbe4c30c2cd0b837598a1d493d4005b826ac",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The pyramid angle is 32° from the ground. The sun starts at the tip of the pyramid and moves upward at 5° per hour for 10 hours, so it moves 50° upward from that starting point. The starting point is at 32° above the ground, so the sun's final angle from the ground is 32° + 50° = 82°.  \n\nAnswer: 82",
+  "finish_reason": "stop",
+  "expected": "82",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.519438359187916
+  },
+  "response": {
+    "id": "cmpl-200",
+    "object": "text_completion",
+    "created": 1786298991,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The pyramid angle is 32° from the ground. The sun starts at the tip of the pyramid and moves upward at 5° per hour for 10 hours, so it moves 50° upward from that starting point. The starting point is at 32° above the ground, so the sun's final angle from the ground is 32° + 50° = 82°.  \n\nAnswer: 82",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 116,
+      "completion_tokens": 84,
+      "total_tokens": 200,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 886.7,
+      "prefill_tokens": 116,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 130.9,
+      "decode_tok_s": 23.2,
+      "spec_accept_rate": 0.694,
+      "tok_per_step": 1.73
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,54 @@
+{
+  "index": 107,
+  "task_id": 178,
+  "rendered_prompt_sha256": "6069f80af200eb205aa189e21fcd63ec92bf0e59bcac3cb9cc67a229dfbcf2a4",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "To find the taxes, first calculate the assessed value:  \n$16,500 × 22% = $16,500 × 0.22 = $3,630.\n\nNow calculate each tax:  \n- Local college fund: $3,630 × ($0.41 / $100) = $3,630 × 0.0041 = $14.883  \n- Special education: $3,630 × ($0.02 / $100) = $3,630 × 0.0002 = $0.726  \n- Health and welfare: $3,630 × ($0.001 / $100) = $3,630 × 0.00001 = $0.0363  \n- Community construction: $3,630 × ($0.089 / $100) = $3,630 × 0.00089 = $3.2307  \n\nTotal = $14.883 + $0.726 + $0.0363 + $3.2307 = $18.876 ≈ $18.88.\n\nThe option matching $18.88 is C.\n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.794612125959247
+  },
+  "response": {
+    "id": "cmpl-283",
+    "object": "text_completion",
+    "created": 1786299360,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "To find the taxes, first calculate the assessed value:  \n$16,500 × 22% = $16,500 × 0.22 = $3,630.\n\nNow calculate each tax:  \n- Local college fund: $3,630 × ($0.41 / $100) = $3,630 × 0.0041 = $14.883  \n- Special education: $3,630 × ($0.02 / $100) = $3,630 × 0.0002 = $0.726  \n- Health and welfare: $3,630 × ($0.001 / $100) = $3,630 × 0.00001 = $0.0363  \n- Community construction: $3,630 × ($0.089 / $100) = $3,630 × 0.00089 = $3.2307  \n\nTotal = $14.883 + $0.726 + $0.0363 + $3.2307 = $18.876 ≈ $18.88.\n\nThe option matching $18.88 is C.\n\nAnswer: C",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 184,
+      "completion_tokens": 229,
+      "total_tokens": 413,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 493.0,
+      "prefill_tokens": 184,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 375.2,
+      "decode_tok_s": 24.6,
+      "spec_accept_rate": 0.816,
+      "tok_per_step": 1.83
+    }
+  }
+}

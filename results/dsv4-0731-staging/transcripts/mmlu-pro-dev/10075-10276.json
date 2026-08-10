@@ -1,0 +1,54 @@
+{
+  "index": 10075,
+  "task_id": 10276,
+  "rendered_prompt_sha256": "51e011209278a709b44e5b7d955b2522b3b77b90f9b0542b553d5742a2e7b1e2",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The beam divergence for a laser is given by the diffraction limit:  \n\\[\n\\theta \\approx \\frac{\\lambda}{D}\n\\]\nwhere \\(D\\) is the initial beam diameter.  \nHere,  \n\\(\\lambda = 694.3 \\times 10^{-9} \\, \\text{m}\\),  \n\\(D = 14 \\times 10^{-3} \\, \\text{m}\\).  \n\nSo  \n\\[\n\\theta \\approx \\frac{694.3 \\times 10^{-9}}{14 \\times 10^{-3}} \\approx 4.96 \\times 10^{-5} \\, \\text{rad}\n\\]\n\nAt a distance \\(L = 10,000 \\, \\text{km} = 10^7 \\, \\text{m}\\), the beam diameter becomes approximately  \n\\[\nD_f \\approx D + 2L \\theta \\approx 14 \\times 10^{-3} + 2 \\times 10^7 \\times 4.96 \\times 10^{-5}\n\\]\n\\[\nD_f \\approx 0.014 + 992 \\approx 992 \\, \\text{m}\n\\]\n\nThis is close to 1000 m, so the closest option is **H. 1000 m**.\n\nAnswer: H",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='H' expected='B'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "enable_thinking": false,
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.521224068943411
+  },
+  "response": {
+    "id": "cmpl-501",
+    "object": "text_completion",
+    "created": 1786300995,
+    "model": "deepseek-v4-flash",
+    "choices": [
+      {
+        "text": "The beam divergence for a laser is given by the diffraction limit:  \n\\[\n\\theta \\approx \\frac{\\lambda}{D}\n\\]\nwhere \\(D\\) is the initial beam diameter.  \nHere,  \n\\(\\lambda = 694.3 \\times 10^{-9} \\, \\text{m}\\),  \n\\(D = 14 \\times 10^{-3} \\, \\text{m}\\).  \n\nSo  \n\\[\n\\theta \\approx \\frac{694.3 \\times 10^{-9}}{14 \\times 10^{-3}} \\approx 4.96 \\times 10^{-5} \\, \\text{rad}\n\\]\n\nAt a distance \\(L = 10,000 \\, \\text{km} = 10^7 \\, \\text{m}\\), the beam diameter becomes approximately  \n\\[\nD_f \\approx D + 2L \\theta \\approx 14 \\times 10^{-3} + 2 \\times 10^7 \\times 4.96 \\times 10^{-5}\n\\]\n\\[\nD_f \\approx 0.014 + 992 \\approx 992 \\, \\text{m}\n\\]\n\nThis is close to 1000 m, so the closest option is **H. 1000 m**.\n\nAnswer: H",
+        "index": 0,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 154,
+      "completion_tokens": 256,
+      "total_tokens": 410,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    },
+    "timings": {
+      "ttft_ms": 872.2,
+      "prefill_tokens": 154,
+      "prefill_cached_tokens": 0,
+      "prefill_tok_s": 176.7,
+      "decode_tok_s": 24.0,
+      "spec_accept_rate": 0.764,
+      "tok_per_step": 1.77
+    }
+  }
+}

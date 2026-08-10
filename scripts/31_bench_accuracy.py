@@ -110,6 +110,20 @@ def parse_args() -> argparse.Namespace:
         help="plain completions path (default: /v1/completions)",
     )
     parser.add_argument(
+        "--max-tokens",
+        type=int,
+        help=(
+            "override the per-suite generation budget (defaults: "
+            f"{', '.join(f'{k}={v}' for k, v in MAX_TOKENS.items())}). "
+            "A reasoning model needs a larger budget: measured on MMLU-Pro, "
+            "0731 with thinking enabled emits a median 202 tokens per item "
+            "against 56 with thinking disabled, and 15%% of items truncated "
+            "before reaching an answer at the 768 default. The value used is "
+            "recorded in both the config digest and the generation block, so a "
+            "run with a raised budget is not contract-matched to one without."
+        ),
+    )
+    parser.add_argument(
         "--config-hash",
         help="optional serving-config identifier recorded as context (not a ledger key)",
     )
@@ -140,6 +154,13 @@ def parse_args() -> argparse.Namespace:
         parser.error("--config-evidence requires at least one FILE for holdout runs")
     if args.config_hash is not None and not args.config_hash.strip():
         parser.error("--config-hash must not be empty")
+    # Resolve the generation budget once, here, so the request and both evidence
+    # records (config_digest_payload and generation) can only ever report the
+    # value actually used.
+    if args.max_tokens is None:
+        args.max_tokens = MAX_TOKENS[args.suite]
+    elif not 1 <= args.max_tokens <= 32768:
+        parser.error("--max-tokens must be between 1 and 32768")
     return args
 
 
@@ -303,7 +324,7 @@ def derive_config_digest(
         "suite": args.suite,
         "split": args.split,
         "extra_body": args.extra_body,
-        "max_tokens": MAX_TOKENS[args.suite],
+        "max_tokens": args.max_tokens,
         "harness_manifest_line": load_harness_manifest_line(),
     }
     digest = hashlib.sha256(canonical_json(digest_payload)).hexdigest()
@@ -1041,7 +1062,7 @@ def main() -> int:
                     completion, response_document, request_record, finish_reason = client.complete(
                         model,
                         rendered,
-                        MAX_TOKENS[args.suite],
+                        args.max_tokens,
                         HUMANEVAL_STOPS if args.suite == "humaneval" else None,
                     )
                     if args.suite == "gsm8k":
@@ -1132,7 +1153,7 @@ def main() -> int:
                 "endpoint": args.completions_endpoint,
                 "temperature": 0,
                 "seed": SEED,
-                "max_tokens": MAX_TOKENS[args.suite],
+                "max_tokens": args.max_tokens,
                 "stop": HUMANEVAL_STOPS if args.suite == "humaneval" else None,
                 "extra_body": args.extra_body,
             },
