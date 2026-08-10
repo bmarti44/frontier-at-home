@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "gate": "dsv4-0731-llamacpp-bringup",
+  "date_utc": "2026-08-09",
+  "status": "SERVING",
+  "scope": "DeepSeek-V4-Flash-0731 brought up on the llama.cpp serving path (the production arm per results/DECISION-OVERRIDE.md). Bring-up and correctness only; accuracy, speed, parity, and soak are not in this record.",
+  "engine": {
+    "binary": "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server",
+    "system_fingerprint": "b10053-0dc74e332",
+    "restore_result": {"ok": true, "stack": "llamacpp", "port": 8013},
+    "profile": "1M-fast: CTX=1048576, UBATCH/BATCH=2048, PARALLEL=2, NO_MMAP=1, SPEC_TYPE=none"
+  },
+  "gates": {
+    "weight_integrity": {
+      "pass": true,
+      "checks": "not a symlink, regular file, not group/other writable, manifest name set exact, byte sizes exact, full sha256 over all three shards",
+      "note": "Replicated the launcher's own check (scripts/21_serve_llamacpp.sh:646-671) before restarting, after a first attempt failed on permissions."
+    },
+    "memory_admission": {
+      "pass": true,
+      "mem_available_gib": 115.63,
+      "weights_gib": 90.18,
+      "kv_bytes_per_token": 4096,
+      "overhead_gib": 12.0,
+      "projected_free_gib": 9.45,
+      "floor_gib": 8.0
+    },
+    "health": {"endpoint": "127.0.0.1:8013/health", "status": 200},
+    "slot_topology": {"slots": 2, "n_ctx_per_slot": 524288, "matches_owner_spec": true},
+    "mem_available_after_load_gib": 11.87,
+    "golden": {"pass": true, "checks_passed": 10, "checks_total": 10, "artifact": "results/dsv4-0731-staging/golden-llamacpp-0731.json"}
+  },
+  "findings": [
+    {
+      "id": "DSV4-0731-L1-REASONING-TRANSFERS-TO-LLAMACPP",
+      "finding": "0731 emits reasoning_content on llama.cpp exactly as it does on ds4. streaming_sse, sustained_ctx, and multiturn_cache_consistency all failed first because they read only the content field.",
+      "why_it_matters": "The plan recorded as an open risk that the ds4 thinking evidence might not transfer to llama.cpp. It does. Any harness that reads only `content` will mis-score this model on either engine."
+    },
+    {
+      "id": "DSV4-0731-L2-MULTITURN-FAILURE-WAS-A-BUDGET-ARTIFACT",
+      "finding": "multiturn_cache_consistency reported a cache divergence (full history returned CACHE-ANCHOR, incremental returned empty). Raising the per-turn budget from the default 128 to 512 tokens made it pass.",
+      "why_it_matters": "The mismatch was reasoning exhausting the token budget before reaching an answer, not a cache defect. Distinguishing the two required raising the budget and re-running rather than assuming: had it still mismatched at 512, it would have been a genuine cache-consistency bug."
+    },
+    {
+      "id": "DSV4-0731-L3-COMFYUI-AND-ENGINE-CANNOT-COEXIST",
+      "finding": "ComfyUI held 2.23 GiB RSS plus 567 MiB GPU, putting projected free memory at 7.11 GiB against the 8.0 GiB floor. The admission gate refused the load until it was stopped (owner-approved).",
+      "why_it_matters": "Restarting ComfyUI while the engine is already resident would not hit the admission gate at all -- it would eat into the watchdog margin on a machine where a breach hangs rather than errors."
+    },
+    {
+      "id": "DSV4-0731-L4-HARDLINKS-DO-NOT-INHERIT-DIRECTORY-ACL-OR-MODE",
+      "finding": "The installed shards were hardlinked from staging and kept the source inode's 0664 mode, so the launcher rejected them as group/other writable. chmod 0444 fixed it.",
+      "why_it_matters": "The directory's default ACL grants dsv4 read on newly created files, but a hardlink is the same inode and inherits nothing. The read path was verified explicitly; the write bits were not, and that is what failed."
+    }
+  ],
+  "harness_changes_required": {
+    "scripts/32_golden_tests.py": "streaming_sse and sustained_ctx now accept reasoning or content on the wire; multiturn_cache_consistency runs at a 512-token per-turn budget.",
+    "note": "These are the same two fixes already made on branch dsv4-0731-upgrade for the ds4 arm, plus the multiturn budget which is new here."
+  },
+  "not_yet_run": [
+    "scripts/33_token_parity.py --backend llamacpp",
+    "accuracy suites under the thinking contract (requires a --thinking-mode flag; chat_template_kwargs is inert on the pre-rendered /v1/completions path)",
+    "scripts/30_bench_speed.py matched arms",
+    "scripts/35_soak.py at the owner-set DSV4_SOAK_MEM_FLOOR_GIB=8",
+    "1M/512K context qualification via scripts/57,58,62"
+  ],
+  "rollback": "weights/unsloth-ud-q2_k_xl/*.gguf.pre0731 hold the previous release, hashes verified 3/3 on 2026-08-09. Rename back and revert commit 72d1db7."
+}

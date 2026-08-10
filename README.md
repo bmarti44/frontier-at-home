@@ -96,6 +96,21 @@ being qualified rather than a secondary fallback.
 
 ## Current model status and measurements
 
+> **Weights changed 2026-08-09.** The serving endpoint now loads
+> [DeepSeek-V4-Flash-0731](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
+> (unsloth UD-Q2_K_XL, revision `fbbb5b93`). Every measurement in the table below
+> predates that swap and was taken on the previous release — treat them as the
+> incumbent baseline, not as 0731 results. What has been verified for 0731 is
+> bring-up only: weight integrity including full SHA-256, memory admission,
+> health, two slots at 524,288 tokens each, and golden correctness 10/10
+> ([bring-up record](results/dsv4-0731-staging/bringup-llamacpp-2026-08-09.json)).
+> Accuracy, speed, token parity, soak, and context qualification have **not** been
+> re-run, so 0731 is **not qualified**. Note also that 0731 emits reasoning
+> content by default, which changes the generation contract these baselines were
+> measured under; three golden checks had to be made reasoning-aware before they
+> would score it correctly. The previous shards remain on disk as
+> `weights/unsloth-ud-q2_k_xl/*.gguf.pre0731` and are the verified rollback target.
+
 Status below is current as of 2026-07-31. Only DeepSeek V4 Flash and GLM-5.2 on
 CUDA are actively worked on; every other model/backend combination is N/A until
 someone qualifies it. A dash means this repository does not yet contain a

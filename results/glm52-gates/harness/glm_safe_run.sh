@@ -73,7 +73,7 @@ fi
 if (( MIN_START_GIB < 110 || MIN_START_GIB > 119 )); then
   config_error "GLM_SAFE_MIN_START_GIB"
 fi
-if (( TIMEOUT_S < 1 || TIMEOUT_S > 9000 )); then
+if (( TIMEOUT_S < 1 || TIMEOUT_S > 3600 )); then
   config_error "GLM_SAFE_TIMEOUT_S"
 fi
 if (( MIN_START_GIB <= KILL_FLOOR_GIB )); then
@@ -625,6 +625,40 @@ PY
   sleep 0.25
 done
 wait "$WRAP" 2>/dev/null; RC=$?
+# Shutdown grace: the sampler runs at a bounded cadence, so a candidate that
+# exits normally in the window between the last sample and command completion
+# is indistinguishable from one that vanished mid-run unless we re-check here.
+# A candidate whose /proc entry is gone, or is a zombie carrying the SAME start
+# ticks we verified, exited as itself -- that is a clean shutdown, not an
+# identity break. Anything still live in the group under a DIFFERENT identity is
+# a replacement and stays fatal. The grace is bounded in clock ticks so a PID
+# recycled into a new process cannot be laundered as "our candidate exiting".
+CANDIDATE_EXIT_GRACE_TICKS=8
+if [[ $CANDIDATE_PROVENANCE == 1 && $EXECUTED_CANDIDATE_OBSERVED == 1 &&
+      -z $PROVENANCE_FAILURE ]]; then
+  SHUTDOWN_STAT=""
+  SHUTDOWN_STATE=""
+  SHUTDOWN_START_TICKS=""
+  IFS= read -r SHUTDOWN_STAT <"/proc/$EXECUTED_PID/stat" 2>/dev/null || true
+  if [[ -n $SHUTDOWN_STAT ]]; then
+    SHUTDOWN_STAT_REST=${SHUTDOWN_STAT##*) }
+    read -r -a SHUTDOWN_STAT_FIELDS <<<"$SHUTDOWN_STAT_REST"
+    SHUTDOWN_STATE=${SHUTDOWN_STAT_FIELDS[0]:-}
+    SHUTDOWN_START_TICKS=${SHUTDOWN_STAT_FIELDS[19]:-}
+  fi
+  if [[ -z $SHUTDOWN_STAT ||
+        ( $SHUTDOWN_START_TICKS == "$EXECUTED_START_TICKS" &&
+          ( $SHUTDOWN_STATE == Z || $SHUTDOWN_STATE == X ) ) ]]; then
+    EXECUTED_CANDIDATE_EXIT_PENDING=1
+    plog "executed candidate exited during wrapper shutdown pid=$EXECUTED_PID start_ticks=${SHUTDOWN_START_TICKS:-gone} state=${SHUTDOWN_STATE:-gone} grace_ticks=$CANDIDATE_EXIT_GRACE_TICKS"
+  elif [[ -n $SHUTDOWN_START_TICKS &&
+          $SHUTDOWN_START_TICKS != "$EXECUTED_START_TICKS" ]]; then
+    plog "FATAL replacement candidate appeared during shutdown pid=$EXECUTED_PID start_ticks=$SHUTDOWN_START_TICKS expected_start_ticks=$EXECUTED_START_TICKS"
+    kill -KILL -- -"$PG" 2>/dev/null || true
+    KILLED=provenance
+    PROVENANCE_FAILURE=shutdown-replacement
+  fi
+fi
 if [[ $EXECUTED_CANDIDATE_EXIT_PENDING == 1 && $RC != 0 ]]; then
   plog "FATAL wrapper command failed after candidate exit rc=$RC"
 fi

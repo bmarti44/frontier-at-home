@@ -485,17 +485,28 @@ def main() -> int:
             {"role": "assistant", "content": expected_first_reply},
             {"role": "user", "content": final_user},
         ]
-        full_answer = client.chat(model(), full_history)
+        # A reasoning model can spend the default 128-token budget entirely
+        # inside reasoning_content and return empty content, which this check
+        # would then report as a cache divergence it did not actually observe.
+        # Give every turn room to finish thinking AND answer, so a mismatch here
+        # means what the check claims: the same conversation produced different
+        # answers depending on how it was assembled.
+        turn_budget = 512
+        full_answer = client.chat(model(), full_history, max_tokens=turn_budget)
 
         incremental_first_reply = client.chat(
-            model(), [{"role": "user", "content": first_user}]
+            model(),
+            [{"role": "user", "content": first_user}],
+            max_tokens=turn_budget,
         )
         incremental_history = [
             {"role": "user", "content": first_user},
             {"role": "assistant", "content": incremental_first_reply},
             {"role": "user", "content": final_user},
         ]
-        incremental_answer = client.chat(model(), incremental_history)
+        incremental_answer = client.chat(
+            model(), incremental_history, max_tokens=turn_budget
+        )
         if full_answer != incremental_answer:
             raise RuntimeError(
                 "final completion mismatch: "
@@ -538,8 +549,14 @@ def main() -> int:
             raise RuntimeError(f"received only {stream['chunks']} SSE data chunks")
         if not stream["done"]:
             raise RuntimeError("SSE stream did not terminate with [DONE]")
-        if not stream["content"]:
-            raise RuntimeError("concatenated content deltas are empty")
+        # This check validates SSE mechanics, not answer shape. A reasoning
+        # model may spend a short max_tokens budget entirely inside
+        # reasoning_content and emit no content delta at all; that is a
+        # streaming success, not a failure. Require text on the wire from
+        # either field, and record which field carried it so a silently
+        # content-free model stays visible in the evidence.
+        if not stream["generated_text"]:
+            raise RuntimeError("SSE stream produced no reasoning or content deltas")
         if not isinstance(stream["usage"], dict):
             raise RuntimeError("SSE stream did not include a usage object")
         return {
@@ -652,8 +669,14 @@ def main() -> int:
             raise RuntimeError("sustained stream did not terminate with [DONE]")
         if stream["ttft_s"] is None:
             raise RuntimeError("sustained stream produced no content chunks")
-        if not stream["content"]:
-            raise RuntimeError("sustained stream final content is empty")
+        # As in streaming_sse: a reasoning model can spend a 64-token budget
+        # entirely inside reasoning_content. What this check needs to prove is
+        # that a long-context prompt still streams tokens back, which either
+        # field demonstrates.
+        if not stream["generated_text"]:
+            raise RuntimeError(
+                "sustained stream produced no reasoning or content deltas"
+            )
         return {
             "fixture_context_tokens": target,
             "prompt_tokens_client": token_count(tokenizer(), prompt),

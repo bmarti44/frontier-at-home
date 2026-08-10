@@ -1,0 +1,104 @@
+{
+  "stack_label": "llamacpp-0731",
+  "base_url": "http://127.0.0.1:8013",
+  "started_at": "2026-08-10T01:28:32.973630+00:00",
+  "finished_at": "2026-08-10T01:30:56.983880+00:00",
+  "pass": true,
+  "checks": [
+    {
+      "name": "health",
+      "pass": true,
+      "detail": "GET /health returned HTTP 200"
+    },
+    {
+      "name": "models_endpoint",
+      "pass": true,
+      "detail": "exactly one model: deepseek-v4-flash"
+    },
+    {
+      "name": "basic_fact",
+      "pass": true,
+      "detail": {
+        "expected": "Paris",
+        "completion": "Paris"
+      }
+    },
+    {
+      "name": "arithmetic",
+      "pass": true,
+      "detail": {
+        "expected": "391",
+        "completion": "391"
+      }
+    },
+    {
+      "name": "determinism",
+      "pass": true,
+      "detail": {
+        "first": "",
+        "second": ""
+      }
+    },
+    {
+      "name": "needle_16k",
+      "pass": true,
+      "detail": {
+        "haystack_tokens": 16000,
+        "completion": "BLUEBERRY-7421"
+      }
+    },
+    {
+      "name": "multiturn_cache_consistency",
+      "pass": true,
+      "detail": {
+        "full_history": "CACHE-ANCHOR",
+        "incremental": "CACHE-ANCHOR",
+        "incremental_first_reply": "CACHE-ANCHOR"
+      }
+    },
+    {
+      "name": "streaming_sse",
+      "pass": true,
+      "detail": {
+        "data_chunks": 67,
+        "done": true,
+        "content": "",
+        "usage": {
+          "completion_tokens": 64,
+          "prompt_tokens": 13,
+          "total_tokens": 77,
+          "prompt_tokens_details": {
+            "cached_tokens": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "error_schema",
+      "pass": true,
+      "detail": {
+        "invalid_json_status": 500,
+        "unknown_model_status": 200,
+        "unknown_model_behavior": "served_configured_model"
+      }
+    },
+    {
+      "name": "sustained_ctx",
+      "pass": true,
+      "detail": {
+        "fixture_context_tokens": 29491,
+        "prompt_tokens_client": 29509,
+        "ttft_s": 66.05520671399972,
+        "completion": "",
+        "usage": {
+          "completion_tokens": 64,
+          "prompt_tokens": 29513,
+          "total_tokens": 29577,
+          "prompt_tokens_details": {
+            "cached_tokens": 1
+          }
+        }
+      }
+    }
+  ]
+}
