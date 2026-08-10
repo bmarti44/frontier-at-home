@@ -1,0 +1,56 @@
+{
+  "index": 9353,
+  "task_id": 9542,
+  "rendered_prompt_sha256": "2ff20e58476a401df6a6715c34660483549527bba0d1fe1b963a50c2581b5e6e",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics. Two lamps in parallel, current in one lamp is 2 A, current in other lamp? In parallel voltage same across each. Current through each depends on resistance: I = V/R. If identical? Not stated. So depends on resistance of other lamp (and voltage? but voltage same). Options: B \"Depends on the resistance of the lamp\" likely correct. Also F depends on voltage of battery? But current in one is 2 A, voltage determined by that lamp's resistance: V=2*R1. Other current = V/R2 = 2*R1/R2. Depends on resistance of other lamp (and first resistance). Among options B. Answer: B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='B' expected='H'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.37067779499921
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics. Two lamps in parallel, current in one lamp is 2 A, current in other lamp? In parallel voltage same across each. Current through each depends on resistance: I = V/R. If identical? Not stated. So depends on resistance of other lamp (and voltage? but voltage same). Options: B \"Depends on the resistance of the lamp\" likely correct. Also F depends on voltage of battery? But current in one is 2 A, voltage determined by that lamp's resistance: V=2*R1. Other current = V/R2 = 2*R1/R2. Depends on resistance of other lamp (and first resistance). Among options B. Answer: B.</think>Answer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786368159,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 152,
+      "prompt_tokens": 139,
+      "total_tokens": 291,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-5pmodqxFh71Ztn6aU2rb7PplGz9G4r6Q",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 138,
+      "prompt_ms": 684.972,
+      "prompt_per_token_ms": 4.963565217391304,
+      "prompt_per_second": 201.4680892065661,
+      "predicted_n": 152,
+      "predicted_ms": 7683.224,
+      "predicted_per_token_ms": 50.547526315789476,
+      "predicted_per_second": 19.783361776254342
+    }
+  }
+}

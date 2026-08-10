@@ -1,0 +1,56 @@
+{
+  "index": 9249,
+  "task_id": 9438,
+  "rendered_prompt_sha256": "4336cf3468f399fe3b9f48d224462701efc52d398f03af0cc87861015a5adbfb",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics. Need find fraction of standard solar flux reaching Earth (about 1000 W/m^2) available to a solar collector lying flat on Earth's surface at Regina, Saskatchewan (latitude 50°N) at noon on summer solstice.\n\nWe need compute incident solar flux on horizontal surface relative to direct normal? \"fraction of standard solar flux reaching Earth (about 1000 W/m^2) available to a solar collector lying flat\" = cos(zenith angle) maybe times atmospheric effects? At noon summer solstice at latitude 50°N. Declination sun = +23.45°. Latitude 50°. Solar noon zenith angle = |latitude - declination| = 26.55°. cos = cos(26.55°) ≈ 0.894. Options include 0.891 (B) and 0.932, 0.975 etc. Need account? Standard solar flux reaching Earth about 1000 W/m^2 is irradiance on surface perpendicular to sun at Earth's surface? Actually \"standard solar flux reaching the Earth (about 1000 W/m^2)\" maybe solar constant? Solar constant ~1366 W/m^2, but at Earth's surface ~1000 W/m^2 normal to rays on clear day. For flat collector, flux = 1000 * cos(zenith) * maybe atmospheric attenuation? The question says \"fraction of the standard solar flux reaching the Earth (about 1000 W/m^2) available to a solar collector lying flat on the Earth’s surface\" at noon summer solstice. So fraction = cos(zenith angle) = cos(26.55)=0.894. Option B 0.891. Need answer: B.\n\nLet's ensure no other factors: At noon on summer solstice at latitude 50°N, sun's zenith angle = 50 - 23.45 = 26.55°. cos = 0.8946. Option B 0.891. Yes.\n\nFinal: Answer: B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 22.258025078001083
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics. Need find fraction of standard solar flux reaching Earth (about 1000 W/m^2) available to a solar collector lying flat on Earth's surface at Regina, Saskatchewan (latitude 50°N) at noon on summer solstice.\n\nWe need compute incident solar flux on horizontal surface relative to direct normal? \"fraction of standard solar flux reaching Earth (about 1000 W/m^2) available to a solar collector lying flat\" = cos(zenith angle) maybe times atmospheric effects? At noon summer solstice at latitude 50°N. Declination sun = +23.45°. Latitude 50°. Solar noon zenith angle = |latitude - declination| = 26.55°. cos = cos(26.55°) ≈ 0.894. Options include 0.891 (B) and 0.932, 0.975 etc. Need account? Standard solar flux reaching Earth about 1000 W/m^2 is irradiance on surface perpendicular to sun at Earth's surface? Actually \"standard solar flux reaching the Earth (about 1000 W/m^2)\" maybe solar constant? Solar constant ~1366 W/m^2, but at Earth's surface ~1000 W/m^2 normal to rays on clear day. For flat collector, flux = 1000 * cos(zenith) * maybe atmospheric attenuation? The question says \"fraction of the standard solar flux reaching the Earth (about 1000 W/m^2) available to a solar collector lying flat on the Earth’s surface\" at noon summer solstice. So fraction = cos(zenith angle) = cos(26.55)=0.894. Option B 0.891. Need answer: B.\n\nLet's ensure no other factors: At noon on summer solstice at latitude 50°N, sun's zenith angle = 50 - 23.45 = 26.55°. cos = 0.8946. Option B 0.891. Yes.\n\nFinal: Answer: B.</think>Answer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786368119,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 425,
+      "prompt_tokens": 145,
+      "total_tokens": 570,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-8IzNKIFL7OeNHml4AsH9lkwOd8avVUVd",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 144,
+      "prompt_ms": 711.549,
+      "prompt_per_token_ms": 4.9413124999999996,
+      "prompt_per_second": 202.3753810348971,
+      "predicted_n": 425,
+      "predicted_ms": 21544.122,
+      "predicted_per_token_ms": 50.69205176470588,
+      "predicted_per_second": 19.726958471549686
+    }
+  }
+}
