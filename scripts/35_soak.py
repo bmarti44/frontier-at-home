@@ -59,7 +59,48 @@ MIN_REQUESTS = 30
 # claim a stricter floor than it was scored against. Owner-set to 8.0 for the
 # 1M-fast profile on 2026-08-09, matching the accepted watchdog floor
 # (DSV4_WATCHDOG_FLOOR_GIB=8 in scripts/52_engine_switch.sh).
-MEM_FLOOR_GIB = float(os.environ.get("DSV4_SOAK_MEM_FLOOR_GIB", "12.0"))
+# The override is bounded on both sides. An unrestricted float() accepts 0, -1,
+# and -inf, each of which deletes the gate, and nan, whose every comparison is
+# False -- a gate whose meaning depends on which side of the operator NaN lands on
+# is not a gate. The lower bound is the deployed watchdog floor: below it the
+# watchdog, not the soak, decides the outcome, so a lower value is unmeasurable.
+# The upper bound is the machine's unified memory; a larger value is a units error.
+WATCHDOG_FLOOR_GIB = 8.0
+MACHINE_MEMORY_GIB = 119.7
+QUALIFICATION_FLOOR_GIB = 12.0
+
+
+def _resolve_mem_floor_gib() -> float:
+    raw = os.environ.get("DSV4_SOAK_MEM_FLOOR_GIB", "12.0")
+    try:
+        value = float(raw)
+    except ValueError as error:
+        raise SystemExit(
+            f"DSV4_SOAK_MEM_FLOOR_GIB is not a number: {raw!r}"
+        ) from error
+    if not math.isfinite(value):
+        raise SystemExit(f"DSV4_SOAK_MEM_FLOOR_GIB must be finite, got {raw!r}")
+    if not WATCHDOG_FLOOR_GIB <= value <= MACHINE_MEMORY_GIB:
+        raise SystemExit(
+            f"DSV4_SOAK_MEM_FLOOR_GIB must be between {WATCHDOG_FLOOR_GIB} and "
+            f"{MACHINE_MEMORY_GIB} GiB, got {value}"
+        )
+    return value
+
+
+MEM_FLOOR_GIB = _resolve_mem_floor_gib()
+
+
+def qualification_eligible_floor() -> bool:
+    """Whether a soak at this floor can be used as qualifying evidence.
+
+    scripts/34_decision.py fixes and independently recomputes a 12 GiB floor. A run
+    held to the 8 GiB operational floor is valid operational evidence for the
+    1M-fast profile and is NOT admissible to the decision procedure. Recording this
+    in the artifact keeps the distinction with the run instead of with whoever
+    remembers how it was launched.
+    """
+    return MEM_FLOOR_GIB >= QUALIFICATION_FLOOR_GIB
 WINDOW_SECONDS = 300
 REQUEST_TIMEOUT = 600
 HEALTH_PROBE_INTERVAL = 30.0
@@ -438,6 +479,11 @@ def main() -> int:
         "n_first_window": len(first_window),
         "n_last_window": len(last_window),
         "mem_floor_gib": MEM_FLOOR_GIB,
+        "mem_floor_source": (
+            "default" if "DSV4_SOAK_MEM_FLOOR_GIB" not in os.environ else "env-override"
+        ),
+        "qualification_eligible_floor": qualification_eligible_floor(),
+        "qualification_floor_gib": QUALIFICATION_FLOOR_GIB,
         "mem_available_baseline_gib": round(baseline_mem, 3),
         "mem_available_min_gib": min_mem,
         "n_mem_samples": len(sampler.samples),
