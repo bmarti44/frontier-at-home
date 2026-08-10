@@ -9,7 +9,8 @@
   "supersedes": {
     "repo": "unsloth/DeepSeek-V4-Flash-GGUF",
     "revision": "e3aa0d6a5fa4f820d9e132ac1fd1d01e1b2b49e0",
-    "note": "Pre-0731 release. Its shards remain on disk as weights/unsloth-ud-q2_k_xl/*.gguf.pre0731 and are the tested rollback target; their sha256 values are recorded in results/dsv4-0731-staging/weights-swap-2026-08-09.json."
+    "note": "Pre-0731 release. NO LOCAL ROLLBACK PATH EXISTS. The *.gguf.pre0731 anchors were deleted at owner instruction on 2026-08-09; an earlier version of this note claimed they remained and were a tested rollback target, which was true when written and is not true now. Rollback requires re-fetching this repo/revision from HuggingFace. The per-shard sha256 values needed to verify such a re-fetch are preserved in the git history of weights/unsloth-ud-q2_k_xl/manifest.json at commit 72d1db7^. No rollback has ever been executed or verified end-to-end.",
+    "unrelated_stale_copies": "Two full pre-0731 copies exist under /var/lib/dsv4-context/models/ (90.18 GiB each, root-owned, link count 1). They are NOT a rollback path: they are the context-qualification protected model copy and its rotated-aside predecessor, they are unreadable and unwritable from the harness account, and scripts/64_context_submit.sh will replace the live one from the 0731 weights on its next run. See results/dsv4-0731-staging/thinking-default-and-disk-2026-08-09.json."
   },
   "install_note": "The on-disk basenames intentionally omit the 0731 infix. scripts/21_serve_llamacpp.sh hardcodes WEIGHTS_MANIFEST to weights/unsloth-ud-q2_k_xl/manifest.json and verifies selected shards by basename, so the installed files keep the canonical names and the manifest carries the 0731 digests. The staged originals are hardlinks under /home/bmarti44/models/dsv4-flash-0731-ud-q2k-xl/ with the upstream names.",
   "files": [

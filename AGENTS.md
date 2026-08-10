@@ -19,9 +19,9 @@ When adding or optimizing a model:
 5. Never trade whole-system stability for benchmark progress.
 
 Before starting claimed work, set a persistent goal for the chosen model and
-backend with the goal tool built into your agent harness. That is the entire
-agent-goal requirement: do not create a repository-specific substitute. Read
-the existing evidence before assuming that an inherited claim is true.
+backend: you MUST use the goal tool built into your agent harness. That is the
+entire agent-goal requirement: do not create a repository-specific substitute.
+Read the existing evidence before assuming that an inherited claim is true.
 
 ## Start every session with facts
 

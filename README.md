@@ -104,12 +104,26 @@ being qualified rather than a secondary fallback.
 > bring-up only: weight integrity including full SHA-256, memory admission,
 > health, two slots at 524,288 tokens each, and golden correctness 10/10
 > ([bring-up record](results/dsv4-0731-staging/bringup-llamacpp-2026-08-09.json)).
-> Accuracy, speed, token parity, soak, and context qualification have **not** been
-> re-run, so 0731 is **not qualified**. Note also that 0731 emits reasoning
-> content by default, which changes the generation contract these baselines were
-> measured under; three golden checks had to be made reasoning-aware before they
-> would score it correctly. The previous shards remain on disk as
-> `weights/unsloth-ud-q2_k_xl/*.gguf.pre0731` and are the verified rollback target.
+> Token parity passes (`exact-ids`) and golden correctness is 11/11. Accuracy has
+> been re-run under the baselines' own non-thinking contract on the serving arm:
+> GSM8K dev 97/100 (parity with the 97/100 baseline) and MMLU-Pro dev 188/253
+> against 197/253 — nine items down, with overlapping Wilson intervals and
+> comparable invalid counts (15 vs 16), so it is a point-estimate regression under
+> a contract this model is not meant to run in. Speed, soak, holdout, and context
+> qualification have **not** been re-run, so 0731 is **not qualified**.
+>
+> 0731 emits reasoning content by default, which changes the generation contract
+> these baselines were measured under; golden checks had to be made reasoning-aware
+> before they would score it correctly, and thinking is now the harness default.
+>
+> **There is no local rollback path.** The `*.gguf.pre0731` anchors were deleted at
+> owner instruction on 2026-08-09. Reverting requires re-fetching
+> `unsloth/DeepSeek-V4-Flash-GGUF` at revision `e3aa0d6a`; the shard digests needed
+> to verify that fetch are in the git history of
+> `weights/unsloth-ud-q2_k_xl/manifest.json` at `72d1db7^`. No rollback has been
+> executed or verified end-to-end. The two pre-0731 copies under
+> `/var/lib/dsv4-context/models/` are not a rollback path — see
+> [the accounting record](results/dsv4-0731-staging/thinking-default-and-disk-2026-08-09.json).
 
 Status below is current as of 2026-07-31. Only DeepSeek V4 Flash and GLM-5.2 on
 CUDA are actively worked on; every other model/backend combination is N/A until
@@ -173,7 +187,16 @@ or truncation artifact. Forcing non-thinking on a release whose stated
 improvements are in reasoning may itself be the wrong contract for 0731; 0731
 with thinking enabled has not been measured against anything.
 
-**0731 is therefore not qualified and is not the installed default.** HumanEval
+**0731 is the installed default as of 2026-08-09, and it is not qualified.** Those
+are separate statements and both are true: the owner directed the swap on a box
+carrying no traffic, so 0731 is what the endpoint serves, while the evidence
+required by `scripts/34_decision.py` has not been produced for it. The table above
+is the **ds4** arm under the non-thinking contract and predates the swap.
+
+Thinking is the serving contract for 0731. The endpoint emits `reasoning_content`
+with no request flag on both engines, so `scripts/31_bench_accuracy.py` defaults to
+`--thinking-mode thinking` as of 2026-08-09; reproducing any pre-0731 baseline now
+requires passing `--thinking-mode chat` explicitly. HumanEval
 has not run (its harness pins a Docker-image runtime digest and the account
 lacks docker group membership), and no holdout, token-parity, soak, or
 agent-gate evidence exists. Three further findings are recorded: the MTP weights
@@ -198,7 +221,9 @@ unchanged in [results/DECISION.md](results/DECISION.md), with the rationale in
 [results/DECISION-OVERRIDE.md](results/DECISION-OVERRIDE.md).
 
 Production traffic follows
-`Tailscale Serve → Caddy :8010 → authenticated streaming helper :8014 → llama.cpp :8011`.
+`Tailscale Serve → Caddy :8010 → authenticated streaming helper :8014 → llama.cpp :8013`.
+The engine port is set by `scripts/52_engine_switch.sh` (`PORT=8013`), which overrides
+the launcher's own `DSV4_PORT` default of 8011; 8013 is what is actually listening.
 Listeners are loopback-only, Funnel is forbidden, credentials are stripped
 before the engine, and a watchdog protects unified CPU/GPU memory from a
 whole-system freeze.
