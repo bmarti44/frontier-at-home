@@ -1,0 +1,57 @@
+{
+  "index": 356,
+  "task_id": 356,
+  "rendered_prompt_sha256": "64d2ec9fffe4872f59682c68f305caad773ffd4ff9d45c215061f8ddfc1f3e08",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Dean starts 28. Buys 6 cars *2=12, 5 bears*1=5 total 17. Left 11. Mother gives extra 10 => 21. Need final numeric answer. But check wording: \"Dean's mother gave him $28 to go to toy store. Dean bought ... His mother then feels generous and decides to give him an extra $10. How much money does Dean have left?\" Could be after extra? Yes 28-17+10=21. Need answer line.</think>Answer: 21",
+  "finish_reason": "stop",
+  "expected": "21",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.628117628999462
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Dean starts 28. Buys 6 cars *2=12, 5 bears*1=5 total 17. Left 11. Mother gives extra 10 => 21. Need final numeric answer. But check wording: \"Dean's mother gave him $28 to go to toy store. Dean bought ... His mother then feels generous and decides to give him an extra $10. How much money does Dean have left?\" Could be after extra? Yes 28-17+10=21. Need answer line.</think>Answer: 21",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786354283,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 120,
+      "prompt_tokens": 94,
+      "total_tokens": 214,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-So3dHqlnn51GQ110hksvRSaD85M6jRUa",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 93,
+      "prompt_ms": 616.026,
+      "prompt_per_token_ms": 6.623935483870968,
+      "prompt_per_second": 150.96765396265744,
+      "predicted_n": 120,
+      "predicted_ms": 6009.091,
+      "predicted_per_token_ms": 50.07575833333333,
+      "predicted_per_second": 19.969742511804196
+    }
+  },
+  "used_fallback": false
+}

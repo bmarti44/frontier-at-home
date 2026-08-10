@@ -1,0 +1,56 @@
+{
+  "index": 78,
+  "task_id": 149,
+  "rendered_prompt_sha256": "9e85425fa2a12a28904d7113455471f7436047f00db80fa01011c4b599e424c5",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need compute compound interest quarterly 8% annual? \"rate of 8%, compounded quarterly\" means nominal annual rate 8%, quarterly rate 2%, 5 years =20 quarters. $500*(1.02)^20. Need compute. 1.02^20? Let's calculate: 1.02^10=1.218994419994? Actually 1.02^20 = (1.02^10)^2. 1.02^10 ≈1.21899442, square ≈1.485947? Let's compute precisely: 1.02^20 =? Known: 1.02^20 = 1.485947395978? times 500 =742.973697989. So $742.97 option I. Need answer: I.</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.528692339001282
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need compute compound interest quarterly 8% annual? \"rate of 8%, compounded quarterly\" means nominal annual rate 8%, quarterly rate 2%, 5 years =20 quarters. $500*(1.02)^20. Need compute. 1.02^20? Let's calculate: 1.02^10=1.218994419994? Actually 1.02^20 = (1.02^10)^2. 1.02^10 ≈1.21899442, square ≈1.485947? Let's compute precisely: 1.02^20 =? Known: 1.02^20 = 1.485947395978? times 500 =742.973697989. So $742.97 option I. Need answer: I.</think>Answer: I",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786356510,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 128,
+      "total_tokens": 302,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-up3rr5lBviYwQSwuDcxHl7IlaAGddm1d",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 127,
+      "prompt_ms": 767.848,
+      "prompt_per_token_ms": 6.0460472440944875,
+      "prompt_per_second": 165.3973182192309,
+      "predicted_n": 174,
+      "predicted_ms": 8758.956,
+      "predicted_per_token_ms": 50.3388275862069,
+      "predicted_per_second": 19.865381216665547
+    }
+  }
+}

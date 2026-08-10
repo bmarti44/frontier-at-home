@@ -1,0 +1,56 @@
+{
+  "index": 8792,
+  "task_id": 8981,
+  "rendered_prompt_sha256": "fd5b0ae20a55b6550ede5b29e61b92f9a98ce5d0f2d65dc3245f8bf7a882957e",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need identify true statement about correlation coefficient. Let's evaluate options.\n\nA false: correlation 1 indicates perfect linear relationship, not causation.\nB false same.\nC false correlation can be positive/negative, between -1 and 1.\nD false correlation applies quantitative, not categorical.\nE false slope equals r * (sy/sx), not always equal.\nF false? Correlation coefficient and slope of regression line may have opposite signs? Actually slope of least-squares regression line has same sign as correlation coefficient (since slope = r * sy/sx, sy/sx positive). So cannot have opposite signs. False.\nG Correlations of +0.87 and -0.87 indicate same degree of clustering around regression line? For simple linear regression, r^2 measures strength/clustering; sign only direction. Absolute value same means same degree of linear association/clustering around line (though slopes opposite). True.\nH correlation 0 indicates no linear relationship, not strong positive. False.\n\nAnswer: G. Need single letter.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.577336809998087
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need identify true statement about correlation coefficient. Let's evaluate options.\n\nA false: correlation 1 indicates perfect linear relationship, not causation.\nB false same.\nC false correlation can be positive/negative, between -1 and 1.\nD false correlation applies quantitative, not categorical.\nE false slope equals r * (sy/sx), not always equal.\nF false? Correlation coefficient and slope of regression line may have opposite signs? Actually slope of least-squares regression line has same sign as correlation coefficient (since slope = r * sy/sx, sy/sx positive). So cannot have opposite signs. False.\nG Correlations of +0.87 and -0.87 indicate same degree of clustering around regression line? For simple linear regression, r^2 measures strength/clustering; sign only direction. Absolute value same means same degree of linear association/clustering around line (though slopes opposite). True.\nH correlation 0 indicates no linear relationship, not strong positive. False.\n\nAnswer: G. Need single letter.</think>Answer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786365560,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 214,
+      "prompt_tokens": 168,
+      "total_tokens": 382,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-dxsui48cNvIDduapOfe2VsciygAUmCnT",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 167,
+      "prompt_ms": 784.186,
+      "prompt_per_token_ms": 4.695724550898204,
+      "prompt_per_second": 212.9596804839668,
+      "predicted_n": 214,
+      "predicted_ms": 10789.777,
+      "predicted_per_token_ms": 50.419518691588785,
+      "predicted_per_second": 19.83358877574578
+    }
+  }
+}

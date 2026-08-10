@@ -1,0 +1,58 @@
+{
+  "index": 535,
+  "task_id": 535,
+  "rendered_prompt_sha256": "4a04c2699f3ec335bf08d9aacde446239dd0d720aa02941a44e441dce9724884",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need solve. Let's parse: Nick had twice as many candies as George. Then George ate 5 candies. Now George has 3 candies left. How many candies does Nick have? Need infer initial George? George ate 5 and now has 3, so before eating George had 8. Nick had twice as many as George (presumably initially? \"Nick had twice as many candies as George. Then George ate...\" So Nick's amount unchanged, George initial 8, Nick 16. Final answer 16. Need final line.</think>Answer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.826394480995077
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need solve. Let's parse: Nick had twice as many candies as George. Then George ate 5 candies. Now George has 3 candies left. How many candies does Nick have? Need infer initial George? George ate 5 and now has 3, so before eating George had 8. Nick had twice as many as George (presumably initially? \"Nick had twice as many candies as George. Then George ate...\" So Nick's amount unchanged, George initial 8, Nick 16. Final answer 16. Need final line.</think>Answer: 16",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786355162,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 127,
+      "prompt_tokens": 64,
+      "total_tokens": 191,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-J6exNwembSfTN0UqmB3eyr1AogGTTEaj",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 63,
+      "prompt_ms": 467.775,
+      "prompt_per_token_ms": 7.425,
+      "prompt_per_second": 134.68013468013467,
+      "predicted_n": 127,
+      "predicted_ms": 6356.07,
+      "predicted_per_token_ms": 50.04779527559055,
+      "predicted_per_second": 19.980900147418136
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Nick had twice as many candies as George. Then George ate 5 candies. Now George has 3 candies left. How many candies does Nick have?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

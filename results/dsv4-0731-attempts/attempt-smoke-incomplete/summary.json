@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "record_type": "attempt_summary",
+  "attempt_id": "smoke-incomplete",
+  "built_at": "2026-08-10T13:14:04.749054+00:00",
+  "verdict": "NO_RESULT",
+  "verdict_rule": "PASS requires every named arm present, every arm recomputable from its transcripts, every preregistered gate met, and golden all-pass. Missing arms yield NO_RESULT rather than FAIL, so an incomplete run is never reported as a measured negative.",
+  "scope_limits": [
+    "Accuracy is dev-split only. No holdout arm exists, so this bundle is NOT a qualification result under scripts/34_decision.py.",
+    "Speed, soak, and context capability are not in this bundle.",
+    "The engine binary digest is absent because /home/dsv4 is not readable from this account."
+  ],
+  "missing_arms": [
+    "mmlu-pro-dev-thinking"
+  ],
+  "arm_failures": [],
+  "gates": [
+    {
+      "gate": "gsm8k-dev-thinking: truncated_fraction <= 0.01",
+      "pass": false,
+      "observed": 0.02,
+      "ceiling": 0.01,
+      "formula": "count(finish_reason == 'length') / n"
+    },
+    {
+      "gate": "gsm8k-dev-thinking: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "gsm8k-dev-thinking: n == 100",
+      "pass": true,
+      "observed": 100
+    },
+    {
+      "gate": "gsm8k-dev-chat: truncated_fraction <= 0.01",
+      "pass": true,
+      "observed": 0.01,
+      "ceiling": 0.01,
+      "formula": "count(finish_reason == 'length') / n"
+    },
+    {
+      "gate": "gsm8k-dev-chat: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "gsm8k-dev-chat: n == 100",
+      "pass": true,
+      "observed": 100
+    },
+    {
+      "gate": "mmlu-pro-dev-chat: truncated_fraction <= 0.055",
+      "pass": false,
+      "observed": 0.05533596837944664,
+      "ceiling": 0.055,
+      "formula": "count(finish_reason == 'length') / n"
+    },
+    {
+      "gate": "mmlu-pro-dev-chat: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "mmlu-pro-dev-chat: n == 253",
+      "pass": true,
+      "observed": 253
+    }
+  ],
+  "arms": {
+    "gsm8k-dev-chat": {
+      "arm": "gsm8k-dev-chat",
+      "artifact": "results/dsv4-0731-staging/acc-gsm8k-dev-0731-chat.json",
+      "artifact_sha256": "16712bdc3e7619b56eda9fa64f210ce22f73fa1b2b00f2182b80d98b897af335",
+      "stack_label": "llamacpp-0731-chat",
+      "suite": "gsm8k",
+      "split": "dev",
+      "rowset_sha256": null,
+      "thinking_mode": null,
+      "max_tokens": 512,
+      "request_timeout_s": null,
+      "n": 100,
+      "correct": 97,
+      "accuracy": 0.97,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.9154806357094724,
+      "wilson95_high": 0.9897454759759611,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 1,
+      "truncated_fraction": 0.01,
+      "request_timeouts": 0,
+      "completion_tokens_median": 86,
+      "completion_tokens_p90": 157,
+      "completion_tokens_p95": 185,
+      "completion_tokens_max": 512,
+      "transcripts_without_usage": 0
+    },
+    "gsm8k-dev-thinking": {
+      "arm": "gsm8k-dev-thinking",
+      "artifact": "results/dsv4-0731-staging/acc-gsm8k-dev-0731-thinking-final.json",
+      "artifact_sha256": "419347c727442b43d9b510c239cc3ceaef630c4140a14e9e0f4bacbad136998c",
+      "stack_label": "llamacpp-0731-thinking-final",
+      "suite": "gsm8k",
+      "split": "dev",
+      "rowset_sha256": null,
+      "thinking_mode": null,
+      "max_tokens": 8192,
+      "request_timeout_s": null,
+      "n": 100,
+      "correct": 96,
+      "accuracy": 0.96,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.9016292856411208,
+      "wilson95_high": 0.9843366960084523,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 2,
+      "truncated_fraction": 0.02,
+      "request_timeouts": 0,
+      "completion_tokens_median": 120,
+      "completion_tokens_p90": 1298,
+      "completion_tokens_p95": 3197,
+      "completion_tokens_max": 8192,
+      "transcripts_without_usage": 0
+    },
+    "mmlu-pro-dev-chat": {
+      "arm": "mmlu-pro-dev-chat",
+      "artifact": "results/dsv4-0731-staging/acc-mmlu-pro-dev-0731-chat.json",
+      "artifact_sha256": "05d233af1fe1a5cbbd76524bd471a29bea2aba0607c056f7cafd68f501bf2de7",
+      "stack_label": "llamacpp-0731-chat",
+      "suite": "mmlu-pro",
+      "split": "dev",
+      "rowset_sha256": null,
+      "thinking_mode": null,
+      "max_tokens": 768,
+      "request_timeout_s": null,
+      "n": 253,
+      "correct": 188,
+      "accuracy": 0.7430830039525692,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.6858881936049755,
+      "wilson95_high": 0.7930064543415175,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 14,
+      "truncated_fraction": 0.05533596837944664,
+      "request_timeouts": 0,
+      "completion_tokens_median": 4,
+      "completion_tokens_p90": 420,
+      "completion_tokens_p95": 768,
+      "completion_tokens_max": 768,
+      "transcripts_without_usage": 0
+    }
+  },
+  "golden": {
+    "artifact": "results/dsv4-0731-staging/golden-llamacpp-0731-v2.json",
+    "artifact_sha256": "466aad9901d2ef6624686282e3f89ae3d3a69fffc2bb63bb78b89d44cf0e7c5d",
+    "checks_total": 11,
+    "checks_passed": 11,
+    "all_passed": true,
+    "formula": "count(check.pass) over every recorded check"
+  },
+  "raw_jsonl_sha256": "cc650902dd2787888c0e35280bccd5d079e2b878a2fdbf2d4cc1dd64a2de606e",
+  "manifest_sha256": "5ccd32d507b9a87fab1cf32c6fd9d956facad5ff09c60da8bb390870fe7af796"
+}

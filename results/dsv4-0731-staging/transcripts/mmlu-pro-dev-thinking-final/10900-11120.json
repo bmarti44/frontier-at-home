@@ -1,0 +1,56 @@
+{
+  "index": 10900,
+  "task_id": 11120,
+  "rendered_prompt_sha256": "21f18f847ecae75acec0538050d6036db199489546768ec367abd18382c28153",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer logic. Need determine consistency of propositions:\n1 D ≡ E (biconditional, D iff E)\n2 F ∨ D\n3 ~E · ~F (conjunction: ~E and ~F, so E false and F false)\n\nFrom 3: E false, F false. Then D ≡ E: D iff false, so D must be false (since E false, D false for biconditional true). Then F ∨ D: false ∨ false = false, contradiction. So inconsistent. Answer B.\n\nNeed final Answer: B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.111600025993539
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer logic. Need determine consistency of propositions:\n1 D ≡ E (biconditional, D iff E)\n2 F ∨ D\n3 ~E · ~F (conjunction: ~E and ~F, so E false and F false)\n\nFrom 3: E false, F false. Then D ≡ E: D iff false, so D must be false (since E false, D false for biconditional true). Then F ∨ D: false ∨ false = false, contradiction. So inconsistent. Answer B.\n\nNeed final Answer: B.</think>Answer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786367680,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 122,
+      "prompt_tokens": 228,
+      "total_tokens": 350,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-lOpF8AZQBw1IGvbHjlXqlRgnz1g5LMf3",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 227,
+      "prompt_ms": 930.99,
+      "prompt_per_token_ms": 4.101277533039648,
+      "prompt_per_second": 243.82646430144257,
+      "predicted_n": 122,
+      "predicted_ms": 6176.899,
+      "predicted_per_token_ms": 50.63031967213115,
+      "predicted_per_second": 19.751010984638082
+    }
+  }
+}

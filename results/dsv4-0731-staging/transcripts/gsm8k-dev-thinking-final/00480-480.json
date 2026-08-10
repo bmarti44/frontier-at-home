@@ -1,0 +1,58 @@
+{
+  "index": 480,
+  "task_id": 480,
+  "rendered_prompt_sha256": "860edf153092cad144d2851c6b4d9d17b7c59064e6af7aa3063c86b1020d18e1",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need comply. Problem: Ben has 4 blue, 3 yellow. Jasper has half as many blue as Ben = 2 blue. three times as many yellow as Ben = 9 yellow. Total 11. Final answer line.</think>Answer: 11",
+  "finish_reason": "stop",
+  "expected": "11",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4938162279941025
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need comply. Problem: Ben has 4 blue, 3 yellow. Jasper has half as many blue as Ben = 2 blue. three times as many yellow as Ben = 9 yellow. Total 11. Final answer line.</think>Answer: 11",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786353255,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 59,
+      "prompt_tokens": 78,
+      "total_tokens": 137,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-qLkrGgKT1sFp8MmcLqfBOaW3S9Dzh8Q5",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 77,
+      "prompt_ms": 534.275,
+      "prompt_per_token_ms": 6.9386363636363635,
+      "prompt_per_second": 144.12053717654766,
+      "predicted_n": 59,
+      "predicted_ms": 2956.69,
+      "predicted_per_token_ms": 50.113389830508474,
+      "predicted_per_second": 19.954746693092613
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Ben has 4 tubes of blue paint and 3 tubes of yellow paint. Jasper has half as many tubes of blue paint as Ben, and three times as many tubes of yellow paint as Ben. How many tubes of paint does Jasper have?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

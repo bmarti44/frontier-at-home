@@ -44,7 +44,9 @@
     "truncated_fraction_max": {
       "mmlu-pro": 0.055,
       "gsm8k": 0.010,
-      "source": "the measured truncation rate of the pre-0731 chat arms, so the candidate is not held to a laxer standard than the baseline"
+      "source": "the measured truncation rate of the pre-0731 chat arms, so the candidate is not held to a laxer standard than the baseline",
+      "known_rounding_defect": "The MMLU-Pro ceiling was transcribed as 0.055 from a chat-arm rate of 14/253 = 0.0553359..., so as written the gate is very slightly STRICTER than intended and the baseline arm marginally fails its own derived ceiling. The value is deliberately NOT being corrected after the fact: moving a preregistered threshold once results exist is the failure mode preregistration prevents, and the error is in the conservative direction. Any arm clearing 0.055 also clears the intended 14/253. Noted 2026-08-10, after the discrepancy appeared in an actual bundle build.",
+      "gsm8k_note": "1/100 = 0.010 exactly, so the chat arm sits exactly on its ceiling and passes."
     },
     "request_failures_max": 0,
     "expected_n": {"gsm8k-dev": 100, "mmlu-pro-dev": 253},

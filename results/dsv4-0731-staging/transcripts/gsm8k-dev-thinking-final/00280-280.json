@@ -1,0 +1,57 @@
+{
+  "index": 280,
+  "task_id": 280,
+  "rendered_prompt_sha256": "d35dcc4d3b4e972e8ff91840b301e5d1d7ab550aa41b6818ffa55d2dde66dfda",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need compute: 20*0.25=5.00, 4*0.50=2.00 total 7.00. Need final numeric answer on own line.</think>Answer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8799724190030247
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need compute: 20*0.25=5.00, 4*0.50=2.00 total 7.00. Need final numeric answer on own line.</think>Answer: 7",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786353607,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 49,
+      "prompt_tokens": 67,
+      "total_tokens": 116,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-s19EgXiqMt0e44vUbWGytV8SwS4Kn3wu",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 66,
+      "prompt_ms": 472.948,
+      "prompt_per_token_ms": 7.165878787878787,
+      "prompt_per_second": 139.550225394758,
+      "predicted_n": 49,
+      "predicted_ms": 2404.621,
+      "predicted_per_token_ms": 49.073897959183675,
+      "predicted_per_second": 20.377431620201268
+    }
+  },
+  "used_fallback": false
+}

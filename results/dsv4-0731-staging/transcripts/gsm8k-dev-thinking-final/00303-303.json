@@ -1,0 +1,57 @@
+{
+  "index": 303,
+  "task_id": 303,
+  "rendered_prompt_sha256": "25171481e182f90cd60c43d2035e03240df319563b1af3d8564e3e9df7d23794",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse problem. Need solve. Let's restate.\n\nElise has been selling Dad's collection of 250 books for three years. Each book sells at $20. She sold twice as many books in first year as she has sold in current year. There are currently 50 unsold books, and her sales number this year is 45. What's total amount earned in second year?\n\nNeed determine second year sales count and money. Total books 250, currently 50 unsold => sold total = 200 over three years. Current year sales = 45. First year sold twice as many as current year? \"twice as many books in the first year as she has sold in the current year\" current year = 45, so first year = 90. Then second year = total sold - first - current = 200 - 90 - 45 = 65. Earned second year = 65 * $20 = $1300. Need final answer. But check ambiguity: \"current year\" maybe third year? She has been selling for three years, current year sales number is 45. Yes.\n\nNeed produce final numeric answer on own line: Answer: 1300.</think>Answer: 1300",
+  "finish_reason": "stop",
+  "expected": "1300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 13.588601167997695
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse problem. Need solve. Let's restate.\n\nElise has been selling Dad's collection of 250 books for three years. Each book sells at $20. She sold twice as many books in first year as she has sold in current year. There are currently 50 unsold books, and her sales number this year is 45. What's total amount earned in second year?\n\nNeed determine second year sales count and money. Total books 250, currently 50 unsold => sold total = 200 over three years. Current year sales = 45. First year sold twice as many as current year? \"twice as many books in the first year as she has sold in the current year\" current year = 45, so first year = 90. Then second year = total sold - first - current = 200 - 90 - 45 = 65. Earned second year = 65 * $20 = $1300. Need final answer. But check ambiguity: \"current year\" maybe third year? She has been selling for three years, current year sales number is 45. Yes.\n\nNeed produce final numeric answer on own line: Answer: 1300.</think>Answer: 1300",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786355155,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 256,
+      "prompt_tokens": 106,
+      "total_tokens": 362,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ink1ES9owsBj76K70Aw4osXUsuAOPE2P",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 105,
+      "prompt_ms": 701.961,
+      "prompt_per_token_ms": 6.6853428571428575,
+      "prompt_per_second": 149.58095962596212,
+      "predicted_n": 256,
+      "predicted_ms": 12883.586,
+      "predicted_per_token_ms": 50.3265078125,
+      "predicted_per_second": 19.870244200644137
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,57 @@
+{
+  "index": 969,
+  "task_id": 969,
+  "rendered_prompt_sha256": "8598f46fd8a19b2324a4d646b68a9938e9b0179a6ae13e378268f8a9a3b4b354",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse problem. John buys new phones for him, his 2 kids, and his wife. That's 4 phones total? Him + 2 kids + wife = 4 people. \"Each phone after the first 2 is half price.\" Phone price $600. Need total cost. First 2 phones full price? Each phone after first 2 is half price. So first 2 cost $600 each = $1200. Remaining 2 phones cost half price $300 each = $600. Total $1800. Need final numeric answer on own line.</think>Answer: 1800",
+  "finish_reason": "stop",
+  "expected": "1800",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 8192,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.981021558000066
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse problem. John buys new phones for him, his 2 kids, and his wife. That's 4 phones total? Him + 2 kids + wife = 4 people. \"Each phone after the first 2 is half price.\" Phone price $600. Need total cost. First 2 phones full price? Each phone after first 2 is half price. So first 2 cost $600 each = $1200. Remaining 2 phones cost half price $300 each = $600. Total $1800. Need final numeric answer on own line.</think>Answer: 1800",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786354734,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 129,
+      "prompt_tokens": 76,
+      "total_tokens": 205,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-XXTPznMYZZAhM7wnACm8388sPit6BZ9o",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 75,
+      "prompt_ms": 534.828,
+      "prompt_per_token_ms": 7.13104,
+      "prompt_per_second": 140.23199982050303,
+      "predicted_n": 129,
+      "predicted_ms": 6443.897,
+      "predicted_per_token_ms": 49.95268992248062,
+      "predicted_per_second": 20.018941953913913
+    }
+  },
+  "used_fallback": false
+}
