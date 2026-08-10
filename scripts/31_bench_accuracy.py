@@ -111,12 +111,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--thinking-mode",
-        default="chat",
+        default="thinking",
         choices=("chat", "thinking"),
         help=(
-            "how the official encoder renders each prompt. 'chat' (default) is "
-            "the non-thinking rendering every published baseline was measured "
-            "under; 'thinking' selects the reasoning rendering. This must be an "
+            "how the official encoder renders each prompt. 'thinking' (default) "
+            "is the reasoning rendering, and is the contract the endpoint "
+            "actually serves: 0731 emits reasoning_content with no request flag "
+            "on both engines. 'chat' selects the non-thinking rendering every "
+            "pre-0731 published baseline was measured under, and is required to "
+            "reproduce those baselines. This must be an "
             "encoder argument rather than a request field: prompts are "
             "pre-rendered and posted to /v1/completions, which applies no chat "
             "template, so extra_body chat_template_kwargs is inert on this path. "
@@ -341,6 +344,18 @@ def derive_config_digest(
         "split": args.split,
         "extra_body": args.extra_body,
         "max_tokens": args.max_tokens,
+        # The rendering mode must be in the digest, not merely in the transcripts.
+        # This digest keys the holdout ledger and every digest-keyed comparison,
+        # so without it a chat run and a thinking run over the same suite are
+        # indistinguishable to their consumers -- the exact silent cross-contract
+        # comparison --thinking-mode exists to prevent.
+        #
+        # Digests frozen before this field was added remain valid: no consumer
+        # recomputes them (36_audit_accuracy.py reads the recorded value and
+        # matches it against the ledger). A re-run under --thinking-mode chat
+        # will therefore not reproduce a pre-2026-08-09 digest, which is correct
+        # -- the old payload could not express the rendering it ran under.
+        "thinking_mode": args.thinking_mode,
         "harness_manifest_line": load_harness_manifest_line(),
     }
     digest = hashlib.sha256(canonical_json(digest_payload)).hexdigest()
