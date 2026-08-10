@@ -93,6 +93,10 @@ allowlist = {
     "oid",
     "git_oid_sha1",
     "rendered_prompt_sha256",
+    # scripts/31_bench_accuracy.py: digest of the dataset rows an arm consumed,
+    # so a repeat look at the same holdout is visible to the auditor.
+    "rowset_sha256",
+    "holdout_rowset_sha256",
     # 0731 evidence-bundle fields (scripts/105_build_dsv4_0731_bundle.py): the
     # digests of the arm artifacts and harnesses an attempt was computed from.
     "artifact_sha256",
