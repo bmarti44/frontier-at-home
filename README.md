@@ -88,7 +88,7 @@ being qualified rather than a secondary fallback.
 | [Nemotron 3 Super](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16) | 256K | 120B / 12B active; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-super?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-super) |
 | [Kimi K2.7 Code](https://huggingface.co/moonshotai/Kimi-K2.7-Code) | 256K | 1.04T; text, image | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Akimi-k2.7-code?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Akimi-k2.7-code) |
 | [DeepSeek V4 Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro) | 1M | 1.6T; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-pro?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-pro) |
-| [DeepSeek V4 Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash) | 1M | 284B total / 13B active (Ollama page displays 158B); text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-flash?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-flash) |
+| [DeepSeek V4 Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731) | 1M | 284B total / 13B active (Ollama page displays 158B); text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Adeepseek-v4-flash?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Adeepseek-v4-flash) |
 | [Nemotron 3 Ultra](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16) | 256K served | 550B / 55B active; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-ultra?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-ultra) |
 | [GPT-OSS](https://huggingface.co/openai/gpt-oss-120b) | 128K | 20B, 120B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Agpt-oss?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Agpt-oss) |
 | [Nemotron 3 Nano](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) | 1M | 4B, 30B; text | [![open self-declared claims](https://img.shields.io/github/issues-pr/bmarti44/frontier-at-home/claim%3Anemotron-3-nano?label=open%20claims)](https://github.com/bmarti44/frontier-at-home/pulls?q=is%3Apr+is%3Aopen+label%3Aclaim%3Anemotron-3-nano) |
@@ -132,6 +132,29 @@ DeepSeek performance values come from the five-repetition
 and has not yet been re-run. The 1M capability result and the ≤28K performance
 suite answer different questions and must not be combined into an implied 1M
 throughput figure.
+
+**0731 on the ds4 arm (not the serving path).** The banner above covers the
+llama.cpp endpoint, which is what this box actually serves per
+[DECISION-OVERRIDE](results/DECISION-OVERRIDE.md). The rest of this section
+records the separate 0731 evaluation on the **ds4** engine, which is retained as
+the fast small-context alternative (≤~28K prompt tokens) and is not the serving
+path. Its findings are what established that 0731 requires thinking enabled.
+
+The [0731 release](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
+was fetched for both arms — the ds4 lineage
+([pin](configs/pins/antirez-imatrix-0731.json)) and the llama.cpp lineage
+([pin](configs/pins/unsloth-ud-q2_k_xl-0731.json)) — every file verified
+against its published SHA-256, and the ds4 lineage
+[serves and generates](results/dsv4-0731-staging/bringup-2026-08-09.json) on the
+`mtp` profile. Preliminary decode measured 21.34 tok/s median at a 52-token
+prompt against the 19.15 tok/s v0.4.2 `dspark` baseline, but that comparison
+changes both the weights and the serving profile at once, and the speed suite
+reported `suite_valid=false` because 0731 interleaves reasoning tokens the
+pre-0731 harness does not count. No accuracy, golden, token-parity, soak, or
+agent-gate evidence exists for 0731 yet, and the installed default is unchanged.
+Two upgrade findings are recorded in that bring-up file: the MTP weights are
+byte-identical across the release, and no 0731 DSpark drafter exists in any
+published repository, so the `dspark` profile cannot currently start.
 
 DeepSeek task accuracy is the audited llama.cpp result in
 [results/DECISION.md](results/DECISION.md). GLM fidelity is the teacher-forced

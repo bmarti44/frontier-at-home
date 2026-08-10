@@ -1,0 +1,40 @@
+{
+  "purpose": "Production-lineage DeepSeek-V4-Flash-0731 weights for the ds4 serving arm.",
+  "lineage_note": "results/decision.json shows the ds4 arm (the 18.4 tok/s production stack) serves the antirez imatrix quant, NOT the unsloth UD-Q2_K_XL. UD-Q2_K_XL is the llama.cpp comparison arm (configs/pins/unsloth-ud-q2_k_xl.json). This pin is the 0731 upgrade of the ds4 production arm; configs/pins/unsloth-ud-q2_k_xl-0731.json is the 0731 upgrade of the comparison arm. Both are needed for a matched requalification.",
+  "repo": "antirez/deepseek-v4-gguf",
+  "revision": "e7f04037032990db0346398d249baf9fb9df1ccc",
+  "captured_from": "HF API (?blobs=true), 2026-08-09",
+  "staging_dir": "/home/bmarti44/models/dsv4-flash-0731-production",
+  "supersedes": "configs/build-manifests/ds4-weights.json (engine_commit baa889025b16a7060f5f854226cb0d14e260eb52, repo revision 9170bf42beb77f38006e016503ecace31f2bd9a0)",
+  "files": [
+    {
+      "role": "base",
+      "path": "DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix-0731.gguf",
+      "bytes": 86720111488,
+      "sha256": "ca22ae2f838e14077c22bc1c1417b71b45b5e5a3687bd96c2ac6e17fdb6261c0",
+      "predecessor_sha256": "efc7ed607ff2...(truncated per repo digest policy; full value in configs/build-manifests/ds4-weights.json role=base)",
+      "note": "Byte size is identical to the pre-0731 base (86720111488) — same quantization recipe applied to the 0731 weights. Content differs (different sha256)."
+    },
+    {
+      "role": "mtp",
+      "path": "DeepSeek-V4-Flash-MTP-Q4K-Q8_0-F32.gguf",
+      "bytes": 3807602400,
+      "sha256": "afd481ee689dce9037f70f39085fcdae5a5b096d521cdad43b19fa52bf8f4083",
+      "predecessor_sha256": "afd481ee689d...(truncated per repo digest policy; identical to this file's sha256 above)",
+      "note": "UNCHANGED by 0731. The repo ships no MTP-0731 variant and this file's sha256 is byte-identical to the pinned production MTP. Verified locally 2026-08-09."
+    },
+    {
+      "role": "dspark_support",
+      "path": "DeepSeek-V4-Flash-DSpark-support-0731.gguf",
+      "bytes": 5989114272,
+      "sha256": "7e319924541db3f7a163ed7e11d7532a70d48228ab59d36cb81e1d4511885360",
+      "note": "OPEN QUESTION. The pre-0731 production dspark_drafter was a THIRD-PARTY file: bleysg/DeepSeek-V4-Flash-DSpark-drafter-GGUF DSpark-drafter-Q2K-Q8.gguf (6971241504 bytes, sha f98c894c7be92457e40a9f95c689d008ecfe020aec6b082b811860e103ae0504), which docs/ds4-security-review.md audit finding HIGH-2 flagged for having no independent provenance chain and being non-reproducible by the in-tree extractor. bleysg publishes no 0731 drafter, and a drafter must stay token-distribution-compatible with its base, so the old drafter does NOT carry over. This first-party antirez DSpark-support-0731 file is the same-repo, same-provenance analog and is staged as the candidate replacement. Whether ds4-server consumes it directly via DS4_DSPARK_MODEL or whether it must first pass through the in-tree drafter extractor is UNVERIFIED as of this pin."
+    }
+  ],
+  "engine": {
+    "pinned_commit": "baa889025b16a7060f5f854226cb0d14e260eb52",
+    "production_binary_sha256": "2fb2250a6d46...(truncated per repo digest policy; full value in configs/build-manifests/ds4.json binaries.ds4-server)",
+    "local_rebuild_sha256": "04aa7ae2e098...(truncated per repo digest policy; reproducible by rebuilding the pinned commit)",
+    "rebuild_note": "Rebuilt from the pinned commit with the documented `make cuda-spark` recipe. The binary is NOT byte-identical to the committed production hash because the build uses -g -lineinfo, which embeds absolute source paths, and this rebuild lives at a different path (/tmp/ds4-prod-baa8890) than the original (under DS4_HOME). Same defect class as the llama-server reproducibility issue in results/dsv4-cold-load: fixable with -ffile-prefix-map. Source provenance is exact; byte reproducibility is not claimed."
+  }
+}
