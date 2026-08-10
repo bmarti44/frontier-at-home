@@ -1,0 +1,57 @@
+{
+  "index": 90,
+  "task_id": 90,
+  "rendered_prompt_sha256": "505ff867820d61a8746db70e280090d4305fca1fbd82ad9ce65f56b62c8ad01b",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple arithmetic. Need maybe think briefly but final numeric answer. Problem: adult eats 10 lbs, child half as much as adult = 5 lbs. 20 adults = 200 lbs, 5 children =25 lbs total 225. Answer: 225.</think>Answer: 225",
+  "finish_reason": "stop",
+  "expected": "225",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.8901435590014444
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. Need maybe think briefly but final numeric answer. Problem: adult eats 10 lbs, child half as much as adult = 5 lbs. 20 adults = 200 lbs, 5 children =25 lbs total 225. Answer: 225.</think>Answer: 225",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786373983,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 63,
+      "prompt_tokens": 113,
+      "total_tokens": 176,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-PLbax6r7Bxi9wiiNMWrZ6Jkqn7XVs6PB",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 112,
+      "prompt_ms": 708.524,
+      "prompt_per_token_ms": 6.3261071428571425,
+      "prompt_per_second": 158.07509696213538,
+      "predicted_n": 63,
+      "predicted_ms": 3179.424,
+      "predicted_per_token_ms": 50.46704761904762,
+      "predicted_per_second": 19.814909870467105
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,57 @@
+{
+  "index": 1308,
+  "task_id": 1308,
+  "rendered_prompt_sha256": "d95a2235d5505f37f20bba709c6443a3d406f4328f4cffb5043856dd53eb7a8a",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need follow instruction: \"Think briefly if needed, then end with final numeric answer on its own line in form Answer: <number>\". Need compute: first basket 10, second twice as many = 20, both = 30. Final answer line.</think>Answer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.6266171890019905
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need follow instruction: \"Think briefly if needed, then end with final numeric answer on its own line in form Answer: <number>\". Need compute: first basket 10, second twice as many = 20, both = 30. Final answer line.</think>Answer: 30",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786372544,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 64,
+      "prompt_tokens": 61,
+      "total_tokens": 125,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Mm6shya7b7KyAYn32o8MPLPxAythF9CT",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 60,
+      "prompt_ms": 472.893,
+      "prompt_per_token_ms": 7.88155,
+      "prompt_per_second": 126.87859621521147,
+      "predicted_n": 64,
+      "predicted_ms": 3151.147,
+      "predicted_per_token_ms": 49.236671875,
+      "predicted_per_second": 20.310064874790037
+    }
+  },
+  "used_fallback": false
+}

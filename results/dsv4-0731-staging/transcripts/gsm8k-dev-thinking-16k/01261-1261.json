@@ -1,0 +1,57 @@
+{
+  "index": 1261,
+  "task_id": 1261,
+  "rendered_prompt_sha256": "57a453cf3d3b5cf7129e44d4eb85d06d3caa9cb74916452b00b3e99145ce6fa4",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple arithmetic. Need compute weekly cost: 5 blouses*$5=25, 2 pants*$8=16, 1 skirt*$6=6 total 47 per week. 5 weeks = 235. Need final answer line.</think>Answer: 235",
+  "finish_reason": "stop",
+  "expected": "235",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7937971130013466
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. Need compute weekly cost: 5 blouses*$5=25, 2 pants*$8=16, 1 skirt*$6=6 total 47 per week. 5 weeks = 235. Need final answer line.</think>Answer: 235",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786374078,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 62,
+      "prompt_tokens": 106,
+      "total_tokens": 168,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-fAqZFBb1xeBDOngWOC8qmo1KQ6YJQ5HC",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 105,
+      "prompt_ms": 694.901,
+      "prompt_per_token_ms": 6.618104761904761,
+      "prompt_per_second": 151.10066038183857,
+      "predicted_n": 62,
+      "predicted_ms": 3096.697,
+      "predicted_per_token_ms": 49.94672580645162,
+      "predicted_per_second": 20.02133240675468
+    }
+  },
+  "used_fallback": false
+}

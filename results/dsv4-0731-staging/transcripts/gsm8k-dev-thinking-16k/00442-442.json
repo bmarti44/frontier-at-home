@@ -1,0 +1,57 @@
+{
+  "index": 442,
+  "task_id": 442,
+  "rendered_prompt_sha256": "0372f776810726b6e18ea3032727654c5a6c9c107d9b26d0bed1dfb1ca11f9f2",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Need be careful: \"When Marcus wakes up, his house is 40 degrees. He spends 3 hours baking, and every hour the oven is on it raises the house's temperature by 5 degrees. Then Marcus opens a window for 30 minutes, and the house cools down 2 degrees for every 10 minutes the window is open. What is the house's final temperature?\"\n\nNeed compute: initial 40. Baking 3 hours, each hour raises by 5 => +15 = 55. Then window open 30 min, cools 2 degrees per 10 min => 30 min is 3 intervals of 10, so cools 6 degrees. Final 49. Need final numeric answer on own line: Answer: 49.</think>Answer: 49",
+  "finish_reason": "stop",
+  "expected": "49",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.027049440002884
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Need be careful: \"When Marcus wakes up, his house is 40 degrees. He spends 3 hours baking, and every hour the oven is on it raises the house's temperature by 5 degrees. Then Marcus opens a window for 30 minutes, and the house cools down 2 degrees for every 10 minutes the window is open. What is the house's final temperature?\"\n\nNeed compute: initial 40. Baking 3 hours, each hour raises by 5 => +15 = 55. Then window open 30 min, cools 2 degrees per 10 min => 30 min is 3 intervals of 10, so cools 6 degrees. Final 49. Need final numeric answer on own line: Answer: 49.</think>Answer: 49",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786373945,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 166,
+      "prompt_tokens": 102,
+      "total_tokens": 268,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-PjFjfrcR6uJBJn5xlAYpsLQh71wmyQCe",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 101,
+      "prompt_ms": 660.374,
+      "prompt_per_token_ms": 6.538356435643564,
+      "prompt_per_second": 152.9436349704864,
+      "predicted_n": 166,
+      "predicted_ms": 8363.522,
+      "predicted_per_token_ms": 50.38266265060241,
+      "predicted_per_second": 19.848097488115652
+    }
+  },
+  "used_fallback": false
+}

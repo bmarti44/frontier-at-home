@@ -1,0 +1,57 @@
+{
+  "index": 107,
+  "task_id": 107,
+  "rendered_prompt_sha256": "197fb08211faba7d575cf9c668fd8bec2b0016aa59baaac03d703385e237835c",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Let's parse. Frankie watches TV after homework every night. Monday/Tuesday: 1-hour episode each night = 2 hours total. Wednesday: watched a few episodes of 30-minute show. Let x = number 30-min episodes Wednesday, each 0.5 hour. Thursday: 1-hour episode + 30-minute show = 1.5 hours. Friday: two 1-hour episodes = 2 hours. Total 7 hours. Sum: Mon+Tue 2 + Wed 0.5x + Thu 1.5 + Fri 2 = 7 => 5.5 + 0.5x = 7 => 0.5x = 1.5 => x=3. Answer 3. Need final numeric answer on own line.</think>Answer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.51562117299909
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Let's parse. Frankie watches TV after homework every night. Monday/Tuesday: 1-hour episode each night = 2 hours total. Wednesday: watched a few episodes of 30-minute show. Let x = number 30-min episodes Wednesday, each 0.5 hour. Thursday: 1-hour episode + 30-minute show = 1.5 hours. Friday: two 1-hour episodes = 2 hours. Total 7 hours. Sum: Mon+Tue 2 + Wed 0.5x + Thu 1.5 + Fri 2 = 7 => 5.5 + 0.5x = 7 => 0.5x = 1.5 => x=3. Answer 3. Need final numeric answer on own line.</think>Answer: 3",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786374312,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 175,
+      "prompt_tokens": 141,
+      "total_tokens": 316,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Zm1SX6xhBCLdGjB7AKFBN7oflCurBk65",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 140,
+      "prompt_ms": 693.034,
+      "prompt_per_token_ms": 4.950242857142857,
+      "prompt_per_second": 202.01029098139486,
+      "predicted_n": 175,
+      "predicted_ms": 8819.132,
+      "predicted_per_token_ms": 50.395039999999995,
+      "predicted_per_second": 19.843222666357644
+    }
+  },
+  "used_fallback": false
+}

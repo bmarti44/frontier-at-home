@@ -1,0 +1,57 @@
+{
+  "index": 1115,
+  "task_id": 1115,
+  "rendered_prompt_sha256": "e0064e5da25e6f0922ff9bffe3d4cd97f21c020b6d3b233a5a383247dd4bb7f0",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Problem: budget 16, spent 4, bought 2 books today same cost, has 2 left. Need each book cost? Let's parse: Budget 16, already spent 4, so remaining before today = 12. After buying 2 books, has 2 left, so spent today 10. Each book same cost => 5 each. But check \"already spent $4\" maybe from budget, total spent = 4 + 2x, left = 16 - (4+2x)=2 => 2x=10 => x=5. Answer: 5. Need final numeric answer on own line.</think>Answer: 5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.956429523001134
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Problem: budget 16, spent 4, bought 2 books today same cost, has 2 left. Need each book cost? Let's parse: Budget 16, already spent 4, so remaining before today = 12. After buying 2 books, has 2 left, so spent today 10. Each book same cost => 5 each. But check \"already spent $4\" maybe from budget, total spent = 4 + 2x, left = 16 - (4+2x)=2 => 2x=10 => x=5. Answer: 5. Need final numeric answer on own line.</think>Answer: 5",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786374320,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 146,
+      "prompt_tokens": 94,
+      "total_tokens": 240,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-EMJEdjS04xHVstUBZx2hQ5MiVcnjSxfS",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 93,
+      "prompt_ms": 604.684,
+      "prompt_per_token_ms": 6.501978494623655,
+      "prompt_per_second": 153.79933982046822,
+      "predicted_n": 146,
+      "predicted_ms": 7349.29,
+      "predicted_per_token_ms": 50.33760273972603,
+      "predicted_per_second": 19.86586459372266
+    }
+  },
+  "used_fallback": false
+}

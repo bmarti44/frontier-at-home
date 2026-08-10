@@ -1,0 +1,57 @@
+{
+  "index": 22,
+  "task_id": 22,
+  "rendered_prompt_sha256": "1cc5818646422da16e3e1657b6dc0828d8b304656c4d4503dc365780d850de68",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need follow instruction: think briefly then final numeric answer on own line. Need compute: first 3 customers buy 1 each =3, next 2 buy 2 each=4, last 3 none=0 total 7. Final Answer: 7.</think>Answer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.817575521003164
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need follow instruction: think briefly then final numeric answer on own line. Need compute: first 3 customers buy 1 each =3, next 2 buy 2 each=4, last 3 none=0 total 7. Final Answer: 7.</think>Answer: 7",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786374066,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 65,
+      "prompt_tokens": 84,
+      "total_tokens": 149,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-k3EaZecQKLXJixTWiidAxQsdw4OAQtAB",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 83,
+      "prompt_ms": 550.478,
+      "prompt_per_token_ms": 6.632265060240964,
+      "prompt_per_second": 150.77805107561068,
+      "predicted_n": 65,
+      "predicted_ms": 3264.452,
+      "predicted_per_token_ms": 50.22233846153846,
+      "predicted_per_second": 19.91145833971521
+    }
+  },
+  "used_fallback": false
+}

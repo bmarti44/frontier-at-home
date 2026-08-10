@@ -1,0 +1,57 @@
+{
+  "index": 1082,
+  "task_id": 1082,
+  "rendered_prompt_sha256": "51809e26ec719703bed7b11a33c07dcc5c70e85fe280e11e9243fad13a44f45c",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse. James home 4 miles from store. He walks halfway then realized forgot something and had to walk back. Then presumably continues to store? Need total time? Let's reason: He walks halfway to store: distance 2 miles. Then walks back home: 2 miles. Then from home to store: 4 miles. Total distance walked = 2 + 2 + 4 = 8 miles. Speed 4 mph. Time = 8/4 = 2 hours. But question \"how long did it take him to reach the store?\" Could be from initial departure? Yes total time to reach store after detour = 2 hours. Need final numeric answer.</think>Answer: 2",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.11375807999866
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse. James home 4 miles from store. He walks halfway then realized forgot something and had to walk back. Then presumably continues to store? Need total time? Let's reason: He walks halfway to store: distance 2 miles. Then walks back home: 2 miles. Then from home to store: 4 miles. Total distance walked = 2 + 2 + 4 = 8 miles. Speed 4 mph. Time = 8/4 = 2 hours. But question \"how long did it take him to reach the store?\" Could be from initial departure? Yes total time to reach store after detour = 2 hours. Need final numeric answer.</think>Answer: 2",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786372499,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 150,
+      "prompt_tokens": 86,
+      "total_tokens": 236,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-6CprADlTa7Wnztkd7xDbAGCpy1FVzwPX",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 85,
+      "prompt_ms": 586.47,
+      "prompt_per_token_ms": 6.89964705882353,
+      "prompt_per_second": 144.9349497843027,
+      "predicted_n": 150,
+      "predicted_ms": 7524.401,
+      "predicted_per_token_ms": 50.16267333333333,
+      "predicted_per_second": 19.93514168104544
+    }
+  },
+  "used_fallback": false
+}

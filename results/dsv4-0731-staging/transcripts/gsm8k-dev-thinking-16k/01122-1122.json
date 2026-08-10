@@ -1,0 +1,57 @@
+{
+  "index": 1122,
+  "task_id": 1122,
+  "rendered_prompt_sha256": "735a57e8666ccadb1edbac43f3a92317df4b9ed8f0ea5eba607402b5b4fbc961",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Let's parse problem. Order 400 toys. 5 workers. 2 workers produce 6 toys/hour, another 2 produce 4 toys/hour. All work on order during 10-hour shift, by end still need another 20 toys to ship. How many toys per hour does fifth worker produce?\n\nNeed compute. Total produced in 10 hours = 400 - 20 = 380 toys. Known four workers: 2*6=12 toys/hour combined, 2*4=8 toys/hour combined, total known =20 toys/hour. Over 10 hours known produce 200 toys. Need fifth produce 180 toys in 10 hours => 18 toys/hour. But check: 2 workers produce 6 toys an hour, another 2 produce 4 toys an hour. Fifth worker rate x. Total rate = 2*6 + 2*4 + x = 20 + x toys/hour. In 10 hours = 10(20+x)=380 => 200+10x=380 => x=18. Answer 18.\n\nNeed final numeric answer on own line.</think>Answer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 12.890447517995199
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Let's parse problem. Order 400 toys. 5 workers. 2 workers produce 6 toys/hour, another 2 produce 4 toys/hour. All work on order during 10-hour shift, by end still need another 20 toys to ship. How many toys per hour does fifth worker produce?\n\nNeed compute. Total produced in 10 hours = 400 - 20 = 380 toys. Known four workers: 2*6=12 toys/hour combined, 2*4=8 toys/hour combined, total known =20 toys/hour. Over 10 hours known produce 200 toys. Need fifth produce 180 toys in 10 hours => 18 toys/hour. But check: 2 workers produce 6 toys an hour, another 2 produce 4 toys an hour. Fifth worker rate x. Total rate = 2*6 + 2*4 + x = 20 + x toys/hour. In 10 hours = 10(20+x)=380 => 200+10x=380 => x=18. Answer 18.\n\nNeed final numeric answer on own line.</think>Answer: 18",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786372169,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 240,
+      "prompt_tokens": 122,
+      "total_tokens": 362,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-kL5LLDNaeeJquDNkVIaLvcYG8L1dV2YZ",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 121,
+      "prompt_ms": 772.673,
+      "prompt_per_token_ms": 6.385727272727273,
+      "prompt_per_second": 156.59923408738237,
+      "predicted_n": 240,
+      "predicted_ms": 12114.965,
+      "predicted_per_token_ms": 50.47902083333334,
+      "predicted_per_second": 19.810209934572654
+    }
+  },
+  "used_fallback": false
+}

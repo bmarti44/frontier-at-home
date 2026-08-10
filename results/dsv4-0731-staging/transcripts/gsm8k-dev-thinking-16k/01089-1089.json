@@ -1,0 +1,57 @@
+{
+  "index": 1089,
+  "task_id": 1089,
+  "rendered_prompt_sha256": "8d15fd07ae8979bcf9363e90406f665e093d5ce62ded7cad59a085ef7e8cb739",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer math. Need think briefly? Need final numeric answer. Problem: Nathan drops ball from third-floor balcony in mall, each story 24 feet high. Bounces to 2/3 of starting height with each bounce. How high does ball go on its second bounce?\n\nNeed parse: Starting height = third-floor balcony? Each story 24 feet high. Third-floor balcony height? If third floor, likely 3 stories above ground? But \"third-floor balcony\" maybe height = 3 * 24 = 72 feet? Need consider floor numbering: third floor could be 2 floors above ground? But typical word problem: third-floor balcony, each story 24 feet high, so height = 3*24 = 72 feet. Then first bounce reaches 2/3 of starting height = 48 feet. Second bounce reaches 2/3 of first bounce height = 32 feet. Answer 32.\n\nNeed final line Answer: 32.</think>Answer: 32",
+  "finish_reason": "stop",
+  "expected": "32",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.780925029001082
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer math. Need think briefly? Need final numeric answer. Problem: Nathan drops ball from third-floor balcony in mall, each story 24 feet high. Bounces to 2/3 of starting height with each bounce. How high does ball go on its second bounce?\n\nNeed parse: Starting height = third-floor balcony? Each story 24 feet high. Third-floor balcony height? If third floor, likely 3 stories above ground? But \"third-floor balcony\" maybe height = 3 * 24 = 72 feet? Need consider floor numbering: third floor could be 2 floors above ground? But typical word problem: third-floor balcony, each story 24 feet high, so height = 3*24 = 72 feet. Then first bounce reaches 2/3 of starting height = 48 feet. Second bounce reaches 2/3 of first bounce height = 32 feet. Answer 32.\n\nNeed final line Answer: 32.</think>Answer: 32",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786373964,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 202,
+      "prompt_tokens": 87,
+      "total_tokens": 289,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ioYEtT2Xwq3UDt0xhGMGnQfBDEu2C5zU",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 86,
+      "prompt_ms": 588.43,
+      "prompt_per_token_ms": 6.842209302325581,
+      "prompt_per_second": 146.15162381251807,
+      "predicted_n": 202,
+      "predicted_ms": 10190.049,
+      "predicted_per_token_ms": 50.44578712871287,
+      "predicted_per_second": 19.823260908755195
+    }
+  },
+  "used_fallback": false
+}

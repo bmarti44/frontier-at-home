@@ -55,7 +55,20 @@
   "rollback": {
     "status": "REMOVED_BY_OWNER_2026-08-09",
     "note": "The *.gguf.pre0731 links were deleted at owner instruction once 0731 was serving. There is no longer a local rollback path: reverting to the pre-0731 release now requires re-fetching it from unsloth/DeepSeek-V4-Flash-GGUF at revision e3aa0d6a5fa4f820d9e132ac1fd1d01e1b2b49e0, whose per-shard sha256 values are preserved in the git history of weights/unsloth-ud-q2_k_xl/manifest.json (commit 72d1db7^).",
-    "disk_effect_measured": "Deleting the links freed 0 bytes. df reported 281G available immediately before and after. Each old shard had link count 2 and the surviving link is under /home/dsv4, which this account cannot read or unlink, so the ~90 GiB remains allocated until root removes that link.",
+    "disk_effect_measured": "SUPERSEDED AND PARTLY WRONG -- see disk_effect_corrected_2026_08_10. Original text: 'Deleting the links freed 0 bytes. df reported 281G available immediately before and after. Each old shard had link count 2 and the surviving link is under /home/dsv4, which this account cannot read or unlink, so the ~90 GiB remains allocated until root removes that link.'",
+    "disk_effect_corrected_2026_08_10": {
+      "correction": "The /home/dsv4 hypothesis was wrong. A complete `sudo find / -xdev -type f -size 49437013568c` returns exactly four paths: the two pre-0731 copies under /var/lib/dsv4-context/models/, and two names for a single 0731 inode (6730860, link count 2) at weights/unsloth-ud-q2_k_xl/ and /home/bmarti44/models/dsv4-flash-0731-ud-q2k-xl/. No pre-0731 shard existed under /home/dsv4 or anywhere else on the filesystem.",
+      "what_the_link_count_2_actually_was": "The surviving link-count-2 pair belongs to the 0731 release -- the installed hardlink and its staging original, both under /home/bmarti44. Attributing a second link to the deleted *.pre0731 files and placing it under an unreadable directory was inference, not observation, and it was wrong.",
+      "still_unexplained": "Why df showed no change across the *.pre0731 deletion is not resolved. The files are gone and cannot be re-inspected, so no mechanism is being invented here. The measurement was taken at 1 GiB granularity (df -BG), which is the only identified weakness in it.",
+      "reclaim_verified_2026_08_10": {
+        "before_bytes": 301456285696,
+        "after_bytes": 495093178368,
+        "freed_bytes": 193636892672,
+        "freed_gib": 180.34,
+        "cause": "owner removed both /var/lib/dsv4-context/models/deepseek-v4-flash and its rotated-aside predecessor, 96832507552 bytes each",
+        "side_effect": "the protected context-qualification model copy is now absent, so scripts/64_context_submit.sh will re-copy it from the live 0731 weights on its next run rather than silently measuring the superseded release"
+      }
+    },
     "verified_recoverable": false
   },
   "remaining": {
