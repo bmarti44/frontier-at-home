@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "gate": "dsv4-0731-direct-1m-feasibility",
+  "date_utc": "2026-08-10",
+  "status": "BLOCKED_AND_PROJECTED_SHORT",
+  "scope": "Review finding 8 asked for a true single-sequence 1M context capability result rather than a 2x524288 serving topology. This record is the arithmetic and the blockers, computed before attempting the run. It is NOT a capability result and must never be cited as one.",
+
+  "what_finding_8_requires": {
+    "source": "AGENTS.md:140-149",
+    "requirements": [
+      "configured cap exactly 1,048,576",
+      "at least 1,000,000 actual input tokens processed in one sequence",
+      "deterministic retrieval at multiple positions plus negative controls",
+      "completed generation with timestamped output tokens",
+      "no truncation, OOM, Xid, or unexpected swap",
+      "at least 10 GiB available memory at the measured low point"
+    ]
+  },
+
+  "why_the_installed_topology_does_not_satisfy_it": "scripts/52_engine_switch.sh:229-241 requires exactly 2 slots at n_ctx=524288. Two 512K slots reserve the same total KV as one 1M slot but no single request can exceed 512K tokens, so the endpoint has never processed a 1,000,000-token sequence. The reviewer is correct that this is a serving smoke test.",
+
+  "admission_arithmetic": {
+    "method": "scripts/02_membudget.py's own formula: projected_free = mem_available_pre_load - weights - ctx * kv_bytes_per_token - overhead",
+    "inputs": {
+      "mem_total_gib": 119.67,
+      "weights_gib": 90.18,
+      "ctx": 1048576,
+      "kv_bytes_per_token": 4096,
+      "kv_gib": 4.0,
+      "overhead_gib": 12.0,
+      "note_on_overhead": "12 GiB is the launcher's measured headless charge, valid for DSV4_UBATCH <= 2048 at CTX=1048576 (scripts/21_serve_llamacpp.sh:875-882). It is a fixed charge and does not shrink with ubatch, so at the ub=256 single-slot profile it OVER-charges. The real low point at ub=256 is therefore higher than the projection below -- by an unmeasured amount."
+    },
+    "derived": {
+      "weights_plus_kv_plus_overhead_gib": 106.18,
+      "mem_available_required_for_a_10_gib_low_point_gib": 116.18,
+      "mem_available_pre_load_measured_2026_08_09_gib": 115.63,
+      "projected_low_point_gib": 9.45,
+      "shortfall_against_agents_md_gib": 0.55
+    },
+    "verdict": "The conservative model projects a 9.45 GiB low point against a 10 GiB requirement -- short by 0.55 GiB. It clears the installed profile's own 8 GiB floor, which is why the current deployment is admissible. Only 3.49 GiB of non-engine system usage is tolerable to reach 116.18 GiB, and roughly 4.04 GiB was in use at the 2026-08-09 measurement.",
+    "not_concluded": "This does NOT establish that a single-sequence 1M run is impossible here. The overhead charge is conservative at small ubatch, and freeing system memory raises the pre-load figure. It establishes that the run cannot be declared feasible without measuring, and that the margin is under one gibibyte either way."
+  },
+
+  "live_observation": {
+    "observed_at_utc": "2026-08-10T09:20Z",
+    "mem_total_kib": 125483616,
+    "mem_available_kib": 11405340,
+    "swap_total_kib": 16777212,
+    "swap_free_kib": 14991916,
+    "swap_used_kib": 1785296,
+    "swap_used_gib": 1.7,
+    "why_it_matters": "AGENTS.md's direct-1M gate forbids unexpected swap. Roughly 1.7 GiB is currently swapped out under the installed 2x512K profile serving an accuracy run. A 1M attempt must start from a clean swap state or the gate fails on an observation that predates the attempt."
+  },
+
+  "blockers": [
+    {
+      "id": "B1-EXCLUSIVITY",
+      "detail": "An accuracy arm has been running for over four hours and holds the engine. Evidence runs must be exclusive, and any context attempt stops and restarts the engine, so the two cannot overlap.",
+      "clears_when": "the thinking-contract accuracy arms finish"
+    },
+    {
+      "id": "B2-NO-DSV4-DELEGATION",
+      "detail": "scripts/60_schedule_dsv4_context_user.sh requires passwordless dsv4 delegation. `sudo -n -u dsv4 true` reports 'a password is required', so the unprivileged path is unavailable.",
+      "clears_when": "the owner grants the delegation or runs the root path"
+    },
+    {
+      "id": "B3-STALE-PROTECTED-MODEL",
+      "detail": "The root path uses PROTECTED_MODEL_PATH=/var/lib/dsv4-context/models/deepseek-v4-flash, which currently holds PRE-0731 shards (shard 1 is 5,256,864 bytes; 0731's is 5,257,664). scripts/64_context_submit.sh validates that copy by existence, uid and link count but never against the live weights manifest, so a root-mode run would measure the superseded release and label it with the current candidate hash.",
+      "clears_when": "the stale copy is removed so 64_context_submit.sh re-copies from the 0731 weights, AND a digest comparison against weights/unsloth-ud-q2_k_xl/manifest.json is added to its validity check",
+      "severity": "this is a correctness defect, not merely a blocker"
+    }
+  ],
+
+  "runbook_when_unblocked": {
+    "note": "Each step is owner-executed; none can be done from the harness account.",
+    "steps": [
+      "1. Confirm no accuracy or golden run is active.",
+      "2. sudo rm -rf /var/lib/dsv4-context/models/deepseek-v4-flash  (forces a fresh 0731 copy on the next submit; also reclaims 90.18 GiB of pre-0731)",
+      "3. sudo rm -rf /var/lib/dsv4-context/models/deepseek-v4-flash-replaced-79e5cbe27786a34fbc66c8b260d9cb1db3e35aa3  (orphaned, referenced by nothing, another 90.18 GiB)",
+      "4. Free system memory toward the 116.18 GiB pre-load target and clear swap; re-measure MemAvailable with the engine stopped before committing to the attempt.",
+      "5. Run the graduation worker in one-million mode via the root scheduler, which ladders 131072 -> 262144 -> 524288 -> 1048576 with targets 130000/260000/520000/1000000 (scripts/58_dsv4_context_worker.sh:16-17).",
+      "6. Score with scripts/62_score_dsv4_context.py and preserve the attempt directory whatever the outcome."
+    ],
+    "expected_outcome": "Unknown. The projection is 0.55 GiB short of the requirement under a conservative overhead charge. A NO_RESULT or a documented FAIL is a legitimate and useful outcome here; it is the measurement that is missing, not a particular verdict."
+  }
+}
