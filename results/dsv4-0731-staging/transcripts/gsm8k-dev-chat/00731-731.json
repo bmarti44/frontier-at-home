@@ -1,0 +1,60 @@
+{
+  "index": 731,
+  "task_id": 731,
+  "rendered_prompt_sha256": "dae9713bf17de8fdd4a7eb811837787fb639deb64b4e426c5a52cb5655545e73",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need 9 kids × 2 smores = 18 smores for kids.  \n6 adults × 1 smore = 6 smores for adults.  \nTotal smores needed = 18 + 6 = 24 smores.  \n\nEach sleeve makes 8 smores, so sleeves needed = 24 ÷ 8 = 3 sleeves.  \nThere are 3 sleeves per box, so 3 sleeves = 1 box.  \n\nAnswer: 1",
+  "finish_reason": "stop",
+  "expected": "1",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.469743119998384
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need 9 kids × 2 smores = 18 smores for kids.  \n6 adults × 1 smore = 6 smores for adults.  \nTotal smores needed = 18 + 6 = 24 smores.  \n\nEach sleeve makes 8 smores, so sleeves needed = 24 ÷ 8 = 3 sleeves.  \nThere are 3 sleeves per box, so 3 sleeves = 1 box.  \n\nAnswer: 1",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327071,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 98,
+      "prompt_tokens": 91,
+      "total_tokens": 189,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-WbyYTG8XMpZxeoZh0WUziM4YpIeHb7se",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 90,
+      "prompt_ms": 594.202,
+      "prompt_per_token_ms": 6.602244444444445,
+      "prompt_per_second": 151.46364367672945,
+      "predicted_n": 98,
+      "predicted_ms": 4872.406,
+      "predicted_per_token_ms": 49.71842857142857,
+      "predicted_per_second": 20.113266423200365
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 272,
+  "task_id": 344,
+  "rendered_prompt_sha256": "3cb76c0a9a3320fc085edb4a2c96e6f10c35ab0b66ee7e0fa47b39f6f1e1e964",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use simple interest formula:  \nInterest = Principal × Rate × Time (in years).\n\n- Ms. Atlas: $1,800 at 6% for 60 days.  \n60 days = 60/365 ≈ 0.1644 years.  \nInterest = 1800 × 0.06 × 0.1644 ≈ 17.75 → closest to $18.\n\n- Mr. Johnson: $2,400 at 5% for 3 years.  \nInterest = 2400 × 0.05 × 3 = 360.\n\n- Mr. Breakman: $7,000 at 6.5% for 4 years.  \nInterest = 7000 × 0.065 × 4 = 1820.\n\nThat matches option I.\n\nAnswer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.622006546000193
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use simple interest formula:  \nInterest = Principal × Rate × Time (in years).\n\n- Ms. Atlas: $1,800 at 6% for 60 days.  \n60 days = 60/365 ≈ 0.1644 years.  \nInterest = 1800 × 0.06 × 0.1644 ≈ 17.75 → closest to $18.\n\n- Mr. Johnson: $2,400 at 5% for 3 years.  \nInterest = 2400 × 0.05 × 3 = 360.\n\n- Mr. Breakman: $7,000 at 6.5% for 4 years.  \nInterest = 7000 × 0.065 × 4 = 1820.\n\nThat matches option I.\n\nAnswer: I",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327320,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 165,
+      "prompt_tokens": 388,
+      "total_tokens": 553,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-I8vxyYWCtLoWYEwO1uPPSmghkoRAHChe",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 387,
+      "prompt_ms": 1247.475,
+      "prompt_per_token_ms": 3.2234496124031007,
+      "prompt_per_second": 310.2266578488547,
+      "predicted_n": 165,
+      "predicted_ms": 8372.484,
+      "predicted_per_token_ms": 50.74232727272727,
+      "predicted_per_second": 19.707412997146363
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "index": 474,
+  "task_id": 549,
+  "rendered_prompt_sha256": "136efa3ec221cd83075605eb6c07295b66b97ad425dd923571d6d49ee65c79bb",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need the selling price per unit.\n\nStep 1: Calculate production/sales volume.  \nCapacity = 200,000 units.  \n80% of capacity = 0.80 × 200,000 = 160,000 units.\n\nStep 2: Required return on investment before taxes.  \nInvestment = $1,400,000.  \nRequired return = 20% × 1,400,000 = $280,000.\n\nStep 3: Total costs at that volume.  \nFixed costs = $200,000.  \nVariable costs = 160,000 × $9 = $1,440,000.  \nTotal costs = $200,000 + $1,440,000 = $1,640,000.\n\nStep 4: Required total revenue.  \nRevenue must cover total costs + required return:  \n$1,640,000 + $280,000 = $1,920,000.\n\nStep 5: Selling price per unit.  \nPrice = $1,920,000 / 160,000 = $12.\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.984348298999976
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need the selling price per unit.\n\nStep 1: Calculate production/sales volume.  \nCapacity = 200,000 units.  \n80% of capacity = 0.80 × 200,000 = 160,000 units.\n\nStep 2: Required return on investment before taxes.  \nInvestment = $1,400,000.  \nRequired return = 20% × 1,400,000 = $280,000.\n\nStep 3: Total costs at that volume.  \nFixed costs = $200,000.  \nVariable costs = 160,000 × $9 = $1,440,000.  \nTotal costs = $200,000 + $1,440,000 = $1,640,000.\n\nStep 4: Required total revenue.  \nRevenue must cover total costs + required return:  \n$1,640,000 + $280,000 = $1,920,000.\n\nStep 5: Selling price per unit.  \nPrice = $1,920,000 / 160,000 = $12.\n\nAnswer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327353,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 220,
+      "prompt_tokens": 156,
+      "total_tokens": 376,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-GbCMUvdnhdYQKQ03StW36QzsMSIGkLUW",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 155,
+      "prompt_ms": 760.476,
+      "prompt_per_token_ms": 4.906296774193549,
+      "prompt_per_second": 203.81971291664692,
+      "predicted_n": 220,
+      "predicted_ms": 11219.371,
+      "predicted_per_token_ms": 50.9971409090909,
+      "predicted_per_second": 19.608942426451538
+    }
+  }
+}

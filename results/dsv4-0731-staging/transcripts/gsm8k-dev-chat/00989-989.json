@@ -1,0 +1,60 @@
+{
+  "index": 989,
+  "task_id": 989,
+  "rendered_prompt_sha256": "c96e9636c194d3ec7246cab665ab8da7deda6c9d4a6bd0bd995e983fb1fe2b14",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We know Emily can peel 6 shrimp per minute.  \nSo peeling 90 shrimp takes:  \n90 ÷ 6 = 15 minutes.\n\nShe can sauté 30 shrimp in 10 minutes, which is 3 shrimp per minute.  \nSo sautéing 90 shrimp takes:  \n90 ÷ 3 = 30 minutes.\n\nTotal time = peeling + cooking = 15 + 30 = 45 minutes.\n\nAnswer: 45",
+  "finish_reason": "stop",
+  "expected": "45",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.896852679001313
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We know Emily can peel 6 shrimp per minute.  \nSo peeling 90 shrimp takes:  \n90 ÷ 6 = 15 minutes.\n\nShe can sauté 30 shrimp in 10 minutes, which is 3 shrimp per minute.  \nSo sautéing 90 shrimp takes:  \n90 ÷ 3 = 30 minutes.\n\nTotal time = peeling + cooking = 15 + 30 = 45 minutes.\n\nAnswer: 45",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327018,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 89,
+      "prompt_tokens": 62,
+      "total_tokens": 151,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-IQzmSEd2Yt6qKKigNjJowmMB5AG1n23Z",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 61,
+      "prompt_ms": 462.75,
+      "prompt_per_token_ms": 7.586065573770492,
+      "prompt_per_second": 131.8206374932469,
+      "predicted_n": 89,
+      "predicted_ms": 4431.99,
+      "predicted_per_token_ms": 49.7976404494382,
+      "predicted_per_second": 20.08127274655403
+    }
+  },
+  "used_fallback": false
+}

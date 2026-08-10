@@ -1,0 +1,59 @@
+{
+  "index": 642,
+  "task_id": 719,
+  "rendered_prompt_sha256": "6b3d8123161e0ab89d24f649dee05040fb5e5cec679ac4518d44dfd3016aef54",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use the declining-balance method at 40% on the book value each year.\n\nInitial cost = $4,000  \nRate = 40% = 0.40  \n\nYear 1: 4000 × 0.40 = $1,600  \nBook value after year 1: 4000 − 1600 = 2400  \n\nYear 2: 2400 × 0.40 = $960  \nBook value: 2400 − 960 = 1440  \n\nYear 3: 1440 × 0.40 = $576  \nBook value: 1440 − 576 = 864  \n\nYear 4: 864 × 0.40 = $345.6  \nBook value: 864 − 345.6 = 518.4  \n\nYear 5: 518.4 × 0.40 = $207.36  \n\nSo the depreciation amounts are:  \n$1,600, $960, $576, $345.6, $207.36  \n\nThat matches option A.  \n\nAnswer: A",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='A' expected='D'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 12.524935618999734
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use the declining-balance method at 40% on the book value each year.\n\nInitial cost = $4,000  \nRate = 40% = 0.40  \n\nYear 1: 4000 × 0.40 = $1,600  \nBook value after year 1: 4000 − 1600 = 2400  \n\nYear 2: 2400 × 0.40 = $960  \nBook value: 2400 − 960 = 1440  \n\nYear 3: 1440 × 0.40 = $576  \nBook value: 1440 − 576 = 864  \n\nYear 4: 864 × 0.40 = $345.6  \nBook value: 864 − 345.6 = 518.4  \n\nYear 5: 518.4 × 0.40 = $207.36  \n\nSo the depreciation amounts are:  \n$1,600, $960, $576, $345.6, $207.36  \n\nThat matches option A.  \n\nAnswer: A",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327378,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 223,
+      "prompt_tokens": 319,
+      "total_tokens": 542,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-QzzXOXZURl8W7ndF3FxvVx9GGQpcMp0M",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 318,
+      "prompt_ms": 1120.554,
+      "prompt_per_token_ms": 3.5237547169811325,
+      "prompt_per_second": 283.7881976236754,
+      "predicted_n": 223,
+      "predicted_ms": 11401.478,
+      "predicted_per_token_ms": 51.12770403587444,
+      "predicted_per_second": 19.5588677187291
+    }
+  }
+}

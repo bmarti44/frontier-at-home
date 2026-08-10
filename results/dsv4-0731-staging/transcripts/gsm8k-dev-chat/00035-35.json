@@ -1,0 +1,60 @@
+{
+  "index": 35,
+  "task_id": 35,
+  "rendered_prompt_sha256": "33e0babec68717e9631649ccffd6bea01e940edbe0ca678af69d0d091f20db78",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "First 20 minutes: 4 points.  \nSecond 20 minutes: 25% more than 4 = 4 × 1.25 = 5 points.  \nTotal = 4 + 5 = 9 points.  \n\nAnswer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.218072364999898
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "First 20 minutes: 4 points.  \nSecond 20 minutes: 25% more than 4 = 4 × 1.25 = 5 points.  \nTotal = 4 + 5 = 9 points.  \n\nAnswer: 9",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327162,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 54,
+      "prompt_tokens": 78,
+      "total_tokens": 132,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Yf4gktjw60dvuZrQEis5nXCQihbuXXVi",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 77,
+      "prompt_ms": 527.869,
+      "prompt_per_token_ms": 6.855441558441559,
+      "prompt_per_second": 145.8695244464062,
+      "predicted_n": 54,
+      "predicted_ms": 2687.305,
+      "predicted_per_token_ms": 49.76490740740741,
+      "predicted_per_second": 20.094481273990116
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,58 @@
+{
+  "index": 463,
+  "task_id": 463,
+  "rendered_prompt_sha256": "4bbb87017217f9de4e8b204be7113009e371d450f0fdecf8f530fa30e899705f",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse problem. \"Ashley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\" Need total amount = cost + tip. Tip = 1/5 of amount ordered? \"amount she ordered\" maybe delivery costs $15? It says pizza delivery costs $15. Tip equal to 1/5 of amount she ordered. If amount ordered = $15? Then tip = $3, total = $18. But wording: \"Ashley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\" Could be \"delivery costs $15\" maybe cost of pizza order is $15, tip = 1/5 of $15 = $3, total $18. Need final numeric answer.</think>Answer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.170430406000378
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse problem. \"Ashley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\" Need total amount = cost + tip. Tip = 1/5 of amount ordered? \"amount she ordered\" maybe delivery costs $15? It says pizza delivery costs $15. Tip equal to 1/5 of amount she ordered. If amount ordered = $15? Then tip = $3, total = $18. But wording: \"Ashley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\" Could be \"delivery costs $15\" maybe cost of pizza order is $15, tip = 1/5 of $15 = $3, total $18. Need final numeric answer.</think>Answer: 18",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786329554,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 210,
+      "prompt_tokens": 71,
+      "total_tokens": 281,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-dwCH1aMcn24DZuXxZpOfthQW44pssTfM",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 70,
+      "prompt_ms": 518.849,
+      "prompt_per_token_ms": 7.412128571428572,
+      "prompt_per_second": 134.91401159104092,
+      "predicted_n": 210,
+      "predicted_ms": 10648.037,
+      "predicted_per_token_ms": 50.7049380952381,
+      "predicted_per_second": 19.72194499324148
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Ashley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

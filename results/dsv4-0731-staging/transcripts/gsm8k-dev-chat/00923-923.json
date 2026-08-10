@@ -1,0 +1,60 @@
+{
+  "index": 923,
+  "task_id": 923,
+  "rendered_prompt_sha256": "5e20166285ffefbe7cab6527ef2b21567a86204ed46893457b96137b420a972f",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s break it down:\n\n- Total cups: 27  \n- She divides them into 3 rows.  \n- In each row, equal amounts of chamomile and mint tea cups.  \n- The remaining cups (after the rows) are used for 15 cups of cinnamon tea.\n\nFirst, find how many cups are used in the rows:  \n27 total − 15 cinnamon = 12 cups for the rows.\n\nThere are 3 rows, so each row has 12 ÷ 3 = 4 cups.\n\nIn each row, equal amounts of chamomile and mint means 4 ÷ 2 = 2 cups of each.\n\nSo each row has 2 cups of mint tea.\n\nAnswer: 2",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.034653827000511
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s break it down:\n\n- Total cups: 27  \n- She divides them into 3 rows.  \n- In each row, equal amounts of chamomile and mint tea cups.  \n- The remaining cups (after the rows) are used for 15 cups of cinnamon tea.\n\nFirst, find how many cups are used in the rows:  \n27 total − 15 cinnamon = 12 cups for the rows.\n\nThere are 3 rows, so each row has 12 ÷ 3 = 4 cups.\n\nIn each row, equal amounts of chamomile and mint means 4 ÷ 2 = 2 cups of each.\n\nSo each row has 2 cups of mint tea.\n\nAnswer: 2",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326915,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 148,
+      "prompt_tokens": 101,
+      "total_tokens": 249,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-cpbY8cnp9w0OhoWB4OBPbYTUtSOod3Yx",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 100,
+      "prompt_ms": 623.725,
+      "prompt_per_token_ms": 6.23725,
+      "prompt_per_second": 160.32706721712293,
+      "predicted_n": 148,
+      "predicted_ms": 7408.451,
+      "predicted_per_token_ms": 50.05710135135135,
+      "predicted_per_second": 19.97718551421883
+    }
+  },
+  "used_fallback": false
+}

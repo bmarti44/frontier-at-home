@@ -1,0 +1,58 @@
+{
+  "index": 238,
+  "task_id": 238,
+  "rendered_prompt_sha256": "d3dea45fea17b3c8c40c3bcd55ec76c40df3f85143eeb6833a2cc045abff4dba",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Let's parse: Mary is two years younger than Joan. Joan is five years older than Jessa. Jessa 20. Joan = 25. Mary = Joan -2 = 23. Sum = 20+25+23=68. Need final numeric answer on own line.</think>Answer: 68",
+  "finish_reason": "stop",
+  "expected": "68",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.124441873000251
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Let's parse: Mary is two years younger than Joan. Joan is five years older than Jessa. Jessa 20. Joan = 25. Mary = Joan -2 = 23. Sum = 20+25+23=68. Need final numeric answer on own line.</think>Answer: 68",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786329577,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 72,
+      "prompt_tokens": 67,
+      "total_tokens": 139,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-CmWUszpkHu26KXKd76p3dJmsOYmFvHvI",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 66,
+      "prompt_ms": 482.872,
+      "prompt_per_token_ms": 7.316242424242424,
+      "prompt_per_second": 136.68218492685432,
+      "predicted_n": 72,
+      "predicted_ms": 3637.729,
+      "predicted_per_token_ms": 50.52401388888889,
+      "predicted_per_second": 19.7925683853855
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Mary is two years younger than Joan, who is five years older than Jessa. If Jessa is 20 years old, what is the sum of the ages of the three girls?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

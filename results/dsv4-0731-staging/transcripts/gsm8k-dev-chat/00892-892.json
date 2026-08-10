@@ -1,0 +1,60 @@
+{
+  "index": 892,
+  "task_id": 892,
+  "rendered_prompt_sha256": "77146498b5f2b626a0fc6321f8fc5ea238d62482dfdcb6214bc0c0038d730202",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s break it down:\n\n- Salad = $6  \n- Yogurt = half the price of salad = $3  \n- Total for salad + yogurt = $6 + $3 = $9  \n- Total for all goods = $11  \n- So, cost for two carrots = $11 - $9 = $2  \n- Cost for one carrot = $2 ÷ 2 = $1  \n\nAnswer: 1",
+  "finish_reason": "stop",
+  "expected": "1",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.987318412000604
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s break it down:\n\n- Salad = $6  \n- Yogurt = half the price of salad = $3  \n- Total for salad + yogurt = $6 + $3 = $9  \n- Total for all goods = $11  \n- So, cost for two carrots = $11 - $9 = $2  \n- Cost for one carrot = $2 ÷ 2 = $1  \n\nAnswer: 1",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327167,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 88,
+      "prompt_tokens": 86,
+      "total_tokens": 174,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-7oPrFZreXSB3ke6mTrGfm9be2jGLQRQx",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 85,
+      "prompt_ms": 590.845,
+      "prompt_per_token_ms": 6.951117647058824,
+      "prompt_per_second": 143.86175731367786,
+      "predicted_n": 88,
+      "predicted_ms": 4394.686,
+      "predicted_per_token_ms": 49.93961363636363,
+      "predicted_per_second": 20.0241837528324
+    }
+  },
+  "used_fallback": false
+}

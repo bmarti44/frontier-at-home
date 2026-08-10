@@ -1,0 +1,60 @@
+{
+  "index": 945,
+  "task_id": 945,
+  "rendered_prompt_sha256": "3989e437618e36e3f1fa2c1839ecb1a9c71c52fd463cea352a6ecb900a572cd7",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We know the lake is 20 miles long.  \nHe swims 60% of the distance first:  \n60% of 20 = 12 miles.  \n\nAt 2 mph, time for first part:  \n12 ÷ 2 = 6 hours.  \n\nHe rests for half as long as the swimming time:  \nRest = 6 ÷ 2 = 3 hours.  \n\nRemaining distance: 20 - 12 = 8 miles.  \nHe swims at half speed: 2 ÷ 2 = 1 mph.  \nTime for second part: 8 ÷ 1 = 8 hours.  \n\nTotal time = 6 + 3 + 8 = 17 hours.  \n\nAnswer: 17",
+  "finish_reason": "stop",
+  "expected": "17",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.276133523999306
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We know the lake is 20 miles long.  \nHe swims 60% of the distance first:  \n60% of 20 = 12 miles.  \n\nAt 2 mph, time for first part:  \n12 ÷ 2 = 6 hours.  \n\nHe rests for half as long as the swimming time:  \nRest = 6 ÷ 2 = 3 hours.  \n\nRemaining distance: 20 - 12 = 8 miles.  \nHe swims at half speed: 2 ÷ 2 = 1 mph.  \nTime for second part: 8 ÷ 1 = 8 hours.  \n\nTotal time = 6 + 3 + 8 = 17 hours.  \n\nAnswer: 17",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326759,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 151,
+      "prompt_tokens": 116,
+      "total_tokens": 267,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-8CRtSUyEGo4UCJ8xu4fkOHvNTsrh9065",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 115,
+      "prompt_ms": 689.947,
+      "prompt_per_token_ms": 5.9995391304347825,
+      "prompt_per_second": 166.6794695824462,
+      "predicted_n": 151,
+      "predicted_ms": 7583.605,
+      "predicted_per_token_ms": 50.22254966887417,
+      "predicted_per_second": 19.911374603503216
+    }
+  },
+  "used_fallback": false
+}

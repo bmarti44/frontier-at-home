@@ -1,0 +1,59 @@
+{
+  "index": 262,
+  "task_id": 334,
+  "rendered_prompt_sha256": "fba1056a72f58f4f196a36b32f94cc53ce2da5d35e301c58b04c254942d366fe",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to calculate simple interest for 90 days at 6% annual rate.\n\nPrincipal = $150  \nRate = 6% per year = 0.06  \nTime = 90 days = 90/360 = 0.25 years (assuming ordinary interest, bank method)\n\nInterest = 150 × 0.06 × 0.25 = 150 × 0.015 = $2.25  \n\nAmount due = 150 + 2.25 = $152.25  \n\nThat matches option F.\n\nAnswer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.361731361999773
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need to calculate simple interest for 90 days at 6% annual rate.\n\nPrincipal = $150  \nRate = 6% per year = 0.06  \nTime = 90 days = 90/360 = 0.25 years (assuming ordinary interest, bank method)\n\nInterest = 150 × 0.06 × 0.25 = 150 × 0.015 = $2.25  \n\nAmount due = 150 + 2.25 = $152.25  \n\nThat matches option F.\n\nAnswer: F",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327311,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 112,
+      "prompt_tokens": 128,
+      "total_tokens": 240,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-0KlFrgHrHwkL2Uit9qnsW9jSqrTO90zl",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 127,
+      "prompt_ms": 762.944,
+      "prompt_per_token_ms": 6.007433070866141,
+      "prompt_per_second": 166.46044794899757,
+      "predicted_n": 112,
+      "predicted_ms": 5597.043,
+      "predicted_per_token_ms": 49.97359821428571,
+      "predicted_per_second": 20.01056629366614
+    }
+  }
+}

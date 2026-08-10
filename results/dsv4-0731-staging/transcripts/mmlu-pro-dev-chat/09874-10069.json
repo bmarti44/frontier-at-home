@@ -1,0 +1,59 @@
+{
+  "index": 9874,
+  "task_id": 10069,
+  "rendered_prompt_sha256": "97596ebf45c96abc77580d37ec8c0ced1e27c9e2121ecd64790c7b3d74a3e166",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We have initial amounts:  \nLet \\( N_B(0) = N_0 \\), then \\( N_A(0) = 2N_0 \\).  \n\nDecay equations:  \n\\( N_A(t) = 2N_0 \\left( \\frac{1}{2} \\right)^{t/3} \\)  \n\\( N_B(t) = N_0 \\left( \\frac{1}{2} \\right)^{t/6} \\)  \n\nWe want the ratio reversed: initially \\( N_A/N_B = 2 \\), so reversed means \\( N_A/N_B = 1/2 \\).  \n\nSo:  \n\\[\n\\frac{2N_0 \\left( \\frac{1}{2} \\right)^{t/3}}{N_0 \\left( \\frac{1}{2} \\right)^{t/6}} = \\frac{1}{2}\n\\]  \nCancel \\( N_0 \\):  \n\\[\n2 \\cdot \\left( \\frac{1}{2} \\right)^{t/3 - t/6} = \\frac{1}{2}\n\\]  \nExponent: \\( t/3 - t/6 = t/6 \\).  \nSo:  \n\\[\n2 \\cdot \\left( \\frac{1}{2} \\right)^{t/6} = \\frac{1}{2}\n\\]  \nDivide by 2:  \n\\[\n\\left( \\frac{1}{2} \\right)^{t/6} = \\frac{1}{4}\n\\]  \nThus \\( t/6 = 2 \\) → \\( t = 12 \\).  \n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 18.147298198999124
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We have initial amounts:  \nLet \\( N_B(0) = N_0 \\), then \\( N_A(0) = 2N_0 \\).  \n\nDecay equations:  \n\\( N_A(t) = 2N_0 \\left( \\frac{1}{2} \\right)^{t/3} \\)  \n\\( N_B(t) = N_0 \\left( \\frac{1}{2} \\right)^{t/6} \\)  \n\nWe want the ratio reversed: initially \\( N_A/N_B = 2 \\), so reversed means \\( N_A/N_B = 1/2 \\).  \n\nSo:  \n\\[\n\\frac{2N_0 \\left( \\frac{1}{2} \\right)^{t/3}}{N_0 \\left( \\frac{1}{2} \\right)^{t/6}} = \\frac{1}{2}\n\\]  \nCancel \\( N_0 \\):  \n\\[\n2 \\cdot \\left( \\frac{1}{2} \\right)^{t/3 - t/6} = \\frac{1}{2}\n\\]  \nExponent: \\( t/3 - t/6 = t/6 \\).  \nSo:  \n\\[\n2 \\cdot \\left( \\frac{1}{2} \\right)^{t/6} = \\frac{1}{2}\n\\]  \nDivide by 2:  \n\\[\n\\left( \\frac{1}{2} \\right)^{t/6} = \\frac{1}{4}\n\\]  \nThus \\( t/6 = 2 \\) → \\( t = 12 \\).  \n\nAnswer: C",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786329114,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 342,
+      "prompt_tokens": 160,
+      "total_tokens": 502,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-T6e6WeARn01vPeJDqNfPcCgM7hxnDeac",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 159,
+      "prompt_ms": 726.526,
+      "prompt_per_token_ms": 4.569345911949685,
+      "prompt_per_second": 218.84970393351372,
+      "predicted_n": 342,
+      "predicted_ms": 17382.742,
+      "predicted_per_token_ms": 50.826730994152044,
+      "predicted_per_second": 19.674686536796095
+    }
+  }
+}

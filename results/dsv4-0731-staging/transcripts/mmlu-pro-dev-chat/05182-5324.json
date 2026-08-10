@@ -1,0 +1,59 @@
+{
+  "index": 5182,
+  "task_id": 5324,
+  "rendered_prompt_sha256": "7b5791c9a6aba0d1e02ce124d34530a95fa0561b58a8a955d30c7ca098369ff1",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We can estimate:  \n- U.S. chicken population: ~9 billion broilers raised per year, plus layers (~300 million).  \n- Each chicken produces about 0.1 kg of manure per day (rough estimate).  \n- For broilers, average lifespan ~7 weeks (~50 days).  \n- Total manure from broilers: 9 billion × 50 days × 0.1 kg/day ≈ 45 billion kg = 4.5 × 10^10 kg.  \n- Layers produce year-round: 300 million × 365 days × 0.1 kg/day ≈ 1.1 × 10^10 kg.  \n- Combined ≈ 5.6 × 10^10 kg, which is closest to 4 × 10^10 kg.\n\nAnswer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.104047136999725
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We can estimate:  \n- U.S. chicken population: ~9 billion broilers raised per year, plus layers (~300 million).  \n- Each chicken produces about 0.1 kg of manure per day (rough estimate).  \n- For broilers, average lifespan ~7 weeks (~50 days).  \n- Total manure from broilers: 9 billion × 50 days × 0.1 kg/day ≈ 45 billion kg = 4.5 × 10^10 kg.  \n- Layers produce year-round: 300 million × 365 days × 0.1 kg/day ≈ 1.1 × 10^10 kg.  \n- Combined ≈ 5.6 × 10^10 kg, which is closest to 4 × 10^10 kg.\n\nAnswer: A",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786328716,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 165,
+      "prompt_tokens": 136,
+      "total_tokens": 301,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-74lEFXQHjEASTNqSZV1kgRQfqDLOqUWF",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 135,
+      "prompt_ms": 666.264,
+      "prompt_per_token_ms": 4.935288888888889,
+      "prompt_per_second": 202.6223839198876,
+      "predicted_n": 165,
+      "predicted_ms": 8426.29,
+      "predicted_per_token_ms": 51.06842424242425,
+      "predicted_per_second": 19.581571486383684
+    }
+  }
+}

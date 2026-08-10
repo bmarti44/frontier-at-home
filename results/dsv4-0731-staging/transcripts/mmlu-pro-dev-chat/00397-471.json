@@ -1,0 +1,59 @@
+{
+  "index": 397,
+  "task_id": 471,
+  "rendered_prompt_sha256": "aeb07724ec7241d395771ba09a559b26fe8dff97a8ba107cee05eb716e1c416f",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to find the tax rate.  \nFirst, find the amount to be raised by property tax:  \n$125,626.79 - $4,256.30 = $121,370.49  \n\nNow, tax rate per $1,000 of assessed valuation:  \n\\[\n\\frac{121,370.49}{2,697,112} \\times 1000\n\\]  \nFirst, divide:  \n121,370.49 ÷ 2,697,112 ≈ 0.0450  \nMultiply by 1000: 0.0450 × 1000 = $45.00  \n\nSo the rate is $45 per $1,000.  \n\nAnswer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.312068388000625
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need to find the tax rate.  \nFirst, find the amount to be raised by property tax:  \n$125,626.79 - $4,256.30 = $121,370.49  \n\nNow, tax rate per $1,000 of assessed valuation:  \n\\[\n\\frac{121,370.49}{2,697,112} \\times 1000\n\\]  \nFirst, divide:  \n121,370.49 ÷ 2,697,112 ≈ 0.0450  \nMultiply by 1000: 0.0450 × 1000 = $45.00  \n\nSo the rate is $45 per $1,000.  \n\nAnswer: F",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327341,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 143,
+      "prompt_tokens": 226,
+      "total_tokens": 369,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-rZRFfqjR4rf0CTlepHHJDQ6VpYt1ab3R",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 225,
+      "prompt_ms": 931.677,
+      "prompt_per_token_ms": 4.140786666666667,
+      "prompt_per_second": 241.50000483000008,
+      "predicted_n": 143,
+      "predicted_ms": 7372.404,
+      "predicted_per_token_ms": 51.55527272727273,
+      "predicted_per_second": 19.396658132137087
+    }
+  }
+}

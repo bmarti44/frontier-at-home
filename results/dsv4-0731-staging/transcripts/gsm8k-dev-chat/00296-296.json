@@ -1,0 +1,60 @@
+{
+  "index": 296,
+  "task_id": 296,
+  "rendered_prompt_sha256": "8eedfbaad92b1037ddf9c1d714f4e8d5a48b9b00100a762df58fbf6181835386",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We have 5 members, each eating rice at lunch and dinner, so that’s 2 meals per person per day.  \nRice per meal per person = 0.2 kg.  \nTotal per day = 5 people × 2 meals × 0.2 kg = 2 kg per day.  \nA 42 kg bag lasts: 42 ÷ 2 = 21 days.  \n21 days = 3 weeks.  \n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.306435684000462
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We have 5 members, each eating rice at lunch and dinner, so that’s 2 meals per person per day.  \nRice per meal per person = 0.2 kg.  \nTotal per day = 5 people × 2 meals × 0.2 kg = 2 kg per day.  \nA 42 kg bag lasts: 42 ÷ 2 = 21 days.  \n21 days = 3 weeks.  \n\nAnswer: 3",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327041,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 96,
+      "prompt_tokens": 74,
+      "total_tokens": 170,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-eGRRyZxBzQmiPLPlxnIeyEcvDAH0LuHc",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 73,
+      "prompt_ms": 518.848,
+      "prompt_per_token_ms": 7.107506849315068,
+      "prompt_per_second": 140.69631182928336,
+      "predicted_n": 96,
+      "predicted_ms": 4785.415,
+      "predicted_per_token_ms": 49.848072916666666,
+      "predicted_per_second": 20.060956050833628
+    }
+  },
+  "used_fallback": false
+}

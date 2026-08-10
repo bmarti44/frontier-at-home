@@ -1,0 +1,61 @@
+{
+  "index": 706,
+  "task_id": 706,
+  "rendered_prompt_sha256": "d3dbe09474a2ea336c544ea72ad572ef0b92eed6672b90e483fe5fb2433094e8",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We know they raised $2100 in 3 hours, so the rate is:\n\n$2100 ÷ 3 = $700 per hour.\n\nTheir goal is $6300, so total hours needed:\n\n$6300 ÷ $700 = 9 hours.\n\nAnswer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4757040820004477
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We know they raised $2100 in 3 hours, so the rate is:\n\n$2100 ÷ 3 = $700 per hour.\n\nTheir goal is $6300, so total hours needed:\n\n$6300 ÷ $700 = 9 hours.\n\nAnswer: 9",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327151,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 57,
+      "prompt_tokens": 92,
+      "total_tokens": 149,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-fcl1VE6ENrRgBVWv7B0kXHWIEMIwLORc",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 91,
+      "prompt_ms": 615.528,
+      "prompt_per_token_ms": 6.764043956043956,
+      "prompt_per_second": 147.84055315111578,
+      "predicted_n": 57,
+      "predicted_ms": 2858.068,
+      "predicted_per_token_ms": 50.141543859649126,
+      "predicted_per_second": 19.943542281009407
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>The local firefighters are doing a “fill the boot” fundraiser. Their goal is to raise $6300. After the first 3 hours, they have raised $2100.  For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜></think>"
+}

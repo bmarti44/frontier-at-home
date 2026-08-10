@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "gate": "dsv4-0731-thinking-default-and-stale-weight-accounting",
+  "date_utc": "2026-08-10",
+  "status": "OBSERVATIONS",
+  "evidence_class": "agent-authored observations with raw command output preserved alongside; NOT a scorer-generated evidence bundle per AGENTS.md:167-180",
+  "raw": "results/dsv4-0731-staging/raw/protected-model-stat-2026-08-09.txt",
+
+  "thinking_is_the_serving_default": {
+    "claim": "The llama.cpp endpoint serves DeepSeek-V4-Flash-0731 with reasoning enabled by default; no request flag is needed to get it, and none of the launcher flags disable it.",
+    "probe": {
+      "endpoint": "http://127.0.0.1:8013/v1/chat/completions",
+      "request": "{\"messages\":[{\"role\":\"user\",\"content\":\"What is 17*23? Answer with the number only.\"}],\"max_tokens\":300,\"temperature\":0.0,\"stream\":false}",
+      "request_contained_no_thinking_flag": true,
+      "response_message_keys": ["content", "reasoning_content", "role"],
+      "reasoning_content_bytes": 163,
+      "content": "391",
+      "content_correct": true
+    },
+    "launcher_check": "grep for thinking|reasoning|chat-template|chat_template|jinja in scripts/21_serve_llamacpp.sh returns no matches, so the serving default comes from the model's own template rather than from any flag this repo sets.",
+    "decision": "Owner directive 2026-08-09: thinking is always set moving forward. scripts/31_bench_accuracy.py --thinking-mode now defaults to 'thinking'.",
+    "why": "0731 scores 201/253 on MMLU-Pro dev under the thinking rendering against 178/253 under the chat rendering (results/dsv4-0731-staging/acc-mmlu-pro-dev-0731-thinking-2048.json and acc-mmlu-pro-dev-0731.json, ds4 arm). Defaulting to chat measured a contract the endpoint does not serve and discarded roughly nine points of the model's capability."
+  },
+
+  "defect_found_and_fixed": {
+    "id": "DSV4-0731-H1-THINKING-MODE-ABSENT-FROM-CONFIG-DIGEST",
+    "severity": "high",
+    "introduced_by": "this workstream, commit 2d0e367, when --thinking-mode was added",
+    "finding": "The --thinking-mode help text asserted that the rendering mode 'is recorded in the config digest ... so runs under different contracts cannot be silently compared'. derive_config_digest() did not include it. max_tokens was present; thinking_mode was not.",
+    "why_it_matters": "config_digest keys the holdout ledger (spend_holdout_budget) and is what scripts/36_audit_accuracy.py matches ledger entries against. A chat run and a thinking run over the same stack/suite/split produced an identical digest, so the two contracts were indistinguishable to every digest-keyed consumer -- precisely the silent cross-contract comparison the flag was added to prevent.",
+    "detected_by": "reading derive_config_digest while implementing the default flip; the help text made a claim the code did not honour",
+    "fix": "thinking_mode added to the digest payload, with a RED test first (scripts/tests/test_bench_accuracy_thinking_contract.py)",
+    "frozen_evidence_impact": "none. No consumer recomputes the digest; 36_audit_accuracy.py reads the recorded value. Digests frozen before this change remain valid and still match their ledger rows. A future re-run under --thinking-mode chat will not reproduce a pre-2026-08-09 digest, which is correct: the old payload could not express the rendering it ran under. REPRODUCING.md now states this."
+  },
+
+  "stale_weight_accounting": {
+    "question": "Where did the ~90 GiB of pre-0731 weights go? Deleting the *.gguf.pre0731 links freed no measurable space.",
+    "answer": "Two full independent pre-0731 copies exist under /var/lib/dsv4-context/models/, 96832507552 bytes (90.18 GiB) each, 180.37 GiB total. Both are root-owned mode 0444 with link count 1, so they are independent inodes and not hardlink partners of anything in the repo.",
+    "identified_by": "shard 1 is 5256864 bytes in both directories. The 0731 release's shard 1 is 5257664 bytes. Shards 2 and 3 are byte-identical in size across the two releases, so size alone cannot distinguish them -- shard 1 is the only discriminator, and it says pre-0731.",
+    "copies": [
+      {
+        "path": "/var/lib/dsv4-context/models/deepseek-v4-flash",
+        "bytes": 96832507552,
+        "release": "pre-0731",
+        "created": "2026-07-28",
+        "status": "LIVE PATH, STALE CONTENT",
+        "referenced_by": [
+          "scripts/58_dsv4_context_worker.sh:26 PROTECTED_MODEL_PATH (root-mode context qualification)",
+          "scripts/62_score_dsv4_context.py:30 MODEL_ROOT"
+        ]
+      },
+      {
+        "path": "/var/lib/dsv4-context/models/deepseek-v4-flash-replaced-79e5cbe27786a34fbc66c8b260d9cb1db3e35aa3",
+        "bytes": 96832507552,
+        "release": "pre-0731",
+        "created": "2026-07-16",
+        "status": "ORPHANED",
+        "referenced_by": [],
+        "origin": "scripts/64_context_submit.sh:85 renames the previous protected copy aside as deepseek-v4-flash-replaced-$CANDIDATE_HASH and never deletes it"
+      }
+    ],
+    "still_unaccounted": "The pre-0731 shards deleted from weights/unsloth-ud-q2_k_xl/ had link count 2. Neither /var/lib copy is that second link (both are link count 1, distinct inodes). The owner's `find / -xdev -type f -size 49437013568c` returned only the two /var/lib paths and did not list the currently-served 0731 shards, which are that exact size and on the same filesystem -- so that output was partial and the search must be repeated before concluding a third copy does or does not exist."
+  },
+
+  "correctness_finding": {
+    "id": "DSV4-0731-H2-PROTECTED-CONTEXT-MODEL-CAN-SILENTLY-BE-A-DIFFERENT-RELEASE",
+    "severity": "high",
+    "finding": "scripts/64_context_submit.sh validates the protected model copy by existence, non-symlink, uid 0, and link count 1 (lines 60-63). It does not compare the copy's digest against the live weights manifest. The copy is therefore currently pre-0731 while the endpoint serves 0731.",
+    "why_it_matters": "Any root-mode run of the 512K/1M context qualification (scripts 57/58/62) would measure the pre-0731 release and label the result with the current candidate hash. That is a silent cross-release substitution inside the repository's own capability evidence, and it is live right now.",
+    "relation_to_review": "This is the same class as the xhigh reviewer's finding 10 (the DeepSeek comparison profile does not bind the served GGUF generation), reached independently and on a different code path.",
+    "required_before_context_qualification": "Refresh the protected copy from the 0731 weights, and add a digest comparison against weights/unsloth-ud-q2_k_xl/manifest.json to the validity check so a generation mismatch fails closed instead of running."
+  }
+}

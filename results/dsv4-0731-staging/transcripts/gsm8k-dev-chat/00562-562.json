@@ -1,0 +1,60 @@
+{
+  "index": 562,
+  "task_id": 562,
+  "rendered_prompt_sha256": "f3dec4d863bfcf4a4f14791af132fbe4c30c2cd0b837598a1d493d4005b826ac",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We start with the pyramid at an angle of 32° from the ground.  \nThe sun starts at the tip of the pyramid, so initially it is at that same 32° above the ground.  \nThe sun moves upward at 5° per hour for 10 hours, so it rises:\n\n5° × 10 = 50°\n\nNow add that to the starting angle:\n\n32° + 50° = 82°\n\nSo the angle from the ground to the sun is 82°.\n\nAnswer: 82",
+  "finish_reason": "stop",
+  "expected": "82",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.014621186999648
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We start with the pyramid at an angle of 32° from the ground.  \nThe sun starts at the tip of the pyramid, so initially it is at that same 32° above the ground.  \nThe sun moves upward at 5° per hour for 10 hours, so it rises:\n\n5° × 10 = 50°\n\nNow add that to the starting angle:\n\n32° + 50° = 82°\n\nSo the angle from the ground to the sun is 82°.\n\nAnswer: 82",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326851,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 107,
+      "prompt_tokens": 107,
+      "total_tokens": 214,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-OtT6ZKhDizI72TNr1WPwaEwowiEVme0q",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 106,
+      "prompt_ms": 670.694,
+      "prompt_per_token_ms": 6.327301886792452,
+      "prompt_per_second": 158.04524865288792,
+      "predicted_n": 107,
+      "predicted_ms": 5341.519,
+      "predicted_per_token_ms": 49.920738317757014,
+      "predicted_per_second": 20.031755012010628
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 11627,
+  "task_id": 11851,
+  "rendered_prompt_sha256": "1052bb321d61b66329879c63e9f6187f7753e663a9f880e578f1ad24a83ea83b",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use the net radiation heat transfer formula for a gray body in a black surroundings:\n\n\\[\nq = \\epsilon \\sigma (T_1^4 - T_2^4)\n\\]\n\nWhere:\n- \\(\\epsilon = 0.1\\)\n- \\(\\sigma = 0.1714 \\times 10^{-8} \\, \\text{Btu/hr-ft}^2\\text{-R}^4\\)\n- \\(T_1 = 40^\\circ\\text{F}\\) → convert to Rankine: \\(40 + 459.67 = 499.67 \\,^\\circ\\text{R}\\)\n- \\(T_2 = 0^\\circ\\text{R}\\)\n\nSo:\n\n\\[\nq = 0.1 \\times 0.1714\\times 10^{-8} \\times (499.67^4 - 0)\n\\]\n\nFirst, \\(499.67^2 \\approx 249670\\), square again:  \n\\(499.67^4 \\approx (2.4967\\times 10^5)^2 \\approx 6.2335\\times 10^{10}\\)\n\nThen:\n\n\\[\nq = 0.1 \\times 0.1714\\times 10^{-8} \\times 6.2335\\times 10^{10}\n\\]\n\\[\n= 0.1 \\times 0.1714 \\times 6.2335 \\times 10^{2}\n\\]\n\\[\n= 0.1 \\times 1.068 \\approx 0.1068 \\times 100 = 10.68\n\\]\n\nThat matches about 10.71 Btu/hr-ft².\n\nAnswer: **G**  \nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 18.469318478000787
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use the net radiation heat transfer formula for a gray body in a black surroundings:\n\n\\[\nq = \\epsilon \\sigma (T_1^4 - T_2^4)\n\\]\n\nWhere:\n- \\(\\epsilon = 0.1\\)\n- \\(\\sigma = 0.1714 \\times 10^{-8} \\, \\text{Btu/hr-ft}^2\\text{-R}^4\\)\n- \\(T_1 = 40^\\circ\\text{F}\\) → convert to Rankine: \\(40 + 459.67 = 499.67 \\,^\\circ\\text{R}\\)\n- \\(T_2 = 0^\\circ\\text{R}\\)\n\nSo:\n\n\\[\nq = 0.1 \\times 0.1714\\times 10^{-8} \\times (499.67^4 - 0)\n\\]\n\nFirst, \\(499.67^2 \\approx 249670\\), square again:  \n\\(499.67^4 \\approx (2.4967\\times 10^5)^2 \\approx 6.2335\\times 10^{10}\\)\n\nThen:\n\n\\[\nq = 0.1 \\times 0.1714\\times 10^{-8} \\times 6.2335\\times 10^{10}\n\\]\n\\[\n= 0.1 \\times 0.1714 \\times 6.2335 \\times 10^{2}\n\\]\n\\[\n= 0.1 \\times 1.068 \\approx 0.1068 \\times 100 = 10.68\n\\]\n\nThat matches about 10.71 Btu/hr-ft².\n\nAnswer: **G**  \nAnswer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786328232,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 344,
+      "prompt_tokens": 211,
+      "total_tokens": 555,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-hMsJKxn9UGfh02iKC4PTVn3JX7tUyJHG",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 210,
+      "prompt_ms": 919.955,
+      "prompt_per_token_ms": 4.380738095238096,
+      "prompt_per_second": 228.2720350451924,
+      "predicted_n": 344,
+      "predicted_ms": 17543.811,
+      "predicted_per_token_ms": 50.99945058139535,
+      "predicted_per_second": 19.608054373134774
+    }
+  }
+}

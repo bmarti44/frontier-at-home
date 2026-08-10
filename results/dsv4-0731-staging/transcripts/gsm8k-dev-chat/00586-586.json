@@ -1,0 +1,60 @@
+{
+  "index": 586,
+  "task_id": 586,
+  "rendered_prompt_sha256": "a0ceb70fc796a469e6816ef4eb6df0aaa5decac1d6fe022be3aa48a2a62378c7",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Total calories burned = (2 hours × 500 cal/hour) + (1 hour × 600 cal/hour)  \n= 1000 + 600 = 1600 calories  \n\nWater needed = (1600 calories) × (100 ml / 200 calories)  \n= 1600 × 0.5 = 800 ml  \n\nAnswer: 800",
+  "finish_reason": "stop",
+  "expected": "800",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.289272103000258
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Total calories burned = (2 hours × 500 cal/hour) + (1 hour × 600 cal/hour)  \n= 1000 + 600 = 1600 calories  \n\nWater needed = (1600 calories) × (100 ml / 200 calories)  \n= 1600 × 0.5 = 800 ml  \n\nAnswer: 800",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327025,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 74,
+      "prompt_tokens": 88,
+      "total_tokens": 162,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-xA6tcziceEOYK0oRI1YhvYyVfwj0Torc",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 87,
+      "prompt_ms": 601.309,
+      "prompt_per_token_ms": 6.911597701149425,
+      "prompt_per_second": 144.68434698299876,
+      "predicted_n": 74,
+      "predicted_ms": 3685.694,
+      "predicted_per_token_ms": 49.80667567567568,
+      "predicted_per_second": 20.077629884629598
+    }
+  },
+  "used_fallback": false
+}

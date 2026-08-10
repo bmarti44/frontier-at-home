@@ -1,0 +1,60 @@
+{
+  "index": 356,
+  "task_id": 356,
+  "rendered_prompt_sha256": "bd01e82f794597dbd653c3014d8c19f313cc05658b4baa85172c323d3956133a",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s calculate step by step:\n\n1. Dean started with $28.  \n2. He bought 6 toy cars at $2 each:  \n   6 × 2 = $12  \n3. He bought 5 teddy bears at $1 each:  \n   5 × 1 = $5  \n4. Total spent:  \n   12 + 5 = $17  \n5. Money left after shopping:  \n   28 − 17 = $11  \n6. His mother gives him an extra $10:  \n   11 + 10 = $21  \n\nAnswer: 21",
+  "finish_reason": "stop",
+  "expected": "21",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.6984661419992335
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s calculate step by step:\n\n1. Dean started with $28.  \n2. He bought 6 toy cars at $2 each:  \n   6 × 2 = $12  \n3. He bought 5 teddy bears at $1 each:  \n   5 × 1 = $5  \n4. Total spent:  \n   12 + 5 = $17  \n5. Money left after shopping:  \n   28 − 17 = $11  \n6. His mother gives him an extra $10:  \n   11 + 10 = $21  \n\nAnswer: 21",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326948,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 122,
+      "prompt_tokens": 94,
+      "total_tokens": 216,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-GTM2eBqDgfRWP4FHBLKOMDfg8Dc7DcHk",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 93,
+      "prompt_ms": 614.771,
+      "prompt_per_token_ms": 6.6104408602150535,
+      "prompt_per_second": 151.27584092288023,
+      "predicted_n": 122,
+      "predicted_ms": 6081.726,
+      "predicted_per_token_ms": 49.8502131147541,
+      "predicted_per_second": 20.06009478230358
+    }
+  },
+  "used_fallback": false
+}

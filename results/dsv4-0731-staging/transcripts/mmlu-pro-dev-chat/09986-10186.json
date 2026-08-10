@@ -1,0 +1,59 @@
+{
+  "index": 9986,
+  "task_id": 10186,
+  "rendered_prompt_sha256": "62d07010f4049ed3f6f6302be215f5aa92d2f14e2cf49ca2e1e4a205316f6d38",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use the Carnot efficiency formula:\n\n\\[\n\\eta = 1 - \\frac{T_{\\text{cold}}}{T_{\\text{hot}}}\n\\]\n\nConvert temperatures to Kelvin:\n\n- \\( T_{\\text{hot}} = 175 + 273.15 = 448.15 \\, \\text{K} \\)\n- \\( T_{\\text{cold}} = 75 + 273.15 = 348.15 \\, \\text{K} \\)\n\n\\[\n\\eta = 1 - \\frac{348.15}{448.15} \\approx 1 - 0.7769 \\approx 0.2231\n\\]\n\nThat's about **22.3%**.\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.877964338000311
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use the Carnot efficiency formula:\n\n\\[\n\\eta = 1 - \\frac{T_{\\text{cold}}}{T_{\\text{hot}}}\n\\]\n\nConvert temperatures to Kelvin:\n\n- \\( T_{\\text{hot}} = 175 + 273.15 = 448.15 \\, \\text{K} \\)\n- \\( T_{\\text{cold}} = 75 + 273.15 = 348.15 \\, \\text{K} \\)\n\n\\[\n\\eta = 1 - \\frac{348.15}{448.15} \\approx 1 - 0.7769 \\approx 0.2231\n\\]\n\nThat's about **22.3%**.\n\nAnswer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786329140,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 142,
+      "prompt_tokens": 113,
+      "total_tokens": 255,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-caog5EwFaWIu2YZMW8cCdUEHNhqBHmjl",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 112,
+      "prompt_ms": 666.918,
+      "prompt_per_token_ms": 5.954625,
+      "prompt_per_second": 167.9366878686735,
+      "predicted_n": 142,
+      "predicted_ms": 7184.567,
+      "predicted_per_token_ms": 50.595542253521124,
+      "predicted_per_second": 19.764587065580987
+    }
+  }
+}

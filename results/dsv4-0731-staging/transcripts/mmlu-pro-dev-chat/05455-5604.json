@@ -1,0 +1,60 @@
+{
+  "index": 5455,
+  "task_id": 5604,
+  "rendered_prompt_sha256": "2a11355111e29e27cb44d72e1ff306bf4cf6a0301d75c11aadb3f5a84dce3b69",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.7799939559990889
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Answer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786328730,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 4,
+      "prompt_tokens": 89,
+      "total_tokens": 93,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-9yTZ84SfxtOwnwSLcbLZmCAs5zUaYqkw",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 88,
+      "prompt_ms": 606.794,
+      "prompt_per_token_ms": 6.895386363636363,
+      "prompt_per_second": 145.0245058454764,
+      "predicted_n": 4,
+      "predicted_ms": 165.875,
+      "predicted_per_token_ms": 41.46875,
+      "predicted_per_second": 24.114544084400904
+    }
+  },
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>As of 2015, agriculture made up about what percentage of total US GDP?\n\nA. 20%\nB. 1%\nC. 12%\nD. 15%\nE. 7%\nF. 25%\nG. 9%\nH. 5%\nI. 30%\nJ. 3%\n\nReply with the single letter of the correct option in the form: Answer: <letter><｜Assistant｜></think>"
+}

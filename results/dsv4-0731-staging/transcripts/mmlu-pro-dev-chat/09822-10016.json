@@ -1,0 +1,59 @@
+{
+  "index": 9822,
+  "task_id": 10016,
+  "rendered_prompt_sha256": "0f5df4126874d9b5f10b1772b0970267220785faca59360822c67ed1a51727b2",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use Ohm's law:  \n\\[\nR = \\frac{V_1}{I_1} = \\frac{120}{8} = 15\\ \\Omega\n\\]  \nFor \\(V = 180\\):  \n\\[\nI = \\frac{180}{15} = 12\\ \\text{A}\n\\]  \n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.410625971999252
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use Ohm's law:  \n\\[\nR = \\frac{V_1}{I_1} = \\frac{120}{8} = 15\\ \\Omega\n\\]  \nFor \\(V = 180\\):  \n\\[\nI = \\frac{180}{15} = 12\\ \\text{A}\n\\]  \n\nAnswer: C",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786329096,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 72,
+      "prompt_tokens": 159,
+      "total_tokens": 231,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-9GLJlltHX6WOefnOqFHxFscoD1WtXeAm",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 158,
+      "prompt_ms": 764.432,
+      "prompt_per_token_ms": 4.838177215189874,
+      "prompt_per_second": 206.68941122297338,
+      "predicted_n": 72,
+      "predicted_ms": 3620.437,
+      "predicted_per_token_ms": 50.28384722222222,
+      "predicted_per_second": 19.8871020266338
+    }
+  }
+}

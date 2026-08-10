@@ -1,0 +1,60 @@
+{
+  "index": 15,
+  "task_id": 15,
+  "rendered_prompt_sha256": "99b96547e2620e87c05b9dfe4cb2365d89b8908e05fccd46ac7f6c311bdc00c9",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "The merchant should choose the plan with the higher profit.  \n- Jewelry: 2.5% of $5,000 = 0.025 × 5000 = $125 profit.  \n- Electronics: 1.2% of $8,000 = 0.012 × 8000 = $96 profit.  \n\nSo the maximum profit is from jewelry.  \n\nAnswer: 125",
+  "finish_reason": "stop",
+  "expected": "125",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.910391933999563
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "The merchant should choose the plan with the higher profit.  \n- Jewelry: 2.5% of $5,000 = 0.025 × 5000 = $125 profit.  \n- Electronics: 1.2% of $8,000 = 0.012 × 8000 = $96 profit.  \n\nSo the maximum profit is from jewelry.  \n\nAnswer: 125",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326786,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 83,
+      "prompt_tokens": 119,
+      "total_tokens": 202,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-V65mOmW063IMny8hhilrUVYilYUHUTKl",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 118,
+      "prompt_ms": 762.016,
+      "prompt_per_token_ms": 6.457762711864406,
+      "prompt_per_second": 154.85239155083357,
+      "predicted_n": 83,
+      "predicted_ms": 4146.325,
+      "predicted_per_token_ms": 49.95572289156626,
+      "predicted_per_second": 20.017726540973033
+    }
+  },
+  "used_fallback": false
+}

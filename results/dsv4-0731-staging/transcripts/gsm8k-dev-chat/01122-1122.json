@@ -1,0 +1,60 @@
+{
+  "index": 1122,
+  "task_id": 1122,
+  "rendered_prompt_sha256": "48f9723e0f9c2a46f6137f7913fe2a7819f7aa6ceae1d639a064dc3f5071a6b3",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s break it down:\n\n- Total toys needed: 400  \n- 5 workers work a 10-hour shift.  \n- 2 workers produce 6 toys/hour → each produces 60 toys in 10 hours → 2 × 60 = 120 toys  \n- 2 workers produce 4 toys/hour → each produces 40 toys in 10 hours → 2 × 40 = 80 toys  \n- So the first 4 workers produce 120 + 80 = 200 toys in the shift.  \n- At the end, 20 toys are still needed, so total produced = 400 − 20 = 380 toys.  \n- Therefore, the fifth worker produced 380 − 200 = 180 toys in 10 hours.  \n- That means the fifth worker’s rate is 180 ÷ 10 = 18 toys per hour.\n\nAnswer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.046778743000687
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s break it down:\n\n- Total toys needed: 400  \n- 5 workers work a 10-hour shift.  \n- 2 workers produce 6 toys/hour → each produces 60 toys in 10 hours → 2 × 60 = 120 toys  \n- 2 workers produce 4 toys/hour → each produces 40 toys in 10 hours → 2 × 40 = 80 toys  \n- So the first 4 workers produce 120 + 80 = 200 toys in the shift.  \n- At the end, 20 toys are still needed, so total produced = 400 − 20 = 380 toys.  \n- Therefore, the fifth worker produced 380 − 200 = 180 toys in 10 hours.  \n- That means the fifth worker’s rate is 180 ÷ 10 = 18 toys per hour.\n\nAnswer: 18",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326811,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 185,
+      "prompt_tokens": 122,
+      "total_tokens": 307,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-3JtnUmcGpoEjogfdtPKAHY4X8CrfvAeX",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 121,
+      "prompt_ms": 765.218,
+      "prompt_per_token_ms": 6.324115702479339,
+      "prompt_per_second": 158.12487421885007,
+      "predicted_n": 185,
+      "predicted_ms": 9279.379,
+      "predicted_per_token_ms": 50.15880540540541,
+      "predicted_per_second": 19.93667895233075
+    }
+  },
+  "used_fallback": false
+}

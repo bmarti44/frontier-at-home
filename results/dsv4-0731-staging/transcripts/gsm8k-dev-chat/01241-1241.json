@@ -1,0 +1,60 @@
+{
+  "index": 1241,
+  "task_id": 1241,
+  "rendered_prompt_sha256": "c2d4b084b659f81ea5e3ceaf2cfba9ffa08219cb2e5da8043573f4f8dee90c84",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Rose bought 5 dozens of eggs.  \nCost per dozen = $2.40, so total cost = 5 × 2.40 = $12.00.  \n\n5 dozens = 5 × 12 = 60 eggs.  \n\nShe sells 3 eggs for $1, so for 60 eggs:  \n60 ÷ 3 = 20 groups of 3 eggs.  \nRevenue = 20 × $1 = $20.  \n\nProfit = Revenue − Cost = $20 − $12 = $8.  \n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.092161069000213
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Rose bought 5 dozens of eggs.  \nCost per dozen = $2.40, so total cost = 5 × 2.40 = $12.00.  \n\n5 dozens = 5 × 12 = 60 eggs.  \n\nShe sells 3 eggs for $1, so for 60 eggs:  \n60 ÷ 3 = 20 groups of 3 eggs.  \nRevenue = 20 × $1 = $20.  \n\nProfit = Revenue − Cost = $20 − $12 = $8.  \n\nAnswer: 8",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327077,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 113,
+      "prompt_tokens": 63,
+      "total_tokens": 176,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-F5z79tLU93RG6g78Cg74fmserKnfggz4",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 62,
+      "prompt_ms": 458.364,
+      "prompt_per_token_ms": 7.392967741935483,
+      "prompt_per_second": 135.26367690307268,
+      "predicted_n": 113,
+      "predicted_ms": 5631.963,
+      "predicted_per_token_ms": 49.84038053097345,
+      "predicted_per_second": 20.06405226738883
+    }
+  },
+  "used_fallback": false
+}

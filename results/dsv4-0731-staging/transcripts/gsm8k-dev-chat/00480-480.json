@@ -1,0 +1,61 @@
+{
+  "index": 480,
+  "task_id": 480,
+  "rendered_prompt_sha256": "9be2d2aaad2ce51bbcd447599a7e76757faa438a8d150f053616eee7a35525e8",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Ben has 4 blue and 3 yellow.  \nJasper has half as many blue as Ben: 4 ÷ 2 = 2 blue.  \nJasper has three times as many yellow as Ben: 3 × 3 = 9 yellow.  \nTotal for Jasper: 2 + 9 = 11.  \n\nAnswer: 11",
+  "finish_reason": "stop",
+  "expected": "11",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.153232516000571
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Ben has 4 blue and 3 yellow.  \nJasper has half as many blue as Ben: 4 ÷ 2 = 2 blue.  \nJasper has three times as many yellow as Ben: 3 × 3 = 9 yellow.  \nTotal for Jasper: 2 + 9 = 11.  \n\nAnswer: 11",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326822,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 73,
+      "prompt_tokens": 78,
+      "total_tokens": 151,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-qWXrqWDTrXmmmlH7SfTsVEtf22l46ric",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 77,
+      "prompt_ms": 526.571,
+      "prompt_per_token_ms": 6.838584415584416,
+      "prompt_per_second": 146.22909351255575,
+      "predicted_n": 73,
+      "predicted_ms": 3625.203,
+      "predicted_per_token_ms": 49.66031506849315,
+      "predicted_per_second": 20.136803373493844
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Ben has 4 tubes of blue paint and 3 tubes of yellow paint. Jasper has half as many tubes of blue paint as Ben, and three times as many tubes of yellow paint as Ben. How many tubes of paint does Jasper have?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜></think>"
+}

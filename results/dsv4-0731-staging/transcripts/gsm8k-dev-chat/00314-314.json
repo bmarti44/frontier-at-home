@@ -1,0 +1,60 @@
+{
+  "index": 314,
+  "task_id": 314,
+  "rendered_prompt_sha256": "edf91ba9b48c77545822a510ded0908a57bedca356f644b7a1bc1ed63f03c32c",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let the number of players on defense be \\( d \\).\n\n- Offense = \\( 2d \\) (twice as many as defense)  \n- Special teams = \\( \\frac{d}{2} \\) (half as many as defense)\n\nTotal players:  \n\\[\nd + 2d + \\frac{d}{2} = 105\n\\]  \n\\[\n3d + \\frac{d}{2} = 105\n\\]  \n\\[\n\\frac{6d + d}{2} = 105\n\\]  \n\\[\n\\frac{7d}{2} = 105\n\\]  \n\\[\n7d = 210\n\\]  \n\\[\nd = 30\n\\]\n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.796647791999931
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let the number of players on defense be \\( d \\).\n\n- Offense = \\( 2d \\) (twice as many as defense)  \n- Special teams = \\( \\frac{d}{2} \\) (half as many as defense)\n\nTotal players:  \n\\[\nd + 2d + \\frac{d}{2} = 105\n\\]  \n\\[\n3d + \\frac{d}{2} = 105\n\\]  \n\\[\n\\frac{6d + d}{2} = 105\n\\]  \n\\[\n\\frac{7d}{2} = 105\n\\]  \n\\[\n7d = 210\n\\]  \n\\[\nd = 30\n\\]\n\nAnswer: 30",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327175,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 145,
+      "prompt_tokens": 81,
+      "total_tokens": 226,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-6U0xkGtPzQ8Zd84JUTCT9ZxYeUKRrxKd",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 80,
+      "prompt_ms": 533.804,
+      "prompt_per_token_ms": 6.672549999999999,
+      "prompt_per_second": 149.86774171793394,
+      "predicted_n": 145,
+      "predicted_ms": 7261.016,
+      "predicted_per_token_ms": 50.0759724137931,
+      "predicted_per_second": 19.969657138890756
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 9526,
+  "task_id": 9716,
+  "rendered_prompt_sha256": "33e85802664ea490be4ff6d061da0bcbf18f727b13c2a57d4ab3dce37b951092",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use \\( Q = C V \\).  \nHere, \\( C = 2 \\, \\text{mF} = 2 \\times 10^{-3} \\, \\text{F} \\) and \\( V = 5 \\, \\text{V} \\).  \n\n\\[\nQ = (2 \\times 10^{-3})(5) = 0.01 \\, \\text{C}\n\\]\n\nThat matches option I.\n\nAnswer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.157546651998928
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use \\( Q = C V \\).  \nHere, \\( C = 2 \\, \\text{mF} = 2 \\times 10^{-3} \\, \\text{F} \\) and \\( V = 5 \\, \\text{V} \\).  \n\n\\[\nQ = (2 \\times 10^{-3})(5) = 0.01 \\, \\text{C}\n\\]\n\nThat matches option I.\n\nAnswer: I",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786329026,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 88,
+      "prompt_tokens": 137,
+      "total_tokens": 225,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-i4G3MWe6sua6CxmRG3utNFLstVKbnteJ",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 136,
+      "prompt_ms": 671.713,
+      "prompt_per_token_ms": 4.939066176470588,
+      "prompt_per_second": 202.4674228427915,
+      "predicted_n": 88,
+      "predicted_ms": 4443.456,
+      "predicted_per_token_ms": 50.493818181818185,
+      "predicted_per_second": 19.8044044995607
+    }
+  }
+}

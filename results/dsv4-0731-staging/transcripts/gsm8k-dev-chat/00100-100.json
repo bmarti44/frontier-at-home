@@ -1,0 +1,60 @@
+{
+  "index": 100,
+  "task_id": 100,
+  "rendered_prompt_sha256": "718fa9f0ee6a657fd2ce27c69962bbcf6ccc6734315fbd69489cee6c715f3087",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to find the total number of doorbell rings.\n\n- First friend: 20 rings.\n- Second friend: pressed 1/4 times more than the first friend.  \n  \"1/4 times more\" means an additional 1/4 of 20, which is 5, so second friend = 20 + 5 = 25 rings.\n- Fourth friend: 60 rings.\n- Third friend: pressed 10 times more than the fourth friend, so third friend = 60 + 10 = 70 rings.\n\nNow sum all:  \n20 + 25 + 60 + 70 = 175.\n\nAnswer: 175",
+  "finish_reason": "stop",
+  "expected": "175",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.539375817999826
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need to find the total number of doorbell rings.\n\n- First friend: 20 rings.\n- Second friend: pressed 1/4 times more than the first friend.  \n  \"1/4 times more\" means an additional 1/4 of 20, which is 5, so second friend = 20 + 5 = 25 rings.\n- Fourth friend: 60 rings.\n- Third friend: pressed 10 times more than the fourth friend, so third friend = 60 + 10 = 70 rings.\n\nNow sum all:  \n20 + 25 + 60 + 70 = 175.\n\nAnswer: 175",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326956,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 135,
+      "prompt_tokens": 121,
+      "total_tokens": 256,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-hXw4Cgs5jkmyp3EW9TLGhk0wbxJky02t",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 120,
+      "prompt_ms": 776.323,
+      "prompt_per_token_ms": 6.469358333333333,
+      "prompt_per_second": 154.5748354744095,
+      "predicted_n": 135,
+      "predicted_ms": 6760.632,
+      "predicted_per_token_ms": 50.07875555555555,
+      "predicted_per_second": 19.96854731924471
+    }
+  },
+  "used_fallback": false
+}

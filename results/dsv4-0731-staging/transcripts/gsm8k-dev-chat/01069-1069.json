@@ -1,0 +1,60 @@
+{
+  "index": 1069,
+  "task_id": 1069,
+  "rendered_prompt_sha256": "2bea535162249c2c779d5f3c1ed642b92f9f802167118a44e315d8704b1d1cfe",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We know:\n- 20 trucks were dispatched.\n- Each truck carries 20 tons.\n- A quarter of the trucks had mechanical failures.\n\nQuarter of 20 = 5 trucks failed.\n\nSo trucks that delivered = 20 - 5 = 15 trucks.\n\nTons delivered = 15 × 20 = 300 tons.\n\nAnswer: 300",
+  "finish_reason": "stop",
+  "expected": "300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.398422079999364
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We know:\n- 20 trucks were dispatched.\n- Each truck carries 20 tons.\n- A quarter of the trucks had mechanical failures.\n\nQuarter of 20 = 5 trucks failed.\n\nSo trucks that delivered = 20 - 5 = 15 trucks.\n\nTons delivered = 15 × 20 = 300 tons.\n\nAnswer: 300",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327058,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 72,
+      "prompt_tokens": 133,
+      "total_tokens": 205,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-iWyWVLaMNevsvfbBms0nif2dNXrnnXuP",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 132,
+      "prompt_ms": 806.201,
+      "prompt_per_token_ms": 6.107583333333333,
+      "prompt_per_second": 163.73088100858223,
+      "predicted_n": 72,
+      "predicted_ms": 3589.623,
+      "predicted_per_token_ms": 49.855875,
+      "predicted_per_second": 20.057816656512397
+    }
+  },
+  "used_fallback": false
+}

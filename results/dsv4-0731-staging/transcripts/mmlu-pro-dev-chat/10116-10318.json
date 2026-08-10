@@ -1,0 +1,59 @@
+{
+  "index": 10116,
+  "task_id": 10318,
+  "rendered_prompt_sha256": "d5a0ebc35fa3c5e0845d6a3f2e6d4c743de45a6f9bb2e2f9b9ba83c2d50e0848",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We have an electron in orbit around a proton, so it's a hydrogen-like system.  \nGiven:  \n- Angular momentum \\( L = 6 \\times 10^{-35} \\, \\text{N·s} \\) (units are actually kg·m²/s, but here it's fine)  \n- Total energy \\( H_0 = -4 \\times 10^{-18} \\, \\text{J} \\)  \n\nFor a Coulomb potential, the orbit is an ellipse with  \n\\[\nr_{\\text{min}} = \\frac{p}{1 + \\epsilon}, \\quad r_{\\text{max}} = \\frac{p}{1 - \\epsilon}\n\\]  \nwhere  \n\\[\np = \\frac{L^2}{\\mu k}, \\quad \\epsilon = \\sqrt{1 + \\frac{2 H_0 L^2}{\\mu k^2}}\n\\]  \nwith \\( k = \\frac{e^2}{4\\pi\\epsilon_0} \\approx 2.307 \\times 10^{-28} \\, \\text{N·m}^2 \\) and reduced mass \\(\\mu \\approx m_e = 9.11 \\times 10^{-31} \\, \\text{kg}\\).\n\nFirst compute \\( L^2 \\):  \n\\[\nL^2 = (6\\times 10^{-35})^2 = 36 \\times 10^{-70} = 3.6 \\times 10^{-69}\n\\]\n\nThen  \n\\[\np = \\frac{3.6\\times 10^{-69}}{(9.11\\times 10^{-31})(2.307\\times 10^{-28})}\n\\]  \nDenominator:  \n\\[\n9.11 \\times 2.307 \\approx 21.02 \\times 10^{-59} = 2.102 \\times 10^{-58}\n\\]  \nSo  \n\\[\np \\approx \\frac{3.6\\times 10^{-69}}{2.102\\times 10^{-58}} \\approx 1.712\\times 10^{-11} \\, \\text{m}\n\\]\n\nNow compute  \n\\[\n\\frac{2 H_0 L^2}{\\mu k^2}\n\\]  \nFirst \\( k^2 = (2.307\\times 10^{-28})^2 \\approx 5.322\\times 10^{-56} \\)  \nThen \\(\\mu k^2 \\approx (9.11\\times 10^{-31})(5.322\\times 10^{-56}) \\approx 4.849\\times 10^{-86}\\)  \n\nNumerator: \\(2 H_0 L^2 = 2(-4\\times 10^{-18})(3.6\\times 10^{-69}) = -2.88\\times 10^{-86}\\)  \n\nSo  \n\\[\n\\frac{2 H_0 L^2}{\\mu k^2} \\approx \\frac{-2.88\\times 10^{-86}}{4.849\\times 10^{-86}} \\approx -0.594\n\\]  \n\nThus  \n\\[\n\\epsilon = \\sqrt{1 - 0.594} = \\sqrt{0.406} \\approx 0.637\n\\]  \n\nNow  \n\\[\nr_{\\min} = \\frac{1.712\\times 10^{-11}}{1 + 0.637} \\approx \\frac{1.712\\times 10^{-11}}{1.637} \\approx 1.046\\times 10^{-11} \\, \\text{m}\n\\]  \n\\[\nr_{\\max} = \\frac{1.712\\times 10^{-11}}{1 - 0.637} \\approx \\frac{1.712\\times 10^{-11}}{0.363} \\approx 4.716\\times 10^{-11} \\, \\text{m}\n",
+  "finish_reason": "length",
+  "expected": "G",
+  "scored_correct": false,
+  "reason": "truncated without answer",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 40.56675807600004
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We have an electron in orbit around a proton, so it's a hydrogen-like system.  \nGiven:  \n- Angular momentum \\( L = 6 \\times 10^{-35} \\, \\text{N·s} \\) (units are actually kg·m²/s, but here it's fine)  \n- Total energy \\( H_0 = -4 \\times 10^{-18} \\, \\text{J} \\)  \n\nFor a Coulomb potential, the orbit is an ellipse with  \n\\[\nr_{\\text{min}} = \\frac{p}{1 + \\epsilon}, \\quad r_{\\text{max}} = \\frac{p}{1 - \\epsilon}\n\\]  \nwhere  \n\\[\np = \\frac{L^2}{\\mu k}, \\quad \\epsilon = \\sqrt{1 + \\frac{2 H_0 L^2}{\\mu k^2}}\n\\]  \nwith \\( k = \\frac{e^2}{4\\pi\\epsilon_0} \\approx 2.307 \\times 10^{-28} \\, \\text{N·m}^2 \\) and reduced mass \\(\\mu \\approx m_e = 9.11 \\times 10^{-31} \\, \\text{kg}\\).\n\nFirst compute \\( L^2 \\):  \n\\[\nL^2 = (6\\times 10^{-35})^2 = 36 \\times 10^{-70} = 3.6 \\times 10^{-69}\n\\]\n\nThen  \n\\[\np = \\frac{3.6\\times 10^{-69}}{(9.11\\times 10^{-31})(2.307\\times 10^{-28})}\n\\]  \nDenominator:  \n\\[\n9.11 \\times 2.307 \\approx 21.02 \\times 10^{-59} = 2.102 \\times 10^{-58}\n\\]  \nSo  \n\\[\np \\approx \\frac{3.6\\times 10^{-69}}{2.102\\times 10^{-58}} \\approx 1.712\\times 10^{-11} \\, \\text{m}\n\\]\n\nNow compute  \n\\[\n\\frac{2 H_0 L^2}{\\mu k^2}\n\\]  \nFirst \\( k^2 = (2.307\\times 10^{-28})^2 \\approx 5.322\\times 10^{-56} \\)  \nThen \\(\\mu k^2 \\approx (9.11\\times 10^{-31})(5.322\\times 10^{-56}) \\approx 4.849\\times 10^{-86}\\)  \n\nNumerator: \\(2 H_0 L^2 = 2(-4\\times 10^{-18})(3.6\\times 10^{-69}) = -2.88\\times 10^{-86}\\)  \n\nSo  \n\\[\n\\frac{2 H_0 L^2}{\\mu k^2} \\approx \\frac{-2.88\\times 10^{-86}}{4.849\\times 10^{-86}} \\approx -0.594\n\\]  \n\nThus  \n\\[\n\\epsilon = \\sqrt{1 - 0.594} = \\sqrt{0.406} \\approx 0.637\n\\]  \n\nNow  \n\\[\nr_{\\min} = \\frac{1.712\\times 10^{-11}}{1 + 0.637} \\approx \\frac{1.712\\times 10^{-11}}{1.637} \\approx 1.046\\times 10^{-11} \\, \\text{m}\n\\]  \n\\[\nr_{\\max} = \\frac{1.712\\times 10^{-11}}{1 - 0.637} \\approx \\frac{1.712\\times 10^{-11}}{0.363} \\approx 4.716\\times 10^{-11} \\, \\text{m}\n",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786329245,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 768,
+      "prompt_tokens": 312,
+      "total_tokens": 1080,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-61Y56LIiA5eWmkap2dXvQn4U4Z7FEUwR",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 311,
+      "prompt_ms": 1046.414,
+      "prompt_per_token_ms": 3.3646752411575562,
+      "prompt_per_second": 297.2055037489942,
+      "predicted_n": 768,
+      "predicted_ms": 39500.636,
+      "predicted_per_token_ms": 51.43311979166666,
+      "predicted_per_second": 19.44272492220125
+    }
+  }
+}

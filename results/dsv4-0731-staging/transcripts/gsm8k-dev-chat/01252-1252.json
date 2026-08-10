@@ -1,0 +1,60 @@
+{
+  "index": 1252,
+  "task_id": 1252,
+  "rendered_prompt_sha256": "84909c9a385c34ba1642faf8744ba531e29f5183d81aa49ff9b2ae1d7ed8e1f0",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s break it down:\n\n- Helmets = 20  \n- Robots = half as many as helmets → 20 ÷ 2 = 10 robots  \n- Helmets = half as many as footballs → so footballs = 2 × helmets = 2 × 20 = 40 footballs  \n\nTotal items = helmets + robots + footballs = 20 + 10 + 40 = 70  \n\nAnswer: 70",
+  "finish_reason": "stop",
+  "expected": "70",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.033503287999338
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s break it down:\n\n- Helmets = 20  \n- Robots = half as many as helmets → 20 ÷ 2 = 10 robots  \n- Helmets = half as many as footballs → so footballs = 2 × helmets = 2 × 20 = 40 footballs  \n\nTotal items = helmets + robots + footballs = 20 + 10 + 40 = 70  \n\nAnswer: 70",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326703,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 91,
+      "prompt_tokens": 74,
+      "total_tokens": 165,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-nXsmhWuQWbPfG28AS25bh6xmHlNUdw58",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 73,
+      "prompt_ms": 527.517,
+      "prompt_per_token_ms": 7.226260273972604,
+      "prompt_per_second": 138.38416581835276,
+      "predicted_n": 91,
+      "predicted_ms": 4503.923,
+      "predicted_per_token_ms": 49.49365934065934,
+      "predicted_per_second": 20.204608293703068
+    }
+  },
+  "used_fallback": false
+}

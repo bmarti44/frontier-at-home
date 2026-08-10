@@ -1,0 +1,59 @@
+{
+  "index": 5690,
+  "task_id": 5848,
+  "rendered_prompt_sha256": "4721a8108f6d6e4fdc3446372eac73eca51b319a67bd41724bce16f6f7e81eb8",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We calculate distributable net income (DNI) for a simple trust as:\n\n- Start with taxable income:  \n  Dividend income: $2,500  \n  Taxable interest: $2,000  \n  Capital gains (allocable to corpus): $5,000 — but for DNI, capital gains allocable to corpus are generally excluded unless distributed or used to determine distributable net income. For a simple trust, they are excluded from DNI.  \n  So income items for DNI: $2,500 + $2,000 = $4,500.\n\n- Subtract expenses allocable to income:  \n  Accounting fees: $500  \n  Trustee fees: $750  \n  Total = $1,250.\n\n- DNI = $4,500 − $1,250 = $3,250.\n\nThat matches option J.\n\nAnswer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.72391881600015
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We calculate distributable net income (DNI) for a simple trust as:\n\n- Start with taxable income:  \n  Dividend income: $2,500  \n  Taxable interest: $2,000  \n  Capital gains (allocable to corpus): $5,000 — but for DNI, capital gains allocable to corpus are generally excluded unless distributed or used to determine distributable net income. For a simple trust, they are excluded from DNI.  \n  So income items for DNI: $2,500 + $2,000 = $4,500.\n\n- Subtract expenses allocable to income:  \n  Accounting fees: $500  \n  Trustee fees: $750  \n  Total = $1,250.\n\n- DNI = $4,500 − $1,250 = $3,250.\n\nThat matches option J.\n\nAnswer: J",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786328744,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 176,
+      "prompt_tokens": 162,
+      "total_tokens": 338,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-j6T5HjLH0GX1rnK6XHk6R9xoiNVSKVUV",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 161,
+      "prompt_ms": 766.485,
+      "prompt_per_token_ms": 4.760776397515528,
+      "prompt_per_second": 210.04977266352245,
+      "predicted_n": 176,
+      "predicted_ms": 8934.102,
+      "predicted_per_token_ms": 50.76194318181819,
+      "predicted_per_second": 19.6997974726503
+    }
+  }
+}

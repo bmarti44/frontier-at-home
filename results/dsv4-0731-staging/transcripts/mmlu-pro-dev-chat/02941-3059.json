@@ -1,0 +1,60 @@
+{
+  "index": 2941,
+  "task_id": 3059,
+  "rendered_prompt_sha256": "49055c2ce75cb81d31ad53b5862998e660b545f92d7f3347f896abd6f5339ae3",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.7640102620007383
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Answer: C",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327230,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 4,
+      "prompt_tokens": 88,
+      "total_tokens": 92,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-x7qydRg7XNjKvU8fOvLfljUy4LFOJMv9",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 87,
+      "prompt_ms": 596.5,
+      "prompt_per_token_ms": 6.85632183908046,
+      "prompt_per_second": 145.85079631181893,
+      "predicted_n": 4,
+      "predicted_ms": 165.75,
+      "predicted_per_token_ms": 41.4375,
+      "predicted_per_second": 24.132730015082956
+    }
+  },
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>All of the following statements about plant embryogenesis are correct EXCEPT:\n\nA. The suspensor is derived from the basal cell.\nB. Cotyledons are derived from the apical cell.\nC. Shoot apical meristem formation occurs after seed formation.\nD. Precursors of all three plant tissue systems are formed during embryogenesis.\n\nReply with the single letter of the correct option in the form: Answer: <letter><｜Assistant｜></think>"
+}

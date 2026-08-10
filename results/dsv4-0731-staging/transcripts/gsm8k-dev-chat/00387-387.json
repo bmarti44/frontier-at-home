@@ -1,0 +1,60 @@
+{
+  "index": 387,
+  "task_id": 387,
+  "rendered_prompt_sha256": "43ffc21dfc2328eaaa155b1c82a54cd8a736394e1d812842cf5ce8ead6766a1a",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "6 erasers cost 6 × $2 = $12.  \n8 pencils cost 8 × $3 = $24.  \nTotal cost = $12 + $24 = $36.  \n\nAnswer: 36",
+  "finish_reason": "stop",
+  "expected": "36",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.6518791439993947
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "6 erasers cost 6 × $2 = $12.  \n8 pencils cost 8 × $3 = $24.  \nTotal cost = $12 + $24 = $36.  \n\nAnswer: 36",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327121,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 45,
+      "prompt_tokens": 55,
+      "total_tokens": 100,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-imyOpU3x4hhh1Y9H43QVmO2Q4LBfYmva",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 54,
+      "prompt_ms": 443.759,
+      "prompt_per_token_ms": 8.21775925925926,
+      "prompt_per_second": 121.68767281339646,
+      "predicted_n": 45,
+      "predicted_ms": 2204.77,
+      "predicted_per_token_ms": 48.99488888888889,
+      "predicted_per_second": 20.41029223002853
+    }
+  },
+  "used_fallback": false
+}

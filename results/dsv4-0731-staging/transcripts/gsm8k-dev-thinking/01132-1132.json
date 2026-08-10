@@ -1,0 +1,58 @@
+{
+  "index": 1132,
+  "task_id": 1132,
+  "rendered_prompt_sha256": "2373dc001e73475c2595323c2d305f69ca8569a9c47df417867698e87c1bb7bb",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need parse problem. Valerie earns $5000 per month, 1/2 of what her brother earns. So Valerie = half brother's earnings => brother earns $10000 per month. Their mother earns twice their combined salary. Combined salary of Valerie and brother? \"their combined salary\" likely Valerie + brother = $15000. Mother earns twice that = $30000. Total amount all together = Valerie + brother + mother = 5000+10000+30000 = $45000 per month? Need answer numeric. But check wording: \"Valerie earns $5000 per month, 1/2 of what her brother earns.\" Means Valerie's earnings are half of brother's, so brother = 10000. \"If their mother earns twice their combined salary\" combined salary could be Valerie and brother combined? \"their\" refers Valerie and brother? Mother earns twice their combined salary = 2*(5000+10000)=30000. Total all together = 45000. Need final line Answer: 45000.</think>Answer: 45000",
+  "finish_reason": "stop",
+  "expected": "45000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.76088707999952
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need parse problem. Valerie earns $5000 per month, 1/2 of what her brother earns. So Valerie = half brother's earnings => brother earns $10000 per month. Their mother earns twice their combined salary. Combined salary of Valerie and brother? \"their combined salary\" likely Valerie + brother = $15000. Mother earns twice that = $30000. Total amount all together = Valerie + brother + mother = 5000+10000+30000 = $45000 per month? Need answer numeric. But check wording: \"Valerie earns $5000 per month, 1/2 of what her brother earns.\" Means Valerie's earnings are half of brother's, so brother = 10000. \"If their mother earns twice their combined salary\" combined salary could be Valerie and brother combined? \"their\" refers Valerie and brother? Mother earns twice their combined salary = 2*(5000+10000)=30000. Total all together = 45000. Need final line Answer: 45000.</think>Answer: 45000",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786329543,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 222,
+      "prompt_tokens": 69,
+      "total_tokens": 291,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Ah3Ib69khM0EBxMrOf7bbyLRbJFhSbnD",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 68,
+      "prompt_ms": 487.784,
+      "prompt_per_token_ms": 7.173294117647059,
+      "prompt_per_second": 139.40596657536943,
+      "predicted_n": 222,
+      "predicted_ms": 11267.479,
+      "predicted_per_token_ms": 50.75440990990991,
+      "predicted_per_second": 19.702721433960516
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Valerie earns $5000 per month, 1/2 of what her brother earns. If their mother earns twice their combined salary, what's the total amount of money they all have together?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

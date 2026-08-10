@@ -1,0 +1,60 @@
+{
+  "index": 2,
+  "task_id": 2,
+  "rendered_prompt_sha256": "d6d1c7afedea967ccfc6b1bfac15c6d5ea441048e388ca914da3e3d756b9a6c6",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s break it down:\n\n1. He buys the house for $80,000.\n2. He spends $50,000 on repairs, so his total cost is:\n   \\[\n   80,000 + 50,000 = 130,000\n   \\]\n3. The repairs increased the house’s value by 150%.  \n   That means the new value is:\n   \\[\n   80,000 \\times (1 + 1.50) = 80,000 \\times 2.50 = 200,000\n   \\]\n4. His profit is the new value minus his total cost:\n   \\[\n   200,000 - 130,000 = 70,000\n   \\]\n\nAnswer: 70000",
+  "finish_reason": "stop",
+  "expected": "70000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.400249299998904
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s break it down:\n\n1. He buys the house for $80,000.\n2. He spends $50,000 on repairs, so his total cost is:\n   \\[\n   80,000 + 50,000 = 130,000\n   \\]\n3. The repairs increased the house’s value by 150%.  \n   That means the new value is:\n   \\[\n   80,000 \\times (1 + 1.50) = 80,000 \\times 2.50 = 200,000\n   \\]\n4. His profit is the new value minus his total cost:\n   \\[\n   200,000 - 130,000 = 70,000\n   \\]\n\nAnswer: 70000",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327183,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 157,
+      "prompt_tokens": 78,
+      "total_tokens": 235,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-vSoYC5kb4J4LAVuNFSOjf7clOBJRNAPc",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 77,
+      "prompt_ms": 540.43,
+      "prompt_per_token_ms": 7.018571428571428,
+      "prompt_per_second": 142.47913698351314,
+      "predicted_n": 157,
+      "predicted_ms": 7857.683,
+      "predicted_per_token_ms": 50.04893630573248,
+      "predicted_per_second": 19.98044461707096
+    }
+  },
+  "used_fallback": false
+}

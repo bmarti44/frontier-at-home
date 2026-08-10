@@ -1,0 +1,60 @@
+{
+  "index": 770,
+  "task_id": 770,
+  "rendered_prompt_sha256": "d43e9115cdedfdbeb8abc14e02c00b3761bd8c6e009e672d9b650ca1ab453209",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We have 4 vanilla scents, and they sold 5 of each:  \nVanilla total = 4 × 5 = 20  \n\nWe have 8 fruity scents, and they sold 2 of each:  \nFruity total = 8 × 2 = 16  \n\nDifference = 20 − 16 = 4  \n\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.597373530999903
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We have 4 vanilla scents, and they sold 5 of each:  \nVanilla total = 4 × 5 = 20  \n\nWe have 8 fruity scents, and they sold 2 of each:  \nFruity total = 8 × 2 = 16  \n\nDifference = 20 − 16 = 4  \n\nAnswer: 4",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326868,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 78,
+      "prompt_tokens": 137,
+      "total_tokens": 215,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-DlFFUyUcIA81OOQnomNzBVuVxd55Cm97",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 136,
+      "prompt_ms": 707.558,
+      "prompt_per_token_ms": 5.202632352941176,
+      "prompt_per_second": 192.2103912329449,
+      "predicted_n": 78,
+      "predicted_ms": 3887.525,
+      "predicted_per_token_ms": 49.84006410256411,
+      "predicted_per_second": 20.064179651577806
+    }
+  },
+  "used_fallback": false
+}

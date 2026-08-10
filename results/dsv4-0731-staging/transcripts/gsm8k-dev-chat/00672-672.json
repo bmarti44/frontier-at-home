@@ -1,0 +1,60 @@
+{
+  "index": 672,
+  "task_id": 672,
+  "rendered_prompt_sha256": "1d8c9709d7c332f7c5bea81b434139d256bb6e84fc299e370528c5fc2b9a32c2",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We know there are 30 days total.  \n- 12 good days  \n- 8 bad days  \n- Rest neutral → 30 - 12 - 8 = 10 neutral days  \n\nThe first 8 days: good  \nThe second 8 days: bad  \nThe third 8 days: neutral  \n\nThat accounts for 24 days.  \nThe next 3 days are: good, neutral, good → that’s 2 more good days and 1 more neutral day.  \n\nNow total good days so far: 8 (first block) + 2 = 10 good days.  \nWe need 12 good days total, so 12 - 10 = 2 good days remain for the rest of the month.  \n\nAnswer: 2",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.54718127599881
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We know there are 30 days total.  \n- 12 good days  \n- 8 bad days  \n- Rest neutral → 30 - 12 - 8 = 10 neutral days  \n\nThe first 8 days: good  \nThe second 8 days: bad  \nThe third 8 days: neutral  \n\nThat accounts for 24 days.  \nThe next 3 days are: good, neutral, good → that’s 2 more good days and 1 more neutral day.  \n\nNow total good days so far: 8 (first block) + 2 = 10 good days.  \nWe need 12 good days total, so 12 - 10 = 2 good days remain for the rest of the month.  \n\nAnswer: 2",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326738,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 157,
+      "prompt_tokens": 108,
+      "total_tokens": 265,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-dGhJ9FBhVeSnqVpHU0TKkg6J4QpCscvi",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 107,
+      "prompt_ms": 681.787,
+      "prompt_per_token_ms": 6.371841121495327,
+      "prompt_per_second": 156.94051074602478,
+      "predicted_n": 157,
+      "predicted_ms": 7863.255,
+      "predicted_per_token_ms": 50.08442675159236,
+      "predicted_per_second": 19.966286226251086
+    }
+  },
+  "used_fallback": false
+}

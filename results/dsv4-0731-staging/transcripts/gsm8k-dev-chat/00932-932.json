@@ -1,0 +1,60 @@
+{
+  "index": 932,
+  "task_id": 932,
+  "rendered_prompt_sha256": "4ce5b2b673f0a57fc3744f0c9f8774e4abc7a58e08516ea0dc19dffb95963868",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need to count the people: Maria + 4 friends = 5 girls.\n\nAt the start:\n- Each of the 4 friends got 2 balloons → 4 × 2 = 8 balloons.\n- Maria had 1 balloon for herself → 1 balloon.\n- Total so far = 8 + 1 = 9 balloons.\n\nThen mom gave each person 3 more balloons:\n- 5 girls × 3 balloons = 15 balloons.\n\nTotal balloons = 9 + 15 = 24.\n\nAnswer: 24",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.146246518001135
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need to count the people: Maria + 4 friends = 5 girls.\n\nAt the start:\n- Each of the 4 friends got 2 balloons → 4 × 2 = 8 balloons.\n- Maria had 1 balloon for herself → 1 balloon.\n- Total so far = 8 + 1 = 9 balloons.\n\nThen mom gave each person 3 more balloons:\n- 5 girls × 3 balloons = 15 balloons.\n\nTotal balloons = 9 + 15 = 24.\n\nAnswer: 24",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327223,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 111,
+      "prompt_tokens": 97,
+      "total_tokens": 208,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-vQ4Y3ZzzYlfVd4TbKnidYumpC05osb0Z",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 96,
+      "prompt_ms": 601.125,
+      "prompt_per_token_ms": 6.26171875,
+      "prompt_per_second": 159.70056144728633,
+      "predicted_n": 111,
+      "predicted_ms": 5543.44,
+      "predicted_per_token_ms": 49.9409009009009,
+      "predicted_per_second": 20.023667614333338
+    }
+  },
+  "used_fallback": false
+}

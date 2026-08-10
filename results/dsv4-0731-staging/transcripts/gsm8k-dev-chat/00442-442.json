@@ -1,0 +1,60 @@
+{
+  "index": 442,
+  "task_id": 442,
+  "rendered_prompt_sha256": "8e9fa3609d9874d46ea83219d770c902777db2532b84289e70e7264d822a6f17",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s go step by step.\n\n1. **Starting temperature**: 40°F  \n2. **Baking for 3 hours**:  \n   - Each hour raises temperature by 5°F.  \n   - Total increase = 3 × 5 = 15°F  \n   - Temperature after baking: 40 + 15 = 55°F  \n\n3. **Opening window for 30 minutes**:  \n   - Cooling is 2°F per 10 minutes.  \n   - 30 minutes = 3 × 10 minutes, so cooling = 3 × 2 = 6°F  \n   - Temperature after cooling: 55 - 6 = 49°F  \n\nFinal temperature: **49°F**  \n\nAnswer: 49",
+  "finish_reason": "stop",
+  "expected": "49",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.651787574999616
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s go step by step.\n\n1. **Starting temperature**: 40°F  \n2. **Baking for 3 hours**:  \n   - Each hour raises temperature by 5°F.  \n   - Total increase = 3 × 5 = 15°F  \n   - Temperature after baking: 40 + 15 = 55°F  \n\n3. **Opening window for 30 minutes**:  \n   - Cooling is 2°F per 10 minutes.  \n   - 30 minutes = 3 × 10 minutes, so cooling = 3 × 2 = 6°F  \n   - Temperature after cooling: 55 - 6 = 49°F  \n\nFinal temperature: **49°F**  \n\nAnswer: 49",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326987,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 159,
+      "prompt_tokens": 102,
+      "total_tokens": 261,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-UkF940OQB2qtv1K0DnxfCHCKMnu9tEVH",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 101,
+      "prompt_ms": 652.432,
+      "prompt_per_token_ms": 6.459722772277228,
+      "prompt_per_second": 154.80540500772494,
+      "predicted_n": 159,
+      "predicted_ms": 7996.223,
+      "predicted_per_token_ms": 50.2907106918239,
+      "predicted_per_second": 19.884387916645146
+    }
+  },
+  "used_fallback": false
+}

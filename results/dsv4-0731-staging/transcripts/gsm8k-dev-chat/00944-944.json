@@ -1,0 +1,60 @@
+{
+  "index": 944,
+  "task_id": 944,
+  "rendered_prompt_sha256": "7cb9057b822ef3650b4f8080354eaa77e83b75cbd5be5f52b973608e24fbc039",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Jen's earnings from yams: 6 × $1.50 = $9.00  \nEarnings from sweet potatoes: 10 × $2.00 = $20.00  \nEarnings from carrots: 4 × $1.25 = $5.00  \nTotal earnings: $9.00 + $20.00 + $5.00 = $34.00  \n\nAnswer: 34",
+  "finish_reason": "stop",
+  "expected": "34",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.85159776600085
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Jen's earnings from yams: 6 × $1.50 = $9.00  \nEarnings from sweet potatoes: 10 × $2.00 = $20.00  \nEarnings from carrots: 4 × $1.25 = $5.00  \nTotal earnings: $9.00 + $20.00 + $5.00 = $34.00  \n\nAnswer: 34",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327188,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 85,
+      "prompt_tokens": 88,
+      "total_tokens": 173,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-64BdC9EBrbWH3tgmaFZAo1fQW6tIz7FP",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 87,
+      "prompt_ms": 594.974,
+      "prompt_per_token_ms": 6.838781609195403,
+      "prompt_per_second": 146.22487705345105,
+      "predicted_n": 85,
+      "predicted_ms": 4254.87,
+      "predicted_per_token_ms": 50.05729411764706,
+      "predicted_per_second": 19.977108583811024
+    }
+  },
+  "used_fallback": false
+}

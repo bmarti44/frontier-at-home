@@ -1,0 +1,59 @@
+{
+  "index": 279,
+  "task_id": 351,
+  "rendered_prompt_sha256": "5defcddd57181e327a77f0b762a41ee588fa4a3676e0defdba7b37b4522e5a3a",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We calculate commission on sales above $2,500:  \nSales above $2,500 = $5,070.20 - $2,500 = $2,570.20  \nCommission = 10% of $2,570.20 = $257.02  \nAdd salary: $300 + $257.02 = $557.02  \n\nAnswer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.528968466000151
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We calculate commission on sales above $2,500:  \nSales above $2,500 = $5,070.20 - $2,500 = $2,570.20  \nCommission = 10% of $2,570.20 = $257.02  \nAdd salary: $300 + $257.02 = $557.02  \n\nAnswer: H",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327325,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 76,
+      "prompt_tokens": 149,
+      "total_tokens": 225,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-aAh6gJi8kyKwnyKgpsDrmGsjTbtyVPkO",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 148,
+      "prompt_ms": 724.886,
+      "prompt_per_token_ms": 4.897878378378378,
+      "prompt_per_second": 204.17003501240197,
+      "predicted_n": 76,
+      "predicted_ms": 3802.264,
+      "predicted_per_token_ms": 50.02978947368421,
+      "predicted_per_second": 19.988091305601085
+    }
+  }
+}

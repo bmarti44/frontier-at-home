@@ -1,0 +1,60 @@
+{
+  "index": 21,
+  "task_id": 21,
+  "rendered_prompt_sha256": "d36aba92b19314e139b46a0e40594cc265ed7b4a169015835f36374d8d19b2c7",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let’s break it down:\n\n1. Raymond was born 6 years before Samantha.  \n   So, Raymond is 6 years older than Samantha.\n\n2. Samantha is now 31.  \n   So, Raymond is now 31 + 6 = 37 years old.\n\n3. Raymond had a son at age 23.  \n   That means his son was born when Raymond was 23.\n\n4. Raymond is now 37, so the son was born 37 - 23 = 14 years ago.\n\nAnswer: 14",
+  "finish_reason": "stop",
+  "expected": "14",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.06945236699903
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let’s break it down:\n\n1. Raymond was born 6 years before Samantha.  \n   So, Raymond is 6 years older than Samantha.\n\n2. Samantha is now 31.  \n   So, Raymond is now 31 + 6 = 37 years old.\n\n3. Raymond had a son at age 23.  \n   That means his son was born when Raymond was 23.\n\n4. Raymond is now 37, so the son was born 37 - 23 = 14 years ago.\n\nAnswer: 14",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326939,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 111,
+      "prompt_tokens": 73,
+      "total_tokens": 184,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-2mVzDluAd6dZNy0Yx0FSpKFe62WiL4Xu",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 72,
+      "prompt_ms": 512.731,
+      "prompt_per_token_ms": 7.121263888888889,
+      "prompt_per_second": 140.42451109841224,
+      "predicted_n": 111,
+      "predicted_ms": 5554.766,
+      "predicted_per_token_ms": 50.04293693693693,
+      "predicted_per_second": 19.98283996121529
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 9249,
+  "task_id": 9438,
+  "rendered_prompt_sha256": "455247893053df34ae9569c24082112b06d6c4bb7bc0a6d744f648146565095b",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We need the fraction of the standard solar flux reaching a horizontal collector at noon on the summer solstice at latitude 50°N.\n\nAt noon on the summer solstice, the solar declination is about +23.45°.  \nThe solar zenith angle at noon is:\n\n\\[\n\\theta_z = |\\phi - \\delta| = |50° - 23.45°| = 26.55°\n\\]\n\nThe ratio of direct beam on a horizontal surface to the flux on a surface perpendicular to the rays is \\(\\cos(\\theta_z)\\):\n\n\\[\n\\cos(26.55°) \\approx 0.894\n\\]\n\nThis is close to 0.891, which is one of the options.\n\nAnswer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.27101134899931
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need the fraction of the standard solar flux reaching a horizontal collector at noon on the summer solstice at latitude 50°N.\n\nAt noon on the summer solstice, the solar declination is about +23.45°.  \nThe solar zenith angle at noon is:\n\n\\[\n\\theta_z = |\\phi - \\delta| = |50° - 23.45°| = 26.55°\n\\]\n\nThe ratio of direct beam on a horizontal surface to the flux on a surface perpendicular to the rays is \\(\\cos(\\theta_z)\\):\n\n\\[\n\\cos(26.55°) \\approx 0.894\n\\]\n\nThis is close to 0.891, which is one of the options.\n\nAnswer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786328840,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 148,
+      "prompt_tokens": 145,
+      "total_tokens": 293,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ZKiW94numfgp5CCWQF79hVF8hB2HDlYB",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 144,
+      "prompt_ms": 728.493,
+      "prompt_per_token_ms": 5.058979166666667,
+      "prompt_per_second": 197.66833723865568,
+      "predicted_n": 148,
+      "predicted_ms": 7531.955,
+      "predicted_per_token_ms": 50.89158783783784,
+      "predicted_per_second": 19.649612882711065
+    }
+  }
+}

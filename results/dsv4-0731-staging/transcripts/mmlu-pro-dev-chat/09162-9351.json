@@ -1,0 +1,59 @@
+{
+  "index": 9162,
+  "task_id": 9351,
+  "rendered_prompt_sha256": "66945915fa093365a155b9276fa10cd524b76b9864e98592151d445752b56ad2",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use Gauss’ Law for gravity. Inside a uniform-density sphere, only the mass within radius \\( r \\) contributes to the gravitational force at radius \\( r \\).  \n\nMass inside radius \\( r \\):  \n\\[\nM(r) = \\rho \\frac{4}{3}\\pi r^3\n\\]  \nGravitational force on mass \\( m \\) at radius \\( r \\):  \n\\[\nF = \\frac{G M(r) m}{r^2} = \\frac{G \\rho \\frac{4}{3}\\pi r^3 m}{r^2} = \\frac{4}{3}\\pi G \\rho m r\n\\]  \n\nAt Earth's surface, \\( F = mg \\) with \\( g = 9.8 \\) m/s², so  \n\\[\ng = \\frac{4}{3}\\pi G \\rho R\n\\]  \nThus at depth \\( d \\), \\( r = R - d \\),  \n\\[\nF = mg \\frac{r}{R} = mg \\left(1 - \\frac{d}{R}\\right)\n\\]  \n\nFor \\( d = R/4 \\), \\( r/R = 3/4 \\):  \n\\[\nF = 1 \\times 9.8 \\times 0.75 = 7.35 \\ \\text{N}\n\\]  \n\nFor \\( d = R/2 \\), \\( r/R = 1/2 \\):  \n\\[\nF = 1 \\times 9.8 \\times 0.5 = 4.9 \\ \\text{N}\n\\]  \n\nThat matches option D.  \n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 18.09964043599939
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use Gauss’ Law for gravity. Inside a uniform-density sphere, only the mass within radius \\( r \\) contributes to the gravitational force at radius \\( r \\).  \n\nMass inside radius \\( r \\):  \n\\[\nM(r) = \\rho \\frac{4}{3}\\pi r^3\n\\]  \nGravitational force on mass \\( m \\) at radius \\( r \\):  \n\\[\nF = \\frac{G M(r) m}{r^2} = \\frac{G \\rho \\frac{4}{3}\\pi r^3 m}{r^2} = \\frac{4}{3}\\pi G \\rho m r\n\\]  \n\nAt Earth's surface, \\( F = mg \\) with \\( g = 9.8 \\) m/s², so  \n\\[\ng = \\frac{4}{3}\\pi G \\rho R\n\\]  \nThus at depth \\( d \\), \\( r = R - d \\),  \n\\[\nF = mg \\frac{r}{R} = mg \\left(1 - \\frac{d}{R}\\right)\n\\]  \n\nFor \\( d = R/4 \\), \\( r/R = 3/4 \\):  \n\\[\nF = 1 \\times 9.8 \\times 0.75 = 7.35 \\ \\text{N}\n\\]  \n\nFor \\( d = R/2 \\), \\( r/R = 1/2 \\):  \n\\[\nF = 1 \\times 9.8 \\times 0.5 = 4.9 \\ \\text{N}\n\\]  \n\nThat matches option D.  \n\nAnswer: D",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786328805,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 334,
+      "prompt_tokens": 253,
+      "total_tokens": 587,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-rHsesOAvCMNGmR7FfQOgGLWIuKPpXRwX",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 252,
+      "prompt_ms": 1050.335,
+      "prompt_per_token_ms": 4.167996031746032,
+      "prompt_per_second": 239.9234529935687,
+      "predicted_n": 334,
+      "predicted_ms": 17041.676,
+      "predicted_per_token_ms": 51.022982035928145,
+      "predicted_per_second": 19.599011270957153
+    }
+  }
+}

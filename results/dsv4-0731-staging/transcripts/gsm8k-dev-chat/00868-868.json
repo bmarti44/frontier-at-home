@@ -1,0 +1,61 @@
+{
+  "index": 868,
+  "task_id": 868,
+  "rendered_prompt_sha256": "4f87a4e4f7a78a0c3213cdc607cca2aef167a6387f511ec778c947c2385e5d87",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "He needs 30 kids × 4 cups = 120 cups.  \nEach box makes 10 cups, so he needs 120 ÷ 10 = 12 boxes.  \nEach box costs $1.25, so 12 × 1.25 = $15.  \n\nAnswer: 15",
+  "finish_reason": "stop",
+  "expected": "15",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.802813435000644
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "He needs 30 kids × 4 cups = 120 cups.  \nEach box makes 10 cups, so he needs 120 ÷ 10 = 12 boxes.  \nEach box costs $1.25, so 12 × 1.25 = $15.  \n\nAnswer: 15",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326841,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 62,
+      "prompt_tokens": 112,
+      "total_tokens": 174,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Rinor7ObBT7PFZBsUrV0vYS0K5yWpLyU",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 111,
+      "prompt_ms": 698.209,
+      "prompt_per_token_ms": 6.2901711711711705,
+      "prompt_per_second": 158.97818561490902,
+      "predicted_n": 62,
+      "predicted_ms": 3102.618,
+      "predicted_per_token_ms": 50.04222580645161,
+      "predicted_per_second": 19.983123929533058
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>A three-ounce box of flavored jello makes 10 small jello cups.  Greg wants to make small jello cups for his son's outdoor birthday party.  There will be 30 kids and he wants to have enough so that each kid can have 4 jello cups.  Jello is currently on sale for $1.25.  How much will he spend on jello?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜></think>"
+}

@@ -1,0 +1,59 @@
+{
+  "index": 9330,
+  "task_id": 9519,
+  "rendered_prompt_sha256": "fab50803403dc39e2d052731166365a56530110199af9738410ab3e86c1526a5",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use the Rydberg formula for hydrogen-like atoms:\n\n\\[\nE = 2.18 \\times 10^{-18} \\, \\text{J} \\left( \\frac{1}{n_1^2} - \\frac{1}{n_2^2} \\right)\n\\]\n\nHere, the electron jumps from \\(n=3\\) to \\(n=2\\), so:\n\n\\[\nE = 2.18 \\times 10^{-18} \\left( \\frac{1}{2^2} - \\frac{1}{3^2} \\right)\n\\]\n\nThat matches option D exactly.\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='D' expected='E'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.684789120999994
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use the Rydberg formula for hydrogen-like atoms:\n\n\\[\nE = 2.18 \\times 10^{-18} \\, \\text{J} \\left( \\frac{1}{n_1^2} - \\frac{1}{n_2^2} \\right)\n\\]\n\nHere, the electron jumps from \\(n=3\\) to \\(n=2\\), so:\n\n\\[\nE = 2.18 \\times 10^{-18} \\left( \\frac{1}{2^2} - \\frac{1}{3^2} \\right)\n\\]\n\nThat matches option D exactly.\n\nAnswer: D",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786328888,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 132,
+      "prompt_tokens": 265,
+      "total_tokens": 397,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-0WWSRAmbm3Uy0RkRCywOEuqd5aFMm7Nh",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 264,
+      "prompt_ms": 964.36,
+      "prompt_per_token_ms": 3.652878787878788,
+      "prompt_per_second": 273.7566883736364,
+      "predicted_n": 132,
+      "predicted_ms": 6692.821,
+      "predicted_per_token_ms": 50.7031893939394,
+      "predicted_per_second": 19.72262518301326
+    }
+  }
+}

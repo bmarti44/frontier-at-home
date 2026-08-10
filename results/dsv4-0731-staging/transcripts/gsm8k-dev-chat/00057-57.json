@@ -1,0 +1,60 @@
+{
+  "index": 57,
+  "task_id": 57,
+  "rendered_prompt_sha256": "1a4f782252f1178fc39ee149a6b0c1d790624fe72ebcf9ac3c6941e6e6aa6c4f",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "Let the number of boxes be \\( x \\).  \nEach box weighs 15 pounds, so the total weight of the boxes is \\( 15x \\).  \nThe truck and driver weigh 3755 pounds.  \nThe total weight is:\n\n\\[\n3755 + 15x\n\\]\n\nThis must be ≤ 5000:\n\n\\[\n3755 + 15x \\leq 5000\n\\]\n\nSubtract 3755:\n\n\\[\n15x \\leq 1245\n\\]\n\nDivide by 15:\n\n\\[\nx \\leq 83\n\\]\n\nSince \\( x \\) must be a whole number, the maximum is 83.\n\nAnswer: 83",
+  "finish_reason": "stop",
+  "expected": "83",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.284168971998952
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let the number of boxes be \\( x \\).  \nEach box weighs 15 pounds, so the total weight of the boxes is \\( 15x \\).  \nThe truck and driver weigh 3755 pounds.  \nThe total weight is:\n\n\\[\n3755 + 15x\n\\]\n\nThis must be ≤ 5000:\n\n\\[\n3755 + 15x \\leq 5000\n\\]\n\nSubtract 3755:\n\n\\[\n15x \\leq 1245\n\\]\n\nDivide by 15:\n\n\\[\nx \\leq 83\n\\]\n\nSince \\( x \\) must be a whole number, the maximum is 83.\n\nAnswer: 83",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326693,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 101,
+      "total_tokens": 235,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ntc0Xl46PwwDg8RPPBZyXwXfoAdAU0fH",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 100,
+      "prompt_ms": 622.519,
+      "prompt_per_token_ms": 6.2251900000000004,
+      "prompt_per_second": 160.63766728405076,
+      "predicted_n": 134,
+      "predicted_ms": 6658.577,
+      "predicted_per_token_ms": 49.69087313432836,
+      "predicted_per_second": 20.124419977421603
+    }
+  },
+  "used_fallback": false
+}

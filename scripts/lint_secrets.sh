@@ -93,6 +93,12 @@ allowlist = {
     "oid",
     "git_oid_sha1",
     "rendered_prompt_sha256",
+    # Golden-test response digests. 32_golden_tests.py records the reasoning and
+    # content streams separately so a pass that accepted reasoning-only output can
+    # be recomputed from the artifact instead of taken on trust.
+    "content_sha256",
+    "reasoning_sha256",
+    "generated_sha256",
     "commit",
     "revision",
     "config_digest",

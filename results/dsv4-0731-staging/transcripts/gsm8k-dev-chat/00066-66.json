@@ -1,0 +1,60 @@
+{
+  "index": 66,
+  "task_id": 66,
+  "rendered_prompt_sha256": "4a46bedf87ed95e1c438eea45f1729f78c93764197783f280977c4999577dbba",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We have 4 schools.  \nEach school sends:  \n- 1 girls’ team (5 players)  \n- 1 boys’ team (5 players)  \n- 1 coach for girls  \n- 1 coach for boys  \n\nSo per school: 5 + 5 + 1 + 1 = 12 people.  \n\nFor 4 schools: 4 × 12 = 48.  \n\nAnswer: 48",
+  "finish_reason": "stop",
+  "expected": "48",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.007597714999065
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We have 4 schools.  \nEach school sends:  \n- 1 girls’ team (5 players)  \n- 1 boys’ team (5 players)  \n- 1 coach for girls  \n- 1 coach for boys  \n\nSo per school: 5 + 5 + 1 + 1 = 12 people.  \n\nFor 4 schools: 4 × 12 = 48.  \n\nAnswer: 48",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786326791,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 89,
+      "prompt_tokens": 87,
+      "total_tokens": 176,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ubJrVKzHJla7RhdCMqbwOcq0cSCTMdAb",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 86,
+      "prompt_ms": 572.982,
+      "prompt_per_token_ms": 6.662581395348837,
+      "prompt_per_second": 150.09197496605478,
+      "predicted_n": 89,
+      "predicted_ms": 4431.815,
+      "predicted_per_token_ms": 49.79567415730337,
+      "predicted_per_second": 20.082065699944607
+    }
+  },
+  "used_fallback": false
+}

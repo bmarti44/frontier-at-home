@@ -1,0 +1,59 @@
+{
+  "index": 78,
+  "task_id": 149,
+  "rendered_prompt_sha256": "7da2b8d476ad46716841557007a1cbe82582ec43f6b6b8bf027b001616d6d359",
+  "rendering": "official-encoder-chat-nonthinking",
+  "completion": "We use the compound interest formula:\n\n\\[\nA = P \\left(1 + \\frac{r}{n}\\right)^{nt}\n\\]\n\nHere:\n- \\(P = 500\\)\n- \\(r = 0.08\\)\n- \\(n = 4\\) (quarterly)\n- \\(t = 5\\)\n\nSo:\n\n\\[\nA = 500 \\left(1 + \\frac{0.08}{4}\\right)^{4 \\cdot 5}\n= 500 \\left(1 + 0.02\\right)^{20}\n= 500 (1.02)^{20}\n\\]\n\nNow \\((1.02)^{20} \\approx 1.485947\\)\n\nSo:\n\n\\[\nA \\approx 500 \\times 1.485947 = 742.97\n\\]\n\nThat matches option I.\n\nAnswer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "model": "deepseek-v4-flash",
+      "max_tokens": 768,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.427666356999907
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We use the compound interest formula:\n\n\\[\nA = P \\left(1 + \\frac{r}{n}\\right)^{nt}\n\\]\n\nHere:\n- \\(P = 500\\)\n- \\(r = 0.08\\)\n- \\(n = 4\\) (quarterly)\n- \\(t = 5\\)\n\nSo:\n\n\\[\nA = 500 \\left(1 + \\frac{0.08}{4}\\right)^{4 \\cdot 5}\n= 500 \\left(1 + 0.02\\right)^{20}\n= 500 (1.02)^{20}\n\\]\n\nNow \\((1.02)^{20} \\approx 1.485947\\)\n\nSo:\n\n\\[\nA \\approx 500 \\times 1.485947 = 742.97\n\\]\n\nThat matches option I.\n\nAnswer: I",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786327248,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 171,
+      "prompt_tokens": 128,
+      "total_tokens": 299,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-fWdK3w8U91WD9Jc7rP7jc0bOhzYfci7F",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 127,
+      "prompt_ms": 769.385,
+      "prompt_per_token_ms": 6.058149606299213,
+      "prompt_per_second": 165.0669040857308,
+      "predicted_n": 171,
+      "predicted_ms": 8655.941,
+      "predicted_per_token_ms": 50.61953801169591,
+      "predicted_per_second": 19.75521783246905
+    }
+  }
+}
