@@ -37,11 +37,12 @@
   "preregistered_validity_gates": {
     "note": "Set before the corresponding evidence existed. A run failing any of these is not reportable, regardless of its score.",
     "truncated_fraction_max": {
-      "mmlu-pro": 0.055,
+      "mmlu-pro": 0.05533596837944664,
       "gsm8k": 0.01,
-      "source": "the measured truncation rate of the pre-0731 chat arms, so the candidate is not held to a laxer standard than the baseline",
-      "known_rounding_defect": "The MMLU-Pro ceiling was transcribed as 0.055 from a chat-arm rate of 14/253 = 0.0553359..., so as written the gate is very slightly STRICTER than intended and the baseline arm marginally fails its own derived ceiling. The value is deliberately NOT being corrected after the fact: moving a preregistered threshold once results exist is the failure mode preregistration prevents, and the error is in the conservative direction. Any arm clearing 0.055 also clears the intended 14/253. Noted 2026-08-10, after the discrepancy appeared in an actual bundle build.",
-      "gsm8k_note": "1/100 = 0.010 exactly, so the chat arm sits exactly on its ceiling and passes."
+      "source": "the exact measured truncation rate of the pre-0731 chat arms -- 14/253 for MMLU-Pro and 1/100 for GSM8K -- so the candidate is held to precisely the baseline's own standard, neither laxer nor (as in v1) fractionally stricter.",
+      "gsm8k_note": "1/100 = 0.010 exactly, so the chat arm sits exactly on its ceiling and passes.",
+      "mmlu-pro_exact": "14/253",
+      "gsm8k_exact": "1/100"
     },
     "request_failures_max": 0,
     "expected_n": {
@@ -72,5 +73,14 @@
       "results/DECISION.md"
     ]
   },
-  "relationship_to_the_frozen_decision": "results/decision.json (2026-07-16) selected ds4 on composite score; results/DECISION-OVERRIDE.md (2026-07-17) records the owner overriding serving to llama.cpp because ds4's envelope caps near 28K prompt tokens against a 1M product target. Neither document is superseded by this specification, and neither may be rewritten by a 0731 run."
+  "relationship_to_the_frozen_decision": "results/decision.json (2026-07-16) selected ds4 on composite score; results/DECISION-OVERRIDE.md (2026-07-17) records the owner overriding serving to llama.cpp because ds4's envelope caps near 28K prompt tokens against a 1M product target. Neither document is superseded by this specification, and neither may be rewritten by a 0731 run.",
+  "spec_version": "v2",
+  "supersedes": {
+    "spec": "configs/decision-specs/dsv4-0731.v1.json",
+    "reason": "v1's MMLU-Pro truncation ceiling was transcribed as 0.055 from a chat-arm rate of 14/253 = 0.05533596837944664. As written it was fractionally STRICTER than the value it was derived from, so the reference arm that DEFINED the ceiling failed it, and no bundle including that arm could ever reach a verdict about the candidate.",
+    "what_changed": "the MMLU-Pro ceiling becomes the exact rational 14/253 instead of a 3-decimal rounding of it",
+    "direction_and_magnitude": "loosens by 0.0000359678, admitting exactly the baseline rate that defined the gate and nothing else. The 0731 candidate arm sits at 5/253 = 0.019763, far inside either value, so this correction does not change any candidate verdict.",
+    "why_a_new_version_instead_of_an_edit": "v1 is left byte-identical on disk. Editing a preregistration after results exist is indistinguishable from tuning it, even when the edit is a typo fix. A superseding version keeps both the original defect and its correction auditable.",
+    "corrected_utc": "2026-08-10"
+  }
 }

@@ -1,0 +1,56 @@
+{
+  "index": 10075,
+  "task_id": 10276,
+  "rendered_prompt_sha256": "d480fbd0d8bf54593c62e82470b4d6e9393a01f8e5c8ec0bdd91fac45725ac06",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics diffraction divergence. Ruby laser wavelength 694.3 nm, initial diameter 14 mm, distance 10,000 km = 10^7 m. Beam divergence due to diffraction: θ ≈ 1.22 λ / D (Airy disk radius? Actually full angular divergence between first zeros? For Gaussian beam divergence θ = λ/(π w0) with diameter 2w0? Need determine expected options. Need compute beam diameter at target. Initial beam diameter 14 mm. Diffraction limited divergence half-angle θ ≈ 1.22 λ / D for circular aperture (Airy disk first null). Then beam diameter at distance L ≈ D + 2 L θ? Or if using full angle 2θ? Let's compute.\n\nλ=694.3 nm = 6.943e-7 m. D=0.014 m. λ/D = 4.959e-5 rad. 1.22 λ/D = 6.05e-5 rad half-angle. Full angle =1.21e-4 rad. At L=1e7 m, spread diameter = L * full angle? If beam diameter after distance = D + 2 L θ = D + L * 2θ = 0.014 + 1e7 * 1.21e-4 = 1214 m. Option B 1210 m. If using θ = λ/D (not 1.22) full angle 2λ/D = 9.918e-5 -> 992 m ~1000 m option H. If using θ=1.22 λ/D and diameter = 2 L θ = 1210 m (ignore initial) -> B. So answer B. Need final Answer: B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 19.190362908993848
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics diffraction divergence. Ruby laser wavelength 694.3 nm, initial diameter 14 mm, distance 10,000 km = 10^7 m. Beam divergence due to diffraction: θ ≈ 1.22 λ / D (Airy disk radius? Actually full angular divergence between first zeros? For Gaussian beam divergence θ = λ/(π w0) with diameter 2w0? Need determine expected options. Need compute beam diameter at target. Initial beam diameter 14 mm. Diffraction limited divergence half-angle θ ≈ 1.22 λ / D for circular aperture (Airy disk first null). Then beam diameter at distance L ≈ D + 2 L θ? Or if using full angle 2θ? Let's compute.\n\nλ=694.3 nm = 6.943e-7 m. D=0.014 m. λ/D = 4.959e-5 rad. 1.22 λ/D = 6.05e-5 rad half-angle. Full angle =1.21e-4 rad. At L=1e7 m, spread diameter = L * full angle? If beam diameter after distance = D + 2 L θ = D + L * 2θ = 0.014 + 1e7 * 1.21e-4 = 1214 m. Option B 1210 m. If using θ = λ/D (not 1.22) full angle 2λ/D = 9.918e-5 -> 992 m ~1000 m option H. If using θ=1.22 λ/D and diameter = 2 L θ = 1210 m (ignore initial) -> B. So answer B. Need final Answer: B.</think>Answer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786393736,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 366,
+      "prompt_tokens": 145,
+      "total_tokens": 511,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-iWQeAb5Cizqh5QgRB2kfHDDvebqjaFs9",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 144,
+      "prompt_ms": 707.07,
+      "prompt_per_token_ms": 4.910208333333333,
+      "prompt_per_second": 203.65734651448935,
+      "predicted_n": 366,
+      "predicted_ms": 18480.723,
+      "predicted_per_token_ms": 50.49377868852459,
+      "predicted_per_second": 19.80441998941275
+    }
+  }
+}

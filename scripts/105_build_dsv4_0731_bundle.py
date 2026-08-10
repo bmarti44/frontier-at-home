@@ -48,7 +48,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STAGING = REPO_ROOT / "results" / "dsv4-0731-staging"
 ATTEMPTS_ROOT = REPO_ROOT / "results" / "dsv4-0731-attempts"
-SPEC_PATH = REPO_ROOT / "configs" / "decision-specs" / "dsv4-0731.v1.json"
+SPEC_PATH = REPO_ROOT / "configs" / "decision-specs" / "dsv4-0731.v2.json"
 WEIGHTS_MANIFEST = REPO_ROOT / "weights" / "unsloth-ud-q2_k_xl" / "manifest.json"
 WEIGHTS_PIN = REPO_ROOT / "configs" / "pins" / "unsloth-ud-q2_k_xl.json"
 TOKENIZER = REPO_ROOT / "vendor" / "official-encoding" / "tokenizer.json"
@@ -512,12 +512,12 @@ def main() -> int:
 
         wanted = {
             "gsm8k-dev-thinking": (
-                STAGING / "acc-gsm8k-dev-0731-thinking-final.json",
-                STAGING / "transcripts" / "gsm8k-dev-thinking-final",
+                STAGING / "acc-gsm8k-dev-0731-thinking-16k.json",
+                STAGING / "transcripts" / "gsm8k-dev-thinking-16k",
             ),
             "mmlu-pro-dev-thinking": (
-                STAGING / "acc-mmlu-pro-dev-0731-thinking-final.json",
-                STAGING / "transcripts" / "mmlu-pro-dev-thinking-final",
+                STAGING / "acc-mmlu-pro-dev-0731-thinking-16k.json",
+                STAGING / "transcripts" / "mmlu-pro-dev-thinking-16k",
             ),
             "gsm8k-dev-chat": (
                 STAGING / "acc-gsm8k-dev-0731-chat.json",

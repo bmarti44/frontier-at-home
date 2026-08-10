@@ -1,0 +1,56 @@
+{
+  "index": 7561,
+  "task_id": 7744,
+  "rendered_prompt_sha256": "8528b5f89ca9526651c01372575406372f46f55c45d3c088d47af0f9533d0f3d",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Set 1..100 divisible by 2 and not divisible by 3. Numbers divisible by 2: 50. Among those divisible by 6 (divisible by 2 and 3): floor(100/6)=16. So divisible by 2 not 3 = 50-16=34? Wait 100/6=16.666 floor 16. So 34. Probability 34/100 = 17/50. Option D. Need answer: Answer: D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.519682409008965
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Set 1..100 divisible by 2 and not divisible by 3. Numbers divisible by 2: 50. Among those divisible by 6 (divisible by 2 and 3): floor(100/6)=16. So divisible by 2 not 3 = 50-16=34? Wait 100/6=16.666 floor 16. So 34. Probability 34/100 = 17/50. Option D. Need answer: Answer: D.</think>Answer: D",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786387768,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 115,
+      "prompt_tokens": 157,
+      "total_tokens": 272,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-nKhwQAYDq1Zw8vgtuVlb9LdsXshQsiTy",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 156,
+      "prompt_ms": 693.488,
+      "prompt_per_token_ms": 4.445435897435898,
+      "prompt_per_second": 224.94981888655605,
+      "predicted_n": 115,
+      "predicted_ms": 5824.216,
+      "predicted_per_token_ms": 50.64535652173913,
+      "predicted_per_second": 19.745146814609896
+    }
+  }
+}

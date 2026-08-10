@@ -1,0 +1,56 @@
+{
+  "index": 10508,
+  "task_id": 10718,
+  "rendered_prompt_sha256": "3dafaa2e56cfac629a98bdd0fdbbefadf742cd11927f545343be08f7df609e5a",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need simplify expression: a[i] == max || !(max != a[i]). Let's parse. max != a[i] equivalent a[i] != max. !(max != a[i]) equivalent a[i] == max. So expression is a[i] == max || a[i] == max = a[i] == max. Option B. Need reply single letter form. Answer: B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.211175666001509
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need simplify expression: a[i] == max || !(max != a[i]). Let's parse. max != a[i] equivalent a[i] != max. !(max != a[i]) equivalent a[i] == max. So expression is a[i] == max || a[i] == max = a[i] == max. Option B. Need reply single letter form. Answer: B.</think>Answer: B",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786381020,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 90,
+      "prompt_tokens": 130,
+      "total_tokens": 220,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-PKt58K3yH8NzQWOwiux8fZqYIdAHlLry",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 129,
+      "prompt_ms": 728.746,
+      "prompt_per_token_ms": 5.649193798449613,
+      "prompt_per_second": 177.0164090094491,
+      "predicted_n": 90,
+      "predicted_ms": 4480.235,
+      "predicted_per_token_ms": 49.780388888888886,
+      "predicted_per_second": 20.088231978902893
+    }
+  }
+}
