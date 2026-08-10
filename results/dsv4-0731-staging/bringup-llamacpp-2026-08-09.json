@@ -7,7 +7,11 @@
   "engine": {
     "binary": "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server",
     "system_fingerprint": "b10053-0dc74e332",
-    "restore_result": {"ok": true, "stack": "llamacpp", "port": 8013},
+    "restore_result": {
+      "ok": true,
+      "stack": "llamacpp",
+      "port": 8013
+    },
     "profile": "1M-fast: CTX=1048576, UBATCH/BATCH=2048, PARALLEL=2, NO_MMAP=1, SPEC_TYPE=none"
   },
   "gates": {
@@ -25,10 +29,22 @@
       "projected_free_gib": 9.45,
       "floor_gib": 8.0
     },
-    "health": {"endpoint": "127.0.0.1:8013/health", "status": 200},
-    "slot_topology": {"slots": 2, "n_ctx_per_slot": 524288, "matches_owner_spec": true},
+    "health": {
+      "endpoint": "127.0.0.1:8013/health",
+      "status": 200
+    },
+    "slot_topology": {
+      "slots": 2,
+      "n_ctx_per_slot": 524288,
+      "matches_owner_spec": true
+    },
     "mem_available_after_load_gib": 11.87,
-    "golden": {"pass": true, "checks_passed": 10, "checks_total": 10, "artifact": "results/dsv4-0731-staging/golden-llamacpp-0731.json"}
+    "golden": {
+      "pass": true,
+      "checks_passed": 10,
+      "checks_total": 10,
+      "artifact": "results/dsv4-0731-staging/golden-llamacpp-0731.json"
+    }
   },
   "findings": [
     {
@@ -63,5 +79,5 @@
     "scripts/35_soak.py at the owner-set DSV4_SOAK_MEM_FLOOR_GIB=8",
     "1M/512K context qualification via scripts/57,58,62"
   ],
-  "rollback": "weights/unsloth-ud-q2_k_xl/*.gguf.pre0731 hold the previous release, hashes verified 3/3 on 2026-08-09. Rename back and revert commit 72d1db7."
+  "rollback": "REMOVED 2026-08-09 at owner instruction. The *.gguf.pre0731 links were deleted; deleting them freed 0 bytes because the surviving hardlink is under /home/dsv4. Reverting now requires re-fetching unsloth/DeepSeek-V4-Flash-GGUF revision e3aa0d6a; the shard digests are in git history at 72d1db7^."
 }

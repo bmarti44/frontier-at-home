@@ -53,8 +53,10 @@
     "pre_existing_failure_note": "test_frozen_profiles_pin_the_verified_production_candidates, test_glm_wrapper_hashes_the_selected_candidate_binary, test_glm_wrapper_rejects_unsafe_safety_overrides all fail identically with these changes stashed."
   },
   "rollback": {
-    "procedure": "Rename the three *.gguf.pre0731 files back to their canonical names (removing the 0731 hardlinks first), then git-revert this commit to restore manifest.json, the pin, and verification/MANIFEST.sha256. No re-download is required.",
-    "verified_recoverable": true
+    "status": "REMOVED_BY_OWNER_2026-08-09",
+    "note": "The *.gguf.pre0731 links were deleted at owner instruction once 0731 was serving. There is no longer a local rollback path: reverting to the pre-0731 release now requires re-fetching it from unsloth/DeepSeek-V4-Flash-GGUF at revision e3aa0d6a5fa4f820d9e132ac1fd1d01e1b2b49e0, whose per-shard sha256 values are preserved in the git history of weights/unsloth-ud-q2_k_xl/manifest.json (commit 72d1db7^).",
+    "disk_effect_measured": "Deleting the links freed 0 bytes. df reported 281G available immediately before and after. Each old shard had link count 2 and the surviving link is under /home/dsv4, which this account cannot read or unlink, so the ~90 GiB remains allocated until root removes that link.",
+    "verified_recoverable": false
   },
   "remaining": {
     "restart": "Requires one root command: scripts/52_engine_switch.sh uses install -o root and runuser -u dsv4. Until the engine is restarted it continues serving the pre-0731 weights already resident in memory (DSV4_NO_MMAP=1).",
