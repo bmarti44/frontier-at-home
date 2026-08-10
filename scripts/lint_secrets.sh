@@ -108,6 +108,10 @@ allowlist = {
     "normalized_server_sha256",
     "model_manifest_sha256s",
     "model_manifest_sha256",
+    # The llama.cpp GGUF generation actually loaded by the serving arm. Distinct
+    # from weights_manifest_sha256, which names the ds4 weights.
+    "serving_weights_manifest_sha256",
+    "dsv4_serving_weights_manifest_sha256",
     "diagnostic_events_sha256",
     "runtime_start_sha256",
     "run_log_sha256",

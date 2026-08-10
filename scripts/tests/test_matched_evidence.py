@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import sys
 import tempfile
@@ -35,14 +36,28 @@ class MatchedEvidenceTests(unittest.TestCase):
         campaign.mkdir()
         fixture = root / "fixture.txt"
         fixture.write_text("fixed matched fixture\n", encoding="utf-8")
+        # The serving weights manifest is a real file whose digest the profile
+        # must match: the collector hashes it rather than trusting the profile,
+        # so that editing the profile alone cannot relabel the baseline.
+        serving_manifest = root / "serving-manifest.json"
+        serving_manifest.write_text(
+            json.dumps({"repo": "unsloth/test-GGUF", "files": []}),
+            encoding="utf-8",
+        )
+        serving_digest = hashlib.sha256(serving_manifest.read_bytes()).hexdigest()
         dsv4_profile = root / "dsv4-profile.json"
         dsv4_profile.write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "profile": "dsv4",
                     "binary_sha256": "c" * 64,
                     "configuration_sha256": "e" * 64,
+                    "serving_weights_manifest_sha256": serving_digest,
+                    "serving_weights_release": {
+                        "repo": "unsloth/test-GGUF",
+                        "revision": "f" * 40,
+                    },
                 }
             ),
             encoding="utf-8",
@@ -138,13 +153,13 @@ class MatchedEvidenceTests(unittest.TestCase):
                         "ts=2026-07-27T00:00:00Z mem_available_gib=20.00\n",
                         encoding="utf-8",
                     )
-        return campaign, fixture, dsv4_profile
+        return campaign, fixture, dsv4_profile, serving_manifest
 
     def test_collects_exact_twenty_safe_matched_records(self):
         with tempfile.TemporaryDirectory() as tmp:
-            campaign, fixture, profile = self.make_campaign(Path(tmp))
+            campaign, fixture, profile, serving = self.make_campaign(Path(tmp))
             records = self.collector.collect_records(
-                campaign, fixture, profile
+                campaign, fixture, profile, serving
             )
             self.assertEqual(len(records), 20)
             self.assertEqual(
@@ -161,13 +176,42 @@ class MatchedEvidenceTests(unittest.TestCase):
                 all(len(row["token_timestamps"]) == 128 for row in records)
             )
 
+    def test_rejects_a_swapped_deepseek_weight_generation(self):
+        """A GGUF generation change must invalidate the matched baseline.
+
+        Before the serving identity was bound, swapping the served weights from
+        the pre-0731 release to 0731 changed neither binary_sha256 nor
+        configuration_sha256 -- the engine and its unit are the same -- so two GLM
+        candidates measured against different DeepSeek models produced evidence
+        claiming the same baseline. The collector must hash the manifest on disk,
+        not trust the profile's copy of the digest.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving = self.make_campaign(Path(tmp))
+            # Sanity: unmutated campaign collects.
+            self.assertEqual(
+                len(self.collector.collect_records(
+                    campaign, fixture, profile, serving
+                )),
+                20,
+            )
+            # Now the served weights change underneath an unchanged profile.
+            serving.write_text(
+                json.dumps({"repo": "unsloth/test-GGUF", "files": [{"n": 1}]}),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "served GGUF generation"):
+                self.collector.collect_records(
+                    campaign, fixture, profile, serving
+                )
+
     def test_rejects_missing_memory_and_duplicate_server_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
-            campaign, fixture, profile = self.make_campaign(Path(tmp))
+            campaign, fixture, profile, serving = self.make_campaign(Path(tmp))
             first = campaign / "block0-seq0-armA"
             (first / "samples.log").unlink()
             with self.assertRaisesRegex(ValueError, "samples"):
-                self.collector.collect_records(campaign, fixture, profile)
+                self.collector.collect_records(campaign, fixture, profile, serving)
 
             (first / "samples.log").write_text(
                 "mem_avail_kb=62914560\n", encoding="utf-8"
@@ -176,7 +220,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             target = campaign / "block0-seq3-armA" / "process.identity"
             target.write_bytes(source.read_bytes())
             with self.assertRaisesRegex(ValueError, "fresh servers|server boot"):
-                self.collector.collect_records(campaign, fixture, profile)
+                self.collector.collect_records(campaign, fixture, profile, serving)
 
 
 if __name__ == "__main__":

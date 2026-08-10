@@ -176,8 +176,14 @@ def _load_result(
     return profile, reps[0], reps[1]
 
 
+SERVING_WEIGHTS_MANIFEST = ROOT / "weights" / "unsloth-ud-q2_k_xl" / "manifest.json"
+
+
 def collect_records(
-    campaign: Path, fixture: Path, dsv4_profile_path: Path
+    campaign: Path,
+    fixture: Path,
+    dsv4_profile_path: Path,
+    serving_manifest_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     campaign = campaign.resolve()
     fixture = fixture.resolve()
@@ -191,14 +197,39 @@ def collect_records(
     dsv4_profile = _read_json(dsv4_profile_path)
     if (
         not isinstance(dsv4_profile, dict)
-        or dsv4_profile.get("schema_version") != 2
+        or dsv4_profile.get("schema_version") != 3
         or dsv4_profile.get("profile") != "dsv4"
         or not SHA256.fullmatch(str(dsv4_profile.get("binary_sha256", "")))
         or not SHA256.fullmatch(
             str(dsv4_profile.get("configuration_sha256", ""))
         )
+        or not SHA256.fullmatch(
+            str(dsv4_profile.get("serving_weights_manifest_sha256", ""))
+        )
     ):
         raise ValueError("approved DeepSeek profile is invalid")
+    # The DeepSeek arm is llama.cpp serving UD-Q2_K_XL. binary_sha256 and
+    # configuration_sha256 identify the engine and its unit, and neither moves when
+    # the GGUF generation underneath them is replaced -- the 0731 swap changed no
+    # value this collector previously recorded. Without this check a GLM candidate
+    # measured against pre-0731 and one measured against 0731 both claim the same
+    # DeepSeek baseline. Recording the profile's own digest is not sufficient
+    # either: a profile edit alone would relabel the baseline, so the manifest on
+    # disk is hashed and compared.
+    serving_manifest = (
+        SERVING_WEIGHTS_MANIFEST
+        if serving_manifest_path is None
+        else serving_manifest_path
+    ).resolve()
+    if serving_manifest.is_symlink() or not serving_manifest.is_file():
+        raise ValueError("serving weights manifest is missing or unsafe")
+    serving_manifest_sha256 = _sha256(serving_manifest)
+    if serving_manifest_sha256 != dsv4_profile["serving_weights_manifest_sha256"]:
+        raise ValueError(
+            "served GGUF generation does not match the approved DeepSeek profile: "
+            f"manifest {serving_manifest_sha256} != profile "
+            f"{dsv4_profile['serving_weights_manifest_sha256']}"
+        )
     fixture_sha256 = _sha256(fixture)
     directories: dict[tuple[int, int], tuple[str, Path]] = {}
     for path in campaign.iterdir():
@@ -335,6 +366,36 @@ def main() -> int:
                     json.dumps(record, sort_keys=True, separators=(",", ":"))
                     + "\n"
                 )
+            stream.flush()
+            os.fsync(stream.fileno())
+        # The served DeepSeek generation goes in a sidecar rather than in each
+        # matched_arm record: glm52_goal._score_parity pins the record key set and
+        # requires exactly 20 records, and widening a GLM scorer's schema from a
+        # DeepSeek change is precisely the cross-campaign coupling this repository
+        # keeps splitting apart. The value is constant across arms anyway, and
+        # collect_records has already refused to produce these records at all if
+        # the live manifest disagreed with the approved profile.
+        profile = _read_json(args.dsv4_profile)
+        identity = args.out.with_suffix(args.out.suffix + ".identity.json")
+        with identity.open("x", encoding="utf-8") as stream:
+            json.dump(
+                {
+                    "schema_version": 1,
+                    "record_type": "matched_campaign_identity",
+                    "dsv4_binary_sha256": profile["binary_sha256"],
+                    "dsv4_configuration_sha256": profile["configuration_sha256"],
+                    "dsv4_serving_weights_manifest_sha256": profile[
+                        "serving_weights_manifest_sha256"
+                    ],
+                    "dsv4_serving_weights_release": profile.get(
+                        "serving_weights_release"
+                    ),
+                },
+                stream,
+                indent=2,
+                sort_keys=True,
+            )
+            stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
     except (OSError, ValueError) as exc:

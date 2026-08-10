@@ -310,7 +310,7 @@ class EngineSwitchTests(unittest.TestCase):
                 path,
             )
 
-        self.assertEqual(dsv4["schema_version"], 2)
+        self.assertEqual(dsv4["schema_version"], 3)
         self.assertEqual(dsv4["profile"], "dsv4")
         self.assertEqual(
             dsv4["binary_sha256"],
