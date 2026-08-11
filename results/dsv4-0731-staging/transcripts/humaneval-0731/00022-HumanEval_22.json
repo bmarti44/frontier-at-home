@@ -1,0 +1,93 @@
+{
+  "index": 22,
+  "task_id": "HumanEval/22",
+  "rendered_prompt_sha256": "b7bde40423debe285816bdcee858624a7ded823a414e8cf0e71d1185fc6cdb32",
+  "rendering": "raw",
+  "completion": "    result = []\n    for value in values:\n        if isinstance(value, int):\n            result.append(value)\n    return result\n",
+  "finish_reason": "stop",
+  "expected": "    return [x for x in values if isinstance(x, int)]\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.8895788619993255
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    result = []\n    for value in values:\n        if isinstance(value, int):\n            result.append(value)\n    return result\n",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414200,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 27,
+      "prompt_tokens": 89,
+      "total_tokens": 116,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Z14o8ctUQiZSrT68lRsQPEPJn294XZ94",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 88,
+      "prompt_ms": 564.536,
+      "prompt_per_token_ms": 6.415181818181818,
+      "prompt_per_second": 155.8802273017133,
+      "predicted_n": 27,
+      "predicted_ms": 1322.161,
+      "predicted_per_token_ms": 48.96892592592593,
+      "predicted_per_second": 20.42111361626912
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00022:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "from typing import List, Any\n\n\ndef filter_integers(values: List[Any]) -> List[int]:\n    \"\"\" Filter given list of any python values only for integers\n    >>> filter_integers(['a', 3.14, 5])\n    [5]\n    >>> filter_integers([1, 2, 3, 'abc', {}, []])\n    [1, 2, 3]\n    \"\"\"\n"
+}

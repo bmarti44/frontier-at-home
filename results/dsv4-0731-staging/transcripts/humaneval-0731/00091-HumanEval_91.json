@@ -1,0 +1,92 @@
+{
+  "index": 91,
+  "task_id": "HumanEval/91",
+  "rendered_prompt_sha256": "9445e82177f062459a801e24909bc856435701d82f1d67a9dad1f9d6fd0f6362",
+  "rendering": "raw",
+  "completion": "    count = 0\n    sentences = re.split('[.!?]', S)\n    for sentence in sentences:\n        sentence = sentence.strip()\n        if sentence.startswith('I '):\n            count += 1\n    return count",
+  "finish_reason": "stop",
+  "expected": "    import re\n    sentences = re.split(r'[.?!]\\s*', S)\n    return sum(sentence[0:2] == 'I ' for sentence in sentences)\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.134469266005908
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    count = 0\n    sentences = re.split('[.!?]', S)\n    for sentence in sentences:\n        sentence = sentence.strip()\n        if sentence.startswith('I '):\n            count += 1\n    return count",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414743,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 49,
+      "prompt_tokens": 103,
+      "total_tokens": 152,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-3IpzTROFQhJnzhtTrFTUQpnTIljRSxoe",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 102,
+      "prompt_ms": 677.426,
+      "prompt_per_token_ms": 6.64143137254902,
+      "prompt_per_second": 150.5699515519038,
+      "predicted_n": 49,
+      "predicted_ms": 2454.992,
+      "predicted_per_token_ms": 50.101877551020415,
+      "predicted_per_second": 19.959331843036555
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00091:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 38, in <module>\n    check(is_bored)\n  File \"/case/main.py\", line 26, in check\n    assert candidate(\"Hello world\") == 0, \"Test 1\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/case/main.py\", line 15, in is_bored\n    sentences = re.split('[.!?]', S)\n                ^^\nNameError: name 're' is not defined. Did you forget to import 're'?\n"
+  }
+}

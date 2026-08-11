@@ -1,0 +1,92 @@
+{
+  "index": 31,
+  "task_id": "HumanEval/31",
+  "rendered_prompt_sha256": "453ca5e2c63fdbba8afa4208d797faeb371744b7de1e5c401d89664050bcc613",
+  "rendering": "raw",
+  "completion": "    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\ndef is_valid_location(row, col, board):\n    \"\"\"Check if a location is valid for placing a queen.\"\"\"\n    n = len(board)\n    return 0 <= row < n and 0 <= col < n\n\ndef is_safe(row, col, board):\n    \"\"\"Check if placing a queen at (row, col) is safe.\"\"\"\n    # Check column\n    for i in range(row):\n        if board[i][col] == 1:\n            return False\n    # Check upper left diagonal\n    i, j = row, col\n    while i >= 0 and j >= 0:\n        if board[i][j] == 1:\n            return False\n        i -= 1\n        j -= 1\n    # Check upper right diagonal\n    i, j = row, col\n    while i >= 0 and j < len(board):\n        if board[i][j] == 1:\n            return False\n        i -= 1\n        j += 1\n    return True\n\ndef solve_n_queens(n, board, row=0):\n    \"\"\"Solve the N-Queens problem using backtracking.\"\"\"\n    if row == n:\n        return True\n    for col in range(n):\n        if is_safe(row, col, board):\n            board[row][col] = 1\n            if solve_n_queens(n, board, row + 1):\n                return True\n            board[row][col] = 0\n    return False\n\ndef n_queens(n):\n    \"\"\"Return a solution to the N-Queens problem as a list of lists.\n    >>> n_queens(4)\n    [[0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 0, 1, 0]]\n    \"\"\"\n    board = [[0] * n for _ in range(n)]\n    if solve_n_queens(n, board):\n        return board\n    return []\n\n# Test the functions\nprint(is_prime(6))  # False\nprint(is_prime(101))  # True\nprint(is_prime(11))  # True\nprint",
+  "finish_reason": "length",
+  "expected": "    if n < 2:\n        return False\n    for k in range(2, n - 1):\n        if n % k == 0:\n            return False\n    return True\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 26.66527357599989
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\ndef is_valid_location(row, col, board):\n    \"\"\"Check if a location is valid for placing a queen.\"\"\"\n    n = len(board)\n    return 0 <= row < n and 0 <= col < n\n\ndef is_safe(row, col, board):\n    \"\"\"Check if placing a queen at (row, col) is safe.\"\"\"\n    # Check column\n    for i in range(row):\n        if board[i][col] == 1:\n            return False\n    # Check upper left diagonal\n    i, j = row, col\n    while i >= 0 and j >= 0:\n        if board[i][j] == 1:\n            return False\n        i -= 1\n        j -= 1\n    # Check upper right diagonal\n    i, j = row, col\n    while i >= 0 and j < len(board):\n        if board[i][j] == 1:\n            return False\n        i -= 1\n        j += 1\n    return True\n\ndef solve_n_queens(n, board, row=0):\n    \"\"\"Solve the N-Queens problem using backtracking.\"\"\"\n    if row == n:\n        return True\n    for col in range(n):\n        if is_safe(row, col, board):\n            board[row][col] = 1\n            if solve_n_queens(n, board, row + 1):\n                return True\n            board[row][col] = 0\n    return False\n\ndef n_queens(n):\n    \"\"\"Return a solution to the N-Queens problem as a list of lists.\n    >>> n_queens(4)\n    [[0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 0, 1, 0]]\n    \"\"\"\n    board = [[0] * n for _ in range(n)]\n    if solve_n_queens(n, board):\n        return board\n    return []\n\n# Test the functions\nprint(is_prime(6))  # False\nprint(is_prime(101))  # True\nprint(is_prime(11))  # True\nprint",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786414406,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 94,
+      "total_tokens": 606,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-GGFMdTutPobktU7dnBYd0o1fUQBNTLwF",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 94,
+      "prompt_ms": 589.418,
+      "prompt_per_token_ms": 6.270404255319149,
+      "prompt_per_second": 159.47935081724685,
+      "predicted_n": 512,
+      "predicted_ms": 26074.281,
+      "predicted_per_token_ms": 50.926330078125,
+      "predicted_per_second": 19.63620780185655
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00031:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

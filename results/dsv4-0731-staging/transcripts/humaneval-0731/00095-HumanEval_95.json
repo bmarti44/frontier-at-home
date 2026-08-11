@@ -1,0 +1,92 @@
+{
+  "index": 95,
+  "task_id": "HumanEval/95",
+  "rendered_prompt_sha256": "e8a971e0e8838d69639de6628a8eff45638ce938c172670b7274c41d63207631",
+  "rendering": "raw",
+  "completion": "    if not dict:\n        return False\n    all_lower = True\n    all_upper = True\n    for key in dict:\n        if not isinstance(key, str):\n            return False\n        if key.islower():\n            all_upper = False\n        elif key.isupper():\n            all_lower = False\n        else:\n            return False\n    return all_lower or all_upper",
+  "finish_reason": "stop",
+  "expected": "    if len(dict.keys()) == 0:\n        return False\n    else:\n        state = \"start\"\n        for key in dict.keys():\n\n            if isinstance(key, str) == False:\n                state = \"mixed\"\n                break\n            if state == \"start\":\n                if key.isupper():\n                    state = \"upper\"\n                elif key.islower():\n                    state = \"lower\"\n                else:\n                    break\n            elif (state == \"upper\" and not key.isupper()) or (state == \"lower\" and not key.islower()):\n                    state = \"mixed\"\n                    break\n            else:\n                break\n        return state == \"upper\" or state == \"lower\" \n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.02675096099847
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if not dict:\n        return False\n    all_lower = True\n    all_upper = True\n    for key in dict:\n        if not isinstance(key, str):\n            return False\n        if key.islower():\n            all_upper = False\n        elif key.isupper():\n            all_lower = False\n        else:\n            return False\n    return all_lower or all_upper",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414766,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 84,
+      "prompt_tokens": 175,
+      "total_tokens": 259,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-xJX2eyjCqvnZKvztoftyiwCwwyuLmqRT",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 174,
+      "prompt_ms": 777.419,
+      "prompt_per_token_ms": 4.467925287356322,
+      "prompt_per_second": 223.81752954327075,
+      "predicted_n": 84,
+      "predicted_ms": 4246.093,
+      "predicted_per_token_ms": 50.54872619047619,
+      "predicted_per_second": 19.782892178762925
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00095:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

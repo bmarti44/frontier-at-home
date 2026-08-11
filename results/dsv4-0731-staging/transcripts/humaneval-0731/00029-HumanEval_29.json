@@ -1,0 +1,92 @@
+{
+  "index": 29,
+  "task_id": "HumanEval/29",
+  "rendered_prompt_sha256": "a173ce6b1e3767cabcf0ff73457d20e4eac07e0968b173b76afa0b35c0799646",
+  "rendering": "raw",
+  "completion": "    return [s for s in strings if s.startswith(prefix)]\n\n\ndef filter_by_prefix_ignore_case(strings: List[str], prefix: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that start with a given prefix, ignoring case.\n    >>> filter_by_prefix_ignore_case([], 'a')\n    []\n    >>> filter_by_prefix_ignore_case(['abc', 'bcd', 'cde', 'array'], 'a')\n    ['abc', 'array']\n    >>> filter_by_prefix_ignore_case(['Abc', 'bcd', 'cde', 'array'], 'a')\n    ['Abc', 'array']\n    \"\"\"\n    return [s for s in strings if s.lower().startswith(prefix.lower())]\n\n\ndef filter_by_prefix_ignore_case_and_whitespace(strings: List[str], prefix: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that start with a given prefix, ignoring case and whitespace.\n    >>> filter_by_prefix_ignore_case_and_whitespace([], 'a')\n    []\n    >>> filter_by_prefix_ignore_case_and_whitespace(['abc', 'bcd', 'cde', 'array'], 'a')\n    ['abc', 'array']\n    >>> filter_by_prefix_ignore_case_and_whitespace(['Abc', 'bcd', 'cde', 'array'], 'a')\n    ['Abc', 'array']\n    >>> filter_by_prefix_ignore_case_and_whitespace(['  abc', 'bcd', 'cde', 'array'], 'a')\n    ['  abc', 'array']\n    \"\"\"\n    return [s for s in strings if s.strip().lower().startswith(prefix.strip().lower())]\n\n\ndef filter_by_prefix_ignore_case_and_whitespace_and_underscore(strings: List[str], prefix: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that start with a given prefix, ignoring case, whitespace, and underscore.\n    >>> filter_by_prefix_ignore_case_and_whitespace_and_underscore([], 'a')\n    []\n    >>> filter_by_prefix_ignore_case_and_whitespace_and_underscore(['abc', 'bcd', 'cde', 'array'], 'a')\n    ['abc', 'array']\n    >>> filter_by_prefix_ignore_case_and_whitespace_and_underscore(['Abc",
+  "finish_reason": "length",
+  "expected": "    return [x for x in strings if x.startswith(prefix)]\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 26.611827125001582
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    return [s for s in strings if s.startswith(prefix)]\n\n\ndef filter_by_prefix_ignore_case(strings: List[str], prefix: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that start with a given prefix, ignoring case.\n    >>> filter_by_prefix_ignore_case([], 'a')\n    []\n    >>> filter_by_prefix_ignore_case(['abc', 'bcd', 'cde', 'array'], 'a')\n    ['abc', 'array']\n    >>> filter_by_prefix_ignore_case(['Abc', 'bcd', 'cde', 'array'], 'a')\n    ['Abc', 'array']\n    \"\"\"\n    return [s for s in strings if s.lower().startswith(prefix.lower())]\n\n\ndef filter_by_prefix_ignore_case_and_whitespace(strings: List[str], prefix: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that start with a given prefix, ignoring case and whitespace.\n    >>> filter_by_prefix_ignore_case_and_whitespace([], 'a')\n    []\n    >>> filter_by_prefix_ignore_case_and_whitespace(['abc', 'bcd', 'cde', 'array'], 'a')\n    ['abc', 'array']\n    >>> filter_by_prefix_ignore_case_and_whitespace(['Abc', 'bcd', 'cde', 'array'], 'a')\n    ['Abc', 'array']\n    >>> filter_by_prefix_ignore_case_and_whitespace(['  abc', 'bcd', 'cde', 'array'], 'a')\n    ['  abc', 'array']\n    \"\"\"\n    return [s for s in strings if s.strip().lower().startswith(prefix.strip().lower())]\n\n\ndef filter_by_prefix_ignore_case_and_whitespace_and_underscore(strings: List[str], prefix: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that start with a given prefix, ignoring case, whitespace, and underscore.\n    >>> filter_by_prefix_ignore_case_and_whitespace_and_underscore([], 'a')\n    []\n    >>> filter_by_prefix_ignore_case_and_whitespace_and_underscore(['abc', 'bcd', 'cde', 'array'], 'a')\n    ['abc', 'array']\n    >>> filter_by_prefix_ignore_case_and_whitespace_and_underscore(['Abc",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786414352,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 84,
+      "total_tokens": 596,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-d9b41k8lkalFu4skOssgcJqjZggsMqgB",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 84,
+      "prompt_ms": 568.362,
+      "prompt_per_token_ms": 6.766214285714286,
+      "prompt_per_second": 147.79313184203025,
+      "predicted_n": 512,
+      "predicted_ms": 26042.024,
+      "predicted_per_token_ms": 50.863328125,
+      "predicted_per_second": 19.66053022606845
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00029:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

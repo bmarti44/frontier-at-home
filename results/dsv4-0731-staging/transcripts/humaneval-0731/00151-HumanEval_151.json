@@ -1,0 +1,92 @@
+{
+  "index": 151,
+  "task_id": "HumanEval/151",
+  "rendered_prompt_sha256": "76075722f14f440573576993f00d079bbb312818c40a47974f99bf0d9374d905",
+  "rendering": "raw",
+  "completion": "    return sum(num ** 2 for num in lst if num > 0 and num % 2 != 0 and isinstance(num, int))",
+  "finish_reason": "stop",
+  "expected": "    return sum([i**2 for i in lst if i > 0 and i%2!=0 and \".\" not in str(i)])\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1734732589975465
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    return sum(num ** 2 for num in lst if num > 0 and num % 2 != 0 and isinstance(num, int))",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786415135,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 31,
+      "prompt_tokens": 139,
+      "total_tokens": 170,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-HyFNqiDTYTon7ANXcjt6nZ0pHEbZ8y7W",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 138,
+      "prompt_ms": 646.725,
+      "prompt_per_token_ms": 4.686413043478261,
+      "prompt_per_second": 213.3828134060072,
+      "predicted_n": 31,
+      "predicted_ms": 1524.141,
+      "predicted_per_token_ms": 49.16583870967742,
+      "predicted_per_second": 20.33932556108654
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00151:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

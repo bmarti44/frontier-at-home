@@ -1,0 +1,92 @@
+{
+  "index": 24,
+  "task_id": "HumanEval/24",
+  "rendered_prompt_sha256": "3bc8bf3f66a3b5e171a358bbd5f33fba1a5d16ea65459198757dcb662dbaaac2",
+  "rendering": "raw",
+  "completion": "    for i in range(n // 2, 0, -1):\n        if n % i == 0:\n            return i\n    return 1\n\ndef check(candidate):\n    assert candidate(3) == 1\n    assert candidate(7) == 1\n    assert candidate(19) == 1\n    assert candidate(15) == 5\n    assert candidate(49) == 7\n    assert candidate(100) == 50\n\n# Check some simple cases\nassert largest_divisor(15) == 5\nassert largest_divisor(49) == 7\nassert largest_divisor(100) == 50\nassert largest_divisor(3) == 1\nassert largest_divisor(7) == 1\nassert largest_divisor(19) == 1\n\n# Check some edge cases that are easy to work out by hand:\nassert largest_divisor(2) == 1\nassert largest_divisor(1) == 1\nassert largest_divisor(0) == 1\n\n# Check some edge cases that are easy to work out by hand:\nassert largest_divisor(4) == 2\nassert largest_divisor(6) == 3\nassert largest_divisor(8) == 4\nassert largest_divisor(9) == 3\nassert largest_divisor(10) == 5\nassert largest_divisor(12) == 6\nassert largest_divisor(14) == 7\nassert largest_divisor(16) == 8\nassert largest_divisor(18) == 9\nassert largest_divisor(20) == 10\nassert largest_divisor(22) == 11\nassert largest_divisor(24) == 12\nassert largest_divisor(26) == 13\nassert largest_divisor(28) == 14\nassert largest_divisor(30) == 15\nassert largest_divisor(32) == 16\nassert largest_divisor(34) == 17\nassert largest_divisor(36) == 18\nassert largest_divisor(38) == 19\nassert largest_divisor(40) == 20\nassert largest_divisor(42) == 21\nassert largest_divisor(44) == 22\nassert largest_divisor(46) == 23\nassert largest_divisor(48) == 24\nassert largest_divisor(50) == 25\nassert largest_divisor(",
+  "finish_reason": "length",
+  "expected": "    for i in reversed(range(n)):\n        if n % i == 0:\n            return i\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 26.34193525799492
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    for i in range(n // 2, 0, -1):\n        if n % i == 0:\n            return i\n    return 1\n\ndef check(candidate):\n    assert candidate(3) == 1\n    assert candidate(7) == 1\n    assert candidate(19) == 1\n    assert candidate(15) == 5\n    assert candidate(49) == 7\n    assert candidate(100) == 50\n\n# Check some simple cases\nassert largest_divisor(15) == 5\nassert largest_divisor(49) == 7\nassert largest_divisor(100) == 50\nassert largest_divisor(3) == 1\nassert largest_divisor(7) == 1\nassert largest_divisor(19) == 1\n\n# Check some edge cases that are easy to work out by hand:\nassert largest_divisor(2) == 1\nassert largest_divisor(1) == 1\nassert largest_divisor(0) == 1\n\n# Check some edge cases that are easy to work out by hand:\nassert largest_divisor(4) == 2\nassert largest_divisor(6) == 3\nassert largest_divisor(8) == 4\nassert largest_divisor(9) == 3\nassert largest_divisor(10) == 5\nassert largest_divisor(12) == 6\nassert largest_divisor(14) == 7\nassert largest_divisor(16) == 8\nassert largest_divisor(18) == 9\nassert largest_divisor(20) == 10\nassert largest_divisor(22) == 11\nassert largest_divisor(24) == 12\nassert largest_divisor(26) == 13\nassert largest_divisor(28) == 14\nassert largest_divisor(30) == 15\nassert largest_divisor(32) == 16\nassert largest_divisor(34) == 17\nassert largest_divisor(36) == 18\nassert largest_divisor(38) == 19\nassert largest_divisor(40) == 20\nassert largest_divisor(42) == 21\nassert largest_divisor(44) == 22\nassert largest_divisor(46) == 23\nassert largest_divisor(48) == 24\nassert largest_divisor(50) == 25\nassert largest_divisor(",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786414253,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 46,
+      "total_tokens": 558,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-cIKwgdXc06dzo7v6EJ3Wlx51YhKXZ8Ow",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 46,
+      "prompt_ms": 403.748,
+      "prompt_per_token_ms": 8.777130434782608,
+      "prompt_per_second": 113.93245291617545,
+      "predicted_n": 512,
+      "predicted_ms": 25936.361,
+      "predicted_per_token_ms": 50.656955078125,
+      "predicted_per_second": 19.740625911244834
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00024:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

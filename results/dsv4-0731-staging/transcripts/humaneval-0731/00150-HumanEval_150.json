@@ -1,0 +1,92 @@
+{
+  "index": 150,
+  "task_id": "HumanEval/150",
+  "rendered_prompt_sha256": "d3c5a3ef8fbe608f4c6ddb2b0209fe20ac537b827fb3252e805681c6c92c3a14",
+  "rendering": "raw",
+  "completion": "    if is_prime(n):\n        return x\n    else:\n        return y",
+  "finish_reason": "stop",
+  "expected": "    if n == 1:\n        return y\n    for i in range(2, n):\n        if n % i == 0:\n            return y\n            break\n    else:\n        return x\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.3327628030092455
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if is_prime(n):\n        return x\n    else:\n        return y",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786415133,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 17,
+      "prompt_tokens": 81,
+      "total_tokens": 98,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Blew6KoQep5UblqSca0K2o8MOQ9bQwkU",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 80,
+      "prompt_ms": 506.806,
+      "prompt_per_token_ms": 6.335075,
+      "prompt_per_second": 157.85132772698034,
+      "predicted_n": 17,
+      "predicted_ms": 823.577,
+      "predicted_per_token_ms": 48.44570588235294,
+      "predicted_per_second": 20.641664349538658
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00150:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 36, in <module>\n    check(x_or_y)\n  File \"/case/main.py\", line 20, in check\n    assert candidate(7, 34, 12) == 34\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/case/main.py\", line 11, in x_or_y\n    if is_prime(n):\n       ^^^^^^^^\nNameError: name 'is_prime' is not defined\n"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "index": 87,
+  "task_id": "HumanEval/87",
+  "rendered_prompt_sha256": "8de3ecf44a0ece8d4e372c37aa51439548bd77398c179f009834d5b5d1ea34fb",
+  "rendering": "raw",
+  "completion": "    result = []\n    for row_index, row in enumerate(lst):\n        for col_index, val in enumerate(row):\n            if val == x:\n                result.append((row_index, col_index))\n    result.sort(key=lambda x: (x[0], -x[1]))\n    return result",
+  "finish_reason": "stop",
+  "expected": "    coords = [(i, j) for i in range(len(lst)) for j in range(len(lst[i])) if lst[i][j] == x]\n    return sorted(sorted(coords, key=lambda x: x[1], reverse=True), key=lambda x: x[0])\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.153396883993992
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    result = []\n    for row_index, row in enumerate(lst):\n        for col_index, val in enumerate(row):\n            if val == x:\n                result.append((row_index, col_index))\n    result.sort(key=lambda x: (x[0], -x[1]))\n    return result",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414719,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 61,
+      "prompt_tokens": 255,
+      "total_tokens": 316,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-R5cRwSCVPvIJMruSVof8NQkeVnrlgTvp",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 254,
+      "prompt_ms": 1060.141,
+      "prompt_per_token_ms": 4.173783464566929,
+      "prompt_per_second": 239.59077141625497,
+      "predicted_n": 61,
+      "predicted_ms": 3080.072,
+      "predicted_per_token_ms": 50.49298360655738,
+      "predicted_per_second": 19.804731837437565
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00087:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

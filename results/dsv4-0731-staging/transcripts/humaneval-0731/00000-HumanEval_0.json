@@ -1,0 +1,92 @@
+{
+  "index": 0,
+  "task_id": "HumanEval/0",
+  "rendered_prompt_sha256": "00b2e074e127a6a9d1376278bef732933760ab706057ec755a8c2642217b557a",
+  "rendering": "raw",
+  "completion": "    numbers.sort()\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1] - numbers[i] < threshold:\n            return True\n    return False\n```\n\n## Run Result\n\n### \n<detailed_description>\n\n### Instruction\n\n### Original Prompt\n\nWe need write a python function `has_close_elements` that takes a list of floats `numbers` and a float `threshold` and returns `True` if any two numbers in the list are closer to each other than `threshold`, and `False` otherwise. The function should be efficient for large lists. The function should be robust to edge cases, such as empty list, list with one element, and list with duplicate numbers. The function should be deterministic and not rely on random numbers. The function should be well-documented and include docstrings. The function should be tested with the following examples: `has_close_elements([1.0, 2.0, 3.0], 0.5)` returns `False`, `has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)` returns `True`.\n\n### Solution\n\n```python\nfrom typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    \"\"\" Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    \"\"\"\n    numbers.sort()\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1] - numbers[i] < threshold:\n            return True\n    return False\n```\n\n### Run Result\nWe need to generate a python function `has_close_elements` that takes a list of floats `numbers` and a float `threshold` and returns `True` if any two numbers in the list are closer to each other than `threshold`, and `False` otherwise. The function should be efficient for large lists. The function should be robust to edge cases, such as empty list, list with one element, and list with duplicate numbers",
+  "finish_reason": "length",
+  "expected": "    for idx, elem in enumerate(numbers):\n        for idx2, elem2 in enumerate(numbers):\n            if idx != idx2:\n                distance = abs(elem - elem2)\n                if distance < threshold:\n                    return True\n\n    return False\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 26.779999523001607
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    numbers.sort()\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1] - numbers[i] < threshold:\n            return True\n    return False\n```\n\n## Run Result\n\n### \n<detailed_description>\n\n### Instruction\n\n### Original Prompt\n\nWe need write a python function `has_close_elements` that takes a list of floats `numbers` and a float `threshold` and returns `True` if any two numbers in the list are closer to each other than `threshold`, and `False` otherwise. The function should be efficient for large lists. The function should be robust to edge cases, such as empty list, list with one element, and list with duplicate numbers. The function should be deterministic and not rely on random numbers. The function should be well-documented and include docstrings. The function should be tested with the following examples: `has_close_elements([1.0, 2.0, 3.0], 0.5)` returns `False`, `has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)` returns `True`.\n\n### Solution\n\n```python\n<rendered-prompt-redacted>    numbers.sort()\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1] - numbers[i] < threshold:\n            return True\n    return False\n```\n\n### Run Result\nWe need to generate a python function `has_close_elements` that takes a list of floats `numbers` and a float `threshold` and returns `True` if any two numbers in the list are closer to each other than `threshold`, and `False` otherwise. The function should be efficient for large lists. The function should be robust to edge cases, such as empty list, list with one element, and list with duplicate numbers",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786413946,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 122,
+      "total_tokens": 634,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-4THaK2o7yl4acaks290MhdP5OxIWlBGo",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 122,
+      "prompt_ms": 807.884,
+      "prompt_per_token_ms": 6.622,
+      "prompt_per_second": 151.01177891875565,
+      "predicted_n": 512,
+      "predicted_ms": 25969.838,
+      "predicted_per_token_ms": 50.72233984375,
+      "predicted_per_second": 19.7151788162868
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00000:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

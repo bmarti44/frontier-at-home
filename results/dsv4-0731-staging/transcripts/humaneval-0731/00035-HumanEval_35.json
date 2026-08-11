@@ -1,0 +1,93 @@
+{
+  "index": 35,
+  "task_id": "HumanEval/35",
+  "rendered_prompt_sha256": "75ceb54ce0c4ea472f0613ef75a8b6bc8d5b530e6749df89eff0779faa70a96b",
+  "rendering": "raw",
+  "completion": "    if not l:\n        return None\n    max_el = l[0]\n    for el in l:\n        if el > max_el:\n            max_el = el\n    return max_el",
+  "finish_reason": "stop",
+  "expected": "    m = l[0]\n    for e in l:\n        if e > m:\n            m = e\n    return m\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.679162422005902
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if not l:\n        return None\n    max_el = l[0]\n    for el in l:\n        if el > max_el:\n            max_el = el\n    return max_el",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414448,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 45,
+      "prompt_tokens": 75,
+      "total_tokens": 120,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-adiYVj661DzcVxGTHCXRtMpKz6w1YGYv",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 74,
+      "prompt_ms": 463.797,
+      "prompt_per_token_ms": 6.267527027027027,
+      "prompt_per_second": 159.55256286694393,
+      "predicted_n": 45,
+      "predicted_ms": 2212.708,
+      "predicted_per_token_ms": 49.17128888888889,
+      "predicted_per_second": 20.337071136363225
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00035:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "\n\ndef max_element(l: list):\n    \"\"\"Return maximum element in the list.\n    >>> max_element([1, 2, 3])\n    3\n    >>> max_element([5, 3, -5, 2, -3, 3, 9, 0, 123, 1, -10])\n    123\n    \"\"\"\n"
+}

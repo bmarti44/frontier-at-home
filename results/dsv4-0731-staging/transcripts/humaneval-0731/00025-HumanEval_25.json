@@ -1,0 +1,92 @@
+{
+  "index": 25,
+  "task_id": "HumanEval/25",
+  "rendered_prompt_sha256": "b619821eb84b3f0f1296d3f955acfcd54e9f78bc70d2f06929cdfc08fd6b3788",
+  "rendering": "raw",
+  "completion": "    factors = []\n    i = 2\n    while i * i <= n:\n        if n % i:\n            i += 1\n        else:\n            n //= i\n            factors.append(i)\n    if n > 1:\n        factors.append(n)\n    return factors\n</pre>\n</div>\n</div>\"\"\",\n    \"buggy_benchmarks\": [\"HumanEval/17\", \"HumanEval/2\", \"HumanEval/3\", \"HumanEval/4\", \"HumanEval/5\", \"HumanEval/6\", \"HumanEval/7\", \"HumanEval/8\", \"HumanEval/9\", \"HumanEval/10\", \"HumanEval/11\", \"HumanEval/12\", \"HumanEval/13\", \"HumanEval/14\", \"HumanEval/15\", \"HumanEval/16\", \"HumanEval/18\", \"HumanEval/19\", \"HumanEval/20\", \"HumanEval/21\", \"HumanEval/22\", \"HumanEval/23\", \"HumanEval/24\", \"HumanEval/25\", \"HumanEval/26\", \"HumanEval/27\", \"HumanEval/28\", \"HumanEval/29\", \"HumanEval/30\", \"HumanEval/31\", \"HumanEval/32\", \"HumanEval/33\", \"HumanEval/34\", \"HumanEval/35\", \"HumanEval/36\", \"HumanEval/37\", \"HumanEval/38\", \"HumanEval/39\", \"HumanEval/40\", \"HumanEval/41\", \"HumanEval/42\", \"HumanEval/43\", \"HumanEval/44\", \"HumanEval/45\", \"HumanEval/46\", \"HumanEval/47\", \"HumanEval/48\", \"HumanEval/49\", \"HumanEval/50\", \"HumanEval/51\", \"HumanEval/52\", \"HumanEval/53\", \"HumanEval/54\", \"HumanEval/55\", \"HumanEval/56\", \"HumanEval/57\", \"HumanEval/58\", \"HumanEval/59\", \"HumanEval/60\", \"HumanEval/61\", \"HumanEval/62\", \"HumanEval/63",
+  "finish_reason": "length",
+  "expected": "    import math\n    fact = []\n    i = 2\n    while i <= int(math.sqrt(n) + 1):\n        if n % i == 0:\n            fact.append(i)\n            n //= i\n        else:\n            i += 1\n\n    if n > 1:\n        fact.append(n)\n    return fact\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 26.782104329991853
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    factors = []\n    i = 2\n    while i * i <= n:\n        if n % i:\n            i += 1\n        else:\n            n //= i\n            factors.append(i)\n    if n > 1:\n        factors.append(n)\n    return factors\n</pre>\n</div>\n</div>\"\"\",\n    \"buggy_benchmarks\": [\"HumanEval/17\", \"HumanEval/2\", \"HumanEval/3\", \"HumanEval/4\", \"HumanEval/5\", \"HumanEval/6\", \"HumanEval/7\", \"HumanEval/8\", \"HumanEval/9\", \"HumanEval/10\", \"HumanEval/11\", \"HumanEval/12\", \"HumanEval/13\", \"HumanEval/14\", \"HumanEval/15\", \"HumanEval/16\", \"HumanEval/18\", \"HumanEval/19\", \"HumanEval/20\", \"HumanEval/21\", \"HumanEval/22\", \"HumanEval/23\", \"HumanEval/24\", \"HumanEval/25\", \"HumanEval/26\", \"HumanEval/27\", \"HumanEval/28\", \"HumanEval/29\", \"HumanEval/30\", \"HumanEval/31\", \"HumanEval/32\", \"HumanEval/33\", \"HumanEval/34\", \"HumanEval/35\", \"HumanEval/36\", \"HumanEval/37\", \"HumanEval/38\", \"HumanEval/39\", \"HumanEval/40\", \"HumanEval/41\", \"HumanEval/42\", \"HumanEval/43\", \"HumanEval/44\", \"HumanEval/45\", \"HumanEval/46\", \"HumanEval/47\", \"HumanEval/48\", \"HumanEval/49\", \"HumanEval/50\", \"HumanEval/51\", \"HumanEval/52\", \"HumanEval/53\", \"HumanEval/54\", \"HumanEval/55\", \"HumanEval/56\", \"HumanEval/57\", \"HumanEval/58\", \"HumanEval/59\", \"HumanEval/60\", \"HumanEval/61\", \"HumanEval/62\", \"HumanEval/63",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786414280,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 119,
+      "total_tokens": 631,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-PA1nklUKPaRtSjJZn8hS2iUXiiomGwym",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 119,
+      "prompt_ms": 771.052,
+      "prompt_per_token_ms": 6.4794285714285715,
+      "prompt_per_second": 154.33459740717876,
+      "predicted_n": 512,
+      "predicted_ms": 26008.587,
+      "predicted_per_token_ms": 50.798021484375,
+      "predicted_per_second": 19.685806076277807
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00025:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

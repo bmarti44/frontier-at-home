@@ -1,0 +1,92 @@
+{
+  "index": 53,
+  "task_id": "HumanEval/53",
+  "rendered_prompt_sha256": "37ae93665c1512f10b22de3b438a4310a63dabf773891ef3120880a8f2dc7217",
+  "rendering": "raw",
+  "completion": "    return x+y\n\ndef subtract(x: int, y: int):\n    \"\"\"Subtract two numbers x and y\n    >>> subtract(5, 3)\n    2\n    >>> subtract(10, 7)\n    3\n    \"\"\"\n    return x-y\n\ndef multiply(x: int, y: int):\n    \"\"\"Multiply two numbers x and y\n    >>> multiply(2, 3)\n    6\n    >>> multiply(5, 7)\n    35\n    \"\"\"\n    return x*y\n\ndef divide(x: int, y: int):\n    \"\"\"Divide two numbers x and y\n    >>> divide(10, 2)\n    5.0\n    >>> divide(7, 2)\n    3.5\n    \"\"\"\n    return x/y",
+  "finish_reason": "stop",
+  "expected": "    return x + y\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.379242052993504
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    return x+y\n\ndef subtract(x: int, y: int):\n    \"\"\"Subtract two numbers x and y\n    >>> subtract(5, 3)\n    2\n    >>> subtract(10, 7)\n    3\n    \"\"\"\n    return x-y\n\ndef multiply(x: int, y: int):\n    \"\"\"Multiply two numbers x and y\n    >>> multiply(2, 3)\n    6\n    >>> multiply(5, 7)\n    35\n    \"\"\"\n    return x*y\n\ndef divide(x: int, y: int):\n    \"\"\"Divide two numbers x and y\n    >>> divide(10, 2)\n    5.0\n    >>> divide(7, 2)\n    3.5\n    \"\"\"\n    return x/y",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414521,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 160,
+      "prompt_tokens": 46,
+      "total_tokens": 206,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-1a3rLHn9ZUx20I68f5Tlgs9BE9A22wps",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 45,
+      "prompt_ms": 363.103,
+      "prompt_per_token_ms": 8.068955555555556,
+      "prompt_per_second": 123.93177693381767,
+      "predicted_n": 160,
+      "predicted_ms": 8013.81,
+      "predicted_per_token_ms": 50.086312500000005,
+      "predicted_per_second": 19.965534496076145
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00053:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

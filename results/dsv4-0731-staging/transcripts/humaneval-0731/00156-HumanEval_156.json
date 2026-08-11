@@ -1,0 +1,92 @@
+{
+  "index": 156,
+  "task_id": "HumanEval/156",
+  "rendered_prompt_sha256": "8959ac1c6c2fd7f47f748d3f39d4698b9ef610a28fbd428fad7dc4e856e9d737",
+  "rendering": "raw",
+  "completion": "    if not 1 <= number <= 1000:\n        raise ValueError('Number must be between 1 and 1000')\n    roman_numerals = [\n        (1000, 'm'),\n        (900, 'cm'),\n        (500, 'd'),\n        (400, 'cd'),\n        (100, 'c'),\n        (90, 'xc'),\n        (50, 'l'),\n        (40, 'xl'),\n        (10, 'x'),\n        (9, 'ix'),\n        (5, 'v'),\n        (4, 'iv'),\n        (1, 'i'),\n    ]\n    result = []\n    for value, numeral in roman_numerals:\n        while number >= value:\n            result.append(numeral)\n            number -= value\n    return ''.join(result)",
+  "finish_reason": "stop",
+  "expected": "    num = [1, 4, 5, 9, 10, 40, 50, 90,  \n           100, 400, 500, 900, 1000] \n    sym = [\"I\", \"IV\", \"V\", \"IX\", \"X\", \"XL\",  \n           \"L\", \"XC\", \"C\", \"CD\", \"D\", \"CM\", \"M\"] \n    i = 12\n    res = ''\n    while number: \n        div = number // num[i] \n        number %= num[i] \n        while div: \n            res += sym[i] \n            div -= 1\n        i -= 1\n    return res.lower()\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.06814497600135
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if not 1 <= number <= 1000:\n        raise ValueError('Number must be between 1 and 1000')\n    roman_numerals = [\n        (1000, 'm'),\n        (900, 'cm'),\n        (500, 'd'),\n        (400, 'cd'),\n        (100, 'c'),\n        (90, 'xc'),\n        (50, 'l'),\n        (40, 'xl'),\n        (10, 'x'),\n        (9, 'ix'),\n        (5, 'v'),\n        (4, 'iv'),\n        (1, 'i'),\n    ]\n    result = []\n    for value, numeral in roman_numerals:\n        while number >= value:\n            result.append(numeral)\n            number -= value\n    return ''.join(result)",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786415161,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 167,
+      "prompt_tokens": 100,
+      "total_tokens": 267,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-nMokft2ZXjh9e1wCWC4p4GSv0pFhuRW8",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 99,
+      "prompt_ms": 600.178,
+      "prompt_per_token_ms": 6.06240404040404,
+      "prompt_per_second": 164.95106451752645,
+      "predicted_n": 167,
+      "predicted_ms": 8465.747,
+      "predicted_per_token_ms": 50.69309580838323,
+      "predicted_per_second": 19.726552187302552
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00156:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

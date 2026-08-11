@@ -1,0 +1,93 @@
+{
+  "index": 139,
+  "task_id": "HumanEval/139",
+  "rendered_prompt_sha256": "be0a59f5cf0d2c13ca98ace59ca3a5bf4b8c4a153d42450c7cf6abb87d22d0c8",
+  "rendering": "raw",
+  "completion": "    if n == 0:\n        return 1\n    result = 1\n    for i in range(1, n + 1):\n        result *= i\n    return result * special_factorial(n - 1)",
+  "finish_reason": "stop",
+  "expected": "    fact_i = 1\n    special_fact = 1\n    for i in range(1, n+1):\n        fact_i *= i\n        special_fact *= fact_i\n    return special_fact\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.02063771498797
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if n == 0:\n        return 1\n    result = 1\n    for i in range(1, n + 1):\n        result *= i\n    return result * special_factorial(n - 1)",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786415032,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 49,
+      "prompt_tokens": 90,
+      "total_tokens": 139,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-fFKP99MxR4wSBsSxtqKoxBpmBq6jjBcZ",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 89,
+      "prompt_ms": 563.007,
+      "prompt_per_token_ms": 6.325921348314606,
+      "prompt_per_second": 158.0797396835208,
+      "predicted_n": 49,
+      "predicted_ms": 2455.351,
+      "predicted_per_token_ms": 50.109204081632654,
+      "predicted_per_second": 19.956413563681934
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00139:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "\ndef special_factorial(n):\n    \"\"\"The Brazilian factorial is defined as:\n    brazilian_factorial(n) = n! * (n-1)! * (n-2)! * ... * 1!\n    where n > 0\n\n    For example:\n    >>> special_factorial(4)\n    288\n\n    The function will receive an integer as input and should return the special\n    factorial of this integer.\n    \"\"\"\n"
+}

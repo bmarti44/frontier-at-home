@@ -1,0 +1,92 @@
+{
+  "index": 39,
+  "task_id": "HumanEval/39",
+  "rendered_prompt_sha256": "6dde5c311a83caad26ca80e7e914c596b9cb6e8467630530600e21c98d547c5a",
+  "rendering": "raw",
+  "completion": "    fib = [0, 1]\n    while len(fib) <= n:\n        fib.append(fib[-1] + fib[-2])\n    return fib[-1]",
+  "finish_reason": "stop",
+  "expected": "    import math\n\n    def is_prime(p):\n        if p < 2:\n            return False\n        for k in range(2, min(int(math.sqrt(p)) + 1, p - 1)):\n            if p % k == 0:\n                return False\n        return True\n    f = [0, 1]\n    while True:\n        f.append(f[-1] + f[-2])\n        if is_prime(f[-1]):\n            n -= 1\n        if n == 0:\n            return f[-1]\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.39411148999352
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    fib = [0, 1]\n    while len(fib) <= n:\n        fib.append(fib[-1] + fib[-2])\n    return fib[-1]",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414464,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 38,
+      "prompt_tokens": 87,
+      "total_tokens": 125,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-y7SELYvVxNIK1QVLkejKbqqjgdVFXnWn",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 86,
+      "prompt_ms": 536.292,
+      "prompt_per_token_ms": 6.235953488372093,
+      "prompt_per_second": 160.36040067724298,
+      "predicted_n": 38,
+      "predicted_ms": 1856.052,
+      "predicted_per_token_ms": 48.84347368421052,
+      "predicted_per_second": 20.473564318241085
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00039:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 42, in <module>\n    check(prime_fib)\n  File \"/case/main.py\", line 29, in check\n    assert candidate(1) == 2\n           ^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

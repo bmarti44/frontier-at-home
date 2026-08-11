@@ -1,0 +1,92 @@
+{
+  "index": 106,
+  "task_id": "HumanEval/106",
+  "rendered_prompt_sha256": "f9dee5694b9f6e2c5f39785ca58d27c74624ba052d3010d58eececbe949ce19d",
+  "rendering": "raw",
+  "completion": "    result = []\n    for i in range(1, n+1):\n        if i % 2 == 0:\n            # sum of numbers from 1 to i\n            result.append(sum(range(1, i+1)))\n        else:\n            # factorial of i\n            fact = 1\n            for j in range(1, i+1):\n                fact *= j\n            result.append(fact)\n    return result",
+  "finish_reason": "stop",
+  "expected": "    ret = []\n    for i in range(1,n+1):\n        if i%2 == 0:\n            x = 1\n            for j in range(1,i+1): x *= j\n            ret += [x]\n        else:\n            x = 0\n            for j in range(1,i+1): x += j\n            ret += [x]\n    return ret\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.2863748719973955
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    result = []\n    for i in range(1, n+1):\n        if i % 2 == 0:\n            # sum of numbers from 1 to i\n            result.append(sum(range(1, i+1)))\n        else:\n            # factorial of i\n            fact = 1\n            for j in range(1, i+1):\n                fact *= j\n            result.append(fact)\n    return result",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414831,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 91,
+      "prompt_tokens": 119,
+      "total_tokens": 210,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-xHX5SKBHOn7mbuME9xbkUl5KORZOqb4M",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 118,
+      "prompt_ms": 716.653,
+      "prompt_per_token_ms": 6.073330508474577,
+      "prompt_per_second": 164.65430270995867,
+      "predicted_n": 91,
+      "predicted_ms": 4567.451,
+      "predicted_per_token_ms": 50.19176923076923,
+      "predicted_per_second": 19.923585387122927
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00106:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 33, in <module>\n    check(f)\n  File \"/case/main.py\", line 27, in check\n    assert candidate(5) == [1, 2, 6, 24, 15]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

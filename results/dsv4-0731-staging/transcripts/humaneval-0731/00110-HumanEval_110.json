@@ -1,0 +1,92 @@
+{
+  "index": 110,
+  "task_id": "HumanEval/110",
+  "rendered_prompt_sha256": "3ae7e8bd32a483624eaf7543bf375fec87e33e448f4c417e879a21a04dd0dba6",
+  "rendering": "raw",
+  "completion": "    # Check if lst1 has any odd numbers\n    if all(num % 2 == 0 for num in lst1):\n        return \"YES\"\n    # Check if lst2 has any even numbers\n    if any(num % 2 == 0 for num in lst2):\n        return \"YES\"\n    return \"NO\"",
+  "finish_reason": "stop",
+  "expected": "    odd = 0\n    even = 0\n    for i in lst1:\n        if i%2 == 1:\n            odd += 1\n    for i in lst2:\n        if i%2 == 0:\n            even += 1\n    if even >= odd:\n        return \"YES\"\n    return \"NO\"\n            \n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.377804773001117
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # Check if lst1 has any odd numbers\n    if all(num % 2 == 0 for num in lst1):\n        return \"YES\"\n    # Check if lst2 has any even numbers\n    if any(num % 2 == 0 for num in lst2):\n        return \"YES\"\n    return \"NO\"",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414853,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 70,
+      "prompt_tokens": 192,
+      "total_tokens": 262,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-f4jK6b7aJJZ382csVzMpQaK5BjsD6r0q",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 191,
+      "prompt_ms": 834.06,
+      "prompt_per_token_ms": 4.3668062827225125,
+      "prompt_per_second": 229.00031172817307,
+      "predicted_n": 70,
+      "predicted_ms": 3541.04,
+      "predicted_per_token_ms": 50.586285714285715,
+      "predicted_per_second": 19.768203691570836
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00110:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 39, in <module>\n    check(exchange)\n  File \"/case/main.py\", line 28, in check\n    assert candidate([1, 2, 3, 4], [1, 5, 3, 4]) == \"NO\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

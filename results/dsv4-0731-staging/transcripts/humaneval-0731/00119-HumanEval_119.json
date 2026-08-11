@@ -1,0 +1,92 @@
+{
+  "index": 119,
+  "task_id": "HumanEval/119",
+  "rendered_prompt_sha256": "7d057f437949f329d47d033084ee94a506621185f9063e13a91bbb741dca6216",
+  "rendering": "raw",
+  "completion": "    # Combine both strings in both possible orders\n    combined1 = lst[0] + lst[1]\n    combined2 = lst[1] + lst[0]\n\n    # Check if either combined string is balanced\n    if is_balanced(combined1) or is_balanced(combined2):\n        return 'Yes'\n    else:\n        return 'No'\n\ndef is_balanced(s):\n    balance = 0\n    for char in s:\n        if char == '(':\n            balance += 1\n        else:  # char == ')'\n            balance -= 1\n        if balance < 0:\n            return False\n    return balance == 0",
+  "finish_reason": "stop",
+  "expected": "    def check(s):\n        val = 0\n        for i in s:\n            if i == '(':\n                val = val + 1\n            else:\n                val = val - 1\n            if val < 0:\n                return False\n        return True if val == 0 else False\n\n    S1 = lst[0] + lst[1]\n    S2 = lst[1] + lst[0]\n    return 'Yes' if check(S1) or check(S2) else 'No'\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.805719898009556
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # Combine both strings in both possible orders\n    combined1 = lst[0] + lst[1]\n    combined2 = lst[1] + lst[0]\n\n    # Check if either combined string is balanced\n    if is_balanced(combined1) or is_balanced(combined2):\n        return 'Yes'\n    else:\n        return 'No'\n\ndef is_balanced(s):\n    balance = 0\n    for char in s:\n        if char == '(':\n            balance += 1\n        else:  # char == ')'\n            balance -= 1\n        if balance < 0:\n            return False\n    return balance == 0",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414894,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 139,
+      "prompt_tokens": 166,
+      "total_tokens": 305,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-j4Vr5lFAvqcD5L7P0x364S35l1YSCqrS",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 165,
+      "prompt_ms": 770.983,
+      "prompt_per_token_ms": 4.672624242424242,
+      "prompt_per_second": 214.01250092414492,
+      "predicted_n": 139,
+      "predicted_ms": 7032.556,
+      "predicted_per_token_ms": 50.59392805755395,
+      "predicted_per_second": 19.765217653439233
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00119:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "index": 140,
+  "task_id": "HumanEval/140",
+  "rendered_prompt_sha256": "f757e5d21a3d47b21dcd96c7c9f869adfbfe70276370fddb0f4ded8fb1c311f9",
+  "rendering": "raw",
+  "completion": "    # Replace all spaces with underscores\n    text = text.replace(\" \", \"_\")\n    # Replace all consecutive underscores with dashes\n    while \"___\" in text:\n        text = text.replace(\"___\", \"---\")\n    return text",
+  "finish_reason": "stop",
+  "expected": "    new_text = \"\"\n    i = 0\n    start, end = 0, 0\n    while i < len(text):\n        if text[i] == \" \":\n            end += 1\n        else:\n            if end - start > 2:\n                new_text += \"-\"+text[i]\n            elif end - start > 0:\n                new_text += \"_\"*(end - start)+text[i]\n            else:\n                new_text += text[i]\n            start, end = i+1, i+1\n        i+=1\n    if end - start > 2:\n        new_text += \"-\"\n    elif end - start > 0:\n        new_text += \"_\"\n    return new_text\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.184132258000318
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # Replace all spaces with underscores\n    text = text.replace(\" \", \"_\")\n    # Replace all consecutive underscores with dashes\n    while \"___\" in text:\n        text = text.replace(\"___\", \"---\")\n    return text",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786415035,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 50,
+      "prompt_tokens": 106,
+      "total_tokens": 156,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-n6bi1sDOV56HRHcrU63bAp12X7F3k7AX",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 105,
+      "prompt_ms": 634.649,
+      "prompt_per_token_ms": 6.04427619047619,
+      "prompt_per_second": 165.44578184161637,
+      "predicted_n": 50,
+      "predicted_ms": 2547.643,
+      "predicted_per_token_ms": 50.95286,
+      "predicted_per_second": 19.62598370336817
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00140:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 34, in <module>\n    check(fix_spaces)\n  File \"/case/main.py\", line 29, in check\n    assert candidate(\"Exa   mple\") == \"Exa-mple\", \"This prints if this assert fails 4 (good for debugging!)\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: This prints if this assert fails 4 (good for debugging!)\n"
+  }
+}

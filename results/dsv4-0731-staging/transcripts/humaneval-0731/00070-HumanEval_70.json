@@ -1,0 +1,93 @@
+{
+  "index": 70,
+  "task_id": "HumanEval/70",
+  "rendered_prompt_sha256": "431d1a56bd425ed0718c9996fd486badefa4547c69e80bc5e81526cec2abae70",
+  "rendering": "raw",
+  "completion": "    result = []\n    while lst:\n        # Find minimum value in the list\n        min_val = min(lst)\n        result.append(min_val)\n        lst.remove(min_val)\n        if lst:\n            # Find maximum value in the remaining list\n            max_val = max(lst)\n            result.append(max_val)\n            lst.remove(max_val)\n    return result",
+  "finish_reason": "stop",
+  "expected": "    res, switch = [], True\n    while lst:\n        res.append(min(lst) if switch else max(lst))\n        lst.remove(res[-1])\n        switch = not switch\n    return res\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.44106611800089
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    result = []\n    while lst:\n        # Find minimum value in the list\n        min_val = min(lst)\n        result.append(min_val)\n        lst.remove(min_val)\n        if lst:\n            # Find maximum value in the remaining list\n            max_val = max(lst)\n            result.append(max_val)\n            lst.remove(max_val)\n    return result",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414629,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 73,
+      "prompt_tokens": 119,
+      "total_tokens": 192,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-IqNqlZYXYTc8VKe119cXaG6KEPvqTCqc",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 118,
+      "prompt_ms": 735.71,
+      "prompt_per_token_ms": 6.234830508474577,
+      "prompt_per_second": 160.3892838210708,
+      "predicted_n": 73,
+      "predicted_ms": 3703.211,
+      "predicted_per_token_ms": 50.72891780821917,
+      "predicted_per_second": 19.712622370153905
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00070:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "\ndef strange_sort_list(lst):\n    '''\n    Given list of integers, return list in strange order.\n    Strange sorting, is when you start with the minimum value,\n    then maximum of the remaining integers, then minimum and so on.\n\n    Examples:\n    strange_sort_list([1, 2, 3, 4]) == [1, 4, 2, 3]\n    strange_sort_list([5, 5, 5, 5]) == [5, 5, 5, 5]\n    strange_sort_list([]) == []\n    '''\n"
+}

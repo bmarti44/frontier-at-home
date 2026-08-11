@@ -1,0 +1,92 @@
+{
+  "index": 130,
+  "task_id": "HumanEval/130",
+  "rendered_prompt_sha256": "68f3722378473214d80f09420cfa3335984eccd0d4c15a0117985261d22fd01c",
+  "rendering": "raw",
+  "completion": "    if n == 0:\n        return [1]\n    result = [1, 3]\n    for i in range(2, n + 1):\n        if i % 2 == 0:\n            result.append(1 + i // 2)\n        else:\n            result.append(result[i - 1] + result[i - 2] + result[i])\n    return result",
+  "finish_reason": "stop",
+  "expected": "    if n == 0:\n        return [1]\n    my_tri = [1, 3]\n    for i in range(2, n + 1):\n        if i % 2 == 0:\n            my_tri.append(i / 2 + 1)\n        else:\n            my_tri.append(my_tri[i - 1] + my_tri[i - 2] + (i + 3) / 2)\n    return my_tri\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.102708018996054
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if n == 0:\n        return [1]\n    result = [1, 3]\n    for i in range(2, n + 1):\n        if i % 2 == 0:\n            result.append(1 + i // 2)\n        else:\n            result.append(result[i - 1] + result[i - 2] + result[i])\n    return result",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414964,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 82,
+      "prompt_tokens": 229,
+      "total_tokens": 311,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ZvZee4PVJgPVZoEDVMPMwiGRlESTKM6P",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 228,
+      "prompt_ms": 947.086,
+      "prompt_per_token_ms": 4.153885964912281,
+      "prompt_per_second": 240.73843346855514,
+      "predicted_n": 82,
+      "predicted_ms": 4152.89,
+      "predicted_per_token_ms": 50.645,
+      "predicted_per_second": 19.745285813012142
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00130:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 48, in <module>\n    check(tri)\n  File \"/case/main.py\", line 34, in check\n    assert candidate(3) == [1, 3, 2.0, 8.0]\n           ^^^^^^^^^^^^\n  File \"/case/main.py\", line 26, in tri\n    result.append(result[i - 1] + result[i - 2] + result[i])\n                                                  ~~~~~~^^^\nIndexError: list index out of range\n"
+  }
+}

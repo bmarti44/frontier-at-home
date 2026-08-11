@@ -1,0 +1,92 @@
+{
+  "index": 127,
+  "task_id": "HumanEval/127",
+  "rendered_prompt_sha256": "aaebd5df799992f92d5d1e023101fa08b8a199d71be54536511e5ed071d5db1c",
+  "rendering": "raw",
+  "completion": "    # find the intersection of the two intervals\n    start = max(interval1[0], interval2[0])\n    end = min(interval1[1], interval2[1])\n    if start > end:\n        return \"NO\"\n    length = end - start\n    if length < 2:\n        return \"NO\"\n    for i in range(2, int(length ** 0.5) + 1):\n        if length % i == 0:\n            return \"NO\"\n    return \"YES\"\n",
+  "finish_reason": "stop",
+  "expected": "    def is_prime(num):\n        if num == 1 or num == 0:\n            return False\n        if num == 2:\n            return True\n        for i in range(2, num):\n            if num%i == 0:\n                return False\n        return True\n\n    l = max(interval1[0], interval2[0])\n    r = min(interval1[1], interval2[1])\n    length = r - l\n    if length > 0 and is_prime(length):\n        return \"YES\"\n    return \"NO\"\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.58268081600545
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # find the intersection of the two intervals\n    start = max(interval1[0], interval2[0])\n    end = min(interval1[1], interval2[1])\n    if start > end:\n        return \"NO\"\n    length = end - start\n    if length < 2:\n        return \"NO\"\n    for i in range(2, int(length ** 0.5) + 1):\n        if length % i == 0:\n            return \"NO\"\n    return \"YES\"\n",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414933,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 110,
+      "prompt_tokens": 250,
+      "total_tokens": 360,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-RLlBKMWoiymxuay2r5IVV6bcXDSPg7uB",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 249,
+      "prompt_ms": 1010.903,
+      "prompt_per_token_ms": 4.05985140562249,
+      "prompt_per_second": 246.31443372905213,
+      "predicted_n": 110,
+      "predicted_ms": 5568.769,
+      "predicted_per_token_ms": 50.62517272727273,
+      "predicted_per_second": 19.753019024491767
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00127:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

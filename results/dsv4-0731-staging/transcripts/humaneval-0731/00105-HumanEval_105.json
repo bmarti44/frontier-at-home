@@ -1,0 +1,92 @@
+{
+  "index": 105,
+  "task_id": "HumanEval/105",
+  "rendered_prompt_sha256": "7610e97e9e03b58b9d2f83c6ffb2e08c7a8827a982645a091f53b347cdfa7a5b",
+  "rendering": "raw",
+  "completion": "    result = []\n    for num in arr:\n        if 1 <= num <= 9:\n            result.append(num)\n    result.sort()\n    result.reverse()\n    return [num_to_name[num] for num in result]",
+  "finish_reason": "stop",
+  "expected": "    dic = {\n        1: \"One\",\n        2: \"Two\",\n        3: \"Three\",\n        4: \"Four\",\n        5: \"Five\",\n        6: \"Six\",\n        7: \"Seven\",\n        8: \"Eight\",\n        9: \"Nine\",\n    }\n    sorted_arr = sorted(arr, reverse=True)\n    new_arr = []\n    for var in sorted_arr:\n        try:\n            new_arr.append(dic[var])\n        except:\n            pass\n    return new_arr\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.302024263990461
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    result = []\n    for num in arr:\n        if 1 <= num <= 9:\n            result.append(num)\n    result.sort()\n    result.reverse()\n    return [num_to_name[num] for num in result]",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414825,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 47,
+      "prompt_tokens": 271,
+      "total_tokens": 318,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-RORHlKIRs3dDZ0mdBOju1GlHmxX74Vot",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 270,
+      "prompt_ms": 932.05,
+      "prompt_per_token_ms": 3.452037037037037,
+      "prompt_per_second": 289.68402982672603,
+      "predicted_n": 47,
+      "predicted_ms": 2367.296,
+      "predicted_per_token_ms": 50.367999999999995,
+      "predicted_per_second": 19.853875476493013
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00105:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 48, in <module>\n    check(by_length)\n  File \"/case/main.py\", line 37, in check\n    assert candidate([2, 1, 1, 4, 5, 8, 2, 3]) == [\"Eight\", \"Five\", \"Four\", \"Three\", \"Two\", \"Two\", \"One\", \"One\"], \"Error\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/case/main.py\", line 30, in by_length\n    return [num_to_name[num] for num in result]\n            ^^^^^^^^^^^\nNameError: name 'num_to_name' is not defined\n"
+  }
+}

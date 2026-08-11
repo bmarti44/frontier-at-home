@@ -1,0 +1,92 @@
+{
+  "index": 23,
+  "task_id": "HumanEval/23",
+  "rendered_prompt_sha256": "18b94c4f616dccb558eb6824a5b9a070cb075a0f411448abc24eefc0083865a9",
+  "rendering": "raw",
+  "completion": "    return len(string)\n\ndef is_prime(n: int) -> bool:\n    \"\"\" Return true if given number is prime\n    >>> is_prime(2)\n    True\n    >>> is_prime(8)\n    False\n    >>> is_prime(1)\n    False\n    \"\"\"\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\ndef reverse_string(string: str) -> str:\n    \"\"\" Return reverse of given string\n    >>> reverse_string('')\n    ''\n    >>> reverse_string('abc')\n    'cba'\n    \"\"\"\n    return string[::-1]\n\ndef is_palindrome(string: str) -> bool:\n    \"\"\" Return true if given string is a palindrome\n    >>> is_palindrome('')\n    True\n    >>> is_palindrome('abc')\n    False\n    >>> is_palindrome('abcba')\n    True\n    \"\"\"\n    return string == reverse_string(string)\n\ndef is_even(n: int) -> bool:\n    \"\"\" Return true if given number is even\n    >>> is_even(2)\n    True\n    >>> is_even(3)\n    False\n    \"\"\"\n    return n % 2 == 0\n\ndef is_odd(n: int) -> bool:\n    \"\"\" Return true if given number is odd\n    >>> is_odd(2)\n    False\n    >>> is_odd(3)\n    True\n    \"\"\"\n    return n % 2 != 0\n\ndef is_positive(n: int) -> bool:\n    \"\"\" Return true if given number is positive\n    >>> is_positive(2)\n    True\n    >>> is_positive(-2)\n    False\n    \"\"\"\n    return n > 0\n\ndef is_negative(n: int) -> bool:\n    \"\"\" Return true if given number is negative\n    >>> is_negative(2)\n    False\n    >>> is_negative(-2)\n    True\n    \"\"\"\n    return n < 0\n\ndef is_zero(n: int) -> bool:\n    \"\"\" Return true if given number is zero\n    >>> is_zero(0)\n    True\n    >>> is_zero(2)\n    False\n    \"\"\"\n    return n == 0\n\ndef is_non_zero(n: int) -> bool:\n    \"\"\" Return true if given number is non-zero\n    >>> is_non_zero(0",
+  "finish_reason": "length",
+  "expected": "    return len(string)\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 26.283610754995607
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    return len(string)\n\ndef is_prime(n: int) -> bool:\n    \"\"\" Return true if given number is prime\n    >>> is_prime(2)\n    True\n    >>> is_prime(8)\n    False\n    >>> is_prime(1)\n    False\n    \"\"\"\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\ndef reverse_string(string: str) -> str:\n    \"\"\" Return reverse of given string\n    >>> reverse_string('')\n    ''\n    >>> reverse_string('abc')\n    'cba'\n    \"\"\"\n    return string[::-1]\n\ndef is_palindrome(string: str) -> bool:\n    \"\"\" Return true if given string is a palindrome\n    >>> is_palindrome('')\n    True\n    >>> is_palindrome('abc')\n    False\n    >>> is_palindrome('abcba')\n    True\n    \"\"\"\n    return string == reverse_string(string)\n\ndef is_even(n: int) -> bool:\n    \"\"\" Return true if given number is even\n    >>> is_even(2)\n    True\n    >>> is_even(3)\n    False\n    \"\"\"\n    return n % 2 == 0\n\ndef is_odd(n: int) -> bool:\n    \"\"\" Return true if given number is odd\n    >>> is_odd(2)\n    False\n    >>> is_odd(3)\n    True\n    \"\"\"\n    return n % 2 != 0\n\ndef is_positive(n: int) -> bool:\n    \"\"\" Return true if given number is positive\n    >>> is_positive(2)\n    True\n    >>> is_positive(-2)\n    False\n    \"\"\"\n    return n > 0\n\ndef is_negative(n: int) -> bool:\n    \"\"\" Return true if given number is negative\n    >>> is_negative(2)\n    False\n    >>> is_negative(-2)\n    True\n    \"\"\"\n    return n < 0\n\ndef is_zero(n: int) -> bool:\n    \"\"\" Return true if given number is zero\n    >>> is_zero(0)\n    True\n    >>> is_zero(2)\n    False\n    \"\"\"\n    return n == 0\n\ndef is_non_zero(n: int) -> bool:\n    \"\"\" Return true if given number is non-zero\n    >>> is_non_zero(0",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786414226,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 37,
+      "total_tokens": 549,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-WnMTGh0VO8XSyuoBObZHR3rMuzt3DBk5",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 37,
+      "prompt_ms": 368.509,
+      "prompt_per_token_ms": 9.959702702702703,
+      "prompt_per_second": 100.4046034153847,
+      "predicted_n": 512,
+      "predicted_ms": 25913.215,
+      "predicted_per_token_ms": 50.611748046875,
+      "predicted_per_second": 19.758258479312584
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00023:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "index": 99,
+  "task_id": "HumanEval/99",
+  "rendered_prompt_sha256": "53ad185333496f1faa011070d323b24af3e23506e32f52ced0b3c0f9867d2719",
+  "rendering": "raw",
+  "completion": "    # Convert the string to a float\n    num = float(value)\n    \n    # Get the integer part and fractional part\n    integer_part = int(num)\n    fractional_part = num - integer_part\n    \n    # If the fractional part is exactly 0.5 or -0.5, round away from zero\n    if abs(fractional_part) == 0.5:\n        if num > 0:\n            return integer_part + 1\n        else:\n            return integer_part - 1\n    # Otherwise, use the built-in round function\n    else:\n        return round(num)",
+  "finish_reason": "stop",
+  "expected": "    from math import floor, ceil\n\n    if value.count('.') == 1:\n        # remove trailing zeros\n        while (value[-1] == '0'):\n            value = value[:-1]\n\n    num = float(value)\n    if value[-2:] == '.5':\n        if num > 0:\n            res = ceil(num)\n        else:\n            res = floor(num)\n    elif len(value) > 0:\n        res = int(round(num))\n    else:\n        res = 0\n\n    return res\n\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.038728168990929
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # Convert the string to a float\n    num = float(value)\n    \n    # Get the integer part and fractional part\n    integer_part = int(num)\n    fractional_part = num - integer_part\n    \n    # If the fractional part is exactly 0.5 or -0.5, round away from zero\n    if abs(fractional_part) == 0.5:\n        if num > 0:\n            return integer_part + 1\n        else:\n            return integer_part - 1\n    # Otherwise, use the built-in round function\n    else:\n        return round(num)",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414805,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 125,
+      "prompt_tokens": 151,
+      "total_tokens": 276,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ECNoJRIAjdHsAUuVsaLnb1SSGwY7JuXt",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 150,
+      "prompt_ms": 727.381,
+      "prompt_per_token_ms": 4.849206666666666,
+      "prompt_per_second": 206.21929910184622,
+      "predicted_n": 125,
+      "predicted_ms": 6309.349,
+      "predicted_per_token_ms": 50.474792,
+      "predicted_per_second": 19.8118696556491
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00099:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

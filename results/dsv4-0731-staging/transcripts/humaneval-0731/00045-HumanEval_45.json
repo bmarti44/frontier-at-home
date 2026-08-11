@@ -1,0 +1,92 @@
+{
+  "index": 45,
+  "task_id": "HumanEval/45",
+  "rendered_prompt_sha256": "2ffd4f475e7fbe32b636a57d40751aedd393c3a1096cd6a1edaef3981d7c8564",
+  "rendering": "raw",
+  "completion": "    return a * h / 2.0",
+  "finish_reason": "stop",
+  "expected": "    return a * h / 2.0\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.8621254119934747
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    return a * h / 2.0",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414485,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 11,
+      "prompt_tokens": 40,
+      "total_tokens": 51,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-OIerlzAGbxW8Hndu8WHGAsHYNb5WoHdO",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 39,
+      "prompt_ms": 344.169,
+      "prompt_per_token_ms": 8.824846153846153,
+      "prompt_per_second": 113.31642303635714,
+      "predicted_n": 11,
+      "predicted_ms": 515.898,
+      "predicted_per_token_ms": 46.89981818181818,
+      "predicted_per_second": 21.322044280070866
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00045:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

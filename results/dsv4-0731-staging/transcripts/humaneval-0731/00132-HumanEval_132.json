@@ -1,0 +1,92 @@
+{
+  "index": 132,
+  "task_id": "HumanEval/132",
+  "rendered_prompt_sha256": "ceeef7227e3911edf98ea8a7c714116780f3468053e4cccc66bbb2dfa185c334",
+  "rendering": "raw",
+  "completion": "    # Initialize counters for open and close brackets\n    open_brackets = 0\n    close_brackets = 0\n    \n    # Iterate through the string\n    for char in string:\n        if char == '[':\n            open_brackets += 1\n        elif char == ']':\n            close_brackets += 1\n    \n    # Check if there is at least one nested bracket\n    # A nested bracket means there is at least one '[' before a ']'\n    # So we need to check if there is at least one '[' that comes before a ']'\n    # We can do this by checking if there is at least one '[' and at least one ']'\n    # and the first '[' comes before the last ']'\n    if open_brackets > 0 and close_brackets > 0:\n        first_open = string.find('[')\n        last_close = string.rfind(']')\n        if first_open < last_close:\n            return True\n    \n    return False",
+  "finish_reason": "stop",
+  "expected": "    opening_bracket_index = []\n    closing_bracket_index = []\n    for i in range(len(string)):\n        if string[i] == '[':\n            opening_bracket_index.append(i)\n        else:\n            closing_bracket_index.append(i)\n    closing_bracket_index.reverse()\n    cnt = 0\n    i = 0\n    l = len(closing_bracket_index)\n    for idx in opening_bracket_index:\n        if i < l and idx < closing_bracket_index[i]:\n            cnt += 1\n            i += 1\n    return cnt >= 2\n\n    \n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.578394322990789
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # Initialize counters for open and close brackets\n    open_brackets = 0\n    close_brackets = 0\n    \n    # Iterate through the string\n    for char in string:\n        if char == '[':\n            open_brackets += 1\n        elif char == ']':\n            close_brackets += 1\n    \n    # Check if there is at least one nested bracket\n    # A nested bracket means there is at least one '[' before a ']'\n    # So we need to check if there is at least one '[' that comes before a ']'\n    # We can do this by checking if there is at least one '[' and at least one ']'\n    # and the first '[' comes before the last ']'\n    if open_brackets > 0 and close_brackets > 0:\n        first_open = string.find('[')\n        last_close = string.rfind(']')\n        if first_open < last_close:\n            return True\n    \n    return False",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414980,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 216,
+      "prompt_tokens": 136,
+      "total_tokens": 352,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-sjbnkFklbdNyJHduKCAzgNdbt5d64bHE",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 135,
+      "prompt_ms": 683.994,
+      "prompt_per_token_ms": 5.066622222222223,
+      "prompt_per_second": 197.37015236975762,
+      "predicted_n": 216,
+      "predicted_ms": 10892.876,
+      "predicted_per_token_ms": 50.429981481481484,
+      "predicted_per_second": 19.829473868976383
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00132:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 62, in <module>\n    check(is_nested)\n  File \"/case/main.py\", line 44, in check\n    assert candidate('[]]]]]]][[[[[]') == False\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

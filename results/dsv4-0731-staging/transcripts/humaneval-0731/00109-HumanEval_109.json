@@ -1,0 +1,92 @@
+{
+  "index": 109,
+  "task_id": "HumanEval/109",
+  "rendered_prompt_sha256": "e68cbac960bfb695527850d504ec27806e0f41a7711920d0a9e3152369179146",
+  "rendering": "raw",
+  "completion": "    # If the array is empty, return True\n    if not arr:\n        return True\n\n    # Find the index of the minimum element in the array\n    min_index = arr.index(min(arr))\n\n    # Check if the array is sorted in non-decreasing order after right shifting\n    # by the number of positions equal to the index of the minimum element\n    shifted_arr = arr[min_index:] + arr[:min_index]\n    return all(shifted_arr[i] <= shifted_arr[i+1] for i in range(len(shifted_arr)-1))\n",
+  "finish_reason": "stop",
+  "expected": "    if len(arr)==0:\n      return True\n    sorted_array=sorted(arr)\n    my_arr=[]\n    \n    min_value=min(arr)\n    min_index=arr.index(min_value)\n    my_arr=arr[min_index:]+arr[0:min_index]\n    for i in range(len(arr)):\n      if my_arr[i]!=sorted_array[i]:\n        return False\n    return True\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.063670275005279
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # If the array is empty, return True\n    if not arr:\n        return True\n\n    # Find the index of the minimum element in the array\n    min_index = arr.index(min(arr))\n\n    # Check if the array is sorted in non-decreasing order after right shifting\n    # by the number of positions equal to the index of the minimum element\n    shifted_arr = arr[min_index:] + arr[:min_index]\n    return all(shifted_arr[i] <= shifted_arr[i+1] for i in range(len(shifted_arr)-1))\n",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786414849,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 118,
+      "prompt_tokens": 299,
+      "total_tokens": 417,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-nEze0ClVZWRtFrMvMqi0oMuodGkp6HR8",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 298,
+      "prompt_ms": 1054.705,
+      "prompt_per_token_ms": 3.5392785234899327,
+      "prompt_per_second": 282.54346001962637,
+      "predicted_n": 118,
+      "predicted_ms": 6005.575,
+      "predicted_per_token_ms": 50.894703389830504,
+      "predicted_per_second": 19.64841001902399
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00109:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

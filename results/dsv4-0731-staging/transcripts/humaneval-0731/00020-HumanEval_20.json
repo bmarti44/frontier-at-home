@@ -1,0 +1,92 @@
+{
+  "index": 20,
+  "task_id": "HumanEval/20",
+  "rendered_prompt_sha256": "881d52f394307cce02e432bc6342c93bfe0f6652b203f0bf1a0fc365ed87c594",
+  "rendering": "raw",
+  "completion": "    numbers.sort()\n    closest = (numbers[0], numbers[1])\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1] - numbers[i] < closest[1] - closest[0]:\n            closest = (numbers[i], numbers[i + 1])\n    return closest\n</pre>\n</div>\n<p style=\"margin: 0,0,2px 0; font-size: 0.9rem\"><strong>Output</strong> (plain text):\n<button\n  type=\"button\"\n  class=\"copyBtn\"\n  onclick=\"copyOutput()\"\n  style=\"\n    background: none;\n    border: none;\n    font-size: 0.9rem;\n    float: right;\n    cursor: pointer;\n  \"\n>\nCopy\n</button>\n</p>\n<pre><code class=\"plain-text\" id=\"output\">(2.0, 2.2)</code></pre>\n</div>\n\n<p style=\"margin: 0 0 10px 0; font-size: 0.9rem\"><strong>Solution Explain:</strong> The solution sorts the list and then iterates through it, keeping track of the closest pair found so far. It returns the pair with the smallest difference.</p>\n\n<p style=\"margin: 0 0 10px 0; font-size: 0.9rem\"><strong>Code Solution:</strong></p>\n<pre><code class=\"python\" id=\"code\">from typing import List, Tuple\n\n\ndef find_closest_elements(numbers: List[float]) -> Tuple[float, float]:\n    \"\"\" From a supplied list of numbers (of length at least two) select and return two that are the closest to each\n    other and return them in order (smaller number, larger number).\n    >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.2])\n    (2.0, 2.2)\n    >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.0])\n    (2.0, 2.0)\n    \"\"\"\n    numbers.sort()\n    closest = (numbers[0], numbers[1])\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1",
+  "finish_reason": "length",
+  "expected": "    closest_pair = None\n    distance = None\n\n    for idx, elem in enumerate(numbers):\n        for idx2, elem2 in enumerate(numbers):\n            if idx != idx2:\n                if distance is None:\n                    distance = abs(elem - elem2)\n                    closest_pair = tuple(sorted([elem, elem2]))\n                else:\n                    new_distance = abs(elem - elem2)\n                    if new_distance < distance:\n                        distance = new_distance\n                        closest_pair = tuple(sorted([elem, elem2]))\n\n    return closest_pair\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 512,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 26.86682339401159
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    numbers.sort()\n    closest = (numbers[0], numbers[1])\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1] - numbers[i] < closest[1] - closest[0]:\n            closest = (numbers[i], numbers[i + 1])\n    return closest\n</pre>\n</div>\n<p style=\"margin: 0,0,2px 0; font-size: 0.9rem\"><strong>Output</strong> (plain text):\n<button\n  type=\"button\"\n  class=\"copyBtn\"\n  onclick=\"copyOutput()\"\n  style=\"\n    background: none;\n    border: none;\n    font-size: 0.9rem;\n    float: right;\n    cursor: pointer;\n  \"\n>\nCopy\n</button>\n</p>\n<pre><code class=\"plain-text\" id=\"output\">(2.0, 2.2)</code></pre>\n</div>\n\n<p style=\"margin: 0 0 10px 0; font-size: 0.9rem\"><strong>Solution Explain:</strong> The solution sorts the list and then iterates through it, keeping track of the closest pair found so far. It returns the pair with the smallest difference.</p>\n\n<p style=\"margin: 0 0 10px 0; font-size: 0.9rem\"><strong>Code Solution:</strong></p>\n<pre><code class=\"python\" id=\"code\"><rendered-prompt-redacted>    numbers.sort()\n    closest = (numbers[0], numbers[1])\n    for i in range(len(numbers) - 1):\n        if numbers[i + 1",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "length"
+      }
+    ],
+    "created": 1786414194,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 165,
+      "total_tokens": 677,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-qk9VTG6MLuoHBAxcGSU2W7U4s0omrzqN",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 165,
+      "prompt_ms": 816.729,
+      "prompt_per_token_ms": 4.949872727272727,
+      "prompt_per_second": 202.02539642892563,
+      "predicted_n": 512,
+      "predicted_ms": 26048.206,
+      "predicted_per_token_ms": 50.87540234375,
+      "predicted_per_second": 19.655864208076366
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-8f0_m854/case-00020:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}
