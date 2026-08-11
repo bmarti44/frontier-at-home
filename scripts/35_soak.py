@@ -26,8 +26,12 @@ Gates (ALL must hold for pass=true):
  10. duration met                  — elapsed time is at least 95% of 1800 seconds
 
 Decode throughput per request uses the server-reported usage.completion_tokens
-over the wall time between the first and last streamed content chunk — the same
-definition scripts/30_bench_speed.py uses.
+over the wall time between the first and last streamed GENERATED chunk, counting
+reasoning_content and content alike — the same definition scripts/30_bench_speed.py
+uses. The window must cover the same tokens completion_tokens counts: timing only
+content deltas while dividing by all generated tokens inflates the rate by the
+ratio of reasoning to content, which on 0731 reported 89.97 tok/s against a
+~19.7 tok/s baseline before this was corrected.
 """
 from __future__ import annotations
 
@@ -101,6 +105,8 @@ def qualification_eligible_floor() -> bool:
     remembers how it was launched.
     """
     return MEM_FLOOR_GIB >= QUALIFICATION_FLOOR_GIB
+
+
 WINDOW_SECONDS = 300
 REQUEST_TIMEOUT = 600
 HEALTH_PROBE_INTERVAL = 30.0
@@ -232,6 +238,8 @@ class Client:
         )
         first_content_at: float | None = None
         last_content_at: float | None = None
+        first_generated_at: float | None = None
+        last_generated_at: float | None = None
         usage: dict[str, Any] | None = None
         done = False
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
@@ -251,14 +259,34 @@ class Client:
                     usage = event_usage
                 for choice in event.get("choices", []):
                     delta = choice.get("delta", {})
-                    content = delta.get("content")
-                    if content:
+                    # A reasoning model emits reasoning_content and content as
+                    # separate fields, but usage.completion_tokens counts BOTH.
+                    # Timing only the content deltas divided every reasoning token
+                    # by the width of the content tail: measured on 0731,
+                    # 256 tokens over a short tail reported 89.97 tok/s against a
+                    # ~19.7 tok/s baseline. The window must cover the same tokens
+                    # the denominator counts.
+                    generated = False
+                    for field in ("reasoning_content", "content"):
+                        if delta.get(field):
+                            generated = True
+                            if field == "content":
+                                now_content = time.monotonic()
+                                if first_content_at is None:
+                                    first_content_at = now_content
+                                last_content_at = now_content
+                    if generated:
                         now = time.monotonic()
-                        if first_content_at is None:
-                            first_content_at = now
-                        last_content_at = now
+                        if first_generated_at is None:
+                            first_generated_at = now
+                        last_generated_at = now
         return {
             "done": done,
+            # Timing basis: spans reasoning and content alike.
+            "first_generated_at": first_generated_at,
+            "last_generated_at": last_generated_at,
+            # Retained so a reader can see how the generation split, and so a
+            # silently content-free model stays visible in the evidence.
             "first_content_at": first_content_at,
             "last_content_at": last_content_at,
             "usage": usage,
@@ -378,10 +406,10 @@ def main() -> int:
             completion_tokens = usage.get("completion_tokens")
             if not isinstance(completion_tokens, int) or completion_tokens < 1:
                 raise RuntimeError(f"invalid completion_tokens: {completion_tokens!r}")
-            first_at = result["first_content_at"]
-            last_at = result["last_content_at"]
+            first_at = result["first_generated_at"]
+            last_at = result["last_generated_at"]
             if first_at is None or last_at is None or last_at <= first_at or completion_tokens < 2:
-                raise RuntimeError("insufficient content chunks to measure decode")
+                raise RuntimeError("insufficient generated chunks to measure decode")
             decode_tok_s = (completion_tokens - 1) / (last_at - first_at)
             reps.append(
                 {
