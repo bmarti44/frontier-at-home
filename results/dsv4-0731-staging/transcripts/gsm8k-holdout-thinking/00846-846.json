@@ -1,0 +1,57 @@
+{
+  "index": 846,
+  "task_id": 846,
+  "rendered_prompt_sha256": "c8845862e4b420a8a70fa7f4d89f48771c17b5d50700c27edf9852e689cff9a4",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer math. Need solve. Show 2 hours = 120 minutes. Each group takes 2+6+2=10 minutes. Intermission 10 minutes. Total time = 120. Need number groups n such that n*10 + 10 <= 120? But intermission maybe included? \"show will be 2 hours. allowing each group 2 min get on stage, 6 perform, 2 exit. If allows 10-minute intermission, how many groups can perform?\" Need account intermission. If n groups, total time = 10n + 10 (intermission) <= 120 => 10n <=110 => n<=11. So 11 groups. But check if intermission maybe between groups? yes. Answer 11. Need final numeric answer on own line.</think>Answer: 11",
+  "finish_reason": "stop",
+  "expected": "11",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.395835616014665
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer math. Need solve. Show 2 hours = 120 minutes. Each group takes 2+6+2=10 minutes. Intermission 10 minutes. Total time = 120. Need number groups n such that n*10 + 10 <= 120? But intermission maybe included? \"show will be 2 hours. allowing each group 2 min get on stage, 6 perform, 2 exit. If allows 10-minute intermission, how many groups can perform?\" Need account intermission. If n groups, total time = 10n + 10 (intermission) <= 120 => 10n <=110 => n<=11. So 11 groups. But check if intermission maybe between groups? yes. Answer 11. Need final numeric answer on own line.</think>Answer: 11",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453936,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 97,
+      "total_tokens": 271,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-WIG8bACHyIHqYhRG8U3n38QOFemLkx8z",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 96,
+      "prompt_ms": 624.582,
+      "prompt_per_token_ms": 6.5060625,
+      "prompt_per_second": 153.70279643025253,
+      "predicted_n": 174,
+      "predicted_ms": 8767.98,
+      "predicted_per_token_ms": 50.39068965517241,
+      "predicted_per_second": 19.844935777681975
+    }
+  },
+  "used_fallback": false
+}

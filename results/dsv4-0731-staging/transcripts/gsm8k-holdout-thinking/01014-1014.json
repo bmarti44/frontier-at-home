@@ -1,0 +1,57 @@
+{
+  "index": 1014,
+  "task_id": 1014,
+  "rendered_prompt_sha256": "caceec72d369463bdd841233092075cd153f80f2e8797b64a6318e75f98be315",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer math. Need compute. Let's parse. Jamaar has $10. Prices: peaches and pears are $.5 each, apples $.75, kiwis $1, plums $.25. Already purchased 3 peaches, 4 pears, 2 kiwis, 5 apples. Need how many plums can he buy? Need total spent and remaining. Compute cost: peaches 3*0.5=1.5; pears 4*0.5=2.0; kiwis 2*1=2; apples 5*0.75=3.75. Total = 1.5+2+2+3.75=9.25. Remaining = 0.75. Plums cost 0.25 each, can buy 3 (0.75). Answer: 3. Need final numeric answer on own line.</think>Answer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.55204118299298
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer math. Need compute. Let's parse. Jamaar has $10. Prices: peaches and pears are $.5 each, apples $.75, kiwis $1, plums $.25. Already purchased 3 peaches, 4 pears, 2 kiwis, 5 apples. Need how many plums can he buy? Need total spent and remaining. Compute cost: peaches 3*0.5=1.5; pears 4*0.5=2.0; kiwis 2*1=2; apples 5*0.75=3.75. Total = 1.5+2+2+3.75=9.25. Remaining = 0.75. Plums cost 0.25 each, can buy 3 (0.75). Answer: 3. Need final numeric answer on own line.</think>Answer: 3",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453923,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 194,
+      "prompt_tokens": 116,
+      "total_tokens": 310,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-iqh15fJV7smBRnFpiIiZgaGd7ZztcAWY",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 115,
+      "prompt_ms": 713.355,
+      "prompt_per_token_ms": 6.203086956521739,
+      "prompt_per_second": 161.21005670388516,
+      "predicted_n": 194,
+      "predicted_ms": 9836.261,
+      "predicted_per_token_ms": 50.7023762886598,
+      "predicted_per_second": 19.722941471357863
+    }
+  },
+  "used_fallback": false
+}

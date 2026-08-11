@@ -1,0 +1,57 @@
+{
+  "index": 999,
+  "task_id": 999,
+  "rendered_prompt_sha256": "4a3823f82b0a279e3f3e8080c63a387f98f869127f1d9600bcf398ff9085126f",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Family 6: 2 adults, 4 kids. Each adult slice twice as big as each kid slice. Let kid slice = k, adult = 2k. Total = 2 adults*2k + 4 kids*k = 4k + 4k = 8k = whole watermelon. So k = 1/8 = 12.5%. Adult = 2k = 1/4 = 25%. Need final numeric answer on own line: Answer: 25.</think>Answer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.39407490400481
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Family 6: 2 adults, 4 kids. Each adult slice twice as big as each kid slice. Let kid slice = k, adult = 2k. Total = 2 adults*2k + 4 kids*k = 4k + 4k = 8k = whole watermelon. So k = 1/8 = 12.5%. Adult = 2k = 1/4 = 25%. Need final numeric answer on own line: Answer: 25.</think>Answer: 25",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452729,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 117,
+      "prompt_tokens": 75,
+      "total_tokens": 192,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-2yWRiOYEPus0u0WwIWtCC5W2bpFNkZD7",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 74,
+      "prompt_ms": 540.072,
+      "prompt_per_token_ms": 7.298270270270271,
+      "prompt_per_second": 137.01876786798798,
+      "predicted_n": 117,
+      "predicted_ms": 5851.291,
+      "predicted_per_token_ms": 50.01103418803419,
+      "predicted_per_second": 19.995587298597865
+    }
+  },
+  "used_fallback": false
+}

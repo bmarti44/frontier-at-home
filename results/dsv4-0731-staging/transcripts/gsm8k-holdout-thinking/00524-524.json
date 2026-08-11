@@ -1,0 +1,57 @@
+{
+  "index": 524,
+  "task_id": 524,
+  "rendered_prompt_sha256": "e40284f692a60591eb623e50014f7e22f8e331ca8741f83cb9a4f5a915d19d04",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need parse: 6 red per row, 8 blue per row. 36 red tulips -> rows red = 36/6=6. 24 blue -> 24/8=3. total rows = 9. Need final numeric answer only? \"Answer: <number>\" likely 9.</think>Answer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.301871873001801
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need parse: 6 red per row, 8 blue per row. 36 red tulips -> rows red = 36/6=6. 24 blue -> 24/8=3. total rows = 9. Need final numeric answer only? \"Answer: <number>\" likely 9.</think>Answer: 9",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453383,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 75,
+      "prompt_tokens": 80,
+      "total_tokens": 155,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-MJYg5ARKtSnjlDt2X2tajZX1KbgW1nhF",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 79,
+      "prompt_ms": 538.741,
+      "prompt_per_token_ms": 6.819506329113924,
+      "prompt_per_second": 146.63818049860694,
+      "predicted_n": 75,
+      "predicted_ms": 3760.621,
+      "predicted_per_token_ms": 50.14161333333333,
+      "predicted_per_second": 19.943514648245596
+    }
+  },
+  "used_fallback": false
+}

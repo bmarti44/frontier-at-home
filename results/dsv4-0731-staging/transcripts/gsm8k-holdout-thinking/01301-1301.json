@@ -1,0 +1,57 @@
+{
+  "index": 1301,
+  "task_id": 1301,
+  "rendered_prompt_sha256": "ff4f29a44c744ba54178fc0d5354a84ae786e7bb0a0687e76fdc8099242340f3",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer arithmetic. Need parse. Randy has 9 oatmeal, 4 chocolate chip, 5 sugar. He ate 3 cookies for early day snack, one of each flavor. So subtract 1 oatmeal, 1 chocolate, 1 sugar. Then ate 2 oatmeal cookies for lunch. subtract 2 oatmeal. Gives 2 sugar cookies to friends. subtract 2 sugar. Then bakes 4 of each flavor for dinner. Add 4 oatmeal, 4 chocolate, 4 sugar. Need total now. Let's compute.\n\nInitial: O=9, C=4, S=5.\nAfter snack one each: O=8, C=3, S=4.\nAfter lunch 2 oatmeal: O=6, C=3, S=4.\nAfter give 2 sugar: O=6, C=3, S=2.\nBake 4 each: O=10, C=7, S=6. Total 23. Need answer: 23. But check \"bakes 4 of each flavor for dinner\" means he made cookies, now has them. Yes total 23. Final line Answer: 23.</think>Answer: 23",
+  "finish_reason": "stop",
+  "expected": "23",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 13.13185904501006
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer arithmetic. Need parse. Randy has 9 oatmeal, 4 chocolate chip, 5 sugar. He ate 3 cookies for early day snack, one of each flavor. So subtract 1 oatmeal, 1 chocolate, 1 sugar. Then ate 2 oatmeal cookies for lunch. subtract 2 oatmeal. Gives 2 sugar cookies to friends. subtract 2 sugar. Then bakes 4 of each flavor for dinner. Add 4 oatmeal, 4 chocolate, 4 sugar. Need total now. Let's compute.\n\nInitial: O=9, C=4, S=5.\nAfter snack one each: O=8, C=3, S=4.\nAfter lunch 2 oatmeal: O=6, C=3, S=4.\nAfter give 2 sugar: O=6, C=3, S=2.\nBake 4 each: O=10, C=7, S=6. Total 23. Need answer: 23. But check \"bakes 4 of each flavor for dinner\" means he made cookies, now has them. Yes total 23. Final line Answer: 23.</think>Answer: 23",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453735,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 247,
+      "prompt_tokens": 105,
+      "total_tokens": 352,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-uEvNgXicRIzJr3RYKDUdZHTZ19HkJf72",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 104,
+      "prompt_ms": 664.349,
+      "prompt_per_token_ms": 6.387971153846154,
+      "prompt_per_second": 156.54422600169488,
+      "predicted_n": 247,
+      "predicted_ms": 12464.476,
+      "predicted_per_token_ms": 50.46346558704454,
+      "predicted_per_second": 19.81631638586331
+    }
+  },
+  "used_fallback": false
+}

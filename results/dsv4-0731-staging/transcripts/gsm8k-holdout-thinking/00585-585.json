@@ -1,0 +1,57 @@
+{
+  "index": 585,
+  "task_id": 585,
+  "rendered_prompt_sha256": "98142f989b2bb0b2351612f79c4677a95550efbbd8c4a483cdedf3f19c1b8b8c",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Need think briefly but final numeric answer. Let's parse.\n\nTabitha agreed to pay John and Jill $10/hour. Jill worked 2 hours Saturday and 1 hour Sunday = 3 hours total. John worked twice as long as Jill on Saturday and three times as long as Jill on Sunday. Need interpret: \"John worked twice as long as Jill on Saturday and three times as long as Jill on Sunday.\" Jill Saturday=2, so John Saturday=4. Jill Sunday=1, so John Sunday=3. John total=7 hours. Earnings: Jill 3*10=30, John 7*10=70. Difference=40. Answer: 40. Need final line.</think>Answer: 40",
+  "finish_reason": "stop",
+  "expected": "40",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.389030100981472
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Need think briefly but final numeric answer. Let's parse.\n\nTabitha agreed to pay John and Jill $10/hour. Jill worked 2 hours Saturday and 1 hour Sunday = 3 hours total. John worked twice as long as Jill on Saturday and three times as long as Jill on Sunday. Need interpret: \"John worked twice as long as Jill on Saturday and three times as long as Jill on Sunday.\" Jill Saturday=2, so John Saturday=4. Jill Sunday=1, so John Sunday=3. John total=7 hours. Earnings: Jill 3*10=30, John 7*10=70. Difference=40. Answer: 40. Need final line.</think>Answer: 40",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452833,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 155,
+      "prompt_tokens": 97,
+      "total_tokens": 252,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Yis4pwNrU1pS5ja1J4AyJcSRhIlWnd6y",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 96,
+      "prompt_ms": 618.161,
+      "prompt_per_token_ms": 6.439177083333333,
+      "prompt_per_second": 155.29934758097002,
+      "predicted_n": 155,
+      "predicted_ms": 7769.355,
+      "predicted_per_token_ms": 50.124870967741934,
+      "predicted_per_second": 19.95017604421474
+    }
+  },
+  "used_fallback": false
+}

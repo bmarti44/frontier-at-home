@@ -1,0 +1,57 @@
+{
+  "index": 113,
+  "task_id": 113,
+  "rendered_prompt_sha256": "60f87ae3a2f86f15ceed8f6eedc1facbf07c2251a4918e62a0c52ca67add4a56",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple arithmetic. Ryan plants 2 flowers a day for 15 days = 30 planted. 5 did not grow, so flowers = 30 - 5 = 25. Need final numeric answer on own line.</think>Answer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.117571732989745
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. Ryan plants 2 flowers a day for 15 days = 30 planted. 5 did not grow, so flowers = 30 - 5 = 25. Need final numeric answer on own line.</think>Answer: 25",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452717,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 54,
+      "prompt_tokens": 58,
+      "total_tokens": 112,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-xATZUgbqBTKdsabvnegn9a11LgoCjXPq",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 57,
+      "prompt_ms": 452.288,
+      "prompt_per_token_ms": 7.934877192982456,
+      "prompt_per_second": 126.02589500495259,
+      "predicted_n": 54,
+      "predicted_ms": 2663.258,
+      "predicted_per_token_ms": 49.31959259259259,
+      "predicted_per_second": 20.275917691789534
+    }
+  },
+  "used_fallback": false
+}

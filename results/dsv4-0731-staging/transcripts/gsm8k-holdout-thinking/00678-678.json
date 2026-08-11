@@ -1,0 +1,58 @@
+{
+  "index": 678,
+  "task_id": 678,
+  "rendered_prompt_sha256": "3c5e419e68d36969c2490b4e89d5364e35e462cdcffe214a9212525014ac1c6d",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need comply final numeric answer. Let's compute: Lorie $10/hr. Karen twice = $20/hr. Works 3 hours per day for 2 days = 6 hours. 20*6=120. Answer: 120.</think>Answer: 120",
+  "finish_reason": "stop",
+  "expected": "120",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4773292030149605
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need comply final numeric answer. Let's compute: Lorie $10/hr. Karen twice = $20/hr. Works 3 hours per day for 2 days = 6 hours. 20*6=120. Answer: 120.</think>Answer: 120",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452247,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 61,
+      "prompt_tokens": 62,
+      "total_tokens": 123,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-SGRWB5q98CPQK2usmGQAIwQgCg2VSELM",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 61,
+      "prompt_ms": 464.317,
+      "prompt_per_token_ms": 7.611754098360656,
+      "prompt_per_second": 131.37576267937638,
+      "predicted_n": 61,
+      "predicted_ms": 3011.266,
+      "predicted_per_token_ms": 49.36501639344262,
+      "predicted_per_second": 20.25726056748225
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Lorie earns $10 per hour. Karen earns twice what Lorie earns. How much does Karen earn in two days if she works 3 hours per day?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

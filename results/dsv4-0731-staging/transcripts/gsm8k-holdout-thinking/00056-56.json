@@ -1,0 +1,58 @@
+{
+  "index": 56,
+  "task_id": 56,
+  "rendered_prompt_sha256": "3717c243bf7a71659582e3c1fcd2acf57f0c629a9f492b0cf61afd503661e94e",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need think briefly? We can reason: each movie costs ticket 7 + popcorn 7 = 14. 42 /14 = 3. Answer: 3. Need final numeric answer on own line.</think>Answer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.176625512976898
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need think briefly? We can reason: each movie costs ticket 7 + popcorn 7 = 14. 42 /14 = 3. Answer: 3. Need final numeric answer on own line.</think>Answer: 3",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786451962,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 54,
+      "prompt_tokens": 73,
+      "total_tokens": 127,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-YWvpHGWhk3dogRZJOO1EN1M1rhQ9t9O4",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 72,
+      "prompt_ms": 521.353,
+      "prompt_per_token_ms": 7.241013888888888,
+      "prompt_per_second": 138.1022071418022,
+      "predicted_n": 54,
+      "predicted_ms": 2652.784,
+      "predicted_per_token_ms": 49.12562962962963,
+      "predicted_per_second": 20.355973196460774
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Peter plans to go to the movies this week. He always gets a ticket for $7 and popcorn for $7. If he has 42 dollars for the week, how many times can he go to the movies?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

@@ -1,0 +1,58 @@
+{
+  "index": 875,
+  "task_id": 875,
+  "rendered_prompt_sha256": "bfb227b940acd2f97a638214b9d76f47563193873cc9a4b9b711f36cc601a7dc",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Paul starts 52, friend gave 28 => 80. Lost 1/4 of his marbles => remaining 3/4 of 80 = 60. Need final numeric answer line.</think>Answer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.0880180440144613
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Paul starts 52, friend gave 28 => 80. Lost 1/4 of his marbles => remaining 3/4 of 80 = 60. Need final numeric answer line.</think>Answer: 60",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453420,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 53,
+      "prompt_tokens": 63,
+      "total_tokens": 116,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-wiWFtVeYnxIV5CpK9zHkLn0TrY661ZF1",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 62,
+      "prompt_ms": 470.126,
+      "prompt_per_token_ms": 7.582677419354838,
+      "prompt_per_second": 131.87953867686537,
+      "predicted_n": 53,
+      "predicted_ms": 2615.453,
+      "predicted_per_token_ms": 49.34816981132075,
+      "predicted_per_second": 20.26417603375018
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Paul has 52 marbles. His friend gave him 28 marbles. Then, he lost 1/4 of his marbles. How many marbles does Paul have left?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

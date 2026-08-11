@@ -1,0 +1,58 @@
+{
+  "index": 188,
+  "task_id": 188,
+  "rendered_prompt_sha256": "6aec127109f8b8a087c9679ccce54062e60864e5910223278835605fdc1b1615",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Problem: trader buys bags at $20 per bag, transport $2 each, sells at $30 each, total profit $400. Profit per bag = selling price - (purchase + transport) = 30 - (20+2)=8. Total profit 400 => number bags = 400/8=50. Need final answer line.</think>Answer: 50",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.826054543984355
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Problem: trader buys bags at $20 per bag, transport $2 each, sells at $30 each, total profit $400. Profit per bag = selling price - (purchase + transport) = 30 - (20+2)=8. Total profit 400 => number bags = 400/8=50. Need final answer line.</think>Answer: 50",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453705,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 84,
+      "prompt_tokens": 94,
+      "total_tokens": 178,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-J35dpmL6KAZW5tQwLjMMna3tM85hfBtY",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 93,
+      "prompt_ms": 600.447,
+      "prompt_per_token_ms": 6.45641935483871,
+      "prompt_per_second": 154.88461096483118,
+      "predicted_n": 84,
+      "predicted_ms": 4223.111,
+      "predicted_per_token_ms": 50.27513095238095,
+      "predicted_per_second": 19.890549881355238
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>A trader buys some bags of wheat from a farmer at a rate of $20 per bag. If it costs $2 to transport each bag from the farm to the warehouse, and the trader made a total profit of $400 after selling all the bags at a rate of $30 each, how many bags did he sell?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

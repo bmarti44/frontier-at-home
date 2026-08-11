@@ -1,0 +1,57 @@
+{
+  "index": 658,
+  "task_id": 658,
+  "rendered_prompt_sha256": "ee83f85bb668b29be41309a157532324a202bff70dd4cea0172c450479a9413d",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Problem: rice 30 min. Pork took 20 more minutes than rice => 50 min. Beans took half combined cooking time of pork and rice: combined pork+rice = 80, half = 40. Total all food = 30+50+40 = 120 minutes. Need final numeric answer line.</think>Answer: 120",
+  "finish_reason": "stop",
+  "expected": "120",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.584446800989099
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Problem: rice 30 min. Pork took 20 more minutes than rice => 50 min. Beans took half combined cooking time of pork and rice: combined pork+rice = 80, half = 40. Total all food = 30+50+40 = 120 minutes. Need final numeric answer line.</think>Answer: 120",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452383,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 78,
+      "prompt_tokens": 100,
+      "total_tokens": 178,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-hyoF1Ltn7OFOA0UZfBOTkeDexK3tPQf1",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 99,
+      "prompt_ms": 630.603,
+      "prompt_per_token_ms": 6.369727272727272,
+      "prompt_per_second": 156.99259280403044,
+      "predicted_n": 78,
+      "predicted_ms": 3952.215,
+      "predicted_per_token_ms": 50.66942307692308,
+      "predicted_per_second": 19.73576842352959
+    }
+  },
+  "used_fallback": false
+}

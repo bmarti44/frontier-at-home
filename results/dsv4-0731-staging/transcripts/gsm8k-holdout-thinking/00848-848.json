@@ -1,0 +1,58 @@
+{
+  "index": 848,
+  "task_id": 848,
+  "rendered_prompt_sha256": "a14465f457ef5865d622f9bcffcfdfb8520d0d789c8c3370a63bda47760bbd5b",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Let's parse: 40 white shirts, 50 floral shirts. Half of white shirts have collars => 20 white have collars, so white with no collars = 20. 20 floral shirts have buttons, so floral with no buttons = 50-20=30. Difference = 30-20=10. Need final numeric answer on own line: Answer: 10.</think>Answer: 10",
+  "finish_reason": "stop",
+  "expected": "10",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.257916448987089
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Let's parse: 40 white shirts, 50 floral shirts. Half of white shirts have collars => 20 white have collars, so white with no collars = 20. 20 floral shirts have buttons, so floral with no buttons = 50-20=30. Difference = 30-20=10. Need final numeric answer on own line: Answer: 10.</think>Answer: 10",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452264,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 94,
+      "prompt_tokens": 80,
+      "total_tokens": 174,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-YykpXsgNIQUnQ7rFM0k5aBThjDacLAel",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 79,
+      "prompt_ms": 566.62,
+      "prompt_per_token_ms": 7.172405063291139,
+      "prompt_per_second": 139.4232466203099,
+      "predicted_n": 94,
+      "predicted_ms": 4688.605,
+      "predicted_per_token_ms": 49.878776595744675,
+      "predicted_per_second": 20.048607208327425
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>A clothing store has 40 white shirts and 50 floral shirts. Half of the white shirts have collars, and 20 of the floral shirts have buttons. How many more floral shirts with no buttons are there than white shirts with no collars?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

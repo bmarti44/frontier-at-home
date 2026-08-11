@@ -1,0 +1,56 @@
+{
+  "index": 8110,
+  "task_id": 8296,
+  "rendered_prompt_sha256": "ed87791b96ff952e6662e38cf92febe51160a10e245d5119c150c41ff2ea0d97",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer math. Problem: compute surface integral ∬_Σ x^3 dy dz + y^3 dz dx + z^3 dx dy, outward of ellipsoid x^2+y^2+z^2/4=1. Need round to thousands decimal? Options. Need compute.\n\nThis is flux integral of vector field F = (x^3, y^3, z^3) over surface? Integral form ∫ P dy dz + Q dz dx + R dx dy = ∫ F·n dS with F=(P,Q,R)=(x^3,y^3,z^3). Outward ellipsoid x^2+y^2+z^2/4=1. Need compute.\n\nUse divergence theorem: ∫_S F·n dS = ∫_V div F dV = ∫_V (3x^2+3y^2+3z^2) dV = 3 ∫_V (x^2+y^2+z^2) dV over ellipsoid x^2+y^2+z^2/4 ≤1.\n\nEllipsoid semi-axes: a=1 (x), b=1 (y), c=2 (z). Volume = 4/3 π abc = 8π/3? a=1,b=1,c=2 => 8π/3 ≈8.37758.\n\nNeed ∫ (x^2+y^2+z^2) dV over ellipsoid. Use transformation x=u, y=v, z=2w? Then ellipsoid maps to unit sphere u^2+v^2+w^2 ≤1. Jacobian = |det diag(1,1,2)|=2. x^2+y^2+z^2 = u^2+v^2+4w^2. Integral = ∫_{unit ball} (u^2+v^2+4w^2) *2 dV = 2 [ ∫ (u^2+v^2+w^2) dV + ∫ 3 w^2 dV? Since 4w^2 = (u^2+v^2+w^2)+3w^2. So =2 [ ∫ r^2 dV + 3 ∫ w^2 dV ].\n\nFor unit ball radius 1: ∫ r^2 dV = ∫_0^1 r^2 *4π r^2 dr =4π/5. ∫ w^2 dV = (1/3) ∫ r^2 dV? By symmetry ∫ x_i^2 = (1/3)∫ r^2 =4π/15. So ∫ (u^2+v^2+4w^2)= ∫ r^2 +3∫w^2 =4π/5 +3*(4π/15)=4π/5+12π/15=4π/5+4π/5=8π/5. Times 2 =16π/5. Then multiply 3 =48π/5 ≈30.15928896. Option C. Need answer letter.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 34.07378982900991
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer math. Problem: compute surface integral ∬_Σ x^3 dy dz + y^3 dz dx + z^3 dx dy, outward of ellipsoid x^2+y^2+z^2/4=1. Need round to thousands decimal? Options. Need compute.\n\nThis is flux integral of vector field F = (x^3, y^3, z^3) over surface? Integral form ∫ P dy dz + Q dz dx + R dx dy = ∫ F·n dS with F=(P,Q,R)=(x^3,y^3,z^3). Outward ellipsoid x^2+y^2+z^2/4=1. Need compute.\n\nUse divergence theorem: ∫_S F·n dS = ∫_V div F dV = ∫_V (3x^2+3y^2+3z^2) dV = 3 ∫_V (x^2+y^2+z^2) dV over ellipsoid x^2+y^2+z^2/4 ≤1.\n\nEllipsoid semi-axes: a=1 (x), b=1 (y), c=2 (z). Volume = 4/3 π abc = 8π/3? a=1,b=1,c=2 => 8π/3 ≈8.37758.\n\nNeed ∫ (x^2+y^2+z^2) dV over ellipsoid. Use transformation x=u, y=v, z=2w? Then ellipsoid maps to unit sphere u^2+v^2+w^2 ≤1. Jacobian = |det diag(1,1,2)|=2. x^2+y^2+z^2 = u^2+v^2+4w^2. Integral = ∫_{unit ball} (u^2+v^2+4w^2) *2 dV = 2 [ ∫ (u^2+v^2+w^2) dV + ∫ 3 w^2 dV? Since 4w^2 = (u^2+v^2+w^2)+3w^2. So =2 [ ∫ r^2 dV + 3 ∫ w^2 dV ].\n\nFor unit ball radius 1: ∫ r^2 dV = ∫_0^1 r^2 *4π r^2 dr =4π/5. ∫ w^2 dV = (1/3) ∫ r^2 dV? By symmetry ∫ x_i^2 = (1/3)∫ r^2 =4π/15. So ∫ (u^2+v^2+4w^2)= ∫ r^2 +3∫w^2 =4π/5 +3*(4π/15)=4π/5+12π/15=4π/5+4π/5=8π/5. Times 2 =16π/5. Then multiply 3 =48π/5 ≈30.15928896. Option C. Need answer letter.</think>Answer: C",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786475277,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 653,
+      "prompt_tokens": 172,
+      "total_tokens": 825,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-rlDM3yDfdWToJUDud5NbluU1SlygaQrK",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 171,
+      "prompt_ms": 778.333,
+      "prompt_per_token_ms": 4.551654970760234,
+      "prompt_per_second": 219.7003082228301,
+      "predicted_n": 653,
+      "predicted_ms": 33293.101,
+      "predicted_per_token_ms": 50.984840735068914,
+      "predicted_per_second": 19.61367311503966
+    }
+  }
+}

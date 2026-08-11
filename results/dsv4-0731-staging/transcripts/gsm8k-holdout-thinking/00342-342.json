@@ -1,0 +1,57 @@
+{
+  "index": 342,
+  "task_id": 342,
+  "rendered_prompt_sha256": "66f5cd31827df496128b80ed7fee7ea9cb95a3d4c881d91eb2ad4d32d4cd3a6a",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple arithmetic. Need parse: friend gave 24. At baby shower received twice the amount of new baby outfits. \"twice the amount of new baby outfits\" ambiguous: twice the amount of new baby outfits? Could mean twice the amount of friend's 24? Let's read: \"Laurel's friend gave her 24 baby outfits that her child no longer needed. At her baby shower, Laurel received twice the amount of new baby outfits. Then, Laurel's mom gifted her with another 15 baby outfits. How many outfits does she have for her baby?\" Likely \"twice the amount\" refers to 24? \"twice the amount of new baby outfits\" maybe \"twice the amount [of outfits her friend gave]\" = 48. Then total 24 + 48 + 15 = 87. Need final answer.</think>Answer: 87",
+  "finish_reason": "stop",
+  "expected": "87",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.827414432977093
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. Need parse: friend gave 24. At baby shower received twice the amount of new baby outfits. \"twice the amount of new baby outfits\" ambiguous: twice the amount of new baby outfits? Could mean twice the amount of friend's 24? Let's read: \"Laurel's friend gave her 24 baby outfits that her child no longer needed. At her baby shower, Laurel received twice the amount of new baby outfits. Then, Laurel's mom gifted her with another 15 baby outfits. How many outfits does she have for her baby?\" Likely \"twice the amount\" refers to 24? \"twice the amount of new baby outfits\" maybe \"twice the amount [of outfits her friend gave]\" = 48. Then total 24 + 48 + 15 = 87. Need final answer.</think>Answer: 87",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452401,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 183,
+      "prompt_tokens": 89,
+      "total_tokens": 272,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-V2KOA1L9Xzxw4fxNYEopevUXkDYCJxRC",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 88,
+      "prompt_ms": 597.633,
+      "prompt_per_token_ms": 6.791284090909091,
+      "prompt_per_second": 147.2475582840974,
+      "predicted_n": 183,
+      "predicted_ms": 9228.219,
+      "predicted_per_token_ms": 50.42742622950819,
+      "predicted_per_second": 19.830478665493313
+    }
+  },
+  "used_fallback": false
+}

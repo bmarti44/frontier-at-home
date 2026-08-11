@@ -1,0 +1,56 @@
+{
+  "index": 8847,
+  "task_id": 9036,
+  "rendered_prompt_sha256": "ca314ff6e52693c9634af1b5e39907438ca764c530d17eb2f0343abbbe6af445",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need compute monthly payment for mortgage 100k, 30 years, interest rate 9% annual presumably monthly 0.09/12=0.0075, n=360. Payment = P * r / (1 - (1+r)^-n). r=0.0075, P=100000. Numerator 750. Denominator 1 - (1.0075)^-360. Need compute. (1.0075)^360? Let's approximate. Monthly payment for 9% 30yr is about $804.62? I recall $100k at 9% 30 years = $804.62. Yes option D. Need answer: D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.322997147013666
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need compute monthly payment for mortgage 100k, 30 years, interest rate 9% annual presumably monthly 0.09/12=0.0075, n=360. Payment = P * r / (1 - (1+r)^-n). r=0.0075, P=100000. Numerator 750. Denominator 1 - (1.0075)^-360. Need compute. (1.0075)^360? Let's approximate. Monthly payment for 9% 30yr is about $804.62? I recall $100k at 9% 30 years = $804.62. Yes option D. Need answer: D.</think>Answer: D",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786477113,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 150,
+      "prompt_tokens": 129,
+      "total_tokens": 279,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-7pzo5TGvxbkmvk8pyXQE6O45pKQE8UYK",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 128,
+      "prompt_ms": 760.642,
+      "prompt_per_token_ms": 5.942515625,
+      "prompt_per_second": 168.27890124394918,
+      "predicted_n": 150,
+      "predicted_ms": 7559.172,
+      "predicted_per_token_ms": 50.394479999999994,
+      "predicted_per_second": 19.843443170759972
+    }
+  }
+}

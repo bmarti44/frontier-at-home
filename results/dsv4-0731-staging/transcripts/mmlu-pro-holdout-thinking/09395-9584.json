@@ -1,0 +1,56 @@
+{
+  "index": 9395,
+  "task_id": 9584,
+  "rendered_prompt_sha256": "9e58f86fca342c609bd37c3064407bdf8cacc791c35c94143d47db94ba6aec3e",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics. Need compute separation in wave number and wavelength of first two lines of isotopes in Balmer series for hydrogen vs deuterium. Atomic weights: hydrogen 1.0082, deuterium 2.01445. Need separation in wave number and wavelength of first two lines (alpha = Hα n=3->2? Balmer first line, beta n=4->2). Isotope shift due to reduced mass. Rydberg constant depends on reduced mass: R_M = R_infinity * m_e / (1 + m_e/M)? Actually R = R∞ / (1 + m_e/M) (or R∞ * μ/m_e = R∞ * m_e/(1+m_e/M)? μ = m_e M/(m_e+M) = m_e/(1+m_e/M), so R_M = R∞ μ/m_e = R∞/(1+m_e/M). For hydrogen M_H ~1.0082 amu, deuterium M_D ~2.01445 amu. Difference in wave numbers for transition n_i -> n_f (Balmer n_f=2): ν~ = R_M (1/2^2 - 1/n_i^2). Δν = R∞ (1/4 -1/n_i^2) [1/(1+m_e/M_D) - 1/(1+m_e/M_H)]? Actually R_M = R∞/(1+m_e/M). For D smaller denominator? M_D > M_H so R_D > R_H. Δν = R_D - R_H times factor. Need compute.\n\nNeed match options. Let's calculate accurately.\n\nConstants: R∞ = 109737.3155 cm^-1? m_e = 5.485799e-4 amu? Actually electron mass / proton? m_e = 0.000548579909 amu. Atomic masses: H = 1.0082? deuterium = 2.01445? These are atomic weights including electron? For reduced mass with nucleus? Usually isotope shift uses nuclear masses? Problem says atomic weight of hydrogen is 1.0082, deuterium 2.01445. Need use M? For hydrogen atom mass includes electron? But reduced mass should use nuclear mass? However atomic weight includes electron. For hydrogen atom, total mass ~1.007825 u; deuterium atom ~2.014101 u. Given 1.0082 and 2.01445 maybe atomic weights? Need compute.\n\nR_M = R∞ / (1 + m_e/M) where M is mass of nucleus? If using atomic mass, includes electron, but close. Need compute Δν for Balmer lines.\n\nBalmer first two lines: Hα: n=3 to 2, factor Fα = 1/4 - 1/9 = 5/36 = 0.1388888889. Hβ: n=4 to 2, factor Fβ = 1/4 - 1/16 = 3/16 = 0.1875.\n\nΔν = R∞ F [1/(1+m_e/M_D) - 1/(1+m_e/M_H)] = R∞ F [ (1+m_e/M_H -1 - m_e/M_D) / ((1+m_e/M_D)(1+m_e/M_H)) ] ≈ R∞ F * m_e (1/M_H - 1/M_D) since denominators ~1. m_e/M ~ 5.485799e-4 / 1.0082 ≈ 5.441e-4; for D ~2.723e-4. Difference ~2.718e-4. Times R∞ F ~109737*0.1389=15241 cm^-1; Δν ≈ 15241 * 2.718e-4 = 4.143 cm^-1. For β factor 0.1875 -> R∞F=20575; *2.718e-4=5.59 cm^-1. So option D: Δν_alpha=4.14, beta=5.59. Wavelength shifts? Need compute Δλ. For Hα wavelength ~6563 Å? Δν = Δ(1/λ) = -Δλ/λ^2 (cm^-1? λ in cm). Δλ ≈ λ^2 Δν (if λ in cm? Δν cm^-1 = Δ(1/λ) with λ cm; Δλ cm = λ^2 Δν). For Hα λ ~656.3 nm = 6563 Å = 6.563e-5 cm. λ^2 = 4.307e-9 cm^2? Δν=4.14 cm^-1 -> Δλ = 4.14*4.307e-9 cm =1.783e-8 cm =1.783 Å? 1 Å=1e-8 cm, so 1.78 Å. Option D says Δλ_alpha=1.79 A°, beta=1.32? For Hβ λ ~4861 Å =4.861e-5 cm; λ^2=2.363e-9; Δν=5.59 -> Δλ=1.321e-8 cm=1.32 Å. Yes D.\n\nAnswer D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 59.228099839994684
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics. Need compute separation in wave number and wavelength of first two lines of isotopes in Balmer series for hydrogen vs deuterium. Atomic weights: hydrogen 1.0082, deuterium 2.01445. Need separation in wave number and wavelength of first two lines (alpha = Hα n=3->2? Balmer first line, beta n=4->2). Isotope shift due to reduced mass. Rydberg constant depends on reduced mass: R_M = R_infinity * m_e / (1 + m_e/M)? Actually R = R∞ / (1 + m_e/M) (or R∞ * μ/m_e = R∞ * m_e/(1+m_e/M)? μ = m_e M/(m_e+M) = m_e/(1+m_e/M), so R_M = R∞ μ/m_e = R∞/(1+m_e/M). For hydrogen M_H ~1.0082 amu, deuterium M_D ~2.01445 amu. Difference in wave numbers for transition n_i -> n_f (Balmer n_f=2): ν~ = R_M (1/2^2 - 1/n_i^2). Δν = R∞ (1/4 -1/n_i^2) [1/(1+m_e/M_D) - 1/(1+m_e/M_H)]? Actually R_M = R∞/(1+m_e/M). For D smaller denominator? M_D > M_H so R_D > R_H. Δν = R_D - R_H times factor. Need compute.\n\nNeed match options. Let's calculate accurately.\n\nConstants: R∞ = 109737.3155 cm^-1? m_e = 5.485799e-4 amu? Actually electron mass / proton? m_e = 0.000548579909 amu. Atomic masses: H = 1.0082? deuterium = 2.01445? These are atomic weights including electron? For reduced mass with nucleus? Usually isotope shift uses nuclear masses? Problem says atomic weight of hydrogen is 1.0082, deuterium 2.01445. Need use M? For hydrogen atom mass includes electron? But reduced mass should use nuclear mass? However atomic weight includes electron. For hydrogen atom, total mass ~1.007825 u; deuterium atom ~2.014101 u. Given 1.0082 and 2.01445 maybe atomic weights? Need compute.\n\nR_M = R∞ / (1 + m_e/M) where M is mass of nucleus? If using atomic mass, includes electron, but close. Need compute Δν for Balmer lines.\n\nBalmer first two lines: Hα: n=3 to 2, factor Fα = 1/4 - 1/9 = 5/36 = 0.1388888889. Hβ: n=4 to 2, factor Fβ = 1/4 - 1/16 = 3/16 = 0.1875.\n\nΔν = R∞ F [1/(1+m_e/M_D) - 1/(1+m_e/M_H)] = R∞ F [ (1+m_e/M_H -1 - m_e/M_D) / ((1+m_e/M_D)(1+m_e/M_H)) ] ≈ R∞ F * m_e (1/M_H - 1/M_D) since denominators ~1. m_e/M ~ 5.485799e-4 / 1.0082 ≈ 5.441e-4; for D ~2.723e-4. Difference ~2.718e-4. Times R∞ F ~109737*0.1389=15241 cm^-1; Δν ≈ 15241 * 2.718e-4 = 4.143 cm^-1. For β factor 0.1875 -> R∞F=20575; *2.718e-4=5.59 cm^-1. So option D: Δν_alpha=4.14, beta=5.59. Wavelength shifts? Need compute Δλ. For Hα wavelength ~6563 Å? Δν = Δ(1/λ) = -Δλ/λ^2 (cm^-1? λ in cm). Δλ ≈ λ^2 Δν (if λ in cm? Δν cm^-1 = Δ(1/λ) with λ cm; Δλ cm = λ^2 Δν). For Hα λ ~656.3 nm = 6563 Å = 6.563e-5 cm. λ^2 = 4.307e-9 cm^2? Δν=4.14 cm^-1 -> Δλ = 4.14*4.307e-9 cm =1.783e-8 cm =1.783 Å? 1 Å=1e-8 cm, so 1.78 Å. Option D says Δλ_alpha=1.79 A°, beta=1.32? For Hβ λ ~4861 Å =4.861e-5 cm; λ^2=2.363e-9; Δν=5.59 -> Δλ=1.321e-8 cm=1.32 Å. Yes D.\n\nAnswer D.</think>Answer: D",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786479638,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1109,
+      "prompt_tokens": 622,
+      "total_tokens": 1731,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-ylDhvyR3CAT0pu3aMeimDFVjrsjZa6RE",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 621,
+      "prompt_ms": 1684.853,
+      "prompt_per_token_ms": 2.7131288244766507,
+      "prompt_per_second": 368.5781489542411,
+      "predicted_n": 1109,
+      "predicted_ms": 57539.753,
+      "predicted_per_token_ms": 51.88435798016231,
+      "predicted_per_second": 19.273631570855024
+    }
+  }
+}

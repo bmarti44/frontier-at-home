@@ -1,0 +1,57 @@
+{
+  "index": 44,
+  "task_id": 44,
+  "rendered_prompt_sha256": "4d33f0f4fc80813577632519ea1590af6b19119569f7b843757b3c3297e71944",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Let's parse: For every pound beeswax, can make 10 tapered candles. One pound beeswax and wicks cost $10 supplies. If sells each candle $2, net profit if makes and sells 20 candles? Need compute. 20 candles require 2 pounds beeswax? Since 1 pound makes 10 candles, 20 candles = 2 pounds. Supplies cost: one pound beeswax and wicks cost $10.00. Ambiguity: \"One pound of beeswax and the wicks cost $10.00 in supplies.\" Means for one pound beeswax plus wicks needed for 10 candles cost $10. For 20 candles, need 2 pounds beeswax and wicks for 20 candles, cost $20? Wicks included? likely yes. Revenue 20*$2=$40. Net profit = $40 - $20 = $20. Need final numeric answer. But check if \"one pound of beeswax and the wicks cost $10.00 in supplies\" could mean one pound beeswax costs $10 and wicks cost? Actually phrase: \"One pound of beeswax and the wicks cost $10.00 in supplies.\" It says one pound of beeswax and the wicks cost $10.00 in supplies. So for 1 pound + wicks = $10. For 20 candles = 2 pounds + wicks for 20 candles = $20. Profit $20. Answer: 20.</think>Answer: 20",
+  "finish_reason": "stop",
+  "expected": "20",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 17.133895475999452
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Let's parse: For every pound beeswax, can make 10 tapered candles. One pound beeswax and wicks cost $10 supplies. If sells each candle $2, net profit if makes and sells 20 candles? Need compute. 20 candles require 2 pounds beeswax? Since 1 pound makes 10 candles, 20 candles = 2 pounds. Supplies cost: one pound beeswax and wicks cost $10.00. Ambiguity: \"One pound of beeswax and the wicks cost $10.00 in supplies.\" Means for one pound beeswax plus wicks needed for 10 candles cost $10. For 20 candles, need 2 pounds beeswax and wicks for 20 candles, cost $20? Wicks included? likely yes. Revenue 20*$2=$40. Net profit = $40 - $20 = $20. Need final numeric answer. But check if \"one pound of beeswax and the wicks cost $10.00 in supplies\" could mean one pound beeswax costs $10 and wicks cost? Actually phrase: \"One pound of beeswax and the wicks cost $10.00 in supplies.\" It says one pound of beeswax and the wicks cost $10.00 in supplies. So for 1 pound + wicks = $10. For 20 candles = 2 pounds + wicks for 20 candles = $20. Profit $20. Answer: 20.</think>Answer: 20",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452378,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 327,
+      "prompt_tokens": 101,
+      "total_tokens": 428,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-vGucfY3tQmcM0jzjLM6h1Paqjdrx9Y9M",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 100,
+      "prompt_ms": 617.945,
+      "prompt_per_token_ms": 6.17945,
+      "prompt_per_second": 161.82669978719787,
+      "predicted_n": 327,
+      "predicted_ms": 16513.374,
+      "predicted_per_token_ms": 50.49961467889908,
+      "predicted_per_second": 19.802131290673852
+    }
+  },
+  "used_fallback": false
+}

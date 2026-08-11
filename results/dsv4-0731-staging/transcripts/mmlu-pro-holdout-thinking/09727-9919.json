@@ -1,0 +1,56 @@
+{
+  "index": 9727,
+  "task_id": 9919,
+  "rendered_prompt_sha256": "008e49b59e7a5f7853849c32e6bf9e6bbc7008e0bcb0873788af3e3c805f07d9",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics. Need solve. Two motorcycles at rest separated by 24.5 ft. Start same time same direction. Back acceleration 3 ft/s^2, front acceleration 2 ft/s^2. Need time faster overtake slower. Let positions: back starts at x=0? front at x=24.5. Both from rest. Positions: back x_b = 1/2 *3 t^2 = 1.5 t^2. front x_f = 24.5 + 1/2*2 t^2 = 24.5 + t^2. Overtake when x_b = x_f: 1.5 t^2 = 24.5 + t^2 => 0.5 t^2 = 24.5 => t^2 = 49 => t=7 sec. Distance faster goes: 1.5*49=73.5 ft. Speeds: v = a t: back 3*7=21 ft/s; front 2*7=14 ft/s. Option E. Answer: E.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 13.161278262006817
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics. Need solve. Two motorcycles at rest separated by 24.5 ft. Start same time same direction. Back acceleration 3 ft/s^2, front acceleration 2 ft/s^2. Need time faster overtake slower. Let positions: back starts at x=0? front at x=24.5. Both from rest. Positions: back x_b = 1/2 *3 t^2 = 1.5 t^2. front x_f = 24.5 + 1/2*2 t^2 = 24.5 + t^2. Overtake when x_b = x_f: 1.5 t^2 = 24.5 + t^2 => 0.5 t^2 = 24.5 => t^2 = 49 => t=7 sec. Distance faster goes: 1.5*49=73.5 ft. Speeds: v = a t: back 3*7=21 ft/s; front 2*7=14 ft/s. Option E. Answer: E.</think>Answer: E",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786479763,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 233,
+      "prompt_tokens": 427,
+      "total_tokens": 660,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-nHi1sLF9jA98QZGB1eMQxdGsWupUMg75",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 426,
+      "prompt_ms": 1304.493,
+      "prompt_per_token_ms": 3.0621901408450705,
+      "prompt_per_second": 326.5636534653693,
+      "predicted_n": 233,
+      "predicted_ms": 11853.884,
+      "predicted_per_token_ms": 50.875038626609445,
+      "predicted_per_second": 19.65600473228859
+    }
+  }
+}

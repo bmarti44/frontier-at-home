@@ -1,0 +1,57 @@
+{
+  "index": 160,
+  "task_id": 160,
+  "rendered_prompt_sha256": "72f28515e3620ffe7d502da150e5bf7f0a76d13fb091cf1aec5f7947cbb186fa",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple arithmetic. Need think briefly but final numeric. Problem: Monday depth 17 feet. Tuesday had 7 feet more water -> 17+7=24 feet. Wednesday depth is two thirds of Tuesday -> 2/3 * 24 = 16 feet. Final answer line.</think>Answer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.8809539749927353
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. Need think briefly but final numeric. Problem: Monday depth 17 feet. Tuesday had 7 feet more water -> 17+7=24 feet. Wednesday depth is two thirds of Tuesday -> 2/3 * 24 = 16 feet. Final answer line.</think>Answer: 16",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452824,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 67,
+      "prompt_tokens": 84,
+      "total_tokens": 151,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-zzReNFI5iQtP19FBW13A5VgBOTH3La5G",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 83,
+      "prompt_ms": 541.818,
+      "prompt_per_token_ms": 6.5279277108433735,
+      "prompt_per_second": 153.1879708684466,
+      "predicted_n": 67,
+      "predicted_ms": 3336.33,
+      "predicted_per_token_ms": 49.79597014925373,
+      "predicted_per_second": 20.081946330249107
+    }
+  },
+  "used_fallback": false
+}

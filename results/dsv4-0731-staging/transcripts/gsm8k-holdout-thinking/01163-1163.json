@@ -1,0 +1,57 @@
+{
+  "index": 1163,
+  "task_id": 1163,
+  "rendered_prompt_sha256": "610392f1bb412246b703c849533c9301b5c632c5788c5d983bc43b7460310db8",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple arithmetic. Tyrion changes mask two times every time he goes out. Goes out three times a day. Masks per day = 2*3=6. Every 2 days = 12. Need final numeric answer line.</think>Answer: 12",
+  "finish_reason": "stop",
+  "expected": "12",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.3143908260099124
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. Tyrion changes mask two times every time he goes out. Goes out three times a day. Masks per day = 2*3=6. Every 2 days = 12. Need final numeric answer line.</think>Answer: 12",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453926,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 57,
+      "prompt_tokens": 65,
+      "total_tokens": 122,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-C4kTyjp3LCxAD6Y2qGXZp7faClH9IuzL",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 64,
+      "prompt_ms": 481.016,
+      "prompt_per_token_ms": 7.515875,
+      "prompt_per_second": 133.05170721971825,
+      "predicted_n": 57,
+      "predicted_ms": 2830.399,
+      "predicted_per_token_ms": 49.65612280701754,
+      "predicted_per_second": 20.13850344068098
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,56 @@
+{
+  "index": 11154,
+  "task_id": 11376,
+  "rendered_prompt_sha256": "e46817da07210d921a2e773ba8c4c52929a9f7c598a1b00712df87800484bd6e",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics. Need compute maximum pressure exerted on aircraft flying at 200 mph at sea level. Need interpret: maximum pressure likely stagnation pressure (total pressure) at points where flow is brought to rest: p_total = p0 + 1/2 rho V^2. Need units consistent. Given rho=0.00238 slug/ft^3, p0=14.7 psi. V=200 mph. Convert to ft/s: 200 mph * 5280/3600 = 293.333 ft/s. Dynamic pressure q = 1/2 rho V^2 = 0.5*0.00238*(293.33)^2. Compute: 293.33^2 ≈ 86044.4. *0.00238 ≈ 204.785? Let's calculate: 86044 * 0.00238 = 204.785. half = 102.39 lb/ft^2 (psf). Convert to psi: 1 psi = 144 psf (since 1 lb/in^2 = 144 lb/ft^2). So q = 102.39/144 = 0.711 psi. Total = 14.7 + 0.711 = 15.411 psi ≈ 15.42 psia. Option E. Need answer letter.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 14.916312752000522
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics. Need compute maximum pressure exerted on aircraft flying at 200 mph at sea level. Need interpret: maximum pressure likely stagnation pressure (total pressure) at points where flow is brought to rest: p_total = p0 + 1/2 rho V^2. Need units consistent. Given rho=0.00238 slug/ft^3, p0=14.7 psi. V=200 mph. Convert to ft/s: 200 mph * 5280/3600 = 293.333 ft/s. Dynamic pressure q = 1/2 rho V^2 = 0.5*0.00238*(293.33)^2. Compute: 293.33^2 ≈ 86044.4. *0.00238 ≈ 204.785? Let's calculate: 86044 * 0.00238 = 204.785. half = 102.39 lb/ft^2 (psf). Convert to psi: 1 psi = 144 psf (since 1 lb/in^2 = 144 lb/ft^2). So q = 102.39/144 = 0.711 psi. Total = 14.7 + 0.711 = 15.411 psi ≈ 15.42 psia. Option E. Need answer letter.</think>Answer: E",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786459595,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 281,
+      "prompt_tokens": 152,
+      "total_tokens": 433,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-yitIzJS072AaXhHPptIP8HO4yZyOScL2",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 151,
+      "prompt_ms": 706.882,
+      "prompt_per_token_ms": 4.6813377483443706,
+      "prompt_per_second": 213.61415342306074,
+      "predicted_n": 281,
+      "predicted_ms": 14207.136,
+      "predicted_per_token_ms": 50.55920284697509,
+      "predicted_per_second": 19.778792854520432
+    }
+  }
+}

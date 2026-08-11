@@ -1,0 +1,58 @@
+{
+  "index": 69,
+  "task_id": 69,
+  "rendered_prompt_sha256": "937e6dcd8efeedafa3db26fffb19d70f3eef5696aeee18f1100968b63bf4d1d0",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple. Need comply. Problem: starts x, receives 5*8=40, total 100, so x=60. Final numeric answer on own line.</think>Answer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.6444496779877227
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple. Need comply. Problem: starts x, receives 5*8=40, total 100, so x=60. Final numeric answer on own line.</think>Answer: 60",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786451984,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 43,
+      "prompt_tokens": 79,
+      "total_tokens": 122,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-u7h9ke8pwxEpJdVd7hjVwrkavwQmm5oj",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 78,
+      "prompt_ms": 536.656,
+      "prompt_per_token_ms": 6.8802051282051275,
+      "prompt_per_second": 145.3445037416893,
+      "predicted_n": 43,
+      "predicted_ms": 2105.948,
+      "predicted_per_token_ms": 48.975534883720925,
+      "predicted_per_second": 20.41835790817247
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Bailey starts with a certain amount of money. Then she receives a weekly allowance of $5 for 8 weeks. At the end of the 8 weeks, if she has a total of $100, how much money did Bailey start with?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

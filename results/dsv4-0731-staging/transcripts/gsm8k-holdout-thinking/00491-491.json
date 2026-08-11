@@ -1,0 +1,57 @@
+{
+  "index": 491,
+  "task_id": 491,
+  "rendered_prompt_sha256": "3270c519274a669d4a6b3a98b5c75d9f988b09d8799e981615ce8c5da579df64",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer simple arithmetic. Need think briefly? We can reason: 2 trays * 24 = 48 capacity. 64 eggs, 64-48=16 eggs won't fit. Final answer line.</think>Answer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.980802643985953
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer simple arithmetic. Need think briefly? We can reason: 2 trays * 24 = 48 capacity. 64 eggs, 64-48=16 eggs won't fit. Final answer line.</think>Answer: 16",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452629,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 50,
+      "prompt_tokens": 70,
+      "total_tokens": 120,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-CQ8P9OSlsLybqsy5MZzZ9QBq4g652Ngf",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 69,
+      "prompt_ms": 514.767,
+      "prompt_per_token_ms": 7.4603913043478265,
+      "prompt_per_second": 134.04122641894293,
+      "predicted_n": 50,
+      "predicted_ms": 2463.808,
+      "predicted_per_token_ms": 49.27616,
+      "predicted_per_second": 20.293789126425434
+    }
+  },
+  "used_fallback": false
+}

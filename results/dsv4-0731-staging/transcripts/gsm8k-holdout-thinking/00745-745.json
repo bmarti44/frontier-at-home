@@ -1,0 +1,57 @@
+{
+  "index": 745,
+  "task_id": 745,
+  "rendered_prompt_sha256": "32251246c14f14575d734168acb9ea628cb3ec7669964ad600fc0a588116512f",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Need think briefly? We can reason. Mark buys 3 packs at $1800 each = cost $5400. He gets cards: 1 worth $4000, another $1000, 30 more worth average $50 each = 30*50=1500. Total value = 4000+1000+1500=6500. Profit = revenue? If selling cards, total value 6500 minus cost 5400 = 1100. Need final numeric answer. Ensure \"Answer: 1100\".</think>Answer: 1100",
+  "finish_reason": "stop",
+  "expected": "1100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.794828718004283
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Need think briefly? We can reason. Mark buys 3 packs at $1800 each = cost $5400. He gets cards: 1 worth $4000, another $1000, 30 more worth average $50 each = 30*50=1500. Total value = 4000+1000+1500=6500. Profit = revenue? If selling cards, total value 6500 minus cost 5400 = 1100. Need final numeric answer. Ensure \"Answer: 1100\".</think>Answer: 1100",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786452842,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 123,
+      "prompt_tokens": 100,
+      "total_tokens": 223,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-pO4lEsZ2klX4fauzJFa17uK3twD1qW0T",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 99,
+      "prompt_ms": 620.169,
+      "prompt_per_token_ms": 6.264333333333333,
+      "prompt_per_second": 159.63390624168574,
+      "predicted_n": 123,
+      "predicted_ms": 6171.515,
+      "predicted_per_token_ms": 50.174918699186996,
+      "predicted_per_second": 19.930276439415607
+    }
+  },
+  "used_fallback": false
+}

@@ -48,7 +48,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STAGING = REPO_ROOT / "results" / "dsv4-0731-staging"
 ATTEMPTS_ROOT = REPO_ROOT / "results" / "dsv4-0731-attempts"
-SPEC_PATH = REPO_ROOT / "configs" / "decision-specs" / "dsv4-0731.v2.json"
+SPEC_PATH = REPO_ROOT / "configs" / "decision-specs" / "dsv4-0731.v3.json"
 WEIGHTS_MANIFEST = REPO_ROOT / "weights" / "unsloth-ud-q2_k_xl" / "manifest.json"
 WEIGHTS_PIN = REPO_ROOT / "configs" / "pins" / "unsloth-ud-q2_k_xl.json"
 TOKENIZER = REPO_ROOT / "vendor" / "official-encoding" / "tokenizer.json"

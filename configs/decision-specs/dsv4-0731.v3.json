@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "decision_id": "0731",
+  "title": "DeepSeek-V4-Flash-0731 on the llama.cpp serving path",
+  "created_utc": "2026-08-10",
+  "status": "SPECIFICATION_ONLY_NOT_YET_EXECUTABLE",
+  "why_this_file_exists": "scripts/34_decision.py hardcodes the input artifact names, stack identities, ports, configuration hashes, and thresholds of the 2026-07-16 ds4-vs-llamacpp comparison, and until 2026-08-10 also hardcoded its output paths. Feeding 0731 evidence through it would either fail closed on identity mismatch or overwrite results/decision.json and relabel a frozen terminal record as being about whatever ran last. This file states the 0731 decision's inputs and identities up front, before its evidence exists, so the acceptance criteria cannot be chosen after seeing the numbers.",
+  "honest_status": {
+    "what_is_implemented": "34_decision.py now takes --decision-id, so a 0731 run writes results/decision-0731.json and results/DECISION-0731.md and cannot clobber the frozen decision. The identifier is recorded inside the machine report.",
+    "what_is_NOT_implemented": "34_decision.py does not read this file. Its INPUT_PATHS, stack identity checks, port expectations, configuration hashes, and thresholds remain hardcoded to the pre-0731 comparison. Running it against 0731 evidence today will still fail closed on those checks. This specification is therefore a preregistration, not a working configuration.",
+    "what_must_change_before_it_can_run": [
+      "INPUT_PATHS must become spec-driven rather than module constants",
+      "the per-stack identity block (34_decision.py:43-175) must accept the 0731 serving identity, including configs/dsv4-profile.json serving_weights_manifest_sha256",
+      "the soak floor check must distinguish the 12 GiB qualification floor from the 8 GiB operational floor now recorded as qualification_eligible_floor in the soak artifact",
+      "holdout evidence must satisfy the row-set freshness rule added to 36_audit_accuracy.py on 2026-08-10"
+    ]
+  },
+  "candidate_identity": {
+    "release": {
+      "repo": "unsloth/DeepSeek-V4-Flash-0731-GGUF",
+      "revision": "fbbb5b93fb787c21338159b0af3318bb3f4d9768",
+      "upstream": "deepseek-ai/DeepSeek-V4-Flash-0731"
+    },
+    "serving_weights_manifest_sha256": "0091522cf58e3c09d3911e26e85688b2bc09f9fb3eb0be4aab47e7eca9800e2f",
+    "engine": "llama.cpp fusion build, system_fingerprint b10053-0dc74e332",
+    "profile": "1M-fast: CTX=1048576, UBATCH/BATCH=2048, PARALLEL=2, NO_MMAP=1, SPEC_TYPE=none",
+    "serving_topology": "2 slots at n_ctx=524288 each",
+    "port": 8013
+  },
+  "generation_contract": {
+    "thinking_mode": "thinking",
+    "why": "0731 emits reasoning_content with no request flag on both engines, so the thinking rendering is the contract the endpoint actually serves. The pre-0731 baselines were all measured under the chat rendering and are NOT contract-matched to this candidate.",
+    "max_tokens": 16384,
+    "request_timeout_s": 3600,
+    "budget_rationale": "Three limits were hit in sequence, each hidden behind the last. At 2048 tokens 13.0% of MMLU-Pro items truncated. At 8192 truncation went to zero but the hardcoded 300 s client timeout killed 20 of 253. At 8192 with a 1800 s clock, truncation returned at 5.5% with p95 sitting exactly on the ceiling. At 16384 with a 3600 s clock, truncation is 2.0% and p95 is 10956 -- below the ceiling for the first time. p99 is still 16384, so the top 1% remains censored and every score here is a floor."
+  },
+  "preregistered_validity_gates": {
+    "note": "Set before the corresponding evidence existed. A run failing any of these is not reportable, regardless of its score.",
+    "truncated_fraction_max": {
+      "mmlu-pro": 0.05533596837944664,
+      "gsm8k": 0.01,
+      "source": "the exact measured truncation rate of the pre-0731 chat arms -- 14/253 for MMLU-Pro and 1/100 for GSM8K -- so the candidate is held to precisely the baseline's own standard, neither laxer nor (as in v1) fractionally stricter.",
+      "gsm8k_note": "1/100 = 0.010 exactly, so the chat arm sits exactly on its ceiling and passes.",
+      "mmlu-pro_exact": "14/253",
+      "gsm8k_exact": "1/100"
+    },
+    "request_failures_max": 0,
+    "expected_n": {
+      "gsm8k-dev": 100,
+      "mmlu-pro-dev": 253,
+      "humaneval-all": 164,
+      "gsm8k-holdout": 100,
+      "mmlu-pro-holdout": 247
+    },
+    "holdout_rowset_must_be_unspent": true,
+    "truncation_gate_exempt": {
+      "humaneval": "No valid baseline truncation rate exists for this suite. The pre-0731 llama.cpp reference arm truncated 124/164 = 75.6% of items with a median completion of exactly 512 tokens, i.e. most of its items ran into the ceiling and never terminated. Deriving a ceiling from that arm would be meaningless, and choosing any other number now -- after the candidate's 14.0% rate is known -- would be precisely the post-hoc threshold-setting this preregistration exists to prevent. HumanEval truncation is therefore RECORDED and reported, not gated. Re-running the reference arm at a larger budget is not possible: the pre-0731 weights were deleted on 2026-08-09."
+    },
+    "holdout_note": "Holdout ceilings reuse the dev-split values. The holdout arms run the identical contract (thinking, 16384 tokens, 3600 s) so the same exposure limits apply; they were set before the holdout was drawn and the holdout is a one-shot budget."
+  },
+  "inputs": {
+    "note": "Paths the 0731 decision would consume. Holdout and speed artifacts do not exist yet; they are named here so that producing them cannot become a matter of picking whichever files look best.",
+    "golden": "results/dsv4-0731-staging/golden-llamacpp-0731-v2.json",
+    "parity": "results/dsv4-0731-staging/parity-llamacpp-0731.json",
+    "gsm8k-dev": "results/dsv4-0731-staging/acc-gsm8k-dev-0731-thinking-16k.json",
+    "mmlu-pro-dev": "results/dsv4-0731-staging/acc-mmlu-pro-dev-0731-thinking-16k.json",
+    "gsm8k-holdout": "NOT YET PRODUCED",
+    "mmlu-pro-holdout": "NOT YET PRODUCED",
+    "humaneval": "BLOCKED: harness pins a Docker image digest and the account lacks docker group membership",
+    "speed": "NOT YET PRODUCED",
+    "soak": "NOT YET PRODUCED",
+    "context_capability": "NOT YET PRODUCED",
+    "arm_selection_rule": "The 16384-token arms are used because they are the ones that satisfy the preregistered VALIDITY gates, not because they score highest. The 8192-token arms failed the truncation ceilings (gsm8k 2.0% > 1.0%, mmlu-pro 5.5% > 5.5% by the documented rounding defect) and are retained in the staging directory rather than discarded. Selecting on validity is what the gates exist for; selecting on score is what they exist to prevent."
+  },
+  "output_destination": {
+    "machine": "results/decision-0731.json",
+    "human": "results/DECISION-0731.md",
+    "must_not_write": [
+      "results/decision.json",
+      "results/DECISION.md"
+    ]
+  },
+  "relationship_to_the_frozen_decision": "results/decision.json (2026-07-16) selected ds4 on composite score; results/DECISION-OVERRIDE.md (2026-07-17) records the owner overriding serving to llama.cpp because ds4's envelope caps near 28K prompt tokens against a 1M product target. Neither document is superseded by this specification, and neither may be rewritten by a 0731 run.",
+  "spec_version": "v3",
+  "supersedes": {
+    "spec": "configs/decision-specs/dsv4-0731.v2.json",
+    "reason": "v2 preregistered expected_n['mmlu-pro-holdout'] = 253. The MMLU-Pro holdout split contains 247 rows, not 253; 253 is the DEV split size, copied across in error when the holdout entries were added.",
+    "why_this_is_a_factual_correction_and_not_a_tuned_threshold": "expected_n is a coverage check -- did the run score every row in the split -- and its correct value is a property of the frozen dataset, independently verifiable without reference to any result. Both pre-0731 baseline artifacts recorded for this split, results/acc-mmlu-holdout-llamacpp.json and results/acc-mmlu-holdout-ds4.json, carry n=247, as does the 0731 arm. The value was checkable before the run and I got it wrong.",
+    "disclosure": "This correction makes a gate PASS that would otherwise FAIL, which is exactly the shape of a post-hoc adjustment and is stated plainly here for that reason. The distinguishing facts: the corrected value is verifiable from evidence frozen weeks before this candidate existed, it is not a threshold on any measured quantity, and no score changes. Had the 0731 run returned n=253 it would still have failed, because the split does not contain 253 rows.",
+    "corrected_utc": "2026-08-11"
+  }
+}

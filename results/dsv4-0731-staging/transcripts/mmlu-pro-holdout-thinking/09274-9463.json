@@ -1,0 +1,56 @@
+{
+  "index": 9274,
+  "task_id": 9463,
+  "rendered_prompt_sha256": "298f1b153c835f5b6d436519e2f4420d20a344c3c8e03390c4191fe8da086fcc",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer physics. Need compute ratio specific heats gamma from speed of sound ideal gas. v = sqrt(gamma R T / M) where M molar mass kg/mol. At STP? STP usually T=273.15 K, P=1 atm. Given v=334 m/s, M=28.8 g/mol = 0.0288 kg/mol. R=8.314 J/mol K. gamma = v^2 M / (R T). Compute: v^2=334^2=111556. *0.0288 =? 111556*0.0288 = 111556*(0.03 -0.0012)=3346.68 -133.8672=3212.8128. R*T=8.314*273.15 =? 8.314*273.15 = 8.314*(273+0.15)=2270? 8.314*273=2269.722? 8.314*273 = 8.314*300 -8.314*27=2494.2 -224.478=2269.722. +1.2471=2270.9691. Ratio=3212.8128/2270.9691 ≈1.4147. Options include 1.415 (G) and 1.38? 1.415 closest. Answer G. Need final single letter.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 15.970523308002157
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer physics. Need compute ratio specific heats gamma from speed of sound ideal gas. v = sqrt(gamma R T / M) where M molar mass kg/mol. At STP? STP usually T=273.15 K, P=1 atm. Given v=334 m/s, M=28.8 g/mol = 0.0288 kg/mol. R=8.314 J/mol K. gamma = v^2 M / (R T). Compute: v^2=334^2=111556. *0.0288 =? 111556*0.0288 = 111556*(0.03 -0.0012)=3346.68 -133.8672=3212.8128. R*T=8.314*273.15 =? 8.314*273.15 = 8.314*(273+0.15)=2270? 8.314*273=2269.722? 8.314*273 = 8.314*300 -8.314*27=2494.2 -224.478=2269.722. +1.2471=2270.9691. Ratio=3212.8128/2270.9691 ≈1.4147. Options include 1.415 (G) and 1.38? 1.415 closest. Answer G. Need final single letter.</think>Answer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786478670,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 302,
+      "prompt_tokens": 156,
+      "total_tokens": 458,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-UA5nnRSIBJ0km7jgyDnMV3CLGOIaSq3X",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 155,
+      "prompt_ms": 729.631,
+      "prompt_per_token_ms": 4.707296774193548,
+      "prompt_per_second": 212.43614923159788,
+      "predicted_n": 302,
+      "predicted_ms": 15238.441,
+      "predicted_per_token_ms": 50.45841390728477,
+      "predicted_per_second": 19.818300310379517
+    }
+  }
+}

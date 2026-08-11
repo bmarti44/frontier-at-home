@@ -1,0 +1,56 @@
+{
+  "index": 10414,
+  "task_id": 10622,
+  "rendered_prompt_sha256": "e6d476b881c910bcf15fce63d43d00d407f9dd573c4d4135d2d7b2a14c43e7bc",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Question: virtual memory systems using pages. Statements:\nI. Virtual address space can be larger than physical memory. True.\nII. Programs must be resident in main memory throughout execution. False; virtual memory allows parts not resident, demand paging.\nIII. Pages correspond to semantic characteristics of program. False; pages are fixed-size chunks, not semantic (segments correspond semantic). So only I true. Option G. Answer: G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.59071980099543
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Question: virtual memory systems using pages. Statements:\nI. Virtual address space can be larger than physical memory. True.\nII. Programs must be resident in main memory throughout execution. False; virtual memory allows parts not resident, demand paging.\nIII. Pages correspond to semantic characteristics of program. False; pages are fixed-size chunks, not semantic (segments correspond semantic). So only I true. Option G. Answer: G.</think>Answer: G",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786458167,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 96,
+      "prompt_tokens": 143,
+      "total_tokens": 239,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-Cjwp8PNwnxzgVYw8pOrpmzw02Pvq7QWy",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 142,
+      "prompt_ms": 729.21,
+      "prompt_per_token_ms": 5.135281690140845,
+      "prompt_per_second": 194.7312845408044,
+      "predicted_n": 96,
+      "predicted_ms": 4858.099,
+      "predicted_per_token_ms": 50.60519791666667,
+      "predicted_per_second": 19.760815907621478
+    }
+  }
+}

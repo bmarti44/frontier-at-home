@@ -1,0 +1,57 @@
+{
+  "index": 97,
+  "task_id": 97,
+  "rendered_prompt_sha256": "4c80651bb4862adc1de2723a47f2de134a66f2e8420aa049574c2b2d96776ac3",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need solve. Problem: Freda cooks canned tomatoes into sauce, lose half volume. Each 16 oz can contains three tomatoes. Last batch made 32 oz sauce. How many tomatoes did she use? Need infer initial volume? Sauce made 32 oz after losing half volume, so initial canned tomato volume = 64 oz. Each can 16 oz, so 4 cans. Each can 3 tomatoes => 12 tomatoes. Need final answer.</think>Answer: 12",
+  "finish_reason": "stop",
+  "expected": "12",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.665015245991526
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need solve. Problem: Freda cooks canned tomatoes into sauce, lose half volume. Each 16 oz can contains three tomatoes. Last batch made 32 oz sauce. How many tomatoes did she use? Need infer initial volume? Sauce made 32 oz after losing half volume, so initial canned tomato volume = 64 oz. Each can 16 oz, so 4 cans. Each can 3 tomatoes => 12 tomatoes. Need final answer.</think>Answer: 12",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786453941,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 101,
+      "prompt_tokens": 82,
+      "total_tokens": 183,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-r37kJfzCxLQHUKMkZIlMrYiLb8TUgvTo",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 81,
+      "prompt_ms": 543.811,
+      "prompt_per_token_ms": 6.713716049382716,
+      "prompt_per_second": 148.94880758204596,
+      "predicted_n": 101,
+      "predicted_ms": 5118.731,
+      "predicted_per_token_ms": 50.68050495049505,
+      "predicted_per_second": 19.73145297144937
+    }
+  },
+  "used_fallback": false
+}
