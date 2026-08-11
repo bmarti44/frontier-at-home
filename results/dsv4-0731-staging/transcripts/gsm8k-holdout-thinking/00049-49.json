@@ -1,0 +1,58 @@
+{
+  "index": 49,
+  "task_id": 49,
+  "rendered_prompt_sha256": "a85738b6151ce2b0254896ad0051d7e3d0d34232d9e75cbdce34d3f889655968",
+  "rendering": "official-encoder-thinking",
+  "completion": "We need answer. Need compute. Building 15 floors * 8 units = 120 units. 3/4 occupied => 1/4 unoccupied = 30. Need final numeric answer line.</think>Answer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "deepseek-v4-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9010628790128976
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "We need answer. Need compute. Building 15 floors * 8 units = 120 units. 3/4 occupied => 1/4 unoccupied = 30. Need final numeric answer line.</think>Answer: 30",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1786451776,
+    "model": "deepseek-v4-flash",
+    "system_fingerprint": "b10053-0dc74e332",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 48,
+      "prompt_tokens": 71,
+      "total_tokens": 119,
+      "prompt_tokens_details": {
+        "cached_tokens": 1
+      }
+    },
+    "id": "chatcmpl-hqQUqGShIRV9q4TPWAZT7dfk1TITJwXN",
+    "timings": {
+      "cache_n": 1,
+      "prompt_n": 70,
+      "prompt_ms": 517.39,
+      "prompt_per_token_ms": 7.391285714285714,
+      "prompt_per_second": 135.2944587255262,
+      "predicted_n": 48,
+      "predicted_ms": 2380.783,
+      "predicted_per_token_ms": 49.599645833333334,
+      "predicted_per_second": 20.161434284434996
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<｜begin▁of▁sentence｜><｜User｜>Richard lives in an apartment building with 15 floors. Each floor contains 8 units, and 3/4 of the building is occupied. What's the total number of unoccupied units In the building?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><｜Assistant｜><think>"
+}

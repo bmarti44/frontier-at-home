@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "record_type": "attempt_manifest",
+  "built_at": "2026-08-11T12:38:12.097296+00:00",
+  "spec": {
+    "path": "configs/decision-specs/dsv4-0731.v2.json",
+    "sha256": "e5705507e3542a7cbaf07491a870fd90d10e4a2ba29d5280bb2cd80e11cecb72",
+    "decision_id": "0731"
+  },
+  "source": {
+    "commit": "79827f7c9e6c2bcf074b542a86513f2e896de00e",
+    "tree_is_clean": false,
+    "dirty_paths": [
+      "configs/decision-specs/dsv4-0731.v2.json",
+      "results/holdout-ledger.json",
+      "scripts/105_build_dsv4_0731_bundle.py",
+      "results/dsv4-0731-attempts/attempt-2026-08-11-full/",
+      "results/dsv4-0731-staging/decision-procedure-blockers-2026-08-11.json",
+      "results/dsv4-0731-staging/transcripts/gsm8k-holdout-thinking/"
+    ],
+    "diff_sha256": "4af4be09edc7c61809f0cddbed2595869415bf9497b28a66c35dca1a46cb14a8"
+  },
+  "scorer": {
+    "path": "scripts/105_build_dsv4_0731_bundle.py",
+    "sha256": "613141e3ef28cf9a01b0665a11e0655aedc3c35779e2c68e615f8e4a8e1b70c7"
+  },
+  "harnesses": {
+    "31_bench_accuracy.py": "c0b6515aa799e2d9c9503a7ac0416e81db63e4f27fb0f33be9e709426a48c77e",
+    "32_golden_tests.py": "21c8747448f19b5fa1c6c798cf36dc41ee27cbbdd43e16441a7d845923992e01"
+  },
+  "binary": {
+    "path": "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server",
+    "sha256": null,
+    "readable": false,
+    "note": "engine binary lives under /home/dsv4 (mode 0700) and is not readable from the harness account; the digest is therefore absent rather than fabricated"
+  },
+  "model": {
+    "weights_manifest_path": "weights/unsloth-ud-q2_k_xl/manifest.json",
+    "weights_manifest_sha256": "0091522cf58e3c09d3911e26e85688b2bc09f9fb3eb0be4aab47e7eca9800e2f",
+    "release_repo": "unsloth/DeepSeek-V4-Flash-0731-GGUF",
+    "release_revision": "fbbb5b93fb787c21338159b0af3318bb3f4d9768",
+    "shards": [
+      {
+        "name": "DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf",
+        "bytes": 5257664,
+        "sha256": "de65c5bb660817b95cc281bf54935f9d1bcc3b22535f2eae63b35a14c7c5724b"
+      },
+      {
+        "name": "DeepSeek-V4-Flash-UD-Q2_K_XL-00002-of-00003.gguf",
+        "bytes": 49437013568,
+        "sha256": "c8728a298862cd8736782e2e4056e5e3e03c415ba552a38173264494e41ef327"
+      },
+      {
+        "name": "DeepSeek-V4-Flash-UD-Q2_K_XL-00003-of-00003.gguf",
+        "bytes": 47390237120,
+        "sha256": "a4bae0788c025c1b2388754592c98fefa1372981748ac9875039bf6a30e6eeb4"
+      }
+    ],
+    "pin_sha256": "4983a324d5716aa5ed3bc3ecfaa711b87df4eba7e735b1ea3196c3fdad85810c",
+    "pin_repo": "unsloth/DeepSeek-V4-Flash-0731-GGUF",
+    "pin_revision": "fbbb5b93fb787c21338159b0af3318bb3f4d9768"
+  },
+  "tokenizer": {
+    "path": "vendor/official-encoding/tokenizer.json",
+    "sha256": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf"
+  },
+  "public_randomness": {
+    "used": false,
+    "why": "This attempt scores already-collected deterministic suites whose row selection is seeded at 42 in the harness. No arm order or fixture subset was chosen here, so there is nothing for public randomness to bind. A holdout or matched-arm attempt would need it."
+  }
+}

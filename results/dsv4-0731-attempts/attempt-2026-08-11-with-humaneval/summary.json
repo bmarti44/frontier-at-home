@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "record_type": "attempt_summary",
+  "attempt_id": "2026-08-11-with-humaneval",
+  "built_at": "2026-08-11T12:38:12.158618+00:00",
+  "verdict": "NO_RESULT",
+  "verdict_rule": "PASS requires every named arm present, every arm recomputable from its transcripts, every preregistered gate met, and golden all-pass. Missing arms yield NO_RESULT rather than FAIL, so an incomplete run is never reported as a measured negative.",
+  "scope_limits": [
+    "Accuracy is dev-split only. No holdout arm exists, so this bundle is NOT a qualification result under scripts/34_decision.py.",
+    "Speed, soak, and context capability are not in this bundle.",
+    "The engine binary digest is absent because /home/dsv4 is not readable from this account."
+  ],
+  "missing_arms": [
+    "gsm8k-holdout",
+    "mmlu-pro-holdout"
+  ],
+  "arm_failures": [],
+  "gates": [
+    {
+      "gate": "gsm8k-dev-thinking: truncated_fraction <= 0.01",
+      "pass": true,
+      "observed": 0.01,
+      "ceiling": 0.01,
+      "formula": "count(finish_reason == 'length') / n"
+    },
+    {
+      "gate": "gsm8k-dev-thinking: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "gsm8k-dev-thinking: n == 100",
+      "pass": true,
+      "observed": 100
+    },
+    {
+      "gate": "mmlu-pro-dev-thinking: truncated_fraction <= 0.05533596837944664",
+      "pass": true,
+      "observed": 0.019762845849802372,
+      "ceiling": 0.05533596837944664,
+      "formula": "count(finish_reason == 'length') / n"
+    },
+    {
+      "gate": "mmlu-pro-dev-thinking: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "mmlu-pro-dev-thinking: n == 253",
+      "pass": true,
+      "observed": 253
+    },
+    {
+      "gate": "gsm8k-dev-chat: truncated_fraction <= 0.01",
+      "pass": true,
+      "observed": 0.01,
+      "ceiling": 0.01,
+      "formula": "count(finish_reason == 'length') / n"
+    },
+    {
+      "gate": "gsm8k-dev-chat: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "gsm8k-dev-chat: n == 100",
+      "pass": true,
+      "observed": 100
+    },
+    {
+      "gate": "mmlu-pro-dev-chat: truncated_fraction <= 0.05533596837944664",
+      "pass": true,
+      "observed": 0.05533596837944664,
+      "ceiling": 0.05533596837944664,
+      "formula": "count(finish_reason == 'length') / n"
+    },
+    {
+      "gate": "mmlu-pro-dev-chat: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "mmlu-pro-dev-chat: n == 253",
+      "pass": true,
+      "observed": 253
+    },
+    {
+      "gate": "humaneval: truncation RECORDED (no valid baseline ceiling)",
+      "pass": true,
+      "observed": 0.1402439024390244,
+      "exemption_reason": "No valid baseline truncation rate exists for this suite. The pre-0731 llama.cpp reference arm truncated 124/164 = 75.6% of items with a median completion of exactly 512 tokens, i.e. most of its items ran into the ceiling and never terminated. Deriving a ceiling from that arm would be meaningless, and choosing any other number now -- after the candidate's 14.0% rate is known -- would be precisely the post-hoc threshold-setting this preregistration exists to prevent. HumanEval truncation is therefore RECORDED and reported, not gated. Re-running the reference arm at a larger budget is not possible: the pre-0731 weights were deleted on 2026-08-09."
+    },
+    {
+      "gate": "humaneval: request_timeouts == 0",
+      "pass": true,
+      "observed": 0,
+      "formula": "count(reason contains 'Timeout')"
+    },
+    {
+      "gate": "humaneval: n == 164",
+      "pass": true,
+      "observed": 164
+    },
+    {
+      "gate": "speed: suite_valid",
+      "pass": true,
+      "observed": true
+    },
+    {
+      "gate": "parity: exact-ids",
+      "pass": true,
+      "observed": "exact-ids"
+    },
+    {
+      "gate": "soak: all gates pass",
+      "pass": true,
+      "observed": "none failed"
+    },
+    {
+      "gate": "soak: floor is qualification-eligible (>= 12 GiB)",
+      "pass": false,
+      "observed": 8.0,
+      "note": "an operational-floor soak is valid evidence for the served profile and is NOT admissible to the decision procedure"
+    }
+  ],
+  "arms": {
+    "gsm8k-dev-chat": {
+      "arm": "gsm8k-dev-chat",
+      "artifact": "results/dsv4-0731-staging/acc-gsm8k-dev-0731-chat.json",
+      "artifact_sha256": "16712bdc3e7619b56eda9fa64f210ce22f73fa1b2b00f2182b80d98b897af335",
+      "stack_label": "llamacpp-0731-chat",
+      "suite": "gsm8k",
+      "split": "dev",
+      "rowset_sha256": null,
+      "thinking_mode": null,
+      "max_tokens": 512,
+      "request_timeout_s": null,
+      "n": 100,
+      "correct": 97,
+      "accuracy": 0.97,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.9154806357094724,
+      "wilson95_high": 0.9897454759759611,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 1,
+      "truncated_fraction": 0.01,
+      "request_timeouts": 0,
+      "completion_tokens_median": 86,
+      "completion_tokens_p90": 157,
+      "completion_tokens_p95": 185,
+      "completion_tokens_max": 512,
+      "transcripts_without_usage": 0
+    },
+    "gsm8k-dev-thinking": {
+      "arm": "gsm8k-dev-thinking",
+      "artifact": "results/dsv4-0731-staging/acc-gsm8k-dev-0731-thinking-16k.json",
+      "artifact_sha256": "7f9c2042a35a12664f218f618957549689c6c6164808e4fc5512c0536e962196",
+      "stack_label": "llamacpp-0731-thinking-16k",
+      "suite": "gsm8k",
+      "split": "dev",
+      "rowset_sha256": "9719326c6ea24d07ddc39514bb2711df791af5b34d0b5978ee3e51e22db10899",
+      "thinking_mode": "thinking",
+      "max_tokens": 16384,
+      "request_timeout_s": 3600,
+      "n": 100,
+      "correct": 95,
+      "accuracy": 0.95,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.8882495307680808,
+      "wilson95_high": 0.9784563208456319,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 1,
+      "truncated_fraction": 0.01,
+      "request_timeouts": 0,
+      "completion_tokens_median": 120,
+      "completion_tokens_p90": 1298,
+      "completion_tokens_p95": 3197,
+      "completion_tokens_max": 16384,
+      "transcripts_without_usage": 0
+    },
+    "humaneval": {
+      "arm": "humaneval",
+      "artifact": "results/dsv4-0731-staging/acc-humaneval-0731.json",
+      "artifact_sha256": "e342c761d7fabf4e8521442822ae34a5a1c30681bfb0e9b277b18f4426115c19",
+      "stack_label": "llamacpp-0731",
+      "suite": "humaneval",
+      "split": "all",
+      "rowset_sha256": "a8571e687aee2c21d5ac335416ded4d160133bf5bafbc740e8a89bbfc0d5338c",
+      "thinking_mode": "thinking",
+      "max_tokens": 512,
+      "request_timeout_s": 300,
+      "n": 164,
+      "correct": 138,
+      "accuracy": 0.8414634146341463,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.7778420785428521,
+      "wilson95_high": 0.8894543140585143,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 23,
+      "truncated_fraction": 0.1402439024390244,
+      "request_timeouts": 0,
+      "completion_tokens_median": 65,
+      "completion_tokens_p90": 512,
+      "completion_tokens_p95": 512,
+      "completion_tokens_max": 512,
+      "transcripts_without_usage": 0
+    },
+    "mmlu-pro-dev-chat": {
+      "arm": "mmlu-pro-dev-chat",
+      "artifact": "results/dsv4-0731-staging/acc-mmlu-pro-dev-0731-chat.json",
+      "artifact_sha256": "05d233af1fe1a5cbbd76524bd471a29bea2aba0607c056f7cafd68f501bf2de7",
+      "stack_label": "llamacpp-0731-chat",
+      "suite": "mmlu-pro",
+      "split": "dev",
+      "rowset_sha256": null,
+      "thinking_mode": null,
+      "max_tokens": 768,
+      "request_timeout_s": null,
+      "n": 253,
+      "correct": 188,
+      "accuracy": 0.7430830039525692,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.6858881936049755,
+      "wilson95_high": 0.7930064543415175,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 14,
+      "truncated_fraction": 0.05533596837944664,
+      "request_timeouts": 0,
+      "completion_tokens_median": 4,
+      "completion_tokens_p90": 420,
+      "completion_tokens_p95": 768,
+      "completion_tokens_max": 768,
+      "transcripts_without_usage": 0
+    },
+    "mmlu-pro-dev-thinking": {
+      "arm": "mmlu-pro-dev-thinking",
+      "artifact": "results/dsv4-0731-staging/acc-mmlu-pro-dev-0731-thinking-16k.json",
+      "artifact_sha256": "36d6400301e8b2f6cd409260656a7ba760c20e1fb6b308b7a617b1af9c1d4497",
+      "stack_label": "llamacpp-0731-thinking-16k",
+      "suite": "mmlu-pro",
+      "split": "dev",
+      "rowset_sha256": "56a888f6e88884bbcdd2805b2835a53ff54ca285d664df05c5ff5c316e7dd2ac",
+      "thinking_mode": "thinking",
+      "max_tokens": 16384,
+      "request_timeout_s": 3600,
+      "n": 253,
+      "correct": 221,
+      "accuracy": 0.8735177865612648,
+      "accuracy_formula": "correct / n, both recomputed from transcripts",
+      "wilson95_low": 0.826898653159873,
+      "wilson95_high": 0.9089638546603478,
+      "wilson95_formula": "Wilson score interval, z=1.959963984540054",
+      "invalid": 0,
+      "invalid_fraction": 0.0,
+      "truncated": 5,
+      "truncated_fraction": 0.019762845849802372,
+      "request_timeouts": 0,
+      "completion_tokens_median": 191,
+      "completion_tokens_p90": 3198,
+      "completion_tokens_p95": 10956,
+      "completion_tokens_max": 16384,
+      "transcripts_without_usage": 0
+    }
+  },
+  "golden": {
+    "artifact": "results/dsv4-0731-staging/golden-llamacpp-0731-v2.json",
+    "artifact_sha256": "466aad9901d2ef6624686282e3f89ae3d3a69fffc2bb63bb78b89d44cf0e7c5d",
+    "checks_total": 11,
+    "checks_passed": 11,
+    "all_passed": true,
+    "formula": "count(check.pass) over every recorded check"
+  },
+  "other_arms": {
+    "parity": {
+      "artifact": "results/dsv4-0731-staging/parity-llamacpp-0731.json",
+      "artifact_sha256": "614c4c58d44c434f7efda642eb4717247a43fd985720b613f2bc2e1e088d4d72",
+      "pass": true,
+      "parity_level": "exact-ids"
+    },
+    "soak": {
+      "artifact": "results/dsv4-0731-staging/soak-llamacpp-0731-v2.json",
+      "artifact_sha256": "f5b930f5fe839883c58770f32131ad3aa1cf9514bd116562fd14a614c48e6818",
+      "pass": true,
+      "failed_gates": [],
+      "n_reps": 135,
+      "n_errors": 0,
+      "decode_overall_median_tok_s": 19.806693117383844,
+      "degradation_fraction": -0.0005617676165014817,
+      "mem_floor_gib": 8.0,
+      "mem_available_min_gib": 11.53116226196289,
+      "qualification_eligible_floor": false
+    },
+    "speed": {
+      "artifact": "results/dsv4-0731-staging/speed-llamacpp-0731-thinking.json",
+      "artifact_sha256": "972370aeea3c2102daa148d9a1341b4a319ac1a458f187c35109685c7ed99bfc",
+      "suite_valid": true,
+      "all_cells_valid": true,
+      "cells": 4,
+      "total_invalid_reps": 0
+    }
+  },
+  "raw_jsonl_sha256": "23636e5836690ba83968f7b74ca12c2cfc5ec19cd2e1b6cd24bed08705200b90",
+  "manifest_sha256": "e177d70f776bd966a635e5c8a7dcbcd1618e7ad484b863d9f5b3955a10b5cab2"
+}

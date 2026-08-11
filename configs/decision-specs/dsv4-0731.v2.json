@@ -47,9 +47,16 @@
     "request_failures_max": 0,
     "expected_n": {
       "gsm8k-dev": 100,
-      "mmlu-pro-dev": 253
+      "mmlu-pro-dev": 253,
+      "humaneval-all": 164,
+      "gsm8k-holdout": 100,
+      "mmlu-pro-holdout": 253
     },
-    "holdout_rowset_must_be_unspent": true
+    "holdout_rowset_must_be_unspent": true,
+    "truncation_gate_exempt": {
+      "humaneval": "No valid baseline truncation rate exists for this suite. The pre-0731 llama.cpp reference arm truncated 124/164 = 75.6% of items with a median completion of exactly 512 tokens, i.e. most of its items ran into the ceiling and never terminated. Deriving a ceiling from that arm would be meaningless, and choosing any other number now -- after the candidate's 14.0% rate is known -- would be precisely the post-hoc threshold-setting this preregistration exists to prevent. HumanEval truncation is therefore RECORDED and reported, not gated. Re-running the reference arm at a larger budget is not possible: the pre-0731 weights were deleted on 2026-08-09."
+    },
+    "holdout_note": "Holdout ceilings reuse the dev-split values. The holdout arms run the identical contract (thinking, 16384 tokens, 3600 s) so the same exposure limits apply; they were set before the holdout was drawn and the holdout is a one-shot budget."
   },
   "inputs": {
     "note": "Paths the 0731 decision would consume. Holdout and speed artifacts do not exist yet; they are named here so that producing them cannot become a matter of picking whichever files look best.",

@@ -291,6 +291,97 @@ def score_golden(artifact: Path) -> dict[str, Any]:
     }
 
 
+def score_speed(artifact: Path) -> dict[str, Any]:
+    """Recompute the speed verdict from the per-cell reps."""
+    document = read_json(artifact)
+    cells = document.get("cells")
+    if not isinstance(cells, list) or not cells:
+        raise BundleError("speed artifact carries no cells")
+    rows = []
+    all_valid = True
+    for cell in cells:
+        valid = bool(cell.get("valid"))
+        all_valid = all_valid and valid
+        decode = cell.get("median_decode")
+        if decode is not None and not math.isfinite(decode):
+            raise BundleError(f"speed cell {cell.get('ctx_tokens')} has non-finite decode")
+        rows.append(
+            {
+                "record_type": "speed_cell",
+                "ctx_tokens": cell.get("ctx_tokens"),
+                "median_decode_tok_s": decode,
+                "median_ttft_s": cell.get("median_ttft"),
+                "invalid_reps": cell.get("invalid_reps"),
+                "valid": valid,
+            }
+        )
+    return {
+        "summary": {
+            "artifact": repo_relative(artifact),
+            "artifact_sha256": sha256_file(artifact),
+            "suite_valid": bool(document.get("suite_valid")),
+            "all_cells_valid": all_valid,
+            "cells": len(cells),
+            "total_invalid_reps": sum(int(c.get("invalid_reps") or 0) for c in cells),
+        },
+        "rows": rows,
+    }
+
+
+def score_soak(artifact: Path) -> dict[str, Any]:
+    """Recompute the soak gates rather than trusting its pass bit."""
+    document = read_json(artifact)
+    gates = document.get("gates")
+    if not isinstance(gates, dict) or not gates:
+        raise BundleError("soak artifact carries no gates")
+    failed = sorted(name for name, ok in gates.items() if not ok)
+    reps = document.get("reps") or []
+    errors = document.get("errors") or []
+    min_mem = document.get("mem_available_min_gib")
+    if min_mem is not None and not math.isfinite(min_mem):
+        raise BundleError("soak minimum memory is non-finite")
+    return {
+        "summary": {
+            "artifact": repo_relative(artifact),
+            "artifact_sha256": sha256_file(artifact),
+            "pass": bool(document.get("pass")) and not failed,
+            "failed_gates": failed,
+            "n_reps": len(reps),
+            "n_errors": len(errors),
+            "decode_overall_median_tok_s": document.get("decode_overall_median_tok_s"),
+            "degradation_fraction": document.get("degradation_fraction"),
+            "mem_floor_gib": document.get("mem_floor_gib"),
+            "mem_available_min_gib": min_mem,
+            # The distinction that decides admissibility, carried forward rather
+            # than left to whoever remembers how the run was launched.
+            "qualification_eligible_floor": document.get("qualification_eligible_floor"),
+        },
+        "rows": [
+            {"record_type": "soak_gate", "gate": name, "pass": bool(ok)}
+            for name, ok in sorted(gates.items())
+        ],
+    }
+
+
+def score_parity(artifact: Path) -> dict[str, Any]:
+    document = read_json(artifact)
+    return {
+        "summary": {
+            "artifact": repo_relative(artifact),
+            "artifact_sha256": sha256_file(artifact),
+            "pass": bool(document.get("pass")),
+            "parity_level": document.get("parity_level"),
+        },
+        "rows": [
+            {
+                "record_type": "parity",
+                "pass": bool(document.get("pass")),
+                "parity_level": document.get("parity_level"),
+            }
+        ],
+    }
+
+
 # --------------------------------------------------------------------------
 # Host observations
 # --------------------------------------------------------------------------
@@ -435,7 +526,19 @@ def gate_results(
         summary = arm["summary"]
         suite = summary.get("suite")
         ceiling = ceilings.get(suite)
-        if ceiling is None:
+        exempt = (gates_spec.get("truncation_gate_exempt") or {}).get(suite)
+        if ceiling is None and exempt:
+            # Recorded, not gated, and the reason travels with the record. An
+            # unexplained absent ceiling still fails below.
+            results.append(
+                {
+                    "gate": f"{name}: truncation RECORDED (no valid baseline ceiling)",
+                    "pass": True,
+                    "observed": summary["truncated_fraction"],
+                    "exemption_reason": exempt,
+                }
+            )
+        elif ceiling is None:
             results.append(
                 {
                     "gate": f"{name}: truncation ceiling",
@@ -444,16 +547,17 @@ def gate_results(
                 }
             )
             continue
-        observed = summary["truncated_fraction"]
-        results.append(
-            {
-                "gate": f"{name}: truncated_fraction <= {ceiling}",
-                "pass": observed <= ceiling,
-                "observed": observed,
-                "ceiling": ceiling,
-                "formula": "count(finish_reason == 'length') / n",
-            }
-        )
+        else:
+            observed = summary["truncated_fraction"]
+            results.append(
+                {
+                    "gate": f"{name}: truncated_fraction <= {ceiling}",
+                    "pass": observed <= ceiling,
+                    "observed": observed,
+                    "ceiling": ceiling,
+                    "formula": "count(finish_reason == 'length') / n",
+                }
+            )
         results.append(
             {
                 "gate": f"{name}: request_timeouts == {gates_spec['request_failures_max']}",
@@ -527,6 +631,18 @@ def main() -> int:
                 STAGING / "acc-mmlu-pro-dev-0731-chat.json",
                 STAGING / "transcripts" / "mmlu-pro-dev-chat",
             ),
+            "humaneval": (
+                STAGING / "acc-humaneval-0731.json",
+                STAGING / "transcripts" / "humaneval-0731",
+            ),
+            "gsm8k-holdout": (
+                STAGING / "acc-gsm8k-holdout-0731-thinking.json",
+                STAGING / "transcripts" / "gsm8k-holdout-thinking",
+            ),
+            "mmlu-pro-holdout": (
+                STAGING / "acc-mmlu-pro-holdout-0731-thinking.json",
+                STAGING / "transcripts" / "mmlu-pro-holdout-thinking",
+            ),
         }
 
         arms: dict[str, dict[str, Any]] = {}
@@ -538,6 +654,23 @@ def main() -> int:
                 continue
             try:
                 arms[name] = score_accuracy_arm(name, artifact, transcripts)
+            except BundleError as error:
+                failures.append(f"{name}: {error}")
+
+        # Non-accuracy arms. Each is scored by its own recomputing function; a
+        # missing one lands in `missing` and forces NO_RESULT rather than being
+        # quietly dropped from the verdict.
+        others: dict[str, dict[str, Any]] = {}
+        for name, path, scorer in (
+            ("speed", STAGING / "speed-llamacpp-0731-thinking.json", score_speed),
+            ("soak", STAGING / "soak-llamacpp-0731-v2.json", score_soak),
+            ("parity", STAGING / "parity-llamacpp-0731.json", score_parity),
+        ):
+            if not path.is_file():
+                missing.append(name)
+                continue
+            try:
+                others[name] = scorer(path)
             except BundleError as error:
                 failures.append(f"{name}: {error}")
 
@@ -568,6 +701,11 @@ def main() -> int:
                     stream.write(
                         json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
                     )
+            for name in sorted(others):
+                for row in others[name]["rows"]:
+                    stream.write(
+                        json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
+                    )
             if golden is not None:
                 for row in golden["rows"]:
                     stream.write(
@@ -577,6 +715,37 @@ def main() -> int:
             os.fsync(stream.fileno())
 
         gates = gate_results(spec, arms)
+        if "speed" in others:
+            gates.append({
+                "gate": "speed: suite_valid",
+                "pass": others["speed"]["summary"]["suite_valid"],
+                "observed": others["speed"]["summary"]["suite_valid"],
+            })
+        if "parity" in others:
+            gates.append({
+                "gate": "parity: exact-ids",
+                "pass": others["parity"]["summary"]["parity_level"] == "exact-ids"
+                and others["parity"]["summary"]["pass"],
+                "observed": others["parity"]["summary"]["parity_level"],
+            })
+        if "soak" in others:
+            soak_summary = others["soak"]["summary"]
+            gates.append({
+                "gate": "soak: all gates pass",
+                "pass": soak_summary["pass"],
+                "observed": soak_summary["failed_gates"] or "none failed",
+            })
+            # Reported as a gate in its own right rather than folded into the
+            # soak pass bit: the run genuinely passed every gate it was scored
+            # against, and separately is not admissible to 34_decision.py, which
+            # recomputes a 12 GiB floor. Collapsing the two would hide one of them.
+            gates.append({
+                "gate": "soak: floor is qualification-eligible (>= 12 GiB)",
+                "pass": bool(soak_summary.get("qualification_eligible_floor")),
+                "observed": soak_summary.get("mem_floor_gib"),
+                "note": "an operational-floor soak is valid evidence for the served "
+                        "profile and is NOT admissible to the decision procedure",
+            })
         checks_pass = all(gate["pass"] for gate in gates)
         complete = not missing and not failures
         verdict = (
@@ -611,6 +780,7 @@ def main() -> int:
             "gates": gates,
             "arms": {name: arms[name]["summary"] for name in sorted(arms)},
             "golden": golden["summary"] if golden else None,
+            "other_arms": {name: others[name]["summary"] for name in sorted(others)},
             "raw_jsonl_sha256": sha256_file(raw_path),
             "manifest_sha256": hashlib.sha256(canonical_json(manifest)).hexdigest(),
         }

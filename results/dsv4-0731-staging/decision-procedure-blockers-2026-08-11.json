@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "gate": "dsv4-0731-decision-procedure-blockers",
+  "date_utc": "2026-08-11",
+  "status": "BLOCKERS_RECORDED",
+  "scope": "Why scripts/34_decision.py cannot serve as the qualification authority for DeepSeek-V4-Flash-0731, established by running it rather than by reading it.",
+
+  "finding_1": {
+    "id": "DSV4-DEC-1-DECISION-PROCEDURE-CANNOT-VALIDATE-ITS-OWN-FROZEN-EVIDENCE",
+    "severity": "high",
+    "scope": "pre-existing, unrelated to 0731",
+    "observed": "`python3 scripts/34_decision.py --validate-evidence-only` fails closed with: results/speed-llamacpp.json.metadata.base_url: expected 'http://127.0.0.1:8011', got 'http://127.0.0.1:8013'",
+    "cause": "results/speed-llamacpp.json was re-measured on 2026-08-01 for the installed 1M-fast profile (commit 0727dfb) and recorded base_url 8013, which is what scripts/52_engine_switch.sh serves. scripts/34_decision.py:148 still pins 8011 in SPEED_EXPECTED_METADATA['llamacpp'].",
+    "why_it_matters": "The repository's decision procedure has been unable to validate the evidence set in its own tree since 2026-08-01 -- ten days before this was noticed, because nothing ran it. This is the same class as the stale verification/MANIFEST.sha256 (review finding 1): machinery drifting out of sync with the artifacts it governs, undetected because the gate was never exercised.",
+    "consequence_for_the_frozen_decision": "results/decision.json was computed on 2026-07-16 against a speed artifact that has since been replaced. Re-running the procedure today would not re-validate that decision; it would validate a different measurement. The frozen verdict and the current evidence set are not the same inputs.",
+    "deliberately_not_done": "The 8011 constant is NOT being changed to 8013. It is part of the frozen pre-0731 identity block, and editing it would silently make a stale decision appear to re-validate against evidence it was never computed from. Recording the inconsistency is the correct action; repairing it is an owner decision about whether to re-run the incumbent decision entirely."
+  },
+
+  "finding_2": {
+    "id": "DSV4-DEC-2-IDENTITY-BLOCKS-ARE-HARDCODED-TO-THE-PRE-0731-ARM",
+    "severity": "high",
+    "observed": "Every identity a 0731 run would have to match is a module constant naming the superseded arm.",
+    "enumerated": {
+      "scripts/34_decision.py:147 SPEED_EXPECTED_METADATA['llamacpp'].stack_label": "llamacpp-udq2kxl; the 0731 speed arm is llamacpp-0731-thinking",
+      "scripts/34_decision.py:148 SPEED_EXPECTED_METADATA['llamacpp'].base_url": "http://127.0.0.1:8011; the deployment serves 8013",
+      "scripts/34_decision.py:170 SOAK_EXPECTED_IDENTITY['llamacpp'].config_hash": "llamacpp-32e789fd-udq2kxl-ctx32768-nothink-v1; the 0731 soak is llamacpp-0731-1mfast-2x512k-thinking-v1",
+      "scripts/34_decision.py:173 SOAK_EXPECTED_IDENTITY['llamacpp'].extra_body": "{'chat_template_kwargs': {'enable_thinking': False}}; 0731 runs the thinking contract and sends no extra_body at all",
+      "scripts/34_decision.py:43-67 INPUT_PATHS": "fixed results/ filenames for the pre-0731 arms"
+    },
+    "why_it_matters": "Feeding 0731 evidence to the existing procedure fails closed on identity, which is correct behaviour. It means the procedure is a comparator for one frozen pair of arms, not a reusable qualification gate. Making it reusable is a real change to a 1629-line scorer that governs frozen evidence."
+  },
+
+  "finding_3": {
+    "id": "DSV4-DEC-3-SOAK-FLOOR-IS-UNSATISFIABLE-ON-THE-SERVED-PROFILE",
+    "severity": "high",
+    "observed": "34_decision.py fixes and independently recomputes a 12 GiB soak floor. The 1M-fast profile's measured steady state is ~9.8 GiB free, and the 2026-08-10 soak measured a 11.53 GiB minimum against the owner-set 8 GiB floor.",
+    "why_it_matters": "A 12 GiB soak cannot pass on the profile this box actually serves -- it would fail by construction rather than by fault. So even a perfect 0731 evidence set cannot satisfy the existing decision procedure while the 1M-fast profile is deployed.",
+    "measured_headroom": {
+      "soak_min_mem_available_gib": 11.53116226196289,
+      "qualification_floor_gib": 12.0,
+      "shortfall_gib": 0.47,
+      "note": "The 2026-08-10 soak came within 0.47 GiB of the qualification floor while running the full 1M-fast profile under sustained load. The floor is close, not wildly out of reach, which makes it an owner judgement rather than an obvious impossibility."
+    },
+    "owner_decision_required": [
+      "run soak on a reduced-context profile that clears 12 GiB, and accept that the soak then measures a profile the box does not serve",
+      "amend the decision floor with a documented rationale tied to the deployed profile",
+      "accept that 0731 remains formally unqualified under 34_decision.py while serving 1M-fast"
+    ],
+    "not_done_unilaterally": "No threshold was moved. Today's work repeatedly declined to adjust preregistered numbers after seeing results, and quietly relaxing this one to manufacture a PASS would undo that."
+  },
+
+  "what_this_means_for_0731": "0731 has a complete, computed, gate-checked evidence bundle under configs/decision-specs/dsv4-0731.v2.json, scored by scripts/105_build_dsv4_0731_bundle.py. That bundle is authoritative for what it measures and is explicitly NOT results/decision.json. Formal qualification under the repository's own decision procedure is blocked on findings 1-3 above, all of which need owner decisions rather than more measurement."
+}
