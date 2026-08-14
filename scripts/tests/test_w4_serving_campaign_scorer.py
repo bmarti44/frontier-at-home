@@ -173,6 +173,21 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
         self.assertTrue(callable(module.parse_arm))
         self.assertEqual(module.BASE.__name__, "w7_campaign_base")
 
+    def test_authoritative_runner_replay_rejects_malformed_extra_sync_trace(self) -> None:
+        runner_path = ROOT / "scripts/102_run_w4_serving_campaign.py"
+        base_path = ROOT / "scripts/91_run_w7_cache_generation_campaign.py"
+        runner = SCORER._load_runner_from_bytes(
+            runner_path.read_bytes(), base_path.read_bytes(), runner_path)
+        first = ("ds4: GLM sync start=0 prompt=19772 suffix=19772 checkpoint=0 "
+                 "dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=0 "
+                 "indexed_keep=0 indexed_batch=1 batch_ffn=1")
+        second = ("ds4: GLM sync start=19772 prompt=19783 suffix=11 checkpoint=19772 "
+                  "dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 "
+                  "indexed_keep=1 indexed_batch=1 batch_ffn=1")
+        mutated = first + "\n" + second + "\n" + second + " hidden=1"
+        with self.assertRaisesRegex(runner.CampaignError, "malformed sync trace"):
+            runner.validate_novel_sync_trace(mutated, 19_783)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -279,6 +279,7 @@ class W4ServingContainmentTest(unittest.TestCase):
             valid.replace("suffix=11", "suffix=10"),
             valid.replace("checkpoint=19772", "checkpoint=19771"),
             valid + "\n" + second,
+            valid + "\n" + second + " hidden=1",
         ):
             with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
                 RUNNER.validate_novel_sync_trace(mutation, 19_783)
@@ -367,6 +368,21 @@ class W4ServingContainmentTest(unittest.TestCase):
                                             "does not match sync trace"):
                     RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
                                      "5" * 64, 19_783, None, True)
+                duplicate.unlink()
+                shadow = out / "logits.shadow"
+                shadow.write_bytes(b"\2" * RUNNER.LOGIT_BYTES)
+                with self.assertRaisesRegex(RUNNER.CampaignError,
+                                            "logit artifact closure"):
+                    RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
+                                     "5" * 64, 19_783, None, True)
+                shadow.unlink()
+                noncanonical = out / "logits.sync01.start0.prompt19772.suffix19772"
+                logit1.rename(noncanonical)
+                with self.assertRaisesRegex(RUNNER.CampaignError,
+                                            "logit artifact closure"):
+                    RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
+                                     "5" * 64, 19_783, None, True)
+                noncanonical.rename(logit1)
         self.assertEqual(first, second)
         self.assertEqual(first["safety"]["surviving_descendants"], 0)
         expected_final = hashlib.sha256(b"\1" * RUNNER.LOGIT_BYTES).hexdigest()
