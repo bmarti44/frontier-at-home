@@ -284,6 +284,10 @@ class W4ServingContainmentTest(unittest.TestCase):
             with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
                 RUNNER.validate_novel_sync_trace(mutation, 19_783)
 
+    def test_logit_name_grammar_rejects_noncanonical_numeric_spelling(self) -> None:
+        self.assertIsNone(RUNNER.LOGIT_RE.fullmatch(
+            "logits.sync01.start0.prompt19772.suffix19772"))
+
     def test_arm_replay_is_pure_self_contained_and_repeatable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory) / "b0-p0-off-0123456789ab"
