@@ -1,0 +1,65 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "candidate_hash": "4b2a7707bc4217335c32ec5c8c76e4fd4aae0e67",
+  "review_round": 309,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 95,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [
+      {
+        "id": "W4S-R309-L1-SYNC-PREFIX-DELIMITER-EDGE",
+        "evidence": "Lines beginning ds4: GLM sync without the canonical trailing-space delimiter are ignored while canonical coverage remains accepted.",
+        "affected_gate": "Defensive malformed-log grammar closure only; these lines cannot contribute segment coverage, expected logit names, or selected hashes.",
+        "reproduction": "Append ds4: GLM sync or ds4: GLM syncX to a valid trace and validate it.",
+        "acceptance": "Optional focused test may broaden prefix inspection to ds4: GLM sync without changing the accepted grammars."
+      }
+    ],
+    "prior_issue_status": [
+      {"id": "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE", "status": "VERIFIED_FIXED"},
+      {"id": "ADV-W4S-307-M1-NONCANONICAL-SEGMENT-FILENAME", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "W4S-R308-M1-PREAUDIT-TEST-COMMAND-OMITTED", "status": "VERIFIED_FIXED"},
+      {"id": "CANDIDATE10-FREEZE-POSIX-ERE-WARNING", "status": "VERIFIED_FIXED"},
+      {"id": "W4S-R307-H1-SEGMENTED-SYNC-PARSER-MISMATCH", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE", "status": "OPEN_NONBLOCKING_UNCHANGED"},
+      {"id": "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW", "status": "DEFERRED_NONBLOCKING_UNCHANGED"}
+    ],
+    "verdict": "PASS_FOR_ENGINE_LAUNCH"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 100,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE", "status": "FIXED"},
+      {"id": "ADV-W4S-308-M1-UNICODE-CANONICAL-UINT", "status": "FIXED"},
+      {"id": "W4S-R308-M1-PREAUDIT-OMITTED", "status": "FIXED"},
+      {"id": "CANDIDATE10-FREEZE-POSIX-ERE-WARNING", "status": "FIXED"}
+    ],
+    "verdict": "PASS_FOR_ENGINE_LAUNCH"
+  },
+  "external_receipt": {
+    "github_event_id": "17679167116",
+    "github_created_at_unix": 1786733466,
+    "drand_round": 6376749,
+    "randomness_receipt_sha256": "e86f2f76c184f6dc88cf2b2b7b740e42a0caab29ed902f6de4b6dec415cf3817",
+    "schedules": ["ABBA", "ABBA", "BAAB", "ABBA", "ABBA"],
+    "independently_verified": true
+  },
+  "convergence": {
+    "candidate_count": 10,
+    "open_blocking_count_previous": 1,
+    "open_blocking_count_current": 0,
+    "blocking_finding_strictly_shrank": true,
+    "owner_exception_consumed": true,
+    "gate_paused": false
+  },
+  "launch_authorization": {
+    "no_verified_critical_or_high": true,
+    "engine_launch_authorized": true
+  }
+}
