@@ -73,10 +73,18 @@ DONE_RE = re.compile(
 TOPK_MARKER = "ds4: CUDA exact top-2048 CUB enabled chunk=8192 merge=2"
 LISTENER = "ds4-server: listening on "
 SHUTDOWN = "ds4-server: shutdown requested"
+CANONICAL_UINT = r"(?:0|[1-9]\d*)"
 SYNC_RE = re.compile(
-    r"^ds4: GLM sync start=(\d+) prompt=(\d+) suffix=(\d+) checkpoint=(\d+) "
-    r"dense_len=\d+ ctx_cap=\d+ dense_fit=\d+ resume_min=\d+ dense_gap=\d+ "
-    r"indexed_keep=\d+ indexed_batch=\d+ batch_ffn=\d+$"
+    rf"^ds4: GLM sync start=({CANONICAL_UINT}) prompt=({CANONICAL_UINT}) "
+    rf"suffix=({CANONICAL_UINT}) checkpoint=({CANONICAL_UINT}) "
+    rf"dense_len={CANONICAL_UINT} ctx_cap={CANONICAL_UINT} "
+    rf"dense_fit={CANONICAL_UINT} resume_min={CANONICAL_UINT} "
+    rf"dense_gap={CANONICAL_UINT} indexed_keep={CANONICAL_UINT} "
+    rf"indexed_batch={CANONICAL_UINT} batch_ffn={CANONICAL_UINT}$"
+)
+SYNC_BRANCH_RE = re.compile(
+    rf"^ds4: GLM sync branch=(?:full_indexed|indexed_resume) "
+    rf"pos={CANONICAL_UINT} chunk={CANONICAL_UINT} logits=[01]$"
 )
 LOGIT_RE = re.compile(
     r"logits\.sync(0|[1-9]\d*)\.start(0|[1-9]\d*)\.prompt(0|[1-9]\d*)"
@@ -413,8 +421,14 @@ def semantic_response(raw: bytes) -> tuple[dict[str, Any], str]:
 def validate_novel_sync_trace(server_log: str, expected_prompt_tokens: int) -> list[tuple[int, int, int, int]]:
     sync_lines = [line for line in server_log.splitlines()
                   if line.startswith("ds4: GLM sync ")]
-    matches = [SYNC_RE.fullmatch(line) for line in sync_lines]
-    if not sync_lines or any(match is None for match in matches):
+    matches = []
+    for line in sync_lines:
+        match = SYNC_RE.fullmatch(line)
+        if match is not None:
+            matches.append(match)
+        elif SYNC_BRANCH_RE.fullmatch(line) is None:
+            raise CampaignError("malformed sync trace")
+    if not matches:
         raise CampaignError("malformed sync trace")
     segments = [tuple(map(int, match.groups()[:4])) for match in matches]
     previous_prompt = 0
