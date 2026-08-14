@@ -1,0 +1,25 @@
+{
+  "schema": "glm52-w4-serving-red-v1",
+  "candidate_number": 10,
+  "authorized_scope": "ASCII-only sync numerals and complete configured-basename logits artifact enumeration",
+  "owner_authorized": true,
+  "test_head": "238c5b33f125605f53a304af8a7a7ec7ff564792",
+  "unchanged_runner_sha256": "f1cd04884f41a153cbba222871e61f98b73e8d5da5fec7d13f2a4dc1c83a590b",
+  "unchanged_scorer_sha256": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7",
+  "runner_test_sha256": "2ee1fa07561929a76003791c938322180592a7f1597e9395b4491eb36e9ec210",
+  "scorer_test_sha256": "0508915f8aa4771d6e08cb8a9b4c9ffb5278b3aa4a68ce22c46a656fb81a940d",
+  "executed_at_utc": "2026-08-14T18:45:23Z",
+  "command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner.W4ServingContainmentTest.test_sync_trace_requires_full_novel_prefill scripts.tests.test_w4_serving_campaign_runner.W4ServingContainmentTest.test_arm_replay_is_pure_self_contained_and_repeatable scripts.tests.test_w4_serving_campaign_runner.W4ServingContainmentTest.test_live_logit_enumeration_uses_the_complete_configured_basename scripts.tests.test_w4_serving_campaign_scorer.W4ServingCampaignScorerTest.test_authoritative_runner_replay_rejects_malformed_extra_sync_trace",
+  "exit_status": 1,
+  "output_sha256": "98a0c05b28b31dd17ee6ee198e73302859c47dc061d819a3bfa76ba04e71d3c6",
+  "observed_failures": [
+    "Unicode decimal digits were accepted in a segment header",
+    "Unicode decimal digits were accepted in a branch-detail line",
+    "logits was ignored by replay artifact enumeration",
+    "logits_shadow was ignored by replay artifact enumeration",
+    "logits-foreign was ignored by replay artifact enumeration",
+    "live enumeration remained narrowed to the dotted prefix",
+    "the scorer-retained runner accepted a Unicode-decimal segment header"
+  ],
+  "verdict": "RED_CONFIRMED"
+}
