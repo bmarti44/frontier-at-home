@@ -1,0 +1,44 @@
+{
+  "schema": "glm52-w4-serving-freeze-v2",
+  "gate": "W4-serving-prefill",
+  "candidate": 10,
+  "implementation_commit": "56dbad1cccafa88b0106dcef629f528a54f3e8fc",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "launch_status": "NOT_RUN_PENDING_ROUND_309",
+  "supersedes_freeze_sha256": "0598d6823120ce79e1fb51159341b6972745a9ac7cb721bc44c294e4098a16f7",
+  "supersession_reason": "The first freeze used a PCRE-only noncapturing group in a POSIX ERE lint allowlist and emitted warnings; that attempt remains preserved and is not authoritative.",
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate10-freeze-attempt.json": "95ecb5c9ff22aeed1c9573129c28a67583408dcee2dcb20cf8c68d2d447eeb75",
+    "results/glm52-gates/W4-serving-candidate10-preaudit.txt": "60279d29cbc7c3f90b6eb61987c96582b6ce95ce960f9891598b97af18f178e1",
+    "results/glm52-gates/W4-serving-candidate10-red.json": "00b0dacf703dd840d86eee0f256ebe92c6e1b3df6061ba9a1a05601a25b57be2",
+    "scripts/101_score_w4_serving_campaign.py": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7",
+    "scripts/102_run_w4_serving_campaign.py": "57d53139d1afa816f82af99a09f3ac560605ab5de08c0e90b3c2bab01f19a973",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "cdb7b08146164df3a611a6cb5d9e954b47fdd69cce3dac7af848b3c75b000e37",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "1c962054e4c1440d20786584f159fd4120f657ec426984b8f200df25bdb38f1b",
+    "scripts/lint_secrets.sh": "01f436084c8edad683aba12e4f74a5de91fa107f5c87f0405998532ae10ae340"
+  },
+  "finding_disposition": {
+    "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE": "FIXED: ASCII-only canonical numerals and complete configured-basename enumeration are exercised through live and retained-replay paths",
+    "W4S-R308-M1-PREAUDIT-TEST-COMMAND-OMITTED": "FIXED_WITH_ATTESTATION",
+    "CANDIDATE10-FREEZE-POSIX-ERE-WARNING": "FIXED: warning-free POSIX ERE syntax, failed freeze preserved"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "45/45 PASS",
+    "test_output_sha256": "822c3b158db4ed83ce6275c47507171f143c5a49104c55474f2d9774ce93a333",
+    "python_compile": "PASS",
+    "secret_scan": "PASS_WITHOUT_WARNING",
+    "dependency_candidate_hash_preflight": "PASS",
+    "independent_tokenization": "19783 tokens unchanged",
+    "immutable_failed_arm_replay": "PASS",
+    "closure_mutations": "PASS_REJECTED",
+    "engine_started_for_candidate10": false,
+    "frozen_engine_scorer_wrapper_microgate_fixture_unchanged": true
+  },
+  "convergence": {
+    "candidate_count": 10,
+    "owner_exception": "Explicit authorization for candidate 10 limited to ASCII-only sync numerals and complete logits artifact enumeration",
+    "new_scope_added": false,
+    "engine_or_scorer_modified": false
+  }
+}
