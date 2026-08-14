@@ -1,0 +1,81 @@
+{
+  "schema": "glm52-w4-serving-review-v1",
+  "candidate_hash": "547a82bc1b2f51ffa3fc5a4b9e8afefd5cae2688",
+  "review_round": 308,
+  "runtime_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 68,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE",
+        "evidence": "CANONICAL_UINT uses Unicode-aware \\d, so coherently rebound Arabic-Indic decimal digits replay as the same integers; separately, a full-sized logits_shadow snapshot artifact is ignored because enumeration requires the dotted prefix logits.. Both mutations returned the immutable baseline row and hashes.",
+        "affected_gate": "Exact segmented-prefill evidence closure, tensor completeness, malformed-evidence rejection, and false-PASS resistance.",
+        "reproduction": "Mutate a bound segment header from ASCII digits to equivalent Unicode decimal digits and update its bound digests; separately add a LOGIT_BYTES-sized logits_shadow snapshot artifact; replay the immutable candidate-7 arm.",
+        "acceptance": "Use ASCII-only [0-9] canonical unsigned integers; enumerate every artifact whose basename begins with the configured dump basename logits; require exact equality with generated names; add live-parser and retained-scorer mutations for Unicode digits and logits, logits_shadow, logits-foreign, malformed, missing, and duplicate artifacts."
+      }
+    ],
+    "medium": [
+      {
+        "id": "W4S-R308-M1-PREAUDIT-TEST-COMMAND-OMITTED",
+        "evidence": "The preaudit records 44/44 but omits the discover command that combines 35 serving tests and 9 top-k tests, making the count ambiguous when only the two serving modules are run.",
+        "affected_gate": "Pre-submission audit reproducibility.",
+        "reproduction": "Run only the runner and scorer modules and observe 35 tests; run discover with test_w4*.py and observe the recorded 44.",
+        "acceptance": "Record the exact test command, exit status, output digest, and framework-reported count."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE", "status": "OPEN"},
+      {"id": "ADV-W4S-307-M1-NONCANONICAL-SEGMENT-FILENAME", "status": "VERIFIED_FIXED_FOR_LOGIT_FILENAMES"},
+      {"id": "W4S-R307-H1-SEGMENTED-SYNC-PARSER-MISMATCH", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "CANDIDATE9-PREAUDIT-BRANCH-GRAMMAR", "status": "VERIFIED_FIXED"},
+      {"id": "ADV-W4S-304-M1-FAILURE-EVIDENCE-POSTREAD-RACE", "status": "OPEN_NONBLOCKING_UNCHANGED"},
+      {"id": "W4S-R303-M1-PUSHEVENT-REPLAY-WINDOW", "status": "DEFERRED_NONBLOCKING_UNCHANGED"}
+    ],
+    "verdict": "REJECT_PRE_LAUNCH"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 96,
+    "critical": [],
+    "high": [],
+    "medium": [
+      {
+        "id": "ADV-W4S-308-M1-UNICODE-DECIMAL-CANONICALITY",
+        "evidence": "Python's Unicode-aware \\d admits mixed Arabic-Indic numerals while preserving numeric coverage and selected tensor hashes.",
+        "affected_gate": "Canonical sync-header and branch-detail spelling.",
+        "reproduction": "Replace each sync-trace occurrence of an ASCII numeral with the equivalent mixed Unicode decimal spelling, rebind digests, and replay.",
+        "acceptance": "Replace \\d with [0-9] and add focused segment and branch mutations."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": [
+      {"id": "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE", "status": "VERIFIED_FIXED_FOR_DOTTED_ARTIFACTS"},
+      {"id": "ADV-W4S-307-M1-NONCANONICAL-SEGMENT-FILENAME", "status": "VERIFIED_FIXED_FOR_LEADING_ZERO_SPELLINGS"},
+      {"id": "CANDIDATE7-RUNTIME-MULTISEGMENT-PREFILL", "status": "REMAINS_VERIFIED_FIXED"},
+      {"id": "ADV-W4S-305-H1-RETAINED-DRIVER-BROKEN-SELF-PATH", "status": "REMAINS_VERIFIED_FIXED"}
+    ],
+    "verdict": "PASS_FOR_ENGINE_LAUNCH"
+  },
+  "external_receipt": {
+    "github_event_id": "17677477235",
+    "github_created_at_unix": 1786731996,
+    "drand_round": 6376700,
+    "randomness_receipt_sha256": "97d49f5fdd8f5a0c2ae638fe1e41b2562c871071e89cfac7f68754b0d5d3d8f5",
+    "schedules": ["ABBA", "BAAB", "BAAB", "ABBA", "BAAB"],
+    "independently_verified": true
+  },
+  "convergence": {
+    "candidate_count": 9,
+    "open_blocking_count_previous": 1,
+    "open_blocking_count_current": 1,
+    "blocking_finding_strictly_shrank": false,
+    "owner_exception_consumed": true,
+    "gate_paused": true,
+    "required_owner_action": "Explicitly authorize candidate 10 limited to ASCII-only sync numerals and complete configured-basename logit artifact enumeration, or leave W4 serving paused."
+  },
+  "launch_authorization": {
+    "no_verified_critical_or_high": false,
+    "engine_launch_authorized": false
+  }
+}
