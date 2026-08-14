@@ -79,7 +79,8 @@ SYNC_RE = re.compile(
     r"indexed_keep=\d+ indexed_batch=\d+ batch_ffn=\d+$"
 )
 LOGIT_RE = re.compile(
-    r"logits\.sync(\d+)\.start(\d+)\.prompt(\d+)\.suffix(\d+)\Z"
+    r"logits\.sync(0|[1-9]\d*)\.start(0|[1-9]\d*)\.prompt(0|[1-9]\d*)"
+    r"\.suffix(0|[1-9]\d*)\Z"
 )
 
 
@@ -410,11 +411,12 @@ def semantic_response(raw: bytes) -> tuple[dict[str, Any], str]:
 
 
 def validate_novel_sync_trace(server_log: str, expected_prompt_tokens: int) -> list[tuple[int, int, int, int]]:
-    matches = [SYNC_RE.fullmatch(line) for line in server_log.splitlines()]
-    matches = [match for match in matches if match is not None]
+    sync_lines = [line for line in server_log.splitlines()
+                  if line.startswith("ds4: GLM sync ")]
+    matches = [SYNC_RE.fullmatch(line) for line in sync_lines]
+    if not sync_lines or any(match is None for match in matches):
+        raise CampaignError("malformed sync trace")
     segments = [tuple(map(int, match.groups()[:4])) for match in matches]
-    if not segments:
-        raise CampaignError("sync trace does not prove a novel complete prefill")
     previous_prompt = 0
     for start, prompt, suffix, checkpoint in segments:
         if (start != previous_prompt or checkpoint != start or prompt <= start
@@ -657,12 +659,18 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
                   f"device_inode={metadata.st_dev}:{metadata.st_ino}:{metadata.st_size}")
         if main.count(marker) != 1:
             raise CampaignError(f"final artifact binding mismatch: {name}")
-    logit_names = ([name for name in snapshot if name.startswith("logits.sync")]
-                   if snapshot is not None else
-                   [path.name for path in out.glob("logits.sync*.start*.prompt*.suffix*")])
     segments = validate_novel_sync_trace(server, expected_prompt_tokens)
+    logit_names = ([name for name in snapshot if name.startswith("logits.")]
+                   if snapshot is not None else
+                   [path.name for path in out.iterdir() if path.name.startswith("logits.")])
+    expected_logit_names = [
+        f"logits.sync{sync}.start{start}.prompt{prompt}.suffix{suffix}"
+        for sync, (start, prompt, suffix, _) in enumerate(segments, start=1)
+    ]
+    if sorted(logit_names) != sorted(expected_logit_names):
+        raise CampaignError("logit artifact closure differs from sync trace")
     parsed_logits: list[tuple[int, str, tuple[int, int, int]]] = []
-    for name in logit_names:
+    for name in expected_logit_names:
         match = LOGIT_RE.fullmatch(name)
         if match is None:
             raise CampaignError("malformed synchronized logit tensor name")

@@ -361,15 +361,13 @@ class W4ServingContainmentTest(unittest.TestCase):
                                           "5" * 64, 19_783, None, True)
                 wrong = out / "logits.sync2.start19772.prompt19783.suffix10"
                 logit2.rename(wrong)
-                with self.assertRaisesRegex(RUNNER.CampaignError,
-                                            "does not match sync trace"):
+                with self.assertRaisesRegex(RUNNER.CampaignError, "sync trace"):
                     RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
                                      "5" * 64, 19_783, None, True)
                 wrong.rename(logit2)
                 duplicate = out / "logits.sync3.start19772.prompt19783.suffix11"
                 duplicate.write_bytes(b"\2" * RUNNER.LOGIT_BYTES)
-                with self.assertRaisesRegex(RUNNER.CampaignError,
-                                            "does not match sync trace"):
+                with self.assertRaisesRegex(RUNNER.CampaignError, "sync trace"):
                     RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
                                      "5" * 64, 19_783, None, True)
                 duplicate.unlink()
