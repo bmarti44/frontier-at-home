@@ -1,0 +1,22 @@
+{
+  "schema": "glm52-w4-serving-red-v1",
+  "candidate_number": 9,
+  "authorized_scope": "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE",
+  "owner_authorized": true,
+  "test_head": "c73c3db8ef58593267ae9bde6ebd3f414dba4586",
+  "unchanged_runner_sha256": "6c3fa421f0a0a09a7307e1f4733bdfec74b3e84fdb72436c742f873d3490668f",
+  "unchanged_scorer_sha256": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7",
+  "runner_test_sha256": "9791ec5ba981de40ff068313d93ccb2ae750721080d54a1055233af8711e504d",
+  "scorer_test_sha256": "6adccecea59aba7bd67389e931f0f5dcabd52ca198552ac33962e3fbe22ed890",
+  "executed_at_utc": "2026-08-14T18:20:25Z",
+  "command": "python3 -m unittest scripts.tests.test_w4_serving_campaign_runner.W4ServingContainmentTest.test_sync_trace_requires_full_novel_prefill scripts.tests.test_w4_serving_campaign_runner.W4ServingContainmentTest.test_arm_replay_is_pure_self_contained_and_repeatable scripts.tests.test_w4_serving_campaign_runner.W4ServingContainmentTest.test_logit_name_grammar_rejects_noncanonical_numeric_spelling scripts.tests.test_w4_serving_campaign_scorer.W4ServingCampaignScorerTest.test_authoritative_runner_replay_rejects_malformed_extra_sync_trace",
+  "exit_status": 1,
+  "output_sha256": "ece6801c231689cdee35ac938ef0c2d2c53d3a653bdd0611984a9f0c7e0bc41c",
+  "observed_failures": [
+    "malformed extra sync-prefixed line was silently ignored",
+    "unaccounted logits.shadow tensor was silently ignored by replay",
+    "leading-zero synchronized logit filename was accepted",
+    "the scorer-retained runner silently ignored the malformed extra sync trace"
+  ],
+  "verdict": "RED_CONFIRMED"
+}

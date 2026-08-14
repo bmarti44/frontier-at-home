@@ -152,6 +152,10 @@ allowlist = {
     "microgate_sha256",
     "metric_scorer_tests_sha256",
     "tests_sha256",
+    # W4 RED receipts bind the unchanged runner and the two exact test modules.
+    "unchanged_runner_sha256",
+    "runner_test_sha256",
+    "scorer_test_sha256",
     "randomness_sha256",
     "raw_jsonl_sha256",
     "raw_sha256",
