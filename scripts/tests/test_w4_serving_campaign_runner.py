@@ -271,7 +271,11 @@ class W4ServingContainmentTest(unittest.TestCase):
         second = ("ds4: GLM sync start=19772 prompt=19783 suffix=11 checkpoint=19772 "
                   "dense_len=0 ctx_cap=8192 dense_fit=0 resume_min=4 dense_gap=1 "
                   "indexed_keep=1 indexed_batch=1 batch_ffn=1")
-        valid = first + "\n" + second
+        first_branch = ("ds4: GLM sync branch=full_indexed pos=0 chunk=19772 "
+                        "logits=1")
+        second_branch = ("ds4: GLM sync branch=indexed_resume pos=19772 chunk=11 "
+                         "logits=1")
+        valid = first + "\n" + first_branch + "\n" + second + "\n" + second_branch
         RUNNER.validate_novel_sync_trace(valid, 19_783)
         for mutation in (
             valid.replace("start=0", "start=1"),
@@ -280,6 +284,7 @@ class W4ServingContainmentTest(unittest.TestCase):
             valid.replace("checkpoint=19772", "checkpoint=19771"),
             valid + "\n" + second,
             valid + "\n" + second + " hidden=1",
+            valid + "\n" + second_branch + " hidden=1",
         ):
             with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
                 RUNNER.validate_novel_sync_trace(mutation, 19_783)

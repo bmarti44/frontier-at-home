@@ -1,0 +1,15 @@
+{
+  "schema": "glm52-w4-serving-preaudit-attempt-v1",
+  "candidate_number": 9,
+  "implementation_commit": "11904f6a2a54a8edd20cae20ed5a0932ca49ba67",
+  "runner_sha256": "81562f876d13ac979e4ca7887a5b15359ffc0b8aa98b927051d0818983bf264d",
+  "immutable_attempt": "/home/bmarti44/.local/state/glm52-w4-serving-campaign/attempt-d70d5c2ecc0c438bbd54f2d64eccc4f2",
+  "immutable_server_log_sha256": "9b461291e861d1d9c60c02aa85dcba868b8d701ac6f7bc73abd7e16929185123",
+  "red_test_output_sha256": "dd99f46f45f80eb39e88a1f54e3395190aad0a7de58a5727ba6c70da946c92bb",
+  "red_test_exit_status": 1,
+  "executed_at_utc": "2026-08-14T18:23:18Z",
+  "observed_failure": "The immutable candidate-7 arm contains canonical sync branch-detail lines in addition to segment headers; the first candidate-9 implementation rejected those branch-detail lines as malformed.",
+  "bounded_fix": "Recognize only the exact production segment-header and branch-detail grammars, reject every sync-prefixed line that matches neither, and continue deriving logit closure solely from contiguous segment headers.",
+  "engine_started": false,
+  "verdict": "FAIL"
+}
