@@ -73,6 +73,7 @@ DONE_RE = re.compile(
 TOPK_MARKER = "ds4: CUDA exact top-2048 CUB enabled chunk=8192 merge=2"
 LISTENER = "ds4-server: listening on "
 SHUTDOWN = "ds4-server: shutdown requested"
+LOGIT_DUMP_BASENAME = "logits"
 CANONICAL_UINT = r"(?:0|[1-9][0-9]*)"
 SYNC_RE = re.compile(
     rf"^ds4: GLM sync start=({CANONICAL_UINT}) prompt=({CANONICAL_UINT}) "
@@ -442,6 +443,17 @@ def validate_novel_sync_trace(server_log: str, expected_prompt_tokens: int) -> l
     return segments
 
 
+def observed_logit_artifact_names(
+    out: Path,
+    snapshot: dict[str, tuple[bytes, tuple[int, int, int, int]]] | None,
+) -> list[str]:
+    if snapshot is not None:
+        return [name for name in snapshot
+                if Path(name).name.startswith(LOGIT_DUMP_BASENAME)]
+    return [str(path.relative_to(out)) for path in out.rglob("*")
+            if path.name.startswith(LOGIT_DUMP_BASENAME)]
+
+
 def measured_environment(arm: str, out: Path, lock_path: str,
                          lock_identity: str) -> dict[str, str]:
     measured = {
@@ -674,9 +686,7 @@ def parse_arm(arm: str, block: int, position: int, out: Path, containment_rc: in
         if main.count(marker) != 1:
             raise CampaignError(f"final artifact binding mismatch: {name}")
     segments = validate_novel_sync_trace(server, expected_prompt_tokens)
-    logit_names = ([name for name in snapshot if name.startswith("logits")]
-                   if snapshot is not None else
-                   [path.name for path in out.iterdir() if path.name.startswith("logits")])
+    logit_names = observed_logit_artifact_names(out, snapshot)
     expected_logit_names = [
         f"logits.sync{sync}.start{start}.prompt{prompt}.suffix{suffix}"
         for sync, (start, prompt, suffix, _) in enumerate(segments, start=1)

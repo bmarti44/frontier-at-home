@@ -414,9 +414,23 @@ class W4ServingContainmentTest(unittest.TestCase):
         self.assertEqual(first["logit_sequence_sha256"], expected_sequence)
 
     def test_live_logit_enumeration_uses_the_complete_configured_basename(self) -> None:
-        source = inspect.getsource(RUNNER.parse_arm)
-        self.assertIn('path.name.startswith("logits")', source)
-        self.assertNotIn('path.name.startswith("logits.")', source)
+        names = ("logits", "logits_shadow", "logits-foreign", "logits.shadow")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            nested = root / "nested"
+            nested.mkdir()
+            for name in names[:3]:
+                (root / name).write_bytes(b"")
+            (nested / names[3]).write_bytes(b"")
+            (root / "unrelated").write_bytes(b"")
+            live = RUNNER.observed_logit_artifact_names(root, None)
+        snapshot = {name: (b"", (1, 1, 0, 1))
+                    for name in (*names[:3], "nested/logits.shadow", "unrelated")}
+        replay = RUNNER.observed_logit_artifact_names(Path("unused"), snapshot)
+        expected = {"logits", "logits_shadow", "logits-foreign",
+                    "nested/logits.shadow"}
+        self.assertEqual(set(live), expected)
+        self.assertEqual(set(replay), expected)
 
     def test_signal_handlers_are_restored_after_preflight_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory, \

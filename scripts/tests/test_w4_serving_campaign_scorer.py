@@ -191,6 +191,12 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
                            + "\n" + second)
         with self.assertRaisesRegex(runner.CampaignError, "malformed sync trace"):
             runner.validate_novel_sync_trace(unicode_segment, 19_783)
+        names = {name: (b"", (1, 1, 0, 1)) for name in (
+            "logits", "logits_shadow", "logits-foreign", "nested/logits.shadow",
+            "unrelated")}
+        self.assertEqual(set(runner.observed_logit_artifact_names(
+            Path("unused"), names)),
+            {"logits", "logits_shadow", "logits-foreign", "nested/logits.shadow"})
 
 
 if __name__ == "__main__":
