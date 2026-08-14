@@ -1,0 +1,46 @@
+{
+  "schema": "glm52-w4-serving-freeze-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 9,
+  "implementation_commit": "f585679c7ca60bea2195f54993997b6e5a21eda7",
+  "engine_source_commit": "0424a6b406e4f6e125be3269104f3d16ad39c951",
+  "binary_sha256": "620fd8fa2b6cd0885f11c70cebfecf0ca128580a5dd2e27f05822d4ff4b4651f",
+  "launch_status": "NOT_RUN_PENDING_ROUND_308",
+  "artifacts": {
+    "results/glm52-gates/W4-serving-candidate8-review-r307.json": "0c162985efbda66ceca394d3722cf94afaa591462d99b1495829c16d25d2770d",
+    "results/glm52-gates/W4-serving-candidate9-red.json": "f5804972df6a888e01ae46daf644568a42b60c025e0b073c94ce72a48b00ec96",
+    "results/glm52-gates/W4-serving-candidate9-preaudit-attempt.json": "d8b90be616c5377f346949dbffd0f4c703d629c71d18fc04c5c54131b2c54f34",
+    "results/glm52-gates/W4-serving-candidate9-preaudit.txt": "9e7bfc699c72778350b54229a2c9f303fbcf5dca39cea0899a48928688bd4552",
+    "scripts/101_score_w4_serving_campaign.py": "d46b38262ab70ae2cd85cd791b01dd3b371ce323495cd2ad572809ab0067d6b7",
+    "scripts/102_run_w4_serving_campaign.py": "f1cd04884f41a153cbba222871e61f98b73e8d5da5fec7d13f2a4dc1c83a590b",
+    "scripts/tests/test_w4_serving_campaign_runner.py": "a6e554483f3d6744c3a717199d6eb384c3c4283e817ec9408358b0bd0844841b",
+    "scripts/tests/test_w4_serving_campaign_scorer.py": "6adccecea59aba7bd67389e931f0f5dcabd52ca198552ac33962e3fbe22ed890",
+    "scripts/lint_secrets.sh": "8cfc4bf77e4271084aa016a1270ba739d8e7d9cc3e5127fefa51302f1063db0c"
+  },
+  "finding_disposition": {
+    "ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE": "FIXED: every sync-prefixed line must match an exact canonical segment-header or branch-detail grammar, and all observed logits.* artifact names must exactly equal names generated from the contiguous segment headers",
+    "ADV-W4S-307-M1-NONCANONICAL-SEGMENT-FILENAME": "FIXED_WITH_FOCUSED_TEST: leading-zero numeric spellings are rejected"
+  },
+  "pre_submission_audit": {
+    "focused_tests": "44/44 PASS",
+    "python_compile": "PASS",
+    "secret_scan": "PASS",
+    "dependency_candidate_hash_preflight": "PASS",
+    "independent_tokenization": "19783 tokens unchanged",
+    "immutable_failed_arm_replay": "PASS",
+    "closure_mutations": "PASS_REJECTED",
+    "clean_exact_head": "PASS before freeze record",
+    "user_systemd_available": true,
+    "glm_engine_or_fio_active": false,
+    "dsv4_llama_server_active_but_not_touched": true,
+    "engine_started_for_candidate9": false,
+    "frozen_engine_scorer_wrapper_microgate_fixture_unchanged": true
+  },
+  "convergence": {
+    "candidate_count": 9,
+    "owner_exception": "Explicit authorization for candidate 9 limited to ADV-W4S-307-H1-INCOMPLETE-SYNC-LOGIT-EVIDENCE-CLOSURE",
+    "named_blocking_classes_targeted": 1,
+    "new_scope_added": false,
+    "engine_or_scorer_modified": false
+  }
+}
