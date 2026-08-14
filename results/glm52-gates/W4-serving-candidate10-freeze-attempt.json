@@ -1,0 +1,12 @@
+{
+  "schema": "glm52-w4-serving-freeze-attempt-v1",
+  "candidate_number": 10,
+  "attempt_commit": "009cf51075dfb0ea592d976f5bc39f10fba4363d",
+  "lint_sha256": "ef549d018cd52d10ee5f1d8770ae1ad6459e4036d5ff03ce72894d9761ea776e",
+  "freeze_sha256": "0598d6823120ce79e1fb51159341b6972745a9ac7cb721bc44c294e4098a16f7",
+  "executed_at_utc": "2026-08-14T18:48:48Z",
+  "observed_failure": "The candidate-10 W4 preaudit allowlist used the PCRE noncapturing group (?:[4-9]|10) in a POSIX grep -E expression; lint emitted 'grep: warning: ? at start of expression' while exiting zero.",
+  "bounded_fix": "Replace only the noncapturing group with the POSIX ERE group ([4-9]|10), then require warning-free lint output and regenerate the final freeze bindings before publication.",
+  "engine_started": false,
+  "verdict": "FAIL"
+}

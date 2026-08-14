@@ -158,6 +158,8 @@ allowlist = {
     "scorer_test_sha256",
     "immutable_server_log_sha256",
     "red_test_output_sha256",
+    "lint_sha256",
+    "freeze_sha256",
     "randomness_sha256",
     "raw_jsonl_sha256",
     "raw_sha256",
