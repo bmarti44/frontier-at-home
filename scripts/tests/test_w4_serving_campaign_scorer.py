@@ -187,6 +187,10 @@ class W4ServingCampaignScorerTest(unittest.TestCase):
         mutated = first + "\n" + second + "\n" + second + " hidden=1"
         with self.assertRaisesRegex(runner.CampaignError, "malformed sync trace"):
             runner.validate_novel_sync_trace(mutated, 19_783)
+        unicode_segment = (first.replace("prompt=19772", "prompt=1977٢", 1)
+                           + "\n" + second)
+        with self.assertRaisesRegex(runner.CampaignError, "malformed sync trace"):
+            runner.validate_novel_sync_trace(unicode_segment, 19_783)
 
 
 if __name__ == "__main__":

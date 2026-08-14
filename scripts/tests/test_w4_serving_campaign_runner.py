@@ -285,6 +285,8 @@ class W4ServingContainmentTest(unittest.TestCase):
             valid + "\n" + second,
             valid + "\n" + second + " hidden=1",
             valid + "\n" + second_branch + " hidden=1",
+            valid.replace("prompt=19772", "prompt=1977٢", 1),
+            valid.replace("pos=19772", "pos=1977٢", 1),
         ):
             with self.subTest(mutation=mutation[:60]), self.assertRaises(RUNNER.CampaignError):
                 RUNNER.validate_novel_sync_trace(mutation, 19_783)
@@ -390,6 +392,15 @@ class W4ServingContainmentTest(unittest.TestCase):
                     RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
                                      "5" * 64, 19_783, None, True)
                 noncanonical.rename(logit1)
+                for unexpected_name in ("logits", "logits_shadow", "logits-foreign"):
+                    unexpected = out / unexpected_name
+                    unexpected.write_bytes(b"\3" * RUNNER.LOGIT_BYTES)
+                    with self.subTest(unexpected_name=unexpected_name), \
+                         self.assertRaisesRegex(RUNNER.CampaignError,
+                                                "logit artifact closure"):
+                        RUNNER.parse_arm("off", 0, 0, out, 0, done, "4" * 64,
+                                         "5" * 64, 19_783, None, True)
+                    unexpected.unlink()
         self.assertEqual(first, second)
         self.assertEqual(first["safety"]["surviving_descendants"], 0)
         expected_final = hashlib.sha256(b"\1" * RUNNER.LOGIT_BYTES).hexdigest()
@@ -401,6 +412,11 @@ class W4ServingContainmentTest(unittest.TestCase):
         ], separators=(",", ":")).encode()).hexdigest()
         self.assertEqual(first["final_logits_sha256"], expected_final)
         self.assertEqual(first["logit_sequence_sha256"], expected_sequence)
+
+    def test_live_logit_enumeration_uses_the_complete_configured_basename(self) -> None:
+        source = inspect.getsource(RUNNER.parse_arm)
+        self.assertIn('path.name.startswith("logits")', source)
+        self.assertNotIn('path.name.startswith("logits.")', source)
 
     def test_signal_handlers_are_restored_after_preflight_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory, \
