@@ -1,0 +1,69 @@
+{
+  "schema": "glm52-lossless-plateau-launch-review-v1",
+  "gate": "lossless-plateau-matched-32k",
+  "candidate_number_for_gate": 12,
+  "candidate_hash": "13ea2728d500010f2eeb3f322bc4f294e5f5ed60",
+  "freeze_commit": "8bb660d",
+  "review_round": 323,
+  "trigger": "A parallel isolated-worktree launch-readiness audit discovered that the frozen campaign runner and collector do not bind the executed seed to post-freeze public randomness. No model or randomness run occurred.",
+  "gap_reviewer": {
+    "canonical_agent": "/root/gap_reviewer",
+    "score_0_to_100": 78,
+    "critical": [],
+    "high": [
+      {
+        "id": "PLATEAU-323-H1-CALLER-SEED-NOT-DRAND-BOUND",
+        "evidence": "The runner accepts any numeric MATCHED_SEED and the collector accepts any common nonnegative arm seed. Synthetic complete campaigns with uniform seeds 0 and 999999999999999999999999999999 both passed.",
+        "affected_gate": "Post-freeze public-randomness lineage, blinded prompt generation, arm assignment, and anti-selection validity",
+        "acceptance_test": "Reject caller seed authority; verify and retain one exact candidate/freeze-bound BLS receipt, derive the seed internally, and make the collector independently repeat receipt verification and seed derivation before matching all arms."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_MODEL_RUN_PENDING_PUBLIC_RANDOMNESS_BINDING"
+  },
+  "adversarial_reviewer": {
+    "canonical_agent": "/root/adversarial_reviewer",
+    "score_0_to_100": 55,
+    "critical": [
+      {
+        "id": "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS",
+        "evidence": "Caller-controlled seed changes prompt preambles and A/B mapping while the exact production collector accepts the result. Candidate 12 has no receipt, and neither retained runtime nor profiles bind the existing verifier.",
+        "affected_gate": "Matched-performance validity and the public-randomness anti-cheating contract",
+        "acceptance_test": "Production runner and collector must fail on absent, stale, wrong-candidate, wrong-freeze, bad-signature, changed-randomness, altered-derivation, or uniformly wrong seeds; the exact verified receipt must be retained in campaign evidence."
+      }
+    ],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_MODEL_RUN_CRITICAL"
+  },
+  "independent_reproduction": {
+    "arbitrary_uniform_seed_zero_accepted": true,
+    "arbitrary_uniform_large_seed_accepted": true,
+    "candidate12_randomness_receipt_present": false,
+    "historical_candidate10_receipt_signature_valid": true,
+    "historical_candidate10_seed_derivation_valid": true,
+    "historical_receipt_execution_binding_present": false,
+    "model_started": false
+  },
+  "bounded_fix_scope": [
+    "results/glm52-goal/harness/decisive_matched.sh",
+    "scripts/56_collect_matched_evidence.py",
+    "scripts/89_verify_drand_receipt.mjs",
+    "the two matched profiles",
+    "direct production-path tests and induced freeze bindings"
+  ],
+  "open_critical": [
+    "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS"
+  ],
+  "open_high": [
+    "PLATEAU-323-H1-CALLER-SEED-NOT-DRAND-BOUND"
+  ],
+  "convergence": {
+    "new_critical_in_previously_frozen_scope": true,
+    "mandatory_owner_report_triggered": true,
+    "model_run_paused": true
+  },
+  "verdict": "REJECT_MODEL_RUN_AND_REPORT_OWNER"
+}
