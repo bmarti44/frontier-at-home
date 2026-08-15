@@ -14,7 +14,7 @@ ARM = ROOT / "results/glm52-goal/harness/glm_decisive_arm.sh"
 DSV4_ARM = ROOT / "results/glm52-goal/harness/dsv4_decisive_arm.sh"
 COLLECTOR = ROOT / "scripts/56_collect_matched_evidence.py"
 DSV4_PROFILE = ROOT / "configs/dsv4-matched-32k-profile.json"
-FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate6-preaudit.json"
+FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate7-preaudit.json"
 GLM_CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 DSV4_CGROUP = ROOT / "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh"
 

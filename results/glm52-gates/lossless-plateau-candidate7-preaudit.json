@@ -1,0 +1,59 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-v1",
+  "candidate_number_for_gate": 7,
+  "campaign_global_review_round_before_review": 317,
+  "candidate_commit": "e59ee4682b35d4b0b55b65783a6d7d9d49fba87a",
+  "candidate_tree": "7e927dfbacfe1b46564d4a83a3a4ce9c3bf4ef29",
+  "supersedes": "results/glm52-gates/lossless-plateau-candidate6-preaudit.json",
+  "failure_record": "results/glm52-gates/lossless-plateau-candidate6-receipt-fail.json",
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r317.json",
+  "recorded_at_utc": "2026-08-15T16:40:00Z",
+  "scope": "Candidate 6 runtime unchanged except selecting this corrected freeze receipt. Correct the manually transcribed reviewed runtime commit and add executable commit/tree/path equality validation; no engine, harness algorithm, fixture, request, metric, or safety-policy change.",
+  "artifact_sha256": {
+    "configs/glm52-lossless-plateau-profile.json": "7a998686ccd954a3cc35ce7c10949189f81711e36d6472d393e5b5f6ae86354e",
+    "configs/dsv4-matched-32k-profile.json": "0cffb9195d133e1f30737a0533487605fd699a77a17f0f8499a7213f0e9702e6",
+    "results/glm52-goal/harness/decisive_matched.sh": "f14681a3104bcc4066fa03b66aff10f07574eb2befa38bb6d6659f4e5ceb133c",
+    "results/glm52-goal/harness/glm_decisive_arm.sh": "f5829fcf713b73e2e9aa6d45d0b8e43db71076905a0740f884f425c1d38c328a",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "1c42c1449f20bb1c70dc7eb93f380374af545fa15f54e85709e428b647f39d6e",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "84b658c6147d0fdc1baf11de33e7613eb17f29cc357252c6261c3db22d3ec913",
+    "scripts/30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "scripts/56_collect_matched_evidence.py": "9dfec6b359d57e7a3cf4a12fc25b9197dee47d7eb315f65f842126328552fb48"
+  },
+  "bound_python_runtime": {
+    "executable_sha256": "a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1",
+    "stdlib_tree_sha256": "b8cb577d2bdeefc77c16bd7a42e467bfd554a7ba104663e760ac896cd93a17a9",
+    "libpython_sha256": "32ce729462e7ba66c8edb12c1151fa5db25964f65900fe8337c3969f7350672d",
+    "tokenizer_native_sha256": "3c7e64a6cf423a4b675d535b0e56667382a02fa71f86380719d2a442ad98c1c7",
+    "execution_flags": ["-I", "-B", "-S"],
+    "environment": "env -i"
+  },
+  "pre_submission_audit": {
+    "focused_tests_run": 33,
+    "focused_failures": 1,
+    "focused_errors": 1,
+    "receipt_commit_exists": true,
+    "receipt_tree_matches": true,
+    "receipt_bound_paths_match": false,
+    "term_int_hup_real_user_systemd_probes": "PASS",
+    "campaign_fallback_cleanup_contract": "PASS",
+    "authentic_safety_and_breach_mutation": "PASS",
+    "profile_and_python_runtime_bindings": "FAIL_UNTRACKED_TOKENIZER_JSON",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count": 7,
+    "candidate_6_runtime_blocking_classes": 0,
+    "candidate_6_receipt_defects": 1,
+    "candidate_7_receipt_defects": 2,
+    "escalation_triggered": false,
+    "reason": "Pre-submission audit rejected candidate 7 before publication: the retained closure required vendor/official-encoding/tokenizer.json but the reviewed runtime commit did not contain it, and a static assertion still named candidate 6. This is an execution-lineage defect eligible for a bounded candidate-8 correction."
+  },
+  "failure": {
+    "failing_test": "test_freeze_receipt_names_the_exact_existing_runtime_commit",
+    "error": "git show e59ee4682b35d4b0b55b65783a6d7d9d49fba87a:vendor/official-encoding/tokenizer.json failed because the required tokenizer was ignored and untracked",
+    "additional_failure": "test_campaign_binds_isolated_python_and_reviewed_runtime_commit still expected candidate6-preaudit.json",
+    "engine_started": false
+  },
+  "verdict": "FAIL_PRE_SUBMISSION_AUDIT"
+}
