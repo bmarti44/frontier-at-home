@@ -9,6 +9,8 @@ CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
 GLM_ARM=/tmp/glm_decisive_arm_$TAG.sh
 DSV4_MEMWATCH_LOG=/home/dsv4/logs/memwatch-llamacpp.log
 GLM_CRASHLOG=/home/dsv4/ds4-project/glm52-crashlog
+GLM_CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6
+GLM_SAFE_EXPECTED_BINARY_SHA256=eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2
 SEED=${MATCHED_SEED:?MATCHED_SEED is required}
 BLOCKS=${MATCHED_BLOCKS:-5}
 [[ $BLOCKS =~ ^[1-5]$ ]] || { echo "MATCHED_BLOCKS must be 1-5" >&2; exit 2; }
@@ -193,9 +195,9 @@ run_glm() {
     safety_marker=$(mktemp "/tmp/glm52-safety-$TAG-$label.XXXXXX")
     ACTIVE=glm52
     set +e
-    env GLM_CANDIDATE_SRC="${GLM_CANDIDATE_SRC:-}" \
+    env GLM_CANDIDATE_SRC="$GLM_CANDIDATE_SRC" \
         GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
-        GLM_SAFE_EXPECTED_BINARY_SHA256="${GLM_SAFE_EXPECTED_BINARY_SHA256:-}" \
+        GLM_SAFE_EXPECTED_BINARY_SHA256="$GLM_SAFE_EXPECTED_BINARY_SHA256" \
         GLM_SAFE_KILL_FLOOR_GIB=40 GLM_SAFE_MIN_START_GIB=110 \
         GLM_SAFE_EVIDENCE_DIR="$arm_out" \
         GLM_SAFE_TIMEOUT_S=2400 \

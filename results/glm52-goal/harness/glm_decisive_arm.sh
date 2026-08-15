@@ -7,7 +7,8 @@ OUT=$1
 LABEL=$2
 SEED=$3
 REPO=/home/bmarti44/spark-deepseek-v4-flash
-SRC=${GLM_CANDIDATE_SRC:-/home/dsv4/ds4-project/src/ds4-goal-clean-0a7ad776}
+SRC=${GLM_CANDIDATE_SRC:?GLM_CANDIDATE_SRC is required}
+EXPECTED_BINARY_SHA256=${GLM_SAFE_EXPECTED_BINARY_SHA256:?GLM_SAFE_EXPECTED_BINARY_SHA256 is required}
 MODEL=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
 TOKENIZER=/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json
 TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10ac\
@@ -21,8 +22,11 @@ TILE_ENV=()
 PID=
 START_TICKS=
 
-[[ $SRC == /home/dsv4/ds4-project/src/* && -x $SRC/ds4-server ]] \
+[[ $SRC == /home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6 && -x $SRC/ds4-server ]] \
     || { echo "invalid GLM_CANDIDATE_SRC: $SRC" >&2; exit 2; }
+actual_binary_sha256=$(sha256sum -- "$SRC/ds4-server" | awk '{print $1}')
+[[ $actual_binary_sha256 == "$EXPECTED_BINARY_SHA256" ]] \
+    || { echo "GLM candidate binary identity mismatch" >&2; exit 2; }
 [[ -r $TOKENIZER && $(sha256sum "$TOKENIZER" | awk '{print $1}') == "$TOKENIZER_SHA256" ]] \
     || { echo "GLM tokenizer identity mismatch: $TOKENIZER" >&2; exit 2; }
 [[ $PORT =~ ^[0-9]+$ ]] \
@@ -72,6 +76,7 @@ printf 'expert_cache_gib=%s\niq2_reference=%s\nno_expert_tiles=%s\n' \
     "$CACHE_GB" "$IQ2_REFERENCE" "$NO_EXPERT_TILES" >"$OUT/runtime.config"
 env DS4_TOKEN_TIMING_LOG=1 \
 DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
+DS4_CUDA_STABLE_MODEL_REMAP=1 \
 DS4_CUDA_EXPERT_CACHE_GB="$CACHE_GB" \
 DS4_CUDA_EXPERT_CACHE_PIN=1 \
 DS4_CUDA_FETCH_THREADS=6 \
