@@ -1,0 +1,30 @@
+{
+  "schema": "glm52-lossless-plateau-envelope-red-v1",
+  "gate": "lossless-plateau-matched-32k",
+  "candidate_number": 11,
+  "scope": "Close only the DSV4 containment start-threshold mismatch observed in candidate-10 runtime attempt 1.",
+  "runtime_attempt": "results/glm52-gates/lossless-plateau-candidate10-runtime-attempt1.json",
+  "test": "scripts.tests.test_matched_memory_safety.MatchedHarnessContractTests.test_dsv4_envelope_preserves_floor_at_every_admitted_start",
+  "red_against": "unchanged candidate-10 campaign and DSV4 containment wrappers",
+  "command": "python3 -m unittest scripts.tests.test_matched_memory_safety.MatchedHarnessContractTests.test_dsv4_envelope_preserves_floor_at_every_admitted_start",
+  "exit_code": 1,
+  "stdout_bytes": 0,
+  "stderr_bytes": 890,
+  "observed_failure": "AssertionError: 115 not less than or equal to 110: an arm admitted by the release threshold can be rejected by the containment floor arithmetic",
+  "acceptance_formula": "DSV4_MATCHED_MEMORY_MAX_GIB + DSV4_MATCHED_KILL_FLOOR_GIB <= DSV4_MATCHED_MIN_START_GIB, with MEMORY_HIGH < MEMORY_MAX and the wrapper retaining its independent available >= MAX+FLOOR assertion",
+  "bindings": {
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "ae3836d9432076ec5d520f108969072b7cdda29063ca754c00ffe6d710bc74d9",
+    "test_source_sha256": "5095783339553d1909d2f46c10079b28119b5bd689f42b36690ceaee794de676",
+    "harness_sha256": "4b2ec6943e6c131a6b0567de88cfccbf5c3ab56eea482938c3f97dc45a6190ed",
+    "cgroup_sha256": "84b658c6147d0fdc1baf11de33e7613eb17f29cc357252c6261c3db22d3ec913",
+    "attempt_sha256": "e9365e1109859ff1bc3b5a2ab01c438889151a9973389798557ad99faf67471a"
+  },
+  "checks": {
+    "failure_is_behavior_under_test": true,
+    "failure_is_not_missing_file": true,
+    "model_started": false,
+    "frozen_candidate10_artifacts_modified": false
+  },
+  "verdict": "RED_CONFIRMED"
+}

@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 import os
+import re
 from pathlib import Path
 
 
@@ -15,6 +16,9 @@ GUARD = ROOT / "scripts" / "03_memory_guard.py"
 HARNESS = ROOT / "results" / "glm52-goal" / "harness" / "decisive_matched.sh"
 GLM_SAFE = ROOT / "results" / "glm52-gates" / "harness" / "glm_safe_run.sh"
 GLM_CGROUP = ROOT / "results" / "glm52-gates" / "harness" / "glm_cgroup_run.sh"
+DSV4_CGROUP = (
+    ROOT / "results" / "glm52-gates" / "harness" / "dsv4_matched_cgroup_run.sh"
+)
 DSV4_LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 DSV4_SERVICE = ROOT / "configs" / "systemd" / "deepseek-v4-flash-llamacpp.service"
 GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
@@ -414,6 +418,34 @@ class MatchedHarnessContractTests(unittest.TestCase):
         cgroup = GLM_CGROUP.read_text(encoding="utf-8")
         self.assertIn("systemd-run --user --wait --collect", cgroup)
         self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER", cgroup)
+
+    def test_dsv4_envelope_preserves_floor_at_every_admitted_start(self):
+        """The campaign release threshold and DSV4 envelope cannot disagree."""
+        source = HARNESS.read_text(encoding="utf-8")
+
+        def exact_gib(name: str) -> int:
+            matches = re.findall(rf"\b{name}=([0-9]+)\b", source)
+            self.assertEqual(len(matches), 1, f"expected one exact {name}")
+            return int(matches[0])
+
+        minimum_start = exact_gib("DSV4_MATCHED_MIN_START_GIB")
+        memory_high = exact_gib("DSV4_MATCHED_MEMORY_HIGH_GIB")
+        memory_max = exact_gib("DSV4_MATCHED_MEMORY_MAX_GIB")
+        kill_floor = exact_gib("DSV4_MATCHED_KILL_FLOOR_GIB")
+
+        self.assertLess(memory_high, memory_max)
+        self.assertLessEqual(
+            memory_max + kill_floor,
+            minimum_start,
+            "an arm admitted by the release threshold can be rejected by the "
+            "containment floor arithmetic",
+        )
+
+        wrapper = DSV4_CGROUP.read_text(encoding="utf-8")
+        self.assertIn(
+            "available_mib >= (MAX + FLOOR) * 1024",
+            wrapper,
+        )
 
 
 if __name__ == "__main__":
