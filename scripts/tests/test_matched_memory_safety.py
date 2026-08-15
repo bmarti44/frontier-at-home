@@ -160,7 +160,8 @@ class MatchedHarnessContractTests(unittest.TestCase):
         self.assertIn("MATCHED_BLOCKS:-5", source)
         self.assertNotIn("21_serve_llamacpp.sh\" start >/dev/null 2>&1 || true", source)
         self.assertIn("watchdog_armed", source)
-        self.assertIn("matched campaign finished without verified DeepSeek restoration", source)
+        self.assertIn("matched campaign did not restore the initially idle host", source)
+        self.assertNotIn("restore_dsv4", source)
         self.assertIn("glm_cgroup_run.sh", source)
         self.assertNotIn('bash "$SAFE" --tag "$label"', source)
 
@@ -175,7 +176,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
             "DSV4_UBATCH=512",
             "DSV4_BATCH=2048",
             "DSV4_UBATCH_LARGE=0",
-            "CTX=8192",
+            "CTX=32768",
             "DSV4_PARALLEL=1",
             "DSV4_NO_MMAP=1",
             "DSV4_SPEC_TYPE=ngram-map-k4v",

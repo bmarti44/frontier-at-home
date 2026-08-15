@@ -381,6 +381,14 @@ class BenchOptionTests(unittest.TestCase):
         self.assertTrue(rep["valid"])
         self.assertEqual(rep["response_id"], "chatcmpl-evidence")
         self.assertEqual(rep["request_sha256"], "a" * 64)
+        self.assertEqual(
+            rep["prompt_sha256"],
+            hashlib.sha256(
+                "p\n\n\n\nContinue this text naturally, writing at least 600 more words without stopping.".encode(
+                    "utf-8"
+                )
+            ).hexdigest(),
+        )
         self.assertEqual(rep["client_request_started_ns"], 1_000_000_000)
         self.assertEqual(rep["client_first_content_ns"], timestamps_ns[0])
         self.assertEqual(rep["client_last_content_ns"], timestamps_ns[-1])

@@ -1,18 +1,11 @@
 {
   "schema_version": 3,
   "profile": "glm52",
+  "purpose": "32K-class matched lossless-plateau evidence; not a serving profile",
   "binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
   "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
   "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
   "context_cap": 1048576,
-  "build_manifest_sha256": "2eeb3062073eda8bfaa078d30cb40cfd65b41e5e271b3380d0d1847f4deb3ed4",
-  "promotion": {
-    "gate": "W7.1a-stable-model-cache-generation-owner-adoption",
-    "engine_commit": "bccf0b6dd769854fe9e1cb8b5b3af966b161c071",
-    "binary_freeze_sha256": "075b481fa71187835a77574a46f6ecfe8200ae40f01fa74573e9e4c472b9f3d9",
-    "owner_decision_sha256": "45feffa9e62fa21a2c060c278fb9a702c44df1bc5316a11aa1dd8ef3ef25e996",
-    "review_sha256": "cab3d0898008dd4e26c8f53a90a029ede43f683d64140e6e016e4f7d7448f0a0"
-  },
   "runtime": {
     "engine_environment": {
       "DS4_CUDA_EXPERT_CACHE_GB": "0",
@@ -29,7 +22,7 @@
       "-m",
       "{model}",
       "-c",
-      "8192",
+      "32768",
       "--host",
       "127.0.0.1",
       "--port",
@@ -39,27 +32,26 @@
       "40GB"
     ],
     "benchmark": {
-      "fixture_context_tokens": 0,
+      "fixture_context_tokens": [0, 28672],
       "max_completion_tokens": 160,
       "minimum_completion_tokens": 128,
-      "raw_token_timing_required": true
+      "raw_token_timing_required": true,
+      "request_timeout_seconds": 2700,
+      "prefill_timing": "external_request_to_first_token_wall"
     },
     "safety": {
       "kill_floor_gib": 40,
       "minimum_start_gib": 110,
       "sample_hz": 4,
       "swap_max_bytes": 0,
-      "timeout_seconds": 2400,
+      "timeout_seconds": 5400,
       "virtual_memory_limit_kib": 419430400
     }
   },
   "artifact_sha256": {
-    "scripts/11_build_glm52_repro.sh": "6b4e376fb939b6829ca3eb0a4e89051283222fb6d702ad09f737a2f3f0de3e7d",
     "results/glm52-goal/harness/decisive_matched.sh": "5cae0b72c3a5addcdf6c953f16547800ac1e4b4756ffd7356f7d5a2bd0de0e50",
     "results/glm52-goal/harness/glm_decisive_arm.sh": "cbad554b59a8b8692b233782b52281deec58dde4e4c4d3f4ee91669b2de67850",
-    "results/glm52-gates/harness/glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
-    "results/glm52-gates/harness/glm_cgroup_run.sh": "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14",
-    "results/glm52-gates/harness/glm_evidence_export.py": "8f4cd672643a3863b149565ce2462b7fe48f94bb7a270bde3680562835f36b92",
-    "scripts/30_bench_speed.py": "ffca4b467dab2513094fc203f80e4e3fce5c57811fa80b3d12fcb82dfc0005a0"
+    "scripts/30_bench_speed.py": "ffca4b467dab2513094fc203f80e4e3fce5c57811fa80b3d12fcb82dfc0005a0",
+    "scripts/56_collect_matched_evidence.py": "a5664e6091686d7e719b61b7ddb6983e6a918a51628ae2c45ddccb12a16d4a2c"
   }
 }

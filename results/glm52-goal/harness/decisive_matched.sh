@@ -35,7 +35,7 @@ DSV4_ENV=(
     DSV4_UBATCH=512
     DSV4_BATCH=2048
     DSV4_UBATCH_LARGE=0
-    CTX=8192
+    CTX=32768
     DSV4_PARALLEL=1
     DSV4_NO_MMAP=1
     DSV4_SPEC_TYPE=ngram-map-k4v
@@ -81,35 +81,6 @@ cleanup_active() {
     wait_full_release || true
 }
 
-restore_dsv4() {
-    local status models
-    if [[ $ACTIVE == glm52 ]]; then
-        ACTIVE=
-    fi
-    wait_full_release || return 1
-    sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
-        "$REPO/scripts/21_serve_llamacpp.sh" start
-    status=$(sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
-        "$REPO/scripts/21_serve_llamacpp.sh" status) || return 1
-    python3 - "$status" <<'PY' || return 1
-import json, sys
-value = json.loads(sys.argv[1])
-required = ("server_alive", "memwatch_alive", "watchdog_armed", "healthy")
-if not all(value.get(field) is True for field in required):
-    raise SystemExit("DeepSeek supervision or health is not verified")
-PY
-    models=$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
-        return 1
-    python3 - "$models" <<'PY' || return 1
-import json, sys
-value = json.loads(sys.argv[1])
-if not any(
-    "deepseek-v4-flash" == item["id"].lower() for item in value["data"]
-):
-    raise SystemExit("exact DeepSeek model identity mismatch")
-PY
-    ACTIVE=dsv4
-}
 trap cleanup_active EXIT
 
 if sudo -n -u dsv4 test -e "$OUT"; then
@@ -153,13 +124,21 @@ run_dsv4() {
         "$REPO/scripts/21_serve_llamacpp.sh" status) || rc=1
     printf '%s\n' "$status" | sudo -n -u dsv4 tee \
         "$arm_out/process.identity.json" >/dev/null || rc=1
+    python3 - "$status" <<'PY' || rc=1
+import json, sys
+value = json.loads(sys.argv[1])
+required = ("server_alive", "memwatch_alive", "watchdog_armed", "healthy")
+if not all(value.get(field) is True for field in required):
+    raise SystemExit("DeepSeek supervision is incomplete")
+PY
     set +e
     sudo -n -u dsv4 env "${DSV4_ENV[@]}" \
         "$REPO/.venv-harness/bin/python" "$REPO/scripts/30_bench_speed.py" \
         --base-url "http://127.0.0.1:$PORT" \
         --out "$arm_out/result.json" --stack-label "$label" \
-        --reps 2 --context-levels 0 --max-tokens 160 \
-        --min-completion-tokens 128 --seed "$SEED" --ignore-eos-supported
+        --reps 2 --context-levels 0,28672 --max-tokens 160 \
+        --min-completion-tokens 128 --request-timeout 2700 \
+        --seed "$SEED" --ignore-eos-supported
     bench_rc=$?
     (( bench_rc == 0 )) || rc=$bench_rc
     read -r after_identity after_size < <(
@@ -200,7 +179,7 @@ run_glm() {
         GLM_SAFE_EXPECTED_BINARY_SHA256="$GLM_SAFE_EXPECTED_BINARY_SHA256" \
         GLM_SAFE_KILL_FLOOR_GIB=40 GLM_SAFE_MIN_START_GIB=110 \
         GLM_SAFE_EVIDENCE_DIR="$arm_out" \
-        GLM_SAFE_TIMEOUT_S=2400 \
+        GLM_SAFE_TIMEOUT_S=5400 \
         GLM_PORT="$PORT" \
         "$CGROUP" --tag "$label" -- \
         bash "$GLM_ARM" "$arm_out" "$label" "$SEED"
@@ -246,9 +225,9 @@ for ((block=0; block<BLOCKS; block++)); do
     done
 done
 
-if ! restore_dsv4; then
+if ! wait_full_release || pgrep -x ds4-server >/dev/null; then
     trap - EXIT
-    echo "FATAL: matched campaign finished without verified DeepSeek restoration" >&2
+    echo "FATAL: matched campaign did not restore the initially idle host" >&2
     exit 1
 fi
 trap - EXIT

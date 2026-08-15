@@ -81,7 +81,29 @@ class MatchedEvidenceTests(unittest.TestCase):
                             "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
                             "DS4_CUDA_STABLE_MODEL_REMAP": "1",
                             "DS4_TOKEN_TIMING_LOG": "1",
-                        }
+                        },
+                        "launch_arguments": [
+                            "--cuda", "-m", "{model}", "-c", "32768",
+                            "--host", "127.0.0.1", "--port", "{port}",
+                            "--ssd-streaming", "--ssd-streaming-cache-experts",
+                            "40GB",
+                        ],
+                        "benchmark": {
+                            "fixture_context_tokens": [0, 28672],
+                            "max_completion_tokens": 160,
+                            "minimum_completion_tokens": 128,
+                            "raw_token_timing_required": True,
+                            "request_timeout_seconds": 2700,
+                            "prefill_timing": "external_request_to_first_token_wall",
+                        },
+                        "safety": {
+                            "kill_floor_gib": 40,
+                            "minimum_start_gib": 110,
+                            "sample_hz": 4,
+                            "swap_max_bytes": 0,
+                            "timeout_seconds": 5400,
+                            "virtual_memory_limit_kib": 419430400,
+                        },
                     },
                 }
             ),
@@ -120,6 +142,9 @@ class MatchedEvidenceTests(unittest.TestCase):
                             "request_sha256": f"{block}{sequence}{rep_index}".ljust(
                                 64, "0"
                             ),
+                            "prompt_sha256": hashlib.sha256(
+                                f"short-{rep_index}".encode()
+                            ).hexdigest(),
                         }
                     )
                 long_reps = []
@@ -139,7 +164,9 @@ class MatchedEvidenceTests(unittest.TestCase):
                                 for index in range(128)
                             ],
                             "request_sha256": f"long{rep_index}".ljust(64, "0"),
-                            "prompt_sha256": f"prompt{rep_index}".ljust(64, "0"),
+                            "prompt_sha256": hashlib.sha256(
+                                f"long-{rep_index}".encode()
+                            ).hexdigest(),
                         }
                     )
                 result = {
@@ -288,6 +315,23 @@ class MatchedEvidenceTests(unittest.TestCase):
             value["binary_sha256"] = "9" * 64
             glm_profile.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, "GLM binary"):
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+
+    def test_rejects_unequal_prompts_and_wrong_runtime_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            target = campaign / "block0-seq1-armB" / "result.json"
+            value = json.loads(target.read_text())
+            value["cells"][1]["reps"][0]["prompt_sha256"] = "8" * 64
+            target.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "unequal prompt bytes"):
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            target = campaign / "block0-seq0-armA" / "runtime.config"
+            target.write_text(target.read_text().replace("a" * 64, "7" * 64))
+            with self.assertRaisesRegex(ValueError, "runtime configuration"):
                 self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
 
 

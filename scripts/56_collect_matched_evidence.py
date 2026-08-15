@@ -135,7 +135,7 @@ def _server_identity(directory: Path, profile: str) -> tuple[str, str, str]:
 
 def _load_result(
     directory: Path, fixture: Path
-) -> tuple[str, dict[str, Any], dict[str, Any]]:
+) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
     result = _read_json(directory / "result.json")
     if not isinstance(result, dict) or result.get("suite_valid") is not True:
         raise ValueError(f"benchmark suite is invalid in {directory}")
@@ -145,12 +145,24 @@ def _load_result(
         not isinstance(metadata, dict)
         or metadata.get("reps") != 2
         or not isinstance(cells, list)
-        or len(cells) != 1
-        or not isinstance(cells[0], dict)
-        or cells[0].get("ctx_tokens") != 0
-        or cells[0].get("valid") is not True
+        or len(cells) != 2
     ):
-        raise ValueError(f"benchmark shape is invalid in {directory}")
+        raise ValueError(f"32K-class benchmark shape is invalid in {directory}")
+    cells_by_context: dict[int, dict[str, Any]] = {}
+    for cell in cells:
+        if not isinstance(cell, dict):
+            raise ValueError(f"32K-class benchmark shape is invalid in {directory}")
+        context = cell.get("ctx_tokens")
+        if (
+            not isinstance(context, int)
+            or isinstance(context, bool)
+            or context in cells_by_context
+            or cell.get("valid") is not True
+        ):
+            raise ValueError(f"32K-class benchmark shape is invalid in {directory}")
+        cells_by_context[context] = cell
+    if set(cells_by_context) != {0, 28_672}:
+        raise ValueError(f"32K-class benchmark shape is invalid in {directory}")
     fixture_value = metadata.get("fixture_path")
     if not isinstance(fixture_value, str) or not fixture_value:
         raise ValueError(f"benchmark fixture path is invalid in {directory}")
@@ -166,14 +178,22 @@ def _load_result(
         profile = "dsv4"
     else:
         raise ValueError(f"benchmark model identity is invalid in {directory}")
-    reps = cells[0].get("reps")
-    if (
-        not isinstance(reps, list)
-        or len(reps) != 2
-        or any(not isinstance(rep, dict) or rep.get("valid") is not True for rep in reps)
-    ):
-        raise ValueError(f"cold/warm benchmark reps are incomplete in {directory}")
-    return profile, reps[0], reps[1]
+    result_reps: list[list[dict[str, Any]]] = []
+    for context in (0, 28_672):
+        reps = cells_by_context[context].get("reps")
+        if (
+            not isinstance(reps, list)
+            or len(reps) != 2
+            or any(
+                not isinstance(rep, dict) or rep.get("valid") is not True
+                for rep in reps
+            )
+        ):
+            raise ValueError(
+                f"32K-class benchmark reps are incomplete in {directory}"
+            )
+        result_reps.append(reps)
+    return profile, result_reps[0], result_reps[1]
 
 
 SERVING_WEIGHTS_MANIFEST = ROOT / "weights" / "unsloth-ud-q2_k_xl" / "manifest.json"
@@ -184,6 +204,7 @@ def collect_records(
     fixture: Path,
     dsv4_profile_path: Path,
     serving_manifest_path: Path | None = None,
+    glm_profile_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     campaign = campaign.resolve()
     fixture = fixture.resolve()
@@ -230,6 +251,61 @@ def collect_records(
             f"manifest {serving_manifest_sha256} != profile "
             f"{dsv4_profile['serving_weights_manifest_sha256']}"
         )
+    glm_profile_path = (
+        ROOT / "configs" / "glm52-lossless-plateau-profile.json"
+        if glm_profile_path is None
+        else glm_profile_path
+    ).resolve()
+    if glm_profile_path.is_symlink() or not glm_profile_path.is_file():
+        raise ValueError("approved GLM profile is missing or unsafe")
+    glm_profile = _read_json(glm_profile_path)
+    expected_glm_environment = {
+        "DS4_CUDA_EXPERT_CACHE_GB": "0",
+        "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+        "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+        "DS4_CUDA_FETCH_THREADS": "6",
+        "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
+        "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+        "DS4_CUDA_STABLE_MODEL_REMAP": "1",
+        "DS4_TOKEN_TIMING_LOG": "1",
+    }
+    runtime = glm_profile.get("runtime") if isinstance(glm_profile, dict) else None
+    if (
+        not isinstance(glm_profile, dict)
+        or glm_profile.get("schema_version") != 3
+        or glm_profile.get("profile") != "glm52"
+        or not SHA256.fullmatch(str(glm_profile.get("binary_sha256", "")))
+        or not SHA256.fullmatch(str(glm_profile.get("model_sha256", "")))
+        or glm_profile.get("context_cap") != 1_048_576
+        or not isinstance(runtime, dict)
+        or runtime.get("engine_environment") != expected_glm_environment
+        or runtime.get("launch_arguments")
+        != [
+            "--cuda", "-m", "{model}", "-c", "32768", "--host",
+            "127.0.0.1", "--port", "{port}", "--ssd-streaming",
+            "--ssd-streaming-cache-experts", "40GB",
+        ]
+        or runtime.get("benchmark")
+        != {
+            "fixture_context_tokens": [0, 28_672],
+            "max_completion_tokens": 160,
+            "minimum_completion_tokens": 128,
+            "raw_token_timing_required": True,
+            "request_timeout_seconds": 2700,
+            "prefill_timing": "external_request_to_first_token_wall",
+        }
+        or runtime.get("safety")
+        != {
+            "kill_floor_gib": 40,
+            "minimum_start_gib": 110,
+            "sample_hz": 4,
+            "swap_max_bytes": 0,
+            "timeout_seconds": 5400,
+            "virtual_memory_limit_kib": 419_430_400,
+        }
+    ):
+        raise ValueError("approved GLM profile is invalid")
+    glm_configuration_sha256 = _sha256(glm_profile_path)
     fixture_sha256 = _sha256(fixture)
     directories: dict[tuple[int, int], tuple[str, Path]] = {}
     for path in campaign.iterdir():
@@ -249,9 +325,11 @@ def collect_records(
 
     records: list[dict[str, Any]] = []
     seeds: set[int] = set()
+    prompt_hashes: dict[tuple[int, int], str] = {}
     for block, sequence in sorted(directories):
         arm, directory = directories[(block, sequence)]
-        profile, cold, warm = _load_result(directory, fixture)
+        profile, short_reps, long_reps = _load_result(directory, fixture)
+        cold, warm = short_reps
         result = _read_json(directory / "result.json")
         seed = result["metadata"].get("seed")
         if not isinstance(seed, int) or isinstance(seed, bool) or seed < 0:
@@ -269,6 +347,29 @@ def collect_records(
                 1.0,
             )
         else:
+            if binary_sha256 != glm_profile["binary_sha256"]:
+                raise ValueError(f"GLM binary does not match approved profile in {directory}")
+            expected_runtime = (
+                "context_cap=32768\n"
+                "expert_cache_gib=0\n"
+                "iq2_reference=1\n"
+                "no_expert_tiles=0\n"
+                "stable_model_remap=1\n"
+                f"model_sha256={glm_profile['model_sha256']}\n"
+            )
+            try:
+                observed_runtime = (directory / "runtime.config").read_text(
+                    encoding="ascii"
+                )
+            except OSError as exc:
+                raise ValueError(
+                    f"GLM runtime configuration is missing in {directory}"
+                ) from exc
+            if observed_runtime != expected_runtime:
+                raise ValueError(
+                    f"GLM runtime configuration does not match approved profile in {directory}"
+                )
+            configuration_sha256 = glm_configuration_sha256
             available_memory = _memory_min(
                 directory / "samples.log",
                 re.compile(r"\bmem_avail_kb=([0-9]+)\b"),
@@ -305,13 +406,31 @@ def collect_records(
             )
         ):
             raise ValueError(f"warm token timestamps are invalid in {directory}")
-        prompt_tokens = warm.get("prompt_tokens")
-        if (
-            not isinstance(prompt_tokens, int)
-            or isinstance(prompt_tokens, bool)
-            or prompt_tokens <= 0
-        ):
-            raise ValueError(f"evaluated prompt tokens are invalid in {directory}")
+        for context, reps in ((0, short_reps), (28_672, long_reps)):
+            for rep_index, rep in enumerate(reps):
+                prompt_hash = rep.get("prompt_sha256")
+                if not isinstance(prompt_hash, str) or not SHA256.fullmatch(prompt_hash):
+                    raise ValueError(f"prompt bytes are unbound in {directory}")
+                key = (context, rep_index)
+                prior = prompt_hashes.setdefault(key, prompt_hash)
+                if prior != prompt_hash:
+                    raise ValueError("matched arms use unequal prompt bytes")
+        evaluated_tokens = 0
+        prefill_seconds = 0.0
+        for rep in long_reps:
+            prompt_tokens = rep.get("prompt_tokens")
+            if (
+                not isinstance(prompt_tokens, int)
+                or isinstance(prompt_tokens, bool)
+                or prompt_tokens < 28_672
+            ):
+                raise ValueError(
+                    f"32K-class evaluated prompt tokens are invalid in {directory}"
+                )
+            evaluated_tokens += prompt_tokens
+            prefill_seconds += _finite(
+                rep.get("ttft_s"), "32K-class external prefill wall time"
+            )
         warm_ttft = _finite(warm.get("ttft_s"), "warm TTFT")
         cold_ttft = _finite(cold.get("ttft_s"), "cold TTFT")
         _finite(warm.get("prefill_tok_s"), "warm prefill rate")
@@ -329,8 +448,8 @@ def collect_records(
                 "token_timestamps": [
                     value / 1_000_000_000 for value in timestamps_ns
                 ],
-                "evaluated_tokens": prompt_tokens,
-                "prefill_seconds": warm_ttft,
+                "evaluated_tokens": evaluated_tokens,
+                "prefill_seconds": prefill_seconds,
                 "warm_ttft_seconds": warm_ttft,
                 "cold_ttft_seconds": cold_ttft,
                 "available_memory_gib": available_memory,
@@ -355,10 +474,21 @@ def main() -> int:
         type=Path,
         default=ROOT / "configs" / "dsv4-profile.json",
     )
+    parser.add_argument(
+        "--glm-profile",
+        type=Path,
+        default=ROOT / "configs" / "glm52-lossless-plateau-profile.json",
+    )
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     try:
-        records = collect_records(args.campaign, args.fixture, args.dsv4_profile)
+        records = collect_records(
+            args.campaign,
+            args.fixture,
+            args.dsv4_profile,
+            None,
+            args.glm_profile,
+        )
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with args.out.open("x", encoding="utf-8") as stream:
             for record in records:
@@ -376,6 +506,7 @@ def main() -> int:
         # collect_records has already refused to produce these records at all if
         # the live manifest disagreed with the approved profile.
         profile = _read_json(args.dsv4_profile)
+        glm_profile = _read_json(args.glm_profile)
         identity = args.out.with_suffix(args.out.suffix + ".identity.json")
         with identity.open("x", encoding="utf-8") as stream:
             json.dump(
@@ -390,6 +521,10 @@ def main() -> int:
                     "dsv4_serving_weights_release": profile.get(
                         "serving_weights_release"
                     ),
+                    "glm_binary_sha256": glm_profile["binary_sha256"],
+                    "glm_model_sha256": glm_profile["model_sha256"],
+                    "glm_profile_sha256": _sha256(args.glm_profile),
+                    "prefill_timing": "external_request_to_first_token_wall",
                 },
                 stream,
                 indent=2,

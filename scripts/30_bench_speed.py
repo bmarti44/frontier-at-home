@@ -869,6 +869,7 @@ def run_rep(
         evidence = {
             "response_id": stream["response_id"],
             "request_sha256": stream["request_sha256"],
+            "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
             "request_bytes": stream.get("request_bytes"),
             "generated_reasoning_sha256": hashlib.sha256(
                 generated_reasoning
