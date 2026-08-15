@@ -1,5 +1,11 @@
 # GLM-5.2 on one DGX Spark — where the numbers actually landed
 
+Current summary numbers in this file are production fast-path measurements with
+diagnostics disabled. Instrumented, evidence-mode, control-configuration, smoke,
+and one-token timings remain in immutable attempt records but are not model
+performance numbers. If no qualified fast-path measurement exists, this status
+reports it as not measured rather than substituting a diagnostic value.
+
 Answering the standing question directly: *are GLM-5.2's performance metrics
 similar to or better than DeepSeek-V4-Flash's?*
 
@@ -10,7 +16,7 @@ order of magnitude, and the reason is arithmetic, not tuning.**
 |---|---|---|---|
 | warm TTFT | <2 s | **1.755 s** | **MET** (with a config dependency, below) |
 | cold TTFT | **~19 s at ~19k tokens** | 147–165 s at 5047 tokens; ~19k would take **10–14 min** | ~35–45x short |
-| decode | 18.4 tok/s | 2.33 tok/s | ~8x short |
+| decode | 18.4 tok/s | **2.33 tok/s** | ~8x short |
 | prefill | 467 tok/s | ~23–32 tok/s | ~15–20x short |
 | context | **1,000,000** | 32768 configured; **~207k is the ceiling** at the current cache size | see below |
 

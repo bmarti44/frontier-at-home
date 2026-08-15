@@ -81,6 +81,16 @@ least 0.995, TTFT upper-95 ratio at most 1.005, and zero diagnostic I/O/counters
 in the disabled arm. A useful diagnostic that cannot meet this gate stays in an
 evidence-only binary and never enters the serving binary.
 
+Published performance numbers must come from the fastest qualified production
+path with production diagnostics disabled. This applies to the README, status
+pages, comparison tables, release notes, PR summaries, and agent status updates.
+Never substitute an evidence-mode, control-configuration, instrumented, smoke,
+or single-token diagnostic result for a model's headline performance. Preserve
+those measurements in immutable evidence and label them there, but keep them
+out of current model-performance summaries. When no qualified fast-path value
+exists, publish a dash or "not yet measured" rather than a slower diagnostic
+number.
+
 Candidate iteration is governed by convergence, not a hard retry count. Continue
 publishing candidates for a gate autonomously only while all three conditions
 hold:

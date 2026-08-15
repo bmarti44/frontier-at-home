@@ -4,6 +4,12 @@ Every claim from this workstream, restated in the strongest form the evidence
 actually supports. Where an earlier statement was too strong, the original is
 shown struck and the reason recorded. This supersedes prose in older notes.
 
+Current/headline performance claims use only the fastest measured production
+path with diagnostics disabled. Historical diagnostic, evidence-mode,
+control-configuration, smoke, and one-token measurements remain below when they
+are necessary to explain a gate, retraction, or mechanism, but they are not
+substitutes for model-performance numbers in README or status summaries.
+
 Status vocabulary:
 - **ESTABLISHED** — measured with a valid same-binary control and repeats.
 - **SUPPORTED** — measured, but with a named limitation (n, single fixture, an
@@ -11,7 +17,7 @@ Status vocabulary:
 - **OPEN** — mechanism identified, not established.
 - **RETRACTED** — was claimed, no longer supported.
 
-Last updated 2026-07-26.
+Last updated 2026-08-15.
 
 ---
 
@@ -126,7 +132,8 @@ redesigned, with a fidelity gate because merging batches changes FP results.
 
 ### C7. DSV4 parity — NOT MET, structurally
 DSV4 bar: 467 t/s prefill, 18.4 t/s decode, <2 s warm TTFT.
-GLM-5.2 streaming: ~23 t/s prefill, ~2.3–2.6 t/s decode, 1.755 s warm TTFT.
+GLM-5.2 production fast path: ~23–32 t/s prefill, 2.33 t/s decode, 1.755 s
+exact-replay warm TTFT.
 Warm TTFT **meets** the bar. Decode is ~8× short and prefill ~20× short.
 Independent arithmetic (sol): 74.2 MiB × 75 layers = 5.8 GB of expert weights
 per decode token; at 10.7 GB/s the all-miss floor is ~0.55 s/token = **1.83

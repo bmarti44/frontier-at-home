@@ -93,6 +93,14 @@ counters, synchronization tracing, token timing, and debug dumps must all be
 audited under this rule during R-K; production defaults remain off unless their
 cost is separately proven absent.
 
+All current or headline performance reporting uses the fastest qualified
+production path with these facilities disabled. README tables, status pages,
+comparison summaries, release notes, PR text, and agent updates must not quote
+evidence-mode, control-configuration, instrumented, smoke, or one-token
+diagnostic timings as model performance. Immutable attempt records retain those
+numbers with their original labels. If the fast path lacks a qualified value,
+report it as not measured instead of filling the gap with a diagnostic result.
+
 Do not re-run the measured dead ends: expert keep-N/skipping, expert merging,
 lossless or stream-separated entropy compression, shared-basis/MoBE,
 REAP Q2_K with `--cpu-moe`, prefill chunking, or purchased NVMe-oF. Also do not
