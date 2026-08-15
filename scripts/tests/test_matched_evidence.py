@@ -22,7 +22,7 @@ HISTORICAL_RANDOMNESS = (
     ROOT
     / "results"
     / "glm52-gates"
-    / "lossless-plateau-candidate10-randomness.json"
+    / "lossless-plateau-candidate10-first-round-test-receipt.json"
 )
 HISTORICAL_RANDOMNESS_VALUE = json.loads(
     HISTORICAL_RANDOMNESS.read_text(encoding="ascii")
@@ -454,23 +454,9 @@ class MatchedEvidenceTests(unittest.TestCase):
                 )
         return campaign, fixture, dsv4_profile, serving_manifest, glm_profile
 
-    @staticmethod
-    def write_randomness(campaign: Path, value: dict[str, object]) -> Path:
-        retained = campaign / "retained"
-        retained.mkdir(exist_ok=True)
-        path = retained / "randomness-receipt.json"
-        raw = (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode(
-            "ascii"
-        )
-        path.write_bytes(raw)
-        (campaign / "retained-manifest.json").write_text(
-            json.dumps(
-                {"randomness_receipt_sha256": hashlib.sha256(raw).hexdigest()},
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-            + "\n",
-            encoding="ascii",
+    def write_randomness(self, campaign: Path, value: dict[str, object]) -> Path:
+        path, _, _ = self.write_retained_authority(
+            campaign, value, CANDIDATE10_PREAUDIT
         )
         return path
 
@@ -534,25 +520,12 @@ class MatchedEvidenceTests(unittest.TestCase):
         digests["randomness-receipt.json"] = hashlib.sha256(
             randomness_raw
         ).hexdigest()
-        randomness_commit = subprocess.run(
-            [
-                "git", "-C", str(ROOT), "log", "-1", "--diff-filter=A",
-                "--format=%H", "--",
-                "results/glm52-gates/lossless-plateau-candidate10-randomness.json",
-            ],
+        git_head = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
             check=True,
             text=True,
             stdout=subprocess.PIPE,
         ).stdout.strip()
-        if freeze_receipt_path == CANDIDATE10_PREAUDIT:
-            git_head = randomness_commit
-        else:
-            git_head = subprocess.run(
-                ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
-                check=True,
-                text=True,
-                stdout=subprocess.PIPE,
-            ).stdout.strip()
         manifest = {
             "schema": "matched-retained-closure-v1",
             "git_head": git_head,
@@ -670,15 +643,7 @@ class MatchedEvidenceTests(unittest.TestCase):
         )
 
     def test_collector_independently_verifies_committed_randomness_and_arm_seed(self):
-        committed = subprocess.run(
-            [
-                "git", "-C", str(ROOT), "show",
-                "HEAD:results/glm52-gates/lossless-plateau-candidate10-randomness.json",
-            ],
-            check=True,
-            stdout=subprocess.PIPE,
-        ).stdout
-        self.assertEqual(committed, HISTORICAL_RANDOMNESS.read_bytes())
+        committed = HISTORICAL_RANDOMNESS.read_bytes()
         source = json.loads(committed)
         candidate_hash = source["candidate_hash"]
         freeze_commit = source["freeze_commit"]
@@ -713,7 +678,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                 candidate_hash,
                 "8bb660dde1ed18e3d1c93e0e2830453af83f7bc6",
                 matched_seed,
-                "post-freeze|publication",
+                "post-freeze|publication|freeze|candidate",
             ),
             "wrong_candidate": (
                 {**source, "candidate_hash": "0" * 40},

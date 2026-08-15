@@ -154,6 +154,155 @@ def _git_output(source_repo: Path, *arguments: str) -> str:
     return observed.stdout.strip()
 
 
+def _git_bytes(source_repo: Path, commit: str, relative: str) -> bytes:
+    observed = subprocess.run(
+        ["git", "-C", str(source_repo), "show", f"{commit}:{relative}"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+    )
+    if observed.returncode != 0:
+        raise ValueError(
+            "retained preaudit git binding failed: "
+            + observed.stderr.decode("utf-8", errors="replace").strip()
+        )
+    return observed.stdout
+
+
+def _derive_retained_lineage(
+    retained_manifest: Path,
+    source_repo: Path,
+) -> tuple[dict[str, Any], str, str]:
+    manifest_raw, _ = _read_bound_bytes(retained_manifest, "retained manifest")
+    manifest = _strict_json_bytes(manifest_raw, "retained manifest")
+    manifest_keys = {
+        "schema", "git_head", "reviewed_runtime_commit", "freeze_commit",
+        "freeze_receipt_sha256", "randomness_receipt_sha256",
+        "python_runtime", "sha256",
+    }
+    if (
+        not isinstance(manifest, dict)
+        or set(manifest) != manifest_keys
+        or manifest.get("schema") != "matched-retained-closure-v1"
+        or not isinstance(manifest.get("python_runtime"), dict)
+        or not isinstance(manifest.get("sha256"), dict)
+    ):
+        raise ValueError("retained manifest schema is invalid")
+    candidate_hash = manifest.get("reviewed_runtime_commit")
+    freeze_commit = manifest.get("freeze_commit")
+    git_head = manifest.get("git_head")
+    if not all(
+        isinstance(value, str) and COMMIT.fullmatch(value)
+        for value in (candidate_hash, freeze_commit, git_head)
+    ):
+        raise ValueError("retained manifest candidate or freeze lineage is invalid")
+    sha_map = manifest["sha256"]
+    if not all(
+        isinstance(path, str)
+        and path
+        and not path.startswith("/")
+        and ".." not in Path(path).parts
+        and isinstance(digest, str)
+        and SHA256.fullmatch(digest)
+        for path, digest in sha_map.items()
+    ):
+        raise ValueError("retained manifest artifact map is invalid")
+
+    freeze_path = retained_manifest.parent / "retained" / "freeze-receipt.json"
+    freeze_raw, freeze_sha256 = _read_bound_bytes(
+        freeze_path, "retained freeze receipt"
+    )
+    if (
+        manifest.get("freeze_receipt_sha256") != freeze_sha256
+        or sha_map.get("freeze-receipt.json") != freeze_sha256
+    ):
+        raise ValueError("retained freeze receipt digest mismatch")
+    preaudit = _strict_json_bytes(freeze_raw, "retained freeze receipt")
+    preaudit_keys = {
+        "schema", "candidate_number_for_gate",
+        "campaign_global_review_round_before_review", "candidate_commit",
+        "candidate_tree", "supersedes", "failure_record", "parent_review",
+        "owner_authorization", "recorded_at_utc", "scope", "artifact_sha256",
+        "red_lineage", "pre_submission_audit", "convergence", "verdict",
+    }
+    if (
+        not isinstance(preaudit, dict)
+        or set(preaudit) != preaudit_keys
+        or preaudit.get("schema") != "glm52-lossless-plateau-preaudit-v1"
+        or not isinstance(preaudit.get("candidate_number_for_gate"), int)
+        or isinstance(preaudit.get("candidate_number_for_gate"), bool)
+        or preaudit["candidate_number_for_gate"] < 1
+        or preaudit.get("candidate_commit") != candidate_hash
+        or not isinstance(preaudit.get("artifact_sha256"), dict)
+    ):
+        raise ValueError("retained preaudit schema or candidate is invalid")
+
+    try:
+        _git_output(source_repo, "cat-file", "-e", f"{candidate_hash}^{{commit}}")
+        _git_output(source_repo, "cat-file", "-e", f"{freeze_commit}^{{commit}}")
+        _git_output(source_repo, "cat-file", "-e", f"{git_head}^{{commit}}")
+        _git_output(
+            source_repo, "merge-base", "--is-ancestor", candidate_hash,
+            freeze_commit,
+        )
+        _git_output(
+            source_repo, "merge-base", "--is-ancestor", freeze_commit, git_head
+        )
+        candidate_tree = _git_output(
+            source_repo, "rev-parse", f"{candidate_hash}^{{tree}}"
+        )
+    except ValueError as exc:
+        raise ValueError("retained manifest git lineage is invalid") from exc
+    if preaudit.get("candidate_tree") != candidate_tree:
+        raise ValueError("retained preaudit candidate tree mismatch")
+
+    preaudit_relative = (
+        "results/glm52-gates/lossless-plateau-candidate"
+        f"{preaudit['candidate_number_for_gate']}-preaudit.json"
+    )
+    derived_freeze = _git_output(
+        source_repo, "log", "-1", "--diff-filter=A", "--format=%H", "--",
+        preaudit_relative,
+    )
+    if derived_freeze != freeze_commit:
+        raise ValueError("retained preaudit freeze commit mismatch")
+    if _git_bytes(source_repo, freeze_commit, preaudit_relative) != freeze_raw:
+        raise ValueError("retained preaudit differs from its freeze commit")
+
+    bindings = preaudit["artifact_sha256"]
+    required = {
+        "configs/glm52-lossless-plateau-profile.json",
+        "configs/dsv4-matched-32k-profile.json",
+        "results/glm52-goal/harness/decisive_matched.sh",
+        "scripts/56_collect_matched_evidence.py",
+    }
+    if preaudit["candidate_number_for_gate"] >= 13:
+        required.add("scripts/89_verify_drand_receipt.mjs")
+    if not required <= set(bindings):
+        raise ValueError("retained preaudit omits required execution artifacts")
+    for relative, expected in bindings.items():
+        if (
+            not isinstance(relative, str)
+            or not relative
+            or relative.startswith("/")
+            or ".." in Path(relative).parts
+            or not isinstance(expected, str)
+            or not SHA256.fullmatch(expected)
+        ):
+            raise ValueError("retained preaudit artifact binding is malformed")
+        actual = hashlib.sha256(
+            _git_bytes(source_repo, candidate_hash, relative)
+        ).hexdigest()
+        if actual != expected or (
+            relative in required and sha_map.get(relative) != expected
+        ):
+            raise ValueError(
+                f"retained preaudit artifact binding mismatch: {relative}"
+            )
+    return manifest, candidate_hash, freeze_commit
+
+
 def verify_randomness_receipt(
     receipt_path: Path,
     *,
@@ -163,14 +312,21 @@ def verify_randomness_receipt(
     retained_manifest: Path,
     source_repo: Path,
 ) -> int:
-    if not COMMIT.fullmatch(candidate_hash) or not COMMIT.fullmatch(freeze_commit):
-        raise ValueError("randomness candidate or freeze commit is malformed")
     raw, receipt_sha256 = _read_bound_bytes(receipt_path, "randomness receipt")
     receipt = _strict_json_bytes(raw, "randomness receipt")
-    manifest = _read_json(retained_manifest)
+    manifest, retained_candidate, retained_freeze = _derive_retained_lineage(
+        retained_manifest, source_repo
+    )
     if (
-        not isinstance(manifest, dict)
-        or manifest.get("randomness_receipt_sha256") != receipt_sha256
+        candidate_hash != retained_candidate
+        or freeze_commit != retained_freeze
+        or not COMMIT.fullmatch(candidate_hash)
+        or not COMMIT.fullmatch(freeze_commit)
+    ):
+        raise ValueError("randomness candidate or freeze commit is malformed")
+    if (
+        manifest.get("randomness_receipt_sha256") != receipt_sha256
+        or manifest["sha256"].get("randomness-receipt.json") != receipt_sha256
     ):
         raise ValueError("retained manifest randomness receipt digest mismatch")
 
@@ -223,6 +379,11 @@ def verify_randomness_receipt(
         value = beacon.get(key)
         if not isinstance(value, str) or not re.fullmatch(f"[0-9a-f]{{{length}}}", value):
             raise ValueError(f"drand {key} encoding is invalid")
+    expected_round = (
+        (freeze_epoch - DRAND_GENESIS_UNIX) // DRAND_PERIOD_SECONDS + 2
+    )
+    if round_value != expected_round:
+        raise ValueError("drand receipt is not the unique first round after freeze")
     publication_epoch = DRAND_GENESIS_UNIX + (round_value - 1) * DRAND_PERIOD_SECONDS
     publication_iso = dt.datetime.fromtimestamp(
         publication_epoch, tz=dt.timezone.utc
