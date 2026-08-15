@@ -1,7 +1,8 @@
 # GLM-5.2 performance qualification: active rung plan
 
 Owner course correction accepted 2026-08-01, owner-approved literature
-revision accepted 2026-08-02, and owner-directed external-research amendments
+revision accepted 2026-08-02, owner-directed external-research amendments
+accepted 2026-08-15, and the owner-directed expert-validation course correction
 accepted 2026-08-15. This document supersedes the W1-W11 execution
 order, but preserves those identifiers so old evidence stays traceable. The
 existing G0-G5 gate evidence, `glm_safe_run.sh` witness, and the two persistent
@@ -43,9 +44,12 @@ The measured physics are not open questions:
 - All-miss NVMe bottoms out around 1.83 tok/s. The 68 GB SLRU cache measured
   about 77% hits and roughly 107 ms/token of kernel-side reads, leaving a
   faithful streamed ceiling near 6-8 tok/s on the current stack.
-- All lossless work together is bounded around 7-10 decode tok/s and 75-100
-  prefill tok/s. Reaching roughly 18 tok/s decode or 450 tok/s prefill requires
-  residency. These are engineering bounds, not benchmark results.
+- All lossless model-byte work together is bounded around 7-10 decode tok/s.
+  The checksum-decomposition finding below makes the old 75-100 prefill bound
+  provisional and moves the production estimate toward roughly 140 tok/s when
+  per-fetch validation is disabled. Reaching roughly 18 tok/s decode or 450
+  tok/s prefill still requires residency. These are engineering estimates, not
+  benchmark results.
 
 External single-Spark results now independently anchor the demand-streaming
 part of that bound. Upstream llama.cpp's GLM-5.2-UD GB10 experiment measured
@@ -93,7 +97,11 @@ The 2026-08-15 external review closes additional variants:
   external PCIe-offload claims do not transfer to this NVMe-bound UMA path.
 - An internal-drive upgrade is closed: the installed Samsung PM9E1 already
   reaches its measured sustained ceiling. Purchased NVMe-oF remains separately
-  owner-descoped and must not be implemented.
+  owner-descoped and must not be implemented. After R-V, the owner may re-score
+  external storage because removing the checksum bottleneck makes serving more
+  bandwidth-sensitive. Preserve only the design note: native NVMe multipath and
+  md-RAID1 read balancing do not stripe one logical record; any future design
+  requires an in-engine dual-source sub-record miss scheduler. Do not build it.
 
 ## Branch and source reconciliation
 
@@ -360,15 +368,79 @@ bytes and overlap remain measured inputs; total decode/prefill and the
 lossless plateau therefore remain provisional until the matched engine-stage
 gate below closes.
 
-#### Rung 0.2 - collision-resistant validation pipeline and bounded submission
+#### R-V - owner-directed configurable expert-stream validation (top rung)
+
+This owner decision is authoritative for the production profile and is not a
+reviewer-overridable proposal. It supersedes the earlier Rung 0.2 claim that
+performance must never come from changing validation, but it does **not**
+weaken evidence-mode governance. Every gate, fidelity campaign, and evidence
+arm continues to require full cryptographic validation unless a separately
+reviewed chunked sidecar equivalence gate explicitly authorizes chunked mode.
+
+The measured one-miss fetch window is about 5.77 ms: approximately 1.01 ms in
+`pread`, 3.95 ms in whole-record SHA-256, and 0.81 ms in remaining copy and
+compute. The SHA term is independently consistent with
+[`G6-rung0-io-accelerated-sha-falsifier.json`](G6-rung0-io-accelerated-sha-falsifier.json),
+which measured 2.293743 GiB/s and 3.95149856 ms per record. The zero-fit-parameter
+decomposition reproduces the observed 2.31-2.33 tok/s decode and brackets the
+observed 23-32 tok/s prefill. Therefore the current serving path is
+checksum-bound rather than drive-bandwidth-bound.
+
+Add one exact, logged setting to the Entrpi/ds4 streaming source pinned by
+`versions.lock`:
+
+- `DS4_EXPERT_VALIDATION=full` preserves the current byte-for-byte validation
+  path. It is the mandatory mode for all evidence, gate, and fidelity runs.
+- `DS4_EXPERT_VALIDATION=chunked` verifies eight approximately 1.2 MiB SHA-256
+  sub-digests per record in parallel. Generate a frozen Merkle-style sidecar
+  offline and cross-verify its root/record relationship against every existing
+  whole-record digest before first use. Round 28 rejected non-cryptographic
+  checksums; it does not reject this cryptographic construction.
+- `DS4_EXPERT_VALIDATION=off` performs no per-fetch digest. It may become the
+  production default only after the qualification gate below passes.
+
+The mandatory production-integrity floor for `off` is a one-time full-artifact
+SHA-256 at model install or server start, logged with the digest in the run
+header; unchanged read/copy accounting with copied bytes reconciled to read
+bytes; and a standalone offline scrub command that re-verifies the artifact on
+demand. The serving profile must fail closed if the startup/install digest is
+missing or wrong.
+
+Pre-register the production `off` qualification before engine work. Use the
+same binary, seed, fixtures, and fresh-server schedule in at least five
+counterbalanced blocks:
+
+- correctness: `off` output bytes and the complete logit sequence equal `full`
+  exactly. Any mismatch is terminal `FAIL` for `off`; diagnose and fix the
+  underlying fetch/copy bug before a new candidate;
+- performance: decode lower-95 ratio versus `full` exceeds 2.0; report prefill
+  and cold TTFT; warm TTFT upper-95 ratio is at most 1.05. The planning values
+  are about 3.1x decode, 7.3 tok/s, 140 tok/s prefill, and 15 seconds for a
+  2048-token cold window, but only measured harness values have authority;
+- safety: zero swap, Xid, OOM, stale-prefetch, and model-generation events,
+  with the existing memory floor and survivor checks unchanged.
+
+Separately accelerate evidence mode without weakening its guarantee: hash full
+records across 12-16 bounded in-flight workers during prefill, or adopt chunked
+mode only after whole-record-to-sidecar equivalence and both persistent reviews
+pass. Evidence mode never uses `off`.
+
+If `off` qualifies, re-measure the lossless plateau with `off` as the production
+configuration and `full` reserved for evidence. The production estimate becomes
+roughly 7-8+ decode tok/s on current hardware. This spends no model fidelity; it
+changes integrity-check placement and is controlled by the exact correctness
+gate above.
+
+#### Rung 0.2 - collision-resistant evidence validation and bounded submission
 
 Round-28 review falsified the proposed non-cryptographic repeated-record
 checksum before implementation: a compensating multi-byte mutation can collide
 while passing a one-byte mutation test. Do not build or adopt that design.
-Every demand or speculative slab read continues to match the record's frozen
-SHA-256 before its bytes become CUDA-copy-eligible. Performance comes from
-moving the complete O_DIRECT read plus SHA-256 into the cross-layer prefetch
-window and overlapping it with useful compute, not from weakening validation.
+In `full` evidence mode, every demand or speculative slab read continues to
+match the record's frozen SHA-256 before its bytes become CUDA-copy-eligible.
+The historical candidate below attempted to overlap that unchanged guarantee.
+R-V now separately governs configurable production validation and must not be
+retroactively attributed to this failed prefetch candidate.
 
 The next candidate is default-off and uses one bounded QD4-QD8 staging ring.
 The background worker publishes a slot `READY` only after the exact record key,
@@ -997,10 +1069,12 @@ Restore the prior host settings after every arm and after any failure.
 ### Lossless plateau decision
 
 After all Rung 0 work, run the same-fixture performance gauntlet and report the
-measured plateau to the owner. The expected hard range is 7-10 decode tok/s and
-75-100 prefill tok/s, but measurements alone populate the decision table. Stop
-there until the owner chooses one of: accept the lossless profile, authorize a
-bounded Rung 2/2.5 fidelity spend, or authorize the Rung 3 residency program.
+measured plateau to the owner. With a qualified R-V `off` profile, the current
+planning range is roughly 7-8+ decode tok/s and about 140 prefill tok/s; the
+broader lossless composition hypothesis remains 6-10 decode tok/s. Measurements
+alone populate the decision table. Stop there until the owner chooses one of:
+accept the lossless profile, authorize a bounded Rung 2/2.5 fidelity spend, or
+authorize the Rung 3 residency program.
 If the MTP-union, decaying-hotness, and OS arms all pass, the planning envelope
 is approximately `1.3-2.0x * 1.05-1.15x * 1.02-1.05x` on top of 2.33 tok/s,
 which is consistent with the existing 6-10 tok/s lossless estimate. This is a
@@ -1008,7 +1082,8 @@ composition hypothesis, never a reported result.
 
 ### Rung 2 - bounded lossy streaming (W1/W8/W9)
 
-Fidelity ordering is unchanged. The packed FP4/E2M1 compact-cKV experiment is
+Fidelity ordering is unchanged. R-V spends no model fidelity. The packed
+FP4/E2M1 compact-cKV experiment is
 the active lossy frontier because its real-capture falsifier has cleared; it
 still requires the fixed 100-case NLL/top-1 gate and owner adoption. Rung 3
 residency remains the only plausible path to 18.4 tok/s and remains separately
