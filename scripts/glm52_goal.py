@@ -374,7 +374,7 @@ def _score_w9_e2m1_fidelity_raw(
             "record_type", "engine_candidate_hash", "seed_sha256",
             "binary_sha256", "baseline_environment_sha256",
             "candidate_environment_sha256", "fixture_sha256",
-            "candidate_arm", "candidate_required_paths", "attempts",
+            "binary_path", "binary_device_inode", "candidate_arm", "attempts",
         },
         "W9 E2M1 campaign",
     )
@@ -392,6 +392,13 @@ def _score_w9_e2m1_fidelity_raw(
     ):
         if not _is_sha256(campaign[field]):
             raise ValueError(f"W9 E2M1 {field} is invalid")
+    binary_path = campaign["binary_path"]
+    binary_device_inode = campaign["binary_device_inode"]
+    if (
+        not isinstance(binary_path, str) or not binary_path.startswith("/")
+        or not re.fullmatch(r"[0-9]+:[0-9]+", binary_device_inode)
+    ):
+        raise ValueError("W9 E2M1 frozen binary identity is invalid")
     if campaign["baseline_environment_sha256"] == campaign["candidate_environment_sha256"]:
         raise ValueError("W9 E2M1 arms have identical environments")
     seed = campaign["seed_sha256"]
@@ -399,13 +406,7 @@ def _score_w9_e2m1_fidelity_raw(
     if campaign["candidate_arm"] != candidate_arm:
         raise ValueError("W9 E2M1 candidate arm does not match the seed")
     schedule = "ABBA" if int(seed[2:4], 16) % 2 == 0 else "BAAB"
-    required_paths = campaign["candidate_required_paths"]
-    if (
-        not isinstance(required_paths, list) or not required_paths
-        or len(required_paths) != len(set(required_paths))
-        or any(path not in {"normal", "fused"} for path in required_paths)
-    ):
-        raise ValueError("W9 E2M1 required paths are invalid")
+    required_paths = ("normal", "fused")
     attempts = campaign["attempts"]
     if not isinstance(attempts, list) or len(attempts) != 4:
         raise ValueError("W9 E2M1 campaign requires four attempts")
@@ -430,8 +431,27 @@ def _score_w9_e2m1_fidelity_raw(
             for value in (main_log, samples_log, kernel_log)
         ):
             raise ValueError("W9 E2M1 host evidence is invalid")
-        if "memory_swap_max=0" not in main_log or "memory_oom_group=1" not in main_log:
-            raise ValueError("W9 E2M1 cgroup containment is absent")
+        main_lines = [line for line in main_log.splitlines() if line]
+        containment_lines = [line for line in main_lines if "cgroup_verified" in line]
+        completion_lines = [line for line in main_lines if "SAFE_RUN end" in line]
+        candidate_lines = [line for line in main_lines if "candidate_binary_sha256=" in line]
+        identity_lines = [line for line in main_lines if "executed_candidate_verified" in line]
+        environment_lines = [line for line in main_lines if "executed_environment_sha256=" in line]
+        if (
+            len(containment_lines) != 1
+            or re.fullmatch(
+                r"\S+ cgroup_verified path=\S+ memory_high=\d+ "
+                r"memory_max=\d+ memory_swap_max=0 memory_oom_group=1",
+                containment_lines[0],
+            ) is None
+            or len(completion_lines) != 1
+            or re.fullmatch(
+                r"\S+ SAFE_RUN end rc=0 killed=no "
+                r"\(124=timeout, 137=SIGKILL/ENOMEM-adjacent\)",
+                completion_lines[0],
+            ) is None
+        ):
+            raise ValueError("W9 E2M1 containment or completion is invalid")
         binary_matches = re.findall(
             r"(?:^| )candidate_binary_sha256=([0-9a-f]{64})(?: |$)",
             main_log, re.MULTILINE,
@@ -440,21 +460,32 @@ def _score_w9_e2m1_fidelity_raw(
             r"(?:^| )executed_environment_sha256=([0-9a-f]{64})(?: |$)",
             main_log, re.MULTILINE,
         )
-        identity_matches = re.findall(
-            r"executed_candidate_verified pid=(\d+) start_ticks=(\d+)",
-            main_log,
-        )
-        completion_matches = re.findall(
-            r"SAFE_RUN end rc=0 killed=no(?: |$)", main_log,
-        )
+        identity_match = None
+        if len(identity_lines) == 1:
+            identity_match = re.fullmatch(
+                r"\S+ executed_candidate_verified pid=(\d+) start_ticks=(\d+) "
+                r"path=(\S+) executed_binary_sha256=([0-9a-f]{64}) "
+                r"device_inode=([0-9]+:[0-9]+)",
+                identity_lines[0],
+            )
         if (
             binary_matches != [campaign["binary_sha256"]]
             or len(environment_matches) != 1
-            or len(identity_matches) != 1
-            or len(completion_matches) != 1
+            or len(candidate_lines) != 1
+            or len(environment_lines) != 1
+            or identity_match is None
         ):
             raise ValueError("W9 E2M1 wrapper provenance or completion is invalid")
-        identity = ":".join(identity_matches[0])
+        pid, start_ticks, executed_path, executed_sha256, executed_dev_ino = (
+            identity_match.groups()
+        )
+        if (
+            executed_path != binary_path
+            or executed_sha256 != campaign["binary_sha256"]
+            or executed_dev_ino != binary_device_inode
+        ):
+            raise ValueError("W9 E2M1 executed binary differs from the freeze")
+        identity = f"{pid}:{start_ticks}"
         if identity in identities:
             raise ValueError("W9 E2M1 process identity was reused")
         identities.add(identity)
@@ -466,12 +497,18 @@ def _score_w9_e2m1_fidelity_raw(
             raise ValueError("W9 E2M1 executed environment differs")
         if attempt["fixture_sha256"] != campaign["fixture_sha256"]:
             raise ValueError("W9 E2M1 fixture differs")
-        samples = re.findall(
-            r"^\S+ mem_avail_kb=(\d+) eng_rss_kb=(\d+) read_bytes=(\d+) "
+        sample_pattern = re.compile(
+            r"\S+ mem_avail_kb=(\d+) eng_rss_kb=(\d+) read_bytes=(\d+) "
             r"cgroup_current_bytes=(\d+) cgroup_peak_bytes=(\d+) "
-            r"cgroup_swap_current_bytes=(\d+)$",
-            samples_log, re.MULTILINE,
+            r"cgroup_swap_current_bytes=(\d+)"
         )
+        sample_lines = [line for line in samples_log.splitlines() if line]
+        samples = []
+        for line in sample_lines:
+            match = sample_pattern.fullmatch(line)
+            if match is None:
+                raise ValueError("W9 E2M1 memory sample is malformed")
+            samples.append(match.groups())
         if len(samples) < 20:
             raise ValueError("W9 E2M1 memory sampling is incomplete")
         memory = min(int(row[0]) for row in samples) / 1048576
@@ -494,20 +531,37 @@ def _score_w9_e2m1_fidelity_raw(
         )
         exits = re.findall(
             r"^ds4: GLM compact cache E2M1 fidelity attestation "
-            r"mode=(on|off) synchronized=([01]) normal_rows=(\d+) fused_rows=(\d+)$",
+            r"mode=(on|off) synchronized=([01]) "
+            r"normal_applied_rows=(\d+) normal_total_rows=(\d+) "
+            r"fused_applied_rows=(\d+) fused_total_rows=(\d+)$",
             command_log, re.MULTILINE,
         )
         if len(starts) != 1 or len(exits) != 1:
             raise ValueError("W9 E2M1 attestation is missing or duplicated")
-        exit_mode, synchronized, normal_text, fused_text = exits[0]
+        (
+            exit_mode, synchronized, normal_applied_text, normal_total_text,
+            fused_applied_text, fused_total_text,
+        ) = exits[0]
         if starts[0] != exit_mode or synchronized != "1":
             raise ValueError("W9 E2M1 mode changed or was not synchronized")
-        counts = {"normal": int(normal_text), "fused": int(fused_text)}
+        applied = {
+            "normal": int(normal_applied_text),
+            "fused": int(fused_applied_text),
+        }
+        totals = {
+            "normal": int(normal_total_text),
+            "fused": int(fused_total_text),
+        }
         is_candidate = arm == candidate_arm
         if is_candidate:
-            if exit_mode != "on" or any(counts[path] <= 0 for path in required_paths):
+            if exit_mode != "on" or any(
+                totals[path] <= 0 or applied[path] != totals[path]
+                for path in required_paths
+            ):
                 raise ValueError("W9 E2M1 candidate device effect was not executed")
-        elif exit_mode != "off" or any(counts.values()):
+        elif exit_mode != "off" or any(applied.values()) or any(
+            totals[path] <= 0 for path in required_paths
+        ):
             raise ValueError("W9 E2M1 baseline is not default-off")
         cases = attempt["cases"]
         if not isinstance(cases, list) or len(cases) != 100:
@@ -527,7 +581,7 @@ def _score_w9_e2m1_fidelity_raw(
                 raise ValueError("W9 E2M1 case identity/count is invalid")
             _finite_number(case["nll_sum"], "nll_sum")
             seen.add(case_id)
-        by_arm[arm].append({"counts": counts, "cases": cases})
+        by_arm[arm].append({"applied": applied, "totals": totals, "cases": cases})
     for arm, repeats in by_arm.items():
         if len(repeats) != 2 or repeats[0] != repeats[1]:
             raise ValueError(f"W9 E2M1 arm {arm} is not deterministic")
@@ -569,6 +623,112 @@ def _score_w9_e2m1_fidelity_raw(
         "checks": checks,
         "verdict": "PASS" if all(checks.values()) else "FAIL",
     }
+
+
+def _read_w9_bound_artifact(
+    root: Path, descriptor: dict[str, Any], seen: set[Path], label: str,
+) -> bytes:
+    _require_exact_keys(descriptor, {"path", "bytes", "sha256"}, label)
+    relative = descriptor["path"]
+    byte_count = descriptor["bytes"]
+    digest = descriptor["sha256"]
+    if (
+        not isinstance(relative, str) or not relative
+        or Path(relative).is_absolute() or ".." in Path(relative).parts
+        or not isinstance(byte_count, int) or isinstance(byte_count, bool)
+        or byte_count < 0 or byte_count > 16 * 1024 * 1024
+        or not _is_sha256(digest)
+    ):
+        raise ValueError(f"{label} descriptor is invalid")
+    path = root / relative
+    if path in seen:
+        raise ValueError("W9 E2M1 artifact path is duplicated")
+    seen.add(path)
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size != byte_count:
+            raise ValueError(f"{label} identity or size differs")
+        chunks: list[bytes] = []
+        remaining = byte_count
+        while remaining:
+            chunk = os.read(fd, min(1024 * 1024, remaining))
+            if not chunk:
+                raise ValueError(f"{label} is short")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(fd, 1):
+            raise ValueError(f"{label} grew while read")
+        after = os.fstat(fd)
+        if (
+            (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+            != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+        ):
+            raise ValueError(f"{label} changed while read")
+    finally:
+        os.close(fd)
+    data = b"".join(chunks)
+    if hashlib.sha256(data).hexdigest() != digest:
+        raise ValueError(f"{label} digest differs")
+    return data
+
+
+def _score_w9_e2m1_fidelity_evidence(
+    evidence_root: Path, *, expected_runner_sha256: str,
+) -> dict[str, Any]:
+    """Score only hash-enumerated, file-backed W9 E2M1 evidence."""
+    if not _is_sha256(expected_runner_sha256):
+        raise ValueError("W9 E2M1 expected runner digest is invalid")
+    root = Path(evidence_root).resolve()
+    manifest_path = root / "manifest.json"
+    fd = os.open(manifest_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > 4 * 1024 * 1024:
+            raise ValueError("W9 E2M1 manifest is invalid")
+        raw_manifest = os.read(fd, before.st_size + 1)
+        after = os.fstat(fd)
+        if len(raw_manifest) != before.st_size or (
+            before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns
+        ) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+            raise ValueError("W9 E2M1 manifest changed while read")
+    finally:
+        os.close(fd)
+    manifest = json.loads(raw_manifest)
+    if not isinstance(manifest, dict):
+        raise ValueError("W9 E2M1 manifest root is invalid")
+    if manifest.get("runner_sha256") != expected_runner_sha256:
+        raise ValueError("W9 E2M1 runner digest differs")
+    raw_campaign = {key: value for key, value in manifest.items() if key != "runner_sha256"}
+    attempts = raw_campaign.get("attempts")
+    if not isinstance(attempts, list):
+        raise ValueError("W9 E2M1 manifest attempts are invalid")
+    seen: set[Path] = set()
+    materialized = []
+    expected_attempt_keys = {"sequence", "arm", "fixture_sha256", "artifacts"}
+    expected_artifacts = {"command_log", "main_log", "samples_log", "kernel_log", "cases"}
+    for index, attempt in enumerate(attempts):
+        _require_exact_keys(attempt, expected_attempt_keys, f"W9 E2M1 attempt {index}")
+        artifacts = attempt["artifacts"]
+        if not isinstance(artifacts, dict) or set(artifacts) != expected_artifacts:
+            raise ValueError("W9 E2M1 artifact enumeration is incomplete")
+        row = {key: attempt[key] for key in ("sequence", "arm", "fixture_sha256")}
+        for name in sorted(expected_artifacts):
+            data = _read_w9_bound_artifact(
+                root, artifacts[name], seen, f"W9 E2M1 attempt {index} {name}"
+            )
+            if name == "cases":
+                row[name] = json.loads(data)
+            else:
+                row[name] = data.decode("utf-8", errors="strict")
+        materialized.append(row)
+    raw_campaign["attempts"] = materialized
+    enumerated = {path.name for path in seen} | {"manifest.json"}
+    observed = {path.name for path in root.iterdir()}
+    if observed != enumerated:
+        raise ValueError("W9 E2M1 evidence directory has unenumerated artifacts")
+    return _score_w9_e2m1_fidelity_raw([raw_campaign])
 
 
 def _score_w1_affine(records: list[dict[str, Any]]) -> dict[str, Any]:

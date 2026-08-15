@@ -3365,7 +3365,7 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                 "command_log": command_log,
                 "main_log": (
                     "2026-08-15T00:00:00Z cgroup_verified path=/test "
-                    "memory_high=max memory_max=100000000000 "
+                    "memory_high=100000000000 memory_max=110000000000 "
                     "memory_swap_max=0 memory_oom_group=1\n"
                     "2026-08-15T00:00:01Z candidate_src=/frozen/ds4-server "
                     f"candidate_binary_sha256={'2' * 64} "
