@@ -1,0 +1,44 @@
+{
+  "candidates": {
+    "hadamard_e2m1_multistart_f32_scale": {
+      "denominator": 7353309648.960979,
+      "key_references": 462641,
+      "numerator": 12233089.789674584,
+      "pairs": 29609024,
+      "query_rows": 512,
+      "relative_rmse": 0.04078745939376588
+    },
+    "hadamard_e2m1_multistart_f32_scale_channel_correction": {
+      "denominator": 7353309648.960979,
+      "key_references": 462641,
+      "numerator": 12196792.003546631,
+      "pairs": 29609024,
+      "query_rows": 512,
+      "relative_rmse": 0.04072690256146929
+    },
+    "plain_e2m1_multistart_f32_scale": {
+      "denominator": 7353310151.429567,
+      "key_references": 462641,
+      "numerator": 12277526.994351948,
+      "pairs": 29609024,
+      "query_rows": 512,
+      "relative_rmse": 0.040861471910667496
+    }
+  },
+  "checks": {
+    "all_layers_contributed": true,
+    "calibration_heldout_disjoint": true,
+    "capture_width_512": true,
+    "finite_data": true,
+    "real_capture": true,
+    "source_hashes_and_shapes": true
+  },
+  "formula": "PASS iff every check is true and the minimum preregistered held-out query-weighted relative RMSE is <= 0.05",
+  "gate": "W9",
+  "interpretation": "PASS only authorizes an exact packed-format plus fixed 100-case NLL/top-1 gate; NO_RESULT stops this W9 branch without claiming every possible FP4 scale optimizer fails.",
+  "maximum_allowed_error": 0.05,
+  "query_weighted_error": 0.04072690256146929,
+  "schema": "glm52-w9-fp4-falsifier-summary-v1",
+  "verdict": "PASS",
+  "winner": "hadamard_e2m1_multistart_f32_scale_channel_correction"
+}
