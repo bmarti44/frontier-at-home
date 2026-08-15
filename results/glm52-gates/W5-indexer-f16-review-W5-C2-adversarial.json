@@ -1,0 +1,40 @@
+{
+  "candidate_hash": "4a79e9cc5a20f0ecae7ae59dd0ed51786592fca4",
+  "review_round": "W5-C2",
+  "reviewer": "adversarial_reviewer",
+  "score_0_to_100": 62,
+  "critical": [],
+  "high": [
+    {
+      "id": "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE",
+      "evidence": "The standalone allocation and direct CUDA fixtures still do not traverse glm_graph_alloc_slice or graph forward routing.",
+      "affected_gate": "W5 production allocation and graph-bound store/score routing",
+      "reproduction_instructions": "Mutate the graph allocation width or one graph forward format argument; submitted tests remain green.",
+      "proposed_acceptance_test": "Use one shared production graph allocation/store/score path from both serving and tests, with mutations rejected."
+    },
+    {
+      "id": "ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE",
+      "evidence": "The memory guard still reparses the environment after engine/graph mode binding and can price F16 before allocating bound F32 storage.",
+      "affected_gate": "W5 memory admission and UMA safety",
+      "reproduction_instructions": "Bind OFF, change the environment ON, and compare guard estimate with the later bound F32 allocation.",
+      "proposed_acceptance_test": "Pass immutable mode through every estimator and guard; OFF-to-ON and ON-to-OFF mutations must leave accounting unchanged."
+    }
+  ],
+  "medium": [
+    {
+      "id": "ADV-W5-C1-M1-SESSION-F32-INTEROPERABILITY-UNTESTED",
+      "evidence": "The conversion helper is tested, but the full/layer production call sites remain independently mutable.",
+      "affected_gate": "W5 external-F32 session compatibility",
+      "reproduction_instructions": "Change one production serializer mode argument; helper tests remain green.",
+      "proposed_acceptance_test": "Unify full/layer indexer serialization through one graph-bound helper and test non-F16-representable rounding."
+    }
+  ],
+  "low": [],
+  "prior_issue_status": [
+    {"id": "ADV-W5-C1-H1-QUALITY-MODE-SCORE-DIVERGENCE", "status": "FIXED"},
+    {"id": "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE", "status": "OPEN"},
+    {"id": "W5-C1-M-GRAPH-MODE-BINDING", "status": "OPEN"},
+    {"id": "ADV-W5-C1-M1-SESSION-F32-INTEROPERABILITY-UNTESTED", "status": "OPEN"}
+  ],
+  "verdict": "REJECT_CANDIDATE_2_CONVERGENCE_NOT_CLEARED"
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "gate": "W5-indexer-f16",
+  "candidate": 2,
+  "status": "FAIL",
+  "source_commit": "4a79e9cc5a20f0ecae7ae59dd0ed51786592fca4",
+  "binary_sha256": "d990162d26b5a700e35ef9ed3b5e4fe584db629173526ef2b5661e5bf2d9ba45",
+  "review_round": "W5-C2",
+  "model_started": false,
+  "fixed_findings": [
+    "W5-C1-H1-QUALITY-MODE-BREAKS-EXACTNESS",
+    "ADV-W5-C1-H1-QUALITY-MODE-SCORE-DIVERGENCE"
+  ],
+  "open_blocking_findings": [
+    "W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS",
+    "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE",
+    "ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE"
+  ],
+  "candidate_3_scope": [
+    "bind every compact-cache estimate and memory guard to immutable engine/graph mode",
+    "unify production graph allocation/store/score routing with the exercised path",
+    "unify full/layer indexer session conversion behind one graph-bound helper",
+    "test non-F16-representable session values against an explicit rounding oracle"
+  ],
+  "convergence": {
+    "candidate_count": 2,
+    "consecutive_nonshrinking_candidates": 1,
+    "new_finding_class": false,
+    "escalation_triggered": false,
+    "candidate_3_permitted": true
+  }
+}

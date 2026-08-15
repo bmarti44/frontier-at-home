@@ -1,0 +1,35 @@
+{
+  "candidate_hash": "4a79e9cc5a20f0ecae7ae59dd0ed51786592fca4",
+  "review_round": "W5-C2",
+  "reviewer": "gap_reviewer",
+  "score_0_to_100": 82,
+  "critical": [],
+  "high": [
+    {
+      "id": "W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS",
+      "evidence": "Tests exercise direct APIs and helpers but not graph allocation/routing or full/layer serializer entry paths.",
+      "affected_gate": "W5 production-path evidence and mutation rejection",
+      "reproduction_instructions": "Mutate a graph allocation, graph format route, or serializer route while helpers remain unchanged.",
+      "proposed_acceptance_test": "Share the actual graph allocation/store/score/session path between production and tests and require relevant mutations to fail."
+    }
+  ],
+  "medium": [
+    {
+      "id": "W5-C1-M1-REPRESENTATION-NOT-BOUND-TO-GRAPH",
+      "evidence": "Runtime interpretation is bound, but the memory guard still reparses the environment.",
+      "affected_gate": "W5 admission consistency and UMA safety",
+      "reproduction_instructions": "Bind OFF, mutate the environment ON, and compare guard pricing with graph allocation.",
+      "proposed_acceptance_test": "Parameterize graph estimates and guards with immutable engine/graph mode."
+    }
+  ],
+  "low": [],
+  "prior_issue_status": [
+    {"id": "W5-C1-H1-QUALITY-MODE-BREAKS-EXACTNESS", "status": "FIXED"},
+    {"id": "ADV-W5-C1-H1-QUALITY-MODE-SCORE-DIVERGENCE", "status": "FIXED"},
+    {"id": "W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS", "status": "OPEN"},
+    {"id": "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE", "status": "OPEN"},
+    {"id": "W5-C1-M1-REPRESENTATION-NOT-BOUND-TO-GRAPH", "status": "OPEN"},
+    {"id": "ADV-W5-C1-M1-SESSION-F32-INTEROPERABILITY-UNTESTED", "status": "OPEN"}
+  ],
+  "verdict": "REJECT_BEFORE_MODEL_LAUNCH_CONVERGING"
+}
