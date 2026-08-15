@@ -1,0 +1,29 @@
+{
+  "schema": "glm52-w6-indexer-tile-reuse-freeze-v2",
+  "gate": "W6-indexer-tile-reuse",
+  "candidate": 2,
+  "verdict": "FROZEN",
+  "freeze_time_unix": 1786795341,
+  "source_commit": "90471483ee587646d0a1e7a1c35c5f71e665b4ff",
+  "baseline_source_commit": "8cde153a43b170ad6c66644dba4392c343cf39b1",
+  "binary_sha256": "703237062fafa70e240ce6d525cd2fc9cb93fb774c78842398371285ea722d1a",
+  "binary_bytes": 4151368,
+  "binary_derivation": "Two independent make-clean -j2 builds canonicalized by scripts/82_canonicalize_glm_binary.sh; canonical binaries were byte-identical.",
+  "artifact_sha256": {
+    "ds4.c": "a6855b9ab10e8868295b16705864cf841b975006c4930c9abca75bfe11d62dc9",
+    "ds4_cuda.cu": "3efa73518b996cb8894dcb1b8a1c87dd39932b5549950c9f82a6216c5382ef78",
+    "tests/cuda_indexer_tile_reuse_w6.cu": "942086fc35e148a7d05350d65b6f33fa619eefb9fc0870394a7d1e502a9b6109",
+    "Makefile": "4baf208603f0b6f3ef4a5a7926d9ba9704963b5cd5d885a2c7e5c6fce819434e",
+    "scripts/106_score_w6_indexer_tile_reuse.py": "ec4c51e8b998fd74d723e2c273a5b8a4f576ec42550ca88d12e13a468aa7fbb6",
+    "scripts/107_run_w6_indexer_tile_reuse.py": "0d74b6122c2b9abed1bcea6efed1936fd75493a554af9b596c47c0f25c50c227",
+    "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+  },
+  "mutation_proof": {
+    "mutation": "return success without launching widths 2 or 4",
+    "exit_code": 1,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "ee4d6b32329a175e7ba16efc46b4191cfd33e601ae542da99b46a2ff5d774846",
+    "rejected_reason": "incomplete score output or damaged canary on the first width-2 case"
+  },
+  "model_started": false
+}
