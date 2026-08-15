@@ -1,0 +1,35 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-candidate-plan-v1",
+  "candidate": 4,
+  "parent_review": "results/glm52-gates/W9-e2m1-fidelity-seam-review-r312.json",
+  "scope": "Close only the six verified round-312 critical/high findings and the focused unset-versus-zero medium test; do not run the model before delta review clears.",
+  "fixed_acceptance": {
+    "artifact_authority": "A frozen runner must create one exclusive file per raw artifact and a manifest containing its relative path, byte count, and SHA-256. The scorer reads each file once through O_NOFOLLOW, verifies its identity and digest, and rejects missing, duplicate, replaced, mutated, unenumerated, or caller-embedded evidence.",
+    "process_identity": "Each arm must contain exactly one executed-process record with PID, start ticks, resolved binary path, SHA-256, device and inode. Its digest must equal the frozen campaign binary digest and its path identity must match the launched frozen binary.",
+    "safety": "Every nonempty sample line must match the fixed grammar; every sample reports zero cgroup swap and at least 10 GiB available. There is exactly one containment record and exactly one SAFE_RUN terminal record, which is successful. Contradictory, malformed, duplicate, or failed records reject.",
+    "path_coverage": "The scorer hard-codes the ordered path tuple [normal, fused]. The engine reports applied rows and total store opportunities separately for both paths. Candidate arms require applied == total > 0 on both paths; baseline arms require applied == 0 and total > 0 on both paths. Repeated arms require identical totals.",
+    "selector_equivalence": "Compiled tests resolve unset and explicit zero through the production selector and execute both stores; all output bytes match and applied counters remain zero.",
+    "quality": "The existing fixed 100-case paired limits remain unchanged: token-weighted delta NLL and one-sided 95% upper bound <=0.01; top-1 loss and upper bound <=0.5 percentage points."
+  },
+  "red_requirements": [
+    "Preserve passing pre-fix mutations for self-authored logs, wrong executed binary, malformed/contradictory safety records, caller-selected paths, and one-row partial coverage.",
+    "Commit engine tests that fail because total opportunity counters and selector-derived unset/zero execution do not yet exist before implementing them."
+  ],
+  "frozen_scope": {
+    "unchanged": [
+      "E2M1 codebook and tie semantics",
+      "F32 physical latent representation",
+      "F32 RoPE representation",
+      "100-case fixture and quality formulas",
+      "candidate-3 clean-build toolchain"
+    ],
+    "allowed": [
+      "candidate-specific runner and scorer evidence ingestion",
+      "wrapper evidence parsing without changing wrapper behavior",
+      "executed-process and file hash binding",
+      "normal/fused applied and opportunity counters",
+      "focused compiled unset/zero selector test"
+    ]
+  },
+  "model_run_authorized": false
+}
