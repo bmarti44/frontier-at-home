@@ -380,6 +380,7 @@ allowlist = {
     "campaign_preflight_sha256",
     "observed_stderr_sha256",
     "retained_manifest_sha256",
+    "runtime_attempt_record_sha256",
 }
 # Keys whose value is a MAP of repo-relative path -> sha256 (audit bindings).
 # Every string leaf under them is an allowed digest.

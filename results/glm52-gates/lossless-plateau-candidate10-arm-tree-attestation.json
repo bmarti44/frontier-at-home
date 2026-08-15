@@ -1,0 +1,30 @@
+{
+  "schema": "glm52-lossless-plateau-arm-tree-attestation-v1",
+  "gate": "lossless-plateau-matched-32k",
+  "candidate_number": 10,
+  "candidate_hash": "0288c547708519f07409799bb5628bfc302165c2",
+  "freeze_commit": "df84ecaab0dd6d54f87a6ba2d0e4297b4a83cba7",
+  "campaign_tag": "p10-r6379414",
+  "campaign_root": "/home/bmarti44/.local/state/glm52-decisive-p10-r6379414",
+  "aggregation": {
+    "scope": "Every regular file directly inside each completed arm directory; subdirectories and non-regular files are excluded.",
+    "path_binding": "The first-stage sha256sum records include each absolute file path beneath campaign_root. Consequently the aggregate binds both file bytes and the absolute campaign-root spelling.",
+    "ordering": "NUL-delimited absolute paths sorted bytewise with sort -z under LC_ALL=C.",
+    "formula": "LC_ALL=C find ARM_DIRECTORY -maxdepth 1 -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum",
+    "digest_field": "The first whitespace-delimited field emitted by the final sha256sum.",
+    "recomputed_utc": "2026-08-15T18:49:40Z"
+  },
+  "completed_arm_tree_sha256": {
+    "block0-seq0-armA": "38e1310f7f666c6860131e4d2a69cac3911302f3b37e86bb6fd7732f0d94add1",
+    "block0-seq1-armB": "4251f9089544a98152d3d9b65d3792c89e4d96e453861f0d53dd675d38e62e36",
+    "block0-seq2-armB": "43cbc09e9138777ad97a4f080ee2b83e324a56d4c0487277393c1d1e8878d0b1",
+    "block0-seq3-armA": "5db571fdd8c026b4c2dcd08a994479d31add57bf89b94cd2e69a468e3ca98745"
+  },
+  "cross_check": {
+    "matches_runtime_attempt_record": true,
+    "runtime_attempt_record": "results/glm52-gates/lossless-plateau-candidate10-runtime-attempt1.json",
+    "runtime_attempt_record_sha256": "e9365e1109859ff1bc3b5a2ab01c438889151a9973389798557ad99faf67471a"
+  },
+  "review_finding": "PLATEAU-321-L1-ARM-TREE-AGGREGATION-UNDERSPECIFIED",
+  "disposition": "FIXED_BY_EXPLICIT_FORMULA_AND_INDEPENDENT_RECOMPUTATION"
+}
