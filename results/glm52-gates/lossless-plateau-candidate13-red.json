@@ -1,0 +1,72 @@
+{
+  "schema": "glm52-lossless-plateau-red-v1",
+  "gate": "lossless-plateau-matched-32k",
+  "candidate_number_for_gate": 13,
+  "findings": [
+    "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS",
+    "PLATEAU-323-H1-CALLER-SEED-NOT-DRAND-BOUND"
+  ],
+  "unchanged_base_commit": "0408216e9108a88380c7f7f2b05c4175549d09f5",
+  "test_commit": "658a309dc8b82f01ac8acda2d8fd3c85af0a86e7",
+  "test_tree": "3fa1bf2f8e393a361175f919389f914b23057d57",
+  "scope": "RED-only production-path contract: remove caller MATCHED_SEED authority; require one candidate/freeze-bound committed receipt; reuse the existing BLS verifier; enforce post-freeze publication and the fixed domain-separated derivation; retain the receipt; and make the production collector independently verify the receipt, derivation, and all 20 arm seeds.",
+  "historical_public_receipt": {
+    "path": "results/glm52-gates/lossless-plateau-candidate10-randomness.json",
+    "sha256": "8ed3c47086043a188513d83176aff87ba8e57559dee91598128b0100465e7189",
+    "purpose": "Real previously verified BLS material for the positive collector contract; no new randomness was obtained."
+  },
+  "artifact_sha256": {
+    "results/glm52-goal/harness/decisive_matched.sh": "884d4f6cfd75620e8394b372210318c219150503ec5f38f8ca2642826105c40d",
+    "scripts/56_collect_matched_evidence.py": "1f09d35a3544dc1105b6f037d7996206fd04ae604576fc7ee6c3568db00ceaa0",
+    "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131",
+    "scripts/tests/test_glm_lossless_plateau.py": "19f2503a74bce4b4521a74c1f6c60c14244851d556ecff7f9d26a09f3c7c9df9",
+    "scripts/tests/test_matched_evidence.py": "15ebf5682f291e654d4892a5cb467c9212b7eff6d58befc9cffc1667b3e7d250",
+    "results/glm52-gates/lossless-plateau-launch-review-r323.json": "4c2ef139c6fd5ad78e87799614628a3f2aa166857ac89601421c0aef4dd9a087"
+  },
+  "acceptance_contract": {
+    "candidate_source": "candidate_hash is the candidate preaudit's candidate_commit",
+    "freeze_source": "freeze_commit is the commit that first adds that candidate preaudit receipt",
+    "domain": "GLM52-LOSSLESS-PLATEAU-32K-V1\\0",
+    "seed_sha256_formula": "sha256(domain || candidate_hash || NUL || randomness)",
+    "matched_seed_formula": "integer value of the first 15 hexadecimal seed_sha256 digits",
+    "required_mutation_rejections": [
+      "absent receipt",
+      "stale publication relative to freeze",
+      "wrong candidate",
+      "wrong freeze",
+      "bad BLS signature",
+      "changed randomness",
+      "altered derivation domain or value",
+      "uniformly wrong arm seed"
+    ]
+  },
+  "red_execution": {
+    "focused_command": "python3 -m unittest -v scripts.tests.test_glm_lossless_plateau.GlmLosslessPlateauTests.test_campaign_derives_seed_only_from_retained_candidate_receipt scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_independently_verifies_committed_randomness_and_arm_seed scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_rejects_randomness_and_seed_mutations",
+    "focused_exit_code": 1,
+    "focused_artifacts": {
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "60e76a3257e7e4ebd6b29914f4747dfeaa1ea0e46cfb14dff436305147fd6f65"
+    },
+    "full_command": "python3 -m unittest scripts.tests.test_glm_lossless_plateau scripts.tests.test_matched_evidence",
+    "full_exit_code": 1,
+    "full_tests_run": 26,
+    "full_failures": 1,
+    "full_errors": 9,
+    "preexisting_tests_passed": 16,
+    "full_artifacts": {
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "8bba912b690b70c170cf421ba01767b6f85804b67569e29c87a3a486412db3b9"
+    },
+    "observed_runner_failure": "The production runner still requires arbitrary caller MATCHED_SEED and has no retained receipt/verifier/derivation binding.",
+    "observed_collector_failure": "collect_records rejects the new receipt-binding arguments because it currently validates only that all arm seeds are equal."
+  },
+  "safety": {
+    "model_started": false,
+    "gpu_used": false,
+    "randomness_obtained": false,
+    "systemd_touched": false,
+    "shared_worktree_touched": false,
+    "production_implementation_changed": false
+  },
+  "verdict": "RED_CONFIRMED"
+}
