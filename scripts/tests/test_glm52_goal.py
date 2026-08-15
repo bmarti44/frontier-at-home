@@ -3330,5 +3330,94 @@ class ControllerTests(unittest.TestCase):
             self.assertEqual((state_dir / "runner.marker").read_text(), "ran\n")
 
 
+class W9E2M1FidelityRawScorerTests(unittest.TestCase):
+    def setUp(self):
+        self.goal = load_goal_module()
+
+    def campaign(self):
+        seed = "00" * 32
+        arms = "ABBA"
+        attempts = []
+        for sequence, arm in enumerate(arms):
+            candidate = arm == "A"
+            cases = []
+            for index in range(100):
+                cases.append({
+                    "case_id": f"case-{index:03d}",
+                    "tokens": 10,
+                    "nll_sum": 4.51 if candidate else 4.5,
+                    "top1_correct": 8,
+                })
+            command_log = (
+                "ds4: GLM compact cache E2M1 fidelity seam="
+                f"{'on' if candidate else 'off'} physical=f32\n"
+                "ds4: GLM compact cache E2M1 fidelity attestation "
+                f"mode={'on' if candidate else 'off'} synchronized=1 "
+                f"normal_rows={100 if candidate else 0} "
+                f"fused_rows={50 if candidate else 0}\n"
+            )
+            attempts.append({
+                "sequence": sequence,
+                "arm": arm,
+                "process_identity": f"boot:pid:{sequence}",
+                "binary_sha256": "2" * 64,
+                "environment_sha256": ("3" if candidate else "4") * 64,
+                "fixture_sha256": "5" * 64,
+                "command_log": command_log,
+                "safe_run_completed": True,
+                "minimum_available_memory_gib": 80.0,
+                "swap_bytes": 0,
+                "oom": False,
+                "xid": False,
+                "cases": cases,
+            })
+        return {
+            "record_type": "w9_e2m1_fidelity_raw",
+            "engine_candidate_hash": "1" * 40,
+            "seed_sha256": seed,
+            "binary_sha256": "2" * 64,
+            "baseline_environment_sha256": "4" * 64,
+            "candidate_environment_sha256": "3" * 64,
+            "fixture_sha256": "5" * 64,
+            "candidate_arm": "A",
+            "candidate_required_paths": ["normal", "fused"],
+            "attempts": attempts,
+        }
+
+    def test_valid_e2m1_campaign_passes_and_reports_fixed_quality_formula(self):
+        result = self.goal._score_w9_e2m1_fidelity_raw([self.campaign()])
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(result["paired_case_count"], 100)
+        self.assertTrue(result["checks"]["candidate_device_effect_attested"])
+        self.assertGreater(result["metrics"]["delta_nll"], 0.0)
+
+    def test_inactive_or_malformed_candidate_fails_closed(self):
+        for mutate in ("off", "zero", "identical", "duplicate", "missing_path"):
+            campaign = self.campaign()
+            candidate_attempts = [
+                row for row in campaign["attempts"] if row["arm"] == "A"
+            ]
+            if mutate == "off":
+                candidate_attempts[0]["command_log"] = candidate_attempts[0][
+                    "command_log"
+                ].replace("seam=on", "seam=off").replace("mode=on", "mode=off")
+            elif mutate == "zero":
+                candidate_attempts[0]["command_log"] = candidate_attempts[0][
+                    "command_log"
+                ].replace("normal_rows=100", "normal_rows=0")
+            elif mutate == "identical":
+                for attempt in candidate_attempts:
+                    for case in attempt["cases"]:
+                        case["nll_sum"] = 4.5
+            elif mutate == "duplicate":
+                candidate_attempts[0]["command_log"] += candidate_attempts[0][
+                    "command_log"
+                ].splitlines()[-1] + "\n"
+            else:
+                campaign["candidate_required_paths"] = ["normal", "unknown"]
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                self.goal._score_w9_e2m1_fidelity_raw([campaign])
+
+
 if __name__ == "__main__":
     unittest.main()
