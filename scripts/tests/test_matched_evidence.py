@@ -445,8 +445,17 @@ class MatchedEvidenceTests(unittest.TestCase):
         retained = campaign / "retained"
         retained.mkdir(exist_ok=True)
         path = retained / "randomness-receipt.json"
-        path.write_text(
-            json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n",
+        raw = (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode(
+            "ascii"
+        )
+        path.write_bytes(raw)
+        (campaign / "retained-manifest.json").write_text(
+            json.dumps(
+                {"randomness_receipt_sha256": hashlib.sha256(raw).hexdigest()},
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n",
             encoding="ascii",
         )
         return path
@@ -548,6 +557,33 @@ class MatchedEvidenceTests(unittest.TestCase):
                 matched_seed,
                 "signature|BLS|randomness",
             ),
+            "bad_previous_signature": (
+                {
+                    **source,
+                    "receipt": {
+                        **source["receipt"],
+                        "previous_signature": "0"
+                        + source["receipt"]["previous_signature"][1:],
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "signature|BLS|randomness",
+            ),
+            "changed_round": (
+                {
+                    **source,
+                    "receipt": {
+                        **source["receipt"],
+                        "round": source["receipt"]["round"] + 1,
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "round|signature|BLS|publication",
+            ),
             "changed_randomness": (
                 {
                     **source,
@@ -560,6 +596,19 @@ class MatchedEvidenceTests(unittest.TestCase):
                 freeze_commit,
                 matched_seed,
                 "randomness|signature",
+            ),
+            "self_authored_publication_time": (
+                {
+                    **source,
+                    "receipt": {
+                        **source["receipt"],
+                        "published_at_utc": "2099-01-01T00:00:00+00:00",
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "publication|published",
             ),
             "altered_derivation": (
                 {
@@ -575,6 +624,52 @@ class MatchedEvidenceTests(unittest.TestCase):
                 freeze_commit,
                 matched_seed,
                 "derivation|seed",
+            ),
+            "altered_seed_digest_only": (
+                {
+                    **source,
+                    "seed_derivation": {
+                        **source["seed_derivation"],
+                        "seed_sha256": "0" * 64,
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "derivation|seed",
+            ),
+            "altered_matched_seed_only": (
+                {
+                    **source,
+                    "seed_derivation": {
+                        **source["seed_derivation"],
+                        "matched_seed": 0,
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "derived seed|seed mismatch|derivation",
+            ),
+            "changed_relay_list": (
+                {**source, "relay_agreement": ["api.drand.sh"]},
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "relay|schema",
+            ),
+            "forged_verification_result": (
+                {
+                    **source,
+                    "verification": {
+                        **source["verification"],
+                        "result": "NOT_VERIFIED",
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "verification|BLS",
             ),
             "uniformly_wrong_arm_seed": (
                 source,
@@ -604,6 +699,54 @@ class MatchedEvidenceTests(unittest.TestCase):
                         candidate_hash=expected_candidate,
                         freeze_commit=expected_freeze,
                     )
+
+    def test_collector_rejects_randomness_receipt_digest_and_path_replacement(self):
+        source = json.loads(HISTORICAL_RANDOMNESS.read_text(encoding="ascii"))
+        candidate_hash = source["candidate_hash"]
+        freeze_commit = source["freeze_commit"]
+        matched_seed = source["seed_derivation"]["matched_seed"]
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp), seed=matched_seed
+            )
+            receipt = self.write_randomness(campaign, source)
+            manifest = campaign / "retained-manifest.json"
+            manifest.write_text(
+                json.dumps({"randomness_receipt_sha256": "0" * 64}) + "\n",
+                encoding="ascii",
+            )
+            with self.assertRaisesRegex(ValueError, "receipt|digest|manifest"):
+                self.collect_with_randomness(
+                    campaign,
+                    fixture,
+                    profile,
+                    serving,
+                    glm_profile,
+                    receipt,
+                    candidate_hash=candidate_hash,
+                    freeze_commit=freeze_commit,
+                )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp), seed=matched_seed
+            )
+            receipt = self.write_randomness(campaign, source)
+            replacement = campaign / "replacement.json"
+            replacement.write_bytes(receipt.read_bytes())
+            receipt.unlink()
+            receipt.symlink_to(replacement)
+            with self.assertRaisesRegex((OSError, ValueError), "receipt|symlink|regular"):
+                self.collect_with_randomness(
+                    campaign,
+                    fixture,
+                    profile,
+                    serving,
+                    glm_profile,
+                    receipt,
+                    candidate_hash=candidate_hash,
+                    freeze_commit=freeze_commit,
+                )
 
     @staticmethod
     def set_dsv4_safety(profile: Path, safety: dict[str, object]) -> None:
