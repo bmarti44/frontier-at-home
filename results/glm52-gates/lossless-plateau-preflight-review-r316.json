@@ -1,0 +1,69 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "f1f2d4f3394f992efffac7b41552934ab3e2f756",
+  "review_round": 316,
+  "candidate_number_for_gate": 3,
+  "model_run_authorized": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 55,
+      "critical": [],
+      "high": [
+        "PLATEAU-316-H1-DSV4-PROMPT-CACHE-SELF-REJECTION",
+        "PLATEAU-316-H2-DSV4-CGROUP-ENVELOPE-UNQUALIFIED",
+        "PLATEAU-316-H3-DSV4-MULTISHARD-IDENTITY-TOCTOU"
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "REJECT_MODEL_RUN_PENDING_BOUNDED_CANDIDATE_4"
+    },
+    "Singer": {
+      "score_0_to_100": 52,
+      "critical": [],
+      "high": [
+        "ADV-PLATEAU-R316-H1-COLLAPSED-PROMPT-COUNT-EVIDENCE",
+        "ADV-PLATEAU-R316-H2-MUTABLE-PREFLIGHT-TOCTOU",
+        "ADV-PLATEAU-R316-H3-NONCANONICAL-SAFETY-ATTESTATION"
+      ],
+      "medium": [
+        "ADV-PLATEAU-R316-M1-LITERAL-DEEPSEEK-SUPERVISION-CLAIMS"
+      ],
+      "low": [],
+      "verdict": "REJECT_PRE_RUN"
+    }
+  },
+  "root_reproduction": {
+    "prompt_cache_self_rejection": "Verified in the exact frozen DeepSeek source: cache_prompt defaults true; OAI usage.prompt_tokens is total n_prompt_tokens while print_timing prompt_n is n_prompt_tokens_processed. Existing sequential production evidence contains 52 total versus 51 evaluated tokens, so candidate 3 fails its own equality check.",
+    "collapsed_prompt_authority": "Verified the collector never reparses server.log and accepts coherent mutations of prompt_tokens and production_prompt_tokens. The authoritative numerator must come from an ordered replay of the retained raw production log.",
+    "cgroup_envelope": "Verified current default arithmetic yields MemoryHigh below the 90.1823 GiB shard total and only about 3 GiB above it at MemoryMax, before CUDA, KV, graph, and engine overhead. Existing 0731 serving evidence used roughly 104 GiB and cannot satisfy an 18 GiB floor on this host.",
+    "multishard_identity": "Verified only shard one contributes per-arm device/inode/size; shards two and three are prehashed but not bound through execution.",
+    "mutable_execution_paths": "Verified the preflight hashes repository/runtime paths and later executes the same owner-mutable paths. Restoration before collection defeats the second pathname hash.",
+    "safety_substring": "Verified collector safety acceptance is an unanchored substring test and does not parse killed state or cgroup/swap deltas.",
+    "literal_supervision": "Verified the DeepSeek arm writes healthy, memwatch_alive, server_alive, and watchdog_armed as unconditional true values.",
+    "campaign_exclusivity": "Root audit additionally verified the one-time 300 GB model verification occurs before any inference-lock acquisition; exclusivity currently covers each arm only, not the full evidence window."
+  },
+  "verified_fixed_round_315_classes": [
+    "PLATEAU-315-H1-PREFILL-TIME-RATIO-DIRECTION-MISMATCH",
+    "PLATEAU-315-H2-IDLE-BOUNDARY-INCOMPLETE",
+    "PLATEAU-315-M1-CAMPAIGN-CONTEXT-CAP-AMBIGUOUS",
+    "ADV-PLATEAU-R315-M1-INCOMPLETE-IDLE-STATE-CLOSURE",
+    "ADV-PLATEAU-R315-L1-DUAL-CONTEXT-CAP-SEMANTICS"
+  ],
+  "required_candidate_4_scope": [
+    "Disable prompt-cache reuse for both arms, retain each raw server log, and have the collector independently parse exactly four ordered request-local production prompt-count events; use actual evaluated tokens and reject extra, missing, reordered, or coherently mutated result fields.",
+    "Acquire and bind the global inference lock before model verification and retain it through terminal cleanup.",
+    "Stage exact immutable retained campaign/profile/arm/benchmark/collector bytes before preflight; execute only retained bytes and bind their digests as an exact attempt closure.",
+    "Bind device/inode/size for every DeepSeek shard before launch, after readiness, after requests, and during collection.",
+    "Replace substring safety acceptance with exactly one anchored terminal record and parsed zero timeout, kill, swap, cgroup max/OOM event deltas; remove literal DeepSeek supervision claims.",
+    "Use existing owner-accepted DeepSeek memory evidence to derive a dedicated contained envelope, or fail closed before launch if the required peak plus physical floor cannot fit. Do not weaken the GLM 40 GiB floor."
+  ],
+  "convergence": {
+    "candidate_2_blocking_classes": 6,
+    "candidate_3_blocking_classes": 4,
+    "blocking_set_strictly_shrank": true,
+    "consecutive_non_shrinking_candidates": 0,
+    "candidate_4_authorized": true,
+    "reason": "Formula, context, and idle-state classes closed; remaining findings collapse into prompt authority, retained execution/model provenance, safety attestation, and feasible containment. No escalation trigger fired."
+  },
+  "verdict": "REJECT_PRE_RUN_PENDING_BOUNDED_CANDIDATE_4"
+}
