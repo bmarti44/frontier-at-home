@@ -1,0 +1,55 @@
+{
+  "schema": "glm52-lossless-plateau-candidate12-red-v1",
+  "gate": "lossless-plateau-matched-32k",
+  "candidate_number_for_gate": 12,
+  "captured_at": "2026-08-15T14:51:01-04:00",
+  "unchanged_parent": "6f7c86066372557b7719b2b8301d223097099bf1",
+  "test_commit": "f3dfefed5e12ae6487874c8b7253be91657a1e1e",
+  "test_tree": "05b12aa8f355a85d4644aa244072f8f5f47e5e00",
+  "scope": "Require the production matched-evidence collector to accept only the owner-approved DSV4 safety envelope (minimum start 110 GiB, memory high 100 GiB, memory max 102 GiB), reject the stale 105/107 envelope, and reject malformed value types or shapes. No scoring formula, model, fixture, runtime, engine, or campaign change.",
+  "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_accepts_exact_owner_dsv4_safety_envelope",
+    "scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_rejects_stale_or_malformed_dsv4_safety_envelope"
+  ],
+  "returncode": 1,
+  "tests_run": 2,
+  "failures": 1,
+  "errors": 1,
+  "status": "RED_CONFIRMED",
+  "observed": {
+    "exact_100_102": "ERROR: unchanged collector raises approved DeepSeek profile is invalid",
+    "stale_105_107": "FAIL: unchanged collector accepts the stale envelope instead of raising ValueError",
+    "other_malformed_variants": "REJECTED on unchanged collector; retained to prevent a type-weak literal-only fix"
+  },
+  "malformed_variants": [
+    "minimum_start_gib as float",
+    "memory_high_gib as float",
+    "memory_max_gib as float",
+    "memory_max_gib as string",
+    "memory_high_gib not below memory_max_gib",
+    "minimum_start_gib 109",
+    "unknown extra key",
+    "missing memory_high_gib"
+  ],
+  "artifact_sha256": {
+    "scripts/tests/test_matched_evidence.py": "1226b98ee6e3ebe2c8152fb0a125f48b097e8571fe8c47c200c408dd12fec651",
+    "scripts/56_collect_matched_evidence.py": "4dff36ec7001e12a7fe1bb13305bc38f6d60cdb1af1dbed241460200328e022d",
+    "configs/dsv4-matched-32k-profile.json": "5cc0b45988d53f6e3d646d432fc1ad6c575a5dd33ce2e912324a52cea44519f1",
+    "configs/glm52-lossless-plateau-profile.json": "024da74c36371983d08c306b78019425e1dbb362db9595912ef57976580a2e54"
+  },
+  "expected_minimal_followup": [
+    "Change only the collector's DSV4 safety validation to the exact typed 110/100/102 schema.",
+    "Change the existing matched-evidence test fixture from stale 105/107 to 100/102 while retaining the new mutations.",
+    "Refresh the collector digest in both matched profiles; do not change their safety values or any metric formula.",
+    "Create and bind a candidate-12 preaudit receipt in decisive_matched.sh and its direct receipt-binding tests.",
+    "Refresh only downstream hashes that directly bind the collector, profiles, receipt, or changed tests."
+  ],
+  "engine_started": false,
+  "gpu_used": false,
+  "systemd_touched": false,
+  "frozen_runtime_artifact_modified": false,
+  "verdict": "RED_CONFIRMED_IMPLEMENTATION_NOT_PRESENT"
+}
