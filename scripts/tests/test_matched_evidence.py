@@ -31,7 +31,7 @@ class MatchedEvidenceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.collector = load_module()
 
-    def make_campaign(self, root: Path) -> tuple[Path, Path, Path]:
+    def make_campaign(self, root: Path):
         campaign = root / "campaign"
         campaign.mkdir()
         fixture = root / "fixture.txt"
@@ -57,6 +57,31 @@ class MatchedEvidenceTests(unittest.TestCase):
                     "serving_weights_release": {
                         "repo": "unsloth/test-GGUF",
                         "revision": "f" * 40,
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        glm_profile = root / "glm52-profile.json"
+        glm_profile.write_text(
+            json.dumps(
+                {
+                    "schema_version": 3,
+                    "profile": "glm52",
+                    "binary_sha256": "b" * 64,
+                    "model_sha256": "a" * 64,
+                    "context_cap": 1_048_576,
+                    "runtime": {
+                        "engine_environment": {
+                            "DS4_CUDA_EXPERT_CACHE_GB": "0",
+                            "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+                            "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+                            "DS4_CUDA_FETCH_THREADS": "6",
+                            "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
+                            "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+                            "DS4_CUDA_STABLE_MODEL_REMAP": "1",
+                            "DS4_TOKEN_TIMING_LOG": "1",
+                        }
                     },
                 }
             ),
@@ -97,6 +122,26 @@ class MatchedEvidenceTests(unittest.TestCase):
                             ),
                         }
                     )
+                long_reps = []
+                for rep_index in range(2):
+                    long_reps.append(
+                        {
+                            "valid": True,
+                            "ttft_s": (20.0 if glm else 10.0) + rep_index,
+                            "decode_tok_s": decode,
+                            "prefill_tok_s": 1_440.0 if glm else 2_880.0,
+                            "completion_tokens": 128,
+                            "server_completion_tokens": 128,
+                            "prompt_tokens": 28_800,
+                            "timing_source": "server_raw_token_log" if glm else "sse_content_events",
+                            "token_timestamps_ns": [
+                                int((3000 + rep_index * 1000 + index / decode) * 1_000_000_000)
+                                for index in range(128)
+                            ],
+                            "request_sha256": f"long{rep_index}".ljust(64, "0"),
+                            "prompt_sha256": f"prompt{rep_index}".ljust(64, "0"),
+                        }
+                    )
                 result = {
                     "suite_valid": True,
                     "metadata": {
@@ -105,7 +150,10 @@ class MatchedEvidenceTests(unittest.TestCase):
                         "reps": 2,
                         "fixture_path": str(fixture),
                     },
-                    "cells": [{"ctx_tokens": 0, "valid": True, "reps": reps}],
+                    "cells": [
+                        {"ctx_tokens": 0, "valid": True, "reps": reps},
+                        {"ctx_tokens": 28672, "valid": True, "reps": long_reps},
+                    ],
                 }
                 (directory / "result.json").write_text(
                     json.dumps(result), encoding="utf-8"
@@ -113,8 +161,9 @@ class MatchedEvidenceTests(unittest.TestCase):
                 (directory / "kernel.log").write_text("", encoding="utf-8")
                 if glm:
                     (directory / "runtime.config").write_text(
-                        "expert_cache_gib=32\niq2_reference=0\n"
-                        "no_expert_tiles=1\n",
+                        "context_cap=32768\nexpert_cache_gib=0\n"
+                        "iq2_reference=1\nno_expert_tiles=0\n"
+                        "stable_model_remap=1\nmodel_sha256=" + "a" * 64 + "\n",
                         encoding="utf-8",
                     )
                     (directory / "process.identity").write_text(
@@ -153,13 +202,13 @@ class MatchedEvidenceTests(unittest.TestCase):
                         "ts=2026-07-27T00:00:00Z mem_available_gib=20.00\n",
                         encoding="utf-8",
                     )
-        return campaign, fixture, dsv4_profile, serving_manifest
+        return campaign, fixture, dsv4_profile, serving_manifest, glm_profile
 
     def test_collects_exact_twenty_safe_matched_records(self):
         with tempfile.TemporaryDirectory() as tmp:
-            campaign, fixture, profile, serving = self.make_campaign(Path(tmp))
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
             records = self.collector.collect_records(
-                campaign, fixture, profile, serving
+                campaign, fixture, profile, serving, glm_profile
             )
             self.assertEqual(len(records), 20)
             self.assertEqual(
@@ -187,11 +236,11 @@ class MatchedEvidenceTests(unittest.TestCase):
         not trust the profile's copy of the digest.
         """
         with tempfile.TemporaryDirectory() as tmp:
-            campaign, fixture, profile, serving = self.make_campaign(Path(tmp))
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
             # Sanity: unmutated campaign collects.
             self.assertEqual(
                 len(self.collector.collect_records(
-                    campaign, fixture, profile, serving
+                    campaign, fixture, profile, serving, glm_profile
                 )),
                 20,
             )
@@ -202,16 +251,16 @@ class MatchedEvidenceTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "served GGUF generation"):
                 self.collector.collect_records(
-                    campaign, fixture, profile, serving
+                    campaign, fixture, profile, serving, glm_profile
                 )
 
     def test_rejects_missing_memory_and_duplicate_server_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
-            campaign, fixture, profile, serving = self.make_campaign(Path(tmp))
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
             first = campaign / "block0-seq0-armA"
             (first / "samples.log").unlink()
             with self.assertRaisesRegex(ValueError, "samples"):
-                self.collector.collect_records(campaign, fixture, profile, serving)
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
 
             (first / "samples.log").write_text(
                 "mem_avail_kb=62914560\n", encoding="utf-8"
@@ -220,7 +269,26 @@ class MatchedEvidenceTests(unittest.TestCase):
             target = campaign / "block0-seq3-armA" / "process.identity"
             target.write_bytes(source.read_bytes())
             with self.assertRaisesRegex(ValueError, "fresh servers|server boot"):
-                self.collector.collect_records(campaign, fixture, profile, serving)
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+
+    def test_rejects_short_geometry_and_wrong_glm_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            first = campaign / "block0-seq0-armA"
+            result = json.loads((first / "result.json").read_text())
+            result["cells"] = [result["cells"][0]]
+            (first / "result.json").write_text(json.dumps(result))
+            with self.assertRaisesRegex(ValueError, "32K-class"):
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+
+            second = Path(tmp) / "second"
+            second.mkdir()
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(second)
+            value = json.loads(glm_profile.read_text())
+            value["binary_sha256"] = "9" * 64
+            glm_profile.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "GLM binary"):
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
 
 
 if __name__ == "__main__":

@@ -26,8 +26,14 @@ class GlmLosslessPlateauTests(unittest.TestCase):
         arm = ARM.read_text()
         self.assertIn(f"GLM_SAFE_EXPECTED_BINARY_SHA256={expected}", campaign)
         self.assertIn("GLM_CANDIDATE_SRC=/home/bmarti44/.cache/", campaign)
+        self.assertIn("CTX=32768", campaign)
+        self.assertIn("--context-levels 0,28672", campaign)
+        self.assertNotIn("restore_dsv4", campaign)
         self.assertIn('[[ $actual_binary_sha256 == "$EXPECTED_BINARY_SHA256" ]]', arm)
+        self.assertIn('[[ $actual_model_sha256 == "$EXPECTED_MODEL_SHA256" ]]', arm)
+        self.assertIn('"$SRC/ds4-server" --cuda -m "$MODEL" -c 32768', arm)
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP=1", arm)
+        self.assertIn("stable_model_remap=1", arm)
         self.assertNotIn("DS4_KV_SKIP_PRELOAD_EVICT_STORE_DIAGNOSTIC", arm)
 
         identity_check = arm.index(

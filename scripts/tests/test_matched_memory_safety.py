@@ -354,8 +354,9 @@ class MatchedHarnessContractTests(unittest.TestCase):
 
     def test_candidate_source_and_bounded_cache_overrides_are_default_off(self):
         source = GLM_ARM.read_text(encoding="utf-8")
-        self.assertIn("GLM_CANDIDATE_SRC:-", source)
-        self.assertIn("ds4-goal-clean-0a7ad776", source)
+        self.assertIn("GLM_CANDIDATE_SRC:?GLM_CANDIDATE_SRC is required", source)
+        self.assertIn("glm52-w7-stable-remap-bccf0b6", source)
+        self.assertNotIn("ds4-goal-clean-0a7ad776", source)
         self.assertIn("GLM_EXPERT_CACHE_GB:-0", source)
         self.assertIn("CACHE_GB must be an integer from 0 through 40", source)
         self.assertIn("cache_gb < 0 || cache_gb > 40", source)
