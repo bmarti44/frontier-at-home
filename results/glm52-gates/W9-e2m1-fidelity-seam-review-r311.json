@@ -1,0 +1,82 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-review-v1",
+  "candidate_hash": "main:1b0b6d8;engine:058cb6ea37cb8d3433872af223f4e8cea968065a",
+  "review_round": 311,
+  "status": "REJECTED",
+  "gap_reviewer": {
+    "score_0_to_100": 86,
+    "critical": [],
+    "high": [
+      {
+        "id": "W9-E2M1-311-H1-FUSED-STORE-UNEXECUTED",
+        "finding": "The compiled CUDA fixture executes only the ordinary compact store. A fused-store bypass or threshold corruption leaves the microgate green.",
+        "acceptance": "Execute the fused wrapper against an independent RMS-normalization plus E2M1 oracle, bind it with a path-specific counter, and prove fused bypass/tie mutations fail."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "BLOCK_100_CASE_NLL_GATE_PENDING_FUSED_STORE_COVERAGE"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 28,
+    "critical": [
+      {
+        "id": "ADV-W9-E2M1-311-C1-INACTIVE-GRAPH-ARM-PASSES-MICROGATE",
+        "finding": "The direct CUDA fixture bypasses the host selector and graph-owned mode. Mutating the enabled resolver to resolve off leaves the microgate green.",
+        "acceptance": "Execute the exact selector and graph binding, and make the NLL runner require enabled-mode plus nonzero production coverage before scoring."
+      }
+    ],
+    "high": [
+      {
+        "id": "ADV-W9-E2M1-311-H1-FUSED-DECODE-STORE-UNEXECUTED",
+        "finding": "The compiled fixture does not execute the fused decode store and a fused launch bypass leaves the microgate green.",
+        "acceptance": "Add a fused CUDA oracle, separate normal/fused counts, and mutations for each path."
+      },
+      {
+        "id": "ADV-W9-E2M1-311-H2-COUNTER-CANNOT-AUTHORIZE-MODEL-COVERAGE",
+        "finding": "The aggregate launch counter is test-only, does not distinguish paths, and is not bound into model-run evidence.",
+        "acceptance": "Expose synchronized run-scoped path coverage and reject missing or inconsistent coverage in the NLL evidence."
+      },
+      {
+        "id": "ADV-W9-E2M1-311-H3-PREREGISTERED-FLAG-NAME-DIVERGENCE",
+        "finding": "The packed-format plan names DS4_GLM_COMPACT_CACHE_E2M1 while this diagnostic seam uses DS4_GLM_COMPACT_CACHE_E2M1_FAKE without a separate pre-implementation plan binding the distinction.",
+        "acceptance": "Freeze the diagnostic seam flag and conflict behavior explicitly before its next implementation candidate."
+      },
+      {
+        "id": "ADV-W9-E2M1-311-H4-CODEC-MICROGATE-UNDERCOVERS-PLAN",
+        "finding": "The one-row ordinary-store test does not cover randomized inputs, both-sign midpoint neighbors, multirow/tail positions, undersized buffers, repeated determinism, or baseline equality.",
+        "acceptance": "Extend the independent oracle and bounds/determinism cases for both stores."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W9-E2M1-311-M1-METAL-ENABLEMENT-FAILS-LATE",
+        "finding": "The CUDA-only diagnostic is accepted at graph allocation on Metal and fails only at a store.",
+        "acceptance": "Reject the diagnostic at graph creation on unsupported backends or implement it there."
+      }
+    ],
+    "low": [],
+    "verdict": "REJECT_CANDIDATE_2_BLOCK_100_CASE_NLL"
+  },
+  "root_reproduction": {
+    "selector_mutation": {
+      "change": "Resolve exact enabled value 1 to graph mode 0 while leaving the direct CUDA API unchanged.",
+      "microgate_returncode": 0,
+      "stdout_sha256": "67c53bbc57d48daa235e1a711eb746bca54e5f73464ccb12e02bc71fe1eea617",
+      "stderr_sha256": "aecef4c4995cacf21a8003da39e406198ab53c8c6c766de357d7bfe8fddc2ccd",
+      "result": "CRITICAL VERIFIED"
+    },
+    "fused_bypass_mutation": {
+      "change": "Pass fake_e2m1=0 only to the fused kernel launch while retaining the ordinary store implementation.",
+      "microgate_returncode": 0,
+      "stdout_sha256": "de49d3963e604877e2b0b3db5f39e537c9fafcd74fe19ca435590d2670a7bb76",
+      "stderr_sha256": "aecef4c4995cacf21a8003da39e406198ab53c8c6c766de357d7bfe8fddc2ccd",
+      "result": "HIGH VERIFIED"
+    },
+    "counter_authority": "VERIFIED: only the direct fixture reads the aggregate counter; no serving attestation consumes it.",
+    "flag_lineage": "VERIFIED AS A DOCUMENTATION/BINDING DEFECT: the packed plan and diagnostic seam intentionally need distinct flags, but the seam lacked its own preregistered selector record.",
+    "coverage": "VERIFIED: the compiled fixture contains one enabled ordinary-store row and no fused, randomized, baseline, multirow, tail-position, or malformed-buffer execution.",
+    "metal": "VERIFIED; medium and CUDA-gate nonblocking."
+  },
+  "decision": "Candidate 2 is permanently rejected before any model run. Candidate 3 may change only the named selector, fused-store, coverage, counter-authority, flag-binding, codec-coverage, and early-backend-rejection findings."
+}
