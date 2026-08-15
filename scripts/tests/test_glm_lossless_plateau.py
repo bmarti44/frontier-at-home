@@ -13,6 +13,8 @@ ARM = ROOT / "results/glm52-goal/harness/glm_decisive_arm.sh"
 DSV4_ARM = ROOT / "results/glm52-goal/harness/dsv4_decisive_arm.sh"
 COLLECTOR = ROOT / "scripts/56_collect_matched_evidence.py"
 DSV4_PROFILE = ROOT / "configs/dsv4-matched-32k-profile.json"
+GLM_CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+DSV4_CGROUP = ROOT / "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh"
 
 
 class GlmLosslessPlateauTests(unittest.TestCase):
@@ -94,6 +96,17 @@ class GlmLosslessPlateauTests(unittest.TestCase):
             campaign.index("exec {INFERENCE_LOCK_FD}"),
             campaign.index("\nverify_campaign_artifacts\n"),
         )
+
+    def test_parent_lock_validation_binds_the_shared_open_description_not_flocker_pid(self):
+        # flock(1) initiates the lock in a short-lived child.  Linux retains that
+        # child's PID in fdinfo after the campaign shell inherits the locked open
+        # file description, so requiring the fdinfo PID to equal the shell PID
+        # rejects the real production launch.  Parent PID/start-ticks still bind
+        # the direct caller; the fdinfo check must bind the unique kernel key.
+        for path in (GLM_CGROUP, DSV4_CGROUP):
+            source = path.read_text()
+            self.assertNotIn('$6 == pid && $7 == key', source, str(path))
+            self.assertIn('$7 == key', source, str(path))
 
     def test_dsv4_arm_disables_prompt_cache_and_records_all_shard_checkpoints(self):
         arm = DSV4_ARM.read_text()

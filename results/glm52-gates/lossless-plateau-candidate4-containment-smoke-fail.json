@@ -1,0 +1,33 @@
+{
+  "schema": "glm52-lossless-plateau-execution-failure-v1",
+  "candidate_number_for_gate": 4,
+  "candidate_commit": "c890fc2102bffcbfed1b62f0c1085975d4b1ff57",
+  "recorded_at_utc": "2026-08-15T15:59:00Z",
+  "scope": "Non-model /usr/bin/true smoke of the new DSV4 matched containment wrapper under the real user-systemd cgroup and global inference lock.",
+  "attempts": [
+    {
+      "tag": "c4-containment-smoke",
+      "exit_code": 2,
+      "diagnostic_output": "none"
+    },
+    {
+      "tag": "c4-containment-smoke2",
+      "exit_code": 2,
+      "diagnostic_output": "none"
+    },
+    {
+      "tag": "c4-containment-smoke3",
+      "exit_code": 2,
+      "diagnostic_output": "bash -x localized rejection to the fdinfo ownership predicate: the retained flock key was 00:1f:8 but fdinfo recorded the short-lived flock(1) child PID rather than the campaign shell PID"
+    }
+  ],
+  "failing_assertion": "Both per-arm cgroup launchers require fdinfo field 6 to equal the campaign-shell PID even though flock(1) records its own initiating PID while the shared open file description retains the lock.",
+  "production_impact": "Every matched campaign arm would fail before containment starts; no engine or GPU process was launched.",
+  "bounded_fix": "Retain direct-parent PID/start-ticks, descriptor dev:inode, global lock dev:inode, and the exact fdinfo kernel key checks; remove only the invalid fdinfo initiator-PID equality.",
+  "frozen_components_changed": false,
+  "host_safety": {
+    "engine_started": false,
+    "gpu_measurement_started": false,
+    "oom_or_xid_observed": false
+  }
+}
