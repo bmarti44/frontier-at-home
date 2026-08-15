@@ -1,0 +1,74 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-freeze-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 4,
+  "status": "FROZEN_REVIEW_PENDING",
+  "date": "2026-08-15",
+  "main_parent_commit": "6762628dba3f05e6a9dab250005aa8b583ea2963",
+  "engine_commit": "3ce8df6fe9e7d60017581d8aa01323503bc8f85c",
+  "engine_tree": "/home/bmarti44/.cache/glm52-w9-fp4-packed-c1",
+  "source_hashes": {
+    "ds4.c": "f354c894b884a0f3c746e4a4c394ba97db10a4fda3969a7ddb808acf17d94a4e",
+    "ds4_cuda.cu": "743b32b543159d558b8e465d76a1eb822f3bbc53c15e1bbcb236023c234e9622",
+    "ds4_gpu.h": "072f734b6aad8e0298d22611903ae78a389cfdf3aa1ec704da02a5f4fe6f182b",
+    "ds4_metal.m": "976ef323c4662aeaff28eb75683463d68bef4af49b1de1e35f5a61ea61f5d68f"
+  },
+  "test_hashes": {
+    "Makefile": "a0c8382e2faf6a68fb73a4ca396d6395533e75c867d2dd7f9f8da72e9c689a58",
+    "tests/test_glm_w9_e2m1_fake_cuda.c": "d719333d96f5a5ab170a8071275392e884c70bb615aed0bc8acfb7ef77daf270",
+    "tests/test_glm_w9_e2m1_fake_fused_cuda.c": "a00fcf31f7a1d05027b1e0ad82237ccf1f9bab36ed920f3a3413d2ed21b845ec",
+    "tests/test_glm_w9_e2m1_fake_host.c": "97ecd2d61cce0a835df5ad7200ac9fc856bcd4980cc86a8f2ec56a50c2cf19a2",
+    "tests/test_glm_w9_e2m1_fake_source.py": "eb9876ca396c0a8d37c76c1e904c38892d72ecc696d291e93ad6bfee387db329"
+  },
+  "campaign_closure": {
+    "runner": "scripts/104_run_w9_e2m1_fidelity.py",
+    "runner_file_sha256": "4f1a49be07d1be61fe6694773a802a795dac67b1a4d83b0d636bf0615c80adac",
+    "runner_closure_sha256": "6019b2a9bc8da79230fb449f6eb9f4cff83f9596ffa7b375f4bb1349f08ec957",
+    "scorer_sha256": "1ec1e1261a114f475f568eb4d0418ad7451e3c2c7c135f21ebcbfd1d5384bfd8",
+    "scorer_test_sha256": "5ad72bb312b36b508f3a77623a7b6a8da54270377db77e2b27df27f594213306",
+    "runner_test_sha256": "aceb5d8903b601c5bb1714dc5d26120d9c8a4ee7d08481a02043f8b6830412f8",
+    "cgroup_launcher_sha256": "7d9d149e96455dcbb68eddc119a219fd27af9cf86ae19013146cfc57596fbf6d",
+    "safe_wrapper_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "drand_verifier_sha256": "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc"
+  },
+  "artifacts": {
+    "model_path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+    "model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "fixture_path": "gguf-tools/quality-testing/data/glm52-openrouter-100/manifest.tsv",
+    "fixture_content_sha256": "3995e49164de84e967d432a2b80f0a52cb16751da1e4ccef236410a7f3458c49"
+  },
+  "clean_builds": {
+    "parallel_jobs": 2,
+    "server_raw_1_sha256": "0c0e0c7ece59322b784097366516e2f8273f483ec16471c3f083dcd62b11e558",
+    "server_raw_2_sha256": "6de0ad7123ee8271cc9bf11f6ada32316756f56438b85791c5402438d21ea9a2",
+    "server_canonical_sha256": "413ff7efc9e01f713f2a920cc913132cc801c0a520621ddef88e2cf31f1b8bf6",
+    "score_raw_1_sha256": "8d686c2a90822b66b0a31a5d6f556a4d3e7b58a4b5044d132b9d42b6321d494f",
+    "score_raw_2_sha256": "a7a5a50e3e71dd5f8d399aaca33aba55ccd69e2e1f513c662ff28b8ee1e1ced4",
+    "score_canonical_sha256": "7ffae413ed1ef86141c4925c5b1a5fbd2f4e7d8191cfa6e69b5a40ba2e460717",
+    "canonical_builds_byte_identical": true,
+    "canonicalization": "strip debug and .note.gnu.build-id only"
+  },
+  "checks": {
+    "engine_targeted_suite": "PASS",
+    "main_targeted_tests": "19/19 PASS",
+    "main_controller_suite": "95/95 PASS",
+    "secret_scan": "PASS",
+    "applied_without_total_opportunity_mutation": "ordinary rc=1 and fused rc=1 as required",
+    "prior_selector_and_store_bypass_mutations": "remain bound by candidate-3 freeze",
+    "main_tree_clean_before_freeze": true,
+    "engine_tree_clean_before_freeze": true,
+    "model_process_started": false
+  },
+  "round_312_disposition": {
+    "W9-E2M1-312-C1-EXECUTED-BINARY-NOT-BOUND": "FIXED: exact path, digest and device/inode are required and matched to the frozen binary",
+    "W9-E2M1-312-H1-MALFORMED-HOST-SAFETY-LINES-IGNORED": "FIXED: every sample and every terminal/containment record is parsed with an exact cardinality and grammar",
+    "W9-E2M1-312-H2-REQUIRED-PATH-MIX-SELF-DECLARED": "FIXED: scorer hard-codes normal plus fused and no campaign field controls the set",
+    "ADV-W9-E2M1-312-C1-SELF-AUTHORED-RAW-EVIDENCE": "FIXED: frozen runner creates exclusive per-arm artifacts; scorer reopens once with O_NOFOLLOW and verifies size, identity, hash and complete enumeration",
+    "ADV-W9-E2M1-312-H1-RECORD-CONTROLS-REQUIRED-PATHS": "FIXED: same hard-coded normal-plus-fused coverage",
+    "ADV-W9-E2M1-312-H2-NONZERO-COUNTERS-PERMIT-PARTIAL-SEAM": "FIXED: candidate applied rows equal all opportunities and baseline applied rows are zero while opportunities remain positive",
+    "W9-E2M1-312-M1-UNSET-ZERO-STORE-EQUALITY-NOT-EXECUTED": "FIXED: both CUDA store fixtures resolve unset and zero through the production selector and compare complete output bytes and counters"
+  },
+  "randomness_obtained": false,
+  "runtime_allowed": false,
+  "next": "Delta-only Nash/Singer round 313. Obtain fresh public randomness and run no model until both reviewers report no critical/high issues."
+}
