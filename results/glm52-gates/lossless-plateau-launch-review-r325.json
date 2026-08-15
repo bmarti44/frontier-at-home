@@ -1,0 +1,67 @@
+{
+  "schema": "glm52-lossless-plateau-review-v1",
+  "candidate_hash": "60ab2f42c2379dd388655878f36266320def5e6f",
+  "freeze_commit": "f59a17e",
+  "review_round": 325,
+  "recorded_at_utc": "2026-08-15T19:52:00Z",
+  "model_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 84,
+    "critical": [],
+    "high": [
+      {
+        "id": "PLATEAU-325-H1-STALE-P13-CAMPAIGN-TAG",
+        "evidence": "The candidate-14 runner pins candidate-14 preaudit and randomness paths but still requires TAG == p13-r$DRAND_ROUND. A canonical p14 tag fails before launch; using p13 mislabels candidate-14 evidence.",
+        "affected_gate": "Candidate-14 launch readiness and campaign identity labeling",
+        "acceptance_test": "Derive the candidate number from retained preaudit authority, require p${candidate_number}-r${round}, accept p14 and reject p13 before any model work."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": {
+      "PLATEAU-324-C1-COLLECTOR-TRUSTS-CALLER-LINEAGE": "VERIFIED",
+      "ADV-PLATEAU-324-H1-UNCONSTRAINED-POSTFREEZE-ROUND-SELECTION": "VERIFIED",
+      "ADV-PLATEAU-324-H2-COLLECTOR-DOES-NOT-BIND-RETAINED-MANIFEST-LINEAGE": "VERIFIED",
+      "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS": "VERIFIED"
+    },
+    "verdict": "REJECT_MODEL_RUN_PENDING_CANDIDATE_TAG_FIX"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 98,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [
+      {
+        "id": "ADV-PLATEAU-325-L1-STALE-CANDIDATE13-CAMPAIGN-TAG",
+        "evidence": "The same stale p13 tag affects archive labeling but not retained candidate/freeze authority, seed, arm order, scoring, or artifact closure.",
+        "affected_gate": "Evidence labeling",
+        "acceptance_test": "Require the tag prefix to agree with the retained preaudit candidate number."
+      }
+    ],
+    "prior_issue_status": {
+      "PLATEAU-324-C1-COLLECTOR-TRUSTS-CALLER-LINEAGE": "FIXED",
+      "ADV-PLATEAU-324-H1-UNCONSTRAINED-POSTFREEZE-ROUND-SELECTION": "FIXED",
+      "ADV-PLATEAU-324-H2-COLLECTOR-DOES-NOT-BIND-RETAINED-MANIFEST-LINEAGE": "FIXED",
+      "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS": "FIXED"
+    },
+    "verdict": "ACCEPT_PRE_RUN_AFTER_UNIQUE_RECEIPT; NO_VERIFIED_CRITICAL_OR_HIGH"
+  },
+  "root_disposition": {
+    "blocking_severity": "HIGH",
+    "rationale": "Release requires both reviewers to report no high/critical issues. The tag mismatch also makes the canonical candidate-14 invocation fail before launch, so the stricter gap-reviewer classification governs.",
+    "verified_r324_blockers_remaining": 0,
+    "new_blocker": "PLATEAU-325-H1-STALE-P13-CAMPAIGN-TAG",
+    "next_action": "Preserve a focused production-path RED, derive the candidate number from retained preaudit output, and freeze candidate 15 before obtaining randomness."
+  },
+  "convergence": {
+    "candidate_count": 14,
+    "blocking_classes_before_candidate": 2,
+    "blocking_classes_after_review": 1,
+    "strictly_shrank": true,
+    "consecutive_nonshrinking_candidates": 0,
+    "owner_exception_beyond_eight_candidates": true,
+    "escalation_triggered": false
+  },
+  "verdict": "REJECT_MODEL_RUN_PRESERVE_CANDIDATE14"
+}
