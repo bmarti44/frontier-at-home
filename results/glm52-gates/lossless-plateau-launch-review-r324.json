@@ -1,0 +1,78 @@
+{
+  "schema": "glm52-lossless-plateau-review-v1",
+  "candidate_hash": "a29fd9e2ce4bf8460b90dac1d2b8821b4f23e594",
+  "freeze_commit": "1ebca1b7ef2cb54c6901465ecc0099d56dfc6bbb",
+  "review_round": 324,
+  "recorded_at_utc": "2026-08-15T19:31:00Z",
+  "model_started": false,
+  "gap_reviewer": {
+    "score_0_to_100": 62,
+    "critical": [
+      {
+        "id": "PLATEAU-324-C1-COLLECTOR-TRUSTS-CALLER-LINEAGE",
+        "evidence": "The production collector accepted a complete 20-arm synthetic campaign using the historical candidate-10 receipt and seed while no retained freeze receipt existed. It trusts caller-provided candidate_hash and freeze_commit and checks only retained_manifest.randomness_receipt_sha256.",
+        "affected_gate": "Independent scorer replay, candidate/freeze lineage, and cross-candidate receipt rejection",
+        "acceptance_test": "Require and strictly read the retained freeze receipt; validate its manifest digest, candidate commit/tree and bound artifacts; derive candidate/freeze from retained evidence; reject a valid receipt from another candidate."
+      }
+    ],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": {
+      "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS": "OPEN",
+      "PLATEAU-323-H1-CALLER-SEED-NOT-DRAND-BOUND": "OPEN",
+      "ADV-PLATEAU-321-H1-FROZEN-SCORER-REJECTS-NEW-ENVELOPE": "VERIFIED"
+    },
+    "verdict": "REJECT_MODEL_RUN_PENDING_COLLECTOR_LINEAGE_BINDING"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 72,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-PLATEAU-324-H1-UNCONSTRAINED-POSTFREEZE-ROUND-SELECTION",
+        "evidence": "Every correctly signed drand round later than the freeze is accepted. The unique first strictly subsequent round for freeze 1ebca1b is 6379697, but later rounds are also accepted, leaving post-freeze round selection under receipt-author control.",
+        "affected_gate": "Public-randomness anti-selection validity",
+        "acceptance_test": "Derive the unique first drand round strictly after the exact freeze and reject every other round, including a genuine target-plus-one receipt."
+      },
+      {
+        "id": "ADV-PLATEAU-324-H2-COLLECTOR-DOES-NOT-BIND-RETAINED-MANIFEST-LINEAGE",
+        "evidence": "The production collector accepted a minimal retained manifest containing only randomness_receipt_sha256. It does not require reviewed_runtime_commit, freeze_commit, manifest.sha256 receipt entries, or the retained freeze receipt to agree.",
+        "affected_gate": "Independent scorer replay and retained lineage",
+        "acceptance_test": "Require the exact production manifest schema and equality of runtime candidate, freeze, receipt digests, and retained preaudit candidate commit; derive lineage from canonical retained evidence."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-PLATEAU-324-M1-CANDIDATE13-RECEIPT-NOT-YET-COMMITTED",
+        "evidence": "No candidate-13 randomness receipt exists because pre-run review has not cleared; the production path correctly fails closed.",
+        "affected_gate": "Launch readiness",
+        "acceptance_test": "After the corrected candidate freezes, commit and replay the unique target-round receipt before launch."
+      }
+    ],
+    "low": [],
+    "prior_issue_status": {
+      "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS": "OPEN",
+      "PLATEAU-323-H1-CALLER-SEED-NOT-DRAND-BOUND": "FIXED_DIRECT_SEED_ROUTE_ONLY"
+    },
+    "verdict": "REJECT_MODEL_RUN"
+  },
+  "root_reproduction": {
+    "status": "REPRODUCED_IN_SOURCE_AND_ACCEPTED_REVIEW_REPROS",
+    "finding_classes": [
+      "collector caller-controlled lineage and missing retained freeze receipt authority",
+      "non-unique post-freeze drand round"
+    ],
+    "frozen_model_binary_request_fixture_arms_formulas": "UNCHANGED",
+    "next_action": "Commit production-path RED tests, then candidate 14 limited to exact retained-lineage derivation and unique first-post-freeze round selection."
+  },
+  "convergence": {
+    "candidate_count": 13,
+    "blocking_classes_before_candidate": 1,
+    "blocking_classes_after_review": 2,
+    "consecutive_nonshrinking_candidates": 1,
+    "owner_exception_beyond_eight_candidates": true,
+    "escalation_triggered": false
+  },
+  "verdict": "REJECT_MODEL_RUN_PRESERVE_CANDIDATE13"
+}
