@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "gate": "W5-indexer-f16",
+  "candidate": 2,
+  "status": "RED_CONFIRMED",
+  "parent_source_commit": "c82d6b8ae11e6a88d3ff2b867ff50e17281900e6",
+  "test_commit": "6d875fa",
+  "named_finding": "W5-C1-H1-QUALITY-MODE-BREAKS-EXACTNESS",
+  "setup_attempt": {
+    "status": "NO_RESULT",
+    "reason": "the first compile omitted stdbool.h; it was corrected before the behavioral RED and was not accepted as RED"
+  },
+  "behavioral_red": {
+    "exit_code": 1,
+    "stderr": "FAIL: W5 remains disabled under quality mode",
+    "compiled_successfully": true,
+    "failure_is_missing_file_or_symbol": false
+  },
+  "implementation_commit": "4a79e9cc5a20f0ecae7ae59dd0ed51786592fca4",
+  "green_checks": [
+    "quality mode rejects W5",
+    "allocation-time representation survives environment changes",
+    "actual baseline and candidate GPU tensors use F32 and F16 byte counts",
+    "production CUDA store produces the exact rounded candidate representation",
+    "scalar, aligned-16, and ragged-17 scores and ordered IDs are byte-identical",
+    "OFF-to-OFF, OFF-to-ON, ON-to-OFF, and ON-to-ON session conversions remain external F32"
+  ],
+  "model_started": false
+}

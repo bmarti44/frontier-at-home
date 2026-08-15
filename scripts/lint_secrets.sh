@@ -335,6 +335,7 @@ allowlist = {
     "expected_sha256",
     "actual_sha256",
     "candidate_diff_sha256",
+    "candidate_delta_sha256",
     "tarball_sha256",
     "weights_manifest_sha256",
     "GLM_SAFE_EXPECTED_BINARY_SHA256",
