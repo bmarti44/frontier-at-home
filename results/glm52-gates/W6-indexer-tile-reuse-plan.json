@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "gate": "W6-indexer-tile-reuse",
+  "status": "PENDING",
+  "created_at": "2026-08-14T21:40:00-04:00",
+  "baseline_source_commit": "8cde153a43b170ad6c66644dba4392c343cf39b1",
+  "source_hashes": {
+    "ds4_cuda.cu": "35375030ae4d0a290d34d66c0afd632c3d70ff9bc8a9c8cb0c32b5173354c797",
+    "ds4_gpu.h": "330abe0d58caa72fe281bd17a4cf358326f726656f1bed9e7a5d9f707bc07208",
+    "Makefile": "6e67c8185358dedfe12c26a9dcdfba18edbb68665917eceebd3c748a4c6d777e"
+  },
+  "feature_flag": {
+    "name": "DS4_CUDA_GLM_INDEXER_QUERY_TILES",
+    "default": 1,
+    "allowed_values": [1, 2, 4],
+    "invalid_values_fail_closed": true,
+    "logged_exactly": true
+  },
+  "production_path_red": {
+    "compiled_behavioral_failure_required": true,
+    "missing_file_or_symbol_is_not_red": true,
+    "unchanged_behavior_to_reject": "the unchanged kernel ignores requested widths 2 and 4 and does not reject malformed width values"
+  },
+  "microgate": {
+    "token_shapes": [1, 16, 17, 32, 33, 64, 65],
+    "widths": [1, 2, 4],
+    "scores_byte_identical": true,
+    "ordered_ids_byte_identical": true,
+    "causal_boundaries_covered": true,
+    "width_selection_observed_from_production_launch": true,
+    "malformed_width_rejected": true
+  },
+  "load_formula": {
+    "logical_k_load_bytes": "ceil(n_rows/128) * ceil(n_tokens/(16*width)) * 128 * 128 * cache_element_bytes",
+    "aligned_width2_ratio_max": 0.5,
+    "aligned_width4_ratio_max": 0.25,
+    "counter_source": "production launch geometry, independently recomputed by the scorer"
+  },
+  "timing_formula": {
+    "samples_per_width": 5,
+    "clock": "synchronized CUDA events around the completed production score launch",
+    "selected_width": "the faster passing width among 2 and 4",
+    "candidate_vs_width1_completed_time_ratio_upper_95_max": 0.95,
+    "invalid_or_nonfinite_sample": "FAIL"
+  },
+  "serving_confirmation": {
+    "fresh_server_blocks": 5,
+    "schedule": "post-freeze public-randomness-derived ABBA/BAAB",
+    "fixtures_equal_between_arms": true,
+    "logit_sequence_byte_identical": true,
+    "generated_bytes_identical": true,
+    "decode_non_regression_lower_95": 0.995,
+    "safety_failures": [
+      "OOM",
+      "cgroup kill",
+      "swap use",
+      "Xid",
+      "short output",
+      "timeout",
+      "binary identity failure",
+      "surviving descendant"
+    ]
+  },
+  "fidelity": {
+    "classification": "byte-identical",
+    "nll_gate_required": false,
+    "reason": "the same FP16 K tile and unchanged WMMA operations are reused across additional query tiles; arithmetic order per output must not change"
+  },
+  "authority": "Only fixed scorers may issue PASS. Reviewer scores cannot override a failed deterministic or statistical check."
+}
