@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "gate": "W6-indexer-tile-reuse",
+  "status": "NO_RESULT",
+  "candidate": 2,
+  "candidate_hash": "90471483ee587646d0a1e7a1c35c5f71e665b4ff",
+  "evidence": "results/glm52-gates/W6-indexer-tile-reuse-candidate2-confirmation",
+  "result": {
+    "width2_geometric_speedup": 0.9616597116832061,
+    "width2_speedup_lower_95": 0.9552284865748804,
+    "width4_geometric_speedup": 0.8807975001897214,
+    "width4_speedup_lower_95": 0.8756106386652418,
+    "required_speedup_lower_95": 1.05,
+    "selected_width": null
+  },
+  "correctness": {
+    "scores_exact": true,
+    "ordered_ids_exact": true,
+    "complete_writes_and_canaries": true,
+    "causal_and_ragged_cases": true,
+    "noop_mutation_rejected": true
+  },
+  "review": {
+    "gap_score": 100,
+    "adversarial_score": 96,
+    "verified_critical_or_high": 0
+  },
+  "adopted": false,
+  "model_run_performed": false,
+  "conclusion": "Reducing derived logical K loads did not improve completed kernel time on GB10. Both wider variants are slower, so this branch ends without serving work."
+}

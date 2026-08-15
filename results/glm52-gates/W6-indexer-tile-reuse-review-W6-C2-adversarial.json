@@ -1,0 +1,28 @@
+{
+  "candidate_hash": "90471483ee587646d0a1e7a1c35c5f71e665b4ff",
+  "review_round": "W6-C2",
+  "score_0_to_100": 96,
+  "critical": [],
+  "high": [],
+  "medium": [],
+  "low": [
+    {
+      "stable_id": "ADV-W6-C2-L1-THRESHOLD-RECIPROCAL-MISMATCH",
+      "evidence": "The scorer uses speedup lower-95 >=1.05 while the exact reciprocal of the preregistered time-ratio upper-95 <=0.95 is 1.0526315789. Every candidate sample is slower than every baseline sample, so this cannot affect NO_RESULT.",
+      "disposition": "DEFERRED_DEAD_BRANCH_NO_VERDICT_EFFECT"
+    },
+    {
+      "stable_id": "ADV-W6-C2-L2-WIDTH-TRANSITION-LOGGING-INSIDE-EVENT-WINDOW",
+      "evidence": "Width-transition logging occurs after the start event. No-transition width-2 samples remain slower than no-transition width-1 and width 4 is substantially slower, so this cannot affect NO_RESULT.",
+      "disposition": "DEFERRED_DEAD_BRANCH_NO_VERDICT_EFFECT"
+    }
+  ],
+  "prior_issue_status": [
+    {"stable_id": "ADV-W6-C1-C1-STALE-SCORES-NOOP-FALSE-PASS", "status": "VERIFIED_FIXED"},
+    {"stable_id": "ADV-W6-C1-H1-NONAUTHORITATIVE-FIXED-ORDER-MICROPROBE", "status": "VERIFIED_FIXED"},
+    {"stable_id": "ADV-W6-C1-H2-CAUSAL-COVERAGE-FALSE-CLAIM", "status": "VERIFIED_FIXED"},
+    {"stable_id": "ADV-W6-C1-H3-FINAL-TEST-LACKS-RED-LINEAGE", "status": "VERIFIED_FIXED"},
+    {"stable_id": "ADV-W6-C1-M1-LOGICAL-BYTES-NOT-MEASURED-TRAFFIC", "status": "VERIFIED_FIXED"}
+  ],
+  "verdict": "APPROVE_W6_C2_TERMINAL_NO_RESULT_NO_MODEL_RUN"
+}
