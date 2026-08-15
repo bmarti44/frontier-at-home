@@ -1,7 +1,8 @@
 # GLM-5.2 performance qualification: active rung plan
 
-Owner course correction accepted 2026-08-01 and owner-approved literature
-revision accepted 2026-08-02. This document supersedes the W1-W11 execution
+Owner course correction accepted 2026-08-01, owner-approved literature
+revision accepted 2026-08-02, and owner-directed external-research amendments
+accepted 2026-08-15. This document supersedes the W1-W11 execution
 order, but preserves those identifiers so old evidence stays traceable. The
 existing G0-G5 gate evidence, `glm_safe_run.sh` witness, and the two persistent
 Sol xhigh reviewers remain the evidence and review mechanism. Do not build
@@ -46,6 +47,17 @@ The measured physics are not open questions:
   prefill tok/s. Reaching roughly 18 tok/s decode or 450 tok/s prefill requires
   residency. These are engineering bounds, not benchmark results.
 
+External single-Spark results now independently anchor the demand-streaming
+part of that bound. Upstream llama.cpp's GLM-5.2-UD GB10 experiment measured
+about 2.20 decode tok/s at a 79% expert-cache hit rate, while its smaller cache
+measured about 1.83 tok/s at 73%; its implementation and measurements are in
+[llama.cpp PR #25294](https://github.com/ggml-org/llama.cpp/pull/25294).
+The owner-provided Pulsar audit reports 2.07-2.12 tok/s, consistent with this
+repository's 1.82-2.33 tok/s range. These observations confirm the known
+single-Spark demand-streaming plateau; they do not replace the matched local
+plateau campaign. The remaining lossless levers below must be folded into that
+campaign before any fidelity decision.
+
 After the lossless plateau is measured, stop and present it to the owner. Do
 not automatically spend fidelity to pursue residency.
 
@@ -56,6 +68,32 @@ retry acceptance speculation as a primary decode lever, tree speculation,
 layer-skip drafting, batch-2 expert sharing, CPU expert placement,
 BuddyMoE-style substitution without a cheap NLL falsifier, MoE-SVD/D2-MoE
 per-expert low-rank compression, AQLM/PV-Tuning, or standalone CALDERA.
+
+The 2026-08-15 external review closes additional variants:
+
+- Lossless compression of the already-quantized IQ2_XXS experts is closed by
+  this repository's 99.2% retained-size result and by the quantized-model
+  limits described in [On the Compressibility of Quantized Large Language
+  Models](https://arxiv.org/abs/2403.01384) and
+  [ZipNN](https://arxiv.org/abs/2411.05239); their useful lossless gains are on
+  substantially higher-entropy BF16/FP16 storage, not this packed 2-bit form.
+- GDS/cuFile is closed on this host. NVIDIA's
+  [GDS release notes](https://docs.nvidia.com/gpudirect-storage/release-notes/index.html)
+  say DGX Spark is compatibility-mode-only and must not load `nvidia-fs`; the
+  [Spark CUDA porting guide](https://docs.nvidia.com/dgx/dgx-spark-porting-guide/porting/cuda.html)
+  likewise documents the UMA platform's lack of peer-direct mechanisms.
+- A GB10 hardware decompression-engine route is closed. NVIDIA's
+  [nvCOMP DE support matrix](https://docs.nvidia.com/cuda/nvcomp/decompression_engine_faq.html)
+  lists B200/B300/GB200/GB300, not GB10.
+- Fiddler/KTransformers-style CPU/GPU expert splitting remains closed because
+  Spark exposes one 273 GB/s unified pool, so there is no discrete PCIe weight
+  hop to avoid; the same UMA constraint is documented in the
+  [DGX Spark porting guide](https://docs.nvidia.com/dgx/dgx-spark-porting-guide/index.html).
+- Cross-layer spatial prefetch stays closed by the terminal local ABBA failure;
+  external PCIe-offload claims do not transfer to this NVMe-bound UMA path.
+- An internal-drive upgrade is closed: the installed Samsung PM9E1 already
+  reaches its measured sustained ceiling. Purchased NVMe-oF remains separately
+  owner-descoped and must not be implemented.
 
 ## Branch and source reconciliation
 
@@ -68,6 +106,10 @@ per-expert low-rank compression, AQLM/PV-Tuning, or standalone CALDERA.
   patch plus production-path tests. The actually compiled `ds4.c` and
   `ds4_cuda.cu` must be copied to a reviewer-readable path before review;
   reviewers must ignore `vendor/ds4/`.
+- The engine source of truth is the Entrpi/ds4 checkout pinned by
+  `versions.lock`; `vendor/ds4/` is a stale snapshot and is never review or
+  build authority. Never modify a harness file while an attempt is running;
+  every launch uses a versioned immutable attempt directory.
 
 Identity audit at reconciliation:
 
@@ -515,6 +557,19 @@ R0-UPGRADE b: reconsider it only if a held-out trained probe produces calibrated
 future-use probabilities that beat the frequency prior. See
 `R0c-causal-least-stale-diagnostic-2026-08-04.json`.
 
+#### Bounded decaying-hotness cache-policy probe
+
+This is distinct from the falsified least-stale policy. Replay upstream's
+decaying route-hotness admission/eviction score with an LRU tiebreak against
+the current SLRU using the existing `harness/slru_ab.sh` methodology and
+byte-identical access-stream digests. The policy and its 79% GLM-5.2 cache-hit
+observation are documented in
+[llama.cpp PR #25294](https://github.com/ggml-org/llama.cpp/pull/25294).
+The local exact-Belady value of 88.0% is only the upper-bound headroom claim.
+Pre-register and close offline unless replay beats SLRU by at least 2.0
+percentage points. Only a passing replay opens a serving A/B. Serving remains
+byte-identical and must show a positive completed-time bound.
+
 ### Remaining lossless transport - zero-copy expert-slot GEMV (W3)
 
 Consume pinned arena pointers directly, hold slot ownership through a CUDA
@@ -559,6 +614,36 @@ NVMe rate: it is reliable only a few layers ahead while about a second of I/O
 lookahead is needed. Oracle prefetch therefore uses token-level lookahead while
 leaving target computation exact. This is the intended path toward the faithful
 6-8 tok/s streaming ceiling.
+
+Rung 0.5 is promoted as a primary remaining lossless lever. Upstream merged
+GLM-5.2 NextN/MTP support in
+[llama.cpp PR #25980](https://github.com/ggml-org/llama.cpp/pull/25980), built on
+the generic MTP work in
+[PR #22673](https://github.com/ggml-org/llama.cpp/pull/22673). Its reported
+resident-model result is about 1.37x decode, position acceptance
+`0.83/0.65/0.49`, and mean accepted length about 2.98; MTP-off graphs are
+bit-identical. Upstream also reports that MTP-on greedy output can diverge at
+near-tie tokens because batched verification changes floating-point reduction
+order. Therefore its speed result does not satisfy this repository's stricter
+byte-identity gate: any local divergence closes the serving arm. Before any
+engine work, inspect the frozen IQ2_XXS artifact and conversion lineage to
+prove the `blk.78` NextN head was not removed by the converter's `--no-mtp`
+path. The NextN loading/conversion distinction is also documented in upstream
+[issue #26290](https://github.com/ggml-org/llama.cpp/issues/26290).
+
+The pre-registered falsifier is offline and uses only the frozen P0 corpus.
+For every layer, compute the exact union of routed expert IDs across `k=2,3,4`
+consecutive real decode tokens. If the median layer union at `k=3` is at least
+20 experts, retain the demotion arithmetic and close the conditional serving
+arm. If it is at most 16, open one bounded greedy-MTP serving probe that fetches
+each union once per verification pass. It must preserve byte-identical target
+output and its decode lower-95 ratio must exceed 1.10 to adopt. Values strictly
+between 16 and 20 are an inconclusive offline `NO_RESULT` and do not authorize
+engine work. This gate tests the mechanism reported by
+[SpecMoEOff](https://arxiv.org/abs/2508.21706),
+[SP-MoE](https://arxiv.org/abs/2510.10302), and
+[MoE-SpeQ](https://arxiv.org/abs/2511.14102) without assuming their offload
+speedups transfer to this flat-router UMA system.
 
 ### Rung 0.5 prototype - calibrated union-probe prediction
 
@@ -891,6 +976,24 @@ tested once as an optional final roughly 1.2x multiplier, informed by
 NLL evidence. Tree speculation and layer-skip drafting stay on the do-not-retry
 list.
 
+The Rung 0.5 offline union falsifier above is the only exception: it tests MTP
+as an expert-address oracle and conditionally permits one exact greedy serving
+probe. It does not reopen acceptance speculation as an unconditional primary
+lever.
+
+### Rung 0.7 - bounded Grace OS tuning
+
+After the matched 32K campaign freezes, test AutoNUMA disabled, THP `always`,
+measured proactive compaction, and then explicit hugepages for the pinned arena
+as separate reversible arms. NVIDIA's
+[Grace OS tuning guide](https://docs.nvidia.com/dccpu/grace-perf-tuning-guide/os-settings.html)
+recommends disabling AutoNUMA for GPU-heavy Grace workloads, documents THP and
+hugetlbfs tradeoffs, and warns that overly aggressive proactive compaction can
+increase translation latency. Therefore do not bundle the knobs or assume a
+win. Use the standard matched decode fixture, require byte-identical output,
+and adopt an arm only when its decode improvement lower-95 is at least 2%.
+Restore the prior host settings after every arm and after any failure.
+
 ### Lossless plateau decision
 
 After all Rung 0 work, run the same-fixture performance gauntlet and report the
@@ -898,8 +1001,18 @@ measured plateau to the owner. The expected hard range is 7-10 decode tok/s and
 75-100 prefill tok/s, but measurements alone populate the decision table. Stop
 there until the owner chooses one of: accept the lossless profile, authorize a
 bounded Rung 2/2.5 fidelity spend, or authorize the Rung 3 residency program.
+If the MTP-union, decaying-hotness, and OS arms all pass, the planning envelope
+is approximately `1.3-2.0x * 1.05-1.15x * 1.02-1.05x` on top of 2.33 tok/s,
+which is consistent with the existing 6-10 tok/s lossless estimate. This is a
+composition hypothesis, never a reported result.
 
 ### Rung 2 - bounded lossy streaming (W1/W8/W9)
+
+Fidelity ordering is unchanged. The packed FP4/E2M1 compact-cKV experiment is
+the active lossy frontier because its real-capture falsifier has cleared; it
+still requires the fixed 100-case NLL/top-1 gate and owner adoption. Rung 3
+residency remains the only plausible path to 18.4 tok/s and remains separately
+owner-gated. No Rung 0, 0.5, 0.7, or context-qualification item spends fidelity.
 
 The affine-INT8 compact cache is explicitly lossy and is not qualification
 plumbing. Its existing NLL campaign measured delta NLL
@@ -999,6 +1112,14 @@ and cleared its offline FP4 error falsifier diagnostically. The next bounded
 context route is a default-off packed FP4 compact-cache implementation followed
 by the fixed 100-case NLL/top-1 gate; a materially different exact-storage
 design would require a new candidate rather than rehabilitating W8.
+
+After the matched-32K plateau campaign freezes, qualify the largest presently
+feasible lossless serving context directly, moving from 32,768 toward the
+current-cache estimate of roughly 207K. This is a context-capability gate, not
+a speed claim and not a substitute for the final direct 1M gate advertised by
+the official [GLM-5.2 model card](https://huggingface.co/zai-org/GLM-5.2). Do
+not prove a ladder below a context already passed; use the largest bounded
+candidate first under the normal OOM containment and retrieval controls.
 
 ## Final decision table
 
