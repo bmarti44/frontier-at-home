@@ -490,6 +490,18 @@ def collect_records(
     ):
         raise ValueError("campaign or fixture path is unsafe")
     dsv4_profile = _read_json(dsv4_profile_path)
+    approved_dsv4_safety = {
+        "kill_floor_gib": 8,
+        "minimum_start_gib": 110,
+        "memory_high_gib": 100,
+        "memory_max_gib": 102,
+        "sample_hz": 4,
+        "swap_max_bytes": 0,
+        "timeout_seconds": 5400,
+    }
+    observed_dsv4_safety = (
+        dsv4_profile.get("safety") if isinstance(dsv4_profile, dict) else None
+    )
     if (
         not isinstance(dsv4_profile, dict)
         or dsv4_profile.get("schema_version") != 3
@@ -508,16 +520,13 @@ def collect_records(
         or not dsv4_profile.get("runtime_closure_sha256")
         or not isinstance(dsv4_profile.get("launch_arguments"), list)
         or not isinstance(dsv4_profile.get("model_path"), str)
-        or dsv4_profile.get("safety")
-        != {
-            "kill_floor_gib": 8,
-            "minimum_start_gib": 110,
-            "memory_high_gib": 105,
-            "memory_max_gib": 107,
-            "sample_hz": 4,
-            "swap_max_bytes": 0,
-            "timeout_seconds": 5400,
-        }
+        or not isinstance(observed_dsv4_safety, dict)
+        or set(observed_dsv4_safety) != set(approved_dsv4_safety)
+        or any(
+            type(observed_dsv4_safety[key]) is not type(expected)
+            or observed_dsv4_safety[key] != expected
+            for key, expected in approved_dsv4_safety.items()
+        )
     ):
         raise ValueError("approved DeepSeek profile is invalid")
     for shard in dsv4_profile["model_shards"]:
