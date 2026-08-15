@@ -74,6 +74,25 @@ campaign before any fidelity decision.
 After the lossless plateau is measured, stop and present it to the owner. Do
 not automatically spend fidelity to pursue residency.
 
+### Production observability invariant (owner directive 2026-08-15)
+
+Diagnostics, telemetry, and debugging are evidence tools, not a serving tax.
+Every new facility has an exact startup-time switch and defaults off in the
+production profile. Resolve configuration once during initialization. Disabled
+mode performs no hot-path environment lookup, hashing, formatting, allocation,
+timestamping, locking, storage sync, or file write; prefer a separately selected
+fast implementation rather than a repeated token/layer/expert branch. Evidence
+profiles explicitly enable only the witnesses their fixed scorers require.
+
+Promotion requires five matched blocks against the pre-instrumentation serving
+binary: byte-identical output, point decode ratio at least 1.0, decode lower-95
+ratio at least 0.995, TTFT upper-95 ratio at most 1.005, and zero diagnostic
+I/O/counters in the disabled arm. A facility that cannot satisfy this stays in
+an evidence-only binary. Existing access-stream hashing, verbose cache/fetch
+counters, synchronization tracing, token timing, and debug dumps must all be
+audited under this rule during R-K; production defaults remain off unless their
+cost is separately proven absent.
+
 Do not re-run the measured dead ends: expert keep-N/skipping, expert merging,
 lossless or stream-separated entropy compression, shared-basis/MoBE,
 REAP Q2_K with `--cpu-moe`, prefill chunking, or purchased NVMe-oF. Also do not

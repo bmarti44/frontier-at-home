@@ -66,6 +66,21 @@ Use this sequence for production-path changes:
     high or critical issues. Reviewers choose their own scores; do not prescribe
     a scoring formula.
 
+Diagnostics, telemetry, and debugging must never become a production hot-path
+tax. Every such feature needs an exact startup-time switch and must default off
+in production profiles. Resolve switches once during initialization—never call
+`getenv`, parse configuration, allocate, hash, format strings, take timestamps,
+lock, sync storage, or write files inside the disabled token/layer/expert path.
+Prefer a separately selected fast implementation so disabled mode does not add
+a repeated branch. Evidence profiles may explicitly enable instrumentation.
+
+Before promotion, compare the disabled instrumented binary against the
+pre-instrumentation production binary in five matched blocks. Require
+byte-identical output, point decode ratio at least 1.0, decode lower-95 ratio at
+least 0.995, TTFT upper-95 ratio at most 1.005, and zero diagnostic I/O/counters
+in the disabled arm. A useful diagnostic that cannot meet this gate stays in an
+evidence-only binary and never enters the serving binary.
+
 Candidate iteration is governed by convergence, not a hard retry count. Continue
 publishing candidates for a gate autonomously only while all three conditions
 hold:
