@@ -1,0 +1,51 @@
+{
+  "schema": "glm52-persistent-review-round-v1",
+  "candidate_hash": "0288c547708519f07409799bb5628bfc302165c2",
+  "freeze_commit": "df84eca",
+  "review_round": 320,
+  "reviewed_scope": "Candidate-10 exact two-schema parser delta and induced bindings; previously frozen scope excluded.",
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 97,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": {
+      "PLATEAU-319-H1-MISSING-LOW-PAIR-SCHEMA-FALSE-PASS": "VERIFIED",
+      "ADV-PLATEAU-319-H1-DELTA-SCHEMA-MISSING-LOW-PAIR": "VERIFIED",
+      "ADV-PLATEAU-319-M1-NONCANONICAL-SEPARATOR-AND-EMPTY-ITEMS": "VERIFIED",
+      "PLATEAU-318-H1-DUPLICATE-CGROUP-EVENT-LAST-WINS": "VERIFIED",
+      "ADV-PLATEAU-R316-H3-NONCANONICAL-SAFETY-ATTESTATION": "VERIFIED"
+    },
+    "independent_mutations": 38,
+    "verdict": "ACCEPT_PRE_RUN"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 99,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": {
+      "PLATEAU-319-H1-MISSING-LOW-PAIR-SCHEMA-FALSE-PASS": "FIXED",
+      "ADV-PLATEAU-319-H1-DELTA-SCHEMA-MISSING-LOW-PAIR": "FIXED",
+      "ADV-PLATEAU-319-M1-NONCANONICAL-SEPARATOR-AND-EMPTY-ITEMS": "FIXED",
+      "PLATEAU-318-H1-DUPLICATE-CGROUP-EVENT-LAST-WINS": "FIXED"
+    },
+    "independent_mutations": 70,
+    "verdict": "ACCEPT_PRE_RUN"
+  },
+  "checks": {
+    "exact_glm_schema": "PASS",
+    "exact_dsv_schema": "PASS",
+    "each_field_removal": "PASS",
+    "low_pair_removal": "PASS",
+    "hybrid_duplicate_empty_separator_unknown_malformed_nonzero": "PASS",
+    "focused_tests": "34/34 PASS",
+    "receipt_commit_tree_and_artifact_hashes": "PASS",
+    "model_started": false
+  },
+  "verdict": "ACCEPT_PRE_RUN_NO_CRITICAL_OR_HIGH"
+}
