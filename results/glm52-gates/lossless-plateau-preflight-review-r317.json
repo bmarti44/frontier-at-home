@@ -1,0 +1,80 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "7508a2131075bfbedcdc9338629d47bdfacb2d9c",
+  "review_round": 317,
+  "candidate_number_for_gate": 5,
+  "model_run_authorized": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 48,
+      "critical": [
+        "PLATEAU-317-C1-DSV4-TRANSIENT-SERVICE-ORPHAN-ON-CONTROLLER-EXIT"
+      ],
+      "high": [
+        "ADV-PLATEAU-R316-H3-NONCANONICAL-SAFETY-ATTESTATION"
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "REJECT_MODEL_RUN_PENDING_BOUNDED_CANDIDATE_6"
+    },
+    "Singer": {
+      "score_0_to_100": 66,
+      "critical": [],
+      "high": [
+        "ADV-PLATEAU-R317-H1-DSV4-SIGNAL-LEAVES-CGROUP",
+        "ADV-PLATEAU-R317-H2-UNBOUND-PYTHON-EXECUTION-CLOSURE"
+      ],
+      "medium": [],
+      "low": [],
+      "verdict": "REJECT_PRE_RUN"
+    }
+  },
+  "findings": {
+    "PLATEAU-317-C1-DSV4-TRANSIENT-SERVICE-ORPHAN-ON-CONTROLLER-EXIT": {
+      "evidence": "Singer ran the exact non-model wrapper with /usr/bin/sleep 30, terminated the outer controller, and observed the identity-named user-systemd service plus inner wrapper, timeout, and sleep still active. Nash independently confirmed the same class. Singer explicitly stopped the unit; root then verified no matched units or engine processes remained.",
+      "affected_gate": "whole-host safety, exclusivity, cleanup, and OOM containment",
+      "reproduction": "Interrupt the exact dedicated wrapper while a harmless sleep payload is active, then inspect the identity-bound transient unit and descendants.",
+      "acceptance_test": "TERM, INT, and HUP must stop and reap the exact unit and descendants and return their signal-specific status. A controller SIGKILL probe must demonstrate the documented systemd RuntimeMax/containment behavior and the campaign cleanup must stop any recorded active unit before releasing its lock."
+    },
+    "ADV-PLATEAU-R316-H3-NONCANONICAL-SAFETY-ATTESTATION": {
+      "evidence": "The new failure regex matches the harmless authentic SAFE_RUN start field kill_floor_gib=40 case-insensitively, so every real successful GLM arm would be rejected even though synthetic tests pass.",
+      "affected_gate": "canonical GLM safety evidence collection",
+      "reproduction": "Apply the collector regex to an authentic successful GLM main.log containing kill_floor_gib=40.",
+      "acceptance_test": "An authentic complete successful GLM log must pass; an exact anchored KILL_FLOOR breached record and any FATAL record must fail."
+    },
+    "ADV-PLATEAU-R317-H2-UNBOUND-PYTHON-EXECUTION-CLOSURE": {
+      "evidence": "Retained Python source is executed by ambient /usr/bin/python3 or the mutable .venv-harness interpreter/site packages. The bootstrap inherits PYTHONPATH/PYTHONHOME, tokenization can load mutable package code, and current Git HEAD is recorded but not compared with the reviewed runtime commit.",
+      "affected_gate": "frozen execution closure, candidate identity, prompt construction, and scoring authority",
+      "reproduction": "Inject PYTHONPATH/sitecustomize, mutate the venv tokenizer runtime, or invoke from a later self-consistent Git HEAD.",
+      "acceptance_test": "Use a sanitized isolated Python runtime; bind the exact interpreter and native tokenizer bytes; reject PYTHONPATH/PYTHONHOME, runtime mutations, or a Git runtime tree different from the reviewed candidate."
+    }
+  },
+  "root_reproduction": {
+    "signal_cleanup": "Verified Singer cleaned the probe and independently confirmed no dsv4-matched unit, ds4-server, or llama-server remained; the wrapper source has no signal trap and the campaign cleanup only diagnoses rather than stops a recorded unit.",
+    "authentic_safety_false_rejection": "Verified Python re.IGNORECASE search for KILL_FLOOR matches the authentic kill_floor_gib configuration field.",
+    "python_runtime": "Verified the retained closure omits /usr/bin/python3.12 and the 188 MiB .venv-harness; the benchmark dynamically imports tokenizers from mutable site-packages and the retained re-exec does not sanitize Python environment variables."
+  },
+  "round_316_status": {
+    "prompt_cache_and_raw_prompt_authority": "FIXED",
+    "normal_dsv4_cgroup_envelope": "VERIFIED_BUT_SIGNAL_CLEANUP_OPEN",
+    "multishard_identity": "FIXED",
+    "canonical_safety": "OPEN_FALSE_REJECTION_ONLY",
+    "retained_execution_paths": "PARTIALLY_FIXED_PYTHON_RUNTIME_OPEN",
+    "literal_supervision": "FIXED"
+  },
+  "required_candidate_6_scope": [
+    "Add identity-bound TERM/INT/HUP cleanup and campaign fallback cleanup for the dedicated DSV4 transient unit, with non-model signal tests.",
+    "Anchor the actual kill-floor breach marker rather than matching the harmless configuration field, with an authentic-log regression and failure mutations.",
+    "Sanitize Python execution, bind the reviewed candidate tree, interpreter, and exact native tokenizer dependency used by matched prompt construction/scoring; reject mutation before any model starts."
+  ],
+  "convergence": {
+    "candidate_3_blocking_classes": 6,
+    "candidate_5_blocking_classes": 3,
+    "blocking_set_strictly_shrank": true,
+    "consecutive_non_shrinking_candidates": 0,
+    "candidate_6_authorized": true,
+    "escalation_triggered": false,
+    "reason": "The blocking set halved, the new critical is in the newly introduced DSV4 containment rather than previously frozen scope, and the gate remains below eight candidates. No literal owner escalation trigger fired."
+  },
+  "verdict": "REJECT_PRE_RUN_PENDING_BOUNDED_CANDIDATE_6"
+}
