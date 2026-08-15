@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "gate": "W6-indexer-tile-reuse",
+  "candidate": 2,
+  "verdict": "NO_RESULT",
+  "stage": "prefreeze-green-and-runner-closure",
+  "source_commit": "90471483ee587646d0a1e7a1c35c5f71e665b4ff",
+  "test_sha256": "942086fc35e148a7d05350d65b6f33fa619eefb9fc0870394a7d1e502a9b6109",
+  "test_binary_sha256": "84b0b9cdef571a24fd6a3b16c8f2c5323e8f85fe949005b024b1836444937a0d",
+  "stdout_sha256": "b95be594e5754b6a4e52426302398a69c5b9a925025ee59fbc83eafc00b5a02e",
+  "stderr_sha256": "d97159af31f3fed67f573f176784ed1d073b0b852b8670ebbc30992894b0abdf",
+  "test_exit_code": 0,
+  "observed": {
+    "stdout_rows": 16,
+    "stderr_rows": 60,
+    "complete_write_checks_passed": true,
+    "exact_scores_and_ids_passed": true,
+    "causal_and_ragged_cases_passed": true,
+    "malformed_and_quality_rejections_passed": true
+  },
+  "blocking_failure": "The candidate-2 runner and scorer demanded empty stderr, while the exact production path necessarily emits the CUDA-backend identity, width-transition markers, malformed-value rejections, and quality-mode rejection. An authoritative run would therefore fail before scoring despite a valid execution.",
+  "bounded_candidate3_fix": "Keep production source and fixture byte-identical; validate the exact stderr state-machine transcript derived from the fixed correctness sequence and post-freeze randomized timing schedule.",
+  "safety": {
+    "model_loaded": false,
+    "engine_server_started": false,
+    "oom_or_xid": false
+  }
+}
