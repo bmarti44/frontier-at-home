@@ -1,0 +1,56 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-v1",
+  "candidate_number_for_gate": 8,
+  "campaign_global_review_round_before_review": 317,
+  "candidate_commit": "09ac3192392999943d18e15174ecc10ab456515a",
+  "candidate_tree": "7c97f9890c906279f01437e2f6620b681001e80f",
+  "supersedes": "results/glm52-gates/lossless-plateau-candidate7-preaudit.json",
+  "failure_records": [
+    "results/glm52-gates/lossless-plateau-candidate7-preaudit.json",
+    "results/glm52-gates/lossless-plateau-candidate8-profile-pin-fail.json"
+  ],
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r317.json",
+  "recorded_at_utc": "2026-08-15T16:37:42Z",
+  "scope": "Candidate 7 pre-audit correction only: retain the profile-required official tokenizer JSON in the reviewed Git closure, select this receipt, correct the stale receipt-name assertion, and refresh the resulting campaign-script digest in both matched profiles. No engine, request, metric, scorer, safety-policy, or fixture change.",
+  "artifact_sha256": {
+    "configs/glm52-lossless-plateau-profile.json": "a3c7a182145f7d6d72f50d173afff58029c00253b94ad2b6bac19513054822f8",
+    "configs/dsv4-matched-32k-profile.json": "572e7845b1b9fc6b055cec24ba1928f1b4e17d35ad8b18497cf76ae3e0c218a2",
+    "results/glm52-goal/harness/decisive_matched.sh": "8432df45873719b684ca9384c5ec4f7f5fd368067fc1d5b71eb9aebd21fa6c68",
+    "results/glm52-goal/harness/glm_decisive_arm.sh": "f5829fcf713b73e2e9aa6d45d0b8e43db71076905a0740f884f425c1d38c328a",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "1c42c1449f20bb1c70dc7eb93f380374af545fa15f54e85709e428b647f39d6e",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "84b658c6147d0fdc1baf11de33e7613eb17f29cc357252c6261c3db22d3ec913",
+    "scripts/30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "scripts/56_collect_matched_evidence.py": "9dfec6b359d57e7a3cf4a12fc25b9197dee47d7eb315f65f842126328552fb48",
+    "vendor/official-encoding/tokenizer.json": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf"
+  },
+  "bound_python_runtime": {
+    "executable_sha256": "a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1",
+    "stdlib_tree_sha256": "b8cb577d2bdeefc77c16bd7a42e467bfd554a7ba104663e760ac896cd93a17a9",
+    "libpython_sha256": "32ce729462e7ba66c8edb12c1151fa5db25964f65900fe8337c3969f7350672d",
+    "tokenizer_native_sha256": "3c7e64a6cf423a4b675d535b0e56667382a02fa71f86380719d2a442ad98c1c7",
+    "execution_flags": ["-I", "-B", "-S"],
+    "environment": "env -i"
+  },
+  "pre_submission_audit": {
+    "focused_tests_run": 33,
+    "focused_failures": 0,
+    "focused_errors": 0,
+    "receipt_commit_exists": true,
+    "receipt_tree_matches": true,
+    "receipt_bound_paths_match": true,
+    "term_int_hup_real_user_systemd_probes": "PASS",
+    "campaign_fallback_cleanup_contract": "PASS",
+    "authentic_safety_and_breach_mutation": "PASS",
+    "profile_and_python_runtime_bindings": "PASS",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count": 8,
+    "candidate_7_pre_submission_defects": 2,
+    "candidate_8_pre_submission_defects": 0,
+    "escalation_triggered": false,
+    "reason": "The bounded pre-audit defects are preserved and closed before publication, the blocking set strictly shrank, no frozen scope changed, and candidate 8 does not exceed the eight-candidate trigger."
+  },
+  "verdict": "READY_FOR_DELTA_ONLY_REVIEW_NO_ENGINE_RUN"
+}
