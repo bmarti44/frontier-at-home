@@ -1145,8 +1145,10 @@ to move from about 2.3 toward 4-6 decode tok/s; with B-E passing, the broader
 lossless planning range is 7-10 decode tok/s and 75-140 prefill tok/s.
 Measurements alone populate the decision table. Hardware additions are not
 continuation options under the 2026-08-15 owner directive: NVMe-oF and a second
-Spark remain recorded context only. Stop there for the owner's choice between
-the measured lossless profile and separately authorized fidelity/residency work.
+Spark remain recorded context only. Measure the plateau there and present it to
+the owner with the single-box continuation decision: stop at the lossless
+plateau, or open Rung 3 residency (fidelity spend, owner-gated) — the only
+current-hardware path to 18.4.
 If the MTP-union, decaying-hotness, and OS arms all pass, the planning envelope
 is approximately `1.3-2.0x * 1.05-1.15x * 1.02-1.05x` on top of 2.33 tok/s,
 which is consistent with the existing 6-10 tok/s lossless estimate. This is a
