@@ -3359,16 +3359,24 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
             attempts.append({
                 "sequence": sequence,
                 "arm": arm,
-                "process_identity": f"boot:pid:{sequence}",
-                "binary_sha256": "2" * 64,
-                "environment_sha256": ("3" if candidate else "4") * 64,
                 "fixture_sha256": "5" * 64,
                 "command_log": command_log,
-                "safe_run_completed": True,
-                "minimum_available_memory_gib": 80.0,
-                "swap_bytes": 0,
-                "oom": False,
-                "xid": False,
+                "main_log": (
+                    "memory_swap_max=0 memory_oom_group=1\n"
+                    f"candidate_binary_sha256={'2' * 64}\n"
+                    f"executed_environment_sha256="
+                    f"{('3' if candidate else '4') * 64}\n"
+                    f"executed_candidate_verified pid={100 + sequence} "
+                    f"start_ticks={200 + sequence}\n"
+                    "SAFE_RUN end rc=0 killed=no\n"
+                ),
+                "samples_log": "".join(
+                    f"2026-08-15T00:00:{sample:02d}Z mem_avail_kb=83886080 "
+                    "eng_rss_kb=1024 read_bytes=0 cgroup_current_bytes=1024 "
+                    "cgroup_peak_bytes=2048 cgroup_swap_current_bytes=0\n"
+                    for sample in range(20)
+                ),
+                "kernel_log": "",
                 "cases": cases,
             })
         return {
@@ -3392,7 +3400,10 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
         self.assertGreater(result["metrics"]["delta_nll"], 0.0)
 
     def test_inactive_or_malformed_candidate_fails_closed(self):
-        for mutate in ("off", "zero", "identical", "duplicate", "missing_path"):
+        for mutate in (
+            "off", "zero", "identical", "duplicate", "missing_path",
+            "binary", "environment", "swap", "fault",
+        ):
             campaign = self.campaign()
             candidate_attempts = [
                 row for row in campaign["attempts"] if row["arm"] == "A"
@@ -3413,8 +3424,26 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                 candidate_attempts[0]["command_log"] += candidate_attempts[0][
                     "command_log"
                 ].splitlines()[-1] + "\n"
-            else:
+            elif mutate == "missing_path":
                 campaign["candidate_required_paths"] = ["normal", "unknown"]
+            elif mutate == "binary":
+                candidate_attempts[0]["main_log"] = candidate_attempts[0][
+                    "main_log"
+                ].replace("2" * 64, "9" * 64)
+            elif mutate == "environment":
+                candidate_attempts[0]["main_log"] = candidate_attempts[0][
+                    "main_log"
+                ].replace("3" * 64, "9" * 64)
+            elif mutate == "swap":
+                candidate_attempts[0]["samples_log"] = candidate_attempts[0][
+                    "samples_log"
+                ].replace(
+                    "cgroup_swap_current_bytes=0",
+                    "cgroup_swap_current_bytes=1",
+                    1,
+                )
+            else:
+                candidate_attempts[0]["kernel_log"] = "NVRM: Xid 79\n"
             with self.subTest(mutate=mutate), self.assertRaises(ValueError):
                 self.goal._score_w9_e2m1_fidelity_raw([campaign])
 
