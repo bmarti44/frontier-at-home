@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "gate": "W5-indexer-f16",
+  "candidate": 3,
+  "status": "RED_CONFIRMED",
+  "parent_source_commit": "4a79e9cc5a20f0ecae7ae59dd0ed51786592fca4",
+  "test_commit": "1858791bd0214b426072b128a1aacbccc3e443d7",
+  "named_findings": [
+    "ADV-W5-C2-H2-MUTABLE-MEMORY-GUARD-MODE",
+    "W5-C2-H1-PRODUCTION-PATHS-BYPASS-TESTED-HELPERS"
+  ],
+  "behavioral_red": {
+    "command": "make -j2 cuda-w5-indexer-red",
+    "exit_code": 1,
+    "stderr": "FAIL: W5 memory guard survives environment changes after binding",
+    "compiled_successfully": true,
+    "failure_is_missing_file_or_symbol": false
+  },
+  "implementation_commit": "191d6b6c7f42df63b51d215f93ba9c5220ee7353",
+  "green_checks": [
+    "graph-bound W5 mode remains stable after environment mutation",
+    "the test allocator and serving allocator share one graph-bound helper",
+    "only the indexer allocation halves while compact KV and RoPE remain F32",
+    "the CUDA fixture invokes the same graph-bound store and score wrappers as serving",
+    "production CUDA store rounding is exact and scores and ordered IDs match at shapes 1, 16, and 17",
+    "session tests invoke the same graph-bound payload wrappers as full and layer session save/load",
+    "cross-mode session conversion uses non-F16-representable values and an explicit F16 rounding oracle",
+    "ds4-server builds successfully"
+  ],
+  "model_started": false,
+  "host_safety": {
+    "large_model_processes_started": false,
+    "fio_started": false,
+    "reboot_required": false,
+    "sudo_required": false
+  }
+}
