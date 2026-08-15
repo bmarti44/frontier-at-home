@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "gate": "W6-indexer-tile-reuse",
+  "candidate": 1,
+  "status": "FROZEN_FOR_REVIEW_AND_MICROGATE",
+  "created_at": "2026-08-14T21:58:09-04:00",
+  "source_commit": "0604aee0383bde8c2101118db14faf33cb67c523",
+  "baseline_source_commit": "8cde153a43b170ad6c66644dba4392c343cf39b1",
+  "binary_sha256": "9dfb400223e7b9c461b82e1c7acc2d142e07c1aa395b120eb517d7b71feb379d",
+  "binary_bytes": 14757624,
+  "builds": 2,
+  "byte_identical": true,
+  "jobs": 2,
+  "source_hashes": {
+    "Makefile": "4baf208603f0b6f3ef4a5a7926d9ba9704963b5cd5d885a2c7e5c6fce819434e",
+    "ds4_cuda.cu": "3d18dc3dae7f11a70b2e7147a8e0ecccc9b0d1678e16065f6b6fb952f38a09a5",
+    "tests/cuda_indexer_tile_reuse_w6.cu": "3db5c4179c68f1d86643eb9fbf68b6d45eebbd2dff022ebb5e424294410e3fd1"
+  },
+  "patch_sha256": "53660074a4bbbb4f8950825670fccb99a7e9e66e47da638dd98898830e77ba59",
+  "preserved_archive_sha256": "40bb4e75d73d10eb3e0f525d1ee151fd694beec4926bab111844bfe26f0724b2",
+  "preserved_archive_path": "results/glm52-gates/harness/w6-indexer-tile-reuse-candidate1.patch.gz",
+  "build_artifact_hashes": {
+    "build1.log": "859dd079f152ab72378d7c5eb47575052e19de4b38c67293e247edd257404a45",
+    "build1.time": "90eee54a9288b7cf0fe48255fb5a1429f7961aac6bf93ae6ef89308eca09d25c",
+    "build2.log": "859dd079f152ab72378d7c5eb47575052e19de4b38c67293e247edd257404a45",
+    "build2.time": "8cdce04ba1206923c222c09d46741f3359fa3f4356dd6b4d4ed9c5375541fb8b",
+    "manifest.json": "cce958c05841d4ddbd94c2938c65829ba44a19773939b4904dee50a36fa2015f"
+  },
+  "pre_freeze_diagnostic_only": {
+    "rows": 1048576,
+    "tokens": 64,
+    "width1_ms": [1.43244803, 1.43318403, 1.43180799, 1.43312001, 1.43196797],
+    "width2_ms": [1.48163199, 1.49244797, 1.48630404, 1.48102403, 1.48278403],
+    "width4_ms": [1.62233603, 1.61491203, 1.61833596, 1.62041605, 1.61638403],
+    "logical_k_load_bytes": {"1": 2147483648, "2": 1073741824, "4": 536870912},
+    "claim_limit": "Post-hoc diagnostic only; it predicts rejection but has no gate authority."
+  },
+  "model_started": false,
+  "authority": "Candidate freeze only. A post-freeze randomized fixed scorer may issue the terminal microgate verdict."
+}
