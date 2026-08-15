@@ -1,0 +1,25 @@
+{
+  "schema": "glm52-lossless-plateau-profile-pin-red-v1",
+  "status": "RED_CONFIRMED",
+  "purpose": "Reconcile the adopted W7.1a GLM profile before freezing the lossless-plateau gauntlet.",
+  "repository_head": "dcaad516e79f9e7e277a42c8b891388eec35284a",
+  "test": {
+    "path": "scripts/tests/test_engine_switch.py",
+    "sha256": "a5640b2a51542a6b8cd96f4c82059293e55814ff3467c69f518cdaaa33b96f34",
+    "case": "EngineSwitchTests.test_frozen_profiles_pin_the_verified_production_candidates",
+    "command": "python3 -m unittest scripts.tests.test_engine_switch.EngineSwitchTests.test_frozen_profiles_pin_the_verified_production_candidates -v",
+    "exit_code": 1
+  },
+  "unchanged_profile": {
+    "path": "configs/glm52-profile.json",
+    "sha256": "2b1fb3d5143ceac173732cf7d00aa99f5e3b83a1248fd861ecb82aa7330f2d8d",
+    "expected_sha256": "ede222c835c07b03e7fbde1dde1daf6c13807133250abeeede3cfff5464524eb"
+  },
+  "observed_benchmark": {
+    "path": "scripts/30_bench_speed.py",
+    "actual_sha256": "b8e9d26f15f721c4cbe29825863e0a7b3fdfb44547fe756e5832442388a1c131"
+  },
+  "failure": "The adopted GLM profile does not hash-bind the current reasoning-aware benchmark client, so a plateau freeze must fail closed.",
+  "engine_started": false,
+  "gpu_used": false
+}
