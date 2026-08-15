@@ -614,6 +614,57 @@ class MatchedEvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "records a failure"):
                 self.collector._parse_canonical_safety(directory)
 
+    def test_rejects_noncanonical_or_hidden_nonzero_cgroup_events(self):
+        valid_items = [
+            "high=0", "high_delta=0", "max=0", "max_delta=0",
+            "oom=0", "oom_delta=0", "oom_kill=0", "oom_kill_delta=0",
+            "oom_group_kill=0", "oom_group_kill_delta=0",
+        ]
+        mutations = {
+            "duplicate_high_delta": valid_items[:2] + ["high_delta=9", "high_delta=0"] + valid_items[2:],
+            "duplicate_max_delta": valid_items[:4] + ["max_delta=9", "max_delta=0"] + valid_items[4:],
+            "duplicate_oom_delta": valid_items[:6] + ["oom_delta=9", "oom_delta=0"] + valid_items[6:],
+            "duplicate_oom_kill_delta": valid_items[:8] + ["oom_kill_delta=9", "oom_kill_delta=0"] + valid_items[8:],
+            "duplicate_oom_group_kill_delta": valid_items + ["oom_group_kill_delta=9", "oom_group_kill_delta=0"],
+            "unknown_key": valid_items + ["pressure_delta=0"],
+            "malformed_value": [*valid_items[:-1], "oom_group_kill_delta=zero"],
+            "missing_key": valid_items[:-1],
+            "nonzero_absolute": ["high=1", *valid_items[1:]],
+            "nonzero_delta": [valid_items[0], "high_delta=1", *valid_items[2:]],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / "samples.log").write_text("sample\n", encoding="ascii")
+            (directory / "safety.kernel.log").write_text("", encoding="ascii")
+
+            def write_main(items):
+                (directory / "safety.main.log").write_text(
+                    "2026-08-15T00:00:01+00:00 cgroup_final current_bytes=1 "
+                    "peak_bytes=2 swap_current_bytes=0 events="
+                    + ",".join(items)
+                    + "\n2026-08-15T00:00:02+00:00 SAFE_RUN end rc=0 killed=no "
+                    "(124=timeout, 137=SIGKILL/ENOMEM-adjacent)\n",
+                    encoding="ascii",
+                )
+                digests = [
+                    hashlib.sha256((directory / name).read_bytes()).hexdigest()
+                    for name in ("safety.main.log", "samples.log", "safety.kernel.log")
+                ]
+                (directory / "safety.wrapper.out").write_text(
+                    "SAFE_RUN_DONE rc=0 killed=no dir=/tmp/safe "
+                    f"main_sha256={digests[0]} samples_sha256={digests[1]} "
+                    f"kernel_sha256={digests[2]}\n",
+                    encoding="ascii",
+                )
+
+            write_main(valid_items)
+            self.collector._parse_canonical_safety(directory)
+            for name, items in mutations.items():
+                with self.subTest(name=name):
+                    write_main(items)
+                    with self.assertRaisesRegex(ValueError, "canonical safety"):
+                        self.collector._parse_canonical_safety(directory)
+
     def test_rejects_live_environment_command_and_model_identity_drift(self):
         mutations = (
             (
