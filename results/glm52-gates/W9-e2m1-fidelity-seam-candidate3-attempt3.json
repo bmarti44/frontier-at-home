@@ -1,0 +1,15 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-attempt-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "attempt": 3,
+  "status": "FAIL",
+  "date": "2026-08-15",
+  "observed": "The ordinary-store exact non-unit-scale midpoint test failed at index 169: observed 1.75 versus lower-tie oracle 0.875. The CUDA codec divided value by scale before thresholding; fast reciprocal rounding moved an exact constructed midpoint above its boundary.",
+  "bounded_fix": "Compare value directly against each midpoint multiplied by the stored F32 scale. This removes the reciprocal-rounding ambiguity, preserves the preregistered lower-code tie rule, and changes only the shared E2M1 diagnostic codec.",
+  "artifact_sha256": {
+    "/tmp/w9-e2m1-c3-green3.stdout": "8a38588d6ef19f39397401d6ba3570b1ddd05ac2b832e99bfd3953497bbe5d7a",
+    "/tmp/w9-e2m1-c3-green3.stderr": "0bd6f0b1a7457999da4f8f3ab9f770e516b3d7516fe16c0f9317d939a52648bf"
+  },
+  "acceptance": "All exact unit/non-unit midpoint and nextafter cases pass, and a mutation restoring normalized division fails the fixed test."
+}
