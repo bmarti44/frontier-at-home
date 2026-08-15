@@ -54,6 +54,22 @@ class MatchedEvidenceTests(unittest.TestCase):
                     "binary_sha256": "c" * 64,
                     "configuration_sha256": "e" * 64,
                     "serving_weights_manifest_sha256": serving_digest,
+                    "measured_server_context_cap": 32_768,
+                    "matched_model_first_shard_bytes": 5_257_664,
+                    "model_path": "/models/dsv4-00001-of-00003.gguf",
+                    "launch_arguments": [
+                        "--model", "{model}", "-c", "32768", "--port", "{port}"
+                    ],
+                    "runtime_closure_sha256": {
+                        str((ROOT / "scripts/30_bench_speed.py").resolve()): hashlib.sha256(
+                            (ROOT / "scripts/30_bench_speed.py").read_bytes()
+                        ).hexdigest()
+                    },
+                    "artifact_sha256": {
+                        "scripts/30_bench_speed.py": hashlib.sha256(
+                            (ROOT / "scripts/30_bench_speed.py").read_bytes()
+                        ).hexdigest()
+                    },
                     "serving_weights_release": {
                         "repo": "unsloth/test-GGUF",
                         "revision": "f" * 40,
@@ -75,7 +91,8 @@ class MatchedEvidenceTests(unittest.TestCase):
                     # Candidate 2's legacy field keeps the previously-green
                     # collector fixtures valid until the bounded candidate-3
                     # implementation replaces it with the two explicit caps.
-                    "context_cap": 1_048_576,
+                    "model_path": "/models/glm52.gguf",
+                    "model_bytes": 211_075_856_448,
                     "runtime": {
                         "engine_environment": {
                             "DS4_CUDA_EXPERT_CACHE_GB": "0",
@@ -209,12 +226,43 @@ class MatchedEvidenceTests(unittest.TestCase):
                         "stable_model_remap=1\nmodel_sha256=" + "a" * 64 + "\n",
                         encoding="utf-8",
                     )
+                    environment = {
+                        "environment": {
+                            "DS4_CUDA_EXPERT_CACHE_GB": "0",
+                            "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+                            "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+                            "DS4_CUDA_FETCH_THREADS": "6",
+                            "DS4_CUDA_IQ2_DOWN_REFERENCE": "1",
+                            "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+                            "DS4_CUDA_STABLE_MODEL_REMAP": "1",
+                            "DS4_TOKEN_TIMING_LOG": "1",
+                        }
+                    }
+                    canonical = "".join(
+                        f"{key}={value}\n"
+                        for key, value in sorted(environment["environment"].items())
+                    )
+                    environment["sha256"] = hashlib.sha256(
+                        canonical.encode("ascii")
+                    ).hexdigest()
                     (directory / "process.environment").write_text(
-                        "executed_environment_sha256=" + "6" * 64 + "\n",
-                        encoding="ascii",
+                        json.dumps(environment) + "\n", encoding="ascii"
                     )
                     (directory / "process.command").write_text(
-                        json.dumps({"context_cap": 32768, "stable_model_remap": True}) + "\n",
+                        json.dumps(
+                            {
+                                "argv": [
+                                    "/candidate/ds4-server", "--cuda", "-m",
+                                    "/models/glm52.gguf", "-c", "32768",
+                                    "--host", "127.0.0.1", "--port", "8021",
+                                    "--ssd-streaming", "--ssd-streaming-cache-experts",
+                                    "40GB",
+                                ],
+                                "context_cap": 32768,
+                                "model_device_inode_size": "66306:679227:211075856448",
+                                "stable_model_remap": True,
+                            }
+                        ) + "\n",
                         encoding="ascii",
                     )
                     (directory / "model.device-inode-size").write_text(
@@ -236,7 +284,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                     )
                     (directory / "safety.main.log").write_text(
                         "executed_environment_allowlist=bound "
-                        "executed_environment_sha256=" + "6" * 64 + "\n"
+                        "executed_environment_sha256=" + environment["sha256"] + "\n"
                         "SAFE_RUN_DONE rc=0\n", encoding="utf-8"
                     )
                 else:
@@ -254,9 +302,41 @@ class MatchedEvidenceTests(unittest.TestCase):
                         ),
                         encoding="utf-8",
                     )
-                    (directory / "memwatch.segment.log").write_text(
-                        "ts=2026-07-27T00:00:00Z mem_available_gib=20.00\n",
+                    (directory / "process.command").write_text(
+                        json.dumps(
+                            {
+                                "argv": [
+                                    "/candidate/llama-server", "--model",
+                                    "/models/dsv4-00001-of-00003.gguf", "-c", "32768",
+                                    "--port", "8021",
+                                ],
+                                "binary_sha256": "c" * 64,
+                                "context_cap": 32768,
+                                "model_device_inode_size": "66306:779227:5257664",
+                            }
+                        ) + "\n",
+                        encoding="ascii",
+                    )
+                    (directory / "model.device-inode-size").write_text(
+                        "66306:779227:5257664\n", encoding="ascii"
+                    )
+                    (directory / "process.runtime-closure.json").write_text(
+                        json.dumps(
+                            {
+                                str((ROOT / "scripts/30_bench_speed.py").resolve()): hashlib.sha256(
+                                    (ROOT / "scripts/30_bench_speed.py").read_bytes()
+                                ).hexdigest()
+                            }
+                        ) + "\n",
+                        encoding="ascii",
+                    )
+                    (directory / "samples.log").write_text(
+                        "2026-07-27T00:00:00+00:00 "
+                        "mem_avail_kb=20971520 eng_rss_kb=1 read_bytes=1\n",
                         encoding="utf-8",
+                    )
+                    (directory / "safety.main.log").write_text(
+                        "SAFE_RUN_DONE rc=0\n", encoding="utf-8"
                     )
         return campaign, fixture, dsv4_profile, serving_manifest, glm_profile
 
@@ -380,6 +460,42 @@ class MatchedEvidenceTests(unittest.TestCase):
             glm_profile.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, "campaign artifact"):
                 self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+
+    def test_rejects_live_environment_command_and_model_identity_drift(self):
+        mutations = (
+            (
+                "process.environment",
+                lambda value: value["environment"].__setitem__(
+                    "DS4_CUDA_FETCH_THREADS", "7"
+                ),
+                "executed environment",
+            ),
+            (
+                "process.command",
+                lambda value: value.__setitem__("context_cap", 8192),
+                "executed command",
+            ),
+        )
+        for artifact, mutate, message in mutations:
+            with self.subTest(artifact=artifact), tempfile.TemporaryDirectory() as tmp:
+                campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+                path = campaign / "block0-seq0-armA" / artifact
+                value = json.loads(path.read_text())
+                mutate(value)
+                path.write_text(json.dumps(value))
+                with self.assertRaisesRegex(ValueError, message):
+                    self.collector.collect_records(
+                        campaign, fixture, profile, serving, glm_profile
+                    )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            path = campaign / "block0-seq0-armA" / "model.device-inode-size"
+            path.write_text("66306:679228:211075856448\n", encoding="ascii")
+            with self.assertRaisesRegex(ValueError, "executed command"):
+                self.collector.collect_records(
+                    campaign, fixture, profile, serving, glm_profile
+                )
 
 
 if __name__ == "__main__":

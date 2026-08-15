@@ -105,6 +105,16 @@ def parse_args() -> argparse.Namespace:
         help="server log containing DS4_TOKEN_TIMING records for exact decode timing",
     )
     parser.add_argument(
+        "--prompt-count-log",
+        type=Path,
+        help="production server log used to bind each request's evaluated prompt count",
+    )
+    parser.add_argument(
+        "--prompt-count-format",
+        choices=("ds4", "llama"),
+        help="production prompt-count line format in --prompt-count-log",
+    )
+    parser.add_argument(
         "--tokenizer-path",
         type=Path,
         default=TOKENIZER_PATH,
@@ -133,6 +143,10 @@ def parse_args() -> argparse.Namespace:
         parser.error("--reps must be positive")
     if args.warmup < 0:
         parser.error("--warmup must be non-negative")
+    if (args.prompt_count_log is None) != (args.prompt_count_format is None):
+        parser.error(
+            "--prompt-count-log and --prompt-count-format must be supplied together"
+        )
     try:
         args.context_levels = tuple(
             int(value) for value in args.context_levels.split(",") if value != ""
@@ -715,6 +729,36 @@ def raw_timing_envelope_errors(
     return []
 
 
+def read_production_prompt_count(
+    path: Path, offset: int, line_format: str
+) -> int:
+    """Read exactly one request-local prompt count from the production log."""
+    if offset < 0 or line_format not in {"ds4", "llama"}:
+        raise ValueError("invalid production prompt-count request")
+    with path.open("rb") as stream:
+        stream.seek(offset)
+        payload = stream.read().decode("utf-8", errors="strict")
+    if line_format == "ds4":
+        pattern = re.compile(
+            r"^.*\bds4-server: chat ctx=[0-9]+\.\.[0-9]+:([0-9]+) "
+            r"prompt start\s*$",
+            re.MULTILINE,
+        )
+    else:
+        pattern = re.compile(
+            r"^.*\bslot\s+print_timing:.*\bprompt eval time\s*=.*?\s/\s*"
+            r"([0-9]+) tokens\s*\(.*$",
+            re.MULTILINE,
+        )
+    counts = [int(match.group(1)) for match in pattern.finditer(payload)]
+    if len(counts) != 1 or counts[0] <= 0:
+        raise ValueError(
+            "production prompt count is missing or ambiguous: "
+            f"format={line_format}, matches={counts!r}"
+        )
+    return counts[0]
+
+
 def run_rep(
     client: Client,
     tokenizer: Any,
@@ -728,6 +772,8 @@ def run_rep(
     min_completion_tokens: int = MIN_VALID_COMPLETION_TOKENS,
     seed: int = SEED,
     token_timing_log: Path | None = None,
+    prompt_count_log: Path | None = None,
+    prompt_count_format: str | None = None,
 ) -> dict[str, Any]:
     try:
         preamble = make_preamble(tokenizer, unique_id, seed)
@@ -743,6 +789,9 @@ def run_rep(
             payload["ignore_eos"] = True
         timing_offset = (
             token_timing_log.stat().st_size if token_timing_log is not None else None
+        )
+        prompt_count_offset = (
+            prompt_count_log.stat().st_size if prompt_count_log is not None else None
         )
         stream = client.stream_chat(payload)
         if not stream["done"]:
@@ -761,6 +810,18 @@ def run_rep(
             return invalid_rep(f"invalid usage.completion_tokens: {completion_tokens!r}")
         if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
             return invalid_rep(f"invalid usage.prompt_tokens: {prompt_tokens!r}")
+        production_prompt_tokens = None
+        if prompt_count_log is not None:
+            if prompt_count_offset is None or prompt_count_format is None:
+                return invalid_rep("production prompt-count binding is incomplete")
+            production_prompt_tokens = read_production_prompt_count(
+                prompt_count_log, prompt_count_offset, prompt_count_format
+            )
+            if production_prompt_tokens != prompt_tokens:
+                return invalid_rep(
+                    "production prompt count/server usage mismatch: "
+                    f"production={production_prompt_tokens}, usage={prompt_tokens}"
+                )
         # Tokenize the reasoning and content streams separately rather than
         # tokenizing their concatenation: the model emits them as distinct
         # delta fields, and re-encoding across that seam invents or destroys a
@@ -884,6 +945,7 @@ def run_rep(
             "client_last_content_ns": last_content_at_ns,
             "sse_token_timestamps_ns": sse_token_timestamps_ns,
             "client_prompt_tokens": token_count(tokenizer, prompt),
+            "production_prompt_tokens": production_prompt_tokens,
             "raw_client_timing_ratio": raw_client_timing_ratio,
         }
         if reasons:
@@ -1054,6 +1116,8 @@ def main() -> int:
                     args.min_completion_tokens,
                     args.seed,
                     args.token_timing_log,
+                    args.prompt_count_log,
+                    args.prompt_count_format,
                 )
                 unique_id += 1
                 if warmup_index + 1 < args.warmup or args.reps > 0:
@@ -1073,6 +1137,8 @@ def main() -> int:
                     args.min_completion_tokens,
                     args.seed,
                     args.token_timing_log,
+                    args.prompt_count_log,
+                    args.prompt_count_format,
                 )
                 unique_id += 1
                 cell["reps"].append(rep)

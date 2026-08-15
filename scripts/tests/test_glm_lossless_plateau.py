@@ -10,6 +10,7 @@ PROFILE = ROOT / "configs/glm52-profile.json"
 CAMPAIGN_PROFILE = ROOT / "configs/glm52-lossless-plateau-profile.json"
 CAMPAIGN = ROOT / "results/glm52-goal/harness/decisive_matched.sh"
 ARM = ROOT / "results/glm52-goal/harness/glm_decisive_arm.sh"
+DSV4_ARM = ROOT / "results/glm52-goal/harness/dsv4_decisive_arm.sh"
 
 
 class GlmLosslessPlateauTests(unittest.TestCase):
@@ -27,10 +28,12 @@ class GlmLosslessPlateauTests(unittest.TestCase):
 
         campaign = CAMPAIGN.read_text()
         arm = ARM.read_text()
-        self.assertIn(f"GLM_SAFE_EXPECTED_BINARY_SHA256={expected}", campaign)
+        dsv4_arm = DSV4_ARM.read_text()
+        self.assertIn(f"GLM_BINARY_SHA256={expected}", campaign)
         self.assertIn("GLM_CANDIDATE_SRC=/home/bmarti44/.cache/", campaign)
-        self.assertIn("CTX=32768", campaign)
-        self.assertIn("--context-levels 0,28672", campaign)
+        self.assertIn('"$SRC/ds4-server" --cuda -m "$MODEL" -c 32768', arm)
+        self.assertIn("--context-levels 0,28672", arm)
+        self.assertIn("--context-levels 0,28672", dsv4_arm)
         self.assertNotIn("restore_dsv4", campaign)
         self.assertNotIn("sudo -n", campaign)
         self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER=1", campaign)
@@ -64,6 +67,9 @@ class GlmLosslessPlateauTests(unittest.TestCase):
         for path in (
             "results/glm52-goal/harness/decisive_matched.sh",
             "results/glm52-goal/harness/glm_decisive_arm.sh",
+            "results/glm52-goal/harness/dsv4_decisive_arm.sh",
+            "results/glm52-gates/harness/glm_cgroup_run.sh",
+            "results/glm52-gates/harness/glm_safe_run.sh",
             "scripts/30_bench_speed.py",
             "scripts/56_collect_matched_evidence.py",
         ):

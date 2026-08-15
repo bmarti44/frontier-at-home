@@ -61,6 +61,142 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _verify_campaign_artifacts(profile: dict[str, Any]) -> None:
+    bindings = profile.get("artifact_sha256")
+    if not isinstance(bindings, dict) or not bindings:
+        raise ValueError("campaign artifact bindings are missing")
+    for relative, expected in bindings.items():
+        if (
+            not isinstance(relative, str)
+            or not relative
+            or relative.startswith("/")
+            or not SHA256.fullmatch(str(expected))
+        ):
+            raise ValueError("campaign artifact binding is malformed")
+        path = (ROOT / relative).resolve()
+        try:
+            path.relative_to(ROOT)
+        except ValueError as exc:
+            raise ValueError("campaign artifact escapes repository") from exc
+        if path.is_symlink() or not path.is_file() or _sha256(path) != expected:
+            raise ValueError(f"campaign artifact digest mismatch: {relative}")
+
+
+def _environment_digest(environment: dict[str, str]) -> str:
+    canonical = "".join(
+        f"{name}={environment[name]}\n" for name in sorted(environment)
+    )
+    return hashlib.sha256(canonical.encode("ascii")).hexdigest()
+
+
+def _execution_binding(
+    directory: Path,
+    expected_environment: dict[str, str],
+    expected_binary_sha256: str,
+    expected_model_bytes: int,
+    expected_model_path: str,
+    expected_launch_arguments: list[str],
+) -> str:
+    environment = _read_json(directory / "process.environment")
+    command = _read_json(directory / "process.command")
+    try:
+        model_identity = (directory / "model.device-inode-size").read_text(
+            encoding="ascii"
+        ).strip()
+    except OSError as exc:
+        raise ValueError(f"live model identity is missing in {directory}") from exc
+    if (
+        not isinstance(environment, dict)
+        or environment.get("environment") != expected_environment
+        or environment.get("sha256") != _environment_digest(expected_environment)
+    ):
+        raise ValueError(f"executed environment does not match in {directory}")
+    if not isinstance(command, dict):
+        raise ValueError(f"executed command is invalid in {directory}")
+    argv = command.get("argv")
+    expected_arguments = [
+        expected_model_path if value == "{model}" else value
+        for value in expected_launch_arguments
+    ]
+    if "{port}" not in expected_arguments:
+        raise ValueError("approved launch arguments have no port placeholder")
+    port_index = expected_arguments.index("{port}")
+    if (
+        not isinstance(argv, list)
+        or len(argv) != len(expected_arguments) + 1
+        or not argv[port_index + 1].isdigit()
+        or not 1024 <= int(argv[port_index + 1]) <= 65535
+    ):
+        raise ValueError(f"executed command does not match in {directory}")
+    expected_arguments[port_index] = argv[port_index + 1]
+    if (
+        argv[1:] != expected_arguments
+        or any(not isinstance(value, str) or "\x00" in value for value in argv)
+        or command.get("context_cap") != 32_768
+        or command.get("model_device_inode_size") != model_identity
+    ):
+        raise ValueError(f"executed command does not match in {directory}")
+    parts = model_identity.split(":")
+    if (
+        len(parts) != 3
+        or any(not value.isdigit() for value in parts)
+        or int(parts[2]) != expected_model_bytes
+    ):
+        raise ValueError(f"live model identity is invalid in {directory}")
+    identity = (directory / "process.identity").read_text(encoding="ascii").split()
+    if len(identity) != 3 or identity[2] != expected_binary_sha256:
+        raise ValueError(f"executed binary does not match in {directory}")
+    return model_identity
+
+
+def _dsv_execution_binding(
+    directory: Path,
+    expected_binary_sha256: str,
+    expected_model_bytes: int,
+    expected_runtime_closure: dict[str, str],
+    expected_launch_arguments: list[str],
+    expected_model_path: str,
+) -> str:
+    command = _read_json(directory / "process.command")
+    try:
+        model_identity = (directory / "model.device-inode-size").read_text(
+            encoding="ascii"
+        ).strip()
+    except OSError as exc:
+        raise ValueError(f"DeepSeek live model identity is missing in {directory}") from exc
+    argv = command.get("argv") if isinstance(command, dict) else None
+    runtime_closure = _read_json(directory / "process.runtime-closure.json")
+    expected_arguments = [
+        expected_model_path if value == "{model}" else value
+        for value in expected_launch_arguments
+    ]
+    if "{port}" not in expected_arguments:
+        raise ValueError("approved DeepSeek launch arguments have no port")
+    port_index = expected_arguments.index("{port}")
+    if (
+        not isinstance(argv, list)
+        or len(argv) != len(expected_arguments) + 1
+        or not argv[port_index + 1].isdigit()
+        or not 1024 <= int(argv[port_index + 1]) <= 65535
+    ):
+        raise ValueError(f"DeepSeek executed command does not match in {directory}")
+    expected_arguments[port_index] = argv[port_index + 1]
+    parts = model_identity.split(":")
+    if (
+        argv[1:] != expected_arguments
+        or any(not isinstance(value, str) or "\x00" in value for value in argv)
+        or command.get("binary_sha256") != expected_binary_sha256
+        or command.get("context_cap") != 32_768
+        or command.get("model_device_inode_size") != model_identity
+        or len(parts) != 3
+        or any(not value.isdigit() for value in parts)
+        or int(parts[2]) != expected_model_bytes
+        or runtime_closure != expected_runtime_closure
+    ):
+        raise ValueError(f"DeepSeek executed command does not match in {directory}")
+    return model_identity
+
+
 def _finite(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{label} is not numeric")
@@ -227,8 +363,15 @@ def collect_records(
         or not SHA256.fullmatch(
             str(dsv4_profile.get("serving_weights_manifest_sha256", ""))
         )
+        or dsv4_profile.get("measured_server_context_cap") != 32_768
+        or not isinstance(dsv4_profile.get("matched_model_first_shard_bytes"), int)
+        or not isinstance(dsv4_profile.get("runtime_closure_sha256"), dict)
+        or not dsv4_profile.get("runtime_closure_sha256")
+        or not isinstance(dsv4_profile.get("launch_arguments"), list)
+        or not isinstance(dsv4_profile.get("model_path"), str)
     ):
         raise ValueError("approved DeepSeek profile is invalid")
+    _verify_campaign_artifacts(dsv4_profile)
     # The DeepSeek arm is llama.cpp serving UD-Q2_K_XL. binary_sha256 and
     # configuration_sha256 identify the engine and its unit, and neither moves when
     # the GGUF generation underneath them is replaced -- the 0731 swap changed no
@@ -276,7 +419,11 @@ def collect_records(
         or glm_profile.get("profile") != "glm52"
         or not SHA256.fullmatch(str(glm_profile.get("binary_sha256", "")))
         or not SHA256.fullmatch(str(glm_profile.get("model_sha256", "")))
-        or glm_profile.get("context_cap") != 1_048_576
+        or glm_profile.get("model_supported_context_cap") != 1_048_576
+        or glm_profile.get("measured_server_context_cap") != 32_768
+        or "context_cap" in glm_profile
+        or not isinstance(glm_profile.get("model_path"), str)
+        or glm_profile.get("model_bytes") != 211_075_856_448
         or not isinstance(runtime, dict)
         or runtime.get("engine_environment") != expected_glm_environment
         or runtime.get("launch_arguments")
@@ -305,6 +452,7 @@ def collect_records(
         }
     ):
         raise ValueError("approved GLM profile is invalid")
+    _verify_campaign_artifacts(glm_profile)
     glm_configuration_sha256 = _sha256(glm_profile_path)
     fixture_sha256 = _sha256(fixture)
     directories: dict[tuple[int, int], tuple[str, Path]] = {}
@@ -326,6 +474,8 @@ def collect_records(
     records: list[dict[str, Any]] = []
     seeds: set[int] = set()
     prompt_hashes: dict[tuple[int, int], str] = {}
+    glm_model_identity: str | None = None
+    dsv_model_identity: str | None = None
     for block, sequence in sorted(directories):
         arm, directory = directories[(block, sequence)]
         profile, short_reps, long_reps = _load_result(directory, fixture)
@@ -339,13 +489,35 @@ def collect_records(
             directory, profile
         )
         if profile == "dsv4":
+            observed_dsv_model = _dsv_execution_binding(
+                directory,
+                dsv4_profile["binary_sha256"],
+                dsv4_profile["matched_model_first_shard_bytes"],
+                dsv4_profile["runtime_closure_sha256"],
+                dsv4_profile["launch_arguments"],
+                dsv4_profile["model_path"],
+            )
+            if dsv_model_identity is None:
+                dsv_model_identity = observed_dsv_model
+            elif observed_dsv_model != dsv_model_identity:
+                raise ValueError("DeepSeek model device/inode/size changed between arms")
             binary_sha256 = dsv4_profile["binary_sha256"]
             configuration_sha256 = dsv4_profile["configuration_sha256"]
             available_memory = _memory_min(
-                directory / "memwatch.segment.log",
-                re.compile(r"\bmem_available_gib=([0-9]+(?:\.[0-9]+)?)\b"),
-                1.0,
+                directory / "samples.log",
+                re.compile(r"\bmem_avail_kb=([0-9]+)\b"),
+                1_048_576.0,
             )
+            try:
+                safety = (directory / "safety.main.log").read_text(
+                    encoding="utf-8"
+                )
+            except OSError as exc:
+                raise ValueError(f"DeepSeek safety log is missing in {directory}") from exc
+            if "SAFE_RUN_DONE rc=0" not in safety or re.search(
+                r"\bFATAL\b|KILL_FLOOR|oom_kill", safety, re.IGNORECASE
+            ):
+                raise ValueError(f"DeepSeek safety wrapper failed in {directory}")
         else:
             if binary_sha256 != glm_profile["binary_sha256"]:
                 raise ValueError(f"GLM binary does not match approved profile in {directory}")
@@ -369,6 +541,18 @@ def collect_records(
                 raise ValueError(
                     f"GLM runtime configuration does not match approved profile in {directory}"
                 )
+            observed_model_identity = _execution_binding(
+                directory,
+                expected_glm_environment,
+                glm_profile["binary_sha256"],
+                glm_profile["model_bytes"],
+                glm_profile["model_path"],
+                runtime["launch_arguments"],
+            )
+            if glm_model_identity is None:
+                glm_model_identity = observed_model_identity
+            elif observed_model_identity != glm_model_identity:
+                raise ValueError("GLM model device/inode/size changed between arms")
             configuration_sha256 = glm_configuration_sha256
             available_memory = _memory_min(
                 directory / "samples.log",
@@ -385,6 +569,16 @@ def collect_records(
                 r"\bFATAL\b|KILL_FLOOR|oom_kill", safety, re.IGNORECASE
             ):
                 raise ValueError(f"GLM safety wrapper failed in {directory}")
+            expected_environment_sha256 = _environment_digest(
+                expected_glm_environment
+            )
+            if (
+                f"executed_environment_sha256={expected_environment_sha256}"
+                not in safety
+            ):
+                raise ValueError(
+                    f"GLM safety environment binding is missing in {directory}"
+                )
         try:
             kernel = (directory / "kernel.log").read_text(encoding="utf-8")
         except OSError as exc:
@@ -415,6 +609,22 @@ def collect_records(
                 prior = prompt_hashes.setdefault(key, prompt_hash)
                 if prior != prompt_hash:
                     raise ValueError("matched arms use unequal prompt bytes")
+                prompt_tokens = rep.get("prompt_tokens")
+                production_prompt_tokens = rep.get("production_prompt_tokens")
+                completion_tokens = rep.get("server_completion_tokens")
+                if (
+                    not isinstance(prompt_tokens, int)
+                    or isinstance(prompt_tokens, bool)
+                    or prompt_tokens <= 0
+                    or production_prompt_tokens != prompt_tokens
+                    or not isinstance(completion_tokens, int)
+                    or isinstance(completion_tokens, bool)
+                    or completion_tokens < 128
+                    or prompt_tokens + completion_tokens > 32_768
+                ):
+                    raise ValueError(
+                        f"production prompt accounting is invalid in {directory}"
+                    )
         evaluated_tokens = 0
         prefill_seconds = 0.0
         for rep in long_reps:
@@ -425,7 +635,7 @@ def collect_records(
                 or prompt_tokens < 28_672
             ):
                 raise ValueError(
-                    f"32K-class evaluated prompt tokens are invalid in {directory}"
+                    f"32K-class production prompt tokens are invalid in {directory}"
                 )
             evaluated_tokens += prompt_tokens
             prefill_seconds += _finite(
@@ -472,7 +682,7 @@ def main() -> int:
     parser.add_argument(
         "--dsv4-profile",
         type=Path,
-        default=ROOT / "configs" / "dsv4-profile.json",
+        default=ROOT / "configs" / "dsv4-matched-32k-profile.json",
     )
     parser.add_argument(
         "--glm-profile",

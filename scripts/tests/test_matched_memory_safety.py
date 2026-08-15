@@ -18,6 +18,7 @@ GLM_CGROUP = ROOT / "results" / "glm52-gates" / "harness" / "glm_cgroup_run.sh"
 DSV4_LAUNCHER = ROOT / "scripts" / "21_serve_llamacpp.sh"
 DSV4_SERVICE = ROOT / "configs" / "systemd" / "deepseek-v4-flash-llamacpp.service"
 GLM_ARM = ROOT / "results" / "glm52-goal" / "harness" / "glm_decisive_arm.sh"
+DSV4_ARM = ROOT / "results" / "glm52-goal" / "harness" / "dsv4_decisive_arm.sh"
 GLM_LOGIT_ARM = (
     ROOT / "results" / "glm52-goal" / "harness" / "glm_logit_arm.sh"
 )
@@ -159,42 +160,51 @@ class MatchedHarnessContractTests(unittest.TestCase):
         )
         self.assertIn("MATCHED_BLOCKS:-5", source)
         self.assertNotIn("21_serve_llamacpp.sh\" start >/dev/null 2>&1 || true", source)
-        self.assertIn("watchdog_armed", source)
-        self.assertIn("matched campaign did not restore the initially idle host", source)
+        self.assertIn("assert_idle initial", source)
+        self.assertIn("assert_idle terminal", source)
+        self.assertIn("for process_name in ds4-server llama-server fio", source)
+        self.assertIn('pgrep -x "$process_name"', source)
+        self.assertIn("ss -H -ltn", source)
+        self.assertIn("systemctl --user list-units 'glm52-*'", source)
         self.assertNotIn("restore_dsv4", source)
         self.assertIn("glm_cgroup_run.sh", source)
         self.assertNotIn('bash "$SAFE" --tag "$label"', source)
 
     def test_harness_uses_the_frozen_production_dsv4_profile(self):
         source = HARNESS.read_text(encoding="utf-8")
+        dsv4_arm = DSV4_ARM.read_text(encoding="utf-8")
         expected = (
-            "DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/"
-            "llama.cpp-fusion/build/bin/llama-server",
-            "DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json",
-            "DSV4_MEM_FLOOR_GIB=18",
-            "DSV4_WATCHDOG_FLOOR_GIB=18",
-            "DSV4_UBATCH=512",
-            "DSV4_BATCH=2048",
-            "DSV4_UBATCH_LARGE=0",
-            "CTX=32768",
-            "DSV4_PARALLEL=1",
-            "DSV4_NO_MMAP=1",
-            "DSV4_SPEC_TYPE=ngram-map-k4v",
+            "DSV4_PROFILE=$REPO/configs/dsv4-matched-32k-profile.json",
+            'DSV4_MATCHED_BINARY="$DSV4_BINARY"',
+            'DSV4_MATCHED_BINARY_SHA256="$DSV4_BINARY_SHA256"',
+            'MATCHED_PORT="$PORT"',
         )
         for setting in expected:
             self.assertIn(setting, source)
+        for setting in (
+            "-c 32768",
+            "-np 1",
+            "-ngl 999",
+            "-b 2048",
+            "-ub 512",
+            "--no-mmap",
+            "--spec-type ngram-map-k4v",
+        ):
+            self.assertIn(setting, dsv4_arm)
         self.assertIn("MATCHED_PORT:-8021", source)
-        self.assertIn('DSV4_PORT="$PORT"', source)
         self.assertIn('GLM_PORT="$PORT"', source)
-        self.assertEqual(source.count("--reps 2"), 1)
+        self.assertEqual(dsv4_arm.count("--reps 2"), 1)
         self.assertEqual(GLM_ARM.read_text(encoding="utf-8").count("--reps 2"), 1)
         self.assertNotIn("--reps 1", source)
+        self.assertNotIn("--reps 1", dsv4_arm)
         self.assertNotIn("--reps 1", GLM_ARM.read_text(encoding="utf-8"))
-        self.assertIn("process.identity.json", source)
-        self.assertIn("memwatch.segment.log", source)
+        self.assertIn("process.identity.json", dsv4_arm)
+        self.assertIn("process.runtime-closure.json", dsv4_arm)
+        self.assertIn("/proc/{pid}/maps", dsv4_arm)
         self.assertIn("samples.log", source)
         self.assertIn("kernel.log", source)
         self.assertIn("host.boot_id", GLM_ARM.read_text(encoding="utf-8"))
+        self.assertNotIn("sudo", source + dsv4_arm)
 
     def test_harness_rejects_kernel_gpu_and_oom_faults_from_each_arm(self):
         source = HARNESS.read_text(encoding="utf-8")
@@ -394,10 +404,14 @@ class MatchedHarnessContractTests(unittest.TestCase):
     def test_matched_glm_arm_uses_profile_safety_and_exports_evidence(self):
         source = HARNESS.read_text(encoding="utf-8")
         self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=40", source)
-        self.assertNotIn("GLM_SAFE_KILL_FLOOR_GIB=18", source)
-        self.assertIn('GLM_SAFE_EVIDENCE_DIR="$arm_out"', source)
+        self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=18", source)
+        self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER=1", source)
+        self.assertIn('copy_safety_evidence "$safe_tag" "$arm_out"', source)
+        self.assertIn('cp -- "${matches[0]}/samples.log"', source)
+        self.assertIn('cp -- "${matches[0]}/main.log"', source)
         cgroup = GLM_CGROUP.read_text(encoding="utf-8")
-        self.assertIn("glm52-decisive-", cgroup)
+        self.assertIn("systemd-run --user --wait --collect", cgroup)
+        self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER", cgroup)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,36 @@ def load_module():
 
 
 class BenchOptionTests(unittest.TestCase):
+    def test_production_prompt_count_is_request_local_and_unambiguous(self):
+        bench = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "server.log"
+            prefix = "old prompt eval time = 1 ms / 9 tokens (old)\n"
+            path.write_text(
+                prefix
+                + "0804 ds4-server: chat ctx=0..573:573 prompt start\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                bench.read_production_prompt_count(path, len(prefix), "ds4"), 573
+            )
+            path.write_text(
+                prefix
+                + "1.00 I slot print_timing: id 0 | prompt eval time = 2 ms / 32 tokens (16 t/s)\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                bench.read_production_prompt_count(path, len(prefix), "llama"), 32
+            )
+            path.write_text(
+                prefix
+                + "1.00 I slot print_timing: prompt eval time = 2 ms / 32 tokens (16 t/s)\n"
+                + "1.01 I slot print_timing: prompt eval time = 2 ms / 33 tokens (16 t/s)\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "ambiguous"):
+                bench.read_production_prompt_count(path, len(prefix), "llama")
+
     class _StreamResponse:
         status = 200
 
@@ -370,7 +400,10 @@ class BenchOptionTests(unittest.TestCase):
                 "slot print_timing: prompt eval time = 1.00 ms / 32 tokens\n",
                 encoding="utf-8",
             )
-            with mock.patch.object(bench, "make_preamble", return_value="p"):
+            with mock.patch.object(bench, "make_preamble", return_value="p"), \
+                    mock.patch.object(
+                        bench, "read_production_prompt_count", return_value=32
+                    ):
                 rep = bench.run_rep(
                     Client(),
                     Tokenizer(),

@@ -1,0 +1,46 @@
+{
+  "schema_version": 3,
+  "profile": "dsv4",
+  "purpose": "32K-class matched GLM lossless-plateau baseline; not a serving profile",
+  "source_commit": "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a",
+  "binary_path": "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/llama-server",
+  "binary_sha256": "803b7b39cbdaa1acadc2d06a45f14232589a46e22ed5414cbc01cba175d4995c",
+  "configuration_sha256": "6b57009b842b5ae5b04900d125bda3ac75e68917cea9196c997a414d8a80030f",
+  "measured_server_context_cap": 32768,
+  "model_path": "/home/bmarti44/spark-deepseek-v4-flash/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf",
+  "matched_model_first_shard_bytes": 5257664,
+  "weights_manifest_path": "/home/bmarti44/spark-deepseek-v4-flash/weights/unsloth-ud-q2_k_xl/manifest.json",
+  "weights_manifest_sha256": "0091522cf58e3c09d3911e26e85688b2bc09f9fb3eb0be4aab47e7eca9800e2f",
+  "serving_weights_manifest_sha256": "0091522cf58e3c09d3911e26e85688b2bc09f9fb3eb0be4aab47e7eca9800e2f",
+  "serving_weights_release": {
+    "repo": "unsloth/DeepSeek-V4-Flash-0731-GGUF",
+    "revision": "fbbb5b93fb787c21338159b0af3318bb3f4d9768"
+  },
+  "launch_arguments": [
+    "--model", "{model}", "--alias", "deepseek-v4-flash",
+    "--host", "127.0.0.1", "--port", "{port}",
+    "-c", "32768", "-np", "1", "-ngl", "999",
+    "-b", "2048", "-ub", "512", "--no-warmup",
+    "--cache-ram", "0", "--no-mmap", "--no-direct-io",
+    "--spec-type", "ngram-map-k4v"
+  ],
+  "runtime_closure_sha256": {
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/llama-server": "803b7b39cbdaa1acadc2d06a45f14232589a46e22ed5414cbc01cba175d4995c",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libggml-base.so.0.16.0": "f0e23c971ffc70a27f45c647ed22801b5a0a357038ebec8b5924a91d126fb8b9",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libggml-cpu.so.0.16.0": "30a9976c4da840ca2e7d2d748840ecaa04981db7ff17dd8dc87b92b803c9451e",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libggml-cuda.so.0.16.0": "6665847b2265d520b8bc7a4736d2f3f55dc0e66cb1d1a96533f20466b5d5a001",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libggml.so.0.16.0": "ca028c5a8516463399ee94756aa976a6969e9cab8b34beba5744c76a88423169",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libllama-common.so.0.0.10053": "87b0355a7f978492389567930d267a5a97f664bd964e7759c282555a5f38539e",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libllama-server-impl.so": "8db52d0927048abab8e0452fe4418b32c23b8ccef5661bda8d8d684b61a36f4c",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libllama.so.0.0.10053": "b7e733677ab49160c7dcf39f1ba5e9935a7315ae9f69f74fdab709b3c99afac2",
+    "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libmtmd.so.0.0.10053": "a372a31f5c6421118e91021a0205b96853652388b5a046d15370759f7b6e4006"
+  },
+  "artifact_sha256": {
+    "results/glm52-goal/harness/decisive_matched.sh": "7bf3d510f24f3c310493cbfb14b1ced466436d53f10a3a58bb01b388126821df",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "e2ef6ce160c9e26ebea463144f28884f0034de9e4d107da7ce34225ccfa710eb",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "8d7e0832462e36bfa4e2ffe5b57f01c1fabfa301b47c90eb6ebbc73e7e5fb2e5",
+    "results/glm52-gates/harness/glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "scripts/30_bench_speed.py": "23385f43639b23a97ed9b605337f0d766848877c3e4cec87a29ee6fbdfa16a88",
+    "scripts/56_collect_matched_evidence.py": "9ea3cb1cc17c4972100184f2d29c5b94796db6b99957aaa44fd0721cd1fa9d55"
+  }
+}
