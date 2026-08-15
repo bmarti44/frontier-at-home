@@ -1,0 +1,75 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-freeze-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "status": "FROZEN_REVIEW_PENDING",
+  "date": "2026-08-15",
+  "main_commit": "d2e8d9710c71f3aa0c5cccbdbccaf73add59e17e",
+  "engine_commit": "31d7d120e5dcd9aee537e066b4881e3a505974c8",
+  "engine_tree": "/home/bmarti44/.cache/glm52-w9-fp4-packed-c1",
+  "source_hashes": {
+    "ds4.c": "1ba3f8b66e8e97452b4ec2c787edc7f0550e538d37be24e854b2a4afe4f5f806",
+    "ds4_cuda.cu": "1c94d684b25e265c9982ee5ddf9b44bab635065d902bc16619190c4daf8c837c",
+    "ds4_gpu.h": "0091b20b517c4cc5ef5f18a4efb3dc34fa79c3b40d46df15064088bda246da2b",
+    "ds4_metal.m": "976ef323c4662aeaff28eb75683463d68bef4af49b1de1e35f5a61ea61f5d68f"
+  },
+  "tests_sha256_by_path": {
+    "Makefile": "0edf44b17b6e1d847ecda84ed12ca227fee2a3119ce5311cd3ed6526ffd2a1fb",
+    "tests/test_glm_w9_e2m1_fake_cuda.c": "1069058c7dab0c6e7f2ff1f3f1b01c98c91bf6ac87a4e862622b2c1edf02399d",
+    "tests/test_glm_w9_e2m1_fake_fused_cuda.c": "d54722f28de5c94cb66d787abbdf81b0b34d892411a5b702991ed1e880c4e485",
+    "tests/test_glm_w9_e2m1_fake_host.c": "97ecd2d61cce0a835df5ad7200ac9fc856bcd4980cc86a8f2ec56a50c2cf19a2",
+    "tests/test_glm_w9_e2m1_fake_source.py": "1128966075ef16277fff1c274401e3b0e0d901801012e4dfc22285f5a323089a"
+  },
+  "scorer": {
+    "path": "scripts/glm52_goal.py",
+    "sha256": "7c0ee55048398feab1cb82780ecb4c272cce1d732bbf83b9e55b6c2c13ca42ad",
+    "test_sha256": "d95708dc0fd2f5cba03303124bdb9a902582f639e2a4bf293c2431492c308309",
+    "target": "_score_w9_e2m1_fidelity_raw",
+    "test_result": "2/2 PASS",
+    "runtime_binding": "Derives exact selector/coverage, binary, environment, fresh process, safe completion, memory, zero swap and fault absence from raw logs; identical candidate metrics are inactive FAIL."
+  },
+  "clean_builds": {
+    "parallel_jobs": 2,
+    "configuration": "CUDA_ARCH=native; same source path; canonicalization removes debug and .note.gnu.build-id",
+    "server_canonical_bytes": 5323280,
+    "score_canonical_bytes": 5048648,
+    "canonical_builds_byte_identical": true,
+    "build_artifact_hashes": {
+      "server_raw_1": "4079ac34e3e199088dc3a6d1a5a2be125ed9c66aa2c8b68b0e2c3d6fb8551ba0",
+      "server_raw_2": "754981fab0b212238dc84ffb480e784aa3f4e55449c5b5cabaef6a4c4795e184",
+      "server_raw_3": "e241908d2512b11705b6e7f521c8fbe645bc876d1161ab71bd3bb6e5e7dbc5e6",
+      "server_canonical": "a9e8320579325dfae72523422decb26c03ee5eacbb4cdeaf8081a901c7f7c662",
+      "score_raw_1": "1ed19f14c7f4da72e17bc644ef8f9377a547004db558db28fc1f7fa1ffe22746",
+      "score_raw_2": "9994f98fa06b481e49e428ad6577b7b7d60ae859af354d0db5479d63246d01df",
+      "score_raw_3": "422c207b4b6db8a52ef5fe1b4c91f9f8d201d581271f3b24fc2cf73383c55993",
+      "score_canonical": "4d578a0da673b86ca13ef4a265cc25f2331ab06276831f47f5bc24aee859870f"
+    }
+  },
+  "checks": {
+    "targeted_engine_suite": "PASS",
+    "W9_capture_regression": "PASS",
+    "W7_stable_model_regression": "PASS",
+    "selector_mutation": "FAIL as required",
+    "ordinary_store_bypass_mutation": "FAIL as required",
+    "fused_store_bypass_mutation": "FAIL as required",
+    "main_tree_clean": true,
+    "engine_tree_clean": true,
+    "model_process_started": false
+  },
+  "artifact_sha256": {
+    "selector_run_stderr_sha256": "023c2eb4b7836aa8d8ad43bc4e4f8056f1291fe8142bdc23763351f4b5fa2f5f",
+    "ordinary_run_stderr_sha256": "4a75988e9c8c35fc55f03eee36bbbb390d217be55a980e882d3ed53574f0bf34",
+    "fused_run_stderr_sha256": "4b1e02c2abaa665650b13ea586e55d65574321dbcd5de22a57760870cd8a11a6"
+  },
+  "round_311_disposition": {
+    "ADV-W9-E2M1-311-C1-INACTIVE-GRAPH-ARM-PASSES-MICROGATE": "FIXED: compiled selector-to-graph hook plus raw scorer enabled-mode/nonzero-difference binding",
+    "W9-E2M1-311-H1-FUSED-STORE-UNEXECUTED": "FIXED: compiled fused F32-vs-E2M1 oracle and bypass mutation",
+    "ADV-W9-E2M1-311-H1-FUSED-DECODE-STORE-UNEXECUTED": "FIXED: same",
+    "ADV-W9-E2M1-311-H2-COUNTER-CANNOT-AUTHORIZE-MODEL-COVERAGE": "FIXED: separate synchronized normal/fused counts and raw shutdown-attestation scoring",
+    "ADV-W9-E2M1-311-H3-PREREGISTERED-FLAG-NAME-DIVERGENCE": "FIXED: candidate-3 plan distinguishes diagnostic and reserved packed flags; conflicts reject",
+    "ADV-W9-E2M1-311-H4-CODEC-MICROGATE-UNDERCOVERS-PLAN": "FIXED: ordinary exact midpoint/nextafter/nonunit oracle; fused baseline differential, tail position, repeats, canaries and undersized rejection",
+    "ADV-W9-E2M1-311-M1-METAL-ENABLEMENT-FAILS-LATE": "FIXED: enabled diagnostic rejects during graph resolution on non-CUDA builds"
+  },
+  "runtime_allowed": false,
+  "next": "Delta-only Nash/Singer review. No score_official model arm may run until both report no critical/high findings."
+}
