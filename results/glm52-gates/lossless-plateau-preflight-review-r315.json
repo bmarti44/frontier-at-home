@@ -1,0 +1,73 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "eeaeb533f5f65dee7e4a088a165677ec2fc32194",
+  "review_round": 315,
+  "candidate_number_for_gate": 2,
+  "model_run_authorized": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 58,
+      "critical": [],
+      "high": [
+        "PLATEAU-315-H1-PREFILL-TIME-RATIO-DIRECTION-MISMATCH",
+        "ADV-PLATEAU-H2-SCORER-DOES-NOT-ENFORCE-PINNED-GLM-PROFILE",
+        "PLATEAU-315-H2-IDLE-BOUNDARY-INCOMPLETE",
+        "PLATEAU-315-H3-PREARM-MODEL-HASH-PRECONDITIONS-GLM"
+      ],
+      "medium": ["PLATEAU-315-M1-CAMPAIGN-CONTEXT-CAP-AMBIGUOUS"],
+      "low": [],
+      "verdict": "REJECT_MODEL_RUN_PENDING_BOUNDED_CANDIDATE_3"
+    },
+    "Singer": {
+      "score_0_to_100": 58,
+      "critical": [],
+      "high": [
+        "ADV-PLATEAU-R315-H1-UNBOUND-PROMPT-TOKEN-COUNTS",
+        "ADV-PLATEAU-R315-H2-DECLARATIVE-NOT-EXECUTED-PROVENANCE"
+      ],
+      "medium": ["ADV-PLATEAU-R315-M1-INCOMPLETE-IDLE-STATE-CLOSURE"],
+      "low": ["ADV-PLATEAU-R315-L1-DUAL-CONTEXT-CAP-SEMANTICS"],
+      "verdict": "REJECT_PRE_RUN"
+    }
+  },
+  "root_reproduction": {
+    "formula_direction": "Verified performance_verdict computes GLM/DSV4 prefill-time upper bound while the freeze text incorrectly says DSV4/GLM.",
+    "prompt_token_authority": "Verified collector ignores client_prompt_tokens and accepts arbitrarily inflated positive long-cell prompt_tokens.",
+    "environment_binding": "Verified runtime.config covers only a subset of the profile environment and is not compared to the live process environment.",
+    "artifact_binding": "Verified campaign profile artifact_sha256 values are not checked by runner or collector.",
+    "model_toctou": "Verified the 211 GB model is hashed by pathname before launch, then reopened by the engine without stable inode binding.",
+    "preconditioning": "Verified full buffered SHA-256 occurs inside every GLM arm immediately before launch and has no matched DSV4 counterpart.",
+    "idle_boundary": "Verified pre-state is not recorded and terminal check only searches ds4-server, not llama-server/listener/supervision.",
+    "context_semantics": "Verified one context_cap field says 1,048,576 while the measured launch cap is 32,768."
+  },
+  "required_candidate_3_scope": [
+    "Correct the documented prefill-time ratio direction and add an asymmetric regression vector.",
+    "Bind evaluated token counts to an independent production-derived prompt count and the 32,768 context envelope; reject inflated counts.",
+    "Validate every frozen campaign artifact and bind the live child environment, command line, binary and model identity rather than trusting runtime.config.",
+    "Move the full model digest out of individual arms; use stable dev:ino:size identity across launch/readiness/completion without asymmetric cache preconditioning.",
+    "Record and require complete idle pre/post state including both engine names and the campaign listener.",
+    "Split model-supported and measured campaign context fields."
+  ],
+  "prior_issue_status": {
+    "fixed": [
+      "PLATEAU-H3-DELTA-BREAKS-EXISTING-HARNESS-CONTRACT-TEST",
+      "ADV-PLATEAU-C1-SHORT-CACHE-OFF-GEOMETRY-CANNOT-MEASURE-PLATEAU",
+      "ADV-PLATEAU-H3-CANDIDATE-CHANGED-CONTRACT-WITH-RED-SUITE"
+    ],
+    "partially_fixed_or_open": [
+      "PLATEAU-H1-SHORT-FIXTURE-CANNOT-MEASURE-PREFILL",
+      "PLATEAU-H2-MODEL-NOT-BOUND-TO-ADOPTED-PROFILE",
+      "ADV-PLATEAU-H1-HARNESS-RESTORES-DEEPSEEK-AS-8K",
+      "ADV-PLATEAU-H2-SCORER-DOES-NOT-ENFORCE-PINNED-GLM-PROFILE",
+      "PLATEAU-M1-STABLE-FLAG-TEST-IS-TEXTUAL",
+      "ADV-PLATEAU-M1-PROFILE-PIN-TEST-IS-STATIC-NOT-EXECUTION-BOUND"
+    ]
+  },
+  "convergence": {
+    "candidate_1_blocking_classes": 4,
+    "candidate_2_blocking_classes": 6,
+    "consecutive_non_shrinking_candidates": 1,
+    "candidate_3_authorized": true,
+    "reason": "This is the first consecutive candidate without strict shrinkage. The enumerated escalation trigger requires two consecutive non-shrinking candidates. Candidate 3 is bounded to the named round-315 findings."
+  }
+}
