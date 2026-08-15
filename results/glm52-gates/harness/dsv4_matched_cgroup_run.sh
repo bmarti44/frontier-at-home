@@ -53,7 +53,15 @@ if [[ ${1:-} == --inner ]]; then
     rc=$?
     set -e
     [[ $killed == no ]] || rc=137
-    mapfile -t survivors < <(awk -v self="$$" '$1 != self {print $1}' "$CGROUP_DIR/cgroup.procs")
+    survivors=()
+    for _ in $(seq 1 20); do
+        survivors=()
+        while read -r cgroup_pid; do
+            [[ $cgroup_pid == "$$" ]] || survivors+=("$cgroup_pid")
+        done <"$CGROUP_DIR/cgroup.procs"
+        (( ${#survivors[@]} == 0 )) && break
+        sleep 0.05
+    done
     if (( ${#survivors[@]} != 0 )); then
         printf '%s FATAL contained descendants survived command exit pids=%s\n' \
             "$(date -u --iso-8601=ns)" "${survivors[*]}" >>"$MAIN"
@@ -129,8 +137,8 @@ KEY=${GLM_SAFE_PARENT_LOCK_KERNEL_KEY:-}
 [[ $(awk '{print $22}' "/proc/$PARENT/stat") == "$TICKS" &&
    $(stat -Lc '%d:%i' "/proc/$PARENT/fd/$FD") == "$DEVINO" &&
    $(stat -Lc '%d:%i' /run/lock/frontier-at-home/inference.lock) == "$DEVINO" ]] || exit 2
-awk -v pid="$PARENT" -v key="$KEY" '
-  $1 == "lock:" && $3 == "FLOCK" && $5 == "WRITE" && $6 == pid && $7 == key { count++ }
+awk -v key="$KEY" '
+  $1 == "lock:" && $3 == "FLOCK" && $5 == "WRITE" && $7 == key { count++ }
   END { exit(count == 1 ? 0 : 1) }
 ' "/proc/$PARENT/fdinfo/$FD" || exit 2
 

@@ -111,12 +111,13 @@ class GlmLosslessPlateauTests(unittest.TestCase):
     def test_dsv_containment_allows_bounded_helper_drain_before_survivor_verdict(self):
         source = DSV4_CGROUP.read_text()
         wait_index = source.index('wait "$wrapper_pid"')
-        drain_index = source.index("remaining_cgroup_pids")
+        drain_index = source.index("while read -r cgroup_pid", wait_index)
         verdict_index = source.index("contained descendants survived command exit")
         self.assertLess(wait_index, drain_index)
         self.assertLess(drain_index, verdict_index)
-        self.assertIn("seq 1 20", source[drain_index:verdict_index])
+        self.assertIn("seq 1 20", source[wait_index:verdict_index])
         self.assertIn("sleep 0.05", source[drain_index:verdict_index])
+        self.assertNotIn("< <(", source[drain_index:verdict_index])
 
     def test_dsv4_arm_disables_prompt_cache_and_records_all_shard_checkpoints(self):
         arm = DSV4_ARM.read_text()

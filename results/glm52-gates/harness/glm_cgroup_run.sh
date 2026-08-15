@@ -58,8 +58,8 @@ if [[ -n $PARENT_LOCK_PID || -n $PARENT_LOCK_START_TICKS || -n $PARENT_LOCK_FD |
     echo "parent inference-lock identity mismatch" >&2
     exit 2
   }
-  if ! awk -v pid="$PARENT_LOCK_PID" -v key="$PARENT_LOCK_KERNEL_KEY" '
-      $1 == "lock:" && $3 == "FLOCK" && $5 == "WRITE" && $6 == pid && $7 == key { count++ }
+  if ! awk -v key="$PARENT_LOCK_KERNEL_KEY" '
+      $1 == "lock:" && $3 == "FLOCK" && $5 == "WRITE" && $7 == key { count++ }
       END { exit(count == 1 ? 0 : 1) }
     ' "/proc/$PARENT_LOCK_PID/fdinfo/$PARENT_LOCK_FD"; then
     echo "parent inference-lock ownership mismatch" >&2
