@@ -11,9 +11,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 WRAPPER = ROOT / "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh"
+CAMPAIGN = ROOT / "results/glm52-goal/harness/decisive_matched.sh"
 
 
 class DsvMatchedSignalCleanupTests(unittest.TestCase):
+    def test_campaign_has_identity_scoped_fallback_cleanup(self):
+        source = CAMPAIGN.read_text()
+        self.assertIn("stop_dsv_units_for_tag", source)
+        self.assertIn("dsv4-matched-${tag}-*.service", source)
+        self.assertIn('stop_dsv_units_for_tag "$safe_tag"', source)
+        self.assertIn('stop_dsv_units_for_tag "$TAG"', source)
+        self.assertIn("'dsv4-matched-*' --state=active", source)
+
     def _stop_probe_units(self, tag: str):
         listing = subprocess.run(
             [
