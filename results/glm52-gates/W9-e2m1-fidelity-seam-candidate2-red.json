@@ -1,0 +1,26 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-red-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 2,
+  "status": "RED_CONFIRMED",
+  "date": "2026-08-15",
+  "supersedes": "results/glm52-gates/W9-e2m1-fidelity-seam-candidate1-red.json",
+  "bounded_change": "Add execution-counter assertions so a passing codec test cannot be satisfied by an inactive or bypassed store branch.",
+  "engine_test_commit": "47ba1f3",
+  "tests_sha256_by_path": {
+    "tests/test_glm_w9_e2m1_fake_source.py": "8dd822140db4b9c174d099c18ece95b1ff94fc824bec8d617a43ccd23e3a31b4",
+    "tests/test_glm_w9_e2m1_fake_cuda.c": "a96c2d5fb39e625f57b34edade5e0e8d841ff89f7a3f9c4181841ff61d37754e"
+  },
+  "observed": {
+    "source_contract_returncode": 1,
+    "source_contract_result": "Four of five contracts fail, including absence of the E2M1 execution counter.",
+    "cuda_build_returncode": 2,
+    "cuda_build_result": "The unchanged header has neither the counter API nor the fake_e2m1 store argument."
+  },
+  "artifacts": {
+    "/tmp/w9-e2m1-c2-source-red.stderr": "6ddf4058c303bcf996b16c6d1b97204cfb19a46ea562b773b051d53d19749379",
+    "/tmp/w9-e2m1-c2-cuda-red.stdout": "461b32d237713c16969593600f073ca6e51180c522827cf4ecf2af4794020c22",
+    "/tmp/w9-e2m1-c2-cuda-red.stderr": "506ff6b6487750feab7c2b34f73fe23827813fada25053477c867725425d9292"
+  },
+  "runtime_scope": "Compiled CUDA test only; no model or serving process was started."
+}
