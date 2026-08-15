@@ -1,0 +1,45 @@
+{
+  "schema": "glm52-lossless-plateau-randomness-v1",
+  "candidate_hash": "7ec6032f2ea6a68deecc35e3a92bc76fb2ae7327",
+  "freeze_commit": "1f93e8e714b3fd50ee20fe187c02f1bae503cb61",
+  "freeze_committed_at": "2026-08-15T15:56:24-04:00",
+  "obtained_at_utc": "2026-08-15T20:00:30+00:00",
+  "source": "drand-default-three-relay",
+  "relay_agreement": [
+    "api.drand.sh",
+    "api2.drand.sh",
+    "api3.drand.sh"
+  ],
+  "chain": {
+    "scheme": "pedersen-bls-chained",
+    "period_seconds": 30,
+    "genesis_time": 1595431050,
+    "public_key": "868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31"
+  },
+  "receipt": {
+    "round": 6379759,
+    "published_at_utc": "2026-08-15T19:56:30+00:00",
+    "randomness": "b0055406349f9df90f96af90e9217f3d9d0cd8be784174635228b7775e67b72f",
+    "signature": "b4a05ae63676dd2ef7401971385712a7b757963609012e6129e8d647c074dac6f977f547a838995c8c8fb3f35444b34916ae9e0ee9b5a78d255ffd6b8ec3f1c99ea8161da70255d43608a77e90700360dcf2278e54bbe79f40633ab94d3f7ad8",
+    "previous_signature": "aecb1e60f598a2eab5efd8b920745b066a1bf01a677f7a3e8fd94d9f4a6f085bd31ced9697e9e4636292edc19556c3b0107f26b7aed36a7a501ccc824b1f819b114e29f8cc2e2c89bb4fe1de95f807e30b9a83b31de0a124098ef39f3d4a9832"
+  },
+  "verification": {
+    "result": "DRAND_BLS_RECEIPT_OK",
+    "artifact_sha256": {
+      "/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node": "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90",
+      "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+    }
+  },
+  "seed_derivation": {
+    "formula": "sha256('GLM52-LOSSLESS-PLATEAU-32K-V1\\0' || candidate_hash || '\\0' || randomness)",
+    "seed_sha256": "7eab8d1080d83ec52c7b7a08d8d92618ad02598e1f2fe4e1a13aee605d6a6b3a",
+    "matched_seed_formula": "integer value of the first 15 hexadecimal seed_sha256 digits",
+    "matched_seed": 570471510738568172
+  },
+  "checks": {
+    "three_relays_byte_equal": true,
+    "published_strictly_after_freeze": true,
+    "signature_verified": true
+  },
+  "verdict": "PASS_POST_FREEZE_PUBLIC_RANDOMNESS"
+}
