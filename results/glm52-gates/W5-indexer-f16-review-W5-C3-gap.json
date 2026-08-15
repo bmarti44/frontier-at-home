@@ -1,0 +1,56 @@
+{
+  "candidate_hash": "191d6b6c7f42df63b51d215f93ba9c5220ee7353",
+  "review_round": "W5-C3",
+  "score_0_to_100": 96,
+  "critical": [],
+  "high": [],
+  "medium": [],
+  "low": [
+    {
+      "id": "W5-C3-L1-GUARD-MUTATION-DIRECTIONAL-COVERAGE",
+      "evidence": "The guard regression binds OFF and mutates the environment ON. The separate graph-mode test covers ON-to-OFF, but does not exercise the estimator/guard in that direction. Current production code passes the explicit bound Boolean and is correct; this is mutation-coverage completeness only.",
+      "affected_gate": "W5 immutable memory-estimator mutation coverage",
+      "reproduction_instructions": "Inspect ds4_test_glm_indexer_guard_mode_survives_env_change: it resolves with the flag set to 0, then changes it to 1 before estimating. There is no corresponding bound-ON/environment-OFF guard calculation.",
+      "proposed_acceptance_test": "Add the symmetric bound-ON/environment-OFF estimate and compare its compressed bytes with the explicit F16 expectation."
+    },
+    {
+      "id": "W5-C3-L2-RED-LEDGER-ID-DRIFT",
+      "evidence": "Candidate-3 RED names ADV-W5-C2-H2-MUTABLE-MEMORY-GUARD-MODE and W5-C2-H1-PRODUCTION-PATHS-BYPASS-TESTED-HELPERS. The frozen candidate-2 reviews use ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE and W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS. The behavioral assertion and parent commit make the intended lineage clear, but the stable IDs are not exact.",
+      "affected_gate": "Review-ledger provenance and stable issue tracking",
+      "reproduction_instructions": "Compare evidence/W5-indexer-f16-candidate3-red.json named_findings with evidence/W5-indexer-f16-review-W5-C2-adversarial.json and evidence/W5-indexer-f16-review-W5-C2-gap.json.",
+      "proposed_acceptance_test": "In the next authoritative ledger, record the exact original IDs and explicitly map the two candidate-3 RED aliases to them."
+    }
+  ],
+  "prior_issue_status": [
+    {"id": "W5-C1-H1-QUALITY-MODE-BREAKS-EXACTNESS", "status": "FIXED", "evidence": "The quality-mode incompatibility continues to fail closed before allocation."},
+    {"id": "ADV-W5-C1-H1-QUALITY-MODE-SCORE-DIVERGENCE", "status": "FIXED", "evidence": "W5 remains unreachable in quality mode, preventing the previously reproduced divergent scorer."},
+    {"id": "W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS", "status": "FIXED", "evidence": "Production allocation, stores, scalar/batch scores, and session serialization now use the same graph-bound helpers exercised by the tests. Independent allocator-width, store-wrapper, and session-wrapper mutations failed."},
+    {"id": "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE", "status": "FIXED", "evidence": "glm_graph_alloc_slice and the fixture share glm_graph_alloc_compact_layer_caches. All production indexer store and score call sites route through the tested graph-bound wrappers."},
+    {"id": "W5-C1-M1-REPRESENTATION-NOT-BOUND-TO-GRAPH", "status": "FIXED", "evidence": "Allocation, kernel routing, serialization, estimators, and guards consume immutable engine/graph mode. The environment-reparse guard mutation independently caused the regression test to fail."},
+    {"id": "ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE", "status": "FIXED", "evidence": "Every engine/session guard path now receives e->glm_indexer_cache_f16 or g->indexer_cache_f16 explicitly."},
+    {"id": "ADV-W5-C1-M1-SESSION-F32-INTEROPERABILITY-UNTESTED", "status": "FIXED", "evidence": "Full and layer session indexer sites share payload_write/read_glm_indexer_span with the fixture. Four cross-mode cases use non-FP16-representable values, an explicit _Float16 rounding oracle, and exact external F32 payload size."}
+  ],
+  "verdict": "CLEAR_FOR_POST_FREEZE_MODEL_CONFIRMATION",
+  "verification_notes": {
+    "scope": "Only candidate-2-to-candidate-3 closure changes were reviewed. Frozen W4 and candidate-1/2 scope were not reopened.",
+    "binary_sha256_verified": "ae960b0abc7337d226f5b73da473f57fdee7855acc8ed5f388d209922af875fe",
+    "candidate3_patch_sha256_verified": "d4195cb0d8b63bb93a53f941e9dd8c7269a3f7c727a28f69f24ace1ac89ba0af",
+    "candidate_delta_sha256_verified": "fcce881724630ea3067ea54e42b8fccbe148db21ed5e354b748c1ce6a6945059",
+    "green_suite": [
+      "Production allocation: baseline indexer 51,200,000 bytes; candidate 25,600,000 bytes; ratio 0.5; KV and RoPE remain F32.",
+      "Production CUDA store rounding exact.",
+      "Scores and ordered IDs byte-identical for scalar, aligned-16, and ragged-17 token shapes.",
+      "Four graph-bound session conversion combinations pass the nonrepresentable rounding oracle and F32 byte-size check."
+    ],
+    "independent_mutations": [
+      "Forced production indexer allocation to F32: rejected.",
+      "Forced graph-bound store wrapper to F32: rejected.",
+      "Forced graph-bound session writer to F32: rejected.",
+      "Made compact-cache guard accounting reparse the environment: rejected."
+    ],
+    "convergence": {"candidate_count": 3, "open_critical_or_high": 0, "blocking_findings_strictly_shrank": true, "new_critical_or_high_class": false},
+    "model_started": false,
+    "claim_limit": "This clears candidate 3 for post-freeze model-backed confirmation; it is not a W5 performance, logit, output, or adoption result."
+  },
+  "goal_usage": {"tokens_used": 71954, "elapsed_seconds": 341}
+}

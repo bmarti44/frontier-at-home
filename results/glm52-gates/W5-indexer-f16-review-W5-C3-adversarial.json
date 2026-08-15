@@ -1,0 +1,41 @@
+{
+  "candidate_hash": "191d6b6c7f42df63b51d215f93ba9c5220ee7353",
+  "review_round": "W5-C3",
+  "score_0_to_100": 65,
+  "critical": [],
+  "high": [
+    {
+      "id": "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE",
+      "evidence": "Changing the production decode score call in glm_graph_forward_token from glm_graph_indexer_score_one_tensor(g, ...) to glm_graph_indexer_score_one_tensor(NULL, ...) still passed make -j2 cuda-w5-indexer-red. The CUDA fixture calls the wrapper directly with its own synthetic graph and therefore does not prove the production consumer is graph-bound.",
+      "affected_gate": "W5 production-path score/ID/logit identity and immutable graph-format binding",
+      "reproduction_instructions": "In a clean candidate-3 worktree, mutate only the graph argument of the production glm_graph_forward_token indexer-score call to NULL, clean-build, and run make -j2 cuda-w5-indexer-red. Both test executables pass.",
+      "proposed_acceptance_test": "Exercise the real production forward/store/score consumer through a lightweight test hook, or add a structural compiled-source assertion covering every production indexer consumer. Mutating any consumer to NULL, the wrong graph, or an unbound mode must fail."
+    },
+    {
+      "id": "ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE",
+      "evidence": "Replacing the bound mode argument inside glm_graph_memory_guard_for_compact_cap with ds4_glm_indexer_cache_f16_requested() still passed the complete C W5 suite. ds4_test_glm_indexer_guard_mode_survives_env_change tests the lower-level context estimator directly and never invokes the actual production guard.",
+      "affected_gate": "W5 immutable mode binding through admission and memory-safety guards",
+      "reproduction_instructions": "In a clean candidate-3 worktree, change only the production guard's estimator argument from indexer_cache_f16 to ds4_glm_indexer_cache_f16_requested(), then clean-build and run the W5 C test. It passes despite restoring mutable-environment behavior.",
+      "proposed_acceptance_test": "Expose and invoke the actual glm_graph_memory_guard_for_compact_cap accounting path under both OFF-to-ON and ON-to-OFF environment mutations after graph binding. A mutation that rereads the environment must fail."
+    }
+  ],
+  "medium": [],
+  "low": [
+    {
+      "id": "ADV-W5-C3-L1-RED-LEDGER-ID-MISMATCH",
+      "evidence": "The candidate-3 RED record names ADV-W5-C2-H2-MUTABLE-MEMORY-GUARD-MODE, while the stable candidate-2 issue ID is ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE.",
+      "affected_gate": "W5 evidence lineage and prior-issue traceability",
+      "reproduction_instructions": "Compare candidate-3-red.json named findings with the candidate-2 adversarial review/rejection ledger.",
+      "proposed_acceptance_test": "Validate every named prior finding against the frozen review ledger's exact stable IDs and reject unknown or renumbered IDs."
+    }
+  ],
+  "prior_issue_status": [
+    {"id": "W5-C1-H1-QUALITY-MODE-EXACTNESS", "status": "FIXED", "evidence": "Quality-mode fail-closed behavior remains covered."},
+    {"id": "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE", "status": "OPEN", "evidence": "Shared allocator and session-wrapper mutations were rejected, but the production score-consumer mutation passed all tests."},
+    {"id": "W5-C1-M1-REPRESENTATION-NOT-BOUND-TO-GRAPH", "status": "OPEN", "evidence": "The source now carries immutable graph state, but production guard and score-consumer mutation rejection remains incomplete."},
+    {"id": "ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE", "status": "OPEN", "evidence": "A mutation restoring an environment read in the real guard passed."},
+    {"id": "ADV-W5-C1-M1-SESSION-F32-INTEROPERABILITY-UNTESTED", "status": "FIXED", "evidence": "All current production session sites use common wrappers, the nonrepresentable rounding oracle is valid, and mutating the shared write wrapper was rejected."}
+  ],
+  "verdict": "REJECT_CANDIDATE_3_ESCALATE_CONVERGENCE_BREAK_NO_MODEL_LAUNCH",
+  "goal_usage": {"tokens_used": 75617, "elapsed_seconds_approximate": 329}
+}

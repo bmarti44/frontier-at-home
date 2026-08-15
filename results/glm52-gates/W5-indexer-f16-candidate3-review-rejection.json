@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "gate": "W5-indexer-f16",
+  "candidate": 3,
+  "candidate_hash": "191d6b6c7f42df63b51d215f93ba9c5220ee7353",
+  "status": "REJECTED_BEFORE_MODEL_RUN",
+  "review_round": "W5-C3",
+  "review_scores": {
+    "gap_reviewer": 96,
+    "adversarial_reviewer": 65
+  },
+  "open_critical": [],
+  "open_high": [
+    "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE",
+    "ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE"
+  ],
+  "independently_reproduced": {
+    "production_decode_consumer_mutation_passes_submitted_tests": true,
+    "production_guard_environment_reparse_mutation_passes_submitted_tests": true
+  },
+  "candidate3_red_alias_disposition": {
+    "ADV-W5-C2-H2-MUTABLE-MEMORY-GUARD-MODE": "ADV-W5-C2-H1-MUTABLE-MEMORY-GUARD-MODE",
+    "W5-C2-H1-PRODUCTION-PATHS-BYPASS-TESTED-HELPERS": "W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS"
+  },
+  "convergence": {
+    "candidate_count": 3,
+    "candidate2_blocking_set_strictly_shrank": false,
+    "candidate3_blocking_set_strictly_shrank": false,
+    "two_consecutive_candidates_without_strict_shrinkage": true,
+    "new_critical_in_frozen_scope": false,
+    "more_than_eight_candidates": false,
+    "gate_paused": true,
+    "owner_report_required": true
+  },
+  "required_next_acceptance_tests": [
+    "exercise or structurally assert every production indexer store and scalar/batch score consumer so NULL, wrong-graph, or unbound-mode mutations fail",
+    "exercise glm_graph_memory_guard_for_compact_cap itself under both OFF-to-ON and ON-to-OFF environment mutations so an environment reparse mutation fails"
+  ],
+  "model_started": false,
+  "randomness_obtained": false,
+  "authority": "Candidate 3 remains frozen and rejected. No W5 model confirmation or adoption claim is authorized."
+}
