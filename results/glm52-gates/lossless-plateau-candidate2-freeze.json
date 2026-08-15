@@ -1,0 +1,98 @@
+{
+  "schema": "glm52-lossless-plateau-freeze-v1",
+  "candidate_number_for_gate": 2,
+  "candidate_commit": "eeaeb533f5f65dee7e4a088a165677ec2fc32194",
+  "parent_red_commit": "04ca64f1e8884a9f5a3af10d96bebe5cb6050a75",
+  "prior_review": "results/glm52-gates/lossless-plateau-preflight-review-r314.json",
+  "model_run_authorized": false,
+  "scope": "Correct only round-314 measurement geometry, adopted-GLM binding, idle-host restoration, and behavioral mutation coverage. No engine implementation changed.",
+  "measurement_interpretation": {
+    "decode": "Short-cell server token timestamps; (N-1)/(tN-t1), at least 128 output tokens.",
+    "ttft": "Short-cell external request start to first streamed token.",
+    "prefill": "Aggregate actual prompt tokens divided by aggregate external request-to-first-token wall time for two 28,672-fixture-token requests. This is wall-inclusive and is not the historical 467 tok/s engine prompt-eval metric.",
+    "terminal_parity_authority": false
+  },
+  "fixed_campaign": {
+    "blocks": 5,
+    "arms_per_block": 4,
+    "block_orders": ["ABBA", "BAAB", "ABBA", "BAAB", "ABBA"],
+    "server_context_cap": 32768,
+    "fixture_context_tokens": [0, 28672],
+    "repetitions_per_cell": 2,
+    "maximum_output_tokens": 160,
+    "minimum_output_tokens": 128,
+    "request_timeout_seconds": 2700,
+    "glm_wrapper_timeout_seconds": 5400,
+    "glm_kill_floor_gib": 40,
+    "minimum_start_memory_gib": 110,
+    "post_campaign_state": "idle, matching the observed pre-campaign state"
+  },
+  "acceptance_formula": {
+    "evidence_valid": "exactly 20 fresh-server arms; equal prompt_sha256 per cell and repetition; exact binary/model/configuration bindings; no OOM, Xid, truncation, wrapper failure, missing memory evidence, duplicate server identity, or malformed/non-finite value",
+    "decode_target": "GLM/DSV4 lower one-sided 95% bound >= 0.80",
+    "prefill_target": "GLM/DSV4 lower one-sided 95% bound >= 0.80 and DSV4/GLM total wall-prefill-time upper one-sided 95% bound <= 1.25",
+    "ttft_target": "GLM/DSV4 warm and cold TTFT upper one-sided 95% bounds <= 1.20",
+    "verdict_authority": "The existing fixed parity.performance.v1 scorer produces the statistical verdict. Because prefill is wall-inclusive, this campaign is a lossless-plateau diagnostic and cannot alone qualify terminal parity."
+  },
+  "bindings": {
+    "campaign_profile": {
+      "path": "configs/glm52-lossless-plateau-profile.json",
+      "sha256": "9e4becd6bb5c3169142b3516121b63d193777e02fe1714f98887b5e82cde2f4c"
+    },
+    "adopted_glm_profile": {
+      "path": "configs/glm52-profile.json",
+      "sha256": "93add91c396c4c57231d7d4e17f7ab6768687c8d434ce1826f8b799f728f10a7"
+    },
+    "dsv4_profile": {
+      "path": "configs/dsv4-profile.json",
+      "sha256": "7da5b9eb149c8c1421f82ee7e39a9b35bcb7e5987eed919f2d9e16ceccd52d59"
+    },
+    "glm_binary": {
+      "path": "/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6/ds4-server",
+      "sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2"
+    },
+    "glm_model": {
+      "path": "/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf",
+      "bytes": 211075856448,
+      "sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0"
+    },
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "campaign_runner_sha256": "5cae0b72c3a5addcdf6c953f16547800ac1e4b4756ffd7356f7d5a2bd0de0e50",
+    "glm_arm_sha256": "cbad554b59a8b8692b233782b52281deec58dde4e4c4d3f4ee91669b2de67850",
+    "benchmark_sha256": "ffca4b467dab2513094fc203f80e4e3fce5c57811fa80b3d12fcb82dfc0005a0",
+    "collector_sha256": "a5664e6091686d7e719b61b7ddb6983e6a918a51628ae2c45ddccb12a16d4a2c",
+    "controller_sha256": "1ec1e1261a114f475f568eb4d0418ad7451e3c2c7c135f21ebcbfd1d5384bfd8",
+    "safe_wrapper_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "cgroup_launcher_sha256": "d604c4e64f102ce03a7d6660b887e5b6c78091eeea72eab82874f34f9f4efb14"
+  },
+  "pre_submission_audit": {
+    "passing_tests": 120,
+    "passing_suites": [
+      "test_glm_lossless_plateau.py 2/2",
+      "test_matched_evidence.py 5/5 including unequal-prompt and wrong-runtime mutations",
+      "test_bench_speed_options.py 13/13",
+      "test_profile_conformance.py 5/5",
+      "test_engine_switch.py 16/16",
+      "test_glm52_goal.py 79/79"
+    ],
+    "shell_syntax": "PASS",
+    "diff_check": "PASS",
+    "secret_lint": "PASS",
+    "known_unrelated_red": [
+      "test_glm_wrapper_hashes_the_selected_candidate_binary",
+      "test_glm_wrapper_rejects_unsafe_safety_overrides"
+    ],
+    "known_red_rationale": "Both wrapper tests predate this candidate and were explicitly preserved during the merged DSV4 work because implementing them changes the safe-wrapper SHA pinned by the in-flight frozen W4 campaign. This candidate does not modify glm_safe_run.sh."
+  },
+  "round_314_disposition": {
+    "PLATEAU-H1-SHORT-FIXTURE-CANNOT-MEASURE-PREFILL": "FIXED by the 28,672-token cell and explicit wall-inclusive timing label",
+    "PLATEAU-H2-MODEL-NOT-BOUND-TO-ADOPTED-PROFILE": "FIXED by pre-launch full model SHA and exact collector comparison",
+    "PLATEAU-H3-DELTA-BREAKS-EXISTING-HARNESS-CONTRACT-TEST": "FIXED; all candidate-specific and profile/switch tests pass",
+    "ADV-PLATEAU-C1-SHORT-CACHE-OFF-GEOMETRY-CANNOT-MEASURE-PLATEAU": "FIXED for 32K-class matched diagnostic; no terminal engine-prefill claim is made",
+    "ADV-PLATEAU-H1-HARNESS-RESTORES-DEEPSEEK-AS-8K": "RESOLVED by restoring the actually observed idle pre-state; the owner has explicitly stated DSV4 is not production or in use",
+    "ADV-PLATEAU-H2-SCORER-DOES-NOT-ENFORCE-PINNED-GLM-PROFILE": "FIXED by a separately frozen campaign profile and exact runtime/model/binary comparisons",
+    "ADV-PLATEAU-H3-CANDIDATE-CHANGED-CONTRACT-WITH-RED-SUITE": "FIXED; RED is behavior-specific and GREEN is reproduced",
+    "PLATEAU-M1-STABLE-FLAG-TEST-IS-TEXTUAL": "FIXED by exact runtime.config validation and wrong-runtime mutation",
+    "ADV-PLATEAU-M1-PROFILE-PIN-TEST-IS-STATIC-NOT-EXECUTION-BOUND": "FIXED by collector comparison to process identity and exact runtime.config"
+  }
+}
