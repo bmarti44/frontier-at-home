@@ -1,0 +1,38 @@
+{
+  "schema": "glm52-lossless-plateau-red-v1",
+  "candidate_number_for_gate": 6,
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r317.json",
+  "recorded_at_utc": "2026-08-15T16:15:00Z",
+  "tests": [
+    {
+      "command": "python3 -m unittest scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_authentic_kill_floor_configuration_is_not_a_breach_marker",
+      "exit_code": 1,
+      "observed": "ERROR: authentic successful GLM configuration line kill_floor_gib=40 is classified as a safety failure"
+    },
+    {
+      "command": "python3 -m unittest scripts.tests.test_glm_lossless_plateau.GlmLosslessPlateauTests.test_campaign_binds_isolated_python_and_reviewed_runtime_commit",
+      "exit_code": 1,
+      "observed": "FAIL: both matched profiles omit the bound Python/native-tokenizer runtime and campaign receipt binding"
+    },
+    {
+      "command": "python3 -m unittest scripts.tests.test_dsv_matched_signal_cleanup",
+      "exit_code": 1,
+      "observed": "FAIL after 5.644 seconds: SIGTERM made the outer controller exit but the exact transient unit remained active; test cleanup explicitly stopped it"
+    }
+  ],
+  "tests_sha256_by_path": {
+    "scripts/tests/test_matched_evidence.py": "e7a68b5e55e3c296f2f53ca87a2096aa471c58821544f903ede4a7a084304ca8",
+    "scripts/tests/test_glm_lossless_plateau.py": "52e64158c01ff01113d4ab20bffa73e120302a07184eb80df7634be131be457a",
+    "scripts/tests/test_dsv_matched_signal_cleanup.py": "8f9e3be7e140a06c5702db05577414e9afc024ee9fc8c0d8abae2452caf9f256"
+  },
+  "artifact_sha256": {
+    "scripts/56_collect_matched_evidence.py": "2e0cfb17ba6a54b8d166e056b0ecab5800ccf43ec8444a50a6c77964eeec000d",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "3e1a7e8a5edbbf2190eba1762ad653f45086ea81eee7a1b641baf22e8d803216"
+  },
+  "host_cleanup": {
+    "probe_units_remaining": 0,
+    "engine_processes_started": 0,
+    "oom_or_xid_observed": false
+  },
+  "scope": "Only the three blocking round-317 classes: signal cleanup, authentic safety-marker parsing, and isolated reviewed Python/tokenizer runtime binding."
+}

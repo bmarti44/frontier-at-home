@@ -155,6 +155,30 @@ class GlmLosslessPlateauTests(unittest.TestCase):
             },
         )
 
+    def test_campaign_binds_isolated_python_and_reviewed_runtime_commit(self):
+        campaign = CAMPAIGN.read_text()
+        bench = (ROOT / "scripts/30_bench_speed.py").read_text()
+        for profile_path in (CAMPAIGN_PROFILE, DSV4_PROFILE):
+            runtime = json.loads(profile_path.read_text()).get("python_runtime")
+            self.assertIsInstance(runtime, dict)
+            self.assertEqual(
+                set(runtime),
+                {
+                    "executable_path", "executable_sha256", "stdlib_path",
+                    "stdlib_tree_sha256", "libpython_path", "libpython_sha256",
+                    "tokenizer_native_path", "tokenizer_native_sha256",
+                },
+            )
+        self.assertIn("lossless-plateau-candidate6-preaudit.json", campaign)
+        self.assertIn("reviewed runtime commit", campaign)
+        self.assertIn("/usr/bin/python3.12", campaign)
+        self.assertIn("-I", campaign)
+        self.assertIn("-B", campaign)
+        self.assertIn("-S", campaign)
+        self.assertIn("env -i", campaign)
+        self.assertIn("MATCHED_TOKENIZER_NATIVE_PATH", bench)
+        self.assertIn("ExtensionFileLoader", bench)
+
 
 if __name__ == "__main__":
     unittest.main()

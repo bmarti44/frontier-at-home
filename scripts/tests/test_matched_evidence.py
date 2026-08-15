@@ -578,6 +578,42 @@ class MatchedEvidenceTests(unittest.TestCase):
                     campaign, fixture, profile, serving, glm_profile
                 )
 
+    def test_authentic_kill_floor_configuration_is_not_a_breach_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / "samples.log").write_text("sample\n", encoding="ascii")
+            (directory / "safety.kernel.log").write_text("", encoding="ascii")
+
+            def write_main(extra: str = ""):
+                main = (
+                    "2026-08-15T00:00:00+00:00 SAFE_RUN start tag=matched "
+                    "vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 "
+                    "timeout_s=5400 allow_cgroup_high=0\n"
+                    "2026-08-15T00:00:01+00:00 cgroup_final current_bytes=1 "
+                    "peak_bytes=2 swap_current_bytes=0 events=low 0,high 0,max 0,"
+                    "oom 0,oom_kill 0,oom_group_kill 0,\n"
+                    + extra
+                    + "2026-08-15T00:00:02+00:00 SAFE_RUN end rc=0 killed=no "
+                    "(124=timeout, 137=SIGKILL/ENOMEM-adjacent)\n"
+                )
+                (directory / "safety.main.log").write_text(main, encoding="ascii")
+                digests = [
+                    hashlib.sha256((directory / name).read_bytes()).hexdigest()
+                    for name in ("safety.main.log", "samples.log", "safety.kernel.log")
+                ]
+                (directory / "safety.wrapper.out").write_text(
+                    "SAFE_RUN_DONE rc=0 killed=no dir=/tmp/safe "
+                    f"main_sha256={digests[0]} samples_sha256={digests[1]} "
+                    f"kernel_sha256={digests[2]}\n",
+                    encoding="ascii",
+                )
+
+            write_main()
+            self.collector._parse_canonical_safety(directory)
+            write_main("2026-08-15T00:00:01+00:00 KILL_FLOOR breached: 7 GiB available\n")
+            with self.assertRaisesRegex(ValueError, "records a failure"):
+                self.collector._parse_canonical_safety(directory)
+
     def test_rejects_live_environment_command_and_model_identity_drift(self):
         mutations = (
             (
