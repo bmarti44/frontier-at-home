@@ -405,7 +405,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                 safety_main = (
                     safety_prefix
                     + "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
-                    "events=high=0,high_delta=0,max=0,max_delta=0,oom=0,oom_delta=0,"
+                    "events=low=0,low_delta=0,high=0,high_delta=0,max=0,max_delta=0,oom=0,oom_delta=0,"
                     "oom_kill=0,oom_kill_delta=0,oom_group_kill=0,oom_group_kill_delta=0\n"
                     "SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)\n"
                 )

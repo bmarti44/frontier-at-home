@@ -337,34 +337,23 @@ def _parse_canonical_safety(directory: Path) -> None:
     )
     if len(finals) != 1 or int(finals[0][2]) != 0:
         raise ValueError(f"canonical safety cgroup record is invalid in {directory}")
-    base_keys = {"low", "high", "max", "oom", "oom_kill", "oom_group_kill"}
-    critical_keys = base_keys - {"low"}
-    critical_delta_keys = {f"{key}_delta" for key in critical_keys}
-    allowed_keys = base_keys | critical_delta_keys | {"low_delta"}
-    event_values: dict[str, int] = {}
-    for item in finals[0][3].split(","):
-        item = item.strip()
-        if not item:
-            continue
-        match = re.fullmatch(r"([a-z_]+)(?:=| )([0-9]+)", item)
-        if match is None:
-            raise ValueError(f"canonical safety memory event is malformed in {directory}")
-        key, raw = match.groups()
-        if key not in allowed_keys or key in event_values:
-            raise ValueError(f"canonical safety memory event key is invalid in {directory}: {key}")
-        event_values[key] = int(raw)
-    present = set(event_values)
-    if present & critical_delta_keys:
-        required = critical_keys | critical_delta_keys
-        if not required <= present or present - allowed_keys:
-            raise ValueError(f"canonical safety memory event schema is incomplete in {directory}")
-        if ("low" in present) != ("low_delta" in present):
-            raise ValueError(f"canonical safety low-event schema is incomplete in {directory}")
-    elif present != base_keys:
-        raise ValueError(f"canonical safety memory event schema is incomplete in {directory}")
-    for key, value in event_values.items():
-        if value != 0:
-            raise ValueError(f"canonical safety memory event is nonzero in {directory}: {key}")
+    glm_events = re.fullmatch(
+        r"low ([0-9]+),high ([0-9]+),max ([0-9]+),oom ([0-9]+),"
+        r"oom_kill ([0-9]+),oom_group_kill ([0-9]+),",
+        finals[0][3],
+    )
+    dsv_events = re.fullmatch(
+        r"low=([0-9]+),low_delta=([0-9]+),high=([0-9]+),high_delta=([0-9]+),"
+        r"max=([0-9]+),max_delta=([0-9]+),oom=([0-9]+),oom_delta=([0-9]+),"
+        r"oom_kill=([0-9]+),oom_kill_delta=([0-9]+),"
+        r"oom_group_kill=([0-9]+),oom_group_kill_delta=([0-9]+)",
+        finals[0][3],
+    )
+    event_match = glm_events or dsv_events
+    if event_match is None:
+        raise ValueError(f"canonical safety memory event schema is invalid in {directory}")
+    if any(int(raw) != 0 for raw in event_match.groups()):
+        raise ValueError(f"canonical safety memory event is nonzero in {directory}")
     if re.search(r"(?im)^.*\bFATAL\b|^.*\bKILL_FLOOR breached:", main_text):
         raise ValueError(f"canonical safety log records a failure in {directory}")
 
