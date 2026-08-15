@@ -1,0 +1,65 @@
+{
+  "schema": "glm52-lossless-plateau-red-v1",
+  "candidate_number_for_gate": 14,
+  "parent_review": "results/glm52-gates/lossless-plateau-launch-review-r324.json",
+  "base_commit": "4547206e6ae09f738f06b8975470a3cfa6e867b2",
+  "base_tree": "e0551684feb3d10c13e93d12cd42c403f3a615cd",
+  "test_commit": "4626a318c8263cb68526c0281a2dec355b8b6b2d",
+  "test_tree": "fec216e759b1d29e4e24742fe90e8245af05b728",
+  "scope": "RED-only production-path contract for PLATEAU-324-C1-COLLECTOR-TRUSTS-CALLER-LINEAGE, ADV-PLATEAU-324-H1-UNCONSTRAINED-POSTFREEZE-ROUND-SELECTION, and ADV-PLATEAU-324-H2-COLLECTOR-DOES-NOT-BIND-RETAINED-MANIFEST-LINEAGE. The collector must derive candidate and freeze authority from the exact retained manifest and freeze receipt, validate their complete schema, digests, candidate commit, candidate tree, preaudit artifact bindings, and reject historical cross-candidate substitution. It must require the unique first drand round strictly after the authoritative freeze and reject target+1 before BLS verification. No implementation or runtime artifact changed.",
+  "frozen_candidate13_authority": {
+    "candidate_commit": "a29fd9e2ce4bf8460b90dac1d2b8821b4f23e594",
+    "candidate_tree": "4b4a420b327e87d01e5b871a196baf30f415f983"
+  },
+  "artifact_sha256": {
+    "results/glm52-gates/lossless-plateau-launch-review-r324.json": "5f51818ed7a6d3cac02ccc8730c1674a7aa4de959fbea4cf2d445726798693d2",
+    "scripts/56_collect_matched_evidence.py": "a465253efad9bf3a7debb91328efc097cc16dbf5db59d76ef66c6d3d69e965c9",
+    "results/glm52-goal/harness/decisive_matched.sh": "b907515b1ef8ff5ee95fe428b260d81bea8e343833a7078447f5590e637f54e4",
+    "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131",
+    "scripts/tests/test_matched_evidence.py": "fd6953d189bbf2492dd874f974d3689fc2ad994eae3186f83e93ba7dc7faf830"
+  },
+  "focused_command": "python3 -m unittest -v scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_accepts_exact_retained_authority_and_first_round scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_derives_lineage_and_rejects_cross_candidate_receipt scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_rejects_retained_manifest_and_preaudit_mutations scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_rejects_target_plus_one_before_bls_verification",
+  "focused_result": {
+    "returncode": 1,
+    "tests_run": 4,
+    "failures": 10,
+    "errors": 0,
+    "positive_control_passed": "test_collector_accepts_exact_retained_authority_and_first_round",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "3dc909cea7883245d8771b60b838940be9dbfc81f8f4ebcaeb699c96f53ec445"
+  },
+  "full_command": "python3 -m unittest -v scripts.tests.test_matched_evidence",
+  "full_result": {
+    "returncode": 1,
+    "tests_run": 20,
+    "failures": 10,
+    "errors": 0,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "6b23b410f42eb01510578f9da843dd7df90b2b7fb17cd96a8dcfc01f46336863"
+  },
+  "observed_red": {
+    "cross_candidate_substitution": "FAIL: historical candidate-10 candidate/freeze caller values and receipt were accepted under a retained candidate-13 authority closure",
+    "retained_manifest_mutations": [
+      "extra manifest key accepted",
+      "missing manifest schema accepted",
+      "changed reviewed candidate accepted",
+      "changed manifest freeze commit accepted",
+      "changed freeze-receipt digest accepted",
+      "changed retained artifact digest accepted"
+    ],
+    "freeze_receipt_mutations": [
+      "changed preaudit candidate tree accepted",
+      "changed preaudit artifact binding accepted after consistently rehashing the retained freeze receipt"
+    ],
+    "round_selection": "FAIL: candidate-13 target+1 reached the BLS verifier instead of being rejected as non-unique before signature verification"
+  },
+  "controls": {
+    "exact_authority_first_round_fixture": "PASS with BLS execution mocked only because no genuine candidate-13 first-round receipt may be acquired for a RED-only test",
+    "historical_bls_lineage": "existing committed candidate-10 receipt remains the real verifier fixture in the unchanged test suite",
+    "no_randomness_acquired": true,
+    "no_model_or_gpu_run": true,
+    "no_systemd_or_service_change": true,
+    "production_implementation_changed": false
+  },
+  "verdict": "RED_CONFIRMED"
+}
