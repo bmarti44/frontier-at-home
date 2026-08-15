@@ -1,0 +1,15 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-attempt-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "attempt": 6,
+  "status": "FAIL",
+  "date": "2026-08-15",
+  "observed": "Even when the oracle consumed the disabled fused F32 row directly, the enabled result differed at index 144. The unrolled midpoint-threshold implementation and the independent nearest-error oracle disagree under F32 multiplication rounding near a boundary.",
+  "bounded_fix": "Implement the preregistered rule literally on device: evaluate absolute F32 error to all 15 ordered codebook levels and replace the winner only on strictly smaller error. Ordered strict comparison makes the lower code win an exact error tie and removes algebraically transformed threshold behavior.",
+  "artifact_sha256": {
+    "/tmp/w9-e2m1-c3-green6.stdout": "9091a46c48eb08045cd30c17b30b2b0a801b45a22266e35e6a761bd5aae7f00b",
+    "/tmp/w9-e2m1-c3-green6.stderr": "9fcc16b7ae8bd55adcc8fb5e5c9b61faa981ebbeff5789f62b9359b8416ba1a3"
+  },
+  "acceptance": "The device result matches the independent ordered nearest-error oracle for ordinary and fused inputs, including exact/non-unit midpoints and nextafter neighbors. Restoring either normalized or threshold shortcut must fail."
+}
