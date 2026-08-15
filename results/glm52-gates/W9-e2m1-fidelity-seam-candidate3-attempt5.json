@@ -1,0 +1,15 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-attempt-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "attempt": 5,
+  "status": "FAIL",
+  "date": "2026-08-15",
+  "observed": "Deriving the fused RMS factor from the q branch still mismatched the kv branch because their reduction widths differ (q_n=32, kv_lora_dim=512) and fast-rsqrt rounding is not guaranteed identical.",
+  "bounded_fix": "Execute the same fused wrapper once with the diagnostic off into a separate exact F32 cache, then use that observed pre-quantized latent as the independent E2M1 oracle input for the enabled call. This directly proves candidate=E2M1(baseline fused latent), adds the required baseline arm, and leaves codec selection independent.",
+  "artifact_sha256": {
+    "/tmp/w9-e2m1-c3-green5.stdout": "9091a46c48eb08045cd30c17b30b2b0a801b45a22266e35e6a761bd5aae7f00b",
+    "/tmp/w9-e2m1-c3-green5.stderr": "9fcc16b7ae8bd55adcc8fb5e5c9b61faa981ebbeff5789f62b9359b8416ba1a3"
+  },
+  "acceptance": "The enabled fused latent equals the independent codec oracle applied to the same wrapper's disabled F32 latent; RoPE and q outputs match across arms; only the enabled call advances the fused counter."
+}
