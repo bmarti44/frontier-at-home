@@ -377,6 +377,9 @@ allowlist = {
     "tarball_sha256",
     "weights_manifest_sha256",
     "GLM_SAFE_EXPECTED_BINARY_SHA256",
+    "campaign_preflight_sha256",
+    "observed_stderr_sha256",
+    "retained_manifest_sha256",
 }
 # Keys whose value is a MAP of repo-relative path -> sha256 (audit bindings).
 # Every string leaf under them is an allowed digest.
@@ -405,6 +408,8 @@ map_allowlist = {
     "build_artifact_hashes",
     "tests_sha256_by_path",
     "test_hashes",
+    "completed_arm_tree_sha256",
+    "completed_result_sha256",
 }
 w3_campaign_raw = re.fullmatch(
     r"results/glm52-gates/W3-performance-campaign-[^/]+/raw\.jsonl",

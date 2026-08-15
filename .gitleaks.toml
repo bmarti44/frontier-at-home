@@ -12,6 +12,8 @@ paths = [
 ]
 regexes = [
   '''"(access_stream|binary|build_manifest|builder|configuration|diff|fixture|generated_content|generated_reasoning|inventory|launcher|model|output_tokenizer|pack|preserved_archive|profile|randomness_receipt|raw_artifact|receipt|request|response|runner|runtime_bundle|scorer|seed|server|source|staged_binary|terminal_receipt|test|test_diff|tokenizer|weights_manifest)_sha256": "[0-9a-f]{64}"''',
+  '''"(campaign_preflight|observed_stderr|retained_manifest)_sha256": "[0-9a-f]{64}"''',
+  '''^      "block[0-4]-seq[0-3]-arm[AB]": "[0-9a-f]{64}"[,]?$''',
   '''"tokenizers_(init|so)_sha256": "[0-9a-f]{64}"''',
   '''"token_scorer_sha256": "[0-9a-f]{64}"''',
   '''"tokenizer_sha256":"[0-9a-f]{64}"''',
