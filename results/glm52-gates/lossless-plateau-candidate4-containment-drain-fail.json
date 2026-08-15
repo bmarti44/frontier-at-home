@@ -1,0 +1,26 @@
+{
+  "schema": "glm52-lossless-plateau-execution-failure-v1",
+  "candidate_number_for_gate": 4,
+  "candidate_commit": "2cd3d53",
+  "recorded_at_utc": "2026-08-15T16:02:16Z",
+  "dsv_containment_sha256": "a61ad8b99f09ae1c474e0a07d83657b40f1a61c0d3c161615a5639451c1f5377",
+  "scope": "Non-model /usr/bin/true GREEN smoke after correcting retained-lock ownership validation.",
+  "attempt": {
+    "tag": "c4-containment-green",
+    "exit_code": 15,
+    "canonical_terminal": "SAFE_RUN_DONE rc=15 killed=no",
+    "safety_main_sha256": "4b47ad99372af59232ff1d6cceecf7107a0d5e085c56ea5a258b6bf1da34690d",
+    "samples_sha256": "6decd7bd8886bdc78117804561b86e0771f3b43b7d9ee99fe6e8df524566aa76",
+    "kernel_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e"
+  },
+  "failing_assertion": "The wrapper sampled cgroup.procs immediately after timeout(1) exited and classified one transient teardown helper as a surviving descendant.",
+  "bounded_fix": "Poll cgroup.procs for at most one second after the command exits; fail and kill only processes that remain after that bounded drain interval.",
+  "frozen_components_changed": false,
+  "host_safety": {
+    "engine_started": false,
+    "gpu_measurement_started": false,
+    "oom_or_xid_observed": false,
+    "swap_current_bytes": 0,
+    "cgroup_oom_delta": 0
+  }
+}
