@@ -12,6 +12,9 @@ EXPECTED_BINARY_SHA256=${DSV4_MATCHED_BINARY_SHA256:?DSV4_MATCHED_BINARY_SHA256 
 MODEL=${DSV4_MATCHED_MODEL_FIRST:?DSV4_MATCHED_MODEL_FIRST is required}
 SHARDS_JSON=${DSV4_MATCHED_SHARDS_JSON:?DSV4_MATCHED_SHARDS_JSON is required}
 BENCH=${MATCHED_BENCH_PATH:?MATCHED_BENCH_PATH is required}
+PYTHON=${MATCHED_PYTHON_PATH:?MATCHED_PYTHON_PATH is required}
+TOKENIZER_NATIVE=${MATCHED_TOKENIZER_NATIVE_PATH:?MATCHED_TOKENIZER_NATIVE_PATH is required}
+TOKENIZER_NATIVE_SHA256=${MATCHED_TOKENIZER_NATIVE_SHA256:?MATCHED_TOKENIZER_NATIVE_SHA256 is required}
 PORT=${MATCHED_PORT:?MATCHED_PORT is required}
 PID=
 START_TICKS=
@@ -42,7 +45,7 @@ trap stop_server EXIT
 mkdir -p -- "$OUT"
 record_shards() {
     local checkpoint=$1
-    python3 - "$SHARDS_JSON" "$OUT/model.shards.jsonl" "$checkpoint" <<'PY'
+    "$PYTHON" -I -B -S - "$SHARDS_JSON" "$OUT/model.shards.jsonl" "$checkpoint" <<'PY'
 import json
 import os
 import pathlib
@@ -96,7 +99,7 @@ done
 "$ready" || { tail -100 "$OUT/server.log" >&2; exit 1; }
 record_shards ready
 
-python3 - "$PID" "$MODEL" "$OUT" "$actual_binary_sha256" <<'PY'
+"$PYTHON" -I -B -S - "$PID" "$MODEL" "$OUT" "$actual_binary_sha256" <<'PY'
 import hashlib
 import json
 import pathlib
@@ -160,7 +163,9 @@ model_identity = f"{model_info.st_dev}:{model_info.st_ino}:{model_info.st_size}"
 )
 PY
 
-"$REPO/.venv-harness/bin/python" "$BENCH" \
+env MATCHED_TOKENIZER_NATIVE_PATH="$TOKENIZER_NATIVE" \
+    MATCHED_TOKENIZER_NATIVE_SHA256="$TOKENIZER_NATIVE_SHA256" \
+    "$PYTHON" -I -B -S "$BENCH" \
     --base-url "http://127.0.0.1:$PORT" \
     --out "$OUT/result.json" --stack-label "$LABEL" \
     --reps 2 --context-levels 0,28672 --max-tokens 160 \
@@ -176,7 +181,7 @@ post_status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 \
     "http://127.0.0.1:$PORT/v1/models" || true)
 [[ $post_status == 200 ]] || { echo "DeepSeek post-request health failed" >&2; exit 1; }
 record_shards post_requests
-python3 - "$OUT/process.observations.json" "$PID" "$START_TICKS" "$post_status" <<'PY'
+"$PYTHON" -I -B -S - "$OUT/process.observations.json" "$PID" "$START_TICKS" "$post_status" <<'PY'
 import json
 import os
 import sys

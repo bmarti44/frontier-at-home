@@ -153,17 +153,46 @@ DIR=$CRASH_ROOT/$(date -u +%Y%m%dT%H%M%SZ)-$TAG
 mkdir -- "$DIR"
 UNIT=dsv4-matched-${TAG//./-}-$$
 SELF=$(readlink -f -- "$0")
+RUN_CLIENT_PID=
+UNIT_ACTIVE=0
+stop_unit() {
+    trap - INT TERM HUP
+    if (( UNIT_ACTIVE )); then
+        systemctl --user stop "$UNIT.service" >/dev/null 2>&1 || true
+        for _ in $(seq 1 100); do
+            [[ $(systemctl --user is-active "$UNIT.service" 2>/dev/null || true) != active ]] && break
+            sleep 0.05
+        done
+    fi
+    if [[ ${RUN_CLIENT_PID:-} =~ ^[1-9][0-9]*$ ]] && kill -0 "$RUN_CLIENT_PID" 2>/dev/null; then
+        kill -TERM "$RUN_CLIENT_PID" 2>/dev/null || true
+        wait "$RUN_CLIENT_PID" 2>/dev/null || true
+    fi
+    UNIT_ACTIVE=0
+}
+handle_signal() {
+    local signal_name=$1 signal_rc=$2
+    printf 'DSV4_MATCHED_INTERRUPTED signal=%s unit=%s\n' "$signal_name" "$UNIT" >&2
+    stop_unit
+    exit "$signal_rc"
+}
+trap 'handle_signal INT 130' INT
+trap 'handle_signal TERM 143' TERM
+trap 'handle_signal HUP 129' HUP
 env_args=(
     HOME=/home/bmarti44
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     "DSV4_MATCHED_TIMEOUT_S=$TIMEOUT"
 )
 for name in DSV4_MATCHED_BINARY DSV4_MATCHED_BINARY_SHA256 \
-    DSV4_MATCHED_MODEL_FIRST DSV4_MATCHED_SHARDS_JSON MATCHED_BENCH_PATH MATCHED_PORT
+    DSV4_MATCHED_MODEL_FIRST DSV4_MATCHED_SHARDS_JSON MATCHED_BENCH_PATH \
+    MATCHED_PYTHON_PATH MATCHED_TOKENIZER_NATIVE_PATH \
+    MATCHED_TOKENIZER_NATIVE_SHA256 MATCHED_PORT
 do
     [[ -v $name ]] && env_args+=("$name=${!name}")
 done
 set +e
+UNIT_ACTIVE=1
 systemd-run --user --wait --collect --pipe --quiet --expand-environment=no \
     --working-directory="$(pwd -P)" --unit="$UNIT" --service-type=exec \
     -p KillMode=control-group -p SendSIGKILL=yes -p TimeoutStopSec=45s \
@@ -171,8 +200,10 @@ systemd-run --user --wait --collect --pipe --quiet --expand-environment=no \
     -p "MemoryHigh=${HIGH}G" -p "MemoryMax=${MAX}G" -p MemorySwapMax=0 \
     -p OOMPolicy=kill -p TasksMax=4096 -- \
     /usr/bin/env -i "${env_args[@]}" /usr/bin/bash "$SELF" \
-        --inner "$DIR" "$UNIT" "$FLOOR" -- "$@"
+        --inner "$DIR" "$UNIT" "$FLOOR" -- "$@" &
+RUN_CLIENT_PID=$!
+wait "$RUN_CLIENT_PID"
 rc=$?
 set -e
-systemctl --user stop "$UNIT.service" >/dev/null 2>&1 || true
+stop_unit
 exit "$rc"

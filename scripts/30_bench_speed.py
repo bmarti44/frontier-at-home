@@ -5,12 +5,18 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.machinery
+import importlib.util
 import json
+import os
 import random
 import re
+import stat
 import statistics
 import subprocess
+import sys
 import time
+import types
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -212,11 +218,70 @@ def verify_tokenizer_hash(path: Path, expected_sha256: str) -> str:
     return read_verified_tokenizer_bytes(path, expected_sha256)[1]
 
 
-def load_tokenizer_bytes(raw: bytes) -> Any:
+_BOUND_TOKENIZER_CLASS: Any = None
+
+
+def _load_bound_native_tokenizer() -> Any:
+    global _BOUND_TOKENIZER_CLASS
+    if _BOUND_TOKENIZER_CLASS is not None:
+        return _BOUND_TOKENIZER_CLASS
+    raw_path = os.environ.get("MATCHED_TOKENIZER_NATIVE_PATH")
+    expected = os.environ.get("MATCHED_TOKENIZER_NATIVE_SHA256")
+    if not raw_path or not expected or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise RuntimeError("matched tokenizer native binding is incomplete")
+    path = Path(raw_path)
+    descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
     try:
-        from tokenizers import Tokenizer
-    except ImportError as error:
-        raise RuntimeError("tokenizers is required; install requirements-harness.txt") from error
+        info_before = os.fstat(descriptor)
+        if not stat.S_ISREG(info_before.st_mode) or info_before.st_mode & 0o022:
+            raise RuntimeError("matched tokenizer native file is unsafe")
+        digest = hashlib.sha256()
+        while chunk := os.read(descriptor, 1024 * 1024):
+            digest.update(chunk)
+        if digest.hexdigest() != expected:
+            raise RuntimeError("matched tokenizer native SHA-256 mismatch")
+        descriptor_path = f"/proc/self/fd/{descriptor}"
+        package = types.ModuleType("tokenizers")
+        package.__path__ = []  # type: ignore[attr-defined]
+        sys.modules["tokenizers"] = package
+        loader = importlib.machinery.ExtensionFileLoader(
+            "tokenizers.tokenizers", descriptor_path
+        )
+        spec = importlib.util.spec_from_loader("tokenizers.tokenizers", loader)
+        if spec is None:
+            raise RuntimeError("cannot construct matched tokenizer native module")
+        native = importlib.util.module_from_spec(spec)
+        sys.modules["tokenizers.tokenizers"] = native
+        loader.exec_module(native)
+        info_after = os.fstat(descriptor)
+        if (
+            info_before.st_dev,
+            info_before.st_ino,
+            info_before.st_size,
+            info_before.st_mtime_ns,
+        ) != (
+            info_after.st_dev,
+            info_after.st_ino,
+            info_after.st_size,
+            info_after.st_mtime_ns,
+        ):
+            raise RuntimeError("matched tokenizer native changed during import")
+        _BOUND_TOKENIZER_CLASS = native.Tokenizer
+        return _BOUND_TOKENIZER_CLASS
+    finally:
+        os.close(descriptor)
+
+
+def load_tokenizer_bytes(raw: bytes) -> Any:
+    if os.environ.get("MATCHED_TOKENIZER_NATIVE_PATH") is not None:
+        Tokenizer = _load_bound_native_tokenizer()
+    else:
+        try:
+            from tokenizers import Tokenizer
+        except ImportError as error:
+            raise RuntimeError(
+                "tokenizers is required; install requirements-harness.txt"
+            ) from error
     try:
         document = raw.decode("utf-8", errors="strict")
     except UnicodeDecodeError as error:

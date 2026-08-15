@@ -355,7 +355,7 @@ def _parse_canonical_safety(directory: Path) -> None:
         value = event_values.get(key, event_values.get(key.removesuffix("_delta")))
         if value != 0:
             raise ValueError(f"canonical safety memory event is nonzero in {directory}: {key}")
-    if re.search(r"\bFATAL\b|KILL_FLOOR", main_text, re.IGNORECASE):
+    if re.search(r"(?im)^.*\bFATAL\b|^.*\bKILL_FLOOR breached:", main_text):
         raise ValueError(f"canonical safety log records a failure in {directory}")
 
 

@@ -17,6 +17,9 @@ TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10ac\
 ca112d42a854923df93db4a6f333a82d
 PORT=${GLM_PORT:-8011}
 BENCH=${MATCHED_BENCH_PATH:?MATCHED_BENCH_PATH is required}
+PYTHON=${MATCHED_PYTHON_PATH:?MATCHED_PYTHON_PATH is required}
+TOKENIZER_NATIVE=${MATCHED_TOKENIZER_NATIVE_PATH:?MATCHED_TOKENIZER_NATIVE_PATH is required}
+TOKENIZER_NATIVE_SHA256=${MATCHED_TOKENIZER_NATIVE_SHA256:?MATCHED_TOKENIZER_NATIVE_SHA256 is required}
 CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
 IQ2_REFERENCE=${DS4_CUDA_IQ2_DOWN_REFERENCE:-1}
 NO_EXPERT_TILES=${DS4_CUDA_MOE_NO_EXPERT_TILES:-0}
@@ -113,7 +116,7 @@ for _ in $(seq 1 600); do
 done
 "$ready" || { tail -80 "$OUT/server.log" >&2; exit 1; }
 
-python3 - "$PID" "$MODEL" "$OUT" "$actual_binary_sha256" <<'PY'
+"$PYTHON" -I -B -S - "$PID" "$MODEL" "$OUT" "$actual_binary_sha256" <<'PY'
 import hashlib
 import json
 import os
@@ -178,7 +181,9 @@ except (ValueError, IndexError):
 (out / "model.device-inode-size").write_text(model_identity + "\n", encoding="ascii")
 PY
 
-/home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin/python \
+env MATCHED_TOKENIZER_NATIVE_PATH="$TOKENIZER_NATIVE" \
+    MATCHED_TOKENIZER_NATIVE_SHA256="$TOKENIZER_NATIVE_SHA256" \
+    "$PYTHON" -I -B -S \
     "$BENCH" \
     --base-url "http://127.0.0.1:$PORT" \
     --out "$OUT/result.json" \

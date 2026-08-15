@@ -15,6 +15,17 @@ PORT=$((10#$PORT))
 (( PORT >= 1024 && PORT <= 65535 )) || { echo "invalid MATCHED_PORT" >&2; exit 2; }
 
 OUT=/home/bmarti44/.local/state/glm52-decisive-$TAG
+PYTHON=/usr/bin/python3.12
+PYTHON_SHA256=a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1
+FREEZE_RECEIPT=results/glm52-gates/lossless-plateau-candidate6-preaudit.json
+[[ ! -v PYTHONPATH && ! -v PYTHONHOME && ! -v PYTHONSTARTUP ]] || {
+    echo "Python environment injection is prohibited" >&2
+    exit 2
+}
+[[ $(sha256sum "$PYTHON" | awk '{print $1}') == "$PYTHON_SHA256" ]] || {
+    echo "bound Python executable changed" >&2
+    exit 2
+}
 if [[ ${MATCHED_RETAINED_RUNTIME:-0} != 1 ]]; then
     [[ ! -e $OUT ]] || { echo "refusing to overwrite $OUT" >&2; exit 1; }
     head=$(git -C "$REPO" rev-parse HEAD)
@@ -24,11 +35,14 @@ if [[ ${MATCHED_RETAINED_RUNTIME:-0} != 1 ]]; then
             exit 1
         }
     mkdir -p -- "$OUT/retained"
-    python3 - "$REPO" "$head" "$OUT/retained" "$OUT/retained-manifest.json" <<'PY'
+    env -i HOME=/home/bmarti44 PATH=/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+        "$PYTHON" -I -B -S - "$REPO" "$head" "$OUT/retained" \
+        "$OUT/retained-manifest.json" "$FREEZE_RECEIPT" <<'PY'
 import hashlib
 import json
 import os
 import pathlib
+import stat
 import subprocess
 import sys
 
@@ -36,19 +50,32 @@ repo = pathlib.Path(sys.argv[1])
 head = sys.argv[2]
 retained = pathlib.Path(sys.argv[3])
 manifest_path = pathlib.Path(sys.argv[4])
+receipt_path = sys.argv[5]
 profiles = (
     "configs/glm52-lossless-plateau-profile.json",
     "configs/dsv4-matched-32k-profile.json",
 )
 
-def git_bytes(relative):
+def git_bytes(relative, commit=head):
     return subprocess.run(
-        ["git", "-C", str(repo), "show", f"{head}:{relative}"],
+        ["git", "-C", str(repo), "show", f"{commit}:{relative}"],
         check=True,
         stdout=subprocess.PIPE,
     ).stdout
 
+receipt = json.loads(git_bytes(receipt_path))
+reviewed_commit = receipt.get("candidate_commit")
+if not isinstance(reviewed_commit, str) or len(reviewed_commit) != 40:
+    raise SystemExit("reviewed runtime commit is missing")
+subprocess.run(
+    ["git", "-C", str(repo), "merge-base", "--is-ancestor", reviewed_commit, head],
+    check=True,
+)
 profile_docs = [json.loads(git_bytes(path)) for path in profiles]
+python_runtimes = [profile.get("python_runtime") for profile in profile_docs]
+if not isinstance(python_runtimes[0], dict) or python_runtimes[0] != python_runtimes[1]:
+    raise SystemExit("matched profiles disagree on the Python runtime")
+python_runtime = python_runtimes[0]
 paths = set(profiles)
 for profile in profile_docs:
     bindings = profile.get("artifact_sha256")
@@ -76,6 +103,8 @@ for relative in sorted(paths):
     if relative.startswith("/") or ".." in pathlib.PurePosixPath(relative).parts:
         raise SystemExit(f"unsafe retained path: {relative}")
     raw = git_bytes(relative)
+    if raw != git_bytes(relative, reviewed_commit):
+        raise SystemExit(f"path differs from reviewed runtime commit: {relative}")
     expected_values = {
         profile["artifact_sha256"].get(relative)
         for profile in profile_docs
@@ -92,7 +121,60 @@ for relative in sorted(paths):
         stream.flush()
         os.fsync(stream.fileno())
     digests[relative] = actual
-manifest = {"schema": "matched-retained-closure-v1", "git_head": head, "sha256": digests}
+
+def sha256_path(path):
+    value = hashlib.sha256()
+    with open(path, "rb", buffering=0) as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+def stdlib_tree(path):
+    root = pathlib.Path(path)
+    value = hashlib.sha256()
+    for item in sorted(root.rglob("*"), key=lambda p: p.relative_to(root).as_posix()):
+        relative = item.relative_to(root)
+        if "__pycache__" in relative.parts:
+            continue
+        info = item.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            kind = b"L"
+            payload = item.readlink().as_posix().encode()
+        elif stat.S_ISREG(info.st_mode):
+            kind = b"F"
+            payload = bytes.fromhex(sha256_path(item))
+        else:
+            continue
+        name = relative.as_posix().encode()
+        value.update(kind + len(name).to_bytes(4, "big") + name)
+        value.update(info.st_size.to_bytes(8, "big") + payload)
+    return value.hexdigest()
+
+for path_key, digest_key in (
+    ("executable_path", "executable_sha256"),
+    ("libpython_path", "libpython_sha256"),
+    ("tokenizer_native_path", "tokenizer_native_sha256"),
+):
+    if sha256_path(python_runtime[path_key]) != python_runtime[digest_key]:
+        raise SystemExit(f"Python runtime changed: {path_key}")
+if stdlib_tree(python_runtime["stdlib_path"]) != python_runtime["stdlib_tree_sha256"]:
+    raise SystemExit("Python standard-library tree changed")
+native_raw = pathlib.Path(python_runtime["tokenizer_native_path"]).read_bytes()
+native_destination = retained / "runtime/tokenizers.abi3.so"
+native_destination.parent.mkdir(parents=True, exist_ok=True)
+fd = os.open(native_destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o500)
+with os.fdopen(fd, "wb") as stream:
+    stream.write(native_raw)
+    stream.flush()
+    os.fsync(stream.fileno())
+digests["runtime/tokenizers.abi3.so"] = hashlib.sha256(native_raw).hexdigest()
+manifest = {
+    "schema": "matched-retained-closure-v1",
+    "git_head": head,
+    "reviewed_runtime_commit": reviewed_commit,
+    "python_runtime": python_runtime,
+    "sha256": digests,
+}
 with open(manifest_path, "x", encoding="ascii") as stream:
     json.dump(manifest, stream, sort_keys=True, separators=(",", ":"))
     stream.write("\n")
@@ -100,9 +182,12 @@ with open(manifest_path, "x", encoding="ascii") as stream:
     os.fsync(stream.fileno())
 os.chmod(retained, 0o500)
 PY
-    exec env MATCHED_RETAINED_RUNTIME=1 MATCHED_TAG="$TAG" MATCHED_SEED="$SEED" \
+    exec env -i HOME=/home/bmarti44 XDG_RUNTIME_DIR=/run/user/1000 \
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        LANG=C.UTF-8 LC_ALL=C.UTF-8 MATCHED_RETAINED_RUNTIME=1 \
+        MATCHED_TAG="$TAG" MATCHED_SEED="$SEED" \
         MATCHED_BLOCKS="$BLOCKS" MATCHED_PORT="$PORT" \
-        bash "$OUT/retained/results/glm52-goal/harness/decisive_matched.sh"
+        /usr/bin/bash "$OUT/retained/results/glm52-goal/harness/decisive_matched.sh"
 fi
 
 CODE_ROOT=$OUT/retained
@@ -114,6 +199,8 @@ GLM_PROFILE=$CODE_ROOT/configs/glm52-lossless-plateau-profile.json
 DSV4_PROFILE=$CODE_ROOT/configs/dsv4-matched-32k-profile.json
 BENCH=$CODE_ROOT/scripts/30_bench_speed.py
 COLLECTOR=$CODE_ROOT/scripts/56_collect_matched_evidence.py
+TOKENIZER_NATIVE=$CODE_ROOT/runtime/tokenizers.abi3.so
+TOKENIZER_NATIVE_SHA256=3c7e64a6cf423a4b675d535b0e56667382a02fa71f86380719d2a442ad98c1c7
 CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
 GLM_CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6
 GLM_BINARY_SHA256=eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2
@@ -121,7 +208,7 @@ FAULT_PATTERN='NV_ERR_NO_MEMORY|NVRM.*Xid|oom-kill|Out of memory: Killed process
 GLM_ENV_ALLOWLIST=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_IQ2_DOWN_REFERENCE,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_CUDA_STABLE_MODEL_REMAP,DS4_TOKEN_TIMING_LOG
 
 wait_full_release() {
-    python3 "$CODE_ROOT/scripts/03_memory_guard.py" \
+    "$PYTHON" -I -B -S "$CODE_ROOT/scripts/03_memory_guard.py" \
         --required-gib 110 --stable-samples 3 --timeout-seconds 180
 }
 
@@ -137,12 +224,23 @@ assert_idle() {
         echo "$label: selected listener remains on port $PORT" >&2
         return 1
     fi
-    if systemctl --user list-units 'glm52-*' --state=active --no-legend |
+    if systemctl --user list-units 'glm52-*' 'dsv4-matched-*' --state=active --no-legend |
             grep -q .; then
-        echo "$label: a GLM campaign supervisor remains active" >&2
+        echo "$label: a matched campaign supervisor remains active" >&2
         return 1
     fi
     return 0
+}
+
+stop_dsv_units_for_tag() {
+    local tag=${1//./-} unit
+    while read -r unit _; do
+        [[ $unit == dsv4-matched-${tag}-*.service ]] || continue
+        systemctl --user stop "$unit" >/dev/null 2>&1 || true
+    done < <(
+        systemctl --user list-units "dsv4-matched-${tag}-*" --all --no-legend \
+            2>/dev/null || true
+    )
 }
 
 kernel_cursor() {
@@ -157,12 +255,13 @@ assert_no_kernel_faults_since() {
 }
 
 verify_campaign_artifacts() {
-    python3 - "$CODE_ROOT" "$REPO" "$GLM_PROFILE" "$DSV4_PROFILE" \
+    "$PYTHON" -I -B -S - "$CODE_ROOT" "$REPO" "$GLM_PROFILE" "$DSV4_PROFILE" \
         "$OUT/models" "$OUT/campaign-preflight.json" <<'PY'
 import hashlib
 import json
 import os
 import pathlib
+import stat
 import sys
 
 root = pathlib.Path(sys.argv[1]).resolve()
@@ -268,7 +367,7 @@ PY
 
 prepare_dsv_model_links() {
     mkdir -p -- "$OUT/models"
-    python3 - "$DSV4_PROFILE" "$REPO" "$OUT/models" <<'PY'
+    "$PYTHON" -I -B -S - "$DSV4_PROFILE" "$REPO" "$OUT/models" <<'PY'
 import json
 import os
 import pathlib
@@ -286,12 +385,13 @@ PY
 }
 
 verify_terminal_closure() {
-    python3 - "$OUT/retained-manifest.json" "$CODE_ROOT" \
+    "$PYTHON" -I -B -S - "$OUT/retained-manifest.json" "$CODE_ROOT" \
         "$OUT/campaign-preflight.json" <<'PY'
 import hashlib
 import json
 import os
 import pathlib
+import stat
 import sys
 
 manifest = json.load(open(sys.argv[1], encoding="ascii"))
@@ -307,6 +407,42 @@ for path in root.rglob("*"):
             raise SystemExit(f"retained closure changed: {relative}")
 if observed != set(manifest["sha256"]):
     raise SystemExit("retained closure membership changed")
+
+def sha256_path(path):
+    value = hashlib.sha256()
+    with open(path, "rb", buffering=0) as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+def stdlib_tree(path):
+    base = pathlib.Path(path)
+    value = hashlib.sha256()
+    for item in sorted(base.rglob("*"), key=lambda p: p.relative_to(base).as_posix()):
+        relative = item.relative_to(base)
+        if "__pycache__" in relative.parts:
+            continue
+        info = item.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            kind, payload = b"L", item.readlink().as_posix().encode()
+        elif stat.S_ISREG(info.st_mode):
+            kind, payload = b"F", bytes.fromhex(sha256_path(item))
+        else:
+            continue
+        name = relative.as_posix().encode()
+        value.update(kind + len(name).to_bytes(4, "big") + name)
+        value.update(info.st_size.to_bytes(8, "big") + payload)
+    return value.hexdigest()
+
+runtime = manifest["python_runtime"]
+for path_key, digest_key in (
+    ("executable_path", "executable_sha256"),
+    ("libpython_path", "libpython_sha256"),
+):
+    if sha256_path(runtime[path_key]) != runtime[digest_key]:
+        raise SystemExit(f"executed Python runtime changed: {path_key}")
+if stdlib_tree(runtime["stdlib_path"]) != runtime["stdlib_tree_sha256"]:
+    raise SystemExit("executed Python standard-library tree changed")
 for shard in preflight["dsv4_shards"]:
     path = pathlib.Path(shard["path"])
     info = path.stat()
@@ -342,6 +478,7 @@ cleanup() {
     local rc=$?
     trap - EXIT
     set +e
+    stop_dsv_units_for_tag "$TAG"
     assert_idle cleanup || rc=1
     wait_full_release >/dev/null 2>&1 || rc=1
     if [[ ${PREFLIGHT_DONE:-0} == 1 ]]; then
@@ -373,11 +510,11 @@ wait_full_release >"$OUT/initial-memory.json"
 prepare_dsv_model_links
 verify_campaign_artifacts
 PREFLIGHT_DONE=1
-GLM_MODEL_IDENTITY=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["glm_model_device_inode_size"])' "$OUT/campaign-preflight.json")
-GLM_ENV_SHA256=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["glm_environment_sha256"])' "$OUT/campaign-preflight.json")
-DSV4_BINARY=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_binary"])' "$OUT/campaign-preflight.json")
-DSV4_BINARY_SHA256=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_binary_sha256"])' "$OUT/campaign-preflight.json")
-DSV4_MODEL_FIRST=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_shards"][0]["path"])' "$OUT/campaign-preflight.json")
+GLM_MODEL_IDENTITY=$("$PYTHON" -I -B -S -c 'import json,sys; print(json.load(open(sys.argv[1]))["glm_model_device_inode_size"])' "$OUT/campaign-preflight.json")
+GLM_ENV_SHA256=$("$PYTHON" -I -B -S -c 'import json,sys; print(json.load(open(sys.argv[1]))["glm_environment_sha256"])' "$OUT/campaign-preflight.json")
+DSV4_BINARY=$("$PYTHON" -I -B -S -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_binary"])' "$OUT/campaign-preflight.json")
+DSV4_BINARY_SHA256=$("$PYTHON" -I -B -S -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_binary_sha256"])' "$OUT/campaign-preflight.json")
+DSV4_MODEL_FIRST=$("$PYTHON" -I -B -S -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_shards"][0]["path"])' "$OUT/campaign-preflight.json")
 
 run_glm() {
     local label=$1 arm_out=$OUT/$label safe_tag="$TAG-$label" cursor rc=0
@@ -403,12 +540,16 @@ run_glm() {
         GLM_SAFE_KILL_FLOOR_GIB=40 GLM_SAFE_MIN_START_GIB=110 \
         GLM_SAFE_TIMEOUT_S=5400 GLM_SAFE_DONE_DIGESTS=1 GLM_PORT="$PORT" \
         MATCHED_BENCH_PATH="$BENCH" \
+        MATCHED_PYTHON_PATH="$PYTHON" \
+        MATCHED_TOKENIZER_NATIVE_PATH="$TOKENIZER_NATIVE" \
+        MATCHED_TOKENIZER_NATIVE_SHA256="$TOKENIZER_NATIVE_SHA256" \
         GLM_VERIFIED_MODEL_DEVICE_INODE_SIZE="$GLM_MODEL_IDENTITY" \
         "$CGROUP" --tag "$safe_tag" -- \
         bash "$GLM_ARM" "$arm_out" "$label" "$SEED" \
         >"$arm_out/safety.wrapper.out" 2>"$arm_out/safety.wrapper.err"
     rc=$?
     set -e
+    stop_dsv_units_for_tag "$safe_tag"
     copy_safety_evidence "$safe_tag" "$arm_out" || rc=1
     assert_no_kernel_faults_since "$cursor" "$arm_out/kernel.log" || rc=1
     assert_idle "$label" || rc=1
@@ -437,6 +578,9 @@ run_dsv4() {
         DSV4_MATCHED_MODEL_FIRST="$DSV4_MODEL_FIRST" \
         DSV4_MATCHED_SHARDS_JSON="$OUT/campaign-preflight.json" \
         MATCHED_BENCH_PATH="$BENCH" \
+        MATCHED_PYTHON_PATH="$PYTHON" \
+        MATCHED_TOKENIZER_NATIVE_PATH="$TOKENIZER_NATIVE" \
+        MATCHED_TOKENIZER_NATIVE_SHA256="$TOKENIZER_NATIVE_SHA256" \
         MATCHED_PORT="$PORT" \
         "$DSV4_CGROUP" --tag "$safe_tag" -- \
         bash "$DSV4_ARM" "$arm_out" "$label" "$SEED" \
@@ -470,7 +614,7 @@ done
 assert_idle terminal
 wait_full_release >"$OUT/terminal-memory.json"
 verify_terminal_closure
-"$REPO/.venv-harness/bin/python" "$COLLECTOR" "$OUT" \
+"$PYTHON" -I -B -S "$COLLECTOR" "$OUT" \
     --fixture "$CODE_ROOT/fixtures/ctx-32k.txt" \
     --dsv4-profile "$DSV4_PROFILE" --glm-profile "$GLM_PROFILE" \
     --serving-manifest "$REPO/weights/unsloth-ud-q2_k_xl/manifest.json" \
