@@ -1,0 +1,81 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-v1",
+  "candidate_number_for_gate": 5,
+  "campaign_global_review_round_before_review": 316,
+  "candidate_commit": "7508a2131075bfbedcdc9338629d47bdfacb2d9c",
+  "candidate_tree": "73c388ff1e618b9575ab75f7b55936a19498b0bb",
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r316.json",
+  "recorded_at_utc": "2026-08-15T16:05:00Z",
+  "scope": "Close only round-316 execution-authority, prompt-authority, canonical-safety, DSV4 multishard identity, supervision, and owner-accepted containment findings. No engine, output, fidelity, arm schedule, metric formula, or fixture change.",
+  "artifact_sha256": {
+    ".gitleaks.toml": "89821d8b275eb7c7dce9a5d596c011d1c55bf97370a19f69e474340cff14888d",
+    "scripts/lint_secrets.sh": "ffec86cb221b85231be48d87f6f4091c8a1203398528ab6b3bcbd03b25e5d4ca",
+    "scripts/tests/test_glm_lossless_plateau.py": "cb195387bd53dd473863c4c68fd0b7ef9a3ba5f2840dadb814436ee3b851f6ea",
+    "scripts/tests/test_matched_evidence.py": "3cdda0742379c1c66f6205157db69495485a6cbb398e6f072d8474abf3f9ddd1",
+    "scripts/tests/test_matched_memory_safety.py": "f5fb1c709949f0af604e0382cb6b537c4d4f138b4cc9042ddf7bb9674bc12d94",
+    "configs/glm52-lossless-plateau-profile.json": "a9ad173ff05b85b2b530a26087dbdbd51523eb649f0667a87ea5875d8d35ed72",
+    "configs/dsv4-matched-32k-profile.json": "35a7d51b33ccf235d408ccb45a1f475f0c934457783980852a915b5e8d69af4a",
+    "results/glm52-goal/harness/decisive_matched.sh": "30f98d9ee13cd8d5b22f4c574f388bd6b258c9a815cdca17da628343e8b1efff",
+    "results/glm52-goal/harness/glm_decisive_arm.sh": "5764cccb8e8ab1c6e833a0494910b80ea10c16e3d1d5ba2ad255605f3182fd02",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "4413b8d68f3762802e37f6f7ec1c7f39d8e45dfcee3a948bb467af8e55eebc4d",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "13a05cd6c4713cf8dff34f64a3b642968002d7bbbf006fc4e9631823a1c3b983",
+    "results/glm52-gates/harness/glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "3e1a7e8a5edbbf2190eba1762ad653f45086ea81eee7a1b641baf22e8d803216",
+    "scripts/56_collect_matched_evidence.py": "2e0cfb17ba6a54b8d166e056b0ecab5800ccf43ec8444a50a6c77964eeec000d"
+  },
+  "pre_submission_audit": {
+    "focused_command": "python3 -m unittest scripts.tests.test_glm_lossless_plateau scripts.tests.test_matched_evidence scripts.tests.test_dsv4_serving_weight_identity scripts.tests.test_profile_conformance",
+    "focused_tests_run": 28,
+    "focused_failures": 0,
+    "focused_errors": 0,
+    "shell_syntax": "PASS",
+    "profile_artifact_bindings": "PASS",
+    "git_diff_check": "PASS",
+    "secret_scan": "PASS",
+    "worktree_clean_before_receipt": true
+  },
+  "known_inherited_red_tests": {
+    "command": "python3 -m unittest scripts.tests.test_matched_memory_safety",
+    "tests_run": 21,
+    "failures": 2,
+    "tests": [
+      "test_glm_wrapper_hashes_the_selected_candidate_binary",
+      "test_glm_wrapper_rejects_unsafe_safety_overrides"
+    ],
+    "disposition": "Unchanged, explicitly inherited RED specifications for the frozen GLM safe wrapper; not introduced or modified by this candidate. Re-freezing that wrapper would invalidate the in-flight W4 campaign pin and is outside this gate. All other 19 tests pass."
+  },
+  "execution_failures_preserved": [
+    "results/glm52-gates/lossless-plateau-candidate4-containment-smoke-fail.json",
+    "results/glm52-gates/lossless-plateau-candidate4-containment-drain-fail.json"
+  ],
+  "non_model_containment_green": {
+    "tag": "c4-containment-green3",
+    "command_payload": "/usr/bin/true",
+    "exit_code": 0,
+    "canonical_terminal": "SAFE_RUN_DONE rc=0 killed=no",
+    "main_sha256": "34513b42d1b3e763d58132066e1babfef3366027dbfe927da4d5bc5316ba7448",
+    "samples_sha256": "4493ae3b3230ebf445d1d1490ade18fb2df89c2e82a37d299788711b83f909ef",
+    "kernel_sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+    "swap_current_bytes": 0,
+    "memory_event_deltas_zero": true,
+    "engine_started": false
+  },
+  "review_finding_disposition": {
+    "NASH-R316-H1-PROMPT-CACHE-SELF-REJECTION": "closed by --no-cache-prompt on DSV4 and independent raw production prompt-log parsing for both arms",
+    "NASH-R316-H2-DSV-CGROUP-ENVELOPE": "closed by dedicated current-user cgroup with the exact owner-accepted 8/110/105/107 GiB envelope, swap disabled, four-Hz sampling, and canonical evidence",
+    "NASH-R316-H3-MULTISHARD-TOCTOU": "closed by locked hardlinks, full prehash, three live inode checkpoints for all shards, and terminal full rehash",
+    "SINGER-R316-H1-COLLAPSED-PROMPT-AUTHORITY": "closed by deriving evaluated-token numerator from four exact raw server-log prompt events",
+    "SINGER-R316-H2-MUTABLE-PREFLIGHT": "closed by executing a Git-HEAD retained closure under one global lock and terminally rehashing the closure and model shards",
+    "SINGER-R316-H3-NONCANONICAL-SAFETY": "closed by anchored exact terminal parsing plus artifact digest, clean-end, cgroup-event, swap, and failure-marker validation",
+    "SINGER-R316-M1-LITERAL-SUPERVISION": "closed by replacing literal booleans with observed process identity and HTTP status records"
+  },
+  "candidate_convergence": {
+    "blocking_findings_before": 6,
+    "blocking_findings_after_local_audit": 0,
+    "new_review_finding_class_introduced": false,
+    "execution_defects_found_before_freeze": 2,
+    "execution_defects_remaining": 0,
+    "escalation_triggered": false
+  },
+  "verdict": "READY_FOR_DELTA_ONLY_REVIEW_NO_ENGINE_RUN"
+}
