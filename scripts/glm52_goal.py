@@ -361,6 +361,185 @@ def quality_verdict(cases: Iterable[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _score_w9_e2m1_fidelity_raw(
+    records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Score the bounded F32-physical E2M1 fidelity seam from raw arms."""
+    if len(records) != 1:
+        raise ValueError("W9 E2M1 scorer requires exactly one campaign")
+    campaign = records[0]
+    _require_exact_keys(
+        campaign,
+        {
+            "record_type", "engine_candidate_hash", "seed_sha256",
+            "binary_sha256", "baseline_environment_sha256",
+            "candidate_environment_sha256", "fixture_sha256",
+            "candidate_arm", "candidate_required_paths", "attempts",
+        },
+        "W9 E2M1 campaign",
+    )
+    if campaign["record_type"] != "w9_e2m1_fidelity_raw":
+        raise ValueError("W9 E2M1 record type is invalid")
+    engine = campaign["engine_candidate_hash"]
+    if (
+        not isinstance(engine, str) or len(engine) != 40
+        or any(char not in "0123456789abcdef" for char in engine)
+    ):
+        raise ValueError("W9 E2M1 engine candidate is invalid")
+    for field in (
+        "seed_sha256", "binary_sha256", "baseline_environment_sha256",
+        "candidate_environment_sha256", "fixture_sha256",
+    ):
+        if not _is_sha256(campaign[field]):
+            raise ValueError(f"W9 E2M1 {field} is invalid")
+    if campaign["baseline_environment_sha256"] == campaign["candidate_environment_sha256"]:
+        raise ValueError("W9 E2M1 arms have identical environments")
+    seed = campaign["seed_sha256"]
+    candidate_arm = "A" if int(seed[:2], 16) % 2 == 0 else "B"
+    if campaign["candidate_arm"] != candidate_arm:
+        raise ValueError("W9 E2M1 candidate arm does not match the seed")
+    schedule = "ABBA" if int(seed[2:4], 16) % 2 == 0 else "BAAB"
+    required_paths = campaign["candidate_required_paths"]
+    if (
+        not isinstance(required_paths, list) or not required_paths
+        or len(required_paths) != len(set(required_paths))
+        or any(path not in {"normal", "fused"} for path in required_paths)
+    ):
+        raise ValueError("W9 E2M1 required paths are invalid")
+    attempts = campaign["attempts"]
+    if not isinstance(attempts, list) or len(attempts) != 4:
+        raise ValueError("W9 E2M1 campaign requires four attempts")
+    attempt_keys = {
+        "sequence", "arm", "process_identity", "binary_sha256",
+        "environment_sha256", "fixture_sha256", "command_log",
+        "safe_run_completed", "minimum_available_memory_gib", "swap_bytes",
+        "oom", "xid", "cases",
+    }
+    case_keys = {"case_id", "tokens", "nll_sum", "top1_correct"}
+    identities: set[str] = set()
+    by_arm: dict[str, list[dict[str, Any]]] = {"A": [], "B": []}
+    minimum_memory = math.inf
+    for sequence, attempt in enumerate(attempts):
+        _require_exact_keys(attempt, attempt_keys, f"W9 E2M1 attempt {sequence}")
+        arm = schedule[sequence]
+        if attempt["sequence"] != sequence or attempt["arm"] != arm:
+            raise ValueError("W9 E2M1 attempts are missing or reordered")
+        identity = attempt["process_identity"]
+        if not isinstance(identity, str) or not identity or identity in identities:
+            raise ValueError("W9 E2M1 process identity is invalid or reused")
+        identities.add(identity)
+        if attempt["binary_sha256"] != campaign["binary_sha256"]:
+            raise ValueError("W9 E2M1 executed binary differs")
+        expected_environment = campaign[
+            "candidate_environment_sha256" if arm == candidate_arm
+            else "baseline_environment_sha256"
+        ]
+        if attempt["environment_sha256"] != expected_environment:
+            raise ValueError("W9 E2M1 executed environment differs")
+        if attempt["fixture_sha256"] != campaign["fixture_sha256"]:
+            raise ValueError("W9 E2M1 fixture differs")
+        if attempt["safe_run_completed"] is not True:
+            raise ValueError("W9 E2M1 safe run did not complete")
+        memory = _finite_number(
+            attempt["minimum_available_memory_gib"],
+            "minimum_available_memory_gib",
+        )
+        if memory < 10.0:
+            raise ValueError("W9 E2M1 memory floor was violated")
+        minimum_memory = min(minimum_memory, memory)
+        if (
+            not isinstance(attempt["swap_bytes"], int)
+            or isinstance(attempt["swap_bytes"], bool)
+            or attempt["swap_bytes"] != 0
+            or attempt["oom"] is not False or attempt["xid"] is not False
+        ):
+            raise ValueError("W9 E2M1 resource safety failed")
+        command_log = attempt["command_log"]
+        if not isinstance(command_log, str) or len(command_log.encode()) > 16 * 1024 * 1024:
+            raise ValueError("W9 E2M1 command log is invalid")
+        starts = re.findall(
+            r"^ds4: GLM compact cache E2M1 fidelity seam=(on|off) physical=f32$",
+            command_log, re.MULTILINE,
+        )
+        exits = re.findall(
+            r"^ds4: GLM compact cache E2M1 fidelity attestation "
+            r"mode=(on|off) synchronized=([01]) normal_rows=(\d+) fused_rows=(\d+)$",
+            command_log, re.MULTILINE,
+        )
+        if len(starts) != 1 or len(exits) != 1:
+            raise ValueError("W9 E2M1 attestation is missing or duplicated")
+        exit_mode, synchronized, normal_text, fused_text = exits[0]
+        if starts[0] != exit_mode or synchronized != "1":
+            raise ValueError("W9 E2M1 mode changed or was not synchronized")
+        counts = {"normal": int(normal_text), "fused": int(fused_text)}
+        is_candidate = arm == candidate_arm
+        if is_candidate:
+            if exit_mode != "on" or any(counts[path] <= 0 for path in required_paths):
+                raise ValueError("W9 E2M1 candidate device effect was not executed")
+        elif exit_mode != "off" or any(counts.values()):
+            raise ValueError("W9 E2M1 baseline is not default-off")
+        cases = attempt["cases"]
+        if not isinstance(cases, list) or len(cases) != 100:
+            raise ValueError("W9 E2M1 attempt requires 100 cases")
+        seen: set[str] = set()
+        for case_index, case in enumerate(cases):
+            _require_exact_keys(case, case_keys, f"W9 E2M1 case {case_index}")
+            case_id, tokens, correct = (
+                case["case_id"], case["tokens"], case["top1_correct"]
+            )
+            if (
+                not isinstance(case_id, str) or not case_id or case_id in seen
+                or not isinstance(tokens, int) or isinstance(tokens, bool) or tokens <= 0
+                or not isinstance(correct, int) or isinstance(correct, bool)
+                or not 0 <= correct <= tokens
+            ):
+                raise ValueError("W9 E2M1 case identity/count is invalid")
+            _finite_number(case["nll_sum"], "nll_sum")
+            seen.add(case_id)
+        by_arm[arm].append({"counts": counts, "cases": cases})
+    for arm, repeats in by_arm.items():
+        if len(repeats) != 2 or repeats[0] != repeats[1]:
+            raise ValueError(f"W9 E2M1 arm {arm} is not deterministic")
+    baseline_arm = "B" if candidate_arm == "A" else "A"
+    baseline_cases = by_arm[baseline_arm][0]["cases"]
+    candidate_cases = by_arm[candidate_arm][0]["cases"]
+    paired: list[dict[str, Any]] = []
+    changed = False
+    for baseline, candidate in zip(baseline_cases, candidate_cases):
+        if baseline["case_id"] != candidate["case_id"] or baseline["tokens"] != candidate["tokens"]:
+            raise ValueError("W9 E2M1 arms use unequal fixtures")
+        changed |= baseline["nll_sum"] != candidate["nll_sum"] or baseline["top1_correct"] != candidate["top1_correct"]
+        paired.append({
+            "tokens": baseline["tokens"],
+            "baseline_nll_sum": baseline["nll_sum"],
+            "candidate_nll_sum": candidate["nll_sum"],
+            "baseline_top1_correct": baseline["top1_correct"],
+            "candidate_top1_correct": candidate["top1_correct"],
+        })
+    if not changed:
+        raise ValueError("W9 E2M1 candidate arm is observationally inactive")
+    quality = quality_verdict(paired)
+    checks = {
+        **quality["checks"],
+        "candidate_device_effect_attested": True,
+        "baseline_default_off": True,
+        "fresh_counterbalanced_processes": len(identities) == 4,
+        "repeat_determinism": True,
+        "resource_safety": minimum_memory >= 10.0,
+    }
+    return {
+        "scorer_id": "w9.e2m1-fidelity.v1",
+        "formula_version": 1,
+        "engine_candidate_hash": engine,
+        "paired_case_count": len(paired),
+        "attempt_count": len(attempts),
+        "minimum_available_memory_gib": minimum_memory,
+        "metrics": quality["metrics"],
+        "checks": checks,
+        "verdict": "PASS" if all(checks.values()) else "FAIL",
+    }
+
+
 def _score_w1_affine(records: list[dict[str, Any]]) -> dict[str, Any]:
     """Authorize W1 affine fidelity only from a strict counterbalanced campaign."""
     if len(records) != 1:
