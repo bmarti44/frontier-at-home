@@ -1,0 +1,44 @@
+{
+  "candidate_hash": "0604aee0383bde8c2101118db14faf33cb67c523",
+  "review_round": "W6-C1",
+  "score_0_to_100": 38,
+  "critical": [
+    {
+      "stable_id": "ADV-W6-C1-C1-STALE-SCORES-NOOP-FALSE-PASS",
+      "evidence": "A width-2/4 production mutation that returns success without launching a kernel passes the unchanged fixture because scores and IDs are not poisoned between arms. It reports near-zero elapsed time and the derived logical-load counts while reusing stale width-1 scores.",
+      "affected_gate": "correctness, completed time, load evidence, and mutation rejection",
+      "proposed_acceptance_test": "Poison complete score and ID destinations per arm, require complete writes and intact surrounding canaries, compare with a separately preserved baseline, and prove no-launch/partial-write mutations fail."
+    }
+  ],
+  "high": [
+    {
+      "stable_id": "ADV-W6-C1-H1-NONAUTHORITATIVE-FIXED-ORDER-MICROPROBE",
+      "evidence": "The diagnostic used fixed 1-2-4 order and lacked post-freeze randomness, a frozen scorer, structured evidence, confidence output, and scorer mutations.",
+      "affected_gate": "terminal W6 disposition",
+      "proposed_acceptance_test": "Freeze a corrected microgate and scorer, derive an interleaved schedule from public randomness, and emit bound manifest/raw/summary evidence with fail-closed validation."
+    },
+    {
+      "stable_id": "ADV-W6-C1-H2-CAUSAL-COVERAGE-FALSE-CLAIM",
+      "evidence": "The preregistration claims causal coverage but every frozen fixture call passes causal=false.",
+      "affected_gate": "causal masking and output identity",
+      "proposed_acceptance_test": "Exercise causal=true around 16/32/64 boundaries and multiple pos0 values with exact masked-score and ordered-ID comparison."
+    },
+    {
+      "stable_id": "ADV-W6-C1-H3-FINAL-TEST-LACKS-RED-LINEAGE",
+      "evidence": "The preserved RED binds test SHA be2a5582..., while the frozen test is 3db5c417... after substantial fixture changes.",
+      "affected_gate": "test-first lineage",
+      "proposed_acceptance_test": "Freeze the complete corrected fixture and scorer first, run those exact hashes against unchanged baseline source, and do not change them after RED."
+    }
+  ],
+  "medium": [
+    {
+      "stable_id": "ADV-W6-C1-M1-LOGICAL-BYTES-NOT-MEASURED-TRAFFIC",
+      "evidence": "logical_k_load_bytes is derived from requested geometry and remains unchanged under the no-work mutation.",
+      "affected_gate": "K-load reduction claim",
+      "proposed_acceptance_test": "Label it derived logical traffic only; require external counters if physical traffic is claimed."
+    }
+  ],
+  "low": [],
+  "prior_issue_status": [],
+  "verdict": "REJECT_CANDIDATE_1_NO_RESULT_NOT_YET_AUTHORIZED_NO_MODEL_RUN_REQUIRED"
+}

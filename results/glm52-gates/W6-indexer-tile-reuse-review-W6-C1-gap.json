@@ -1,0 +1,33 @@
+{
+  "candidate_hash": "0604aee0383bde8c2101118db14faf33cb67c523",
+  "review_round": "W6-C1",
+  "score_0_to_100": 94,
+  "critical": [],
+  "high": [],
+  "medium": [
+    {
+      "stable_id": "W6-C1-M1-EXPLICIT-EMPTY-FLAG-ACCEPTED",
+      "evidence": "An explicitly empty DS4_CUDA_GLM_INDEXER_QUERY_TILES value is treated as unset and selects width 1, although the preregistration allows only exact strings 1, 2, or 4.",
+      "affected_gate": "default-off exact flag parsing",
+      "proposed_acceptance_test": "Require unset to default to 1 and reject explicitly empty, whitespace, signs, leading zeros, Unicode digits, and all other values."
+    }
+  ],
+  "low": [
+    {
+      "stable_id": "W6-C1-L1-RAGGED-ROW-TAIL-NOT-COVERED",
+      "evidence": "All preserved cases use 1048576 rows, divisible by the 128-row CUDA block size.",
+      "affected_gate": "ragged row-tail correctness",
+      "proposed_acceptance_test": "Add a nonmultiple-of-128 row fixture and require exact scores and ordered IDs for every width."
+    }
+  ],
+  "prior_issue_status": [],
+  "verdict": "APPROVE_TERMINAL_NO_RESULT_NO_MODEL_RUN_DO_NOT_ADOPT",
+  "verification_notes": {
+    "binary_sha256": "9dfb400223e7b9c461b82e1c7acc2d142e07c1aa395b120eb517d7b71feb379d",
+    "width2_mean_ratio": 1.0368069719264628,
+    "width2_paired_one_sided_95_lower": 1.0321086832273538,
+    "width4_mean_ratio": 1.1323652189421576,
+    "width4_paired_one_sided_95_lower": 1.125732988844526,
+    "evidence_limit": "Diagnostic-only: no randomized schedule or frozen scorer; sufficient in this reviewer's judgment for NO_RESULT but not formal PASS/FAIL."
+  }
+}
