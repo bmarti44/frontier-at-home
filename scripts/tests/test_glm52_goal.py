@@ -3531,6 +3531,27 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                 self.goal._score_w9_e2m1_fidelity_evidence(
                     root, expected_runner_sha256="6" * 64
                 )
+            original_main = campaign["attempts"][0]["main_log"].encode()
+            (root / "0-main_log.log").write_bytes(original_main)
+            (root / "extra.log").write_text("not enumerated\n")
+            with self.assertRaises(ValueError):
+                self.goal._score_w9_e2m1_fidelity_evidence(
+                    root, expected_runner_sha256="6" * 64
+                )
+            (root / "extra.log").unlink()
+            manifest["runner_sha256"] = "7" * 64
+            (root / "manifest.json").write_text(json.dumps(manifest))
+            with self.assertRaises(ValueError):
+                self.goal._score_w9_e2m1_fidelity_evidence(
+                    root, expected_runner_sha256="6" * 64
+                )
+            manifest["runner_sha256"] = "6" * 64
+            manifest["randomness"]["randomness"] = "0" * 64
+            (root / "manifest.json").write_text(json.dumps(manifest))
+            with self.assertRaises(ValueError):
+                self.goal._score_w9_e2m1_fidelity_evidence(
+                    root, expected_runner_sha256="6" * 64
+                )
 
 
 if __name__ == "__main__":
