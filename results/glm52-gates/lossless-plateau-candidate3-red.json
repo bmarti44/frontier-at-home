@@ -1,0 +1,28 @@
+{
+  "schema": "glm52-lossless-plateau-candidate3-red-v1",
+  "candidate": 3,
+  "parent_candidate_rejection": "results/glm52-gates/lossless-plateau-preflight-review-r315.json",
+  "runtime_failure": "results/glm52-gates/lossless-plateau-candidate2-unprivileged-preflight-fail.json",
+  "command": "python3 -m unittest scripts.tests.test_bench_speed_options scripts.tests.test_glm_lossless_plateau scripts.tests.test_matched_evidence",
+  "unchanged_implementation_head": "8b08cde",
+  "observed": {
+    "tests_run": 21,
+    "passed": 18,
+    "failures": 2,
+    "errors": 1,
+    "expected_red": [
+      "run_rep rejects the new prompt_count_log argument because production-log prompt accounting is not implemented",
+      "the matched campaign still contains sudo -n delegation",
+      "the collector accepts a fabricated usage.prompt_tokens value instead of comparing it to production prompt accounting"
+    ]
+  },
+  "acceptance": {
+    "prompt_count": "Each measured request records exactly one prompt-token count parsed from the production server log after the request-specific log offset; usage.prompt_tokens must equal it.",
+    "privilege": "The complete campaign runs as bmarti44 through the existing user-systemd cgroup and contains no sudo invocation.",
+    "execution_binding": "Before runtime, every profile artifact digest is verified. Every arm binds the live command, allowlisted environment, binary identity, and stable model device/inode/size; the collector recomputes and validates those bindings.",
+    "idle_boundary": "Initial and terminal checks reject ds4-server, llama-server, fio, the selected listener, or a surviving campaign unit.",
+    "context_semantics": "The profile separately records the model-supported 1,048,576 cap and the measured 32,768 server cap.",
+    "formula": "Prefill time is GLM wall time divided by matched DSV4 wall time; its one-sided upper 95% confidence bound must be <=1.25."
+  },
+  "engine_started": false
+}

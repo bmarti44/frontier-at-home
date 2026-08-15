@@ -70,6 +70,11 @@ class MatchedEvidenceTests(unittest.TestCase):
                     "profile": "glm52",
                     "binary_sha256": "b" * 64,
                     "model_sha256": "a" * 64,
+                    "model_supported_context_cap": 1_048_576,
+                    "measured_server_context_cap": 32_768,
+                    # Candidate 2's legacy field keeps the previously-green
+                    # collector fixtures valid until the bounded candidate-3
+                    # implementation replaces it with the two explicit caps.
                     "context_cap": 1_048_576,
                     "runtime": {
                         "engine_environment": {
@@ -105,6 +110,15 @@ class MatchedEvidenceTests(unittest.TestCase):
                             "virtual_memory_limit_kib": 419430400,
                         },
                     },
+                    "artifact_sha256": {
+                        path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
+                        for path in (
+                            "results/glm52-goal/harness/decisive_matched.sh",
+                            "results/glm52-goal/harness/glm_decisive_arm.sh",
+                            "scripts/30_bench_speed.py",
+                            "scripts/56_collect_matched_evidence.py",
+                        )
+                    },
                 }
             ),
             encoding="utf-8",
@@ -133,6 +147,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                             "completion_tokens": 128,
                             "server_completion_tokens": 128,
                             "prompt_tokens": 100,
+                            "production_prompt_tokens": 100,
                             "timing_source": (
                                 "server_raw_token_log"
                                 if glm
@@ -158,6 +173,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                             "completion_tokens": 128,
                             "server_completion_tokens": 128,
                             "prompt_tokens": 28_800,
+                            "production_prompt_tokens": 28_800,
                             "timing_source": "server_raw_token_log" if glm else "sse_content_events",
                             "token_timestamps_ns": [
                                 int((3000 + rep_index * 1000 + index / decode) * 1_000_000_000)
@@ -193,6 +209,17 @@ class MatchedEvidenceTests(unittest.TestCase):
                         "stable_model_remap=1\nmodel_sha256=" + "a" * 64 + "\n",
                         encoding="utf-8",
                     )
+                    (directory / "process.environment").write_text(
+                        "executed_environment_sha256=" + "6" * 64 + "\n",
+                        encoding="ascii",
+                    )
+                    (directory / "process.command").write_text(
+                        json.dumps({"context_cap": 32768, "stable_model_remap": True}) + "\n",
+                        encoding="ascii",
+                    )
+                    (directory / "model.device-inode-size").write_text(
+                        "66306:679227:211075856448\n", encoding="ascii"
+                    )
                     (directory / "process.identity").write_text(
                         f"{1000 + block * 4 + sequence} "
                         f"{2000 + block * 4 + sequence} {'b' * 64}\n",
@@ -208,6 +235,8 @@ class MatchedEvidenceTests(unittest.TestCase):
                         encoding="utf-8",
                     )
                     (directory / "safety.main.log").write_text(
+                        "executed_environment_allowlist=bound "
+                        "executed_environment_sha256=" + "6" * 64 + "\n"
                         "SAFE_RUN_DONE rc=0\n", encoding="utf-8"
                     )
                 else:
@@ -332,6 +361,24 @@ class MatchedEvidenceTests(unittest.TestCase):
             target = campaign / "block0-seq0-armA" / "runtime.config"
             target.write_text(target.read_text().replace("a" * 64, "7" * 64))
             with self.assertRaisesRegex(ValueError, "runtime configuration"):
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+
+    def test_rejects_inflated_usage_and_unbound_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            target = campaign / "block0-seq0-armA" / "result.json"
+            value = json.loads(target.read_text())
+            value["cells"][1]["reps"][0]["prompt_tokens"] = 999_999_999
+            target.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "production prompt"):
+                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            value = json.loads(glm_profile.read_text())
+            value["artifact_sha256"]["scripts/30_bench_speed.py"] = "9" * 64
+            glm_profile.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "campaign artifact"):
                 self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
 
 

@@ -32,8 +32,17 @@ class GlmLosslessPlateauTests(unittest.TestCase):
         self.assertIn("CTX=32768", campaign)
         self.assertIn("--context-levels 0,28672", campaign)
         self.assertNotIn("restore_dsv4", campaign)
+        self.assertNotIn("sudo -n", campaign)
+        self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER=1", campaign)
+        for process_name in ("ds4-server", "llama-server", "fio"):
+            self.assertIn(process_name, campaign)
+        self.assertIn("ss -H -ltn", campaign)
+        self.assertIn("verify_campaign_artifacts", campaign)
         self.assertIn('[[ $actual_binary_sha256 == "$EXPECTED_BINARY_SHA256" ]]', arm)
-        self.assertIn('[[ $actual_model_sha256 == "$EXPECTED_MODEL_SHA256" ]]', arm)
+        self.assertNotIn('sha256sum -- "$MODEL"', arm)
+        self.assertIn("model.device-inode-size", arm)
+        self.assertIn("process.environment", arm)
+        self.assertIn("process.command", arm)
         self.assertIn('"$SRC/ds4-server" --cuda -m "$MODEL" -c 32768', arm)
         self.assertIn("DS4_CUDA_STABLE_MODEL_REMAP=1", arm)
         self.assertIn("stable_model_remap=1", arm)
@@ -44,6 +53,10 @@ class GlmLosslessPlateauTests(unittest.TestCase):
         )
         launch = arm.index('"$SRC/ds4-server" --cuda')
         self.assertLess(identity_check, launch)
+
+        self.assertEqual(profile["model_supported_context_cap"], 1_048_576)
+        self.assertEqual(profile["measured_server_context_cap"], 32_768)
+        self.assertNotIn("context_cap", profile)
 
     def test_profile_hashes_the_exact_matched_harnesses(self):
         profile = json.loads(CAMPAIGN_PROFILE.read_text())

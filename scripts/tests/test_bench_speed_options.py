@@ -364,23 +364,32 @@ class BenchOptionTests(unittest.TestCase):
                     "token_timestamps_ns": timestamps_ns,
                 }
 
-        with mock.patch.object(bench, "make_preamble", return_value="p"):
-            rep = bench.run_rep(
-                Client(),
-                Tokenizer(),
-                Tokenizer(),
-                "deepseek-v4-flash",
-                "",
-                0,
-                1,
-                False,
-                max_tokens=128,
-                min_completion_tokens=128,
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_log = Path(tmp) / "server.log"
+            prompt_log.write_text(
+                "slot print_timing: prompt eval time = 1.00 ms / 32 tokens\n",
+                encoding="utf-8",
             )
+            with mock.patch.object(bench, "make_preamble", return_value="p"):
+                rep = bench.run_rep(
+                    Client(),
+                    Tokenizer(),
+                    Tokenizer(),
+                    "deepseek-v4-flash",
+                    "",
+                    0,
+                    1,
+                    False,
+                    max_tokens=128,
+                    min_completion_tokens=128,
+                    prompt_count_log=prompt_log,
+                    prompt_count_format="llama",
+                )
 
         self.assertTrue(rep["valid"])
         self.assertEqual(rep["response_id"], "chatcmpl-evidence")
         self.assertEqual(rep["request_sha256"], "a" * 64)
+        self.assertEqual(rep["production_prompt_tokens"], 32)
         self.assertEqual(
             rep["prompt_sha256"],
             hashlib.sha256(
