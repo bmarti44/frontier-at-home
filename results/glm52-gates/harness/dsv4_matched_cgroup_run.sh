@@ -120,7 +120,7 @@ MIN_START=${DSV4_MATCHED_MIN_START_GIB:-}
 HIGH=${DSV4_MATCHED_MEMORY_HIGH_GIB:-}
 MAX=${DSV4_MATCHED_MEMORY_MAX_GIB:-}
 TIMEOUT=${DSV4_MATCHED_TIMEOUT_S:-}
-[[ $FLOOR == 8 && $MIN_START == 110 && $HIGH == 105 && $MAX == 107 &&
+[[ $FLOOR == 8 && $MIN_START == 110 && $HIGH == 100 && $MAX == 102 &&
    $TIMEOUT == 5400 ]] || {
     echo "invalid DSV4 matched containment envelope" >&2
     exit 2

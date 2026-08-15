@@ -149,8 +149,8 @@ class GlmLosslessPlateauTests(unittest.TestCase):
             {
                 "kill_floor_gib": 8,
                 "minimum_start_gib": 110,
-                "memory_high_gib": 105,
-                "memory_max_gib": 107,
+                "memory_high_gib": 100,
+                "memory_max_gib": 102,
                 "sample_hz": 4,
                 "swap_max_bytes": 0,
                 "timeout_seconds": 5400,
