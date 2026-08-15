@@ -1,0 +1,77 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-v1",
+  "candidate_number_for_gate": 11,
+  "campaign_global_review_round_before_review": 320,
+  "candidate_commit": "3699d9b25dde8ebd359dafdde7b40baeff642b8f",
+  "candidate_tree": "e8ef630059683454efdfe5b9f7bd138c85d524dd",
+  "supersedes": "results/glm52-gates/lossless-plateau-candidate10-preaudit.json",
+  "failure_record": "results/glm52-gates/lossless-plateau-candidate10-runtime-attempt1.json",
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r320.json",
+  "owner_authorization": "The owner explicitly authorized matched-32K candidate 9 and everything else with autonomous continuation on 2026-08-15. Repository policy independently permits this bounded runtime-defect fix because the failed attempt and RED were committed first and frozen components outside the observed failure stayed unchanged.",
+  "recorded_at_utc": "2026-08-15T18:42:00Z",
+  "scope": "Close only the candidate-10 DSV4 containment start-threshold mismatch. Reduce the matched DSV4 cgroup high/max envelope from 105/107 GiB to 100/102 GiB so max+the owner-accepted 8 GiB floor equals the existing 110 GiB campaign admission threshold, and bind the runner to this candidate-11 receipt. Update only the two matched profiles, the campaign/wrapper constants, and their direct tests. No model, binary, request, fixture, scorer, metric, output, serving profile, or acceptance formula change.",
+  "artifact_sha256": {
+    "configs/glm52-lossless-plateau-profile.json": "024da74c36371983d08c306b78019425e1dbb362db9595912ef57976580a2e54",
+    "configs/dsv4-matched-32k-profile.json": "5cc0b45988d53f6e3d646d432fc1ad6c575a5dd33ce2e912324a52cea44519f1",
+    "results/glm52-goal/harness/decisive_matched.sh": "a9a9066be48b472eb68c668b3330d6c2f11dc3f447d9ef96e4847ce9750a4fe0",
+    "results/glm52-goal/harness/glm_decisive_arm.sh": "f5829fcf713b73e2e9aa6d45d0b8e43db71076905a0740f884f425c1d38c328a",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "1c42c1449f20bb1c70dc7eb93f380374af545fa15f54e85709e428b647f39d6e",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1",
+    "results/glm52-gates/harness/glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "07720ebdf11c2223abdb947bdf0eca128a195acb55885d9a2ad6ca3f7865ff5c",
+    "scripts/30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "scripts/56_collect_matched_evidence.py": "4dff36ec7001e12a7fe1bb13305bc38f6d60cdb1af1dbed241460200328e022d",
+    "vendor/official-encoding/tokenizer.json": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf",
+    "scripts/tests/test_matched_memory_safety.py": "98d51b126cc8b1851839a488bb46607dd03fbf1ea4cdd170456af11e3cec9916",
+    "scripts/tests/test_dsv_matched_signal_cleanup.py": "b33f344d7d62e0242da424045fb109063848de405abd06d623074a4fc1f892ec",
+    "scripts/tests/test_glm_lossless_plateau.py": "79fee9fdd8e645d56b7af4b7ce1a07fb5c2eced404adcaefdd299ca11a1fd900",
+    "results/glm52-gates/lossless-plateau-candidate10-runtime-attempt1.json": "e9365e1109859ff1bc3b5a2ab01c438889151a9973389798557ad99faf67471a",
+    "results/glm52-gates/lossless-plateau-candidate11-red.json": "fc3b387fbb45e5a2bbf07c790e9f4a9a78f2fb233270106149ec00b5be8ce85a"
+  },
+  "red_lineage": {
+    "failure_record_commit": "e0923c8",
+    "test_commit": "20d7202",
+    "implementation_commits": ["08d5363", "3699d9b"],
+    "red_formula": "107 + 8 = 115 > 110",
+    "green_formula": "102 + 8 = 110 <= 110",
+    "red_verdict": "RED_CONFIRMED",
+    "model_started_during_red_or_fix_tests": false
+  },
+  "pre_submission_audit": {
+    "focused_tests_run": 18,
+    "focused_failures": 0,
+    "focused_errors": 0,
+    "real_user_systemd_signal_probes": ["TERM", "INT", "HUP"],
+    "signal_probe_result": "PASS_NO_SURVIVING_UNIT",
+    "profile_hash_bindings": "PASS",
+    "profile_conformance": "PASS",
+    "shell_syntax": "PASS",
+    "secret_scan": "PASS",
+    "known_frozen_wrapper_reds_excluded": [
+      "test_glm_wrapper_hashes_the_selected_candidate_binary",
+      "test_glm_wrapper_rejects_unsafe_safety_overrides"
+    ],
+    "candidate10_freeze_receipt_test_expected_to_fail_until_candidate11_receipt_is_committed": true,
+    "engine_started": false
+  },
+  "safety_argument": {
+    "containment_is_stricter": true,
+    "memory_high_reduction_gib": 5,
+    "memory_max_reduction_gib": 5,
+    "floor_unchanged_gib": 8,
+    "minimum_start_unchanged_gib": 110,
+    "prior_completed_dsv4_arm_peak_gib_upper_bound": 13,
+    "new_memory_high_gib": 100,
+    "margin_over_observed_peak_gib_lower_bound": 87
+  },
+  "convergence": {
+    "candidate_count": 11,
+    "open_blocking_classes_before_candidate": 1,
+    "open_blocking_classes_after_local_audit": 0,
+    "scope_expanded": false,
+    "frozen_components_outside_failure_modified": false,
+    "owner_exception": "Explicit autonomous continuation authorization remains in force beyond the prior candidate-count checkpoint.",
+    "escalation_triggered": false
+  },
+  "verdict": "READY_FOR_DELTA_ONLY_REVIEW_NO_ENGINE_RUN"
+}
