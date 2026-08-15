@@ -1,0 +1,19 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-red-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "status": "RED_CONFIRMED",
+  "date": "2026-08-15",
+  "plan_commit": "68c3b24",
+  "engine_parent": "058cb6ea37cb8d3433872af223f4e8cea968065a",
+  "engine_test_commit": "e2ac30158764aeab303de261a4dddc906f57a6c6",
+  "bounded_scope": "Executable graph-selector binding, fused-store oracle, separate synchronized path counters, runtime attestation, flag conflict, and expanded codec coverage named by review round 311.",
+  "observed": {
+    "command": "make -j2 test-glm-w9-e2m1-fake",
+    "returncode": 2,
+    "failure": "The unchanged implementation lacks the preregistered synchronized normal/fused completed-row API; both ordinary and fused compiled fixtures fail to link. The host graph-selector hook is also absent and remains an independently required link target after those first parallel failures are closed.",
+    "stdout_sha256": "2c50a74e7af8647d44f05763adce6e41d9826026bbec21bcc0b61497f4bc7dc9",
+    "stderr_sha256": "1b7cfc21a01d3f7cbe1996a2f9c750e9c88f8afdad346a00451e09597dc93d47"
+  },
+  "acceptance": "The exact committed tests must pass; selector, ordinary-store, and fused-store bypass mutations must each fail; then a clean double-build and delta-only re-review are required before any model run."
+}
