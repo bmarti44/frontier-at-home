@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "gate": "W5-indexer-f16",
+  "candidate": 1,
+  "status": "FAIL",
+  "source_commit": "c82d6b8ae11e6a88d3ff2b867ff50e17281900e6",
+  "binary_sha256": "64308b48afe77a3d5d4e2bb46aaf5ee0288923c5d125d3debdadd7d9e84081ab",
+  "review_round": "W5-C1",
+  "model_started": false,
+  "blocking_findings": [
+    "ADV-W5-C1-H1-QUALITY-MODE-SCORE-DIVERGENCE",
+    "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE",
+    "W5-C1-H1-QUALITY-MODE-BREAKS-EXACTNESS",
+    "W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS"
+  ],
+  "bounded_candidate_2_scope": [
+    "bind the selected representation once to the graph",
+    "keep W5 disabled under quality mode with an explicit diagnostic",
+    "exercise actual production allocation geometry and store/score consumers",
+    "cover scalar and ragged/aligned batch shapes",
+    "cover external-F32 full and layer session serialization across modes"
+  ],
+  "medium_findings_included_without_extra_review_scope": [
+    "ADV-W5-C1-M1-SESSION-F32-INTEROPERABILITY-UNTESTED",
+    "W5-C1-M1-REPRESENTATION-NOT-BOUND-TO-GRAPH"
+  ],
+  "convergence": {
+    "candidate_count": 1,
+    "blocking_set_must_strictly_shrink": true,
+    "escalation_triggered": false
+  }
+}

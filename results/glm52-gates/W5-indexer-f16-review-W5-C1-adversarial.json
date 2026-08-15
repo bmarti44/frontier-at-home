@@ -1,0 +1,36 @@
+{
+  "candidate_hash": "c82d6b8ae11e6a88d3ff2b867ff50e17281900e6",
+  "review_round": "W5-C1",
+  "reviewer": "adversarial_reviewer",
+  "score_0_to_100": 70,
+  "critical": [],
+  "high": [
+    {
+      "id": "ADV-W5-C1-H1-QUALITY-MODE-SCORE-DIVERGENCE",
+      "evidence": "The CUDA test passes in default WMMA mode but fails exact score comparison after enabling GPU quality mode. The quality kernel consumes full-precision baseline keys versus rounded F16 candidate keys.",
+      "affected_gate": "W5 score, ID, logit, and fidelity-free requirements",
+      "reproduction_instructions": "Enable ds4_gpu_set_quality(true) in the paired CUDA fixture and compare F32 and F16 score buffers on GB10.",
+      "proposed_acceptance_test": "Exercise both fast and quality modes; require exact equality where enabled, and fail closed or keep the flag OFF in quality mode."
+    },
+    {
+      "id": "ADV-W5-C1-H2-MICROTEST-BYPASSES-PRODUCTION-ALLOCATOR-STORE",
+      "evidence": "The allocation test exercises planner arithmetic and the CUDA test manually allocates and converts buffers. Neither proves glm_graph_alloc_slice or the production indexer store routing.",
+      "affected_gate": "W5 production allocation, store, and score routing",
+      "reproduction_instructions": "Restore the production allocation or one store call to the baseline format while retaining the planner and manual fixture; the current tests remain green.",
+      "proposed_acceptance_test": "Exercise actual production allocation geometry and the real store/score/top-k route, with exact bytes and output checks."
+    }
+  ],
+  "medium": [
+    {
+      "id": "ADV-W5-C1-M1-SESSION-F32-INTEROPERABILITY-UNTESTED",
+      "evidence": "No test verifies the unchanged external F32 session payload or cross-mode restore.",
+      "affected_gate": "W5 session compatibility",
+      "reproduction_instructions": "Save and restore populated sessions across OFF and ON modes.",
+      "proposed_acceptance_test": "Require identical external payload layout and exact post-restore scores, IDs, logits, and output."
+    }
+  ],
+  "low": [],
+  "prior_issue_status": [],
+  "verdict": "REJECT_CANDIDATE_1_REQUIRES_BOUNDED_CANDIDATE_2",
+  "model_started": false
+}

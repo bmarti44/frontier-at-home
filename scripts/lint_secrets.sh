@@ -334,6 +334,7 @@ allowlist = {
     "entry_sha256",
     "expected_sha256",
     "actual_sha256",
+    "candidate_diff_sha256",
     "tarball_sha256",
     "weights_manifest_sha256",
     "GLM_SAFE_EXPECTED_BINARY_SHA256",
@@ -357,6 +358,8 @@ map_allowlist = {
     "loaded_numerical_libraries",
     "row_sha256",
     "shared_libraries",
+    "source_hashes",
+    "build_artifact_hashes",
     "tests_sha256_by_path",
 }
 w3_campaign_raw = re.fullmatch(

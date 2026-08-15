@@ -1,0 +1,36 @@
+{
+  "candidate_hash": "c82d6b8ae11e6a88d3ff2b867ff50e17281900e6",
+  "review_round": "W5-C1",
+  "reviewer": "gap_reviewer",
+  "score_0_to_100": 72,
+  "critical": [],
+  "high": [
+    {
+      "id": "W5-C1-H1-QUALITY-MODE-BREAKS-EXACTNESS",
+      "evidence": "An independent quality-mode reproduction found 512 of 514 scores unequal, max absolute delta 0.00149345. Fast-mode WMMA rounds both arms to F16; quality mode does not.",
+      "affected_gate": "W5 exact score, ID, logit, and unchanged-quality-mode requirements",
+      "reproduction_instructions": "Set GPU quality mode, score identical F32 keys and their F16 equivalents through the candidate object, and compare bytewise.",
+      "proposed_acceptance_test": "With W5 requested in quality mode, either fail closed before allocation or keep W5 disabled and require unchanged allocation and exact behavior."
+    },
+    {
+      "id": "W5-C1-H2-MICROGATE-BYPASSES-CHANGED-PRODUCTION-PATHS",
+      "evidence": "The tests cover planner arithmetic and manually prepared CUDA buffers, not the production allocator, store, scalar/tail consumers, or session serializers.",
+      "affected_gate": "W5 allocation, producer/consumer coverage, session compatibility, and exactness",
+      "reproduction_instructions": "Mutate a production allocation, store, consumer, or serializer call site while leaving the planner and manual fixture intact; current microtests remain green.",
+      "proposed_acceptance_test": "Bind the representation to a real graph/test hook, use the actual store, cover scalar and ragged/aligned batch scoring, and round-trip full/layer session payloads across modes."
+    }
+  ],
+  "medium": [
+    {
+      "id": "W5-C1-M1-REPRESENTATION-NOT-BOUND-TO-GRAPH",
+      "evidence": "The environment is reparsed by allocation, producer, consumer, and serializer paths rather than captured once in the graph.",
+      "affected_gate": "W5 representation consistency and session safety",
+      "reproduction_instructions": "Change the environment after allocation and observe later operations reinterpret the existing tensor using another width.",
+      "proposed_acceptance_test": "Resolve and store one immutable per-graph mode; changing the environment after allocation must not change interpretation."
+    }
+  ],
+  "low": [],
+  "prior_issue_status": [],
+  "verdict": "REJECT_BEFORE_MODEL_LAUNCH",
+  "model_started": false
+}
