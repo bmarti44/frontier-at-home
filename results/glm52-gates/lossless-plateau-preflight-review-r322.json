@@ -1,0 +1,74 @@
+{
+  "schema": "glm52-lossless-plateau-preflight-review-v1",
+  "gate": "lossless-plateau-matched-32k",
+  "candidate_number_for_gate": 12,
+  "candidate_hash": "13ea2728d500010f2eeb3f322bc4f294e5f5ed60",
+  "freeze_commit": "8bb660d",
+  "review_round": 322,
+  "review_scope": "Delta-only review from candidate 11/r321: exact typed DSV4 110/100/102 safety-envelope validation, induced profile/runner/test bindings, and the separate candidate-10 arm-tree attestation. Frozen model, binary, fixture, arm, request, and metric-formula bytes were excluded after independent equality checks.",
+  "gap_reviewer": {
+    "canonical_agent": "/root/gap_reviewer",
+    "score_0_to_100": 98,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {
+        "id": "ADV-PLATEAU-321-H1-FROZEN-SCORER-REJECTS-NEW-ENVELOPE",
+        "status": "VERIFIED",
+        "evidence": "Exact integer-typed 110/100/102 produced 20 records; stale 105/107 and 65 independently tested malformed variants rejected."
+      },
+      {
+        "id": "PLATEAU-321-L1-ARM-TREE-DIGEST-FORMULA-UNSPECIFIED",
+        "status": "VERIFIED",
+        "evidence": "The explicit absolute-path, NUL-delimited, byte-sorted formula independently reproduced all four candidate-10 arm-tree digests."
+      },
+      {
+        "id": "C10-RUNTIME-DSV4-CONTAINMENT-START-THRESHOLD-MISMATCH",
+        "status": "VERIFIED"
+      }
+    ],
+    "verdict": "ACCEPT_PRE_RUN"
+  },
+  "adversarial_reviewer": {
+    "canonical_agent": "/root/adversarial_reviewer",
+    "score_0_to_100": 99,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": [
+      {
+        "id": "ADV-PLATEAU-321-H1-FROZEN-SCORER-REJECTS-NEW-ENVELOPE",
+        "status": "FIXED",
+        "evidence": "Exact profile produced 20 records; stale, bool, null, list, negative, zero, partial-stale, swapped, missing-key, extra-key, and type-confused mutations all rejected."
+      },
+      {
+        "id": "PLATEAU-321-L1-ARM-TREE-DIGEST-FORMULA-UNSPECIFIED",
+        "status": "FIXED",
+        "evidence": "All four preserved arm directories independently reproduced the attested and original digests."
+      },
+      {
+        "id": "CANDIDATE10-DSV4-CONTAINMENT-START-THRESHOLD-MISMATCH",
+        "status": "FIXED",
+        "evidence": "Runner, wrapper, profile, and collector agree on 110/100/102 with the unchanged 8 GiB floor."
+      }
+    ],
+    "verdict": "ACCEPT_PRE_RUN"
+  },
+  "independent_root_reproduction": {
+    "focused_tests_passed": 50,
+    "focused_tests_failed": 0,
+    "known_unrelated_frozen_wrapper_reds_excluded": 2,
+    "freeze_receipt_artifacts_replayed": 21,
+    "freeze_receipt_artifact_mismatches": 0,
+    "collector_exact_envelope_records": 20,
+    "model_started": false,
+    "engine_survivors": 0
+  },
+  "open_critical": [],
+  "open_high": [],
+  "verdict": "ACCEPT_PRE_RUN",
+  "next_action": "Obtain fresh post-freeze public randomness, then run a new contained 20-arm campaign from an empty immutable attempt directory. Candidate-10 partial arms remain immutable and must not be reused."
+}
