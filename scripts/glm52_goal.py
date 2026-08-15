@@ -410,10 +410,8 @@ def _score_w9_e2m1_fidelity_raw(
     if not isinstance(attempts, list) or len(attempts) != 4:
         raise ValueError("W9 E2M1 campaign requires four attempts")
     attempt_keys = {
-        "sequence", "arm", "process_identity", "binary_sha256",
-        "environment_sha256", "fixture_sha256", "command_log",
-        "safe_run_completed", "minimum_available_memory_gib", "swap_bytes",
-        "oom", "xid", "cases",
+        "sequence", "arm", "fixture_sha256", "command_log", "main_log",
+        "samples_log", "kernel_log", "cases",
     }
     case_keys = {"case_id", "tokens", "nll_sum", "top1_correct"}
     identities: set[str] = set()
@@ -424,39 +422,72 @@ def _score_w9_e2m1_fidelity_raw(
         arm = schedule[sequence]
         if attempt["sequence"] != sequence or attempt["arm"] != arm:
             raise ValueError("W9 E2M1 attempts are missing or reordered")
-        identity = attempt["process_identity"]
-        if not isinstance(identity, str) or not identity or identity in identities:
-            raise ValueError("W9 E2M1 process identity is invalid or reused")
+        main_log = attempt["main_log"]
+        samples_log = attempt["samples_log"]
+        kernel_log = attempt["kernel_log"]
+        if any(
+            not isinstance(value, str) or len(value.encode()) > 16 * 1024 * 1024
+            for value in (main_log, samples_log, kernel_log)
+        ):
+            raise ValueError("W9 E2M1 host evidence is invalid")
+        if "memory_swap_max=0" not in main_log or "memory_oom_group=1" not in main_log:
+            raise ValueError("W9 E2M1 cgroup containment is absent")
+        binary_matches = re.findall(
+            r"(?:^| )candidate_binary_sha256=([0-9a-f]{64})(?: |$)",
+            main_log, re.MULTILINE,
+        )
+        environment_matches = re.findall(
+            r"(?:^| )executed_environment_sha256=([0-9a-f]{64})(?: |$)",
+            main_log, re.MULTILINE,
+        )
+        identity_matches = re.findall(
+            r"executed_candidate_verified pid=(\d+) start_ticks=(\d+)",
+            main_log,
+        )
+        completion_matches = re.findall(
+            r"SAFE_RUN end rc=0 killed=no(?: |$)", main_log,
+        )
+        if (
+            binary_matches != [campaign["binary_sha256"]]
+            or len(environment_matches) != 1
+            or len(identity_matches) != 1
+            or len(completion_matches) != 1
+        ):
+            raise ValueError("W9 E2M1 wrapper provenance or completion is invalid")
+        identity = ":".join(identity_matches[0])
+        if identity in identities:
+            raise ValueError("W9 E2M1 process identity was reused")
         identities.add(identity)
-        if attempt["binary_sha256"] != campaign["binary_sha256"]:
-            raise ValueError("W9 E2M1 executed binary differs")
         expected_environment = campaign[
             "candidate_environment_sha256" if arm == candidate_arm
             else "baseline_environment_sha256"
         ]
-        if attempt["environment_sha256"] != expected_environment:
+        if environment_matches[0] != expected_environment:
             raise ValueError("W9 E2M1 executed environment differs")
         if attempt["fixture_sha256"] != campaign["fixture_sha256"]:
             raise ValueError("W9 E2M1 fixture differs")
-        if attempt["safe_run_completed"] is not True:
-            raise ValueError("W9 E2M1 safe run did not complete")
-        memory = _finite_number(
-            attempt["minimum_available_memory_gib"],
-            "minimum_available_memory_gib",
+        samples = re.findall(
+            r"^\S+ mem_avail_kb=(\d+) eng_rss_kb=(\d+) read_bytes=(\d+) "
+            r"cgroup_current_bytes=(\d+) cgroup_peak_bytes=(\d+) "
+            r"cgroup_swap_current_bytes=(\d+)$",
+            samples_log, re.MULTILINE,
         )
-        if memory < 10.0:
-            raise ValueError("W9 E2M1 memory floor was violated")
+        if len(samples) < 20:
+            raise ValueError("W9 E2M1 memory sampling is incomplete")
+        memory = min(int(row[0]) for row in samples) / 1048576
+        if memory < 10.0 or any(int(row[5]) != 0 for row in samples):
+            raise ValueError("W9 E2M1 memory floor or swap safety failed")
         minimum_memory = min(minimum_memory, memory)
-        if (
-            not isinstance(attempt["swap_bytes"], int)
-            or isinstance(attempt["swap_bytes"], bool)
-            or attempt["swap_bytes"] != 0
-            or attempt["oom"] is not False or attempt["xid"] is not False
-        ):
-            raise ValueError("W9 E2M1 resource safety failed")
         command_log = attempt["command_log"]
         if not isinstance(command_log, str) or len(command_log.encode()) > 16 * 1024 * 1024:
             raise ValueError("W9 E2M1 command log is invalid")
+        if re.search(
+            r"NVRM.*Xid|NV_ERR_NO_MEMORY|oom-kill|Out of memory|"
+            r"Memory cgroup out of memory",
+            "\n".join((kernel_log, main_log, command_log)),
+            re.IGNORECASE,
+        ):
+            raise ValueError("W9 E2M1 kernel or memory fault was observed")
         starts = re.findall(
             r"^ds4: GLM compact cache E2M1 fidelity seam=(on|off) physical=f32$",
             command_log, re.MULTILINE,
