@@ -3335,11 +3335,11 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
         self.goal = load_goal_module()
 
     def campaign(self):
-        seed = "00" * 32
-        arms = "ABBA"
+        seed = "3d8d4c1508c73354c6564e9f524c44edca5f0eb2d8be121f44d0963ef8e82a3a"
+        arms = "BAAB"
         attempts = []
         for sequence, arm in enumerate(arms):
-            candidate = arm == "A"
+            candidate = arm == "B"
             cases = []
             for index in range(100):
                 cases.append({
@@ -3398,7 +3398,7 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
             "baseline_environment_sha256": "4" * 64,
             "candidate_environment_sha256": "3" * 64,
             "fixture_sha256": "5" * 64,
-            "candidate_arm": "A",
+            "candidate_arm": "B",
             "attempts": attempts,
         }
 
@@ -3417,7 +3417,8 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
         ):
             campaign = self.campaign()
             candidate_attempts = [
-                row for row in campaign["attempts"] if row["arm"] == "A"
+                row for row in campaign["attempts"]
+                if row["arm"] == campaign["candidate_arm"]
             ]
             if mutate == "off":
                 candidate_attempts[0]["command_log"] = candidate_attempts[0][
@@ -3514,6 +3515,12 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                 attempts.append(record)
             manifest["attempts"] = attempts
             manifest["runner_sha256"] = "6" * 64
+            manifest["randomness"] = {
+                "round": 6356486,
+                "randomness": "c1de5398491271e023dca62630580d0718183660b23f9b5c72a1cbbd0426f4f8",
+                "signature": "a84ad44c761b2968bedfe22dea75cead0c2841ad1e589db17995796ab61ecfbc23a0c408f1fb19b9efa3245eb8afb78300433d886f9b43f5bab6d6fe8bad737839f84a5c7474043fcf9274605c91b13cb04851458ed2d869035da4dffbd4ef0d",
+                "previous_signature": "9093a267999827309eea839823e6cb343f37fead382366174bbfdaa7919cc42a7293885245dca1812b1dc4912b545b0810417fcd231d13d021a29378f362d0280ddd22cc1afce7535b76b682371ed0c5baaaebdd9ce8a6c4242492a2d0dddce9"
+            }
             (root / "manifest.json").write_text(json.dumps(manifest))
             result = self.goal._score_w9_e2m1_fidelity_evidence(
                 root, expected_runner_sha256="6" * 64

@@ -700,7 +700,35 @@ def _score_w9_e2m1_fidelity_evidence(
         raise ValueError("W9 E2M1 manifest root is invalid")
     if manifest.get("runner_sha256") != expected_runner_sha256:
         raise ValueError("W9 E2M1 runner digest differs")
-    raw_campaign = {key: value for key, value in manifest.items() if key != "runner_sha256"}
+    randomness = manifest.get("randomness")
+    if not isinstance(randomness, dict) or set(randomness) != {
+        "round", "randomness", "signature", "previous_signature"
+    }:
+        raise ValueError("W9 E2M1 randomness receipt is invalid")
+    verifier = ROOT / "scripts/103_verify_drand_receipt_bundle.mjs"
+    verified = subprocess.run(
+        [
+            "node", str(verifier), str(randomness["round"]),
+            randomness["randomness"], randomness["signature"],
+            randomness["previous_signature"],
+        ],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False,
+    )
+    if verified.returncode != 0 or verified.stdout != "DRAND_BLS_RECEIPT_OK\n":
+        raise ValueError("W9 E2M1 randomness receipt did not verify")
+    raw_campaign = {
+        key: value for key, value in manifest.items()
+        if key not in {"runner_sha256", "randomness"}
+    }
+    derived_seed = hashlib.sha256(
+        (
+            randomness["randomness"]
+            + raw_campaign.get("engine_candidate_hash", "")
+            + raw_campaign.get("binary_sha256", "")
+        ).encode()
+    ).hexdigest()
+    if raw_campaign.get("seed_sha256") != derived_seed:
+        raise ValueError("W9 E2M1 schedule seed is not bound to public randomness")
     attempts = raw_campaign.get("attempts")
     if not isinstance(attempts, list):
         raise ValueError("W9 E2M1 manifest attempts are invalid")

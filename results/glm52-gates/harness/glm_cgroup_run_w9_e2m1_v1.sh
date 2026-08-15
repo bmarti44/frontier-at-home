@@ -353,4 +353,3 @@ if ! export_evidence; then
   (( command_rc != 0 )) || exit 16
 fi
 exit "$command_rc"
-
