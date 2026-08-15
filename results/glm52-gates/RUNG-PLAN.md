@@ -44,12 +44,21 @@ The measured physics are not open questions:
 - All-miss NVMe bottoms out around 1.83 tok/s. The 68 GB SLRU cache measured
   about 77% hits and roughly 107 ms/token of kernel-side reads, leaving a
   faithful streamed ceiling near 6-8 tok/s on the current stack.
-- All lossless model-byte work together is bounded around 7-10 decode tok/s.
-  The checksum-decomposition finding below makes the old 75-100 prefill bound
-  provisional and moves the production estimate toward roughly 140 tok/s when
-  per-fetch validation is disabled. Reaching roughly 18 tok/s decode or 450
-  tok/s prefill still requires residency. These are engineering estimates, not
-  benchmark results.
+- The current production token budget measured by
+  [`loadprof-2026-07-25.json`](loadprof-2026-07-25.json) is about 383 ms:
+  fetch 227.5 ms, kernels 107.1 ms (70.6 gate/up plus 35.5 down), other
+  44.1 ms, hit copy 2.6 ms, and fill 2.1 ms. Fetch realizes about 5.8 GB/s
+  against the frozen 12.56 GB/s NVMe curve, the signature of synchronous QD1
+  submission rather than a drive ceiling.
+- Per-fetch SHA-256 is **inactive in the production path**. It exists only in
+  the unadopted slab path, so checksum removal cannot explain or accelerate the
+  current 2.3 tok/s serving profile. This corrects the superseded R-V premise
+  below.
+- With R-K in scope, faithful streamed decode is projected to move from about
+  2.3 toward 4-6 tok/s. If the remaining lossless B-E items also pass, the
+  planning plateau is 7-10 decode and 75-140 prefill tok/s. Reaching roughly
+  18 tok/s decode or 450 tok/s prefill still requires residency. These are
+  engineering estimates, not benchmark results.
 
 External single-Spark results now independently anchor the demand-streaming
 part of that bound. Upstream llama.cpp's GLM-5.2-UD GB10 experiment measured
@@ -97,9 +106,9 @@ The 2026-08-15 external review closes additional variants:
   external PCIe-offload claims do not transfer to this NVMe-bound UMA path.
 - An internal-drive upgrade is closed: the installed Samsung PM9E1 already
   reaches its measured sustained ceiling. Purchased NVMe-oF remains separately
-  owner-descoped and must not be implemented. After R-V, the owner may re-score
-  external storage because removing the checksum bottleneck makes serving more
-  bandwidth-sensitive. Preserve only the design note: native NVMe multipath and
+  owner-descoped and must not be implemented. After R-K, the owner may re-score
+  external storage once serving is demonstrably bandwidth-bound. Preserve only
+  the design note: native NVMe multipath and
   md-RAID1 read balancing do not stripe one logical record; any future design
   requires an in-engine dual-source sub-record miss scheduler. Do not build it.
 
@@ -368,26 +377,82 @@ bytes and overlap remain measured inputs; total decode/prefill and the
 lossless plateau therefore remain provisional until the matched engine-stage
 gate below closes.
 
-#### R-V - owner-directed configurable expert-stream validation (top rung)
+#### R-K - production hot-path recovery (top rung after matched 32K)
 
-This owner decision is authoritative for the production profile and is not a
-reviewer-overridable proposal. It supersedes the earlier Rung 0.2 claim that
-performance must never come from changing validation, but it does **not**
-weaken evidence-mode governance. Every gate, fidelity campaign, and evidence
-arm continues to require full cryptographic validation unless a separately
-reviewed chunked sidecar equivalence gate explicitly authorizes chunked mode.
+R-K is fidelity-free and precedes R-V, MTP, cache-policy, OS, and context work.
+Its premise is the measured production budget above, not the unadopted slab
+path. Each numbered item is separately preregistered and byte-identical unless
+the item explicitly requires reporting a delta to the owner.
 
-The measured one-miss fetch window is about 5.77 ms: approximately 1.01 ms in
+1. **IQ2 down-reference A/B.** Once the pinned Entrpi/ds4 tree is readable,
+   inspect every `DS4_CUDA_IQ2_DOWN_REFERENCE` definition and branch to classify
+   whether it is a correctness workaround or only a determinism preference.
+   The engine default is off, while the current GLM profile opted into `1`
+   without a completed A/B; the historical smoke was one-arm `NO_RESULT`.
+   Parameterize the existing `glm_decisive_arm.sh` and compare `1` with `0`.
+   Byte-identical outputs at `0` permit production adoption; any output/logit
+   delta is reported to the owner before adoption. The measured kernel bucket
+   puts up to roughly 106 ms/token in scope.
+2. **Downgrade synchronization.** First A/B the already-existing
+   `DS4_CUDA_END_STREAM_SYNC=1` flag, which is currently absent from the
+   profile. Then replace the four stubbed signal/read-after/wait/commit
+   `cudaDeviceSynchronize` readbacks with event record plus synchronization on
+   the readback stream; their existing `event_value` argument must no longer be
+   discarded. NVIDIA's
+   [CUDA event API](https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__EVENT.html)
+   is the implementation authority. Require byte identity and explicit
+   signal/read-after ordering tests. The target is roughly 80-90 device-wide
+   barriers/token and a material share of the measured 44.1 ms other bucket.
+3. **Recover non-slab fetch bandwidth.** On the unmodified non-slab file
+   layout, deepen and overlap miss submission with one bounded QD4 ring. Do not
+   introduce a sidecar, slab, or layout change. The frozen
+   [`NVME-characterization-final-2026-08-03.json`](NVME-characterization-final-2026-08-03.json)
+   shows 12.56 GB/s at single-ring QD4 and lower results at QD16/QD32. The
+   bounded target is fetch 227.5 ms toward 110-130 ms with identical bytes and
+   access accounting.
+4. **Close F13 without relaxing first.** Build the missing reproduction:
+   disk-checkpoint restore plus long-suffix extension through a BPE-junction
+   live-cache miss, following
+   [`docs/ds4-glm-resume-frontier-bug-2026-07-26.md`](../../docs/ds4-glm-resume-frontier-bug-2026-07-26.md).
+   If divergence reproduces, fix and requalify it. Only a bounded preregistered
+   non-reproduction may be presented to the owner as evidence for relaxing the
+   strict guard. This item targets minutes per affected warm agent turn.
+5. **One zero-risk hygiene candidate.** Hoist the roughly 51 per-launch
+   `getenv()` calls from routed-MoE launch into the existing `g_cuda_*`
+   initialization (about 4,000-4,600 calls/token); remove
+   `DS4_CUDA_MOE_NO_ATOMIC_DOWN` from production because the atomic path needs
+   `n_tokens >= 128` and is a decode no-op; gate the always-on access-stream
+   SHA-256 behind an evidence-only environment flag; and make
+   `glm_safe_run.sh` call `sync -d` every Nth 4 Hz sample while preserving every
+   sample and the kill floor. Refresh the frozen environment digest and run one
+   matched A/B. Do not alter `DS4_CUDA_STABLE_MODEL_REMAP=1` or
+   `DS4_TOKEN_TIMING_LOG=1`.
+
+The source prerequisite is currently unmet: `bmarti44` cannot read
+`/home/dsv4/ds4-project/src/ds4-upstream-master`. Restore read/traverse access
+before R-K source audit and copy the exact compiled `ds4.c` and `ds4_cuda.cu`
+to a reviewer-readable immutable path. `vendor/ds4/` is stale and must never be
+used as fallback review authority.
+
+#### R-V - conditional configurable slab expert-stream validation
+
+This owner decision is authoritative and is not a reviewer-overridable
+proposal, but it is conditional: the production path does not currently use
+the slab or per-fetch SHA-256. Do **no immediate R-V engine work**. If a future
+slab candidate is adopted for an I/O win, it must expose the modes below.
+Evidence-mode governance remains unchanged.
+
+The slab-only measured one-miss fetch window is about 5.77 ms: approximately 1.01 ms in
 `pread`, 3.95 ms in whole-record SHA-256, and 0.81 ms in remaining copy and
 compute. The SHA term is independently consistent with
 [`G6-rung0-io-accelerated-sha-falsifier.json`](G6-rung0-io-accelerated-sha-falsifier.json),
 which measured 2.293743 GiB/s and 3.95149856 ms per record. The zero-fit-parameter
 decomposition reproduces the observed 2.31-2.33 tok/s decode and brackets the
-observed 23-32 tok/s prefill. Therefore the current serving path is
-checksum-bound rather than drive-bandwidth-bound.
+observed 23-32 tok/s prefill. This diagnoses that experimental slab path only;
+it is not a diagnosis of current production.
 
-Add one exact, logged setting to the Entrpi/ds4 streaming source pinned by
-`versions.lock`:
+If the slab is later adopted, add one exact, logged setting to the Entrpi/ds4
+streaming source pinned by `versions.lock`:
 
 - `DS4_EXPERT_VALIDATION=full` preserves the current byte-for-byte validation
   path. It is the mandatory mode for all evidence, gate, and fidelity runs.
@@ -425,10 +490,10 @@ records across 12-16 bounded in-flight workers during prefill, or adopt chunked
 mode only after whole-record-to-sidecar equivalence and both persistent reviews
 pass. Evidence mode never uses `off`.
 
-If `off` qualifies, re-measure the lossless plateau with `off` as the production
-configuration and `full` reserved for evidence. The production estimate becomes
-roughly 7-8+ decode tok/s on current hardware. This spends no model fidelity; it
-changes integrity-check placement and is controlled by the exact correctness
+If `off` qualifies, re-measure that slab candidate with `off` as its production
+configuration and `full` reserved for evidence. Do not import the earlier
+7-8+ estimate into the present non-slab plateau. This spends no model fidelity;
+it changes integrity-check placement and is controlled by the exact correctness
 gate above.
 
 #### Rung 0.2 - collision-resistant evidence validation and bounded submission
@@ -640,7 +705,9 @@ observation are documented in
 The local exact-Belady value of 88.0% is only the upper-bound headroom claim.
 Pre-register and close offline unless replay beats SLRU by at least 2.0
 percentage points. Only a passing replay opens a serving A/B. Serving remains
-byte-identical and must show a positive completed-time bound.
+byte-identical and must show a positive completed-time bound. Re-rank the value
+of each hit-rate point against the measured post-R-K fetch budget rather than
+reusing the current 227.5 ms/token economics.
 
 ### Remaining lossless transport - zero-copy expert-slot GEMV (W3)
 
@@ -687,7 +754,7 @@ lookahead is needed. Oracle prefetch therefore uses token-level lookahead while
 leaving target computation exact. This is the intended path toward the faithful
 6-8 tok/s streaming ceiling.
 
-Rung 0.5 is promoted as a primary remaining lossless lever. Upstream merged
+Rung 0.5 remains the primary oracle lever **after R-K**. Upstream merged
 GLM-5.2 NextN/MTP support in
 [llama.cpp PR #25980](https://github.com/ggml-org/llama.cpp/pull/25980), built on
 the generic MTP work in
@@ -711,7 +778,9 @@ arm. If it is at most 16, open one bounded greedy-MTP serving probe that fetches
 each union once per verification pass. It must preserve byte-identical target
 output and its decode lower-95 ratio must exceed 1.10 to adopt. Values strictly
 between 16 and 20 are an inconclusive offline `NO_RESULT` and do not authorize
-engine work. This gate tests the mechanism reported by
+engine work. Before any serving probe, re-derive its expected value from the
+measured post-R-K per-layer fetch/kernel/other budget. This gate tests the
+mechanism reported by
 [SpecMoEOff](https://arxiv.org/abs/2508.21706),
 [SP-MoE](https://arxiv.org/abs/2510.10302), and
 [MoE-SpeQ](https://arxiv.org/abs/2511.14102) without assuming their offload
@@ -1069,12 +1138,14 @@ Restore the prior host settings after every arm and after any failure.
 ### Lossless plateau decision
 
 After all Rung 0 work, run the same-fixture performance gauntlet and report the
-measured plateau to the owner. With a qualified R-V `off` profile, the current
-planning range is roughly 7-8+ decode tok/s and about 140 prefill tok/s; the
-broader lossless composition hypothesis remains 6-10 decode tok/s. Measurements
-alone populate the decision table. Stop there until the owner chooses one of:
-accept the lossless profile, authorize a bounded Rung 2/2.5 fidelity spend, or
-authorize the Rung 3 residency program.
+measured plateau to the owner. With R-K in scope, current production is expected
+to move from about 2.3 toward 4-6 decode tok/s; with B-E passing, the broader
+lossless planning range is 7-10 decode tok/s and 75-140 prefill tok/s.
+Measurements alone populate the decision table. Price three continuations in
+that report: owner-descoped NVMe-oF (planning estimate +3-4 decode only after
+R-K proves bandwidth-bound), a second Spark (owner planning estimate 37-48
+tok/s class through dual-Spark resident inference), and Rung 3 residency on one
+box with its fidelity spend. Stop there for the owner's choice.
 If the MTP-union, decaying-hotness, and OS arms all pass, the planning envelope
 is approximately `1.3-2.0x * 1.05-1.15x * 1.02-1.05x` on top of 2.33 tok/s,
 which is consistent with the existing 6-10 tok/s lossless estimate. This is a
@@ -1082,7 +1153,8 @@ composition hypothesis, never a reported result.
 
 ### Rung 2 - bounded lossy streaming (W1/W8/W9)
 
-Fidelity ordering is unchanged. R-V spends no model fidelity. The packed
+Fidelity ordering is unchanged. R-K spends no model fidelity, and conditional
+R-V changes integrity checking rather than model bytes. The packed
 FP4/E2M1 compact-cKV experiment is
 the active lossy frontier because its real-capture falsifier has cleared; it
 still requires the fixed 100-case NLL/top-1 gate and owner adoption. Rung 3
