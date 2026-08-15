@@ -1,0 +1,68 @@
+{
+  "schema": "glm52-persistent-review-round-v1",
+  "candidate_hash": "d023567d1f528970eccab4c40dcdecde1508523e",
+  "freeze_commit": "c74043d",
+  "review_round": 319,
+  "reviewed_scope": "Candidate-9 delta for PLATEAU-318-H1 only; previously frozen scope excluded.",
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 84,
+    "critical": [],
+    "high": [{
+      "id": "PLATEAU-319-H1-MISSING-LOW-PAIR-SCHEMA-FALSE-PASS",
+      "evidence": "The delta branch accepts a DSV record with both low and low_delta removed, or a hybrid base-plus-critical-deltas record without low_delta. Neither frozen wrapper emits either schema.",
+      "affected_gate": "Strict canonical cgroup safety evidence",
+      "reproduction_instructions": "Remove low and low_delta from the complete 12-field DSV record, refresh canonical digests, and invoke the frozen parser.",
+      "proposed_acceptance_test": "Accept exactly the six-field GLM schema or the 12-field DSV schema; reject removal of each field, every low-pair/hybrid omission, duplicates, unknowns, malformed values, and nonzero values."
+    }],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": {
+      "PLATEAU-318-H1-DUPLICATE-CGROUP-EVENT-LAST-WINS": "OPEN",
+      "ADV-PLATEAU-R316-H3-NONCANONICAL-SAFETY-ATTESTATION": "OPEN",
+      "all_other_prior_blockers": "VERIFIED"
+    },
+    "verdict": "REJECT_MODEL_RUN_PENDING_EXACT_SCHEMA_FIX"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 82,
+    "critical": [],
+    "high": [{
+      "id": "ADV-PLATEAU-319-H1-DELTA-SCHEMA-MISSING-LOW-PAIR",
+      "evidence": "A coherently digest-bound ten-field DSV record with low and low_delta omitted is accepted.",
+      "affected_gate": "Canonical cgroup safety evidence",
+      "reproduction_instructions": "Remove both low items from a valid 12-field DSV record and refresh its digests.",
+      "proposed_acceptance_test": "Require exactly the complete six-field GLM or 12-field DSV key set."
+    }],
+    "medium": [{
+      "id": "ADV-PLATEAU-319-M1-NONCANONICAL-SEPARATOR-AND-EMPTY-ITEMS",
+      "evidence": "Interior empty items and mixed space/equal separators pass even though neither wrapper emits them.",
+      "affected_gate": "Strict canonical event grammar",
+      "reproduction_instructions": "Insert an interior empty item or mix separators in an otherwise valid record and refresh digests.",
+      "proposed_acceptance_test": "Accept only GLM space syntax with its terminal comma or DSV equals syntax without empty members."
+    }],
+    "low": [],
+    "prior_issue_status": {"PLATEAU-318-H1-DUPLICATE-CGROUP-EVENT-LAST-WINS": "OPEN"},
+    "verdict": "REJECT_MODEL_RUN"
+  },
+  "root_reproduction": {
+    "status": "VERIFIED_FALSE_PASS",
+    "missing_low_pair": "ACCEPT_FALSE_PASS",
+    "interior_empty_item": "ACCEPT_FALSE_PASS",
+    "mixed_separator": "ACCEPT_FALSE_PASS",
+    "model_started": false
+  },
+  "convergence": {
+    "candidate_count": 9,
+    "open_blocking_findings": [
+      "PLATEAU-319-H1-MISSING-LOW-PAIR-SCHEMA-FALSE-PASS",
+      "ADV-PLATEAU-319-H1-DELTA-SCHEMA-MISSING-LOW-PAIR"
+    ],
+    "normalized_blocking_classes": 1,
+    "nonshrinking_consecutive_candidates": 1,
+    "owner_authorization": "The owner explicitly authorized candidate 9 and everything else, directing autonomous continuation on 2026-08-15.",
+    "next_candidate_scope": "Exact two-schema grammar only, including the named medium grammar closure; no engine or measurement change."
+  },
+  "verdict": "REJECT_MODEL_RUN_AUTONOMOUS_BOUNDED_CANDIDATE_10"
+}
