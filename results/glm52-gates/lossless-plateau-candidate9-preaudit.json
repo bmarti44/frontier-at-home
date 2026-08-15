@@ -1,0 +1,53 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-v1",
+  "candidate_number_for_gate": 9,
+  "campaign_global_review_round_before_review": 318,
+  "candidate_commit": "d023567d1f528970eccab4c40dcdecde1508523e",
+  "candidate_tree": "c5a96d821f86862b8a3876d468b5352e98ebfad3",
+  "supersedes": "results/glm52-gates/lossless-plateau-candidate8-preaudit.json",
+  "failure_record": "results/glm52-gates/lossless-plateau-preflight-review-r318.json",
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r318.json",
+  "owner_authorization": "Owner explicitly authorized matched-32K candidate 9 for PLATEAU-318-H1 and autonomous continuation on 2026-08-15.",
+  "recorded_at_utc": "2026-08-15T16:52:12Z",
+  "scope": "Close PLATEAU-318-H1 only: reject duplicate, unknown, malformed, missing, and nonzero canonical cgroup event fields. Select this receipt and refresh only the collector/campaign digest bindings induced by that fix. No engine, request, metric, fixture, or safety-envelope change.",
+  "artifact_sha256": {
+    "configs/glm52-lossless-plateau-profile.json": "55a5b01c5e840ac3b3316ddcb82f75ca9aec7ff6cd7be6a2edb87fb93db7dcf5",
+    "configs/dsv4-matched-32k-profile.json": "63a5e5be15fb2aa43869a5cdebe2f7b8553ebf9d3aa623b9ec75af04d1d7e8c9",
+    "results/glm52-goal/harness/decisive_matched.sh": "035e7c7bcb6fc38c2cf47a623579401de61b2fdb4ec8388ed24c855f043d3031",
+    "results/glm52-goal/harness/glm_decisive_arm.sh": "f5829fcf713b73e2e9aa6d45d0b8e43db71076905a0740f884f425c1d38c328a",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "1c42c1449f20bb1c70dc7eb93f380374af545fa15f54e85709e428b647f39d6e",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "84b658c6147d0fdc1baf11de33e7613eb17f29cc357252c6261c3db22d3ec913",
+    "scripts/30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "scripts/56_collect_matched_evidence.py": "61d0e36a4e527ca48dcc730f1569b10519224e7fcfadbcde2aca287c906af100",
+    "vendor/official-encoding/tokenizer.json": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf"
+  },
+  "red_lineage": {
+    "test_commit": "52324d76b016d3913f019dbb83cbabe84ce39077",
+    "artifact_sha256": {
+      "unchanged_scripts/56_collect_matched_evidence.py": "9dfec6b359d57e7a3cf4a12fc25b9197dee47d7eb315f65f842126328552fb48"
+    },
+    "mutations_run": 10,
+    "mutations_false_passed_before_fix": 9,
+    "nonzero_delta_rejected_before_fix": true
+  },
+  "pre_submission_audit": {
+    "focused_tests_run": 34,
+    "focused_failures": 0,
+    "focused_errors": 0,
+    "receipt_commit_exists": true,
+    "receipt_tree_matches": true,
+    "receipt_bound_paths_match": true,
+    "duplicate_unknown_malformed_missing_and_nonzero_mutations": "PASS",
+    "profile_and_python_runtime_bindings": "PASS",
+    "engine_started": false
+  },
+  "convergence": {
+    "candidate_count": 9,
+    "candidate_8_blocking_findings": 1,
+    "candidate_9_blocking_findings_before_review": 0,
+    "owner_exception": "Explicitly authorized candidate 9, superseding the eight-candidate pause for PLATEAU-318-H1.",
+    "escalation_triggered": false
+  },
+  "verdict": "READY_FOR_DELTA_ONLY_REVIEW_NO_ENGINE_RUN"
+}
