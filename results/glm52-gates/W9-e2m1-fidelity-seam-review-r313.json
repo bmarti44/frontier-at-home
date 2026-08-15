@@ -1,0 +1,101 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-review-v1",
+  "candidate_hash": "main:7a43104c3c84f557abe275c3a316ef3a4f0a05b3;engine:3ce8df6fe9e7d60017581d8aa01323503bc8f85c",
+  "review_round": 313,
+  "status": "REJECTED_CONVERGENCE_PAUSE",
+  "gap_reviewer": {
+    "score_0_to_100": 40,
+    "critical": [
+      {
+        "id": "W9-E2M1-312-C1-EXECUTED-BINARY-NOT-BOUND",
+        "finding": "Runtime identity is internally consistent with mutable manifest fields but not compared with candidate 4's external engine, binary, model, fixture, runner, and scorer freeze; model identity is absent.",
+        "acceptance": "Require an immutable candidate-4 freeze descriptor and exact engine, executable, model, fixture, runner closure, and scorer hashes; mutate each independently."
+      },
+      {
+        "id": "ADV-W9-E2M1-312-C1-SELF-AUTHORED-RAW-EVIDENCE",
+        "finding": "A coordinated artifact-plus-descriptor-plus-manifest replacement passes because no expected completed-manifest digest exists outside the evidence directory.",
+        "acceptance": "Bind the completed manifest digest through an external sealed controller receipt; coordinated replacement must reject."
+      }
+    ],
+    "high": [
+      {
+        "id": "W9-E2M1-313-H1-RANDOMNESS-NOT-POSTFREEZE",
+        "finding": "The valid passing test receipt is round 6356486 from 2026-08-07, eight days before candidate 4 froze, and no eligible post-freeze round is enforced.",
+        "acceptance": "Freeze the unique first scheduled round strictly after a bound freeze time and reject old, adjacent, alternate-valid, and future-selected receipts."
+      }
+    ],
+    "medium": [
+      {
+        "id": "W9-E2M1-313-M1-NONSTRICT-JSON-EVIDENCE",
+        "finding": "Manifest and cases use json.loads and accept duplicate keys and noncanonical JSON.",
+        "acceptance": "Use the repository strict JSON loader and add duplicate-key/non-finite mutations."
+      }
+    ],
+    "low": [],
+    "verdict": "REJECT_MODEL_RUN"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 42,
+    "critical": [
+      {
+        "id": "ADV-W9-E2M1-313-C1-FILE-BACKING-DOES-NOT-PROVE-RUNNER-EXECUTION",
+        "finding": "No trusted controller binds retained frozen runner and scorer descriptors to creation and scoring of the directory; the positive scorer test remains wholly synthetic.",
+        "acceptance": "Execute retained frozen runner bytes through a sealed controller, bind executing runner/scorer descriptors, and reject synthetic directories, restored-path runner substitution, direct scorer calls, and alternate launchers."
+      }
+    ],
+    "high": [
+      {
+        "id": "ADV-W9-E2M1-313-H1-AMBIENT-NODE-PERMITS-RANDOMNESS-FORGERY",
+        "finding": "Bare node is resolved through ambient PATH and is absent from the closure; a fake node that prints the success marker authorizes arbitrary randomness.",
+        "acceptance": "Execute an absolute frozen Node binary and bind its digest; fake/wrong node mutations reject."
+      },
+      {
+        "id": "ADV-W9-E2M1-313-H2-RANDOMNESS-FRESHNESS-UNENFORCED",
+        "finding": "Authentic but pre-freeze receipts pass and allow selection among valid historical schedules.",
+        "acceptance": "Require exactly the first scheduled round after the immutable freeze timestamp."
+      },
+      {
+        "id": "ADV-W9-E2M1-313-H3-KERNEL-LOG-COLLECTION-FAILURE-PASSES-CLEAN",
+        "finding": "journalctl is ambient-PATH resolved, its return status is ignored, and permission-denied text is treated as clean kernel evidence.",
+        "acceptance": "Use an absolute bound journalctl, require exit zero and an explicit collection-success record, and reject collection failures."
+      }
+    ],
+    "medium": [
+      {
+        "id": "ADV-W9-E2M1-313-M1-CONTRADICTORY-COMMAND-ATTESTATION-IGNORED",
+        "finding": "A second reserved-prefix attestation with a malformed suffix is ignored.",
+        "acceptance": "Reject every reserved-prefix line that does not fully match the sole canonical record."
+      },
+      {
+        "id": "ADV-W9-E2M1-313-M2-CONTAINMENT-ARITHMETIC-NOT-VALIDATED",
+        "finding": "The scorer accepts memory_high greater than memory_max and does not bind launcher-derived limits.",
+        "acceptance": "Enforce exact limits, high below max, and the preregistered physical kill-floor arithmetic."
+      }
+    ],
+    "low": [],
+    "verdict": "REJECT_MODEL_RUN"
+  },
+  "root_reproduction": {
+    "synthetic_candidate_ids": "PASS with engine=1*40, binary=2*64, fixture=5*64, no model identity",
+    "coordinated_replacement": "PASS after both candidate case files and their manifest descriptors were rewritten together; delta_nll=0.0009000000000000341",
+    "runner_execution": "VERIFIED: direct construction of the full directory passes without running scripts/104_run_w9_e2m1_fidelity.py",
+    "ambient_node": "VERIFIED: a PATH-prepended shell named node authorized an all-zero malformed receipt",
+    "randomness_freshness": "VERIFIED: accepted round 6356486 maps to 2026-08-07T18:00:00Z; candidate freeze commit is 2026-08-15T14:02:43Z",
+    "kernel_collection": "PASS with every kernel artifact replaced by Failed to open journal: Permission denied",
+    "result": "All critical/high findings independently VERIFIED. Candidate 4 remains model-run forbidden."
+  },
+  "prior_fixes_verified": [
+    "exact executed process path/hash/device-inode parsing",
+    "all-line sample and lifecycle parsing",
+    "hard-coded normal-plus-fused path set",
+    "applied-equals-total store opportunity coverage",
+    "compiled unset-versus-zero ordinary and fused equality"
+  ],
+  "convergence": {
+    "candidate_3": "first consecutive candidate without strict blocking-set decrease, recorded in round 312",
+    "candidate_4": "second consecutive candidate without strict blocking-set decrease; evidence authority remains open and new randomness/kernel authority blockers appeared",
+    "trigger": "blocking findings failed to strictly decrease across two consecutive candidates",
+    "action": "Pause W9 E2M1 fidelity gate and post exact open findings to owner. Do not publish candidate 5 or run the model without a new owner direction."
+  },
+  "decision": "Candidate 4 is permanently rejected before a model run. Engine implementation remains a non-adopted diagnostic branch."
+}
