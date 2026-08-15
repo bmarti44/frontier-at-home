@@ -115,6 +115,10 @@ class GlmLosslessPlateauTests(unittest.TestCase):
         self.assertIn('reviewed runtime commit', campaign)
         self.assertIn('randomness_receipt_sha256', campaign)
         self.assertIn('MATCHED_DERIVED_SEED', campaign)
+        self.assertIn('print(candidate_number)', campaign)
+        self.assertIn('CANDIDATE_NUMBER=${RANDOMNESS_BINDING[4]}', campaign)
+        self.assertIn('"p${CANDIDATE_NUMBER}-r$DRAND_ROUND"', campaign)
+        self.assertNotIn('"p13-r$DRAND_ROUND"', campaign)
         self.assertNotIn('MATCHED_SEED="$SEED"', campaign)
         collector_call = campaign[campaign.rindex('"$PYTHON" -I -B -S "$COLLECTOR"'):]
         for argument in (
