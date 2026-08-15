@@ -55,7 +55,12 @@
     "verdict": "ACCEPT_PRE_RUN"
   },
   "root_reproduction": {
-    "status": "PENDING_CONVERGENCE_PAUSE",
+    "status": "VERIFIED_FALSE_PASS",
+    "collector_sha256": "9dfec6b359d57e7a3cf4a12fc25b9197dee47d7eb315f65f842126328552fb48",
+    "baseline_result": "ACCEPT",
+    "mutation": "high=0,high_delta=9,high_delta=0,max=0,max_delta=0,oom=0,oom_delta=0,oom_kill=0,oom_kill_delta=0,oom_group_kill=0,oom_group_kill_delta=0",
+    "mutation_result": "ACCEPT_FALSE_PASS",
+    "diagnosis": "The parser inserts repeated keys into a dictionary without rejecting duplicates, so the trailing zero overwrites the earlier nonzero pressure event.",
     "model_started": false,
     "machine_cleanup": "No ds4-server, llama-server, fio, or matched transient unit remained after reviewer probes."
   },
