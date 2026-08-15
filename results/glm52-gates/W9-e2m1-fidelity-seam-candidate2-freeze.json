@@ -1,0 +1,64 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-freeze-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 2,
+  "status": "FROZEN_REVIEW_PENDING",
+  "date": "2026-08-15",
+  "engine_tree": "/home/bmarti44/.cache/glm52-w9-fp4-packed-c1",
+  "engine_lineage": {
+    "reviewed_w9_capture_source": "9ebc0f2879c126db095ecd25be0567166868d52c",
+    "reconstructed_snapshot": "227baf5ec0184074cb55a3b50345d6c206352168",
+    "adopted_w7_1_stack": "5a5a39de344fc3a691660453aab7cf305021ca52",
+    "red_test_commit": "47ba1f3aa21e47de5655d6470acf6b0f8602106d",
+    "implementation_commit": "058cb6ea37cb8d3433872af223f4e8cea968065a"
+  },
+  "source_hashes": {
+    "ds4.c": "d26a183fcfcf386238d52556be3c4c18e4604cd02ace8344d4f24aad54d69364",
+    "ds4_cuda.cu": "f8d333ac959f6c61d92befd982d3514cca60773eaa9bed30638f06a7e44e8478",
+    "ds4_gpu.h": "c079f6d577e0faa1459ec2c2e6f5b7b40b00cfdedd9e4ae73c903ed8ae918cd8",
+    "ds4_metal.m": "4a9671ff7cd7b4ff74af44117125720e0f22289d784f7ac368de3189e5e7c388"
+  },
+  "tests_sha256_by_path": {
+    "Makefile": "e102b041ae706da238602cba9abc39c45d8721d10b6b29f100d2d58d2adcdb5d",
+    "tests/test_glm_w9_e2m1_fake_source.py": "8dd822140db4b9c174d099c18ece95b1ff94fc824bec8d617a43ccd23e3a31b4",
+    "tests/test_glm_w9_e2m1_fake_cuda.c": "a96c2d5fb39e625f57b34edade5e0e8d841ff89f7a3f9c4181841ff61d37754e"
+  },
+  "clean_builds": {
+    "build_path": "/home/bmarti44/.cache/glm52-w9-fp4-packed-c1",
+    "parallel_jobs": 2,
+    "raw_server_sha256": [
+      "62b8075c405395612f6ee766aa05b9befd643bbd0d3151aa3a20391ff80a3fd1",
+      "6a20b9b2f484e23f46f4fc780c16db39982d64f301b6cb943a6b18fe57ceb613"
+    ],
+    "canonical_server_sha256": [
+      "c5010bf3f9f5cbbef6f7dd2655a0eac85dd064232caeb7929a3e77c251955c26",
+      "c5010bf3f9f5cbbef6f7dd2655a0eac85dd064232caeb7929a3e77c251955c26"
+    ],
+    "canonicalization": "objcopy --strip-debug --remove-section=.note.gnu.build-id",
+    "canonical_bytes": 5323016,
+    "canonical_builds_byte_identical": true,
+    "note": "Raw ELF build IDs differ; two clean builds from the same frozen source path are byte-identical after the established debug/build-id canonicalization. Different source paths also alter CUDA fatbin line information and are not treated as equivalent build configurations."
+  },
+  "checks": {
+    "source_contract": "5/5 PASS",
+    "compiled_cuda_codec": "PASS",
+    "w9_capture_regression": "6/6 PASS",
+    "stable_model_cache_regression": "PASS",
+    "server_link": "PASS",
+    "tree_clean": true,
+    "model_process_started": false
+  },
+  "artifacts": {
+    "/tmp/w9-e2m1-final-microgate.stdout": "d0cfaf1c12e6d2e8222acb3d337e54dd6f3859e8b174a3b8513e13e4afef15ea",
+    "/tmp/w9-e2m1-final-microgate.stderr": "aecef4c4995cacf21a8003da39e406198ab53c8c6c766de357d7bfe8fddc2ccd",
+    "/tmp/w9-e2m1-final-capture-tests.stderr": "3b276704f3e563f93455088f7ce46c6323f4b89f61012ff8ddd99bba729ec60f",
+    "/tmp/w9-e2m1-mutation.stdout": "81a81fbc68d1ff81bbe140df9361dfd5714e5971df9a7e51cc42c77aea437972",
+    "/tmp/w9-e2m1-mutation.stderr": "99713a35da89575644d2e6b642f498c9afe1b7aa54fe62412c53df5759a6323f"
+  },
+  "mutation": {
+    "change": "Force the normal compact-cache store to bypass fake_e2m1 while retaining the selector and counter.",
+    "result": "The fixed compiled CUDA test failed on the first latent value; return code 2. The source was restored and the complete microgate passed again before freeze."
+  },
+  "runtime_allowed": false,
+  "next": "Nash and Singer review only the candidate-2 delta and frozen source. A model-backed 100-case fidelity run is forbidden until both report no critical/high issue."
+}
