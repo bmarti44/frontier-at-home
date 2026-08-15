@@ -1,0 +1,15 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-attempt-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "attempt": 1,
+  "status": "FAIL",
+  "date": "2026-08-15",
+  "observed": "The first fused compiled oracle expected an exact RMS scale of 1 from rsqrtf(1). Under the production --use_fast_math CUDA build, a midpoint crossed upward (index 73 observed 1.75 versus oracle 0.875). This is a fixture-construction defect, not accepted candidate behavior.",
+  "bounded_fix": "Keep the same midpoint targets but choose x=1 and eps=3 so the production RMS factor is exactly 0.5; double the synthetic norm weights. The post-normalization target values and E2M1 oracle remain unchanged.",
+  "artifact_sha256": {
+    "/tmp/w9-e2m1-c3-green1.stdout": "aec1b9ef0ef2983296c0aff5ec417c72f384e9eb7d668da98754b0c2a23f5915",
+    "/tmp/w9-e2m1-c3-green1.stderr": "2799dfa623f9e845e976beb0eb76f69bdadfbf0d3e5d83b245c1af536f32ee49"
+  },
+  "acceptance": "The corrected fixture must exercise the same fused production API and exact midpoint targets, pass its independent oracle, and still fail under a fused-branch bypass mutation."
+}
