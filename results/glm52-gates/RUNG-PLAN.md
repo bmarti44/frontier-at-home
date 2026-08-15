@@ -764,6 +764,22 @@ lowercase digest actually recorded. Evidence is
 `W3-performance-campaign-v8-fail/{manifest.json,raw.jsonl,summary.json}`. Do not
 rerun or weaken this gate; continue to the MTP address-oracle work.
 
+Owner-directed post-R-K re-score (2026-08-15): the terminal W3 verdict above
+remains immutable, but it no longer permanently closes the mechanism after the
+hot-path budget changes. W3 removed about `2.03` seconds from a `59.04`-second
+control arm while missing the original five-percent adoption bar. If the
+qualified production fast path after R-K is at least five percent faster than
+the current `2.33 tok/s` baseline, open one separately named **W3a** re-screen
+against that new baseline. This is not permission to re-score every marginal
+candidate: W3 is singled out because reducing miss I/O and synchronization can
+make its fixed hit/copy saving a larger fraction of total time. Preserve
+byte-identical outputs and event-safe slot ownership; use five fresh-server
+counterbalanced blocks. Adopt only if both the one-sided 95% upper bound for
+candidate/baseline completed-time ratio is below `1.0` and the one-sided 95%
+lower bound for decode ratio is above `1.0`. Any new copy path must still use
+persistent pinned staging. The prior W3 FAIL is never amended or reused as the
+new decision evidence.
+
 ### Rung 0.5 - MTP as an expert-address oracle
 
 Use the MTP head K tokens ahead only to predict expert IDs and keep the NVMe
