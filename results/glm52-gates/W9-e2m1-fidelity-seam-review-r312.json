@@ -1,0 +1,77 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-review-v1",
+  "candidate_hash": "main:eb60ab3;engine:31d7d120e5dcd9aee537e066b4881e3a505974c8",
+  "review_round": 312,
+  "status": "REJECTED",
+  "gap_reviewer": {
+    "score_0_to_100": 55,
+    "critical": [
+      {
+        "id": "W9-E2M1-312-C1-EXECUTED-BINARY-NOT-BOUND",
+        "finding": "The scorer checks a planned candidate digest but neither requires nor compares the digest, resolved path, or device/inode identity of the process that actually executed.",
+        "acceptance": "Require one canonical executed-process record per arm and bind its binary digest to the frozen campaign digest, with missing, wrong, duplicate, stale-path, and conflict mutations rejected."
+      }
+    ],
+    "high": [
+      {
+        "id": "W9-E2M1-312-H1-MALFORMED-HOST-SAFETY-LINES-IGNORED",
+        "finding": "Extra malformed samples and an earlier failed SAFE_RUN terminal record are ignored when enough valid lines and one later success exist.",
+        "acceptance": "Parse every safety line with an exact grammar and require exactly one containment record and exactly one successful terminal record."
+      },
+      {
+        "id": "W9-E2M1-312-H2-REQUIRED-PATH-MIX-SELF-DECLARED",
+        "finding": "The campaign can declare only the normal path, zero fused coverage, and pass.",
+        "acceptance": "Hard-code the complete normal-plus-fused path mix in the frozen scorer and reject deletion, reordering, duplication, or zero coverage."
+      }
+    ],
+    "medium": [
+      {
+        "id": "W9-E2M1-312-M1-UNSET-ZERO-STORE-EQUALITY-NOT-EXECUTED",
+        "finding": "Compiled tests do not compare complete ordinary and fused stores under selector states resolved from unset versus explicit zero.",
+        "acceptance": "Add one focused end-to-end unset-versus-zero equality test with zero applied-path counters."
+      }
+    ],
+    "low": [],
+    "verdict": "BLOCK_FOUR_ARM_100_CASE_CAMPAIGN_PENDING_SCORER_AUTHORITY_FIXES"
+  },
+  "adversarial_reviewer": {
+    "score_0_to_100": 45,
+    "critical": [
+      {
+        "id": "ADV-W9-E2M1-312-C1-SELF-AUTHORED-RAW-EVIDENCE",
+        "finding": "The scorer accepts caller-authored embedded log strings and has no frozen runner or artifact-hash binding; its passing test constructs an entire fictitious campaign in memory.",
+        "acceptance": "Use a frozen runner that writes exclusive per-arm files and a hash manifest, and score those files only after verifying every digest. Post-execution mutation or replacement must reject."
+      }
+    ],
+    "high": [
+      {
+        "id": "ADV-W9-E2M1-312-H1-RECORD-CONTROLS-REQUIRED-PATHS",
+        "finding": "The record can remove fused from candidate_required_paths and pass with fused_rows zero.",
+        "acceptance": "Remove caller control over required paths and hard-code both production paths in the scorer."
+      },
+      {
+        "id": "ADV-W9-E2M1-312-H2-NONZERO-COUNTERS-PERMIT-PARTIAL-SEAM",
+        "finding": "The scorer accepts one normal and one fused row regardless of evaluated workload.",
+        "acceptance": "Bind exact applied coverage to independently defined store opportunities and require equality for both paths."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "verdict": "REJECT_MODEL_RUN"
+  },
+  "root_reproduction": {
+    "method": "Mutate the existing passing unit campaign and invoke the frozen candidate-3 scorer without changing source.",
+    "self_declared_subset": "PASS after required paths became [normal] and both candidate fused counters became zero.",
+    "partial_counts": "PASS after both candidate path counters became one.",
+    "wrong_executed_binary": "PASS after every executed-process line carried a digest different from the frozen binary digest.",
+    "ignored_contradictions": "PASS after every arm gained a malformed nonzero-swap sample and a failed terminal record before the accepted success record.",
+    "result": "Both critical findings and all four high findings independently VERIFIED. No model run is authorized."
+  },
+  "convergence": {
+    "gate_candidate_count": 3,
+    "blocking_findings_candidate_2": 5,
+    "blocking_findings_candidate_3": 6,
+    "assessment": "The engine-side blocker set closed, but the campaign-evidence authority class became concrete. This is the first non-shrinking candidate; the enumerated two-consecutive-candidate trigger has not fired. Candidate 4 is bounded to the round-312 findings."
+  },
+  "decision": "Candidate 3 is permanently rejected before any model run. Candidate 4 may change only file-backed artifact authority, executed-process binding, fail-closed safety parsing, fixed path coverage, applied-versus-opportunity counters, and the medium unset-versus-zero regression test."
+}
