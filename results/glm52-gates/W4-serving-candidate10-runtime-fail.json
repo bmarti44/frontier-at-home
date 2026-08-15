@@ -1,0 +1,54 @@
+{
+  "schema": "glm52-w4-serving-runtime-attempt-v1",
+  "gate": "W4-serving-prefill",
+  "candidate": 10,
+  "candidate_hash": "4b2a7707bc4217335c32ec5c8c76e4fd4aae0e67",
+  "attempt_root": "/home/bmarti44/.local/state/glm52-w4-serving-campaign/attempt-72cda40fbd35490f8384ae55953fc8fe",
+  "started_engine": true,
+  "completed_arms": 20,
+  "verdict": "NO_RESULT",
+  "fixed_scorer_verdict": "FAIL",
+  "fixed_scorer_failure": "microgate speedup does not replay",
+  "failure_class": "post-campaign scorer precision mismatch",
+  "failure": {
+    "microgate_stored_speedup_lower_95": 2.982571005715445,
+    "microgate_replayed_speedup_lower_95": 2.9825710057033468,
+    "absolute_difference": 1.2098322343945256e-11,
+    "fixed_scorer_absolute_tolerance": 1e-12,
+    "microgate_t_one_sided_95_df4": 2.131846786,
+    "serving_scorer_t_one_sided_95_df4": 2.131846786326649,
+    "diagnosis": "The frozen W4 microgate summary used its preregistered truncated t constant. The later frozen serving scorer used a higher-precision t constant to replay the microgate summary while requiring 1e-12 equality. The serving scorer therefore failed closed before evaluating the serving arms."
+  },
+  "safety": {
+    "completed_requests": 20,
+    "off_arms": 10,
+    "on_arms": 10,
+    "minimum_mem_available_kib": 45233316,
+    "unique_response_semantic_sha256_count": 1,
+    "unique_logit_sequence_sha256_count": 1,
+    "engine_processes_after_attempt": 0,
+    "oom_xid_timeout_or_cgroup_swap_observed": false
+  },
+  "posthoc_diagnostic_only": {
+    "formula": "exp(mean(log(block_mean_OFF_seconds/block_mean_ON_seconds)) - 2.131846786326649 * sample_sd/sqrt(5))",
+    "block_prefill_speedup_ratios": [
+      1.0048340784857324,
+      1.0026998694897438,
+      1.000850012715358,
+      1.006732198578148,
+      1.0071495086366136
+    ],
+    "prefill_speedup_lower_95": 1.0019003405064535,
+    "preregistered_required_lower_95": 1.05,
+    "interpretation": "This diagnostic is not an authoritative scorer verdict because it was calculated after observing the frozen scorer failure. It indicates that correcting only the precision mismatch would not make candidate 10 satisfy the preregistered serving-prefill gate."
+  },
+  "artifacts": {
+    "manifest.json": "441f468c7b0bf8248ab519726aeb277ebd615a3697f547c9a75b5a19b5af860e",
+    "raw.jsonl": "1c6354170627f0b894a04dd5ef9ac6aef3a1069f91503055d2cd4f88766ff414",
+    "summary.json": "6ef2cff6c515db61a6361e67f147caa0a64b7dc18bf427bc49767e5cc0281af8",
+    "microgate-summary.json": "b8bfdafe391398a9c10778e13582e7d03b195b08ee2080460316a9ac628c12c1",
+    "randomness-receipt.json": "e86f2f76c184f6dc88cf2b2b7b740e42a0caab29ed902f6de4b6dec415cf3817",
+    "publication-receipt.json": "a2bb72308636c3fa7c76016a1d6fa1419783bde8c816786a970bbca4f7595be7"
+  },
+  "disposition": "Preserve the fixed scorer FAIL unchanged. Do not claim an authoritative serving-performance result from this attempt. Submit the immutable evidence and post-hoc diagnostic to the persistent reviewers to decide whether W4 should terminate as NO_RESULT without another multi-hour campaign or whether a new candidate and fresh run are scientifically required."
+}
