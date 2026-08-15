@@ -1,0 +1,36 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-plan-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "status": "PREREGISTERED_BEFORE_CANDIDATE_3_TEST_OR_CODE_CHANGE",
+  "scope": "Close only the round-311 selector, fused-store, runtime-coverage, flag-lineage, codec-coverage, and early unsupported-backend findings. The packed representation, attention readers, serving performance, memory claim, and model weights remain out of scope.",
+  "selector": {
+    "diagnostic_flag": "DS4_GLM_COMPACT_CACHE_E2M1_FAKE",
+    "packed_production_flag_reserved_for_later_gate": "DS4_GLM_COMPACT_CACHE_E2M1",
+    "accepted": ["unset", "0", "1"],
+    "invalid": ["empty", "any other value"],
+    "conflict": "Reject when the reserved packed flag is present in any form or F16 compact cache is active.",
+    "backend": "Reject enabled diagnostic during graph allocation on non-CUDA builds."
+  },
+  "compiled_microgate": {
+    "required": [
+      "A compiled DS4_TEST_HOOKS test executes the production selector into the graph-owned field for unset, 0, 1, empty, malformed, reserved-name conflict, and F16 conflict cases.",
+      "The ordinary and fused CUDA wrappers each execute independently and expose separate synchronized completed-row counts.",
+      "Each wrapper matches an independent CPU E2M1 oracle; the fused oracle also includes RMS normalization and norm weights.",
+      "Coverage includes deterministic public-fixed pseudo-random finite rows, zero and signed zero, all positive and negative exact midpoints plus nextafter neighbors at unit and non-unit scale, saturation, two rows, a nonzero tail position, exact buffers, adjacent canaries, and undersized-buffer rejection.",
+      "Unset and explicit zero remain byte-identical F32 stores and leave E2M1 counters at zero.",
+      "Mutating the selector, ordinary branch, or fused branch independently makes the fixed test fail."
+    ],
+    "failure": "Any unexecuted path, oracle mismatch, changed RoPE byte, canary write, accepted malformed selector, unsynchronized/mismatched count, or green mutation is FAIL."
+  },
+  "nll_runtime_binding": {
+    "required_before_scoring": [
+      "Exactly one startup line identifies the resolved diagnostic mode for each process.",
+      "A synchronized shutdown attestation reports separate ordinary and fused completed-row counts.",
+      "Baseline arms report mode off and both counts zero; candidate arms report mode on and nonzero total coverage, with the path mix fixed by the selected scorer configuration.",
+      "At least one paired case has a nonzero raw candidate-vs-baseline metric difference; otherwise the candidate arm is treated as inactive and FAIL, not as perfect fidelity."
+    ],
+    "quality_formula": "Use the existing fixed 100-case paired scorer: token-weighted delta NLL <= 0.01; one-sided 95% upper bound <= 0.01; top-1 loss and one-sided 95% upper bound <= 0.005; deterministic candidate rerun.",
+    "authority": "A statistical PASS authorizes only packed-reader implementation. Any nonzero fidelity delta and later performance/memory purchase still require owner adoption."
+  }
+}
