@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import math
 import os
 import re
+import stat
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -29,6 +32,15 @@ FAULT = re.compile(
     r"Killed process .*total-vm",
     re.IGNORECASE,
 )
+COMMIT = re.compile(r"[0-9a-f]{40}\Z")
+DRAND_GENESIS_UNIX = 1_595_431_050
+DRAND_PERIOD_SECONDS = 30
+DRAND_DOMAIN = b"GLM52-LOSSLESS-PLATEAU-32K-V1\0"
+DRAND_NODE = Path("/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node")
+DRAND_NODE_SHA256 = "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
+DRAND_VERIFIER_SHA256 = "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+DRAND_RUNTIME = Path("/home/bmarti44/.cache/glm52-drand-client-1.4.2")
+DRAND_RUNTIME_TREE_SHA256 = "38161b0df115fbd3c2e1dda87759a1eb1e87500109661f0f2fa18874d6e1a0e4"
 
 
 def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -59,6 +71,227 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _read_bound_bytes(path: Path, label: str) -> tuple[bytes, str]:
+    try:
+        flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError(f"{label} is absent, unsafe, or not a regular file") from exc
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > 1_048_576:
+            raise ValueError(f"{label} is not a bounded regular file")
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 65_536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+        if (
+            before.st_dev,
+            before.st_ino,
+            before.st_size,
+            before.st_mtime_ns,
+        ) != (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+        ):
+            raise ValueError(f"{label} changed while it was read")
+        raw = b"".join(chunks)
+        if len(raw) != before.st_size:
+            raise ValueError(f"{label} was read short")
+        return raw, hashlib.sha256(raw).hexdigest()
+    finally:
+        os.close(descriptor)
+
+
+def _strict_json_bytes(raw: bytes, label: str) -> Any:
+    try:
+        return json.loads(
+            raw.decode("ascii"),
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"non-finite JSON value {value}")
+            ),
+            object_pairs_hook=_pairs,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"invalid {label}: {exc}") from exc
+
+
+def _tree_sha256(root: Path) -> str:
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("drand runtime tree is absent or unsafe")
+    digest = hashlib.sha256()
+    paths = sorted(path for path in root.rglob("*") if path.is_file())
+    if not paths or any(path.is_symlink() for path in paths):
+        raise ValueError("drand runtime tree contains no files or a symlink")
+    for path in paths:
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        data = path.read_bytes()
+        digest.update(len(relative).to_bytes(4, "big"))
+        digest.update(relative)
+        digest.update(len(data).to_bytes(8, "big"))
+        digest.update(data)
+    return digest.hexdigest()
+
+
+def _git_output(source_repo: Path, *arguments: str) -> str:
+    observed = subprocess.run(
+        ["git", "-C", str(source_repo), *arguments],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+    )
+    if observed.returncode != 0:
+        raise ValueError(f"randomness git binding failed: {observed.stderr.strip()}")
+    return observed.stdout.strip()
+
+
+def verify_randomness_receipt(
+    receipt_path: Path,
+    *,
+    candidate_hash: str,
+    freeze_commit: str,
+    drand_verifier: Path,
+    retained_manifest: Path,
+    source_repo: Path,
+) -> int:
+    if not COMMIT.fullmatch(candidate_hash) or not COMMIT.fullmatch(freeze_commit):
+        raise ValueError("randomness candidate or freeze commit is malformed")
+    raw, receipt_sha256 = _read_bound_bytes(receipt_path, "randomness receipt")
+    receipt = _strict_json_bytes(raw, "randomness receipt")
+    manifest = _read_json(retained_manifest)
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("randomness_receipt_sha256") != receipt_sha256
+    ):
+        raise ValueError("retained manifest randomness receipt digest mismatch")
+
+    top_keys = {
+        "schema", "candidate_hash", "freeze_commit", "freeze_committed_at",
+        "obtained_at_utc", "source", "relay_agreement", "chain", "receipt",
+        "verification", "seed_derivation", "checks", "verdict",
+    }
+    if not isinstance(receipt, dict) or set(receipt) != top_keys:
+        raise ValueError("randomness receipt schema is invalid")
+    if (
+        receipt.get("schema") != "glm52-lossless-plateau-randomness-v1"
+        or receipt.get("candidate_hash") != candidate_hash
+        or receipt.get("freeze_commit") != freeze_commit
+        or receipt.get("source") != "drand-default-three-relay"
+        or receipt.get("relay_agreement")
+        != ["api.drand.sh", "api2.drand.sh", "api3.drand.sh"]
+        or receipt.get("verdict") != "PASS_POST_FREEZE_PUBLIC_RANDOMNESS"
+    ):
+        raise ValueError("randomness candidate, freeze, relay, or verdict binding failed")
+    chain = receipt.get("chain")
+    if chain != {
+        "scheme": "pedersen-bls-chained",
+        "period_seconds": DRAND_PERIOD_SECONDS,
+        "genesis_time": DRAND_GENESIS_UNIX,
+        "public_key": "868f005eb8e6e4ca0a47c8a77ceaa5309a47978a7c71bc5cce96366b5d7a569937c529eeda66c7293784a9402801af31",
+    }:
+        raise ValueError("randomness chain binding failed")
+
+    _git_output(source_repo, "cat-file", "-e", f"{candidate_hash}^{{commit}}")
+    _git_output(source_repo, "cat-file", "-e", f"{freeze_commit}^{{commit}}")
+    _git_output(source_repo, "merge-base", "--is-ancestor", candidate_hash, freeze_commit)
+    freeze_epoch_raw = _git_output(source_repo, "show", "-s", "--format=%ct", freeze_commit)
+    freeze_iso = _git_output(source_repo, "show", "-s", "--format=%cI", freeze_commit)
+    if not freeze_epoch_raw.isascii() or not freeze_epoch_raw.isdigit():
+        raise ValueError("freeze commit timestamp is invalid")
+    freeze_epoch = int(freeze_epoch_raw)
+    if receipt.get("freeze_committed_at") != freeze_iso:
+        raise ValueError("post-freeze publication timestamp binding failed")
+
+    beacon = receipt.get("receipt")
+    if not isinstance(beacon, dict) or set(beacon) != {
+        "round", "published_at_utc", "randomness", "signature", "previous_signature"
+    }:
+        raise ValueError("drand receipt schema is invalid")
+    round_value = beacon.get("round")
+    if not isinstance(round_value, int) or isinstance(round_value, bool) or round_value < 1:
+        raise ValueError("drand round is invalid")
+    for key, length in (("randomness", 64), ("signature", 192), ("previous_signature", 192)):
+        value = beacon.get(key)
+        if not isinstance(value, str) or not re.fullmatch(f"[0-9a-f]{{{length}}}", value):
+            raise ValueError(f"drand {key} encoding is invalid")
+    publication_epoch = DRAND_GENESIS_UNIX + (round_value - 1) * DRAND_PERIOD_SECONDS
+    publication_iso = dt.datetime.fromtimestamp(
+        publication_epoch, tz=dt.timezone.utc
+    ).isoformat()
+    if beacon.get("published_at_utc") != publication_iso or publication_epoch <= freeze_epoch:
+        raise ValueError("drand publication is not strictly post-freeze")
+    obtained = receipt.get("obtained_at_utc")
+    try:
+        obtained_time = dt.datetime.fromisoformat(str(obtained).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("randomness obtained timestamp is invalid") from exc
+    if obtained_time.tzinfo is None or obtained_time.timestamp() < publication_epoch:
+        raise ValueError("randomness obtained timestamp predates publication")
+
+    verification = receipt.get("verification")
+    expected_verifier_artifacts = {
+        str(DRAND_NODE): DRAND_NODE_SHA256,
+        "scripts/89_verify_drand_receipt.mjs": DRAND_VERIFIER_SHA256,
+    }
+    if verification != {
+        "result": "DRAND_BLS_RECEIPT_OK",
+        "artifact_sha256": expected_verifier_artifacts,
+    }:
+        raise ValueError("recorded drand verification is invalid")
+    if (
+        drand_verifier.is_symlink()
+        or not drand_verifier.is_file()
+        or _sha256(drand_verifier) != DRAND_VERIFIER_SHA256
+        or DRAND_NODE.is_symlink()
+        or not DRAND_NODE.is_file()
+        or _sha256(DRAND_NODE) != DRAND_NODE_SHA256
+        or _tree_sha256(DRAND_RUNTIME) != DRAND_RUNTIME_TREE_SHA256
+    ):
+        raise ValueError("drand verifier runtime binding failed")
+    verified = subprocess.run(
+        [
+            str(DRAND_NODE), str(drand_verifier), str(round_value),
+            beacon["randomness"], beacon["signature"], beacon["previous_signature"],
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=30,
+        check=False,
+        env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+    )
+    if verified.returncode != 0 or verified.stdout != "DRAND_BLS_RECEIPT_OK\n":
+        raise ValueError("drand BLS signature or randomness verification failed")
+
+    seed_sha256 = hashlib.sha256(
+        DRAND_DOMAIN + candidate_hash.encode("ascii") + b"\0"
+        + beacon["randomness"].encode("ascii")
+    ).hexdigest()
+    matched_seed = int(seed_sha256[:15], 16)
+    derivation = receipt.get("seed_derivation")
+    if derivation != {
+        "formula": "sha256('GLM52-LOSSLESS-PLATEAU-32K-V1\\0' || candidate_hash || '\\0' || randomness)",
+        "seed_sha256": seed_sha256,
+        "matched_seed_formula": "integer value of the first 15 hexadecimal seed_sha256 digits",
+        "matched_seed": matched_seed,
+    }:
+        raise ValueError("randomness seed derivation mismatch")
+    if receipt.get("checks") != {
+        "three_relays_byte_equal": True,
+        "published_strictly_after_freeze": True,
+        "signature_verified": True,
+    }:
+        raise ValueError("randomness checks are invalid")
+    return matched_seed
 
 
 def _verify_campaign_artifacts(profile: dict[str, Any]) -> None:
@@ -479,6 +712,12 @@ def collect_records(
     dsv4_profile_path: Path,
     serving_manifest_path: Path | None = None,
     glm_profile_path: Path | None = None,
+    *,
+    randomness_receipt: Path,
+    candidate_hash: str,
+    freeze_commit: str,
+    drand_verifier: Path,
+    source_repo: Path = ROOT,
 ) -> list[dict[str, Any]]:
     campaign = campaign.resolve()
     fixture = fixture.resolve()
@@ -622,6 +861,14 @@ def collect_records(
     ):
         raise ValueError("approved GLM profile is invalid")
     _verify_campaign_artifacts(glm_profile)
+    matched_seed = verify_randomness_receipt(
+        randomness_receipt,
+        candidate_hash=candidate_hash,
+        freeze_commit=freeze_commit,
+        drand_verifier=drand_verifier,
+        retained_manifest=campaign / "retained-manifest.json",
+        source_repo=source_repo,
+    )
     glm_configuration_sha256 = _sha256(glm_profile_path)
     fixture_sha256 = _sha256(fixture)
     directories: dict[tuple[int, int], tuple[str, Path]] = {}
@@ -830,8 +1077,8 @@ def collect_records(
                 "failures": [],
             }
         )
-    if len(seeds) != 1:
-        raise ValueError("matched campaign uses unequal seeds")
+    if seeds != {matched_seed}:
+        raise ValueError("matched campaign arm seed differs from the derived seed")
     score_registered_gate("parity", "parity.performance.v1", records)
     return records
 
@@ -855,6 +1102,11 @@ def main() -> int:
         type=Path,
         default=SERVING_WEIGHTS_MANIFEST,
     )
+    parser.add_argument("--randomness-receipt", type=Path, required=True)
+    parser.add_argument("--candidate-hash", required=True)
+    parser.add_argument("--freeze-commit", required=True)
+    parser.add_argument("--drand-verifier", type=Path, required=True)
+    parser.add_argument("--source-repo", type=Path, default=ROOT)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     try:
@@ -864,6 +1116,11 @@ def main() -> int:
             args.dsv4_profile,
             args.serving_manifest,
             args.glm_profile,
+            randomness_receipt=args.randomness_receipt,
+            candidate_hash=args.candidate_hash,
+            freeze_commit=args.freeze_commit,
+            drand_verifier=args.drand_verifier,
+            source_repo=args.source_repo,
         )
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with args.out.open("x", encoding="utf-8") as stream:
@@ -887,8 +1144,13 @@ def main() -> int:
         with identity.open("x", encoding="utf-8") as stream:
             json.dump(
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "record_type": "matched_campaign_identity",
+                    "candidate_hash": args.candidate_hash,
+                    "freeze_commit": args.freeze_commit,
+                    "randomness_receipt_sha256": _sha256(
+                        args.randomness_receipt
+                    ),
                     "dsv4_binary_sha256": profile["binary_sha256"],
                     "dsv4_configuration_sha256": profile["configuration_sha256"],
                     "dsv4_serving_weights_manifest_sha256": profile[

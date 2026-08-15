@@ -22,6 +22,12 @@ HISTORICAL_RANDOMNESS = (
     / "glm52-gates"
     / "lossless-plateau-candidate10-randomness.json"
 )
+HISTORICAL_RANDOMNESS_VALUE = json.loads(
+    HISTORICAL_RANDOMNESS.read_text(encoding="ascii")
+)
+HISTORICAL_MATCHED_SEED = HISTORICAL_RANDOMNESS_VALUE["seed_derivation"][
+    "matched_seed"
+]
 
 
 def load_module():
@@ -49,7 +55,7 @@ class MatchedEvidenceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.collector = load_module()
 
-    def make_campaign(self, root: Path, *, seed: int = 1234):
+    def make_campaign(self, root: Path, *, seed: int = HISTORICAL_MATCHED_SEED):
         campaign = root / "campaign"
         campaign.mkdir()
         fixture = root / "fixture.txt"
@@ -484,6 +490,28 @@ class MatchedEvidenceTests(unittest.TestCase):
             drand_verifier=DRAND_VERIFIER,
         )
 
+    def collect_current(
+        self,
+        campaign: Path,
+        fixture: Path,
+        profile: Path,
+        serving: Path,
+        glm_profile: Path,
+    ):
+        receipt = campaign / "retained" / "randomness-receipt.json"
+        if not receipt.exists():
+            receipt = self.write_randomness(campaign, HISTORICAL_RANDOMNESS_VALUE)
+        return self.collect_with_randomness(
+            campaign,
+            fixture,
+            profile,
+            serving,
+            glm_profile,
+            receipt,
+            candidate_hash=HISTORICAL_RANDOMNESS_VALUE["candidate_hash"],
+            freeze_commit=HISTORICAL_RANDOMNESS_VALUE["freeze_commit"],
+        )
+
     def test_collector_independently_verifies_committed_randomness_and_arm_seed(self):
         committed = subprocess.run(
             [
@@ -760,7 +788,7 @@ class MatchedEvidenceTests(unittest.TestCase):
     def test_collects_exact_twenty_safe_matched_records(self):
         with tempfile.TemporaryDirectory() as tmp:
             campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
-            records = self.collector.collect_records(
+            records = self.collect_current(
                 campaign, fixture, profile, serving, glm_profile
             )
             self.assertEqual(len(records), 20)
@@ -784,7 +812,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                 Path(tmp)
             )
             self.set_dsv4_safety(profile, dict(self.DSV4_SAFETY_ENVELOPE))
-            records = self.collector.collect_records(
+            records = self.collect_current(
                 campaign, fixture, profile, serving, glm_profile
             )
             self.assertEqual(len(records), 20)
@@ -840,7 +868,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                     with self.assertRaisesRegex(
                         ValueError, "approved DeepSeek profile is invalid"
                     ):
-                        self.collector.collect_records(
+                        self.collect_current(
                             campaign, fixture, profile, serving, glm_profile
                         )
 
@@ -858,7 +886,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
             # Sanity: unmutated campaign collects.
             self.assertEqual(
-                len(self.collector.collect_records(
+                len(self.collect_current(
                     campaign, fixture, profile, serving, glm_profile
                 )),
                 20,
@@ -869,7 +897,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "served GGUF generation"):
-                self.collector.collect_records(
+                self.collect_current(
                     campaign, fixture, profile, serving, glm_profile
                 )
 
@@ -879,7 +907,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             first = campaign / "block0-seq0-armA"
             (first / "samples.log").unlink()
             with self.assertRaisesRegex(ValueError, "samples|canonical safety"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
         with tempfile.TemporaryDirectory() as tmp:
             campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
@@ -887,7 +915,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             target = campaign / "block0-seq3-armA" / "process.identity"
             target.write_bytes(source.read_bytes())
             with self.assertRaisesRegex(ValueError, "fresh servers|server boot"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
     def test_rejects_short_geometry_and_wrong_glm_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -897,7 +925,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             result["cells"] = [result["cells"][0]]
             (first / "result.json").write_text(json.dumps(result))
             with self.assertRaisesRegex(ValueError, "32K-class"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
             second = Path(tmp) / "second"
             second.mkdir()
@@ -906,7 +934,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             value["binary_sha256"] = "9" * 64
             glm_profile.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, "GLM binary"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
     def test_rejects_unequal_prompts_and_wrong_runtime_model(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -916,14 +944,14 @@ class MatchedEvidenceTests(unittest.TestCase):
             value["cells"][1]["reps"][0]["prompt_sha256"] = "8" * 64
             target.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, "unequal prompt bytes"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
         with tempfile.TemporaryDirectory() as tmp:
             campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
             target = campaign / "block0-seq0-armA" / "runtime.config"
             target.write_text(target.read_text().replace("a" * 64, "7" * 64))
             with self.assertRaisesRegex(ValueError, "runtime configuration"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
     def test_rejects_inflated_usage_and_unbound_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -933,7 +961,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             value["cells"][1]["reps"][0]["prompt_tokens"] = 999_999_999
             target.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, "production prompt"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
         with tempfile.TemporaryDirectory() as tmp:
             campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
@@ -941,7 +969,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             value["artifact_sha256"]["scripts/30_bench_speed.py"] = "9" * 64
             glm_profile.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, "campaign artifact"):
-                self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
+                self.collect_current(campaign, fixture, profile, serving, glm_profile)
 
     def test_rejects_coherently_inflated_prompt_fields_without_raw_log_authority(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -954,7 +982,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                     rep["production_prompt_tokens"] = 32_640
                 result_path.write_text(json.dumps(value))
             with self.assertRaisesRegex(ValueError, "raw production prompt"):
-                self.collector.collect_records(
+                self.collect_current(
                     campaign, fixture, profile, serving, glm_profile
                 )
 
@@ -975,7 +1003,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                     encoding="utf-8",
                 )
             with self.assertRaisesRegex(ValueError, "canonical safety"):
-                self.collector.collect_records(
+                self.collect_current(
                     campaign, fixture, profile, serving, glm_profile
                 )
 
@@ -1104,7 +1132,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                 mutate(value)
                 path.write_text(json.dumps(value))
                 with self.assertRaisesRegex(ValueError, message):
-                    self.collector.collect_records(
+                    self.collect_current(
                         campaign, fixture, profile, serving, glm_profile
                     )
 
@@ -1113,7 +1141,7 @@ class MatchedEvidenceTests(unittest.TestCase):
             path = campaign / "block0-seq0-armA" / "model.device-inode-size"
             path.write_text("66306:679228:211075856448\n", encoding="ascii")
             with self.assertRaisesRegex(ValueError, "executed command"):
-                self.collector.collect_records(
+                self.collect_current(
                     campaign, fixture, profile, serving, glm_profile
                 )
 

@@ -4,11 +4,13 @@ umask 077
 
 REPO=/home/bmarti44/spark-deepseek-v4-flash
 TAG=${MATCHED_TAG:?MATCHED_TAG is required}
-SEED=${MATCHED_SEED:?MATCHED_SEED is required}
+[[ ! -v MATCHED_SEED ]] || {
+    echo "MATCHED_SEED is prohibited; the public receipt derives it" >&2
+    exit 2
+}
 BLOCKS=${MATCHED_BLOCKS:-5}
 PORT=${MATCHED_PORT:-8021}
 [[ $TAG =~ ^[a-z0-9][a-z0-9.-]{0,19}$ ]] || { echo "invalid MATCHED_TAG" >&2; exit 2; }
-[[ $SEED =~ ^[0-9]+$ ]] || { echo "MATCHED_SEED must be a non-negative integer" >&2; exit 2; }
 [[ $BLOCKS =~ ^[1-5]$ ]] || { echo "MATCHED_BLOCKS must be 1-5" >&2; exit 2; }
 [[ $PORT =~ ^[0-9]{4,5}$ ]] || { echo "invalid MATCHED_PORT" >&2; exit 2; }
 PORT=$((10#$PORT))
@@ -17,7 +19,21 @@ PORT=$((10#$PORT))
 OUT=/home/bmarti44/.local/state/glm52-decisive-$TAG
 PYTHON=/usr/bin/python3.12
 PYTHON_SHA256=a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1
-FREEZE_RECEIPT=results/glm52-gates/lossless-plateau-candidate12-preaudit.json
+FREEZE_RECEIPT=results/glm52-gates/lossless-plateau-candidate13-preaudit.json
+RANDOMNESS_RELATIVE=results/glm52-gates/lossless-plateau-candidate13-randomness.json
+if [[ ${MATCHED_RETAINED_RUNTIME:-0} == 1 ]]; then
+    RANDOMNESS_INPUT=${MATCHED_RANDOMNESS_RECEIPT:?retained randomness receipt is required}
+    [[ $RANDOMNESS_INPUT == "$OUT/retained/randomness-receipt.json" ]] || {
+        echo "retained randomness receipt path is not canonical" >&2
+        exit 2
+    }
+else
+    RANDOMNESS_INPUT=${MATCHED_RANDOMNESS_RECEIPT:?MATCHED_RANDOMNESS_RECEIPT is required}
+    [[ $RANDOMNESS_INPUT == "$REPO/$RANDOMNESS_RELATIVE" ]] || {
+        echo "randomness receipt path is not the candidate-13 canonical path" >&2
+        exit 2
+    }
+fi
 [[ ! -v PYTHONPATH && ! -v PYTHONHOME && ! -v PYTHONSTARTUP ]] || {
     echo "Python environment injection is prohibited" >&2
     exit 2
@@ -37,7 +53,8 @@ if [[ ${MATCHED_RETAINED_RUNTIME:-0} != 1 ]]; then
     mkdir -p -- "$OUT/retained"
     env -i HOME=/home/bmarti44 PATH=/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 \
         "$PYTHON" -I -B -S - "$REPO" "$head" "$OUT/retained" \
-        "$OUT/retained-manifest.json" "$FREEZE_RECEIPT" <<'PY'
+        "$OUT/retained-manifest.json" "$FREEZE_RECEIPT" \
+        "$RANDOMNESS_RELATIVE" "$RANDOMNESS_INPUT" <<'PY'
 import hashlib
 import json
 import os
@@ -51,6 +68,8 @@ head = sys.argv[2]
 retained = pathlib.Path(sys.argv[3])
 manifest_path = pathlib.Path(sys.argv[4])
 receipt_path = sys.argv[5]
+randomness_relative = sys.argv[6]
+randomness_input = pathlib.Path(sys.argv[7])
 profiles = (
     "configs/glm52-lossless-plateau-profile.json",
     "configs/dsv4-matched-32k-profile.json",
@@ -69,6 +88,25 @@ if not isinstance(reviewed_commit, str) or len(reviewed_commit) != 40:
     raise SystemExit("reviewed runtime commit is missing")
 subprocess.run(
     ["git", "-C", str(repo), "merge-base", "--is-ancestor", reviewed_commit, head],
+    check=True,
+)
+freeze_commit = subprocess.run(
+    [
+        "git", "-C", str(repo), "log", "-1", "--diff-filter=A",
+        "--format=%H", "--", receipt_path,
+    ],
+    check=True,
+    text=True,
+    stdout=subprocess.PIPE,
+).stdout.strip()
+if len(freeze_commit) != 40:
+    raise SystemExit("candidate freeze commit is missing")
+subprocess.run(
+    ["git", "-C", str(repo), "merge-base", "--is-ancestor", reviewed_commit, freeze_commit],
+    check=True,
+)
+subprocess.run(
+    ["git", "-C", str(repo), "merge-base", "--is-ancestor", freeze_commit, head],
     check=True,
 )
 profile_docs = [json.loads(git_bytes(path)) for path in profiles]
@@ -92,6 +130,7 @@ required = {
     "scripts/03_memory_guard.py",
     "scripts/30_bench_speed.py",
     "scripts/56_collect_matched_evidence.py",
+    "scripts/89_verify_drand_receipt.mjs",
     "scripts/glm52_goal.py",
     "fixtures/ctx-32k.txt",
     "vendor/official-encoding/tokenizer.json",
@@ -121,6 +160,35 @@ for relative in sorted(paths):
         stream.flush()
         os.fsync(stream.fileno())
     digests[relative] = actual
+
+expected_randomness_path = repo / randomness_relative
+if (
+    randomness_input != expected_randomness_path
+    or randomness_input.is_symlink()
+    or not randomness_input.is_file()
+):
+    raise SystemExit("randomness receipt input path is absent or unsafe")
+randomness_raw = git_bytes(randomness_relative)
+if randomness_input.read_bytes() != randomness_raw:
+    raise SystemExit("randomness receipt differs from committed HEAD")
+randomness_destination = retained / "randomness-receipt.json"
+fd = os.open(randomness_destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o400)
+with os.fdopen(fd, "wb") as stream:
+    stream.write(randomness_raw)
+    stream.flush()
+    os.fsync(stream.fileno())
+randomness_receipt_sha256 = hashlib.sha256(randomness_raw).hexdigest()
+digests["randomness-receipt.json"] = randomness_receipt_sha256
+
+freeze_receipt_raw = git_bytes(receipt_path)
+freeze_destination = retained / "freeze-receipt.json"
+fd = os.open(freeze_destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o400)
+with os.fdopen(fd, "wb") as stream:
+    stream.write(freeze_receipt_raw)
+    stream.flush()
+    os.fsync(stream.fileno())
+freeze_receipt_sha256 = hashlib.sha256(freeze_receipt_raw).hexdigest()
+digests["freeze-receipt.json"] = freeze_receipt_sha256
 
 def sha256_path(path):
     value = hashlib.sha256()
@@ -172,6 +240,9 @@ manifest = {
     "schema": "matched-retained-closure-v1",
     "git_head": head,
     "reviewed_runtime_commit": reviewed_commit,
+    "freeze_commit": freeze_commit,
+    "freeze_receipt_sha256": freeze_receipt_sha256,
+    "randomness_receipt_sha256": randomness_receipt_sha256,
     "python_runtime": python_runtime,
     "sha256": digests,
 }
@@ -185,7 +256,8 @@ PY
     exec env -i HOME=/home/bmarti44 XDG_RUNTIME_DIR=/run/user/1000 \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         LANG=C.UTF-8 LC_ALL=C.UTF-8 MATCHED_RETAINED_RUNTIME=1 \
-        MATCHED_TAG="$TAG" MATCHED_SEED="$SEED" \
+        MATCHED_TAG="$TAG" \
+        MATCHED_RANDOMNESS_RECEIPT="$OUT/retained/randomness-receipt.json" \
         MATCHED_BLOCKS="$BLOCKS" MATCHED_PORT="$PORT" \
         /usr/bin/bash "$OUT/retained/results/glm52-goal/harness/decisive_matched.sh"
 fi
@@ -199,6 +271,7 @@ GLM_PROFILE=$CODE_ROOT/configs/glm52-lossless-plateau-profile.json
 DSV4_PROFILE=$CODE_ROOT/configs/dsv4-matched-32k-profile.json
 BENCH=$CODE_ROOT/scripts/30_bench_speed.py
 COLLECTOR=$CODE_ROOT/scripts/56_collect_matched_evidence.py
+DRAND_VERIFIER=$CODE_ROOT/scripts/89_verify_drand_receipt.mjs
 TOKENIZER_NATIVE=$CODE_ROOT/runtime/tokenizers.abi3.so
 TOKENIZER_NATIVE_SHA256=3c7e64a6cf423a4b675d535b0e56667382a02fa71f86380719d2a442ad98c1c7
 CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
@@ -206,6 +279,60 @@ GLM_CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6
 GLM_BINARY_SHA256=eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2
 FAULT_PATTERN='NV_ERR_NO_MEMORY|NVRM.*Xid|oom-kill|Out of memory: Killed process|Killed process .*total-vm'
 GLM_ENV_ALLOWLIST=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_IQ2_DOWN_REFERENCE,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_CUDA_STABLE_MODEL_REMAP,DS4_TOKEN_TIMING_LOG
+
+readarray -t RANDOMNESS_BINDING < <(
+    "$PYTHON" -I -B -S - "$COLLECTOR" "$RANDOMNESS_INPUT" \
+        "$OUT/retained-manifest.json" "$DRAND_VERIFIER" "$REPO" <<'PY'
+import importlib.util
+import json
+import pathlib
+import sys
+
+collector_path, receipt_path, manifest_path, verifier_path, source_repo = sys.argv[1:]
+spec = importlib.util.spec_from_file_location("matched_evidence", collector_path)
+if spec is None or spec.loader is None:
+    raise SystemExit("cannot load retained matched collector")
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+with open(manifest_path, encoding="ascii") as stream:
+    manifest = json.load(stream)
+candidate = manifest.get("reviewed_runtime_commit")
+freeze = manifest.get("freeze_commit")
+seed = module.verify_randomness_receipt(
+    pathlib.Path(receipt_path),
+    candidate_hash=candidate,
+    freeze_commit=freeze,
+    drand_verifier=pathlib.Path(verifier_path),
+    retained_manifest=pathlib.Path(manifest_path),
+    source_repo=pathlib.Path(source_repo),
+)
+with open(receipt_path, encoding="ascii") as stream:
+    round_value = json.load(stream)["receipt"]["round"]
+print(seed)
+print(round_value)
+print(candidate)
+print(freeze)
+PY
+)
+(( ${#RANDOMNESS_BINDING[@]} == 4 )) || {
+    echo "randomness derivation did not produce an exact binding" >&2
+    exit 2
+}
+MATCHED_DERIVED_SEED=${RANDOMNESS_BINDING[0]}
+DRAND_ROUND=${RANDOMNESS_BINDING[1]}
+CANDIDATE_HASH=${RANDOMNESS_BINDING[2]}
+FREEZE_COMMIT=${RANDOMNESS_BINDING[3]}
+[[ $MATCHED_DERIVED_SEED =~ ^[0-9]+$ && $DRAND_ROUND =~ ^[1-9][0-9]*$ &&
+   $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ && $FREEZE_COMMIT =~ ^[0-9a-f]{40}$ ]] || {
+    echo "randomness binding output is malformed" >&2
+    exit 2
+}
+[[ $TAG == "p13-r$DRAND_ROUND" ]] || {
+    echo "campaign tag does not bind the verified drand round" >&2
+    exit 2
+}
+SEED=$MATCHED_DERIVED_SEED
 
 wait_full_release() {
     "$PYTHON" -I -B -S "$CODE_ROOT/scripts/03_memory_guard.py" \
@@ -618,6 +745,9 @@ verify_terminal_closure
     --fixture "$CODE_ROOT/fixtures/ctx-32k.txt" \
     --dsv4-profile "$DSV4_PROFILE" --glm-profile "$GLM_PROFILE" \
     --serving-manifest "$REPO/weights/unsloth-ud-q2_k_xl/manifest.json" \
+    --randomness-receipt "$RANDOMNESS_INPUT" \
+    --candidate-hash "$CANDIDATE_HASH" --freeze-commit "$FREEZE_COMMIT" \
+    --drand-verifier "$DRAND_VERIFIER" --source-repo "$REPO" \
     --out "$OUT/raw.jsonl"
 verify_terminal_closure
 PREFLIGHT_DONE=0

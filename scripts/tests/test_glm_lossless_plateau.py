@@ -14,7 +14,7 @@ ARM = ROOT / "results/glm52-goal/harness/glm_decisive_arm.sh"
 DSV4_ARM = ROOT / "results/glm52-goal/harness/dsv4_decisive_arm.sh"
 COLLECTOR = ROOT / "scripts/56_collect_matched_evidence.py"
 DSV4_PROFILE = ROOT / "configs/dsv4-matched-32k-profile.json"
-FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate12-preaudit.json"
+FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate13-preaudit.json"
 GLM_CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 DSV4_CGROUP = ROOT / "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh"
 DRAND_VERIFIER = ROOT / "scripts/89_verify_drand_receipt.mjs"
@@ -102,15 +102,16 @@ class GlmLosslessPlateauTests(unittest.TestCase):
 
     def test_campaign_derives_seed_only_from_retained_candidate_receipt(self):
         campaign = CAMPAIGN.read_text()
+        collector = COLLECTOR.read_text()
         self.assertIn('[[ ! -v MATCHED_SEED ]]', campaign)
         self.assertNotIn('SEED=${MATCHED_SEED', campaign)
         self.assertIn('MATCHED_RANDOMNESS_RECEIPT', campaign)
         self.assertIn('randomness-receipt.json', campaign)
         self.assertIn('scripts/89_verify_drand_receipt.mjs', campaign)
-        self.assertIn('GLM52-LOSSLESS-PLATEAU-32K-V1', campaign)
-        self.assertIn('candidate_commit', campaign)
-        self.assertIn('freeze_commit', campaign)
-        self.assertIn('published_at_utc', campaign)
+        self.assertIn('GLM52-LOSSLESS-PLATEAU-32K-V1', collector)
+        self.assertIn('candidate_hash', collector)
+        self.assertIn('freeze_commit', collector)
+        self.assertIn('published_at_utc', collector)
         self.assertIn('reviewed runtime commit', campaign)
         self.assertIn('randomness_receipt_sha256', campaign)
         self.assertIn('MATCHED_DERIVED_SEED', campaign)
@@ -201,7 +202,7 @@ class GlmLosslessPlateauTests(unittest.TestCase):
                     "tokenizer_native_path", "tokenizer_native_sha256",
                 },
             )
-        self.assertIn("lossless-plateau-candidate12-preaudit.json", campaign)
+        self.assertIn("lossless-plateau-candidate13-preaudit.json", campaign)
         self.assertIn("reviewed runtime commit", campaign)
         self.assertIn("/usr/bin/python3.12", campaign)
         self.assertIn("-I", campaign)
