@@ -80,6 +80,15 @@ class W6ScorerTests(unittest.TestCase):
         with self.assertRaises(SCORER.ScoreError):
             SCORER.validate_and_score_rows(self.schedule, mutated)
 
+    def test_expected_stderr_is_schedule_bound(self):
+        transcript = SCORER.expected_stderr(self.schedule)
+        self.assertIn(b"CUDA backend initialized", transcript)
+        self.assertEqual(transcript.count(b"must be 1, 2, or 4"), 6)
+        changed = list(self.schedule)
+        changed[0], changed[1] = changed[1], changed[0]
+        if changed != self.schedule:
+            self.assertNotEqual(transcript, SCORER.expected_stderr(changed))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -84,6 +84,24 @@ def schedule_from_randomness(randomness: str) -> list[int]:
     return [width for _, width in sorted(tagged)]
 
 
+def expected_stderr(schedule: list[int]) -> bytes:
+    lines = ["ds4: CUDA backend initialized on NVIDIA GB10 (sm_121) dev=0"]
+    for _ in range(12):
+        lines.extend(f"ds4: GLM indexer query tiles={width}" for width in (1, 2, 4))
+    lines.extend(
+        ["ds4: DS4_CUDA_GLM_INDEXER_QUERY_TILES must be 1, 2, or 4"] * 6)
+    lines.extend([
+        "ds4: GLM indexer query tiles=2",
+        "ds4: GLM indexer query-tile reuse is unavailable in quality mode",
+    ])
+    previous = 2
+    for width in schedule:
+        if width != previous:
+            lines.append(f"ds4: GLM indexer query tiles={width}")
+            previous = width
+    return ("\n".join(lines) + "\n").encode()
+
+
 def validate_and_score_rows(schedule: list[int], raw: bytes) -> dict:
     try:
         lines = raw.decode("utf-8").splitlines()
@@ -254,8 +272,8 @@ def score_run(run_dir: Path) -> dict:
     raw = _read(run_dir / "raw.jsonl")
     if _sha(raw) != manifest["raw_sha256"] or raw != bound["microgate.stdout"]:
         raise ScoreError("raw evidence binding differs")
-    if bound["microgate.stderr"] != b"":
-        raise ScoreError("microgate emitted unexpected stderr")
+    if bound["microgate.stderr"] != expected_stderr(schedule):
+        raise ScoreError("microgate stderr state-machine transcript differs")
     invocation = manifest["invocation"]
     if not isinstance(invocation, dict) or invocation.get("exit_code") != 0 or \
             invocation.get("schedule_env") != ",".join(map(str, schedule)):

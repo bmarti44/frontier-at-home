@@ -174,7 +174,7 @@ def main() -> int:
         fail("CUDA microgate timed out")
     completed_at = datetime.now(timezone.utc).isoformat()
     after = memory_snapshot()
-    if process.returncode != 0 or stderr != "":
+    if process.returncode != 0:
         fail(f"CUDA microgate failed: rc={process.returncode} stderr={stderr[-1000:]}")
     if len(stdout.splitlines()) != 16:
         fail("CUDA microgate output row count differs")
