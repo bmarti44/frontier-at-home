@@ -1,0 +1,15 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-attempt-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "attempt": 4,
+  "status": "FAIL",
+  "date": "2026-08-15",
+  "observed": "After the codec tie fix, a robust fused random value still disagreed because the fixture oracle assumed an exact RMS factor of 0.5 while the production fast-rsqrt value is only approximately 0.5 (index 144 observed -1.45455 versus -1.09091).",
+  "bounded_fix": "Read the independently produced q-normalization output, derive the actual production RMS factor from q_out/q_weight, and apply that factor in the CPU pre-quantization oracle. The oracle still computes block amax, scale, and E2M1 selection independently; exact midpoint semantics remain covered through the non-RMS ordinary path.",
+  "artifact_sha256": {
+    "/tmp/w9-e2m1-c3-green4.stdout": "93e15ec6cab6be06668ba064307d5d738b329f4119e43e11e69f3a6af45ff179",
+    "/tmp/w9-e2m1-c3-green4.stderr": "9fcc16b7ae8bd55adcc8fb5e5c9b61faa981ebbeff5789f62b9359b8416ba1a3"
+  },
+  "acceptance": "The fused output must match the independent codec oracle applied to the observed RMS factor, while ordinary exact midpoint cases and both bypass mutations remain rejecting."
+}
