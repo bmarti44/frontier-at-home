@@ -1,0 +1,23 @@
+{
+  "schema": "glm52-lossless-plateau-red-v1",
+  "candidate_number_for_gate": 4,
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r316.json",
+  "recorded_at_utc": "2026-08-15T15:42:00Z",
+  "command": "python3 -m unittest scripts.tests.test_glm_lossless_plateau scripts.tests.test_matched_evidence",
+  "tests_run": 15,
+  "failures": 5,
+  "errors": 1,
+  "exit_code": 1,
+  "tests_sha256_by_path": {
+    "scripts/tests/test_glm_lossless_plateau.py": "f3beb22430cf55b172836496cff78a17ba897687edfecbb9fed86ef8b112c7c6",
+    "scripts/tests/test_matched_evidence.py": "70918e109feaf90ba05a480037b0ea80a96dadc89401c5897c85c2d24b353e2c"
+  },
+  "red_behaviors": [
+    "campaign does not retain and execute a Git-bound immutable closure or acquire the global inference lock before model verification",
+    "DeepSeek arm leaves prompt caching enabled, binds only one shard, and self-authors supervision booleans",
+    "collector accepts coherently inflated result prompt counts without independently parsing the raw production log",
+    "collector accepts a prefixed SAFE_RUN_DONE substring with killed=floor",
+    "DeepSeek profile has no owner-accepted 8 GiB-floor contained memory envelope"
+  ],
+  "scope": "Only the named round-316 critical/high closure plus its supervision medium; no engine or metric-formula change."
+}

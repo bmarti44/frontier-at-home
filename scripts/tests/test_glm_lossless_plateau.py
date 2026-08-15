@@ -11,6 +11,8 @@ CAMPAIGN_PROFILE = ROOT / "configs/glm52-lossless-plateau-profile.json"
 CAMPAIGN = ROOT / "results/glm52-goal/harness/decisive_matched.sh"
 ARM = ROOT / "results/glm52-goal/harness/glm_decisive_arm.sh"
 DSV4_ARM = ROOT / "results/glm52-goal/harness/dsv4_decisive_arm.sh"
+COLLECTOR = ROOT / "scripts/56_collect_matched_evidence.py"
+DSV4_PROFILE = ROOT / "configs/dsv4-matched-32k-profile.json"
 
 
 class GlmLosslessPlateauTests(unittest.TestCase):
@@ -78,6 +80,54 @@ class GlmLosslessPlateauTests(unittest.TestCase):
                 hashlib.sha256((ROOT / path).read_bytes()).hexdigest(),
                 path,
             )
+
+    def test_campaign_retains_execution_bytes_and_holds_one_global_lock(self):
+        campaign = CAMPAIGN.read_text()
+        self.assertIn("MATCHED_RETAINED_RUNTIME", campaign)
+        self.assertIn("retained/decisive_matched.sh", campaign)
+        self.assertIn("git show", campaign)
+        self.assertIn("INFERENCE_LOCK_FD", campaign)
+        self.assertIn("GLM_SAFE_PARENT_LOCK_FD", campaign)
+        self.assertLess(
+            campaign.index("INFERENCE_LOCK_FD"),
+            campaign.index("verify_campaign_artifacts"),
+        )
+
+    def test_dsv4_arm_disables_prompt_cache_and_records_all_shard_checkpoints(self):
+        arm = DSV4_ARM.read_text()
+        self.assertIn("--no-cache-prompt", arm)
+        self.assertIn("model.shards.jsonl", arm)
+        for checkpoint in ("prelaunch", "ready", "post_requests"):
+            self.assertIn(checkpoint, arm)
+        for self_authored in (
+            '"healthy": True',
+            '"memwatch_alive": True',
+            '"server_alive": True',
+            '"watchdog_armed": True',
+        ):
+            self.assertNotIn(self_authored, arm)
+
+    def test_collector_uses_raw_prompt_events_and_canonical_safety_records(self):
+        collector = COLLECTOR.read_text()
+        self.assertIn("_parse_production_prompt_counts", collector)
+        self.assertIn("_parse_canonical_safety", collector)
+        self.assertIn("safety.wrapper.out", collector)
+        self.assertNotIn('if "SAFE_RUN_DONE rc=0" not in safety', collector)
+
+    def test_dsv4_profile_declares_owner_accepted_containment_envelope(self):
+        profile = json.loads(DSV4_PROFILE.read_text())
+        self.assertEqual(
+            profile["safety"],
+            {
+                "kill_floor_gib": 8,
+                "minimum_start_gib": 110,
+                "memory_high_gib": 105,
+                "memory_max_gib": 107,
+                "sample_hz": 4,
+                "swap_max_bytes": 0,
+                "timeout_seconds": 5400,
+            },
+        )
 
 
 if __name__ == "__main__":

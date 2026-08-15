@@ -461,6 +461,42 @@ class MatchedEvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "campaign artifact"):
                 self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
 
+    def test_rejects_coherently_inflated_prompt_fields_without_raw_log_authority(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            for directory in campaign.iterdir():
+                result_path = directory / "result.json"
+                value = json.loads(result_path.read_text())
+                for rep in value["cells"][1]["reps"]:
+                    rep["prompt_tokens"] = 32_640
+                    rep["production_prompt_tokens"] = 32_640
+                result_path.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "raw production prompt"):
+                self.collector.collect_records(
+                    campaign, fixture, profile, serving, glm_profile
+                )
+
+    def test_rejects_prefixed_or_killed_safety_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
+            for directory in campaign.iterdir():
+                prefix = ""
+                environment_path = directory / "process.environment"
+                if environment_path.exists():
+                    environment = json.loads(environment_path.read_text())
+                    prefix = (
+                        "executed_environment_allowlist=bound "
+                        f"executed_environment_sha256={environment['sha256']}\n"
+                    )
+                (directory / "safety.main.log").write_text(
+                    prefix + "NOT_SAFE_RUN_DONE rc=0 killed=floor\n",
+                    encoding="utf-8",
+                )
+            with self.assertRaisesRegex(ValueError, "canonical safety"):
+                self.collector.collect_records(
+                    campaign, fixture, profile, serving, glm_profile
+                )
+
     def test_rejects_live_environment_command_and_model_identity_drift(self):
         mutations = (
             (
