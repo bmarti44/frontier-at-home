@@ -1,0 +1,42 @@
+{
+  "schema": "glm52-w9-fp4-amax-scale-diagnostic-v1",
+  "status": "POSTHOC_DIAGNOSTIC_ONLY",
+  "date": "2026-08-15",
+  "purpose": "Bound the error of the production-cheap scale rule before writing a packed CUDA path.",
+  "source_capture": "results/glm52-gates/W9-real-capture-pass-a14e364",
+  "capture_hashes": {
+    "kv.f32": "805b30d0c4ac89bd5cd361c455c3c6eb49d69d32b49d8afb935b5a75a7de33ed",
+    "query.f32": "a9346a4d3a8fc8fd6915905cc8c7f2a595816b957713a1fbfa8a1cfe182d0a9b",
+    "selected.u32": "fe9edd824633783800ff16f428c1b42bcebb15276a386b951fb0727897b0eba0"
+  },
+  "split_lineage": {
+    "candidate_commit": "4f4a9afae16a4e95a94d6af7ec46ebc5f3d5427e",
+    "drand_round": 6378811,
+    "randomness": "f0ce15de1b66a22c97c2f77b51518f8c7467f8da7a7b826cc97ff38d4d079b66",
+    "master_seed_sha256": "f5bb62fcdda099bbf72a70ccba1fda3ca4b8164c7e1e33410c3e89edce4408ea",
+    "heldout_pairs": 29609024
+  },
+  "format": {
+    "values": "E2M1 levels {-6,-4,-3,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,3,4,6}",
+    "block_values": 32,
+    "scale": "float32 max(abs(block))/6, or 1 for an all-zero block",
+    "rounding": "nearest midpoint with lower code on an exact midpoint",
+    "packed_bytes_per_512_value_row": 320,
+    "f32_bytes_per_512_value_row": 2048,
+    "storage_ratio": 0.15625
+  },
+  "query_weighted_relative_rmse_by_layer": {
+    "0": 0.027451033184268406,
+    "2": 0.0214470392993955,
+    "10": 0.03683522153438803,
+    "26": 0.04107240684916794,
+    "42": 0.06486202206916483,
+    "58": 0.0527842568362901,
+    "74": 0.04158289011139942,
+    "77": 0.03744520534758126
+  },
+  "aggregate_query_weighted_relative_rmse": 0.045605047099661,
+  "diagnostic_ceiling": 0.05,
+  "verdict": "PASS",
+  "authority": "This is an unprivileged offline engineering diagnostic. It authorizes no fidelity spend or adoption; the production candidate must pass the fixed 100-case NLL/top-1 gate."
+}

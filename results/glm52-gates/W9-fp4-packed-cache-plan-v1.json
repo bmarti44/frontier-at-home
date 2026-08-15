@@ -1,0 +1,59 @@
+{
+  "schema": "glm52-w9-fp4-packed-cache-plan-v1",
+  "gate": "W9-fp4-packed-compact-cache",
+  "candidate": 1,
+  "status": "PREREGISTERED_BEFORE_IMPLEMENTATION",
+  "scope": "Pack only the 512-wide non-RoPE GLM compact latent. Keep the 64-wide RoPE cache, indexer cache, weights, routing, selected-ID order, and all non-GLM paths unchanged.",
+  "flag": {
+    "name": "DS4_GLM_COMPACT_CACHE_E2M1",
+    "enabled_value": "1",
+    "default": "off",
+    "explicit_zero": "must equal an unset flag",
+    "other_values": "reject startup"
+  },
+  "format": {
+    "block_values": 32,
+    "codes_per_byte": 2,
+    "scale_type": "float32",
+    "scale_rule": "max(abs(block))/6, or 1 for an all-zero block",
+    "codebook": [-6, -4, -3, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 3, 4, 6],
+    "rounding": "nearest midpoint with lower code on an exact midpoint",
+    "latent_row_bytes": 320,
+    "baseline_f32_latent_row_bytes": 2048,
+    "required_storage_ratio": 0.15625
+  },
+  "production_path_red": [
+    "unchanged engine has no exact DS4_GLM_COMPACT_CACHE_E2M1 selector",
+    "unchanged store kernels cannot emit the packed 320-byte row",
+    "unchanged attention readers cannot consume the packed representation"
+  ],
+  "microgate": {
+    "required": [
+      "packed bytes and decoded float32 values match an independent CPU reference for finite randomized, zero, signed-zero, midpoint, saturation, ragged-row, and canary cases",
+      "all production store paths increment a format-specific row counter and every compact-latent reader increments a format-specific value counter",
+      "the candidate allocates exactly 320 bytes per 512-value latent row while RoPE and indexer allocation are byte-unchanged",
+      "unset and explicit-zero arms are byte-identical and execute no E2M1 store/read counter",
+      "repeated candidate runs are deterministic"
+    ],
+    "failure": "Any mismatch, uncovered reader/store path, canary write, non-finite result, malformed flag acceptance, or storage-ratio mismatch is FAIL."
+  },
+  "fidelity_gate": {
+    "fixture": "glm52-openrouter-100",
+    "baseline_nll": 0.4515,
+    "baseline_top1": 0.834,
+    "requirements": [
+      "token-weighted delta NLL <= 0.01",
+      "one-sided 95% upper bound for delta NLL <= 0.01",
+      "top-1 loss <= 0.005",
+      "one-sided 95% upper bound for top-1 loss <= 0.005",
+      "candidate is deterministic with itself run-to-run"
+    ],
+    "adoption_authority": "Passing statistical limits does not authorize adoption. Report the nonzero fidelity delta with measured memory/performance purchase to the owner."
+  },
+  "serving_gate": "Only after microgate review and fidelity PASS: matched contained arms must demonstrate the intended memory reduction, complete output, no OOM/Xid/swap/survivor, and no decode or TTFT regression beyond preregistered bounds.",
+  "context_gate": "Only after serving and fidelity gates: direct cap 1048576 with at least 1000000 actual input tokens, deterministic multi-position retrieval plus negative controls, completed generation with max_tokens >= 64, and at least 10 GiB MemAvailable at the low point.",
+  "offline_basis": [
+    "results/glm52-gates/W9-fp4-falsifier-diagnostic-4f4a9af-2026-08-15",
+    "results/glm52-gates/W9-fp4-amax-scale-diagnostic-2026-08-15.json"
+  ]
+}

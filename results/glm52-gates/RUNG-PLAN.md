@@ -845,7 +845,8 @@ terminating W4 without another multi-hour run. See
 `W4-serving-candidate10-review-r310.json`. W5/W6 remain eligible as distinct
 mechanisms and must not reuse or reinterpret the W4 result.
 
-W5 is now the active fidelity-free gate. Its exact default-off flag is
+W5 is paused after a convergence break and is not adopted. Its exact
+default-off flag is
 `DS4_CUDA_GLM_INDEXER_CACHE_F16=1`. The candidate may change only the
 128-wide indexer-key cache on CUDA from F32 to FP16; compact latent and RoPE
 storage, quality mode, selected-ID ordering/ties, and all other caches remain
@@ -858,13 +859,21 @@ allocation to be unchanged and explicit flag value `0` to equal default OFF.
 Byte-identical generation remains the serving confirmation backbone; no NLL
 budget is spent.
 
-Candidate 1's test is committed in the reconstructed W4-frozen engine tree at
-`ce5017c727342237ca59c246da6e84360955bd1b`. On unchanged engine closure
-`8cde153a43b170ad6c66644dba4392c343cf39b1`, it builds successfully and fails
-only the intended ON-arm assertion: `W5 ON stores only indexer keys as F16`.
-See `W5-indexer-f16-candidate1-red.json`. First run a bounded CUDA allocation,
-score, and selected-ID microgate; only a passing reviewed microgate may proceed
-to a model-backed logit/output confirmation.
+Candidate 1 preserved the intended production-path RED and implemented the
+isolated F16 indexer allocation, but reviewer findings did not strictly shrink
+under the repository convergence rule. Preserve the committed W5 attempt and
+do not adopt or silently carry the representation into another gate. It may be
+reopened only as its own bounded candidate with the named blockers resolved.
+
+W6 K-tile reuse is terminal **NO_RESULT** and is not adopted. The corrected,
+randomized CUDA microgate used the frozen canonical binary below.
+SHA-256 `703237062fafa70e240ce6d525cd2fc9cb93fb774c78842398371285ea722d1a`.
+Both wider variants preserved exact scores, ordered selected IDs, complete
+writes, canaries, causal cases and ragged tails, but both were slower: width 2
+had geometric speedup `0.9616597011` with lower-95 `0.9552284552`, and width 4
+had geometric speedup `0.8807974994` with lower-95 `0.8756106404`, against the
+fixed `1.05` requirement. Nash and Singer found no critical/high issues in the
+terminal review. See `W6-indexer-tile-reuse-terminal.json`.
 
 ### Demoted acceptance speculation
 
@@ -906,7 +915,17 @@ router's 42% top-2 gate mass may make low-weight approximations cheaper than
 frequency alone suggests, but the 100-case NLL suite decides. Test intermediate
 bit rates separately; every rate requires deterministic self-replay, retrieval,
 quality and owner approval. Real 512-wide captures and query-weighted error are
-the offline falsifier before kernels.
+the offline falsifier before kernels. That falsifier has now produced a bounded
+**post-hoc diagnostic PASS** from the hash-bound real capture: plain E2M1
+measured query-weighted relative RMSE `0.0408614719`, Hadamard E2M1
+`0.0407874594`, and Hadamard plus per-channel correction `0.0407269026`, all
+below the preregistered `0.05` offline ceiling across all eight stratified
+layers and 29,609,024 evaluated pairs. The mathematical scorer and capture
+were unchanged; only the blocked root publication wrapper was bypassed.
+Therefore this result justifies a default-off packed FP4 implementation
+experiment, but it is not adoption evidence and cannot replace the fixed
+100-case NLL/top-1 gate. See
+`W9-fp4-falsifier-diagnostic-4f4a9af-2026-08-15/`.
 
 ### Rung 2.5 - optional router-locality fine-tune
 
@@ -963,7 +982,7 @@ negative controls with `max_tokens >= 64`, complete generation, and retain at
 least 10 GiB available memory. Switching/rollback is re-run only after a
 candidate earns adoption; DSV4 and GLM engine forks remain separate.
 
-Current status (2026-08-07): **W8 exact F32 NVMe cKV candidate 9 is closed
+Current status (2026-08-15): **W8 exact F32 NVMe cKV candidate 9 is closed
 FAIL.** In the reviewed 5,066-token model-backed smoke, the exact arm completed
 only the first 2,048-token checkpoint (254.004 seconds) and then exceeded the
 fixed 1,800-second request timeout before returning a response. The resident
@@ -975,9 +994,11 @@ at 100 and no critical/high issues. A review-time accidental overwrite and
 restoration of `exact/http-status` is disclosed; the local attempt is explicitly
 non-pristine, and the committed pre-mutation digest record plus the independent
 timeout/missing-arm rules support FAIL only. Do not extend the timeout or use
-this candidate for direct 1M. The next bounded context route is the W9 real
-512-wide capture and offline falsifier; a materially different exact-storage
-design would require a new candidate rather than rehabilitating this one.
+this candidate for direct 1M. W9 has since completed the real 512-wide capture
+and cleared its offline FP4 error falsifier diagnostically. The next bounded
+context route is a default-off packed FP4 compact-cache implementation followed
+by the fixed 100-case NLL/top-1 gate; a materially different exact-storage
+design would require a new candidate rather than rehabilitating W8.
 
 ## Final decision table
 
