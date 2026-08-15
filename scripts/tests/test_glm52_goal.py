@@ -3353,8 +3353,10 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                 f"{'on' if candidate else 'off'} physical=f32\n"
                 "ds4: GLM compact cache E2M1 fidelity attestation "
                 f"mode={'on' if candidate else 'off'} synchronized=1 "
-                f"normal_rows={100 if candidate else 0} "
-                f"fused_rows={50 if candidate else 0}\n"
+                f"normal_applied_rows={100 if candidate else 0} "
+                "normal_total_rows=100 "
+                f"fused_applied_rows={50 if candidate else 0} "
+                "fused_total_rows=50\n"
             )
             attempts.append({
                 "sequence": sequence,
@@ -3362,13 +3364,20 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                 "fixture_sha256": "5" * 64,
                 "command_log": command_log,
                 "main_log": (
+                    "2026-08-15T00:00:00Z cgroup_verified path=/test "
+                    "memory_high=max memory_max=100000000000 "
                     "memory_swap_max=0 memory_oom_group=1\n"
-                    f"candidate_binary_sha256={'2' * 64}\n"
+                    "2026-08-15T00:00:01Z candidate_src=/frozen/ds4-server "
+                    f"candidate_binary_sha256={'2' * 64} "
+                    "candidate_device_inode=8:42\n"
                     f"executed_environment_sha256="
                     f"{('3' if candidate else '4') * 64}\n"
-                    f"executed_candidate_verified pid={100 + sequence} "
-                    f"start_ticks={200 + sequence}\n"
-                    "SAFE_RUN end rc=0 killed=no\n"
+                    f"2026-08-15T00:00:02Z executed_candidate_verified "
+                    f"pid={100 + sequence} start_ticks={200 + sequence} "
+                    "path=/frozen/ds4-server "
+                    f"executed_binary_sha256={'2' * 64} device_inode=8:42\n"
+                    "2026-08-15T00:00:03Z SAFE_RUN end rc=0 killed=no "
+                    "(124=timeout, 137=SIGKILL/ENOMEM-adjacent)\n"
                 ),
                 "samples_log": "".join(
                     f"2026-08-15T00:00:{sample:02d}Z mem_avail_kb=83886080 "
@@ -3384,11 +3393,12 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
             "engine_candidate_hash": "1" * 40,
             "seed_sha256": seed,
             "binary_sha256": "2" * 64,
+            "binary_path": "/frozen/ds4-server",
+            "binary_device_inode": "8:42",
             "baseline_environment_sha256": "4" * 64,
             "candidate_environment_sha256": "3" * 64,
             "fixture_sha256": "5" * 64,
             "candidate_arm": "A",
-            "candidate_required_paths": ["normal", "fused"],
             "attempts": attempts,
         }
 
@@ -3401,8 +3411,9 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
 
     def test_inactive_or_malformed_candidate_fails_closed(self):
         for mutate in (
-            "off", "zero", "identical", "duplicate", "missing_path",
-            "binary", "environment", "swap", "fault",
+            "off", "zero", "identical", "duplicate", "binary",
+            "executed_binary", "environment", "swap", "fault",
+            "malformed_sample", "failed_before_success", "partial",
         ):
             campaign = self.campaign()
             candidate_attempts = [
@@ -3415,7 +3426,7 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
             elif mutate == "zero":
                 candidate_attempts[0]["command_log"] = candidate_attempts[0][
                     "command_log"
-                ].replace("normal_rows=100", "normal_rows=0")
+                ].replace("normal_applied_rows=100", "normal_applied_rows=0")
             elif mutate == "identical":
                 for attempt in candidate_attempts:
                     for case in attempt["cases"]:
@@ -3424,12 +3435,17 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                 candidate_attempts[0]["command_log"] += candidate_attempts[0][
                     "command_log"
                 ].splitlines()[-1] + "\n"
-            elif mutate == "missing_path":
-                campaign["candidate_required_paths"] = ["normal", "unknown"]
             elif mutate == "binary":
                 candidate_attempts[0]["main_log"] = candidate_attempts[0][
                     "main_log"
                 ].replace("2" * 64, "9" * 64)
+            elif mutate == "executed_binary":
+                candidate_attempts[0]["main_log"] = candidate_attempts[0][
+                    "main_log"
+                ].replace(
+                    f"executed_binary_sha256={'2' * 64}",
+                    f"executed_binary_sha256={'9' * 64}",
+                )
             elif mutate == "environment":
                 candidate_attempts[0]["main_log"] = candidate_attempts[0][
                     "main_log"
@@ -3442,10 +3458,72 @@ class W9E2M1FidelityRawScorerTests(unittest.TestCase):
                     "cgroup_swap_current_bytes=1",
                     1,
                 )
+            elif mutate == "malformed_sample":
+                candidate_attempts[0]["samples_log"] += (
+                    "bad cgroup_swap_current_bytes=1\n"
+                )
+            elif mutate == "failed_before_success":
+                candidate_attempts[0]["main_log"] = (
+                    "2026-08-15T00:00:00Z SAFE_RUN end rc=137 killed=yes\n"
+                    + candidate_attempts[0]["main_log"]
+                )
+            elif mutate == "partial":
+                candidate_attempts[0]["command_log"] = candidate_attempts[0][
+                    "command_log"
+                ].replace(
+                    "normal_applied_rows=100 normal_total_rows=100",
+                    "normal_applied_rows=1 normal_total_rows=100",
+                )
             else:
                 candidate_attempts[0]["kernel_log"] = "NVRM: Xid 79\n"
             with self.subTest(mutate=mutate), self.assertRaises(ValueError):
                 self.goal._score_w9_e2m1_fidelity_raw([campaign])
+
+    def test_file_backed_campaign_rejects_post_execution_mutation(self):
+        import tempfile
+
+        campaign = self.campaign()
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            root = Path(raw_tmp)
+            manifest = dict(campaign)
+            attempts = []
+            for attempt in campaign["attempts"]:
+                record = {
+                    key: attempt[key]
+                    for key in ("sequence", "arm", "fixture_sha256")
+                }
+                artifacts = {}
+                for key in ("command_log", "main_log", "samples_log", "kernel_log"):
+                    path = root / f"{attempt['sequence']}-{key}.log"
+                    data = attempt[key].encode()
+                    path.write_bytes(data)
+                    artifacts[key] = {
+                        "path": path.name,
+                        "bytes": len(data),
+                        "sha256": hashlib.sha256(data).hexdigest(),
+                    }
+                path = root / f"{attempt['sequence']}-cases.json"
+                data = json.dumps(attempt["cases"], separators=(",", ":")).encode()
+                path.write_bytes(data)
+                artifacts["cases"] = {
+                    "path": path.name,
+                    "bytes": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                }
+                record["artifacts"] = artifacts
+                attempts.append(record)
+            manifest["attempts"] = attempts
+            manifest["runner_sha256"] = "6" * 64
+            (root / "manifest.json").write_text(json.dumps(manifest))
+            result = self.goal._score_w9_e2m1_fidelity_evidence(
+                root, expected_runner_sha256="6" * 64
+            )
+            self.assertEqual(result["verdict"], "PASS")
+            (root / "0-main_log.log").write_text("replacement\n")
+            with self.assertRaises(ValueError):
+                self.goal._score_w9_e2m1_fidelity_evidence(
+                    root, expected_runner_sha256="6" * 64
+                )
 
 
 if __name__ == "__main__":
