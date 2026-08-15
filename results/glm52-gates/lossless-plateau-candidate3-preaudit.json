@@ -1,0 +1,88 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-v1",
+  "candidate_number_for_gate": 3,
+  "candidate_commit": "f1f2d4f3394f992efffac7b41552934ab3e2f756",
+  "parent_red_commit": "bcad26ed9fa7c32fd139f36ebc50fade36b6125f",
+  "prior_review": "results/glm52-gates/lossless-plateau-preflight-review-r315.json",
+  "model_run_authorized": false,
+  "scope": "Close only the round-315 prompt-count, executed-provenance, artifact-binding, model-identity, idle-boundary, formula-label, and context-semantics findings. No engine implementation changed and no model was started.",
+  "candidate_delta_sha256": "d93f0f0e2c7492d607130355dabbb2df32cc136d6d0dd55ff714df2104ec6e13",
+  "red_evidence": {
+    "path": "results/glm52-gates/lossless-plateau-candidate3-red.json",
+    "sha256": "fecfb3890672d307953481738d1f2feecf0864ab36b09273cf3fa508bae668da",
+    "result": "3 candidate-specific failures and 18 passes before implementation"
+  },
+  "bindings": {
+    "adopted_glm_profile": {
+      "path": "configs/glm52-profile.json",
+      "sha256": "11bc49a62e0d194f4d186cf670b85f8539efee9bb9ccf9c6485a402cf006be18"
+    },
+    "campaign_profile": {
+      "path": "configs/glm52-lossless-plateau-profile.json",
+      "sha256": "f93e41b9cdda2cea33838170908aa0caf90372e0ab599cfce097e8113e9d735d"
+    },
+    "dsv4_matched_profile": {
+      "path": "configs/dsv4-matched-32k-profile.json",
+      "sha256": "2966ad0a7165fd16fd34572b9921e74ef3fefabe81ca7cae2974f5daf70b849e"
+    },
+    "campaign_runner_sha256": "7bf3d510f24f3c310493cbfb14b1ced466436d53f10a3a58bb01b388126821df",
+    "glm_arm_sha256": "0a27039da2614ab11c6c667b836f4662fe6928a55f57d68fa52e103b8710430b",
+    "dsv4_arm_sha256": "e2ef6ce160c9e26ebea463144f28884f0034de9e4d107da7ce34225ccfa710eb",
+    "cgroup_sha256": "8d7e0832462e36bfa4e2ffe5b57f01c1fabfa301b47c90eb6ebbc73e7e5fb2e5",
+    "safe_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "benchmark_sha256": "23385f43639b23a97ed9b605337f0d766848877c3e4cec87a29ee6fbdfa16a88",
+    "collector_sha256": "9ea3cb1cc17c4972100184f2d29c5b94796db6b99957aaa44fd0721cd1fa9d55",
+    "glm_binary_sha256": "eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2",
+    "glm_model_sha256": "a49de64c5020432bdae23de36a423a9660a5621bc0db8d12b66bd8814b07fea0",
+    "dsv4_source_commit": "0dc74e332edee2616e4d8d9ab3b68dfc340fc14a",
+    "dsv4_binary_sha256": "803b7b39cbdaa1acadc2d06a45f14232589a46e22ed5414cbc01cba175d4995c",
+    "dsv4_runtime_closure_entries": 9,
+    "dsv4_weights_manifest_sha256": "0091522cf58e3c09d3911e26e85688b2bc09f9fb3eb0be4aab47e7eca9800e2f"
+  },
+  "pre_submission_audit": {
+    "focused_tests": {
+      "count": 106,
+      "result": "PASS",
+      "output_sha256": "f73be2b25f7a7b0f892de94385021b54c18d3aef0b44e2e05d0f32d85f2bbafc"
+    },
+    "shell_syntax": "PASS",
+    "python_compile": "PASS",
+    "profile_artifact_hash_replay": "PASS",
+    "dsv4_source_commit_and_clean_tree": "PASS",
+    "dsv4_binary_version": "10053 (0dc74e332)",
+    "secret_lint_self_test": "PASS",
+    "secret_lint_staged": "PASS",
+    "diff_check": "PASS",
+    "host_idle": true,
+    "engine_started": false,
+    "known_unrelated_red": [
+      "test_glm_wrapper_hashes_the_selected_candidate_binary",
+      "test_glm_wrapper_rejects_unsafe_safety_overrides"
+    ],
+    "known_red_rationale": "These two pre-existing specifications require changing glm_safe_run.sh, whose exact SHA remains frozen by completed campaign evidence. Candidate 3 leaves that file byte-identical and does not weaken either test."
+  },
+  "round_315_disposition": {
+    "PLATEAU-315-H1-PREFILL-TIME-RATIO-DIRECTION-MISMATCH": "FIXED by the corrected GLM-over-DSV4 formula label and asymmetric regression vector",
+    "ADV-PLATEAU-H2-SCORER-DOES-NOT-ENFORCE-PINNED-GLM-PROFILE": "FIXED by replaying every profile artifact digest before launch and during collection",
+    "PLATEAU-315-H2-IDLE-BOUNDARY-INCOMPLETE": "FIXED by initial, per-arm, cleanup, and terminal checks for ds4-server, llama-server, fio, the selected listener, and active glm52 user units",
+    "PLATEAU-315-H3-PREARM-MODEL-HASH-PRECONDITIONS-GLM": "FIXED by one pre-campaign full scan of both model generations with cache eviction and per-arm stable device/inode/size binding",
+    "ADV-PLATEAU-R315-H1-UNBOUND-PROMPT-TOKEN-COUNTS": "FIXED by exact request-local production-log prompt counts, equality to response usage, and the 32,768-token envelope",
+    "ADV-PLATEAU-R315-H2-DECLARATIVE-NOT-EXECUTED-PROVENANCE": "FIXED by live process environment, argv, binary, model identity, and DeepSeek mapped runtime-closure evidence",
+    "PLATEAU-315-M1-CAMPAIGN-CONTEXT-CAP-AMBIGUOUS": "FIXED by separate model_supported_context_cap=1048576 and measured_server_context_cap=32768 fields",
+    "ADV-PLATEAU-R315-M1-INCOMPLETE-IDLE-STATE-CLOSURE": "FIXED with the same complete idle checks at every campaign boundary",
+    "ADV-PLATEAU-R315-L1-DUAL-CONTEXT-CAP-SEMANTICS": "FIXED by rejecting the former ambiguous context_cap field"
+  },
+  "safety": {
+    "execution_user": "bmarti44",
+    "sudo_required": false,
+    "fresh_user_systemd_cgroup_per_arm": true,
+    "memory_swap_max_bytes": 0,
+    "oom_policy": "kill",
+    "kill_mode": "control-group",
+    "glm_kill_floor_gib": 40,
+    "dsv4_kill_floor_gib": 18,
+    "minimum_start_gib": 110,
+    "engine_run_requires_clean_review": true
+  },
+  "verdict": "READY_FOR_DELTA_ONLY_REVIEW"
+}
