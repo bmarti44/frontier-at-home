@@ -27,6 +27,16 @@ def load_module():
 
 
 class MatchedEvidenceTests(unittest.TestCase):
+    DSV4_SAFETY_ENVELOPE = {
+        "kill_floor_gib": 8,
+        "minimum_start_gib": 110,
+        "memory_high_gib": 100,
+        "memory_max_gib": 102,
+        "sample_hz": 4,
+        "swap_max_bytes": 0,
+        "timeout_seconds": 5400,
+    }
+
     @classmethod
     def setUpClass(cls):
         cls.collector = load_module()
@@ -422,6 +432,15 @@ class MatchedEvidenceTests(unittest.TestCase):
                 )
         return campaign, fixture, dsv4_profile, serving_manifest, glm_profile
 
+    @staticmethod
+    def set_dsv4_safety(profile: Path, safety: dict[str, object]) -> None:
+        value = json.loads(profile.read_text(encoding="utf-8"))
+        value["safety"] = safety
+        profile.write_text(
+            json.dumps(value, sort_keys=True, allow_nan=False),
+            encoding="utf-8",
+        )
+
     def test_collects_exact_twenty_safe_matched_records(self):
         with tempfile.TemporaryDirectory() as tmp:
             campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
@@ -442,6 +461,72 @@ class MatchedEvidenceTests(unittest.TestCase):
             self.assertTrue(
                 all(len(row["token_timestamps"]) == 128 for row in records)
             )
+
+    def test_collector_accepts_exact_owner_dsv4_safety_envelope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp)
+            )
+            self.set_dsv4_safety(profile, dict(self.DSV4_SAFETY_ENVELOPE))
+            records = self.collector.collect_records(
+                campaign, fixture, profile, serving, glm_profile
+            )
+            self.assertEqual(len(records), 20)
+
+    def test_collector_rejects_stale_or_malformed_dsv4_safety_envelope(self):
+        malformed = {
+            "stale_105_107": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "memory_high_gib": 105,
+                "memory_max_gib": 107,
+            },
+            "float_minimum_start": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "minimum_start_gib": 110.0,
+            },
+            "float_memory_high": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "memory_high_gib": 100.0,
+            },
+            "float_memory_max": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "memory_max_gib": 102.0,
+            },
+            "string_memory_max": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "memory_max_gib": "102",
+            },
+            "high_not_below_max": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "memory_high_gib": 102,
+            },
+            "wrong_minimum_start": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "minimum_start_gib": 109,
+            },
+            "extra_key": {
+                **self.DSV4_SAFETY_ENVELOPE,
+                "diagnostic_override": 1,
+            },
+            "missing_memory_high": {
+                key: value
+                for key, value in self.DSV4_SAFETY_ENVELOPE.items()
+                if key != "memory_high_gib"
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp)
+            )
+            for label, safety in malformed.items():
+                with self.subTest(label=label):
+                    self.set_dsv4_safety(profile, safety)
+                    with self.assertRaisesRegex(
+                        ValueError, "approved DeepSeek profile is invalid"
+                    ):
+                        self.collector.collect_records(
+                            campaign, fixture, profile, serving, glm_profile
+                        )
 
     def test_rejects_a_swapped_deepseek_weight_generation(self):
         """A GGUF generation change must invalidate the matched baseline.
