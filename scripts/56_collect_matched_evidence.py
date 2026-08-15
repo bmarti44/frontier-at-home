@@ -337,22 +337,32 @@ def _parse_canonical_safety(directory: Path) -> None:
     )
     if len(finals) != 1 or int(finals[0][2]) != 0:
         raise ValueError(f"canonical safety cgroup record is invalid in {directory}")
+    base_keys = {"low", "high", "max", "oom", "oom_kill", "oom_group_kill"}
+    critical_keys = base_keys - {"low"}
+    critical_delta_keys = {f"{key}_delta" for key in critical_keys}
+    allowed_keys = base_keys | critical_delta_keys | {"low_delta"}
     event_values: dict[str, int] = {}
     for item in finals[0][3].split(","):
         item = item.strip()
         if not item:
             continue
-        if "=" in item:
-            key, raw = item.split("=", 1)
-        elif ":" in item:
-            key, raw = item.split(":", 1)
-        else:
-            parts = item.split()
-            key, raw = parts if len(parts) == 2 else ("", "")
-        if key and raw.isdigit():
-            event_values[key] = int(raw)
-    for key in ("high_delta", "max_delta", "oom_delta", "oom_kill_delta", "oom_group_kill_delta"):
-        value = event_values.get(key, event_values.get(key.removesuffix("_delta")))
+        match = re.fullmatch(r"([a-z_]+)(?:=| )([0-9]+)", item)
+        if match is None:
+            raise ValueError(f"canonical safety memory event is malformed in {directory}")
+        key, raw = match.groups()
+        if key not in allowed_keys or key in event_values:
+            raise ValueError(f"canonical safety memory event key is invalid in {directory}: {key}")
+        event_values[key] = int(raw)
+    present = set(event_values)
+    if present & critical_delta_keys:
+        required = critical_keys | critical_delta_keys
+        if not required <= present or present - allowed_keys:
+            raise ValueError(f"canonical safety memory event schema is incomplete in {directory}")
+        if ("low" in present) != ("low_delta" in present):
+            raise ValueError(f"canonical safety low-event schema is incomplete in {directory}")
+    elif present != base_keys:
+        raise ValueError(f"canonical safety memory event schema is incomplete in {directory}")
+    for key, value in event_values.items():
         if value != 0:
             raise ValueError(f"canonical safety memory event is nonzero in {directory}: {key}")
     if re.search(r"(?im)^.*\bFATAL\b|^.*\bKILL_FLOOR breached:", main_text):
