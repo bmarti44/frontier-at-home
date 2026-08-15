@@ -1,0 +1,69 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-v1",
+  "candidate_number_for_gate": 6,
+  "campaign_global_review_round_before_review": 317,
+  "candidate_commit": "12de015506d6f5b434aed1376a9a3c9ca83f8b66",
+  "candidate_tree": "906266324bf6acea122ad9a0f61dd1f498a75207",
+  "parent_review": "results/glm52-gates/lossless-plateau-preflight-review-r317.json",
+  "recorded_at_utc": "2026-08-15T16:30:00Z",
+  "scope": "Close only round-317 signal cleanup, authentic safety-marker parsing, and isolated reviewed Python/tokenizer runtime authority. No engine, fixture, arm order, request, output, fidelity, or metric-formula change.",
+  "artifact_sha256": {
+    ".gitleaks.toml": "a338b4c44ca285b0c6eb3d3fd0df99ce8aa3a5b76f6615401b23ac3b5b8b88fe",
+    "scripts/lint_secrets.sh": "49ec4c001776521a36ea58b771f5f6c8ecd6d0bf618e5a06e8da2d14a9974703",
+    "scripts/tests/test_glm_lossless_plateau.py": "52e64158c01ff01113d4ab20bffa73e120302a07184eb80df7634be131be457a",
+    "scripts/tests/test_matched_evidence.py": "e7a68b5e55e3c296f2f53ca87a2096aa471c58821544f903ede4a7a084304ca8",
+    "scripts/tests/test_dsv_matched_signal_cleanup.py": "dda4727ce802783748bb43fe06ab2f35cddc116d2affcd42e0a1b067fd833f95",
+    "configs/glm52-lossless-plateau-profile.json": "b1a11e976824d85ca60490803557a318377f8d4bc87e79e794891814a9dea5aa",
+    "configs/dsv4-matched-32k-profile.json": "daec5f8e9e455dc42fa217d98795413c2239e6819debd28405e0117239e56db0",
+    "results/glm52-goal/harness/decisive_matched.sh": "40c68bca5a575e54dea755605868c27cb0371131c26b80fb4ad7f16b5edc2fce",
+    "results/glm52-goal/harness/glm_decisive_arm.sh": "f5829fcf713b73e2e9aa6d45d0b8e43db71076905a0740f884f425c1d38c328a",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "1c42c1449f20bb1c70dc7eb93f380374af545fa15f54e85709e428b647f39d6e",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "84b658c6147d0fdc1baf11de33e7613eb17f29cc357252c6261c3db22d3ec913",
+    "scripts/30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "scripts/56_collect_matched_evidence.py": "9dfec6b359d57e7a3cf4a12fc25b9197dee47d7eb315f65f842126328552fb48"
+  },
+  "bound_python_runtime": {
+    "executable_path": "/usr/bin/python3.12",
+    "executable_sha256": "a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1",
+    "stdlib_path": "/usr/lib/python3.12",
+    "stdlib_tree_sha256": "b8cb577d2bdeefc77c16bd7a42e467bfd554a7ba104663e760ac896cd93a17a9",
+    "libpython_path": "/usr/lib/aarch64-linux-gnu/libpython3.12.so.1.0",
+    "libpython_sha256": "32ce729462e7ba66c8edb12c1151fa5db25964f65900fe8337c3969f7350672d",
+    "tokenizer_native_sha256": "3c7e64a6cf423a4b675d535b0e56667382a02fa71f86380719d2a442ad98c1c7",
+    "execution_flags": ["-I", "-B", "-S"],
+    "environment": "env -i with no PYTHONPATH, PYTHONHOME, or PYTHONSTARTUP"
+  },
+  "pre_submission_audit": {
+    "focused_command": "python3 -m unittest scripts.tests.test_glm_lossless_plateau scripts.tests.test_matched_evidence scripts.tests.test_dsv_matched_signal_cleanup scripts.tests.test_dsv4_serving_weight_identity scripts.tests.test_profile_conformance",
+    "focused_tests_run": 32,
+    "focused_failures": 0,
+    "focused_errors": 0,
+    "term_int_hup_real_user_systemd_probes": "PASS",
+    "authentic_glm_safe_log_pass_and_breach_mutation": "PASS",
+    "bound_native_tokenizer_isolated_smoke": "PASS: 5 tokens",
+    "profile_artifact_bindings": "PASS",
+    "python_runtime_tree_binding": "PASS",
+    "shell_and_python_syntax": "PASS",
+    "git_diff_check": "PASS",
+    "secret_scan": "PASS"
+  },
+  "red_lineage": {
+    "receipt": "results/glm52-gates/lossless-plateau-candidate6-red.json",
+    "note": "The first signal RED used a background shell and timed out on an inherited pipe. Before GREEN, the acceptance test was mechanically corrected to launch the exact wrapper directly from Python while Python owns the real flock; the corrected unchanged-code RED failed in 5.644 seconds because SIGTERM left the unit active. A second mechanical correction added XDG_RUNTIME_DIR to the isolated test environment."
+  },
+  "review_finding_disposition": {
+    "PLATEAU-317-C1-DSV4-TRANSIENT-SERVICE-ORPHAN-ON-CONTROLLER-EXIT": "closed by direct TERM/INT/HUP traps, identity-named systemd stop/reap, and campaign-level tag-scoped fallback cleanup before idle checks and lock release",
+    "ADV-PLATEAU-R317-H1-DSV4-SIGNAL-LEAVES-CGROUP": "same closure as PLATEAU-317-C1; all three catchable signals pass against real user-systemd with /usr/bin/sleep and leave no unit",
+    "ADV-PLATEAU-R316-H3-NONCANONICAL-SAFETY-ATTESTATION": "closed by matching only FATAL or the exact KILL_FLOOR breached marker; authentic kill_floor_gib configuration passes and breach mutation fails",
+    "ADV-PLATEAU-R317-H2-UNBOUND-PYTHON-EXECUTION-CLOSURE": "closed by reviewed-commit path equality, sanitized isolated Python, interpreter/libpython/stdlib tree bindings, retained native tokenizer copy and descriptor loading, plus terminal runtime and closure rehash"
+  },
+  "candidate_convergence": {
+    "blocking_classes_before": 3,
+    "blocking_classes_after_local_audit": 0,
+    "new_blocking_class_introduced": false,
+    "candidate_count": 6,
+    "escalation_triggered": false
+  },
+  "verdict": "READY_FOR_DELTA_ONLY_REVIEW_NO_ENGINE_RUN"
+}
