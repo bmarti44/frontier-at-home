@@ -1,0 +1,21 @@
+{
+  "schema": "glm52-lossless-plateau-unprivileged-preflight-v1",
+  "candidate_hash": "eeaeb533f5f65dee7e4a088a165677ec2fc32194",
+  "status": "FAIL",
+  "engine_started": false,
+  "gpu_used": false,
+  "observed_failure": "The frozen campaign calls sudo -n -u dsv4 directly, but the current delegated policy permits only dsv4-context-submit and glm52-w1-submit. The campaign cannot start either matched arm without interactive privilege.",
+  "reproduction": {
+    "command": "sudo -n -u dsv4 true",
+    "exit_code": 1,
+    "stderr": "sudo: a password is required"
+  },
+  "policy_observation": {
+    "allowed_nopasswd_commands": [
+      "/usr/local/sbin/dsv4-context-submit *",
+      "/usr/local/sbin/glm52-w1-submit *"
+    ],
+    "direct_run_as_dsv4_allowed": false
+  },
+  "candidate_3_acceptance_test": "The campaign must run wholly as the logged-in owner through user-systemd containment, contain no direct sudo/runuser path, use owner-readable frozen binaries and weights, and preserve the same OOM, lock, process-identity, memory, and survivor checks."
+}
