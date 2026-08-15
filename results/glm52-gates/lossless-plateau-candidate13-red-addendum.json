@@ -1,0 +1,48 @@
+{
+  "schema": "glm52-lossless-plateau-red-addendum-v1",
+  "gate": "lossless-plateau-matched-32k",
+  "candidate_number_for_gate": 13,
+  "parent_red": "results/glm52-gates/lossless-plateau-candidate13-red.json",
+  "review_findings": [
+    "ADV-PLATEAU-323-C1-UNBOUND-CALLER-CONTROLLED-RANDOMNESS",
+    "PLATEAU-323-H1-CALLER-SEED-NOT-DRAND-BOUND"
+  ],
+  "test_commit": "919cbf97f563a0d3a1e3f9eec414c04fe6b8ba26",
+  "test_tree": "0df88385664dfd75a495149ec708b8c3a026a483",
+  "scope": "Extend the candidate-13 RED before implementation so every mutation explicitly named in review 323 is rejected: round, previous signature, publication timestamp, relay list, verifier result, seed digest, matched seed, retained-receipt digest, and symlink/path replacement. No production implementation or runtime artifact changed.",
+  "artifact_sha256": {
+    "scripts/tests/test_matched_evidence.py": "18f69235fe291e4906506d936fe84f5909f2f513805cffc1b40675310335f8ec",
+    "scripts/tests/test_glm_lossless_plateau.py": "19f2503a74bce4b4521a74c1f6c60c14244851d556ecff7f9d26a09f3c7c9df9",
+    "scripts/56_collect_matched_evidence.py": "1f09d35a3544dc1105b6f037d7996206fd04ae604576fc7ee6c3568db00ceaa0",
+    "results/glm52-goal/harness/decisive_matched.sh": "884d4f6cfd75620e8394b372210318c219150503ec5f38f8ca2642826105c40d",
+    "scripts/89_verify_drand_receipt.mjs": "c191d301e1ff8460fffaea9dfeaab7d0fce0d63f92d3fdfcfa20442ccfdc2131"
+  },
+  "new_mutations": [
+    "previous_signature changed",
+    "round changed",
+    "published_at_utc inconsistent with round",
+    "relay agreement list changed",
+    "recorded verification result forged",
+    "seed_sha256 changed without changing matched seed",
+    "matched_seed changed without changing seed_sha256",
+    "retained-manifest receipt digest changed",
+    "receipt regular file replaced by symlink"
+  ],
+  "red_execution": {
+    "command": "python3 -m unittest scripts.tests.test_glm_lossless_plateau.GlmLosslessPlateauTests.test_campaign_derives_seed_only_from_retained_candidate_receipt scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_independently_verifies_committed_randomness_and_arm_seed scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_rejects_randomness_and_seed_mutations scripts.tests.test_matched_evidence.MatchedEvidenceTests.test_collector_rejects_randomness_receipt_digest_and_path_replacement",
+    "exit_code": 1,
+    "tests_run": 4,
+    "failures": 1,
+    "errors": 17,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "bea5f7601dd29fb3a9a86a3f033a0a4e19c36d5be363b1606372fb337586a6e3",
+    "observed": "The unchanged runner still accepts MATCHED_SEED, and the unchanged collector rejects the new receipt-binding interface before it can enforce any added mutation."
+  },
+  "safety": {
+    "model_started": false,
+    "gpu_used": false,
+    "randomness_obtained": false,
+    "systemd_touched": false
+  },
+  "verdict": "RED_CONFIRMED_IMPLEMENTATION_NOT_PRESENT"
+}
