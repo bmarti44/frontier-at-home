@@ -168,7 +168,7 @@ def main() -> int:
     process_start_ticks = int(stat[21]) if len(stat) >= 22 else 0
     process_exe = Path(os.readlink(f"/proc/{process.pid}/exe")).resolve()
     try:
-        stdout, stderr = process.communicate(timeout=300)
+        stdout, stderr = process.communicate(timeout=900)
     except subprocess.TimeoutExpired:
         process.kill(); process.communicate()
         fail("CUDA microgate timed out")

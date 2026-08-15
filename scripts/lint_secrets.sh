@@ -149,6 +149,8 @@ allowlist = {
     "candidate_binary_sha256",
     "quality_binary_sha256",
     "metric_scorer_sha256",
+    "fixed_scorer_sha256",
+    "test_binary_sha256",
     "microgate_sha256",
     "metric_scorer_tests_sha256",
     "tests_sha256",

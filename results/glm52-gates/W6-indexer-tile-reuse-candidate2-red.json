@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "gate": "W6-indexer-tile-reuse",
+  "candidate": 2,
+  "verdict": "RED_CONFIRMED",
+  "unchanged_engine_commit": "927198960fa0a8875b104f22fef85d598971fa21",
+  "unchanged_production_source_parent": "8cde153a43b170ad6c66644dba4392c343cf39b1",
+  "test_commit": "927198960fa0a8875b104f22fef85d598971fa21",
+  "test_sha256": "942086fc35e148a7d05350d65b6f33fa619eefb9fc0870394a7d1e502a9b6109",
+  "fixed_scorer_sha256": "801a7425a6b7a19a938cd06d7bfef3a832d83e1635b89a0db1ebf2d8f4ccac0e",
+  "test_binary_sha256": "c57aee16379ce066f058868fedf52a93f68dab645147e98e7f8e84cd80f569aa",
+  "invocation": {
+    "environment": {
+      "W6_TIMING_SCHEDULE": "1,2,4,1,2,4,1,2,4,1,2,4,1,2,4"
+    },
+    "exit_code": 1
+  },
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "63a3a709040bc0afbe6052e6a50b5de211129210327ab55e8f2b4221cdc195af",
+  "stderr_tail": [
+    "ds4: CUDA backend initialized on NVIDIA GB10 (sm_121) dev=0",
+    "FAIL: malformed width accepted bytes=0"
+  ],
+  "failed_behavior": "The unchanged production source accepts an explicitly empty width instead of rejecting every explicit value outside exact ASCII 1, 2, or 4.",
+  "lineage_note": "This is the exact final candidate-2 fixture and scorer. The fixture was committed before this unchanged-source run and must remain byte-identical through confirmation.",
+  "safety": {
+    "model_loaded": false,
+    "engine_server_started": false,
+    "oom_or_xid": false
+  }
+}
