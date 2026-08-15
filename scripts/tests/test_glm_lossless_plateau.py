@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import hashlib
 import json
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -13,6 +14,7 @@ ARM = ROOT / "results/glm52-goal/harness/glm_decisive_arm.sh"
 DSV4_ARM = ROOT / "results/glm52-goal/harness/dsv4_decisive_arm.sh"
 COLLECTOR = ROOT / "scripts/56_collect_matched_evidence.py"
 DSV4_PROFILE = ROOT / "configs/dsv4-matched-32k-profile.json"
+FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate6-preaudit.json"
 GLM_CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 DSV4_CGROUP = ROOT / "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh"
 
@@ -178,6 +180,38 @@ class GlmLosslessPlateauTests(unittest.TestCase):
         self.assertIn("env -i", campaign)
         self.assertIn("MATCHED_TOKENIZER_NATIVE_PATH", bench)
         self.assertIn("ExtensionFileLoader", bench)
+
+    def test_freeze_receipt_names_the_exact_existing_runtime_commit(self):
+        receipt = json.loads(FREEZE_RECEIPT.read_text())
+        commit = receipt["candidate_commit"]
+        observed = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", f"{commit}^{{commit}}"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(observed.returncode, 0, observed.stderr)
+        self.assertEqual(observed.stdout.strip(), commit)
+        tree = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", f"{commit}^{{tree}}"],
+            text=True,
+            stdout=subprocess.PIPE,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(tree, receipt["candidate_tree"])
+        paths = set()
+        for profile_path in (CAMPAIGN_PROFILE, DSV4_PROFILE):
+            profile = json.loads(profile_path.read_text())
+            paths.add(profile_path.relative_to(ROOT).as_posix())
+            paths.update(profile["artifact_sha256"])
+        for relative in sorted(paths):
+            frozen = subprocess.run(
+                ["git", "-C", str(ROOT), "show", f"{commit}:{relative}"],
+                stdout=subprocess.PIPE,
+                check=True,
+            ).stdout
+            self.assertEqual(frozen, (ROOT / relative).read_bytes(), relative)
 
 
 if __name__ == "__main__":

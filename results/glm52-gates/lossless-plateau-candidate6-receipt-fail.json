@@ -1,0 +1,18 @@
+{
+  "schema": "glm52-lossless-plateau-execution-failure-v1",
+  "candidate_number_for_gate": 6,
+  "recorded_at_utc": "2026-08-15T16:31:00Z",
+  "failed_receipt": "results/glm52-gates/lossless-plateau-candidate6-preaudit.json",
+  "recorded_candidate_commit": "12de015506d6f5b434aed1376a9a3c9ca83f8b66",
+  "actual_candidate_commit": "12de015016c761334a38b3d6f8db7123b798206a",
+  "candidate_tree": "906266324bf6acea122ad9a0f61dd1f498a75207",
+  "failing_assertion": "git rev-parse <recorded-candidate>^{commit} fails because the manually transcribed full hash does not exist, even though the recorded tree is correct.",
+  "production_effect": "The reviewed-runtime bootstrap fails closed before staging, model verification, or engine launch.",
+  "review_disposition": "Round 318 was withdrawn immediately and both persistent reviewers were interrupted before verdict.",
+  "bounded_fix": "Correct only the receipt commit value and add an executable test that requires the commit to exist, match the recorded tree, and contain byte-identical matched profiles plus every bound artifact.",
+  "host_safety": {
+    "engine_started": false,
+    "gpu_measurement_started": false,
+    "oom_or_xid_observed": false
+  }
+}
