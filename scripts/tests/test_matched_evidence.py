@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "56_collect_matched_evidence.py"
+DRAND_VERIFIER = ROOT / "scripts" / "89_verify_drand_receipt.mjs"
+HISTORICAL_RANDOMNESS = (
+    ROOT
+    / "results"
+    / "glm52-gates"
+    / "lossless-plateau-candidate10-randomness.json"
+)
 
 
 def load_module():
@@ -41,7 +49,7 @@ class MatchedEvidenceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.collector = load_module()
 
-    def make_campaign(self, root: Path):
+    def make_campaign(self, root: Path, *, seed: int = 1234):
         campaign = root / "campaign"
         campaign.mkdir()
         fixture = root / "fixture.txt"
@@ -231,7 +239,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                     "suite_valid": True,
                     "metadata": {
                         "model": "glm-5.2" if glm else "deepseek-v4-flash",
-                        "seed": 1234,
+                        "seed": seed,
                         "reps": 2,
                         "fixture_path": str(fixture),
                     },
@@ -431,6 +439,171 @@ class MatchedEvidenceTests(unittest.TestCase):
                     encoding="ascii",
                 )
         return campaign, fixture, dsv4_profile, serving_manifest, glm_profile
+
+    @staticmethod
+    def write_randomness(campaign: Path, value: dict[str, object]) -> Path:
+        retained = campaign / "retained"
+        retained.mkdir(exist_ok=True)
+        path = retained / "randomness-receipt.json"
+        path.write_text(
+            json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="ascii",
+        )
+        return path
+
+    def collect_with_randomness(
+        self,
+        campaign: Path,
+        fixture: Path,
+        profile: Path,
+        serving: Path,
+        glm_profile: Path,
+        receipt: Path,
+        *,
+        candidate_hash: str,
+        freeze_commit: str,
+    ):
+        return self.collector.collect_records(
+            campaign,
+            fixture,
+            profile,
+            serving,
+            glm_profile,
+            randomness_receipt=receipt,
+            candidate_hash=candidate_hash,
+            freeze_commit=freeze_commit,
+            drand_verifier=DRAND_VERIFIER,
+        )
+
+    def test_collector_independently_verifies_committed_randomness_and_arm_seed(self):
+        committed = subprocess.run(
+            [
+                "git", "-C", str(ROOT), "show",
+                "HEAD:results/glm52-gates/lossless-plateau-candidate10-randomness.json",
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+        ).stdout
+        self.assertEqual(committed, HISTORICAL_RANDOMNESS.read_bytes())
+        source = json.loads(committed)
+        candidate_hash = source["candidate_hash"]
+        freeze_commit = source["freeze_commit"]
+        matched_seed = source["seed_derivation"]["matched_seed"]
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp), seed=matched_seed
+            )
+            receipt = self.write_randomness(campaign, source)
+            records = self.collect_with_randomness(
+                campaign,
+                fixture,
+                profile,
+                serving,
+                glm_profile,
+                receipt,
+                candidate_hash=candidate_hash,
+                freeze_commit=freeze_commit,
+            )
+            self.assertEqual(len(records), 20)
+
+    def test_collector_rejects_randomness_and_seed_mutations(self):
+        source = json.loads(HISTORICAL_RANDOMNESS.read_text(encoding="ascii"))
+        candidate_hash = source["candidate_hash"]
+        freeze_commit = source["freeze_commit"]
+        matched_seed = source["seed_derivation"]["matched_seed"]
+
+        mutations = {
+            "absent": (None, candidate_hash, freeze_commit, matched_seed, "receipt"),
+            "stale_publication": (
+                {**source, "freeze_commit": "8bb660dde1ed18e3d1c93e0e2830453af83f7bc6"},
+                candidate_hash,
+                "8bb660dde1ed18e3d1c93e0e2830453af83f7bc6",
+                matched_seed,
+                "post-freeze|publication",
+            ),
+            "wrong_candidate": (
+                {**source, "candidate_hash": "0" * 40},
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "candidate",
+            ),
+            "wrong_freeze": (
+                {**source, "freeze_commit": "0" * 40},
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "freeze",
+            ),
+            "bad_signature": (
+                {
+                    **source,
+                    "receipt": {
+                        **source["receipt"],
+                        "signature": "0" + source["receipt"]["signature"][1:],
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "signature|BLS|randomness",
+            ),
+            "changed_randomness": (
+                {
+                    **source,
+                    "receipt": {
+                        **source["receipt"],
+                        "randomness": "0" * 64,
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "randomness|signature",
+            ),
+            "altered_derivation": (
+                {
+                    **source,
+                    "seed_derivation": {
+                        **source["seed_derivation"],
+                        "formula": "sha256('ALTERED-DOMAIN' || randomness)",
+                        "seed_sha256": "0" * 64,
+                        "matched_seed": 0,
+                    },
+                },
+                candidate_hash,
+                freeze_commit,
+                matched_seed,
+                "derivation|seed",
+            ),
+            "uniformly_wrong_arm_seed": (
+                source,
+                candidate_hash,
+                freeze_commit,
+                999_999_999_999_999_999,
+                "arm seed|derived seed|seed mismatch",
+            ),
+        }
+
+        for label, (value, expected_candidate, expected_freeze, arm_seed, error) in mutations.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                    Path(tmp), seed=arm_seed
+                )
+                receipt = campaign / "retained" / "randomness-receipt.json"
+                if value is not None:
+                    receipt = self.write_randomness(campaign, value)
+                with self.assertRaisesRegex((OSError, ValueError), error):
+                    self.collect_with_randomness(
+                        campaign,
+                        fixture,
+                        profile,
+                        serving,
+                        glm_profile,
+                        receipt,
+                        candidate_hash=expected_candidate,
+                        freeze_commit=expected_freeze,
+                    )
 
     @staticmethod
     def set_dsv4_safety(profile: Path, safety: dict[str, object]) -> None:

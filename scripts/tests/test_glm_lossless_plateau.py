@@ -17,6 +17,7 @@ DSV4_PROFILE = ROOT / "configs/dsv4-matched-32k-profile.json"
 FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate12-preaudit.json"
 GLM_CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 DSV4_CGROUP = ROOT / "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh"
+DRAND_VERIFIER = ROOT / "scripts/89_verify_drand_receipt.mjs"
 
 
 class GlmLosslessPlateauTests(unittest.TestCase):
@@ -98,6 +99,35 @@ class GlmLosslessPlateauTests(unittest.TestCase):
             campaign.index("exec {INFERENCE_LOCK_FD}"),
             campaign.index("\nverify_campaign_artifacts\n"),
         )
+
+    def test_campaign_derives_seed_only_from_retained_candidate_receipt(self):
+        campaign = CAMPAIGN.read_text()
+        self.assertIn('[[ ! -v MATCHED_SEED ]]', campaign)
+        self.assertNotIn('SEED=${MATCHED_SEED', campaign)
+        self.assertIn('MATCHED_RANDOMNESS_RECEIPT', campaign)
+        self.assertIn('randomness-receipt.json', campaign)
+        self.assertIn('scripts/89_verify_drand_receipt.mjs', campaign)
+        self.assertIn('GLM52-LOSSLESS-PLATEAU-32K-V1', campaign)
+        self.assertIn('candidate_commit', campaign)
+        self.assertIn('freeze_commit', campaign)
+        self.assertIn('published_at_utc', campaign)
+        self.assertIn('reviewed runtime commit', campaign)
+        self.assertIn('randomness_receipt_sha256', campaign)
+        self.assertIn('MATCHED_DERIVED_SEED', campaign)
+        self.assertNotIn('MATCHED_SEED="$SEED"', campaign)
+        collector_call = campaign[campaign.rindex('"$PYTHON" -I -B -S "$COLLECTOR"'):]
+        for argument in (
+            '--randomness-receipt', '--candidate-hash', '--freeze-commit',
+            '--drand-verifier',
+        ):
+            self.assertIn(argument, collector_call)
+
+        for profile_path in (CAMPAIGN_PROFILE, DSV4_PROFILE):
+            bindings = json.loads(profile_path.read_text())["artifact_sha256"]
+            self.assertEqual(
+                bindings["scripts/89_verify_drand_receipt.mjs"],
+                hashlib.sha256(DRAND_VERIFIER.read_bytes()).hexdigest(),
+            )
 
     def test_parent_lock_validation_binds_the_shared_open_description_not_flocker_pid(self):
         # flock(1) initiates the lock in a short-lived child.  Linux retains that
