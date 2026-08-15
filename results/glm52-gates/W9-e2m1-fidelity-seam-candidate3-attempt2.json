@@ -1,0 +1,15 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-attempt-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 3,
+  "attempt": 2,
+  "status": "FAIL",
+  "date": "2026-08-15",
+  "observed": "The eps=3 fixture still placed a fused RMS-derived value fractionally above an exact E2M1 midpoint under CUDA fast math (index 73 observed 1.75 versus lower-tie oracle 0.875).",
+  "bounded_fix": "Test exact midpoint and nextafter semantics through the ordinary store, which feeds the shared device codec without RMS arithmetic. Test the distinct fused implementation with values 0.0625 code units below every midpoint at unit and non-unit scales, so it independently covers fused propagation and RMS weighting without pretending fast-rsqrt output is an exact tie.",
+  "artifact_sha256": {
+    "/tmp/w9-e2m1-c3-green2.stdout": "9091a46c48eb08045cd30c17b30b2b0a801b45a22266e35e6a761bd5aae7f00b",
+    "/tmp/w9-e2m1-c3-green2.stderr": "2799dfa623f9e845e976beb0eb76f69bdadfbf0d3e5d83b245c1af536f32ee49"
+  },
+  "acceptance": "The exact ordinary-store tie oracle and robust fused-store oracle must both pass and independent branch-bypass mutations must fail."
+}
