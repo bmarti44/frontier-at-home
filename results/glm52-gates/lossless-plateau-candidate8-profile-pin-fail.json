@@ -1,0 +1,16 @@
+{
+  "schema": "glm52-lossless-plateau-preaudit-failure-v1",
+  "candidate_number_for_gate": 8,
+  "candidate_commit": "b644430375f2551bab2a8fec3a062dcb7ddb2092",
+  "candidate_tree": "ca9c03b5a7ee0fb0fe564da40dda4e1b2b440c0d",
+  "recorded_at_utc": "2026-08-15T16:37:00Z",
+  "failing_test": "test_profile_hashes_the_exact_matched_harnesses",
+  "artifact_sha256": {
+    "profile_declared_results/glm52-goal/harness/decisive_matched.sh": "f14681a3104bcc4066fa03b66aff10f07574eb2befa38bb6d6659f4e5ceb133c",
+    "observed_results/glm52-goal/harness/decisive_matched.sh": "8432df45873719b684ca9384c5ec4f7f5fd368067fc1d5b71eb9aebd21fa6c68"
+  },
+  "cause": "Selecting the candidate-8 receipt changed decisive_matched.sh, but both matched profiles still pinned the candidate-7 script digest.",
+  "bounded_fix": "Update only the decisive_matched.sh digest in both matched profiles, then rerun the complete pre-submission audit before candidate-8 publication.",
+  "engine_started": false,
+  "verdict": "FAIL_PRE_SUBMISSION_AUDIT"
+}
