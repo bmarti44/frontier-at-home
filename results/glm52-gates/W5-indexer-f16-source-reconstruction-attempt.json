@@ -1,0 +1,24 @@
+{
+  "schema": "glm52-w5-source-reconstruction-attempt-v1",
+  "gate": "W5",
+  "attempt": 1,
+  "verdict": "NO_RESULT",
+  "purpose": "Reconstruct the exact W4-frozen engine baseline before W5 work",
+  "observed_failure": "The first reconstruction copied only the three artifacts present in the W4 evidence bundle. Compilation stopped before the W5 assertion because companion headers and declarations from the frozen source closure were absent.",
+  "errors": [
+    "ds4_slab_prefetch_state.h: No such file or directory",
+    "unknown type name ds4_glm_baseline_fail_stage"
+  ],
+  "bounded_correction": "Import the intact non-build working files from the original W4 source tree, whose Git worktree metadata is broken but whose files remain readable; retain the W4-frozen ds4.c, ds4_cuda.cu, and Makefile bytes.",
+  "corrected_source": {
+    "engine_repository": "/home/bmarti44/.cache/glm52-w5-indexer-f16",
+    "closure_commit": "8cde153a43b170ad6c66644dba4392c343cf39b1",
+    "artifact_sha256": {
+      "ds4.c": "a6855b9ab10e8868295b16705864cf841b975006c4930c9abca75bfe11d62dc9",
+      "ds4_cuda.cu": "35375030ae4d0a290d34d66c0afd632c3d70ff9bc8a9c8cb0c32b5173354c797",
+      "Makefile": "6e67c8185358dedfe12c26a9dcdfba18edbb68665917eceebd3c748a4c6d777e"
+    },
+    "matches_w4_frozen_primary_artifacts": true
+  },
+  "large_model_started": false
+}

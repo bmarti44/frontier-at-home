@@ -843,7 +843,28 @@ round 310 (scores 97 and 100, no high/critical findings) and approved
 terminating W4 without another multi-hour run. See
 `W4-serving-candidate10-runtime-fail.json` and
 `W4-serving-candidate10-review-r310.json`. W5/W6 remain eligible as distinct
-fidelity-free mechanisms; do not retry this W4 candidate.
+mechanisms and must not reuse or reinterpret the W4 result.
+
+W5 is now the active fidelity-free gate. Its exact default-off flag is
+`DS4_CUDA_GLM_INDEXER_CACHE_F16=1`. The candidate may change only the
+128-wide indexer-key cache on CUDA from F32 to FP16; compact latent and RoPE
+storage, quality mode, selected-ID ordering/ties, and all other caches remain
+unchanged. The fixed acceptance formula is the existing `W5` formula in
+`scripts/glm52_goal.py`: `scores_identical`, `ids_identical`, and
+`logits_identical` must all be true, and isolated candidate indexer allocation
+bytes divided by isolated baseline indexer allocation bytes must equal exactly
+`0.5`. Additionally, the production-path test requires non-indexer compact
+allocation to be unchanged and explicit flag value `0` to equal default OFF.
+Byte-identical generation remains the serving confirmation backbone; no NLL
+budget is spent.
+
+Candidate 1's test is committed in the reconstructed W4-frozen engine tree at
+`ce5017c727342237ca59c246da6e84360955bd1b`. On unchanged engine closure
+`8cde153a43b170ad6c66644dba4392c343cf39b1`, it builds successfully and fails
+only the intended ON-arm assertion: `W5 ON stores only indexer keys as F16`.
+See `W5-indexer-f16-candidate1-red.json`. First run a bounded CUDA allocation,
+score, and selected-ID microgate; only a passing reviewed microgate may proceed
+to a model-backed logit/output confirmation.
 
 ### Demoted acceptance speculation
 

@@ -1,0 +1,23 @@
+{
+  "schema": "glm52-w5-indexer-f16-red-v1",
+  "gate": "W5",
+  "candidate": 1,
+  "verdict": "RED_CONFIRMED",
+  "engine_repository": "/home/bmarti44/.cache/glm52-w5-indexer-f16",
+  "unchanged_engine_commit": "8cde153a43b170ad6c66644dba4392c343cf39b1",
+  "test_commit": "ce5017c727342237ca59c246da6e84360955bd1b",
+  "test_sha256": "fedc88cf2b926a429f330ee974bda635f815512d94bdfe67f3442264bbbe7f5d",
+  "command": "make clean; make -j2 tests/test_glm_indexer_f16_w5; ./tests/test_glm_indexer_f16_w5",
+  "build_jobs": 2,
+  "exit_code": 1,
+  "expected_failure": "FAIL: W5 ON stores only indexer keys as F16",
+  "default_off_checks_passed_before_failure": true,
+  "feature_flag": "DS4_CUDA_GLM_INDEXER_CACHE_F16",
+  "engine_started": false,
+  "fio_started": false,
+  "artifact_sha256": {
+    "ds4.c": "a6855b9ab10e8868295b16705864cf841b975006c4930c9abca75bfe11d62dc9",
+    "ds4_cuda.cu": "35375030ae4d0a290d34d66c0afd632c3d70ff9bc8a9c8cb0c32b5173354c797",
+    "Makefile": "7c8d0102c1ad2c9b29787a3af9b35a7382fc6a40c2d9ba6f85815ab02dec73a6"
+  }
+}
