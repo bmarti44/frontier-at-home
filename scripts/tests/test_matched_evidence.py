@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import importlib.util
 import hashlib
 import json
@@ -11,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +30,12 @@ HISTORICAL_RANDOMNESS_VALUE = json.loads(
 HISTORICAL_MATCHED_SEED = HISTORICAL_RANDOMNESS_VALUE["seed_derivation"][
     "matched_seed"
 ]
+CANDIDATE10_PREAUDIT = (
+    ROOT / "results/glm52-gates/lossless-plateau-candidate10-preaudit.json"
+)
+CANDIDATE13_PREAUDIT = (
+    ROOT / "results/glm52-gates/lossless-plateau-candidate13-preaudit.json"
+)
 
 
 def load_module():
@@ -466,6 +474,155 @@ class MatchedEvidenceTests(unittest.TestCase):
         )
         return path
 
+    @staticmethod
+    def git_bytes(commit: str, relative: str) -> bytes:
+        return subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{commit}:{relative}"],
+            check=True,
+            stdout=subprocess.PIPE,
+        ).stdout
+
+    def write_retained_authority(
+        self,
+        campaign: Path,
+        randomness: dict[str, object],
+        freeze_receipt_path: Path,
+    ) -> tuple[Path, Path, dict[str, object]]:
+        retained = campaign / "retained"
+        retained.mkdir(exist_ok=True)
+        randomness_path = retained / "randomness-receipt.json"
+        randomness_raw = (
+            json.dumps(randomness, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode("ascii")
+        randomness_path.write_bytes(randomness_raw)
+
+        relative_receipt = freeze_receipt_path.relative_to(ROOT).as_posix()
+        freeze_raw = freeze_receipt_path.read_bytes()
+        freeze_value = json.loads(freeze_raw)
+        candidate = freeze_value["candidate_commit"]
+        freeze = subprocess.run(
+            [
+                "git", "-C", str(ROOT), "log", "-1", "--diff-filter=A",
+                "--format=%H", "--", relative_receipt,
+            ],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+        ).stdout.strip()
+        freeze_path = retained / "freeze-receipt.json"
+        freeze_path.write_bytes(freeze_raw)
+
+        profile_paths = (
+            "configs/glm52-lossless-plateau-profile.json",
+            "configs/dsv4-matched-32k-profile.json",
+        )
+        profiles = [
+            json.loads(self.git_bytes(candidate, relative))
+            for relative in profile_paths
+        ]
+        paths = set(profile_paths)
+        for profile in profiles:
+            paths.update(profile["artifact_sha256"])
+        digests = {
+            relative: hashlib.sha256(self.git_bytes(candidate, relative)).hexdigest()
+            for relative in sorted(paths)
+        }
+        digests["runtime/tokenizers.abi3.so"] = profiles[0]["python_runtime"][
+            "tokenizer_native_sha256"
+        ]
+        digests["freeze-receipt.json"] = hashlib.sha256(freeze_raw).hexdigest()
+        digests["randomness-receipt.json"] = hashlib.sha256(
+            randomness_raw
+        ).hexdigest()
+        randomness_commit = subprocess.run(
+            [
+                "git", "-C", str(ROOT), "log", "-1", "--diff-filter=A",
+                "--format=%H", "--",
+                "results/glm52-gates/lossless-plateau-candidate10-randomness.json",
+            ],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+        ).stdout.strip()
+        if freeze_receipt_path == CANDIDATE10_PREAUDIT:
+            git_head = randomness_commit
+        else:
+            git_head = subprocess.run(
+                ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+            ).stdout.strip()
+        manifest = {
+            "schema": "matched-retained-closure-v1",
+            "git_head": git_head,
+            "reviewed_runtime_commit": candidate,
+            "freeze_commit": freeze,
+            "freeze_receipt_sha256": hashlib.sha256(freeze_raw).hexdigest(),
+            "randomness_receipt_sha256": hashlib.sha256(randomness_raw).hexdigest(),
+            "python_runtime": profiles[0]["python_runtime"],
+            "sha256": digests,
+        }
+        manifest_path = campaign / "retained-manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="ascii",
+        )
+        return randomness_path, freeze_path, manifest
+
+    def first_round_receipt(self, source: dict, preaudit_path: Path) -> dict:
+        preaudit = json.loads(preaudit_path.read_text(encoding="ascii"))
+        relative = preaudit_path.relative_to(ROOT).as_posix()
+        freeze_commit = subprocess.run(
+            ["git", "-C", str(ROOT), "log", "--diff-filter=A", "-1",
+             "--format=%H", "--", relative],
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip()
+        freeze_epoch = int(subprocess.run(
+            ["git", "-C", str(ROOT), "show", "-s", "--format=%ct", freeze_commit],
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip())
+        freeze_iso = subprocess.run(
+            ["git", "-C", str(ROOT), "show", "-s", "--format=%cI", freeze_commit],
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip()
+        target = ((freeze_epoch - self.collector.DRAND_GENESIS_UNIX)
+                  // self.collector.DRAND_PERIOD_SECONDS + 2)
+        publication = (self.collector.DRAND_GENESIS_UNIX
+                       + (target - 1) * self.collector.DRAND_PERIOD_SECONDS)
+        candidate = preaudit["candidate_commit"]
+        result = json.loads(json.dumps(source))
+        result["candidate_hash"] = candidate
+        result["freeze_commit"] = freeze_commit
+        result["freeze_committed_at"] = freeze_iso
+        result["receipt"]["round"] = target
+        result["receipt"]["published_at_utc"] = dt.datetime.fromtimestamp(
+            publication, tz=dt.timezone.utc
+        ).isoformat()
+        result["obtained_at_utc"] = dt.datetime.fromtimestamp(
+            publication + 1, tz=dt.timezone.utc
+        ).isoformat()
+        seed_sha256 = hashlib.sha256(
+            self.collector.DRAND_DOMAIN + candidate.encode("ascii") + b"\0"
+            + result["receipt"]["randomness"].encode("ascii")
+        ).hexdigest()
+        result["seed_derivation"]["seed_sha256"] = seed_sha256
+        result["seed_derivation"]["matched_seed"] = int(seed_sha256[:15], 16)
+        return result
+
+    def collect_with_mocked_bls(self, *args, **kwargs):
+        real_run = subprocess.run
+
+        def verified(arguments, *run_args, **run_kwargs):
+            if arguments[0] == str(self.collector.DRAND_NODE):
+                return subprocess.CompletedProcess(
+                    arguments, 0, stdout="DRAND_BLS_RECEIPT_OK\n", stderr=""
+                )
+            return real_run(arguments, *run_args, **run_kwargs)
+
+        with mock.patch.object(self.collector.subprocess, "run", side_effect=verified):
+            return self.collect_with_randomness(*args, **kwargs)
+
     def collect_with_randomness(
         self,
         campaign: Path,
@@ -775,6 +932,170 @@ class MatchedEvidenceTests(unittest.TestCase):
                     candidate_hash=candidate_hash,
                     freeze_commit=freeze_commit,
                 )
+
+    def test_collector_accepts_exact_retained_authority_and_first_round(self):
+        source = json.loads(HISTORICAL_RANDOMNESS.read_text(encoding="ascii"))
+        source = self.first_round_receipt(source, CANDIDATE13_PREAUDIT)
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp), seed=source["seed_derivation"]["matched_seed"]
+            )
+            receipt, _, _ = self.write_retained_authority(
+                campaign, source, CANDIDATE13_PREAUDIT
+            )
+            records = self.collect_with_mocked_bls(
+                campaign,
+                fixture,
+                profile,
+                serving,
+                glm_profile,
+                receipt,
+                candidate_hash=source["candidate_hash"],
+                freeze_commit=source["freeze_commit"],
+            )
+            self.assertEqual(len(records), 20)
+
+    def test_collector_derives_lineage_and_rejects_cross_candidate_receipt(self):
+        source = json.loads(HISTORICAL_RANDOMNESS.read_text(encoding="ascii"))
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp), seed=HISTORICAL_MATCHED_SEED
+            )
+            receipt, _, _ = self.write_retained_authority(
+                campaign, source, CANDIDATE13_PREAUDIT
+            )
+            with self.assertRaisesRegex(
+                ValueError, "retained|preaudit|candidate|cross-candidate"
+            ):
+                self.collect_with_randomness(
+                    campaign,
+                    fixture,
+                    profile,
+                    serving,
+                    glm_profile,
+                    receipt,
+                    # These historical caller values are deliberately coherent.
+                    # The collector must ignore/reject them and derive authority
+                    # from the candidate-13 retained manifest and freeze receipt.
+                    candidate_hash=source["candidate_hash"],
+                    freeze_commit=source["freeze_commit"],
+                )
+
+    def test_collector_rejects_retained_manifest_and_preaudit_mutations(self):
+        source = json.loads(HISTORICAL_RANDOMNESS.read_text(encoding="ascii"))
+        mutations = (
+            "manifest_extra_key",
+            "manifest_missing_schema",
+            "manifest_reviewed_candidate",
+            "manifest_freeze_commit",
+            "manifest_freeze_receipt_digest",
+            "manifest_artifact_digest",
+            "preaudit_candidate_tree",
+            "preaudit_artifact_binding",
+        )
+        for label in mutations:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                    Path(tmp), seed=HISTORICAL_MATCHED_SEED
+                )
+                receipt, freeze_receipt, manifest = self.write_retained_authority(
+                    campaign, source, CANDIDATE10_PREAUDIT
+                )
+                if label == "manifest_extra_key":
+                    manifest["unreviewed"] = True
+                elif label == "manifest_missing_schema":
+                    del manifest["schema"]
+                elif label == "manifest_reviewed_candidate":
+                    manifest["reviewed_runtime_commit"] = "0" * 40
+                elif label == "manifest_freeze_commit":
+                    manifest["freeze_commit"] = "0" * 40
+                elif label == "manifest_freeze_receipt_digest":
+                    manifest["freeze_receipt_sha256"] = "0" * 64
+                elif label == "manifest_artifact_digest":
+                    manifest["sha256"][
+                        "results/glm52-goal/harness/decisive_matched.sh"
+                    ] = "0" * 64
+                else:
+                    preaudit = json.loads(freeze_receipt.read_text(encoding="ascii"))
+                    if label == "preaudit_candidate_tree":
+                        preaudit["candidate_tree"] = "0" * 40
+                    else:
+                        first = next(iter(preaudit["artifact_sha256"]))
+                        preaudit["artifact_sha256"][first] = "0" * 64
+                    freeze_raw = (
+                        json.dumps(preaudit, sort_keys=True, separators=(",", ":"))
+                        + "\n"
+                    ).encode("ascii")
+                    freeze_receipt.write_bytes(freeze_raw)
+                    freeze_digest = hashlib.sha256(freeze_raw).hexdigest()
+                    manifest["freeze_receipt_sha256"] = freeze_digest
+                    manifest["sha256"]["freeze-receipt.json"] = freeze_digest
+                (campaign / "retained-manifest.json").write_text(
+                    json.dumps(manifest, sort_keys=True, separators=(",", ":"))
+                    + "\n",
+                    encoding="ascii",
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "manifest|retained|preaudit|candidate|artifact|tree"
+                ):
+                    self.collect_with_randomness(
+                        campaign,
+                        fixture,
+                        profile,
+                        serving,
+                        glm_profile,
+                        receipt,
+                        candidate_hash=source["candidate_hash"],
+                        freeze_commit=source["freeze_commit"],
+                    )
+
+    def test_collector_rejects_target_plus_one_before_bls_verification(self):
+        source = json.loads(HISTORICAL_RANDOMNESS.read_text(encoding="ascii"))
+        source = self.first_round_receipt(source, CANDIDATE13_PREAUDIT)
+        later = json.loads(json.dumps(source))
+        later["receipt"]["round"] = source["receipt"]["round"] + 1
+        publication = (
+            self.collector.DRAND_GENESIS_UNIX
+            + (later["receipt"]["round"] - 1)
+            * self.collector.DRAND_PERIOD_SECONDS
+        )
+        later["receipt"]["published_at_utc"] = dt.datetime.fromtimestamp(
+            publication, tz=dt.timezone.utc
+        ).isoformat()
+        later["obtained_at_utc"] = dt.datetime.fromtimestamp(
+            publication + 1, tz=dt.timezone.utc
+        ).isoformat()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(
+                Path(tmp), seed=later["seed_derivation"]["matched_seed"]
+            )
+            receipt, _, _ = self.write_retained_authority(
+                campaign, later, CANDIDATE13_PREAUDIT
+            )
+            real_run = subprocess.run
+
+            def reject_verifier_execution(arguments, *args, **kwargs):
+                if arguments[0] == str(self.collector.DRAND_NODE):
+                    raise AssertionError(
+                        "target+1 reached BLS verification instead of failing round selection"
+                    )
+                return real_run(arguments, *args, **kwargs)
+
+            with mock.patch.object(
+                self.collector.subprocess, "run", side_effect=reject_verifier_execution
+            ), self.assertRaisesRegex(ValueError, "unique|first.*round|target round"):
+                self.collect_with_randomness(
+                    campaign,
+                    fixture,
+                    profile,
+                    serving,
+                    glm_profile,
+                    receipt,
+                    candidate_hash=source["candidate_hash"],
+                    freeze_commit=source["freeze_commit"],
+                )
+
 
     @staticmethod
     def set_dsv4_safety(profile: Path, safety: dict[str, object]) -> None:
