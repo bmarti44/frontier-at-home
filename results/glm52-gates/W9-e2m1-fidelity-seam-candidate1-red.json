@@ -1,0 +1,37 @@
+{
+  "schema": "glm52-w9-e2m1-fidelity-seam-red-v1",
+  "gate": "W9-e2m1-fidelity-seam",
+  "candidate": 1,
+  "status": "RED_CONFIRMED",
+  "date": "2026-08-15",
+  "scope": "CUDA microtest and source contract only; no model or serving engine was started.",
+  "engine_tree": "/home/bmarti44/.cache/glm52-w9-fp4-packed-c1",
+  "lineage": {
+    "reviewed_w9_capture_source": "9ebc0f2879c126db095ecd25be0567166868d52c",
+    "reconstructed_source_commit": "227baf5ec0184074cb55a3b50345d6c206352168",
+    "adopted_w7_1_stack_commit": "5a5a39de344fc3a691660453aab7cf305021ca52",
+    "red_test_commit": "5429064e34400919982b4af10bb4f7e2a3a8e325"
+  },
+  "source_hashes": {
+    "ds4.c": "f1db7226348aa2d93e86ca9e9cbb3df10d723d5b0c96dfc15c5299c1938775f0",
+    "ds4_cuda.cu": "84433fa3eb0e5fa470b7d802a90a2f3022552795c4891b1be33a21862558879b",
+    "ds4_gpu.h": "6cf43cbb00abbb6fce3474c4fde3db921b0dd3af70158cb88645bbdf4c34aaa7"
+  },
+  "tests_sha256_by_path": {
+    "Makefile": "e102b041ae706da238602cba9abc39c45d8721d10b6b29f100d2d58d2adcdb5d",
+    "tests/test_glm_w9_e2m1_fake_source.py": "dd1b1e6c337bf5f2878177e314f4708c843eb120df1336913cee79e56d52a155",
+    "tests/test_glm_w9_e2m1_fake_cuda.c": "a1acf6e05f89a27f78f16c41c9ecebbc805ccaab5b7b150351cd54d9a1455a56"
+  },
+  "observed": {
+    "source_contract_returncode": 1,
+    "source_contract_result": "5 tests ran; 4 failed because the unchanged production source has no exact flag resolver, graph-owned mode, store-path propagation, or E2M1 device codec.",
+    "cuda_build_returncode": 2,
+    "cuda_build_result": "Compilation failed at the real store call because the unchanged production API has no fake_e2m1 argument."
+  },
+  "artifacts": {
+    "/tmp/w9-e2m1-source-red.stderr": "7a672b9804f35c0136f5697585ffe774285dd5f5cf5aef058b7c7f8ff3b8527e",
+    "/tmp/w9-e2m1-cuda-red.stdout": "0281361b94343b37969c9472a7d7967e923a1e14167da06fcc3ea18253dbf5b1",
+    "/tmp/w9-e2m1-cuda-red.stderr": "912c26e62fe96fbdb83107c2fa129aeb8d8ac21bed1d37c42345bd8e23dfb0df"
+  },
+  "acceptance": "The implementation must make the exact committed tests pass while leaving the flag default-off, preserving F32 physical allocation and RoPE bytes, and changing only the 512-wide latent values in the enabled arm. This seam earns no adoption or memory claim; it exists only to run the fixed 100-case fidelity gate before packed-reader work."
+}
