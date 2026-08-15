@@ -1,0 +1,54 @@
+{
+  "schema": "glm52-persistent-review-ledger-v1",
+  "candidate_hash": "bb65196b7fbc780cee39c66730c8cea319c4e0d2",
+  "review_round": 314,
+  "candidate_number_for_gate": 1,
+  "model_run_authorized": false,
+  "reviewers": {
+    "Nash": {
+      "score_0_to_100": 45,
+      "critical": [],
+      "high": [
+        "PLATEAU-H1-SHORT-FIXTURE-CANNOT-MEASURE-PREFILL",
+        "PLATEAU-H2-MODEL-NOT-BOUND-TO-ADOPTED-PROFILE",
+        "PLATEAU-H3-DELTA-BREAKS-EXISTING-HARNESS-CONTRACT-TEST"
+      ],
+      "medium": ["PLATEAU-M1-STABLE-FLAG-TEST-IS-TEXTUAL"],
+      "low": [],
+      "verdict": "REJECT_BEFORE_FREEZE"
+    },
+    "Singer": {
+      "score_0_to_100": 45,
+      "critical": [
+        "ADV-PLATEAU-C1-SHORT-CACHE-OFF-GEOMETRY-CANNOT-MEASURE-PLATEAU"
+      ],
+      "high": [
+        "ADV-PLATEAU-H1-HARNESS-RESTORES-DEEPSEEK-AS-8K",
+        "ADV-PLATEAU-H2-SCORER-DOES-NOT-ENFORCE-PINNED-GLM-PROFILE",
+        "ADV-PLATEAU-H3-CANDIDATE-CHANGED-CONTRACT-WITH-RED-SUITE"
+      ],
+      "medium": ["ADV-PLATEAU-M1-PROFILE-PIN-TEST-IS-STATIC-NOT-EXECUTION-BOUND"],
+      "low": [],
+      "verdict": "BLOCK_FREEZE_AND_MODEL_RUN"
+    }
+  },
+  "root_reproduction": {
+    "short_geometry": "Verified both arms use context 8192 and context-levels 0; collector requires ctx_tokens=0 and aliases warm TTFT to prefill_seconds.",
+    "model_binding": "Verified the arm checks tokenizer and binary but not the profile model digest.",
+    "collector_binding": "Verified the collector accepts any syntactically valid GLM binary/configuration digest and does not compare the GLM profile.",
+    "restoration": "Verified restore_dsv4 leaves the CTX=8192 campaign server active rather than restoring the selected 1M profile.",
+    "regression": "Verified test_candidate_source_and_bounded_cache_overrides_are_default_off rejects the new exact-source behavior."
+  },
+  "required_candidate_2_scope": [
+    "Use an identical 28,672-token fixture cell with 32,768-token server caps and synchronized prompt-evaluation timing.",
+    "Bind the exact GLM model, binary and canonical W7.1a runtime configuration in both execution and collection.",
+    "Restore the selected 1M DSV4 profile instead of leaving the campaign's 8K server active.",
+    "Update the affected existing contract test and add execution-oriented mutations for the bindings."
+  ],
+  "convergence": {
+    "blocking_classes_before": 0,
+    "blocking_classes_after": 4,
+    "candidate_2_authorized": true,
+    "reason": "First rejected candidate for this new gate; bounded fixes target only named findings."
+  }
+}
