@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "gate": "W6-indexer-tile-reuse",
+  "candidate": 1,
+  "status": "RED_CONFIRMED",
+  "unchanged_source_commit": "8cde153a43b170ad6c66644dba4392c343cf39b1",
+  "test_commit": "79e4842ac739c46cf36c12fc45f8150cb4b096b2",
+  "test_sha256": "be2a558244f74d39bc766c9f21e8b9a6c0907b4a3cfaccb87228fc06aafc5d11",
+  "command": "make clean; make -j2 cuda-w6-indexer-red",
+  "build_jobs": 2,
+  "exit_code": 2,
+  "behavioral_failure": "FAIL: malformed W6 width is rejected",
+  "compiled_successfully": true,
+  "failure_is_missing_file_or_symbol": false,
+  "unchanged_behavior_observed": {
+    "width2_scores_and_ids_equal_baseline": true,
+    "width4_scores_and_ids_equal_baseline": true,
+    "malformed_width_ignored_instead_of_rejected": true
+  },
+  "source_hashes": {
+    "Makefile": "4baf208603f0b6f3ef4a5a7926d9ba9704963b5cd5d885a2c7e5c6fce819434e",
+    "ds4_cuda.cu": "35375030ae4d0a290d34d66c0afd632c3d70ff9bc8a9c8cb0c32b5173354c797",
+    "tests/cuda_indexer_tile_reuse_w6.cu": "be2a558244f74d39bc766c9f21e8b9a6c0907b4a3cfaccb87228fc06aafc5d11"
+  },
+  "model_started": false,
+  "fio_started": false
+}
