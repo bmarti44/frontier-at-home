@@ -616,22 +616,32 @@ class MatchedEvidenceTests(unittest.TestCase):
 
     def test_rejects_noncanonical_or_hidden_nonzero_cgroup_events(self):
         valid_items = [
-            "high=0", "high_delta=0", "max=0", "max_delta=0",
+            "low=0", "low_delta=0", "high=0", "high_delta=0",
+            "max=0", "max_delta=0",
             "oom=0", "oom_delta=0", "oom_kill=0", "oom_kill_delta=0",
             "oom_group_kill=0", "oom_group_kill_delta=0",
         ]
         mutations = {
-            "duplicate_high_delta": valid_items[:2] + ["high_delta=9", "high_delta=0"] + valid_items[2:],
-            "duplicate_max_delta": valid_items[:4] + ["max_delta=9", "max_delta=0"] + valid_items[4:],
-            "duplicate_oom_delta": valid_items[:6] + ["oom_delta=9", "oom_delta=0"] + valid_items[6:],
-            "duplicate_oom_kill_delta": valid_items[:8] + ["oom_kill_delta=9", "oom_kill_delta=0"] + valid_items[8:],
+            "duplicate_high_delta": valid_items[:4] + ["high_delta=9", "high_delta=0"] + valid_items[4:],
+            "duplicate_max_delta": valid_items[:6] + ["max_delta=9", "max_delta=0"] + valid_items[6:],
+            "duplicate_oom_delta": valid_items[:8] + ["oom_delta=9", "oom_delta=0"] + valid_items[8:],
+            "duplicate_oom_kill_delta": valid_items[:10] + ["oom_kill_delta=9", "oom_kill_delta=0"] + valid_items[10:],
             "duplicate_oom_group_kill_delta": valid_items + ["oom_group_kill_delta=9", "oom_group_kill_delta=0"],
             "unknown_key": valid_items + ["pressure_delta=0"],
             "malformed_value": [*valid_items[:-1], "oom_group_kill_delta=zero"],
             "missing_key": valid_items[:-1],
-            "nonzero_absolute": ["high=1", *valid_items[1:]],
-            "nonzero_delta": [valid_items[0], "high_delta=1", *valid_items[2:]],
+            "missing_low_pair": valid_items[2:],
+            "interior_empty_item": [*valid_items[:4], "", *valid_items[4:]],
+            "mixed_separator": ["low 0", *valid_items[1:]],
+            "nonzero_absolute": [*valid_items[:2], "high=1", *valid_items[3:]],
+            "nonzero_delta": [*valid_items[:3], "high_delta=1", *valid_items[4:]],
         }
+        mutations.update(
+            {
+                f"missing_{item.split('=', 1)[0]}": valid_items[:index] + valid_items[index + 1:]
+                for index, item in enumerate(valid_items)
+            }
+        )
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
             (directory / "samples.log").write_text("sample\n", encoding="ascii")
@@ -658,6 +668,11 @@ class MatchedEvidenceTests(unittest.TestCase):
                 )
 
             write_main(valid_items)
+            self.collector._parse_canonical_safety(directory)
+            write_main([
+                "low 0", "high 0", "max 0", "oom 0", "oom_kill 0",
+                "oom_group_kill 0", "",
+            ])
             self.collector._parse_canonical_safety(directory)
             for name, items in mutations.items():
                 with self.subTest(name=name):
