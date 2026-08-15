@@ -1,0 +1,68 @@
+{
+  "schema": "glm52-persistent-review-round-v1",
+  "candidate_hash": "3699d9b25dde8ebd359dafdde7b40baeff642b8f",
+  "freeze_commit": "e172a67",
+  "review_round": 321,
+  "reviewed_scope": "Candidate-11 DSV4 containment-envelope runtime-defect delta only; previously frozen scope excluded.",
+  "gap_reviewer": {
+    "name": "Nash",
+    "score_0_to_100": 96,
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": [
+      {
+        "id": "PLATEAU-321-L1-ARM-TREE-DIGEST-FORMULA-UNSPECIFIED",
+        "evidence": "The four completed arm directories and result hashes exist, but the candidate-10 failure record does not state the serialization used for its aggregate arm-tree digests.",
+        "affected_gate": "Candidate-10 failure-archive reproducibility only",
+        "reproduction_instructions": "Attempt to recompute completed_arm_tree_sha256 without an external formula; the record does not name one.",
+        "acceptance_test": "Add a separate immutable attestation naming the exact deterministic command and recompute all four values; do not rewrite the prior attempt."
+      }
+    ],
+    "prior_issue_status": {
+      "C10-RUNTIME-DSV4-CONTAINMENT-START-THRESHOLD-MISMATCH": "VERIFIED",
+      "PLATEAU-319-H1-MISSING-LOW-PAIR-SCHEMA-FALSE-PASS": "VERIFIED",
+      "ADV-PLATEAU-319-H1-DELTA-SCHEMA-MISSING-LOW-PAIR": "VERIFIED",
+      "ADV-PLATEAU-319-M1-NONCANONICAL-SEPARATOR-AND-EMPTY-ITEMS": "VERIFIED"
+    },
+    "verdict": "ACCEPT_PRE_RUN"
+  },
+  "adversarial_reviewer": {
+    "name": "Singer",
+    "score_0_to_100": 80,
+    "critical": [],
+    "high": [
+      {
+        "id": "ADV-PLATEAU-321-H1-FROZEN-SCORER-REJECTS-NEW-ENVELOPE",
+        "evidence": "Candidate 11 changes the approved profile to 100/102 GiB, but scripts/56_collect_matched_evidence.py still requires 105/107 exactly. Direct invocation raises ValueError before arm scoring.",
+        "affected_gate": "Matched-32K scorer validity and campaign completion",
+        "reproduction_instructions": "Invoke the frozen collector with the candidate-11 profiles and any otherwise valid campaign directory; observe approved DeepSeek profile is invalid.",
+        "acceptance_test": "Commit a RED proving the production collector rejects the valid 100/102 profile, then accept exactly 100/102 while rejecting stale 105/107 and all malformed envelopes. Re-run the complete focused scorer suite and induced profile/receipt bindings before any model run."
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "prior_issue_status": {
+      "CANDIDATE10-DSV4-CONTAINMENT-START-THRESHOLD-MISMATCH": "FIXED",
+      "PLATEAU-320-PRE-RUN-CLEARANCE": "VERIFIED"
+    },
+    "verdict": "REJECT_MODEL_RUN"
+  },
+  "root_reproduction": {
+    "performed_before_fix": true,
+    "command_exit_code": 1,
+    "stderr": "56_collect_matched_evidence.py: approved DeepSeek profile is invalid",
+    "stderr_sha256": "d404d7b95715b59815618daa5e5c804c1facd347c5ad1ba85be216f097b5a834",
+    "scorer_sha256": "4dff36ec7001e12a7fe1bb13305bc38f6d60cdb1af1dbed241460200328e022d",
+    "output_created": false,
+    "next_action": "Preserve this rejection, independently reproduce Singer's exact collector rejection, then create candidate 12 with only the scorer envelope update, induced pins, and Nash's separate low-severity digest-formula attestation."
+  },
+  "convergence": {
+    "candidate_count": 11,
+    "open_blocking_classes": 1,
+    "new_blocking_class": "scorer/profile envelope drift induced by the named containment correction",
+    "owner_authorized_autonomous_continuation": true,
+    "escalation_triggered": false
+  },
+  "verdict": "REJECT_MODEL_RUN_ONE_HIGH"
+}
