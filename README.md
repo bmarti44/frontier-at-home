@@ -144,11 +144,10 @@ kept in the evidence archive but never substituted for headline model speed.
 
 DeepSeek performance values come from the five-repetition
 [speed suite](results/speed-llamacpp.json), re-run 2026-08-01 on the installed
-1M-fast profile; the prior soak median (14.037 decode tok/s over 96 requests,
-[soak](results/soak-llamacpp.json)) was measured on the earlier ub=512 flags
-and has not yet been re-run. The 1M capability result and the ≤28K performance
-suite answer different questions and must not be combined into an implied 1M
-throughput figure.
+1M-fast profile. Results from superseded slower profiles remain in their raw
+evidence files and are intentionally omitted here. The 1M capability result and
+the ≤28K performance suite answer different questions and must not be combined
+into an implied 1M throughput figure.
 
 **0731 on the ds4 arm (not the serving path).** The banner above covers the
 llama.cpp endpoint, which is what this box actually serves per
