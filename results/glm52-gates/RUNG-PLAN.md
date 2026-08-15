@@ -106,11 +106,13 @@ The 2026-08-15 external review closes additional variants:
   external PCIe-offload claims do not transfer to this NVMe-bound UMA path.
 - An internal-drive upgrade is closed: the installed Samsung PM9E1 already
   reaches its measured sustained ceiling. Purchased NVMe-oF remains separately
-  owner-descoped and must not be implemented. After R-K, the owner may re-score
-  external storage once serving is demonstrably bandwidth-bound. Preserve only
-  the design note: native NVMe multipath and
+  owner-descoped and must not be implemented, prototyped, or designed against.
+  A second Spark is equally owner-descoped. Preserve only historical context
+  for a future owner decision: native NVMe multipath and
   md-RAID1 read balancing do not stripe one logical record; any future design
-  requires an in-engine dual-source sub-record miss scheduler. Do not build it.
+  would require an in-engine dual-source sub-record miss scheduler, while the
+  owner-provided dual-Spark datapoint is 37-48 tok/s class. Do no current work
+  against either option.
 
 ## Branch and source reconciliation
 
@@ -1141,11 +1143,10 @@ After all Rung 0 work, run the same-fixture performance gauntlet and report the
 measured plateau to the owner. With R-K in scope, current production is expected
 to move from about 2.3 toward 4-6 decode tok/s; with B-E passing, the broader
 lossless planning range is 7-10 decode tok/s and 75-140 prefill tok/s.
-Measurements alone populate the decision table. Price three continuations in
-that report: owner-descoped NVMe-oF (planning estimate +3-4 decode only after
-R-K proves bandwidth-bound), a second Spark (owner planning estimate 37-48
-tok/s class through dual-Spark resident inference), and Rung 3 residency on one
-box with its fidelity spend. Stop there for the owner's choice.
+Measurements alone populate the decision table. Hardware additions are not
+continuation options under the 2026-08-15 owner directive: NVMe-oF and a second
+Spark remain recorded context only. Stop there for the owner's choice between
+the measured lossless profile and separately authorized fidelity/residency work.
 If the MTP-union, decaying-hotness, and OS arms all pass, the planning envelope
 is approximately `1.3-2.0x * 1.05-1.15x * 1.02-1.05x` on top of 2.33 tok/s,
 which is consistent with the existing 6-10 tok/s lossless estimate. This is a
