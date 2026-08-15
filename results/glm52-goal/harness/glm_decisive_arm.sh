@@ -16,6 +16,7 @@ TOKENIZER=/home/dsv4/ds4-project/tokenizers/glm52-b4734de4/tokenizer.json
 TOKENIZER_SHA256=19e773648cb4e65de8660ea6365e10ac\
 ca112d42a854923df93db4a6f333a82d
 PORT=${GLM_PORT:-8011}
+BENCH=${MATCHED_BENCH_PATH:?MATCHED_BENCH_PATH is required}
 CACHE_GB=${GLM_EXPERT_CACHE_GB:-0}
 IQ2_REFERENCE=${DS4_CUDA_IQ2_DOWN_REFERENCE:-1}
 NO_EXPERT_TILES=${DS4_CUDA_MOE_NO_EXPERT_TILES:-0}
@@ -178,7 +179,7 @@ except (ValueError, IndexError):
 PY
 
 /home/bmarti44/spark-deepseek-v4-flash/.venv-harness/bin/python \
-    "$REPO/scripts/30_bench_speed.py" \
+    "$BENCH" \
     --base-url "http://127.0.0.1:$PORT" \
     --out "$OUT/result.json" \
     --stack-label "$LABEL" \

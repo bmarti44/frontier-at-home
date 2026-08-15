@@ -9,7 +9,9 @@ SEED=$3
 REPO=/home/bmarti44/spark-deepseek-v4-flash
 BINARY=${DSV4_MATCHED_BINARY:?DSV4_MATCHED_BINARY is required}
 EXPECTED_BINARY_SHA256=${DSV4_MATCHED_BINARY_SHA256:?DSV4_MATCHED_BINARY_SHA256 is required}
-MODEL=$REPO/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf
+MODEL=${DSV4_MATCHED_MODEL_FIRST:?DSV4_MATCHED_MODEL_FIRST is required}
+SHARDS_JSON=${DSV4_MATCHED_SHARDS_JSON:?DSV4_MATCHED_SHARDS_JSON is required}
+BENCH=${MATCHED_BENCH_PATH:?MATCHED_BENCH_PATH is required}
 PORT=${MATCHED_PORT:?MATCHED_PORT is required}
 PID=
 START_TICKS=
@@ -38,11 +40,45 @@ stop_server() {
 trap stop_server EXIT
 
 mkdir -p -- "$OUT"
+record_shards() {
+    local checkpoint=$1
+    python3 - "$SHARDS_JSON" "$OUT/model.shards.jsonl" "$checkpoint" <<'PY'
+import json
+import os
+import pathlib
+import sys
+import time
+
+expected = json.load(open(sys.argv[1], encoding="ascii"))["dsv4_shards"]
+rows = []
+for shard in expected:
+    path = pathlib.Path(shard["path"])
+    info = path.stat()
+    observed = {
+        "path": str(path),
+        "device": info.st_dev,
+        "inode": info.st_ino,
+        "bytes": info.st_size,
+    }
+    for field in ("path", "device", "inode", "bytes"):
+        if observed[field] != shard[field]:
+            raise SystemExit(f"DeepSeek shard identity changed at {sys.argv[3]}: {path}")
+    rows.append(observed)
+record = {"checkpoint": sys.argv[3], "monotonic_ns": time.monotonic_ns(), "shards": rows}
+fd = os.open(sys.argv[2], os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+with os.fdopen(fd, "a", encoding="ascii") as stream:
+    stream.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
+    stream.flush()
+    os.fsync(stream.fileno())
+PY
+}
+
+record_shards prelaunch
 LD_LIBRARY_PATH=$(dirname -- "$BINARY") \
     "$BINARY" --model "$MODEL" --alias deepseek-v4-flash \
     --host 127.0.0.1 --port "$PORT" -c 32768 -np 1 -ngl 999 \
     -b 2048 -ub 512 --no-warmup --cache-ram 0 --no-mmap \
-    --no-direct-io --spec-type ngram-map-k4v \
+    --no-direct-io --no-cache-prompt --spec-type ngram-map-k4v \
     >"$OUT/server.log" 2>&1 &
 PID=$!
 START_TICKS=$(awk '{print $22}' "/proc/$PID/stat")
@@ -58,6 +94,7 @@ for _ in $(seq 1 900); do
     sleep 1
 done
 "$ready" || { tail -100 "$OUT/server.log" >&2; exit 1; }
+record_shards ready
 
 python3 - "$PID" "$MODEL" "$OUT" "$actual_binary_sha256" <<'PY'
 import hashlib
@@ -94,12 +131,8 @@ model_identity = f"{model_info.st_dev}:{model_info.st_ino}:{model_info.st_size}"
     json.dumps(
         {
             "boot_id": boot_id,
-            "healthy": True,
-            "memwatch_alive": True,
-            "server_alive": True,
             "server_pid": pid,
             "server_start_ticks": int(stat_fields[21]),
-            "watchdog_armed": True,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -127,13 +160,42 @@ model_identity = f"{model_info.st_dev}:{model_info.st_ino}:{model_info.st_size}"
 )
 PY
 
-"$REPO/.venv-harness/bin/python" "$REPO/scripts/30_bench_speed.py" \
+"$REPO/.venv-harness/bin/python" "$BENCH" \
     --base-url "http://127.0.0.1:$PORT" \
     --out "$OUT/result.json" --stack-label "$LABEL" \
     --reps 2 --context-levels 0,28672 --max-tokens 160 \
     --min-completion-tokens 128 --request-timeout 2700 \
     --seed "$SEED" --ignore-eos-supported \
     --prompt-count-log "$OUT/server.log" --prompt-count-format llama
+
+[[ $(awk '{print $22}' "/proc/$PID/stat" 2>/dev/null || true) == "$START_TICKS" ]] || {
+    echo "DeepSeek server identity changed after requests" >&2
+    exit 1
+}
+post_status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 \
+    "http://127.0.0.1:$PORT/v1/models" || true)
+[[ $post_status == 200 ]] || { echo "DeepSeek post-request health failed" >&2; exit 1; }
+record_shards post_requests
+python3 - "$OUT/process.observations.json" "$PID" "$START_TICKS" "$post_status" <<'PY'
+import json
+import os
+import sys
+import time
+
+record = {
+    "readiness_http_status": 200,
+    "post_requests_http_status": int(sys.argv[4]),
+    "server_pid": int(sys.argv[2]),
+    "server_start_ticks": int(sys.argv[3]),
+    "recorded_monotonic_ns": time.monotonic_ns(),
+}
+fd = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+with os.fdopen(fd, "w", encoding="ascii") as stream:
+    json.dump(record, stream, sort_keys=True, separators=(",", ":"))
+    stream.write("\n")
+    stream.flush()
+    os.fsync(stream.fileno())
+PY
 
 stop_server
 trap - EXIT

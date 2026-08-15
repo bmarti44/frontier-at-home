@@ -56,10 +56,25 @@ class MatchedEvidenceTests(unittest.TestCase):
                     "serving_weights_manifest_sha256": serving_digest,
                     "measured_server_context_cap": 32_768,
                     "matched_model_first_shard_bytes": 5_257_664,
+                    "model_shards": [
+                        {"name": "dsv4-00001-of-00003.gguf", "bytes": 5_257_664, "sha256": "1" * 64},
+                        {"name": "dsv4-00002-of-00003.gguf", "bytes": 49_437_013_568, "sha256": "2" * 64},
+                        {"name": "dsv4-00003-of-00003.gguf", "bytes": 47_390_237_120, "sha256": "3" * 64},
+                    ],
                     "model_path": "/models/dsv4-00001-of-00003.gguf",
                     "launch_arguments": [
-                        "--model", "{model}", "-c", "32768", "--port", "{port}"
+                        "--model", "{model}", "-c", "32768", "--port", "{port}",
+                        "--no-cache-prompt",
                     ],
+                    "safety": {
+                        "kill_floor_gib": 8,
+                        "minimum_start_gib": 110,
+                        "memory_high_gib": 105,
+                        "memory_max_gib": 107,
+                        "sample_hz": 4,
+                        "swap_max_bytes": 0,
+                        "timeout_seconds": 5400,
+                    },
                     "runtime_closure_sha256": {
                         str((ROOT / "scripts/30_bench_speed.py").resolve()): hashlib.sha256(
                             (ROOT / "scripts/30_bench_speed.py").read_bytes()
@@ -219,6 +234,20 @@ class MatchedEvidenceTests(unittest.TestCase):
                     json.dumps(result), encoding="utf-8"
                 )
                 (directory / "kernel.log").write_text("", encoding="utf-8")
+                counts = (100, 100, 28_800, 28_800)
+                if glm:
+                    server_lines = [
+                        f"ds4-server: chat ctx=0..1:{count} prompt start"
+                        for count in counts
+                    ]
+                else:
+                    server_lines = [
+                        f"slot print_timing: prompt eval time = 1.0 ms / {count} tokens (x)"
+                        for count in counts
+                    ]
+                (directory / "server.log").write_text(
+                    "\n".join(server_lines) + "\n", encoding="utf-8"
+                )
                 if glm:
                     (directory / "runtime.config").write_text(
                         "context_cap=32768\nexpert_cache_gib=0\n"
@@ -282,10 +311,9 @@ class MatchedEvidenceTests(unittest.TestCase):
                         "mem_avail_kb=62914560 eng_rss_kb=1 read_bytes=1\n",
                         encoding="utf-8",
                     )
-                    (directory / "safety.main.log").write_text(
+                    safety_prefix = (
                         "executed_environment_allowlist=bound "
                         "executed_environment_sha256=" + environment["sha256"] + "\n"
-                        "SAFE_RUN_DONE rc=0\n", encoding="utf-8"
                     )
                 else:
                     (directory / "process.identity.json").write_text(
@@ -294,10 +322,6 @@ class MatchedEvidenceTests(unittest.TestCase):
                                 "boot_id": "11111111-2222-3333-4444-555555555555",
                                 "server_pid": 3000 + block * 4 + sequence,
                                 "server_start_ticks": 4000 + block * 4 + sequence,
-                                "server_alive": True,
-                                "memwatch_alive": True,
-                                "watchdog_armed": True,
-                                "healthy": True,
                             }
                         ),
                         encoding="utf-8",
@@ -308,7 +332,7 @@ class MatchedEvidenceTests(unittest.TestCase):
                                 "argv": [
                                     "/candidate/llama-server", "--model",
                                     "/models/dsv4-00001-of-00003.gguf", "-c", "32768",
-                                    "--port", "8021",
+                                    "--port", "8021", "--no-cache-prompt",
                                 ],
                                 "binary_sha256": "c" * 64,
                                 "context_cap": 32768,
@@ -319,6 +343,48 @@ class MatchedEvidenceTests(unittest.TestCase):
                     )
                     (directory / "model.device-inode-size").write_text(
                         "66306:779227:5257664\n", encoding="ascii"
+                    )
+                    shard_values = (
+                        ("dsv4-00001-of-00003.gguf", 779227, 5_257_664),
+                        ("dsv4-00002-of-00003.gguf", 779228, 49_437_013_568),
+                        ("dsv4-00003-of-00003.gguf", 779229, 47_390_237_120),
+                    )
+                    checkpoints = []
+                    for checkpoint_index, checkpoint in enumerate(
+                        ("prelaunch", "ready", "post_requests")
+                    ):
+                        checkpoints.append(
+                            json.dumps(
+                                {
+                                    "checkpoint": checkpoint,
+                                    "monotonic_ns": 10 + checkpoint_index,
+                                    "shards": [
+                                        {
+                                            "path": f"/models/{name}",
+                                            "device": 66306,
+                                            "inode": inode,
+                                            "bytes": size,
+                                        }
+                                        for name, inode, size in shard_values
+                                    ],
+                                },
+                                separators=(",", ":"),
+                            )
+                        )
+                    (directory / "model.shards.jsonl").write_text(
+                        "\n".join(checkpoints) + "\n", encoding="ascii"
+                    )
+                    (directory / "process.observations.json").write_text(
+                        json.dumps(
+                            {
+                                "readiness_http_status": 200,
+                                "post_requests_http_status": 200,
+                                "server_pid": 3000 + block * 4 + sequence,
+                                "server_start_ticks": 4000 + block * 4 + sequence,
+                                "recorded_monotonic_ns": 20,
+                            }
+                        ),
+                        encoding="ascii",
                     )
                     (directory / "process.runtime-closure.json").write_text(
                         json.dumps(
@@ -335,9 +401,25 @@ class MatchedEvidenceTests(unittest.TestCase):
                         "mem_avail_kb=20971520 eng_rss_kb=1 read_bytes=1\n",
                         encoding="utf-8",
                     )
-                    (directory / "safety.main.log").write_text(
-                        "SAFE_RUN_DONE rc=0\n", encoding="utf-8"
-                    )
+                    safety_prefix = ""
+                safety_main = (
+                    safety_prefix
+                    + "cgroup_final current_bytes=1 peak_bytes=2 swap_current_bytes=0 "
+                    "events=high=0,high_delta=0,max=0,max_delta=0,oom=0,oom_delta=0,"
+                    "oom_kill=0,oom_kill_delta=0,oom_group_kill=0,oom_group_kill_delta=0\n"
+                    "SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)\n"
+                )
+                (directory / "safety.main.log").write_text(safety_main, encoding="utf-8")
+                (directory / "safety.kernel.log").write_text("", encoding="utf-8")
+                main_hash = hashlib.sha256((directory / "safety.main.log").read_bytes()).hexdigest()
+                samples_hash = hashlib.sha256((directory / "samples.log").read_bytes()).hexdigest()
+                kernel_hash = hashlib.sha256((directory / "safety.kernel.log").read_bytes()).hexdigest()
+                (directory / "safety.wrapper.out").write_text(
+                    "SAFE_RUN_DONE rc=0 killed=no dir=/tmp/safe "
+                    f"main_sha256={main_hash} samples_sha256={samples_hash} "
+                    f"kernel_sha256={kernel_hash}\n",
+                    encoding="ascii",
+                )
         return campaign, fixture, dsv4_profile, serving_manifest, glm_profile
 
     def test_collects_exact_twenty_safe_matched_records(self):
@@ -395,12 +477,11 @@ class MatchedEvidenceTests(unittest.TestCase):
             campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
             first = campaign / "block0-seq0-armA"
             (first / "samples.log").unlink()
-            with self.assertRaisesRegex(ValueError, "samples"):
+            with self.assertRaisesRegex(ValueError, "samples|canonical safety"):
                 self.collector.collect_records(campaign, fixture, profile, serving, glm_profile)
 
-            (first / "samples.log").write_text(
-                "mem_avail_kb=62914560\n", encoding="utf-8"
-            )
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, fixture, profile, serving, glm_profile = self.make_campaign(Path(tmp))
             source = campaign / "block0-seq0-armA" / "process.identity"
             target = campaign / "block0-seq3-armA" / "process.identity"
             target.write_bytes(source.read_bytes())

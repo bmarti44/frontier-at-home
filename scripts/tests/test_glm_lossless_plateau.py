@@ -84,13 +84,15 @@ class GlmLosslessPlateauTests(unittest.TestCase):
     def test_campaign_retains_execution_bytes_and_holds_one_global_lock(self):
         campaign = CAMPAIGN.read_text()
         self.assertIn("MATCHED_RETAINED_RUNTIME", campaign)
-        self.assertIn("retained/decisive_matched.sh", campaign)
-        self.assertIn("git show", campaign)
+        self.assertIn(
+            "retained/results/glm52-goal/harness/decisive_matched.sh", campaign
+        )
+        self.assertIn('git -C "$REPO" show', campaign)
         self.assertIn("INFERENCE_LOCK_FD", campaign)
         self.assertIn("GLM_SAFE_PARENT_LOCK_FD", campaign)
         self.assertLess(
-            campaign.index("INFERENCE_LOCK_FD"),
-            campaign.index("verify_campaign_artifacts"),
+            campaign.index("exec {INFERENCE_LOCK_FD}"),
+            campaign.index("\nverify_campaign_artifacts\n"),
         )
 
     def test_dsv4_arm_disables_prompt_cache_and_records_all_shard_checkpoints(self):

@@ -15,11 +15,105 @@ PORT=$((10#$PORT))
 (( PORT >= 1024 && PORT <= 65535 )) || { echo "invalid MATCHED_PORT" >&2; exit 2; }
 
 OUT=/home/bmarti44/.local/state/glm52-decisive-$TAG
-CGROUP=$REPO/results/glm52-gates/harness/glm_cgroup_run.sh
-GLM_ARM=$REPO/results/glm52-goal/harness/glm_decisive_arm.sh
-DSV4_ARM=$REPO/results/glm52-goal/harness/dsv4_decisive_arm.sh
-GLM_PROFILE=$REPO/configs/glm52-lossless-plateau-profile.json
-DSV4_PROFILE=$REPO/configs/dsv4-matched-32k-profile.json
+if [[ ${MATCHED_RETAINED_RUNTIME:-0} != 1 ]]; then
+    [[ ! -e $OUT ]] || { echo "refusing to overwrite $OUT" >&2; exit 1; }
+    head=$(git -C "$REPO" rev-parse HEAD)
+    git -C "$REPO" show "$head:results/glm52-goal/harness/decisive_matched.sh" |
+        cmp -s -- - "${BASH_SOURCE[0]}" || {
+            echo "campaign entrypoint differs from committed HEAD" >&2
+            exit 1
+        }
+    mkdir -p -- "$OUT/retained"
+    python3 - "$REPO" "$head" "$OUT/retained" "$OUT/retained-manifest.json" <<'PY'
+import hashlib
+import json
+import os
+import pathlib
+import subprocess
+import sys
+
+repo = pathlib.Path(sys.argv[1])
+head = sys.argv[2]
+retained = pathlib.Path(sys.argv[3])
+manifest_path = pathlib.Path(sys.argv[4])
+profiles = (
+    "configs/glm52-lossless-plateau-profile.json",
+    "configs/dsv4-matched-32k-profile.json",
+)
+
+def git_bytes(relative):
+    return subprocess.run(
+        ["git", "-C", str(repo), "show", f"{head}:{relative}"],
+        check=True,
+        stdout=subprocess.PIPE,
+    ).stdout
+
+profile_docs = [json.loads(git_bytes(path)) for path in profiles]
+paths = set(profiles)
+for profile in profile_docs:
+    bindings = profile.get("artifact_sha256")
+    if not isinstance(bindings, dict) or not bindings:
+        raise SystemExit("retained profile has no artifact bindings")
+    paths.update(bindings)
+required = {
+    "results/glm52-goal/harness/decisive_matched.sh",
+    "results/glm52-goal/harness/glm_decisive_arm.sh",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh",
+    "results/glm52-gates/harness/glm_cgroup_run.sh",
+    "results/glm52-gates/harness/glm_safe_run.sh",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh",
+    "scripts/03_memory_guard.py",
+    "scripts/30_bench_speed.py",
+    "scripts/56_collect_matched_evidence.py",
+    "scripts/glm52_goal.py",
+    "fixtures/ctx-32k.txt",
+    "vendor/official-encoding/tokenizer.json",
+}
+if not required <= paths:
+    raise SystemExit(f"profiles omit required retained closure: {sorted(required - paths)}")
+digests = {}
+for relative in sorted(paths):
+    if relative.startswith("/") or ".." in pathlib.PurePosixPath(relative).parts:
+        raise SystemExit(f"unsafe retained path: {relative}")
+    raw = git_bytes(relative)
+    expected_values = {
+        profile["artifact_sha256"].get(relative)
+        for profile in profile_docs
+        if relative in profile["artifact_sha256"]
+    }
+    actual = hashlib.sha256(raw).hexdigest()
+    if expected_values and expected_values != {actual}:
+        raise SystemExit(f"profile digest mismatch at committed HEAD: {relative}")
+    destination = retained / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o500)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+    digests[relative] = actual
+manifest = {"schema": "matched-retained-closure-v1", "git_head": head, "sha256": digests}
+with open(manifest_path, "x", encoding="ascii") as stream:
+    json.dump(manifest, stream, sort_keys=True, separators=(",", ":"))
+    stream.write("\n")
+    stream.flush()
+    os.fsync(stream.fileno())
+os.chmod(retained, 0o500)
+PY
+    exec env MATCHED_RETAINED_RUNTIME=1 MATCHED_TAG="$TAG" MATCHED_SEED="$SEED" \
+        MATCHED_BLOCKS="$BLOCKS" MATCHED_PORT="$PORT" \
+        bash "$OUT/retained/results/glm52-goal/harness/decisive_matched.sh"
+fi
+
+CODE_ROOT=$OUT/retained
+CGROUP=$CODE_ROOT/results/glm52-gates/harness/glm_cgroup_run.sh
+DSV4_CGROUP=$CODE_ROOT/results/glm52-gates/harness/dsv4_matched_cgroup_run.sh
+GLM_ARM=$CODE_ROOT/results/glm52-goal/harness/glm_decisive_arm.sh
+DSV4_ARM=$CODE_ROOT/results/glm52-goal/harness/dsv4_decisive_arm.sh
+GLM_PROFILE=$CODE_ROOT/configs/glm52-lossless-plateau-profile.json
+DSV4_PROFILE=$CODE_ROOT/configs/dsv4-matched-32k-profile.json
+BENCH=$CODE_ROOT/scripts/30_bench_speed.py
+COLLECTOR=$CODE_ROOT/scripts/56_collect_matched_evidence.py
 CRASH_ROOT=/home/bmarti44/.local/state/glm52-crashlog
 GLM_CANDIDATE_SRC=/home/bmarti44/.cache/glm52-w7-stable-remap-bccf0b6
 GLM_BINARY_SHA256=eec10ca8aae5ef685e5420b02a56a1b76afaac9416acd58efb4230b15678a4d2
@@ -27,7 +121,7 @@ FAULT_PATTERN='NV_ERR_NO_MEMORY|NVRM.*Xid|oom-kill|Out of memory: Killed process
 GLM_ENV_ALLOWLIST=DS4_CUDA_EXPERT_CACHE_GB,DS4_CUDA_EXPERT_CACHE_PIN,DS4_CUDA_EXPERT_CACHE_SLRU,DS4_CUDA_FETCH_THREADS,DS4_CUDA_IQ2_DOWN_REFERENCE,DS4_CUDA_MOE_NO_ATOMIC_DOWN,DS4_CUDA_STABLE_MODEL_REMAP,DS4_TOKEN_TIMING_LOG
 
 wait_full_release() {
-    python3 "$REPO/scripts/03_memory_guard.py" \
+    python3 "$CODE_ROOT/scripts/03_memory_guard.py" \
         --required-gib 110 --stable-samples 3 --timeout-seconds 180
 }
 
@@ -63,18 +157,20 @@ assert_no_kernel_faults_since() {
 }
 
 verify_campaign_artifacts() {
-    python3 - "$REPO" "$GLM_PROFILE" "$DSV4_PROFILE" "$OUT/campaign-preflight.json" <<'PY'
+    python3 - "$CODE_ROOT" "$REPO" "$GLM_PROFILE" "$DSV4_PROFILE" \
+        "$OUT/models" "$OUT/campaign-preflight.json" <<'PY'
 import hashlib
 import json
 import os
 import pathlib
-import stat
 import sys
 
 root = pathlib.Path(sys.argv[1]).resolve()
-glm_profile_path = pathlib.Path(sys.argv[2])
-dsv_profile_path = pathlib.Path(sys.argv[3])
-output = pathlib.Path(sys.argv[4])
+source_repo = pathlib.Path(sys.argv[2]).resolve()
+glm_profile_path = pathlib.Path(sys.argv[3])
+dsv_profile_path = pathlib.Path(sys.argv[4])
+model_root = pathlib.Path(sys.argv[5]).resolve()
+output = pathlib.Path(sys.argv[6])
 
 def digest(path, *, evict=False):
     value = hashlib.sha256()
@@ -130,13 +226,28 @@ with open(dsv["weights_manifest_path"], encoding="utf-8") as stream:
 manifest_digest, _ = digest(dsv["weights_manifest_path"])
 if manifest_digest != dsv["weights_manifest_sha256"]:
     raise SystemExit("DeepSeek weights manifest mismatch")
+shards = []
 for entry in weights["files"]:
-    path = root / "weights" / "unsloth-ud-q2_k_xl" / entry["name"]
+    source = source_repo / "weights" / "unsloth-ud-q2_k_xl" / entry["name"]
+    path = model_root / entry["name"]
     if path.is_symlink() or os.access(path, os.W_OK):
         raise SystemExit(f"DeepSeek model shard is writable or a symlink: {path}")
     actual, info = digest(path, evict=True)
-    if actual != entry["sha256"] or info.st_size != entry["bytes"]:
+    source_info = source.stat()
+    if (
+        actual != entry["sha256"]
+        or info.st_size != entry["bytes"]
+        or (info.st_dev, info.st_ino) != (source_info.st_dev, source_info.st_ino)
+    ):
         raise SystemExit(f"DeepSeek model shard mismatch: {path}")
+    shards.append({
+        "path": str(path),
+        "name": entry["name"],
+        "sha256": actual,
+        "device": info.st_dev,
+        "inode": info.st_ino,
+        "bytes": info.st_size,
+    })
 environment = glm["runtime"]["engine_environment"]
 canonical = "".join(f"{name}={environment[name]}\n" for name in sorted(environment))
 record = {
@@ -145,12 +256,71 @@ record = {
     "glm_environment_sha256": hashlib.sha256(canonical.encode("ascii")).hexdigest(),
     "glm_model_device_inode_size": f"{glm_info.st_dev}:{glm_info.st_ino}:{glm_info.st_size}",
     "glm_model_sha256": glm_digest,
+    "dsv4_shards": shards,
 }
 with open(output, "x", encoding="ascii") as stream:
     json.dump(record, stream, sort_keys=True, separators=(",", ":"))
     stream.write("\n")
     stream.flush()
     os.fsync(stream.fileno())
+PY
+}
+
+prepare_dsv_model_links() {
+    mkdir -p -- "$OUT/models"
+    python3 - "$DSV4_PROFILE" "$REPO" "$OUT/models" <<'PY'
+import json
+import os
+import pathlib
+import sys
+
+profile = json.load(open(sys.argv[1], encoding="utf-8"))
+repo = pathlib.Path(sys.argv[2])
+target = pathlib.Path(sys.argv[3])
+weights = json.load(open(profile["weights_manifest_path"], encoding="utf-8"))
+for entry in weights["files"]:
+    source = repo / "weights" / "unsloth-ud-q2_k_xl" / entry["name"]
+    destination = target / entry["name"]
+    os.link(source, destination)
+PY
+}
+
+verify_terminal_closure() {
+    python3 - "$OUT/retained-manifest.json" "$CODE_ROOT" \
+        "$OUT/campaign-preflight.json" <<'PY'
+import hashlib
+import json
+import os
+import pathlib
+import sys
+
+manifest = json.load(open(sys.argv[1], encoding="ascii"))
+root = pathlib.Path(sys.argv[2])
+preflight = json.load(open(sys.argv[3], encoding="ascii"))
+observed = set()
+for path in root.rglob("*"):
+    if path.is_file():
+        relative = path.relative_to(root).as_posix()
+        observed.add(relative)
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if manifest["sha256"].get(relative) != actual:
+            raise SystemExit(f"retained closure changed: {relative}")
+if observed != set(manifest["sha256"]):
+    raise SystemExit("retained closure membership changed")
+for shard in preflight["dsv4_shards"]:
+    path = pathlib.Path(shard["path"])
+    info = path.stat()
+    digest = hashlib.sha256()
+    with path.open("rb", buffering=0) as stream:
+        for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
+            digest.update(chunk)
+        os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
+    if (
+        (info.st_dev, info.st_ino, info.st_size)
+        != (shard["device"], shard["inode"], shard["bytes"])
+        or digest.hexdigest() != shard["sha256"]
+    ):
+        raise SystemExit(f"DeepSeek shard changed during campaign: {path}")
 PY
 }
 
@@ -165,6 +335,7 @@ copy_safety_evidence() {
     }
     cp -- "${matches[0]}/samples.log" "$arm_out/samples.log"
     cp -- "${matches[0]}/main.log" "$arm_out/safety.main.log"
+    cp -- "${matches[0]}/kernel.log" "$arm_out/safety.kernel.log"
 }
 
 cleanup() {
@@ -173,19 +344,40 @@ cleanup() {
     set +e
     assert_idle cleanup || rc=1
     wait_full_release >/dev/null 2>&1 || rc=1
+    if [[ ${PREFLIGHT_DONE:-0} == 1 ]]; then
+        verify_terminal_closure || rc=1
+    fi
     exit "$rc"
 }
 trap cleanup EXIT
 
-[[ ! -e $OUT ]] || { echo "refusing to overwrite $OUT" >&2; exit 1; }
-mkdir -p -- "$OUT"
+[[ -d $OUT && -d $CODE_ROOT && -f $OUT/retained-manifest.json ]] || {
+    echo "retained campaign closure is missing" >&2
+    exit 1
+}
+exec {INFERENCE_LOCK_FD}<>/run/lock/frontier-at-home/inference.lock
+flock -n -E 75 "$INFERENCE_LOCK_FD"
+PARENT_LOCK_PID=$$
+PARENT_LOCK_START_TICKS=$(awk '{print $22}' "/proc/$$/stat")
+PARENT_LOCK_DEV_INO=$(stat -Lc '%d:%i' "/proc/$$/fd/$INFERENCE_LOCK_FD")
+PARENT_LOCK_KERNEL_KEY=$(awk '$1 == "lock:" && $3 == "FLOCK" && $5 == "WRITE" {print $7}' \
+    "/proc/$$/fdinfo/$INFERENCE_LOCK_FD")
+[[ $PARENT_LOCK_KERNEL_KEY =~ ^[0-9a-f]+:[0-9a-f]+:[0-9]+$ ]] || {
+    echo "global inference-lock kernel binding is missing" >&2
+    exit 1
+}
+exec {SAFE_FD}<"$CODE_ROOT/results/glm52-gates/harness/glm_safe_run.sh"
+SAFE_FD_SHA256=$(sha256sum "/proc/$$/fd/$SAFE_FD" | awk '{print $1}')
 assert_idle initial
 wait_full_release >"$OUT/initial-memory.json"
+prepare_dsv_model_links
 verify_campaign_artifacts
+PREFLIGHT_DONE=1
 GLM_MODEL_IDENTITY=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["glm_model_device_inode_size"])' "$OUT/campaign-preflight.json")
 GLM_ENV_SHA256=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["glm_environment_sha256"])' "$OUT/campaign-preflight.json")
 DSV4_BINARY=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_binary"])' "$OUT/campaign-preflight.json")
 DSV4_BINARY_SHA256=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_binary_sha256"])' "$OUT/campaign-preflight.json")
+DSV4_MODEL_FIRST=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dsv4_shards"][0]["path"])' "$OUT/campaign-preflight.json")
 
 run_glm() {
     local label=$1 arm_out=$OUT/$label safe_tag="$TAG-$label" cursor rc=0
@@ -196,16 +388,25 @@ run_glm() {
     cursor=$(kernel_cursor)
     set +e
     env GLM_SAFE_RUN_AS_CURRENT_USER=1 \
+        GLM_SAFE_PARENT_LOCK_PID="$PARENT_LOCK_PID" \
+        GLM_SAFE_PARENT_LOCK_START_TICKS="$PARENT_LOCK_START_TICKS" \
+        GLM_SAFE_PARENT_LOCK_FD="$INFERENCE_LOCK_FD" \
+        GLM_SAFE_PARENT_LOCK_DEV_INO="$PARENT_LOCK_DEV_INO" \
+        GLM_SAFE_PARENT_LOCK_KERNEL_KEY="$PARENT_LOCK_KERNEL_KEY" \
+        GLM_SAFE_PINNED_SAFE_PATH="/proc/$$/fd/$SAFE_FD" \
+        GLM_SAFE_PINNED_SAFE_SHA256="$SAFE_FD_SHA256" \
         GLM_CANDIDATE_SRC="$GLM_CANDIDATE_SRC" \
         GLM_SAFE_LOG_CANDIDATE_PROVENANCE=1 \
         GLM_SAFE_EXPECTED_BINARY_SHA256="$GLM_BINARY_SHA256" \
         GLM_SAFE_PROVENANCE_ENV_ALLOWLIST="$GLM_ENV_ALLOWLIST" \
         GLM_SAFE_EXPECTED_ENV_SHA256="$GLM_ENV_SHA256" \
         GLM_SAFE_KILL_FLOOR_GIB=40 GLM_SAFE_MIN_START_GIB=110 \
-        GLM_SAFE_TIMEOUT_S=5400 GLM_PORT="$PORT" \
+        GLM_SAFE_TIMEOUT_S=5400 GLM_SAFE_DONE_DIGESTS=1 GLM_PORT="$PORT" \
+        MATCHED_BENCH_PATH="$BENCH" \
         GLM_VERIFIED_MODEL_DEVICE_INODE_SIZE="$GLM_MODEL_IDENTITY" \
         "$CGROUP" --tag "$safe_tag" -- \
-        bash "$GLM_ARM" "$arm_out" "$label" "$SEED"
+        bash "$GLM_ARM" "$arm_out" "$label" "$SEED" \
+        >"$arm_out/safety.wrapper.out" 2>"$arm_out/safety.wrapper.err"
     rc=$?
     set -e
     copy_safety_evidence "$safe_tag" "$arm_out" || rc=1
@@ -223,13 +424,23 @@ run_dsv4() {
     wait_full_release >/dev/null
     cursor=$(kernel_cursor)
     set +e
-    env GLM_SAFE_RUN_AS_CURRENT_USER=1 GLM_SAFE_KILL_FLOOR_GIB=18 \
-        GLM_SAFE_MIN_START_GIB=110 GLM_SAFE_TIMEOUT_S=5400 \
+    env DSV4_MATCHED_KILL_FLOOR_GIB=8 DSV4_MATCHED_MIN_START_GIB=110 \
+        DSV4_MATCHED_MEMORY_HIGH_GIB=105 DSV4_MATCHED_MEMORY_MAX_GIB=107 \
+        DSV4_MATCHED_TIMEOUT_S=5400 \
+        GLM_SAFE_PARENT_LOCK_PID="$PARENT_LOCK_PID" \
+        GLM_SAFE_PARENT_LOCK_START_TICKS="$PARENT_LOCK_START_TICKS" \
+        GLM_SAFE_PARENT_LOCK_FD="$INFERENCE_LOCK_FD" \
+        GLM_SAFE_PARENT_LOCK_DEV_INO="$PARENT_LOCK_DEV_INO" \
+        GLM_SAFE_PARENT_LOCK_KERNEL_KEY="$PARENT_LOCK_KERNEL_KEY" \
         DSV4_MATCHED_BINARY="$DSV4_BINARY" \
         DSV4_MATCHED_BINARY_SHA256="$DSV4_BINARY_SHA256" \
+        DSV4_MATCHED_MODEL_FIRST="$DSV4_MODEL_FIRST" \
+        DSV4_MATCHED_SHARDS_JSON="$OUT/campaign-preflight.json" \
+        MATCHED_BENCH_PATH="$BENCH" \
         MATCHED_PORT="$PORT" \
-        "$CGROUP" --tag "$safe_tag" -- \
-        bash "$DSV4_ARM" "$arm_out" "$label" "$SEED"
+        "$DSV4_CGROUP" --tag "$safe_tag" -- \
+        bash "$DSV4_ARM" "$arm_out" "$label" "$SEED" \
+        >"$arm_out/safety.wrapper.out" 2>"$arm_out/safety.wrapper.err"
     rc=$?
     set -e
     copy_safety_evidence "$safe_tag" "$arm_out" || rc=1
@@ -258,5 +469,13 @@ done
 
 assert_idle terminal
 wait_full_release >"$OUT/terminal-memory.json"
+verify_terminal_closure
+"$REPO/.venv-harness/bin/python" "$COLLECTOR" "$OUT" \
+    --fixture "$CODE_ROOT/fixtures/ctx-32k.txt" \
+    --dsv4-profile "$DSV4_PROFILE" --glm-profile "$GLM_PROFILE" \
+    --serving-manifest "$REPO/weights/unsloth-ud-q2_k_xl/manifest.json" \
+    --out "$OUT/raw.jsonl"
+verify_terminal_closure
+PREFLIGHT_DONE=0
 trap - EXIT
 echo "DECISIVE_MATCHED_DONE out=$OUT"

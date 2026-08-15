@@ -152,22 +152,75 @@ def _execution_binding(
 def _dsv_execution_binding(
     directory: Path,
     expected_binary_sha256: str,
-    expected_model_bytes: int,
+    expected_model_shards: list[dict[str, Any]],
     expected_runtime_closure: dict[str, str],
     expected_launch_arguments: list[str],
-    expected_model_path: str,
-) -> str:
+    identity: dict[str, Any],
+) -> tuple[tuple[int, int, int], ...]:
     command = _read_json(directory / "process.command")
-    try:
-        model_identity = (directory / "model.device-inode-size").read_text(
-            encoding="ascii"
-        ).strip()
-    except OSError as exc:
-        raise ValueError(f"DeepSeek live model identity is missing in {directory}") from exc
     argv = command.get("argv") if isinstance(command, dict) else None
     runtime_closure = _read_json(directory / "process.runtime-closure.json")
+    try:
+        shard_rows = [
+            json.loads(line, object_pairs_hook=_pairs)
+            for line in (directory / "model.shards.jsonl").read_text(
+                encoding="ascii"
+            ).splitlines()
+        ]
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"DeepSeek shard checkpoints are invalid in {directory}") from exc
+    if len(shard_rows) != 3 or [row.get("checkpoint") for row in shard_rows] != [
+        "prelaunch", "ready", "post_requests"
+    ]:
+        raise ValueError(f"DeepSeek shard checkpoints are incomplete in {directory}")
+    if any(
+        not isinstance(row.get("monotonic_ns"), int)
+        or isinstance(row.get("monotonic_ns"), bool)
+        or row["monotonic_ns"] <= 0
+        for row in shard_rows
+    ) or any(
+        right["monotonic_ns"] <= left["monotonic_ns"]
+        for left, right in zip(shard_rows, shard_rows[1:])
+    ):
+        raise ValueError(f"DeepSeek shard checkpoint order is invalid in {directory}")
+    expected_names = [entry["name"] for entry in expected_model_shards]
+    snapshots: list[tuple[tuple[int, int, int], ...]] = []
+    model_paths: list[str] = []
+    for row in shard_rows:
+        shards = row.get("shards")
+        if not isinstance(shards, list) or len(shards) != len(expected_names):
+            raise ValueError(f"DeepSeek shard checkpoint shape is invalid in {directory}")
+        observed: list[tuple[int, int, int]] = []
+        names: list[str] = []
+        paths: list[str] = []
+        for shard, expected in zip(shards, expected_model_shards):
+            if not isinstance(shard, dict) or set(shard) != {
+                "path", "device", "inode", "bytes"
+            }:
+                raise ValueError(f"DeepSeek shard checkpoint row is invalid in {directory}")
+            path = shard["path"]
+            if not isinstance(path, str) or not Path(path).is_absolute():
+                raise ValueError(f"DeepSeek shard path is invalid in {directory}")
+            values = (shard["device"], shard["inode"], shard["bytes"])
+            if any(
+                not isinstance(value, int) or isinstance(value, bool) or value <= 0
+                for value in values
+            ) or values[2] != expected["bytes"]:
+                raise ValueError(f"DeepSeek shard identity is invalid in {directory}")
+            names.append(Path(path).name)
+            paths.append(path)
+            observed.append(values)
+        if names != expected_names:
+            raise ValueError(f"DeepSeek shard names do not match in {directory}")
+        if model_paths and paths != model_paths:
+            raise ValueError(f"DeepSeek shard paths changed in {directory}")
+        model_paths = paths
+        snapshots.append(tuple(observed))
+    if snapshots[1:] != snapshots[:-1]:
+        raise ValueError(f"DeepSeek shard identity changed during arm {directory}")
+    model_identity = ":".join(str(value) for value in snapshots[0][0])
     expected_arguments = [
-        expected_model_path if value == "{model}" else value
+        model_paths[0] if value == "{model}" else value
         for value in expected_launch_arguments
     ]
     if "{port}" not in expected_arguments:
@@ -181,20 +234,32 @@ def _dsv_execution_binding(
     ):
         raise ValueError(f"DeepSeek executed command does not match in {directory}")
     expected_arguments[port_index] = argv[port_index + 1]
-    parts = model_identity.split(":")
     if (
         argv[1:] != expected_arguments
         or any(not isinstance(value, str) or "\x00" in value for value in argv)
         or command.get("binary_sha256") != expected_binary_sha256
         or command.get("context_cap") != 32_768
         or command.get("model_device_inode_size") != model_identity
-        or len(parts) != 3
-        or any(not value.isdigit() for value in parts)
-        or int(parts[2]) != expected_model_bytes
         or runtime_closure != expected_runtime_closure
     ):
         raise ValueError(f"DeepSeek executed command does not match in {directory}")
-    return model_identity
+    observations = _read_json(directory / "process.observations.json")
+    if (
+        not isinstance(observations, dict)
+        or set(observations)
+        != {
+            "readiness_http_status", "post_requests_http_status", "server_pid",
+            "server_start_ticks", "recorded_monotonic_ns",
+        }
+        or observations["readiness_http_status"] != 200
+        or observations["post_requests_http_status"] != 200
+        or observations["server_pid"] != identity.get("server_pid")
+        or observations["server_start_ticks"] != identity.get("server_start_ticks")
+        or not isinstance(observations["recorded_monotonic_ns"], int)
+        or observations["recorded_monotonic_ns"] <= shard_rows[-1]["monotonic_ns"]
+    ):
+        raise ValueError(f"DeepSeek live supervision observations are invalid in {directory}")
+    return snapshots[0]
 
 
 def _finite(value: Any, label: str) -> float:
@@ -217,6 +282,81 @@ def _memory_min(path: Path, pattern: re.Pattern[str], scale: float) -> float:
     if not values or any(not math.isfinite(value) or value <= 0 for value in values):
         raise ValueError(f"memory samples are missing or invalid in {path}")
     return min(values)
+
+
+def _parse_production_prompt_counts(directory: Path, profile: str) -> list[int]:
+    try:
+        text = (directory / "server.log").read_text(encoding="utf-8", errors="strict")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"raw production prompt log is invalid in {directory}") from exc
+    if profile == "glm52":
+        pattern = re.compile(
+            r"^.*\bds4-server: chat ctx=[0-9]+\.\.[0-9]+:([0-9]+) prompt start\s*$",
+            re.MULTILINE,
+        )
+    else:
+        pattern = re.compile(
+            r"^.*\bslot\s+print_timing:.*\bprompt eval time\s*=.*?\s/\s*"
+            r"([0-9]+) tokens\s*\(.*$",
+            re.MULTILINE,
+        )
+    counts = [int(match.group(1)) for match in pattern.finditer(text)]
+    if len(counts) != 4 or any(value <= 0 for value in counts):
+        raise ValueError(f"raw production prompt events are incomplete in {directory}")
+    return counts
+
+
+def _parse_canonical_safety(directory: Path) -> None:
+    try:
+        wrapper = (directory / "safety.wrapper.out").read_text(encoding="utf-8")
+        main = (directory / "safety.main.log").read_bytes()
+        samples = (directory / "samples.log").read_bytes()
+        kernel = (directory / "safety.kernel.log").read_bytes()
+    except OSError as exc:
+        raise ValueError(f"canonical safety evidence is missing in {directory}") from exc
+    done = re.compile(
+        r"SAFE_RUN_DONE rc=0 killed=no dir=\S+ "
+        r"main_sha256=([0-9a-f]{64}) samples_sha256=([0-9a-f]{64}) "
+        r"kernel_sha256=([0-9a-f]{64})\Z"
+    )
+    matches = [done.fullmatch(line) for line in wrapper.splitlines()]
+    matches = [match for match in matches if match is not None]
+    if len(matches) != 1:
+        raise ValueError(f"canonical safety terminal record is invalid in {directory}")
+    actual = tuple(hashlib.sha256(value).hexdigest() for value in (main, samples, kernel))
+    if actual != matches[0].groups():
+        raise ValueError(f"canonical safety artifact digests do not match in {directory}")
+    main_text = main.decode("utf-8", errors="strict")
+    if len(re.findall(r"^.*\bSAFE_RUN end rc=0 killed=no \(124=timeout, 137=SIGKILL/ENOMEM-adjacent\)$", main_text, re.MULTILINE)) != 1:
+        raise ValueError(f"canonical safety completion is invalid in {directory}")
+    finals = re.findall(
+        r"^.*\bcgroup_final current_bytes=([0-9]+) peak_bytes=([0-9]+) "
+        r"swap_current_bytes=([0-9]+) events=([^\n]+)$",
+        main_text,
+        re.MULTILINE,
+    )
+    if len(finals) != 1 or int(finals[0][2]) != 0:
+        raise ValueError(f"canonical safety cgroup record is invalid in {directory}")
+    event_values: dict[str, int] = {}
+    for item in finals[0][3].split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if "=" in item:
+            key, raw = item.split("=", 1)
+        elif ":" in item:
+            key, raw = item.split(":", 1)
+        else:
+            parts = item.split()
+            key, raw = parts if len(parts) == 2 else ("", "")
+        if key and raw.isdigit():
+            event_values[key] = int(raw)
+    for key in ("high_delta", "max_delta", "oom_delta", "oom_kill_delta", "oom_group_kill_delta"):
+        value = event_values.get(key, event_values.get(key.removesuffix("_delta")))
+        if value != 0:
+            raise ValueError(f"canonical safety memory event is nonzero in {directory}: {key}")
+    if re.search(r"\bFATAL\b|KILL_FLOOR", main_text, re.IGNORECASE):
+        raise ValueError(f"canonical safety log records a failure in {directory}")
 
 
 def _server_identity(directory: Path, profile: str) -> tuple[str, str, str]:
@@ -248,9 +388,8 @@ def _server_identity(directory: Path, profile: str) -> tuple[str, str, str]:
     identity = _read_json(directory / "process.identity.json")
     if not isinstance(identity, dict):
         raise ValueError(f"DeepSeek process identity is invalid in {directory}")
-    required_true = ("server_alive", "memwatch_alive", "watchdog_armed", "healthy")
-    if any(identity.get(field) is not True for field in required_true):
-        raise ValueError(f"DeepSeek supervision is incomplete in {directory}")
+    if set(identity) != {"boot_id", "server_pid", "server_start_ticks"}:
+        raise ValueError(f"DeepSeek process identity is not observational in {directory}")
     boot_id = identity.get("boot_id")
     pid = identity.get("server_pid")
     ticks = identity.get("server_start_ticks")
@@ -364,13 +503,35 @@ def collect_records(
             str(dsv4_profile.get("serving_weights_manifest_sha256", ""))
         )
         or dsv4_profile.get("measured_server_context_cap") != 32_768
-        or not isinstance(dsv4_profile.get("matched_model_first_shard_bytes"), int)
+        or not isinstance(dsv4_profile.get("model_shards"), list)
+        or len(dsv4_profile.get("model_shards", [])) != 3
         or not isinstance(dsv4_profile.get("runtime_closure_sha256"), dict)
         or not dsv4_profile.get("runtime_closure_sha256")
         or not isinstance(dsv4_profile.get("launch_arguments"), list)
         or not isinstance(dsv4_profile.get("model_path"), str)
+        or dsv4_profile.get("safety")
+        != {
+            "kill_floor_gib": 8,
+            "minimum_start_gib": 110,
+            "memory_high_gib": 105,
+            "memory_max_gib": 107,
+            "sample_hz": 4,
+            "swap_max_bytes": 0,
+            "timeout_seconds": 5400,
+        }
     ):
         raise ValueError("approved DeepSeek profile is invalid")
+    for shard in dsv4_profile["model_shards"]:
+        if (
+            not isinstance(shard, dict)
+            or set(shard) != {"name", "bytes", "sha256"}
+            or not isinstance(shard["name"], str)
+            or "/" in shard["name"]
+            or not isinstance(shard["bytes"], int)
+            or shard["bytes"] <= 0
+            or not SHA256.fullmatch(str(shard["sha256"]))
+        ):
+            raise ValueError("approved DeepSeek shard binding is invalid")
     _verify_campaign_artifacts(dsv4_profile)
     # The DeepSeek arm is llama.cpp serving UD-Q2_K_XL. binary_sha256 and
     # configuration_sha256 identify the engine and its unit, and neither moves when
@@ -475,7 +636,7 @@ def collect_records(
     seeds: set[int] = set()
     prompt_hashes: dict[tuple[int, int], str] = {}
     glm_model_identity: str | None = None
-    dsv_model_identity: str | None = None
+    dsv_model_identity: tuple[tuple[int, int, int], ...] | None = None
     for block, sequence in sorted(directories):
         arm, directory = directories[(block, sequence)]
         profile, short_reps, long_reps = _load_result(directory, fixture)
@@ -488,14 +649,17 @@ def collect_records(
         server_id, binary_sha256, configuration_sha256 = _server_identity(
             directory, profile
         )
+        raw_prompt_counts = _parse_production_prompt_counts(directory, profile)
+        _parse_canonical_safety(directory)
         if profile == "dsv4":
+            dsv_identity = _read_json(directory / "process.identity.json")
             observed_dsv_model = _dsv_execution_binding(
                 directory,
                 dsv4_profile["binary_sha256"],
-                dsv4_profile["matched_model_first_shard_bytes"],
+                dsv4_profile["model_shards"],
                 dsv4_profile["runtime_closure_sha256"],
                 dsv4_profile["launch_arguments"],
-                dsv4_profile["model_path"],
+                dsv_identity,
             )
             if dsv_model_identity is None:
                 dsv_model_identity = observed_dsv_model
@@ -508,16 +672,6 @@ def collect_records(
                 re.compile(r"\bmem_avail_kb=([0-9]+)\b"),
                 1_048_576.0,
             )
-            try:
-                safety = (directory / "safety.main.log").read_text(
-                    encoding="utf-8"
-                )
-            except OSError as exc:
-                raise ValueError(f"DeepSeek safety log is missing in {directory}") from exc
-            if "SAFE_RUN_DONE rc=0" not in safety or re.search(
-                r"\bFATAL\b|KILL_FLOOR|oom_kill", safety, re.IGNORECASE
-            ):
-                raise ValueError(f"DeepSeek safety wrapper failed in {directory}")
         else:
             if binary_sha256 != glm_profile["binary_sha256"]:
                 raise ValueError(f"GLM binary does not match approved profile in {directory}")
@@ -565,10 +719,6 @@ def collect_records(
                 )
             except OSError as exc:
                 raise ValueError(f"GLM safety log is missing in {directory}") from exc
-            if "SAFE_RUN_DONE rc=0" not in safety or re.search(
-                r"\bFATAL\b|KILL_FLOOR|oom_kill", safety, re.IGNORECASE
-            ):
-                raise ValueError(f"GLM safety wrapper failed in {directory}")
             expected_environment_sha256 = _environment_digest(
                 expected_glm_environment
             )
@@ -600,6 +750,7 @@ def collect_records(
             )
         ):
             raise ValueError(f"warm token timestamps are invalid in {directory}")
+        raw_index = 0
         for context, reps in ((0, short_reps), (28_672, long_reps)):
             for rep_index, rep in enumerate(reps):
                 prompt_hash = rep.get("prompt_sha256")
@@ -617,18 +768,20 @@ def collect_records(
                     or isinstance(prompt_tokens, bool)
                     or prompt_tokens <= 0
                     or production_prompt_tokens != prompt_tokens
+                    or raw_prompt_counts[raw_index] != prompt_tokens
                     or not isinstance(completion_tokens, int)
                     or isinstance(completion_tokens, bool)
                     or completion_tokens < 128
                     or prompt_tokens + completion_tokens > 32_768
                 ):
                     raise ValueError(
-                        f"production prompt accounting is invalid in {directory}"
+                        f"raw production prompt accounting is invalid in {directory}"
                     )
+                raw_index += 1
         evaluated_tokens = 0
         prefill_seconds = 0.0
-        for rep in long_reps:
-            prompt_tokens = rep.get("prompt_tokens")
+        for long_index, rep in enumerate(long_reps):
+            prompt_tokens = raw_prompt_counts[2 + long_index]
             if (
                 not isinstance(prompt_tokens, int)
                 or isinstance(prompt_tokens, bool)
@@ -689,6 +842,11 @@ def main() -> int:
         type=Path,
         default=ROOT / "configs" / "glm52-lossless-plateau-profile.json",
     )
+    parser.add_argument(
+        "--serving-manifest",
+        type=Path,
+        default=SERVING_WEIGHTS_MANIFEST,
+    )
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     try:
@@ -696,7 +854,7 @@ def main() -> int:
             args.campaign,
             args.fixture,
             args.dsv4_profile,
-            None,
+            args.serving_manifest,
             args.glm_profile,
         )
         args.out.parent.mkdir(parents=True, exist_ok=True)

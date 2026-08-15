@@ -9,6 +9,23 @@
   "measured_server_context_cap": 32768,
   "model_path": "/home/bmarti44/spark-deepseek-v4-flash/weights/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf",
   "matched_model_first_shard_bytes": 5257664,
+  "model_shards": [
+    {
+      "name": "DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf",
+      "bytes": 5257664,
+      "sha256": "de65c5bb660817b95cc281bf54935f9d1bcc3b22535f2eae63b35a14c7c5724b"
+    },
+    {
+      "name": "DeepSeek-V4-Flash-UD-Q2_K_XL-00002-of-00003.gguf",
+      "bytes": 49437013568,
+      "sha256": "c8728a298862cd8736782e2e4056e5e3e03c415ba552a38173264494e41ef327"
+    },
+    {
+      "name": "DeepSeek-V4-Flash-UD-Q2_K_XL-00003-of-00003.gguf",
+      "bytes": 47390237120,
+      "sha256": "a4bae0788c025c1b2388754592c98fefa1372981748ac9875039bf6a30e6eeb4"
+    }
+  ],
   "weights_manifest_path": "/home/bmarti44/spark-deepseek-v4-flash/weights/unsloth-ud-q2_k_xl/manifest.json",
   "weights_manifest_sha256": "0091522cf58e3c09d3911e26e85688b2bc09f9fb3eb0be4aab47e7eca9800e2f",
   "serving_weights_manifest_sha256": "0091522cf58e3c09d3911e26e85688b2bc09f9fb3eb0be4aab47e7eca9800e2f",
@@ -22,8 +39,18 @@
     "-c", "32768", "-np", "1", "-ngl", "999",
     "-b", "2048", "-ub", "512", "--no-warmup",
     "--cache-ram", "0", "--no-mmap", "--no-direct-io",
+    "--no-cache-prompt",
     "--spec-type", "ngram-map-k4v"
   ],
+  "safety": {
+    "kill_floor_gib": 8,
+    "minimum_start_gib": 110,
+    "memory_high_gib": 105,
+    "memory_max_gib": 107,
+    "sample_hz": 4,
+    "swap_max_bytes": 0,
+    "timeout_seconds": 5400
+  },
   "runtime_closure_sha256": {
     "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/llama-server": "803b7b39cbdaa1acadc2d06a45f14232589a46e22ed5414cbc01cba175d4995c",
     "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libggml-base.so.0.16.0": "f0e23c971ffc70a27f45c647ed22801b5a0a357038ebec8b5924a91d126fb8b9",
@@ -36,11 +63,16 @@
     "/home/bmarti44/.cache/dsv4-matched-0dc74e3-prefixmap/bin/libmtmd.so.0.0.10053": "a372a31f5c6421118e91021a0205b96853652388b5a046d15370759f7b6e4006"
   },
   "artifact_sha256": {
-    "results/glm52-goal/harness/decisive_matched.sh": "7bf3d510f24f3c310493cbfb14b1ced466436d53f10a3a58bb01b388126821df",
-    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "e2ef6ce160c9e26ebea463144f28884f0034de9e4d107da7ce34225ccfa710eb",
-    "results/glm52-gates/harness/glm_cgroup_run.sh": "8d7e0832462e36bfa4e2ffe5b57f01c1fabfa301b47c90eb6ebbc73e7e5fb2e5",
+    "results/glm52-goal/harness/decisive_matched.sh": "30f98d9ee13cd8d5b22f4c574f388bd6b258c9a815cdca17da628343e8b1efff",
+    "results/glm52-goal/harness/dsv4_decisive_arm.sh": "4413b8d68f3762802e37f6f7ec1c7f39d8e45dfcee3a948bb467af8e55eebc4d",
+    "results/glm52-gates/harness/glm_cgroup_run.sh": "2e9a74bc19aa6ce8eca998d47a36c50efe78f5e2c0944fad42269bc25ec9a98d",
     "results/glm52-gates/harness/glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh": "eeaf94f0eb430ed5e0b9849d4fb0217156fc3a1d55c437de3d4bdf82cb30e400",
+    "scripts/03_memory_guard.py": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
     "scripts/30_bench_speed.py": "23385f43639b23a97ed9b605337f0d766848877c3e4cec87a29ee6fbdfa16a88",
-    "scripts/56_collect_matched_evidence.py": "9ea3cb1cc17c4972100184f2d29c5b94796db6b99957aaa44fd0721cd1fa9d55"
+    "scripts/56_collect_matched_evidence.py": "2e0cfb17ba6a54b8d166e056b0ecab5800ccf43ec8444a50a6c77964eeec000d",
+    "scripts/glm52_goal.py": "1ec1e1261a114f475f568eb4d0418ad7451e3c2c7c135f21ebcbfd1d5384bfd8",
+    "fixtures/ctx-32k.txt": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031",
+    "vendor/official-encoding/tokenizer.json": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf"
   }
 }

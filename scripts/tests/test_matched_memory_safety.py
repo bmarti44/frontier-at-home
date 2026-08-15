@@ -174,7 +174,7 @@ class MatchedHarnessContractTests(unittest.TestCase):
         source = HARNESS.read_text(encoding="utf-8")
         dsv4_arm = DSV4_ARM.read_text(encoding="utf-8")
         expected = (
-            "DSV4_PROFILE=$REPO/configs/dsv4-matched-32k-profile.json",
+            "DSV4_PROFILE=$CODE_ROOT/configs/dsv4-matched-32k-profile.json",
             'DSV4_MATCHED_BINARY="$DSV4_BINARY"',
             'DSV4_MATCHED_BINARY_SHA256="$DSV4_BINARY_SHA256"',
             'MATCHED_PORT="$PORT"',
@@ -404,7 +404,9 @@ class MatchedHarnessContractTests(unittest.TestCase):
     def test_matched_glm_arm_uses_profile_safety_and_exports_evidence(self):
         source = HARNESS.read_text(encoding="utf-8")
         self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=40", source)
-        self.assertIn("GLM_SAFE_KILL_FLOOR_GIB=18", source)
+        self.assertIn("DSV4_MATCHED_KILL_FLOOR_GIB=8", source)
+        self.assertIn("DSV4_MATCHED_MEMORY_HIGH_GIB=105", source)
+        self.assertIn("DSV4_MATCHED_MEMORY_MAX_GIB=107", source)
         self.assertIn("GLM_SAFE_RUN_AS_CURRENT_USER=1", source)
         self.assertIn('copy_safety_evidence "$safe_tag" "$arm_out"', source)
         self.assertIn('cp -- "${matches[0]}/samples.log"', source)
