@@ -1,0 +1,29 @@
+{
+  "schema": "glm52-lossless-plateau-red-v1",
+  "candidate_number_for_gate": 15,
+  "parent_review": "results/glm52-gates/lossless-plateau-launch-review-r325.json",
+  "base_commit": "ef79505",
+  "test_commit": "1690f9f3c967ee75a6ff5d45c649daddf1682484",
+  "test_tree": "f938061d0559132158ca6ea91b30d9d82ffeff58",
+  "scope": "RED-only production-path contract for PLATEAU-325-H1-STALE-P13-CAMPAIGN-TAG. Require the retained preaudit candidate number to be emitted with the verified seed/round/candidate/freeze binding, require the canonical p${candidate_number}-r${round} tag, and reject the stale p13 tag for candidate 15. No collector, model, engine, arm, fixture, formula, or runtime behavior change.",
+  "artifact_sha256": {
+    "results/glm52-gates/lossless-plateau-launch-review-r325.json": "71b1c441262c4ae435b7b22b6c31c2237caf056af759a9792dc252fe1359c2f1",
+    "results/glm52-goal/harness/decisive_matched.sh": "9526b4d1faf08e0855abfcfee7c7cf4a987f6535cbe4fb18c152ecde30be78cd",
+    "scripts/tests/test_glm_lossless_plateau.py": "e441136527bcd6569de7a9d02c7188648ee80f3dacf50e1c78cc668c626cf1da"
+  },
+  "focused_command": "/usr/bin/python3.12 -I -B scripts/tests/test_glm_lossless_plateau.py GlmLosslessPlateauTests.test_campaign_derives_seed_only_from_retained_candidate_receipt",
+  "focused_result": {
+    "returncode": 1,
+    "tests_run": 1,
+    "failures": 1,
+    "errors": 0,
+    "observed": "The unchanged runner has no retained candidate-number output and still contains the exact stale p13-r$DRAND_ROUND comparison."
+  },
+  "controls": {
+    "no_randomness_acquired": true,
+    "no_model_or_gpu_run": true,
+    "no_systemd_or_service_change": true,
+    "production_implementation_changed": false
+  },
+  "verdict": "RED_CONFIRMED"
+}
