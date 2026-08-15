@@ -821,6 +821,30 @@ only after the higher-priority decode and TTFT work. Require identical selected
 IDs, order, tie behavior, logits, and output. Prefill gain is best-effort and
 cannot authorize a fidelity trade.
 
+W4 exact top-k is terminal **NO_RESULT** and is not adopted. Candidate 10 ran
+all five fresh-server ABBA/BAAB blocks (20 complete 19,783-token arms) safely
+and byte-identically, but the frozen scorer failed closed before evaluating the
+serving metric. The older microgate stored its lower bound with the truncated
+`t=2.131846786`; the serving scorer replayed it with
+`t=2.131846786326649` and a `math.isclose` effective tolerance of
+`2.982571005715445e-12`. The resulting `1.2098322343945256e-11` difference
+was correctly rejected. Preserve that authoritative scorer `FAIL`; it is not
+an authoritative performance FAIL or PASS.
+
+For branch disposition only, the complete arm data were recomputed post hoc
+with the preregistered serving formula. OFF averaged `536.9154678945` seconds
+(`36.8456510996` prompt tok/s) and ON averaged `534.5364878795` seconds
+(`37.0096344189` prompt tok/s). The five block ratios were
+`[1.0048340785, 1.0026998695, 1.0008500127, 1.0067321986, 1.0071495086]`,
+with lower-95 `1.0019003405`, far below the required `1.05`. These are
+explicitly diagnostic-only values, not acceptance evidence. Nash and Singer
+independently verified the artifact closure, calculation and safe execution in
+round 310 (scores 97 and 100, no high/critical findings) and approved
+terminating W4 without another multi-hour run. See
+`W4-serving-candidate10-runtime-fail.json` and
+`W4-serving-candidate10-review-r310.json`. W5/W6 remain eligible as distinct
+fidelity-free mechanisms; do not retry this W4 candidate.
+
 ### Demoted acceptance speculation
 
 MTP acceptance speculation is not a primary lever. With flat 8-of-256 routing,

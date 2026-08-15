@@ -1,0 +1,61 @@
+{
+  "schema": "glm52-review-round-v1",
+  "gate": "W4-serving-prefill",
+  "review_round": 310,
+  "record_commit": "17c14302cd43941739339f013b4e8df54e7be10b",
+  "subject_candidate_hash": "4b2a7707bc4217335c32ec5c8c76e4fd4aae0e67",
+  "scope": "Delta-only review of the candidate-10 runtime NO_RESULT disposition and its binding to the immutable 20-arm attempt. Frozen candidate scope remained closed after round 309.",
+  "reviewers": {
+    "gap_reviewer": {
+      "canonical_agent": "/root/gap_reviewer",
+      "score_0_to_100": 97,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [
+        {
+          "id": "W4S-R310-L1-ISCLOSE-TOLERANCE-LABEL",
+          "status": "FIXED",
+          "evidence": "The runtime record originally named only abs_tol=1e-12 although the frozen scorer uses rel_tol=1e-12 and abs_tol=1e-12. The record now states both and the effective tolerance 2.982571005715445e-12. The observed 1.2098322343945256e-11 difference still fails replay."
+        }
+      ],
+      "verdict": "ACCEPT_NO_RESULT_WITHOUT_RERUN"
+    },
+    "adversarial_reviewer": {
+      "canonical_agent": "/root/adversarial_reviewer",
+      "score_0_to_100": 100,
+      "critical": [],
+      "high": [],
+      "medium": [],
+      "low": [],
+      "verdict": "CLEAR_TO_TERMINATE_W4_AS_NO_RESULT"
+    }
+  },
+  "independently_verified": {
+    "manifest_closes_over_attempt_artifacts": true,
+    "completed_arms": 20,
+    "off_arms": 10,
+    "on_arms": 10,
+    "minimum_mem_available_kib": 45233316,
+    "all_safety_counters_zero": true,
+    "semantic_and_logit_sequences_identical": true,
+    "stored_microgate_speedup_lower_95": 2.982571005715445,
+    "replayed_microgate_speedup_lower_95": 2.9825710057033468,
+    "posthoc_serving_prefill_lower_95": 1.0019003405064535,
+    "preregistered_serving_prefill_lower_95_required": 1.05
+  },
+  "terminal_disposition": {
+    "status": "NO_RESULT",
+    "authoritative_fixed_scorer_record_preserved_as": "FAIL",
+    "authoritative_performance_claim": false,
+    "rerun_required": false,
+    "rationale": "The scorer failed closed before producing an authoritative performance result. The complete balanced arm data, explicitly evaluated only as a post-hoc diagnostic with the preregistered serving formula, misses the required lower bound decisively. Both persistent reviewers found no high or critical issue and judged another multi-hour rerun scientifically unnecessary for terminating this branch."
+  },
+  "remaining_prior_low": [
+    {
+      "id": "W4S-R309-L1-SYNC-PREFIX-DELIMITER-EDGE",
+      "status": "OPEN_ACCEPTED_LOW",
+      "rationale": "Previously accepted low-severity delimiter edge outside the runtime-disposition delta; it does not affect the observed ASCII production artifacts or terminal negative disposition."
+    }
+  ]
+}
