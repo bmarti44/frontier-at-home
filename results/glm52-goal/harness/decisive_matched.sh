@@ -19,8 +19,8 @@ PORT=$((10#$PORT))
 OUT=/home/bmarti44/.local/state/glm52-decisive-$TAG
 PYTHON=/usr/bin/python3.12
 PYTHON_SHA256=a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1
-FREEZE_RECEIPT=results/glm52-gates/lossless-plateau-candidate14-preaudit.json
-RANDOMNESS_RELATIVE=results/glm52-gates/lossless-plateau-candidate14-randomness.json
+FREEZE_RECEIPT=results/glm52-gates/lossless-plateau-candidate15-preaudit.json
+RANDOMNESS_RELATIVE=results/glm52-gates/lossless-plateau-candidate15-randomness.json
 if [[ ${MATCHED_RETAINED_RUNTIME:-0} == 1 ]]; then
     RANDOMNESS_INPUT=${MATCHED_RANDOMNESS_RECEIPT:?retained randomness receipt is required}
     [[ $RANDOMNESS_INPUT == "$OUT/retained/randomness-receipt.json" ]] || {
@@ -30,7 +30,7 @@ if [[ ${MATCHED_RETAINED_RUNTIME:-0} == 1 ]]; then
 else
     RANDOMNESS_INPUT=${MATCHED_RANDOMNESS_RECEIPT:?MATCHED_RANDOMNESS_RECEIPT is required}
     [[ $RANDOMNESS_INPUT == "$REPO/$RANDOMNESS_RELATIVE" ]] || {
-        echo "randomness receipt path is not the candidate-14 canonical path" >&2
+        echo "randomness receipt path is not the candidate-15 canonical path" >&2
         exit 2
     }
 fi
@@ -309,13 +309,19 @@ seed = module.verify_randomness_receipt(
 )
 with open(receipt_path, encoding="ascii") as stream:
     round_value = json.load(stream)["receipt"]["round"]
+with open(
+    pathlib.Path(manifest_path).parent / "retained/freeze-receipt.json",
+    encoding="ascii",
+) as stream:
+    candidate_number = json.load(stream)["candidate_number_for_gate"]
 print(seed)
 print(round_value)
 print(candidate)
 print(freeze)
+print(candidate_number)
 PY
 )
-(( ${#RANDOMNESS_BINDING[@]} == 4 )) || {
+(( ${#RANDOMNESS_BINDING[@]} == 5 )) || {
     echo "randomness derivation did not produce an exact binding" >&2
     exit 2
 }
@@ -323,12 +329,14 @@ MATCHED_DERIVED_SEED=${RANDOMNESS_BINDING[0]}
 DRAND_ROUND=${RANDOMNESS_BINDING[1]}
 CANDIDATE_HASH=${RANDOMNESS_BINDING[2]}
 FREEZE_COMMIT=${RANDOMNESS_BINDING[3]}
+CANDIDATE_NUMBER=${RANDOMNESS_BINDING[4]}
 [[ $MATCHED_DERIVED_SEED =~ ^[0-9]+$ && $DRAND_ROUND =~ ^[1-9][0-9]*$ &&
-   $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ && $FREEZE_COMMIT =~ ^[0-9a-f]{40}$ ]] || {
+   $CANDIDATE_HASH =~ ^[0-9a-f]{40}$ && $FREEZE_COMMIT =~ ^[0-9a-f]{40}$ &&
+   $CANDIDATE_NUMBER =~ ^[1-9][0-9]*$ ]] || {
     echo "randomness binding output is malformed" >&2
     exit 2
 }
-[[ $TAG == "p13-r$DRAND_ROUND" ]] || {
+[[ $TAG == "p${CANDIDATE_NUMBER}-r$DRAND_ROUND" ]] || {
     echo "campaign tag does not bind the verified drand round" >&2
     exit 2
 }

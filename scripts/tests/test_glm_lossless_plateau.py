@@ -14,7 +14,7 @@ ARM = ROOT / "results/glm52-goal/harness/glm_decisive_arm.sh"
 DSV4_ARM = ROOT / "results/glm52-goal/harness/dsv4_decisive_arm.sh"
 COLLECTOR = ROOT / "scripts/56_collect_matched_evidence.py"
 DSV4_PROFILE = ROOT / "configs/dsv4-matched-32k-profile.json"
-FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate14-preaudit.json"
+FREEZE_RECEIPT = ROOT / "results/glm52-gates/lossless-plateau-candidate15-preaudit.json"
 GLM_CGROUP = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
 DSV4_CGROUP = ROOT / "results/glm52-gates/harness/dsv4_matched_cgroup_run.sh"
 DRAND_VERIFIER = ROOT / "scripts/89_verify_drand_receipt.mjs"
@@ -206,7 +206,7 @@ class GlmLosslessPlateauTests(unittest.TestCase):
                     "tokenizer_native_path", "tokenizer_native_sha256",
                 },
             )
-        self.assertIn("lossless-plateau-candidate14-preaudit.json", campaign)
+        self.assertIn("lossless-plateau-candidate15-preaudit.json", campaign)
         self.assertIn("reviewed runtime commit", campaign)
         self.assertIn("/usr/bin/python3.12", campaign)
         self.assertIn("-I", campaign)
