@@ -17,7 +17,7 @@ PORT=$((10#$PORT))
 OUT=/home/bmarti44/.local/state/glm52-decisive-$TAG
 PYTHON=/usr/bin/python3.12
 PYTHON_SHA256=a7d56a8a764faf7bbf5c164055a48fd072be52287bdeb523a9e07b2042f4e7e1
-FREEZE_RECEIPT=results/glm52-gates/lossless-plateau-candidate11-preaudit.json
+FREEZE_RECEIPT=results/glm52-gates/lossless-plateau-candidate12-preaudit.json
 [[ ! -v PYTHONPATH && ! -v PYTHONHOME && ! -v PYTHONSTARTUP ]] || {
     echo "Python environment injection is prohibited" >&2
     exit 2
