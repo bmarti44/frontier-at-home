@@ -28,8 +28,8 @@ class ModelClaimCatalogTests(unittest.TestCase):
             "glm-5.2",
             "kimi-k3",
             "gemma4",
-            "qwen3.5",
-            "glm-5.1",
+            "qwen3.8-max",
+            "qwen3.8-27b",
             "minimax-m2.7",
             "nemotron-3-super",
             "minimax-m2.5",
@@ -48,22 +48,30 @@ class ModelClaimCatalogTests(unittest.TestCase):
         models = catalog["models"]
         self.assertEqual({model["slug"] for model in models}, expected)
         self.assertEqual(len(models), len(expected))
+        required = {
+            "slug",
+            "ollama_tag",
+            "context",
+            "parameters",
+            "modalities",
+            "repo_status",
+        }
+        # Entries may carry their upstream provenance inline; these keys
+        # are permitted but never required.
+        optional = {"source", "license"}
         for model in models:
-            self.assertEqual(
-                set(model),
-                {
-                    "slug",
-                    "ollama_tag",
-                    "context",
-                    "parameters",
-                    "modalities",
-                    "repo_status",
-                },
-            )
+            self.assertEqual(set(model) & required, required)
+            self.assertFalse(set(model) - required - optional)
             self.assertIn(
                 model["repo_status"],
                 {"available", "active", "qualified", "reference_only"},
             )
+            # An entry with no tag must still say where its numbers came
+            # from, so a claimant can verify them.
+            if model["ollama_tag"] is None:
+                self.assertIn("source", model)
+            else:
+                self.assertIsInstance(model["ollama_tag"], str)
         statuses = {model["slug"]: model["repo_status"] for model in models}
         self.assertEqual(statuses["deepseek-v4-flash"], "qualified")
         self.assertEqual(statuses["glm-5.2"], "active")
