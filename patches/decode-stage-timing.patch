@@ -1,0 +1,378 @@
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -78,6 +78,19 @@
+ int ds4_gpu_flush_encoder(void);
+ int ds4_gpu_flush_commands(void);
+ int ds4_gpu_commands_active(void);
++#if !defined(__APPLE__) && !defined(DS4_ROCM_BUILD) && !defined(DS4_NO_GPU)
++enum {
++    DS4_DECODE_STAGE_ROUTER = 0,
++    DS4_DECODE_STAGE_COPIES = 1,
++    DS4_DECODE_STAGE_MOE = 2,
++    DS4_DECODE_STAGE_INDEXER = 3,
++    DS4_DECODE_STAGE_TOTAL = 4
++};
++extern int ds4_gpu_decode_stage_timing_enabled_cached;
++void ds4_gpu_decode_stage_timing_begin(uint32_t stage);
++void ds4_gpu_decode_stage_timing_end(uint32_t stage);
++void ds4_gpu_decode_stage_timing_token_done(void);
++#endif
+ int ds4_gpu_signal_selected_readback_ready(uint64_t *event_value);
+ int ds4_gpu_commit_and_wait_selected_readback(uint64_t event_value, const char *label);
+ int ds4_gpu_wait_selected_readback_ready(uint64_t event_value, const char *label);
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -12,6 +12,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <sys/resource.h>
+ #include <sys/stat.h>
+ #include <time.h>
+ #include <unistd.h>
+@@ -128,6 +129,143 @@
+ static int g_cuda_moe_decode_graph;
+ static int g_current_logical_tier = -1;
+ static int g_ssd_streaming_mode;
++enum {
++    DS4_DECODE_STAGE_ROUTER = 0,
++    DS4_DECODE_STAGE_COPIES = 1,
++    DS4_DECODE_STAGE_MOE = 2,
++    DS4_DECODE_STAGE_INDEXER = 3,
++    DS4_DECODE_STAGE_TOTAL = 4
++};
++int ds4_gpu_decode_stage_timing_enabled_cached;
++
++typedef struct {
++    cudaEvent_t start;
++    cudaEvent_t stop;
++    uint32_t stage;
++} cuda_decode_stage_record;
++
++static std::vector<cuda_decode_stage_record> g_decode_stage_records;
++static int64_t g_decode_stage_open[5] = {-1, -1, -1, -1, -1};
++static cudaEvent_t g_decode_stage_last_event;
++static uint32_t g_decode_stage_every = 32;
++static uint32_t g_decode_stage_tokens;
++static struct rusage g_decode_stage_usage0;
++static uint64_t g_decode_stage_stub_signal;
++static uint64_t g_decode_stage_stub_read;
++static uint64_t g_decode_stage_stub_wait;
++static uint64_t g_decode_stage_stub_commit_wait;
++static uint64_t g_decode_stage_stub_signal0;
++static uint64_t g_decode_stage_stub_read0;
++static uint64_t g_decode_stage_stub_wait0;
++static uint64_t g_decode_stage_stub_commit_wait0;
++
++static void cuda_decode_stage_timing_clear(void) {
++    for (cuda_decode_stage_record &r : g_decode_stage_records) {
++        if (r.start) (void)cudaEventDestroy(r.start);
++        if (r.stop) (void)cudaEventDestroy(r.stop);
++    }
++    g_decode_stage_records.clear();
++    for (uint32_t i = 0; i < 5; i++) g_decode_stage_open[i] = -1;
++    g_decode_stage_last_event = NULL;
++}
++
++extern "C" void ds4_gpu_decode_stage_timing_begin(uint32_t stage) {
++    if (!ds4_gpu_decode_stage_timing_enabled_cached || stage >= 5u ||
++        g_decode_stage_open[stage] >= 0) {
++        return;
++    }
++    if (stage == DS4_DECODE_STAGE_TOTAL && g_decode_stage_tokens == 0u) {
++        (void)getrusage(RUSAGE_SELF, &g_decode_stage_usage0);
++        g_decode_stage_stub_signal0 = g_decode_stage_stub_signal;
++        g_decode_stage_stub_read0 = g_decode_stage_stub_read;
++        g_decode_stage_stub_wait0 = g_decode_stage_stub_wait;
++        g_decode_stage_stub_commit_wait0 = g_decode_stage_stub_commit_wait;
++    }
++    cuda_decode_stage_record r = {NULL, NULL, stage};
++    if (cudaEventCreate(&r.start) != cudaSuccess ||
++        cudaEventCreate(&r.stop) != cudaSuccess ||
++        cudaEventRecord(r.start, cudaStreamLegacy) != cudaSuccess) {
++        if (r.start) (void)cudaEventDestroy(r.start);
++        if (r.stop) (void)cudaEventDestroy(r.stop);
++        fprintf(stderr, "ds4: disabling decode-stage timing after CUDA event failure\n");
++        ds4_gpu_decode_stage_timing_enabled_cached = 0;
++        cuda_decode_stage_timing_clear();
++        return;
++    }
++    try {
++        g_decode_stage_records.push_back(r);
++    } catch (...) {
++        (void)cudaEventDestroy(r.start);
++        (void)cudaEventDestroy(r.stop);
++        fprintf(stderr, "ds4: disabling decode-stage timing after record allocation failure\n");
++        ds4_gpu_decode_stage_timing_enabled_cached = 0;
++        cuda_decode_stage_timing_clear();
++        return;
++    }
++    g_decode_stage_open[stage] = (int64_t)g_decode_stage_records.size() - 1;
++}
++
++extern "C" void ds4_gpu_decode_stage_timing_end(uint32_t stage) {
++    if (!ds4_gpu_decode_stage_timing_enabled_cached || stage >= 5u) return;
++    const int64_t idx = g_decode_stage_open[stage];
++    if (idx < 0 || (uint64_t)idx >= g_decode_stage_records.size()) return;
++    cuda_decode_stage_record &r = g_decode_stage_records[(size_t)idx];
++    if (cudaEventRecord(r.stop, cudaStreamLegacy) != cudaSuccess) {
++        fprintf(stderr, "ds4: disabling decode-stage timing after CUDA event record failure\n");
++        ds4_gpu_decode_stage_timing_enabled_cached = 0;
++        cuda_decode_stage_timing_clear();
++        return;
++    }
++    g_decode_stage_open[stage] = -1;
++    if (stage == DS4_DECODE_STAGE_TOTAL) g_decode_stage_last_event = r.stop;
++}
++
++extern "C" void ds4_gpu_decode_stage_timing_token_done(void) {
++    if (!ds4_gpu_decode_stage_timing_enabled_cached || !g_decode_stage_last_event) return;
++    g_decode_stage_tokens++;
++    if (g_decode_stage_tokens < g_decode_stage_every) return;
++    if (cudaEventSynchronize(g_decode_stage_last_event) != cudaSuccess) {
++        fprintf(stderr, "ds4: disabling decode-stage timing after CUDA event synchronize failure\n");
++        ds4_gpu_decode_stage_timing_enabled_cached = 0;
++        cuda_decode_stage_timing_clear();
++        return;
++    }
++    double ms[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
++    for (const cuda_decode_stage_record &r : g_decode_stage_records) {
++        float elapsed = 0.0f;
++        if (cudaEventElapsedTime(&elapsed, r.start, r.stop) == cudaSuccess) {
++            ms[r.stage] += (double)elapsed;
++        }
++    }
++    struct rusage usage1;
++    memset(&usage1, 0, sizeof(usage1));
++    (void)getrusage(RUSAGE_SELF, &usage1);
++    double router = ms[DS4_DECODE_STAGE_ROUTER] - ms[DS4_DECODE_STAGE_COPIES];
++    if (router < 0.0) router = 0.0;
++    double attn_dense = ms[DS4_DECODE_STAGE_TOTAL] - router -
++        ms[DS4_DECODE_STAGE_COPIES] - ms[DS4_DECODE_STAGE_MOE] -
++        ms[DS4_DECODE_STAGE_INDEXER];
++    if (attn_dense < 0.0) attn_dense = 0.0;
++    const double n = (double)g_decode_stage_tokens;
++    fprintf(stderr,
++            "DS4_DECODE_STAGE ms/token router=%.2f copies=%.2f moe=%.2f "
++            "indexer=%.2f attn_dense=%.2f total=%.2f n=%d "
++            "majflt=%ld minflt=%ld stubs_signal=%llu stubs_read=%llu "
++            "stubs_wait=%llu stubs_commit_wait=%llu\n",
++            router / n, ms[DS4_DECODE_STAGE_COPIES] / n,
++            ms[DS4_DECODE_STAGE_MOE] / n, ms[DS4_DECODE_STAGE_INDEXER] / n,
++            attn_dense / n, ms[DS4_DECODE_STAGE_TOTAL] / n,
++            (int)g_decode_stage_tokens,
++            usage1.ru_majflt - g_decode_stage_usage0.ru_majflt,
++            usage1.ru_minflt - g_decode_stage_usage0.ru_minflt,
++            (unsigned long long)(g_decode_stage_stub_signal - g_decode_stage_stub_signal0),
++            (unsigned long long)(g_decode_stage_stub_read - g_decode_stage_stub_read0),
++            (unsigned long long)(g_decode_stage_stub_wait - g_decode_stage_stub_wait0),
++            (unsigned long long)(g_decode_stage_stub_commit_wait -
++                                 g_decode_stage_stub_commit_wait0));
++    cuda_decode_stage_timing_clear();
++    g_decode_stage_tokens = 0;
++}
+ 
+ typedef struct {
+     int valid;
+@@ -275,6 +413,23 @@
+ }
+ 
+ static void cuda_decode_dispatch_env_refresh(void) {
++    ds4_gpu_decode_stage_timing_enabled_cached =
++        getenv("DS4_DECODE_STAGE_TIMING") != NULL;
++    g_decode_stage_every = 32u;
++    const char *decode_stage_every = getenv("DS4_DECODE_STAGE_TIMING_EVERY");
++    if (decode_stage_every && decode_stage_every[0]) {
++        char *end = NULL;
++        const unsigned long parsed = strtoul(decode_stage_every, &end, 10);
++        if (end != decode_stage_every && *end == '\0' && parsed > 0u &&
++            parsed <= INT_MAX) {
++            g_decode_stage_every = (uint32_t)parsed;
++        }
++    }
++    if (ds4_gpu_decode_stage_timing_enabled_cached) {
++        fprintf(stderr,
++                "ds4: evidence-only decode-stage timing enabled (every %u tokens)\n",
++                g_decode_stage_every);
++    }
+     g_cuda_disable_qkv_rms_fused = getenv("DS4_CUDA_DISABLE_QKV_RMS_FUSED") != NULL;
+     g_cuda_no_window_attention = getenv("DS4_CUDA_NO_WINDOW_ATTENTION") != NULL;
+     g_cuda_decode_heads8_online = getenv("DS4_CUDA_DECODE_HEADS8_ONLINE") != NULL;
+@@ -2229,6 +2384,8 @@
+ 
+ extern "C" void ds4_gpu_cleanup(void) {
+     (void)cudaDeviceSynchronize();
++    cuda_decode_stage_timing_clear();
++    g_decode_stage_tokens = 0;
+     g_current_logical_tier = -1;
+ 
+     /* Multi-GPU teardown: events, streams, cublas handles, scratch
+@@ -23976,20 +24133,28 @@
+             g_expert_persist_cache.hits++;
+             g_expert_cache_run_stats.hit_bytes +=
+                 2u * table->gate_expert_bytes + table->down_expert_bytes;
+-            if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.gate_ptr + gate_dst,
+-                                    slab, table->gate_expert_bytes,
+-                                    cudaMemcpyDefault),
+-                         "expert cache gate copy") ||
+-                !cuda_ok(cudaMemcpy(g_stream_selected_cache.up_ptr + gate_dst,
+-                                    slab + table->gate_expert_bytes,
+-                                    table->gate_expert_bytes,
+-                                    cudaMemcpyDefault),
+-                         "expert cache up copy") ||
+-                !cuda_ok(cudaMemcpy(g_stream_selected_cache.down_ptr + down_dst,
+-                                    slab + 2u * table->gate_expert_bytes,
+-                                    table->down_expert_bytes,
+-                                    cudaMemcpyDefault),
+-                         "expert cache down copy")) {
++            if (ds4_gpu_decode_stage_timing_enabled_cached) {
++                ds4_gpu_decode_stage_timing_begin(DS4_DECODE_STAGE_COPIES);
++            }
++            const bool copy_ok =
++                cuda_ok(cudaMemcpy(g_stream_selected_cache.gate_ptr + gate_dst,
++                                   slab, table->gate_expert_bytes,
++                                   cudaMemcpyDefault),
++                        "expert cache gate copy") &&
++                cuda_ok(cudaMemcpy(g_stream_selected_cache.up_ptr + gate_dst,
++                                   slab + table->gate_expert_bytes,
++                                   table->gate_expert_bytes,
++                                   cudaMemcpyDefault),
++                        "expert cache up copy") &&
++                cuda_ok(cudaMemcpy(g_stream_selected_cache.down_ptr + down_dst,
++                                   slab + 2u * table->gate_expert_bytes,
++                                   table->down_expert_bytes,
++                                   cudaMemcpyDefault),
++                        "expert cache down copy");
++            if (ds4_gpu_decode_stage_timing_enabled_cached) {
++                ds4_gpu_decode_stage_timing_end(DS4_DECODE_STAGE_COPIES);
++            }
++            if (!copy_ok) {
+                 cuda_stream_selected_cache_invalidate();
+                 return cuda_stream_selected_reject(table, slot_count,
+                                                    "expert cache copy");
+@@ -28374,6 +28539,7 @@
+ }
+ 
+ extern "C" int ds4_gpu_signal_selected_readback_ready(uint64_t *event_value) {
++    if (ds4_gpu_decode_stage_timing_enabled_cached) g_decode_stage_stub_signal++;
+     if (event_value) *event_value = 1;
+     return cuda_ok(cudaDeviceSynchronize(), "selected readback signal");
+ }
+@@ -28427,6 +28593,7 @@
+                                              uint64_t bytes,
+                                              uint64_t event_value,
+                                              const char *label) {
++    if (ds4_gpu_decode_stage_timing_enabled_cached) g_decode_stage_stub_read++;
+     (void)event_value;
+     if (!tensor || !data || offset > tensor->bytes ||
+         bytes > tensor->bytes - offset) {
+@@ -28459,6 +28626,7 @@
+ }
+ 
+ extern "C" int ds4_gpu_wait_selected_readback_ready(uint64_t event_value, const char *label) {
++    if (ds4_gpu_decode_stage_timing_enabled_cached) g_decode_stage_stub_wait++;
+     (void)event_value;
+     return cuda_ok(cudaDeviceSynchronize(),
+                    label ? label : "selected readback wait");
+@@ -28469,6 +28637,7 @@
+  * optional fast path so the graph can use its established fallback. */
+ extern "C" int ds4_gpu_commit_and_wait_selected_readback(
+         uint64_t event_value, const char *label) {
++    if (ds4_gpu_decode_stage_timing_enabled_cached) g_decode_stage_stub_commit_wait++;
+     (void)event_value;
+     return cuda_ok(cudaDeviceSynchronize(),
+                    label ? label : "selected readback wait");
+--- a/ds4.c
++++ b/ds4.c
+@@ -39822,6 +39822,25 @@
+ 
+ static bool glm_graph_disable_add3_residual(void);
+ 
++#if !defined(__APPLE__) && !defined(DS4_ROCM_BUILD) && !defined(DS4_NO_GPU)
++#define DS4_DECODE_STAGE_BEGIN(stage_) do { \
++        if (ds4_gpu_decode_stage_timing_enabled_cached) \
++            ds4_gpu_decode_stage_timing_begin((stage_)); \
++    } while (0)
++#define DS4_DECODE_STAGE_END(stage_) do { \
++        if (ds4_gpu_decode_stage_timing_enabled_cached) \
++            ds4_gpu_decode_stage_timing_end((stage_)); \
++    } while (0)
++#define DS4_DECODE_STAGE_TOKEN_DONE() do { \
++        if (ds4_gpu_decode_stage_timing_enabled_cached) \
++            ds4_gpu_decode_stage_timing_token_done(); \
++    } while (0)
++#else
++#define DS4_DECODE_STAGE_BEGIN(stage_) ((void)0)
++#define DS4_DECODE_STAGE_END(stage_) ((void)0)
++#define DS4_DECODE_STAGE_TOKEN_DONE() ((void)0)
++#endif
++
+ static bool glm_graph_use_streaming_selected_async_load(
+         const ds4_glm_gpu_graph *g) {
+     if (!g || !g->ssd_streaming) return false;
+@@ -40056,6 +40075,7 @@
+     (void)up_in;
+     (void)down_in;
+ 
++    DS4_DECODE_STAGE_BEGIN(DS4_DECODE_STAGE_ROUTER);
+     bool ok = ds4_gpu_matmul_f32_tensor(g->router_logits,
+                                         model->map,
+                                         model->size,
+@@ -40178,6 +40198,7 @@
+             }
+         }
+     }
++    DS4_DECODE_STAGE_END(DS4_DECODE_STAGE_ROUTER);
+     if (ok && shared_first) {
+         ok = glm_graph_encode_shared_swiglu_one(ffn_mid,
+                                                 ffn_gate,
+@@ -40253,6 +40274,7 @@
+         fprintf(stderr, "ds4: glm sparse ffn: failed before routed dispatch (layer %u)\n", il);
+     }
+     if (ok && !(glm_decode_ablate_mask() & DS4_GLM_ABLATE_ROUTED)) {
++        DS4_DECODE_STAGE_BEGIN(DS4_DECODE_STAGE_MOE);
+         ok = glm_graph_routed_moe_one_dispatch(
+             g,
+             model,
+@@ -40270,6 +40292,7 @@
+             g->router_weights,
+             ffn_norm,
+             resident_decode_layer) != 0;
++        DS4_DECODE_STAGE_END(DS4_DECODE_STAGE_MOE);
+     }
+     if (ok && tp_split_ffn) {
+         ok = ds4_gpu_tp_gate_encode(il, DS4_TP_GATE_FFN) != 0;
+@@ -45501,6 +45524,7 @@
+         !static_decode_map &&
+         glm_graph_streaming_decode_sync_each_layer();
+     bool ok = true;
++    DS4_DECODE_STAGE_BEGIN(DS4_DECODE_STAGE_TOTAL);
+     if (input_hc) {
+         ok = ds4_gpu_tensor_write(g->cur,
+                                   0,
+@@ -45820,6 +45844,7 @@
+                     DS4_GLM_PROFILE_DECODE_STAGE("glm_decode_attn", "indexer_weights");
+                     const float indexer_scale =
+                         1.0f / sqrtf((float)(DS4_N_INDEXER_HEAD_DIM * DS4_N_INDEXER_HEAD));
++                    DS4_DECODE_STAGE_BEGIN(DS4_DECODE_STAGE_INDEXER);
+                     ok = ds4_gpu_glm_indexer_score_one_tensor(g->indexer_scores,
+                                                               g->indexer_q,
+                                                               g->indexer_weights,
+@@ -45835,6 +45860,7 @@
+                                                              visible,
+                                                              1,
+                                                              indexer_top_k) != 0;
++                    DS4_DECODE_STAGE_END(DS4_DECODE_STAGE_INDEXER);
+                     DS4_GLM_PROFILE_DECODE_STAGE("glm_decode_attn", "indexer_topk");
+                     last_indexer_selected_count = indexer_top_k;
+                 }
+@@ -46181,6 +46207,8 @@
+                 pos, glm_ft_fail_il);
+     }
+     (void)glm_ft_fail_il;
++    DS4_DECODE_STAGE_END(DS4_DECODE_STAGE_TOTAL);
++    DS4_DECODE_STAGE_TOKEN_DONE();
+     return ok;
+ #undef DS4_GLM_FT_FAIL
+ }
+
