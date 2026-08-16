@@ -71,8 +71,10 @@ single-Spark demand-streaming plateau; they do not replace the matched local
 plateau campaign. The remaining lossless levers below must be folded into that
 campaign before any fidelity decision.
 
-After the lossless plateau is measured, stop and present it to the owner. Do
-not automatically spend fidelity to pursue residency.
+After the lossless plateau is measured, present the single-box continuation
+decision to the owner: stop at the lossless plateau, or open owner-gated Rung 3
+residency and spend fidelity. Rung 3 is the only current-hardware path to the
+18.4 tok/s target; do not climb automatically.
 
 ### Production observability invariant (owner directive 2026-08-15)
 
@@ -90,8 +92,8 @@ ratio at least 0.995, TTFT upper-95 ratio at most 1.005, and zero diagnostic
 I/O/counters in the disabled arm. A facility that cannot satisfy this stays in
 an evidence-only binary. Existing access-stream hashing, verbose cache/fetch
 counters, synchronization tracing, token timing, and debug dumps must all be
-audited under this rule during R-K; production defaults remain off unless their
-cost is separately proven absent.
+audited under this rule during R-K. Their production switches remain off or
+unset even if a measurement cannot resolve their cost.
 
 All current or headline performance reporting uses the fastest qualified
 production path with these facilities disabled. README tables, status pages,
@@ -266,11 +268,13 @@ an 8K profile and violates the repository's current largest-context policy.
 
 ## Ranked execution plan and pre-registered gates
 
-### Rung 0.1 - coalesced expert I/O and slab layout (W3/W8 transport)
+### Rung 0.1 - coalesced expert I/O and slab layout (historical, rejected)
 
-Implement a default-off expert-I/O mode that submits aligned O_DIRECT reads at
-QD8-QD32 and reads one contiguous gate/up/down slab per expert. Repacking is a
-separate offline artifact with a checksummed map; it never rewrites the source
+This preregistered default-off experiment submitted aligned O_DIRECT reads at
+QD8-QD32 and read one contiguous gate/up/down slab per expert. It is preserved
+as historical evidence and was rejected by its completed A/B. It is superseded
+for active work by R-K's unmodified non-slab path and the measured single-ring
+QD4 target. Repacking remains an offline artifact and never rewrites the source
 GGUF in place.
 
 Acceptance before adoption:
@@ -349,14 +353,13 @@ exact-size QD16/QD32 cells of
 is exactly 80% of that value. The identity-scan reference and 80% target use the
 same formula over the distinct sequential QD16/QD32 cells.
 
-If high-QD fio materially exceeds 4.8 GB/s, audit and correct the engine's
-submission batching, io_uring depth, pinned staging-buffer count, and
-completion-to-compute overlap. All eight routed experts across the available
-prefetch horizon should be eligible to remain in flight; one staging buffer is
-still QD1 regardless of ring depth. The eventual slab engine must sustain at
-least 80% of the matched 9.28 MiB fio bandwidth. This work is coupled to the
-Rung 0.5 expert-address oracle because cross-token lookahead may be required to
-keep QD16+ occupied.
+The historical preregistration proposed QD16+ slab submission and coupling it
+to the Rung 0.5 oracle. The completed curve supersedes that design assumption:
+large expert reads peak with one submitter at QD4-QD8, and active R-K work uses
+a bounded single-ring QD4 probe on the unmodified non-slab path. One staging
+buffer still serializes any ring, so persistent pinned staging and completion-
+to-compute overlap remain mandatory. Oracle lookahead is evaluated separately
+only after the R-K baseline freezes.
 
 The same fio curve also gates an evidence-only identity-scan acceleration. The
 live `b1fd7e6` campaign preflight read the 211 GB model at roughly 0.66 GB/s,
@@ -367,12 +370,12 @@ stock scanner on model and slab, a one-byte corruption mutation that fails
 closed, bounded memory, and at least 80% of the matched fio sequential rate.
 This changes evidence setup time only; it is not a serving-performance claim.
 
-After the sweep, re-derive rather than scale by analogy: all-miss decode,
-cache-hit/miss decode with compute overlap, the faithful streamed decode
-ceiling, and the ub2048 streamed-prefill ceiling. The currently documented
-6-8 decode, 75-100 prefill, and 7-10 lossless-plateau ranges are provisional
-until that artifact lands. The owner decision to stop or authorize a lossy
-rung is blocked on the recalibrated measured plateau.
+This was the preregistered recalibration instruction before the sweep. The
+artifact below has now landed: use its completed diagnostic curve and the
+measured R-K time budget, not the obsolete 4.8 GB/s reproduction premise, when
+deriving all-miss decode, cache-hit/miss overlap, streamed decode, and ub2048
+prefill. Final plateau numbers remain measurements from the matched campaign,
+not scaled fio projections.
 
 #### Completed NVMe characterization (`2026-08-03d`)
 
@@ -454,8 +457,10 @@ the item explicitly requires reporting a delta to the owner.
    SHA-256 behind an evidence-only environment flag; and make
    `glm_safe_run.sh` call `sync -d` every Nth 4 Hz sample while preserving every
    sample and the kill floor. Refresh the frozen environment digest and run one
-   matched A/B. Do not alter `DS4_CUDA_STABLE_MODEL_REMAP=1` or
-   `DS4_TOKEN_TIMING_LOG=1`.
+   matched A/B. Do not alter `DS4_CUDA_STABLE_MODEL_REMAP=1`. Preserve
+   `DS4_TOKEN_TIMING_LOG=1` in evidence profiles and their fixed scorers, but
+   make it off or unset in the production profile under the observability
+   invariant above.
 
 The source prerequisite is currently unmet: `bmarti44` cannot read
 `/home/dsv4/ds4-project/src/ds4-upstream-master`. Restore read/traverse access
@@ -796,8 +801,9 @@ this box, not claimed results.
 Layer-level lookahead alone cannot fill roughly 5.8 GB/token at the measured
 NVMe rate: it is reliable only a few layers ahead while about a second of I/O
 lookahead is needed. Oracle prefetch therefore uses token-level lookahead while
-leaving target computation exact. This is the intended path toward the faithful
-6-8 tok/s streaming ceiling.
+leaving target computation exact. Re-derive its benefit against the post-R-K
+per-layer budget; the current planning range is the 7-10 tok/s lossless plateau,
+not the superseded fixed 6-8 tok/s ceiling.
 
 Rung 0.5 remains the primary oracle lever **after R-K**. Upstream merged
 GLM-5.2 NextN/MTP support in
@@ -806,10 +812,11 @@ the generic MTP work in
 [PR #22673](https://github.com/ggml-org/llama.cpp/pull/22673). Its reported
 resident-model result is about 1.37x decode, position acceptance
 `0.83/0.65/0.49`, and mean accepted length about 2.98; MTP-off graphs are
-bit-identical. Upstream also reports that MTP-on greedy output can diverge at
-near-tie tokens because batched verification changes floating-point reduction
-order. Therefore its speed result does not satisfy this repository's stricter
-byte-identity gate: any local divergence closes the serving arm. Before any
+bit-identical, and greedy verification is algorithmically exact. Upstream also
+reports an implementation-level caveat: near-tie MTP-on tokens can diverge when
+batched verification changes floating-point reduction order. Therefore the
+published exactness claim does not replace this repository's mandatory local
+byte-identity A/B; any local divergence closes the serving arm. Before any
 engine work, inspect the frozen IQ2_XXS artifact and conversion lineage to
 prove the `blk.78` NextN head was not removed by the converter's `--no-mtp`
 path. The NextN loading/conversion distinction is also documented in upstream
@@ -1301,10 +1308,11 @@ restoration of `exact/http-status` is disclosed; the local attempt is explicitly
 non-pristine, and the committed pre-mutation digest record plus the independent
 timeout/missing-arm rules support FAIL only. Do not extend the timeout or use
 this candidate for direct 1M. W9 has since completed the real 512-wide capture
-and cleared its offline FP4 error falsifier diagnostically. The next bounded
-context route is a default-off packed FP4 compact-cache implementation followed
-by the fixed 100-case NLL/top-1 gate; a materially different exact-storage
-design would require a new candidate rather than rehabilitating W8.
+and cleared its offline FP4 error falsifier diagnostically. Packed FP4 is the
+next **lossy** context route only after the lossless plateau is reported and the
+owner authorizes fidelity spend; it requires a default-off implementation and
+the fixed 100-case NLL/top-1 gate. A materially different exact-storage design
+would require a new candidate rather than rehabilitating W8.
 
 After the matched-32K plateau campaign freezes, qualify the largest presently
 feasible lossless serving context directly, moving from 32,768 toward the
@@ -1318,7 +1326,9 @@ candidate first under the normal OOM containment and retrieval controls.
 
 Every rung appends one same-fixture row containing context, prefill tokens/s,
 decode tokens/s, warm agent-turn TTFT, NLL delta and confidence bound, top-1
-delta and confidence bound, memory low point, and verdict. The least-loss row
-that meets the bars wins. If no row reaches parity, preserve the best qualified
-GLM profile and issue a reviewed numerical NO_GO rather than climbing without
-owner authorization.
+delta and confidence bound, memory low point, and verdict. Headline and README
+values come only from the fastest qualified production profile with diagnostics
+off; otherwise use a dash rather than substitute evidence-mode or control-arm
+timings. The least-loss row that meets the bars wins. If no row reaches parity,
+preserve the best qualified GLM profile and issue a reviewed numerical NO_GO
+rather than climbing without owner authorization.
