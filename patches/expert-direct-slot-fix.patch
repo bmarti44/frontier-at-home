@@ -1,0 +1,61 @@
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -23972,26 +23972,43 @@
+     g_expert_persist_cache.protected_last_layer = UINT32_MAX;
+     g_expert_persist_cache.disabled = 0;
+     if (direct_slot_requested) {
+-        const cudaError_t map_rc = cudaHostRegister(
+-                arena, (size_t)n_slots * slot_bytes,
+-                cudaHostRegisterMapped | cudaHostRegisterReadOnly);
+         void *arena_device = NULL;
+-        const cudaError_t alias_rc = map_rc == cudaSuccess ?
+-            cudaHostGetDevicePointer(&arena_device, arena, 0) : map_rc;
+-        if (map_rc == cudaSuccess && alias_rc == cudaSuccess && arena_device) {
+-            g_expert_persist_cache.arena_device = (uint8_t *)arena_device;
++        int device = 0;
++        int pageable = 0;
++        cudaError_t pageable_rc = cudaGetDevice(&device);
++        if (pageable_rc == cudaSuccess) {
++            pageable_rc = cudaDeviceGetAttribute(
++                    &pageable, cudaDevAttrPageableMemoryAccess, device);
++        }
++        if (pageable_rc != cudaSuccess) (void)cudaGetLastError();
++        if (pageable_rc == cudaSuccess && pageable) {
++            g_expert_persist_cache.arena_device = arena;
+             g_expert_persist_cache.protected_slots = protected_slots;
+             g_expert_persist_cache.direct_slot_enabled = 1;
+             fprintf(stderr,
+-                    "ds4: CUDA expert direct-slot enabled (mapped arena)\n");
++                    "ds4: CUDA expert direct-slot: coherent pageable access, "
++                    "using host arena pointer directly\n");
+         } else {
+-            if (map_rc == cudaSuccess) (void)cudaHostUnregister(arena);
+-            free(protected_slots);
+-            (void)cudaGetLastError();
+-            fprintf(stderr,
+-                    "ds4: CUDA expert direct-slot DISABLED (mapped arena "
+-                    "registration failed: %s)\n",
+-                    cudaGetErrorString(map_rc == cudaSuccess ? alias_rc : map_rc));
++            const cudaError_t map_rc = cudaHostRegister(
++                    arena, (size_t)n_slots * slot_bytes,
++                    cudaHostRegisterMapped | cudaHostRegisterReadOnly);
++            const cudaError_t alias_rc = map_rc == cudaSuccess ?
++                cudaHostGetDevicePointer(&arena_device, arena, 0) : map_rc;
++            if (map_rc == cudaSuccess && alias_rc == cudaSuccess && arena_device) {
++                g_expert_persist_cache.arena_device = (uint8_t *)arena_device;
++                g_expert_persist_cache.protected_slots = protected_slots;
++                g_expert_persist_cache.direct_slot_enabled = 1;
++                fprintf(stderr,
++                        "ds4: CUDA expert direct-slot enabled (mapped arena)\n");
++            } else {
++                if (map_rc == cudaSuccess) (void)cudaHostUnregister(arena);
++                free(protected_slots);
++                (void)cudaGetLastError();
++                fprintf(stderr,
++                        "ds4: CUDA expert direct-slot DISABLED (mapped arena "
++                        "registration failed: %s)\n",
++                        cudaGetErrorString(map_rc == cudaSuccess ? alias_rc : map_rc));
++            }
+         }
+     }
+     fprintf(stderr,

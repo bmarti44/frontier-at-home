@@ -1,0 +1,508 @@
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -289,12 +289,16 @@
+     int32_t *slot_selected_ptr;
+     uint64_t slot_selected_capacity;
+     ds4_gpu_tensor slot_selected_tensor;
++    const uint64_t *direct_slot_ptrs;
++    int direct_slot_valid;
+ } cuda_stream_selected_cache;
+ 
+ static cuda_stream_selected_cache g_stream_selected_cache;
+ 
+ static void cuda_stream_selected_cache_invalidate(void) {
+     g_stream_selected_cache.valid = 0;
++    g_stream_selected_cache.direct_slot_valid = 0;
++    g_stream_selected_cache.direct_slot_ptrs = NULL;
+ }
+ 
+ static void cuda_stream_selected_cache_release(void) {
+@@ -17239,12 +17243,24 @@
+ #endif
+ #define MOE_DECODE_ROWS_PER_BLOCK (32u * MOE_DECODE_ROW_TILES)
+ 
++__device__ __forceinline__ static const char *moe_expert_weight_base(
++        const char *compact_base,
++        const uint64_t *direct_slot_ptrs,
++        uint32_t expert,
++        uint32_t tensor,
++        uint64_t compact_expert_bytes) {
++    return direct_slot_ptrs ?
++        (const char *)(uintptr_t)direct_slot_ptrs[(uint64_t)expert * 3u + tensor] :
++        compact_base + (uint64_t)expert * compact_expert_bytes;
++}
++
+ __global__ static void moe_gate_up_mid_qwarp32_kernel(
+         float *gate_out,
+         float *up_out,
+         float *mid_out,
+         const char *gate_base,
+         const char *up_base,
++        const uint64_t *direct_slot_ptrs,
+         const cuda_block_q8_K *xq,
+         const int32_t *selected,
+         const float *weights,
+@@ -17262,12 +17278,16 @@
+     int32_t expert_i = selected[(uint64_t)tok * n_expert + slot];
+     if (expert_i < 0) expert_i = 0;
+     uint32_t expert = (uint32_t)expert_i;
++    const char *expert_gate = moe_expert_weight_base(
++        gate_base, direct_slot_ptrs, expert, 0u, gate_expert_bytes);
++    const char *expert_up = moe_expert_weight_base(
++        up_base, direct_slot_ptrs, expert, 1u, gate_expert_bytes);
+     const cuda_block_q8_K *xqb = xq + (uint64_t)tok * xq_blocks;
+     for (uint32_t rr = 0; rr < MOE_DECODE_ROW_TILES; rr++) {
+         uint32_t row = blockIdx.x * MOE_DECODE_ROWS_PER_BLOCK + row_lane + rr * 32u;
+         if (row >= expert_mid_dim) continue;
+-        const cuda_block_iq2_xxs *gr = (const cuda_block_iq2_xxs *)(gate_base + (uint64_t)expert * gate_expert_bytes + (uint64_t)row * gate_row_bytes);
+-        const cuda_block_iq2_xxs *ur = (const cuda_block_iq2_xxs *)(up_base + (uint64_t)expert * gate_expert_bytes + (uint64_t)row * gate_row_bytes);
++        const cuda_block_iq2_xxs *gr = (const cuda_block_iq2_xxs *)(expert_gate + (uint64_t)row * gate_row_bytes);
++        const cuda_block_iq2_xxs *ur = (const cuda_block_iq2_xxs *)(expert_up + (uint64_t)row * gate_row_bytes);
+         float gate = 0.0f;
+         float up = 0.0f;
+         for (uint32_t b = lane; b < xq_blocks; b += 8u) {
+@@ -17296,6 +17316,7 @@
+         float *mid_out,
+         const char *gate_base,
+         const char *up_base,
++        const uint64_t *direct_slot_ptrs,
+         const cuda_block_q8_K *xq,
+         const int32_t *selected,
+         const float *weights,
+@@ -17314,6 +17335,10 @@
+     int32_t expert_i = selected[(uint64_t)tok * n_expert + slot];
+     if (expert_i < 0) expert_i = 0;
+     uint32_t expert = (uint32_t)expert_i;
++    const char *expert_gate = moe_expert_weight_base(
++        gate_base, direct_slot_ptrs, expert, 0u, gate_expert_bytes);
++    const char *expert_up = moe_expert_weight_base(
++        up_base, direct_slot_ptrs, expert, 1u, gate_expert_bytes);
+     const cuda_block_q8_K *xqb = xq + (uint64_t)tok * xq_blocks;
+     __shared__ cuda_block_q8_K sxq[16];
+     __shared__ uint64_t s_iq2_grid[256];
+@@ -17328,8 +17353,8 @@
+     for (uint32_t rr = 0; rr < MOE_DECODE_ROW_TILES; rr++) {
+         uint32_t row = blockIdx.x * MOE_DECODE_ROWS_PER_BLOCK + row_lane + rr * 32u;
+         if (row >= expert_mid_dim) continue;
+-        const cuda_block_iq2_xxs *gr = (const cuda_block_iq2_xxs *)(gate_base + (uint64_t)expert * gate_expert_bytes + (uint64_t)row * gate_row_bytes);
+-        const cuda_block_iq2_xxs *ur = (const cuda_block_iq2_xxs *)(up_base + (uint64_t)expert * gate_expert_bytes + (uint64_t)row * gate_row_bytes);
++        const cuda_block_iq2_xxs *gr = (const cuda_block_iq2_xxs *)(expert_gate + (uint64_t)row * gate_row_bytes);
++        const cuda_block_iq2_xxs *ur = (const cuda_block_iq2_xxs *)(expert_up + (uint64_t)row * gate_row_bytes);
+         float gate = 0.0f;
+         float up = 0.0f;
+         for (uint32_t b = lane; b < xq_blocks; b += 8u) {
+@@ -18250,6 +18275,7 @@
+ __global__ static void moe_down_iq2_xxs_qwarp32_kernel(
+         float *down_out,
+         const char *down_base,
++        const uint64_t *direct_slot_ptrs,
+         const cuda_block_q8_K *midq,
+         const int32_t *selected,
+         uint64_t down_expert_bytes,
+@@ -18265,7 +18291,10 @@
+     uint32_t slot = pair - tok * n_expert;
+     int32_t expert_i = selected[(uint64_t)tok * n_expert + slot];
+     if (expert_i < 0) expert_i = 0;
+-    const cuda_block_iq2_xxs *wr = (const cuda_block_iq2_xxs *)(down_base + (uint64_t)(uint32_t)expert_i * down_expert_bytes + (uint64_t)row * down_row_bytes);
++    const char *expert_down = moe_expert_weight_base(
++        down_base, direct_slot_ptrs, (uint32_t)expert_i, 2u,
++        down_expert_bytes);
++    const cuda_block_iq2_xxs *wr = (const cuda_block_iq2_xxs *)(expert_down + (uint64_t)row * down_row_bytes);
+     const cuda_block_q8_K *xq = midq + (uint64_t)pair * midq_blocks;
+     float acc = 0.0f;
+     for (uint32_t b = lane; b < midq_blocks; b += 8u) acc += dev_dot_iq2_xxs_q8_K_block(wr + b, xq + b);
+@@ -21222,6 +21251,7 @@
+         float *mid_out,
+         const char *gate_base,
+         const char *up_base,
++        const uint64_t *direct_slot_ptrs,
+         const float *x,
+         const int32_t *selected,
+         const float *weights,
+@@ -21239,9 +21269,13 @@
+     int32_t expert_i = selected[(uint64_t)tok * n_expert + slot];
+     if (expert_i < 0) expert_i = 0;
+     uint32_t expert = (uint32_t)expert_i;
++    const char *expert_gate = moe_expert_weight_base(
++        gate_base, direct_slot_ptrs, expert, 0u, gate_expert_bytes);
++    const char *expert_up = moe_expert_weight_base(
++        up_base, direct_slot_ptrs, expert, 1u, gate_expert_bytes);
+     const uint32_t nb = expert_in_dim / CUDA_QK_K;
+-    const cuda_block_iq2_xxs *gr = (const cuda_block_iq2_xxs *)(gate_base + (uint64_t)expert * gate_expert_bytes + (uint64_t)row * gate_row_bytes);
+-    const cuda_block_iq2_xxs *ur = (const cuda_block_iq2_xxs *)(up_base + (uint64_t)expert * gate_expert_bytes + (uint64_t)row * gate_row_bytes);
++    const cuda_block_iq2_xxs *gr = (const cuda_block_iq2_xxs *)(expert_gate + (uint64_t)row * gate_row_bytes);
++    const cuda_block_iq2_xxs *ur = (const cuda_block_iq2_xxs *)(expert_up + (uint64_t)row * gate_row_bytes);
+     const float *xr = x + (uint64_t)tok * expert_in_dim;
+     float gate = 0.0f;
+     float up = 0.0f;
+@@ -21311,6 +21345,7 @@
+ __global__ static void moe_down_iq2_xxs_f32_kernel(
+         float *down_out,
+         const char *down_base,
++        const uint64_t *direct_slot_ptrs,
+         const float *mid,
+         const int32_t *selected,
+         uint64_t down_expert_bytes,
+@@ -21326,7 +21361,10 @@
+     int32_t expert_i = selected[(uint64_t)tok * n_expert + slot];
+     if (expert_i < 0) expert_i = 0;
+     const uint32_t nb = expert_mid_dim / CUDA_QK_K;
+-    const cuda_block_iq2_xxs *wr = (const cuda_block_iq2_xxs *)(down_base + (uint64_t)(uint32_t)expert_i * down_expert_bytes + (uint64_t)row * down_row_bytes);
++    const char *expert_down = moe_expert_weight_base(
++        down_base, direct_slot_ptrs, (uint32_t)expert_i, 2u,
++        down_expert_bytes);
++    const cuda_block_iq2_xxs *wr = (const cuda_block_iq2_xxs *)(expert_down + (uint64_t)row * down_row_bytes);
+     const float *xr = mid + (uint64_t)pair * expert_mid_dim;
+     float acc = 0.0f;
+     for (uint32_t b = threadIdx.x; b < nb; b += blockDim.x) acc += dev_iq2_xxs_dot_f32(wr + b, xr + (uint64_t)b * CUDA_QK_K, 1);
+@@ -21475,6 +21513,10 @@
+     if (use_stream_selected_cache) {
+         selected = &g_stream_selected_cache.slot_selected_tensor;
+     }
++    const uint64_t *direct_slot_ptrs =
++        use_stream_selected_cache && n_tokens == 1u &&
++        g_stream_selected_cache.direct_slot_valid ?
++        g_stream_selected_cache.direct_slot_ptrs : NULL;
+     const char *gate_w = use_stream_selected_cache ?
+         g_stream_selected_cache.gate_ptr :
+         cuda_resolve_weight_ptr(model_map, gate_offset, gate_bytes,
+@@ -22116,6 +22158,7 @@
+                         (float *)mid->ptr,
+                         gate_w,
+                         up_w,
++                        direct_slot_ptrs,
+                         xq,
+                         (const int32_t *)selected->ptr,
+                         (const float *)weights->ptr,
+@@ -22133,6 +22176,7 @@
+                         (float *)mid->ptr,
+                         gate_w,
+                         up_w,
++                        direct_slot_ptrs,
+                         xq,
+                         (const int32_t *)selected->ptr,
+                         (const float *)weights->ptr,
+@@ -22514,6 +22558,7 @@
+                 moe_down_iq2_xxs_qwarp32_kernel<<<dgrid, 256>>>(
+                     (float *)down->ptr,
+                     down_w,
++                    direct_slot_ptrs,
+                     midq,
+                     (const int32_t *)selected->ptr,
+                     down_expert_bytes,
+@@ -22584,6 +22629,7 @@
+             (float *)mid->ptr,
+             gate_w,
+             up_w,
++            direct_slot_ptrs,
+             (const float *)x->ptr,
+             (const int32_t *)selected->ptr,
+             (const float *)weights->ptr,
+@@ -22601,6 +22647,7 @@
+             moe_down_iq2_xxs_f32_kernel<<<dgrid, 256>>>(
+                 (float *)down->ptr,
+                 down_w,
++                direct_slot_ptrs,
+                 (const float *)mid->ptr,
+                 (const int32_t *)selected->ptr,
+                 down_expert_bytes,
+@@ -23724,6 +23771,10 @@
+     uint64_t hits;
+     uint64_t misses;
+     uint64_t loads;
++    uint8_t *arena_device;
++    uint8_t *protected_slots;
++    uint32_t protected_last_layer;
++    int direct_slot_enabled;
+     uint64_t model_generation; /* cache valid for exactly one model-load
+                                    generation (bumped by every model-map
+                                    registration; immune to address reuse) */
+@@ -23838,6 +23889,11 @@
+     g_expert_persist_cache.lru_head = UINT32_MAX;
+     g_expert_persist_cache.lru_tail = UINT32_MAX;
+     g_expert_persist_cache.used = 0;
++    if (g_expert_persist_cache.protected_slots) {
++        memset(g_expert_persist_cache.protected_slots, 0,
++               g_expert_persist_cache.n_slots);
++        g_expert_persist_cache.protected_last_layer = UINT32_MAX;
++    }
+     if (g_expert_persist_cache.model_generation != 0)
+         fprintf(stderr, "ds4: CUDA persistent expert cache flushed "
+                         "(model load generation changed)\n");
+@@ -23884,12 +23940,17 @@
+     cuda_expert_cache_slot_meta *meta = (cuda_expert_cache_slot_meta *)
+         malloc((size_t)n_slots * sizeof(cuda_expert_cache_slot_meta));
+     std::unordered_map<uint64_t, uint32_t> *map = NULL;
++    const int direct_slot_requested =
++        getenv("DS4_CUDA_EXPERT_DIRECT_SLOT") != NULL;
++    uint8_t *protected_slots = direct_slot_requested ?
++        (uint8_t *)calloc(n_slots, 1) : NULL;
+     try {
+         map = new std::unordered_map<uint64_t, uint32_t>();
+         map->reserve(n_slots);   /* avoid rehash allocations on the hot path */
+     } catch (...) { delete map; map = NULL; }
+-    if (!arena || !meta || !map) {
+-        free(arena); free(meta); delete map;
++    if (!arena || !meta || !map ||
++        (direct_slot_requested && !protected_slots)) {
++        free(arena); free(meta); free(protected_slots); delete map;
+         fprintf(stderr, "ds4: CUDA persistent expert cache DISABLED "
+                         "(arena allocation failed for %.1f GB)\n", gb);
+         return;
+@@ -23908,7 +23969,31 @@
+     g_expert_persist_cache.lru_head = UINT32_MAX;
+     g_expert_persist_cache.lru_tail = UINT32_MAX;
+     g_expert_persist_cache.used = 0;
++    g_expert_persist_cache.protected_last_layer = UINT32_MAX;
+     g_expert_persist_cache.disabled = 0;
++    if (direct_slot_requested) {
++        const cudaError_t map_rc = cudaHostRegister(
++                arena, (size_t)n_slots * slot_bytes,
++                cudaHostRegisterMapped | cudaHostRegisterReadOnly);
++        void *arena_device = NULL;
++        const cudaError_t alias_rc = map_rc == cudaSuccess ?
++            cudaHostGetDevicePointer(&arena_device, arena, 0) : map_rc;
++        if (map_rc == cudaSuccess && alias_rc == cudaSuccess && arena_device) {
++            g_expert_persist_cache.arena_device = (uint8_t *)arena_device;
++            g_expert_persist_cache.protected_slots = protected_slots;
++            g_expert_persist_cache.direct_slot_enabled = 1;
++            fprintf(stderr,
++                    "ds4: CUDA expert direct-slot enabled (mapped arena)\n");
++        } else {
++            if (map_rc == cudaSuccess) (void)cudaHostUnregister(arena);
++            free(protected_slots);
++            (void)cudaGetLastError();
++            fprintf(stderr,
++                    "ds4: CUDA expert direct-slot DISABLED (mapped arena "
++                    "registration failed: %s)\n",
++                    cudaGetErrorString(map_rc == cudaSuccess ? alias_rc : map_rc));
++        }
++    }
+     fprintf(stderr,
+             "ds4: CUDA persistent expert cache enabled: %u slots x %.2f MiB "
+             "= %.2f GiB (fixed arena)\n",
+@@ -23920,7 +24005,8 @@
+ /* Returns arena slot base on hit (and refreshes LRU), NULL on miss.
+  * A hit requires key AND model-offset equality (stale-model guard). */
+ static uint8_t *cuda_expert_cache_lookup(uint64_t key, uint64_t gate_off,
+-                                         uint64_t down_off) {
++                                         uint64_t down_off,
++                                         uint32_t *slot_out) {
+     if (g_expert_persist_cache.disabled) return NULL;
+     auto it = g_expert_persist_cache.map->find(key);
+     if (it == g_expert_persist_cache.map->end()) return NULL;
+@@ -23936,6 +24022,7 @@
+     }
+     cuda_expert_cache_lru_unlink(s);
+     cuda_expert_cache_lru_push_front(s);
++    if (slot_out) *slot_out = s;
+     return g_expert_persist_cache.arena +
+            (uint64_t)s * g_expert_persist_cache.slot_bytes;
+ }
+@@ -23955,6 +24042,11 @@
+         fresh = 1;
+     } else {
+         s = g_expert_persist_cache.lru_tail;
++        while (s != UINT32_MAX &&
++               g_expert_persist_cache.direct_slot_enabled &&
++               g_expert_persist_cache.protected_slots[s]) {
++            s = g_expert_persist_cache.meta[s].prev;
++        }
+         if (s == UINT32_MAX) return UINT32_MAX;
+         cuda_expert_cache_lru_unlink(s);
+         if (g_expert_persist_cache.meta[s].key != UINT64_MAX)
+@@ -24086,7 +24178,52 @@
+     cuda_expert_cache_init_once(table->gate_expert_bytes,
+                                 table->down_expert_bytes);
+     cuda_expert_cache_flush_for_model();
+-    struct cuda_miss_job { uint64_t gate_src, up_src, down_src, gate_dst, down_dst, key; };
++    int direct_this_layer =
++        g_expert_persist_cache.direct_slot_enabled &&
++        slot_count == 8u && compact_count == 8u &&
++        table->gate_expert_bytes == table->down_expert_bytes;
++    std::vector<uint32_t> arena_slots;
++    if (direct_this_layer) {
++        try { arena_slots.assign((size_t)compact_count, UINT32_MAX); }
++        catch (...) { direct_this_layer = 0; }
++    }
++    const uint64_t remap_ids_bytes =
++        (uint64_t)slot_count * sizeof(int32_t);
++    const uint64_t direct_ptr_offset = (remap_ids_bytes + 7u) & ~7ull;
++    const uint64_t direct_payload_bytes = direct_ptr_offset +
++        compact_count * 3u * sizeof(uint64_t);
++    if (direct_this_layer && !cuda_stream_selected_ensure_bytes(
++            (char **)&g_stream_selected_cache.slot_selected_ptr,
++            &g_stream_selected_cache.slot_selected_capacity,
++            direct_payload_bytes, "selected-id/direct-slot table")) {
++        direct_this_layer = 0;
++        if (!cuda_stream_selected_ensure_i32(slot_count)) {
++            cuda_stream_selected_cache_invalidate();
++            return cuda_stream_selected_reject(table, slot_count,
++                                               "direct-slot payload allocation");
++        }
++    }
++    std::vector<uint8_t> remap_payload;
++    if (direct_this_layer) {
++        try { remap_payload.assign((size_t)direct_payload_bytes, 0); }
++        catch (...) { direct_this_layer = 0; }
++    }
++    if (direct_this_layer) {
++        /* Normal decode visits routed layers in increasing order. A layer
++         * wrap therefore starts a new token and releases the prior token's
++         * slots. Within the token, protected slots cannot be chosen as SLRU
++         * victims, including while later misses in this layer are inserted. */
++        if (g_expert_persist_cache.protected_last_layer == UINT32_MAX ||
++            table->layer <= g_expert_persist_cache.protected_last_layer) {
++            memset(g_expert_persist_cache.protected_slots, 0,
++                   g_expert_persist_cache.n_slots);
++        }
++        g_expert_persist_cache.protected_last_layer = table->layer;
++    }
++    struct cuda_miss_job {
++        uint64_t gate_src, up_src, down_src, gate_dst, down_dst, key;
++        uint32_t compact;
++    };
+     std::vector<cuda_miss_job> miss_jobs;
+     try { miss_jobs.reserve(table->n_total_expert); }  /* <=256; push_back never reallocs/throws */
+     catch (...) { return cuda_stream_selected_reject(table, slot_count, "miss-job reserve"); }
+@@ -24125,14 +24262,21 @@
+             ec_sha256_update(&g_expert_cache_run_stats.stream, &rec_bytes, 8);
+             g_expert_cache_run_stats.lookup_bytes += rec_bytes;
+         }
++        uint32_t arena_slot = UINT32_MAX;
+         uint8_t *slab = persist_ok ?
+-            cuda_expert_cache_lookup(key, gate_src, down_src) : NULL;
++            cuda_expert_cache_lookup(key, gate_src, down_src,
++                                     direct_this_layer ? &arena_slot : NULL) : NULL;
+         if (slab) {
+             /* HIT: memory copy from the fixed arena; identical bytes to a
+              * disk read of the same offsets, so outputs are unchanged. */
+             g_expert_persist_cache.hits++;
+             g_expert_cache_run_stats.hit_bytes +=
+                 2u * table->gate_expert_bytes + table->down_expert_bytes;
++            if (direct_this_layer) {
++                arena_slots[i] = arena_slot;
++                g_expert_persist_cache.protected_slots[arena_slot] = 1;
++                continue;
++            }
+             if (ds4_gpu_decode_stage_timing_enabled_cached) {
+                 ds4_gpu_decode_stage_timing_begin(DS4_DECODE_STAGE_COPIES);
+             }
+@@ -24170,7 +24314,7 @@
+          * Default (env unset) keeps the exact legacy sequential path. */
+         if (fetch_threads >= 2) {
+             miss_jobs.push_back({gate_src, up_src, down_src,
+-                                 gate_dst, down_dst, key});
++                                 gate_dst, down_dst, key, i});
+             continue;
+         }
+         if (!cuda_model_copy_to_device_streamed(
+@@ -24220,7 +24364,13 @@
+                      * index (no map lookup that could throw) */
+                     g_expert_persist_cache.map->erase(key);
+                     g_expert_persist_cache.meta[fslot].key = UINT64_MAX;
++                    direct_this_layer = 0;
++                } else if (direct_this_layer) {
++                    arena_slots[i] = fslot;
++                    g_expert_persist_cache.protected_slots[fslot] = 1;
+                 }
++            } else if (direct_this_layer) {
++                direct_this_layer = 0;
+             }
+         }
+     }
+@@ -24305,6 +24455,10 @@
+                              "expert cache down fill (par)")) {
+                     g_expert_persist_cache.map->erase(j.key);
+                     g_expert_persist_cache.meta[fslot].key = UINT64_MAX;
++                    direct_this_layer = 0;
++                } else if (direct_this_layer) {
++                    arena_slots[j.compact] = fslot;
++                    g_expert_persist_cache.protected_slots[fslot] = 1;
+                 }
+             }
+         }
+@@ -24326,9 +24480,70 @@
+                     g_expert_persist_cache.n_slots);
+         }
+     }
++    if (direct_this_layer) {
++        for (uint32_t i = 0; i < compact_count; i++) {
++            if (arena_slots[i] == UINT32_MAX) {
++                direct_this_layer = 0;
++                break;
++            }
++        }
++    }
++    /* An exceptional fill/metadata failure after earlier direct hits falls
++     * back to the original staging path for this layer. Recopy only slots
++     * whose hit copies were intentionally skipped; normal OFF operation
++     * never enters this block. */
++    if (!direct_this_layer && !arena_slots.empty()) {
++        for (uint32_t i = 0; i < compact_count; i++) {
++            if (arena_slots[i] == UINT32_MAX) continue;
++            const uint8_t *slab = g_expert_persist_cache.arena +
++                (uint64_t)arena_slots[i] * g_expert_persist_cache.slot_bytes;
++            const uint64_t gate_dst =
++                (uint64_t)i * table->gate_expert_bytes;
++            const uint64_t down_dst =
++                (uint64_t)i * table->down_expert_bytes;
++            if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.gate_ptr + gate_dst,
++                                    slab, table->gate_expert_bytes,
++                                    cudaMemcpyDefault),
++                         "expert direct-slot fallback gate copy") ||
++                !cuda_ok(cudaMemcpy(g_stream_selected_cache.up_ptr + gate_dst,
++                                    slab + table->gate_expert_bytes,
++                                    table->gate_expert_bytes,
++                                    cudaMemcpyDefault),
++                         "expert direct-slot fallback up copy") ||
++                !cuda_ok(cudaMemcpy(g_stream_selected_cache.down_ptr + down_dst,
++                                    slab + 2u * table->gate_expert_bytes,
++                                    table->down_expert_bytes,
++                                    cudaMemcpyDefault),
++                         "expert direct-slot fallback down copy")) {
++                cuda_stream_selected_cache_invalidate();
++                return cuda_stream_selected_reject(table, slot_count,
++                                                   "direct-slot fallback copy");
++            }
++        }
++    }
++
++    const void *remap_src = slot_ids.data();
++    size_t remap_copy_bytes = (size_t)remap_ids_bytes;
++    if (direct_this_layer) {
++        memcpy(remap_payload.data(), slot_ids.data(),
++               (size_t)remap_ids_bytes);
++        uint64_t *ptrs = (uint64_t *)(remap_payload.data() +
++                                      direct_ptr_offset);
++        for (uint32_t i = 0; i < compact_count; i++) {
++            uint8_t *base = g_expert_persist_cache.arena_device +
++                (uint64_t)arena_slots[i] * g_expert_persist_cache.slot_bytes;
++            ptrs[(uint64_t)i * 3u + 0u] = (uint64_t)(uintptr_t)base;
++            ptrs[(uint64_t)i * 3u + 1u] =
++                (uint64_t)(uintptr_t)(base + table->gate_expert_bytes);
++            ptrs[(uint64_t)i * 3u + 2u] =
++                (uint64_t)(uintptr_t)(base + 2u * table->gate_expert_bytes);
++        }
++        remap_src = remap_payload.data();
++        remap_copy_bytes = (size_t)direct_payload_bytes;
++    }
+     if (!cuda_ok(cudaMemcpy(g_stream_selected_cache.slot_selected_ptr,
+-                            slot_ids.data(),
+-                            (size_t)slot_count * sizeof(int32_t),
++                            remap_src,
++                            remap_copy_bytes,
+                             cudaMemcpyHostToDevice),
+                  "stream selected-id remap copy")) {
+         cuda_stream_selected_cache_invalidate();
+@@ -24353,6 +24568,10 @@
+         (uint64_t)slot_count * sizeof(int32_t);
+     g_stream_selected_cache.slot_selected_tensor.owner = 0;
+     g_stream_selected_cache.slot_selected_tensor.device_id = logical_tier;
++    g_stream_selected_cache.direct_slot_valid = direct_this_layer;
++    g_stream_selected_cache.direct_slot_ptrs = direct_this_layer ?
++        (const uint64_t *)((const char *)g_stream_selected_cache.slot_selected_ptr +
++                           direct_ptr_offset) : NULL;
+     g_stream_selected_cache.valid = 1;
+     return 1;
+ }
