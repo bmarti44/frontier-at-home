@@ -1,0 +1,478 @@
+--- a/ds4.c
++++ b/ds4.c
+@@ -24439,7 +24439,8 @@
+     const uint32_t tp_ways = (ok && g->cuda_tp_output)
+         ? metal_graph_cuda_tp_output_tiers(g, tp_tiers) : 0;
+     bool tp_ok = ok && tp_ways >= 2u &&
+-                 weights->output->type == DS4_TENSOR_Q8_0 &&
++                 (weights->output->type == DS4_TENSOR_Q8_0 ||
++                  weights->output->type == DS4_TENSOR_Q4_0) &&
+                  weights->output->ndim == 2 &&
+                  weights->output->dim[0] == DS4_N_EMBD &&
+                  weights->output->dim[1] == vocab_dim &&
+@@ -24459,7 +24460,9 @@
+                       (uint64_t)head_rows * DS4_N_EMBD * sizeof(float)));
+     }
+     if (tp_ok) {
+-        const uint64_t row_bytes = metal_graph_q8_0_row_bytes(DS4_N_EMBD);
++        const uint64_t row_bytes = weights->output->type == DS4_TENSOR_Q4_0 ?
++            ((uint64_t)DS4_N_EMBD / 32u) * 18u :
++            metal_graph_q8_0_row_bytes(DS4_N_EMBD);
+         const int home_tier = g->active_tier;
+         uint64_t split_start[DS4_MAX_GPUS] = {0};
+         uint64_t split_count[DS4_MAX_GPUS] = {0};
+@@ -24493,17 +24496,31 @@
+                                     0,
+                                     (uint64_t)head_rows * DS4_N_EMBD *
+                                         sizeof(float));
+-            ok = shard_out && (t == home_tier || shard_in) &&
+-                 ds4_gpu_matmul_q8_0_tensor(shard_out,
+-                                            model->map,
+-                                            model->size,
+-                                            weights->output->abs_offset +
+-                                                split_start[i] * row_bytes,
+-                                            DS4_N_EMBD,
+-                                            split_count[i],
+-                                            t == home_tier ? output_norm :
+-                                                             shard_in,
+-                                            head_rows) != 0;
++            ok = shard_out && (t == home_tier || shard_in);
++            if (ok && weights->output->type == DS4_TENSOR_Q4_0) {
++                ok = ds4_gpu_matmul_quant_tensor(shard_out,
++                                                 model->map,
++                                                 model->size,
++                                                 weights->output->abs_offset +
++                                                     split_start[i] * row_bytes,
++                                                 DS4_TENSOR_Q4_0,
++                                                 DS4_N_EMBD,
++                                                 split_count[i],
++                                                 t == home_tier ? output_norm :
++                                                                  shard_in,
++                                                 head_rows) != 0;
++            } else if (ok) {
++                ok = ds4_gpu_matmul_q8_0_tensor(shard_out,
++                                                model->map,
++                                                model->size,
++                                                weights->output->abs_offset +
++                                                    split_start[i] * row_bytes,
++                                                DS4_N_EMBD,
++                                                split_count[i],
++                                                t == home_tier ? output_norm :
++                                                                 shard_in,
++                                                head_rows) != 0;
++            }
+             ds4_gpu_tensor_free(shard_in);
+             ds4_gpu_tensor_free(shard_out);
+         }
+@@ -24531,14 +24548,26 @@
+             }
+         }
+     } else if (ok && !(g->cuda_tp_ep && g->cuda_tp_output)) {
+-        ok = ds4_gpu_matmul_q8_0_tensor(logits,
+-                                        model->map,
+-                                        model->size,
+-                                        weights->output->abs_offset,
+-                                        DS4_N_EMBD,
+-                                        vocab_dim,
+-                                        output_norm,
+-                                        head_rows) != 0;
++        if (weights->output->type == DS4_TENSOR_Q4_0) {
++            ok = ds4_gpu_matmul_quant_tensor(logits,
++                                             model->map,
++                                             model->size,
++                                             weights->output->abs_offset,
++                                             DS4_TENSOR_Q4_0,
++                                             DS4_N_EMBD,
++                                             vocab_dim,
++                                             output_norm,
++                                             head_rows) != 0;
++        } else {
++            ok = ds4_gpu_matmul_q8_0_tensor(logits,
++                                            model->map,
++                                            model->size,
++                                            weights->output->abs_offset,
++                                            DS4_N_EMBD,
++                                            vocab_dim,
++                                            output_norm,
++                                            head_rows) != 0;
++        }
+     } else if (ok) {
+         /* The expert-parallel cache stores only output vocabulary shards, so
+          * a single-device full-head fallback would access uncached weights. */
+@@ -41460,6 +41489,50 @@
+         use_batch_residual &&
+         glm_graph_indexed_prefill_batch_shared_expert() &&
+         g->batch_ffn_gate &&
++        g->batch_ffn_up &&
++        g->batch_shared_mid &&
++        glm_graph_weight_type_for_offset(model,
++                l->ffn_gate_shexp->abs_offset) == DS4_TENSOR_Q4_0 &&
++        glm_graph_weight_type_for_offset(model,
++                l->ffn_up_shexp->abs_offset) == DS4_TENSOR_Q4_0 &&
++        glm_graph_weight_type_for_offset(model,
++                l->ffn_down_shexp->abs_offset) == DS4_TENSOR_Q4_0) {
++        ok = glm_graph_matmul_q8_0_tensor(g->batch_ffn_gate,
++                                          model,
++                                          l->ffn_gate_shexp->abs_offset,
++                                          DS4_N_EMBD,
++                                          DS4_N_FF_EXP,
++                                          g->batch_ffn_norm,
++                                          n_tokens);
++        if (ok) ok = glm_graph_matmul_q8_0_tensor(g->batch_ffn_up,
++                                                  model,
++                                                  l->ffn_up_shexp->abs_offset,
++                                                  DS4_N_EMBD,
++                                                  DS4_N_FF_EXP,
++                                                  g->batch_ffn_norm,
++                                                  n_tokens);
++        if (ok) ok = ds4_gpu_swiglu_tensor(g->batch_shared_mid,
++                                           g->batch_ffn_gate,
++                                           g->batch_ffn_up,
++                                           n_tokens * DS4_N_FF_EXP,
++                                           0.0f,
++                                           1.0f) != 0;
++        if (ok) {
++            shared_expert_done = glm_graph_matmul_q8_0_tensor(
++                    g->batch_attn_out,
++                    model,
++                    l->ffn_down_shexp->abs_offset,
++                    DS4_N_FF_EXP,
++                    DS4_N_EMBD,
++                    g->batch_shared_mid,
++                    n_tokens);
++        }
++    }
++    if (ok &&
++        !shared_expert_done &&
++        use_batch_residual &&
++        glm_graph_indexed_prefill_batch_shared_expert() &&
++        g->batch_ffn_gate &&
+         g->batch_ffn_up &&
+         g->batch_shared_mid &&
+         glm_graph_weights_are_q8_0(model,
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -12257,6 +12257,33 @@
+     }
+ }
+ 
++__global__ static void q4_0_dequant_f16_kernel(
++        __half *out,
++        const unsigned char *w,
++        uint64_t total_blocks,
++        uint32_t blocks_per_row,
++        uint32_t in_dim) {
++    const uint64_t tid = (uint64_t)blockIdx.x * blockDim.x + threadIdx.x;
++    const uint64_t b = tid >> 1;
++    if (b >= total_blocks) return;
++    const uint32_t half_idx = (uint32_t)tid & 1u;
++    const unsigned char *blk = w + b * 18u;
++    const float d = __half2float(*(const __half *)blk);
++    const uint8_t *q = (const uint8_t *)(blk + 2);
++    const uint64_t row = b / blocks_per_row;
++    const uint32_t col = (uint32_t)(b - row * blocks_per_row) * 32u +
++                         half_idx * 16u;
++    __half2 *dst = (__half2 *)(out + row * in_dim + col);
++#pragma unroll
++    for (int k = 0; k < 8; k++) {
++        const uint8_t q0 = q[2 * k];
++        const uint8_t q1 = q[2 * k + 1];
++        const int v0 = (int)(half_idx == 0u ? (q0 & 0x0fu) : (q0 >> 4u)) - 8;
++        const int v1 = (int)(half_idx == 0u ? (q1 & 0x0fu) : (q1 >> 4u)) - 8;
++        dst[k] = __floats2half2_rn(d * (float)v0, d * (float)v1);
++    }
++}
++
+ static int cuda_matmul_q8_0_tensor_labeled(ds4_gpu_tensor *out, const void *model_map, uint64_t model_size, uint64_t weight_offset, uint64_t in_dim, uint64_t out_dim, const ds4_gpu_tensor *x, uint64_t n_tok, const char *label) {
+     if (!out || !x || !model_map) return 0;
+     uint64_t blocks = (in_dim + 31) / 32;
+@@ -25320,6 +25347,78 @@
+     if (lane == 0u) out[tok * out_dim + row] = acc;
+ }
+ 
++__device__ __forceinline__ static int32_t glm_q4_0_i8x4(
++        const uint8_t *q, uint32_t k) {
++    uint32_t packed = 0u;
++#pragma unroll
++    for (uint32_t j = 0; j < 4u; j++) {
++        const uint32_t i = k + j;
++        const uint8_t b = q[i & 15u];
++        const int8_t v = (int8_t)((int)(i < 16u ? (b & 0x0fu) : (b >> 4u)) - 8);
++        packed |= (uint32_t)(uint8_t)v << (j * 8u);
++    }
++    return (int32_t)packed;
++}
++
++/* Q4_0 counterpart of matmul_q8_0_preq_batch_warp8_tok8_kernel: one warp
++ * owns one output row, reuses each packed weight block across eight tokens,
++ * and retains an independent block-ordered accumulator for each token. */
++template <uint32_t token_tile>
++__global__ static void glm_matmul_q4_0_preq_batch_warp8_tiled_kernel(
++        float *out, const char *weight,
++        const int8_t *xq, const float *xscale,
++        uint64_t in_dim, uint64_t out_dim, uint64_t n_tok,
++        uint64_t blocks, int use_dp4a) {
++    const uint64_t row = (uint64_t)blockIdx.x * 8u + (threadIdx.x >> 5u);
++    const uint64_t tok0 = (uint64_t)blockIdx.y * token_tile;
++    const uint32_t lane = threadIdx.x & 31u;
++    if (row >= out_dim || tok0 >= n_tok) return;
++
++    const char *wr = weight + row * blocks * 18u;
++    float acc[token_tile] = { 0.0f };
++    for (uint64_t b = lane; b < blocks; b += 32u) {
++        const char *blk = wr + b * 18u;
++        const float ws = __half2float(*(const __half *)blk);
++        const uint8_t *q = (const uint8_t *)(blk + 2);
++        int dot[token_tile] = { 0 };
++#pragma unroll
++        for (uint32_t k = 0; k < 32u; k += 4u) {
++            const int32_t w4 = glm_q4_0_i8x4(q, k);
++#pragma unroll
++            for (uint32_t t = 0; t < token_tile; t++) {
++                if (tok0 + t < n_tok) {
++                    const int8_t *xb = xq +
++                        ((tok0 + t) * blocks + b) * 32u + k;
++                    if (use_dp4a) {
++                        dot[t] = __dp4a(w4, load_i8x4_i32_aligned(xb), dot[t]);
++                    } else {
++                        const int8_t *wv = (const int8_t *)&w4;
++#pragma unroll
++                        for (uint32_t j = 0; j < 4u; j++) {
++                            dot[t] += (int)wv[j] * (int)xb[j];
++                        }
++                    }
++                }
++            }
++        }
++#pragma unroll
++        for (uint32_t t = 0; t < token_tile; t++) {
++            if (tok0 + t < n_tok) {
++                acc[t] += ws * xscale[(tok0 + t) * blocks + b] *
++                          (float)dot[t];
++            }
++        }
++    }
++#pragma unroll
++    for (uint32_t t = 0; t < token_tile; t++) acc[t] = warp_sum_f32(acc[t]);
++    if (lane == 0u) {
++#pragma unroll
++        for (uint32_t t = 0; t < token_tile; t++) {
++            if (tok0 + t < n_tok) out[(tok0 + t) * out_dim + row] = acc[t];
++        }
++    }
++}
++
+ __global__ static void glm_matmul_q4_0_kslice_warp8_kernel(
+         float *out, const char *weight, const float *x,
+         uint64_t full_blocks, uint64_t block_start, uint64_t slice_blocks,
+@@ -26623,7 +26722,8 @@
+     const char *w = (const char *)cuda_resolve_weight_ptr(
+             model_map, weight_offset, wbytes, logical_tier, "glm_k_b_qk");
+     if (!w) return 0;
+-    if (weight_type == 8u && g_q8_dequant_gemm_enabled &&
++    if ((weight_type == 8u || weight_type == 2u) &&
++        g_q8_dequant_gemm_enabled &&
+         g_cublas_ready && n_tokens >= 128u) {
+         /* Per-head strided-batched GEMM over a dequantized k_b: the
+          * per-(token,head) warp kernel was ~65ms/layer at 820 tokens.
+@@ -26644,9 +26744,17 @@
+             float *oo = (float *)((char *)tmp + oo_off);
+             const uint64_t total_blocks =
+                 (uint64_t)n_head * kv_lora_dim * (qk_nope / 32u);
+-            q8_0_dequant_f16_kernel<<<(unsigned)((total_blocks * 2u + 255u) / 256u), 256>>>(
+-                    wh, (const unsigned char *)w, total_blocks,
+-                    qk_nope / 32u, qk_nope);
++            if (weight_type == 2u) {
++                q4_0_dequant_f16_kernel<<<
++                        (unsigned)((total_blocks * 2u + 255u) / 256u), 256>>>(
++                        wh, (const unsigned char *)w, total_blocks,
++                        qk_nope / 32u, qk_nope);
++            } else {
++                q8_0_dequant_f16_kernel<<<
++                        (unsigned)((total_blocks * 2u + 255u) / 256u), 256>>>(
++                        wh, (const unsigned char *)w, total_blocks,
++                        qk_nope / 32u, qk_nope);
++            }
+             const uint64_t xn = (uint64_t)n_tokens * n_head * qk_dim;
+             f32_to_f16_kernel<<<(xn + 255u) / 256u, 256>>>(
+                     xh, (const float *)q->ptr, xn);
+@@ -28557,6 +28665,76 @@
+     }
+ }
+ 
++/* Same row/token tile as the Q8_0 value kernel; only the 18-byte Q4_0 block
++ * decode differs. Accumulation remains block-major and token-independent. */
++template <uint32_t token_tile>
++__global__ static void glm_value_project_q4_0_batch_heads_tiled_kernel(
++        float *heads,
++        const char *weight,
++        const float *lora,
++        uint32_t n_tokens,
++        uint32_t n_head,
++        uint32_t kv_lora_dim,
++        uint32_t value_dim,
++        uint64_t row_bytes) {
++    const uint32_t head = blockIdx.x;
++    const uint32_t token0 = blockIdx.y * token_tile;
++    if (head >= n_head || token0 >= n_tokens) return;
++    const uint32_t tid = threadIdx.x;
++    const uint32_t nth = blockDim.x;
++    extern __shared__ float xsh[];
++
++#pragma unroll
++    for (uint32_t t = 0; t < token_tile; t++) {
++        const uint32_t token = token0 + t;
++        if (token >= n_tokens) break;
++        const float *src = lora + (uint64_t)token * n_head * kv_lora_dim +
++                           (uint64_t)head * kv_lora_dim;
++        for (uint32_t j = tid; j < kv_lora_dim; j += nth) {
++            xsh[(uint64_t)t * kv_lora_dim + j] = src[j];
++        }
++    }
++    __syncthreads();
++
++    for (uint32_t od = tid; od < value_dim; od += nth) {
++        const char *row = weight +
++            ((uint64_t)head * value_dim + od) * row_bytes;
++        float acc[token_tile] = { 0.0f };
++        const uint32_t nb = kv_lora_dim >> 5;
++        for (uint32_t b = 0; b < nb; b++) {
++            const char *blk = row + (uint64_t)b * 18u;
++            const float d = __half2float(*(const __half *)blk);
++            const uint8_t *q = (const uint8_t *)(blk + 2);
++            float s[token_tile] = { 0.0f };
++#pragma unroll 8
++            for (uint32_t k = 0; k < 32u; k++) {
++                const uint8_t packed = q[k & 15u];
++                const float wv = (float)((int)(k < 16u ?
++                    (packed & 0x0fu) : (packed >> 4u)) - 8);
++#pragma unroll
++                for (uint32_t t = 0; t < token_tile; t++) {
++                    if (token0 + t < n_tokens) {
++                        s[t] += wv * xsh[(uint64_t)t * kv_lora_dim +
++                                         b * 32u + k];
++                    }
++                }
++            }
++#pragma unroll
++            for (uint32_t t = 0; t < token_tile; t++) {
++                if (token0 + t < n_tokens) acc[t] += d * s[t];
++            }
++        }
++#pragma unroll
++        for (uint32_t t = 0; t < token_tile; t++) {
++            const uint32_t token = token0 + t;
++            if (token < n_tokens) {
++                heads[(uint64_t)token * n_head * value_dim +
++                      (uint64_t)head * value_dim + od] = acc[t];
++            }
++        }
++    }
++}
++
+ extern "C" int ds4_gpu_glm_value_project_typed_batch_heads_tensor(
+         ds4_gpu_tensor       *heads,
+         const ds4_gpu_tensor *lora,
+@@ -28598,6 +28776,15 @@
+                 n_tokens, n_head, kv_lora_dim, value_dim, row_bytes);
+         return cuda_ok(cudaGetLastError(), "glm value project tile16 launch");
+     }
++    if (weight_type == 2u && n_tokens >= 16u &&
++        getenv("DS4_GLM_VALUE_NO_TILE16") == NULL) {
++        dim3 grid(n_head, (n_tokens + 15u) / 16u, 1);
++        const size_t shmem = 16ull * kv_lora_dim * sizeof(float);
++        glm_value_project_q4_0_batch_heads_tiled_kernel<16><<<grid, 128, shmem>>>(
++                (float *)heads->ptr, w, (const float *)lora->ptr,
++                n_tokens, n_head, kv_lora_dim, value_dim, row_bytes);
++        return cuda_ok(cudaGetLastError(), "glm q4_0 value project tile16 launch");
++    }
+     dim3 grid(n_head, n_tokens, 1);
+     const size_t shmem = (size_t)kv_lora_dim * sizeof(float);
+     if (weight_type == 2u) {
+@@ -28669,6 +28856,85 @@
+     const char *w = (const char *)cuda_resolve_weight_ptr(
+             model_map, weight_offset, weight_bytes, logical_tier, "q4_0");
+     if (!w) return 0;
++    if (g_q8_dequant_gemm_enabled && g_cublas_ready &&
++        n_tok >= 128u && blocks > 32u) {
++        const uint64_t wh_bytes = in_dim * out_dim * sizeof(__half);
++        const uint64_t xh_offset = (wh_bytes + 255u) & ~255ull;
++        const uint64_t xh_bytes = n_tok * in_dim * sizeof(__half);
++        const uint64_t out_offset = (xh_offset + xh_bytes + 255u) & ~255ull;
++        const uint64_t out_bytes = n_tok * out_dim * sizeof(float);
++        if (out_offset <= UINT64_MAX - out_bytes) {
++            void *tmp = cuda_tmp_alloc_on(logical_tier,
++                                           out_offset + out_bytes,
++                                           "q4_0 dequant gemm");
++            if (tmp) {
++                __half *wh = (__half *)tmp;
++                __half *xh = (__half *)((char *)tmp + xh_offset);
++                float *out_local = (float *)((char *)tmp + out_offset);
++                const uint64_t total_blocks = out_dim * blocks;
++                q4_0_dequant_f16_kernel<<<
++                        (unsigned)((total_blocks * 2u + 255u) / 256u), 256>>>(
++                        wh, (const unsigned char *)w, total_blocks,
++                        (uint32_t)blocks, (uint32_t)in_dim);
++                const uint64_t xh_count = n_tok * in_dim;
++                f32_to_f16_kernel<<<(xh_count + 255u) / 256u, 256>>>(
++                        xh, (const float *)x->ptr, xh_count);
++                if (cuda_ok(cudaGetLastError(),
++                            "q4_0 dequant gemm staging")) {
++                    const float alpha = 1.0f;
++                    const float beta = 0.0f;
++                    cublasStatus_t st = cublasGemmEx(
++                            cuda_cublas_for_tier(logical_tier),
++                            CUBLAS_OP_T, CUBLAS_OP_N,
++                            (int)out_dim, (int)n_tok, (int)in_dim,
++                            &alpha,
++                            wh, CUDA_R_16F, (int)in_dim,
++                            xh, CUDA_R_16F, (int)in_dim,
++                            &beta,
++                            out_local, CUDA_R_32F, (int)out_dim,
++                            CUDA_R_32F, CUBLAS_GEMM_DEFAULT);
++                    if (st == CUBLAS_STATUS_SUCCESS &&
++                        cuda_ok(cudaMemcpyAsync(
++                                out->ptr, out_local, out_bytes,
++                                cudaMemcpyDeviceToDevice, 0),
++                                "q4_0 dequant gemm out copy")) {
++                        return 1;
++                    }
++                    fprintf(stderr,
++                            "ds4: cuBLAS q4_0 f16 matmul failed: status %d; "
++                            "native batch path\n", (int)st);
++                }
++            }
++        }
++    }
++    if (n_tok > 1u) {
++        const uint64_t xq_bytes = n_tok * blocks * 32u;
++        const uint64_t scale_offset = (xq_bytes + 15u) & ~15ull;
++        if (n_tok > UINT64_MAX / blocks ||
++            n_tok * blocks > (UINT64_MAX - scale_offset) / sizeof(float)) {
++            return 0;
++        }
++        const uint64_t tmp_bytes =
++            scale_offset + n_tok * blocks * sizeof(float);
++        void *tmp = cuda_tmp_alloc_on(logical_tier, tmp_bytes,
++                                      "q4_0 batch prequant");
++        if (!tmp) return 0;
++        int8_t *xq = (int8_t *)tmp;
++        float *xscale = (float *)((char *)tmp + scale_offset);
++        dim3 qgrid((unsigned)blocks, (unsigned)n_tok, 1u);
++        quantize_q8_0_f32_kernel<<<qgrid, 32>>>(
++                xq, xscale, (const float *)x->ptr, in_dim, blocks);
++        if (!cuda_ok(cudaGetLastError(), "matmul_q4_0 batch quantize launch")) {
++            return 0;
++        }
++        dim3 grid(((unsigned)out_dim + 7u) / 8u,
++                  ((unsigned)n_tok + 7u) / 8u, 1u);
++        glm_matmul_q4_0_preq_batch_warp8_tiled_kernel<8><<<grid, 256>>>(
++                (float *)out->ptr, w, xq, xscale,
++                in_dim, out_dim, n_tok, blocks, cuda_q8_use_dp4a());
++        return cuda_ok(cudaGetLastError(),
++                       "matmul_q4_0 batch tok8 warp launch");
++    }
+     dim3 grid(((unsigned)out_dim + 7u) / 8u, (unsigned)n_tok, 1u);
+     glm_matmul_q4_0_warp8_kernel<<<grid, 256>>>(
+             (float *)out->ptr, w, (const float *)x->ptr,
+

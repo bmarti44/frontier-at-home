@@ -1,0 +1,315 @@
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -25318,46 +25318,129 @@
+     return acc;
+ }
+ 
+-__global__ static void glm_matmul_q4_0_warp8_kernel(
+-        float *out, const char *weight, const float *x,
+-        uint64_t in_dim, uint64_t out_dim, uint64_t n_tok,
+-        uint64_t row_bytes) {
++__device__ __forceinline__ static uint32_t glm_q4_0_load_u32(
++        const uint8_t *p) {
++    return (uint32_t)__ldg(p + 0) |
++           ((uint32_t)__ldg(p + 1) << 8u) |
++           ((uint32_t)__ldg(p + 2) << 16u) |
++           ((uint32_t)__ldg(p + 3) << 24u);
++}
++
++__device__ __forceinline__ static int32_t glm_q4_0_unpack_i8x4(
++        uint32_t packed, uint32_t high) {
++    const uint32_t nibbles = (packed >> (high ? 4u : 0u)) & 0x0f0f0f0fu;
++    return __vsub4((int32_t)nibbles, (int32_t)0x08080808u);
++}
++
++__device__ __forceinline__ static int32_t glm_q4_0_dot_i8x32_words(
++        uint32_t q0, uint32_t q1, uint32_t q2, uint32_t q3,
++        const int8_t *xq, int use_dp4a) {
++    const uint32_t qword[4] = { q0, q1, q2, q3 };
++    int32_t dot = 0;
++#pragma unroll
++    for (uint32_t k = 0; k < 16u; k += 4u) {
++        const uint32_t packed = qword[k >> 2u];
++        const int32_t lo = glm_q4_0_unpack_i8x4(packed, 0u);
++        const int32_t hi = glm_q4_0_unpack_i8x4(packed, 1u);
++        const int32_t xlo = load_i8x4_i32_aligned(xq + k);
++        const int32_t xhi = load_i8x4_i32_aligned(xq + 16u + k);
++        if (use_dp4a) {
++            dot = __dp4a(lo, xlo, dot);
++            dot = __dp4a(hi, xhi, dot);
++        } else {
++            const int8_t *lv = (const int8_t *)&lo;
++            const int8_t *hv = (const int8_t *)&hi;
++            const int8_t *xlv = (const int8_t *)&xlo;
++            const int8_t *xhv = (const int8_t *)&xhi;
++#pragma unroll
++            for (uint32_t j = 0; j < 4u; j++) {
++                dot += (int32_t)lv[j] * (int32_t)xlv[j] +
++                       (int32_t)hv[j] * (int32_t)xhv[j];
++            }
++        }
++    }
++    return dot;
++}
++
++__device__ __forceinline__ static int32_t glm_q4_0_dot_i8x32(
++        const uint8_t *q, const int8_t *xq, int use_dp4a) {
++    return glm_q4_0_dot_i8x32_words(
++            glm_q4_0_load_u32(q + 0u), glm_q4_0_load_u32(q + 4u),
++            glm_q4_0_load_u32(q + 8u), glm_q4_0_load_u32(q + 12u),
++            xq, use_dp4a);
++}
++
++__device__ __forceinline__ static float glm_q4_0_half_bits_to_float(
++        uint16_t bits) {
++    return __half2float(*(const __half *)&bits);
++}
++
++/* One warp owns a row. Each lane consumes a consecutive 36-byte block pair.
++ * The pair base is four-byte aligned, so nine read-only uint32 loads cover
++ * both scales and all 32 packed bytes without any overlapping byte loads. */
++__launch_bounds__(256, 2)
++__global__ static void glm_matmul_q4_0_preq_pair_warp8_kernel(
++        float *out, const char *weight,
++        const int8_t *xq, const float *xscale,
++        uint64_t out_dim, uint64_t weight_row_blocks,
++        uint64_t block_start, uint64_t blocks, int use_dp4a) {
+     const uint64_t row = (uint64_t)blockIdx.x * 8u + (threadIdx.x >> 5u);
+-    const uint64_t tok = blockIdx.y;
+     const uint32_t lane = threadIdx.x & 31u;
+-    if (row >= out_dim || tok >= n_tok) return;
+-    const char *wr = weight + row * row_bytes;
+-    const float *xr = x + tok * in_dim;
+-    const uint64_t blocks = in_dim >> 5;
++    if (row >= out_dim) return;
++    const uint32_t *wr = (const uint32_t *)(weight +
++            (row * weight_row_blocks + block_start) * 18u);
+     float acc = 0.0f;
+-    for (uint64_t b = lane; b < blocks; b += 32u) {
+-        const char *blk = wr + b * 18u;
+-        const float d = __half2float(*(const __half *)blk);
+-        const uint8_t *q = (const uint8_t *)(blk + 2);
+-        float s = 0.0f;
+-        #pragma unroll 8
+-        for (uint32_t k = 0; k < 32u; k++) {
+-            const uint8_t packed = q[k & 15u];
+-            const int v = (int)(k < 16u ? (packed & 0x0fu) : (packed >> 4u)) - 8;
+-            s += (float)v * xr[b * 32u + k];
+-        }
+-        acc += d * s;
++    const uint64_t pairs = blocks >> 1u;
++    for (uint64_t p = lane; p < pairs; p += 32u) {
++        const uint32_t *src = wr + p * 9u;
++        const uint32_t r0 = __ldg(src + 0u);
++        const uint32_t r1 = __ldg(src + 1u);
++        const uint32_t r2 = __ldg(src + 2u);
++        const uint32_t r3 = __ldg(src + 3u);
++        const uint32_t r4 = __ldg(src + 4u);
++        const uint32_t r5 = __ldg(src + 5u);
++        const uint32_t r6 = __ldg(src + 6u);
++        const uint32_t r7 = __ldg(src + 7u);
++        const uint32_t r8 = __ldg(src + 8u);
++        const uint64_t b = p << 1u;
++        const int32_t dot0 = glm_q4_0_dot_i8x32_words(
++                (r0 >> 16u) | (r1 << 16u),
++                (r1 >> 16u) | (r2 << 16u),
++                (r2 >> 16u) | (r3 << 16u),
++                (r3 >> 16u) | (r4 << 16u),
++                xq + b * 32u, use_dp4a);
++        const int32_t dot1 = glm_q4_0_dot_i8x32_words(
++                r5, r6, r7, r8, xq + (b + 1u) * 32u, use_dp4a);
++        acc += glm_q4_0_half_bits_to_float((uint16_t)r0) *
++               __ldg(xscale + b) * (float)dot0;
++        acc += glm_q4_0_half_bits_to_float((uint16_t)(r4 >> 16u)) *
++               __ldg(xscale + b + 1u) * (float)dot1;
+     }
+     acc = warp_sum_f32(acc);
+-    if (lane == 0u) out[tok * out_dim + row] = acc;
++    if (lane == 0u) out[row] = acc;
+ }
+ 
+-__device__ __forceinline__ static int32_t glm_q4_0_i8x4(
+-        const uint8_t *q, uint32_t k) {
+-    uint32_t packed = 0u;
+-#pragma unroll
+-    for (uint32_t j = 0; j < 4u; j++) {
+-        const uint32_t i = k + j;
+-        const uint8_t b = q[i & 15u];
+-        const int8_t v = (int8_t)((int)(i < 16u ? (b & 0x0fu) : (b >> 4u)) - 8);
+-        packed |= (uint32_t)(uint8_t)v << (j * 8u);
++__launch_bounds__(256, 2)
++__global__ static void glm_matmul_q4_0_preq_warp8_kernel(
++        float *out, const char *weight,
++        const int8_t *xq, const float *xscale,
++        uint64_t out_dim, uint64_t weight_row_blocks,
++        uint64_t block_start, uint64_t blocks, int use_dp4a) {
++    const uint64_t row = (uint64_t)blockIdx.x * 8u + (threadIdx.x >> 5u);
++    const uint32_t lane = threadIdx.x & 31u;
++    if (row >= out_dim) return;
++    const char *wr = weight +
++        (row * weight_row_blocks + block_start) * 18u;
++    float acc = 0.0f;
++    for (uint64_t b = lane; b < blocks; b += 32u) {
++        const char *blk = wr + b * 18u;
++        const float d = __half2float(__ldg((const __half *)blk));
++        const int32_t dot = glm_q4_0_dot_i8x32(
++                (const uint8_t *)(blk + 2u), xq + b * 32u, use_dp4a);
++        acc += d * __ldg(xscale + b) * (float)dot;
+     }
+-    return (int32_t)packed;
++    acc = warp_sum_f32(acc);
++    if (lane == 0u) out[row] = acc;
+ }
+ 
+ /* Q4_0 counterpart of matmul_q8_0_preq_batch_warp8_tok8_kernel: one warp
+@@ -25382,20 +25465,28 @@
+         const uint8_t *q = (const uint8_t *)(blk + 2);
+         int dot[token_tile] = { 0 };
+ #pragma unroll
+-        for (uint32_t k = 0; k < 32u; k += 4u) {
+-            const int32_t w4 = glm_q4_0_i8x4(q, k);
++        for (uint32_t k = 0; k < 16u; k += 4u) {
++            const uint32_t packed = glm_q4_0_load_u32(q + k);
++            const int32_t wlo = glm_q4_0_unpack_i8x4(packed, 0u);
++            const int32_t whi = glm_q4_0_unpack_i8x4(packed, 1u);
+ #pragma unroll
+             for (uint32_t t = 0; t < token_tile; t++) {
+                 if (tok0 + t < n_tok) {
+                     const int8_t *xb = xq +
+-                        ((tok0 + t) * blocks + b) * 32u + k;
++                        ((tok0 + t) * blocks + b) * 32u;
+                     if (use_dp4a) {
+-                        dot[t] = __dp4a(w4, load_i8x4_i32_aligned(xb), dot[t]);
++                        dot[t] = __dp4a(
++                                wlo, load_i8x4_i32_aligned(xb + k), dot[t]);
++                        dot[t] = __dp4a(
++                                whi, load_i8x4_i32_aligned(xb + 16u + k),
++                                dot[t]);
+                     } else {
+-                        const int8_t *wv = (const int8_t *)&w4;
++                        const int8_t *lv = (const int8_t *)&wlo;
++                        const int8_t *hv = (const int8_t *)&whi;
+ #pragma unroll
+                         for (uint32_t j = 0; j < 4u; j++) {
+-                            dot[t] += (int)wv[j] * (int)xb[j];
++                            dot[t] += (int)lv[j] * (int)xb[k + j] +
++                                      (int)hv[j] * (int)xb[16u + k + j];
+                         }
+                     }
+                 }
+@@ -25419,32 +25510,6 @@
+     }
+ }
+ 
+-__global__ static void glm_matmul_q4_0_kslice_warp8_kernel(
+-        float *out, const char *weight, const float *x,
+-        uint64_t full_blocks, uint64_t block_start, uint64_t slice_blocks,
+-        uint64_t out_dim) {
+-    const uint64_t row = (uint64_t)blockIdx.x * 8u + (threadIdx.x >> 5u);
+-    const uint32_t lane = threadIdx.x & 31u;
+-    if (row >= out_dim) return;
+-    const char *wr = weight + (row * full_blocks + block_start) * 18u;
+-    float acc = 0.0f;
+-    for (uint64_t b = lane; b < slice_blocks; b += 32u) {
+-        const char *blk = wr + b * 18u;
+-        const float d = __half2float(*(const __half *)blk);
+-        const uint8_t *q = (const uint8_t *)(blk + 2);
+-        float s = 0.0f;
+-        #pragma unroll 8
+-        for (uint32_t k = 0; k < 32u; k++) {
+-            const uint8_t packed = q[k & 15u];
+-            const int v = (int)(k < 16u ? (packed & 0x0fu) : (packed >> 4u)) - 8;
+-            s += (float)v * x[b * 32u + k];
+-        }
+-        acc += d * s;
+-    }
+-    acc = warp_sum_f32(acc);
+-    if (lane == 0u) out[row] = acc;
+-}
+-
+ template <typename CT>
+ __device__ __forceinline__ static float2 glm_cache_value_pair_dev(
+         const CT *p) {
+@@ -28935,11 +29000,33 @@
+         return cuda_ok(cudaGetLastError(),
+                        "matmul_q4_0 batch tok8 warp launch");
+     }
+-    dim3 grid(((unsigned)out_dim + 7u) / 8u, (unsigned)n_tok, 1u);
+-    glm_matmul_q4_0_warp8_kernel<<<grid, 256>>>(
+-            (float *)out->ptr, w, (const float *)x->ptr,
+-            in_dim, out_dim, n_tok, row_bytes);
+-    return cuda_ok(cudaGetLastError(), "matmul_q4_0 warp launch");
++    const uint64_t xq_bytes = blocks * 32u;
++    const uint64_t scale_offset = (xq_bytes + 15u) & ~15ull;
++    if (blocks > (UINT64_MAX - scale_offset) / sizeof(float)) return 0;
++    void *tmp = cuda_tmp_alloc_on(logical_tier,
++            scale_offset + blocks * sizeof(float), "q4_0 decode prequant");
++    if (!tmp) return 0;
++    int8_t *xq = (int8_t *)tmp;
++    float *xscale = (float *)((char *)tmp + scale_offset);
++    quantize_q8_0_f32_kernel<<<(unsigned)blocks, 32>>>(
++            xq, xscale, (const float *)x->ptr, in_dim, blocks);
++    if (!cuda_ok(cudaGetLastError(), "matmul_q4_0 decode quantize launch")) {
++        return 0;
++    }
++    const unsigned grid = ((unsigned)out_dim + 7u) / 8u;
++    const bool pair_aligned = (blocks & 1u) == 0u &&
++        (((uintptr_t)w | (uintptr_t)row_bytes) & 3u) == 0u;
++    if (pair_aligned) {
++        glm_matmul_q4_0_preq_pair_warp8_kernel<<<grid, 256>>>(
++                (float *)out->ptr, w, xq, xscale, out_dim,
++                blocks, 0u, blocks, cuda_q8_use_dp4a());
++        return cuda_ok(cudaGetLastError(),
++                       "matmul_q4_0 decode pair warp launch");
++    }
++    glm_matmul_q4_0_preq_warp8_kernel<<<grid, 256>>>(
++            (float *)out->ptr, w, xq, xscale, out_dim,
++            blocks, 0u, blocks, cuda_q8_use_dp4a());
++    return cuda_ok(cudaGetLastError(), "matmul_q4_0 decode warp launch");
+ }
+ 
+ extern "C" int ds4_gpu_matmul_quant_rows_scalar_tensor(
+@@ -29621,11 +29708,38 @@
+             "q4_0_kslice");
+     if (!w) return 0;
+     const float *xs = (const float *)x->ptr + x_elem_off;
+-    glm_matmul_q4_0_kslice_warp8_kernel
+-            <<<((unsigned)out_dim + 7u) / 8u, 256>>>(
+-            (float *)out->ptr, w, xs, full_blocks, block_start,
+-            slice_blocks, out_dim);
+-    return cuda_ok(cudaGetLastError(), "matmul_q4_0 kslice launch");
++    const uint64_t xq_bytes = slice_blocks * 32u;
++    const uint64_t scale_offset = (xq_bytes + 15u) & ~15ull;
++    if (slice_blocks >
++        (UINT64_MAX - scale_offset) / sizeof(float)) return 0;
++    void *tmp = cuda_tmp_alloc_on(logical_tier,
++            scale_offset + slice_blocks * sizeof(float),
++            "q4_0 kslice prequant");
++    if (!tmp) return 0;
++    int8_t *xq = (int8_t *)tmp;
++    float *xscale = (float *)((char *)tmp + scale_offset);
++    quantize_q8_0_f32_kernel<<<(unsigned)slice_blocks, 32>>>(
++            xq, xscale, xs, k_cnt, slice_blocks);
++    if (!cuda_ok(cudaGetLastError(), "matmul_q4_0 kslice quantize launch")) {
++        return 0;
++    }
++    const unsigned grid = ((unsigned)out_dim + 7u) / 8u;
++    const uintptr_t first_row = (uintptr_t)w + block_start * 18u;
++    const bool pair_aligned = (slice_blocks & 1u) == 0u &&
++        ((first_row | (uintptr_t)(full_blocks * 18u)) & 3u) == 0u;
++    if (pair_aligned) {
++        glm_matmul_q4_0_preq_pair_warp8_kernel<<<grid, 256>>>(
++                (float *)out->ptr, w, xq, xscale, out_dim,
++                full_blocks, block_start, slice_blocks,
++                cuda_q8_use_dp4a());
++        return cuda_ok(cudaGetLastError(),
++                       "matmul_q4_0 kslice pair warp launch");
++    }
++    glm_matmul_q4_0_preq_warp8_kernel<<<grid, 256>>>(
++            (float *)out->ptr, w, xq, xscale, out_dim,
++            full_blocks, block_start, slice_blocks,
++            cuda_q8_use_dp4a());
++    return cuda_ok(cudaGetLastError(), "matmul_q4_0 kslice warp launch");
+ }
+ 
+ extern "C" int ds4_gpu_matmul_q8_0_f16_out_tensor(

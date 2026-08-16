@@ -1,0 +1,122 @@
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -17247,6 +17247,31 @@
+ #endif
+ #define MOE_DECODE_ROWS_PER_BLOCK (32u * MOE_DECODE_ROW_TILES)
+ 
++/* Eight consecutive IQ2_XXS blocks occupy exactly 528 bytes, or 33 uint4s.
++ * A decode quarter-warp owns those same eight blocks.  Loading the wave as
++ * aligned uint4s makes the global transactions contiguous; the owning lane
++ * then consumes its original 66-byte block from shared memory. */
++#define MOE_IQ2_WAVE_BLOCKS 8u
++#define MOE_IQ2_WAVE_UINT4S \
++    ((MOE_IQ2_WAVE_BLOCKS * sizeof(cuda_block_iq2_xxs)) / sizeof(uint4))
++static_assert(sizeof(cuda_block_iq2_xxs) == 66u,
++              "IQ2_XXS vector staging assumes the 66-byte wire block");
++static_assert((MOE_IQ2_WAVE_BLOCKS * sizeof(cuda_block_iq2_xxs)) %
++                  sizeof(uint4) == 0u,
++              "eight IQ2_XXS blocks must be an integral uint4 wave");
++
++__device__ __forceinline__ static void moe_iq2_stage_wave8(
++        uint4 *dst,
++        const cuda_block_iq2_xxs *src,
++        uint32_t lane) {
++    const uint4 *src4 = (const uint4 *)src;
++    #pragma unroll
++    for (uint32_t i = lane; i < MOE_IQ2_WAVE_UINT4S;
++         i += MOE_IQ2_WAVE_BLOCKS) {
++        dst[i] = __ldg(src4 + i);
++    }
++}
++
+ __device__ __forceinline__ static const char *moe_expert_weight_base(
+         const char *compact_base,
+         const uint64_t *direct_slot_ptrs,
+@@ -17276,6 +17301,7 @@ __global__ static void moe_gate_up_mid_qwarp32_kernel(
+         float clamp) {
+     uint32_t lane = threadIdx.x & 7u;
+     uint32_t row_lane = threadIdx.x >> 3u;
++    const uint32_t qwarp_mask = 0xffu << (threadIdx.x & 24u);
+     uint32_t pair = blockIdx.y;
+     uint32_t tok = pair / n_expert;
+     uint32_t slot = pair - tok * n_expert;
+@@ -17287,6 +17313,8 @@ __global__ static void moe_gate_up_mid_qwarp32_kernel(
+     const char *expert_up = moe_expert_weight_base(
+         up_base, direct_slot_ptrs, expert, 1u, gate_expert_bytes);
+     const cuda_block_q8_K *xqb = xq + (uint64_t)tok * xq_blocks;
++    __shared__ uint4 s_iq2_wave[32u * MOE_IQ2_WAVE_UINT4S];
++    uint4 *row_wave = s_iq2_wave + row_lane * MOE_IQ2_WAVE_UINT4S;
+     for (uint32_t rr = 0; rr < MOE_DECODE_ROW_TILES; rr++) {
+         uint32_t row = blockIdx.x * MOE_DECODE_ROWS_PER_BLOCK + row_lane + rr * 32u;
+         if (row >= expert_mid_dim) continue;
+@@ -17294,9 +17322,28 @@ __global__ static void moe_gate_up_mid_qwarp32_kernel(
+         const cuda_block_iq2_xxs *ur = (const cuda_block_iq2_xxs *)(expert_up + (uint64_t)row * gate_row_bytes);
+         float gate = 0.0f;
+         float up = 0.0f;
+-        for (uint32_t b = lane; b < xq_blocks; b += 8u) {
+-            gate += dev_dot_iq2_xxs_q8_K_block(gr + b, xqb + b);
+-            up += dev_dot_iq2_xxs_q8_K_block(ur + b, xqb + b);
++        for (uint32_t b0 = 0; b0 < xq_blocks;
++             b0 += MOE_IQ2_WAVE_BLOCKS) {
++            const uint32_t b = b0 + lane;
++            const bool vector_wave =
++                b0 + MOE_IQ2_WAVE_BLOCKS <= xq_blocks &&
++                ((((uintptr_t)(gr + b0)) | ((uintptr_t)(ur + b0))) &
++                  (alignof(uint4) - 1u)) == 0u;
++            if (vector_wave) {
++                moe_iq2_stage_wave8(row_wave, gr + b0, lane);
++                __syncwarp(qwarp_mask);
++                gate += dev_dot_iq2_xxs_q8_K_block(
++                    (const cuda_block_iq2_xxs *)row_wave + lane, xqb + b);
++                __syncwarp(qwarp_mask);
++                moe_iq2_stage_wave8(row_wave, ur + b0, lane);
++                __syncwarp(qwarp_mask);
++                up += dev_dot_iq2_xxs_q8_K_block(
++                    (const cuda_block_iq2_xxs *)row_wave + lane, xqb + b);
++                __syncwarp(qwarp_mask);
++            } else if (b < xq_blocks) {
++                gate += dev_dot_iq2_xxs_q8_K_block(gr + b, xqb + b);
++                up += dev_dot_iq2_xxs_q8_K_block(ur + b, xqb + b);
++            }
+         }
+         gate = quarter_warp_sum_f32(gate, lane);
+         up = quarter_warp_sum_f32(up, lane);
+@@ -18288,7 +18335,9 @@ __global__ static void moe_down_iq2_xxs_qwarp32_kernel(
+         uint32_t out_dim,
+         uint32_t n_expert) {
+     uint32_t lane = threadIdx.x & 7u;
+-    uint32_t row = blockIdx.x * 32u + (threadIdx.x >> 3u);
++    uint32_t row_lane = threadIdx.x >> 3u;
++    const uint32_t qwarp_mask = 0xffu << (threadIdx.x & 24u);
++    uint32_t row = blockIdx.x * 32u + row_lane;
+     uint32_t pair = blockIdx.y;
+     if (row >= out_dim) return;
+     uint32_t tok = pair / n_expert;
+@@ -18300,8 +18349,25 @@ __global__ static void moe_down_iq2_xxs_qwarp32_kernel(
+         down_expert_bytes);
+     const cuda_block_iq2_xxs *wr = (const cuda_block_iq2_xxs *)(expert_down + (uint64_t)row * down_row_bytes);
+     const cuda_block_q8_K *xq = midq + (uint64_t)pair * midq_blocks;
++    __shared__ uint4 s_iq2_wave[32u * MOE_IQ2_WAVE_UINT4S];
++    uint4 *row_wave = s_iq2_wave + row_lane * MOE_IQ2_WAVE_UINT4S;
+     float acc = 0.0f;
+-    for (uint32_t b = lane; b < midq_blocks; b += 8u) acc += dev_dot_iq2_xxs_q8_K_block(wr + b, xq + b);
++    for (uint32_t b0 = 0; b0 < midq_blocks;
++         b0 += MOE_IQ2_WAVE_BLOCKS) {
++        const uint32_t b = b0 + lane;
++        const bool vector_wave =
++            b0 + MOE_IQ2_WAVE_BLOCKS <= midq_blocks &&
++            (((uintptr_t)(wr + b0) & (alignof(uint4) - 1u)) == 0u);
++        if (vector_wave) {
++            moe_iq2_stage_wave8(row_wave, wr + b0, lane);
++            __syncwarp(qwarp_mask);
++            acc += dev_dot_iq2_xxs_q8_K_block(
++                (const cuda_block_iq2_xxs *)row_wave + lane, xq + b);
++            __syncwarp(qwarp_mask);
++        } else if (b < midq_blocks) {
++            acc += dev_dot_iq2_xxs_q8_K_block(wr + b, xq + b);
++        }
++    }
+     acc = quarter_warp_sum_f32(acc, lane);
+     if (lane == 0) down_out[(uint64_t)pair * out_dim + row] = acc;
+ }

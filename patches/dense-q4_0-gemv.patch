@@ -1,0 +1,482 @@
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -25271,6 +25271,81 @@
+     return acc;
+ }
+ 
++__device__ __forceinline__ static float glm_q4_0_dot_row_dev(
++        const char *row, const float *x, uint32_t n_cols) {
++    float acc = 0.0f;
++    const uint32_t nb = n_cols >> 5;
++    for (uint32_t b = 0; b < nb; b++) {
++        const char *blk = row + (uint64_t)b * 18u;
++        const float d = __half2float(*(const __half *)blk);
++        const uint8_t *q = (const uint8_t *)(blk + 2);
++        float s = 0.0f;
++        #pragma unroll 8
++        for (uint32_t k = 0; k < 32u; k++) {
++            const uint8_t packed = q[k & 15u];
++            const int v = (int)(k < 16u ? (packed & 0x0fu) : (packed >> 4u)) - 8;
++            s += (float)v * x[b * 32u + k];
++        }
++        acc += d * s;
++    }
++    return acc;
++}
++
++__global__ static void glm_matmul_q4_0_warp8_kernel(
++        float *out, const char *weight, const float *x,
++        uint64_t in_dim, uint64_t out_dim, uint64_t n_tok,
++        uint64_t row_bytes) {
++    const uint64_t row = (uint64_t)blockIdx.x * 8u + (threadIdx.x >> 5u);
++    const uint64_t tok = blockIdx.y;
++    const uint32_t lane = threadIdx.x & 31u;
++    if (row >= out_dim || tok >= n_tok) return;
++    const char *wr = weight + row * row_bytes;
++    const float *xr = x + tok * in_dim;
++    const uint64_t blocks = in_dim >> 5;
++    float acc = 0.0f;
++    for (uint64_t b = lane; b < blocks; b += 32u) {
++        const char *blk = wr + b * 18u;
++        const float d = __half2float(*(const __half *)blk);
++        const uint8_t *q = (const uint8_t *)(blk + 2);
++        float s = 0.0f;
++        #pragma unroll 8
++        for (uint32_t k = 0; k < 32u; k++) {
++            const uint8_t packed = q[k & 15u];
++            const int v = (int)(k < 16u ? (packed & 0x0fu) : (packed >> 4u)) - 8;
++            s += (float)v * xr[b * 32u + k];
++        }
++        acc += d * s;
++    }
++    acc = warp_sum_f32(acc);
++    if (lane == 0u) out[tok * out_dim + row] = acc;
++}
++
++__global__ static void glm_matmul_q4_0_kslice_warp8_kernel(
++        float *out, const char *weight, const float *x,
++        uint64_t full_blocks, uint64_t block_start, uint64_t slice_blocks,
++        uint64_t out_dim) {
++    const uint64_t row = (uint64_t)blockIdx.x * 8u + (threadIdx.x >> 5u);
++    const uint32_t lane = threadIdx.x & 31u;
++    if (row >= out_dim) return;
++    const char *wr = weight + (row * full_blocks + block_start) * 18u;
++    float acc = 0.0f;
++    for (uint64_t b = lane; b < slice_blocks; b += 32u) {
++        const char *blk = wr + b * 18u;
++        const float d = __half2float(*(const __half *)blk);
++        const uint8_t *q = (const uint8_t *)(blk + 2);
++        float s = 0.0f;
++        #pragma unroll 8
++        for (uint32_t k = 0; k < 32u; k++) {
++            const uint8_t packed = q[k & 15u];
++            const int v = (int)(k < 16u ? (packed & 0x0fu) : (packed >> 4u)) - 8;
++            s += (float)v * x[b * 32u + k];
++        }
++        acc += d * s;
++    }
++    acc = warp_sum_f32(acc);
++    if (lane == 0u) out[row] = acc;
++}
++
+ template <typename CT>
+ __device__ __forceinline__ static float2 glm_cache_value_pair_dev(
+         const CT *p) {
+@@ -25487,6 +25562,54 @@
+     }
+ }
+ 
++template <bool TOK2 = false>
++__global__ static void glm_attention_decode_value_q4_0_staged_kernel(
++        float *heads,
++        const float *lora_sum,
++        const char *value_weight,
++        uint32_t n_head,
++        uint32_t kv_lora_dim,
++        uint32_t value_dim,
++        uint32_t value_row_bytes) {
++    const uint32_t head = blockIdx.y;
++    const uint32_t token = TOK2 ? blockIdx.z : 0u;
++    const uint32_t warp = threadIdx.x >> 5;
++    const uint32_t lane = threadIdx.x & 31u;
++    const uint32_t nwarps = blockDim.x >> 5;
++    const uint32_t out_warp = blockIdx.x * nwarps + warp;
++    const uint32_t total_warps = gridDim.x * nwarps;
++    if (head >= n_head) return;
++    const float *low = lora_sum +
++        ((uint64_t)token * n_head + head) * kv_lora_dim;
++    float *out = heads +
++        ((uint64_t)token * n_head + head) * value_dim;
++    const uint32_t nblk = kv_lora_dim >> 5;
++    for (uint32_t d = out_warp; d < value_dim; d += total_warps) {
++        const char *row = value_weight +
++            ((uint64_t)head * value_dim + d) * value_row_bytes;
++        float acc = 0.0f;
++        for (uint32_t blk = lane >> 1; blk < nblk; blk += 16u) {
++            const char *b = row + (uint64_t)blk * 18u;
++            const float dscale = __half2float(*(const __half *)b);
++            const uint8_t *q = (const uint8_t *)(b + 2);
++            const uint32_t half = lane & 1u;
++            const float *xs = low + blk * 32u + half * 16u;
++            float s = 0.0f;
++            #pragma unroll
++            for (int k = 0; k < 16; k++) {
++                const uint8_t packed = q[k];
++                const int v = (int)(half == 0u ? (packed & 0x0fu) : (packed >> 4u)) - 8;
++                s += (float)v * xs[k];
++            }
++            acc += dscale * s;
++        }
++        for (int off = 16; off > 0; off >>= 1) {
++            acc += __shfl_down_sync(0xffffffffu, acc, off);
++        }
++        if (lane == 0u) out[d] = acc;
++    }
++}
++
+ /* Single-token indexed MLA decode attention, one block per head.
+  * Fuses score (qk_low . kv_lora + q_rope . rope(k_rope@row)), softmax over
+  * the indexer-selected rows, the weighted kv_lora sum, and the per-head
+@@ -25700,13 +25823,15 @@
+         value_dim == 0) {
+         return 0;
+     }
+-    if (value_weight_type != 8u) {   /* DS4_TENSOR_Q8_0 */
++    if (value_weight_type != 8u && value_weight_type != 2u) {
+         fprintf(stderr,
+             "ds4: glm indexed decode attention: unsupported value type %u\n",
+             value_weight_type);
+         return 0;
+     }
+-    const uint64_t value_row_bytes = ((uint64_t)kv_lora_dim / 32u) * 34u;
++    const uint64_t value_block_bytes = value_weight_type == 2u ? 18u : 34u;
++    const uint64_t value_row_bytes =
++        ((uint64_t)kv_lora_dim / 32u) * value_block_bytes;
+     const uint64_t value_weight_bytes =
+         (uint64_t)n_head * value_dim * value_row_bytes;
+     if (value_weight_offset > model_size ||
+@@ -25736,7 +25861,7 @@
+         q->bytes >= 2u * (uint64_t)n_head * qk_dim * sizeof(float) &&
+         qk_low->bytes >=
+             2u * (uint64_t)n_head * kv_lora_dim * sizeof(float);
+-    if (range_tok2 && n_selected < 512u) {
++    if (value_weight_type == 8u && range_tok2 && n_selected < 512u) {
+         const bool lora_vec2 =
+             getenv("DS4_GLM_ATTN_NO_LORA_VEC2") == NULL;
+         const uint32_t shmem =
+@@ -25775,8 +25900,9 @@
+         return cuda_ok(cudaGetLastError(),
+                        "glm indexed decode attention tok2 range");
+     }
+-    if (n_selected >= 512u &&
+-        getenv("DS4_GLM_ATTN_NO_STAGED_DECODE") == NULL) {
++    if (value_weight_type == 2u ||
++        (n_selected >= 512u &&
++         getenv("DS4_GLM_ATTN_NO_STAGED_DECODE") == NULL)) {
+         const uint32_t token_count = range_tok2 ? 2u : 1u;
+         const uint32_t score_stride = n_selected + (range_tok2 ? 1u : 0u);
+         const uint64_t head_count = (uint64_t)token_count * n_head;
+@@ -25892,7 +26018,19 @@
+         }
+         dim3 value_grid((value_dim + 127u) / 128u,
+                         n_head, token_count);
+-        if (range_tok2) {
++        if (value_weight_type == 2u && range_tok2) {
++            glm_attention_decode_value_q4_0_staged_kernel<true>
++                    <<<value_grid, 128>>>(
++                    (float *)heads->ptr, lora_sum, vw,
++                    n_head, kv_lora_dim, value_dim,
++                    (uint32_t)value_row_bytes);
++        } else if (value_weight_type == 2u) {
++            glm_attention_decode_value_q4_0_staged_kernel<false>
++                    <<<value_grid, 128>>>(
++                    (float *)heads->ptr, lora_sum, vw,
++                    n_head, kv_lora_dim, value_dim,
++                    (uint32_t)value_row_bytes);
++        } else if (range_tok2) {
+             glm_attention_decode_value_staged_kernel<true>
+                     <<<value_grid, 128>>>(
+                     (float *)heads->ptr, lora_sum, vw,
+@@ -26425,6 +26563,32 @@
+     }
+ }
+ 
++__global__ static void glm_qk_lowrank_q4_0_batch_kernel(
++        float *qk_low,
++        const char *weight,
++        const float *q,
++        uint32_t n_tokens,
++        uint32_t n_head,
++        uint32_t kv_lora_dim,
++        uint32_t qk_nope,
++        uint32_t qk_dim,
++        uint64_t row_bytes) {
++    const uint32_t head = blockIdx.x;
++    const uint32_t token = blockIdx.y;
++    if (head >= n_head || token >= n_tokens) return;
++    const uint32_t tid = threadIdx.x;
++    const uint32_t nth = blockDim.x;
++    const float *qh = q + (uint64_t)token * n_head * qk_dim +
++                      (uint64_t)head * qk_dim;
++    float *out = qk_low + (uint64_t)token * n_head * kv_lora_dim +
++                 (uint64_t)head * kv_lora_dim;
++    for (uint32_t j = tid; j < kv_lora_dim; j += nth) {
++        const char *row = weight +
++            ((uint64_t)head * kv_lora_dim + j) * row_bytes;
++        out[j] = glm_q4_0_dot_row_dev(row, qh, qk_nope);
++    }
++}
++
+ extern "C" int ds4_gpu_glm_qk_lowrank_typed_batch_tensor(
+         ds4_gpu_tensor       *qk_low,
+         const ds4_gpu_tensor *q,
+@@ -26441,12 +26605,13 @@
+         kv_lora_dim == 0 || qk_nope == 0 || (qk_nope & 31u) != 0u) {
+         return 0;
+     }
+-    if (weight_type != 8u) {
++    if (weight_type != 8u && weight_type != 2u) {
+         fprintf(stderr, "ds4: glm qk_lowrank: unsupported type %u\n",
+                 weight_type);
+         return 0;
+     }
+-    const uint64_t row_bytes = ((uint64_t)qk_nope / 32u) * 34u;
++    const uint64_t row_bytes = ((uint64_t)qk_nope / 32u) *
++        (weight_type == 2u ? 18u : 34u);
+     const uint64_t wbytes = (uint64_t)n_head * kv_lora_dim * row_bytes;
+     if (weight_offset > model_size || wbytes > model_size - weight_offset ||
+         q->bytes < (uint64_t)n_tokens * n_head * qk_dim * sizeof(float) ||
+@@ -26458,7 +26623,8 @@
+     const char *w = (const char *)cuda_resolve_weight_ptr(
+             model_map, weight_offset, wbytes, logical_tier, "glm_k_b_qk");
+     if (!w) return 0;
+-    if (g_q8_dequant_gemm_enabled && g_cublas_ready && n_tokens >= 128u) {
++    if (weight_type == 8u && g_q8_dequant_gemm_enabled &&
++        g_cublas_ready && n_tokens >= 128u) {
+         /* Per-head strided-batched GEMM over a dequantized k_b: the
+          * per-(token,head) warp kernel was ~65ms/layer at 820 tokens.
+          * Scratch (executing device): [w_f16][q_f16][out_f32]. */
+@@ -26514,9 +26680,15 @@
+         }
+     }
+     dim3 grid(n_head, n_tokens, 1);
+-    glm_qk_lowrank_q8_0_batch_kernel<<<grid, 128>>>(
+-            (float *)qk_low->ptr, w, (const float *)q->ptr,
+-            n_tokens, n_head, kv_lora_dim, qk_nope, qk_dim, row_bytes);
++    if (weight_type == 2u) {
++        glm_qk_lowrank_q4_0_batch_kernel<<<grid, 128>>>(
++                (float *)qk_low->ptr, w, (const float *)q->ptr,
++                n_tokens, n_head, kv_lora_dim, qk_nope, qk_dim, row_bytes);
++    } else {
++        glm_qk_lowrank_q8_0_batch_kernel<<<grid, 128>>>(
++                (float *)qk_low->ptr, w, (const float *)q->ptr,
++                n_tokens, n_head, kv_lora_dim, qk_nope, qk_dim, row_bytes);
++    }
+     return cuda_ok(cudaGetLastError(), "glm qk lowrank batch launch");
+ }
+ 
+@@ -28290,6 +28462,33 @@
+     }
+ }
+ 
++__global__ static void glm_value_project_q4_0_batch_heads_kernel(
++        float *heads,
++        const char *weight,
++        const float *lora,
++        uint32_t n_tokens,
++        uint32_t n_head,
++        uint32_t kv_lora_dim,
++        uint32_t value_dim,
++        uint64_t row_bytes) {
++    const uint32_t head = blockIdx.x;
++    const uint32_t token = blockIdx.y;
++    if (head >= n_head || token >= n_tokens) return;
++    const uint32_t tid = threadIdx.x;
++    const uint32_t nth = blockDim.x;
++    extern __shared__ float xsh[];
++    const float *src = lora + (uint64_t)token * n_head * kv_lora_dim +
++                       (uint64_t)head * kv_lora_dim;
++    float *out = heads + (uint64_t)token * n_head * value_dim +
++                 (uint64_t)head * value_dim;
++    for (uint32_t j = tid; j < kv_lora_dim; j += nth) xsh[j] = src[j];
++    __syncthreads();
++    for (uint32_t d = tid; d < value_dim; d += nth) {
++        const char *row = weight + ((uint64_t)head * value_dim + d) * row_bytes;
++        out[d] = glm_q4_0_dot_row_dev(row, xsh, kv_lora_dim);
++    }
++}
++
+ /* Reuse each Q8 row across a token tile while retaining the scalar kernel's
+  * block/k accumulation order independently for every output token. */
+ template <uint32_t token_tile>
+@@ -28373,12 +28572,13 @@
+         kv_lora_dim == 0 || (kv_lora_dim & 31u) != 0u || value_dim == 0) {
+         return 0;
+     }
+-    if (weight_type != 8u) {
++    if (weight_type != 8u && weight_type != 2u) {
+         fprintf(stderr, "ds4: glm value project: unsupported type %u\n",
+                 weight_type);
+         return 0;
+     }
+-    const uint64_t row_bytes = ((uint64_t)kv_lora_dim / 32u) * 34u;
++    const uint64_t row_bytes = ((uint64_t)kv_lora_dim / 32u) *
++        (weight_type == 2u ? 18u : 34u);
+     const uint64_t wbytes = (uint64_t)n_head * value_dim * row_bytes;
+     if (weight_offset > model_size || wbytes > model_size - weight_offset ||
+         lora->bytes < (uint64_t)n_tokens * n_head * kv_lora_dim * sizeof(float) ||
+@@ -28389,7 +28589,8 @@
+     const char *w = (const char *)cuda_resolve_weight_ptr(
+             model_map, weight_offset, wbytes, logical_tier, "glm_v_b");
+     if (!w) return 0;
+-    if (n_tokens >= 16u && getenv("DS4_GLM_VALUE_NO_TILE16") == NULL) {
++    if (weight_type == 8u && n_tokens >= 16u &&
++        getenv("DS4_GLM_VALUE_NO_TILE16") == NULL) {
+         dim3 grid(n_head, (n_tokens + 15u) / 16u, 1);
+         const size_t shmem = 16ull * kv_lora_dim * sizeof(float);
+         glm_value_project_q8_0_batch_heads_tiled_kernel<16><<<grid, 128, shmem>>>(
+@@ -28399,9 +28600,15 @@
+     }
+     dim3 grid(n_head, n_tokens, 1);
+     const size_t shmem = (size_t)kv_lora_dim * sizeof(float);
+-    glm_value_project_q8_0_batch_heads_kernel<<<grid, 128, shmem>>>(
+-            (float *)heads->ptr, w, (const float *)lora->ptr,
+-            n_tokens, n_head, kv_lora_dim, value_dim, row_bytes);
++    if (weight_type == 2u) {
++        glm_value_project_q4_0_batch_heads_kernel<<<grid, 128, shmem>>>(
++                (float *)heads->ptr, w, (const float *)lora->ptr,
++                n_tokens, n_head, kv_lora_dim, value_dim, row_bytes);
++    } else {
++        glm_value_project_q8_0_batch_heads_kernel<<<grid, 128, shmem>>>(
++                (float *)heads->ptr, w, (const float *)lora->ptr,
++                n_tokens, n_head, kv_lora_dim, value_dim, row_bytes);
++    }
+     return cuda_ok(cudaGetLastError(), "glm value project launch");
+ }
+ 
+@@ -28423,9 +28630,50 @@
+         uint64_t                out_dim,
+         const ds4_gpu_tensor *x,
+         uint64_t                n_tok) {
+-    return ds4_gpu_matmul_quant_tensor(out, model_map, model_size,
+-                                       weight_offset, weight_type,
+-                                       in_dim, out_dim, x, n_tok);
++    if (weight_type == 2u) {
++        return ds4_gpu_matmul_quant_tensor(out, model_map, model_size,
++                                           weight_offset, weight_type,
++                                           in_dim, out_dim, x, n_tok);
++    }
++    fprintf(stderr, "ds4: CUDA stub called: ds4_gpu_matmul_quant_rows_scalar_tensor\n");
++    return 0;
++}
++
++static int cuda_matmul_q4_0_tensor(
++        ds4_gpu_tensor       *out,
++        const void           *model_map,
++        uint64_t              model_size,
++        uint64_t              weight_offset,
++        uint64_t              in_dim,
++        uint64_t              out_dim,
++        const ds4_gpu_tensor *x,
++        uint64_t              n_tok) {
++    if (!out || !x || !model_map || in_dim == 0u || out_dim == 0u ||
++        n_tok == 0u || (in_dim & 31u) != 0u) {
++        return 0;
++    }
++    const uint64_t blocks = in_dim / 32u;
++    if (blocks > UINT64_MAX / 18u) return 0;
++    const uint64_t row_bytes = blocks * 18u;
++    if (out_dim > UINT64_MAX / row_bytes) return 0;
++    const uint64_t weight_bytes = out_dim * row_bytes;
++    if (weight_offset > model_size ||
++        weight_bytes > model_size - weight_offset ||
++        n_tok > UINT64_MAX / in_dim ||
++        n_tok * in_dim > x->bytes / sizeof(float) ||
++        n_tok > UINT64_MAX / out_dim ||
++        n_tok * out_dim > out->bytes / sizeof(float)) {
++        return 0;
++    }
++    const int logical_tier = cuda_current_tier();
++    const char *w = (const char *)cuda_resolve_weight_ptr(
++            model_map, weight_offset, weight_bytes, logical_tier, "q4_0");
++    if (!w) return 0;
++    dim3 grid(((unsigned)out_dim + 7u) / 8u, (unsigned)n_tok, 1u);
++    glm_matmul_q4_0_warp8_kernel<<<grid, 256>>>(
++            (float *)out->ptr, w, (const float *)x->ptr,
++            in_dim, out_dim, n_tok, row_bytes);
++    return cuda_ok(cudaGetLastError(), "matmul_q4_0 warp launch");
+ }
+ 
+ extern "C" int ds4_gpu_matmul_quant_rows_scalar_tensor(
+@@ -28438,8 +28686,9 @@
+         uint64_t                out_dim,
+         const ds4_gpu_tensor *x,
+         uint64_t                n_tok) {
+-    fprintf(stderr, "ds4: CUDA stub called: ds4_gpu_matmul_quant_rows_scalar_tensor\n");
+-    return 0;
++    return ds4_gpu_matmul_quant_tensor(out, model_map, model_size,
++                                       weight_offset, weight_type,
++                                       in_dim, out_dim, x, n_tok);
+ }
+ 
+ extern "C" int ds4_gpu_matmul_quant_tensor(
+@@ -28453,6 +28702,10 @@
+         const ds4_gpu_tensor *x,
+         uint64_t                n_tok) {
+     switch (weight_type) {
++    case 2u:   /* Q4_0 */
++        return cuda_matmul_q4_0_tensor(out, model_map, model_size,
++                                       weight_offset, in_dim, out_dim,
++                                       x, n_tok);
+     case 8u:   /* Q8_0 */
+         return ds4_gpu_matmul_q8_0_tensor(out, model_map, model_size,
+                                           weight_offset, in_dim, out_dim,
+@@ -29069,10 +29322,44 @@
+         uint64_t out_dim,
+         const ds4_gpu_tensor *x,
+         uint64_t x_elem_off) {
+-    if (weight_type != 8u) return 0;
+-    return ds4_gpu_matmul_q8_0_kslice_tensor(
+-            out, model_map, model_size, weight_offset,
+-            full_in_dim, k_off, k_cnt, out_dim, x, x_elem_off);
++    if (weight_type == 8u) {
++        return ds4_gpu_matmul_q8_0_kslice_tensor(
++                out, model_map, model_size, weight_offset,
++                full_in_dim, k_off, k_cnt, out_dim, x, x_elem_off);
++    }
++    if (weight_type != 2u || !out || !x || !model_map ||
++        full_in_dim == 0u || out_dim == 0u || k_cnt == 0u ||
++        (full_in_dim & 31u) != 0u || (k_off & 31u) != 0u ||
++        (k_cnt & 31u) != 0u || k_off > full_in_dim ||
++        k_cnt > full_in_dim - k_off ||
++        x_elem_off > x->bytes / sizeof(float) ||
++        k_cnt > x->bytes / sizeof(float) - x_elem_off ||
++        out_dim > out->bytes / sizeof(float)) {
++        return 0;
++    }
++    const uint64_t full_blocks = full_in_dim / 32u;
++    const uint64_t block_start = k_off / 32u;
++    const uint64_t slice_blocks = k_cnt / 32u;
++    if (full_blocks > UINT64_MAX / 18u ||
++        out_dim > UINT64_MAX / (full_blocks * 18u)) {
++        return 0;
++    }
++    const uint64_t weight_bytes = out_dim * full_blocks * 18u;
++    if (weight_offset > model_size ||
++        weight_bytes > model_size - weight_offset) {
++        return 0;
++    }
++    const int logical_tier = cuda_current_tier();
++    const char *w = (const char *)cuda_resolve_weight_ptr(
++            model_map, weight_offset, weight_bytes, logical_tier,
++            "q4_0_kslice");
++    if (!w) return 0;
++    const float *xs = (const float *)x->ptr + x_elem_off;
++    glm_matmul_q4_0_kslice_warp8_kernel
++            <<<((unsigned)out_dim + 7u) / 8u, 256>>>(
++            (float *)out->ptr, w, xs, full_blocks, block_start,
++            slice_blocks, out_dim);
++    return cuda_ok(cudaGetLastError(), "matmul_q4_0 kslice launch");
+ }
+ 
+ extern "C" int ds4_gpu_matmul_q8_0_f16_out_tensor(
