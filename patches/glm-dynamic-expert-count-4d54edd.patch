@@ -1,0 +1,288 @@
+diff --git a/ds4.c b/ds4.c
+index bd5b214..42af776 100644
+--- a/ds4.c
++++ b/ds4.c
+@@ -4678,6 +4678,38 @@ static void tensor_expect_routed_expert(
+     }
+ }
+ 
++static void tensor_expect_glm_expert_count(
++        const ds4_tensor *router,
++        const ds4_tensor *routed,
++        uint32_t          layer) {
++    const uint64_t n_expert = DS4_N_EXPERT;
++    const uint64_t router_rows = router->dim[1];
++    const uint64_t routed_experts = routed->dim[2];
++
++    if (router_rows != n_expert) {
++        fprintf(stderr,
++                "ds4: GLM router in layer %u has %" PRIu64
++                " rows, metadata declares %" PRIu64 " experts\n",
++                layer, router_rows, n_expert);
++        exit(1);
++    }
++    if (n_expert == 0 ||
++        routed_experts % n_expert != 0 ||
++        routed_experts / n_expert != 1u ||
++        routed_experts != router_rows) {
++        fprintf(stderr,
++                "ds4: GLM tensor %.*s in layer %u has %" PRIu64
++                " experts, expected exactly %" PRIu64
++                " from metadata and router rows\n",
++                (int)routed->name.len,
++                routed->name.ptr,
++                layer,
++                routed_experts,
++                n_expert);
++        exit(1);
++    }
++}
++
+ static bool weights_have_output_head(const ds4_weights *w) {
+     if (DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA) {
+         return w && w->output_norm && w->output;
+@@ -4892,6 +4924,12 @@ static void weights_validate_glm_dsa_layout(
+             tensor_expect_routed_expert(l->ffn_gate_exps, 3, DS4_N_EMBD, DS4_N_FF_EXP, DS4_N_EXPERT);
+             tensor_expect_routed_expert(l->ffn_up_exps,   3, DS4_N_EMBD, DS4_N_FF_EXP, DS4_N_EXPERT);
+             tensor_expect_routed_expert(l->ffn_down_exps, 3, DS4_N_FF_EXP, DS4_N_EMBD, DS4_N_EXPERT);
++            tensor_expect_glm_expert_count(
++                    l->ffn_gate_inp, l->ffn_gate_exps, il);
++            tensor_expect_glm_expert_count(
++                    l->ffn_gate_inp, l->ffn_up_exps, il);
++            tensor_expect_glm_expert_count(
++                    l->ffn_gate_inp, l->ffn_down_exps, il);
+             if (l->ffn_gate_exps->type != l->ffn_up_exps->type) {
+                 fprintf(stderr, "ds4: GLM routed gate/up experts use different quant types in layer %u\n", il);
+                 exit(1);
+@@ -5052,8 +5090,11 @@ static void mtp_weights_validate_layout(const ds4_mtp_weights *w) {
+     tensor_expect_plain_layout(l->ffn_gate_inp, 2, DS4_N_EMBD, DS4_N_EXPERT, 0);
+     tensor_expect_layout(l->ffn_exp_probs_b, DS4_TENSOR_F32, 1, DS4_N_EXPERT, 0, 0);
+     tensor_expect_routed_expert(l->ffn_gate_exps, 3, DS4_N_EMBD, DS4_N_FF_EXP, DS4_N_EXPERT);
++    tensor_expect_glm_expert_count(l->ffn_gate_inp, l->ffn_gate_exps, 0u);
+     tensor_expect_routed_expert(l->ffn_up_exps,   3, DS4_N_EMBD, DS4_N_FF_EXP, DS4_N_EXPERT);
++    tensor_expect_glm_expert_count(l->ffn_gate_inp, l->ffn_up_exps, 0u);
+     tensor_expect_routed_expert(l->ffn_down_exps, 3, DS4_N_FF_EXP, DS4_N_EMBD, DS4_N_EXPERT);
++    tensor_expect_glm_expert_count(l->ffn_gate_inp, l->ffn_down_exps, 0u);
+     if (l->ffn_gate_exps->type != l->ffn_up_exps->type) {
+         ds4_die("MTP routed gate/up experts use different quant types");
+     }
+@@ -5685,8 +5726,18 @@ static void config_validate_glm_dsa_model(const ds4_model *m) {
+     config_expect_u32("attention.kv_lora_rank", n_kv_lora, DS4_N_KV_LORA);
+     config_expect_u32("attention.key_length_mla", n_key_mla, DS4_N_KEY_MLA);
+     config_expect_u32("attention.value_length_mla", n_value_mla, DS4_N_VALUE_MLA);
+-    config_expect_u32("expert_count", n_expert, DS4_N_EXPERT);
+     config_expect_u32("expert_used_count", n_expert_used, DS4_N_EXPERT_USED);
++    if (n_expert <= n_expert_used ||
++        n_expert > DS4_SHAPE_GLM52.n_expert) {
++        fprintf(stderr,
++                "ds4: unsupported GLM expert_count=%u; expected greater than "
++                "expert_used_count=%u and no greater than %u\n",
++                n_expert,
++                n_expert_used,
++                DS4_SHAPE_GLM52.n_expert);
++        exit(1);
++    }
++    g_ds4_shape.n_expert = n_expert;
+     config_expect_u32("expert_feed_forward_length", n_ff_exp, DS4_N_FF_EXP);
+     config_expect_u32("expert_shared_count", n_expert_shared, DS4_N_EXPERT_SHARED);
+     config_expect_u32("expert_group_count", n_expert_group, 1);
+@@ -5879,6 +5930,13 @@ static void weights_bind(
+     }
+ 
+     weights_validate_layout(w, start, end, require_token_embd, require_output);
++    if (DS4_MODEL_FAMILY == DS4_MODEL_FAMILY_GLM_DSA &&
++        start == 0 && end == executable_layers - 1u &&
++        executable_layers < DS4_N_LAYER) {
++        weights_validate_glm_dsa_layout(w, executable_layers,
++                                        DS4_N_LAYER - 1u,
++                                        false, false);
++    }
+ }
+ 
+ typedef struct {
+diff --git a/ds4_cuda.cu b/ds4_cuda.cu
+index d026f48..f677105 100644
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -26411,6 +26411,7 @@ __global__ static void glm_routed_moe_batch_q2K_gateup_kernel(
+         uint64_t up_row_bytes,
+         uint32_t xq_blocks,
+         uint32_t expert_mid_dim,
++        uint32_t n_total_expert,
+         uint32_t n_expert,
+         uint32_t n_tokens,
+         uint32_t mid_token_stride) {
+@@ -26418,7 +26419,7 @@ __global__ static void glm_routed_moe_batch_q2K_gateup_kernel(
+     const uint32_t slot = blockIdx.y;
+     if (tok >= n_tokens || slot >= n_expert) return;
+     const int32_t expert = selected[(uint64_t)tok * n_expert + slot];
+-    if (expert < 0) return;
++    if (expert < 0 || (uint32_t)expert >= n_total_expert) return;
+     const cuda_block_q8_K *xrow = xq + (uint64_t)tok * xq_blocks;
+     float *mrow = mid + (uint64_t)tok * mid_token_stride +
+                   (uint64_t)slot * expert_mid_dim;
+@@ -26446,6 +26447,7 @@ __global__ static void glm_routed_moe_batch_q2K_down_kernel(
+         uint64_t down_row_bytes,
+         uint32_t midq_blocks,
+         uint32_t out_dim,
++        uint32_t n_total_expert,
+         uint32_t n_expert,
+         uint32_t n_tokens) {
+     const uint32_t tok = blockIdx.y;
+@@ -26455,7 +26457,7 @@ __global__ static void glm_routed_moe_batch_q2K_down_kernel(
+     float acc = 0.0f;
+     for (uint32_t slot = 0; slot < n_expert; slot++) {
+         const int32_t expert = selected[(uint64_t)tok * n_expert + slot];
+-        if (expert < 0) continue;
++        if (expert < 0 || (uint32_t)expert >= n_total_expert) continue;
+         const float w = weights[(uint64_t)tok * n_expert + slot];
+         const cuda_block_q2_K *dr = (const cuda_block_q2_K *)(down_base +
+             (uint64_t)expert * down_expert_bytes + (uint64_t)r * down_row_bytes);
+@@ -27025,7 +27027,7 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+         const ds4_gpu_tensor *x,
+         uint32_t                n_tokens,
+         uint32_t                mid_token_stride) {
+-    (void)layer_index; (void)n_total_expert;
++    (void)layer_index;
+     if (!out || !mid || !x || !selected || !weights || !model_map ||
+         n_tokens == 0 || n_expert == 0 ||
+         (expert_in_dim & 255u) != 0u || (expert_mid_dim & 255u) != 0u) {
+@@ -27036,6 +27038,11 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+                 gate_type, up_type, down_type);
+         return 0;
+     }
++    if (n_total_expert <= n_expert || n_total_expert > 256u) {
++        fprintf(stderr, "ds4: glm routed moe: invalid total expert count %u\n",
++                n_total_expert);
++        return 0;
++    }
+     if (mid_token_stride != n_expert * expert_mid_dim) {
+         fprintf(stderr,
+             "ds4: glm routed moe: mid stride %u != %u (packed rows expected)\n",
+@@ -27044,13 +27051,16 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+     }
+     const int logical_tier = cuda_current_tier();
+     const char *gw = (const char *)cuda_resolve_weight_ptr(model_map,
+-            gate_offset, (uint64_t)256 * gate_expert_bytes, logical_tier,
++            gate_offset, (uint64_t)n_total_expert * gate_expert_bytes,
++            logical_tier,
+             "glm_gate_exps");
+     const char *uw = (const char *)cuda_resolve_weight_ptr(model_map,
+-            up_offset, (uint64_t)256 * up_expert_bytes, logical_tier,
++            up_offset, (uint64_t)n_total_expert * up_expert_bytes,
++            logical_tier,
+             "glm_up_exps");
+     const char *dw = (const char *)cuda_resolve_weight_ptr(model_map,
+-            down_offset, (uint64_t)256 * down_expert_bytes, logical_tier,
++            down_offset, (uint64_t)n_total_expert * down_expert_bytes,
++            logical_tier,
+             "glm_down_exps");
+     if (!gw || !uw || !dw) return 0;
+ 
+@@ -27119,12 +27129,12 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+     if (use_expert_tile8 || use_expert_major) {
+         const uint32_t cap = n_tokens;
+         const uint32_t n_pairs = n_tokens * n_expert;
+-        const uint64_t counts_bytes = 256u * sizeof(int32_t);
++        const uint64_t counts_bytes = (uint64_t)n_total_expert * sizeof(int32_t);
+         const uint64_t lists_off = (counts_bytes + 255u) & ~255ull;
+         const uint64_t lists_bytes =
+-            (uint64_t)256u * cap * sizeof(int32_t);
++            (uint64_t)n_total_expert * cap * sizeof(int32_t);
+         const uint32_t tile_capacity =
+-            (n_pairs + 7u) / 8u + 256u;
++            (n_pairs + 7u) / 8u + n_total_expert;
+         const uint64_t tile_total_off =
+             (lists_off + lists_bytes + 255u) & ~255ull;
+         const uint64_t tile_experts_off =
+@@ -27144,7 +27154,7 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+             cudaMemsetAsync(counts, 0, counts_bytes);
+             glm_moe_expert_map_kernel<<<(n_pairs + 255u) / 256u, 256>>>(
+                     counts, lists, (const int32_t *)selected->ptr,
+-                    n_pairs, 256u, cap, 0u);
++                    n_pairs, n_total_expert, cap, 0u);
+             if (use_expert_tile8) {
+                 uint32_t *tile_total = (uint32_t *)(
+                         (char *)map_scratch[dev]->ptr + tile_total_off);
+@@ -27154,7 +27164,7 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+                         (char *)map_scratch[dev]->ptr + tile_starts_off);
+                 glm_moe_build_expert_tiles8_kernel<<<1, 1>>>(
+                         tile_total, tile_experts, tile_starts,
+-                        counts, 256u);
++                        counts, n_total_expert);
+                 dim3 ge1((expert_mid_dim + 7u) / 8u,
+                           tile_capacity, 1);
+                 glm_routed_moe_gateup_expert_tile8_kernel<<<ge1, 256>>>(
+@@ -27199,16 +27209,17 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+                             uint32_t chunk_tile_capacity = tile_capacity;
+                             if (n_tokens > max_chunk_tokens) {
+                                 chunk_tile_capacity =
+-                                    (chunk_pairs + 7u) / 8u + 256u;
++                                    (chunk_pairs + 7u) / 8u +
++                                    n_total_expert;
+                                 cudaMemsetAsync(counts, 0, counts_bytes);
+                                 glm_moe_expert_map_kernel<<<
+                                         (chunk_pairs + 255u) / 256u, 256>>>(
+                                         counts, lists,
+                                         (const int32_t *)selected->ptr,
+-                                        chunk_pairs, 256u, cap, pair_base);
++                                        chunk_pairs, n_total_expert, cap, pair_base);
+                                 glm_moe_build_expert_tiles8_kernel<<<1, 1>>>(
+                                         tile_total, tile_experts, tile_starts,
+-                                        counts, 256u);
++                                        counts, n_total_expert);
+                             }
+                             dim3 gd1((out_dim + 31u) / 32u,
+                                      chunk_tile_capacity, 1);
+@@ -27255,7 +27266,8 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+                         out, out_work, out_work_bytes,
+                         "glm routed moe expert tile8");
+             }
+-            dim3 ge1((expert_mid_dim + 7u) / 8u, 256u, 1);
++            dim3 ge1((expert_mid_dim + 7u) / 8u,
++                      n_total_expert, 1);
+             glm_routed_moe_gateup_expert_kernel<<<ge1, 256>>>(
+                     mid_work, gw, uw,
+                     (const cuda_block_q8_K *)xq_scratch[dev]->ptr,
+@@ -27268,7 +27280,8 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+                     mid_work, expert_mid_dim, n_tokens * n_expert);
+             cudaMemsetAsync(out_work, 0,
+                             (uint64_t)n_tokens * out_dim * sizeof(float));
+-            dim3 ge2((out_dim + 7u) / 8u, 256u, 1);
++            dim3 ge2((out_dim + 7u) / 8u,
++                      n_total_expert, 1);
+             glm_routed_moe_down_expert_kernel<<<ge2, 256>>>(
+                     out_work, dw,
+                     (const cuda_block_q8_K *)midq_scratch[dev]->ptr,
+@@ -27303,7 +27316,8 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+                 (const cuda_block_q8_K *)xq_scratch[dev]->ptr,
+                 (const int32_t *)selected->ptr,
+                 gate_expert_bytes, gate_row_bytes, up_expert_bytes, up_row_bytes,
+-                xq_blocks, expert_mid_dim, n_expert, n_tokens, mid_token_stride);
++                xq_blocks, expert_mid_dim, n_total_expert, n_expert,
++                n_tokens, mid_token_stride);
+     } else {
+         const uint32_t warps = 8u;
+         dim3 g1((expert_mid_dim + warps - 1u) / warps, n_expert, n_tokens);
+@@ -27331,7 +27345,7 @@ extern "C" int ds4_gpu_glm_routed_moe_batch_tensor(
+                 (const int32_t *)selected->ptr,
+                 (const float *)weights->ptr,
+                 down_expert_bytes, down_row_bytes, midq_blocks, out_dim,
+-                n_expert, n_tokens);
++                n_total_expert, n_expert, n_tokens);
+     } else {
+         const uint32_t warps = 8u;
+         dim3 g2((out_dim + warps - 1u) / warps, n_tokens, 1);
+@@ -27442,7 +27456,11 @@ __global__ static void glm_router_select_parallel_kernel(
+             __syncthreads();
+         }
+         if (tid == 0u) {
+-            const int best = sh_i[0];
++            int best = sh_i[0];
++            const float best_v = sh_v[0];
++            if ((uint32_t)best >= n_expert || best_v == -1e30f) {
++                best = 0;
++            }
+             sel[k2] = best;
+             const float p = probs[best];
+             w[k2] = p;

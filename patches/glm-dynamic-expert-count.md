@@ -12,6 +12,20 @@ the immutable snapshot at
 The patch was not applied, compiled, or run. No model, CUDA, or GPU process was
 started or stopped while authoring it.
 
+## Ported to `4d54edd`
+
+`glm-dynamic-expert-count-4d54edd.patch` ports the same semantics to ds4 commit
+`4d54edd477919b01af336be5ff23ebc7b8a19827`. Both the unmodified commit and the
+ported source build successfully with `make cuda-spark -j2`.
+
+The cache refactor changes only the placement of these hunks: the CUDA GLM MoE
+block moved 607 lines earlier after cache/debug code was removed, while the
+`weights_bind` hunk has narrower surrounding context because nearby blank lines
+changed. The metadata bounds/publication, router and routed-tensor validation
+(including MTP), runtime CUDA expert sizing, inactive-lane guard, and direct
+Q2_K bounds are otherwise unchanged. In particular, every substituted runtime
+value is still 256 for the ordinary model, preserving the 256-expert path.
+
 ## Runtime count flow
 
 The patch deliberately adds no global and no struct member. GLM metadata is
