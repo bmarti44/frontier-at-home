@@ -26,3 +26,13 @@ Decode @30K: 2.33 → **2.95 tok/s (+27%)**. Outputs byte-identical ON vs OFF
 inference_mu with -np 1; OFF-path adds an inlined null-check, needs the
 matched-block gate before production promotion; tensor-type eligibility to be
 asserted) queued as hardening.
+
+## Rejected follow-up: IQ2 MoE kernel load-widening (2026-08-16)
+
+A vectorized-load/occupancy optimization of the routed-MoE IQ2 kernels
+(claimed accumulation-order-preserving) was A/B'd on the same protocol:
+outputs were NOT byte-identical to baseline and the moe stage bucket was
+unchanged (100.9 vs 101.6 ms/token). Rejected and reverted; the kernel is
+latency-bound on scattered sign-table gathers, not load width. The patch is
+preserved untracked as a negative result; the next decode levers are the
+dense/attention bucket (~187 ms) and the v1 dense-Q4 artifact.
