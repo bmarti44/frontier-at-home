@@ -40,9 +40,10 @@ arena pointer directly`. Devices without coherent pageable access retain the
 mapped-registration attempt and the existing fail-open staging fallback.
 
 If registration, alias resolution, or the small protected-slot bitmap
-allocation fails, direct-slot mode is disabled, one diagnostic is printed, the
-sticky CUDA error is cleared, and selected experts use the existing staging
-copy path. No model or serving operation depends on direct-slot availability.
+allocation fails, only direct-slot mode is disabled, one diagnostic is printed,
+the sticky CUDA error is cleared when applicable, and selected experts use the
+existing staging copy path. The persistent copy cache remains active; no model
+or serving operation depends on direct-slot availability.
 
 ## Payload layout
 

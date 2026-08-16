@@ -1,0 +1,166 @@
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -174,6 +174,9 @@ typedef struct ds4_gpu_stream_expert_table {
+     uint64_t    down_offset;
+     uint64_t    gate_expert_bytes;
+     uint64_t    down_expert_bytes;
++    uint32_t    gate_type;
++    uint32_t    up_type;
++    uint32_t    down_type;
+ } ds4_gpu_stream_expert_table;
+ /* Reset only the prompt-local eviction heuristic.  The resident SSD expert
+  * cache itself is intentionally kept warm across sessions. */
+--- a/ds4.c
++++ b/ds4.c
+@@ -4582,6 +4582,9 @@ static ds4_gpu_stream_expert_table graph_stream_expert_table_make(
+     table.down_offset = layer->ffn_down_exps ? layer->ffn_down_exps->abs_offset : 0;
+     table.gate_expert_bytes = gate_expert_bytes;
+     table.down_expert_bytes = down_expert_bytes;
++    table.gate_type = layer->ffn_gate_exps ? layer->ffn_gate_exps->type : UINT32_MAX;
++    table.up_type = layer->ffn_up_exps ? layer->ffn_up_exps->type : UINT32_MAX;
++    table.down_type = layer->ffn_down_exps ? layer->ffn_down_exps->type : UINT32_MAX;
+     return table;
+ }
+ #endif
+@@ -40141,6 +40144,9 @@ static bool metal_graph_compute_layer(ds4_metal_graph *g, uint32_t il,
+             .down_offset = l->ffn_down_exps->abs_offset,
+             .gate_expert_bytes = gate_out * gate_row_bytes,
+             .down_expert_bytes = down_out * down_row_bytes,
++            .gate_type = l->ffn_gate_exps->type,
++            .up_type = l->ffn_up_exps->type,
++            .down_type = l->ffn_down_exps->type,
+         };
+         const bool async_selected_load =
+ #ifdef DS4_ROCM_BUILD
+@@ -42441,6 +42447,9 @@ static bool glm_graph_compute_layer(ds4_glm_gpu_graph *g, uint32_t il,
+                 .down_offset = l->ffn_down_exps->abs_offset,
+                 .gate_expert_bytes = gate_out * gate_row_bytes,
+                 .down_expert_bytes = down_out * down_row_bytes,
++                .gate_type = l->ffn_gate_exps->type,
++                .up_type = l->ffn_up_exps->type,
++                .down_type = l->ffn_down_exps->type,
+             };
+             ok = ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+                     &table, g->router_selected, DS4_N_EXPERT_USED) != 0;
+@@ -46537,6 +46546,9 @@ static bool ds4_glm_gpu_graph_mtp_forward(ds4_glm_gpu_graph *g,
+                     .down_offset = gl->ffn_down_exps->abs_offset,
+                     .gate_expert_bytes = gate_out * gate_row_bytes,
+                     .down_expert_bytes = down_out * down_row_bytes,
++                    .gate_type = gl->ffn_gate_exps->type,
++                    .up_type = gl->ffn_up_exps->type,
++                    .down_type = gl->ffn_down_exps->type,
+                 };
+                 ok = ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+                         &table,
+@@ -52870,6 +52882,9 @@ int ds4_test_glm_metal_graph(const char *model_path, const char *prompt,
+                 .down_offset = sparse_layer->ffn_down_exps->abs_offset,
+                 .gate_expert_bytes = gate_out * gate_row_bytes,
+                 .down_expert_bytes = down_out * down_row_bytes,
++                .gate_type = sparse_layer->ffn_gate_exps->type,
++                .up_type = sparse_layer->ffn_up_exps->type,
++                .down_type = sparse_layer->ffn_down_exps->type,
+             };
+             ok = ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+                     &table,
+@@ -53174,6 +53189,9 @@ int ds4_test_glm_mtp_pipeline(const char *model_path, const char *prompt,
+                     .down_offset = gl->ffn_down_exps->abs_offset,
+                     .gate_expert_bytes = gate_out * gate_row_bytes,
+                     .down_expert_bytes = down_out * down_row_bytes,
++                    .gate_type = gl->ffn_gate_exps->type,
++                    .up_type = gl->ffn_up_exps->type,
++                    .down_type = gl->ffn_down_exps->type,
+                 };
+                 ok = ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+                         &table,
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -293,6 +293,10 @@ typedef struct {
+     int direct_slot_valid;
+ } cuda_stream_selected_cache;
+ 
++/* Direct-slot state assumes the server's single-request serialization:
++ * inference_mu protects inference and the supported profile uses -np 1.
++ * Concurrent direct API callers or asynchronous model reloads require a guard
++ * around this cache and its protected-slot state before direct-slot use. */
+ static cuda_stream_selected_cache g_stream_selected_cache;
+ 
+ static void cuda_stream_selected_cache_invalidate(void) {
+@@ -23655,6 +23659,9 @@ typedef struct ds4_gpu_stream_expert_table {
+     uint64_t    down_offset;
+     uint64_t    gate_expert_bytes;
+     uint64_t    down_expert_bytes;
++    uint32_t    gate_type;
++    uint32_t    up_type;
++    uint32_t    down_type;
+ } ds4_gpu_stream_expert_table;
+ 
+ static int cuda_stream_selected_ensure_bytes(
+@@ -23936,22 +23943,27 @@ static void cuda_expert_cache_init_once(uint64_t gate_bytes, uint64_t down_bytes
+     uint8_t *arena = (uint8_t *)malloc((size_t)n_slots * slot_bytes);
+     cuda_expert_cache_slot_meta *meta = (cuda_expert_cache_slot_meta *)
+         malloc((size_t)n_slots * sizeof(cuda_expert_cache_slot_meta));
+     std::unordered_map<uint64_t, uint32_t> *map = NULL;
+-    const int direct_slot_requested =
++    int direct_slot_requested =
+         getenv("DS4_CUDA_EXPERT_DIRECT_SLOT") != NULL;
+     uint8_t *protected_slots = direct_slot_requested ?
+         (uint8_t *)calloc(n_slots, 1) : NULL;
+     try {
+         map = new std::unordered_map<uint64_t, uint32_t>();
+         map->reserve(n_slots);   /* avoid rehash allocations on the hot path */
+     } catch (...) { delete map; map = NULL; }
+-    if (!arena || !meta || !map ||
+-        (direct_slot_requested && !protected_slots)) {
++    if (!arena || !meta || !map) {
+         free(arena); free(meta); free(protected_slots); delete map;
+         fprintf(stderr, "ds4: CUDA persistent expert cache DISABLED "
+                         "(arena allocation failed for %.1f GB)\n", gb);
+         return;
+     }
++    if (direct_slot_requested && !protected_slots) {
++        direct_slot_requested = 0;
++        fprintf(stderr, "ds4: CUDA expert direct-slot DISABLED "
++                        "(protected-slot bitmap allocation failed); "
++                        "persistent expert cache remains enabled\n");
++    }
+     for (uint32_t i = 0; i < n_slots; i++) {
+         meta[i].key = UINT64_MAX;
+         meta[i].prev = meta[i].next = UINT32_MAX;
+@@ -24197,6 +24209,9 @@ static int cuda_stream_selected_cache_begin_load(
+     cuda_expert_cache_flush_for_model();
+     int direct_this_layer =
+         g_expert_persist_cache.direct_slot_enabled &&
++        table->gate_type == 16u && /* DS4_TENSOR_IQ2_XXS */
++        table->up_type == 16u &&   /* DS4_TENSOR_IQ2_XXS */
++        table->down_type == 16u && /* DS4_TENSOR_IQ2_XXS */
+         slot_count == 8u && compact_count == 8u &&
+         table->gate_expert_bytes == table->down_expert_bytes;
+     std::vector<uint32_t> arena_slots;
+@@ -24544,16 +24559,20 @@ static int cuda_stream_selected_cache_begin_load(
+     if (direct_this_layer) {
+         memcpy(remap_payload.data(), slot_ids.data(),
+                (size_t)remap_ids_bytes);
+-        uint64_t *ptrs = (uint64_t *)(remap_payload.data() +
+-                                      direct_ptr_offset);
+         for (uint32_t i = 0; i < compact_count; i++) {
+             uint8_t *base = g_expert_persist_cache.arena_device +
+                 (uint64_t)arena_slots[i] * g_expert_persist_cache.slot_bytes;
+-            ptrs[(uint64_t)i * 3u + 0u] = (uint64_t)(uintptr_t)base;
+-            ptrs[(uint64_t)i * 3u + 1u] =
+-                (uint64_t)(uintptr_t)(base + table->gate_expert_bytes);
+-            ptrs[(uint64_t)i * 3u + 2u] =
+-                (uint64_t)(uintptr_t)(base + 2u * table->gate_expert_bytes);
++            const uint64_t ptr_values[3] = {
++                (uint64_t)(uintptr_t)base,
++                (uint64_t)(uintptr_t)(base + table->gate_expert_bytes),
++                (uint64_t)(uintptr_t)(base + 2u * table->gate_expert_bytes),
++            };
++            for (uint32_t tensor = 0; tensor < 3u; tensor++) {
++                const uint64_t value_offset = direct_ptr_offset +
++                    ((uint64_t)i * 3u + tensor) * sizeof(uint64_t);
++                memcpy(remap_payload.data() + value_offset,
++                       &ptr_values[tensor], sizeof(ptr_values[tensor]));
++            }
+         }
+         remap_src = remap_payload.data();
+         remap_copy_bytes = (size_t)direct_payload_bytes;
