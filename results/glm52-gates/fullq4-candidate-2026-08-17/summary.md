@@ -26,3 +26,13 @@ expert-count + direct-slot + Q4_0 GEMV/batch (optimized) + stage timing.
 ## Remaining decode levers on this candidate
 router+miss ~100 ms (GPU directory / deeper lookahead / reserve-fill-publish),
 MoE kernels ~102 ms, attention-at-depth ~80 ms, exact MTP multiplier.
+
+## GPU-resident directory A/B (2026-08-17)
+Byte-identical on/off; NET-NEUTRAL (router 96-106 off vs 107-129 on ms/token).
+Cause: at 47% cache capacity only ~36% of layers are all-hit (0.88^8), so the
+host fallback still dominates and the poll adds overhead. Patch preserved
+(patches/expert-gpu-directory.patch); revisit only if per-layer all-hit rates
+rise materially. Router-bucket floor at this capacity ≈ miss streaming +
+selected-ID dependency; three approaches (prefetch, GPU dir, async spelling)
+have now failed to move it — deprioritized in favor of attention and MoE
+gather latency.
