@@ -23,3 +23,19 @@ Q4_0 GEMV/batch + optimized Q4_0 decode GEMV.
 
 Per the owner directive, lossy adoption requires the owner's decision on the
 reported delta; this delta is reported as unacceptable by default.
+
+## Decomposition (paired 30 cases, 2026-08-16 evening)
+
+| config | NLL | top-1 |
+|---|---|---|
+| full model (bench3 reference) | 0.5083 | 0.8097 |
+| prune-only (v1a, Q8 dense) | 1.8024 | 0.5750 |
+| prune + Q4_0 dense (v1) | 1.8139 | 0.5694 |
+
+Verdict: the 50% frequency prune accounts for essentially all of the fidelity
+loss; the Q4_0 dense requant is fidelity-free at this resolution (+0.012 NLL).
+Physical expert pruning is rejected. The surviving configuration is the FULL
+256-expert model with Q4_0 dense + hot-expert cache (SLRU, direct-slot) where
+cache misses stream from NVMe instead of being wrong — plus the previously
+rejected cross-layer prediction prefetch (R0.2), whose rejection premise
+(fetch-bandwidth contention) no longer holds in the cache-resident regime.
