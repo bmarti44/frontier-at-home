@@ -35,9 +35,12 @@ LEDGER_PATH = REPO_ROOT / "results" / "holdout-ledger.json"
 LEDGER_LOCK_PATH = REPO_ROOT / "results" / "holdout-ledger.json.lock"
 HARNESS_MANIFEST_PATH = REPO_ROOT / "verification" / "MANIFEST.sha256"
 HUMANEVAL_RUNTIME_PIN_PATH = REPO_ROOT / "configs" / "pins" / "humaneval-runtime.json"
-ENCODER_PATH = (
-    REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_dsv4.py"
-)
+ENCODER_PATHS = {
+    "dsv4": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_dsv4.py",
+    "qwen38": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_qwen38.py",
+}
+# Retain the historical constant for callers that inspect the default encoder.
+ENCODER_PATH = ENCODER_PATHS["dsv4"]
 EXPECTED_ROWS = {"gsm8k": 1319, "mmlu-pro": 12032, "humaneval": 164}
 DATASET_FILES = {
     "gsm8k": EVALSETS_DIR / "gsm8k-test.jsonl",
@@ -108,6 +111,12 @@ def parse_args() -> argparse.Namespace:
         "--completions-endpoint",
         default="/v1/completions",
         help="plain completions path (default: /v1/completions)",
+    )
+    parser.add_argument(
+        "--encoder",
+        default="dsv4",
+        choices=tuple(ENCODER_PATHS),
+        help="chat encoder used for non-HumanEval prompts (default: dsv4)",
     )
     parser.add_argument(
         "--thinking-mode",
@@ -210,17 +219,23 @@ def load_api_key(path: Path | None) -> str | None:
     return key
 
 
-def load_encoder() -> ModuleType:
-    if not ENCODER_PATH.is_file():
-        raise RuntimeError(f"official encoder is missing: {ENCODER_PATH}")
-    spec = importlib.util.spec_from_file_location("official_encoding_dsv4", ENCODER_PATH)
+def load_encoder(encoder_name: str = "dsv4") -> ModuleType:
+    try:
+        encoder_path = ENCODER_PATHS[encoder_name]
+    except KeyError as error:
+        raise RuntimeError(f"unknown official encoder: {encoder_name}") from error
+    if not encoder_path.is_file():
+        raise RuntimeError(f"official encoder is missing: {encoder_path}")
+    spec = importlib.util.spec_from_file_location(
+        f"official_encoding_{encoder_name}", encoder_path
+    )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot construct import spec for {ENCODER_PATH}")
+        raise RuntimeError(f"cannot construct import spec for {encoder_path}")
     module = importlib.util.module_from_spec(spec)
     sys.dont_write_bytecode = True
     spec.loader.exec_module(module)
     if not callable(getattr(module, "encode_messages", None)):
-        raise RuntimeError(f"official encoder has no encode_messages(): {ENCODER_PATH}")
+        raise RuntimeError(f"official encoder has no encode_messages(): {encoder_path}")
     return module
 
 
@@ -374,6 +389,9 @@ def derive_config_digest(
         # will therefore not reproduce a pre-2026-08-09 digest, which is correct
         # -- the old payload could not express the rendering it ran under.
         "thinking_mode": args.thinking_mode,
+        # Encoder families use different special-token and thinking renderings;
+        # they are different measurement contracts even with the same mode.
+        "encoder": args.encoder,
         # In the digest for the same reason as thinking_mode and max_tokens: a
         # timed-out item is scored incorrect, so an arm run under a shorter clock
         # is a different measurement, not a noisier one.
@@ -535,6 +553,7 @@ def render_item(
     row: dict[str, Any],
     encoder: ModuleType | None,
     thinking_mode: str = "chat",
+    encoder_name: str = "dsv4",
 ) -> tuple[str, str]:
     if suite == "humaneval":
         prompt = row.get("prompt")
@@ -576,11 +595,14 @@ def render_item(
     )
     if not isinstance(rendered, str) or not rendered:
         raise RuntimeError("official encoder returned an invalid prompt")
-    label = (
-        "official-encoder-chat-nonthinking"
-        if thinking_mode == "chat"
-        else f"official-encoder-{thinking_mode}"
-    )
+    if encoder_name == "dsv4":
+        label = (
+            "official-encoder-chat-nonthinking"
+            if thinking_mode == "chat"
+            else f"official-encoder-{thinking_mode}"
+        )
+    else:
+        label = f"official-encoder-{encoder_name}-{thinking_mode}"
     return rendered, label
 
 
@@ -1139,7 +1161,7 @@ def main() -> int:
     indices = select_indices(args.suite, args.split, rows)
     if not indices:
         raise RuntimeError("deterministic split selected zero items")
-    encoder = None if args.suite == "humaneval" else load_encoder()
+    encoder = None if args.suite == "humaneval" else load_encoder(args.encoder)
     client = Client(
         args.base_url,
         load_api_key(args.api_key_file),
@@ -1185,7 +1207,7 @@ def main() -> int:
             for run_position, dataset_index in enumerate(indices):
                 row = rows[dataset_index]
                 rendered, rendering = render_item(
-                    args.suite, row, encoder, args.thinking_mode
+                    args.suite, row, encoder, args.thinking_mode, args.encoder
                 )
                 prompt_sha = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
                 item_id = row.get("task_id", row.get("question_id", dataset_index))
@@ -1241,6 +1263,7 @@ def main() -> int:
                     "task_id": item_id,
                     "rendered_prompt_sha256": prompt_sha,
                     "rendering": rendering,
+                    "encoder": args.encoder,
                     "completion": completion,
                     "finish_reason": finish_reason,
                     "expected": expected,
@@ -1297,6 +1320,7 @@ def main() -> int:
                 "max_tokens": args.max_tokens,
                 "request_timeout_s": args.request_timeout,
                 "thinking_mode": args.thinking_mode,
+                "encoder": args.encoder,
                 "stop": HUMANEVAL_STOPS if args.suite == "humaneval" else None,
                 "extra_body": args.extra_body,
             },
