@@ -68,12 +68,12 @@ PIN_EXPECTATIONS = {
         "file": "humaneval.jsonl",
     },
 }
-# Owner directive 2026-08-18: 8192 default for every suite. The old
+# Owner directive 2026-08-18: 16384 default for every suite. The old
 # 512/768/512 budgets were sized for terse non-thinking completions and
 # truncate reasoning models (Qwen3.8 thinking lost 8 of 10 GSM8K misses to
 # finish_reason=length at 512). Budgets are recorded in each run's config
 # digest, so runs under different budgets cannot be conflated.
-MAX_TOKENS = {"gsm8k": 8192, "mmlu-pro": 8192, "humaneval": 8192}
+MAX_TOKENS = {"gsm8k": 16384, "mmlu-pro": 16384, "humaneval": 16384}
 # PROTOCOL v4: no stop sequences for HumanEval. The v2/v3 stop list
 # ("\ndef ", "\nclass ", "\nif __name__", "\nprint(") assumed base-model
 # continuation-style completions; instruct-style completions that open with
@@ -122,6 +122,16 @@ def parse_args() -> argparse.Namespace:
         default="dsv4",
         choices=tuple(ENCODER_PATHS),
         help="chat encoder used for non-HumanEval prompts (default: dsv4)",
+    )
+    parser.add_argument(
+        "--reasoning-effort",
+        default=None,
+        choices=("low", "medium", "xhigh"),
+        help=(
+            "reasoning-effort rendering passed to the encoder (Qwen3.8 template "
+            "levels; omit for the template default). Recorded in the config "
+            "digest: runs under different efforts are different measurements."
+        ),
     )
     parser.add_argument(
         "--thinking-mode",
@@ -397,6 +407,9 @@ def derive_config_digest(
         # Encoder families use different special-token and thinking renderings;
         # they are different measurement contracts even with the same mode.
         "encoder": args.encoder,
+        # Same contract logic as thinking_mode: effort changes the rendered
+        # system instruction, so it is part of the measurement identity.
+        "reasoning_effort": args.reasoning_effort,
         # In the digest for the same reason as thinking_mode and max_tokens: a
         # timed-out item is scored incorrect, so an arm run under a shorter clock
         # is a different measurement, not a noisier one.
@@ -559,6 +572,7 @@ def render_item(
     encoder: ModuleType | None,
     thinking_mode: str = "chat",
     encoder_name: str = "dsv4",
+    reasoning_effort: str | None = None,
 ) -> tuple[str, str]:
     if suite == "humaneval":
         prompt = row.get("prompt")
@@ -596,7 +610,9 @@ def render_item(
     # what the encoder emits, which is why this must be an explicit argument
     # rather than a request field.
     rendered = encoder.encode_messages(
-        [{"role": "user", "content": content}], thinking_mode=thinking_mode
+        [{"role": "user", "content": content}],
+        thinking_mode=thinking_mode,
+        reasoning_effort=reasoning_effort,
     )
     if not isinstance(rendered, str) or not rendered:
         raise RuntimeError("official encoder returned an invalid prompt")
@@ -608,6 +624,8 @@ def render_item(
         )
     else:
         label = f"official-encoder-{encoder_name}-{thinking_mode}"
+    if reasoning_effort is not None:
+        label += f"-effort-{reasoning_effort}"
     return rendered, label
 
 
@@ -1212,7 +1230,8 @@ def main() -> int:
             for run_position, dataset_index in enumerate(indices):
                 row = rows[dataset_index]
                 rendered, rendering = render_item(
-                    args.suite, row, encoder, args.thinking_mode, args.encoder
+                    args.suite, row, encoder, args.thinking_mode, args.encoder,
+                    args.reasoning_effort,
                 )
                 prompt_sha = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
                 item_id = row.get("task_id", row.get("question_id", dataset_index))

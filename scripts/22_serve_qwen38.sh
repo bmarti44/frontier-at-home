@@ -4,7 +4,7 @@ set -Eeuo pipefail
 umask 077
 
 readonly STACK=qwen38
-readonly PORT=8014
+readonly PORT=8015
 readonly RUNTIME_DIR=/run/dsv4
 readonly LOCK_FILE=/run/lock/frontier-at-home/inference.lock
 readonly STATE_FILE=$RUNTIME_DIR/qwen38.state.json
@@ -28,12 +28,13 @@ usage() {
     cat <<'EOF'
 Usage: 22_serve_qwen38.sh [start|stop|status] [--help]
 
-Start (the default), stop, or inspect Qwen3.8-27B on 127.0.0.1:8014.
+Start (the default), stop, or inspect Qwen3.8-27B on 127.0.0.1:8015.
 
 Environment:
   QWEN_QUANT  GGUF filename below /home/bmarti44/models/qwen3.8-27b
               (default: Qwen3.8-27B-Q4_K_M.gguf)
   QWEN_MTP    Set to 1 to enable two-token built-in MTP drafting (default: 0)
+  QWEN_REASONING_EFFORT  low | medium | xhigh (default: low, owner directive)
 EOF
 }
 
@@ -94,7 +95,7 @@ try:
         value = state[key]
         if not isinstance(value, int) or isinstance(value, bool) or value <= 1:
             raise ValueError(f"invalid {key}")
-    if state["port"] != 8014:
+    if state["port"] != 8015:
         raise ValueError("invalid port")
     if state["unit"] != "qwen38-server.service":
         raise ValueError("invalid unit")
@@ -139,7 +140,7 @@ value = {
     "memwatch_start_ticks": int(watchdog_ticks),
     "boot_id": boot_id,
     "host": "127.0.0.1",
-    "port": 8014,
+    "port": 8015,
     "context": 32768,
     "model": model,
     "mmproj": mmproj,
@@ -359,6 +360,10 @@ do_start() {
     MODEL=$MODEL_ROOT/$quant
     mtp=${QWEN_MTP:-0}
     [[ $mtp == 0 || $mtp == 1 ]] || die 'QWEN_MTP must be 0 or 1'
+    reasoning_effort=${QWEN_REASONING_EFFORT:-low}
+    [[ $reasoning_effort == low || $reasoning_effort == medium ||
+       $reasoning_effort == xhigh ]] \
+        || die 'QWEN_REASONING_EFFORT must be low, medium, or xhigh'
 
     [[ -x $BINARY ]] || die "llama-server is missing or not executable: $BINARY"
     [[ -r $BUILD_MANIFEST ]] || die "build manifest is missing: $BUILD_MANIFEST"
@@ -416,6 +421,9 @@ do_start() {
         "$BINARY" --model "$MODEL" -ngl 99 -fa on --no-mmap -c 32768
         --mmproj "$MMPROJ" --parallel 1 --host 127.0.0.1 --port "$PORT"
         --alias "$quant"
+        # Owner directive 2026-08-18: Qwen3.8 serves with low reasoning
+        # effort by default (template levels: low|medium|xhigh).
+        --chat-template-kwargs "{\"reasoning_effort\":\"$reasoning_effort\"}"
     )
     (( mtp == 0 )) || command+=(--spec-type draft-mtp --spec-draft-n-max 2)
     printf '\n===== Qwen3.8 session start %s mtp=%s =====\n' \
@@ -486,7 +494,7 @@ do_start() {
             trap - ERR EXIT
             mtp_json=false
             [[ $mtp == 0 ]] || mtp_json=true
-            printf '{"ok":true,"stack":"qwen38","pid":%d,"port":8014,"mtp":%s}\n' \
+            printf '{"ok":true,"stack":"qwen38","pid":%d,"port":8015,"mtp":%s}\n' \
                 "$server_pid" "$mtp_json"
             return 0
         fi
