@@ -1,0 +1,453 @@
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -23807,14 +23807,125 @@
+     uint64_t loads;
+     uint8_t *arena_device;
+     uint8_t *protected_slots;
++    uint8_t *protected_slots_device;
+     uint32_t protected_last_layer;
+     int direct_slot_enabled;
++    uint32_t *gpu_dir_host;
++    uint32_t *gpu_dir_device;
++    uint32_t *gpu_dir_miss_host;
++    uint32_t *gpu_dir_miss_device;
++    cudaEvent_t gpu_dir_event;
++    int gpu_dir_enabled;
+     uint64_t model_generation; /* cache valid for exactly one model-load
+                                    generation (bumped by every model-map
+                                    registration; immune to address reuse) */
+     std::unordered_map<uint64_t, uint32_t> *map;
+ } g_expert_persist_cache;
+ 
++#define DS4_EXPERT_GPU_DIR_LAYERS 76u
++#define DS4_EXPERT_GPU_DIR_EXPERTS 256u
++#define DS4_EXPERT_GPU_DIR_INVALID UINT32_MAX
++
++static int cuda_expert_gpu_dir_requested(void) {
++    static int requested = -1;
++    if (requested < 0)
++        requested = getenv("DS4_CUDA_EXPERT_GPU_DIR") != NULL;
++    return requested;
++}
++
++/* Directory updates share stream 0 with translation and MoE dispatch.  An
++ * invalidation is therefore visible before a reused arena slot can be
++ * published, and a publication is visible before a later translation. */
++static void cuda_expert_gpu_dir_update(uint64_t key, uint32_t slot) {
++    if (!g_expert_persist_cache.gpu_dir_enabled) return;
++    const uint32_t layer = (uint32_t)(key >> 32);
++    const uint32_t expert = (uint32_t)key;
++    if (layer >= DS4_EXPERT_GPU_DIR_LAYERS ||
++        expert >= DS4_EXPERT_GPU_DIR_EXPERTS) return;
++    const uint32_t index = layer * DS4_EXPERT_GPU_DIR_EXPERTS + expert;
++    g_expert_persist_cache.gpu_dir_host[index] = slot;
++    const cudaError_t rc = cudaMemcpyAsync(
++            g_expert_persist_cache.gpu_dir_device + index,
++            g_expert_persist_cache.gpu_dir_host + index,
++            sizeof(uint32_t), cudaMemcpyHostToDevice, 0);
++    if (rc != cudaSuccess) {
++        g_expert_persist_cache.gpu_dir_enabled = 0;
++        (void)cudaGetLastError();
++        fprintf(stderr, "ds4: CUDA expert GPU directory DISABLED "
++                        "(directory update failed: %s)\n",
++                cudaGetErrorString(rc));
++    }
++}
++
++static void cuda_expert_gpu_dir_invalidate_for_reuse(uint64_t key) {
++    if (!g_expert_persist_cache.gpu_dir_enabled || key == UINT64_MAX) return;
++    /* Miss processing may reuse this host-mirror cell and arena slot.  Drain
++     * an older publication, enqueue the invalidation, then make it visible
++     * before the CPU overwrites the slot.  This synchronization is miss-only. */
++    cudaError_t rc = cudaStreamSynchronize(0);
++    if (rc == cudaSuccess) {
++        cuda_expert_gpu_dir_update(key, DS4_EXPERT_GPU_DIR_INVALID);
++        if (g_expert_persist_cache.gpu_dir_enabled)
++            rc = cudaStreamSynchronize(0);
++    }
++    if (rc != cudaSuccess) {
++        g_expert_persist_cache.gpu_dir_enabled = 0;
++        (void)cudaGetLastError();
++        fprintf(stderr, "ds4: CUDA expert GPU directory DISABLED "
++                        "(reuse invalidation failed: %s)\n",
++                cudaGetErrorString(rc));
++    }
++}
++
++static void cuda_expert_gpu_dir_init(int requested) {
++    if (!requested || !g_expert_persist_cache.direct_slot_enabled ||
++        !g_expert_persist_cache.protected_slots_device) return;
++    const size_t entries = (size_t)DS4_EXPERT_GPU_DIR_LAYERS *
++                           DS4_EXPERT_GPU_DIR_EXPERTS;
++    uint32_t *host = NULL;
++    uint32_t *device = NULL;
++    uint32_t *miss_host = NULL;
++    uint32_t *miss_device = NULL;
++    cudaEvent_t event = NULL;
++    cudaError_t rc = cudaHostAlloc((void **)&host,
++                                   entries * sizeof(uint32_t),
++                                   cudaHostAllocDefault);
++    if (rc == cudaSuccess) {
++        for (size_t i = 0; i < entries; i++)
++            host[i] = DS4_EXPERT_GPU_DIR_INVALID;
++        rc = cudaMalloc((void **)&device, entries * sizeof(uint32_t));
++    }
++    if (rc == cudaSuccess)
++        rc = cudaMemcpy(device, host, entries * sizeof(uint32_t),
++                        cudaMemcpyHostToDevice);
++    if (rc == cudaSuccess)
++        rc = cudaHostAlloc((void **)&miss_host, sizeof(uint32_t),
++                           cudaHostAllocMapped);
++    if (rc == cudaSuccess)
++        rc = cudaHostGetDevicePointer((void **)&miss_device, miss_host, 0);
++    if (rc == cudaSuccess)
++        rc = cudaEventCreateWithFlags(&event, cudaEventDisableTiming);
++    if (rc != cudaSuccess) {
++        if (event) (void)cudaEventDestroy(event);
++        if (miss_host) (void)cudaFreeHost(miss_host);
++        if (device) (void)cudaFree(device);
++        if (host) (void)cudaFreeHost(host);
++        (void)cudaGetLastError();
++        fprintf(stderr, "ds4: CUDA expert GPU directory DISABLED "
++                        "(initialization failed: %s)\n",
++                cudaGetErrorString(rc));
++        return;
++    }
++    *miss_host = 0;
++    g_expert_persist_cache.gpu_dir_host = host;
++    g_expert_persist_cache.gpu_dir_device = device;
++    g_expert_persist_cache.gpu_dir_miss_host = miss_host;
++    g_expert_persist_cache.gpu_dir_miss_device = miss_device;
++    g_expert_persist_cache.gpu_dir_event = event;
++    g_expert_persist_cache.gpu_dir_enabled = 1;
++    fprintf(stderr, "ds4: CUDA expert GPU directory enabled\n");
++}
++
+ /* Compact SHA-256 (FIPS 180-4) for the access-stream digest required by the
+  * G4a pre-registered criterion: digest over the post-compaction
+  * (layer u32, expert u32, slab_bytes u64) records of every selected load. */
+@@ -24233,6 +24344,24 @@
+                g_expert_persist_cache.n_slots);
+         g_expert_persist_cache.protected_last_layer = UINT32_MAX;
+     }
++    if (g_expert_persist_cache.gpu_dir_enabled) {
++        const size_t bytes = (size_t)DS4_EXPERT_GPU_DIR_LAYERS *
++                             DS4_EXPERT_GPU_DIR_EXPERTS * sizeof(uint32_t);
++        cudaError_t rc = cudaStreamSynchronize(0);
++        if (rc == cudaSuccess) {
++            memset(g_expert_persist_cache.gpu_dir_host, 0xff, bytes);
++            rc = cudaMemcpyAsync(g_expert_persist_cache.gpu_dir_device,
++                                 g_expert_persist_cache.gpu_dir_host, bytes,
++                                 cudaMemcpyHostToDevice, 0);
++        }
++        if (rc != cudaSuccess) {
++            g_expert_persist_cache.gpu_dir_enabled = 0;
++            (void)cudaGetLastError();
++            fprintf(stderr, "ds4: CUDA expert GPU directory DISABLED "
++                            "(model-flush update failed: %s)\n",
++                    cudaGetErrorString(rc));
++        }
++    }
+     if (g_expert_persist_cache.model_generation != 0)
+         fprintf(stderr, "ds4: CUDA persistent expert cache flushed "
+                         "(model load generation changed)\n");
+@@ -24279,16 +24408,44 @@
+     cuda_expert_cache_slot_meta *meta = (cuda_expert_cache_slot_meta *)
+         malloc((size_t)n_slots * sizeof(cuda_expert_cache_slot_meta));
+     std::unordered_map<uint64_t, uint32_t> *map = NULL;
+-    int direct_slot_requested =
++    const int gpu_dir_requested = cuda_expert_gpu_dir_requested();
++    int direct_slot_requested = gpu_dir_requested ||
+         getenv("DS4_CUDA_EXPERT_DIRECT_SLOT") != NULL;
+-    uint8_t *protected_slots = direct_slot_requested ?
+-        (uint8_t *)calloc(n_slots, 1) : NULL;
++    uint8_t *protected_slots = NULL;
++    uint8_t *protected_slots_device = NULL;
++    int protected_slots_pinned = 0;
++    if (gpu_dir_requested) {
++        const cudaError_t alloc_rc = cudaHostAlloc(
++                (void **)&protected_slots, n_slots,
++                cudaHostAllocMapped);
++        const cudaError_t alias_rc = alloc_rc == cudaSuccess ?
++            cudaHostGetDevicePointer((void **)&protected_slots_device,
++                                     protected_slots, 0) : alloc_rc;
++        if (alloc_rc == cudaSuccess && alias_rc == cudaSuccess) {
++            memset(protected_slots, 0, n_slots);
++            protected_slots_pinned = 1;
++        } else {
++            if (alloc_rc == cudaSuccess) (void)cudaFreeHost(protected_slots);
++            protected_slots = NULL;
++            protected_slots_device = NULL;
++            (void)cudaGetLastError();
++            fprintf(stderr, "ds4: CUDA expert GPU directory DISABLED "
++                            "(mapped protection bitmap failed: %s)\n",
++                    cudaGetErrorString(alloc_rc == cudaSuccess ?
++                                       alias_rc : alloc_rc));
++        }
++    }
++    if (direct_slot_requested && !protected_slots)
++        protected_slots = (uint8_t *)calloc(n_slots, 1);
+     try {
+         map = new std::unordered_map<uint64_t, uint32_t>();
+         map->reserve(n_slots);   /* avoid rehash allocations on the hot path */
+     } catch (...) { delete map; map = NULL; }
+     if (!arena || !meta || !map) {
+-        free(arena); free(meta); free(protected_slots); delete map;
++        free(arena); free(meta);
++        if (protected_slots_pinned) (void)cudaFreeHost(protected_slots);
++        else free(protected_slots);
++        delete map;
+         fprintf(stderr, "ds4: CUDA persistent expert cache DISABLED "
+                         "(arena allocation failed for %.1f GB)\n", gb);
+         return;
+@@ -24328,6 +24485,8 @@
+         if (pageable_rc == cudaSuccess && pageable) {
+             g_expert_persist_cache.arena_device = arena;
+             g_expert_persist_cache.protected_slots = protected_slots;
++            g_expert_persist_cache.protected_slots_device =
++                protected_slots_device;
+             g_expert_persist_cache.direct_slot_enabled = 1;
+             fprintf(stderr,
+                     "ds4: CUDA expert direct-slot: coherent pageable access, "
+@@ -24341,12 +24500,17 @@
+             if (map_rc == cudaSuccess && alias_rc == cudaSuccess && arena_device) {
+                 g_expert_persist_cache.arena_device = (uint8_t *)arena_device;
+                 g_expert_persist_cache.protected_slots = protected_slots;
++                g_expert_persist_cache.protected_slots_device =
++                    protected_slots_device;
+                 g_expert_persist_cache.direct_slot_enabled = 1;
+                 fprintf(stderr,
+                         "ds4: CUDA expert direct-slot enabled (mapped arena)\n");
+             } else {
+                 if (map_rc == cudaSuccess) (void)cudaHostUnregister(arena);
+-                free(protected_slots);
++                if (protected_slots_pinned)
++                    (void)cudaFreeHost(protected_slots);
++                else
++                    free(protected_slots);
+                 (void)cudaGetLastError();
+                 fprintf(stderr,
+                         "ds4: CUDA expert direct-slot DISABLED (mapped arena "
+@@ -24355,6 +24519,7 @@
+             }
+         }
+     }
++    cuda_expert_gpu_dir_init(gpu_dir_requested);
+     fprintf(stderr,
+             "ds4: CUDA persistent expert cache enabled: %u slots x %.2f MiB "
+             "= %.2f GiB (fixed arena)\n",
+@@ -24375,6 +24540,8 @@
+     if (g_expert_persist_cache.meta[s].gate_off != gate_off ||
+         g_expert_persist_cache.meta[s].down_off != down_off) {
+         /* same (layer,expert) from a different mapping: drop stale entry */
++        cuda_expert_gpu_dir_invalidate_for_reuse(
++                g_expert_persist_cache.meta[s].key);
+         cuda_expert_cache_lru_unlink(s);
+         g_expert_persist_cache.map->erase(it);
+         g_expert_persist_cache.meta[s].key = UINT64_MAX;
+@@ -24409,6 +24576,8 @@
+             s = g_expert_persist_cache.meta[s].prev;
+         }
+         if (s == UINT32_MAX) return UINT32_MAX;
++        cuda_expert_gpu_dir_invalidate_for_reuse(
++                g_expert_persist_cache.meta[s].key);
+         cuda_expert_cache_lru_unlink(s);
+         if (g_expert_persist_cache.meta[s].key != UINT64_MAX)
+             g_expert_persist_cache.map->erase(g_expert_persist_cache.meta[s].key);
+@@ -24739,9 +24908,12 @@
+                             g_expert_persist_cache.map->erase(key);
+                             g_expert_persist_cache.meta[fslot].key = UINT64_MAX;
+                             direct_this_layer = 0;
+-                        } else if (direct_this_layer) {
+-                            arena_slots[i] = fslot;
+-                            g_expert_persist_cache.protected_slots[fslot] = 1;
++                        } else {
++                            cuda_expert_gpu_dir_update(key, fslot);
++                            if (direct_this_layer) {
++                                arena_slots[i] = fslot;
++                                g_expert_persist_cache.protected_slots[fslot] = 1;
++                            }
+                         }
+                     } else if (direct_this_layer) {
+                         direct_this_layer = 0;
+@@ -24814,9 +24986,12 @@
+                     g_expert_persist_cache.map->erase(key);
+                     g_expert_persist_cache.meta[fslot].key = UINT64_MAX;
+                     direct_this_layer = 0;
+-                } else if (direct_this_layer) {
+-                    arena_slots[i] = fslot;
+-                    g_expert_persist_cache.protected_slots[fslot] = 1;
++                } else {
++                    cuda_expert_gpu_dir_update(key, fslot);
++                    if (direct_this_layer) {
++                        arena_slots[i] = fslot;
++                        g_expert_persist_cache.protected_slots[fslot] = 1;
++                    }
+                 }
+             } else if (direct_this_layer) {
+                 direct_this_layer = 0;
+@@ -24905,9 +25080,12 @@
+                     g_expert_persist_cache.map->erase(j.key);
+                     g_expert_persist_cache.meta[fslot].key = UINT64_MAX;
+                     direct_this_layer = 0;
+-                } else if (direct_this_layer) {
+-                    arena_slots[j.compact] = fslot;
+-                    g_expert_persist_cache.protected_slots[fslot] = 1;
++                } else {
++                    cuda_expert_gpu_dir_update(j.key, fslot);
++                    if (direct_this_layer) {
++                        arena_slots[j.compact] = fslot;
++                        g_expert_persist_cache.protected_slots[fslot] = 1;
++                    }
+                 }
+             }
+         }
+@@ -28981,6 +29159,133 @@
+     return cuda_ok(cudaGetLastError(), "glm store indexer k launch");
+ }
+ 
++__global__ static void cuda_expert_gpu_dir_translate_kernel(
++        const int32_t *selected,
++        int32_t *remapped,
++        uint64_t *direct_ptrs,
++        const uint32_t *slot_of,
++        uint8_t *protected_slots,
++        uint32_t *miss,
++        uint8_t *arena_base,
++        uint64_t slot_bytes,
++        uint64_t expert_bytes,
++        uint32_t layer,
++        uint32_t n_slots,
++        uint32_t clear_protected) {
++    const uint32_t tid = threadIdx.x;
++    if (clear_protected) {
++        for (uint32_t slot = tid; slot < n_slots; slot += blockDim.x)
++            protected_slots[slot] = 0;
++    }
++    if (tid == 0) *miss = 0;
++    __syncthreads();
++    if (tid >= 8u) return;
++    const int32_t expert = selected[tid];
++    int bad = expert < 0 || expert >= (int32_t)DS4_EXPERT_GPU_DIR_EXPERTS;
++    for (uint32_t prior = 0; prior < tid && !bad; prior++)
++        bad = selected[prior] == expert;
++    uint32_t slot = DS4_EXPERT_GPU_DIR_INVALID;
++    if (!bad)
++        slot = slot_of[layer * DS4_EXPERT_GPU_DIR_EXPERTS +
++                       (uint32_t)expert];
++    if (slot == DS4_EXPERT_GPU_DIR_INVALID || slot >= n_slots) {
++        atomicOr(miss, 1u);
++        remapped[tid] = (int32_t)tid;
++        direct_ptrs[(uint64_t)tid * 3u + 0u] = 0;
++        direct_ptrs[(uint64_t)tid * 3u + 1u] = 0;
++        direct_ptrs[(uint64_t)tid * 3u + 2u] = 0;
++        return;
++    }
++    protected_slots[slot] = 1;
++    remapped[tid] = (int32_t)tid;
++    uint8_t *base = arena_base + (uint64_t)slot * slot_bytes;
++    direct_ptrs[(uint64_t)tid * 3u + 0u] =
++        (uint64_t)(uintptr_t)base;
++    direct_ptrs[(uint64_t)tid * 3u + 1u] =
++        (uint64_t)(uintptr_t)(base + expert_bytes);
++    direct_ptrs[(uint64_t)tid * 3u + 2u] =
++        (uint64_t)(uintptr_t)(base + 2u * expert_bytes);
++}
++
++/* Returns 1 for a complete device-directory hit and 0 to use the unchanged
++ * host readback/remap/fill path.  The event provides completion/visibility
++ * for the mapped miss word; it does not transfer selected IDs to the host. */
++static int cuda_expert_gpu_dir_try_selected(
++        const ds4_gpu_stream_expert_table *table,
++        const ds4_gpu_tensor *selected,
++        uint32_t n_selected) {
++    if (!g_expert_persist_cache.gpu_dir_enabled || n_selected != 8u ||
++        table->layer >= DS4_EXPERT_GPU_DIR_LAYERS ||
++        table->n_total_expert > DS4_EXPERT_GPU_DIR_EXPERTS ||
++        table->gate_type != 16u || table->up_type != 16u ||
++        table->down_type != 16u ||
++        table->gate_expert_bytes != table->down_expert_bytes)
++        return 0;
++    const uint64_t remap_bytes = 8u * sizeof(int32_t);
++    const uint64_t ptr_offset = (remap_bytes + 7u) & ~7ull;
++    const uint64_t payload_bytes = ptr_offset + 8u * 3u * sizeof(uint64_t);
++    if (ds4_gpu_set_current_device(0) != 0 ||
++        !cuda_stream_selected_ensure_bytes(
++                (char **)&g_stream_selected_cache.slot_selected_ptr,
++                &g_stream_selected_cache.slot_selected_capacity,
++                payload_bytes, "selected-id/GPU-directory table"))
++        return 0;
++
++    const int clear_protected =
++        g_expert_persist_cache.protected_last_layer == UINT32_MAX ||
++        table->layer <= g_expert_persist_cache.protected_last_layer;
++    g_expert_persist_cache.protected_last_layer = table->layer;
++    int32_t *remapped = g_stream_selected_cache.slot_selected_ptr;
++    uint64_t *direct_ptrs = (uint64_t *)(
++            (uint8_t *)g_stream_selected_cache.slot_selected_ptr + ptr_offset);
++    cuda_expert_gpu_dir_translate_kernel<<<1, 256>>>(
++            (const int32_t *)selected->ptr, remapped, direct_ptrs,
++            g_expert_persist_cache.gpu_dir_device,
++            g_expert_persist_cache.protected_slots_device,
++            g_expert_persist_cache.gpu_dir_miss_device,
++            g_expert_persist_cache.arena_device,
++            g_expert_persist_cache.slot_bytes,
++            table->gate_expert_bytes, table->layer,
++            g_expert_persist_cache.n_slots,
++            clear_protected ? 1u : 0u);
++    cudaError_t rc = cudaGetLastError();
++    if (rc == cudaSuccess)
++        rc = cudaEventRecord(g_expert_persist_cache.gpu_dir_event, 0);
++    if (rc == cudaSuccess)
++        rc = cudaEventSynchronize(g_expert_persist_cache.gpu_dir_event);
++    if (rc != cudaSuccess) {
++        g_expert_persist_cache.gpu_dir_enabled = 0;
++        (void)cudaGetLastError();
++        fprintf(stderr, "ds4: CUDA expert GPU directory DISABLED "
++                        "(translation failed: %s)\n",
++                cudaGetErrorString(rc));
++        return 0;
++    }
++    if (*g_expert_persist_cache.gpu_dir_miss_host != 0) return 0;
++
++    g_stream_selected_cache.logical_tier = 0;
++    g_stream_selected_cache.model_map = table->model_map;
++    g_stream_selected_cache.layer = table->layer;
++    g_stream_selected_cache.n_total_expert = table->n_total_expert;
++    g_stream_selected_cache.slot_count = 8u;
++    g_stream_selected_cache.compact_count = 8u;
++    g_stream_selected_cache.gate_offset = table->gate_offset;
++    g_stream_selected_cache.up_offset = table->up_offset;
++    g_stream_selected_cache.down_offset = table->down_offset;
++    g_stream_selected_cache.gate_expert_bytes = table->gate_expert_bytes;
++    g_stream_selected_cache.down_expert_bytes = table->down_expert_bytes;
++    g_stream_selected_cache.slot_selected_tensor.ptr = remapped;
++    g_stream_selected_cache.slot_selected_tensor.bytes = remap_bytes;
++    g_stream_selected_cache.slot_selected_tensor.owner = 0;
++    g_stream_selected_cache.slot_selected_tensor.device_id = 0;
++    g_stream_selected_cache.direct_slot_valid = 1;
++    g_stream_selected_cache.direct_slot_ptrs = direct_ptrs;
++    g_stream_selected_cache.valid = 1;
++    g_expert_persist_cache.hits += 8u;
++    g_expert_persist_cache.loads++;
++    return 1;
++}
++
+ extern "C" int ds4_gpu_glm_stream_expert_cache_begin_selected_load_tensor(
+         const ds4_gpu_stream_expert_table *table,
+         const ds4_gpu_tensor              *selected,
+@@ -28991,6 +29296,13 @@
+         return cuda_stream_selected_reject(table, n_selected,
+                                            "selected tensor guard");
+     }
++    if (cuda_expert_gpu_dir_requested()) {
++        cuda_expert_cache_init_once(table->gate_expert_bytes,
++                                    table->down_expert_bytes);
++        cuda_expert_cache_flush_for_model();
++        if (cuda_expert_gpu_dir_try_selected(table, selected, n_selected))
++            return 1;
++    }
+     std::vector<int32_t> ids;
+     try {
+         ids.resize(n_selected);
+
