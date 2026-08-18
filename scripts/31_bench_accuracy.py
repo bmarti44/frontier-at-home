@@ -68,7 +68,12 @@ PIN_EXPECTATIONS = {
         "file": "humaneval.jsonl",
     },
 }
-MAX_TOKENS = {"gsm8k": 512, "mmlu-pro": 768, "humaneval": 512}
+# Owner directive 2026-08-18: 8192 default for every suite. The old
+# 512/768/512 budgets were sized for terse non-thinking completions and
+# truncate reasoning models (Qwen3.8 thinking lost 8 of 10 GSM8K misses to
+# finish_reason=length at 512). Budgets are recorded in each run's config
+# digest, so runs under different budgets cannot be conflated.
+MAX_TOKENS = {"gsm8k": 8192, "mmlu-pro": 8192, "humaneval": 8192}
 # PROTOCOL v4: no stop sequences for HumanEval. The v2/v3 stop list
 # ("\ndef ", "\nclass ", "\nif __name__", "\nprint(") assumed base-model
 # continuation-style completions; instruct-style completions that open with
