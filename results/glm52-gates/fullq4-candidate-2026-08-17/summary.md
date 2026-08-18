@@ -36,3 +36,18 @@ rise materially. Router-bucket floor at this capacity ≈ miss streaming +
 selected-ID dependency; three approaches (prefetch, GPU dir, async spelling)
 have now failed to move it — deprioritized in favor of attention and MoE
 gather latency.
+
+## Attention warp-tile + cache-105 A/B (2026-08-17 late)
+- DSA warp-tile (DS4_CUDA_GLM_ATTN_LORA_WARP_TILE): byte-identical but SLOWER
+  (attn_dense 147→175 ms/token). REJECTED; kernels already tuned past this.
+- DS4_CUDA_EXPERT_CACHE_GB=105: memory overcommit (97.8 GiB arena + 13 GiB
+  dense + ~10 GiB KV/buffers ≈ 121 GiB > 119.7 physical, swap disabled) →
+  page-fault storm (router 8-12 s/token, millions of minflt) and a machine
+  lockup. Safe arena ceiling with Q4 dense: ~100-101 decimal GB. Future gates
+  must verify arena+resident+10 GiB floor ≤ physical before launch.
+
+Candidate standing remains: ~2.75 tok/s @30K, NLL 0.600/top-1 0.810.
+Post-candidate lever attempts now exhausted-cheap: MoE load-widening (rejected),
+prefetch (net-neutral), GPU directory (net-neutral), attention warp-tile
+(rejected). Remaining levers are larger projects: MoE gather-latency redesign,
+deeper attention restructuring, exact MTP, reserve-fill-publish completion.
